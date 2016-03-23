@@ -150,7 +150,7 @@ contains
     do j = JS, JE
     do i = IS, IE
        if( is_OCN(i,j) ) then
-          OCEAN_TEMP_t(i,j) = ( OCEAN_TEMP(i,j) - OCEAN_TEMP_new(i,j) ) / dt
+          OCEAN_TEMP_t(i,j) = ( OCEAN_TEMP_new(i,j) - OCEAN_TEMP(i,j) ) / dt
        else
           OCEAN_TEMP_t(i,j) = 0.0_RP
        endif

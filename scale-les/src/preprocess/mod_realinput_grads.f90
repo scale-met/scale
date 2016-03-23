@@ -52,14 +52,14 @@ module mod_realinput_grads
   integer,  parameter    :: grads_vars_limit = 1000 !> limit of number of values
   integer,  parameter    :: num_item_list = 17
   integer,  parameter    :: num_item_list_atom  = 17
-  integer,  parameter    :: num_item_list_land  = 13
+  integer,  parameter    :: num_item_list_land  = 11
   integer,  parameter    :: num_item_list_ocean = 9
   logical                :: data_available(num_item_list_atom,3) ! 1:atom, 2:land, 3:ocean
   character(len=H_SHORT) :: item_list_atom (num_item_list_atom)
   character(len=H_SHORT) :: item_list_land (num_item_list_land)
   character(len=H_SHORT) :: item_list_ocean(num_item_list_ocean)
   data item_list_atom  /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO' /
-  data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','lon_sst', 'lat_sst','llev', &
+  data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','llev', &
                         'STEMP','SMOISVC','SMOISDS','SKINT','TOPO' /
   data item_list_ocean /'lsmask','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
 
@@ -86,14 +86,12 @@ module mod_realinput_grads
   integer,  parameter   :: Il_lat     = 3
   integer,  parameter   :: Il_lon_sfc = 4
   integer,  parameter   :: Il_lat_sfc = 5
-  integer,  parameter   :: Il_lon_sst = 6
-  integer,  parameter   :: Il_lat_sst = 7
-  integer,  parameter   :: Il_lz      = 8  ! Level(depth) of stemp & smois (m)
-  integer,  parameter   :: Il_stemp   = 9
-  integer,  parameter   :: Il_smoisvc = 10 ! soil moisture (vormetric water content)
-  integer,  parameter   :: Il_smoisds = 11 ! soil moisture (degree of saturation)
-  integer,  parameter   :: Il_skint   = 12
-  integer,  parameter   :: Il_topo    = 13
+  integer,  parameter   :: Il_lz      = 6  ! Level(depth) of stemp & smois (m)
+  integer,  parameter   :: Il_stemp   = 7
+  integer,  parameter   :: Il_smoisvc = 8  ! soil moisture (vormetric water content)
+  integer,  parameter   :: Il_smoisds = 9  ! soil moisture (degree of saturation)
+  integer,  parameter   :: Il_skint   = 10
+  integer,  parameter   :: Il_topo    = 11
 
   integer,  parameter   :: Io_lsmask  = 1
   integer,  parameter   :: Io_lon     = 2
@@ -925,11 +923,13 @@ contains
        ldims(2) = outer_nx_sfc
     else
        ldims(2) = outer_nx
+       outer_nx_sfc = outer_nx
     endif
     if(outer_ny_sfc > 0)then
        ldims(3) = outer_ny_sfc
     else
        ldims(3) = outer_ny
+       outer_ny_sfc = outer_ny
     endif
 
     allocate( gland2D( ldims(2), ldims(3)           ) )
@@ -964,7 +964,7 @@ contains
              if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
              cycle
           endif
-       case('lon', 'lat', 'lon_sfc', 'lat_sfc', 'lon_sst', 'lat_sst')
+       case('lon', 'lat', 'lon_sfc', 'lat_sfc')
           cycle
        case('SMOISVC', 'SMOISDS')
           if ( use_file_landwater ) then
@@ -1107,7 +1107,7 @@ contains
              lmask_org = UNDEF
           end if
        case("lon")
-          if ( .not. data_available(Il_lon_sfc,2) .and. .not. data_available(Il_lon_sst,2) ) then
+          if ( .not. data_available(Il_lon_sfc,2) ) then
              if ( ldims(2).ne.outer_nx .or. ldims(3).ne.outer_ny ) then
                 write(*,*) 'xxx namelist of "lon_sfc" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx and outer_nx_sfc! ', outer_nx, ldims(2)
@@ -1137,27 +1137,8 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gland2D)
              llon_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
           endif
-       case("lon_sst")
-          if ( .not. data_available(Il_lon_sfc,2) ) then
-             if ( ldims(2).ne.outer_nx_sst .or. ldims(3).ne.outer_ny_sst ) then
-                write(*,*) 'xxx namelist of "lon_sfc" is not found in grads namelist!'
-                write(*,*) 'xxx dimension is different: outer_nx_sst and outer_nx_sfc! ', outer_nx_sst, ldims(2)
-                write(*,*) '                          : outer_ny_sst and outer_ny_sfc! ', outer_ny_sst, ldims(3)
-                call PRC_MPIstop
-             end if
-             if ( trim(dtype) == "linear" ) then
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
-                   llon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
-                enddo
-                enddo
-             else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gsst2D)
-                llon_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
-             endif
-          end if
        case("lat")
-          if ( .not. data_available(Il_lat_sfc,2) .and. .not. data_available(Il_lat_sst,2) ) then
+          if ( .not. data_available(Il_lat_sfc,2) ) then
              if ( ldims(2).ne.outer_nx .or. ldims(3).ne.outer_ny ) then
                 write(*,*) 'xxx namelist of "lat_sfc" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx and outer_nx_sfc! ', outer_nx, ldims(2)
@@ -1187,25 +1168,6 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gland2D)
              llat_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
           endif
-       case("lat_sst")
-          if ( .not. data_available(Il_lat_sfc,2) ) then
-             if ( ldims(2).ne.outer_nx_sst .or. ldims(3).ne.outer_nx_sst ) then
-                write(*,*) 'xxx namelist of "lat_sfc" is not found in grads namelist!'
-                write(*,*) 'xxx dimension is different: outer_nx_sfc and outer_nx_sst! ', ldims(2), outer_nx_sst
-                write(*,*) '                          : outer_ny_sfc and outer_ny_sst! ', ldims(3), outer_ny_sst
-                call PRC_MPIstop
-             end if
-             if ( trim(dtype) == "linear" ) then
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
-                   llat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
-                enddo
-                enddo
-             else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gsst2D)
-                llat_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
-             endif
-          end if
        case("llev")
           if(ldims(1)/=knum)then
              write(*,*) 'xxx "knum" must be equal to outer_nl for llev. knum:',knum,'> outer_nl:',ldims(1)
@@ -1394,15 +1356,19 @@ contains
        odims(1) = outer_nx_sst
     else if (outer_nx_sfc > 0) then
        odims(1) = outer_nx_sfc
+       outer_nx_sst = outer_nx_sfc
     else
        odims(1) = outer_nx
+       outer_nx_sst = outer_nx
     endif
     if(outer_ny_sst > 0)then
        odims(2) = outer_ny_sst
     else if(outer_ny_sfc > 0)then
        odims(2) = outer_ny_sfc
+       outer_ny_sst = outer_ny_sfc
     else
        odims(2) = outer_ny
+       outer_ny_sst = outer_ny
     endif
 
     allocate( gsst2D ( odims(1), odims(2)        ) )
@@ -1585,7 +1551,7 @@ contains
              endif
           end if
        case("lon_sfc")
-          if ( .not. data_available(Io_lon_sst,3) ) then
+          if ( .not. data_available(Io_lon_sst,3) .and. data_available(Io_lon_sfc,3) ) then
              if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_ny_sfc ) then
                 write(*,*) 'xxx namelist of "lon_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx_sfc and outer_nx_sst! ', outer_nx_sfc, odims(1)
@@ -1617,7 +1583,7 @@ contains
           endif
        case("lat")
           if ( .not. data_available(Io_lat_sfc,3) .and. .not. data_available(Io_lat_sst,3) ) then
-             if ( odims(1).ne.outer_nx .or. odims(1).ne.outer_ny ) then
+             if ( odims(1).ne.outer_nx .or. odims(2).ne.outer_ny ) then
                 write(*,*) 'xxx namelist of "lat_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx and outer_nx_sst! ', outer_nx, odims(1)
                 write(*,*) '                          : outer_ny and outer_ny_sst! ', outer_ny, odims(2)
@@ -1635,7 +1601,7 @@ contains
              endif
           end if
        case("lat_sfc")
-          if ( .not. data_available(Io_lat_sst,3) ) then
+          if ( .not. data_available(Io_lat_sst,3) .and. data_available(Io_lat_sfc,3) ) then
              if ( odims(1).ne.outer_nx .or. odims(1).ne.outer_ny ) then
                 write(*,*) 'xxx namelist of "lat_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx_sfc and outer_nx_sst! ', outer_nx_sfc, odims(1)
@@ -1667,7 +1633,7 @@ contains
           endif
        case('SKINT')
           if ( .not. data_available(Io_sst,3) ) then
-             if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_nx_sfc ) then
+             if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_ny_sfc ) then
                 write(*,*) 'xxx dimsntion is different: outer_nx_sst/outer_nx_sfc and outer_nx_sst! ', odims(1), outer_nx_sfc
                 write(*,*) '                          : outer_ny_sst/outer_ny_sfc and outer_ny_sst! ', odims(2), outer_ny_sfc
                 call PRC_MPIstop
@@ -1960,7 +1926,7 @@ contains
        irec = totalrec * (it-1) + startrec + (k-1)
        read(io_fid, rec=irec, iostat=ierr) gdata(:,:,k)
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx grads data does not found! ',trim(item),k,it
+          write(*,*) 'xxx grads data does not found! ',trim(item),', k=',k,', it=',it,' in ', trim(gfile)
           call PRC_MPIstop
        endif
     enddo

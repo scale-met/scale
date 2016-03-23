@@ -890,7 +890,7 @@ contains
 
     !--- get data information
     call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, 0,          & ! (in)
+         fid, varname, 1, .false., & ! (in)
          error                     ) ! (out)
 
     !--- verify
@@ -985,7 +985,8 @@ contains
        call file_get_datainfo( dinfo,   & ! [OUT]
                                fid,     & ! [IN]
                                varname, & ! [IN]
-                               istep-1, & ! [IN]
+                               istep,   & ! [IN]
+                               .true.,  & ! [IN]
                                error    ) ! [OUT]
 
        !--- verify and exit
@@ -1060,9 +1061,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1141,9 +1142,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1222,9 +1223,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1303,9 +1304,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1384,9 +1385,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1465,9 +1466,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1546,9 +1547,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1627,9 +1628,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then

@@ -103,6 +103,7 @@ contains
        I_month,                 &
        I_day
     use scale_time, only: &
+       TIME_STARTDAYSEC, &
        TIME_NOWDAYSEC, &
        TIME_OFFSET_year
     implicit none
@@ -146,7 +147,7 @@ contains
     integer  :: offset_year   !< offset year
     real(DP) :: cftime        !< time in the CF convention
 
-    integer  :: count, nid, t
+    integer  :: count, nid, t, n
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -213,15 +214,19 @@ contains
                                 time_units                ) ! [OUT]
 
        if ( step_nmax == 0 ) then
-          write(*,*) 'xxx Data not found! basename,varname = ', trim(basename), trim(varname)
+          write(*,*) 'xxx Data not found! basename,varname = ', trim(basename), ', ', trim(varname)
           call PRC_MPIstop
        endif
 
+       do n=dim_rank+1, 3
+          dim_size(n) = 1
+       end do
+
        ! setup item
-       EXTIN_item(nid)%basename      = trim(basename)
-       EXTIN_item(nid)%varname       = trim(varname)
-       EXTIN_item(nid)%dim_size(1:3) = dim_size(1:3)
-       EXTIN_item(nid)%step_num      = step_nmax
+       EXTIN_item(nid)%basename    = basename
+       EXTIN_item(nid)%varname     = varname
+       EXTIN_item(nid)%dim_size(:) = dim_size(:)
+       EXTIN_item(nid)%step_num    = step_nmax
 
        if ( enable_periodic_day ) then
           EXTIN_item(nid)%flag_periodic = I_periodic_day
@@ -243,7 +248,7 @@ contains
        do t = 1, EXTIN_item(nid)%step_num
           cftime = 0.5_DP * ( time_start(t) + time_end(t) )
 
-          EXTIN_item(nid)%time(t) = CALENDAR_CFunits2sec( cftime, time_units, TIME_OFFSET_year )
+          EXTIN_item(nid)%time(t) = CALENDAR_CFunits2sec( cftime, time_units, TIME_OFFSET_year, TIME_STARTDAYSEC )
        enddo
 
        if ( EXTIN_item(nid)%step_num == 1 ) then
@@ -331,7 +336,7 @@ contains
        !--- read first data
        if (       dim_size(1) >= 1 &
             .AND. dim_size(2) == 1 &
-            .AND. dim_size(3) == 1 ) then
+            .AND. dim_size(3) == 1 ) then ! 1D
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,1,1,I_prev),  &
@@ -348,7 +353,7 @@ contains
 
        elseif (       dim_size(1) >= 1 &
                 .AND. dim_size(2) >  1 &
-                .AND. dim_size(3) == 1 ) then
+                .AND. dim_size(3) == 1 ) then ! 2D
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,:,1,I_prev),  &
@@ -365,7 +370,7 @@ contains
 
        elseif (       dim_size(1) >= 1 &
                 .AND. dim_size(2) >  1 &
-                .AND. dim_size(3) >  1 ) then
+                .AND. dim_size(3) >  1 ) then ! 3D
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,:,:,I_prev),  &
@@ -557,6 +562,7 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
+
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(EXTIN_item(nid)%varname)
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)

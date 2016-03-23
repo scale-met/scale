@@ -372,10 +372,10 @@ contains
     character(len=*), intent(in)  :: unit   !< variable unit
     !---------------------------------------------------------------------------
 
-    select case(trim(unit))
+    select case(unit)
     case('MSEC')
        second = value * 1.E-3_DP
-    case('SEC')
+    case('SEC', 'seconds')
        second = value
     case('MIN')
        second = value * CALENDAR_SEC
@@ -384,7 +384,7 @@ contains
     case('DAY')
        second = value * CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR
     case default
-       write(*,*) ' xxx Unsupported UNIT:', trim(unit), value
+       write(*,*) ' xxx Unsupported UNIT: ', trim(unit), ', ', value
        call PRC_MPIstop
     endselect
 
@@ -393,13 +393,14 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Convert time in units of the CF convention to second
-  function CALENDAR_CFunits2sec( cftime, cfunits, offset_year ) result( sec )
+  function CALENDAR_CFunits2sec( cftime, cfunits, offset_year, startdaysec ) result( sec )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
     real(DP),         intent(in) :: cftime
     character(len=*), intent(in) :: cfunits
     integer,          intent(in) :: offset_year
+    real(DP),         intent(in), optional :: startdaysec
     real(DP)                     :: sec
 
     character(len=H_SHORT) :: tunit
@@ -415,10 +416,8 @@ contains
 
     intrinsic index
 
-    call CALENDAR_unit2sec(sec, cftime, tunit)
-
     l = index(cfunits, " since ")
-    if ( l > 1 ) then
+    if ( l > 1 ) then ! untis is under the CF convension
        tunit = cfunits(1:l-1)
        buf = cfunits(l+7:)
 
@@ -473,13 +472,16 @@ contains
                                   date(:), & ! (in)
                                   subsec,  & ! (in)
                                   0        ) ! (in)
-       sec = sec0 + sec
-
     else
        tunit = cfunits
        oyear = offset_year
+       sec0 = startdaysec
        day = 0
     end if
+
+    call CALENDAR_unit2sec(sec, cftime, tunit)
+
+    sec = sec0 + sec
 
     call CALENDAR_adjust_daysec( day, sec ) ! [INOUT]
 
