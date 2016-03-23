@@ -421,11 +421,12 @@ contains
     logical                  :: elevation_collection = .true.
 
     NAMELIST / PARAM_MKINIT_REAL_LAND / &
+         NUMBER_OF_FILES,        &
+         NUMBER_OF_TSTEPS,       &
+         NUMBER_OF_SKIP_TSTEPS,  &
          FILETYPE_ORG,           &
          BASENAME_ORG,           &
          BASENAME_ADD_NUM,       &
-         NUMBER_OF_TSTEPS,       &
-         NUMBER_OF_SKIP_TSTEPS,  &
          USE_FILE_LANDWATER,     &
          INIT_LANDWATER_RATIO,   &
          INTRP_LAND_TEMP,        &

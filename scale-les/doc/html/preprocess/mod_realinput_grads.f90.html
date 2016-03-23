@@ -6,47 +6,31 @@
   <h1>mod_realinput_grads module</h1>
   <h2>NAMELIST</h2>
     <ul>
-      <li>PARAM_MKINIT_REAL_GrADS</li>
-      <table>
-        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
-        <tr>
-          <td>GRADS_BOUNDARY_NAMELIST</td>
-          <td>character(len=H_LONG)</td>
-          <td>"namelist.grads_boundary"</td>
-          <td></td>
-        </tr>
-        <tr>
-          <td>UPPER_QV_TYPE</td>
-          <td>character(len=H_SHORT)</td>
-          <td>"ZERO"</td>
-          <td>how qv is given at higher level than outer model</td>
-        </tr>
-      </table>
       <li>nml_grads_grid</li>
       <table>
         <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
         <tr>
           <td>OUTER_NX</td>
           <td>integer</td>
-          <td>0</td>
+          <td>-1</td>
           <td></td>
         </tr>
         <tr>
           <td>OUTER_NY</td>
           <td>integer</td>
-          <td>0</td>
+          <td>-1</td>
           <td></td>
         </tr>
         <tr>
           <td>OUTER_NZ</td>
           <td>integer</td>
-          <td>0</td>
+          <td>-1</td>
           <td>number of atmos layers</td>
         </tr>
         <tr>
           <td>OUTER_NL</td>
           <td>integer</td>
-          <td>0</td>
+          <td>-1</td>
           <td>number of land layers</td>
         </tr>
         <tr>
@@ -72,6 +56,16 @@
           <td>integer</td>
           <td>-1</td>
           <td></td>
+        </tr>
+      </table>
+      <li>PARAM_MKINIT_REAL_GrADS</li>
+      <table>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>UPPER_QV_TYPE</td>
+          <td>character(len=H_SHORT)</td>
+          <td>"ZERO"</td>
+          <td>how qv is given at higher level than outer model</td>
         </tr>
       </table>
     </ul>
