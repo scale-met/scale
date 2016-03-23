@@ -10,28 +10,34 @@
       <table>
         <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
         <tr>
-          <td>ATMOS_PHY_TB_HYBRID_LES_DX</td>
-          <td>integer</td>
+          <td>ATMOS_PHY_TB_HYBRID_SGS_DX</td>
+          <td>real(RP)</td>
           <td>100.0_RP</td>
-          <td>horizontal resolution for LES</td>
+          <td>horizontal resolution for SGS model</td>
         </tr>
         <tr>
-          <td>ATMOS_PHY_TB_HYBRID_PRM_DX</td>
-          <td>integer</td>
+          <td>ATMOS_PHY_TB_HYBRID_PBL_DX</td>
+          <td>real(RP)</td>
           <td>500.0_RP</td>
-          <td>horizontal resolution for turbulent parametarization</td>
+          <td>horizontal resolution for PBL model</td>
         </tr>
         <tr>
-          <td>ATMOS_PHY_TB_HYBRID_LES_TYPE</td>
+          <td>ATMOS_PHY_TB_HYBRID_SGS_TYPE</td>
           <td>character(len=H_SHORT)</td>
           <td>'SMAGORINSKY'</td>
-          <td>scheme type for LES</td>
+          <td>scheme type for SGS</td>
         </tr>
         <tr>
-          <td>ATMOS_PHY_TB_HYBRID_PRM_TYPE</td>
+          <td>ATMOS_PHY_TB_HYBRID_PBL_TYPE</td>
           <td>character(len=H_SHORT)</td>
           <td>'MYNN'</td>
           <td>scheme type for turbulent parametarization</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_TB_HYBRID_TKE_TYPE</td>
+          <td>character(len=H_SHORT)</td>
+          <td>'PBL'</td>
+          <td>SGS, PBL, or MIXED</td>
         </tr>
       </table>
     </ul>

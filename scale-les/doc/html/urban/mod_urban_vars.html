@@ -1,0 +1,194 @@
+<html>
+  <head>
+    <title>mod_urban_vars module</title>
+  </head>
+ <body>
+  <h1>mod_urban_vars module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_URBAN_VARS</li>
+      <table border=1>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>URBAN_RESTART_IN_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td>basename of the restart file</td>
+        </tr>
+        <tr>
+          <td>URBAN_RESTART_OUTPUT</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>output restart file?</td>
+        </tr>
+        <tr>
+          <td>URBAN_RESTART_OUT_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td>basename of the output file</td>
+        </tr>
+        <tr>
+          <td>URBAN_RESTART_OUT_TITLE</td>
+          <td>character(len=H_MID)</td>
+          <td>'URBAN restart'</td>
+          <td>title    of the output file</td>
+        </tr>
+        <tr>
+          <td>URBAN_RESTART_OUT_DTYPE</td>
+          <td>character(len=H_MID)</td>
+          <td>'DEFAULT'</td>
+          <td>REAL4 or REAL8</td>
+        </tr>
+        <tr>
+          <td>URBAN_VARS_CHECKRANGE</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table border=1>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+      <tr>
+        <td>URBAN_ALB_LW</td>
+        <td>urban grid average of albedo LW</td>
+        <td>VAR_UNIT(I_ALB_LW)</td>
+        <td>URBAN_SFC_albedo</td>
+      </tr>
+      <tr>
+        <td>URBAN_ALB_SW</td>
+        <td>urban grid average of albedo SW</td>
+        <td>VAR_UNIT(I_ALB_SW)</td>
+        <td>URBAN_SFC_albedo</td>
+      </tr>
+      <tr>
+        <td>URBAN_QC</td>
+        <td>urban canopy humidity</td>
+        <td>VAR_UNIT(I_QC)</td>
+        <td>URBAN_QC</td>
+      </tr>
+      <tr>
+        <td>URBAN_RAINB</td>
+        <td>urban rain strage on wall</td>
+        <td>VAR_UNIT(I_RAINB)</td>
+        <td>URBAN_RAINB</td>
+      </tr>
+      <tr>
+        <td>URBAN_RAING</td>
+        <td>urban rain strage on road</td>
+        <td>VAR_UNIT(I_RAING)</td>
+        <td>URBAN_RAING</td>
+      </tr>
+      <tr>
+        <td>URBAN_RAINR</td>
+        <td>urban rain strage on roof</td>
+        <td>VAR_UNIT(I_RAINR)</td>
+        <td>URBAN_RAINR</td>
+      </tr>
+      <tr>
+        <td>URBAN_ROFF</td>
+        <td>urban runoff </td>
+        <td>VAR_UNIT(I_ROFF)</td>
+        <td>URBAN_ROFF</td>
+      </tr>
+      <tr>
+        <td>URBAN_SFC_TEMP</td>
+        <td>urban grid average of temperature</td>
+        <td>VAR_UNIT(I_SFC_TEMP)</td>
+        <td>URBAN_SFC_TEMP</td>
+      </tr>
+      <tr>
+        <td>URBAN_SFLX_GH</td>
+        <td>urban grid average of ground heat flux</td>
+        <td>VAR_UNIT(I_SFLX_GH)</td>
+        <td>URBAN_SFLX_GH</td>
+      </tr>
+      <tr>
+        <td>URBAN_SFLX_LH</td>
+        <td>urban grid average of latent heat flux</td>
+        <td>VAR_UNIT(I_SFLX_LH)</td>
+        <td>URBAN_SFLX_LH</td>
+      </tr>
+      <tr>
+        <td>URBAN_SFLX_MU</td>
+        <td>urban grid average of u-momentum flux</td>
+        <td>VAR_UNIT(I_SFLX_MU)</td>
+        <td>URBAN_SFLX_MU</td>
+      </tr>
+      <tr>
+        <td>URBAN_SFLX_MV</td>
+        <td>urban grid average of v-momentum flux</td>
+        <td>VAR_UNIT(I_SFLX_MV)</td>
+        <td>URBAN_SFLX_MV</td>
+      </tr>
+      <tr>
+        <td>URBAN_SFLX_MW</td>
+        <td>urban grid average of w-momentum flux</td>
+        <td>VAR_UNIT(I_SFLX_MW)</td>
+        <td>URBAN_SFLX_MW</td>
+      </tr>
+      <tr>
+        <td>URBAN_SFLX_SH</td>
+        <td>urban grid average of sensible heat flux</td>
+        <td>VAR_UNIT(I_SFLX_SH)</td>
+        <td>URBAN_SFLX_SH</td>
+      </tr>
+      <tr>
+        <td>VAR_NAME(I_SFLX_evap)</td>
+        <td>VAR_DESC(I_SFLX_evap)</td>
+        <td>VAR_UNIT(I_SFLX_evap)</td>
+        <td>URBAN_SFLX_evap</td>
+      </tr>
+      <tr>
+        <td>URBAN_TB</td>
+        <td>urban surface temperature of wall</td>
+        <td>VAR_UNIT(I_TB)</td>
+        <td>URBAN_TB</td>
+      </tr>
+      <tr>
+        <td>URBAN_TBL</td>
+        <td>urban temperature in layer of wall</td>
+        <td>VAR_UNIT(I_TBL)</td>
+        <td>URBAN_TBL</td>
+      </tr>
+      <tr>
+        <td>URBAN_TC</td>
+        <td>urban canopy air temperature</td>
+        <td>VAR_UNIT(I_TC)</td>
+        <td>URBAN_TC</td>
+      </tr>
+      <tr>
+        <td>URBAN_TG</td>
+        <td>urban surface temperature of road</td>
+        <td>VAR_UNIT(I_TG)</td>
+        <td>URBAN_TG</td>
+      </tr>
+      <tr>
+        <td>URBAN_TGL</td>
+        <td>urban temperature in layer of road</td>
+        <td>VAR_UNIT(I_TGL)</td>
+        <td>URBAN_TGL</td>
+      </tr>
+      <tr>
+        <td>URBAN_TR</td>
+        <td>urban surface temperature of roof</td>
+        <td>VAR_UNIT(I_TR)</td>
+        <td>URBAN_TR</td>
+      </tr>
+      <tr>
+        <td>URBAN_TRL</td>
+        <td>urban temperature in layer of roof</td>
+        <td>VAR_UNIT(I_TRL)</td>
+        <td>URBAN_TRL</td>
+      </tr>
+      <tr>
+        <td>URBAN_UC</td>
+        <td>urban canopy wind</td>
+        <td>VAR_UNIT(I_UC)</td>
+        <td>URBAN_UC</td>
+      </tr>
+    </table>
+  </body>
+</html>

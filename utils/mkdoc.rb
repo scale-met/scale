@@ -6,6 +6,7 @@ The document is output in the HTML format.
 
 Usage: ruby mkdoc.rb doc_dir
 =end
+require "pp"
 
 def usage
   print "Usage: #$0 doc_dir\n"
@@ -58,6 +59,32 @@ def parse_dir(dir)
   files
 end
 
+def get_data(name, data, vars)
+  if /\A([^\(]+)\(([^\)]+)\)\Z/ =~ name
+    var = $1
+    idx = $2
+    if ary = data[var]
+      if idx.to_i.to_s == idx
+        return ary[id.to_i] || name
+      else
+        if (h = vars[idx]) && h[:type]=="integer"
+          return ary[h[:val].to_i-1] || name
+        end
+      end
+    end
+  end
+  return name
+end
+
+Index = {
+  "I_DENS" => {:type=>"integer", :val=>1},
+  "I_MOMZ" => {:type=>"integer", :val=>2},
+  "I_MOMX" => {:type=>"integer", :val=>3},
+  "I_MOMY" => {:type=>"integer", :val=>4},
+  "I_RHOT" => {:type=>"integer", :val=>5},
+  "I_QTRC" => {:type=>"integer", :val=>6},
+}
+
 files = parse_dir(srcdir)
 
 files.flatten!.sort!
@@ -65,15 +92,16 @@ files.flatten!.sort!
 tree = Hash.new
 files.each do |fname|
 
-  mod_f = fname.sub(/#{srcdir}\//,"").sub(/\.F90\Z/,"")
+  mod_f = fname.sub(/#{srcdir}\//,"").sub(/\.[Ff]90\Z/,"")
 
   vars = Hash.new
   namelists = Hash.new
   hist = Hash.new
   modname = nil
   fnames = [fname]
-  if /scale_tracer_(.+)\.F90\Z/ =~ fname
-    fnames.push File.join(File.dirname(fname),"../../../include","inc_tracer_#{$1}.h")
+  data = Hash.new
+  if /scale_(ae)?tracer_(.+)\.F90\Z/ =~ fname && $2 != "sdm"
+    fnames.push File.join(File.dirname(fname),"../../../include","inc_#{$1}tracer_#{$2}.h")
   end
   fnames.each do |fn|
     File.open(fn) do |file|
@@ -122,10 +150,14 @@ files.each do |fname|
           str.gsub!(/\(:[^)]*\)/,'')
           info = str.split(",").map{|c| c.strip.sub(/\A'(.*)'\Z/,'\1')}
           hist[info[1]] = {:unit => info[3], :desc => info[2], :var => info[0]}
+        when /data\s+([^\s]+)\s+\/([^\/]+)\/$/
+          data[$1] = $2.split(',').map{|s| s.strip.sub(/^'/,"").sub(/'$/,"")}
         end
-      end
-    end
+      end # while line
+    end # open
   end
+
+  vars.update(Index){|k,v1,v2| v1}
 
   next if namelists.empty? && hist.empty?
 
@@ -150,7 +182,7 @@ EOL
     namelists.each do |group, lists|
       file.print <<EOL
       <li>#{group}</li>
-      <table>
+      <table border=1>
         <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
 EOL
       lists.each do |v|
@@ -184,16 +216,17 @@ EOL
     </ul>
 
   <h2>History</h2>
-    <table>
+    <table border=1>
       <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
 EOL
+
     hist.sort.each do |name, info|
       file.print <<EOL
       <tr>
-        <td>#{name}</td>
-        <td>#{info[:desc]}</td>
-        <td>#{info[:unit]}</td>
-        <td>#{info[:var]}</td>
+        <td>#{get_data(name,data,vars)}</td>
+        <td>#{get_data(info[:desc],data,vars)}</td>
+        <td>#{get_data(info[:unit],data,vars)}</td>
+        <td>#{get_data(info[:var],data,vars)}</td>
       </tr>
 EOL
     end
