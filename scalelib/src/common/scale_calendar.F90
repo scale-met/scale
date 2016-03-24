@@ -403,13 +403,11 @@ contains
     real(DP),         intent(in), optional :: startdaysec
     real(DP)                     :: sec
 
-    character(len=H_SHORT) :: tunit
-    character(len=H_SHORT) :: buf
+    character(len=H_MID) :: tunit
+    character(len=H_MID) :: buf
 
     integer  :: date(6)
-    integer  :: oyear
     integer  :: day
-    real(DP) :: subsec
     real(DP) :: sec0
 
     integer :: l
@@ -423,15 +421,16 @@ contains
 
        l = index(buf, "-")
        if ( l .ne. 5 ) then
-          write(*,*) 'xxx units for time is invalid: ', cfunits
+          write(*,*) 'xxx units for time is invalid (year): ', trim(cfunits), ' ', trim(buf)
           call PRC_MPIstop
        end if
        read( buf(1:4), *) date(1) ! year
+       date(1) = date(1) - offset_year
        buf = buf(6:)
 
        l = index(buf, "-")
        if ( l .ne. 3 ) then
-          write(*,*) 'xxx units for time is invalid: ', cfunits
+          write(*,*) 'xxx units for time is invalid (month): ', trim(cfunits), ' ', trim(buf)
           call PRC_MPIstop
        end if
        read( buf(1:2), *) date(2) ! month
@@ -439,7 +438,7 @@ contains
 
        l = index(buf, " ")
        if ( l .ne. 3 ) then
-          write(*,*) 'xxx units for time is invalid: ', cfunits
+          write(*,*) 'xxx units for time is invalid (day): ', trim(cfunits), ' ', trim(buf)
           call PRC_MPIstop
        end if
        read( buf(1:2), *) date(3) ! day
@@ -447,57 +446,41 @@ contains
 
        l = index(buf, ":")
        if ( l .ne. 3 ) then
-          write(*,*) 'xxx units for time is invalid: ', cfunits
+          write(*,*) 'xxx units for time is invalid (hour): ', trim(cfunits), ' ', trim(buf)
           call PRC_MPIstop
        end if
-       read( buf(1:2), *) date(3) ! hour
+       read( buf(1:2), *) date(4) ! hour
        buf = buf(4:)
 
        l = index(buf, ":")
        if ( l .ne. 3 ) then
-          write(*,*) 'xxx units for time is invalid: ', cfunits
+          write(*,*) 'xxx units for time is invalid (min): ', trim(cfunits), ' ', trim(buf)
           call PRC_MPIstop
        end if
-       read( buf(1:2), *) date(3) ! min
+       read( buf(1:2), *) date(5) ! min
        buf = buf(4:)
 
        if ( len_trim(buf) .ne. 2 ) then
-          write(*,*) 'xxx units for time is invalid: ', cfunits
+          write(*,*) 'xxx units for time is invalid (sec): ', trim(cfunits), ' ', trim(buf), len_trim(buf)
           call PRC_MPIstop
        end if
-       read( buf(1:2), *) date(3) ! sec
+       read( buf(1:2), *) date(6) ! sec
 
        call CALENDAR_date2daysec( day,     & ! (out)
                                   sec0,    & ! (out)
                                   date(:), & ! (in)
-                                  subsec,  & ! (in)
-                                  0        ) ! (in)
+                                  0.0_DP,  & ! (in)
+                                  offset_year ) ! (in)
+
+       sec0 = CALENDAR_combine_daysec( day, sec0 )
     else
        tunit = cfunits
-       oyear = offset_year
        sec0 = startdaysec
-       day = 0
     end if
 
     call CALENDAR_unit2sec(sec, cftime, tunit)
 
     sec = sec0 + sec
-
-    call CALENDAR_adjust_daysec( day, sec ) ! [INOUT]
-
-    call CALENDAR_daysec2date( date(:), & ! [OUT]
-                               subsec,  & ! [OUT]
-                               day,     & ! [IN]
-                               sec,     & ! [IN]
-                               oyear    ) ! [IN]
-
-    call CALENDAR_date2daysec( day,        & ! (out)
-                               sec,        & ! (out)
-                               date(:),    & ! (in)
-                               subsec,     & ! (in)
-                               offset_year ) ! (in)
-
-    sec = CALENDAR_combine_daysec( day, sec )
 
     return
   end function CALENDAR_CFunits2sec

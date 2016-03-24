@@ -93,7 +93,7 @@ void file_get_datainfo_( datainfo_t *dinfo,       // (out)
   cstr2fstr(dinfo->varname, dinfo->varname, File_HSHORT);
   cstr2fstr(dinfo->description, dinfo->description, File_HMID);
   cstr2fstr(dinfo->units, dinfo->units, File_HSHORT);
-  cstr2fstr(dinfo->time_units, dinfo->time_units, File_HSHORT);
+  cstr2fstr(dinfo->time_units, dinfo->time_units, File_HMID);
   for ( i=0; i<MAX_RANK; i++ )
     cstr2fstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
 }
@@ -107,7 +107,7 @@ void file_read_data_( void       *var,       // (out)
   fstr2cstr(dinfo->varname, dinfo->varname, File_HSHORT);
   fstr2cstr(dinfo->description, dinfo->description, File_HMID);
   fstr2cstr(dinfo->units, dinfo->units, File_HSHORT);
-  fstr2cstr(dinfo->time_units, dinfo->time_units, File_HSHORT);
+  fstr2cstr(dinfo->time_units, dinfo->time_units, File_HMID);
   for ( i=0; i<MAX_RANK; i++ )
     fstr2cstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
 
@@ -184,9 +184,9 @@ void file_set_tunits_( int32_t *fid,        // (in)
 		       int32_t *error,      // (in)
 		       int32_t  len)        // (in)
 {
-  char _time_units[File_HLONG+1];
+  char _time_units[File_HMID+1];
 
-  len = len > File_HLONG ? File_HLONG : len;
+  len = len > File_HMID ? File_HMID : len;
   fstr2cstr(_time_units, time_units, len);
 
   *error = file_set_tunits( *fid, _time_units );

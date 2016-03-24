@@ -945,7 +945,7 @@ contains
     integer,                    intent(out) :: dim_size  (dim_limit)
     real(DP),                   intent(out) :: time_start(step_limit)
     real(DP),                   intent(out) :: time_end  (step_limit)
-    character(len=File_HSHORT), intent(out) :: time_units
+    character(len=File_HMID),   intent(out) :: time_units
 
     logical,                    intent(in), optional :: single
 

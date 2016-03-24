@@ -1124,6 +1124,7 @@ contains
        axistype, &
        datatype, &
        timeintv, &
+       tsince,   &
        append,   &
        timetarg, &
        nohalo    )
@@ -1154,6 +1155,7 @@ contains
     character(len=*),  intent(in)  :: axistype     !< axis type (X/Y/Time)
     character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
     real(RP),          intent(in)  :: timeintv     !< time interval [sec]
+    integer ,          intent(in)  :: tsince(6)    !< start time
     logical, optional, intent(in)  :: append       !< append existing (closed) file?
     integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
     logical, optional, intent(in)  :: nohalo       !< include halo data?
@@ -1167,6 +1169,8 @@ contains
 
     real(RP), allocatable :: var2D(:,:)
     real(DP) :: time_interval, nowtime
+
+    character(len=34) :: tunits
 
     integer :: rankidx(2)
     logical :: append_sw
@@ -1208,16 +1212,19 @@ contains
        append_sw = append
     endif
 
-    call FileCreate( fid,               & ! [OUT]
-                     fileexisted,       & ! [OUT]
-                     basename,          & ! [IN]
-                     title,             & ! [IN]
-                     H_SOURCE,          & ! [IN]
-                     H_INSTITUTE,       & ! [IN]
-                     PRC_masterrank,    & ! [IN]
-                     PRC_myrank,        & ! [IN]
-                     rankidx,           & ! [IN]
-                     append = append_sw ) ! [IN]
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', tsince
+
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     time_units = tunits, & ! [IN]
+                     append = append_sw   ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype ) ! [IN]
@@ -1329,6 +1336,7 @@ contains
        axistype, &
        datatype, &
        timeintv, &
+       tsince,   &
        append,   &
        timetarg, &
        nohalo    )
@@ -1359,6 +1367,7 @@ contains
     character(len=*),  intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
     character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
     real(RP),          intent(in)  :: timeintv     !< time interval [sec]
+    integer ,          intent(in)  :: tsince(6)    !< start time
     logical, optional, intent(in)  :: append       !< append existing (closed) file?
     integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
     logical, optional, intent(in)  :: nohalo       !< include halo data?
@@ -1373,6 +1382,8 @@ contains
 
     real(RP), allocatable :: var3D(:,:,:)
     real(DP) :: time_interval, nowtime
+
+    character(len=34) :: tunits
 
     integer :: rankidx(2)
     logical :: append_sw
@@ -1414,16 +1425,19 @@ contains
        append_sw = append
     endif
 
-    call FileCreate( fid,               & ! [OUT]
-                     fileexisted,       & ! [OUT]
-                     basename,          & ! [IN]
-                     title,             & ! [IN]
-                     H_SOURCE,          & ! [IN]
-                     H_INSTITUTE,       & ! [IN]
-                     PRC_masterrank,    & ! [IN]
-                     PRC_myrank,        & ! [IN]
-                     rankidx,           & ! [IN]
-                     append = append_sw ) ! [IN]
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', tsince
+
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     time_units = tunits, & ! [IN]
+                     append = append_sw   ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype ) ! [IN]

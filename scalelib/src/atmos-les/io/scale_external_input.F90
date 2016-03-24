@@ -138,7 +138,7 @@ contains
     integer                :: dim_size  (3)
     real(DP)               :: time_start(EXTIN_step_limit)
     real(DP)               :: time_end  (EXTIN_step_limit)
-    character(len=H_SHORT) :: time_units
+    character(len=H_MID)   :: time_units
 
     integer  :: datadate(6)   !< date
     real(DP) :: datasubsec    !< subsecond

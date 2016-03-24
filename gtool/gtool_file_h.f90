@@ -71,7 +71,7 @@ module gtool_file_h
      integer                    :: step
      real(DP)                   :: time_start
      real(DP)                   :: time_end
-     character(LEN=File_HSHORT) :: time_units
+     character(LEN=File_HMID)   :: time_units
      integer                    :: fid
   endtype datainfo
 
