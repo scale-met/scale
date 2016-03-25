@@ -13,6 +13,8 @@ def usage
   exit
 end
 
+output_dir = "./list"
+
 docdir = ARGV.shift || usage
 topdir = File.join(docdir, "..")
 srcdir = File.join(topdir, "src")
@@ -67,7 +69,7 @@ def get_data(name, data, vars)
       if idx.to_i.to_s == idx
         return ary[id.to_i] || name
       else
-        if (h = vars[idx]) && h[:type]=="integer"
+        if (h = vars[idx.upcase]) && h[:type]=="integer"
           return ary[h[:val].to_i-1] || name
         end
       end
@@ -90,6 +92,8 @@ files = parse_dir(srcdir)
 files.flatten!.sort!
 
 tree = Hash.new
+nm_params = Hash.new
+history = Hash.new
 files.each do |fname|
 
   mod_f = fname.sub(/#{srcdir}\//,"").sub(/\.[Ff]90\Z/,"")
@@ -150,9 +154,10 @@ files.each do |fname|
           str.gsub!(/\(:[^)]*\)/,'')
           info = str.split(",").map{|c| c.strip.sub(/\A'(.*)'\Z/,'\1')}
           hist[info[1]] = {:unit => info[3], :desc => info[2], :var => info[0]}
-        when /data\s+([^\s]+)\s+\/([^\/]+)\/$/
+        when /data\s+([^\s]+)\s+\/(.+)\/$/
           data[$1] = $2.split(',').map{|s| s.strip.sub(/^'/,"").sub(/'$/,"")}
         end
+
       end # while line
     end # open
   end
@@ -162,12 +167,12 @@ files.each do |fname|
   next if namelists.empty? && hist.empty?
 
   parent = File.dirname(mod_f)
-  system("mkdir -p html/#{parent}")
+  system("mkdir -p #{output_dir}/#{parent}")
 
   tree[parent] ||= Array.new
   tree[parent].push File.basename(mod_f)
 
-  File.open("html/#{mod_f}.html","w") do |file|
+  File.open("#{output_dir}/#{mod_f}.html","w") do |file|
 
     file.print <<EOL
 <html>
@@ -181,7 +186,7 @@ files.each do |fname|
 EOL
     namelists.each do |group, lists|
       file.print <<EOL
-      <li>#{group}</li>
+      <li id="#{group}">#{group}</li>
       <table border=1>
         <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
 EOL
@@ -195,11 +200,12 @@ EOL
             end
           end
           unless info
-            require "pp"
             pp vars
             raise "parse error: #{group} #{v}"
           end
         end
+        nm_params[v] ||= Array.new
+        nm_params[v].push [mod_f, group]
         file.print <<EOL
         <tr>
           <td>#{v}</td>
@@ -209,7 +215,7 @@ EOL
         </tr>
 EOL
       end
-      file.print "      </table>\n"
+      file.print "      </table><br>\n"
     end
 
     file.print <<EOL
@@ -221,9 +227,12 @@ EOL
 EOL
 
     hist.sort.each do |name, info|
+      name = get_data(name,data,vars)
+      history[name] ||= Array.new
+      history[name].push mod_f
       file.print <<EOL
       <tr>
-        <td>#{get_data(name,data,vars)}</td>
+        <td id="#{name}">#{name}</td>
         <td>#{get_data(info[:desc],data,vars)}</td>
         <td>#{get_data(info[:unit],data,vars)}</td>
         <td>#{get_data(info[:var],data,vars)}</td>
@@ -239,8 +248,8 @@ EOL
 end
 
 
-system("mkdir -p html")
-File.open("html/index.html","w") do |file|
+system("mkdir -p #{output_dir}")
+File.open("#{output_dir}/index.html","w") do |file|
   file.print <<EOL
 <html>
   <head>
@@ -248,18 +257,53 @@ File.open("html/index.html","w") do |file|
   </head>
   <body>
     <h1>SCALE Document Index</h1>
+
+    <h2>Table</h3>
+    <ul>
+      <li><a href="#module">Module list</a></li>
+      <li><a href="#namelist">Namelist parameters</a></li>
+      <li><a href="#history">History variables</a></li>
+    </ul>
+
+
+    <h2 id="module">Module List</h2>
+
     <ul>
 EOL
   tree.each.sort.each do |parent, mods|
     file.print "      <li>#{parent}</li>\n"
     file.print "      <ul>\n"
     mods.each do |mod|
-      file.print "        <li><a href=\"./#{parent}/#{mod}.html\">#{mod}</a></li>\n"
+      file.print "        <li id=\"#{mod}\"><a href=\"./#{parent}/#{mod}.html\">#{mod}</a></li>\n"
     end
     file.print "      </ul>\n"
   end
   file.print <<EOL
     </ul>
+
+    <h2 id="namelist">NAMELIST Parameters</h2>
+    <ul>
+EOL
+  nm_params.sort.each do |name,ary|
+    list = ary.map do |mod, group|
+      "<a href=\"#{mod}.html\##{group}\">#{group} in #{File.basename(mod)}</a>"
+    end
+    file.print "    <li>#{name}: #{list.join(", ")}</li>\n"
+  end
+  file.print <<EOL
+    </ul>
+    <h2 id="history">History Variables</h2>
+    <ul>
+EOL
+  history.sort.each do |name,ary|
+    list = ary.map do |mod|
+      "<a href=\"#{mod}.html\##{name}\">#{File.basename(mod)}</a>"
+    end
+    file.print "    <li>#{name}: #{list.join(", ")}</li>\n"
+  end
+  file.print <<EOL
+    </ul>
+
   </body>
 </html>
 EOL
