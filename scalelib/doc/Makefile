@@ -1,10 +1,10 @@
 TOPDIR = ../..
 include $(TOPDIR)/Mkinclude
 
-all: html
+all: list
 
 
-html:
+list:
 	ruby $(TOPDIR)/utils/mkdoc.rb .
 
-.PHONY: html
+.PHONY: list

@@ -1,10 +1,13 @@
 TOPDIR = ../..
 include $(TOPDIR)/Mkinclude
 
-all: html
+all: list doxygen
 
 
-html:
+list:
 	ruby $(TOPDIR)/utils/mkdoc.rb .
 
-.PHONY: html
+doxygen:
+	doxygen scaleles.cfg
+
+.PHONY: list doxygen
