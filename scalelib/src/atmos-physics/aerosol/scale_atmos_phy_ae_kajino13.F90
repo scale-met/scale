@@ -70,7 +70,7 @@ module scale_atmos_phy_ae_kajino13
   real(RP), parameter  :: rho_kg   = rhod_ae*1.E3_RP      ! particle density [kg/m3] sulfate assumed
   real(RP), parameter  :: grav     = 9.80622_RP           ! mean gravitational acceleration [m/s2]
   real(RP), parameter  :: conv_ms_vl = 1.E-12_RP/rhod_ae  ! mass[ug/m3] to M3(volume)[m3/m3] rhod
-  real(RP), parameter  :: conv_vl_ms = rhod_ae/1.E-12_RP  ! M3(volume)[m3/m3] to mass[m3/m3]
+  real(RP), parameter  :: conv_vl_ms = rhod_ae/1.E-12_RP  ! M3(volume)[m3/m3] to mass[ug/m3]
   real(RP), parameter  :: mwrat_s6   = 96._RP/98._RP      ! molecular weight ratio (part/gas) of sulfate
   real(RP), parameter  :: mwrat_s6_i = 1._RP/mwrat_s6     ! molecular weight ratio (gas/part) of sulfate
   real(RP), parameter  :: diffsulf =  9.36e-6_RP          ! std. molecular diffusivity of sulfuric acid [m2/s]
@@ -149,6 +149,8 @@ module scale_atmos_phy_ae_kajino13
   real(RP) :: sg_reg = 1.6_RP               ! sg of regenerated aerosol [-]
   integer  :: is0_reg                       ! size bin of regenerated aerosol
   character(len=H_SHORT),allocatable :: ctg_name(:)
+  real(RP), parameter :: cleannumber = 1.e-3 ! tiny number of aerosol per bin for neglectable mass,
+                                             !  D =10 um resulted in 1.e-6 ug/m3
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -410,9 +412,10 @@ contains
           RHOT, &
           EMIT, &
           NREG, &
+          QTRC, &
           CN,   &
           CCN,  &
-          QTRC  )
+          RHOQ_t_AE )
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
@@ -438,9 +441,12 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
     real(RP), intent(in)    :: NREG(KA,IA,JA)
+    real(RP), intent(in)    :: QTRC(KA,IA,JA,QA)
     real(RP), intent(out)   :: CN(KA,IA,JA)
     real(RP), intent(out)   :: CCN(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)
+    real(RP), allocatable   :: QTRC0(:,:,:,:)
+    real(RP), allocatable   :: QTRC1(:,:,:,:)
 
     !--- local
     real(RP) :: pres_ae(KA,IA,JA)
@@ -475,6 +481,17 @@ contains
     integer :: i, j, k, iq, it
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(kajino13)'
+
+    allocate( QTRC0(KA,IA,JA,QA), QTRC1(KA,IA,JA,QA) )
+    do iq = 1, QA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+      QTRC0(k,i,j,iq) = QTRC(k,i,j,iq) ! save
+    enddo
+    enddo
+    enddo
+    enddo
 
     allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
@@ -521,6 +538,35 @@ contains
     enddo
     enddo
 
+  ! tiny number, tiny mass
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+      do ic = 1, n_ctg       !aerosol category
+      do ik = 1, n_kap(ic)   !kappa bin
+      do is0 = 1, n_siz(ic)   !size bin
+        if (QTRC0(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j).lt.cleannumber) then
+          do ia0 = 1, N_ATR
+            QTRC0(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = 0._RP !to save cpu time and avoid underflow
+          enddo !ia0 (1:n_atr      )
+        endif
+      enddo !is (1:n_siz(ic)  )
+      enddo !ik (1:n_kap(ic)  )
+      enddo !ic (1:n_ctg      )
+    enddo
+    enddo
+    enddo
+
+    do iq = 1, QA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+      QTRC1(k,i,j,iq) = QTRC0(k,i,j,iq) ! save
+    enddo
+    enddo
+    enddo
+    enddo
+
     !---- Calculate aerosol processs
     CN(:,:,:) = 0.0_RP
     CCN(:,:,:) = 0.0_RP
@@ -534,7 +580,7 @@ contains
             aerosol_procs(ia_trans2procs(it), &
                           is_trans2procs(it), &
                           ik_trans2procs(it), &
-                          ic_trans2procs(it)) = QTRC(k,i,j,QAES-1+it)*DENS(k,i,j) 
+                          ic_trans2procs(it)) = QTRC1(k,i,j,QAES-1+it)*DENS(k,i,j) 
             emis_procs(ia_trans2procs(it), &
                           is_trans2procs(it), &
                           ik_trans2procs(it), &
@@ -542,7 +588,7 @@ contains
        enddo !it(1:n_trans)
        ! mixing ratio [kg/kg] -> concentration [ug/m3]
        conc_gas(1:GAS_CTG) &
-               = QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG)*DENS(k,i,j)*1.E+9_RP
+               = QTRC1(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG)*DENS(k,i,j)*1.E+9_RP
 
        emis_gas(1:GAS_CTG) = EMIT(k,i,j,QA_AE-GAS_CTG+IG_H2SO4:QA_AE-GAS_CTG+IG_CGAS)
 
@@ -604,14 +650,27 @@ contains
        do ik = 1, n_kap(ic)   !kappa bin
        do is0 = 1, n_siz(ic)   !size bin
        do ia0 = 1, N_ATR       !attributes
-          QTRC(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j)  
+          QTRC1(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j)  
        enddo !ia (1:N_ATR )
        enddo !is (1:n_siz(ic)  )
        enddo !ik (1:n_kap(ic)  )
        enddo !ic (1:n_ctg      )
        !  [ug/m3] -> mixing ratio [kg/kg]
-       QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) &
+       QTRC1(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) &
             = conc_gas(1:GAS_CTG) / DENS(k,i,j)*1.E-9_RP 
+
+       ! tiny number, tiny mass
+       do ic = 1, n_ctg       !aerosol category
+       do ik = 1, n_kap(ic)   !kappa bin
+       do is0 = 1, n_siz(ic)   !size bin
+         if (QTRC1(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j).lt.cleannumber) then
+           do ia0 = 1, N_ATR
+             QTRC1(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = 0._RP !to save cpu time and avoid underflow
+           enddo !ia0 (1:n_atr      )
+         endif
+       enddo !is (1:n_siz(ic)  )
+       enddo !ik (1:n_kap(ic)  )
+       enddo !ic (1:n_ctg      )
 
        ! for history
        total_aerosol_mass(k,i,j,:) = 0.0_RP
@@ -622,9 +681,9 @@ contains
        do ik = 1, n_kap(ic)
        do is0 = 1, n_siz(ic)
            total_aerosol_mass       (k,i,j,ic) = total_aerosol_mass (k,i,j,ic) & 
-                                               + QTRC(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic))
+                                               + QTRC1(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic))
            total_aerosol_number     (k,i,j,ic) = total_aerosol_number     (k,i,j,ic) &
-                                               + QTRC(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))
+                                               + QTRC1(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))
            total_emit_aerosol_mass  (k,i,j,ic) = total_emit_aerosol_mass  (k,i,j,ic) & 
                                                + EMIT(k,i,j,it_procs2trans(ia_ms,is0,ik,ic))
            total_emit_aerosol_number(k,i,j,ic) = total_emit_aerosol_number(k,i,j,ic) &
@@ -655,6 +714,18 @@ contains
     deallocate( aerosol_activ )
     deallocate( emis_procs )
     deallocate( emis_gas )
+
+    do iq = 1, QA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+      RHOQ_t_AE(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC0(k,i,j,iq) ) * DENS(k,i,j) / TIME_DTSEC_ATMOS_PHY_AE
+    enddo
+    enddo
+    enddo
+    enddo
+
+    deallocate( QTRC0, QTRC1 )
 
     return
   end subroutine ATMOS_PHY_AE_kajino13
@@ -700,8 +771,8 @@ contains
     integer             :: is_nuc     ! size bin  for 1nm new particles
     real(RP)            :: c_ratio, t_elaps
     real(RP)            :: chem_gas(GAS_CTG)
-    real(RP), parameter :: cleannumber = 1.e-3 ! tiny number of aerosol per bin for neglectable mass,
-                                               !  D =10 um resulted in 1.e-6 ug/m3
+!   real(RP), parameter :: cleannumber = 1.e-3 ! tiny number of aerosol per bin for neglectable mass,
+!                                              !  D =10 um resulted in 1.e-6 ug/m3
 
     chem_gas(IG_H2SO4) = h2so4dt
     chem_gas(IG_CGAS) = ocgasdt 

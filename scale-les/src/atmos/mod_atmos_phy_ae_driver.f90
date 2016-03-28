@@ -124,7 +124,6 @@ contains
 
     logical, intent(in) :: update_flag
 
-    real(RP) :: QTRC0(KA,IA,JA,QA)
     real(RP) :: CN(KA,IA,JA)
     real(RP) :: NREG(KA,IA,JA)
 
@@ -136,15 +135,6 @@ contains
     if ( update_flag ) then
 
 !OCL XFILL
-       do iq = 1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC0(k,i,j,iq) = QTRC(k,i,j,iq) ! save
-       enddo
-       enddo
-       enddo
-       enddo
 
        CCN(:,:,:) = 0.0_RP ! reset
        CCN_t(:,:,:) = 0.0_RP ! reset
@@ -159,19 +149,10 @@ contains
                           RHOT, & ! [IN]
                           AE_EMIT, & ! [IN]
                           NREG,    & ! [IN]
+                          QTRC, & ! [IN]
                           CN ,  & ! [OUT]
                           CCN,  & ! [OUT]
-                          QTRC0 ) ! [INOUT]
-
-       do iq = 1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          RHOQ_t_AE(k,i,j,iq) = ( QTRC0(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_AE
-       enddo
-       enddo
-       enddo
-       enddo
+                          RHOQ_t_AE ) ! [INOUT]
 
        CCN_t(:,:,:) = CCN(:,:,:) / dt_AE
 
