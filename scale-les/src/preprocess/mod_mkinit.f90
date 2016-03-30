@@ -208,7 +208,6 @@ module mod_mkinit
   real(RP), private, allocatable :: bubble(:,:,:) ! bubble factor (0-1)
 
   real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
-  logical,  private :: flg_bin = .false.
   logical,  private :: flg_intrp = .false.
 
   !-----------------------------------------------------------------------------
@@ -222,7 +221,6 @@ contains
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
-       flg_bin, &
        flg_intrp
 
     integer :: ierr
@@ -404,7 +402,7 @@ contains
       qv_sfc  (:,:,:) = CONST_UNDEF8
       qc_sfc  (:,:,:) = CONST_UNDEF8
 
-      if ( flg_bin ) then
+      if( TRACER_TYPE == 'SUZUKI10' ) then
          if( IO_L ) write(IO_FID_LOG,*) '*** Prepare Size Distribution FUnction (SBM) ***'
          call SBMAERO_setup
       endif
@@ -1844,7 +1842,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on tracerbubble. Check!'
        call PRC_MPIstop
     endif
@@ -1951,7 +1949,7 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on coldbubble. Check!'
        call PRC_MPIstop
     endif
@@ -2025,7 +2023,7 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on lambwave. Check!'
        call PRC_MPIstop
     endif
@@ -2122,7 +2120,7 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on gravitywave. Check!'
        call PRC_MPIstop
     endif
@@ -2247,7 +2245,7 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on khwave. Check!'
        call PRC_MPIstop
     endif
@@ -2428,7 +2426,7 @@ contains
     endif
 #endif
 
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on turbulence. Check!'
        call PRC_MPIstop
     endif
@@ -3185,7 +3183,7 @@ enddo
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3431,7 +3429,7 @@ enddo
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3689,7 +3687,7 @@ enddo
     enddo
 
 !write(*,*)'chk12'
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3907,7 +3905,7 @@ enddo
     enddo
 
     call RANDOM_get(rndm) ! make random
-    if ( flg_bin ) then
+    if( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -4929,6 +4927,7 @@ enddo
     integer :: timelen = 1           ! NUMBER_OF_TSTEPS for nicam data
     integer :: skip_steps
     integer :: ierr
+    logical :: flg_bin 
 
     integer :: k, i, j, iq, n, ns, ne
     !---------------------------------------------------------------------------
@@ -4946,6 +4945,12 @@ enddo
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL)
+
+    if( TRACER_TYPE == 'SUZUKI10' ) then
+       flg_bin = .true.
+    else
+       flg_bin = .false.
+    endif
 
     if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
        write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
