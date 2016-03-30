@@ -675,10 +675,10 @@ contains
        knum  )
     implicit none
 
+    integer,  intent(in)  :: knum
     real(RP), intent(out) :: qsat(knum,IA,JA) !< saturation vapor mass [kg/kg]
     real(RP), intent(in)  :: temp(knum,IA,JA) !< temperature           [K]
     real(RP), intent(in)  :: pres(knum,IA,JA) !< pressure              [Pa]
-    integer,  intent(in)  :: knum
 
     real(RP) :: alpha, psatl, psati
     real(RP) :: psat
