@@ -1,13 +1,20 @@
 TOPDIR = ../..
 include $(TOPDIR)/Mkinclude
 
-all: list doxygen
+all: dox doxygen
 
 
-list:
+dox:
+	$(MAKE) -C ../../scalelib/doc dox
 	ruby $(TOPDIR)/utils/mkdoc.rb .
 
 doxygen:
 	doxygen scaleles.cfg
 
-.PHONY: list doxygen
+clean:
+	rm -rf dox html latex
+
+allclean: clean
+	$(MAKE) -C ../../scalelib/doc clean
+
+.PHONY: dox doxygen clean
