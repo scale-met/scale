@@ -291,6 +291,80 @@ int32_t file_read_data( void       *var,        // (out)
   return SUCCESS_CODE;
 }
 
+int32_t file_get_global_attribute_text( int32_t  fid,   // (in)
+				        char    *key,   // (in)
+				        char    *value, // (out)
+					int32_t  len )  // (in)
+{
+  int ncid;
+  size_t l;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) );
+  if ( len < l+1 ) return ERROR_CODE;
+
+  CHECK_ERROR( nc_get_att_text(ncid, NC_GLOBAL, key, value) );
+  value[l] = '\0';
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_global_attribute_int( int32_t  fid,   // (in)
+				       char    *key,   // (in)
+				       int     *value, // (out)
+				       size_t   len )  // (in)
+{
+  int ncid;
+  size_t l;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) );
+  if ( len < l ) return ERROR_CODE;
+  CHECK_ERROR( nc_get_att_int(ncid, NC_GLOBAL, key, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_global_attribute_float( int32_t  fid,   // (in)
+					 char    *key,   // (in)
+					 float   *value, // (out)
+					 size_t   len )  // (in)
+{
+  int ncid;
+  size_t l;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) );
+  if ( len < l ) return ERROR_CODE;
+  CHECK_ERROR( nc_get_att_float(ncid, NC_GLOBAL, key, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_global_attribute_double( int32_t  fid,   // (in)
+					  char    *key,   // (in)
+					  double  *value, // (out)
+					  size_t   len )  // (in)
+{
+  int ncid;
+  size_t l;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) );
+  if ( len < l ) return ERROR_CODE;
+  CHECK_ERROR( nc_get_att_double(ncid, NC_GLOBAL, key, value) );
+
+  return SUCCESS_CODE;
+}
+
 int32_t file_set_global_attribute_text( int32_t  fid,    // (in)
 				        char    *key,    // (in)
 				        char    *value ) // (in)

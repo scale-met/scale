@@ -238,7 +238,7 @@ contains
 
        do iv = 1, VA
           call FILEIO_write( PROG(:,:,:,iv), basename,               ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
-                             VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE  ) ! [IN]
+                             VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE ) ! [IN]
        end do
 
     endif

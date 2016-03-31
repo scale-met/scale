@@ -69,7 +69,7 @@ module mod_admin_time
   !
   !++ Private parameters & variables
   !
-  integer,  private :: TIME_STARTDATE(6) = (/ 0, 1, 1, 0, 0, 0 /)
+  integer,  private :: TIME_STARTDATE(6) = (/ -999, 1, 1, 0, 0, 0 /)
   real(DP), private :: TIME_STARTMS      = 0.0_DP !< [millisec]
   integer,  private :: TIME_STARTDAY
   real(DP), private :: TIME_STARTSEC
@@ -108,7 +108,10 @@ contains
   !> Setup
   subroutine ADMIN_TIME_setup( &
        setup_TimeIntegration )
+    use gtool_file, only: &
+       FileGetDatainfo
     use scale_process, only: &
+       PRC_myrank,  &
        PRC_MPIstop, &
        PRC_MPItime
     use scale_const, only: &
@@ -119,6 +122,7 @@ contains
        CALENDAR_adjust_daysec,  &
        CALENDAR_combine_daysec, &
        CALENDAR_unit2sec,       &
+       CALENDAR_CFunits2sec,    &
        CALENDAR_date2char
     use scale_time, only: &
        TIME_DTSEC,                 &
@@ -156,6 +160,8 @@ contains
        TIME_DSTEP_WALLCLOCK_CHECK, &
        TIME_OFFSET_YEAR,           &
        TIME_STARTDAYSEC
+    use mod_atmos_vars, only: &
+       RESTART_IN_BASENAME => ATMOS_RESTART_IN_BASENAME
     implicit none
 
     logical, intent(in) :: setup_TimeIntegration
@@ -248,6 +254,11 @@ contains
        TIME_DT_RESUME_UNIT,          &
        TIME_WALLCLOCK_LIMIT,         &
        TIME_WALLCLOCK_SAFE
+
+    integer              :: dateday
+    real(DP)             :: datesec
+    real(DP)             :: cftime
+    character(len=H_MID) :: cfunits
 
     real(DP)          :: TIME_DURATIONSEC
     character(len=27) :: startchardate
@@ -428,9 +439,32 @@ contains
     endif
 
     !--- calculate time
-    TIME_STARTMS      = TIME_STARTMS * 1.E-3_DP
+    if ( TIME_STARTDATE(1) == -999 ) then
+       if ( RESTART_IN_BASENAME /= '' ) then
+          call FileGetDatainfo( &
+               RESTART_IN_BASENAME, & ! [IN]
+               'DENS',              & ! [IN]
+               PRC_myrank,          & ! [IN]
+               0,                   & ! [IN] step
+               time_start = cftime, & ! [OUT]
+               time_units = cfunits ) ! [OUT]
+
+          dateday = 0
+          datesec = CALENDAR_CFunits2sec( cftime, cfunits, 0 )
+          call CALENDAR_adjust_daysec( dateday, datesec )
+          call CALENDAR_daysec2date( TIME_STARTDATE, & ! [OUT]
+                                     TIME_STARTMS,   & ! [OUT]
+                                     dateday,        & ! [IN]
+                                     datesec,        & ! [IN]
+                                     0               ) ! [IN]
+       else
+          TIME_STARTDATE = (/ 0, 1, 1, 0, 0, 0 /)
+          TIME_STARTMS = 0.0_DP
+       end if
+    else
+       TIME_STARTMS      = TIME_STARTMS * 1.E-3_DP
+    end if
     TIME_OFFSET_YEAR  = TIME_STARTDATE(1)
-    TIME_STARTDATE(1) = 0
     call CALENDAR_date2daysec( TIME_STARTDAY,     & ! [OUT]
                                TIME_STARTSEC,     & ! [OUT]
                                TIME_STARTDATE(:), & ! [IN]

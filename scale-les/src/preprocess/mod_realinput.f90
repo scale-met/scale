@@ -1347,8 +1347,7 @@ contains
     use scale_fileio, only: &
        FILEIO_write
     use scale_time, only: &
-       TIME_NOWDATE, &
-       TIME_OFFSET_YEAR
+       TIME_NOWDATE
     implicit none
 
     real(RP),         intent(in)   :: dens(:,:,:,:)
@@ -1374,7 +1373,7 @@ contains
     te = numsteps
 
     nowdate = TIME_NOWDATE
-    nowdate(1) = nowdate(1) + TIME_OFFSET_YEAR
+    nowdate(1) = nowdate(1)
 
     allocate( buffer(KA,IA,JA,te-ts+1) )
 
@@ -2221,8 +2220,7 @@ contains
     use scale_fileio, only: &
          FILEIO_write
     use scale_time, only: &
-         TIME_NOWDATE, &
-         TIME_OFFSET_YEAR
+         TIME_NOWDATE
     implicit none
 
     real(RP),         intent(in)   :: tw(:,:,:)
@@ -2246,7 +2244,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputOcean]/Categ[Boundary]'
 
     nowdate = TIME_NOWDATE
-    nowdate(1) = nowdate(1) + TIME_OFFSET_YEAR
+    nowdate(1) = nowdate(1)
 
     call FILEIO_write( tw(:,:,ts:te), basename, title,              &
                        'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', 'XYT', &

@@ -194,16 +194,16 @@ contains
     gmonth_mod = mod( gmonth-1, 12 ) + 1
     gyear_mod  = gyear + ( gmonth-gmonth_mod ) / 12
 
-    yearday = int( CALENDAR_DOI * gyear_mod )                   &
-            + int( real(gyear_mod+oyear-1,kind=DP) /   4.0_DP ) &
-            - int( real(gyear_mod+oyear-1,kind=DP) / 100.0_DP ) &
-            + int( real(gyear_mod+oyear-1,kind=DP) / 400.0_DP ) &
-            - int( real(          oyear-1,kind=DP) /   4.0_DP ) &
-            + int( real(          oyear-1,kind=DP) / 100.0_DP ) &
-            - int( real(          oyear-1,kind=DP) / 400.0_DP )
+    yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) ) &
+            + int( real(gyear_mod-1,kind=DP) /   4.0_DP ) &
+            - int( real(gyear_mod-1,kind=DP) / 100.0_DP ) &
+            + int( real(gyear_mod-1,kind=DP) / 400.0_DP ) &
+            - int( real(oyear    -1,kind=DP) /   4.0_DP ) &
+            + int( real(oyear    -1,kind=DP) / 100.0_DP ) &
+            - int( real(oyear    -1,kind=DP) / 400.0_DP )
 
     ileap = I_nonleapyear
-    if( checkleap(gyear_mod+oyear) ) ileap = I_leapyear
+    if( checkleap(gyear_mod) ) ileap = I_leapyear
 
     monthday = 0
     do m = 1, gmonth_mod-1
@@ -235,7 +235,7 @@ contains
     integer :: i, ileap
     !---------------------------------------------------------------------------
 
-    gyear = int( real(absday,kind=DP) / 366.0_DP ) ! first guess
+    gyear = int( real(absday,kind=DP) / 366.0_DP ) + oyear ! first guess
     do i = 1, 1000
        call CALENDAR_ymd2absday( checkday, gyear+1, 1, 1, oyear )
        if( absday < checkday ) exit
@@ -243,7 +243,7 @@ contains
     enddo
 
     ileap = I_nonleapyear
-    if( checkleap(gyear+oyear) ) ileap = I_leapyear
+    if( checkleap(gyear) ) ileap = I_leapyear
 
     gmonth = 1
     do i = 1, 1000
@@ -425,7 +425,6 @@ contains
           call PRC_MPIstop
        end if
        read( buf(1:4), *) date(1) ! year
-       date(1) = date(1) - offset_year
        buf = buf(6:)
 
        l = index(buf, "-")
@@ -475,7 +474,11 @@ contains
        sec0 = CALENDAR_combine_daysec( day, sec0 )
     else
        tunit = cfunits
-       sec0 = startdaysec
+       if ( present(startdaysec) ) then
+          sec0 = startdaysec
+       else
+          sec0 = 0.0_DP
+       end if
     end if
 
     call CALENDAR_unit2sec(sec, cftime, tunit)
@@ -501,8 +504,8 @@ contains
     !---------------------------------------------------------------------------
 
     write(chardate,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A2,F6.3)')   &
-                       ymdhms(1)+offset_year,'/',ymdhms(2),'/',ymdhms(3),' ',  &
-                       ymdhms(4)            ,':',ymdhms(5),':',ymdhms(6),' +', &
+                       ymdhms(1),'/',ymdhms(2),'/',ymdhms(3),' ',  &
+                       ymdhms(4),':',ymdhms(5),':',ymdhms(6),' +', &
                        subsec
 
     return
@@ -587,11 +590,11 @@ contains
        m = ymdhms(I_month)
     endif
 
-    mjd_day = int( 365.25_DP * (y+oyear) )                          & ! year
-            + int( (y+oyear)/400.0_DP ) - int( (y+oyear)/100.0_DP ) & ! leap year
-            + int( 30.59_DP * m-2 )                                 & ! month
-            + ymdhms(I_day)                                         & ! day
-            + 678912                                                ! constant
+    mjd_day = int( 365.25_DP * y )                  & ! year
+            + int( y/400.0_DP ) - int( y/100.0_DP ) & ! leap year
+            + int( 30.59_DP * m-2 )                 & ! month
+            + ymdhms(I_day)                         & ! day
+            + 678912                                ! constant
 
     mjd     = real(mjd_day,kind=DP)       & ! day
             + ymdhms(I_hour) /    24.0_DP & ! hour

@@ -1025,7 +1025,7 @@ contains
 
        do iq = 1, QA
           call FILEIO_write( QTRC(:,:,:,iq), basename,                         ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                             AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
+                             AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE     ) ! [IN]
        enddo
 
     endif

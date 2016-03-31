@@ -56,8 +56,7 @@ contains
   !> Setup
   subroutine ATMOS_driver_setup
     use scale_time, only: &
-       TIME_NOWDATE,    &
-       TIME_OFFSET_YEAR
+       TIME_NOWDATE
     use scale_atmos_solarins, only: &
        ATMOS_SOLARINS_setup
     use scale_atmos_refstate, only: &
@@ -90,7 +89,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components ...'
 
     !--- setup solar insolation
-    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1)+TIME_OFFSET_YEAR )
+    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
 
     call PROF_rapstart('ATM_Refstate', 2)
     call ATMOS_REFSTATE_setup

@@ -114,6 +114,74 @@ void file_read_data_( void       *var,       // (out)
   *error = file_read_data( var, dinfo, *precision );
 }
 
+void file_get_global_attribute_text_( int32_t *fid,        // (in)
+				      char    *key,        // (in)
+				      char    *value,      // (out)
+				      int32_t *error,      // (out)
+				      int32_t  key_len,    // (in)
+				      int32_t  value_len ) // (in)
+{
+  char _key[File_HLONG+1];
+  char _value[File_HLONG+1];
+  int32_t len;
+
+  len = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, len);
+
+  *error = file_get_global_attribute_text( *fid, _key, _value, value_len );
+
+  len = value_len > File_HLONG ? File_HLONG : value_len;
+  cstr2fstr(value, _value, len);
+}
+
+void file_get_global_attribute_int_( int32_t *fid,      // (in)
+				     char    *key,      // (in)
+				     int32_t *len,      // (in)
+				     int32_t *value,    // (out)
+				     int32_t *error,    // (out)
+				     int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_global_attribute_int( *fid, _key, value, (size_t)*len );
+}
+
+void file_get_global_attribute_float_( int32_t *fid,      // (in)
+				       char    *key,      // (in)
+				       int32_t *len,      // (in)
+				       float   *value,    // (out)
+				       int32_t *error,    // (out)
+				       int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_global_attribute_float( *fid, _key, value, (size_t)*len );
+}
+
+void file_get_global_attribute_double_( int32_t *fid,      // (in)
+					char    *key,      // (in)
+					int32_t *len,      // (in)
+					double  *value,    // (out)
+					int32_t *error,    // (out)
+					int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_global_attribute_double( *fid, _key, value, (size_t)*len );
+}
+
 void file_set_global_attribute_text_( int32_t *fid,        // (in)
 				      char    *key,        // (in)
 				      char    *value,      // (in)
@@ -157,9 +225,10 @@ void file_set_global_attribute_float_( int32_t *fid,      // (in)
 				       int32_t  key_len ) // (in)
 {
   char _key[File_HLONG+1];
+  int32_t l;
 
-  key_len = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, key_len);
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
 
   *error = file_set_global_attribute_float( *fid, _key, value, (size_t)*len );
 }
@@ -172,9 +241,10 @@ void file_set_global_attribute_double_( int32_t *fid,      // (in)
 					int32_t  key_len ) // (in)
 {
   char _key[File_HLONG+1];
+  int32_t l;
 
-  key_len = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, key_len);
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
 
   *error = file_set_global_attribute_double( *fid, _key, value, (size_t)*len );
 }
