@@ -986,7 +986,7 @@ contains
 #endif
     implicit none
 
-    character(len=15)     :: timelabel
+    character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
 
     integer :: iq

@@ -491,16 +491,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert from gregorian date to absolute day/second
   subroutine CALENDAR_date2char( &
-       chardate,   &
-       ymdhms,     &
-       subsec,     &
-       offset_year )
+       chardate, &
+       ymdhms,   &
+       subsec    )
     implicit none
 
     character(len=27), intent(out) :: chardate    !< formatted date character
     integer,           intent(in)  :: ymdhms(6)   !< date
     real(DP),          intent(in)  :: subsec      !< subsecond
-    integer,           intent(in)  :: offset_year !< offset year
     !---------------------------------------------------------------------------
 
     write(chardate,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A2,F6.3)')   &

@@ -473,8 +473,7 @@ contains
 
     call CALENDAR_date2char( startchardate,     & ! [OUT]
                              TIME_STARTDATE(:), & ! [IN]
-                             TIME_STARTMS,      & ! [IN]
-                             TIME_OFFSET_YEAR   ) ! [IN]
+                             TIME_STARTMS       ) ! [IN]
 
     TIME_STARTDAYSEC  = CALENDAR_combine_daysec( TIME_STARTDAY, TIME_STARTSEC )
 
@@ -503,8 +502,7 @@ contains
 
     call CALENDAR_date2char( endchardate,     & ! [OUT]
                              TIME_ENDDATE(:), & ! [IN]
-                             TIME_ENDMS,      & ! [IN]
-                             TIME_OFFSET_YEAR ) ! [IN]
+                             TIME_ENDMS       ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Date/time setting ***'
@@ -768,8 +766,7 @@ contains
        TIME_DSTEP_ATMOS_PHY_AE, &
        TIME_DSTEP_OCEAN,        &
        TIME_DSTEP_LAND,         &
-       TIME_DSTEP_URBAN,        &
-       TIME_OFFSET_YEAR
+       TIME_DSTEP_URBAN
     implicit none
 
     real(DP)          :: WALLCLOCK_elapse
@@ -863,8 +860,7 @@ contains
 
     call CALENDAR_date2char( nowchardate,     & ! [OUT]
                              TIME_NOWDATE(:), & ! [IN]
-                             TIME_NOWMS,      & ! [IN]
-                             TIME_OFFSET_YEAR ) ! [IN]
+                             TIME_NOWMS       ) ! [IN]
 
 
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then

@@ -1238,8 +1238,7 @@ contains
     boundary_time_offset_year = 0
     call CALENDAR_date2char( boundary_chardate,            & ! [OUT]
                              ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
-                             boundary_time_startms,        & ! [IN]
-                             boundary_time_offset_year     ) ! [IN]
+                             boundary_time_startms         ) ! [IN]
  
     call CALENDAR_date2daysec( boundary_time_startday,       & ! [OUT]
                                boundary_time_startsec,       & ! [OUT]

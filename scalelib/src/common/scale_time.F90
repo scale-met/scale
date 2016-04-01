@@ -89,17 +89,14 @@ contains
        timelabel )
     implicit none
 
-    character(len=15), intent(out) :: timelabel
+    character(len=*), intent(out) :: timelabel
 
     integer :: n
     !---------------------------------------------------------------------------
 
-    timelabel = ''
-    write(timelabel(1:15),'(F15.3)') TIME_NOWDAYSEC
-
-    do n = 1, 15
-       if ( timelabel(n:n) == ' ' ) timelabel(n:n) = '0'
-    enddo
+    ! YYYYMMDDhhmmss.sss
+    write(timelabel,'(I4.4,I2.2,I2.2,A1,I2.2,I2.2,I2.2,A1,I3.3)') &
+         TIME_NOWDATE(1:3), '-', TIME_NOWDATE(4:6), '.', TIME_NOWMS*1000_DP
 
     return
   end subroutine TIME_gettimelabel
