@@ -13,6 +13,8 @@ def usage
   exit
 end
 
+output_dir = "./dox"
+
 docdir = ARGV.shift || usage
 topdir = File.join(docdir, "..")
 srcdir = File.join(topdir, "src")
@@ -67,7 +69,7 @@ def get_data(name, data, vars)
       if idx.to_i.to_s == idx
         return ary[id.to_i] || name
       else
-        if (h = vars[idx]) && h[:type]=="integer"
+        if (h = vars[idx.upcase]) && h[:type]=="integer"
           return ary[h[:val].to_i-1] || name
         end
       end
@@ -90,6 +92,8 @@ files = parse_dir(srcdir)
 files.flatten!.sort!
 
 tree = Hash.new
+nm_params = Hash.new
+history = Hash.new
 files.each do |fname|
 
   mod_f = fname.sub(/#{srcdir}\//,"").sub(/\.[Ff]90\Z/,"")
@@ -150,9 +154,10 @@ files.each do |fname|
           str.gsub!(/\(:[^)]*\)/,'')
           info = str.split(",").map{|c| c.strip.sub(/\A'(.*)'\Z/,'\1')}
           hist[info[1]] = {:unit => info[3], :desc => info[2], :var => info[0]}
-        when /data\s+([^\s]+)\s+\/([^\/]+)\/$/
+        when /data\s+([^\s]+)\s+\/(.+)\/$/
           data[$1] = $2.split(',').map{|s| s.strip.sub(/^'/,"").sub(/'$/,"")}
         end
+
       end # while line
     end # open
   end
@@ -162,28 +167,26 @@ files.each do |fname|
   next if namelists.empty? && hist.empty?
 
   parent = File.dirname(mod_f)
-  system("mkdir -p html/#{parent}")
+  system("mkdir -p #{output_dir}/#{parent}")
 
   tree[parent] ||= Array.new
   tree[parent].push File.basename(mod_f)
 
-  File.open("html/#{mod_f}.html","w") do |file|
+  File.open("#{output_dir}/#{mod_f}.dox","w") do |file|
 
     file.print <<EOL
-<html>
-  <head>
-    <title>#{modname} module</title>
-  </head>
- <body>
-  <h1>#{modname} module</h1>
-  <h2>NAMELIST</h2>
-    <ul>
+!> @par NAMELIST
+!>    <ul>
 EOL
+    if namelists.empty?
+      file.print "!>      <li>No namelist group</li>\n"
+    end
     namelists.each do |group, lists|
       file.print <<EOL
-      <li>#{group}</li>
-      <table border=1>
-        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+!>      <li id="#{group}">#{group}</li>
+!> @anchor namelist_#{modname}_#{group}
+!>      <table border=1>
+!>        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
 EOL
       lists.each do |v|
         unless info = vars[v]
@@ -195,72 +198,91 @@ EOL
             end
           end
           unless info
-            require "pp"
             pp vars
             raise "parse error: #{group} #{v}"
           end
         end
+        nm_params[v] ||= Array.new
+        nm_params[v].push [modname, group]
         file.print <<EOL
-        <tr>
-          <td>#{v}</td>
-          <td>#{info[:type]}</td>
-          <td>#{info[:val]}</td>
-          <td>#{info[:comments].join('<br />')}</td>
-        </tr>
+!>        <tr>
+!>          <td>#{v}</td>
+!>          <td>#{info[:type]}</td>
+!>          <td>#{info[:val]}</td>
+!>          <td>#{info[:comments].join('<br />')}</td>
+!>        </tr>
 EOL
       end
-      file.print "      </table>\n"
+      file.print "!>      </table><br>\n"
     end
 
     file.print <<EOL
-    </ul>
-
-  <h2>History</h2>
-    <table border=1>
-      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+!>    </ul>
+!
+!> @anchor history_#{modname}
+!> @par History Output
+EOL
+    if hist.empty?
+      file.print "!> No history output\n"
+    else
+      file.print <<EOL
+!>    <table border=1>
+!>      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
 EOL
 
     hist.sort.each do |name, info|
+      name = get_data(name,data,vars)
+      history[name] ||= Array.new
+      history[name].push modname
       file.print <<EOL
-      <tr>
-        <td>#{get_data(name,data,vars)}</td>
-        <td>#{get_data(info[:desc],data,vars)}</td>
-        <td>#{get_data(info[:unit],data,vars)}</td>
-        <td>#{get_data(info[:var],data,vars)}</td>
-      </tr>
+!>      <tr>
+!>        <td id="#{name}">#{name}</td>
+!>        <td>#{get_data(info[:desc],data,vars)}</td>
+!>        <td>#{get_data(info[:unit],data,vars)}</td>
+!>        <td>#{get_data(info[:var],data,vars)}</td>
+!>      </tr>
 EOL
     end
     file.print <<EOL
-    </table>
-  </body>
-</html>
+!>    </table>
+EOL
+    end
+    file.print <<EOL
+module #{modname}
+end module
 EOL
   end
 end
 
 
-system("mkdir -p html")
-File.open("html/index.html","w") do |file|
+system("mkdir -p #{output_dir}")
+File.open("#{output_dir}/namelist.dox","w") do |file|
   file.print <<EOL
-<html>
-  <head>
-    <title>SCALE Document Index</title>
-  </head>
-  <body>
-    <h1>SCALE Document Index</h1>
-    <ul>
+!> @page namelist NAMELIST Parameters
+!> <ul>
 EOL
-  tree.each.sort.each do |parent, mods|
-    file.print "      <li>#{parent}</li>\n"
-    file.print "      <ul>\n"
-    mods.each do |mod|
-      file.print "        <li><a href=\"./#{parent}/#{mod}.html\">#{mod}</a></li>\n"
+  nm_params.sort.each do |name,ary|
+    list = ary.map do |mod, group|
+      file.print "!>    <li>#{name} in #{group}: @ref namelist_#{mod}_#{group} \"#{mod}\"\n"
     end
-    file.print "      </ul>\n"
   end
   file.print <<EOL
-    </ul>
-  </body>
-</html>
+!>    </ul>
+EOL
+end
+
+File.open("#{output_dir}/history.dox","w") do |file|
+  file.print <<EOL
+!> @page history History Variables
+!> <ul>
+EOL
+  history.sort.each do |name,list|
+    list = list.map{|mod|
+      "@ref history_#{mod} \"#{mod}\""
+    }
+    file.print "!>    <li>#{name}: #{list.join(", ")}</li>\n"
+  end
+  file.print <<EOL
+!>    </ul>
 EOL
 end

@@ -1,0 +1,22 @@
+!> @mainpage
+!>
+!> \section intro What's SCALE
+!> SCALE (Scalable Computing for Advanced Library and Environment), which stands for Scalable Computing for Advanced Library and Environment, is a basic library for weather and climate model of the earth and planets aimed to be widely used in various models.
+!> The SCALE library is developed with co-design by researchers of computational science and computer science.
+!>
+!> \section list Reference manual
+!> - <a href="namespaces.html">Module List</a>
+!> - <a href="files.html">File List</a>
+!> 
+!> \section config Configuration List
+!> - @ref namelist
+!> - @ref history
+!>
+!> \section link Links
+!> - <a href="http://scale.aics.riken.jp/">SCALE Web Page</a>
+!> - <a href="http://scale.aics.riken.jp/doc/scale_users_guide.v1.1.0.pdf">User's Guide</a>
+!> - <a href="http://scale.aics.riken.jp/doc/scale_les_description.pdf">Model description</a>
+!>
+!> \section references References
+!> - <a href="http://www.geosci-model-dev.net/8/3393/2015/">Nishizawa et al. (2015) GMD</a>
+!> - <a href="http://progearthplanetsci.springeropen.com/articles/10.1186/s40645-015-0053-6">Sato et al. (2015) PEPS</a>
