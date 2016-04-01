@@ -591,7 +591,9 @@ contains
        desc,     &
        unit,     &
        axistype, &
-       datatype,  &
+       datatype, &
+       date,     &
+       subsec,   &
        append    )
     use gtool_file_h, only: &
        File_REAL8, &
@@ -599,6 +601,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
+       FileSetGlobalAttribute, &
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
@@ -607,7 +610,9 @@ contains
     use scale_les_process, only: &
        PRC_2Drank
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       NOWDATE => TIME_NOWDATE, &
+       NOWMS   => TIME_NOWMS,   &
+       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),         intent(in)  :: var(:)   !< value of the variable
@@ -619,6 +624,8 @@ contains
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
 
+    integer, optional, intent(in) :: date(6)    !< ymdhms of the time
+    real(DP),optional, intent(in) :: subsec     !< subsec of the time
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
 
     integer               :: dtype
@@ -629,6 +636,7 @@ contains
     integer :: rankidx(2)
     logical :: fileexisted
     integer :: fid, vid
+    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -664,6 +672,17 @@ contains
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype ) ! [IN]
+       if ( present( subsec ) ) then
+          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
+       else
+          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
+       end if
+       if ( present( date ) ) then
+          call getCFtunits(tunits, date)
+       else
+          call getCFtunits(tunits, NOWDATE)
+       end if
+       call FileSetGlobalAttribute( fid, "time_units", tunits )
     endif
 
     if ( axistype == 'Z' ) then
@@ -711,6 +730,8 @@ contains
        unit,     &
        axistype, &
        datatype, &
+       date,     &
+       subsec,   &
        append,   &
        nohalo,   &
        nozcoord  )
@@ -722,6 +743,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
+       FileSetGlobalAttribute, &
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
@@ -730,7 +752,9 @@ contains
     use scale_les_process, only: &
        PRC_2Drank
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       NOWDATE => TIME_NOWDATE, &
+       NOWMS   => TIME_NOWMS,   &
+       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),         intent(in)  :: var(:,:) !< value of the variable
@@ -741,6 +765,8 @@ contains
     character(len=*), intent(in)  :: unit     !< unit        of the variable
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
+    integer, optional, intent(in) :: date(6)    !< ymdhms of the time
+    real(DP),optional, intent(in) :: subsec     !< subsec of the time
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
     logical, optional, intent(in) :: nohalo   !< switch whether include halo data or not (default=false)
     logical, optional, intent(in) :: nozcoord !< switch whether include zcoordinate or not (default=false)
@@ -758,6 +784,7 @@ contains
     integer :: fid, vid
     integer :: i, j
     logical :: nohalo_
+    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -841,6 +868,17 @@ contains
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype, nozcoord ) ! [IN]
+       if ( present( subsec ) ) then
+          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
+       else
+          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
+       end if
+       if ( present( date ) ) then
+          call getCFtunits(tunits, date)
+       else
+          call getCFtunits(tunits, NOWDATE)
+       end if
+       call FileSetGlobalAttribute( fid, "time_units", tunits )
     endif
 
     varhalo(:,:) = var(:,:)
@@ -897,6 +935,8 @@ contains
        unit,     &
        axistype, &
        datatype, &
+       date,     &
+       subsec,   &
        append,   &
        nohalo    )
     use gtool_file, only: &
@@ -907,6 +947,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
+       FileSetGlobalAttribute, &
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
@@ -915,7 +956,9 @@ contains
     use scale_les_process, only: &
        PRC_2Drank
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       NOWDATE => TIME_NOWDATE, &
+       NOWMS   => TIME_NOWMS,   &
+       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
@@ -926,6 +969,8 @@ contains
     character(len=*),  intent(in)  :: unit       !< unit        of the variable
     character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
     character(len=*),  intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
+    integer, optional, intent(in)  :: date(6)    !< ymdhms of the time
+    real(DP),optional, intent(in)  :: subsec     !< subsec of the time
     logical, optional, intent(in)  :: append     !< append existing (closed) file?
     logical, optional, intent(in)  :: nohalo     !< include halo data?
 
@@ -945,6 +990,7 @@ contains
     integer :: fid, vid
     integer :: i, j, k
     logical :: nohalo_
+    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -975,19 +1021,30 @@ contains
        append_sw = append
     endif
 
-    call FileCreate( fid,               & ! [OUT]
-                     fileexisted,       & ! [OUT]
-                     basename,          & ! [IN]
-                     title,             & ! [IN]
-                     H_SOURCE,          & ! [IN]
-                     H_INSTITUTE,       & ! [IN]
-                     PRC_masterrank,    & ! [IN]
-                     PRC_myrank,        & ! [IN]
-                     rankidx,           & ! [IN]
-                     append = append_sw ) ! [IN]
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     append = append_sw   ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype ) ! [IN]
+       if ( present( subsec ) ) then
+          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
+       else
+          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
+       end if
+       if ( present( date ) ) then
+          call getCFtunits(tunits, date)
+       else
+          call getCFtunits(tunits, NOWDATE)
+       end if
+       call FileSetGlobalAttribute( fid, "time_units", tunits )
     endif
 
     if ( axistype == 'ZXY' ) then
@@ -1425,7 +1482,7 @@ contains
        append_sw = append
     endif
 
-    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', tsince
+    call getCFtunits(tunits, tsince)
 
     call FileCreate( fid,                 & ! [OUT]
                      fileexisted,         & ! [OUT]
@@ -1555,6 +1612,17 @@ contains
 
     return
   end subroutine FILEIO_write_4D
+
+  ! private
+
+  subroutine getCFtunits(tunits, date)
+    character(len=34), intent(out) :: tunits
+    integer,           intent(in)  :: date(6)
+
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
+
+    return
+  end subroutine getCFtunits
 
 end module scale_fileio
 !-------------------------------------------------------------------------------

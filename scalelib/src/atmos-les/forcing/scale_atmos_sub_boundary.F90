@@ -1219,7 +1219,6 @@ contains
        CALENDAR_combine_daysec, &
        CALENDAR_date2char
     use scale_time, only: &
-       TIME_OFFSET_YEAR, &
        TIME_NOWDATE
     implicit none
 
@@ -1232,7 +1231,6 @@ contains
 
     if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
        ATMOS_BOUNDARY_START_DATE = TIME_NOWDATE
-       ATMOS_BOUNDARY_START_DATE(1) = TIME_OFFSET_YEAR
     end if
 
     !--- calculate time of the initial step in boundary file [no offset]
@@ -1240,8 +1238,7 @@ contains
     boundary_time_offset_year = 0
     call CALENDAR_date2char( boundary_chardate,            & ! [OUT]
                              ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
-                             boundary_time_startms,        & ! [IN]
-                             boundary_time_offset_year     ) ! [IN]
+                             boundary_time_startms         ) ! [IN]
  
     call CALENDAR_date2daysec( boundary_time_startday,       & ! [OUT]
                                boundary_time_startsec,       & ! [OUT]
@@ -1265,7 +1262,6 @@ contains
        PRC_MPIstop
     use scale_time, only: &
        TIME_NOWDATE,      &
-       TIME_OFFSET_YEAR,  &
        TIME_DTSEC
     use scale_calendar, only: &
        CALENDAR_date2daysec,    &
@@ -1299,7 +1295,6 @@ contains
 
     !--- recalculate time of the run [no offset]
     run_time_startdate(:) = TIME_NOWDATE(:)
-    run_time_startdate(1) = TIME_OFFSET_YEAR
     run_time_startms      = 0.0_DP
     run_time_offset_year  = 0
 

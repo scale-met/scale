@@ -73,6 +73,26 @@ extern int32_t file_read_data( void       *var,        // (out)
 			       datainfo_t *dinfo,      // (in)
 			       int32_t     precision); // (in)
 
+extern int32_t file_get_global_attribute_text( int32_t  fid,   // (in)
+					       char    *key,   // (in)
+					       char    *value, // (out)
+					       int32_t  len);  // (in)
+
+extern int32_t file_get_global_attribute_int( int32_t  fid,   // (in)
+					      char    *key,   // (in)
+					      int32_t *value, // (out)
+					      size_t   len);  // (in)
+
+extern int32_t file_get_global_attribute_float( int32_t  fid,   // (in)
+						char    *key,   // (in)
+						float   *value, // (out)
+						size_t   len);  // (in)
+
+extern int32_t file_get_global_attribute_double( int32_t  fid,   // (in)
+						 char    *key,   // (in)
+						 double  *value, // (out)
+						 size_t   len);  // (in)
+
 extern int32_t file_set_global_attribute_text( int32_t  fid,    // (in)
 					       char    *key,    // (in)
 					       char    *value); // (in)

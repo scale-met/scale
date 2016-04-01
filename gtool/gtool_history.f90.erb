@@ -226,7 +226,6 @@ contains
          HISTORY_SOURCE,            &
          HISTORY_INSTITUTION,       &
          HISTORY_TIME_UNITS,        &
-         HISTORY_TIME_SINCE,        &
          HISTORY_DEFAULT_BASENAME,  &
          HISTORY_DEFAULT_TINTERVAL, &
          HISTORY_DEFAULT_TUNIT,     &
@@ -488,19 +487,19 @@ contains
 
     if ( id < 0 ) then ! request-register matching check
 
+       ! new file registration
+       if ( HISTORY_TIME_SINCE == '' ) then
+          tunits = HISTORY_TIME_UNITS
+       else
+          tunits = trim(HISTORY_TIME_UNITS)//' since '//trim(HISTORY_TIME_SINCE)
+       endif
+
        do n = 1, History_req_nmax
           if ( varname == History_req_item(n) ) then
              reqid = n
              if( History_req_basename(reqid) == '' ) exit
              History_id_count = History_id_count + 1
              id = History_id_count
-
-             ! new file registration
-             if ( HISTORY_TIME_SINCE == '' ) then
-                tunits = HISTORY_TIME_UNITS
-             else
-                tunits = trim(HISTORY_TIME_UNITS)//' since '//trim(HISTORY_TIME_SINCE)
-             endif
 
              call FileCreate( History_fid(id),                   & ! (out)
                               fileexisted,                       & ! (out)
@@ -944,12 +943,12 @@ contains
        endif
     endif
 
-    time_str = HISTORY_STARTDAYSEC + real(History_tstrstep(itemid)-1,kind=DP) * HISTORY_DTSEC
-    time_end = HISTORY_STARTDAYSEC + real(step_now-1                ,kind=DP) * HISTORY_DTSEC
+    sec_str = HISTORY_STARTDAYSEC + real(History_tstrstep(itemid)-1,kind=DP) * HISTORY_DTSEC
+    sec_end = HISTORY_STARTDAYSEC + real(step_now-1                ,kind=DP) * HISTORY_DTSEC
 
     ! convert time units
-    call CalendarSec2ymdhms( sec_str, time_str, HISTORY_TIME_UNITS )
-    call CalendarSec2ymdhms( sec_end, time_end, HISTORY_TIME_UNITS )
+    call CalendarSec2ymdhms( time_str, sec_str, HISTORY_TIME_UNITS )
+    call CalendarSec2ymdhms( time_end, sec_end, HISTORY_TIME_UNITS )
 
     if ( sec_end .ge.  History_tstart(itemid) ) then
        if ( sec_end_last < sec_end ) then
@@ -959,8 +958,8 @@ contains
 
        call FileWrite( History_vid   (itemid),         & ! id
                        History_varsum(1:isize,itemid), & ! data
-                       sec_str,                        & ! start time
-                       sec_end                         ) ! end   time
+                       time_str,                       & ! start time
+                       time_end                        ) ! end   time
     else
        if ( sec_end_last < sec_end ) then
           write(message,'(A,2F15.3)') '*** Output History: Suppressed ', sec_end, History_tstart(itemid)

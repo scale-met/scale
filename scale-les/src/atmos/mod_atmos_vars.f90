@@ -986,7 +986,7 @@ contains
 #endif
     implicit none
 
-    character(len=15)     :: timelabel
+    character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
 
     integer :: iq
@@ -1025,7 +1025,7 @@ contains
 
        do iq = 1, QA
           call FILEIO_write( QTRC(:,:,:,iq), basename,                         ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                             AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
+                             AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE     ) ! [IN]
        enddo
 
     endif

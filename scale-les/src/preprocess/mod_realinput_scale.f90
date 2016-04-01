@@ -416,6 +416,8 @@ contains
       it                  )
     use gtool_file, only: &
          FileRead
+    use scale_const, only: &
+         D2R => CONST_D2R
     implicit none
 
     real(RP), intent(out) :: tg_org(:,:,:)
@@ -467,6 +469,12 @@ contains
              strg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
           end do
        endif
+
+       call FileRead( read2D(:,:),   BASENAME_land, "lon",        1, rank )
+       llon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
+
+       call FileRead( read2D(:,:),   BASENAME_land, "lat",        1, rank )
+       llat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
        call FileRead( read2D(:,:), BASENAME_land, "LAND_SFC_TEMP",  it, rank )
        lst_org(xs:xe,ys:ye) = read2D(:,:)

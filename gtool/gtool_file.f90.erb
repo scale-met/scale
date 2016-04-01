@@ -43,9 +43,12 @@ module gtool_file
   public :: FileAddVariable
   public :: FileSetTAttr
   public :: FileGetShape
+  public :: FileGetDatainfo
   public :: FileGetAllDatainfo
   public :: FileRead
   public :: FileWrite
+  public :: FileGetGlobalAttribute
+  public :: FileSetGlobalAttribute
   public :: FileClose
   public :: FileCloseAll
   public :: FileMakeFname
@@ -80,6 +83,12 @@ module gtool_file
 %   end
 % end
   end interface FileWrite
+  interface FileGetGlobalAttribute
+     module procedure FileGetGlobalAttributeText
+     module procedure FileGetGlobalAttributeInt
+     module procedure FileGetGlobalAttributeFloat
+     module procedure FileGetGlobalAttributeDouble
+  end interface FileGetGlobalAttribute
   interface FileSetGlobalAttribute
      module procedure FileSetGlobalAttributeText
      module procedure FileSetGlobalAttributeInt
@@ -204,6 +213,81 @@ contains
 
     return
   end subroutine FileCreate
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetGlobalAttributeText( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (out)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    character(LEN=*), intent(out) :: val
+
+    integer error
+
+    intrinsic size
+
+    call file_get_global_attribute_text( & ! (in)
+         fid, key,                       & ! (in)
+         val, error                      ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get text global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetGlobalAttributeText
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetGlobalAttributeInt( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (out)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    integer,          intent(out) :: val(:)
+
+    integer error
+
+    intrinsic size
+
+    call file_get_global_attribute_int( & ! (in)
+         fid, key, size(val),           & ! (in)
+         val, error                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get integer global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetGlobalAttributeInt
+
+% [["SP","Float"], ["DP","Double"]].each do |rp,name|
+  !-----------------------------------------------------------------------------
+  subroutine FileGetGlobalAttribute<%=name%>( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (out)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    real(<%=rp%>),          intent(out) :: val(:)
+
+    integer error
+
+    intrinsic size
+
+    call file_get_global_attribute_<%=name.downcase%>( & ! (in)
+         fid, key, size(val),            & ! (in)
+         val, error                      ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get <%=name.downcase%> global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetGlobalAttribute<%=name%>
+
+% end
 
   !-----------------------------------------------------------------------------
   subroutine FileSetGlobalAttributeText( &
@@ -584,6 +668,121 @@ contains
 
     return
   end subroutine FileGetShape
+
+  !-----------------------------------------------------------------------------
+  ! FileGetData
+  !-----------------------------------------------------------------------------
+  subroutine FileGetDatainfo( &
+      basename,    &
+      varname,     &
+      myrank,      &
+      istep,       &
+      single,      &
+      description, &
+      units,       &
+      datatype,    &
+      dim_rank,    &
+      dim_name,    &
+      dim_size,    &
+      time_start,  &
+      time_end,    &
+      time_units   )
+    implicit none
+    character(len=*),           intent(in)  :: basename
+    character(len=*),           intent(in)  :: varname
+    integer,                    intent(in)  :: myrank
+    integer,                    intent(in)  :: istep
+    logical,                    intent(in), optional :: single
+
+    character(len=File_HMID),   intent(out), optional :: description
+    character(len=File_HSHORT), intent(out), optional :: units
+    integer,                    intent(out), optional :: datatype
+    integer,                    intent(out), optional :: dim_rank
+    character(len=File_HSHORT), intent(out), optional :: dim_name(:)
+    integer,                    intent(out), optional :: dim_size(:)
+    real(DP),                   intent(out), optional :: time_start
+    real(DP),                   intent(out), optional :: time_end
+    character(len=File_HMID),   intent(out), optional :: time_units
+
+    integer        :: fid
+    type(datainfo) :: dinfo
+
+    integer :: ndim, idim
+    real(DP):: time(1)
+
+    integer :: error
+    logical :: single_ = .false.
+
+    intrinsic size
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    if ( present(single) ) single_ = single
+
+    !--- search/register file
+    call FileOpen( fid,        & ! [OUT]
+                   basename,   & ! [IN]
+                   File_FREAD, & ! [IN]
+                   single_     ) ! [IN]
+
+    !--- get data information
+    call file_get_datainfo( dinfo,   & ! [OUT]
+                            fid,     & ! [IN]
+                            varname, & ! [IN]
+                            istep,   & ! [IN]
+                            .false., & ! [IN]
+                            error    ) ! [OUT]
+
+    !--- verify and exit
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx data info not found in '//trim(basename))
+    endif
+
+    if ( present(description) ) description = dinfo%description
+    if ( present(units)       ) units       = dinfo%units
+    if ( present(datatype)    ) datatype    = dinfo%datatype
+    if ( present(dim_rank)    ) dim_rank    = dinfo%rank
+
+    if ( present(dim_name) ) then
+       ndim = min( dinfo%rank, size(dim_name) ) ! limit dimension rank
+       do idim = 1, ndim
+          dim_name(idim) = dinfo%dim_name(idim)
+       enddo
+    end if
+    if ( present(dim_size) ) then
+       ndim = min( dinfo%rank, size(dim_size) ) ! limit dimension rank
+       do idim = 1, ndim
+          dim_size(idim) = dinfo%dim_size(idim)
+       enddo
+    end if
+
+    if ( present(time_units)  ) then
+       if ( dinfo%time_units == "" ) then
+          call FileGetGlobalAttribute( fid, "time_units", time_units )
+       else
+          time_units  = dinfo%time_units
+       end if
+    end if
+    if ( present(time_start)  ) then
+       if ( dinfo%time_units == "" ) then
+          call FileGetGlobalAttribute( fid, "time", time )
+          time_start = time(1)
+       else
+          time_start  = dinfo%time_start
+       end if
+    end if
+    if ( present(time_end)  ) then
+       if ( dinfo%time_units == "" ) then
+          call FileGetGlobalAttribute( fid, "time", time )
+          time_end = time(1)
+       else
+          time_end  = dinfo%time_end
+       end if
+    end if
+
+    return
+  end subroutine FileGetDatainfo
 
   !-----------------------------------------------------------------------------
   ! FileGetData
