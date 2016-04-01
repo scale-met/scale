@@ -39,7 +39,7 @@ $(BUILD_DIR)/mod_ocean_driver.o: ocean/mod_ocean_driver.f90 $(DEPENDLIB) $(BUILD
 $(BUILD_DIR)/mod_ocean_phy_driver.o: ocean/mod_ocean_phy_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_admin_restart.o $(BUILD_DIR)/mod_ocean_admin.o $(BUILD_DIR)/mod_ocean_vars.o
 $(BUILD_DIR)/mod_ocean_vars.o: ocean/mod_ocean_vars.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_ocean_admin.o
 $(BUILD_DIR)/mod_pp_driver.o: admin/mod_pp_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_admin_restart.o $(BUILD_DIR)/mod_admin_time.o $(BUILD_DIR)/mod_atmos_vars.o $(BUILD_DIR)/mod_convert.o $(BUILD_DIR)/mod_cpl_vars.o $(BUILD_DIR)/mod_land_vars.o $(BUILD_DIR)/mod_ocean_vars.o
-$(BUILD_DIR)/mod_realinput.o: preprocess/mod_realinput.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_phy_sf_vars.o $(BUILD_DIR)/mod_land_vars.o $(BUILD_DIR)/mod_ocean_vars.o $(BUILD_DIR)/mod_realinput_grads.o $(BUILD_DIR)/mod_realinput_nicam.o $(BUILD_DIR)/mod_realinput_scale.o $(BUILD_DIR)/mod_realinput_wrfarw.o $(BUILD_DIR)/mod_urban_vars.o
+$(BUILD_DIR)/mod_realinput.o: preprocess/mod_realinput.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_phy_sf_vars.o $(BUILD_DIR)/mod_atmos_vars.o $(BUILD_DIR)/mod_land_vars.o $(BUILD_DIR)/mod_ocean_vars.o $(BUILD_DIR)/mod_realinput_grads.o $(BUILD_DIR)/mod_realinput_nicam.o $(BUILD_DIR)/mod_realinput_scale.o $(BUILD_DIR)/mod_realinput_wrfarw.o $(BUILD_DIR)/mod_urban_vars.o
 $(BUILD_DIR)/mod_realinput_grads.o: preprocess/mod_realinput_grads.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_realinput_nicam.o: preprocess/mod_realinput_nicam.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_realinput_scale.o: preprocess/mod_realinput_scale.f90 $(DEPENDLIB)

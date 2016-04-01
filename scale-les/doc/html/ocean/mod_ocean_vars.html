@@ -1,0 +1,134 @@
+<html>
+  <head>
+    <title>mod_ocean_vars module</title>
+  </head>
+ <body>
+  <h1>mod_ocean_vars module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_OCEAN_VARS</li>
+      <table border=1>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>OCEAN_RESTART_IN_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td>basename of the input file</td>
+        </tr>
+        <tr>
+          <td>OCEAN_RESTART_OUTPUT</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>output restart file?</td>
+        </tr>
+        <tr>
+          <td>OCEAN_RESTART_OUT_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td>basename of the output file</td>
+        </tr>
+        <tr>
+          <td>OCEAN_RESTART_OUT_TITLE</td>
+          <td>character(len=H_MID)</td>
+          <td>'OCEAN restart'</td>
+          <td>title    of the output file</td>
+        </tr>
+        <tr>
+          <td>OCEAN_VARS_CHECKRANGE</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table border=1>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+      <tr>
+        <td>OCEAN_ALB_LW</td>
+        <td>ocean surface albedo (longwave)</td>
+        <td>VAR_UNIT(I_ALB_LW)</td>
+        <td>OCEAN_SFC_albedo</td>
+      </tr>
+      <tr>
+        <td>OCEAN_ALB_SW</td>
+        <td>ocean surface albedo (shortwave)</td>
+        <td>VAR_UNIT(I_ALB_SW)</td>
+        <td>OCEAN_SFC_albedo</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFC_TEMP</td>
+        <td>ocean surface skin temperature</td>
+        <td>VAR_UNIT(I_SFC_TEMP)</td>
+        <td>OCEAN_SFC_TEMP</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFC_Z0E</td>
+        <td>ocean surface roughness length (vapor)</td>
+        <td>VAR_UNIT(I_SFC_Z0E)</td>
+        <td>OCEAN_SFC_Z0E</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFC_Z0H</td>
+        <td>ocean surface roughness length (heat)</td>
+        <td>VAR_UNIT(I_SFC_Z0H)</td>
+        <td>OCEAN_SFC_Z0H</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFC_Z0M</td>
+        <td>ocean surface roughness length (momentum)</td>
+        <td>VAR_UNIT(I_SFC_Z0M)</td>
+        <td>OCEAN_SFC_Z0M</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFLX_LH</td>
+        <td>ocean surface latent heat flux</td>
+        <td>VAR_UNIT(I_SFLX_LH)</td>
+        <td>OCEAN_SFLX_LH</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFLX_MU</td>
+        <td>ocean surface u-momentum flux</td>
+        <td>VAR_UNIT(I_SFLX_MU)</td>
+        <td>OCEAN_SFLX_MU</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFLX_MV</td>
+        <td>ocean surface v-momentum flux</td>
+        <td>VAR_UNIT(I_SFLX_MV)</td>
+        <td>OCEAN_SFLX_MV</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFLX_MW</td>
+        <td>ocean surface w-momentum flux</td>
+        <td>VAR_UNIT(I_SFLX_MW)</td>
+        <td>OCEAN_SFLX_MW</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFLX_SH</td>
+        <td>ocean surface sensible heat flux</td>
+        <td>VAR_UNIT(I_SFLX_SH)</td>
+        <td>OCEAN_SFLX_SH</td>
+      </tr>
+      <tr>
+        <td>OCEAN_SFLX_WH</td>
+        <td>ocean surface water heat flux</td>
+        <td>VAR_UNIT(I_SFLX_WH)</td>
+        <td>OCEAN_SFLX_WH</td>
+      </tr>
+      <tr>
+        <td>VAR_NAME(I_SFLX_evap)</td>
+        <td>VAR_DESC(I_SFLX_evap)</td>
+        <td>VAR_UNIT(I_SFLX_evap)</td>
+        <td>OCEAN_SFLX_evap</td>
+      </tr>
+      <tr>
+        <td>OCEAN_TEMP</td>
+        <td>temperature at uppermost ocean layer</td>
+        <td>VAR_UNIT(I_TEMP)</td>
+        <td>OCEAN_TEMP</td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -4,11 +4,15 @@
 #define RMISS -9.9999e+30
 #define TEPS 1e-6
 
+static int32_t ERROR_SUPPRESS = 0;
+
 #define CHECK_ERROR(status)					\
   {								\
     if (status != NC_NOERR) {					\
-      fprintf(stderr, "Error: at l%d in %s\n", __LINE__, __FILE__);	\
-      fprintf(stderr, "       %s\n", nc_strerror(status));	\
+      if ( ! ERROR_SUPPRESS ) {                                 \
+        fprintf(stderr, "Error: at l%d in %s\n", __LINE__, __FILE__);	\
+        fprintf(stderr, "       %s\n", nc_strerror(status));	\
+      }                                                         \
       return ERROR_CODE;					\
     }								\
   }
@@ -158,7 +162,8 @@ int32_t file_set_option( int32_t fid,    // (in)
 int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
 			   int32_t     fid,     // (in)
 			   char*       varname, // (in)
-			   int32_t     step)    // (in)
+			   int32_t     step,    // (in)
+			   int32_t     suppress)// (in)
 {
   int ncid, varid;
   nc_type xtype;
@@ -168,6 +173,8 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   size_t size;
   size_t idx[2];
   int i, n;
+
+  ERROR_SUPPRESS = suppress;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -225,8 +232,12 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_ERROR( nc_inq_varid(ncid, name, &varid) );
     idx[1] = 0;
     CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) );
+    // units
+    CHECK_ERROR( nc_get_att_text(ncid, varid, "units", dinfo->time_units) );
   } else {
   }
+
+  ERROR_SUPPRESS = 0;
 
   return SUCCESS_CODE;
 }

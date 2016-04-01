@@ -1,0 +1,268 @@
+<html>
+  <head>
+    <title>mod_realinput module</title>
+  </head>
+ <body>
+  <h1>mod_realinput module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_MKINIT_REAL_ATMOS</li>
+      <table border=1>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>NUMBER_OF_FILES</td>
+          <td>integer</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>NUMBER_OF_TSTEPS</td>
+          <td>integer</td>
+          <td>1</td>
+          <td>num of time steps in one file</td>
+        </tr>
+        <tr>
+          <td>NUMBER_OF_SKIP_TSTEPS</td>
+          <td>integer</td>
+          <td>0</td>
+          <td>num of skipped first several data</td>
+        </tr>
+        <tr>
+          <td>FILETYPE_ORG</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BASENAME_ORG</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BASENAME_ADD_NUM</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BASENAME_BOUNDARY</td>
+          <td>character(len=H_LONG)</td>
+          <td>'boundary_atmos'</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BOUNDARY_TITLE</td>
+          <td>character(len=H_LONG)</td>
+          <td>'SCALE-LES BOUNDARY CONDITION for REAL CASE'</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BOUNDARY_UPDATE_DT</td>
+          <td>real(RP)</td>
+          <td>0.0_RP</td>
+          <td>inteval time of boudary data update [s]</td>
+        </tr>
+        <tr>
+          <td>PARENT_MP_TYPE</td>
+          <td>integer</td>
+          <td>6</td>
+          <td>microphysics type of the parent model (number of classes)</td>
+        </tr>
+        <tr>
+          <td>SERIAL_PROC_READ</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td>read by one MPI process and broadcast</td>
+        </tr>
+        <tr>
+          <td>USE_FILE_DENSITY</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>use density data from files</td>
+        </tr>
+      </table>
+      <li>PARAM_MKINIT_REAL_LAND</li>
+      <table border=1>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>NUMBER_OF_FILES</td>
+          <td>integer</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>NUMBER_OF_TSTEPS</td>
+          <td>integer</td>
+          <td>1</td>
+          <td>num of time steps in one file</td>
+        </tr>
+        <tr>
+          <td>NUMBER_OF_SKIP_TSTEPS</td>
+          <td>integer</td>
+          <td>0</td>
+          <td>num of skipped first several data</td>
+        </tr>
+        <tr>
+          <td>FILETYPE_ORG</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BASENAME_ORG</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BASENAME_ADD_NUM</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>USE_FILE_LANDWATER</td>
+          <td>logical</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>INIT_LANDWATER_RATIO</td>
+          <td>real(RP)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>INTRP_LAND_TEMP</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>INTRP_LAND_WATER</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>INTRP_LAND_SFC_TEMP</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>INTRP_ITER_MAX</td>
+          <td>integer</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>SOILWATER_DS2VC</td>
+          <td>character(len=H_SHORT)</td>
+          <td>'limit'</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ELEVATION_COLLECTION</td>
+          <td>logical</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>SERIAL_PROC_READ</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td>read by one MPI process and broadcast</td>
+        </tr>
+      </table>
+      <li>PARAM_MKINIT_REAL_OCEAN</li>
+      <table border=1>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>NUMBER_OF_FILES</td>
+          <td>integer</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>NUMBER_OF_TSTEPS</td>
+          <td>integer</td>
+          <td>1</td>
+          <td>num of time steps in one file</td>
+        </tr>
+        <tr>
+          <td>NUMBER_OF_SKIP_TSTEPS</td>
+          <td>integer</td>
+          <td>0</td>
+          <td>num of skipped first several data</td>
+        </tr>
+        <tr>
+          <td>FILETYPE_ORG</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BASENAME_ORG</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BASENAME_ADD_NUM</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BASENAME_BOUNDARY</td>
+          <td>character(len=H_LONG)</td>
+          <td>'boundary_atmos'</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BOUNDARY_TITLE</td>
+          <td>character(len=H_LONG)</td>
+          <td>'SCALE-LES BOUNDARY CONDITION for REAL CASE'</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BOUNDARY_UPDATE_DT</td>
+          <td>real(RP)</td>
+          <td>0.0_RP</td>
+          <td>inteval time of boudary data update [s]</td>
+        </tr>
+        <tr>
+          <td>INTRP_OCEAN_TEMP</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>INTRP_OCEAN_SFC_TEMP</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>INTRP_ITER_MAX</td>
+          <td>integer</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>SERIAL_PROC_READ</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td>read by one MPI process and broadcast</td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table border=1>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+    </table>
+  </body>
+</html>

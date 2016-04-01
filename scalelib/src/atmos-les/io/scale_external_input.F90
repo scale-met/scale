@@ -19,6 +19,9 @@ module scale_external_input
   use scale_grid_index
   use scale_land_grid_index
   use scale_urban_grid_index
+  use scale_process, only: &
+       PRC_myrank, &
+       PRC_MPIstop
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -81,9 +84,9 @@ module scale_external_input
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine EXTIN_setup( &
-       current_time )
+  subroutine EXTIN_setup
     use gtool_file, only: &
+       FileGetAllDataInfo, &
        FileRead
     use scale_process, only: &
        PRC_myrank, &
@@ -95,12 +98,15 @@ contains
        CALENDAR_daysec2date,    &
        CALENDAR_date2daysec,    &
        CALENDAR_combine_daysec, &
+       CALENDAR_CFunits2sec,    &
        I_year,                  &
        I_month,                 &
        I_day
+    use scale_time, only: &
+       TIME_STARTDAYSEC, &
+       TIME_NOWDAYSEC, &
+       TIME_OFFSET_year
     implicit none
-
-    real(DP), intent(in) :: current_time ! current time
 
     character(len=H_LONG)  :: basename
     character(len=H_SHORT) :: varname
@@ -130,17 +136,18 @@ contains
     integer                :: dim_rank
     character(len=H_SHORT) :: dim_name  (3)
     integer                :: dim_size  (3)
-    integer                :: time_start(EXTIN_step_limit)
-    integer                :: time_end  (EXTIN_step_limit)
+    real(DP)               :: time_start(EXTIN_step_limit)
+    real(DP)               :: time_end  (EXTIN_step_limit)
+    character(len=H_MID)   :: time_units
 
     integer  :: datadate(6)   !< date
     real(DP) :: datasubsec    !< subsecond
     integer  :: dataday       !< absolute day
     real(DP) :: datasec       !< absolute second
     integer  :: offset_year   !< offset year
-    real(DP) :: midtime
+    real(DP) :: cftime        !< time in the CF convention
 
-    integer  :: count, nid, t
+    integer  :: count, nid, t, n
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -190,31 +197,36 @@ contains
        read(IO_FID_CONF,nml=EXTITEM)
 
        ! read from file
-       call FileGetAllDatainfo( step_limit,      & ! [IN]
-                                EXTIN_dim_limit, & ! [IN]
-                                basename,        & ! [IN]
-                                varname,         & ! [IN]
-                                PRC_myrank,      & ! [IN]
-                                step_nmax,       & ! [OUT]
-                                description,     & ! [OUT]
-                                unit,            & ! [OUT]
-                                datatype,        & ! [OUT]
-                                dim_rank,        & ! [OUT]
-                                dim_name  (:),   & ! [OUT]
-                                dim_size  (:),   & ! [OUT]
-                                time_start(:),   & ! [OUT]
-                                time_end  (:)    ) ! [OUT]
+       call FileGetAllDatainfo( step_limit,               & ! [IN]
+                                EXTIN_dim_limit,          & ! [IN]
+                                basename,                 & ! [IN]
+                                varname,                  & ! [IN]
+                                PRC_myrank,               & ! [IN]
+                                step_nmax,                & ! [OUT]
+                                description,              & ! [OUT]
+                                unit,                     & ! [OUT]
+                                datatype,                 & ! [OUT]
+                                dim_rank,                 & ! [OUT]
+                                dim_name  (:),            & ! [OUT]
+                                dim_size  (:),            & ! [OUT]
+                                time_start(1:step_limit), & ! [OUT]
+                                time_end  (1:step_limit), & ! [OUT]
+                                time_units                ) ! [OUT]
 
        if ( step_nmax == 0 ) then
-          write(*,*) 'xxx Data not found! basename,varname = ', trim(basename), trim(varname)
+          write(*,*) 'xxx Data not found! basename,varname = ', trim(basename), ', ', trim(varname)
           call PRC_MPIstop
        endif
 
+       do n=dim_rank+1, 3
+          dim_size(n) = 1
+       end do
+
        ! setup item
-       EXTIN_item(nid)%basename      = trim(basename)
-       EXTIN_item(nid)%varname       = trim(varname)
-       EXTIN_item(nid)%dim_size(1:3) = dim_size(1:3)
-       EXTIN_item(nid)%step_num      = step_nmax
+       EXTIN_item(nid)%basename    = basename
+       EXTIN_item(nid)%varname     = varname
+       EXTIN_item(nid)%dim_size(:) = dim_size(:)
+       EXTIN_item(nid)%step_num    = step_nmax
 
        if ( enable_periodic_day ) then
           EXTIN_item(nid)%flag_periodic = I_periodic_day
@@ -234,9 +246,9 @@ contains
        EXTIN_item(nid)%time(:) = 0.0_DP
 
        do t = 1, EXTIN_item(nid)%step_num
-          midtime = 0.5_DP * ( time_start(t) + time_end(t) )
+          cftime = 0.5_DP * ( time_start(t) + time_end(t) )
 
-          EXTIN_item(nid)%time(t) = midtime
+          EXTIN_item(nid)%time(t) = CALENDAR_CFunits2sec( cftime, time_units, TIME_OFFSET_year, TIME_STARTDAYSEC )
        enddo
 
        if ( EXTIN_item(nid)%step_num == 1 ) then
@@ -258,7 +270,7 @@ contains
           ! seek start position
           EXTIN_item(nid)%data_steppos(I_next) = 1
           do t = 1, EXTIN_item(nid)%step_num
-             if ( EXTIN_item(nid)%time(t) > current_time ) exit
+             if ( EXTIN_item(nid)%time(t) > TIME_NOWDAYSEC ) exit
              EXTIN_item(nid)%data_steppos(I_next) = t + 1
           enddo
 
@@ -297,10 +309,10 @@ contains
                       datadate(I_year)  = datadate(I_year)  + 1
                    endif
 
-                   call CALENDAR_date2daysec( dataday,     & ! [IN]
-                                              datasec,     & ! [IN]
-                                              datadate(:), & ! [OUT]
-                                              datasubsec,  & ! [OUT]
+                   call CALENDAR_date2daysec( dataday,     & ! [OUT]
+                                              datasec,     & ! [OUT]
+                                              datadate(:), & ! [IN]
+                                              datasubsec,  & ! [IN]
                                               offset_year  ) ! [IN]
 
                    EXTIN_item(nid)%time(t) = CALENDAR_combine_daysec( dataday, datasec )
@@ -324,7 +336,7 @@ contains
        !--- read first data
        if (       dim_size(1) >= 1 &
             .AND. dim_size(2) == 1 &
-            .AND. dim_size(3) == 1 ) then
+            .AND. dim_size(3) == 1 ) then ! 1D
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,1,1,I_prev),  &
@@ -341,7 +353,7 @@ contains
 
        elseif (       dim_size(1) >= 1 &
                 .AND. dim_size(2) >  1 &
-                .AND. dim_size(3) == 1 ) then
+                .AND. dim_size(3) == 1 ) then ! 2D
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,:,1,I_prev),  &
@@ -358,7 +370,7 @@ contains
 
        elseif (       dim_size(1) >= 1 &
                 .AND. dim_size(2) >  1 &
-                .AND. dim_size(3) >  1 ) then
+                .AND. dim_size(3) >  1 ) then ! 3D
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,:,:,I_prev),  &
@@ -550,6 +562,7 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
+
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(EXTIN_item(nid)%varname)
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)

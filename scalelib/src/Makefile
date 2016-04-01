@@ -178,6 +178,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_monitor.o	\
 	scale_ocean_phy.o	\
 	scale_ocean_phy_slab.o	\
+	scale_ocean_phy_file.o	\
 	scale_ocean_sfc.o	\
 	scale_ocean_sfc_slab.o	\
 	scale_precision.o	\

@@ -1,0 +1,56 @@
+<html>
+  <head>
+    <title>mod_admin_restart module</title>
+  </head>
+ <body>
+  <h1>mod_admin_restart module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_RESTART</li>
+      <table border=1>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>RESTART_RUN</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>is this run restart?</td>
+        </tr>
+        <tr>
+          <td>RESTART_OUTPUT</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>output restart file?</td>
+        </tr>
+        <tr>
+          <td>RESTART_IN_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td>basename of the restart file</td>
+        </tr>
+        <tr>
+          <td>RESTART_OUT_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td>basename of the output file</td>
+        </tr>
+        <tr>
+          <td>RESTART_OUT_TITLE</td>
+          <td>character(len=H_MID)</td>
+          <td>''</td>
+          <td>title    of the output file</td>
+        </tr>
+        <tr>
+          <td>RESTART_OUT_DTYPE</td>
+          <td>character(len=H_MID)</td>
+          <td>'DEFAULT'</td>
+          <td>REAL4 or REAL8</td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table border=1>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+    </table>
+  </body>
+</html>

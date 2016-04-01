@@ -13,7 +13,7 @@
           <td>MP_NTMAX_SEDIMENTATION</td>
           <td>integer</td>
           <td>1</td>
-          <td></td>
+          <td>maxinum fractional step</td>
         </tr>
         <tr>
           <td>MP_DOAUTOCONVERSION</td>
@@ -32,6 +32,12 @@
           <td>logical</td>
           <td>.true.</td>
           <td>apply negative fixer?</td>
+        </tr>
+        <tr>
+          <td>MP_COUPLE_AEROSOL</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>apply CCN effect?</td>
         </tr>
       </table>
       <li>PARAM_ATMOS_PHY_MP_SUZUKI10</li>
@@ -113,25 +119,25 @@
           <td>C_CCN</td>
           <td>real(RP)</td>
           <td>100.E+6_RP</td>
-          <td></td>
+          <td>N0 of Nc = N0*s^kappa</td>
         </tr>
         <tr>
           <td>KAPPA</td>
           <td>real(RP)</td>
           <td>0.462_RP</td>
-          <td></td>
+          <td>kappa of Nc = N0*s^kappa</td>
         </tr>
         <tr>
           <td>SIGMA</td>
           <td>real(RP)</td>
           <td>7.5E-02_RP</td>
-          <td>water surface tension [ N/m2 ]</td>
+          <td>water surface tension [ N/m2 ] (sigma in eq. (A.11) of Suzuki (2004) )</td>
         </tr>
         <tr>
           <td>VHFCT</td>
           <td>real(RP)</td>
           <td>2.0_RP</td>
-          <td>van't hoff factor</td>
+          <td>van't hoff factor (i in eq.(A.11) of Suzuki (2004))</td>
         </tr>
       </table>
     </ul>
@@ -139,6 +145,42 @@
   <h2>History</h2>
     <table>
       <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+      <tr>
+        <td>QC</td>
+        <td>Mixing ratio of QC</td>
+        <td>kg/kg</td>
+        <td>QHYD_out</td>
+      </tr>
+      <tr>
+        <td>QG</td>
+        <td>Mixing ratio of QG</td>
+        <td>kg/kg</td>
+        <td>QHYD_out</td>
+      </tr>
+      <tr>
+        <td>QH</td>
+        <td>Mixing ratio of QH</td>
+        <td>kg/kg</td>
+        <td>QHYD_out</td>
+      </tr>
+      <tr>
+        <td>QI</td>
+        <td>Mixing ratio of QI</td>
+        <td>kg/kg</td>
+        <td>QHYD_out</td>
+      </tr>
+      <tr>
+        <td>QR</td>
+        <td>Mixing ratio of QR</td>
+        <td>kg/kg</td>
+        <td>QHYD_out</td>
+      </tr>
+      <tr>
+        <td>QS</td>
+        <td>Mixing ratio of QS</td>
+        <td>kg/kg</td>
+        <td>QHYD_out</td>
+      </tr>
     </table>
   </body>
 </html>

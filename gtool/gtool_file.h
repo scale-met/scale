@@ -49,6 +49,7 @@ typedef struct{
   int32_t  step;
   real64_t time_start;
   real64_t time_end;
+  char     time_units[File_HMID];
   int32_t  fid;
 } datainfo_t; 
 
@@ -62,10 +63,11 @@ extern int32_t file_set_option( int32_t  fid,      // (in)
 				char    *key,      // (in)
 				char    *val);     // (in)
 
-extern int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
-				  int32_t     fid,     // (in)
-				  char       *varname, // (in)
-				  int32_t     step);   // (in)
+extern int32_t file_get_datainfo( datainfo_t *dinfo,    // (out)
+				  int32_t     fid,      // (in)
+				  char       *varname,  // (in)
+				  int32_t     step,     // (in)
+				  int32_t     suppress);// (in)
 
 extern int32_t file_read_data( void       *var,        // (out)
 			       datainfo_t *dinfo,      // (in)

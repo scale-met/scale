@@ -69,6 +69,9 @@ contains
     use scale_ocean_phy_slab, only: &
        OCEAN_PHY_SLAB_setup, &
        OCEAN_PHY_SLAB
+    use scale_ocean_phy_file, only: &
+       OCEAN_PHY_FILE_setup, &
+       OCEAN_PHY_FILE
     implicit none
 
     character(len=*), intent(in) :: OCEAN_TYPE
@@ -81,6 +84,9 @@ contains
     case ( 'SLAB' )
        call OCEAN_PHY_SLAB_setup( OCEAN_TYPE )
        OCEAN_PHY => OCEAN_PHY_SLAB
+    case ( 'FILE' )
+       call OCEAN_PHY_FILE_setup( OCEAN_TYPE )
+       OCEAN_PHY => OCEAN_PHY_FILE
     case default
        write(*,*) 'xxx invalid Ocean type(', trim(OCEAN_TYPE), '). CHECK!'
        call PRC_MPIstop

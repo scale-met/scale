@@ -46,6 +46,7 @@ module scale_fileio
      module procedure FILEIO_write_1D
      module procedure FILEIO_write_2D
      module procedure FILEIO_write_3D
+     module procedure FILEIO_write_3D_t
      module procedure FILEIO_write_4D
   end interface FILEIO_write
 
@@ -448,7 +449,7 @@ contains
     real(RP),         intent(out) :: var(:,:,:) !< value of the variable
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
-    character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y)
+    character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y/T)
     integer,          intent(in)  :: step       !< step number
 
     integer               :: dim1_max, dim1_S, dim1_E
@@ -471,6 +472,16 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
+    else if ( axistype == 'XYT' ) then
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = step
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = 1
+       dim3_E   = step
     else if ( axistype == 'Land' ) then
        dim1_max = LKMAX
        dim2_max = IMAXB
@@ -1102,6 +1113,218 @@ contains
   end subroutine FILEIO_write_3D
 
   !-----------------------------------------------------------------------------
+  !> Write 3D data with time dimension to file
+  subroutine FILEIO_write_3D_t( &
+       var,      &
+       basename, &
+       title,    &
+       varname,  &
+       desc,     &
+       unit,     &
+       axistype, &
+       datatype, &
+       timeintv, &
+       tsince,   &
+       append,   &
+       timetarg, &
+       nohalo    )
+    use gtool_file, only: &
+       RMISS
+    use gtool_file_h, only: &
+       File_REAL8, &
+       File_REAL4
+    use gtool_file, only: &
+       FileCreate,      &
+       FilePutAxis,     &
+       FileAddVariable, &
+       FileWrite
+    use scale_process, only: &
+       PRC_masterrank, &
+       PRC_myrank,     &
+       PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_2Drank
+    implicit none
+
+    real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
+    character(len=*),  intent(in)  :: basename     !< basename of the file
+    character(len=*),  intent(in)  :: title        !< title    of the file
+    character(len=*),  intent(in)  :: varname      !< name        of the variable
+    character(len=*),  intent(in)  :: desc         !< description of the variable
+    character(len=*),  intent(in)  :: unit         !< unit        of the variable
+    character(len=*),  intent(in)  :: axistype     !< axis type (X/Y/Time)
+    character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
+    real(RP),          intent(in)  :: timeintv     !< time interval [sec]
+    integer ,          intent(in)  :: tsince(6)    !< start time
+    logical, optional, intent(in)  :: append       !< append existing (closed) file?
+    integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
+    logical, optional, intent(in)  :: nohalo       !< include halo data?
+
+    real(RP)         :: varhalo( size(var(:,1,1)), size(var(1,:,1)) )
+
+    integer          :: dtype
+    character(len=2) :: dims(2)
+    integer          :: dim1_max, dim1_S, dim1_E
+    integer          :: dim2_max, dim2_S, dim2_E
+
+    real(RP), allocatable :: var2D(:,:)
+    real(DP) :: time_interval, nowtime
+
+    character(len=34) :: tunits
+
+    integer :: rankidx(2)
+    logical :: append_sw
+    logical :: fileexisted
+    integer :: fid, vid
+    integer :: step
+    integer :: i, j, n
+    logical :: nohalo_
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    nohalo_ = .false.
+    if ( present(nohalo) ) nohalo_ = nohalo
+
+    time_interval = timeintv
+    step = size(var(ISB,JSB,:))
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    if ( datatype == 'REAL8' ) then
+       dtype = File_REAL8
+    elseif( datatype == 'REAL4' ) then
+       dtype = File_REAL4
+    else
+       if ( RP == 8 ) then
+          dtype = File_REAL8
+       elseif( RP == 4 ) then
+          dtype = File_REAL4
+       else
+          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
+    endif
+
+    append_sw = .false.
+    if ( present(append) ) then
+       append_sw = append
+    endif
+
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', tsince
+
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     time_units = tunits, & ! [IN]
+                     append = append_sw   ) ! [IN]
+
+    if ( .NOT. fileexisted ) then ! only once
+       call FILEIO_set_axes( fid, dtype ) ! [IN]
+    endif
+
+    if ( axistype == 'XYT' ) then
+       dims = (/'x','y'/)
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+    else
+       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       call PRC_MPIstop
+    endif
+
+    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype, time_interval ) ! [IN]
+    allocate( var2D(dim1_max,dim2_max) )
+
+    if ( present(timetarg) ) then
+       varhalo(:,:) = var(:,:,timetarg)
+
+       if ( nohalo_ ) then
+          ! W halo
+          do j = 1, JA
+          do i = 1, IS-1
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! E halo
+          do j = 1, JA
+          do i = IE+1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! S halo
+          do j = 1, JS-1
+          do i = 1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! N halo
+          do j = JE+1, JA
+          do i = 1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+       end if
+
+       nowtime = (timetarg-1) * time_interval
+       var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
+       call FileWrite( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+    else
+       nowtime = 0.0_DP
+       do n = 1, step
+          varhalo(:,:) = var(:,:,n)
+
+          if ( nohalo_ ) then
+             ! W halo
+             do j = 1, JA
+             do i = 1, IS-1
+                varhalo(i,j) = RMISS
+             end do
+             end do
+             ! E halo
+             do j = 1, JA
+             do i = IE+1, IA
+                varhalo(i,j) = RMISS
+             end do
+             end do
+             ! S halo
+             do j = 1, JS-1
+             do i = 1, IA
+                varhalo(i,j) = RMISS
+             end do
+             end do
+             ! N halo
+             do j = JE+1, JA
+             do i = 1, IA
+                varhalo(i,j) = RMISS
+             end do
+             end do
+          end if
+
+          var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
+          call FileWrite( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+          nowtime = nowtime + time_interval
+       enddo
+    endif
+
+    deallocate( var2D )
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
+
+    return
+  end subroutine FILEIO_write_3D_t
+
+  !-----------------------------------------------------------------------------
   !> Write 4D data to file
   subroutine FILEIO_write_4D( &
        var,      &
@@ -1113,6 +1336,7 @@ contains
        axistype, &
        datatype, &
        timeintv, &
+       tsince,   &
        append,   &
        timetarg, &
        nohalo    )
@@ -1143,6 +1367,7 @@ contains
     character(len=*),  intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
     character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
     real(RP),          intent(in)  :: timeintv     !< time interval [sec]
+    integer ,          intent(in)  :: tsince(6)    !< start time
     logical, optional, intent(in)  :: append       !< append existing (closed) file?
     integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
     logical, optional, intent(in)  :: nohalo       !< include halo data?
@@ -1157,6 +1382,8 @@ contains
 
     real(RP), allocatable :: var3D(:,:,:)
     real(DP) :: time_interval, nowtime
+
+    character(len=34) :: tunits
 
     integer :: rankidx(2)
     logical :: append_sw
@@ -1198,16 +1425,19 @@ contains
        append_sw = append
     endif
 
-    call FileCreate( fid,               & ! [OUT]
-                     fileexisted,       & ! [OUT]
-                     basename,          & ! [IN]
-                     title,             & ! [IN]
-                     H_SOURCE,          & ! [IN]
-                     H_INSTITUTE,       & ! [IN]
-                     PRC_masterrank,    & ! [IN]
-                     PRC_myrank,        & ! [IN]
-                     rankidx,           & ! [IN]
-                     append = append_sw ) ! [IN]
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', tsince
+
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     time_units = tunits, & ! [IN]
+                     append = append_sw   ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype ) ! [IN]
