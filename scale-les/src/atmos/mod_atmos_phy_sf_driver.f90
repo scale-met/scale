@@ -49,10 +49,14 @@ module mod_atmos_phy_sf_driver
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
+  real(RP), private :: ATMOS_PHY_SF_beta = 1.0_RP
+
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_SF_driver_setup
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
     use mod_atmos_admin, only: &
@@ -71,10 +75,26 @@ contains
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
+
+    NAMELIST / PARAM_ATMOS_PHY_SF / &
+         ATMOS_PHY_SF_beta
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_SF] / Origin[SCALE-LES]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF)
 
     if ( ATMOS_sw_phy_sf ) then
 
@@ -239,7 +259,7 @@ contains
                              SFC_PRES (:,:)    ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
-          beta(:,:) = 1.0_RP
+          beta(:,:) = ATMOS_PHY_SF_beta
 
           call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
                              PRES      (KS,:,:),   & ! [IN]
