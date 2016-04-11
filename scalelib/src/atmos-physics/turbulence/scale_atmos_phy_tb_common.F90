@@ -1157,7 +1157,6 @@ contains
 
        ! |S|^2 = 2*Sij*Sij
 #ifdef DEBUG
-       S2(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
 #endif
        ! (cell center)

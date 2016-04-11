@@ -96,7 +96,7 @@ contains
 
     ! YYYYMMDDhhmmss.sss
     write(timelabel,'(I4.4,I2.2,I2.2,A1,I2.2,I2.2,I2.2,A1,I3.3)') &
-         TIME_NOWDATE(1:3), '-', TIME_NOWDATE(4:6), '.', TIME_NOWMS*1000_DP
+         TIME_NOWDATE(1:3), '-', TIME_NOWDATE(4:6), '.', int(TIME_NOWMS*1000.0_DP)
 
     return
   end subroutine TIME_gettimelabel
