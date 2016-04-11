@@ -11,19 +11,19 @@ do
       TIME_STARTDATE="0000, 1, 1, 0, 0, 0"
       TIME_DURATION="8.D0"
       RESTART_RUN=".false."
-      RESTART_IN_BASENAME="init_00000000000.000"
+      RESTART_IN_BASENAME="init_00000101-000000.000"
     ;;
     "A" )
       TIME_STARTDATE="0000, 1, 1, 0, 0, 0"
       TIME_DURATION="4.D0"
       RESTART_RUN=".false."
-      RESTART_IN_BASENAME="init_00000000000.000"
+      RESTART_IN_BASENAME="init_00000101-000000.000"
     ;;
     "B" )
       TIME_STARTDATE="0000, 1, 1, 0, 0, 4"
       TIME_DURATION="4.D0"
       RESTART_RUN=".true."
-      RESTART_IN_BASENAME="restartA_00000000004.000"
+      RESTART_IN_BASENAME="restartA_00000101-000004.000"
     ;;
   esac
 
