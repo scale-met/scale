@@ -77,14 +77,14 @@ module scale_gridtrans
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG), private :: GTRANS_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),  private :: GTRANS_OUT_TITLE    = 'SCALE-LES TOPOGRAPHY' !< title    of the output file
-  character(len=H_MID),  private :: GTRANS_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG), private :: GTRANS_OUT_BASENAME  = ''                     !< basename of the output file
+  character(len=H_MID),  private :: GTRANS_OUT_TITLE     = 'SCALE-LES TOPOGRAPHY' !< title    of the output file
+  character(len=H_MID),  private :: GTRANS_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
 
-  character(len=H_MID),  private :: TOPO_TYPE = 'TERRAIN FOLLOWING' !< topographical shceme
-  integer,               private :: TW_XDIV   = 50                  !< number dividing quarter-cell (x)
-  integer,               private :: TW_YDIV   = 50                  !< number dividing quarter-cell (y)
-  logical,               private :: debug     = .false.
+  character(len=H_MID),  private :: GTRANS_TOPO_TYPE     = 'TERRAINFOLLOWING'     !< topographical shceme
+  integer,               private :: GTRANS_ThinWall_XDIV = 50                     !< number dividing quarter-cell (x)
+  integer,               private :: GTRANS_ThinWall_YDIV = 50                     !< number dividing quarter-cell (y)
+  logical,               private :: debug                = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -95,13 +95,11 @@ contains
     implicit none
 
     namelist / PARAM_GTRANS / &
-       GTRANS_OUT_BASENAME, &
-       GTRANS_OUT_DTYPE
-
-    namelist / PARAM_TOPO_TYPE / &
-       TOPO_type,  &
-       TW_XDIV,    &
-       TW_YDIV,    &
+       GTRANS_OUT_BASENAME,  &
+       GTRANS_OUT_DTYPE,     &
+       GTRANS_TOPO_TYPE,     &
+       GTRANS_ThinWall_XDIV, &
+       GTRANS_ThinWall_YDIV, &
        debug
 
     integer :: ierr
@@ -148,20 +146,20 @@ contains
     call GTRANS_rotcoef
 
     ! calc metrics for terrain-following,step-mountain,thin-wall coordinate
-    select case(TOPO_type)
-    case ('TERRAIN FOLLOWING')
+    select case(GTRANS_TOPO_TYPE)
+    case ('TERRAINFOLLOWING')
       if( IO_L ) write(IO_FID_LOG,*) '=> Use terrain-following coordinate'
       call GTRANS_terrainfollowing
-    case ('STEP')
+    case ('STEPMOUNTAIN')
       if( IO_L ) write(IO_FID_LOG,*) '=> Use step mountain method'
       call GTRANS_thin_wall
       call GTRANS_step_mountain
-    case ('THIN WALL')
+    case ('THINWALL')
       if( IO_L ) write(IO_FID_LOG,*) '=> Use thin-wall approximation'
       call GTRANS_thin_wall
     case default
-      if( IO_L ) write(IO_FID_LOG,*) '=>Default terrain-following coordinate'
-      call GTRANS_terrainfollowing
+       write(*,*) 'xxx Not appropriate name for GTRANS_TOPO_TYPE : ', trim(GTRANS_TOPO_TYPE)
+       call PRC_MPIstop
     end select
 
     ! output metrics (for debug)
@@ -531,8 +529,8 @@ contains
     do jj = 1, 2*(JA-1)
     do ii = 1, 2*(IA-1)
     do kk = KS, 2*KE
-       DX_piece = QDX(ii) / real(TW_XDIV,kind=RP)
-       DY_piece = QDY(jj) / real(TW_YDIV,kind=RP)
+       DX_piece = QDX(ii) / real(GTRANS_ThinWall_XDIV,kind=RP)
+       DY_piece = QDY(jj) / real(GTRANS_ThinWall_YDIV,kind=RP)
 
        AQAF(1:3) = 0.0_RP
        Ztop = sum(QDZ(KS:kk))
@@ -540,7 +538,7 @@ contains
        !--- y-z face ---
        YSLOPE = ( TOPO_ZsfcALL(ii,jj+1) - TOPO_ZsfcALL(ii,jj) ) / QDY(jj)
 
-       do jjj = 1, TW_YDIV
+       do jjj = 1, GTRANS_ThinWall_YDIV
           DY = ( real(jjj,kind=RP) - 0.5_RP ) * DY_piece
           DZ = Ztop - TOPO_ZsfcALL(ii,jj) - YSLOPE * DY
 
@@ -556,7 +554,7 @@ contains
        !--- x-z face ---
        XSLOPE = ( TOPO_ZsfcALL(ii+1,jj) - TOPO_ZsfcALL(ii,jj) ) / QDX(ii)
 
-       do iii = 1, TW_XDIV
+       do iii = 1, GTRANS_ThinWall_XDIV
           DX = ( real(iii,kind=RP) - 0.5_RP ) * DX_piece
           DZ = Ztop - TOPO_ZsfcALL(ii,jj) + XSLOPE * DX
 
@@ -570,8 +568,8 @@ contains
        enddo
 
        !--- x-y face ---
-       do jjj = 1, TW_YDIV
-       do iii = 1, TW_XDIV
+       do jjj = 1, GTRANS_ThinWall_YDIV
+       do iii = 1, GTRANS_ThinWall_XDIV
           DX = ( real(iii,kind=RP) - 0.5_RP ) * DX_piece
           DY = ( real(jjj,kind=RP) - 0.5_RP ) * DY_piece
           DZ = Ztop - TOPO_ZsfcALL(ii,jj) - XSLOPE * DX - YSLOPE * DY
