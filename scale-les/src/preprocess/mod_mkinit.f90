@@ -208,7 +208,8 @@ module mod_mkinit
   real(RP), private, allocatable :: bubble(:,:,:) ! bubble factor (0-1)
 
   real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
-  logical,  private :: flg_intrp = .false.
+
+  logical,  private              :: flg_intrp = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -402,8 +403,8 @@ contains
       qv_sfc  (:,:,:) = CONST_UNDEF8
       qc_sfc  (:,:,:) = CONST_UNDEF8
 
-      if( TRACER_TYPE == 'SUZUKI10' ) then
-         if( IO_L ) write(IO_FID_LOG,*) '*** Prepare Size Distribution FUnction (SBM) ***'
+      if ( TRACER_TYPE == 'SUZUKI10' ) then
+         if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
          call SBMAERO_setup
       endif
 
@@ -621,6 +622,7 @@ contains
     real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
     real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]
+    real(RP), parameter :: cleannumber = 1.e-3_RP
 
     NAMELIST / PARAM_AERO / &
        m0_init, &
@@ -765,6 +767,16 @@ contains
     m0t = m0_init !total M0 [#/m3]
     dgt = dg_init ![m]
     sgt = sg_init ![-]
+
+    if ( m0t <= cleannumber ) then
+       m0t = cleannumber
+       dgt = 0.1E-6_RP
+       sgt = 1.3_RP
+       if ( IO_L ) then
+          write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
+       endif
+    endif
+
     m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M2 [m2/m3]
     m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M3 [m3/m3]
     mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
@@ -1849,7 +1861,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on tracerbubble. Check!'
        call PRC_MPIstop
     endif
@@ -1956,7 +1968,7 @@ contains
     enddo
     enddo
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on coldbubble. Check!'
        call PRC_MPIstop
     endif
@@ -2030,7 +2042,7 @@ contains
     enddo
     enddo
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on lambwave. Check!'
        call PRC_MPIstop
     endif
@@ -2127,7 +2139,7 @@ contains
     enddo
     enddo
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on gravitywave. Check!'
        call PRC_MPIstop
     endif
@@ -2252,7 +2264,7 @@ contains
     enddo
     enddo
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on khwave. Check!'
        call PRC_MPIstop
     endif
@@ -2433,7 +2445,7 @@ contains
     endif
 #endif
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on turbulence. Check!'
        call PRC_MPIstop
     endif
@@ -3190,7 +3202,7 @@ enddo
     enddo
     enddo
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3225,6 +3237,9 @@ enddo
     endif
 
 #endif
+    if ( AETRACER_TYPE == 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_DYCOMS2_RF01
 
@@ -3436,7 +3451,7 @@ enddo
     enddo
     enddo
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3472,6 +3487,9 @@ enddo
     endif
 
 #endif
+    if ( AETRACER_TYPE == 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_DYCOMS2_RF02
 
@@ -3694,7 +3712,7 @@ enddo
     enddo
 
 !write(*,*)'chk12'
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3912,7 +3930,8 @@ enddo
     enddo
 
     call RANDOM_get(rndm) ! make random
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3949,6 +3968,9 @@ enddo
     endif
 
 #endif
+    if ( AETRACER_TYPE == 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_RICO
 
@@ -4684,6 +4706,12 @@ enddo
     real(RP) :: qsat
     integer :: i, j, k, ierr
 
+    if ( AETRACER_TYPE /= 'KAJINO13' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '+++ For [Box model of aerosol],'
+       if( IO_L ) write(IO_FID_LOG,*) '+++ AETRACER_TYPE should be KAJINO13. Stop!'
+       call PRC_MPIstop
+    endif
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Box model of aerosol]/Categ[MKINIT]'
 
@@ -4714,7 +4742,9 @@ enddo
     enddo
     enddo
 
-    call AEROSOL_setup
+    if( AETRACER_TYPE /= 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
 
   end subroutine MKINIT_boxaero
   !-----------------------------------------------------------------------------
@@ -4847,7 +4877,10 @@ enddo
     enddo
 
     call flux_setup
-    call AEROSOL_setup
+
+    if ( AETRACER_TYPE /= 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
 
     return
   end subroutine MKINIT_warmbubbleaero

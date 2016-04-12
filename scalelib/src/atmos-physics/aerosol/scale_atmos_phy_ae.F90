@@ -43,9 +43,10 @@ module scale_atmos_phy_ae
           RHOT, &
           EMIT, &
           NREG, &
+          QTRC, &
           CN,   &
           CCN,  &
-          QTRC  )
+          RHOQ_t_AE )
        use scale_precision
        use scale_grid_index
        use scale_tracer
@@ -56,9 +57,10 @@ module scale_atmos_phy_ae
        real(RP), intent(inout) :: RHOT(KA,IA,JA)
        real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
        real(RP), intent(in)    :: NREG(KA,IA,JA)
+       real(RP), intent(in)    :: QTRC(KA,IA,JA,QA)
        real(RP), intent(out)   :: CN(KA,IA,JA)
        real(RP), intent(out)   :: CCN(KA,IA,JA)
-       real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+       real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)
      end subroutine ae
 
      subroutine er( RE, QTRC, RH )
