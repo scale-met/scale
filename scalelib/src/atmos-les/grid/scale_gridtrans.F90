@@ -81,10 +81,10 @@ module scale_gridtrans
   character(len=H_MID),  private :: GTRANS_OUT_TITLE    = 'SCALE-LES TOPOGRAPHY' !< title    of the output file
   character(len=H_MID),  private :: GTRANS_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
-  character(len=H_SHORT), private :: TOPO_TYPE = 'TERRAIN FOLLOWING' !< topographical shceme
-  integer,                private :: TW_XDIV   = 50                  !< number dividing quarter-cell (x)
-  integer,                private :: TW_YDIV   = 50                  !< number dividing quarter-cell (y)
-  logical,                private :: debug     = .false.
+  character(len=H_MID),  private :: TOPO_TYPE = 'TERRAIN FOLLOWING' !< topographical shceme
+  integer,               private :: TW_XDIV   = 50                  !< number dividing quarter-cell (x)
+  integer,               private :: TW_YDIV   = 50                  !< number dividing quarter-cell (y)
+  logical,               private :: debug     = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -161,6 +161,7 @@ contains
       call GTRANS_thin_wall
     case default
       if( IO_L ) write(IO_FID_LOG,*) '=>Default terrain-following coordinate'
+      call GTRANS_terrainfollowing
     end select
 
     ! output metrics (for debug)
