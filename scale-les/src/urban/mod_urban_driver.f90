@@ -18,6 +18,10 @@ module mod_urban_driver
   use scale_debug
   use scale_grid_index
   use scale_urban_grid_index
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -241,23 +245,32 @@ contains
     use mod_cpl_vars, only: &
        CPL_getATM_URB
     implicit none
+
+    real(RP) :: ATMOS_SFLX_rad_dn(IA,JA,2,2)
+    real(RP) :: ATMOS_SFLX_rain  (IA,JA)
+    real(RP) :: ATMOS_SFLX_snow  (IA,JA)
     !---------------------------------------------------------------------------
 
     if ( URBAN_sw ) then
-       call CPL_getATM_URB( ATMOS_TEMP     (:,:), & ! [OUT]
-                            ATMOS_PRES     (:,:), & ! [OUT]
-                            ATMOS_W        (:,:), & ! [OUT]
-                            ATMOS_U        (:,:), & ! [OUT]
-                            ATMOS_V        (:,:), & ! [OUT]
-                            ATMOS_DENS     (:,:), & ! [OUT]
-                            ATMOS_QV       (:,:), & ! [OUT]
-                            ATMOS_PBL      (:,:), & ! [OUT]
-                            ATMOS_SFC_PRES (:,:), & ! [OUT]
-                            ATMOS_SFLX_LW  (:,:), & ! [OUT]
-                            ATMOS_SFLX_SW  (:,:), & ! [OUT]
-                            ATMOS_cosSZA   (:,:), & ! [OUT]
-                            ATMOS_SFLX_prec(:,:)  ) ! [OUT]
+       call CPL_getATM_URB( ATMOS_TEMP       (:,:),     & ! [OUT]
+                            ATMOS_PRES       (:,:),     & ! [OUT]
+                            ATMOS_W          (:,:),     & ! [OUT]
+                            ATMOS_U          (:,:),     & ! [OUT]
+                            ATMOS_V          (:,:),     & ! [OUT]
+                            ATMOS_DENS       (:,:),     & ! [OUT]
+                            ATMOS_QV         (:,:),     & ! [OUT]
+                            ATMOS_PBL        (:,:),     & ! [OUT]
+                            ATMOS_SFC_PRES   (:,:),     & ! [OUT]
+                            ATMOS_SFLX_rad_dn(:,:,:,:), & ! [OUT]
+                            ATMOS_cosSZA     (:,:),     & ! [OUT]
+                            ATMOS_SFLX_rain  (:,:),     & ! [OUT]
+                            ATMOS_SFLX_snow  (:,:)      ) ! [OUT]
     endif
+
+    ATMOS_SFLX_SW  (:,:,:) = ATMOS_SFLX_rad_dn(:,:,I_SW,:) ! direct/diffuse
+    ATMOS_SFLX_LW  (:,:,:) = ATMOS_SFLX_rad_dn(:,:,I_LW,:) ! direct/diffuse
+
+    ATMOS_SFLX_prec(:,:) = ATMOS_SFLX_rain(:,:) + ATMOS_SFLX_snow(:,:) ! liquid+ice
 
     return
   end subroutine URBAN_SURFACE_GET
