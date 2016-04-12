@@ -1145,7 +1145,8 @@ contains
        TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall
     implicit none
     ! Flux from Atmosphere
     real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
@@ -1178,6 +1179,7 @@ contains
     do i = IS, IE
        SFLX_rain   (i,j) = FLX_rain
        SFLX_snow   (i,j) = FLX_snow
+
        SFLX_LW_up  (i,j) = 0.0_RP
        SFLX_LW_dn  (i,j) = FLX_LW_dn
        SFLX_SW_up  (i,j) = 0.0_RP
@@ -1187,8 +1189,13 @@ contains
        TOAFLX_LW_dn(i,j) = 0.0_RP
        TOAFLX_SW_up(i,j) = 0.0_RP
        TOAFLX_SW_dn(i,j) = 0.0_RP
-    end do
-    end do
+
+       SFLX_rad_dn (i,j,1,1) = FLX_SW_dn
+       SFLX_rad_dn (i,j,1,2) = 0.0_RP
+       SFLX_rad_dn (i,j,2,1) = FLX_LW_dn
+       SFLX_rad_dn (i,j,2,2) = 0.0_RP
+    enddo
+    enddo
 
     return
   end subroutine flux_setup

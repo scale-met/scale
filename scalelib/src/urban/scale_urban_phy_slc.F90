@@ -319,8 +319,8 @@ contains
     real(RP), intent(in) :: Z1    (IA,JA)
     real(RP), intent(in) :: PBL   (IA,JA)
     real(RP), intent(in) :: PRSS  (IA,JA)
-    real(RP), intent(in) :: LWD   (IA,JA)
-    real(RP), intent(in) :: SWD   (IA,JA)
+    real(RP), intent(in) :: LWD   (IA,JA,2)
+    real(RP), intent(in) :: SWD   (IA,JA,2)
     real(RP), intent(in) :: PREC  (IA,JA)
 
     real(RP), intent(in) :: TR_URB   (IA,JA)
@@ -455,8 +455,8 @@ contains
                       U1      (i,j),      & ! [IN]
                       V1      (i,j),      & ! [IN]
                       Z1      (i,j),      & ! [IN]
-                      SWD     (i,j),      & ! [IN]
-                      LWD     (i,j),      & ! [IN]
+                      SWD     (i,j,:),    & ! [IN]
+                      LWD     (i,j,:),    & ! [IN]
                       PREC    (i,j),      & ! [IN]
                       DENS    (i,j),      & ! [IN]
                       LON,                & ! [IN]
@@ -464,7 +464,7 @@ contains
                       NOWDATE (:),        & ! [IN]
                       dt, i, j            ) ! [IN]
 
-       ! calculate tendency 
+       ! calculate tendency
        TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) / dt
        TB_URB_t(i,j) = ( TB - TB_URB(i,j) ) / dt
        TG_URB_t(i,j) = ( TG - TG_URB(i,j) ) / dt
@@ -669,8 +669,8 @@ contains
     real(RP), intent(in)    :: U1   ! u at 1st atmospheric level             [m/s]
     real(RP), intent(in)    :: V1   ! v at 1st atmospheric level             [m/s]
     real(RP), intent(in)    :: ZA   ! height of 1st atmospheric level        [m]
-    real(RP), intent(in)    :: SSG  ! downward total short wave radiation    [W/m/m]
-    real(RP), intent(in)    :: LLG  ! downward long wave radiation           [W/m/m]
+    real(RP), intent(in)    :: SSG(2) ! downward total short wave radiation    [W/m/m]
+    real(RP), intent(in)    :: LLG(2) ! downward long wave radiation           [W/m/m]
     real(RP), intent(in)    :: RAIN ! precipitation flux                     [kg/m2/s]
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
     real(RP), intent(in)    :: XLAT ! latitude                               [rad,-pi,pi]
@@ -856,11 +856,6 @@ contains
        call PRC_MPIstop
     endif
 
-    !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
-      SSGD = SRATIO * SSG   ! downward direct short wave radiation
-      SSGQ = SSG - SSGD     ! downward diffuse short wave radiation
-    !endif
-
     W    = 2.0_RP * 1.0_RP * HGT
     VFGS = SVF
     VFGW = 1.0_RP - SVF
@@ -868,8 +863,11 @@ contains
     VFWS = VFWG
     VFWW = 1.0_RP - 2.0_RP * VFWG
 
-    SX  = (SSGD+SSGQ)   ! downward short wave radition [W/m/m]
-    RX  = LLG           ! downward long wave radiation
+    SX   = SSG(1) + SSG(2) ! downward shortwave radiation [W/m2]
+    RX   = LLG(1) + LLG(2) ! downward longwave  radiation [W/m2]
+
+    SSGD = SSG(1)          ! downward direct  shortwave radiation [W/m2]
+    SSGQ = SSG(2)          ! downward diffuse shortwave radiation [W/m2]
 
     !--- calculate canopy wind
 
@@ -895,7 +893,7 @@ contains
     ! Radiation : Net Short Wave Radiation at roof/wall/road
     !-----------------------------------------------------------
 
-    if( SSG > 0.0_RP ) then !  SSG is downward short
+    if( SX > 0.0_RP ) then !  SSG is downward short
 
       ! currently we use no shadow effect model
       !!     IF(.NOT.SHADOW) THEN              ! no shadow effects model
@@ -1166,7 +1164,7 @@ contains
       endif
       TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
       TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
- 
+
       resi1p = resi1
       resi2p = resi2
 
@@ -1322,8 +1320,8 @@ contains
     ! Grid average
     !-----------------------------------------------------------
 
-    LW = LLG - LNET     ! Upward longwave radiation   [W/m/m]
-    SW = SSG - SNET     ! Upward shortwave radiation  [W/m/m]
+    LW = RX - LNET     ! Upward longwave radiation   [W/m/m]
+    SW = SX - SNET     ! Upward shortwave radiation  [W/m/m]
     RN = (SNET+LNET)    ! Net radiation [W/m/m]
 
     !--- shortwave radiation

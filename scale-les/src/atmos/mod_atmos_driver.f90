@@ -510,9 +510,8 @@ contains
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
-       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn, &
-       cosSZA     => ATMOS_PHY_RD_cosSZA
+       SFLX_rad_dn => ATMOS_PHY_RD_SFLX_downall, &
+       cosSZA      => ATMOS_PHY_RD_cosSZA
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
@@ -540,21 +539,20 @@ contains
                              SFC_DENS (:,:),   & ! [OUT]
                              SFC_PRES (:,:)    ) ! [OUT]
 
-       call CPL_putATM( TEMP      (KS,:,:),   & ! [IN]
-                        PRES      (KS,:,:),   & ! [IN]
-                        W         (KS,:,:),   & ! [IN]
-                        U         (KS,:,:),   & ! [IN]
-                        V         (KS,:,:),   & ! [IN]
-                        DENS      (KS,:,:),   & ! [IN]
-                        QTRC      (KS,:,:,:), & ! [IN]
-                        ATM_PBL   (:,:),      & ! [IN]
-                        SFC_PRES  (:,:),      & ! [IN]
-                        SFLX_LW_dn(:,:),      & ! [IN]
-                        SFLX_SW_dn(:,:),      & ! [IN]
-                        cosSZA    (:,:),      & ! [IN]
-                        SFLX_rain (:,:),      & ! [IN]
-                        SFLX_snow (:,:),      & ! [IN]
-                        countup               ) ! [IN]
+       call CPL_putATM( TEMP       (KS,:,:),   & ! [IN]
+                        PRES       (KS,:,:),   & ! [IN]
+                        W          (KS,:,:),   & ! [IN]
+                        U          (KS,:,:),   & ! [IN]
+                        V          (KS,:,:),   & ! [IN]
+                        DENS       (KS,:,:),   & ! [IN]
+                        QTRC       (KS,:,:,:), & ! [IN]
+                        ATM_PBL    (:,:),      & ! [IN]
+                        SFC_PRES   (:,:),      & ! [IN]
+                        SFLX_rad_dn(:,:,:,:),  & ! [IN]
+                        cosSZA     (:,:),      & ! [IN]
+                        SFLX_rain  (:,:),      & ! [IN]
+                        SFLX_snow  (:,:),      & ! [IN]
+                        countup                ) ! [IN]
     endif
 
     return
