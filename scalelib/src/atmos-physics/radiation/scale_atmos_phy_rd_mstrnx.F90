@@ -1727,6 +1727,7 @@ contains
                                     flux_direct(:,:,:,:)    ) ! [OUT]
           call PROF_rapend  ('RD_MSTRN_twst', 3)
 
+          do icloud = 1, 2
           !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
           !$acc loop gang
           do j = JS, JE
@@ -1740,6 +1741,7 @@ contains
           enddo
           enddo
           !$acc end kernels
+          enddo
 
           do j = JS, JE
           do i = IS, IE
