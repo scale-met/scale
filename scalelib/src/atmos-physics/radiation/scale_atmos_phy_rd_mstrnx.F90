@@ -660,31 +660,31 @@ contains
     call PROF_rapstart('RD_MSTRN_DTRN3', 3)
 
     ! calc radiative transfer
-    call RD_MSTRN_DTRN3( RD_KMAX,                      & ! [IN]
-                         MSTRN_ngas,                   & ! [IN]
-                         MSTRN_ncfc,                   & ! [IN]
-                         RD_naero,                     & ! [IN]
-                         RD_hydro_str,                 & ! [IN]
-                         RD_hydro_end,                 & ! [IN]
-                         RD_aero_str,                  & ! [IN]
-                         RD_aero_end,                  & ! [IN]
-                         solins            (:,:),      & ! [IN]
-                         cosSZA            (:,:),      & ! [IN]
-                         rhodz_merge       (:,:,:),    & ! [IN]
-                         pres_merge        (:,:,:),    & ! [IN]
-                         temp_merge        (:,:,:),    & ! [IN]
-                         temph_merge       (:,:,:),    & ! [IN]
-                         temp_sfc          (:,:),      & ! [IN]
-                         gas_merge         (:,:,:,:),  & ! [IN]
-                         cfc_merge         (:,:,:,:),  & ! [IN]
-                         aerosol_conc_merge(:,:,:,:),  & ! [IN]
-                         aerosol_radi_merge(:,:,:,:),  & ! [IN]
-                         I_MPAE2RD         (:),        & ! [IN]
-                         cldfrac_merge     (:,:,:),    & ! [IN]
-                         albedo_land       (:,:,:),    & ! [IN]
-                         fact_ocean        (:,:),      & ! [IN]
-                         fact_land         (:,:),      & ! [IN]
-                         fact_urban        (:,:),      & ! [IN]
+    call RD_MSTRN_DTRN3( RD_KMAX,                         & ! [IN]
+                         MSTRN_ngas,                      & ! [IN]
+                         MSTRN_ncfc,                      & ! [IN]
+                         RD_naero,                        & ! [IN]
+                         RD_hydro_str,                    & ! [IN]
+                         RD_hydro_end,                    & ! [IN]
+                         RD_aero_str,                     & ! [IN]
+                         RD_aero_end,                     & ! [IN]
+                         solins            (:,:),         & ! [IN]
+                         cosSZA            (:,:),         & ! [IN]
+                         rhodz_merge       (:,:,:),       & ! [IN]
+                         pres_merge        (:,:,:),       & ! [IN]
+                         temp_merge        (:,:,:),       & ! [IN]
+                         temph_merge       (:,:,:),       & ! [IN]
+                         temp_sfc          (:,:),         & ! [IN]
+                         gas_merge         (:,:,:,:),     & ! [IN]
+                         cfc_merge         (:,:,:,:),     & ! [IN]
+                         aerosol_conc_merge(:,:,:,:),     & ! [IN]
+                         aerosol_radi_merge(:,:,:,:),     & ! [IN]
+                         I_MPAE2RD         (:),           & ! [IN]
+                         cldfrac_merge     (:,:,:),       & ! [IN]
+                         albedo_land       (:,:,:),       & ! [IN]
+                         fact_ocean        (:,:),         & ! [IN]
+                         fact_land         (:,:),         & ! [IN]
+                         fact_urban        (:,:),         & ! [IN]
                          flux_rad_merge    (:,:,:,:,:,:), & ! [OUT]
                          flux_rad_sfc_dn   (:,:,:,:)      ) ! [OUT]
 
@@ -1087,7 +1087,7 @@ contains
     real(RP), intent(in)  :: fact_land   (IA,JA)
     real(RP), intent(in)  :: fact_urban  (IA,JA)
     real(RP), intent(out) :: rflux       (rd_kmax+1,IA,JA,2,2,MSTRN_ncloud)
-    real(RP), intent(out) :: rflux_sfc_dn(IA,JA,2,2) ! surface downward radiation flux (SW/LW,direct/diffuse)
+    real(RP), intent(out) :: rflux_sfc_dn(IA,JA,2,2)                        ! surface downward radiation flux (SW/LW,direct/diffuse)
 
     ! for P-T fitting
     real(RP) :: dz_std (rd_kmax,IA,JA)       ! layer thickness at 0C, 1atm [cm]
@@ -1728,19 +1728,19 @@ contains
           call PROF_rapend  ('RD_MSTRN_twst', 3)
 
           do icloud = 1, 2
-          !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
-          !$acc loop gang
-          do j = JS, JE
-          !$acc loop gang vector(8)
-          do i = IS, IE
-          !$acc loop gang vector(32)
-          do k = 1, rd_kmax+1
-             rflux(k,i,j,irgn,I_up,icloud) = rflux(k,i,j,irgn,I_up,icloud) + flux(k,i,j,I_up,icloud) * wgtch(ich,iw)
-             rflux(k,i,j,irgn,I_dn,icloud) = rflux(k,i,j,irgn,I_dn,icloud) + flux(k,i,j,I_dn,icloud) * wgtch(ich,iw)
-          enddo
-          enddo
-          enddo
-          !$acc end kernels
+             !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
+             !$acc loop gang
+             do j = JS, JE
+             !$acc loop gang vector(8)
+             do i = IS, IE
+             !$acc loop gang vector(32)
+             do k = 1, rd_kmax+1
+                rflux(k,i,j,irgn,I_up,icloud) = rflux(k,i,j,irgn,I_up,icloud) + flux(k,i,j,I_up,icloud) * wgtch(ich,iw)
+                rflux(k,i,j,irgn,I_dn,icloud) = rflux(k,i,j,irgn,I_dn,icloud) + flux(k,i,j,I_dn,icloud) * wgtch(ich,iw)
+             enddo
+             enddo
+             enddo
+             !$acc end kernels
           enddo
 
           do j = JS, JE
@@ -1883,7 +1883,6 @@ contains
 
     !$acc kernels pcopyin(cosSZA0) pcopy(cosSZA) async(0)
     cosSZA(IS:IE,JS:JE) = max( cosSZA0(IS:IE,JS:JE), RD_cosSZA_min )
-!    cosSZA(:,:) = max( cosSZA0(:,:), RD_cosSZA_min ) ! this may raise a floating exception for value in halo
     !$acc end kernels
 
 !OCL SERIAL
@@ -2013,11 +2012,11 @@ contains
           Tdir(k,i,j) = (        cf(k,i,j) ) * Tdir0(k,i,j,I_Cloud   ) &
                       + ( 1.0_RP-cf(k,i,j) ) * Tdir0(k,i,j,I_ClearSky)
 
-          R (k,i,j)   = (        cf(k,i,j) ) * R0(k,i,j,I_Cloud   ) &
-                      + ( 1.0_RP-cf(k,i,j) ) * R0(k,i,j,I_ClearSky)
+          R   (k,i,j) = (        cf(k,i,j) ) * R0   (k,i,j,I_Cloud   ) &
+                      + ( 1.0_RP-cf(k,i,j) ) * R0   (k,i,j,I_ClearSky)
 
-          T (k,i,j)   = (        cf(k,i,j) ) * T0(k,i,j,I_Cloud   ) &
-                      + ( 1.0_RP-cf(k,i,j) ) * T0(k,i,j,I_ClearSky)
+          T   (k,i,j) = (        cf(k,i,j) ) * T0   (k,i,j,I_Cloud   ) &
+                      + ( 1.0_RP-cf(k,i,j) ) * T0   (k,i,j,I_ClearSky)
        enddo
        enddo
        enddo
