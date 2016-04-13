@@ -316,30 +316,30 @@ contains
        GTOPO30_IN_DIR
 
     ! data catalogue list
-    integer, parameter    :: TILE_nlim = 100
-    integer               :: TILE_nmax
-    real(RP)              :: TILE_LATS (TILE_nlim)
-    real(RP)              :: TILE_LATE (TILE_nlim)
-    real(RP)              :: TILE_LONS (TILE_nlim)
-    real(RP)              :: TILE_LONE (TILE_nlim)
-    character(len=H_LONG) :: TILE_fname(TILE_nlim)
+    integer, parameter      :: TILE_nlim = 100
+    integer                 :: TILE_nmax
+    real(RP)                :: TILE_LATS (TILE_nlim)
+    real(RP)                :: TILE_LATE (TILE_nlim)
+    real(RP)                :: TILE_LONS (TILE_nlim)
+    real(RP)                :: TILE_LONE (TILE_nlim)
+    character(len=H_LONG)   :: TILE_fname(TILE_nlim)
 
     ! GTOPO30 data
-    integer, parameter    :: isize_orig = 4800
-    integer, parameter    :: jsize_orig = 6000
-    integer(2)            :: TILE_HEIGHT_orig(isize_orig,jsize_orig)
-    real(RP)              :: TILE_DLAT_orig, TILE_DLON_orig
+    integer, parameter      :: isize_orig = 4800
+    integer, parameter      :: jsize_orig = 6000
+    integer(2)              :: TILE_HEIGHT_orig(isize_orig,jsize_orig)
+    real(RP)                :: TILE_DLAT_orig, TILE_DLON_orig
 
     ! GTOPO30 data (oversampling)
-    integer               :: ios
-    integer               :: jos
-    integer               :: isize
-    integer               :: jsize
-    real(RP), allocatable :: TILE_HEIGHT(:,:)
-    real(RP), allocatable :: TILE_LATH  (:)
-    real(RP), allocatable :: TILE_LONH  (:)
-    real(RP)              :: TILE_DLAT, TILE_DLON
-    real(RP)              :: area, area_fraction
+    integer                 :: ios
+    integer                 :: jos
+    integer                 :: isize
+    integer                 :: jsize
+    integer(2), allocatable :: TILE_HEIGHT(:,:)
+    real(RP),   allocatable :: TILE_LATH  (:)
+    real(RP),   allocatable :: TILE_LONH  (:)
+    real(RP)                :: TILE_DLAT, TILE_DLON
+    real(RP)                :: area, area_fraction
 
     integer  :: iloc
     integer  :: jloc
@@ -350,6 +350,7 @@ contains
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
     real(RP) :: topo_sum(IA,JA)
     real(RP) :: area_sum(IA,JA)
+    real(RP) :: topo, mask
 
     character(len=H_LONG) :: fname
 
@@ -497,7 +498,7 @@ contains
                 jjj = (jj-1) * jos + j
                 iii = (ii-1) * ios + i
 
-                TILE_HEIGHT(iii,jjj) = max( real(TILE_HEIGHT_orig(ii,jsize_orig-jj+1),kind=RP), 0.0_RP ) ! reverse y-axis
+                TILE_HEIGHT(iii,jjj) = TILE_HEIGHT_orig(ii,jsize_orig-jj+1) ! reverse y-axis
              enddo
              enddo
           enddo
@@ -552,25 +553,28 @@ contains
 
              if( iloc == 1 .AND. jloc == 1 ) cycle
 
-             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
+             topo = real( TILE_HEIGHT(ii,jj), kind=RP )
+             mask = 0.5_RP - sign( 0.5_RP, topo ) ! if Height is negative, mask = 1
+
+             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) ) * ( 1.0_RP - mask )
 
 !             if( IO_L ) write(IO_FID_LOG,*) ii, jj, area, iloc, jloc, ifrac_l, jfrac_b, TILE_HEIGHT(ii,jj)
 
              area_fraction = (       ifrac_l) * (       jfrac_b) * area
              area_sum(iloc  ,jloc  ) = area_sum(iloc  ,jloc  ) + area_fraction
-             topo_sum(iloc  ,jloc  ) = topo_sum(iloc  ,jloc  ) + area_fraction * TILE_HEIGHT(ii,jj)
+             topo_sum(iloc  ,jloc  ) = topo_sum(iloc  ,jloc  ) + area_fraction * topo
 
              area_fraction = (1.0_RP-ifrac_l) * (       jfrac_b) * area
              area_sum(iloc+1,jloc  ) = area_sum(iloc+1,jloc  ) + area_fraction
-             topo_sum(iloc+1,jloc  ) = topo_sum(iloc+1,jloc  ) + area_fraction * TILE_HEIGHT(ii,jj)
+             topo_sum(iloc+1,jloc  ) = topo_sum(iloc+1,jloc  ) + area_fraction * topo
 
              area_fraction = (       ifrac_l) * (1.0_RP-jfrac_b) * area
              area_sum(iloc  ,jloc+1) = area_sum(iloc  ,jloc+1) + area_fraction
-             topo_sum(iloc  ,jloc+1) = topo_sum(iloc  ,jloc+1) + area_fraction * TILE_HEIGHT(ii,jj)
+             topo_sum(iloc  ,jloc+1) = topo_sum(iloc  ,jloc+1) + area_fraction * topo
 
              area_fraction = (1.0_RP-ifrac_l) * (1.0_RP-jfrac_b) * area
              area_sum(iloc+1,jloc+1) = area_sum(iloc+1,jloc+1) + area_fraction
-             topo_sum(iloc+1,jloc+1) = topo_sum(iloc+1,jloc+1) + area_fraction * TILE_HEIGHT(ii,jj)
+             topo_sum(iloc+1,jloc+1) = topo_sum(iloc+1,jloc+1) + area_fraction * topo
           enddo
           enddo
 
@@ -802,7 +806,7 @@ contains
                 jjj = (jj-1) * ios + j
                 iii = (ii-1) * ios + i
 
-                TILE_HEIGHT(iii,jjj) = max( TILE_HEIGHT_orig(ii,jj), 0.0_SP )
+                TILE_HEIGHT(iii,jjj) = TILE_HEIGHT_orig(ii,jj)
              enddo
              enddo
           enddo
@@ -857,25 +861,28 @@ contains
 
              if( iloc == 1 .AND. jloc == 1 ) cycle
 
-             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
+             topo = real( TILE_HEIGHT(ii,jj), kind=RP )
+             mask = 0.5_RP - sign( 0.5_RP,topo ) ! if Height is negative, mask = 1
+
+             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) ) * ( 1.0_RP - mask )
 
 !             if( IO_L ) write(IO_FID_LOG,*) ii, jj, area, iloc, jloc, ifrac_l, jfrac_b, TILE_HEIGHT(ii,jj)
 
              area_fraction = (       ifrac_l) * (       jfrac_b) * area
              area_sum(iloc  ,jloc  ) = area_sum(iloc  ,jloc  ) + area_fraction
-             topo_sum(iloc  ,jloc  ) = topo_sum(iloc  ,jloc  ) + area_fraction * real( TILE_HEIGHT(ii,jj), kind=RP )
+             topo_sum(iloc  ,jloc  ) = topo_sum(iloc  ,jloc  ) + area_fraction * topo
 
              area_fraction = (1.0_RP-ifrac_l) * (       jfrac_b) * area
              area_sum(iloc+1,jloc  ) = area_sum(iloc+1,jloc  ) + area_fraction
-             topo_sum(iloc+1,jloc  ) = topo_sum(iloc+1,jloc  ) + area_fraction * real( TILE_HEIGHT(ii,jj), kind=RP )
+             topo_sum(iloc+1,jloc  ) = topo_sum(iloc+1,jloc  ) + area_fraction * topo
 
              area_fraction = (       ifrac_l) * (1.0_RP-jfrac_b) * area
              area_sum(iloc  ,jloc+1) = area_sum(iloc  ,jloc+1) + area_fraction
-             topo_sum(iloc  ,jloc+1) = topo_sum(iloc  ,jloc+1) + area_fraction * real( TILE_HEIGHT(ii,jj), kind=RP )
+             topo_sum(iloc  ,jloc+1) = topo_sum(iloc  ,jloc+1) + area_fraction * topo
 
              area_fraction = (1.0_RP-ifrac_l) * (1.0_RP-jfrac_b) * area
              area_sum(iloc+1,jloc+1) = area_sum(iloc+1,jloc+1) + area_fraction
-             topo_sum(iloc+1,jloc+1) = topo_sum(iloc+1,jloc+1) + area_fraction * real( TILE_HEIGHT(ii,jj), kind=RP )
+             topo_sum(iloc+1,jloc+1) = topo_sum(iloc+1,jloc+1) + area_fraction * topo
           enddo
           enddo
 
