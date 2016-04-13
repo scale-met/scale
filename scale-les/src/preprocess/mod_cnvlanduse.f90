@@ -31,11 +31,10 @@ module mod_cnvlanduse
   !
   !++ Public parameters & variables
   !
-  integer, public            :: CNVLANDUSE_TYPE = -1
-
-  integer, public, parameter :: I_IGNORE     =  0
-  integer, public, parameter :: I_GLCCv2       =  1
-  integer, public, parameter :: I_LU100M     =  2
+  logical, public :: CNVLANDUSE_DoNothing
+  logical, public :: CNVLANDUSE_UseGLCCv2 = .false.
+  logical, public :: CNVLANDUSE_UseLU100M = .false.
+  logical, public :: CNVLANDUSE_UseJIBIS  = .false.
 
   !-----------------------------------------------------------------------------
   !
@@ -43,11 +42,15 @@ module mod_cnvlanduse
   !
   private :: CNVLANDUSE_GLCCv2
   private :: CNVLANDUSE_LU100M
+  private :: CNVLANDUSE_JIBIS
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
+  real(RP), private :: CNVLANDUSE_unittile_ddeg                ! dx for unit tile [deg]
+  real(RP), private :: CNVLANDUSE_oversampling_factor = 2.0_RP ! factor of min. dx against the unit tile
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -55,14 +58,26 @@ contains
   subroutine CNVLANDUSE_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       D2R => CONST_D2R
+    use scale_comm, only: &
+       COMM_horizontal_min
+    use scale_grid_real, only: &
+       REAL_DLAT, &
+       REAL_DLON
     implicit none
 
-    character(len=H_SHORT) :: CNVLANDUSE_name = 'NONE'
-
     NAMELIST / PARAM_CNVLANDUSE / &
-       CNVLANDUSE_name
+       CNVLANDUSE_UseGLCCv2,           &
+       CNVLANDUSE_UseLU100M,           &
+       CNVLANDUSE_UseJIBIS,            &
+       CNVLANDUSE_unittile_ddeg,       &
+       CNVLANDUSE_oversampling_factor
 
-    integer :: ierr
+    real(RP) :: drad(IA,JA)
+    real(RP) :: drad_min
+
+    integer  :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -78,20 +93,43 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE)
 
-    select case(CNVLANDUSE_name)
-    case('NONE')
-       CNVLANDUSE_TYPE = I_IGNORE
+    CNVLANDUSE_DoNothing = .true.
 
-    case('GLCCv2')
-       CNVLANDUSE_TYPE = I_GLCCv2
+    if ( CNVLANDUSE_UseGLCCv2 ) then
+       CNVLANDUSE_DoNothing = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** Use GLCC ver.2, global 30 arcsec. data'
+       if ( CNVLANDUSE_UseLU100M ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Use KSJ landuse 100m data for Japan region'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Overwrite Japan region'
+          if ( CNVLANDUSE_UseJIBIS ) then
+             if( IO_L ) write(IO_FID_LOG,*) '*** Use J-IBIS map 100m data for Japan region'
+             if( IO_L ) write(IO_FID_LOG,*) '*** Overwrite Japan region (PFT only)'
+          endif
+       endif
+    elseif ( CNVLANDUSE_UseLU100M ) then
+       CNVLANDUSE_DoNothing = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** Use KSJ landuse 100m data, Japan region only'
+       if ( CNVLANDUSE_UseJIBIS ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Use J-IBIS map 100m data for Japan region'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Overwrite Japan region (PFT only)'
+       endif
+    endif
 
-    case('LU100M')
-       CNVLANDUSE_TYPE = I_LU100M
+    if ( CNVLANDUSE_DoNothing ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Do nothing for landuse index'
+    else
+       drad(:,:) = min( REAL_DLAT(:,:), REAL_DLON(:,:) )
+       call COMM_horizontal_min( drad_min, drad(:,:) )
 
-    case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(CNVLANDUSE_name)
-       call PRC_MPIstop
-    endselect
+       if ( CNVLANDUSE_unittile_ddeg > 0.0_RP ) then
+          CNVLANDUSE_oversampling_factor = ( drad_min / D2R ) / CNVLANDUSE_unittile_ddeg
+       endif
+       CNVLANDUSE_oversampling_factor = max( 1.0_RP, CNVLANDUSE_oversampling_factor )
+       CNVLANDUSE_unittile_ddeg       = ( drad_min / D2R ) / CNVLANDUSE_oversampling_factor
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** The size of tile [deg] = ', CNVLANDUSE_unittile_ddeg
+       if( IO_L ) write(IO_FID_LOG,*) '*** oversampling factor    = ', CNVLANDUSE_oversampling_factor
+    endif
 
     return
   end subroutine CNVLANDUSE_setup
@@ -102,29 +140,29 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_landuse, only: &
-       LANDUSE_calc_fact, &
+       LANDUSE_calc_fact,  &
        LANDUSE_write
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( CNVLANDUSE_TYPE == I_IGNORE ) then
+    if ( CNVLANDUSE_DoNothing ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  CONVERT LANDUSE DATA ++++++'
     else
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ START CONVERT LANDUSE DATA ++++++'
 
-       select case(CNVLANDUSE_TYPE)
-       case(I_GLCCv2)
-           call CNVLANDUSE_GLCCv2
+       if ( CNVLANDUSE_UseGLCCv2 ) then
+          call CNVLANDUSE_GLCCv2
+       endif
 
-       case(I_LU100M)
-           call CNVLANDUSE_LU100M
+       if ( CNVLANDUSE_UseLU100M ) then
+          call CNVLANDUSE_LU100M
+       endif
 
-       case default
-          write(*,*) ' xxx Unsupported TYPE:', CNVLANDUSE_TYPE
-          call PRC_MPIstop
-       endselect
+       if ( CNVLANDUSE_UseJIBIS ) then
+          call CNVLANDUSE_JIBIS
+       endif
 
        ! calculate landuse factors
        call LANDUSE_calc_fact
@@ -160,8 +198,8 @@ contains
        REAL_LONX
     implicit none
 
-    character(len=H_LONG) :: GLCCv2_IN_CATALOGUE = '' !< metadata files for GLCCv2
-    character(len=H_LONG) :: GLCCv2_IN_DIR       = '' !< directory contains GLCCv2 files (GrADS format)
+    character(len=H_LONG) :: GLCCv2_IN_CATALOGUE  = ''     !< metadata files for GLCCv2
+    character(len=H_LONG) :: GLCCv2_IN_DIR        = ''     !< directory contains GLCCv2 files (GrADS format)
     real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
     NAMELIST / PARAM_CNVLANDUSE_GLCCv2 / &
@@ -170,32 +208,38 @@ contains
        limit_urban_fraction
 
     ! data catalogue list
-    integer, parameter    :: TILE_nlim = 100
-    integer               :: TILE_nmax
-    real(RP)              :: TILE_LATS (TILE_nlim)
-    real(RP)              :: TILE_LATE (TILE_nlim)
-    real(RP)              :: TILE_LONS (TILE_nlim)
-    real(RP)              :: TILE_LONE (TILE_nlim)
-    character(len=H_LONG) :: TILE_fname(TILE_nlim)
+    integer, parameter      :: TILE_nlim = 100
+    integer                 :: TILE_nmax
+    real(RP)                :: TILE_LATS (TILE_nlim)
+    real(RP)                :: TILE_LATE (TILE_nlim)
+    real(RP)                :: TILE_LONS (TILE_nlim)
+    real(RP)                :: TILE_LONE (TILE_nlim)
+    character(len=H_LONG)   :: TILE_fname(TILE_nlim)
 
     ! GLCCv2 data
-    integer(1) :: TILE_LANDUSE(3600,3600)
-    real(RP) :: TILE_LATH   (0:3600)
-    real(RP) :: TILE_LONH   (0:3600)
-    real(RP) :: TILE_DLAT, TILE_DLON
-    real(RP) :: area, area_fraction
+    integer, parameter      :: isize_orig = 3600
+    integer(1)              :: TILE_LANDUSE_orig(isize_orig,isize_orig)
+    real(RP)                :: TILE_DLAT_orig, TILE_DLON_orig
+
+    ! GLCCv2 data (oversampling)
+    integer                 :: ios
+    integer                 :: isize
+    integer(1), allocatable :: TILE_LANDUSE(:,:)
+    real(RP),   allocatable :: TILE_LATH   (:)
+    real(RP),   allocatable :: TILE_LONH   (:)
+    real(RP)                :: TILE_DLAT, TILE_DLON
+    real(RP)                :: area, area_fraction
 
     integer  :: iloc
     integer  :: jloc
     real(RP) :: ifrac_l ! fraction for iloc
     real(RP) :: jfrac_b ! fraction for jloc
 
-
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
 
     ! tentative: LANDUSE_PFT_nmax is assumed to be 4
-    real(RP) :: categ_sum(IA,JA,-2:LANDUSE_PFT_nmax)
+    real(RP) :: categ_sum(IA,JA,-3:LANDUSE_PFT_nmax)
 
     integer  :: lookuptable(1:25)
     data lookuptable /  0, & !   1 Urban and Built-Up Land        ->  0 urban
@@ -222,7 +266,7 @@ contains
                         1, & !  22 Mixed Tundra                   ->  1 Bare Ground
                         1, & !  23 Bare Ground Tundra             ->  1 Bare Ground
                         1, & !  24 Snow or Ice                    ->  1 Bare Ground
-                       -1  / !  25 Missing Data                   -> -1 Sea Surface
+                       -3  / !  25 Missing Data                   -> -1 Sea Surface
 
     real(RP) :: categ_pftsum, allsum
     real(RP) :: PFT    (LANDUSE_PFT_nmax)
@@ -236,7 +280,7 @@ contains
     logical  :: hit_lat, hit_lon
     integer  :: index
     integer  :: fid, ierr
-    integer  :: i, j, ii, jj, t, p, pp
+    integer  :: i, j, ii, jj, iii, jjj, t, p, pp
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -253,7 +297,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_GLCCv2)
 
-    do p = -2, LANDUSE_PFT_nmax
+    do p = -3, LANDUSE_PFT_nmax
     do j = 1, JA
     do i = 1, IA
        categ_sum(i,j,p) = 0.0_RP
@@ -266,8 +310,28 @@ contains
     DOMAIN_LONS = minval(REAL_LONX(:,:))
     DOMAIN_LONE = maxval(REAL_LONX(:,:))
 
+    ios   = nint( 30.0_RP / 60.0_RP / 60.0_RP / CNVLANDUSE_unittile_ddeg - 0.5_RP ) + 1
+    isize = isize_orig * ios
+
+    allocate( TILE_LANDUSE(isize,isize) )
+    allocate( TILE_LATH   (0:isize)     )
+    allocate( TILE_LONH   (0:isize)     )
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling orig = ', isize_orig, ', use = ', isize
+
+    TILE_DLAT_orig = 30.0_RP / 60.0_RP / 60.0_RP * D2R
+    TILE_DLON_orig = 30.0_RP / 60.0_RP / 60.0_RP * D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT       :', TILE_DLAT_orig/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON       :', TILE_DLON_orig/D2R
+
+    TILE_DLAT = TILE_DLAT_orig / ios
+    TILE_DLON = TILE_DLON_orig / ios
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON (OS)  :', TILE_DLON/D2R
+
     !---< READ from external files >---
 
+    ! catalogue file
     fname = trim(GLCCv2_IN_DIR)//'/'//trim(GLCCv2_IN_CATALOGUE)
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -295,6 +359,7 @@ contains
        TILE_nmax = t - 1
     close(fid)
 
+    ! data file
     do t = 1, TILE_nmax
        hit_lat = .false.
        hit_lon = .false.
@@ -323,51 +388,58 @@ contains
           fname = trim(GLCCv2_IN_DIR)//'/'//trim(TILE_fname(t))
 
           if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data      file :', trim(fname)
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '*** Tile  (LAT):', TILE_LATS(t), TILE_LATE(t)
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', TILE_LONS(t), TILE_LONE(t)
-
-          TILE_DLAT = 30.0_RP / 60.0_RP / 60.0_RP * D2R
-          TILE_DLON = 30.0_RP / 60.0_RP / 60.0_RP * D2R
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data file :', trim(fname)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '*** Tile   (LAT)    :', TILE_LATS(t), TILE_LATE(t)
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', TILE_LONS(t), TILE_LONE(t)
 
           fid = IO_get_available_fid()
-          open( fid,                    &
-                file   = trim(fname),   &
-                form   = 'unformatted', &
-                access = 'direct',      &
-                status = 'old',         &
-                recl   = 3600*3600*1,   &
-                iostat = ierr           )
+          open( fid,                              &
+                file   = trim(fname),             &
+                form   = 'unformatted',           &
+                access = 'direct',                &
+                status = 'old',                   &
+                recl   = isize_orig*isize_orig*1, &
+                iostat = ierr                     )
 
              if ( ierr /= 0 ) then
                 write(*,*) 'xxx data file not found!'
                 call PRC_MPIstop
              endif
 
-             read(fid,rec=1) TILE_LANDUSE(:,:)
+             read(fid,rec=1) TILE_LANDUSE_orig(:,:)
           close(fid)
 
+          ! oversampling
+          do jj = 1, isize_orig
+          do ii = 1, isize_orig
+             do j = 1, ios
+             do i = 1, ios
+                jjj = (jj-1) * ios + j
+                iii = (ii-1) * ios + i
+
+                TILE_LANDUSE(iii,jjj) = TILE_LANDUSE_orig(ii,jj)
+             enddo
+             enddo
+          enddo
+          enddo
+
           TILE_LATH(0) = TILE_LATS(t) * D2R
-          do jj = 1, 3600
+          do jj = 1, isize
              TILE_LATH(jj) = TILE_LATH(jj-1) + TILE_DLAT
 !             if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj)
           enddo
 
           TILE_LONH(0) = TILE_LONS(t) * D2R
-          do ii = 1, 3600
+          do ii = 1, isize
              TILE_LONH(ii) = TILE_LONH(ii-1) + TILE_DLON
 !             if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii)
           enddo
 
           ! match and calc fraction
-          do jj = 1, 3600
-          do ii = 1, 3600
+          do jj = 1, isize
+          do ii = 1, isize
 
              iloc    = 1 ! Z_sfc(1,1) is used for dummy grid
              ifrac_l = 1.0_RP
@@ -531,8 +603,8 @@ contains
        REAL_LONX
     implicit none
 
-    character(len=H_LONG) :: LU100M_IN_CATALOGUE = '' !< metadata files for LU100M
-    character(len=H_LONG) :: LU100M_IN_DIR       = '' !< directory contains LU100M files (GrADS format)
+    character(len=H_LONG) :: LU100M_IN_CATALOGUE = ''      !< metadata files for LU100M
+    character(len=H_LONG) :: LU100M_IN_DIR       = ''      !< directory contains LU100M files (GrADS format)
     real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
     NAMELIST / PARAM_CNVLANDUSE_LU100M / &
@@ -550,26 +622,32 @@ contains
     character(len=H_LONG) :: TILE_fname(TILE_nlim)
 
     ! LU100M data
-    real(SP) :: TILE_LANDUSE(800,800)
-    real(RP) :: TILE_LATH   (0:800)
-    real(RP) :: TILE_LONH   (0:800)
-    real(RP) :: TILE_DLAT, TILE_DLON
-    real(RP) :: area, area_fraction
+    integer, parameter    :: isize_orig = 800
+    real(SP)              :: TILE_LANDUSE_orig(isize_orig,isize_orig)
+    real(RP)              :: TILE_DLAT_orig, TILE_DLON_orig
+
+    ! LU100M data (oversampling)
+    integer               :: ios
+    integer               :: isize
+    real(RP), allocatable :: TILE_LANDUSE(:,:)
+    real(RP), allocatable :: TILE_LATH   (:)
+    real(RP), allocatable :: TILE_LONH   (:)
+    real(RP)              :: TILE_DLAT, TILE_DLON
+    real(RP)              :: area, area_fraction
 
     integer  :: iloc
     integer  :: jloc
     real(RP) :: ifrac_l ! fraction for iloc
     real(RP) :: jfrac_b ! fraction for jloc
 
-
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
 
     ! tentative: LANDUSE_PFT_nmax is assumed to be 4
-    real(RP) :: categ_sum(IA,JA,-2:LANDUSE_PFT_nmax)
+    real(RP) :: categ_sum(IA,JA,-3:LANDUSE_PFT_nmax)
 
     integer  :: lookuptable(0:16)
-    data lookuptable / -1, & !  0 missing        -> -1 Sea Surface
+    data lookuptable / -3, & !  0 missing        -> -1 Sea Surface
                        10, & !  1 paddy          -> 10 Paddy
                         9, & !  2 cropland       ->  9 Mixed Cropland and Pasture
                         1, & !  3 UNDEF          ->  1 Bare Ground
@@ -592,6 +670,7 @@ contains
     integer  :: PFT_idx(LANDUSE_PFT_nmax)
     real(RP) :: temp
     integer  :: temp_idx
+    real(RP) :: frac, mask
 
     character(len=H_LONG) :: fname
 
@@ -599,7 +678,7 @@ contains
     logical  :: hit_lat, hit_lon
     integer  :: index
     integer  :: fid, ierr
-    integer  :: i, j, ii, jj, t, p, pp
+    integer  :: i, j, ii, jj, iii, jjj, t, p, pp
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -616,7 +695,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_LU100M)
 
-    do p = -2, LANDUSE_PFT_nmax
+    do p = -3, LANDUSE_PFT_nmax
     do j = 1, JA
     do i = 1, IA
        categ_sum(i,j,p) = 0.0_RP
@@ -629,8 +708,28 @@ contains
     DOMAIN_LONS = minval(REAL_LONX(:,:))
     DOMAIN_LONE = maxval(REAL_LONX(:,:))
 
+    ios   = nint( 5.0_RP / 60.0_RP / 100.0_RP / CNVLANDUSE_unittile_ddeg - 0.5_RP ) + 1
+    isize = isize_orig * ios
+
+    allocate( TILE_LANDUSE(isize,isize) )
+    allocate( TILE_LATH   (0:isize)     )
+    allocate( TILE_LONH   (0:isize)     )
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling orig = ', isize_orig, ', use = ', isize
+
+    TILE_DLAT_orig = 5.0_RP / 60.0_RP / 100.0_RP * D2R
+    TILE_DLON_orig = 7.5_RP / 60.0_RP / 100.0_RP * D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT       :', TILE_DLAT_orig/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON       :', TILE_DLON_orig/D2R
+
+    TILE_DLAT = TILE_DLAT_orig / ios
+    TILE_DLON = TILE_DLON_orig / ios
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON (OS)  :', TILE_DLON/D2R
+
     !---< READ from external files >---
 
+    ! catalogue file
     fname = trim(LU100M_IN_DIR)//'/'//trim(LU100M_IN_CATALOGUE)
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -658,6 +757,7 @@ contains
        TILE_nmax = t - 1
     close(fid)
 
+    ! data file
     do t = 1, TILE_nmax
        hit_lat = .false.
        hit_lon = .false.
@@ -686,51 +786,58 @@ contains
           fname = trim(LU100M_IN_DIR)//'/'//trim(TILE_fname(t))
 
           if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data      file :', trim(fname)
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '*** Tile  (LAT):', TILE_LATS(t), TILE_LATE(t)
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', TILE_LONS(t), TILE_LONE(t)
-
-          TILE_DLAT = 5.0_RP / 60.0_RP / 100.0_RP * D2R
-          TILE_DLON = 7.5_RP / 60.0_RP / 100.0_RP * D2R
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data file :', trim(fname)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '*** Tile   (LAT)    :', TILE_LATS(t), TILE_LATE(t)
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', TILE_LONS(t), TILE_LONE(t)
 
           fid = IO_get_available_fid()
-          open( fid,                    &
-                file   = trim(fname),   &
-                form   = 'unformatted', &
-                access = 'direct',      &
-                status = 'old',         &
-                recl   = 800*800*4,     &
-                iostat = ierr           )
+          open( fid,                              &
+                file   = trim(fname),             &
+                form   = 'unformatted',           &
+                access = 'direct',                &
+                status = 'old',                   &
+                recl   = isize_orig*isize_orig*4, &
+                iostat = ierr                     )
 
              if ( ierr /= 0 ) then
                 write(*,*) 'xxx data file not found!'
                 call PRC_MPIstop
              endif
 
-             read(fid,rec=1) TILE_LANDUSE(:,:)
+             read(fid,rec=1) TILE_LANDUSE_orig(:,:)
           close(fid)
 
+          ! oversampling
+          do jj = 1, isize_orig
+          do ii = 1, isize_orig
+             do j = 1, ios
+             do i = 1, ios
+                jjj = (jj-1) * ios + j
+                iii = (ii-1) * ios + i
+
+                TILE_LANDUSE(iii,jjj) = real( TILE_LANDUSE_orig(ii,jj), kind=RP )
+             enddo
+             enddo
+          enddo
+          enddo
+
           TILE_LATH(0) = TILE_LATS(t) * D2R
-          do jj = 1, 800
+          do jj = 1, isize
              TILE_LATH(jj) = TILE_LATH(jj-1) + TILE_DLAT
 !             if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj)
           enddo
 
           TILE_LONH(0) = TILE_LONS(t) * D2R
-          do ii = 1, 800
+          do ii = 1, isize
              TILE_LONH(ii) = TILE_LONH(ii-1) + TILE_DLON
 !             if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii)
           enddo
 
           ! match and calc fraction
-          do jj = 1, 800
-          do ii = 1, 800
+          do jj = 1, isize
+          do ii = 1, isize
 
              iloc    = 1 ! Z_sfc(1,1) is used for dummy grid
              ifrac_l = 1.0_RP
@@ -767,7 +874,7 @@ contains
 
              area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
 
-             pp = int( max( TILE_LANDUSE(ii,jj), 0.0 ) )
+             pp = int( max( TILE_LANDUSE(ii,jj), 0.0_RP ) )
              p  = lookuptable(pp)
 
              !if( IO_L ) write(IO_FID_LOG,*) ii, jj, iloc, jloc, p, pp
@@ -821,25 +928,34 @@ contains
 
        ! land fraction : 1 - ocean / total
        allsum = categ_sum(i,j,-2) + categ_sum(i,j,-1) + categ_sum(i,j,0) + categ_pftsum
+       mask   = 0.5_RP + sign( 0.5_RP, allsum-EPS ) ! if any data is found, overwrite
        zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-       LANDUSE_frac_land (i,j) = 1.0_RP-zerosw - categ_sum(i,j,-1) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+       frac = ( 1.0_RP-zerosw ) - categ_sum(i,j,-1) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+       LANDUSE_frac_land (i,j) = (        mask ) * frac &                  ! overwrite
+                               + ( 1.0_RP-mask ) * LANDUSE_frac_land (i,j) ! keep existing value
 
        ! lake fraction : lake / ( total - ocean )
        allsum = categ_sum(i,j,-2) + categ_sum(i,j,0) + categ_pftsum
        zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-       LANDUSE_frac_lake (i,j) = categ_sum(i,j,-2) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+       frac = categ_sum(i,j,-2) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+       LANDUSE_frac_lake (i,j) = (        mask ) * frac &                  ! overwrite
+                               + ( 1.0_RP-mask ) * LANDUSE_frac_lake (i,j) ! keep existing value
 
        ! urban fraction : urban / ( total - ocean - lake )
        allsum = categ_sum(i,j,0) + categ_pftsum
        zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-       LANDUSE_frac_urban(i,j) = categ_sum(i,j,0) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+       frac = categ_sum(i,j,0) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+       LANDUSE_frac_urban(i,j) = (        mask ) * frac &                  ! overwrite
+                               + ( 1.0_RP-mask ) * LANDUSE_frac_urban(i,j) ! keep existing value
 
        ! PFT fraction : PFT / sum( PFT(1:mosaic) )
        allsum = sum( PFT(1:LANDUSE_PFT_mosaic) )
        if ( abs(allsum) > EPS ) then
           do p = 1, LANDUSE_PFT_mosaic
-             LANDUSE_frac_PFT (i,j,p) = PFT    (p) / allsum
-             LANDUSE_index_PFT(i,j,p) = PFT_idx(p)
+             LANDUSE_frac_PFT (i,j,p) = (        mask ) * PFT    (p) / allsum &    ! overwrite
+                                      + ( 1.0_RP-mask ) * LANDUSE_frac_PFT (i,j,p) ! keep existing value
+             LANDUSE_index_PFT(i,j,p) = (        mask ) * PFT_idx(p) &             ! overwrite
+                                      + ( 1.0_RP-mask ) * LANDUSE_index_PFT(i,j,p) ! keep existing value
           enddo
           ! if no second PFT, set to same as PFT1
           if ( abs(LANDUSE_frac_PFT(i,j,1)-1.0_RP) <= EPS ) then
@@ -848,9 +964,14 @@ contains
              LANDUSE_index_PFT(i,j,:) = PFT_idx(1)
           endif
        else ! if no PFT, set to bare ground
-          LANDUSE_frac_PFT (i,j,:) = 0.0_RP
-          LANDUSE_frac_PFT (i,j,1) = 1.0_RP
-          LANDUSE_index_PFT(i,j,:) = 1
+          do p = 1, LANDUSE_PFT_mosaic
+             LANDUSE_frac_PFT (i,j,p) = (        mask ) * 0.0_RP &                 ! overwrite
+                                      + ( 1.0_RP-mask ) * LANDUSE_frac_PFT (i,j,p) ! keep existing value
+             LANDUSE_index_PFT(i,j,p) = (        mask ) * 1      &                 ! overwrite
+                                      + ( 1.0_RP-mask ) * LANDUSE_index_PFT(i,j,p) ! keep existing value
+          enddo
+          LANDUSE_frac_PFT (i,j,1) = (        mask ) * 1.0_RP &                 ! overwrite
+                                   + ( 1.0_RP-mask ) * LANDUSE_frac_PFT (i,j,1) ! keep existing value
        endif
 
     enddo
@@ -871,5 +992,14 @@ contains
 
     return
   end subroutine CNVLANDUSE_LU100M
+
+  !-----------------------------------------------------------------------------
+  !> Convert from Japan Integrated Biodiversity Information System database 100m mesh
+  subroutine CNVLANDUSE_JIBIS
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine CNVLANDUSE_JIBIS
 
 end module mod_cnvlanduse
