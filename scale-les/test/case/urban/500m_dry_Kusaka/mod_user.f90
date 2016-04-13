@@ -159,6 +159,9 @@ contains
     real(RP) :: dsec
     integer  :: tloc
 
+    real(RP), parameter :: SRATIO = 0.75_RP ! ratio between direct/total solar [-]
+    real(RP)            :: SWtot
+
     real(RP) :: SW  (0:24)
     real(RP) :: PT  (0:24)
     real(RP) :: Wind(0:24)
@@ -181,16 +184,16 @@ contains
 
     if ( USER_do ) then
 
-       VA  (:,:)  = 0.0_RP
-       WA  (:,:)  = 0.0_RP
-       RHOA(:,:)  = 1.13_RP
-       PBL(:,:)   = 100.0_RP
-       LWD (:,:)  = 400.0_RP
-       PRSA(:,:)  = 100000.0_RP
-       PRSS(:,:)  = 100120.0_RP
-       QVA (:,:)  = 0.015_RP
-       PREC(:,:)  = 0.0_RP
-
+       VA  (:,:)   =      0.0_RP
+       WA  (:,:)   =      0.0_RP
+       RHOA(:,:)   =     1.13_RP
+       PBL (:,:)   =    100.0_RP
+       LWD (:,:,1) =      0.0_RP ! direct
+       LWD (:,:,2) =    400.0_RP ! diffuse
+       PRSA(:,:)   = 100000.0_RP
+       PRSS(:,:)   = 100120.0_RP
+       QVA (:,:)   =    0.015_RP
+       PREC(:,:)   =      0.0_RP
 
        do j = 1, JA
        do i = 1, IA
@@ -201,8 +204,11 @@ contains
 
           dsec = mod(NOWSEC,3600.0_RP) / 3600.0_RP
 
-          SWD (i,j) = ( ( 1.0_RP-dsec ) * SW(tloc  ) &
-                      + (        dsec ) * SW(tloc+1) )
+          SWtot = ( ( 1.0_RP-dsec ) * SW(tloc  ) &
+                  + (        dsec ) * SW(tloc+1) )
+
+          SWD (i,j,1) = (        SRATIO ) * SWtot ! direct
+          SWD (i,j,2) = ( 1.0_RP-SRATIO ) * SWtot ! diffuse
 
           THETA     = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
                       + (        dsec ) * PT(tloc+1) ) + TEM00

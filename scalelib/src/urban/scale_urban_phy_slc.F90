@@ -712,7 +712,7 @@ contains
     integer , intent(in)    :: i, j
 
     !-- parameters
-    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
+!    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
 !    real(RP), parameter     :: TFa       = 0.5_RP      ! factor a in Tomita (2009)
 !    real(RP), parameter     :: TFb       = 1.1_RP      ! factor b in Tomita (2009)
     real(RP), parameter     :: redf_min  = 1.0E-2_RP   ! minimum reduced factor
