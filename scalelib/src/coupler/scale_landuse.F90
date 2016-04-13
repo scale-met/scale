@@ -146,12 +146,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine LANDUSE_calc_fact
+    implicit none
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ calculate landuse factor'
 
     ! tentative treatment for lake fraction
-    LANDUSE_frac_land(:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
+    LANDUSE_frac_land (:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
 
     ! make factors
     LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
