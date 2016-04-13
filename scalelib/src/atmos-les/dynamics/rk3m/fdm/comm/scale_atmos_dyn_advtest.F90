@@ -56,6 +56,8 @@ contains
 
   subroutine ATMOS_DYN_RK3_advtest(PROG,  &
     & PROG0, DENS, mflx_hi, dt, RCDX, RCDY, RCDZ )
+    use scale_grid
+    
     real(RP), intent(inout) :: PROG(KA,IA,JA)
     real(RP), intent(in) :: PROG0(KA,IA,JA)
     real(RP), intent(in) :: mflx_hi(KA,IA,JA,3), DENS(KA,IA,JA,3)
@@ -63,27 +65,71 @@ contains
     real(RP), intent(in) :: RCDX(IA), RCDY(JA), RCDZ(KA)
     
     integer :: IIS, IIE, JJS, JJE
-
+    integer :: i, j, k
     
-    real(RP) :: RHS_RKTMP(KA,IA,JA,4)
-    real(RP) :: PROG_RKTMP(KA,IA,JA)
+    real(RP) :: RHS_RKTMP(KA,IA,JA,4), l2norm, r
+    real(RP) :: work1(KA,IA,JA), work2(KA,IA,JA), work_flx(KA,IA,JA,3), work1_diff(KA,IA,JA)
 
+    RHS_RKTMP = 0.0_RP
+    
     call calc_RHS(RHS_RKTMP(:,:,:,1), PROG0, &
          & DENS, mflx_hi, RCDX, RCDY, RCDZ)
-
-    call calc_RHS(RHS_RKTMP(:,:,:,2), PROG0 + 0.5_RP*dt*RHS_RKTMP(:,:,:,1), &
+    call calc_RHS(RHS_RKTMP(:,:,:,2), PROG0 + dt*RHS_RKTMP(:,:,:,1), &
          & DENS, mflx_hi, RCDX, RCDY, RCDZ)
+
+    PROG = PROG0 + 0.5_RP*dt * (RHS_RKTMP(:,:,:,1)+RHS_RKTMP(:,:,:,2))
     
-    call calc_RHS(RHS_RKTMP(:,:,:,3), PROG0 + 0.5_RP*dt*RHS_RKTMP(:,:,:,2), &
-         & DENS, mflx_hi, RCDX, RCDY, RCDZ)
+!!$    call calc_RHS(RHS_RKTMP(:,:,:,2), PROG0 + 0.5_RP*dt*RHS_RKTMP(:,:,:,1), &
+!!$         & DENS, mflx_hi, RCDX, RCDY, RCDZ)
+!!$    
+!!$    call calc_RHS(RHS_RKTMP(:,:,:,3), PROG0 + 0.5_RP*dt*RHS_RKTMP(:,:,:,2), &
+!!$         & DENS, mflx_hi, RCDX, RCDY, RCDZ)
+!!$
+!!$    call calc_RHS(RHS_RKTMP(:,:,:,4), PROG0 + dt*RHS_RKTMP(:,:,:,3), &
+!!$         & DENS, mflx_hi, RCDX, RCDY, RCDZ)
+!!$
+!!$    PROG =   PROG0  + dt*(          RHS_RKTMP(:,:,:,1)  + 2.0_RP*RHS_RKTMP(:,:,:,2) &
+!!$         &                 + 2.0_RP*RHS_RKTMP(:,:,:,3)  +        RHS_RKTMP(:,:,:,4))/6.0_RP
 
-    call calc_RHS(RHS_RKTMP(:,:,:,4), PROG0 + dt*RHS_RKTMP(:,:,:,3), &
-         & DENS, mflx_hi, RCDX, RCDY, RCDZ)
+!!$    do j = 1, JA
+!!$    do i = 1, IA
+!!$    do k = 1, KA
+!!$       work1(k,i,j) = - 1.17225_RP * 0.5_RP * (1.0_RP + cos(2.0_RP * acos(-1.0_RP) * GRID_CX(i) / 20.e3_RP))
+!!$       work2(k,i,j) = 1.17225_RP !* 40.0_RPDENS(k,i,j) !1.0_RP
+!!$       work_flx(k,i,j,XDIR) = 1.17225_RP * 40.0_RP
+!!$       work_flx(k,i,j,YDIR) = 0.0_RP
+!!$       work_flx(k,i,j,ZDIR) = 0.0_RP
+!!$    enddo
+!!$    enddo
+!!$    enddo
+!!$    
+!!$    call calc_RHS(RHS_RKTMP(:,:,:,1), PROG0, &
+!!$         & DENS, mflx_hi, RCDX, RCDY, RCDZ)    
+!!$    l2norm = sqrt( sum( ( - RHS_RKTMP(KS,IS:IE,JS,1) - &
+!!$         & 1.17225_RP * 40.0_RP * 0.5_RP*(2.0_RP * acos(-1.0_RP) / 20.e3_RP * sin(2.0_RP * acos(-1.0_RP) * GRID_CX(IS:IE) / 20.e3_RP) ) &
+!!$         & )**2 ) / dble(IE - IS + 1) )
+!!$    write(*,*) FlxEvalTypeID, "l2norm=", l2norm
+!!$!    write(*,*) RHS_RKTMP(KS,IS:IE,JS,1)
+!!$    write(*,*) PROG0(KS,IS:IE,JS)
+!!$    write(*,*) "=----"
+!!$    
+!!$    !
+!!$
+!!$    call calc_RHS(RHS_RKTMP(:,:,:,1), work1, &
+!!$         & work2, work_flx, RCDX, RCDY, RCDZ)
+!!$    l2norm = sqrt( sum( ( - RHS_RKTMP(KS,IS:IE,JS,1) - &
+!!$         & 1.17225_RP * 40.0_RP * 0.5_RP*(2.0_RP * acos(-1.0_RP) / 20.e3_RP * sin(2.0_RP * acos(-1.0_RP) * GRID_CX(IS:IE) / 20.e3_RP) ) &
+!!$         & )**2 ) / dble(IE - IS + 1) )
+!!$    write(*,*) FlxEvalTypeID, "l2norm=", l2norm
+!!$!    write(*,*) RHS_RKTMP(KS,IS:IE,JS,1)
+!!$    write(*,*) work1(KS,IS:IE,JS)
+!!$    write(*,*) "=----"
+!!$
+!!$    write(*,*) - RHS_RKTMP(KS,IS:IE,JS,1) &
+!!$         & - 1.17225_RP * 40.0_RP * (2.0_RP * acos(-1.0_RP) / 20.e3_RP * sin(2.0_RP * acos(-1.0_RP) * GRID_CX(IS:IE) / 20.e3_RP) )
+!stop    
 
-    PROG =   PROG0  + dt*(          RHS_RKTMP(:,:,:,1)  + 2.0_RP*RHS_RKTMP(:,:,:,2) &
-         &                 + 2.0_RP*RHS_RKTMP(:,:,:,3)  +        RHS_RKTMP(:,:,:,4))/6.0_RP
-
-  end subroutine ATMOS_DYN_RK3_advtest
+end subroutine ATMOS_DYN_RK3_advtest
 
   subroutine calc_RHS(RHS, PROG, DENS, mflx_hi, RCDX, RCDY, RCDZ)
     real(RP), intent(inout) :: RHS(KA,IA,JA)
@@ -112,7 +158,7 @@ contains
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
       call ATMOS_NUMERIC_FDM_RhoVar2Var( VARTMP,                        &  ! (out)
-         & PROG, VL_ZXY, one,                                           &  ! (in)
+         & PROG, VL_ZXY, DENS,                                           &  ! (in)
          & IIS-IHALO, IIE+IHALO, JJS-JHALO, JJE+JHALO, KS, KE )            ! (in)
     enddo
     enddo
@@ -130,7 +176,7 @@ contains
       !   [ POTT*MOMFlxX, POTT*MOMFlxY, POTT*MOMFlxZ ]
        call ATMOS_NUMERIC_FDM_EvalFlux( qflx_hi,                                                &  ! (inout)
         & FlxEvalTypeID, VL_ZXY,                                                               &  ! (in)
-        & VARTMP, DENS, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
+        & VARTMP, one, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
         & IIS, IIE, JJS, JJE, KS, KE  )                          ! (in)
 
     enddo

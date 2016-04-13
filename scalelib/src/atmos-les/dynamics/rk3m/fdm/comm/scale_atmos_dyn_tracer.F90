@@ -189,19 +189,20 @@ contains
     enddo
     enddo
 
-!#ifdef HORDCFDDYN_FCT_Q_ON    
-!!$    call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
-!!$                        QTRC, DENS00, DENS,           & ! (in)
-!!$                        qflx_hi, qflx_lo,             & ! (in)
-!!$                        mflx_hi,                      & ! (in)
-!!$                        RCDZ, RCDX, RCDY,             & ! (in)
-!!$                        GSQRT(:,:,:,I_XYZ),           & ! (in)
-!!$                        MAPF(:,:,:,I_XY), dt,         & ! (in)
-!!$                        FLAG_FCT_ALONG_STREAM         ) ! (in)
-!!$    write(*,*) "FCT called"
-!#else
+
+#ifdef HORDCFDDYN_FCT_Q_ON    
+    call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
+                        QTRC, DENS00, DENS,           & ! (in)
+                        qflx_hi, qflx_lo,             & ! (in)
+                        mflx_hi,                      & ! (in)
+                        RCDZ, RCDX, RCDY,             & ! (in)
+                        GSQRT(:,:,:,I_XYZ),           & ! (in)
+                        MAPF(:,:,:,I_XY), dt,         & ! (in)
+                        FLAG_FCT_ALONG_STREAM         ) ! (in)
+    write(*,*) "FCT called"
+#else
     qflx_anti = 0.0_RP
-!#endif
+#endif
     
     !--- < update rho*q >
     do JJS = JS, JE, JBLOCK

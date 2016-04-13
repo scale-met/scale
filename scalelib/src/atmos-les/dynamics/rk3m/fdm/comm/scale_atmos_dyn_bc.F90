@@ -46,7 +46,7 @@ module scale_atmos_dyn_bc
   !-----------------------------------------------------------------------------
 contains
 
-subroutine ATMOS_DYN_bc_apply( &
+  subroutine ATMOS_DYN_bc_apply( &
      & DENS, MOMX, MOMY, MOMZ, RHOT, PROG,      &
      & DENS0, MOMX0, MOMY0, MOMZ0, RHOT0, PROG0 &
      & )
@@ -63,12 +63,7 @@ subroutine ATMOS_DYN_bc_apply( &
   real(RP), intent(in) :: PROG0(KA,IA,JA,VA)
 
   integer :: i, j, k, iv
-  real(RP), parameter :: Ulid = 1.0_RP!3.47212902986050
-  
-!    do k=1,10
-!       write(*,*) "DENS_R: K, k=", k,":", DENS(k,1:6,JS)
-!       write(*,*) "DENS0: k=", k,":", DENS0(k,1:6,JS)       
-!    end do
+  real(RP), parameter :: Ulid = 10.0_RP!3.47212902986050
   
   if( .not. PRC_HAS_W ) then
     !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)

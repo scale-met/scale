@@ -82,6 +82,7 @@ module scale_atmos_dyn_rk_fdmheve
 #endif
 
   integer :: FlxEvalTypeID
+  logical, public :: FLAG_FCT_PROG = .false.
   
   !-----------------------------------------------------------------------------
 
@@ -348,7 +349,7 @@ contains
 
     real(RP), parameter ::  extdmp_coef = 0.01D0
     real(RP) :: extdiv
-    
+
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
@@ -566,7 +567,7 @@ contains
 
          VARTMP(:,IIS:IIE,JJS:JJE) = DENS_RK(:,IIS:IIE,JJS:JJE)
          call ATMOS_NUMERIC_FDM_EvolveVar( DENS_RK,                    & ! (out)
-           & VARTMP, VL_ZXY, qflx_anti, dtrk, RCDX, RCDY, RCDZ,        & ! (in)
+           & VARTMP, VL_ZXY, -qflx_anti, dtrk, RCDX, RCDY, RCDZ,       & ! (in)
            & IIS, IIE, JJS, JJE, KS, KE )                              
          
        enddo
@@ -758,7 +759,7 @@ contains
 
          VARTMP(KS:KE-1,IIS:IIE,JJS:JJE) = MOMZ_RK(KS:KE-1,IIS:IIE,JJS:JJE)
          call ATMOS_NUMERIC_FDM_EvolveVar( MOMZ_RK,                  & ! (out)
-           & VARTMP, VL_WXY, qflx_anti, dtrk, RCDX, RCDY, RFDZ,      & ! (in)
+           & VARTMP, VL_WXY, -qflx_anti, dtrk, RCDX, RCDY, RFDZ,     & ! (in)
            & IIS, IIE, JJS, JJE, KS, KE-1                            & ! (in)
            & )
 
@@ -902,7 +903,7 @@ contains
 
          VARTMP(:,IIS:min(IIE,IEH),JJS:JJE) = MOMX_RK(:,IIS:min(IIE,IEH),JJS:JJE)
          call ATMOS_NUMERIC_FDM_EvolveVar( MOMX_RK,                               & ! (out)
-           & VARTMP, VL_ZUY, qflx_anti, dtrk, RFDX, RCDY, RCDZ,                   & ! (in)
+           & VARTMP, VL_ZUY, -qflx_anti, dtrk, RFDX, RCDY, RCDZ,                  & ! (in)
            & IIS, min(IIE,IEH), JJS, JJE, KS, KE                                  & ! (in)
            & )
          
@@ -1010,7 +1011,7 @@ contains
        
        !-----< update momentum (y) >-----
        call ATMOS_NUMERIC_FDM_EvolveVar( MOMY_RK,                     & ! (out)
-         & MOMY0, VL_ZXV, qflx_hi, dtrk, RCDX, RFDY, RCDZ,            & ! (in)
+         & MOMY0, VL_ZXV, -qflx_hi, dtrk, RCDX, RFDY, RCDZ,           & ! (in)
          & IIS, IIE, JJS, min(JJE,JEH), KS, KE, MOMY_t_nadv           & ! (in)
 #ifdef HIST_TEND
          & ,lhist, advch_t, advcv_t                                   &
@@ -1062,7 +1063,7 @@ contains
 
          VARTMP(:,IIS:IIE,JJS:min(JJE,JEH)) = MOMY_RK(:,IIS:IIE,JJS:min(JJE,JEH))
          call ATMOS_NUMERIC_FDM_EvolveVar( MOMY_RK,                      & ! (out)
-           & VARTMP, VL_ZXV, qflx_anti, dtrk, RCDX, RFDY, RCDZ,          & ! (in)
+           & VARTMP, VL_ZXV, -qflx_anti, dtrk, RCDX, RFDY, RCDZ,         & ! (in)
            & IIS, IIE, JJS, min(JJE,JEH), KS, KE-1                       & ! (in)
            & )
 
@@ -1138,7 +1139,7 @@ contains
          ! * Ouput
          !   [ POTT*MOMFlxX, POTT*MOMFlxY, POTT*MOMFlxZ ]
          VARTMP(:,IIS:IIE,JJS:JJE) = 1.0_RP
-         call ATMOS_NUMERIC_FDM_EvalFlux( tflx_hi,                                                 &  ! (inout)
+         call ATMOS_NUMERIC_FDM_EvalFlux( tflx_lo,                                                 &  ! (inout)
            & FLXEVALTYPE_UD1, VL_ZXY,                                                              &  ! (in)
            & POTT, VARTMP, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
            & IIS, IIE, JJS, JJE, KS, KE )                                                      ! (in)
@@ -1171,9 +1172,9 @@ contains
        IIE = IIS+IBLOCK-1
 
          VARTMP(:,IIS:IIE,JJS:JJE) = RHOT_RK(:,IIS:IIE,JJS:JJE)
-         call ATMOS_NUMERIC_FDM_EvolveVar( RHOT_RK,                   & ! (out)
-           & VARTMP, VL_ZXY, tflx_anti, dtrk, RCDX, RCDY, RCDZ,       & ! (in)
-           & IIS, IIE, JJS, JJE, KS, KE                               & ! (in)
+         call ATMOS_NUMERIC_FDM_EvolveVar( RHOT_RK,                    & ! (out)
+           & VARTMP, VL_ZXY, -tflx_anti, dtrk, RCDX, RCDY, RCDZ,       & ! (in)
+           & IIS, IIE, JJS, JJE, KS, KE                                & ! (in)
            & )
           
        enddo
@@ -1181,11 +1182,12 @@ contains
 
     endif ! FLAG_FCT_T
 #endif    ! [--- End ifndef NO_FCT_DYN ---------------------------------------------------------- ]
-
+    
+!!$
 !!$    !####################################################################################
 !!$    ! PROG0 (advection test)
 !!$    !####################################################################################
-!!$
+!!$write(*,*) "advtest."
 !!$    ! RHOQ --> Q
 !!$    do JJS = JS, JE, JBLOCK
 !!$    JJE = JJS+JBLOCK-1
@@ -1223,6 +1225,67 @@ contains
 !!$
 !!$    enddo
 !!$    enddo
+!!$
+!!$#ifndef NO_FCT_DYN
+!!$   
+!!$    if ( FLAG_FCT_PROG ) then
+!!$
+!!$       call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
+!!$       call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
+!!$       call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
+!!$       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1, .false. )
+!!$       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2, .false. )
+!!$       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3, .false. )
+!!$
+!!$       if ( .not. FLAG_FCT_MOMENTUM ) then
+!!$          call COMM_vars8( DENS_RK, 1 )
+!!$          call COMM_wait ( DENS_RK, 1, .false. )
+!!$       end if
+!!$
+!!$       do JJS = JS, JE, JBLOCK
+!!$       JJE = JJS+JBLOCK-1
+!!$       do IIS = IS, IE, IBLOCK
+!!$       IIE = IIS+IBLOCK-1
+!!$
+!!$         !-----< low order flux >-----
+!!$         ! * Input (Phi * Vec_i / Fact)
+!!$         !   Phi = POTT, Vec_i = MomFlx{X,Y,Z}, Fact = 1.0
+!!$         ! * Ouput
+!!$         !   [ POTT*MOMFlxX, POTT*MOMFlxY, POTT*MOMFlxZ ]
+!!$         call ATMOS_NUMERIC_FDM_EvalFlux( qflx_lo,                                                 &  ! (inout)
+!!$           & FLXEVALTYPE_UD1, VL_ZXY,                                                              &  ! (in)
+!!$           & VARTMP, one, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false.,  &  ! (in)
+!!$           & IIS, IIE, JJS, JJE, KS, KE )                                                      ! (in)
+!!$               
+!!$      enddo
+!!$      enddo
+!!$
+!!$      call ATMOS_DYN_fct( qflx_anti,               & ! (out)
+!!$                          VARTMP, DENS0, DENS_RK,  & ! (out)
+!!$                          qflx_hi, qflx_lo,        & ! (in)
+!!$                          mflx_hi,                 & ! (in)
+!!$                          RCDZ, RCDX, RCDY,        & ! (in)
+!!$                          GSQRT(:,:,:,I_XYZ),      & ! (in)
+!!$                          MAPF(:,:,:,I_XY), dtrk,  & ! (in)
+!!$                          FLAG_FCT_ALONG_STREAM    ) ! (in)
+!!$
+!!$       !--- update rho*theta       
+!!$       do JJS = JS, JE, JBLOCK
+!!$       JJE = JJS+JBLOCK-1
+!!$       do IIS = IS, IE, IBLOCK
+!!$       IIE = IIS+IBLOCK-1
+!!$
+!!$         VARTMP(:,IIS:IIE,JJS:JJE) = PROG_RK(:,IIS:IIE,JJS:JJE,1)
+!!$         call ATMOS_NUMERIC_FDM_EvolveVar( PROG_RK,                   & ! (out)
+!!$           & VARTMP, VL_ZXY, -qflx_anti, dtrk, RCDX, RCDY, RCDZ,       & ! (in)
+!!$           & IIS, IIE, JJS, JJE, KS, KE                               & ! (in)
+!!$           & )
+!!$          
+!!$       enddo
+!!$       enddo
+!!$
+!!$    endif ! FLAG_FCT
+!!$#endif    ! [--- End ifndef NO_FCT_DYN ---------------------------------------------------------- ]
     
 #ifdef HIST_TEND
     if ( lhist ) then

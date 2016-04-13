@@ -2685,7 +2685,7 @@ contains
 
     ! Nondimenstional numbers for a cavity flow problem
     real(RP) :: REYNOLDS_NUM = 4.D02 
-    real(RP) :: MACH_NUM     = 1.D-2
+    real(RP) :: MACH_NUM     = 3.D-2
     real(RP) :: TEMP0        = 300.D0
     
     NAMELIST / PARAM_MKINIT_CAVITYFLOW / &
@@ -2695,7 +2695,7 @@ contains
     
     integer :: ierr
     integer :: k, i, j
-    real(RP) :: PRES, DENS0, Cs2, Ulid, TEMP, Gam
+    real(RP) :: PRES0, DENS0, Cs2, Ulid, TEMP, Gam
     
     !---------------------------------------------------------------------------
 
@@ -2715,20 +2715,22 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_CAVITYFLOW)
 
     Gam = CPdry / (CPdry - Rdry)
-    Ulid = 1.0_RP
+    Ulid = 10.0_RP
     Cs2  = (Ulid / MACH_NUM)**2
     TEMP = Cs2 / (Gam * Rdry)
-    PRES = 1.D4
-    DENS0 = PRES / (Rdry * TEMP)
+    PRES0 = 1.D5
+    DENS0 = PRES0 / (Rdry * TEMP)
 
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
+          
        DENS(k,i,j) = DENS0
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = 0.0_RP
        MOMY(k,i,j) = 0.0_RP
-       RHOT(k,i,j) = PRES/Rdry * (P00/PRES)**((Rdry - CPdry)/CPdry)
+       PRES(k,i,j) = PRES0
+       RHOT(k,i,j) = P00/Rdry * (P00/PRES0)**((Rdry - CPdry)/CPdry)
        QTRC(k,i,j,:) = 0.0_RP
     enddo
     enddo
@@ -2737,7 +2739,7 @@ contains
     MOMX(KE+1:KA,:,:) = DENS0 * Ulid
 
     write(*,*) "DENS=", DENS0
-    write(*,*) "PRES=", PRES
+    write(*,*) "PRES=", PRES0
     write(*,*) "TEMP=", RHOT(10,10,4)/DENS0, TEMP
     write(*,*) "Ulid=", Ulid
     write(*,*) "Cs  =", sqrt(Cs2)

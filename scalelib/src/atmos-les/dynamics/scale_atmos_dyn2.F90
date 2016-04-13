@@ -1145,9 +1145,10 @@ contains
                           dtrk, dt                                          ) ! (in)
        call PROF_rapend  ("DYN_RK", 2)
 
-
-       call ATMOS_DYN_RK3_advtest(PROG(:,:,:,1), &
-            & PROG0(:,:,:,1), DENS, mflx_hi, dt, RCDX, RCDY, RCDZ)
+!!$       mflx_hi(:,:,:,XDIR) = 1.17225_RP * 40.0_RP
+!!$       DENS = 1.17225_RP
+!!$       call ATMOS_DYN_RK3_advtest(PROG(:,:,:,1), &
+!!$            & PROG0(:,:,:,1), DENS, mflx_hi, dt, RCDX, RCDY, RCDZ)
        
 #ifdef CHECK_MASS
        call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
@@ -1327,11 +1328,11 @@ contains
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq) + RHOQ_tp(k,i,j,iq) * dt / DENS00(k,i,j), 0.0_RP )
+!             QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq) + RHOQ_tp(k,i,j,iq) * dt / DENS00(k,i,j), 0.0_RP )
           end do
           end do
-          end do
-
+       end do
+      
           call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
           call COMM_wait ( QTRC(:,:,:,iq), I_COMM_QTRC(iq), .false. )
 
