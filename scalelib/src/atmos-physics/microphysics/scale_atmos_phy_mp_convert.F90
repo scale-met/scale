@@ -418,7 +418,7 @@ contains
 
            !--- Snow put into snow bin (gamma)
            n_hyd = coef0 * n0_sdf(3) * rho_sdf(3)
-           lambda_hyd = ( PI * rho_sdf(3) / 6.0_RP *n0_sdf(3) * SF_gamma(4.d0) &
+           lambda_hyd = ( PI * rho_sdf(3) / 6.0_RP *n0_sdf(3) * SF_gamma(4.0_RP) &
                       / ( qtrc_tmp(k+2,i,j,I_QS) &
                         + (0.50_RP-sign(0.50_RP,qtrc_tmp(k+2,i,j,I_QS)-EPS)) &
                         ) )**(0.25_RP)
@@ -439,7 +439,7 @@ contains
 
            !--- Graupel put into Graupel bin (gamma)
            n_hyd = coef0 * n0_sdf(4) * rho_sdf(4)
-           lambda_hyd = ( PI * rho_sdf(4) / 6.0_RP *n0_sdf(4) * SF_gamma(4.d0) &
+           lambda_hyd = ( PI * rho_sdf(4) / 6.0_RP *n0_sdf(4) * SF_gamma(4.0_RP) &
                       / ( qtrc_tmp(k+2,i,j,I_QG) &
                         + (0.50_RP-sign(0.50_RP,qtrc_tmp(k+2,i,j,I_QG)-EPS)) &
                         ) )**(0.25_RP)
