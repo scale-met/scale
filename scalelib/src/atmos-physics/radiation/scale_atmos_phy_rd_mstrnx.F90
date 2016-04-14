@@ -1959,8 +1959,8 @@ contains
           SIGpls = Wmns_irgn * ( Spls + Smns )
 
           tmp    = X*Y*cosSZA(i,j)-1.0/cosSZA(i,j)
-          zerosw = 0.5_RP - sign(0.5_RP,abs(tmp)-EPS)
-          Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / ( tmp + zerosw ) + zerosw * HUGE
+          zerosw = 1.0_RP - sign(1.0_RP,abs(tmp)-EPS) ! if abs(tmp)<EPS then 2, otherwise 0
+          Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / ( tmp + zerosw*EPS )
 
           V0pls = 0.5_RP * ( ( 1.0_RP + 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma + SIGmns / X )
           V0mns = 0.5_RP * ( ( 1.0_RP - 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma - SIGmns / X )
