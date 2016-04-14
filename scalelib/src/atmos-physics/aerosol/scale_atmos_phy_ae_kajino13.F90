@@ -31,7 +31,8 @@ module scale_atmos_phy_ae_kajino13
       rgas  => CONST_R, &                 ! universal gas constant             [J/mol/K]
       stdatmpa =>  CONST_Pstd, &          ! standard pressure                   [Pa]
       stdtemp  =>  CONST_TEM00, &         ! standard temperature                [K]
-      pi    => CONST_PI                   ! pi
+      pi    => CONST_PI, &                ! pi
+      EPS   => CONST_EPS                  ! epsilon number
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -1486,11 +1487,10 @@ contains
     real(RP), parameter :: ratio  =rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
-    real(RP), parameter :: tiny=1.E-50_RP
 
     dm2=0._RP
   
-    if (m0 <= tiny .or. m2 <= tiny .or. m3 <= tiny) then
+    if (m0 <= EPS .or. m2 <= EPS .or. m3 <= EPS) then
       m0=0._RP
       m2=0._RP
       m3=0._RP
@@ -1565,7 +1565,7 @@ contains
     real(RP), intent(in)   :: sg         ![-]
     real(RP), intent(in)   :: lambda     ! mean free path of air molecules [cm]
     real(RP), intent(in)   :: rknc, rkfm ! constants for both regimes
-    real(RP), intent(in)   :: dt         ! dt
+    real(DP), intent(in)   :: dt         ! dt
   
   !=== Intermidiate quantities
     real(RP) :: mm2,mm1,m1,m4,m2,mm1p5,mm0p5,m0p5,m3p5,m1p5,m5,m2p5
@@ -1650,7 +1650,7 @@ contains
     real(RP), intent(in)  :: dgj,sgj,rhoj            ! [m][-][g/cm3]
     real(RP), intent(in)  :: rknc, rkfm              ! constants for both regimes
     real(RP), intent(in)  :: lambda     ! mean free path of air molecules [cm]
-    real(RP)              :: dtrest     ! time[s]
+    real(DP)              :: dtrest     ! time[s]
   
   !=== local variables
     real(RP) :: dm0dt_i,dm3dt_i,dm6dt_i
@@ -1849,10 +1849,9 @@ contains
     real(RP), parameter :: ratio  =rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
-    real(RP), parameter :: tiny=1.E-50_RP
   
     dm2=0._RP
-    if (m0 <= tiny .or. m3 <= tiny .or. m6 <= tiny) then
+    if (m0 <= EPS .or. m3 <= EPS .or. m6 <= EPS) then
       m0=0._RP
       m2=0._RP
       m3=0._RP

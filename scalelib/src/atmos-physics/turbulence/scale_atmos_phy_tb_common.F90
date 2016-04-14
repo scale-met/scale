@@ -41,8 +41,8 @@ module scale_atmos_phy_tb_common
   public :: ATMOS_PHY_TB_calc_tend_MOMZ
   public :: ATMOS_PHY_TB_calc_tend_MOMX
   public :: ATMOS_PHY_TB_calc_tend_MOMY
-  public :: ATMOS_PHY_TB_calc_tend_PHI
-  public :: ATMOS_PHY_TB_calc_flux_PHI
+  public :: ATMOS_PHY_TB_calc_tend_phi
+  public :: ATMOS_PHY_TB_calc_flux_phi
 
   !-----------------------------------------------------------------------------
   !
@@ -1232,7 +1232,7 @@ contains
     real(RP), intent(in)  :: a(KA,IA,JA)
     real(RP), intent(in)  :: b(KA,IA,JA)
     real(RP), intent(in)  :: c(KA,IA,JA)
-    real(RP), intent(in)  :: dt
+    real(DP), intent(in)  :: dt
     logical,  intent(in)  :: implicit
     integer,  intent(in)  :: IIS
     integer,  intent(in)  :: IIE

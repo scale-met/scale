@@ -41,12 +41,6 @@ module mod_realinput
      iGrADS
   use scale_comm, only: &
      COMM_bcast
-  use scale_interpolation_nest, only: &
-     INTRPNEST_domain_compatibility, &
-     INTRPNEST_interp_fact_llz,      &
-     INTRPNEST_interp_fact_latlon,   &
-     INTRPNEST_interp_2d,            &
-     INTRPNEST_interp_3d
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -914,7 +908,6 @@ contains
     use scale_interpolation_nest, only: &
          INTRPNEST_domain_compatibility, &
          INTRPNEST_interp_fact_llz, &
-         INTRPNEST_interp_fact_latlon, &
          INTRPNEST_interp_3d
     use mod_realinput_scale, only: &
          ParentAtomOpenSCALE, &
@@ -1762,19 +1755,14 @@ contains
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
     use scale_interpolation_nest, only: &
-         INTRPNEST_domain_compatibility, &
-         INTRPNEST_interp_fact_llz, &
          INTRPNEST_interp_fact_latlon, &
-         INTRPNEST_interp_3d
+         INTRPNEST_interp_2d
     use scale_land_grid, only: &
          LCZ  => GRID_LCZ
     use scale_atmos_thermodyn, only: &
          THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_landuse, only: &
          lsmask_nest => LANDUSE_frac_land
-    use scale_interpolation_nest, only: &
-         INTRPNEST_interp_3d, &
-         INTRPNEST_interp_2d
     use mod_realinput_scale, only: &
          ParentOceanOpenSCALE, &
          ParentOCeanInputSCALE, &
@@ -2311,6 +2299,11 @@ contains
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW, &
          LAPS => CONST_LAPS
+    use scale_interpolation_nest, only: &
+         INTRPNEST_interp_fact_llz, &
+         INTRPNEST_interp_fact_latlon, &
+         INTRPNEST_interp_3d, &
+         INTRPNEST_interp_2d
     use scale_topography, only: &
          TOPO_Zsfc
     use mod_land_vars, only: &
