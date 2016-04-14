@@ -63,6 +63,7 @@ module scale_comm
   public :: COMM_wait
   public :: COMM_horizontal_mean
   public :: COMM_horizontal_max
+  public :: COMM_horizontal_min
   public :: COMM_gather
   public :: COMM_bcast
 
@@ -85,6 +86,11 @@ module scale_comm
      module procedure COMM_horizontal_max_2D
      module procedure COMM_horizontal_max_3D
   end interface COMM_horizontal_max
+
+  interface COMM_horizontal_min
+     module procedure COMM_horizontal_min_2D
+     module procedure COMM_horizontal_min_3D
+  end interface COMM_horizontal_min
 
   interface COMM_gather
      module procedure COMM_gather_2D
@@ -567,7 +573,7 @@ contains
   end subroutine COMM_horizontal_mean
 
   !-----------------------------------------------------------------------------
-  !> Get minimam value in horizontal area
+  !> Get maximum value in horizontal area
   subroutine COMM_horizontal_max_2D( varmax, var )
     implicit none
 
@@ -601,8 +607,10 @@ contains
   end subroutine COMM_horizontal_max_2D
 
   !-----------------------------------------------------------------------------
-  !> Get minimam value in horizontal area
+  !> Get maximum value in 3D volume
   subroutine COMM_horizontal_max_3D( varmax, var )
+    use scale_const, only: &
+       CONST_HUGE
     implicit none
 
     real(RP), intent(out) :: varmax(KA)       !< horizontal maximum
@@ -636,11 +644,89 @@ contains
     do k = KS, KE
        varmax(k) = allstatval(k)
     enddo
-    varmax(   1:KS-1) = 0.0_RP
-    varmax(KE+1:KA  ) = 0.0_RP
+    varmax(   1:KS-1) = -CONST_HUGE
+    varmax(KE+1:KA  ) = -CONST_HUGE
 
     return
   end subroutine COMM_horizontal_max_3D
+
+  !-----------------------------------------------------------------------------
+  !> Get minimum value in horizontal area
+  subroutine COMM_horizontal_min_2D( varmin, var )
+    implicit none
+
+    real(RP), intent(out) :: varmin     !< horizontal minimum
+    real(RP), intent(in)  :: var(IA,JA) !< 2D value
+
+    real(RP) :: statval
+    real(RP) :: allstatval
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    statval = minval(var(IS:IE,JS:JE))
+
+    ! [NOTE] always communicate globally
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval,       &
+                        allstatval,    &
+                        1,             &
+                        COMM_datatype, &
+                        MPI_MIN,       &
+                        COMM_world,    &
+                        ierr           )
+
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    varmin = allstatval
+
+    return
+  end subroutine COMM_horizontal_min_2D
+
+  !-----------------------------------------------------------------------------
+  !> Get minimum value in 3D volume
+  subroutine COMM_horizontal_min_3D( varmin, var )
+    use scale_const, only: &
+       CONST_HUGE
+    implicit none
+
+    real(RP), intent(out) :: varmin(KA)       !< horizontal minimum
+    real(RP), intent(in)  :: var   (KA,IA,JA) !< 3D value
+
+    real(RP) :: statval   (KA)
+    real(RP) :: allstatval(KA)
+
+    integer :: ierr
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    statval(:) = -1.E19_RP
+    do k = KS, KE
+       statval(k) = minval(var(k,IS:IE,JS:JE))
+    enddo
+
+    ! [NOTE] always communicate globally
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval(1),    &
+                        allstatval(1), &
+                        KA,            &
+                        COMM_datatype, &
+                        MPI_MIN,       &
+                        COMM_world,    &
+                        ierr           )
+
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    do k = KS, KE
+       varmin(k) = allstatval(k)
+    enddo
+    varmin(   1:KS-1) = CONST_HUGE
+    varmin(KE+1:KA  ) = CONST_HUGE
+
+    return
+  end subroutine COMM_horizontal_min_3D
 
   !-----------------------------------------------------------------------------
   !> Get data from whole process value in 2D field

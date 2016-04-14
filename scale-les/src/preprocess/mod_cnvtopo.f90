@@ -31,32 +31,35 @@ module mod_cnvtopo
   !
   !++ Public parameters & variables
   !
-  integer, public            :: CNVTOPO_TYPE = -1
-
-  integer, public, parameter :: I_IGNORE     =  0
-  integer, public, parameter :: I_GTOPO30    =  1
-  integer, public, parameter :: I_DEM50M     =  2
-  integer, public, parameter :: I_GMTED2010  =  3
+  logical, public :: CNVTOPO_DoNothing
+  logical, public :: CNVTOPO_UseGTOPO30   = .false.
+  logical, public :: CNVTOPO_UseGMTED2010 = .false.
+  logical, public :: CNVTOPO_UseDEM50M    = .false.
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
   private :: CNVTOPO_GTOPO30
-  private :: CNVTOPO_DEM50M
   private :: CNVTOPO_GMTED2010
+  private :: CNVTOPO_DEM50M
   private :: CNVTOPO_smooth
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: CNVTOPO_smooth_maxslope
-  real(RP), private :: CNVTOPO_smooth_maxslope_bnd
-  logical,  private :: CNVTOPO_smooth_local  = .false.
-  integer, private  :: CNVTOPO_smooth_itelim = 1000
-  logical,  private :: CNVTOPO_copy_parent   = .false.
-  character(len=H_SHORT), private :: CNVTOPO_smooth_type = 'LAPLACIAN'
+  character(len=H_SHORT), private :: CNVTOPO_smooth_type         = 'LAPLACIAN'
+  real(RP),               private :: CNVTOPO_smooth_maxslope
+  real(RP),               private :: CNVTOPO_smooth_maxslope_bnd
+  logical,                private :: CNVTOPO_smooth_local        = .false.
+  integer,                private :: CNVTOPO_smooth_itelim       = 1000
+
+  logical,                private :: CNVTOPO_copy_parent         = .false.
+
+  real(RP),               private :: CNVTOPO_unittile_ddeg                ! dx for unit tile [deg]
+  real(RP),               private :: CNVTOPO_oversampling_factor = 2.0_RP ! factor of min. dx against the unit tile
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -65,17 +68,27 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-       D2R   => CONST_D2R
+       D2R  => CONST_D2R, &
+       HUGE => CONST_HUGE
+    use scale_comm, only: &
+       COMM_horizontal_min
     use scale_grid, only: &
-       GRID_CDZ, &
        DX,       &
-       DY
+       DY,       &
+       GRID_CDZ, &
+       GRID_FDX, &
+       GRID_FDY
+    use scale_grid_real, only: &
+       REAL_DLAT, &
+       REAL_DLON
     implicit none
 
-    character(len=H_SHORT) :: CNVTOPO_name = 'NONE'
-
-    NAMELIST / PARAM_CNVTOPO /      &
-       CNVTOPO_name,                &
+    NAMELIST / PARAM_CNVTOPO / &
+       CNVTOPO_UseGTOPO30,          &
+       CNVTOPO_UseGMTED2010,        &
+       CNVTOPO_UseDEM50M,           &
+       CNVTOPO_unittile_ddeg,       &
+       CNVTOPO_oversampling_factor, &
        CNVTOPO_smooth_maxslope,     &
        CNVTOPO_smooth_maxslope_bnd, &
        CNVTOPO_smooth_local,        &
@@ -83,23 +96,69 @@ contains
        CNVTOPO_smooth_type,         &
        CNVTOPO_copy_parent
 
-    real(RP) :: minslope, DZDX, DZDY
+    real(RP) :: minslope(IA,JA)
+    real(RP) :: DXL(IA-1)
+    real(RP) :: DYL(JA-1)
+    real(RP) :: DZDX, DZDY
+
+    real(RP) :: drad(IA,JA)
+    real(RP) :: drad_min
 
     integer :: ierr
-    integer :: k
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CNVTOPO]/Categ[CNVTOPO]'
 
-    minslope = 1.E+30_RP
+    if ( CNVTOPO_smooth_local ) then
+       DXL(:) = DX
+       DYL(:) = DY
+    else
+       DXL(:) = GRID_FDX(:)
+       DYL(:) = GRID_FDY(:)
+    endif
+
+    minslope(:,:) = HUGE
+
+    j = JS-1
+    i = IS-1
     do k = KS, KE
-       DZDX = atan2( 2.5_RP * GRID_CDZ(k), DX ) / D2R
-       DZDY = atan2( 2.5_RP * GRID_CDZ(k), DY ) / D2R
-       minslope = min( minslope, DZDX, DZDY )
+       DZDX = atan2( 2.5_RP * GRID_CDZ(k), DXL(i) ) / D2R
+       DZDY = atan2( 2.5_RP * GRID_CDZ(k), DYL(j) ) / D2R
+       minslope(IS,JS) = min( minslope(IS,JS), DZDX, DZDY )
     enddo
 
-    CNVTOPO_smooth_maxslope = minslope
+    j = JS-1
+    do i = IS, IE
+    do k = KS, KE
+       DZDX = atan2( 2.5_RP * GRID_CDZ(k), DXL(i) ) / D2R
+       DZDY = atan2( 2.5_RP * GRID_CDZ(k), DYL(j) ) / D2R
+       minslope(i,JS) = min( minslope(i,JS), DZDX, DZDY )
+    enddo
+    enddo
+
+    i = IS-1
+    do j = JS, JE
+    do k = KS, KE
+       DZDX = atan2( 2.5_RP * GRID_CDZ(k), DXL(i) ) / D2R
+       DZDY = atan2( 2.5_RP * GRID_CDZ(k), DYL(j) ) / D2R
+       minslope(IS,j) = min( minslope(IS,j), DZDX, DZDY )
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE
+          DZDX = atan2( 2.5_RP * GRID_CDZ(k), DXL(i) ) / D2R
+          DZDY = atan2( 2.5_RP * GRID_CDZ(k), DYL(j) ) / D2R
+          minslope(i,j) = min( minslope(i,j), DZDX, DZDY )
+       enddo
+    enddo
+    enddo
+
+    call COMM_horizontal_min( CNVTOPO_smooth_maxslope, minslope(:,:) )
+
     CNVTOPO_smooth_maxslope_bnd = -1.0_RP
 
     !--- read namelist
@@ -113,27 +172,50 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO)
 
+    CNVTOPO_DoNothing = .true.
+
+    if ( CNVTOPO_UseGTOPO30 ) then
+       CNVTOPO_DoNothing = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** Use GTOPO, global 30 arcsec. data'
+       if ( CNVTOPO_UseGMTED2010 ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Use GMTED2010, new global 5 arcsec. data'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Overwrite Existing region'
+       endif
+       if ( CNVTOPO_UseDEM50M ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Use DEM 50m data for Japan region'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Overwrite Japan region'
+       endif
+    elseif ( CNVTOPO_UseGMTED2010 ) then
+       CNVTOPO_DoNothing = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** Use GMTED2010, new global 5 arcsec. data'
+       if ( CNVTOPO_UseDEM50M ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Use DEM 50m data for Japan region'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Overwrite Japan region'
+       endif
+    elseif ( CNVTOPO_UseDEM50M ) then
+       CNVTOPO_DoNothing = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** Use DEM 50m data, Japan region only'
+    endif
+
     if ( CNVTOPO_smooth_maxslope_bnd < 0.0_RP ) then
        CNVTOPO_smooth_maxslope_bnd = CNVTOPO_smooth_maxslope
-    end if
+    endif
 
-    select case(CNVTOPO_name)
-    case('NONE')
-       CNVTOPO_TYPE = I_IGNORE
+    if ( CNVTOPO_DoNothing ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Do nothing for landuse index'
+    else
+       drad(:,:) = min( REAL_DLAT(:,:), REAL_DLON(:,:) )
+       call COMM_horizontal_min( drad_min, drad(:,:) )
 
-    case('GTOPO30')
-       CNVTOPO_TYPE = I_GTOPO30
+       if ( CNVTOPO_unittile_ddeg > 0.0_RP ) then
+          CNVTOPO_oversampling_factor = ( drad_min / D2R ) / CNVTOPO_unittile_ddeg
+       endif
+       CNVTOPO_oversampling_factor = max( 1.0_RP, CNVTOPO_oversampling_factor )
+       CNVTOPO_unittile_ddeg       = ( drad_min / D2R ) / CNVTOPO_oversampling_factor
 
-    case('DEM50M')
-       CNVTOPO_TYPE = I_DEM50M
-
-    case('GMTED2010')
-       CNVTOPO_TYPE = I_GMTED2010
-
-    case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(CNVTOPO_name)
-       call PRC_MPIstop
-    endselect
+       if( IO_L ) write(IO_FID_LOG,*) '*** The size of tile [deg] = ', CNVTOPO_unittile_ddeg
+       if( IO_L ) write(IO_FID_LOG,*) '*** oversampling factor    = ', CNVTOPO_oversampling_factor
+    endif
 
     return
   end subroutine CNVTOPO_setup
@@ -141,10 +223,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine CNVTOPO
-    use scale_const, only: &
-       PI => CONST_PI
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       PI => CONST_PI
     use scale_grid, only: &
        CBFX => GRID_CBFX, &
        CBFY => GRID_CBFY
@@ -161,45 +243,41 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    if ( CNVTOPO_TYPE == I_IGNORE ) then
+    if ( CNVTOPO_DoNothing ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  CONVERT TOPOGRAPHY DATA ++++++'
     else
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ START CONVERT TOPOGRAPHY DATA ++++++'
 
-       select case(CNVTOPO_TYPE)
-       case(I_GTOPO30)
+       if ( CNVTOPO_UseGTOPO30 ) then
           call CNVTOPO_GTOPO30
+       endif
 
-       case(I_DEM50M)
-          call CNVTOPO_DEM50M
-
-       case(I_GMTED2010)
+       if ( CNVTOPO_UseGMTED2010 ) then
           call CNVTOPO_GMTED2010
+       endif
 
-       case default
-          write(*,*) ' xxx Unsupported TYPE:', CNVTOPO_TYPE
-          call PRC_MPIstop
-       endselect
+       if ( CNVTOPO_UseDEM50M ) then
+          call CNVTOPO_DEM50M
+       endif
 
-       Zsfc(:,:,1) = TOPO_Zsfc
-       call CNVTOPO_smooth( &
-            Zsfc(:,:,1), & ! (inout)
-            CNVTOPO_smooth_maxslope ) ! (in)
+       Zsfc(:,:,1) = TOPO_Zsfc(:,:)
+       call CNVTOPO_smooth( Zsfc(:,:,1),            & ! (inout)
+                            CNVTOPO_smooth_maxslope ) ! (in)
 
        Zsfc(:,:,2) = Zsfc(:,:,1)
-       call CNVTOPO_smooth( &
-            Zsfc(:,:,2), & ! (inout)
-            CNVTOPO_smooth_maxslope_bnd ) ! (in)
+       call CNVTOPO_smooth( Zsfc(:,:,2),                & ! (inout)
+                            CNVTOPO_smooth_maxslope_bnd ) ! (in)
 
        do j = 1, JA
        do i = 1, IA
-          frac = sin( max( CBFX(i), CBFY(j) ) * PI * 0.5_RP )
-          TOPO_Zsfc(i,j) = Zsfc(i,j,1) * ( 1.0_RP - frac ) &
-                         + Zsfc(i,j,2) * frac
-       end do
-       end do
+          frac = sin( 0.5_RP * PI * max( CBFX(i), CBFY(j) ) )
+
+          TOPO_Zsfc(i,j) = ( 1.0_RP-frac ) * Zsfc(i,j,1) &
+                         + (        frac ) * Zsfc(i,j,2)
+       enddo
+       enddo
 
        call TOPO_fillhalo
 
@@ -230,39 +308,49 @@ contains
        REAL_LONX
     implicit none
 
-    character(len=H_LONG) :: GTOPO30_IN_CATALOGUE = ''      !< metadata files for GTOPO30
-    character(len=H_LONG) :: GTOPO30_IN_DIR       = ''      !< directory contains GTOPO30 files (GrADS format)
+    character(len=H_LONG) :: GTOPO30_IN_CATALOGUE = '' !< metadata files for GTOPO30
+    character(len=H_LONG) :: GTOPO30_IN_DIR       = '' !< directory contains GTOPO30 files (GrADS format)
 
     NAMELIST / PARAM_CNVTOPO_GTOPO30 / &
        GTOPO30_IN_CATALOGUE, &
        GTOPO30_IN_DIR
 
     ! data catalogue list
-    integer, parameter    :: TILE_nlim = 100
-    integer               :: TILE_nmax
-    real(RP)              :: TILE_LATS (TILE_nlim)
-    real(RP)              :: TILE_LATE (TILE_nlim)
-    real(RP)              :: TILE_LONS (TILE_nlim)
-    real(RP)              :: TILE_LONE (TILE_nlim)
-    character(len=H_LONG) :: TILE_fname(TILE_nlim)
+    integer, parameter      :: TILE_nlim = 100
+    integer                 :: TILE_nmax
+    real(RP)                :: TILE_LATS (TILE_nlim)
+    real(RP)                :: TILE_LATE (TILE_nlim)
+    real(RP)                :: TILE_LONS (TILE_nlim)
+    real(RP)                :: TILE_LONE (TILE_nlim)
+    character(len=H_LONG)   :: TILE_fname(TILE_nlim)
 
     ! GTOPO30 data
-    integer(2) :: TILE_HEIGHT_i(4800,6000)
-    real(RP) :: TILE_HEIGHT(4800,6000)
-    real(RP) :: TILE_LATH  (0:6000)
-    real(RP) :: TILE_LONH  (0:4800)
-    real(RP) :: TILE_DLAT, TILE_DLON
-    real(RP) :: area, area_fraction
+    integer, parameter      :: isize_orig = 4800
+    integer, parameter      :: jsize_orig = 6000
+    integer(2)              :: TILE_HEIGHT_orig(isize_orig,jsize_orig)
+    real(RP)                :: TILE_DLAT_orig, TILE_DLON_orig
+
+    ! GTOPO30 data (oversampling)
+    integer                 :: ios
+    integer                 :: jos
+    integer                 :: isize
+    integer                 :: jsize
+    integer(2), allocatable :: TILE_HEIGHT(:,:)
+    real(RP),   allocatable :: TILE_LATH  (:)
+    real(RP),   allocatable :: TILE_LONH  (:)
+    real(RP)                :: TILE_DLAT, TILE_DLON
+    real(RP)                :: area, area_fraction
 
     integer  :: iloc
     integer  :: jloc
     real(RP) :: ifrac_l ! fraction for iloc
     real(RP) :: jfrac_b ! fraction for jloc
 
-
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
+    real(RP) :: topo_sum(IA,JA)
     real(RP) :: area_sum(IA,JA)
+    real(RP) :: topo, mask
 
     character(len=H_LONG) :: fname
 
@@ -270,7 +358,7 @@ contains
     logical  :: hit_lat, hit_lon
     integer  :: index
     integer  :: fid, ierr
-    integer  :: i, j, ii, jj, t
+    integer  :: i, j, ii, jj, iii, jjj, t
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -288,8 +376,8 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       area_sum (i,j) = 0.0_RP
-       TOPO_Zsfc(i,j) = 0.0_RP
+       area_sum(i,j) = 0.0_RP
+       topo_sum(i,j) = 0.0_RP
     enddo
     enddo
 
@@ -298,8 +386,31 @@ contains
     DOMAIN_LONS = minval(REAL_LONX(:,:))
     DOMAIN_LONE = maxval(REAL_LONX(:,:))
 
+    jos   = nint( 30.0_RP / 60.0_RP / 60.0_RP / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    ios   = nint( 30.0_RP / 60.0_RP / 60.0_RP / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    jsize = jsize_orig * jos
+    isize = isize_orig * ios
+
+    allocate( TILE_HEIGHT(isize,jsize) )
+    allocate( TILE_LATH  (0:jsize)     )
+    allocate( TILE_LONH  (0:isize)     )
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (j) orig = ', jsize_orig, ', use = ', jsize
+    if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (i) orig = ', isize_orig, ', use = ', isize
+
+    TILE_DLAT_orig = 30.0_RP / 60.0_RP / 60.0_RP * D2R
+    TILE_DLON_orig = 30.0_RP / 60.0_RP / 60.0_RP * D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT       :', TILE_DLAT_orig/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON       :', TILE_DLON_orig/D2R
+
+    TILE_DLAT = TILE_DLAT_orig / jos
+    TILE_DLON = TILE_DLON_orig / ios
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON (OS)  :', TILE_DLON/D2R
+
     !---< READ from external files >---
 
+    ! catalogue file
     fname = trim(GTOPO30_IN_DIR)//'/'//trim(GTOPO30_IN_CATALOGUE)
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -327,6 +438,7 @@ contains
        TILE_nmax = t - 1
     close(fid)
 
+    ! data file
     do t = 1, TILE_nmax
        hit_lat = .false.
        hit_lon = .false.
@@ -355,51 +467,58 @@ contains
           fname = trim(GTOPO30_IN_DIR)//'/'//trim(TILE_fname(t))
 
           if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data      file :', trim(fname)
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '*** Tile  (LAT):', TILE_LATS(t), TILE_LATE(t)
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', TILE_LONS(t), TILE_LONE(t)
-
-          TILE_DLAT = 30.0_RP / 60.0_RP / 60.0_RP * D2R
-          TILE_DLON = 30.0_RP / 60.0_RP / 60.0_RP * D2R
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data file :', trim(fname)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '*** Tile   (LAT)    :', TILE_LATS(t), TILE_LATE(t)
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', TILE_LONS(t), TILE_LONE(t)
 
           fid = IO_get_available_fid()
-          open( fid,                    &
-                file   = trim(fname),   &
-                form   = 'unformatted', &
-                access = 'direct',      &
-                status = 'old',         &
-                recl   = 4800*6000*2,   &
-                iostat = ierr           )
+          open( fid,                              &
+                file   = trim(fname),             &
+                form   = 'unformatted',           &
+                access = 'direct',                &
+                status = 'old',                   &
+                recl   = isize_orig*jsize_orig*2, &
+                iostat = ierr                     )
 
              if ( ierr /= 0 ) then
                 write(*,*) 'xxx data file not found!'
                 call PRC_MPIstop
              endif
 
-             read(fid,rec=1) TILE_HEIGHT_i(:,:)
+             read(fid,rec=1) TILE_HEIGHT_orig(:,:)
           close(fid)
 
+          ! oversampling
+          do jj = 1, jsize_orig
+          do ii = 1, isize_orig
+             do j = 1, jos
+             do i = 1, ios
+                jjj = (jj-1) * jos + j
+                iii = (ii-1) * ios + i
+
+                TILE_HEIGHT(iii,jjj) = TILE_HEIGHT_orig(ii,jsize_orig-jj+1) ! reverse y-axis
+             enddo
+             enddo
+          enddo
+          enddo
+
           TILE_LATH(0) = TILE_LATS(t) * D2R
-          do jj = 1, 6000
+          do jj = 1, jsize
              TILE_LATH(jj) = TILE_LATH(jj-1) + TILE_DLAT
 !             if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj)
           enddo
 
           TILE_LONH(0) = TILE_LONS(t) * D2R
-          do ii = 1, 4800
+          do ii = 1, isize
              TILE_LONH(ii) = TILE_LONH(ii-1) + TILE_DLON
 !             if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii)
           enddo
 
           ! match and calc fraction
-          do jj = 1, 6000
-          do ii = 1, 4800
+          do jj = 1, jsize
+          do ii = 1, isize
 
              iloc    = 1 ! Z_sfc(1,1) is used for dummy grid
              ifrac_l = 1.0_RP
@@ -434,26 +553,28 @@ contains
 
              if( iloc == 1 .AND. jloc == 1 ) cycle
 
-             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
+             topo = real( TILE_HEIGHT(ii,jj), kind=RP )
+             mask = 0.5_RP - sign( 0.5_RP, topo ) ! if Height is negative, mask = 1
 
-             TILE_HEIGHT(ii,jj) = max( real(TILE_HEIGHT_i(ii,6000-jj+1),kind=RP), 0.0_RP ) ! reverse y-axis
+             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) ) * ( 1.0_RP - mask )
+
 !             if( IO_L ) write(IO_FID_LOG,*) ii, jj, area, iloc, jloc, ifrac_l, jfrac_b, TILE_HEIGHT(ii,jj)
 
              area_fraction = (       ifrac_l) * (       jfrac_b) * area
-             area_sum (iloc  ,jloc  ) = area_sum (iloc  ,jloc  ) + area_fraction
-             TOPO_Zsfc(iloc  ,jloc  ) = TOPO_Zsfc(iloc  ,jloc  ) + area_fraction * TILE_HEIGHT(ii,jj)
+             area_sum(iloc  ,jloc  ) = area_sum(iloc  ,jloc  ) + area_fraction
+             topo_sum(iloc  ,jloc  ) = topo_sum(iloc  ,jloc  ) + area_fraction * topo
 
              area_fraction = (1.0_RP-ifrac_l) * (       jfrac_b) * area
-             area_sum (iloc+1,jloc  ) = area_sum (iloc+1,jloc  ) + area_fraction
-             TOPO_Zsfc(iloc+1,jloc  ) = TOPO_Zsfc(iloc+1,jloc  ) + area_fraction * TILE_HEIGHT(ii,jj)
+             area_sum(iloc+1,jloc  ) = area_sum(iloc+1,jloc  ) + area_fraction
+             topo_sum(iloc+1,jloc  ) = topo_sum(iloc+1,jloc  ) + area_fraction * topo
 
              area_fraction = (       ifrac_l) * (1.0_RP-jfrac_b) * area
-             area_sum (iloc  ,jloc+1) = area_sum (iloc  ,jloc+1) + area_fraction
-             TOPO_Zsfc(iloc  ,jloc+1) = TOPO_Zsfc(iloc  ,jloc+1) + area_fraction * TILE_HEIGHT(ii,jj)
+             area_sum(iloc  ,jloc+1) = area_sum(iloc  ,jloc+1) + area_fraction
+             topo_sum(iloc  ,jloc+1) = topo_sum(iloc  ,jloc+1) + area_fraction * topo
 
              area_fraction = (1.0_RP-ifrac_l) * (1.0_RP-jfrac_b) * area
-             area_sum (iloc+1,jloc+1) = area_sum (iloc+1,jloc+1) + area_fraction
-             TOPO_Zsfc(iloc+1,jloc+1) = TOPO_Zsfc(iloc+1,jloc+1) + area_fraction * TILE_HEIGHT(ii,jj)
+             area_sum(iloc+1,jloc+1) = area_sum(iloc+1,jloc+1) + area_fraction
+             topo_sum(iloc+1,jloc+1) = topo_sum(iloc+1,jloc+1) + area_fraction * topo
           enddo
           enddo
 
@@ -463,12 +584,21 @@ contains
     do j = JS, JE
     do i = IS, IE
        zerosw = 0.5_RP - sign( 0.5_RP, area_sum(i,j)-EPS )
-       TOPO_Zsfc(i,j) = TOPO_Zsfc(i,j) * ( 1.0_RP-zerosw ) / ( area_sum(i,j)-zerosw )
+       TOPO_Zsfc(i,j) = topo_sum(i,j) * ( 1.0_RP-zerosw ) / ( area_sum(i,j)-zerosw )
     enddo
     enddo
 
     return
   end subroutine CNVTOPO_GTOPO30
+
+  !-----------------------------------------------------------------------------
+  !> Convert from GMTED 2010 7.5 arc-seconds mesh
+  subroutine CNVTOPO_GMTED2010
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine CNVTOPO_GMTED2010
 
   !-----------------------------------------------------------------------------
   !> Convert from DEM 50m mesh
@@ -486,8 +616,8 @@ contains
        REAL_LONX
     implicit none
 
-    character(len=H_LONG) :: DEM50M_IN_CATALOGUE = ''      !< metadata files for DEM50M
-    character(len=H_LONG) :: DEM50M_IN_DIR       = ''      !< directory contains DEM50M files (GrADS format)
+    character(len=H_LONG) :: DEM50M_IN_CATALOGUE = '' !< metadata files for DEM50M
+    character(len=H_LONG) :: DEM50M_IN_DIR       = '' !< directory contains DEM50M files (GrADS format)
 
     NAMELIST / PARAM_CNVTOPO_DEM50M / &
        DEM50M_IN_CATALOGUE, &
@@ -503,21 +633,32 @@ contains
     character(len=H_LONG) :: TILE_fname(TILE_nlim)
 
     ! DEM50M data
-    real(SP) :: TILE_HEIGHT(1600,1600)
-    real(RP) :: TILE_LATH  (0:1600)
-    real(RP) :: TILE_LONH  (0:1600)
-    real(RP) :: TILE_DLAT, TILE_DLON
-    real(RP) :: area, area_fraction
+    integer, parameter    :: isize_orig = 1600
+    integer, parameter    :: jsize_orig = 1600
+    real(SP)              :: TILE_HEIGHT_orig(isize_orig,jsize_orig)
+    real(RP)              :: TILE_DLAT_orig, TILE_DLON_orig
+
+    ! DEM50M data (oversampling)
+    integer               :: ios
+    integer               :: jos
+    integer               :: isize
+    integer               :: jsize
+    real(SP), allocatable :: TILE_HEIGHT(:,:)
+    real(RP), allocatable :: TILE_LATH  (:)
+    real(RP), allocatable :: TILE_LONH  (:)
+    real(RP)              :: TILE_DLAT, TILE_DLON
+    real(RP)              :: area, area_fraction
 
     integer  :: iloc
     integer  :: jloc
     real(RP) :: ifrac_l ! fraction for iloc
     real(RP) :: jfrac_b ! fraction for jloc
 
-
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
+    real(RP) :: topo_sum(IA,JA)
     real(RP) :: area_sum(IA,JA)
+    real(RP) :: topo, mask
 
     character(len=H_LONG) :: fname
 
@@ -525,7 +666,7 @@ contains
     logical  :: hit_lat, hit_lon
     integer  :: index
     integer  :: fid, ierr
-    integer  :: i, j, ii, jj, t
+    integer  :: i, j, ii, jj, iii, jjj, t
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -543,8 +684,8 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       area_sum (i,j) = 0.0_RP
-       TOPO_Zsfc(i,j) = 0.0_RP
+       area_sum(i,j) = 0.0_RP
+       topo_sum(i,j) = 0.0_RP
     enddo
     enddo
 
@@ -553,8 +694,31 @@ contains
     DOMAIN_LONS = minval(REAL_LONX(:,:))
     DOMAIN_LONE = maxval(REAL_LONX(:,:))
 
+    jos   = nint( 5.0_RP / 60.0_RP / 200.0_RP / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    ios   = nint( 7.5_RP / 60.0_RP / 200.0_RP / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    jsize = jsize_orig * jos
+    isize = isize_orig * ios
+
+    allocate( TILE_HEIGHT(isize,jsize) )
+    allocate( TILE_LATH  (0:jsize)     )
+    allocate( TILE_LONH  (0:isize)     )
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (j) orig = ', jsize_orig, ', use = ', jsize
+    if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (i) orig = ', isize_orig, ', use = ', isize
+
+    TILE_DLAT_orig = 5.0_RP / 60.0_RP / 200.0_RP * D2R
+    TILE_DLON_orig = 7.5_RP / 60.0_RP / 200.0_RP * D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT       :', TILE_DLAT_orig/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON       :', TILE_DLON_orig/D2R
+
+    TILE_DLAT = TILE_DLAT_orig / jos
+    TILE_DLON = TILE_DLON_orig / ios
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON (OS)  :', TILE_DLON/D2R
+
     !---< READ from external files >---
 
+    ! catalogue file
     fname = trim(DEM50M_IN_DIR)//'/'//trim(DEM50M_IN_CATALOGUE)
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -582,6 +746,7 @@ contains
        TILE_nmax = t - 1
     close(fid)
 
+    ! data file
     do t = 1, TILE_nmax
        hit_lat = .false.
        hit_lon = .false.
@@ -610,51 +775,58 @@ contains
           fname = trim(DEM50M_IN_DIR)//'/'//trim(TILE_fname(t))
 
           if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data      file :', trim(fname)
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '*** Tile  (LAT):', TILE_LATS(t), TILE_LATE(t)
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', TILE_LONS(t), TILE_LONE(t)
-
-          TILE_DLAT = 5.0_RP / 60.0_RP / 200.0_RP * D2R
-          TILE_DLON = 7.5_RP / 60.0_RP / 200.0_RP * D2R
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT/D2R
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data file :', trim(fname)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '*** Tile   (LAT)    :', TILE_LATS(t), TILE_LATE(t)
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', TILE_LONS(t), TILE_LONE(t)
 
           fid = IO_get_available_fid()
-          open( fid,                    &
-                file   = trim(fname),   &
-                form   = 'unformatted', &
-                access = 'direct',      &
-                status = 'old',         &
-                recl   = 1600*1600*4,   &
-                iostat = ierr           )
+          open( fid,                              &
+                file   = trim(fname),             &
+                form   = 'unformatted',           &
+                access = 'direct',                &
+                status = 'old',                   &
+                recl   = isize_orig*jsize_orig*4, &
+                iostat = ierr                     )
 
              if ( ierr /= 0 ) then
                 write(*,*) 'xxx data file not found!'
                 call PRC_MPIstop
              endif
 
-             read(fid,rec=1) TILE_HEIGHT(:,:)
+             read(fid,rec=1) TILE_HEIGHT_orig(:,:)
           close(fid)
 
+          ! oversampling
+          do jj = 1, jsize_orig
+          do ii = 1, isize_orig
+             do j = 1, ios
+             do i = 1, ios
+                jjj = (jj-1) * ios + j
+                iii = (ii-1) * ios + i
+
+                TILE_HEIGHT(iii,jjj) = TILE_HEIGHT_orig(ii,jj)
+             enddo
+             enddo
+          enddo
+          enddo
+
           TILE_LATH(0) = TILE_LATS(t) * D2R
-          do jj = 1, 1600
+          do jj = 1, jsize
              TILE_LATH(jj) = TILE_LATH(jj-1) + TILE_DLAT
 !             if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj)
           enddo
 
           TILE_LONH(0) = TILE_LONS(t) * D2R
-          do ii = 1, 1600
+          do ii = 1, isize
              TILE_LONH(ii) = TILE_LONH(ii-1) + TILE_DLON
 !             if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii)
           enddo
 
           ! match and calc fraction
-          do jj = 1, 1600
-          do ii = 1, 1600
+          do jj = 1, jsize
+          do ii = 1, isize
 
              iloc    = 1 ! Z_sfc(1,1) is used for dummy grid
              ifrac_l = 1.0_RP
@@ -689,26 +861,28 @@ contains
 
              if( iloc == 1 .AND. jloc == 1 ) cycle
 
-             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
+             topo = real( TILE_HEIGHT(ii,jj), kind=RP )
+             mask = 0.5_RP - sign( 0.5_RP,topo ) ! if Height is negative, mask = 1
 
-             TILE_HEIGHT(ii,jj) = max( TILE_HEIGHT(ii,jj), 0.0 )
+             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) ) * ( 1.0_RP - mask )
+
 !             if( IO_L ) write(IO_FID_LOG,*) ii, jj, area, iloc, jloc, ifrac_l, jfrac_b, TILE_HEIGHT(ii,jj)
 
              area_fraction = (       ifrac_l) * (       jfrac_b) * area
-             area_sum (iloc  ,jloc  ) = area_sum (iloc  ,jloc  ) + area_fraction
-             TOPO_Zsfc(iloc  ,jloc  ) = TOPO_Zsfc(iloc  ,jloc  ) + area_fraction * TILE_HEIGHT(ii,jj)
+             area_sum(iloc  ,jloc  ) = area_sum(iloc  ,jloc  ) + area_fraction
+             topo_sum(iloc  ,jloc  ) = topo_sum(iloc  ,jloc  ) + area_fraction * topo
 
              area_fraction = (1.0_RP-ifrac_l) * (       jfrac_b) * area
-             area_sum (iloc+1,jloc  ) = area_sum (iloc+1,jloc  ) + area_fraction
-             TOPO_Zsfc(iloc+1,jloc  ) = TOPO_Zsfc(iloc+1,jloc  ) + area_fraction * TILE_HEIGHT(ii,jj)
+             area_sum(iloc+1,jloc  ) = area_sum(iloc+1,jloc  ) + area_fraction
+             topo_sum(iloc+1,jloc  ) = topo_sum(iloc+1,jloc  ) + area_fraction * topo
 
              area_fraction = (       ifrac_l) * (1.0_RP-jfrac_b) * area
-             area_sum (iloc  ,jloc+1) = area_sum (iloc  ,jloc+1) + area_fraction
-             TOPO_Zsfc(iloc  ,jloc+1) = TOPO_Zsfc(iloc  ,jloc+1) + area_fraction * TILE_HEIGHT(ii,jj)
+             area_sum(iloc  ,jloc+1) = area_sum(iloc  ,jloc+1) + area_fraction
+             topo_sum(iloc  ,jloc+1) = topo_sum(iloc  ,jloc+1) + area_fraction * topo
 
              area_fraction = (1.0_RP-ifrac_l) * (1.0_RP-jfrac_b) * area
-             area_sum (iloc+1,jloc+1) = area_sum (iloc+1,jloc+1) + area_fraction
-             TOPO_Zsfc(iloc+1,jloc+1) = TOPO_Zsfc(iloc+1,jloc+1) + area_fraction * TILE_HEIGHT(ii,jj)
+             area_sum(iloc+1,jloc+1) = area_sum(iloc+1,jloc+1) + area_fraction
+             topo_sum(iloc+1,jloc+1) = topo_sum(iloc+1,jloc+1) + area_fraction * topo
           enddo
           enddo
 
@@ -717,48 +891,16 @@ contains
 
     do j = JS, JE
     do i = IS, IE
+       mask   = 0.5_RP + sign( 0.5_RP, area_sum(i,j)-EPS ) ! if any data is found, overwrite
        zerosw = 0.5_RP - sign( 0.5_RP, area_sum(i,j)-EPS )
-       TOPO_Zsfc(i,j) = TOPO_Zsfc(i,j) * ( 1.0_RP-zerosw ) / ( area_sum(i,j)-zerosw )
+       topo   = topo_sum(i,j) * ( 1.0_RP-zerosw ) / ( area_sum(i,j)-zerosw )
+       TOPO_Zsfc(i,j) = (        mask ) * topo &         ! overwrite
+                      + ( 1.0_RP-mask ) * TOPO_Zsfc(i,j) ! keep existing value
     enddo
     enddo
 
     return
   end subroutine CNVTOPO_DEM50M
-
-  !-----------------------------------------------------------------------------
-  !> Convert from DEM 50m mesh
-  subroutine CNVTOPO_GMTED2010
-    use scale_process, only: &
-       PRC_MPIstop
-!     use scale_topography, only: &
-!        TOPO_Zsfc
-    implicit none
-
-    character(len=H_LONG) :: TOPO_GMTED2010_IN_CATALOGUE = ''      !< metadata files for GMTED2010
-    character(len=H_LONG) :: TOPO_GMTED2010_IN_DIR       = ''      !< directory contains GMTED2010 files (GrADS format)
-
-    NAMELIST / PARAM_CNVTOPO_GMTED2010 / &
-       TOPO_GMTED2010_IN_CATALOGUE, &
-       TOPO_GMTED2010_IN_DIR
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[GMTED2010]/Categ[CNVTOPO]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CNVTOPO_GMTED2010,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO_GMTED2010. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_GMTED2010)
-
-    return
-  end subroutine CNVTOPO_GMTED2010
 
   !-----------------------------------------------------------------------------
   !> check slope
@@ -770,8 +912,8 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only: &
-       DX, &
-       DY, &
+       DX,       &
+       DY,       &
        GRID_FDX, &
        GRID_FDY
     use scale_comm, only: &
@@ -815,7 +957,7 @@ contains
     else
        DXL(:) = GRID_FDX(:)
        DYL(:) = GRID_FDY(:)
-    end if
+    endif
 
     ! digital filter
     do ite = 1, CNVTOPO_smooth_itelim+1
@@ -851,6 +993,7 @@ contains
 
        select case ( CNVTOPO_smooth_type )
        case ( 'GAUSSIAN' )
+
           ! 3 by 3 gaussian filter
           do j = JS, JE
           do i = IS, IE
@@ -865,52 +1008,54 @@ contains
                          + 0.0625_RP * Zsfc(i+1,j+1) )
           enddo
           enddo
+
        case ( 'LAPLACIAN' )
+
           do j = JS  , JE
           do i = IS-1, IE
              FLX_X(i,j) = Zsfc(i+1,j) - Zsfc(i,j)
-          end do
-          end do
+          enddo
+          enddo
+
           do j = JS-1, JE
           do i = IS  , IE
              FLX_Y(i,j) = Zsfc(i,j+1) - Zsfc(i,j)
-          end do
-          end do
+          enddo
+          enddo
+
           if ( CNVTOPO_smooth_local ) then
              do j = JS  , JE
              do i = IS-1, IE
                 flag = 0.5_RP &
                      + sign(0.5_RP, max( abs(DZsfc_DX(1,i+1,j,1)), &
                                          abs(DZsfc_DX(1,i  ,j,1)), &
-                                         abs(DZsfc_DX(1,i-1,j,1)) ) &
-                                    - smooth_maxslope )
+                                         abs(DZsfc_DX(1,i-1,j,1))  ) - smooth_maxslope )
                 FLX_X(i,j) = FLX_X(i,j) &
                            * DXL(i) / GRID_FDX(i) &
                            * flag
-             end do
-             end do
+             enddo
+             enddo
              do j = JS-1, JE
              do i = IS  , IE
                 flag = 0.5_RP &
                      + sign(0.5_RP, max( abs(DZsfc_DY(1,i,j+1,1)), &
                                          abs(DZsfc_DY(1,i,j  ,1)), &
-                                         abs(DZsfc_DY(1,i,j-1,1)) ) &
-                                    - smooth_maxslope )
+                                         abs(DZsfc_DY(1,i,j-1,1))  ) - smooth_maxslope )
                 FLX_Y(i,j) = FLX_Y(i,j) &
                            * DYL(j) / GRID_FDY(j) &
                            * flag
-             end do
-             end do
-          end if
+             enddo
+             enddo
+          endif
 
           do j = JS, JE
           do i = IS, IE
              Zsfc(i,j) = Zsfc(i,j) &
-                       + ( ( FLX_X(i,j) - FLX_X(i-1,j) ) &
-                         + ( FLX_Y(i,j) - FLX_Y(i,j-1) ) ) &
-                         * 0.1_RP
+                       + 0.1_RP * ( ( FLX_X(i,j) - FLX_X(i-1,j) ) &
+                                  + ( FLX_Y(i,j) - FLX_Y(i,j-1) ) )
           enddo
           enddo
+
        case default
           write(*,*) 'xxx Invalid smoothing type'
           call PRC_MPIstop
@@ -923,7 +1068,7 @@ contains
        call PRC_MPIstop
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** smoothing complete.'
-    end if
+    endif
 
     varname(1) = "DZsfc_DX"
     call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
