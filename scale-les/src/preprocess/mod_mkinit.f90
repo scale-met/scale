@@ -37,8 +37,7 @@ module mod_mkinit
 
   use scale_process, only: &
 #ifdef _SDM
-     PRC_myrank, &
-     PRC_nmax, &
+     PRC_myrank
 #endif
      PRC_MPIstop
   use scale_const, only: &
@@ -673,11 +672,6 @@ contains
        write(fmt(14:14),'(I1)') 6
        write(fmt(16:16),'(I1)') 6
        write(basename,fmt) trim(RANDOM_INIT_BASENAME),'pe',PRC_myrank
-    endif
-
-    if( RANDOM_NUMBER_SEED > 0 .and. RANDOM_NUMBER_SEED < PRC_nmax ) then
-       write(*,*) 'xxx RANDOM_NUMBER_SEED should be larger than total process number Check!'
-       call PRC_MPIstop
     endif
 
     iseed = PRC_myrnak+RANDOM_NUMBER_SEED
