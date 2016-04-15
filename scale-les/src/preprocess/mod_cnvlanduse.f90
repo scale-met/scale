@@ -67,7 +67,10 @@ contains
        REAL_DLON
     implicit none
 
+    character(len=H_SHORT) :: CNVLANDUSE_name = 'NONE' ! keep backward compatibility
+
     NAMELIST / PARAM_CNVLANDUSE / &
+       CNVLANDUSE_name,                &
        CNVLANDUSE_UseGLCCv2,           &
        CNVLANDUSE_UseLU100M,           &
        CNVLANDUSE_UseJIBIS,            &
@@ -92,6 +95,26 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE)
+
+    select case(CNVLANDUSE_name)
+    case('NONE')
+       ! do nothing
+    case('GLCCv2')
+       CNVLANDUSE_UseGLCCv2 = .true.
+       CNVLANDUSE_UseLU100M = .false.
+       CNVLANDUSE_UseJIBIS  = .false.
+    case('LU100M')
+       CNVLANDUSE_UseGLCCv2 = .false.
+       CNVLANDUSE_UseLU100M = .true.
+       CNVLANDUSE_UseJIBIS  = .false.
+    case('COMBINE')
+       CNVLANDUSE_UseGLCCv2 = .true.
+       CNVLANDUSE_UseLU100M = .true.
+       CNVLANDUSE_UseJIBIS  = .true.
+    case default
+       write(*,*) ' xxx Unsupported TYPE:', trim(CNVLANDUSE_name)
+       call PRC_MPIstop
+    endselect
 
     CNVLANDUSE_DoNothing = .true.
 

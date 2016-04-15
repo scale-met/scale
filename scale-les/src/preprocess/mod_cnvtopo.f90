@@ -83,7 +83,10 @@ contains
        REAL_DLON
     implicit none
 
+    character(len=H_SHORT) :: CNVTOPO_name = 'NONE' ! keep backward compatibility
+
     NAMELIST / PARAM_CNVTOPO / &
+       CNVTOPO_name,                &
        CNVTOPO_UseGTOPO30,          &
        CNVTOPO_UseGMTED2010,        &
        CNVTOPO_UseDEM50M,           &
@@ -171,6 +174,30 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO)
+
+    select case(CNVTOPO_name)
+    case('NONE')
+       ! do nothing
+    case('GTOPO30')
+       CNVTOPO_UseGTOPO30   = .true.
+       CNVTOPO_UseGMTED2010 = .false.
+       CNVTOPO_UseDEM50M    = .false.
+    case('GMTED2010')
+       CNVTOPO_UseGTOPO30   = .false.
+       CNVTOPO_UseGMTED2010 = .true.
+       CNVTOPO_UseDEM50M    = .false.
+    case('DEM50M')
+       CNVTOPO_UseGTOPO30   = .false.
+       CNVTOPO_UseGMTED2010 = .false.
+       CNVTOPO_UseDEM50M    = .true.
+    case('COMBINE')
+       CNVTOPO_UseGTOPO30   = .true.
+       CNVTOPO_UseGMTED2010 = .true.
+       CNVTOPO_UseDEM50M    = .true.
+    case default
+       write(*,*) ' xxx Unsupported TYPE:', trim(CNVTOPO_name)
+       call PRC_MPIstop
+    endselect
 
     CNVTOPO_DoNothing = .true.
 
