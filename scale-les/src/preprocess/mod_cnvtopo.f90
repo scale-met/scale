@@ -828,9 +828,9 @@ contains
           ! oversampling
           do jj = 1, jsize_orig
           do ii = 1, isize_orig
-             do j = 1, ios
+             do j = 1, jos
              do i = 1, ios
-                jjj = (jj-1) * ios + j
+                jjj = (jj-1) * jos + j
                 iii = (ii-1) * ios + i
 
                 TILE_HEIGHT(iii,jjj) = TILE_HEIGHT_orig(ii,jj)
