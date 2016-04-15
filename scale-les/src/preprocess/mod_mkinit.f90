@@ -675,7 +675,7 @@ contains
        write(basename,fmt) trim(RANDOM_INIT_BASENAME),'pe',PRC_myrank
     endif
 
-    if( RANDOM_NUMBER_SEED < PRC_nmax ) then
+    if( RANDOM_NUMBER_SEED > 0 .and. RANDOM_NUMBER_SEED < PRC_nmax ) then
        write(*,*) 'xxx RANDOM_NUMBER_SEED should be larger than total process number Check!'
        call PRC_MPIstop
     endif
