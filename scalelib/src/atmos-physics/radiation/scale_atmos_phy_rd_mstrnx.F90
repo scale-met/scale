@@ -1765,7 +1765,9 @@ contains
        flux,         &
        flux_direct   )
     use scale_const, only: &
-       PI   => CONST_PI,  &
+       PI   => CONST_PI,   &
+       HUGE => CONST_HUGE, &
+       EPS  => CONST_EPS,  &
        EPS1 => CONST_EPS1
     implicit none
 
@@ -1813,6 +1815,7 @@ contains
     real(RP) :: Dpls0, Dpls1, Dpls2  ! D0+, D1+, D2+
     real(RP) :: SIGmns, SIGpls       ! sigma-, sigma+
     real(RP) :: Qgamma               ! Q * gamma
+    real(RP) :: zerosw, tmp
 
     ! main factors
     real(RP) :: Tdir0(rd_kmax,IA,JA,MSTRN_ncloud) ! transmission factor for solar direct (clear-sky/cloud)
@@ -1955,7 +1958,9 @@ contains
           SIGmns = Wmns_irgn * ( Spls - Smns )
           SIGpls = Wmns_irgn * ( Spls + Smns )
 
-          Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / max( X*Y*cosSZA(i,j) - 1.0_RP/cosSZA(i,j), RD_EPS )
+          tmp    = X*Y*cosSZA(i,j)-1.0/cosSZA(i,j)
+          zerosw = 1.0_RP - sign(1.0_RP,abs(tmp)-EPS) ! if abs(tmp)<EPS then 2, otherwise 0
+          Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / ( tmp + zerosw*EPS )
 
           V0pls = 0.5_RP * ( ( 1.0_RP + 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma + SIGmns / X )
           V0mns = 0.5_RP * ( ( 1.0_RP - 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma - SIGmns / X )
