@@ -142,7 +142,6 @@ module mod_mkinit
   integer, public, parameter :: I_WARMBUBBLEAERO = 28
 
   integer, public, parameter :: I_CAVITYFLOW    = 29
-  integer, public, parameter :: I_ADVECT        = 30
   
   !-----------------------------------------------------------------------------
   !
@@ -276,7 +275,6 @@ contains
        MKINIT_TYPE = I_PLANESTATE
     case('TRACERBUBBLE')
        MKINIT_TYPE = I_TRACERBUBBLE
-       call BUBBLE_setup
     case('COLDBUBBLE')
        MKINIT_TYPE = I_COLDBUBBLE
        call BUBBLE_setup
@@ -339,10 +337,6 @@ contains
        call BUBBLE_setup
     case('CAVITYFLOW')
        MKINIT_TYPE = I_CAVITYFLOW
-    case('ADVECT')
-       MKINIT_TYPE = I_ADVECT
-       call BUBBLE_setup
-       call RECT_setup
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -492,8 +486,6 @@ contains
          call MKINIT_warmbubbleaero
       case(I_CAVITYFLOW)
          call MKINIT_cavityflow
-      case(I_ADVECT)
-         call MKINIT_advect
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -1873,7 +1865,10 @@ contains
     real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
     real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
     ! Bubble
+    character(len=H_SHORT) :: SHAPE_NC = 'BUBBLE' ! BUBBLE or RECT
     real(RP) :: BBL_NC       =   1.0_RP ! extremum of NC in bubble [kg/kg]
+
+    real(RP), pointer :: shapeFac(:,:,:) => null()
 
     NAMELIST / PARAM_MKINIT_TRACERBUBBLE / &
        SFC_THETA, &
@@ -1881,6 +1876,7 @@ contains
        ENV_THETA, &
        ENV_U,     &
        ENV_V,     &
+       SHAPE_NC,  &
        BBL_NC
 
     integer :: ierr
@@ -1949,10 +1945,24 @@ contains
 
     ! make tracer bubble
     if ( I_NC > 0 ) then
+
+       select case(SHAPE_NC)
+       case('BUBBLE')
+          call BUBBLE_setup
+          shapeFac => bubble
+       case('RECT')
+          call RECT_setup
+          shapeFac => rect
+       case default
+          write(*,*) 'xxx SHAPE_NC=', trim(SHAPE_NC), ' cannot be used on advect. Check!'
+          call PRC_MPIstop
+       end select
+
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_NC) = BBL_NC * bubble(k,i,j)
+          QTRC(k,i,j,I_NC) = BBL_NC * shapeFac(k,i,j)
        enddo
        enddo
        enddo
@@ -2552,132 +2562,7 @@ contains
 
     return
   end subroutine MKINIT_turbulence
-
-  !-----------------------------------------------------------------------------
-  !> Make initial state for advection experiment
-  subroutine MKINIT_advect
-    implicit none
-
-#ifndef DRY
-    ! Surface state
-    real(RP) :: SFC_THETA               ! surface potential temperature [K]
-    real(RP) :: SFC_PRES                ! surface pressure [Pa]
-    ! Environment state
-    real(RP) :: ENV_THETA               ! potential temperature of environment [K]
-    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
-    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
-    ! Advected quantity
-    character(len=H_SHORT) :: SHAPE_NC = 'BUBBLE' ! BUBBLE or RECT
-    real(RP) :: MAXMIN_NC       =   1.0_RP ! extremum of NC in bubble [kg/kg]
-
-    real(RP), pointer :: ShapeFac(:,:,:) => null()
-    
-    NAMELIST / PARAM_MKINIT_ADVECT / &
-       SFC_THETA,    &
-       SFC_PRES,     &
-       ENV_THETA,    &
-       ENV_U,        &
-       ENV_V,        &
-       SHAPE_NC,     &
-       MAXMIN_NC
-      
-    integer :: ierr
-    integer :: k, i, j, iq
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[ADVECT]/Categ[MKINIT]'
-
-    SFC_THETA = THETAstd
-    SFC_PRES  = Pstd
-    ENV_THETA = THETAstd
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_ADVECT,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TRACERBUBBLE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_ADVECT)
-
-    ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    do k = KS, KE
-       pott(k,1,1) = ENV_THETA
-       qv  (k,1,1) = 0.0_RP
-       qc  (k,1,1) = 0.0_RP
-    enddo
-
-    ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       DENS(k,i,j) = DENS(k,1,1)
-       MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = ENV_U       * DENS(k,1,1)
-       MOMY(k,i,j) = ENV_V       * DENS(k,1,1)
-       RHOT(k,i,j) = pott(k,1,1) * DENS(k,1,1)
-
-       do iq = 1, QA
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-    enddo
-    enddo
-    enddo
-
-    ! set value of NC
-    if ( I_NC > 0 ) then
-       
-       select case(SHAPE_NC)
-       case('BUBBLE')
-          ShapeFac => bubble
-       case('RECT')
-          ShapeFac => rect
-       case default
-          write(*,*) 'xxx SHAPE_NC=', trim(SHAPE_NC), ' cannot be used on advect. Check!'
-          call PRC_MPIstop
-       end select
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-         QTRC(k,i,j,I_NC) = MAXMIN_NC * ShapeFac(k,i,j)
-       enddo
-       enddo
-       enddo
-    else
-       write(*,*) 'xxx tracer I_NC is not defined. Check!'
-       call PRC_MPIstop
-    endif
-
-    if ( flg_bin ) then
-       write(*,*) 'xxx SBM cannot be used on advect. Check!'
-       call PRC_MPIstop
-    endif
-
-#endif
-    return
-  end subroutine MKINIT_advect
-  
+ 
   !-----------------------------------------------------------------------------
   !> Make initial state for cavity flow
   subroutine MKINIT_cavityflow
