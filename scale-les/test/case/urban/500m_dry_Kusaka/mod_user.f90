@@ -124,6 +124,8 @@ contains
   !> Step
   subroutine USER_step
     use scale_const, only: &
+       I_LW  => CONST_I_LW,  &
+       I_SW  => CONST_I_SW,  &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        PRE00 => CONST_PRE00, &
@@ -133,18 +135,18 @@ contains
     use scale_grid_real, only: &
        REAL_lon
     use mod_cpl_vars, only: &
-       TMPA  => URB_ATM_TEMP,      &  ! air temperature
-       PRSA  => URB_ATM_PRES,      &
-       WA    => URB_ATM_W,         &
-       UA    => URB_ATM_U,         &
-       VA    => URB_ATM_V,         &
-       RHOA  => URB_ATM_DENS,      &
-       QVA   => URB_ATM_QV,        &
-       PBL   => URB_ATM_PBL,       &
-       PRSS  => URB_ATM_SFC_PRES,  &
-       LWD   => URB_ATM_SFLX_LW,   &
-       SWD   => URB_ATM_SFLX_SW,   &
-       PREC  => URB_ATM_SFLX_prec
+       TMPA  => URB_ATM_TEMP,        &  ! air temperature
+       PRSA  => URB_ATM_PRES,        &
+       WA    => URB_ATM_W,           &
+       UA    => URB_ATM_U,           &
+       VA    => URB_ATM_V,           &
+       RHOA  => URB_ATM_DENS,        &
+       QVA   => URB_ATM_QV,          &
+       PBL   => URB_ATM_PBL,         &
+       PRSS  => URB_ATM_SFC_PRES,    &
+       RWD   => URB_ATM_SFLX_rad_dn, &
+       RAIN  => URB_ATM_SFLX_rain,   &
+       SNOW  => URB_ATM_SFLX_snow
     use scale_time, only:   &
        NOWSEC => TIME_NOWSEC,      & !< subday part  of current time [sec]
        dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
@@ -158,6 +160,9 @@ contains
     real(RP) :: LON, LAT
     real(RP) :: dsec
     integer  :: tloc
+
+    real(RP) :: LWD(IA,JA)
+    real(RP) :: SWD(IA,JA)
 
     real(RP), parameter :: SRATIO = 0.75_RP ! ratio between direct/total solar [-]
     real(RP)            :: SWtot
@@ -184,16 +189,17 @@ contains
 
     if ( USER_do ) then
 
-       VA  (:,:)   =      0.0_RP
-       WA  (:,:)   =      0.0_RP
-       RHOA(:,:)   =     1.13_RP
-       PBL (:,:)   =    100.0_RP
-       LWD (:,:,1) =      0.0_RP ! direct
-       LWD (:,:,2) =    400.0_RP ! diffuse
-       PRSA(:,:)   = 100000.0_RP
-       PRSS(:,:)   = 100120.0_RP
-       QVA (:,:)   =    0.015_RP
-       PREC(:,:)   =      0.0_RP
+       VA  (:,:)        =      0.0_RP
+       WA  (:,:)        =      0.0_RP
+       RHOA(:,:)        =     1.13_RP
+       PBL (:,:)        =    100.0_RP
+       RWD (:,:,I_LW,1) =      0.0_RP ! direct
+       RWD (:,:,I_LW,2) =    400.0_RP ! diffuse
+       PRSA(:,:)        = 100000.0_RP
+       PRSS(:,:)        = 100120.0_RP
+       QVA (:,:)        =    0.015_RP
+       RAIN(:,:)        =      0.0_RP
+       SNOW(:,:)        =      0.0_RP
 
        do j = 1, JA
        do i = 1, IA
@@ -207,8 +213,8 @@ contains
           SWtot = ( ( 1.0_RP-dsec ) * SW(tloc  ) &
                   + (        dsec ) * SW(tloc+1) )
 
-          SWD (i,j,1) = (        SRATIO ) * SWtot ! direct
-          SWD (i,j,2) = ( 1.0_RP-SRATIO ) * SWtot ! diffuse
+          RWD (i,j,I_SW,1) = (        SRATIO ) * SWtot ! direct
+          RWD (i,j,I_SW,2) = ( 1.0_RP-SRATIO ) * SWtot ! diffuse
 
           THETA     = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
                       + (        dsec ) * PT(tloc+1) ) + TEM00
@@ -217,6 +223,9 @@ contains
 
           UA  (i,j) = ( ( 1.0_RP-dsec ) * Wind(tloc  ) &
                       + (        dsec ) * Wind(tloc+1) )
+
+          LWD(i,j) = RWD(i,j,I_LW,1) + RWD(i,j,I_LW,2)
+          SWD(i,j) = RWD(i,j,I_SW,1) + RWD(i,j,I_SW,2)
 
        enddo
        enddo
@@ -227,7 +236,7 @@ contains
        call HIST_in( SWD  (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
        call HIST_in( LWD  (:,:), 'LWD_urb',  'Downward longwave radiation',  'W/m2'  )
 
-       WORK(:,:) = PREC(:,:) * dt_URB
+       WORK(:,:) = ( RAIN(:,:) + SNOW(:,:) ) * dt_URB
        call HIST_in( WORK (:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
 
     endif
