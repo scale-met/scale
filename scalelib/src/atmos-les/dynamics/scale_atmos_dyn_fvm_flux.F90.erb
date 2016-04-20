@@ -1,0 +1,250 @@
+% # -*- f90 -*-
+% # vi: set sw=4 ts=8:
+<%
+ order = [ ["cd2",1], ["ud3",2], ["cd4",2], ["ud5",3], ["cd6",3] ]
+%>
+!-------------------------------------------------------------------------------
+!> module scale_atmos_dyn_fvm_flux
+!!
+!! @par Description
+!!          FVM flux scheme
+!!
+!! @author Team SCALE
+!!
+!! @par History
+!! @li      2016-04-18 (S.Nishizawa) [new]
+!!
+!<
+!-------------------------------------------------------------------------------
+module scale_atmos_dyn_fvm_flux
+  !-----------------------------------------------------------------------------
+  !
+  !++ used modules
+  !
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_index
+  use scale_tracer
+  use scale_process
+#ifdef DEBUG
+  use scale_debug, only: &
+     CHECK
+  use scale_const, only: &
+     UNDEF  => CONST_UNDEF, &
+     IUNDEF => CONST_UNDEF2
+#endif
+  !-----------------------------------------------------------------------------
+  implicit none
+  private
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public procedure
+  !
+  public :: ATMOS_DYN_FVM_flux_setup
+
+  abstract interface
+     subroutine flux_phi( &
+          flux, &
+          mflx, val, GSQRT, &
+          num_diff, &
+          CDZ, &
+          IIS, IIE, JJS, JJE )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(in)  :: mflx    (KA,IA,JA)
+       real(RP), intent(in)  :: val     (KA,IA,JA)
+       real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
+       real(RP), intent(in)  :: num_diff(KA,IA,JA)
+       real(RP), intent(in)  :: CDZ(KA)
+       integer,  intent(in)  :: IIS, IIE, JJS, JJE
+     end subroutine flux_phi
+     subroutine flux_mom( &
+          flux, &
+          mom, val, DENS, &
+          GSQRT, MAPF, &
+          num_diff, &
+          CDZ, &
+          IIS, IIE, JJS, JJE )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(in)  :: mom     (KA,IA,JA)
+       real(RP), intent(in)  :: val     (KA,IA,JA)
+       real(RP), intent(in)  :: DENS    (KA,IA,JA)
+       real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
+       real(RP), intent(in)  :: MAPF    (   IA,JA,2)
+       real(RP), intent(in)  :: num_diff(KA,IA,JA)
+       real(RP), intent(in)  :: CDZ(KA)
+       integer,  intent(in)  :: IIS, IIE, JJS, JJE
+     end subroutine flux_mom
+     subroutine flux_z( &
+          flux, &
+          mom, val, DENS, &
+          GSQRT, J33G, &
+          num_diff, &
+          CDZ, &
+          IIS, IIE, JJS, JJE )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(in)  :: mom     (KA,IA,JA)
+       real(RP), intent(in)  :: val     (KA,IA,JA)
+       real(RP), intent(in)  :: DENS    (KA,IA,JA)
+       real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
+       real(RP), intent(in)  :: J33G
+       real(RP), intent(in)  :: num_diff(KA,IA,JA)
+       real(RP), intent(in)  :: CDZ(KA)
+       integer,  intent(in)  :: IIS, IIE, JJS, JJE
+     end subroutine flux_z
+     subroutine flux_wz( &
+          flux, &
+          mom, val, DENS, &
+          GSQRT, J33G, &
+          num_diff, &
+          CDZ, FDZ, &
+          dtrk, &
+          IIS, IIE, JJS, JJE )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(in)  :: mom     (KA,IA,JA)
+       real(RP), intent(in)  :: val     (KA,IA,JA)
+       real(RP), intent(in)  :: DENS    (KA,IA,JA)
+       real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
+       real(RP), intent(in)  :: J33G
+       real(RP), intent(in)  :: num_diff(KA,IA,JA)
+       real(RP), intent(in)  :: CDZ(KA)
+       real(RP), intent(in)  :: FDZ(KA-1)
+       real(RP), intent(in)  :: dtrk
+       integer,  intent(in)  :: IIS, IIE, JJS, JJE
+     end subroutine flux_wz
+     subroutine flux_j( &
+          flux, &
+          mom, val, DENS, &
+          GSQRT, JG, MAPF, &
+          CDZ, &
+          IIS, IIE, JJS, JJE )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(in)  :: mom     (KA,IA,JA)
+       real(RP), intent(in)  :: val     (KA,IA,JA)
+       real(RP), intent(in)  :: DENS    (KA,IA,JA)
+       real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
+       real(RP), intent(in)  :: JG      (KA,IA,JA)
+       real(RP), intent(in)  :: MAPF    (   IA,JA,2)
+       real(RP), intent(in)  :: CDZ(KA)
+       integer,  intent(in)  :: IIS, IIE, JJS, JJE
+     end subroutine flux_j
+  end interface
+
+<% ["Z", "X", "Y"].each do |dir| %>
+  procedure(flux_phi), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_XYZ => NULL()
+  public :: ATMOS_DYN_FVM_flux<%=dir%>_XYZ
+<% end %>
+
+<% ["XYW", "UYZ", "XVZ"].each do |uvw| %>
+  procedure(<%= uvw=="XYW" ? "flux_wz" : "flux_z" %>), pointer :: ATMOS_DYN_FVM_fluxZ_<%=uvw%> => NULL()
+  public :: ATMOS_DYN_FVM_fluxZ_<%=uvw%>
+<% ["X", "Y"].each do |dir| %>
+  procedure(flux_mom), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%> => NULL()
+  public :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>
+<% end %>
+<% ["J13", "J23"].each do |dir| %>
+  procedure(flux_j), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%> => NULL()
+  public :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>
+<% end %>
+<% end %>
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private procedure
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+  !
+  !-----------------------------------------------------------------------------
+contains
+
+  !-----------------------------------------------------------------------------
+  !> setup
+  subroutine ATMOS_DYN_FVM_flux_setup( &
+       scheme )
+    use scale_process, only: &
+         PRC_MPIstop
+<%
+  order.each do |o, nh|
+    funcs = Array.new
+    ["Z", "X", "Y"].each do |dir|
+      funcs.push "ATMOS_DYN_FVM_flux#{dir}_XYZ_#{o}"
+    end
+    ["XYW", "UYZ", "XVZ"].each do |uvw|
+      ["Z", "X", "Y", "J13", "J23"].each do |dir|
+        funcs.push "ATMOS_DYN_FVM_flux#{dir}_#{uvw}_#{o}"
+      end
+    end
+%>
+   use scale_atmos_dyn_fvm_flux_<%=o%>, only: &
+      <%= funcs.join(", &\n      ") %>
+<% end %>
+    implicit none
+    character(len=*), intent(in) :: scheme
+
+    select case ( scheme )
+<%   order.each do |o, nh| %>
+    case ( "<%= o.upcase %>" )
+      if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation'
+<% ["Z", "X", "Y"].each do |dir| %>
+      ATMOS_DYN_FVM_flux<%=dir%>_XYZ => ATMOS_DYN_FVM_flux<%=dir%>_XYZ_<%=o%>
+<% end %>
+<% ["XYW", "UYZ", "XVZ"].each do |uvw| %>
+<%   ["Z", "X", "Y", "J13", "J23"].each do |dir| %>
+      ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%> => ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>_<%=o%>
+<%   end # dir%>
+<% end # uvw %>
+      
+      if ( IHALO < <%=nh%> ) then
+         write(*,*) 'xxx IHALO must be >= ', <%=nh%>
+         call PRC_MPIstop
+      end if
+      if ( JHALO < <%=nh%> ) then
+         write(*,*) 'xxx JHALO must be >= ', <%=nh%>
+         call PRC_MPIstop
+      end if
+
+<% end %>
+    case default
+       write(*,*) 'xxx scheme is invalid: ', scheme
+       call PRC_MPIstop
+    end select
+
+  end subroutine ATMOS_DYN_FVM_flux_setup
+
+
+end module scale_atmos_dyn_fvm_flux
+
+!-------------------------------------------------------------------------------
+
+
+!--
+! vi<%=":"%>set readonly sw=4 ts=8
+!
+!Local Variables<%=":"%>
+!mode: f90
+!buffer-read-only: t
+!End:
+!
+!++

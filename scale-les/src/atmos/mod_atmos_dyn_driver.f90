@@ -54,9 +54,6 @@ module mod_atmos_dyn_driver
   !
   !++ Private parameters & variables
   !
-  ! time integration scheme
-  integer,  private, parameter :: RK = 3                                 ! order of Runge-Kutta scheme
-
   ! numerical filter
   integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
   real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
@@ -71,7 +68,6 @@ module mod_atmos_dyn_driver
   real(RP), private :: ATMOS_DYN_divdmp_coef = 0.0_RP                    ! Divergence dumping coef
 
   ! fct
-  logical,  private :: ATMOS_DYN_FLAG_FCT_rho      = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_momentum = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream = .true.
@@ -105,7 +101,8 @@ contains
        TIME_DTSEC_ATMOS_DYN
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn, &
-       ATMOS_DYN_TYPE
+       ATMOS_DYN_TYPE,  &
+       ATMOS_DYN_TINTEG_TYPE
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -115,26 +112,15 @@ contains
        QTRC
     use mod_atmos_dyn_vars, only: &
        PROG
-
-#ifndef DYN2
     use scale_atmos_dyn, only: &
        ATMOS_DYN_setup    
-#else
-    use scale_atmos_dyn2, only: &
-       ATMOS_DYN_setup    
-    use scale_atmos_dyn_rk_fdmheve, only: &
-       ATMOS_DYN_rk_fdmheve_SetFluxEvalType
-    use scale_atmos_dyn_tracer, only: &
-       ATMOS_DYN_tracer_SetFluxEvalType
-    use scale_atmos_dyn_advtest, only: &
-         ATMOS_DYN_RK3_advtest_SetFluxEvalType
-#endif
-    
+    implicit none
     !-------------------------------------------------------
     
-    implicit none
+    character(len=H_SHORT) :: ATMOS_DYN_FVM_FLUX_scheme
 
     NAMELIST / PARAM_ATMOS_DYN / &
+       ATMOS_DYN_FVM_FLUX_scheme,             &
        ATMOS_DYN_numerical_diff_order,        &
        ATMOS_DYN_numerical_diff_coef,         &
        ATMOS_DYN_numerical_diff_coef_q,       &
@@ -142,11 +128,9 @@ contains
        ATMOS_DYN_numerical_diff_use_refstate, &
        ATMOS_DYN_enable_coriolis,             &
        ATMOS_DYN_divdmp_coef,                 &
-       ATMOS_DYN_FLAG_FCT_rho,                &
        ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T,                  &
-       ATMOS_DYN_FLAG_FCT_along_stream,       &
-       ATMOS_DYN_FLXEVAL_TYPE
+       ATMOS_DYN_FLAG_FCT_along_stream
 
     real(RP) :: DT
     integer  :: ierr
@@ -170,28 +154,16 @@ contains
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
-       if (ATMOS_DYN_TYPE == 'FDM-HEVE') then
-#ifdef DYN2          
-          call ATMOS_DYN_rk_fdmheve_SetFluxEvalType( &
-               & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
-
-          call ATMOS_DYN_tracer_SetFluxEvalType( &
-               & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
-          call ATMOS_DYN_RK3_advtest_SetFluxEvalType( &
-               & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
-#else
-          write(*,*) 'xxx Set FDM-HEVE, but specify -DDYN2 in compiling time. Check!' 
-#endif
-       else
-          call ATMOS_DYN_setup( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
-               PROG,                           & ! [IN]
-               GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
-               GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
-               ATMOS_DYN_enable_coriolis,      & ! [IN]
-               REAL_LAT,                       & ! [IN]
-               none = ATMOS_DYN_TYPE=='NONE'   ) ! [IN]
-       end if
+       call ATMOS_DYN_setup( &
+            ATMOS_DYN_TINTEG_TYPE,          & ! [IN]
+            ATMOS_DYN_FVM_FLUX_SCHEME,      & ! [IN]
+            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
+            PROG,                           & ! [IN]
+            GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
+            GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
+            ATMOS_DYN_enable_coriolis,      & ! [IN]
+            REAL_LAT,                       & ! [IN]
+            none = ATMOS_DYN_TYPE=='NONE'   ) ! [IN]
        
     endif
     return
@@ -319,7 +291,6 @@ contains
          ATMOS_BOUNDARY_alpha_POTT,                            & ! [IN]
          ATMOS_BOUNDARY_alpha_QTRC,                            & ! [IN]
          ATMOS_DYN_divdmp_coef,                                & ! [IN]
-         ATMOS_DYN_FLAG_FCT_rho,                               & ! [IN]
          ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
          ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
          ATMOS_DYN_FLAG_FCT_along_stream,                      & ! [IN]

@@ -40,16 +40,16 @@ module scale_grid_index
   include "inc_index.h"
   include "inc_index_common.h"
 #else
+  integer, public, parameter :: KHALO  = 2  !< # of halo cells: z
+  integer, public            :: IHALO  = 2  !< # of halo cells: x
+  integer, public            :: JHALO  = 2  !< # of halo cells: y
+
   integer, public :: KMAX   = -1 !< # of computational cells: z
   integer, public :: IMAX   = -1 !< # of computational cells: x
   integer, public :: JMAX   = -1 !< # of computational cells: y
 
   integer, public :: IBLOCK = -1 !< block size for cache blocking: x
   integer, public :: JBLOCK = -1 !< block size for cache blocking: y
-
-  integer, public :: KHALO  = 3  !< # of halo cells: z
-  integer, public :: IHALO  = 3  !< # of halo cells: x
-  integer, public :: JHALO  = 3  !< # of halo cells: y
 
   integer, public :: KA          !< # of z whole cells (local, with HALO)
   integer, public :: IA          !< # of x whole cells (local, with HALO)
@@ -111,6 +111,8 @@ contains
        KMAX,   &
        IMAX,   &
        JMAX,   &
+       IHALO,  &
+       JHALO,  &
        IBLOCK, &
        JBLOCK
 #endif
@@ -136,6 +138,15 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_INDEX)
+
+    if ( IMAX < IHALO ) then
+       write(*,*) 'xxx number of grid size IMAX must >= IHALO! ', IMAX, IHALO
+       call PRC_MPIstop
+    end if
+    if ( JMAX < JHALO ) then
+       write(*,*) 'xxx number of grid size JMAX must >= JHALO! ', JMAX, JHALO
+       call PRC_MPIstop
+    end if
 
     KA   = KMAX + KHALO * 2
     IA   = IMAX + IHALO * 2

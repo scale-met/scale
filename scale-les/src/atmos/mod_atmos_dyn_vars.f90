@@ -72,8 +72,8 @@ contains
        UNDEF => CONST_UNDEF
     use mod_atmos_admin, only: &
        ATMOS_DYN_TYPE
-    use scale_atmos_dyn_rk, only: &
-       ATMOS_DYN_rk_regist
+    use scale_atmos_dyn_tstep, only: &
+       ATMOS_DYN_tstep_regist
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN_VARS / &
@@ -102,11 +102,11 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_VARS)
 
 
-    call ATMOS_DYN_rk_regist( ATMOS_DYN_TYPE, & ! (in)
-                              VA,       & ! (out)
-                              VAR_NAME, & ! (out)
-                              VAR_DESC, & ! (out)
-                              VAR_UNIT  ) ! (out)
+    call ATMOS_DYN_tstep_regist( ATMOS_DYN_TYPE, & ! (in)
+                                 VA,       & ! (out)
+                                 VAR_NAME, & ! (out)
+                                 VAR_DESC, & ! (out)
+                                 VAR_UNIT  ) ! (out)
     if ( VA > 0 ) then
        if ( VA > VMAX ) then
           write(*,*) 'xxx number of the prognostic variables is exceed the limit', VA, ' > ', VMAX

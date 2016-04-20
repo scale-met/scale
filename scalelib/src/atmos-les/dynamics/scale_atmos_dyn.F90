@@ -77,19 +77,6 @@ module scale_atmos_dyn
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: DENS_RK1(:,:,:) ! prognostic variables (+1/3 step)
-  real(RP), private, allocatable :: MOMZ_RK1(:,:,:)
-  real(RP), private, allocatable :: MOMX_RK1(:,:,:)
-  real(RP), private, allocatable :: MOMY_RK1(:,:,:)
-  real(RP), private, allocatable :: RHOT_RK1(:,:,:)
-  real(RP), private, allocatable :: PROG_RK1(:,:,:,:)
-  real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (+2/3 step)
-  real(RP), private, allocatable :: MOMZ_RK2(:,:,:)
-  real(RP), private, allocatable :: MOMX_RK2(:,:,:)
-  real(RP), private, allocatable :: MOMY_RK2(:,:,:)
-  real(RP), private, allocatable :: RHOT_RK2(:,:,:)
-  real(RP), private, allocatable :: PROG_RK2(:,:,:,:)
-
   ! tendency
   real(RP), private, allocatable :: DENS_t(:,:,:)
   real(RP), private, allocatable :: MOMZ_t(:,:,:)
@@ -125,20 +112,6 @@ module scale_atmos_dyn
   integer :: I_COMM_MOMY_t = 4
   integer :: I_COMM_RHOT_t = 5
 
-  integer :: I_COMM_DENS_RK1 = 1
-  integer :: I_COMM_MOMZ_RK1 = 2
-  integer :: I_COMM_MOMX_RK1 = 3
-  integer :: I_COMM_MOMY_RK1 = 4
-  integer :: I_COMM_RHOT_RK1 = 5
-  integer, allocatable :: I_COMM_PROG_RK1(:)
-
-  integer :: I_COMM_DENS_RK2 = 1
-  integer :: I_COMM_MOMZ_RK2 = 2
-  integer :: I_COMM_MOMX_RK2 = 3
-  integer :: I_COMM_MOMY_RK2 = 4
-  integer :: I_COMM_RHOT_RK2 = 5
-  integer, allocatable :: I_COMM_PROG_RK2(:)
-
   integer, allocatable :: I_COMM_RHOQ_t(:)
   integer, allocatable :: I_COMM_QTRC(:)
 
@@ -152,6 +125,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_setup( &
+       DYN_Tinteg_TYPE, &
+       DYN_FVM_FLUX_SCHEME, &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, &
        PROG,             &
        CDZ, CDX, CDY,    &
@@ -173,9 +148,14 @@ contains
        COMM_vars8_init
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_filter_setup
-    use scale_atmos_dyn_rk, only: &
-       ATMOS_DYN_rk_setup
+    use scale_atmos_dyn_tinteg, only: &
+       ATMOS_DYN_tinteg_setup
+    use scale_atmos_dyn_tstep, only: &
+       ATMOS_DYN_tstep_setup
     implicit none
+
+    character(len=*), intent(in) :: DYN_Tinteg_TYPE
+    character(len=*), intent(in) :: DYN_FVM_FLUX_SCHEME
 
     ! MPI_RECV_INIT requires intent(inout)
     real(RP),               intent(inout) :: DENS(KA,IA,JA)
@@ -200,18 +180,6 @@ contains
     integer :: iv, iq
     !---------------------------------------------------------------------------
 
-    allocate( DENS_RK1(KA,IA,JA) )
-    allocate( MOMZ_RK1(KA,IA,JA) )
-    allocate( MOMX_RK1(KA,IA,JA) )
-    allocate( MOMY_RK1(KA,IA,JA) )
-    allocate( RHOT_RK1(KA,IA,JA) )
-
-    allocate( DENS_RK2(KA,IA,JA) )
-    allocate( MOMZ_RK2(KA,IA,JA) )
-    allocate( MOMX_RK2(KA,IA,JA) )
-    allocate( MOMY_RK2(KA,IA,JA) )
-    allocate( RHOT_RK2(KA,IA,JA) )
-
     allocate( DENS_t(KA,IA,JA) )
     allocate( MOMZ_t(KA,IA,JA) )
     allocate( MOMX_t(KA,IA,JA) )
@@ -225,14 +193,9 @@ contains
     allocate( num_diff  (KA,IA,JA,5,3) )
     allocate( num_diff_q(KA,IA,JA,3) )
 
-    allocate( PROG_RK1(KA,IA,JA,max(VA,1)) )
-    allocate( PROG_RK2(KA,IA,JA,max(VA,1)) )
     allocate( I_COMM_PROG    (max(VA,1)) )
-    allocate( I_COMM_PROG_RK1(max(VA,1)) )
-    allocate( I_COMM_PROG_RK2(max(VA,1)) )
-
-    allocate( I_COMM_RHOQ_t(QA) )
     allocate( I_COMM_QTRC(QA) )
+    allocate( I_COMM_RHOQ_t(QA) )
 
     if ( present(none) ) then
        DYN_NONE = none
@@ -259,8 +222,7 @@ contains
     BND_S = .not. PRC_HAS_S
     BND_N = .not. PRC_HAS_N
 
-    call ATMOS_DYN_rk_setup( &
-         BND_W, BND_E, BND_S, BND_N )
+    call ATMOS_DYN_tstep_setup( DYN_FVM_FLUX_SCHEME ) ! (in)
 
     call COMM_vars8_init( DENS, I_COMM_DENS )
     call COMM_vars8_init( MOMZ, I_COMM_MOMZ )
@@ -268,6 +230,7 @@ contains
     call COMM_vars8_init( MOMY, I_COMM_MOMY )
     call COMM_vars8_init( RHOT, I_COMM_RHOT )
     do iv = 1, VA
+       I_COMM_PROG(iv) = 5 + iv
        call COMM_vars8_init( PROG(:,:,:,iv), I_COMM_PROG(iv) )
     end do
 
@@ -276,24 +239,6 @@ contains
     call COMM_vars8_init( MOMX_t, I_COMM_MOMX_t )
     call COMM_vars8_init( MOMY_t, I_COMM_MOMY_t )
     call COMM_vars8_init( RHOT_t, I_COMM_RHOT_t )
-
-    call COMM_vars8_init( DENS_RK1, I_COMM_DENS_RK1 )
-    call COMM_vars8_init( MOMZ_RK1, I_COMM_MOMZ_RK1 )
-    call COMM_vars8_init( MOMX_RK1, I_COMM_MOMX_RK1 )
-    call COMM_vars8_init( MOMY_RK1, I_COMM_MOMY_RK1 )
-    call COMM_vars8_init( RHOT_RK1, I_COMM_RHOT_RK1 )
-    do iv = 1, VA
-       call COMM_vars8_init( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
-    end do
-
-    call COMM_vars8_init( DENS_RK2, I_COMM_DENS_RK2 )
-    call COMM_vars8_init( MOMZ_RK2, I_COMM_MOMZ_RK2 )
-    call COMM_vars8_init( MOMX_RK2, I_COMM_MOMX_RK2 )
-    call COMM_vars8_init( MOMY_RK2, I_COMM_MOMY_RK2 )
-    call COMM_vars8_init( RHOT_RK2, I_COMM_RHOT_RK2 )
-    do iv = 1, VA
-       call COMM_vars8_init( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
-    end do
 
     do iq = 1, QA
        I_COMM_RHOQ_t(iq) = 5 + VA + iq
@@ -307,21 +252,10 @@ contains
     call COMM_vars8_init( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
     call COMM_vars8_init( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
 
-    DENS_RK1(:,:,:) = UNDEF
-    MOMZ_RK1(:,:,:) = UNDEF
-    MOMX_RK1(:,:,:) = UNDEF
-    MOMY_RK1(:,:,:) = UNDEF
-    RHOT_RK1(:,:,:) = UNDEF
-    if ( VA > 0 ) PROG_RK1(:,:,:,:) = UNDEF
-
-    DENS_RK2(:,:,:) = UNDEF
-    MOMZ_RK2(:,:,:) = UNDEF
-    MOMX_RK2(:,:,:) = UNDEF
-    MOMY_RK2(:,:,:) = UNDEF
-    RHOT_RK2(:,:,:) = UNDEF
-    if ( VA > 0 ) PROG_RK2(:,:,:,:) = UNDEF
-
     mflx_hi(:,:,:,:) = UNDEF
+
+
+    call ATMOS_DYN_Tinteg_setup( DYN_Tinteg_TYPE )
 
     return
   end subroutine ATMOS_DYN_setup
@@ -343,7 +277,7 @@ contains
        DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,       DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,       &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC, &
        divdmp_coef,                                                                                          &
-       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,                                                          &
+       FLAG_FCT_MOMENTUM, FLAG_FCT_T,                                                                        &
        FLAG_FCT_ALONG_STREAM,                                                                                &
        USE_AVERAGE,                                                                                          &
        DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN                                                               )
@@ -376,8 +310,8 @@ contains
        ATMOS_DYN_numfilter_coef,   &
        ATMOS_DYN_numfilter_coef_q, &
        ATMOS_DYN_fct
-    use scale_atmos_dyn_rk, only: &
-       ATMOS_DYN_rk
+    use scale_atmos_dyn_tstep, only: &
+       ATMOS_DYN_tstep
     use scale_atmos_boundary, only: &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
@@ -386,6 +320,8 @@ contains
        HIST_in, &
 #endif
        HIST_switch
+    use scale_atmos_dyn_tinteg, only: &
+       ATMOS_DYN_tinteg
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -459,7 +395,6 @@ contains
 
     real(RP), intent(in)    :: divdmp_coef
 
-    logical,  intent(in)    :: FLAG_FCT_RHO
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
@@ -483,6 +418,7 @@ contains
     real(RP) :: QDRY (KA,IA,JA) ! dry air
     real(RP) :: Rtot (KA,IA,JA) ! total R
     real(RP) :: CVtot(KA,IA,JA) ! total CV
+    real(RP) :: DDIV (KA,IA,JA) ! 3 dimensional divergence
 
     real(RP) :: DENS_tq(KA,IA,JA)
     real(RP) :: diff(KA,IA,JA)
@@ -519,6 +455,8 @@ contains
     integer  :: JJS, JJE
     integer  :: i, j, k, iq, step
     integer  :: iv
+
+    real(RP) :: diff_coef
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
@@ -533,19 +471,6 @@ contains
     MOMY0   (:,:,:) = UNDEF
     RHOT0   (:,:,:) = UNDEF
     if ( VA > 0 ) PROG0(:,:,:,:) = UNDEF
-    DENS_RK1(:,:,:) = UNDEF
-    MOMZ_RK1(:,:,:) = UNDEF
-    MOMX_RK1(:,:,:) = UNDEF
-    MOMY_RK1(:,:,:) = UNDEF
-    RHOT_RK1(:,:,:) = UNDEF
-    if ( VA > 0 ) PROG_RK1(:,:,:,:) = UNDEF
-
-    DENS_RK2(:,:,:) = UNDEF
-    MOMZ_RK2(:,:,:) = UNDEF
-    MOMX_RK2(:,:,:) = UNDEF
-    MOMY_RK2(:,:,:) = UNDEF
-    RHOT_RK2(:,:,:) = UNDEF
-    if ( VA > 0 ) PROG_RK2(:,:,:,:) = UNDEF
 
     num_diff (:,:,:,:,:) = UNDEF
 
@@ -605,7 +530,7 @@ contains
 
     if ( DYN_NONE ) then
 
-       call PROF_rapstart("DYN_integ", 2)
+       call PROF_rapstart("DYN_Tinteg", 2)
 
        dt = real(DTSEC_ATMOS_DYN * NSTEP_ATMOS_DYN,kind=RP)
 
@@ -688,7 +613,7 @@ contains
           QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
        end if
 
-       call PROF_rapend("DYN_integ", 2)
+       call PROF_rapend("DYN_Tinteg", 2)
 
        return
     end if ! if DYN_NONE == .true.
@@ -1032,318 +957,57 @@ contains
                                          ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
+       if ( divdmp_coef > 0.0_RP ) then
+
+          ! 3D divergence for damping
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE+1
+          do i = IIS, IIE+1
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMZ(k  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMZ(k-1,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(k  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(k  ,i-1,j  ) )
+             call CHECK( __LINE__, MOMY(k  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMY(k  ,i  ,j-1) )
+#endif
+             DDIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
+                         + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                         * ( ( MOMX(k,i,j)/MAPF(i,j,2,I_UY) - MOMX(k,i-1,j  )/MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                           + ( MOMY(k,i,j)/MAPF(i,j,1,I_XV) - MOMY(k,i  ,j-1)/MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+          enddo
+          enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+       end if
+
        call PROF_rapend  ("DYN_Numfilter", 2)
 
        !------------------------------------------------------------------------
-       ! Start RK
+       ! Start temporal integration
        !------------------------------------------------------------------------
 
-       !##### SAVE #####
-!OCL XFILL
-       DENS0(:,:,:) = DENS(:,:,:)
-!OCL XFILL
-       MOMZ0(:,:,:) = MOMZ(:,:,:)
-!OCL XFILL
-       MOMX0(:,:,:) = MOMX(:,:,:)
-!OCL XFILL
-       MOMY0(:,:,:) = MOMY(:,:,:)
-!OCL XFILL
-       RHOT0(:,:,:) = RHOT(:,:,:)
+       call PROF_rapstart("DYN_Tinteg", 2)
 
-       if ( VA > 0 ) then
-!OCL XFILL
-          PROG0(:,:,:,:) = PROG(:,:,:,:)
-       end if
+       call ATMOS_DYN_tinteg( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,   & ! (inout)
+                              PROG,                                           & ! (inout)
+                              mflx_hi,  tflx_hi,                              & ! (out)
+                              DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t, & ! (in)
+                              Rtot, CVtot, CORIOLI,                           & ! (in)
+                              num_diff, divdmp_coef, DDIV,                    & ! (in)
+                              FLAG_FCT_MOMENTUM, FLAG_FCT_T,                  & ! (in)
+                              FLAG_FCT_ALONG_STREAM,                          & ! (in)
+                              CDZ, FDZ, FDX, FDY,                             & ! (in)
+                              RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,             & ! (in)
+                              PHI, GSQRT, J13G, J23G, J33G, MAPF,             & ! (in)
+                              REF_pres, REF_dens,                             & ! (in)
+                              BND_W, BND_E, BND_S, BND_N,                     & ! (in)
+                              dt                                              ) ! (in)
 
-       call PROF_rapstart("DYN_RK", 2)
-
-       !##### RK1 : PROG0,PROG->PROG_RK1 #####
-
-       dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
-
-       call ATMOS_DYN_rk( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
-                          PROG_RK1,                                         & ! (out)
-                          mflx_hi,  tflx_hi,                                & ! (out)
-                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
-                          DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
-                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
-                          PROG0, PROG,                                      & ! (in)
-                          Rtot, CVtot, CORIOLI,                             & ! (in)
-                          num_diff, divdmp_coef,                            & ! (in)
-                          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
-                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
-                          CDZ, FDZ, FDX, FDY,                               & ! (in)
-                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
-                          REF_pres, REF_dens,                               & ! (in)
-                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
-                          dtrk, dt                                          ) ! (in)
-       call PROF_rapend  ("DYN_RK", 2)
-
-       call PROF_rapstart("DYN_Boundary", 2)
-
-       if ( BND_W ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do i = 1, IS-1
-          do k = KS, KE
-             DENS_RK1(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-       end if
-       if ( BND_E ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do i = IE+1, IA
-          do k = KS, KE
-             DENS_RK1(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do k = KS, KE
-             MOMX_RK1(k,IE,j) = MOMX0(k,IE,j)
-          enddo
-          enddo
-       end if
-       if ( BND_S ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JS-1
-          do i = 1, IA
-          do k = KS, KE
-             DENS_RK1(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-       end if
-       if ( BND_N ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = JE+1, JA
-          do i = 1, IA
-          do k = KS, KE
-             DENS_RK1(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do i = 1, IA
-          do k = KS, KE
-             MOMY_RK1(k,i,JE) = MOMY0(k,i,JE)
-          enddo
-          enddo
-       end if
-
-       call PROF_rapend  ("DYN_Boundary", 2)
-
-       call COMM_vars8( DENS_RK1(:,:,:), I_COMM_DENS_RK1 )
-       call COMM_vars8( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1 )
-       call COMM_vars8( MOMX_RK1(:,:,:), I_COMM_MOMX_RK1 )
-       call COMM_vars8( MOMY_RK1(:,:,:), I_COMM_MOMY_RK1 )
-       call COMM_vars8( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1 )
-       do iv = 1, VA
-          call COMM_vars8( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
-       end do
-       call COMM_wait ( DENS_RK1(:,:,:), I_COMM_DENS_RK1, .false. )
-       call COMM_wait ( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1, .false. )
-       call COMM_wait ( MOMX_RK1(:,:,:), I_COMM_MOMX_RK1, .false. )
-       call COMM_wait ( MOMY_RK1(:,:,:), I_COMM_MOMY_RK1, .false. )
-       call COMM_wait ( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1, .false. )
-       do iv = 1, VA
-          call COMM_wait ( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv), .false. )
-       end do
-
-       !##### RK2 : PROG0,PROG_RK1->PROG_RK2 #####
-
-       call PROF_rapstart("DYN_RK", 2)
-
-       dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
-
-       call ATMOS_DYN_rk( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
-                          PROG_RK2,                                         & ! (out)
-                          mflx_hi,  tflx_hi,                                & ! (out)
-                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
-                          DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
-                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
-                          PROG0, PROG_RK1,                                  & ! (in)
-                          Rtot, CVtot, CORIOLI,                             & ! (in)
-                          num_diff, divdmp_coef,                            & ! (in)
-                          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
-                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
-                          CDZ, FDZ, FDX, FDY,                               & ! (in)
-                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
-                          REF_pres, REF_dens,                               & ! (in)
-                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
-                          dtrk, dt                                          ) ! (in)
-
-       call PROF_rapend  ("DYN_RK", 2)
-
-       call PROF_rapstart("DYN_Boundary", 2)
-
-       if ( BND_W ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do i = 1, IS-1
-          do k = KS, KE
-             DENS_RK2(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-       end if
-       if ( BND_E ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do i = IE+1, IA
-          do k = KS, KE
-             DENS_RK2(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do k = KS, KE
-             MOMX_RK2(k,IE,j) = MOMX0(k,IE,j)
-          enddo
-          enddo
-       end if
-       if ( BND_S ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JS-1
-          do i = 1, IA
-          do k = KS, KE
-             DENS_RK2(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-       end if
-       if ( BND_N ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = JE+1, JA
-          do i = 1, IA
-          do k = KS, KE
-             DENS_RK2(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do i = 1, IA
-          do k = KS, KE
-             MOMY_RK2(k,i,JE) = MOMY0(k,i,JE)
-          enddo
-          enddo
-       end if
-
-       call PROF_rapend  ("DYN_Boundary", 2)
-
-       call COMM_vars8( DENS_RK2(:,:,:), I_COMM_DENS_RK2 )
-       call COMM_vars8( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2 )
-       call COMM_vars8( MOMX_RK2(:,:,:), I_COMM_MOMX_RK2 )
-       call COMM_vars8( MOMY_RK2(:,:,:), I_COMM_MOMY_RK2 )
-       call COMM_vars8( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2 )
-       do iv = 1, VA
-          call COMM_vars8( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
-       end do
-       call COMM_wait ( DENS_RK2(:,:,:), I_COMM_DENS_RK2, .false. )
-       call COMM_wait ( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2, .false. )
-       call COMM_wait ( MOMX_RK2(:,:,:), I_COMM_MOMX_RK2, .false. )
-       call COMM_wait ( MOMY_RK2(:,:,:), I_COMM_MOMY_RK2, .false. )
-       call COMM_wait ( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2, .false. )
-       do iv = 1, VA
-          call COMM_wait ( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv), .false. )
-       end do
-
-       !##### RK3 : PROG0,PROG_RK2->PROG #####
-
-       call PROF_rapstart("DYN_RK", 2)
-
-       dtrk = real(DTSEC_ATMOS_DYN,kind=RP)
-
-       call ATMOS_DYN_rk( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (out)
-                          PROG,                                             & ! (out)
-                          mflx_hi,  tflx_hi,                                & ! (out)
-                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
-                          DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
-                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
-                          PROG0, PROG_RK2,                                  & ! (in)
-                          Rtot, CVtot, CORIOLI,                             & ! (in)
-                          num_diff, divdmp_coef,                            & ! (in)
-                          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
-                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
-                          CDZ, FDZ, FDX, FDY,                               & ! (in)
-                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
-                          REF_pres, REF_dens,                               & ! (in)
-                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
-                          dtrk, dt                                          ) ! (in)
-
-       call PROF_rapend  ("DYN_RK", 2)
+       call PROF_rapend  ("DYN_Tinteg", 2)
 
 #ifdef CHECK_MASS
        call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )

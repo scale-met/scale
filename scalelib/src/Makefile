@@ -33,16 +33,6 @@ VPATH = common:                           \
         atmos-les/io:                     \
         atmos-les/numeric:                \
         atmos-les/dynamics:               \
-        atmos-les/dynamics/rk3m/none:     \
-	atmos-les/dynamics/rk3m/ori/comm: \
-        atmos-les/dynamics/rk3m/ori/heve: \
-        atmos-les/dynamics/rk3m/ori/hevi: \
-        atmos-les/dynamics/rk3m/ori/hivi: \
-	atmos-les/dynamics/rk3m/fdm/comm: \
-        atmos-les/dynamics/rk3m/fdm/heve: \
-        atmos-les/dynamics/rk3m/fdm/hevi: \
-        atmos-les/dynamics/rk3m/fdm/hivi: \
-	atmos-les/dynamics:               \
 	atmos-les/forcing:                \
         land:                             \
         land/grid:                        \
@@ -124,39 +114,33 @@ else
   OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
 
-ifeq ($(DYN2_ENABLE),)
-  OBJS_NUMERIC_FDM = \
-             scale_atmos_numeric_fdm_def.o  \
-             scale_atmos_numeric_fdm_util.o \
-	     scale_atmos_numeric_fdm_ud.o   \
-	     scale_atmos_numeric_fdm_cd.o   \
-	     scale_atmos_numeric_fdm_diff.o \
-             scale_atmos_numeric_fdm.o       
-
-  OBJS_DYN2 = \
-		scale_atmos_dyn_bc.o	\
-		scale_atmos_dyn_advtest.o	\
-		scale_atmos_dyn_tracer.o	\
-		scale_atmos_dyn_rk_fdmheve.o    \
-		scale_atmos_dyn2.o
-
-ifeq ($(DYNBC_CAVITY),T)
-  FFLAGS +=  -DDYNBC_W_RIGID -DDYNBC_E_RIGID -DDYNBC_N_RIGID -DDYNBC_S_RIGID \
-	     -DDYNBC_B_RIGID -DDYNBC_T_RIGID
+OBJS_DYN = scale_atmos_dyn_tinteg.o \
+           scale_atmos_dyn_tstep.o \
+           scale_atmos_dyn_fvm_flux.o \
+           scale_atmos_dyn_fvm_flux_ud1.o \
+           scale_atmos_dyn_fvm_flux_cd2.o \
+           scale_atmos_dyn_fvm_flux_ud3.o \
+           scale_atmos_dyn_fvm_flux_cd4.o \
+           scale_atmos_dyn_fvm_flux_ud5.o \
+           scale_atmos_dyn_fvm_flux_cd6.o
+ifeq ($(DYNAMICS),)
+  OBJS_DYN += scale_atmos_dyn_tstep_fvm_heve.o \
+#	      scale_atmos_dyn_tstep_fvm_hevi.o \
+#	      scale_atmos_dyn_tstep_fvm_hivi.o
+else
+  OBJS_DYN += scale_atmos_dyn_tstep_$(DYNAMICS).o
+endif
+ifeq ($(DYNAMICS),)
+  OBJS_DYN += scale_atmos_dyn_tinteg_rk3.o
+else
+  OBJS_DYN += scale_atmos_dyn_tinteg_$(TINTEG).o
 endif
 
-endif
 
-
-OBJS_NAME = $(scale_rdma)	\
-	scale_atmos_dyn.o	\
-	$(OBJS_DYN2)        \
+OBJS_NAME = $(scale_rdma)	        \
+	scale_atmos_dyn.o               \
 	scale_atmos_dyn_common.o	\
-	scale_atmos_dyn_rk.o	\
-	scale_atmos_dyn_rk_heve.o	\
-	scale_atmos_dyn_rk_hevi.o	\
-	scale_atmos_dyn_rk_hivi.o	\
-	scale_atmos_dyn_rk_none.o	\
+	$(OBJS_DYN)                     \
 	scale_atmos_phy_ae.o	\
 	scale_atmos_phy_ae_dummy.o	\
 	$(OBJS_NUMERIC_FDM) \
@@ -379,20 +363,12 @@ $(OBJ_DIR)/%.o : %.F90
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/scale_atmos_dyn.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_common.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_heve.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_hevi.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_hivi.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_fdmhevi.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_none.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJ_DIR)/scale_atmos_dyn%.o:
+	$(FC) -O0 $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+
+scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	erb fname=$@ $< > $@
+
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
 

@@ -137,7 +137,7 @@ contains
     select case (trim(type))
     case ('E', 'e')
        if ( LOG_ilevel >= LOG_ERROR ) call LogPut(message)
-       write(STDERR,*) message
+       write(STDERR,*) trim(message)
        call abort
     case ('W', 'w')
        if ( LOG_ilevel >= LOG_WARN ) call LogPut(message)

@@ -32,6 +32,7 @@ module mod_atmos_admin
   logical,                public :: ATMOS_do          = .true. ! main switch for the model
 
   character(len=H_SHORT), public :: ATMOS_DYN_TYPE    = 'NONE'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TYPE = 'RK3'
   character(len=H_SHORT), public :: ATMOS_PHY_MP_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_AE_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_CH_TYPE = 'NONE'
@@ -71,6 +72,7 @@ contains
     NAMELIST / PARAM_ATMOS / &
        ATMOS_do,          &
        ATMOS_DYN_TYPE,    &
+       ATMOS_DYN_TINTEG_TYPE, &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_PHY_AE_TYPE, &
        ATMOS_PHY_CH_TYPE, &
@@ -125,6 +127,10 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** +Advection        : ON'
        ATMOS_sw_dyn = .true.
     endif
+
+    if ( ATMOS_sw_dyn ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Temporal integration: ', trim(ATMOS_DYN_TINTEG_TYPE)
+    end if
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics...'
 

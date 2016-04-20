@@ -1,18 +1,18 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Dynamics RK
+!> module Atmosphere / Dynamical scheme
 !!
 !! @par Description
-!!          Runge-Kutta for Atmospheric dynamical process
+!!          Dynamical scheme selecter for Atmospheric dynamical process
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-12-04 (S.Nishizawa) [new]
+!! @li      2016-04-18 (S.Nishizawa) [new]
 !!
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module scale_atmos_dyn_rk
+module scale_atmos_dyn_tstep
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -30,53 +30,42 @@ module scale_atmos_dyn_rk
   !
   !++ Public procedure
   !
-  public :: ATMOS_DYN_rk_regist
+  public :: ATMOS_DYN_Tstep_regist
 
-  !> Runge-Kutta setup
   abstract interface
-     subroutine setup( BND_W, BND_E, BND_S, BND_N )
-       use scale_precision
-       use scale_grid_index
-       implicit none
-       logical, intent(in) :: BND_W
-       logical, intent(in) :: BND_E
-       logical, intent(in) :: BND_S
-       logical, intent(in) :: BND_N
+     !> setup
+     subroutine setup( &
+          scheme )
+       character(len=*), intent(in) :: scheme
      end subroutine setup
-  end interface
-  procedure(setup), pointer :: ATMOS_DYN_rk_setup => NULL()
-  public :: ATMOS_DYN_rk_setup
 
-  !> Runge-Kutta loop
-  abstract interface
-     subroutine rk( &
-          DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-          PROG_RK,                                     &
-          mflx_hi, tflx_hi,                            &
-          DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
-          DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
-          DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
-          PROG0, PROG,                                 &
-          Rtot, CVtot, CORIOLI,                        &
-          num_diff, divdmp_coef,                       &
-          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
-          FLAG_FCT_ALONG_STREAM,                       &
-          CDZ, FDZ, FDX, FDY,                          &
-          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-          PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
-          REF_pres, REF_dens,                          &
-          BND_W, BND_E, BND_S, BND_N,                  &
-          dtrk, dt                                     )
+     !> calculation values at next temporal step
+     subroutine tstep( DENS_new, MOMZ_new, MOMX_new, MOMY_new, RHOT_new, & ! (out)
+                       PROG_new,                                         & ! (out)
+                       mflx_hi,  tflx_hi,                                & ! (out)
+                       DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
+                       DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
+                       DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
+                       PROG0, PROG,                                      & ! (in)
+                       Rtot, CVtot, CORIOLI,                             & ! (in)
+                       num_diff, divdmp_coef, DDIV,                      & ! (in)
+                       FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! (in)
+                       FLAG_FCT_ALONG_STREAM,                            & ! (in)
+                       CDZ, FDZ, FDX, FDY,                               & ! (in)
+                       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
+                       PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
+                       REF_pres, REF_dens,                               & ! (in)
+                       BND_W, BND_E, BND_S, BND_N,                       & ! (in)
+                       dtrk, dt                                          ) ! (in)
        use scale_precision
        use scale_grid_index
        use scale_index
-       real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
-       real(RP), intent(out) :: MOMZ_RK(KA,IA,JA)   !
-       real(RP), intent(out) :: MOMX_RK(KA,IA,JA)   !
-       real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
-       real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
-
-       real(RP), intent(out) :: PROG_RK(KA,IA,JA,VA)!
+       real(RP), intent(out) :: DENS_new(KA,IA,JA)   ! prognostic variables
+       real(RP), intent(out) :: MOMZ_new(KA,IA,JA)   !
+       real(RP), intent(out) :: MOMX_new(KA,IA,JA)   !
+       real(RP), intent(out) :: MOMY_new(KA,IA,JA)   !
+       real(RP), intent(out) :: RHOT_new(KA,IA,JA)   !
+       real(RP), intent(out) :: PROG_new(KA,IA,JA,VA)  !
 
        real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! mass flux
        real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! internal energy flux
@@ -107,8 +96,8 @@ module scale_atmos_dyn_rk
        real(RP), intent(in)  :: CORIOLI (1, IA,JA)
        real(RP), intent(in)  :: num_diff(KA,IA,JA,5,3)
        real(RP), intent(in)  :: divdmp_coef
+       real(RP), intent(in)  :: DDIV(KA,IA,JA)
 
-       logical,  intent(in)  :: FLAG_FCT_RHO
        logical,  intent(in)  :: FLAG_FCT_MOMENTUM
        logical,  intent(in)  :: FLAG_FCT_T
        logical,  intent(in)  :: FLAG_FCT_ALONG_STREAM
@@ -140,10 +129,13 @@ module scale_atmos_dyn_rk
 
        real(RP), intent(in)  :: dtrk
        real(RP), intent(in)  :: dt
-     end subroutine rk
+     end subroutine tstep
   end interface
-  procedure(rk), pointer :: ATMOS_DYN_rk => NULL()
-  public :: ATMOS_DYN_rk
+
+  procedure(setup), pointer :: ATMOS_DYN_Tstep_setup => NULL()
+  public :: ATMOS_DYN_Tstep_setup
+  procedure(tstep), pointer :: ATMOS_DYN_Tstep => NULL()
+  public :: ATMOS_DYN_Tstep
 
   !-----------------------------------------------------------------------------
   !
@@ -161,11 +153,10 @@ module scale_atmos_dyn_rk
 contains
   !-----------------------------------------------------------------------------
   !> Register
-  subroutine ATMOS_DYN_rk_regist( ATMOS_DYN_TYPE, & ! (in)
-                                  VA_out,   & ! (out)
-                                  VAR_NAME, & ! (out)
-                                  VAR_DESC, & ! (out)
-                                  VAR_UNIT  ) ! (out)
+  subroutine ATMOS_DYN_Tstep_regist( &
+       ATMOS_DYN_TYPE, &
+       VA_out, &
+       VAR_NAME, VAR_DESC, VAR_UNIT )
     use scale_precision
     use scale_grid_index
     use scale_index
@@ -174,31 +165,23 @@ contains
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef DYNAMICS
-    use NAME(scale_atmos_dyn_rk_, DYNAMICS,), only: &
-       NAME(ATMOS_DYN_rk_, DYNAMICS, _regist), &
-       NAME(ATMOS_DYN_rk_, DYNAMICS, _setup), &
-       NAME(ATMOS_DYN_rk_, DYNAMICS,)
+    use NAME(scale_atmos_dyn_tstep_, DYNAMICS,), only: &
+       NAME(ATMOS_DYN_rk_tstep_, DYNAMICS, _regist), &
+       NAME(ATMOS_DYN_rk_tstep_, DYNAMICS, _setup), &
+       NAME(ATMOS_DYN_rk_tstep_, DYNAMICS,)
 #else
-    use scale_atmos_dyn_rk_heve, only: &
-       ATMOS_DYN_rk_heve_regist, &
-       ATMOS_DYN_rk_heve_setup, &
-       ATMOS_DYN_rk_heve
-    use scale_atmos_dyn_rk_hevi, only: &
-       ATMOS_DYN_rk_hevi_regist, &
-       ATMOS_DYN_rk_hevi_setup, &
-       ATMOS_DYN_rk_hevi
-    use scale_atmos_dyn_rk_hivi, only: &
-       ATMOS_DYN_rk_hivi_regist, &
-       ATMOS_DYN_rk_hivi_setup, &
-       ATMOS_DYN_rk_hivi
-    use scale_atmos_dyn_rk_fdmheve, only: &
-       ATMOS_DYN_rk_fdmheve_regist, &
-       ATMOS_DYN_rk_fdmheve_setup, &
-       ATMOS_DYN_rk_fdmheve        
-    use scale_atmos_dyn_rk_none, only: &
-       ATMOS_DYN_rk_none_regist, &
-       ATMOS_DYN_rk_none_setup, &
-       ATMOS_DYN_rk_none
+    use scale_atmos_dyn_tstep_fvm_heve, only: &
+       ATMOS_DYN_Tstep_fvm_heve_regist, &
+       ATMOS_DYN_Tstep_fvm_heve_setup, &
+       ATMOS_DYN_Tstep_fvm_heve
+!!$    use scale_atmos_dyn_tstep_fvm_hevi, only: &
+!!$       ATMOS_DYN_Tstep_fvm_hevi_regist, &
+!!$       ATMOS_DYN_Tstep_fvm_hevi_setup, &
+!!$       ATMOS_DYN_Tstep_fvm_hevi
+!!$    use scale_atmos_dyn_tstep_fvm_hivi, only: &
+!!$       ATMOS_DYN_Tstep_fvm_hivi_regist, &
+!!$       ATMOS_DYN_Tstep_fvm_hivi_setup, &
+!!$       ATMOS_DYN_Tstep_fvm_hivi
 #endif
     implicit none
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -209,50 +192,34 @@ contains
     !---------------------------------------------------------------------------
 
 #ifdef DYNAMICS
-    NAME(ATMOS_DYN_rk_, DYNAMICS, _regist)( &
-            ATMOS_DYN_TYPE, &
-            VA_out, &
-            VAR_NAME, VAR_DESC, VAR_UNIT )
-    ATMOS_DYN_rk_setup => NAME(ATMOS_DYN_rk_, DYNAMICS, _setup)
-    ATMOS_DYN_rk => NAME(ATMOS_DYN_rk_, DYNAMICS,)
+    NAME(ATMOS_DYN_Tstep_, DYNAMICS, _regist)( &
+            ATMOS_DYN_TYPE )
+    ATMOS_DYN_Tstep => NAME(ATMOS_DYN_Tstep_, DYNAMICS,)
+    ATMOS_DYN_Tstep_setup => NAME(ATMOS_DYN_Tstep_, DYNAMICS, _setup)
 #else
     select case ( ATMOS_DYN_TYPE )
-    case ( 'HEVE' )
-       call ATMOS_DYN_rk_heve_regist( &
+    case ( 'FVM-HEVE', 'HEVE' )
+       call ATMOS_DYN_Tstep_fvm_heve_regist( &
             ATMOS_DYN_TYPE, &
             VA_out, &
             VAR_NAME, VAR_DESC, VAR_UNIT )
-       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_heve_setup
-       ATMOS_DYN_rk => ATMOS_DYN_rk_heve
-    case ( 'HEVI' )
-       call ATMOS_DYN_rk_hevi_regist( &
-            ATMOS_DYN_TYPE, &
-            VA_out, &
-            VAR_NAME, VAR_DESC, VAR_UNIT )
-       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_hevi_setup
-       ATMOS_DYN_rk => ATMOS_DYN_rk_hevi
-    case ( 'HIVI' )
-       call ATMOS_DYN_rk_hivi_regist( &
-            ATMOS_DYN_TYPE, &
-            VA_out, &
-            VAR_NAME, VAR_DESC, VAR_UNIT )
-       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_hivi_setup
-       ATMOS_DYN_rk => ATMOS_DYN_rk_hivi
-    case ( 'FDM-HEVE' )
-       call ATMOS_DYN_rk_fdmheve_regist( &
-            ATMOS_DYN_TYPE, &
-            VA_out, &
-            VAR_NAME, VAR_DESC, VAR_UNIT )
-       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_fdmheve_setup
-       ATMOS_DYN_rk => ATMOS_DYN_rk_fdmheve       
-    case ( 'NONE' )
-       call ATMOS_DYN_rk_none_regist( &
-            ATMOS_DYN_TYPE, &
-            VA_out, &
-            VAR_NAME, VAR_DESC, VAR_UNIT )
-       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_none_setup
-       ATMOS_DYN_rk => ATMOS_DYN_rk_none
-    case ( 'OFF' )
+       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_heve_setup
+       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_heve
+!!$    case ( 'FVM-HEVI', 'HEVI' )
+!!$       call ATMOS_DYN_Tstep_fvm_hevi_regist( &
+!!$            ATMOS_DYN_TYPE, &
+!!$            VA_out, &
+!!$            VAR_NAME, VAR_DESC, VAR_UNIT )
+!!$       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_hevi_setup
+!!$       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_hevi
+!!$    case ( 'FVM-HIVI', 'HIVI' )
+!!$       call ATMOS_DYN_Tstep_fvm_hivi_regist( &
+!!$            ATMOS_DYN_TYPE, &
+!!$            VA_out, &
+!!$            VAR_NAME, VAR_DESC, VAR_UNIT )
+!!$       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_hivi_setup
+!!$       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_hivi
+    case ( 'OFF', 'NONE' )
        ! do nothing
     case default
        write(*,*) 'xxx ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
@@ -260,9 +227,7 @@ contains
     end select
 #endif
 
-    VA = VA_out
-
     return
-  end subroutine ATMOS_DYN_rk_regist
+  end subroutine ATMOS_DYN_Tstep_regist
 
-end module scale_atmos_dyn_rk
+end module scale_atmos_dyn_tstep
