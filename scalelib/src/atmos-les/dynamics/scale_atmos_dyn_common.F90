@@ -1785,6 +1785,8 @@ contains
 
        if (flag_vect) then
 
+!OCL INDEPENDENT( get_fact_fct )
+       !$omp parallel do private(i,j,k,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-1
@@ -1866,6 +1868,8 @@ contains
 
 
        ! k = KS
+!OCL INDEPENDENT( get_fact_fct )
+       !$omp parallel do private(i,j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           rw = (mflx_hi(KS,i,j,ZDIR)                           ) * RDZ(KS)! 2 * rho * w / dz
@@ -1944,6 +1948,8 @@ contains
        end do
 
        ! k = KE
+!OCL INDEPENDENT( get_fact_fct )
+       !$omp parallel do private(i,j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           rw = (                     mflx_hi(KE-1,i  ,j  ,ZDIR)) * RDZ(KE)! 2 * rho * w / dz
@@ -2023,6 +2029,7 @@ contains
 
        else
 
+       !$omp parallel do private(i,j,k,qmax,qmin) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-1
@@ -2078,7 +2085,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,qmax,qmin) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -2242,7 +2249,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -2326,6 +2333,7 @@ contains
   !-----------------------------------------------------------------------------
   ! private procedure
   ! get factor for FCT
+!OCL SERIAL
   subroutine get_fact_fct( &
        fact, &
        rw, ru, rv )
@@ -2340,7 +2348,7 @@ contains
     real(RP) :: umax, vmax, wmax
     real(RP) :: vu, wu, uv, wv, uw, vw    ! |v/u|, |w/u|, ....
     real(RP) :: zero, tmp
-
+    !---------------------------------------------------------------------------
 
     sign_uv = sign(0.5_RP, ru*rv) + 0.5_RP ! uv >= 0
     sign_uw = sign(0.5_RP, ru*rw) + 0.5_RP ! uw >= 0
@@ -2377,13 +2385,12 @@ contains
     fact(0,0,1) = vmax * (1.0_RP-uv) * (1.0_RP-wv)
 
     tmp = (1.0_RP-vmax) * (         ugew  * wu * (1.0_RP-vu) &
-                                + (1.0_RP-ugew) * uw * (1.0_RP-vw) )
+                          + (1.0_RP-ugew) * uw * (1.0_RP-vw) )
     fact(1, 1,0) =         sign_uw  * tmp
     fact(1,-1,0) = (1.0_RP-sign_uw) * tmp
 
     tmp = (1.0_RP-umax) * (         vgew  * wv * (1.0_RP-uv) &
                           + (1.0_RP-vgew) * vw * (1.0_RP-uw) )
-
     fact(1,0, 1) =         sign_vw  * tmp
     fact(1,0,-1) = (1.0_RP-sign_vw) * tmp
 
