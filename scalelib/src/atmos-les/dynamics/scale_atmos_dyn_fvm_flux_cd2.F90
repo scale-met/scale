@@ -41,6 +41,8 @@ module scale_atmos_dyn_fvm_flux_cd2
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_FVM_flux_valueW_Z_cd2
+
   public :: ATMOS_DYN_FVM_fluxZ_XYZ_cd2
   public :: ATMOS_DYN_FVM_fluxX_XYZ_cd2
   public :: ATMOS_DYN_FVM_fluxY_XYZ_cd2
@@ -84,6 +86,45 @@ module scale_atmos_dyn_fvm_flux_cd2
 
 
 contains
+
+  !-----------------------------------------------------------------------------
+  !> value at XYW
+!OCL SIRIAL
+  subroutine ATMOS_DYN_FVM_flux_valueW_Z_cd2( &
+       valW, &
+       mflx, val, GSQRT, &
+       CDZ )
+    implicit none
+    real(RP), intent(out) :: valW  (KA)
+    real(RP), intent(in)  :: mflx    (KA)
+    real(RP), intent(in)  :: val     (KA)
+    real(RP), intent(in)  :: GSQRT   (KA)
+    real(RP), intent(in)  :: CDZ(KA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE-1
+#ifdef DEBUG
+       call CHECK( __LINE__, mflx(k) )
+
+       call CHECK( __LINE__, val(k) )
+       call CHECK( __LINE__, val(k+1) )
+
+#endif
+       valW(k) = F2 * ( val(k+1)+val(k) )
+    enddo
+#ifdef DEBUG
+    k = IUNDEF
+#endif
+
+#ifdef DEBUG
+
+#endif
+
+
+    return
+  end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_cd2
 
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYZ

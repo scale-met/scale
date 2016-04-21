@@ -174,14 +174,14 @@ contains
        ATMOS_DYN_Tstep_fvm_heve_regist, &
        ATMOS_DYN_Tstep_fvm_heve_setup, &
        ATMOS_DYN_Tstep_fvm_heve
-!!$    use scale_atmos_dyn_tstep_fvm_hevi, only: &
-!!$       ATMOS_DYN_Tstep_fvm_hevi_regist, &
-!!$       ATMOS_DYN_Tstep_fvm_hevi_setup, &
-!!$       ATMOS_DYN_Tstep_fvm_hevi
-!!$    use scale_atmos_dyn_tstep_fvm_hivi, only: &
-!!$       ATMOS_DYN_Tstep_fvm_hivi_regist, &
-!!$       ATMOS_DYN_Tstep_fvm_hivi_setup, &
-!!$       ATMOS_DYN_Tstep_fvm_hivi
+    use scale_atmos_dyn_tstep_fvm_hevi, only: &
+       ATMOS_DYN_Tstep_fvm_hevi_regist, &
+       ATMOS_DYN_Tstep_fvm_hevi_setup, &
+       ATMOS_DYN_Tstep_fvm_hevi
+    use scale_atmos_dyn_tstep_fvm_hivi, only: &
+       ATMOS_DYN_Tstep_fvm_hivi_regist, &
+       ATMOS_DYN_Tstep_fvm_hivi_setup, &
+       ATMOS_DYN_Tstep_fvm_hivi
 #endif
     implicit none
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -205,20 +205,20 @@ contains
             VAR_NAME, VAR_DESC, VAR_UNIT )
        ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_heve_setup
        ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_heve
-!!$    case ( 'FVM-HEVI', 'HEVI' )
-!!$       call ATMOS_DYN_Tstep_fvm_hevi_regist( &
-!!$            ATMOS_DYN_TYPE, &
-!!$            VA_out, &
-!!$            VAR_NAME, VAR_DESC, VAR_UNIT )
-!!$       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_hevi_setup
-!!$       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_hevi
-!!$    case ( 'FVM-HIVI', 'HIVI' )
-!!$       call ATMOS_DYN_Tstep_fvm_hivi_regist( &
-!!$            ATMOS_DYN_TYPE, &
-!!$            VA_out, &
-!!$            VAR_NAME, VAR_DESC, VAR_UNIT )
-!!$       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_hivi_setup
-!!$       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_hivi
+    case ( 'FVM-HEVI', 'HEVI' )
+       call ATMOS_DYN_Tstep_fvm_hevi_regist( &
+            ATMOS_DYN_TYPE, &
+            VA_out, &
+            VAR_NAME, VAR_DESC, VAR_UNIT )
+       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_hevi_setup
+       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_hevi
+    case ( 'FVM-HIVI', 'HIVI' )
+       call ATMOS_DYN_Tstep_fvm_hivi_regist( &
+            ATMOS_DYN_TYPE, &
+            VA_out, &
+            VAR_NAME, VAR_DESC, VAR_UNIT )
+       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_hivi_setup
+       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_hivi
     case ( 'OFF', 'NONE' )
        ! do nothing
     case default

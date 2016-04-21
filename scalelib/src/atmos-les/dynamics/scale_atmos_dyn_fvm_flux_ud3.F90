@@ -41,6 +41,8 @@ module scale_atmos_dyn_fvm_flux_ud3
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_FVM_flux_valueW_Z_ud3
+
   public :: ATMOS_DYN_FVM_fluxZ_XYZ_ud3
   public :: ATMOS_DYN_FVM_fluxX_XYZ_ud3
   public :: ATMOS_DYN_FVM_fluxY_XYZ_ud3
@@ -88,6 +90,59 @@ module scale_atmos_dyn_fvm_flux_ud3
 
 
 contains
+
+  !-----------------------------------------------------------------------------
+  !> value at XYW
+!OCL SIRIAL
+  subroutine ATMOS_DYN_FVM_flux_valueW_Z_ud3( &
+       valW, &
+       mflx, val, GSQRT, &
+       CDZ )
+    implicit none
+    real(RP), intent(out) :: valW  (KA)
+    real(RP), intent(in)  :: mflx    (KA)
+    real(RP), intent(in)  :: val     (KA)
+    real(RP), intent(in)  :: GSQRT   (KA)
+    real(RP), intent(in)  :: CDZ(KA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do k = KS+1, KE-2
+#ifdef DEBUG
+       call CHECK( __LINE__, mflx(k) )
+
+       call CHECK( __LINE__, val(k) )
+       call CHECK( __LINE__, val(k+1) )
+
+       call CHECK( __LINE__, val(k-1) )
+       call CHECK( __LINE__, val(k+2) )
+
+#endif
+       valW(k) =   F31 * ( val(k+2)+val(k-1) ) + F32 * ( val(k+1)+val(k) ) &
+              - ( F31 * ( val(k+2)-val(k-1) ) + F33 * ( val(k+1)-val(k) ) ) * sign(1.0_RP,mflx(k))
+    enddo
+#ifdef DEBUG
+    k = IUNDEF
+#endif
+
+#ifdef DEBUG
+
+       call CHECK( __LINE__, mflx(KS) )
+       call CHECK( __LINE__, val(KS  ) )
+       call CHECK( __LINE__, val(KS+1) )
+       call CHECK( __LINE__, mflx(KE-1) )
+       call CHECK( __LINE__, val(KE  ) )
+       call CHECK( __LINE__, val(KE-1) )
+
+#endif
+
+       valW(KS) = F1 * ( val(KS+1)+val(KS) ) - sign(F1,mflx(KS)) * ( val(KS+1)-val(KS) )
+       valW(KE-1) = F1 * ( val(KE)+val(KE-1) ) - sign(F1,mflx(KE-1)) * ( val(KE)-val(KE-1) )
+
+
+    return
+  end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_ud3
 
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYZ

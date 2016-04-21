@@ -305,11 +305,17 @@ contains
        vol => REAL_VOL
 #endif
     use scale_atmos_dyn_common, only: &
-       FACT_N,                     &
-       FACT_F,                     &
        ATMOS_DYN_numfilter_coef,   &
        ATMOS_DYN_numfilter_coef_q, &
        ATMOS_DYN_fct
+    use scale_atmos_dyn_fvm_flux_ud1, only: &
+       ATMOS_DYN_FVM_fluxZ_XYZ_ud1, &
+       ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
+       ATMOS_DYN_FVM_fluxY_XYZ_ud1
+    use scale_atmos_dyn_fvm_flux, only: &
+       ATMOS_DYN_FVM_fluxZ_XYZ, &
+       ATMOS_DYN_FVM_fluxX_XYZ, &
+       ATMOS_DYN_FVM_fluxY_XYZ
     use scale_atmos_dyn_tstep, only: &
        ATMOS_DYN_tstep
     use scale_atmos_boundary, only: &
@@ -1253,88 +1259,44 @@ contains
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
 
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-          do k = KS+1, KE-2
-             qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
+         ! at (x, y, w)
+         call ATMOS_DYN_FVM_fluxZ_XYZ( qflx_hi(:,:,:,ZDIR), & ! (out)
+              mflx_hi(:,:,:,ZDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_XYW), & ! (in)
+              num_diff_q(:,:,:,ZDIR), & ! (in)
+              CDZ, & ! (in)
+              IIS, IIE, JJS, JJE ) ! (in)
 
-             qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
-                                                         + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
-                                 + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
-          enddo
-          enddo
-          enddo
+         ! at (u, y, z)
+         call ATMOS_DYN_FVM_fluxX_XYZ( qflx_hi(:,:,:,XDIR), & ! (out)
+              mflx_hi(:,:,:,XDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_UYZ), & ! (in)
+              num_diff_q(:,:,:,XDIR), & ! (in)
+              CDZ, & ! (in)
+              IIS, IIE, JJS, JJE ) ! (in)
 
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                               - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
+         ! at (x, v, z)
+         call ATMOS_DYN_FVM_fluxY_XYZ( qflx_hi(:,:,:,YDIR), & ! (out)
+              mflx_hi(:,:,:,YDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_XVZ), & ! (in)
+              num_diff_q(:,:,:,YDIR), & ! (in)
+              CDZ, & ! (in)
+              IIS, IIE, JJS, JJE ) ! (in)
+       
+          call ATMOS_DYN_FVM_fluxZ_XYZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
+               mflx_hi(:,:,:,ZDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_XYZ), & ! (in)
+               CDZ, & ! (in)
+               IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
-             qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
-          enddo
-          enddo
+          ! at (u, y, layer)
+          call ATMOS_DYN_FVM_fluxX_XYZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
+               mflx_hi(:,:,:,XDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_UYZ), & ! (in)
+               CDZ, & ! (in)
+               IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-             qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                               - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
-             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
+          ! at (x, v, layer)
+          call ATMOS_DYN_FVM_fluxY_XYZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
+               mflx_hi(:,:,:,YDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_XVZ), & ! (in)
+               CDZ, & ! (in)
+               IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
-             qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
-             qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-2, IIE+1
-          do k = KS, KE
-             qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
-          enddo
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS,   JJE
-          do i = IIS-1, IIE
-          do k = KS, KE
-             qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
-                                                         + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
-                                 + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
-          enddo
-          enddo
-          enddo
-
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-2, JJE+1
-          do i = IIS-1, IIE+1
-          do k = KS, KE
-             qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
-          enddo
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE
-          do i = IIS,   IIE
-          do k = KS, KE
-             qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
-                                                         + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
-                                 + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
-          enddo
-          enddo
-          enddo
 
        enddo
        enddo

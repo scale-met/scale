@@ -125,8 +125,8 @@ OBJS_DYN = scale_atmos_dyn_tinteg.o \
            scale_atmos_dyn_fvm_flux_cd6.o
 ifeq ($(DYNAMICS),)
   OBJS_DYN += scale_atmos_dyn_tstep_fvm_heve.o \
-#	      scale_atmos_dyn_tstep_fvm_hevi.o \
-#	      scale_atmos_dyn_tstep_fvm_hivi.o
+	      scale_atmos_dyn_tstep_fvm_hevi.o \
+	      scale_atmos_dyn_tstep_fvm_hivi.o
 else
   OBJS_DYN += scale_atmos_dyn_tstep_$(DYNAMICS).o
 endif

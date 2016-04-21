@@ -54,8 +54,12 @@ class Fixnum
     0==self ? "" : self>0 ? "+"+_inspect : _inspect
   end
 end
-def flux(vel, ord, dir, k="k", i="i", j="j")
-  idx = [k,i,j]
+def flux(vel, ord, dir, k="k", i="i", j="j", dim=3)
+  if dim==3
+    idx = [k,i,j]
+  elsif dim==1
+    idx = [k]
+  end
   idx0 = idx.join(",")
   idx1 = idx.dup
   idx1[dir] = idx1[dir]+1
@@ -192,6 +196,8 @@ module <%= modname %>
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_FVM_flux_valueW_Z_<%=postfix%>
+
   public :: ATMOS_DYN_FVM_fluxZ_XYZ_<%=postfix%>
   public :: ATMOS_DYN_FVM_fluxX_XYZ_<%=postfix%>
   public :: ATMOS_DYN_FVM_fluxY_XYZ_<%=postfix%>
@@ -261,6 +267,55 @@ module <%= modname %>
 contains
 
   !-----------------------------------------------------------------------------
+  !> value at XYW
+!OCL SIRIAL
+  subroutine ATMOS_DYN_FVM_flux_valueW_Z_<%=postfix%>( &
+       valW, &
+       mflx, val, GSQRT, &
+       CDZ )
+    implicit none
+    real(RP), intent(out) :: valW  (KA)
+    real(RP), intent(in)  :: mflx    (KA)
+    real(RP), intent(in)  :: val     (KA)
+    real(RP), intent(in)  :: GSQRT   (KA)
+    real(RP), intent(in)  :: CDZ(KA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do k = KS<%=nh%>, KE<%=-(nh+1)%>
+#ifdef DEBUG
+       call CHECK( __LINE__, mflx(k) )
+<% (nh+1).times do |k| %>
+       call CHECK( __LINE__, val(k<%=-k%>) )
+       call CHECK( __LINE__, val(k<%=k+1%>) )
+<% end %>
+#endif
+       valW(k) = <%= flux("mflx(k)", order, 0, "k", nil, nil, 1) %>
+    enddo
+#ifdef DEBUG
+    k = IUNDEF
+#endif
+
+#ifdef DEBUG
+<% nh.times do |k| %>
+       call CHECK( __LINE__, mflx(KS<%=k%>) )
+       call CHECK( __LINE__, val(KS<%=k*2%>  ) )
+       call CHECK( __LINE__, val(KS<%=k*2+1%>) )
+       call CHECK( __LINE__, mflx(KE<%=-k-1%>) )
+       call CHECK( __LINE__, val(KE<%=-k*2%>  ) )
+       call CHECK( __LINE__, val(KE<%=-k*2-1%>) )
+<% end %>
+#endif
+<% nh.times do |k| %>
+       valW(KS<%=k%>) = <%= flux("mflx(KS#{k})", order-(nh-k)*2, 0, "KS"+k, nil, nil, 1) %>
+       valW(KE<%=-k-1%>) = <%= flux("mflx(KE#{-(k+1)})", order-(nh-k)*2, 0, "KE"-(k+1), nil, nil, 1) %>
+<% end %>
+
+    return
+  end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_<%=postfix%>
+
+  !-----------------------------------------------------------------------------
   !> calculation z-flux at XYZ
   subroutine ATMOS_DYN_FVM_fluxZ_XYZ_<%=postfix%>( &
        flux, &
@@ -324,7 +379,7 @@ contains
        vel = mflx(KS<%=k%>,i,j)
        flux(KS<%=k%>,i,j) = vel &
             * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
-       vel = mflx(KE<%=-k-1%>,i,j)
+       vel = mflx(KE<%=-(k+1)%>,i,j)
        flux(KE<%=-k-1%>,i,j) = vel &
             * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
 <% end %>

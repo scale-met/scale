@@ -45,6 +45,19 @@ module scale_atmos_dyn_fvm_flux
   public :: ATMOS_DYN_FVM_flux_setup
 
   abstract interface
+     subroutine valueW( &
+          valW, &
+          mflx, val, GSQRT, &
+          CDZ )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+       real(RP), intent(out) :: valW (KA)
+       real(RP), intent(in)  :: mflx (KA)
+       real(RP), intent(in)  :: val  (KA)
+       real(RP), intent(in)  :: GSQRT(KA)
+       real(RP), intent(in)  :: CDZ(KA)
+     end subroutine valueW
      subroutine flux_phi( &
           flux, &
           mflx, val, GSQRT, &
@@ -146,6 +159,9 @@ module scale_atmos_dyn_fvm_flux
      end subroutine flux_j
   end interface
 
+  procedure(valueW), pointer :: ATMOS_DYN_FVM_flux_valueW_Z => NULL()
+  public :: ATMOS_DYN_FVM_flux_valueW_Z
+
 <% ["Z", "X", "Y"].each do |dir| %>
   procedure(flux_phi), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_XYZ => NULL()
   public :: ATMOS_DYN_FVM_flux<%=dir%>_XYZ
@@ -186,19 +202,22 @@ contains
     use scale_process, only: &
          PRC_MPIstop
 <%
+  funcs = Hash.new
   order.each do |o, nh|
-    funcs = Array.new
+    ary = Array.new
+    ary.push "ATMOS_DYN_FVM_flux_valueW_Z_#{o}"
     ["Z", "X", "Y"].each do |dir|
-      funcs.push "ATMOS_DYN_FVM_flux#{dir}_XYZ_#{o}"
+      ary.push "ATMOS_DYN_FVM_flux#{dir}_XYZ_#{o}"
     end
     ["XYW", "UYZ", "XVZ"].each do |uvw|
       ["Z", "X", "Y", "J13", "J23"].each do |dir|
-        funcs.push "ATMOS_DYN_FVM_flux#{dir}_#{uvw}_#{o}"
+        ary.push "ATMOS_DYN_FVM_flux#{dir}_#{uvw}_#{o}"
       end
     end
+    funcs[o] = ary
 %>
    use scale_atmos_dyn_fvm_flux_<%=o%>, only: &
-      <%= funcs.join(", &\n      ") %>
+      <%= ary.join(", &\n      ") %>
 <% end %>
     implicit none
     character(len=*), intent(in) :: scheme
@@ -207,14 +226,9 @@ contains
 <%   order.each do |o, nh| %>
     case ( "<%= o.upcase %>" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation'
-<% ["Z", "X", "Y"].each do |dir| %>
-      ATMOS_DYN_FVM_flux<%=dir%>_XYZ => ATMOS_DYN_FVM_flux<%=dir%>_XYZ_<%=o%>
-<% end %>
-<% ["XYW", "UYZ", "XVZ"].each do |uvw| %>
-<%   ["Z", "X", "Y", "J13", "J23"].each do |dir| %>
-      ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%> => ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>_<%=o%>
-<%   end # dir%>
-<% end # uvw %>
+<% funcs[o].each do |func| %>
+      <%= func.sub(/_[^_]+\Z/,"") %> => <%= func %>
+<% end # func %>
       
       if ( IHALO < <%=nh%> ) then
          write(*,*) 'xxx IHALO must be >= ', <%=nh%>

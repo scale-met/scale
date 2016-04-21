@@ -117,7 +117,7 @@ contains
     implicit none
     !-------------------------------------------------------
     
-    character(len=H_SHORT) :: ATMOS_DYN_FVM_FLUX_scheme
+    character(len=H_SHORT) :: ATMOS_DYN_FVM_FLUX_scheme = 'CD4' ! UD1, CD2, UD3, CD4, UD5, CD6
 
     NAMELIST / PARAM_ATMOS_DYN / &
        ATMOS_DYN_FVM_FLUX_scheme,             &

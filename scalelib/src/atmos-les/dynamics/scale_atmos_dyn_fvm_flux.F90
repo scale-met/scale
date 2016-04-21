@@ -41,6 +41,19 @@ module scale_atmos_dyn_fvm_flux
   public :: ATMOS_DYN_FVM_flux_setup
 
   abstract interface
+     subroutine valueW( &
+          valW, &
+          mflx, val, GSQRT, &
+          CDZ )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+       real(RP), intent(out) :: valW (KA)
+       real(RP), intent(in)  :: mflx (KA)
+       real(RP), intent(in)  :: val  (KA)
+       real(RP), intent(in)  :: GSQRT(KA)
+       real(RP), intent(in)  :: CDZ(KA)
+     end subroutine valueW
      subroutine flux_phi( &
           flux, &
           mflx, val, GSQRT, &
@@ -142,6 +155,9 @@ module scale_atmos_dyn_fvm_flux
      end subroutine flux_j
   end interface
 
+  procedure(valueW), pointer :: ATMOS_DYN_FVM_flux_valueW_Z => NULL()
+  public :: ATMOS_DYN_FVM_flux_valueW_Z
+
 
   procedure(flux_phi), pointer :: ATMOS_DYN_FVM_fluxZ_XYZ => NULL()
   public :: ATMOS_DYN_FVM_fluxZ_XYZ
@@ -229,6 +245,7 @@ contains
          PRC_MPIstop
 
    use scale_atmos_dyn_fvm_flux_cd2, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_cd2, &
       ATMOS_DYN_FVM_fluxZ_XYZ_cd2, &
       ATMOS_DYN_FVM_fluxX_XYZ_cd2, &
       ATMOS_DYN_FVM_fluxY_XYZ_cd2, &
@@ -249,6 +266,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_cd2
 
    use scale_atmos_dyn_fvm_flux_ud3, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud3, &
       ATMOS_DYN_FVM_fluxZ_XYZ_ud3, &
       ATMOS_DYN_FVM_fluxX_XYZ_ud3, &
       ATMOS_DYN_FVM_fluxY_XYZ_ud3, &
@@ -269,6 +287,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_ud3
 
    use scale_atmos_dyn_fvm_flux_cd4, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_cd4, &
       ATMOS_DYN_FVM_fluxZ_XYZ_cd4, &
       ATMOS_DYN_FVM_fluxX_XYZ_cd4, &
       ATMOS_DYN_FVM_fluxY_XYZ_cd4, &
@@ -289,6 +308,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_cd4
 
    use scale_atmos_dyn_fvm_flux_ud5, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud5, &
       ATMOS_DYN_FVM_fluxZ_XYZ_ud5, &
       ATMOS_DYN_FVM_fluxX_XYZ_ud5, &
       ATMOS_DYN_FVM_fluxY_XYZ_ud5, &
@@ -309,6 +329,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_ud5
 
    use scale_atmos_dyn_fvm_flux_cd6, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_cd6, &
       ATMOS_DYN_FVM_fluxZ_XYZ_cd6, &
       ATMOS_DYN_FVM_fluxX_XYZ_cd6, &
       ATMOS_DYN_FVM_fluxY_XYZ_cd6, &
@@ -336,13 +357,13 @@ contains
     case ( "CD2" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd2 scheme is used for flux calculation'
 
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd2
+
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_cd2
 
       ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_cd2
 
       ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_cd2
-
-
 
       ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_cd2
 
@@ -354,7 +375,6 @@ contains
 
       ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_cd2
 
-
       ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_cd2
 
       ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_cd2
@@ -364,7 +384,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_cd2
 
       ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_cd2
-
 
       ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_cd2
 
@@ -389,13 +408,13 @@ contains
     case ( "UD3" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud3 scheme is used for flux calculation'
 
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud3
+
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud3
 
       ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_ud3
 
       ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_ud3
-
-
 
       ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_ud3
 
@@ -407,7 +426,6 @@ contains
 
       ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_ud3
 
-
       ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_ud3
 
       ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_ud3
@@ -417,7 +435,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_ud3
 
       ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_ud3
-
 
       ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_ud3
 
@@ -442,13 +459,13 @@ contains
     case ( "CD4" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd4 scheme is used for flux calculation'
 
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd4
+
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_cd4
 
       ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_cd4
 
       ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_cd4
-
-
 
       ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_cd4
 
@@ -460,7 +477,6 @@ contains
 
       ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_cd4
 
-
       ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_cd4
 
       ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_cd4
@@ -470,7 +486,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_cd4
 
       ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_cd4
-
 
       ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_cd4
 
@@ -495,13 +510,13 @@ contains
     case ( "UD5" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud5 scheme is used for flux calculation'
 
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud5
+
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud5
 
       ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_ud5
 
       ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_ud5
-
-
 
       ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_ud5
 
@@ -513,7 +528,6 @@ contains
 
       ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_ud5
 
-
       ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_ud5
 
       ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_ud5
@@ -523,7 +537,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_ud5
 
       ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_ud5
-
 
       ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_ud5
 
@@ -548,13 +561,13 @@ contains
     case ( "CD6" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd6 scheme is used for flux calculation'
 
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd6
+
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_cd6
 
       ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_cd6
 
       ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_cd6
-
-
 
       ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_cd6
 
@@ -566,7 +579,6 @@ contains
 
       ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_cd6
 
-
       ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_cd6
 
       ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_cd6
@@ -576,7 +588,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_cd6
 
       ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_cd6
-
 
       ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_cd6
 

@@ -41,6 +41,8 @@ module scale_atmos_dyn_fvm_flux_cd6
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_FVM_flux_valueW_Z_cd6
+
   public :: ATMOS_DYN_FVM_fluxZ_XYZ_cd6
   public :: ATMOS_DYN_FVM_fluxX_XYZ_cd6
   public :: ATMOS_DYN_FVM_fluxY_XYZ_cd6
@@ -91,6 +93,71 @@ module scale_atmos_dyn_fvm_flux_cd6
 
 
 contains
+
+  !-----------------------------------------------------------------------------
+  !> value at XYW
+!OCL SIRIAL
+  subroutine ATMOS_DYN_FVM_flux_valueW_Z_cd6( &
+       valW, &
+       mflx, val, GSQRT, &
+       CDZ )
+    implicit none
+    real(RP), intent(out) :: valW  (KA)
+    real(RP), intent(in)  :: mflx    (KA)
+    real(RP), intent(in)  :: val     (KA)
+    real(RP), intent(in)  :: GSQRT   (KA)
+    real(RP), intent(in)  :: CDZ(KA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do k = KS+2, KE-3
+#ifdef DEBUG
+       call CHECK( __LINE__, mflx(k) )
+
+       call CHECK( __LINE__, val(k) )
+       call CHECK( __LINE__, val(k+1) )
+
+       call CHECK( __LINE__, val(k-1) )
+       call CHECK( __LINE__, val(k+2) )
+
+       call CHECK( __LINE__, val(k-2) )
+       call CHECK( __LINE__, val(k+3) )
+
+#endif
+       valW(k) = F61 * ( val(k+1)+val(k) ) + F62 * ( val(k+2)+val(k-1) ) + F63 * ( val(k+3)+val(k-2) )
+    enddo
+#ifdef DEBUG
+    k = IUNDEF
+#endif
+
+#ifdef DEBUG
+
+       call CHECK( __LINE__, mflx(KS) )
+       call CHECK( __LINE__, val(KS  ) )
+       call CHECK( __LINE__, val(KS+1) )
+       call CHECK( __LINE__, mflx(KE-1) )
+       call CHECK( __LINE__, val(KE  ) )
+       call CHECK( __LINE__, val(KE-1) )
+
+       call CHECK( __LINE__, mflx(KS+1) )
+       call CHECK( __LINE__, val(KS+2  ) )
+       call CHECK( __LINE__, val(KS+3) )
+       call CHECK( __LINE__, mflx(KE-2) )
+       call CHECK( __LINE__, val(KE-2  ) )
+       call CHECK( __LINE__, val(KE-3) )
+
+#endif
+
+       valW(KS) = F2 * ( val(KS+1)+val(KS) )
+       valW(KE-1) = F2 * ( val(KE)+val(KE-1) )
+
+       valW(KS+1) = F41 * ( val(KS+2)+val(KS+1) ) + F42 * ( val(KS+3)+val(KS) )
+       valW(KE-2) = F41 * ( val(KE-1)+val(KE-2) ) + F42 * ( val(KE)+val(KE-3) )
+
+
+    return
+  end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_cd6
 
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYZ

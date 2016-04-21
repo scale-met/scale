@@ -49,11 +49,6 @@ module scale_atmos_dyn_common
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
-  ! advection settings
-  real(RP), public, parameter :: FACT_N =   7.0_RP / 12.0_RP !  7/12: fourth, 1: second
-  real(RP), public, parameter :: FACT_F = - 1.0_RP / 12.0_RP ! -1/12: fourth, 0: second
-
-  !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
