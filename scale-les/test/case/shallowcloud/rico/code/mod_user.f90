@@ -21,6 +21,7 @@ module mod_user
   use scale_prof
   use scale_grid_index
   use scale_tracer
+  use scale_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -28,6 +29,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_setup0
   public :: USER_setup
   public :: USER_step
 
@@ -75,6 +77,11 @@ module mod_user
   real(RP), private, parameter :: pres_sfc = 1015.4E2_RP! fixed surface pressure
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Setup0
+  subroutine USER_setup0
+  end subroutine USER_setup0
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -258,7 +265,7 @@ contains
          MOMX_tp, &
          MOMY_tp, &
          RHOT_tp, &
-         QTRC_tp
+         RHOQ_tp
     use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
@@ -266,10 +273,10 @@ contains
          CPdry => CONST_CPdry, &
          Rdry  => CONST_Rdry, &
          Rvap  => CONST_Rvap, &
-         LH0   => CONST_LH0, &
-         P00   => CONST_PRE00 
+         LHV   => CONST_LHV, &
+         P00   => CONST_PRE00
     use scale_atmos_thermodyn, only: &
-         CPw   => AQ_CP 
+         CPw   => AQ_CP
     use scale_history, only: &
          HIST_in
     use scale_time, only: &
@@ -277,7 +284,7 @@ contains
          dtsf =>  TIME_DTSEC_ATMOS_PHY_SF
     use scale_atmos_saturation, only : &
          moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq
- 
+
     implicit none
     !---------------------------------------------------------------------------
     real(RP) :: ratesum
@@ -480,7 +487,7 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE-1
-                QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) &
+                RHOQ_tp(k,i,j,iq) = RHOQ_tp(k,i,j,iq) &
                      + QV_LS(k,1) * Q_rate(k,i,j,iq) &
                      - MOMZ_LS(k,1) * ( QTRC(k+1,i,j,iq) - QTRC(k,i,j,iq) ) * RFDZ(k)
              enddo
@@ -489,7 +496,7 @@ contains
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
-                QTRC_tp(KE,i,j,iq) = QTRC_tp(KE,i,j,iq) &
+                RHOQ_tp(KE,i,j,iq) = RHOQ_tp(KE,i,j,iq) &
                      + QV_LS(KE,1) * Q_rate(KE,i,j,iq) &
                      - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1)
              enddo
@@ -530,12 +537,12 @@ contains
             RovCP  = RTOT / CPTOT
 
             d_PT   = RHOT(k,i,j) / DENS(k,i,j)
-            LWPT = RHOT(k,i,j) / DENS(k,i,j)  &
-                 - ( LH0 / CPdry * QHYD ) * ( P00 / PRES )**RovCP
+            LWPT   = RHOT(k,i,j) / DENS(k,i,j)  &
+                   - ( LHV / CPdry * QHYD ) * ( P00 / PRES )**RovCP
             LWPT_a = LWPT - 2.5_RP / 86400.0_RP ! * dt
-            drhot = ( LWPT_a &
-                 + ( LH0 / CPdry * QHYD ) * ( P00 / PRES )**RovCP &
-                 ) * DENS(k,i,j) - RHOT(k,i,j)
+            drhot  = ( LWPT_a &
+                     + ( LHV / CPdry * QHYD ) * ( P00 / PRES )**RovCP &
+                     ) * DENS(k,i,j) - RHOT(k,i,j)
 
             RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + drhot !/ dt
        enddo
@@ -603,13 +610,13 @@ contains
        SFLX_MOMY(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMY(KS,i,j)
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+       LHFLX(i,j) = SFLX_QV  (i,j) * LHV
 
       enddo
       enddo
 
-      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
+      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
 
       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
       do j = JS, JE
@@ -626,7 +633,7 @@ contains
              + SFLX_MOMX(i,j) * RCDZ(KS)
        MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
              + SFLX_MOMY(i,j) * RCDZ(KS)
-       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
+       RHOQ_tp(KS,i,j,I_QV) = RHOQ_tp(KS,i,j,I_QV) &
              + SFLX_QV(i,j) * RCDZ(KS)
       enddo
       enddo

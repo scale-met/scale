@@ -1,0 +1,102 @@
+################################################################################
+#
+# NICAM driver config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 5,
+    rlevel      = 0,
+    vlayer      = 94,
+    rgnmngfname = "rl00-prc10.info",
+/
+
+&GRDPARAM
+    hgrid_io_mode = "ADVANCED",
+    hgrid_fname   = "boundary_GL05RL00",
+    VGRID_fname   = "vgrid94.dat",
+    topo_io_mode  = "IDEAL",
+/
+
+&TIMEPARAM
+    DTL         = 1200.D0,
+    INTEG_TYPE  = "RK3",
+    LSTEP_MAX   = 10,
+    start_date  = 0000,1,1,0,0,0
+/
+
+&RUNCONFPARAM
+    RUNNAME        = 'ICOMEX_JW',
+    NDIFF_LOCATION = 'IN_LARGE_STEP2',
+/
+
+&BSSTATEPARAM
+    ref_type = 'NOBASE',
+/
+
+&RESTARTPARAM
+    input_io_mode     = 'IDEAL',
+    output_io_mode    = 'ADVANCED',
+    output_basename   = 'restart_all_GL05RL00z80',
+    restart_layername = 'ZSALL96',
+/
+
+##### ICOMEX Test case: Jablonowski Baroclinic Wave
+# test_case = 1: with initial perturbation
+#             2: without initial perturbation
+&DYCORETESTPARAM
+    init_type = 'Jablonowski',
+    test_case = '1'
+/
+
+&IDEALTOPOPARAM
+    topo_type = 'JW',
+/
+
+&CNSTPARAM
+    earth_radius        = 6.37122D+6,
+    earth_angvel        =   7.292D-5,
+    small_planet_factor =      1.D0,
+    earth_gravity       = 9.80616D0,
+    gas_cnst            =   287.0D0,
+    specific_heat_pre   =  1004.5D0,
+/
+
+&NUMFILTERPARAM
+    hdiff_type        = 'DIRECT',
+    lap_order_hdiff   = 2,
+    gamma_h           = 1.20D16,
+    Kh_coef_minlim    = 0.D0,
+    Kh_coef_maxlim    = 1.D30,
+    divdamp_type      = 'DIRECT',
+    lap_order_divdamp = 2,
+    alpha_d           = 1.20D16,
+/
+
+&EMBUDGETPARAM
+    MNT_ON   = .true.,
+    MNT_INTV = 72    ,
+/
+
+&NMHISD
+    output_io_mode   = 'ADVANCED' ,
+    histall_fname    = 'history'  ,
+    hist3D_layername = 'ZSDEF94'  ,
+    NO_VINTRPL       = .false.    ,
+    output_type      = 'SNAPSHOT' ,
+    step             = 72         ,
+    doout_step0      = .true.     ,
+/
+
+&NMHIST item='ml_u',     file='u',    ktype='3D' /
+&NMHIST item='ml_v',     file='v',    ktype='3D' /
+&NMHIST item='ml_w',     file='w',    ktype='3D' /
+&NMHIST item='ml_pres',  file='prs',  ktype='3D' /
+&NMHIST item='ml_tem',   file='t',    ktype='3D' /
+&NMHIST item='sl_ps',    file='ps',   ktype='2D' /
+&NMHIST item='sl_u850',  file='u850', ktype='2D' /
+&NMHIST item='sl_v850',  file='v850', ktype='2D' /
+&NMHIST item='sl_w850',  file='w850', ktype='2D' /
+&NMHIST item='sl_t850',  file='t850', ktype='2D' /
+
+################################################################################

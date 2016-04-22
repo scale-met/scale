@@ -8,6 +8,7 @@
 !!
 !! @par History
 !! @li      2012-10-18 (S.Nishizawa) [new]
+!! @li      2015-09-08 (Y.Sato)      [add] Add evaporated cloud number concentration
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -53,52 +54,64 @@ module scale_atmos_phy_mp_dry
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup Cloud Microphysics
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_MP_dry_setup( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_tracer, only: &
-       QAD => QA
     implicit none
-    character(len=H_SHORT), intent(in) :: MP_TYPE
+
+    character(len=*), intent(in) :: MP_TYPE
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Dry Atmosphere'
-
-    ATMOS_PHY_MP_DENS(:) = 0.0_RP
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** dummy process (dry Atmosphere)'
 
     if ( MP_TYPE /= 'DRY' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'
        call PRC_MPIstop
     endif
+
+    ATMOS_PHY_MP_DENS(:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_MP_dry_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_dry( &
-          DENS, &
-          MOMZ, &
-          MOMX, &
-          MOMY, &
-          RHOT, &
-          QTRC  )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       CCN ,      &
+       EVAPORATE, &
+       SFLX_rain, &
+       SFLX_snow  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA
     implicit none
+
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA) 
+    real(RP), intent(out)   :: SFLX_rain(IA,JA)
+    real(RP), intent(out)   :: SFLX_snow(IA,JA)
+    !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(dummy)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(dummy)'
+
+    EVAPORATE(:,:,:) = 0.0_RP
+    SFLX_rain(:,:) = 0.0_RP
+    SFLX_snow(:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_MP_dry
@@ -108,6 +121,7 @@ contains
   subroutine ATMOS_PHY_MP_dry_CloudFraction( &
        cldfrac, &
        QTRC     )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA
     implicit none
@@ -126,18 +140,23 @@ contains
   subroutine ATMOS_PHY_MP_dry_EffectiveRadius( &
        Re,    &
        QTRC0, &
-       DENS0  )
+       DENS0, &
+       TEMP0  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
+
+    real(RP), parameter :: um2cm = 100.0_RP
     !---------------------------------------------------------------------------
 
-    Re(:,:,:,:) = 8.E-6_RP ! dummy
+    Re(:,:,:,:) = 8.E-6_RP * um2cm ! dummy
 
     return
   end subroutine ATMOS_PHY_MP_dry_EffectiveRadius
@@ -146,8 +165,7 @@ contains
   subroutine ATMOS_PHY_MP_dry_Mixingratio( &
        Qe,    &
        QTRC0  )
-    use scale_const, only: &
-       EPS => CONST_EPS
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA

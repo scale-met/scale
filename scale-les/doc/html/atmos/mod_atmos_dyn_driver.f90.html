@@ -1,0 +1,92 @@
+<html>
+  <head>
+    <title>mod_atmos_dyn_driver module</title>
+  </head>
+ <body>
+  <h1>mod_atmos_dyn_driver module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_ATMOS_DYN</li>
+      <table>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>ATMOS_DYN_NUMERICAL_DIFF_ORDER</td>
+          <td>integer</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_NUMERICAL_DIFF_COEF</td>
+          <td>real(RP)</td>
+          <td>1.0E-4_RP</td>
+          <td>nondimensional numerical diffusion</td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_NUMERICAL_DIFF_COEF_Q</td>
+          <td>real(RP)</td>
+          <td>1.0E-4_RP</td>
+          <td>nondimensional numerical diffusion for tracer</td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_NUMERICAL_DIFF_SFC_FACT</td>
+          <td>real(RP)</td>
+          <td>1.0_RP</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_NUMERICAL_DIFF_USE_REFSTATE</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_ENABLE_CORIOLIS</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>enable coriolis force?</td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_DIVDMP_COEF</td>
+          <td>real(RP)</td>
+          <td>0.0_RP</td>
+          <td>Divergence dumping coef</td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_FLAG_FCT_RHO</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_FLAG_FCT_MOMENTUM</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_FLAG_FCT_T</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_FLAG_FCT_ALONG_STREAM</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_DYN_ADJUST_FLUX_CELL</td>
+          <td>integer</td>
+          <td>1</td>
+          <td>number of cells adjusting lateral boundary flux</td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+    </table>
+  </body>
+</html>

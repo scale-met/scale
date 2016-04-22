@@ -40,18 +40,20 @@ module scale_atmos_dyn_rk
   abstract interface
      subroutine rk( &
           DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-          mflx_hi,                                     &
+          mflx_hi, tflx_hi,                            &
           DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
           DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
           DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
           Rtot, CVtot, CORIOLI,                        &
           num_diff, divdmp_coef,                       &
           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
+          FLAG_FCT_ALONG_STREAM,                       &
           CDZ, FDZ, FDX, FDY,                          &
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-          PHI, GSQRT, J13G, J23G, J33G,                &
+          PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
           REF_pres, REF_dens,                          &
-          dtrk                                         )
+          BND_W, BND_E, BND_S, BND_N,                  &
+          dtrk, dt                                     )
        use scale_precision
        use scale_grid_index
        real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
@@ -60,7 +62,8 @@ module scale_atmos_dyn_rk
        real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
        real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
-       real(RP), intent(out) :: mflx_hi(KA,IA,JA,3) ! mass flux
+       real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! mass flux
+       real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! internal energy flux
 
        real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables at previous dynamical time step
        real(RP), intent(in),target :: MOMZ0(KA,IA,JA) !
@@ -89,6 +92,7 @@ module scale_atmos_dyn_rk
        logical,  intent(in)  :: FLAG_FCT_RHO
        logical,  intent(in)  :: FLAG_FCT_MOMENTUM
        logical,  intent(in)  :: FLAG_FCT_T
+       logical,  intent(in)  :: FLAG_FCT_ALONG_STREAM
 
        real(RP), intent(in)  :: CDZ (KA)
        real(RP), intent(in)  :: FDZ (KA-1)
@@ -106,10 +110,17 @@ module scale_atmos_dyn_rk
        real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
        real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
        real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+       real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
        real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
        real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
+       logical,  intent(in)  :: BND_W
+       logical,  intent(in)  :: BND_E
+       logical,  intent(in)  :: BND_S
+       logical,  intent(in)  :: BND_N
+
        real(RP), intent(in)  :: dtrk
+       real(RP), intent(in)  :: dt
      end subroutine rk
   end interface
   procedure(rk), pointer :: ATMOS_DYN_rk => NULL()
@@ -128,7 +139,9 @@ module scale_atmos_dyn_rk
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_rk_setup( ATMOS_TYPE_DYN )
+  subroutine ATMOS_DYN_rk_setup( ATMOS_DYN_TYPE, &
+       BND_W, BND_E, BND_S, BND_N )
+
     use scale_process, only: &
        PRC_MPIstop
     use scale_stdio, only: &
@@ -152,21 +165,28 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
+    character(len=*), intent(in) :: ATMOS_DYN_TYPE
+    logical, intent(in) :: BND_W
+    logical, intent(in) :: BND_E
+    logical, intent(in) :: BND_S
+    logical, intent(in) :: BND_N
     !---------------------------------------------------------------------------
 
-    select case ( ATMOS_TYPE_DYN )
+    select case ( ATMOS_DYN_TYPE )
     case ( 'HEVE' )
-       call ATMOS_DYN_rk_heve_setup( ATMOS_TYPE_DYN )
+       call ATMOS_DYN_rk_heve_setup( ATMOS_DYN_TYPE, &
+            BND_W, BND_E, BND_S, BND_N )
        ATMOS_DYN_rk => ATMOS_DYN_rk_heve
     case ( 'HEVI' )
-       call ATMOS_DYN_rk_hevi_setup( ATMOS_TYPE_DYN )
+       call ATMOS_DYN_rk_hevi_setup( ATMOS_DYN_TYPE, &
+            BND_W, BND_E, BND_S, BND_N )
        ATMOS_DYN_rk => ATMOS_DYN_rk_hevi
     case ( 'HIVI' )
-       call ATMOS_DYN_rk_hivi_setup( ATMOS_TYPE_DYN )
+       call ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE, &
+            BND_W, BND_E, BND_S, BND_N )
        ATMOS_DYN_rk => ATMOS_DYN_rk_hivi
     case default
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is invalid'
+       write(*,*) 'xxx ATMOS_DYN_TYPE is invalid'
        call PRC_MPIstop
     end select
 

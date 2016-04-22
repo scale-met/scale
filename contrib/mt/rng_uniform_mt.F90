@@ -92,11 +92,19 @@ module rng_uniform_mt
   ! in the Fortran95, most compilers and Fortran2003 extend the use of
   ! non-decimal constants.
 
+#ifdef GNU_BOZ
+  integer(intopt), parameter :: mata   = int(z"9908b0df",intopt) ! constant vector a
+  integer(intopt), parameter :: umask  = int(z"80000000",intopt) ! most significant w-r bits
+  integer(intopt), parameter :: lmask  = int(z"7fffffff",intopt) ! least significant r bits
+  integer(intopt), parameter :: tmaskb = int(z"9d2c5680",intopt) ! tempering parameter b
+  integer(intopt), parameter :: tmaskc = int(z"efc60000",intopt) ! tempering parameter c
+#else
   integer(intopt), parameter :: mata   = z"9908b0df"  ! constant vector a
   integer(intopt), parameter :: umask  = z"80000000"  ! most significant w-r bits
   integer(intopt), parameter :: lmask  = z"7fffffff"  ! least significant r bits
   integer(intopt), parameter :: tmaskb = z"9d2c5680"  ! tempering parameter b
   integer(intopt), parameter :: tmaskc = z"efc60000"  ! tempering parameter c
+#endif
 
   integer, parameter :: default_seed = 4357   ! default random seed
 
@@ -167,7 +175,12 @@ contains
     !=------------------------------------------------------------------------
     integer :: i
     integer(int32) ::  kmt
+
+#ifdef GNU_BOZ
+    integer(intopt), parameter :: mask = int(z"ffffffff",intopt)
+#else
     integer(intopt), parameter :: mask = z"ffffffff"
+#endif
 
     kmt = int(seed, int32)
     self%mt(0) = kmt

@@ -1,0 +1,14 @@
+files listed below are same with original "netcdf2grads_h"
+------------------------------------------------
+mod_net2g_anal.F90
+mod_net2g_vars.F90
+mod_net2g_calender.F90
+mod_net2g_netcdf.F90
+mod_net2g_setup.F90
+
+files listed below are different from original "netcdf2grads_h"
+------------------------------------------------
+mod_net2g_error2.F90
+mod_netcdf2grads_h.F90
+mod_net2g_comm2.F90
+prg_bulk_net2g.f90

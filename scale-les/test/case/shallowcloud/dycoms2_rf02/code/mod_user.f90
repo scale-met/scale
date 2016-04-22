@@ -21,6 +21,7 @@ module mod_user
   use scale_prof
   use scale_grid_index
   use scale_tracer
+  use scale_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -28,6 +29,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_setup0
   public :: USER_setup
   public :: USER_step
 
@@ -66,6 +68,11 @@ module mod_user
   logical, private :: first = .true.
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Setup0
+  subroutine USER_setup0
+  end subroutine USER_setup0
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -160,8 +167,8 @@ contains
        Q_rate( :,:,:,: ) = 0.0_RP
 
        do k = KS-1, KE
-          V_GEOS(k) = -5.5_RP
-          U_GEOS(k) =  7.0_RP
+          U_GEOS(k) =  3.0_RP + 4.3 * CZ(k)*1.E-3_RP
+          V_GEOS(k) = -9.0_RP + 5.6 * CZ(k)*1.E-3_RP
        enddo
        corioli = 7.6E-5_RP
 
@@ -248,17 +255,16 @@ contains
          MOMX_tp, &
          MOMY_tp, &
          RHOT_tp, &
-         QTRC_tp
+         RHOQ_tp
     use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ, &
          CZ   => GRID_CZ, &
          FZ   => GRID_FZ
     use scale_const, only: &
+         Rdry  => CONST_Rdry,  &
          CPdry => CONST_CPdry, &
-         Rdry  => CONST_Rdry, &
-         RovCP => CONST_RovCP, &
-         RovCV => CONST_RovCV, &
+         CVdry => CONST_CVdry, &
          P00   => CONST_PRE00
     use scale_time, only: &
          do_phy_rd => TIME_DOATMOS_PHY_RD, &
@@ -282,9 +288,13 @@ contains
     real(RP) :: dQ, QWSUM
     real(RP) :: TEMP_t(KA,IA,JA)
     real(RP) :: flux_rad(KA,IA,JA)
+    real(RP) :: RovCP, RovCV
 
     integer :: k2
+    !---------------------------------------------------------------------------
 
+    RovCP = Rdry / CPdry
+    RovCV = Rdry / CVdry
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -463,7 +473,7 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE-1
-                QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) &
+                RHOQ_tp(k,i,j,iq) = RHOQ_tp(k,i,j,iq) &
                      + QV_LS(k,1) * Q_rate(k,i,j,iq) &
                      - MOMZ_LS(k,1) * ( QTRC(k+1,i,j,iq) - QTRC(k,i,j,iq) ) * RFDZ(k)
              enddo
@@ -472,7 +482,7 @@ contains
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
-                QTRC_tp(KE,i,j,iq) = QTRC_tp(KE,i,j,iq) &
+                RHOQ_tp(KE,i,j,iq) = RHOQ_tp(KE,i,j,iq) &
                      + QV_LS(KE,1) * Q_rate(KE,i,j,iq) &
                      - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1)
              enddo

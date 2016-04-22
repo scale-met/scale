@@ -56,15 +56,16 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: AE_TYPE
+    character(len=*), intent(in) :: AE_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AEROSOL] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     if ( AE_TYPE /= 'DUMMY' .and. AE_TYPE /= 'NONE' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_AE_TYPE is not DUMMY. Check!'
+       write(*,*) 'xxx ATMOS_PHY_AE_TYPE is not DUMMY. Check!'
        call PRC_MPIstop
     endif
 
@@ -82,18 +83,29 @@ contains
           MOMX, &
           MOMY, &
           RHOT, &
+          EMIT, &
+          NREG, &
+          CN,   &
+          CCN,  &
           QTRC  )
-    use scale_tracer, only: &
-       QAD => QA
+    use scale_grid_index
+    use scale_tracer
     implicit none
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
+    real(RP), intent(in)    :: NREG(KA,IA,JA)
+    real(RP), intent(out)   :: CN(KA,IA,JA)
+    real(RP), intent(out)   :: CCN(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(dummy)'
+
+    CN(:,:,:) = 0.0_RP
+    CCN(:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_AE_dummy
@@ -104,6 +116,8 @@ contains
        Re,   &
        QTRC, &
        RH    )
+    use scale_grid_index
+    use scale_tracer
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
@@ -117,7 +131,7 @@ contains
 
 !    Re(:,:,:,I_ae_seasalt) = 2.E-4_RP
 !    Re(:,:,:,I_ae_dust   ) = 4.E-6_RP
-!    Re(:,:,:,I_ae_bc     ) = 4.D-8_RP
+!    Re(:,:,:,I_ae_bc     ) = 4.E-8_RP
 !    Re(:,:,:,I_ae_oc     ) = RH(:,:,:)
 !    Re(:,:,:,I_ae_sulfate) = RH(:,:,:)
 

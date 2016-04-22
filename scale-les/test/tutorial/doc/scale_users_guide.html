@@ -1,0 +1,1196 @@
+<h1 id="sec:overview">Overview</h1>
+<h2 id="はじめに">はじめに</h2>
+<p>本書は初めてSCALEモデルを利用するユーザー向けに、SCALE-LESモデルについて解説したユーザーズガイドです。 本書はSCALE version 0.2.0 (SCALE-LES version 4.2.0)に対応した説明になっています。 第[sec:overview]章でSCALEの概要について説明します。第[sec:install]章で必要な環境、 およびインストール方法を説明します。つづいて、第[sec:tuto<sub>i</sub>deal]章では理想実験、 第[sec:tuto<sub>r</sub>eal]章では現実大気実験の簡単な例を挙げて実行方法を説明します。 第[sec:install]章から第[sec:tuto<sub>r</sub>eal]章まではひとつながりの チュートリアルになっており、前章の経験や結果に基づいて説明する部分がありますので注意してください。 第[sec:advance]章ではチュートリアルでは説明しなかった実行方法の詳細、 機能やツールについて説明します。</p>
+<p>本書中の不明点やお気づきの点がございましたら、SCALE user’s メーリングリスト<br /><code>scale-user@riken.jp</code>までご連絡ください。</p>
+<h3 id="scaleの特徴">SCALEの特徴</h3>
+<p>SCALEは計算機を用いて気象・気候科学の問題にアプローチする際に、ユーザーが研究を進めやすいように 事前処理から数値モデル計算、解析に至るまですべての過程を網羅する計算ライブラリの開発を 目指したソフトウェアであり。SCALEは下記に挙げるような特徴を持つ。</p>
+<ul>
+<li><p>SCALEは、 “Scalable Computing for Advanced Library and Environment”の略である．</p></li>
+<li><p>SCALEは、フリーソフトウェアである。「BSD-2ライセンス」においてフリーソフトウェア として提供されており、商用、非商用に関わらず自由な利用・改変が可能なソフトウェアである。</p></li>
+<li><p>SCALEには、SCALE-LESモデル、SCALE-GMといった組み上げ済みの数値モデルが含まれている。</p></li>
+<li><p>SCALEには、次節で説明する様々なコンポーネントが導入されており、必要に応じて取り替えることが可能性である。</p></li>
+</ul>
+<p>ライセンスの詳細は、トップディレクトリ直下の“<code>scale/LICENSE</code>”のファイルに記述されている。 SCALEの使用前に一読しておくこと。またSCALEのWebページにも説明が記載されているので必要に応じて 参照すること（<a href="http://scale.aics.riken.jp/" class="uri">http://scale.aics.riken.jp/</a>）。</p>
+<h3 id="scale-lesモデルの構成">SCALE-LESモデルの構成</h3>
+<p>現在，SCALE-LESモデルとして組み込まれているコンポーネントは下記のものである。 詳細なモデル構成や差分化手法については、<span class="citation"></span>や<span class="citation"></span>を参照されたい。<br /></p>
+<p><span><strong>フレームワーク関係</strong></span></p>
+<ul>
+<li><p>Cartesian グリッドシステム（Arakawa C-grid）</p></li>
+<li><p>Cartesian ベースMPI通信</p></li>
+<li><p>Map-projection &amp; Map-factors</p></li>
+<li><p>Nesting システム（1-way：親→子のみ）</p>
+<ul>
+<li><p>Option: オフライン実行とオンライン実行を選択可能</p></li>
+</ul></li>
+<li><p>複数事例一括実行 システム（バルクジョブシステム）</p></li>
+<li><p>gtoolベースnetcdf4ファイル I/O</p></li>
+<li><p>外部データ読み込みによる初期値・境界値データ作成</p>
+<ul>
+<li><p>Option: WRF-ARW、NICAM、その他GrADSフォーマットでの入力に対応</p></li>
+</ul></li>
+</ul>
+<p><span><strong>力学コア関係</strong></span></p>
+<ul>
+<li><p>方程式系: ３次元完全圧縮流体方程式</p></li>
+<li><p>数値解法: 陽解法と陰解法の両方を実装済み</p>
+<ul>
+<li><p>Option: HE-VE、HE-VI、HI-VIスキームから選択可能</p></li>
+</ul></li>
+<li><p>空間差分: 4次中央差分</p></li>
+<li><p>時間差分: 3段ルンゲクッタスキーム（2次）</p></li>
+<li><p>非負保証: FCTスキーム</p></li>
+<li><p>数値フィルター: 4次Hyper diffusion</p></li>
+<li><p>地形: Terrain-followingスキーム</p></li>
+</ul>
+<p><span><strong>物理過程</strong></span></p>
+<ul>
+<li><p>乱流過程: 複数から選択可能</p>
+<ul>
+<li><p>Smagorinsky-Lilly typeのサブグリッドモデル (<span class="citation"></span>; <span class="citation"></span>)</p></li>
+<li><p>MYNN2.5境界層モデル (<span class="citation"></span>,<span class="citation"></span>)</p></li>
+</ul></li>
+<li><p>雲微物理: 複数から選択可能</p>
+<ul>
+<li><p>Kessler type バルクモデル(<span class="citation"></span>)</p></li>
+<li><p>6-class single moment バルクモデル(<span class="citation"></span>)</p></li>
+<li><p>6-class double moment バルクモデル(<span class="citation"></span>)</p></li>
+<li><p>ビン法雲モデル(<span class="citation"></span>)から選択可能</p></li>
+</ul></li>
+<li><p>放射過程: MSTRN (<span class="citation"></span>)</p></li>
+<li><p>地表面モデル</p>
+<ul>
+<li><p>陸面モデル: バケツモデル（バルク交換係数は <span class="citation"></span>; <span class="citation"></span>）</p></li>
+<li><p>海洋モデル:（スラブモデル）</p></li>
+<li><p>都市モデル: 単層キャノピーモデル(<span class="citation"></span>)</p></li>
+</ul></li>
+</ul>
+<p>上記に加えて、SCALE-LESモデル本体のドライバー、現実事例の計算に必要な地形や土地利用データを作成するツール、 理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。</p>
+<p>次節でSCALEライブラリの思想とモデルの関係について説明するが、SCALE-LESモデルの実行とは直接関係ないため、 必要なければ読み飛ばしても構わない。</p>
+<h3 id="scaleのライブラリとモデル">SCALEのライブラリとモデル</h3>
+<p><embed src="./figure/library.eps" title="fig:" /><br /></p>
+<p>SCALEは、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に開発が進められている気象・気候科学向けのライブラリである。 図 [fig:scale]はSCALEのねらいを表したポンチ絵である。この図に示されるように、SCALEプロジェクトは、近い将来もしくは 現在すでに研究の足かせとなっている諸問題を解決する、もしくは解決の手助けをすることを目指している。 SCALEは次世代のスーパーコンピュータから汎用計算機に至るまで広く用いられる事を念頭において開発されており、 気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が共同で開発を行っている（<span class="citation"></span>）。 そのため、スーパーコンピュータ「京」やFujitsu FX10等のスーパーコンピュータ上でも、 ユーザーがチューニングすることなく高い計算効率で実行可能なようになっている。</p>
+<p>SCALEライブラリは、ユーザーにスーパーコンピュータ「京」をはじめとする並列計算機に対してチューニングされた モデルコンポーネントや解析システム、テストセット、そしてこれらに対する知見といった「開発環境」を提供する。</p>
+<p>提供された開発環境利用の例として数値モデルの構築が挙げられる。その一例として、SCALEライブラリを用いて構築した数値モデル、 SCALE-LESモデルが本ライブラリセットに含まれている(図 [fig:scale-les])。 格子系、力学コア、そして物理過程といったモデル構築に必要な基本的コンポーネントはSCALEライブラリが提供する。そのため、 「SCALE-LESモデル」として新たに用意されたのは、これらのコンポーネントを動かすためのモデルドライバーや変数セットである。 このSCALE-LESモデルは研究に利用できるものである、すでに層積雲の遷移過程を調べる研究などの実績がある （<span class="citation"></span>、<span class="citation"></span>）。ユーザーは、SCALEライブラリを用いてSCALE-LESモデルと同様な方法によって ユーザーは新たなモデル作ることができる。</p>
+<p><embed src="./figure/scale_and_scale-les.eps" title="fig:" /><br /></p>
+<h2 id="表記上の注意">表記上の注意</h2>
+<p>本書中のシェルコマンド等はbash を想定して記述する。異なる環境下では適宜読み替えて対応すること。 また、本書内では特に断りがない限り、下記の表記法に従うものとする。</p>
+<p>コマンドラインのシンボル（<code>$, #</code>）は、コマンドの実行を示す。 下記の表記の違いは、プログラムを実行する権限の違いを示している。</p>
+<pre><code> #        &lt;- root権限で実行するコマンド
+ $        &lt;- ユーザ権限で実行するコマンド</code></pre>
+<p>権限の一時的な切り替えにはsuコマンドを用いる。 <code>{User_Name}</code>は実際のユーザ名に読み替えること。</p>
+<pre><code> $ su {User_Name}   &lt;- {User_Name}のユーザー名でログイン
+ $ exit             &lt;- {User_Name}のユーザー名でログインを修了
+ $ su -             &lt;- root権限に変更
+ #</code></pre>
+<p>コマンドオプションにハイフンを用いると、そのユーザでのログインを行う。 用いない場合、権限のみの変更となる。またユーザ名を省略するとrootでのログインを試す。 ユーザの一時切り替えを終わるには、exitコマンドを用いる。 文章表記のうち、ダブルスラッシュ（//）で始まる行は解説のためのもので、実際に記述する必要はない。</p>
+<p>下記のように四角い囲みで区切られた部分は、コマンドラインのメッセージ部分であることを意味する。<br /></p>
+<p><br /></p>
+<p>また、下記のように丸い囲みで区切られた部分は、エディタでファイルを編集する記述内容を表す、 もしくはファイル内の記述を参照している部分である。<br /></p>
+<p><br /></p>
+<pre><code> $ vi</code></pre>
+<p>上記のコマンドは、vi（汎用テキストエディタ）プログラムを実行する。 他に、gedit、emacsなどのテキストエディタがある。 マニュアルではviコマンドの実行指示があるが、各自の使いやすいエディタへ適宜読み替えること。</p>
+<h1 id="sec:install">Installation</h1>
+<p>本章では、SCALE-LESの使用方法と、SCALEチュートリアルを実行するための環境の準備について説明する。</p>
+<h2 id="sec:req_env">必要なシステム環境</h2>
+<p>ここでは、SCALEのインストール、および実行に必要な環境について説明する。 以下に説明するもの以外に、SCALEは、理化学研究所 計算科学研究機構のスーパーコンピュータ「京」、 及びFujitsu PRIME-HPC FX10の環境に対応している。</p>
+<p><span><strong>必須のシステム環境</strong></span></p>
+<ul>
+<li><p><span><strong>システムハードウェア構成</strong></span></p>
+<ul>
+<li><p><span><strong>CPU</strong></span> : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上を搭載したシステムが望ましい。</p></li>
+<li><p><span><strong>Memory</strong></span> : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が搭載されたシステムが必要となる。</p></li>
+<li><p><span><strong>HDD</strong></span> : 実験内容によって変化するが、Tutorialの現実大気実験を実行するには約3GBのディスク空き容量が必要となる。</p></li>
+</ul></li>
+<li><p><span><strong>システムソフトウェア構成</strong></span></p>
+<ul>
+<li><p><span><strong>OS</strong></span> : Linux OS、Mac OS X<br />対応確認済みOSについては、表[tab:compatible<sub>o</sub>s]を参照のこと。</p></li>
+<li><p><span><strong>コンパイラ</strong></span> : Cコンパイラ、Fortran<br />FortranコンパイラはFortran2003をサポートするコンパイラを必要とする。 対応確認済みコンパイラについては、表[tab:compatible<sub>c</sub>ompiler]を参照のこと。</p></li>
+<li><p><span><strong>MPIライブラリ</strong></span> : MPI1.0/2.0 に対応するMPIライブラリを必要とする。 対応確認済みMPIライブラリについては、表[tab:compatible<sub>m</sub>pi]を参照のこと。</p></li>
+<li><p><span><strong>ファイルI/Oライブラリ</strong></span> : gzip、HDF5、NetCDF4を必要とする。<br />HDF5/NetCDF4の代わりに、NetCDF3でも動作するが、この場合はSCALEが提供する全ての機能が有効にならない可能性がある。</p></li>
+</ul></li>
+</ul>
+<p><span><strong>あると便利なシステム環境</strong></span></p>
+<ul>
+<li><p><span><strong>データ変換ツール</strong></span>：wgrib、wgrib2やNCL等があれば、SCALEで直接サポートしないデータを外部入力データとして利用できる。現実大気実験のTutorialでは、実際にwgrib2を利用する。</p></li>
+<li><p><span><strong>描画環境</strong></span>：GrADS、GPhys/Ruby-DCL、ncviewなどがあれば計算結果を描画することができる。</p></li>
+<li><p><span><strong>演算性能評価</strong></span>：演算性能評価としてPAPIライブラリを使用が可能である。</p></li>
+</ul>
+<p><span>150mm</span><span>|l|l|X|</span> OS名 &amp; 確認済みバージョン &amp; 備考<br />CentOS &amp; 6.5、6.6、7.0、7.1 &amp; 左記以外も正常動作する可能性が高い<br />openSUSE &amp; 13.2 &amp;<br />SUSE Enterprise Linux &amp; 11.1、11.3 &amp; 11.1ではGNUコンパイラは使用不可<br />fedora &amp; 20 &amp; 左記以外も正常動作する可能性が高い<br />Vine Linux &amp; 6.2、6.3 &amp;<br />Mac OS X &amp; 10.10 Yosemite &amp;<br /></p>
+<p>[tab:compatible<sub>o</sub>s]</p>
+<p><span>150mm</span><span>|l|l|X|</span> コンパイラ名 &amp; 確認済みバージョン &amp; 備考<br />GNU (gcc/gfortran) &amp; 4.4.x, 4.8.x &amp; 4.4.xではコンパイル時にWarningが出ることがある<br />Intel (icc/ifort) &amp; 13.0.1、14.0.2、15.0.0 &amp; 2013年以降のバージョンであれば左記以外も正常動作する可能性が高い<br />PGI (gcc/pgfortran) &amp; 14.3 &amp;<br /></p>
+<p>[tab:compatible<sub>c</sub>ompiler]</p>
+<p><span>150mm</span><span>|l|l|X|</span> MPIライブラリ名 &amp; 確認済みバージョン &amp; 備考<br />openMPI &amp; 1.8.5 &amp; 左記以外も正常動作する可能性が高い<br />Intel MPI &amp; 4.0 Update 3、4.1.0、5.0 &amp; 2013年以降のバージョンであれば左記以外も正常動作する可能性が高い<br />SGI MPT &amp; 2.05、2.09 &amp; Intel Compilerとの組み合わせで確認済み<br /></p>
+<p>[tab:compatible<sub>m</sub>pi]</p>
+<h3 id="sec:assumed_env">本書で想定する環境</h3>
+<p>本書の以降すべての説明において、下記の環境であることを前提として説明をすすめる。</p>
+<ul>
+<li><p><span><strong>CPU</strong></span> : 第[sec:tuto<sub>i</sub>deal]章は物理コアが2コア、第[sec:tuto<sub>r</sub>eal]章は4コアを搭載</p></li>
+<li><p><span><strong>Memory</strong></span> : 第[sec:tuto<sub>i</sub>deal]章は512MB、第[sec:tuto<sub>r</sub>eal]章は2GB</p></li>
+<li><p><span><strong>OS</strong></span> : Linux OS x86-64 (CentOS 6.6、CentOS 7.1、openSUSE 13.2のいずれか)</p></li>
+<li><p><span><strong>コンパイラ</strong></span> : GNU コンパイラ（gcc/gfortran）</p></li>
+<li><p><span><strong>MPIライブラリ</strong></span> : openMPI（リポジトリ経由でのインストール）</p></li>
+</ul>
+<h2 id="sec:inst_env">ライブラリ環境のインストール</h2>
+<p>実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix [sec:env<sub>s</sub>etting]章を参照のこと。 第[sec:tuto<sub>i</sub>deal]章、第[sec:tuto<sub>r</sub>eal]章のチュートリアルは、 それらのライブラリ環境がインストールされていることを想定して進める。</p>
+<p>描画ツールは何を使っても良いが、対応を確認している描画ツールについての詳細とインストール方法についての情報は Appendix [sec:env<sub>v</sub>is<sub>t</sub>ools]を参照のこと。 第3章および第4章のチュートリアルではGrADSを使って描画する方法を紹介する。 その他にGphysを使って、結果のクイックビューを行う方法については、[sec:quicklook]節にて説明する。</p>
+<h2 id="sec:source_code">SCALEのコンパイル</h2>
+<p>以下の説明で使用した環境は次のとおりである。</p>
+<ul>
+<li><p>CPU: Intel Core i5 2410M 2コア/4スレッド</p></li>
+<li><p>Memory: DDR3-1333 4GB</p></li>
+<li><p>OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64</p></li>
+</ul>
+<h4 id="ソースコードの入手">ソースコードの入手</h4>
+<p>安定版ソースコードは、<br /><a href="http://scale.aics.riken.jp/ja/download/index.html" class="uri">http://scale.aics.riken.jp/ja/download/index.html</a><br />よりダウンロードできる。 ソースコードのtarballファイルを展開すると<code>scale/</code>というディレクトリができる。 <code>{ver}</code>には、“v020”等のバーション番号が入る。</p>
+<pre><code> $ tar -zxvf SCALE_{ver}.tar.gz
+ $ ls
+  scale/</code></pre>
+<h4 id="makedefファイルと環境変数の設定">Makedefファイルと環境変数の設定</h4>
+<p>SCALEはコンパイルするとき、独自の環境変数“<code>SCALE_SYS</code>”で与えられた名称に対応した、 Makedefファイルを使用してコンパイルが行われる。 Makdefファイルは、<code>scale/sysdep/</code>内にいくつかの計算機環境に 対応するファイル（<code>Makedef.***</code>）が準備されており、これらの中から自分の環境にあったものを設定する。 本書で対応を確認している環境について対応するMakedefファイルを表[tab:makedef]にまとめた。</p>
+<p><span>150mm</span><span>|l|l|X|l|</span> OS/計算機 &amp; コンパイラ &amp; MPI &amp; Makedefファイル<br />&amp; gcc/gfortran &amp; openMPI &amp; Makedef.Linux64-gnu-ompi<br /> Linux OS x86-64 &amp; icc/ifort &amp; intelMPI &amp; Makedef.Linux64-intel-impi<br /> &amp; icc/ifort &amp; SGI-MPT &amp; Makedef.Linux64-intel-mpt<br />Mac OS X &amp; gcc/gfortran &amp; openMPI &amp; Makedef.MacOSX-gnu-ompi<br />スーパーコンピュータ「京」 &amp; original&amp; original&amp; Makedef.K<br />Fujitsu PRIME-HPC FX10 &amp; original&amp; original&amp; Makedef.FX10<br /></p>
+<p>[tab:makedef]</p>
+<p>ここでは、先述のとおりLinux OS、GNUコンパイラ、およびopenMPIを使用することを想定しているため、 <code>&quot;Makedef.Linux64-gnu-ompi&quot;</code>が対応するファイルとなる。下記のコマンドによって環境変数の値を設定する。</p>
+<pre><code> $ export SCALE_SYS=&quot;Linux64-gnu-ompi&quot;</code></pre>
+<p>自分の環境に合致するものがなければ、既存ファイルをベースにして作成する。 実行環境がいつも同じに決まっている場合は、常に同じMakedefファイルを使用するために、 環境変数設定を<code>.bashrc</code>などの環境設定ファイルに記述しておくと便利である。<br /></p>
+<p>チュートリアル通り進めている場合は、Appendix [sec:env<sub>s</sub>etting]章で説明する以外にPATHの設定をする 必要はないが、環境が異なる場合には上述に加えて次の設定が必要になる。 HDF5とNetCDF4について、下記のようにPATHを設定する。 例えば、Intel コンパイラを利用して自分で“<code>/opt</code>”下にHDF5とNetCDF4を インストールした場合を想定して、HDF5は<code>/opt/hdf5</code>、netcdf4は<code>/opt/netcdf</code>に それぞれインストールされている場合の例を示す。</p>
+<pre><code> $ export HDF5=&quot;/opt/hdf5&quot;
+ $ export NETCDF4=&quot;/opt/netcdf&quot;</code></pre>
+<h4 id="コンパイル">コンパイル</h4>
+<p>チュートリアル用のディレクトリに移動して，makeコマンドによってコンパイルを行う．</p>
+<pre><code> $ cd scale/scale-les/test/tutorial/bin
+ $ make -j 4</code></pre>
+<p><code>make</code>のあとの <code>&quot;-j 4&quot;</code> は， コンパイル時の並列数を示しており， 例では4並列コンパイルを行うことを指示している． 実行環境によっては並列数を増やすこともできる． このmakeによってSCALEライブラリ，およびSCALE-LESモデルのコンパイルが行われ， 結果として</p>
+<pre><code> scale-les  scale-les_init  scale-les_pp</code></pre>
+<p>の3つの実行ファイルが生成されていればコンパイルは成功である．<br /></p>
+<p>下記のコマンドで作成された実行バイナリを消去できる。</p>
+<pre><code> $ make clean</code></pre>
+<p>ただし、この場合はコンパイルされたライブラリは消去されないため、全てのコンパイル済みファイルを消去したい場合は、</p>
+<pre><code> $ make allclean</code></pre>
+<p>とする。コンパイラを変更したり、コンパイルオプションを変更して再コンパイルする場合は、“allclean”を実行すること。</p>
+<p><span><strong>注意点</strong></span></p>
+<ul>
+<li><p>SCALEライブラリは，scaleのTOPディレクトリ直下の <code>scale/scalelib/</code>というディレクトリ内でコンパイルとアーカイブが行われ， <code>&quot;.lib&quot;</code>という名前の隠しディレクトリとして <code>bin/</code>ディレクトリ内へコピーされる．</p></li>
+<li><p>Debugモードでコンパイルしたい場合は、<code>&quot;make -j 4 DEBUG=T&quot;</code>としてコンパイルする。</p></li>
+<li><p>細かくコンパイルオプションを変更したい場合は、<code>Makedef.***</code>のファイルを編集する。</p></li>
+</ul>
+<h2 id="sec:source_net2g">後処理ツールのコンパイル</h2>
+<p>第[sec:tuto<sub>i</sub>deal]章、第[sec:tuto<sub>r</sub>eal]章のチュートリアルでは、 GrADSを使用して図化する方法を紹介している。このとき、SCALE-LESの分割 出力ファイル（<code>history.******.nc</code>）を結合し、GrADSで直接読み込めるデータ形式へ 変換する後処理ツール「net2g」を使用する。 ここでは、このnet2gのコンパイル方法について説明する。</p>
+<p>net2gはSCALE本体から独立したツールになっている（ただしMakedefファイルを除く）ため、 任意の場所へコピーしてコンパイルすることができるが、 コンパイルにはNetCDFライブラリが必要であり、また並列実行するためにはMPIライブラリが必要である。 従って、以降はこれらのライブラリがインストールされている環境であることを想定して進める。<br /></p>
+<p>まず、Makedefファイル設定のために環境変数を設定する。 SCALE本体のコンパイル時と同じように、使用する環境にあったMakedefファイルを 選択し、下記のコマンドにて設定する。</p>
+<pre><code> $ export SCALE_SYS=&quot;Linux64-gnu-ompi&quot;</code></pre>
+<p>その後、net2gのディレクトリに移動して、makeコマンドによってコンパイルを行う。 MPIライブラリを用いた並列実行を行うためのバイナリは、下記のコマンドによって生成される。</p>
+<pre><code> $ cd scale/scale-les/util/netcdf2grads_h
+ $ make -j 2</code></pre>
+<p>MPIライブラリが無い場合など、逐次実行バイナリを生成するためには、<br /></p>
+<pre><code> $ make -j 2 NOMPI=T</code></pre>
+<p>としてコンパイルを行う。 結果として、“net2g”という名前の実行ファイルが生成されていればコンパイルは成功である．<br /></p>
+<p>下記のコマンドで作成された実行バイナリを消去できる。</p>
+<pre><code> $ make clean</code></pre>
+<h1 id="sec:tuto_ideal">SCALE-LES Tutorial: Ideal case</h1>
+<h2 id="内容の説明">内容の説明</h2>
+<p>本章では、チュートリアルにおける1つめの実験として、SCALEを使った理想実験（Ideal case）の 実行方法を説明する。簡単な実験であるが、第[sec:install]章で実行したSCALEのコンパイルが 正常に完了しているかどうかのチェックも含めてぜひ実施してもらいたい。</p>
+<p>ここでは、SCALEのコンパイルが正常に終了し、</p>
+<pre><code>  scale-les/test/tutorial/bin</code></pre>
+<p>に<code>scale-les</code>、および<code>scale-les_init</code>が生成されており、</p>
+<pre><code>  scale-les/util/netcdf2grads_h</code></pre>
+<p>に<code>net2g</code>が生成されているものとして説明を行う。 これらに加えて、本章のチュートリアルでは、描画ツールとしてGrADSを使用する。 GrADSの詳細やインストール方法については、Appendix [sec:env<sub>v</sub>is<sub>t</sub>ools]節を参照のこと。</p>
+<p>ここで実行する理想実験は、「スコールライン」と呼ばれる積乱雲群を発生させる実験である。 実験設定の概要を表[tab:setting<sub>i</sub>deal]に示す。この実験は、積乱雲が発生する場合の 典型的な大気の成層構造を表現した鉛直プロファイルを与え、対流圏下層に置いた初期擾乱から 積乱雲が発達する様子を準2次元モデル実験する内容となっている。</p>
+<p><span>150mm</span><span>|l|l|X|</span> 項目 &amp; 設定内容 &amp; 備考<br />水平格子間隔 &amp; 東西：500 m、南北：1000 m &amp; 東西-鉛直の面を切り取った準2次元実験である<br />水平格子点数 &amp; 東西：40、南北：2 &amp; 東西-鉛直の面を切り取った準2次元実験である<br />鉛直層数 &amp; 97層（トップ：20 km）&amp; 下層ほど細かい層間隔をとったストレッチ設定である<br />側面境界条件 &amp; 周期境界 &amp; 東西、南北とも<br />積分時間間隔 &amp; 5 sec &amp; 雲微物理スキームは10 sec毎<br />積分期間 &amp; 3,600 sec &amp; 720 steps<br />データ出力間隔 &amp; 300 sec &amp;<br />物理スキーム &amp; 雲微物理モデルのみ使用 &amp; 6-class single moment bulk model (tomita 2006)<br />初期鉛直プロファイル &amp; GCSS Case1 squall-line &amp; 風のプロファイルは、Ooyama (2001)に基づいた鉛直シアを与える<br />初期擾乱 &amp; ウォームバブル &amp; 水平半径4 km、 鉛直半径3 kmの大きさを持つ最大プラス3Kの強度のウォームバブルを置く<br /></p>
+<p>[tab:setting<sub>i</sub>deal]</p>
+<p>このチュートリアルを実行するには、最低でも2コア/4スレッドの演算コアを持つCPU、 512MB以上のメモリを搭載した計算機が必要である。本節の説明で使用した環境は次のとおりである。</p>
+<ul>
+<li><p>CPU: Intel Core i5 2410M 2.3GHz 2コア/4スレッド</p></li>
+<li><p>Memory: DDR3-1333 4GB</p></li>
+<li><p>OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64</p></li>
+</ul>
+<h2 id="実行方法">実行方法</h2>
+<p>実行の流れとしては、下準備、初期値の作成、モデル本体の実行、 後処理、そして描画といった順番で作業を進める。</p>
+<h3 id="下準備">下準備</h3>
+<p>チュートリアル理想実験は、<code>scale-les/test/tutorial/ideal</code>の ディレクトリにて実行するので、まずこのディレクトリに移動する。</p>
+<pre><code>  $ cd scale-les/test/tutorial/ideal</code></pre>
+<p>次に、このディレクトリに対して、前章までに作成したSCALEの 実行バイナリの静的リンクを張る。</p>
+<pre><code>  $ ln -s ../bin/scale-les       ./
+  $ ln -s ../bin/scale-les_init  ./</code></pre>
+<p>“<code>scale-les</code>”はモデル本体、“<code>scale-les_init</code>”は 初期値・境界値作成ツールである。 もし、ここで説明するディレクトリとは異なる場所で実行している場合は、 リンクを張る時のディレクトリ指定に注意すること。</p>
+<h3 id="初期値作成">初期値作成</h3>
+<p>ここでは、“<code>scale-les_init</code>”を実行して初期値を作成する。“<code>scale-les_init</code>”を 実行する際にはconfigファイルを与える。例えば、“<code>init_R20kmDX500m.conf</code>”のファイルには、 表[tab:setting<sub>i</sub>deal]に対応した実験設定が書き込まれており、このconfigファイルの指示に 従って<code>scale-les_init</code>は大気の成層構造を計算し、ウォームバブルを設置する。</p>
+<p>SCALEの基本的な実行コマンドは下記のとおりである。</p>
+<pre><code>  $ mpirun  -n  [プロセス数]  [実行バイナリ名]  [configファイル]</code></pre>
+<p>[プロセス数]の部分にはMPI並列で使用したいプロセス数を記述する。[実行バイナリ]には、 <code>scale-les</code>や<code>scale-les_init</code>が入る。そして、実験設定を記述したconfigファイルを [configファイル]の部分に指定する。ここでは、を用いて実行する。 以降、これを「2-MPI並列」のように表現する。従って、<code>init_R20kmDX500m.conf</code>を configファイルとして与えて、2-MPI並列で<code>scale-les_init</code>を実行する場合の コマンドはつぎのようになる。</p>
+<pre><code>  $ mpirun  -n  2  ./scale-les_init  init_R20kmDX500m.conf</code></pre>
+<p>実行が成功した場合には、コマンドラインのメッセージは 下記のように表示される。<br /></p>
+<p><br /></p>
+<p>この実行によって、<br />“init_LOG.pe000000”<br />“init_00000000000.000.pe000000.nc”<br />“init_00000000000.000.pe000000.nc”<br />の3つのファイルが、現在のディレクトリ下に作成されているはずである。“init_LOG.pe000000”には、 コマンドラインには表示されない詳しい実行ログが記録されている。 実行が正常に終了している場合、このLOGファイルの最後に<br /></p>
+<p><br /></p>
+<p>と記述される。</p>
+<p>そして、“init_00000000000.000.pe000000.nc”と“init_00000000000.000.pe000001.nc”の 2つのファイルが初期値ファイルである。計算領域全体を2つのMPIプロセスで分割し担当するため、 2つのファイルが生成される。もし、4-MPI並列で実行すれば、4つの初期値ファイルが生成される。 これらのファイル名の末尾が“.nc”で終わるファイルはNetCDF形式のファイルであり、 Gphys/Ruby-DCLやncviewといったツールで直接読むことができる。</p>
+<h3 id="モデル本体の実行">モデル本体の実行</h3>
+<p>いよいよ、モデル本体を実行する。初期値作成のときと同じように2-MPI並列だが、 しかしconfigファイルは実行用の“<code>run_R20kmDX500m.conf</code>”を指定する。</p>
+<pre><code>  $ mpirun  -n  2  ./scale-les  run_R20kmDX500m.conf</code></pre>
+<p>本書の必要要件にあった計算機であれば、2分程度で計算が終わる。 この実行によって、<br />“LOG.pe000000”<br />“history.pe000000.nc”<br />“history.pe000000.nc”<br />“monitor.pe000000”<br />の4つのファイルが、現在のディレクトリ下に作成されているはずである。“LOG.pe000000”には、 コマンドラインには表示されない詳しい実行ログが記録されている。 実行が正常に終了している場合、このLOGファイルの最後に<br /></p>
+<p><br /></p>
+<p>と記述される。</p>
+<p>そして、“history.pe000000.nc”と“history.pe000001.nc”の2つのファイルが計算経過の データが記録されたhistoryファイルである。このファイルもNetCDF形式のファイルであり、 2-MPI並列で実行したため、やはり2つのファイルが生成される。 “monitor.pe000000”は、計算中にモニタリングしている 物理変数の時間変化を記録したテキストファイルである。</p>
+<h3 id="後処理と描画">後処理と描画</h3>
+<p>ここでは、計算結果を描画するための後処理について説明する。本書のチュートリアルでは、 NetCDF形式の分散ファイルを1つのファイルにまとめ、ユーザーが解析しやすいDirect-Accessの 単純バイナリ形式（GrADS形式）に変換する方法を説明する。Gphys/Ruby-DCLを使うと 分割ファイルのまま直接描画することができるが、この方法については[sec:quicklook]節を 参照してもらいたい。</p>
+<p>まず、[sec:source<sub>n</sub>et2g]節でコンパイルした後処理ツール“net2g”を、 現在のディレクトリへリンクを張る。</p>
+<pre><code>  $ ln -s ../../../util/netcdf2grads_h/net2g  ./</code></pre>
+<p>もし、ここで説明するディレクトリとは異なる場所で実行している場合は、 リンクを張る時のディレクトリ指定に注意すること。</p>
+<p>net2gも実行方法は基本的にSCALE本体と同じである。</p>
+<pre><code>  $ mpirun  -n  [プロセス数]  ./net2g  [configファイル]</code></pre>
+<p>net2g専用の“<code>net2g.conf</code>”をconfigファイルとして与えて、 つぎのように実行する。</p>
+<pre><code>  $ mpirun  -n  2  ./net2g  net2g.conf</code></pre>
+<p>net2gの実行にあたっては、SCALE本体の実行時に使用したMPIプロセス数と同じか、 その約数のプロセス数を用いて実行しなければならない。 HDDの読み書き速度に依存するが、本書の必要要件にあった計算機であれば2分程度で計算が終わる。 この実行によって、<br />“QHYD_d01z-3d.ctl”、 “U_d01z-3d.ctl”、 “W_d01z-3d.ctl”<br />“QHYD_d01z-3d.grd”、 “U_d01z-3d.grd”、 “W_d01z-3d.grd”<br />の6つのファイルが、現在のディレクトリ下に作成される。</p>
+<p>これらのファイルはぞれぞれ、3次元変数、U（水平風東西成分）、W（鉛直風）、QHYD（全凝結物混合比） について、分割ファイルを1つにまとめ、Direct-Accessの単純バイナリ形式（GrADS形式）に 変換されたgrdファイルとGrADSに読み込ませるためのctlファイルである。従って、このctlファイルをGrADSに 読み込ませれば直ちに計算結果の描画が可能である。図[fig<sub>i</sub>deal]は、積分開始1200秒後における、 U-WとQHYDについての鉛直断面図である。</p>
+<p>“<code>net2g.conf</code>”の下記の行を編集することによって、net2gを用いて 他の様々な変数の変換を行うことができる。<br /></p>
+<p><br /></p>
+<p>この“VNAME”の項目を例えば、<code>&quot;PT&quot;,&quot;RH&quot;</code>と変更して実行すれば温位と相対湿度の変数に ついて変換する。どの変数が出力されているのかを調べるには、NetCDFのncdumpツールなどを 使えば簡単に調べられる。net2gの詳しい使用方法は、[sec:net2g]を参照してほしい。</p>
+<p><embed src="./figure/grads_hist_ideal.eps" title="fig:" /><br /></p>
+<h2 id="mpiプロセス数の変更">MPIプロセス数の変更</h2>
+<p>今後、様々な実験を行う上で必須の設定変更であるMPIプロセス数の変更方法について説明する。 その他の設定方法については次節を参照して欲しい。</p>
+<p>前節までに使用した<code>init_R20kmDX500m.conf</code>や<code>run_R20kmDX500m.conf</code>の configファイルを編集することで、すべての実験設定の変更が行える。 先に述べたとおりSCALEの入出力ファイルは、MPIプロセス毎に分割されている。そのため、MPIプロセス数を 変更すると分割ファイル数も必ず変わることになる。従って、2-MPI並列用に作成した初期値ファイルは、 4-MPI並列のモデル実行には使用できない。MPIプロセス数を変更するには、“<code>init_***.conf</code>”、 “<code>run_***.conf</code>”の両方を編集・変更し、再度初期値作成から行わなければならない。</p>
+<p><code>init_R20kmDX500m.conf</code>をviエディタ等で開くと、22行目付近に“<code>PARAM_PRC</code>”という 設定項目がある。チュートリアルでは2-MPI並列で実行するため、デフォルトでは下記に示すような 設定が記述されている。“PRC”は“Process”を意味する。<br /></p>
+<p><br /></p>
+<p>SCALEでは水平2次元に領域を分割して並列計算する。“<code>PRC_NUM_X</code>”は X方向（東西方向）の MPI並列分割数、“<code>PRC_NUM_Y</code>”は Y方向（南北方向）のMPI並列分割数を指定する変数である。 このconfigファイルから、X方向に2分割、Y方向に1分割（分割なし）という設定であることがわかる。 これはチュートリアルでは、Y方向に均一な準2次元実験を行なっているため、X方向にだけMPI並列している。 全MPIプロセス数は、<span class="math"><em>P</em><em>R</em><em>C</em><sub><em>t</em><em>o</em><em>t</em><em>a</em><em>l</em></sub> = <em>P</em><em>R</em><em>C</em><sub><em>X</em></sub> × <em>P</em><em>R</em><em>C</em><sub><em>Y</em></sub></span> であるため、<span class="math">2 × 1 = 2</span>で 全MPIプロセス数は2プロセスである。次に格子点数の設定項目について説明する。<br /></p>
+<p><br /></p>
+<p>上記の“<code>PARAM_INDEX</code>”の設定項目が格子点数を設定する項目である。<code>KMAX、IMAX、JMAX</code>は、 鉛直層数、X方向の格子点数、Y方向の格子点数をそれぞれ意味する。この値は、MPIプロセス当たりの 値であることに注意が必要である。つまり、計算領域全体での格子点数は、 <br /><span class="math">$$\begin{aligned}
+東西方向：{Grids}_{X}={\bf IMAX} \times {\bf PRC}_{X} \nonumber \\
+南北方向：{Grids}_{Y}={\bf JMAX} \times {\bf PRC}_{Y} \nonumber \end{aligned}$$</span><br /> と表現される。鉛直方向には分割しないため、<code>KMAX</code>がそのまま領域全体の鉛直層数を表す。 従って、このチュートリアルの全体の格子点数は、X方向（東西）に40点、Y方向（南北）に2点、 そして鉛直に97層ということがわかる。</p>
+<p>さて、上記の設定を変更して4-MPI並列で実行できるようにしてみる。注意する点は領域全体の格子点数を 維持するように設定することである。今回は準2次元実験なので、X方向に4分割して4-MPI並列を達成する。 この場合の設定方法は下記のとおりである。<br /></p>
+<p><br /></p>
+<p>X方向に4分割を指定するため、<code>PRC_NUM_X = 4</code>と記述されている。そして、領域全体で40格子点 とするために、<code>IMAX = 10</code>と記述されている。Y方向と鉛直方向には何も変更していない。 そして、つぎのようにMPIコマンドに指定するプロセス数を“4”として、初期値作成、モデル実行の順で 作業を進めれば、4-MPI並列で実行することができる。</p>
+<pre><code>  $ mpirun  -n  4  ./scale-les_init  init_R20kmDX500m.conf
+  $ mpirun  -n  4  ./scale-les       run_R20kmDX500m.conf</code></pre>
+<p>計算領域（総演算量）を維持したままMPIプロセス数を2倍に増やすことによって、1つのMPIプロセスあたりの 問題サイズ（演算量 per PRC）が1/2に減る。したがって、計算にかかる時間も理想的には半分になる <a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>。 実験機では、2-MPI並列のときチュートリアルの時間積分に60 sec かかっていたが、4-MPI並列にすることで同じ計算が32 secで終了できた。 ここで説明したMPIプロセス数の変更を加えたサンプルファイルが、同じディレクトリ下の“sample”ディレクトリ内に <code>init_R20kmDX500m.pe4.conf</code>、<code>run_R20kmDX500m.pe4.conf</code>として置いてあるので、うまく実行できない場合は 参考にして欲しい。</p>
+<h4 id="この章の最後に">この章の最後に</h4>
+<p>以上で、理想実験の最も簡単な実行方法についてのチュートリアルは終了である。 ここでは、簡単な実行方法をMPIプロセス数の変更方法だけを説明したが、実際には解像度や計算領域を変更したり、 放射過程や乱流過程といった他の物理過程を加えてみたり、雲微物理スキームを別のスキームに変更したりすることが あるだろう。これらの変更方法は、第[sec:advance]章[sec:adv<sub>s</sub>ettings]節に詳しく記載されているので 適宜参考にして欲しい。 このスコールラインの理想実験については、同じディレクトリ下の“sample”ディレクトリ内に、 解像度設定、領域設定、そして使用する物理スキームについて変更を加えたconfigファイルのサンプルが用意されているので、 これらを参考にすれば、SCALEのシステムについて理解が深まることと思う。</p>
+<p>また、SCALEには他にも理想実験セットが“<code>scale-les/test/case</code>”以下に複数用意されているので、 興味があれば他の理想実験にもチャレンジしてもよい。少々ディレクトリ構造がチュートリアルとは 異なる部分もあるが、実行に関しては本章のチュートリアルと同じであるため、容易に実験できるだろう。</p>
+<h1 id="sec:tuto_real">SCALE-LES Tutorial: Real case</h1>
+<p>このチュートリアルでは、図 [fig:domain]に示した 領域を対象とした現実大気実験を行う。 現実大気実験用のチュートリアルは</p>
+<pre><code> scale/scale-les/test/tutorial/real/</code></pre>
+<p>の下で行う。 以降の説明で<code>${Tutrial_DIR}</code>は、<code>scale/scale-les/test/tutorial/</code>を絶対PATHで示すこととする。</p>
+<p>SCALE-LESモデルの実行過程は、図 [fig:howto]に示されるように</p>
+<ol>
+<li><p>pp : 地形・海陸分布データの作成</p></li>
+<li><p>init : 初期値・境界値データの作成</p></li>
+<li><p>run : 時間積分を行う（モデル本体の実行）</p></li>
+</ol>
+<p>といった手順で実行する。</p>
+<p><embed src="./figure/how_to_run.eps" title="fig:" /><br /></p>
+<p>計算領域（ドメイン）の設定はTable [tab:grids]のようになっている。 チュートリアルは、SCALEの使い方を学ぶことが目的であり、 短い時間で実行可能な設定にしている。 領域モデルの実験設定として必ずしも適切な設定を選択しているとは限らないので (例えば、15kmの水平解像度で積雲パラメタリゼーションなし) ご留意頂きたい。</p>
+<p>このチュートリアルを実行するには、下記の条件を満たす計算機環境が必要である。</p>
+<ul>
+<li><p>CPU: 2コア/4スレッド以上の演算コアを持つCPU（4コア以上を推奨）</p></li>
+<li><p>Memory容量: 4GB以上をプログラムに割当可能（8GB以上を搭載した計算機を推奨）</p></li>
+<li><p>HDD空き容量: 7GB以上の空き容量</p></li>
+</ul>
+<p>本節の説明で使用した環境は次のとおりである。</p>
+<ul>
+<li><p>CPU: Intel Xeon E5-2620 2.0GHz 6コア（ただし4コアのみ使用）</p></li>
+<li><p>Memory: DDR3-1333 (4 channel, 32GB搭載)</p></li>
+<li><p>OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64</p></li>
+</ul>
+<p><embed src="./figure/real_domain.eps" title="fig:" /><br /></p>
+<p><span>150mm</span><span>|l|X|</span> 項目 &amp; 設定<br />MPIプロセス分割 (東西 x 南北) &amp; 2 x 2 (合計4プロセス)<br />水平格子数 (東西 x 南北) &amp; 60格子点 x 60格子点<br />鉛直層数 &amp; 36層<br />水平格子間隔 &amp; dx = dy = 15km<br />積分期間 &amp; 2014年8月10日 00UTC～12UTC (12時間積分)<br />時間ステップ間隔 &amp; 60 sec (720 steps)<br /></p>
+<h2 id="境界データの準備">境界データの準備</h2>
+<p>現実大気実験のシミュレーションを行う場合、SCALE本体に加えて 境界値データが必要になる。境界値データとしては下記が必要である。 <span>青字</span>は必須の変数、その他は任意である。</p>
+<ul>
+<li><p>地形データ(SCALEモデルの地形を準備する)</p>
+<ul>
+<li><p><span>標高データ</span></p></li>
+<li><p><span>土地利用データ</span></p></li>
+</ul></li>
+<li><p>初期値境界値データ</p>
+<ul>
+<li><p><span>親モデルの緯度・経度</span></p></li>
+<li><p>3次元大気データ</p>
+<ul>
+<li><p><span>東西風速, 南北風速, 気温, 比湿(相対湿度), 気圧, ジオポテンシャル高度</span></p></li>
+</ul></li>
+<li><p>2次元大気データ</p>
+<ul>
+<li><p>海面更正気圧, 地上気圧, 10m東西風速, 10m南北風速, 2m気温, 2m比湿(相対湿度)</p></li>
+</ul></li>
+<li><p>2次元陸面データ</p>
+<ul>
+<li><p>親モデルの海陸マップ</p></li>
+<li><p><span>地表面温度</span></p></li>
+<li><p><span>土壌データの深さ情報, 土壌温度</span>, 土壌水分(体積含水率 or 飽和度)</p></li>
+</ul></li>
+<li><p>2次元海面データ 海面水温</p></li>
+</ul></li>
+</ul>
+<h4 id="地形データと土地利用データ">地形データと土地利用データ</h4>
+<p>標高データと土地利用データは実験設定に従って、 SCALEのそれぞれの格子点における地形、海陸分布、土地利用を 作成するために使用する。 ユーザーが全球の任意の地域を対象とした計算ができるよう、 フォーマット変換済みの 標高データ USGS(U.S. Geological Survey) のGTOPO30 と、 土地利用データ GLCCv2、 を提供している。</p>
+<ol>
+<li><p>データのダウンロード<br />SCALE用の地形・土地利用のデータを<br /><a href="http://scale.aics.riken.jp/download/scale_database.tar.gz" class="uri">http://scale.aics.riken.jp/download/scale_database.tar.gz</a><br />より入手し、任意のディレクトリに展開しておく。</p>
+<pre><code>  $ tar -zxvf scale_database.tar.gz</code></pre>
+<p>展開したディレクトリには、地形データと土地利用データが格納されている。</p>
+<pre><code>  scale_database/topo/    &lt;- 地形データ
+  scale_database/landuse/ &lt;- 土地利用データ</code></pre></li>
+<li><p>パスの設定<br />makeを使ったjob scriptを使用する場合には、 展開先のディレクトリを <code>SCALE_DB</code> という環境変数に設定しておくと便利である (以後、<code>${SCALE_DB}</code>と表記)。</p>
+<pre><code>  $ export SCALE_DB=${path_to_directory_of_scale_database}/scale_database</code></pre></li>
+</ol>
+<h4 id="sec:real_prep">大気・陸面・海面水温データ</h4>
+<p>初期値境界値データは4-byte バイナリー(grads format)に変換すれば、 任意のデータを読み込むことが可能である。 チュートリアルではNCEP FNL(Final) Operational Global Analysis dataを使用する。</p>
+<ol>
+<li><p>データのダウンロード<br />NCARのサイト <a href="http://rda.ucar.edu/datasets/ds083.2/" class="uri">http://rda.ucar.edu/datasets/ds083.2/</a><br />から、2014年8月10日のgrib2フォーマットのデータ</p>
+<pre><code>  fnl_20140810_00_00.grib2
+  fnl_20140810_06_00.grib2
+  fnl_20140810_12_00.grib2
+  fnl_20140810_18_00.grib2</code></pre>
+<p>を<code>${Tutrial_DIR}/real/tools/</code>の下にダウンロードする。</p></li>
+<li><p>データフォーマットをgribからbinaryに変換<br />SCALEは4byte バイナリー（grads format）の境界値データを読み込むことができる。<br /><code>${Tutrial_DIR}/real/tools/</code> の中にある <code>convert_grib2grads.sh</code>を実行。 ただし、あらかじめ<code>wgrib2</code>がインストールされている必要がある．</p>
+<pre><code>  $ sh convert_grib2grads.sh</code></pre>
+<p>成功すれば、下記のファイルが作成される。</p>
+<pre><code>  $ ls FNL_output/*/*
+     FNL_output/201408/FNLatm_2014081000.grd
+     FNL_output/201408/FNLatm_2014081006.grd
+     FNL_output/201408/FNLatm_2014081012.grd
+     FNL_output/201408/FNLatm_2014081018.grd
+     FNL_output/201408/FNLland_2014081000.grd
+     FNL_output/201408/FNLland_2014081006.grd
+     FNL_output/201408/FNLland_2014081012.grd
+     FNL_output/201408/FNLland_2014081018.grd
+     FNL_output/201408/FNLsfc_2014081000.grd
+     FNL_output/201408/FNLsfc_2014081006.grd
+     FNL_output/201408/FNLsfc_2014081012.grd
+     FNL_output/201408/FNLsfc_2014081018.grd</code></pre></li>
+</ol>
+<h2 id="地形土地利用データの作成pp">地形・土地利用データの作成：pp</h2>
+<p>ppディレクトリへ移動し、現実実験のための地形データ、土地利用データを作成する。</p>
+<pre><code> $ cd ${Tutrial_DIR}/real/pp</code></pre>
+<p>ppディレクトリの中には、<code>pp.conf</code>という名前の コンフィグファイルが準備されている。 ドメインの位置や格子点数など、実験設定に合わせて、 適宜<code>pp.conf</code>を編集する必要があるが、 チュートリアルではすでにTable [tab:grids]の設定に 従って編集済みの<code>pp.conf</code>が用意されているためそのまま利用する。 <code>pp.conf</code>の設定の中で特に注意するべき項目は、<code>PARAM_CONVERT</code>である。<br /></p>
+<p><br /></p>
+<p>上記のように<code>CONVERT_TOPO</code>と<code>CONVERT_LANDUSE</code>が <code>.true.</code>となっていることが、 それぞれ地形と土地利用の処理を行うことを意味している。 詳細なコンフィグファイルの内容については、 Appendix [app:namelist]を参照されたい。</p>
+<p>次に、コンパイル済みのバイナリと入力データをppディレクトリへリンクする。</p>
+<pre><code> $ ln -s ../../bin/scale-les_pp ./
+ $ ln -s ${SCALE_DB}/topo    ./
+ $ ln -s ${SCALE_DB}/landuse ./</code></pre>
+<p>今回は、Table [tab:grids]に示されているように。 4つのMPIプロセスを使用する設定なので次のように実行する。</p>
+<pre><code> $ mpirun -n 4 ./scale-les_pp pp.conf</code></pre>
+<p>実行にはおおよそ15秒を要する。ジョブが正常に終了すれば、<code>topo_d01.pe######.nc</code>と<br /><code>landuse_d01.pe######.nc</code>と いうファイルがMPIプロセス数だけ、つまり4つずつ生成される（<code>######</code>にはMPIプロセスの番号が入る）。 それぞれ、ドメインの格子点に内挿された地形と土地利用の情報が入っている。 実行時のログは、<code>pp_LOG_d01.pe000000</code>に出力されるので内容を確かめておくこと。</p>
+<p><span><em>OPTION</em></span><br />gpviewがインストールされている場合、次のコマンドによって、 作成された地形と土地利用データが正しく作成されているかどうか 確認することが出来る．正しく作成されていれば，図 [fig:domain]と同様の図ができる．</p>
+<pre><code>  $ gpview topo_d01.pe00000*@TOPO --aspect=1 --nocont
+  $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1 --nocont</code></pre>
+<h2 id="初期値境界値データの作成init">初期値・境界値データの作成：init</h2>
+<p>init では、SCALE計算に必要な初期値・境界値データを作成する。 まず、initディレクトリへ移動する。</p>
+<pre><code> $ cd ${Tutrial_DIR}/real/init</code></pre>
+<p>initディレクトリの中には、<code>init.conf</code>という名前のコンフィグファイルが準備されている。 <code>pp.conf</code>と同様に、実験設定に合わせて、この<code>init.conf</code>を書き換える必要があるが、 チュートリアル用の<code>init.conf</code>ファイルはTable[tab:grids]の設定に すでに合わせてある。 初期値・境界値データの作成には前節で作成した地形・土地利用データを利用する。 これは、<code>init.conf</code>の中で、下記のように相対PATHを用いて参照するように設定されている。<br /></p>
+<p><br /></p>
+<p>その他に<code>init.conf</code>の設定の中で特に注意するべき項目は、 <code>PARAM_MKINIT_REAL</code>である。<br /></p>
+<p><br /></p>
+<p><code>FILETYPE_ORG</code>は入力する気象場データのファイルフォーマットに 関するパラメータを設定しており、ここでは grads形式のデータを読み込むことを指定している。 詳細なコンフィグファイルの内容については、Appendix [app:namelist]を参照されたい。</p>
+<p>次に、コンパイル済みのバイナリをinitディレクトリへリンクする。</p>
+<pre><code>  $ ln -s ../../bin/scale-les_init ./</code></pre>
+<p>[sec:real<sub>p</sub>rep]節で作成した入力データに、 initディレクトリの中に準備されている<code>&quot;gradsinput-link_FNL.sh&quot;</code>を用いてリンクをはる。</p>
+<pre><code>  $ sh gradsinput-link_FNL.sh</code></pre>
+<p>下記のgrads形式のファイルにリンクが張れれば成功。<br /></p>
+<p><br /></p>
+<p>次に、陸面の変数を用意するのに必要なパラメータファイルにリンクをはる。</p>
+<pre><code> $ ln -s ../../../data/land/* ./   &lt;- 陸面スキーム用のパラメータファイル</code></pre>
+<p>準備が整ったら、4つのMPIプロセスを使用してinitを実行する。</p>
+<pre><code> $ mpirun -n 4 ./scale-les_init init.conf</code></pre>
+<p>実行にはおおよそ45秒を要する。正常にジョブが終了すれば、 <code>boundary_d01.pe######.nc</code>と<code>init_d01_00019094400.000.pe######.nc</code>というファイルが MPIプロセス数だけ、つまり4つずつ生成される（<code>######</code>にはMPIプロセスの番号が入る）。 それぞれ、境界値データと初期値データが入ってるおり、境界値データには複数の時刻のデータが1つのファイルに含まれている。 初期値ファイルの名前のうち<code>&quot;00019094400.000&quot;</code>の部分は，モデル内で算出された実験開始時刻を表している。 処理内容のログとして、<code>init_LOG_d01.pe000000</code>という名前でログファイルも出力されるので内容を確かめておくこと。</p>
+<p><span><em>OPTION</em></span><br />gpviewがインストールされている場合，作成された初期値と境界値が 正しく作成されているかどうかを確認することが出来る。 正しく作成されていれば、図 [fig:init]と同じように描かれる。</p>
+<pre><code>$ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \
+         --xintv=10 --yintv=10 --unit_vect init_d01_00019094400.000.pe00*@QV      \
+         init_d01_00019094400.000.pe00*@MOMX init_d01_00019094400.000.pe00*@MOMY</code></pre>
+<p><embed src="./figure/init_qv-momxy.eps" title="fig:" /><br /></p>
+<h2 id="時間積分を行うrun">時間積分を行う：run</h2>
+<h4 id="run.confの準備">run.confの準備</h4>
+<p>ここではいよいよSCALE-LESモデルを実行する。 まず、runディレクトリへ移動する。</p>
+<pre><code> $ cd ${Tutrial_DIR}/real/run</code></pre>
+<p>runディレクトリの中には、<code>run.conf</code>という名前の コンフィグファイルが準備されており、 ドメインの位置や格子点数など、チュートリアル用の設定（Table[tab:grids]）に合わせてある。 モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用する。 これらのファイルの場所は、<code>run.conf</code>内の <code>TOPO_IN_BASENAME</code>、<code>LANDUSE_IN_BASENAME</code>、 <code>RESTART_IN_BASENAME</code>、および<code>ATMOS_BOUNDARY_IN_BASENAME</code>で 指定している。<br /></p>
+<p><br /></p>
+<p><code>run.conf</code>の設定の中で時間積分に関する設定は、<code>PARAM_TIME</code>の項目にある。<br /></p>
+<p><br /></p>
+<p>初期時刻<code>TIME_STARTDATE</code>はUTCで指定する。 チュートリアルでは2014年8月10日0時UTCに設定している。 積分のための時間ステップは、上記の他、 それぞれの物理スキーム毎に設定できるようになっている。</p>
+<p>計算結果の出力に関する設定は<code>PARAM_HISTORY</code>で行う。<br /></p>
+<p><br /></p>
+<p>上記の設定に従って、下記の<code>HISTITEM</code>に羅列された変数が出力される。 <code>HISTITEM</code>ではオプション変数を加えることで、変数毎に、出力間隔を変更したり、 平均値を出力したりすることも可能である。 これらの説明は[sec:output]を参照されたい。<br /></p>
+<p><br /></p>
+<p>その他に実験で使用される物理過程の設定は、 <code>PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN</code>の項目に 記述されているので、実行前にチェックすること。 詳細なコンフィグファイルの内容については、Appendix [app:namelist]を参照されたい。</p>
+<h4 id="実行">実行</h4>
+<p>コンパイル済みのバイナリをrunディレクトリへリンクする。</p>
+<pre><code> $ ln -s ../../bin/scale-les ./</code></pre>
+<p>陸面過程や放射過程のモデルを起動するためのパラメータファイルに リンクを張る。</p>
+<pre><code> $ ln -s ../../../data/land/* ./   &lt;- 陸面スキーム用のパラメータファイル
+ $ ln -s ../../../data/rad/*  ./   &lt;- 放射スキーム用のパラメータファイル</code></pre>
+<p>準備が整ったら、4つのMPIプロセスを使用してscale-lesを実行する。</p>
+<pre><code>  $ mpirun -n 4 ./scale-les run.conf &lt; /dev/null &gt;&amp;log&amp;</code></pre>
+<p>実行にはおおよそ1〜2時間を要する（評価環境では93分）。長時間の実行になるため、上記のように 標準出力をファイルへ書き出すようにしてバックグラウンドで実行すると便利である。 計算が開始されれば，処理内容のログとして、 <code>&quot;LOG_d01.pe000000&quot;</code>ファイルが生成されるので、 例えば下記のようなコマンドで<code>&quot;LOG_d01.pe000000&quot;</code>ファイルを参照すれば、 どこまで計算が進んでいるかチェックすることができる。</p>
+<pre><code> $ tail -f LOG_d01.pe000000</code></pre>
+<p>正常にジョブが終了すれば、<code>history_d01.pe######.nc</code>と <code>restart_d01.pe######.nc</code>という名前のファイルがMPIプロセス数だけ、 つまり4つずつ生成される（<code>######</code>にはMPIプロセスの番号が入る）。 historyファイルは計算結果の出力ファイルであり、 <code>HISTITEM</code>に指定した変数のみ書き出される。 restartファイルは対応する時刻を開始時刻として 再計算を開始するための初期値ファイルである。 次節でhistoryデータをGrADSで描画可能なバイナリーデータに変換して 結果を確認する方法について説明する。</p>
+<h2 id="sec:quicklook">結果を描画する</h2>
+<p>SCALEモデルの出力ファイルは、MPIプロセス毎に計算領域が分割された状態で出力される。 それぞれのファイルフォーマットは気候・予報(CF)メタデータ規約 に対応したnetcdf4形式である<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>。 ここでは、1) プロセス毎に分割されたnetcdfファイルを gradsで扱えるように１つのバイナリーファイルにまとめ、 2) 作図して結果の確認を行う。</p>
+<h4 id="gradsバイナリーに変換">GrADSバイナリーに変換</h4>
+<p>分割されたnetcdfからGrADSバイナリー変換するには、<code>netcdf2grads_h</code>を使用する。 詳細な使用方法は [sec:net2g]節を参照頂くこととして、 ここでは最低限の手続きのみ説明する。まず、net2gディレクトリへ移動する。</p>
+<pre><code> $ cd ${Tutrial_DIR}/real/net2g</code></pre>
+<p>[sec:source<sub>n</sub>et2g]節でコンパイルしたバイナリーファイルにリンクを張る。</p>
+<pre><code> $ ln -s ../../../../util/netcdf2grads_h/net2g ./</code></pre>
+<p>ここでは例として、2次元変数であるMSLP、PRECを、 3次元変数として850hPa,500h,200hPa面のU、Vを変換する． 2次元変数のためのconfigure fileは<code>net2g.2d.conf</code>に、 3次元変数のためのconfigure fileは<code>net2g.3d.conf</code>に用意している。</p>
+<p><code>netcdf2grads_h</code>実行時のプロセス数は、 計算実行時に使用したプロセス数の約数である必要がある。 ここでは、計算に用いたのと同じ4プロセスを使用することとする。</p>
+<pre><code> $ mpirun -n 4 ./net2g net2g.2d.conf
+ $ mpirun -n 4 ./net2g net2g.3d.conf</code></pre>
+<p>両方とも数秒程度で終了する。成功すれば、下記のファイルが作成される。</p>
+<pre><code>  MSLP_d01z-2d.ctl
+  MSLP_d01z-2d.grd
+  PREC_d01z-2d.ctl
+  PREC_d01z-2d.grd
+  U_d01z-3d.ctl
+  U_d01z-3d.grd
+  V_d01z-3d.ctl
+  V_d01z-3d.grd</code></pre>
+<h4 id="計算結果の確認">計算結果の確認</h4>
+<p>現在のバージョンの<code>netcdf2grads_h</code>では、 SCALEのXY格子座標で、ctlファイルを作成する。 今後、緯度経度座標で描画するためのctlファイルを 出力できるようにする予定であるが、 現バージョンは未対応のため、 緯度経度座標で作図するためのctlを別途用意している。</p>
+<pre><code>  MSLP_d01z-2d_lcc.ctl
+  PREC_d01z-2d_lcc.ctl
+  U_d01z-3d_lcc.ctl
+  V_d01z-3d_lcc.ctl</code></pre>
+<p>計算結果確認用の図を作成するための スクリプト<code>checkfig.gs</code>を使って作図する。</p>
+<pre><code> $ grads -blc checkfig.gs</code></pre>
+<p>成功すると、下記の図が作成される。 なお、GrADSのバージョンによって文法が異なるので、 Warningが出る場合は、適宜変更する。</p>
+<pre><code>  mslp.png
+  prec.png
+  wind.png</code></pre>
+<p>計算と変換が成功していれば、下記と同じ図が描画される。</p>
+<p><embed src="./figure/real_mslp.eps" title="fig:" /><br /></p>
+<p><embed src="./figure/real_prec.eps" title="fig:" /><br /></p>
+<p><embed src="./figure/real_wind.eps" title="fig:" /><br /></p>
+<h1 id="sec:advance">SCALE-LES Advance use</h1>
+<h2 id="sec:adv_settings">実験設定の詳細</h2>
+<p>ここではチュートリアルで触れなかった実験設定の詳細について説明する。SCALEでサポートする全てを 網羅してはいないが、格子間隔、計算領域、積分時間間隔、物理過程等の重要な設定方法については できる限り丁寧に説明するように心がけた。実験設定は全て、<code>pp_***.conf</code>、<code>init_***.conf</code>、 および<code>run_***.conf</code>のconfigファイルを編集することで設定できる。従って、以降の説明は 全てconfigファイルの編集方法について述べたものである。configファイルの設定変数の詳細は 付録[app:namelist]に記載があるので、本節と併せて読み進めて欲しい。 また以下の説明は、第3章と第4章のチュートリアルをすでに実行してきたものとして説明する。</p>
+<h3 id="sec:adv_gridspace">格子間隔</h3>
+<p>はじめに、この設定を行う上で注意しなければならない点を挙げる。以下で説明する このことに注意して設定変更を進めてもらいたい。</p>
+<p>SCALEでは、格子点の位置を均等間隔で設定することも、任意の格子点位置を直接指定することもできる。 均等間隔で設定する場合は、configファイルの<code>PARAM_GRID</code>の<code>DX</code>、<code>DY</code>、<code>DZ</code>の変数を 指定することで、格子間隔を指定できる（<code>DX</code>、<code>DY</code>、<code>DZ</code>はそれぞれ、東西、南北、鉛直方向の 格子間隔を意味する）。一方、直接格子点の位置を指定する場合は、<code>FZ</code> <a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a> などの格子点位置変数に対して直接に値を代入する。これらの変数は全て、倍精度浮動小数点変数で単位はメートル[m]である。</p>
+<p>例として理想実験のチュートリアルのrun.confファイル（run_R20kmDX500m.conf）を見てみると次のように記載されている。<br /></p>
+<p><br /></p>
+<p><code>DX</code>、<code>DY</code>は“<code>500.D0</code>”と倍精度表記を用いて500 mと指定されており、水平方向の格子間隔は 500 mの均等間隔に設定されていることがわかる。例えば、2 kmの格子間隔で実験がしたければ、 ここに“<code>2000.D0</code>”と記述すればよい。</p>
+<p>一方、<code>FX(:)</code>の項目は鉛直方向の格子点位置を直接指定している。ここには示していないが、同じconfigファイル中の <code>PARAM_INDEX</code>の項目に“<code>KMAX = 97</code>”として鉛直97層であると設定されているため、最下層から再上層まで 97層分の位置が指定されている。これを見れば、最下層の高度は80 m、最上層の高度は約20 kmであるとわかる。 モデルの鉛直層とり方を変えたい場合は、これに習って<code>KMAX</code>で指定した層数に応じて高度をしていすればよい <a href="#fn4" class="footnoteRef" id="fnref4"><sup>4</sup></a> 。</p>
+<h4 id="バッファー格子点の設定">バッファー格子点の設定</h4>
+<p>SCALEでは計算領域境界のすぐ内側に「バッファー格子点」を設定することができる。バッファー格子点では、指定された値や 親モデルのデータにダンピングする、いわゆるナッジングが行われる。これは、モデル最上層で重力波が反射することを 緩和するための「スポンジ層」として利用したり、現実大気実験を行う際に側面境界において親モデルと SCALEで計算される大気場が乖離することを防ぐための「緩和領域」として利用される。</p>
+<p>バッファー格子点は、<code>BUFFER_DX</code>、<code>BUFFER_DY</code>、<code>BUFFER_DZ</code>、および<code>BUFFFACT</code>の変数によって 設定される。<code>BUFFER_DX</code>、<code>BUFFER_DY</code>、<code>BUFFER_DZ</code>は、それぞれの方向のバッファー領域の幅 （単位はメートル）を示す。バッファー領域は境界から内側に<code>BUFFER_DX</code>等で指定された幅で設置され、 バッファー領域内の格子点はバッファー格子点として認識される。したがって、その分だけナッジングの影響を受けないで計算 される自由領域は狭くなることに注意が必要である。水平方向には東西南北どの方向にも同様にバッファー領域が設定されるが、 鉛直方向には計算領域の上端にのみバッファー領域が設定され、下端には設定されない。 <code>BUFFFACT</code>はバッファー領域内の格子点の格子間隔に対するストレッチ係数である。 下記の関係式によって、バッファー領域内の格子間隔（BDX）は決定される。 <br /><span class="math">$$\begin{aligned}
+BDX_{i+1}={BDX_{i}}^{BUFFFACT} \nonumber \\
+BDX_{1}=DX_{default} \nonumber\end{aligned}$$</span><br /> ここで、<span class="math"><em>i</em></span>はバッファー領域内の格子点番号を表し、計算領域の内側から外側へ向かって番号が振られる。 <span class="math"><em>D</em><em>X</em><sub><em>d</em><em>e</em><em>f</em><em>a</em><em>u</em><em>l</em><em>t</em></sub></span>は<code>PARAM_GRID</code>の項目で設定される元々の<code>DX</code>を意味する。 <span class="math"><em>i</em></span>の最大値<span class="math"><em>n</em><em>i</em></span>は、<span class="math">$\sum_{i=1}^ni BDX_{i} &gt; BUFFER_{DX}$</span>の関係を達成する最小の数として決定される。 したがって、“<code>BUFFFACT = 1.0</code>”ならば、格子間隔をストレッチせずに等間隔であることを意味し、 “<code>BUFFFACT = 1.2</code>”ならば、計算領域の内側から境界へ向けて、格子点間距離がもともとの格子間隔から 1.2倍の割合で広がっていくことを意味する。<code>BUFFFACT</code>の値を大きくすると、バッファー領域の幅が同じでも バッファー格子点として使用される格子点数は少なくなる。</p>
+<p>例として理想実験のチュートリアルのrun.confファイル（run_R20kmDX500m.conf；上に表示したもの）を見てみると、 <code>BUFFER_DZ = 5000.D0</code>、<code>BUFFFACT = 1.0D0</code>と指定されている。<code>BUFFER_DZ</code>以外には指定がないので、 水平方向にはバッファー領域が設定されない（この実験は水平方向には周期境界条件になっておりバッファー領域は必要ない）。 <code>BUFFFACT = 1.0D0</code>となっているため、もとの格子間隔のままストレッチは行わない。 最上層の高度が20222 mと指定されており、鉛直方向のバッファー領域の幅は5000 mと指定されているため、 モデル計算領域のトップから高度15222 mまでがバッファー領域となる。鉛直層の高度指定によれば、92層目の高度が 15517 mで、91層目の高度が14910 mであるため、92層目まではバッファー領域だが、91層目はバッファー領域ではない。 繰り返しになるが、これらの設定は<code>pp_***.conf</code>、<code>init_***.conf</code>、<code>run_***.conf</code>の すべてのconfigファイルにおいて共通した設定になっていなければならない。</p>
+<p>SCALEでは、バッファー領域の大きさ、バッファー格子点の数について、まだ明確な指標を設定できていないが、 鉛直方向（計算領域トップ）のバッファー格子点は5点以上、水平方向（側面境界付近）のバッファー格子点は 20〜40点程度を推奨している。実験設定や事例によっては、さらにバッファー格子点を増やしたり、ストレッチ係数を 用いてバッファー領域を広げる処理が必要であったり、ここでは説明しなかったが<code>ATMOS_BOUNDARY_taux</code>、 <code>ATMOS_BOUNDARY_tauy</code>といった設定項目を調整してバッファー領域のナッジング強度を強める必要があったりする。</p>
+<h3 id="sec:adv_domainsize">計算領域の大きさ</h3>
+<p>ここで説明するこのことに注意して設定変更を進めてもらいたい。</p>
+<p>SCALEはMPI並列プログラムであり、全計算領域は複数のMPIプロセスに分割されて並列実行される。計算領域は 水平2次元（東西方向 <span class="math"> × </span> 南北方向）に分割される。したがって計算領域の大きさは、MPIプロセス数と 1つのMPIプロセスが担当する格子点数によって決まる。以降、X方向は水平軸の東西方向、Y方向は水平軸の南北方向を それぞれ意味するものとする。</p>
+<p>X方向、およびY方向のMPIプロセスの割付設定は、configファイルの<code>PARAM_PRC</code>の項目にある<code>PRC_NUM_X</code>、 および<code>PRC_NUM_Y</code>よって指定される。また、1つのMPIプロセスが担当する格子点数は、 <code>PARAM_INDEX</code>項目にある<code>KMAX</code>、<code>IMAX</code>、<code>JMAX</code>の変数によって指定され、 それぞれ鉛直方向、X方向、Y方向の格子点数を表す。 したがって、X方向の総格子点数は<code>PRC_NUM_X</code> <span class="math"> × </span> <code>IMAX</code>、Y方向の総格子点数は <code>PRC_NUM_Y</code> <span class="math"> × </span> <code>JMAX</code>と表現される。また、計算に必要な総MPIプロセス数は、 <code>PRC_NUM_X</code> <span class="math"> × </span> <code>PRC_NUM_Y</code>となる。実行時にMPIコマンドに指定するMPIプロセス数は、 この総MPIプロセス数を指定しなければならない。この条件を満たさない場合は，LOGファイルなどに<br /></p>
+<p><br /></p>
+<p>というメッセージが出力がされて計算が異常終了するので、設定、もしくは実行コマンドを見なおしてもらいたい。</p>
+<p>ここまでの復習として、現実大気実験のチュートリアルで使用した<code>run.conf</code>ファイルを例にして、 上述の内容を確認してみる。<br /></p>
+<p><br /></p>
+<p>まずMPIプロセス数については<code>PRC_NUM_X = 2</code>、<code>PRC_NUM_Y = 2</code>と設定されているため、 X方向、Y方向ともに2分割されており、総計として4つのMPIプロセスを使用した計算となることがわかる。 一方、1つのMPIプロセスあたりの格子点数については、<code>IMAX = 30</code>、<code>JMAX = 30</code>と指定されているため、 総格子点数としては、X方向、Y方向ともに<span class="math">2 × 60 = 120</span>となり120格子点である。 同じconfigファイル内に記載されている<code>PARAM_GRID</code>の項目の<code>DX</code>、<code>DY</code>はともに15000 m（15 km） と指定されているため、<span class="math">120<em>g</em><em>r</em><em>i</em><em>d</em> × 15<em>k</em><em>m</em> = 1800<em>k</em><em>m</em></span>の計算から、<span class="math">1800<em>k</em><em>m</em> × 1800<em>k</em><em>m</em></span>の正方形の計算領域 が設定されていることがわかる。</p>
+<p><code>PARAM_PRC</code>の項目の<code>PRC_PERIODIC_X</code>、<code>PRC_PERIODIC_Y</code>は側面境界条件に関する設定である。 その詳細は次節で説明する。</p>
+<h4 id="計算領域の変更例">計算領域の変更例</h4>
+<p>ここでは、現実大気実験のチュートリアルのconfigファイル（<code>run.conf</code>）を元にしていくつかの変更例を説明する。 以下の変更例をもとに、自分の行いたい実験設定にあったconfigファイルを作り上げてもらいたい。<br /></p>
+<p><span><strong>a. MPIプロセス数はそのままに計算領域を4倍に広げる</strong></span><br /></p>
+<p>この設定はとても簡単である。デフォルト設定は、X方向、Y方向ともに2つのMPIプロセスを使用し、格子点数はともに 30点なので、全領域の格子点数は、<span class="math">(2 × 60)<sub><em>x</em></sub> × (2 × 60)<sub><em>y</em></sub> = 14400</span>点である。 従って、計算領域を4倍に広げるためには、<code>IMAX</code>、<code>JMAX</code>の値をデフォルトに対して2倍の値に変更するだけである。 これで、全領域の格子点数は、<span class="math">(2 × 120)<sub><em>x</em></sub> × (2 × 120)<sub><em>y</em></sub> = 57600</span>点となり、14400点の4倍の 計算領域になっている。この変更を施したconfigファイルの例は次のとおりである。 赤文字の部分がデフォルトからの変更点を意味する。<br /></p>
+<p><br /></p>
+<p><br /></p>
+<p>先程は、MPIプロセス数を維持して計算領域を広げたが今度は、1つのMPIプロセスあたりの格子点数はそのままに、MPIプロセス数を 増やすことで計算領域を4倍に広げる方法を説明する。1つのMPIプロセスあたりの格子点数（プロセスあたりの演算量）は そのままにMPIプロセス数を増やすことで計算領域を広げる（総演算量を増やす）。この場合、1つのCPUが担当する問題サイズは 変わらないため、理想的には計算にかかる時間を増やすことなく計算領域を広げることができる <a href="#fn5" class="footnoteRef" id="fnref5"><sup>5</sup></a>。</p>
+<p>計算領域を4倍に広げるためには、<code>PRC_NUM_X</code>、<code>PRC_NUM_Y</code>の値をデフォルトに対して2倍の値に変更するだけである。 これで、全領域の格子点数は、<span class="math">(4 × 60)<sub><em>x</em></sub> × (4 × 60)<sub><em>y</em></sub> = 57600</span>点となり、14400点の4倍の 計算領域になっている。このとき必要なMPIプロセス数は、<span class="math">4 × 4 = 16</span>プロセス、つまりデフォルトの4倍のMPIプロセス数が必要になる。 この変更を施したconfigファイルの例は次のとおりである。赤文字の部分がデフォルトからの変更点を意味する。<br /></p>
+<p><br /></p>
+<p><br /></p>
+<p>現実大気実験チュートリアルのデフォルト設定は、X方向、Y方向の総格子点数は120点で水平格子間隔が15 kmなので、 計算領域は1800 km <span class="math"> × </span> 1800 kmの領域となっている。ここでは、この領域を維持したまま水平格子間隔を3 kmに 狭める設定にトライする。水平格子間隔が15 kmから3 kmへ1/5だけ小さくなるので逆に1方向あたりの総格子点数は5倍、 つまり600点必要になる。この600点をどのようにMPIプロセス数とプロセスあたりの格子点数として割り振るかは ユーザーの環境や計算機リソース量によって異なる。たとえば、X方向、Y方向ともに10プロセスずつ、合計で100プロセスを 使えば、プロセスあたりの格子点数は60点となり、積分時間間隔が短くなることを無視すれば演算量はデフォルトと変わらない。</p>
+<p>しかし、なかなか100プロセスを利用できる計算機を持っている環境にいる人は少ないだろう。そこで、デフォルトから 各方向に1つずつMPIプロセス数を増やし、<span class="math">3 × 3 = 9</span>プロセスを利用した設定を考えてみる。 1方向あたりの総格子点数は600点なので、プロセスあたりの格子点数は<span class="math">600 ÷ 3 = 200</span>点となる。</p>
+<p>ここでの変更で気をつけなければならないことは、バッファー領域の幅である。現実大気実験チュートリアルの デフォルト設定ではバッファー領域は、計算領域トップと東西南北の側面境界に設定されており、側面境界のバッファー領域の 幅は片側300 km、つまり15 km格子間隔で20点のバッファー格子点が確保されている。水平格子間隔を15 kmから3 kmへ変更 したので、このままでは100点もの格子点がバッファー領域に取られてしまう。SCALEでは一般的に20〜40点程度の バッファー格子点を設定するようにしているので、デフォルトと同じ20点になるように側面境界のバッファー領域の 幅は片側60 kmと設定する。鉛直層設定は変更していないため、計算領域トップのバッファー領域については設定を変更する 必要はない。</p>
+<p>この変更を施したconfigファイルの例は次のとおりである。赤文字の部分がデフォルトからの変更点を意味する。<br /></p>
+<p><br /></p>
+<h3 id="sec:adv_mapproj">地図投影法と計算領域の位置</h3>
+<p>計算領域の位置と投影法は、configファイルの<code>PARAM_MAPPROJ</code>の項目を編集することで設定できる。 はじめに下記の例をもとに説明する。<br /></p>
+<p><br /></p>
+<p>まず<code>MPRJ_basepoint_lat</code>と<code>MPRJ_basepoint_lon</code>は、計算領域の中心の緯度・経度を表す。 SCALEでは、北緯を正、南緯を負の値として表現し、経度は0度を起点に右回りで表現するため、この設定では計算領域の 中心が北緯35.360556度、東経138.727778度に位置することになる。この場所を中心に指定された大きさで、計算領域が 設定される<a href="#fn6" class="footnoteRef" id="fnref6"><sup>6</sup></a>。 実際にはSCALE内部での格子点は実距離に基づいて格子点が配置されるので、投影法で設定されるのは、 実距離に基づいた緯度・経度座標が計算される。この緯度・経度情報は、すべてのSCALEのNetCDF形式の出力ファイルに 含まれている。</p>
+<p><code>MPRJ_type</code>は、地図投影法の種類を表しており、<code>MER</code>はメルカトル図法を意味する。 SCALEで現在選択できる地図投影法とその指定文字列は次のとおりである。</p>
+<p><span>150mm</span><span>|l|X|</span> 地図投影法 &amp; <code>MPRJ_type</code><br />地図投影なし（理想実験用）&amp; <code>NONE</code><br />ランベルト正角円錐図法 &amp; <code>LC</code><br />極心平射図法（ポーラーステレオ） &amp; <code>PS</code><br />メルカトル図法 &amp; <code>MER</code><br />正距円筒図法 &amp; <code>EC</code><br /></p>
+<p>[tab:map<sub>p</sub>roj]</p>
+<p>メルカトル図法以外の投影法も、<code>MPRJ_type</code>の指定を変更するだけで、上記と同じように使用可能であるが、 ランベルト正角円錐図法の設定方法については、設定方法が異なるため以下で説明する。ここでは、現実大気実験 チュートリアルで使用した<code>run.conf</code>ファイルを例に挙げる。<br /></p>
+<p><br /></p>
+<p>SCALEでは“standard parallel type”の実装を採用しているため、投影を決定する上で2つの“standard latitude”の 位置を指定する必要がある。2つのstandard latitudeに挟まれた領域では、緯線・経線の長さの比が地球楕円体面上における 長さの比と近くなるように調節される。従って、メルカトル図法の場合に比べて、standard latitudeを設定する <code>MPRJ_LC_lat1</code>と<code>MPRJ_LC_lat2</code>の項目が追加されている。それぞれ、南側、北側のstandard latitudeの 値を“degree”で指定する。</p>
+<p>さらに下記のように<code>MPRJ_basepoint_x</code>と<code>MPRJ_basepoint_y</code>という変数を用いることで、地図投影中心と 計算領域中心をずらすこともできる。<br /></p>
+<p><br /></p>
+<p><code>MPRJ_basepoint_x</code>と<code>MPRJ_basepoint_y</code>は、地図投影中心の位置を、計算領域の南西端（左下角）から の距離で指定するパラメータで、単位はメートルである。これらを指定しない場合は、デフォルト設定として計算領域中心と 地図投影中心の位置は一致する。上記の場合とデフォルト設定の場合を比較したものが図[fig:map<sub>l</sub>c]である。 図[fig:map<sub>l</sub>c]aはデフォルト設定で投影中心と計算領域中心が一致している場合、図[fig:map<sub>l</sub>c]bは、 計算領域の位置を投影中心からずらした場合の関係を表している。図[fig:map<sub>l</sub>c]bでは、計算領域の南西端から <code>MPRJ_basepoint_x</code>と<code>MPRJ_basepoint_y</code>で指定した距離だけ離れた位置に投影中心がある。</p>
+<p><embed src="./figure/LC_latlon_xy.eps" title="fig:" /><br /></p>
+<h3 id="sec:adv_lateralbnd">側面境界条件</h3>
+<p>SCALEでは、側面境界条件として「周期境界条件」と「外部入力データ指定」の2種類から選択できる。デフォルトの設定は東西方向、 南北方向ともに周期境界条件となっている。主に理想実験では周期境界条件を使用し、現実大気実験では外部入力データ指定 を使用することを想定している。設定方法によっては、他の側面境界条件も設定可能であるが、現在のところ想定外の 使用方法であるためサポートできない。</p>
+<p>側面境界条件の設定は、configファイルの<code>PARAM_PRC</code>の項目を編集することで設定できる。 周期境界条件を設定したい場合は、デフォルト設定なので特にconfigファイルに記述する 必要はない。理想実験チュートリアルのconfigファイルの<code>PARAM_PRC</code>の項目を見れば特に境界条件に関する記述が ないことがわかるだろう。一方、外部入力データ指定を設定したい場合は、下記のように“<code>PRERIODIC</code>”のスイッチを “false”に指定する。<br /></p>
+<p><br /></p>
+<p>外部入力データ指定の場合は、[sec:adv<sub>g</sub>ridspace]節で説明した必ず側面境界のバッファー領域を 設定しなければならない。バッファー領域でどの変数に強制をかけるか（ダンピングするか）、またその場合の時定数などの 設定はconfigファイルの<code>PARAM_ATMOS_BOUNDARY</code>の項目で指定できる。現実大気実験のチュートリアルの configファイル（<code>run.conf</code>）を元にして一部の項目を説明する。<br /></p>
+<p><br /></p>
+<p>上2つの項目は、“REAL”が外部入力データを使用することを意味し、次の行の指定がその外部入力データのファイル名を指定している。 上から3つ目の設定項目である“<code>ATMOS_BOUNDARY_USE_VELZ = .true.</code>”は、鉛直速度に対して「強制をかける」ことを 意味している。一方、“<code>ATMOS_BOUNDARY_USE_QHYD = .false.</code>”として、凝結物の混合比に対しては逆に「強制をかけない」 設定になっている。その次の項目の“<code> ATMOS_BOUNDARY_VALUE_VELZ</code>”は、鉛直速度に対して 強制をかける際、ここで指定した値、“0.0 m/s”へ近づくように強制をかけるという指定を意味する。 最後の行の“<code>ATMOS_BOUNDARY_UPDATE_DT</code>”は、外部入力データの更新間隔が21600秒であることを 意味している。たとえば、6時間間隔でデータが与えられている再解析データを外部入力データとして使用する場合にこの設定になる。</p>
+<p>他にも、水平速度東西成分（<code>VELX</code>）、水平速度南北成分（<code>VELY</code>）や温位（<code>POTT</code>）などに対して同様の設定項目が 存在する。また、ダンピングの時定数を設定する<code>ATMOS_BOUNDARY_TAUX</code>や<code>ATMOS_BOUNDARY_TAUY</code>といった設定項目がある。 更なる詳細については、付録[app:namelist]を参照のこと。</p>
+<h3 id="sec:adv_timeintiv">積分時間と積分時間間隔の設定</h3>
+<p>例えば理想実験チュートリアルでは、積分時間は1時間とし、時間積分間隔として力学過程は1.0秒、雲物理過程は10.0秒で実行したが、 積分時間を伸ばしたい場合や、計算にかかる時間を短くするために積分時間間隔を長くしたり、計算不安定を防ぐために 積分時間間隔を短くすることがあるだろう。</p>
+<p>積分時間と積分時間間隔の設定は、configファイル<code>run_***.conf</code>の<code>PARAM_PRC</code>の項目を編集することで設定できる。 この項目はモデル本体の実行だけで有効である。理想実験チュートリアルで使用した<code>run_R20kmDX500m.conf</code>の例を示す。<br /></p>
+<p><br /></p>
+<p>上記の各部分を変更することで積分時間や積分時間間隔を変更することができる。</p>
+<h2 id="sec:adv_physics">物理モデルの利用</h2>
+<p>本節では雲物理モデルや乱流モデルなどの物理モデルの利用方法を説明する。 チュートリアル実験で用いてきた物理モデルについて理解するためにconfigファイルの設定を再確認しながら説明をすすめる。 ここでは例として、理想実験チュートリアルのsampleディレクトリ内にある<code>run_R20kmx20kmDX500m.conf</code>を取り上げる。</p>
+<h3 id="sec:adv_microphys">雲微物理スキームの設定</h3>
+<p>チュートリアルでは、<span class="citation"></span>の1-momentバルク法を用いていたが、SCALEには暖かい雲のみを考慮する1-momentバルク法 (<span class="citation"></span>)，氷雲を含んだ2-momentバルク法(<span class="citation"></span>)、1-momentビン法の４種類の雲微物理スキーム (<span class="citation"></span>)も利用することが可能である。 これらの雲微物理スキームの選択は，init.confとrun.confに記載されているPARAM_TRACERに含まれる “TRACER_TYPE”及び，PARAM_ATMOSに含まれる“ATMOS_PHY_MP_TYPE”によって設定する。 <span><strong>両者は同じにする必要があり</strong></span>，選択する雲微物理スキームによって以下のように設定する。</p>
+<pre><code>KESSLER ：水雲のみの1-momentバルク法(Kessler 1969)
+TOMITA08：氷雲を含む1-momentバルク法(Tomita 2008)
+SN14    ：氷雲を含む2-momentバルク法(Seiki and Nakajima 2014)
+SUZUKI10：1-momentビン法(Suzuki et al. 2010，氷雲を含むか否かはオプションで選択)</code></pre>
+<p>このときことに注意されたい． SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER_TYPEとATMOS_PHY_MP_TYPEを変更するだけで実行可能である。 一方SUZUKI10を選択した場合は、init.conf、run.confの双方に<br /></p>
+<p><br /></p>
+<p>を追記し、さらにinit.confに記載されているPARAM_MKINITに「flg_bin = .true. 」を追加する必要がある。<br /></p>
+<p><br /></p>
+<p>この場合も、<span><strong>init.confとrun.confに記載されるPARAM_BINは同一にする必要がある</strong></span>。 SUZUKI10を選択した時には、micpara.datという 雲微物理の計算に必要なファイルが自動生成される。micpara.datがすでに存在する場合は存在する場合はあるものを利用するが、 nbinが変わると新たに作成しなければならない。micpara.datにnbinの情報が記載されているが、もしrun.confに記載されるnbinと micpara.datに記載されているnbinが異なれば、<br /></p>
+<p><br /></p>
+<p>というエラーメッセージを標準出力に出力して計算が落ちるようになっている。 そのため、nbinを変更した際は、micpara.datを消去して 新たに作り直す必要がある（micpara.datを消して再度SCALEをSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される）。</p>
+<h3 id="sec:adv_turbulence">乱流スキームの設定</h3>
+<p>理想実験チュートリアルでは乱流スキームは導入されていなかったが、SCALEにはSmagorinsky typeの乱流スキーム (<span class="citation"></span>; <span class="citation"></span>; Brown 1994; Scotti et al. 1994)とMellor-Yamada Level 3の 乱流スキーム(MYNN, <span class="citation"></span>,<span class="citation"></span>)導入されている。 これらを利用するには，init.confとrun.conf双方のPARAM_ATMOSに「ATMOS_PHY_TB_TYPE」を加える。</p>
+<pre><code>ATMOS_PHY_TB_TYPE=&quot;SMAGORINSKY&quot; (Smagorinsky typeのサブグリッドモデル)
+ATMOS_PHY_TB_TYPE=&quot;MYNN&quot; (Mellor-Yamada Level 3のRANSモデル）</code></pre>
+<p>またrun.confのPARAM_TIMEに</p>
+<pre><code> TIME_DT_ATMOS_PHY_TB       = 0.10D0,  (乱流スキームの時間ステップ)
+ TIME_DT_ATMOS_PHY_TB_UNIT  = &quot;SEC&quot;,　（TIME_DT_ATMOS_PHY_TBの単位）</code></pre>
+<p>を加える。これらを設定した上で，run.shを実行することで，乱流スキームを考慮した計算が可能になる． 地表面フラックスのバルク係数を決めるスキーム，放射スキーム，都市スキームなどに関しては， 現実事例を対象とした４章を参照されたい．</p>
+<h3 id="sec:adv_radiation">放射過程の設定</h3>
+<p>SCALEには、放射過程としてMSTRN (<span class="citation"></span>)が実装されている。ここでは、MSTRNの設定方法を説明する。</p>
+<p>放射モデルを実行するには、各種外部データとパラメタテーブルが必要である。 オゾンのプロファイルなどの外部データとパラメタテーブルは、“scale-les/test/data/rad/”の中に与えられている。 放射過程を利用する実験を行う場合は、必ず“scale-les/test/data/rad/”下の外部データとパラメタテーブルが必要である。 詳細に関しては随時説明を加えていく。</p>
+<h3 id="sec:adv_landocean">陸面・海洋上の地表面フラックスモデルの設定</h3>
+<p>SCALEには、陸面モデルとしてバケツモデル（バルク交換係数は <span class="citation"></span>; <span class="citation"></span>に基づく）が 実装されている。また海洋上のフラックスモデルとしてスラブモデルが実装されている。 ここでは、陸面モデルと海洋モデルの設定方法について説明する。</p>
+<p>陸面モデルを実行するには、土地利用データとそれに対応するパラメタテーブルが必要である。 パラメタテーブルは、“scale-les/test/data/land/”の中に“param.bucket.conf”というファイルで与えられている。 中には10種類を超える土地利用区分とそれらに対応する粗度長などのパラメタが与えられている。陸面が存在する領域で実験 を行う場合は、必ず“param.bucket.conf”のパラメタテーブルが必要である。 詳細に関しては随時説明を加えていく。</p>
+<h3 id="sec:adv_urban">都市モデルの設定</h3>
+<p>SCALEには、都市モデルとして単層キャノピーモデル(<span class="citation"></span>)が実装されている。 ここでは都市モデルの設定方法について説明する。 詳細に関しては随時説明を加えていく。</p>
+<h2 id="sec:adv_datainput">任意のデータをSCALEで使用する</h2>
+<h3 id="sec:adv_bnddata">初期値・境界値データ</h3>
+<p>現在、SCALEでは下記のデータの読み込みとそれらに基づく初期値・境界値作成に対応している。</p>
+<p><span>150mm</span><span>|l|l|l|X|</span> データ形式 &amp; 対応状況 &amp; <code>FILETYPE_ORG</code> &amp; 備考<br />バイナリデータ &amp; &amp; <code>GrADS</code> &amp; データ読み込み用のnamelistを別途必要とする。<br />NICAMデータ &amp; &amp; <code>NICAM-NETCDF</code> &amp; netCDF形式のLatLonデータに対応する。<br />WRFデータ &amp; &amp; <code>WRF-ARW</code> &amp; “wrfout”、“wrfrst”の両方に対応する。<br />SCALEデータ &amp; &amp; <code>SCALE-LES</code> &amp; historyデータのみ対応；latlonカタログを必要とする。<br /></p>
+<p>[tab:inputdata<sub>f</sub>ormat]</p>
+<p>これらの使い分けは、初期値・境界値作成時、すなわち“scale-les_init”の実行時のconfigファイルの <code>PARAM_MKINIT_REAL</code>の項目中の<code>FILETYPE_ORG</code>に表[tab:inputdata<sub>f</sub>ormat]に示した設定値を 指定することで使い分ける。</p>
+<p>最も汎用的に使用するデータ形式は「バイナリデータ」になることと思う。ここでいうバイナリデータとは、「4バイト単精度 浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。その主な使用方法は、 第[sec:tuto<sub>r</sub>eal]章の現実大気実験チュートリアルで説明したとおりである。 その他に任意のデータを境界値に使用したい場合は、バイナリデータ形式に変換することで読み込ませることができる。</p>
+<p>SCALEデータ形式は主にオフライン・ネスティング実験で使用される。詳細については、[sec:nest<sub>o</sub>ffline]節を 参照されたい。NICAMデータ形式は、nativeのicosahedral grid systemデータではなく、緯度・経度座標に変換されたデータの み読み込みに対応している。WRFデータ形式についてはモデル出力データをそのまま使用することができる。 これらの読み込み方法に関しては随時説明を加えていく。</p>
+<h2 id="sec:nest_exp">ドメインネスティング実験</h2>
+<p>本節では、SCALEでネスティング実験を行う方法について説明する。ネスティング実験とは、図[fig<sub>n</sub>estsample]に 示すように、水平格子間隔の異なる複数の計算領域（ドメイン）を設定し、領域が重複するように入れ子（ネスト）構造に することで、広領域かつ高解像度のドメインを設定する計算領域設定方法である。図[fig<sub>n</sub>estsample]の例では、 3つのドメインを用いた3段ネスティング構成になっている。外側のドメインは比較的粗い 水平解像度であるが広い領域を取ることで大きな場の構造を表現することができる。逆に内側のドメインは、比較的狭い 領域であるが細かい水平解像度を取ることで対象とする現象の細かい構造を表現することができる。ここでは、 入れ子構造のうち、データを渡す側のドメインを「親ドメイン」、データを受ける側のドメインを「子ドメイン」と称する。</p>
+<p>SCALEはオフライン・ネスティング実験とオンライン・ネスティング実験の両方をサポートしている。オフライン・ネスティング実験は、 はじめに親ドメインだけで時間積分を行い、その計算結果のhistoryデータを用いて、子ドメイン用の初期値・境界値を作成する。 その後に子ドメインの時間積分を行う。オンライン・ネスティング実験は、親ドメインと子ドメインを同時に実行し、適宜計算途中の データを親ドメインから子ドメインへMPI通信によって受け渡しすることで、子ドメインの時間積分を行う。 オンライン・ネスティング実験が実行できる計算機リソースがあれば、オンラインで実行することを推奨する。 それは、オンラインの場合、子ドメインの境界条件の更新間隔は親ドメインの時間積分間隔に一致するため、 可能な限り細かい境界条件の更新間隔を得ることができる。また、中間ファイルも作成されずディスクリソースにも優しい。</p>
+<p>ドメインネスティング実験を行う上で共通する実験設定の制限事項は、基本的に以下の2点だけである。</p>
+<p>これに加えて、オンライン・ネスティング実験の場合、現在のところ親ドメインと子ドメインの積分時間は一致させなければならない。 SCALEではオンライン・ネスティングであっても、親ドメインと子ドメインの間で鉛直層数、鉛直層設定、地図投影法、そして 物理スキームが異なっていても構わない。</p>
+<p>オフライン、オンラインに関わらず、ドメイン間の格子間隔比率（<span class="math"><em>D</em><em>X</em><sub><em>p</em><em>a</em><em>r</em><em>e</em><em>n</em><em>t</em></sub>/<em>D</em><em>X</em><sub><em>c</em><em>h</em><em>i</em><em>l</em><em>d</em></sub></span>）にシステム上は制限はないが、 この比率が大きすぎると計算結果の物理的なパフォーマンスが下がる可能性がある。本書では5倍以下で使用することを推奨する。</p>
+<p>以降、まずは実行方法がわかりやすいオフライン・ネスティング実験から説明し、ついでオンライン・ネスティング実験に ついて説明する。configファイルの名前に特に指定はないが、ここでの表記としては、 ことを意味し、 ことを意味する。</p>
+<p><embed src="./figure/nesting_sample.eps" title="fig:" /><br /></p>
+<h3 id="sec:nest_offline">オフライン・ネスティング実験の方法</h3>
+<p>ここでは、親ドメインは解像度は荒いが広領域の外側ドメインで、子ドメインは領域は狭いが高解像度の内側ドメインで あることを想定する。このとき、2段ネスティングのオフライン・ネスティング実験の実行過程は次のようになる。</p>
+<ol>
+<li><p>親ドメインの時間積分計算を行う。</p></li>
+<li><p>親ドメインの出力ファイル（history）を用いて子ドメインの初期値/境界値を作成する。</p></li>
+<li><p>作成した初期値/境界値を用いて子ドメインの時間積分計算を行う。</p></li>
+</ol>
+<p>以下、この流れに沿って説明を進める。親ドメインと子ドメインそれぞれについて、“pp.***.conf”、“init.***.conf”、 そして“run.***.conf”ファイルを事前に作成し、親ドメイン、子ドメインともに地形/土地利用データの作成を終え、 親ドメインについては、初期値/境界値データの作成を終えていることを想定して説明を進める。 ここで説明するオフライン・ネスティング実験の設定を記述したconfigファイルがチュートリアルディレクトリの下、 “tutorial/real/sample/offline_nesting”に置いてあるので、説明を読み進める上で参考にしてもらいたい。</p>
+<h4 id="親ドメインの時間積分計算を行う">親ドメインの時間積分計算を行う</h4>
+<p>基本的には通常のシングルドメインの計算と同じ方法で実行すればよいが、“run.conf”ファイルの設定について、 次の3点の注意点・変更点がある。</p>
+<ul>
+<li><p>親ドメインのhistory出力間隔を適度に細かくとること。</p></li>
+<li><p>親ドメインのhistory出力形式で<code>ZINTERP</code>は“false”に設定すること。</p></li>
+<li><p>親ドメインのhistory出力形式で<code>STEP0</code>は“true”に設定すること。</p></li>
+<li><p>親ドメインの計算領域を子ドメインへ伝える「カタログファイル」を出力すること。</p></li>
+</ul>
+<p>この設定を“run.parent.conf”に適用すると下記のようになる。赤文字で示した部分が、 上記の注意点・変更点に対応する部分である。<br /></p>
+<p><br /></p>
+<p><code>PARAM_DOMAIN_CATALOGUE</code>の項目の“<code>DOMAIN_CATALOGUE_OUTPUT</code>”の変数がカタログファイルの出力設定である。 もともとのconfigファイルには項目自体がないこともあるので、その場合は自分で項目を加えて設定すること。 カタログファイルは、“latlon_domain_catalogue.txt”というファイル名で出力される。この中には、MPIプロセス毎に分割 して担当した計算領域の四隅の緯度・経度が記述されている。</p>
+<p><code>HISTORY_DEFAULT_TINTERVAL</code>の設定項目によってhistoryデータ出力間隔を指定する（単位は秒である）。指定値に 任意性はあるが、子ドメインの側面境界条件の更新間隔として使用可能であると考えられる範囲で指定すること。 親ドメイン、子ドメインの解像度、および実行環境のディスク空き容量にもよるが、おおよそ最大で1時間間隔、 出来れば10分間隔のhistoryデータ出力間隔を指定することが多い。</p>
+<p>設定が完了すれば、“scale-les”を実行して親ドメインの時間積分計算を行う。</p>
+<h4 id="親ドメインの出力ファイルを用いて子ドメインの初期値境界値を作成する">親ドメインの出力ファイルを用いて子ドメインの初期値/境界値を作成する</h4>
+<p>次に計算が終わった親ドメインのhistoryデータ出力を用いて、子ドメインの初期値/境界値を作成する。 実行するプログラムは、通常の初期値/境界値作成と同じ“scale-les_init”だが、 “init.child.conf”を下記のように編集する。<br /></p>
+<p><br /></p>
+<p>読み込む外部入力データのファイル名を指定する“<code>BASENAME_ORG</code>”は、親モデルのhistory.pe***.nc ファイルを読み込むので、“history”と指定する。また、このhistoryファイルはSCALE-LESモデルの出力データなので、 “<code>FILETYPE_ORG</code>”は、“SCALE-LES”と指定する。<code>NUMBER_OF_TSTEPS</code>には、historyファイルが持つ時間ステップ数 を記述する（例として25が記述されているだけ）。<code>BOUNDARY_UPDATE_DT</code>には、時間ステップの時間間隔を指定する （単位は秒である）。つまり、親ドメインの<code>HISTORY_DEFAULT_TINTERVAL</code>の設定項目に一致する値を指定する。 この説明では、親ドメインで600秒としたので、ここでも600秒を指定する。</p>
+<p><code>PARAM_NEST</code>の項目は、ネスティング実験のために新たに加える項目である。もともとのconfigファイルには項目自体がないので、 自分でconfigファイルに追記する。最初の2つの項目によって、オフライン・ネスティング実験であることが決定される。 “<code>OFFLINE_PARENT_</code>”で始まる6つの設定変数は、親ドメインの設定を記述する変数である。親ドメインの対応する項目を 参照して正しく設定すること。この例では、親ドメインは<span class="math">4 × 4</span>のMPIプロセス数を使用し、鉛直35層で、水平には1つの MPIプロセスあたり<span class="math">40 × 40</span>の格子点を持っており、陸面モデルは5層モデルであることを想定している。 最後の“<code>ATLON_CATALOGUE_FNAME</code>”の項目は、親ドメインを実行した時に出力したカタログファイルを指定する。</p>
+<p>設定の編集が完了すれば、“scale-les_init”を実行して子ドメインの初期値/境界値を作成する。<br /></p>
+<p><br /></p>
+<p>実行時に上記のようなメッセージが表示されて計算が止まる場合は、子ドメインの計算領域が親ドメインの計算領域の 外側に取られている部分がある。この場合は、各ドメインの大きさや領域中心の設定を見直す必要がある。</p>
+<h4 id="作成した初期値境界値を用いて子ドメインの時間積分計算を行う">作成した初期値/境界値を用いて子ドメインの時間積分計算を行う</h4>
+<p>初期値/境界値作成が終われば、子ドメインの時間積分計算を実行する。子ドメインの実行は、通常の現実大気実験と何も変わらないので、 必要なデータのPATHが正しくconfigファイルに記述されていることを確認してから、“scale-les”を実行すればよい。</p>
+<p>1点だけ設定を忘れやすい設定項目を挙げておく。<br /></p>
+<p><br /></p>
+<p>“run.child.conf”の<code>BOUNDARY_UPDATE_DT</code>を、初期値/境界値作成で使用した親ドメインの historyデータ出力間隔に合わせておくことを忘れないようにすること。オフライン・ネスティング実験の場合、 現在のところこの設定に親ドメインと子ドメイン間で不整合あっても警告やエラーメッセージが発せられないまま、 時間積分計算が進み、場合によっては正常終了してしまうため注意が必要である。</p>
+<p>多段のオフライン・ネスティング実験を行いたい場合は、ここまでの過程を繰り返せばよい。つまり、子ドメインとして 時間積分計算した結果を再度、親ドメインと見立てて、さらに内側の孫ドメインの初期値/境界値作成を行なえばよい。 以上でオフライン・ネスティングの実行方法の説明を終える。</p>
+<h3 id="sec:nest_online">オンライン・ネスティング実験の方法</h3>
+<p>オフライン・ネスティング実験では、各ドメインの計算を逐次的に実行する必要があったが、オンライン・ネスティング実験では 全てのドメインの計算を同時に実行する。現在は、親ドメインから子ドメインへのみデータ受け渡しを行う、いわゆる “1-Wayネスティング”のみをサポートしている。オンライン・ネスティング実験でサポートするネスティング段数は、 最大で10段までである。</p>
+<p>SCALEのオンライン・ネスティング実験は、複数のドメインを逐次的に時間積分計算を進めるのではなく、並列的に時間積分計算を行う。 図[fig<sub>m</sub>pisplit]に示すイメージ図のように、与えられたMPIプロセスを分割してそれぞれのドメインに分配し、各々のドメインが 独立したモデルのように計算を進める。後ほど説明するが、複数のドメインを立ち上げるために実行時には“launch.conf”という 起動用のconfigファイルが別途必要になる。</p>
+<p><embed src="./figure/mpisplit_nesting.eps" title="fig:" /><br /></p>
+<p>ここでは、最も単純な2段ネスティングの例を説明する。親ドメインは解像度は荒いが広領域の外側ドメインで、 子ドメインは領域は狭いが高解像度の内側ドメインであることを想定する。</p>
+<p>オンライン・ネスティング実験を行う場合は、“scale-les”のモデル本体実行前に全てのドメインについて、 地形/土地利用データの作成、及び初期値/境界値データの作成を事前に行っておく必要がある。従って、親ドメインと子ドメイン それぞれについて、“pp.***.conf”、“init.***.conf”、そして“run.***.conf”ファイルを事前に作成し、 親ドメイン、子ドメインともに地形/土地利用データの作成、及び初期値/境界値データの作成を終えていることを想定して説明を進める。 ここで説明するオンライン・ネスティング実験の設定を記述したconfigファイルがチュートリアルディレクトリの下、 “tutorial/real/sample/online_nesting”に置いてあるので、説明を読み進める上で参考にしてもらいたい。</p>
+<h4 id="configファイルの編集">configファイルの編集</h4>
+<p>まず、親ドメイン、子ドメインそれぞれに“run.***.conf”ファイルを編集する。</p>
+<p><span><code>run.parent.conf</code>の編集内容</span><br /><br /></p>
+<p><span><code>run.child.conf</code>の編集内容</span><br /><br /></p>
+<p>上記の<code>PARAM_NEST</code>の項目は、ネスティング実験のために新たに加える項目である。 もともとのconfigファイルには項目自体がないので、自分でconfigファイルに追記する。最初の2つの項目によって、 オンライン・ネスティング実験であることが決定される。“<code> ONLINE_</code>”で始まる設定変数はオンライン・ネスティング実験 専用の設定変数である。<code>ONLINE_DOMAIN_NUM</code>は、ドメインのID番号であり、外側ドメインから内側ドメインへ順番に 番号を振っていく。ここでは、親ドメインは1番、子ドメインは2番と設定する。</p>
+<p><code>ONLINE_IAM_PARENT</code>と<code>ONLINE_IAM_CHILD</code>は各ドメインの役割を設定するパラメータである。 これらの変数は、“In online nesting system, I am parent (or, I am child).”という意味で覚えれば設定を間違うことはない。 少し脇道にそれるが、ここで説明している設定より複雑なものとして、図[fig<sub>n</sub>estsample]のような 3段ネスティング実験の場合の設定例を表[tab:triple<sub>n</sub>ested]に示した。</p>
+<p><span>150mm</span><span>|l|l|l|X|</span> ドメイン &amp; <code>ONLINE_DOMAIN_NUM</code> &amp; <code>ONLINE_IAM_PARENT</code> &amp; <code>ONLINE_IAM_CHILD</code><br />最外ドメイン &amp; 1 &amp; &amp;<br />中間ドメイン &amp; 2 &amp; &amp;<br />最内ドメイン &amp; 3 &amp; &amp;<br /></p>
+<p>[tab:triple<sub>n</sub>ested]</p>
+<p>最外ドメインは親ドメインとしてのみ働き、最内ドメインは子ドメインとしてのみ働く。一方、中間ドメインは最外ドメインに 対しては子ドメイン、最内ドメインに対しては親ドメインとして働くため両方共“true”となる。</p>
+<p>さて、configファイルの編集内容の説明に戻る。<code>ONLINE_BOUNDARY_USE_QHYD</code>は、「側面境界条件として親ドメインの凝結物の 混合比を使うかどうか」を指定する設定変数である。外部入力データから側面境界条件を作成するときには通常使わないが、 ネスティングの場合、ドメイン間の物理スキームの違いがなかったり、解像度もそれほど大きく離れていないため、側面境界から 凝結物自体が移流して入ってくる設定も選択肢に入るだろう。側面境界付近で雲が立ちにくい問題を解決したり、親ドメインとの乖離を 抑制したりする可能性がある。</p>
+<p>最後の<code>ONLINE_AGGRESSIVE_COMM</code>はオンライン・ネスティング時のドメイン間通信に関する最適化変数である。 通常は、“true”と設定して実行する。</p>
+<h4 id="launchファイルの編集">launchファイルの編集</h4>
+<p>オンライン・ネスティング実験の実行には、“run.***.conf”の他に、起動用configファイル“launch.conf”が必要である。</p>
+<pre><code> $ vi launch.conf</code></pre>
+<p>などとして、適宜エディタをたちあげて新規ファイルを作成し、下記の内容を記述する。<br /></p>
+<p><br /></p>
+<p>図[fig<sub>m</sub>pisplit]のイメージを思い浮かべながら設定を確認してもらいたい。<code>PARAM_LAUNCHER</code>の項目のうち、 <code>NUM_DOMAIN = 2</code>が「2つのドメインを起動する」ことを表しており、<code>CONF_FILES</code>の項目に羅列されたファイル名は、 各々のドメインで読み込むconfigファイルを指定している。<code>PRC_DOMAINS</code>は各々のドメインで使用するMPIプロセス数を 指定する。<code>PRC_DOMAINS</code>は、<code>CONF_FILES</code>で羅列した順番で指定しなければならない。従ってこの場合、 親ドメインは4-MPI並列、子ドメインは9-MPI並列で実行するように指定されている。ここで指定するMPIプロセス数は、 各々の“run.***.conf”で指定されている総MPIプロセス数と合致させなければならない。 この2段オンライン・ネスティング実験で使用する総MPIプロセス数は、<span class="math">4 + 9 = 13</span>プロセスとなる。</p>
+<p>実行時には、シングルドメイン計算とは異なり、<code>launch.conf</code>を引数に指定し、計算全体で使用するMPIプロセス数を 指定して実行する。</p>
+<pre><code> $ mpirun  -n  13  ./scale-les  launch.conf</code></pre>
+<p>実行にあたって注意することは、複数のドメインの計算を同時に実行するため、ことである。たとえば，“history.pe***.nc”は、 “history_d01.pe***.nc”、“history_d02.pe***.nc”といったようにドメイン毎に名前を変えながらどのドメインの 出力データであるか判別がつくようにconfigファイルの記述を設定する。 historyファイルのほかに、LOGファイル、topoファイル、landuseファイル、boundaryファイル、initファイル、restartファイル、 そしてmonitorファイルの名前を変更しておく必要がある。</p>
+<p>実行時に次のようなエラーメッセージが出力されて計算が異常終了することがある。<br /></p>
+<p><br /></p>
+<p><br /></p>
+<p>これは、子ドメインで設定された計算領域が親ドメインの計算領域よりも大きいことを意味するエラーメッセージである。 “SW search”のエラーが出る場合は子ドメインの西側か南側が親ドメインの外側に出ており、“NE search”のエラーが出る場合は 子ドメインの東側か北側が親ドメインの外側に出ていることを意味している。再度設定を確認し、地形・土地利用データ、および 初期値/境界値作成からやり直すこと。</p>
+<h4 id="mpiプロセスの分配ガイドライン">MPIプロセスの分配ガイドライン</h4>
+<p>SCALEのオンライン・ネスティング実験は、図[fig<sub>m</sub>pisplit]のイメージ図で説明したように、MPIプロセスを分割し、複数のドメイン に分配する。現在のところ、その分配割合はユーザーに委ねられているため、適切にMPIプロセスを分配しなければ余計な計算時間が かかってしまう。ここでは、適切にMPIプロセスを分配するためのガイドラインについて説明する。ガイドラインは、ドメイン毎に という単純なものである。 ここでは、以下に示す2段オンライン・ネスティング実験を行う場合を想定し、ガイドラインに沿ったプロセス分配方法の例を示す。 “domain 1”は外側の親ドメイン、“domain 2”は内側の子ドメインを意味する。</p>
+<p><span>150mm</span><span>|l|l|X|</span> 設定項目 &amp; domain 1 &amp; domain 2<br />計算領域 &amp; 450 km <span class="math"> × </span> 450 km &amp; 200 km <span class="math"> × </span> 200 km<br />DX &amp; DY（X,Y同一設定） &amp; 3 km &amp; 1 km<br />鉛直層設定 &amp; 40層 &amp; 60層<br />積分時間間隔（DT）&amp; 30 sec &amp; 10 sec<br />積分時間 &amp; 3600 sec &amp; 3600 sec<br /></p>
+<p>[tab:nest<sub>p</sub>roc<sub>g</sub>uide1]</p>
+<p>このとき、親ドメインの水平方向の一辺の格子点数は、<span class="math">450<em>k</em><em>m</em> ÷ 3<em>k</em><em>m</em> = 150</span>点であるので、総格子点数は <span class="math"><em>X</em> × <em>Y</em> × <em>Z</em> = 150 × 150 × 40 = 900, 000</span>点である。一方、子ドメインの水平方向の一辺の格子点数は、 <span class="math">200<em>k</em><em>m</em> ÷ 1<em>k</em><em>m</em> = 200</span>点であるので、総格子点数は<span class="math">200 × 200 × 60 = 2, 400, 000</span>点である。1つの時間ステップの 積分を行うのにこれだけの格子点について計算を行わなければならない。</p>
+<p>積分時間間隔は格子間隔に依存するためにドメイン毎に異なる。この例では、domain 1は30 secだが、domain 2は10 secであり、 3倍の差がある。したがって、同じ30 secという積分時間に対してdomain 2は3倍多くの時間ステップ、つまり3倍の演算量を要する。 これらを考慮して、簡単なドメイン間の演算量比率（Computation Rate）の指標を考えると下記の式で表される。 <br /><span class="math">$$\begin{aligned}
+ComputationRate=\frac{Xgrd_{child} \times Ygrd_{child} \times Zgrd_{child} \times Ustep_{child}}
+                     {Xgrd_{parent} \times Ygrd_{parent} \times Zgrd_{parent} \times Ustep_{parent}} \nonumber\end{aligned}$$</span><br /> ここで、Xgrd、Ygrd、ZgrdはそれぞれX方向、Y方向、Z方向の格子点数を表し、Ustepは単位時間積分に必要な時間ステップ数を表す。 ここでの例をこの式に当てはまると、演算量比率は<span class="math">(2, 400, 000 × 3) ÷ (900, 000 × 1) = 8</span>であることがわかる。 おおよそ、この割合にしたがってMPIプロセスをドメイン毎に分配すればよい。例えばdomain 1は4プロセス、domain 2は32プロセスを 使用し、全体で36プロセスを使用する設定が考えられる。この場合、例えば次のように設定することができる。</p>
+<p><span>150mm</span><span>|l|l|X|</span> 設定項目 &amp; domain 1 &amp; domain 2<br />MPIプロセス（X <span class="math"> × </span> Y） &amp; 2 <span class="math"> × </span> 2 &amp; 4 <span class="math"> × </span> 8<br />水平格子点数（IMAX <span class="math"> × </span> JMAX） &amp; 75 <span class="math"> × </span> 75 &amp; 50 <span class="math"> × </span> 25<br /></p>
+<p>[tab:nest<sub>p</sub>roc<sub>g</sub>uide2]</p>
+<p>X方向とY方向に分配するプロセス数には任意性が残るが、この例のdomain 2のようにXとYで大きくプロセス数が異なる場合には、 X方向の格子点数（IMAX）の値が大きくなる設定を取ると計算機の演算性能を引き出しやすいと考えられる<a href="#fn7" class="footnoteRef" id="fnref7"><sup>7</sup></a>。</p>
+<p>この設定は一例であり、これ以外の方法で設定しても構わない。また、ここでは格子点数と積分時間間隔だけに着目して演算量比率 を考えたが、実際の計算には様々な物理過程も含まれるだろうし、それらをCallする時間間隔もドメイン毎に異なるかもしれない。 さらにドメイン内通信やドメイン間通信のMPI通信にかかる時間も影響を及ぼす。SCALEにおけるオンライン・ネスティングの実装に おいて最も重要なことは、最内ドメインが時間積分を実行し続けることである。同じ設定で何度も実験を行うような場合には、上記の 方法である程度の見通しをつけた上で、いくらかの微調整を行うことをおすすめする。 以上でオンライン・ネスティングの実行方法の説明を終える。</p>
+<h3 id="sec:nest_topo">子ドメインにおける地形の取り扱い</h3>
+<p>ネスティング実験を行う際、ドメイン間の格子間隔比率が大きい場合などに子ドメインのバッファー領域内で不整合が発生する 可能性がある。バッファー領域内は親ドメインの計算結果を用いて一部の変数にダンピングがかかるが、地形の表現性が異なる ことで、子ドメインにとっては正しくない値へダンピングされる可能性がある。例えば、子ドメインでは斜面上の小さな谷として 表現されている地形が、親ドメインでは格子間隔が荒く谷がなくスムースな斜面として表現される場合が考えられる。</p>
+<p>こういった不整合を無くすために、バッファー領域では親ドメインの地形を用い、内側領域では子ドメイン自身の地形を用いる 「地形コピー」の機能が実装されている。この機能を使えば、図[fig<sub>t</sub>opocopy]に示すようにバッファー領域は完全に 親ドメインに一致する地形で、内側に移る地形遷移領域内では親ドメインと子ドメインのミックス、それより内側では完全に 子ドメインの地形という設定を構築することができる。以降、その設定方法と実行手順を説明する。基本的には、 オフライン・ネスティングのフレームワークを利用して進める。 ここで説明する地形コピーの設定を記述した“pp.d0*.conf”ファイルがチュートリアルディレクトリの下、 “tutorial/real/sample/online_nesting”に置いてあるので、説明を読み進める上で参考にしてもらいたい。</p>
+<p><embed src="./figure/topo_copy.eps" title="fig:" /><br /></p>
+<p>まず親ドメインの“pp.d01.conf”ファイルを編集して、計算領域の大きさを子ドメインへ伝えるために緯度経度カタログ ファイルを出力するように設定する。具体的には、下記の記述を“pp.d01.conf”ファイルに追記する。<br /></p>
+<p><br /></p>
+<p>その他の設定項目は通常通りで良い。編集ができたら親ドメインの地形データ作成を実行する（つまり、 scale-les_ppを実行する）。ここで、出力データは、“topo_d01.pe***.nc”というファイル名で保存されていると 想定する。次に、子ドメインの“pp.d02.conf”ファイルを編集する。<br /></p>
+<p><br /></p>
+<p>もともとconfigファイルにある<code>PARAM_CNVTOPO</code>の項目に、<code>CNVTOPO_copy_parent = .true.</code> という記述を加える。これは地形コピーの実行を指示するスイッチである。 次の<code>PARAM_COPYTOPO</code>は、地形コピーの設定項目群であり、すべて追記すること。 1つ目の<code>COPYTOPO_IN_BASENAME</code>は、親ドメインの地形データのPATHを指定する。ここでは、親ドメインの 出力データは“topo_d01.pe***.nc”というファイル名でカレントディレクトリに保存されていると指定している。 2つ目の<code>COPYTOPO_ENTIRE_REGION</code>は、全領域でコピーするかどうかを決定するオプションである。 このスイッチをtrueにすると、図[fig<sub>t</sub>opocopy]に示された桃色と白色の領域は無くなり、全て緑色の 完全コピー領域になる。3つ目の<code>COPYTOPO_LINEAR_H</code>は、地形遷移領域の遷移具合を調整するスイッチである。 <code>COPYTOPO_LINEAR_H</code>がtrueだと線形プロファイルで遷移し、falseだと指数関数プロファイルで遷移する。</p>
+<p>地形遷移領域の幅は、デフォルト設定ではバッファー領域と同じ幅になる。バッファー領域の設定と同じ要領で、 <code>COPYTOPO_TRANSITION_DX</code>、<code>COPYTOPO_TRANSITION_DY</code>、および<code>COPYTOPO_TRANSFACT</code>の 変数を使って任意の幅に設定することができる。</p>
+<p>最後の<code>PARAM_NEST</code>の項目はオフライン・ネスティング実験のフレームワークを利用するための設定項目であり、 全て追記する必要がある。設定変数の詳しい説明は、[sec:nest<sub>o</sub>ffline]節のオフライン・ネスティング実験の説明を 参照してほしい。</p>
+<p>configファイルの編集が終われば、子ドメインの地形データ作成を実行する。3つ以上のドメインがある場合は、 上記の実行過程を外側ドメインから順に繰り返せばよい。</p>
+<h2 id="sec:bulkjob">複数の実験を一括実行する：バルクジョブ機能</h2>
+<p>SCALEには「一括実行機能」、いわゆるバルクジョブ機能が備わっている。これは、パラメタスイープ実験、 初期値アンサンブル実験や、Time Slice気候実験など多数の実験を行う場合に便利な機能である。SCALEモデル本体の実行は もちろん、ドメインネスティング実験の場合でも利用できるし、地形・土地利用データ作成（地形コピーを利用しない場合のみ）、 初期値/境界値作成、そして後処理ツールのnet2g（netcdf2grads_bulkを使用）にも適用可能である。 各プログラムの実行内容は異なっていても構わないが、MPI並列としての構造は共通していなければならない点に注意すること。 1つの計算事例をここでは「ジョブ」と呼ぶこととする。以下では、3つの2段オンライン・ネスティング実験を一括に行う例を もとに説明する（積分期間、もしくは計算領域中心が異なっている3つのジョブを想定している）。</p>
+<p><embed src="./figure/bulkjob_directory_structure.eps" title="fig:" /><br /></p>
+<p>バルクジョブ実行するにあたって下記のものを事前に準備する必要がある。</p>
+<ul>
+<li><p>バルクジョブ用のディレクトリ構造</p></li>
+<li><p>実験に必要なすべてのconfigファイル</p></li>
+<li><p>実験に必要なすべての外部入力データ</p></li>
+<li><p>実行用のlaunch.confファイル</p></li>
+</ul>
+<p>まず、図[fig<sub>b</sub>ulkjob]に示すようなディレクトリ構造を準備する。“0000”や“0001”といったディレクトリは、 ジョブ番号に対応する名前を持ったジョブディレクトリである。ジョブディレクトリは必ず4桁の数字で、ジョブ番号はゼロから 数え上げられる。これらのディレクトリの中にはconfigファイルが収められている。 今回は2段オンライン・ネスティング実験を想定しているので、“run.d01.conf”と“run.d02.conf”の2つのファイルが準備 されている。各ジョブディレクトリにあるconfigファイルの名前は同じにする必要があるが、内容は異なっていても構わない。 ただし、 configファイル内にバルクジョブ機能用に追加する設定項目はないが、必要がある。以下にジョブ0000番のrun.d01.confの抜粋を示す。<br /></p>
+<p><br /></p>
+<p>上記のconfigファイルの設定例のうち、青色文字の部分は出力ファイルの指定、水色文字の部分は入力ファイルの指定である。 図[fig<sub>b</sub>ulkjob]を見てわかるように、実行バイナリ（scale-les）があるのは“runディレクトリ”の下で、 ジョブディレクトリも実行バイナリと同じ階層にある。従って、ジョブ0000番において、実行バイナリからみてデータを出力するべき ディレクトリは、“0000/”の下である。そこで出力ファイル名の指定として“0000/***”と記述している。</p>
+<p>入力ファイルについても同様である。ここでは、runディレクトリと同じ階層にppディレクトリやinitディレクトリがあり、 その中にまたジョブディレクトリが作成してあって、それらの中に入力ファイルが保管されている状況を想定している。 従って、runディレクトリの下で実行される実行バイナリにとっては、“../pp/0000/***”といったPATHになる。</p>
+<p>バルクジョブ機能は、オンライン・ネスティング実験で利用したMPIプロセスを分割・分配する機能を使って実装されている。 したがって、ジョブの起動のために“launch.conf”ファイルが必要になる。オンライン・ネスティング実験とバルクジョブ機能を 併用して実行する今回のような場合もlaunch.confファイルは1つだけで良い。<br /></p>
+<p><br /></p>
+<p>上記がオンライン・ネスティング実験とバルクジョブ機能を併用して実行する場合のlaunch.confファイルの中身である。 オンライン・ネスティング実験の場合のlaunch.confファイルに対して、<code>NUM_BULKJOB</code>の設定項目を加えただけとなっている。 ここで実行するジョブ数は3つであるので、<code>NUM_BULKJOB</code>に対して“3”と指定する。シングルドメイン実験として バルクジョブ機能を利用する場合は、<code>NUM_DOMAIN = 1</code>と指定して、<code>CONF_FILES</code>に1つだけconfigファイルを指定すればよい。 実行時のコマンドは、</p>
+<pre><code> $ mpirun  -n  135  ./scale-les  launch.conf</code></pre>
+<p>となる。ここでは1ジョブあたり、<span class="math">9 + 36 = 45</span>プロセス使用し、全体で3つのジョブを実行するので、総計で135プロセスを 必要とする。</p>
+<p>実行すると得られるLOGファイルに、MPIプロセスを分割した時の情報が示されている。LOGファイルを開いて最初の 「SCALEロゴ」のあとに下記のようなメッセージが出力される。<br /></p>
+<p><br /></p>
+<p>これらのうち、<code>[LOCAL]</code>と表記されている項目はドメイン内のプロセスグループ、<code>[GLOBAL]</code>と表記されている項目は ネスティング・グループ、<code>[MASTER]</code>と表記されて項目はジョブ・グループに関する情報である。 したがって、このLOGメッセージから、当該ドメインは12-MPI並列で実行されており、オンライン・ネスティング実験は総計で 48プロセス使用して実行され、バルクジョブ全体では1488プロセスが使用されているため、同時に31個のジョブが走っていたことがわかる。 異常終了したときにも、この表記法に従ってメッセージが出力されるので、これを理解しているとバルクジョブ機能を使って多量に 走らせている場合にも、どのプロセスがエラーを発生したのか即座に判断できる。ちなみに現在のバルクジョブ機能では、 1つのジョブがエラーを発生し、異常終了状態に入ると全てのジョブが異常終了する。 以上でバルクジョブ機能の説明を終える。</p>
+<h2 id="sec:output">出力変数の追加・変更</h2>
+<p>ここでは、“run.***.conf”ファイルの中の出力変数の設定方法について説明する。 history出力ファイルへ新たに出力変数を追加するには、正式には次の2段階の手続きが必要である。</p>
+<ol>
+<li><p>ソースファイル内の設定。対象の変数をhistory出力するための設定で、この手続きにより、出力のための準備が行われる。</p></li>
+<li><p>run.conf内の設定。実際にhistoryに出力するかどうかを指定。コンパイルし直すことなく、実験毎に変更可能。</p></li>
+</ol>
+<p>頻繁に使用する予報変数や主要な変数については、すでに1の手続きは行われているため、2の手続きだけを行えばよい。 2の手続きだけで出力可能な変数については、Appendix[app:vari<sub>h</sub>ist]にリストアップしてあるので、そちらを参照すること。 これ以外の変数をユーザーが書き出したい場合は、1の手続きが必要であるがここでは割愛する。</p>
+<p>history出力ファイルへの変数の追加は、下記のフォーマットに従ってrun.confに追記すればよい。<br /></p>
+<p><br /></p>
+<p>の部分はオプションである。<code>[character]</code>は任意の文字列、 <code>[real]</code>は任意の浮動小数点値、<code>[logical]</code>は任意の論理変数（<code>.true.</code> or <code>.false.</code>） をそれぞれ指定することを意味する。デフォルト設定は、 つぎに説明する<code>&amp;PARAM_HISTORY</code>の項目によって定められる。<br /></p>
+<p><br /></p>
+<p>上記のとおり、変数毎の個別の設定群とデフォルト設定群の違いはあるが、各設定変数の意味は同じである。 それらの各設定変数の説明は以下の通りである。<br /></p>
+<p><span>150mm</span><span>|l|X|</span> 設定変数 &amp; 説明<br />ITEM &amp; 変数名。 Appendix [app:vari<sub>h</sub>ist]を参照<br />BASENAME &amp; 出力ファイル名 BASENAME_xxxxxx.ncとなる。xxxxxxはノード番号<br />TINTERVAL &amp; 出力間隔<br />TUNIT &amp; TINTERVALで指定した出力間隔の単位<br />TAVERAGE &amp; .false.=瞬間値、.true.=平均値として出力する；平均値の場合、 出力タイミングの直前のTINTERVAL間の平均値<br />DATATYPE &amp; 出力値の型；”REAL4”,”REAL8”など<br />ZINTERP &amp; .false.=モデル面、.true.=Z面（FZ面<span class="math">?</span>、CZ面<span class="math">?</span>）の値として出力<br />HISTORY_OUTPUT_STEP0 &amp; .false.=初期時刻(t=0)の値を出力、.true.=出力しない；<code>&amp;PARAM_HISTORY</code>でのみ有効<br /></p>
+<p>[tab:history<sub>s</sub>ettings]</p>
+<p><code>&amp;PARAM_HISTORY</code>の<code>HISTORY_DEFAULT_TINTERVAL</code>は、デフォルトのhistory出力間隔を設定する変数だが、 出力アイテム毎に出力間隔を設定することもできる。一部の変数でhistory出力間隔を変更したい場合の記述例を次に挙げる。<br /></p>
+<p><br /></p>
+<p>上記のように設定すると、“RAIN”は600秒の出力間隔で、それ以外は3600秒の出力間隔となる。 以上で、出力変数の追加・変更についての説明を終える。</p>
+<h2 id="sec:net2g">Postprocess : netcdf2grads</h2>
+<p>本節では、SCALEの領域分割されたhistoryデータ（<code>history.***.nc</code>）をGrADSで 読み込める形式に変換する後処理ツール“net2g”の実行方法について説明する。 net2gのインストール方法については、[sec:source<sub>n</sub>et2g]節を参照すること。net2gの実行に おいて注意するべき点は下記のとおりである。</p>
+<ul>
+<li><p>使用するMPIプロセス数は、SCALEの本体の実行で使用したMPIプロセス数の約数でなければならない。</p></li>
+<li><p>history出力形式は、“<code>HIST_BND = .false.</code>”でなければならない（今後対応予定）。</p></li>
+<li><p>2次元データと3次元データは同時に変換できない（今後対応予定）。</p></li>
+<li><p>変換できるデータはhistoryデータのみ（今後対応予定）。</p></li>
+</ul>
+<p>“HIST_BND”の対応、2次元データと3次元データの同時実行、そしてhistoryデータ以外のデータへの対応は 今後早急に進める予定ではあるが、どうしてもgpview等の他のツールが使えず、データの描画に支障が出る場合は、 「旧型netcdf2grads」を使用することができる。旧型netcdf2gradsは、シングルプロセス実行しかできないが、 上記の制限はない。旧型netcdf2gradsの概要については本節の最後に紹介する。</p>
+<p>その他に注意するべき点は、net2g実行時のMPI並列数である。net2gはMPI並列実行できるが、プログラム中の 作業のほとんどがhistoryファイルからのデータ読み込みである。したがって、並列ファイルシステム上でない限り、 一般に単一のディスク、もしくは単一のディスクアレイからデータを読み込む速度は、MPIプロセス数を増やしても 向上しない。むしろ読み込み要求が立て込んで、作業効率が下がり結果として読み込み速度が落ちることもある。 したがって、新しい環境でnet2gを実行する場合、少しMPIプロセス数を変えて実行してみて最適なMPIプロセス数を 予め知っておくことも必要である。</p>
+<p>net2gの実行方法は、MPI並列版としてコンパイルした場合は、</p>
+<pre><code> $ mpirun  -n  [procs]  ./net2g  net2g.conf</code></pre>
+<p>として実行する。<code>[procs]</code>には任意のMPIプロセス数を指定する。最後の“net2g.conf”はnet2gの実行設定が 記述されたconfigファイルである。一方、シングルプロセス版としてコンパイルした場合はmpiコマンドを使わずに、</p>
+<pre><code> $ ./net2g  net2g.conf</code></pre>
+<p>とする。次にconfigファイルの記述方法と設定内容について説明する。ここでは主要な設定項目を取り上げて説明する。 ここで取り上げなかったオプションについては、“scale/scale-les/util/netcdf2grads_h/”のディレクトリに 入っている“net2g.all.conf”のサンプルconfigファイルを参照してもらいたい。</p>
+<h4 id="configファイルサンプル3次元データの変換">configファイルサンプル：3次元データの変換</h4>
+<p><br /></p>
+<p>上記はあるdomain 1のデータの3次元変数を、指定した気圧高度面へ変換して出力する場合のconfigファイルの 全記述内容の例を示している。各々の設定項目は次の説明のとおりである。</p>
+<ul>
+<li><p><code>LOGOUT</code>の項目（この項目は必須ではない）</p>
+<ul>
+<li><p><code>LOG_BASENAME</code>：デフォルトのLOGファイル名“LOG”を変更したいときに指定する。</p></li>
+<li><p><code>LOG_ALL_OUTPUT</code>：プロセス番号0番以外もLOGファイルを出力させたい場合に“true”にする。 デフォルト値は“false”である。</p></li>
+</ul></li>
+<li><p><code>INFO</code>の項目</p>
+<ul>
+<li><p><code>START_TSTEP</code>：変換を開始するnetCDFデータの最初のTime Stepを指定する。最初のいくつかの ステップを飛ばして変換したい場合に任意の値を指定する。デフォルト値は1である。</p></li>
+<li><p><code>END_TSTEP</code>：変換を終了するnetCDFデータのTime Stepを指定する。必ず指定する。</p></li>
+<li><p><code>INC_TSTEP</code>：netCDFデータを読み込む時の時間軸の増加量（インクリメント）を指定する。 例えば1つ飛ばしで変換したい場合に任意の値を指定する。デフォルト値は1である。</p></li>
+<li><p><code>DOMAIN_NUM</code>：ドメイン番号を指定する。デフォルト値は1である。</p></li>
+<li><p><code>CONFFILE</code>：SCALE本体を実行したときの<code>run.***.conf</code>ファイルのPATHを指定する （ファイル名を含む）。</p></li>
+<li><p><code>IDIR</code>：SCALE本体のhistory出力ファイルのPATHを指定する。</p></li>
+<li><p><code>Z_LEV_TYPE</code>：鉛直方向のデータ変換の種類を指定する。“original”はhistoryデータのまま 出力、“plev”は気圧高度面に変換して出力、そして“zlev”は高度面データに変換する。 “anal”を指定すると別途指定の簡易解析を行なって出力する（次項で説明）。デフォルト値は“plev”である。</p></li>
+</ul></li>
+<li><p><code>VARI</code>の項目</p>
+<ul>
+<li><p><code>VNAME</code>：変換したい変数名を指定する。デフォルトでは、“PT”、“PRES”、“U”、“V”、 “W”、“QHYD”が指定される。</p></li>
+<li><p><code>TARGET_ZLEV</code>：<code>Z_LEV_TYPE</code>に応じた変換高度を指定する。plevの場合は“hPa”、 zlevの場合は“m”、そしてoriginalの場合は格子点番号で指定する。デフォルトでは、 1000hPa、975hPa、950hPa、925hPa、900hPa、850hPa、800hPa、700hPa、600hPa、500hPa、400hPa、 300hPa、250hPa、200hPaの14層が指定される。</p></li>
+</ul></li>
+</ul>
+<h4 id="configファイルサンプル3次元データの変換鉛直積算値を出す">configファイルサンプル：3次元データの変換：鉛直積算値を出す</h4>
+<p><br /></p>
+<p>上記はconfigファイル記述例の抜粋である。 <code>Z_LEV_TYPE</code>を“anal”と指定すると<code>ANAL</code>項目を指定できるようになる。これは、鉛直次元に 大して何からの簡易解析を施してデータ出力する機能である。この場合は、変換後のデータは必ず水平2次元データとなるため 、<code>VARI</code>の項目の<code>TARGET_ZLEV</code>は指定できない。下記に説明する以外の設定変数については、 先の3次元変数の変換の場合と同じである。</p>
+<ul>
+<li><p><code>ANAL</code>の項目</p>
+<ul>
+<li><p><code>ANALYSIS</code>：鉛直次元のの簡易解析の種類を指定する。“max”を指定すると鉛直カラム中の最大値、 “min”を指定するすると最小値、“sum”を指定すると鉛直カラム積算値、そして“ave”を指定すると 鉛直カラム平均値を算出する。デフォルト値は“ave”である。</p></li>
+</ul></li>
+</ul>
+<h4 id="configファイルサンプル2次元データの変換">configファイルサンプル：2次元データの変換</h4>
+<p><br /></p>
+<p>上記はconfigファイル記述例の抜粋である。また、2次元データなので<code>VARI</code>の項目の <code>TARGET_ZLEV</code>は指定できない。その他の設定項目は3次元データ変換の場合と変わりない。</p>
+<h4 id="configファイルサンプル特殊な時間軸を持つデータの変換">configファイルサンプル：特殊な時間軸を持つデータの変換</h4>
+<p><br /></p>
+<p>上記はconfigファイル記述例の抜粋である。[sec:output]節の最後で説明した出力アイテム毎の 設定で、<code>HISTITEM</code>の<code>tinterval</code>を設定し、一部のデータ変数が<code>HISTORY_DEFAULT_TINTERVAL</code>に 従わない場合は、net2gでは<code>EXTRA</code>の設定項目を上記のように設定することで対応できる。ここでは、 [sec:output]節の最後で説明した設定に合わせて、2次元データの“RAIN”だけが600秒間隔で出力されていた 場合のconfigファイル設定例を示している。</p>
+<h3 id="スーパーコンピュータ京での実行方法">スーパーコンピュータ「京」での実行方法</h3>
+<p>スーパーコンピュータ「京」などの大型計算機で並列計算を行った場合、出力ファイルの数が多く、 それぞれのファイルのデータ容量も大きい。そのような場合には、手元のマシンへhistoryデータをコピーするだけの ディスク空き容量がなかったり、並列ファイルシステムではないために後処理に膨大な時間がかかり、現実的な 時間スケールで解析が行えない可能性がある。こういった場合には、SCALE本体の計算を行ったスーパーコンピュータで 後処理も行なってしまうことをおすすめする。この目的のためにここでは、スーパーコンピュータ「京」でnet2gを 使用する方法を簡単に説明する。</p>
+<p>スーパーコンピュータ「京」には、JOBのサイズや実行形態に応じたいくつかのJOBグループがあるが、 ここでは、もっとも簡単に実行を行える“micro JOB”を対象に実行方法を説明する。micro JOBでは実行バイナリが “/scratch”ディレクトリの下に存在する必要があることに注意されたい。</p>
+<p><code>/scratch/GROUP/USER/</code>の下に、作業ディレクトリを用意する。そこに、</p>
+<pre><code>  net2g         : copy executive file
+  net2g.conf    : copy configure file
+  output/       : link to directory with scale history files
+  bindata/      : create directory for grads file output
+  job.sh        : job script for K (option)</code></pre>
+<p>を用意する。<code>net2g.conf</code>の設定と<code>job.sh</code>の設定をする。<code>net2g.conf</code>の<code>INFO</code>項目の <code>IDIR</code>と<code>ODIR</code>は、上記設定に合わせて適切に記述しなければならない。 使用するノード数は、SCALE本体の計算に使用したノード数の約数である必要がある。<code>job.sh</code>の中身は 下記のような内容を記述する。各パラメタの詳細等は、スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。 準備が整えば、<code>job.sh</code>を使ってpjsubコマンドにてJOBを投入すればよい。実行時間が30分の制限時間に間に合わない 場合は、一度に変換する変数の数を減らすか、鉛直層数を減らして実行する。もしくはLustreのstriping countの調整等を 行なってもよい。<br /></p>
+<p><span><code>job.sh</code>の記述例</span><br /><br /></p>
+<h3 id="バルクジョブ対応版の使用方法">バルクジョブ対応版の使用方法</h3>
+<p>[sec:bulkjob]節で説明した「複数の実験を一括実行するバルクジョブ機能」を用いてSCALEを走らせた場合は、 バルクジョブ対応版のnet2gを利用するのが便利である。コンパイルは、通常版のnet2gと同じである。 “scale/scale-les/util/netcdf2grads_bulk”の下で[sec:source<sub>n</sub>et2g]節で説明したとおりの方法で コンパイルすれば、バルクジョブ対応版のnet2gが生成される。</p>
+<p>基本的な使用方法や制限事項も通常版のnet2gと同じである。net2gに渡すconfigファイルなどの記述も通常版と 同じように記述すればよい。ただし、実行にあたっては“launch.conf”が必要になることと、[sec:bulkjob]節で 説明したバルクジョブ実行時のディレクトリ構造を準備する必要がある。SCALE本体をバルクジョブ機能で実行した 場合にはディレクトリ構造はすでに準備されているため新たに用意する必要はない。net2gに渡すconfigファイルだけ、 各バルク番号のディレクトリ下に設置すればよい。以下に、launch.confファイルの記述例を挙げておく。<br /></p>
+<p><br /></p>
+<p>この例の場合、一度に31個のジョブを実行している。また1つのジョブは2段オンライン・ネスティング実験 となっており、net2gの実行にあたってはdomain 1は12-MPI並列、domain 2は36-MPI並列で実行される。ここで 指定するMPIプロセス数は、SCALE本体の実行時に使用したMPIプロセス数の約数でなければならない。</p>
+<p>それぞれのドメインについて実行するnet2gのconfigファイルは、それぞれ“net2g.3d.d01.conf”と “net2g.3d.d02.conf”と指定さえている。このconfigファイルは31個のバルク番号ディレクトリの中に 収められてことを想定している。</p>
+<p>この例では、1つのジョブあたり、<span class="math">12 + 36 = 48</span>プロセスを使用し、全体で31ジョブあるので総計で1488プロセスを 必要とする。下記のコマンドのように実行する。</p>
+<pre><code> $ mpirun  -n  1488  ./net2g  launch.conf</code></pre>
+<h3 id="旧型netcdf2gradsの使用方法">旧型netcdf2gradsの使用方法</h3>
+<p>ここでは、シングルプロセス実行しかできないが、“HIST_BND”の対応、そしてhistoryデータ以外のデータにも対応 する「旧型netcdf2grads」の実行方法概略について説明する。このプログラムは、並列版/シングル版net2gの整備が 済み次第、サポート外となるため注意して欲しい。</p>
+<p>netcdf2gradsのソースファイルは <code>scale/scale-les/util/netcdf2grads/</code>にある。 SCALE本体とは独立なので、ディレクトリを任意の場所に移動/コピーして使用することが可能である。</p>
+<h4 id="コンパイル-1">コンパイル</h4>
+<dl>
+<dt>Intel compiler</dt>
+<dd><p><br /></p>
+<pre><code> $ ifort -convert big_endian -assume byterecl -I${NETCDF4}/include 
+    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file.f90 -o convine
+  </code></pre>
+</dd>
+<dt>gfortran</dt>
+<dd><p><br /></p>
+<pre><code> $ gfortran -frecord-marker=4 --convert=big-endian -I${NETCDF4}/include
+    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file1.f90 -o convine</code></pre>
+</dd>
+</dl>
+<h4 id="使用方法">使用方法</h4>
+<p>実行時に，インタラクティブモードかサイレントモードかを選択することが出来る．</p>
+<pre><code>   Interactive mode :  ``./convine -i&#39;&#39;
+   Silent mode      :  ``./convine -s&#39;&#39;</code></pre>
+<dl>
+<dt>インタラクティブモード</dt>
+<dd><p><br /></p>
+<pre><code> $ cd netcdf2grads/
+ $ ./convine -i</code></pre>
+<p>と実行すると、下記のメッセージが出るので、指示通りに必要なファイルのパスを打ち込む。<br /></p>
+<p><br /></p>
+<p>の行は、ユーザーが入力する行である。 うまく実行されれば、指定した出力先にctlファイルとgrdファイルが作成される。</p>
+</dd>
+<dt>サイレントモード</dt>
+<dd><p><br />サイレントモードの場合は、あらかじめ、<code>namelist.in</code>に必要な情報を書き入れておく．</p>
+<pre><code> $ cd netcdf2grads/
+ $ ./convine -s</code></pre>
+<p>と実行すれば変換が始まる。</p>
+</dd>
+</dl>
+<h1 id="sec:env_setting">ライブラリ環境のインストール</h1>
+<p>ここでは、SCALEのインストールに必要なライブラリ環境のインストール方法について説明する。 Linuxをインストール後、各種プログラムのインストールにはコマンドライン端末を使う。 本書で説明するライブラリ環境のインストールにあたっては、root権限が必要になる。したがって、 想定する環境は、ユーザーがroot権限を所持しているサーバーや、自前のデスクトップマシンといった環境である。 別途サーバー管理者が存在し、root権限を取得できない場合等は、必要な環境条件が整っているか問い合わせること。</p>
+<p>また本節では、HDF5, NetCDF, MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。 GNU compiler以外のIntel compilerなどを利用する場合は、各自でインストール方法を調べてインストールすること。<br /></p>
+<p>ここでインストールするライブラリ環境は、主に下記の4点である。</p>
+<ul>
+<li><p>GNU C/C++, fortran compiler</p></li>
+<li><p>HDF5 Library (<a href="https://www.hdfgroup.org/HDF5/" class="uri">https://www.hdfgroup.org/HDF5/</a>)</p></li>
+<li><p>NetCDF Library (<a href="http://www.unidata.ucar.edu/software/netcdf/" class="uri">http://www.unidata.ucar.edu/software/netcdf/</a>)</p></li>
+<li><p>Message Passing Interface (MPI) Library (openMPI版、<a href="http://www.open-mpi.org/" class="uri">http://www.open-mpi.org/</a>)</p></li>
+</ul>
+<p>これらのインストール方法について、本書では下記の5種類のOperating System (OS）について説明する。</p>
+<ul>
+<li><p>Linux CentOS 6.6 x86-64</p></li>
+<li><p>Linux CentOS 7.1 x86-64</p></li>
+<li><p>Linux openSUSE 13.2 x86-64</p></li>
+<li><p>Apple Mac OS X 10.10 Yosemite</p></li>
+<li><p>スーパーコンピュータ「京」</p></li>
+</ul>
+<p>他のOSディストリビューション（下記参照）でもSCALEを利用可能だが、 本書でサポートするのは上記の範囲とする。<br /></p>
+<p><span><strong>動作確認済みの他のOSディストリビューション</strong></span></p>
+<ul>
+<li><p>Linux SUSE Enterprise Linux 11.1, 11.3 x86-64</p></li>
+<li><p>Linux Vine Linux 6.3 x86-64</p></li>
+<li><p>Linux Fedora 16 x86-64</p></li>
+</ul>
+<h2 id="インストール方法-linux---centos-6.6-編">インストール方法 (Linux - CentOS 6.6 編)</h2>
+<p>以下の説明で使用した環境は次のとおりである。</p>
+<ul>
+<li><p>CPU: Intel Core i5 2410M (sandybridge)</p></li>
+<li><p>Memory: DDR3-1333 4GB</p></li>
+<li><p>OS: CentOS 6.6 (kernel: 2.6.32-504.23.4.el6.x86_64）<br /><span>＊インストール時、“日本語”、 “Desktop”、“Kdump有り”を選択</span></p></li>
+</ul>
+<h4 id="ライブラリのインストール">ライブラリのインストール</h4>
+<p>CentOS 6.6では、一部のライブラリをエンタープライズLinux用の拡張パッケージ(EPEL)リポジトリからインストールする。 そこで、はじめにEPELリポジトリをシステムにインストールし登録する。 CentOS 6.6では、ソフトウェアのインストールに“yum”コマンドを利用する。 すべての作業を行うまえに、下記のコマンドにてパッケージをアップデートしておくことをおすすめする。</p>
+<pre><code> # yum update</code></pre>
+<p>ルート権限で、下記のコマンドを実行することでリポジトリの登録が可能である。</p>
+<pre><code> # yum install epel-release</code></pre>
+<p>実行時のコマンドラインの様子は以下のようになる。 インストール対象がリストされるので、確認して“y”をタイプして先へ進める。<br /></p>
+<p><br /></p>
+<p><span>＊この時点で、yumによるインストールに失敗する場合は、 プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。</span></p>
+<p>yumのグループインストール機能を用いて，開発ツール （ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。</p>
+<pre><code> # yum groupinstall &quot;development tools&quot;</code></pre>
+<p>つづいて、グループインストールではインストールされないライブラリを個別に追加する。</p>
+<pre><code> # yum install zlib-devel
+ # yum install hdf5-devel hdf5-static
+ # yum install netcdf-devel netcdf-static
+ # yum install openmpi-devel
+ # yum install lapack lapack-devel
+ # yum install wgrib wgrib2</code></pre>
+<p><span>＊“yum -y install package name”として実行することで、インストール前の再確認をスキップできる。</span></p>
+<h4 id="環境変数の設定">環境変数の設定</h4>
+<p>ローカルシステムでMPI並列プログラムを実行するために、OpenMPIライブラリの環境変数設定を行う。 ユーザ権限に移動して.bashrcをエディタで開き，</p>
+<pre><code> $ vi ~/.bashrc</code></pre>
+<p>下記をファイルの最後に追加して，環境変数の設定を記述する。<br /></p>
+<p><br /></p>
+<p>編集が終わったら、環境設定を有効にする。</p>
+<pre><code> $ . ~/.bashrc</code></pre>
+<h2 id="インストール方法-linux---centos-7.1-編">インストール方法 (Linux - CentOS 7.1 編)</h2>
+<p>以下の説明で使用した環境は次のとおりである。</p>
+<ul>
+<li><p>CPU: Intel Core i5 2410M (sandybridge)</p></li>
+<li><p>Memory: DDR3-1333 4GB</p></li>
+<li><p>OS: CentOS 7.1 (kernel: 3.10.0-229.7.2.el7.x86_64）<br /><span>＊インストール時、“日本語”、 “Gnome デスクトップ”、“Kdump有り”を選択</span></p></li>
+</ul>
+<h4 id="ライブラリのインストール-1">ライブラリのインストール</h4>
+<p>CentOS 7.1では、一部のライブラリをエンタープライズLinux用の拡張パッケージ(EPEL)リポジトリからインストールする。 そこで、はじめにEPELリポジトリをシステムにインストールし登録する。 CentOS 7.1では、ソフトウェアのインストールに“yum”コマンドを利用する。 すべての作業を行うまえに、下記のコマンドにてパッケージをアップデートしておくことをおすすめする。</p>
+<pre><code> # yum update</code></pre>
+<p>ルート権限で、下記のコマンドを実行することでリポジトリの登録が可能である。</p>
+<pre><code> # yum install epel-release</code></pre>
+<p>実行時のコマンドラインの様子は以下のようになる。 インストール対象がリストされるので、確認して“y”をタイプして先へ進める。<br /></p>
+<p><br /></p>
+<p><span>＊この時点で、yumによるインストールに失敗する場合は、 プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。</span></p>
+<p>yumのグループインストール機能を用いて，開発ツール （ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。</p>
+<pre><code> # yum groupinstall &quot;development tools&quot;</code></pre>
+<p>つづいて、グループインストールではインストールされないライブラリを個別に追加する。</p>
+<pre><code> # yum install hdf5-devel hdf5-static
+ # yum install netcdf-devel netcdf-static
+ # yum install netcdf-fortran-devel
+ # yum install openmpi-devel
+ # yum install lapack lapack-devel
+ # yum install wgrib wgrib2</code></pre>
+<p><span>＊“yum -y install package name”として実行することで、インストール前の再確認をスキップできる。</span></p>
+<h4 id="環境変数の設定-1">環境変数の設定</h4>
+<p>ローカルシステムでMPI並列プログラムを実行するために、OpenMPIライブラリの環境変数設定を行う。 ユーザ権限に移動して.bashrcをエディタで開き，</p>
+<pre><code> $ vi ~/.bashrc</code></pre>
+<p>下記をファイルの最後に追加して，環境変数の設定を記述する。<br /></p>
+<p><br /></p>
+<p>編集が終わったら、環境設定を有効にする。</p>
+<pre><code> $ . ~/.bashrc</code></pre>
+<h2 id="インストール方法-linux---opensuse-13.2-編">インストール方法 (Linux - openSUSE 13.2 編)</h2>
+<p>以下の説明で使用した環境は次のとおりである。</p>
+<ul>
+<li><p>CPU: Intel Core i5 2410M (sandybridge)</p></li>
+<li><p>Memory: DDR3-1333 4GB</p></li>
+<li><p>OS: openSUSE 13.2 (kernel: 3.16.7-21-desktop x86_64）<br /><span>＊インストール時、“日本語”、 “Gnome Desktop”を選択</span></p></li>
+</ul>
+<h4 id="ライブラリのインストール-2">ライブラリのインストール</h4>
+<p>openSUSE 13.2では、一部のライブラリを外部リポジトリ （ocefpaf’s Home Project; <a href="https://build.opensuse.org/project/show/home:ocefpaf" class="uri">https://build.opensuse.org/project/show/home:ocefpaf</a>）からインストールする。 このため、まずhome_ocefpafリポジトリをシステムにインストールし登録する。 このリポジトリには、grads、ncview、GMT、ncl、そしてcdoといったツール群も含まれており便利である。</p>
+<p>openSUSE 13.2では、ソフトウェアのインストールに“zypper”コマンドを利用する。 openSUSEでは一般にユーザーがrootユーザーにスイッチすることを推奨しておらず、 デフォルトのままOSをインストールすると“su”コマンドによってrootユーザーに スイッチすることはできないので、“sudo”コマンドを利用してインストール作業を行う。 すべての作業を行うまえに、下記のコマンドにてパッケージをアップデートしておくことをおすすめする。</p>
+<pre><code> # sudo zypper update</code></pre>
+<p>下記のコマンドを実行することでリポジトリの登録が可能である。</p>
+<pre><code> $ sudo zypper ar \\
+   http://download.opensuse.org/repositories/home:/ocefpaf/openSUSE_13.2/ \\
+   home_ocefpaf</code></pre>
+<p><span>＊上記コマンド中の“<code>\\</code>”は、組版上の改行であることを意味する。 実際は改行も“<code>\\</code>”の記述も必要ない。</span> 実行時のコマンドラインの様子は以下のようになる。<br /></p>
+<p><br /></p>
+<p><span>＊この時点で、zypperによるインストールに失敗する場合は、 プロキシ設定等を含めた通信環境、zypperリポジトリの登録状況等を再確認すること。</span></p>
+<p>zypperのパターンインストール機能を用いて，基本開発ツール （ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。</p>
+<pre><code> $ sudo zypper install --type pattern devel_basis</code></pre>
+<p>home_ocefpafリポジトリを登録して最初のインストールの場合、 下記のようにパッケージの署名鍵の信頼について問われることがある。 “a”の「ずっと信頼」を選択して作業を進める。 その後、インストール対象がリストされるので、確認して“y”をタイプして先へ進める。<br /></p>
+<p><br /></p>
+<p>つづいて、devel_basisパッケージに含まれないライブラリを個別に追加する。</p>
+<pre><code> $ sudo zypper install gcc-fortran
+ $ sudo zypper install hdf5-devel hdf5-devel-static
+ $ sudo zypper install netcdf-devel netcdf-devel-static
+ $ sudo zypper install netcdf-fortran-devel netcdf-fortran-static
+ $ sudo zypper install lapack-devel lapack-devel-static
+ $ sudo zypper install openmpi-devel openmpi-devel-static
+ $ sudo zypper install wgrib wgrib2</code></pre>
+<h4 id="環境変数の設定-2">環境変数の設定</h4>
+<p>ローカルシステムでMPI並列プログラムを実行するために、OpenMPIライブラリの環境変数設定を行う。 ユーザ権限に移動して.bashrcをエディタで開き，</p>
+<pre><code> $ vi ~/.bashrc</code></pre>
+<p>下記をファイルの最後に追加して，環境変数の設定を記述する。<br /></p>
+<p><br /></p>
+<p>編集が終わったら、環境設定を有効にする。</p>
+<pre><code> $ . ~/.bashrc</code></pre>
+<h2 id="インストール方法mac-os-x-編">インストール方法(Mac OS X 編)</h2>
+<h4 id="macportsを用いたインストール">macportsを用いたインストール</h4>
+<p>Apple Mac OS XでのSCALE実行環境を整備する方法について説明する。 ここではMac OS Xのパッケージマネージャの一つであるmacportsを用いる方法を紹介する。 その他の主要なパッケージマネージャとしては、homebrewが挙げられる。homebrewを利用しても環境は手軽に揃えられるので、 興味のある方は利用してもらいたい。</p>
+<p>まずはAppleの開発ツールであるXcodeをインストールする。 大元のgccコンパイラを導入するために、必ずインストールする必要がある。 最近のOSのバージョンのものは、App Store経由で入手できる（無料）。 古いOSでは、インストールディスクから追加することが出来る。 最近のOSのXcodeの場合、最初に以下の様な設定をターミナルから行う必要がある。</p>
+<pre><code> コマンドラインツールのインストール
+ # xcode-select --install</code></pre>
+<pre><code> ライセンス条項の承認
+ # xcodebuild -license</code></pre>
+<p>次にmacports本体をインストールする。 <a href="https://www.macports.org/" class="uri">https://www.macports.org/</a></p>
+<p>macportsとmacportsが管理するパッケージは/opt/local以下に配置される。 インストール時に<code>.bash_profile</code>に、/opt/local/binへのパスが張られているので確認されたし。 macportsはコマンドラインから操作する。主要なコマンドは以下の通り。</p>
+<pre><code> インストール可能なソフトウェアを検索する
+ $ port search &lt;検索文字&gt;</code></pre>
+<pre><code> ソフトウェアのインストール時に選択可能なオプション(variants)を確認する
+ $ port variants &lt;アプリ名&gt;</code></pre>
+<pre><code> ソフトウェアのインストール（root権限必要）
+ $ sudo port install &lt;アプリ名&gt; [variants]</code></pre>
+<pre><code> ソフトウェアのアンインストール（root権限必要）
+ $ sudo port uninstall &lt;アプリ名&gt; [variants]</code></pre>
+<pre><code> macports本体とパッケージカタログの更新（root権限必要）
+ $ sudo port selfupdate</code></pre>
+<pre><code> パッケージの更新（root権限必要）
+ $ sudo port upgrade outdated</code></pre>
+<pre><code> 不要なパッケージ（activateされていない過去のバージョン等）の削除
+ $ sudo port -u uninstall</code></pre>
+<h4 id="gccからnetcdfまでのインストール">gccからNetCDFまでのインストール</h4>
+<p>macportsはパッケージの依存関係を解決してくれるが、必要なvariantsを備えたセットを作るには、 順番にインストールしていく方が問題が少ない。以下にsudo port installしていく順番とvariantsの設定を示す。 今回はgcc4.9の利用を想定している。</p>
+<pre><code> $ gcc49
+ $ openmpi-gcc49 +threads
+ $ hdf4 +gcc49 +szip
+ $ hdf5 +gcc49 +szip +fortran +cxx +openmpi +threadsafe
+ $ netcdf +gcc49 +openmpi +netcdf4 +hdf4
+ $ netcdf-fortran +gcc49 +openmpi</code></pre>
+<p>最近のmacportsでは、gccとmpiライブラリはselectで選択する。 この操作を行うと、gfortran等の一般的な名前でエイリアスが作られてパスが通るようになる。</p>
+<pre><code> $ sudo port select --set gcc mp-gcc49
+ $ sudo port select --set mpi openmpi-gcc49-fortran</code></pre>
+<p>SCALEは陰解法計算の部分で、数値計算ライブラリを利用するオプションがある。 もし必要ならば、macportsからATLASをインストールすることが出来る。</p>
+<pre><code> $ atlas +gcc49</code></pre>
+<h2 id="インストール方法-スーパーコンピュータ京-編">インストール方法 (スーパーコンピュータ「京」 編)</h2>
+<p>以下の説明で使用した環境は次のとおりである。</p>
+<ul>
+<li><p>計算機: スーパーコンピュータ「京」</p></li>
+<li><p>言語環境: K-1.2.0-18</p></li>
+</ul>
+<h4 id="ライブラリについて">ライブラリについて</h4>
+<p>スーパーコンピュータ「京」では、SCALEのコンパイルに 必要なライブラリがAICSソフトウェアとして準備されている。 詳細は、京ポータルサイトの「AICSソフトウェア等」の項目、もしくは下記のWebページを参照のこと。<br /><a href="http://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf.html" class="uri">http://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf.html</a></p>
+<p>一般に、スーパーコンピュータ「京」におけるSCALEのコンパイルには、<br />“<code>/opt/aics/netcdf/k-serial-noszip/</code>”下にあるHDF5、NetCDFライブラリを用いる。 コンパイラやMPIライブラリについてもスーパーコンピュータ「京」専用のコンパイラとライブラリを用いるため、 特別にライブラリ環境を準備する必要はない。</p>
+<p><span>＊コンパイル時に参照するライブラリのPATHは、 SCALEコンパイル時に使用する“Makedef.K”に記述されているため、 環境変数について特に設定する必要はない。</span></p>
+<h2 id="sec:env_vis_tools">描画ツールのインストール</h2>
+<p>SCALEの計算結果や、初期値/境界値データなどを描画するのに利用可能である描画ツールの例を挙げる。 個人の好みでどのツールを使ってもよいし、出力形式を理解していれば、 ここに挙げた以外のツールで解析・描画することももちろん可能である。</p>
+<ul>
+<li><p>Gphys / Ruby-DCL by 地球電脳倶楽部<br /></p>
+<ul>
+<li><p>URL： <a href="http://ruby.gfd-dennou.org/products/gphys/" class="uri">http://ruby.gfd-dennou.org/products/gphys/</a></p></li>
+<li><p>概略：SCALEの出力ファイルは、MPI並列の計算領域分割に従ってMPIプロセスごとに NetCDF形式の分割ファイルとして出力される。Gphysの“gpview”や“gpvect”といった 描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。</p></li>
+<li><p>インストール方法：本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。<br /><a href="http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm" class="uri">http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm</a><br />Mac OS Xにおけるインストール方法は本節の末尾で説明する。</p></li>
+</ul></li>
+<li><p>Grid Analysis and Display System (GrADS) by COLA<br /></p>
+<ul>
+<li><p>URL： <a href="http://iges.org/grads/" class="uri">http://iges.org/grads/</a></p></li>
+<li><p>概略：言わずと知れた描画ツール。SCALEのNetCDF形式の分割ファイルをそのまま読むことはできない ため、SCALEで提供している出力データの後処理ツール“<code>netcdf2grads_h</code>”を使用して分割ファイルを結合し、 GrADSで読み込めるファイル形式に変換する必要ある。“<code>netcdf2grads_h</code>”のインストール方法は、 本書の第[sec:inst<sub>e</sub>nv]章、使用方法は第3章、および第4章を参照のこと。</p></li>
+<li><p>インストール方法：<a href="http://iges.org/grads/downloads.html" class="uri">http://iges.org/grads/downloads.html</a>を参照のこと。 CentOS6、CentOS7ではEPELリポジトリを登録していればyumコマンドによって、 openSUSE 13ではhome_ocefpafリポジトリを登録していればzypperコマンドによって インストールできる。</p></li>
+</ul></li>
+<li><p>Ncview: a netCDF visual browser by David W. Pierce<br /></p>
+<ul>
+<li><p>URL： <a href="http://meteora.ucsd.edu/~pierce/ncview_home_page.html" class="uri">http://meteora.ucsd.edu/~pierce/ncview_home_page.html</a></p></li>
+<li><p>概略：NetCDF形式ファイルのクイックビューアーである。SCALEの分割ファイルを結合して描画することは できないが、分割ファイルを１つずつ描画してチェックすることはできる。</p></li>
+<li><p>インストール方法：<a href="http://meteora.ucsd.edu/~pierce/ncview_home_page.html" class="uri">http://meteora.ucsd.edu/~pierce/ncview_home_page.html</a>を参照のこと。 CentOS6、CentOS7ではEPELリポジトリを登録していればyumコマンドによって、 openSUSE 13ではhome_ocefpafリポジトリを登録していればzypperコマンドによって インストールできる。</p></li>
+</ul></li>
+</ul>
+<p><span><em>COLUMN</em></span></p>
+<h4 id="mac-os-xにおけるgphys-ruby-dclのインストール">Mac OS XにおけるGphys / Ruby-DCLのインストール</h4>
+<p>macports-JPが作成しているリポジトリから、Mac OS X用のGPhysをインストールできる。 以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。</p>
+<pre><code> $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
+ $ /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk</code></pre>
+<p>/opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。</p>
+<pre><code> file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports</code></pre>
+<p>これで、Gphysと関連ライブラリをmacportsで一括インストールできるようになる。 今回はruby1.9向けのrb19-gphysをインストールすることにする。</p>
+<pre><code> rubyのインストールと1.9の選択
+ $ sudo port install ruby19
+ $ sudo port select --set ruby ruby19</code></pre>
+<pre><code> 依存関係の解決を任せるかたちで、gphysのインストール
+ $ sudo port install rb19-gphys</code></pre>
+<p>インストールされたruby1.9版gphysコマンドは、末尾に1.9が付いている。 これを無くしたい場合は/opt/local/bin内でシンボリックリンクを張る。 以下では特に頻繁に使う３つを例に挙げる。</p>
+<pre><code> $ sudo ln -s gplist1.9 gplist
+ $ sudo ln -s gpvect1.9 gpvect
+ $ sudo ln -s gpview1.9 gpview</code></pre>
+<h1 id="app:namelist">Namelist in run.conf</h1>
+<h4 id="param_io">PARAM_IO</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>IO_LOG_BASENAME</code> &amp; 文字列 &amp; “LOG” &amp; ログファイルの接頭辞。<br /><code>IO_LOG_ALLNODE</code> &amp; logical &amp; .false. &amp; 全ノードログ出力するかどうか。<br /></p>
+<h4 id="param_const">PARAM_CONST</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>CONST_RADIUS</code> &amp; 実数 &amp; 6.37122d+6 &amp; 惑星半径(m)（デフォルトは地球）<br /><code>CONST_OHM</code> &amp; 実数 &amp; 7.2920D-5 &amp; 惑星の角速度(1/s)<br /><code>CONST_GRAV</code> &amp; 実数 &amp; 9.80665D0 &amp; 重力加速度(<span class="math"><em>m</em>/<em>s</em><sup>2</sup></span>)<br /><code>CONST_RDRY</code> &amp; 実数 &amp; 287.04D0 &amp; 乾燥気体の気体定数 (J/kg/K)<br /><code>CONST_CPDRY</code> &amp; 実数 &amp; 1004.64D0 &amp; 乾燥気体の定圧比熱 (J/kg/K)<br /><code>CONST_LAPS</code> &amp; 実数 &amp; 6.5D-3 &amp; International Standard Atmosphere (ISA)の気温減率(K/m)<br /><code>CONST_PSTD</code> &amp; 実数 &amp; 101325.D0 &amp; 標準気圧(Pa)<br /><code>CONST_PRE00</code> &amp; 実数 &amp; 100000.D0 &amp; 基準気圧(Pa)<br /><code>CONST_TSTD</code> &amp; 実数 &amp; 288.15D0 &amp; 基準温度(K)<br /><code>CONST_THERMODYN_TYPE</code> &amp; 文字列 &amp; “EXACT” &amp; 内部エネルギーの定義種類。SIMPLEは定数。EXACTは温度依存。<br /></p>
+<h4 id="param_time">PARAM_TIME</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>TIME_STARTDATE</code> &amp; 整数配列 &amp; 0000, 1, 1, 0, 0, 0 &amp; 積分実行時の初期時刻。<br /><code>TIME_STARTMS</code> &amp; 実数 &amp; 0.0D0 &amp; 初期時刻マイクロ秒。<br /><code>TIME_DURATION</code> &amp; 実数 &amp; 0.0D0 &amp; 実行する積分時間。<br /><code>TIME_DT</code> &amp; 実数 &amp; 0.0D0 &amp; 積分1STEPに要する時間。<br /><code>TIME_DT_ATMOS_DYN</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 力学スキームの時間差分値。<code>TIME_DT</code>の約数である必要がある。<br /><code>TIME_DT_ATMOS_PHY_MP</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 雲微物理スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_ATMOS_PHY_RD</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 放射スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_ATMOS_PHY_SF</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 地表面スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_ATMOS_PHY_TB</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 乱流スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_OCEAN</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 海洋スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_LAND</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 陸面スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_URBAN</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 都市スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DURATION_UNIT</code> &amp; 文字列 &amp; “SEC” &amp; 積分時間単位。<br /><code>TIME_DT_UNIT</code> &amp; 文字列 &amp; “SEC” &amp; 積分1STEPの時間単位。<br /><code>TIME_DT_ATMOS_DYN_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 力学スキームの時間単位。<br /><code>TIME_DT_ATMOS_PHY_MP_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 雲微物理スキームの時間単位。<br /><code>TIME_DT_ATMOS_PHY_RD_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 放射スキームの時間単位。<br /><code>TIME_DT_ATMOS_PHY_SF_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 地表面スキームの時間単位。<br /><code>TIME_DT_ATMOS_PHY_TB_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 乱流スキームの時間単位。<br /><code>TIME_DT_OCEAN_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 海洋スキームの時間単位。<br /><code>TIME_DT_LAND_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 陸面スキームの時間単位。<br /><code>TIME_DT_URBAN_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 都市スキームの時間単位。<br /></p>
+<p><br />＊次ページへつづく</p>
+<h4 id="param_timeつづき">PARAM_TIME：つづき</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>TIME_DT_ATMOS_RESTART</code> &amp; 実数 &amp; <code>TIME_DURATION</code> &amp; 大気のリスタートファイルを出力する時間間隔。<br /><code>TIME_DT_ATMOS_RESTART_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 大気のリスタートファイルを出力する時間間隔の時間単位。<br /><code>TIME_DT_OCEAN_RESTART</code> &amp; 実数 &amp; <code>TIME_DURATION</code> &amp; 海洋のリスタートファイルを出力する時間間隔。<br /><code>TIME_DT_OCEAN_RESTART_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 海洋のリスタートファイルを出力する時間間隔の時間単位。<br /><code>TIME_DT_LAND_RESTART</code> &amp; 実数 &amp; <code>TIME_DURATION</code> &amp; 地表面スキーム関係のリスタートファイルを出力する時間間隔。<br /><code>TIME_DT_LAND_RESTART_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 地表面スキーム関係のリスタートファイルを出力する時間間隔の時間単位。<br /><code>TIME_DT_URBAN_RESTART</code> &amp; 実数 &amp; <code>TIME_DURATION</code> &amp; 都市スキーム関係のリスタートファイルを出力する時間間隔。<br /><code>TIME_DT_URBAN_RESTART_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 都市スキームのリスタートファイルを出力する時間間隔の時間単位。<br /></p>
+<h4 id="param_grid">PARAM_GRID</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>GRID_IN_BASENAME</code> &amp; 文字列 &amp; &amp; Gridを外部から与えるときの入力ファイル（省略時はDX, DY, DZ, BAFFFACTなどから生成する）<br /><code>GRID_OUT_BASENAME</code> &amp; 文字列 &amp; &amp; Grid情報の出力ファイル名<br /> <code>DX</code> &amp; 実数 &amp; 500.D0 &amp; X方向のGridの間隔(m)<br /><code>DY</code> &amp; 実数 &amp; 500.D0 &amp; Y方向のGridの間隔(m)<br /><code>DZ</code> &amp; 実数 &amp; 500.D0 &amp; Z方向のGridの間隔(m)<br /><code>BUFFER_DZ</code> &amp; 実数 &amp; 0.D0 &amp; Z方向のダンピング層（スポンジ層）の厚さ(m)<br /><code>BUFFER_DX</code> &amp; 実数 &amp; 0.D0 &amp; X方向のダンピング層（スポンジ層）の厚さ(m)<br /><code>BUFFER_DY</code> &amp; 実数 &amp; 0.D0 &amp; Y方向のダンピング層（スポンジ層）の厚さ(m)<br /><code>BUFFFACT</code> &amp; 実数 &amp; 1.D0 &amp; ダンピング層でのGridの引き伸ばし度合い（<span class="math">(<em>d</em><em>x</em>)<sub><em>i</em> + 1</sub> = (<em>d</em><em>x</em>)<sub><em>i</em></sub><sup><em>B</em><em>U</em><em>F</em><em>F</em><em>F</em><em>A</em><em>C</em><em>T</em></sup></span>）<br /></p>
+<h4 id="param_statistics">PARAM_STATISTICS</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>STATISTICS_checktotal</code> &amp; logical &amp; .false. &amp; 値のチェックを行うかどうか。<br /><code>STATISTICS_use_globalcomm</code> &amp; logical &amp; .false. &amp; 全ノード通信を行うかどうか。<br /></p>
+<h4 id="param_restrat">PARAM_RESTRAT</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>RESTART_OUTPUT</code> &amp; logical &amp; .false. &amp; restartファイルを出力するかどうか。<br /><code>RESTART_OUT_BASENAME</code> &amp; 文字列 &amp; &amp; 書き出すrestartファイルの接頭辞。<code>RESTART_OUTPUT</code>が真のときに有効。<br /><code>RESTART_IN_BASENAME</code> &amp; 文字列 &amp; &amp; 読み込むrestartファイルの接頭辞。<br /></p>
+<h4 id="param_topo">PARAM_TOPO</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>TOPO_IN_BASENAME</code> &amp; 文字列 &amp; &amp; 読み込む地形ファイルの接頭辞。<br /></p>
+<h4 id="param_landuse">PARAM_LANDUSE</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LANDUSE_IN_BASENAME</code> &amp; 文字列 &amp; &amp; 読み込む土地利用ファイルの接頭辞。<br /></p>
+<h4 id="param_land_property">PARAM_LAND_PROPERTY</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LAND_PROPERTY_IN_FILENAME</code> &amp; 文字列 &amp; &amp; 読み込む土壌パラメータファイル名。<br /></p>
+<h4 id="param_prc">PARAM_PRC</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>PRC_NUM_X</code> &amp; 整数 &amp; &amp; X方向に割り当てるプロセス数。<br /><code>PRC_NUM_Y</code> &amp; 整数 &amp; &amp; Y方向に割り当てるプロセス数。<br /><code>PRC_PERIODIC_X</code> &amp; logical &amp; &amp; X方向に周期境界とするかどうか。<br /><code>PRC_PERIODIC_Y</code> &amp; logical &amp; &amp; Y方向に周期境界とするかどうか。<br /></p>
+<h4 id="param_index">PARAM_INDEX</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>KMAX</code> &amp; 整数 &amp; &amp; 大気の鉛直層数。<br /><code>IMAX</code> &amp; 整数 &amp; &amp; プロセスあたりのX方向の格子数。<br /><code>JMAX</code> &amp; 整数 &amp; &amp; プロセスあたりのY方向の格子数。<br /></p>
+<h4 id="param_land_index">PARAM_LAND_INDEX</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LKMAX</code> &amp; 整数 &amp; &amp; 陸面の鉛直層数。<br /></p>
+<h4 id="param_urban_index">PARAM_URBAN_INDEX</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>UKMAX</code> &amp; 整数 &amp; &amp; 都市の鉛直層数。<br /></p>
+<h4 id="param_land_grid">PARAM_LAND_GRID</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LDZ</code> &amp; 実数配列 &amp; &amp; 陸面の鉛直層の層厚。鉛直層数分の設定が必要。<br /></p>
+<h4 id="param_urban_grid">PARAM_URBAN_GRID</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>UDZ</code> &amp; 実数配列 &amp; &amp; 都市の鉛直層の層厚。鉛直層数分の設定が必要。<br /></p>
+<h4 id="param_mapproj">PARAM_MAPPROJ</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>MPRJ_basepoint_lon</code> &amp; 実数 &amp; &amp; 計算領域の中心経度。<br /><code>MPRJ_basepoint_lat</code> &amp; 実数 &amp; &amp; 計算領域の中心緯度。<br /><code>MPRJ_type</code> &amp; 文字列 &amp; &amp; 計算領域の投影図法。<br /><code>MPRJ_LC_lat1</code> &amp; 実数 &amp; &amp; 投影図法がLCの場合の参照緯度1。<br /><code>MPRJ_LC_lat2</code> &amp; 実数 &amp; &amp; 投影図法がLCの場合の参照緯度2。<br /></p>
+<h4 id="param_tracer">PARAM_TRACER</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>TRACER_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; トレーサーの種類。通常、<code>ATMOS_PHY_MP_TYPE</code>と同じ。<br /></p>
+<h4 id="param_atmos">PARAM_ATMOS</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_DYN_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 力学スキームの種類。（OFF、HEVE、HEVI、HIVIが選択可能）<br /><code>ATMOS_PHY_MP_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 雲微物理スキームの種類。（OFF、KESSLER、TOMITA08、SN14、SUZUKI10が選択可能）<br /><code>ATMOS_PHY_RD_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 放射スキームの種類。 （OFF、MSTRNXが選択可能）<br /><code>ATMOS_PHY_SF_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 地表面スキームの種類。（OFF、CONST、COUPLEが選択可能）<br /><code>ATMOS_PHY_TB_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 乱流スキームの種類。 （OFF、SMAGORINSKY、MYNNが選択可能）<br /></p>
+<h4 id="param_ocean">PARAM_OCEAN</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>OCEAN_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 海洋スキームの種類。（OFF、CONSTが選択可能）<br /></p>
+<h4 id="param_land">PARAM_LAND</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LAND_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 陸面スキームの種類。 （OFF、SLUBが選択可能）<br /></p>
+<h4 id="param_urban">PARAM_URBAN</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>URBAN_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 都市スキームの種類。（OFF、SLCが選択可能）<br /></p>
+<p>*</p>
+<h4 id="param_hist">PARAM_HIST</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>HIST_BND</code> &amp; logical &amp; .true. &amp; Nesting時にxy方向のhalo領域をHistoryファイルに出力するか。<br /></p>
+<h4 id="param_history">PARAM_HISTORY</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>HISTORY_TITLE</code> &amp; 文字列 &amp; &amp; NetCDF形式のHistoryファイルのタイトル<br /> <code>HISTORY_DEFAULT_BASENAME</code> &amp; 文字列 &amp; ’history’ &amp; Historyファイルのファイル名（相対パス）<br /><code>HISTORY_DEFAULT_TINTERVAL</code> &amp; 実数 &amp; 1.0_DP &amp; Historyを出力する時間間隔。<code>HISTORY_DEFAULT_TUNIT</code>が単位となる。<br /><code>HISTORY_DEFAULT_TUNIT</code> &amp; 文字列 &amp; “SEC” &amp; <code>HISTORY_DEFAULT_TINTERVAL</code>の単位（SEC、HOUR、DAYが利用可能）<br /><code>HISTORY_DEFAULT_TAVERAGE</code> &amp; logical &amp; .false. &amp; Historyに出力する際<code>HISTORY_DEFAULT_TINTERVAL</code>で指定した時間間隔ごとの時間平均を出力するか。<br /><code>HISTORY_DEFAULT_ZINTERP</code> &amp; logical &amp; .false. &amp; 出力時にz面への内挿をするかどうか<br /><code>HISTORY_DEFAULT_DATATYPE</code> &amp; 文字列 &amp; REAL4 &amp; 出力データのprecision<br /><code>HISTORY_OUTPUT_STEP0</code> &amp; logical &amp; .false. &amp; 初期時刻(t<span class="math"> = </span>0)の値を出力するかどうか<br /></p>
+<h4 id="param_nest">PARAM_NEST</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>USE_NESTING</code> &amp; logical &amp; .false. &amp; ネスティング機能を使うかどうか。<br /><code>LATLON_CATALOGUE_FNAME</code> &amp; 文字列 &amp; &amp; 入力する親ドメインのlatlonカタログのファイル名。<br /><code>OFFLINE_PARENT_PRC_NUM_X</code> &amp; 整数 &amp; &amp; 親ドメインのMPIプロセス数（X方向）。<code>OFFLINE</code>が真のときのみ有効。<br /><code>OFFLINE_PARENT_PRC_NUM_Y</code> &amp; 整数 &amp; &amp; 親ドメインのMPIプロセス数（Y方向）。<code>OFFLINE</code>が真のときのみ有効。<br /><code>OFFLINE_PARENT_KMAX</code> &amp; 整数 &amp; &amp; 親ドメインの1プロセスあたりの格子点数（Z方向）。<code>OFFLINE</code>が真のときのみ有効。<br /><code>OFFLINE_PARENT_IMAX</code> &amp; 整数 &amp; &amp; 親ドメインの1プロセスあたりの格子点数（X方向）。<code>OFFLINE</code>が真のときのみ有効。<br /><code>OFFLINE_PARENT_JMAX</code> &amp; 整数 &amp; &amp; 親ドメインの1プロセスあたりの格子点数（Y方向）。<code>OFFLINE</code>が真のときのみ有効。<br /><code>OFFLINE_PARENT_LKMAX</code> &amp; 整数 &amp; &amp; 親ドメインの1プロセスあたりの格子点数（陸面モデル）。<code>OFFLINE</code>が真のときのみ有効。<br /><code>OFFLINE</code> &amp; logical &amp; .true. &amp; オフラインかオンラインのどちらのシステムを使うか。<code>USE_NESTING</code>が真のときのみ有効。<br /><code>ONLINE_DOMAIN_NUM</code> &amp; 整数 &amp; &amp; ドメインID番号。オンライン・ネスティングのときのみ有効。<br /><code>ONLINE_IAM_PARENT</code> &amp; logical &amp; .false. &amp; 当該ドメインが親ドメインとして働くかどうか。オンライン・ネスティングのときのみ有効。<br /><code>ONLINE_IAM_DAUGHTER</code> &amp; logical &amp; .false. &amp; 当該ドメインが子ドメインとして働くかどうか。オンライン・ネスティングのときのみ有効。<br /><code>ONLINE_USE_VELZ</code> &amp; logical &amp; .false. &amp; 鉛直速度をバッファー領域のダンピングに使用するかどうか。オンライン・ネスティングのときのみ有効。<br /><code>ONLINE_NO_ROTATE</code> &amp; logical &amp; .false. &amp; 水平速度成分に対して地図投影法の違い基づく回転効果の変換を行うかどうか。オンライン・ネスティングのときのみ有効。<br /><code>ONLINE_BOUNDARY_USE_QHYD</code> &amp; logical &amp; .false. &amp; 凝結物の混合比をバッファー領域のダンピングに使用するかどうか。オンライン・ネスティングのときのみ有効。<br /><code>ONLINE_AGGRESSIVE_COMM</code> &amp; logical &amp; .false. &amp; より安全にドメイン間の同期通信を行うかどうか。オンライン・ネスティングのときのみ有効。<br /> <code>ONLINE_SPECIFIED_MAXRQ</code> &amp; 整数 &amp; 1000 &amp; 非同期MPI通信の同時Request数の最大値。オンライン・ネスティングのときのみ有効。<br /><code>NEST_INTERP_LEVEL</code> &amp; 整数 &amp; 4 &amp; 水平2次元内挿処理に使用する格子点数の指定；1, 3, 4, 8, 12のうちから指定する。オンライン・ネスティングのときのみ有効。<br /></p>
+<h4 id="param_atmos_vars">PARAM_ATMOS_VARS</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /> <code>ATMOS_VARS_CHECKRANGE</code> &amp; logical &amp; .false. &amp; わかりません。<br /></p>
+<h4 id="param_atmos_refstate">PARAM_ATMOS_REFSTATE</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_REFSTATE_TYPE</code> &amp; 文字列 &amp; UNIFORM &amp; Reference stateに何を用いるか。(UNIFORM：一定値で与える。値は<code>ATMOS_REFSTATE_**</code>によって決まる、INIT：初期値（リスタートの時はリスタート時の値）、FILE：<code>ATMOS_REFSTATE_IN_BASENAME</code>から読み出す、ISA：International Standard Atmosphere)<br /><code>ATMOS_REFSTATE_IN_BASENAME</code> &amp; 文字列 &amp; &amp; Reference stateの入力ファイル名<br /><code>ATMOS_REFSTATE_OUT_BASENAME</code> &amp; 文字列 &amp; &amp; Reference stateの出力ファイル名<br /> <code>ATMOS_REFSTATE_UPDATE_DT</code> &amp; 実数 &amp; 0.D0 &amp; Reference Stateをアップデートする時間間隔（0の時はReference stateが更新されない）<br /></p>
+<h4 id="param_atmos_boundary">PARAM_ATMOS_BOUNDARY</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_BOUNDARY_TYPE</code> &amp; 文字列 &amp; NONE &amp; バッファ層でどの値に緩和させるか。（CONST：一定値（<code>ATMOS_BOUNDARY_VALUE_**</code>に緩和）、INIT：初期値に緩和、REAL：Nesting時、FILE：入力ファイル（<code>ATMOS_BOUNDARY_IN_BASENAME</code>）から読み込む））<br /><code>ATMOS_BOUNDARY_IN_BASENAME</code> &amp; 文字列 &amp; &amp; <code>ATMOS_BOUNDARY_TYPE</code>=FILEの時に読み込む外部ファイル<br /><code>ATMOS_BOUNDARY_OUT_BASENAME</code> &amp; 文字列 &amp; &amp; バッファ層で緩和させる値を出力する際の出力ファイル名（設定しない場合は出力されない）<br /> <code>ATMOS_BOUNDARY_USE_VELZ</code> &amp; logical &amp; .false. &amp; 鉛直方向の運動量にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_VELY</code> &amp; logical &amp; .false. &amp; Y方向の運動量にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_VELX</code> &amp; logical &amp; .false. &amp; X方向の運動量にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_POTT</code> &amp; logical &amp; .false. &amp; 温位にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_QV</code> &amp; logical &amp; .false. &amp; 水蒸気混合比にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_QHYD</code> &amp; logical &amp; .false. &amp; 水物質の混合比ににダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_VALUE_VELZ</code> &amp; 実数 &amp; 0.D0 &amp; 鉛直方向の運動量を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_VELX</code> &amp; 実数 &amp; 0.D0 &amp; X方向の運動量を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_VELY</code> &amp; 実数 &amp; 0.D0 &amp; Y方向の運動量を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_POTT</code> &amp; 実数 &amp; 3.D0 &amp; 温位を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /></p>
+<p><br />＊次ページへつづく</p>
+<h4 id="param_atmos_boundaryつづき">PARAM_ATMOS_BOUNDARY：つづき</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_BOUNDARY_VALUE_QV</code> &amp; 実数 &amp; 0.D0 &amp; 水蒸気混合比を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_QHYD</code> &amp; 実数 &amp; 0.D0 &amp; 水物質の混合比を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /> <code>ATMOS_BOUNDARY_LINEAR_V</code> &amp; logical &amp; .false. &amp; わかりません<br /><code>ATMOS_BOUNDARY_LINEAR_H</code> &amp; logical &amp; .true. &amp; わかりません<br /><code>ATMOS_BOUNDARY_EXP_H</code> &amp; 実数 &amp; 2.D0 &amp; わかりません<br /></p>
+<h4 id="param_atmos_dyn">PARAM_ATMOS_DYN</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_DYN_NUMERICAL_DIFF_ORDER</code> &amp; 実数 &amp; 1.D0. &amp; 数値粘性のオーダーを4で割ったもの（<code>ATMOS_DYN_NUMERICAL_DIFF_ORDER</code> =1なら4次の数値粘性になる）<br /><code>ATMOS_DYN_NUMERICAL_DIFF_COEF</code> &amp; 実数 &amp; 1.D-4 &amp; 混合比以外の予報変数にかかる数値粘性の強さを決める無次元定数<br /><code>ATMOS_DYN_NUMERICAL_DIFF_COEF_Q</code> &amp; 実数 &amp; 1.D-4 &amp; 混合比にかかる数値粘性の強さを決める無次元定数<br /> <code>ATMOS_DYN_ENABLE_CORIOLIS</code> &amp; logical &amp; .false. &amp; コリオリ力を考慮するか<br /> <code>ATMOS_DYN_FLAG_FCT_RHO</code> &amp; logical &amp; .false. &amp; 密度にFCTをかけるか<br /><code>ATMOS_DYN_FLAG_FCT_MOMENTUM</code> &amp; logical &amp; .false. &amp; 運動量にFCTをかけるか。<br /><code>ATMOS_DYN_FLAG_FCT_T</code> &amp; logical &amp; .false. &amp; 温位にFCTをかけるか。<br /></p>
+<h4 id="param_atmos_phy_mp">PARAM_ATMOS_PHY_MP</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>MP_DOPRECIPITATION</code> &amp; logical &amp; .true. &amp; 水物質の重力による落下を考慮するか否か<br /><code>MP_DONEGATIVE_FIXER</code> &amp; logical &amp; .false. &amp; 雲物理スキームの前後で負値を０にするか否か。<br /><code>MP_NTMAX_SEDIMENTATION</code> &amp; 整数 &amp; 1 &amp; 水物質の重力落下の計算をする際に区切るステップ数<br /></p>
+<h4 id="param_atmos_phy_rd_mstrn">PARAM_ATMOS_PHY_RD_MSTRN</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /> &amp; 整数 &amp; 0 &amp; 放射スキームで計算する際にモデル上端から上に加える層数。<br /> &amp; 文字列 &amp; ’PARAG.29’ &amp; 放射スキームで用いる希ガスパラメータの入力ファイル名<br /> &amp; 文字列 &amp; ’PARAC.29’ &amp; 放射スキームで用いるエアロゾルパラメータの入力ファイル名<br /> &amp; 文字列 &amp; ’VARDATA.RM29’ &amp; 放射スキームで用いる水蒸気と水物質パラメータの入力ファイル名<br /> &amp; 整数 &amp; 29 &amp; MSTRNXで計算に用いる波長バンド数 （<code>ATMOS_PHY_RD_MSTRN_GAS</code> <code>(AERO,HYGRO)</code> <code>PARA_IN_FILENAME</code>のバンド数と対応する必要がある）<br /></p>
+<h4 id="param_atmos_phy_rd_profile">PARAM_ATMOS_PHY_RD_PROFILE</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /> &amp; 実数 &amp; 100.D0 &amp; 放射スキームで用いるTop Of Atmospher (TOA)の高度(km)<br /> &amp; logical &amp; .true. &amp; 放射スキームに必要な大気のプロファイルに気候値を用いるかどうか。<br /> &amp; 文字列 &amp; ./ &amp; cira.ncの相対パス<br /> &amp; 文字列 &amp; &amp; MIPAS2001が保存されているディレクトリ名（相対パス）<br /> &amp; 文字列 &amp; &amp; 放射スキームに用いる大気のプロファイルの入力ファイル名（省略された場合は気候値が用いられる）<br /> &amp; logical &amp; .true. &amp; 放射計算で二酸化炭素を考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算でオゾンを考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算で一酸化炭素を考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算で一酸化二窒素を考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算でメタンを考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算で酸素を考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算でCFCを考慮するか<br /><code>DEBUG</code> &amp; logical &amp; .false. &amp; 放射計算においてDEBUG情報を出力するか否か<br /></p>
+<h4 id="param_ocean_phy_slab">PARAM_OCEAN_PHY_SLAB</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>OCEAN_PHY_SLAB_DEPTH</code> &amp; 実数 &amp; 10.D0 &amp; スラブモデルにおける海洋の深さ<br /></p>
+<h1 id="app:vari_hist">Variables for history output</h1>
+<h4 id="mod_atmos_phy_ae_driver">mod_atmos_phy_ae_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>CCN</code> &amp; cloud condensation nucrei &amp;<br /></p>
+<h4 id="mod_atmos_phy_ch_driver">mod_atmos_phy_ch_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>Ozone</code> &amp; Ozone &amp; <span class="math"><em>P</em><em>P</em><em>M</em></span><br /><code>CBMFX</code> &amp; cloud base mass flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_atmos_phy_cp_driver">mod_atmos_phy_cp_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>CBMFX</code> &amp; cloud base mass flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_atmos_phy_mp_driver">mod_atmos_phy_mp_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>RAIN</code> &amp; surface rain rate &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SNOW</code> &amp; surface snow rate &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>PREC</code> &amp; surface precipitation rate &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>DENS_t_MP</code> &amp; tendency DENS in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_MP</code> &amp; tendency MOMZ in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_MP</code> &amp; tendency MOMX in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_MP</code> &amp; tendency MOMY in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_MP</code> &amp; tendency RHOT in MP &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>QV_t_MP</code> &amp; tendency QV in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /></p>
+<h4 id="mod_atmos_phy_rd_driver">mod_atmos_phy_rd_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>SOLINS</code> &amp; solar insolation &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>COSZ</code> &amp; cos(solar zenith angle) &amp; <span class="math">0 − 1</span><br /><code>SFLX_LW_up</code> &amp; SFC upward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SFLX_LW_dn</code> &amp; SFC downward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SFLX_SW_up</code> &amp; SFC upward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SFLX_SW_dn</code> &amp; SFC downward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TOAFLX_LW_up</code> &amp; TOA upward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TOAFLX_LW_dn</code> &amp; TOA downward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TOAFLX_SW_up</code> &amp; TOA upward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TOAFLX_SW_dn</code> &amp; TOA downward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SLR</code> &amp; SFC net longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SSR</code> &amp; SFC net shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>OLR</code> &amp; TOA net longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>OSR</code> &amp; TOA net shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_LWUP</code> &amp; upward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_LWDN</code> &amp; downward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_LW</code> &amp; net longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_SWUP</code> &amp; upward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_SWDN</code> &amp; downward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_SW</code> &amp; net shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TEMP_t_rd_LW</code> &amp; tendency of temp in rd(LW) &amp; <span class="math"><em>K</em>/<em>d</em><em>a</em><em>y</em></span><br /><code>TEMP_t_rd_SW</code> &amp; tendency of temp in rd(SW) &amp; <span class="math"><em>K</em>/<em>d</em><em>a</em><em>y</em></span><br /><code>TEMP_t_rd</code> &amp; tendency of temp in rd &amp; <span class="math"><em>K</em>/<em>d</em><em>a</em><em>y</em></span><br /><code>RHOT_t_RD</code> &amp; tendency of RHOT in rd &amp; <span class="math"><em>K</em>.<em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /></p>
+<h4 id="mod_atmos_phy_sf_driver">mod_atmos_phy_sf_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>SFC_DENS</code> &amp; surface atmospheric density &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>SFC_PRES</code> &amp; surface atmospheric pressure &amp; <span class="math"><em>P</em><em>a</em></span><br /><code>SFC_TEMP</code> &amp; surface skin temperature (merged) &amp; <span class="math"><em>K</em></span><br /><code>SFC_ALB_LW</code> &amp; surface albedo (longwave,merged) &amp; <span class="math">0 − 1</span><br /><code>SFC_ALB_SW</code> &amp; surface albedo (shortwave,merged) &amp; <span class="math">0 − 1</span><br /><code>SFC_Z0M</code> &amp; roughness length (momentum) &amp; <span class="math"><em>m</em></span><br /><code>SFC_Z0H</code> &amp; roughness length (heat) &amp; <span class="math"><em>m</em></span><br /><code>SFC_Z0E</code> &amp; roughness length (vapor) &amp; <span class="math"><em>m</em></span><br /><code>MWFLX</code> &amp; w-momentum flux (merged) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MUFLX</code> &amp; u-momentum flux (merged) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MVFLX</code> &amp; v-momentum flux (merged) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SHFLX</code> &amp; sensible heat flux (merged) &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>LHFLX</code> &amp; latent heat flux (merged) &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>GHFLX</code> &amp; ground heat flux (merged) &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>Uabs10</code> &amp; 10m absolute wind &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>U10</code> &amp; 10m x-wind &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>V10</code> &amp; 10m y-wind &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>T2 </code> &amp; 2m temperature &amp; <span class="math"><em>K</em></span><br /><code>Q2 </code> &amp; 2m water vapor &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>MSLP</code> &amp; mean sea-level pressure &amp; <span class="math"><em>P</em><em>a</em></span><br /></p>
+<h4 id="mod_atmos_phy_tb_driver">mod_atmos_phy_tb_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>TKE</code> &amp; turburent kinetic energy &amp; <span class="math"><em>m</em>2/<em>s</em>2</span><br /><code>NU</code> &amp; eddy viscosity &amp; <span class="math"><em>m</em>2/<em>s</em></span><br /><code>Ri</code> &amp; Richardson number &amp; <span class="math"><em>N</em><em>I</em><em>L</em></span><br /><code>Pr</code> &amp; Prantle number &amp; <span class="math"><em>N</em><em>I</em><em>L</em></span><br /><code>MOMZ_t_TB</code> &amp; MOMZ tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_TB</code> &amp; MOMX tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_TB</code> &amp; MOMY tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_TB</code> &amp; RHOT tendency (TB) &amp; <span class="math"><em>K</em>.<em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>QV_t_TB</code> &amp; QV tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC_t_TB</code> &amp; QC tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR_t_TB</code> &amp; QR tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI_t_TB</code> &amp; QI tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS_t_TB</code> &amp; QS tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG_t_TB</code> &amp; QG tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>SGS_ZFLX_MOMZ</code> &amp; SGS Z FLUX of MOMZ &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_XFLX_MOMZ</code> &amp; SGS X FLUX of MOMZ &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_YFLX_MOMZ</code> &amp; SGS Y FLUX of MOMZ &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_ZFLX_MOMX</code> &amp; SGS Z FLUX of MOMX &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_XFLX_MOMX</code> &amp; SGS X FLUX of MOMX &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_YFLX_MOMX</code> &amp; SGS Y FLUX of MOMX &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_ZFLX_MOMY</code> &amp; SGS Z FLUX of MOMY &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_XFLX_MOMY</code> &amp; SGS X FLUX of MOMY &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_YFLX_MOMY</code> &amp; SGS Y FLUX of MOMY &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_ZFLX_RHOT</code> &amp; SGS Z FLUX of RHOT &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_RHOT</code> &amp; SGS X FLUX of RHOT &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_RHOT</code> &amp; SGS Y FLUX of RHOT &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QV</code> &amp; SGS Z FLUX of QV &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QV</code> &amp; SGS X FLUX of QV &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QV</code> &amp; SGS Y FLUX of QV &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QC</code> &amp; SGS Z FLUX of QC &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QC</code> &amp; SGS X FLUX of QC &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QC</code> &amp; SGS Y FLUX of QC &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QR</code> &amp; SGS Z FLUX of QR &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QR</code> &amp; SGS X FLUX of QR &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QR</code> &amp; SGS Y FLUX of QR &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<p><br />＊次ページへつづく</p>
+<h4 id="mod_atmos_phy_tb_driverつづき">mod_atmos_phy_tb_driver：つづき</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>SGS_ZFLX_QI</code> &amp; SGS Z FLUX of QI &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QI</code> &amp; SGS X FLUX of QI &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QI</code> &amp; SGS Y FLUX of QI &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QS</code> &amp; SGS Z FLUX of QS &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QS</code> &amp; SGS X FLUX of QS &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QS</code> &amp; SGS Y FLUX of QS &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QG</code> &amp; SGS Z FLUX of QG &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QG</code> &amp; SGS X FLUX of QG &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QG</code> &amp; SGS Y FLUX of QG &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_atmos_vars">mod_atmos_vars</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS</code> &amp; density &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>MOMZ</code> &amp; momentum z &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MOMX</code> &amp; momentum x &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MOMY</code> &amp; momentum y &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>RHOT</code> &amp; rho * theta &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3 * <em>K</em></span><br /><code>QV</code> &amp; Water Vapor mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC</code> &amp; Cloud Water mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR</code> &amp; Rain Water mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI</code> &amp; Cloud Ice mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS</code> &amp; Snow mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG</code> &amp; Graupel mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>W</code> &amp; velocity w &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>U</code> &amp; velocity u &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>V</code> &amp; velocity v &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>PT</code> &amp; potential temp. &amp; <span class="math"><em>K</em></span><br /><code>QDRY</code> &amp; dry air &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QTOT</code> &amp; total water &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QHYD</code> &amp; total hydrometeors &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QLIQ</code> &amp; total liquid water &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QICE</code> &amp; total ice water &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>LWP</code> &amp; liquid water path &amp; <span class="math"><em>g</em>/<em>m</em>2</span><br /><code>IWP</code> &amp; ice water path &amp; <span class="math"><em>g</em>/<em>m</em>2</span><br /><code>RTOT</code> &amp; Total gas constant &amp; <span class="math"><em>J</em>/<em>k</em><em>g</em>/<em>K</em></span><br /><code>CPTOT</code> &amp; Total heat capacity &amp; <span class="math"><em>J</em>/<em>k</em><em>g</em>/<em>K</em></span><br /><code>PRES</code> &amp; pressure &amp; <span class="math"><em>P</em><em>a</em></span><br /><code>T</code> &amp; temperature &amp; <span class="math"><em>K</em></span><br /><code>LWPT</code> &amp; liq. potential temp. &amp; <span class="math"><em>K</em></span><br /><code>RHA</code> &amp; relative humidity(liq+ice) &amp; <span class="math">%</span><br /><code>RH</code> &amp; relative humidity(liq) &amp; <span class="math">%</span><br /><code>RHI</code> &amp; relative humidity(ice) &amp; <span class="math">%</span><br /><code>VOR</code> &amp; vertical vorticity &amp; <span class="math">1/<em>s</em></span><br /><code>DIV</code> &amp; divergence &amp; <span class="math">1/<em>s</em></span><br /><code>HDIV</code> &amp; horizontal divergence &amp; <span class="math">1/<em>s</em></span><br /><code>Uabs</code> &amp; absolute velocity &amp; <span class="math"><em>m</em>/<em>s</em></span><br /></p>
+<p><br />＊次ページへつづく</p>
+<h4 id="mod_atmos_varsつづき">mod_atmos_vars：つづき</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS_PRIM</code> &amp; horiz. deviation of density &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>W_PRIM</code> &amp; horiz. deviation of w &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>U_PRIM</code> &amp; horiz. deviation of u &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>V_PRIM</code> &amp; horiz. deviation of v &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>PT_PRIM</code> &amp; horiz. deviation of pot. temp. &amp; <span class="math"><em>K</em></span><br /><code>W_PRIM2</code> &amp; variance of w &amp; <span class="math"><em>m</em>2/<em>s</em>2</span><br /><code>PT_W_PRIM</code> &amp; resolved scale heat flux &amp; <span class="math"><em>W</em>/<em>s</em></span><br /><code>W_PRIM3</code> &amp; skewness of w &amp; <span class="math"><em>m</em>3/<em>s</em>3</span><br /><code>TKE_RS</code> &amp; resolved scale TKE &amp; <span class="math"><em>m</em>2/<em>s</em>2</span><br /><code>ENGT</code> &amp; total energy &amp; <span class="math"><em>J</em>/<em>m</em>3</span><br /><code>ENGP</code> &amp; potential energy &amp; <span class="math"><em>J</em>/<em>m</em>3</span><br /><code>ENGK</code> &amp; kinetic energy &amp; <span class="math"><em>J</em>/<em>m</em>3</span><br /><code>ENGI</code> &amp; internal energy &amp; <span class="math"><em>J</em>/<em>m</em>3</span><br /></p>
+<h4 id="mod_land_phy_driver">mod_land_phy_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>LAND_TEMP_t</code> &amp; tendency of LAND_TEMP &amp; <span class="math"><em>K</em></span><br /><code>LAND_WATER_t</code> &amp; tendency of LAND_WATER &amp; <span class="math"><em>m</em>3/<em>m</em>3</span><br /><code>LAND_SFC_TEMP_t</code> &amp; tendency of LAND_SFC_TEMP &amp; <span class="math"><em>K</em></span><br /><code>LAND_ALB_LW_t</code> &amp; tendency of LAND_ALB_LW &amp; <span class="math">0 − 1</span><br /><code>LAND_ALB_SW_t</code> &amp; tendency of LAND_ALB_SW &amp; <span class="math">0 − 1</span><br /><code>LP_WaterLimit</code> &amp; LAND PROPERTY maximum soil moisture &amp; <span class="math"><em>m</em>3/<em>m</em>3</span><br /><code>LP_WaterCritical</code> &amp; LAND PROPERTY critical soil moisture &amp; <span class="math"><em>m</em>3/<em>m</em>3</span><br /><code>LP_ThermalCond</code> &amp; LAND PROPERTY thermal conductivity for soil &amp; <span class="math"><em>W</em>/<em>K</em>/<em>m</em></span><br /><code>LP_HeatCapacity</code> &amp; LAND PROPERTY heat capacity for soil &amp; <span class="math"><em>J</em>/<em>K</em>/<em>m</em>3</span><br /><code>LP_WaterDiff</code> &amp; LAND PROPERTY moisture diffusivity in the soil &amp; <span class="math"><em>m</em>2/<em>s</em></span><br /><code>LP_Z0M</code> &amp; LAND PROPERTY roughness length for momemtum &amp; <span class="math"><em>m</em></span><br /><code>LP_Z0H</code> &amp; LAND PROPERTY roughness length for heat &amp; <span class="math"><em>m</em></span><br /><code>LP_Z0E</code> &amp; LAND PROPERTY roughness length for vapor &amp; <span class="math"><em>m</em></span><br /></p>
+<h4 id="mod_land_vars">mod_land_vars</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>LAND_TEMP</code> &amp; temperature at each soil layer &amp; <span class="math"><em>K</em></span><br /><code>LAND_WATER</code> &amp; moisture at each soil layer &amp; <span class="math"><em>m</em>3/<em>m</em>3</span><br /><code>LAND_SFC_TEMP</code> &amp; land surface skin temperature &amp; <span class="math"><em>K</em></span><br /><code>LAND_ALB_LW</code> &amp; land surface albedo (longwave) &amp; <span class="math">0 − 1</span><br /><code>LAND_ALB_SW</code> &amp; land surface albedo (shortwave) &amp; <span class="math">0 − 1</span><br /><code>LAND_SFLX_MW</code> &amp; land surface w-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_MU</code> &amp; land surface u-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_MV</code> &amp; land surface v-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_SH</code> &amp; land surface sensible heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_LH</code> &amp; land surface latent heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_GH</code> &amp; land surface ground heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_evap</code> &amp; land surface water vapor flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_ocean_phy_driver">mod_ocean_phy_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>OCEAN_TEMP_t</code> &amp; tendency of OCEAN_TEMP &amp; <span class="math"><em>K</em></span><br /><code>OCEAN_SFC_TEMP_t</code> &amp; tendency of OCEAN_SFC_TEMP &amp; <span class="math"><em>K</em></span><br /><code>OCEAN_ALB_LW_t</code> &amp; tendency of OCEAN_ALB_LW &amp; <span class="math">0 − 1</span><br /><code>OCEAN_ALB_SW_t</code> &amp; tendency of OCEAN_ALB_SW &amp; <span class="math">0 − 1</span><br /><code>OCEAN_SFC_Z0M_t</code> &amp; tendency of OCEAN_SFC_Z0M &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFC_Z0H_t</code> &amp; tendency of OCEAN_SFC_Z0H &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFC_Z0E_t</code> &amp; tendency of OCEAN_SFC_Z0E &amp; <span class="math"><em>m</em></span><br /></p>
+<h4 id="mod_ocean_vars">mod_ocean_vars</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>OCEAN_TEMP</code> &amp; temperature at uppermost ocean layer &amp; <span class="math"><em>K</em></span><br /><code>OCEAN_SFC_TEMP</code> &amp; ocean surface skin temperature &amp; <span class="math"><em>K</em></span><br /><code>OCEAN_ALB_LW</code> &amp; ocean surface albedo (longwave) &amp; <span class="math">0 − 1</span><br /><code>OCEAN_ALB_SW</code> &amp; ocean surface albedo (shortwave) &amp; <span class="math">0 − 1</span><br /><code>OCEAN_SFC_Z0M</code> &amp; ocean surface roughness length (momentum) &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFC_Z0H</code> &amp; ocean surface roughness length (heat) &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFC_Z0E</code> &amp; ocean surface roughness length (vapor) &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFLX_MW</code> &amp; ocean surface w-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_MU</code> &amp; ocean surface u-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_MV</code> &amp; ocean surface v-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_SH</code> &amp; ocean surface sensible heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_LH</code> &amp; ocean surface latent heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_WH</code> &amp; ocean surface water heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_evap</code> &amp; ocean surface water vapor flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_urban_phy_driver">mod_urban_phy_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>URBAN_TR_t</code> &amp; tendency of URBAN_TR &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TB_t</code> &amp; tendency of URBAN_TB &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TG_t</code> &amp; tendency of URBAN_TG &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TC_t</code> &amp; tendency of URBAN_TC &amp; <span class="math"><em>K</em></span><br /><code>URBAN_QC_t</code> &amp; tendency of URBAN_QC &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>URBAN_UC_t</code> &amp; tendency of URBAN_UC &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>URBAN_TRL_t</code> &amp; tendency of URBAN_TRL &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TBL_t</code> &amp; tendency of URBAN_TBL &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TGL_t</code> &amp; tendency of URBAN_TGL &amp; <span class="math"><em>K</em></span><br /><code>URBAN_RAINR_t</code> &amp; tendency of URBAN_RAINR &amp; <span class="math"><em>K</em></span><br /><code>URBAN_RAINB_t</code> &amp; tendency of URBAN_RAINB &amp; <span class="math"><em>K</em></span><br /><code>URBAN_RAING_t</code> &amp; tendency of URBAN_RAING &amp; <span class="math"><em>K</em></span><br /><code>URBAN_ROFF_t</code> &amp; tendency of URBAN_ROFF &amp; <span class="math"><em>K</em></span><br /></p>
+<h4 id="mod_urban_vars">mod_urban_vars</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>URBAN_TR</code> &amp; urban surface temperature of roof &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TB</code> &amp; urban surface temperature of wall &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TG</code> &amp; urban surface temperature of road &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TC</code> &amp; urban canopy air temperature &amp; <span class="math"><em>K</em></span><br /><code>URBAN_QC</code> &amp; urban canopy humidity &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>URBAN_UC</code> &amp; urban canopy wind &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>URBAN_TRL</code> &amp; urban temperature in layer of roof &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TBL</code> &amp; urban temperature in layer of wall &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TGL</code> &amp; urban temperature in layer of road &amp; <span class="math"><em>K</em></span><br /><code>URBAN_RAINR</code> &amp; urban rain strage on roof &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2</span><br /><code>URBAN_RAINB</code> &amp; urban rain strage on wall &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2</span><br /><code>URBAN_RAING</code> &amp; urban rain strage on road &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2</span><br /><code>URBAN_ROFF</code> &amp; urban runoff &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2</span><br /><code>URBAN_SFC_TEMP</code> &amp; urban grid average of temperature &amp; <span class="math"><em>K</em></span><br /><code>URBAN_ALB_LW</code> &amp; urban grid average of albedo LW &amp; <span class="math">0 − 1</span><br /><code>URBAN_ALB_SW</code> &amp; urban grid average of albedo SW &amp; <span class="math">0 − 1</span><br /><code>URBAN_SFLX_MW</code> &amp; urban grid average of w-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>URBAN_SFLX_MU</code> &amp; urban grid average of u-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>URBAN_SFLX_MV</code> &amp; urban grid average of v-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>URBAN_SFLX_SH</code> &amp; urban grid average of sensible heat flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>URBAN_SFLX_LH</code> &amp; urban grid average of latent heat flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>URBAN_SFLX_GH</code> &amp; urban grid average of ground heat flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>URBAN_SFLX_evap</code> &amp; urban grid average of water vapor flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="scale_atmos_dyn">scale_atmos_dyn</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS_t_phys</code> &amp; tendency of density due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_phys</code> &amp; tendency of momentum z due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_phys</code> &amp; tendency of momentum x due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_phys</code> &amp; tendency of momentum y due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_phys</code> &amp; tendency of rho*theta temperature due to physics &amp; <span class="math"><em>K</em><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>QV_t_phys</code> &amp; tendency of QV due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC_t_phys</code> &amp; tendency of QC due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR_t_phys</code> &amp; tendency of QR due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI_t_phys</code> &amp; tendency of QI due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS_t_phys</code> &amp; tendency of QS due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG_t_phys</code> &amp; tendency of QG due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>DENS_t_damp</code> &amp; tendency of density due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_damp</code> &amp; tendency of momentum z due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_damp</code> &amp; tendency of momentum x due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_damp</code> &amp; tendency of momentum y due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_damp</code> &amp; tendency of rho*theta temperature due to rayleigh damping &amp; <span class="math"><em>K</em><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>QV_t_damp</code> &amp; tendency of QV due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC_t_damp</code> &amp; tendency of QC due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR_t_damp</code> &amp; tendency of QR due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI_t_damp</code> &amp; tendency of QI due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS_t_damp</code> &amp; tendency of QS due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG_t_damp</code> &amp; tendency of QG due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /></p>
+<h4 id="scale_atmos_dyn-if-check_mass-is-defined-in-compilation-process">scale_atmos_dyn (if CHECK_MASS is defined in compilation process)</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>MFLXZ</code> &amp; momentum flux of z-direction &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MFLXX</code> &amp; momentum flux of x-direction &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MFLXY</code> &amp; momentum flux of y-direction &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>TFLXZ</code> &amp; potential temperature flux of z-direction &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>TFLXX</code> &amp; potential temperature flux of x-direction &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>TFLXY</code> &amp; potential temperature flux of y-direction &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>ALLMOM_lb_hz</code> &amp; horizontally total momentum flux from lateral boundary &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="scale_atmos_dyn_rk-if-hist_tend-is-defined-in-compilation-process">scale_atmos_dyn_rk (if HIST_TEND is defined in compilation process)</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS_t_advcv</code> &amp; tendency of density (vert. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_advcv</code> &amp; tendency of momentum z (vert. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_advcv</code> &amp; tendency of momentum x (vert. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_advcv</code> &amp; tendency of momentum y (vert. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_advcv</code> &amp; tendency of rho*theta (vert. advection) &amp; <span class="math"><em>K</em><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>DENS_t_advch</code> &amp; tendency of density (horiz. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_advch</code> &amp; tendency of momentum z (horiz. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_advch</code> &amp; tendency of momentum x (horiz. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_advch</code> &amp; tendency of momentum y (horiz. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_advch</code> &amp; tendency of rho*theta (horiz. advection) &amp; <span class="math"><em>K</em><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_pg</code> &amp; tendency of momentum z (pressure gradient) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_pg</code> &amp; tendency of momentum x (pressure gradient) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_pg</code> &amp; tendency of momentum y (pressure gradient) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMZ_t_ddiv</code> &amp; tendency of momentum z (divergence damping) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_ddiv</code> &amp; tendency of momentum x (divergence damping) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_ddiv</code> &amp; tendency of momentum y (divergence damping) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_cf</code> &amp; tendency of momentum x (coliolis force) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_cf</code> &amp; tendency of momentum y (coliolis force) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /></p>
+<h4 id="scale_atmos_phy_mp_kessler">scale_atmos_phy_mp_kessler</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>Vterm_QR</code> &amp; terminal velocity of QR &amp; <span class="math"><em>m</em>/<em>s</em></span><br /></p>
+<h4 id="scale_atmos_phy_mp_suzuki10">scale_atmos_phy_mp_suzuki10</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>aerosol</code> &amp; aerosol mass &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em><sup>3</sup></span><br /></p>
+<h4 id="scale_atmos_phy_mp_tomita08">scale_atmos_phy_mp_tomita08</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>Vterm_QR</code> &amp; terminal velocity of QR &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>Vterm_QI</code> &amp; terminal velocity of QI &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>Vterm_QS</code> &amp; terminal velocity of QS &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>Vterm_QG</code> &amp; terminal velocity of QG &amp; <span class="math"><em>m</em>/<em>s</em></span><br /></p>
+<h4 id="scale_atmos_sub_boundary">scale_atmos_sub_boundary</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS_BND</code> &amp; Boundary Density &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>VELX_BND</code> &amp; Boundary velocity x-direction &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>VELY_BND</code> &amp; Boundary velocity y-direction &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>POTT_BND</code> &amp; Boundary potential temperature &amp; <span class="math"><em>K</em></span><br /><code>VELZ_BND</code> &amp; Boundary velocity z-direction &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>QV_BND</code> &amp; Boundary QV &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC_BND</code> &amp; Boundary QC &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR_BND</code> &amp; Boundary QR &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI_BND</code> &amp; Boundary QI &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS_BND</code> &amp; Boundary QS &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG_BND</code> &amp; Boundary QG &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /></p>
+<h4 id="scale_atmos_sub_boundary-1">scale_atmos_sub_boundary</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>BND_ref_DENS</code> &amp; reference DENS &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>BND_ref_VELZ</code> &amp; reference VELZ &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>BND_ref_VELX</code> &amp; reference VELZ &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>BND_ref_VELY</code> &amp; reference VELZ &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>BND_ref_POTT</code> &amp; reference VELZ &amp; <span class="math"><em>K</em></span><br /></p>
+<h1 id="scaleに実装されている雲モデルの概要とそれぞれの選択方法">SCALEに実装されている雲モデルの概要とそれぞれの選択方法</h1>
+<p>SCALEライブラリには５種類の雲モデルが実装されている。氷雲の微物理過程を 含まない1-momentバルクモデル（<span class="citation"></span>）、氷雲の微物理過程を 含む1-momentバルクモデル（<span class="citation"></span>）、氷雲を含む2-momentバルクモデル （<span class="citation"></span>）、1-momentビン法（<span class="citation"></span>）、 及び、超水滴法（<span class="citation"></span>）である。1-momentビン法はオプションにより 氷を含む場合とそうでない場合を切り替えられる。また超水滴法に関しては 著作権の関係から公開されていない。使用したい場合はSCALEの開発者に連絡をされたい。<br />これらの雲微物理モデルの違いは雲粒の粒径分布関数の表現方法にある。 ここでは超水滴法を除く４種類の雲モデルの利用法について記述する。</p>
+<ol>
+<li><p><span><strong>氷を含まない1-momentバルク法<span class="citation"></span></strong></span><br /><span class="citation"></span>は後述の<span class="citation"></span>と同様に1-momentバルク法は粒径分布関数を粒径分布関数の ３次のモーメント（質量）のみで表現する。<span class="citation"></span>は雲粒と雨粒のカテゴリを考慮し、 雲粒混合比（QC[kg/kg]）と雨粒混合比（QR[kg/kg]）を予報する。<br />粒径分布関数はデルタ関数（すなわち雲粒のサイズは全て同じと仮定する）で表現する。<br />考慮する雲粒の成長過程は、雲粒生成（飽和調整）、凝結・蒸発、衝突併合、落下である。</p></li>
+<li><p><span><strong>氷を含む1-momentバルク法<span class="citation"></span></strong></span><br />氷を含む1-momentバルク法は雲粒、雨粒、氷粒、雪片、あられの５カテゴリを考慮し、<br />それぞれの混合比（QC、QR、QI、QS、QG[kg/kg]）をそれぞれ予報する。粒径分布は<br />雲物はデルタ分布（半径10µmで一様）、その他はMarshall-Palmer分布を仮定する。<br />考慮する成長過程は雲粒生成（飽和調整）、凝結・蒸発、衝突併合、落下である。</p></li>
+<li><p><span><strong>氷を含む2-momentバルク法<span class="citation"></span></strong></span><br />氷を含む2-momentバルク法は混合比に加えて、粒径分布関数の０次のモーメント（数濃度）で表現する。<br />考慮する水物質のカテゴリは、雲粒、雨粒、氷粒、雪片、あられの５カテゴリであり、<br />それぞれの質量混合比（QC、QR、QI、QS、QG）と数密度混合比（NC、NR、NI、NS、NG）を予報する。 粒径分布は一般ガンマ関数で近似する。考慮する成長過程は雲粒生成、凝結・蒸発、 衝突併合、分裂、落下である。</p></li>
+<li><p><span><strong>1-momentビン法<span class="citation"></span></strong></span><br />1-momentビン法は粒径分布関数を差分化して陽に表現する。差分化された各粒径分布関数を ビンと呼ぶためビン法と呼ばれる。各サイズのビンを質量のみで予報する（各ビンを 質量及び数密度で表現するビン法を2-momentビン法と呼ぶ）。考慮する水物質のカテゴリは 雲粒、雨粒、氷粒、雪片、あられ、ひょうの６種類であり、考慮する成長過程は雲粒生成、 凝結・蒸発、衝突併合、落下である。</p></li>
+</ol>
+<p>上記の４種類の雲微物理は１→４の順に高精度になるが、その分計算コストも高くなる。次にこれらの 雲物理スキームを用いて実験を行う方法を記述する。</p>
+<h2 id="雲微物理スキームの選択方法">雲微物理スキームの選択方法</h2>
+<p>雲微物理スキームを選択するには、init.confおよびrun.confの編集が必要である。まずinit.confをエディタで 開き、<code>TRACER_TYPE</code>を指定する（以下は氷を含む2-momentバルク法を指定する場合の例である）。<br /></p>
+<p><br /></p>
+<p>それぞれの雲微物理スキームを利用する際の<code>TRACER_TYPE</code>は、 次の表 [tab:mp<sub>t</sub>rc<sub>t</sub>ype]に示すとおりである。</p>
+<p><span>150mm</span><span>|l|X|</span> 雲微物理スキームの種類 &amp; <code>TRACER_TYPE</code>の設定値<br />氷を含まない1-momentバルク法；<span class="citation"></span> &amp; <code>KESSLER</code><br />氷を含む1-momentバルク法；<span class="citation"></span> &amp; <code>TOMITA08</code><br />氷を含む2-momentバルク法；<span class="citation"></span> &amp; <code>SN14</code><br />1-momentビン法；<span class="citation"></span> &amp; <code>SUZUKI10</code><br /></p>
+<p>[tab:mp<sub>t</sub>rc<sub>t</sub>ype]</p>
+<p>次にrun.confをエディタで開き<code>TRACER_TYPE</code>と<code>ATMOS_PHY_MP_TYPE</code>を指定する （以下は氷を含む2-momentバルク法を指定する場合である）<br /></p>
+<p><br /></p>
+<p>この際、run.conf、init.confに記述される<code>TRACER_TYPE</code>と<code>ATMOS_PHY_MP_TYPE</code>は <span><strong>全て同一でなければならない</strong></span>。<br />加えて、1-momentビン法を用いる際は、init.confに以下の項目を追加する必要がある。<br /></p>
+<p><br /></p>
+<p>それぞれの意味は「雲微物理スキームのオプションとNamelist」の章を参照されたい。</p>
+<h2 id="実行方法-1">実行方法</h2>
+<p>上記を設定して他の実験と同様に実行することで各雲微物理スキームを選択することができる。</p>
+<h2 id="各雲物理スキームにのオプションとnamelist">各雲物理スキームにのオプションとNamelist</h2>
+<p>現在執筆中...</p>
+<p><br /></p>
+<p><br /></p>
+<hr />
+<p>width 90mm</p>
+<p>21, July, 2015. = = Version 1.0</p>
+<p><br /></p>
+<hr />
+<p>width 90mm</p>
+<p>Team SCALE ユーザーズガイド制作委員会（UGC Working Group）<br />コアメンバー：足立 幸穂、佐藤 陽祐、富田 浩文、八代 尚、山浦 剛、吉田 龍二（50音順）<br /></p>
+<p>Copyright ©Team SCALE, RIKEN AICS, 2015. All rights reserved.</p>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>計算科学用語では、この変更、つまり総演算量一定でプロセスあたりの演算量を減らしていくことを“strong scaling”と呼ぶ。<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>gpviewがインストールされている場合、gpviewを使って作図することも出来る。 gpviewならばhistoryデータを変換することなく直接作図することができるため、クイックチェックに適している。<a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p>SCALEの格子系はArakawa-Cグリッド、およびLorenzグリッドであるため、水平方向と鉛直方向ともに スタッガード点（1/2ずれた点）に位置する変数がある。コントロールボリュームに対して中心点に位置する格子点を Center Pointと呼び、コントロールボリュームの面に位置する格子点（Center Pointに対して1/2ずれている）を Face Pointと呼ぶ。そして、これらの頭文字と方向を組み合わせてCX、CY、CZやFX、FY、FZと呼ぶ。<a href="#fnref3">↩</a></p></li>
+<li id="fn4"><p>独自の鉛直層設定の作成をサポートするツールとして、scale/scale-les/util/makevgridのディレクトリ下に “make_vgrid.f90”というFortranプログラムといくつかのサンプルnamelistが用意されている。これをコンパイルして 実行すれば直ちにconfigファイルに貼り付けて使用できるフォーマットになった鉛直層設定を作成できる。<a href="#fnref4">↩</a></p></li>
+<li id="fn5"><p>計算科学用語では、この変更、つまりプロセスあたりの演算量一定で総演算量を増やしていくことを“weak scaling”と呼ぶ。<a href="#fnref5">↩</a></p></li>
+<li id="fn6"><p>デフォルトではメルカトル図法に基づいて緯度・経度を計算する際の基準とする緯度は、 MPRJ_basepoint_latの値が使用されるが、MPRJ_M_latを用いて任意の緯度を指定することもできる。<a href="#fnref6">↩</a></p></li>
+<li id="fn7"><p>SCALEでは X方向のDo Loopが最も最内ループになっているため、X方向の回転数が多いとプリフェッチ機能が効果を発揮しやすく、メモリ性能 へのプレッシャーが緩和される。ただし、京の場合のようにスレッド並列も併用するハイブリッド並列の場合にはY方向の格子点数 もある程度大きくしてスレッド間の演算量のインバランスを小さくする必要性も出てくる。<a href="#fnref7">↩</a></p></li>
+</ol>
+</div>

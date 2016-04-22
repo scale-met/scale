@@ -23,6 +23,8 @@ module scale_atmos_phy_mp_common
   use scale_prof
   use scale_grid_index
   use scale_tracer
+  use scale_const, only: &
+     UNDEF => CONST_UNDEF
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -42,8 +44,8 @@ module scale_atmos_phy_mp_common
   !
   !++ Private procedure
   !
-  public :: moist_conversion_liq
-  public :: moist_conversion_all
+  private :: moist_conversion_liq
+  private :: moist_conversion_all
 
   !-----------------------------------------------------------------------------
   !
@@ -65,52 +67,51 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
-    real(RP) :: diffq(KA)
+    real(RP) :: diffq
 
-    integer :: i, j, iq
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('MP_filter', 3)
 
     !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
-       diffq(:) = 0.0_RP
+    do k = KS, KE
 
-       ! total hydrometeor (before correction)
+       diffq = 0.0_RP
        do iq = QQS+1, QQE
-          diffq(:) = diffq(:) + QTRC(:,i,j,iq)
+          ! total hydrometeor (before correction)
+          diffq = diffq + QTRC(k,i,j,iq)
+          ! remove negative value of hydrometeors (mass)
+          QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
        enddo
 
-       ! remove negative value of hydrometeors (mass)
        do iq = QQS+1, QQE
-          QTRC(:,i,j,iq) = max( QTRC(:,i,j,iq), 0.0_RP )
-       enddo
-
-       ! difference between before and after correction
-       do iq = QQS+1, QQE
-          diffq(:) = diffq(:) - QTRC(:,i,j,iq)
+          ! difference between before and after correction
+          diffq = diffq - QTRC(k,i,j,iq)
        enddo
 
        ! Compensate for the lack of hydrometeors by the water vapor
-       QTRC(:,i,j,I_QV) = QTRC(:,i,j,I_QV) + diffq(:)
+       QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + diffq
 
        ! TODO: We have to consider energy conservation (but very small)
 
        ! remove negative value of water vapor (mass)
-       diffq(:) = QTRC(:,i,j,I_QV)
-       QTRC(:,i,j,I_QV) = max( QTRC(:,i,j,I_QV), 0.0_RP )
-       diffq(:) = diffq(:) - QTRC(:,i,j,I_QV)
+       diffq = QTRC(k,i,j,I_QV)
+       QTRC(k,i,j,I_QV) = max( QTRC(k,i,j,I_QV), 0.0_RP )
+       diffq = diffq - QTRC(k,i,j,I_QV)
 
        ! Apply correction to total density
        ! TODO: We have to consider energy conservation (but very small)
-       DENS(:,i,j) = DENS(:,i,j) * ( 1.0_RP + diffq(:) )
-       RHOT(:,i,j) = RHOT(:,i,j) * ( 1.0_RP + diffq(:) )
+       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - diffq ) ! diffq is negative
+       RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - diffq )
 
     enddo
     enddo
+    enddo
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend('MP_filter', 3)
 
     return
   end subroutine ATMOS_PHY_MP_negative_fixer
@@ -125,8 +126,8 @@ contains
        QTRC0,  &
        DENS0   )
     use scale_const, only: &
-       LHV00  => CONST_LH00, &
-       LHF00  => CONST_LHF00
+       LHV => CONST_LHV, &
+       LHF => CONST_LHF
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
@@ -161,14 +162,16 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_saturation_adjustment')
+#ifndef DRY
+
+    call PROF_rapstart('MP_Saturation_adjustment', 3)
 
     rdt = 1.0_RP / dt
 
     !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(4)
     do iq = QQS, QQE
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        QTRC1(k,i,j,iq) = QTRC0(k,i,j,iq)
     enddo
@@ -194,11 +197,11 @@ contains
 
        ! Turn QC into QV with consistency of moist internal energy
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
-                        + QTRC1(k,i,j,I_QV) * LHV00
+                        + QTRC1(k,i,j,I_QV) * LHV
 
           QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
                        + QTRC1(k,i,j,I_QC)
@@ -215,10 +218,10 @@ contains
 
        ! new temperature (after QC evaporation)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
-          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV00 ) / CVtot(k,i,j)
+          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
        enddo
        enddo
        enddo
@@ -234,12 +237,12 @@ contains
 
        ! Turn QC & QI into QV with consistency of moist internal energy
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
-                        + QTRC1(k,i,j,I_QV) * LHV00   &
-                        - QTRC1(k,i,j,I_QI) * LHF00
+                        + QTRC1(k,i,j,I_QV) * LHV     &
+                        - QTRC1(k,i,j,I_QI) * LHF
 
           QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
                        + QTRC1(k,i,j,I_QC) &
@@ -258,10 +261,10 @@ contains
 
        ! new temperature (after QC & QI evaporation)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
-          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV00 ) / CVtot(k,i,j)
+          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
        enddo
        enddo
        enddo
@@ -306,8 +309,14 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP_saturation_adjustment')
+    call PROF_rapend  ('MP_Saturation_adjustment', 3)
 
+#else
+    RHOE_t = UNDEF
+    QTRC_t = UNDEF
+    RHOE0  = UNDEF
+    QTRC0  = UNDEF
+#endif
     return
   end subroutine ATMOS_PHY_MP_saturation_adjustment
 
@@ -322,7 +331,7 @@ contains
        QDRY0, &
        Emoist )
     use scale_const, only: &
-       LHV00  => CONST_LH00
+       LHV => CONST_LHV
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
@@ -365,6 +374,8 @@ contains
     logical  :: converged
     integer  :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
+
+#ifndef DRY
 
     dtemp_criteria = 0.1_RP**(2+RP/2)
 
@@ -415,7 +426,7 @@ contains
                              q(:),        & ! [IN]
                              QDRY0(k,i,j) ) ! [IN]
 
-          Emoist_new = temp * CVtot + qsatl_new * LHV00
+          Emoist_new = temp * CVtot + qsatl_new * LHV
 
           ! dX/dT
           dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsatl_new
@@ -425,7 +436,7 @@ contains
           dCVtot_dT = dqsatl_dT * CVw(I_QV) &
                     + dqc_dT    * CVw(I_QC)
 
-          dEmoist_dT = qsatl_new * dCVtot_dT + CVtot + dqsatl_dT * LHV00
+          dEmoist_dT = qsatl_new * dCVtot_dT + CVtot + dqsatl_dT * LHV
 
           dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
           temp  = temp - dtemp
@@ -449,6 +460,11 @@ contains
        enddo
     enddo
 
+#else
+    TEMP1 = UNDEF
+    QTRC1 = UNDEF
+#endif
+
     return
   end subroutine moist_conversion_liq
 
@@ -463,8 +479,8 @@ contains
        QDRY0, &
        Emoist )
     use scale_const, only: &
-       LHV00  => CONST_LH00,  &
-       LHF00  => CONST_LHF00
+       LHV => CONST_LHV,  &
+       LHF => CONST_LHF
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
@@ -516,6 +532,7 @@ contains
     integer  :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
 
+#ifndef DRY
     dtemp_criteria = 0.1_RP**(2+RP/2)
 
     call SATURATION_dens2qsat_all( QSAT (:,:,:), & ! [OUT]
@@ -569,7 +586,7 @@ contains
                              q(:),        & ! [IN]
                              QDRY0(k,i,j) ) ! [IN]
 
-          Emoist_new = temp * CVtot + qsat_new * LHV00 - q(I_QI) * LHF00
+          Emoist_new = temp * CVtot + qsat_new * LHV - q(I_QI) * LHF
 
           ! dX/dT
           call SATURATION_dalphadT( dalpha_dT, temp )
@@ -587,7 +604,7 @@ contains
                     + dqc_dT   * CVw(I_QC) &
                     + dqi_dT   * CVw(I_QI)
 
-          dEmoist_dT = temp * dCVtot_dT + CVtot + dqsat_dT * LHV00 - dqi_dT * LHF00
+          dEmoist_dT = temp * dCVtot_dT + CVtot + dqsat_dT * LHV - dqi_dT * LHF
 
           dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
           temp  = temp - dtemp
@@ -601,7 +618,8 @@ contains
        enddo
 
        if ( .NOT. converged ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp, k,i,j,ite
+          write(*,*) TEMP1(k,i,j), dens0(k,i,j),q,QTRC1(k,i,j,QQS:QQE)
+          write(*,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp, k,i,j,ite
           call PRC_MPIstop
        endif
 
@@ -610,6 +628,11 @@ contains
           QTRC1(k,i,j,iq) = q(iq)
        enddo
     enddo
+
+#else
+    TEMP1 = UNDEF
+    QTRC1 = UNDEF
+#endif
 
     return
   end subroutine moist_conversion_all
@@ -631,20 +654,16 @@ contains
        dt         )
     use scale_const, only: &
        GRAV  => CONST_GRAV
-    use scale_grid, only: &
-       CZ   => GRID_CZ,   &
-       FDZ  => GRID_FDZ,  &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
     use scale_gridtrans, only: &
-       I_XYZ, &
-       GSQRT => GTRANS_GSQRT, &
-       J33G  => GTRANS_J33G
-    use scale_atmos_thermodyn, only: &
-       CVw => AQ_CV
+       J33G => GTRANS_J33G
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_atmos_thermodyn, only: &
+       CVw => AQ_CV
     implicit none
 
     real(RP), intent(out)   :: flux_rain(KA,IA,JA)
@@ -659,155 +678,204 @@ contains
     real(RP), intent(in)    :: temp     (KA,IA,JA)
     real(DP), intent(in)    :: dt
 
-    real(RP) :: rhoq(KA,QA) ! rho * q before precipitation
-    real(RP) :: qflx(KA,QA)
-    real(RP) :: eflx(KA)
+    real(RP) :: rhoq(KA,IA,JA,QA) ! rho * q before precipitation
+    real(RP) :: qflx(KA,IA,JA,QA)
+    real(RP) :: eflx(KA,IA,JA)
+
+    real(RP) :: rcdz  (KA,IA,JA)
+    real(RP) :: rcdz_u(KA,IA,JA)
+    real(RP) :: rcdz_v(KA,IA,JA)
+    real(RP) :: rfdz  (KA,IA,JA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_precipitation')
+    call PROF_rapstart('MP_Precipitation', 3)
 
-    do iq = 1, QA
-       call COMM_vars8( vterm(:,:,:,iq), iq )
-    enddo
-    do iq = 1, QA
-       call COMM_vars8( QTRC(:,:,:,iq), QA+iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait( vterm(:,:,:,iq), iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait( QTRC(:,:,:,iq), QA+iq )
+    if ( TRACER_TYPE /= 'SUZUKI10' ) then
+       do iq = I_QC, QQE
+          call COMM_vars8( vterm(:,:,:,iq), iq )
+       enddo
+    endif
+    do iq = I_QC, QQE
+       call COMM_vars8( QTRC(:,:,:,iq), QQE+iq )
     enddo
 
+!OCL XFILL
     flux_rain(:,:,:) = 0.0_RP
+!OCL XFILL
     flux_snow(:,:,:) = 0.0_RP
 
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
-    !$omp parallel do private(i,j,k,iq,eflx,qflx) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-    do i  = IS, IE
 
-       eflx(KE) = 0.0_RP
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+       rfdz(KS-1,i,j) = 1.0_RP / ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) )
+       do k = KS, KE
+          rcdz  (k,i,j) = 1.0_RP / ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) )
+          rcdz_u(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i+1,j) - REAL_FZ(k-1,i+1,j) ) &
+                                   + ( REAL_FZ(k,i  ,j) - REAL_FZ(k-1,i  ,j) ) )
+          rcdz_v(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i,j+1) - REAL_FZ(k-1,i,j+1) ) &
+                                   + ( REAL_FZ(k,i,j  ) - REAL_FZ(k-1,i,j  ) ) )
+          rfdz(k,i,j) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+       enddo
+    enddo
+    enddo
 
-       do iq = I_QC, QQE
+    do iq = I_QC, QQE
 
+       if ( TRACER_TYPE /= 'SUZUKI10' ) then
+          call COMM_wait( vterm(:,:,:,iq), iq )
+       endif
+       call COMM_wait( QTRC(:,:,:,iq), QQE+iq )
+
+       do j  = JS, JE
+       do i  = IS, IE
           !--- mass flux for each mass tracer, upwind with vel < 0
           do k  = KS-1, KE-1
-             qflx(k,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iq) * J33G
+             qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iq) * J33G
           enddo
-          qflx(KE,iq) = 0.0_RP
+          qflx(KE,i,j,iq) = 0.0_RP
 
           !--- internal energy
-          do k  = KS-1, KE-1
-             eflx(k) = qflx(k,iq) * temp(k+1,i,j) * CVw(iq)
+          eflx(KS-1,i,j) = qflx(KS-1,i,j,iq) * temp(KS,i,j) * CVw(iq)
+          do k  = KS, KE-1
+             eflx(k,i,j) = qflx(k,i,j,iq) * temp(k+1,i,j) * CVw(iq)
+             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz(k,i,j)
           enddo
-          do k  = KS, KE
-             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-          enddo
+          eflx(KE,i,j) = 0.0_RP
+          RHOE(KE,i,j) = RHOE(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz(KE,i,j)
 
           !--- potential energy
+          eflx(KS-1,i,j) = qflx(KS-1,i,j,iq) * GRAV / rfdz(KS-1,i,j)
           do k  = KS, KE-1
-             eflx(k) = qflx(k,iq) * GRAV * FDZ(k)
+             eflx(k,i,j) = qflx(k,i,j,iq) * GRAV / rfdz(k,i,j)
+             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz(k,i,j)
           enddo
-          eflx(KS-1) = qflx(KS-1,iq) * GRAV * CZ(KS)
-          do k  = KS, KE
-             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-          enddo
+          RHOE(KE,i,j) = RHOE(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz(KE,i,j)
 
           !--- momentum z (half level)
           do k  = KS-1, KE-1
-             eflx(k) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k,i,j,iq) ) &
-                               * ( QTRC (k+1,i,j,iq) + QTRC (k,i,j,iq) ) &
-                               * MOMZ(k,i,j)
+             eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k,i,j,iq) ) &
+                                   * ( QTRC (k+1,i,j,iq) + QTRC (k,i,j,iq) ) &
+                                   * MOMZ(k,i,j)
           enddo
           do k  = KS, KE-1
-             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1) - eflx(k) ) * RFDZ(k) / GSQRT(k,i,j,I_XYZ)
+             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1,i,j) - eflx(k,i,j) ) * rfdz(k,i,j)
           enddo
 
           !--- momentum x
-          do k  = KS-1, KE-1
-             eflx(k) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i+1,j,iq) ) &
-                               * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i+1,j,iq) ) &
-                               * MOMX(k+1,i,j)
+          eflx(KS-1,i,j) = 0.25_RP * ( vterm(KS,i,j,iq) + vterm(KS,i+1,j,iq) ) &
+                                   * ( QTRC (KS,i,j,iq) + QTRC (KS,i+1,j,iq) ) &
+                                   * MOMX(KS,i,j)
+          do k  = KS, KE-1
+             eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i+1,j,iq) ) &
+                                   * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i+1,j,iq) ) &
+                                   * MOMX(k+1,i,j)
+             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz_u(k,i,j)
           enddo
-          do k  = KS, KE
-             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-          enddo
+          MOMX(KE,i,j) = MOMX(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz_u(KE,i,j)
 
           !--- momentum y
+          eflx(KS-1,i,j) = 0.25_RP * ( vterm(KS,i,j,iq) + vterm(KS,i,j+1,iq) ) &
+                                   * ( QTRC (KS,i,j,iq) + QTRC (KS,i,j+1,iq) ) &
+                                   * MOMY(KS,i,j)
+          do k  = KS, KE-1
+             eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i,j+1,iq) ) &
+                                   * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i,j+1,iq) ) &
+                                   * MOMY(k+1,i,j)
+             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz_v(k,i,j)
+          enddo
+          MOMY(KE,i,j) = MOMY(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz_v(KE,i,j)
+       enddo
+       enddo
+
+    enddo ! mass tracer loop
+
+    ! save previous value
+    do iq = 1, QA
+       do j = JS, JE
+       do i = IS, IE
+          rhoq(KS-1,i,j,iq) = DENS(KS,i,j) * QTRC(KS,i,j,iq)
+          do k = KS, KE
+             rhoq(k,i,j,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
+          enddo
+       enddo
+       enddo
+    enddo
+
+    !--- mass flux for each tracer, upwind with vel < 0
+    do iq = I_QC, QA
+
+       do j  = JS, JE
+       do i  = IS, IE
           do k  = KS-1, KE-1
-             eflx(k) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i,j+1,iq) ) &
-                               * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i,j+1,iq) ) &
-                               * MOMY(k+1,i,j)
+             qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * rhoq(k+1,i,j,iq)
           enddo
-          do k  = KS, KE
-             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-          enddo
-
-       enddo ! mass tracer loop
-
-    enddo ! I loop
-    enddo ! J loop
-
-    !$omp parallel do private(i,j,k,iq,rhoq,qflx) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-    do i  = IS, IE
-
-       ! save previous value
-       do iq = 1, QA
-       do k  = KS-1, KE
-          rhoq(k,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
+          qflx(KE,i,j,iq) = 0.0_RP
        enddo
        enddo
+    enddo
 
-       !--- mass flux for each tracer, upwind with vel < 0
-       do iq = I_QC, QA
-          do k  = KS-1, KE-1
-             qflx(k,iq) = vterm(k+1,i,j,iq) * rhoq(k+1,iq)
-          enddo
-          qflx(KE,iq) = 0.0_RP
-       enddo
-
-       !--- update total density
-       do iq = I_QC, QQE
-          do k  = KS, KE
-             DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-          enddo
-       enddo ! mass tracer loop
-
-       !--- update falling tracer
-       do iq = I_QC, QA
+    !--- update total density
+    do iq = I_QC, QQE
+       do j  = JS, JE
+       do i  = IS, IE
        do k  = KS, KE
-          QTRC(k,i,j,iq) = ( rhoq(k,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ) ) / DENS(k,i,j)
+          DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,i,j,iq) - qflx(k-1,i,j,iq) ) * rcdz(k,i,j)
        enddo
        enddo
+       enddo
+    enddo ! mass tracer loop
 
-       !--- update no-falling tracer
-       do k = KS, KE
-          QTRC(k,i,j,I_QV) = rhoq(k,I_QV) / DENS(k,i,j)
+    !--- update falling tracer (use updated total density)
+    do iq = I_QC, QA
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QTRC(k,i,j,iq) = ( rhoq(k,i,j,iq) - dt * ( qflx(k,i,j,iq) - qflx(k-1,i,j,iq) ) * rcdz(k,i,j) ) / DENS(k,i,j)
        enddo
+       enddo
+       enddo
+    enddo
 
-       !--- lowermost flux is saved for land process
+    !--- update no-falling tracer (use updated total density)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_QV) = rhoq(k,i,j,I_QV) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !--- lowermost flux is saved for land process
+    if ( QWS > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
        do k  = KS-1, KE
-          if ( QWS > 0 ) then
-             do iq = QWS, QWE
-                flux_rain(k,i,j) = flux_rain(k,i,j) - qflx(k,iq)
-             enddo
-          endif
-          if ( QIS > 0 ) then
-             do iq = QIS, QIE
-                flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,iq)
-             enddo
-          endif
+       do iq = QWS, QWE
+          flux_rain(k,i,j) = flux_rain(k,i,j) - qflx(k,i,j,iq)
        enddo
+       enddo
+       enddo
+       enddo
+    endif
+    if ( QIS > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS-1, KE
+       do iq = QIS, QIE
+          flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+       enddo
+    endif
 
-    enddo ! I loop
-    enddo ! J loop
 
-    call PROF_rapend  ('MP_precipitation')
+    call PROF_rapend  ('MP_Precipitation', 3)
 
     return
   end subroutine ATMOS_PHY_MP_precipitation

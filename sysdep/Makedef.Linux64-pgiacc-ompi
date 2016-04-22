@@ -5,50 +5,47 @@
 ##### for computation
 
 FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
-              -Minfo=accel -acc -ta=tesla,cuda5.5,cc35,nofma -Mcuda \
+              -Minfo=accel -acc -ta=tesla,cuda5.5,cc35,maxregcount:64,ptxinfo -Mcuda \
               -Mbyteswapio                       \
               -Mflushz -pc 64                    \
               -mcmodel=medium                    \
-              -Msmartalloc=huge -DHEVI_BICGSTAB
+              -Msmartalloc=huge -DHEVI_BICGSTAB -D__PGI
+
+# FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
+#               -Minfo=accel -acc -ta=tesla,cuda5.5,cc35,nofma -Mcuda \
+#               -Mbyteswapio                       \
+#               -Mflushz -pc 64                    \
+#               -mcmodel=medium                    \
+#               -Msmartalloc=huge -DHEVI_BICGSTAB
 
 FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
                -Minfo=accel -acc -ta=nvidia,time  \
                -Mbyteswapio                      \
                -Ktrap=fp -pc 64                  \
                -Mbounds -Mstandard -g -traceback \
-               -mcmodel=medium -DHEVI_BICGSTAB
+               -mcmodel=medium -DHEVI_BICGSTAB -D__PGI
 
 FC     = mpif90
+SFC    = pgfortran
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
-ifneq ($(ENABLE_OPENMP),)
-      FFLAGS += -openmp -openmp-report
-endif
-ifneq ($(ENABLE_PAPI),)
-      FFLAGS += -D_PAPI_
-      PAPI_INCLUDE = -I$(PAPI)/include
-      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
-endif
+FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -module
 
 CC     = mpicc
 CFLAGS = -fastsse -mcmodel=medium
 
-ifneq ($(USE_NETCDF3),)
-      CFLAGS += -DNETCDF3
-endif
-
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I$(NETCDF4)/include
-NETCDF_LIBS    ?= -L$(NETCDF4)/lib -lnetcdff -lnetcdf
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lcurl -lhdf5_hl -lhdf5 -lm -lz
 
 ###### Lapack
-LAPACK_LIBS    ?=
+LAPACK_LIBS    ?= -lacml
 
 ##### for frontend
 INSTALL = install

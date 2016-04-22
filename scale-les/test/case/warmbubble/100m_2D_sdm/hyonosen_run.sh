@@ -1,6 +1,6 @@
 #! /bin/bash -x
 #BSUB -q smp-small
-#BSUB -n 1 
+#BSUB -n 4 
 #BSUB -J sdm_test
 #BSUB -o output_run.log
 #BSUB -e error_run.log
@@ -11,7 +11,7 @@
 # ulimit -s unlimited
 
 # run
-#mpirun -np ${LSB_DJOB_NUMPROC} dplace -s1 ./scale-les_init  init.conf  || exit
+mpirun -np ${LSB_DJOB_NUMPROC} dplace -s1 ./scale-les_init  init.conf  || exit
 mpirun -np ${LSB_DJOB_NUMPROC} dplace -s1 ./scale-les  run.conf  || exit
 
 ################################################################################

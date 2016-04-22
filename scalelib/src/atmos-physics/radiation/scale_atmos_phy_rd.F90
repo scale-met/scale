@@ -46,7 +46,9 @@ module scale_atmos_phy_rd
      subroutine rd( &
           DENS, RHOT, QTRC,      &
           CZ, FZ,                &
-          oceanfrc,              &
+          fact_ocean,            &
+          fact_land,             &
+          fact_urban,            &
           temp_sfc, albedo_land, &
           solins, cosSZA,        &
           flux_rad,              &
@@ -61,13 +63,15 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
        real(RP), intent(in)  :: CZ          (  KA,IA,JA)    ! UNUSED
        real(RP), intent(in)  :: FZ          (0:KA,IA,JA)
-       real(RP), intent(in)  :: oceanfrc    (IA,JA)
+       real(RP), intent(in)  :: fact_ocean  (IA,JA)
+       real(RP), intent(in)  :: fact_land   (IA,JA)
+       real(RP), intent(in)  :: fact_urban  (IA,JA)
        real(RP), intent(in)  :: temp_sfc    (IA,JA)
        real(RP), intent(in)  :: albedo_land (IA,JA,2)
        real(RP), intent(in)  :: solins      (IA,JA)
        real(RP), intent(in)  :: cosSZA      (IA,JA)
        real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
-       real(RP), intent(out) :: flux_rad_top(IA,JA,2)
+       real(RP), intent(out) :: flux_rad_top(IA,JA,2,2)
      end subroutine rd
   end interface
   procedure(rd), pointer :: ATMOS_PHY_RD => NULL()
@@ -91,15 +95,21 @@ contains
        ATMOS_PHY_RD_mstrnx_setup, &
        ATMOS_PHY_RD_mstrnx
 #endif
+    use scale_atmos_phy_rd_mm5sw, only: &
+       swinit
     implicit none
 
-    character(len=H_SHORT), intent(in) :: RD_TYPE
+    character(len=*), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
     select case ( RD_TYPE )
     case ( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
+    case ( 'WRF' )
+       call ATMOS_PHY_RD_mstrnx_setup( 'MSTRNX' )
+       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
+       call swinit
     case default
        write(*,*) 'xxx invalid Radiation type(', trim(RD_TYPE), '). CHECK!'
        call PRC_MPIstop

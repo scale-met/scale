@@ -29,7 +29,7 @@ program convine
   integer(4) :: ix, jy, kz, kz1, nrec, n
   integer(4) :: ncid, id01, status, iix, jjy
   real(8) :: count1
-  character(len=64) :: cfile
+  character(len=H_MID) :: cfile
   real(8),allocatable :: dens(:,:,:), qt(:,:,:), t(:,:,:), pres(:,:,:)
   real(8),allocatable :: pt(:,:,:), w(:,:,:), u(:,:,:), v(:,:,:)
   real(8),allocatable :: qc(:,:,:), qr(:,:,:), ql(:,:,:), qv(:,:,:)

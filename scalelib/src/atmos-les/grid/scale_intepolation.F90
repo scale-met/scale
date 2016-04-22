@@ -67,11 +67,13 @@ contains
     integer :: k, i, j, kk, kp
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[INTERPOLATION]/Categ[COMMON]'
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERPOLATION] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     INTERP_available = TOPO_exist
-    if( IO_L ) write(IO_FID_LOG,*) '*** Interpolation is available? : ', INTERP_available
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Vertical interpolation is available? : ', INTERP_available
 
     allocate( INTERP_xi2z_idx (KA,IA,JA,2) )
     allocate( INTERP_xi2z_coef(KA,IA,JA,3) )
@@ -234,8 +236,8 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
        var_Z(k,i,j) = INTERP_xi2z_coef(k,i,j,1) * var(INTERP_xi2z_idx(k,i,j,1),i,j) &
                     + INTERP_xi2z_coef(k,i,j,2) * var(INTERP_xi2z_idx(k,i,j,2),i,j) &
@@ -271,8 +273,8 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
        var_Xi(k,i,j) = INTERP_z2xi_coef(k,i,j,1) * var(INTERP_z2xi_idx(k,i,j,1),i,j) &
                      + INTERP_z2xi_coef(k,i,j,2) * var(INTERP_z2xi_idx(k,i,j,2),i,j) &

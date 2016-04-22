@@ -16,6 +16,7 @@
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-18 (Y.Sato)  [mod] Modify the output message in sdm_boundary
 !! @li      2014-07-18 (Y.Sato)  [mod] Modify a bug in sdm_getbufsy
+!! @li      2015-09-08 (Y.Sato)  [mod] update for version SCALE 0.2.4
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -453,6 +454,8 @@ contains
   subroutine sdm_shiftsx(wbc,ebc,bufsiz1,bufsiz2,           &
                             sbufx,rbufx)
     use mpi
+    use scale_process, only: &
+         PRC_LOCAL_COMM_WORLD
     use m_sdm_common, only: &
          nisub, &
          dstw_sub, dste_sub, srcw_sub, srce_sub, &
@@ -516,10 +519,10 @@ contains
        !### Call the sending and receiving MPI function (towards west)###!
 
        call mpi_isend(sbufx(1,1,1),siz,MPI_DOUBLE_PRECISION,dstw,tag, &
-            MPI_COMM_WORLD,statsw,ierr)
+            PRC_LOCAL_COMM_WORLD,statsw,ierr)
 
        call mpi_irecv(rbufx(1,1,1),siz,MPI_DOUBLE_PRECISION,srce,tag, &
-            MPI_COMM_WORLD,statre,ierr)
+            PRC_LOCAL_COMM_WORLD,statre,ierr)
 
        !### Incliment the message tag ###!
 
@@ -528,10 +531,10 @@ contains
        !### Call the sending and receiving MPI function (towards east)###!
 
        call mpi_isend(sbufx(1,1,2),siz,MPI_DOUBLE_PRECISION,dste,tag, &
-            MPI_COMM_WORLD,statse,ierr)
+            PRC_LOCAL_COMM_WORLD,statse,ierr)
 
        call mpi_irecv(rbufx(1,1,2),siz,MPI_DOUBLE_PRECISION,srcw,tag, &
-            MPI_COMM_WORLD,statrw,ierr)
+            PRC_LOCAL_COMM_WORLD,statrw,ierr)
 
        !### Call the waiting MPI function ###!
 

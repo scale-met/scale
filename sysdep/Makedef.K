@@ -6,11 +6,15 @@
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
-               -Kdynamic_iteration -Ksimd                                \
+               -x-                                                       \
+               -Ksimd                                                    \
                -Kauto,threadsafe
 
-# This option can reudce compilation time considerably
-# FFLAGS_FAST  = -Kparallel,ocl,array_private -Cpp -Kauto,threadsafe
+FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
+                   -Kautoobjstack   \
+                   -Ktemparraystack \
+                   -Kinstance=8     \
+                   -Kswp_strong
 
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
 # If you find the segmentation fault error, please check.
@@ -22,15 +26,13 @@ FFLAGS_DEBUG = -O0                                                       \
 
 # Performance monitor
 # disable
-# PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
+PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
 # fipp
 #PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_ -U_FINEPA_
 # fapp
 #PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_ -U_FINEPA_
 # fine PA
 #PERF_MONIT = -Ntl_trt -U_FIPP_ -U_FAPP_ -D_FINEPA_
-# Runtime Information 
-#PERF_MONIT = -Nrt_tune_func
 
 # RDMA
 # disable
@@ -38,35 +40,20 @@ RDMA = -U_USE_RDMA
 # enable
 #RDMA = -D_USE_RDMA
 
-# Super Droplet Method (SDM)
-# without SDM
-#SDM =
-# with SDM
-SDM = -D_SDM
+# Single precision
+#FFLAGS += -DSINGLE
 
 FC     = mpifrtpx
-FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA) $(SDM)
-#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA) $(SDM)
+SFC    = frtpx
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
 #FFLAGS_DYN ?= $(FFLAGS)
 
-#FFLAGS_SDM ?= $(FFLAGS) -Kprefetch_indirect
-#FFLAGS_SDM ?= $(FFLAGS)
-FFLAGS_SDM ?= -Kfast,parallel,optmsg=2,ocl,preex,mfunc=3 -Nlst=t
-
-# without performance monitor or Nrt_tune_func
-FFLAGS_SDM_MONIT ?= 
-# without performance monitor or Nrt_tune_func (Ntl_trt should be defined in PERF_MONIT shown above)
-# Anyway, YOU SHOULD NOT USE -Nrt_tune_func. It makes the run very slow, 3rd times or worse..
-#FFLAGS_SDM_MONIT ?= -Nrt_tune_func
-
 MODDIROPT ?= -M
 
 CC     = mpifccpx
-CFLAGS_FAST  = 
-#CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
-#CFLAGS_DEBUG = -O0
+CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
+CFLAGS_DEBUG = -O0
 
 CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
 #CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)

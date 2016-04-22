@@ -28,6 +28,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_setup0
   public :: USER_setup
   public :: USER_step
 
@@ -50,6 +51,11 @@ module mod_user
 
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Setup0
+  subroutine USER_setup0
+  end subroutine USER_setup0
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -78,7 +84,10 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
+
+    ! run once (only for the diagnostic value)
+    call USER_step
 
     return
   end subroutine USER_setup
@@ -115,7 +124,7 @@ contains
        enddo
        enddo
 
-       call HIST_in( PT_diff(:,:,:), 'PT_diff', 'PT perturbation', 'K', DTSEC)
+       call HIST_in( PT_diff(:,:,:), 'PT_diff', 'PT perturbation', 'K' )
     endif
 
     return

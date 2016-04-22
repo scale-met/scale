@@ -41,7 +41,12 @@ module scale_atmos_solarins
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: ATMOS_SOLARINS_constant = 1360.250117_RP ! Solar constant [W/m2]
+  real(RP), public :: ATMOS_SOLARINS_constant    = 1360.250117_RP ! Solar constant [W/m2]
+  logical,  public :: ATMOS_SOLARINS_fixedlatlon = .false.        ! Latitude/Longitude is fixed?
+  logical,  public :: ATMOS_SOLARINS_fixeddate   = .false.        ! Date is fixed?
+  real(RP), public :: ATMOS_SOLARINS_lon                          ! Longitude for radiation [rad]
+  real(RP), public :: ATMOS_SOLARINS_lat                          ! Latitude  for radiation [rad]
+  real(RP), public :: ATMOS_SOLARINS_date(6)                      ! Date      for radiation [Y,M,D,H,M,S]
 
   !-----------------------------------------------------------------------------
   !
@@ -51,13 +56,13 @@ module scale_atmos_solarins
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: obliquity ! obliquity [rad]
-  real(RP), private, save :: E         ! eccentricity
-  real(RP), private, save :: omega     ! longitude of perigee [rad]
-  real(RP), private, save :: lambda_m0 ! longitude at the vernal equinox [rad]
+  real(RP), private :: obliquity ! obliquity [rad]
+  real(RP), private :: E         ! eccentricity
+  real(RP), private :: omega     ! longitude of perigee [rad]
+  real(RP), private :: lambda_m0 ! longitude at the vernal equinox [rad]
 
   integer,  private, parameter :: year_ref = 1950              ! reference year [year]
-  integer,  private, save      :: ve_date(6)                   ! reference date of vernal equinox
+  integer,  private            :: ve_date(6)                   ! reference date of vernal equinox
   data ve_date / 1950, 3, 21, 0, 0, 0 /
 
   real(RP), private, parameter :: obliquity_ref = 23.320556_RP ! initial condition of obliquity (epsilon_star)
@@ -66,9 +71,9 @@ module scale_atmos_solarins
 
   !-----< Parameter tables from Berger(1978b) >-----
   integer,  private, parameter :: nObliq = 47         ! # of terms of the series expansion of epsilon
-  real(RP), private, save      :: Obliq_amp  (nObliq) ! amplitude [second of arc]
-  real(RP), private, save      :: Obliq_rate (nObliq) ! mean rate [second of arc/year]
-  real(RP), private, save      :: Obliq_phase(nObliq) ! phase     [degree of arc]
+  real(RP), private            :: Obliq_amp  (nObliq) ! amplitude [second of arc]
+  real(RP), private            :: Obliq_rate (nObliq) ! mean rate [second of arc/year]
+  real(RP), private            :: Obliq_phase(nObliq) ! phase     [degree of arc]
 
   data Obliq_amp / &
         -2462.2214466_RP, & !  1
@@ -218,9 +223,9 @@ module scale_atmos_solarins
          82.6496_RP  / ! 47
 
   integer,  private, parameter :: nEclip = 19         ! # of terms of the series expansion of ecliptic
-  real(RP), private, save      :: Eclip_amp  (nEclip) ! amplitude
-  real(RP), private, save      :: Eclip_rate (nEclip) ! mean rate [second of arc/year]
-  real(RP), private, save      :: Eclip_phase(nEclip) ! phase     [degree of arc]
+  real(RP), private            :: Eclip_amp  (nEclip) ! amplitude
+  real(RP), private            :: Eclip_rate (nEclip) ! mean rate [second of arc/year]
+  real(RP), private            :: Eclip_phase(nEclip) ! phase     [degree of arc]
 
   data Eclip_amp / &
          0.01860798_RP, & !  1
@@ -286,9 +291,9 @@ module scale_atmos_solarins
          72.108838_RP  / ! 19
 
   integer,  private, parameter :: nPrece = 78         ! # of terms of the series expansion of general precession
-  real(RP), private, save      :: Prece_amp  (nPrece) ! amplitude
-  real(RP), private, save      :: Prece_rate (nPrece) ! mean rate [second of arc/year]
-  real(RP), private, save      :: Prece_phase(nPrece) ! phase     [degree of arc]
+  real(RP), private            :: Prece_amp  (nPrece) ! amplitude
+  real(RP), private            :: Prece_rate (nPrece) ! mean rate [second of arc/year]
+  real(RP), private            :: Prece_phase(nPrece) ! phase     [degree of arc]
 
   data Prece_amp / &
          7391.0225890_RP, & !  1
@@ -530,11 +535,10 @@ module scale_atmos_solarins
         332.3345_RP, & ! 77
          27.3039_RP  / ! 78
 
-  real(RP), private, save :: arcsec2d, arcsec2r ! unit converter
+  real(RP), private :: arcsec2d, arcsec2r ! unit converter
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> setup solar incidence module
   !-----------------------------------------------------------------------------
@@ -544,40 +548,57 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_D2R
+    use scale_grid_real, only: &
+       REAL_BASEPOINT_LON, &
+       REAL_BASEPOINT_LAT
     implicit none
 
     integer, intent(in) :: iyear ! year at setup
 
     namelist / PARAM_ATMOS_SOLARINS / &
-       ATMOS_SOLARINS_constant
+       ATMOS_SOLARINS_constant,    &
+       ATMOS_SOLARINS_fixedlatlon, &
+       ATMOS_SOLARINS_fixeddate,   &
+       ATMOS_SOLARINS_lon,         &
+       ATMOS_SOLARINS_lat,         &
+       ATMOS_SOLARINS_date
 
     real(RP) :: dyear ! delta t [year]
+    integer  :: year  ! used year
 
     integer  :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SOLARINS]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ solar insolation'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SOLARINS] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+
+    ATMOS_SOLARINS_lon     = REAL_BASEPOINT_LON
+    ATMOS_SOLARINS_lat     = REAL_BASEPOINT_LAT
+    ATMOS_SOLARINS_date(:) = -1
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_SOLARINS,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_SOLARINS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_SOLARINS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_SOLARINS)
 
     arcsec2d = 1.0_RP / (60.0_RP*60.0_RP)
     arcsec2r = arcsec2d * CONST_D2R
 
-    call ATMOS_SOLARINS_orbit(iyear)
+    year = iyear
 
-    dyear = real( iyear-year_ref, kind=RP )
+    if ( ATMOS_SOLARINS_fixeddate ) then
+       if( ATMOS_SOLARINS_date(1) >= 0 ) year = ATMOS_SOLARINS_date(1)
+    endif
+
+    call ATMOS_SOLARINS_orbit( year )
+
+    dyear = real( year-year_ref, kind=RP )
 
     !----- report data -----
     if( IO_L ) write(IO_FID_LOG,*)
@@ -591,6 +612,20 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** eccentricity                         : ', E
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** longitude of perihelion         [deg]: ', omega     / CONST_D2R
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** longitude at the vernal equinox [deg]: ', lambda_m0 / CONST_D2R
+    if( IO_L ) write(IO_FID_LOG,*)
+
+    if( IO_L ) write(IO_FID_LOG,*)              '*** Latitude/Longitude is fixed?         : ', ATMOS_SOLARINS_fixedlatlon
+    if ( ATMOS_SOLARINS_fixedlatlon ) then
+       if( IO_L ) write(IO_FID_LOG,*)           '*** Longitude                       [deg]: ', ATMOS_SOLARINS_lon
+       if( IO_L ) write(IO_FID_LOG,*)           '*** Latitude                        [deg]: ', ATMOS_SOLARINS_lat
+       ATMOS_SOLARINS_lon = ATMOS_SOLARINS_lon * CONST_D2R
+       ATMOS_SOLARINS_lat = ATMOS_SOLARINS_lat * CONST_D2R
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)              '*** Date is fixed?                       : ', ATMOS_SOLARINS_fixeddate
+    if ( ATMOS_SOLARINS_fixeddate ) then
+       if( IO_L ) write(IO_FID_LOG,*)           '*** Date                                 : ', ATMOS_SOLARINS_date
+    endif
 
     return
   end subroutine ATMOS_SOLARINS_setup
@@ -706,28 +741,36 @@ contains
   !-----------------------------------------------------------------------------
   !> calc factor of Earths solar insolation
   subroutine ATMOS_SOLARINS_insolation_0D( &
-      solins,    &
-      cosSZA,    &
-      Re_factor, &
-      lon,       &
-      lat,       &
-      now_date   )
+       solins,     &
+       cosSZA,     &
+       Re_factor,  &
+       real_lon,   &
+       real_lat,   &
+       now_date,   &
+       offset_year )
     use scale_const, only: &
-         PI => CONST_PI
+       PI  => CONST_PI,  &
+       EPS => CONST_EPS
     use scale_calendar, only: &
-         CALENDAR_getDayOfYear,  &
-         CALENDAR_ymd2absday,    &
-         CALENDAR_hms2abssec,    &
-         I_year, I_month, I_day, &
-         I_hour, I_min, I_sec
+       CALENDAR_getDayOfYear,  &
+       CALENDAR_ymd2absday,    &
+       CALENDAR_hms2abssec,    &
+       I_year, I_month, I_day, &
+       I_hour, I_min, I_sec
     implicit none
 
     real(RP), intent(out) :: solins      ! solar insolation
     real(RP), intent(out) :: cosSZA      ! cos(Solar Zenith Angle)
     real(RP), intent(out) :: Re_factor   ! factor of the distance of Earth from the sun (1/rho2)
-    real(RP), intent(in)  :: lon         ! longitude
-    real(RP), intent(in)  :: lat         ! latitude
+    real(RP), intent(in)  :: real_lon    ! longitude
+    real(RP), intent(in)  :: real_lat    ! latitude
     integer,  intent(in)  :: now_date(6) ! date(yyyy,mm,dd,hh,mm,ss)
+    integer,  intent(in)  :: offset_year ! year offset
+
+    real(RP) :: lon     !< used lon
+    real(RP) :: lat     !< used lat
+    integer  :: date(6) !< used date
+    integer  :: oyear   !< used year offset
 
     real(RP) :: lambda_m       ! mean longitude from vernal equinox
     real(RP) :: lambda         !
@@ -735,27 +778,50 @@ contains
     real(RP) :: hourangle      ! hour angle: relative longitude of subsolar point
 
     integer  :: absday, absday_ve
-    real(RP) :: DayOfYear, abssec
+    real(DP) :: DayOfYear, abssec
     real(RP) :: nu
+
+    integer :: i
     !---------------------------------------------------------------------------
 
-    call CALENDAR_getDayOfYear( DayOfYear, now_date(I_year) )
+    lon = real_lon
+    lat = real_lat
+    if ( ATMOS_SOLARINS_fixedlatlon ) then
+       lon = ATMOS_SOLARINS_lon
+       lat = ATMOS_SOLARINS_lat
+    endif
 
-    call CALENDAR_ymd2absday( absday,            & ! [OUT]
-                              now_date(I_year),  & ! [IN]
-                              now_date(I_month), & ! [IN]
-                              now_date(I_day)    ) ! [IN]
+    date(:) = now_date(:)
+    oyear   = offset_year
+    if ( ATMOS_SOLARINS_fixeddate ) then
+       if( ATMOS_SOLARINS_date(1) >= 0 ) oyear   = 0
+       if( ATMOS_SOLARINS_date(1) >= 0 ) date(1) = ATMOS_SOLARINS_date(1)
+       if( ATMOS_SOLARINS_date(2) >= 1 ) date(2) = ATMOS_SOLARINS_date(2)
+       if( ATMOS_SOLARINS_date(3) >= 1 ) date(3) = ATMOS_SOLARINS_date(3)
+       if( ATMOS_SOLARINS_date(4) >= 0 ) date(4) = ATMOS_SOLARINS_date(4)
+       if( ATMOS_SOLARINS_date(5) >= 0 ) date(5) = ATMOS_SOLARINS_date(5)
+       if( ATMOS_SOLARINS_date(6) >= 0 ) date(6) = ATMOS_SOLARINS_date(6)
+    endif
 
-    call CALENDAR_ymd2absday( absday_ve,         & ! [OUT]
-                              now_date(I_year),  & ! [IN]
-                              ve_date (I_month), & ! [IN]
-                              ve_date (I_day)    ) ! [IN]
+    call CALENDAR_getDayOfYear( DayOfYear, date(I_year) )
 
-    call CALENDAR_hms2abssec( abssec,            & ! [OUT]
-                              now_date(I_hour),  & ! [IN]
-                              now_date(I_min),   & ! [IN]
-                              now_date(I_sec),   & ! [IN]
-                              0.0_RP             ) ! [IN]
+    call CALENDAR_ymd2absday( absday,        & ! [OUT]
+                              date(I_year),  & ! [IN]
+                              date(I_month), & ! [IN]
+                              date(I_day),   & ! [IN]
+                              oyear          ) ! [IN]
+
+    call CALENDAR_ymd2absday( absday_ve,        & ! [OUT]
+                              date   (I_year),  & ! [IN]
+                              ve_date(I_month), & ! [IN]
+                              ve_date(I_day),   & ! [IN]
+                              oyear             ) ! [IN]
+
+    call CALENDAR_hms2abssec( abssec,        & ! [OUT]
+                              date(I_hour),  & ! [IN]
+                              date(I_min),   & ! [IN]
+                              date(I_sec),   & ! [IN]
+                              0.0_DP         ) ! [IN]
 
     lambda_m = lambda_m0 + 2.0_RP * PI * real(absday-absday_ve,kind=RP) / DayOfYear
 
@@ -784,7 +850,8 @@ contains
               + 2.5_RP*E*E                      &
               + 4.0_RP*E*E*E * cos( 3.0_RP*nu )
 
-    solins = ATMOS_SOLARINS_constant * Re_factor * max(cosSZA,0.0_RP)
+!    solins = ATMOS_SOLARINS_constant * Re_factor * max(cosSZA,0.0_RP)
+    solins = ATMOS_SOLARINS_constant * Re_factor * ( 0.5_RP + sign(0.5_RP,cosSZA-EPS) )
 
     return
   end subroutine ATMOS_SOLARINS_insolation_0D
@@ -792,27 +859,35 @@ contains
   !-----------------------------------------------------------------------------
   !> calc factor of Earths solar insolation
   subroutine ATMOS_SOLARINS_insolation_2D( &
-      solins,    &
-      cosSZA,    &
-      lon,       &
-      lat,       &
-      now_date   )
+       solins,     &
+       cosSZA,     &
+       real_lon,   &
+       real_lat,   &
+       now_date,   &
+       offset_year )
     use scale_grid_index
     use scale_const, only: &
-         PI => CONST_PI
+       PI  => CONST_PI,  &
+       EPS => CONST_EPS
     use scale_calendar, only: &
-         CALENDAR_getDayOfYear,  &
-         CALENDAR_ymd2absday,    &
-         CALENDAR_hms2abssec,    &
-         I_year, I_month, I_day, &
-         I_hour, I_min, I_sec
+       CALENDAR_getDayOfYear,  &
+       CALENDAR_ymd2absday,    &
+       CALENDAR_hms2abssec,    &
+       I_year, I_month, I_day, &
+       I_hour, I_min, I_sec
     implicit none
 
-    real(RP), intent(out) :: solins(IA,JA) ! solar insolation
-    real(RP), intent(out) :: cosSZA(IA,JA) ! cos(Solar Zenith Angle)
-    real(RP), intent(in)  :: lon   (IA,JA) ! longitude
-    real(RP), intent(in)  :: lat   (IA,JA) ! latitude
-    integer,  intent(in)  :: now_date(6)   ! date(yyyy,mm,dd,hh,mm,ss)
+    real(RP), intent(out) :: solins  (IA,JA) ! solar insolation
+    real(RP), intent(out) :: cosSZA  (IA,JA) ! cos(Solar Zenith Angle)
+    real(RP), intent(in)  :: real_lon(IA,JA) ! longitude [rad]
+    real(RP), intent(in)  :: real_lat(IA,JA) ! latitude  [rad]
+    integer,  intent(in)  :: now_date(6)     ! date(yyyy,mm,dd,hh,mm,ss)
+    integer,  intent(in)  :: offset_year     ! year offset
+
+    real(RP) :: lon(IA,JA) !< used lon
+    real(RP) :: lat(IA,JA) !< used lat
+    integer  :: date(6)    !< used date
+    integer  :: oyear      !< used year offset
 
     real(RP) :: lambda_m       ! mean longitude from vernal equinox
     real(RP) :: lambda         !
@@ -820,30 +895,51 @@ contains
     real(RP) :: hourangle(IA,JA) ! hour angle: relative longitude of subsolar point
 
     integer  :: absday, absday_ve
-    real(RP) :: DayOfYear, abssec
+    real(DP) :: DayOfYear, abssec
     real(RP) :: nu
     real(RP) :: Re_factor   ! factor of the distance of Earth from the sun (1/rho2)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    call CALENDAR_getDayOfYear( DayOfYear, now_date(I_year) )
+    lon(:,:) = real_lon(:,:)
+    lat(:,:) = real_lat(:,:)
+    if ( ATMOS_SOLARINS_fixedlatlon ) then
+       lon(:,:) = ATMOS_SOLARINS_lon
+       lat(:,:) = ATMOS_SOLARINS_lat
+    endif
 
-    call CALENDAR_ymd2absday( absday,            & ! [OUT]
-                              now_date(I_year),  & ! [IN]
-                              now_date(I_month), & ! [IN]
-                              now_date(I_day)    ) ! [IN]
+    date(:) = now_date(:)
+    oyear   = offset_year
+    if ( ATMOS_SOLARINS_fixeddate ) then
+       if( ATMOS_SOLARINS_date(1) >= 0 ) oyear   = 0
+       if( ATMOS_SOLARINS_date(1) >= 0 ) date(1) = ATMOS_SOLARINS_date(1)
+       if( ATMOS_SOLARINS_date(2) >= 1 ) date(2) = ATMOS_SOLARINS_date(2)
+       if( ATMOS_SOLARINS_date(3) >= 1 ) date(3) = ATMOS_SOLARINS_date(3)
+       if( ATMOS_SOLARINS_date(4) >= 0 ) date(4) = ATMOS_SOLARINS_date(4)
+       if( ATMOS_SOLARINS_date(5) >= 0 ) date(5) = ATMOS_SOLARINS_date(5)
+       if( ATMOS_SOLARINS_date(6) >= 0 ) date(6) = ATMOS_SOLARINS_date(6)
+    endif
 
-    call CALENDAR_ymd2absday( absday_ve,         & ! [OUT]
-                              now_date(I_year),  & ! [IN]
-                              ve_date (I_month), & ! [IN]
-                              ve_date (I_day)    ) ! [IN]
+    call CALENDAR_getDayOfYear( DayOfYear, date(I_year) )
 
-    call CALENDAR_hms2abssec( abssec,            & ! [OUT]
-                              now_date(I_hour),  & ! [IN]
-                              now_date(I_min),   & ! [IN]
-                              now_date(I_sec),   & ! [IN]
-                              0.0_RP             ) ! [IN]
+    call CALENDAR_ymd2absday( absday,        & ! [OUT]
+                              date(I_year),  & ! [IN]
+                              date(I_month), & ! [IN]
+                              date(I_day),   & ! [IN]
+                              oyear          ) ! [IN]
+
+    call CALENDAR_ymd2absday( absday_ve,        & ! [OUT]
+                              date   (I_year),  & ! [IN]
+                              ve_date(I_month), & ! [IN]
+                              ve_date(I_day),   & ! [IN]
+                              oyear             ) ! [IN]
+
+    call CALENDAR_hms2abssec( abssec,       & ! [OUT]
+                              date(I_hour), & ! [IN]
+                              date(I_min),  & ! [IN]
+                              date(I_sec),  & ! [IN]
+                              0.0_DP        ) ! [IN]
 
     lambda_m = lambda_m0 + 2.0_RP * PI * real(absday-absday_ve,kind=RP) / DayOfYear
 
@@ -882,7 +978,8 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * max(cosSZA(i,j),0.0_RP)
+!       solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * max(cosSZA(i,j),0.0_RP)
+       solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * ( 0.5_RP + sign(0.5_RP,cosSZA(i,j)-EPS) )
     enddo
     enddo
 

@@ -8,9 +8,9 @@
 !!
 !! @par History
 !! @li      2013-12-05 (S.Nishizawa)       [new]
-!!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_phy_tb_driver
   !-----------------------------------------------------------------------------
   !
@@ -43,436 +43,408 @@ module mod_atmos_phy_tb_driver
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: MOMZ_t(:,:,:)
-  real(RP), private, allocatable :: MOMX_t(:,:,:)
-  real(RP), private, allocatable :: MOMY_t(:,:,:)
-  real(RP), private, allocatable :: RHOT_t(:,:,:)
-  real(RP), private, allocatable :: QTRC_t(:,:,:,:)
   !-----------------------------------------------------------------------------
 contains
-
-  subroutine ATMOS_PHY_TB_driver_setup( TB_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_PHY_TB_driver_setup
     use scale_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
-       CDY => GRID_CDY, &
-       CZ  => GRID_CZ
+       CDY => GRID_CDY
+    use scale_grid_real, only: &
+       CZ  => REAL_CZ
+    use scale_process, only: &
+       PRC_MPIstop
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_sw_phy_tb
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
+    use mod_atmos_phy_tb_vars, only: &
+       TKE       => ATMOS_PHY_TB_TKE,    &
+       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
+       MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     implicit none
 
-    character(len=H_SHORT), intent(in) :: TB_TYPE
+!    NAMELIST / PARAM_ATMOS_PHY_TB / &
+
+    integer :: k, i, j
+!    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_TB] / Origin[SCALE-LES]'
 
-    allocate( MOMZ_t(KA,IA,JA) )
-    allocate( MOMX_t(KA,IA,JA) )
-    allocate( MOMY_t(KA,IA,JA) )
-    allocate( RHOT_t(KA,IA,JA) )
-    allocate( QTRC_t(KA,IA,JA,QA) )
+!    !--- read namelist
+!    rewind(IO_FID_CONF)
+!    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB,iostat=ierr)
+!    if( ierr < 0 ) then !--- missing
+!       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+!    elseif( ierr > 0 ) then !--- fatal error
+!       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB. Check!'
+!       call PRC_MPIstop
+!    endif
+!    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB)
 
-    call ATMOS_PHY_TB_setup( &
-         TB_TYPE,       & ! (in)
-         CDZ, CDX, CDY, & ! (in)
-         CZ             ) ! (in)
 
-    call ATMOS_PHY_TB_driver( .true., .false. )
+    ! initialize
+    do j = JS, JE
+    do i = IS, IE
+       MOMZ_t_TB(KS-1,i,j) = 0.0_RP
+       MOMZ_t_TB(KE  ,i,j) = 0.0_RP
+    enddo
+    enddo
 
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       TKE_t_TB(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    if ( ATMOS_sw_phy_tb ) then
+
+       ! setup library component
+       call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE, & ! [IN]
+                                CDZ, CDX, CDY, CZ  ) ! [IN]
+
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('ATM_Turbulence', 1)
+       call ATMOS_PHY_TB_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM_Turbulence', 1)
+
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
+    endif
+
+    return
   end subroutine ATMOS_PHY_TB_driver_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB_driver( update_flag, history_flag )
-    use scale_time, only: &
-       dttb => TIME_DTSEC_ATMOS_PHY_TB
-    use scale_history, only: &
-       HIST_in
-    use scale_grid, only: &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY, &
-       CDZ  => GRID_CDZ,  &
-       FDZ  => GRID_FDZ
+  subroutine ATMOS_PHY_TB_driver( update_flag )
+  !> Driver
     use scale_gridtrans, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
        GSQRT => GTRANS_GSQRT, &
        J13G  => GTRANS_J13G,  &
        J23G  => GTRANS_J23G,  &
-       J33G  => GTRANS_J33G
+       J33G  => GTRANS_J33G,  &
+       MAPF  => GTRANS_MAPF
+    use scale_les_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_history, only: &
+       HIST_in
+    use scale_time, only: &
+       dt_TB => TIME_DTSEC_ATMOS_PHY_TB
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB
+    use scale_atmos_phy_tb_common, only: &
+       calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
+       calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
+       calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
+       calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi
     use mod_atmos_vars, only: &
-       DENS_av, &
-       MOMZ_av, &
-       MOMX_av, &
-       MOMY_av, &
-       RHOT_av, &
-       QTRC_av, &
-       MOMZ_tp, &
-       MOMX_tp, &
-       MOMY_tp, &
-       RHOT_tp, &
-       QTRC_tp
-
+       DENS => DENS_av,   &
+       MOMZ => MOMZ_av,   &
+       MOMX => MOMX_av,   &
+       MOMY => MOMY_av,   &
+       RHOT => RHOT_av,   &
+       QTRC => QTRC_av,   &
+       MOMZ_t => MOMZ_tp, &
+       MOMX_t => MOMX_tp, &
+       MOMY_t => MOMY_tp, &
+       RHOT_t => RHOT_tp, &
+       RHOQ_t => RHOQ_tp
+    use mod_atmos_phy_tb_vars, only: &
+       MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t, &
+       MOMX_t_TB => ATMOS_PHY_TB_MOMX_t, &
+       MOMY_t_TB => ATMOS_PHY_TB_MOMY_t, &
+       RHOT_t_TB => ATMOS_PHY_TB_RHOT_t, &
+       RHOQ_t_TB => ATMOS_PHY_TB_RHOQ_t, &
+       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
+       TKE       => ATMOS_PHY_TB_TKE,    &
+       NU        => ATMOS_PHY_TB_NU
+    use mod_atmos_phy_sf_vars, only: &
+       SFLX_MW => ATMOS_PHY_SF_SFLX_MW, &
+       SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
+       SFLX_MV => ATMOS_PHY_SF_SFLX_MV, &
+       SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
+       SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in), optional :: history_flag
 
     ! eddy viscosity/diffusion flux
-    real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
-    real(RP) :: qflx_sgs_momx(KA,IA,JA,3)
-    real(RP) :: qflx_sgs_momy(KA,IA,JA,3)
-    real(RP) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+    real(RP) :: QFLX_MOMZ(KA,IA,JA,3)
+    real(RP) :: QFLX_MOMX(KA,IA,JA,3)
+    real(RP) :: QFLX_MOMY(KA,IA,JA,3)
+    real(RP) :: QFLX_RHOT(KA,IA,JA,3)
+    real(RP) :: QFLX_RHOQ(KA,IA,JA,3,QA)
 
-    ! diagnostic variables
-    real(RP) :: tke(KA,IA,JA) ! TKE
-    real(RP) :: nu (KA,IA,JA) ! eddy diffusion
-    real(RP) :: Ri (KA,IA,JA) ! Richardoson number
-    real(RP) :: Pr (KA,IA,JA) ! Prandtle number
+    real(RP) :: Ri(KA,IA,JA) ! Richardson number
+    real(RP) :: Pr(KA,IA,JA) ! Prandtl number
+    real(RP) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
+
+    integer :: JJS, JJE
+    integer :: IIS, IIE
+
+    real(RP) :: total ! dummy
 
     integer :: k, i, j, iq
-    integer :: IIS, IIE, JJS, JJE
+    !---------------------------------------------------------------------------
 
     if ( update_flag ) then
-       call ATMOS_PHY_TB( &
-            qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
-            qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
-            tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
-            MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av, & ! (in)
-            GSQRT, J13G, J23G, J33G                      & ! (in)
-            )
 
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          TKE(k,i,j) = max( TKE(k,i,j) + TKE_t_TB(k,i,j) * dt_TB, 0.0_RP )
+       end do
+       end do
+       end do
+
+       do j = JS, JE
+       do i = IS, IE
+          TKE(1:KS-1,i,j) = TKE(KS,i,j)
+          TKE(KE+1:KA,i,j) = TKE(KE,i,j)
+       end do
+       end do
+
+       call COMM_vars8( TKE(:,:,:), 1 )
+       call COMM_wait ( TKE(:,:,:), 1 )
+
+       call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
+                          QFLX_MOMX, & ! [OUT]
+                          QFLX_MOMY, & ! [OUT]
+                          QFLX_RHOT, & ! [OUT]
+                          QFLX_RHOQ, & ! [OUT]
+                          TKE,       & ! [INOUT]
+                          TKE_t_TB,  & ! [OUT]
+                          NU,        & ! [OUT]
+                          Ri,        & ! [OUT]
+                          Pr,        & ! [OUT]
+                          N2,        & ! [OUT]
+                          MOMZ,      & ! [IN]
+                          MOMX,      & ! [IN]
+                          MOMY,      & ! [IN]
+                          RHOT,      & ! [IN]
+                          DENS,      & ! [IN]
+                          QTRC,      & ! [IN]
+                          SFLX_MW,   & ! [IN]
+                          SFLX_MU,   & ! [IN]
+                          SFLX_MV,   & ! [IN]
+                          SFLX_SH,   & ! [IN]
+                          SFLX_Q(:,:,I_QV), & ! [IN]
+                          GSQRT,     & ! [IN]
+                          J13G,      & ! [IN]
+                          J23G,      & ! [IN]
+                          J33G,      & ! [IN]
+                          MAPF,      & ! [IN]
+                          dt_TB      ) ! [IN]
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS+1, KE-2
-             MOMZ_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UYW)*qflx_sgs_momz(k,i  ,j,XDIR) &
-                    - GSQRT(k,i-1,j,I_UYW)*qflx_sgs_momz(k,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVW)*qflx_sgs_momz(k,i,j  ,YDIR) &
-                    - GSQRT(k,i,j-1,I_XVW)*qflx_sgs_momz(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(k+1,i,j,I_XYZ)*(qflx_sgs_momz(k+1,i,j,XDIR)+qflx_sgs_momz(k+1,i-1,j,XDIR)) &
-                    - J13G(k-1,i,j,I_XYZ)*(qflx_sgs_momz(k-1,i,j,XDIR)-qflx_sgs_momz(k-1,i-1,j,XDIR)) &
-                    + J23G(k+1,i,j,I_XYZ)*(qflx_sgs_momz(k+1,i,j,YDIR)+qflx_sgs_momz(k+1,i,j-1,YDIR)) &
-                    - J23G(k-1,i,j,I_XYZ)*(qflx_sgs_momz(k-1,i,j,YDIR)+qflx_sgs_momz(k-1,i,j-1,YDIR)) &
-                    ) * 0.5_RP / ( CDZ(k+1)+CDZ(k) ) &
-                  + J33G * ( qflx_sgs_momz(k+1,i,j,ZDIR) - qflx_sgs_momz(k,i,j,ZDIR) ) * RFDZ(k) &
-                  ) / GSQRT(k,i,j,I_XYW)
-          end do
-          end do
-          end do
-          do j = JJS, JJE
-          do i = IIS, IIE
-             MOMZ_t(KS,i,j) = - ( &
-                  + ( GSQRT(KS,i  ,j,I_UYW)*qflx_sgs_momz(KS,i  ,j,XDIR) &
-                    - GSQRT(KS,i-1,j,I_UYW)*qflx_sgs_momz(KS,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(KS,i,j  ,I_XVW)*qflx_sgs_momz(KS,i,j  ,YDIR) &
-                    - GSQRT(KS,i,j-1,I_XVW)*qflx_sgs_momz(KS,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(KS+1,i,j,I_XYZ)*(qflx_sgs_momz(KS+1,i,j,XDIR)+qflx_sgs_momz(KS+1,i-1,j,XDIR)) &
-                    - J13G(KS  ,i,j,I_XYZ)*(qflx_sgs_momz(KS  ,i,j,XDIR)-qflx_sgs_momz(KS  ,i-1,j,XDIR)) &
-                    + J23G(KS+1,i,j,I_XYZ)*(qflx_sgs_momz(KS+1,i,j,YDIR)+qflx_sgs_momz(KS+1,i,j-1,YDIR)) &
-                    - J23G(KS  ,i,j,I_XYZ)*(qflx_sgs_momz(KS  ,i,j,YDIR)+qflx_sgs_momz(KS  ,i,j-1,YDIR)) &
-                    ) * 0.5_RP * RCDZ(KS+1) &
-                  + J33G * ( qflx_sgs_momz(KS+1,i,j,ZDIR) - qflx_sgs_momz(KS,i,j,ZDIR) ) * RFDZ(KS) &
-                  ) / GSQRT(KS,i,j,I_XYW)
-             MOMZ_t(KE-1,i,j) = - ( &
-                  + ( GSQRT(KE-1,i  ,j,I_UYW)*qflx_sgs_momz(KE-1,i  ,j,XDIR) &
-                    - GSQRT(KE-1,i-1,j,I_UYW)*qflx_sgs_momz(KE-1,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(KE-1,i,j  ,I_XVW)*qflx_sgs_momz(KE-1,i,j  ,YDIR) &
-                    - GSQRT(KE-1,i,j-1,I_XVW)*qflx_sgs_momz(KE-1,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(KE-1,i,j,I_XYZ)*(qflx_sgs_momz(KE-1,i,j,XDIR)+qflx_sgs_momz(KE-1,i-1,j,XDIR)) &
-                    - J13G(KE-2,i,j,I_XYZ)*(qflx_sgs_momz(KE-2,i,j,XDIR)-qflx_sgs_momz(KE-2,i-1,j,XDIR)) &
-                    + J23G(KE-1,i,j,I_XYZ)*(qflx_sgs_momz(KE-1,i,j,YDIR)+qflx_sgs_momz(KE-1,i,j-1,YDIR)) &
-                    - J23G(KE-2,i,j,I_XYZ)*(qflx_sgs_momz(KE-2,i,j,YDIR)+qflx_sgs_momz(KE-2,i,j-1,YDIR)) &
-                    ) * 0.5_RP * RCDZ(KE-1) &
-                  + J33G * ( qflx_sgs_momz(KE,i,j,ZDIR) - qflx_sgs_momz(KE-1,i,j,ZDIR) ) * RFDZ(KE-1) &
-                  ) / GSQRT(KE-1,i,j,I_XYW)
-          end do
-          end do
-          
+          call calc_tend_momz( MOMZ_t_TB,   & ! (out)
+                               QFLX_MOMZ,   & ! (in)
+                               GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                               IIS, IIE, JJS, JJE ) ! (in)
+       end do
+       end do
 
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS+1, KE-1
-             MOMX_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i+1,j,I_XYZ)*qflx_sgs_momx(k,i+1,j,XDIR) &
-                    - GSQRT(k,i  ,j,I_XYZ)*qflx_sgs_momx(k,i  ,j,XDIR) ) * RFDX(i) &
-                  + ( GSQRT(k,i,j  ,I_UVZ)*qflx_sgs_momx(k,i,j  ,YDIR) &
-                    - GSQRT(k,i,j-1,I_UVZ)*qflx_sgs_momx(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(k+1,i,j,I_UYW)*(qflx_sgs_momx(k+1,i+1,j,XDIR)+qflx_sgs_momx(k+1,i,j,XDIR)) &
-                    - J13G(k-1,i,j,I_UYW)*(qflx_sgs_momx(k-1,i+1,j,XDIR)+qflx_sgs_momx(k-1,i,j,XDIR)) &
-                    + J23G(k+1,i,j,I_UYW)*(qflx_sgs_momx(k+1,i,j,YDIR)+qflx_sgs_momx(k+1,i,j-1,YDIR)) &
-                    - J23G(k-1,i,j,I_UYW)*(qflx_sgs_momx(k-1,i,j,YDIR)+qflx_sgs_momx(k-1,i,j-1,YDIR)) &
-                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-                  + J33G * ( qflx_sgs_momx(k,i,j,ZDIR) - qflx_sgs_momx(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                  ) / GSQRT(k,i,j,I_UYZ)
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+          call calc_tend_momx( MOMX_t_TB,   & ! (out)
+                               QFLX_MOMX,   & ! (in)
+                               GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                               IIS, IIE, JJS, JJE ) ! (in)
+       end do
+       end do
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+          call calc_tend_momy( MOMY_t_TB,   & ! (out)
+                               QFLX_MOMY,   & ! (in)
+                               GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                               IIS, IIE, JJS, JJE ) ! (in)
+       end do
+       end do
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+          call calc_tend_phi ( RHOT_t_TB,  & ! (out)
+                               QFLX_RHOT,  & ! (in)
+                               GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                               IIS, IIE, JJS, JJE ) ! (in)
+       end do
+       end do
+
+       do iq = 1, QA
+          do JJS = JS, JE, JBLOCK
+          JJE = JJS+JBLOCK-1
+          do IIS = IS, IE, IBLOCK
+          IIE = IIS+IBLOCK-1
+             call calc_tend_phi ( RHOQ_t_TB(:,:,:,iq),    & ! (out)
+                                  QFLX_RHOQ(:,:,:,:,iq),  & ! (in)
+                                  GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                                  IIS, IIE, JJS, JJE ) ! (in)
           end do
           end do
-          end do
-          do j = JJS, JJE
-          do i = IIS, IIE
-             MOMX_t(KS,i,j) = - ( &
-                  + ( GSQRT(KS,i+1,j,I_XYZ)*qflx_sgs_momx(KS,i+1,j,XDIR) &
-                    - GSQRT(KS,i  ,j,I_XYZ)*qflx_sgs_momx(KS,i  ,j,XDIR) ) * RFDX(i) &
-                  + ( GSQRT(KS,i,j  ,I_UVZ)*qflx_sgs_momx(KS,i,j  ,YDIR) &
-                    - GSQRT(KS,i,j-1,I_UVZ)*qflx_sgs_momx(KS,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(KS+1,i,j,I_UYW)*(qflx_sgs_momx(KS+1,i+1,j,XDIR)+qflx_sgs_momx(KS+1,i,j,XDIR)) &
-                    - J13G(KS  ,i,j,I_UYW)*(qflx_sgs_momx(KS  ,i+1,j,XDIR)+qflx_sgs_momx(KS  ,i,j,XDIR)) &
-                    + J23G(KS+1,i,j,I_UYW)*(qflx_sgs_momx(KS+1,i,  j,YDIR)+qflx_sgs_momx(KS+1,i,j-1,YDIR)) &
-                    - J23G(KS  ,i,j,I_UYW)*(qflx_sgs_momx(KS  ,i,  j,YDIR)+qflx_sgs_momx(KS  ,i,j-1,YDIR)) &
-                    ) * 0.5_RP * RCDZ(KS) &
-                  + J33G * ( qflx_sgs_momx(KS,i,j,ZDIR) ) * RCDZ(KS) &
-                  ) / GSQRT(KS,i,j,I_UYZ)
-             MOMX_t(KE,i,j) = - ( &
-                  + ( GSQRT(KE,i+1,j,I_XYZ)*qflx_sgs_momx(KE,i+1,j,XDIR) &
-                    - GSQRT(KE,i  ,j,I_XYZ)*qflx_sgs_momx(KE,i  ,j,XDIR) ) * RFDX(i) &
-                  + ( GSQRT(KE,i,j  ,I_UVZ)*qflx_sgs_momx(KE,i,j  ,YDIR) &
-                    - GSQRT(KE,i,j-1,I_UVZ)*qflx_sgs_momx(KE,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(KE  ,i,j,I_UYW)*(qflx_sgs_momx(KE  ,i+1,j,XDIR)+qflx_sgs_momx(KE  ,i,j,XDIR)) &
-                    - J13G(KE-1,i,j,I_UYW)*(qflx_sgs_momx(KE-1,i+1,j,XDIR)+qflx_sgs_momx(KE-1,i,j,XDIR)) &
-                    + J23G(KE  ,i,j,I_UYW)*(qflx_sgs_momx(KE  ,i,  j,YDIR)+qflx_sgs_momx(KE  ,i,j-1,YDIR)) &
-                    - J23G(KE-1,i,j,I_UYW)*(qflx_sgs_momx(KE-1,i,  j,YDIR)+qflx_sgs_momx(KE-1,i,j-1,YDIR)) &
-                    ) * 0.5_RP * RFDZ(KE-1) &
-                  + J33G * ( qflx_sgs_momx(KE-1,i,j,ZDIR) ) * RCDZ(KE) &
-                  ) / GSQRT(KE,i,j,I_UYZ)
-          end do
-          end do
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS+1, KE-1
-             MOMY_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UVZ)*qflx_sgs_momy(k,i  ,j,XDIR) &
-                    - GSQRT(k,i-1,j,I_UVZ)*qflx_sgs_momy(k,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j+1,I_XYZ)*qflx_sgs_momy(k,i,j+1,YDIR) &
-                    - GSQRT(k,i,j  ,I_XYZ)*qflx_sgs_momy(k,i,j  ,YDIR) ) * RFDY(j) &
-                  + ( J13G(k+1,i,j,I_XVW)*(qflx_sgs_momy(k+1,i,j,XDIR)+qflx_sgs_momy(k+1,i-1,j,XDIR)) &
-                    - J13G(k-1,i,j,I_XVW)*(qflx_sgs_momy(k-1,i,j,XDIR)+qflx_sgs_momy(k-1,i-1,j,XDIR)) &
-                    + J23G(k+1,i,j+1,I_XVW)*(qflx_sgs_momy(k+1,i,j+1,YDIR)+qflx_sgs_momy(k+1,i,j,YDIR)) &
-                    - J23G(k-1,i,j+1,I_XVW)*(qflx_sgs_momy(k-1,i,j+1,YDIR)+qflx_sgs_momy(k-1,i,j,YDIR)) &
-                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-                  + J33G * ( qflx_sgs_momy(k,i,j  ,ZDIR) - qflx_sgs_momy(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XVW)
-          end do
-          end do
-          end do
-          do j = JJS, JJE
-          do i = IIS, IIE
-             MOMY_t(KS,i,j) = - ( &
-                  + ( GSQRT(KS,i  ,j,I_UVZ)*qflx_sgs_momy(KS,i  ,j,XDIR) &
-                    - GSQRT(KS,i-1,j,I_UVZ)*qflx_sgs_momy(KS,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(KS,i,j+1,I_XYZ)*qflx_sgs_momy(KS,i,j+1,YDIR) &
-                    - GSQRT(KS,i,j  ,I_XYZ)*qflx_sgs_momy(KS,i,j  ,YDIR) ) * RFDY(j) &
-                  + ( J13G(KS+1,i,j  ,I_XVW)*(qflx_sgs_momy(KS+1,i,j  ,XDIR)+qflx_sgs_momy(KS+1,i-1,j,XDIR)) &
-                    - J13G(KS  ,i,j  ,I_XVW)*(qflx_sgs_momy(KS  ,i,j  ,XDIR)+qflx_sgs_momy(KS  ,i-1,j,XDIR)) &
-                    + J23G(KS+1,i,j+1,I_XVW)*(qflx_sgs_momy(KS+1,i,j+1,YDIR)+qflx_sgs_momy(KS+1,i,j,YDIR)) &
-                    - J23G(KS  ,i,j+1,I_XVW)*(qflx_sgs_momy(KS  ,i,j+1,YDIR)+qflx_sgs_momy(KS  ,i,j,YDIR)) &
-                    ) * 0.5_RP * RFDZ(KS) &
-                  + J33G * ( qflx_sgs_momy(KS,i,j,ZDIR) ) * RCDZ(KS) &
-                ) / GSQRT(KS,i,j,I_XVW)
-             MOMY_t(KE,i,j) = - ( &
-                  + ( GSQRT(KE,i  ,j,I_UVZ)*qflx_sgs_momy(KE,i  ,j,XDIR) &
-                    - GSQRT(KE,i-1,j,I_UVZ)*qflx_sgs_momy(KE,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(KE,i,j+1,I_XYZ)*qflx_sgs_momy(KE,i,j+1,YDIR) &
-                    - GSQRT(KE,i,j  ,I_XYZ)*qflx_sgs_momy(KE,i,j  ,YDIR) ) * RFDY(j) &
-                  + ( J13G(KE  ,i,j  ,I_XVW)*(qflx_sgs_momy(KE  ,i,j  ,XDIR)+qflx_sgs_momy(KE  ,i-1,j,XDIR)) &
-                    - J13G(KE-1,i,j  ,I_XVW)*(qflx_sgs_momy(KE-1,i,j  ,XDIR)+qflx_sgs_momy(KE-1,i-1,j,XDIR)) &
-                    + J23G(KE  ,i,j+1,I_XVW)*(qflx_sgs_momy(KE  ,i,j+1,YDIR)+qflx_sgs_momy(KE  ,i,j,YDIR)) &
-                    - J23G(KE-1,i,j+1,I_XVW)*(qflx_sgs_momy(KE-1,i,j+1,YDIR)+qflx_sgs_momy(KE-1,i,j,YDIR)) &
-                    ) * 0.5_RP * RFDZ(KE-1) &
-                  + J33G * ( qflx_sgs_momy(KE-1,i,j,ZDIR) ) * RCDZ(KE) &
-                ) / GSQRT(KE,i,j,I_XVW)
-          end do
-          end do
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS+1, KE-1
-             RHOT_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UYZ)*qflx_sgs_rhot(k,i  ,j,XDIR) &
-                    - GSQRT(k,i-1,j,I_UVZ)*qflx_sgs_rhot(k,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVZ)*qflx_sgs_rhot(k,i,j  ,YDIR) &
-                    - GSQRT(k,i,j-1,I_XVZ)*qflx_sgs_rhot(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(k+1,i,j,I_XYW)*(qflx_sgs_rhot(k+1,i,j,XDIR) + qflx_sgs_rhot(k+1,i-1,j,XDIR)) &
-                    - J13G(k-1,i,j,I_XYW)*(qflx_sgs_rhot(k-1,i,j,XDIR) + qflx_sgs_rhot(k-1,i-1,j,XDIR)) &
-                    + J23G(k+1,i,j,I_XYW)*(qflx_sgs_rhot(k+1,i,j,YDIR) + qflx_sgs_rhot(k+1,i,j-1,YDIR)) &
-                    - J23G(k-1,i,j,I_XYW)*(qflx_sgs_rhot(k-1,i,j,YDIR) + qflx_sgs_rhot(k-1,i,j-1,YDIR)) &
-                    ) * 0.5_RP / ( FDZ(k) + FDZ(k-1) ) &
-                  + J33G * ( qflx_sgs_rhot(k,i,j,ZDIR) - qflx_sgs_rhot(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XYZ)
-          end do
-          end do
-          end do
-          do j = JJS, JJE
-          do i = IIS, IIE
-             RHOT_t(KS,i,j) = - ( &
-                  + ( GSQRT(KS,i  ,j,I_UYZ)*qflx_sgs_rhot(KS,i  ,j,XDIR) &
-                    - GSQRT(KS,i-1,j,I_UVZ)*qflx_sgs_rhot(KS,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(KS,i,j  ,I_XVZ)*qflx_sgs_rhot(KS,i,j  ,YDIR) &
-                    - GSQRT(KS,i,j-1,I_XVZ)*qflx_sgs_rhot(KS,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(KS+1,i,j,I_XYW)*(qflx_sgs_rhot(KS+1,i,j,XDIR) + qflx_sgs_rhot(KS+1,i-1,j,XDIR)) &
-                    - J13G(KS  ,i,j,I_XYW)*(qflx_sgs_rhot(KS  ,i,j,XDIR) + qflx_sgs_rhot(KS  ,i-1,j,XDIR)) &
-                    + J23G(KS+1,i,j,I_XYW)*(qflx_sgs_rhot(KS+1,i,j,YDIR) + qflx_sgs_rhot(KS+1,i,j-1,YDIR)) &
-                    - J23G(KS  ,i,j,I_XYW)*(qflx_sgs_rhot(KS  ,i,j,YDIR) + qflx_sgs_rhot(KS  ,i,j-1,YDIR)) &
-                    ) * 0.5_RP * RFDZ(KS)  &
-                  + J33G * ( qflx_sgs_rhot(KS,i,j,ZDIR) ) * RCDZ(KS) &
-                ) / GSQRT(KS,i,j,I_XYZ)
-             RHOT_t(KE,i,j) = - ( &
-                  + ( GSQRT(KE,i  ,j,I_UYZ)*qflx_sgs_rhot(KE,i  ,j,XDIR) &
-                    - GSQRT(KE,i-1,j,I_UVZ)*qflx_sgs_rhot(KE,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(KE,i,j  ,I_XVZ)*qflx_sgs_rhot(KE,i,j  ,YDIR) &
-                    - GSQRT(KE,i,j-1,I_XVZ)*qflx_sgs_rhot(KE,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(KE  ,i,j,I_XYW)*(qflx_sgs_rhot(KE  ,i,j,XDIR) + qflx_sgs_rhot(KE  ,i-1,j,XDIR)) &
-                    - J13G(KE-1,i,j,I_XYW)*(qflx_sgs_rhot(KE-1,i,j,XDIR) + qflx_sgs_rhot(KE-1,i-1,j,XDIR)) &
-                    + J23G(KE  ,i,j,I_XYW)*(qflx_sgs_rhot(KE  ,i,j,YDIR) + qflx_sgs_rhot(KE  ,i,j-1,YDIR)) &
-                    - J23G(KE-1,i,j,I_XYW)*(qflx_sgs_rhot(KE-1,i,j,YDIR) + qflx_sgs_rhot(KE-1,i,j-1,YDIR)) &
-                     ) * 0.5_RP * RFDZ(KE-1)  &
-                  + J33G * ( qflx_sgs_rhot(KE-1,i,j,ZDIR) ) * RCDZ(KE) &
-                ) / GSQRT(KE,i,j,I_XYZ)
-          end do
-          end do
+       end do
+
+       call HIST_in( TKE(:,:,:), 'TKE', 'turburent kinetic energy', 'm2/s2', nohalo=.true. )
+       call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , nohalo=.true. )
+       call HIST_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , nohalo=.true. )
+       call HIST_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL'  , nohalo=.true. )
+       call HIST_in( N2 (:,:,:), 'N2',  'squared Brunt-Vaisala frequency', '1/s2', nohalo=.true. )
+
+       call HIST_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
+       call HIST_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
+       call HIST_in( MOMY_t_TB(:,:,:), 'MOMY_t_TB', 'MOMY tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
+       call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K.kg/m3/s', nohalo=.true. )
+
+       do iq = 1, QA
+          call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(AQ_NAME(iq))//'_t_TB',                      &
+                        'RHO*'//trim(AQ_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
+       enddo
+
+       call HIST_in( QFLX_MOMZ(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ', 'SGS Z FLUX of MOMZ', 'kg/m/s2', &
+                     nohalo=.true.)
+       call HIST_in( QFLX_MOMZ(:,:,:,XDIR), 'SGS_XFLX_MOMZ', 'SGS X FLUX of MOMZ', 'kg/m/s2', &
+                     xdim='half', zdim='half', nohalo=.true.)
+       call HIST_in( QFLX_MOMZ(:,:,:,YDIR), 'SGS_YFLX_MOMZ', 'SGS Y FLUX of MOMZ', 'kg/m/s2', &
+                     ydim='half', zdim='half', nohalo=.true.)
+
+       call HIST_in( QFLX_MOMX(:,:,:,ZDIR), 'SGS_ZFLX_MOMX', 'SGS Z FLUX of MOMX', 'kg/m/s2', &
+                     xdim='half', zdim='half', nohalo=.true.)
+       call HIST_in( QFLX_MOMX(:,:,:,XDIR), 'SGS_XFLX_MOMX', 'SGS X FLUX of MOMX', 'kg/m/s2', &
+                     nohalo=.true.)
+       call HIST_in( QFLX_MOMX(:,:,:,YDIR), 'SGS_YFLX_MOMX', 'SGS Y FLUX of MOMX', 'kg/m/s2', &
+                     xdim='half', ydim='half', nohalo=.true.)
+
+       call HIST_in( QFLX_MOMY(:,:,:,ZDIR), 'SGS_ZFLX_MOMY', 'SGS Z FLUX of MOMY', 'kg/m/s2', &
+                     ydim='half', zdim='half', nohalo=.true.)
+       call HIST_in( QFLX_MOMY(:,:,:,XDIR), 'SGS_XFLX_MOMY', 'SGS X FLUX of MOMY', 'kg/m/s2', &
+                     xdim='half', ydim='half', nohalo=.true.)
+       call HIST_in( QFLX_MOMY(:,:,:,YDIR), 'SGS_YFLX_MOMY', 'SGS Y FLUX of MOMY', 'kg/m/s2', &
+                     nohalo=.true.)
+
+       call HIST_in( QFLX_RHOT(:,:,:,ZDIR), 'SGS_ZFLX_RHOT', 'SGS Z FLUX of RHOT', 'K*kg/m2/s', &
+                     zdim='half', nohalo=.true.)
+       call HIST_in( QFLX_RHOT(:,:,:,XDIR), 'SGS_XFLX_RHOT', 'SGS X FLUX of RHOT', 'K*kg/m2/s', &
+                     xdim='half', nohalo=.true.)
+       call HIST_in( QFLX_RHOT(:,:,:,YDIR), 'SGS_YFLX_RHOT', 'SGS Y FLUX of RHOT', 'K*kg/m2/s', &
+                     ydim='half', nohalo=.true.)
+
+       if ( I_QV > 0 ) then
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QV), 'SGS_ZFLX_QV', 'SGS Z FLUX of QV', 'kg/m2/s', &
+                        zdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QV), 'SGS_XFLX_QV', 'SGS X FLUX of QV', 'kg/m2/s', &
+                        xdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QV), 'SGS_YFLX_QV', 'SGS Y FLUX of QV', 'kg/m2/s', &
+                        ydim='half', nohalo=.true.)
+       endif
+
+#ifndef DRY
+       if ( I_QC > 0 ) then
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QC), 'SGS_ZFLX_QC', 'SGS Z FLUX of QC', 'kg/m2/s', &
+                        zdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QC), 'SGS_XFLX_QC', 'SGS X FLUX of QC', 'kg/m2/s', &
+                        xdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QC), 'SGS_YFLX_QC', 'SGS Y FLUX of QC', 'kg/m2/s', &
+                        ydim='half', nohalo=.true.)
+       endif
+
+       if ( I_QR > 0 ) then
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QR), 'SGS_ZFLX_QR', 'SGS Z FLUX of QR', 'kg/m2/s', &
+                        zdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QR), 'SGS_XFLX_QR', 'SGS X FLUX of QR', 'kg/m2/s', &
+                        xdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QR), 'SGS_YFLX_QR', 'SGS Y FLUX of QR', 'kg/m2/s', &
+                        ydim='half', nohalo=.true.)
+       endif
+
+       if ( I_QI > 0 ) then
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QI), 'SGS_ZFLX_QI', 'SGS Z FLUX of QI', 'kg/m2/s', &
+                        zdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QI), 'SGS_XFLX_QI', 'SGS X FLUX of QI', 'kg/m2/s', &
+                        xdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QI), 'SGS_YFLX_QI', 'SGS Y FLUX of QI', 'kg/m2/s', &
+                        ydim='half', nohalo=.true.)
+       endif
+
+       if ( I_QS > 0 ) then
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QS), 'SGS_ZFLX_QS', 'SGS Z FLUX of QS', 'kg/m2/s', &
+                        zdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QS), 'SGS_XFLX_QS', 'SGS X FLUX of QS', 'kg/m2/s', &
+                        xdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QS), 'SGS_YFLX_QS', 'SGS Y FLUX of QS', 'kg/m2/s', &
+                        ydim='half', nohalo=.true.)
+       endif
+
+       if ( I_QG > 0 ) then
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QG), 'SGS_ZFLX_QG', 'SGS Z FLUX of QG', 'kg/m2/s', &
+                        zdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QG), 'SGS_XFLX_QG', 'SGS X FLUX of QG', 'kg/m2/s', &
+                        xdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QG), 'SGS_YFLX_QG', 'SGS Y FLUX of QG', 'kg/m2/s', &
+                        ydim='half', nohalo=.true.)
+       endif
+#endif
+
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, MOMZ_t_TB(:,:,:), 'MOMZ_t_TB' )
+          call STAT_total( total, MOMX_t_TB(:,:,:), 'MOMX_t_TB' )
+          call STAT_total( total, MOMY_t_TB(:,:,:), 'MOMY_t_TB' )
+          call STAT_total( total, RHOT_t_TB(:,:,:), 'RHOT_t_TB' )
+          call STAT_total( total, TKE(:,:,:), 'TKE' )
+          call STAT_total( total, Nu(:,:,:), 'Nu' )
+          call STAT_total( total, Ri(:,:,:), 'Ri' )
+          call STAT_total( total, Pr(:,:,:), 'Pr' )
+
           do iq = 1, QA
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS, KE
-             QTRC_t(k,i,j,iq) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UYZ)*qflx_sgs_qtrc(k,i  ,j,iq,XDIR) &
-                    - GSQRT(k,i-1,j,I_UYZ)*qflx_sgs_qtrc(k,i-1,j,iq,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVZ)*qflx_sgs_qtrc(k,i,j  ,iq,YDIR) &
-                    - GSQRT(k,i,j-1,I_XVZ)*qflx_sgs_qtrc(k,i,j-1,iq,YDIR) ) * RCDY(j) &
-                  + ( J13G(k+1,i,j,I_XYW)*( qflx_sgs_qtrc(k+1,i,j,iq,XDIR)+qflx_sgs_qtrc(k+1,i-1,j,iq,XDIR) ) &
-                    - J13G(k-1,i,j,I_XYW)*( qflx_sgs_qtrc(k-1,i,j,iq,XDIR)+qflx_sgs_qtrc(k-1,i-1,j,iq,XDIR) ) &
-                    + J23G(k+1,i,j,I_XYW)*( qflx_sgs_qtrc(k+1,i,j,iq,YDIR)+qflx_sgs_qtrc(k+1,i,j-1,iq,YDIR) ) &
-                    - J23G(k-1,i,j,I_XYW)*( qflx_sgs_qtrc(k-1,i,j,iq,YDIR)+qflx_sgs_qtrc(k-1,i,j-1,iq,YDIR) ) &
-                    ) * 0.5_RP / ( FDZ(k) + FDZ(k-1) ) &
-                  + J33G * ( qflx_sgs_qtrc(k,i,j,iq,ZDIR) - qflx_sgs_qtrc(k-1,i,j,iq,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XYZ)
-          end do
-          end do
-          end do
-          do j = JJS, JJE
-          do i = IIS, IIE
-             QTRC_t(KS,i,j,iq) = - ( &
-                  + ( GSQRT(KS,i  ,j,I_UYZ)*qflx_sgs_qtrc(KS,i  ,j,iq,XDIR) &
-                    - GSQRT(KS,i-1,j,I_UYZ)*qflx_sgs_qtrc(KS,i-1,j,iq,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(KS,i,j  ,I_XVZ)*qflx_sgs_qtrc(KS,i,j  ,iq,YDIR) &
-                    - GSQRT(KS,i,j-1,I_XVZ)*qflx_sgs_qtrc(KS,i,j-1,iq,YDIR) ) * RCDY(j) &
-                  + ( J13G(KS+1,i,j,I_XYW)*( qflx_sgs_qtrc(KS+1,i,j,iq,XDIR)+qflx_sgs_qtrc(KS+1,i-1,j,iq,XDIR) ) &
-                    - J13G(KS  ,i,j,I_XYW)*( qflx_sgs_qtrc(KS  ,i,j,iq,XDIR)+qflx_sgs_qtrc(KS  ,i-1,j,iq,XDIR) ) &
-                    + J23G(KS+1,i,j,I_XYW)*( qflx_sgs_qtrc(KS+1,i,j,iq,YDIR)+qflx_sgs_qtrc(KS+1,i,j-1,iq,YDIR) ) &
-                    - J23G(KS  ,i,j,I_XYW)*( qflx_sgs_qtrc(KS  ,i,j,iq,YDIR)+qflx_sgs_qtrc(KS  ,i,j-1,iq,YDIR) ) &
-                    ) * 0.5_RP * RFDZ(KS) &
-                  + J33G * ( qflx_sgs_qtrc(KS,i,j,iq,ZDIR) ) * RCDZ(KS) &
-                ) / GSQRT(KS,i,j,I_XYZ)
-             QTRC_t(KE,i,j,iq) = - ( &
-                  + ( GSQRT(KE,i  ,j,I_UYZ)*qflx_sgs_qtrc(KE,i  ,j,iq,XDIR) &
-                    - GSQRT(KE,i-1,j,I_UYZ)*qflx_sgs_qtrc(KE,i-1,j,iq,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(KE,i,j  ,I_XVZ)*qflx_sgs_qtrc(KE,i,j  ,iq,YDIR) &
-                    - GSQRT(KE,i,j-1,I_XVZ)*qflx_sgs_qtrc(KE,i,j-1,iq,YDIR) ) * RCDY(j) &
-                  + ( J13G(KE  ,i,j,I_XYW)*( qflx_sgs_qtrc(KE  ,i,j,iq,XDIR)+qflx_sgs_qtrc(KE  ,i-1,j,iq,XDIR) ) &
-                    - J13G(KE-1,i,j,I_XYW)*( qflx_sgs_qtrc(KE-1,i,j,iq,XDIR)+qflx_sgs_qtrc(KE-1,i-1,j,iq,XDIR) ) &
-                    + J23G(KE  ,i,j,I_XYW)*( qflx_sgs_qtrc(KE  ,i,j,iq,YDIR)+qflx_sgs_qtrc(KE  ,i,j-1,iq,YDIR) ) &
-                    - J23G(KE-1,i,j,I_XYW)*( qflx_sgs_qtrc(KE-1,i,j,iq,YDIR)+qflx_sgs_qtrc(KE-1,i,j-1,iq,YDIR) ) &
-                    ) * 0.5_RP * RFDZ(KE-1) &
-                  + J33G * ( qflx_sgs_qtrc(KE-1,i,j,iq,ZDIR) ) * RCDZ(KE) &
-                ) / GSQRT(KE,i,j,I_XYZ)
-          end do
-          end do
-          end do
-       end do
-       end do
+             call STAT_total( total, RHOQ_t_TB(:,:,:,iq), trim(AQ_NAME(iq))//'_t_TB' )
+          enddo
+       endif
 
-       if ( present(history_flag) ) then
-       if ( history_flag ) then
-          call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', dttb )
-          call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  dttb )
-          call HIST_in( Pr (:,:,:), 'Pr',   'Prantle number',           'NIL',   dttb )
-          call HIST_in( Ri (:,:,:), 'Ri',   'Richardson number',        'NIL',   dttb )
+    endif
 
-          call HIST_in( qflx_sgs_momz(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ',   'SGS Z FLUX of MOMZ', 'kg/m/s2', dttb, zdim='half')
-          call HIST_in( qflx_sgs_momz(:,:,:,XDIR), 'SGS_XFLX_MOMZ',   'SGS X FLUX of MOMZ', 'kg/m/s2', dttb, xdim='half')
-          call HIST_in( qflx_sgs_momz(:,:,:,YDIR), 'SGS_YFLX_MOMZ',   'SGS Y FLUX of MOMZ', 'kg/m/s2', dttb, ydim='half')
-
-          call HIST_in( qflx_sgs_momx(:,:,:,ZDIR), 'SGS_ZFLX_MOMX',   'SGS Z FLUX of MOMX', 'kg/m/s2', dttb, zdim='half')
-          call HIST_in( qflx_sgs_momx(:,:,:,XDIR), 'SGS_XFLX_MOMX',   'SGS X FLUX of MOMX', 'kg/m/s2', dttb, xdim='half')
-          call HIST_in( qflx_sgs_momx(:,:,:,YDIR), 'SGS_YFLX_MOMX',   'SGS Y FLUX of MOMX', 'kg/m/s2', dttb, ydim='half')
-
-          call HIST_in( qflx_sgs_momy(:,:,:,ZDIR), 'SGS_ZFLX_MOMY',   'SGS Z FLUX of MOMY', 'kg/m/s2', dttb, zdim='half')
-          call HIST_in( qflx_sgs_momy(:,:,:,XDIR), 'SGS_XFLX_MOMY',   'SGS X FLUX of MOMY', 'kg/m/s2', dttb, xdim='half')
-          call HIST_in( qflx_sgs_momy(:,:,:,YDIR), 'SGS_YFLX_MOMY',   'SGS Y FLUX of MOMY', 'kg/m/s2', dttb, ydim='half')
-
-          call HIST_in( qflx_sgs_rhot(:,:,:,ZDIR), 'SGS_ZFLX_RHOT',   'SGS Z FLUX of RHOT', 'kg K/m2/s', dttb, zdim='half')
-          call HIST_in( qflx_sgs_rhot(:,:,:,XDIR), 'SGS_XFLX_RHOT',   'SGS X FLUX of RHOT', 'kg K/m2/s', dttb, xdim='half')
-          call HIST_in( qflx_sgs_rhot(:,:,:,YDIR), 'SGS_YFLX_RHOT',   'SGS Y FLUX of RHOT', 'kg K/m2/s', dttb, ydim='half')
-
-          if ( I_QV > 0 ) then
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV',   'SGS Z FLUX of QV', 'kg/m2 s', dttb, zdim='half')
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV',   'SGS X FLUX of QV', 'kg/m2 s', dttb, xdim='half')
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV',   'SGS Y FLUX of QV', 'kg/m2 s', dttb, ydim='half')
-          endif
-
-          if ( I_QC > 0 ) then
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC',   'SGS Z FLUX of QC', 'kg/m2 s', dttb, zdim='half')
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC',   'SGS X FLUX of QC', 'kg/m2 s', dttb, xdim='half')
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC',   'SGS Y FLUX of QC', 'kg/m2 s', dttb, ydim='half')
-          endif
-
-          if ( I_QR > 0 ) then
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR',   'SGS Z FLUX of QR', 'kg/m2 s', dttb, zdim='half')
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR',   'SGS X FLUX of QR', 'kg/m2 s', dttb, xdim='half')
-             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR',   'SGS Y FLUX of QR', 'kg/m2 s', dttb, ydim='half')
-          endif
-
-       end if
-       end if
-
-    end if
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE-1
-       MOMZ_tp(k,i,j) = MOMZ_tp(k,i,j) + MOMZ_t(k,i,j)
-    end do
-    end do
-    end do
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX_tp(k,i,j) = MOMX_tp(k,i,j) + MOMX_t(k,i,j)
-       MOMY_tp(k,i,j) = MOMY_tp(k,i,j) + MOMY_t(k,i,j)
-       RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
-    end do
-    end do
-    end do
+       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_TB(k,i,j)
+       MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_TB(k,i,j)
+       MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_TB(k,i,j)
+       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_TB(k,i,j)
+    enddo
+    enddo
+    enddo
 
-    do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) + QTRC_t(k,i,j,iq)
-    end do
-    end do
-    end do
-    end do
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+    do iq = 1,  QA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_TB(k,i,j,iq)
+    enddo
+    enddo
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_PHY_TB_driver
-
 
 end module mod_atmos_phy_tb_driver

@@ -1,0 +1,14 @@
+-----------------------------------------
+  Kobe Product Run Setting
+-----------------------------------------
+
+./full : full size setting
+./mini : 1/6 size of full setting
+
+* each directory includes config, init, input, and run directories.
+
+* config directory includes all config files to run the test case.
+
+* init, input, and run directories include job-scripts to submit jobs on K computer.
+  run directory has five scripts; single.*** scritps are single domain test for each domains,
+  and run.nest.sh script is for a online-nesting test.

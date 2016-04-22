@@ -42,8 +42,9 @@ module gtool_file_h
   !--- data type 
   integer, public, parameter :: File_REAL4    = 0
   integer, public, parameter :: File_REAL8    = 1
-  integer, public, parameter :: File_INTEGER4 = 2
-  integer, public, parameter :: File_INTEGER8 = 3
+  integer, public, parameter :: File_INTEGER2 = 2
+  integer, public, parameter :: File_INTEGER4 = 3
+  integer, public, parameter :: File_INTEGER8 = 4
 
   !--- action type 
   integer, public, parameter :: File_FREAD   = 0

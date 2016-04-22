@@ -1,5 +1,5 @@
 #
-# ------ FOR MacOSX & gfortran4.6 & OpenMPI1.6 -----
+# ------ FOR MacOSX & gfortran4.9 & OpenMPI1.7 -----
 #
 
 ##### for computation
@@ -16,24 +16,18 @@ FFLAGS_DEBUG = -cpp -O0 -m64 \
                -g -fbacktrace \
                -DDEBUG
 
-# Super Droplet Method (SDM)
-# without SDM
-SDM =
-# with SDM
-#SDM = -D_SDM
-
 FC     = mpif90
-FFLAGS = $(FFLAGS_FAST) $(SDM)
-#FFLAGS = $(FFLAGS_DEBUG) $(SDM)
+SFC    = gfortran
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
 
 FFLAGS_DYN = $(FFLAGS)
-
-FFLAGS_SDM ?= $(FFLAGS)
 
 MODDIROPT ?= -J
 
 CC     = mpicc
 CFLAGS = -O3 -m64 -g
+CFLAGS_DEBUG = -O0 -m64 -g
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)

@@ -6,6 +6,8 @@
 
 \usepackage[dvipdfmx]{graphicx}
 \usepackage{amsmath}
+\usepackage[round]{natbib}
+\usepackage{bm}
 
 \begin{document}
 \maketitle
@@ -20,6 +22,8 @@
 
 \input{dynamical_process_terrainfollowing}
 
+\input{dynamical_process_mapfactor}
+
 \input{dynamical_process_hevi}
 
 \input{dynamical_process_hivi}
@@ -28,6 +32,7 @@
 
 \chapter{The physical parameterization}
 \input{turbulence}
+\input{turbulence_mynn}
 
 \section{Microphysics}
 \input{microphysics}
@@ -44,7 +49,7 @@
 \section{Large scale sinking}
 \input{large_scale_sinking}
 
-\bibliographystyle{jplain}
+\bibliographystyle{plainnat}
 \bibliography{reference}
 
 \appendix

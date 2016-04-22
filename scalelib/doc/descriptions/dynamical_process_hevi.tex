@@ -51,11 +51,11 @@ For the temporal discritization, backward temporal integrations are employed for
   \frac{(\rho w)^{n+1}-(\rho w)^n}{\Delta t}
   &= -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}(J_{33}G^{\frac{1}{2}}p^{n+1}) -g\rho^{n+1} + S_{\rho w}^n, \\
   \frac{p^{n+1} - p^n}{\Delta t}
-  &\sim \frac{c_p^n}{c_v^n} \frac{p^n}{(\rho\theta)^n}\frac{\partial \rho\theta}{\partial t}, \\
+  &= \frac{c_p^n}{c_v^n} \frac{p^n}{(\rho\theta)^n}\frac{\partial \rho\theta}{\partial t}, \\
   \frac{\partial \rho\theta}{\partial t}
   &= -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}\{J_{33}G^{\frac{1}{2}}\theta^n (\rho w)^{n+1}\} + S_{\rho\theta}^n.
 \end{align}
-Note that the pressure equation is linealized.
+Note that the potential temperature at previous step, $\theta^n$, is used.
 
 Eliminating $p^{n+1}, (\rho\theta)^{n+1}$, and $\rho^{n+1}$, the Helmholtz equation for $(\rho w)^{n+1}$ is obtained:
 \begin{align}

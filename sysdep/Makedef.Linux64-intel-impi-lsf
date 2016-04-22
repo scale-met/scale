@@ -4,48 +4,34 @@
 
 ##### for computation
 
-FFLAGS_FAST  = -fpp3 -O3 -xHost -ip                 \
+FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
                -assume byterecl -convert big_endian \
-               -ftz -fp-model source -pc 80         \
-               -mcmodel=medium -shared-intel        \
-               -heap-arrays
+               -fp-model source                     \
+               -mcmodel=medium -heap-arrays
 
-FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
+FFLAGS_DEBUG = -fpp -m64 -O0                        \
                -assume byterecl -convert big_endian \
-               -fpe0 -fp-model source -pc 80        \
+               -fpe0 -fp-model source               \
                -check all -warn all -g -traceback   \
-               -mcmodel=medium -shared-intel        \
-               -heap-arrays                         \
+               -mcmodel=medium -heap-arrays         \
+               -assume nobuffered_io                \
                -DDEBUG
 
 FC     = mpiifort
+SFC    = ifort
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
 FFLAGS_DYN ?= $(FFLAGS)
 
-FFLAGS_SDM ?= $(FFLAGS)
-
 ifneq ($(DISABLE_VEC),)
       FFLAGS += -no-vec
-endif
-ifneq ($(ENABLE_OPENMP),)
-      FFLAGS += -openmp -openmp-report
-endif
-ifneq ($(ENABLE_PAPI),)
-      FFLAGS += -D_PAPI_
-      PAPI_INCLUDE = -I$(PAPI)/include
-      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
 endif
 
 MODDIROPT ?= -module
 
 CC     = mpiicc
 CFLAGS = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
-
-ifneq ($(USE_NETCDF3),)
-      CFLAGS += -DNETCDF3
-endif
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)

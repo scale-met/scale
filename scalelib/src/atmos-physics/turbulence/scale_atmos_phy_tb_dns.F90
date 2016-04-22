@@ -51,9 +51,9 @@ module scale_atmos_phy_tb_dns
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: ATMOS_PHY_TB_DNS_NU = 1.512E-5_RP ! [m2/s] kinematic viscosity coefficient for air at 20degC
-! real(RP), private, save :: mu = 1.8E-5_RP   ! [m2/s] molecular diffusive coefficient for air at 20degC
-  real(RP), private, save :: ATMOS_PHY_TB_DNS_MU = 1.512E-5_RP ! same as NU (needed based on hyposes. see Mellado 2010)
+  real(RP), private :: ATMOS_PHY_TB_DNS_NU = 1.512E-5_RP ! [m2/s] kinematic viscosity coefficient for air at 20degC
+! real(RP), private :: mu = 1.8E-5_RP   ! [m2/s] molecular diffusive coefficient for air at 20degC
+  real(RP), private :: ATMOS_PHY_TB_DNS_MU = 1.512E-5_RP ! same as NU (needed based on hyposes. see Mellado 2010)
 
   !-----------------------------------------------------------------------------
 contains
@@ -66,12 +66,12 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: TYPE_TB
+    character(len=*), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
-    real(RP), intent(in) :: CZ (KA)
+    real(RP), intent(in) :: CZ (KA,IA,JA)
 
     NAMELIST / PARAM_ATMOS_PHY_TB_DNS / &
          ATMOS_PHY_TB_DNS_NU, &
@@ -85,7 +85,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Eddy Viscocity Model for DNS'
 
     if ( TYPE_TB /= 'DNS' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
        call PRC_MPIstop
     endif
 
@@ -106,10 +106,13 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_dns( &
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
-       qflx_sgs_rhot, qflx_sgs_qtrc,                &
-       tke, nu, Ri, Pr,                             &
+       qflx_sgs_rhot, qflx_sgs_rhoq,                &
+       tke, tke_t, nu, Ri, Pr, N2,                  &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       GSQRT, J13G, J23G, J33G                      )
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       GSQRT, J13G, J23G, J33G, MAPF, dt            )
+    use scale_grid_index
+    use scale_tracer
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_grid, only: &
@@ -129,7 +132,10 @@ contains
        I_XVW, &
        I_UYZ, &
        I_XVZ, &
-       I_UVZ
+       I_XY,  &
+       I_UY,  &
+       I_XV,  &
+       I_UV
     implicit none
 
     ! SGS flux
@@ -137,12 +143,14 @@ contains
     real(RP), intent(out) :: qflx_sgs_MOMX(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_MOMY(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(out) :: tke(KA,IA,JA) ! TKE
+    real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
+    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
     real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
+    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
+    real(RP), intent(out) :: N2 (KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -151,10 +159,18 @@ contains
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
 
+    real(RP), intent(in)  :: SFLX_MW(IA,JA)
+    real(RP), intent(in)  :: SFLX_MU(IA,JA)
+    real(RP), intent(in)  :: SFLX_MV(IA,JA)
+    real(RP), intent(in)  :: SFLX_SH(IA,JA)
+    real(RP), intent(in)  :: SFLX_QV(IA,JA)
+
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
+    real(DP), intent(in)  :: dt
 
     real(RP) :: POTT(KA,IA,JA)
 
@@ -169,17 +185,17 @@ contains
     qflx_sgs_MOMX(:,:,:,:)   = UNDEF
     qflx_sgs_MOMY(:,:,:,:)   = UNDEF
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
-    qflx_sgs_qtrc(:,:,:,:,:) = UNDEF
+    qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
     POTT(:,:,:) = UNDEF
 #endif
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: SGS Parameterization'
-
+    tke_t(:,:,:) = 0.0_RP
     tke(:,:,:) = 0.0_RP
     nu (:,:,:) = 0.0_RP
-    Pr (:,:,:) = 1.0_RP
     Ri (:,:,:) = 0.0_RP
+    Pr (:,:,:) = 1.0_RP
+    N2 (:,:,:) = 0.0_RP
 
     ! potential temperature
     do j = JS-1, JE+1
@@ -217,7 +233,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
-          qflx_sgs_MOMZ(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i+1,j)-MOMZ(k,i,j) ) * RFDX(i)
+          qflx_sgs_MOMZ(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i+1,j)-MOMZ(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XY)
        enddo
        enddo
        enddo
@@ -226,7 +242,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
-          qflx_sgs_MOMZ(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i,j+1)-MOMZ(k,i,j) ) * RFDY(j)
+          qflx_sgs_MOMZ(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i,j+1)-MOMZ(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_XY)
        enddo
        enddo
        enddo
@@ -252,7 +268,7 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
-          qflx_sgs_MOMX(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j)-MOMX(k,i-1,j) ) * RCDX(i)
+          qflx_sgs_MOMX(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j)-MOMX(k,i-1,j) ) * RCDX(i) * MAPF(i,j,1,I_UY)
        enddo
        enddo
        enddo
@@ -261,7 +277,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
-          qflx_sgs_MOMX(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j+1)-MOMX(k,i,j) ) * RFDY(j)
+          qflx_sgs_MOMX(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j+1)-MOMX(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_UY)
        enddo
        enddo
        enddo
@@ -288,7 +304,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
-          qflx_sgs_MOMY(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i+1,j)-MOMY(k,i,j) ) * RFDX(i)
+          qflx_sgs_MOMY(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i+1,j)-MOMY(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XV)
        enddo
        enddo
        enddo
@@ -297,7 +313,7 @@ contains
        do j = JJS, JJE+1
        do i = IIS, IIE
        do k = KS, KE
-          qflx_sgs_MOMY(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i,j)-MOMY(k,i,j-1) ) * RCDY(j)
+          qflx_sgs_MOMY(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i,j)-MOMY(k,i,j-1) ) * RCDY(j) * MAPF(i,j,2,I_XV)
        enddo
        enddo
        enddo
@@ -326,7 +342,7 @@ contains
        do i = IIS-1, IIE
        do k = KS, KE
           qflx_sgs_rhot(k,i,j,XDIR) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
-                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i)
+                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XY)
        enddo
        enddo
        enddo
@@ -336,7 +352,7 @@ contains
        do i = IIS,   IIE
        do k = KS, KE
           qflx_sgs_rhot(k,i,j,YDIR) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
-                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j)
+                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_XY)
        enddo
        enddo
        enddo
@@ -356,15 +372,15 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
-          qflx_sgs_qtrc(k,i,j,iq,ZDIR) = -0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
+          qflx_sgs_rhoq(k,i,j,ZDIR,iq) = -0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
                                        * ATMOS_PHY_TB_DNS_MU * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k)
        enddo
        enddo
        enddo
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs_qtrc(KS-1,i,j,iq,ZDIR) = 0.0_RP
-          qflx_sgs_qtrc(KE  ,i,j,iq,ZDIR) = 0.0_RP
+          qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
+          qflx_sgs_rhoq(KE  ,i,j,ZDIR,iq) = 0.0_RP
        enddo
        enddo
 
@@ -372,8 +388,8 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS,   KE
-          qflx_sgs_qtrc(k,i,j,iq,XDIR) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
-                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i)
+          qflx_sgs_rhoq(k,i,j,XDIR,iq) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i) * MAPF(i,j,1,I_XY)
        enddo
        enddo
        enddo
@@ -382,8 +398,8 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS,   KE
-          qflx_sgs_qtrc(k,i,j,iq,YDIR) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
-                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j)
+          qflx_sgs_rhoq(k,i,j,YDIR,iq) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
+                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j) * MAPF(i,j,2,I_XY)
        enddo
        enddo
        enddo

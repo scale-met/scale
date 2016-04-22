@@ -39,6 +39,8 @@ module scale_atmos_phy_rd_profile
   !
   !++ Public parameters & variables
   !
+  logical, public :: ATMOS_PHY_RD_PROFILE_use_climatology = .true. !< use climatology?
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -56,33 +58,39 @@ module scale_atmos_phy_rd_profile
   !
   !++ Private parameters & variables
   !
-  real(RP),              private, save :: PROFILE_TOA = 100.0_RP              !< top of atmosphere [km]
-  logical,               private, save :: PROFILE_use_climatology = .true.    !< use climatology?
-  character(len=H_LONG), private, save :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
-  character(len=H_LONG), private, save :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
-  character(len=H_LONG), private, save :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
-  logical,               private, save :: debug                   = .false.   !< debug mode?
+  real(RP),              private :: PROFILE_TOA = 100.0_RP              !< top of atmosphere [km]
+  character(len=H_LONG), private :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
+  character(len=H_LONG), private :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
+  character(len=H_LONG), private :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO2   = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O3    = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_N2O   = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO    = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CH4   = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O2    = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CFC   = .true.
+  logical,               private :: debug                   = .false.   !< debug mode?
 
-  integer,  private,              save :: CIRA_ntime
-  integer,  private,              save :: CIRA_nplev
-  integer,  private,              save :: CIRA_nlat
-  real(RP), private, allocatable, save :: CIRA_nd  (:)     ! [day]
-  real(RP), private, allocatable, save :: CIRA_plog(:)     ! log([hPa])
-  real(RP), private, allocatable, save :: CIRA_lat (:)     ! [rad]
-  real(RP), private, allocatable, save :: CIRA_temp(:,:,:) ! [K]
-  real(RP), private, allocatable, save :: CIRA_z   (:,:,:) ! [km]
+  integer,  private              :: CIRA_ntime
+  integer,  private              :: CIRA_nplev
+  integer,  private              :: CIRA_nlat
+  real(RP), private, allocatable :: CIRA_nd  (:)     ! [day]
+  real(RP), private, allocatable :: CIRA_plog(:)     ! log([hPa])
+  real(RP), private, allocatable :: CIRA_lat (:)     ! [rad]
+  real(RP), private, allocatable :: CIRA_temp(:,:,:) ! [K]
+  real(RP), private, allocatable :: CIRA_z   (:,:,:) ! [km]
 
-  real(RP), private, allocatable, save :: interp_temp(:)   ! [K]
-  real(RP), private, allocatable, save :: interp_z   (:)   ! [km]
+  real(RP), private, allocatable :: interp_temp(:)   ! [K]
+  real(RP), private, allocatable :: interp_z   (:)   ! [km]
 
   integer,  private, parameter :: MIPAS_kmax  = 121
   integer,  private, parameter :: MIPAS_ntime = 2
-  real(RP), private, save      :: MIPAS_nd  (0:MIPAS_ntime+1) ! [day]
-  real(RP), private, save      :: MIPAS_lat (5)               ! [rad]
-  real(RP), private, save      :: MIPAS_z   (MIPAS_kmax,4)    ! [km]
-  real(RP), private, save      :: MIPAS_pres(MIPAS_kmax,4)    ! (not used) [hPa]
-  real(RP), private, save      :: MIPAS_temp(MIPAS_kmax,4)    ! (not used) [K]
-  real(RP), private, save      :: MIPAS_gas (MIPAS_kmax,30,4) ! [ppmv]
+  real(RP), private            :: MIPAS_nd  (0:MIPAS_ntime+1) ! [day]
+  real(RP), private            :: MIPAS_lat (5)               ! [rad]
+  real(RP), private            :: MIPAS_z   (MIPAS_kmax,4)    ! [km]
+  real(RP), private            :: MIPAS_pres(MIPAS_kmax,4)    ! (not used) [hPa]
+  real(RP), private            :: MIPAS_temp(MIPAS_kmax,4)    ! (not used) [K]
+  real(RP), private            :: MIPAS_gas (MIPAS_kmax,30,4) ! [ppmv]
 
   integer,  private, parameter :: I_tropic   =  1
   integer,  private, parameter :: I_midlat   =  2
@@ -120,6 +128,8 @@ module scale_atmos_phy_rd_profile
   integer,  private, parameter :: I_SO2    = 29
   integer,  private, parameter :: I_SF6    = 30
 
+  logical, private :: report_firsttime = .true. !< true at only first report
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -130,7 +140,6 @@ contains
     implicit none
 
     real(RP)              :: ATMOS_PHY_RD_PROFILE_TOA
-    logical               :: ATMOS_PHY_RD_PROFILE_use_climatology
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
@@ -141,17 +150,23 @@ contains
        ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME,    &
        ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME, &
        ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME,      &
+       ATMOS_PHY_RD_PROFILE_USE_CO2,               &
+       ATMOS_PHY_RD_PROFILE_USE_O3,                &
+       ATMOS_PHY_RD_PROFILE_USE_N2O,               &
+       ATMOS_PHY_RD_PROFILE_USE_CO,                &
+       ATMOS_PHY_RD_PROFILE_USE_CH4,               &
+       ATMOS_PHY_RD_PROFILE_USE_O2,                &
+       ATMOS_PHY_RD_PROFILE_USE_CFC,               &
        debug
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD PROFILE]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ climatological profile'
 
     ATMOS_PHY_RD_PROFILE_TOA                   = PROFILE_TOA
-    ATMOS_PHY_RD_PROFILE_use_climatology       = PROFILE_use_climatology
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir
     ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = PROFILE_USER_fname
@@ -169,12 +184,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
     PROFILE_TOA             = ATMOS_PHY_RD_PROFILE_TOA
-    PROFILE_use_climatology = ATMOS_PHY_RD_PROFILE_use_climatology
     PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     PROFILE_USER_fname      = ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
 
-    if ( PROFILE_use_climatology ) then
+    if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
        call PROFILE_setup_CIRA86
 
@@ -192,16 +206,18 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-         CONST_D2R
+       CONST_D2R
     use scale_calendar, only: &
-         CALENDAR_date2daysec
+       CALENDAR_date2daysec
     implicit none
 
     integer  :: status, ncid, varid, dimid ! for netCDF
 
     integer, allocatable :: CIRA_date(:,:)
     integer  :: nday
-    real(RP) :: nsec, subsec = 0.0_RP
+    real(DP) :: nsec
+    real(DP) :: subsec = 0.0_DP
+    integer  :: offset_year = 0
 
     real(4), allocatable :: tmp1d(:)
     real(4), allocatable :: tmp3d(:,:,:)
@@ -269,8 +285,9 @@ contains
     CIRA_date(:,13) = (/ 1987,  1, 15, 12, 0, 0 /)
 
     do t = 0, CIRA_ntime+1
-       call CALENDAR_date2daysec( nday, nsec,            & ! [OUT]
-                                  CIRA_date(:,t), subsec ) ! [IN]
+       call CALENDAR_date2daysec( nday, nsec,             & ! [OUT]
+                                  CIRA_date(:,t), subsec, & ! [IN]
+                                  offset_year             ) ! [IN]
 
        CIRA_nd(t) = real(nday,kind=RP) + nsec / 86400.0_RP
     enddo
@@ -391,7 +408,9 @@ contains
 
     integer  :: MIPAS_date(6,0:MIPAS_ntime+1)
     integer  :: nday
-    real(RP) :: nsec, subsec = 0.0_RP
+    real(DP) :: nsec
+    real(DP) :: subsec = 0.0_DP
+    integer  :: offset_year = 0
 
     character(len=H_LONG) :: dummy
     integer  :: fid, ierr
@@ -406,8 +425,9 @@ contains
     MIPAS_date(:, 3) = (/ 2002,  6, 21, 12, 0, 0 /)
 
     do t = 0, MIPAS_ntime+1
-       call CALENDAR_date2daysec( nday, nsec,             & ! [OUT]
-                                  MIPAS_date(:,t), subsec ) ! [IN]
+       call CALENDAR_date2daysec( nday, nsec,              & ! [OUT]
+                                  MIPAS_date(:,t), subsec, & ! [IN]
+                                  offset_year              ) ! [IN]
 
        MIPAS_nd(t) = real(nday,kind=RP) + nsec / 86400.0_RP
     enddo
@@ -523,7 +543,7 @@ contains
        ngas,         &
        ncfc,         &
        naero,        &
-       lat,          &
+       real_lat,     &
        now_date,     &
        zh,           &
        z,            &
@@ -538,14 +558,19 @@ contains
        aerosol_radi, &
        cldfrac       )
     use scale_const, only: &
-         GRAV  => CONST_GRAV
+       GRAV  => CONST_GRAV
+    use scale_atmos_solarins, only: &
+       SOLARINS_fixedlatlon => ATMOS_SOLARINS_fixedlatlon, &
+       SOLARINS_fixeddate   => ATMOS_SOLARINS_fixeddate,   &
+       SOLARINS_lat         => ATMOS_SOLARINS_lat,         &
+       SOLARINS_date        => ATMOS_SOLARINS_date
     implicit none
 
     integer,  intent(in)  :: kmax                     !< Number of layer
     integer,  intent(in)  :: ngas                     !< Number of gas species
     integer,  intent(in)  :: ncfc                     !< Number of CFCs
     integer,  intent(in)  :: naero                    !< Number of aerosol(particle) categories
-    real(RP), intent(in)  :: lat                      !< latitude [rad]
+    real(RP), intent(in)  :: real_lat                 !< latitude [rad]
     integer,  intent(in)  :: now_date(6)              !< date
     real(RP), intent(in)  :: zh(kmax+1)               !< altitude    at the interface [km]
     real(RP), intent(in)  :: z (kmax)                 !< altitude    at the center    [km]
@@ -560,25 +585,44 @@ contains
     real(RP), intent(out) :: aerosol_radi(kmax,naero) !< cloud/aerosol effective radius    [cm]
     real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    [0-1]
 
-    integer  :: k
+    real(RP) :: lat     !< used lat
+    integer  :: date(6) !< used date
+
+    integer :: k
     !---------------------------------------------------------------------------
 
-    if ( PROFILE_use_climatology ) then
+    if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
-       call PROFILE_read_climatology( kmax,     & ! [IN]
-                                      ngas,     & ! [IN]
-                                      ncfc,     & ! [IN]
-                                      naero,    & ! [IN]
-                                      lat,      & ! [IN], tentative treatment
-                                      now_date, & ! [IN]
-                                      zh,       & ! [IN]
-                                      z,        & ! [IN]
-                                      pres,     & ! [OUT]
-                                      presh,    & ! [OUT]
-                                      temp,     & ! [OUT]
-                                      temph,    & ! [OUT]
-                                      gas,      & ! [OUT]
-                                      cfc       ) ! [OUT]
+       if ( SOLARINS_fixedlatlon ) then
+          lat = SOLARINS_lat
+       else
+          lat = real_lat
+       endif
+
+       date = now_date
+       if ( SOLARINS_fixeddate ) then
+          if( SOLARINS_date(1) >= 0 ) date(1) = SOLARINS_date(1)
+          if( SOLARINS_date(2) >= 1 ) date(2) = SOLARINS_date(2)
+          if( SOLARINS_date(3) >= 1 ) date(3) = SOLARINS_date(3)
+          if( SOLARINS_date(4) >= 0 ) date(4) = SOLARINS_date(4)
+          if( SOLARINS_date(5) >= 0 ) date(5) = SOLARINS_date(5)
+          if( SOLARINS_date(6) >= 0 ) date(6) = SOLARINS_date(6)
+       endif
+
+       call PROFILE_read_climatology( kmax,  & ! [IN]
+                                      ngas,  & ! [IN]
+                                      ncfc,  & ! [IN]
+                                      naero, & ! [IN]
+                                      lat,   & ! [IN], tentative treatment
+                                      date,  & ! [IN]
+                                      zh,    & ! [IN]
+                                      z,     & ! [IN]
+                                      pres,  & ! [OUT]
+                                      presh, & ! [OUT]
+                                      temp,  & ! [OUT]
+                                      temph, & ! [OUT]
+                                      gas,   & ! [OUT]
+                                      cfc    ) ! [OUT]
 
     else
 
@@ -607,8 +651,17 @@ contains
     aerosol_radi(:,:) = 0.0_RP
     cldfrac     (:)   = 0.0_RP
 
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_CO2 ) gas(:,2) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_O3  ) gas(:,3) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_N2O ) gas(:,4) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_CO  ) gas(:,5) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_CH4 ) gas(:,6) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_O2  ) gas(:,7) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_CFC ) cfc(:,:) = 0.0_RP
+
     !----- report data -----
-    if ( debug ) then
+    if ( debug .AND. report_firsttime ) then
+       report_firsttime = .false.
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
@@ -734,7 +787,7 @@ contains
        pres,     &
        temp      )
     use scale_calendar, only: &
-         CALENDAR_date2daysec
+       CALENDAR_date2daysec
     implicit none
 
     integer,  intent(in)  :: kmax          !< Number of layer
@@ -751,7 +804,10 @@ contains
     real(RP) :: plog (kmax)
 
     integer  :: now_date_mod(6), nday
-    real(RP) :: nd, nsec, subsec = 0.0_RP
+    real(RP) :: nd
+    real(DP) :: nsec
+    real(DP) :: subsec = 0.0_DP
+    integer  :: offset_year = 0
 
     integer  :: nplev_mod
     integer  :: indexLAT, indexD
@@ -781,8 +837,9 @@ contains
     now_date_mod(2:6) = now_date(2:6)
     now_date_mod(1)   = 1986
 
-    call CALENDAR_date2daysec( nday, nsec,             & ! [OUT]
-                               now_date_mod(:), subsec ) ! [IN]
+    call CALENDAR_date2daysec( nday, nsec,              & ! [OUT]
+                               now_date_mod(:), subsec, & ! [IN]
+                               offset_year              ) ! [IN]
 
     nd = real(nday,kind=RP) + nsec / 86400.0_RP
 
@@ -860,7 +917,7 @@ contains
        gas,      &
        cfc       )
     use scale_calendar, only: &
-         CALENDAR_date2daysec
+       CALENDAR_date2daysec
     implicit none
 
     integer,  intent(in)    :: kmax           !< Number of layer
@@ -876,7 +933,10 @@ contains
     real(RP) :: interp_z  (MIPAS_kmax)
 
     integer  :: now_date_mod(6), nday
-    real(RP) :: nd, nsec, subsec = 0.0_RP
+    real(RP) :: nd
+    real(DP) :: nsec
+    real(DP) :: subsec = 0.0_DP
+    integer  :: offset_year = 0
 
     integer  :: indexD1, indexD2
     real(RP) :: factLAT, factD
@@ -886,8 +946,9 @@ contains
     now_date_mod(2:6) = now_date(2:6)
     now_date_mod(1)   = 2001
 
-    call CALENDAR_date2daysec( nday, nsec,             & ! [OUT]
-                               now_date_mod(:), subsec ) ! [IN]
+    call CALENDAR_date2daysec( nday, nsec,              & ! [OUT]
+                               now_date_mod(:), subsec, & ! [IN]
+                               offset_year              ) ! [IN]
 
     nd = real(nday,kind=RP) + nsec / 86400.0_RP
 

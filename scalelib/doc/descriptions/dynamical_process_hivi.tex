@@ -73,7 +73,8 @@ For the temporal discritization, backward temporal integrations are employed for
   \frac{(\rho w)^{n+1}-(\rho w)^n}{\Delta t}
   &= -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}(J_{33}G^{\frac{1}{2}}p'^{n+1}) -g\rho'^{n+1} + S_{\rho w}^n, \\
   \frac{p'^{n+1} - p'^n}{\Delta t}
-  &\sim \kappa^n \frac{p^n}{(\rho\theta)^n}\frac{\partial \rho\theta}{\partial t}, \\
+  &= P_{00}\left(\frac{R}{P_{00}}\right)^{\kappa^n} \kappa^n {(\rho\theta)^n}^{\kappa^n-1} \frac{\partial \rho\theta}{\partial t}
+   = \kappa^n \frac{p^n}{(\rho\theta)^n}\frac{\partial \rho\theta}{\partial t}, \\
   \frac{\partial \rho\theta}{\partial t} &=
   -G^{-\frac{1}{2}}\frac{\partial}{\partial x^*}\{G^{\frac{1}{2}}\theta^n (\rho u)^{n+1}\}
   -G^{-\frac{1}{2}}\frac{\partial}{\partial y^*}\{G^{\frac{1}{2}}\theta^n (\rho v)^{n+1}\}  \nonumber\\ & \;\;\;
@@ -81,7 +82,7 @@ For the temporal discritization, backward temporal integrations are employed for
   + S_{\rho\theta}^n,
 \end{align}
 where $\kappa = c_p/c_v$.
-Note that the pressure equation is linealized.
+Note that the potential temperature at previous step, $\theta^n$, is used.
 
 In order to obtain Helmholtz equation, a linearlized equation for the density is used instead of Eq. \ref{eq: hivi rho}.
 \begin{align}
