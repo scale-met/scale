@@ -1785,7 +1785,6 @@ contains
 
        if (flag_vect) then
 
-!OCL INDEPENDENT( get_fact_fct )
        !$omp parallel do private(i,j,k,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1866,9 +1865,7 @@ contains
        end do
        end do
 
-
        ! k = KS
-!OCL INDEPENDENT( get_fact_fct )
        !$omp parallel do private(i,j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1948,7 +1945,6 @@ contains
        end do
 
        ! k = KE
-!OCL INDEPENDENT( get_fact_fct )
        !$omp parallel do private(i,j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -2333,7 +2329,6 @@ contains
   !-----------------------------------------------------------------------------
   ! private procedure
   ! get factor for FCT
-!OCL SERIAL
   subroutine get_fact_fct( &
        fact, &
        rw, ru, rv )
@@ -2347,57 +2342,49 @@ contains
     real(RP) :: ugev, ugew, vgew          ! u>=v, u>=w, u>=w
     real(RP) :: umax, vmax, wmax
     real(RP) :: vu, wu, uv, wv, uw, vw    ! |v/u|, |w/u|, ....
-    real(RP) :: zero, tmp
+    real(RP) :: uzero, vzero, wzero
     !---------------------------------------------------------------------------
-
-    sign_uv = sign(0.5_RP, ru*rv) + 0.5_RP ! uv >= 0
-    sign_uw = sign(0.5_RP, ru*rw) + 0.5_RP ! uw >= 0
-    sign_vw = sign(0.5_RP, rv*rw) + 0.5_RP ! vw >= 0
 
     ugev = sign(0.5_RP, abs(ru)-abs(rv)) + 0.5_RP ! u >= v
     ugew = sign(0.5_RP, abs(ru)-abs(rw)) + 0.5_RP ! u >= w
     vgew = sign(0.5_RP, abs(rv)-abs(rw)) + 0.5_RP ! v >= w
 
-    umax = ugev * ugew          ! u == max(u,v,w)
-    vmax = (1.0_RP-ugev) * vgew ! v == max(u,v,w)
-    wmax = 1.0_RP - umax - vmax ! w == max(u,v,w)
+    uzero = sign(0.5_RP,abs(ru)-EPSILON) - 0.5_RP
+    vzero = sign(0.5_RP,abs(rv)-EPSILON) - 0.5_RP
+    wzero = sign(0.5_RP,abs(rw)-EPSILON) - 0.5_RP
 
-    zero = sign(0.5_RP,abs(ru)-EPSILON) - 0.5_RP ! to avoid zero division
-    wu = abs( rw / ( ru+zero ) * ( 1.0_RP+zero ) )
-    vu = abs( rv / ( ru+zero ) * ( 1.0_RP+zero ) )
-    fact(0,0,0) = - umax * zero   ! 1.0 if max(u,v,w) < epsilon
-    umax = umax * ( 1.0_RP+zero ) ! 0.0 if max(u,v,w) < epsilon
-    zero = sign(0.5_RP,abs(rv)-EPSILON) - 0.5_RP
-    uv = abs( ru / ( rv+zero ) * ( 1.0_RP+zero ) )
-    wv = abs( rw / ( rv+zero ) * ( 1.0_RP+zero ) )
-    zero = sign(0.5_RP,abs(rw)-EPSILON) - 0.5_RP
-    uw = abs( ru / ( rw+zero ) * ( 1.0_RP+zero ) )
-    vw = abs( rv / ( rw+zero ) * ( 1.0_RP+zero ) )
+    sign_uv = sign(0.5_RP, ru*rv) + 0.5_RP ! uv >= 0
+    sign_uw = sign(0.5_RP, ru*rw) + 0.5_RP ! uw >= 0
+    sign_vw = sign(0.5_RP, rv*rw) + 0.5_RP ! vw >= 0
 
-    tmp = umax * vu*wu + vmax * uv*wv + wmax * uw*vw
-    fact(1, 1, 1) =         sign_uv  *         sign_uw  * tmp
-    fact(1,-1, 1) = (1.0_RP-sign_uv) * (1.0_RP-sign_uw) * tmp
-    fact(1, 1,-1) = (1.0_RP-sign_uv) *         sign_uw  * tmp
-    fact(1,-1,-1) =         sign_uv  * (1.0_RP-sign_uw) * tmp
+    wu = abs( rw / ( ru+uzero ) * ( 1.0_RP+uzero ) )
+    vu = abs( rv / ( ru+uzero ) * ( 1.0_RP+uzero ) )
+    uv = abs( ru / ( rv+vzero ) * ( 1.0_RP+vzero ) )
+    wv = abs( rw / ( rv+vzero ) * ( 1.0_RP+vzero ) )
+    uw = abs( ru / ( rw+wzero ) * ( 1.0_RP+wzero ) )
+    vw = abs( rv / ( rw+wzero ) * ( 1.0_RP+wzero ) )
 
-    fact(1,0,0) = wmax * (1.0_RP-uw) * (1.0_RP-vw)
-    fact(0,1,0) = umax * (1.0_RP-vu) * (1.0_RP-wu)
-    fact(0,0,1) = vmax * (1.0_RP-uv) * (1.0_RP-wv)
+    umax  = ugev * ugew * ( 1.0_RP+uzero ) ! u == max(u,v,w)
+    vmax  = (1.0_RP-ugev) * vgew           ! v == max(u,v,w)
+    wmax  = 1.0_RP - ugev * ugew - vmax    ! w == max(u,v,w)
 
-    tmp = (1.0_RP-vmax) * (         ugew  * wu * (1.0_RP-vu) &
-                          + (1.0_RP-ugew) * uw * (1.0_RP-vw) )
-    fact(1, 1,0) =         sign_uw  * tmp
-    fact(1,-1,0) = (1.0_RP-sign_uw) * tmp
+    fact(0, 0, 0) = - ugev * ugew * uzero  ! 1.0 if max(u,v,w) < epsilon
 
-    tmp = (1.0_RP-umax) * (         vgew  * wv * (1.0_RP-uv) &
-                          + (1.0_RP-vgew) * vw * (1.0_RP-uw) )
-    fact(1,0, 1) =         sign_vw  * tmp
-    fact(1,0,-1) = (1.0_RP-sign_vw) * tmp
+    fact(1, 0, 0) = wmax * (1.0_RP-uw) * (1.0_RP-vw)
+    fact(0, 1, 0) = umax * (1.0_RP-vu) * (1.0_RP-wu)
+    fact(0, 0, 1) = vmax * (1.0_RP-uv) * (1.0_RP-wv)
 
-    tmp = (1.0_RP-wmax) * (         ugev  * vu * (1.0_RP-wu) &
-                          + (1.0_RP-ugev) * uv * (1.0_RP-wv) )
-    fact(0,1, 1) =         sign_uv  * tmp
-    fact(0,1,-1) = (1.0_RP-sign_uv) * tmp
+    fact(1, 1, 1) =         sign_uv  *         sign_uw  * ( umax * vu*wu + vmax * uv*wv + wmax * uw*vw )
+    fact(1,-1, 1) = (1.0_RP-sign_uv) * (1.0_RP-sign_uw) * ( umax * vu*wu + vmax * uv*wv + wmax * uw*vw )
+    fact(1, 1,-1) = (1.0_RP-sign_uv) *         sign_uw  * ( umax * vu*wu + vmax * uv*wv + wmax * uw*vw )
+    fact(1,-1,-1) =         sign_uv  * (1.0_RP-sign_uw) * ( umax * vu*wu + vmax * uv*wv + wmax * uw*vw )
+
+    fact(1, 1, 0) =         sign_uw  * (1.0_RP-vmax) * ( ugew * wu * (1.0_RP-vu) + (1.0_RP-ugew) * uw * (1.0_RP-vw) )
+    fact(1,-1, 0) = (1.0_RP-sign_uw) * (1.0_RP-vmax) * ( ugew * wu * (1.0_RP-vu) + (1.0_RP-ugew) * uw * (1.0_RP-vw) )
+    fact(1, 0, 1) =         sign_vw  * (1.0_RP-umax) * ( vgew * wv * (1.0_RP-uv) + (1.0_RP-vgew) * vw * (1.0_RP-uw) )
+    fact(1, 0,-1) = (1.0_RP-sign_vw) * (1.0_RP-umax) * ( vgew * wv * (1.0_RP-uv) + (1.0_RP-vgew) * vw * (1.0_RP-uw) )
+    fact(0, 1, 1) =         sign_uv  * (1.0_RP-wmax) * ( ugev * vu * (1.0_RP-wu) + (1.0_RP-ugev) * uv * (1.0_RP-wv) )
+    fact(0, 1,-1) = (1.0_RP-sign_uv) * (1.0_RP-wmax) * ( ugev * vu * (1.0_RP-wu) + (1.0_RP-ugev) * uv * (1.0_RP-wv) )
 
     return
   end subroutine get_fact_fct
