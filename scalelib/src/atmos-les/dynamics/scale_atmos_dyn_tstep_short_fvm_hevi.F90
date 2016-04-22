@@ -25,7 +25,7 @@
 #define PROFILE_STOP(name)
 #endif
 
-module scale_atmos_dyn_tstep_fvm_hevi
+module scale_atmos_dyn_tstep_short_fvm_hevi
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -48,9 +48,9 @@ module scale_atmos_dyn_tstep_fvm_hevi
   !
   !++ Public procedure
   !
-  public :: ATMOS_DYN_Tstep_fvm_hevi_regist
-  public :: ATMOS_DYN_Tstep_fvm_hevi_setup
-  public :: ATMOS_DYN_Tstep_fvm_hevi
+  public :: ATMOS_DYN_Tstep_short_fvm_hevi_regist
+  public :: ATMOS_DYN_Tstep_short_fvm_hevi_setup
+  public :: ATMOS_DYN_Tstep_short_fvm_hevi
 
   !-----------------------------------------------------------------------------
   !
@@ -90,7 +90,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Register
-  subroutine ATMOS_DYN_Tstep_fvm_hevi_regist( &
+  subroutine ATMOS_DYN_Tstep_short_fvm_hevi_regist( &
        ATMOS_DYN_TYPE, &
        VA_out, &
        VAR_NAME, VAR_DESC, VAR_UNIT )
@@ -113,21 +113,17 @@ contains
     VA_out = VA_FVM_HEVI
 
     return
-  end subroutine ATMOS_DYN_Tstep_fvm_hevi_regist
+  end subroutine ATMOS_DYN_Tstep_short_fvm_hevi_regist
 
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_Tstep_fvm_hevi_setup( &
-       scheme )
+  subroutine ATMOS_DYN_Tstep_short_fvm_hevi_setup
 #ifdef DRY
     use scale_const, only: &
        CVdry  => CONST_CVdry,  &
        CPdry  => CONST_CPdry
 #endif
-    use scale_atmos_dyn_fvm_flux, only: &
-       ATMOS_DYN_FVM_flux_setup
     implicit none
-    character(len=*), intent(in) :: scheme
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
@@ -139,8 +135,6 @@ contains
 #else
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
 #endif
-
-    call ATMOS_DYN_FVM_flux_setup( scheme )
 
 #ifdef DRY
     kappa = CPdry / CVdry
@@ -161,10 +155,10 @@ contains
 #endif
 
     return
-  end subroutine ATMOS_DYN_Tstep_fvm_hevi_setup
+  end subroutine ATMOS_DYN_Tstep_short_fvm_hevi_setup
 
 
-  subroutine ATMOS_DYN_Tstep_fvm_hevi( &
+  subroutine ATMOS_DYN_Tstep_short_fvm_hevi( &
     DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
     PROG_RK,                                     &
     mflx_hi, tflx_hi,                            &
@@ -1103,7 +1097,7 @@ contains
     endif
 #endif
 
-  end subroutine ATMOS_DYN_Tstep_fvm_hevi
+  end subroutine ATMOS_DYN_Tstep_short_fvm_hevi
 
 #ifdef HEVI_BICGSTAB
 !OCL SERIAL
@@ -1533,4 +1527,4 @@ contains
   end subroutine check_equation
 #endif
 
-end module scale_atmos_dyn_tstep_fvm_hevi
+end module scale_atmos_dyn_tstep_short_fvm_hevi

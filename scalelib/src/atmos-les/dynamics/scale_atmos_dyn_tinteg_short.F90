@@ -2,7 +2,7 @@
 !> module Atmosphere / Dynamics Temporal integration
 !!
 !! @par Description
-!!          Temporal integration scheme selecter for Atmospheric dynamical process
+!!          Temporal integration scheme selecter for dynamical short time step
 !!
 !! @author Team SCALE
 !!
@@ -12,7 +12,7 @@
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module scale_atmos_dyn_tinteg
+module scale_atmos_dyn_tinteg_short
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -30,25 +30,25 @@ module scale_atmos_dyn_tinteg
   !
   !++ Public procedure
   !
-  public :: ATMOS_DYN_Tinteg_setup
+  public :: ATMOS_DYN_Tinteg_short_setup
 
   !> Runge-Kutta loop
   abstract interface
-     subroutine tinteg( &
-          DENS,     MOMZ,     MOMX,     MOMY,     RHOT,   & ! (inout)
-          PROG,                                           & ! (inout)
-          mflx_hi,  tflx_hi,                              & ! (out)
-          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t, & ! (in)
-          Rtot, CVtot, CORIOLI,                           & ! (in)
-          num_diff, divdmp_coef, DDIV,                    & ! (in)
-          FLAG_FCT_MOMENTUM, FLAG_FCT_T,                  & ! (in)
-          FLAG_FCT_ALONG_STREAM,                          & ! (in)
-          CDZ, FDZ, FDX, FDY,                             & ! (in)
-          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,             & ! (in)
-          PHI, GSQRT, J13G, J23G, J33G, MAPF,             & ! (in)
-          REF_pres, REF_dens,                             & ! (in)
-          BND_W, BND_E, BND_S, BND_N,                     & ! (in)
-          dt                                              ) ! (in)
+     subroutine short( &
+          DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
+          mflx_hi, tflx_hi,                         & ! (inout)
+          DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, PROG0, & ! (in)
+          DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
+          Rtot, CVtot, CORIOLI,                     & ! (in)
+          num_diff, divdmp_coef, DDIV,              & ! (in)
+          FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
+          FLAG_FCT_ALONG_STREAM,                    & ! (in)
+          CDZ, FDZ, FDX, FDY,                       & ! (in)
+          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,       & ! (in)
+          PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
+          REF_pres, REF_dens,                       & ! (in)
+          BND_W, BND_E, BND_S, BND_N,               & ! (in)
+          dt                                        ) ! (in)
        use scale_precision
        use scale_grid_index
        use scale_index
@@ -59,8 +59,15 @@ module scale_atmos_dyn_tinteg
        real(RP), intent(inout) :: RHOT(KA,IA,JA)
        real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
 
-       real(RP), intent(out)   :: mflx_hi(KA,IA,JA,3)
-       real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
+       real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
+       real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3)
+
+       real(RP), intent(in)    :: DENS0(KA,IA,JA)
+       real(RP), intent(in)    :: MOMZ0(KA,IA,JA)
+       real(RP), intent(in)    :: MOMX0(KA,IA,JA)
+       real(RP), intent(in)    :: MOMY0(KA,IA,JA)
+       real(RP), intent(in)    :: RHOT0(KA,IA,JA)
+       real(RP), intent(in)    :: PROG0(KA,IA,JA,VA)
 
        real(RP), intent(in)    :: DENS_t(KA,IA,JA)
        real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)
@@ -71,6 +78,7 @@ module scale_atmos_dyn_tinteg
        real(RP), intent(in)    :: Rtot(KA,IA,JA)
        real(RP), intent(in)    :: CVtot(KA,IA,JA)
        real(RP), intent(in)    :: CORIOLI(IA,JA)
+
        real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
        real(RP), intent(in)    :: divdmp_coef
        real(RP), intent(in)    :: DDIV(KA,IA,JA)
@@ -106,10 +114,10 @@ module scale_atmos_dyn_tinteg
        logical,  intent(in)    :: BND_N
 
        real(RP), intent(in)    :: dt
-     end subroutine tinteg
+     end subroutine short
   end interface
-  procedure(tinteg), pointer :: ATMOS_DYN_Tinteg => NULL()
-  public :: ATMOS_DYN_Tinteg
+  procedure(short), pointer :: ATMOS_DYN_Tinteg_short => NULL()
+  public :: ATMOS_DYN_Tinteg_short
 
   !-----------------------------------------------------------------------------
   !
@@ -127,8 +135,9 @@ module scale_atmos_dyn_tinteg
 contains
   !-----------------------------------------------------------------------------
   !> Register
-  subroutine ATMOS_DYN_Tinteg_setup( &
-       ATMOS_DYN_Tinteg_TYPE ) ! (in)
+  subroutine ATMOS_DYN_Tinteg_short_setup( &
+       ATMOS_DYN_Tinteg_short_TYPE )
+
     use scale_precision
     use scale_grid_index
     use scale_index
@@ -136,38 +145,38 @@ contains
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef TINTEG
-    use NAME(scale_atmos_dyn_tinteg_, TINTEG,), only: &
-       NAME(ATMOS_DYN_rk_tinteg_, TINTEG, _setup), &
-       NAME(ATMOS_DYN_rk_tinteg_, TINTEG,)
+#ifdef TINTEG_SHORT
+    use NAME(scale_atmos_dyn_tinteg_short_, TINTEG_SHORT,), only: &
+       NAME(ATMOS_DYN_rk_tinteg_short_, TINTEG_SHORT, _setup), &
+       NAME(ATMOS_DYN_rk_tinteg_short_, TINTEG_SHORT,)
 #else
-    use scale_atmos_dyn_tinteg_rk3, only: &
-       ATMOS_DYN_Tinteg_rk3_setup, &
-       ATMOS_DYN_Tinteg_rk3
+    use scale_atmos_dyn_tinteg_short_rk3, only: &
+       ATMOS_DYN_Tinteg_short_rk3_setup, &
+       ATMOS_DYN_Tinteg_short_rk3
 #endif
     implicit none
-    character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_TYPE
+    character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_short_TYPE
     !---------------------------------------------------------------------------
 
-#ifdef TINTEG
-    NAME(ATMOS_DYN_Tinteg_, TINTEG, _setup)( &
-            ATMOS_DYN_Tinteg_TYPE )
-    ATMOS_DYN_Tinteg => NAME(ATMOS_DYN_Tingeg_, TINTEG,)
+#ifdef TINTEG_SHORT
+    NAME(ATMOS_DYN_Tinteg_short_, TINTEG_SHORT, _setup)( &
+            ATMOS_DYN_Tinteg_short_TYPE )
+    ATMOS_DYN_Tinteg_short => NAME(ATMOS_DYN_Tingeg_short_, TINTEG_SHORT,)
 #else
-    select case ( ATMOS_DYN_Tinteg_TYPE )
+    select case ( ATMOS_DYN_Tinteg_short_TYPE )
     case ( 'RK3' )
-       call ATMOS_DYN_Tinteg_rk3_setup( &
-            ATMOS_DYN_Tinteg_TYPE )
-       ATMOS_DYN_Tinteg => ATMOS_DYN_Tinteg_rk3
+       call ATMOS_DYN_Tinteg_short_rk3_setup( &
+            ATMOS_DYN_Tinteg_short_TYPE )
+       ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk3
     case ( 'OFF', 'NONE' )
        ! do nothing
     case default
-       write(*,*) 'xxx ATMOS_DYN_TINTEG_TYPE is invalid: ', ATMOS_DYN_Tinteg_TYPE
+       write(*,*) 'xxx ATMOS_DYN_TINTEG_SHORT_TYPE is invalid: ', ATMOS_DYN_Tinteg_short_TYPE
        call PRC_MPIstop
     end select
 #endif
 
     return
-  end subroutine ATMOS_DYN_Tinteg_setup
+  end subroutine ATMOS_DYN_Tinteg_short_setup
 
-end module scale_atmos_dyn_tinteg
+end module scale_atmos_dyn_tinteg_short

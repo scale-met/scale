@@ -43,7 +43,7 @@ module scale_atmos_dyn_common
   public :: ATMOS_DYN_numfilter_coef_q
   public :: ATMOS_DYN_filter_tend
   public :: ATMOS_DYN_fct
-
+  public :: ATMOS_DYN_Copy_boundary
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -1169,6 +1169,121 @@ contains
 
     return
   end subroutine ATMOS_DYN_filter_tend
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_DYN_Copy_boundary( &
+       DENS,  MOMZ,  MOMX,  MOMY,  RHOT,  PROG, &
+       DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, PROG0, &
+       BND_W, BND_E, BND_S, BND_N )
+    implicit none
+    real(RP), intent(inout) :: DENS (KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ (KA,IA,JA)
+    real(RP), intent(inout) :: MOMX (KA,IA,JA)
+    real(RP), intent(inout) :: MOMY (KA,IA,JA)
+    real(RP), intent(inout) :: RHOT (KA,IA,JA)
+    real(RP), intent(inout) :: PROG (KA,IA,JA,VA)
+    real(RP), intent(in)    :: DENS0(KA,IA,JA)
+    real(RP), intent(in)    :: MOMZ0(KA,IA,JA)
+    real(RP), intent(in)    :: MOMX0(KA,IA,JA)
+    real(RP), intent(in)    :: MOMY0(KA,IA,JA)
+    real(RP), intent(in)    :: RHOT0(KA,IA,JA)
+    real(RP), intent(in)    :: PROG0(KA,IA,JA,VA)
+    logical,  intent(in)    :: BND_W
+    logical,  intent(in)    :: BND_E
+    logical,  intent(in)    :: BND_S
+    logical,  intent(in)    :: BND_N
+
+    integer :: k, i, j, iv
+
+    if ( BND_W ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IS-1
+       do k = KS, KE
+          DENS(k,i,j) = DENS0(k,i,j)
+          MOMZ(k,i,j) = MOMZ0(k,i,j)
+          MOMX(k,i,j) = MOMX0(k,i,j)
+          MOMY(k,i,j) = MOMY0(k,i,j)
+          RHOT(k,i,j) = RHOT0(k,i,j)
+          do iv = 1, VA
+             PROG(k,i,j,iv) = PROG0(k,i,j,iv)
+          end do
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_E ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = 1, JA
+       do i = IE+1, IA
+       do k = KS, KE
+          DENS(k,i,j) = DENS0(k,i,j)
+          MOMZ(k,i,j) = MOMZ0(k,i,j)
+          MOMX(k,i,j) = MOMX0(k,i,j)
+          MOMY(k,i,j) = MOMY0(k,i,j)
+          RHOT(k,i,j) = RHOT0(k,i,j)
+          do iv = 1, VA
+             PROG(k,i,j,iv) = PROG0(k,i,j,iv)
+          end do
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = 1, JA
+       do k = KS, KE
+          MOMX(k,IE,j) = MOMX0(k,IE,j)
+       enddo
+       enddo
+    end if
+    if ( BND_S ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = 1, JS-1
+       do i = 1, IA
+       do k = KS, KE
+          DENS(k,i,j) = DENS0(k,i,j)
+          MOMZ(k,i,j) = MOMZ0(k,i,j)
+          MOMX(k,i,j) = MOMX0(k,i,j)
+          MOMY(k,i,j) = MOMY0(k,i,j)
+          RHOT(k,i,j) = RHOT0(k,i,j)
+          do iv = 1, VA
+             PROG(k,i,j,iv) = PROG0(k,i,j,iv)
+          end do
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_N ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JE+1, JA
+       do i = 1, IA
+       do k = KS, KE
+          DENS(k,i,j) = DENS0(k,i,j)
+          MOMZ(k,i,j) = MOMZ0(k,i,j)
+          MOMX(k,i,j) = MOMX0(k,i,j)
+          MOMY(k,i,j) = MOMY0(k,i,j)
+          RHOT(k,i,j) = RHOT0(k,i,j)
+          do iv = 1, VA
+             PROG(k,i,j,iv) = PROG0(k,i,j,iv)
+          end do
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do i = 1, IA
+       do k = KS, KE
+          MOMY(k,i,JE) = MOMY0(k,i,JE)
+       enddo
+       enddo
+    end if
+
+    return
+  end subroutine ATMOS_DYN_Copy_boundary
 
   !-----------------------------------------------------------------------------
   subroutine calc_numdiff(&

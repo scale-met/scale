@@ -114,8 +114,13 @@ else
   OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
 
-OBJS_DYN = scale_atmos_dyn_tinteg.o \
-           scale_atmos_dyn_tstep.o \
+OBJS_DYN = scale_atmos_dyn_tinteg_short.o \
+           scale_atmos_dyn_tinteg_large.o \
+           scale_atmos_dyn_tinteg_large_euler.o \
+           scale_atmos_dyn_tinteg_large_rk3.o \
+	   scale_atmos_dyn_tstep_short.o \
+	   scale_atmos_dyn_tstep_large.o \
+           scale_atmos_dyn_tstep_large_fvm_heve.o \
            scale_atmos_dyn_fvm_flux.o \
            scale_atmos_dyn_fvm_flux_ud1.o \
            scale_atmos_dyn_fvm_flux_cd2.o \
@@ -124,16 +129,16 @@ OBJS_DYN = scale_atmos_dyn_tinteg.o \
            scale_atmos_dyn_fvm_flux_ud5.o \
            scale_atmos_dyn_fvm_flux_cd6.o
 ifeq ($(DYNAMICS),)
-  OBJS_DYN += scale_atmos_dyn_tstep_fvm_heve.o \
-	      scale_atmos_dyn_tstep_fvm_hevi.o \
-	      scale_atmos_dyn_tstep_fvm_hivi.o
+  OBJS_DYN += scale_atmos_dyn_tstep_short_fvm_heve.o \
+	      scale_atmos_dyn_tstep_short_fvm_hevi.o \
+	      scale_atmos_dyn_tstep_short_fvm_hivi.o
 else
-  OBJS_DYN += scale_atmos_dyn_tstep_$(DYNAMICS).o
+  OBJS_DYN += scale_atmos_dyn_tstep_short_$(DYNAMICS).o
 endif
-ifeq ($(DYNAMICS),)
-  OBJS_DYN += scale_atmos_dyn_tinteg_rk3.o
+ifeq ($(TINTEG),)
+  OBJS_DYN += scale_atmos_dyn_tinteg_short_rk3.o
 else
-  OBJS_DYN += scale_atmos_dyn_tinteg_$(TINTEG).o
+  OBJS_DYN += scale_atmos_dyn_tinteg_short_$(TINTEG).o
 endif
 
 

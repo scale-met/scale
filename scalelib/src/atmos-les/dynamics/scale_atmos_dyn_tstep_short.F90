@@ -2,7 +2,7 @@
 !> module Atmosphere / Dynamical scheme
 !!
 !! @par Description
-!!          Dynamical scheme selecter for Atmospheric dynamical process
+!!          Dynamical scheme selecter for dynamical short time step
 !!
 !! @author Team SCALE
 !!
@@ -12,7 +12,7 @@
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module scale_atmos_dyn_tstep
+module scale_atmos_dyn_tstep_short
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -30,17 +30,15 @@ module scale_atmos_dyn_tstep
   !
   !++ Public procedure
   !
-  public :: ATMOS_DYN_Tstep_regist
+  public :: ATMOS_DYN_Tstep_short_regist
 
   abstract interface
      !> setup
-     subroutine setup( &
-          scheme )
-       character(len=*), intent(in) :: scheme
-     end subroutine setup
+     subroutine short_setup
+     end subroutine short_setup
 
      !> calculation values at next temporal step
-     subroutine tstep( DENS_new, MOMZ_new, MOMX_new, MOMY_new, RHOT_new, & ! (out)
+     subroutine short( DENS_new, MOMZ_new, MOMX_new, MOMY_new, RHOT_new, & ! (out)
                        PROG_new,                                         & ! (out)
                        mflx_hi,  tflx_hi,                                & ! (out)
                        DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
@@ -129,13 +127,14 @@ module scale_atmos_dyn_tstep
 
        real(RP), intent(in)  :: dtrk
        real(RP), intent(in)  :: dt
-     end subroutine tstep
+     end subroutine short
+
   end interface
 
-  procedure(setup), pointer :: ATMOS_DYN_Tstep_setup => NULL()
-  public :: ATMOS_DYN_Tstep_setup
-  procedure(tstep), pointer :: ATMOS_DYN_Tstep => NULL()
-  public :: ATMOS_DYN_Tstep
+  procedure(short_setup), pointer :: ATMOS_DYN_Tstep_short_setup => NULL()
+  public :: ATMOS_DYN_Tstep_short_setup
+  procedure(short), pointer :: ATMOS_DYN_Tstep_short => NULL()
+  public :: ATMOS_DYN_Tstep_short
 
   !-----------------------------------------------------------------------------
   !
@@ -153,7 +152,7 @@ module scale_atmos_dyn_tstep
 contains
   !-----------------------------------------------------------------------------
   !> Register
-  subroutine ATMOS_DYN_Tstep_regist( &
+  subroutine ATMOS_DYN_Tstep_short_regist( &
        ATMOS_DYN_TYPE, &
        VA_out, &
        VAR_NAME, VAR_DESC, VAR_UNIT )
@@ -166,22 +165,22 @@ contains
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef DYNAMICS
     use NAME(scale_atmos_dyn_tstep_, DYNAMICS,), only: &
-       NAME(ATMOS_DYN_rk_tstep_, DYNAMICS, _regist), &
-       NAME(ATMOS_DYN_rk_tstep_, DYNAMICS, _setup), &
-       NAME(ATMOS_DYN_rk_tstep_, DYNAMICS,)
+       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS, _regist), &
+       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS, _setup), &
+       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS,)
 #else
-    use scale_atmos_dyn_tstep_fvm_heve, only: &
-       ATMOS_DYN_Tstep_fvm_heve_regist, &
-       ATMOS_DYN_Tstep_fvm_heve_setup, &
-       ATMOS_DYN_Tstep_fvm_heve
-    use scale_atmos_dyn_tstep_fvm_hevi, only: &
-       ATMOS_DYN_Tstep_fvm_hevi_regist, &
-       ATMOS_DYN_Tstep_fvm_hevi_setup, &
-       ATMOS_DYN_Tstep_fvm_hevi
-    use scale_atmos_dyn_tstep_fvm_hivi, only: &
-       ATMOS_DYN_Tstep_fvm_hivi_regist, &
-       ATMOS_DYN_Tstep_fvm_hivi_setup, &
-       ATMOS_DYN_Tstep_fvm_hivi
+    use scale_atmos_dyn_tstep_short_fvm_heve, only: &
+       ATMOS_DYN_Tstep_short_fvm_heve_regist, &
+       ATMOS_DYN_Tstep_short_fvm_heve_setup, &
+       ATMOS_DYN_Tstep_short_fvm_heve
+    use scale_atmos_dyn_tstep_short_fvm_hevi, only: &
+       ATMOS_DYN_Tstep_short_fvm_hevi_regist, &
+       ATMOS_DYN_Tstep_short_fvm_hevi_setup, &
+       ATMOS_DYN_Tstep_short_fvm_hevi
+    use scale_atmos_dyn_tstep_short_fvm_hivi, only: &
+       ATMOS_DYN_Tstep_short_fvm_hivi_regist, &
+       ATMOS_DYN_Tstep_short_fvm_hivi_setup, &
+       ATMOS_DYN_Tstep_short_fvm_hivi
 #endif
     implicit none
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -194,31 +193,31 @@ contains
 #ifdef DYNAMICS
     NAME(ATMOS_DYN_Tstep_, DYNAMICS, _regist)( &
             ATMOS_DYN_TYPE )
-    ATMOS_DYN_Tstep => NAME(ATMOS_DYN_Tstep_, DYNAMICS,)
-    ATMOS_DYN_Tstep_setup => NAME(ATMOS_DYN_Tstep_, DYNAMICS, _setup)
+    ATMOS_DYN_Tstep_short_ => NAME(ATMOS_DYN_Tstep_short_, DYNAMICS,)
+    ATMOS_DYN_Tstep_short_setup => NAME(ATMOS_DYN_Tstep_short_, DYNAMICS, _setup)
 #else
     select case ( ATMOS_DYN_TYPE )
     case ( 'FVM-HEVE', 'HEVE' )
-       call ATMOS_DYN_Tstep_fvm_heve_regist( &
+       call ATMOS_DYN_Tstep_short_fvm_heve_regist( &
             ATMOS_DYN_TYPE, &
             VA_out, &
             VAR_NAME, VAR_DESC, VAR_UNIT )
-       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_heve_setup
-       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_heve
+       ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_heve_setup
+       ATMOS_DYN_Tstep_short => ATMOS_DYN_Tstep_short_fvm_heve
     case ( 'FVM-HEVI', 'HEVI' )
-       call ATMOS_DYN_Tstep_fvm_hevi_regist( &
+       call ATMOS_DYN_Tstep_short_fvm_hevi_regist( &
             ATMOS_DYN_TYPE, &
             VA_out, &
             VAR_NAME, VAR_DESC, VAR_UNIT )
-       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_hevi_setup
-       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_hevi
+       ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_hevi_setup
+       ATMOS_DYN_Tstep_short => ATMOS_DYN_Tstep_short_fvm_hevi
     case ( 'FVM-HIVI', 'HIVI' )
-       call ATMOS_DYN_Tstep_fvm_hivi_regist( &
+       call ATMOS_DYN_Tstep_short_fvm_hivi_regist( &
             ATMOS_DYN_TYPE, &
             VA_out, &
             VAR_NAME, VAR_DESC, VAR_UNIT )
-       ATMOS_DYN_Tstep_setup => ATMOS_DYN_Tstep_fvm_hivi_setup
-       ATMOS_DYN_Tstep => ATMOS_DYN_Tstep_fvm_hivi
+       ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_hivi_setup
+       ATMOS_DYN_Tstep_short => ATMOS_DYN_Tstep_short_fvm_hivi
     case ( 'OFF', 'NONE' )
        ! do nothing
     case default
@@ -228,6 +227,6 @@ contains
 #endif
 
     return
-  end subroutine ATMOS_DYN_Tstep_regist
+  end subroutine ATMOS_DYN_Tstep_short_regist
 
-end module scale_atmos_dyn_tstep
+end module scale_atmos_dyn_tstep_short

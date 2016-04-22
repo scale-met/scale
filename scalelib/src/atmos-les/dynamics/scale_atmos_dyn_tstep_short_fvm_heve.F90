@@ -12,7 +12,7 @@
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module scale_atmos_dyn_tstep_fvm_heve
+module scale_atmos_dyn_tstep_short_fvm_heve
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -38,9 +38,9 @@ module scale_atmos_dyn_tstep_fvm_heve
   !
   !++ Public procedure
   !
-  public :: ATMOS_DYN_Tstep_fvm_heve_regist
-  public :: ATMOS_DYN_Tstep_fvm_heve_setup
-  public :: ATMOS_DYN_Tstep_fvm_heve
+  public :: ATMOS_DYN_Tstep_short_fvm_heve_regist
+  public :: ATMOS_DYN_Tstep_short_fvm_heve_setup
+  public :: ATMOS_DYN_Tstep_short_fvm_heve
 
   !-----------------------------------------------------------------------------
   !
@@ -66,7 +66,7 @@ module scale_atmos_dyn_tstep_fvm_heve
 contains
   !-----------------------------------------------------------------------------
   !> Register
-  subroutine ATMOS_DYN_Tstep_fvm_heve_regist( &
+  subroutine ATMOS_DYN_Tstep_short_fvm_heve_regist( &
        ATMOS_DYN_TYPE, &
        VA_out, &
        VAR_NAME, VAR_DESC, VAR_UNIT )
@@ -89,26 +89,16 @@ contains
     VA_out = VA_FVM_HEVE
 
     return
-  end subroutine ATMOS_DYN_Tstep_fvm_heve_regist
+  end subroutine ATMOS_DYN_Tstep_short_fvm_heve_regist
 
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_Tstep_fvm_heve_setup( &
-       scheme )
-    use scale_process, only: &
-         PRC_MPIstop
-    use scale_atmos_dyn_fvm_flux, only: &
-         ATMOS_DYN_FVM_flux_setup
-    implicit none
-    character(len=*), intent(in) :: scheme
-    !---------------------------------------------------------------------------
-
-    call ATMOS_DYN_FVM_flux_setup( scheme )
+  subroutine ATMOS_DYN_Tstep_short_fvm_heve_setup
 
     return
-  end subroutine ATMOS_DYN_Tstep_fvm_heve_setup
+  end subroutine ATMOS_DYN_Tstep_short_fvm_heve_setup
 
-  subroutine ATMOS_DYN_Tstep_fvm_heve( &
+  subroutine ATMOS_DYN_Tstep_short_fvm_heve( &
        DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
        PROG_RK,                                     &
        mflx_hi, tflx_hi,                            &
@@ -412,11 +402,11 @@ contains
        do i = IS-1, IE+2
        do k = KS, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMZ(k,i,j) )
-          call CHECK( __LINE__, DENS(k  ,i,j) )
-          call CHECK( __LINE__, DENS(k+1,i,j) )
+          call CHECK( __LINE__, MOMZ0(k,i,j) )
+          call CHECK( __LINE__, DENS0(k  ,i,j) )
+          call CHECK( __LINE__, DENS0(k+1,i,j) )
 #endif
-          VELZ(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
+          VELZ(k,i,j) = 2.0_RP * MOMZ0(k,i,j) / ( DENS0(k+1,i,j)+DENS0(k,i,j) )
        enddo
        enddo
        enddo
@@ -438,12 +428,11 @@ contains
        do i = IS-2, IE+1
        do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMX(k,i,j) )
-          call CHECK( __LINE__, DENS(k,i  ,j) )
-          call CHECK( __LINE__, DENS(k,i+1,j) )
+          call CHECK( __LINE__, MOMX0(k,i,j) )
+          call CHECK( __LINE__, DENS0(k,i  ,j) )
+          call CHECK( __LINE__, DENS0(k,i+1,j) )
 #endif
-          VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) &
-                      / ( DENS(k,i+1,j)+DENS(k,i,j) )
+          VELX(k,i,j) = 2.0_RP * MOMX0(k,i,j) / ( DENS0(k,i+1,j)+DENS0(k,i,j) )
        enddo
        enddo
        enddo
@@ -456,12 +445,11 @@ contains
        do i = IS-1, IE+2
        do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMY(k,i,j) )
-          call CHECK( __LINE__, DENS(k,i,j  ) )
-          call CHECK( __LINE__, DENS(k,i,j+1) )
+          call CHECK( __LINE__, MOMY0(k,i,j) )
+          call CHECK( __LINE__, DENS0(k,i,j  ) )
+          call CHECK( __LINE__, DENS0(k,i,j+1) )
 #endif
-          VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) &
-                      / ( DENS(k,i,j+1)+DENS(k,i,j) )
+          VELY(k,i,j) = 2.0_RP * MOMY0(k,i,j) / ( DENS0(k,i,j+1)+DENS0(k,i,j) )
        enddo
        enddo
        enddo
@@ -1519,6 +1507,6 @@ contains
 #endif
 
     return
-  end subroutine ATMOS_DYN_Tstep_fvm_heve
+  end subroutine ATMOS_DYN_Tstep_short_fvm_heve
 
-end module scale_atmos_dyn_tstep_fvm_heve
+end module scale_atmos_dyn_tstep_short_fvm_heve

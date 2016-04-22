@@ -70,6 +70,7 @@ module mod_atmos_dyn_driver
   ! fct
   logical,  private :: ATMOS_DYN_FLAG_FCT_momentum = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER   = .true.
   logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream = .true.
 
   ! lateral boundary flux adjustment
@@ -102,7 +103,8 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn, &
        ATMOS_DYN_TYPE,  &
-       ATMOS_DYN_TINTEG_TYPE
+       ATMOS_DYN_TINTEG_SHORT_TYPE, &
+       ATMOS_DYN_TINTEG_LARGE_TYPE
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -130,6 +132,7 @@ contains
        ATMOS_DYN_divdmp_coef,                 &
        ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T,                  &
+       ATMOS_DYN_FLAG_FCT_TRACER,             &
        ATMOS_DYN_FLAG_FCT_along_stream
 
     real(RP) :: DT
@@ -155,7 +158,8 @@ contains
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
        call ATMOS_DYN_setup( &
-            ATMOS_DYN_TINTEG_TYPE,          & ! [IN]
+            ATMOS_DYN_TINTEG_SHORT_TYPE,    & ! [IN]
+            ATMOS_DYN_TINTEG_LARGE_TYPE,    & ! [IN]
             ATMOS_DYN_FVM_FLUX_SCHEME,      & ! [IN]
             DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
             PROG,                           & ! [IN]
@@ -293,10 +297,10 @@ contains
          ATMOS_DYN_divdmp_coef,                                & ! [IN]
          ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
          ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
+         ATMOS_DYN_FLAG_FCT_TRACER,                            & ! [IN]
          ATMOS_DYN_FLAG_FCT_along_stream,                      & ! [IN]
          ATMOS_USE_AVERAGE,                                    & ! [IN]
          TIME_DTSEC,                                           & ! [IN]
-         TIME_DTSEC_ATMOS_DYN,                                 & ! [IN]
          TIME_NSTEP_ATMOS_DYN                                  ) ! [IN]
 
        call ATMOS_vars_total

@@ -13,7 +13,7 @@
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
 #define HIVI_BICGSTAB 1
-module scale_atmos_dyn_tstep_fvm_hivi
+module scale_atmos_dyn_tstep_short_fvm_hivi
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -40,9 +40,9 @@ module scale_atmos_dyn_tstep_fvm_hivi
   !
   !++ Public procedure
   !
-  public :: ATMOS_DYN_Tstep_fvm_hivi_regist
-  public :: ATMOS_DYN_Tstep_fvm_hivi_setup
-  public :: ATMOS_DYN_Tstep_fvm_hivi
+  public :: ATMOS_DYN_Tstep_short_fvm_hivi_regist
+  public :: ATMOS_DYN_Tstep_short_fvm_hivi_setup
+  public :: ATMOS_DYN_Tstep_short_fvm_hivi
 
   !-----------------------------------------------------------------------------
   !
@@ -77,7 +77,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Register
-  subroutine ATMOS_DYN_Tstep_fvm_hivi_regist( &
+  subroutine ATMOS_DYN_Tstep_short_fvm_hivi_regist( &
        ATMOS_DYN_TYPE, &
        VA_out, &
        VAR_NAME, VAR_DESC, VAR_UNIT )
@@ -100,12 +100,11 @@ contains
     VA_out = VA_FVM_HIVI
 
     return
-  end subroutine ATMOS_DYN_Tstep_fvm_hivi_regist
+  end subroutine ATMOS_DYN_Tstep_short_fvm_hivi_regist
 
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_Tstep_fvm_hivi_setup( &
-       scheme )
+  subroutine ATMOS_DYN_Tstep_short_fvm_hivi_setup
     use scale_process, only: &
        PRC_MPIstop
 #ifdef DRY
@@ -113,10 +112,7 @@ contains
        CVdry  => CONST_CVdry,  &
        CPdry  => CONST_CPdry
 #endif
-    use scale_atmos_dyn_fvm_flux, only: &
-       ATMOS_DYN_FVM_flux_setup
     implicit none
-    character(len=*), intent(in) :: scheme
 
     integer :: ierr
 
@@ -135,7 +131,6 @@ contains
     call PRC_MPIstop
 #endif
 
-    call ATMOS_DYN_FVM_flux_setup( scheme )
     ! currently, vertical difference scheme for potential temperature is the CD4
 
 
@@ -168,10 +163,10 @@ contains
     end if
 
     return
-  end subroutine ATMOS_DYN_Tstep_fvm_hivi_setup
+  end subroutine ATMOS_DYN_Tstep_short_fvm_hivi_setup
 
 
-  subroutine ATMOS_DYN_Tstep_fvm_hivi( &
+  subroutine ATMOS_DYN_Tstep_short_fvm_hivi( &
     DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
     PROG_RK,                                     &
     mflx_hi, tflx_hi,                            &
@@ -1682,7 +1677,7 @@ contains
     enddo
     enddo
 
-  end subroutine ATMOS_DYN_Tstep_fvm_hivi
+  end subroutine ATMOS_DYN_Tstep_short_fvm_hivi
 
 #ifdef HIVI_BICGSTAB
   subroutine solve_bicgstab( &
@@ -2501,4 +2496,4 @@ contains
 #endif
 
 
-end module scale_atmos_dyn_tstep_fvm_hivi
+end module scale_atmos_dyn_tstep_short_fvm_hivi
