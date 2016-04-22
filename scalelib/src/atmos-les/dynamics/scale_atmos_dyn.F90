@@ -941,28 +941,56 @@ contains
        if ( divdmp_coef > 0.0_RP ) then
 
           ! 3D divergence for damping
+
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE+1
           do i = IIS, IIE+1
-          do k = KS, KE
-#ifdef DEBUG
-             call CHECK( __LINE__, MOMZ(k  ,i  ,j  ) )
-             call CHECK( __LINE__, MOMZ(k-1,i  ,j  ) )
-             call CHECK( __LINE__, MOMX(k  ,i  ,j  ) )
-             call CHECK( __LINE__, MOMX(k  ,i-1,j  ) )
-             call CHECK( __LINE__, MOMY(k  ,i  ,j  ) )
-             call CHECK( __LINE__, MOMY(k  ,i  ,j-1) )
-#endif
-             DDIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
+          do k = KS-1, KE+1
+             DDIV(k,i,j) = J33G * ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
+                         + ( ( MOMX(k+1,i,j) + MOMX(k+1,i-1,j  ) ) * J13G(k+1,i,j,I_XYW) &
+                           - ( MOMX(k-1,i,j) + MOMX(k-1,i-1,j  ) ) * J13G(k-1,i,j,I_XYW) &
+                           + ( MOMY(k+1,i,j) + MOMY(k+1,i  ,j-1) ) * J23G(k+1,i,j,I_XYW) &
+                           - ( MOMY(k-1,i,j) + MOMY(k-1,i  ,j-1) ) * J23G(k-1,i,j,I_XYW) ) / ( FDZ(k)+FDZ(k-1) ) &
                          + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                         * ( ( MOMX(k,i,j)/MAPF(i,j,2,I_UY) - MOMX(k,i-1,j  )/MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
-                           + ( MOMY(k,i,j)/MAPF(i,j,1,I_XV) - MOMY(k,i  ,j-1)/MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+                         * ( ( MOMX(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                             - MOMX(k,i-1,j  ) * GSQRT(k,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                           + ( MOMY(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                             - MOMY(k,i,  j-1) * GSQRT(k,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
           enddo
           enddo
           enddo
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE+1
+          do i = IIS, IIE+1
+             DDIV(KS,i,j) = J33G * ( MOMZ(KS,i,j) ) * RCDZ(KS) &
+                         + ( ( MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j  ) ) * J13G(KS+1,i,j,I_XYW) &
+                           - ( MOMX(KS-1,i,j) + MOMX(KS  ,i-1,j  ) ) * J13G(KS  ,i,j,I_XYW) &
+                           + ( MOMY(KS+1,i,j) + MOMY(KS+1,i  ,j-1) ) * J23G(KS+1,i,j,I_XYW) &
+                           - ( MOMY(KS  ,i,j) + MOMY(KS  ,i  ,j-1) ) * J23G(KS  ,i,j,I_XYW) ) * RFDZ(KS) &
+                         + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                         * ( ( MOMX(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                             - MOMX(KS,i-1,j  ) * GSQRT(KS,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                           + ( MOMY(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                             - MOMY(KS,i,  j-1) * GSQRT(KS,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+             DDIV(KE,i,j) = J33G * ( - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
+                         + ( ( MOMX(KE  ,i,j) + MOMX(KE  ,i-1,j  ) ) * J13G(KE  ,i,j,I_XYW) &
+                           - ( MOMX(KE-1,i,j) + MOMX(KE-1,i-1,j  ) ) * J13G(KE-1,i,j,I_XYW) &
+                           + ( MOMY(KE  ,i,j) + MOMY(KE  ,i  ,j-1) ) * J23G(KE  ,i,j,I_XYW) &
+                           - ( MOMY(KE-1,i,j) + MOMY(KE-1,i  ,j-1) ) * J23G(KE-1,i,j,I_XYW) ) * RFDZ(KE) &
+                         + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                         * ( ( MOMX(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                             - MOMX(KE,i-1,j  ) * GSQRT(KE,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                           + ( MOMY(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                             - MOMY(KE,i,  j-1) * GSQRT(KE,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+          enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
        end if
 
        call PROF_rapend  ("DYN_Numfilter", 2)
