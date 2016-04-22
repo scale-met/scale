@@ -38,9 +38,6 @@ module scale_atmos_dyn
   !
   !++ used modules
   !
-#ifdef CHECK_MASS
-  use mpi
-#endif
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -286,10 +283,6 @@ contains
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry
     use scale_comm, only: &
-#ifdef CHECK_MASS
-       COMM_datatype, &
-       COMM_world,    &
-#endif
        COMM_vars8, &
        COMM_wait
     use scale_gridtrans, only: &
@@ -300,10 +293,6 @@ contains
        I_XY,  &
        I_UY,  &
        I_XV
-#ifdef CHECK_MASS
-    use scale_grid_real, only: &
-       vol => REAL_VOL
-#endif
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_numfilter_coef,   &
        ATMOS_DYN_numfilter_coef_q, &
@@ -322,7 +311,7 @@ contains
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
     use scale_history, only: &
-#if defined( HIST_TEND ) || defined( CHECK_MASS )
+#ifdef HIST_TEND
        HIST_in, &
 #endif
        HIST_switch
@@ -439,20 +428,6 @@ contains
     real(RP) :: qflx_hi  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
     real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
-
-    ! lateral boundary flux
-#ifdef CHECK_MASS
-    real(RP) :: mflx_lb_horizontal(KA)
-    real(RP) :: allmflx_lb_horizontal(KA)
-    real(RP) :: mflx_lb_total
-    real(RP) :: mass_total
-    real(RP) :: mass_total2
-    real(RP) :: allmflx_lb_total
-    real(RP) :: allmass_total
-    real(RP) :: allmass_total2
-
-    integer :: ierr
-#endif
 
     real(RP) :: dt
     real(RP) :: dtrk
@@ -1016,117 +991,13 @@ contains
        call PROF_rapend  ("DYN_Tinteg", 2)
 
 #ifdef CHECK_MASS
-       call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
-       call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
-       call HIST_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', ydim='half' )
-
-       call HIST_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', zdim='half' )
-       call HIST_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', xdim='half' )
-       call HIST_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', ydim='half' )
-
-       mflx_lb_total            = 0.0_RP
-       mflx_lb_horizontal(:)    = 0.0_RP
-       allmflx_lb_horizontal(:) = 0.0_RP
-
-       if ( BND_W ) then ! for western boundary
-          i = IS
-          do j = JS, JE
-          do k = KS, KE
-            mflx_lb_total = mflx_lb_total + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-
-          end do
-          end do
-       end if
-       if ( BND_E ) then ! for eastern boundary
-          i = IE
-          do j = JS, JE
-          do k = KS, KE
-            mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          end do
-          end do
-       end if
-       if ( BND_S ) then ! for sourthern boundary
-          j = JS
-          do i = IS, IE
-          do k = KS, KE
-            mflx_lb_total = mflx_lb_total + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          end do
-          end do
-       end if
-       if ( BND_N ) then ! for northern boundary
-          j = JE
-          do i = IS, IE
-          do k = KS, KE
-            mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          end do
-          end do
-       end if
-
-       mass_total  = 0.0_RP
-       mass_total2 = 0.0_RP
-
-       ! check total mass in the inner region
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          mass_total  = mass_total  + DENS     (k,i,j) * vol(k,i,j)
-          mass_total2 = mass_total2 + DAMP_DENS(k,i,j) * vol(k,i,j)
-       end do
-       end do
-       end do
-
-       call MPI_Allreduce( mflx_lb_total,        &
-                           allmflx_lb_total,     &
-                           1,                    &
-                           COMM_datatype,        &
-                           MPI_SUM,              &
-                           COMM_world,           &
-                           ierr                  )
-
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mflx_lb:', step, allmflx_lb_total
-
-       call MPI_Allreduce( mass_total,           &
-                           allmass_total,        &
-                           1,                    &
-                           COMM_datatype,        &
-                           MPI_SUM,              &
-                           COMM_world,           &
-                           ierr                  )
-
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass   :', step, allmass_total
-
-       call MPI_Allreduce( mass_total2,          &
-                           allmass_total2,       &
-                           1,                    &
-                           COMM_datatype,        &
-                           MPI_SUM,              &
-                           COMM_world,           &
-                           ierr                  )
-
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass2  :', step, allmass_total2
-
-       call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
-                           allmflx_lb_horizontal(KS:KE), &
-                           KMAX,                         &
-                           COMM_datatype,                &
-                           MPI_SUM,                      &
-                           COMM_world,                   &
-                           ierr                          )
-
-       call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
-                    'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
+       call check_mass( &
+            DENS, DAMP_DENS, &
+            mflx_hi, tflx_hi, &
+            GSQRT, MAPF, &
+            RCDX, RCDY, &
+            dt, step, &
+            BND_W, BND_E, BND_S, BND_N )
 #endif
 
        do j  = JS, JE
@@ -1361,5 +1232,171 @@ contains
 
     return
   end subroutine ATMOS_DYN
+
+#ifdef CHECK_MASS
+  subroutine check_mass( &
+       DENS, DAMP_DENS, &
+       mflx_hi, tflx_hi, &
+       GSQRT, MAPF, &
+       RCDX, RCDY, &
+       dt, step, &
+       BND_W, BND_E, BND_S, BND_N &
+       )
+    use mpi
+    use scale_grid_real, only: &
+       vol => REAL_VOL
+    use scale_comm, only: &
+       COMM_datatype, &
+       COMM_world
+    use scale_history, only: &
+       HIST_in
+    use scale_gridtrans, only: &
+       I_XYZ, &
+       I_XY
+    implicit none
+    real(RP), intent(in) :: DENS     (KA,IA,JA)
+    real(RP), intent(in) :: DAMP_DENS(KA,IA,JA)
+    real(RP), intent(in) :: mflx_hi  (KA,IA,JA,3)
+    real(RP), intent(in) :: tflx_hi  (KA,IA,JA,3)
+    real(RP), intent(in) :: GSQRT    (KA,IA,JA,7)
+    real(RP), intent(in) :: MAPF     (   IA,JA,2,7)
+    real(RP), intent(in) :: RCDX(IA)
+    real(RP), intent(in) :: RCDY(JA)
+    real(RP), intent(in) :: dt
+    integer,  intent(in) :: step
+    logical,  intent(in) :: BND_W
+    logical,  intent(in) :: BND_E
+    logical,  intent(in) :: BND_S
+    logical,  intent(in) :: BND_N
+
+    ! lateral boundary flux
+    real(RP) :: mflx_lb_horizontal(KA)
+    real(RP) :: allmflx_lb_horizontal(KA)
+    real(RP) :: mflx_lb_total
+    real(RP) :: mass_total
+    real(RP) :: mass_total2
+    real(RP) :: allmflx_lb_total
+    real(RP) :: allmass_total
+    real(RP) :: allmass_total2
+
+    integer :: k, i, j
+    integer :: ierr
+
+
+    call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
+    call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
+    call HIST_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', ydim='half' )
+
+    call HIST_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', zdim='half' )
+    call HIST_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', xdim='half' )
+    call HIST_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', ydim='half' )
+
+    mflx_lb_total            = 0.0_RP
+    mflx_lb_horizontal(:)    = 0.0_RP
+    allmflx_lb_horizontal(:) = 0.0_RP
+
+    if ( BND_W ) then ! for western boundary
+       i = IS
+       do j = JS, JE
+       do k = KS, KE
+          mflx_lb_total = mflx_lb_total + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+
+       end do
+       end do
+    end if
+    if ( BND_E ) then ! for eastern boundary
+       i = IE
+       do j = JS, JE
+       do k = KS, KE
+          mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+       end do
+       end do
+    end if
+    if ( BND_S ) then ! for sourthern boundary
+       j = JS
+       do i = IS, IE
+       do k = KS, KE
+          mflx_lb_total = mflx_lb_total + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+       end do
+       end do
+    end if
+    if ( BND_N ) then ! for northern boundary
+       j = JE
+       do i = IS, IE
+       do k = KS, KE
+          mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+       end do
+       end do
+    end if
+
+    mass_total  = 0.0_RP
+    mass_total2 = 0.0_RP
+
+    ! check total mass in the inner region
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       mass_total  = mass_total  + DENS     (k,i,j) * vol(k,i,j)
+       mass_total2 = mass_total2 + DAMP_DENS(k,i,j) * vol(k,i,j)
+    end do
+    end do
+    end do
+
+    call MPI_Allreduce( mflx_lb_total,        &
+                        allmflx_lb_total,     &
+                        1,                    &
+                        COMM_datatype,        &
+                        MPI_SUM,              &
+                        COMM_world,           &
+                        ierr                  )
+
+    if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mflx_lb:', step, allmflx_lb_total
+
+    call MPI_Allreduce( mass_total,           &
+                        allmass_total,        &
+                        1,                    &
+                        COMM_datatype,        &
+                        MPI_SUM,              &
+                        COMM_world,           &
+                        ierr                  )
+
+    if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass   :', step, allmass_total
+
+    call MPI_Allreduce( mass_total2,          &
+                        allmass_total2,       &
+                        1,                    &
+                        COMM_datatype,        &
+                        MPI_SUM,              &
+                        COMM_world,           &
+                        ierr                  )
+
+    if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass2  :', step, allmass_total2
+
+    call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
+                        allmflx_lb_horizontal(KS:KE), &
+                        KMAX,                         &
+                        COMM_datatype,                &
+                        MPI_SUM,                      &
+                        COMM_world,                   &
+                        ierr                          )
+
+    call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
+                    'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
+
+    return
+  end subroutine check_mass
+#endif
 
 end module scale_atmos_dyn
