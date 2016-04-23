@@ -582,215 +582,214 @@ contains
     call PROF_rapend  ("DYN_Large_Boundary", 2)
 
 
-    !-----< prepare tendency >-----
-
-    call PROF_rapstart("DYN_Large_Tendency", 2)
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-    do j = JS-1, JE+2
-    do i = IS-1, IE+2
-    do k = KS, KE
-       diff(k,i,j) = DENS(k,i,j) - DAMP_DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       damp = - DAMP_alpha_DENS(k,i,j) &
-            * ( diff(k,i,j) & ! rayleigh damping
-              - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-               * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
-               + DENS_tq(k,i,j) ! dencity change due to rayleigh damping for tracers
-       DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
-                     + damp
-#ifdef HIST_TEND
-       damp_t(k,i,j) = damp
-#endif
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       DENS_t(   1:KS-1,i,j) = 0.0_RP
-       DENS_t(KE+1:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
-    call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
-#ifdef HIST_TEND
-    call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics',          'kg/m3/s' )
-    call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s' )
-#endif
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS, KE-1
-       diff(k,i,j) = MOMZ(k,i,j) - DAMP_VELZ(k,i,j) * ( DENS(k,i,j)+DENS(k+1,i,j) ) * 0.5_RP
-    enddo
-    enddo
-    enddo
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE-1
-       damp = - DAMP_alpha_VELZ(k,i,j) &
-            * ( diff(k,i,j) & ! rayleigh damping
-              - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-              * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-       MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                     + damp
-#ifdef HIST_TEND
-       damp_t(k,i,j) = damp
-#endif
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       MOMZ_t( 1:KS-1,i,j) = 0.0_RP
-       MOMZ_t(KE:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
-    call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
-#ifdef HIST_TEND
-    call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',          'kg/m2/s2', zdim='half' )
-    call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', zdim='half' )
-#endif
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-    do j = JS-1, JE+2
-    do i = IS-2, IE+1
-    do k = KS, KE
-       diff(k,i,j) = MOMX(k,i,j) - DAMP_VELX(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       damp = - DAMP_alpha_VELX(k,i,j) &
-              * ( diff(k,i,j) & ! rayleigh damping
-                - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-       MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
-                     + damp
-#ifdef HIST_TEND
-       damp_t(k,i,j) = damp
-#endif
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       MOMX_t(   1:KS-1,i,j) = 0.0_RP
-       MOMX_t(KE+1:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
-    call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
-#ifdef HIST_TEND
-    call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics',          'kg/m2/s2', xdim='half' )
-    call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', xdim='half' )
-#endif
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-    do j = JS-2, JE+1
-    do i = IS-1, IE+2
-    do k = KS, KE
-       diff(k,i,j) = MOMY(k,i,j) - DAMP_VELY(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       damp = - DAMP_alpha_VELY(k,i,j) &
-              * ( diff(k,i,j) & ! rayleigh damping
-                - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-       MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
-                     + damp
-#ifdef HIST_TEND
-       damp_t(k,i,j) = damp
-#endif
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       MOMY_t(   1:KS-1,i,j) = 0.0_RP
-       MOMY_t(KE+1:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
-    call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
-#ifdef HIST_TEND
-    call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics',          'kg/m2/s2', ydim='half' )
-    call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', ydim='half' )
-#endif
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-    do j = JS-1, JE+2
-    do i = IS-1, IE+2
-    do k = KS, KE
-       diff(k,i,j) = RHOT(k,i,j) - DAMP_POTT(k,i,j) * DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       damp = - DAMP_alpha_POTT(k,i,j) &
-              * ( diff(k,i,j) & ! rayleigh damping
-                - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-       RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
-                     + damp
-#ifdef HIST_TEND
-       damp_t(k,i,j) = damp
-#endif
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       RHOT_t(   1:KS-1,i,j) = 0.0_RP
-       RHOT_t(KE+1:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
-    call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
-#ifdef HIST_TEND
-    call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics',          'K kg/m3/s' )
-    call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', 'K kg/m3/s' )
-#endif
-
-    call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
-    call COMM_wait ( MOMZ_t(:,:,:), I_COMM_MOMZ_t, .false. )
-    call COMM_wait ( MOMX_t(:,:,:), I_COMM_MOMX_t, .false. )
-    call COMM_wait ( MOMY_t(:,:,:), I_COMM_MOMY_t, .false. )
-    call COMM_wait ( RHOT_t(:,:,:), I_COMM_RHOT_t, .false. )
-
-    call PROF_rapend  ("DYN_Large_Tendency", 2)
-
-
     do step = 1, nstep
 
        call HIST_switch( Llast .and. step == nstep )
+
+       !-----< prepare tendency >-----
+
+       call PROF_rapstart("DYN_Large_Tendency", 2)
+
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS, KE
+          diff(k,i,j) = DENS(k,i,j) - DAMP_DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          damp = - DAMP_alpha_DENS(k,i,j) &
+               * ( diff(k,i,j) & ! rayleigh damping
+                 - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                 * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
+               + DENS_tq(k,i,j) ! dencity change due to rayleigh damping for tracers
+          DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          DENS_t(   1:KS-1,i,j) = 0.0_RP
+          DENS_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
+#ifdef HIST_TEND
+       call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics',          'kg/m3/s' )
+       call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s' )
+#endif
+
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE-1
+          diff(k,i,j) = MOMZ(k,i,j) - DAMP_VELZ(k,i,j) * ( DENS(k,i,j)+DENS(k+1,i,j) ) * 0.5_RP
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE-1
+          damp = - DAMP_alpha_VELZ(k,i,j) &
+               * ( diff(k,i,j) & ! rayleigh damping
+                 - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                 * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+          MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          MOMZ_t( 1:KS-1,i,j) = 0.0_RP
+          MOMZ_t(KE:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
+#ifdef HIST_TEND
+       call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',          'kg/m2/s2', zdim='half' )
+       call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', zdim='half' )
+#endif
+
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JS-1, JE+2
+       do i = IS-2, IE+1
+       do k = KS, KE
+          diff(k,i,j) = MOMX(k,i,j) - DAMP_VELX(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          damp = - DAMP_alpha_VELX(k,i,j) &
+               * ( diff(k,i,j) & ! rayleigh damping
+                 - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                 * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+          MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          MOMX_t(   1:KS-1,i,j) = 0.0_RP
+          MOMX_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
+#ifdef HIST_TEND
+       call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics',          'kg/m2/s2', xdim='half' )
+       call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', xdim='half' )
+#endif
+
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JS-2, JE+1
+       do i = IS-1, IE+2
+       do k = KS, KE
+          diff(k,i,j) = MOMY(k,i,j) - DAMP_VELY(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          damp = - DAMP_alpha_VELY(k,i,j) &
+               * ( diff(k,i,j) & ! rayleigh damping
+                 - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                 * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+          MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          MOMY_t(   1:KS-1,i,j) = 0.0_RP
+          MOMY_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
+#ifdef HIST_TEND
+       call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics',          'kg/m2/s2', ydim='half' )
+       call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', ydim='half' )
+#endif
+
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS, KE
+          diff(k,i,j) = RHOT(k,i,j) - DAMP_POTT(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          damp = - DAMP_alpha_POTT(k,i,j) &
+               * ( diff(k,i,j) & ! rayleigh damping
+                 - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                 * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+          RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          RHOT_t(   1:KS-1,i,j) = 0.0_RP
+          RHOT_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
+#ifdef HIST_TEND
+       call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics',          'K kg/m3/s' )
+       call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', 'K kg/m3/s' )
+#endif
+
+       call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
+       call COMM_wait ( MOMZ_t(:,:,:), I_COMM_MOMZ_t, .false. )
+       call COMM_wait ( MOMX_t(:,:,:), I_COMM_MOMX_t, .false. )
+       call COMM_wait ( MOMY_t(:,:,:), I_COMM_MOMY_t, .false. )
+       call COMM_wait ( RHOT_t(:,:,:), I_COMM_RHOT_t, .false. )
+
+       call PROF_rapend  ("DYN_Large_Tendency", 2)
 
        call PROF_rapstart("DYN_Large_Numfilter", 2)
 
