@@ -782,10 +782,11 @@ contains
 #ifdef DEBUG
           call check_equation( &
                C(:,i,j), &
-               DENS(:,i,j), MOMZ(:,i,j), RHOT(:,i,j), PRES(:,i,j), &
+               DENS(:,i,j), MOMZ(:,i,j), RHOT(:,i,j), DPRES(:,i,j), &
+               REF_dens(:,i,j), &
                Sr(:,i,j), Sw(:,i,j), St(:,i,j), &
                J33G, GSQRT(:,i,j,:), &
-               RT2P(:,i,j) &
+               RT2P(:,i,j), &
                dtrk, i, j )
 #endif
 
@@ -849,8 +850,8 @@ contains
           call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, PRES(k,i+1,j) )
-          call CHECK( __LINE__, PRES(k,i  ,j) )
+          call CHECK( __LINE__, DPRES(k,i+1,j) )
+          call CHECK( __LINE__, DPRES(k,i  ,j) )
           call CHECK( __LINE__, CORIOLI(1,i  ,j) )
           call CHECK( __LINE__, CORIOLI(1,i+1,j) )
           call CHECK( __LINE__, MOMY(k,i  ,j  ) )
@@ -958,8 +959,8 @@ contains
           call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, PRES(k,i,j  ) )
-          call CHECK( __LINE__, PRES(k,i,j+1) )
+          call CHECK( __LINE__, DPRES(k,i,j  ) )
+          call CHECK( __LINE__, DPRES(k,i,j+1) )
           call CHECK( __LINE__, CORIOLI(1,i,j  ) )
           call CHECK( __LINE__, CORIOLI(1,i,j+1) )
           call CHECK( __LINE__, MOMX(k,i  ,j  ) )
@@ -1325,7 +1326,8 @@ contains
 #ifdef DEBUG
   subroutine check_equation( &
        VECT, &
-       DENS, MOMZ, RHOT, PRES, &
+       DENS, MOMZ, RHOT, DPRES, &
+       REF_dens, &
        Sr, Sw, St, &
        J33G, G, &
        RT2P, &
@@ -1346,7 +1348,8 @@ contains
     real(RP), intent(in) :: DENS(KA)
     real(RP), intent(in) :: MOMZ(KA)
     real(RP), intent(in) :: RHOT(KA)
-    real(RP), intent(in) :: PRES(KA)
+    real(RP), intent(in) :: DPRES(KA)
+    real(RP), intent(in) :: REF_dens(KA)
     real(RP), intent(in) :: Sr(KA)
     real(RP), intent(in) :: Sw(KA)
     real(RP), intent(in) :: St(KA)
@@ -1362,7 +1365,7 @@ contains
     real(RP) :: MOMZ_N(KA)
     real(RP) :: DENS_N(KA)
     real(RP) :: RHOT_N(KA)
-    real(RP) :: PRES_N(KA)
+    real(RP) :: DPRES_N(KA)
 
     real(RP) :: POTT(KA)
     real(RP) :: PT(KA)
@@ -1415,7 +1418,7 @@ contains
 
 
     do k = KS, KE
-       PRES_N(k) = PRES(k) + RT2P(k) * ( RHOT_N(k) - RHOT(k) )
+       DPRES_N(k) = DPRES(k) + RT2P(k) * ( RHOT_N(k) - RHOT(k) )
     end do
 
     do k = KS, KE
@@ -1435,8 +1438,8 @@ contains
 
     do k = KS, KE-1
        lhs = ( MOMZ_N(k) - MOMZ(k) ) / dt
-       rhs = - J33G * ( PRES_N(k+1) - PRES_N(k) ) * RFDZ(k) / G(k,I_XYW) &
-             - GRAV * ( DENS_N(k+1) + DENS_N(k) ) * 0.5_RP &
+       rhs = - J33G * ( DPRES_N(k+1) - DPRES_N(k) ) * RFDZ(k) / G(k,I_XYW) &
+             - GRAV * ( DENS_N(k+1) - REF_dens(k+1) + DENS_N(k) - REF_dens(k) ) * 0.5_RP &
              + Sw(k)
        if ( abs(lhs) < small ) then
           error = rhs
@@ -1446,8 +1449,8 @@ contains
        if ( abs(error) > small ) then
           write(*,*)"HEVI: MOMZ error", k, i, j, error, lhs, rhs
           write(*,*) MOMZ_N(k), MOMZ(k), dt
-          write(*,*) - J33G * ( PRES(k+1) - PRES(k) ) * RFDZ(k) / G(k,I_XYW) &
-             - GRAV * ( DENS(k+1) + DENS(k) ) * 0.5_RP &
+          write(*,*) - J33G * ( DPRES(k+1) - DPRES(k) ) * RFDZ(k) / G(k,I_XYW) &
+             - GRAV * ( DENS(k+1) -REF_dens(k+1) + DENS(k) -REF_dens(k) ) * 0.5_RP &
              + Sw(k)
           call PRC_MPIstop
        end if

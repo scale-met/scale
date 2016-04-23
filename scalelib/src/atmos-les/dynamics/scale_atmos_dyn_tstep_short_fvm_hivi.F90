@@ -333,7 +333,7 @@ contains
     zero = 0.0_RP
 
 #ifdef DEBUG
-    PRES(:,:,:) = UNDEF
+    DPRES(:,:,:) = UNDEF
     POTT(:,:,:) = UNDEF
 
     mflx_hi(:,:,:,:) = UNDEF
@@ -1322,8 +1322,8 @@ contains
 #ifdef DEBUG
           call CHECK( __LINE__, DPRES_N(k+1,i,j) )
           call CHECK( __LINE__, DPRES_N(k  ,i,j) )
-          call CHECK( __LINE__, PRES(k+1,i,j) )
-          call CHECK( __LINE__, PRES(k  ,i,j) )
+          call CHECK( __LINE__, DPRES(k+1,i,j) )
+          call CHECK( __LINE__, DPRES(k  ,i,j) )
           call CHECK( __LINE__, DDENS(k+1,i,j) )
           call CHECK( __LINE__, DDENS(k  ,i,j) )
           call CHECK( __LINE__, REF_DENS(k+1,i,j) )
@@ -1572,11 +1572,8 @@ contains
 
 #ifdef DEBUG
        call check_pres( &
-            DPRES_N, REF_pres, PRES, RHOT_RK, RHOT, Rtot &
-#ifndef DRY
-            , kappa &
-#endif
-    )
+            DPRES_N, DPRES, RHOT_RK, RHOT, &
+            RT2P )
 #endif
 
     enddo
@@ -2358,41 +2355,23 @@ contains
   end subroutine check_solver
 
   subroutine check_pres( &
-       DPRES, REF_pres, PRES, &
-       RHOT_RK, RHOT, Rtot &
-#ifndef DRY
-       , kappa &
-#endif
-       )
-    use scale_const, only: &
-       Rdry  => CONST_Rdry, &
-       CPdry => CONST_CPdry, &
-       CVdry => CONST_CVdry, &
-       P00   => CONST_PRE00
+       DPRES_N, DPRES, &
+       RHOT_RK, RHOT, &
+       RT2P )
+    real(RP), intent(in) :: DPRES_N(KA,IA,JA)
     real(RP), intent(in) :: DPRES(KA,IA,JA)
-    real(RP), intent(in) :: REF_pres(KA,IA,JA)
-    real(RP), intent(in) :: PRES(KA,IA,JA)
     real(RP), intent(in) :: RHOT_RK(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
-#ifndef DRY
-    real(RP), intent(in) :: kappa(KA,IA,JA)
-#endif
+    real(RP), intent(in) :: RT2P(KA,IA,JA)
 
     real(RP) :: lhs, rhs
-    real(RP) :: kapp
     integer :: k,i,j
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-#ifndef DRY
-       kapp = kappa(k,i,j)
-#else
-       kapp = CPdry / CVdry
-#endif
-       lhs = DPRES(k,i,j) - ( PRES(k,i,j) - REF_pres(k,i,j) )
-       rhs = kapp * PRES(k,i,j) * ( RHOT_RK(k,i,j) - RHOT(k,i,j) ) / RHOT(k,i,j)
+       lhs = DPRES_N(k,i,j) - DPRES(k,i,j)
+       rhs = RT2P(k,i,j) * ( RHOT_RK(k,i,j) - RHOT(k,i,j) )
        if ( abs( lhs - rhs ) / lhs > 1e-15 ) then
           write(*,*) "error is too large: ", k,i,j, lhs, rhs
           call abort
