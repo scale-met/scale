@@ -108,7 +108,7 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
-       DT, NSTEP_DYN                                         )
+       DTL, DTS                                              )
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
@@ -240,9 +240,8 @@ contains
 
     logical,  intent(in)    :: USE_AVERAGE
 
-    real(DP), intent(in)    :: DT
-    integer , intent(in)    :: NSTEP_DYN
-
+    real(DP), intent(in)    :: DTL
+    real(DP), intent(in)    :: DTS
 
     ! for time integartion
     real(RP) :: DENS0   (KA,IA,JA)
@@ -292,7 +291,7 @@ contains
 
        do n = 1, 3
 
-          dtrk = dt / (4-n)
+          dtrk = DTL / (4-n)
           last = n == 3
 
           call ATMOS_DYN_tstep_large( &
@@ -319,7 +318,7 @@ contains
                FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,              & ! (in)
                FLAG_FCT_ALONG_STREAM,                                       & ! (in)
                USE_AVERAGE .and. last,                                      & ! (in)
-               dtrk, NSTEP_DYN, last                                        ) ! (in)
+               dtrk, dts, last                                              ) ! (in)
 
        end do
 

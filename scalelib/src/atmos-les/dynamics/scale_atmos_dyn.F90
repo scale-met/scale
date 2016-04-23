@@ -254,7 +254,7 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
-       DTSEC, NSTEP_ATMOS_DYN                                )
+       DTSEC, DTSEC_DYN                                      )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -342,7 +342,7 @@ contains
     logical,  intent(in)    :: USE_AVERAGE
 
     real(DP), intent(in)    :: DTSEC
-    integer , intent(in)    :: NSTEP_ATMOS_DYN
+    real(DP), intent(in)    :: DTSEC_DYN
 
     ! for time integartion
     real(RP) :: DENS00  (KA,IA,JA) ! saved density before small step loop
@@ -501,7 +501,7 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! (in)
        FLAG_FCT_ALONG_STREAM,                                & ! (in)
        USE_AVERAGE,                                          & ! (in)
-       DTSEC, NSTEP_ATMOS_DYN                                ) ! (in)
+       DTSEC, DTSEC_DYN                                      ) ! (in)
 
     call PROF_rapend  ("DYN_Tinteg", 2)
 

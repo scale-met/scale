@@ -178,8 +178,7 @@ contains
   subroutine ATMOS_DYN_driver( do_flag )
     use scale_time, only: &
        TIME_DTSEC,           &
-       TIME_DTSEC_ATMOS_DYN, &
-       TIME_NSTEP_ATMOS_DYN
+       TIME_DTSEC_ATMOS_DYN
     use scale_grid, only: &
        GRID_CDZ,  &
        GRID_CDX,  &
@@ -301,7 +300,7 @@ contains
          ATMOS_DYN_FLAG_FCT_along_stream,                      & ! [IN]
          ATMOS_USE_AVERAGE,                                    & ! [IN]
          TIME_DTSEC,                                           & ! [IN]
-         TIME_NSTEP_ATMOS_DYN                                  ) ! [IN]
+         TIME_DTSEC_ATMOS_DYN                                  ) ! [IN]
 
        call ATMOS_vars_total
 

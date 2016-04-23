@@ -189,9 +189,10 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
-       DDT, NSTEP_DYN, Llast                                 )
+       DTLS, DTSS, Llast                                     )
 use scale_process, only: prc_myrank
     use scale_const, only: &
+       EPS    => CONST_EPS, &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry
@@ -329,8 +330,8 @@ use scale_process, only: prc_myrank
 
     logical,  intent(in)    :: USE_AVERAGE
 
-    real(DP), intent(in)    :: DDT
-    integer , intent(in)    :: NSTEP_DYN
+    real(DP), intent(in)    :: DTLS
+    real(DP), intent(in)    :: DTSS
     logical , intent(in)    :: Llast
 
     ! for time integartion
@@ -355,8 +356,9 @@ use scale_process, only: prc_myrank
     real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
 
-    real(RP) :: dt
-    real(RP) :: dtrk
+    real(RP) :: dtl
+    real(RP) :: dts
+    integer  :: nstep
 
     integer  :: IIS, IIE
     integer  :: JJS, JJE
@@ -382,8 +384,10 @@ use scale_process, only: prc_myrank
     qflx_lo(:,:,:,:) = UNDEF
 #endif
 
-    dtrk = real(DDT / NSTEP_DYN, kind=RP)
-    dt   = real(DDT, kind=RP)
+    dts = real(DTSS, kind=RP) ! short time step
+    dtl = real(DTLS, kind=RP) ! large time step
+    nstep = int( ( dtl + eps ) / dts )
+    dts = dtl / nstep ! dts is divisor of dtl and smaller or equal to dtss
 
 
 !OCL XFILL
@@ -541,9 +545,9 @@ use scale_process, only: prc_myrank
     call PROF_rapend  ("DYN_Large_Boundary", 2)
 
 
-    do step = 1, NSTEP_DYN
+    do step = 1, nstep
 
-       call HIST_switch( Llast .and. step == NSTEP_DYN )
+       call HIST_switch( Llast .and. step == nstep )
 
        !-----< prepare tendency >-----
 
@@ -770,7 +774,7 @@ use scale_process, only: prc_myrank
        else
           call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
                                          DENS, MOMZ, MOMX, MOMY, RHOT,           & ! [IN]
-                                         CDZ, CDX, CDY, FDZ, FDX, FDY, dtrk,     & ! [IN]
+                                         CDZ, CDX, CDY, FDZ, FDX, FDY, dts,      & ! [IN]
                                          REF_dens, REF_pott,                     & ! [IN]
                                          ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
@@ -778,6 +782,8 @@ use scale_process, only: prc_myrank
        call PROF_rapend  ("DYN_Large_Numfilter", 2)
 
        if ( divdmp_coef > 0.0_RP ) then
+
+          call PROF_rapstart("DYN_Large_divercence", 2)
 
           ! 3D divergence for damping
 
@@ -829,6 +835,8 @@ use scale_process, only: prc_myrank
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+          call PROF_rapend  ("DYN_Large_divercence", 2)
+
        end if
 
        !------------------------------------------------------------------------
@@ -851,7 +859,7 @@ use scale_process, only: prc_myrank
                                        PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
                                        REF_pres, REF_dens,                       & ! (in)
                                        BND_W, BND_E, BND_S, BND_N,               & ! (in)
-                                       dtrk                                      ) ! (in)
+                                       dts                                       ) ! (in)
        else
           call ATMOS_DYN_tinteg_short( DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
                                        mflx_hi, tflx_hi,                         & ! (inout)
@@ -866,7 +874,7 @@ use scale_process, only: prc_myrank
                                        PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
                                        REF_pres, REF_dens,                       & ! (in)
                                        BND_W, BND_E, BND_S, BND_N,               & ! (in)
-                                       dtrk                                      ) ! (in)
+                                       dts                                       ) ! (in)
        end if
 
        call PROF_rapend  ("DYN_Large_Tinteg", 2)
@@ -877,7 +885,7 @@ use scale_process, only: prc_myrank
             mflx_hi, tflx_hi, &
             GSQRT, MAPF, &
             RCDX, RCDY, &
-            dtrk, step, &
+            dts, step, &
             BND_W, BND_E, BND_S, BND_N )
 #endif
 
@@ -936,7 +944,7 @@ use scale_process, only: prc_myrank
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq) + RHOQ_tp(k,i,j,iq) * dtrk / DENS00(k,i,j), 0.0_RP )
+             QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq) + RHOQ_tp(k,i,j,iq) * dts / DENS00(k,i,j), 0.0_RP )
           end do
           end do
           end do
@@ -950,11 +958,11 @@ use scale_process, only: prc_myrank
     enddo ! dynamical steps
 
     if ( USE_AVERAGE ) then
-       DENS_av(:,:,:) = DENS_av(:,:,:) / NSTEP_DYN
-       MOMZ_av(:,:,:) = MOMZ_av(:,:,:) / NSTEP_DYN
-       MOMX_av(:,:,:) = MOMX_av(:,:,:) / NSTEP_DYN
-       MOMY_av(:,:,:) = MOMY_av(:,:,:) / NSTEP_DYN
-       RHOT_av(:,:,:) = RHOT_av(:,:,:) / NSTEP_DYN
+       DENS_av(:,:,:) = DENS_av(:,:,:) / nstep
+       MOMZ_av(:,:,:) = MOMZ_av(:,:,:) / nstep
+       MOMX_av(:,:,:) = MOMX_av(:,:,:) / nstep
+       MOMY_av(:,:,:) = MOMY_av(:,:,:) / nstep
+       RHOT_av(:,:,:) = RHOT_av(:,:,:) / nstep
     endif
 
 #ifndef DRY
@@ -963,7 +971,7 @@ use scale_process, only: prc_myrank
     !###########################################################################
 
 !OCL XFILL
-    mflx_hi(:,:,:,:) = mflx_av(:,:,:,:) / NSTEP_DYN
+    mflx_hi(:,:,:,:) = mflx_av(:,:,:,:) / nstep
 
     call COMM_vars8( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
     call COMM_vars8( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
@@ -995,7 +1003,7 @@ use scale_process, only: prc_myrank
        else
           call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
                                            DENS00, QTRC(:,:,:,iq),                 & ! [IN]
-                                           CDZ, CDX, CDY, dt,                      & ! [IN]
+                                           CDZ, CDX, CDY, dtl,                     & ! [IN]
                                            REF_qv, iq,                             & ! [IN]
                                            ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
@@ -1059,7 +1067,7 @@ use scale_process, only: prc_myrank
                               mflx_hi,                      & ! (in)
                               RCDZ, RCDX, RCDY,             & ! (in)
                               GSQRT(:,:,:,I_XYZ),           & ! (in)
-                              MAPF(:,:,:,I_XY), dt,         & ! (in)
+                              MAPF(:,:,:,I_XY), dtl,        & ! (in)
                               FLAG_FCT_ALONG_STREAM         ) ! (in)
 
           do JJS = JS, JE, JBLOCK
@@ -1072,13 +1080,13 @@ use scale_process, only: prc_myrank
              do i = IIS, IIE
              do k = KS, KE
                 QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS0(k,i,j) &
-                            + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
-                                         - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
-                                         - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                       + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
-                                         - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
-                                       ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
+                            + dtl * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
+                                          - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                        + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
+                                          - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                        + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
+                                          - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
+                                        ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
                               + RHOQ_t(k,i,j,iq) ) ) / DENS(k,i,j)
              enddo
              enddo
@@ -1099,10 +1107,10 @@ use scale_process, only: prc_myrank
              do i = IIS, IIE
              do k = KS, KE
                 QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS0(k,i,j) &
-                            + dt * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR)  ) * RCDZ(k) &
-                                       + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR)  ) * RCDX(i) &
-                                       + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR)  ) * RCDY(j) &
-                                       ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
+                            + dtl * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR)  ) * RCDZ(k) &
+                                        + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR)  ) * RCDX(i) &
+                                        + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR)  ) * RCDY(j) &
+                                        ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
                               + RHOQ_t(k,i,j,iq) ) ) / DENS(k,i,j)
              enddo
              enddo

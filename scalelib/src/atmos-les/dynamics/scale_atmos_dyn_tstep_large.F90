@@ -58,7 +58,7 @@ module scale_atmos_dyn_tstep_large
           FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
           FLAG_FCT_ALONG_STREAM,                                &
           USE_AVERAGE,                                          &
-          DDT, NSTEP_DYN, Llast                                 )
+          DTL, DTS, Llast                                       )
        use scale_precision
        use scale_grid_index
        use scale_index
@@ -164,8 +164,9 @@ module scale_atmos_dyn_tstep_large
 
        logical,  intent(in)    :: USE_AVERAGE
 
-       real(DP), intent(in)    :: DDT
-       integer , intent(in)    :: NSTEP_DYN
+       real(DP), intent(in)    :: DTL
+       real(DP), intent(in)    :: DTS
+
        logical , intent(in)    :: Llast
      end subroutine large
 

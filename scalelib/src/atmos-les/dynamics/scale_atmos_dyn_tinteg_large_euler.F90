@@ -105,7 +105,7 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
-       DT, NSTEP_DYN                                         )
+       DTL, DTS                                              )
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
@@ -236,8 +236,8 @@ contains
 
     logical,  intent(in)    :: USE_AVERAGE
 
-    real(DP), intent(in)    :: DT
-    integer , intent(in)    :: NSTEP_DYN
+    real(DP), intent(in)    :: DTL
+    real(DP), intent(in)    :: DTS
 
 
     real(RP) :: DENS0(KA,IA,JA)
@@ -280,7 +280,7 @@ contains
          FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! (in)
          FLAG_FCT_ALONG_STREAM,                                & ! (in)
          USE_AVERAGE,                                          & ! (in)
-         DT, NSTEP_DYN, .true.                                 ) ! (in)
+         DTL, DTS, .true.                                      ) ! (in)
 
     return
   end subroutine ATMOS_DYN_tinteg_large_euler
