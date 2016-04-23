@@ -166,14 +166,14 @@ contains
     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
     DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
     PROG0, PROG,                                 &
-    Rtot, CVtot, CORIOLI,                        &
+    DPRES0, RT2P, CORIOLI,                       &
     num_diff, divdmp_coef, DDIV,                 &
     FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
     FLAG_FCT_ALONG_STREAM,                       &
     CDZ, FDZ, FDX, FDY,                          &
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
-    REF_pres, REF_dens,                          &
+    REF_dens, REF_rhot,                          &
     BND_W, BND_E, BND_S, BND_N,                  &
     dtrk, dt                                     )
     use scale_grid_index
@@ -259,8 +259,8 @@ contains
     real(RP), intent(in)  :: PROG0(KA,IA,JA,VA)
     real(RP), intent(in)  :: PROG (KA,IA,JA,VA)
 
-    real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
-    real(RP), intent(in) :: CVtot(KA,IA,JA) ! CV
+    real(RP), intent(in) :: DPRES0(KA,IA,JA)
+    real(RP), intent(in) :: RT2P(KA,IA,JA)
     real(RP), intent(in) :: CORIOLI(1,IA,JA)
     real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in) :: divdmp_coef
@@ -287,8 +287,8 @@ contains
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
     real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
-    real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
+    real(RP), intent(in)  :: REF_rhot(KA,IA,JA)
 
     logical,  intent(in)  :: BND_W
     logical,  intent(in)  :: BND_E
@@ -300,7 +300,6 @@ contains
 
 
     ! diagnostic variables (work space)
-    real(RP) :: PRES(KA,IA,JA) ! pressure [Pa]
     real(RP) :: POTT(KA,IA,JA) ! potential temperature [K]
     real(RP) :: DPRES(KA,IA,JA) ! pressure deviation from reference pressure
 
@@ -329,8 +328,6 @@ contains
     real(RP) :: Sw(KA,IA,JA)
     real(RP) :: St(KA,IA,JA)
     real(RP) :: PT(KA,IA,JA)
-    real(RP) :: CPRES(KA,IA,JA) ! kappa * PRES / RHOT
-    real(RP) :: CPtot(KA,IA,JA)
     real(RP) :: C(KMAX-1,IA,JA)
 
     real(RP) :: F1(KA,IA,JA)
@@ -342,12 +339,10 @@ contains
     integer :: iss, iee
 
 #ifdef DEBUG
-    PRES(:,:,:) = UNDEF
     POTT(:,:,:) = UNDEF
     DPRES(:,:,:) = UNDEF
 
     PT(:,:,:) = UNDEF
-    CPRES(:,:,:) = UNDEF
 
 
     qflx_hi (:,:,:,:) = UNDEF
@@ -376,49 +371,20 @@ contains
 
        PROFILE_START("hevi_pres")
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
+       do j = JJS, JJE+1
        do i = IIS, IIE+1
           do k = KS, KE
 #ifdef DEBUG
+             call CHECK( __LINE__, DPRES0(k,i,j) )
+             call CHECK( __LINE__, RT2P(k,i,j) )
              call CHECK( __LINE__, RHOT(k,i,j) )
-             call CHECK( __LINE__, Rtot(k,i,j) )
-             call CHECK( __LINE__, CVtot(k,i,j) )
+             call CHECK( __LINE__, REF_rhot(k,i,j) )
 #endif
-#ifdef DRY
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**kappa
-#else
-             CPtot(k,i,j) = CVtot(k,i,j) + Rtot(k,i,j)
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**(CPtot(k,i,j)/CVtot(k,i,j))
-#endif
-             DPRES(k,i,j) = PRES(k,i,j) - REF_pres(k,i,j)
+             DPRES(k,i,j) = DPRES0(k,i,j) + RT2P(k,i,j) * ( RHOT(k,i,j) - REF_rhot(k,i,j) )
           enddo
-          PRES (KS-1,i,j) = PRES(KS+1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
-          DPRES(KS-1,i,j) = PRES(KS-1,i,j) - REF_pres(KS-1,i,j)
-          PRES (KE+1,i,j) = PRES(KE-1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
-          DPRES(KE+1,i,j) = PRES(KE+1,i,j) - REF_pres(KE+1,i,j)
+          DPRES(KS-1,i,j) = DPRES0(KS-1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
+          DPRES(KE+1,i,j) = DPRES0(KE+1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
        enddo
-       enddo
-       ! j = JJE+1
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(1)
-       do i = IIS, IIE
-          do k = KS, KE
-#ifdef DEBUG
-             call CHECK( __LINE__, RHOT(k,i,JJE+1) )
-             call CHECK( __LINE__, Rtot(k,i,JJE+1) )
-             call CHECK( __LINE__, CVtot(k,i,JJE+1) )
-#endif
-#ifdef DRY
-             PRES(k,i,JJE+1) = P00 * ( RHOT(k,i,JJE+1) * Rdry / P00 )**kappa
-#else
-             CPtot(k,i,JJE+1) = CVtot(k,i,JJE+1) + Rtot(k,i,JJE+1)
-             PRES(k,i,JJE+1) = P00 * ( RHOT(k,i,JJE+1) * Rtot(k,i,JJE+1) / P00 )**(CPtot(k,i,JJE+1)/CVtot(k,i,JJE+1))
-#endif
-             DPRES(k,i,JJE+1) = PRES(k,i,JJE+1) - REF_pres(k,i,JJE+1)
-          enddo
-          PRES (KS-1,i,JJE+1) = PRES(KS+1,i,JJE+1) - DENS(KS,i,JJE+1) * ( PHI(KS-1,i,JJE+1) - PHI(KS+1,i,JJE+1) )
-          DPRES(KS-1,i,JJE+1) = PRES(KS-1,i,JJE+1) - REF_pres(KS-1,i,JJE+1)
-          PRES (KE+1,i,JJE+1) = PRES(KE-1,i,JJE+1) - DENS(KE,i,JJE+1) * ( PHI(KE+1,i,JJE+1) - PHI(KE-1,i,JJE+1) )
-          DPRES(KE+1,i,JJE+1) = PRES(KE+1,i,JJE+1) - REF_pres(KE+1,i,JJE+1)
        enddo
        PROFILE_STOP("hevi_pres")
 
@@ -709,13 +675,7 @@ contains
                CDZ )
 
           do k = KS, KE
-             CPRES(k,i,j) = &
-#ifdef DRY
-                  kappa        * PRES(k,i,j) /                  RHOT(k,i,j)
-#else
-                  CPtot(k,i,j) * PRES(k,i,j) / ( CVtot(k,i,j) * RHOT(k,i,j) )
-#endif
-             A(k,i,j) = dtrk**2 * J33G * RCDZ(k) * CPRES(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
+             A(k,i,j) = dtrk**2 * J33G * RCDZ(k) * RT2P(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
           end do
           B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
           F1(KS,i,j) =        - ( PT(KS+1,i,j) * RFDZ(KS) *   A(KS+1,i,j)             + B ) / GSQRT(KS,i,j,I_XYW)
@@ -730,8 +690,8 @@ contains
           F2(KE-1,i,j) = 1.0_RP + ( PT(KE-1,i,j) * RFDZ(KE-1) * ( A(KE,i,j)+A(KE-1,i,j) )    ) / GSQRT(KE-1,i,j,I_XYW)
           F3(KE-1,i,j) =        - ( PT(KE-2,i,j) * RFDZ(KE-1) *             A(KE-1,i,j)  - B ) / GSQRT(KE-1,i,j,I_XYW)
           do k = KS, KE-1
-             pg = - ( DPRES(k+1,i,j) + CPRES(k+1,i,j)*dtrk*St(k+1,i,j) &
-                    - DPRES(k  ,i,j) - CPRES(k  ,i,j)*dtrk*St(k  ,i,j) ) &
+             pg = - ( DPRES(k+1,i,j) + RT2P(k+1,i,j)*dtrk*St(k+1,i,j) &
+                    - DPRES(k  ,i,j) - RT2P(k  ,i,j)*dtrk*St(k  ,i,j) ) &
                     * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW) &
                   - 0.5_RP * GRAV &
                     * ( ( DENS(k+1,i,j) - REF_dens(k+1,i,j) ) &
@@ -825,11 +785,7 @@ contains
                DENS(:,i,j), MOMZ(:,i,j), RHOT(:,i,j), PRES(:,i,j), &
                Sr(:,i,j), Sw(:,i,j), St(:,i,j), &
                J33G, GSQRT(:,i,j,:), &
-#ifdef DRY
-               kappa, &
-#else
-               CPtot(:,i,j), CVtot(:,i,j), &
-#endif
+               RT2P(:,i,j) &
                dtrk, i, j )
 #endif
 
@@ -1372,11 +1328,7 @@ contains
        DENS, MOMZ, RHOT, PRES, &
        Sr, Sw, St, &
        J33G, G, &
-#ifdef DRY
-       kappa, &
-#else
-       CPtot, CVtot, &
-#endif
+       RT2P, &
        dt, i, j )
     use scale_const, only: &
          EPS => CONST_EPS, &
@@ -1400,12 +1352,7 @@ contains
     real(RP), intent(in) :: St(KA)
     real(RP), intent(in) :: J33G
     real(RP), intent(in) :: G(KA,8)
-#ifdef DRY
-    real(RP), intent(in) :: kappa
-#else
-    real(RP), intent(in) :: CPtot(KA)
-    real(RP), intent(in) :: CVtot(KA)
-#endif
+    real(RP), intent(in) :: RT2P(KA)
     real(RP), intent(in) :: dt
     integer , intent(in) :: i
     integer , intent(in) :: j
@@ -1468,10 +1415,7 @@ contains
 
 
     do k = KS, KE
-#ifndef DRY
-       kappa = CPtot(k) / CVtot(k)
-#endif
-       PRES_N(k) = PRES(k) * ( 1.0_RP + kappa * ( RHOT_N(k) - RHOT(k) ) / RHOT(k) )
+       PRES_N(k) = PRES(k) + RT2P(k) * ( RHOT_N(k) - RHOT(k) )
     end do
 
     do k = KS, KE

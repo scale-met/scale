@@ -61,9 +61,6 @@ module scale_atmos_dyn_tstep_short_fvm_hivi
   integer,  private :: ITMAX
   real(RP), private :: epsilon
 
-#ifdef DRY
-  real(RP), private :: kappa
-#endif
   integer, private :: mtype ! MPI DATATYPE
 
   ! tentative
@@ -149,10 +146,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
 
 
-#ifdef DRY
-    kappa = CPdry / CVdry
-#endif
-
     if ( RP == DP ) then
        mtype = MPI_DOUBLE_PRECISION
     else if ( RP == SP ) then
@@ -174,14 +167,14 @@ contains
     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
     DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
     PROG0, PROG,                                 &
-    Rtot, CVtot, CORIOLI,                        &
+    DPRES0, RT2P, CORIOLI,                       &
     num_diff, divdmp_coef, DDIV,                 &
     FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
     FLAG_FCT_ALONG_STREAM,                       &
     CDZ, FDZ, FDX, FDY,                          &
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
-    REF_pres, REF_dens,                          &
+    REF_dens, REF_rhot,                          &
     BND_W, BND_E, BND_S, BND_N,                  &
     dtrk, dt                                     )
     use scale_grid_index
@@ -264,8 +257,8 @@ contains
     real(RP), intent(in)  :: PROG0(KA,IA,JA,VA)
     real(RP), intent(in)  :: PROG (KA,IA,JA,VA)
 
-    real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
-    real(RP), intent(in) :: CVtot(KA,IA,JA) ! CV
+    real(RP), intent(in) :: DPRES0(KA,IA,JA)
+    real(RP), intent(in) :: RT2P(KA,IA,JA)
     real(RP), intent(in) :: CORIOLI(1,IA,JA)
     real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in) :: divdmp_coef
@@ -292,8 +285,8 @@ contains
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
     real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
-    real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
+    real(RP), intent(in)  :: REF_rhot(KA,IA,JA)
 
     logical,  intent(in)  :: BND_W
     logical,  intent(in)  :: BND_E
@@ -305,10 +298,10 @@ contains
 
 
     ! diagnostic variables (work space)
-    real(RP) :: PRES(KA,IA,JA) ! pressure [Pa]
-    real(RP) :: POTT(KA,IA,JA) ! potential temperature [K]
-    real(RP) :: DPRES(KA,IA,JA) ! pressure deviation from reference
+    real(RP) :: POTT(KA,IA,JA)  ! potential temperature [K]
     real(RP) :: DDENS(KA,IA,JA) ! density deviation from reference
+    real(RP) :: DPRES(KA,IA,JA) ! pressure deviation from reference
+    real(RP) :: DPRES_N(KA,IA,JA) ! pressure deviation at t=n+1 [Pa]
 
     real(RP) :: Sr(KA,IA,JA)
     real(RP) :: Sw(KA,IA,JA)
@@ -317,10 +310,6 @@ contains
     real(RP) :: St(KA,IA,JA)
     real(RP) :: RCs2(KA,IA,JA)
     real(RP) :: B(KA,IA,JA)
-
-#ifndef DRY
-    real(RP) :: kappa(KA,IA,JA)
-#endif
 
     real(RP) :: duvw
 
@@ -368,9 +357,6 @@ contains
     r(:,:,:) = UNDEF
     p(:,:,:) = UNDEF
 
-#ifndef DRY
-    kappa(:,:,:) = UNDEF
-#endif
 #endif
 
     rdt = 1.0_RP / dtrk
@@ -380,68 +366,23 @@ contains
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-#ifndef DRY
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS, KE
-          kappa(k,i,j) = ( CVtot(k,i,j) + Rtot(k,i,j) ) / CVtot(k,i,j)
-       end do
-       end do
-       end do
+          do k = KS, KE
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             call CHECK( __LINE__, DPRES0(k,i,j) )
+             call CHECK( __LINE__, RT2P(k,i,j) )
+             call CHECK( __LINE__, RHOT(k,i,j) )
+             call CHECK( __LINE__, REF_rhot(k,i,j) )
 #endif
-#endif
+             DPRES(k,i,j) = DPRES0(k,i,j) + RT2P(k,i,j) * ( RHOT(k,i,j) - REF_rhot(k,i,j) )
+          enddo
+          DPRES(KS-1,i,j) = DPRES0(KS-1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
+          DPRES(KE+1,i,j) = DPRES0(KE+1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
+       enddo
+       enddo
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
-#ifdef DEBUG
-          call CHECK( __LINE__, RHOT(k,i,j) )
-          call CHECK( __LINE__, Rtot(k,i,j) )
-#ifndef DRY
-          call CHECK( __LINE__, kappa(k,i,j) )
-#endif
-#endif
-#ifdef DRY
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**kappa
-#else
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**kappa(k,i,j)
-#endif
-       enddo
-       enddo
-       enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
-          call CHECK( __LINE__, PRES(KS+1,i,j) )
-          call CHECK( __LINE__, DENS(KS,i,j) )
-          call CHECK( __LINE__, PHI(KS-1,i,j) )
-          call CHECK( __LINE__, PHI(KS+1,i,j) )
-          call CHECK( __LINE__, PRES(KE-1,i,j) )
-          call CHECK( __LINE__, DENS(KE,i,j) )
-          call CHECK( __LINE__, PHI(KE+1,i,j) )
-          call CHECK( __LINE__, PHI(KE-1,i,j) )
-#endif
-          PRES(KS-1,i,j) = PRES(KS+1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
-          PRES(KE+1,i,j) = PRES(KE-1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
-       end do
-       end do
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS-1, KE+1
-#ifdef DEBUG
-          call CHECK( __LINE__, PRES(k,i,j) )
-          call CHECK( __LINE__, REF_PRES(k,i,j) )
-#endif
-          DPRES(k,i,j) = PRES(k,i,j) - REF_pres(k,i,j)
-       end do
-       enddo
-       enddo
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
@@ -454,6 +395,7 @@ contains
        end do
        enddo
        enddo
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
@@ -974,35 +916,11 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    ! implicit solver
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-#ifdef HIVI_BICGSTAB
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-#ifdef DEBUG
-          call CHECK( __LINE__, RHOT(k,i,j) )
-          call CHECK( __LINE__, PRES(k,i,j) )
-#ifndef DRY
-          call CHECK( __LINE__, kappa(k,i,j) )
-#endif
-#endif
-          RCs2(k,i,j) = RHOT(k,i,j) / ( PRES(k,i,j) &
-#ifdef DRY
-               * kappa &
-#else
-               * kappa(k,i,j) &
-#endif
-               )
-       end do
-       end do
-       end do
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
+    end do
+    end do
 
-    end do
-    end do
+    ! implicit solver
+#ifdef HIVI_BICGSTAB
 
     call COMM_vars8( Su, 1 )
     call COMM_vars8( Sv, 2 )
@@ -1054,9 +972,9 @@ contains
           call CHECK( __LINE__, DPRES(k-1,i,j) )
           call CHECK( __LINE__, DPRES(k  ,i,j) )
           call CHECK( __LINE__, DPRES(k+1,i,j) )
-          call CHECK( __LINE__, RCs2(k-1,i,j) )
-          call CHECK( __LINE__, RCs2(k  ,i,j) )
-          call CHECK( __LINE__, RCs2(k+1,i,j) )
+          call CHECK( __LINE__, RT2P(k-1,i,j) )
+          call CHECK( __LINE__, RT2P(k  ,i,j) )
+          call CHECK( __LINE__, RT2P(k+1,i,j) )
           call CHECK( __LINE__, RHOT(k-1,i,j) )
           call CHECK( __LINE__, RHOT(k+1,i,j) )
           call CHECK( __LINE__, DDENS(k-1,i,j) )
@@ -1081,7 +999,7 @@ contains
                - GSQRT(k,i,j-1,I_XVZ) * ( MOMY(k,i,j-1) + dtrk*Sv(k,i,j-1) ) &
                  * ( FACT_N*(POTT(k,i,j  )+POTT(k,i,j-1)) &
                    + FACT_F*(POTT(k,i,j+1)+POTT(k,i,j-2)) ) ) * RCDY(j) &
-             + GSQRT(k,i,j,I_XYZ) * ( St(k,i,j) - DPRES(k,i,j) * RCs2(k,i,j) * rdt ) &
+             + GSQRT(k,i,j,I_XYZ) * ( St(k,i,j) - DPRES(k,i,j) / RT2P(k,i,j) * rdt ) &
              ) * rdt &
              + GRAV * J33G * ( ( DPRES(k+1,i,j)*RCs2(k+1,i,j) &
                                - DPRES(k-1,i,j)*RCs2(k-1,i,j) ) &
@@ -1125,8 +1043,8 @@ contains
           call CHECK( __LINE__, GSQRT(KS,i,j,I_XYZ) )
           call CHECK( __LINE__, DPRES(KS  ,i,j) )
           call CHECK( __LINE__, DPRES(KS+1,i,j) )
-          call CHECK( __LINE__, RCs2(KS  ,i,j) )
-          call CHECK( __LINE__, RCs2(KS+1,i,j) )
+          call CHECK( __LINE__, RT2P(KS  ,i,j) )
+          call CHECK( __LINE__, RT2P(KS+1,i,j) )
           call CHECK( __LINE__, RHOT(KS+1,i,j) )
           call CHECK( __LINE__, DDENS(KS+1,i,j) )
 #endif
@@ -1145,7 +1063,7 @@ contains
                - GSQRT(KS,i,j-1,I_XVZ) * ( MOMY(KS,i,j-1) + dtrk*Sv(KS,i,j-1) ) &
                  * ( FACT_N*(POTT(KS,i,j  )+POTT(KS,i,j-1)) &
                    + FACT_F*(POTT(KS,i,j+1)+POTT(KS,i,j-2)) ) ) * RCDY(j) &
-             + GSQRT(KS,i,j,I_XYZ) * ( St(KS,i,j) - DPRES(KS,i,j) * RCs2(KS,i,j) * rdt ) &
+             + GSQRT(KS,i,j,I_XYZ) * ( St(KS,i,j) - DPRES(KS,i,j) / RT2P(KS,i,j) * rdt ) &
              ) * rdt &
              + GRAV * J33G * ( DPRES(KS+1,i,j)*RCs2(KS+1,i,j) &
                              - RHOT(KS+1,i,j)*DDENS(KS+1,i,j)/DENS(KS+1,i,j) &
@@ -1187,9 +1105,9 @@ contains
           call CHECK( __LINE__, DPRES(KS  ,i,j) )
           call CHECK( __LINE__, DPRES(KS+1,i,j) )
           call CHECK( __LINE__, DPRES(KS+2,i,j) )
-          call CHECK( __LINE__, RCs2(KS  ,i,j) )
-          call CHECK( __LINE__, RCs2(KS+1,i,j) )
-          call CHECK( __LINE__, RCs2(KS+2,i,j) )
+          call CHECK( __LINE__, RT2P(KS  ,i,j) )
+          call CHECK( __LINE__, RT2P(KS+1,i,j) )
+          call CHECK( __LINE__, RT2P(KS+2,i,j) )
           call CHECK( __LINE__, RHOT(KS  ,i,j) )
           call CHECK( __LINE__, RHOT(KS+2,i,j) )
           call CHECK( __LINE__, DDENS(KS  ,i,j) )
@@ -1213,10 +1131,10 @@ contains
                - GSQRT(KS+1,i,j-1,I_XVZ) * ( MOMY(KS+1,i,j-1) + dtrk*Sv(KS+1,i,j-1) ) &
                  * ( FACT_N*(POTT(KS+1,i,j  )+POTT(KS+1,i,j-1)) &
                    + FACT_F*(POTT(KS+1,i,j+1)+POTT(KS+1,i,j-2)) ) ) * RCDY(j) &
-             + GSQRT(KS+1,i,j,I_XYZ) * ( St(KS+1,i,j) - DPRES(KS+1,i,j) * RCs2(KS+1,i,j) * rdt ) &
+             + GSQRT(KS+1,i,j,I_XYZ) * ( St(KS+1,i,j) - DPRES(KS+1,i,j) / RT2P(KS+1,i,j) * rdt ) &
              ) * rdt &
-             + GRAV * J33G * ( ( DPRES(KS+2,i,j)*RCs2(KS+2,i,j) &
-                               - DPRES(KS  ,i,j)*RCs2(KS  ,i,j) ) &
+             + GRAV * J33G * ( ( DPRES(KS+2,i,j)/RT2P(KS+2,i,j) &
+                               - DPRES(KS  ,i,j)/RT2P(KS  ,i,j) ) &
                              - ( RHOT(KS+2,i,j)*DDENS(KS+2,i,j)/DENS(KS+2,i,j) &
                                - RHOT(KS  ,i,j)*DDENS(KS  ,i,j)/DENS(KS  ,i,j) ) &
                              - ( DENS(KS+2,i,j)*(RHOT_RK(KS+2,i,j)/DENS_RK(KS+2,i,j) - POTT(KS+2,i,j) ) &
@@ -1258,9 +1176,9 @@ contains
           call CHECK( __LINE__, DPRES(KE-2,i,j) )
           call CHECK( __LINE__, DPRES(KE-1,i,j) )
           call CHECK( __LINE__, DPRES(KE  ,i,j) )
-          call CHECK( __LINE__, RCs2(KE-2,i,j) )
-          call CHECK( __LINE__, RCs2(KE-1,i,j) )
-          call CHECK( __LINE__, RCs2(KE  ,i,j) )
+          call CHECK( __LINE__, RT2P(KE-2,i,j) )
+          call CHECK( __LINE__, RT2P(KE-1,i,j) )
+          call CHECK( __LINE__, RT2P(KE  ,i,j) )
           call CHECK( __LINE__, RHOT(KE-2,i,j) )
           call CHECK( __LINE__, RHOT(KE,i,j) )
           call CHECK( __LINE__, DDENS(KE-2,i,j) )
@@ -1284,10 +1202,10 @@ contains
                - GSQRT(KE-1,i,j-1,I_XVZ) * ( MOMY(KE-1,i,j-1) + dtrk*Sv(KE-1,i,j-1) ) &
                  * ( FACT_N*(POTT(KE-1,i,j  )+POTT(KE-1,i,j-1)) &
                    + FACT_F*(POTT(KE-1,i,j+1)+POTT(KE-1,i,j-2)) ) ) * RCDY(j) &
-             + GSQRT(KE-1,i,j,I_XYZ) * ( St(KE-1,i,j) - DPRES(KE-1,i,j) * RCs2(KE-1,i,j) * rdt ) &
+             + GSQRT(KE-1,i,j,I_XYZ) * ( St(KE-1,i,j) - DPRES(KE-1,i,j) / RT2P(KE-1,i,j) * rdt ) &
              ) * rdt &
-             + GRAV * J33G * ( ( DPRES(KE  ,i,j)*RCs2(KE  ,i,j) &
-                               - DPRES(KE-2,i,j)*RCs2(KE-2,i,j) ) &
+             + GRAV * J33G * ( ( DPRES(KE  ,i,j)/RT2P(KE  ,i,j) &
+                               - DPRES(KE-2,i,j)/RT2P(KE-2,i,j) ) &
                              - ( RHOT(KE  ,i,j)*DDENS(KE  ,i,j)/DENS(KE  ,i,j) &
                                - RHOT(KE-2,i,j)*DDENS(KE-2,i,j)/DENS(KE-2,i,j) )&
                              - ( DENS(KE  ,i,j)*(RHOT_RK(KE  ,i,j)/DENS_RK(KE  ,i,j) - POTT(KE  ,i,j) ) &
@@ -1325,8 +1243,8 @@ contains
           call CHECK( __LINE__, St(KE,i,j) )
           call CHECK( __LINE__, DPRES(KE-1,i,j) )
           call CHECK( __LINE__, DPRES(KE  ,i,j) )
-          call CHECK( __LINE__, RCs2(KE-1,i,j) )
-          call CHECK( __LINE__, RCs2(KE  ,i,j) )
+          call CHECK( __LINE__, RT2P(KE-1,i,j) )
+          call CHECK( __LINE__, RT2P(KE  ,i,j) )
           call CHECK( __LINE__, RHOT(KE-1,i,j) )
           call CHECK( __LINE__, DDENS(KE-1,i,j) )
 #endif
@@ -1346,9 +1264,9 @@ contains
                - GSQRT(KE,i,j-1,I_XVZ) * ( MOMY(KE,i,j-1) + dtrk*Sv(KE,i,j-1) ) &
                  * ( FACT_N*(POTT(KE,i,j  )+POTT(KE,i,j-1)) &
                    + FACT_F*(POTT(KE,i,j+1)+POTT(KE,i,j-2)) ) ) * RCDY(j) &
-             + GSQRT(KE,i,j,I_XYZ) * ( St(KE,i,j) - DPRES(KE,i,j) * RCs2(KE,i,j) * rdt ) &
+             + GSQRT(KE,i,j,I_XYZ) * ( St(KE,i,j) - DPRES(KE,i,j) / RT2P(KE,i,j) * rdt ) &
              ) * rdt &
-             + GRAV * J33G * ( - DPRES(KE-1,i,j)*RCs2(KE-1,i,j) &
+             + GRAV * J33G * ( - DPRES(KE-1,i,j)/RT2P(KE-1,i,j) &
                                + RHOT(KE-1,i,j)*DDENS(KE-1,i,j)/DENS(KE-1,i,j) &
                                - DENS(KE-1,i,j)*(RHOT_RK(KE-1,i,j)/DENS_RK(KE-1,i,j) - POTT(KE-1,i,j) ) ) &
                              / ( FDZ(KE) + FDZ(KE-1) )
@@ -1372,32 +1290,27 @@ contains
     end do
 
     call solve_bicgstab( &
-       DPRES, & ! (inout)
+       DPRES_N, & ! (out)
+       DPRES, & ! (in)
        M, B   ) ! (in)
 
 #ifdef DEBUG
-    call check_solver( DPRES, M, B )
+    call check_solver( DPRES_N, M, B )
 #endif
 
-    call COMM_vars8( DPRES, 1 )
-    call COMM_wait ( DPRES, 1 )
+    call COMM_vars8( DPRES_N, 1 )
+    call COMM_wait ( DPRES_N, 1 )
 
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
 #else
-    end do
-    end do
 
     call solve_multigrid
 
+#endif
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
-#endif
 
        !##### momentum equation (z) #####
 
@@ -1407,8 +1320,8 @@ contains
        do i = IIS, IIE
        do k = KS, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, DPRES(k+1,i,j) )
-          call CHECK( __LINE__, DPRES(k  ,i,j) )
+          call CHECK( __LINE__, DPRES_N(k+1,i,j) )
+          call CHECK( __LINE__, DPRES_N(k  ,i,j) )
           call CHECK( __LINE__, PRES(k+1,i,j) )
           call CHECK( __LINE__, PRES(k  ,i,j) )
           call CHECK( __LINE__, DDENS(k+1,i,j) )
@@ -1418,23 +1331,15 @@ contains
           call CHECK( __LINE__, MOMZ0(k,i,j) )
 #endif
           duvw =  dtrk * ( ( &
-                   - J33G * ( DPRES(k+1,i,j) - DPRES(k,i,j) ) * RFDZ(k) &
+                   - J33G * ( DPRES_N(k+1,i,j) - DPRES_N(k,i,j) ) * RFDZ(k) &
                    ) / GSQRT(k,i,j,I_UYZ) &
                  - 0.5_RP * GRAV &
                  * ( DDENS(k+1,i,j) &
-                   + ( DPRES(k+1,i,j) - (PRES(k+1,i,j)-REF_pres(k+1,i,j)) ) &
-#ifdef DRY
-                   * DENS(k+1,i,j) / ( kappa         *PRES(k+1,i,j) ) &
-#else
-                   * DENS(k+1,i,j) / ( kappa(k+1,i,j)*PRES(k+1,i,j) ) &
-#endif
+                   + ( DPRES_N(k+1,i,j) - DPRES(k+1,i,j) ) &
+                   * POTT(k+1,i,j) / RT2P(k+1,i,j) &
                    + DDENS(k  ,i,j) &
-                   + ( DPRES(k  ,i,j) - (PRES(k  ,i,j)-REF_pres(k  ,i,j)) ) &
-#ifdef DRY
-                   * DENS(k  ,i,j) / ( kappa         *PRES(k  ,i,j) ) ) &
-#else
-                   * DENS(k  ,i,j) / ( kappa(k  ,i,j)*PRES(k  ,i,j) ) ) &
-#endif
+                   + ( DPRES_N(k  ,i,j) - DPRES(k  ,i,j) ) &
+                   * POTT(k  ,i,j) / RT2P(k  ,i,j) ) &
                  + Sw(k,i,j) )
           MOMZ_RK(k,i,j) = MOMZ0(k,i,j) + duvw
           mflx_hi(k,i,j,ZDIR) = J33G * ( MOMZ(k,i,j) + duvw )
@@ -1463,8 +1368,8 @@ contains
        do i = IIS-1, IIE
        do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, DPRES(k,i+1,j) )
-          call CHECK( __LINE__, DPRES(k,i  ,j) )
+          call CHECK( __LINE__, DPRES_N(k,i+1,j) )
+          call CHECK( __LINE__, DPRES_N(k,i  ,j) )
           call CHECK( __LINE__, GSQRT(k,i+1,j,I_XYZ) )
           call CHECK( __LINE__, GSQRT(k,i  ,j,I_XYZ) )
           call CHECK( __LINE__, GSQRT(k,i,j,I_UYZ) )
@@ -1472,8 +1377,8 @@ contains
           call CHECK( __LINE__, MOMX0(k,i,j) )
 #endif
           duvw = dtrk * ( ( &
-                 - ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) &
-                   - GSQRT(k,i  ,j,I_XYZ) * DPRES(k,i  ,j) ) * RFDX(i) &  ! pressure gradient force
+                 - ( GSQRT(k,i+1,j,I_XYZ) * DPRES_N(k,i+1,j) &
+                   - GSQRT(k,i  ,j,I_XYZ) * DPRES_N(k,i  ,j) ) * RFDX(i) &  ! pressure gradient force
                    ) / GSQRT(k,i,j,I_UYZ) &
                  + Su(k,i,j) )
 
@@ -1494,8 +1399,8 @@ contains
        do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, DPRES(k,i,j  ) )
-          call CHECK( __LINE__, DPRES(k,i,j+1) )
+          call CHECK( __LINE__, DPRES_N(k,i,j  ) )
+          call CHECK( __LINE__, DPRES_N(k,i,j+1) )
           call CHECK( __LINE__, GSQRT(k,i,j  ,I_XYZ) )
           call CHECK( __LINE__, GSQRT(k,i,j+1,I_XYZ) )
           call CHECK( __LINE__, GSQRT(k,i,j,I_XVZ) )
@@ -1503,8 +1408,8 @@ contains
           call CHECK( __LINE__, MOMY0(k,i,j) )
 #endif
           duvw = dtrk * ( ( &
-                            - ( GSQRT(k,i,j+1,I_XYZ) * DPRES(k,i,j+1) &
-                              - GSQRT(k,i,j  ,I_XYZ) * DPRES(k,i,j  ) ) * RFDY(j) &
+                            - ( GSQRT(k,i,j+1,I_XYZ) * DPRES_N(k,i,j+1) &
+                              - GSQRT(k,i,j  ,I_XYZ) * DPRES_N(k,i,j  ) ) * RFDY(j) &
                           ) / GSQRT(k,i,j,I_XVZ) &
                           + Sv(k,i,j) )
           MOMY_RK(k,i,j) = MOMY0(k,i,j) + duvw
@@ -1667,7 +1572,7 @@ contains
 
 #ifdef DEBUG
        call check_pres( &
-            DPRES, REF_pres, PRES, RHOT_RK, RHOT, Rtot &
+            DPRES_N, REF_pres, PRES, RHOT_RK, RHOT, Rtot &
 #ifndef DRY
             , kappa &
 #endif
@@ -1677,10 +1582,12 @@ contains
     enddo
     enddo
 
+    return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hivi
 
 #ifdef HIVI_BICGSTAB
   subroutine solve_bicgstab( &
+       DPRES_N, &
        DPRES, &
        M, B )
     use scale_process, only: &
@@ -1690,9 +1597,10 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
-    real(RP), intent(inout) :: DPRES(KA,IA,JA)
-    real(RP), intent(in) :: M(7,KA,IA,JA)
-    real(RP), intent(in) :: B(KA,IA,JA)
+    real(RP), intent(out) :: DPRES_N(KA,IA,JA)
+    real(RP), intent(in)  :: DPRES(KA,IA,JA)
+    real(RP), intent(in)  :: M(7,KA,IA,JA)
+    real(RP), intent(in)  :: B(KA,IA,JA)
 
     real(RP) :: r0(KA,IA,JA)
 
@@ -1911,7 +1819,7 @@ contains
           call CHECK( __LINE__, p(k,i,j) )
           call CHECK( __LINE__, s(k,i,j) )
 #endif
-          DPRES(k,i,j) = DPRES(k,i,j) + al*p(k,i,j) + w*s(k,i,j)
+          DPRES_N(k,i,j) = DPRES(k,i,j) + al*p(k,i,j) + w*s(k,i,j)
        end do
        end do
        end do

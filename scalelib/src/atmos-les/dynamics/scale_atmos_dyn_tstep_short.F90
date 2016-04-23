@@ -45,14 +45,14 @@ module scale_atmos_dyn_tstep_short
                        DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
                        DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
                        PROG0, PROG,                                      & ! (in)
-                       Rtot, CVtot, CORIOLI,                             & ! (in)
+                       DPRES0, RT2P, CORIOLI,                            & ! (in)
                        num_diff, divdmp_coef, DDIV,                      & ! (in)
                        FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! (in)
                        FLAG_FCT_ALONG_STREAM,                            & ! (in)
                        CDZ, FDZ, FDX, FDY,                               & ! (in)
                        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                        PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
-                       REF_pres, REF_dens,                               & ! (in)
+                       REF_dens, REF_rhot,                               & ! (in)
                        BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                        dtrk, dt                                          ) ! (in)
        use scale_precision
@@ -89,8 +89,8 @@ module scale_atmos_dyn_tstep_short
        real(RP), intent(in)  :: PROG0(KA,IA,JA,VA)
        real(RP), intent(in)  :: PROG (KA,IA,JA,VA)
 
-       real(RP), intent(in)  :: Rtot    (KA,IA,JA)  ! total R
-       real(RP), intent(in)  :: CVtot   (KA,IA,JA)  ! total CV
+       real(RP), intent(in)  :: DPRES0  (KA,IA,JA)
+       real(RP), intent(in)  :: RT2P    (KA,IA,JA)
        real(RP), intent(in)  :: CORIOLI (1, IA,JA)
        real(RP), intent(in)  :: num_diff(KA,IA,JA,5,3)
        real(RP), intent(in)  :: divdmp_coef
@@ -117,8 +117,8 @@ module scale_atmos_dyn_tstep_short
        real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
        real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
        real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
-       real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
        real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
+       real(RP), intent(in)  :: REF_rhot(KA,IA,JA)
 
        logical,  intent(in)  :: BND_W
        logical,  intent(in)  :: BND_E

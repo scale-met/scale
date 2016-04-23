@@ -106,14 +106,14 @@ contains
        DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
        DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
        PROG0, PROG,                                 &
-       Rtot, CVtot, CORIOLI,                        &
+       DPRES0, RT2P, CORIOLI,                       &
        num_diff, divdmp_coef, DDIV,                 &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
        FLAG_FCT_ALONG_STREAM,                       &
        CDZ, FDZ, FDX, FDY,                          &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
-       REF_pres, REF_dens,                          &
+       REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
        dtrk, dt                                     )
     use scale_grid_index
@@ -210,8 +210,8 @@ contains
     real(RP), intent(in)  :: PROG0(KA,IA,JA,VA)
     real(RP), intent(in)  :: PROG (KA,IA,JA,VA)
 
-    real(RP), intent(in)  :: Rtot    (KA,IA,JA)  ! total R
-    real(RP), intent(in)  :: CVtot   (KA,IA,JA)  ! total CV
+    real(RP), intent(in)  :: DPRES0  (KA,IA,JA)
+    real(RP), intent(in)  :: RT2P    (KA,IA,JA)
     real(RP), intent(in)  :: CORIOLI (1, IA,JA)
     real(RP), intent(in)  :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in)  :: divdmp_coef
@@ -238,8 +238,8 @@ contains
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
     real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
-    real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
+    real(RP), intent(in)  :: REF_rhot(KA,IA,JA)
 
     logical,  intent(in)  :: BND_W
     logical,  intent(in)  :: BND_E
@@ -250,7 +250,6 @@ contains
     real(RP), intent(in)  :: dt
 
     ! diagnostic variables
-    real(RP) :: PRES (KA,IA,JA) ! pressure [Pa]
     real(RP) :: VELZ (KA,IA,JA) ! velocity w [m/s]
     real(RP) :: VELX (KA,IA,JA) ! velocity u [m/s]
     real(RP) :: VELY (KA,IA,JA) ! velocity v [m/s]
@@ -301,7 +300,6 @@ contains
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
-    PRES(:,:,:) = UNDEF
     VELZ(:,:,:) = UNDEF
     VELX(:,:,:) = UNDEF
     VELY(:,:,:) = UNDEF
@@ -353,23 +351,15 @@ contains
        do i = IIS-2, IIE+2
           do k = KS, KE
 #ifdef DEBUG
+             call CHECK( __LINE__, DPRES0(k,i,j) )
+             call CHECK( __LINE__, RT2P(k,i,j) )
              call CHECK( __LINE__, RHOT(k,i,j) )
-             call CHECK( __LINE__, Rtot(k,i,j) )
-             call CHECK( __LINE__, CVtot(k,i,j) )
+             call CHECK( __LINE__, REF_rhot(k,i,j) )
 #endif
-#ifdef DRY
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
-#else
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
-#endif
+             DPRES(k,i,j) = DPRES0(k,i,j) + RT2P(k,i,j) * ( RHOT(k,i,j) - REF_rhot(k,i,j) )
           enddo
-
-          PRES(KS-1,i,j) = PRES(KS+1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
-          PRES(KE+1,i,j) = PRES(KE-1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
-
-          do k = KS-1, KE+1
-             DPRES(k,i,j) = PRES(k,i,j) - REF_pres(k,i,j)
-          enddo
+          DPRES(KS-1,i,j) = DPRES0(KS-1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
+          DPRES(KE+1,i,j) = DPRES0(KE+1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
        enddo
        enddo
 #ifdef DEBUG
