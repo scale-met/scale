@@ -962,6 +962,7 @@ contains
 
     real(RP) :: FLX_X(IA,JA)
     real(RP) :: FLX_Y(IA,JA)
+    real(RP) :: FLX_TMP(IA,JA)
 
     real(RP) :: slope(IA,JA)
     real(RP) :: maxslope
@@ -1041,22 +1042,42 @@ contains
           do j = JS  , JE
           do i = IS-1, IE
              FLX_X(i,j) = Zsfc(i+1,j) - Zsfc(i,j)
+!             FLX_TMP(i,j) = Zsfc(i+1,j) - Zsfc(i,j)
           enddo
           enddo
+!!$          call TOPO_fillhalo( FLX_TMP )
+!!$          do j = JS  , JE
+!!$          do i = IS-1, IE
+!!$             FLX_X(i,j) = - ( FLX_TMP(i+1,j) - FLX_TMP(i,j) )
+!!$          enddo
+!!$          enddo
 
           do j = JS-1, JE
           do i = IS  , IE
              FLX_Y(i,j) = Zsfc(i,j+1) - Zsfc(i,j)
+!             FLX_TMP(i,j) = Zsfc(i,j+1) - Zsfc(i,j)
           enddo
           enddo
+!!$          call TOPO_fillhalo( FLX_TMP )
+!!$          do j = JS-1, JE
+!!$          do i = IS  , IE
+!!$             FLX_Y(i,j) = - ( FLX_TMP(i,j+1) - FLX_TMP(i,j) )
+!!$          enddo
+!!$          enddo
+
 
           if ( CNVTOPO_smooth_local ) then
              do j = JS  , JE
              do i = IS-1, IE
                 flag = 0.5_RP &
-                     + sign(0.5_RP, max( abs(DZsfc_DX(1,i+1,j,1)), &
-                                         abs(DZsfc_DX(1,i  ,j,1)), &
-                                         abs(DZsfc_DX(1,i-1,j,1))  ) - smooth_maxslope )
+                     + sign(0.5_RP, max( abs(DZsfc_DX(1,i+1,j  ,1)), &
+                                         abs(DZsfc_DX(1,i  ,j  ,1)), &
+                                         abs(DZsfc_DX(1,i-1,j  ,1)), &
+                                         abs(DZsfc_DY(1,i+1,j  ,1)), &
+                                         abs(DZsfc_DY(1,i+1,j-1,1)), &
+                                         abs(DZsfc_DY(1,i  ,j  ,1)), &
+                                         abs(DZsfc_DY(1,i  ,j-1,1))  &
+                                       ) - smooth_maxslope )
                 FLX_X(i,j) = FLX_X(i,j) &
                            * DXL(i) / GRID_FDX(i) &
                            * flag
@@ -1065,9 +1086,14 @@ contains
              do j = JS-1, JE
              do i = IS  , IE
                 flag = 0.5_RP &
-                     + sign(0.5_RP, max( abs(DZsfc_DY(1,i,j+1,1)), &
-                                         abs(DZsfc_DY(1,i,j  ,1)), &
-                                         abs(DZsfc_DY(1,i,j-1,1))  ) - smooth_maxslope )
+                     + sign(0.5_RP, max( abs(DZsfc_DY(1,i  ,j+1,1)), &
+                                         abs(DZsfc_DY(1,i  ,j  ,1)), &
+                                         abs(DZsfc_DY(1,i  ,j-1,1)), &
+                                         abs(DZsfc_DX(1,i  ,j+1,1)), &
+                                         abs(DZsfc_DX(1,i-1,j+1,1)), &
+                                         abs(DZsfc_DX(1,i  ,j  ,1)), &
+                                         abs(DZsfc_DX(1,i-1,j  ,1))  &
+                                       ) - smooth_maxslope )
                 FLX_Y(i,j) = FLX_Y(i,j) &
                            * DYL(j) / GRID_FDY(j) &
                            * flag
@@ -1077,9 +1103,10 @@ contains
 
           do j = JS, JE
           do i = IS, IE
-             Zsfc(i,j) = Zsfc(i,j) &
-                       + 0.1_RP * ( ( FLX_X(i,j) - FLX_X(i-1,j) ) &
-                                  + ( FLX_Y(i,j) - FLX_Y(i,j-1) ) )
+             Zsfc(i,j) = max( 0.0_RP, &
+                              Zsfc(i,j) &
+                              + 0.1_RP * ( ( FLX_X(i,j) - FLX_X(i-1,j) ) &
+                                         + ( FLX_Y(i,j) - FLX_Y(i,j-1) ) ) )
           enddo
           enddo
 
