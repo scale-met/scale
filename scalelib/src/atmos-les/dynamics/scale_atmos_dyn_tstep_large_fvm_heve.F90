@@ -495,7 +495,7 @@ contains
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-          RHOQ_t(k,i,j,iq) = damp * DENS00(k,i,j)
+          RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp * DENS00(k,i,j)
 #ifdef HIST_TEND
           damp_t(k,i,j) = damp
 #endif
@@ -503,9 +503,9 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(RHOQ_tp(:,:,:,iq), trim(AQ_NAME(iq))//'_t_phys',                         &
+       call HIST_in(RHOQ_tp(:,:,:,iq), trim(AQ_NAME(iq))//'_t_phys', &
                     'tendency of '//trim(AQ_NAME(iq))//' due to physics',          'kg/kg/s' )
-       call HIST_in(damp_t,            trim(AQ_NAME(iq))//'_t_damp',                         &
+       call HIST_in(damp_t,            trim(AQ_NAME(iq))//'_t_damp', &
                     'tendency of '//trim(AQ_NAME(iq))//' due to rayleigh damping', 'kg/kg/s' )
 #endif
 !OCL XFILL
@@ -536,7 +536,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          RHOQ_t(k,i,j,iq) = 0.0_RP
+          RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq)
        enddo
        enddo
        enddo
@@ -965,22 +965,6 @@ contains
 #ifndef DRY
        mflx_av(:,:,:,:) = mflx_av(:,:,:,:) + mflx_hi(:,:,:,:)
 #endif
-
-       do iq = 1, QA
-
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq) + RHOQ_tp(k,i,j,iq) * dts / DENS00(k,i,j), 0.0_RP )
-          end do
-          end do
-          end do
-
-          call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
-          call COMM_wait ( QTRC(:,:,:,iq), I_COMM_QTRC(iq), .false. )
-
-          ! TODO: mass and energy conservation should be considered
-       end do
 
     enddo ! dynamical steps
 

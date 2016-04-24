@@ -267,8 +267,7 @@ contains
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
 
-    real(DP), intent(in)    :: dt
-
+    real(RP), intent(in)    :: dt
 
     real(RP) :: dtrk
 
