@@ -493,6 +493,8 @@ contains
        zdim     )
     use gtool_history, only: &
        HistoryAddVariable
+    use scale_time, only: &
+       NOWSTEP => TIME_NOWSTEP
     implicit none
 
     integer,          intent(out) :: itemid  !< index number of the item
@@ -582,6 +584,7 @@ contains
                              dims(1:ndim), & ! [IN]
                              desc,         & ! [IN]
                              unit,         & ! [IN]
+                             NOWSTEP,      & ! [IN]
                              itemid,       & ! [OUT]
                              zinterp,      & ! [OUT]
                              existed       ) ! [OUT]

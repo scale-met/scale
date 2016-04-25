@@ -214,7 +214,7 @@ contains
     character(len=*), intent(in), optional :: namelist_filename
     integer         , intent(in), optional :: namelist_fid
 
-    character(len=File_HLONG)  :: HISTORY_DEFAULT_BASENAME  = 'history'
+    character(len=File_HLONG)  :: HISTORY_DEFAULT_BASENAME  = ''
     real(DP)                   :: HISTORY_DEFAULT_TINTERVAL = 1.0_DP
     character(len=File_HSHORT) :: HISTORY_DEFAULT_TUNIT     = 'sec'
     logical                    :: HISTORY_DEFAULT_TAVERAGE  = .false.
@@ -256,7 +256,7 @@ contains
     integer :: fid_conf
 
     integer :: ierr
-    integer :: n
+    integer :: n, ni
     integer :: memsize
     intrinsic size
     !---------------------------------------------------------------------------
@@ -332,15 +332,15 @@ contains
     endif
 
     ! listup history request
+    History_req_nmax = 0
     if ( fid_conf > 0 ) then
        rewind( fid_conf )
        do n = 1, History_req_limit
+          BASENAME  = HISTORY_DEFAULT_BASENAME
           read(fid_conf, nml=HISTITEM, iostat=ierr)
           if( ierr /= 0 ) exit
+          if ( BASENAME /= "" ) History_req_nmax = History_req_nmax + 1
        enddo
-       History_req_nmax = n - 1
-    else
-       History_req_nmax = History_req_limit
     endif
 
     if    ( History_req_nmax > History_req_limit ) then
@@ -368,7 +368,8 @@ contains
 
     if ( fid_conf > 0 ) rewind(fid_conf)
     memsize = 0
-    do n = 1, History_req_nmax
+    ni = 0
+    do n = 1, History_req_limit
        ! set default
        BASENAME  = HISTORY_DEFAULT_BASENAME
        ITEM      = 'unknown'
@@ -383,22 +384,25 @@ contains
           if( ierr /= 0 ) exit
        endif
 
-       History_req_item    (n) = ITEM
-       History_req_basename(n) = BASENAME
-       call CalendarYmdhms2sec( History_req_tintsec(n), TINTERVAL, TUNIT )
-       History_req_tintstep(n) = int( History_req_tintsec(n) / HISTORY_DTSEC )
+       if ( BASENAME == "" ) cycle
+       ni = ni + 1
 
-       History_req_tavg    (n) = TAVERAGE
-       History_req_zinterp (n) = ZINTERP
+       History_req_item    (ni) = ITEM
+       History_req_basename(ni) = BASENAME
+       call CalendarYmdhms2sec( History_req_tintsec(ni), TINTERVAL, TUNIT )
+       History_req_tintstep(ni) = int( History_req_tintsec(ni) / HISTORY_DTSEC )
 
-       if ( History_req_tintsec(n) <= 0.D0 ) then
+       History_req_tavg    (ni) = TAVERAGE
+       History_req_zinterp (ni) = ZINTERP
+
+       if ( History_req_tintsec(ni) <= 0.D0 ) then
           write(message,*) 'xxx Not appropriate time interval. Check!', ITEM, TINTERVAL
           call Log('E', message)
        endif
 
-       if ( abs(History_req_tintsec(n)-real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC) > eps ) then
+       if ( abs(History_req_tintsec(ni)-real(History_req_tintstep(ni),kind=DP)*HISTORY_DTSEC) > eps ) then
           write(message,*) 'xxx time interval must be a multiple of delta t ', &
-                           History_req_tintsec(n), real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC
+                           History_req_tintsec(ni), real(History_req_tintstep(ni),kind=DP)*HISTORY_DTSEC
           call Log('E', message)
        endif
 
@@ -411,7 +415,7 @@ contains
           call Log('E', message)
        endif
 
-       memsize = memsize + array_size * File_preclist(History_req_dtype(n))
+       memsize = memsize + array_size * File_preclist(History_req_dtype(ni))
     enddo
 
     write(message,*) '*** Number of requested history item             : ', History_req_nmax
@@ -439,6 +443,7 @@ contains
        dims,       &
        desc,       &
        units,      &
+       now_step,   &
        id,         &
        zinterp,    &
        existed,    &
@@ -456,6 +461,7 @@ contains
     character(len=*), intent(in)  :: dims(:)
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
+    integer,          intent(in)  :: now_step
     integer,          intent(out) :: id
     logical,          intent(out) :: zinterp
     logical,          intent(out) :: existed
@@ -563,7 +569,7 @@ contains
 
              History_varsum(:,id) = 0.D0
 
-             if ( HISTORY_OUTPUT_STEP0 ) then
+             if ( HISTORY_OUTPUT_STEP0 .and. now_step==1 ) then
                 History_tstrstep(id) = 1 - History_tintstep(id)
              else
                 History_tstrstep(id) = 1
@@ -935,12 +941,7 @@ contains
 
     if ( firsttime ) then
        firsttime = .false.
-
        call HistoryOutputList
-
-       if ( HISTORY_OUTPUT_STEP0 ) then
-          History_tstrstep(itemid) = step_now
-       endif
     endif
 
     sec_str = HISTORY_STARTDAYSEC + real(History_tstrstep(itemid)-1,kind=DP) * HISTORY_DTSEC
