@@ -650,7 +650,6 @@ contains
 #ifdef HIST_TEND
           if ( lhist ) then
              advch_t(k,i,j,I_RHOT) = advch
-          end if
 #endif
        enddo
        enddo
@@ -693,10 +692,9 @@ contains
              pg = - ( DPRES(k+1,i,j) + RT2P(k+1,i,j)*dtrk*St(k+1,i,j) &
                     - DPRES(k  ,i,j) - RT2P(k  ,i,j)*dtrk*St(k  ,i,j) ) &
                     * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW) &
-                  - 0.5_RP * GRAV &
-                    * ( ( DENS(k+1,i,j) - REF_dens(k+1,i,j) ) &
-                      + ( DENS(k  ,i,j) - REF_dens(k  ,i,j) ) &
-                      + dtrk * ( Sr(k+1,i,j) + Sr(k,i,j) ) )
+                  - GRAV &
+                    * ( F2H(k,1,I_XYZ) * ( DENS(k+1,i,j) - REF_dens(k+1,i,j) + Sr(k+1,i,j) * dtrk ) &
+                      + F2H(k,2,I_XYZ) * ( DENS(k  ,i,j) - REF_dens(k  ,i,j) + Sr(k  ,i,j) * dtrk ) )
              C(k-KS+1,i,j) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) pg_t(k,i,j,1) = pg
@@ -729,7 +727,7 @@ contains
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                   + dtrk*( &
                   - J33G * ( DPRES(k+1,i,j)-DPRES(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,i_XYW) &
-                  - 0.5_RP * GRAV * ( (DENS(k,i,j)-REF_dens(k,i,j))+(DENS(k+1,i,j)-REF_dens(k+1,i,j)) ) &
+                  - GRAV * ( F2H(k,2,I_XYZ)*(DENS(k,i,j)-REF_dens(k,i,j))+F2H(k,1,I_XYZ)*(DENS(k+1,i,j)-REF_dens(k+1,i,j)) ) &
                   + Sw(k,i,j) )
 #else
              ! z-momentum flux
