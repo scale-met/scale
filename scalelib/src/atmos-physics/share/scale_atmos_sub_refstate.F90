@@ -247,6 +247,7 @@ contains
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
+       ! 1D
        call FILEIO_read( ATMOS_REFSTATE1D_pres(:),                           & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref', 'Z', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_REFSTATE1D_temp(:),                           & ! [OUT]
@@ -258,8 +259,20 @@ contains
        call FILEIO_read( ATMOS_REFSTATE1D_qv(:),                             & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'QV_ref',   'Z', step=1 ) ! [IN]
 
+       ! 3D
+       call FILEIO_read( ATMOS_REFSTATE_pres(:,:,:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref3D', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_temp(:,:,:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'TEMP_ref3D', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_dens(:,:,:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref3D', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_pott(:,:,:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref3D', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_qv(:,:,:),                               & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'QV_ref3D',   'ZXY', step=1 ) ! [IN]
+
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** refstate file is not specified.'
+       if( IO_L ) write(*,*) 'xxx refstate file is not specified.'
        call PRC_MPIstop
     endif
 
@@ -282,6 +295,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output reference state profile ***'
 
+       ! 1D
        call FILEIO_write( ATMOS_REFSTATE1D_pres(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'PRES_ref', 'Reference profile of pres.', 'Pa', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_REFSTATE1D_temp(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
@@ -292,6 +306,18 @@ contains
                           'POTT_ref', 'Reference profile of theta', 'K', 'Z',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_REFSTATE1D_qv(:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'QV_ref',   'Reference profile of qv', 'kg/kg', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+
+       ! 3D
+       call FILEIO_write( ATMOS_REFSTATE_pres(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'PRES_ref3D', 'Reference profile of pres.', 'Pa', 'ZXY',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE_temp(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'TEMP_ref3D', 'Reference profile of temp.', 'K', 'ZXY',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE_dens(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'DENS_ref3D', 'Reference profile of rho', 'kg/m3', 'ZXY',  ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE_pott(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'POTT_ref3D', 'Reference profile of theta', 'K', 'ZXY',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE_qv(:,:,:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'QV_ref3D',   'Reference profile of qv', 'kg/kg', 'ZXY',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
 
     endif
 
