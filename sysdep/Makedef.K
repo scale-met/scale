@@ -6,7 +6,7 @@
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
-               -x-                                                       \
+               -x100                                                     \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
