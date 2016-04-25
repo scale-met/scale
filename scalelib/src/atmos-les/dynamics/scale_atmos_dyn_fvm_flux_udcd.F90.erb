@@ -1,6 +1,7 @@
 % # -*- f90 -*-
 % # vi: set sw=4 ts=8:
 <%
+fname ||= ENV["fname"] # for ruby <= 1.8
 if /((?:ud|cd)(\d+))\.F90/ =~ fname
   postfix = $1
   order = $2.to_i
@@ -51,7 +52,7 @@ class Fixnum
   end
   alias :_to_s :to_s
   def to_s
-    0==self ? "" : self>0 ? "+"+_inspect : _inspect
+    0==self ? "" : self>0 ? "+"+_to_s : _to_s
   end
 end
 def flux(vel, ord, dir, k="k", i="i", j="j", dim=3)
@@ -107,7 +108,7 @@ def interp(val, src, dst, k="k", i="i", j="j")
     ret = "#{val}(#{k},#{i},#{j})"
   when src[2] == dst[2] # z==z
     ret = interpH(val, src[0..1], dst[0..1], k, i, j)
-  when src[2] == "Z" # Z->W
+  when src[2..2] == "Z" # Z->W
     v0 = interpH(val, src[0..1], dst[0..1], k  , i, j)
     v1 = interpH(val, src[0..1], dst[0..1], k+1, i, j)
     ret = "F2H(#{k},1,I_#{src}) * #{v1} &
@@ -126,26 +127,26 @@ def interpH(val, src, dst, k="k", i="i", j="j")
   when src == dst
     return "#{val}(#{k},#{i},#{j})"
   when src[0] == dst[0] # x==x, y!=y
-    if src[1]=="Y" # Y->V
+    if src[1..1]=="Y" # Y->V
       jo = 1
     else # V->Y
       jo = -1
     end
     return "0.5_RP * ( #{val}(#{k},#{i},#{j})+#{val}(#{k},#{i},#{j+jo}) )"
   when src[1] == dst[1] # x!=x, y==y
-    if src[0]=="X" # X->U
+    if src[0..0]=="X" # X->U
       io = 1
     else # U->X
       io = -1
     end
     return "0.5_RP * ( #{val}(#{k},#{i},#{j})+#{val}(#{k},#{i+io},#{j}) )"
   else # x!=x, y!=y
-    if src[0]=="X" # X->U
+    if src[0..0]=="X" # X->U
       io = 1
     else # U->X
       io = -1
     end
-    if src[1]=="Y" # Y->V
+    if src[1..1]=="Y" # Y->V
       jo = 1
     else # V->Y
       jo = -1
@@ -874,9 +875,9 @@ contains
 
    dst = uv
    if dir=="X"
-     dst = dst[0]=="X" ? "U"+dst[1] : "X"+dst[1]
+     dst = dst[0..0]=="X" ? "U"+dst[1..1] : "X"+dst[1..1]
    else # dir=="Y"
-     dst = dst[1]=="Y" ? dst[0]+"V" : dst[0]+"Y"
+     dst = dst[1..1]=="Y" ? dst[0..0]+"V" : dst[0..0]+"Y"
    end
 %>
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
