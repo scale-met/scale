@@ -168,7 +168,7 @@ contains
     real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
     real(RP), intent(out)   :: num_diff(KA,IA,JA,5,3)
-    real(RP), intent(out)   :: num_diff_q(KA,IA,JA,5)
+    real(RP), intent(out)   :: num_diff_q(KA,IA,JA,3)
 
     real(RP), intent(in)    :: DENS_tp(KA,IA,JA)
     real(RP), intent(in)    :: MOMZ_tp(KA,IA,JA)
@@ -252,7 +252,7 @@ contains
     real(RP) :: QTRC0   (KA,IA,JA,QA)
     real(RP) :: PROG0   (KA,IA,JA,VA)
 
-    real(RP) :: dtrk
+    real(DP) :: dtrk
 
     logical :: last
 
@@ -291,7 +291,7 @@ contains
 
        do n = 1, 3
 
-          dtrk = DTL / (4-n)
+          dtrk = DTL / real( 4-n, kind=DP )
           last = n == 3
 
           call ATMOS_DYN_tstep_large( &
