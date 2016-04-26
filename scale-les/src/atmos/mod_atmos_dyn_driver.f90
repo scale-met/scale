@@ -28,9 +28,6 @@ module mod_atmos_dyn_driver
   use scale_index
   use scale_tracer
 
-  use scale_atmos_numeric_fdm_def, only: &
-       & FLXEVALTYPENAME_CD4
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -75,13 +72,10 @@ module mod_atmos_dyn_driver
 
   ! lateral boundary flux adjustment
   integer,  private :: ATMOS_DYN_adjust_flux_cell  = 1                   ! number of cells adjusting lateral boundary flux
-
-  !* For DYN2
-  ! Type of finite difference scheme used in advection terms
-  character(len=H_SHORT), public :: ATMOS_DYN_FLXEVAL_TYPE = FLXEVALTYPENAME_CD4
-
   
-  
+
+  character(len=H_SHORT), private :: ATMOS_DYN_FVM_FLUX_scheme = 'CD4' ! UD1, CD2, UD3, CD4, UD5, CD
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -119,7 +113,6 @@ contains
     implicit none
     !-------------------------------------------------------
     
-    character(len=H_SHORT) :: ATMOS_DYN_FVM_FLUX_scheme = 'CD4' ! UD1, CD2, UD3, CD4, UD5, CD6
 
     NAMELIST / PARAM_ATMOS_DYN / &
        ATMOS_DYN_FVM_FLUX_scheme,             &

@@ -228,7 +228,8 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation'
 <% funcs[o].each do |func| %>
       <%= func.sub(/_[^_]+\Z/,"") %> => <%= func %>
-<% end # func %>
+<% end %>
+<%# func %>
       
       if ( IHALO < <%=nh%> ) then
          write(*,*) 'xxx IHALO must be >= ', <%=nh%>

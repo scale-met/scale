@@ -238,7 +238,8 @@ module <%= modname %>
   !
   !++ Private parameters & variables
   !
-<% if order%2 == 0 # even %>
+<% if order%2 == 0 %>
+<%# even %>
   real(RP), parameter :: F2  =  0.5_RP
 <%   if order >= 4 %>
   real(RP), parameter :: F41 =  7.0_RP/12.0_RP
@@ -249,7 +250,8 @@ module <%= modname %>
   real(RP), parameter :: F63 =  1.0_RP/60.0_RP
 <%     end # 6 %>
 <%   end # 4 %>
-<% else # odd %>
+<% else %>
+<%# odd %>
   real(RP), parameter :: F1  =  0.5_RP
 <%   if order >= 3 %>
   real(RP), parameter :: F31  = -1.0_RP/12.0_RP
@@ -447,7 +449,8 @@ contains
 
     return
   end subroutine ATMOS_DYN_FVM_flux<%=dir%>_XYZ_<%=postfix%>
-<% end # X Y loop %>
+<% end %>
+<%# end X Y loop %>
 
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYW
@@ -906,9 +909,11 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_flux<%=dir%>_<%=uv%>Z_<%=postfix%>
 
-<% end # X Y loop %>
+<% end %>
+<%# -- X Y loop ------- %>
 
-<% end # U V loop %>
+<% end %>
+<%# -- U V loop ------- %>
 
 end module <%= modname %>
 
