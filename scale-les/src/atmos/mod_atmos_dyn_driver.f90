@@ -42,6 +42,11 @@ module mod_atmos_dyn_driver
   !
   !++ Public parameters & variables
   !
+
+  ! Type of advective flux scheme (FVM)
+  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_scheme = 'CD4' ! UD1, CD2, UD3, CD4, UD5, CD
+
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -73,8 +78,6 @@ module mod_atmos_dyn_driver
   ! lateral boundary flux adjustment
   integer,  private :: ATMOS_DYN_adjust_flux_cell  = 1                   ! number of cells adjusting lateral boundary flux
   
-
-  character(len=H_SHORT), private :: ATMOS_DYN_FVM_FLUX_scheme = 'CD4' ! UD1, CD2, UD3, CD4, UD5, CD
 
   !-----------------------------------------------------------------------------
 contains
