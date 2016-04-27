@@ -294,6 +294,15 @@ contains
           dtrk = DTL / real( 4-n, kind=DP )
           last = n == 3
 
+          if ( n > 1 ) then
+             DENS = DENS0
+             MOMZ = MOMZ0
+             MOMX = MOMX0
+             MOMY = MOMY0
+             RHOT = RHOT0
+             if ( VA > 0 ) PROG = PROG0
+          end if
+
           call ATMOS_DYN_tstep_large( &
                DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    PROG,  & ! (inout)
                DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av,        & ! (inout)

@@ -208,6 +208,7 @@ contains
        I_UY,  &
        I_XV
     use scale_atmos_dyn_common, only: &
+       ATMOS_DYN_divergence, &
        ATMOS_DYN_numfilter_coef,   &
        ATMOS_DYN_numfilter_coef_q, &
        ATMOS_DYN_fct
@@ -395,7 +396,7 @@ contains
     nstep = ceiling( ( dtl - eps ) / dts )
     dts = dtl / nstep ! dts is divisor of dtl and smaller or equal to dtss
     if( IO_L ) write(IO_FID_LOG,'(a,f0.2,a,f0.2,a,i0)') &
-         '*** DT_large, DT_small, and DT_large/DT_small: ', dtl, ', ', dts, ', ', nstep
+         '       DT_large, DT_small, and DT_large/DT_small: ', dtl, ', ', dts, ', ', nstep
 
 
 !OCL XFILL
@@ -812,59 +813,15 @@ contains
 
        if ( divdmp_coef > 0.0_RP ) then
 
-          call PROF_rapstart("DYN_Large_divercence", 2)
+          call ATMOS_DYN_divergence( DDIV, & ! (out)
+               MOMZ, MOMX, MOMY, & ! (in)
+               GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+               RCDZ, RCDX, RCDY, RFDZ, FDZ ) ! (in)
 
-          ! 3D divergence for damping
+       else
 
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, JJE+1
-          do i = IIS, IIE+1
-          do k = KS-1, KE+1
-             DDIV(k,i,j) = J33G * ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
-                         + ( ( MOMX(k+1,i,j) + MOMX(k+1,i-1,j  ) ) * J13G(k+1,i,j,I_XYW) &
-                           - ( MOMX(k-1,i,j) + MOMX(k-1,i-1,j  ) ) * J13G(k-1,i,j,I_XYW) &
-                           + ( MOMY(k+1,i,j) + MOMY(k+1,i  ,j-1) ) * J23G(k+1,i,j,I_XYW) &
-                           - ( MOMY(k-1,i,j) + MOMY(k-1,i  ,j-1) ) * J23G(k-1,i,j,I_XYW) ) / ( FDZ(k)+FDZ(k-1) ) &
-                         + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                         * ( ( MOMX(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
-                             - MOMX(k,i-1,j  ) * GSQRT(k,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
-                           + ( MOMY(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
-                             - MOMY(k,i,  j-1) * GSQRT(k,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
-          enddo
-          enddo
-          enddo
-#ifdef DEBUG
-          k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, JJE+1
-          do i = IIS, IIE+1
-             DDIV(KS,i,j) = J33G * ( MOMZ(KS,i,j) ) * RCDZ(KS) &
-                         + ( ( MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j  ) ) * J13G(KS+1,i,j,I_XYW) &
-                           - ( MOMX(KS-1,i,j) + MOMX(KS  ,i-1,j  ) ) * J13G(KS  ,i,j,I_XYW) &
-                           + ( MOMY(KS+1,i,j) + MOMY(KS+1,i  ,j-1) ) * J23G(KS+1,i,j,I_XYW) &
-                           - ( MOMY(KS  ,i,j) + MOMY(KS  ,i  ,j-1) ) * J23G(KS  ,i,j,I_XYW) ) * RFDZ(KS) &
-                         + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                         * ( ( MOMX(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
-                             - MOMX(KS,i-1,j  ) * GSQRT(KS,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
-                           + ( MOMY(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
-                             - MOMY(KS,i,  j-1) * GSQRT(KS,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
-             DDIV(KE,i,j) = J33G * ( - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
-                         + ( ( MOMX(KE  ,i,j) + MOMX(KE  ,i-1,j  ) ) * J13G(KE  ,i,j,I_XYW) &
-                           - ( MOMX(KE-1,i,j) + MOMX(KE-1,i-1,j  ) ) * J13G(KE-1,i,j,I_XYW) &
-                           + ( MOMY(KE  ,i,j) + MOMY(KE  ,i  ,j-1) ) * J23G(KE  ,i,j,I_XYW) &
-                           - ( MOMY(KE-1,i,j) + MOMY(KE-1,i  ,j-1) ) * J23G(KE-1,i,j,I_XYW) ) * RFDZ(KE) &
-                         + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                         * ( ( MOMX(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
-                             - MOMX(KE,i-1,j  ) * GSQRT(KE,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
-                           + ( MOMY(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
-                             - MOMY(KE,i,  j-1) * GSQRT(KE,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
-          enddo
-          enddo
-#ifdef DEBUG
-          k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-          call PROF_rapend  ("DYN_Large_divercence", 2)
+!XFILL
+          DDIV = 0.0_RP
 
        end if
 
