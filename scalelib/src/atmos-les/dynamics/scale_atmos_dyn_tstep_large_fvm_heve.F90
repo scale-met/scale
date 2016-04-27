@@ -392,8 +392,10 @@ contains
 
     dts = real(DTSS, kind=RP) ! short time step
     dtl = real(DTLS, kind=RP) ! large time step
-    nstep = max( int( ( dtl + eps ) / dts ), 1 )
+    nstep = ceiling( ( dtl - eps ) / dts )
     dts = dtl / nstep ! dts is divisor of dtl and smaller or equal to dtss
+    if( IO_L ) write(IO_FID_LOG,'(a,f0.2,a,f0.2,a,i0)') &
+         '*** DT_large, DT_small, and DT_large/DT_small: ', dtl, ', ', dts, ', ', nstep
 
 
 !OCL XFILL
