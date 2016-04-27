@@ -82,6 +82,8 @@ module scale_atmos_dyn_fvm_flux_ud5
   !
   !++ Private parameters & variables
   !
+
+
   real(RP), parameter :: F1  =  0.5_RP
 
   real(RP), parameter :: F31  = -1.0_RP/12.0_RP
@@ -99,7 +101,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> value at XYW
-!OCL SIRIAL
+!OCL SERIAL
   subroutine ATMOS_DYN_FVM_flux_valueW_Z_ud5( &
        valW, &
        mflx, val, GSQRT, &
@@ -401,6 +403,8 @@ contains
 
     return
   end subroutine ATMOS_DYN_FVM_fluxY_XYZ_ud5
+
+
 
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYW
@@ -1219,6 +1223,8 @@ contains
 
 
 
+
+
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XV
   subroutine ATMOS_DYN_FVM_fluxZ_XVZ_ud5( &
@@ -1640,6 +1646,10 @@ contains
 
     return
   end subroutine ATMOS_DYN_FVM_fluxY_XVZ_ud5
+
+
+
+
 
 
 

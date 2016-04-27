@@ -663,7 +663,7 @@ contains
 
        PROFILE_START("hevi_solver")
 
-!OCL INDEPENDENT(solve_*, ATMOS_DYN_FVM_flux_valueW_Z)
+!OCL INDEPENDENT
 !OCL PREFETCH_SEQUENTIAL(SOFT)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE

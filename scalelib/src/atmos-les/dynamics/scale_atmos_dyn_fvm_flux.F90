@@ -394,6 +394,8 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_cd2
 
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd2
+
+
       
       if ( IHALO < 1 ) then
          write(*,*) 'xxx IHALO must be >= ', 1
@@ -445,6 +447,8 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_ud3
 
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3
+
+
       
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
@@ -496,6 +500,8 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_cd4
 
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd4
+
+
       
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
@@ -547,6 +553,8 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_ud5
 
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud5
+
+
       
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
@@ -598,6 +606,8 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_cd6
 
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd6
+
+
       
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
