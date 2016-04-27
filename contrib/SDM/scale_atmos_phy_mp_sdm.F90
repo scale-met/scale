@@ -415,9 +415,9 @@ contains
     end if
 
     if( docondensation ) then
-       nclstp(1)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
-            /int(1.E+3_RP*(sdm_dtcmph(1)+0.00010_RP))
-       if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(1)+0.00010_RP))) /= 0) then 
+       nclstp(1)=10*int(1.E+5_RP*(dt+0.0000010_RP))            &
+            /int(1.E+6_RP*(sdm_dtcmph(1)+0.00000010_RP))
+       if(mod(10*int(1.E+5_RP*(dt+0.0000010_RP)),int(1.E+6_RP*(sdm_dtcmph(1)+0.00000010_RP))) /= 0) then
           write(*,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
           call PRC_MPIstop
        end if
@@ -426,9 +426,9 @@ contains
     end if
 
     if( doautoconversion ) then
-       nclstp(2)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
-            /int(1.E+3_RP*(sdm_dtcmph(2)+0.00010_RP))
-       if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(2)+0.00010_RP))) /= 0) then 
+       nclstp(2)=10*int(1.E+5_RP*(dt+0.0000010_RP))            &
+            /int(1.E+6_RP*(sdm_dtcmph(2)+0.00000010_RP))
+       if(mod(10*int(1.E+5_RP*(dt+0.0000010_RP)),int(1.E+6_RP*(sdm_dtcmph(2)+0.00000010_RP))) /= 0) then
           write(*,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
           call PRC_MPIstop
        end if
@@ -437,9 +437,9 @@ contains
     end if
 
     if( domovement ) then
-       nclstp(3)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
-            /int(1.E+3_RP*(sdm_dtcmph(3)+0.00010_RP))
-       if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(3)+0.00010_RP))) /= 0) then 
+       nclstp(3)=10*int(1.E+5_RP*(dt+0.0000010_RP))            &
+            /int(1.E+6_RP*(sdm_dtcmph(3)+0.00000010_RP))
+       if(mod(10*int(1.E+5_RP*(dt+0.0000010_RP)),int(1.E+6_RP*(sdm_dtcmph(3)+0.00000010_RP))) /= 0) then
           write(*,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
           call PRC_MPIstop
        end if
