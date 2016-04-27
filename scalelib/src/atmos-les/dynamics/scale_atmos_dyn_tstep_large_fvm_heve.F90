@@ -392,7 +392,7 @@ contains
 
     dts = real(DTSS, kind=RP) ! short time step
     dtl = real(DTLS, kind=RP) ! large time step
-    nstep = int( ( dtl + eps ) / dts )
+    nstep = max( int( ( dtl + eps ) / dts ), 1 )
     dts = dtl / nstep ! dts is divisor of dtl and smaller or equal to dtss
 
 
