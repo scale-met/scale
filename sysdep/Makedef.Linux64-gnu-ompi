@@ -15,7 +15,7 @@ else
 endif
 
 FFLAGS_CORE = -m64 \
-              -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
+              -fno-range-check -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
               -fconvert=big-endian -frecord-marker=4
 FFLAGS_FAST  = -O3 $(FFLAGS_CORE) $(GNUCPPOPT) \
               -mcmodel=medium
@@ -27,9 +27,9 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) $(GNUCPPOPT) \
 
 # Super Droplet Method (SDM)
 # without SDM
-SDM =
+#SDM =
 # with SDM
-#SDM = -D_SDM
+SDM = -D_SDM
 
 FC     = mpif90
 FFLAGS = $(FFLAGS_FAST) $(SDM)

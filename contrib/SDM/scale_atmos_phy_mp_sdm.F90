@@ -479,7 +479,9 @@ contains
     end do
     !! if igcd>1, it meanst dt is not the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt
     if( igcd > 1)then
-       write(*,*) 'ERROR: TIME_DTSEC_ATMOS_PHY_MP should be the least comon multiple of sdm_dtcmph(1:3) that are smaller than TIME_DTSEC_ATMOS_PHY_MP'
+       write(*,*) 'ERROR: TIME_DTSEC_ATMOS_PHY_MP should be the least common'
+       write(*,*) 'multiple of sdm_dtcmph(1:3) that are smaller than'
+       write(*,*) 'TIME_DTSEC_ATMOS_PHY_MP'
        call PRC_MPIstop
     end if
 
@@ -2668,12 +2670,15 @@ contains
        Re,    &
        QTRC0, &
        DENS0  )
+    use scale_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     use m_sdm_coordtrans, only: &
        sdm_x2ri, sdm_y2rj
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
 
     real(RP) :: sum3(KA,IA,JA), sum2(KA,IA,JA)
@@ -2792,12 +2797,14 @@ contains
   subroutine ATMOS_PHY_MP_sdm_CloudFraction( &
        cldfrac, &
        QTRC     )
+    use scale_tracer, only: &
+       QAD => QA
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq

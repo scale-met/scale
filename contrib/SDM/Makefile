@@ -54,6 +54,7 @@ $(LIBNAME): $(OBJS)
 
 makemodules: $(OBJS)
 
+ifeq ($(SCALE_SYS),K || $(SCALE_SYS),FX10)
 sdm_condensation_water.o: sdm_condensation_water.f90 \
 	$(DEPENDLIB) \
 	sdm_coordtrans.o \
@@ -65,6 +66,19 @@ sdm_condensation_water.o: sdm_condensation_water.f90 \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_precision.o
 	$(FC) $(FFLAGS_SDM) -Kprefetch_indirect,simd=2 $(FFLAGS_SDM_MONIT) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
+else
+sdm_condensation_water.o: sdm_condensation_water.f90 \
+	$(DEPENDLIB) \
+	sdm_coordtrans.o \
+	sdm_common.o \
+	sdm_fluidconv.o \
+        $(BUILD_DIR)/scale_atmos_sub_saturation.o \
+	$(BUILD_DIR)/scale_tracer.o \
+	$(BUILD_DIR)/scale_const.o \
+	$(BUILD_DIR)/scale_grid_index.o \
+	$(BUILD_DIR)/scale_precision.o
+	$(FC) $(FFLAGS_SDM) $(FFLAGS_SDM_MONIT) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
+endif
 
 sdm_sd2fluid.o: sdm_sd2fluid.f90 \
 	$(DEPENDLIB) \

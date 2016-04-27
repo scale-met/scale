@@ -37,7 +37,7 @@ module mod_mkinit
 
   use scale_process, only: &
 #ifdef _SDM
-     PRC_myrank
+     PRC_myrank, &
 #endif
      PRC_MPIstop
   use scale_const, only: &
@@ -674,9 +674,9 @@ contains
        write(basename,fmt) trim(RANDOM_INIT_BASENAME),'pe',PRC_myrank
     endif
 
-    iseed = PRC_myrnak+RANDOM_NUMBER_SEED
+    iseed = PRC_myrank+RANDOM_NUMBER_SEED
     call rng_init( rng_s2c_i, iseed )
-    call rng_save_state( rng_s2c_i, basename)
+    call rng_save_state( rng_s2c_i, basename )
 !    call rng_save_state( rng_s2c_i, basename, fid_output )
 
     return
