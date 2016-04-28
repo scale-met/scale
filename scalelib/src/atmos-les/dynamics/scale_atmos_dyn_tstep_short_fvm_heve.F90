@@ -887,10 +887,10 @@ contains
           call CHECK( __LINE__, MOMY(k,i  ,j-1) )
           call CHECK( __LINE__, MOMY(k,i+1,j-1) )
 #endif
-          cor(k,i,j) = 0.0625_RP * ( CORIOLI(1,i+1,j  )+CORIOLI(1,i,j  ) ) & ! [x,y,z->u,y,z]
-                                 * ( MOMY   (k,i+1,j  )+MOMY   (k,i,j  ) &
-                                   + MOMY   (k,i+1,j-1)+MOMY   (k,i,j-1) ) &  ! [x,v,z->u,y,z]
-                      + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
+          cor(k,i,j) = 0.125_RP * ( CORIOLI(1,i+1,j  )+CORIOLI(1,i,j  ) ) & ! [x,y,z->u,y,z]
+                                * ( MOMY   (k,i+1,j  )+MOMY   (k,i,j  ) &
+                                  + MOMY   (k,i+1,j-1)+MOMY   (k,i,j-1) ) &  ! [x,v,z->u,y,z]
+                      - 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
                       * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) &
                       * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
                         * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RCDX(i) &
@@ -1132,16 +1132,16 @@ contains
           call CHECK( __LINE__, MOMX(k,i-1,j  ) )
           call CHECK( __LINE__, MOMX(k,i-1,j+1) )
 #endif
-          cor(k,i,j) = - 0.0625_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) & ! [x,y,z->x,v,z]
-                                   * ( MOMX   (k,i  ,j+1)+MOMX   (k,i  ,j) &
-                                     + MOMX   (k,i-1,j+1)+MOMX   (k,i-1,j) ) & ! [u,y,z->x,v,z]
-                     - 0.25_RP * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) * GSQRT(k,i,j,I_XVZ) &
+          cor(k,i,j) = - 0.125_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) & ! [x,y,z->x,v,z]
+                                  * ( MOMX   (k,i  ,j+1)+MOMX   (k,i  ,j) &
+                                    + MOMX   (k,i-1,j+1)+MOMX   (k,i-1,j) ) & ! [u,y,z->x,v,z]
+                     + 0.25_RP * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) &
                      * ( MOMX(k,i,j) + MOMX(k,i-1,j) + MOMX(k,i,j+1) + MOMX(k,i-1,j+1) )&
                      * ( MOMY(k,i,j) &
                        * ( 1.0_RP/MAPF(i,j,2,I_UV) - 1.0_RP/MAPF(i-1,j,2,I_UV) ) * RCDX(i) &
                        - 0.25_RP * ( MOMX(k,i,j)+MOMX(k,i-1,j)+MOMX(k,i,j+1)+MOMX(k,i-1,j+1) ) &
                        * ( 1.0_RP/MAPF(i,j+1,1,I_XY) - 1.0_RP/MAPF(i,j,1,I_XY) ) * RFDY(j) ) &
-                     * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metoric term
+                     * 2.0_RP / ( DENS(k,i,j) + DENS(k,i,j+1) ) ! metoric term
        enddo
        enddo
        enddo

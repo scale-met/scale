@@ -640,8 +640,8 @@ contains
                  - J13G(k-1,i,j,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
                  * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) &
                ) / GSQRT(k,i,j,I_UYZ) &
-               + 0.0625_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
-                           * ( MOMY(k,i,j)+MOMY(k,i+1,j)+MOMY(k,i,j-1)+MOMY(k,i+1,j-1) ) & ! coriolis force
+               + 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
+                          * ( MOMY(k,i,j)+MOMY(k,i+1,j)+MOMY(k,i,j-1)+MOMY(k,i+1,j-1) ) & ! coriolis force
                + divdmp_coef * rdt * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
                + MOMX_t(k,i,j)
        enddo
@@ -722,8 +722,8 @@ contains
                    - J23G(k-1,i,j,I_XVZ) * ( DPRES(k-1,i,j+1)+DPRES(k-1,i,j) ) ) &
                    * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) & ! pressure gradient force
                ) / GSQRT(k,i,j,I_XVZ) &
-               - 0.0625_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) &
-                           * ( MOMX(k,i,j+1)+MOMX(k,i,j)+MOMX(k,i-1,j+1)+MOMX(k,i-1,j) ) & ! coriolis force
+               - 0.125_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) &
+                          * ( MOMX(k,i,j+1)+MOMX(k,i,j)+MOMX(k,i-1,j+1)+MOMX(k,i-1,j) ) & ! coriolis force
                + divdmp_coef * rdt * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
                + MOMY_t(k,i,j)
        enddo

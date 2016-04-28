@@ -878,10 +878,10 @@ contains
                             + F2H(k,2,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) & ! [x,y,z->u,y,w]
                  ) * RCDZ(k) ) &
                * MAPF(i,j,1,I_UY)
-          cf = 0.0625_RP * ( CORIOLI(1,i+1,j  )+CORIOLI(1,i,j  ) ) & ! [x,y,z->u,y,z]
+          cf = 0.125_RP * ( CORIOLI(1,i+1,j  )+CORIOLI(1,i,j  ) ) & ! [x,y,z->u,y,z]
              * ( MOMY   (k,i+1,j  )+MOMY   (k,i,j  ) &
                + MOMY   (k,i+1,j-1)+MOMY   (k,i,j-1) ) &  ! [x,v,z->u,y,z]
-             + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
+             - 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
              * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) &
              * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
                  * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RCDX(i) &
@@ -988,16 +988,16 @@ contains
                             + F2H(k-1,2,I_XVZ) * ( DPRES(k-1,i,j+1)+DPRES(k-1,i,j) ) ) & ! [x,y,z->x,v,w]
                  ) * RCDZ(k) ) &
                * MAPF(i,j,2,I_XV)
-          cf = - 0.0625_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) & ! [x,y,z->x,v,z]
-                           * ( MOMX   (k,i  ,j+1)+MOMX   (k,i  ,j) &
-                             + MOMX   (k,i-1,j+1)+MOMX   (k,i-1,j) ) & ! [u,y,z->x,v,z]
-               - 0.25_RP * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) * GSQRT(k,i,j,I_XVZ) &
+          cf = - 0.125_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) & ! [x,y,z->x,v,z]
+                          * ( MOMX   (k,i  ,j+1)+MOMX   (k,i  ,j) &
+                            + MOMX   (k,i-1,j+1)+MOMX   (k,i-1,j) ) & ! [u,y,z->x,v,z]
+               + 0.25_RP * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) &
                * ( MOMX(k,i,j) + MOMX(k,i-1,j) + MOMX(k,i,j+1) + MOMX(k,i-1,j+1) ) &
                * ( MOMY(k,i,j) &
                  * ( 1.0_RP/MAPF(i,j,2,I_UV) - 1.0_RP/MAPF(i-1,j,2,I_UV) ) * RCDX(i) &
                  - 0.25_RP * ( MOMX(k,i,j)+MOMX(k,i-1,j)+MOMX(k,i,j+1)+MOMX(k,i-1,j+1) ) &
                  * ( 1.0_RP/MAPF(i,j+1,1,I_XY) - 1.0_RP/MAPF(i,j,1,I_XY) ) * RFDY(j) ) &
-               * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metoric term
+               * 2.0_RP / ( DENS(k,i,j+1) + DENS(k,i,j) ) ! metoric term
           div = divdmp_coef / dtrk * ( DDIV(k,i,j+1)/MAPF(i,j+1,1,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
               * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) * FDY(j) ! divergence damping
           MOMY_RK(k,i,j) = MOMY0(k,i,j) &
