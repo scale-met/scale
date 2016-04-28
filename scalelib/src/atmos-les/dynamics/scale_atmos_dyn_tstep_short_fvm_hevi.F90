@@ -650,6 +650,7 @@ contains
 #ifdef HIST_TEND
           if ( lhist ) then
              advch_t(k,i,j,I_RHOT) = advch
+          end if
 #endif
        enddo
        enddo
