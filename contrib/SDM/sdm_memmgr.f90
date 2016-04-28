@@ -36,7 +36,7 @@ contains
        GTRANS_J23G,  &
        GTRANS_J33G
     use scale_tracer_sdm, only: &
-         QA
+         QA_MP
     use scale_grid_index, only: &
          IE,IS,KE,KS,JE,JS,IA,KA,JA ! S:start, E: end of active grids. A: num of grids including HALO.
     use m_sdm_common
@@ -146,7 +146,7 @@ contains
     allocate( dy_sdm(JA) )
 !    allocate( dz_sdm(KA) )
 
-    allocate(QTRC_sdm(KA,IA,JA,QA))
+    allocate(QTRC_sdm(KA,IA,JA,QA_MP))
 
     ! Initialize allocated array
     QTRC_sdm(:,:,:,:) = 0.0_RP

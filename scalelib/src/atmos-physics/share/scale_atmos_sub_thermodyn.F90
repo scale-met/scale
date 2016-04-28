@@ -30,13 +30,17 @@ module scale_atmos_thermodyn
   use scale_const, only: &
      Rdry  => CONST_Rdry,  &
      CPdry => CONST_CPdry, &
-     CVdry => CONST_CVdry, &
-     Rvap  => CONST_Rvap,  &
      CPvap => CONST_CPvap, &
-     CVvap => CONST_CVvap, &
+     CVdry => CONST_CVdry, &
      CL    => CONST_CL,    &
      CI    => CONST_CI,    &
-     LH0   => CONST_LH0,   &
+     Rvap  => CONST_Rvap,  &
+     LHV0  => CONST_LHV0,  &
+     LHV00 => CONST_LHV00, &
+     LHS0  => CONST_LHS0,  &
+     LHS00 => CONST_LHS00, &
+     LHF0  => CONST_LHF0,  &
+     LHF00 => CONST_LHF00, &
      TEM00 => CONST_TEM00, &
      PRE00 => CONST_PRE00
   !-----------------------------------------------------------------------------
@@ -56,7 +60,12 @@ module scale_atmos_thermodyn
   public :: ATMOS_THERMODYN_rhot
   public :: ATMOS_THERMODYN_temp_pres
   public :: ATMOS_THERMODYN_temp_pres_E
+  public :: ATMOS_THERMODYN_tempre
+  public :: ATMOS_THERMODYN_tempre2
+  public :: ATMOS_THERMODYN_pott
   public :: ATMOS_THERMODYN_templhv
+  public :: ATMOS_THERMODYN_templhs
+  public :: ATMOS_THERMODYN_templhf
 
   interface ATMOS_THERMODYN_qd
      module procedure ATMOS_THERMODYN_qd_0D
@@ -93,14 +102,28 @@ module scale_atmos_thermodyn
      module procedure ATMOS_THERMODYN_temp_pres_E_3D
   end interface ATMOS_THERMODYN_temp_pres_E
 
+  interface ATMOS_THERMODYN_pott
+     module procedure ATMOS_THERMODYN_pott_0D
+     module procedure ATMOS_THERMODYN_pott_3D
+  end interface ATMOS_THERMODYN_pott
+
   interface ATMOS_THERMODYN_templhv
      module procedure ATMOS_THERMODYN_templhv_0D
      module procedure ATMOS_THERMODYN_templhv_2D
      module procedure ATMOS_THERMODYN_templhv_3D
   end interface ATMOS_THERMODYN_templhv
 
-  public :: ATMOS_THERMODYN_tempre
-  public :: ATMOS_THERMODYN_tempre2
+  interface ATMOS_THERMODYN_templhs
+     module procedure ATMOS_THERMODYN_templhs_0D
+     module procedure ATMOS_THERMODYN_templhs_2D
+     module procedure ATMOS_THERMODYN_templhs_3D
+  end interface ATMOS_THERMODYN_templhs
+
+  interface ATMOS_THERMODYN_templhf
+     module procedure ATMOS_THERMODYN_templhf_0D
+     module procedure ATMOS_THERMODYN_templhf_2D
+     module procedure ATMOS_THERMODYN_templhf_3D
+  end interface ATMOS_THERMODYN_templhf
 
   !-----------------------------------------------------------------------------
   !
@@ -122,32 +145,59 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_THERMODYN_setup
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       CPvap          => CONST_CPvap,          &
+       CVvap          => CONST_CVvap,          &
+       CL             => CONST_CL,             &
+       CI             => CONST_CI,             &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
     implicit none
 
     integer :: n
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[THERMODYN]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[THERMODYN] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
     allocate( AQ_CP(QQA) )
     allocate( AQ_CV(QQA) )
 
-    AQ_CP(I_QV) = CPvap
-    AQ_CV(I_QV) = CVvap
+    if ( THERMODYN_TYPE == 'EXACT' ) then
+       AQ_CP(I_QV) = CPvap
+       AQ_CV(I_QV) = CVvap
 
-    if ( QWS /= 0 ) then
-       do n = QWS, QWE
-          AQ_CP(n) = CL
-          AQ_CV(n) = CL
-       enddo
-    endif
+       if ( QWS /= 0 ) then
+          do n = QWS, QWE
+             AQ_CP(n) = CL
+             AQ_CV(n) = CL
+          enddo
+       endif
 
-    if ( QIS /= 0 ) then
-       do n = QIS, QIE
-          AQ_CP(n) = CI
-          AQ_CV(n) = CI
-       enddo
+       if ( QIS /= 0 ) then
+          do n = QIS, QIE
+             AQ_CP(n) = CI
+             AQ_CV(n) = CI
+          enddo
+       endif
+    elseif( THERMODYN_TYPE == 'SIMPLE' ) then
+       AQ_CP(I_QV) = CPdry
+       AQ_CV(I_QV) = CVdry
+
+       if ( QWS /= 0 ) then
+          do n = QWS, QWE
+             AQ_CP(n) = CVdry
+             AQ_CV(n) = CVdry
+          enddo
+       endif
+
+       if ( QIS /= 0 ) then
+          do n = QIS, QIE
+             AQ_CP(n) = CVdry
+             AQ_CV(n) = CVdry
+          enddo
+       endif
     endif
 
     return
@@ -190,9 +240,9 @@ contains
     !-----------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 
 !       qdry(k,i,j) = 1.0_RP
 !       do iqw = QQS, QQE
@@ -248,9 +298,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 
 !       CPtot(k,i,j) = qdry(k,i,j) * CPdry
 !       do iqw = QQS, QQE
@@ -307,9 +357,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 
 !       CVtot(k,i,j) = qdry(k,i,j) * CVdry
 !       do iqw = QQS, QQE
@@ -387,9 +437,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
        Rtot  = Rdry
@@ -479,9 +529,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 
 #ifdef DRY
        CVtot = CVdry
@@ -576,9 +626,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
        Rtot  = Rdry
@@ -669,9 +719,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
        Rtot  = Rdry
@@ -714,9 +764,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,cv,Rmoist) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 
        CALC_CV(cv, qdry(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV)
        CALC_R(Rmoist, q(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap)
@@ -751,9 +801,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,cp,Rmoist) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
 
        CALC_CP(cp, qdry(k,i,j), q, k, i, j, iqw, CPdry, AQ_CP)
        CALC_R(Rmoist, q(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap)
@@ -769,11 +819,95 @@ contains
   end subroutine ATMOS_THERMODYN_tempre2
 
   !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_pott_0D( &
+      pott,         &
+      temp, pres, q )
+    implicit none
+
+    real(RP), intent(out) :: pott  ! potential temperature [K]
+    real(RP), intent(in)  :: temp  ! temperature           [K]
+    real(RP), intent(in)  :: pres  ! pressure              [Pa]
+    real(RP), intent(in)  :: q(QA) ! mass concentration   [kg/kg]
+
+    ! work
+    real(RP) :: qdry
+    real(RP) :: Rtot, CVtot, RovCP
+
+    integer  :: iqw
+    !---------------------------------------------------------------------------
+
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
+    qdry  = 1.0_RP
+    CVtot = 0.0_RP
+    do iqw = QQS, QQE
+       qdry  = qdry  - q(iqw)
+       CVtot = CVtot + q(iqw) * AQ_CV(iqw)
+    enddo
+    CVtot = CVdry * qdry + CVtot
+    Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
+
+    RovCP = Rtot / ( CVtot + Rtot )
+
+    pott  = temp * ( PRE00 / pres )**RovCP
+
+    return
+  end subroutine ATMOS_THERMODYN_pott_0D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_pott_3D( &
+      pott,         &
+      temp, pres, q )
+    implicit none
+
+    real(RP), intent(out) :: pott(KA,IA,JA)    ! potential temperature [K]
+    real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature           [K]
+    real(RP), intent(in)  :: pres(KA,IA,JA)    ! pressure              [Pa]
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! mass concentration    [kg/kg]
+
+    ! work
+    real(RP) :: qdry
+    real(RP) :: Rtot, CVtot, RovCP
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rdry
+#else
+       qdry  = 1.0_RP
+       CVtot = 0.0_RP
+       do iqw = QQS, QQE
+          qdry  = qdry  - q(k,i,j,iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
+       enddo
+       CVtot = CVdry * qdry + CVtot
+       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
+
+       RovCP = Rtot / ( CVtot + Rtot )
+
+       pott(k,i,j) = temp(k,i,j) * ( PRE00 / pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_pott_3D
+
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_templhv_0D( &
       lhv,         &
       temp         )
-!    use scale_const, only: &
-!       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
     implicit none
 
     real(RP), intent(out) :: lhv  ! potential temperature [K]
@@ -781,11 +915,11 @@ contains
 
     !---------------------------------------------------------------------------
 
-!    if ( THERMODYN_TYPE == 'EXACT' ) then
-         lhv = LH0 + ( CPvap - CL ) * ( temp - TEM00 )
-!    elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
-!         lhv = LH0
-!    endif
+    if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhv = LHV0 + ( CPvap - CL ) * ( temp - TEM00 )
+    elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhv = LHV0
+    endif
 
     return
   end subroutine ATMOS_THERMODYN_templhv_0D
@@ -794,8 +928,8 @@ contains
   subroutine ATMOS_THERMODYN_templhv_2D( &
       lhv,         &
       temp         )
-!    use scale_const, only: &
-!       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
     implicit none
 
     real(RP), intent(out) :: lhv(IA,JA)     ! potential temperature [K]
@@ -804,13 +938,13 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
-!       if ( THERMODYN_TYPE == 'EXACT' ) then
-         lhv(i,j) = LH0 + ( CPvap - CL ) * ( temp(i,j) - TEM00 )
-!       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
-!         lhv(i,j) = LH0
-!       endif
+    do j = JSB, JEB
+    do i = ISB, IEB
+       if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhv(i,j) = LHV0 + ( CPvap - CL ) * ( temp(i,j) - TEM00 )
+       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhv(i,j) = LHV0
+       endif
     enddo
     enddo
 
@@ -821,29 +955,185 @@ contains
   subroutine ATMOS_THERMODYN_templhv_3D( &
       lhv,         &
       temp         )
-!    use scale_const, only: &
-!       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
     implicit none
 
     real(RP), intent(out) :: lhv(KA,IA,JA)     ! potential temperature [K]
     real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature           [K]
 
-    integer :: k, i, j
+    integer :: k, i, j 
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-!       if ( THERMODYN_TYPE == 'EXACT' ) then
-         lhv(k,i,j) = LH0 + ( CPvap - CL ) * ( temp(k,i,j) - TEM00 )
-!       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
-!         lhv(k,i,j) = LH0
-!       endif
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
+       if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhv(k,i,j) = LHV0 + ( CPvap - CL ) * ( temp(k,i,j) - TEM00 )
+       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhv(k,i,j) = LHV0
+       endif
     enddo
     enddo
     enddo
 
     return
   end subroutine ATMOS_THERMODYN_templhv_3D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhs_0D( &
+      lhs,         &
+      temp         )
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhs  ! potential temperature [K]
+    real(RP), intent(in)  :: temp  ! temperature           [K]
+
+    !---------------------------------------------------------------------------
+
+    if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhs = LHS0 + ( CPvap - CI ) * ( temp - TEM00 )
+    elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhs = LHS0
+    endif
+
+    return
+  end subroutine ATMOS_THERMODYN_templhs_0D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhs_2D( &
+      lhs,         &
+      temp         )
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhs(IA,JA)     ! potential temperature [K]
+    real(RP), intent(in)  :: temp(IA,JA)    ! temperature           [K]
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+       if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhs(i,j) = LHS0 + ( CPvap - CI ) * ( temp(i,j) - TEM00 )
+       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhs(i,j) = LHS0
+       endif
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_templhs_2D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhs_3D( &
+      lhs,         &
+      temp         )
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhs(KA,IA,JA)     ! potential temperature [K]
+    real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature           [K]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
+       if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhs(k,i,j) = LHS0 + ( CPvap - CI ) * ( temp(k,i,j) - TEM00 )
+       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhs(k,i,j) = LHS0
+       endif
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_templhs_3D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhf_0D( &
+      lhf,         &
+      temp         )
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhf  ! potential temperature [K]
+    real(RP), intent(in)  :: temp  ! temperature           [K]
+
+    !---------------------------------------------------------------------------
+
+    if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhf = LHF0 + ( CL - CI ) * ( temp - TEM00 )
+    elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhf = LHF0
+    endif
+
+    return
+  end subroutine ATMOS_THERMODYN_templhf_0D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhf_2D( &
+      lhf,         &
+      temp         )
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhf(IA,JA)     ! potential temperature [K]
+    real(RP), intent(in)  :: temp(IA,JA)    ! temperature           [K]
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+       if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhf(i,j) = LHF0 + ( CL - CI ) * ( temp(i,j) - TEM00 )
+       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhf(i,j) = LHF0
+       endif
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_templhf_2D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhf_3D( &
+      lhf,         &
+      temp         )
+    use scale_const, only: &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhf(KA,IA,JA)     ! potential temperature [K]
+    real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature           [K]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
+       if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhf(k,i,j) = LHF0 + ( CL - CI ) * ( temp(k,i,j) - TEM00 )
+       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+         lhf(k,i,j) = LHF0
+       endif
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_templhf_3D
 
 end module scale_atmos_thermodyn

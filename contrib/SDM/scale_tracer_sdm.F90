@@ -8,6 +8,7 @@
 !! @par History
 !! @li      2013-09-18 (Y.Sato)  [new]
 !! @li      2014-01-22 (Y.Sato)  [new] revised for develop 4.0.0
+!! @li      2015-09-08 (Y.Sato)  [mod] update for version SCALE 0.2.4
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -30,7 +31,7 @@ module scale_tracer_sdm
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: QA = 3
+  integer, public, parameter :: QA_MP = 3
 
   integer, public, parameter :: I_QV =  1
   integer, public, parameter :: I_QC =  2
@@ -53,17 +54,17 @@ module scale_tracer_sdm
   integer, public, parameter :: QIS =  0 ! start index for ice tracer
   integer, public, parameter :: QIE = -1 ! end   index for ice tracer
 
-  character(len=H_SHORT), public, save :: AQ_NAME(QA)
-  character(len=H_MID), public, save :: AQ_DESC(QA)
-  character(len=H_SHORT), public, save :: AQ_UNIT(QA)
+  character(len=H_SHORT), public, save :: AQ_MP_NAME(QA_MP)
+  character(len=H_MID), public, save :: AQ_MP_DESC(QA_MP)
+  character(len=H_SHORT), public, save :: AQ_MP_UNIT(QA_MP)
 
-  data AQ_NAME / 'QV', 'QC', 'QR' /
+  data AQ_MP_NAME / 'QV', 'QC', 'QR' /
 
-  data AQ_DESC / 'Water Vapor mixing ratio', &
+  data AQ_MP_DESC / 'Water Vapor mixing ratio', &
                  'cloud water mixing ratio', &  
                  'rain water mixing ratio'  /
 
-  data AQ_UNIT / 'kg/kg', 'kg/kg', 'kg/kg' /
+  data AQ_MP_UNIT / 'kg/kg', 'kg/kg', 'kg/kg' /
 
   !-----------------------------------------------------------------------------
   !
@@ -83,14 +84,14 @@ module scale_tracer_sdm
   data I_MP2RD  / 1,    & ! I_mp_QC => MSTRN_nptype=1: water cloud
                   1     / ! I_mp_QR => MSTRN_nptype=1: water cloud
   
-  integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
-  integer, public, parameter :: I_ae_dummy = 1
-
-  integer, public, save :: I_AE2ALL(AE_QA)
-  data I_AE2ALL / -999 / ! dummy
-
-  integer, public, save :: I_AE2RD(AE_QA)
-  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
+!  integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
+!  integer, public, parameter :: I_ae_dummy = 1
+!
+!  integer, public, save :: I_AE2ALL(AE_QA)
+!  data I_AE2ALL / -999 / ! dummy
+!
+!  integer, public, save :: I_AE2RD(AE_QA)
+!  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
 
 contains
   subroutine TRACER_sdm_setup

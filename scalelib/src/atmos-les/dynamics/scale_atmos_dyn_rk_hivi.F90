@@ -24,6 +24,7 @@ module scale_atmos_dyn_rk_hivi
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_index
   use scale_tracer
 
 #ifdef DEBUG
@@ -67,7 +68,8 @@ module scale_atmos_dyn_rk_hivi
 
 contains
 
-  subroutine ATMOS_DYN_rk_hivi_setup( ATMOS_TYPE_DYN )
+  subroutine ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE, &
+       BND_W, BND_E, BND_S, BND_N )
     use scale_process, only: &
        PRC_MPIstop
 #ifdef DRY
@@ -77,7 +79,11 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
+    character(len=*), intent(in) :: ATMOS_DYN_TYPE
+    logical, intent(in) :: BND_W
+    logical, intent(in) :: BND_E
+    logical, intent(in) :: BND_S
+    logical, intent(in) :: BND_N
 
     integer :: ierr
 
@@ -88,8 +94,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI'
 
-    if ( ATMOS_TYPE_DYN .ne. 'HIVI' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is not HIVI. Check!'
+    if ( ATMOS_DYN_TYPE .ne. 'HIVI' ) then
+       write(*,*) 'xxx ATMOS_DYN_TYPE is not HIVI. Check!'
        call PRC_MPIstop
     end if
 
@@ -97,7 +103,7 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
 #else
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
-    if ( IO_L ) write(IO_FID_LOG,*) 'xxx Not Implemented yet'
+    write(*,*) 'xxx Not Implemented yet'
     call PRC_MPIstop
 #endif
 
@@ -125,7 +131,7 @@ contains
     else if ( RP == SP ) then
        mtype = MPI_REAL
     else
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx Unsupported precision'
+       write(*,*) 'xxx Unsupported precision'
        call PRC_MPIstop
     end if
 
@@ -135,18 +141,21 @@ contains
 
   subroutine ATMOS_DYN_rk_hivi( &
     DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-    mflx_hi,                                     &
+    mflx_hi, tflx_hi,                            &
     DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
     DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
     Rtot, CVtot, CORIOLI,                        &
     num_diff, divdmp_coef,                       &
     FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
+    FLAG_FCT_ALONG_STREAM,                       &
     CDZ, FDZ, FDX, FDY,                          &
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-    PHI, GSQRT, J13G, J23G, J33G,                &
+    PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
     REF_pres, REF_dens,                          &
-    dtrk                                         )
+    BND_W, BND_E, BND_S, BND_N,                  &
+    dtrk, dt                                     )
+    use scale_grid_index
     use scale_const, only: &
 #ifdef DRY
        Rdry   => CONST_Rdry,   &
@@ -156,9 +165,7 @@ contains
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00
     use scale_comm, only: &
-#ifdef _USE_RDMA
-       COMM_rdma_vars8, &
-#endif
+       COMM_world, &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
@@ -181,7 +188,8 @@ contains
     real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
     real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
-    real(RP), intent(out) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
+    real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
+    real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! rho * theta * vel(x,y,z)
 
     real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables
     real(RP), intent(in),target :: MOMZ0(KA,IA,JA) ! at previous dynamical time step
@@ -210,6 +218,7 @@ contains
     logical,  intent(in) :: FLAG_FCT_RHO
     logical,  intent(in) :: FLAG_FCT_MOMENTUM
     logical,  intent(in) :: FLAG_FCT_T
+    logical,  intent(in) :: FLAG_FCT_ALONG_STREAM
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: FDZ(KA-1)
@@ -227,10 +236,17 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
     real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
+    logical,  intent(in)  :: BND_W
+    logical,  intent(in)  :: BND_E
+    logical,  intent(in)  :: BND_S
+    logical,  intent(in)  :: BND_N
+
     real(RP), intent(in)  :: dtrk
+    real(RP), intent(in)  :: dt
 
 
     ! diagnostic variables (work space)
@@ -283,6 +299,7 @@ contains
     mflx_hi(KS-1,:,:,ZDIR) = 0.0_RP
 
     qflx_hi(:,:,:,:) = UNDEF
+    tflx_hi(:,:,:,:) = UNDEF
     qflx_J (:,:,:)   = UNDEF
     mflx_hi2(:,:,:,:)   = UNDEF
 
@@ -298,7 +315,9 @@ contains
     r(:,:,:) = UNDEF
     p(:,:,:) = UNDEF
 
+#ifndef DRY
     kappa(:,:,:) = UNDEF
+#endif
 #endif
 
     rdt = 1.0_RP / dtrk
@@ -977,7 +996,7 @@ contains
                  + ( qflx_hi(k,i  ,j,YDIR) - qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) &
                - ( J13G(k+1,i,j,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
                  - J13G(k-1,i,j,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
-                 * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) & 
+                 * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) &
                ) / GSQRT(k,i,j,I_UYZ) &
                + 0.0625_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
                            * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
@@ -1021,7 +1040,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS  , IIE
 #ifdef DEBUG
@@ -1211,7 +1230,7 @@ contains
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          qflx_hi(k,i,j,ZDIR) = mflx_hi2(k,i,j,ZDIR) &
+          tflx_hi(k,i,j,ZDIR) = mflx_hi2(k,i,j,ZDIR) &
                               * ( FACT_N * ( POTT(k+1,i,j) + POTT(k  ,i,j) ) &
                                 + FACT_F * ( POTT(k+2,i,j) + POTT(k-1,i,j) ) ) &
                               + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_RHOT,ZDIR)
@@ -1237,12 +1256,12 @@ contains
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_RHOT,ZDIR) )
 #endif
 
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_hi(KS  ,i,j,ZDIR) = mflx_hi2(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j) + POTT(KS  ,i,j) ) &
+          tflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+          tflx_hi(KS  ,i,j,ZDIR) = mflx_hi2(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j) + POTT(KS  ,i,j) ) &
                                  + GSQRT(KS,i,j,I_XYW) * num_diff(KS  ,i,j,I_RHOT,ZDIR)
-          qflx_hi(KE-1,i,j,ZDIR) = mflx_hi2(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE  ,i,j) + POTT(KE-1,i,j) ) &
+          tflx_hi(KE-1,i,j,ZDIR) = mflx_hi2(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE  ,i,j) + POTT(KE-1,i,j) ) &
                                  + GSQRT(KE-1,i,j,I_XYW) * num_diff(KE-1,i,j,I_RHOT,ZDIR)
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
+          tflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -1261,7 +1280,7 @@ contains
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, POTT(k,i+1,j) )
 #endif
-          qflx_hi(k,i,j,XDIR) = mflx_hi2(k,i,j,XDIR) &
+          tflx_hi(k,i,j,XDIR) = mflx_hi2(k,i,j,XDIR) &
                                 * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                   + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) )
        enddo
@@ -1282,7 +1301,7 @@ contains
           call CHECK( __LINE__, POTT(k,i,j+1) )
           call CHECK( __LINE__, POTT(k,i,j+2) )
 #endif
-          qflx_hi(k,i,j,YDIR) = mflx_hi2(k,i,j,YDIR) &
+          tflx_hi(k,i,j,YDIR) = mflx_hi2(k,i,j,YDIR) &
                                 * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                   + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) )
        enddo
@@ -1297,18 +1316,18 @@ contains
        do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, tflx_hi(k-1,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,XDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i-1,j  ,XDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,YDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, RHOT_t(k,i,j) )
 #endif
           St(k,i,j) = &
-               - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                 + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                 + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
+               - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                 + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                 + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
                  ) / GSQRT(k,i,j,I_XYZ) &
                + RHOT_t(k,i,j)
        enddo
@@ -1393,7 +1412,7 @@ contains
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
+          tflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( POTT(k+1,i,j) + POTT(k  ,i,j) ) &
                                 + FACT_F * ( POTT(k+2,i,j) + POTT(k-1,i,j) ) )
        enddo
@@ -1405,10 +1424,10 @@ contains
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_hi(KS  ,i,j,ZDIR) = mflx_hi(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j) + POTT(KS  ,i,j) )
-          qflx_hi(KE-1,i,j,ZDIR) = mflx_hi(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE  ,i,j) + POTT(KE-1,i,j) )
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
+          tflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+          tflx_hi(KS  ,i,j,ZDIR) = mflx_hi(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j) + POTT(KS  ,i,j) )
+          tflx_hi(KE-1,i,j,ZDIR) = mflx_hi(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE  ,i,j) + POTT(KE-1,i,j) )
+          tflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -1427,7 +1446,7 @@ contains
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
+          tflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
                                 * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                   + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) )
        enddo
@@ -1449,7 +1468,7 @@ contains
           call CHECK( __LINE__, POTT(k,i,j+2) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,YDIR) )
 #endif
-          qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
+          tflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
                                 * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                   + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) )
        enddo
@@ -1464,9 +1483,9 @@ contains
        do i = IIS, IIE
        do k = KS, KE
           RHOT_RK(k,i,j) = RHOT0(k,i,j) &
-               + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                            + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                            + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+               + dtrk * ( - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                            + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                            + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                             / GSQRT(k,i,j,I_XYZ) &
                           + St(k,i,j) )
        end do
@@ -1509,7 +1528,7 @@ contains
 #endif
 
     ! implicit solver
-    !$omp parallel do private(i,j,k,PT,A,B,C) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 #ifdef HIVI_BICGSTAB
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1957,10 +1976,18 @@ contains
                  - 0.5_RP * GRAV &
                  * ( DDENS(k+1,i,j) &
                    + ( DPRES(k+1,i,j) - (PRES(k+1,i,j)-REF_pres(k+1,i,j)) ) &
+#ifdef DRY
+                   * DENS(k+1,i,j) / ( kappa         *PRES(k+1,i,j) ) &
+#else
                    * DENS(k+1,i,j) / ( kappa(k+1,i,j)*PRES(k+1,i,j) ) &
+#endif
                    + DDENS(k  ,i,j) &
                    + ( DPRES(k  ,i,j) - (PRES(k  ,i,j)-REF_pres(k  ,i,j)) ) &
+#ifdef DRY
+                   * DENS(k  ,i,j) / ( kappa         *PRES(k  ,i,j) ) ) &
+#else
                    * DENS(k  ,i,j) / ( kappa(k  ,i,j)*PRES(k  ,i,j) ) ) &
+#endif
                  + Sw(k,i,j) )
           MOMZ_RK(k,i,j) = MOMZ0(k,i,j) + duvw
           mflx_hi(k,i,j,ZDIR) = J33G * ( MOMZ(k,i,j) + duvw )
@@ -2058,7 +2085,7 @@ contains
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
+          tflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( POTT(k+1,i,j) + POTT(k  ,i,j) ) &
                                 + FACT_F * ( POTT(k+2,i,j) + POTT(k-1,i,j) ) )
        enddo
@@ -2070,10 +2097,10 @@ contains
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_hi(KS  ,i,j,ZDIR) = mflx_hi(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j) + POTT(KS  ,i,j) )
-          qflx_hi(KE-1,i,j,ZDIR) = mflx_hi(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE  ,i,j) + POTT(KE-1,i,j) )
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
+          tflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+          tflx_hi(KS  ,i,j,ZDIR) = mflx_hi(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j) + POTT(KS  ,i,j) )
+          tflx_hi(KE-1,i,j,ZDIR) = mflx_hi(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE  ,i,j) + POTT(KE-1,i,j) )
+          tflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -2092,7 +2119,7 @@ contains
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
+          tflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
                                 * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                   + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) )
        enddo
@@ -2114,7 +2141,7 @@ contains
           call CHECK( __LINE__, POTT(k,i,j+2) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,YDIR) )
 #endif
-          qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
+          tflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
                                 * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                   + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) )
        enddo
@@ -2129,9 +2156,9 @@ contains
        do i = IIS, IIE
        do k = KS, KE
           RHOT_RK(k,i,j) = RHOT0(k,i,j) &
-               + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                            + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                            + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+               + dtrk * ( - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                            + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                            + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                             / GSQRT(k,i,j,I_XYZ) &
                           + St(k,i,j) )
        end do
@@ -2193,9 +2220,9 @@ contains
 
 #ifdef DEBUG
        call check_pres( &
-            DPRES, REF_pres, PRES, RHOT_RK, RHOT &
-#ifdef DRY
-            , kappa
+            DPRES, REF_pres, PRES, RHOT_RK, RHOT, Rtot &
+#ifndef DRY
+            , kappa &
 #endif
     )
 #endif
@@ -2212,6 +2239,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_comm, only: &
+       COMM_world, &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -2326,7 +2354,7 @@ contains
 
     iprod(1) = r0r
     iprod(2) = norm
-    call MPI_AllReduce(iprod, buf, 2, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+    call MPI_AllReduce(iprod, buf, 2, mtype, MPI_SUM, COMM_world, ierror)
     r0r = buf(1)
     norm = buf(2)
 
@@ -2348,7 +2376,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       call MPI_AllReduce(error, buf, 1, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+       call MPI_AllReduce(error, buf, 1, mtype, MPI_SUM, COMM_world, ierror)
        error = buf(1)
 
 #ifdef DEBUG
@@ -2381,7 +2409,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       call MPI_AllReduce(iprod, buf, 1, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+       call MPI_AllReduce(iprod, buf, 1, mtype, MPI_SUM, COMM_world, ierror)
        al = r0r / buf(1) ! (r0,r) / (r0,Mp)
 
        do j = JS, JE
@@ -2419,7 +2447,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       call MPI_AllReduce(iprod, buf, 2, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+       call MPI_AllReduce(iprod, buf, 2, mtype, MPI_SUM, COMM_world, ierror)
        w = buf(1) / buf(2) ! (Ms,s) / (Ms,Ms)
 
        iprod(1) = 0.0_RP
@@ -2478,7 +2506,7 @@ contains
     end do
     end do
 
-       call MPI_AllReduce(iprod, r0r, 1, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+       call MPI_AllReduce(iprod, r0r, 1, mtype, MPI_SUM, COMM_world, ierror)
 
        be = be * r0r ! al/w * (r0,rn)/(r0,r)
        do j = JS, JE
@@ -2976,9 +3004,9 @@ contains
 
   subroutine check_pres( &
        DPRES, REF_pres, PRES, &
-       RHOT_RK, RHOT &
-#ifdef DRY
-       , kappa
+       RHOT_RK, RHOT, Rtot &
+#ifndef DRY
+       , kappa &
 #endif
        )
     use scale_const, only: &
@@ -2991,7 +3019,8 @@ contains
     real(RP), intent(in) :: PRES(KA,IA,JA)
     real(RP), intent(in) :: RHOT_RK(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
-#ifdef DRY
+    real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
+#ifndef DRY
     real(RP), intent(in) :: kappa(KA,IA,JA)
 #endif
 
@@ -3002,8 +3031,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-#ifdef DRY
-       R = Rtot(k,i,j)
+#ifndef DRY
        kapp = kappa(k,i,j)
 #else
        R = Rdry

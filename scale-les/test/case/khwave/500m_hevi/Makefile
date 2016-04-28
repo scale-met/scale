@@ -8,19 +8,21 @@ PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
-# for build
-index      = 500m20x20x20
-precision  = real8
-dynamics   = hevi
-tracer     = dry
-sfcflx     = const
-turbulence = smg
-radiation  = dummy
 
-# for run
-INITCONF  = init.conf
-RUNCONF   = run.conf
-TPROC     = 6
+# user-defined source files
+CODE_DIR    = .
+ORG_SRCS    =
+
+# parameters for run
+INITCONF    = init.conf
+RUNCONF     = run.conf
+TPROC       = 6
+
+# required data (parameters,distributed files)
+DATDIR      = ../../../data
+DATPARAM    =
+DATDISTS    =
+
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile

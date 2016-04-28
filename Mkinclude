@@ -1,17 +1,25 @@
+ifeq ($(ENABLE_FIXEDINDEX),T)
+      inc_index = $(INDEX_DIR)/inc_index.h
+      OBJ_DIR = $(BUILD_DIR)
+      INST_DIR = $(BUILD_DIR)
+else
+      inc_index =
+      OBJ_DIR = .
+      INST_DIR = $(TOPDIR)
+endif
+
+
+
 ifeq ($(origin BINDIR), undefined)
-   BINDIR = $(TOPDIR)/bin/$(SCALE_SYS)
+   BINDIR = $(INST_DIR)/bin/$(SCALE_SYS)
 endif
 
 ifeq ($(origin LIBDIR), undefined)
-   LIBDIR = $(TOPDIR)/lib
+   LIBDIR = $(INST_DIR)/lib
 endif
 
 ifeq ($(origin MODDIR), undefined)
-   MODDIR = $(TOPDIR)/include
-endif
-
-ifeq ($(origin SYSDEP_DIR), undefined)
-   SYSDEP_DIR = $(TOPDIR)/sysdep
+   MODDIR = $(INST_DIR)/include
 endif
 
 GTOOLDIR    = $(TOPDIR)/gtool
@@ -21,21 +29,56 @@ SCALELIBDIR = $(TOPDIR)/scalelib
 SCALELESDIR = $(TOPDIR)/scale-les
 SCALEGMDIR  = $(TOPDIR)/scale-gm
 
-ifeq ($(RDMA),-D_USE_RDMA)
-   mod_rdma := rdma.o
-else
-   mod_rdma :=
+ifeq ($(origin INDEX_DIR), undefined)
+   INDEX_DIR = $(SCALELIBDIR)/include
 endif
 
-ifeq ($(SDM),-D_SDM)
+ifeq ($(AGGRESSIVE),T)
+  FFLAGS = $(FFLAGS_AGGRESSIVE) $(PERF_MONIT) $(RDMA)
+else
+  ifeq ($(DEBUG),T)
+    FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+    FFLAGS_DYN = $(FFLAGS)
+    CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+  else
+    FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
+  endif
+endif
+
+ifeq ($(ENABLE_FIXEDINDEX),T)
+      FFLAGS += -D_FIXEDINDEX_
+endif
+
+ifeq ($(ENABLE_OPENMP),T)
+      FFLAGS += -openmp -openmp-report
+endif
+
+ifeq ($(ENABLE_PAPI),T)
+      FFLAGS += -D_PAPI_
+      PAPI_INCLUDE = -I$(PAPI)/include
+      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+endif
+
+ifeq ($(USE_NETCDF3),T)
+      CFLAGS += -DNETCDF3
+endif
+
+ifeq ($(CHECK_MASS),T)
+      FFLAGS += -DCHECK_MASS
+endif
+
+# Super Droplet Method (SDM)
+ifeq ($(ENABLE_SDM),T)
+   FFLAGS         += -D_SDM $(ADDITIONAL_FFLAGS_SDM)
    GAGETRYDIR      = $(TOPDIR)/contrib/Gadgetry
    MTDIR           = $(TOPDIR)/contrib/mt
    SDMDIR          = $(TOPDIR)/contrib/SDM
-   CONTRIB_LIBS    = $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(LIBDIR)/libsdm.a
+   CONTRIB_LIBS    = $(LIBDIR)/libsdm.a $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a
    CONTRIB_INCLUDE = -I$(GAGETRYDIR) -I$(MTDIR) -I$(SDMDIR)
 else
    GAGETRYDIR      =
    MTDIR           =
+   SDMDIR          =
    CONTRIB_LIBS    =
    CONTRIB_INCLUDE =
 endif

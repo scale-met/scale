@@ -37,6 +37,8 @@ module scale_debug
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
+  integer, public :: DEBUG_DOMAIN_NUM = 0
+
   !
   !-----------------------------------------------------------------------------
   !
@@ -63,7 +65,7 @@ contains
     real(RP), intent(in) :: v
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('Debug', 1)
 
     if ( .NOT. ( abs(v) < abs(CONST_UNDEF) ) ) then
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx uninitialized value at line:', current_line
@@ -73,7 +75,7 @@ contains
        call abort
     end if
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend  ('Debug', 1)
 
     return
   end subroutine CHECK
@@ -88,7 +90,8 @@ contains
        current_file, &
        current_line  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:)
@@ -102,7 +105,7 @@ contains
     integer :: k, kstr, kend
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('Debug', 1)
 
     kstr = lbound( var(:), 1 )
     kend = ubound( var(:), 1 )
@@ -121,13 +124,15 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx invalid value:', trim(varname), '(', k, ')=', var(k)
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
-       write(*,*) 'xxx invalid value:', trim(varname), '(', k, ')=', var(k)
+       write(*,*) 'xxx invalid value:', trim(varname), &
+                  '(', PRC_myrank, ',', k, ')=', var(k)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
+       write(*,*) 'xxx in domain:', DEBUG_DOMAIN_NUM
 
        call PRC_MPIstop
     endif
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend  ('Debug', 1)
 
     return
   end subroutine VALCHECK_1D
@@ -142,7 +147,8 @@ contains
        current_file, &
        current_line  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:,:)
@@ -157,7 +163,7 @@ contains
     integer :: i, istr, iend
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('Debug', 1)
 
     kstr = lbound( var(:,:), 1 )
     kend = ubound( var(:,:), 1 )
@@ -181,13 +187,15 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx invalid value:', trim(varname), '(', k, ',', i, ')=', var(k,i)
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
-       write(*,*) 'xxx invalid value:', trim(varname), '(', k, ',', i, ')=', var(k,i)
+       write(*,*) 'xxx invalid value:', trim(varname), &
+                  '(', PRC_myrank, ',', k, ',', i, ')=', var(k,i)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
+       write(*,*) 'xxx in domain:', DEBUG_DOMAIN_NUM
 
        call PRC_MPIstop
     endif
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend  ('Debug', 1)
 
     return
   end subroutine VALCHECK_2D
@@ -202,7 +210,8 @@ contains
        current_file, &
        current_line  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:)
@@ -218,7 +227,7 @@ contains
     integer :: j, jstr, jend
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('Debug', 1)
 
     kstr = lbound( var(:,:,:), 1 )
     kend = ubound( var(:,:,:), 1 )
@@ -247,13 +256,15 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx invalid value:', trim(varname), '(', k, ',', i, ',', j, ')=', var(k,i,j)
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
-       write(*,*) 'xxx invalid value:', trim(varname), '(', k, ',', i, ',', j, ')=', var(k,i,j)
+       write(*,*) 'xxx invalid value:', trim(varname), &
+                  '(', PRC_myrank, ',', k, ',', i, ',', j, ')=', var(k,i,j)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
+       write(*,*) 'xxx in domain:', DEBUG_DOMAIN_NUM
 
        call PRC_MPIstop
     endif
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend  ('Debug', 1)
 
     return
   end subroutine VALCHECK_3D

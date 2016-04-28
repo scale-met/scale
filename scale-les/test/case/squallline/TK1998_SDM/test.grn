@@ -1,0 +1,13 @@
+'open QR_sd_d01z-3d.ctl'
+t = 1
+'set y 1'
+'set x 1 56'
+'set z 1 65'
+'set gxout shaded'
+while (t <= 7)
+  'set t 't
+  'd qr_sd'  
+  'q pos'
+  t = t + 1
+endwhile
+

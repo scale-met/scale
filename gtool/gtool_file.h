@@ -15,8 +15,9 @@
 /* data type */
 #define File_REAL4     0
 #define File_REAL8     1
-#define File_INTEGER4  2
-#define File_INTEGER8  3
+#define File_INTEGER2  2
+#define File_INTEGER4  3
+#define File_INTEGER8  4
 
 /* action type */
 #define File_FREAD   0
@@ -70,14 +71,32 @@ extern int32_t file_read_data( void       *var,        // (out)
 			       datainfo_t *dinfo,      // (in)
 			       int32_t     precision); // (in)
 
-extern int32_t file_set_global_attributes( int32_t  fid,          // (in)
-					   char    *title,        // (in)
-					   char    *source,       // (in)
-					   char    *institution,  // (in)
-					   char    *time_units,   // (in)
-					   int32_t  nodeid,       // (in)
-					   int32_t *nodeidx,      // (in)
-					   int32_t  nodeidx_dim); // (in)
+extern int32_t file_set_global_attribute_text( int32_t  fid,    // (in)
+					       char    *key,    // (in)
+					       char    *value); // (in)
+
+extern int32_t file_set_global_attribute_int( int32_t  fid,   // (in)
+					      char    *key,   // (in)
+					      int32_t *value, // (in)
+					      size_t   len);  // (in)
+
+extern int32_t file_set_global_attribute_float( int32_t  fid,   // (in)
+						char    *key,   // (in)
+						float   *value, // (in)
+						size_t   len);  // (in)
+
+extern int32_t file_set_global_attribute_double( int32_t  fid,   // (in)
+						 char    *key,   // (in)
+						 double  *value, // (in)
+						 size_t   len);  // (in)
+
+extern int32_t file_set_tunits( int32_t fid,          // (in)
+				char    *time_units); // (in)
+
+extern int32_t file_set_tattr( int32_t  fid,   // (in)
+			       char    *vname, // (in)
+			       char    *key,   // (in)
+			       char    *val);  // (in)
 
 extern int32_t file_put_axis( int32_t fid,        // (in)
 			      char   *name,       // (in)

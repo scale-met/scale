@@ -21,7 +21,6 @@ precision  = real8
 dynamics   = heve
 tracer     = sn13
 tracer     = tomita08
-sfcflx     = louis
 sfcflx     = grayzone
 turbulence = smg
 radiation  = dummy

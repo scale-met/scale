@@ -21,6 +21,8 @@ MODS = \
 	gtool_file_f.o  \
 	gtool_netcdf.o
 
+
+
 all: makedir $(LIBDIR)/$(LIBNAME)
 
 makedir:

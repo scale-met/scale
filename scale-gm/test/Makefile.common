@@ -1,0 +1,79 @@
+################################################################################
+#
+# Common Makefile for each test (Please include this file)
+#
+################################################################################
+
+ifeq ($(origin SYSDEP_DIR), undefined)
+   SYSDEP_DIR = $(TOPDIR)/sysdep
+endif
+
+ifeq ($(origin BINNAME), undefined)
+   BINNAME = scale-gm
+endif
+
+# For Mkjobshell of scale-gm
+SYSDEP_DIR2 = $(TOPDIR)/scale-gm/test/sysdep
+
+
+BUILD_DIR := $(PWD)/.libs
+INDEX_DIR := $(PWD)
+BINDIR     = $(PWD)
+
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
+
+$(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
+	mkdir -p $(BUILD_DIR)
+	cp -f $< $@
+
+all:
+	$(MAKE) build
+	$(MAKE) tools
+
+build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
+	mkdir -p $(BUILD_DIR)
+	$(MAKE) -C $(SCALEGMDIR)/src  SYSDEP_DIR=$(SYSDEP_DIR) \
+                                 BUILD_DIR=$(BUILD_DIR)   \
+                                 INDEX_DIR=$(INDEX_DIR)   \
+                                 BINDIR=$(BINDIR)         \
+                                 postfix=$(postfix)
+
+tools: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
+	mkdir -p $(BUILD_DIR)
+	$(MAKE) -C $(SCALEGMDIR)/src  SYSDEP_DIR=$(SYSDEP_DIR) \
+                                 BUILD_DIR=$(BUILD_DIR)   \
+                                 INDEX_DIR=$(INDEX_DIR)   \
+                                 BINDIR=$(BINDIR)         \
+                                 postfix=$(postfix)
+
+run: jobshell
+	$(JOBSUB) run.sh
+
+jobshell:
+	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
+		sh ../Mkjobshell.$(SCALE_SYS).sh $(glevel) $(rlevel) $(nmpi) $(zlayer) $(vgrid) $(TOPDIR) $(BINNAME); \
+	else \
+		sh $(SYSDEP_DIR2)/Mkjobshell.$(SCALE_SYS).sh $(glevel) $(rlevel) $(nmpi) $(zlayer) $(vgrid) $(TOPDIR) $(BINNAME); \
+	fi
+
+
+
+.PHONY: allclean distclean clean
+
+allclean: distclean clean
+	$(MAKE) -C $(SCALEGMDIR)/src allclean  BINDIR=$(BINDIR)         \
+                                          BUILD_DIR=$(BUILD_DIR)   \
+                                          SYSDEP_DIR=$(SYSDEP_DIR)
+
+distclean: clean
+	$(MAKE) -C $(SCALEGMDIR)/src distclean  BINDIR=$(BINDIR)         \
+                                           BUILD_DIR=$(BUILD_DIR)   \
+                                           SYSDEP_DIR=$(SYSDEP_DIR)
+	rm -f *.nc *LOG.pe* monitor.pe* latlon* run.sh
+
+clean:
+	$(MAKE) -C $(SCALEGMDIR)/src clean  BINDIR=$(BINDIR)         \
+                                       BUILD_DIR=$(BUILD_DIR)   \
+                                       SYSDEP_DIR=$(SYSDEP_DIR)
+

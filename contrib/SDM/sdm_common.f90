@@ -37,7 +37,7 @@ module m_sdm_common
      rrst   => CONST_R, &       ! Gas constant [J/(K*mol)]
      mass_air => CONST_Mdry, &  ! Molecular mass of air [g/mol]
      GasV_C => CONST_Rvap, &    ! Gas Constant of vapor [J/K/kg]
-     LH0    => CONST_LH0, &
+     LH0    => CONST_LHV0, &
      CPvap  => CONST_CPvap, &
      CL     => CONST_CL, &
      TEM00  => CONST_TEM00, &

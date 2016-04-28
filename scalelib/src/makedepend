@@ -1,0 +1,89 @@
+#!/usr/bin/env ruby
+
+def usage
+  print "Usage: ruby #$0 srcdir\n"
+  exit(-1)
+end
+
+srcdir = ARGV.shift || usage
+
+deps = Hash.new
+pros = Hash.new
+
+
+SUFFIX = ".F90"
+
+def parse(deps, pros, srcdir, dir="")
+  dirs = Dir[ File.join(srcdir, dir, "*") ]
+  dirs.each do |fdir|
+    dir = fdir.sub(/#{srcdir}\//,"")
+    next if /\A\./ =~ dir
+    parse(deps, pros, srcdir, dir)
+    files = Dir[ File.join(fdir, "*#{SUFFIX}") ]
+    files.each do |file|
+      basename = File.basename(file, SUFFIX)
+      dep = {
+        :dir => dir,
+        :depends => Array.new
+      }
+      pro = {
+        :dir => dir,
+        :file => basename
+      }
+      deps[basename] = dep
+      File.foreach(file) do |line|
+        case line
+        when /^\s*module (\w+)/
+          mod = $1
+          next if /procedure/ =~ mod
+          pros[mod] = pro
+        when /^\s*use (\w+)/
+          mod = $1
+#          next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
+          next if /(dc_types|gtool|mpi|netcdf|gadg|rng|m_|mt|NAME)/ =~ mod
+          dep[:depends].push(mod) unless dep[:depends].include?(mod)
+        end
+      end
+    end
+  end
+end
+
+parse(deps, pros, srcdir)
+
+File.open( File.join(srcdir, "depend"), "w" ) do |file|
+  deps.sort.each do |name, dep|
+    file.print "$(OBJ_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(inc_index) $(DEPENDLIB)"
+    ptype = ""
+    if /\Ascale_atmos_phy_(mp|tb|rd)\Z/ =~ name
+      ptype = $1
+      file.print " $(patsubst %,$(OBJ_DIR)/%,$(OBJS_#{ptype.upcase}))"
+    end
+#    file.print "#{name}.o: #{name}.f90"
+    dep[:depends].sort.each do |mod|
+      if pro = pros[mod]
+        if "scale_atmos_phy_#{ptype}" != name || /\Ascale_atmos_phy_#{ptype}_\w+\Z/ !~ pro[:file]
+          file.print " $(OBJ_DIR)/#{pro[:file]}.o"
+        end
+      else
+        p name
+        p mod
+        raise
+      end
+    end
+    file.print "\n"
+  end
+#  file.print "\n"
+#  file.print "OBJS = $(scale_rdma)\t\\\n\t", deps.keys.sort.map{|mod| "#{mod.downcase}.o"}.join("\t\\\n\t"), "\n"
+  file.print "\n"
+  mods = Array.new
+  mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_MP))"
+  mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_TB))"
+  mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_RD))"
+  pros.keys.sort.map{|mod|
+     mod = mod.downcase
+     unless /\Ascale_atmos_phy_(mp|tb|rd)_(\w+)\Z/ =~ mod && $2 != "common"
+       mods.push "$(OBJ_DIR)/#{mod}.mod"
+     end
+  }
+  file.print "MODS =\t\\\n\t", mods.join("\t\\\n\t"), "\n"
+end

@@ -7,7 +7,9 @@
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-xx-xx (A.Noda)   [new]
+!! @li      2014-05-01 (A.Noda)   [new]
+!! @li      2014-08-24 (A.Noda)   [mod] bug fix
+!! @li      2015-01-15 (Y.Sato)   [mod] bug fix
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -20,9 +22,12 @@ module mod_user
      IO_FID_LOG, &
      IO_L
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use scale_tracer
   use scale_grid_index
+  use scale_index
   use scale_stdio, only: &
        IO_get_available_fid
   use scale_grid, only: &
@@ -33,8 +38,12 @@ module mod_user
        TIME_NOWSTEP,&
        TIME_NOWSEC,&
        TIME_DTSEC
-  use mod_cpl_vars, only: &
-       SST
+! use mod_cpl_vars, only: &
+!      SST
+!2014/6/13noda
+  use mod_atmos_phy_sf_vars, only: &
+     SFC_albedo      => ATMOS_PHY_SF_SFC_albedo,&
+     SFC_TEMP        => ATMOS_PHY_SF_SFC_TEMP
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -43,9 +52,10 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_setup0
   public :: USER_setup
   public :: USER_step
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -54,17 +64,18 @@ module mod_user
   !
   !++ Public parameters & variables
   !
-  real(DP),allocatable :: momz_ls_t(:)
-  real(DP),allocatable :: momz_ls_dz_t(:)
-  real(DP),allocatable :: z_in(:)
+  real(DP),save,allocatable :: momz_ls_t(:)
+  real(DP),save,allocatable :: momz_ls_dz_t(:)
+  real(DP),save,allocatable :: z_in(:)
   real(DP),save,allocatable :: time_atm_in(:)
   real(DP),save,allocatable :: time_sst_in(:)
   real(DP),save,allocatable :: sst_in(:)
-  real(RP), private, allocatable :: MOMZ_LS(:,:)
-  real(RP), private, allocatable :: MOMZ_LS_DZ(:,:)
-  real(RP), private, allocatable :: QV_LS(:,:)
-  real(RP), private, allocatable :: U_GEOS(:)
-  real(RP), private, allocatable :: V_GEOS(:)
+! real(RP), private, allocatable :: MOMZ_LS(:,:)
+  real(RP),save, private, allocatable :: MOMZ_LS(:,:)
+  real(RP),save, private, allocatable :: MOMZ_LS_DZ(:,:)
+  real(RP),save, private, allocatable :: QV_LS(:,:)
+  real(RP),save, private, allocatable :: U_GEOS(:)
+  real(RP),save, private, allocatable :: V_GEOS(:)
   logical,  private, save        :: MOMZ_LS_FLG(6)
   !
   !-----------------------------------------------------------------------------
@@ -116,6 +127,7 @@ module mod_user
   real(RP), save, allocatable :: time_in(:)
   real(RP), save, allocatable :: lhf_in(:)
   real(RP), save, allocatable :: shf_in(:)
+  real(RP), save, allocatable :: sst(:,:)
   logical, save :: GIVEN_HEAT_FLUX=.false.
 
   logical,  private, save :: CNST_RAD=.false. ! add constant radiative cooling
@@ -151,6 +163,12 @@ module mod_user
 contains
 
   !-----------------------------------------------------------------------------
+  !> Setup0
+  !-----------------------------------------------------------------------------
+  subroutine USER_setup0
+  end subroutine USER_setup0
+
+  !-----------------------------------------------------------------------------
   !> Setup
   !-----------------------------------------------------------------------------
   subroutine USER_setup
@@ -162,9 +180,6 @@ contains
     use scale_grid, only:   &
        CZ => GRID_CZ
     implicit none
-
-
-!    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_PHY_SF
 
     real(RP) :: USER_SF_U_minM ! minimum U_abs for u,v,w
     real(RP) :: USER_SF_U_minH !                   T
@@ -197,10 +212,10 @@ contains
        !--- for surface flux
        USER_SF_U_minM,      &
        USER_SF_U_minH,      &
-       USER_SF_U_minE,      & 
-       USER_SF_CM_min,      & 
-       USER_SF_CH_min,      & 
-       USER_SF_CE_min,      & 
+       USER_SF_U_minE,      &
+       USER_SF_CM_min,      &
+       USER_SF_CH_min,      &
+       USER_SF_CE_min,      &
        USER_SF_Z00,         &
        USER_SF_Z0R,         &
        USER_SF_Z0S,         &
@@ -224,8 +239,9 @@ contains
 
     allocate( time_sst_in(mstep_sst) )
     allocate( sst_in(mstep_sst) )
+    allocate( sst(ia,ja) )
 
-    USER_SF_U_minM = U_minM 
+    USER_SF_U_minM = U_minM
     USER_SF_U_minH = U_minH
     USER_SF_U_minE = U_minE
     USER_SF_CM_min = CM_min
@@ -322,6 +338,8 @@ contains
           exit
         endif
     enddo
+    sfc_temp(:,:)=sst(:,:)
+! write(*,*)'chksstuser00',maxval(sst(:,:)), minval(sst(:,:))
 
     return
   end subroutine USER_setup
@@ -351,32 +369,43 @@ contains
          MOMX_tp, &
          MOMY_tp, &
          RHOT_tp, &
-         QTRC_tp
+         RHOQ_tp
     use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
     use scale_time, only: &
-        do_phy_sf => TIME_DOATMOS_PHY_SF, &
-        dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
         TIME_NOWSEC
     use scale_const, only: &
         GRAV   => CONST_GRAV,   &
         KARMAN => CONST_KARMAN, &
         Rdry   => CONST_Rdry,   &
-        Rvap   => CONST_Rvap,   &
-        RovCP  => CONST_RovCP,  &
-        CPovCV => CONST_CPovCV, &
         CPdry  => CONST_CPdry,  &
+        CVdry  => CONST_CVdry,  &
+        Rvap   => CONST_Rvap,   &
         P00    => CONST_PRE00,  &
         T00    => CONST_TEM00,  &
         CPd    => CONST_CPdry,  &
-        LH0    => CONST_LH0,    &
+        LHV    => CONST_LHV,    &
         EPSvap => CONST_EPSvap, &
         PSAT0  => CONST_PSAT0
+    use mod_admin_time, only: &
+       do_phy_sf => TIME_DOATMOS_PHY_SF,     &
+       dtdyn     => TIME_DTSEC_ATMOS_DYN,    &
+       dtmp      => TIME_DTSEC_ATMOS_PHY_MP, &
+       dtrd      => TIME_DTSEC_ATMOS_PHY_RD, &
+       dtsf      => TIME_DTSEC_ATMOS_PHY_SF, &
+       dttb      => TIME_DTSEC_ATMOS_PHY_TB
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
+       CPw => AQ_CP, &
+       ATMOS_THERMODYN_templhv
     use scale_history, only: &
          HIST_in
+    use mod_atmos_phy_tb_vars, only: &
+       TKE       => ATMOS_PHY_TB_TKE,    &
+       NU        => ATMOS_PHY_TB_NU
+!   use mod_atmos_phy_tb_driver,only: &
+!        pr
 
     implicit none
 
@@ -434,12 +463,17 @@ contains
     real(RP) :: a2
     real(RP) :: Fm, Fh, Psih
     real(RP) :: RiB
-    real(RP) :: qdry, Rtot, pres_1d, temp_1d
+    real(RP) :: qdry, Rtot, RovCP, CPovCV, pres_1d, temp_1d
     real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
     real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface[kg/kg]
-    integer :: iw 
+    integer :: iw
+
+    real(RP) :: lhv_t_1d, lhv_t(IA,JA)
 
     !---------------------------------------------------------------------------
+!return ! tmp05
+    RovCP  = Rdry  / CPdry
+    CPovCV = CPdry / CVdry
 
     if ( .not.USER_do ) then
       return
@@ -448,11 +482,14 @@ contains
     if( first_in )then
       first_in = .false.
 
+!write(*,*)'chkalloc',ka
+
       allocate( MOMZ_LS(KA,2) )
       allocate( MOMZ_LS_DZ(KA,2) )
       allocate( U_GEOS(KA) )
       allocate( V_GEOS(KA) )
       allocate( QV_LS(KA,2) )
+!return ! ok
 
       allocate(wk(mstep_atm,1:kend))
       allocate(var(mstep_atm,1:ka))
@@ -461,6 +498,9 @@ contains
       allocate( momz_ls_dz_t(ka) )
       allocate( z_in(kend) )
       allocate( time_atm_in(mstep_atm) )
+
+      var(:,:)=0.0
+!return !ok
       !
       ! open 1-dim forcing data
       fid_data = IO_get_available_fid()
@@ -490,9 +530,9 @@ contains
       !
       if(IO_L)then
         write(io_fid_log,*) 'w forcing height levels:'
-        write(*,'(f9.2,4f11.2)') (z_in(k),k=1,kend)
+        write(io_fid_log,'(f9.2,4f11.2)') (z_in(k),k=1,kend)
         write(io_fid_log,*) 'w forcing time levels:'
-        write(*,'(f9.2,4f11.2)') (time_atm_in(k),k=1,mstep_atm)
+        write(io_fid_log,'(f9.2,4f11.2)') (time_atm_in(k),k=1,mstep_atm)
         write(io_fid_log,*) 'w forcing:'
         do t=1, mstep_atm
           write(io_fid_log,'(f9.4,3f11.4)')(wk(t,k),k=1,kend)
@@ -510,6 +550,9 @@ contains
       enddo
 
     endif
+!return ! ok
+
+    if(IO_L) write(*,*)'chk',TIME_NOWSTEP
 
     if( USER_LS_FLG == 0 ) then  ! no large scale sinking
 
@@ -521,13 +564,18 @@ contains
        U_GEOS(:) = 0.0_RP
        corioli = 0.0_RP
 
-    elseif( USER_LS_FLG == 1 ) then 
+    elseif( USER_LS_FLG == 1 ) then
 
       do t=1, mstep_atm-1
-        if( time_nowsec>time_atm_in(t) )then
+        if( time_nowsec>=time_atm_in(t) )then
           do k=1, ka
             momz_ls_t(k)=( (time_atm_in(t+1)-time_nowsec)*var(t,k)+(time_nowsec-time_atm_in(t))*var(t+1,k) )&
                    /(time_atm_in(t+1)-time_atm_in(t))
+            if(abs(momz_ls_t(k))>100.)then
+              write(*,*) 'error',k,t,momz_ls_t(k),time_atm_in(t+1),time_nowsec,var(t,k),time_nowsec,time_atm_in(t),var(t+1,k)
+              call PRC_MPIstop
+            endif
+!write(*,'(a,2i5,10f11.3)')'chkls',t,k,momz_ls_t(k),time_atm_in(t+1),time_atm_in(t),var(t,k),var(t+1,k)
           enddo
           do k=2, ka-1
             momz_ls_dz_t(k)=(momz_ls_t(k+1)-momz_ls_t(k-1))/(cz(k+1)-cz(k-1))
@@ -542,6 +590,7 @@ contains
         call PRC_MPIstop
       endif
 
+!return ! ok
       do t=1, mstep_sst-1
 ! write(*,*)'chksstuser0',t,time_nowsec,time_sst_in(t),sst_in(t)
         if( time_nowsec>=time_sst_in(t) )then
@@ -550,8 +599,10 @@ contains
           exit
         endif
       enddo
-! write(*,*)'chksstuser1',maxval(sst(:,:)), minval(sst(:,:))
- 
+      sfc_temp(:,:)=sst(:,:)
+!write(*,*)'chksstuser1',maxval(sst(:,:)), minval(sst(:,:))
+!return ! ok
+
       if( time_nowsec>time_sst_in(mstep_sst) )then
         write(*,*) 'Integration time exceeds the maximum forcing data length',time_nowsec,time_sst_in(mstep_sst)
         call PRC_MPIstop
@@ -562,7 +613,7 @@ contains
        MOMZ_LS_FLG(:) = .true.
        U_GEOS(:) = 0.0
        V_GEOS(:) = -15.0-0.0024*cz(:)
-       corioli = 1e-5 ! tentative. need to ask stephan 
+       corioli = 1e-5 ! tentative. need to ask stephan
        MOMZ_LS(:,2)=0.0_RP
        MOMZ_LS_DZ(:,2)=0.0_RP
        do k=KS, KE
@@ -578,10 +629,26 @@ contains
 !write(*,*)'chk1',k,momz_ls(k,1),momz_ls_dz(k,1),v_geos(k),momz_ls(k,2),momz_ls_dz(k,2)
 !enddo
 
+!return ! tmp06
+
+!MOMZ_LS_FLG(:)=.false.  !tmp09
+!MOMZ_LS_FLG(I_MOMZ)=.true. ! tmp10
+!MOMZ_LS_FLG(I_MOMX)=.true. ! tmp11
+!MOMZ_LS_FLG(I_MOMY)=.true. !tmp12
+!MOMZ_LS_FLG(I_RHOT)=.true. ! tmp13
+!MOMZ_LS_FLG(I_QTRC)=.true. ! tmp14
+!momz_ls(:,:)=0.0 ! tmp11
+!do k=1, ka
+!write(*,*)'chkw',time_nowstep,k,ka,momz_ls(k,2),k,momz_ls(k,1)
+!enddo
+!!write(*,*)'chkchk0', I_MOMX, I_MOMY, I_MOMZ, I_RHOT, I_QTRC
+!!write(*,*)'chkchk1',maxval(momz_tp(:,:,:)),minval(momz_tp(:,:,:))
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
+!write(*,*)'chk3',iis,iie,jjs,jje,ie,je
 
        if ( MOMZ_LS_FLG(I_MOMZ) ) then
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
@@ -592,6 +659,7 @@ contains
           enddo
           enddo
           enddo
+!write(*,*)'chk4'
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -601,6 +669,7 @@ contains
           enddo
           enddo
           enddo
+!write(*,*)'chk5'
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -608,9 +677,24 @@ contains
                   - MOMZ_LS(KE-1,2) * (           - WORK(KE-1,i,j) ) * RCDZ(KE-1)
           enddo
           enddo
+
+!write(*,*)'chk6'
+!do k=1,ka
+!do j=1,ja
+!do i=1,ia
+!if(momz_tp(k,i,j)>1.0.or.momz_tp(k,i,j)<-1.0)then
+!write(*,*)'chkchk2',time_nowstep,i,j,k,momz_tp(k,i,j),momz(k,i,j),dens(k+1,i,j),dens(k,i,j),momz_ls(k,2)
+!        call PRC_MPIstop
+!endif
+!enddo
+!enddo
+!enddo
+!endif
        end if
 
+!return ! tmp08
        if ( MOMZ_LS_FLG(I_MOMX) ) then
+!write(*,*)'chk7'
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -655,6 +739,7 @@ contains
           enddo
        end if
 
+!return ! tmp07 ng
        if ( MOMZ_LS_FLG(I_MOMY) ) then
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
@@ -699,6 +784,8 @@ contains
           enddo
           enddo
        end if
+
+!return ! tmp08
 
        if ( MOMZ_LS_FLG(I_RHOT) ) then
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
@@ -745,6 +832,7 @@ contains
 
        end if
 
+!return ! 04-05
        if ( MOMZ_LS_FLG(I_QTRC) ) then
 
           do iq = 1, QA
@@ -752,7 +840,7 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE-1
-                QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) &
+                RHOQ_tp(k,i,j,iq) = RHOQ_tp(k,i,j,iq) &
                      - MOMZ_LS(k,1) * ( QTRC(k+1,i,j,iq) - QTRC(k,i,j,iq) ) * RFDZ(k)
              enddo
              enddo
@@ -760,7 +848,7 @@ contains
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
-                QTRC_tp(KE,i,j,iq) = QTRC_tp(KE,i,j,iq) &
+                RHOQ_tp(KE,i,j,iq) = RHOQ_tp(KE,i,j,iq) &
                      - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1)
              enddo
              enddo
@@ -770,7 +858,7 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
-             QTRC_tp(k,i,j,I_QV) = QTRC_tp(k,i,j,I_QV) + QV_LS(k,1)
+             RHOQ_tp(k,i,j,I_QV) = RHOQ_tp(k,i,j,I_QV) + QV_LS(k,1)
           enddo
           enddo
           enddo
@@ -785,6 +873,8 @@ contains
        call PRC_MPIstop
     endif
     endif
+
+!return ! tmp09
 
     if( do_phy_sf ) then
 
@@ -861,8 +951,10 @@ contains
           !--- saturation at surface
           pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
           temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
-          pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
-!          pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST_loc(i,j) )
+          call ATMOS_THERMODYN_templhv( lhv_t_1d, temp_1d )
+          pres_evap = PSAT0 * exp( lhv_t_1d/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
+!          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
+!          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST_loc(i,j) )
 !          )
 !          qv_evap   = EPSvap * pres_evap / ( pres_1d - pres_evap )
           qv_evap   = EPSvap * pres_evap / P00
@@ -938,13 +1030,31 @@ contains
       enddo
       enddo
 
+      do j = JS, JE
+      do i = IS, IE
+          ! Gas constant
+          qdry = 1.0_RP
+          do iw = QQS, QQE
+             qdry = qdry - QTRC(KS,i,j,iw)
+          enddo
+          Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
+
+          !--- saturation at surface
+          pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
+          call ATMOS_THERMODYN_templhv( lhv_t(i,j), temp_1d )
+      enddo
+      enddo
+
       if( GIVEN_HEAT_FLUX )then
         do t=1, mstep-1
           if( time_nowsec>time_in(t) )then
             SFLX_POTT(:,:)=( (time_in(t+1)-time_nowsec)*shf_in(t)+(time_nowsec-time_in(t))*shf_in(t+1) )&
                           /( time_in(t+1)-time_in(t) ) / CPd
+!            SFLX_QV  (:,:)=( (time_in(t+1)-time_nowsec)*lhf_in(t)+(time_nowsec-time_in(t))*lhf_in(t+1) )&
+!                          /( time_in(t+1)-time_in(t) ) / LHV
             SFLX_QV  (:,:)=( (time_in(t+1)-time_nowsec)*lhf_in(t)+(time_nowsec-time_in(t))*lhf_in(t+1) )&
-                          /( time_in(t+1)-time_in(t ))/LH0
+                          /( time_in(t+1)-time_in(t) ) / lhv_t(i,j)
           endif
         enddo
         if( time_nowsec>time_in(mstep) )then
@@ -953,19 +1063,18 @@ contains
         endif
       endif
 
-!write(*,*)'chksst',dtsf,maxval(sst(1,:,:)), minval(sst(1,:,:))
-!     call HIST_in( SST_loc(:,:), 'SST','sst','K',dtsf)
-      call HIST_in( SST(:,:), 'SST2','sst','K',dtsf)
-      call HIST_in( SFLX_POTT(:,:)*CPd, 'SHF','shf','W/m2',dtsf)
-      call HIST_in( SFLX_QV(:,:)*LH0, 'LHF','lhf','W/m2',dtsf)
-!write(*,*)'chksst2'
+      call HIST_in( SST       (:,:),     'SST2',      'sst',   'K'    )
+      call HIST_in( SFLX_POTT (:,:)*CPd, 'SHF',       'shf',   'W/m2' )
+      call HIST_in( SFLX_QV   (:,:)*lhv_t(:,:), 'LHF',       'lhf',   'W/m2' )
+      call HIST_in( SFC_albedo(:,:,1),   'ALBEDO_LW', 'alblw', '-'    )
+      call HIST_in( SFC_albedo(:,:,2),   'ALBEDO_SW', 'albsw', '-'    )
 
       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
       do j = JS, JE
       do i = IS, IE
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+       LHFLX(i,j) = SFLX_QV  (i,j) * lhv_t(i,j)
 
        RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
             + ( SFLX_POTT(i,j) &
@@ -979,15 +1088,21 @@ contains
              + SFLX_MOMX(i,j) * RCDZ(KS)
        MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
              + SFLX_MOMY(i,j) * RCDZ(KS)
-       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
+       RHOQ_tp(KS,i,j,I_QV) = RHOQ_tp(KS,i,j,I_QV) &
              + SFLX_QV(i,j) * RCDZ(KS)
       enddo
       enddo
+!return ! tmp12
 
-      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
+      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
 
     endif
+!momz_tp(:,:,:)=0.0
+!momz_tp(:,:,:)=1.d-5 ! tmp12 ok
+!momz_tp(:,:,:)=1.d-4 ! tmp11
+!momz_tp(:,:,:)=1.d-3 ! tmp12
+!write(*,*)'chkusr4',maxval(momz_tp(:,:,:)),minval(momz_tp(:,:,:))
 
     return
   end subroutine USER_step

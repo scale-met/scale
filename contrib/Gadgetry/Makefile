@@ -7,6 +7,7 @@ TOPDIR      = ../..
 
 SYSDEP_DIR = $(TOPDIR)/sysdep
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/contrib/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
 LIBNAME = libgagetry.a 
@@ -28,14 +29,18 @@ FPX3    = perl tools/fpx3 -I.
 .inc_fpx3.inc:
 	$(FPX3) $< > $@
 
-all:	$(LIBDIR)/$(LIBNAME) makemodules
+all: makedir $(LIBDIR)/$(LIBNAME) makemodules
 
-$(LIBDIR)/$(LIBNAME):	$(LIBNAME)
+makedir:
+	@echo;echo "Entering contrib/Gadgetry..."
+	mkdir -p $(LIBDIR)
+
+$(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	mkdir -p $(LIBDIR)
 	install $(LIBNAME) $(LIBDIR)
 
-$(LIBNAME):	$(OBJECTS)
-	$(AR) r $@ $?
+$(LIBNAME): $(OBJECTS)
+	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
 makemodules: $(OBJECTS)
@@ -54,4 +59,4 @@ allclean:
 	rm -f $(MODULES)
 	rm -f $(LIBNAME)
 	rm -f $(LIBDIR)/$(LIBNAME)
-	cd $(MODDIR); rm -f $(MODULES)
+	cd $(MODDIR); rm -f $(MODULES); rm -f *.lst

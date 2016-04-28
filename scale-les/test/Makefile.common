@@ -4,57 +4,70 @@
 #
 ################################################################################
 
-include $(TOPDIR)/Mkinclude
-include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+ifeq ($(origin SYSDEP_DIR), undefined)
+   SYSDEP_DIR = $(TOPDIR)/sysdep
+endif
+
+ifeq ($(origin BINNAME), undefined)
+   BINNAME = scale-les
+endif
+
+ifeq ($(origin INITNAME), undefined)
+   INITNAME = scale-les_init
+endif
 
 BUILD_DIR := $(PWD)/.libs
 INDEX_DIR := $(PWD)
-
 BINDIR     = $(PWD)
-SRCDIR     = $(SCALELESDIR)/src
 
-BINNAME    = scale-les
-INITNAME   = scale-les_init
-PPNAME     = scale-les_pp
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
+	mkdir -p $(BUILD_DIR)
 	cp -f $< $@
 
-build: makedir $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
-	$(MAKE) -C $(SRCDIR) BINDIR=$(BINDIR)         \
-                        BUILD_DIR=$(BUILD_DIR)   \
-                        SYSDEP_DIR=$(SYSDEP_DIR) \
-                        index=$(index)           \
-                        precision=$(precision)   \
-                        tracer=$(tracer)         \
-                        dynamics=$(dynamics)     \
-                        sfcflx=$(sfcflx)         \
-                        turbulence=$(turbulence) \
-                        radiation=$(radiation)   \
-                        postfix=$(postfix)
-
-makedir:
+build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	mkdir -p $(BUILD_DIR)
+	$(MAKE) -C $(SCALELESDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
+                                 BUILD_DIR=$(BUILD_DIR)   \
+                                 INDEX_DIR=$(INDEX_DIR)   \
+                                 BINDIR=$(BINDIR)         \
+                                 dynamics=$(dynamics)     \
+                                 sfcflx=$(sfcflx)         \
+                                 turbulence=$(turbulence) \
+                                 radiation=$(radiation)   \
+                                 postfix=$(postfix)
 
 run: jobshell
 	$(JOBSUB) run.sh
 
 jobshell:
 	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC); \
+		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC) \
+		                                 $(DATDIR) $(DATPARAM) $(DATDISTS); \
 	else \
-		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC); \
+		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC) \
+		                                            $(DATDIR) $(DATPARAM) $(DATDISTS); \
 	fi
 
 
 
-.PHONY: allclean clean distclean
+.PHONY: allclean distclean clean
 
-allclean: clean
-	$(MAKE) -C $(SRCDIR) allclean
+allclean: distclean clean
+	$(MAKE) -C $(SCALELESDIR)/src allclean BINDIR=$(BINDIR)         \
+                                          BUILD_DIR=$(BUILD_DIR)   \
+                                          SYSDEP_DIR=$(SYSDEP_DIR)
+
+distclean: clean
+	$(MAKE) -C $(SCALELESDIR)/src distclean BINDIR=$(BINDIR)         \
+                                           BUILD_DIR=$(BUILD_DIR)   \
+                                           SYSDEP_DIR=$(SYSDEP_DIR)
+	rm -f *.nc *LOG.pe* monitor.pe* latlon* run.sh
 
 clean:
-	rm -f $(BUILD_DIR)/*.h $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.a
+	$(MAKE) -C $(SCALELESDIR)/src clean BINDIR=$(BINDIR)         \
+                                       BUILD_DIR=$(BUILD_DIR)   \
+                                       SYSDEP_DIR=$(SYSDEP_DIR)
 
-distclean:
-	rm -f *.nc LOG.pe* init_LOG.pe* monitor.pe* run.sh

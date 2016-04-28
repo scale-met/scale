@@ -9,19 +9,20 @@ TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 SYSDEP_DIR  = $(abspath ..)
 
-# for build
-index      = 005m1256x32x32
-precision  = real8
-dynamics   = heve
-tracer     = sn14
-sfcflx     = louis
-turbulence = smg
-radiation  = mstrnx
+# user-defined source files
+CODE_DIR    = .
+ORG_SRCS    =
 
-# for run
-INITCONF  = init.conf
-RUNCONF   = run.conf
-TPROC     = 6
+# parameters for run
+INITCONF    = init.conf
+RUNCONF     = run.conf
+TPROC       = 6
+
+# required data (parameters,distributed files)
+DATDIR      = ../../../data
+DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/rad_o3_profs.txt
+DATDISTS    =
+
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile

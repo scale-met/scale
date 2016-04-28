@@ -23,8 +23,8 @@ module scale_atmos_profile
 
   use scale_const, only: &
      GRAV  => CONST_GRAV,  &
+     CPdry => CONST_CPdry, &
      Rdry  => CONST_Rdry,  &
-     RovCP => CONST_RovCP, &
      P00   => CONST_PRE00
   !-----------------------------------------------------------------------------
   implicit none
@@ -94,18 +94,18 @@ contains
     real(RP) :: temp(KA)
     real(RP) :: pres(KA)
 
-    real(RP) :: gmr ! grav / Rdry
+    real(RP) :: gmr   ! grav / Rdry
+    real(RP) :: RovCP ! CPdry / Rdry
     integer  :: k, i, j, n
     !---------------------------------------------------------------------------
 
-    gmr = GRAV / Rdry
+    gmr   = GRAV / Rdry
+    RovCP = Rdry / CPdry
 
     !--- ISA profile
     temp_isa(1) = temp_sfc
     pres_isa(1) = pres_sfc
 
-    do j = JS, JE
-    do i = IS, IE
     do n = 2, nref
        temp_isa(n) = temp_isa(n-1) + GAMMA(n-1) * ( z_isa(n)-z_isa(n-1) )
 
@@ -114,8 +114,6 @@ contains
        else
           pres_isa(n) = pres_isa(n-1) * ( temp_isa(n)/temp_isa(n-1) ) ** ( -gmr/GAMMA(n-1) )
        endif
-    enddo
-    enddo
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -127,35 +125,33 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '####################################################'
 
     !--- make reference state
-    do j = JS, JE
-    do i = IS, IE
     do k = KS, KE
-       do n = 2, nref
-          if ( z(k) > z_isa(n-1) .AND. z(k) <= z_isa(n) ) then
+       if    ( z(k) <= z_isa(1)    ) then
 
-             temp(k) = temp_isa(n-1) + GAMMA(n-1) * ( z(k)-z_isa(n-1) )
-             if ( GAMMA(n-1) == 0.0_RP ) then
-                pres(k) = pres_isa(n-1) * exp( -gmr/temp_isa(n-1) * ( z(k)-z_isa(n-1) ) )
-             else
-                pres(k) = pres_isa(n-1) * ( temp(k)/temp_isa(n-1) ) ** ( -gmr/GAMMA(n-1) )
+          temp(k) = temp_isa(1) + GAMMA(1) * ( z(k)-z_isa(1) )
+          pres(k) = pres_isa(1) * ( temp(k)/temp_isa(1) ) ** ( -gmr/GAMMA(1) )
+
+       elseif( z(k)  > z_isa(nref) ) then
+
+          temp(k) = temp_isa(nref)
+          pres(k) = pres_isa(nref) * exp( -gmr/temp_isa(nref) * ( z(k)-z_isa(nref) ) )
+
+       else
+          do n = 2, nref
+             if ( z(k) > z_isa(n-1) .AND. z(k) <= z_isa(n) ) then
+
+                temp(k) = temp_isa(n-1) + GAMMA(n-1) * ( z(k)-z_isa(n-1) )
+                if ( GAMMA(n-1) == 0.0_RP ) then
+                   pres(k) = pres_isa(n-1) * exp( -gmr/temp_isa(n-1) * ( z(k)-z_isa(n-1) ) )
+                else
+                   pres(k) = pres_isa(n-1) * ( temp(k)/temp_isa(n-1) ) ** ( -gmr/GAMMA(n-1) )
+                endif
+
              endif
-
-          elseif ( z(k) <= z_isa(1)    ) then
-
-             temp(k) = temp_isa(1) + GAMMA(1) * ( z(k)-z_isa(1) )
-             pres(k) = pres_isa(1) * ( temp(k)/temp_isa(1) ) ** ( -gmr/GAMMA(1) )
-
-          elseif ( z(k)  > z_isa(nref) ) then
-
-             temp(k) = temp(k-1)
-             pres(k) = pres_isa(n-1) * exp( -gmr/temp_isa(n-1) * ( z(k)-z_isa(n-1) ) )
-
-          endif
-       enddo
+          enddo
+       endif
 
        pott(k) = temp(k) * ( P00/pres(k) )**RovCP
-    enddo
-    enddo
     enddo
 
     return
@@ -187,10 +183,15 @@ contains
     real(RP) :: pres(KA)
 
     real(RP) :: gmr ! grav / Rdry
+    real(RP) :: RovCP ! CPdry / Rdry
     integer  :: k, i, j, n
     !---------------------------------------------------------------------------
 
-    gmr = GRAV / Rdry
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROFILE] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+
+    gmr   = GRAV / Rdry
+    RovCP = Rdry / CPdry
 
     !--- ISA profile
     do j = JS, JE
@@ -226,28 +227,30 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       do n = 2, nref
-          if ( z(k,i,j) > z_isa(n-1) .AND. z(k,i,j) <= z_isa(n) ) then
+       if ( z(k,i,j) <= z_isa(1)    ) then
 
-             temp(k) = temp_isa(n-1,i,j) + GAMMA(n-1) * ( z(k,i,j)-z_isa(n-1) )
-             if ( GAMMA(n-1) == 0.0_RP ) then
-                pres(k) = pres_isa(n-1,i,j) * exp( -gmr/temp_isa(n-1,i,j) * ( z(k,i,j)-z_isa(n-1) ) )
-             else
-                pres(k) = pres_isa(n-1,i,j) * ( temp(k)/temp_isa(n-1,i,j) ) ** ( -gmr/GAMMA(n-1) )
+          temp(k) = temp_isa(1,i,j) + GAMMA(1) * ( z(k,i,j)-z_isa(1) )
+          pres(k) = pres_isa(1,i,j) * ( temp(k)/temp_isa(1,i,j) ) ** ( -gmr/GAMMA(1) )
+
+       elseif ( z(k,i,j)  > z_isa(nref) ) then
+
+          temp(k) = temp_isa(nref,i,j)
+          pres(k) = pres_isa(nref,i,j) * exp( -gmr/temp_isa(nref,i,j) * ( z(k,i,j)-z_isa(nref) ) )
+
+       else
+          do n = 2, nref
+             if ( z(k,i,j) > z_isa(n-1) .AND. z(k,i,j) <= z_isa(n) ) then
+
+                temp(k) = temp_isa(n-1,i,j) + GAMMA(n-1) * ( z(k,i,j)-z_isa(n-1) )
+                if ( GAMMA(n-1) == 0.0_RP ) then
+                   pres(k) = pres_isa(n-1,i,j) * exp( -gmr/temp_isa(n-1,i,j) * ( z(k,i,j)-z_isa(n-1) ) )
+                else
+                   pres(k) = pres_isa(n-1,i,j) * ( temp(k)/temp_isa(n-1,i,j) ) ** ( -gmr/GAMMA(n-1) )
+                endif
+
              endif
-
-          elseif ( z(k,i,j) <= z_isa(1)    ) then
-
-             temp(k) = temp_isa(1,i,j) + GAMMA(1) * ( z(k,i,j)-z_isa(1) )
-             pres(k) = pres_isa(1,i,j) * ( temp(k)/temp_isa(1,i,j) ) ** ( -gmr/GAMMA(1) )
-
-          elseif ( z(k,i,j)  > z_isa(nref) ) then
-
-             temp(k) = temp(k-1)
-             pres(k) = pres_isa(n-1,i,j) * exp( -gmr/temp_isa(n-1,i,j) * ( z(k,i,j)-z_isa(n-1) ) )
-
-          endif
-       enddo
+          enddo
+       endif
 
        pott(k,i,j) = temp(k) * ( P00/pres(k) )**RovCP
     enddo

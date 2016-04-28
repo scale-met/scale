@@ -1,0 +1,20 @@
+----------------------------------------------
+         A USERS GUIDE FOR SCALE-LES
+       by Team SCALE UGC working group
+----------------------------------------------
+
+* make a PDF file
+ >$ sh usersguide_make.sh
+
+ then you will get a pdf file "scale_users_guide"
+ in the current directory.
+
+* texlive (more than 2009) is needed to  make
+  the PDF file.
+
+* to make PDF file complitely, "wallpaper.sty" is
+  needed. it can be download freely from
+  http://www.ctan.org/tex-archive/macros/latex/contrib/wallpaper
+
+----------------------------------------------
+(last update: 9 July, 2015)

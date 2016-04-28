@@ -1,0 +1,37 @@
+#
+# Dimension 
+#
+&nml_grads_grid
+ outer_nx     = 349
+ outer_ny     = 296
+ outer_nz     = 47
+ outer_nl     = 3
+/
+
+#
+# Variables
+#
+&grdvar  item='topo',    dtype='map',     fname='MRI',     startrec=1,   totalrec=5  /
+&grdvar  item='lsmask',  dtype='map',     fname='MRI',     startrec=2,   totalrec=5  /
+&grdvar  item='lon',     dtype='map',     fname='MRI',     startrec=4,   totalrec=5  /
+&grdvar  item='lat',     dtype='map',     fname='MRI',     startrec=5,   totalrec=5  /
+&grdvar  item='plev',    dtype='map',     fname='MRIpres', startrec=1,   totalrec=94 /
+&grdvar  item='HGT',     dtype='map',     fname='MRIpres', startrec=48,  totalrec=94 /
+&grdvar  item='U',       dtype='map',     fname='MRIatm',  startrec=1,   totalrec=188 /
+&grdvar  item='V',       dtype='map',     fname='MRIatm',  startrec=48,  totalrec=188 /
+&grdvar  item='T',       dtype='map',     fname='MRIatm',  startrec=95,  totalrec=188 /
+&grdvar  item='QV',      dtype='map',     fname='MRIatm',  startrec=142, totalrec=188 /
+&grdvar  item='llev',    dtype='levels',  lnum=3, lvars=0.02,1.49,3.49/
+&grdvar  item='SST',     dtype='map',     fname='MRIsfc', startrec=1, totalrec=11, missval=-9.99e+33 /
+&grdvar  item='STEMP',   dtype='map',     fname='MRIsfc', startrec=2, totalrec=11, missval=-9.99e+33 /
+&grdvar  item='SKINT',   dtype='map',     fname='MRIsfc', startrec=6, totalrec=11, missval=-9.99e+33 /
+&grdvar  item='PSFC',    dtype='map',     fname='MRIsfc', startrec=7, totalrec=11, missval=-9.99e+33 /
+&grdvar  item='SMOISDS', dtype='map',     fname='MRIsfc', startrec=8, totalrec=11, missval=-9.99e+33 /
+#
+##----------------------------------------------------------------------------------#
+#&grdvar  item='MSLP',    dtype='map',     fname='GSMjp', startrec=1,  totalrec=101 /
+#&grdvar  item='U10',     dtype='map',     fname='GSMjp', startrec=3,  totalrec=101 /
+#&grdvar  item='V10',     dtype='map',     fname='GSMjp', startrec=4,  totalrec=101 /
+#&grdvar  item='T2',      dtype='map',     fname='GSMjp', startrec=5,  totalrec=101 /
+#&grdvar  item='RH2',     dtype='map',     fname='GSMjp', startrec=6,  totalrec=101 /
+#

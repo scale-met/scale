@@ -2,12 +2,13 @@
 #include "gtool_file.h"
 
 #define RMISS -9.9999e+30
-#define EPS 1e-10
+#define TEPS 1e-6
 
 #define CHECK_ERROR(status)					\
   {								\
     if (status != NC_NOERR) {					\
-      fprintf(stderr, "Error: %s\n", nc_strerror(status));	\
+      fprintf(stderr, "Error: at l%d in %s\n", __LINE__, __FILE__);	\
+      fprintf(stderr, "       %s\n", nc_strerror(status));	\
       return ERROR_CODE;					\
     }								\
   }
@@ -20,6 +21,9 @@
     break;							\
   case NC_DOUBLE:						\
     type = File_REAL8;						\
+    break;							\
+  case NC_SHORT:						\
+    type = File_INTEGER2;					\
     break;							\
   default:                                                      \
     fprintf(stderr, "unsuppoted data type: %d\n", xtype);	\
@@ -47,8 +51,11 @@
 
 typedef struct {
   int ncid;
-  char time_units[File_HSHORT+1];
+  char time_units[File_HMID+1];
   int deflate_level;
+#ifdef NETCDF3
+  int defmode;
+#endif
 } fileinfo_t;
 
 typedef struct {
@@ -70,9 +77,10 @@ typedef struct {
   size_t *count;
 } varinfo_t;
 
-
-#define FILE_MAX 64
-#define VAR_MAX 64000
+// Keep consistency with "File_nfile_max" in gtool_file.f90
+#define FILE_MAX 512
+// Keep consistency with "File_nvar_max" in gtool_file.f90
+#define VAR_MAX 40960
 
 static fileinfo_t *files[FILE_MAX];
 static int nfile = 0;
@@ -122,6 +130,9 @@ int32_t file_open( int32_t *fid,     // (out)
   files[nfile] = (fileinfo_t*) malloc(sizeof(fileinfo_t));
   files[nfile]->ncid = ncid;
   files[nfile]->deflate_level = DEFAULT_DEFLATE_LEVEL;
+#ifdef NETCDF3
+  files[nfile]->defmode = 1;
+#endif
   *fid = nfile;
   nfile++;
 
@@ -177,7 +188,8 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   CHECK_ERROR( nc_inq_varndims(ncid, varid, &rank) );
   CHECK_ERROR( nc_inq_vardimid(ncid, varid, dimids) );
 #ifdef NETCDF3
-  CHECK_ERROR( nc_inq_unlimdim(ncid, &n) );
+  CHECK_ERROR( nc_inq_unlimdim(ncid, uldims) );
+  n = 1;
 #else
   CHECK_ERROR( nc_inq_unlimdims(ncid, &n, uldims) );
 #endif
@@ -206,7 +218,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     // time_end
     CHECK_ERROR( nc_inq_dimname(ncid, tdim, name) );
     CHECK_ERROR( nc_inq_varid(ncid, name, &varid) );
-    idx[0] = step;
+    idx[0] = step - 1;
     CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_end)) );
     // time_start
     strcat(name, "_bnds");
@@ -268,29 +280,100 @@ int32_t file_read_data( void       *var,        // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_global_attributes( int32_t  fid,         // (in)
-				    char    *title,       // (in)
-				    char    *source,      // (in)
-				    char    *institution, // (in)
-				    char    *time_units,  // (in)
-				    int32_t  nodeid,      // (in)
-				    int32_t *nodeidx,     // (in)
-				    int32_t  nodeidx_dim) // (in)
+int32_t file_set_global_attribute_text( int32_t  fid,    // (in)
+				        char    *key,    // (in)
+				        char    *value ) // (in)
 {
   int ncid;
-  int tmp[1];
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
-  CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, "title", strlen(title), title) );
-  CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, "source", strlen(source), source) );
-  CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, "institution", strlen(institution), institution) );
-  tmp[0] = nodeid;
-  CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, "node_id", NC_INT, 1, tmp) );
-  CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, "node_index", NC_INT, nodeidx_dim, nodeidx) );
+  CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, key, strlen(value), value) );
 
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_global_attribute_int( int32_t  fid,   // (in)
+				       char    *key,   // (in)
+				       int     *value, // (in)
+				       size_t   len )  // (in)
+{
+  int ncid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, key, NC_INT, len, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_global_attribute_float( int32_t  fid,   // (in)
+					 char    *key,   // (in)
+					 float   *value, // (in)
+					 size_t   len )  // (in)
+{
+  int ncid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_put_att_float(ncid, NC_GLOBAL, key, NC_FLOAT, len, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_global_attribute_double( int32_t  fid,   // (in)
+					  char    *key,   // (in)
+					  double  *value, // (in)
+					  size_t   len )  // (in)
+{
+  int ncid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_put_att_double(ncid, NC_GLOBAL, key, NC_DOUBLE, len, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_tunits( int32_t fid,         // (in)
+			 char    *time_units) // (in)
+{
   strcpy(files[fid]->time_units, time_units);
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_tattr( int32_t  fid,   // (in)
+			char    *vname, // (in)
+			char    *key,   // (in)
+			char    *val)   // (in)
+{
+  int ncid;
+  int varid;
+  int attid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) );
+
+  if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
+#endif
+
+  CHECK_ERROR( nc_put_att_text(ncid, varid, key, strlen(val), val) );
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+  files[fid]->defmode = 0;
+#endif
 
   return SUCCESS_CODE;
 }
@@ -315,7 +398,7 @@ int32_t file_put_axis( int32_t fid,        // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
 #endif
 
   if ( nc_inq_dimid(ncid, dim_name, &dimid) != NC_NOERR ) // check if existed
@@ -328,6 +411,7 @@ int32_t file_put_axis( int32_t fid,        // (in)
 
 #ifdef NETCDF3
   CHECK_ERROR( nc_enddef(ncid) );
+  files[fid]->defmode = 0;
 #endif
 
   switch ( precision ) {
@@ -366,12 +450,12 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
 #endif
 
   dimids = malloc(sizeof(int)*ndims);
   for (i=0; i<ndims; i++)
-    CHECK_ERROR( nc_inq_dimid(ncid, dim_names[i], dimids+i) );
+    CHECK_ERROR( nc_inq_dimid(ncid, dim_names[i], dimids+ndims-i-1) );
 
   TYPE2NCTYPE(dtype, xtype);
 
@@ -382,6 +466,7 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
 
 #ifdef NETCDF3
   CHECK_ERROR( nc_enddef(ncid) );
+  files[fid]->defmode = 0;
 #endif
 
   switch ( precision ) {
@@ -411,16 +496,18 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 			   int32_t  tavg)    // (in)
 {
   int ncid, varid, acid, *acdimids;
-  int dimids[NC_MAX_DIMS];
+  int dimids[NC_MAX_DIMS], dimid;
   char tname[File_HSHORT+1];
   int tdimid, tvarid;
   nc_type xtype = -1;
   char buf[File_HMID+1];
-  int i, j, n, m;
+  int i, j, k, n, m;
+  int nndims;
   size_t size;
   double rmiss = RMISS;
   char coord[File_HMID+1];
   int has_assoc;
+  int new;
 
   if ( nvar >= VAR_MAX ) {
     fprintf(stderr, "exceed max number of variable limit\n");
@@ -437,7 +524,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   vars[nvar]->count = NULL;
 
 #ifdef NETCDF3
-  CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
 #endif
 
   // get time variable
@@ -491,25 +578,57 @@ int32_t file_add_variable( int32_t *vid,     // (out)
     dimids[0] = vars[nvar]->t->dimid;
     ndims++;
   }
+  for (i=ndims-n; i<ndims; i++) dimids[i] = -1;
 
   has_assoc = 0;
-  for (i=0; i<n; ) {
-    if ( nc_inq_dimid(ncid, dims[i], &(dimids[ndims-i-1])) == NC_NOERR ) {
-      i += 1;
+  nndims = 0;
+  for (i=0; i<n; i++) {
+    //printf("%d %s\n", i, dims[i]);
+    if ( nc_inq_dimid(ncid, dims[i], &dimid) == NC_NOERR ) {
+      //printf("not assoc\n");
+      new = 1;
+      for (k=0; k<nndims; k++) {
+	if (dimid == dimids[k]) {
+	  new = 0;
+	  break;
+	}
+      }
+      if (new) {
+	dimids[ndims-(++nndims)] = dimid;
+      }
     } else {
+      //printf("assoc\n");
       CHECK_ERROR( nc_inq_varid(ncid, dims[i], &acid) );
       CHECK_ERROR( nc_inq_varndims(ncid, acid, &m) );
-      if ( i+m > ndims ) {
-	fprintf(stderr, "Error: invalid associated coordinates\n");
-	return ERROR_CODE;
-      }
       acdimids = (int*) malloc((sizeof(int)*m));
       CHECK_ERROR( nc_inq_vardimid(ncid, acid, acdimids) );
-      for (j=0; j<m; j++) dimids[ndims-i-j-1] = acdimids[j];
+      for (j=m-1; j>=0; j--) {
+	new = 1;
+	for (k=0; k<ndims; k++) {
+	  if (acdimids[j] == dimids[k]) {
+	    new = 0;
+	    break;
+	  }
+	}
+	if (new) {
+	  if ( nndims >= ndims ) {
+	    fprintf(stderr, "Error: invalid associated coordinates\n");
+	    return ERROR_CODE;
+	  }
+          dimids[ndims-(++nndims)] = acdimids[j];
+	  //nc_inq_dimname(ncid, acdimids[j], tname);
+	  //printf("add %s\n", tname);
+	}
+      }
+      free(acdimids);
       has_assoc = 1;
-      i += m;
     }
   }
+  if (nndims != n) {
+    fprintf(stderr, "Error: invalid associated coordinates: %d %d\n", ndims, nndims);
+    return ERROR_CODE;
+  }
+
   TYPE2NCTYPE(dtype, xtype);
   CHECK_ERROR( nc_def_var(ncid, varname, xtype, ndims, dimids, &varid) );
 
@@ -526,8 +645,10 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 	strcat(coord, dims[i]);
       }
     }
-    if ( ndims > n && strlen(coord)+6 < File_HMID)
-      strcat(coord, " time");
+    if ( ndims > n && strlen(coord)+6 < File_HMID) {
+      strcat(coord, " ");
+      strcat(coord, vars[nvar]->t->name);
+    }
     CHECK_ERROR( nc_put_att_text(ncid, varid, "coordinates", strlen(coord), coord) );
   }
 
@@ -557,6 +678,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 
 #ifdef NETCDF3
   CHECK_ERROR( nc_enddef(ncid) );
+  files[fid]->defmode = 0;
 #endif
 
   vars[nvar]->varid = varid;
@@ -579,7 +701,7 @@ int32_t file_write_data( int32_t  vid,        // (in)
   varid = vars[vid]->varid;
   if ( vars[vid]->t != NULL ) { // have time dimension
     if ( vars[vid]->t->count < 0 ||  // first time
-	 fabs(t_end - vars[vid]->t->t) > EPS ) { // time goes next step
+	 t_end > vars[vid]->t->t + TEPS ) { // time goes next step
       vars[vid]->t->count += 1;
       vars[vid]->t->t = t_end;
       size_t index[2];
@@ -589,8 +711,31 @@ int32_t file_write_data( int32_t  vid,        // (in)
       CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->bndsid, index, &t_start) );
       index[1] = 1;
       CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->bndsid, index, &t_end) );
+      vars[vid]->start[0] = vars[vid]->t->count;
+    } else {
+      size_t nt = vars[vid]->t->count + 1;
+      double t[nt];
+      size_t s[1];
+      int flag, n;
+      s[0] = 0;
+      CHECK_ERROR( nc_get_vara_double(ncid, vars[vid]->t->varid, s, &nt, t) );
+      flag = 1;
+      for(n=nt-1;n>=0;n--) {
+	if ( fabs(t[n]-t_end) < TEPS ) {
+	  vars[vid]->start[0] = n;
+	  flag = 0;
+	  break;
+	}
+      }
+      if ( flag ) {
+	fprintf(stderr, "cannot find time: %f\n", t_end);
+	fprintf(stderr, "  time count is : %d, last time is: %f, diff is: %e\n", vars[vid]->t->count < 0, vars[vid]->t->t, vars[vid]->t->t-t_end);
+	fprintf(stderr, "  time is: ");
+	for (n=0;n<nt;n++) fprintf(stderr, "%f, ", t[n]);
+	fprintf(stderr, "\n");
+	return ERROR_CODE;
+      }
     }
-    vars[vid]->start[0] = vars[vid]->t->count;
   }
 
   switch (precision) {

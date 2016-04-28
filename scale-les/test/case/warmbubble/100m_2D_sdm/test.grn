@@ -1,0 +1,12 @@
+'open QC_sd_d01z-3d.ctl'
+t = 1
+'set y 1'
+'set x 1 80'
+'set z 1 50'
+'set gxout shaded'
+while (t <= 16)
+  'set t 't
+  'd qc_sd'  
+  'q pos'
+  t = t + 1
+endwhile

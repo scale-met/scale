@@ -18,7 +18,8 @@
 !! @li      2014-05-04 (Y.Sato)  [rev] Update for scale-0.0.1
 !! @li      2014-06-06 (S.Shima) [rev] Modify several bug 
 !! @li      2014-06-07 (Y.Sato)  [rev] Remove dt=max(dt_sdm) and some other changes
-!! @li      2014-06-09 (S.Shima) [rev] Check whether dt is the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt. Fixed a hidden bug: "/=" to "==".
+!! @li      2014-06-09 (S.Shima) [rev] Check whether dt is the least common multiple of sdm_dtcmph(i) 
+!!                                     that satisfies sdm_dtcmph(i)<= dt. Fixed a hidden bug: "/=" to "==".
 !! @li      2014-06-13 (S.Shima) [rev] Common variables are separated into sdm_common.f90
 !! @li      2014-06-14 (S.Shima) [rev] Check the initialization of the random number generator.
 !! @li      2014-06-24 (S.Shima) [rev] Separated sdm_allocinit
@@ -32,7 +33,8 @@
 !! @li      2014-07-11 (S.Shima) [rev] Subroutines related to sdm_getvz are revised. Many bug fixes.
 !! @li      2014-07-11 (S.Shima) [rev] Subroutines for conversion between fluid variables are separated into module m_sdm_fluidconv
 !! @li      2014-07-11 (S.Shima) [rev] Subroutines to impose boundary conditions are separated into module m_sdm_boundary
-!! @li      2014-07-11 (S.Shima) [rev] Motion (advection/sedimentation/precipitation) related subroutines are separated into the module m_sdm_motion
+!! @li      2014-07-11 (S.Shima) [rev] Motion (advection/sedimentation/precipitation) related subroutines are separated into the 
+!!                                     module m_sdm_motion
 !! @li      2014-07-12 (S.Shima) [rev] Add comments concerning when to diagnose QC and QR
 !! @li      2014-07-12 (S.Shima) [rev] BUG of random number initialization removed
 !! @li      2014-07-12 (S.Shima) [rev] sdm_sort repaired
@@ -68,13 +70,16 @@
 !! @li      2015-06-27 (S.Shima) [add] Add more section specification call for profiling (fapp)
 !! @li      2015-06-27 (S.Shima) [add] Store environmental variable PARALELL to num_threads 
 !! @li      2015-07-30 (Y.Sato)  [add] Add "ifdef" for fapp and fipp module
-!<
+!! @li      2015-09-08 (Y.Sato)  [mod] update for version SCALE 0.4.2
+!! @li      2015-09-15 (Y.Sato)  [mod] update for version SCALE 0.4.3
+!<  
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
 module scale_atmos_phy_mp_sdm
   !-----------------------------------------------------------------------------
   !
-  !++ used modules ! For encapsulation, reduce the use of modules here as far as possible. Modules should be called inside the subroutine here.
+  !++ used modules ! For encapsulation, reduce the use of modules here as far as possible. 
+  !   Modules should be called inside the subroutine here.
   !
   use mpi
   use scale_precision
@@ -82,19 +87,19 @@ module scale_atmos_phy_mp_sdm
   use scale_prof
   use scale_grid_index
   use scale_tracer_sdm
-
-  use scale_process, only: &
-     mype => PRC_myrank, &
+  use scale_process, only:  &
+     mype => PRC_myrank,    &
+     PRC_nprocs,            &
+     PRC_IsMaster,          &
      PRC_MPIstop
-  use scale_time, only: &
-     TIME_DOATMOS_restart, &
+  use scale_time, only:     &
      TIME_NOWSEC
   use gadg_algorithm, only: &
      gadg_count_sort
   use rng_uniform_mt, only: &
-     c_rng_uniform_mt, &
-     rng_save_state, &
-     rng_load_state, &
+     c_rng_uniform_mt,      &
+     rng_save_state,        &
+     rng_load_state,        &
      gen_rand_array => rng_generate_array
   use m_sdm_common
   use m_sdm_numset
@@ -111,67 +116,74 @@ module scale_atmos_phy_mp_sdm
   public :: ATMOS_PHY_MP_sdm
   public :: ATMOS_PHY_MP_sdm_CloudFraction
   public :: ATMOS_PHY_MP_sdm_EffectiveRadius
-  public :: ATMOS_PHY_MP_sdm_Mixingratio
+  public :: ATMOS_PHY_MP_sdm_MixingRatio
   public :: ATMOS_PHY_MP_sdm_restart_out
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
-  logical,  public, save   :: sd_rest_flg_out = .false. ! restart flg of Super Droplet
   real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  logical,  public, save   :: sd_rest_flg_out = .false. ! restart flg of Super Droplet
+
+  integer(DP), allocatable, save :: sdn_s2c_restart(:)      ! multipilicity
+  real(RP), allocatable, save    :: sdrk_s2c_restart(:)     ! index-k(real) of s.d.
+  real(RP), allocatable, save    :: sdx_s2c_restart(:)      ! x-cordinate of s.d.
+  real(RP), allocatable, save    :: sdy_s2c_restart(:)      ! y-cordinate of s.d.
+  real(RP), allocatable, save    :: sdz_s2c_restart(:)      ! z-cordinate of s.d.
+  real(RP), allocatable, save    :: sdr_s2c_restart(:)      ! y-cordinate of s.d.
+  real(RP), allocatable, save    :: sdu_s2c_restart(:)      ! x-components velocity of s.d.
+  real(RP), allocatable, save    :: sdv_s2c_restart(:)      ! y-components velocity of s.d.
+  real(RP), allocatable, save    :: sdvz_s2c_restart(:)     ! z-components velocity of s.d. and terminal veloicty of s.d.
+  real(RP), allocatable, save    :: sdasl_s2c_restart(:,:)  ! aeosol mass of s.d.
+  type(c_rng_uniform_mt), save   :: rng_s2c_restart
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sdm_setup( MP_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_nmax,    &
+    use scale_les_process, only: &
        PRC_next,    &
        PRC_NUM_X,   &
        PRC_NUM_Y,   &
        PRC_W,       &
        PRC_E,       &
        PRC_S,       &
-       PRC_N,       &
-       mype => PRC_myrank, &
-       PRC_master
+       PRC_N
     use scale_const, only: &
        PI     => CONST_PI,    &
        GRAV   => CONST_GRAV,  &
-       dens_w => CONST_DWATR,  &
+       dens_w => CONST_DWATR, &
        dens_i => CONST_DICE
-    use scale_specfunc, only: &
-       SF_gamma
-    use scale_comm, only: &
-       COMM_horizontal_mean
+!    use scale_specfunc, only: &
+!       SF_gamma
+!    use scale_comm, only: &
+!       COMM_horizontal_mean
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_grid_real, only: & ! These should be all REAL_xx. Check later.
-       REAL_FZ
+         REAL_FZ
     use scale_grid, only: &
-!!$       CDZ => GRID_CDZ,   &
          GRID_CDX,   &
          GRID_CDY,   &
-         GRID_RCDX,   &
-         GRID_RCDY,   &
+         GRID_RCDX,  &
+         GRID_RCDY,  &
          GRID_CDZ,   &
+         GRID_FX,    &
+         GRID_FY,    &
+         DX,DY,DZ
 !!$       CZ  => GRID_CZ,    &
 !!$       FZ  => GRID_FZ,    &
 !!$       FDX => GRID_FDX,   &
 !!$       FDY => GRID_FDY,   &
 !!$       FDZ => GRID_FDZ,   & 
-       GRID_FX,    &
-       GRID_FY,    &
 !!       CBFZ => GRID_CBFZ, &
 !!       CBFX => GRID_CBFX, &
 !!       CBFY => GRID_CBFY, &
-       ISG, IEG, JSG, JEG,&
-       DX,DY,DZ
+!!       ISG, IEG, JSG, JEG,&
     use scale_topography, only: &
-       TOPO_Zsfc
+       TOPO_exist
     use m_sdm_coordtrans, only: &
        sdm_getrklu
     implicit none
@@ -183,40 +195,40 @@ contains
        doprecipitation
 
     NAMELIST / PARAM_ATMOS_PHY_MP_SDM / &
-       RANDOM_IN_BASENAME, &
+       RANDOM_IN_BASENAME,  &
        RANDOM_OUT_BASENAME, &
-       SD_IN_BASENAME, &
-       SD_OUT_BASENAME, &
-       domovement, &
-       donegative_fixer, &
-       sdm_dtcmph, &
-       sdm_rdnc, &
-       sdm_sdnmlvol, &
-       sdm_inisdnc, &
-       sdm_aslset, &
-       sdm_aslmw, &
-       sdm_zlower, &
-       sdm_zupper, &
-       sdm_extbuf, &
-       sdm_rqc2qr, &
-       sdm_aslfmrate, &
-       sdm_aslfmdt, &
-       sdm_aslfmsdnc, &
-       sdm_colbrwn, &
-       sdm_colkrnl, &
-       sdm_mvexchg, &
-       sdm_nadjdt, &
-       sdm_nadjvar,&
-       sdm_dmpvar,&
-       sdm_dmpitva,&
-       sdm_dmpnskip,& 
-       sdm_dmpitvb,& 
-       sdm_dmpitvl,&
+       SD_IN_BASENAME,      &
+       SD_OUT_BASENAME,     &
+       domovement,          &
+       donegative_fixer,    &
+       sdm_dtcmph,          &
+       sdm_rdnc,            &
+       sdm_sdnmlvol,        &
+       sdm_inisdnc,         &
+       sdm_aslset,          &
+       sdm_aslmw,           &         
+       sdm_zlower,          &
+       sdm_zupper,          &
+       sdm_extbuf,          &
+       sdm_rqc2qr,          &
+       sdm_aslfmrate,       &
+       sdm_aslfmdt,         &
+       sdm_aslfmsdnc,       &
+       sdm_colbrwn,         &
+       sdm_colkrnl,         &
+       sdm_mvexchg,         &
+       sdm_nadjdt,          &
+       sdm_nadjvar,         &
+       sdm_dmpvar,          &
+       sdm_dmpitva,         &
+       sdm_dmpnskip,        & 
+       sdm_dmpitvb,         & 
+       sdm_dmpitvl,         &
        sdm_dmpsdsiz
 
-    real(RP) :: dtevl
-    real(RP) :: n0, dry_r
-    real(RP) :: delta1, delta2 !, sdn_tmp
+!    real(RP) :: dtevl
+!    real(RP) :: n0, dry_r
+!    real(RP) :: delta1, delta2 !, sdn_tmp
     real(RP) :: buffact
     integer :: ierr
     integer :: i, j, ip, k, n, s
@@ -247,6 +259,8 @@ contains
        deallocate(tmp_value)
     end if
 
+    ! [Bug] Stretched coordinate is not supported yet, but the check below is not working any more
+    ! [Bug] Must be fixed in the future when introducing generalized coordinate 
     buffact = 0.0_RP
     do k = KS, KE
       buffact = max( buffact,GRID_CDZ(k)/DZ )
@@ -268,10 +282,11 @@ contains
        write(*,*) 'ERROR: stretched coordinate is not yet supported!', buffact
        call PRC_MPIstop
     end if
+    ! [Bug] Stretched coordinate is not supported yet, but the check above is not working any more
 
-    if( maxval( TOPO_Zsfc ) > 0.0_RP ) then
+    if( TOPO_exist ) then
        trnopt = 2
-    elseif( maxval( TOPO_Zsfc ) == 0.0_RP ) then
+    elseif( .not. TOPO_exist ) then
        trnopt = 0
     endif
 
@@ -292,7 +307,7 @@ contains
        nbc=1
     end if
 
-    nsub  = max( PRC_nmax,1 )
+    nsub  = max( PRC_nprocs,1 )
     nisub = max( PRC_NUM_X,1 )
     njsub = max( PRC_NUM_Y,1 )
 
@@ -379,7 +394,8 @@ contains
 !     endif
 
     if( sdm_zupper > minval(REAL_FZ(KE-1,IS:IE,JS:JE)) ) then
-       if( mype == PRC_master )  write(*,*) "sdm_zupper was set to minval(REAL_FZ(KE-1)) because zupper > minval(REAL_FZ(KE-1))"
+!       if( mype == PRC_master )  write(*,*) "sdm_zupper was set to minval(REAL_FZ(KE-1)) because zupper > minval(REAL_FZ(KE-1))"
+       if( PRC_IsMaster )  write(*,*) "sdm_zupper was set to minval(REAL_FZ(KE-1)) because zupper > minval(REAL_FZ(KE-1))"
        sdm_zupper = minval(REAL_FZ(KE-1,IS:IE,JS:JE))
     endif
 
@@ -479,9 +495,8 @@ contains
     end do
     !! if igcd>1, it meanst dt is not the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt
     if( igcd > 1)then
-       write(*,*) 'ERROR: TIME_DTSEC_ATMOS_PHY_MP should be the least common'
-       write(*,*) 'multiple of sdm_dtcmph(1:3) that are smaller than'
-       write(*,*) 'TIME_DTSEC_ATMOS_PHY_MP'
+       write(*,*) 'ERROR: TIME_DTSEC_ATMOS_PHY_MP should be the least comon multiple of sdm_dtcmph(1:3)', &
+                  ' that are smaller than TIME_DTSEC_ATMOS_PHY_MP'
        call PRC_MPIstop
     end if
 
@@ -520,24 +535,39 @@ contains
 
     ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w ! hydrometeor density [kg/m3]=[g/L]
 
+    allocate(sdn_s2c_restart(1:sdnum_s2c))
+    allocate(sdrk_s2c_restart(1:sdnum_s2c))
+    allocate(sdx_s2c_restart(1:sdnum_s2c))
+    allocate(sdy_s2c_restart(1:sdnum_s2c))
+    allocate(sdz_s2c_restart(1:sdnum_s2c))
+    allocate(sdr_s2c_restart(1:sdnum_s2c))
+    allocate(sdu_s2c_restart(1:sdnum_s2c))
+    allocate(sdv_s2c_restart(1:sdnum_s2c))
+    allocate(sdvz_s2c_restart(1:sdnum_s2c))
+    allocate(sdasl_s2c_restart(1:sdnum_s2c,1:sdnumasl_s2c))
+
     return
   end subroutine ATMOS_PHY_MP_sdm_setup
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sdm( &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC  )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       CCN,       &
+       EVAPORATE, &
+       SFLX_rain, &
+       SFLX_snow  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP !,&
-!       TIME_NOWSEC
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_mp_common, only: &
@@ -545,6 +575,7 @@ contains
        MP_precipitation         => ATMOS_PHY_MP_precipitation,        &
        MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
     use scale_atmos_thermodyn, only: &
+       CPw => AQ_CP, &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
@@ -559,8 +590,6 @@ contains
        Rdry  => CONST_Rdry, &
        Rvap  => CONST_Rvap, &
        P00   => CONST_PRE00
-    use scale_atmos_thermodyn, only: &
-       CPw => AQ_CP
 
     use m_sdm_io, only: &
        sdm_outasci
@@ -579,6 +608,10 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !---- evaporated cloud number concentration [/m3]
+    real(RP), intent(in)    :: CCN(KA,IA,JA)         !! cloud condensation nuclei calculated by aerosol module
+    real(RP), intent(out)   :: SFLX_rain(IA,JA)      !! rain flux at surface (used in land and urban model)
+    real(RP), intent(out)   :: SFLX_snow(IA,JA)      !! snow flux at surface (used in land and urban model)
 
     real(RP):: dtcl(1:5) ! 1-3 : Time interval of cloud micro physics at current processed time
                          ! 4   : Time interval to form super droplets as aerosol
@@ -605,15 +638,15 @@ contains
     logical :: lsdmup       ! flag for updating water hydrometeor by SDM
     real(RP) :: sd_nc  ! averaged number concentration in a grid
 
-    real(RP) :: RHOE_t(KA,IA,JA)
-    real(RP) :: QTRC_t(KA,IA,JA,QA)
-    real(RP) :: QDRY(KA,IA,JA)
-    real(RP) :: CPTOT(KA,IA,JA)
-    real(RP) :: RTOT(KA,IA,JA)
-    real(RP) :: CPovCV(KA,IA,JA)
-    real(RP) :: RHOE  (KA,IA,JA)
-    real(RP) :: temp  (KA,IA,JA)
-    real(RP) :: pres  (KA,IA,JA)
+!    real(RP) :: RHOE_t(KA,IA,JA)
+!    real(RP) :: QTRC_t(KA,IA,JA,QAD)
+!    real(RP) :: QDRY(KA,IA,JA)
+!    real(RP) :: CPTOT(KA,IA,JA)
+!    real(RP) :: RTOT(KA,IA,JA)
+!    real(RP) :: CPovCV(KA,IA,JA)
+!    real(RP) :: RHOE  (KA,IA,JA)
+!    real(RP) :: temp  (KA,IA,JA)
+!    real(RP) :: pres  (KA,IA,JA)
 
     real(RP) :: flux_tot (KA,IA,JA)
     real(RP) :: flux_rain(KA,IA,JA)
@@ -624,7 +657,7 @@ contains
     integer  :: n, s, k, i, j, iq         ! index
     logical, save ::  TIME_DO_RANDOM_restart = .false.
 
-    real(RP)::tmp_pres, tmp_temp
+!    real(RP)::tmp_pres, tmp_temp
 
     real(RP) :: pres_scale(KA,IA,JA) ! Pressure
     real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
@@ -652,6 +685,20 @@ contains
        end if
     end do
 
+    ! For restart array
+    sdn_s2c_restart(:) = sdn_s2c(:)
+    sdrk_s2c_restart(:) = sdrk_s2c(:)
+    sdx_s2c_restart(:) = sdx_s2c(:)
+    sdy_s2c_restart(:) = sdy_s2c(:)
+    sdz_s2c_restart(:) = sdz_s2c(:)
+    sdr_s2c_restart(:) = sdr_s2c(:)
+    sdu_s2c_restart(:) = sdu_s2c(:)
+    sdv_s2c_restart(:) = sdv_s2c(:)
+    sdvz_s2c_restart(:) = sdvz_s2c(:)
+    sdasl_s2c_restart(:,:) = sdasl_s2c(:,:)
+    rng_s2c_restart = rng_s2c
+
+
 #ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_initialization",0,0)
@@ -663,6 +710,15 @@ contains
          !---- read restart file
          call ATMOS_PHY_MP_sdm_restart_in
          prr_crs(1:IA,1:JA,1:2)=0.0_RP
+!    do iq = 1, sdnum_s2c
+!     write(*,'(15F15.7)') sdrk_s2c(iq), sdx_s2c(iq), &
+!     sdy_s2c(iq), sdz_s2c(iq), sdr_s2c(iq), &
+!     sdu_s2c(iq), sdv_s2c(iq), sdvz_s2c(iq)
+!     write(*,'(15F15.7)') sdrk_s2c_restart(iq), sdx_s2c_restart(iq), &
+!     sdy_s2c_restart(iq), sdz_s2c_restart(iq), sdr_s2c_restart(iq), &
+!     sdu_s2c_restart(iq), sdv_s2c_restart(iq), sdvz_s2c_restart(iq)
+!    enddo
+!    call PRC_MPIstop
       else
          !---- set initial condition
          call sdm_iniset(DENS, RHOT, QTRC,                   &
@@ -701,7 +757,8 @@ contains
     dtcl(5) =  sdm_nadjdt
 
     ! after removing OMP support, this should be also omitted.
-    ! Finally, bufsiz1 = bufsiz and bufsiz2 = bndsdmdim, and these should be determined once in sdm_numset or somewhere and should be stored as common variables
+    ! Finally, bufsiz1 = bufsiz and bufsiz2 = bndsdmdim, and these should be determined 
+    ! once in sdm_numset or somewhere and should be stored as common variables
     bufsiz1 = nint( sdininum_s2c*(real(sdm_extbuf)*1.E-2_RP) )
     bufsiz1 = nomp * ( int((bufsiz1-1)/nomp) + 1 ) !! being multiple number to 'nomp'
     bufsiz2 = 8 + sdnumasl_s2c    !! n,x,y,rk,u,v,wc(vz),r,asl
@@ -840,6 +897,13 @@ contains
 !!$
 !!$      end if
 
+    do i = IS, IE
+    do j = JS, JE
+       SFLX_rain(i,j) = prr_crs(i,j,1)
+       SFLX_snow(i,j) = 0.0_RP
+    enddo
+    enddo
+
     do k = KS, KE
     do i = IS, IE
     do j = JS, JE
@@ -850,11 +914,12 @@ contains
 
 !! Are these correct? Let's check later.
 !!$    call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
-    call HIST_in( prr_crs(:,:,1), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
-    call HIST_in( prr_crs(:,:,1), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
-    call HIST_in( QTRC_sdm(:,:,:,I_QC), 'QC_sd', 'mixing ratio of cloud in SDM', 'kg/kg', dt)
-    call HIST_in( QTRC_sdm(:,:,:,I_QR), 'QR_sd', 'mixing ratio of rain in SDM', 'kg/kg', dt)
-    call HIST_in( QHYD_sdm(:,:,:), 'QHYD_sd', 'mixing ratio of liquid in SDM', 'kg/kg', dt)
+!  PREC and RAIN is output another file
+!    call HIST_in( prr_crs(:,:,1),       'RAIN',    'surface rain rate',             'kg/m2/s')
+!    call HIST_in( prr_crs(:,:,1),       'PREC',    'surface precipitation rate',    'kg/m2/s')
+    call HIST_in( QTRC_sdm(:,:,:,I_QC), 'QC_sd',   'mixing ratio of cloud in SDM',  'kg/kg')
+    call HIST_in( QTRC_sdm(:,:,:,I_QR), 'QR_sd',   'mixing ratio of rain in SDM',   'kg/kg')
+    call HIST_in( QHYD_sdm(:,:,:),      'QHYD_sd', 'mixing ratio of liquid in SDM', 'kg/kg')
 
 #ifdef _FIPP_
     ! Section specification for fipp profiler
@@ -986,7 +1051,8 @@ contains
 !!$        pbr_crs(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
 !!$        pp_crs(k,i,j) = 0.0_RP
 !!$        ptp_crs(k,i,j) = 0.0_RP
-!!$        qv_crs(k,i,j) = QTRC(k,i,j,I_QV) ! Be careful. The definition of qv is different. (SCALE: qv=rhov/rho, CReSS: qv=rhov/rhod)
+!!$        qv_crs(k,i,j) = QTRC(k,i,j,I_QV) ! Be careful. The definition of qv is different. 
+!!$                                           (SCALE: qv=rhov/rho, CReSS: qv=rhov/rhod)
 !!$      enddo
 !!$      enddo
 !!$      enddo
@@ -2587,7 +2653,8 @@ contains
       real(RP), intent(in) :: sd_aslfmrate   ! formation rate of aerosol
       real(RP), intent(in) :: sd_aslfmdt     ! time interval to form aerosol
       integer,  intent(in) :: sd_num         ! number of super-droplets
-      integer,  intent(in) :: sd_numasl      ! number of kind of chemical material contained as water-soluble aerosol in super droplets
+      integer,  intent(in) :: sd_numasl      ! number of kind of chemical material contained as 
+                                             ! water-soluble aerosol in super droplets
       real(RP), intent(in) :: sd_fmnc        ! number concentration of super-droplets at aerosol formation
       ! Input and output variables
       integer(DP), intent(inout) :: sd_n(1:sd_num)  ! multiplicity of super-droplets
@@ -2669,7 +2736,9 @@ contains
   subroutine ATMOS_PHY_MP_sdm_EffectiveRadius( &
        Re,    &
        QTRC0, &
-       DENS0  )
+       DENS0, &
+       TEMP0  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
@@ -2678,8 +2747,9 @@ contains
     implicit none
 
     real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)   ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature [K]
 
     real(RP) :: sum3(KA,IA,JA), sum2(KA,IA,JA)
     real(RP) :: drate             ! temporary
@@ -2797,6 +2867,8 @@ contains
   subroutine ATMOS_PHY_MP_sdm_CloudFraction( &
        cldfrac, &
        QTRC     )
+    use scale_precision
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA
     use scale_const, only: &
@@ -2826,9 +2898,11 @@ contains
   end subroutine ATMOS_PHY_MP_sdm_CloudFraction
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
-  subroutine ATMOS_PHY_MP_sdm_Mixingratio( &
+  subroutine ATMOS_PHY_MP_sdm_MixingRatio( &
        Qe,    &
        QTRC0  )
+    use scale_precision
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA , &
        MP_QAD => MP_QA
@@ -2846,7 +2920,7 @@ contains
     Qe(:,:,:,I_mp_QC) = QTRC_sdm(:,:,:,I_QC)+QTRC_sdm(:,:,:,I_QR)
 
     return
-  end subroutine ATMOS_PHY_MP_sdm_Mixingratio
+  end subroutine ATMOS_PHY_MP_sdm_MixingRatio
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sdm_restart_in
     implicit none
@@ -2953,16 +3027,16 @@ contains
     !--- write time and precision
     write(fid_sd_o) otime, RP, DP, sdnum_s2c, sdnumasl_s2c, sdfmnum_s2c
     !--- write S.D.
-    write(fid_sd_o) (sdn_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) (sdrk_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) (sdx_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) (sdy_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) (sdz_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) (sdr_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) (sdu_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) (sdv_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) (sdvz_s2c(n),n=1,sdnum_s2c)
-    write(fid_sd_o) ((sdasl_s2c(n,m),n=1,sdnum_s2c),m=1,sdnumasl_s2c)
+    write(fid_sd_o) (sdn_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdrk_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdx_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdy_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdz_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdr_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdu_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdv_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdvz_s2c_restart(n),n=1,sdnum_s2c)
+    write(fid_sd_o) ((sdasl_s2c_restart(n,m),n=1,sdnum_s2c),m=1,sdnumasl_s2c)
 
     close(fid_sd_o)
     if( IO_L ) write(IO_FID_LOG,*) '*** Closed restart file of Super Droplet  '
@@ -2979,7 +3053,8 @@ contains
 
     fid_random_o = IO_get_available_fid()
     if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***', trim(basename_random)
-    call rng_save_state( rng_s2c, trim(basename_random))
+!    call rng_save_state( rng_s2c, trim(basename_random))
+    call rng_save_state( rng_s2c_restart, trim(basename_random))
 !    call rng_save_state( rng_s2c, trim(basename_random), fid_random_o )
 
     return

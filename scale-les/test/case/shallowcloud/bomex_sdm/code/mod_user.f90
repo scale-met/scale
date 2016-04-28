@@ -29,6 +29,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_setup0
   public :: USER_setup
   public :: USER_step
 
@@ -44,6 +45,12 @@ module mod_user
   !
   !++ Private parameters & variables
   !
+  integer, parameter :: I_DENS = 1
+  integer, parameter :: I_MOMX = 2
+  integer, parameter :: I_MOMY = 3
+  integer, parameter :: I_MOMZ = 4
+  integer, parameter :: I_RHOT = 5
+  integer, parameter :: I_QTRC = 6
   real(RP), private, allocatable :: MOMZ_LS(:,:)
   real(RP), private, allocatable :: MOMZ_LS_DZ(:,:)
   real(RP), private, allocatable :: QV_LS(:,:)
@@ -70,6 +77,13 @@ module mod_user
   !-----------------------------------------------------------------------------
   real(RP), private, save      :: USER_Ustar = 0.28_RP ! constant frection velocity [m/s]
 contains
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine USER_setup0
+
+  !--- nothing to do
+
+  end subroutine
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -180,7 +194,7 @@ contains
       endif
     enddo
 
-    call USER_step
+!    call USER_step
 
     return
   end subroutine USER_setup
@@ -200,7 +214,7 @@ contains
          MOMX_tp, &
          MOMY_tp, &
          RHOT_tp, &
-         QTRC_tp
+         RHOQ_tp
     use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
@@ -208,7 +222,7 @@ contains
          CPdry => CONST_CPdry, &
          Rdry  => CONST_Rdry, &
          Rvap  => CONST_Rvap, &
-         LH0   => CONST_LH0, &
+         LH0   => CONST_LHV0, &
          P00   => CONST_PRE00 
     use scale_atmos_thermodyn, only: &
          CPw   => AQ_CP, &
@@ -216,12 +230,15 @@ contains
     use scale_history, only: &
          HIST_in
     use scale_time, only: &
-         do_phy_sf => TIME_DOATMOS_PHY_SF, &
          dtsf =>  TIME_DTSEC_ATMOS_PHY_SF
+    use mod_admin_time, only: &
+         do_phy_sf => TIME_DOATMOS_PHY_SF
 #ifdef _SDM
     use scale_atmos_phy_mp_sdm, only: &
          ATMOS_PHY_MP_sdm_Mixingratio
     use scale_tracer_sdm
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
 #endif
  
     implicit none
@@ -440,18 +457,18 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE-1
-                QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) &
-                     + QV_LS(k,1) * Q_rate(k,i,j,iq) &
-                     - MOMZ_LS(k,1) * ( QTRC(k+1,i,j,iq) - QTRC(k,i,j,iq) ) * RFDZ(k)
+                RHOQ_tp(k,i,j,iq) = RHOQ_tp(k,i,j,iq) &
+                     + QV_LS(k,1) * Q_rate(k,i,j,iq) * DENS(k,i,j) &
+                     - MOMZ_LS(k,1) * ( QTRC(k+1,i,j,iq) - QTRC(k,i,j,iq) ) * RFDZ(k) * DENS(k,i,j)
              enddo
              enddo
              enddo
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
-                QTRC_tp(KE,i,j,iq) = QTRC_tp(KE,i,j,iq) &
-                     + QV_LS(KE,1) * Q_rate(KE,i,j,iq) &
-                     - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1)
+                RHOQ_tp(KE,i,j,iq) = RHOQ_tp(KE,i,j,iq) &
+                     + QV_LS(KE,1) * Q_rate(KE,i,j,iq) * DENS(k,i,j) &
+                     - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1) * DENS(k,i,j)
              enddo
              enddo
           end do
@@ -461,7 +478,7 @@ contains
     enddo
 
     ! radiative flux
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation of BOEMX'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation of BOMEX'
 
     do j = JS, JE
     do i = IS, IE
@@ -475,10 +492,12 @@ contains
 
     if( do_phy_sf ) then
 
-      if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux of BOEMX'
+      if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux of BOMEX'
 
 #ifdef _SDM
-      call ATMOS_PHY_MP_sdm_Mixingratio( Qe, QTRC )
+      if( ATMOS_PHY_MP_TYPE == 'SDM' ) then
+        call ATMOS_PHY_MP_sdm_Mixingratio( Qe, QTRC )
+      endif
 #endif
 
       do j = JS-1, JE
@@ -548,8 +567,8 @@ contains
       enddo
       enddo
 
-      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+!      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
+!      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
 
       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
       do j = JS, JE
@@ -566,8 +585,8 @@ contains
              + SFLX_MOMX(i,j) * RCDZ(KS)
        MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
              + SFLX_MOMY(i,j) * RCDZ(KS)
-       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
-             + SFLX_QV(i,j) * RCDZ(KS)
+       RHOQ_tp(KS,i,j,I_QV) = RHOQ_tp(KS,i,j,I_QV) &
+             + SFLX_QV(i,j) * RCDZ(KS) * DENS(k,i,j)
       enddo
       enddo
 
