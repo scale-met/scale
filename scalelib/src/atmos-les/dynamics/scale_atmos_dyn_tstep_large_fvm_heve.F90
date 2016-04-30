@@ -170,7 +170,7 @@ contains
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
        mflx_hi, tflx_hi,                                     &
        num_diff, num_diff_q,                                 &
-       DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, QTRC0, PROG0,      &
+       QTRC0,                                                &
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
        CORIOLI,                                              &
        CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
@@ -253,13 +253,7 @@ contains
     real(RP), intent(out)   :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(out)   :: num_diff_q(KA,IA,JA,3)
 
-    real(RP), intent(in)    :: DENS0(KA,IA,JA)
-    real(RP), intent(in)    :: MOMZ0(KA,IA,JA)
-    real(RP), intent(in)    :: MOMX0(KA,IA,JA)
-    real(RP), intent(in)    :: MOMY0(KA,IA,JA)
-    real(RP), intent(in)    :: RHOT0(KA,IA,JA)
     real(RP), intent(in)    :: QTRC0(KA,IA,JA,QA)
-    real(RP), intent(in)    :: PROG0(KA,IA,JA,VA)
 
     real(RP), intent(in)    :: DENS_tp(KA,IA,JA)
     real(RP), intent(in)    :: MOMZ_tp(KA,IA,JA)
@@ -831,37 +825,19 @@ contains
 
        call PROF_rapstart("DYN_Large_Tinteg", 2)
 
-       if ( step == 1 ) then
-          call ATMOS_DYN_tinteg_short( DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
-                                       mflx_hi, tflx_hi,                         & ! (inout)
-                                       DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, PROG0, & ! (in)
-                                       DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
-                                       DPRES0, RT2P, CORIOLI,                    & ! (in)
-                                       num_diff, divdmp_coef, DDIV,              & ! (in)
-                                       FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
-                                       FLAG_FCT_ALONG_STREAM,                    & ! (in)
-                                       CDZ, FDZ, FDX, FDY,                       & ! (in)
-                                       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,       & ! (in)
-                                       PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
-                                       REF_dens, REF_rhot,                       & ! (in)
-                                       BND_W, BND_E, BND_S, BND_N,               & ! (in)
-                                       dts                                       ) ! (in)
-       else
-          call ATMOS_DYN_tinteg_short( DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
-                                       mflx_hi, tflx_hi,                         & ! (inout)
-                                       DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (in)
-                                       DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
-                                       DPRES0, RT2P, CORIOLI,                    & ! (in)
-                                       num_diff, divdmp_coef, DDIV,              & ! (in)
-                                       FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
-                                       FLAG_FCT_ALONG_STREAM,                    & ! (in)
-                                       CDZ, FDZ, FDX, FDY,                       & ! (in)
-                                       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,       & ! (in)
-                                       PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
-                                       REF_dens, REF_rhot,                       & ! (in)
-                                       BND_W, BND_E, BND_S, BND_N,               & ! (in)
-                                       dts                                       ) ! (in)
-       end if
+       call ATMOS_DYN_tinteg_short( DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
+                                    mflx_hi, tflx_hi,                         & ! (inout)
+                                    DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
+                                    DPRES0, RT2P, CORIOLI,                    & ! (in)
+                                    num_diff, divdmp_coef, DDIV,              & ! (in)
+                                    FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
+                                    FLAG_FCT_ALONG_STREAM,                    & ! (in)
+                                    CDZ, FDZ, FDX, FDY,                       & ! (in)
+                                    RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,       & ! (in)
+                                    PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
+                                    REF_dens, REF_rhot,                       & ! (in)
+                                    BND_W, BND_E, BND_S, BND_N,               & ! (in)
+                                    dts                                       ) ! (in)
 
        call PROF_rapend  ("DYN_Large_Tinteg", 2)
 
@@ -1049,7 +1025,7 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
-                QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS0(k,i,j) &
+                QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS00(k,i,j) &
                             + dtl * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
                                           - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                                         + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
@@ -1076,7 +1052,7 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
-                QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS0(k,i,j) &
+                QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS00(k,i,j) &
                             + dtl * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR)  ) * RCDZ(k) &
                                         + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR)  ) * RCDX(i) &
                                         + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR)  ) * RCDY(j) &

@@ -239,29 +239,12 @@ contains
     real(DP), intent(in)    :: DTL
     real(DP), intent(in)    :: DTS
 
-
-    real(RP) :: DENS0(KA,IA,JA)
-    real(RP) :: MOMZ0(KA,IA,JA)
-    real(RP) :: MOMX0(KA,IA,JA)
-    real(RP) :: MOMY0(KA,IA,JA)
-    real(RP) :: RHOT0(KA,IA,JA)
-    real(RP) :: QTRC0(KA,IA,JA,QA)
-    real(RP) :: PROG0(KA,IA,JA,VA)
-
-    DENS0 = DENS
-    MOMZ0 = MOMZ
-    MOMX0 = MOMX
-    MOMY0 = MOMY
-    RHOT0 = RHOT
-    QTRC0 = QTRC
-    if ( VA > 0 ) PROG0 = PROG
-
     call ATMOS_DYN_tstep_large( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG,             & ! (inout)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          mflx_hi, tflx_hi,                                     & ! (out)
          num_diff, num_diff_q,                                 & ! (out, work)
-         DENS0, MOMZ0,   MOMX0, MOMY0, RHOT0, QTRC0, PROG0,    & ! (in)
+         QTRC,                                                 & ! (in)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! (in)
          CORIOLI,                                              & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                         & ! (in)

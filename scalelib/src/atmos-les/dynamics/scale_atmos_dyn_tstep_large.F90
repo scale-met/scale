@@ -39,7 +39,7 @@ module scale_atmos_dyn_tstep_large
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
           mflx_hi, tflx_hi,                                     &
           num_diff, num_diff_q,                                 &
-          DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, RHOQ0, PROG0,      &
+          QTRC0,                                                &
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
           CORIOLI,                                              &
           CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
@@ -86,13 +86,7 @@ module scale_atmos_dyn_tstep_large
        real(RP), intent(out)   :: num_diff(KA,IA,JA,5,3)
        real(RP), intent(out)   :: num_diff_q(KA,IA,JA,3)
 
-       real(RP), intent(in)    :: DENS0(KA,IA,JA)
-       real(RP), intent(in)    :: MOMZ0(KA,IA,JA)
-       real(RP), intent(in)    :: MOMX0(KA,IA,JA)
-       real(RP), intent(in)    :: MOMY0(KA,IA,JA)
-       real(RP), intent(in)    :: RHOT0(KA,IA,JA)
-       real(RP), intent(in)    :: RHOQ0(KA,IA,JA,QA)
-       real(RP), intent(in)    :: PROG0(KA,IA,JA,VA)
+       real(RP), intent(in)    :: QTRC0(KA,IA,JA,QA)
 
        real(RP), intent(in)    :: DENS_tp(KA,IA,JA)
        real(RP), intent(in)    :: MOMZ_tp(KA,IA,JA)

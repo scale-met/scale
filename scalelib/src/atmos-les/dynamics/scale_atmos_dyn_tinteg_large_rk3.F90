@@ -308,7 +308,7 @@ contains
                DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av,        & ! (inout)
                mflx_hi, tflx_hi,                                            & ! (out)
                num_diff, num_diff_q,                                        & ! (out)
-               DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   QTRC0,   PROG0, & ! (in)
+               QTRC0,                                                       & ! (in)
                DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp,        & ! (in)
                CORIOLI,                                                     & ! (in)
                CDZ, CDX, CDY, FDZ, FDX, FDY,                                & ! (in)

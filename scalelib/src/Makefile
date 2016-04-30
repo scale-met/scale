@@ -136,7 +136,8 @@ else
   OBJS_DYN += scale_atmos_dyn_tstep_short_$(DYNAMICS).o
 endif
 ifeq ($(TINTEG),)
-  OBJS_DYN += scale_atmos_dyn_tinteg_short_rk3.o
+  OBJS_DYN += scale_atmos_dyn_tinteg_short_rk3.o \
+              scale_atmos_dyn_tinteg_short_rk4.o
 else
   OBJS_DYN += scale_atmos_dyn_tinteg_short_$(TINTEG).o
 endif

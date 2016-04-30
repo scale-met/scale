@@ -37,7 +37,6 @@ module scale_atmos_dyn_tinteg_short
      subroutine short( &
           DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
           mflx_hi, tflx_hi,                         & ! (inout)
-          DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, PROG0, & ! (in)
           DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
           Rtot, CVtot, CORIOLI,                     & ! (in)
           num_diff, divdmp_coef, DDIV,              & ! (in)
@@ -61,13 +60,6 @@ module scale_atmos_dyn_tinteg_short
 
        real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
        real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3)
-
-       real(RP), intent(in)    :: DENS0(KA,IA,JA)
-       real(RP), intent(in)    :: MOMZ0(KA,IA,JA)
-       real(RP), intent(in)    :: MOMX0(KA,IA,JA)
-       real(RP), intent(in)    :: MOMY0(KA,IA,JA)
-       real(RP), intent(in)    :: RHOT0(KA,IA,JA)
-       real(RP), intent(in)    :: PROG0(KA,IA,JA,VA)
 
        real(RP), intent(in)    :: DENS_t(KA,IA,JA)
        real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)
@@ -153,6 +145,9 @@ contains
     use scale_atmos_dyn_tinteg_short_rk3, only: &
        ATMOS_DYN_Tinteg_short_rk3_setup, &
        ATMOS_DYN_Tinteg_short_rk3
+    use scale_atmos_dyn_tinteg_short_rk4, only: &
+       ATMOS_DYN_Tinteg_short_rk4_setup, &
+       ATMOS_DYN_Tinteg_short_rk4
 #endif
     implicit none
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_short_TYPE
@@ -168,6 +163,10 @@ contains
        call ATMOS_DYN_Tinteg_short_rk3_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk3
+    case ( 'RK4' )
+       call ATMOS_DYN_Tinteg_short_rk4_setup( &
+            ATMOS_DYN_Tinteg_short_TYPE )
+       ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk4
     case ( 'OFF', 'NONE' )
        ! do nothing
     case default
