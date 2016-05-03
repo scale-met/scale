@@ -32,8 +32,7 @@ module mod_atmos_admin
   logical,                public :: ATMOS_do          = .true. ! main switch for the model
 
   character(len=H_SHORT), public :: ATMOS_DYN_TYPE    = 'NONE'
-  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE = 'RK3'
-!  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE = 'RK3'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE = 'RK3WS2002'
   character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE = 'EULER'
   character(len=H_SHORT), public :: ATMOS_PHY_MP_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_AE_TYPE = 'NONE'

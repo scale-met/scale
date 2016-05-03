@@ -159,7 +159,7 @@ contains
     ATMOS_DYN_Tinteg_short => NAME(ATMOS_DYN_Tingeg_short_, TINTEG_SHORT,)
 #else
     select case ( ATMOS_DYN_Tinteg_short_TYPE )
-    case ( 'RK3' )
+    case ( 'RK3', 'RK3WS2002' )
        call ATMOS_DYN_Tinteg_short_rk3_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk3

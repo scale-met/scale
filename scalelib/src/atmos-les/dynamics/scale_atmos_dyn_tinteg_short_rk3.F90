@@ -99,6 +99,10 @@ module scale_atmos_dyn_tinteg_short_rk3
   integer :: I_COMM_mflx_x = 2
   integer :: I_COMM_mflx_y = 3
 
+  logical :: FLAG_WS2002
+  real(RP) :: fact_dt1
+  real(RP) :: fact_dt2
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -119,10 +123,33 @@ contains
     integer :: iv
     !---------------------------------------------------------------------------
 
-    if ( tinteg_type .ne. 'RK3' ) then
+    select case ( tinteg_type )
+    case ( 'RK3' )
+       if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Heun's method is used"
+       ! Heun's method
+       ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
+       ! k2 = f(r1);     r2 = \phi_n + k2 * dt * 2 / 3
+       ! k3 = f(r2);     r3 = \phi_n + k3 * dt
+       ! \phi_{n+1} = \phi_n + ( k1 + 3 * k3 ) dt / 4
+       !            = \phi_n + ( (r1-\phi_n) * 3 + (r3-\phi_n) * 3 ) / 4
+       !            = ( r1 * 3 + r3 * 3 - \phi_n * 2 ) / 4
+       FLAG_WS2002 = .false.
+       fact_dt1 = 1.0_RP / 3.0_RP
+       fact_dt2 = 2.0_RP / 3.0_RP
+    case ( 'RK3WS2002' )
+       if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Wichere and Skamarock (2002) is used"
+       ! Wicher and Skamarock (2002) RK3 scheme
+       ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
+       ! k2 = f(r1);     r2 = \phi_n + k2 * dt / 2
+       ! k3 = f(r2);     r3 = \phi_n + k3 * dt
+       ! \phi_{n+1} = r3
+       FLAG_WS2002 = .true.
+       fact_dt1 = 1.0_RP / 3.0_RP
+       fact_dt2 = 1.0_RP / 2.0_RP
+    case default
        write(*,*) 'xxx TINTEG_TYPE is not RK3. Check!'
        call PRC_MPIstop
-    end if
+    end select
 
     allocate( DENS_RK1(KA,IA,JA) )
     allocate( MOMZ_RK1(KA,IA,JA) )
@@ -320,7 +347,7 @@ contains
 
     !##### RK1 : PROG0,PROG->PROG_RK1 #####
 
-    dtrk = dt / 3.0_RP
+    dtrk = dt * fact_dt1
 
     call ATMOS_DYN_tstep( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
                           PROG_RK1,                                         & ! (out)
@@ -372,7 +399,7 @@ contains
 
     call PROF_rapstart("DYN_RK3", 3)
 
-    dtrk = dt / 2.0_RP
+    dtrk = dt * fact_dt2
 
     call ATMOS_DYN_tstep( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
                           PROG_RK2,                                         & ! (out)
@@ -443,6 +470,53 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+
+    if ( .not. FLAG_WS2002 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          DENS(k,i,j) = ( DENS_RK1(k,i,j) * 3.0_RP + DENS(k,i,j) * 3.0_RP - DENS0(k,i,j) * 2.0_RP ) / 4.0_RP
+       end do
+       end do
+       end do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE-1
+          MOMZ(k,i,j) = ( MOMZ_RK1(k,i,j) * 3.0_RP + MOMZ(k,i,j) * 3.0_RP - MOMZ0(k,i,j) * 2.0_RP ) / 4.0_RP
+       end do
+       end do
+       end do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMX(k,i,j) = ( MOMX_RK1(k,i,j) * 3.0_RP + MOMX(k,i,j) * 3.0_RP - MOMX0(k,i,j) * 2.0_RP ) / 4.0_RP
+       end do
+       end do
+       end do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMY(k,i,j) = ( MOMY_RK1(k,i,j) * 3.0_RP + MOMY(k,i,j) * 3.0_RP - MOMY0(k,i,j) * 2.0_RP ) / 4.0_RP
+       end do
+       end do
+       end do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOT(k,i,j) = ( RHOT_RK1(k,i,j) * 3.0_RP + RHOT(k,i,j) * 3.0_RP - RHOT0(k,i,j) * 2.0_RP ) / 4.0_RP
+       end do
+       end do
+       end do
+       do iv = 1, VA
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          PROG(k,i,j,iv) = ( PROG_RK1(k,i,j,iv) * 3.0_RP + PROG(k,i,j,iv) * 3.0_RP - PROG0(k,i,j,iv) * 2.0_RP ) / 4.0_RP
+       end do
+       end do
+       end do
+       end do
+    end if
 
     call PROF_rapend  ("DYN_RK3", 3)
 
