@@ -286,6 +286,27 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ_ud3, &
       ATMOS_DYN_FVM_fluxJ23_XVZ_ud3
 
+   use scale_atmos_dyn_fvm_flux_ud3Koren1993, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxZ_XYZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxX_XYZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxY_XYZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxZ_XYW_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxX_XYW_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxY_XYW_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxJ13_XYW_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxJ23_XYW_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxZ_UYZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxX_UYZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxY_UYZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxJ13_UYZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxJ23_UYZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxZ_XVZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxX_XVZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxY_XVZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxJ13_XVZ_ud3Koren1993, &
+      ATMOS_DYN_FVM_fluxJ23_XVZ_ud3Koren1993
+
    use scale_atmos_dyn_fvm_flux_cd4, only: &
       ATMOS_DYN_FVM_flux_valueW_Z_cd4, &
       ATMOS_DYN_FVM_fluxZ_XYZ_cd4, &
@@ -447,6 +468,59 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_ud3
 
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3
+
+
+      
+      if ( IHALO < 2 ) then
+         write(*,*) 'xxx IHALO must be >= ', 2
+         call PRC_MPIstop
+      end if
+      if ( JHALO < 2 ) then
+         write(*,*) 'xxx JHALO must be >= ', 2
+         call PRC_MPIstop
+      end if
+
+
+    case ( "UD3KOREN1993" )
+      if( IO_L ) write(IO_FID_LOG,*) '*** the ud3Koren1993 scheme is used for flux calculation'
+
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxX_XYW => ATMOS_DYN_FVM_fluxX_XYW_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxY_XYW => ATMOS_DYN_FVM_fluxY_XYW_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxJ13_XYW => ATMOS_DYN_FVM_fluxJ13_XYW_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxY_UYZ => ATMOS_DYN_FVM_fluxY_UYZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxX_XVZ => ATMOS_DYN_FVM_fluxX_XVZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxY_XVZ => ATMOS_DYN_FVM_fluxY_XVZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_ud3Koren1993
+
+      ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3Koren1993
 
 
       

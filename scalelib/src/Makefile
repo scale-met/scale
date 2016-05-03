@@ -125,6 +125,7 @@ OBJS_DYN = scale_atmos_dyn_tinteg_short.o \
            scale_atmos_dyn_fvm_flux_ud1.o \
            scale_atmos_dyn_fvm_flux_cd2.o \
            scale_atmos_dyn_fvm_flux_ud3.o \
+           scale_atmos_dyn_fvm_flux_ud3Koren1993.o \
            scale_atmos_dyn_fvm_flux_cd4.o \
            scale_atmos_dyn_fvm_flux_ud5.o \
            scale_atmos_dyn_fvm_flux_cd6.o
