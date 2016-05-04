@@ -220,6 +220,7 @@ contains
        TIME_DT_UNIT,                 &
        TIME_DT_ATMOS_DYN,            &
        TIME_DT_ATMOS_DYN_UNIT,       &
+       TIME_NSTEP_ATMOS_DYN,         &
        TIME_DT_ATMOS_PHY_CP,         &
        TIME_DT_ATMOS_PHY_CP_UNIT,    &
        TIME_DT_ATMOS_PHY_MP,         &
@@ -270,6 +271,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TIME] / Categ[COMMON] / Origin[SCALElib]'
 
+    TIME_NSTEP_ATMOS_DYN         = -1
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_TIME,iostat=ierr)
@@ -295,8 +298,10 @@ contains
 
        ! DYN
        if ( TIME_DT_ATMOS_DYN == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN. TIME_DT is used.'
-          TIME_DT_ATMOS_DYN = TIME_DT
+          if ( TIME_NSTEP_ATMOS_DYN < 0 ) then
+             if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN. TIME_DT is used.'
+             TIME_DT_ATMOS_DYN = TIME_DT
+          end if
        endif
        if ( TIME_DT_ATMOS_DYN_UNIT == '' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN_UNIT. TIME_DT_UNIT is used.'
@@ -520,7 +525,11 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I10)'  ) '*** No. of steps   :', TIME_NSTEP
 
        !--- calculate intervals for atmosphere
-       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
+       if ( TIME_DT_ATMOS_DYN .ne. UNDEF8 ) then
+          call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
+       else
+          TIME_DTSEC_ATMOS_DYN = TIME_DTSEC / TIME_NSTEP_ATMOS_DYN
+       end if
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_CP,  TIME_DT_ATMOS_PHY_CP,  TIME_DT_ATMOS_PHY_CP_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
