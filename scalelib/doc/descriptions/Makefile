@@ -3,6 +3,9 @@ TARGET = scale_les_description
 all: ${TARGET}.pdf
 
 SRCS = ${TARGET}.tex \
+       introduction.tex \
+       governing_equation.tex \
+       temporal_integration.tex \
        dynamical_process.tex \
        dynamical_process_terrainfollowing.tex \
        dynamical_process_mapfactor.tex \
@@ -26,3 +29,7 @@ ${TARGET}.aux: ${SRCS}
 
 ${TARGET}.bib: ${SRCS} ${TARGET}.aux
 	bibtex ${TARGET}
+
+
+clean:
+	rm -f ${TARGET}.aux ${TARGET}.bbl ${TARGET}.blg ${TARGET}.dvi ${TARGET}.log ${TARGET}.out ${TARGET}.toc

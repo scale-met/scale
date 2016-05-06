@@ -1,5 +1,3 @@
-\chapter{Descretization of the dynamics}
-\label{chap:descretization dynamics}
 {\bf \Large
 \begin{tabular}{ccc}
 \hline
@@ -7,22 +5,6 @@
 \hline
 \end{tabular}
 }
-
-\section{Time integration method}
-
-For the time integration of Eqs.(\ref{eq:rhotot_d2})-(\ref{eq:etot_d2}),
-we adopt the full explicit scheme with
-the $p$ step Runge-Kutta scheme.
-\begin{eqnarray}
-&& \phi^{*}_{0} = \phi^{t}\\
-&& k_1 = f(\phi^t) \\
-&& k_2 = f(\phi^t + k_1 \Delta t \alpha_1) \\
-&&  \cdot \cdot \cdot\nonumber\\
-&& k_p = f(\phi^t + k_{p-1} \Delta t \alpha_{p-1}) \\
-&& \phi^{t+\Delta t} = \phi^t + \Delta t\sum_p \beta_p k_p.
-\end{eqnarray}
-The 3 and 4 step Runge-Kutta scheme are implemented.
-
 
 \section{Spatial descretization}
 We employ the Arakawa-C staggered grid with the 3-dimensional momentum
