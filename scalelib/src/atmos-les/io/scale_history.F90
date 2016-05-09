@@ -41,11 +41,13 @@ module scale_history
   public :: HIST_switch
 
   interface HIST_in
+     module procedure HIST_in_0D
      module procedure HIST_in_1D
      module procedure HIST_in_2D
      module procedure HIST_in_3D
   end interface HIST_in
   interface HIST_put
+     module procedure HIST_put_0D
      module procedure HIST_put_1D
      module procedure HIST_put_2D
      module procedure HIST_put_3D
@@ -627,6 +629,35 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
+  subroutine HIST_put_0D( &
+       itemid, &
+       var     )
+    use gtool_history, only: &
+       HistoryPut
+    use scale_time, only: &
+       TIME_NOWSTEP
+    implicit none
+
+    integer,  intent(in) :: itemid !< index number of the item
+    real(RP), intent(in) :: var    !< value
+
+    !---------------------------------------------------------------------------
+
+    if ( .not. enabled ) return
+
+    if ( itemid < 0 ) return
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    call HistoryPut(itemid, TIME_NOWSTEP, var)
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
+
+    return
+  end subroutine HIST_put_0D
+  
+  !-----------------------------------------------------------------------------
+  !> Put 1D data to history buffer
   subroutine HIST_put_1D( &
        itemid, &
        var     )
@@ -938,6 +969,43 @@ contains
     return
   end subroutine HIST_put_3D
 
+  !-----------------------------------------------------------------------------
+  !> Wrapper routine of HIST_reg+HIST_put 0D
+  subroutine HIST_in_0D( &
+       var,  &
+       item, &
+       desc, &
+       unit )
+    implicit none
+
+    real(RP),         intent(in) :: var
+    character(len=*), intent(in) :: item
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: unit
+
+    integer           :: itemid
+    logical           :: zinterp
+    logical           :: do_put
+    !---------------------------------------------------------------------------
+
+    if ( .not. enabled ) return
+
+
+    call HIST_reg( itemid,              & ! [OUT]
+                   zinterp,             & ! [OUT]
+                   item, desc, unit, 0 )  ! [IN]
+
+
+    call HIST_query( itemid, & ! [IN]
+                     do_put  ) ! [OUT]
+
+    if ( do_put ) then
+       call HIST_put( itemid, var ) ! [IN]
+    endif
+
+    return
+  end subroutine HIST_in_0D
+  
   !-----------------------------------------------------------------------------
   !> Wrapper routine of HIST_reg+HIST_put 1D
   subroutine HIST_in_1D( &

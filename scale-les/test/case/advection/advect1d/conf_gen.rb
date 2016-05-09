@@ -1,18 +1,15 @@
 #!/bin/env ruby
 
-TIME_DT_SEC             = "0.25D0"
+require 'fileutils'
+
 TIME_DURATION_SEC       = "600.D0"
 HISTORY_TINTERVAL_SEC   = "50.D0"
 CONF_GEN_RESOL_HASHLIST = \
 [ \
   { "TAG"=>"500m", "DX"=>500E0, "DZ"=>500.0E0, 
     "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>1.0, "NPRCX"=> 1, "NPRCY"=>1}, \
-#  { "TAG"=>"250m", "DX"=>250E0, "DZ"=>250.0E0, 
-#    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.5, "NPRCX"=> 2, "NPRCY"=>1}, \
   { "TAG"=>"250m", "DX"=>250E0, "DZ"=>250.0E0, 
     "KMAX"=>4, "IMAX"=>80, "JMAX"=>3, "DTDYN"=>0.5, "NPRCX"=> 1, "NPRCY"=>1}, \
-#  { "TAG"=>"125m", "DX"=>125E0, "DZ"=>125.0E0, 
-#    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.25, "NPRCX"=> 4, "NPRCY"=>1}, \
   { "TAG"=>"125m", "DX"=>125E0, "DZ"=>125E0, 
     "KMAX"=>4, "IMAX"=>160, "JMAX"=>3, "DTDYN"=>0.25, "NPRCX"=> 1, "NPRCY"=>1}, \
   { "TAG"=>"063m", "DX"=>62.5E0, "DZ"=>62.5E0, 
@@ -25,8 +22,8 @@ CONF_GEN_CASE_HASH_LIST = \
 ]
 CONF_GEN_NUMERIC_HASHLIST = \
 [ \
-  {"TAG"=>"FDM_CD2"}, {"TAG"=>"FDM_CD4"}, {"TAG"=>"FDM_CD6"},  \
-  {"TAG"=>"FDM_UD1"}, {"TAG"=>"FDM_UD3"}, {"TAG"=>"FDM_UD5"},  \
+  {"TAG"=>"FVM_CD2"}, {"TAG"=>"FVM_CD4"}, {"TAG"=>"FVM_CD6"},  \
+  {"TAG"=>"FVM_UD1"}, {"TAG"=>"FVM_UD3"}, {"TAG"=>"FVM_UD5"},  \
 ]
 
 #########################################################
@@ -36,8 +33,7 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
   f.print <<EOS
 #####
 #
-# SCALE-LES mkinit configulation for coldbubble test
-# (following experimental setup in Straka et al. 1993)
+# SCALE-LES mkinit configulation for linear advection test (1D)
 #
 #####
 
@@ -52,8 +48,8 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
 
 &PARAM_INDEX
  KMAX = #{kmax}, 
- IMAX = #{imax}, 
- JMAX = 3,
+ IMAX = #{imax}, IHALO = 3, 
+ JMAX = 3, JHALO = 3,
 /
 
 &PARAM_GRID
@@ -93,7 +89,7 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
 /
 
 &PARAM_MKINIT
- MKINIT_initname = "ADVECT",
+ MKINIT_initname = "TRACERBUBBLE",
 /
 
 &PARAM_BUBBLE
@@ -101,7 +97,7 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
  BBL_CX = 10.0D3,
  BBL_CY = 12.0D3,
  BBL_RZ = 1.0D14,
- BBL_RX = 1.0D3,
+ BBL_RX = 3.0D3,
  BBL_RY = 1.0D14,
 /
 
@@ -110,17 +106,15 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
  RCT_CX = 10.0D3,
  RCT_CY = 12.0D3,
  RCT_RZ = 1.0D14,
- RCT_RX = 1.0D3,
+ RCT_RX = 3.0D3,
  RCT_RY = 1.0D14,
 /
 
-&PARAM_MKINIT_ADVECT
-! ENV_U  = -35.D0,
-! ENV_V  = -40.D0,
- ENV_U  = 40.D0,
- ENV_V  = 0.D0, 
- SHAPE_NC  =  '#{shape_nc}', 
- MAXMIN_NC =   1.D0,
+&PARAM_MKINIT_TRACERBUBBLE
+ ENV_U     = 40.D0,
+ ENV_V     = 0.D0, 
+ SHAPE_NC  = '#{shape_nc}', 
+ BBL_NC    = 1.D0,
 /
 
 EOS
@@ -128,13 +122,16 @@ EOS
   
 end
 
-def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEvalType, dataDir)
-
+def gen_run_conf( conf_name, 
+      nprocx, nprocy,
+      imax, kmax, dx, dz, dtsec_dyn,
+      shape_nc, flxEvalType, fctFlag, dataDir)
+1
   f = File.open(conf_name, "w")
   f.print <<EOS
 #####
 #
-# SCALE-LES run configulation
+# SCALE-LES run configulation for linear advection test (1D)
 #
 #####
 
@@ -145,8 +142,8 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
 
 &PARAM_INDEX
  KMAX = #{kmax}, 
- IMAX = #{imax}, 
- JMAX = 3,
+ IMAX = #{imax}, IHALO = 3, 
+ JMAX = 3, JHALO = 3,
 /
 
 &PARAM_GRID
@@ -161,7 +158,7 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
  TIME_STARTMS               = 0.D0,
  TIME_DURATION              = #{TIME_DURATION_SEC},
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = #{dtsec_dyn}, !#{TIME_DT_SEC},
+ TIME_DT                    = #{dtsec_dyn}, 
  TIME_DT_UNIT               = "SEC",
  TIME_DT_ATMOS_DYN          = #{dtsec_dyn}, 
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
@@ -184,11 +181,12 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
 /
 
 &PARAM_ATMOS
- ATMOS_DYN_TYPE    = "FDM-HEVE",
+ ATMOS_DYN_TYPE    = "FVM-HEVE",
+ ATMOS_DYN_TINTEG_LARGE_TYPE = "RK3",
 /
 
 &PARAM_ATMOS_VARS
- ATMOS_RESTART_IN_BASENAME      = "init_00000000000.000",
+ ATMOS_RESTART_IN_BASENAME      = "init_00000101-000000.000",
  ATMOS_RESTART_OUTPUT           = .false.,
  ATMOS_VARS_CHECKRANGE          = .true.,
 /
@@ -207,11 +205,13 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
 &PARAM_ATMOS_DYN
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF   = 0.D0,
- ATMOS_DYN_FLXEVAL_TYPE  = "#{flxEvalType}"
+ ATMOS_DYN_FVM_FLUX_scheme = "#{flxEvalType}",             
+ ATMOS_DYN_FLAG_FCT_TRACER = F, 
 /
 
 &PARAM_USER
- USER_do = .true.
+ USER_do = .true., 
+ InitShape = "#{shape_nc}"
 /
 
 
@@ -229,7 +229,6 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
 &HISTITEM item='V'    /
 &HISTITEM item='W'    /
 &HISTITEM item='NC'   /
-&HISTITEM item='Qadv'   /
 &HISTITEM item='l2error'   /
 
 
@@ -250,18 +249,27 @@ end
 CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
   CONF_GEN_CASE_HASH_LIST.each{|case_hash|
     CONF_GEN_NUMERIC_HASHLIST.each{|numeric_hash|
-      dataDir = "./#{resol_hash["TAG"]}/#{case_hash["TAG"]}/#{numeric_hash["TAG"]}/"
+      ["F", "T"].each{|fct_flag|
 
-      puts "generate init.conf and run.conf (Dir=#{dataDir})"
+        dataDir = "./#{resol_hash["TAG"]}/#{case_hash["TAG"]}/"
+        dataDir += fct_flag=="T" ? "#{numeric_hash["TAG"]}_FCT/" : "#{numeric_hash["TAG"]}/"
+
+        puts "Generate init.conf and run.conf (Dir=#{dataDir}) .."
+        if !File.exists?(dataDir) then
+          puts "Create directory .."
+          FileUtils.mkdir_p(dataDir)
+        end
       
-      init_conf_name = "#{dataDir}init.conf" 
-      gen_init_conf(init_conf_name, \
-                    resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["KMAX"], \
-                    resol_hash["DX"], resol_hash["DZ"], case_hash["SHAPE_NC"] )
-      run_conf_name = "#{dataDir}run.conf"
-      gen_run_conf(run_conf_name, \
-                   resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["KMAX"], \
-                   resol_hash["DX"], resol_hash["DZ"], resol_hash["DTDYN"], numeric_hash["TAG"], dataDir )
+        init_conf_name = "#{dataDir}init.conf" 
+        gen_init_conf(init_conf_name, 
+                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["KMAX"], 
+                      resol_hash["DX"], resol_hash["DZ"], case_hash["SHAPE_NC"] )
+        run_conf_name = "#{dataDir}run.conf"
+        gen_run_conf(run_conf_name, 
+                     resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["KMAX"], 
+                     resol_hash["DX"], resol_hash["DZ"], resol_hash["DTDYN"], case_hash["SHAPE_NC"], 
+                     numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir )
+      }
     }
   }
 }

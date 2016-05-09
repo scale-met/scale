@@ -16,27 +16,27 @@ module mod_user
   !
   !++ used modules
   !
+
   use scale_precision
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_gridtrans  
+  use scale_index
   use scale_tracer
 
   use scale_grid, only : &
        CZ => GRID_CZ, CX => GRID_CX, FX => GRID_FX, &
-       CDX => GRID_CDX, &
-       RCDX => GRID_RCDX, RCDY => GRID_RCDY, RCDZ => GRID_RCDZ
+       CDX => GRID_CDX, RCDX => GRID_RCDX 
 
-  use scale_atmos_numeric_fdm_def, only: &
-       & FLXEVALTYPE_CD2, FLXEVALTYPE_UD1,  &
-       & FLXEVALTYPE_CD4, FLXEVALTYPE_UD3,  &
-       & FLXEVALTYPE_CD6, FLXEVALTYPE_UD5,  &
-       & VL_ZXY
-
-  use scale_atmos_numeric_fdm, only: &
-      & ATMOS_NUMERIC_FDM_setup,           &
-      & ATMOS_NUMERIC_FDM_EvalFlux,        &
-      & ATMOS_NUMERIC_FDM_EvolveVar
+  use mpi
+  use scale_comm, only: &
+       COMM_datatype, &
+       COMM_world
+  
+  use scale_atmos_dyn_fvm_flux, only: &
+       ATMOS_DYN_FVM_flux_setup, &
+       ATMOS_DYN_FVM_fluxX_XYZ
   
   !-----------------------------------------------------------------------------
   implicit none
@@ -63,9 +63,8 @@ module mod_user
   !++ Private parameters & variables
   !
   logical,  private, save :: USER_do = .false. !< do user step?
-
-  integer, parameter :: I_Qadv = 1
-  real(RP), allocatable :: QadvIni(:,:,:)
+  character(len=H_SHORT), private, save :: InitShape  ! BUBBLE or RECT or COS
+  real(RP), private, parameter :: PI = acos(-1.0_RP)
   
   !-----------------------------------------------------------------------------
 contains
@@ -77,7 +76,9 @@ contains
     implicit none
 
     namelist / PARAM_USER / &
-       USER_do
+       USER_do, &
+       InitShape
+    
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -120,12 +121,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    write(*,*) "Set value of PROG(:,:,:,I_Qadv).."
-    allocate(QadvIni(KA,IA,JA))
-    
-    PROG(:,:,:,I_Qadv) = DENS(:,:,:) * QTRC(:,:,:,I_NC)
-    QadvIni = QTRC(:,:,:,I_NC)
-
 !    call convCheck()
     
     ! calculate diagnostic value and input to history buffer
@@ -140,11 +135,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-       GRAV  => CONST_GRAV
-    use scale_grid, only : &
-         CZ => GRID_CZ, CX => GRID_CX, &
-         CDX => GRID_CDX
-    
+       GRAV  => CONST_GRAV    
     
     use scale_time, only: &
          DTSEC => TIME_DTSEC, &
@@ -154,10 +145,11 @@ contains
        DENS, &
        RHOT, QTRC
     
-    use mod_atmos_dyn_vars, only: &
-         & PROG
     use scale_history, only: &
        HIST_in
+
+    use mpi
+    
     implicit none
 
     real(RP) :: PT_diff(KA,IA,JA), ExactSol(KA,IA,JA)
@@ -169,11 +161,11 @@ contains
          Lx   = 20.0e3_RP,     &
          PI = acos(-1.0_RP)
     
-    real(RP) :: r, xshift, x_, intwork1, intwork2, dist2
-    real(RP) :: l2error, linf
+    real(RP) :: r, xshift, x_, dist2
+    real(RP) :: l2_error
+    real(RP) :: linf_error
     integer :: k, i, j
 
-    
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
@@ -190,52 +182,33 @@ contains
              x_ = mod(x_,Lx)
           end if
 
-          !* Cos 
-          ! ExactSol(k,i,j) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )
-
-          !* CosBell
-          !dist2 = (x_ - XIni)**2/RxCOSBELL**2
-          !ExactSol(k,i,j) = cos( 0.5_RP * PI * sqrt(min(dist2, 1.0_RP)) )**2
-
-          !* Rect
-          dist2 = (x_ - XIni)**2/RxRECT**2
-          if(dist2 <= 1d0) then
-             ExactSol(k,i,j) = 1d0
-          else
-             ExactSol(k,i,j) = 0d0
-          end if
+          select case(InitShape)
+          case("COS")
+             ExactSol(k,i,j) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )
+          case("BUBBLE") ! COSBELL
+             dist2 = (x_ - XIni)**2/RxCOSBELL**2
+             ExactSol(k,i,j) = cos( 0.5_RP * PI * sqrt(min(dist2, 1.0_RP)) )**2
+          case("RECT")
+             dist2 = (x_ - XIni)**2/RxRECT**2
+             if(dist2 <= 1d0) then
+                ExactSol(k,i,j) = 1d0
+             else
+                ExactSol(k,i,j) = 0d0
+             end if
+          end select
+          
        enddo
        enddo
        enddo
-       !
-!       l2error = sum( sqrt(  (PROG(KS,IS:IE,JS,I_Qadv)/DENS(KS,IS:IE,JS) - ExactSol(KS,IS:IE,JS))**2 ) * CDX(IS:IE) )  !/ sum( ExactSol(KS,IS:IE,JS)**2 * CDX(IS:IE) ) )
-       l2error = sqrt( sum( (PROG(KS,IS:IE,JS,I_Qadv)/DENS(KS,IS:IE,JS) - ExactSol(KS,IS:IE,JS))**2 * CDX(IS:IE) )  / sum( ExactSol(KS,IS:IE,JS)**2 * CDX(IS:IE) ) )
-       linf = maxval( abs( PROG(KS,IS:IE,JS,I_Qadv)/DENS(KS,IS:IE,JS) - ExactSol(KS,IS:IE,JS) ) ) / maxval( abs(ExactSol(KS,IS:IE,JS)) )
 
-
-!!$       intwork1 = num_int( &
-!!$            & (PROG(KS,IS:IE,JS,I_Qadv)/DENS(KS,IS:IE,JS) - ExactSol(KS,IS:IE,JS))**2, &
-!!$            & CX(IS), CX(IE) )
-!!$       intwork2 = num_int( &
-!!$            & ExactSol(KS,IS:IE,JS)**2, &
-!!$            & CX(IS), CX(IE) )
-!!$       l2error = sqrt( intwork1 / intwork2 )
-!!$       
-!       l2error = sqrt( sum( (QTRC(KS,IS:IE,JS,I_NC) - ExactSol(KS,IS:IE,JS))**2 * CDX(IS:IE) ) ) / sum( CDX(IS:IE) ) 
-!       PT_diff = PROG(:,:,:,I_Qadv)/DENS - ExactSol
-!       PT_diff = QTRC(:,:,:,I_NC) - ExactSol
-!       if(mod(NOWTSEC,1.0_RP)==0.0_RP)then
-       write(*,*) "t=", NOWTSEC, "l2error", l2error
-!       end if
-       call HIST_in( PROG(:,:,:,1) / DENS, 'Qadv', 'mass concentration of tracer in advection test', '1' )
-       PT_diff = l2error       
-       call HIST_in( PT_diff, 'l2error', 'l2error', '1' )
-       PT_diff = linf
-       call HIST_in( PT_diff, 'linf', 'linf', '1' )
-
-       call HIST_in( (PROG(:,:,:,I_Qadv)/DENS - ExactSol)**2, 'NC_rk', 'NC_rk', '1' )
-
-       !       call HIST_in( ExactSol, 'l2error', 'l2error', '1' )
+       l2_error = calc_l2error( QTRC(:,:,:,I_NC), ExactSol )
+       linf_error = calc_linferror(QTRC(:,:,:,I_NC), ExactSol)
+       if ( mod(NOWTSEC, 10.0_RP) == 0 ) then
+          write(*,*) "t=", NOWTSEC, "l2=", l2_error, "linf=", linf_error
+       end if
+       call HIST_in( l2_error, 'l2error', 'l2error', '1' )
+       call HIST_in( linf_error, 'linf', 'linf', '1' )
+       call HIST_in( (QTRC(:,:,:,I_NC) - ExactSol)**2, 'NC_diff', 'NC_diff', '1' )
     endif
 
     return
@@ -248,18 +221,22 @@ contains
     use mod_atmos_vars, only: &
          & DENS, QTRC
     
-    integer :: IIS, IIE, JJS, JJE, i, j
-    real(RP), dimension(KA,IA,JA,3) :: mflx_hi
-    real(RP), dimension(KA,IA,JA) :: one, zero, VARTMP, exactRHS, RHS
-    real(RP) :: Lx, l2error
-    integer :: FlxEvalTypeID
     integer, parameter :: WaveNum = 2
-    real(RP), parameter :: PI = acos(-1.0_RP)
+    real(RP) :: Lx
+
+    real(RP) :: l2error
+
+    integer :: IIS, IIE, JJS, JJE, i, j
+    real(RP) :: mflx_hi(KA,IA,JA,3)
+    real(RP) :: VARTMP(KA,IA,JA)
+    real(RP) :: exactRHS(KA,IA,JA)
+    real(RP) :: RHS(KA,IA,JA)
+
     
     Lx = FX(IE) - FX(IS-1)
     mflx_hi = 0.0_RP
     
-    call ATMOS_NUMERIC_FDM_setup(1, 1)
+!    call ATMOS_NUMERIC_FDM_setup(1, 1)
     
     do j = 1, JA
     do i = 1, IA
@@ -270,42 +247,63 @@ contains
     enddo
 
     write(*,*) "Lx=", Lx
-    write(*,*) FX(1:IA)
-    PROG(:,:,:,I_Qadv) = DENS(:,:,:) * VARTMP(:,:,:)
-    return
+!!$    write(*,*) FX(1:IA)
+!    return
+
+    !*********************************************
     
-    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_UD1, "UD1")
-    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_CD2, "CD2")
-    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_UD3, "UD3")
-    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_CD4, "CD4")
-    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_UD5, "UD5")
-    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_CD6, "CD6")
-    stop
+!!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, "UD1")
+!!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, "CD2")
+!!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, "UD3")
+!!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, "CD4")
+!!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, "UD5")
+!!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, "CD6")
+!!$
+!!$    stop
+
+    !*********************************************
     
   end subroutine ConvCheck
- 
-  subroutine eval_RHS(var, mflx_hi, exactRHS, FlxEvalTypeID, label)
 
+  
+  subroutine eval_RHS(var, mflx_hi, exactRHS, lblFluxScheme)
+
+    use scale_grid, only : &
+         CDZ => GRID_CDZ
+    
     real(RP), intent(in) :: var(KA,IA,JA)
     real(RP), intent(in) :: mflx_hi(KA,IA,JA,3), exactRHS(KA,IA,JA)
-    integer, intent(in) :: FlxEvalTypeID
-    character(*), intent(in) :: label
+    character(*), intent(in) :: lblFluxScheme
 
     integer :: IIS, IIE, JJS, JJE, i, j
-    real(RP), dimension(KA,IA,JA,3) :: qflx_hi
-    real(RP), dimensioN(KA,IA,JA) :: RHS, one, zero
-    real(RP) :: l2error, linf
+    real(RP) :: qflx_hi(KA,IA,JA,3)
+    real(RP) :: GSQRT(KA,IA,JA,7)
+    real(RP) :: num_diff(KA,IA,JA,5,3)
+    real(RP) :: RHS(KA,IA,JA)
+    real(RP) :: l2_error
+    real(RP) :: linf_error
+
+
+    call ATMOS_DYN_FVM_flux_setup(lblFluxScheme)
     
-    one = 1.0_RP; zero = 0.0_RP
+    num_diff = 0.0_RP
+    GSQRT = 1.0_RP
     
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
-       call ATMOS_NUMERIC_FDM_EvalFlux( qflx_hi,                                                &  ! (inout)
-        & FlxEvalTypeID, VL_ZXY,                                                               &  ! (in)
-        & var, one, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
-        & IIS, IIE, JJS, JJE, KS, KE  )                          ! (in)      
+
+       call ATMOS_DYN_FVM_fluxX_XYZ( qflx_hi(:,:,:,XDIR), & ! (out)
+            mflx_hi(:,:,:,XDIR), var, GSQRT(:,:,:,I_UYZ), & ! (in)
+            num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
+            CDZ, & ! (in)
+            IIS, IIE, JJS, JJE ) ! (in)
+       
+!!$       call ATMOS_NUMERIC_FDM_EvalFlux( qflx_hi,                                 &  ! (inout)
+!!$        & VL_ZXY,                                                                &  ! (in)
+!!$        & var, one, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
+!!$        & IIS, IIE, JJS, JJE, KS, KE  )                          ! (in)      
     enddo
     enddo
 
@@ -320,40 +318,84 @@ contains
       enddo
     enddo
     enddo
-    
-    l2error = sqrt(   sum( (RHS(KS,IS:IE,JS) - exactRHS(KS,IS:IE,JS))**2 * CDX(IS:IE) )     &
-         &          / sum( exactRHS(KS,IS:IE,JS)**2 * CDX(IS:IE) )                                 )
-    
-    linf = maxval( abs( RHS(KS,IS:IE,JS) - exactRHS(KS,IS:IE,JS) ) ) / maxval( abs(exactRHS(KS,IS:IE,JS) ) )
 
-!!$    write(*,*) RHS(KS,IS:IE,JS)
-!!$    write(*,*) exactRHS(KS,IS:IE,JS)    
-    write(*,*) "FlxEvalTypeID=", trim(label), ", l2error=", l2error, " linf=", linf
+    l2_error = calc_l2error(RHS, exactRHS)
+    linf_error = calc_linferror(RHS, exactRHS)
+    write(*,*) "FluxScheme=", trim(lblFluxScheme), ", l2error=", l2_error, " linf=", linf_error
     
   end subroutine eval_RHS
+
+  !----------------------------------------------------------
   
-  function num_int(fx, xa, xb) result(intval)
-    real(RP), intent(in) :: fx(IS:IE)
-    real(RP), intent(in) :: xa, xb
-    real(RP) :: intval
+  function calc_l2error(NumSol, ExactSol) result(l2error)
     
-    real(RP) :: dh
-    integer :: n, i
+    real(RP), intent(in) :: NumSol(KA,IA,JA)
+    real(RP), intent(in) :: ExactSol(KA,IA,JA)
+    real(RP) :: l2error
 
-    n = size(fx)
-    dh = (xb - xa)/dble(n)
+    real(RP) :: l2_error_lctmp1, l2_error_lctmp2
+    real(RP) :: l2_error_gltmp1, l2_error_gltmp2
+    integer :: ierr
+    
+    l2_error_lctmp1 = sum( (NumSol(KS,IS:IE,JS) - ExactSol(KS,IS:IE,JS))**2  * CDX(IS:IE) )
+    l2_error_lctmp2 = sum( ExactSol(KS,IS:IE,JS)**2 * CDX(IS:IE) )
 
-    intval = fx(IS) + fx(IE)
-    do i=1, n-1
-       if(mod(i,2) /= 0) then
-          intval = intval + 4.0_RP * fx(IS+i)
-       else
-          intval = intval + 2.0_RP * fx(IS+i)
-       end if
-    end do
+    call MPI_Allreduce( l2_error_lctmp1, l2_error_gltmp1, 1, &
+         COMM_datatype, MPI_SUM, COMM_world, ierr )
 
-    intval = dh * intval / 3.0_RP
-!    intval = intval + 0.5_RP * dh * (fx(IS) + fx(IE))
-  end function num_int
+    call MPI_Allreduce( l2_error_lctmp2, l2_error_gltmp2, 1, &
+         COMM_datatype, MPI_SUM, COMM_world, ierr )
+
+    l2error = sqrt(l2_error_gltmp1 / l2_error_gltmp2)
+    
+  end function calc_l2error
+
+  function calc_linferror(NumSol, ExactSol) result(linf_error)
+    
+    real(RP), intent(in) :: NumSol(KA,IA,JA)
+    real(RP), intent(in) :: ExactSol(KA,IA,JA)
+    real(RP) :: linf_error
+
+    real(RP) :: linf_error_lctmp1, linf_error_lctmp2
+    real(RP) :: linf_error_gltmp1, linf_error_gltmp2
+    integer :: ierr
+
+    linf_error_lctmp1 = maxval( abs(NumSol(KS,IS:IE,JS) - ExactSol(KS,IS:IE,JS)) )
+    linf_error_lctmp2 = maxval( abs(ExactSol(KS,IS:IE,JS)) )
+
+    call MPI_Allreduce( linf_error_lctmp1, linf_error_gltmp1, 1, &
+         COMM_datatype, MPI_MAX, COMM_world, ierr )
+
+    call MPI_Allreduce( linf_error_lctmp2, linf_error_gltmp2, 1, &
+         COMM_datatype, MPI_MAX, COMM_world, ierr )
+
+    linf_error = linf_error_gltmp1 / linf_error_gltmp2
+    
+  end function calc_linferror
+  
+  
+!!$  function num_int(fx, xa, xb) result(intval)
+!!$    real(RP), intent(in) :: fx(IS:IE)
+!!$    real(RP), intent(in) :: xa, xb
+!!$    real(RP) :: intval
+!!$    
+!!$    real(RP) :: dh
+!!$    integer :: n, i
+!!$
+!!$    n = size(fx)
+!!$    dh = (xb - xa)/dble(n)
+!!$
+!!$    intval = fx(IS) + fx(IE)
+!!$    do i=1, n-1
+!!$       if(mod(i,2) /= 0) then
+!!$          intval = intval + 4.0_RP * fx(IS+i)
+!!$       else
+!!$          intval = intval + 2.0_RP * fx(IS+i)
+!!$       end if
+!!$    end do
+!!$
+!!$    intval = dh * intval / 3.0_RP
+!!$!    intval = intval + 0.5_RP * dh * (fx(IS) + fx(IE))
+!!$  end function num_int
   
 end module mod_user
