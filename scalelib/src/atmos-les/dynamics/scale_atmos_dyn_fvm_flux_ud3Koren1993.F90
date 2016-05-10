@@ -1403,6 +1403,8 @@ contains
 
 
   function phi(v1, v2, v3)
+    use scale_const, only: &
+         EPS => CONST_EPS
     implicit none
     real(RP) :: phi
     real(RP), intent(in)  :: v1
@@ -1410,8 +1412,11 @@ contains
     real(RP), intent(in)  :: v3
 
     real(RP) :: r2
+    real(RP) :: zerosw1, zerosw2
 
-    r2 = 2.0_RP * (v1-v2) / (v2-v3)
+    zerosw1 = EPS - sign(EPS, abs(v1-v2)-EPS)
+    zerosw2 = EPS - sign(EPS, abs(v2-v3)-EPS)
+    r2 = 2.0_RP * (v1-v2+zerosw1*zerosw2) / (v2-v3+zerosw2)
 
     phi = max(0.0_RP, min(r2, min((1.0_RP+r2)/3.0_RP, 2.0_RP) ) )
 
