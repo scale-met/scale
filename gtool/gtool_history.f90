@@ -69,6 +69,10 @@ module gtool_history
   end interface HistoryPutAssociatedCoordinates
 
   interface HistoryPut
+     module procedure HistoryPut0DNameSP
+     module procedure HistoryPut0DIdSP
+     module procedure HistoryPut0DNameDP
+     module procedure HistoryPut0DIdDP
      module procedure HistoryPut1DNameSP
      module procedure HistoryPut1DIdSP
      module procedure HistoryPut1DNameDP
@@ -1236,6 +1240,144 @@ contains
 
   !-----------------------------------------------------------------------------
   ! interface HistoryPut(by NAME)
+  subroutine HistoryPut0DNameSP( &
+       varname,   &
+       step_next, &
+       var        )
+    implicit none
+
+    character(len=*), intent(in) :: varname
+    integer,          intent(in) :: step_next
+    real(SP),         intent(in) :: var
+
+    integer :: itemid, n
+    !---------------------------------------------------------------------------
+
+    ! search item id
+    itemid = -1
+    do n = 1, History_id_count
+       if ( varname == History_item(n) ) then
+          itemid = n
+          exit
+       endif
+    enddo
+
+    call HistoryPut0DIdSP(itemid, step_next, var)
+
+    return
+  end subroutine HistoryPut0DNameSP
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by ID)
+  subroutine HistoryPut0DIdSP( &
+       itemid,    &
+       step_next, &
+       var        )
+    implicit none
+
+    integer,  intent(in) :: itemid
+    integer,  intent(in) :: step_next
+    real(SP), intent(in) :: var
+
+    real(DP) :: dt
+    integer :: idx
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( itemid < 0 ) return
+
+    dt  = ( step_next - History_tlststep(itemid) ) * HISTORY_DTSEC
+
+    if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
+       write(message,*) 'xxx History variable was put two times before output!: ', &
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
+       call Log('E', message)
+    endif
+
+    if ( History_tavg(itemid) ) then
+          idx = 1
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var * dt
+    else
+          idx = 1
+          History_varsum(idx,itemid) = var
+    endif
+
+    History_size    (itemid) = idx
+    History_tlststep(itemid) = step_next
+    History_tsumsec (itemid) = History_tsumsec(itemid) + dt
+
+    return
+  end subroutine HistoryPut0DIdSP
+  subroutine HistoryPut0DNameDP( &
+       varname,   &
+       step_next, &
+       var        )
+    implicit none
+
+    character(len=*), intent(in) :: varname
+    integer,          intent(in) :: step_next
+    real(DP),         intent(in) :: var
+
+    integer :: itemid, n
+    !---------------------------------------------------------------------------
+
+    ! search item id
+    itemid = -1
+    do n = 1, History_id_count
+       if ( varname == History_item(n) ) then
+          itemid = n
+          exit
+       endif
+    enddo
+
+    call HistoryPut0DIdDP(itemid, step_next, var)
+
+    return
+  end subroutine HistoryPut0DNameDP
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by ID)
+  subroutine HistoryPut0DIdDP( &
+       itemid,    &
+       step_next, &
+       var        )
+    implicit none
+
+    integer,  intent(in) :: itemid
+    integer,  intent(in) :: step_next
+    real(DP), intent(in) :: var
+
+    real(DP) :: dt
+    integer :: idx
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( itemid < 0 ) return
+
+    dt  = ( step_next - History_tlststep(itemid) ) * HISTORY_DTSEC
+
+    if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
+       write(message,*) 'xxx History variable was put two times before output!: ', &
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
+       call Log('E', message)
+    endif
+
+    if ( History_tavg(itemid) ) then
+          idx = 1
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var * dt
+    else
+          idx = 1
+          History_varsum(idx,itemid) = var
+    endif
+
+    History_size    (itemid) = idx
+    History_tlststep(itemid) = step_next
+    History_tsumsec (itemid) = History_tsumsec(itemid) + dt
+
+    return
+  end subroutine HistoryPut0DIdDP
   subroutine HistoryPut1DNameSP( &
        varname,   &
        step_next, &
@@ -1276,7 +1418,8 @@ contains
     real(SP), intent(in) :: var(:)
 
     real(DP) :: dt
-    integer  :: ijk(1), idx
+    integer :: idx
+    integer  :: ijk(1)
     integer  :: i
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -1296,14 +1439,12 @@ contains
     if ( History_tavg(itemid) ) then
        do i = 1, ijk(1)
           idx = i
-
-          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i) * dt
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) +  var(i) * dt
        enddo
     else
        do i = 1, ijk(1)
           idx = i
-
-          History_varsum(idx,itemid) = var(i)
+          History_varsum(idx,itemid) =  var(i)
        enddo
     endif
 
@@ -1353,7 +1494,8 @@ contains
     real(DP), intent(in) :: var(:)
 
     real(DP) :: dt
-    integer  :: ijk(1), idx
+    integer :: idx
+    integer  :: ijk(1)
     integer  :: i
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -1373,14 +1515,12 @@ contains
     if ( History_tavg(itemid) ) then
        do i = 1, ijk(1)
           idx = i
-
-          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i) * dt
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) +  var(i) * dt
        enddo
     else
        do i = 1, ijk(1)
           idx = i
-
-          History_varsum(idx,itemid) = var(i)
+          History_varsum(idx,itemid) =  var(i)
        enddo
     endif
 
@@ -1430,7 +1570,8 @@ contains
     real(SP), intent(in) :: var(:,:)
 
     real(DP) :: dt
-    integer  :: ijk(2), idx
+    integer :: idx
+    integer  :: ijk(2)
     integer  :: i, j
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -1451,16 +1592,14 @@ contains
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = j*ijk(i)+i
-
-          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i,j) * dt
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) +  var(i,j) * dt
        enddo
        enddo
     else
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = j*ijk(i)+i
-
-          History_varsum(idx,itemid) = var(i,j)
+          History_varsum(idx,itemid) =  var(i,j)
        enddo
        enddo
     endif
@@ -1511,7 +1650,8 @@ contains
     real(DP), intent(in) :: var(:,:)
 
     real(DP) :: dt
-    integer  :: ijk(2), idx
+    integer :: idx
+    integer  :: ijk(2)
     integer  :: i, j
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -1532,16 +1672,14 @@ contains
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = j*ijk(i)+i
-
-          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i,j) * dt
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) +  var(i,j) * dt
        enddo
        enddo
     else
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = j*ijk(i)+i
-
-          History_varsum(idx,itemid) = var(i,j)
+          History_varsum(idx,itemid) =  var(i,j)
        enddo
        enddo
     endif
@@ -1592,7 +1730,8 @@ contains
     real(SP), intent(in) :: var(:,:,:)
 
     real(DP) :: dt
-    integer  :: ijk(3), idx
+    integer :: idx
+    integer  :: ijk(3)
     integer  :: i, j, k
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -1614,8 +1753,7 @@ contains
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = (k*ijk(2)+j)*ijk(1)+i
-
-          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i,j,k) * dt
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) +  var(i,j,k) * dt
        enddo
        enddo
        enddo
@@ -1624,8 +1762,7 @@ contains
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = (k*ijk(2)+j)*ijk(1)+i
-
-          History_varsum(idx,itemid) = var(i,j,k)
+          History_varsum(idx,itemid) =  var(i,j,k)
        enddo
        enddo
        enddo
@@ -1677,7 +1814,8 @@ contains
     real(DP), intent(in) :: var(:,:,:)
 
     real(DP) :: dt
-    integer  :: ijk(3), idx
+    integer :: idx
+    integer  :: ijk(3)
     integer  :: i, j, k
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -1699,8 +1837,7 @@ contains
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = (k*ijk(2)+j)*ijk(1)+i
-
-          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i,j,k) * dt
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) +  var(i,j,k) * dt
        enddo
        enddo
        enddo
@@ -1709,8 +1846,7 @@ contains
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = (k*ijk(2)+j)*ijk(1)+i
-
-          History_varsum(idx,itemid) = var(i,j,k)
+          History_varsum(idx,itemid) =  var(i,j,k)
        enddo
        enddo
        enddo
