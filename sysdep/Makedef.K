@@ -6,7 +6,7 @@
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
-               -x100                                                     \
+               -x-                                                       \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
@@ -46,7 +46,7 @@ RDMA = -U_USE_RDMA
 FC     = mpifrtpx
 SFC    = frtpx
 
-FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
+FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2 -x100
 #FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -M

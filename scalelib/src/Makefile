@@ -33,7 +33,7 @@ VPATH = common:                           \
         atmos-les/io:                     \
         atmos-les/numeric:                \
         atmos-les/dynamics:               \
-	atmos-les/forcing:                \
+        atmos-les/forcing:                \
         land:                             \
         land/grid:                        \
         ocean:                            \
@@ -118,8 +118,8 @@ OBJS_DYN = scale_atmos_dyn_tinteg_short.o \
            scale_atmos_dyn_tinteg_large.o \
            scale_atmos_dyn_tinteg_large_euler.o \
            scale_atmos_dyn_tinteg_large_rk3.o \
-	   scale_atmos_dyn_tstep_short.o \
-	   scale_atmos_dyn_tstep_large.o \
+           scale_atmos_dyn_tstep_short.o \
+           scale_atmos_dyn_tstep_large.o \
            scale_atmos_dyn_tstep_large_fvm_heve.o \
            scale_atmos_dyn_fvm_flux.o \
            scale_atmos_dyn_fvm_flux_ud1.o \
@@ -131,8 +131,8 @@ OBJS_DYN = scale_atmos_dyn_tinteg_short.o \
            scale_atmos_dyn_fvm_flux_cd6.o
 ifeq ($(DYNAMICS),)
   OBJS_DYN += scale_atmos_dyn_tstep_short_fvm_heve.o \
-	      scale_atmos_dyn_tstep_short_fvm_hevi.o \
-	      scale_atmos_dyn_tstep_short_fvm_hivi.o
+              scale_atmos_dyn_tstep_short_fvm_hevi.o \
+              scale_atmos_dyn_tstep_short_fvm_hivi.o
 else
   OBJS_DYN += scale_atmos_dyn_tstep_short_$(DYNAMICS).o
 endif
@@ -368,10 +368,8 @@ $(MODDIR)/%.mod : %.mod
 
 $(OBJ_DIR)/%.o : %.F90
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn.o:
+$(OBJ_DIR)/scale_atmos_dyn.o $(OBJ_DIR)/scale_atmos_dyn_common.o $(OBJ_DIR)/$(OBJ_DYN) :
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn%.o:
-	$(FC) -O0 $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb $< > $@
