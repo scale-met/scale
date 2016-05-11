@@ -44,7 +44,7 @@ The 3 and 4 step Runge-Kutta scheme are implemented.
 \end{align}
 
 
-\subsubsection{The \citet{Wicker_Skamarock_2002},'s three step scheme}
+\subsubsection{The \citet{Wicker_Skamarock_2002}'s three step scheme}
 
 \begin{align}
   k_1 &= f(\phi^n), \\
@@ -64,6 +64,13 @@ The 3 and 4 step Runge-Kutta scheme are implemented.
   \phi^{n+1} &= \phi^n + \frac{1}{6}\Delta t (k_1 + 2k_2 + 2k_3 + k_4).
 \end{align}
 
+
+\subsubsection{The forward-backward scheme}
+In the short time step, the momentums are updated first and then density is updated with the updated momentums.
+\begin{align}
+  \rho u^{n+1}_i &= \rho u^n_i + \Delta t f_{\rho u_i}(\rho^n), \\
+  \rho^{n+1}     &= \rho^n + \Delta t f_{\rho}(\rho u^{n+1}_i).
+\end{align}
 
 \subsection{Numerical stability}
 
@@ -144,6 +151,21 @@ where
   \end{pmatrix}.
 \end{equation}
 
+\subsubsection{The Euler scheme}
+With the Euler scheme,
+\begin{equation}
+  \phi^{n+1} = \phi^n + \Delta t f(\phi^n)
+\end{equation}
+The $A$ is the matrix representing the time step, then
+\begin{align}
+  A &= I + dt D, \\
+    &= \begin{pmatrix}
+    1 & -6\frac{\Delta t}{\Delta x} \\
+    \frac{2c^2\Delta t}{\Delta x} & 1
+    \end{pmatrix}.
+\end{align}
+The eigen value of $A$ is larger than 1, and the Euler scheme is instable for any $\Delta t$.
+
 
 \subsubsection{The second step Runge-Kutta scheme}
 The Heun's second step Runge-Kutta scheme is
@@ -153,7 +175,6 @@ The Heun's second step Runge-Kutta scheme is
   \phi^{n+1} &= \phi^n + \frac{\Delta t}{2}(k_1 + k_2).
 \end{align}
 
-The $A$ is the matrix representing the time step, then
 \begin{align}
   A &= I + \frac{\Delta t}{2}(K_1 + K_2), \\
   K_1 &= D, \\
@@ -167,12 +188,8 @@ After all,
     \end{pmatrix},
 \end{equation}
 where $\nu$ is the Courant number for the sound speed: $\frac{c\Delta t}{\Delta x}$.
+The eigen value of $A$ is larger than 1, and the Euler scheme is instable for any $\Delta t$.
 
-The determinant of $A$ is
-\begin{equation}
-  |A| = 1 + 36\nu^4 > 1.
-\end{equation}
-Therefore, it is found that the mode is unstable with any $\Delta t$.
 
 
 \subsubsection{The third step Runge-Kutta scheme}
@@ -191,12 +208,7 @@ where
   K_3 &= D (I + \frac{2\Delta t}{3}K_2).
 \end{align}
 
-The determinant of $A$ is
-\begin{equation}
-  |A| = 1 - 12\nu^4 + 48\nu^6. \label{eq: det two}
-\end{equation}
-The necessary and sufficient condition for which the 2-grid mode is stable is $|A| \leq 1$.
-The condition for $\nu$ is
+The condition that all the eigen values are less than or equal to 1 is
 \begin{equation}
   \nu \leq \frac{1}{2}. \label{eq: cond nu two}
 \end{equation}
@@ -240,15 +252,50 @@ where
   K_3 &= D \left(I + \frac{\Delta t}{2}K_2\right), \\
   K_4 &= D (I + \Delta t K_3).
 \end{align}
-The determinant is
+
+The condition for stability is
 \begin{equation}
-  |A| = 1-24\nu^6+36\nu^8.
-\end{equation}
-The stable condition, therefor, is
-\begin{equation}
-  \nu \leq \frac{\sqrt{6}}{3}.
+  \nu \le \frac{\sqrt{6}}{3}.
 \end{equation}
 
 The number of floating opint operations with the four step Runge-Kutta scheme is about $4/3$ times larger than that with the three step scheme.
 Howere, the time step can be $2\sqrt{6}/3$ larger than that in the three step scheme.
 Since $2\sqrt{6}/3 > 4/3$, the four step Runge-Kutta scheme is more cost effective than the three step scheme in terms of numerical stability.
+
+
+\subsubsection{The forward-backward scheme}
+The stabitlity condition is
+\begin{equation}
+  \nu \le \frac{1}{\sqrt{3}}.
+\end{equation}
+
+The forward-backward scheme can be used in each step in the Runge-Kutta schemes.
+The stability conditions are the followings:
+\begin{description}
+ \item[The second step RK scheme]
+ \begin{equation}
+   \nu \le \frac{1}{\sqrt{3}}.
+ \end{equation}
+
+ \item[The Heun's three step RK scheme]
+ \begin{equation}
+   \nu \le \frac{1}{2}.
+ \end{equation}
+
+ \item[The Kutta's three step RK scheme]
+ \begin{equation}
+   \nu \le \frac{1}{2}.
+ \end{equation}
+
+ \item[The\citet{Wicker_Skamarock_2002}'s three step RK scheme]
+ \begin{equation}
+   \nu \le \frac{\sqrt{6}}{4}.
+ \end{equation}
+
+ \item[The four step RK scheme]
+ \begin{equation}
+   \nu \le 0.66
+ \end{equation}
+
+
+\end{description}
