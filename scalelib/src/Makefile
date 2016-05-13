@@ -230,6 +230,10 @@ OBJS_NAME = $(scale_rdma)	        \
 
 OBJS =  $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 
+OBJS_FOR_DYN = $(OBJ_DIR)/scale_atmos_dyn.o \
+	$(OBJ_DIR)/scale_atmos_dyn_common.o	\
+	$(patsubst %,$(OBJ_DIR)/%,$(OBJS_DYN))
+
 OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o \
 	$(OBJ_DIR)/scale_prof.o \
 	$(OBJ_DIR)/scale_comm.o \
@@ -368,7 +372,7 @@ $(MODDIR)/%.mod : %.mod
 
 $(OBJ_DIR)/%.o : %.F90
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn.o $(OBJ_DIR)/scale_atmos_dyn_common.o $(OBJ_DIR)/$(OBJ_DYN) :
+$(OBJS_FOR_DYN) :
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
