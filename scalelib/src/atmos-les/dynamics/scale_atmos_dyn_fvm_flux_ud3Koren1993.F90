@@ -121,10 +121,8 @@ contains
        call CHECK( __LINE__, val(k+2) )
 
 #endif
-       valW(k) =  ( val(k)*0.5_RP + 0.25_RP * phi(val(k+1),val(k),val(k-1)) * ( val(k)-val(k-1) ) &
-                 + val(k+1)*0.5_RP + 0.25_RP * phi(val(k),val(k+1),val(k+2)) * ( val(k+1)-val(k+2) ) ) &
-               + ( val(k)*0.5_RP + 0.25_RP * phi(val(k+1),val(k),val(k-1)) * ( val(k)-val(k-1) ) &
-                 - val(k+1)*0.5_RP + 0.25_RP * phi(val(k),val(k+1),val(k+2)) * ( val(k+1)-val(k+2) ) ) * sign(1.0_RP,mflx(k))
+       valW(k) =    ( val(k) + 0.5_RP * phi(val(k+1),val(k),val(k-1)) * ( val(k)-val(k-1) ) ) * ( 0.5_RP + sign(0.5_RP,mflx(k)) ) &
+                 + ( val(k+1) + 0.5_RP * phi(val(k),val(k+1),val(k+2)) * ( val(k+1)-val(k+2) ) ) * ( 0.5_RP - sign(0.5_RP,mflx(k)) )
     enddo
 #ifdef DEBUG
     k = IUNDEF
@@ -189,10 +187,8 @@ contains
 #endif
        vel = mflx(k,i,j)
        flux(k,i,j) = vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 + val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 - val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k+1,i,j) + 0.5_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -277,10 +273,8 @@ contains
 #endif
        vel = mflx(k,i,j)
        flux(k,i,j) = vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) &
-                 + val(k,i+1,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) &
-                 - val(k,i+1,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i+1,j) + 0.5_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -333,10 +327,8 @@ contains
 #endif
        vel = mflx(k,i,j)
        flux(k,i,j) = vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) &
-                 + val(k,i,j+1)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) &
-                 - val(k,i,j+1)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i,j+1) + 0.5_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -403,10 +395,8 @@ contains
                         + mom(k,i,j) ) ) &
            / DENS(k,i,j)
        flux(k-1,i,j) = J33G * vel &
-            * (  ( val(k-1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) &
-                 + val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) &
-               + ( val(k-1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) &
-                 - val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k-1,i,j) + 0.5_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i,j) + 0.5_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -467,10 +457,8 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i-1,j) ) ) &
            / DENS(k,i,j)
        flux(k-1,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
-            * (  ( val(k-1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) &
-                 + val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) &
-               + ( val(k-1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) &
-                 - val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) * sign(1.0_RP,vel) )
+            * (    ( val(k-1,i,j) + 0.5_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i,j) + 0.5_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )
     enddo
     enddo
     enddo
@@ -517,10 +505,8 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j-1) ) ) &
            / DENS(k,i,j)
        flux(k-1,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
-            * (  ( val(k-1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) &
-                 + val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) &
-               + ( val(k-1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) &
-                 - val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) * sign(1.0_RP,vel) )
+            * (    ( val(k-1,i,j) + 0.5_RP * phi(val(k,i,j),val(k-1,i,j),val(k-2,i,j)) * ( val(k-1,i,j)-val(k-2,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i,j) + 0.5_RP * phi(val(k-1,i,j),val(k,i,j),val(k+1,i,j)) * ( val(k,i,j)-val(k+1,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )
     enddo
     enddo
     enddo
@@ -586,10 +572,8 @@ contains
            / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
              + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+2) * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) &
-                 + val(k,i+1,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) &
-                 - val(k,i+1,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i+1,j) + 0.5_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -659,10 +643,8 @@ contains
            / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
              + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+1) * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) &
-                 + val(k,i,j+1)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) &
-                 - val(k,i,j+1)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i,j+1) + 0.5_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -732,10 +714,8 @@ contains
            / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
              + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J33G * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 + val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 - val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k+1,i,j) + 0.5_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -814,10 +794,8 @@ contains
            / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
              + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 + val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 - val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * sign(1.0_RP,vel) )
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k+1,i,j) + 0.5_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )
     enddo
     enddo
     enddo
@@ -879,10 +857,8 @@ contains
            / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
              + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 + val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 - val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * sign(1.0_RP,vel) )
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k+1,i,j) + 0.5_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )
     enddo
     enddo
     enddo
@@ -961,10 +937,8 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i-1,j) ) ) &
            / ( DENS(k,i,j) )
        flux(k,i-1,j) = GSQRT(k,i,j) / MAPF(i,j,+2) * vel &
-            * (  ( val(k,i-1,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i-1,j),val(k,i-2,j)) * ( val(k,i-1,j)-val(k,i-2,j) ) &
-                 + val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i-1,j),val(k,i,j),val(k,i+1,j)) * ( val(k,i,j)-val(k,i+1,j) ) ) &
-               + ( val(k,i-1,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i-1,j),val(k,i-2,j)) * ( val(k,i-1,j)-val(k,i-2,j) ) &
-                 - val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i-1,j),val(k,i,j),val(k,i+1,j)) * ( val(k,i,j)-val(k,i+1,j) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i-1,j) + 0.5_RP * phi(val(k,i,j),val(k,i-1,j),val(k,i-2,j)) * ( val(k,i-1,j)-val(k,i-2,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i,j) + 0.5_RP * phi(val(k,i-1,j),val(k,i,j),val(k,i+1,j)) * ( val(k,i,j)-val(k,i+1,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -1023,10 +997,8 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i+1,j) ) ) &
            / ( 0.25_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+1) * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) &
-                 + val(k,i,j+1)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) &
-                 - val(k,i,j+1)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k,i,j+1),val(k,i,j),val(k,i,j-1)) * ( val(k,i,j)-val(k,i,j-1) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i,j+1) + 0.5_RP * phi(val(k,i,j),val(k,i,j+1),val(k,i,j+2)) * ( val(k,i,j+1)-val(k,i,j+2) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -1089,10 +1061,8 @@ contains
            / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
              + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J33G * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 + val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 - val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k+1,i,j) + 0.5_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -1171,10 +1141,8 @@ contains
            / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
              + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 + val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 - val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * sign(1.0_RP,vel) )
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k+1,i,j) + 0.5_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )
     enddo
     enddo
     enddo
@@ -1236,10 +1204,8 @@ contains
            / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
              + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 + val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) &
-                 - val(k+1,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * sign(1.0_RP,vel) )
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k+1,i,j),val(k,i,j),val(k-1,i,j)) * ( val(k,i,j)-val(k-1,i,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k+1,i,j) + 0.5_RP * phi(val(k,i,j),val(k+1,i,j),val(k+2,i,j)) * ( val(k+1,i,j)-val(k+2,i,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )
     enddo
     enddo
     enddo
@@ -1316,10 +1282,8 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j+1) ) ) &
            / ( 0.25_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+2) * vel &
-            * (  ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) &
-                 + val(k,i+1,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) &
-               + ( val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) &
-                 - val(k,i+1,j)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j) + 0.5_RP * phi(val(k,i+1,j),val(k,i,j),val(k,i-1,j)) * ( val(k,i,j)-val(k,i-1,j) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i+1,j) + 0.5_RP * phi(val(k,i,j),val(k,i+1,j),val(k,i+2,j)) * ( val(k,i+1,j)-val(k,i+2,j) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
@@ -1380,10 +1344,8 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j-1) ) ) &
            / ( DENS(k,i,j) )
        flux(k,i,j-1) = GSQRT(k,i,j) / MAPF(i,j,+1) * vel &
-            * (  ( val(k,i,j-1)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i,j-1),val(k,i,j-2)) * ( val(k,i,j-1)-val(k,i,j-2) ) &
-                 + val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j-1),val(k,i,j),val(k,i,j+1)) * ( val(k,i,j)-val(k,i,j+1) ) ) &
-               + ( val(k,i,j-1)*0.5_RP + 0.25_RP * phi(val(k,i,j),val(k,i,j-1),val(k,i,j-2)) * ( val(k,i,j-1)-val(k,i,j-2) ) &
-                 - val(k,i,j)*0.5_RP + 0.25_RP * phi(val(k,i,j-1),val(k,i,j),val(k,i,j+1)) * ( val(k,i,j)-val(k,i,j+1) ) ) * sign(1.0_RP,vel) )  &
+            * (    ( val(k,i,j-1) + 0.5_RP * phi(val(k,i,j),val(k,i,j-1),val(k,i,j-2)) * ( val(k,i,j-1)-val(k,i,j-2) ) ) * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                 + ( val(k,i,j) + 0.5_RP * phi(val(k,i,j-1),val(k,i,j),val(k,i,j+1)) * ( val(k,i,j)-val(k,i,j+1) ) ) * ( 0.5_RP - sign(0.5_RP,vel) ) )  &
             + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo

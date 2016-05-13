@@ -84,12 +84,10 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
     "F2 * ( val(#{idx1})+val(#{idx0}) )"
   when 3
     if @scheme=="ud3Koren1993"
-      p = "val(#{idx0})*0.5_RP + 0.25_RP * phi(val(#{idx1}),val(#{idx0}),val(#{idxn1})) * ( val(#{idx0})-val(#{idxn1}) )"
-      n = "val(#{idx1})*0.5_RP + 0.25_RP * phi(val(#{idx0}),val(#{idx1}),val(#{idx2 })) * ( val(#{idx1})-val(#{idx2 }) )"
-               " ( #{p} &
-                 + #{n} ) &
-               + ( #{p} &
-                 - #{n} ) * sign(1.0_RP,#{vel})"
+      p = "val(#{idx0}) + 0.5_RP * phi(val(#{idx1}),val(#{idx0}),val(#{idxn1})) * ( val(#{idx0})-val(#{idxn1}) )"
+      n = "val(#{idx1}) + 0.5_RP * phi(val(#{idx0}),val(#{idx1}),val(#{idx2 })) * ( val(#{idx1})-val(#{idx2 }) )"
+               "   ( #{p} ) * ( 0.5_RP + sign(0.5_RP,#{vel}) ) &
+                 + ( #{n} ) * ( 0.5_RP - sign(0.5_RP,#{vel}) )"
     else
                "  F31 * ( val(#{idx2})+val(#{idxn1}) ) + F32 * ( val(#{idx1})+val(#{idx0}) ) &
               - ( F31 * ( val(#{idx2})-val(#{idxn1}) ) + F33 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
