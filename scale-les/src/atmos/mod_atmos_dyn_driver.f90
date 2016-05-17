@@ -44,7 +44,9 @@ module mod_atmos_dyn_driver
   !
 
   ! Type of advective flux scheme (FVM)
-  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_scheme = 'CD4' ! UD1, CD2, UD3, CD4, UD5, CD
+  ! CD2, UD3, UD3KOREN1993, CD4, UD5, CD6
+  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_scheme        = 'CD4'
+  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_scheme_tracer = 'UD3KOREN1993'
 
 
   !-----------------------------------------------------------------------------
@@ -59,7 +61,7 @@ module mod_atmos_dyn_driver
   ! numerical filter
   integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
   real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private :: ATMOS_DYN_numerical_diff_coef_q       = 1.0E-4_RP ! nondimensional numerical diffusion for tracer
+  real(RP), private :: ATMOS_DYN_numerical_diff_coef_q       = 0.0_RP ! nondimensional numerical diffusion for tracer
   real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
   logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
 
@@ -72,7 +74,7 @@ module mod_atmos_dyn_driver
   ! fct
   logical,  private :: ATMOS_DYN_FLAG_FCT_momentum = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER   = .true.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER   = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream = .true.
 
   ! lateral boundary flux adjustment
@@ -101,7 +103,10 @@ contains
        ATMOS_sw_dyn, &
        ATMOS_DYN_TYPE,  &
        ATMOS_DYN_TINTEG_SHORT_TYPE, &
-       ATMOS_DYN_TINTEG_LARGE_TYPE
+       ATMOS_DYN_TINTEG_TRACER_TYPE, &
+       ATMOS_DYN_TINTEG_LARGE_TYPE, &
+       ATMOS_DYN_TSTEP_TRACER_TYPE, &
+       ATMOS_DYN_TSTEP_LARGE_TYPE
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -119,6 +124,7 @@ contains
 
     NAMELIST / PARAM_ATMOS_DYN / &
        ATMOS_DYN_FVM_FLUX_scheme,             &
+       ATMOS_DYN_FVM_FLUX_scheme_tracer,      &
        ATMOS_DYN_numerical_diff_order,        &
        ATMOS_DYN_numerical_diff_coef,         &
        ATMOS_DYN_numerical_diff_coef_q,       &
@@ -154,16 +160,20 @@ contains
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
        call ATMOS_DYN_setup( &
-            ATMOS_DYN_TINTEG_SHORT_TYPE,    & ! [IN]
-            ATMOS_DYN_TINTEG_LARGE_TYPE,    & ! [IN]
-            ATMOS_DYN_FVM_FLUX_SCHEME,      & ! [IN]
+            ATMOS_DYN_TINTEG_SHORT_TYPE,        & ! [IN]
+            ATMOS_DYN_TINTEG_TRACER_TYPE,       & ! [IN]
+            ATMOS_DYN_TINTEG_LARGE_TYPE,        & ! [IN]
+            ATMOS_DYN_TSTEP_TRACER_TYPE,        & ! [IN]
+            ATMOS_DYN_TSTEP_LARGE_TYPE,         & ! [IN]
+            ATMOS_DYN_FVM_FLUX_SCHEME,          & ! [IN]
+            ATMOS_DYN_FVM_FLUX_SCHEME_TRACER,   & ! [IN]
             DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
-            PROG,                           & ! [IN]
-            GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
-            GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
-            ATMOS_DYN_enable_coriolis,      & ! [IN]
-            REAL_LAT,                       & ! [IN]
-            none = ATMOS_DYN_TYPE=='NONE'   ) ! [IN]
+            PROG,                               & ! [IN]
+            GRID_CDZ, GRID_CDX, GRID_CDY,       & ! [IN]
+            GRID_FDZ, GRID_FDX, GRID_FDY,       & ! [IN]
+            ATMOS_DYN_enable_coriolis,          & ! [IN]
+            REAL_LAT,                           & ! [IN]
+            none = ATMOS_DYN_TYPE=='NONE'       ) ! [IN]
        
     endif
     return

@@ -118,9 +118,14 @@ OBJS_DYN = scale_atmos_dyn_tinteg_short.o \
            scale_atmos_dyn_tinteg_large.o \
            scale_atmos_dyn_tinteg_large_euler.o \
            scale_atmos_dyn_tinteg_large_rk3.o \
+	   scale_atmos_dyn_tinteg_tracer.o \
+	   scale_atmos_dyn_tinteg_tracer_euler.o \
+	   scale_atmos_dyn_tinteg_tracer_rk3.o \
            scale_atmos_dyn_tstep_short.o \
            scale_atmos_dyn_tstep_large.o \
            scale_atmos_dyn_tstep_large_fvm_heve.o \
+           scale_atmos_dyn_tstep_tracer.o \
+           scale_atmos_dyn_tstep_tracer_fvm_heve.o \
            scale_atmos_dyn_fvm_flux.o \
            scale_atmos_dyn_fvm_flux_ud1.o \
            scale_atmos_dyn_fvm_flux_cd2.o \

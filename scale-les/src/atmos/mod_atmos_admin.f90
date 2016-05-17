@@ -32,8 +32,11 @@ module mod_atmos_admin
   logical,                public :: ATMOS_do          = .true. ! main switch for the model
 
   character(len=H_SHORT), public :: ATMOS_DYN_TYPE    = 'NONE'
-  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE = 'RK3WS2002'
-  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE = 'EULER'
+  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_TRACER_TYPE  = 'FVM-HEVE'
+  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_LARGE_TYPE   = 'FVM-HEVE'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE  = 'RK4'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE = 'RK3WS2002'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE  = 'EULER'
   character(len=H_SHORT), public :: ATMOS_PHY_MP_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_AE_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_CH_TYPE = 'NONE'
@@ -74,6 +77,7 @@ contains
        ATMOS_do,          &
        ATMOS_DYN_TYPE,    &
        ATMOS_DYN_TINTEG_SHORT_TYPE, &
+       ATMOS_DYN_TINTEG_TRACER_TYPE, &
        ATMOS_DYN_TINTEG_LARGE_TYPE, &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_PHY_AE_TYPE, &
@@ -132,6 +136,7 @@ contains
 
     if ( ATMOS_sw_dyn ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** +Short time step  : ', trim(ATMOS_DYN_TINTEG_SHORT_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Tracer advection : ', trim(ATMOS_DYN_TINTEG_TRACER_TYPE)
        if( IO_L ) write(IO_FID_LOG,*) '*** +Large time step  : ', trim(ATMOS_DYN_TINTEG_LARGE_TYPE)
     end if
 

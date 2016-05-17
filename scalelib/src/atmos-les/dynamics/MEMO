@@ -16,8 +16,11 @@ Time Step Integration Sequence
         | | {var_dyn}00 = {var_dyn}0 at the first nstep loop, else {var_dyn}00 = {var_dyn}
 	| - ATMOS_DYN_tinteg_short
 	|   - RK loop
-	|     - ATMOS_DYN_tstep
+	|     - ATMOS_DYN_tstep_short
 	|       - {var_dyn} = {var_dyn}00 + f({var_dyn})
 	| calculation momentum flux for tracer advection (nstep loop average)
 	| calculation numerical diffusion for var_tracer from {var_tracer}
-	- {var_tracer} = {var_tracer}0 + f({var_tracer})
+	- ATMOS_DYN_tinteg_tracer
+	  - RK loop
+	    - ATMOS_DYN_tstep_tracer
+	      - {var_tracer} = {var_tracer}0 + g({var_tracer}, mflux)

@@ -102,8 +102,12 @@ contains
   !> Setup
   subroutine ATMOS_DYN_setup( &
        DYN_Tinteg_Short_TYPE, &
+       DYN_Tinteg_Tracer_TYPE, &
        DYN_Tinteg_Large_TYPE, &
+       DYN_Tstep_Tracer_TYPE, &
+       DYN_Tstep_Large_TYPE, &
        DYN_FVM_FLUX_SCHEME, &
+       DYN_FVM_FLUX_SCHEME_TRACER, &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, &
        PROG,             &
        CDZ, CDX, CDY,    &
@@ -127,10 +131,14 @@ contains
        ATMOS_DYN_filter_setup
     use scale_atmos_dyn_tinteg_short, only: &
        ATMOS_DYN_tinteg_short_setup
+    use scale_atmos_dyn_tinteg_tracer, only: &
+       ATMOS_DYN_tinteg_tracer_setup
     use scale_atmos_dyn_tinteg_large, only: &
        ATMOS_DYN_tinteg_large_setup
     use scale_atmos_dyn_tstep_short, only: &
        ATMOS_DYN_tstep_short_setup
+    use scale_atmos_dyn_tstep_tracer, only: &
+       ATMOS_DYN_tstep_tracer_setup
     use scale_atmos_dyn_tstep_large, only: &
        ATMOS_DYN_tstep_large_setup
     use scale_atmos_dyn_fvm_flux, only: &
@@ -138,8 +146,12 @@ contains
     implicit none
 
     character(len=*), intent(in) :: DYN_Tinteg_Short_TYPE
+    character(len=*), intent(in) :: DYN_Tinteg_Tracer_TYPE
     character(len=*), intent(in) :: DYN_Tinteg_Large_TYPE
+    character(len=*), intent(in) :: DYN_Tstep_Tracer_TYPE
+    character(len=*), intent(in) :: DYN_Tstep_Large_TYPE
     character(len=*), intent(in) :: DYN_FVM_FLUX_SCHEME
+    character(len=*), intent(in) :: DYN_FVM_FLUX_SCHEME_TRACER
 
     ! MPI_RECV_INIT requires intent(inout)
     real(RP),               intent(inout) :: DENS(KA,IA,JA)
@@ -173,15 +185,23 @@ contains
     allocate( I_COMM_PROG(max(VA,1)) )
     allocate( I_COMM_QTRC(QA) )
 
-    call ATMOS_DYN_FVM_flux_setup( DYN_FVM_FLUX_SCHEME )
+    call ATMOS_DYN_FVM_flux_setup( &
+         DYN_FVM_FLUX_SCHEME, &
+         DYN_FVM_FLUX_SCHEME_TRACER )
 
     call ATMOS_DYN_tstep_short_setup
 
+    call ATMOS_DYN_tstep_tracer_setup( &
+         DYN_Tstep_Tracer_TYPE )
+
     call ATMOS_DYN_tstep_large_setup( &
+         DYN_Tstep_Large_TYPE, &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
          mflx_hi )
 
     call ATMOS_DYN_Tinteg_short_setup( DYN_Tinteg_Short_TYPE )
+
+    call ATMOS_DYN_Tinteg_tracer_setup( DYN_Tinteg_Tracer_TYPE )
 
     call ATMOS_DYN_Tinteg_large_setup( DYN_Tinteg_Large_TYPE )
 

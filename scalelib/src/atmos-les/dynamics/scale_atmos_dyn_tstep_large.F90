@@ -186,6 +186,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Register
   subroutine ATMOS_DYN_Tstep_large_setup( &
+       Tstep_large_type, &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
        mflx_hi )
     use scale_precision
@@ -197,6 +198,7 @@ contains
        ATMOS_DYN_Tstep_large_fvm_heve_setup, &
        ATMOS_DYN_Tstep_large_fvm_heve
     implicit none
+    character(len=*), intent(in) :: Tstep_large_type
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
@@ -205,8 +207,6 @@ contains
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
-
-    character(len=H_SHORT) :: Tstep_large_type = 'FVM-HEVE'
 
     !---------------------------------------------------------------------------
 

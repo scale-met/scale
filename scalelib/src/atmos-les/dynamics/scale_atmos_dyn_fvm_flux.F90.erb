@@ -165,18 +165,26 @@ module scale_atmos_dyn_fvm_flux
 <% ["Z", "X", "Y"].each do |dir| %>
   procedure(flux_phi), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_XYZ => NULL()
   public :: ATMOS_DYN_FVM_flux<%=dir%>_XYZ
+  procedure(flux_phi), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_XYZ_tracer => NULL()
+  public :: ATMOS_DYN_FVM_flux<%=dir%>_XYZ_tracer
 <% end %>
 
 <% ["XYW", "UYZ", "XVZ"].each do |uvw| %>
   procedure(<%= uvw=="XYW" ? "flux_wz" : "flux_z" %>), pointer :: ATMOS_DYN_FVM_fluxZ_<%=uvw%> => NULL()
   public :: ATMOS_DYN_FVM_fluxZ_<%=uvw%>
+  procedure(<%= uvw=="XYW" ? "flux_wz" : "flux_z" %>), pointer :: ATMOS_DYN_FVM_fluxZ_<%=uvw%>_tracer => NULL()
+  public :: ATMOS_DYN_FVM_fluxZ_<%=uvw%>_tracer
 <% ["X", "Y"].each do |dir| %>
   procedure(flux_mom), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%> => NULL()
   public :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>
+  procedure(flux_mom), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>_tracer => NULL()
+  public :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>_tracer
 <% end %>
 <% ["J13", "J23"].each do |dir| %>
   procedure(flux_j), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%> => NULL()
   public :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>
+  procedure(flux_j), pointer :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>_tracer => NULL()
+  public :: ATMOS_DYN_FVM_flux<%=dir%>_<%=uvw%>_tracer
 <% end %>
 <% end %>
 
@@ -198,7 +206,7 @@ contains
   !-----------------------------------------------------------------------------
   !> setup
   subroutine ATMOS_DYN_FVM_flux_setup( &
-       scheme )
+       scheme, scheme_tracer )
     use scale_process, only: &
          PRC_MPIstop
 <%
@@ -221,6 +229,7 @@ contains
 <% end %>
     implicit none
     character(len=*), intent(in) :: scheme
+    character(len=*), intent(in) :: scheme_tracer
 
     select case ( scheme )
 <%   order.each do |o, nh| %>
@@ -243,6 +252,32 @@ contains
 <% end %>
     case default
        write(*,*) 'xxx scheme is invalid: ', scheme
+       call PRC_MPIstop
+    end select
+
+    select case ( scheme_tracer )
+<%   order.each do |o, nh| %>
+    case ( "<%= o.upcase %>" )
+      if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation of tracer'
+<% funcs[o].each do |func|
+     unless /value/ =~ func %>
+      <%= func.sub(/_[^_]+\Z/,"") %>_tracer => <%= func %>
+<%   end
+   end %>
+<%# func %>
+      
+      if ( IHALO < <%=nh%> ) then
+         write(*,*) 'xxx IHALO must be >= ', <%=nh%>
+         call PRC_MPIstop
+      end if
+      if ( JHALO < <%=nh%> ) then
+         write(*,*) 'xxx JHALO must be >= ', <%=nh%>
+         call PRC_MPIstop
+      end if
+
+<% end %>
+    case default
+       write(*,*) 'xxx scheme is invalid: ', scheme_tracer
        call PRC_MPIstop
     end select
 

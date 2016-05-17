@@ -2,7 +2,7 @@
 !> module Atmosphere / Dynamics
 !!
 !! @par Description
-!!          HEVE FVM scheme forlarge time step in Atmospheric dynamical process
+!!          HEVE FVM scheme for large time step in Atmospheric dynamical process
 !!
 !! @author Team SCALE
 !!
@@ -230,6 +230,8 @@ contains
        HIST_switch
     use scale_atmos_dyn_tinteg_short, only: &
        ATMOS_DYN_tinteg_short
+    use scale_atmos_dyn_tinteg_tracer, only: &
+       ATMOS_DYN_tinteg_tracer
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -823,7 +825,7 @@ contains
        ! Start short time integration
        !------------------------------------------------------------------------
 
-       call PROF_rapstart("DYN_Large_Tinteg", 2)
+       call PROF_rapstart("DYN_Short_Tinteg", 2)
 
        call ATMOS_DYN_tinteg_short( DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
                                     mflx_hi, tflx_hi,                         & ! (inout)
@@ -839,7 +841,7 @@ contains
                                     BND_W, BND_E, BND_S, BND_N,               & ! (in)
                                     dts                                       ) ! (in)
 
-       call PROF_rapend  ("DYN_Large_Tinteg", 2)
+       call PROF_rapend  ("DYN_Short_Tinteg", 2)
 
 #ifdef CHECK_MASS
        call check_mass( &
@@ -956,136 +958,30 @@ contains
 
        call PROF_rapend  ("DYN_Large_Numfilter", 2)
 
-       call PROF_rapstart("DYN_Large_Tracer", 2)
+       call PROF_rapstart("DYN_Tracer_Tinteg", 2)
 
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
+       call ATMOS_DYN_tinteg_tracer( &
+            QTRC(:,:,:,iq), & ! (inout)
+            QTRC0(:,:,:,iq), RHOQ_t(:,:,:,iq), &! (in)
+            DENS00, DENS, & ! (in)
+            mflx_hi, num_diff_q, & ! (in)
+            GSQRT, MAPF(:,:,:,I_XY), & ! (in)
+            CDZ, RCDZ, RCDX, RCDY,             & ! (in)
+            dtl, & ! (in)
+            Llast .and. FLAG_FCT_TRACER, & ! (in)
+            FLAG_FCT_ALONG_STREAM         ) ! (in)
 
-         ! at (x, y, w)
-         call ATMOS_DYN_FVM_fluxZ_XYZ( qflx_hi(:,:,:,ZDIR), & ! (out)
-              mflx_hi(:,:,:,ZDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_XYW), & ! (in)
-              num_diff_q(:,:,:,ZDIR), & ! (in)
-              CDZ, & ! (in)
-              IIS, IIE, JJS, JJE ) ! (in)
 
-         ! at (u, y, z)
-         call ATMOS_DYN_FVM_fluxX_XYZ( qflx_hi(:,:,:,XDIR), & ! (out)
-              mflx_hi(:,:,:,XDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_UYZ), & ! (in)
-              num_diff_q(:,:,:,XDIR), & ! (in)
-              CDZ, & ! (in)
-              IIS, IIE, JJS, JJE ) ! (in)
-
-         ! at (x, v, z)
-         call ATMOS_DYN_FVM_fluxY_XYZ( qflx_hi(:,:,:,YDIR), & ! (out)
-              mflx_hi(:,:,:,YDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_XVZ), & ! (in)
-              num_diff_q(:,:,:,YDIR), & ! (in)
-              CDZ, & ! (in)
-              IIS, IIE, JJS, JJE ) ! (in)
-       
-         if ( Llast .and. FLAG_FCT_TRACER ) then
-
-            call ATMOS_DYN_FVM_fluxZ_XYZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-                 mflx_hi(:,:,:,ZDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_XYZ), & ! (in)
-                 CDZ, & ! (in)
-                 IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
-
-            call ATMOS_DYN_FVM_fluxX_XYZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
-                 mflx_hi(:,:,:,XDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_UYZ), & ! (in)
-                 CDZ, & ! (in)
-                 IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
-
-            call ATMOS_DYN_FVM_fluxY_XYZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
-                 mflx_hi(:,:,:,YDIR), QTRC(:,:,:,iq), GSQRT(:,:,:,I_XVZ), & ! (in)
-                 CDZ, & ! (in)
-                 IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
-         end if
-
-       enddo
-       enddo
-
-       if ( Llast .and. FLAG_FCT_TRACER ) then
-
-          call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
-                              QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
-                              qflx_hi, qflx_lo,             & ! (in)
-                              mflx_hi,                      & ! (in)
-                              RCDZ, RCDX, RCDY,             & ! (in)
-                              GSQRT(:,:,:,I_XYZ),           & ! (in)
-                              MAPF(:,:,:,I_XY), dtl,        & ! (in)
-                              FLAG_FCT_ALONG_STREAM         ) ! (in)
-
-          do JJS = JS, JE, JBLOCK
-          JJE = JJS+JBLOCK-1
-          do IIS = IS, IE, IBLOCK
-          IIE = IIS+IBLOCK-1
-
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JJS, JJE
-             do i = IIS, IIE
-             do k = KS, KE
-                QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS00(k,i,j) &
-                            + dtl * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
-                                          - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                        + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
-                                          - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                        + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
-                                          - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
-                                        ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                              + RHOQ_t(k,i,j,iq) ) ) / DENS(k,i,j)
-             enddo
-             enddo
-             enddo
-
-          enddo
-          enddo
-
-       else ! skip FCT
-
-          do JJS = JS, JE, JBLOCK
-          JJE = JJS+JBLOCK-1
-          do IIS = IS, IE, IBLOCK
-          IIE = IIS+IBLOCK-1
-
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JJS, JJE
-             do i = IIS, IIE
-             do k = KS, KE
-                QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS00(k,i,j) &
-                            + dtl * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR)  ) * RCDZ(k) &
-                                        + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR)  ) * RCDX(i) &
-                                        + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR)  ) * RCDY(j) &
-                                        ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                              + RHOQ_t(k,i,j,iq) ) ) / DENS(k,i,j)
-             enddo
-             enddo
-             enddo
-
-          enddo
-          enddo
-
-       end if
-
-       call PROF_rapend  ("DYN_Large_Tracer", 2)
-
-       do j  = JS, JE
-       do i  = IS, IE
-          QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
-          QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
-       enddo
-       enddo
-
+       call PROF_rapend  ("DYN_Tracer_Tinteg", 2)
 
        if ( USE_AVERAGE ) then
           QTRC_av(:,:,:,iq) = QTRC(:,:,:,iq)
        endif
 
+       call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
+
     enddo ! scalar quantities loop
 
-    do iq = 1, QA
-       call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
-    enddo
     do iq = 1, QA
        call COMM_wait ( QTRC(:,:,:,iq), I_COMM_QTRC(iq), .false. )
     enddo
