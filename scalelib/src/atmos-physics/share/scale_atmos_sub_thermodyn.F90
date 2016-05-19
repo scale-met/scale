@@ -635,7 +635,7 @@ contains
 
 #ifdef DRY
        CVtot = CVdry
-       Rtot  = Rtot
+       Rtot  = Rdry
 #else
        qdry  = 1.0_RP
        CVtot = 0.0_RP
