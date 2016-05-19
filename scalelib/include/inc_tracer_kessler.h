@@ -42,9 +42,9 @@
                  'QR'  /
 
   data AQ_MP_DESC / &
-                 'Water Vapor mixing ratio', &
-                 'Cloud Water mixing ratio', &
-                 'Rain Water mixing ratio'   /
+                 'Ratio of Water Vapor mass to total mass (Specific humidity)', &
+                 'Ratio of Cloud Water mass to total mass', &
+                 'Ratio of Rain Water mass to total mass'   /
 
   data AQ_MP_UNIT / &
                  'kg/kg', &

@@ -50,12 +50,12 @@
                  'NG'  /
 
   data AQ_MP_DESC / &
-                 'Water Vapor mixing ratio',   &
-                 'Cloud Water mixing ratio',   &
-                 'Rain Water mixing ratio',    &
-                 'Cloud Ice mixing ratio',     &
-                 'Snow mixing ratio',          &
-                 'Graupel mixing ratio',       &
+                 'Ratio of Water Vapor mass to total mass (Specific humidity)',   &
+                 'Ratio of Cloud Water mass to total mass',   &
+                 'Ratio of Rain Water mass to total mass',    &
+                 'Ratio of Cloud Ice mass to total mass',     &
+                 'Ratio of Snow mass to total mass',          &
+                 'Ratio of Graupel mass to total mass',       &
                  'Cloud Water Number Density', &
                  'Rain Water Number Density',  &
                  'Cloud Ice Number Density',   &

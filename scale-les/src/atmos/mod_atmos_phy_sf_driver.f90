@@ -318,8 +318,8 @@ contains
        call HIST_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , nohalo=.true. )
        call HIST_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , nohalo=.true. )
        call HIST_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , nohalo=.true. )
-       call HIST_in( T2        (:,:),      'T2 ',        '2m temperature',                    'K'       , nohalo=.true. )
-       call HIST_in( Q2        (:,:),      'Q2 ',        '2m water vapor',                    'kg/kg'   , nohalo=.true. )
+       call HIST_in( T2        (:,:),      'T2 ',        '2m air temperature',                'K'       , nohalo=.true. )
+       call HIST_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , nohalo=.true. )
        call HIST_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
 
        call COMM_vars8( SFLX_MU(:,:), 1 )
