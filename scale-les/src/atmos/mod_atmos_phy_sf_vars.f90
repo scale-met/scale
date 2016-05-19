@@ -74,7 +74,7 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_U10       (:,:)   ! 10m x-wind [m/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_V10       (:,:)   ! 10m y-wind [m/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_T2        (:,:)   ! 2m temperature [K]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_Q2        (:,:)   ! 2m vapor [kg/kg]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Q2        (:,:)   ! 2m specific humidity [kg/kg]
 
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QEMIS(:,:,:) ! tracer emission   flux [kg/m2/s]
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QDEP (:,:,:) ! tracer deposition flux [kg/m2/s]
