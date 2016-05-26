@@ -145,7 +145,7 @@ contains
     !---------------------------------------------------------------------------
 
     select case( OCEAN_TYPE )
-    case ( 'CONST' )
+    case ( 'CONST', 'FILE' )
        call OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
        OCEAN_SFC              => OCEAN_SFC_SLAB
        OCEAN_SFC_SimpleAlbedo => OCEAN_SFC_SLAB_SimpleAlbedo

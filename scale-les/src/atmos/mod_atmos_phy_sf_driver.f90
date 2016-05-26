@@ -49,10 +49,14 @@ module mod_atmos_phy_sf_driver
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
+  real(RP), private :: ATMOS_PHY_SF_beta = 1.0_RP
+
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_SF_driver_setup
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
     use mod_atmos_admin, only: &
@@ -71,10 +75,26 @@ contains
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
+
+    NAMELIST / PARAM_ATMOS_PHY_SF / &
+         ATMOS_PHY_SF_beta
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_SF] / Origin[SCALE-LES]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF)
 
     if ( ATMOS_sw_phy_sf ) then
 
@@ -83,10 +103,6 @@ contains
 
        if ( .NOT. CPL_sw ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is disabled.'
-          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_Z0[MHE] is assumed to be 0.'
-          SFC_Z0M(:,:) = 0.0_RP
-          SFC_Z0H(:,:) = 0.0_RP
-          SFC_Z0E(:,:) = 0.0_RP
        endif
 
     else
@@ -243,7 +259,7 @@ contains
                              SFC_PRES (:,:)    ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
-          beta(:,:) = 1.0_RP
+          beta(:,:) = ATMOS_PHY_SF_beta
 
           call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
                              PRES      (KS,:,:),   & ! [IN]
@@ -302,8 +318,8 @@ contains
        call HIST_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , nohalo=.true. )
        call HIST_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , nohalo=.true. )
        call HIST_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , nohalo=.true. )
-       call HIST_in( T2        (:,:),      'T2 ',        '2m temperature',                    'K'       , nohalo=.true. )
-       call HIST_in( Q2        (:,:),      'Q2 ',        '2m water vapor',                    'kg/kg'   , nohalo=.true. )
+       call HIST_in( T2        (:,:),      'T2 ',        '2m air temperature',                'K'       , nohalo=.true. )
+       call HIST_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , nohalo=.true. )
        call HIST_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
 
        call COMM_vars8( SFLX_MU(:,:), 1 )

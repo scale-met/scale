@@ -792,8 +792,7 @@ contains
        write(ADM_LOG_FID,*) '### HISTORY num_output = ', num_output
        call CALENDAR_date2char( histchardate, & ! [OUT]
                                 idate(:),     & ! [IN]
-                                histms,       & ! [IN]
-                                offset_year   ) ! [IN]
+                                histms        ) ! [IN]
        write(ADM_LOG_FID,*) '###         date-time  = ', histchardate
 
        call COMM_var( v_save, v_save_pl, KSUM, 1 )

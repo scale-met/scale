@@ -134,8 +134,8 @@ module scale_urban_phy
        real(RP), intent(in) :: Z1    (IA,JA)
        real(RP), intent(in) :: PBL   (IA,JA)
        real(RP), intent(in) :: PRSS  (IA,JA)
-       real(RP), intent(in) :: LWD   (IA,JA)
-       real(RP), intent(in) :: SWD   (IA,JA)
+       real(RP), intent(in) :: LWD   (IA,JA,2)
+       real(RP), intent(in) :: SWD   (IA,JA,2)
        real(RP), intent(in) :: PREC  (IA,JA)
 
        real(RP), intent(in) :: TR_URB   (IA,JA)

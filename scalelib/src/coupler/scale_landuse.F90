@@ -25,6 +25,7 @@ module scale_landuse
   !++ Public procedure
   !
   public :: LANDUSE_setup
+  public :: LANDUSE_calc_fact
   public :: LANDUSE_write
 
   !-----------------------------------------------------------------------------
@@ -85,7 +86,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[LANDUSE] / Categ[COUPLER] / Origin[SCALElib]'
 
     !--- read namelist
@@ -112,38 +113,55 @@ contains
     LANDUSE_frac_PFT (:,:,1) = 1.0_RP ! tentative, mosaic is off
     LANDUSE_index_PFT(:,:,:) = 1      ! default
 
-    ! read from file
-    call LANDUSE_read
+    allocate( LANDUSE_fact_ocean(IA,JA) )
+    allocate( LANDUSE_fact_land (IA,JA) )
+    allocate( LANDUSE_fact_urban(IA,JA) )
+    LANDUSE_fact_ocean(:,:) = 1.0_RP
+    LANDUSE_fact_land (:,:) = 0.0_RP
+    LANDUSE_fact_urban(:,:) = 0.0_RP
+
 
     if    ( LANDUSE_AllLand ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
+       call LANDUSE_calc_fact
     elseif( LANDUSE_AllUrban ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all lands are urban'
        LANDUSE_frac_urban(:,:) = 1.0_RP
+       call LANDUSE_calc_fact
     elseif( LANDUSE_MosaicWorld ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids have ocean, land, and urban'
        LANDUSE_frac_land (:,:) = 0.5_RP
        LANDUSE_frac_urban(:,:) = 0.5_RP
+       call LANDUSE_calc_fact
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
+       ! read from file
+       call LANDUSE_read
     endif
 
+    return
+  end subroutine LANDUSE_setup
+
+  !-----------------------------------------------------------------------------
+  subroutine LANDUSE_calc_fact
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ calculate landuse factor'
+
     ! tentative treatment for lake fraction
-    LANDUSE_frac_land(:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
+    LANDUSE_frac_land (:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
 
     ! make factors
-    allocate( LANDUSE_fact_ocean(IA,JA) )
-    allocate( LANDUSE_fact_land (IA,JA) )
-    allocate( LANDUSE_fact_urban(IA,JA) )
     LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
     LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) )
     LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
 
     return
-  end subroutine LANDUSE_setup
+  end subroutine LANDUSE_calc_fact
 
   !-----------------------------------------------------------------------------
   !> Read landuse data
@@ -180,13 +198,27 @@ contains
        call COMM_wait ( LANDUSE_frac_lake (:,:), 2 )
        call COMM_wait ( LANDUSE_frac_urban(:,:), 3 )
 
+       call FILEIO_read( LANDUSE_fact_ocean(:,:),                            & ! [OUT]
+                         LANDUSE_IN_BASENAME, 'FRAC_OCEAN_abs', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( LANDUSE_fact_land(:,:),                             & ! [OUT]
+                         LANDUSE_IN_BASENAME, 'FRAC_LAND_abs',  'XY', step=1 ) ! [IN]
+       call FILEIO_read( LANDUSE_fact_urban(:,:),                            & ! [OUT]
+                         LANDUSE_IN_BASENAME, 'FRAC_URBAN_abs', 'XY', step=1 ) ! [IN]
+
+       call COMM_vars8( LANDUSE_fact_ocean(:,:), 4 )
+       call COMM_vars8( LANDUSE_fact_land (:,:), 5 )
+       call COMM_vars8( LANDUSE_fact_urban(:,:), 6 )
+       call COMM_wait ( LANDUSE_fact_ocean(:,:), 4 )
+       call COMM_wait ( LANDUSE_fact_land (:,:), 5 )
+       call COMM_wait ( LANDUSE_fact_urban(:,:), 6 )
+
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
 
           call FILEIO_read( LANDUSE_frac_PFT(:,:,p),                   & ! [OUT]
                             LANDUSE_IN_BASENAME, varname, 'XY', step=1 ) ! [IN]
 
-          tag = 4 + (p-1)*LANDUSE_PFT_mosaic
+          tag = 7 + (p-1)*LANDUSE_PFT_mosaic
           call COMM_vars8( LANDUSE_frac_PFT (:,:,p), tag )
           call COMM_wait ( LANDUSE_frac_PFT (:,:,p), tag )
 
@@ -195,7 +227,7 @@ contains
           call FILEIO_read( temp(:,:),                                 & ! [OUT]
                             LANDUSE_IN_BASENAME, varname, 'XY', step=1 ) ! [IN]
 
-          tag = 5 + (p-1)*LANDUSE_PFT_mosaic
+          tag = 8 + (p-1)*LANDUSE_PFT_mosaic
           call COMM_vars8( temp(:,:), tag )
           call COMM_wait ( temp(:,:), tag )
 
@@ -204,6 +236,7 @@ contains
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** landuse file is not specified.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
     endif
 
     return
@@ -228,25 +261,42 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output landuse file ***'
 
        call FILEIO_write( LANDUSE_frac_land (:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                          'FRAC_LAND',  'LAND fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE  ) ! [IN]
+                          'FRAC_LAND',  'LAND fraction',  '1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
+
        call FILEIO_write( LANDUSE_frac_lake (:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                          'FRAC_LAKE',  'LAKE fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE  ) ! [IN]
+                          'FRAC_LAKE',  'LAKE fraction',  '1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
        call FILEIO_write( LANDUSE_frac_urban(:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                          'FRAC_URBAN', 'URBAN fraction', '0-1', 'XY',   LANDUSE_OUT_DTYPE  ) ! [IN]
+                          'FRAC_URBAN', 'URBAN fraction', '1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
 
           call FILEIO_write( LANDUSE_frac_PFT(:,:,p), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                             varname, 'PFT fraction', '0-1', 'XY',          LANDUSE_OUT_DTYPE  ) ! [IN]
+                             varname, 'PFT fraction', '1', 'XY',          LANDUSE_OUT_DTYPE, & ! [IN]
+                             nozcoord=.true. )
 
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
           temp(:,:) = real(LANDUSE_index_PFT(:,:,p),kind=RP)
 
           call FILEIO_write( temp(:,:), LANDUSE_OUT_BASENAME,   LANDUSE_OUT_TITLE, & ! [IN]
-                             varname, 'PFT index', 'IDX', 'XY', LANDUSE_OUT_DTYPE  ) ! [IN]
+                             varname, 'PFT index', '1', 'XY', LANDUSE_OUT_DTYPE, & ! [IN]
+                             nozcoord=.true. )
        enddo
 
+       call FILEIO_write( LANDUSE_fact_ocean(:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
+                          'FRAC_OCEAN_abs', 'absolute OCEAN fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
+
+       call FILEIO_write( LANDUSE_fact_land (:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
+                          'FRAC_LAND_abs ', 'absolute LAND fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
+
+       call FILEIO_write( LANDUSE_fact_urban(:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
+                          'FRAC_URBAN_abs', 'absolute URBAN fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
     endif
 
     return

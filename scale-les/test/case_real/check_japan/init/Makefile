@@ -22,7 +22,7 @@ PPNAME      = NONE
 INITNAME    = scale-les_init
 BINNAME     = NONE
 PPCONF      = NONE
-INITCONF    = init.conf
+INITCONF    = init.L36.conf
 RUNCONF     = NONE
 TPROC       = 16
 

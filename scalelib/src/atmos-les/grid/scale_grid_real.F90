@@ -96,7 +96,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REAL]/Categ[GRID]'
 
     allocate( REAL_LON  (IA,JA) )
@@ -223,7 +223,7 @@ contains
     REAL_BASEPOINT_LON = MPRJ_basepoint_lon * D2R
     REAL_BASEPOINT_LAT = MPRJ_basepoint_lat * D2R
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Base position in the global domain'
     if( IO_L ) write(IO_FID_LOG,*) '->(',REAL_BASEPOINT_LON/D2R,',',REAL_BASEPOINT_LAT/D2R,')'
 
@@ -251,7 +251,7 @@ contains
     enddo
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Position on the earth (Local)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
                                 'NW(',REAL_LON(IS,JE)/D2R,',',REAL_LAT(IS,JE)/D2R,')-', &
@@ -372,7 +372,7 @@ contains
     enddo
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Minimum & maximum aspect ratio'
     if( IO_L ) write(IO_FID_LOG,*) '->(',REAL_ASPECT_MIN,',',REAL_ASPECT_MAX,')'
 

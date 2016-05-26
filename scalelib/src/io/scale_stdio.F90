@@ -105,7 +105,7 @@ contains
           fname = fname_in
        else
           write(*,*) ' xxx Not imported name of config file! STOP.'
-          stop
+          stop 1
        endif
     else
        fname = IO_ARG_getfname( is_master=.true. )
@@ -124,7 +124,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
     if ( ierr > 0 ) then !--- fatal error
        write(*,*) ' xxx Not appropriate names in namelist PARAM_IO . Check!'
-       stop
+       stop 1
     endif
 
     return
@@ -172,7 +172,7 @@ contains
                 iostat = ierr         )
           if ( ierr /= 0 ) then
              write(*,*) 'xxx File open error! :', trim(fname)
-             stop
+             stop 1
           endif
        endif
 
@@ -299,7 +299,7 @@ contains
 
     if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
        if(is_master) write(*,*) 'xxx Program needs config file from argument! STOP.'
-       stop
+       stop 1
     else
        call get_command_argument(1,fname)
     endif
@@ -333,7 +333,7 @@ contains
     if ( ierr /= 0 ) then
        if(is_master) write(*,*) 'xxx Failed to open config file! STOP.'
        if(is_master) write(*,*) 'xxx filename : ', trim(fname)
-       stop
+       stop 1
     endif
 
   end function IO_CNF_open

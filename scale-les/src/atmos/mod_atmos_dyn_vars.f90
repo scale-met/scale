@@ -222,7 +222,7 @@ contains
        FILEIO_write
     implicit none
 
-    character(len=15)     :: timelabel
+    character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
     integer :: iv
     !---------------------------------------------------------------------------
@@ -238,7 +238,7 @@ contains
 
        do iv = 1, VA
           call FILEIO_write( PROG(:,:,:,iv), basename,               ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
-                             VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE  ) ! [IN]
+                             VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE ) ! [IN]
        end do
 
     endif

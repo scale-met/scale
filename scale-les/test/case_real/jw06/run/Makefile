@@ -29,7 +29,7 @@ TPROC       = 16
 # required data (parameters,distributed files)
 DATDIR      = "" 
 DATPARAM    = ""
-DATDISTS    = $(PREPDIR)/init/boundary,$(PREPDIR)/init/init_00000000000.000
+DATDISTS    = $(PREPDIR)/init/boundary,$(PREPDIR)/init/init_00000101-000000.000
 
 
 

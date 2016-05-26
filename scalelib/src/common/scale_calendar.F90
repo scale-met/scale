@@ -35,6 +35,7 @@ module scale_calendar
   public :: CALENDAR_adjust_daysec
   public :: CALENDAR_combine_daysec
   public :: CALENDAR_unit2sec
+  public :: CALENDAR_CFunits2sec
   public :: CALENDAR_date2char
 
   !-----------------------------------------------------------------------------
@@ -193,16 +194,16 @@ contains
     gmonth_mod = mod( gmonth-1, 12 ) + 1
     gyear_mod  = gyear + ( gmonth-gmonth_mod ) / 12
 
-    yearday = int( CALENDAR_DOI * gyear_mod )                   &
-            + int( real(gyear_mod+oyear-1,kind=DP) /   4.0_DP ) &
-            - int( real(gyear_mod+oyear-1,kind=DP) / 100.0_DP ) &
-            + int( real(gyear_mod+oyear-1,kind=DP) / 400.0_DP ) &
-            - int( real(          oyear-1,kind=DP) /   4.0_DP ) &
-            + int( real(          oyear-1,kind=DP) / 100.0_DP ) &
-            - int( real(          oyear-1,kind=DP) / 400.0_DP )
+    yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) ) &
+            + int( real(gyear_mod-1,kind=DP) /   4.0_DP ) &
+            - int( real(gyear_mod-1,kind=DP) / 100.0_DP ) &
+            + int( real(gyear_mod-1,kind=DP) / 400.0_DP ) &
+            - int( real(oyear    -1,kind=DP) /   4.0_DP ) &
+            + int( real(oyear    -1,kind=DP) / 100.0_DP ) &
+            - int( real(oyear    -1,kind=DP) / 400.0_DP )
 
     ileap = I_nonleapyear
-    if( checkleap(gyear_mod+oyear) ) ileap = I_leapyear
+    if( checkleap(gyear_mod) ) ileap = I_leapyear
 
     monthday = 0
     do m = 1, gmonth_mod-1
@@ -234,7 +235,7 @@ contains
     integer :: i, ileap
     !---------------------------------------------------------------------------
 
-    gyear = int( real(absday,kind=DP) / 366.0_DP ) ! first guess
+    gyear = int( real(absday,kind=DP) / 366.0_DP ) + oyear ! first guess
     do i = 1, 1000
        call CALENDAR_ymd2absday( checkday, gyear+1, 1, 1, oyear )
        if( absday < checkday ) exit
@@ -242,7 +243,7 @@ contains
     enddo
 
     ileap = I_nonleapyear
-    if( checkleap(gyear+oyear) ) ileap = I_leapyear
+    if( checkleap(gyear) ) ileap = I_leapyear
 
     gmonth = 1
     do i = 1, 1000
@@ -371,10 +372,10 @@ contains
     character(len=*), intent(in)  :: unit   !< variable unit
     !---------------------------------------------------------------------------
 
-    select case(trim(unit))
+    select case(unit)
     case('MSEC')
        second = value * 1.E-3_DP
-    case('SEC')
+    case('SEC', 'seconds')
        second = value
     case('MIN')
        second = value * CALENDAR_SEC
@@ -383,7 +384,7 @@ contains
     case('DAY')
        second = value * CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR
     case default
-       write(*,*) ' xxx Unsupported UNIT:', trim(unit), value
+       write(*,*) ' xxx Unsupported UNIT: ', trim(unit), ', ', value
        call PRC_MPIstop
     endselect
 
@@ -391,23 +392,118 @@ contains
   end subroutine CALENDAR_unit2sec
 
   !-----------------------------------------------------------------------------
+  !> Convert time in units of the CF convention to second
+  function CALENDAR_CFunits2sec( cftime, cfunits, offset_year, startdaysec ) result( sec )
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+    real(DP),         intent(in) :: cftime
+    character(len=*), intent(in) :: cfunits
+    integer,          intent(in) :: offset_year
+    real(DP),         intent(in), optional :: startdaysec
+    real(DP)                     :: sec
+
+    character(len=H_MID) :: tunit
+    character(len=H_MID) :: buf
+
+    integer  :: date(6)
+    integer  :: day
+    real(DP) :: sec0
+
+    integer :: l
+
+    intrinsic index
+
+    l = index(cfunits, " since ")
+    if ( l > 1 ) then ! untis is under the CF convension
+       tunit = cfunits(1:l-1)
+       buf = cfunits(l+7:)
+
+       l = index(buf, "-")
+       if ( l .ne. 5 ) then
+          write(*,*) 'xxx units for time is invalid (year): ', trim(cfunits), ' ', trim(buf)
+          call PRC_MPIstop
+       end if
+       read( buf(1:4), *) date(1) ! year
+       buf = buf(6:)
+
+       l = index(buf, "-")
+       if ( l .ne. 3 ) then
+          write(*,*) 'xxx units for time is invalid (month): ', trim(cfunits), ' ', trim(buf)
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(2) ! month
+       buf = buf(4:)
+
+       l = index(buf, " ")
+       if ( l .ne. 3 ) then
+          write(*,*) 'xxx units for time is invalid (day): ', trim(cfunits), ' ', trim(buf)
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(3) ! day
+       buf = buf(4:)
+
+       l = index(buf, ":")
+       if ( l .ne. 3 ) then
+          write(*,*) 'xxx units for time is invalid (hour): ', trim(cfunits), ' ', trim(buf)
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(4) ! hour
+       buf = buf(4:)
+
+       l = index(buf, ":")
+       if ( l .ne. 3 ) then
+          write(*,*) 'xxx units for time is invalid (min): ', trim(cfunits), ' ', trim(buf)
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(5) ! min
+       buf = buf(4:)
+
+       if ( len_trim(buf) .ne. 2 ) then
+          write(*,*) 'xxx units for time is invalid (sec): ', trim(cfunits), ' ', trim(buf), len_trim(buf)
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(6) ! sec
+
+       call CALENDAR_date2daysec( day,     & ! (out)
+                                  sec0,    & ! (out)
+                                  date(:), & ! (in)
+                                  0.0_DP,  & ! (in)
+                                  offset_year ) ! (in)
+
+       sec0 = CALENDAR_combine_daysec( day, sec0 )
+    else
+       tunit = cfunits
+       if ( present(startdaysec) ) then
+          sec0 = startdaysec
+       else
+          sec0 = 0.0_DP
+       end if
+    end if
+
+    call CALENDAR_unit2sec(sec, cftime, tunit)
+
+    sec = sec0 + sec
+
+    return
+  end function CALENDAR_CFunits2sec
+
+  !-----------------------------------------------------------------------------
   !> Convert from gregorian date to absolute day/second
   subroutine CALENDAR_date2char( &
-       chardate,   &
-       ymdhms,     &
-       subsec,     &
-       offset_year )
+       chardate, &
+       ymdhms,   &
+       subsec    )
     implicit none
 
     character(len=27), intent(out) :: chardate    !< formatted date character
     integer,           intent(in)  :: ymdhms(6)   !< date
     real(DP),          intent(in)  :: subsec      !< subsecond
-    integer,           intent(in)  :: offset_year !< offset year
     !---------------------------------------------------------------------------
 
     write(chardate,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A2,F6.3)')   &
-                       ymdhms(1)+offset_year,'/',ymdhms(2),'/',ymdhms(3),' ',  &
-                       ymdhms(4)            ,':',ymdhms(5),':',ymdhms(6),' +', &
+                       ymdhms(1),'/',ymdhms(2),'/',ymdhms(3),' ',  &
+                       ymdhms(4),':',ymdhms(5),':',ymdhms(6),' +', &
                        subsec
 
     return
@@ -492,11 +588,11 @@ contains
        m = ymdhms(I_month)
     endif
 
-    mjd_day = int( 365.25_DP * (y+oyear) )                          & ! year
-            + int( (y+oyear)/400.0_DP ) - int( (y+oyear)/100.0_DP ) & ! leap year
-            + int( 30.59_DP * m-2 )                                 & ! month
-            + ymdhms(I_day)                                         & ! day
-            + 678912                                                ! constant
+    mjd_day = int( 365.25_DP * y )                  & ! year
+            + int( y/400.0_DP ) - int( y/100.0_DP ) & ! leap year
+            + int( 30.59_DP * m-2 )                 & ! month
+            + ymdhms(I_day)                         & ! day
+            + 678912                                ! constant
 
     mjd     = real(mjd_day,kind=DP)       & ! day
             + ymdhms(I_hour) /    24.0_DP & ! hour

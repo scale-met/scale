@@ -85,6 +85,7 @@ endif
 ifeq ($(TB),)
   OBJS_TB = scale_atmos_phy_tb_dummy.o	\
             scale_atmos_phy_tb_smg.o	\
+            scale_atmos_phy_tb_d1980.o	\
             scale_atmos_phy_tb_dns.o	\
             scale_atmos_phy_tb_mynn.o	\
             scale_atmos_phy_tb_hybrid.o
@@ -126,6 +127,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
 	$(OBJS_MP)	\
+	scale_atmos_phy_mp_convert.o	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\
@@ -151,6 +153,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_const.o	\
 	scale_debug.o	\
 	scale_external_io.o	\
+	scale_external_input.o	\
 	scale_fileio.o	\
 	scale_grid_cartesian.o	\
 	scale_grid_index.o	\
@@ -176,6 +179,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_monitor.o	\
 	scale_ocean_phy.o	\
 	scale_ocean_phy_slab.o	\
+	scale_ocean_phy_file.o	\
 	scale_ocean_sfc.o	\
 	scale_ocean_sfc_slab.o	\
 	scale_precision.o	\
@@ -204,6 +208,7 @@ OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o \
 	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o \
 	$(OBJ_DIR)/scale_atmos_sub_saturation.o \
 	$(OBJ_DIR)/scale_atmos_phy_mp_common.o \
+	$(OBJ_DIR)/scale_atmos_phy_mp_convert.o \
 	$(OBJ_DIR)/scale_tracer.o \
 	$(OBJ_DIR)/scale_tracer_sdm.o \
 	$(OBJ_DIR)/scale_stdio.o \

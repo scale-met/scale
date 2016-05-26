@@ -638,7 +638,8 @@ contains
       mdlid,         & ! (in)
       single,        & ! (in) optional
       xstag,         & ! (in) optional
-      ystag          & ! (in) optional
+      ystag,         & ! (in) optional
+      option         & ! (in) optional
       )
     use netcdf  ![external lib]
     implicit none
@@ -653,6 +654,7 @@ contains
     logical,          intent( in), optional :: single
     logical,          intent( in), optional :: xstag
     logical,          intent( in), optional :: ystag
+    logical,          intent( in), optional :: option
 
     real(SP), allocatable :: var_org(:,:,:)
     integer :: ncid, varid
@@ -664,6 +666,7 @@ contains
     integer :: tcount
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
+    logical :: option_ = .false.
 
     intrinsic size
     intrinsic shape
@@ -673,14 +676,22 @@ contains
 
     if ( present(single) ) then
        single_ = single
-    else
-       single_ = .false.
     endif
+
+    if ( present(option) ) then
+       option_ = option
+    end if
 
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status .ne. nf90_noerr) then
+       if ( option_ ) then
+          return
+       else
+          call handle_err(status, __LINE__)
+       end if
+    end if
 
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
@@ -826,7 +837,8 @@ contains
       xstag,         & ! (in) optional
       ystag,         & ! (in) optional
       zstag,         & ! (in) optional
-      landgrid       & ! (in) optional
+      landgrid,      & ! (in) optional
+      option         & ! (in) optional
       )
     use netcdf  ![external lib]
     implicit none
@@ -843,6 +855,7 @@ contains
     logical,          intent( in), optional :: ystag
     logical,          intent( in), optional :: zstag
     logical,          intent( in), optional :: landgrid
+    logical,          intent( in), optional :: option
 
     real(SP), allocatable :: var_org(:,:,:,:)
     integer :: ncid, varid
@@ -854,6 +867,7 @@ contains
     integer :: tcount
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
+    logical :: option_ = .false.
 
     intrinsic size
     intrinsic shape
@@ -863,16 +877,22 @@ contains
 
     if ( present(single) ) then
        single_ = single
-    else
-       single_ = .false.
+    endif
+
+    if ( present(option) ) then
+       option_ = option
     endif
 
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
     if (status .ne. nf90_noerr) then
-       write(*,*) trim(fname)
-       call handle_err(status, __LINE__)
+       if ( option_ ) then
+          return
+       else
+          write(*,*) trim(fname)
+          call handle_err(status, __LINE__)
+       end if
     end if
 
     ! retrieve dimension size in data original order

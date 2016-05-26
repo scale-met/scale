@@ -24,6 +24,7 @@
 !! @li  ver.0.03   2013-12-26 (Y.Sato) [mod] mearge all version of Bin scheme
 !! @li  ver.0.04   2015-09-02 (Y.Sato) [mod] Tuning for K and FX10
 !! @li  ver.0.05   2015-09-08 (Y.Sato) [mod] Add evaporated cloud number concentration
+!! @li  ver.0.06   2016-01-22 (Y.Sato) [mod] Modify several bugs for using with MSTRNX
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -326,7 +327,7 @@ contains
     mbin = nbin/2
     mspc = nspc_mk*nspc_mk
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (warm cloud)'
 
@@ -590,6 +591,7 @@ contains
     endif
 
     ATMOS_PHY_MP_DENS(I_mp_QC)  = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QP)  = CONST_DICE
     ATMOS_PHY_MP_DENS(I_mp_QCL) = CONST_DICE
     ATMOS_PHY_MP_DENS(I_mp_QD)  = CONST_DICE
     ATMOS_PHY_MP_DENS(I_mp_QS)  = CONST_DICE
@@ -693,10 +695,6 @@ contains
        MP_precipitation  => ATMOS_PHY_MP_precipitation
     use scale_history, only: &
        HIST_in
-    use scale_comm, only: &
-       COMM_barrier
-!    use scale_grid, only: &
-!       GRID_CDZ
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -1071,10 +1069,6 @@ contains
     call PROF_rapend  ('MP_ijkconvert', 3)
 
     endif
-
-    call PROF_rapstart('MP_barrier', 3)
-    call COMM_barrier
-    call PROF_rapend  ('MP_barrier', 3)
 
     FLX_rain(:,:,:) = 0.0_RP
     FLX_snow(:,:,:) = 0.0_RP
@@ -3780,6 +3774,8 @@ contains
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
+    use scale_tracer_suzuki10, only: &
+       I_mp_QC
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
@@ -3789,19 +3785,35 @@ contains
     integer  :: k, i, j, iq, ihydro
     !---------------------------------------------------------------------------
 
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       qhydro = 0.0_RP
-       do ihydro = 1, MP_QA
-        do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
-          qhydro = qhydro + QTRC(k,i,j,iq)
-        enddo
-       enddo
-       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
-    enddo
-    enddo
-    enddo
+    if( nspc > 1 ) then
+      do j  = JS, JE
+      do i  = IS, IE
+      do k  = KS, KE
+         qhydro = 0.0_RP
+         do ihydro = 1, MP_QA
+          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+            qhydro = qhydro + QTRC(k,i,j,iq)
+          enddo
+         enddo
+         cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+      enddo
+      enddo
+      enddo
+    elseif( nspc == 1 ) then
+      do j  = JS, JE
+      do i  = IS, IE
+      do k  = KS, KE
+         qhydro = 0.0_RP
+         do ihydro = 1, I_mp_QC
+          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+            qhydro = qhydro + QTRC(k,i,j,iq)
+          enddo
+         enddo
+         cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+      enddo
+      enddo
+      enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_CloudFraction
@@ -3819,6 +3831,8 @@ contains
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
+    use scale_tracer_suzuki10, only: &
+       I_mp_QC
     implicit none
 
     real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
@@ -3835,32 +3849,62 @@ contains
     sum2(:,:,:,:) = 0.0_RP
     sum3(:,:,:,:) = 0.0_RP
 
-    do ihydro = 1, MP_QA
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, JE
-      do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
-         sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
-                            ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-                            * rexpxctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) &   !--- mass -> number
-                            * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**3.0_RP )
-         sum2(k,i,j,ihydro) = sum2(k,i,j,ihydro) + &
-                            ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-                            * rexpxctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) &   !--- mass -> number
-                            * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**2.0_RP )
-      enddo
-      sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro)-EPS)
-      sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro)-EPS)
+    if( nspc > 1 ) then
+       do ihydro = 1, MP_QA
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, JE
+         do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+            sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
+                               ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                               * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
+            sum2(k,i,j,ihydro) = sum2(k,i,j,ihydro) + &
+                               ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                               * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
+         enddo
+         sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro)-EPS)
+         sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro)-EPS)
 
-      if ( sum2(k,i,j,ihydro) /= 0.0_RP ) then
-       Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro) * um2cm
-      else
-       Re(k,i,j,ihydro) = 0.0_RP
-      endif
-    enddo
-    enddo
-    enddo
-    enddo
+         if ( sum2(k,i,j,ihydro) /= 0.0_RP ) then
+          Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro) * um2cm
+         else
+          Re(k,i,j,ihydro) = 0.0_RP
+         endif
+       enddo
+       enddo
+       enddo
+       enddo
+    elseif( nspc == 1 ) then
+       Re(:,:,:,:) = 0.0_RP
+       do ihydro = 1, I_mp_QC
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, JE
+         do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+            sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
+                               ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                               * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
+            sum2(k,i,j,ihydro) = sum2(k,i,j,ihydro) + &
+                               ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                               * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
+         enddo
+         sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro)-EPS)
+         sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro)-EPS)
+
+         if ( sum2(k,i,j,ihydro) /= 0.0_RP ) then
+          Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro) * um2cm
+         else
+          Re(k,i,j,ihydro) = 0.0_RP
+         endif
+       enddo
+       enddo
+       enddo
+       enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_EffectiveRadius
@@ -3876,6 +3920,8 @@ contains
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
+    use scale_tracer_suzuki10, only: &
+       I_mp_QC
     implicit none
 
     real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
@@ -3885,19 +3931,35 @@ contains
     integer  :: i, j, k, iq, ihydro
     !---------------------------------------------------------------------------
 
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-      do ihydro = 1, MP_QA
-        sum2 = 0.0_RP
-        do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
-          sum2 = sum2 + QTRC0(k,i,j,iq)
-        enddo
-        Qe(k,i,j,ihydro) = sum2
-      enddo
-    enddo
-    enddo
-    enddo
+    if( nspc > 1 ) then
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+         do ihydro = 1, MP_QA
+           sum2 = 0.0_RP
+           do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+             sum2 = sum2 + QTRC0(k,i,j,iq)
+           enddo
+           Qe(k,i,j,ihydro) = sum2
+         enddo
+       enddo
+       enddo
+       enddo
+    elseif( nspc == 1 ) then
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+         do ihydro = 1, I_mp_QC
+           sum2 = 0.0_RP
+           do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+             sum2 = sum2 + QTRC0(k,i,j,iq)
+           enddo
+           Qe(k,i,j,ihydro) = sum2
+         enddo
+       enddo
+       enddo
+       enddo
+     endif
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_Mixingratio

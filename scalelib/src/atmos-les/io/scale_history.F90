@@ -88,6 +88,8 @@ contains
     use scale_les_process, only: &
        PRC_2Drank
     use scale_time, only: &
+       TIME_NOWDATE,     &
+       TIME_NOWMS,       &
        TIME_DTSEC,       &
        TIME_STARTDAYSEC, &
        TIME_OFFSET_YEAR
@@ -102,6 +104,7 @@ contains
     namelist / PARAM_HIST /      &
          HIST_BND
 
+    real(DP) :: start_daysec
     integer :: rankidx(2)
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -126,9 +129,16 @@ contains
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
 
-    if ( TIME_OFFSET_YEAR > 0 ) then
-       HISTORY_T_SINCE = '0000-01-01 00:00:00'
-       write(HISTORY_T_SINCE(1:4),'(i4)') TIME_OFFSET_YEAR
+    start_daysec = TIME_STARTDAYSEC
+!    if ( TIME_OFFSET_YEAR > 0 ) then
+!       HISTORY_T_SINCE = '0000-01-01 00:00:00'
+!       write(HISTORY_T_SINCE(1:4),'(i4)') TIME_OFFSET_YEAR
+!    end if
+    if ( TIME_NOWDATE(1) > 0 ) then
+       write(HISTORY_T_SINCE, '(i4.4,a1,i2.2,a1,i2.2,a1,i2.2,a1,i2.2,a1,i2.2)') &
+            TIME_NOWDATE(1),'-',TIME_NOWDATE(2),'-',TIME_NOWDATE(3),' ', &
+            TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6)
+       start_daysec = TIME_NOWMS
     end if
 
     if ( HIST_BND ) then
@@ -154,7 +164,7 @@ contains
                       PRC_masterrank,                 &
                       PRC_myrank,                     &
                       rankidx,                        &
-                      TIME_STARTDAYSEC,               &
+                      start_daysec,                   &
                       TIME_DTSEC,                     &
                       time_units   = HISTORY_T_UNITS, &
                       time_since   = HISTORY_T_SINCE, &

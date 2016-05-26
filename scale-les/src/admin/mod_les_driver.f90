@@ -110,6 +110,8 @@ contains
        MONIT_setup, &
        MONIT_write, &
        MONIT_finalize
+    use scale_external_input, only: &
+       EXTIN_setup
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
@@ -218,6 +220,12 @@ contains
     ! setup PROF
     call PROF_setup
 
+
+    ! profiler start
+    call PROF_setprefx('INIT')
+    call PROF_rapstart('Initialize', 0)
+
+
     ! setup constants
     call CONST_setup
 
@@ -226,12 +234,6 @@ contains
 
     ! setup random number
     call RANDOM_setup
-
-    ! setup time
-    call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
-
-    call PROF_setprefx('INIT')
-    call PROF_rapstart('Initialize', 0)
 
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
     call GRID_INDEX_setup
@@ -266,12 +268,16 @@ contains
 
     ! setup restart
     call ADMIN_restart_setup
+    ! setup time
+    call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
     ! setup statistics
     call STAT_setup
     ! setup history I/O
     call HIST_setup
     ! setup monitor I/O
     call MONIT_setup
+    ! setup external in
+    call EXTIN_setup
 
     ! setup nesting grid
     call NEST_setup ( intercomm_parent, intercomm_child )
@@ -365,11 +371,17 @@ contains
 
     enddo
 
-    if( ATMOS_do ) call ATMOS_driver_finalize
-
     call PROF_rapend('Main_Loop', 0)
+
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
     if( IO_L ) write(IO_FID_LOG,*)
+
+
+    call PROF_setprefx('FIN')
+
+    call PROF_rapstart('All', 1)
+
+    if( ATMOS_do ) call ATMOS_driver_finalize
 
 #ifdef _FIPP_
     call fipp_stop
@@ -383,14 +395,20 @@ contains
     ! check data
     if( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
+    call PROF_rapstart('Monit', 2)
+    call MONIT_finalize
+    call PROF_rapend  ('Monit', 2)
+
+    call PROF_rapstart('File', 2)
+    call FileCloseAll
+    call PROF_rapend  ('File', 2)
+
+    call PROF_rapend  ('All', 1)
+
     call PROF_rapreport
 #ifdef _PAPI_
     call PROF_PAPI_rapreport
 #endif
-
-    call MONIT_finalize
-
-    call FileCloseAll
 
     return
   end subroutine scaleles

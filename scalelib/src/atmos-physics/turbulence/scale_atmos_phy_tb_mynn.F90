@@ -86,6 +86,7 @@ module scale_atmos_phy_tb_mynn
 
   integer :: KE_PBL
   logical :: ATMOS_PHY_TB_MYNN_TKE_INIT = .false. !< set tke with that of level 2 at the first time if .true.
+  real(RP) :: ATMOS_PHY_TB_MYNN_N2_MAX = 1.E3_RP
   real(RP) :: ATMOS_PHY_TB_MYNN_NU_MIN = 1.E-6_RP
   real(RP) :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000._RP
   real(RP) :: ATMOS_PHY_TB_MYNN_KH_MIN = 1.E-6_RP
@@ -117,6 +118,7 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_TB_MYNN / &
          ATMOS_PHY_TB_MYNN_TKE_INIT, &
          ATMOS_PHY_TB_MYNN_PBL_MAX, &
+         ATMOS_PHY_TB_MYNN_N2_MAX, &
          ATMOS_PHY_TB_MYNN_NU_MIN, &
          ATMOS_PHY_TB_MYNN_NU_MAX, &
          ATMOS_PHY_TB_MYNN_KH_MIN, &
@@ -127,7 +129,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Mellor-Yamada Nakanishi-Niino Model'
 
@@ -286,7 +288,7 @@ contains
     real(RP) :: c(KA,IA,JA)
     real(RP) :: d(KA,IA,JA)
     real(RP) :: ap
-    real(RP) :: tke_N(KE_PBL,IA,JA)
+    real(RP) :: tke_N(KA,IA,JA)
 
     real(RP) :: POTT(KA,IA,JA) !< potential temperature
     real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature
@@ -333,6 +335,8 @@ contains
 
     integer :: k, i, j, iq
     integer :: IIS, IIE, JJS, JJE
+
+    if ( IO_L ) write(IO_FID_LOG, *) "*** Physics step: Turbulence (MYNN)"
 
 #ifdef DEBUG
     POTT(:,:,:) = UNDEF
@@ -518,11 +522,13 @@ contains
        SFLX_PT(i,j) = SFLX_SH(i,j) / ( CP * DENS(KS,i,j) ) &
                     * POTT(KS,i,j) / TEMP(KS,i,j)
 
-       n2(KS,i,j) = GRAV * ( POTV(KS+1,i,j) - POTV(KS,i,j) ) &
-                  / ( ( CZ(KS+1,i,j)-CZ(KS,i,j) ) * POTV(KS,i,j) )
+       n2(KS,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
+                        GRAV * ( POTV(KS+1,i,j) - POTV(KS,i,j) ) &
+                             / ( ( CZ(KS+1,i,j)-CZ(KS,i,j) ) * POTV(KS,i,j) ) )
        do k = KS+1, KE_PBL
-          n2(k,i,j) = GRAV * ( POTV(k+1,i,j) - POTV(k-1,i,j) ) &
-                    / ( ( CZ(k+1,i,j)-CZ(k-1,i,j) ) * POTV(k,i,j) )
+          n2(k,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
+                          GRAV * ( POTV(k+1,i,j) - POTV(k-1,i,j) ) &
+                               / ( ( CZ(k+1,i,j)-CZ(k-1,i,j) ) * POTV(k,i,j) ) )
        end do
 
        dudz2(KS,i,j) = ( ( U(KS+1,i,j) - U(KS,i,j) )**2 + ( V(KS+1,i,j) - V(KS,i,j) )**2 ) &
@@ -599,8 +605,9 @@ contains
                    q, q2_2, & ! (in)
                    l, n2, dudz2 ) ! (in)
 
-    call ATMOS_SATURATION_pres2qsat( Qsl, & ! (out)
-                                     TEML, pres ) ! (in)
+    call ATMOS_SATURATION_pres2qsat( Qsl(KS:KE_PBL,:,:), & ! (out)
+                                     TEML(KS:KE_PBL,:,:), pres(KS:KE_PBL,:,:), & ! (in)
+                                     KE_PBL-KS+1 ) ! (in)
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
@@ -625,9 +632,10 @@ contains
           Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp(-Q1**2 * 0.5_RP), 0.0_RP ), 1.0_RP )
           betat = 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql - Rt * aa * bb * cc
           betaq = EPSTvap * POTT(k,i,j) + Rt * aa * cc
-          n2(k,i,j) = GRAV * ( ( POTL(k+1,i,j) - POTL(k-1,i,j) ) * betat &
-                             + ( Qw  (k+1,i,j) - Qw  (k-1,i,j) ) * betaq ) &
-                           / ( CZ(k+1,i,j) - CZ(k-1,i,j) ) / POTV(k,i,j)
+          n2(k,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
+                          GRAV * ( ( POTL(k+1,i,j) - POTL(k-1,i,j) ) * betat &
+                                 + ( Qw  (k+1,i,j) - Qw  (k-1,i,j) ) * betaq ) &
+                               / ( CZ(k+1,i,j) - CZ(k-1,i,j) ) / POTV(k,i,j) )
        end do
        n2(KS,i,j) = n2(KS+1,i,j)
 
@@ -636,6 +644,7 @@ contains
        end do
        do k = KE_PBL+1, KE
           Ri(k,i,j) = 0.0_RP
+          n2(k,i,j) = 0.0_RP
        end do
 
     end do
@@ -1205,8 +1214,9 @@ contains
        p5 = 6.0_RP * ac2 * A1**2 * dudz2(k,i,j) * l2q2
 
        rd25 = 1.0_RP / max(p2 * p4 + p5 * p3, 1.E-20_RP)
-       sm(k,i,j) = ac * A1 * (p3 - 3.0_RP * C1 * p4) * rd25
-       sh(k,i,j) = ac * A2 * (p2 + 3.0_RP * C1 * p5) * rd25
+       sm(k,i,j) = max( ac * A1 * (p3 - 3.0_RP * C1 * p4) * rd25, 0.0_RP )
+       sh(k,i,j) = max( ac * A2 * (p2 + 3.0_RP * C1 * p5) * rd25, 0.0_RP )
+
     end do
     end do
     end do

@@ -84,16 +84,16 @@ contains
     endif
 
     if ( OCEAN_do ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Ocean model : ON'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Ocean model     : ON'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Ocean model : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Ocean model     : OFF'
     endif
 
     if ( OCEAN_TYPE /= 'OFF' .AND. OCEAN_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Ocean physics : ON, ', trim(OCEAN_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Ocean physics : ON, ', trim(OCEAN_TYPE)
        OCEAN_sw = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Ocean physics : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Ocean physics : OFF'
        OCEAN_sw = .false.
     endif
 

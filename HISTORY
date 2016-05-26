@@ -1,0 +1,29 @@
+= Release History
+
+== 2016-04-15 (0.3.3)
+* Critical bug fix:
+  * Fix a bug in the divergence dumping
+* Bug fix:
+  * Fix possible zero division in the MSTRN-X scheme
+
+== 2016-02-02 (0.3.1)
+* Critical bug fix:
+  * Fix a bug in the Suzuki10 scheme used with the MSTRN-X scheme
+* Bug fix:
+  * Fix wrong liquid water content in calculation of the hydrostatic profile in the real init
+
+== 2016-01-22 (0.3.0)
+* New feature:
+  * Enable to change parameters of the Tomita08 scheme
+  * Enable to output some statistics (CAPE, CIN, PBL height, etc)
+  * Enable to skip arbitray temporal steps in files in the init program for real case
+  * Enable to use the eddy viscosity in the RANS mode
+  * Add a terminator by wall clock time
+  * Add a CFL checker
+* Implovements:
+  * Implove the init program for real case
+  * Optimize the Tomita08 scheme for better computational performance
+* Bug fixs:
+  * Fix bugs in the single precision calculation
+  * Corretct the description document
+  * Corretct the users guide

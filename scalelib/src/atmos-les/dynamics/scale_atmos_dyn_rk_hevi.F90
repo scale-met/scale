@@ -805,7 +805,7 @@ contains
                     + ( qflx_hi(k  ,i,j,YDIR) - qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) &
                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
           cf = 0.0_RP
-          div = divdmp_coef * dtrk * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) ! divergence damping
+          div = divdmp_coef / dtrk * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) ! divergence damping
           Sw(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYW) &
                     + div + MOMZ_t(k,i,j)
 #ifdef HIST_TEND
@@ -1286,7 +1286,7 @@ contains
                - MOMX(k,i,j) &
                  * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RFDY(j) ) &
              * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
-          div = divdmp_coef * dtrk * ( DDIV(k,i+1,j)/MAPF(i+1,j,2,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
+          div = divdmp_coef / dtrk * ( DDIV(k,i+1,j)/MAPF(i+1,j,2,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
               * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) * FDX(i) ! divergence damping
           MOMX_RK(k,i,j) = MOMX0(k,i,j) &
                + dtrk * ( ( advcv + advch + pg ) / GSQRT(k,i,j,I_UYZ) + cf + div + MOMX_t(k,i,j) )
@@ -1496,7 +1496,7 @@ contains
                - 0.25_RP * ( MOMX(k,i,j)+MOMX(k,i-1,j)+MOMX(k,i,j+1)+MOMX(k,i-1,j+1) ) &
                  * ( 1.0_RP/MAPF(i,j+1,1,I_XY) - 1.0_RP/MAPF(i,j,1,I_XY) ) * RFDY(j) ) &
              * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metoric term
-          div = divdmp_coef * dtrk * ( DDIV(k,i,j+1)/MAPF(i,j+1,1,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
+          div = divdmp_coef / dtrk * ( DDIV(k,i,j+1)/MAPF(i,j+1,1,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
               * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) * FDY(j) ! divergence damping
           MOMY_RK(k,i,j) = MOMY0(k,i,j) &
                          + dtrk * ( ( advcv + advch + pg ) / GSQRT(k,i,j,I_XVZ) + cf + div + MOMY_t(k,i,j) )

@@ -46,6 +46,7 @@ module scale_fileio
      module procedure FILEIO_write_1D
      module procedure FILEIO_write_2D
      module procedure FILEIO_write_3D
+     module procedure FILEIO_write_3D_t
      module procedure FILEIO_write_4D
   end interface FILEIO_write
 
@@ -141,8 +142,9 @@ contains
   !-----------------------------------------------------------------------------
   !> write axis to the file
   subroutine FILEIO_set_axes( &
-       fid,  &
-       dtype )
+       fid,   &
+       dtype, &
+       xy     )
     use gtool_file, only: &
        FilePutAxis,  &
        FileSetTAttr, &
@@ -184,49 +186,77 @@ contains
 
     integer, intent(in) :: fid
     integer, intent(in) :: dtype
+    logical, intent(in), optional :: xy
 
     character(len=2) :: AXIS_name(2)
+    logical :: xy_
     !---------------------------------------------------------------------------
 
-    call FilePutAxis( fid, 'z',   'Z',               'm', 'z',   dtype, GRID_CZ(KS:KE) )
+    if ( present(xy) ) then
+       xy_ = xy
+    else
+       xy_ = .false.
+    end if
+
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'z',   'Z',               'm', 'z',   dtype, GRID_CZ(KS:KE) )
+    end if
     call FilePutAxis( fid, 'x',   'X',               'm', 'x',   dtype, GRID_CX(ISB:IEB) )
     call FilePutAxis( fid, 'y',   'Y',               'm', 'y',   dtype, GRID_CY(JSB:JEB) )
-    call FilePutAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, GRID_FZ(KS:KE) )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, GRID_FZ(KS:KE) )
+    end if
     call FilePutAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, GRID_FX(ISB:IEB) )
     call FilePutAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, GRID_FY(JSB:JEB) )
 
-    call FilePutAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, GRID_LCZ(LKS:LKE) )
-    call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, GRID_LCZ(LKS:LKE) )
+       call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
+       call FilePutAxis( fid, 'uz',  'UZ',              'm', 'uz',  dtype, GRID_UCZ(UKS:UKE) )
+       call FilePutAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, GRID_UFZ(UKS:UKE) )
+    end if
 
-    call FilePutAxis( fid, 'uz',  'UZ',              'm', 'uz',  dtype, GRID_UCZ(UKS:UKE) )
-    call FilePutAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, GRID_UFZ(UKS:UKE) )
 
-    call FilePutAxis( fid, 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  dtype, GRID_CZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  dtype, GRID_CZ )
+    end if
     call FilePutAxis( fid, 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  dtype, GRID_CX )
     call FilePutAxis( fid, 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  dtype, GRID_CY )
-    call FilePutAxis( fid, 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  dtype, GRID_FZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  dtype, GRID_FZ )
+    end if
     call FilePutAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, GRID_FX )
     call FilePutAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, GRID_FY )
 
-    call FilePutAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
+    end if
     call FilePutAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, GRID_CDX )
     call FilePutAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, GRID_CDY )
-    call FilePutAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
+    end if
     call FilePutAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, GRID_FDX )
     call FilePutAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, GRID_FDY )
 
-    call FilePutAxis( fid, 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', dtype, GRID_LCZ )
-    call FilePutAxis( fid, 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', dtype, GRID_LFZ )
-    call FilePutAxis( fid, 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', dtype, GRID_LCZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', dtype, GRID_LCZ )
+       call FilePutAxis( fid, 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', dtype, GRID_LFZ )
+       call FilePutAxis( fid, 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', dtype, GRID_LCZ )
 
-    call FilePutAxis( fid, 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', dtype, GRID_UCZ )
-    call FilePutAxis( fid, 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', dtype, GRID_UFZ )
-    call FilePutAxis( fid, 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', dtype, GRID_UCZ )
+       call FilePutAxis( fid, 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', dtype, GRID_UCZ )
+       call FilePutAxis( fid, 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', dtype, GRID_UFZ )
+       call FilePutAxis( fid, 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', dtype, GRID_UCZ )
+    end if
 
-    call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
+    end if
     call FilePutAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
     call FilePutAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
-    call FilePutAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
+    end if
     call FilePutAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, GRID_FBFX )
     call FilePutAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, GRID_FBFY )
 
@@ -268,14 +298,16 @@ contains
                                        'degrees_north', AXIS_name, dtype, AXIS_LATXY(:,:) )
 
     ! attributes
-    call FileSetTAttr( fid, 'lz',  'positive', 'down' )
-    call FileSetTAttr( fid, 'lzh', 'positive', 'down' )
-    call FileSetTAttr( fid, 'uz',  'positive', 'down' )
-    call FileSetTAttr( fid, 'uzh', 'positive', 'down' )
-    call FileSetTAttr( fid, 'LCZ', 'positive', 'down' )
-    call FileSetTAttr( fid, 'LFZ', 'positive', 'down' )
-    call FileSetTAttr( fid, 'UCZ', 'positive', 'down' )
-    call FileSetTAttr( fid, 'UFZ', 'positive', 'down' )
+    if ( .not. xy_ ) then
+       call FileSetTAttr( fid, 'lz',  'positive', 'down' )
+       call FileSetTAttr( fid, 'lzh', 'positive', 'down' )
+       call FileSetTAttr( fid, 'uz',  'positive', 'down' )
+       call FileSetTAttr( fid, 'uzh', 'positive', 'down' )
+       call FileSetTAttr( fid, 'LCZ', 'positive', 'down' )
+       call FileSetTAttr( fid, 'LFZ', 'positive', 'down' )
+       call FileSetTAttr( fid, 'UCZ', 'positive', 'down' )
+       call FileSetTAttr( fid, 'UFZ', 'positive', 'down' )
+    end if
 
     return
   end subroutine FILEIO_set_axes
@@ -417,7 +449,7 @@ contains
     real(RP),         intent(out) :: var(:,:,:) !< value of the variable
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
-    character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y)
+    character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y/T)
     integer,          intent(in)  :: step       !< step number
 
     integer               :: dim1_max, dim1_S, dim1_E
@@ -440,6 +472,16 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
+    else if ( axistype == 'XYT' ) then
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = step
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = 1
+       dim3_E   = step
     else if ( axistype == 'Land' ) then
        dim1_max = LKMAX
        dim2_max = IMAXB
@@ -549,7 +591,9 @@ contains
        desc,     &
        unit,     &
        axistype, &
-       datatype,  &
+       datatype, &
+       date,     &
+       subsec,   &
        append    )
     use gtool_file_h, only: &
        File_REAL8, &
@@ -557,6 +601,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
+       FileSetGlobalAttribute, &
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
@@ -565,7 +610,9 @@ contains
     use scale_les_process, only: &
        PRC_2Drank
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       NOWDATE => TIME_NOWDATE, &
+       NOWMS   => TIME_NOWMS,   &
+       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),         intent(in)  :: var(:)   !< value of the variable
@@ -577,6 +624,8 @@ contains
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
 
+    integer, optional, intent(in) :: date(6)    !< ymdhms of the time
+    real(DP),optional, intent(in) :: subsec     !< subsec of the time
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
 
     integer               :: dtype
@@ -587,6 +636,7 @@ contains
     integer :: rankidx(2)
     logical :: fileexisted
     integer :: fid, vid
+    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -622,6 +672,17 @@ contains
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype ) ! [IN]
+       if ( present( subsec ) ) then
+          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
+       else
+          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
+       end if
+       if ( present( date ) ) then
+          call getCFtunits(tunits, date)
+       else
+          call getCFtunits(tunits, NOWDATE)
+       end if
+       call FileSetGlobalAttribute( fid, "time_units", tunits )
     endif
 
     if ( axistype == 'Z' ) then
@@ -669,8 +730,11 @@ contains
        unit,     &
        axistype, &
        datatype, &
+       date,     &
+       subsec,   &
        append,   &
-       nohalo    )
+       nohalo,   &
+       nozcoord  )
     use gtool_file, only: &
        RMISS
     use gtool_file_h, only: &
@@ -679,6 +743,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
+       FileSetGlobalAttribute, &
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
@@ -687,7 +752,9 @@ contains
     use scale_les_process, only: &
        PRC_2Drank
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       NOWDATE => TIME_NOWDATE, &
+       NOWMS   => TIME_NOWMS,   &
+       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),         intent(in)  :: var(:,:) !< value of the variable
@@ -698,8 +765,11 @@ contains
     character(len=*), intent(in)  :: unit     !< unit        of the variable
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
+    integer, optional, intent(in) :: date(6)    !< ymdhms of the time
+    real(DP),optional, intent(in) :: subsec     !< subsec of the time
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
     logical, optional, intent(in) :: nohalo   !< switch whether include halo data or not (default=false)
+    logical, optional, intent(in) :: nozcoord !< switch whether include zcoordinate or not (default=false)
 
     real(RP)              :: varhalo( size(var(:,1)), size(var(1,:)) )
 
@@ -714,6 +784,7 @@ contains
     integer :: fid, vid
     integer :: i, j
     logical :: nohalo_
+    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -749,10 +820,6 @@ contains
                      PRC_myrank,     & ! [IN]
                      rankidx,        & ! [IN]
                      append = append ) ! [IN]
-
-    if ( .NOT. fileexisted ) then ! only once
-       call FILEIO_set_axes( fid, dtype ) ! [IN]
-    endif
 
     if ( axistype == 'XY' ) then
        dims = (/'x','y'/)
@@ -797,6 +864,21 @@ contains
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
+    endif
+
+    if ( .NOT. fileexisted ) then ! only once
+       call FILEIO_set_axes( fid, dtype, nozcoord ) ! [IN]
+       if ( present( subsec ) ) then
+          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
+       else
+          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
+       end if
+       if ( present( date ) ) then
+          call getCFtunits(tunits, date)
+       else
+          call getCFtunits(tunits, NOWDATE)
+       end if
+       call FileSetGlobalAttribute( fid, "time_units", tunits )
     endif
 
     varhalo(:,:) = var(:,:)
@@ -853,6 +935,8 @@ contains
        unit,     &
        axistype, &
        datatype, &
+       date,     &
+       subsec,   &
        append,   &
        nohalo    )
     use gtool_file, only: &
@@ -863,6 +947,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
+       FileSetGlobalAttribute, &
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
@@ -871,7 +956,9 @@ contains
     use scale_les_process, only: &
        PRC_2Drank
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       NOWDATE => TIME_NOWDATE, &
+       NOWMS   => TIME_NOWMS,   &
+       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
@@ -882,6 +969,8 @@ contains
     character(len=*),  intent(in)  :: unit       !< unit        of the variable
     character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
     character(len=*),  intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
+    integer, optional, intent(in)  :: date(6)    !< ymdhms of the time
+    real(DP),optional, intent(in)  :: subsec     !< subsec of the time
     logical, optional, intent(in)  :: append     !< append existing (closed) file?
     logical, optional, intent(in)  :: nohalo     !< include halo data?
 
@@ -901,6 +990,7 @@ contains
     integer :: fid, vid
     integer :: i, j, k
     logical :: nohalo_
+    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -931,19 +1021,30 @@ contains
        append_sw = append
     endif
 
-    call FileCreate( fid,               & ! [OUT]
-                     fileexisted,       & ! [OUT]
-                     basename,          & ! [IN]
-                     title,             & ! [IN]
-                     H_SOURCE,          & ! [IN]
-                     H_INSTITUTE,       & ! [IN]
-                     PRC_masterrank,    & ! [IN]
-                     PRC_myrank,        & ! [IN]
-                     rankidx,           & ! [IN]
-                     append = append_sw ) ! [IN]
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     append = append_sw   ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype ) ! [IN]
+       if ( present( subsec ) ) then
+          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
+       else
+          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
+       end if
+       if ( present( date ) ) then
+          call getCFtunits(tunits, date)
+       else
+          call getCFtunits(tunits, NOWDATE)
+       end if
+       call FileSetGlobalAttribute( fid, "time_units", tunits )
     endif
 
     if ( axistype == 'ZXY' ) then
@@ -1069,6 +1170,218 @@ contains
   end subroutine FILEIO_write_3D
 
   !-----------------------------------------------------------------------------
+  !> Write 3D data with time dimension to file
+  subroutine FILEIO_write_3D_t( &
+       var,      &
+       basename, &
+       title,    &
+       varname,  &
+       desc,     &
+       unit,     &
+       axistype, &
+       datatype, &
+       timeintv, &
+       tsince,   &
+       append,   &
+       timetarg, &
+       nohalo    )
+    use gtool_file, only: &
+       RMISS
+    use gtool_file_h, only: &
+       File_REAL8, &
+       File_REAL4
+    use gtool_file, only: &
+       FileCreate,      &
+       FilePutAxis,     &
+       FileAddVariable, &
+       FileWrite
+    use scale_process, only: &
+       PRC_masterrank, &
+       PRC_myrank,     &
+       PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_2Drank
+    implicit none
+
+    real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
+    character(len=*),  intent(in)  :: basename     !< basename of the file
+    character(len=*),  intent(in)  :: title        !< title    of the file
+    character(len=*),  intent(in)  :: varname      !< name        of the variable
+    character(len=*),  intent(in)  :: desc         !< description of the variable
+    character(len=*),  intent(in)  :: unit         !< unit        of the variable
+    character(len=*),  intent(in)  :: axistype     !< axis type (X/Y/Time)
+    character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
+    real(RP),          intent(in)  :: timeintv     !< time interval [sec]
+    integer ,          intent(in)  :: tsince(6)    !< start time
+    logical, optional, intent(in)  :: append       !< append existing (closed) file?
+    integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
+    logical, optional, intent(in)  :: nohalo       !< include halo data?
+
+    real(RP)         :: varhalo( size(var(:,1,1)), size(var(1,:,1)) )
+
+    integer          :: dtype
+    character(len=2) :: dims(2)
+    integer          :: dim1_max, dim1_S, dim1_E
+    integer          :: dim2_max, dim2_S, dim2_E
+
+    real(RP), allocatable :: var2D(:,:)
+    real(DP) :: time_interval, nowtime
+
+    character(len=34) :: tunits
+
+    integer :: rankidx(2)
+    logical :: append_sw
+    logical :: fileexisted
+    integer :: fid, vid
+    integer :: step
+    integer :: i, j, n
+    logical :: nohalo_
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    nohalo_ = .false.
+    if ( present(nohalo) ) nohalo_ = nohalo
+
+    time_interval = timeintv
+    step = size(var(ISB,JSB,:))
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    if ( datatype == 'REAL8' ) then
+       dtype = File_REAL8
+    elseif( datatype == 'REAL4' ) then
+       dtype = File_REAL4
+    else
+       if ( RP == 8 ) then
+          dtype = File_REAL8
+       elseif( RP == 4 ) then
+          dtype = File_REAL4
+       else
+          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
+    endif
+
+    append_sw = .false.
+    if ( present(append) ) then
+       append_sw = append
+    endif
+
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', tsince
+
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     time_units = tunits, & ! [IN]
+                     append = append_sw   ) ! [IN]
+
+    if ( .NOT. fileexisted ) then ! only once
+       call FILEIO_set_axes( fid, dtype ) ! [IN]
+    endif
+
+    if ( axistype == 'XYT' ) then
+       dims = (/'x','y'/)
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+    else
+       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       call PRC_MPIstop
+    endif
+
+    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype, time_interval ) ! [IN]
+    allocate( var2D(dim1_max,dim2_max) )
+
+    if ( present(timetarg) ) then
+       varhalo(:,:) = var(:,:,timetarg)
+
+       if ( nohalo_ ) then
+          ! W halo
+          do j = 1, JA
+          do i = 1, IS-1
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! E halo
+          do j = 1, JA
+          do i = IE+1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! S halo
+          do j = 1, JS-1
+          do i = 1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! N halo
+          do j = JE+1, JA
+          do i = 1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+       end if
+
+       nowtime = (timetarg-1) * time_interval
+       var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
+       call FileWrite( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+    else
+       nowtime = 0.0_DP
+       do n = 1, step
+          varhalo(:,:) = var(:,:,n)
+
+          if ( nohalo_ ) then
+             ! W halo
+             do j = 1, JA
+             do i = 1, IS-1
+                varhalo(i,j) = RMISS
+             end do
+             end do
+             ! E halo
+             do j = 1, JA
+             do i = IE+1, IA
+                varhalo(i,j) = RMISS
+             end do
+             end do
+             ! S halo
+             do j = 1, JS-1
+             do i = 1, IA
+                varhalo(i,j) = RMISS
+             end do
+             end do
+             ! N halo
+             do j = JE+1, JA
+             do i = 1, IA
+                varhalo(i,j) = RMISS
+             end do
+             end do
+          end if
+
+          var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
+          call FileWrite( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+          nowtime = nowtime + time_interval
+       enddo
+    endif
+
+    deallocate( var2D )
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
+
+    return
+  end subroutine FILEIO_write_3D_t
+
+  !-----------------------------------------------------------------------------
   !> Write 4D data to file
   subroutine FILEIO_write_4D( &
        var,      &
@@ -1080,6 +1393,7 @@ contains
        axistype, &
        datatype, &
        timeintv, &
+       tsince,   &
        append,   &
        timetarg, &
        nohalo    )
@@ -1110,6 +1424,7 @@ contains
     character(len=*),  intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
     character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
     real(RP),          intent(in)  :: timeintv     !< time interval [sec]
+    integer ,          intent(in)  :: tsince(6)    !< start time
     logical, optional, intent(in)  :: append       !< append existing (closed) file?
     integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
     logical, optional, intent(in)  :: nohalo       !< include halo data?
@@ -1124,6 +1439,8 @@ contains
 
     real(RP), allocatable :: var3D(:,:,:)
     real(DP) :: time_interval, nowtime
+
+    character(len=34) :: tunits
 
     integer :: rankidx(2)
     logical :: append_sw
@@ -1165,16 +1482,19 @@ contains
        append_sw = append
     endif
 
-    call FileCreate( fid,               & ! [OUT]
-                     fileexisted,       & ! [OUT]
-                     basename,          & ! [IN]
-                     title,             & ! [IN]
-                     H_SOURCE,          & ! [IN]
-                     H_INSTITUTE,       & ! [IN]
-                     PRC_masterrank,    & ! [IN]
-                     PRC_myrank,        & ! [IN]
-                     rankidx,           & ! [IN]
-                     append = append_sw ) ! [IN]
+    call getCFtunits(tunits, tsince)
+
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     time_units = tunits, & ! [IN]
+                     append = append_sw   ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FILEIO_set_axes( fid, dtype ) ! [IN]
@@ -1292,6 +1612,17 @@ contains
 
     return
   end subroutine FILEIO_write_4D
+
+  ! private
+
+  subroutine getCFtunits(tunits, date)
+    character(len=34), intent(out) :: tunits
+    integer,           intent(in)  :: date(6)
+
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
+
+    return
+  end subroutine getCFtunits
 
 end module scale_fileio
 !-------------------------------------------------------------------------------

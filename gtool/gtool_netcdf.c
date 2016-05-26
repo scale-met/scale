@@ -4,11 +4,15 @@
 #define RMISS -9.9999e+30
 #define TEPS 1e-6
 
+static int32_t ERROR_SUPPRESS = 0;
+
 #define CHECK_ERROR(status)					\
   {								\
     if (status != NC_NOERR) {					\
-      fprintf(stderr, "Error: at l%d in %s\n", __LINE__, __FILE__);	\
-      fprintf(stderr, "       %s\n", nc_strerror(status));	\
+      if ( ! ERROR_SUPPRESS ) {                                 \
+        fprintf(stderr, "Error: at l%d in %s\n", __LINE__, __FILE__);	\
+        fprintf(stderr, "       %s\n", nc_strerror(status));	\
+      }                                                         \
       return ERROR_CODE;					\
     }								\
   }
@@ -158,7 +162,8 @@ int32_t file_set_option( int32_t fid,    // (in)
 int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
 			   int32_t     fid,     // (in)
 			   char*       varname, // (in)
-			   int32_t     step)    // (in)
+			   int32_t     step,    // (in)
+			   int32_t     suppress)// (in)
 {
   int ncid, varid;
   nc_type xtype;
@@ -168,6 +173,8 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   size_t size;
   size_t idx[2];
   int i, n;
+
+  ERROR_SUPPRESS = suppress;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -225,8 +232,12 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_ERROR( nc_inq_varid(ncid, name, &varid) );
     idx[1] = 0;
     CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) );
+    // units
+    CHECK_ERROR( nc_get_att_text(ncid, varid, "units", dinfo->time_units) );
   } else {
   }
+
+  ERROR_SUPPRESS = 0;
 
   return SUCCESS_CODE;
 }
@@ -276,6 +287,80 @@ int32_t file_read_data( void       *var,        // (out)
     fprintf(stderr, "unsuppoted data precision: %d\n", precision );
     return ERROR_CODE;
   }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_global_attribute_text( int32_t  fid,   // (in)
+				        char    *key,   // (in)
+				        char    *value, // (out)
+					int32_t  len )  // (in)
+{
+  int ncid;
+  size_t l;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) );
+  if ( len < l+1 ) return ERROR_CODE;
+
+  CHECK_ERROR( nc_get_att_text(ncid, NC_GLOBAL, key, value) );
+  value[l] = '\0';
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_global_attribute_int( int32_t  fid,   // (in)
+				       char    *key,   // (in)
+				       int     *value, // (out)
+				       size_t   len )  // (in)
+{
+  int ncid;
+  size_t l;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) );
+  if ( len < l ) return ERROR_CODE;
+  CHECK_ERROR( nc_get_att_int(ncid, NC_GLOBAL, key, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_global_attribute_float( int32_t  fid,   // (in)
+					 char    *key,   // (in)
+					 float   *value, // (out)
+					 size_t   len )  // (in)
+{
+  int ncid;
+  size_t l;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) );
+  if ( len < l ) return ERROR_CODE;
+  CHECK_ERROR( nc_get_att_float(ncid, NC_GLOBAL, key, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_global_attribute_double( int32_t  fid,   // (in)
+					  char    *key,   // (in)
+					  double  *value, // (out)
+					  size_t   len )  // (in)
+{
+  int ncid;
+  size_t l;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) );
+  if ( len < l ) return ERROR_CODE;
+  CHECK_ERROR( nc_get_att_double(ncid, NC_GLOBAL, key, value) );
 
   return SUCCESS_CODE;
 }

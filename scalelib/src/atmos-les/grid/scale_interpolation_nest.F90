@@ -235,7 +235,7 @@ contains
     character(7) :: select_type
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID INTERP]'
 
     divnum = interp_search_divnum

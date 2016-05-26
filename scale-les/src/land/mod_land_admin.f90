@@ -84,16 +84,16 @@ contains
     endif
 
     if ( LAND_do ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model : ON'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model     : ON'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model     : OFF'
     endif
 
     if ( LAND_TYPE /= 'OFF' .AND. LAND_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Land  physics : ON, ', trim(LAND_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Land  physics : ON, ', trim(LAND_TYPE)
        LAND_sw = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Land  physics : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Land  physics : OFF'
        LAND_sw = .false.
     endif
 

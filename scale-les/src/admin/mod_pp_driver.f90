@@ -174,10 +174,6 @@ contains
 
     call PROF_rapstart('Initialize')
 
-    ! setup horizontal/vertical grid index
-    call GRID_INDEX_setup
-    call LAND_GRID_INDEX_setup
-
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
     call GRID_INDEX_setup
     call GRID_setup

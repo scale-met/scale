@@ -208,7 +208,8 @@ module mod_mkinit
   real(RP), private, allocatable :: bubble(:,:,:) ! bubble factor (0-1)
 
   real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
-  logical,  private :: flg_bin = .false.
+
+  logical,  private              :: flg_intrp = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -221,7 +222,7 @@ contains
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
-       flg_bin
+       flg_intrp
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -402,7 +403,7 @@ contains
       qv_sfc  (:,:,:) = CONST_UNDEF8
       qc_sfc  (:,:,:) = CONST_UNDEF8
 
-      if ( flg_bin ) then
+      if ( TRACER_TYPE == 'SUZUKI10' ) then
          if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
          call SBMAERO_setup
       endif
@@ -621,6 +622,7 @@ contains
     real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
     real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]
+    real(RP), parameter :: cleannumber = 1.e-3_RP
 
     NAMELIST / PARAM_AERO / &
        m0_init, &
@@ -765,6 +767,16 @@ contains
     m0t = m0_init !total M0 [#/m3]
     dgt = dg_init ![m]
     sgt = sg_init ![-]
+
+    if ( m0t <= cleannumber ) then
+       m0t = cleannumber
+       dgt = 0.1E-6_RP
+       sgt = 1.3_RP
+       if ( IO_L ) then
+          write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
+       endif
+    endif
+
     m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M2 [m2/m3]
     m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M3 [m3/m3]
     mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
@@ -1021,6 +1033,8 @@ contains
   subroutine SBMAERO_setup
     use scale_const, only: &
        PI => CONST_PI
+    use scale_tracer_suzuki10, only: &
+       nccn, nbin
     implicit none
 
 #ifndef DRY
@@ -1033,8 +1047,6 @@ contains
     real(RP) :: R_MIN        = 1.E-08_RP
     real(RP) :: A_ALPHA      = 3.0_RP
     real(RP) :: RHO_AERO     = 2.25E+03_RP
-    integer  :: nbin_i       = 33
-    integer  :: nccn_i       = 20
 
     NAMELIST / PARAM_SBMAERO / &
        F0_AERO,      &
@@ -1042,9 +1054,7 @@ contains
        R_MAX,        &
        R_MIN,        &
        A_ALPHA,      &
-       RHO_AERO,     &
-       nccn_i,       &
-       nbin_i
+       RHO_AERO
 
     integer :: ierr
     integer :: iq, i, j, k
@@ -1058,30 +1068,31 @@ contains
     read(IO_FID_CONF,nml=PARAM_SBMAERO,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
-       call PRC_MPIstop
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. default value used'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist SBMAERO. Check!'
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_SBMAERO)
 
-    allocate( gan( nccn_i ) )
-    allocate( xactr(nccn_i) )
-    allocate( xabnd(nccn_i+1) )
+    if( nccn /= 0 ) then
+      allocate( gan( nccn ) )
+      allocate( xactr(nccn) )
+      allocate( xabnd(nccn+1) )
 
-    xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
-    xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
-    dxaer = ( xaend-xasta )/nccn_i
-    do iq = 1, nccn_i+1
-      xabnd( iq ) = xasta + dxaer*( iq-1 )
-    enddo
-    do iq = 1, nccn_i
-      xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
-    enddo
-    do iq = 1, nccn_i
-      gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, RHO_AERO )*exp( xactr(iq) )
-    enddo
+      xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+      xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
+      dxaer = ( xaend-xasta )/nccn
+      do iq = 1, nccn+1
+        xabnd( iq ) = xasta + dxaer*( iq-1 )
+      enddo
+      do iq = 1, nccn
+        xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
+      enddo
+      do iq = 1, nccn
+        gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, RHO_AERO )*exp( xactr(iq) )
+      enddo
+    endif
 
     !--- Hydrometeor is zero at initial time for Bin method
     do iq = 2,  QQA
@@ -1095,7 +1106,7 @@ contains
     enddo
 
     !-- Aerosol distribution
-    if( nccn_i /= 0 ) then
+    if( nccn /= 0 ) then
      do iq = QQA+1, QA
      do j  = JS, JE
      do i  = IS, IE
@@ -1105,10 +1116,10 @@ contains
      enddo
      enddo
      enddo
-    endif
 
-    deallocate( xactr )
-    deallocate( xabnd )
+     deallocate( xactr )
+     deallocate( xabnd )
+    endif
 
 #endif
     return
@@ -1146,7 +1157,8 @@ contains
        TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall
     implicit none
     ! Flux from Atmosphere
     real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
@@ -1179,6 +1191,7 @@ contains
     do i = IS, IE
        SFLX_rain   (i,j) = FLX_rain
        SFLX_snow   (i,j) = FLX_snow
+
        SFLX_LW_up  (i,j) = 0.0_RP
        SFLX_LW_dn  (i,j) = FLX_LW_dn
        SFLX_SW_up  (i,j) = 0.0_RP
@@ -1188,8 +1201,13 @@ contains
        TOAFLX_LW_dn(i,j) = 0.0_RP
        TOAFLX_SW_up(i,j) = 0.0_RP
        TOAFLX_SW_dn(i,j) = 0.0_RP
-    end do
-    end do
+
+       SFLX_rad_dn (i,j,1,1) = FLX_SW_dn
+       SFLX_rad_dn (i,j,1,2) = 0.0_RP
+       SFLX_rad_dn (i,j,2,1) = FLX_LW_dn
+       SFLX_rad_dn (i,j,2,2) = 0.0_RP
+    enddo
+    enddo
 
     return
   end subroutine flux_setup
@@ -1843,7 +1861,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on tracerbubble. Check!'
        call PRC_MPIstop
     endif
@@ -1950,7 +1968,7 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on coldbubble. Check!'
        call PRC_MPIstop
     endif
@@ -2024,7 +2042,7 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on lambwave. Check!'
        call PRC_MPIstop
     endif
@@ -2121,7 +2139,7 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on gravitywave. Check!'
        call PRC_MPIstop
     endif
@@ -2246,7 +2264,7 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on khwave. Check!'
        call PRC_MPIstop
     endif
@@ -2427,7 +2445,7 @@ contains
     endif
 #endif
 
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on turbulence. Check!'
        call PRC_MPIstop
     endif
@@ -3184,7 +3202,7 @@ enddo
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3219,6 +3237,9 @@ enddo
     endif
 
 #endif
+    if ( AETRACER_TYPE == 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_DYCOMS2_RF01
 
@@ -3430,7 +3451,7 @@ enddo
     enddo
     enddo
 
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3466,6 +3487,9 @@ enddo
     endif
 
 #endif
+    if ( AETRACER_TYPE == 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_DYCOMS2_RF02
 
@@ -3688,7 +3712,7 @@ enddo
     enddo
 
 !write(*,*)'chk12'
-    if ( flg_bin ) then
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3906,7 +3930,8 @@ enddo
     enddo
 
     call RANDOM_get(rndm) ! make random
-    if ( flg_bin ) then
+
+    if ( TRACER_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3943,6 +3968,9 @@ enddo
     endif
 
 #endif
+    if ( AETRACER_TYPE == 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_RICO
 
@@ -4447,6 +4475,7 @@ enddo
     use scale_les_process, only: &
        PRC_NUM_X
     use scale_landuse, only: &
+       LANDUSE_calc_fact, &
        LANDUSE_frac_land
     implicit none
 
@@ -4479,6 +4508,8 @@ enddo
     enddo
     enddo
 
+    call LANDUSE_calc_fact
+
     return
   end subroutine MKINIT_seabreeze
 
@@ -4488,6 +4519,7 @@ enddo
     use scale_les_process, only: &
        PRC_NUM_X
     use scale_landuse, only: &
+       LANDUSE_calc_fact, &
        LANDUSE_frac_land,    &
        LANDUSE_frac_urban
     implicit none
@@ -4522,6 +4554,8 @@ enddo
        endif
     enddo
     enddo
+
+    call LANDUSE_calc_fact
 
     return
   end subroutine MKINIT_heatisland
@@ -4672,6 +4706,12 @@ enddo
     real(RP) :: qsat
     integer :: i, j, k, ierr
 
+    if ( AETRACER_TYPE /= 'KAJINO13' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '+++ For [Box model of aerosol],'
+       if( IO_L ) write(IO_FID_LOG,*) '+++ AETRACER_TYPE should be KAJINO13. Stop!'
+       call PRC_MPIstop
+    endif
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Box model of aerosol]/Categ[MKINIT]'
 
@@ -4702,7 +4742,9 @@ enddo
     enddo
     enddo
 
-    call AEROSOL_setup
+    if( AETRACER_TYPE /= 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
 
   end subroutine MKINIT_boxaero
   !-----------------------------------------------------------------------------
@@ -4835,7 +4877,10 @@ enddo
     enddo
 
     call flux_setup
-    call AEROSOL_setup
+
+    if ( AETRACER_TYPE /= 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
 
     return
   end subroutine MKINIT_warmbubbleaero
@@ -4844,252 +4889,18 @@ enddo
   !> Make initial state ( real case )
   subroutine MKINIT_real
     use mod_realinput, only: &
-         NDIMS, &
-         ParentAtomSetup, &
-         ParentAtomInput, &
-         ParentAtomBoundary, &
-         ParentSurfaceInput
+         REALINPUT_atmos, &
+         REALINPUT_surface
     implicit none
 
-    integer                  :: NUMBER_OF_FILES     = 1
-    integer                  :: NUMBER_OF_TSTEPS    = 1    ! num of time steps in one file
-    character(len=H_LONG)    :: BASENAME_ORG        = ''
-    character(len=H_LONG)    :: FILETYPE_ORG        = ''
-    character(len=H_LONG)    :: BASENAME_BOUNDARY   = 'boundary_real'
-    character(len=H_LONG)    :: BOUNDARY_TITLE      = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
-    integer                  :: PARENT_MP_TYPE      = 6         ! microphysics type of the parent model (number of classes)
-                                                                ! 0: dry, 3:3-class, 5:5-class, 6:6-class, >6:double moment
-    real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
-    logical                  :: USE_FILE_LANDWATER  = .true.    ! use land water data from files
-    real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP   ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false."
-    character(len=H_SHORT)   :: INTRP_LAND_TEMP      = 'off'
-    character(len=H_SHORT)   :: INTRP_LAND_WATER     = 'off'
-    character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP  = 'off'
-    character(len=H_SHORT)   :: INTRP_OCEAN_TEMP     = 'off'
-    character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP = 'off'
-    integer                  :: INTRP_ITER_MAX       = 20       ! maximum count for iteration in the interporation
+    call REALINPUT_atmos( flg_intrp )
 
-    integer                  :: INTERP_SERC_DIV_NUM = 10        ! num of dividing blocks in interpolation search
-    character(len=H_SHORT)   :: SOILWATER_DS2VC     = 'limit'   ! 'critical' or 'limit'
-    logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
-
-    ! only for SCALE boundary
-    logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
-    ! only for NICAM boundary
-    integer                  :: NUMBER_OF_SKIP_TSTEPS  = 0      ! num of skipped first several data
-
-    logical                  :: soilwater_DS2VC_flag            ! true: 'critical', false: 'limit'
-
-    NAMELIST / PARAM_MKINIT_REAL / &
-         NUMBER_OF_FILES,        &
-         NUMBER_OF_TSTEPS,       &
-         NUMBER_OF_SKIP_TSTEPS,  &
-         INTERP_SERC_DIV_NUM,    &
-         BASENAME_ORG,           &
-         FILETYPE_ORG,           &
-         BASENAME_BOUNDARY,      &
-         BOUNDARY_TITLE,         &
-         BOUNDARY_UPDATE_DT,     &
-         USE_FILE_DENSITY,       &
-         USE_FILE_LANDWATER,     &
-         INIT_LANDWATER_RATIO,   &
-         INTRP_LAND_TEMP,        &
-         INTRP_LAND_WATER,       &
-         INTRP_LAND_SFC_TEMP,    &
-         INTRP_OCEAN_TEMP,       &
-         INTRP_OCEAN_SFC_TEMP,   &
-         INTRP_ITER_MAX,         &
-         PARENT_MP_TYPE,         &
-         SOILWATER_DS2VC,        &
-         SERIAL_PROC_READ
-
-    character(len=H_LONG) :: BASENAME_WITHNUM  = ''
-    character(len=5)      :: NUM               = ''
-
-    real(RP), allocatable :: DENS_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMZ_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMX_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMY_ORG(:,:,:,:)
-    real(RP), allocatable :: RHOT_ORG(:,:,:,:)
-    real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
-
-    integer :: mdlid
-    integer :: dims(NDIMS) ! dims 1-3: normal, 4-6: staggerd, 7-9: soil-layer, 10-11: sst
-
-    integer :: totaltimesteps = 1
-    integer :: timelen = 1           ! NUMBER_OF_TSTEPS for nicam data
-    integer :: skip_steps
-    integer :: ierr
-
-    integer :: k, i, j, iq, n, ns, ne
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Real Case]/Categ[MKINIT]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL)
-
-    if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
-       write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
-       call PRC_MPIstop
-    endif
-
-    if ( NUMBER_OF_FILES > 1 ) then
-       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    else
-       BASENAME_WITHNUM = trim(BASENAME_ORG)
-    end if
-
-    call ParentAtomSetup( dims(:), timelen, mdlid,        & ![OUT]
-                          BASENAME_WITHNUM, FILETYPE_ORG, & ![IN]
-                          USE_FILE_DENSITY,               & ![IN]
-                          USE_FILE_LANDWATER,             & ![IN]
-                          SERIAL_PROC_READ,               & ![IN]
-                          INTERP_SERC_DIV_NUM             ) ![IN]
-
-    if ( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-       NUMBER_OF_TSTEPS = timelen
-       !totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
-    endif
-
-    totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
-
-    allocate( dens_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
-    allocate( momz_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
-    allocate( momx_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
-    allocate( momy_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
-    allocate( rhot_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
-    allocate( qtrc_org(KA,IA,JA,QA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-
-    !--- read external file
-    do n = 1, NUMBER_OF_FILES
-
-       if ( NUMBER_OF_FILES > 1 ) then
-          write(NUM,'(I5.5)') n-1
-          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       else
-          BASENAME_WITHNUM = trim(BASENAME_ORG)
-       end if
-
-       if( IO_L ) write(IO_FID_LOG,*) ' '
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
-       if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
-
-       ns = NUMBER_OF_TSTEPS * (n - 1) + 1
-       ne = ns + (NUMBER_OF_TSTEPS - 1)
-
-       if ( ne <= NUMBER_OF_SKIP_TSTEPS ) then
-          if( IO_L ) write(IO_FID_LOG,*) '    SKIP'
-          cycle
-       end if
-
-       skip_steps = max(NUMBER_OF_SKIP_TSTEPS - ns + 1, 0)
-
-       ! read all prepared data
-       call ParentAtomInput( DENS_org(:,:,:,ns:ne),   &
-                             MOMZ_org(:,:,:,ns:ne),   &
-                             MOMX_org(:,:,:,ns:ne),   &
-                             MOMY_org(:,:,:,ns:ne),   &
-                             RHOT_org(:,:,:,ns:ne),   &
-                             QTRC_org(:,:,:,:,ns:ne), &
-                             BASENAME_WITHNUM,        &
-                             dims(:),                 &
-                             mdlid,                   &
-                             PARENT_MP_TYPE,          &
-                             NUMBER_OF_TSTEPS,        &
-                             skip_steps               )
-    enddo
-
-    !--- input initial data
-    ns = NUMBER_OF_SKIP_TSTEPS + 1  ! skip first several data
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS, KE
-       DENS(k,i,j) = DENS_ORG(k,i,j,ns)
-       MOMZ(k,i,j) = MOMZ_ORG(k,i,j,ns)
-       MOMX(k,i,j) = MOMX_ORG(k,i,j,ns)
-       MOMY(k,i,j) = MOMY_ORG(k,i,j,ns)
-       RHOT(k,i,j) = RHOT_ORG(k,i,j,ns)
-
-       do iq = 1, QA
-          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,iq,ns)
-       enddo
-    enddo
-    enddo
-    enddo
-
-    !--- output boundary data
-    totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
-    call ParentAtomBoundary( DENS_ORG(:,:,:,ns:ne),   &
-                             MOMZ_ORG(:,:,:,ns:ne),   &
-                             MOMX_ORG(:,:,:,ns:ne),   &
-                             MOMY_ORG(:,:,:,ns:ne),   &
-                             RHOT_ORG(:,:,:,ns:ne),   &
-                             QTRC_ORG(:,:,:,:,ns:ne), &
-                             totaltimesteps,          &
-                             BOUNDARY_UPDATE_DT,      &
-                             BASENAME_BOUNDARY,       &
-                             BOUNDARY_TITLE           )
-
-    !--- read/write initial data for bottom boundary models
-    if ( NUMBER_OF_FILES > 1 ) then
-       write(NUM,'(I5.5)') NUMBER_OF_SKIP_TSTEPS / NUMBER_OF_TSTEPS
-       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-    else
-       BASENAME_WITHNUM = trim(BASENAME_ORG)
-    end if
-
-    select case ( SOILWATER_DS2VC )
-    case ( 'critical' )
-       SOILWATER_DS2VC_flag = .true.
-    case ('limit' )
-       SOILWATER_DS2VC_flag = .false.
-    case default
-      write(*,*) ' xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
-      call PRC_MPIstop
-    end select
-
-    call ParentSurfaceInput( DENS_ORG(:,:,:,ns),    &
-                             MOMZ_ORG(:,:,:,ns),    &
-                             MOMX_ORG(:,:,:,ns),    &
-                             MOMY_ORG(:,:,:,ns),    &
-                             RHOT_ORG(:,:,:,ns),    &
-                             QTRC_ORG(:,:,:,:,ns),  &
-                             BASENAME_WITHNUM,      &
-                             dims,                  &
-                             mod(NUMBER_OF_SKIP_TSTEPS, NUMBER_OF_TSTEPS)+1, &
-                             USE_FILE_LANDWATER,    &
-                             INIT_LANDWATER_RATIO,  &
-                             INTRP_LAND_TEMP,       &
-                             INTRP_LAND_WATER,      &
-                             INTRP_LAND_SFC_TEMP,   &
-                             INTRP_OCEAN_TEMP,      &
-                             INTRP_OCEAN_SFC_TEMP,  &
-                             INTRP_ITER_MAX,        &
-                             SOILWATER_DS2VC_flag,  &
-                             mdlid                  )
+    call REALINPUT_surface
 
     call flux_setup
 
-    deallocate( dens_org )
-    deallocate( momz_org )
-    deallocate( momx_org )
-    deallocate( momy_org )
-    deallocate( rhot_org )
-    deallocate( qtrc_org )
-
     return
   end subroutine MKINIT_real
-
 
 end module mod_mkinit
 !-------------------------------------------------------------------------------

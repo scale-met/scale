@@ -28,7 +28,11 @@ MODS = \
 	test_atmos_phy_tb_smg.o \
 	test_atmos_dyn.o
 
-all: makedir makelib makebin run
+all:
+	$(MAKE) makedir
+	$(MAKE) makelib
+	$(MAKE) makebin
+	$(MAKE) run
 
 makedir:
 	mkdir -p $(BUILD_DIR)

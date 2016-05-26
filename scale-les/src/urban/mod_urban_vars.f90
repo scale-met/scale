@@ -108,8 +108,8 @@ module mod_urban_vars
   real(RP), public, allocatable :: ATMOS_QV       (:,:)
   real(RP), public, allocatable :: ATMOS_PBL      (:,:)
   real(RP), public, allocatable :: ATMOS_SFC_PRES (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:,:)
   real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
 
@@ -338,32 +338,32 @@ contains
     URBAN_T2 (:,:) = UNDEF
     URBAN_Q2 (:,:) = UNDEF
 
-    allocate( ATMOS_TEMP     (IA,JA) )
-    allocate( ATMOS_PRES     (IA,JA) )
-    allocate( ATMOS_W        (IA,JA) )
-    allocate( ATMOS_U        (IA,JA) )
-    allocate( ATMOS_V        (IA,JA) )
-    allocate( ATMOS_DENS     (IA,JA) )
-    allocate( ATMOS_QV       (IA,JA) )
-    allocate( ATMOS_PBL      (IA,JA) )
-    allocate( ATMOS_SFC_PRES (IA,JA) )
-    allocate( ATMOS_SFLX_LW  (IA,JA) )
-    allocate( ATMOS_SFLX_SW  (IA,JA) )
-    allocate( ATMOS_cosSZA   (IA,JA) )
-    allocate( ATMOS_SFLX_prec(IA,JA) )
-    ATMOS_TEMP     (:,:) = UNDEF
-    ATMOS_PRES     (:,:) = UNDEF
-    ATMOS_W        (:,:) = UNDEF
-    ATMOS_U        (:,:) = UNDEF
-    ATMOS_V        (:,:) = UNDEF
-    ATMOS_DENS     (:,:) = UNDEF
-    ATMOS_QV       (:,:) = UNDEF
-    ATMOS_PBL      (:,:) = UNDEF
-    ATMOS_SFC_PRES (:,:) = UNDEF
-    ATMOS_SFLX_LW  (:,:) = UNDEF
-    ATMOS_SFLX_SW  (:,:) = UNDEF
-    ATMOS_cosSZA   (:,:) = UNDEF
-    ATMOS_SFLX_prec(:,:) = UNDEF
+    allocate( ATMOS_TEMP     (IA,JA)   )
+    allocate( ATMOS_PRES     (IA,JA)   )
+    allocate( ATMOS_W        (IA,JA)   )
+    allocate( ATMOS_U        (IA,JA)   )
+    allocate( ATMOS_V        (IA,JA)   )
+    allocate( ATMOS_DENS     (IA,JA)   )
+    allocate( ATMOS_QV       (IA,JA)   )
+    allocate( ATMOS_PBL      (IA,JA)   )
+    allocate( ATMOS_SFC_PRES (IA,JA)   )
+    allocate( ATMOS_SFLX_LW  (IA,JA,2) )
+    allocate( ATMOS_SFLX_SW  (IA,JA,2) )
+    allocate( ATMOS_cosSZA   (IA,JA)   )
+    allocate( ATMOS_SFLX_prec(IA,JA)   )
+    ATMOS_TEMP     (:,:)   = UNDEF
+    ATMOS_PRES     (:,:)   = UNDEF
+    ATMOS_W        (:,:)   = UNDEF
+    ATMOS_U        (:,:)   = UNDEF
+    ATMOS_V        (:,:)   = UNDEF
+    ATMOS_DENS     (:,:)   = UNDEF
+    ATMOS_QV       (:,:)   = UNDEF
+    ATMOS_PBL      (:,:)   = UNDEF
+    ATMOS_SFC_PRES (:,:)   = UNDEF
+    ATMOS_SFLX_LW  (:,:,:) = UNDEF
+    ATMOS_SFLX_SW  (:,:,:) = UNDEF
+    ATMOS_cosSZA   (:,:)   = UNDEF
+    ATMOS_SFLX_prec(:,:)   = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -489,7 +489,7 @@ contains
        URBAN_sw
     implicit none
 
-    character(len=15)     :: timelabel
+    character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 

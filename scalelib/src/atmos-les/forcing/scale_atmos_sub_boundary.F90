@@ -408,44 +408,44 @@ contains
     if ( USE_NESTING ) ATMOS_BOUNDARY_UPDATE_FLAG = .true.
 
     !----- report data -----
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary parameters'
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary type                       :', ATMOS_BOUNDARY_TYPE
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '*** is VELZ used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_VELZ
-    if( IO_L ) write(IO_FID_LOG,*) '*** is VELX used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_VELX
-    if( IO_L ) write(IO_FID_LOG,*) '*** is VELY used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_VELY
-    if( IO_L ) write(IO_FID_LOG,*) '*** is POTT used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_POTT
-    if( IO_L ) write(IO_FID_LOG,*) '*** is DENS used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_DENS
-    if( IO_L ) write(IO_FID_LOG,*) '*** is QV   used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_QV
-    if( IO_L ) write(IO_FID_LOG,*) '*** is QHYD used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_QHYD
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELZ values                :', ATMOS_BOUNDARY_VALUE_VELZ
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELX values                :', ATMOS_BOUNDARY_VALUE_VELX
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELY values                :', ATMOS_BOUNDARY_VALUE_VELY
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary POTT values                :', ATMOS_BOUNDARY_VALUE_POTT
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary QTRC values                :', ATMOS_BOUNDARY_VALUE_QTRC
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary smoother factor            :', ATMOS_BOUNDARY_SMOOTHER_FACT
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary z-fraction                 :', ATMOS_BOUNDARY_FRACZ
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary x-fraction                 :', ATMOS_BOUNDARY_FRACX
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary y-fraction                 :', ATMOS_BOUNDARY_FRACY
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary z-relaxation time          :', ATMOS_BOUNDARY_TAUZ
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary x-relaxation time          :', ATMOS_BOUNDARY_TAUX
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary y-relaxation time          :', ATMOS_BOUNDARY_TAUY
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary update dt                  :', ATMOS_BOUNDARY_UPDATE_DT
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary start date                 :', ATMOS_BOUNDARY_START_DATE(:)
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '*** linear profile in vertically relax region       :', ATMOS_BOUNDARY_LINEAR_V
-    if( IO_L ) write(IO_FID_LOG,*) '*** linear profile in horizontally relax region     :', ATMOS_BOUNDARY_LINEAR_H
-    if( IO_L ) write(IO_FID_LOG,*) '*** non-linear factor in horizontally relax region  :', ATMOS_BOUNDARY_EXP_H
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '*** online nesting for lateral boundary             :', ATMOS_BOUNDARY_ONLINE
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary type                       : ', ATMOS_BOUNDARY_TYPE
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** is VELZ used in atmospheric boundary?           : ', ATMOS_BOUNDARY_USE_VELZ
+    if( IO_L ) write(IO_FID_LOG,*) '*** is VELX used in atmospheric boundary?           : ', ATMOS_BOUNDARY_USE_VELX
+    if( IO_L ) write(IO_FID_LOG,*) '*** is VELY used in atmospheric boundary?           : ', ATMOS_BOUNDARY_USE_VELY
+    if( IO_L ) write(IO_FID_LOG,*) '*** is POTT used in atmospheric boundary?           : ', ATMOS_BOUNDARY_USE_POTT
+    if( IO_L ) write(IO_FID_LOG,*) '*** is DENS used in atmospheric boundary?           : ', ATMOS_BOUNDARY_USE_DENS
+    if( IO_L ) write(IO_FID_LOG,*) '*** is QV   used in atmospheric boundary?           : ', ATMOS_BOUNDARY_USE_QV
+    if( IO_L ) write(IO_FID_LOG,*) '*** is QHYD used in atmospheric boundary?           : ', ATMOS_BOUNDARY_USE_QHYD
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELZ values                : ', ATMOS_BOUNDARY_VALUE_VELZ
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELX values                : ', ATMOS_BOUNDARY_VALUE_VELX
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELY values                : ', ATMOS_BOUNDARY_VALUE_VELY
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary POTT values                : ', ATMOS_BOUNDARY_VALUE_POTT
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary QTRC values                : ', ATMOS_BOUNDARY_VALUE_QTRC
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary smoother factor            : ', ATMOS_BOUNDARY_SMOOTHER_FACT
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary z-fraction                 : ', ATMOS_BOUNDARY_FRACZ
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary x-fraction                 : ', ATMOS_BOUNDARY_FRACX
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary y-fraction                 : ', ATMOS_BOUNDARY_FRACY
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary z-relaxation time          : ', ATMOS_BOUNDARY_TAUZ
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary x-relaxation time          : ', ATMOS_BOUNDARY_TAUX
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary y-relaxation time          : ', ATMOS_BOUNDARY_TAUY
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary update dt                  : ', ATMOS_BOUNDARY_UPDATE_DT
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary start date                 : ', ATMOS_BOUNDARY_START_DATE(:)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** linear profile in vertically relax region       : ', ATMOS_BOUNDARY_LINEAR_V
+    if( IO_L ) write(IO_FID_LOG,*) '*** linear profile in horizontally relax region     : ', ATMOS_BOUNDARY_LINEAR_H
+    if( IO_L ) write(IO_FID_LOG,*) '*** non-linear factor in horizontally relax region  : ', ATMOS_BOUNDARY_EXP_H
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** online nesting for lateral boundary             : ', ATMOS_BOUNDARY_ONLINE
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** does lateral boundary exist in this domain?     :', l_bnd
+    if( IO_L ) write(IO_FID_LOG,*) '*** does lateral boundary exist in this domain?     : ', l_bnd
     if ( l_bnd ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** lateral boundary increment type                 :', ATMOS_BOUNDARY_increment_TYPE
+       if( IO_L ) write(IO_FID_LOG,*) '*** lateral boundary increment type                 : ', ATMOS_BOUNDARY_increment_TYPE
     endif
 
     return
@@ -1219,7 +1219,6 @@ contains
        CALENDAR_combine_daysec, &
        CALENDAR_date2char
     use scale_time, only: &
-       TIME_OFFSET_YEAR, &
        TIME_NOWDATE
     implicit none
 
@@ -1232,7 +1231,6 @@ contains
 
     if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
        ATMOS_BOUNDARY_START_DATE = TIME_NOWDATE
-       ATMOS_BOUNDARY_START_DATE(1) = TIME_OFFSET_YEAR
     end if
 
     !--- calculate time of the initial step in boundary file [no offset]
@@ -1240,9 +1238,8 @@ contains
     boundary_time_offset_year = 0
     call CALENDAR_date2char( boundary_chardate,            & ! [OUT]
                              ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
-                             boundary_time_startms,        & ! [IN]
-                             boundary_time_offset_year     ) ! [IN]
- 
+                             boundary_time_startms         ) ! [IN]
+
     call CALENDAR_date2daysec( boundary_time_startday,       & ! [OUT]
                                boundary_time_startsec,       & ! [OUT]
                                ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
@@ -1265,7 +1262,6 @@ contains
        PRC_MPIstop
     use scale_time, only: &
        TIME_NOWDATE,      &
-       TIME_OFFSET_YEAR,  &
        TIME_DTSEC
     use scale_calendar, only: &
        CALENDAR_date2daysec,    &
@@ -1299,7 +1295,6 @@ contains
 
     !--- recalculate time of the run [no offset]
     run_time_startdate(:) = TIME_NOWDATE(:)
-    run_time_startdate(1) = TIME_OFFSET_YEAR
     run_time_startms      = 0.0_DP
     run_time_offset_year  = 0
 

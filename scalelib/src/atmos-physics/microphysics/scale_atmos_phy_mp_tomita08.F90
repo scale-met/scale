@@ -329,7 +329,7 @@ contains
     integer :: i, j, ip
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** TOMITA08: 1-moment bulk 6 category'
 
@@ -1481,9 +1481,9 @@ contains
 
           Giv  = 1.0_RP / ( LHSEx(k,i,j)/(Da*temp) * ( LHSEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
 
-          ! [Pidep] deposition/sublimation : v->i
-          sw = ( 0.5_RP + sign(0.5_RP, 0.0_RP -  temc ) ) &
-             * ( 0.5_RP + sign(0.5_RP, rhoqi          ) ) ! if T < 0C & ice exists, sw=1
+          ! [Pidep] deposition/sublimation : v->i or i->v
+          sw = ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc ) ) &
+             * ( 0.5_RP + sign(0.5_RP, rhoqi         ) ) ! if T < 0C & ice exists, sw=1
 
           rhoqi = max(rhoqi,EPS)
 
@@ -1494,8 +1494,8 @@ contains
           Pidep = sw * 4.0_RP * Di * XNi * Rdens * ( Sice-1.0_RP ) * Giv
 
           ! [Pigen] ice nucleation : v->i
-          sw = ( 0.5_RP + sign(0.5_RP, 0.0_RP -  temc ) ) &
-             * ( 0.5_RP + sign(0.5_RP, Sice - 1.0_RP  ) ) ! if T < 0C & Satulated, sw=1
+          sw = ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc ) ) &
+             * ( 0.5_RP + sign(0.5_RP, Sice - 1.0_RP ) ) ! if T < 0C & Satulated, sw=1
 
           Ni0 = max( exp(-0.1_RP*temc), 1.0_RP ) * 1000.0_RP
           Qi0 = 4.92E-11 * Ni0**1.33_RP * Rdens
@@ -1504,9 +1504,15 @@ contains
 
           ! update Qv, Qi with limiter
           dq   = ( Pigen + Pidep ) * dt
-          dq   = min( dq, QTRC0(k,i,j,I_QV) )
+          qtmp = QTRC0(k,i,j,I_QV) - dq
+          if ( dq > 0.0_RP ) then ! v->i
+             qtmp = max( qtmp, QSATI(k,i,j) )
+          else                    ! i->v
+             qtmp = min( qtmp, QSATI(k,i,j) )
+          endif
+          dq   = QTRC0(k,i,j,I_QV) - qtmp
           qtmp = QTRC0(k,i,j,I_QI) + dq
-          qtmp = max( qtmp, 0.D0 )
+          qtmp = max( qtmp, 0.0_RP )
           dq   = qtmp - QTRC0(k,i,j,I_QI)
           QTRC0 (k,i,j,I_QI) = QTRC0 (k,i,j,I_QI) + dq
           QTRC0 (k,i,j,I_QV) = QTRC0 (k,i,j,I_QV) - dq
@@ -1530,6 +1536,9 @@ contains
 
           dq = sw * ( dens / DWATR * QTRC0(k,i,j,I_QC)**2 / (Nc(k,i,j)*1.E+6) ) &
                   * B_frz * ( exp(-A_frz*temc) - 1.0_RP ) * dt
+          qtmp = QTRC0(k,i,j,I_QC) - dq
+          qtmp = max( qtmp, 0.0_RP )
+          dq   = QTRC0(k,i,j,I_QC) - qtmp
           QTRC0 (k,i,j,I_QI) = QTRC0 (k,i,j,I_QI) + dq
           QTRC0 (k,i,j,I_QC) = QTRC0 (k,i,j,I_QC) - dq
           QTRC_t(k,i,j,I_QI) = QTRC_t(k,i,j,I_QI) + dq /dt
