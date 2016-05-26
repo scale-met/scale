@@ -121,7 +121,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean roughness length parameter'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ROUGHNESS] / Categ[COUPLER] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -173,6 +173,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for ocean roughness length : Miller (1992)'
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ROUGHNESS_MILLER92,iostat=ierr)
@@ -199,6 +201,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for ocean roughness length : Moon et al. (2007)'
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ROUGHNESS_MOON07,iostat=ierr)
@@ -217,6 +221,8 @@ contains
   subroutine ROUGHNESS_const_setup
     implicit none
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for ocean roughness length : constant'
 
     return
   end subroutine ROUGHNESS_const_setup

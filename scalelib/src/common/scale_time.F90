@@ -90,8 +90,6 @@ contains
     implicit none
 
     character(len=*), intent(out) :: timelabel
-
-    integer :: n
     !---------------------------------------------------------------------------
 
     ! YYYYMMDDhhmmss.sss

@@ -348,7 +348,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID]'
 
     if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child

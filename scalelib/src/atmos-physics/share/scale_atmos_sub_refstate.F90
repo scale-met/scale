@@ -132,9 +132,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state input?  : ', trim(ATMOS_REFSTATE_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Input file of reference state   : ', trim(ATMOS_REFSTATE_IN_BASENAME)
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state input?  : NO, internal generation'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Input file of reference state   : Nothing, generate internally'
     endif
 
     ! input or generate reference profile
@@ -143,33 +143,33 @@ contains
     else
        if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ISA'
-          if( IO_L ) write(IO_FID_LOG,*) '*** surface temperature      [K]', ATMOS_REFSTATE_TEMP_SFC
-          if( IO_L ) write(IO_FID_LOG,*) '*** surface & environment RH [%]', ATMOS_REFSTATE_RH
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type               : ISA'
+          if( IO_L ) write(IO_FID_LOG,*) '*** surface temperature      [K] : ', ATMOS_REFSTATE_TEMP_SFC
+          if( IO_L ) write(IO_FID_LOG,*) '*** surface & environment RH [%] : ', ATMOS_REFSTATE_RH
           call ATMOS_REFSTATE_generate_isa
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: UNIFORM POTT'
-          if( IO_L ) write(IO_FID_LOG,*) '*** potential temperature : ', ATMOS_REFSTATE_POTT_UNIFORM
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type               : UNIFORM POTT'
+          if( IO_L ) write(IO_FID_LOG,*) '*** potential temperature        : ', ATMOS_REFSTATE_POTT_UNIFORM
           call ATMOS_REFSTATE_generate_uniform
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'ZERO' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ZERO'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type               : ZERO'
           call ATMOS_REFSTATE_generate_zero
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?         : ', ATMOS_REFSTATE_UPDATE_FLAG
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec] : ', ATMOS_REFSTATE_UPDATE_DT
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type               : make from initial data'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?                : ', ATMOS_REFSTATE_UPDATE_FLAG
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec]        : ', ATMOS_REFSTATE_UPDATE_DT
 
        else
-          write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!: ', trim(ATMOS_REFSTATE_TYPE)
+          write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check! : ', trim(ATMOS_REFSTATE_TYPE)
           call PRC_MPIstop
        endif
 
@@ -199,9 +199,9 @@ contains
 
        if ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?         : ', ATMOS_REFSTATE_UPDATE_FLAG
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec] : ', ATMOS_REFSTATE_UPDATE_DT
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type               : make from initial data'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?                : ', ATMOS_REFSTATE_UPDATE_FLAG
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec]        : ', ATMOS_REFSTATE_UPDATE_DT
           call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC ) ! (in)
 
        endif

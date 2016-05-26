@@ -158,7 +158,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLC] / Categ[URBAN PHY] / Origin[SCALElib]'
 
     allocate( DZR(UKS:UKE) )
@@ -993,10 +993,10 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TR was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                          [K] :', resi1
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                      [W/m2] :', SX
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                       [W/m2] :', RX
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
@@ -1007,7 +1007,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
@@ -1207,14 +1207,14 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TB/TG was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                   [W/m2] :', SX
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                    [W/m2] :', RX
@@ -1227,7 +1227,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG

@@ -83,16 +83,16 @@ contains
     endif
 
     if ( URBAN_do ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model : ON'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model     : ON'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model     : OFF'
     endif
 
     if ( URBAN_TYPE /= 'OFF' .AND. URBAN_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Urban physics : ON, ', trim(URBAN_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Urban physics : ON, ', trim(URBAN_TYPE)
        URBAN_sw = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Urban physics : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Urban physics : OFF'
        URBAN_sw = .false.
     endif
 

@@ -41,7 +41,6 @@ module mod_realinput
      iGrADS
   use scale_comm, only: &
      COMM_bcast
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -781,7 +780,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Setup]'
 
     serial = serial_in
@@ -955,7 +954,7 @@ contains
     character(len=H_SHORT)  :: mptype_run
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Input]'
 
     select case (TRACER_TYPE)
@@ -1370,7 +1369,7 @@ contains
 
     allocate( buffer(KA,IA,JA,te-ts+1) )
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Boundary]'
 
     call FILEIO_write( DENS(:,:,:,ts:te), basename, title,           &
@@ -1507,7 +1506,7 @@ contains
     character(len=*), intent(in)  :: intrp_ocean_sfc_temp
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputSurface]/Categ[Setup]'
 
     ! Land
@@ -1852,7 +1851,7 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputOcean]/Categ[Input]'
 
     if ( first ) then ! read land data only once
@@ -2228,7 +2227,7 @@ contains
     ts = 1
     te = numsteps
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputOcean]/Categ[Boundary]'
 
     nowdate = TIME_NOWDATE
