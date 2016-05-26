@@ -16,7 +16,7 @@ ORG_SRCS    = mod_user.f90
 # parameters for run
 INITCONF    = init.conf
 RUNCONF     = run.conf
-TPROC       = 1
+TPROC       = 2
 
 # required data (parameters,distributed files)
 DATDIR      = ../../../data

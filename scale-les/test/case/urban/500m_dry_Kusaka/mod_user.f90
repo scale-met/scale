@@ -135,7 +135,7 @@ contains
     use scale_grid_real, only: &
        REAL_lon
     use mod_cpl_vars, only: &
-       TMPA  => URB_ATM_TEMP,        &  ! air temperature
+       TMPA  => URB_ATM_TEMP,        &
        PRSA  => URB_ATM_PRES,        &
        WA    => URB_ATM_W,           &
        UA    => URB_ATM_U,           &
@@ -171,18 +171,87 @@ contains
     real(RP) :: PT  (0:24)
     real(RP) :: Wind(0:24)
 
-    data SW / 0.0,0.0,0.0,0.0,0.0,0.0,50.0,240.0,420.0,600.0,690.0,765.0,800.0, &
-              765.0,690.0,600.0,420.0,240.0,50.0,0.0,0.0,0.0,0.0,0.0,0.0/
+    data SW /     0.0_RP, & ! 00LST
+                  0.0_RP, & ! 01LST
+                  0.0_RP, & ! 02LST
+                  0.0_RP, & ! 03LST
+                  0.0_RP, & ! 04LST
+                  0.0_RP, & ! 05LST
+                 50.0_RP, & ! 06LST
+                240.0_RP, & ! 07LST
+                420.0_RP, & ! 08LST
+                600.0_RP, & ! 09LST
+                690.0_RP, & ! 10LST
+                765.0_RP, & ! 11LST
+                800.0_RP, & ! 12LST
+                765.0_RP, & ! 13LST
+                690.0_RP, & ! 14LST
+                600.0_RP, & ! 15LST
+                420.0_RP, & ! 16LST
+                240.0_RP, & ! 17LST
+                 50.0_RP, & ! 18LST
+                  0.0_RP, & ! 19LST
+                  0.0_RP, & ! 20LST
+                  0.0_RP, & ! 21LST
+                  0.0_RP, & ! 22LST
+                  0.0_RP, & ! 23LST
+                  0.0_RP  / ! 24LST
 
-    data PT / 28.0,27.8,27.65,27.5,27.35,27.2,27.1,27.5,27.85,28.25,28.8,29.4,30.0, &
-              30.2,30.4,30.6,30.35,30.1,29.85,29.55,29.15,28.75,28.5,28.25,28.0/
+    data PT /   28.00_RP, & ! 00LST
+                27.80_RP, & ! 01LST
+                27.65_RP, & ! 02LST
+                27.50_RP, & ! 03LST
+                27.35_RP, & ! 04LST
+                27.20_RP, & ! 05LST
+                27.10_RP, & ! 06LST
+                27.50_RP, & ! 07LST
+                27.85_RP, & ! 08LST
+                28.25_RP, & ! 09LST
+                28.80_RP, & ! 10LST
+                29.40_RP, & ! 11LST
+                30.00_RP, & ! 12LST
+                30.20_RP, & ! 13LST
+                30.40_RP, & ! 14LST
+                30.60_RP, & ! 15LST
+                30.35_RP, & ! 16LST
+                30.10_RP, & ! 17LST
+                29.85_RP, & ! 18LST
+                29.55_RP, & ! 19LST
+                29.15_RP, & ! 20LST
+                28.75_RP, & ! 21LST
+                28.50_RP, & ! 22LST
+                28.25_RP, & ! 23LST
+                28.00_RP  / ! 24LST
 
-    data Wind / 2.75,2.75,2.75,2.75,2.75,2.75,2.8,3.0,3.25,3.5,3.65,3.65,3.5, &
-                3.4,3.27,3.15,3.05,2.95,2.85,2.8,2.75,2.7,2.72,2.75,2.75/
+    data Wind /  2.75_RP, & ! 00LST
+                 2.75_RP, & ! 01LST
+                 2.75_RP, & ! 02LST
+                 2.75_RP, & ! 03LST
+                 2.75_RP, & ! 04LST
+                 2.75_RP, & ! 05LST
+                 2.80_RP, & ! 06LST
+                 3.00_RP, & ! 07LST
+                 3.25_RP, & ! 08LST
+                 3.50_RP, & ! 09LST
+                 3.65_RP, & ! 10LST
+                 3.65_RP, & ! 11LST
+                 3.50_RP, & ! 12LST
+                 3.40_RP, & ! 13LST
+                 3.27_RP, & ! 14LST
+                 3.15_RP, & ! 15LST
+                 3.05_RP, & ! 16LST
+                 2.95_RP, & ! 17LST
+                 2.85_RP, & ! 18LST
+                 2.80_RP, & ! 19LST
+                 2.75_RP, & ! 20LST
+                 2.70_RP, & ! 21LST
+                 2.72_RP, & ! 22LST
+                 2.75_RP, & ! 23LST
+                 2.75_RP  / ! 24LST
 
     real(RP) :: THETA
     real(RP) :: RovCP
-    integer :: k, i, j
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     RovCP = Rdry / CPdry
@@ -218,14 +287,13 @@ contains
 
           THETA     = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
                       + (        dsec ) * PT(tloc+1) ) + TEM00
-          WORK(i,j) = THETA                                  ! potential temp
           TMPA(i,j) = THETA * ( PRSA(i,j) / PRE00 )**RovCP   ! air temp, but now PRSA = 100000Pa
 
           UA  (i,j) = ( ( 1.0_RP-dsec ) * Wind(tloc  ) &
                       + (        dsec ) * Wind(tloc+1) )
 
-          LWD(i,j) = RWD(i,j,I_LW,1) + RWD(i,j,I_LW,2)
-          SWD(i,j) = RWD(i,j,I_SW,1) + RWD(i,j,I_SW,2)
+          LWD (i,j) = RWD(i,j,I_LW,1) + RWD(i,j,I_LW,2)
+          SWD (i,j) = RWD(i,j,I_SW,1) + RWD(i,j,I_SW,2)
 
        enddo
        enddo
