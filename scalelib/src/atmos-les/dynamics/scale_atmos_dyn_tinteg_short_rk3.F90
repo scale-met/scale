@@ -24,7 +24,6 @@ module scale_atmos_dyn_tinteg_short_rk3
   use scale_grid_index
   use scale_index
   use scale_tracer
-
 #ifdef DEBUG
   use scale_debug, only: &
      CHECK
@@ -68,19 +67,6 @@ module scale_atmos_dyn_tinteg_short_rk3
   real(RP), private, allocatable :: PROG_RK2(:,:,:,:)
 
   ! for communication
-  integer :: I_COMM_DENS = 1
-  integer :: I_COMM_MOMZ = 2
-  integer :: I_COMM_MOMX = 3
-  integer :: I_COMM_MOMY = 4
-  integer :: I_COMM_RHOT = 5
-  integer, allocatable :: I_COMM_PROG(:)
-
-  integer :: I_COMM_DENS_t = 1
-  integer :: I_COMM_MOMZ_t = 2
-  integer :: I_COMM_MOMX_t = 3
-  integer :: I_COMM_MOMY_t = 4
-  integer :: I_COMM_RHOT_t = 5
-
   integer :: I_COMM_DENS_RK1 = 1
   integer :: I_COMM_MOMZ_RK1 = 2
   integer :: I_COMM_MOMX_RK1 = 3
@@ -95,17 +81,12 @@ module scale_atmos_dyn_tinteg_short_rk3
   integer :: I_COMM_RHOT_RK2 = 5
   integer, allocatable :: I_COMM_PROG_RK2(:)
 
-  integer :: I_COMM_mflx_z = 1
-  integer :: I_COMM_mflx_x = 2
-  integer :: I_COMM_mflx_y = 3
-
   logical :: FLAG_WS2002
   real(RP) :: fact_dt1
   real(RP) :: fact_dt2
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_Tinteg_short_rk3_setup( &
@@ -176,7 +157,7 @@ contains
     do iv = 1, VA
        I_COMM_PROG_RK1(iv) = 5 + iv
        call COMM_vars8_init( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
-    end do
+    enddo
 
     call COMM_vars8_init( DENS_RK2, I_COMM_DENS_RK2 )
     call COMM_vars8_init( MOMZ_RK2, I_COMM_MOMZ_RK2 )
@@ -186,7 +167,7 @@ contains
     do iv = 1, VA
        I_COMM_PROG_RK2(iv) = 5 + iv
        call COMM_vars8_init( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
-    end do
+    enddo
 
     DENS_RK1(:,:,:) = UNDEF
     MOMZ_RK1(:,:,:) = UNDEF
@@ -208,19 +189,19 @@ contains
   !-----------------------------------------------------------------------------
   !> RK3
   subroutine ATMOS_DYN_tinteg_short_rk3( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
-       mflx_hi,  tflx_hi,                        & ! (out)
-       DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
-       Rtot, CVtot, CORIOLI,                     & ! (in)
-       num_diff, divdmp_coef, DDIV,              & ! (in)
-       FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
-       FLAG_FCT_ALONG_STREAM,                    & ! (in)
-       CDZ, FDZ, FDX, FDY,                       & ! (in)
-       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,       & ! (in)
-       PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
-       REF_pres, REF_dens,                       & ! (in)
-       BND_W, BND_E, BND_S, BND_N,               & ! (in)
-       dt                                        ) ! (in)
+       DENS, MOMZ, MOMX, MOMY, RHOT, PROG,     &
+       mflx_hi,  tflx_hi,                      &
+       DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t, &
+       Rtot, CVtot, CORIOLI,                   &
+       num_diff, divdmp_coef, DDIV,            &
+       FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
+       FLAG_FCT_ALONG_STREAM,                  &
+       CDZ, FDZ, FDX, FDY,                     &
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,     &
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,     &
+       REF_pres, REF_dens,                     &
+       BND_W, BND_E, BND_S, BND_N,             &
+       dt                                      )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -294,14 +275,10 @@ contains
 
     real(RP) :: dtrk
 
-    integer  :: IIS, IIE
-    integer  :: JJS, JJE
-    integer  :: i, j, k
-    integer  :: iv
-
+    integer  :: i, j, k, iv
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart("DYN_RK3_Prep", 3)
+    call PROF_rapstart("DYN_RK3_Prep",3)
 
 #ifdef DEBUG
     DENS_RK1(:,:,:) = UNDEF
@@ -320,7 +297,6 @@ contains
 
     mflx_hi(:,:,:,:) = UNDEF
     tflx_hi(:,:,:,:) = UNDEF
-
 #endif
 
 !OCL XFILL
@@ -336,47 +312,46 @@ contains
 !OCL XFILL
     if ( VA > 0 ) PROG0 = PROG
 
-    call PROF_rapend  ("DYN_RK3_Prep", 3)
-
+    call PROF_rapend  ("DYN_RK3_Prep",3)
 
     !------------------------------------------------------------------------
     ! Start RK
     !------------------------------------------------------------------------
 
-    call PROF_rapstart("DYN_RK3", 3)
-
     !##### RK1 : PROG0,PROG->PROG_RK1 #####
+
+    call PROF_rapstart("DYN_RK3",3)
 
     dtrk = dt * fact_dt1
 
-    call ATMOS_DYN_tstep( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
-                          PROG_RK1,                                         & ! (out)
-                          mflx_hi,  tflx_hi,                                & ! (out)
-                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
-                          DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
-                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
-                          PROG0, PROG,                                      & ! (in)
-                          Rtot, CVtot, CORIOLI,                             & ! (in)
-                          num_diff, divdmp_coef, DDIV,                      & ! (in)
-                          FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! (in)
-                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
-                          CDZ, FDZ, FDX, FDY,                               & ! (in)
-                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
-                          REF_pres, REF_dens,                               & ! (in)
-                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
-                          dtrk, dt                                          ) ! (in)
+    call ATMOS_DYN_tstep( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [OUT]
+                          PROG_RK1,                                         & ! [OUT]
+                          mflx_hi,  tflx_hi,                                & ! [OUT]
+                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
+                          DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [IN]
+                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
+                          PROG0, PROG,                                      & ! [IN]
+                          Rtot, CVtot, CORIOLI,                             & ! [IN]
+                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
+                          FLAG_FCT_ALONG_STREAM,                            & ! [IN]
+                          CDZ, FDZ, FDX, FDY,                               & ! [IN]
+                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
+                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
+                          REF_pres, REF_dens,                               & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          dtrk, dt                                          ) ! [IN]
 
-    call PROF_rapend  ("DYN_RK3", 3)
+    call PROF_rapend  ("DYN_RK3",3)
+    call PROF_rapstart("DYN_RK3_BND",3)
 
-    call PROF_rapstart("DYN_RK3_BND", 3)
+    call ATMOS_DYN_Copy_boundary( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [INOUT]
+                                  PROG_RK1,                                         & ! [INOUT]
+                                  DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
+                                  PROG0,                                            & ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N                        ) ! [IN]
 
-    call ATMOS_DYN_Copy_boundary( &
-         DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, PROG_RK1, & ! (inout)
-         DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    PROG0,    & ! (in)
-         BND_W, BND_E, BND_S, BND_N ) ! (in)
-
-    call PROF_rapend  ("DYN_RK3_BND", 3)
+    call PROF_rapend  ("DYN_RK3_BND",3)
 
     call COMM_vars8( DENS_RK1(:,:,:), I_COMM_DENS_RK1 )
     call COMM_vars8( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1 )
@@ -385,7 +360,8 @@ contains
     call COMM_vars8( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1 )
     do iv = 1, VA
        call COMM_vars8( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
-    end do
+    enddo
+
     call COMM_wait ( DENS_RK1(:,:,:), I_COMM_DENS_RK1, .false. )
     call COMM_wait ( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1, .false. )
     call COMM_wait ( MOMX_RK1(:,:,:), I_COMM_MOMX_RK1, .false. )
@@ -393,42 +369,42 @@ contains
     call COMM_wait ( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1, .false. )
     do iv = 1, VA
        call COMM_wait ( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv), .false. )
-    end do
+    enddo
 
     !##### RK2 : PROG0,PROG_RK1->PROG_RK2 #####
 
-    call PROF_rapstart("DYN_RK3", 3)
+    call PROF_rapstart("DYN_RK3",3)
 
     dtrk = dt * fact_dt2
 
-    call ATMOS_DYN_tstep( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
-                          PROG_RK2,                                         & ! (out)
-                          mflx_hi,  tflx_hi,                                & ! (out)
-                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
-                          DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
-                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
-                          PROG0, PROG_RK1,                                  & ! (in)
-                          Rtot, CVtot, CORIOLI,                             & ! (in)
-                          num_diff, divdmp_coef, DDIV,                      & ! (in)
-                          FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! (in)
-                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
-                          CDZ, FDZ, FDX, FDY,                               & ! (in)
-                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
-                          REF_pres, REF_dens,                               & ! (in)
-                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
-                          dtrk, dt                                          ) ! (in)
+    call ATMOS_DYN_tstep( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [OUT]
+                          PROG_RK2,                                         & ! [OUT]
+                          mflx_hi,  tflx_hi,                                & ! [OUT]
+                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
+                          DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [IN]
+                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
+                          PROG0, PROG_RK1,                                  & ! [IN]
+                          Rtot, CVtot, CORIOLI,                             & ! [IN]
+                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
+                          FLAG_FCT_ALONG_STREAM,                            & ! [IN]
+                          CDZ, FDZ, FDX, FDY,                               & ! [IN]
+                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
+                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
+                          REF_pres, REF_dens,                               & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          dtrk, dt                                          ) ! [IN]
 
-    call PROF_rapend  ("DYN_RK3", 3)
+    call PROF_rapend  ("DYN_RK3",3)
+    call PROF_rapstart("DYN_RK3_BND",3)
 
-    call PROF_rapstart("DYN_RK3_BND", 3)
+    call ATMOS_DYN_Copy_boundary( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [INOUT]
+                                  PROG_RK2,                                         & ! [INOUT]
+                                  DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
+                                  PROG0,                                            & ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N                        ) ! [IN]
 
-    call ATMOS_DYN_Copy_boundary( &
-         DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, PROG_RK2, & ! (inout)
-         DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    PROG0,    & ! (in)
-         BND_W, BND_E, BND_S, BND_N ) ! (in)
-
-    call PROF_rapend  ("DYN_RK3_BND", 3)
+    call PROF_rapend  ("DYN_RK3_BND",3)
 
     call COMM_vars8( DENS_RK2(:,:,:), I_COMM_DENS_RK2 )
     call COMM_vars8( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2 )
@@ -437,7 +413,8 @@ contains
     call COMM_vars8( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2 )
     do iv = 1, VA
        call COMM_vars8( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
-    end do
+    enddo
+
     call COMM_wait ( DENS_RK2(:,:,:), I_COMM_DENS_RK2, .false. )
     call COMM_wait ( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2, .false. )
     call COMM_wait ( MOMX_RK2(:,:,:), I_COMM_MOMX_RK2, .false. )
@@ -445,80 +422,97 @@ contains
     call COMM_wait ( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2, .false. )
     do iv = 1, VA
        call COMM_wait ( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv), .false. )
-    end do
+    enddo
 
     !##### RK3 : PROG0,PROG_RK2->PROG #####
 
-    call PROF_rapstart("DYN_RK3", 3)
+    call PROF_rapstart("DYN_RK3",3)
 
     dtrk = dt
 
-    call ATMOS_DYN_tstep( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (out)
-                          PROG,                                             & ! (out)
-                          mflx_hi,  tflx_hi,                                & ! (out)
-                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
-                          DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
-                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
-                          PROG0, PROG_RK2,                                  & ! (in)
-                          Rtot, CVtot, CORIOLI,                             & ! (in)
-                          num_diff, divdmp_coef, DDIV,                      & ! (in)
-                          FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! (in)
-                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
-                          CDZ, FDZ, FDX, FDY,                               & ! (in)
-                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
-                          REF_pres, REF_dens,                               & ! (in)
-                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
-                          dtrk, dt                                          ) ! (in)
+    call ATMOS_DYN_tstep( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [OUT]
+                          PROG,                                             & ! [OUT]
+                          mflx_hi,  tflx_hi,                                & ! [OUT]
+                          DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
+                          DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [IN]
+                          DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
+                          PROG0, PROG_RK2,                                  & ! [IN]
+                          Rtot, CVtot, CORIOLI,                             & ! [IN]
+                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
+                          FLAG_FCT_ALONG_STREAM,                            & ! [IN]
+                          CDZ, FDZ, FDX, FDY,                               & ! [IN]
+                          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
+                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
+                          REF_pres, REF_dens,                               & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          dtrk, dt                                          ) ! [IN]
 
-    if ( .not. FLAG_WS2002 ) then
+    if ( .NOT. FLAG_WS2002 ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          DENS(k,i,j) = ( DENS_RK1(k,i,j) * 3.0_RP + DENS(k,i,j) * 3.0_RP - DENS0(k,i,j) * 2.0_RP ) / 4.0_RP
-       end do
-       end do
-       end do
+          DENS(k,i,j) = ( DENS_RK1(k,i,j) * 3.0_RP &
+                        + DENS    (k,i,j) * 3.0_RP &
+                        - DENS0   (k,i,j) * 2.0_RP ) / 4.0_RP
+       enddo
+       enddo
+       enddo
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE-1
-          MOMZ(k,i,j) = ( MOMZ_RK1(k,i,j) * 3.0_RP + MOMZ(k,i,j) * 3.0_RP - MOMZ0(k,i,j) * 2.0_RP ) / 4.0_RP
-       end do
-       end do
-       end do
+          MOMZ(k,i,j) = ( MOMZ_RK1(k,i,j) * 3.0_RP &
+                        + MOMZ    (k,i,j) * 3.0_RP &
+                        - MOMZ0   (k,i,j) * 2.0_RP ) / 4.0_RP
+       enddo
+       enddo
+       enddo
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          MOMX(k,i,j) = ( MOMX_RK1(k,i,j) * 3.0_RP + MOMX(k,i,j) * 3.0_RP - MOMX0(k,i,j) * 2.0_RP ) / 4.0_RP
-       end do
-       end do
-       end do
+          MOMX(k,i,j) = ( MOMX_RK1(k,i,j) * 3.0_RP &
+                        + MOMX    (k,i,j) * 3.0_RP &
+                        - MOMX0   (k,i,j) * 2.0_RP ) / 4.0_RP
+       enddo
+       enddo
+       enddo
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          MOMY(k,i,j) = ( MOMY_RK1(k,i,j) * 3.0_RP + MOMY(k,i,j) * 3.0_RP - MOMY0(k,i,j) * 2.0_RP ) / 4.0_RP
-       end do
-       end do
-       end do
+          MOMY(k,i,j) = ( MOMY_RK1(k,i,j) * 3.0_RP &
+                        + MOMY    (k,i,j) * 3.0_RP &
+                        - MOMY0   (k,i,j) * 2.0_RP ) / 4.0_RP
+       enddo
+       enddo
+       enddo
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          RHOT(k,i,j) = ( RHOT_RK1(k,i,j) * 3.0_RP + RHOT(k,i,j) * 3.0_RP - RHOT0(k,i,j) * 2.0_RP ) / 4.0_RP
-       end do
-       end do
-       end do
+          RHOT(k,i,j) = ( RHOT_RK1(k,i,j) * 3.0_RP &
+                        + RHOT    (k,i,j) * 3.0_RP &
+                        - RHOT0   (k,i,j) * 2.0_RP ) / 4.0_RP
+       enddo
+       enddo
+       enddo
+
        do iv = 1, VA
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          PROG(k,i,j,iv) = ( PROG_RK1(k,i,j,iv) * 3.0_RP + PROG(k,i,j,iv) * 3.0_RP - PROG0(k,i,j,iv) * 2.0_RP ) / 4.0_RP
-       end do
-       end do
-       end do
-       end do
-    end if
+          PROG(k,i,j,iv) = ( PROG_RK1(k,i,j,iv) * 3.0_RP &
+                           + PROG    (k,i,j,iv) * 3.0_RP &
+                           - PROG0   (k,i,j,iv) * 2.0_RP ) / 4.0_RP
+       enddo
+       enddo
+       enddo
+       enddo
+    endif
 
-    call PROF_rapend  ("DYN_RK3", 3)
+    call PROF_rapend  ("DYN_RK3",3)
 
     return
   end subroutine ATMOS_DYN_tinteg_short_rk3

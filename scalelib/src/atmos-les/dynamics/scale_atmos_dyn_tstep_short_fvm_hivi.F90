@@ -25,13 +25,12 @@ module scale_atmos_dyn_tstep_short_fvm_hivi
   use scale_grid_index
   use scale_index
   use scale_tracer
-
 #ifdef DEBUG
   use scale_debug, only: &
-       CHECK
+     CHECK
   use scale_const, only: &
-       UNDEF  => CONST_UNDEF,  &
-       IUNDEF => CONST_UNDEF2
+     UNDEF  => CONST_UNDEF, &
+     IUNDEF => CONST_UNDEF2
 #endif
   !-----------------------------------------------------------------------------
   implicit none
@@ -56,43 +55,44 @@ module scale_atmos_dyn_tstep_short_fvm_hivi
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: VA_FVM_HIVI = 0
+  integer,  private, parameter :: VA_FVM_HIVI = 0
 
-  integer,  private :: ITMAX
-  real(RP), private :: epsilon
+  integer,  private            :: ITMAX
+  real(RP), private            :: epsilon
 
-  integer, private :: mtype ! MPI DATATYPE
+  integer,  private            :: mtype ! MPI DATATYPE
 
   ! tentative
   real(RP), private, parameter :: FACT_N =  7.0_RP / 12.0_RP
   real(RP), private, parameter :: FACT_F = -1.0_RP / 12.0_RP
 
   !-----------------------------------------------------------------------------
-
-
 contains
-
   !-----------------------------------------------------------------------------
   !> Register
   subroutine ATMOS_DYN_Tstep_short_fvm_hivi_regist( &
        ATMOS_DYN_TYPE, &
-       VA_out, &
-       VAR_NAME, VAR_DESC, VAR_UNIT )
+       VA_out,         &
+       VAR_NAME,       &
+       VAR_DESC,       &
+       VAR_UNIT        )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
-    integer,                intent(out) :: VA_out !< number of prognostic variables
+    integer,                intent(out) :: VA_out      !< number of prognostic variables
     character(len=H_SHORT), intent(out) :: VAR_NAME(:) !< name  of the variables
     character(len=H_MID),   intent(out) :: VAR_DESC(:) !< desc. of the variables
     character(len=H_SHORT), intent(out) :: VAR_UNIT(:) !< unit  of the variables
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Register'
 
     if ( ATMOS_DYN_TYPE .ne. 'FVM-HIVI' .or. ATMOS_DYN_TYPE .ne. 'HIVI' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HIVI. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     VA_out = VA_FVM_HIVI
 
@@ -104,22 +104,16 @@ contains
   subroutine ATMOS_DYN_Tstep_short_fvm_hivi_setup
     use scale_process, only: &
        PRC_MPIstop
-#ifdef DRY
-    use scale_const, only: &
-       CVdry  => CONST_CVdry,  &
-       CPdry  => CONST_CPdry
-#endif
     implicit none
-
-    integer :: ierr
 
     namelist / PARAM_ATMOS_DYN_TSTEP_FVM_HIVI / &
          ITMAX, &
          EPSILON
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Setup'
-
 #ifdef HIVI_BICGSTAB
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
 #else
@@ -129,10 +123,9 @@ contains
 #endif
 
     ! currently, vertical difference scheme for potential temperature is the CD4
-
-
     ITMAX = 100
     epsilon = 0.1_RP ** (RP*2)
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI,iostat=ierr)
@@ -145,45 +138,39 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
 
-
     if ( RP == DP ) then
        mtype = MPI_DOUBLE_PRECISION
-    else if ( RP == SP ) then
+    elseif( RP == SP ) then
        mtype = MPI_REAL
     else
        write(*,*) 'xxx Unsupported precision'
        call PRC_MPIstop
-    end if
+    endif
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hivi_setup
 
-
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_Tstep_short_fvm_hivi( &
-    DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-    PROG_RK,                                     &
-    mflx_hi, tflx_hi,                            &
-    DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
-    DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
-    DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
-    PROG0, PROG,                                 &
-    DPRES0, RT2P, CORIOLI,                       &
-    num_diff, divdmp_coef, DDIV,                 &
-    FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
-    FLAG_FCT_ALONG_STREAM,                       &
-    CDZ, FDZ, FDX, FDY,                          &
-    RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-    PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
-    REF_dens, REF_rhot,                          &
-    BND_W, BND_E, BND_S, BND_N,                  &
-    dtrk, dt                                     )
+       DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
+       PROG_RK,                                     &
+       mflx_hi, tflx_hi,                            &
+       DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
+       DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
+       DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
+       PROG0, PROG,                                 &
+       DPRES0, RT2P, CORIOLI,                       &
+       num_diff, divdmp_coef, DDIV,                 &
+       FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
+       FLAG_FCT_ALONG_STREAM,                       &
+       CDZ, FDZ, FDX, FDY,                          &
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
+       REF_dens, REF_rhot,                          &
+       BND_W, BND_E, BND_S, BND_N,                  &
+       dtrk, dt                                     )
     use scale_grid_index
     use scale_const, only: &
-#ifdef DRY
-       Rdry   => CONST_Rdry,   &
-       CVdry  => CONST_CVdry,  &
-       CPdry  => CONST_CPdry,  &
-#endif
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00
     use scale_comm, only: &
@@ -193,23 +180,23 @@ contains
        ATMOS_DYN_fct
     use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_valueW_Z, &
-       ATMOS_DYN_FVM_fluxZ_XYZ, &
-       ATMOS_DYN_FVM_fluxX_XYZ, &
-       ATMOS_DYN_FVM_fluxY_XYZ, &
-       ATMOS_DYN_FVM_fluxZ_XYW, &
-       ATMOS_DYN_FVM_fluxJ13_XYW, &
-       ATMOS_DYN_FVM_fluxJ23_XYW, &
-       ATMOS_DYN_FVM_fluxX_XYW, &
-       ATMOS_DYN_FVM_fluxY_XYW, &
-       ATMOS_DYN_FVM_fluxZ_UYZ, &
-       ATMOS_DYN_FVM_fluxJ13_UYZ, &
-       ATMOS_DYN_FVM_fluxJ23_UYZ, &
-       ATMOS_DYN_FVM_fluxX_UYZ, &
-       ATMOS_DYN_FVM_fluxY_UYZ, &
-       ATMOS_DYN_FVM_fluxZ_XVZ, &
-       ATMOS_DYN_FVM_fluxJ13_XVZ, &
-       ATMOS_DYN_FVM_fluxJ23_XVZ, &
-       ATMOS_DYN_FVM_fluxX_XVZ, &
+       ATMOS_DYN_FVM_fluxZ_XYZ,     &
+       ATMOS_DYN_FVM_fluxX_XYZ,     &
+       ATMOS_DYN_FVM_fluxY_XYZ,     &
+       ATMOS_DYN_FVM_fluxZ_XYW,     &
+       ATMOS_DYN_FVM_fluxJ13_XYW,   &
+       ATMOS_DYN_FVM_fluxJ23_XYW,   &
+       ATMOS_DYN_FVM_fluxX_XYW,     &
+       ATMOS_DYN_FVM_fluxY_XYW,     &
+       ATMOS_DYN_FVM_fluxZ_UYZ,     &
+       ATMOS_DYN_FVM_fluxJ13_UYZ,   &
+       ATMOS_DYN_FVM_fluxJ23_UYZ,   &
+       ATMOS_DYN_FVM_fluxX_UYZ,     &
+       ATMOS_DYN_FVM_fluxY_UYZ,     &
+       ATMOS_DYN_FVM_fluxZ_XVZ,     &
+       ATMOS_DYN_FVM_fluxJ13_XVZ,   &
+       ATMOS_DYN_FVM_fluxJ23_XVZ,   &
+       ATMOS_DYN_FVM_fluxX_XVZ,     &
        ATMOS_DYN_FVM_fluxY_XVZ
     use scale_gridtrans, only: &
        I_XYZ, &
@@ -353,10 +340,8 @@ contains
     RCs2(:,:,:) = UNDEF
 
     B(:,:,:) = UNDEF
-
     r(:,:,:) = UNDEF
     p(:,:,:) = UNDEF
-
 #endif
 
     rdt = 1.0_RP / dtrk
@@ -392,7 +377,7 @@ contains
           call CHECK( __LINE__, REF_dens(k,i,j) )
 #endif
           DDENS(k,i,j) = DENS(k,i,j) - REF_dens(k,i,j)
-       end do
+       enddo
        enddo
        enddo
 
@@ -877,9 +862,9 @@ contains
                             + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                             / GSQRT(k,i,j,I_XYZ) &
                           + St(k,i,j) )
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        !##### continuous equation #####
 
@@ -916,8 +901,8 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    end do
-    end do
+    enddo
+    enddo
 
     ! implicit solver
 #ifdef HIVI_BICGSTAB
@@ -1008,9 +993,9 @@ contains
                              - ( DENS(k+1,i,j)*(RHOT_RK(k+1,i,j)/DENS_RK(k+1,i,j) - POTT(k+1,i,j) ) &
                                - DENS(k-1,i,j)*(RHOT_RK(k-1,i,j)/DENS_RK(k-1,i,j) - POTT(k-1,i,j) ) ) &
                              ) / ( FDZ(k) + FDZ(k-1) )
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1270,8 +1255,8 @@ contains
                                + RHOT(KE-1,i,j)*DDENS(KE-1,i,j)/DENS(KE-1,i,j) &
                                - DENS(KE-1,i,j)*(RHOT_RK(KE-1,i,j)/DENS_RK(KE-1,i,j) - POTT(KE-1,i,j) ) ) &
                              / ( FDZ(KE) + FDZ(KE-1) )
-       end do
-       end do
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1286,8 +1271,8 @@ contains
             I_XYZ, I_XYW, &
             IIS, IIE, JJS, JJE )
 
-    end do
-    end do
+    enddo
+    enddo
 
     call solve_bicgstab( &
        DPRES_N, & ! (out)
@@ -1513,9 +1498,9 @@ contains
                             + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                             / GSQRT(k,i,j,I_XYZ) &
                           + St(k,i,j) )
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        !##### continuous equation #####
 
@@ -1524,23 +1509,23 @@ contains
        do i = IIS, IIE
        do k = KS, KE-1
           mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) + mflx_hi2(k,i,j,ZDIR)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE
           mflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) + mflx_hi2(k,i,j,XDIR)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS, KE
           mflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) + mflx_hi2(k,i,j,YDIR)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        !--- update density
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1651,9 +1636,9 @@ contains
        do i = IIS, IIE
        do k = KS, KE
           norm = norm + B(k,i,j)**2
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1667,9 +1652,9 @@ contains
           call CHECK( __LINE__, v1(k,i,j) )
 #endif
           r(k,i,j) = B(k,i,j) - v1(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1679,9 +1664,9 @@ contains
        do k = KS, KE
           r0(k,i,j) = r(k,i,j)
           p(k,i,j) = r(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1694,15 +1679,15 @@ contains
           call CHECK( __LINE__, r0(k,i,j) )
 #endif
           r0r = r0r + r0(k,i,j) * r(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    end do
-    end do
+    enddo
+    enddo
 
     iprod(1) = r0r
     iprod(2) = norm
@@ -1722,9 +1707,9 @@ contains
           call CHECK( __LINE__, r(k,i,j) )
 #endif
           error = error + r(k,i,j)**2
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1739,7 +1724,7 @@ contains
          IF ( IO_L ) write(*,*) "Bi-CGSTAB converged:", iter
 #endif
           exit
-       end if
+       endif
        error2 = error
 
        call COMM_vars8( p, 1 )
@@ -1755,9 +1740,9 @@ contains
           call CHECK( __LINE__, Mp(k,i,j) )
 #endif
           iprod(1) = iprod(1) + r0(k,i,j) * Mp(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1772,9 +1757,9 @@ contains
           call CHECK( __LINE__, Mp(k,i,j) )
 #endif
           s(k,i,j) = r(k,i,j) - al*Mp(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1793,9 +1778,9 @@ contains
 #endif
           iprod(1) = iprod(1) + Ms(k,i,j) *  s(k,i,j)
           iprod(2) = iprod(2) + Ms(k,i,j) * Ms(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1817,9 +1802,9 @@ contains
           call CHECK( __LINE__, s(k,i,j) )
 #endif
           DPRES_N(k,i,j) = DPRES(k,i,j) + al*p(k,i,j) + w*s(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1832,9 +1817,9 @@ contains
           call CHECK( __LINE__, Ms(k,i,j) )
 #endif
           rn(k,i,j) = s(k,i,j) - w*Ms(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1848,15 +1833,15 @@ contains
           call CHECK( __LINE__, rn(k,i,j) )
 #endif
           iprod(1) = iprod(1) + r0(k,i,j) * rn(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    end do
-    end do
+    enddo
+    enddo
 
        call MPI_AllReduce(iprod, r0r, 1, mtype, MPI_SUM, COMM_world, ierror)
 
@@ -1870,9 +1855,9 @@ contains
           call CHECK( __LINE__, Mp(k,i,j) )
 #endif
           p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mp(k,i,j) )
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1883,13 +1868,13 @@ contains
 #ifdef DEBUG
        rn(:,:,:) = UNDEF
 #endif
-    end do
+    enddo
 
     if ( iter >= ITMAX ) then
        write(*,*) 'xxx [atmos_dyn_hivi] Bi-CGSTAB'
        write(*,*) 'xxx not converged', error, norm
        call PRC_MPIstop
-    end if
+    endif
 
     return
   end subroutine solve_bicgstab
@@ -1989,9 +1974,9 @@ contains
                     + FACT_F * (POTT(k+2,i,j)+POTT(k-1,i,j)) ) &
                   * RFDZ(k  ) * RCDZ(k) &
                   + GRAV * J33G * RCs2(k+1,i,j) / ( FDZ(k)+FDZ(k-1) )
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -2176,8 +2161,8 @@ contains
                   * 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) &
                   * RFDZ(KE-1) * RCDZ(KE) &
                   - GRAV * J33G * RCs2(KE-1,i,j) / ( FDZ(KE)+FDZ(KE-1) )
-    end do
-    end do
+    enddo
+    enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -2221,9 +2206,9 @@ contains
                   * ( FACT_N * (POTT(k,i,j+1)+POTT(k,i,j  )) &
                     + FACT_F * (POTT(k,i,j+2)+POTT(k,i,j-1)) ) &
                   * RFDY(j  ) * RCDY(j)
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -2269,9 +2254,9 @@ contains
                 + M(5,k,i,j) * C(k  ,i+1,j  ) &
                 + M(6,k,i,j) * C(k  ,i  ,j-1) &
                 + M(7,k,i,j) * C(k  ,i  ,j+1)
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -2315,8 +2300,8 @@ contains
                  + M(5,KE,i,j) * C(KE  ,i+1,j  ) &
                  + M(6,KE,i,j) * C(KE  ,i  ,j-1) &
                  + M(7,KE,i,j) * C(KE  ,i  ,j+1)
-    end do
-    end do
+    enddo
+    enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -2347,10 +2332,10 @@ contains
        if ( abs(B2(k,i,j) - B(k,i,j) ) / B(k,i,j) > 1.e-5_RP ) then
           write(*,*) "solver error is too large: ", k,i,j, B(k,i,j) , B2(k,i,j)
           call abort
-       end if
-    end do
-    end do
-    end do
+       endif
+    enddo
+    enddo
+    enddo
 
   end subroutine check_solver
 
@@ -2375,10 +2360,10 @@ contains
        if ( abs( lhs - rhs ) / lhs > 1e-15 ) then
           write(*,*) "error is too large: ", k,i,j, lhs, rhs
           call abort
-       end if
-    end do
-    end do
-    end do
+       endif
+    enddo
+    enddo
+    enddo
   end subroutine check_pres
 #endif
 

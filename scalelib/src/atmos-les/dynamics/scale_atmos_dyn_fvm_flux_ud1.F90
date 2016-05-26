@@ -86,24 +86,23 @@ module scale_atmos_dyn_fvm_flux_ud1
 
   real(RP), parameter :: F1  =  0.5_RP
 
-
 contains
-
   !-----------------------------------------------------------------------------
   !> value at XYW
 !OCL SERIAL
   subroutine ATMOS_DYN_FVM_flux_valueW_Z_ud1( &
-       valW, &
+       valW,             &
        mflx, val, GSQRT, &
-       CDZ )
+       CDZ               )
     implicit none
-    real(RP), intent(out) :: valW  (KA)
-    real(RP), intent(in)  :: mflx    (KA)
-    real(RP), intent(in)  :: val     (KA)
-    real(RP), intent(in)  :: GSQRT   (KA)
-    real(RP), intent(in)  :: CDZ(KA)
 
-    integer  :: k, i, j
+    real(RP), intent(out) :: valW (KA)
+    real(RP), intent(in)  :: mflx (KA)
+    real(RP), intent(in)  :: val  (KA)
+    real(RP), intent(in)  :: GSQRT(KA)
+    real(RP), intent(in)  :: CDZ  (KA)
+
+    integer  :: k
     !---------------------------------------------------------------------------
 
     do k = KS, KE-1
@@ -114,7 +113,7 @@ contains
        call CHECK( __LINE__, val(k+1) )
 
 #endif
-       valW(k) = F1 * ( val(k+1)+val(k) ) - sign(F1,mflx(k)) * ( val(k+1)-val(k) )
+       valW(k)       = F1 * ( val(k+1)+val(k) ) - sign(F1,mflx(k)) * ( val(k+1)-val(k) )
     enddo
 #ifdef DEBUG
     k = IUNDEF
@@ -124,25 +123,25 @@ contains
 
 #endif
 
-
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_ud1
 
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYZ
   subroutine ATMOS_DYN_FVM_fluxZ_XYZ_ud1( &
-       flux, &
-       mflx, val, GSQRT, &
+       flux,              &
+       mflx, val, GSQRT,  &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -162,7 +161,7 @@ contains
 #endif
        vel = mflx(k,i,j)
        flux(k,i,j) = vel &
-            * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -188,16 +187,16 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_fluxZ_XYZ_ud1
 
-
   !-----------------------------------------------------------------------------
   !> calculation X-flux at XYZ
   subroutine ATMOS_DYN_FVM_fluxX_XYZ_ud1( &
-       flux, &
-       mflx, val, GSQRT, &
+       flux,              &
+       mflx, val, GSQRT,  &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -223,7 +222,7 @@ contains
 #endif
        vel = mflx(k,i,j)
        flux(k,i,j) = vel &
-            * ( F1 * ( val(k,i+1,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i+1,j)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k,i+1,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i+1,j)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -237,12 +236,13 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation Y-flux at XYZ
   subroutine ATMOS_DYN_FVM_fluxY_XYZ_ud1( &
-       flux, &
-       mflx, val, GSQRT, &
+       flux,              &
+       mflx, val, GSQRT,  &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -268,7 +268,7 @@ contains
 #endif
        vel = mflx(k,i,j)
        flux(k,i,j) = vel &
-            * ( F1 * ( val(k,i,j+1)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i,j+1)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k,i,j+1)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i,j+1)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -280,18 +280,18 @@ contains
   end subroutine ATMOS_DYN_FVM_fluxY_XYZ_ud1
 
 
-
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYW
   subroutine ATMOS_DYN_FVM_fluxZ_XYW_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, J33G, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, J33G,       &
 
-       CDZ, FDZ, &
-       dtrk, &
+       CDZ, FDZ,          &
+       dtrk,              &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -299,8 +299,8 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: J33G
 
-    real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(in)  :: FDZ(KA-1)
+    real(RP), intent(in)  :: CDZ     (KA)
+    real(RP), intent(in)  :: FDZ     (KA-1)
     real(RP), intent(in)  :: dtrk
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -327,7 +327,7 @@ contains
                         + mom(k,i,j) ) ) &
            / DENS(k,i,j)
        flux(k-1,i,j) = J33G * vel &
-            * ( F1 * ( val(k,i,j)+val(k-1,i,j) ) - sign(F1,vel) * ( val(k,i,j)-val(k-1,i,j) ) ) 
+                   * ( F1 * ( val(k,i,j)+val(k-1,i,j) ) - sign(F1,vel) * ( val(k,i,j)-val(k-1,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -360,20 +360,21 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation J13-flux at XYW
   subroutine ATMOS_DYN_FVM_fluxJ13_XYW_ud1( &
-       flux, &
-       mom, val, DENS, &
+       flux,              &
+       mom, val, DENS,    &
        GSQRT, J13G, MAPF, &
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-    real(RP), intent(in)  :: J13G(KA,IA,JA)
+    real(RP), intent(in)  :: J13G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -387,7 +388,7 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i-1,j) ) ) &
            / DENS(k,i,j)
        flux(k-1,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
-            * ( F1 * ( val(k,i,j)+val(k-1,i,j) ) - sign(F1,vel) * ( val(k,i,j)-val(k-1,i,j) ) )
+                   * ( F1 * ( val(k,i,j)+val(k-1,i,j) ) - sign(F1,vel) * ( val(k,i,j)-val(k-1,i,j) ) )
     enddo
     enddo
     enddo
@@ -407,20 +408,21 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation J23-flux at XYW
   subroutine ATMOS_DYN_FVM_fluxJ23_XYW_ud1( &
-       flux, &
-       mom, val, DENS, &
+       flux,              &
+       mom, val, DENS,    &
        GSQRT, J23G, MAPF, &
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-    real(RP), intent(in)  :: J23G(KA,IA,JA)
+    real(RP), intent(in)  :: J23G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -434,7 +436,7 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j-1) ) ) &
            / DENS(k,i,j)
        flux(k-1,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
-            * ( F1 * ( val(k,i,j)+val(k-1,i,j) ) - sign(F1,vel) * ( val(k,i,j)-val(k-1,i,j) ) )
+                   * ( F1 * ( val(k,i,j)+val(k-1,i,j) ) - sign(F1,vel) * ( val(k,i,j)-val(k-1,i,j) ) )
     enddo
     enddo
     enddo
@@ -455,13 +457,14 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation X-flux at XYW
   subroutine ATMOS_DYN_FVM_fluxX_XYW_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, MAPF, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, MAPF,       &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -469,7 +472,7 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -488,12 +491,16 @@ contains
        call CHECK( __LINE__, val(k,i+1,j) )
 
 #endif
-       vel = ( F2H(k,1,I_UYZ) * mom(k+1,i,j) &
-             + F2H(k,2,I_UYZ) * mom(k,i,j) ) &
-           / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-             + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
+       vel = ( F2H(k,1,I_UYZ) &
+             * mom(k+1,i,j) &
+             + F2H(k,2,I_UYZ) &
+             * mom(k,i,j) ) &
+           / ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+2) * vel &
-            * ( F1 * ( val(k,i+1,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i+1,j)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k,i+1,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i+1,j)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -517,13 +524,14 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation Y-flux at XYW
   subroutine ATMOS_DYN_FVM_fluxY_XYW_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, MAPF, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, MAPF,       &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -531,7 +539,7 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -550,12 +558,16 @@ contains
        call CHECK( __LINE__, val(k,i,j+1) )
 
 #endif
-       vel = ( F2H(k,1,I_XVZ) * mom(k+1,i,j) &
-             + F2H(k,2,I_XVZ) * mom(k,i,j) ) &
-           / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-             + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
+       vel = ( F2H(k,1,I_XVZ) &
+             * mom(k+1,i,j) &
+             + F2H(k,2,I_XVZ) &
+             * mom(k,i,j) ) &
+           / ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+1) * vel &
-            * ( F1 * ( val(k,i,j+1)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i,j+1)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k,i,j+1)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i,j+1)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -580,13 +592,14 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation z-flux at UY
   subroutine ATMOS_DYN_FVM_fluxZ_UYZ_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, J33G, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, J33G,       &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -594,7 +607,7 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: J33G
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -614,10 +627,12 @@ contains
 
 #endif
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i+1,j) ) ) &
-           / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-             + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
+           / ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J33G * vel &
-            * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -643,25 +658,24 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_fluxZ_UYZ_ud1
 
-
-
   !-----------------------------------------------------------------------------
   !> calculation J13-flux at UYZ
   subroutine ATMOS_DYN_FVM_fluxJ13_UYZ_ud1( &
-       flux, &
-       mom, val, DENS, &
+       flux,              &
+       mom, val, DENS,    &
        GSQRT, J13G, MAPF, &
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-    real(RP), intent(in)  :: J13G(KA,IA,JA)
+    real(RP), intent(in)  :: J13G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -672,12 +686,16 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
-       vel = ( F2H(k,1,I_UYZ) * mom(k+1,i,j) &
-             + F2H(k,2,I_UYZ) * mom(k,i,j) ) &
-           / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-             + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
+       vel = ( F2H(k,1,I_UYZ) &
+             * mom(k+1,i,j) &
+             + F2H(k,2,I_UYZ) &
+             * mom(k,i,j) ) &
+           / ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
-            * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) )
+                   * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) )
     enddo
     enddo
     enddo
@@ -697,20 +715,21 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation J23-flux at UYZ
   subroutine ATMOS_DYN_FVM_fluxJ23_UYZ_ud1( &
-       flux, &
-       mom, val, DENS, &
+       flux,              &
+       mom, val, DENS,    &
        GSQRT, J23G, MAPF, &
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-    real(RP), intent(in)  :: J23G(KA,IA,JA)
+    real(RP), intent(in)  :: J23G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -721,12 +740,16 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
-       vel = ( F2H(k,1,I_XVZ) * 0.25_RP * ( mom(k+1,i,j)+mom(k+1,i+1,j)+mom(k+1,i,j-1)+mom(k+1,i+1,j-1) ) &
-             + F2H(k,2,I_XVZ) * 0.25_RP * ( mom(k,i,j)+mom(k,i+1,j)+mom(k,i,j-1)+mom(k,i+1,j-1) ) ) &
-           / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-             + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
+       vel = ( F2H(k,1,I_XVZ) &
+             * 0.25_RP * ( mom(k+1,i,j)+mom(k+1,i+1,j)+mom(k+1,i,j-1)+mom(k+1,i+1,j-1) ) &
+             + F2H(k,2,I_XVZ) &
+             * 0.25_RP * ( mom(k,i,j)+mom(k,i+1,j)+mom(k,i,j-1)+mom(k,i+1,j-1) ) ) &
+           / ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
-            * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) )
+                   * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) )
     enddo
     enddo
     enddo
@@ -743,17 +766,17 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_fluxJ23_UYZ_ud1
 
-
   !-----------------------------------------------------------------------------
   !> calculation X-flux at UY
   subroutine ATMOS_DYN_FVM_fluxX_UYZ_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, MAPF, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, MAPF,       &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -761,7 +784,7 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -785,7 +808,7 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i-1,j) ) ) &
            / ( DENS(k,i,j) )
        flux(k,i-1,j) = GSQRT(k,i,j) / MAPF(i,j,+2) * vel &
-            * ( F1 * ( val(k,i,j)+val(k,i-1,j) ) - sign(F1,vel) * ( val(k,i,j)-val(k,i-1,j) ) ) 
+                   * ( F1 * ( val(k,i,j)+val(k,i-1,j) ) - sign(F1,vel) * ( val(k,i,j)-val(k,i-1,j) ) ) 
     enddo
     enddo
     enddo
@@ -796,17 +819,17 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_fluxX_UYZ_ud1
 
-
   !-----------------------------------------------------------------------------
   !> calculation Y-flux at UY
   subroutine ATMOS_DYN_FVM_fluxY_UYZ_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, MAPF, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, MAPF,       &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -814,7 +837,7 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -836,7 +859,7 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i+1,j) ) ) &
            / ( 0.25_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+1) * vel &
-            * ( F1 * ( val(k,i,j+1)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i,j+1)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k,i,j+1)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i,j+1)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -849,18 +872,17 @@ contains
 
 
 
-
-
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XV
   subroutine ATMOS_DYN_FVM_fluxZ_XVZ_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, J33G, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, J33G,       &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -868,7 +890,7 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: J33G
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -888,10 +910,12 @@ contains
 
 #endif
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j+1) ) ) &
-           / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-             + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
+           / ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J33G * vel &
-            * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -917,25 +941,24 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_fluxZ_XVZ_ud1
 
-
-
   !-----------------------------------------------------------------------------
   !> calculation J13-flux at XVZ
   subroutine ATMOS_DYN_FVM_fluxJ13_XVZ_ud1( &
-       flux, &
-       mom, val, DENS, &
+       flux,              &
+       mom, val, DENS,    &
        GSQRT, J13G, MAPF, &
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-    real(RP), intent(in)  :: J13G(KA,IA,JA)
+    real(RP), intent(in)  :: J13G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -946,12 +969,16 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
-       vel = ( F2H(k,1,I_UYZ) * 0.25_RP * ( mom(k+1,i,j)+mom(k+1,i-1,j)+mom(k+1,i,j+1)+mom(k+1,i-1,j+1) ) &
-             + F2H(k,2,I_UYZ) * 0.25_RP * ( mom(k,i,j)+mom(k,i-1,j)+mom(k,i,j+1)+mom(k,i-1,j+1) ) ) &
-           / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-             + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
+       vel = ( F2H(k,1,I_UYZ) &
+             * 0.25_RP * ( mom(k+1,i,j)+mom(k+1,i-1,j)+mom(k+1,i,j+1)+mom(k+1,i-1,j+1) ) &
+             + F2H(k,2,I_UYZ) &
+             * 0.25_RP * ( mom(k,i,j)+mom(k,i-1,j)+mom(k,i,j+1)+mom(k,i-1,j+1) ) ) &
+           / ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
-            * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) )
+                   * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) )
     enddo
     enddo
     enddo
@@ -971,20 +998,21 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation J23-flux at XVZ
   subroutine ATMOS_DYN_FVM_fluxJ23_XVZ_ud1( &
-       flux, &
-       mom, val, DENS, &
+       flux,              &
+       mom, val, DENS,    &
        GSQRT, J23G, MAPF, &
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-    real(RP), intent(in)  :: J23G(KA,IA,JA)
+    real(RP), intent(in)  :: J23G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -995,12 +1023,16 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
-       vel = ( F2H(k,1,I_XVZ) * mom(k+1,i,j) &
-             + F2H(k,2,I_XVZ) * mom(k,i,j) ) &
-           / ( F2H(k,1,I_XYZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-             + F2H(k,2,I_XYZ) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
+       vel = ( F2H(k,1,I_XVZ) &
+             * mom(k+1,i,j) &
+             + F2H(k,2,I_XVZ) &
+             * mom(k,i,j) ) &
+           / ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
-            * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) )
+                   * ( F1 * ( val(k+1,i,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k+1,i,j)-val(k,i,j) ) )
     enddo
     enddo
     enddo
@@ -1017,17 +1049,17 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
 
-
   !-----------------------------------------------------------------------------
   !> calculation X-flux at XV
   subroutine ATMOS_DYN_FVM_fluxX_XVZ_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, MAPF, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, MAPF,       &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -1035,7 +1067,7 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1057,7 +1089,7 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j+1) ) ) &
            / ( 0.25_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+2) * vel &
-            * ( F1 * ( val(k,i+1,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i+1,j)-val(k,i,j) ) ) 
+                   * ( F1 * ( val(k,i+1,j)+val(k,i,j) ) - sign(F1,vel) * ( val(k,i+1,j)-val(k,i,j) ) ) 
     enddo
     enddo
     enddo
@@ -1068,17 +1100,17 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_fluxX_XVZ_ud1
 
-
   !-----------------------------------------------------------------------------
   !> calculation Y-flux at XV
   subroutine ATMOS_DYN_FVM_fluxY_XVZ_ud1( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, MAPF, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, MAPF,       &
 
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -1086,7 +1118,7 @@ contains
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
 
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1110,7 +1142,7 @@ contains
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j-1) ) ) &
            / ( DENS(k,i,j) )
        flux(k,i,j-1) = GSQRT(k,i,j) / MAPF(i,j,+1) * vel &
-            * ( F1 * ( val(k,i,j)+val(k,i,j-1) ) - sign(F1,vel) * ( val(k,i,j)-val(k,i,j-1) ) ) 
+                   * ( F1 * ( val(k,i,j)+val(k,i,j-1) ) - sign(F1,vel) * ( val(k,i,j)-val(k,i,j-1) ) ) 
     enddo
     enddo
     enddo
@@ -1127,12 +1159,7 @@ contains
 
 
 
-
-
 end module scale_atmos_dyn_fvm_flux_ud1
-
-!-------------------------------------------------------------------------------
-
 
 !--
 ! vi:set readonly sw=4 ts=8

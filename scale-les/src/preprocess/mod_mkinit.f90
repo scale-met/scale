@@ -76,7 +76,6 @@ module mod_mkinit
   use scale_atmos_saturation, only: &
      SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all, &
      SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
-
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -86,7 +85,6 @@ module mod_mkinit
      QTRC
   use mod_atmos_phy_ae_vars, only: &
      CCN => ATMOS_PHY_AE_CCN
-  use mod_realinput
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -101,48 +99,48 @@ module mod_mkinit
   !
   !++ Public parameters & variables
   !
-  integer, public            :: MKINIT_TYPE     = -1
-  integer, public, parameter :: I_IGNORE        =  0
+  integer, public            :: MKINIT_TYPE        = -1
+  integer, public, parameter :: I_IGNORE           =  0
 
-  integer, public, parameter :: I_PLANESTATE    =  1
-  integer, public, parameter :: I_TRACERBUBBLE  =  2
-  integer, public, parameter :: I_COLDBUBBLE    =  3
+  integer, public, parameter :: I_PLANESTATE       =  1
+  integer, public, parameter :: I_TRACERBUBBLE     =  2
+  integer, public, parameter :: I_COLDBUBBLE       =  3
 
-  integer, public, parameter :: I_LAMBWAVE      =  4
-  integer, public, parameter :: I_GRAVITYWAVE   =  5
-  integer, public, parameter :: I_KHWAVE        =  6
-  integer, public, parameter :: I_TURBULENCE    =  7
-  integer, public, parameter :: I_MOUNTAINWAVE  =  8
+  integer, public, parameter :: I_LAMBWAVE         =  4
+  integer, public, parameter :: I_GRAVITYWAVE      =  5
+  integer, public, parameter :: I_KHWAVE           =  6
+  integer, public, parameter :: I_TURBULENCE       =  7
+  integer, public, parameter :: I_MOUNTAINWAVE     =  8
 
-  integer, public, parameter :: I_WARMBUBBLE    =  9
-  integer, public, parameter :: I_SUPERCELL     = 10
-  integer, public, parameter :: I_SQUALLLINE    = 11
-  integer, public, parameter :: I_WK1982        = 12
-  integer, public, parameter :: I_DYCOMS2_RF01  = 13
-  integer, public, parameter :: I_DYCOMS2_RF02  = 14
-  integer, public, parameter :: I_RICO          = 15
+  integer, public, parameter :: I_WARMBUBBLE       =  9
+  integer, public, parameter :: I_SUPERCELL        = 10
+  integer, public, parameter :: I_SQUALLLINE       = 11
+  integer, public, parameter :: I_WK1982           = 12
+  integer, public, parameter :: I_DYCOMS2_RF01     = 13
+  integer, public, parameter :: I_DYCOMS2_RF02     = 14
+  integer, public, parameter :: I_RICO             = 15
 
-  integer, public, parameter :: I_INTERPORATION = 16
+  integer, public, parameter :: I_INTERPORATION    = 16
 
-  integer, public, parameter :: I_LANDCOUPLE    = 17
-  integer, public, parameter :: I_OCEANCOUPLE   = 18
-  integer, public, parameter :: I_URBANCOUPLE   = 19
-  integer, public, parameter :: I_TRIPLECOUPLE  = 20
-  integer, public, parameter :: I_BUBBLECOUPLE  = 21
+  integer, public, parameter :: I_LANDCOUPLE       = 17
+  integer, public, parameter :: I_OCEANCOUPLE      = 18
+  integer, public, parameter :: I_URBANCOUPLE      = 19
+  integer, public, parameter :: I_TRIPLECOUPLE     = 20
+  integer, public, parameter :: I_BUBBLECOUPLE     = 21
 
-  integer, public, parameter :: I_SEABREEZE     = 22
-  integer, public, parameter :: I_HEATISLAND    = 23
+  integer, public, parameter :: I_SEABREEZE        = 22
+  integer, public, parameter :: I_HEATISLAND       = 23
 
   integer, public, parameter :: I_DYCOMS2_RF02_DNS = 24
 
-  integer, public, parameter :: I_REAL          = 25
+  integer, public, parameter :: I_REAL             = 25
 
-  integer, public, parameter :: I_GRAYZONE      = 26
-  integer, public, parameter :: I_BOXAERO       = 27
-  integer, public, parameter :: I_WARMBUBBLEAERO = 28
+  integer, public, parameter :: I_GRAYZONE         = 26
+  integer, public, parameter :: I_BOXAERO          = 27
+  integer, public, parameter :: I_WARMBUBBLEAERO   = 28
 
-  integer, public, parameter :: I_CAVITYFLOW    = 29
-  
+  integer, public, parameter :: I_CAVITYFLOW       = 29
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -185,35 +183,35 @@ module mod_mkinit
 
   private :: MKINIT_boxaero
   private :: MKINIT_warmbubbleaero
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  real(RP), private, parameter :: THETAstd = 300.0_RP ! [K]
+  real(RP), private, parameter           :: THETAstd = 300.0_RP ! [K]
 
-  real(RP), private, allocatable :: pres(:,:,:) ! pressure [Pa]
-  real(RP), private, allocatable :: temp(:,:,:) ! temperature [K]
-  real(RP), private, allocatable :: pott(:,:,:) ! potential temperature [K]
-  real(RP), private, allocatable :: qsat(:,:,:) ! satulated water vapor [kg/kg]
-  real(RP), private, allocatable :: qv  (:,:,:) ! water vapor [kg/kg]
-  real(RP), private, allocatable :: qc  (:,:,:) ! cloud water [kg/kg]
-  real(RP), private, allocatable :: velx(:,:,:) ! velocity u [m/s]
-  real(RP), private, allocatable :: vely(:,:,:) ! velocity v [m/s]
+  real(RP), private, allocatable         :: pres    (:,:,:) ! pressure [Pa]
+  real(RP), private, allocatable         :: temp    (:,:,:) ! temperature [K]
+  real(RP), private, allocatable         :: pott    (:,:,:) ! potential temperature [K]
+  real(RP), private, allocatable         :: qsat    (:,:,:) ! satulated water vapor [kg/kg]
+  real(RP), private, allocatable         :: qv      (:,:,:) ! water vapor [kg/kg]
+  real(RP), private, allocatable         :: qc      (:,:,:) ! cloud water [kg/kg]
+  real(RP), private, allocatable         :: velx    (:,:,:) ! velocity u [m/s]
+  real(RP), private, allocatable         :: vely    (:,:,:) ! velocity v [m/s]
 
-  real(RP), private, allocatable :: pres_sfc(:,:,:)
-  real(RP), private, allocatable :: temp_sfc(:,:,:)
-  real(RP), private, allocatable :: pott_sfc(:,:,:)
-  real(RP), private, allocatable :: qsat_sfc(:,:,:)
-  real(RP), private, allocatable :: qv_sfc  (:,:,:)
-  real(RP), private, allocatable :: qc_sfc  (:,:,:)
+  real(RP), private, allocatable         :: pres_sfc(:,:,:) ! surface pressure [Pa]
+  real(RP), private, allocatable         :: temp_sfc(:,:,:) ! surface temperature [K]
+  real(RP), private, allocatable         :: pott_sfc(:,:,:) ! surface potential temperature [K]
+  real(RP), private, allocatable         :: qsat_sfc(:,:,:) ! surface satulated water vapor [kg/kg]
+  real(RP), private, allocatable         :: qv_sfc  (:,:,:) ! surface water vapor [kg/kg]
+  real(RP), private, allocatable         :: qc_sfc  (:,:,:) ! surface cloud water [kg/kg]
 
-  real(RP), private, allocatable :: rndm  (:,:,:) ! random number (0-1)
-  real(RP), private, allocatable, target :: bubble(:,:,:) ! bubble factor (0-1)
-  real(RP), private, allocatable, target :: rect(:,:,:) ! rectangle factor (0-1)
+  real(RP), private, allocatable         :: rndm    (:,:,:) ! random    number (0-1)
+  real(RP), private, allocatable, target :: bubble  (:,:,:) ! bubble    factor (0-1)
+  real(RP), private, allocatable, target :: rect    (:,:,:) ! rectangle factor (0-1)
+  real(RP), private, allocatable         :: gan     (:)     ! gamma     factor (0-1)
 
-  real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
-
-  logical,  private              :: flg_intrp = .false.
+  logical,  private                      :: flg_intrp = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -675,7 +673,7 @@ contains
 
     return
   end subroutine RECT_setup
-  
+
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Kajino 2013 scheme
   subroutine AEROSOL_setup
@@ -1858,17 +1856,15 @@ contains
 
 #ifndef DRY
     ! Surface state
-    real(RP) :: SFC_THETA               ! surface potential temperature [K]
-    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    real(RP)               :: SFC_THETA            ! surface potential temperature [K]
+    real(RP)               :: SFC_PRES             ! surface pressure [Pa]
     ! Environment state
-    real(RP) :: ENV_THETA               ! potential temperature of environment [K]
-    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
-    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    real(RP)               :: ENV_THETA            ! potential temperature of environment [K]
+    real(RP)               :: ENV_U     =   0.0_RP ! velocity u of environment [m/s]
+    real(RP)               :: ENV_V     =   0.0_RP ! velocity v of environment [m/s]
     ! Bubble
-    character(len=H_SHORT) :: SHAPE_NC = 'BUBBLE' ! BUBBLE or RECT
-    real(RP) :: BBL_NC       =   1.0_RP ! extremum of NC in bubble [kg/kg]
-
-    real(RP), pointer :: shapeFac(:,:,:) => null()
+    character(len=H_SHORT) :: SHAPE_NC  = 'BUBBLE' ! BUBBLE or RECT
+    real(RP)               :: BBL_NC    =   1.0_RP ! extremum of NC in bubble [kg/kg]
 
     NAMELIST / PARAM_MKINIT_TRACERBUBBLE / &
        SFC_THETA, &
@@ -1879,8 +1875,10 @@ contains
        SHAPE_NC,  &
        BBL_NC
 
-    integer :: ierr
+    real(RP), pointer :: shapeFac(:,:,:) => null()
+
     integer :: k, i, j, iq
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1958,7 +1956,6 @@ contains
           call PRC_MPIstop
        end select
 
-
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1975,8 +1972,8 @@ contains
        write(*,*) 'xxx SBM cannot be used on tracerbubble. Check!'
        call PRC_MPIstop
     endif
-
 #endif
+
     return
   end subroutine MKINIT_tracerbubble
 
@@ -2562,26 +2559,31 @@ contains
 
     return
   end subroutine MKINIT_turbulence
- 
+
   !-----------------------------------------------------------------------------
   !> Make initial state for cavity flow
   subroutine MKINIT_cavityflow
     implicit none
 
     ! Nondimenstional numbers for a cavity flow problem
-    real(RP) :: REYNOLDS_NUM = 4.D02 
+    real(RP) :: REYNOLDS_NUM = 4.D02
     real(RP) :: MACH_NUM     = 3.D-2
     real(RP) :: TEMP0        = 300.D0
-    
+
     NAMELIST / PARAM_MKINIT_CAVITYFLOW / &
          REYNOLDS_NUM, &
          MACH_NUM,     &
          TEMP0
-    
-    integer :: ierr
+
+    real(RP) :: DENS0
+    real(RP) :: TEMP
+    real(RP) :: Gam, Cs2
+
+    real(RP), parameter :: PRES0 = 1000.E+2_RP
+    real(RP), parameter :: Ulid  = 10.0_RP
+
     integer :: k, i, j
-    real(RP) :: PRES0, DENS0, Cs2, Ulid, TEMP, Gam
-    
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -2599,23 +2601,26 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_CAVITYFLOW)
 
-    Gam = CPdry / (CPdry - Rdry)
-    Ulid = 10.0_RP
-    Cs2  = (Ulid / MACH_NUM)**2
-    TEMP = Cs2 / (Gam * Rdry)
-    PRES0 = 1.D5
-    DENS0 = PRES0 / (Rdry * TEMP)
+    Gam   = CPdry / ( CPdry - Rdry )
+    Cs2   = ( Ulid / MACH_NUM )**2
+    TEMP  = Cs2   / ( Gam * Rdry )
+    DENS0 = PRES0 / ( Rdry * TEMP )
+
+    if( IO_L ) write(IO_FID_LOG,*) "DENS = ", DENS0
+    if( IO_L ) write(IO_FID_LOG,*) "PRES = ", PRES0
+    if( IO_L ) write(IO_FID_LOG,*) "TEMP = ", RHOT(10,10,4)/DENS0, TEMP
+    if( IO_L ) write(IO_FID_LOG,*) "Ulid = ", Ulid
+    if( IO_L ) write(IO_FID_LOG,*) "Cs   = ", sqrt(Cs2)
 
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-          
-       DENS(k,i,j) = DENS0
-       MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = 0.0_RP
-       MOMY(k,i,j) = 0.0_RP
-       PRES(k,i,j) = PRES0
-       RHOT(k,i,j) = P00/Rdry * (P00/PRES0)**((Rdry - CPdry)/CPdry)
+       DENS(k,i,j)   = DENS0
+       MOMZ(k,i,j)   = 0.0_RP
+       MOMX(k,i,j)   = 0.0_RP
+       MOMY(k,i,j)   = 0.0_RP
+       PRES(k,i,j)   = PRES0
+       RHOT(k,i,j)   = P00/Rdry * (P00/PRES0)**((Rdry - CPdry)/CPdry)
        QTRC(k,i,j,:) = 0.0_RP
     enddo
     enddo
@@ -2623,14 +2628,9 @@ contains
 
     MOMX(KE+1:KA,:,:) = DENS0 * Ulid
 
-    write(*,*) "DENS=", DENS0
-    write(*,*) "PRES=", PRES0
-    write(*,*) "TEMP=", RHOT(10,10,4)/DENS0, TEMP
-    write(*,*) "Ulid=", Ulid
-    write(*,*) "Cs  =", sqrt(Cs2)
     return
   end subroutine MKINIT_cavityflow
-  
+
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform )
   subroutine MKINIT_mountainwave

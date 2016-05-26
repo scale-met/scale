@@ -55,11 +55,11 @@ module mod_atmos_dyn_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX = 100 !< max of number of the variables
-  integer,                private            :: VA   = 0   !< number of the variables
-  character(len=H_SHORT), private :: VAR_NAME(VMAX) !< name  of the variables
-  character(len=H_MID),   private :: VAR_DESC(VMAX) !< desc. of the variables
-  character(len=H_SHORT), private :: VAR_UNIT(VMAX) !< unit  of the variables
+  integer,                private, parameter :: VMAX = 100     !< max of number of the variables
+  integer,                private            :: VA   = 0       !< number of the variables
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
   !-----------------------------------------------------------------------------
 contains
@@ -101,35 +101,38 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_VARS)
 
+    call ATMOS_DYN_tstep_short_regist( ATMOS_DYN_TYPE, & ! [IN]
+                                       VA,             & ! [OUT]
+                                       VAR_NAME,       & ! [OUT]
+                                       VAR_DESC,       & ! [OUT]
+                                       VAR_UNIT        ) ! [OUT]
 
-    call ATMOS_DYN_tstep_short_regist( ATMOS_DYN_TYPE, & ! (in)
-                                       VA,       & ! (out)
-                                       VAR_NAME, & ! (out)
-                                       VAR_DESC, & ! (out)
-                                       VAR_UNIT  ) ! (out)
-    if ( VA > 0 ) then
+    if ( VA > 0 ) then ! additional prognostic variables
+
        if ( VA > VMAX ) then
           write(*,*) 'xxx number of the prognostic variables is exceed the limit', VA, ' > ', VMAX
           call PRC_MPIstop
-       end if
+       endif
        allocate( PROG(KA,IA,JA,VA) )
        PROG(:,:,:,:) = UNDEF
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_DYN] prognostic/diagnostic variables'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+                  '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
        do iv = 1, VA
           if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+                     '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
        enddo
 
        if( IO_L ) write(IO_FID_LOG,*)
+
        if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
        else
           if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
        endif
+
        if (       ATMOS_DYN_RESTART_OUTPUT             &
             .AND. ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_DYN_RESTART_OUT_BASENAME)
@@ -139,9 +142,11 @@ contains
        endif
 
     else ! no additional prognostic variables
+
        allocate( PROG(KA,IA,JA,1) ) ! for safety
        PROG(:,:,:,:) = UNDEF
        ATMOS_DYN_RESTART_OUTPUT = .false.
+
     endif
 
     return
@@ -167,11 +172,11 @@ contains
        enddo
 
        call COMM_vars8( PROG(:,:,:,iv), iv )
-    end do
+    enddo
 
     do iv = 1, VA
        call COMM_wait ( PROG(:,:,:,iv), iv )
-    end do
+    enddo
 
     return
   end subroutine ATMOS_DYN_vars_fillhalo
@@ -196,16 +201,16 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
 
        do iv = 1, VA
-          call FILEIO_read( PROG(:,:,:,iv),                                     & ! [OUT]
+          call FILEIO_read( PROG(:,:,:,iv),                                            & ! [OUT]
                             ATMOS_DYN_RESTART_IN_BASENAME, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
 
-       end do
+       enddo
 
        call ATMOS_DYN_vars_fillhalo
 
        do iv = 1, VA
           call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
-       end do
+       enddo
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_DYN is not specified.'
     endif
@@ -237,9 +242,9 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        do iv = 1, VA
-          call FILEIO_write( PROG(:,:,:,iv), basename,               ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
+          call FILEIO_write( PROG(:,:,:,iv), basename,                       ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
                              VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE ) ! [IN]
-       end do
+       enddo
 
     endif
 

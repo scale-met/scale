@@ -44,7 +44,6 @@ module scale_atmos_dyn
   use scale_grid_index
   use scale_index
   use scale_tracer
-
 #ifdef DEBUG
   use scale_debug, only: &
      CHECK
@@ -74,47 +73,47 @@ module scale_atmos_dyn
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: CORIOLI(:,:)            ! coriolis term
-  real(RP), private, allocatable :: mflx_hi(:,:,:,:)        ! rho * vel(x,y,z) @ (u,v,w)-face high order
+  ! for communication
+  integer,  private              :: I_COMM_DENS = 1
+  integer,  private              :: I_COMM_MOMZ = 2
+  integer,  private              :: I_COMM_MOMX = 3
+  integer,  private              :: I_COMM_MOMY = 4
+  integer,  private              :: I_COMM_RHOT = 5
+  integer,  private, allocatable :: I_COMM_PROG(:)
+  integer,  private, allocatable :: I_COMM_QTRC(:)
+
+  logical,  private              :: BND_W
+  logical,  private              :: BND_E
+  logical,  private              :: BND_S
+  logical,  private              :: BND_N
+
+  real(RP), private, allocatable :: CORIOLI   (:,:)       ! coriolis term
+  real(RP), private, allocatable :: mflx_hi   (:,:,:,:)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
 
   real(RP), private, allocatable :: num_diff  (:,:,:,:,:)
   real(RP), private, allocatable :: num_diff_q(:,:,:,:)
 
-  logical, private :: BND_W
-  logical, private :: BND_E
-  logical, private :: BND_S
-  logical, private :: BND_N
+  logical,  private              :: DYN_NONE = .false.
 
-  logical, private :: DYN_NONE = .false.
-
-  ! for communication
-  integer :: I_COMM_DENS = 1
-  integer :: I_COMM_MOMZ = 2
-  integer :: I_COMM_MOMX = 3
-  integer :: I_COMM_MOMY = 4
-  integer :: I_COMM_RHOT = 5
-  integer, allocatable :: I_COMM_PROG(:)
-  integer, allocatable :: I_COMM_QTRC(:)
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_setup( &
-       DYN_Tinteg_Short_TYPE, &
-       DYN_Tinteg_Tracer_TYPE, &
-       DYN_Tinteg_Large_TYPE, &
-       DYN_Tstep_Tracer_TYPE, &
-       DYN_Tstep_Large_TYPE, &
-       DYN_FVM_FLUX_SCHEME, &
-       DYN_FVM_FLUX_SCHEME_TRACER, &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, &
-       PROG,             &
-       CDZ, CDX, CDY,    &
-       FDZ, FDX, FDY,    &
-       enable_coriolis,  &
-       lat,              &
-       none              )
+       DYN_Tinteg_Short_TYPE,        &
+       DYN_Tinteg_Tracer_TYPE,       &
+       DYN_Tinteg_Large_TYPE,        &
+       DYN_Tstep_Tracer_TYPE,        &
+       DYN_Tstep_Large_TYPE,         &
+       DYN_FVM_FLUX_SCHEME,          &
+       DYN_FVM_FLUX_SCHEME_TRACER,   &
+       DENS, MOMZ, MOMX, MOMY, RHOT, &
+       QTRC, PROG,                   &
+       CDZ, CDX, CDY,                &
+       FDZ, FDX, FDY,                &
+       enable_coriolis,              &
+       lat,                          &
+       none                          )
     use scale_process, only: &
        PRC_MPIstop
     use scale_les_process, only: &
@@ -123,7 +122,7 @@ contains
        PRC_HAS_N, &
        PRC_HAS_S
     use scale_const, only: &
-       OHM => CONST_OHM, &
+       OHM   => CONST_OHM,  &
        UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_vars8_init
@@ -145,76 +144,74 @@ contains
        ATMOS_DYN_FVM_flux_setup
     implicit none
 
-    character(len=*), intent(in) :: DYN_Tinteg_Short_TYPE
-    character(len=*), intent(in) :: DYN_Tinteg_Tracer_TYPE
-    character(len=*), intent(in) :: DYN_Tinteg_Large_TYPE
-    character(len=*), intent(in) :: DYN_Tstep_Tracer_TYPE
-    character(len=*), intent(in) :: DYN_Tstep_Large_TYPE
-    character(len=*), intent(in) :: DYN_FVM_FLUX_SCHEME
-    character(len=*), intent(in) :: DYN_FVM_FLUX_SCHEME_TRACER
-
-    ! MPI_RECV_INIT requires intent(inout)
-    real(RP),               intent(inout) :: DENS(KA,IA,JA)
-    real(RP),               intent(inout) :: MOMZ(KA,IA,JA)
-    real(RP),               intent(inout) :: MOMX(KA,IA,JA)
-    real(RP),               intent(inout) :: MOMY(KA,IA,JA)
-    real(RP),               intent(inout) :: RHOT(KA,IA,JA)
-    real(RP),               intent(inout) :: QTRC(KA,IA,JA,QA)
-
-    real(RP),               intent(inout) :: PROG(KA,IA,JA,VA)
-
-    real(RP),               intent(in) :: CDZ(KA)
-    real(RP),               intent(in) :: CDX(IA)
-    real(RP),               intent(in) :: CDY(JA)
-    real(RP),               intent(in) :: FDZ(KA-1)
-    real(RP),               intent(in) :: FDX(IA-1)
-    real(RP),               intent(in) :: FDY(JA-1)
-    logical,                intent(in) :: enable_coriolis
-    real(RP),               intent(in) :: lat(IA,JA)
-    logical, optional,      intent(in) :: none
+    character(len=*),  intent(in)    :: DYN_Tinteg_Short_TYPE
+    character(len=*),  intent(in)    :: DYN_Tinteg_Tracer_TYPE
+    character(len=*),  intent(in)    :: DYN_Tinteg_Large_TYPE
+    character(len=*),  intent(in)    :: DYN_Tstep_Tracer_TYPE
+    character(len=*),  intent(in)    :: DYN_Tstep_Large_TYPE
+    character(len=*),  intent(in)    :: DYN_FVM_FLUX_SCHEME
+    character(len=*),  intent(in)    :: DYN_FVM_FLUX_SCHEME_TRACER
+    real(RP),          intent(inout) :: DENS(KA,IA,JA)    ! MPI_RECV_INIT requires intent(inout)
+    real(RP),          intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP),          intent(inout) :: MOMX(KA,IA,JA)
+    real(RP),          intent(inout) :: MOMY(KA,IA,JA)
+    real(RP),          intent(inout) :: RHOT(KA,IA,JA)
+    real(RP),          intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP),          intent(inout) :: PROG(KA,IA,JA,VA)
+    real(RP),          intent(in)    :: CDZ(KA)
+    real(RP),          intent(in)    :: CDX(IA)
+    real(RP),          intent(in)    :: CDY(JA)
+    real(RP),          intent(in)    :: FDZ(KA-1)
+    real(RP),          intent(in)    :: FDX(IA-1)
+    real(RP),          intent(in)    :: FDY(JA-1)
+    logical,           intent(in)    :: enable_coriolis
+    real(RP),          intent(in)    :: lat(IA,JA)
+    logical, optional, intent(in)    :: none
 
     integer :: iv, iq
     !---------------------------------------------------------------------------
 
-    allocate( CORIOLI(IA,JA) )
-    allocate( mflx_hi(KA,IA,JA,3) )
+    BND_W = .NOT. PRC_HAS_W
+    BND_E = .NOT. PRC_HAS_E
+    BND_S = .NOT. PRC_HAS_S
+    BND_N = .NOT. PRC_HAS_N
 
-    allocate( num_diff  (KA,IA,JA,5,3) )
-    allocate( num_diff_q(KA,IA,JA,3) )
+    allocate( CORIOLI    (IA,JA)        )
+    allocate( mflx_hi    (KA,IA,JA,3)   )
+    allocate( num_diff   (KA,IA,JA,5,3) )
+    allocate( num_diff_q (KA,IA,JA,3)   )
+    mflx_hi(:,:,:,:) = UNDEF
 
-    allocate( I_COMM_PROG(max(VA,1)) )
-    allocate( I_COMM_QTRC(QA) )
+    allocate( I_COMM_PROG(max(VA,1))    )
+    allocate( I_COMM_QTRC(QA)           )
 
-    call ATMOS_DYN_FVM_flux_setup( &
-         DYN_FVM_FLUX_SCHEME, &
-         DYN_FVM_FLUX_SCHEME_TRACER )
+    call ATMOS_DYN_FVM_flux_setup( DYN_FVM_FLUX_SCHEME,       & ! [IN]
+                                   DYN_FVM_FLUX_SCHEME_TRACER ) ! [IN]
 
     call ATMOS_DYN_tstep_short_setup
 
-    call ATMOS_DYN_tstep_tracer_setup( &
-         DYN_Tstep_Tracer_TYPE )
+    call ATMOS_DYN_tstep_tracer_setup ( DYN_Tstep_Tracer_TYPE ) ! [IN]
 
-    call ATMOS_DYN_tstep_large_setup( &
-         DYN_Tstep_Large_TYPE, &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
-         mflx_hi )
+    call ATMOS_DYN_tstep_large_setup  ( DYN_Tstep_Large_TYPE,         & ! [IN]
+                                        DENS, MOMZ, MOMX, MOMY, RHOT, & ! [INOUT]
+                                        QTRC, PROG,                   & ! [INOUT]
+                                        mflx_hi                       ) ! [INOUT]
 
-    call ATMOS_DYN_Tinteg_short_setup( DYN_Tinteg_Short_TYPE )
+    call ATMOS_DYN_Tinteg_short_setup ( DYN_Tinteg_Short_TYPE  ) ! [IN]
 
-    call ATMOS_DYN_Tinteg_tracer_setup( DYN_Tinteg_Tracer_TYPE )
+    call ATMOS_DYN_Tinteg_tracer_setup( DYN_Tinteg_Tracer_TYPE ) ! [IN]
 
-    call ATMOS_DYN_Tinteg_large_setup( DYN_Tinteg_Large_TYPE )
+    call ATMOS_DYN_Tinteg_large_setup ( DYN_Tinteg_Large_TYPE  ) ! [IN]
 
     if ( present(none) ) then
        DYN_NONE = none
-    end if
+    endif
 
-    if ( .not. DYN_NONE ) then
+    if ( .NOT. DYN_NONE ) then
 
        ! numerical diffusion
-       call ATMOS_DYN_filter_setup( &
-            num_diff, num_diff_q, & ! (inout)
-            CDZ, CDX, CDY, FDZ, FDX, FDY ) ! (in)
+       call ATMOS_DYN_filter_setup( num_diff, num_diff_q,        & ! [INOUT]
+                                    CDZ, CDX, CDY, FDZ, FDX, FDY ) ! [IN]
        ! coriolis parameter
        if ( enable_coriolis ) then
           CORIOLI(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
@@ -229,25 +226,18 @@ contains
        call COMM_vars8_init( MOMX, I_COMM_MOMX )
        call COMM_vars8_init( MOMY, I_COMM_MOMY )
        call COMM_vars8_init( RHOT, I_COMM_RHOT )
+
        do iv = 1, VA
           I_COMM_PROG(iv) = 5 + iv
           call COMM_vars8_init( PROG(:,:,:,iv), I_COMM_PROG(iv) )
-       end do
+       enddo
 
        do iq = 1, QA
           I_COMM_QTRC(iq) = 5 + VA + iq
-          call COMM_vars8_init( QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
-       end do
+          call COMM_vars8_init( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
+       enddo
 
-    end if
-
-    BND_W = .not. PRC_HAS_W
-    BND_E = .not. PRC_HAS_E
-    BND_S = .not. PRC_HAS_S
-    BND_N = .not. PRC_HAS_N
-
-
-    mflx_hi(:,:,:,:) = UNDEF
+    endif
 
     return
   end subroutine ATMOS_DYN_setup
@@ -365,92 +355,64 @@ contains
     real(DP), intent(in)    :: DTSEC_DYN
 
     ! for time integartion
-    real(RP) :: DENS00  (KA,IA,JA) ! saved density before small step loop
-    real(RP) :: DENS0   (KA,IA,JA) ! prognostic variables (+0   step)
-    real(RP) :: MOMZ0   (KA,IA,JA) !
-    real(RP) :: MOMX0   (KA,IA,JA) !
-    real(RP) :: MOMY0   (KA,IA,JA) !
-    real(RP) :: RHOT0   (KA,IA,JA) !
-    real(RP) :: PROG0   (KA,IA,JA,VA) !
-
-    ! diagnostic variables
-    real(RP) :: QDRY (KA,IA,JA) ! dry air
-    real(RP) :: Rtot (KA,IA,JA) ! total R
-    real(RP) :: CVtot(KA,IA,JA) ! total CV
-    real(RP) :: DDIV (KA,IA,JA) ! 3 dimensional divergence
-
-    real(RP) :: DENS_tq(KA,IA,JA)
-    real(RP) :: diff(KA,IA,JA)
-    real(RP) :: damp
-#ifdef HIST_TEND
-    real(RP) :: damp_t(KA,IA,JA)
-#endif
+    real(RP) :: DENS00 (KA,IA,JA)   ! saved density before update
 
     ! For tracer advection
-    real(RP) :: mflx_av  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face average
-    real(RP) :: tflx_hi  (KA,IA,JA,3)     ! rho * theta * vel(x,y,z) @ (u,v,w)-face high order
-    real(RP) :: qflx_hi  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
-    real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
-    real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
-
+    real(RP) :: tflx_hi(KA,IA,JA,3) ! rho * theta * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: dt
 
-    integer  :: IIS, IIE
-    integer  :: JJS, JJE
-    integer  :: i, j, k, iq, step
-    integer  :: iv
-
-    real(RP) :: diff_coef
+    integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
+    dt = real(DTSEC, kind=RP)
 
     if ( DYN_NONE ) then
 
        call PROF_rapstart("DYN_Tinteg", 2)
 
-       dt = real(DTSEC, kind=RP)
-
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          DENS(k,i,j) = DENS(k,i,j) + DENS_tp(k,i,j) * dt
-       end do
-       end do
-       end do
+          DENS00(k,i,j) = DENS(k,i,j) ! save previous value
+
+          DENS  (k,i,j) = DENS(k,i,j) + DENS_tp(k,i,j) * dt
+       enddo
+       enddo
+       enddo
 
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           MOMZ(k,i,j) = MOMZ(k,i,j) + MOMZ_tp(k,i,j) * dt
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           MOMX(k,i,j) = MOMX(k,i,j) + MOMX_tp(k,i,j) * dt
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           MOMY(k,i,j) = MOMY(k,i,j) + MOMY_tp(k,i,j) * dt
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           RHOT(k,i,j) = RHOT(k,i,j) + RHOT_tp(k,i,j) * dt
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        do iq = 1, QA
        do j = JS, JE
@@ -459,10 +421,10 @@ contains
           QTRC(k,i,j,iq) = max( 0.0_RP, &
                                 QTRC(k,i,j,iq) * DENS00(k,i,j) + RHOQ_tp(k,i,j,iq) * dt &
                               ) / DENS(k,i,j)
-       end do
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
+       enddo
 
        call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
        call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
@@ -472,6 +434,7 @@ contains
        do iq = 1, QA
           call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
        enddo
+
        call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )
        call COMM_wait ( MOMZ(:,:,:), I_COMM_MOMZ, .false. )
        call COMM_wait ( MOMX(:,:,:), I_COMM_MOMX, .false. )
@@ -482,72 +445,69 @@ contains
        enddo
 
        if ( USE_AVERAGE ) then
-          DENS_av(:,:,:) = DENS(:,:,:)
-          MOMZ_av(:,:,:) = MOMZ(:,:,:)
-          MOMX_av(:,:,:) = MOMX(:,:,:)
-          MOMY_av(:,:,:) = MOMY(:,:,:)
-          RHOT_av(:,:,:) = RHOT(:,:,:)
+          DENS_av(:,:,:)   = DENS(:,:,:)
+          MOMZ_av(:,:,:)   = MOMZ(:,:,:)
+          MOMX_av(:,:,:)   = MOMX(:,:,:)
+          MOMY_av(:,:,:)   = MOMY(:,:,:)
+          RHOT_av(:,:,:)   = RHOT(:,:,:)
           QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
-       end if
+       endif
 
        call PROF_rapend("DYN_Tinteg", 2)
 
        return
-    end if ! if DYN_NONE == .true.
+    endif ! if DYN_NONE == .true.
 
     call PROF_rapstart("DYN_Tinteg", 2)
 
-    call ATMOS_DYN_tinteg_large( &
-       DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    & ! (inout)
-       PROG,                                                 & ! (inout)
-       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
-       mflx_hi, tflx_hi,                                     & ! (out)
-       num_diff, num_diff_q,                                 & ! (out; work)
-       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! (in)
-       CORIOLI,                                              & ! (in)
-       CDZ, CDX, CDY, FDZ, FDX, FDY,                         & ! (in)
-       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! (in)
-       PHI, GSQRT,                                           & ! (in)
-       J13G, J23G, J33G, MAPF,                               & ! (in)
-       AQ_CV,                                                & ! (in)
-       REF_dens, REF_pott, REF_qv, REF_pres,                 & ! (in)
-       BND_W, BND_E, BND_S, BND_N,                           & ! (in)
-       ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, & ! (in)
-       DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          & ! (in)
-       DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          & ! (in)
-       DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    & ! (in)
-       DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    & ! (in)
-       divdmp_coef,                                          & ! (in)
-       FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! (in)
-       FLAG_FCT_ALONG_STREAM,                                & ! (in)
-       USE_AVERAGE,                                          & ! (in)
-       DTSEC, DTSEC_DYN                                      ) ! (in)
+    call ATMOS_DYN_tinteg_large( DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    & ! [INOUT]
+                                 PROG,                                                 & ! [INOUT]
+                                 DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
+                                 mflx_hi, tflx_hi,                                     & ! [OUT]
+                                 num_diff, num_diff_q,                                 & ! [OUT;WORK]
+                                 DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
+                                 CORIOLI,                                              & ! [IN]
+                                 CDZ, CDX, CDY, FDZ, FDX, FDY,                         & ! [IN]
+                                 RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! [IN]
+                                 PHI, GSQRT,                                           & ! [IN]
+                                 J13G, J23G, J33G, MAPF,                               & ! [IN]
+                                 AQ_CV,                                                & ! [IN]
+                                 REF_dens, REF_pott, REF_qv, REF_pres,                 & ! [IN]
+                                 BND_W, BND_E, BND_S, BND_N,                           & ! [IN]
+                                 ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, & ! [IN]
+                                 DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          & ! [IN]
+                                 DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          & ! [IN]
+                                 DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    & ! [IN]
+                                 DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    & ! [IN]
+                                 divdmp_coef,                                          & ! [IN]
+                                 FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! [IN]
+                                 FLAG_FCT_ALONG_STREAM,                                & ! [IN]
+                                 USE_AVERAGE,                                          & ! [IN]
+                                 DTSEC, DTSEC_DYN                                      ) ! [IN]
 
     call PROF_rapend  ("DYN_Tinteg", 2)
 
-
 #ifdef CHECK_MASS
-       call check_mass( &
-            DENS, DAMP_DENS, &
-            mflx_hi, tflx_hi, &
-            GSQRT, MAPF, &
-            RCDX, RCDY, &
-            dt, &
-            BND_W, BND_E, BND_S, BND_N )
+    call check_mass( DENS, DAMP_DENS,           & ! [IN]
+                     mflx_hi, tflx_hi,          & ! [IN]
+                     GSQRT, MAPF,               & ! [IN]
+                     RCDX, RCDY,                & ! [IN]
+                     dt,                        & ! [IN]
+                     BND_W, BND_E, BND_S, BND_N ) ! [IN]
 #endif
 
     return
   end subroutine ATMOS_DYN
 
 #ifdef CHECK_MASS
+  !-----------------------------------------------------------------------------
   subroutine check_mass( &
-       DENS, DAMP_DENS, &
-       mflx_hi, tflx_hi, &
-       GSQRT, MAPF, &
-       RCDX, RCDY, &
-       dt, &
-       BND_W, BND_E, BND_S, BND_N &
-       )
+       DENS, DAMP_DENS,           &
+       mflx_hi, tflx_hi,          &
+       GSQRT, MAPF,               &
+       RCDX, RCDY,                &
+       dt,                        &
+       BND_W, BND_E, BND_S, BND_N )
     use mpi
     use scale_grid_real, only: &
        vol => REAL_VOL
@@ -560,6 +520,7 @@ contains
        I_XYZ, &
        I_XY
     implicit none
+
     real(RP), intent(in) :: DENS     (KA,IA,JA)
     real(RP), intent(in) :: DAMP_DENS(KA,IA,JA)
     real(RP), intent(in) :: mflx_hi  (KA,IA,JA,3)
@@ -586,7 +547,7 @@ contains
 
     integer :: k, i, j
     integer :: ierr
-
+    !---------------------------------------------------------------------------
 
     call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
     call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
@@ -609,9 +570,9 @@ contains
           mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
 
-       end do
-       end do
-    end if
+       enddo
+       enddo
+    endif
     if ( BND_E ) then ! for eastern boundary
        i = IE
        do j = JS, JE
@@ -620,9 +581,9 @@ contains
                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
           mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       end do
-       end do
-    end if
+       enddo
+       enddo
+    endif
     if ( BND_S ) then ! for sourthern boundary
        j = JS
        do i = IS, IE
@@ -631,9 +592,9 @@ contains
                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
           mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       end do
-       end do
-    end if
+       enddo
+       enddo
+    endif
     if ( BND_N ) then ! for northern boundary
        j = JE
        do i = IS, IE
@@ -642,9 +603,9 @@ contains
                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
           mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       end do
-       end do
-    end if
+       enddo
+       enddo
+    endif
 
     mass_total  = 0.0_RP
     mass_total2 = 0.0_RP
@@ -655,37 +616,37 @@ contains
     do k = KS, KE
        mass_total  = mass_total  + DENS     (k,i,j) * vol(k,i,j)
        mass_total2 = mass_total2 + DAMP_DENS(k,i,j) * vol(k,i,j)
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
 
-    call MPI_Allreduce( mflx_lb_total,        &
-                        allmflx_lb_total,     &
-                        1,                    &
-                        COMM_datatype,        &
-                        MPI_SUM,              &
-                        COMM_world,           &
-                        ierr                  )
+    call MPI_Allreduce( mflx_lb_total,    &
+                        allmflx_lb_total, &
+                        1,                &
+                        COMM_datatype,    &
+                        MPI_SUM,          &
+                        COMM_world,       &
+                        ierr              )
 
     if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mflx_lb:', allmflx_lb_total
 
-    call MPI_Allreduce( mass_total,           &
-                        allmass_total,        &
-                        1,                    &
-                        COMM_datatype,        &
-                        MPI_SUM,              &
-                        COMM_world,           &
-                        ierr                  )
+    call MPI_Allreduce( mass_total,    &
+                        allmass_total, &
+                        1,             &
+                        COMM_datatype, &
+                        MPI_SUM,       &
+                        COMM_world,    &
+                        ierr           )
 
     if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mass   :', allmass_total
 
-    call MPI_Allreduce( mass_total2,          &
-                        allmass_total2,       &
-                        1,                    &
-                        COMM_datatype,        &
-                        MPI_SUM,              &
-                        COMM_world,           &
-                        ierr                  )
+    call MPI_Allreduce( mass_total2,    &
+                        allmass_total2, &
+                        1,              &
+                        COMM_datatype,  &
+                        MPI_SUM,        &
+                        COMM_world,     &
+                        ierr            )
 
     if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mass2  :', allmass_total2
 

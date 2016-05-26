@@ -40,16 +40,16 @@ module scale_grid_index
   include "inc_index.h"
   include "inc_index_common.h"
 #else
-  integer, public, parameter :: KHALO  = 2  !< # of halo cells: z
-  integer, public            :: IHALO  = 2  !< # of halo cells: x
-  integer, public            :: JHALO  = 2  !< # of halo cells: y
-
   integer, public :: KMAX   = -1 !< # of computational cells: z
   integer, public :: IMAX   = -1 !< # of computational cells: x
   integer, public :: JMAX   = -1 !< # of computational cells: y
 
   integer, public :: IBLOCK = -1 !< block size for cache blocking: x
   integer, public :: JBLOCK = -1 !< block size for cache blocking: y
+
+  integer, public, parameter :: KHALO  = 2  !< # of halo cells: z
+  integer, public            :: IHALO  = 2  !< # of halo cells: x
+  integer, public            :: JHALO  = 2  !< # of halo cells: y
 
   integer, public :: KA          !< # of z whole cells (local, with HALO)
   integer, public :: IA          !< # of x whole cells (local, with HALO)
@@ -120,12 +120,12 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
 
 #ifdef _FIXEDINDEX_
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** fixed index mode'
 #else
     !--- read namelist
@@ -142,11 +142,11 @@ contains
     if ( IMAX < IHALO ) then
        write(*,*) 'xxx number of grid size IMAX must >= IHALO! ', IMAX, IHALO
        call PRC_MPIstop
-    end if
+    endif
     if ( JMAX < JHALO ) then
        write(*,*) 'xxx number of grid size JMAX must >= JHALO! ', JMAX, JHALO
        call PRC_MPIstop
-    end if
+    endif
 
     KA   = KMAX + KHALO * 2
     IA   = IMAX + IHALO * 2
@@ -192,21 +192,21 @@ contains
     if ( .not. PRC_HAS_W ) then
        IMAXB = IMAXB + IHALO
        ISB = 1
-    end if
+    endif
     if ( .not. PRC_HAS_E ) then
        IMAXB = IMAXB + IHALO
        IEB = IA
        IEH = IE - 1
-    end if
+    endif
     if ( .not. PRC_HAS_S ) then
        JMAXB = JMAXB + JHALO
        JSB = 1
-    end if
+    endif
     if ( .not. PRC_HAS_N ) then
        JMAXB = JMAXB + JHALO
        JEB = JA
        JEH = JE - 1
-    end if
+    endif
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere grid index information ***'

@@ -30,34 +30,34 @@ module mod_admin_time
   !
   !++ Public parameters & variables
   !
-  real(DP), public :: TIME_DTSEC_ATMOS_RESTART  !< time interval of atmosphere restart    [sec]
-  real(DP), public :: TIME_DTSEC_OCEAN_RESTART  !< time interval of ocean restart         [sec]
-  real(DP), public :: TIME_DTSEC_LAND_RESTART   !< time interval of land restart          [sec]
-  real(DP), public :: TIME_DTSEC_URBAN_RESTART  !< time interval of urban restart         [sec]
-  real(DP), public :: TIME_DTSEC_RESUME         !< time interval for resume               [sec]
+  real(DP), public :: TIME_DTSEC_ATMOS_RESTART  !< time interval of atmosphere restart [sec]
+  real(DP), public :: TIME_DTSEC_OCEAN_RESTART  !< time interval of ocean restart      [sec]
+  real(DP), public :: TIME_DTSEC_LAND_RESTART   !< time interval of land restart       [sec]
+  real(DP), public :: TIME_DTSEC_URBAN_RESTART  !< time interval of urban restart      [sec]
+  real(DP), public :: TIME_DTSEC_RESUME         !< time interval for resume            [sec]
 
-  integer,  public :: TIME_DSTEP_ATMOS_RESTART  !< interval of atmosphere restart    [step]
-  integer,  public :: TIME_DSTEP_OCEAN_RESTART  !< interval of ocean restart         [step]
-  integer,  public :: TIME_DSTEP_LAND_RESTART   !< interval of land restart          [step]
-  integer,  public :: TIME_DSTEP_URBAN_RESTART  !< interval of urban restart         [step]
-  integer,  public :: TIME_DSTEP_RESUME         !< interval for resume               [step]
+  integer,  public :: TIME_DSTEP_ATMOS_RESTART  !< interval of atmosphere restart [step]
+  integer,  public :: TIME_DSTEP_OCEAN_RESTART  !< interval of ocean restart      [step]
+  integer,  public :: TIME_DSTEP_LAND_RESTART   !< interval of land restart       [step]
+  integer,  public :: TIME_DSTEP_URBAN_RESTART  !< interval of urban restart      [step]
+  integer,  public :: TIME_DSTEP_RESUME         !< interval for resume            [step]
 
-  logical,  public :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
-  logical,  public :: TIME_DOATMOS_DYN          !< execute dynamics?
-  logical,  public :: TIME_DOATMOS_PHY_CP       !< execute physics(cumulus     )?
-  logical,  public :: TIME_DOATMOS_PHY_MP       !< execute physics(microphysics)?
-  logical,  public :: TIME_DOATMOS_PHY_RD       !< execute physics(radiation   )?
-  logical,  public :: TIME_DOATMOS_PHY_SF       !< execute physics(surface flux)?
-  logical,  public :: TIME_DOATMOS_PHY_TB       !< execute physics(turbulence  )?
-  logical,  public :: TIME_DOATMOS_PHY_CH       !< execute physics(chemistry   )?
-  logical,  public :: TIME_DOATMOS_PHY_AE       !< execute physics(aerosol     )?
-  logical,  public :: TIME_DOATMOS_restart      !< execute atmosphere restart output?
-  logical,  public :: TIME_DOOCEAN_step         !< execute ocean component in this step?
-  logical,  public :: TIME_DOOCEAN_restart      !< execute ocean restart output?
-  logical,  public :: TIME_DOLAND_step          !< execute land component in this step?
-  logical,  public :: TIME_DOLAND_restart       !< execute land restart output?
-  logical,  public :: TIME_DOURBAN_step         !< execute urban component in this step?
-  logical,  public :: TIME_DOURBAN_restart      !< execute urban restart output?
+  logical,  public :: TIME_DOATMOS_step         !< execute atmosphere component in this step?
+  logical,  public :: TIME_DOATMOS_DYN          !< execute dynamics in this step?
+  logical,  public :: TIME_DOATMOS_PHY_CP       !< execute physics  in this step? (cumulus     )
+  logical,  public :: TIME_DOATMOS_PHY_MP       !< execute physics  in this step? (microphysics)
+  logical,  public :: TIME_DOATMOS_PHY_RD       !< execute physics  in this step? (radiation   )
+  logical,  public :: TIME_DOATMOS_PHY_SF       !< execute physics  in this step? (surface flux)
+  logical,  public :: TIME_DOATMOS_PHY_TB       !< execute physics  in this step? (turbulence  )
+  logical,  public :: TIME_DOATMOS_PHY_CH       !< execute physics  in this step? (chemistry   )
+  logical,  public :: TIME_DOATMOS_PHY_AE       !< execute physics  in this step? (aerosol     )
+  logical,  public :: TIME_DOATMOS_restart      !< execute atmosphere restart output in this step?
+  logical,  public :: TIME_DOOCEAN_step         !< execute ocean      component      in this step?
+  logical,  public :: TIME_DOOCEAN_restart      !< execute ocean      restart output in this step?
+  logical,  public :: TIME_DOLAND_step          !< execute land       component      in this step?
+  logical,  public :: TIME_DOLAND_restart       !< execute land       restart output in this step?
+  logical,  public :: TIME_DOURBAN_step         !< execute urban      component      in this step?
+  logical,  public :: TIME_DOURBAN_restart      !< execute urban      restart output in this step?
   logical,  public :: TIME_DOresume             !< resume in this step?
   logical,  public :: TIME_DOend                !< finish program in this step?
 
@@ -271,7 +271,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TIME] / Categ[COMMON] / Origin[SCALElib]'
 
-    TIME_NSTEP_ATMOS_DYN         = -1
+    TIME_NSTEP_ATMOS_DYN = -1
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -282,7 +282,6 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TIME. Check!'
        call PRC_MPIstop
     endif
-
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TIME)
 
     ! check time setting
@@ -301,7 +300,7 @@ contains
           if ( TIME_NSTEP_ATMOS_DYN < 0 ) then
              if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN. TIME_DT is used.'
              TIME_DT_ATMOS_DYN = TIME_DT
-          end if
+          endif
        endif
        if ( TIME_DT_ATMOS_DYN_UNIT == '' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN_UNIT. TIME_DT_UNIT is used.'
@@ -445,18 +444,19 @@ contains
 
     !--- calculate time
     if ( TIME_STARTDATE(1) == -999 ) then
-       if ( RESTART_IN_BASENAME /= '' ) then
-          call FileGetDatainfo( &
-               RESTART_IN_BASENAME, & ! [IN]
-               'DENS',              & ! [IN]
-               PRC_myrank,          & ! [IN]
-               0,                   & ! [IN] step
-               time_start = cftime, & ! [OUT]
-               time_units = cfunits ) ! [OUT]
+       if ( RESTART_IN_BASENAME /= '' ) then ! read start time from the restart data
+          call FileGetDatainfo( RESTART_IN_BASENAME, & ! [IN]
+                                'DENS',              & ! [IN]
+                                PRC_myrank,          & ! [IN]
+                                0,                   & ! [IN] step
+                                time_start = cftime, & ! [OUT]
+                                time_units = cfunits ) ! [OUT]
 
           dateday = 0
           datesec = CALENDAR_CFunits2sec( cftime, cfunits, 0 )
+
           call CALENDAR_adjust_daysec( dateday, datesec )
+
           call CALENDAR_daysec2date( TIME_STARTDATE, & ! [OUT]
                                      TIME_STARTMS,   & ! [OUT]
                                      dateday,        & ! [IN]
@@ -465,11 +465,13 @@ contains
        else
           TIME_STARTDATE = (/ 0, 1, 1, 0, 0, 0 /)
           TIME_STARTMS = 0.0_DP
-       end if
+       endif
     else
-       TIME_STARTMS      = TIME_STARTMS * 1.E-3_DP
-    end if
-    TIME_OFFSET_YEAR  = TIME_STARTDATE(1)
+       TIME_STARTMS = TIME_STARTMS * 1.E-3_DP
+    endif
+
+    TIME_OFFSET_YEAR = TIME_STARTDATE(1)
+
     call CALENDAR_date2daysec( TIME_STARTDAY,     & ! [OUT]
                                TIME_STARTSEC,     & ! [OUT]
                                TIME_STARTDATE(:), & ! [IN]
@@ -525,11 +527,11 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I10)'  ) '*** No. of steps   :', TIME_NSTEP
 
        !--- calculate intervals for atmosphere
-       if ( TIME_DT_ATMOS_DYN .ne. UNDEF8 ) then
+       if ( TIME_DT_ATMOS_DYN /= UNDEF8 ) then
           call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
        else
           TIME_DTSEC_ATMOS_DYN = TIME_DTSEC / TIME_NSTEP_ATMOS_DYN
-       end if
+       endif
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_CP,  TIME_DT_ATMOS_PHY_CP,  TIME_DT_ATMOS_PHY_CP_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
@@ -565,7 +567,7 @@ contains
        TIME_DTSEC_URBAN_RESTART = max( TIME_DTSEC_URBAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_RESUME        = max( TIME_DTSEC_RESUME,        TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
 
-       TIME_DSTEP_ATMOS_DYN     = nint( TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN / TIME_DTSEC )
+       TIME_DSTEP_ATMOS_DYN     = nint( TIME_DTSEC_ATMOS_DYN     / TIME_DTSEC * TIME_NSTEP_ATMOS_DYN )
        TIME_DSTEP_ATMOS_PHY_CP  = nint( TIME_DTSEC_ATMOS_PHY_CP  / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_MP  = nint( TIME_DTSEC_ATMOS_PHY_MP  / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_RD  = nint( TIME_DTSEC_ATMOS_PHY_RD  / TIME_DTSEC )
@@ -676,46 +678,45 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)                     '*** Atmosphere'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)')        '*** Dynamics (time)             : ', TIME_DTSEC_ATMOS_DYN
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I10,A,I8,A)')   '***          (step)             : ', TIME_NSTEP_ATMOS_DYN, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_DYN, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_DYN,    ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Cumulus            : ', TIME_DTSEC_ATMOS_PHY_CP, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_PHY_CP, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_PHY_CP, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Cloud Microphysics : ', TIME_DTSEC_ATMOS_PHY_MP, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_PHY_MP, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_PHY_MP, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Radiation          : ', TIME_DTSEC_ATMOS_PHY_RD, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_PHY_RD, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_PHY_RD, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Surface Flux       : ', TIME_DTSEC_ATMOS_PHY_SF, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_PHY_SF, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_PHY_SF, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Turbulence         : ', TIME_DTSEC_ATMOS_PHY_TB, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_PHY_TB, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_PHY_TB, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Chemistry          : ', TIME_DTSEC_ATMOS_PHY_CH, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_PHY_CH, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_PHY_CH, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Aerosol            : ', TIME_DTSEC_ATMOS_PHY_AE, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_PHY_AE, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_PHY_AE, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Ocean                       : ', TIME_DTSEC_OCEAN, &
-                                                          ' (steps=', TIME_DSTEP_OCEAN, ')'
+                                                          ' (step interval=', TIME_DSTEP_OCEAN,        ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Land                        : ', TIME_DTSEC_LAND, &
-                                                          ' (steps=', TIME_DSTEP_LAND, ')'
+                                                          ' (step interval=', TIME_DSTEP_LAND,         ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Urban                       : ', TIME_DTSEC_URBAN, &
-                                                          ' (steps=', TIME_DSTEP_URBAN, ')'
+                                                          ' (step interval=', TIME_DSTEP_URBAN,        ')'
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*)                     '*** Time interval for restart (sec.)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Atmospheric Variables       : ', TIME_DTSEC_ATMOS_RESTART, &
-                                                          ' (steps=', TIME_DSTEP_ATMOS_RESTART, ')'
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_RESTART, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Ocean Variables             : ', TIME_DTSEC_OCEAN_RESTART, &
-                                                          ' (steps=', TIME_DSTEP_OCEAN_RESTART, ')'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Land Variables              : ', TIME_DTSEC_LAND_RESTART, &
-                                                          ' (steps=', TIME_DSTEP_LAND_RESTART, ')'
+                                                          ' (step interval=', TIME_DSTEP_OCEAN_RESTART, ')'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Land Variables              : ', TIME_DTSEC_LAND_RESTART,  &
+                                                          ' (step interval=', TIME_DSTEP_LAND_RESTART,  ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Urban Variables             : ', TIME_DTSEC_URBAN_RESTART, &
-                                                          ' (steps=', TIME_DSTEP_URBAN_RESTART, ')'
-
+                                                          ' (step interval=', TIME_DSTEP_URBAN_RESTART, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Resume                      : ', TIME_DTSEC_RESUME, &
-                                                          ' (steps=', TIME_DSTEP_RESUME, ')'
+                                                          ' (step interval=', TIME_DSTEP_RESUME,        ')'
     endif
 
     ! WALLCLOCK TERMINATOR SETUP
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*)                     '*** Wall clock time limit of execution is specified.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Wall clock time limit of execution is specified.'
 
        if ( TIME_DT_WALLCLOCK_CHECK == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_WALLCLOCK_CHECK. largest time step interval is used.'
@@ -747,7 +748,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.1,A)')      '*** This job stops after ', &
                                                           TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE, ' seconds.'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Step interval for check     : ', TIME_DTSEC_WALLCLOCK_CHECK, &
-                                                          ' (steps=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
+                                                          ' (step interval=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
     endif
 
     return
@@ -782,19 +783,19 @@ contains
     character(len=27) :: nowchardate
     !---------------------------------------------------------------------------
 
-    TIME_DOATMOS_step      = .false.
-    TIME_DOATMOS_DYN       = .false.
-    TIME_DOATMOS_PHY_CP    = .false.
-    TIME_DOATMOS_PHY_MP    = .false.
-    TIME_DOATMOS_PHY_RD    = .false.
-    TIME_DOATMOS_PHY_SF    = .false.
-    TIME_DOATMOS_PHY_TB    = .false.
-    TIME_DOATMOS_PHY_CH    = .false.
-    TIME_DOATMOS_PHY_AE    = .false.
-    TIME_DOOCEAN_step      = .false.
-    TIME_DOLAND_step       = .false.
-    TIME_DOURBAN_step      = .false.
-    TIME_DOresume          = .false.
+    TIME_DOATMOS_step     = .false.
+    TIME_DOATMOS_DYN      = .false.
+    TIME_DOATMOS_PHY_CP   = .false.
+    TIME_DOATMOS_PHY_MP   = .false.
+    TIME_DOATMOS_PHY_RD   = .false.
+    TIME_DOATMOS_PHY_SF   = .false.
+    TIME_DOATMOS_PHY_TB   = .false.
+    TIME_DOATMOS_PHY_CH   = .false.
+    TIME_DOATMOS_PHY_AE   = .false.
+    TIME_DOOCEAN_step     = .false.
+    TIME_DOLAND_step      = .false.
+    TIME_DOURBAN_step     = .false.
+    TIME_DOresume         = .false.
 
     TIME_RES_ATMOS_DYN    = TIME_RES_ATMOS_DYN    + 1
     TIME_RES_ATMOS_PHY_CP = TIME_RES_ATMOS_PHY_CP + 1
@@ -810,9 +811,9 @@ contains
     TIME_RES_RESUME       = TIME_RES_RESUME       + 1
 
     if ( TIME_RES_ATMOS_DYN    == TIME_DSTEP_ATMOS_DYN ) then
-       TIME_DOATMOS_step  = .true.
-       TIME_DOATMOS_DYN   = .true.
-       TIME_RES_ATMOS_DYN = 0
+       TIME_DOATMOS_step     = .true.
+       TIME_DOATMOS_DYN      = .true.
+       TIME_RES_ATMOS_DYN    = 0
     endif
     if ( TIME_RES_ATMOS_PHY_CP == TIME_DSTEP_ATMOS_PHY_CP ) then
        TIME_DOATMOS_step     = .true.
@@ -851,26 +852,25 @@ contains
     endif
 
     if ( TIME_RES_OCEAN  == TIME_DSTEP_OCEAN  ) then
-       TIME_DOOCEAN_step = .true.
-       TIME_RES_OCEAN    = 0
+       TIME_DOOCEAN_step     = .true.
+       TIME_RES_OCEAN        = 0
     endif
     if ( TIME_RES_LAND   == TIME_DSTEP_LAND   ) then
-       TIME_DOLAND_step  = .true.
-       TIME_RES_LAND     = 0
+       TIME_DOLAND_step      = .true.
+       TIME_RES_LAND         = 0
     endif
     if ( TIME_RES_URBAN  == TIME_DSTEP_URBAN  ) then
-       TIME_DOURBAN_step = .true.
-       TIME_RES_URBAN    = 0
+       TIME_DOURBAN_step     = .true.
+       TIME_RES_URBAN        = 0
     endif
     if ( TIME_RES_RESUME == TIME_DSTEP_RESUME ) then
-       TIME_DOresume     = .true.
-       TIME_RES_RESUME   = 0
+       TIME_DOresume         = .true.
+       TIME_RES_RESUME       = 0
     endif
 
     call CALENDAR_date2char( nowchardate,     & ! [OUT]
                              TIME_NOWDATE(:), & ! [IN]
                              TIME_NOWMS       ) ! [IN]
-
 
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
        WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
@@ -879,8 +879,6 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
     endif
-
-
 
     return
   end subroutine ADMIN_TIME_checkstate

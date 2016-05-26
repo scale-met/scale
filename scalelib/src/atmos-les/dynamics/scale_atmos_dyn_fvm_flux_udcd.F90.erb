@@ -9,8 +9,8 @@ if /((?:ud|cd)(\d+)(?:[^\d]\w*)?)\.F90/ =~ fname
   nh = (order+1)/2 - 1
   if order >= 2
     def num_diff(k="k",i="i",j="j")
-      " &
-            + GSQRT(#{k},#{i},#{j}) * num_diff(#{k},#{i},#{j})"
+                  "&
+                   + GSQRT(#{k},#{i},#{j}) * num_diff(#{k},#{i},#{j})"
     end
   else
     def num_diff(*arg)
@@ -84,25 +84,30 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
     "F2 * ( val(#{idx1})+val(#{idx0}) )"
   when 3
     if @scheme=="ud3Koren1993"
-      p = "val(#{idx0}) + 0.5_RP * phi(val(#{idx1}),val(#{idx0}),val(#{idxn1})) * ( val(#{idx0})-val(#{idxn1}) )"
-      n = "val(#{idx1}) + 0.5_RP * phi(val(#{idx0}),val(#{idx1}),val(#{idx2 })) * ( val(#{idx1})-val(#{idx2 }) )"
-               "   ( #{p} ) * ( 0.5_RP + sign(0.5_RP,#{vel}) ) &
-                 + ( #{n} ) * ( 0.5_RP - sign(0.5_RP,#{vel}) )"
+                      "( val(#{idx0}) &
+                       + 0.5_RP * phi(val(#{idx1}),val(#{idx0}),val(#{idxn1})) * ( val(#{idx0})-val(#{idxn1}) ) ) &
+                       * ( 0.5_RP + sign(0.5_RP,#{vel}) ) &
+                     + ( val(#{idx1}) &
+                       + 0.5_RP * phi(val(#{idx0}),val(#{idx1}),val(#{idx2 })) * ( val(#{idx1})-val(#{idx2 }) ) ) &
+                       * ( 0.5_RP - sign(0.5_RP,#{vel}) )"
     else
-               "  F31 * ( val(#{idx2})+val(#{idxn1}) ) + F32 * ( val(#{idx1})+val(#{idx0}) ) &
-              - ( F31 * ( val(#{idx2})-val(#{idxn1}) ) + F33 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
+                      "( F31 * ( val(#{idx2})+val(#{idxn1}) ) + F32 * ( val(#{idx1})+val(#{idx0}) ) ) &
+                     - ( F31 * ( val(#{idx2})-val(#{idxn1}) ) + F33 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
     end
   when 4
-    "F41 * ( val(#{idx1})+val(#{idx0}) ) + F42 * ( val(#{idx2})+val(#{idxn1}) )"
+                      "F41 * ( val(#{idx1})+val(#{idx0}) ) &
+                     + F42 * ( val(#{idx2})+val(#{idxn1}) )"
   when 5
-               "  F51 * ( val(#{idx3})+val(#{idxn2}) ) &
-                + F52 * ( val(#{idx2})+val(#{idxn1}) ) &
-                + F53 * ( val(#{idx1})+val(#{idx0}) ) &
-              - ( F51 * ( val(#{idx3})-val(#{idxn2}) ) &
-                + F54 * ( val(#{idx2})-val(#{idxn1}) ) &
-                + F55 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
+                      "( F51 * ( val(#{idx3})+val(#{idxn2}) ) &
+                       + F52 * ( val(#{idx2})+val(#{idxn1}) ) &
+                       + F53 * ( val(#{idx1})+val(#{idx0}) ) ) &
+                     - ( F51 * ( val(#{idx3})-val(#{idxn2}) ) &
+                       + F54 * ( val(#{idx2})-val(#{idxn1}) ) &
+                       + F55 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
   when 6
-    "F61 * ( val(#{idx1})+val(#{idx0}) ) + F62 * ( val(#{idx2})+val(#{idxn1}) ) + F63 * ( val(#{idx3})+val(#{idxn2}) )"
+                      "F61 * ( val(#{idx1})+val(#{idx0}) ) &
+                     + F62 * ( val(#{idx2})+val(#{idxn1}) ) &
+                     + F63 * ( val(#{idx3})+val(#{idxn2}) )"
   else
     raise "invalid order: #{order}"
   end
@@ -118,8 +123,10 @@ def interp(val, src, dst, k="k", i="i", j="j")
   when src[2..2] == "Z" # Z->W
     v0 = interpH(val, src[0..1], dst[0..1], k  , i, j)
     v1 = interpH(val, src[0..1], dst[0..1], k+1, i, j)
-    ret = "F2H(#{k},1,I_#{src}) * #{v1} &
-             + F2H(#{k},2,I_#{src}) * #{v0}"
+    ret = "F2H(#{k},1,I_#{src}) &
+             * #{v1} &
+             + F2H(#{k},2,I_#{src}) &
+             * #{v0}"
   else # W=>Z
     v0 = interpH(val, src[0..1], dst[0..1], k-1, i, j)
     v1 = interpH(val, src[0..1], dst[0..1], k  , i, j)
@@ -273,24 +280,23 @@ module <%= modname %>
 <%     end # 5 %>
 <%   end # 3 %>
 <% end %>
-
 contains
-
   !-----------------------------------------------------------------------------
   !> value at XYW
 !OCL SERIAL
   subroutine ATMOS_DYN_FVM_flux_valueW_Z_<%=@scheme%>( &
-       valW, &
+       valW,             &
        mflx, val, GSQRT, &
-       CDZ )
+       CDZ               )
     implicit none
-    real(RP), intent(out) :: valW  (KA)
-    real(RP), intent(in)  :: mflx    (KA)
-    real(RP), intent(in)  :: val     (KA)
-    real(RP), intent(in)  :: GSQRT   (KA)
-    real(RP), intent(in)  :: CDZ(KA)
 
-    integer  :: k, i, j
+    real(RP), intent(out) :: valW (KA)
+    real(RP), intent(in)  :: mflx (KA)
+    real(RP), intent(in)  :: val  (KA)
+    real(RP), intent(in)  :: GSQRT(KA)
+    real(RP), intent(in)  :: CDZ  (KA)
+
+    integer  :: k
     !---------------------------------------------------------------------------
 
     do k = KS<%=nh%>, KE<%=-(nh+1)%>
@@ -301,7 +307,7 @@ contains
        call CHECK( __LINE__, val(k<%=k+1%>) )
 <% end %>
 #endif
-       valW(k) = <%= flux("mflx(k)", order, 0, "k", nil, nil, 1) %>
+       valW(k)       = <%= flux("mflx(k)", order, 0, "k", nil, nil, 1) %>
     enddo
 #ifdef DEBUG
     k = IUNDEF
@@ -321,21 +327,21 @@ contains
        valW(KS<%=k%>) = <%= flux("mflx(KS#{k})", order-(nh-k)*2, 0, "KS"+k, nil, nil, 1) %>
        valW(KE<%=-k-1%>) = <%= flux("mflx(KE#{-(k+1)})", order-(nh-k)*2, 0, "KE"-(k+1), nil, nil, 1) %>
 <% end %>
-
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_<%=@scheme%>
 
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYZ
   subroutine ATMOS_DYN_FVM_fluxZ_XYZ_<%=@scheme%>( &
-       flux, &
-       mflx, val, GSQRT, &
+       flux,              &
+       mflx, val, GSQRT,  &
 <% if order >= 2 %>
-       num_diff, &
+       num_diff,          &
 <% end %>
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -343,7 +349,7 @@ contains
 <% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
 <% end %>
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -363,7 +369,7 @@ contains
 #endif
        vel = mflx(k,i,j)
        flux(k,i,j) = vel &
-            * ( <%= flux("vel", order,0) %> ) <%= num_diff() %>
+                   * ( <%= flux("vel", order,0) %> ) <%= num_diff() %>
     enddo
     enddo
     enddo
@@ -388,10 +394,10 @@ contains
 <% nh.times do |k| %>
        vel = mflx(KS<%=k%>,i,j)
        flux(KS<%=k%>,i,j) = vel &
-            * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
        vel = mflx(KE<%=-(k+1)%>,i,j)
        flux(KE<%=-k-1%>,i,j) = vel &
-            * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
 <% end %>
        flux(KE  ,i,j) = 0.0_RP
     enddo
@@ -402,7 +408,6 @@ contains
 
     return
   end subroutine ATMOS_DYN_FVM_fluxZ_XYZ_<%=@scheme%>
-
 <% [
      ["X", 1, 0],
      ["Y", 0, 1]
@@ -411,14 +416,15 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation <%=dir%>-flux at XYZ
   subroutine ATMOS_DYN_FVM_flux<%=dir%>_XYZ_<%=@scheme%>( &
-       flux, &
-       mflx, val, GSQRT, &
+       flux,              &
+       mflx, val, GSQRT,  &
 <% if order >= 2 %>
-       num_diff, &
+       num_diff,          &
 <% end %>
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -446,7 +452,7 @@ contains
 #endif
        vel = mflx(k,i,j)
        flux(k,i,j) = vel &
-            * ( <%=flux("vel", order, i+j*2)%> ) <%= num_diff() %>
+                   * ( <%=flux("vel", order, i+j*2)%> ) <%= num_diff() %>
     enddo
     enddo
     enddo
@@ -458,20 +464,20 @@ contains
   end subroutine ATMOS_DYN_FVM_flux<%=dir%>_XYZ_<%=@scheme%>
 <% end %>
 <%# end X Y loop %>
-
   !-----------------------------------------------------------------------------
   !> calculation z-flux at XYW
   subroutine ATMOS_DYN_FVM_fluxZ_XYW_<%=@scheme%>( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, J33G, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, J33G,       &
 <% if order >= 2 %>
-       num_diff, &
+       num_diff,          &
 <% end %>
-       CDZ, FDZ, &
-       dtrk, &
+       CDZ, FDZ,          &
+       dtrk,              &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -481,8 +487,8 @@ contains
 <% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
 <% end %>
-    real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(in)  :: FDZ(KA-1)
+    real(RP), intent(in)  :: CDZ     (KA)
+    real(RP), intent(in)  :: FDZ     (KA-1)
     real(RP), intent(in)  :: dtrk
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -508,7 +514,7 @@ contains
        vel = <%= interp("mom", "XYW", "XYZ") %> &
            / DENS(k,i,j)
        flux(k-1,i,j) = J33G * vel &
-            * ( <%= flux("vel", order, 0, "k-1") %> ) <%= num_diff() %>
+                   * ( <%= flux("vel", order, 0, "k-1") %> ) <%= num_diff() %>
     enddo
     enddo
     enddo
@@ -532,7 +538,7 @@ contains
        vel = <%= interp("mom", "XYW", "XYZ", "KS+1") %> &
            / DENS(KS+1,i,j)
        flux(KS  ,i,j) = J33G * vel &
-            * ( <%= flux("vel", order-(nh-1)*2, 0, "KS") %> ) <%= num_diff("KS+1") %> ! k = KS+1
+                   * ( <%= flux("vel", order-(nh-1)*2, 0, "KS") %> ) <%= num_diff("KS+1") %> ! k = KS+1
 <% end %>
        ! if w>0; min(f,w*dz/dt)
        ! else  ; max(f,w*dz/dt) = -min(-f,-w*dz/dt)
@@ -543,7 +549,7 @@ contains
        vel = <%= interp("mom", "XYW", "XYZ", "KE-1") %> &
            / DENS(KE-1,i,j)
        flux(KE-2,i,j) = J33G * vel &
-            * ( <%= flux("vel", order-(nh-1)*2, 0, "KE-2") %> ) <%= num_diff("KE-1") %> ! k = KE-1
+                   * ( <%= flux("vel", order-(nh-1)*2, 0, "KE-2") %> ) <%= num_diff("KE-1") %> ! k = KE-1
 <% end %>
        flux(KE-1,i,j) = 0.0_RP ! k = KE
     enddo
@@ -560,20 +566,21 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation <%=dir%>-flux at XYW
   subroutine ATMOS_DYN_FVM_flux<%=dir%>_XYW_<%=@scheme%>( &
-       flux, &
-       mom, val, DENS, &
+       flux,              &
+       mom, val, DENS,    &
        GSQRT, <%=dir%>G, MAPF, &
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-    real(RP), intent(in)  :: <%=dir%>G(KA,IA,JA)
+    real(RP), intent(in)  :: <%=dir%>G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -587,7 +594,7 @@ contains
        vel = <%= interp("mom", uv, "XYZ") %> &
            / DENS(k,i,j)
        flux(k-1,i,j) = <%=dir%>G(k,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-            * ( <%= flux("vel", order, 0, "k-1") %> )
+                   * ( <%= flux("vel", order, 0, "k-1") %> )
     enddo
     enddo
     enddo
@@ -600,11 +607,11 @@ contains
        vel = <%= interp("mom", uv, "XYZ", "KS"+k) %> &
            / DENS(KS<%=k%>,i,j)
        flux(KS<%=k-1%>,i,j) = <%=dir%>G(KS<%k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-            * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+(k-1)) %> )
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+(k-1)) %> )
        vel = <%= interp("mom", uv, "XYZ", "KE"-k) %> &
            / DENS(KE<%=-k%>,i,j)
        flux(KE<%=-k-1%>,i,j) = <%=dir%>G(KE<%=-k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-            * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> )
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> )
 <%   end %>
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -622,15 +629,16 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation <%=dir%>-flux at XYW
   subroutine ATMOS_DYN_FVM_flux<%=dir%>_XYW_<%=@scheme%>( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, MAPF, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, MAPF,       &
 <% if order >= 2 %>
-       num_diff, &
+       num_diff,          &
 <% end %>
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -640,7 +648,7 @@ contains
 <% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
 <% end %>
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -662,7 +670,7 @@ contains
        vel = <%= interp("mom", xyz+"Z", xyz+"W") %> &
            / <%= interp("DENS", "XYZ", xyz+"W") %>
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-            * ( <%= flux("vel", order, i+2*j) %> ) <%= num_diff() %>
+                   * ( <%= flux("vel", order, i+2*j) %> ) <%= num_diff() %>
     enddo
     enddo
     enddo
@@ -692,15 +700,16 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation z-flux at <%=uv%>
   subroutine ATMOS_DYN_FVM_fluxZ_<%=uv%>Z_<%=@scheme%>( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, J33G, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, J33G,       &
 <% if order >= 2 %>
-       num_diff, &
+       num_diff,          &
 <% end %>
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -710,7 +719,7 @@ contains
 <% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
 <% end %>
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -732,7 +741,7 @@ contains
        vel = <%= interp("mom", "XYW", uv+"W") %> &
            / <%= interp("DENS", "XYZ", uv+"W") %>
        flux(k,i,j) = J33G * vel &
-            * ( <%= flux("vel", order, 0) %> ) <%= num_diff() %>
+                   * ( <%= flux("vel", order, 0) %> ) <%= num_diff() %>
     enddo
     enddo
     enddo
@@ -756,11 +765,11 @@ contains
        vel = <%= interp("mom", "XYW", uv+"W", "KS"+k) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KS"+k) %>
        flux(KS<%=k%>,i,j) = J33G * vel &
-            * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
        vel = <%= interp("mom", "XYW", uv+"W", "KE"-(k+1)) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KE"-(k+1)) %>
        flux(KE<%=-k-1%>,i,j) = J33G * vel &
-            * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
 <% end %>
        flux(KE,i,j) = 0.0_RP
     enddo
@@ -771,8 +780,6 @@ contains
 
     return
   end subroutine ATMOS_DYN_FVM_fluxZ_<%=uv%>Z_<%=@scheme%>
-
-
 <% [
      ["J13", "UYZ", 2],
      ["J23", "XVZ", 1]
@@ -781,20 +788,21 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation <%=dir%>-flux at <%=uv%>Z
   subroutine ATMOS_DYN_FVM_flux<%=dir%>_<%=uv%>Z_<%=@scheme%>( &
-       flux, &
-       mom, val, DENS, &
+       flux,              &
+       mom, val, DENS,    &
        GSQRT, <%=dir%>G, MAPF, &
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-    real(RP), intent(in)  :: <%=dir%>G(KA,IA,JA)
+    real(RP), intent(in)  :: <%=dir%>G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -808,7 +816,7 @@ contains
        vel = <%= interp("mom", xyz, uv+"W") %> &
            / <%= interp("DENS", "XYZ", uv+"W") %>
        flux(k,i,j) = <%=dir%>G(k,i,j) / MAPF(i,j,<%=im%>) * vel &
-            * ( <%= flux("vel", order, 0) %> )
+                   * ( <%= flux("vel", order, 0) %> )
     enddo
     enddo
     enddo
@@ -821,11 +829,11 @@ contains
        vel = <%= interp("mom", xyz, uv+"W", "KS"+k) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KS"+k) %>
        flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%=k%>,i,j) / MAPF(i,j,<%=im%>) * vel &
-            * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> )
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> )
        vel = <%= interp("mom", xyz, uv+"W", "KE"-(k+1)) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KE"-(k+1)) %>
        flux(KE<%=-k-1%>,i,j) = <%=dir%>G(KE<%=-k-1%>,i,j) / MAPF(i,j,<%=im%>) * vel &
-            * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> )
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> )
 <% end %>
        flux(KE  ,i,j) = 0.0_RP
     enddo
@@ -834,7 +842,6 @@ contains
     return
   end subroutine ATMOS_DYN_FVM_flux<%=dir%>_<%=uv%>Z_<%=@scheme%>
 <% end # J13 J23 loop %>
-
 <% [
      ["X", 1, 0],
      ["Y", 0, 1]
@@ -843,15 +850,16 @@ contains
   !-----------------------------------------------------------------------------
   !> calculation <%=dir%>-flux at <%=uv%>
   subroutine ATMOS_DYN_FVM_flux<%=dir%>_<%=uv%>Z_<%=@scheme%>( &
-       flux, &
-       mom, val, DENS, &
-       GSQRT, MAPF, &
+       flux,              &
+       mom, val, DENS,    &
+       GSQRT, MAPF,       &
 <% if order >= 2 %>
-       num_diff, &
+       num_diff,          &
 <% end %>
-       CDZ, &
+       CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
+
     real(RP), intent(out) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
@@ -861,7 +869,7 @@ contains
 <% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
 <% end %>
-    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -905,7 +913,7 @@ contains
        vel = <%= interp("mom", dir=="X" ? "UYZ" : "XVZ", dst+"Z") %> &
            / <%= interp("DENS", "XYZ", dst+"Z") %>
        flux(k,i<%=-io%>,j<%=-jo%>) = GSQRT(k,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-            * ( <%= flux("vel", order, i+j*2, "k", "i"-io, "j"-jo) %> ) <%= num_diff() %>
+                   * ( <%= flux("vel", order, i+j*2, "k", "i"-io, "j"-jo) %> ) <%= num_diff() %>
     enddo
     enddo
     enddo
@@ -915,25 +923,26 @@ contains
 
     return
   end subroutine ATMOS_DYN_FVM_flux<%=dir%>_<%=uv%>Z_<%=@scheme%>
-
 <% end %>
 <%# -- X Y loop ------- %>
-
 <% end %>
 <%# -- U V loop ------- %>
 
 <% if @scheme == "ud3Koren1993" %>
+  !-----------------------------------------------------------------------------
   function phi(v1, v2, v3)
     use scale_const, only: &
-         EPS => CONST_EPS
+       EPS => CONST_EPS
     implicit none
-    real(RP) :: phi
+
+    real(RP)              :: phi
     real(RP), intent(in)  :: v1
     real(RP), intent(in)  :: v2
     real(RP), intent(in)  :: v3
 
     real(RP) :: r2
     real(RP) :: zerosw1, zerosw2
+    !---------------------------------------------------------------------------
 
     zerosw1 = EPS - sign(EPS, abs(v1-v2)-EPS)
     zerosw2 = EPS - sign(EPS, abs(v2-v3)-EPS)
@@ -945,9 +954,6 @@ contains
 <% end %>
 
 end module <%= modname %>
-
-!-------------------------------------------------------------------------------
-
 
 !--
 ! vi<%=":"%>set readonly sw=4 ts=8

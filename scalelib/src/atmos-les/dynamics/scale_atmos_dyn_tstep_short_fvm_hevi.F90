@@ -36,10 +36,12 @@ module scale_atmos_dyn_tstep_short_fvm_hevi
   use scale_grid_index
   use scale_index
   use scale_tracer
-
 #ifdef DEBUG
   use scale_debug, only: &
-       CHECK
+     CHECK
+  use scale_const, only: &
+     UNDEF  => CONST_UNDEF, &
+     IUNDEF => CONST_UNDEF2
 #endif
   !-----------------------------------------------------------------------------
   implicit none
@@ -70,45 +72,45 @@ module scale_atmos_dyn_tstep_short_fvm_hevi
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: NB = 1
-  integer, private, parameter :: VA_FVM_HEVI = 0
-  real(RP), private :: kappa
+  integer,  private, parameter :: NB = 1
+  integer,  private, parameter :: VA_FVM_HEVI = 0
+  integer                      :: IFS_OFF
+  integer                      :: JFS_OFF
 
-  integer :: IFS_OFF
-  integer :: JFS_OFF
 #ifdef HIST_TEND
-  real(RP), allocatable :: advch_t(:,:,:,:)
-  real(RP), allocatable :: advcv_t(:,:,:,:)
-  real(RP), allocatable :: ddiv_t(:,:,:,:)
-  real(RP), allocatable :: pg_t(:,:,:,:)
-  real(RP), allocatable :: cf_t(:,:,:,:)
+  real(RP), private, allocatable :: advch_t(:,:,:,:)
+  real(RP), private, allocatable :: advcv_t(:,:,:,:)
+  real(RP), private, allocatable :: ddiv_t (:,:,:,:)
+  real(RP), private, allocatable :: pg_t   (:,:,:,:)
+  real(RP), private, allocatable :: cf_t   (:,:,:,:)
 #endif
   !-----------------------------------------------------------------------------
-
-
 contains
-
   !-----------------------------------------------------------------------------
   !> Register
   subroutine ATMOS_DYN_Tstep_short_fvm_hevi_regist( &
        ATMOS_DYN_TYPE, &
-       VA_out, &
-       VAR_NAME, VAR_DESC, VAR_UNIT )
+       VA_out,         &
+       VAR_NAME,       &
+       VAR_DESC,       &
+       VAR_UNIT        )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
-    integer,                intent(out) :: VA_out !< number of prognostic variables
+    integer,                intent(out) :: VA_out      !< number of prognostic variables
     character(len=H_SHORT), intent(out) :: VAR_NAME(:) !< name  of the variables
     character(len=H_MID),   intent(out) :: VAR_DESC(:) !< desc. of the variables
     character(len=H_SHORT), intent(out) :: VAR_UNIT(:) !< unit  of the variables
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Register'
 
     if ( ATMOS_DYN_TYPE .ne. 'FVM-HEVI' .and. ATMOS_DYN_TYPE .ne. 'HEVI' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVI. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     VA_out = VA_FVM_HEVI
 
@@ -118,16 +120,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_Tstep_short_fvm_hevi_setup
-#ifdef DRY
-    use scale_const, only: &
-       CVdry  => CONST_CVdry,  &
-       CPdry  => CONST_CPdry
-#endif
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
-
 #ifdef HEVI_BICGSTAB
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
 #elif defined(HEVI_LAPACK)
@@ -136,78 +132,72 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
 #endif
 
-#ifdef DRY
-    kappa = CPdry / CVdry
-#endif
-
 #ifdef HIST_TEND
     allocate( advch_t(KA,IA,JA,5) )
     allocate( advcv_t(KA,IA,JA,5) )
-    allocate( ddiv_t(KA,IA,JA,3) )
-    allocate( pg_t(KA,IA,JA,3) )
-    allocate( cf_t(KA,IA,JA,2) )
+    allocate( ddiv_t (KA,IA,JA,3) )
+    allocate( pg_t   (KA,IA,JA,3) )
+    allocate( cf_t   (KA,IA,JA,2) )
 
     advch_t = 0.0_RP
     advcv_t = 0.0_RP
-    ddiv_t = 0.0_RP
-    pg_t = 0.0_RP
-    cf_t = 0.0_RP
+    ddiv_t  = 0.0_RP
+    pg_t    = 0.0_RP
+    cf_t    = 0.0_RP
 #endif
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi_setup
 
-
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_Tstep_short_fvm_hevi( &
-    DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-    PROG_RK,                                     &
-    mflx_hi, tflx_hi,                            &
-    DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
-    DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
-    DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
-    PROG0, PROG,                                 &
-    DPRES0, RT2P, CORIOLI,                       &
-    num_diff, divdmp_coef, DDIV,                 &
-    FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
-    FLAG_FCT_ALONG_STREAM,                       &
-    CDZ, FDZ, FDX, FDY,                          &
-    RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-    PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
-    REF_dens, REF_rhot,                          &
-    BND_W, BND_E, BND_S, BND_N,                  &
-    dtrk, dt                                     )
+       DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
+       PROG_RK,                                     &
+       mflx_hi, tflx_hi,                            &
+       DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
+       DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
+       DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
+       PROG0, PROG,                                 &
+       DPRES0, RT2P, CORIOLI,                       &
+       num_diff, divdmp_coef, DDIV,                 &
+       FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
+       FLAG_FCT_ALONG_STREAM,                       &
+       CDZ, FDZ, FDX, FDY,                          &
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
+       REF_dens, REF_rhot,                          &
+       BND_W, BND_E, BND_S, BND_N,                  &
+       dtrk, dt                                     )
     use scale_grid_index
     use scale_const, only: &
 #ifdef DRY
-       Rdry   => CONST_Rdry,   &
-       CVdry  => CONST_CVdry,  &
-       CPdry  => CONST_CPdry,  &
+       Rdry   => CONST_Rdry,  &
+       CVdry  => CONST_CVdry, &
+       CPdry  => CONST_CPdry, &
 #endif
-       UNDEF  => CONST_UNDEF,  &
-       IUNDEF => CONST_UNDEF2, &
-       GRAV   => CONST_GRAV,   &
+       GRAV   => CONST_GRAV,  &
        P00    => CONST_PRE00
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_fct
     use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_valueW_Z, &
-       ATMOS_DYN_FVM_fluxZ_XYZ, &
-       ATMOS_DYN_FVM_fluxX_XYZ, &
-       ATMOS_DYN_FVM_fluxY_XYZ, &
-       ATMOS_DYN_FVM_fluxZ_XYW, &
-       ATMOS_DYN_FVM_fluxJ13_XYW, &
-       ATMOS_DYN_FVM_fluxJ23_XYW, &
-       ATMOS_DYN_FVM_fluxX_XYW, &
-       ATMOS_DYN_FVM_fluxY_XYW, &
-       ATMOS_DYN_FVM_fluxZ_UYZ, &
-       ATMOS_DYN_FVM_fluxJ13_UYZ, &
-       ATMOS_DYN_FVM_fluxJ23_UYZ, &
-       ATMOS_DYN_FVM_fluxX_UYZ, &
-       ATMOS_DYN_FVM_fluxY_UYZ, &
-       ATMOS_DYN_FVM_fluxZ_XVZ, &
-       ATMOS_DYN_FVM_fluxJ13_XVZ, &
-       ATMOS_DYN_FVM_fluxJ23_XVZ, &
-       ATMOS_DYN_FVM_fluxX_XVZ, &
+       ATMOS_DYN_FVM_fluxZ_XYZ,     &
+       ATMOS_DYN_FVM_fluxX_XYZ,     &
+       ATMOS_DYN_FVM_fluxY_XYZ,     &
+       ATMOS_DYN_FVM_fluxZ_XYW,     &
+       ATMOS_DYN_FVM_fluxJ13_XYW,   &
+       ATMOS_DYN_FVM_fluxJ23_XYW,   &
+       ATMOS_DYN_FVM_fluxX_XYW,     &
+       ATMOS_DYN_FVM_fluxY_XYW,     &
+       ATMOS_DYN_FVM_fluxZ_UYZ,     &
+       ATMOS_DYN_FVM_fluxJ13_UYZ,   &
+       ATMOS_DYN_FVM_fluxJ23_UYZ,   &
+       ATMOS_DYN_FVM_fluxX_UYZ,     &
+       ATMOS_DYN_FVM_fluxY_UYZ,     &
+       ATMOS_DYN_FVM_fluxZ_XVZ,     &
+       ATMOS_DYN_FVM_fluxJ13_XVZ,   &
+       ATMOS_DYN_FVM_fluxJ23_XVZ,   &
+       ATMOS_DYN_FVM_fluxX_XVZ,     &
        ATMOS_DYN_FVM_fluxY_XVZ
     use scale_gridtrans, only: &
        I_XYZ, &
@@ -343,7 +333,6 @@ contains
     DPRES(:,:,:) = UNDEF
 
     PT(:,:,:) = UNDEF
-
 
     qflx_hi (:,:,:,:) = UNDEF
     qflx_J13(:,:,:)   = UNDEF
@@ -577,7 +566,7 @@ contains
              advcv_t(k,i,j,I_MOMZ) = advcv / GSQRT(k,i,j,I_XYW)
              advch_t(k,i,j,I_MOMZ) = advch / GSQRT(k,i,j,I_XYW)
              ddiv_t(k,i,j,1) = div
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -650,7 +639,7 @@ contains
 #ifdef HIST_TEND
           if ( lhist ) then
              advch_t(k,i,j,I_RHOT) = advch
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -676,7 +665,7 @@ contains
 
           do k = KS, KE
              A(k,i,j) = dtrk**2 * J33G * RCDZ(k) * RT2P(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
-          end do
+          enddo
           B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
           F1(KS,i,j) =        - ( PT(KS+1,i,j) * RFDZ(KS) *   A(KS+1,i,j)             + B ) / GSQRT(KS,i,j,I_XYW)
           F2(KS,i,j) = 1.0_RP + ( PT(KS  ,i,j) * RFDZ(KS) * ( A(KS+1,i,j)+A(KS,i,j) )     ) / GSQRT(KS,i,j,I_XYW)
@@ -685,7 +674,7 @@ contains
              F1(k,i,j) =        - ( PT(k+1,i,j) * RFDZ(k) *   A(k+1,i,j)            + B ) / GSQRT(k,i,j,I_XYW)
              F2(k,i,j) = 1.0_RP + ( PT(k  ,i,j) * RFDZ(k) * ( A(k+1,i,j)+A(k,i,j) )     ) / GSQRT(k,i,j,I_XYW)
              F3(k,i,j) =        - ( PT(k-1,i,j) * RFDZ(k) *              A(k,i,j)   - B ) / GSQRT(k,i,j,I_XYW)
-          end do
+          enddo
           B = GRAV * dtrk**2 * J33G / ( CDZ(KE) + CDZ(KE-1) )
           F2(KE-1,i,j) = 1.0_RP + ( PT(KE-1,i,j) * RFDZ(KE-1) * ( A(KE,i,j)+A(KE-1,i,j) )    ) / GSQRT(KE-1,i,j,I_XYW)
           F3(KE-1,i,j) =        - ( PT(KE-2,i,j) * RFDZ(KE-1) *             A(KE-1,i,j)  - B ) / GSQRT(KE-1,i,j,I_XYW)
@@ -700,7 +689,7 @@ contains
 #ifdef HIST_TEND
              if ( lhist ) pg_t(k,i,j,1) = pg
 #endif
-          end do
+          enddo
 
 #ifdef HEVI_BICGSTAB
           call solve_bicgstab( &
@@ -738,7 +727,7 @@ contains
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                             + ( C(k-KS+1,i,j) - MOMZ(k,i,j) )
 #endif
-          end do
+          enddo
           MOMZ_RK(KS-1,i,j) = 0.0_RP
           MOMZ_RK(KE  ,i,j) = 0.0_RP
 
@@ -766,7 +755,7 @@ contains
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(k,i,j,I_RHOT) = advcv
 #endif
-          end do
+          enddo
           advcv = C(KE-KS,i,j)                * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
           DENS_RK(KE,i,j) = DENS0(KE,i,j) + dtrk * ( advcv + Sr(KE,i,j) )
 #ifdef HIST_TEND
@@ -789,8 +778,8 @@ contains
                dtrk, i, j )
 #endif
 
-       end do
-       end do
+       enddo
+       enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -899,7 +888,7 @@ contains
              pg_t(k,i,j,2) = - pg / GSQRT(k,i,j,I_UYZ)
              cf_t(k,i,j,1) = cf
              ddiv_t(k,i,j,2) = div
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -1009,7 +998,7 @@ contains
              pg_t(k,i,j,3) = - pg / GSQRT(k,i,j,I_XVZ)
              cf_t(k,i,j,2) = cf
              ddiv_t(k,i,j,3) = div
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -1103,7 +1092,7 @@ contains
     norm = 0.0_RP
     do k = 1, KMAX-1
        norm = norm + C(k)**2
-    end do
+    enddo
 
     r  => v0
     rn => v1
@@ -1114,7 +1103,7 @@ contains
        r(k) = C(k) - v1(k)
        r0(k) = r(k)
        p(k) = r(k)
-    end do
+    enddo
 
     r0r = r0(1) * r(1)
     do k = 2, KMAX-1
@@ -1124,7 +1113,7 @@ contains
        error = 0.0_RP
        do k = 1, KMAX-1
           error = error + r(k)**2
-       end do
+       enddo
 
 !       if ( error < epsilon .or. error / norm < epsilon ) then
        if ( error/norm < epsilon ) then
@@ -1132,13 +1121,13 @@ contains
 !          write(*,*) "Bi-CGSTAB converged:", iter
 #endif
           exit
-       end if
+       endif
 
        call mul_matrix( ap, M, p )
        al = r0(1) * ap(1)
        do k = 2, KMAX-1
           al = al + r0(k)*ap(k)
-       end do
+       enddo
        al = r0r / al ! (r0,r) / (r0,Mp)
        s(:) = r(:) - al*ap(:)
        call mul_matrix( as, M, s )
@@ -1147,7 +1136,7 @@ contains
        do k = 2, KMAX-1
           be = be + as(k)*s(k)
           w  = w  + as(k)*as(k)
-       end do
+       enddo
        w = be / w ! (as,s) / (as,as)
 
        c(:) = c(:) + al*p(:) + w*s(:)
@@ -1156,20 +1145,20 @@ contains
        r0r = r0(1) * rn(1)
        do k = 2, KMAX-1
           r0r = r0r + r0(k)*rn(k)
-       end do
+       enddo
        be = be * r0r ! al/w * (r0,rn)/(r0,r)
        p(:) = rn(:) + be * ( p(:) - w*ap(:) )
 
        swap => rn
        rn => r
        r => swap
-    end do
+    enddo
 
     if ( iter >= KMAX-1 ) then
        write(*,*) 'xxx [atmos_dyn_hevi] Bi-CGSTAB'
        write(*,*) 'xxx not converged', error, norm
        call PRC_MPIstop
-    end if
+    endif
 
     return
   end subroutine solve_bicgstab
@@ -1235,7 +1224,7 @@ contains
        M(NB+2,k-KS+1) = F2(k)
        ! k+1, -1
        M(NB+3,k-KS+1) = F3(k+1)
-    end do
+    enddo
     ! KS, 0
     M(NB+2,1    ) = F2(KS)
     ! KS+1, -1
@@ -1252,19 +1241,19 @@ contains
              M2(k,k) = M(NB+2,k)
              if (k<kmax-1) M2(k+1,k) = M(NB+1,k+1)
              c2(k) = c(k)
-          end do
+          enddo
 #endif
           if ( RP == DP ) then
              call DGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
           else
              call SGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
-          end if
+          endif
           ! C is (\rho w)^{n+1}
 #ifdef DEBUG
           if ( INFO .ne. 0 ) then
              write(*,*) "DGBSV was failed", info
              call PRC_MPIstop
-          end if
+          endif
 
           do k = 1, KMAX-1
              sum = 0.0_RP
@@ -1276,8 +1265,8 @@ contains
                 write(*,*) k+2, i, j, sum, c2(k)
 !                write(*,*) M2(k-1:k+1,k), c(k-1:k+1)
                 call PRC_MPIstop
-             end if
-          end do
+             endif
+          enddo
 #endif
   end subroutine solve_lapack
 #else
@@ -1308,14 +1297,14 @@ contains
        rdenom = 1.0_RP / ( F2(k+KS-1) + F3(k+KS-1) * e(k-1) )
        e(k) = - F1(k+KS-1) * rdenom
        f(k) = ( C(k) - F3(k+KS-1) * f(k-1) ) * rdenom
-    end do
+    enddo
 
     ! C = \rho w
     C(KMAX-1) = ( C(KMAX-1) - F3(KE-1) * f(KMAX-2) ) &
               / ( F2(KE-1) + F3(KE-1) * e(KMAX-2) ) ! C(KMAX-1) = f(KMAX-1)
     do k = KMAX-2, 1, -1
        C(k) = e(k) * C(k+1) + f(k)
-    end do
+    enddo
 
     return
   end subroutine solve_direct
@@ -1369,17 +1358,13 @@ contains
     real(RP) :: POTT(KA)
     real(RP) :: PT(KA)
 
-#ifndef DRY
-    real(RP) :: kappa
-#endif
-
     real(RP) :: error, lhs, rhs
     integer :: k
 
 
     do k = KS, KE-1
        MOMZ_N(k) = VECT(k-KS+1)
-    end do
+    enddo
     MOMZ_N(:KS-1) = 0.0_RP
     MOMZ_N(KE:) = 0.0_RP
 
@@ -1387,7 +1372,7 @@ contains
     do k = KS+1, KE-1
        DENS_N(k) = DENS(k) &
             + dt * ( - J33G * ( MOMZ_N(k) - MOMZ_N(k-1) ) * RCDZ(k) / G(k,I_XYZ) + Sr(k) )
-    end do
+    enddo
     DENS_N(KS) = DENS(KS) &
          + dt * ( - J33G * MOMZ_N(KS) * RCDZ(KS) / G(KS,I_XYZ) + Sr(KS) )
     DENS_N(KE) = DENS(KE) &
@@ -1396,11 +1381,11 @@ contains
     ! rho*theta
     do k = KS, KE
        POTT(k) = RHOT(k) / DENS(k)
-    end do
+    enddo
     do k = KS+1, KE-2
        PT(k) = ( 7.0_RP * ( POTT(k+1) + POTT(k  ) ) &
                  -        ( POTT(k+2) + POTT(k-1) ) ) / 12.0_RP
-    end do
+    enddo
     PT(KS-1) = 0.0_RP
     PT(KS  ) = ( POTT(KS+1) + POTT(KS  ) ) * 0.5_RP
     PT(KE-1) = ( POTT(KE  ) + POTT(KE-1) ) * 0.5_RP
@@ -1409,7 +1394,7 @@ contains
        RHOT_N(k) = RHOT(k) &
             + dt * ( - J33G * ( MOMZ_N(k)*PT(k) - MOMZ_N(k-1)*PT(k-1) ) * RCDZ(k) / G(k,I_XYZ) &
                      + St(k) )
-    end do
+    enddo
     RHOT_N(KS) = RHOT(KS) &
          + dt * ( - J33G * MOMZ_N(KS)*PT(KS) * RCDZ(KS) / G(KS,I_XYZ) + St(KS) )
     RHOT_N(KE) = RHOT(KE) &
@@ -1418,7 +1403,7 @@ contains
 
     do k = KS, KE
        DPRES_N(k) = DPRES(k) + RT2P(k) * ( RHOT_N(k) - RHOT(k) )
-    end do
+    enddo
 
     do k = KS, KE
        lhs = ( DENS_N(k) - DENS(k) ) / dt
@@ -1427,13 +1412,13 @@ contains
           error = rhs
        else
           error = ( lhs - rhs ) / lhs
-       end if
+       endif
        if ( abs(error) > small ) then
           write(*,*)"HEVI: DENS error", k, i, j, error, lhs, rhs
           write(*,*)eps
           call PRC_MPIstop
-       end if
-    end do
+       endif
+    enddo
 
     do k = KS, KE-1
        lhs = ( MOMZ_N(k) - MOMZ(k) ) / dt
@@ -1444,7 +1429,7 @@ contains
           error = rhs
        else
           error = ( lhs - rhs ) / lhs
-       end if
+       endif
        if ( abs(error) > small ) then
           write(*,*)"HEVI: MOMZ error", k, i, j, error, lhs, rhs
           write(*,*) MOMZ_N(k), MOMZ(k), dt
@@ -1452,8 +1437,8 @@ contains
              - GRAV * ( DENS(k+1) -REF_dens(k+1) + DENS(k) -REF_dens(k) ) * 0.5_RP &
              + Sw(k)
           call PRC_MPIstop
-       end if
-    end do
+       endif
+    enddo
 
     do k = KS, KE
        lhs = ( RHOT_N(k) - RHOT(k) ) / dt
@@ -1462,12 +1447,12 @@ contains
           error = rhs
        else
           error = ( lhs - rhs ) / lhs
-       end if
+       endif
        if ( abs(error) > small ) then
           write(*,*)"HEVI: RHOT error", k, i, j, error, lhs, rhs
           call PRC_MPIstop
-       end if
-    end do
+       endif
+    enddo
 
     return
   end subroutine check_equation

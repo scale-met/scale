@@ -14,30 +14,30 @@ LIBNAME = libscale.a
 
 DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-VPATH = common:                           \
-        common/tracer:                    \
-        coupler:                          \
-        io:                               \
-        atmos-physics:                    \
-        atmos-physics/share:              \
-        atmos-physics/cumulus:            \
-        atmos-physics/microphysics:       \
-        atmos-physics/radiation:          \
-        atmos-physics/surfaceflux:        \
-        atmos-physics/turbulence:         \
-        atmos-physics/aerosol:            \
-        atmos-physics/chemistry:          \
-        atmos-les:                        \
-        atmos-les/communication:          \
-        atmos-les/grid:                   \
-        atmos-les/io:                     \
-        atmos-les/numeric:                \
-        atmos-les/dynamics:               \
-        atmos-les/forcing:                \
-        land:                             \
-        land/grid:                        \
-        ocean:                            \
-        urban:                            \
+VPATH = common:                     \
+        common/tracer:              \
+        coupler:                    \
+        io:                         \
+        atmos-physics:              \
+        atmos-physics/share:        \
+        atmos-physics/cumulus:      \
+        atmos-physics/microphysics: \
+        atmos-physics/radiation:    \
+        atmos-physics/surfaceflux:  \
+        atmos-physics/turbulence:   \
+        atmos-physics/aerosol:      \
+        atmos-physics/chemistry:    \
+        atmos-les:                  \
+        atmos-les/communication:    \
+        atmos-les/grid:             \
+        atmos-les/io:               \
+        atmos-les/numeric:          \
+        atmos-les/dynamics:         \
+        atmos-les/forcing:          \
+        land:                       \
+        land/grid:                  \
+        ocean:                      \
+        urban:                      \
         urban/grid:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
@@ -114,48 +114,48 @@ else
   OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
 
-OBJS_DYN = scale_atmos_dyn_tinteg_short.o \
-           scale_atmos_dyn_tinteg_large.o \
-           scale_atmos_dyn_tinteg_large_euler.o \
-           scale_atmos_dyn_tinteg_large_rk3.o \
-	   scale_atmos_dyn_tinteg_tracer.o \
-	   scale_atmos_dyn_tinteg_tracer_euler.o \
-	   scale_atmos_dyn_tinteg_tracer_rk3.o \
-           scale_atmos_dyn_tstep_short.o \
-           scale_atmos_dyn_tstep_large.o \
-           scale_atmos_dyn_tstep_large_fvm_heve.o \
-           scale_atmos_dyn_tstep_tracer.o \
-           scale_atmos_dyn_tstep_tracer_fvm_heve.o \
-           scale_atmos_dyn_fvm_flux.o \
-           scale_atmos_dyn_fvm_flux_ud1.o \
-           scale_atmos_dyn_fvm_flux_cd2.o \
-           scale_atmos_dyn_fvm_flux_ud3.o \
-           scale_atmos_dyn_fvm_flux_ud3Koren1993.o \
-           scale_atmos_dyn_fvm_flux_cd4.o \
-           scale_atmos_dyn_fvm_flux_ud5.o \
+OBJS_DYN = scale_atmos_dyn_tinteg_short.o	\
+           scale_atmos_dyn_tinteg_large.o	\
+           scale_atmos_dyn_tinteg_large_euler.o	\
+           scale_atmos_dyn_tinteg_large_rk3.o	\
+           scale_atmos_dyn_tinteg_tracer.o	\
+           scale_atmos_dyn_tinteg_tracer_euler.o	\
+           scale_atmos_dyn_tinteg_tracer_rk3.o	\
+           scale_atmos_dyn_tstep_short.o	\
+           scale_atmos_dyn_tstep_large.o	\
+           scale_atmos_dyn_tstep_large_fvm_heve.o	\
+           scale_atmos_dyn_tstep_tracer.o	\
+           scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
+           scale_atmos_dyn_fvm_flux.o	\
+           scale_atmos_dyn_fvm_flux_ud1.o	\
+           scale_atmos_dyn_fvm_flux_cd2.o	\
+           scale_atmos_dyn_fvm_flux_ud3.o	\
+           scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
+           scale_atmos_dyn_fvm_flux_cd4.o	\
+           scale_atmos_dyn_fvm_flux_ud5.o	\
            scale_atmos_dyn_fvm_flux_cd6.o
 ifeq ($(DYNAMICS),)
-  OBJS_DYN += scale_atmos_dyn_tstep_short_fvm_heve.o \
-              scale_atmos_dyn_tstep_short_fvm_hevi.o \
+  OBJS_DYN += scale_atmos_dyn_tstep_short_fvm_heve.o	\
+              scale_atmos_dyn_tstep_short_fvm_hevi.o	\
               scale_atmos_dyn_tstep_short_fvm_hivi.o
 else
   OBJS_DYN += scale_atmos_dyn_tstep_short_$(DYNAMICS).o
 endif
+
 ifeq ($(TINTEG),)
-  OBJS_DYN += scale_atmos_dyn_tinteg_short_rk3.o \
+  OBJS_DYN += scale_atmos_dyn_tinteg_short_rk3.o	\
               scale_atmos_dyn_tinteg_short_rk4.o
 else
   OBJS_DYN += scale_atmos_dyn_tinteg_short_$(TINTEG).o
 endif
 
-
-OBJS_NAME = $(scale_rdma)	        \
-	scale_atmos_dyn.o               \
+OBJS_NAME = $(scale_rdma)	\
+	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
-	$(OBJS_DYN)                     \
+	$(OBJS_DYN)	\
 	scale_atmos_phy_ae.o	\
 	scale_atmos_phy_ae_dummy.o	\
-	$(OBJS_NUMERIC_FDM) \
+	$(OBJS_NUMERIC_FDM)	\
 	$(OBJS_AE)	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
@@ -235,27 +235,27 @@ OBJS_NAME = $(scale_rdma)	        \
 
 OBJS =  $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 
-OBJS_FOR_DYN = $(OBJ_DIR)/scale_atmos_dyn.o \
+OBJS_FOR_DYN = $(OBJ_DIR)/scale_atmos_dyn.o	\
 	$(OBJ_DIR)/scale_atmos_dyn_common.o	\
 	$(patsubst %,$(OBJ_DIR)/%,$(OBJS_DYN))
 
-OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o \
-	$(OBJ_DIR)/scale_prof.o \
-	$(OBJ_DIR)/scale_comm.o \
-	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o \
-	$(OBJ_DIR)/scale_atmos_sub_saturation.o \
-	$(OBJ_DIR)/scale_atmos_phy_mp_common.o \
-	$(OBJ_DIR)/scale_tracer.o \
-	$(OBJ_DIR)/scale_tracer_sdm.o \
-	$(OBJ_DIR)/scale_stdio.o \
-	$(OBJ_DIR)/scale_history.o \
-	$(OBJ_DIR)/scale_const.o \
-	$(OBJ_DIR)/scale_time.o \
-	$(OBJ_DIR)/scale_grid_index.o \
-	$(OBJ_DIR)/scale_topography.o \
-	$(OBJ_DIR)/scale_grid_cartesian.o \
-	$(OBJ_DIR)/scale_grid_real.o \
-	$(OBJ_DIR)/scale_gridtrans.o \
+OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o	\
+	$(OBJ_DIR)/scale_prof.o	\
+	$(OBJ_DIR)/scale_comm.o	\
+	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o	\
+	$(OBJ_DIR)/scale_atmos_sub_saturation.o	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_common.o	\
+	$(OBJ_DIR)/scale_tracer.o	\
+	$(OBJ_DIR)/scale_tracer_sdm.o	\
+	$(OBJ_DIR)/scale_stdio.o	\
+	$(OBJ_DIR)/scale_history.o	\
+	$(OBJ_DIR)/scale_const.o	\
+	$(OBJ_DIR)/scale_time.o	\
+	$(OBJ_DIR)/scale_grid_index.o	\
+	$(OBJ_DIR)/scale_topography.o	\
+	$(OBJ_DIR)/scale_grid_cartesian.o	\
+	$(OBJ_DIR)/scale_grid_real.o	\
+	$(OBJ_DIR)/scale_gridtrans.o	\
 	$(OBJ_DIR)/scale_les_process.o
 
 all:
@@ -295,10 +295,6 @@ else
 modules: $(OBJS)
 	install $(MODS) $(MODDIR)
 endif
-
-
-
-
 
 makesdm: $(OBJS_FOR_SDM)
 	$(MAKE) -C $(MTDIR)

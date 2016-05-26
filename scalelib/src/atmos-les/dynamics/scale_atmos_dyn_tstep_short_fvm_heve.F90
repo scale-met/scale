@@ -53,7 +53,7 @@ module scale_atmos_dyn_tstep_short_fvm_heve
 #if 1
 #define F2H(k,p,idx) (CDZ(k+p-1)*GSQRT(k+p-1,i,j,idx)/(CDZ(k)*GSQRT(k,i,j,idx)+CDZ(k+1)*GSQRT(k+1,i,j,idx)))
 #else
-# define F2H(k,p,idx) 0.5_RP
+#define F2H(k,p,idx) 0.5_RP
 #endif
 
   !-----------------------------------------------------------------------------
@@ -68,16 +68,20 @@ contains
   !> Register
   subroutine ATMOS_DYN_Tstep_short_fvm_heve_regist( &
        ATMOS_DYN_TYPE, &
-       VA_out, &
-       VAR_NAME, VAR_DESC, VAR_UNIT )
+       VA_out,         &
+       VAR_NAME,       &
+       VAR_DESC,       &
+       VAR_UNIT        )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
-    integer,                intent(out) :: VA_out !< number of prognostic variables
+    integer,                intent(out) :: VA_out      !< number of prognostic variables
     character(len=H_SHORT), intent(out) :: VAR_NAME(:) !< name  of the variables
     character(len=H_MID),   intent(out) :: VAR_DESC(:) !< desc. of the variables
     character(len=H_SHORT), intent(out) :: VAR_UNIT(:) !< unit  of the variables
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVE Register'
 
@@ -94,10 +98,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_Tstep_short_fvm_heve_setup
-
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_heve_setup
 
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_Tstep_short_fvm_heve( &
        DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
        PROG_RK,                                     &
@@ -119,10 +123,7 @@ contains
     use scale_grid_index
     use scale_const, only: &
        GRAV   => CONST_GRAV,  &
-       P00    => CONST_PRE00, &
-       Rdry   => CONST_Rdry,  &
-       CPdry  => CONST_CPdry, &
-       CVdry  => CONST_CVdry
+       P00    => CONST_PRE00
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -142,23 +143,23 @@ contains
        ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
        ATMOS_DYN_FVM_fluxY_XYZ_ud1
     use scale_atmos_dyn_fvm_flux, only: &
-       ATMOS_DYN_FVM_fluxZ_XYZ, &
-       ATMOS_DYN_FVM_fluxX_XYZ, &
-       ATMOS_DYN_FVM_fluxY_XYZ, &
-       ATMOS_DYN_FVM_fluxZ_XYW, &
+       ATMOS_DYN_FVM_fluxZ_XYZ,   &
+       ATMOS_DYN_FVM_fluxX_XYZ,   &
+       ATMOS_DYN_FVM_fluxY_XYZ,   &
+       ATMOS_DYN_FVM_fluxZ_XYW,   &
        ATMOS_DYN_FVM_fluxJ13_XYW, &
        ATMOS_DYN_FVM_fluxJ23_XYW, &
-       ATMOS_DYN_FVM_fluxX_XYW, &
-       ATMOS_DYN_FVM_fluxY_XYW, &
-       ATMOS_DYN_FVM_fluxZ_UYZ, &
+       ATMOS_DYN_FVM_fluxX_XYW,   &
+       ATMOS_DYN_FVM_fluxY_XYW,   &
+       ATMOS_DYN_FVM_fluxZ_UYZ,   &
        ATMOS_DYN_FVM_fluxJ13_UYZ, &
        ATMOS_DYN_FVM_fluxJ23_UYZ, &
-       ATMOS_DYN_FVM_fluxX_UYZ, &
-       ATMOS_DYN_FVM_fluxY_UYZ, &
-       ATMOS_DYN_FVM_fluxZ_XVZ, &
+       ATMOS_DYN_FVM_fluxX_UYZ,   &
+       ATMOS_DYN_FVM_fluxY_UYZ,   &
+       ATMOS_DYN_FVM_fluxZ_XVZ,   &
        ATMOS_DYN_FVM_fluxJ13_XVZ, &
        ATMOS_DYN_FVM_fluxJ23_XVZ, &
-       ATMOS_DYN_FVM_fluxX_XVZ, &
+       ATMOS_DYN_FVM_fluxX_XVZ,   &
        ATMOS_DYN_FVM_fluxY_XVZ
     use scale_gridtrans, only: &
        I_XYZ, &
@@ -178,76 +179,74 @@ contains
 #endif
     implicit none
 
-    real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(out) :: MOMZ_RK(KA,IA,JA)   !
-    real(RP), intent(out) :: MOMX_RK(KA,IA,JA)   !
-    real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
-    real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
+    real(RP), intent(out)        :: DENS_RK (KA,IA,JA)    ! prognostic variables
+    real(RP), intent(out)        :: MOMZ_RK (KA,IA,JA)    !
+    real(RP), intent(out)        :: MOMX_RK (KA,IA,JA)    !
+    real(RP), intent(out)        :: MOMY_RK (KA,IA,JA)    !
+    real(RP), intent(out)        :: RHOT_RK (KA,IA,JA)    !
+    real(RP), intent(out)        :: PROG_RK (KA,IA,JA,VA) !
 
-    real(RP), intent(out) :: PROG_RK(KA,IA,JA,VA)  !
+    real(RP), intent(inout)      :: mflx_hi (KA,IA,JA,3)  ! mass flux
+    real(RP), intent(out)        :: tflx_hi (KA,IA,JA,3)  ! internal energy flux
 
-    real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! mass flux
-    real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! internal energy flux
+    real(RP), intent(in), target :: DENS0   (KA,IA,JA)    ! prognostic variables at previous dynamical time step
+    real(RP), intent(in), target :: MOMZ0   (KA,IA,JA)    !
+    real(RP), intent(in), target :: MOMX0   (KA,IA,JA)    !
+    real(RP), intent(in), target :: MOMY0   (KA,IA,JA)    !
+    real(RP), intent(in), target :: RHOT0   (KA,IA,JA)    !
+    real(RP), intent(in)         :: PROG0   (KA,IA,JA,VA)
 
-    real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables at previous dynamical time step
-    real(RP), intent(in),target :: MOMZ0(KA,IA,JA) !
-    real(RP), intent(in),target :: MOMX0(KA,IA,JA) !
-    real(RP), intent(in),target :: MOMY0(KA,IA,JA) !
-    real(RP), intent(in),target :: RHOT0(KA,IA,JA) !
+    real(RP), intent(in)         :: DENS    (KA,IA,JA)    ! prognostic variables at previous RK step
+    real(RP), intent(in)         :: MOMZ    (KA,IA,JA)    !
+    real(RP), intent(in)         :: MOMX    (KA,IA,JA)    !
+    real(RP), intent(in)         :: MOMY    (KA,IA,JA)    !
+    real(RP), intent(in)         :: RHOT    (KA,IA,JA)    !
+    real(RP), intent(in)         :: PROG    (KA,IA,JA,VA)
 
-    real(RP), intent(in)  :: DENS(KA,IA,JA)      ! prognostic variables at previous RK step
-    real(RP), intent(in)  :: MOMZ(KA,IA,JA)      !
-    real(RP), intent(in)  :: MOMX(KA,IA,JA)      !
-    real(RP), intent(in)  :: MOMY(KA,IA,JA)      !
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)      !
+    real(RP), intent(in)         :: DENS_t  (KA,IA,JA)    ! tendency
+    real(RP), intent(in)         :: MOMZ_t  (KA,IA,JA)    !
+    real(RP), intent(in)         :: MOMX_t  (KA,IA,JA)    !
+    real(RP), intent(in)         :: MOMY_t  (KA,IA,JA)    !
+    real(RP), intent(in)         :: RHOT_t  (KA,IA,JA)    !
 
-    real(RP), intent(in)  :: DENS_t(KA,IA,JA)    ! tendency
-    real(RP), intent(in)  :: MOMZ_t(KA,IA,JA)    !
-    real(RP), intent(in)  :: MOMX_t(KA,IA,JA)    !
-    real(RP), intent(in)  :: MOMY_t(KA,IA,JA)    !
-    real(RP), intent(in)  :: RHOT_t(KA,IA,JA)    !
+    real(RP), intent(in)         :: DPRES0  (KA,IA,JA)
+    real(RP), intent(in)         :: RT2P    (KA,IA,JA)
+    real(RP), intent(in)         :: CORIOLI (1, IA,JA)
+    real(RP), intent(in)         :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in)         :: divdmp_coef
+    real(RP), intent(in)         :: DDIV    (KA,IA,JA)
 
-    real(RP), intent(in)  :: PROG0(KA,IA,JA,VA)
-    real(RP), intent(in)  :: PROG (KA,IA,JA,VA)
+    logical,  intent(in)         :: FLAG_FCT_MOMENTUM
+    logical,  intent(in)         :: FLAG_FCT_T
+    logical,  intent(in)         :: FLAG_FCT_ALONG_STREAM
 
-    real(RP), intent(in)  :: DPRES0  (KA,IA,JA)
-    real(RP), intent(in)  :: RT2P    (KA,IA,JA)
-    real(RP), intent(in)  :: CORIOLI (1, IA,JA)
-    real(RP), intent(in)  :: num_diff(KA,IA,JA,5,3)
-    real(RP), intent(in)  :: divdmp_coef
-    real(RP), intent(in)  :: DDIV(KA,IA,JA)
+    real(RP), intent(in)         :: CDZ (KA)
+    real(RP), intent(in)         :: FDZ (KA-1)
+    real(RP), intent(in)         :: FDX (IA-1)
+    real(RP), intent(in)         :: FDY (JA-1)
+    real(RP), intent(in)         :: RCDZ(KA)
+    real(RP), intent(in)         :: RCDX(IA)
+    real(RP), intent(in)         :: RCDY(JA)
+    real(RP), intent(in)         :: RFDZ(KA-1)
+    real(RP), intent(in)         :: RFDX(IA-1)
+    real(RP), intent(in)         :: RFDY(JA-1)
 
-    logical,  intent(in)  :: FLAG_FCT_MOMENTUM
-    logical,  intent(in)  :: FLAG_FCT_T
-    logical,  intent(in)  :: FLAG_FCT_ALONG_STREAM
+    real(RP), intent(in)         :: PHI     (KA,IA,JA)   !< geopotential
+    real(RP), intent(in)         :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
+    real(RP), intent(in)         :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)         :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
+    real(RP), intent(in)         :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)         :: MAPF    (IA,JA,2,4)  !< map factor
+    real(RP), intent(in)         :: REF_dens(KA,IA,JA)   !< reference density
+    real(RP), intent(in)         :: REF_rhot(KA,IA,JA)
 
-    real(RP), intent(in)  :: CDZ (KA)
-    real(RP), intent(in)  :: FDZ (KA-1)
-    real(RP), intent(in)  :: FDX (IA-1)
-    real(RP), intent(in)  :: FDY (JA-1)
-    real(RP), intent(in)  :: RCDZ(KA)
-    real(RP), intent(in)  :: RCDX(IA)
-    real(RP), intent(in)  :: RCDY(JA)
-    real(RP), intent(in)  :: RFDZ(KA-1)
-    real(RP), intent(in)  :: RFDX(IA-1)
-    real(RP), intent(in)  :: RFDY(JA-1)
+    logical,  intent(in)         :: BND_W
+    logical,  intent(in)         :: BND_E
+    logical,  intent(in)         :: BND_S
+    logical,  intent(in)         :: BND_N
 
-    real(RP), intent(in)  :: PHI     (KA,IA,JA)   !< geopotential
-    real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
-    real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
-    real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
-    real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
-    real(RP), intent(in)  :: REF_rhot(KA,IA,JA)
-
-    logical,  intent(in)  :: BND_W
-    logical,  intent(in)  :: BND_E
-    logical,  intent(in)  :: BND_S
-    logical,  intent(in)  :: BND_N
-
-    real(RP), intent(in)  :: dtrk
-    real(RP), intent(in)  :: dt
+    real(RP), intent(in)         :: dtrk
+    real(RP), intent(in)         :: dt
 
     ! diagnostic variables
     real(RP) :: VELZ (KA,IA,JA) ! velocity w [m/s]
@@ -271,11 +270,7 @@ contains
     real(RP) :: tflx_anti(KA,IA,JA,3)
     real(RP) :: DENS0_uvw(KA,IA,JA)
     real(RP) :: DENS_uvw (KA,IA,JA)
-    real(RP) :: one(KA,IA,JA)
 #endif
-
-    real(RP) :: sw
-
     real(RP) :: advch ! horizontal advection
     real(RP) :: advcv ! vertical advection
     real(RP) :: div  ! divergence damping
@@ -285,12 +280,7 @@ contains
     real(RP) :: ddiv_t(KA,IA,JA,3)
     real(RP) :: pg_t(KA,IA,JA,3)
     real(RP) :: cf_t(KA,IA,JA,2)
-
     logical  :: lhist
-#endif
-
-#ifdef DRY
-    real(RP) :: CPovCV
 #endif
 
     integer  :: IIS, IIE
@@ -327,10 +317,6 @@ contains
     cf_t = 0.0_RP
 
     lhist = dt .eq. dtrk
-#endif
-
-#ifdef DRY
-    CPovCV = CPdry / CVdry
 #endif
 
     IFS_OFF = 1
@@ -449,7 +435,7 @@ contains
        call COMM_vars8( VELZ(:,:,:), 1 )
        call COMM_vars8( VELX(:,:,:), 2 )
        call COMM_vars8( VELY(:,:,:), 3 )
-    end if
+    endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -569,7 +555,7 @@ contains
           if ( lhist ) then
              advcv_t(k,i,j,I_DENS) = advcv * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
              advch_t(k,i,j,I_DENS) = advch * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -682,7 +668,7 @@ contains
              advch_t(k,i,j,I_MOMZ) = advch / GSQRT(k,i,j,I_XYW)
              pg_t(k,i,j,1) = ( - pgf(k,i,j) - buoy(k,i,j) ) / GSQRT(k,i,j,I_XYW)
              ddiv_t(k,i,j,1) = div
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -702,7 +688,7 @@ contains
              advch_t(KE,i,j,I_MOMZ) = 0.0_RP
              pg_t(KE,i,j,1) = 0.0_RP
              ddiv_t(KE,i,j,1) = 0.0_RP
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -748,25 +734,25 @@ contains
        do k = KS, KE
           qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
                               + qflx_J13(k,i,j) + qflx_J23(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE-1
           DENS0_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k+1,i,j) )
           DENS_uvw(k,i,j) = 0.5_RP * ( DENS_RK(k,i,j) + DENS_RK(k+1,i,j) )
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           DENS_uvw(KE,i,j) = DENS_uvw(KE-1,i,j)
           DENS0_uvw(KE,i,j) = DENS0_uvw(KE-1,i,j)
-       end do
-       end do
+       enddo
+       enddo
 
        call COMM_wait ( VELZ(:,:,:), 1 )
 
@@ -940,7 +926,7 @@ contains
              pg_t(k,i,j,2) = - pgf(k,i,j) / GSQRT(k,i,j,I_UYZ)
              cf_t(k,i,j,1) = cor(k,i,j)
              ddiv_t(k,i,j,2) = div
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -982,18 +968,18 @@ contains
        do k = KS, KE
           qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) / ( MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) )&
                               + qflx_J13(k,i,j) + qflx_J23(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
           DENS0_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i+1,j) )
           DENS_uvw(k,i,j)  = 0.5_RP * ( DENS_RK(k,i,j) + DENS_RK(k,i+1,j) )
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        call COMM_wait ( VELX(:,:,:), 2 )
 
@@ -1186,7 +1172,7 @@ contains
              pg_t(k,i,j,3) = - pgf(k,i,j) / GSQRT(k,i,j,I_UYZ)
              cf_t(k,i,j,2) = cor(k,i,j)
              ddiv_t(k,i,j,3) = div
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -1232,18 +1218,18 @@ contains
        do k = KS, KE
           qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) / ( MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) ) &
                               + qflx_J13(k,i,j) + qflx_J23(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
           DENS0_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i,j+1) )
           DENS_uvw(k,i,j) = 0.5_RP * ( DENS_RK(k,i,j) + DENS_RK(k,i,j+1) )
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        call COMM_wait ( VELY(:,:,:), 3 )
 
@@ -1360,7 +1346,7 @@ contains
           if ( lhist ) then
              advcv_t(k,i,j,I_RHOT) = advcv * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)/ GSQRT(k,i,j,I_XYZ)
              advch_t(k,i,j,I_RHOT) = advch * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)/ GSQRT(k,i,j,I_XYZ)
-          end if
+          endif
 #endif
        enddo
        enddo
@@ -1386,7 +1372,7 @@ contains
        if ( .not. FLAG_FCT_MOMENTUM ) then
           call COMM_vars8( DENS_RK, 1 )
           call COMM_wait ( DENS_RK, 1, .false. )
-       end if
+       endif
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
