@@ -171,43 +171,42 @@ contains
     integer :: iv, iq
     !---------------------------------------------------------------------------
 
-    BND_W = .NOT. PRC_HAS_W
-    BND_E = .NOT. PRC_HAS_E
-    BND_S = .NOT. PRC_HAS_S
-    BND_N = .NOT. PRC_HAS_N
-
-    allocate( CORIOLI    (IA,JA)        )
-    allocate( mflx_hi    (KA,IA,JA,3)   )
-    allocate( num_diff   (KA,IA,JA,5,3) )
-    allocate( num_diff_q (KA,IA,JA,3)   )
-    mflx_hi(:,:,:,:) = UNDEF
-
-    allocate( I_COMM_PROG(max(VA,1))    )
-    allocate( I_COMM_QTRC(QA)           )
-
-    call ATMOS_DYN_FVM_flux_setup( DYN_FVM_FLUX_SCHEME,       & ! [IN]
-                                   DYN_FVM_FLUX_SCHEME_TRACER ) ! [IN]
-
-    call ATMOS_DYN_tstep_short_setup
-
-    call ATMOS_DYN_tstep_tracer_setup ( DYN_Tstep_Tracer_TYPE ) ! [IN]
-
-    call ATMOS_DYN_tstep_large_setup  ( DYN_Tstep_Large_TYPE,         & ! [IN]
-                                        DENS, MOMZ, MOMX, MOMY, RHOT, & ! [INOUT]
-                                        QTRC, PROG,                   & ! [INOUT]
-                                        mflx_hi                       ) ! [INOUT]
-
-    call ATMOS_DYN_Tinteg_short_setup ( DYN_Tinteg_Short_TYPE  ) ! [IN]
-
-    call ATMOS_DYN_Tinteg_tracer_setup( DYN_Tinteg_Tracer_TYPE ) ! [IN]
-
-    call ATMOS_DYN_Tinteg_large_setup ( DYN_Tinteg_Large_TYPE  ) ! [IN]
-
     if ( present(none) ) then
        DYN_NONE = none
     endif
 
+    allocate( I_COMM_PROG(max(VA,1)) )
+    allocate( I_COMM_QTRC(QA)        )
+
     if ( .NOT. DYN_NONE ) then
+       BND_W = .NOT. PRC_HAS_W
+       BND_E = .NOT. PRC_HAS_E
+       BND_S = .NOT. PRC_HAS_S
+       BND_N = .NOT. PRC_HAS_N
+
+       allocate( CORIOLI    (IA,JA)        )
+       allocate( mflx_hi    (KA,IA,JA,3)   )
+       allocate( num_diff   (KA,IA,JA,5,3) )
+       allocate( num_diff_q (KA,IA,JA,3)   )
+       mflx_hi(:,:,:,:) = UNDEF
+
+       call ATMOS_DYN_FVM_flux_setup( DYN_FVM_FLUX_SCHEME,       & ! [IN]
+                                      DYN_FVM_FLUX_SCHEME_TRACER ) ! [IN]
+
+       call ATMOS_DYN_tstep_short_setup
+
+       call ATMOS_DYN_tstep_tracer_setup ( DYN_Tstep_Tracer_TYPE ) ! [IN]
+
+       call ATMOS_DYN_tstep_large_setup  ( DYN_Tstep_Large_TYPE,         & ! [IN]
+                                           DENS, MOMZ, MOMX, MOMY, RHOT, & ! [INOUT]
+                                           QTRC, PROG,                   & ! [INOUT]
+                                           mflx_hi                       ) ! [INOUT]
+
+       call ATMOS_DYN_Tinteg_short_setup ( DYN_Tinteg_Short_TYPE  ) ! [IN]
+
+       call ATMOS_DYN_Tinteg_tracer_setup( DYN_Tinteg_Tracer_TYPE ) ! [IN]
+
+       call ATMOS_DYN_Tinteg_large_setup ( DYN_Tinteg_Large_TYPE  ) ! [IN]
 
        ! numerical diffusion
        call ATMOS_DYN_filter_setup( num_diff, num_diff_q,        & ! [INOUT]
