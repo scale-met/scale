@@ -99,10 +99,10 @@ contains
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
-    integer,                intent(out) :: VA_out      !< number of prognostic variables
-    character(len=H_SHORT), intent(out) :: VAR_NAME(:) !< name  of the variables
-    character(len=H_MID),   intent(out) :: VAR_DESC(:) !< desc. of the variables
-    character(len=H_SHORT), intent(out) :: VAR_UNIT(:) !< unit  of the variables
+    integer,                intent(out) :: VA_out         !< number of prognostic variables
+    character(len=H_SHORT), intent(out) :: VAR_NAME(:)    !< name   of the variables
+    character(len=H_MID),   intent(out) :: VAR_DESC(:)    !< desc.  of the variables
+    character(len=H_SHORT), intent(out) :: VAR_UNIT(:)    !< unit   of the variables
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Register'
@@ -112,7 +112,10 @@ contains
        call PRC_MPIstop
     endif
 
-    VA_out = VA_FVM_HEVI
+    VA_out      = VA_FVM_HEVI
+    VAR_NAME(:) = ""
+    VAR_DESC(:) = ""
+    VAR_UNIT(:) = ""
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi_regist

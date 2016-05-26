@@ -183,11 +183,12 @@ contains
        ATMOS_DYN_Tstep_short_fvm_hivi
 #endif
     implicit none
+
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
-    integer,                intent(out) :: VA_out !< number of prognostic variables
-    character(len=H_SHORT), intent(out) :: VAR_NAME(:) !< name  of the variables
-    character(len=H_MID),   intent(out) :: VAR_DESC(:) !< desc. of the variables
-    character(len=H_SHORT), intent(out) :: VAR_UNIT(:) !< unit  of the variables
+    integer,                intent(out) :: VA_out         !< number of prognostic variables
+    character(len=H_SHORT), intent(out) :: VAR_NAME(:)    !< name  of the variables
+    character(len=H_MID),   intent(out) :: VAR_DESC(:)    !< desc. of the variables
+    character(len=H_SHORT), intent(out) :: VAR_UNIT(:)    !< unit  of the variables
     !---------------------------------------------------------------------------
 
 #ifdef DYNAMICS
@@ -198,28 +199,39 @@ contains
 #else
     select case ( ATMOS_DYN_TYPE )
     case ( 'FVM-HEVE', 'HEVE' )
-       call ATMOS_DYN_Tstep_short_fvm_heve_regist( &
-            ATMOS_DYN_TYPE, &
-            VA_out, &
-            VAR_NAME, VAR_DESC, VAR_UNIT )
+
+       call ATMOS_DYN_Tstep_short_fvm_heve_regist( ATMOS_DYN_TYPE,              & ! [IN]
+                                                   VA_out,                      & ! [OUT]
+                                                   VAR_NAME, VAR_DESC, VAR_UNIT ) ! [OUT]
+
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_heve_setup
-       ATMOS_DYN_Tstep_short => ATMOS_DYN_Tstep_short_fvm_heve
+       ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_heve
+
     case ( 'FVM-HEVI', 'HEVI' )
-       call ATMOS_DYN_Tstep_short_fvm_hevi_regist( &
-            ATMOS_DYN_TYPE, &
-            VA_out, &
-            VAR_NAME, VAR_DESC, VAR_UNIT )
+
+       call ATMOS_DYN_Tstep_short_fvm_hevi_regist( ATMOS_DYN_TYPE,              & ! [IN]
+                                                   VA_out,                      & ! [OUT]
+                                                   VAR_NAME, VAR_DESC, VAR_UNIT ) ! [OUT]
+
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_hevi_setup
-       ATMOS_DYN_Tstep_short => ATMOS_DYN_Tstep_short_fvm_hevi
+       ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_hevi
+
     case ( 'FVM-HIVI', 'HIVI' )
-       call ATMOS_DYN_Tstep_short_fvm_hivi_regist( &
-            ATMOS_DYN_TYPE, &
-            VA_out, &
-            VAR_NAME, VAR_DESC, VAR_UNIT )
+
+       call ATMOS_DYN_Tstep_short_fvm_hivi_regist( ATMOS_DYN_TYPE,              & ! [IN]
+                                                   VA_out,                      & ! [OUT]
+                                                   VAR_NAME, VAR_DESC, VAR_UNIT ) ! [OUT]
+
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_hivi_setup
-       ATMOS_DYN_Tstep_short => ATMOS_DYN_Tstep_short_fvm_hivi
+       ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_hivi
+
     case ( 'OFF', 'NONE' )
-       ! do nothing
+
+       VA_out      = 0
+       VAR_NAME(:) = ""
+       VAR_DESC(:) = ""
+       VAR_UNIT(:) = ""
+
     case default
        write(*,*) 'xxx ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
        call PRC_MPIstop

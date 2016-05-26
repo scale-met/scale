@@ -464,7 +464,7 @@ contains
     qv_sfc   = 0.0_RP
     qc_sfc   = 0.0_RP
 
-    do k = KS, KE
+    do k = 1, KA
        pott(k) = ATMOS_REFSTATE_POTT_UNIFORM
        qv  (k) = 0.0_RP
        qc  (k) = 0.0_RP
@@ -533,9 +533,9 @@ contains
        ATMOS_REFSTATE_pres(k,i,j) = 0.0_RP
        ATMOS_REFSTATE_pott(k,i,j) = 0.0_RP
        ATMOS_REFSTATE_qv  (k,i,j) = 0.0_RP
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_REFSTATE_generate_zero
@@ -547,6 +547,7 @@ contains
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
+
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
@@ -598,9 +599,9 @@ contains
        do i = 1, IA
        do k = KS, KE
           pott(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        call INTERP_vertical_xi2z( temp(:,:,:), & ! [IN]
                                   work(:,:,:)  ) ! [OUT]

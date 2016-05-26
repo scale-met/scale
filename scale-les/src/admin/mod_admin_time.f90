@@ -711,6 +711,8 @@ contains
                                                           ' (step interval=', TIME_DSTEP_URBAN_RESTART, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Resume                      : ', TIME_DTSEC_RESUME, &
                                                           ' (step interval=', TIME_DSTEP_RESUME,        ')'
+    else
+       TIME_DTSEC = 1.0_RP
     endif
 
     ! WALLCLOCK TERMINATOR SETUP
