@@ -130,8 +130,8 @@ cat << EOF > param.physics.conf
 /
 
 &PARAM_ATMOS_DYN
- ATMOS_DYN_NUMERICAL_DIFF_COEF   = 1.D-2,
- ATMOS_DYN_NUMERICAL_DIFF_COEF_Q = 1.D-2,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 1.D-2,
  ATMOS_DYN_enable_coriolis       = .true.,
 /
 

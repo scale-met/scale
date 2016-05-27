@@ -619,7 +619,7 @@
  \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
  \verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER| & 実数 & 1.D0. & 数値粘性のオーダーを4で割ったもの（\verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER| =1なら4次の数値粘性になる） \\ \hline
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF| & 実数 & 1.D-4 & 混合比以外の予報変数にかかる数値粘性の強さを決める無次元定数\\ \hline
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_Q| & 実数 & 1.D-4 & 混合比にかかる数値粘性の強さを決める無次元定数\\ \hline
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER| & 実数 & 1.D-4 & 混合比にかかる数値粘性の強さを決める無次元定数\\ \hline
 % \verb|ATMOS_DYN_NUMERICAL_DIFF_SFC_FACT| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
 % \verb|ATMOS_DYN_NUMERICAL_DIFF_USE_REFSTATE| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
  \verb|ATMOS_DYN_ENABLE_CORIOLIS| & logical & .false. & コリオリ力を考慮するか \\ \hline
@@ -774,8 +774,8 @@
 %/
 %
 %&PARAM_ATMOS_DYN
-% ATMOS_DYN_NUMERICAL_DIFF_COEF   = 1.D-2,
-% ATMOS_DYN_NUMERICAL_DIFF_COEF_Q = 1.D-2,
+% ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2,
+% ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 1.D-2,
 % ATMOS_DYN_enable_coriolis       = .true.,
 %/
 %

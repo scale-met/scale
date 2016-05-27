@@ -38,24 +38,25 @@ module mod_atmos_dyn_driver
   !
   !++ Public parameters & variables
   !
-  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_LARGE_TYPE       = 'FVM-HEVE'
-  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_TRACER_TYPE      = 'FVM-HEVE'
+  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_LARGE_TYPE     = 'FVM-HEVE'
+  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_TRACER_TYPE    = 'FVM-HEVE'
 
-  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE      = 'EULER'
-  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE      = 'RK4'
-  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE     = 'RK3WS2002'
-                                                                     ! 'RK3'
-                                                                     ! 'RK4'
-                                                                     ! 'RK3WS2002'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE    = 'EULER'        ! Type of time integration
+                                                                   ! 'RK3'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE    = 'RK4'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE   = 'RK3WS2002'
+                                                                   ! 'RK3'
+                                                                   ! 'RK4'
+                                                                   ! 'RK3WS2002'
 
-  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_scheme        = 'CD4' ! Type of advective flux scheme (FVM)
-  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_scheme_tracer = 'UD3KOREN1993'
-                                                                     ! 'CD2'
-                                                                     ! 'UD3'
-                                                                     ! 'UD3KOREN1993'
-                                                                     ! 'CD4'
-                                                                     ! 'UD5'
-                                                                     ! 'CD6'
+  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_TYPE        = 'CD4'          ! Type of advective flux scheme (FVM)
+  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_TRACER_TYPE = 'UD3KOREN1993'
+                                                                   ! 'CD2'
+                                                                   ! 'UD3'
+                                                                   ! 'UD3KOREN1993'
+                                                                   ! 'CD4'
+                                                                   ! 'UD5'
+                                                                   ! 'CD6'
 
   !-----------------------------------------------------------------------------
   !
@@ -66,11 +67,11 @@ module mod_atmos_dyn_driver
   !++ Private parameters & variables
   !
   ! Numerical filter
-  integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
-  real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private :: ATMOS_DYN_numerical_diff_coef_q       = 0.0_RP    ! nondimensional numerical diffusion for tracer
-  real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
-  logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
+  integer,  private :: ATMOS_DYN_NUMERICAL_DIFF_order        = 1
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER  = 0.0_RP    ! nondimensional numerical diffusion for tracer
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact     = 1.0_RP
+  logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate = .true.
 
   ! Coriolis force
   logical,  private :: ATMOS_DYN_enable_coriolis             = .false.   ! enable coriolis force?
@@ -125,13 +126,13 @@ contains
        ATMOS_DYN_TINTEG_SHORT_TYPE,           &
        ATMOS_DYN_TINTEG_TRACER_TYPE,          &
        ATMOS_DYN_TINTEG_LARGE_TYPE,           &
-       ATMOS_DYN_FVM_FLUX_scheme,             &
-       ATMOS_DYN_FVM_FLUX_scheme_tracer,      &
-       ATMOS_DYN_numerical_diff_order,        &
-       ATMOS_DYN_numerical_diff_coef,         &
-       ATMOS_DYN_numerical_diff_coef_q,       &
-       ATMOS_DYN_numerical_diff_sfc_fact,     &
-       ATMOS_DYN_numerical_diff_use_refstate, &
+       ATMOS_DYN_FVM_FLUX_TYPE,               &
+       ATMOS_DYN_FVM_FLUX_TRACER_TYPE,        &
+       ATMOS_DYN_NUMERICAL_DIFF_order,        &
+       ATMOS_DYN_NUMERICAL_DIFF_coef,         &
+       ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER,  &
+       ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,     &
+       ATMOS_DYN_NUMERICAL_DIFF_use_refstate, &
        ATMOS_DYN_enable_coriolis,             &
        ATMOS_DYN_divdmp_coef,                 &
        ATMOS_DYN_FLAG_FCT_momentum,           &
@@ -171,8 +172,8 @@ contains
                              ATMOS_DYN_TINTEG_LARGE_TYPE,        & ! [IN]
                              ATMOS_DYN_TSTEP_TRACER_TYPE,        & ! [IN]
                              ATMOS_DYN_TSTEP_LARGE_TYPE,         & ! [IN]
-                             ATMOS_DYN_FVM_FLUX_SCHEME,          & ! [IN]
-                             ATMOS_DYN_FVM_FLUX_SCHEME_TRACER,   & ! [IN]
+                             ATMOS_DYN_FVM_FLUX_TYPE,            & ! [IN]
+                             ATMOS_DYN_FVM_FLUX_TRACER_TYPE,     & ! [IN]
                              DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
                              PROG,                               & ! [IN]
                              GRID_CDZ, GRID_CDX, GRID_CDY,       & ! [IN]
@@ -285,11 +286,11 @@ contains
                        ATMOS_REFSTATE_pott,                                  & ! [IN]
                        ATMOS_REFSTATE_qv,                                    & ! [IN]
                        ATMOS_REFSTATE_pres,                                  & ! [IN]
-                       ATMOS_DYN_numerical_diff_coef,                        & ! [IN]
-                       ATMOS_DYN_numerical_diff_coef_q,                      & ! [IN]
-                       ATMOS_DYN_numerical_diff_order,                       & ! [IN]
-                       ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
-                       ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_coef,                        & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER,                 & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_order,                       & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,                    & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_use_refstate,                & ! [IN]
                        ATMOS_BOUNDARY_DENS,                                  & ! [IN]
                        ATMOS_BOUNDARY_VELZ,                                  & ! [IN]
                        ATMOS_BOUNDARY_VELX,                                  & ! [IN]

@@ -105,8 +105,8 @@ contains
        DYN_Tinteg_Large_TYPE,        &
        DYN_Tstep_Tracer_TYPE,        &
        DYN_Tstep_Large_TYPE,         &
-       DYN_FVM_FLUX_SCHEME,          &
-       DYN_FVM_FLUX_SCHEME_TRACER,   &
+       DYN_FVM_FLUX_TYPE,            &
+       DYN_FVM_FLUX_TYPE_TRACER,     &
        DENS, MOMZ, MOMX, MOMY, RHOT, &
        QTRC, PROG,                   &
        CDZ, CDX, CDY,                &
@@ -149,8 +149,8 @@ contains
     character(len=*),  intent(in)    :: DYN_Tinteg_Large_TYPE
     character(len=*),  intent(in)    :: DYN_Tstep_Tracer_TYPE
     character(len=*),  intent(in)    :: DYN_Tstep_Large_TYPE
-    character(len=*),  intent(in)    :: DYN_FVM_FLUX_SCHEME
-    character(len=*),  intent(in)    :: DYN_FVM_FLUX_SCHEME_TRACER
+    character(len=*),  intent(in)    :: DYN_FVM_FLUX_TYPE
+    character(len=*),  intent(in)    :: DYN_FVM_FLUX_TYPE_TRACER
     real(RP),          intent(inout) :: DENS(KA,IA,JA)    ! MPI_RECV_INIT requires intent(inout)
     real(RP),          intent(inout) :: MOMZ(KA,IA,JA)
     real(RP),          intent(inout) :: MOMX(KA,IA,JA)
@@ -190,12 +190,12 @@ contains
        allocate( num_diff_q (KA,IA,JA,3)   )
        mflx_hi(:,:,:,:) = UNDEF
 
-       call ATMOS_DYN_FVM_flux_setup( DYN_FVM_FLUX_SCHEME,       & ! [IN]
-                                      DYN_FVM_FLUX_SCHEME_TRACER ) ! [IN]
+       call ATMOS_DYN_FVM_flux_setup     ( DYN_FVM_FLUX_TYPE,            & ! [IN]
+                                           DYN_FVM_FLUX_TYPE_TRACER      ) ! [IN]
 
        call ATMOS_DYN_tstep_short_setup
 
-       call ATMOS_DYN_tstep_tracer_setup ( DYN_Tstep_Tracer_TYPE ) ! [IN]
+       call ATMOS_DYN_tstep_tracer_setup ( DYN_Tstep_Tracer_TYPE         ) ! [IN]
 
        call ATMOS_DYN_tstep_large_setup  ( DYN_Tstep_Large_TYPE,         & ! [IN]
                                            DENS, MOMZ, MOMX, MOMY, RHOT, & ! [INOUT]
