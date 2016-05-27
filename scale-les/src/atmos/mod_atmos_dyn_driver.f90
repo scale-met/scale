@@ -38,6 +38,16 @@ module mod_atmos_dyn_driver
   !
   !++ Public parameters & variables
   !
+  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_LARGE_TYPE       = 'FVM-HEVE'
+  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_TRACER_TYPE      = 'FVM-HEVE'
+
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE      = 'EULER'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE      = 'RK4'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE     = 'RK3WS2002'
+                                                                     ! 'RK3'
+                                                                     ! 'RK4'
+                                                                     ! 'RK3WS2002'
+
   character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_scheme        = 'CD4' ! Type of advective flux scheme (FVM)
   character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_scheme_tracer = 'UD3KOREN1993'
                                                                      ! 'CD2'
@@ -96,13 +106,8 @@ contains
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
     use mod_atmos_admin, only: &
-       ATMOS_sw_dyn,                 &
-       ATMOS_DYN_TYPE,               &
-       ATMOS_DYN_TINTEG_SHORT_TYPE,  &
-       ATMOS_DYN_TINTEG_TRACER_TYPE, &
-       ATMOS_DYN_TINTEG_LARGE_TYPE,  &
-       ATMOS_DYN_TSTEP_TRACER_TYPE,  &
-       ATMOS_DYN_TSTEP_LARGE_TYPE
+       ATMOS_sw_dyn,   &
+       ATMOS_DYN_TYPE
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -117,6 +122,9 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
+       ATMOS_DYN_TINTEG_SHORT_TYPE,           &
+       ATMOS_DYN_TINTEG_TRACER_TYPE,          &
+       ATMOS_DYN_TINTEG_LARGE_TYPE,           &
        ATMOS_DYN_FVM_FLUX_scheme,             &
        ATMOS_DYN_FVM_FLUX_scheme_tracer,      &
        ATMOS_DYN_numerical_diff_order,        &
@@ -151,6 +159,12 @@ contains
        if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
+
+       if ( ATMOS_sw_dyn ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Large time step  : ', trim(ATMOS_DYN_TINTEG_LARGE_TYPE)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Short time step  : ', trim(ATMOS_DYN_TINTEG_SHORT_TYPE)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Tracer advection : ', trim(ATMOS_DYN_TINTEG_TRACER_TYPE)
+       endif
 
        call ATMOS_DYN_setup( ATMOS_DYN_TINTEG_SHORT_TYPE,        & ! [IN]
                              ATMOS_DYN_TINTEG_TRACER_TYPE,       & ! [IN]
