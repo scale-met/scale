@@ -7,22 +7,6 @@ do
       if [ ${subdir} = "500m" -o ${subdir} = "1000m" -o ${subdir} = "2000m" ]; then
          echo ./case/${dir}/${subdir}
 
-         if [ ${dir} = "radiation" -o ${dir} = "rad-conv" -o ${dir} = "urban" ]; then
-            echo "--->skip"
-            rm -rf ./case/${dir}/${subdir}_hevi
-            rm -rf ./case/${dir}/${subdir}_hivi
-         else
-            echo "--->HEVI,HIVI"
-
-            rm -rf ./case/${dir}/${subdir}_hevi
-            cp -r  ./case/${dir}/${subdir} ./case/${dir}/${subdir}_hevi
-            sed -e "s/HEVE/HEVI/g" ./case/${dir}/${subdir}/run.conf > ./case/${dir}/${subdir}_hevi/run.conf
-
-            rm -rf ./case/${dir}/${subdir}_hivi
-            cp -r  ./case/${dir}/${subdir} ./case/${dir}/${subdir}_hivi
-            sed -e "s/HEVE/HIVI/g" ./case/${dir}/${subdir}/run.conf > ./case/${dir}/${subdir}_hivi/run.conf
-         fi
-
          if [ ${dir} = "squallline" -o ${dir} = "supercell" -o ${dir} = "warmbubble" ]; then
             echo "--->kessler,tomita08"
 
