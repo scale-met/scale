@@ -895,27 +895,27 @@ contains
        do k = KS+2, KE-2
           sig0 = dev(k) * dev(k-1)
           sig1 = dev(k) * dev(k+1)
-          ! if (sig0>0 .or. sig1>0) then flux(k) = 0.0
+          ! if (sig0>0 .OR. sig1>0) then flux(k) = 0.0
           flux(k) = dev(k) &
                   / ( 2.0_RP*RCDZ(k) + ( FDZ(k-1)*RCDZ(k+1) + FDZ(k)*RCDZ(k-1) ) / ( FDZ(k) + FDZ(k-1) ) ) &
                   * ( sign(0.5_RP ,sig0) + sign(0.5_RP ,sig1)          ) &
                   * ( sign(0.25_RP,sig0) + sign(0.25_RP,sig1) - 0.5_RP )
-          updated = updated .or. ( sig0 < -EPS .and. sig1 < -EPS )
+          updated = updated .OR. ( sig0 < -EPS .AND. sig1 < -EPS )
        enddo
 
        sig1 = dev(KS+1) * dev(KS+2)
        flux(KS+1) = dev(KS+1) &
                   / ( 2.0_RP*RCDZ(KS+1) + (FDZ(KS)*RCDZ(KS+2)+FDZ(KS+1)*RCDZ(KS))/(FDZ(KS+1)+FDZ(KS)) ) &
                   * ( 0.5_RP - sign(0.5_RP ,sig1) )
-       updated = updated .or. ( sig1 < -EPS )
+       updated = updated .OR. ( sig1 < -EPS )
 
        sig0 = dev(KE-1) * dev(KE-2)
        flux(KE-1) = dev(KE-1) &
                   / ( 2.0_RP*RCDZ(KE-1) + (FDZ(KE-2)*RCDZ(KE)+FDZ(KE-1)*RCDZ(KE-2))/(FDZ(KE-1)+FDZ(KE-2)) ) &
                   * ( 0.5_RP - sign(0.5_RP ,sig0) )
-       updated = updated .or. ( sig0 < -EPS )
+       updated = updated .OR. ( sig0 < -EPS )
 
-       if ( .not. updated ) exit
+       if ( .NOT. updated ) exit
 
        do k = KS+1, KE-1
           zerosw = 0.5_RP - sign( 0.5_RP, abs(flux(k))-EPS ) ! if flux(k) == 0 then fact(k) = 0.0

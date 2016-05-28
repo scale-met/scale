@@ -64,7 +64,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
-    if ( AE_TYPE /= 'DUMMY' .and. AE_TYPE /= 'NONE' ) then
+    if ( AE_TYPE /= 'DUMMY' .AND. AE_TYPE /= 'NONE' ) then
        write(*,*) 'xxx ATMOS_PHY_AE_TYPE is not DUMMY. Check!'
        call PRC_MPIstop
     endif

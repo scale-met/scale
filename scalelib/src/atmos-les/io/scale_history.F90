@@ -540,7 +540,7 @@ contains
           if ( ydim=='half' ) yh = .true.
        end if
 
-       if ( xh .and. yh ) then
+       if ( xh .AND. yh ) then
           dims(1) = 'lon_uv'
           dims(2) = 'lat_uv'
           dims(3) = 'height_uvz'
@@ -568,7 +568,7 @@ contains
           else if ( zdim=='urbanhalf' ) then
              dims(3) = 'uzh'
           else if ( zdim=='half' ) then
-             if ( xh .and. yh ) then
+             if ( xh .AND. yh ) then
                 dims(3) = 'height_uvw'
              else if ( xh ) then
                 dims(3) = 'height_uyw'
@@ -614,7 +614,7 @@ contains
 
     answer = .false.
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -643,7 +643,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -674,7 +674,7 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -715,7 +715,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -810,7 +810,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -988,7 +988,7 @@ contains
     logical           :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
 
     call HIST_reg( itemid,              & ! [OUT]
@@ -1029,7 +1029,7 @@ contains
     logical           :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     zd = ''
     if( present(zdim) ) zd = zdim
@@ -1076,7 +1076,7 @@ contains
     logical           :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     xd = ''
     yd = ''
@@ -1127,7 +1127,7 @@ contains
     logical           :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     xd = ''
     yd = ''

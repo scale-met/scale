@@ -246,8 +246,8 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) .le. PROF_rap_level .and. &
-                  PROF_grpid(id) == gid .and. &
+             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
+                  PROF_grpid(id) == gid .AND. &
                   IO_L ) then
                 write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
                      '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
@@ -276,8 +276,8 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) .le. PROF_rap_level .and. &
-                  PROF_grpid(id) == gid .and. &
+             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
+                  PROF_grpid(id) == gid .AND. &
                   fid > 0 ) then
                 write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I9)') &
                      '*** ID=',id,' : ',PROF_rapname(id), &

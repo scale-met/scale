@@ -88,7 +88,7 @@ program launcher
      do i = 1, NUM_DOMAIN
         total_prc = total_prc + PRC_DOMAINS(i)
      enddo
-     if ( total_prc .ne. nprocs_glb ) then
+     if ( total_prc /= nprocs_glb ) then
         if ( masternode ) write ( MFID, * ) ""
         if ( masternode ) write ( MFID, * ) "ERROR: PROCESS NUMBER is INCONSISTENT"
         if ( masternode ) write ( MFID, * ) " REQ. TOTAL PRC = ", total_prc, "  NPROCS = ", nprocs_glb

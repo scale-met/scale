@@ -390,15 +390,15 @@ contains
 
     if( USE_NESTING ) then
 
-       if ( OFFLINE .or. ONLINE_IAM_DAUGHTER ) then
+       if ( OFFLINE .OR. ONLINE_IAM_DAUGHTER ) then
           ims = IS-1
           ime = IE
           jms = JS-1
           jme = JE
-          if ( .not. PRC_HAS_W ) ims = 1
-          if ( .not. PRC_HAS_E ) ime = IA
-          if ( .not. PRC_HAS_S ) jms = 1
-          if ( .not. PRC_HAS_N ) jme = JA
+          if ( .NOT. PRC_HAS_W ) ims = 1
+          if ( .NOT. PRC_HAS_E ) ime = IA
+          if ( .NOT. PRC_HAS_S ) jms = 1
+          if ( .NOT. PRC_HAS_N ) jme = JA
           corner_loc(I_NW,I_LON) = REAL_LONXY(ims,jme) / D2R
           corner_loc(I_NE,I_LON) = REAL_LONXY(ime,jme) / D2R
           corner_loc(I_SW,I_LON) = REAL_LONXY(ims,jms) / D2R
@@ -453,7 +453,7 @@ contains
          call NEST_domain_relate(HANDLING_NUM)
 
       else ! ONLINE RELATIONSHIP
-!         if ( present(flag_parent) .and. present(flag_child) ) then
+!         if ( present(flag_parent) .AND. present(flag_child) ) then
 !            if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
 !                       '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
 !         else
@@ -785,9 +785,9 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        wid_lat = abs((latlon_catalog(i,I_SW,I_LAT) - latlon_catalog(i,I_NW,I_LAT)) &
                       / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.8_RP
 
-       if ( corner_loc(I_SW,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .and. &
-            corner_loc(I_SW,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .and. &
-            corner_loc(I_SW,I_LON) <= max(latlon_catalog(i,I_NE,I_LON),latlon_catalog(i,I_SE,I_LON))+wid_lon .and. &
+       if ( corner_loc(I_SW,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .AND. &
+            corner_loc(I_SW,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .AND. &
+            corner_loc(I_SW,I_LON) <= max(latlon_catalog(i,I_NE,I_LON),latlon_catalog(i,I_SE,I_LON))+wid_lon .AND. &
             corner_loc(I_SW,I_LAT) <= max(latlon_catalog(i,I_NE,I_LAT),latlon_catalog(i,I_NW,I_LAT))+wid_lat ) then
 
           pd_sw_tile = i-1 ! MPI process number starts from zero
@@ -821,9 +821,9 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        wid_lat = abs((latlon_catalog(i,I_SE,I_LAT) - latlon_catalog(i,I_NE,I_LAT)) &
                       / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.8_RP
 
-       if ( corner_loc(I_NE,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .and. &
-            corner_loc(I_NE,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .and. &
-            corner_loc(I_NE,I_LON) <= max(latlon_catalog(i,I_NE,I_LON),latlon_catalog(i,I_SE,I_LON))+wid_lon .and. &
+       if ( corner_loc(I_NE,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .AND. &
+            corner_loc(I_NE,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .AND. &
+            corner_loc(I_NE,I_LON) <= max(latlon_catalog(i,I_NE,I_LON),latlon_catalog(i,I_SE,I_LON))+wid_lon .AND. &
             corner_loc(I_NE,I_LAT) <= max(latlon_catalog(i,I_NE,I_LAT),latlon_catalog(i,I_NW,I_LAT))+wid_lat ) then
 
           pd_ne_tile = i-1 ! MPI process number starts from zero
@@ -1397,7 +1397,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        call PRC_MPIstop
     endif
 
-    if( NUM_YP * 16 > max_rq .or. NEST_TILE_ALL * 16 > max_rq ) then ! 16 = dyn:5 + qtrc:11
+    if( NUM_YP * 16 > max_rq .OR. NEST_TILE_ALL * 16 > max_rq ) then ! 16 = dyn:5 + qtrc:11
        write(*,*) 'xxx internal error (overflow number of ireq) [nest/grid]'
        write(*,*) '    NUM_YP x 16        = ', NUM_YP * 16
        write(*,*) '    NEST_TILE_ALL x 16 = ', NEST_TILE_ALL * 16
@@ -1700,7 +1700,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        !--- it should be consistent with the order in "NEST_COMM_recvwait_issue"
        rq_ctl_p = 0
 
-       if ( .not. ONLINE_DAUGHTER_NO_ROTATE ) then
+       if ( .NOT. ONLINE_DAUGHTER_NO_ROTATE ) then
           ! from staggered point to scalar point
           do j = 1, PARENT_JA(HANDLE)
           do i = 2, PARENT_IA(HANDLE)
@@ -2084,7 +2084,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     !-------------------------------------------------------- daughter [receive issue]
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: CANCEL recv ( ", nrecv, " )"
        do rq = 1, rq_tot_d
-          if ( ireq_d(rq) .ne. MPI_REQUEST_NULL ) then
+          if ( ireq_d(rq) /= MPI_REQUEST_NULL ) then
              call MPI_CANCEL(ireq_d(rq), ierr)
              !call MPI_TEST_CANCELLED(istatus, flag, ierr)
              !if ( .NOT. flag ) then
@@ -2208,7 +2208,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           if ( no_zstag ) then
              isu_tag = isu_tag + 1
 
-             if ( .not. logarithmic ) then
+             if ( .NOT. logarithmic ) then
 !OCL XFILL
                 ! linear interpolation
                 do k = 1, PARENT_KA(HANDLE)
@@ -2232,7 +2232,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
              enddo
           endif
 
-          if ( isu_tag > max_isu .or. isu_tagf > max_isuf ) then
+          if ( isu_tag > max_isu .OR. isu_tagf > max_isuf ) then
              write(*,*) 'xxx Exceeded maximum issue [intercomm: nest/grid]'
              write(*,*) 'xxx isu_tag  = ', isu_tag
              write(*,*) 'xxx isu_tagf = ', isu_tagf
@@ -2383,7 +2383,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
        enddo ! YP Loop
 
-       if ( isu_tag > max_isu .or. isu_tagf > max_isuf ) then
+       if ( isu_tag > max_isu .OR. isu_tagf > max_isuf ) then
           write(*,*) 'xxx Exceeded maximum issue [receive: nest/grid]'
           write(*,*) 'xxx isu_tag  = ', isu_tag
           write(*,*) 'xxx isu_tagf = ', isu_tagf
@@ -2455,14 +2455,14 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     req_count2 = 0
     do i=1, req_count
-       if (ireq(i) .ne. MPI_REQUEST_NULL) then
+       if (ireq(i) /= MPI_REQUEST_NULL) then
           req_count2 = req_count2 + 1
           ireq2(req_count2) = ireq(i)
        endif
     enddo
-    if ( req_count2 .ne. 0 ) call MPI_WAITALL( req_count2, ireq2, istatus, ierr )
+    if ( req_count2 /= 0 ) call MPI_WAITALL( req_count2, ireq2, istatus, ierr )
 
-!    do while ( .not. flag )
+!    do while ( .NOT. flag )
 !       num = num + 1
 !       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
 

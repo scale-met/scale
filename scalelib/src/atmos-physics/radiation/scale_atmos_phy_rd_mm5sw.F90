@@ -221,9 +221,9 @@ module scale_atmos_phy_rd_mm5sw
                 QI1D(K)=max(0.0_RP,QI1D(K))
             enddo
          ELSE
-            IF (.not. warm_rain) THEN
+            IF (.NOT. warm_rain) THEN
                do k=KS,KE
-               IF(T1D(K) .lt. 273.15) THEN
+               IF(T1D(K) < 273.15) THEN
                   QI1D(K)=QC1D(K)
                   QC1D(K)=0.
                   QS1D(K)=QR1D(K)
@@ -417,7 +417,7 @@ module scale_atmos_phy_rd_mm5sw
       CSZA=cosSZA
 
 !     RETURN IF NIGHT
-      IF(CSZA .LE. 1.0E-9_RP)GOTO 7
+      IF(CSZA <= 1.0E-9_RP)GOTO 7
 !
       DO K=kts, kte
 
@@ -432,7 +432,7 @@ module scale_atmos_phy_rd_mm5sw
 !     REDUCE WEIGHT OF LIQUID AND ICE IN SHORT-WAVE SCHEME
 !     ADD GRAUPEL EFFECT (ASSUMED SAME AS RAIN)
 !
-      IF (ICLOUD.EQ.0)THEN
+      IF (ICLOUD==0)THEN
          DO K=kts, kte
             XLWP(K)=0.
          ENDDO
@@ -487,13 +487,13 @@ module scale_atmos_phy_rd_mm5sw
           XABS=(TOTABS-OLDABS)*(SDOWN(kts)-DSCLD-DSCA-DABSA)/SDOWN(K)
 !rs   AEROSOL ABSORB (would be elemental carbon). So far XABSA = 0.
          XABSA=0.
-         IF(XABS.LT.0.)XABS=0.
+         IF(XABS<0.)XABS=0.
 !
          ALW=log10(WGM+1.0_RP)
-         IF(ALW.GT.3.999)ALW=3.999_RP
+         IF(ALW>3.999)ALW=3.999_RP
 !
          DO II=1,3
-            IF(XMU.GT.XMUVAL(II))THEN
+            IF(XMU>XMUVAL(II))THEN
               IIL=II
               IU=II+1
               XI=(XMU-XMUVAL(II))/(XMUVAL(II+1)-XMUVAL(II))+FLOAT(IIL)
@@ -520,8 +520,8 @@ module scale_atmos_phy_rd_mm5sw
          !XABSC=(ABSC-OLDABC)*(SDOWN(1)-DSCA-DABS)/SDOWN(K)
           XALB=(ALBA-OLDALB)*(SDOWN(kts)-DSCA-DABS)/SDOWN(K)
           XABSC=(ABSC-OLDABC)*(SDOWN(kts)-DSCA-DABS)/SDOWN(K)
-         IF(XALB.LT.0.)XALB=0.
-         IF(XABSC.LT.0.)XABSC=0.
+         IF(XALB<0.)XALB=0.
+         IF(XABSC<0.)XABSC=0.
          DSCLD=DSCLD+(XALB+XABSC)*SDOWN(K)*0.01
          DSCA=DSCA+XSCA*SDOWN(K)
          DABS=DABS+XABS*SDOWN(K)
@@ -530,7 +530,7 @@ module scale_atmos_phy_rd_mm5sw
          OLDABC=ABSC
 !     LAYER TRANSMISSIVITY
          TRANS0=100.0_RP-XALB-XABSC-XABS*100.0_RP-XSCA*100.0_RP
-         IF(TRANS0.LT.1.)THEN
+         IF(TRANS0<1.)THEN
            FF=99.0_RP/(XALB+XABSC+XABS*100.0_RP+XSCA*100.0_RP)
            XALB=XALB*FF
            XABSC=XABSC*FF
@@ -547,12 +547,12 @@ module scale_atmos_phy_rd_mm5sw
 !    IF (PRESENT(slope_rad)) THEN
 !! Slope-dependent solar radiation part
 !
-!      if (slope_rad.eq.1) then
+!      if (slope_rad==1) then
 !
 !!  Parameterize diffuse fraction of global solar radiation as a function of the ratio between TOA radiation and surface global radiation
 !
 !        diffuse_frac = min(1.,1/(max(0.1,2.1-2.8*log(log(SDOWN(kts)/max(SDOWN(kte+1),1.e-3))))))
-!        if ((slope.eq.0).or.(diffuse_frac.eq.1).or.(csza.lt.1.e-2)) then  ! no topographic effects when all radiation is diffuse or the sun is too close to the horizon
+!        if ((slope==0).OR.(diffuse_frac==1).OR.(csza<1.e-2)) then  ! no topographic effects when all radiation is diffuse or the sun is too close to the horizon
 !        corr_fac = 1
 !        goto 140
 !        endif
@@ -566,11 +566,11 @@ module scale_atmos_phy_rd_mm5sw
 !                   SIN(XXLAT)*cos(slope))*SIN(DECLIN)
 !
 !        csza_slp = 0
-!        IF(csza_slp.LE.1.E-4) csza_slp = 0
+!        IF(csza_slp<=1.E-4) csza_slp = 0
 !
 ! Topographic shading
 !
-!        if (shadow.eq.1) csza_slp = 0
+!        if (shadow==1) csza_slp = 0
 !
 ! Correction factor for sloping topography; the diffuse fraction of solar radiation is assumed to be unaffected by the slope
 !        corr_fac = diffuse_frac + (1-diffuse_frac)*csza_slp/csza

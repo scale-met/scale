@@ -1722,7 +1722,7 @@ contains
 #ifdef DEBUG
        if (IO_L) write(*,*) iter, error/norm
 #endif
-       if ( sqrt(error/norm) < epsilon .or. error > error2 ) then
+       if ( sqrt(error/norm) < epsilon .OR. error > error2 ) then
 #ifdef DEBUG
          IF ( IO_L ) write(*,*) "Bi-CGSTAB converged:", iter
 #endif

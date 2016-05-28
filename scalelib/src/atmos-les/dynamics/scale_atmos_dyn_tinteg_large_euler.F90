@@ -72,7 +72,7 @@ contains
     integer :: iv
     !---------------------------------------------------------------------------
 
-    if ( tinteg_type .ne. 'EULER' ) then
+    if ( tinteg_type /= 'EULER' ) then
        write(*,*) 'xxx TINTEG_LARGE_TYPE is not EULER. Check!'
        call PRC_MPIstop
     end if

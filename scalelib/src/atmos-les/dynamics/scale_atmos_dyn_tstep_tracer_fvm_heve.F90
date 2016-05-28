@@ -64,7 +64,7 @@ contains
     implicit none
     character(len=*), intent(in) :: type
 
-    if ( type .ne. 'FVM-HEVE' ) then
+    if ( type /= 'FVM-HEVE' ) then
        write(*,*) 'xxx Tstep_tracer_type is not "FVM-HEVE"!'
        call PRC_MPIstop
     end if

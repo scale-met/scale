@@ -322,7 +322,7 @@ contains
     ATMOS_BOUNDARY_alpha_POTT(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_QTRC(:,:,:,:) = 0.0_RP
 
-    if ( ATMOS_BOUNDARY_TYPE == 'REAL' .or. do_daughter_process ) then
+    if ( ATMOS_BOUNDARY_TYPE == 'REAL' .OR. do_daughter_process ) then
        l_bnd = .true.
     else
        l_bnd = .false.
@@ -865,7 +865,7 @@ contains
     enddo
 
     if ( l_bnd ) then
-       if ( .not. ONLINE_USE_VELZ .and. .NOT. ATMOS_BOUNDARY_USE_VELZ ) then
+       if ( .NOT. ONLINE_USE_VELZ .AND. .NOT. ATMOS_BOUNDARY_USE_VELZ ) then
           ATMOS_BOUNDARY_alpha_VELZ(:,:,:) = 0.0_RP
        end if
     else
@@ -988,10 +988,10 @@ contains
     bname = ATMOS_BOUNDARY_IN_BASENAME
 
     if (      ATMOS_BOUNDARY_USE_DENS &
-         .or. ATMOS_BOUNDARY_USE_VELZ &
-         .or. ATMOS_BOUNDARY_USE_VELX &
-         .or. ATMOS_BOUNDARY_USE_VELY &
-         .or. ATMOS_BOUNDARY_USE_POTT &
+         .OR. ATMOS_BOUNDARY_USE_VELZ &
+         .OR. ATMOS_BOUNDARY_USE_VELX &
+         .OR. ATMOS_BOUNDARY_USE_VELY &
+         .OR. ATMOS_BOUNDARY_USE_POTT &
          ) then
        call FileRead( reference_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
        ATMOS_BOUNDARY_DENS(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
@@ -1093,24 +1093,24 @@ contains
     !---------------------------------------------------------------------------
 
     if (      ATMOS_BOUNDARY_USE_DENS &
-         .or. ATMOS_BOUNDARY_USE_VELZ &
-         .or. ATMOS_BOUNDARY_USE_VELX &
-         .or. ATMOS_BOUNDARY_USE_VELY &
-         .or. ATMOS_BOUNDARY_USE_POTT &
+         .OR. ATMOS_BOUNDARY_USE_VELZ &
+         .OR. ATMOS_BOUNDARY_USE_VELX &
+         .OR. ATMOS_BOUNDARY_USE_VELY &
+         .OR. ATMOS_BOUNDARY_USE_POTT &
          ) then
        call FILEIO_write( ATMOS_BOUNDARY_DENS(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'DENS', 'Reference Density', 'kg/m3', 'ZXY',           &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     end if
-    if ( ATMOS_BOUNDARY_USE_DENS .or. l_bnd ) then
+    if ( ATMOS_BOUNDARY_USE_DENS .OR. l_bnd ) then
        call FILEIO_write( ATMOS_BOUNDARY_alpha_DENS(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_DENS', 'Alpha for DENS', '1', 'ZXY',            &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_VELZ .or. (l_bnd .and. ONLINE_USE_VELZ) ) then
+    if ( ATMOS_BOUNDARY_USE_VELZ .OR. (l_bnd .AND. ONLINE_USE_VELZ) ) then
        call FILEIO_write( ATMOS_BOUNDARY_VELZ(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
@@ -1121,7 +1121,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_VELX .or. l_bnd ) then
+    if ( ATMOS_BOUNDARY_USE_VELX .OR. l_bnd ) then
        call FILEIO_write( ATMOS_BOUNDARY_VELX(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
@@ -1132,7 +1132,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_VELY .or. l_bnd ) then
+    if ( ATMOS_BOUNDARY_USE_VELY .OR. l_bnd ) then
        call FILEIO_write( ATMOS_BOUNDARY_VELY(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
@@ -1143,7 +1143,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_POTT .or. l_bnd ) then
+    if ( ATMOS_BOUNDARY_USE_POTT .OR. l_bnd ) then
        call FILEIO_write( ATMOS_BOUNDARY_POTT(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'POTT', 'Reference POTT', 'K', 'ZXY',                  &
@@ -1154,7 +1154,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_QV   .or. l_bnd ) then
+    if ( ATMOS_BOUNDARY_USE_QV   .OR. l_bnd ) then
        call FILEIO_write( ATMOS_BOUNDARY_QTRC(:,:,:,1),                          &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'QV', 'Reference QV', 'kg/kg', 'ZXY',                  &
@@ -1418,7 +1418,7 @@ contains
 
     ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC(handle)
 
-    if ( NESTQA .ne. BND_QA ) then
+    if ( NESTQA /= BND_QA ) then
        write(*,*) 'xxx ERROR: NEST_BND_QA exceeds BND_QA [initialize/ATMOS_BOUNDARY]'
        write(*,*) 'xxx check consistency between'
        write(*,*) '    ONLINE_BOUNDARY_USE_QHYD and ATMOS_BOUNDARY_USE_QHYD.'
@@ -1661,7 +1661,7 @@ contains
        end if
 
        ! fill HALO in western region
-       if ( .not. PRC_HAS_W ) then
+       if ( .NOT. PRC_HAS_W ) then
           do j = 1, JA
           do i = 1, IS-1
           do k = 1, KA
@@ -1714,7 +1714,7 @@ contains
        end if
 
        ! fill HALO in eastern region
-       if ( .not. PRC_HAS_E ) then
+       if ( .NOT. PRC_HAS_E ) then
           do j = 1, JA
           do i = IE+1, IA
           do k = 1, KA
@@ -1778,7 +1778,7 @@ contains
        end if
 
        ! fill HALO in southern region
-       if ( .not. PRC_HAS_S ) then
+       if ( .NOT. PRC_HAS_S ) then
           do j = 1, JS-1
           do i = 1, IA
           do k = 1, KA
@@ -1831,7 +1831,7 @@ contains
        end if
 
        ! fill HALO in northern region
-       if ( .not. PRC_HAS_N ) then
+       if ( .NOT. PRC_HAS_N ) then
           do j = JE+1, JA
           do i = 1, IA
           do k = 1, KA

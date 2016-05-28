@@ -232,7 +232,7 @@ contains
        allocate( pseqid(COMM_vsize_max_pc) )
     end if
 
-    if ( PRC_HAS_N .and. PRC_HAS_S .and. PRC_HAS_W .and. PRC_HAS_E ) then
+    if ( PRC_HAS_N .AND. PRC_HAS_S .AND. PRC_HAS_W .AND. PRC_HAS_E ) then
        COMM_IsAllPeriodic = .true.
     else
        COMM_IsAllPeriodic = .false.
@@ -444,7 +444,7 @@ contains
     end if
 
     ! copy inner data to boundary
-    if ( .not. COMM_IsAllPeriodic ) then
+    if ( .NOT. COMM_IsAllPeriodic ) then
        if ( FILL_BND_ ) then
           call copy_boundary_3D(var)
        end if
@@ -500,7 +500,7 @@ contains
     call wait_2D_mpi(var, vid)
     call PROF_rapend  ('COMM_wait', 2)
 
-    if( .not. COMM_IsAllPeriodic ) then
+    if( .NOT. COMM_IsAllPeriodic ) then
        if ( FILL_BND_ ) then
           call copy_boundary_2D(var)
        end if
@@ -935,7 +935,7 @@ contains
     call PROF_rapstart('COMM_Bcast', 2)
 
     counts = gIA * gJA * gKA * gTime
-    if ( gIA>0 .and. gJA>0 .and. gKA>0 .and. gTime>0 .and. &
+    if ( gIA>0 .AND. gJA>0 .AND. gKA>0 .AND. gTime>0 .AND. &
          counts < 0 ) then
        write(*,*) 'xxx counts overflow'
        call PRC_MPIstop
@@ -1299,7 +1299,7 @@ contains
 
        !--- From 8-Direction HALO communicate
        ! From SE
-       if ( PRC_HAS_S .and. PRC_HAS_E ) then
+       if ( PRC_HAS_S .AND. PRC_HAS_E ) then
           tagc = 0
           do j = JS-JHALO, JS-1
              call MPI_RECV_INIT( var(1,IE+1,j),     COMM_size2D_4C*kd, COMM_datatype,                &
@@ -1325,7 +1325,7 @@ contains
           enddo
        endif
        ! From SW
-       if ( PRC_HAS_S .and. PRC_HAS_W ) then
+       if ( PRC_HAS_S .AND. PRC_HAS_W ) then
           tagc = 10
           do j = JS-JHALO, JS-1
              call MPI_RECV_INIT( var(1,IS-IHALO,j), COMM_size2D_4C*kd, COMM_datatype,                &
@@ -1351,7 +1351,7 @@ contains
           enddo
        endif
        ! From NE
-       if ( PRC_HAS_N .and. PRC_HAS_E ) then
+       if ( PRC_HAS_N .AND. PRC_HAS_E ) then
           tagc = 20
           do j = JE+1, JE+JHALO
              call MPI_RECV_INIT( var(1,IE+1,j),     COMM_size2D_4C*kd, COMM_datatype,                &
@@ -1377,7 +1377,7 @@ contains
           enddo
        endif
        ! From NW
-       if ( PRC_HAS_N .and. PRC_HAS_W ) then
+       if ( PRC_HAS_N .AND. PRC_HAS_W ) then
           tagc = 30
           do j = JE+1, JE+JHALO
              call MPI_RECV_INIT( var(1,IS-IHALO,j), COMM_size2D_4C*kd, COMM_datatype,                &
@@ -1473,7 +1473,7 @@ contains
           enddo
        endif
        ! To NW HALO
-       if ( PRC_HAS_N .and. PRC_HAS_W ) then
+       if ( PRC_HAS_N .AND. PRC_HAS_W ) then
           tagc = 0
           do j = JE-JHALO+1, JE
              call MPI_SEND_INIT( var(1,IS,j),         COMM_size2D_4C*kd, COMM_datatype,              &
@@ -1499,7 +1499,7 @@ contains
           enddo
        endif
        ! To NE HALO
-       if ( PRC_HAS_N .and. PRC_HAS_E ) then
+       if ( PRC_HAS_N .AND. PRC_HAS_E ) then
           tagc = 10
           do j = JE-JHALO+1, JE
              call MPI_SEND_INIT( var(1,IE-IHALO+1,j), COMM_size2D_4C*kd, COMM_datatype,              &
@@ -1525,7 +1525,7 @@ contains
           enddo
        endif
        ! To SW HALO
-       if ( PRC_HAS_S .and. PRC_HAS_W ) then
+       if ( PRC_HAS_S .AND. PRC_HAS_W ) then
           tagc = 20
           do j = JS, JS+JHALO-1
              call MPI_SEND_INIT( var(1,IS,j),         COMM_size2D_4C*kd, COMM_datatype,              &
@@ -1551,7 +1551,7 @@ contains
           enddo
        endif
        ! To SE HALO
-       if ( PRC_HAS_S .and. PRC_HAS_E ) then
+       if ( PRC_HAS_S .AND. PRC_HAS_E ) then
           tagc = 30
           do j = JS, JS+JHALO-1
              call MPI_SEND_INIT( var(1,IE-IHALO+1,j), COMM_size2D_4C*kd, COMM_datatype,              &
@@ -1880,7 +1880,7 @@ contains
 
        !--- From 8-Direction HALO communicate
        ! From SE
-       if ( PRC_HAS_S .and. PRC_HAS_E ) then
+       if ( PRC_HAS_S .AND. PRC_HAS_E ) then
           tagc = 0
           do j = JS-JHALO, JS-1
              call MPI_IRECV( var(1,IE+1,j),     COMM_size2D_4C*kd, COMM_datatype,                &
@@ -1906,7 +1906,7 @@ contains
           enddo
        endif
        ! From SW
-       if ( PRC_HAS_S .and. PRC_HAS_W ) then
+       if ( PRC_HAS_S .AND. PRC_HAS_W ) then
           tagc = 10
           do j = JS-JHALO, JS-1
              call MPI_IRECV( var(1,IS-IHALO,j), COMM_size2D_4C*kd, COMM_datatype,                &
@@ -1932,7 +1932,7 @@ contains
           enddo
        endif
        ! From NE
-       if ( PRC_HAS_N .and. PRC_HAS_E ) then
+       if ( PRC_HAS_N .AND. PRC_HAS_E ) then
           tagc = 20
           do j = JE+1, JE+JHALO
              call MPI_IRECV( var(1,IE+1,j),     COMM_size2D_4C*kd, COMM_datatype,                &
@@ -1958,7 +1958,7 @@ contains
           enddo
        endif
        ! From NW
-       if ( PRC_HAS_N .and. PRC_HAS_W ) then
+       if ( PRC_HAS_N .AND. PRC_HAS_W ) then
           tagc = 30
           do j = JE+1, JE+JHALO
              call MPI_IRECV( var(1,IS-IHALO,j), COMM_size2D_4C*kd, COMM_datatype,                &
@@ -2056,7 +2056,7 @@ contains
           enddo
        endif
        ! To NW HALO
-       if ( PRC_HAS_N .and. PRC_HAS_W ) then
+       if ( PRC_HAS_N .AND. PRC_HAS_W ) then
           tagc = 0
           do j = JE-JHALO+1, JE
              call MPI_ISEND( var(1,IS,j),         COMM_size2D_4C*kd, COMM_datatype,              &
@@ -2082,7 +2082,7 @@ contains
           enddo
        endif
        ! To NE HALO
-       if ( PRC_HAS_N .and. PRC_HAS_E ) then
+       if ( PRC_HAS_N .AND. PRC_HAS_E ) then
           tagc = 10
           do j = JE-JHALO+1, JE
              call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size2D_4C*kd, COMM_datatype,              &
@@ -2108,7 +2108,7 @@ contains
           enddo
        endif
        ! To SW HALO
-       if ( PRC_HAS_S .and. PRC_HAS_W ) then
+       if ( PRC_HAS_S .AND. PRC_HAS_W ) then
           tagc = 20
           do j = JS, JS+JHALO-1
              call MPI_ISEND( var(1,IS,j),         COMM_size2D_4C*kd, COMM_datatype,              &
@@ -2134,7 +2134,7 @@ contains
           enddo
        endif
        ! To SE HALO
-       if ( PRC_HAS_S .and. PRC_HAS_E ) then
+       if ( PRC_HAS_S .AND. PRC_HAS_E ) then
           tagc = 30
           do j = JS, JS+JHALO-1
              call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size2D_4C*kd, COMM_datatype,              &
@@ -2489,7 +2489,7 @@ contains
     !--- non-periodic condition
         !--- From 8-Direction HALO communicate
         ! From SE
-        if ( PRC_HAS_S .and. PRC_HAS_E ) then
+        if ( PRC_HAS_S .AND. PRC_HAS_E ) then
             tagc = 0
             do j = JS-JHALO, JS-1
                 call MPI_IRECV( var(IE+1,j), COMM_size2D_4C,                      &
@@ -2519,7 +2519,7 @@ contains
         endif
 
         ! From SW
-        if ( PRC_HAS_S .and. PRC_HAS_W ) then
+        if ( PRC_HAS_S .AND. PRC_HAS_W ) then
             tagc = 10
             do j = JS-JHALO, JS-1
                 call MPI_IRECV( var(IS-IHALO,j), COMM_size2D_4C,                  &
@@ -2549,7 +2549,7 @@ contains
         endif
 
         ! From NE
-        if ( PRC_HAS_N .and. PRC_HAS_E ) then
+        if ( PRC_HAS_N .AND. PRC_HAS_E ) then
             tagc = 20
             do j = JE+1, JE+JHALO
                 call MPI_IRECV( var(IE+1,j), COMM_size2D_4C,                      &
@@ -2579,7 +2579,7 @@ contains
         endif
 
         ! From NW
-        if ( PRC_HAS_N .and. PRC_HAS_W ) then
+        if ( PRC_HAS_N .AND. PRC_HAS_W ) then
             tagc = 30
             do j = JE+1, JE+JHALO
                 call MPI_IRECV( var(IS-IHALO,j), COMM_size2D_4C,                  &
@@ -2691,7 +2691,7 @@ contains
         endif
 
         ! To NW HALO communicate
-        if ( PRC_HAS_N .and. PRC_HAS_W ) then
+        if ( PRC_HAS_N .AND. PRC_HAS_W ) then
             tagc = 0
             do j = JE-JHALO+1, JE
                 call MPI_ISEND( var(IS,j), COMM_size2D_4C,                        &
@@ -2721,7 +2721,7 @@ contains
         endif
 
         ! To NE HALO communicate
-        if ( PRC_HAS_N .and. PRC_HAS_E ) then
+        if ( PRC_HAS_N .AND. PRC_HAS_E ) then
             tagc = 10
             do j = JE-JHALO+1, JE
                 call MPI_ISEND( var(IE-IHALO+1,j), COMM_size2D_4C,                &
@@ -2751,7 +2751,7 @@ contains
         endif
 
         ! To SW HALO communicate
-        if ( PRC_HAS_S .and. PRC_HAS_W ) then
+        if ( PRC_HAS_S .AND. PRC_HAS_W ) then
             tagc = 20
             do j = JS, JS+JHALO-1
                 call MPI_ISEND( var(IS,j), COMM_size2D_4C,                        &
@@ -2781,7 +2781,7 @@ contains
         endif
 
         ! To SE HALO communicate
-        if ( PRC_HAS_S .and. PRC_HAS_E ) then
+        if ( PRC_HAS_S .AND. PRC_HAS_E ) then
             tagc = 30
             do j = JS, JS+JHALO-1
                 call MPI_ISEND( var(IE-IHALO+1,j), COMM_size2D_4C,                &
@@ -3220,7 +3220,7 @@ contains
     !---------------------------------------------------------------------------
 
     !--- copy inner data to HALO(North)
-    if ( .not. PRC_HAS_N ) then
+    if ( .NOT. PRC_HAS_N ) then
        do j = JE+1, JE+JHALO
        do i = IS, IE
           var(:,i,j) = var(:,i,JE)
@@ -3229,7 +3229,7 @@ contains
     endif
 
     !--- copy inner data to HALO(South)
-    if ( .not. PRC_HAS_S ) then
+    if ( .NOT. PRC_HAS_S ) then
        do j = JS-JHALO, JS-1
        do i = IS, IE
           var(:,i,j) = var(:,i,JS)
@@ -3238,7 +3238,7 @@ contains
     endif
 
     !--- copy inner data to HALO(East)
-    if ( .not. PRC_HAS_E ) then
+    if ( .NOT. PRC_HAS_E ) then
        do j = JS, JE
        do i = IE+1, IE+IHALO
           var(:,i,j) = var(:,IE,j)
@@ -3247,7 +3247,7 @@ contains
     end if
 
     !--- copy inner data to HALO(West)
-    if ( .not. PRC_HAS_W ) then
+    if ( .NOT. PRC_HAS_W ) then
        do j = JS, JE
        do i = IS-IHALO, IS-1
           var(:,i,j) = var(:,IS,j)
@@ -3256,20 +3256,20 @@ contains
     end if
 
     !--- copy inner data to HALO(NorthWest)
-    if ( .not. PRC_HAS_N .and. &
-         .not. PRC_HAS_W ) then
+    if ( .NOT. PRC_HAS_N .AND. &
+         .NOT. PRC_HAS_W ) then
        do j = JE+1, JE+JHALO
        do i = IS-IHALO, IS-1
           var(:,i,j) = var(:,IS,JE)
        enddo
        enddo
-    elseif( .not. PRC_HAS_N ) then
+    elseif( .NOT. PRC_HAS_N ) then
        do j = JE+1, JE+JHALO
        do i = IS-IHALO, IS-1
           var(:,i,j) = var(:,i,JE)
        enddo
        enddo
-    elseif( .not. PRC_HAS_W ) then
+    elseif( .NOT. PRC_HAS_W ) then
        do j = JE+1, JE+JHALO
        do i = IS-IHALO, IS-1
           var(:,i,j) = var(:,IS,j)
@@ -3278,20 +3278,20 @@ contains
     endif
 
     !--- copy inner data to HALO(SouthWest)
-    if ( .not. PRC_HAS_S .and. &
-         .not. PRC_HAS_W ) then
+    if ( .NOT. PRC_HAS_S .AND. &
+         .NOT. PRC_HAS_W ) then
        do j = JS-IHALO, JS-1
        do i = IS-IHALO, IS-1
           var(:,i,j) = var(:,IS,JS)
        enddo
        enddo
-    elseif( .not. PRC_HAS_S ) then
+    elseif( .NOT. PRC_HAS_S ) then
        do j = JS-IHALO, JS-1
        do i = IS-IHALO, IS-1
           var(:,i,j) = var(:,i,JS)
        enddo
        enddo
-    elseif( .not. PRC_HAS_W ) then
+    elseif( .NOT. PRC_HAS_W ) then
        do j = JS-IHALO, JS-1
        do i = IS-IHALO, IS-1
           var(:,i,j) = var(:,IS,j)
@@ -3300,20 +3300,20 @@ contains
     endif
 
     !--- copy inner data to HALO(NorthEast)
-    if ( .not. PRC_HAS_N .and. &
-         .not. PRC_HAS_E ) then
+    if ( .NOT. PRC_HAS_N .AND. &
+         .NOT. PRC_HAS_E ) then
        do j = JE+1, JE+JHALO
        do i = IE+1, IE+IHALO
           var(:,i,j) = var(:,IE,JE)
        enddo
        enddo
-    elseif( .not. PRC_HAS_N ) then
+    elseif( .NOT. PRC_HAS_N ) then
        do j = JE+1, JE+JHALO
        do i = IE+1, IE+IHALO
           var(:,i,j) = var(:,i,JE)
        enddo
        enddo
-    elseif( .not. PRC_HAS_E ) then
+    elseif( .NOT. PRC_HAS_E ) then
        do j = JE+1, JE+JHALO
        do i = IE+1, IE+IHALO
           var(:,i,j) = var(:,IE,j)
@@ -3322,20 +3322,20 @@ contains
     endif
 
     !--- copy inner data to HALO(SouthEast)
-    if ( .not. PRC_HAS_S .and. &
-         .not. PRC_HAS_E ) then
+    if ( .NOT. PRC_HAS_S .AND. &
+         .NOT. PRC_HAS_E ) then
        do j = JS-IHALO, JS-1
        do i = IE+1, IE+IHALO
           var(:,i,j) = var(:,IE,JS)
        enddo
        enddo
-    elseif( .not. PRC_HAS_S ) then
+    elseif( .NOT. PRC_HAS_S ) then
        do j = JS-IHALO, JS-1
        do i = IE+1, IE+IHALO
           var(:,i,j) = var(:,i,JS)
        enddo
        enddo
-    elseif( .not. PRC_HAS_E ) then
+    elseif( .NOT. PRC_HAS_E ) then
        do j = JS-IHALO, JS-1
        do i = IE+1, IE+IHALO
           var(:,i,j) = var(:,IE,j)
@@ -3354,7 +3354,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
     !--- copy inner data to HALO(North)
-    if( .not. PRC_HAS_N ) then
+    if( .NOT. PRC_HAS_N ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JE+1, JE+JHALO
        do i = IS, IE
@@ -3364,7 +3364,7 @@ contains
     endif
 
     !--- copy inner data to HALO(South)
-    if( .not. PRC_HAS_S ) then
+    if( .NOT. PRC_HAS_S ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS-JHALO, JS-1
        do i = IS, IE
@@ -3373,7 +3373,7 @@ contains
        enddo
     endif
 
-    if( .not. PRC_HAS_E ) then
+    if( .NOT. PRC_HAS_E ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IE+1, IE+IHALO
@@ -3382,7 +3382,7 @@ contains
        enddo
     endif
 
-    if( .not. PRC_HAS_W ) then
+    if( .NOT. PRC_HAS_W ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS-IHALO, IS-1
@@ -3392,21 +3392,21 @@ contains
     endif
 
     !--- copy inner data to HALO(NorthWest)
-    if( .not. PRC_HAS_N .AND. .not. PRC_HAS_W ) then
+    if( .NOT. PRC_HAS_N .AND. .NOT. PRC_HAS_W ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JE+1, JE+JHALO
        do i = IS-IHALO, IS-1
           var(i,j) = var(IS,JE)
        enddo
        enddo
-    elseif( .not. PRC_HAS_N ) then
+    elseif( .NOT. PRC_HAS_N ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JE+1, JE+JHALO
        do i = IS-IHALO, IS-1
           var(i,j) = var(i,JE)
        enddo
        enddo
-    elseif( .not. PRC_HAS_W ) then
+    elseif( .NOT. PRC_HAS_W ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JE+1, JE+JHALO
        do i = IS-IHALO, IS-1
@@ -3416,21 +3416,21 @@ contains
     endif
 
     !--- copy inner data to HALO(SouthWest)
-    if( .not. PRC_HAS_S .AND. .not. PRC_HAS_W ) then
+    if( .NOT. PRC_HAS_S .AND. .NOT. PRC_HAS_W ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS-IHALO, JS-1
        do i = IS-IHALO, IS-1
           var(i,j) = var(IS,JS)
        enddo
        enddo
-    elseif( .not. PRC_HAS_S ) then
+    elseif( .NOT. PRC_HAS_S ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS-IHALO, JS-1
        do i = IS-IHALO, IS-1
           var(i,j) = var(i,JS)
        enddo
        enddo
-    elseif( .not. PRC_HAS_W ) then
+    elseif( .NOT. PRC_HAS_W ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS-IHALO, JS-1
        do i = IS-IHALO, IS-1
@@ -3440,21 +3440,21 @@ contains
     endif
 
     !--- copy inner data to HALO(NorthEast)
-    if( .not. PRC_HAS_N .AND. .not. PRC_HAS_E ) then
+    if( .NOT. PRC_HAS_N .AND. .NOT. PRC_HAS_E ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JE+1, JE+JHALO
        do i = IE+1, IE+IHALO
           var(i,j) = var(IE,JE)
        enddo
        enddo
-    elseif( .not. PRC_HAS_N ) then
+    elseif( .NOT. PRC_HAS_N ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JE+1, JE+JHALO
        do i = IE+1, IE+IHALO
           var(i,j) = var(i,JE)
        enddo
        enddo
-    elseif( .not. PRC_HAS_E ) then
+    elseif( .NOT. PRC_HAS_E ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JE+1, JE+JHALO
        do i = IE+1, IE+IHALO
@@ -3464,21 +3464,21 @@ contains
     endif
 
     !--- copy inner data to HALO(SouthEast)
-    if( .not. PRC_HAS_S .AND. .not. PRC_HAS_E ) then
+    if( .NOT. PRC_HAS_S .AND. .NOT. PRC_HAS_E ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS-IHALO, JS-1
        do i = IE+1, IE+IHALO
           var(i,j) = var(IE,JS)
        enddo
        enddo
-    elseif( .not. PRC_HAS_S ) then
+    elseif( .NOT. PRC_HAS_S ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS-IHALO, JS-1
        do i = IE+1, IE+IHALO
           var(i,j) = var(i,JS)
        enddo
        enddo
-    elseif( .not. PRC_HAS_E ) then
+    elseif( .NOT. PRC_HAS_E ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS-IHALO, JS-1
        do i = IE+1, IE+IHALO

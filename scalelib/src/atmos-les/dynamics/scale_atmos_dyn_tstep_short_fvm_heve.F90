@@ -85,7 +85,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVE Register'
 
-    if ( ATMOS_DYN_TYPE .ne. 'FVM-HEVE' .and. ATMOS_DYN_TYPE .ne. 'HEVE' ) then
+    if ( ATMOS_DYN_TYPE /= 'FVM-HEVE' .AND. ATMOS_DYN_TYPE /= 'HEVE' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVE. Check!'
        call PRC_MPIstop
     endif
@@ -1372,7 +1372,7 @@ contains
        call COMM_wait ( mflx_hi(:,:,:,XDIR), 2, .false. )
        call COMM_wait ( mflx_hi(:,:,:,YDIR), 3, .false. )
 
-       if ( .not. FLAG_FCT_MOMENTUM ) then
+       if ( .NOT. FLAG_FCT_MOMENTUM ) then
           call COMM_vars8( DENS_RK, 1 )
           call COMM_wait ( DENS_RK, 1, .false. )
        endif

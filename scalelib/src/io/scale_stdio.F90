@@ -144,7 +144,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if ( .not. IO_LOG_SUPPRESS ) then
+    if ( .NOT. IO_LOG_SUPPRESS ) then
        if ( is_master ) then ! master node
           IO_L = .true.
        else

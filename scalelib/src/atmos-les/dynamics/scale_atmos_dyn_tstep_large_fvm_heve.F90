@@ -583,7 +583,7 @@ contains
 
     do step = 1, nstep
 
-       call HIST_switch( Llast .and. step == nstep )
+       call HIST_switch( Llast .AND. step == nstep )
 
        !-----< prepare tendency >-----
 
@@ -968,7 +968,7 @@ contains
             GSQRT, MAPF(:,:,:,I_XY), & ! (in)
             CDZ, RCDZ, RCDX, RCDY,             & ! (in)
             dtl, & ! (in)
-            Llast .and. FLAG_FCT_TRACER, & ! (in)
+            Llast .AND. FLAG_FCT_TRACER, & ! (in)
             FLAG_FCT_ALONG_STREAM         ) ! (in)
 
 

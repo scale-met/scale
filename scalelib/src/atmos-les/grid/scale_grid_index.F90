@@ -189,20 +189,20 @@ contains
     JEB = JE
     IEH = IE
     JEH = JE
-    if ( .not. PRC_HAS_W ) then
+    if ( .NOT. PRC_HAS_W ) then
        IMAXB = IMAXB + IHALO
        ISB = 1
     endif
-    if ( .not. PRC_HAS_E ) then
+    if ( .NOT. PRC_HAS_E ) then
        IMAXB = IMAXB + IHALO
        IEB = IA
        IEH = IE - 1
     endif
-    if ( .not. PRC_HAS_S ) then
+    if ( .NOT. PRC_HAS_S ) then
        JMAXB = JMAXB + JHALO
        JSB = 1
     endif
-    if ( .not. PRC_HAS_N ) then
+    if ( .NOT. PRC_HAS_N ) then
        JMAXB = JMAXB + JHALO
        JEB = JA
        JEH = JE - 1

@@ -651,13 +651,13 @@ contains
     aerosol_radi(:,:) = 0.0_RP
     cldfrac     (:)   = 0.0_RP
 
-    if ( .not. ATMOS_PHY_RD_PROFILE_use_CO2 ) gas(:,2) = 0.0_RP
-    if ( .not. ATMOS_PHY_RD_PROFILE_use_O3  ) gas(:,3) = 0.0_RP
-    if ( .not. ATMOS_PHY_RD_PROFILE_use_N2O ) gas(:,4) = 0.0_RP
-    if ( .not. ATMOS_PHY_RD_PROFILE_use_CO  ) gas(:,5) = 0.0_RP
-    if ( .not. ATMOS_PHY_RD_PROFILE_use_CH4 ) gas(:,6) = 0.0_RP
-    if ( .not. ATMOS_PHY_RD_PROFILE_use_O2  ) gas(:,7) = 0.0_RP
-    if ( .not. ATMOS_PHY_RD_PROFILE_use_CFC ) cfc(:,:) = 0.0_RP
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_CO2 ) gas(:,2) = 0.0_RP
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_O3  ) gas(:,3) = 0.0_RP
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_N2O ) gas(:,4) = 0.0_RP
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_CO  ) gas(:,5) = 0.0_RP
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_CH4 ) gas(:,6) = 0.0_RP
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_O2  ) gas(:,7) = 0.0_RP
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_CFC ) cfc(:,:) = 0.0_RP
 
     !----- report data -----
     if ( debug .AND. report_firsttime ) then

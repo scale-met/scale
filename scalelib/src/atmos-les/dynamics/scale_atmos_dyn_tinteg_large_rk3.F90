@@ -74,7 +74,7 @@ contains
     integer :: iv
     !---------------------------------------------------------------------------
 
-    if ( tinteg_type .ne. 'RK3' ) then
+    if ( tinteg_type /= 'RK3' ) then
        write(*,*) 'xxx TINTEG_LARGE_TYPE is not RK3. Check!'
        call PRC_MPIstop
     end if
@@ -326,7 +326,7 @@ contains
                divdmp_coef,                                                 & ! (in)
                FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,              & ! (in)
                FLAG_FCT_ALONG_STREAM,                                       & ! (in)
-               USE_AVERAGE .and. last,                                      & ! (in)
+               USE_AVERAGE .AND. last,                                      & ! (in)
                dtrk, dts, last                                              ) ! (in)
 
        end do

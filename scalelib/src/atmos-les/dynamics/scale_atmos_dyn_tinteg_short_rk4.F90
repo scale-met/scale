@@ -113,7 +113,7 @@ contains
     integer :: iv
     !---------------------------------------------------------------------------
 
-    if ( tinteg_type .ne. 'RK4' ) then
+    if ( tinteg_type /= 'RK4' ) then
        write(*,*) 'xxx TINTEG_TYPE is not RK4. Check!'
        call PRC_MPIstop
     end if

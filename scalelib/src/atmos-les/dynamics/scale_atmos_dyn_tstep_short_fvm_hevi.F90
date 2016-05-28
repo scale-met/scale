@@ -107,7 +107,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Register'
 
-    if ( ATMOS_DYN_TYPE .ne. 'FVM-HEVI' .and. ATMOS_DYN_TYPE .ne. 'HEVI' ) then
+    if ( ATMOS_DYN_TYPE /= 'FVM-HEVI' .AND. ATMOS_DYN_TYPE /= 'HEVI' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVI. Check!'
        call PRC_MPIstop
     endif
@@ -1118,7 +1118,7 @@ contains
           error = error + r(k)**2
        enddo
 
-!       if ( error < epsilon .or. error / norm < epsilon ) then
+!       if ( error < epsilon .OR. error / norm < epsilon ) then
        if ( error/norm < epsilon ) then
 #ifdef DEBUG
 !          write(*,*) "Bi-CGSTAB converged:", iter
@@ -1253,7 +1253,7 @@ contains
           endif
           ! C is (\rho w)^{n+1}
 #ifdef DEBUG
-          if ( INFO .ne. 0 ) then
+          if ( INFO /= 0 ) then
              write(*,*) "DGBSV was failed", info
              call PRC_MPIstop
           endif

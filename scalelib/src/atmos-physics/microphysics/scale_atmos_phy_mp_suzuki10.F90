@@ -611,7 +611,7 @@ contains
      call random_setup( IA*JA*KA )
     endif
 
-    if ( MP_couple_aerosol .and. nccn /=0 ) then
+    if ( MP_couple_aerosol .AND. nccn /=0 ) then
       write(*,*) 'xxx nccn should be 0 when MP_couple_aerosol = .true. !! stop'
       call PRC_MPIstop
     endif
@@ -2851,7 +2851,7 @@ contains
     enddo
   enddo
 
-  if ( .not. flg_regeneration ) then
+  if ( .NOT. flg_regeneration ) then
    dumm_regene(:) = 0.0_RP
   endif
 
@@ -4802,14 +4802,14 @@ contains
   !--- local
   real(DP) :: bsp1, bsp2
 
-  if ( ( inum == 1 .and. x == xdat( 1 ) ) .or. &
-       ( inum == ndat .and. x == xdat( ndat ) ) ) then
+  if ( ( inum == 1 .AND. x == xdat( 1 ) ) .OR. &
+       ( inum == ndat .AND. x == xdat( ndat ) ) ) then
     bspl = 1.
     return
   end if
 
   if ( kdeg == 1 ) then
-    if ( x >= qknt( inum ) .and. x < qknt( inum+1 ) ) then
+    if ( x >= qknt( inum ) .AND. x < qknt( inum+1 ) ) then
       bspl = 1.0_DP
     else
       bspl = 0.0_DP

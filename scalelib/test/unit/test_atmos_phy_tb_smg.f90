@@ -333,16 +333,16 @@ subroutine test_double
 
   call AssertEqual("qflx_sgs_momz", FOUR(KS+1:KME-1,IS:IE,JS:JE,:), &
        qflx_sgs_momz2(KS+1:KME-1,IS:IE,JS:JE,:)/qflx_sgs_momz(KS+1:KME-1,IS:IE,JS:JE,:))
-  where(qflx_sgs_momx .ne. 0.0_RP) work = qflx_sgs_momx2 / qflx_sgs_momx
-  where(qflx_sgs_momx .eq. 0.0_RP) work = 4.0_RP
+  where(qflx_sgs_momx /= 0.0_RP) work = qflx_sgs_momx2 / qflx_sgs_momx
+  where(qflx_sgs_momx == 0.0_RP) work = 4.0_RP
   call AssertEqual("qflx_sgs_momx", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
-  where(qflx_sgs_momy .ne. 0.0_RP) work = qflx_sgs_momy2 / qflx_sgs_momy
-  where(qflx_sgs_momy .eq. 0.0_RP) work = 4.0_RP
+  where(qflx_sgs_momy /= 0.0_RP) work = qflx_sgs_momy2 / qflx_sgs_momy
+  where(qflx_sgs_momy == 0.0_RP) work = 4.0_RP
   call AssertEqual("qflx_sgs_momy", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
   message = "iq = ??"
   do iq = 1, QA
-     where(qflx_sgs_rhoq(:,:,:,iq,:) .ne. 0.0_RP) work = qflx_sgs_rhoq2(:,:,:,iq,:) / qflx_sgs_rhoq(:,:,:,iq,:)
-     where(qflx_sgs_rhoq2(:,:,:,iq,:) .eq. 0.0_RP) work = 4.0_RP
+     where(qflx_sgs_rhoq(:,:,:,iq,:) /= 0.0_RP) work = qflx_sgs_rhoq2(:,:,:,iq,:) / qflx_sgs_rhoq(:,:,:,iq,:)
+     where(qflx_sgs_rhoq2(:,:,:,iq,:) == 0.0_RP) work = 4.0_RP
      write(message(6:7), "(i2)") iq
      call AssertEqual(message, FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
   end do

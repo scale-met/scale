@@ -981,13 +981,13 @@ contains
 
 
     dmax = max(dz, dx, dy)
-    if ( dz .eq. dmax ) then
+    if ( dz == dmax ) then
        a1 = dx / dmax
        a2 = dy / dmax
-    else if ( dx .eq. dmax ) then
+    else if ( dx == dmax ) then
        a1 = dz / dmax
        a2 = dy / dmax
-    else ! dy .eq. dmax
+    else ! dy == dmax
        a1 = dz / dmax
        a2 = dx / dmax
     end if

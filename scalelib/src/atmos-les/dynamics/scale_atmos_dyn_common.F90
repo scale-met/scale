@@ -397,7 +397,7 @@ contains
     ! 1st order coefficients
     !###########################################################################
 
-    if ( .not. ND_USE_RS ) then
+    if ( .NOT. ND_USE_RS ) then
 
        call PROF_rapstart("NumFilter_Main", 3)
 
@@ -975,7 +975,7 @@ contains
        nd_coef_cdy(j) = DIFF4 * CDY(j)**nd_order4
     end do
 
-    if ( iq == I_QV .and. (.not. ND_USE_RS) ) then
+    if ( iq == I_QV .AND. (.NOT. ND_USE_RS) ) then
 
        call PROF_rapstart("NumFilter_Main", 3)
 
