@@ -89,7 +89,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Register'
 
-    if ( ATMOS_DYN_TYPE .ne. 'FVM-HIVI' .or. ATMOS_DYN_TYPE .ne. 'HIVI' ) then
+    if ( ATMOS_DYN_TYPE /= 'FVM-HIVI' .AND. ATMOS_DYN_TYPE /= 'HIVI' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HIVI. Check!'
        call PRC_MPIstop
     endif
