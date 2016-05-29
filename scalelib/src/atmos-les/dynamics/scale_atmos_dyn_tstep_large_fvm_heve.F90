@@ -371,11 +371,18 @@ contains
     real(RP) :: diff_coef
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics large time step'
-
     call PROF_rapstart("DYN_Large_Preparation", 2)
 
+    dts   = real(DTSS, kind=RP)            ! short time step
+    dtl   = real(DTLS, kind=RP)            ! large time step
+    nstep = ceiling( ( dtl - eps ) / dts )
+    dts   = dtl / nstep                    ! dts is divisor of dtl and smaller or equal to dtss
+
 #ifdef DEBUG
+    if( IO_L ) write(IO_FID_LOG,*)                         '*** Dynamics large time step'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F0.2,A,F0.2,A,I0)') &
+    '*** -> DT_large, DT_small, DT_large/DT_small : ', dtl, ', ', dts, ', ', nstep
+
     DENS00  (:,:,:) = UNDEF
 
     num_diff (:,:,:,:,:) = UNDEF
@@ -387,17 +394,8 @@ contains
     qflx_lo(:,:,:,:) = UNDEF
 #endif
 
-    dts = real(DTSS, kind=RP) ! short time step
-    dtl = real(DTLS, kind=RP) ! large time step
-    nstep = ceiling( ( dtl - eps ) / dts )
-    dts = dtl / nstep ! dts is divisor of dtl and smaller or equal to dtss
-    if( IO_L ) write(IO_FID_LOG,'(a,f0.2,a,f0.2,a,i0)') &
-         '       DT_large, DT_small, and DT_large/DT_small: ', dtl, ', ', dts, ', ', nstep
-
-
 !OCL XFILL
     DENS00(:,:,:) = DENS(:,:,:)
-
 
     if ( USE_AVERAGE ) then
 !OCL XFILL
@@ -425,7 +423,7 @@ contains
     !
     ! pres = P0 * ( R * rhot / P0 )**(CP/CV)
     ! d pres / d rhot ~ CP*R/CV * ( R * rhot / P0 )**(R/CV)
-    !                 = CP*R/CV * ( pres / P0 )**(R/CP) 
+    !                 = CP*R/CV * ( pres / P0 )**(R/CP)
     !                 = CP*R/CV * temp / pott
     !                 = CP/CV * pres / rhot
     ! pres ~ P0 * ( R * rhot0 / P0 ) ** (CP/CV) + CV*R/CP * ( pres / P0 )**(R/CP) * rhot'
