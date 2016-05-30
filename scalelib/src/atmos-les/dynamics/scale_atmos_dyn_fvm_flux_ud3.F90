@@ -420,6 +420,7 @@ contains
 
 
        flux(KE-1,i,j) = 0.0_RP ! k = KE
+       flux(KE  ,i,j) = 0.0_RP ! k = KE+1
     enddo
     enddo
 
@@ -1028,7 +1029,7 @@ contains
     do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k,i  ,j) )
-       call CHECK( __LINE__, mom(k,i,j-1) )
+       call CHECK( __LINE__, mom(k,i-1,j) )
 
        call CHECK( __LINE__, val(k,i,j) )
        call CHECK( __LINE__, val(k,i,j+1) )
@@ -1342,7 +1343,7 @@ contains
     do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k,i  ,j) )
-       call CHECK( __LINE__, mom(k,i-1,j) )
+       call CHECK( __LINE__, mom(k,i,j-1) )
 
        call CHECK( __LINE__, val(k,i,j) )
        call CHECK( __LINE__, val(k,i+1,j) )

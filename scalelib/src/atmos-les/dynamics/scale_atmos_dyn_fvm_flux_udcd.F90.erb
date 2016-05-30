@@ -552,6 +552,7 @@ contains
                    * ( <%= flux("vel", order-(nh-1)*2, 0, "KE-2") %> ) <%= num_diff("KE-1") %> ! k = KE-1
 <% end %>
        flux(KE-1,i,j) = 0.0_RP ! k = KE
+       flux(KE  ,i,j) = 0.0_RP ! k = KE+1
     enddo
     enddo
 
@@ -845,7 +846,7 @@ contains
 <% [
      ["X", 1, 0],
      ["Y", 0, 1]
-   ].each do |dir, i, j|
+   ].each do |dir, ii, jj|
 %>
   !-----------------------------------------------------------------------------
   !> calculation <%=dir%>-flux at <%=uv%>
@@ -899,21 +900,21 @@ contains
    end
 %>
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS<%=-j+jo%>, JJE<%=jo%>
-    do i = IIS<%=-i+io%>, IIE<%=io%>
+    do j = JJS<%=-jj+jo%>, JJE<%=jo%>
+    do i = IIS<%=-ii+io%>, IIE<%=io%>
     do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k,i  ,j) )
        call CHECK( __LINE__, mom(k,i<%=-i%>,j<%=-j%>) )
 <% (nh+1).times do |n| %>
-       call CHECK( __LINE__, val(k,i<%=-n*i-io%>,j<%=-n*j-jo%>) )
-       call CHECK( __LINE__, val(k,i<%=(n+1)*i-io%>,j<%=(n+1)*j-jo%>) )
+       call CHECK( __LINE__, val(k,i<%=-n*ii-io%>,j<%=-n*jj-jo%>) )
+       call CHECK( __LINE__, val(k,i<%=(n+1)*ii-io%>,j<%=(n+1)*jj-jo%>) )
 <% end %>
 #endif
        vel = <%= interp("mom", dir=="X" ? "UYZ" : "XVZ", dst+"Z") %> &
            / <%= interp("DENS", "XYZ", dst+"Z") %>
-       flux(k,i<%=-io%>,j<%=-jo%>) = GSQRT(k,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-                   * ( <%= flux("vel", order, i+j*2, "k", "i"-io, "j"-jo) %> ) <%= num_diff() %>
+       flux(k,i<%=-io%>,j<%=-jo%>) = GSQRT(k,i,j) / MAPF(i,j,<%=ii*2+jj%>) * vel &
+                   * ( <%= flux("vel", order, ii+jj*2, "k", "i"-io, "j"-jo) %> ) <%= num_diff() %>
     enddo
     enddo
     enddo

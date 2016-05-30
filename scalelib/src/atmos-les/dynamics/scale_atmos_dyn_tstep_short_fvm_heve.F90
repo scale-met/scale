@@ -435,9 +435,9 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       call COMM_vars8( VELZ(:,:,:), 1 )
-       call COMM_vars8( VELX(:,:,:), 2 )
-       call COMM_vars8( VELY(:,:,:), 3 )
+       call COMM_vars8( VELZ(:,:,:), 4 )
+       call COMM_vars8( VELX(:,:,:), 5 )
+       call COMM_vars8( VELY(:,:,:), 6 )
     endif
 
     do JJS = JS, JE, JBLOCK
@@ -709,19 +709,19 @@ contains
                MOMZ, MOMZ, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), J33G, & ! (in)
                CDZ, FDZ, dtrk, & ! (in)
-               IIS, IIE, JJS, JJE ) ! (in)
+               IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxX_XYW_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
                MOMX, MOMZ, DENS, & ! (in)
                GSQRT(:,:,:,I_UYZ), MAPF(:,:,:,I_UY), & ! (in)
                CDZ, & ! (in)
-               IIS, IIE, JJS, JJE ) ! (in)
+               IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_XYW_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
                MOMY, MOMZ, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), MAPF(:,:,:,I_XV), & ! (in)
                CDZ, & ! (in)
-               IIS, IIE, JJS, JJE ) ! (in)
+               IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
        endif
     enddo
@@ -757,7 +757,7 @@ contains
        enddo
        enddo
 
-       call COMM_wait ( VELZ(:,:,:), 1 )
+       call COMM_wait ( VELZ(:,:,:), 4 )
 
        call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
                            VELZ, DENS0_uvw, DENS_uvw, & ! (in)
@@ -984,7 +984,7 @@ contains
        enddo
        enddo
 
-       call COMM_wait ( VELX(:,:,:), 2 )
+       call COMM_wait ( VELX(:,:,:), 5 )
 
        call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
                            VELX, DENS0_uvw, DENS_uvw, & ! (in)
@@ -1234,7 +1234,7 @@ contains
        enddo
        enddo
 
-       call COMM_wait ( VELY(:,:,:), 3 )
+       call COMM_wait ( VELY(:,:,:), 6 )
 
        call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
                            VELY, DENS0_uvw, DENS_uvw, & ! (in)
