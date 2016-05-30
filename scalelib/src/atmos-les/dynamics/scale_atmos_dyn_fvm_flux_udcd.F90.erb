@@ -607,12 +607,12 @@ contains
 <%   (nh-1).times do |k| %>
        vel = <%= interp("mom", uv, "XYZ", "KS"+k) %> &
            / DENS(KS<%=k%>,i,j)
-       flux(KS<%=k-1%>,i,j) = <%=dir%>G(KS<%k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+(k-1)) %> )
+       flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> )
        vel = <%= interp("mom", uv, "XYZ", "KE"-k) %> &
            / DENS(KE<%=-k%>,i,j)
-       flux(KE<%=-k-1%>,i,j) = <%=dir%>G(KE<%=-k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> )
+       flux(KE<%=-k-2%>,i,j) = <%=dir%>G(KE<%=-k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
+                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+2)) %> )
 <%   end %>
        flux(KE-1,i,j) = 0.0_RP
     enddo

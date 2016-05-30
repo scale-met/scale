@@ -568,12 +568,12 @@ contains
 
        vel = ( 0.5_RP * ( mom(KS,i,j)+mom(KS,i-1,j) ) ) &
            / DENS(KS,i,j)
-       flux(KS-1,i,j) = J13G(KS,i,j) / MAPF(i,j,+2) * vel &
-                   * ( F1 * ( val(KS,i,j)+val(KS-1,i,j) ) - sign(F1,vel) * ( val(KS,i,j)-val(KS-1,i,j) ) )
+       flux(KS,i,j) = J13G(KS,i,j) / MAPF(i,j,+2) * vel &
+                   * ( F1 * ( val(KS+1,i,j)+val(KS,i,j) ) - sign(F1,vel) * ( val(KS+1,i,j)-val(KS,i,j) ) )
        vel = ( 0.5_RP * ( mom(KE,i,j)+mom(KE,i-1,j) ) ) &
            / DENS(KE,i,j)
-       flux(KE-1,i,j) = J13G(KE,i,j) / MAPF(i,j,+2) * vel &
-                   * ( F1 * ( val(KE,i,j)+val(KE-1,i,j) ) - sign(F1,vel) * ( val(KE,i,j)-val(KE-1,i,j) ) )
+       flux(KE-2,i,j) = J13G(KE,i,j) / MAPF(i,j,+2) * vel &
+                   * ( F1 * ( val(KE-1,i,j)+val(KE-2,i,j) ) - sign(F1,vel) * ( val(KE-1,i,j)-val(KE-2,i,j) ) )
 
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -630,12 +630,12 @@ contains
 
        vel = ( 0.5_RP * ( mom(KS,i,j)+mom(KS,i,j-1) ) ) &
            / DENS(KS,i,j)
-       flux(KS-1,i,j) = J23G(KS,i,j) / MAPF(i,j,+1) * vel &
-                   * ( F1 * ( val(KS,i,j)+val(KS-1,i,j) ) - sign(F1,vel) * ( val(KS,i,j)-val(KS-1,i,j) ) )
+       flux(KS,i,j) = J23G(KS,i,j) / MAPF(i,j,+1) * vel &
+                   * ( F1 * ( val(KS+1,i,j)+val(KS,i,j) ) - sign(F1,vel) * ( val(KS+1,i,j)-val(KS,i,j) ) )
        vel = ( 0.5_RP * ( mom(KE,i,j)+mom(KE,i,j-1) ) ) &
            / DENS(KE,i,j)
-       flux(KE-1,i,j) = J23G(KE,i,j) / MAPF(i,j,+1) * vel &
-                   * ( F1 * ( val(KE,i,j)+val(KE-1,i,j) ) - sign(F1,vel) * ( val(KE,i,j)-val(KE-1,i,j) ) )
+       flux(KE-2,i,j) = J23G(KE,i,j) / MAPF(i,j,+1) * vel &
+                   * ( F1 * ( val(KE-1,i,j)+val(KE-2,i,j) ) - sign(F1,vel) * ( val(KE-1,i,j)-val(KE-2,i,j) ) )
 
        flux(KE-1,i,j) = 0.0_RP
     enddo
