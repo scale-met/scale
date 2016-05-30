@@ -185,7 +185,7 @@ contains
     if ( FLAG_FCT_TRACER ) then
 
        call ATMOS_DYN_fct( qflx_anti,            & ! (out)
-                           QTRC, DENS0, DENS,    & ! (in)
+                           QTRC0, DENS0, DENS,   & ! (in)
                            qflx_hi, qflx_lo,     & ! (in)
                            mflx_hi,              & ! (in)
                            RCDZ, RCDX, RCDY,     & ! (in)

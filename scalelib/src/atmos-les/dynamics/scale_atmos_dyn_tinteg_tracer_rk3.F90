@@ -127,17 +127,28 @@ contains
     logical,  intent(in)    :: FLAG_FCT_TRACER
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
 
+    real(RP) :: DENS_RK(KA,IA,JA)
     real(RP) :: dtrk
+    integer :: k, i, j
 
     !------------------------------------------------------------------------
     ! Start RK
     !------------------------------------------------------------------------
 
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS, KE
+       DENS_RK(k,i,j) = DENS0(k,i,j) &
+                      + ( DENS(k,i,j) - DENS0(k,i,j) ) / 3.0_RP
+    end do
+    end do
+    end do
+
     dtrk = DTL / 3.0_RP
     call ATMOS_DYN_tstep_tracer( &
          QTRC_RK1, & ! (out)
          QTRC, QTRC0, RHOQ_t, &! (in)
-         DENS0, DENS, & ! (in)
+         DENS0, DENS_RK, & ! (in)
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
@@ -148,11 +159,20 @@ contains
     call COMM_wait ( QTRC_RK1(:,:,:), I_COMM_RK1, .false. )
     
 
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS, KE
+       DENS_RK(k,i,j) = DENS0(k,i,j) &
+                      + ( DENS(k,i,j) - DENS0(k,i,j) ) * 0.5_RP
+    end do
+    end do
+    end do
+
     dtrk = DTL / 2.0_RP
     call ATMOS_DYN_tstep_tracer( &
          QTRC_RK2, & ! (out)
          QTRC_RK1, QTRC0, RHOQ_t, &! (in)
-         DENS0, DENS, & ! (in)
+         DENS0, DENS_RK, & ! (in)
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)

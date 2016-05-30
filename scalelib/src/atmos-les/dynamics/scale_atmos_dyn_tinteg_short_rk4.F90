@@ -284,9 +284,12 @@ contains
     real(RP) :: RHOT0(KA,IA,JA)
     real(RP) :: PROG0(KA,IA,JA,VA)
 
+    real(RP) :: mflx_hi_RK(KA,IA,JA,3,3)
+    real(RP) :: tflx_hi_RK(KA,IA,JA,3,3)
+
     real(RP) :: dtrk
 
-    integer  :: i, j, k, iv
+    integer  :: i, j, k, iv, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart("DYN_RK4_Prep",3)
@@ -315,6 +318,9 @@ contains
 
     mflx_hi(:,:,:,:) = UNDEF
     tflx_hi(:,:,:,:) = UNDEF
+
+    mflx_hi_RK(:,:,:,:,:) = UNDEF
+    tflx_hi_RK(:,:,:,:,:) = UNDEF
 #endif
 
 !OCL XFILL
@@ -344,7 +350,8 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [OUT]
                           PROG_RK1,                                         & ! [OUT]
-                          mflx_hi,  tflx_hi,                                & ! [OUT]
+                          mflx_hi_RK(:,:,:,:,1), tflx_hi_RK(:,:,:,:,1),     & ! [OUT]
+
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -397,7 +404,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [OUT]
                           PROG_RK2,                                         & ! [OUT]
-                          mflx_hi,  tflx_hi,                                & ! [OUT]
+                          mflx_hi_RK(:,:,:,:,2), tflx_hi_RK(:,:,:,:,2),     & ! [OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -450,7 +457,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK3, MOMZ_RK3, MOMX_RK3, MOMY_RK3, RHOT_RK3, & ! [OUT]
                           PROG_RK3,                                         & ! [OUT]
-                          mflx_hi,  tflx_hi,                                & ! [OUT]
+                          mflx_hi_RK(:,:,:,:,3), tflx_hi_RK(:,:,:,:,3),     & ! [OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -588,6 +595,33 @@ contains
                         + PROG_RK3(k,i,j,iv) * 2.0_RP &
                         + PROG    (k,i,j,iv)          &
                         - PROG0   (k,i,j,iv) * 3.0_RP ) / 6.0_RP
+    enddo
+    enddo
+    enddo
+    enddo
+
+
+    do n = 1, 3
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       mflx_hi(k,i,j,n) = ( mflx_hi_RK(k,i,j,n,1) &
+                          + mflx_hi_RK(k,i,j,n,2) * 2.0_RP &
+                          + mflx_hi_RK(k,i,j,n,3) * 2.0_RP &
+                          + mflx_hi   (k,i,j,n  ) ) / 6.0_RP
+    enddo
+    enddo
+    enddo
+    enddo
+
+    do n = 1, 3
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       tflx_hi(k,i,j,n) = ( tflx_hi_RK(k,i,j,n,1) &
+                          + tflx_hi_RK(k,i,j,n,2) * 2.0_RP &
+                          + tflx_hi_RK(k,i,j,n,3) * 2.0_RP &
+                          + tflx_hi   (k,i,j,n  ) ) / 6.0_RP
     enddo
     enddo
     enddo
