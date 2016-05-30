@@ -589,8 +589,8 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
-       do j = JS-1, JE+2
-       do i = IS-1, IE+2
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
        do k = KS, KE
           diff(k,i,j) = DENS(k,i,j) - DAMP_DENS(k,i,j)
        enddo
@@ -668,8 +668,8 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
-       do j = JS-1, JE+2
-       do i = IS-2, IE+1
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
        do k = KS, KE
           diff(k,i,j) = MOMX(k,i,j) - DAMP_VELX(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP
        enddo
@@ -706,8 +706,8 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
-       do j = JS-2, JE+1
-       do i = IS-1, IE+2
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
        do k = KS, KE
           diff(k,i,j) = MOMY(k,i,j) - DAMP_VELY(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
        enddo

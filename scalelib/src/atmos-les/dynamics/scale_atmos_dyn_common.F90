@@ -93,6 +93,8 @@ contains
   subroutine ATMOS_DYN_filter_setup( &
        num_diff, num_diff_q, &
        CDZ, CDX, CDY, FDZ, FDX, FDY        )
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_comm, only: &
        COMM_vars8_init
     implicit none
@@ -108,6 +110,11 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    if ( IHALO < 2 .or. JHALO < 2 .or. KHALO < 2 ) then
+       write(*,*) 'xxx number of HALO must be at least 2 for numrical filter'
+       call PRC_MPIstop
+    end if
+    
     ! allocation
     allocate( CNZ3(3,KA,2) )
     allocate( CNX3(3,IA,2) )
@@ -115,6 +122,7 @@ contains
     allocate( CNZ4(5,KA,2) )
     allocate( CNX4(5,IA,2) )
     allocate( CNY4(5,JA,2) )
+
 
     call COMM_vars8_init( num_diff(:,:,:,I_DENS,ZDIR), I_COMM_DENS_Z )
     call COMM_vars8_init( num_diff(:,:,:,I_DENS,XDIR), I_COMM_DENS_X )
@@ -227,7 +235,7 @@ contains
        CNZ4(4,k,2) = ( CNZ3(1,k  ,2) + CNZ3(3,k,2) ) / FDZ(k)
        CNZ4(5,k,2) = ( CNZ3(1,k-1,2)               ) / FDZ(k)
     enddo
-!       CNZ4(1,KE,2) = ( CNZ3(1,KE+1,2)                ) / FDZ(KE-1)
+!    CNZ4(1,KE,2) = ( CNZ3(1,KE+1,2)                ) / FDZ(KE-1)
     CNZ4(2,KE,2) = ( CNZ3(2,KE+1,2) + CNZ3(1,KE,2) ) / FDZ(KE-1)
     CNZ4(3,KE,2) = ( CNZ3(3,KE+1,2) + CNZ3(2,KE,2) ) / FDZ(KE-1)
     CNZ4(4,KE,2) = ( CNZ3(1,KE  ,2) + CNZ3(3,KE,2) ) / FDZ(KE-1)
@@ -308,8 +316,7 @@ contains
        CNY4(5,j,2) = ( CNY3(1,j-1,2)               ) / FDY(j)
     enddo
 
-
-
+    return
   end subroutine ATMOS_DYN_filter_setup
 
   !-----------------------------------------------------------------------------

@@ -211,6 +211,7 @@ contains
        ! numerical diffusion
        call ATMOS_DYN_filter_setup( num_diff, num_diff_q,        & ! [INOUT]
                                     CDZ, CDX, CDY, FDZ, FDX, FDY ) ! [IN]
+
        ! coriolis parameter
        if ( enable_coriolis ) then
           CORIOLI(:,:) = 2.0_RP * OHM * sin( lat(:,:) )

@@ -129,7 +129,7 @@ contains
        ATMOS_DYN_FVM_FLUX_TYPE,               &
        ATMOS_DYN_FVM_FLUX_TRACER_TYPE,        &
        ATMOS_DYN_NUMERICAL_DIFF_order,        &
-       ATMOS_DYN_NUMERICAL_DIFF_coef,         &
+       ATMOS_DYN_NUMERICAL_DIFF_COEF,         &
        ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER,  &
        ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,     &
        ATMOS_DYN_NUMERICAL_DIFF_use_refstate, &

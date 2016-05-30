@@ -455,12 +455,12 @@ contains
 
 
       
-      if ( IHALO < 1 ) then
-         write(*,*) 'xxx IHALO must be >= ', 1
+      if ( IHALO < 2 ) then
+         write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
       end if
-      if ( JHALO < 1 ) then
-         write(*,*) 'xxx JHALO must be >= ', 1
+      if ( JHALO < 2 ) then
+         write(*,*) 'xxx JHALO must be >= ', 2
          call PRC_MPIstop
       end if
 
@@ -778,12 +778,12 @@ contains
 
 
       
-      if ( IHALO < 1 ) then
-         write(*,*) 'xxx IHALO must be >= ', 1
+      if ( IHALO < 2 ) then
+         write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
       end if
-      if ( JHALO < 1 ) then
-         write(*,*) 'xxx JHALO must be >= ', 1
+      if ( JHALO < 2 ) then
+         write(*,*) 'xxx JHALO must be >= ', 2
          call PRC_MPIstop
       end if
 
