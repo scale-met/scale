@@ -218,6 +218,9 @@ contains
 
     case ( 'FVM-HIVI', 'HIVI' )
 
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx HIVI is temtatively disabled'
+       call PRC_MPIstop
+
        call ATMOS_DYN_Tstep_short_fvm_hivi_regist( ATMOS_DYN_TYPE,              & ! [IN]
                                                    VA_out,                      & ! [OUT]
                                                    VAR_NAME, VAR_DESC, VAR_UNIT ) ! [OUT]
