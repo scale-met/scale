@@ -739,7 +739,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 
 
   if ( tavg ) {
-    sprintf(buf, "%s: mean", tname);
+    sprintf(buf, "%s: mean", vars[nvar]->t->name);
     CHECK_ERROR( nc_put_att_text(ncid, varid, "cell_methods", strlen(buf), buf) );
   }
 

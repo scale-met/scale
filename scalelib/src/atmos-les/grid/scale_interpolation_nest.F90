@@ -638,10 +638,10 @@ contains
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
           dist(2) = dist(1);   igrd(2) = igrd(1);  jgrd(2) = jgrd(1)
           dist(1) = distance;  igrd(1) = ii;       jgrd(1) = jj
-       elseif ( dist(1) < distance .and. distance <= dist(2) ) then
+       elseif ( dist(1) < distance .AND. distance <= dist(2) ) then
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
           dist(2) = distance;  igrd(2) = ii;       jgrd(2) = jj
-       elseif ( dist(2) < distance .and. distance <= dist(3) ) then
+       elseif ( dist(2) < distance .AND. distance <= dist(3) ) then
           dist(3) = distance;  igrd(3) = ii;       jgrd(3) = jj
        endif
     enddo
@@ -715,14 +715,14 @@ contains
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
           dist(2) = dist(1);   igrd(2) = igrd(1);  jgrd(2) = jgrd(1)
           dist(1) = distance;  igrd(1) = ii;       jgrd(1) = jj
-       elseif ( dist(1) < distance .and. distance <= dist(2) ) then
+       elseif ( dist(1) < distance .AND. distance <= dist(2) ) then
           dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
           dist(2) = distance;  igrd(2) = ii;       jgrd(2) = jj
-       elseif ( dist(2) < distance .and. distance <= dist(3) ) then
+       elseif ( dist(2) < distance .AND. distance <= dist(3) ) then
           dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
           dist(3) = distance;  igrd(3) = ii;       jgrd(3) = jj
-       elseif ( dist(3) < distance .and. distance <= dist(4) ) then
+       elseif ( dist(3) < distance .AND. distance <= dist(4) ) then
           dist(4) = distance;  igrd(4) = ii;       jgrd(4) = jj
        endif
     enddo
@@ -807,7 +807,7 @@ contains
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
           dist(2) = dist(1);   igrd(2) = igrd(1);  jgrd(2) = jgrd(1)
           dist(1) = distance;  igrd(1) = ii;       jgrd(1) = jj
-       elseif ( dist(1) < distance .and. distance <= dist(2) ) then
+       elseif ( dist(1) < distance .AND. distance <= dist(2) ) then
           dist(8) = dist(7);   igrd(8) = igrd(7);  jgrd(8) = jgrd(7)
           dist(7) = dist(6);   igrd(7) = igrd(6);  jgrd(7) = jgrd(6)
           dist(6) = dist(5);   igrd(6) = igrd(5);  jgrd(6) = jgrd(5)
@@ -815,32 +815,32 @@ contains
           dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
           dist(2) = distance;  igrd(2) = ii;       jgrd(2) = jj
-       elseif ( dist(2) < distance .and. distance <= dist(3) ) then
+       elseif ( dist(2) < distance .AND. distance <= dist(3) ) then
           dist(8) = dist(7);   igrd(8) = igrd(7);  jgrd(8) = jgrd(7)
           dist(7) = dist(6);   igrd(7) = igrd(6);  jgrd(7) = jgrd(6)
           dist(6) = dist(5);   igrd(6) = igrd(5);  jgrd(6) = jgrd(5)
           dist(5) = dist(4);   igrd(5) = igrd(4);  jgrd(5) = jgrd(4)
           dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
           dist(3) = distance;  igrd(3) = ii;       jgrd(3) = jj
-       elseif ( dist(3) < distance .and. distance <= dist(4) ) then
+       elseif ( dist(3) < distance .AND. distance <= dist(4) ) then
           dist(8) = dist(7);   igrd(8) = igrd(7);  jgrd(8) = jgrd(7)
           dist(7) = dist(6);   igrd(7) = igrd(6);  jgrd(7) = jgrd(6)
           dist(6) = dist(5);   igrd(6) = igrd(5);  jgrd(6) = jgrd(5)
           dist(5) = dist(4);   igrd(5) = igrd(4);  jgrd(5) = jgrd(4)
           dist(4) = distance;  igrd(4) = ii;       jgrd(4) = jj
-       elseif ( dist(4) < distance .and. distance <= dist(5) ) then
+       elseif ( dist(4) < distance .AND. distance <= dist(5) ) then
           dist(8) = dist(7);   igrd(8) = igrd(7);  jgrd(8) = jgrd(7)
           dist(7) = dist(6);   igrd(7) = igrd(6);  jgrd(7) = jgrd(6)
           dist(6) = dist(5);   igrd(6) = igrd(5);  jgrd(6) = jgrd(5)
           dist(5) = distance;  igrd(5) = ii;       jgrd(5) = jj
-       elseif ( dist(5) < distance .and. distance <= dist(6) ) then
+       elseif ( dist(5) < distance .AND. distance <= dist(6) ) then
           dist(8) = dist(7);   igrd(8) = igrd(7);  jgrd(8) = jgrd(7)
           dist(7) = dist(6);   igrd(7) = igrd(6);  jgrd(7) = jgrd(6)
           dist(6) = distance;  igrd(6) = ii;       jgrd(6) = jj
-       elseif ( dist(6) < distance .and. distance <= dist(7) ) then
+       elseif ( dist(6) < distance .AND. distance <= dist(7) ) then
           dist(8) = dist(7);   igrd(8) = igrd(7);  jgrd(8) = jgrd(7)
           dist(7) = distance;  igrd(7) = ii;       jgrd(7) = jj
-       elseif ( dist(7) < distance .and. distance <= dist(8) ) then
+       elseif ( dist(7) < distance .AND. distance <= dist(8) ) then
           dist(8) = distance;  igrd(8) = ii;       jgrd(8) = jj
        endif
     enddo
@@ -937,7 +937,7 @@ contains
           dist(3 ) = dist(2 );   igrd(3 ) = igrd(2 );  jgrd(3 ) = jgrd(2 )
           dist(2 ) = dist(1 );   igrd(2 ) = igrd(1 );  jgrd(2 ) = jgrd(1 )
           dist(1 ) = distance;   igrd(1 ) = ii;        jgrd(1 ) = jj
-       elseif ( dist(1) < distance .and. distance <= dist(2) ) then
+       elseif ( dist(1) < distance .AND. distance <= dist(2) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = dist(9 );   igrd(10) = igrd(9 );  jgrd(10) = jgrd(9 )
@@ -949,7 +949,7 @@ contains
           dist(4 ) = dist(3 );   igrd(4 ) = igrd(3 );  jgrd(4 ) = jgrd(3 )
           dist(3 ) = dist(2 );   igrd(3 ) = igrd(2 );  jgrd(3 ) = jgrd(2 )
           dist(2 ) = distance;   igrd(2 ) = ii;        jgrd(2 ) = jj
-       elseif ( dist(2) < distance .and. distance <= dist(3) ) then
+       elseif ( dist(2) < distance .AND. distance <= dist(3) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = dist(9 );   igrd(10) = igrd(9 );  jgrd(10) = jgrd(9 )
@@ -960,7 +960,7 @@ contains
           dist(5 ) = dist(4 );   igrd(5 ) = igrd(4 );  jgrd(5 ) = jgrd(4 )
           dist(4 ) = dist(3 );   igrd(4 ) = igrd(3 );  jgrd(4 ) = jgrd(3 )
           dist(3 ) = distance;   igrd(3 ) = ii;        jgrd(3 ) = jj
-       elseif ( dist(3) < distance .and. distance <= dist(4) ) then
+       elseif ( dist(3) < distance .AND. distance <= dist(4) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = dist(9 );   igrd(10) = igrd(9 );  jgrd(10) = jgrd(9 )
@@ -970,7 +970,7 @@ contains
           dist(6 ) = dist(5 );   igrd(6 ) = igrd(5 );  jgrd(6 ) = jgrd(5 )
           dist(5 ) = dist(4 );   igrd(5 ) = igrd(4 );  jgrd(5 ) = jgrd(4 )
           dist(4 ) = distance;   igrd(4 ) = ii;        jgrd(4 ) = jj
-       elseif ( dist(4) < distance .and. distance <= dist(5) ) then
+       elseif ( dist(4) < distance .AND. distance <= dist(5) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = dist(9 );   igrd(10) = igrd(9 );  jgrd(10) = jgrd(9 )
@@ -979,7 +979,7 @@ contains
           dist(7 ) = dist(6 );   igrd(7 ) = igrd(6 );  jgrd(7 ) = jgrd(6 )
           dist(6 ) = dist(5 );   igrd(6 ) = igrd(5 );  jgrd(6 ) = jgrd(5 )
           dist(5 ) = distance;   igrd(5 ) = ii;        jgrd(5 ) = jj
-       elseif ( dist(5) < distance .and. distance <= dist(6) ) then
+       elseif ( dist(5) < distance .AND. distance <= dist(6) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = dist(9 );   igrd(10) = igrd(9 );  jgrd(10) = jgrd(9 )
@@ -987,32 +987,32 @@ contains
           dist(8 ) = dist(7 );   igrd(8 ) = igrd(7 );  jgrd(8 ) = jgrd(7 )
           dist(7 ) = dist(6 );   igrd(7 ) = igrd(6 );  jgrd(7 ) = jgrd(6 )
           dist(6 ) = distance;   igrd(6 ) = ii;        jgrd(6 ) = jj
-       elseif ( dist(6) < distance .and. distance <= dist(7) ) then
+       elseif ( dist(6) < distance .AND. distance <= dist(7) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = dist(9 );   igrd(10) = igrd(9 );  jgrd(10) = jgrd(9 )
           dist(9 ) = dist(8 );   igrd(9 ) = igrd(8 );  jgrd(9 ) = jgrd(8 )
           dist(8 ) = dist(7 );   igrd(8 ) = igrd(7 );  jgrd(8 ) = jgrd(7 )
           dist(7 ) = distance;   igrd(7 ) = ii;        jgrd(7 ) = jj
-       elseif ( dist(7) < distance .and. distance <= dist(8) ) then
+       elseif ( dist(7) < distance .AND. distance <= dist(8) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = dist(9 );   igrd(10) = igrd(9 );  jgrd(10) = jgrd(9 )
           dist(9 ) = dist(8 );   igrd(9 ) = igrd(8 );  jgrd(9 ) = jgrd(8 )
           dist(8 ) = distance;   igrd(8 ) = ii;        jgrd(8 ) = jj
-       elseif ( dist(8) < distance .and. distance <= dist(9) ) then
+       elseif ( dist(8) < distance .AND. distance <= dist(9) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = dist(9 );   igrd(10) = igrd(9 );  jgrd(10) = jgrd(9 )
           dist(9 ) = distance;   igrd(9 ) = ii;        jgrd(9 ) = jj
-       elseif ( dist(9) < distance .and. distance <= dist(10) ) then
+       elseif ( dist(9) < distance .AND. distance <= dist(10) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
           dist(10) = distance;   igrd(10) = ii;        jgrd(10) = jj
-       elseif ( dist(10) < distance .and. distance <= dist(11) ) then
+       elseif ( dist(10) < distance .AND. distance <= dist(11) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = distance;   igrd(11) = ii;        jgrd(11) = jj
-       elseif ( dist(11) < distance .and. distance <= dist(12) ) then
+       elseif ( dist(11) < distance .AND. distance <= dist(12) ) then
           dist(12) = distance;   igrd(12) = ii;        jgrd(12) = jj
        endif
     enddo
@@ -1126,7 +1126,7 @@ contains
                 dist(1) = myhgt(k) - inhgt(kk  ,ii,jj)
                 dist(2) = myhgt(k) - inhgt(kk+1,ii,jj)
 
-                if( dist(1) >= 0.0_RP .and. dist(2) < 0.0_RP ) then
+                if( dist(1) >= 0.0_RP .AND. dist(2) < 0.0_RP ) then
                    kgrd(k,iloc,jloc,idx,1) = kk
                    kgrd(k,iloc,jloc,idx,2) = kk+1
 
@@ -1140,7 +1140,7 @@ contains
              enddo
           endif
 
-          if( .not. dflag ) then
+          if( .NOT. dflag ) then
              write(*,*) 'xxx internal error [INTRPNEST_search_vert_online]'
              write(*,*) 'xxx data for interpolation was not found.'
              write(*,*) 'xxx iloc=',iloc,' jloc=',jloc,' k=',k,' idx=',idx
@@ -1240,7 +1240,7 @@ contains
           else
 
              do kk = 1, inKA-1
-                if( (inhgt(kk,ii,jj)<=myhgt(k)).and.(myhgt(k)<inhgt(kk+1,ii,jj)) )then
+                if( (inhgt(kk,ii,jj)<=myhgt(k)).AND.(myhgt(k)<inhgt(kk+1,ii,jj)) )then
                    kgrd(k,iloc,jloc,idx,1) = kk
                    kgrd(k,iloc,jloc,idx,2) = kk+1
                    dist(1) = abs( myhgt(k) - inhgt(kk,ii,jj)   )
@@ -1259,7 +1259,7 @@ contains
              enddo
           endif
 
-          if( .not. dflag )then
+          if( .NOT. dflag )then
              write(*,*) 'xxx internal error [INTRPNEST_search_vert_offline]'
              write(*,*) 'xxx data for interpolation was not found.'
              write(*,*) 'xxx iloc=',iloc,' jloc=',jloc,' k=',k,' idx=',idx
@@ -1978,7 +1978,7 @@ contains
        max_loc = maxval( lon_loc(:,:) / D2R )
        min_loc = minval( lon_loc(:,:) / D2R )
 
-       if ( max_ref < max_loc .or. min_ref > min_loc ) then
+       if ( max_ref < max_loc .OR. min_ref > min_loc ) then
           write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
           write(*,*) 'xxx -- LONGITUDINAL direction over the limit'
           write(*,*) 'xxx -- reference max: ', max_ref
@@ -1995,7 +1995,7 @@ contains
        max_loc = maxval( lat_loc(:,:) / D2R )
        min_loc = minval( lat_loc(:,:) / D2R )
 
-       if ( max_ref < max_loc .or. min_ref > min_loc ) then
+       if ( max_ref < max_loc .OR. min_ref > min_loc ) then
           write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
           write(*,*) 'xxx -- LATITUDINAL direction over the limit'
           write(*,*) 'xxx -- reference max: ', max_ref
@@ -2014,7 +2014,7 @@ contains
        !min_loc = minval( lev_loc(3:KA,:,:) ) ! HALO + 1
 
        if ( max_ref < max_loc ) then
-       !if ( max_ref < max_loc .or. min_ref > min_loc ) then
+       !if ( max_ref < max_loc .OR. min_ref > min_loc ) then
           write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
           write(*,*) 'xxx -- VERTICAL direction over the limit'
           write(*,*) 'xxx -- reference max: ', max_ref

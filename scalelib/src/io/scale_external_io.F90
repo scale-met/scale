@@ -137,15 +137,15 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire( ncid, unlimitedDimID=unlimid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_dimension( ncid, unlimid, tname, timelen )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
-    if( trim(tname)=='time' .or. trim(tname)=='Time' ) then
+    if( trim(tname)=='time' .OR. trim(tname)=='Time' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'Time Dimension Name: '//trim(tname)
     else
        write(*,*) 'xxx Not appropriate time dimension is used in the external file. Check!'
@@ -168,7 +168,7 @@ contains
     endif
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     return
   end subroutine ExternalFileGetShape
@@ -214,22 +214,22 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_attribute(ncid, nf90_global, trim(attname), len=length)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     allocate( work(length) )
 
     status = nf90_get_att(ncid, nf90_global, trim(attname), work)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     do i = 1, length
        var(i) = work(i)
     enddo
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
     deallocate( work )
 
     return
@@ -276,22 +276,22 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_attribute(ncid, nf90_global, trim(attname), len=length)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     allocate( work(length) )
 
     status = nf90_get_att(ncid, nf90_global, trim(attname), work)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     do i = 1, length
        var(i) = work(i)
     enddo
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
     deallocate( work )
 
     return
@@ -338,22 +338,22 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_attribute(ncid, nf90_global, trim(attname), len=length)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     allocate( work(length) )
 
     status = nf90_get_att(ncid, nf90_global, trim(attname), work)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     do i = 1, length
        var(i) = work(i)
     enddo
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
     deallocate( work )
 
     return
@@ -399,10 +399,10 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_attribute(ncid, nf90_global, trim(attname), len=length)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     if( len(work) < length ) then
        write(*,*) 'xxx Not enough space to put attribute values. [externalio/scalelib]'
@@ -410,7 +410,7 @@ contains
     endif
 
     status = nf90_get_att(ncid, nf90_global, trim(attname), work)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     chr = trim(work)
 
@@ -457,10 +457,10 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .eq. nf90_noerr) then
+    if (status == nf90_noerr) then
        existence = .true.
     else
        existence = .false.
@@ -468,7 +468,7 @@ contains
     endif
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     return
   end subroutine ExternalFileVarExistence
@@ -524,13 +524,13 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     ! based on specified dimension size
     allocate( var_org(nx,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -541,10 +541,10 @@ contains
 
     status = nf90_get_var( ncid, varid, var_org(:,:), start = (/ 1,ts /), &
                             count = (/ nx,tcount /) )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nx )
 
@@ -600,13 +600,13 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     ! based on specified dimension size
     allocate( var_org(nx,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -617,10 +617,10 @@ contains
 
     status = nf90_get_var( ncid, varid, var_org(:,:), start = (/ 1,ts /), &
                             count = (/ nx,tcount /) )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nx )
 
@@ -685,7 +685,7 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) then
+    if (status /= nf90_noerr) then
        if ( option_ ) then
           return
        else
@@ -710,7 +710,7 @@ contains
     allocate( var_org(nx,ny,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -721,10 +721,10 @@ contains
 
     status = nf90_get_var( ncid, varid, var_org(:,:,:), start = (/ 1,1,ts /), &
                             count = (/ nx,ny,tcount /) )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nx,ny )
 
@@ -784,7 +784,7 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
@@ -803,7 +803,7 @@ contains
     allocate( var_org(nx,ny,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -814,10 +814,10 @@ contains
 
     status = nf90_get_var( ncid, varid, var_org(:,:,:), start = (/ 1,1,ts /), &
                             count = (/ nx,ny,tcount /) )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nx,ny )
 
@@ -886,7 +886,7 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) then
+    if (status /= nf90_noerr) then
        if ( option_ ) then
           return
        else
@@ -923,7 +923,7 @@ contains
     allocate( var_org(nx,ny,nz,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -934,10 +934,10 @@ contains
 
     status = nf90_get_var( ncid, varid, var_org(:,:,:,:), start = (/ 1,1,1,ts /), &
                             count = (/ nx,ny,nz,tcount /) )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
 
@@ -1001,7 +1001,7 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
@@ -1031,7 +1031,7 @@ contains
     allocate( var_org(nx,ny,nz,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -1042,10 +1042,10 @@ contains
 
     status = nf90_get_var( ncid, varid, var_org(:,:,:,:), start = (/ 1,1,1,ts /), &
                             count = (/ nx,ny,nz,tcount /) )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
 
@@ -1110,7 +1110,7 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
@@ -1130,7 +1130,7 @@ contains
     allocate( short  (nx,ny,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -1138,23 +1138,23 @@ contains
     if(precis /= NF90_SHORT) then
        status = nf90_get_var( ncid, varid, var_org(:,:,:), start = (/ 1,1,ts /), &
                               count = (/ nx,ny,tcount /) )
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
     else
        status = nf90_get_att(ncid, varid, "scale_factor", scale_factor)
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        status = nf90_get_att(ncid, varid, "add_offset", add_offset)
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        status = nf90_get_var( ncid, varid, short(:,:,:), start = (/ 1,1,ts /), &
                               count = (/ nx,ny,tcount /) )
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        var_org(:,:,:) = real( short(:,:,:),kind=SP )*scale_factor + add_offset
     end if
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nx,ny )
 
@@ -1219,7 +1219,7 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
@@ -1239,7 +1239,7 @@ contains
     allocate( short  (nx,ny,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -1247,23 +1247,23 @@ contains
     if(precis /= NF90_SHORT) then
        status = nf90_get_var( ncid, varid, var_org(:,:,:), start = (/ 1,1,ts /), &
                               count = (/ nx,ny,tcount /) )
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
     else
        status = nf90_get_att(ncid, varid, "scale_factor", scale_factor)
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        status = nf90_get_att(ncid, varid, "add_offset", add_offset)
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        status = nf90_get_var( ncid, varid, short(:,:,:), start = (/ 1,1,ts /), &
                               count = (/ nx,ny,tcount /) )
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        var_org(:,:,:) =  real( real(short(:,:,:),kind=SP)*scale_factor + add_offset, kind=DP )
     endif
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nx,ny )
 
@@ -1332,7 +1332,7 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
@@ -1363,31 +1363,31 @@ contains
     allocate( short  (nx,ny,nz,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     if(precis /= NF90_SHORT) then
        status = nf90_get_var( ncid, varid, var_org(:,:,:,:), start = (/ 1,1,1,ts /), &
                               count = (/ nx,ny,nz,tcount /) )
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
     else
        status = nf90_get_att(ncid, varid, "scale_factor", scale_factor)
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        status = nf90_get_att(ncid, varid, "add_offset", add_offset)
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        status = nf90_get_var( ncid, varid, short(:,:,:,:), start = (/ 1,1,1,ts /), &
                               count = (/ nx,ny,nz,tcount /) )
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        var_org(:,:,:,:) = real( short(:,:,:,:),kind=SP )*scale_factor + add_offset
     end if
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
 
@@ -1456,7 +1456,7 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
@@ -1487,7 +1487,7 @@ contains
     allocate( short  (nx,ny,nz,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)
@@ -1495,23 +1495,23 @@ contains
     if(precis /= NF90_SHORT) then
        status = nf90_get_var( ncid, varid, var_org(:,:,:,:), start = (/ 1,1,1,ts /), &
                               count = (/ nx,ny,nz,tcount /) )
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
     else
        status = nf90_get_att(ncid, varid, "scale_factor", scale_factor)
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        status = nf90_get_att(ncid, varid, "add_offset", add_offset)
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        status = nf90_get_var( ncid, varid, short(:,:,:,:), start = (/ 1,1,1,ts /), &
                               count = (/ nx,ny,nz,tcount /) )
-       if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+       if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
        var_org(:,:,:,:) = real( real(short(:,:,:,:),kind=SP)*scale_factor + add_offset, kind=DP )
     end if
 
     status = nf90_close(ncid)
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) call handle_err(status, __LINE__)
 
     call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
 

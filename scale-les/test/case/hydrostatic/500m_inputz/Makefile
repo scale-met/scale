@@ -8,14 +8,6 @@ PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
-# optional parameters for build
-index       = 500m40x40x40
-precision   = real8
-dynamics    = heve
-tracer      = dry
-sfcflx      = const
-turbulence  = dummy
-radiation   = dummy
 
 # user-defined source files
 CODE_DIR    = .

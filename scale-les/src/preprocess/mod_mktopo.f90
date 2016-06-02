@@ -269,7 +269,7 @@ contains
     real(RP) :: SCHAER_LAMBDA   =   4.E3_RP ! wavelength of wavelike perturbation [m]: x
     real(RP) :: SCHAER_HEIGHT   =  250.0_RP ! height of mountain [m]
 
-    NAMELIST / PARAM_MKTOPO_SCHEAR / &
+    NAMELIST / PARAM_MKTOPO_SCHAER / &
        SCHAER_CX,     &
        SCHAER_RX,     &
        SCHAER_LAMBDA, &
@@ -286,14 +286,14 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKTOPO_SCHEAR,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MKTOPO_SCHAER,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_SCHEAR. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_SCHAER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_SCHEAR)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_SCHAER)
 
     ! make bell-shaped mountain
     do j = 1, JA

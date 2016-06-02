@@ -103,92 +103,91 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere model components ***'
 
     if ( ATMOS_do ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere model : ON'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere model       : ON'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere model : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere model       : OFF'
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics...'
 
-    if ( ATMOS_DYN_TYPE == 'OFF' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Dynamical core   : OFF'
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Advection        : OFF'
+    if    ( ATMOS_DYN_TYPE == 'OFF' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Dynamical core       : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Advection            : OFF'
        ATMOS_sw_dyn = .false.
-    else if ( ATMOS_DYN_TYPE == 'NONE' ) then
+    elseif( ATMOS_DYN_TYPE == 'NONE' ) then
        ! The advection is disbled
        ! The tendencies calculated by physical processed are added
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Dynamical core   : ON, ', trim(ATMOS_DYN_TYPE)
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Advection        : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Dynamical core       : ON, ', trim(ATMOS_DYN_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Advection            : OFF'
        ATMOS_sw_dyn = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Dynamical core   : ON, ', trim(ATMOS_DYN_TYPE)
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Advection        : ON'
+    else ! default
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Dynamical core       : ON, ', trim(ATMOS_DYN_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Advection            : ON'
        ATMOS_sw_dyn = .true.
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics...'
 
     if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Cloud Microphysics   : ON, ', trim(ATMOS_PHY_MP_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Cloud Microphysics   : ON, ', trim(ATMOS_PHY_MP_TYPE)
        ATMOS_sw_phy_mp = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Cloud Microphysics   : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Cloud Microphysics   : OFF'
        ATMOS_sw_phy_mp = .false.
     endif
 
     if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Aerosol Microphysics : ON, ', trim(ATMOS_PHY_AE_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Aerosol Microphysics : ON, ', trim(ATMOS_PHY_AE_TYPE)
        ATMOS_sw_phy_ae = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Aerosol Microphysics : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Aerosol Microphysics : OFF'
        ATMOS_sw_phy_ae = .false.
     endif
 
     if ( ATMOS_PHY_CH_TYPE /= 'OFF' .AND. ATMOS_PHY_CH_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Chemistry            : ON, ', trim(ATMOS_PHY_CH_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Chemistry            : ON, ', trim(ATMOS_PHY_CH_TYPE)
        ATMOS_sw_phy_ch = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Chemistry            : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Chemistry            : OFF'
        ATMOS_sw_phy_ch = .false.
     endif
 
     if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Radiative transfer   : ON, ', trim(ATMOS_PHY_RD_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Radiative transfer   : ON, ', trim(ATMOS_PHY_RD_TYPE)
        ATMOS_sw_phy_rd = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Radiative transfer   : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Radiative transfer   : OFF'
        ATMOS_sw_phy_rd = .false.
     endif
 
     if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Surface Flux         : ON, ', trim(ATMOS_PHY_SF_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Surface Flux         : ON, ', trim(ATMOS_PHY_SF_TYPE)
        ATMOS_sw_phy_sf = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Surface Flux         : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Surface Flux         : OFF'
        ATMOS_sw_phy_sf = .false.
     endif
 
     if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Sub-grid Turbulence  : ON, ', trim(ATMOS_PHY_TB_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Sub-grid Turbulence  : ON, ', trim(ATMOS_PHY_TB_TYPE)
        ATMOS_sw_phy_tb = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Sub-grid Turbulence  : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Sub-grid Turbulence  : OFF'
        ATMOS_sw_phy_tb = .false.
     endif
 
     if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Convection Param.    : ON, ', trim(ATMOS_PHY_CP_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Convection Param.    : ON, ', trim(ATMOS_PHY_CP_TYPE)
        ATMOS_sw_phy_cp = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Convection Param.    : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Convection Param.    : OFF'
        ATMOS_sw_phy_cp = .false.
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_USE_AVERAGE ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos use average?    : YES'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Use time-averaging value for physics? : YES'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos use average?    : NO'
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Use time-averaging value for physics? : NO'
     endif
 
     return

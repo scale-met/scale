@@ -47,6 +47,8 @@ do
  KMAX = 40,
  IMAX =  2,
  JMAX =  2,
+ IHALO = 2,
+ JHALO = 2,
 /
 
 &PARAM_LAND_INDEX
@@ -76,9 +78,9 @@ do
  TIME_STARTMS               = 0.D0,
  TIME_DURATION              = ${TIME_DURATION},
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 1.D0,
+ TIME_DT                    = 2.D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 0.2D0,
+ TIME_DT_ATMOS_DYN          = 1.D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
  TIME_DT_ATMOS_PHY_MP       = 2.D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
@@ -94,13 +96,6 @@ do
  TIME_DT_URBAN_UNIT         = "SEC",
 /
 
-&PARAM_RESTART
- RESTART_RUN          = ${RESTART_RUN},
- RESTART_OUTPUT       = .true.,
- RESTART_IN_BASENAME  = "${RESTART_IN_BASENAME}",
- RESTART_OUT_BASENAME = "restart${RUN_TYPE}",
-/
-
 &PARAM_MAPPROJ
  MPRJ_basepoint_lon = 180.D0,
  MPRJ_basepoint_lat = 0.D0,
@@ -110,8 +105,15 @@ do
  LANDUSE_MosaicWorld = .true.,
 /
 
+&PARAM_RESTART
+ RESTART_RUN          = ${RESTART_RUN},
+ RESTART_IN_BASENAME  = "${RESTART_IN_BASENAME}",
+ RESTART_OUTPUT       = .true.,
+ RESTART_OUT_BASENAME = "restart${RUN_TYPE}",
+/
+
 &PARAM_STATISTICS
- STATISTICS_checktotal     = .true.,
+ STATISTICS_checktotal     = .false.,
  STATISTICS_use_globalcomm = .true.,
 /
 
@@ -149,7 +151,13 @@ do
 /
 
 &PARAM_ATMOS_DYN
- ATMOS_DYN_NUMERICAL_DIFF_COEF = 1.D-4,
+ ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
+ ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
+ ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
+ ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
+ ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN

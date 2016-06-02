@@ -993,7 +993,7 @@ contains
                  * RCDZ(k) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) &
                  - 2.0_RP*tke_N(k,i,j) * q(k,i,j) / (B1 * l(k,i,j)) ) &
                  * dt
-             if ( tke_N(k,i,j) > 0.1_RP .and. abs(tke(1,i,j) - tke_N(k,i,j))/tke_N(k,i,j) > 1e-10_RP ) then
+             if ( tke_N(k,i,j) > 0.1_RP .AND. abs(tke(1,i,j) - tke_N(k,i,j))/tke_N(k,i,j) > 1e-10_RP ) then
                 advc = ( tke(k,i,j) - d(k,i,j) ) / dt + Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
                 write(*,*)k,i,j,tke(1,i,j),tke_N(k,i,j), tke(k,i,j),nu(k,i,j),dudz2(k,i,j),n2(k,i,j),pr(k,i,j),advc
                 open(90, file="mynn.dat")

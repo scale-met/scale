@@ -43,16 +43,13 @@ module scale_atmos_dyn_common
   public :: ATMOS_DYN_numfilter_coef_q
   public :: ATMOS_DYN_filter_tend
   public :: ATMOS_DYN_fct
+  public :: ATMOS_DYN_Copy_boundary
+  public :: ATMOS_DYN_divergence
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  !-----------------------------------------------------------------------------
-  ! advection settings
-  real(RP), public, parameter :: FACT_N =   7.0_RP / 12.0_RP !  7/12: fourth, 1: second
-  real(RP), public, parameter :: FACT_F = - 1.0_RP / 12.0_RP ! -1/12: fourth, 0: second
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -96,6 +93,8 @@ contains
   subroutine ATMOS_DYN_filter_setup( &
        num_diff, num_diff_q, &
        CDZ, CDX, CDY, FDZ, FDX, FDY        )
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_comm, only: &
        COMM_vars8_init
     implicit none
@@ -111,6 +110,11 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    if ( IHALO < 2 .or. JHALO < 2 .or. KHALO < 2 ) then
+       write(*,*) 'xxx number of HALO must be at least 2 for numrical filter'
+       call PRC_MPIstop
+    end if
+    
     ! allocation
     allocate( CNZ3(3,KA,2) )
     allocate( CNX3(3,IA,2) )
@@ -118,6 +122,7 @@ contains
     allocate( CNZ4(5,KA,2) )
     allocate( CNX4(5,IA,2) )
     allocate( CNY4(5,JA,2) )
+
 
     call COMM_vars8_init( num_diff(:,:,:,I_DENS,ZDIR), I_COMM_DENS_Z )
     call COMM_vars8_init( num_diff(:,:,:,I_DENS,XDIR), I_COMM_DENS_X )
@@ -230,7 +235,7 @@ contains
        CNZ4(4,k,2) = ( CNZ3(1,k  ,2) + CNZ3(3,k,2) ) / FDZ(k)
        CNZ4(5,k,2) = ( CNZ3(1,k-1,2)               ) / FDZ(k)
     enddo
-!       CNZ4(1,KE,2) = ( CNZ3(1,KE+1,2)                ) / FDZ(KE-1)
+!    CNZ4(1,KE,2) = ( CNZ3(1,KE+1,2)                ) / FDZ(KE-1)
     CNZ4(2,KE,2) = ( CNZ3(2,KE+1,2) + CNZ3(1,KE,2) ) / FDZ(KE-1)
     CNZ4(3,KE,2) = ( CNZ3(3,KE+1,2) + CNZ3(2,KE,2) ) / FDZ(KE-1)
     CNZ4(4,KE,2) = ( CNZ3(1,KE  ,2) + CNZ3(3,KE,2) ) / FDZ(KE-1)
@@ -311,8 +316,7 @@ contains
        CNY4(5,j,2) = ( CNY3(1,j-1,2)               ) / FDY(j)
     enddo
 
-
-
+    return
   end subroutine ATMOS_DYN_filter_setup
 
   !-----------------------------------------------------------------------------
@@ -400,7 +404,7 @@ contains
     ! 1st order coefficients
     !###########################################################################
 
-    if ( .not. ND_USE_RS ) then
+    if ( .NOT. ND_USE_RS ) then
 
        call PROF_rapstart("NumFilter_Main", 3)
 
@@ -978,7 +982,7 @@ contains
        nd_coef_cdy(j) = DIFF4 * CDY(j)**nd_order4
     end do
 
-    if ( iq == I_QV .and. (.not. ND_USE_RS) ) then
+    if ( iq == I_QV .AND. (.NOT. ND_USE_RS) ) then
 
        call PROF_rapstart("NumFilter_Main", 3)
 
@@ -1174,6 +1178,210 @@ contains
 
     return
   end subroutine ATMOS_DYN_filter_tend
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_DYN_Copy_boundary( &
+       DENS,  MOMZ,  MOMX,  MOMY,  RHOT,  PROG, &
+       DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, PROG0, &
+       BND_W, BND_E, BND_S, BND_N )
+    implicit none
+    real(RP), intent(inout) :: DENS (KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ (KA,IA,JA)
+    real(RP), intent(inout) :: MOMX (KA,IA,JA)
+    real(RP), intent(inout) :: MOMY (KA,IA,JA)
+    real(RP), intent(inout) :: RHOT (KA,IA,JA)
+    real(RP), intent(inout) :: PROG (KA,IA,JA,VA)
+    real(RP), intent(in)    :: DENS0(KA,IA,JA)
+    real(RP), intent(in)    :: MOMZ0(KA,IA,JA)
+    real(RP), intent(in)    :: MOMX0(KA,IA,JA)
+    real(RP), intent(in)    :: MOMY0(KA,IA,JA)
+    real(RP), intent(in)    :: RHOT0(KA,IA,JA)
+    real(RP), intent(in)    :: PROG0(KA,IA,JA,VA)
+    logical,  intent(in)    :: BND_W
+    logical,  intent(in)    :: BND_E
+    logical,  intent(in)    :: BND_S
+    logical,  intent(in)    :: BND_N
+
+    integer :: k, i, j, iv
+
+    if ( BND_W ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IS-1
+       do k = KS, KE
+          DENS(k,i,j) = DENS0(k,i,j)
+          MOMZ(k,i,j) = MOMZ0(k,i,j)
+          MOMX(k,i,j) = MOMX0(k,i,j)
+          MOMY(k,i,j) = MOMY0(k,i,j)
+          RHOT(k,i,j) = RHOT0(k,i,j)
+          do iv = 1, VA
+             PROG(k,i,j,iv) = PROG0(k,i,j,iv)
+          end do
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_E ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = 1, JA
+       do i = IE+1, IA
+       do k = KS, KE
+          DENS(k,i,j) = DENS0(k,i,j)
+          MOMZ(k,i,j) = MOMZ0(k,i,j)
+          MOMX(k,i,j) = MOMX0(k,i,j)
+          MOMY(k,i,j) = MOMY0(k,i,j)
+          RHOT(k,i,j) = RHOT0(k,i,j)
+          do iv = 1, VA
+             PROG(k,i,j,iv) = PROG0(k,i,j,iv)
+          end do
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = 1, JA
+       do k = KS, KE
+          MOMX(k,IE,j) = MOMX0(k,IE,j)
+       enddo
+       enddo
+    end if
+    if ( BND_S ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = 1, JS-1
+       do i = 1, IA
+       do k = KS, KE
+          DENS(k,i,j) = DENS0(k,i,j)
+          MOMZ(k,i,j) = MOMZ0(k,i,j)
+          MOMX(k,i,j) = MOMX0(k,i,j)
+          MOMY(k,i,j) = MOMY0(k,i,j)
+          RHOT(k,i,j) = RHOT0(k,i,j)
+          do iv = 1, VA
+             PROG(k,i,j,iv) = PROG0(k,i,j,iv)
+          end do
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_N ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do j = JE+1, JA
+       do i = 1, IA
+       do k = KS, KE
+          DENS(k,i,j) = DENS0(k,i,j)
+          MOMZ(k,i,j) = MOMZ0(k,i,j)
+          MOMX(k,i,j) = MOMX0(k,i,j)
+          MOMY(k,i,j) = MOMY0(k,i,j)
+          RHOT(k,i,j) = RHOT0(k,i,j)
+          do iv = 1, VA
+             PROG(k,i,j,iv) = PROG0(k,i,j,iv)
+          end do
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+       do i = 1, IA
+       do k = KS, KE
+          MOMY(k,i,JE) = MOMY0(k,i,JE)
+       enddo
+       enddo
+    end if
+
+    return
+  end subroutine ATMOS_DYN_Copy_boundary
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_DYN_divergence( &
+       DDIV, &
+       MOMZ, MOMX, MOMY, &
+       GSQRT, J13G, J23G, J33G, MAPF, &
+       RCDZ, RCDX, RCDY, RFDZ, FDZ )
+    use scale_gridtrans, only: &
+       I_XYZ, &
+       I_XYW, &
+       I_UYZ, &
+       I_XVZ, &
+       I_XY,  &
+       I_UY,  &
+       I_XV
+    implicit none
+    real(RP), intent(out) :: DDIV(KA,IA,JA)
+    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
+    real(RP), intent(in)  :: MOMX(KA,IA,JA)
+    real(RP), intent(in)  :: MOMY(KA,IA,JA)
+    real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
+    real(RP), intent(in)  :: J13G(KA,IA,JA,7)
+    real(RP), intent(in)  :: J23G(KA,IA,JA,7)
+    real(RP), intent(in)  :: J33G
+    real(RP), intent(in)  :: MAPF(IA,JA,2,7)
+    real(RP), intent(in)  :: RCDZ(KA)
+    real(RP), intent(in)  :: RCDX(IA)
+    real(RP), intent(in)  :: RCDY(JA)
+    real(RP), intent(in)  :: RFDZ(KA-1)
+    real(RP), intent(in)  :: FDZ(KA-1)
+    
+    integer :: k, i, j
+
+    call PROF_rapstart("DYN_divercence", 2)
+
+    ! 3D divergence
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE+1
+    do i = IS, IE+1
+    do k = KS-1, KE+1
+       DDIV(k,i,j) = J33G * ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
+                   + ( ( MOMX(k+1,i,j) + MOMX(k+1,i-1,j  ) ) * J13G(k+1,i,j,I_XYW) &
+                     - ( MOMX(k-1,i,j) + MOMX(k-1,i-1,j  ) ) * J13G(k-1,i,j,I_XYW) &
+                     + ( MOMY(k+1,i,j) + MOMY(k+1,i  ,j-1) ) * J23G(k+1,i,j,I_XYW) &
+                     - ( MOMY(k-1,i,j) + MOMY(k-1,i  ,j-1) ) * J23G(k-1,i,j,I_XYW) ) / ( FDZ(k)+FDZ(k-1) ) &
+                   + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                   * ( ( MOMX(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                       - MOMX(k,i-1,j  ) * GSQRT(k,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                     + ( MOMY(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                       - MOMY(k,i,  j-1) * GSQRT(k,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE+1
+    do i = IS, IE+1
+       DDIV(KS,i,j) = J33G * ( MOMZ(KS,i,j) ) * RCDZ(KS) &
+                    + ( ( MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j  ) ) * J13G(KS+1,i,j,I_XYW) &
+                      - ( MOMX(KS-1,i,j) + MOMX(KS  ,i-1,j  ) ) * J13G(KS  ,i,j,I_XYW) &
+                      + ( MOMY(KS+1,i,j) + MOMY(KS+1,i  ,j-1) ) * J23G(KS+1,i,j,I_XYW) &
+                      - ( MOMY(KS  ,i,j) + MOMY(KS  ,i  ,j-1) ) * J23G(KS  ,i,j,I_XYW) ) * RFDZ(KS) &
+                    + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                    * ( ( MOMX(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                        - MOMX(KS,i-1,j  ) * GSQRT(KS,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                      + ( MOMY(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                        - MOMY(KS,i,  j-1) * GSQRT(KS,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+       DDIV(KE,i,j) = J33G * ( - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
+                    + ( ( MOMX(KE  ,i,j) + MOMX(KE  ,i-1,j  ) ) * J13G(KE  ,i,j,I_XYW) &
+                      - ( MOMX(KE-1,i,j) + MOMX(KE-1,i-1,j  ) ) * J13G(KE-1,i,j,I_XYW) &
+                      + ( MOMY(KE  ,i,j) + MOMY(KE  ,i  ,j-1) ) * J23G(KE  ,i,j,I_XYW) &
+                      - ( MOMY(KE-1,i,j) + MOMY(KE-1,i  ,j-1) ) * J23G(KE-1,i,j,I_XYW) ) * RFDZ(KE) &
+                    + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                    * ( ( MOMX(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                        - MOMX(KE,i-1,j  ) * GSQRT(KE,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                      + ( MOMY(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                        - MOMY(KE,i,  j-1) * GSQRT(KE,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+    enddo
+    enddo
+#ifdef DEBUG
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+    call PROF_rapend  ("DYN_divercence", 2)
+
+    return
+  end subroutine ATMOS_DYN_divergence
 
   !-----------------------------------------------------------------------------
   subroutine calc_numdiff(&

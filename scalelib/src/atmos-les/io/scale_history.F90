@@ -41,11 +41,13 @@ module scale_history
   public :: HIST_switch
 
   interface HIST_in
+     module procedure HIST_in_0D
      module procedure HIST_in_1D
      module procedure HIST_in_2D
      module procedure HIST_in_3D
   end interface HIST_in
   interface HIST_put
+     module procedure HIST_put_0D
      module procedure HIST_put_1D
      module procedure HIST_put_2D
      module procedure HIST_put_3D
@@ -493,6 +495,8 @@ contains
        zdim     )
     use gtool_history, only: &
        HistoryAddVariable
+    use scale_time, only: &
+       NOWSTEP => TIME_NOWSTEP
     implicit none
 
     integer,          intent(out) :: itemid  !< index number of the item
@@ -536,7 +540,7 @@ contains
           if ( ydim=='half' ) yh = .true.
        end if
 
-       if ( xh .and. yh ) then
+       if ( xh .AND. yh ) then
           dims(1) = 'lon_uv'
           dims(2) = 'lat_uv'
           dims(3) = 'height_uvz'
@@ -564,7 +568,7 @@ contains
           else if ( zdim=='urbanhalf' ) then
              dims(3) = 'uzh'
           else if ( zdim=='half' ) then
-             if ( xh .and. yh ) then
+             if ( xh .AND. yh ) then
                 dims(3) = 'height_uvw'
              else if ( xh ) then
                 dims(3) = 'height_uyw'
@@ -582,6 +586,7 @@ contains
                              dims(1:ndim), & ! [IN]
                              desc,         & ! [IN]
                              unit,         & ! [IN]
+                             NOWSTEP,      & ! [IN]
                              itemid,       & ! [OUT]
                              zinterp,      & ! [OUT]
                              existed       ) ! [OUT]
@@ -609,7 +614,7 @@ contains
 
     answer = .false.
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -622,6 +627,35 @@ contains
     return
   end subroutine HIST_query
 
+  !-----------------------------------------------------------------------------
+  !> Put 1D data to history buffer
+  subroutine HIST_put_0D( &
+       itemid, &
+       var     )
+    use gtool_history, only: &
+       HistoryPut
+    use scale_time, only: &
+       TIME_NOWSTEP
+    implicit none
+
+    integer,  intent(in) :: itemid !< index number of the item
+    real(RP), intent(in) :: var    !< value
+
+    !---------------------------------------------------------------------------
+
+    if ( .NOT. enabled ) return
+
+    if ( itemid < 0 ) return
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    call HistoryPut(itemid, TIME_NOWSTEP, var)
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
+
+    return
+  end subroutine HIST_put_0D
+  
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
   subroutine HIST_put_1D( &
@@ -640,7 +674,7 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -681,7 +715,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -776,7 +810,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -936,6 +970,43 @@ contains
   end subroutine HIST_put_3D
 
   !-----------------------------------------------------------------------------
+  !> Wrapper routine of HIST_reg+HIST_put 0D
+  subroutine HIST_in_0D( &
+       var,  &
+       item, &
+       desc, &
+       unit )
+    implicit none
+
+    real(RP),         intent(in) :: var
+    character(len=*), intent(in) :: item
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: unit
+
+    integer           :: itemid
+    logical           :: zinterp
+    logical           :: do_put
+    !---------------------------------------------------------------------------
+
+    if ( .NOT. enabled ) return
+
+
+    call HIST_reg( itemid,              & ! [OUT]
+                   zinterp,             & ! [OUT]
+                   item, desc, unit, 0 )  ! [IN]
+
+
+    call HIST_query( itemid, & ! [IN]
+                     do_put  ) ! [OUT]
+
+    if ( do_put ) then
+       call HIST_put( itemid, var ) ! [IN]
+    endif
+
+    return
+  end subroutine HIST_in_0D
+  
+  !-----------------------------------------------------------------------------
   !> Wrapper routine of HIST_reg+HIST_put 1D
   subroutine HIST_in_1D( &
        var,  &
@@ -958,7 +1029,7 @@ contains
     logical           :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     zd = ''
     if( present(zdim) ) zd = zdim
@@ -1005,7 +1076,7 @@ contains
     logical           :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     xd = ''
     yd = ''
@@ -1056,7 +1127,7 @@ contains
     logical           :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .not. enabled ) return
+    if ( .NOT. enabled ) return
 
     xd = ''
     yd = ''

@@ -130,7 +130,7 @@ contains
     enddo
     enddo
 
-    if ( .not. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
+    if ( .NOT. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
        write(*,*) 'xxx [STAT_total] NaN is detected for ', varname_trim, ' in rank ', PRC_myrank
        call PRC_MPIstop
     endif
@@ -201,7 +201,7 @@ contains
     enddo
     enddo
 
-    if ( .not. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
+    if ( .NOT. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
        write(*,*) 'xxx [STAT_total] NaN is detected for ', varname_trim, ' in rank ', PRC_myrank
        call PRC_MPIstop
     endif

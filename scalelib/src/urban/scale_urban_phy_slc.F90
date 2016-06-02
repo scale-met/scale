@@ -982,7 +982,7 @@ contains
 
      enddo
 
-!    if( .not. (resi1 < sqrt(EPS)) ) then
+!    if( .NOT. (resi1 < sqrt(EPS)) ) then
 !       write(*,*) 'xxx Warning not converged for TR in URBAN SLC', &
 !            PRC_myrank, i,j, &
 !            resi1, G0R
@@ -1144,7 +1144,7 @@ contains
       !G0BP   = G0B
       !G0GP   = G0G
 
-      if ( abs(resi1) < sqrt(EPS) .and. abs(resi2) < sqrt(EPS) ) then
+      if ( abs(resi1) < sqrt(EPS) .AND. abs(resi2) < sqrt(EPS) ) then
          TB = TBL(1)
          TG = TGL(1)
          TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
@@ -1187,7 +1187,7 @@ contains
 
     enddo
 
-!    if( .not. (resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) ) then
+!    if( .NOT. (resi1 < sqrt(EPS) .AND. resi2 < sqrt(EPS) ) ) then
 !       write(*,*) 'xxx Warning not converged for TG, TB in URBAN SLC', &
 !            PRC_myrank, i,j, &
 !            resi1, resi2, TB, TG, TC, G0BP, G0GP, RB, HB, RG, HG, QC, &

@@ -91,9 +91,9 @@ module test_atmos_dyn
 
   real(RP) :: divdmp_coef
 
-  logical  :: flag_fct_rho      = .true.
   logical  :: flag_fct_momentum = .true.
   logical  :: flag_fct_t        = .true.
+  logical  :: flag_fct_tracer   = .true.
   logical  :: flag_fct_along_stream = .true.
 
   real(RP), allocatable :: ZERO(:,:,:)
@@ -101,6 +101,14 @@ module test_atmos_dyn
   integer :: KME ! end of main region
 
   character(len=H_SHORT) :: DYN_TYPE
+
+  character(len=H_SHORT) :: DYN_Tinteg_Short_TYPE
+  character(len=H_SHORT) :: DYN_Tinteg_Tracer_TYPE
+  character(len=H_SHORT) :: DYN_Tinteg_Large_TYPE
+  character(len=H_SHORT) :: DYN_Tstep_Tracer_TYPE
+  character(len=H_SHORT) :: DYN_Tstep_Large_TYPE
+  character(len=H_SHORT) :: DYN_FVM_FLUX_TYPE
+  character(len=H_SHORT) :: DYN_FVM_FLUX_TYPE_TRACER
 
   integer :: k, i, j, iq
   character(len=11) :: message
@@ -115,8 +123,8 @@ contains
   use scale_stdio
   use scale_atmos_dyn, only: &
      ATMOS_DYN_setup
-  use scale_atmos_dyn_rk, only: &
-     ATMOS_DYN_rk_regist
+  use scale_atmos_dyn_Tstep_short, only: &
+     ATMOS_DYN_Tstep_short_regist
   use scale_grid, only: &
      GRID_CBFZ
   use scale_const, only: &
@@ -198,14 +206,30 @@ contains
      lat(1,:,j) = real(j, RP)
   end do
 
-  DYN_TYPE = "HEVE"
-  call ATMOS_DYN_rk_regist( DYN_TYPE, & !(in)
+  DYN_TYPE = "FVM-HEVE"
+  call ATMOS_DYN_Tstep_short_regist( DYN_TYPE, & !(in)
                             VA, CSDUMMY, CMDUMMY, CSDUMMY ) ! (out)
 
-  call ATMOS_DYN_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
-                        PROG,                               & ! (in)
-                        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
-                        .false., lat                        ) ! (in)
+  DYN_Tinteg_Short_TYPE = "RK4"
+  DYN_Tinteg_Tracer_TYPE = "RK3WS2002"
+  DYN_Tinteg_Large_TYPE = "EULER"
+  DYN_Tstep_Tracer_TYPE = "FVM-HEVE"
+  DYN_Tstep_Large_TYPE = "FVM-HEVE"
+  DYN_FVM_FLUX_TYPE = "CD4"
+  DYN_FVM_FLUX_TYPE_TRACER = "UD3KOREN1993"
+
+  call ATMOS_DYN_setup( &
+       DYN_Tinteg_Short_TYPE,              & ! (in)
+       DYN_Tinteg_Tracer_TYPE,             & ! (in)
+       DYN_Tinteg_Large_TYPE,              & ! (in)
+       DYN_Tstep_Tracer_TYPE,              & ! (in)
+       DYN_Tstep_Large_TYPE,               & ! (in)
+       DYN_FVM_FLUX_TYPE,                  & ! (in)
+       DYN_FVM_FLUX_TYPE_TRACER,           & ! (in)
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
+       PROG,                               & ! (in)
+       CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
+       .false., lat                        ) ! (in)
 
   do k = KS+1, KE
      if ( GRID_CBFZ(k) > 0.0_RP ) then
@@ -308,10 +332,11 @@ subroutine test_undef
           DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
           DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
           divdmp_coef,                                 & ! (in)
-          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
           flag_fct_along_stream,                       & ! (in)
           .false.,                                     & ! (in)
-          1.0_DP, 1.0_DP, 1                            ) ! (in)
+          1.0_DP, 1.0_DP                               ) ! (in)
+
   end do
 
   call AssertLessThan("MOMZ", BIG(KS:KE,IS:IE,JS:JE), MOMZ(KS:KE,IS:IE,JS:JE))
@@ -361,10 +386,10 @@ subroutine test_const
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
-       flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
-       1.0_DP, 1.0_DP, 1                            ) ! (in)
+       1.0_DP, 1.0_DP                               ) ! (in)
 
   do k = KS, KE
      answer(k,:,:) = MOMZ(k,IS,JS)
@@ -461,10 +486,10 @@ subroutine test_conserve
          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
          DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
          divdmp_coef,                                 & ! (in)
-         flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+         flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
          flag_fct_along_stream,                       & ! (in)
          .true.,                                      & ! (in)
-         1.0_RP, 1.0_DP, 1                            ) ! (in)
+         1.0_RP, 1.0_DP                               ) ! (in)
 
   total_o = 0.0_RP
   total = 0.0_RP
@@ -589,10 +614,10 @@ subroutine test_cwc
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
-       flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
-       1.0_DP, 1.0_DP, 1                            ) ! (in)
+       1.0_DP, 1.0_DP                               ) ! (in)
 
   answer(:,:,:) = POTT
   call AssertEqual("POTT", answer(KS:KE,IS:IE,JS:JE), RHOT(KS:KE,IS:IE,JS:JE)/DENS(KS:KE,IS:IE,JS:JE), RP*2-2, -10)
@@ -677,10 +702,10 @@ subroutine test_fctminmax
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
-       flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
-       1.0_DP, 1.0_DP, 1                            ) ! (in)
+       1.0_DP, 1.0_DP                               ) ! (in)
 
   message = "iq = ??"
   do iq = 1, QA

@@ -490,7 +490,7 @@ contains
     if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI ) then
        do ihydro = 1, MP_QA
           iq = I_MP2ALL(ihydro)
-          if ( iq .ne. I_QC .and. iq .ne. I_QI ) then
+          if ( iq /= I_QC .AND. iq /= I_QI ) then
 !OCL XFILL
              MP_Qe(:,:,:,ihydro) = 0.0_RP
           end if

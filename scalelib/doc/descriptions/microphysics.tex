@@ -134,12 +134,12 @@ In the case of liquid water droplets, absence of shape variability makes formula
 \begin{array}{l}
 a_{R_{s}}D(1-exp(-b_{R_{s}}D)),\;\;(D<D_{0,r}) \\
 a_{R_{l}}-b_{R_{l}}exp(-c_{R_{l}}D),\;\;(D>D_{0,r}) \\
-\label{sn14}
+\label{sn13}
 \end{array}
 \right.
 \end{eqnarray}
 
-where $a_{R_{s}} = 4000 s^{-1}$, $b_{R_{s}}=12000 m^{-1}$, $a_{R_{l}}=9.65 m s^{-1}$, $b_{R_{l}} = 10.43 m s^{-1}$, $c_{R_{l}} = 600 m^{-1}$, and $D_{0}$, $r=7.45\times10^{-4}$ m. This formulation approaches the quadratic form of Stokes’ Law in the limit for small diameter. In addition, the data of Gunn and Kinzer (1948) agrees well with the terminal velocities calculated by theoretical formulation based on the boundary layer theory (Bohm, 1992). Therefore, we applied eq.\ref{sn14} for the sedimentation of rain (Fig. \ref{figsn2-11}2 11). Here it is mentioned that the reference atmosphere of the formulation is $T = 293 K$, $p = 1000hPa$, and relative humidity is 0.5 (Gunn and Kinzer, 1948).
+where $a_{R_{s}} = 4000 s^{-1}$, $b_{R_{s}}=12000 m^{-1}$, $a_{R_{l}}=9.65 m s^{-1}$, $b_{R_{l}} = 10.43 m s^{-1}$, $c_{R_{l}} = 600 m^{-1}$, and $D_{0}$, $r=7.45\times10^{-4}$ m. This formulation approaches the quadratic form of Stokes’ Law in the limit for small diameter. In addition, the data of Gunn and Kinzer (1948) agrees well with the terminal velocities calculated by theoretical formulation based on the boundary layer theory (Bohm, 1992). Therefore, we applied eq.\ref{sn13} for the sedimentation of rain (Fig. \ref{figsn2-11}2 11). Here it is mentioned that the reference atmosphere of the formulation is $T = 293 K$, $p = 1000hPa$, and relative humidity is 0.5 (Gunn and Kinzer, 1948).
 
 \subsubsection{Terminal velocity of solid water particles for the reference atmosphere}
 In the case of ice particles, we derive the theoretical formulation of the terminal velocity following to Mitchell (1996). In general the aerodynamic drag force $F_{D}$ on a particle is expressed as follows,
@@ -334,7 +334,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 \end{center}
 \end{table}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.3]{./figure/D_vt_sn14.eps}
 \end{center}
@@ -342,7 +342,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 \label{figsn2-11}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.3]{./figure/D_vt_sn14-ice.eps}
 \end{center}
@@ -350,7 +350,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 \label{figsn2-12}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.4]{./figure/D_vt_sn14-1.eps}
 \end{center}
@@ -358,7 +358,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 \label{figsn2-13}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.4]{./figure/D_vt_sn14-ice-1.eps}
 \end{center}
@@ -389,7 +389,7 @@ Here $G_{lv}$ is a coefficient related with vapor and thermal diffusion, $D_{v}$
 we can consider eq.\ref{sn69} from a different view point as follows,
 
 \begin{eqnarray}
-\frac{\partial M_{jl}^{k}}{\partial t}\Bigr|_{cnd,evp}&\cong& \int_{0}^{\infty}f_{jl}(x)x^{k}\Bigl[\frac{1}{x}\frac{\partial x}{\partial t}\Bigr|_{cnd,evp}\Bigr]dx\label{sn69}\nonumber\\
+\frac{\partial M_{jl}^{k}}{\partial t}\Bigr|_{cnd,evp}&\cong& \int_{0}^{\infty}f_{jl}(x)x^{k}\Bigl[\frac{1}{x}\frac{\partial x}{\partial t}\Bigr|_{cnd,evp}\Bigr]dx\nonumber\\
 &=&\int_{0}^{\infty}\frac{f_{jl}(x)x^{k}}{\tau}dx,\;\tau\equiv\frac{x}{\frac{\partial x}{\partial t}}\bigr|_{cnd,evp}\label{sn70}
 \end{eqnarray}
 
@@ -783,27 +783,22 @@ With a few assumptions and a little algebra, Seifert and Beheng (2001) derived t
 \frac{\partial L_{c}}{\partial t}\Bigr|_{acc}&=&-k_{cr}L_{c}L_{r}\bigl(\frac{\rho_{0}}{\rho}\bigr)^{1/2}\label{sn147}\\
 \frac{\partial N_{r}}{\partial t}\Bigr|_{slc}&=&-k_{rr}L_{r}L_{r}\bigl(\frac{\rho_{0}}{\rho}\bigr)^{1/2}\label{sn148}
 \end{eqnarray}
-
 with $k_{rr} = 4.33 m^{3}kg^{-1}s^{-1}$, and where density factors are introduced by Seifert and Beheng (2006a) in order to correct the effect of terminal velocity on the collision efficiency. In addition to the analytical derivation, Seifert and Beheng (2001) made corrections depending on the development stage by using the dimensionless internal time scale. Since moment bulk methods cannot represented complicated changes of high-order moments, the corrections are necessary as DSD undergoes evolution by the collection processes. Firstly, the auto-conversion rate is represented by $\tau$ by substituting eq.\ref{sn141} to eq.\ref{sn143},
-
 \begin{eqnarray}
 \frac{\partial \tau}{\partial t}\Bigr|_{aut}=\frac{k_{cc}}{20x^{*}}\frac{(\nu_{c}+2)(\nu_{c}+4)}{(\nu_{c}+1)^{2}}\frac{\rho_{0}}{\rho}x_{c}^{2}L(1-\tau^{2})\label{sn149}
 \end{eqnarray}
 
 The assumptions used in the derivation of eq.\ref{sn149} are valid for the initial stage of collisional growth. Therefore, the additional collection by a universal function $\phi_{aut}$ was introduced by Seifert and Beheng (2001) as follows,
-
 \begin{eqnarray}
 \frac{\partial \tau}{\partial t}\Bigr|_{aut}=\frac{k_{cc}}{20x^{*}}\frac{(\nu_{c}+2)(\nu_{c}+4)}{(\nu_{c}+1)^{2}}\frac{\rho_{0}}{\rho}x_{c}^{2}L_{c}^{2}x_{c}^{2}\bigl[(1-\tau^{2})+\phi_{aut}(\tau)\bigr]\label{sn150}
 \end{eqnarray}
 
 Similarly, the correction for the accretion rate is also made by a universal function $\phi_{acc}$,
-
 \begin{eqnarray}
 \frac{\partial \tau}{\partial t}\Bigr|_{acc}=k_{cr}L\bigl(\frac{\rho_{0}}{\rho}\bigr)^{1/2}(1-\tau)\tau\phi_{acc}(\tau)\label{sn151}
 \end{eqnarray}
 
 In contrast to the correction for the auto-conversion rate, the assumptions used in the derivation of the accretion rate is valid for the mature stage of the collisional growth. Therefore a correction function is multiplied so that $\phi_{aut}$ becomes zero for the beginning of the collisional growth and one for the mature stage of the collisional growth. Here, it is recognized that the growth rate of the dimensional internal time scale is proportional to LWC in eq.\ref{sn150} and eq.\ref{sn151}. Therefore, the parameterizations developed by Seifert and Beheng (2001) satisfy the similarity included in the SCE. Finally, the universal functions are derived by fitting to the results by a bin cloud microphysics model,
-
 \begin{eqnarray}
 \phi_{aut}(\tau)&=&400\tau^{0.7}(1-\tau^{0.7})^{3}\label{152}\\
 \phi_{acc}(\tau)&=&\bigl(\frac{\tau}{\tau+5\times 10^{-5}}\bigr)^{4}\label{153}
@@ -872,7 +867,7 @@ Here, the difference of the terminal velocities, and the collection efficiency i
 \begin{eqnarray}
 \frac{\partial L_{b}}{\partial t}\Bigr|_{col,ab}&\cong&-\frac{\pi}{4}\bar{E}_{ab}\bar{\Delta v_{t,ab}^{1}}\nonumber\\
 &\times&\int_{0}^{\infty}\int_{0}^{\infty}f_{a}(x)f_{b}(y)\bigl[D_{a}(x)+D_{b}(y)\bigr]^{2}ydxdy\label{sn161}\\
-\frac{\partial L_{a}}{\partial t}\Bigr|_{col,ab}&\cong&\frac{\pi}{4}\bar{E}_{ab}\bar{\Delta v_{t,ab}^{1}}\int_{0}^{\infty}\int_{0}^{\infty}f_{a}(x)f_{b}(y)\bigl[D_{a}(x)+D_{b}(y)\bigr]^{2}ydxdy\label{sn162}\nonumber\\
+\frac{\partial L_{a}}{\partial t}\Bigr|_{col,ab}&\cong&\frac{\pi}{4}\bar{E}_{ab}\bar{\Delta v_{t,ab}^{1}}\int_{0}^{\infty}\int_{0}^{\infty}f_{a}(x)f_{b}(y)\bigl[D_{a}(x)+D_{b}(y)\bigr]^{2}ydxdy\nonumber\\
 &=&-\frac{\partial L_{b}}{\partial t}\label{sn162}\\
 \frac{\partial N_{b}}{\partial t}\Bigr|_{col,ab}&\cong&-\frac{\pi}{4}\bar{E}_{ab}\bar{\Delta v_{t,ab}^{0}}\int_{0}^{\infty}\nonumber\\
 &\times&\int_{0}^{\infty}f_{a}(x)f_{b}(y)\bigl[D_{a}(x)+D_{b}(y)\bigr]^{2}dxdy\label{sn163}\\
@@ -1190,7 +1185,7 @@ In contrast to Cotton et al. (1986), we evaluate the incomplete gamma function w
 
 Here, it should be noticed that we may double count the ice multiplication process due to the Hallet-Mossop mechanism by using the two formulations. Those two formulations may be two independent processes or the interpretations of the same process in different two development stages. Since the process is poorly understood by the lack of observation, the assessment of the process by a set of sensitivity studies is necessary in the future.
 
-\begin{figure}[]
+\begin{figure}[htpb]
 \begin{center}
 \includegraphics[scale=0.75]{./figure/mod_gamma_dist.eps}
 \end{center}
@@ -1198,7 +1193,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-17}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.5]{./figure/density_max_num.eps}
 \end{center}
@@ -1206,7 +1201,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-18}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.5]{./figure/cond_timescale.eps}
 \end{center}
@@ -1214,7 +1209,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-19}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.5]{./figure/homo_frz_rate.eps}
 \end{center}
@@ -1222,7 +1217,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-20}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.25]{./figure/univ_function.eps}
 \end{center}
@@ -1230,7 +1225,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-21}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.25]{./figure/stic_effic.eps}
 \end{center}
@@ -1238,7 +1233,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-22}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htpb]
 \begin{center}
 \includegraphics[scale=0.5]{./figure/partial_conversion_coef.eps}
 \end{center}
@@ -1406,7 +1401,7 @@ a_{i,0}&=&-\frac{1}{24}\bigl( f_{i+1}(t)-26f_{i}(t)+f_{i-1}(t) \bigr)\nonumber\\
 a_{i,1}&=&\frac{1}{2}\bigl( f_{i+1}(t)-f_{i-1}(t) \bigr)\nonumber\\
 a_{i,2}&=&\frac{1}{2}\bigl( f_{i+1}(t)-2f_{i}(t)+f_{i-1}(t) \bigr)\nonumber\\
 c_{i}^{\pm}&=&\pm\bigl( c^{n}_{i+1/2}\pm | c^{n}_{i+1/2}|\bigr )/2\nonumber\\
-c^{n}_{i+1/2}&=&U^{n}_{i+1/2}\frac{\Delta t}{\Delta \eta}\label{s10-12}
+c^{n}_{i+1/2}&=&U^{n}_{i+1/2}\frac{\Delta t}{\Delta \eta}
 \end{eqnarray}
 
 Since the super saturation ($S^{(\mu)}$) can change during time step ($\Delta t$), we apply a method shown below to reflect the change of supersaturation during $\Delta t$.\\
@@ -1471,7 +1466,7 @@ K(m,m')=\pi(r(m)-r(m'))\left| V(m)-V(m')\right |E_{col}(m,m')E_{coag}(m,m')\labe
 
 where $r(m)$ is radius of hydrometeros whose mass is $m$, and $V(m)$ is terminal velocity of hydrometeors. The terminal velocity of each species of hydrometeor and each size are shown in Figure \ref{figs10-term} $E_{col}$, and $E_{coag}$ is collision effieiency and coagulation efficiansy, respectively.\\
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \begin{center}
 \includegraphics[scale=0.9]{./figure/terminal-velocity.eps}
 \end{center}
@@ -1563,14 +1558,14 @@ where $a_{fr}=10^{-4}s^{-1}$, and $b_{fr}=0.66^{o}C^{-1}$ are emperical paramete
 The eq. \ref{s10-24} can transfer to
 
 \begin{eqnarray}
-\frac{\partial g^{(w)(m)}}{\partial t}&=&-\frac{g^{(w)}(m)}{\tau_{fr}(m)}\label{s10-25}\\
+\frac{\partial g^{(w)(m)}}{\partial t}&=&-\frac{g^{(w)}(m)}{\tau_{fr}(m)}\\
 \tau_{fr,i}&=&\frac{\exp\bigl (b_{fr}(T_{0}-T)\bigr )}{a_{fr}m}\nonumber
 \end{eqnarray}
 
 From this equation, The mass change of i-th bin during $\Delta t$ is given as
 
 \begin{eqnarray}
-g_{i}^{(w)}(t+\Delta t)=g_{i}^{(w)}-Frz_{i}\label{s10-25}\\
+g_{i}^{(w)}(t+\Delta t)=g_{i}^{(w)}-Frz_{i}\\
 \left \{
 \begin{array}{r}
 g_{i}^{(plate)}(t+\Delta t)=g_{i}^{(plate)}+Frz_{i}\:\:\: (r_{w}<200\mu m)\\

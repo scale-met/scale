@@ -8,6 +8,7 @@
 \usepackage{amsmath}
 \usepackage[round]{natbib}
 \usepackage{bm}
+\usepackage[dvipdfmx]{hyperref}
 
 \begin{document}
 \maketitle
@@ -16,7 +17,12 @@
 
 \input{introduction}
 
+\chapter{Governing equations}
 \input{governing_equation}
+
+\chapter{Descretization of the dynamics}
+\label{chap:descretization dynamics}
+\input{temporal_integration}
 
 \input{dynamical_process}
 

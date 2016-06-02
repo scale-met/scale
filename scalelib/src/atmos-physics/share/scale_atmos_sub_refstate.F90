@@ -247,6 +247,7 @@ contains
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
+       ! 1D
        call FILEIO_read( ATMOS_REFSTATE1D_pres(:),                           & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref', 'Z', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_REFSTATE1D_temp(:),                           & ! [OUT]
@@ -258,8 +259,20 @@ contains
        call FILEIO_read( ATMOS_REFSTATE1D_qv(:),                             & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'QV_ref',   'Z', step=1 ) ! [IN]
 
+       ! 3D
+       call FILEIO_read( ATMOS_REFSTATE_pres(:,:,:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref3D', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_temp(:,:,:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'TEMP_ref3D', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_dens(:,:,:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref3D', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_pott(:,:,:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref3D', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_qv(:,:,:),                               & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'QV_ref3D',   'ZXY', step=1 ) ! [IN]
+
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** refstate file is not specified.'
+       if( IO_L ) write(*,*) 'xxx refstate file is not specified.'
        call PRC_MPIstop
     endif
 
@@ -282,6 +295,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output reference state profile ***'
 
+       ! 1D
        call FILEIO_write( ATMOS_REFSTATE1D_pres(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'PRES_ref', 'Reference profile of pres.', 'Pa', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_REFSTATE1D_temp(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
@@ -292,6 +306,18 @@ contains
                           'POTT_ref', 'Reference profile of theta', 'K', 'Z',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_REFSTATE1D_qv(:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'QV_ref',   'Reference profile of qv', 'kg/kg', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+
+       ! 3D
+       call FILEIO_write( ATMOS_REFSTATE_pres(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'PRES_ref3D', 'Reference profile of pres.', 'Pa', 'ZXY',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE_temp(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'TEMP_ref3D', 'Reference profile of temp.', 'K', 'ZXY',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE_dens(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'DENS_ref3D', 'Reference profile of rho', 'kg/m3', 'ZXY',  ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE_pott(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'POTT_ref3D', 'Reference profile of theta', 'K', 'ZXY',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE_qv(:,:,:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+                          'QV_ref3D',   'Reference profile of qv', 'kg/kg', 'ZXY',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
 
     endif
 
@@ -438,7 +464,7 @@ contains
     qv_sfc   = 0.0_RP
     qc_sfc   = 0.0_RP
 
-    do k = KS, KE
+    do k = 1, KA
        pott(k) = ATMOS_REFSTATE_POTT_UNIFORM
        qv  (k) = 0.0_RP
        qc  (k) = 0.0_RP
@@ -507,9 +533,9 @@ contains
        ATMOS_REFSTATE_pres(k,i,j) = 0.0_RP
        ATMOS_REFSTATE_pott(k,i,j) = 0.0_RP
        ATMOS_REFSTATE_qv  (k,i,j) = 0.0_RP
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_REFSTATE_generate_zero
@@ -521,6 +547,7 @@ contains
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
+
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
@@ -572,9 +599,9 @@ contains
        do i = 1, IA
        do k = KS, KE
           pott(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        call INTERP_vertical_xi2z( temp(:,:,:), & ! [IN]
                                   work(:,:,:)  ) ! [OUT]
@@ -868,27 +895,27 @@ contains
        do k = KS+2, KE-2
           sig0 = dev(k) * dev(k-1)
           sig1 = dev(k) * dev(k+1)
-          ! if (sig0>0 .or. sig1>0) then flux(k) = 0.0
+          ! if (sig0>0 .OR. sig1>0) then flux(k) = 0.0
           flux(k) = dev(k) &
                   / ( 2.0_RP*RCDZ(k) + ( FDZ(k-1)*RCDZ(k+1) + FDZ(k)*RCDZ(k-1) ) / ( FDZ(k) + FDZ(k-1) ) ) &
                   * ( sign(0.5_RP ,sig0) + sign(0.5_RP ,sig1)          ) &
                   * ( sign(0.25_RP,sig0) + sign(0.25_RP,sig1) - 0.5_RP )
-          updated = updated .or. ( sig0 < -EPS .and. sig1 < -EPS )
+          updated = updated .OR. ( sig0 < -EPS .AND. sig1 < -EPS )
        enddo
 
        sig1 = dev(KS+1) * dev(KS+2)
        flux(KS+1) = dev(KS+1) &
                   / ( 2.0_RP*RCDZ(KS+1) + (FDZ(KS)*RCDZ(KS+2)+FDZ(KS+1)*RCDZ(KS))/(FDZ(KS+1)+FDZ(KS)) ) &
                   * ( 0.5_RP - sign(0.5_RP ,sig1) )
-       updated = updated .or. ( sig1 < -EPS )
+       updated = updated .OR. ( sig1 < -EPS )
 
        sig0 = dev(KE-1) * dev(KE-2)
        flux(KE-1) = dev(KE-1) &
                   / ( 2.0_RP*RCDZ(KE-1) + (FDZ(KE-2)*RCDZ(KE)+FDZ(KE-1)*RCDZ(KE-2))/(FDZ(KE-1)+FDZ(KE-2)) ) &
                   * ( 0.5_RP - sign(0.5_RP ,sig0) )
-       updated = updated .or. ( sig0 < -EPS )
+       updated = updated .OR. ( sig0 < -EPS )
 
-       if ( .not. updated ) exit
+       if ( .NOT. updated ) exit
 
        do k = KS+1, KE-1
           zerosw = 0.5_RP - sign( 0.5_RP, abs(flux(k))-EPS ) ! if flux(k) == 0 then fact(k) = 0.0

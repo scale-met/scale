@@ -6,10 +6,13 @@
 !!
 !! @author Team SCALE
 !!
+!! @note The coding to call DYN2 routines is a temporary measure.
+!!       After improving layering of directories and generalizing API
+!!       for each modules in dynamical core, we should remove the temporary codes.
+!!
 !! @par History
 !! @li      2013-12-04 (S.Nishizawa)  [mod] splited from scale_atmos_dyn.f90
 !<
-!-------------------------------------------------------------------------------
 module mod_atmos_dyn_driver
   !-----------------------------------------------------------------------------
   !
@@ -35,6 +38,26 @@ module mod_atmos_dyn_driver
   !
   !++ Public parameters & variables
   !
+  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_LARGE_TYPE     = 'FVM-HEVE'
+  character(len=H_SHORT), public :: ATMOS_DYN_TSTEP_TRACER_TYPE    = 'FVM-HEVE'
+
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE    = 'EULER'        ! Type of time integration
+                                                                   ! 'RK3'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE    = 'RK3WS2002'
+                                                                   ! 'RK4'
+                                                                   ! 'RK3'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE   = 'EULER'
+                                                                   ! 'RK3WS2002'
+
+  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_TYPE        = 'CD4'          ! Type of advective flux scheme (FVM)
+  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_TRACER_TYPE = 'CD4'
+                                                                   ! 'CD2'
+                                                                   ! 'UD3'
+                                                                   ! 'UD3KOREN1993'
+                                                                   ! 'CD4'
+                                                                   ! 'UD5'
+                                                                   ! 'CD6'
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -43,27 +66,27 @@ module mod_atmos_dyn_driver
   !
   !++ Private parameters & variables
   !
-  ! time integration scheme
-  integer,  private, parameter :: RK = 3                                 ! order of Runge-Kutta scheme
-
-  ! numerical filter
-  integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
-  real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private :: ATMOS_DYN_numerical_diff_coef_q       = 1.0E-4_RP ! nondimensional numerical diffusion for tracer
-  real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
-  logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
+  ! Numerical filter
+  integer,  private :: ATMOS_DYN_NUMERICAL_DIFF_order        = 1
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER  = 1.0E-4_RP ! nondimensional numerical diffusion for tracer
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact     = 1.0_RP
+  logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate = .true.
 
   ! Coriolis force
-  logical,  private :: ATMOS_DYN_enable_coriolis = .false.               ! enable coriolis force?
+  logical,  private :: ATMOS_DYN_enable_coriolis             = .false.   ! enable coriolis force?
 
-  ! divergence damping
-  real(RP), private :: ATMOS_DYN_divdmp_coef = 0.0_RP                    ! Divergence dumping coef
+  ! Divergence damping
+  real(RP), private :: ATMOS_DYN_divdmp_coef                 = 0.0_RP    ! Divergence dumping coef
 
-  ! fct
-  logical,  private :: ATMOS_DYN_FLAG_FCT_rho      = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_momentum = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream = .true.
+  ! Flux-Corrected Transport limiter
+  logical,  private :: ATMOS_DYN_FLAG_FCT_momentum           = .false.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_T                  = .false.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER             = .true.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream       = .true.
+
+  ! Flux adjustment at lateral boundary
+  integer,  private :: ATMOS_DYN_adjust_flux_cell            = 1         ! number of cells adjusting lateral boundary flux
 
   !-----------------------------------------------------------------------------
 contains
@@ -83,10 +106,8 @@ contains
        REAL_LAT
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
-    use scale_atmos_dyn, only: &
-       ATMOS_DYN_setup
     use mod_atmos_admin, only: &
-       ATMOS_sw_dyn, &
+       ATMOS_sw_dyn,   &
        ATMOS_DYN_TYPE
     use mod_atmos_vars, only: &
        DENS, &
@@ -97,19 +118,26 @@ contains
        QTRC
     use mod_atmos_dyn_vars, only: &
        PROG
+    use scale_atmos_dyn, only: &
+       ATMOS_DYN_setup
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
-       ATMOS_DYN_numerical_diff_order,        &
-       ATMOS_DYN_numerical_diff_coef,         &
-       ATMOS_DYN_numerical_diff_coef_q,       &
-       ATMOS_DYN_numerical_diff_sfc_fact,     &
-       ATMOS_DYN_numerical_diff_use_refstate, &
+       ATMOS_DYN_TINTEG_SHORT_TYPE,           &
+       ATMOS_DYN_TINTEG_TRACER_TYPE,          &
+       ATMOS_DYN_TINTEG_LARGE_TYPE,           &
+       ATMOS_DYN_FVM_FLUX_TYPE,               &
+       ATMOS_DYN_FVM_FLUX_TRACER_TYPE,        &
+       ATMOS_DYN_NUMERICAL_DIFF_order,        &
+       ATMOS_DYN_NUMERICAL_DIFF_COEF,         &
+       ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER,  &
+       ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,     &
+       ATMOS_DYN_NUMERICAL_DIFF_use_refstate, &
        ATMOS_DYN_enable_coriolis,             &
        ATMOS_DYN_divdmp_coef,                 &
-       ATMOS_DYN_FLAG_FCT_rho,                &
        ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T,                  &
+       ATMOS_DYN_FLAG_FCT_TRACER,             &
        ATMOS_DYN_FLAG_FCT_along_stream
 
     real(RP) :: DT
@@ -120,7 +148,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
 
     if ( ATMOS_sw_dyn ) then
-
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -134,14 +161,26 @@ contains
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
-       call ATMOS_DYN_setup( &
+       if ( ATMOS_sw_dyn ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Large time step  : ', trim(ATMOS_DYN_TINTEG_LARGE_TYPE)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Short time step  : ', trim(ATMOS_DYN_TINTEG_SHORT_TYPE)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Tracer advection : ', trim(ATMOS_DYN_TINTEG_TRACER_TYPE)
+       endif
+
+       call ATMOS_DYN_setup( ATMOS_DYN_TINTEG_SHORT_TYPE,        & ! [IN]
+                             ATMOS_DYN_TINTEG_TRACER_TYPE,       & ! [IN]
+                             ATMOS_DYN_TINTEG_LARGE_TYPE,        & ! [IN]
+                             ATMOS_DYN_TSTEP_TRACER_TYPE,        & ! [IN]
+                             ATMOS_DYN_TSTEP_LARGE_TYPE,         & ! [IN]
+                             ATMOS_DYN_FVM_FLUX_TYPE,            & ! [IN]
+                             ATMOS_DYN_FVM_FLUX_TRACER_TYPE,     & ! [IN]
                              DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
-                             PROG,                           & ! [IN]
-                             GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
-                             GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
-                             ATMOS_DYN_enable_coriolis,      & ! [IN]
-                             REAL_LAT,                       & ! [IN]
-                             none = ATMOS_DYN_TYPE=='NONE'   ) ! [IN]
+                             PROG,                               & ! [IN]
+                             GRID_CDZ, GRID_CDX, GRID_CDY,       & ! [IN]
+                             GRID_FDZ, GRID_FDX, GRID_FDY,       & ! [IN]
+                             ATMOS_DYN_enable_coriolis,          & ! [IN]
+                             REAL_LAT,                           & ! [IN]
+                             none = ATMOS_DYN_TYPE=='NONE'       ) ! [IN]
     endif
 
     return
@@ -150,10 +189,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
   subroutine ATMOS_DYN_driver( do_flag )
-    use scale_time, only: &
-       TIME_DTSEC,           &
-       TIME_DTSEC_ATMOS_DYN, &
-       TIME_NSTEP_ATMOS_DYN
     use scale_grid, only: &
        GRID_CDZ,  &
        GRID_CDX,  &
@@ -175,6 +210,9 @@ contains
        GTRANS_J23G,  &
        GTRANS_J33G,  &
        GTRANS_MAPF
+    use scale_time, only: &
+       TIME_DTSEC,           &
+       TIME_DTSEC_ATMOS_DYN
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE
     use mod_atmos_vars, only: &
@@ -219,60 +257,62 @@ contains
        ATMOS_BOUNDARY_alpha_VELY, &
        ATMOS_BOUNDARY_alpha_POTT, &
        ATMOS_BOUNDARY_alpha_QTRC
+#ifndef DYN2
     use scale_atmos_dyn, only: &
        ATMOS_DYN
+#else
+    use scale_atmos_dyn2, only: &
+       ATMOS_DYN
+#endif
     implicit none
+
     logical, intent(in) :: do_flag
     !---------------------------------------------------------------------------
 
     if ( do_flag ) then
-
-       call ATMOS_DYN( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
-         PROG,                                                 & ! [IN]
-         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
-         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
-         GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]
-         GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
-         GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
-         GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
-         REAL_PHI,                                             & ! [IN]
-         GTRANS_GSQRT,                                         & ! [IN]
-         GTRANS_J13G, GTRANS_J23G, GTRANS_J33G, GTRANS_MAPF,   & ! [IN]
-         AQ_CV,                                                & ! [IN]
-         ATMOS_REFSTATE_dens,                                  & ! [IN]
-         ATMOS_REFSTATE_pott,                                  & ! [IN]
-         ATMOS_REFSTATE_qv,                                    & ! [IN]
-         ATMOS_REFSTATE_pres,                                  & ! [IN]
-         ATMOS_DYN_numerical_diff_coef,                        & ! [IN]
-         ATMOS_DYN_numerical_diff_coef_q,                      & ! [IN]
-         ATMOS_DYN_numerical_diff_order,                       & ! [IN]
-         ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
-         ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
-         ATMOS_BOUNDARY_DENS,                                  & ! [IN]
-         ATMOS_BOUNDARY_VELZ,                                  & ! [IN]
-         ATMOS_BOUNDARY_VELX,                                  & ! [IN]
-         ATMOS_BOUNDARY_VELY,                                  & ! [IN]
-         ATMOS_BOUNDARY_POTT,                                  & ! [IN]
-         ATMOS_BOUNDARY_QTRC,                                  & ! [IN]
-         ATMOS_BOUNDARY_alpha_DENS,                            & ! [IN]
-         ATMOS_BOUNDARY_alpha_VELZ,                            & ! [IN]
-         ATMOS_BOUNDARY_alpha_VELX,                            & ! [IN]
-         ATMOS_BOUNDARY_alpha_VELY,                            & ! [IN]
-         ATMOS_BOUNDARY_alpha_POTT,                            & ! [IN]
-         ATMOS_BOUNDARY_alpha_QTRC,                            & ! [IN]
-         ATMOS_DYN_divdmp_coef,                                & ! [IN]
-         ATMOS_DYN_FLAG_FCT_rho,                               & ! [IN]
-         ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
-         ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
-         ATMOS_DYN_FLAG_FCT_along_stream,                      & ! [IN]
-         ATMOS_USE_AVERAGE,                                    & ! [IN]
-         TIME_DTSEC,                                           & ! [IN]
-         TIME_DTSEC_ATMOS_DYN,                                 & ! [IN]
-         TIME_NSTEP_ATMOS_DYN                                  ) ! [IN]
+       call ATMOS_DYN( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
+                       PROG,                                                 & ! [IN]
+                       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
+                       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
+                       GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]
+                       GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
+                       GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
+                       GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
+                       REAL_PHI,                                             & ! [IN]
+                       GTRANS_GSQRT,                                         & ! [IN]
+                       GTRANS_J13G, GTRANS_J23G, GTRANS_J33G, GTRANS_MAPF,   & ! [IN]
+                       AQ_CV,                                                & ! [IN]
+                       ATMOS_REFSTATE_dens,                                  & ! [IN]
+                       ATMOS_REFSTATE_pott,                                  & ! [IN]
+                       ATMOS_REFSTATE_qv,                                    & ! [IN]
+                       ATMOS_REFSTATE_pres,                                  & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_coef,                        & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER,                 & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_order,                       & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,                    & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_use_refstate,                & ! [IN]
+                       ATMOS_BOUNDARY_DENS,                                  & ! [IN]
+                       ATMOS_BOUNDARY_VELZ,                                  & ! [IN]
+                       ATMOS_BOUNDARY_VELX,                                  & ! [IN]
+                       ATMOS_BOUNDARY_VELY,                                  & ! [IN]
+                       ATMOS_BOUNDARY_POTT,                                  & ! [IN]
+                       ATMOS_BOUNDARY_QTRC,                                  & ! [IN]
+                       ATMOS_BOUNDARY_alpha_DENS,                            & ! [IN]
+                       ATMOS_BOUNDARY_alpha_VELZ,                            & ! [IN]
+                       ATMOS_BOUNDARY_alpha_VELX,                            & ! [IN]
+                       ATMOS_BOUNDARY_alpha_VELY,                            & ! [IN]
+                       ATMOS_BOUNDARY_alpha_POTT,                            & ! [IN]
+                       ATMOS_BOUNDARY_alpha_QTRC,                            & ! [IN]
+                       ATMOS_DYN_divdmp_coef,                                & ! [IN]
+                       ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
+                       ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
+                       ATMOS_DYN_FLAG_FCT_TRACER,                            & ! [IN]
+                       ATMOS_DYN_FLAG_FCT_along_stream,                      & ! [IN]
+                       ATMOS_USE_AVERAGE,                                    & ! [IN]
+                       TIME_DTSEC,                                           & ! [IN]
+                       TIME_DTSEC_ATMOS_DYN                                  ) ! [IN]
 
        call ATMOS_vars_total
-
     endif
 
     return

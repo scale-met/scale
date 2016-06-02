@@ -51,6 +51,9 @@ SCALEライブラリには５種類の雲モデルが実装されている。氷
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_TRACER| \\
 \verb| TRACER_TYPE = 'SN14',| \\
+ \\
+\verb|&PARAM_ATMOS| \\
+\verb| ATMOS_PHY_MP_TYPE = "SN14",| \\
 \verb|/| \\
 \end{tabularx}
 }}\\
@@ -63,7 +66,7 @@ SCALEライブラリには５種類の雲モデルが実装されている。氷
 \caption{雲微物理スキームの種類と設定値}
 \begin{tabularx}{150mm}{|l|X|} \hline
  \rowcolor[gray]{0.9} 雲微物理スキームの種類 & \verb|TRACER_TYPE|の設定値 \\ \hline
- 氷を含まない1-momentバルク法；\cite{kessler_1969}    & \verb|KESSLER| \\ \hline           
+ 氷を含まない1-momentバルク法；\cite{kessler_1969}    & \verb|KESSLER| \\ \hline
  氷を含む1-momentバルク法；\cite{tomita_2008}         & \verb|TOMITA08| \\ \hline
  氷を含む2-momentバルク法；\cite{sn_2014}             & \verb|SN14| \\ \hline
  1-momentビン法；\cite{suzuki_etal_2010}             & \verb|SUZUKI10| \\ \hline
