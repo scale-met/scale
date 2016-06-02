@@ -182,7 +182,6 @@ def gen_run_conf( conf_name,
 
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "FVM-HEVE",
- ATMOS_DYN_TINTEG_LARGE_TYPE = "RK3",
 /
 
 &PARAM_ATMOS_VARS
@@ -203,10 +202,14 @@ def gen_run_conf( conf_name,
 /
 
 &PARAM_ATMOS_DYN
+ ATMOS_DYN_TINTEG_LARGE_TYPE = "EULER",
+ ATMOS_DYN_TINTEG_SHORT_TYPE = "RK4",
+ ATMOS_DYN_TINTEG_TRACER_TYPE = "RK3WS2002",
+ ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",             
+ ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
- ATMOS_DYN_DIVDMP_COEF   = 0.D0,
- ATMOS_DYN_FVM_FLUX_scheme = "#{flxEvalType}",             
- ATMOS_DYN_FLAG_FCT_TRACER = F, 
+ ATMOS_DYN_DIVDMP_COEF          = 0.D0,
+ ATMOS_DYN_FLAG_FCT_TRACER      = F, 
 /
 
 &PARAM_USER

@@ -63,7 +63,7 @@ module mod_user
   !++ Private parameters & variables
   !
   logical,  private, save :: USER_do = .false. !< do user step?
-  character(len=H_SHORT), private, save :: InitShape  ! BUBBLE or RECT or COS
+  character(len=H_SHORT), private, save :: InitShape 
   real(RP), private, parameter :: PI = acos(-1.0_RP)
   
   !-----------------------------------------------------------------------------
@@ -76,7 +76,7 @@ contains
     implicit none
 
     namelist / PARAM_USER / &
-       USER_do, &
+       USER_do,             &
        InitShape
     
 
@@ -113,17 +113,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Resuming operation
   subroutine USER_resume
-    use mod_atmos_dyn_vars, only: &
-         & PROG
-    use mod_atmos_vars, only: &
-         & DENS, QTRC
 
     implicit none
     !---------------------------------------------------------------------------
 
-!    call convCheck()
-    
-    ! calculate diagnostic value and input to history buffer
+    ! calculate diagnostic value and input to history buffer    
     call USER_step
 
     return
@@ -148,8 +142,6 @@ contains
     use scale_history, only: &
        HIST_in
 
-    use mpi
-    
     implicit none
 
     real(RP) :: PT_diff(KA,IA,JA), ExactSol(KA,IA,JA)
@@ -300,10 +292,6 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
        
-!!$       call ATMOS_NUMERIC_FDM_EvalFlux( qflx_hi,                                 &  ! (inout)
-!!$        & VL_ZXY,                                                                &  ! (in)
-!!$        & var, one, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
-!!$        & IIS, IIE, JJS, JJE, KS, KE  )                          ! (in)      
     enddo
     enddo
 
