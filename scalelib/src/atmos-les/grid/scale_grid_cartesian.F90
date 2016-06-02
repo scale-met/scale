@@ -38,9 +38,9 @@ module scale_grid
   !
   !++ Public parameters & variables
   !
-  real(RP), public              :: DZ = 500.0_RP !< length in the main region [m]: z
-  real(RP), public              :: DX = 500.0_RP !< length in the main region [m]: x
-  real(RP), public              :: DY = 500.0_RP !< length in the main region [m]: y
+  real(RP), public              :: DZ        = 500.0_RP !< length in the main region [m]: z
+  real(RP), public              :: DX        = 500.0_RP !< length in the main region [m]: x
+  real(RP), public              :: DY        = 500.0_RP !< length in the main region [m]: y
 
   real(RP), public              :: BUFFER_DZ = 0.0_RP   !< thickness of buffer region [m]: z
   real(RP), public              :: BUFFER_DX = 0.0_RP   !< thickness of buffer region [m]: x

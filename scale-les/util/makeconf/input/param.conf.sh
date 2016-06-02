@@ -81,8 +81,8 @@ cat << EOF > param.region.conf
 /
 
 &PARAM_GRID
- DX = ${DX[$D]},
- DY = ${DY[$D]},
+ DX        = ${DX[$D]},
+ DY        = ${DY[$D]},
  ${LINE_Z}
  BUFFER_DZ = ${BUFFER_DZ[$D]},
  BUFFER_DX = ${BUFFER_DX[$D]},
