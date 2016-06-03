@@ -281,7 +281,7 @@ contains
        PRC_GLOBAL_domainID, &
        PRC_nprocs,          &
        PRC_IsMaster
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_HAS_W,         &
        PRC_HAS_E,         &
        PRC_HAS_S,         &
@@ -937,7 +937,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        PRC_nprocs,  &
        PRC_myrank,  &
        PRC_IsMaster
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_NUM_X,   &
        PRC_NUM_Y
     use scale_time, only: &

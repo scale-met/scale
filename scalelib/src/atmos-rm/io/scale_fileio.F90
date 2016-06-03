@@ -79,7 +79,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FIELIO] / Categ[IO] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FIELIO] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** NetCDF header information ***'
@@ -607,7 +607,7 @@ contains
        PRC_masterrank, &
        PRC_myrank,     &
        PRC_MPIstop
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_2Drank
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
@@ -749,7 +749,7 @@ contains
        PRC_masterrank, &
        PRC_myrank,     &
        PRC_MPIstop
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_2Drank
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
@@ -953,7 +953,7 @@ contains
        PRC_masterrank, &
        PRC_myrank,     &
        PRC_MPIstop
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_2Drank
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
@@ -1199,7 +1199,7 @@ contains
        PRC_masterrank, &
        PRC_myrank,     &
        PRC_MPIstop
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_2Drank
     implicit none
 
@@ -1411,7 +1411,7 @@ contains
        PRC_masterrank, &
        PRC_myrank,     &
        PRC_MPIstop
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_2Drank
     implicit none
 

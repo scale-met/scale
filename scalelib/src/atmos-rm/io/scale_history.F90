@@ -87,7 +87,7 @@ contains
        PRC_MPIstop,    &
        PRC_masterrank, &
        PRC_myrank
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_2Drank
     use scale_time, only: &
        TIME_NOWDATE,     &
@@ -97,7 +97,7 @@ contains
        TIME_OFFSET_YEAR
     implicit none
 
-    character(len=H_MID)   :: HISTORY_H_TITLE = 'SCALE-LES HISTORY OUTPUT' !< title of the output file
+    character(len=H_MID)   :: HISTORY_H_TITLE = 'SCALE-RM HISTORY OUTPUT' !< title of the output file
     character(len=H_SHORT) :: HISTORY_T_UNITS = 'seconds'
     character(len=H_MID)   :: HISTORY_T_SINCE = ''
 
@@ -112,7 +112,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HISTORY] / Categ[IO] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HISTORY] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -655,7 +655,7 @@ contains
 
     return
   end subroutine HIST_put_0D
-  
+
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
   subroutine HIST_put_1D( &
@@ -1005,7 +1005,7 @@ contains
 
     return
   end subroutine HIST_in_0D
-  
+
   !-----------------------------------------------------------------------------
   !> Wrapper routine of HIST_reg+HIST_put 1D
   subroutine HIST_in_1D( &

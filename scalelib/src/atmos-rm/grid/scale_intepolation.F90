@@ -68,7 +68,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERPOLATION] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERPOLATION] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     INTERP_available = TOPO_exist

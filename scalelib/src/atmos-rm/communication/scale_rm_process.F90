@@ -1,13 +1,13 @@
 !-------------------------------------------------------------------------------
-!> module LES PROCESS
+!> module RM PROCESS
 !!
 !! @par Description
-!!          MPI process management module for LES model
+!!          MPI process management module for regional model
 !!
 !! @author Team SCALE
 !!
 !<
-module scale_les_process
+module scale_rm_process
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -109,7 +109,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
 
     if ( IO_L ) then
        write(IO_FID_LOG,*)            ''
@@ -241,5 +241,5 @@ contains
     return
   end subroutine PRC_setup
 
-end module scale_les_process
+end module scale_rm_process
 !-------------------------------------------------------------------------------

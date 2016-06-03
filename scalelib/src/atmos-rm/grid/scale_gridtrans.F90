@@ -78,7 +78,7 @@ module scale_gridtrans
   !++ Private parameters & variables
   !
   character(len=H_LONG), private :: GTRANS_OUT_BASENAME  = ''                     !< basename of the output file
-  character(len=H_MID),  private :: GTRANS_OUT_TITLE     = 'SCALE-LES TOPOGRAPHY' !< title    of the output file
+  character(len=H_MID),  private :: GTRANS_OUT_TITLE     = 'SCALE-RM GEOMETRICS'  !< title    of the output file
   character(len=H_MID),  private :: GTRANS_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
 
   character(len=H_MID),  private :: GTRANS_TOPO_TYPE     = 'TERRAINFOLLOWING'     !< topographical shceme
@@ -106,7 +106,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRIDTRANS] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRIDTRANS] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)

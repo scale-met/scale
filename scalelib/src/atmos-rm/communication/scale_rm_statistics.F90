@@ -11,7 +11,7 @@
 !!
 !<
 #include "inc_openmp.h"
-module scale_les_statistics
+module scale_rm_statistics
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -72,7 +72,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[STATISTICS] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[STATISTICS] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -369,5 +369,5 @@ contains
     return
   end subroutine STAT_detail
 
-end module scale_les_statistics
+end module scale_rm_statistics
 !-------------------------------------------------------------------------------

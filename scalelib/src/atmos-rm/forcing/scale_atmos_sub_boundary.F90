@@ -124,7 +124,7 @@ module scale_atmos_boundary
   character(len=H_LONG), private :: ATMOS_BOUNDARY_TYPE         = 'NONE'
   character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME  = ''
   character(len=H_LONG), private :: ATMOS_BOUNDARY_OUT_BASENAME = ''
-  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE    = 'SCALE-LES BOUNDARY CONDITION' !< title of the output file
+  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE    = 'SCALE-RM BOUNDARY CONDITION'  !< title of the output file
   character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_DTYPE    = 'DEFAULT'                      !< REAL4 or REAL8
 
   logical,               private :: ATMOS_BOUNDARY_USE_DENS     = .false. ! read from file?
@@ -1577,7 +1577,7 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_HAS_W,   &
        PRC_HAS_E,   &
        PRC_HAS_S,   &

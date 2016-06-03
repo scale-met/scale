@@ -4,7 +4,7 @@
   !
   !------------------------------------------------------------
   !
-  !++ scale-les grid parameter for inc_tracer_hbinf_h33_c20.f90
+  !++ grid parameter for inc_tracer_hbinf_h33_c20.f90
   !
   !------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: TRACER_TYPE = "SUZUKI10"

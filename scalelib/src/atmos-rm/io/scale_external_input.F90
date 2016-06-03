@@ -152,7 +152,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[EXTIN] / Categ[IO] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[EXTIN] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
 
     ! count external data from namelist
     rewind(IO_FID_CONF)

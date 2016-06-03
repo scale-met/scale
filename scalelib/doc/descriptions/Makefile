@@ -1,4 +1,4 @@
-TARGET = scale_les_description
+TARGET = scale_rm_description
 
 all: ${TARGET}.pdf
 

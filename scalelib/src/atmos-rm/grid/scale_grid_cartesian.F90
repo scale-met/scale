@@ -134,7 +134,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     call GRID_allocate
 
@@ -178,7 +178,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Allocate arrays
   subroutine GRID_allocate
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
@@ -293,7 +293,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop, &
        PRC_myrank
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y

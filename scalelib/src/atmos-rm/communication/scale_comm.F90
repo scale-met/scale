@@ -34,7 +34,7 @@ module scale_comm
 
   use scale_process, only: &
      PRC_MPIstop
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
      PRC_next, &
      PRC_W,    &
      PRC_N,    &
@@ -178,7 +178,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[COMM] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[COMM] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
 
     COMM_vsize_max = max( 10 + QA*2, 25 )
     COMM_vsize_max_pc = 50 + QA*2

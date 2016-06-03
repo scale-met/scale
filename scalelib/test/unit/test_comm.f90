@@ -25,7 +25,7 @@ contains
   subroutine test_comm_run
   use scale_process, only: &
      PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
      PRC_next, &
      PRC_W, &
      PRC_N, &

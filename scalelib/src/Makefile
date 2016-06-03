@@ -27,13 +27,13 @@ VPATH = common:                     \
         atmos-physics/turbulence:   \
         atmos-physics/aerosol:      \
         atmos-physics/chemistry:    \
-        atmos-les:                  \
-        atmos-les/communication:    \
-        atmos-les/grid:             \
-        atmos-les/io:               \
-        atmos-les/numeric:          \
-        atmos-les/dynamics:         \
-        atmos-les/forcing:          \
+        atmos-rm:                   \
+        atmos-rm/communication:     \
+        atmos-rm/grid:              \
+        atmos-rm/io:                \
+        atmos-rm/numeric:           \
+        atmos-rm/dynamics:          \
+        atmos-rm/forcing:           \
         land:                       \
         land/grid:                  \
         ocean:                      \
@@ -205,8 +205,8 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_land_sfc.o	\
 	scale_land_sfc_slab.o	\
 	scale_landuse.o	\
-	scale_les_process.o	\
-	scale_les_statistics.o	\
+	scale_rm_process.o	\
+	scale_rm_statistics.o	\
 	scale_mapproj.o	\
 	scale_matrix.o	\
 	scale_monitor.o	\
@@ -256,7 +256,7 @@ OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o	\
 	$(OBJ_DIR)/scale_grid_cartesian.o	\
 	$(OBJ_DIR)/scale_grid_real.o	\
 	$(OBJ_DIR)/scale_gridtrans.o	\
-	$(OBJ_DIR)/scale_les_process.o
+	$(OBJ_DIR)/scale_rm_process.o
 
 all:
 	$(MAKE) makedir

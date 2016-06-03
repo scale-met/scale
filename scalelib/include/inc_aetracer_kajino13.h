@@ -4,7 +4,7 @@
   !
   !------------------------------------------------------------
   !
-  !++ scale-les grid parameter for inc_aetracer_kajino13
+  !++ grid parameter for inc_aetracer_kajino13
   !
   !------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: AETRACER_TYPE = "KAJINO13"

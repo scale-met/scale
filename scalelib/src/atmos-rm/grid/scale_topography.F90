@@ -47,7 +47,7 @@ module scale_topography
   !
   character(len=H_LONG), private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
   character(len=H_LONG), private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),  private :: TOPO_OUT_TITLE    = 'SCALE-LES TOPOGRAPHY' !< title    of the output file
+  character(len=H_MID),  private :: TOPO_OUT_TITLE    = 'SCALE-RM TOPOGRAPHY'  !< title    of the output file
   character(len=H_MID),  private :: TOPO_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
@@ -68,7 +68,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TOPOGRAPHY] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TOPOGRAPHY] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)

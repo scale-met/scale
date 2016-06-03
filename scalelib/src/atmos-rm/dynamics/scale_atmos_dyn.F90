@@ -116,7 +116,7 @@ contains
        none                          )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_les_process, only: &
+    use scale_rm_process, only: &
        PRC_HAS_E, &
        PRC_HAS_W, &
        PRC_HAS_N, &
