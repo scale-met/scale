@@ -30,12 +30,10 @@ program scalerm_launcher
      PRC_MPIsplit,        &
      PRC_UNIVERSAL_setup, &
      PRC_GLOBAL_setup
-!  use mod_rm_driver, only: &
-!     scalerm
-  use mod_pp_driver, only: &
-     scalerm_pp
-!  use mod_init_driver, only: &
-!     scalerm_init
+  use mod_rm_prep, only: &
+     scalerm_prep
+  use mod_rm_driver, only: &
+     scalerm
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -48,6 +46,8 @@ program scalerm_launcher
   !
   !=============================================================================
 
+  logical               :: EXECUTE_PREPROCESS           = .true.  ! execute preprocess tools?
+  logical               :: EXECUTE_MODEL                = .false. ! execute main model?
   integer               :: NUM_BULKJOB                  = 1       ! number of bulk jobs
   integer               :: NUM_DOMAIN                   = 1       ! number of domains
   integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
@@ -57,12 +57,14 @@ program scalerm_launcher
   logical               :: COLOR_REORDER                = .true.  ! coloring reorder for mpi splitting?
 
   namelist / PARAM_LAUNCHER / &
-     NUM_BULKJOB,     &
-     NUM_DOMAIN,      &
-     PRC_DOMAINS,     &
-     CONF_FILES,      &
-     ABORT_ALL_JOBS,  &
-     LOG_SPLIT,       &
+     EXECUTE_PREPROCESS, &
+     EXECUTE_MODEL,      &
+     NUM_BULKJOB,        &
+     NUM_DOMAIN,         &
+     PRC_DOMAINS,        &
+     CONF_FILES,         &
+     ABORT_ALL_JOBS,     &
+     LOG_SPLIT,          &
      COLOR_REORDER
 
   integer               :: universal_comm                         ! universal communicator
@@ -116,6 +118,15 @@ program scalerm_launcher
   endif
 
   close(fid)
+
+  if (      EXECUTE_PREPROCESS &
+       .OR. EXECUTE_MODEL      ) then
+     if( universal_master ) write(*,*) "*** Execute preprocess? : ", EXECUTE_PREPROCESS
+     if( universal_master ) write(*,*) "*** Execute model?      : ", EXECUTE_MODEL
+  else
+     if( universal_master ) write(*,*) 'xxx No execution. please check PARAM_LAUNCHER. STOP'
+     call PRC_MPIstop
+  endif
 
   !--- split for bulk jobs
 
@@ -175,20 +186,19 @@ program scalerm_launcher
      local_cnf_fname = trim(bulk_prefix)//"/"//trim(local_cnf_fname)
   endif
 
-!  call scalerm     ( local_comm,            & ! [IN]
-!                     intercomm_parent,      & ! [IN]
-!                     intercomm_child,       & ! [IN]
-!                     local_cnf_fname        ) ! [IN]
+  if ( EXECUTE_PREPROCESS ) then
+     call scalerm_prep( local_comm,            & ! [IN]
+                        intercomm_parent_null, & ! [IN]
+                        intercomm_child_null,  & ! [IN]
+                        local_cnf_fname        ) ! [IN]
+  endif
 
-  call scalerm_pp  ( local_comm,            & ! [IN]
-                     intercomm_parent_null, & ! [IN]
-                     intercomm_child_null,  & ! [IN]
-                     local_cnf_fname        ) ! [IN]
-
-!  call scalerm_init( local_comm,            & ! [IN]
-!                     intercomm_parent_null, & ! [IN]
-!                     intercomm_child_null,  & ! [IN]
-!                     local_cnf_fname        ) ! [IN]
+  if ( EXECUTE_MODEL ) then
+     call scalerm     ( local_comm,            & ! [IN]
+                        intercomm_parent_null, & ! [IN]
+                        intercomm_child_null,  & ! [IN]
+                        local_cnf_fname        ) ! [IN]
+  endif
 
   ! stop MPI
   call PRC_MPIfinish

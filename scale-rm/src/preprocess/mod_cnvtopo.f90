@@ -112,7 +112,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CNVTOPO]/Categ[CNVTOPO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[convert topo] / Categ[preprocess] / Origin[SCALE-RM]'
 
     if ( CNVTOPO_smooth_local ) then
        DXL(:) = DX
@@ -389,7 +389,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[GTOPO30]/Categ[CNVTOPO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[convert GTOPO30] / Categ[preprocess] / Origin[SCALE-RM]'
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CNVTOPO_GTOPO30,iostat=ierr)
@@ -697,7 +698,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DEM50M]/Categ[CNVTOPO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[convert DEM50M] / Categ[preprocess] / Origin[SCALE-RM]'
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CNVTOPO_DEM50M,iostat=ierr)

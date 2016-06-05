@@ -15,12 +15,7 @@ BINNAME  = scale-rm
 INITNAME = scale-rm_init
 PPNAME   = scale-rm_pp
 
-ifeq ($(NOINIT),)
-  BINS = $(BINDIR)/$(BINNAME) $(BINDIR)/$(INITNAME) $(BINDIR)/$(PPNAME)
-else
-  BINS = $(BINDIR)/$(BINNAME)
-endif
-
+BINS = $(BINDIR)/$(BINNAME) $(BINDIR)/$(INITNAME) $(BINDIR)/$(PPNAME)
 LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
 ifneq ($(IGNOREDEP),T)
@@ -83,15 +78,13 @@ OBJS =	\
 	mod_urban_phy_driver.o    \
 	mod_urban_driver.o        \
 	mod_cpl_driver.o          \
-	mod_rm_driver.o
-
-OBJS_INIT =	\
+	mod_rm_driver.o           \
+	\
 	mod_copytopo.o            \
 	mod_cnvtopo.o             \
 	mod_cnvlanduse.o          \
 	mod_convert.o             \
 	mod_mktopo.o              \
-	\
 	mod_realinput_scale.o     \
 	mod_realinput_wrfarw.o    \
 	mod_realinput_nicam.o     \
@@ -99,9 +92,7 @@ OBJS_INIT =	\
 	mod_realinput_scale.o     \
 	mod_realinput.o           \
 	mod_mkinit.o              \
-	\
-	mod_init_driver.o         \
-	mod_pp_driver.o
+	mod_rm_prep.o
 
 all:
 	$(MAKE) makedir
@@ -130,14 +121,14 @@ makebin: $(BINS)
 
 $(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
 	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(CONTRIB_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
-$(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o  $(LIBS)
+$(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o  $(LIBS)
 	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(CONTRIB_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
-$(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o  $(LIBS)
+$(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o  $(LIBS)
 	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(CONTRIB_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-$(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
-$(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
+$(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+$(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
 
 $(BUILD_DIR)/mod_user.o : mod_user.f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
