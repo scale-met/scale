@@ -230,7 +230,18 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[MKINIT]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[make init] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT)
 
     allocate( pres(KA,IA,JA) )
     allocate( temp(KA,IA,JA) )
@@ -251,20 +262,6 @@ contains
     allocate( rndm  (KA,IA,JA) )
     allocate( bubble(KA,IA,JA) )
     allocate( rect  (KA,IA,JA) )
-
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
-       call PRC_MPIstop
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT)
 
     select case(trim(MKINIT_initname))
     case('NONE')
@@ -288,6 +285,7 @@ contains
        MKINIT_TYPE = I_TURBULENCE
     case('MOUNTAINWAVE')
        MKINIT_TYPE = I_MOUNTAINWAVE
+       call BUBBLE_setup
     case('WARMBUBBLE')
        MKINIT_TYPE = I_WARMBUBBLE
        call BUBBLE_setup
@@ -545,7 +543,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BUBBLE]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit bubble] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -625,7 +623,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[RECT]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit rectangle] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -757,7 +755,7 @@ contains
     real(RP) :: pi6
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[AEROSOL]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
 
     pi6   = pi / 6._RP
     n_ctg = AE_CTG
@@ -1151,7 +1149,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[AEROBIN]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit aerobin] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1701,7 +1699,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Horiz_UNIFORM]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit Horiz_UNIFORM] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -1882,7 +1880,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TRACERBUBBLE]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit TRACERBUBBLE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2011,7 +2009,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[COLDBUBBLE]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit COLDBUBBLE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2111,7 +2109,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAMBWAVE]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit LAMBWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_PRES  = Pstd
 
@@ -2186,7 +2184,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[GRAVITYWAVE]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit GRAVITYWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2290,7 +2288,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[KH wave]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit KHWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2419,7 +2417,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TURBULENCE]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit TURBULENCE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2587,7 +2585,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CAVITYFLOW]/Categ[INIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit CAVITYFLOW] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -2644,13 +2642,15 @@ contains
     real(RP) :: ENV_V = 0.0_RP ! velocity v of environment [m/s]
 
     real(RP) :: SCORER = 2.E-3_RP ! Scorer parameter (~=N/U) [1/m]
+    real(RP) :: BBL_NC =   0.0_RP ! extremum of NC in bubble [kg/kg]
 
     NAMELIST / PARAM_MKINIT_MOUNTAINWAVE / &
        SFC_THETA, &
        SFC_PRES,  &
        ENV_U,     &
        ENV_V,     &
-       SCORER
+       SCORER,    &
+       BBL_NC
 
     real(RP) :: Ustar2, N2
 
@@ -2659,7 +2659,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Mountainwave]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit MOUNTAINWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2726,6 +2726,22 @@ contains
     enddo
     enddo
 
+    ! optional : add tracer bubble
+    if (  BBL_NC > 0.0_RP ) then
+       if (  I_NC > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             QTRC(k,i,j,I_NC) = BBL_NC * bubble(k,i,j)
+          enddo
+          enddo
+          enddo
+       else
+          write(*,*) 'xxx tracer I_NC is not defined. Check!'
+          call PRC_MPIstop
+       endif
+    endif
+
     return
   end subroutine MKINIT_mountainwave
 
@@ -2766,7 +2782,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[WARMBUBBLE]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit WARMBUBBLE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2885,7 +2901,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SUPERCELL]/Categ[INIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit SUPERCELL] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -2947,7 +2963,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[WARMBUBBLE]/Categ[INIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit SQUALLLINE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -3020,7 +3036,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[WK1982)]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit WK1982] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_PRES  = Pstd
 
@@ -3193,7 +3209,7 @@ enddo
     pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF01] / Categ[preprocess] / Origin[SCALE-RM]'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF01,iostat=ierr)
@@ -3451,7 +3467,7 @@ enddo
 
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF02)]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF02] / Categ[preprocess] / Origin[SCALE-RM]'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02,iostat=ierr)
@@ -3706,8 +3722,9 @@ enddo
     !---------------------------------------------------------------------------
 
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
+
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF02_DNS)]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF02_DNS] / Categ[preprocess] / Origin[SCALE-RM]'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02_DNS,iostat=ierr)
@@ -3953,7 +3970,7 @@ enddo
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[RICO]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit RICO] / Categ[preprocess] / Origin[SCALE-RM]'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RICO,iostat=ierr)
@@ -4222,7 +4239,7 @@ enddo
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Interporation]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit INTERPORATION] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -4608,7 +4625,7 @@ enddo
     implicit none
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OceanCouple]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit OceanCouple] / Categ[preprocess] / Origin[SCALE-RM]'
 
     call flux_setup
 
@@ -4623,7 +4640,7 @@ enddo
     implicit none
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LandCouple]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit LandCouple] / Categ[preprocess] / Origin[SCALE-RM]'
 
     call flux_setup
 
@@ -4638,7 +4655,7 @@ enddo
     implicit none
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[UrbanCouple]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit UrbanCouple] / Categ[preprocess] / Origin[SCALE-RM]'
 
     call flux_setup
 
@@ -4663,7 +4680,7 @@ enddo
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Sea Breeze]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit SEABREEZE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     call flux_setup
 
@@ -4708,7 +4725,7 @@ enddo
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Heat island]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit HEATISLAND] / Categ[preprocess] / Origin[SCALE-RM]'
 
     call flux_setup
 
@@ -4766,7 +4783,7 @@ enddo
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[GRAYZONE]/Categ[INIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit GRAYZONE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -4891,7 +4908,7 @@ enddo
     endif
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Box model of aerosol]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit Box model of aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -4962,7 +4979,7 @@ enddo
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[WARMBUBBLEAERO]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit WARMBUBBLEAERO] / Categ[preprocess] / Origin[SCALE-RM]'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd

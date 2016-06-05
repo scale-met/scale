@@ -65,7 +65,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CNV BOUNDARY]/Categ[preprocess]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[convert] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)

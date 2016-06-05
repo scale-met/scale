@@ -84,7 +84,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CNVLANDUSE]/Categ[CNVLANDUSE]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[convert landuseindex] / Categ[preprocess] / Origin[SCALE-RM]'
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CNVLANDUSE,iostat=ierr)

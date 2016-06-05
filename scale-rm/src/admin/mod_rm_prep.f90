@@ -1,19 +1,21 @@
 !-------------------------------------------------------------------------------
-!> module SCALE-RM init
+!> module SCALE-RM prep
 !!
 !! @par Description
-!!          This program makes initial data for ideal/real test cases
+!!          This program is driver of preprocess tools
+!!          1) boundary data (e.g. topography, land use index)
+!!          2) initial data for ideal/real test cases
 !!
 !! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
 !! @li      2012-06-13 (Y.Sato)     [mod] add HBINW option
-!! @li      2015-06-01 (R.Yoshida)  [mod] from program of scale-rm_init
+!! @li      2016-06-03 (H.Yashiro)  [mod] merge scale-rm_pp and scale-rm_init
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_init_driver
+module mod_rm_prep
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -37,7 +39,7 @@ module mod_init_driver
   !
   !++ Public procedure
   !
-  public :: scalerm_init
+  public :: scalerm_prep
 
   !-----------------------------------------------------------------------------
   !
@@ -57,7 +59,7 @@ module mod_init_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine scalerm_init( &
+  subroutine scalerm_prep( &
        comm_world,       &
        intercomm_parent, &
        intercomm_child,  &
@@ -66,8 +68,6 @@ contains
        PRC_LOCAL_setup
     use scale_rm_process, only: &
        PRC_setup
-    use scale_prof, only: &
-       PROF_setup
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
@@ -115,6 +115,7 @@ contains
        ATMOS_THERMODYN_setup
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
+
     use mod_admin_restart, only: &
        ADMIN_restart_setup
     use mod_admin_time, only: &
@@ -139,6 +140,9 @@ contains
        CPL_admin_setup
     use mod_cpl_vars, only: &
        CPL_vars_setup
+    use mod_convert, only: &
+       CONVERT_setup, &
+       CONVERT
     use mod_mktopo, only: &
        MKTOPO_setup, &
        MKTOPO
@@ -232,7 +236,6 @@ contains
     call NEST_setup ( intercomm_parent, intercomm_child )
 
 
-
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
     call ATMOS_THERMODYN_setup
@@ -252,6 +255,9 @@ contains
     call URBAN_vars_setup
     call CPL_vars_setup
 
+    ! setup preprocess converter
+    call CONVERT_setup
+
     ! setup mktopo
     call MKTOPO_setup
 
@@ -262,7 +268,12 @@ contains
 
     !########## main ##########
 
-    call PROF_rapstart('Main_Init')
+    call PROF_rapstart('Main_prep')
+
+    ! execute preprocess
+    call PROF_rapstart('Convert')
+    call CONVERT
+    call PROF_rapend  ('Convert')
 
     ! execute mktopo
     call PROF_rapstart('MkTopo')
@@ -277,7 +288,7 @@ contains
     call MKINIT
     call PROF_rapend  ('MkInit')
 
-    call PROF_rapend('Main_Init')
+    call PROF_rapend('Main_prep')
 
     !########## Finalize ##########
 
@@ -286,6 +297,6 @@ contains
     call FileCloseAll
 
     return
-  end subroutine scalerm_init
+  end subroutine scalerm_prep
 
-end module mod_init_driver
+end module mod_rm_prep

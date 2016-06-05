@@ -78,7 +78,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[MKTOPO]/Categ[MKTOPO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[make topo] / Categ[preprocess] / Origin[SCALE-RM]'
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKTOPO,iostat=ierr)
@@ -93,16 +94,12 @@ contains
     select case(MKTOPO_name)
     case('NONE')
        MKTOPO_TYPE = I_IGNORE
-
     case('FLAT')
        MKTOPO_TYPE = I_FLAT
-
     case('BELLSHAPE')
        MKTOPO_TYPE = I_BELLSHAPE
-
     case('SCHAER')
        MKTOPO_TYPE = I_SCHAER
-
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKTOPO_name)
        call PRC_MPIstop
@@ -166,7 +163,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FLAT]/Categ[MKTOPO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mktopo FLAT] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -218,7 +215,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BELLSHAPE]/Categ[MKTOPO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mktopo BELLSHAPE] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -282,7 +279,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SCHEAR]/Categ[MKTOPO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mktopo SCHEAR] / Categ[preprocess] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
