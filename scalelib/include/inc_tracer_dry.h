@@ -4,7 +4,7 @@
   !
   !-----------------------------------------------------------------------------
   !
-  !++ scale-les tracer parameters (vapor only)
+  !++ tracer parameters (vapor only)
   !
   !-----------------------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: TRACER_TYPE = "DRY"

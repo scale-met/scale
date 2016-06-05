@@ -241,7 +241,7 @@ contains
       var     )
     use scale_time, only: &
        dt => TIME_DTSEC
-    use scale_les_statistics, only: &
+    use scale_rm_statistics, only: &
        STAT_total
     implicit none
 
@@ -286,7 +286,7 @@ contains
       var     )
     use scale_time, only: &
        dt => TIME_DTSEC
-    use scale_les_statistics, only: &
+    use scale_rm_statistics, only: &
        STAT_total
     implicit none
 

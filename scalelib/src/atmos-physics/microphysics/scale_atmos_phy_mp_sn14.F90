@@ -464,7 +464,7 @@ module scale_atmos_phy_mp_sn14
 
   !
   ! metrics of vertical coordinate
-  ! not used in SCALE-LES
+  ! not used in SCALE-RM
   !
   real(RP), private, allocatable, save :: gsgam2_d (:,:,:)
   real(RP), private, allocatable, save :: gsgam2h_d(:,:,:)

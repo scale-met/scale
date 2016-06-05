@@ -7,7 +7,7 @@
 \end{tabular}
 }
 \\
- The SCALE-LES has three types of cloud microphysics models. We will show description of these models below.
+ The SCALE-RM has three types of cloud microphysics models. We will show description of these models below.
 
 \subsection{Kessler Parameterization}
 An one-moment bulk microphysical scheme, which treats only warm cloud (cloud and rain), is implemented in SCALE. This scehem predicts mixing ratio of cloud ($Q_{cloud}$) and rain ($Q_{rain}$). Cloud microphysical processes treated in this scheme is saturation adjustment (corresponding to nucleatioin, evaporation, and condensation of cloud), evaporation, auto-conversion, accretion, and sedimentation. The tendency of $Q_{cloud}$, $Q_{rain}$, and $Q_{v}$ (vapor mixing ratio) is given as
@@ -275,7 +275,7 @@ v_{t,js}&=&a_{v,js}x^{b_{v,js}},\;\;(js=i,s,g)\label{sn33}\\
 \bar{v_{k,js,true}}(\bar{D_{id}})&=&\sum_{i=1}^{imax}x^{k}v_{t,js,true}f_{logD}(lnD_{i},\bar{D_{id}},L)\Delta ln D/L\nonumber
 \end{eqnarray}
 
-where $D_{1}=10\mu m$, $D_{imax}=10mm$, $i_{max}=1000$, and L is arbitrary constant. The fitting ranges of the mean volume diameter in eq.\ref{sn34} are from 20 to 400 $\mu$m for the small branch and from 200 to 2000 $\mu m$ for the large branch. The derived parameters are summarized in Table \ref{table_sn14-2-9}.\\ 
+where $D_{1}=10\mu m$, $D_{imax}=10mm$, $i_{max}=1000$, and L is arbitrary constant. The fitting ranges of the mean volume diameter in eq.\ref{sn34} are from 20 to 400 $\mu$m for the small branch and from 200 to 2000 $\mu m$ for the large branch. The derived parameters are summarized in Table \ref{table_sn14-2-9}.\\
 Secondly the terminal velocity with a certain mean diameter is calculated by interpolating between the two branches in the logaritgmic scale of the diameter. Here we practically use the mean diameter weighted by the kth moments of DSD in the interpolation. The formulation of the weighted terminal velocities of the rain droplets and solid particles are as shown in the following,
 
 \begin{eqnarray}
@@ -292,7 +292,7 @@ w_{k,js}&=&max(0.0, \;min(1.0,0.5(1+ln(\bar{D_{k,js}}/D_{0,k,js}))))\;\;(js=i,s,
 N_{r}(D)&=&N_{0,r}D^{-\mu_{D,r}}exp(-\lambda_{D,r}D)
 \end{eqnarray}
 
-where $D_{0,r}$ and $D_{0,js}$ are the branch points of the fitting curves (see Table \ref{table_sn14-2-10}). Here we apply the form of the modified gamma distribution for the diameter as a DSD of rain droplets. Derivation and correspondences of the coefficient $N_{0,r}$ the slope parameter $\lambda_{D}$,$r$ and shape parameter $\mu D$ appeared in the modified gamma distribution are described in Appendix B. Weighted terminl velocities of ice particles for two branches, and, are calculated by eq.\ref{sn35}. Fig.\ref{figsn2-13} shows the terminal velocity of rain droplets weighted by number and mass concentration. Our method gives better results than the results by the approximated method applied in Seifert and Beheng (2006) in the range within their upper and lower limit. Fig.\ref{figsn2-14} shows terminal velocities of ice particles weighted by the number and the mass concentration. 
+where $D_{0,r}$ and $D_{0,js}$ are the branch points of the fitting curves (see Table \ref{table_sn14-2-10}). Here we apply the form of the modified gamma distribution for the diameter as a DSD of rain droplets. Derivation and correspondences of the coefficient $N_{0,r}$ the slope parameter $\lambda_{D}$,$r$ and shape parameter $\mu D$ appeared in the modified gamma distribution are described in Appendix B. Weighted terminl velocities of ice particles for two branches, and, are calculated by eq.\ref{sn35}. Fig.\ref{figsn2-13} shows the terminal velocity of rain droplets weighted by number and mass concentration. Our method gives better results than the results by the approximated method applied in Seifert and Beheng (2006) in the range within their upper and lower limit. Fig.\ref{figsn2-14} shows terminal velocities of ice particles weighted by the number and the mass concentration.
 
 
 \begin{table}[h]
@@ -368,7 +368,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 
 \subsubsection{Detailed description of cloud microphysics}
 Cloud microphysics is mainly categorized into two physics. One is phase change among the gas, liquid, and solid phases. Another is the collection process among all the particles. In addition, all the hydrometeors are vertically transported by gravitational sedimentation. Phase change depends on the thermodynamics of environment air and affects thermodynamics itself through latent heat release. In contrast, collection is an internal growth process with less interaction with the atmosphere. Since the growth speed of the collection process is much faster than that of phase change, the role of the collection process is a key to determine the lifetime of cloud (e.g. lifetime effect). Finally, gravitational sedimentation determines the removal rate of cloud from the atmosphere. Directly it removes cloud by transportation, and indirectly by the collection process via collision volume (swept volume).\\
-The cloud microphysics scheme developed in this study basically follows Seifert and Beheng (2006). Their two-moment bulk cloud microphysics scheme is remarkable in improvement of the collection process by using a bin cloud microphysics scheme. After their works, we modify the cloud nucleation process (Twomey 1959; and Lohmann 2002), the condensation process (Morrison et al. 2005), and the formulation of the terminal velocities (Mitchell, 1996) with expectation of the application to global cloud resolving simulations. We describe production and reduction terms of the mass concentration and the number concentration in the following sub-sections. 
+The cloud microphysics scheme developed in this study basically follows Seifert and Beheng (2006). Their two-moment bulk cloud microphysics scheme is remarkable in improvement of the collection process by using a bin cloud microphysics scheme. After their works, we modify the cloud nucleation process (Twomey 1959; and Lohmann 2002), the condensation process (Morrison et al. 2005), and the formulation of the terminal velocities (Mitchell, 1996) with expectation of the application to global cloud resolving simulations. We describe production and reduction terms of the mass concentration and the number concentration in the following sub-sections.
 
 \subsubsection{Phase change}
 \subsubsection{Condensation/evaporation}
@@ -598,7 +598,7 @@ where super saturation ratio $S_{w,100}$ is in ％. They use $C_{ccn} = 1.26 \ti
 \begin{array}{l}
 C_{ccn}\kappa_{ccn}S_{w,100}^{\kappa_{ccn}-1}\frac{\partial S_{w,100}}{\partial z}w\nonumber\\
 (S_{w,100}>0,\;w\frac{\partial S_{w,100}}{\partial z}>0,\;and\;S_{w,100}<1.1) \nonumber\\
-0,\;\;(else) 
+0,\;\;(else)
 \end{array}
 \right.\\
 \label{sn108}
@@ -690,7 +690,7 @@ log_{10}(10^{-3}J_{hom})=
 \begin{array}{l}
 25.63-243.4-14.75T_{c}-0.307T_{c}^{2},\;\;(-65^{o}C>T_{c}) \nonumber \\
 -0.00287T_{c}^{3}-0.0000102T_{c}^{4},\;\;(-65^{o}C\leq T_{c}<-30^{o}C)\nonumber \\
--7.63-2.996(T_{c}+30),\;\;(-30^{o}C< T_{c})\nonumber 
+-7.63-2.996(T_{c}+30),\;\;(-30^{o}C< T_{c})\nonumber
 \end{array}
 \label{sn121}
 \right.
@@ -737,7 +737,7 @@ As a result, the melting rate of a single ice particle is described as follows,
 &+&\frac{D_{v}L_{v0}}{R_{v}}\bigr(\frac{p_{v}}{T}-\frac{p_{sw}(T_{0})}{T}\bigr)F_{vf}(x_{js})\Bigr]\;\;(js=i,s,g)\label{sn128}
 \end{eqnarray}
 
-where $D_{T}$ is diffusivity of heat, and $T_{0} = 273.15 K$ is melting point. The growth rate of moments can be formulated by using a melting time scale $\tau_{mlt}$ defined as follows, 
+where $D_{T}$ is diffusivity of heat, and $T_{0} = 273.15 K$ is melting point. The growth rate of moments can be formulated by using a melting time scale $\tau_{mlt}$ defined as follows,
 
 \begin{eqnarray}
 \tau_{mlt}&\equiv&\frac{x_{js}}{\bigl(\frac{dx_{js}}{dt}\bigr)_{mlt}}\label{sn129}\\
@@ -822,7 +822,7 @@ where $\phi_{brk}$ is a universal function of break-up, and $\Delta \bar{D}_{r}\
 \begin{array}{l}
 2exp(\kappa_{brk}\Delta\bar{D}_{r})-1,\;\;(\bar{D}_{r}>\bar{D}_{eq}) \\
 \kappa_{brk}\Delta\bar{D}_{r}+1,\;\;(\bar{D}_{eq}\geq \bar{D}_{r}>0.35\times 10^{-3}m) \\
--1,\;\;(0.35\times10^{-3}>\bar{D}_{r}) 
+-1,\;\;(0.35\times10^{-3}>\bar{D}_{r})
 \label{sn155}
 \end{array}
 \right.
@@ -941,7 +941,7 @@ Finally, the characteristic velocity difference are derived by substituting eq.\
 &\times&\Bigl[\frac{\Gamma\bigl(\frac{v_{a}+1}{\mu_{a}}\bigr)}{\Gamma\bigl(\frac{v_{a}+2}{\mu_{a}}\bigr)}\Bigr]^{b_{v,a}}\Bigl[\frac{\Gamma\bigl(\frac{v_{b}+1}{\mu_{b}}\bigr)}{\Gamma\bigl(\frac{v_{b}+2}{\mu_{b}}\bigr)}\Bigr]^{b_{v,b}}\label{sn172}
 \end{eqnarray}
 
-Here, it is noticed that the notation “ab” in $\theta_{ab}^{k}$ is not symmetric because $\theta_{ab}^{k}$ is weighted by the mass of collected particle to the power of “k”. Integrations in eq.\ref{sn161} and eq.\ref{sn163} are similarly calculated as follows, 
+Here, it is noticed that the notation “ab” in $\theta_{ab}^{k}$ is not symmetric because $\theta_{ab}^{k}$ is weighted by the mass of collected particle to the power of “k”. Integrations in eq.\ref{sn161} and eq.\ref{sn163} are similarly calculated as follows,
 
 
 \begin{eqnarray}
@@ -1007,7 +1007,7 @@ The sticking efficiency is considered only in the case of the collision between 
 \left\{
 \begin{array}{l}
 exp[0.09\times T_{c}],\;\;(T_{c}\leq 0^{o}C) \\
-1,\;\;(T_{c}> 0^{o}C) 
+1,\;\;(T_{c}> 0^{o}C)
 \label{sn185}
 \end{array}
 \right.
@@ -1030,7 +1030,7 @@ with $a_{\delta} = 0.883$, $b_{\delta} = 0.093$, $c_{\delta} = 0.00348$, and $d_
 
 
 \subsubsection{The collision case 2: a+b $\rightarrow$ c}
- The case is the same as the case 1 except for the growing particles. 
+ The case is the same as the case 1 except for the growing particles.
 
 \begin{eqnarray}
 \frac{\partial f_{b}(y)}{\partial t}\Bigr|_{col,abs}&=&-\int_{0}^{\infty}f_{b}(y)f_{a}(x)K_{ab}(x,y)dx\label{sn189}\\
@@ -1142,7 +1142,7 @@ The conversion rate of number concentration is as follows,
 The conversion coefficient of riming particle $\bar{x}/\bar{x}_{crit,pconv}$ is shown in Fig.\ref{figsn2-23}. In this formulation, small ice particles are likely to convert into graupel in riming because small ice particles have simple geometry and are almost sphere. In order to suppress the conversion of small ice particles, partial conversion are limited to ice particles with the mean diameter of more than 500 $\mu m$.
 
 \subsubsection{Ice multiplication}
-It has been observed that the number concentration of ice particles can be up to several orders of magnitude larger than ice nuclei in atmospheric cloud (Pruppacher and Klett, 1997). Among the possible mechanisms to explain the fact, the Hallet-Mossop mechanism has been received in many literatures and widely applied in cloud microphysics schemes. The Hallet-Mossop mechanism is based on the fact that ice splintering occurs when many liquid droplets are collected by graupel. Cotton et al. (1986) applied the formulations based on the observations by Hallet and Mossop (1974), and Mossop (1976). 
+It has been observed that the number concentration of ice particles can be up to several orders of magnitude larger than ice nuclei in atmospheric cloud (Pruppacher and Klett, 1997). Among the possible mechanisms to explain the fact, the Hallet-Mossop mechanism has been received in many literatures and widely applied in cloud microphysics schemes. The Hallet-Mossop mechanism is based on the fact that ice splintering occurs when many liquid droplets are collected by graupel. Cotton et al. (1986) applied the formulations based on the observations by Hallet and Mossop (1974), and Mossop (1976).
 Hallet and Mossop (1974) reported that approximately 350 ice splinters were produced for every $10^{-3} g$ of rime accreted by a graupel at -5 degC. The parameterization is formulated with the temperature correction f1 in the units of mks as follows,
 
 \begin{eqnarray}
@@ -1252,7 +1252,7 @@ M^{0}=N&=&\alpha\int_{0}^{\infty}x^{\nu}exp(\lambda x^{\mu})dx\nonumber\\
 M^{1}=L&=&\frac{\alpha}{\lambda^{(\nu+2)/\mu}\mu}\Gamma\bigl(\frac{\nu+1}{\mu}\bigr)\nonumber
 \end{eqnarray}
 
-Then $\alpha$ is expressed as, 
+Then $\alpha$ is expressed as,
 
 \begin{eqnarray}
 \alpha=\frac{N\mu\lambda^{(\nu+1)/\mu}}{\Gamma\bigl(\frac{\nu+1}{\mu}\bigr)}=\frac{L\mu \lambda^{(\nu+2)/\mu}}{\Gamma\bigl(\frac{\nu+2}{\mu}\bigr)}\nonumber
@@ -1298,7 +1298,7 @@ The time evolution of $f_{c}^{(\mu)}(m,t)$ and $f_{a}(m,t)$ are shown as:
 \end{eqnarray}
 
 where $\Bigl[\;\Bigr]_{***}$ show change of SDF by each cloud growth processes. The detail of these processes will be shown later.\\
- The change of SDFs by advection and gravitational falling (i.e. first and second term of eq. \ref{s10-1}, and \ref{s10-2}  ) are calculated by dynamical core of SCALE-LES3 shown in section 3.
+ The change of SDFs by advection and gravitational falling (i.e. first and second term of eq. \ref{s10-1}, and \ref{s10-2}  ) are calculated by dynamical core of SCALE-RM shown in section 3.
 
 
 \subsubsection{Discretization of Size Distribution Function(SDF)}
@@ -1458,7 +1458,7 @@ Collision/Coagulation process are calculated by solving Stochastic Collision Equ
 &-&f(m)\int_0^{\infty}f(m'')K(m,m'')dm''\label{s10-14}
 \end{eqnarray}
 
-where $K(m,m')$ is collection kernel function. Three types of the kernel function, i.e. Long type kernel (Long, 1974\cite{long_1974}), Golovin type kernel (Golovin, 1963\cite{golovin_1963}) and Hydro-dynamic dynamic kernel as shown eq. \ref{s10-15} are implemented into the SCALE-LES3.
+where $K(m,m')$ is collection kernel function. Three types of the kernel function, i.e. Long type kernel (Long, 1974\cite{long_1974}), Golovin type kernel (Golovin, 1963\cite{golovin_1963}) and Hydro-dynamic dynamic kernel as shown eq. \ref{s10-15} are implemented into the SCALE-RM.
 
 \begin{eqnarray}
 K(m,m')=\pi(r(m)-r(m'))\left| V(m)-V(m')\right |E_{col}(m,m')E_{coag}(m,m')\label{s10-15}
@@ -1475,7 +1475,7 @@ where $r(m)$ is radius of hydrometeros whose mass is $m$, and $V(m)$ is terminal
 \end{figure}
 
 
-Although the stochastic collision equation can be apply for collision/coagulation of one type of hydrometeros (i.e. liquid water), the SCALE-LES3 predicts 7 types of hydrometeors, and interactions of these types hydrometeors (i.e. riming/aggregation) must be calculated. To calculate the interaction of all 7 types of hydrometeors, the extented stochastic collision equation:
+Although the stochastic collision equation can be apply for collision/coagulation of one type of hydrometeros (i.e. liquid water), the SCALE-RM predicts 7 types of hydrometeors, and interactions of these types hydrometeors (i.e. riming/aggregation) must be calculated. To calculate the interaction of all 7 types of hydrometeors, the extented stochastic collision equation:
 
 \begin{eqnarray}
 \Bigr[\frac{\partial f^{(\mu)}(m)}{\partial t}\Bigr]_{coll/coag/rim/agg}&=&\nonumber\\
@@ -1502,7 +1502,7 @@ H    & G/H & G/H & G/H & G/H & H   \\ \hline
 \end{table}
 
 
-To solve the stochastic collision equation, a scheme developed by Bott (1998)\cite{bott_1998} was implemented into SCLAE-LES3.\\
+To solve the stochastic collision equation, a scheme developed by Bott (1998)\cite{bott_1998} was implemented into SCLAE-RM.\\
 The Bott (1998)\cite{bott_1998} scheme calculate evolution of mass density distribution ($g(\eta)=mf(\eta)$, $\eta=\log(m)$). The stochastic collision equation can be transferred to
 
 \begin{eqnarray}
@@ -1544,7 +1544,7 @@ a_{k,2}&=&-\frac{1}{2}(g_{k+1}^{(\lambda)}-2g_{k}^{(\lambda)}+g_{k-1}^{(\lambda)
 \end{eqnarray}
 
 These procedure is applied for all bin of all types of hydrometeors.\\
-In addition, to calculate this process fastly, a scheme of Sato et al. (2009)\cite{sato_etal_2009} are also implemented into SCALE-LES3.
+In addition, to calculate this process fastly, a scheme of Sato et al. (2009)\cite{sato_etal_2009} are also implemented into SCALE-RM.
 
 \subsubsection{Freezing}
 The calculation of freezing process is based on a parameterization of Bigg (1953)\cite{bigg_1953}. The parameterization is calculated number density of water ($f_{c}^{(w)}$), wchich can be freezed:

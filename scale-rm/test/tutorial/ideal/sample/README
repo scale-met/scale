@@ -1,0 +1,48 @@
+**** Suggestion for Users manual committee ****
+
+1. default run
+Purpose: start up!
+Domain 0-20[km] DX=500[m] 
+Integration time=3600[sec]
+Process number 2
+% mpirun -n 2 ./scale-rm_init init_R20kmDX500m.conf
+% mpirun -n 2 ./scale-rm run_R20kmDX500m.conf
+% ./quickview.sh
+( % rm *.nc )
+
+2. wide domain run with change of process numbers against default run
+Purpose: lesson to the way of chaging the domain size and process number.
+Domain 0-40[km] DX=500[m] Integration time=3600[sec]
+Process number 4
+% mpirun -n 4 ./scale-rm_init init_R40kmDX500m.conf
+% mpirun -n 4 ./scale-rm run_R40kmDX500m.conf
+% ./quickview.sh
+( % rm *.nc )
+
+3. high resolution run against default run
+Purpose: lesson to the way of chaging the horizontal resolution.
+Domain 0-20[km] DX=125[m] Integration time=3600[sec]
+Process number 4
+% mpirun -n 4 ./scale-rm_init init_R20kmDX125m.conf
+% mpirun -n 4 ./scale-rm run_R20kmDX125m.conf
+% ./quickview.sh
+( % rm *.nc )
+
+
+4. double moment run (optional)
+Purpose: lesson to the way of chaging the microphysical scheme
+Domain 0-20[km] DX=500[m] 
+Integration time=3600[sec]
+Process number 2
+Note : Change the microphysical scheme from one-moment to two moment bulk scheme.
+% mpirun -n 2 ./scale-rm_init init_R20kmDX500m-SN14.conf
+% mpirun -n 2 ./scale-rm run_R20kmDX500m-SN14.conf
+% ./quickview.sh
+( % rm *.nc )
+
+
+==== Common setup =====
+Initial thermodynamics profile : GCSS Case1 squall-line
+Initial wind profile : U=U0*tanh(z/z0) with U0=5[m/s] and z0=1km ( accroding to Ooyama (2001) )
+Initial perturvation :  cosbell shape centered on ( zc=500m, xc=4km Rz=3km, Rx=4km ) with potential temperature of 3K.
+Nudging for W in the upper 5km.
