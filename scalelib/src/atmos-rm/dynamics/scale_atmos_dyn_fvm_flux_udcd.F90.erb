@@ -252,34 +252,32 @@ module <%= modname %>
   !
   !++ Private parameters & variables
   !
-<% if order%2 == 0 %>
-<%# even %>
+<% if order >= 2 %>
   real(RP), parameter :: F2  =  0.5_RP
-<%   if order >= 4 %>
+<% end %>
+<% if order >= 4 %>
   real(RP), parameter :: F41 =  7.0_RP/12.0_RP
   real(RP), parameter :: F42 = -1.0_RP/12.0_RP
-<%     if order >= 6 %>
+<% end %>
+<% if order >= 6 %>
   real(RP), parameter :: F61 = 37.0_RP/60.0_RP
   real(RP), parameter :: F62 = -8.0_RP/60.0_RP
   real(RP), parameter :: F63 =  1.0_RP/60.0_RP
-<%     end # 6 %>
-<%   end # 4 %>
-<% else %>
-<%# odd %>
+<% end %>
+<% if order == 1 %>
   real(RP), parameter :: F1  =  0.5_RP
-<%   if order >= 3 %>
+<% elsif order == 3 %>
   real(RP), parameter :: F31  = -1.0_RP/12.0_RP
   real(RP), parameter :: F32  =  7.0_RP/12.0_RP
   real(RP), parameter :: F33  =  3.0_RP/12.0_RP
-<%     if order >= 5 %>
+<% elsif order == 5 %>
   real(RP), parameter :: F51  =  1.0_RP/60.0_RP
   real(RP), parameter :: F52  = -8.0_RP/60.0_RP
   real(RP), parameter :: F53  = 37.0_RP/60.0_RP
   real(RP), parameter :: F54  = -5.0_RP/60.0_RP
   real(RP), parameter :: F55  = 10.0_RP/60.0_RP
-<%     end # 5 %>
-<%   end # 3 %>
 <% end %>
+
 contains
   !-----------------------------------------------------------------------------
   !> value at XYW
@@ -324,8 +322,8 @@ contains
 <% end %>
 #endif
 <% nh.times do |k| %>
-       valW(KS<%=k%>) = <%= flux("mflx(KS#{k})", order-(nh-k)*2, 0, "KS"+k, nil, nil, 1) %>
-       valW(KE<%=-k-1%>) = <%= flux("mflx(KE#{-(k+1)})", order-(nh-k)*2, 0, "KE"-(k+1), nil, nil, 1) %>
+       valW(KS<%=k%>) = <%= flux("mflx(KS#{k})", ((order+1)/2)*2-(nh-k)*2, 0, "KS"+k, nil, nil, 1) %>
+       valW(KE<%=-k-1%>) = <%= flux("mflx(KE#{-(k+1)})", ((order+1)/2)*2-(nh-k)*2, 0, "KE"-(k+1), nil, nil, 1) %>
 <% end %>
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_<%=@scheme%>
@@ -394,10 +392,10 @@ contains
 <% nh.times do |k| %>
        vel = mflx(KS<%=k%>,i,j)
        flux(KS<%=k%>,i,j) = vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
        vel = mflx(KE<%=-(k+1)%>,i,j)
        flux(KE<%=-k-1%>,i,j) = vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
 <% end %>
        flux(KE  ,i,j) = 0.0_RP
     enddo
@@ -538,7 +536,7 @@ contains
        vel = <%= interp("mom", "XYW", "XYZ", "KS+1") %> &
            / DENS(KS+1,i,j)
        flux(KS  ,i,j) = J33G * vel &
-                   * ( <%= flux("vel", order-(nh-1)*2, 0, "KS") %> ) <%= num_diff("KS+1") %> ! k = KS+1
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-1)*2, 0, "KS") %> ) <%= num_diff("KS+1") %> ! k = KS+1
 <% end %>
        ! if w>0; min(f,w*dz/dt)
        ! else  ; max(f,w*dz/dt) = -min(-f,-w*dz/dt)
@@ -549,7 +547,7 @@ contains
        vel = <%= interp("mom", "XYW", "XYZ", "KE-1") %> &
            / DENS(KE-1,i,j)
        flux(KE-2,i,j) = J33G * vel &
-                   * ( <%= flux("vel", order-(nh-1)*2, 0, "KE-2") %> ) <%= num_diff("KE-1") %> ! k = KE-1
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-1)*2, 0, "KE-2") %> ) <%= num_diff("KE-1") %> ! k = KE-1
 <% end %>
        flux(KE-1,i,j) = 0.0_RP ! k = KE
        flux(KE  ,i,j) = 0.0_RP ! k = KE+1
@@ -608,11 +606,11 @@ contains
        vel = <%= interp("mom", uv, "XYZ", "KS"+k) %> &
            / DENS(KS<%=k%>,i,j)
        flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> )
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-k)*2, 0, "KS"+k) %> )
        vel = <%= interp("mom", uv, "XYZ", "KE"-k) %> &
            / DENS(KE<%=-k%>,i,j)
        flux(KE<%=-k-2%>,i,j) = <%=dir%>G(KE<%=-k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+2)) %> )
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-k)*2, 0, "KE"-(k+2)) %> )
 <%   end %>
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -766,11 +764,11 @@ contains
        vel = <%= interp("mom", "XYW", uv+"W", "KS"+k) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KS"+k) %>
        flux(KS<%=k%>,i,j) = J33G * vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-k)*2, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
        vel = <%= interp("mom", "XYW", uv+"W", "KE"-(k+1)) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KE"-(k+1)) %>
        flux(KE<%=-k-1%>,i,j) = J33G * vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-k)*2, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
 <% end %>
        flux(KE,i,j) = 0.0_RP
     enddo
@@ -830,11 +828,11 @@ contains
        vel = <%= interp("mom", xyz, uv+"W", "KS"+k) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KS"+k) %>
        flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%=k%>,i,j) / MAPF(i,j,<%=im%>) * vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KS"+k) %> )
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-k)*2, 0, "KS"+k) %> )
        vel = <%= interp("mom", xyz, uv+"W", "KE"-(k+1)) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KE"-(k+1)) %>
        flux(KE<%=-k-1%>,i,j) = <%=dir%>G(KE<%=-k-1%>,i,j) / MAPF(i,j,<%=im%>) * vel &
-                   * ( <%= flux("vel", order-(nh-k)*2, 0, "KE"-(k+1)) %> )
+                   * ( <%= flux("vel", ((order+1)/2)*2-(nh-k)*2, 0, "KE"-(k+1)) %> )
 <% end %>
        flux(KE  ,i,j) = 0.0_RP
     enddo
