@@ -134,7 +134,7 @@ contains
        TIME_NOWSTEP,               &
        TIME_NSTEP,                 &
        TIME_DTSEC_ATMOS_DYN,       &
-       TIME_NSTEP_ATMOS_DYN,       &
+       NSTEP_DYN => TIME_NSTEP_ATMOS_DYN, &
        TIME_DTSEC_ATMOS_PHY_CP,    &
        TIME_DTSEC_ATMOS_PHY_MP,    &
        TIME_DTSEC_ATMOS_PHY_RD,    &
@@ -173,6 +173,7 @@ contains
 
     real(DP)               :: TIME_DT_ATMOS_DYN            = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_DYN_UNIT       = "SEC"
+    integer                :: TIME_NSTEP_ATMOS_DYN         = -1
     real(DP)               :: TIME_DT_ATMOS_PHY_CP         = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CP_UNIT    = ""
     real(DP)               :: TIME_DT_ATMOS_PHY_MP         = UNDEF8
@@ -549,6 +550,7 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_RESUME,        TIME_DT_RESUME,        TIME_DT_RESUME_UNIT        )
 
        TIME_NSTEP_ATMOS_DYN = max( nint( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN ), 1 )
+       NSTEP_DYN = TIME_NSTEP_ATMOS_DYN
 
        TIME_DTSEC_ATMOS_DYN     = max( TIME_DTSEC_ATMOS_DYN,     TIME_DTSEC          /TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_CP  = max( TIME_DTSEC_ATMOS_PHY_CP,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
