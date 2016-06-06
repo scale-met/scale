@@ -520,9 +520,9 @@ contains
     real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
     real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
     real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
-    real(RP) :: BBL_RZ       =  2.E3_RP ! bubble radius   [m]: z
-    real(RP) :: BBL_RX       =  2.E3_RP ! bubble radius   [m]: x
-    real(RP) :: BBL_RY       =  2.E3_RP ! bubble radius   [m]: y
+    real(RP) :: BBL_RZ       =  0.0_RP  ! bubble radius   [m]: z
+    real(RP) :: BBL_RX       =  0.0_RP  ! bubble radius   [m]: x
+    real(RP) :: BBL_RY       =  0.0_RP  ! bubble radius   [m]: y
 
     NAMELIST / PARAM_BUBBLE / &
        BBL_eachnode, &
@@ -550,40 +550,45 @@ contains
     read(IO_FID_CONF,nml=PARAM_BUBBLE,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
-       call PRC_MPIstop
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_BUBBLE. Check!'
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_BUBBLE)
 
-    bubble(:,:,:) = CONST_UNDEF8
-
-    if ( BBL_eachnode ) then
-       CZ_offset = GRID_CZ(KS)
-       CX_offset = GRID_CX(IS)
-       CY_offset = GRID_CY(JS)
+    if ( abs(BBL_RZ*BBL_RX*BBL_RY) <= 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** no bubble'
+       bubble(:,:,:) = 0.0_RP
     else
-       CZ_offset = 0.0_RP
-       CX_offset = 0.0_RP
-       CY_offset = 0.0_RP
+
+       bubble(:,:,:) = CONST_UNDEF8
+
+       if ( BBL_eachnode ) then
+          CZ_offset = GRID_CZ(KS)
+          CX_offset = GRID_CX(IS)
+          CY_offset = GRID_CY(JS)
+       else
+          CZ_offset = 0.0_RP
+          CX_offset = 0.0_RP
+          CY_offset = 0.0_RP
+       endif
+
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+
+          ! make tracer bubble
+          dist = ( (GRID_CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2 &
+               + ( (GRID_CX(i)-CX_offset-BBL_CX)/BBL_RX )**2 &
+               + ( (GRID_CY(j)-CY_offset-BBL_CY)/BBL_RY )**2
+
+          bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(dist,1.0_RP) ) )**2
+
+       enddo
+       enddo
+       enddo
     endif
-
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS, KE
-
-       ! make tracer bubble
-       dist = ( (GRID_CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2 &
-            + ( (GRID_CX(i)-CX_offset-BBL_CX)/BBL_RX )**2 &
-            + ( (GRID_CY(j)-CY_offset-BBL_CY)/BBL_RY )**2
-
-       bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(dist,1.0_RP) ) )**2
-
-    enddo
-    enddo
-    enddo
 
     return
   end subroutine BUBBLE_setup
@@ -4766,7 +4771,6 @@ enddo
     real(RP) :: POTT(KA)
     real(RP) :: QV(KA)
 
-    ! Bubble
     real(RP) :: PERTURB_AMP = 0.0_RP
     integer  :: RANDOM_LIMIT = 0
     integer  :: RANDOM_FLAG  = 0       ! 0 -> no perturbation
