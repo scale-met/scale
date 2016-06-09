@@ -1532,6 +1532,7 @@ contains
 
        lmdlid = iSCALE
        serial_land = .false.
+       do_read_land = .true.
        call ParentLandSetupSCALE( ldims ) ! (out)
        use_waterratio = .false.
 
@@ -1629,6 +1630,7 @@ contains
 
        omdlid = iSCALE
        serial_ocean = .false.
+       do_read_ocean = .true.
        call ParentOceanSetupSCALE( odims )
        update_coord = .false.
 
