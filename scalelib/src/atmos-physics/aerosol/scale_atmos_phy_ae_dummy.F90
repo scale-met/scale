@@ -99,7 +99,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
     real(RP), intent(in)    :: NREG(KA,IA,JA)
-    real(RP), intent(in)    :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(out)   :: CN(KA,IA,JA)
     real(RP), intent(out)   :: CCN(KA,IA,JA)
     real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)

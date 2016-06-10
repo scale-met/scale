@@ -442,7 +442,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
     real(RP), intent(in)    :: NREG(KA,IA,JA)
-    real(RP), intent(in)    :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(out)   :: CN(KA,IA,JA)
     real(RP), intent(out)   :: CCN(KA,IA,JA)
     real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)
@@ -483,6 +483,28 @@ contains
     integer :: i, j, k, iq, it
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(kajino13)'
+
+    !--- Negative fixer
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+      do ic = 1, n_ctg       !aerosol category
+      do ik = 1, n_kap(ic)   !kappa bin
+      do is0 = 1, n_siz(ic)   !size bin
+        if (QTRC(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic)) < 0.0_RP .or. &
+            QTRC(k,i,j,QAES-1+it_procs2trans(ia_m2,is0,ik,ic)) < 0.0_RP .or. &
+            QTRC(k,i,j,QAES-1+it_procs2trans(ia_m3,is0,ik,ic)) < 0.0_RP .or. &
+            QTRC(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic)) < 0.0_RP .or. &
+            QTRC(k,i,j,QAES-1+it_procs2trans(ia_kp,is0,ik,ic)) < 0.0_RP ) then
+          QTRC(k,i,j,QAES-1+it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP 
+        endif
+      enddo
+      enddo
+      enddo
+    enddo
+    enddo
+    enddo
+    
 
     allocate( QTRC0(KA,IA,JA,QA), QTRC1(KA,IA,JA,QA) )
     do iq = 1, QA
@@ -610,6 +632,8 @@ contains
        if (flag_ccn_interactive) then
          do is0 = 1, n_siz(ic_mix)
          do ia0 = 1, N_ATR       !attributes
+           aerosol_activ(ia0,is0,ik_out,ic_mix) = min(max(0._RP, aerosol_activ(ia0,is0,ik_out,ic_mix)), &
+                                                                 aerosol_procs(ia0,is0,ik_out,ic_mix) )
            aerosol_procs(ia0,is0,ik_out,ic_mix) = &
            aerosol_procs(ia0,is0,ik_out,ic_mix) - aerosol_activ(ia0,is0,ik_out,ic_mix)
          enddo
@@ -677,6 +701,21 @@ contains
        enddo !ik (1:n_kap(ic)  )
        enddo !ic (1:n_ctg      )
 
+       !--- Negative fixer
+       do ic = 1, n_ctg       !aerosol category
+       do ik = 1, n_kap(ic)   !kappa bin
+       do is0 = 1, n_siz(ic)   !size bin
+         if (QTRC(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic)) < 0.0_RP .or. &
+             QTRC(k,i,j,QAES-1+it_procs2trans(ia_m2,is0,ik,ic)) < 0.0_RP .or. &
+             QTRC(k,i,j,QAES-1+it_procs2trans(ia_m3,is0,ik,ic)) < 0.0_RP .or. &
+             QTRC(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic)) < 0.0_RP .or. &
+             QTRC(k,i,j,QAES-1+it_procs2trans(ia_kp,is0,ik,ic)) < 0.0_RP ) then
+           QTRC(k,i,j,QAES-1+it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP 
+         endif
+       enddo
+       enddo
+       enddo
+
        ! for history
        total_aerosol_mass(k,i,j,:) = 0.0_RP
        total_aerosol_number(k,i,j,:) = 0.0_RP
@@ -705,11 +744,11 @@ contains
       write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass'
       call HIST_in( total_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of aerosol', 'kg/kg' )
       write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number'
-      call HIST_in( total_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of aerosol', '/kg' )
+      call HIST_in( total_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of aerosol', 'num/kg' )
       write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass_emit'
       call HIST_in( total_emit_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of emitted aerosol', 'kg/kg' )
       write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number_emit'
-      call HIST_in( total_emit_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of emitted aerosol', '/kg' )
+      call HIST_in( total_emit_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of emitted aerosol', 'num/kg' )
     enddo
 
     call HIST_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_H2SO4), 'H2SO4_emit', 'Emission ratio of H2SO4 gas', 'ug/m3/s' )
@@ -1463,6 +1502,9 @@ contains
         ccn_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2))
         cca_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2-twort2*tmp3))
         ccv_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2-thrrt2*tmp3))
+        ccn_frc=min(max(ccn_frc,0.0_RP),1.0_RP)
+        cca_frc=min(max(cca_frc,0.0_RP),1.0_RP)
+        ccv_frc=min(max(ccv_frc,0.0_RP),1.0_RP)
         aerosol_activ(ia_m0,is0,ik,ic) = ccn_frc * aerosol_procs(ia_m0,is0,ik,ic)
         aerosol_activ(ia_m2,is0,ik,ic) = cca_frc * aerosol_procs(ia_m2,is0,ik,ic)
         aerosol_activ(ia_m3,is0,ik,ic) = ccv_frc * aerosol_procs(ia_m3,is0,ik,ic)

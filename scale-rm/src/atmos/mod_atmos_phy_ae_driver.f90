@@ -149,7 +149,7 @@ contains
                           RHOT, & ! [IN]
                           AE_EMIT, & ! [IN]
                           NREG,    & ! [IN]
-                          QTRC, & ! [IN]
+                          QTRC, & ! [INOUT]
                           CN ,  & ! [OUT]
                           CCN,  & ! [OUT]
                           RHOQ_t_AE ) ! [INOUT]
@@ -158,8 +158,8 @@ contains
 
 !       CCN(:,:,:) = 0.0_RP ! tentative
 
-       call HIST_in( CN(:,:,:)*1e-6_RP,  'CN',  'condensation nucrei', '/cc' )
-       call HIST_in( CCN(:,:,:)*1e-6_RP, 'CCN', 'cloud condensation nucrei', '/cc' )
+       call HIST_in( CN(:,:,:)*1e-6_RP,  'CN',  'condensation nucrei', 'num/cc' )
+       call HIST_in( CCN(:,:,:)*1e-6_RP, 'CCN', 'cloud condensation nucrei', 'num/cc' )
 
     endif
 
