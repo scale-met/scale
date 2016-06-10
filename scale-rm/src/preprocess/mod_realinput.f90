@@ -1016,7 +1016,8 @@ contains
                                         pres_org, dens_org, pott_org, & ! (out)
                                         qtrc_org,                     & ! (out)
                                         flg_bin, flg_intrp,           & ! (in)
-                                        basename_org, dims, n         ) ! (in)
+                                        basename_org, mptype_parent,  & ! (in)
+                                        dims, n         ) ! (in)
 
           case ( iWRFARW ) ! TYPE: WRF-ARW
 

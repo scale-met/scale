@@ -153,18 +153,19 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ParentAtomInputSCALE( &
-       velz_org,     &
-       velx_org,     &
-       vely_org,     &
-       pres_org,     &
-       dens_org,     &
-       pott_org,     &
-       qtrc_org,     &
-       flg_bin,      &
-       flg_intrp,    &
-       basename_org, &
-       dims,         &
-       it            ) ! (in)
+       velz_org,      &
+       velx_org,      &
+       vely_org,      &
+       pres_org,      &
+       dens_org,      &
+       pott_org,      &
+       qtrc_org,      &
+       flg_bin,       &
+       flg_intrp,     &
+       basename_org,  &
+       mptype_parent, &
+       dims,          &
+       it             ) ! (in)
     use scale_const, only: &
        P00 => CONST_PRE00, &
        CPdry => CONST_CPdry, &
@@ -201,6 +202,7 @@ contains
     logical,          intent(in)  :: flg_bin            ! flag for SBM(S10) 
     logical,          intent(in)  :: flg_intrp          ! flag for interpolation of SBM
     character(len=*), intent(in)  :: basename_org
+    integer,          intent(in)  :: mptype_parent
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
 
@@ -288,12 +290,15 @@ contains
 
        else !--- tracers of paremt domain directly used
 
-          do iq = 1, QA
+          do iq = 1, mptype_parent
              call FileRead( read3D(:,:,:), BASENAME_ORG, AQ_NAME(iq), it, rank )
              do k = 1, dims(1)
                 qtrc_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
              end do
              qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
+          end do
+          do iq = mptype_parent+1, QA
+             qtrc_org(:,xs:xe,ys:ye,iq) = 0.0_RP
           end do
 
        endif
