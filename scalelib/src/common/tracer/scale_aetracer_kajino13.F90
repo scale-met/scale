@@ -155,7 +155,7 @@ contains
     do ia0 = 1, N_ATR
       if( ia0 == 1 ) then
          write(attribute,'(a)') "Number"
-         write(aunit,'(a)') "/kg"
+         write(aunit,'(a)') "#/kg"
       elseif( ia0 == 2 ) then
          write(attribute,'(a)') "Section"
          write(aunit,'(a)') "m2/kg"
