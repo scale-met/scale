@@ -66,7 +66,7 @@ module mod_atmos_phy_ae_vars
 
   data VAR_NAME / 'CCN' /
   data VAR_DESC / 'cloud condensation nuclei' /
-  data VAR_UNIT / '#/m3' /
+  data VAR_UNIT / 'num/m3' /
 
   !-----------------------------------------------------------------------------
 contains
