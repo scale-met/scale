@@ -573,6 +573,7 @@ contains
                                       RHOE(:,:,:),  & ! [IN]
                                       QTRC(:,:,:,:) ) ! [IN]
 
+          vterm(:,:,:,:) = 0.0_RP
           call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
                                   DENS (:,:,:),   & ! [IN]
                                   temp (:,:,:),   & ! [IN]

@@ -255,6 +255,7 @@ contains
 
        do step = 1, MP_NSTEP_SEDIMENTATION
 
+         vterm(:,:,:,:) = 0.0_RP
          call MP_kessler_vterm( vterm(:,:,:,:), & ! [OUT]
                                 DENS (:,:,:),   & ! [IN]
                                 QTRC (:,:,:,:)  ) ! [IN]
