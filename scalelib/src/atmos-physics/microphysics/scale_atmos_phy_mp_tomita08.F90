@@ -563,6 +563,8 @@ contains
     FLX_rain(:,:,:) = 0.0_RP
     FLX_snow(:,:,:) = 0.0_RP
 
+    vterm(:,:,:,:) = 0.0_RP
+
     if ( MP_doprecipitation ) then
 
        do step = 1, MP_NSTEP_SEDIMENTATION
@@ -573,7 +575,6 @@ contains
                                       RHOE(:,:,:),  & ! [IN]
                                       QTRC(:,:,:,:) ) ! [IN]
 
-          vterm(:,:,:,:) = 0.0_RP
           call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
                                   DENS (:,:,:),   & ! [IN]
                                   temp (:,:,:),   & ! [IN]
