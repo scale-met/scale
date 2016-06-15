@@ -505,7 +505,6 @@ contains
     enddo
     enddo
     
-
     allocate( QTRC0(KA,IA,JA,QA), QTRC1(KA,IA,JA,QA) )
     do iq = 1, QA
     do j  = JS, JE
@@ -569,7 +568,7 @@ contains
       do ic = 1, n_ctg       !aerosol category
       do ik = 1, n_kap(ic)   !kappa bin
       do is0 = 1, n_siz(ic)   !size bin
-        if (QTRC0(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j)<cleannumber) then
+        if (QTRC0(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j) < cleannumber) then
           do ia0 = 1, N_ATR
             QTRC0(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = 0._RP !to save cpu time and avoid underflow
           enddo !ia0 (1:n_atr      )
@@ -692,7 +691,7 @@ contains
        do ic = 1, n_ctg       !aerosol category
        do ik = 1, n_kap(ic)   !kappa bin
        do is0 = 1, n_siz(ic)   !size bin
-         if (QTRC1(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j)<cleannumber) then
+         if (QTRC1(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j) < cleannumber) then
            do ia0 = 1, N_ATR
              QTRC1(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = 0._RP !to save cpu time and avoid underflow
            enddo !ia0 (1:n_atr      )
@@ -738,6 +737,17 @@ contains
 
     enddo
     enddo
+    enddo
+
+    do ic = 1, n_ctg
+      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass'
+      call HIST_in( total_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of aerosol', 'kg/kg' )
+      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number'
+      call HIST_in( total_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of aerosol', 'num/kg' )
+      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass_emit'
+      call HIST_in( total_emit_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of emitted aerosol', 'kg/kg' )
+      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number_emit'
+      call HIST_in( total_emit_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of emitted aerosol', 'num/kg' )
     enddo
 
     do ic = 1, n_ctg
@@ -844,7 +854,7 @@ contains
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
     do is0 = 1, n_siz(ic)   !size bin
-      if (aerosol_procs(ia_m0,is0,ik,ic)<cleannumber) then
+      if (aerosol_procs(ia_m0,is0,ik,ic) < cleannumber) then
         do ia0 = 1, N_ATR
           aerosol_procs(ia0,is0,ik,ic) = 0._RP !to save cpu time and avoid underflow
         enddo !ia0 (1:n_atr      )
@@ -1001,7 +1011,7 @@ contains
     integer  :: ic, ik, is0, i, is1, is2
 
 ! nothing happens --> in future, c_ratio is removed and condensable gas should be used
-    if (conc_h2so4<=0.0_RP) return 
+    if (conc_h2so4 <= 0.0_RP) return 
 ! nothing happens --> in future, c_ratio is removed and condensable gas should be used
   
     drive         = conc_h2so4 * mwrat_s6 * conv_ms_vl  ![ugH2SO4/m3]=>volume [m3SO4/m3]
@@ -1255,6 +1265,7 @@ contains
           m3j = aerosol_procs(ia_m3,is_j(mc),ik_j(mc),ic_j(mc))
           msi = aerosol_procs(ia_ms,is_i(mc),ik_i(mc),ic_i(mc))
           msj = aerosol_procs(ia_ms,is_j(mc),ik_j(mc),ic_j(mc))
+
           if (m0i*m2i*m3i <= 0._RP .OR. m0j*m2j*m3j <= 0._RP) cycle
     
           call diag_ds(m0i,m2i,m3i,dgi,sgi,dm2)
@@ -1529,6 +1540,7 @@ contains
     real(RP), parameter :: ratio  =rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
+    real(RP), parameter :: tiny=1.E-50_RP
 
     dm2=0._RP
   
@@ -1891,6 +1903,7 @@ contains
     real(RP), parameter :: ratio  =rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
+    real(RP), parameter :: tiny=1.E-50_RP
   
     dm2=0._RP
     if (m0 <= EPS .OR. m3 <= EPS .OR. m6 <= EPS) then
