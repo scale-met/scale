@@ -1137,6 +1137,28 @@ contains
     enddo
     enddo
     enddo
+    if( nspc > 1 ) then
+      do j = JS, JE
+      do i = IS, IE
+      do k = KS, KE
+         do m = ic, id
+          do n = 1, nbin
+           QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
+          enddo
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + Ghyd_ijk(n,iss,ijk) / DENS(k,i,j) * dxmic
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + Ghyd_ijk(n,ig,ijk) / DENS(k,i,j) * dxmic
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + Ghyd_ijk(n,ih,ijk) / DENS(k,i,j) * dxmic
+         enddo
+      enddo
+      enddo
+      enddo
+    endif
 
     if( nspc > 1 ) then
 
@@ -2818,7 +2840,7 @@ contains
        do myu = 1, nspc
        do mm  = 1, iflg( myu,ijk )
            dumm_regene(ijk) = dumm_regene(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic ) &
-                            * min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
+                            * min( uadv(1,myu,ijk),0.0_RP )/( uadv(1,myu,ijk)+EPS )
        enddo
        enddo
        enddo
