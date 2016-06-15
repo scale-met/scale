@@ -1,18 +1,14 @@
 \section{はじめに}
 
 本書は初めてSCALEモデルを利用するユーザー向けに、SCALE-RMモデルについて解説したユーザーズガイドです。
-本書はSCALE-RM version 4.3.3 に対応した説明になっています。
-第\ref{sec:overview}章でSCALEの概要について説明し、
-第\ref{sec:install}章で必要な環境、およびインストール方法を説明します。
-%
-続いて、第\ref{sec:tuto_ideal}章では理想実験、
-第\ref{sec:tuto_real}章では現実大気実験の実行方法について
-簡単な例示しながら説明します。
-第\ref{sec:install}章から第\ref{sec:tuto_real}章まではひと繋がりの
-チュートリアルとなっており、前章の経験や結果に基づいて説明する部分がありますのでご注意下さい。
-%
-第\ref{sec:advance}章では、チュートリアルを終えたユーザー向けに
-設定の変更、機能やツールについて説明します。
+本書はSCALE-RM version _VERSION_ に対応した説明になっています。
+第\ref{sec:overview}章でSCALEの概要について説明します。第\ref{sec:install}章で必要な環境、
+およびインストール方法を説明します。つづいて、第\ref{sec:tuto_ideal}章では理想実験、
+第\ref{sec:tuto_real}章では現実大気実験の簡単な例を挙げて実行方法を説明します。
+第\ref{sec:install}章から第\ref{sec:tuto_real}章まではひとつながりの
+チュートリアルになっており、前章の経験や結果に基づいて説明する部分がありますので注意してください。
+第\ref{sec:advance}章ではチュートリアルでは説明しなかった実行方法の詳細、
+機能やツールについて説明します。
 
 本書中の不明点やお気づきの点がございましたら、SCALE user's メーリングリスト\\
  \verb|scale-user@riken.jp|までご連絡ください。
@@ -20,12 +16,11 @@
 
 
 \subsection{SCALEの特徴}
-SCALEは計算機を用いて気象・気候科学の問題にアプローチする際に、
-ユーザーが研究を進めやすいように、
-事前処理から数値計算、解析に至るまですべての過程を網羅する計算ライブラリの開発を
-目指したソフトウェアで、下記に挙げるような特徴を持つ。
+SCALEは計算機を用いて気象・気候科学の問題にアプローチする際に、ユーザーが研究を進めやすいように
+事前処理から数値モデル計算、解析に至るまですべての過程を網羅する計算ライブラリの開発を
+目指したソフトウェアであり。SCALEは下記に挙げるような特徴を持つ。
 \begin{itemize}
-\item SCALEは、``Scalable Computing for Advanced Library and Environment''の略である．
+\item SCALEは、 ``Scalable Computing for Advanced Library and Environment''の略である．
 \item SCALEは、フリーソフトウェアである。「BSD-2ライセンス」においてフリーソフトウェア
 として提供されており、商用、非商用に関わらず自由な利用・改変が可能なソフトウェアである。
 \item SCALEには、SCALE-RMモデル、SCALE-GMといった組み上げ済みの数値モデルが含まれている。
@@ -38,11 +33,10 @@ SCALEの使用前に一読しておくこと。またSCALEのWebページにも�
 
 \subsection{SCALE-RMモデルの構成}
 現在，SCALE-RMモデルとして組み込まれているコンポーネントは下記のものである。
-詳細なモデル構成や差分化手法については、
-\cite{scale_2015}、\cite{satoy_2015b}、および\cite{nishizawa_2015}を参照されたい。\\
-
+詳細なモデル構成や差分化手法については、\cite{scale_2015}、\cite{satoy_2015b}、および\cite{nishizawa_2015}を参照されたい。\\
 
 \noindent{\bf フレームワーク関係}
+
 \begin{itemize}
  \item Cartesian グリッドシステム（Arakawa C-grid）
  \item Cartesian ベースMPI通信
@@ -60,26 +54,26 @@ SCALEの使用前に一読しておくこと。またSCALEのWebページにも�
 \end{itemize}
 
 {\bf 力学コア関係}
+
 \begin{itemize}
  \item 方程式系: ３次元完全圧縮流体方程式
  \item 数値解法: 陽解法と陰解法の両方を実装済み
    \begin{itemize}
     \item Option: HE-VE、HE-VI、HI-VIスキームから選択可能
    \end{itemize}
- \item 空間差分: 2次・3次・4次・5次・6次中央差分
- \item 時間差分: 3段ルンゲクッタスキーム・4段ルンゲクッタスキーム
+ \item 空間差分: 4次中央差分
+ \item 時間差分: 3段ルンゲクッタスキーム（2次）
  \item 非負保証: FCTスキーム
  \item 数値フィルター: 4次Hyper diffusion
  \item 地形: Terrain-followingスキーム
 \end{itemize}
 
-
 {\bf 物理過程}
+
 \begin{itemize}
  \item 乱流過程: 複数から選択可能
    \begin{itemize}
     \item Smagorinsky-Lilly typeのサブグリッドモデル (\cite{smagorinsky_1963}; \cite{lilly_1962})
-    %\item Deardorff typeのサブグリットモデル (\cite{Deardorff_1980})
     \item MYNN2.5境界層モデル (\cite{my_1982},\cite{nakanishi_2004})
    \end{itemize}
  \item 雲微物理: 複数から選択可能
@@ -98,12 +92,10 @@ SCALEの使用前に一読しておくこと。またSCALEのWebページにも�
   \end{itemize}
 \end{itemize}
 
-上記に加えて、SCALE-RMモデル本体のドライバー、
-現実事例の計算に必要な地形や土地利用データを作成するツール、
+上記に加えて、SCALE-RMモデル本体のドライバー、現実事例の計算に必要な地形や土地利用データを作成するツール、
 理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。
 
-次節でSCALEライブラリの思想とモデルの関係について説明するが、
-SCALE-RMモデルの実行とは直接関係ないため、
+次節でSCALEライブラリの思想とモデルの関係について説明するが、SCALE-RMモデルの実行とは直接関係ないため、
 必要なければ読み飛ばしても構わない。
 
 
