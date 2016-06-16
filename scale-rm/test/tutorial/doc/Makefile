@@ -1,6 +1,6 @@
 ###########################################################
 #
-# Makefile for tex program
+# Makefile for compiling tex document
 #
 ###########################################################
 
@@ -21,7 +21,7 @@ all: pdf
 pdf: $(TEXNAME).pdf
 
 clean:
-	rm -f *.aux *.bbl *.blg *.log *.out *.pdf *.toc
+	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc
 
 .dvi.pdf:
 	$(DVIPDF) $(TEXNAME)
@@ -36,6 +36,7 @@ clean:
 html: $(TEXNAME).html
 	$(HTMLBIN) $(TEXNAME).tex -o ${TEXNAME}.html
 
+.SUFFIXES:
 .SUFFIXES: .tex .bbl .dvi .pdf .bib .html
 
 .PHONY : pdf clean html
