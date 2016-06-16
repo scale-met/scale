@@ -31,8 +31,7 @@ module scale_atmos_phy_ae_kajino13
       rgas  => CONST_R, &                 ! universal gas constant             [J/mol/K]
       stdatmpa =>  CONST_Pstd, &          ! standard pressure                   [Pa]
       stdtemp  =>  CONST_TEM00, &         ! standard temperature                [K]
-      pi    => CONST_PI, &                ! pi
-      EPS   => CONST_EPS                  ! epsilon number
+      pi    => CONST_PI                   ! pi
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -1540,11 +1539,11 @@ contains
     real(RP), parameter :: ratio  =rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
-    real(RP), parameter :: tiny=1.E-50_RP
+    real(DP), parameter :: tiny=1.E-50_RP
 
     dm2=0._RP
   
-    if (m0 <= EPS .OR. m2 <= EPS .OR. m3 <= EPS) then
+    if (m0 <= tiny .OR. m2 <= tiny .OR. m3 <= tiny) then
       m0=0._RP
       m2=0._RP
       m3=0._RP
@@ -1903,10 +1902,10 @@ contains
     real(RP), parameter :: ratio  =rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
-    real(RP), parameter :: tiny=1.E-50_RP
+    real(DP), parameter :: tiny=1.E-50_RP
   
     dm2=0._RP
-    if (m0 <= EPS .OR. m3 <= EPS .OR. m6 <= EPS) then
+    if (m0 <= tiny .OR. m3 <= tiny .OR. m6 <= tiny) then
       m0=0._RP
       m2=0._RP
       m3=0._RP
