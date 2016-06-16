@@ -1539,7 +1539,7 @@ contains
     real(RP), parameter :: ratio  =rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
-    real(DP), parameter :: tiny=1.E-50_RP
+    real(DP), parameter :: tiny=1.E-50_DP
 
     dm2=0._RP
   
@@ -1902,7 +1902,7 @@ contains
     real(RP), parameter :: ratio  =rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
-    real(DP), parameter :: tiny=1.E-50_RP
+    real(DP), parameter :: tiny=1.E-50_DP
   
     dm2=0._RP
     if (m0 <= tiny .OR. m3 <= tiny .OR. m6 <= tiny) then
