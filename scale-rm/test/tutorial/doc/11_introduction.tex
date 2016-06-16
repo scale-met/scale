@@ -66,10 +66,23 @@ SCALEの使用前に一読しておくこと。またSCALEのWebページにも�
    \begin{itemize}
     \item Option: HE-VE、HE-VI、HI-VIスキームから選択可能
    \end{itemize}
- \item 空間差分: 2次・3次・4次・5次・6次中央差分
- \item 時間差分: 3段ルンゲクッタスキーム・4段ルンゲクッタスキーム
+ \item 空間差分:
+    \begin{itemize}
+      \item 2次中央差分(2-nd order central difference schemes)
+      \item 4次中央差分(4-th order central difference schemes)
+      \item 6次中央差分(6-th order central difference schemes)
+      \item 3次風上差分(3-rd order upwind difference schemes)
+      \item 3次風上差分（Koren(1993)filterあり）(3rd order upwind difference scheme with \cite{Koren_1993} filter)
+      \item 5次風上差分(5-th order upwind difference schemes)
+    \end{itemize}
+ \item 時間差分:
+    \begin{itemize}
+      \item 3次ルンゲクッタスキーム(Heun's 3rd order Runge-Kutta scheme)
+      \item Wicker and Skamarock (2002) 3段ルンゲクッタスキーム(\citet{Wicker_2002} 3-step Runge-Kutta scheme)
+      \item 4次ルンゲクッタスキーム(4th order Runge-Kutta scheme)
+    \end{itemize}
  \item 非負保証: FCTスキーム
- \item 数値フィルター: 4次Hyper diffusion
+ \item 数値フィルター: 4次 Hyper diffusion
  \item 地形: Terrain-followingスキーム
 \end{itemize}
 
@@ -79,7 +92,7 @@ SCALEの使用前に一読しておくこと。またSCALEのWebページにも�
  \item 乱流過程: 複数から選択可能
    \begin{itemize}
     \item Smagorinsky-Lilly typeのサブグリッドモデル (\cite{smagorinsky_1963}; \cite{lilly_1962})
-    %\item Deardorff typeのサブグリットモデル (\cite{Deardorff_1980})
+    \item Deardorff(1980) サブグリットモデル (\cite{Deardorff_1980})
     \item MYNN2.5境界層モデル (\cite{my_1982},\cite{nakanishi_2004})
    \end{itemize}
  \item 雲微物理: 複数から選択可能
