@@ -195,8 +195,8 @@ program scalerm_launcher
 
   if ( EXECUTE_MODEL ) then
      call scalerm     ( local_comm,            & ! [IN]
-                        intercomm_parent_null, & ! [IN]
-                        intercomm_child_null,  & ! [IN]
+                        intercomm_parent, & ! [IN]
+                        intercomm_child,  & ! [IN]
                         local_cnf_fname        ) ! [IN]
   endif
 
