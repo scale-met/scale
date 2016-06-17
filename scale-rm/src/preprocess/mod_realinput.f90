@@ -274,7 +274,7 @@ contains
           write(NUM,'(I5.5)') n-1
           BASENAME_WITHNUM = trim(BASENAME_ATMOS)//"_"//NUM
        else
-          BASENAME_WITHNUM = trim(BASENAME_ORG)
+          BASENAME_WITHNUM = trim(BASENAME_ATMOS)
        end if
 
        if( IO_L ) write(IO_FID_LOG,*) ' '
