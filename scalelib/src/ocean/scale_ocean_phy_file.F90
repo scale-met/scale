@@ -55,7 +55,7 @@ contains
 
     character(len=*), intent(in) :: OCEAN_TYPE
 
-    character(len=H_LONG) :: OCEAN_PHY_IN_BASENAME
+    character(len=H_LONG) :: OCEAN_PHY_IN_BASENAME = ''
 
     NAMELIST / PARAM_OCEAN_PHY_FILE / &
          OCEAN_PHY_IN_BASENAME
@@ -80,6 +80,11 @@ contains
 
     if( OCEAN_TYPE /= 'FILE' ) then
        write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
+       call PRC_MPIstop
+    end if
+
+    if ( OCEAN_PHY_IN_BASENAME == '' ) then
+       write(*,*) 'xxx OCEAN_PHY_IN_BASENAME is empty. Set it!'
        call PRC_MPIstop
     end if
 
