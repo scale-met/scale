@@ -30,7 +30,7 @@
   \item {\bf MPIライブラリ} : MPI1.0/2.0 に対応するMPIライブラリを必要とする。
         対応確認済みMPIライブラリについては、表\ref{tab:compatible_mpi}を参照のこと。
   \item {\bf ファイルI/Oライブラリ} : gzip、HDF5、NetCDF4を必要とする。\\
-        HDF5/NetCDF4の代わりに、NetCDF3でも動作するが、この場合はSCALEが提供する全ての機能が有効にならない可能性がある。
+        HDF5/NetCDF4の代わりに、NetCDF3でも動作するが、この場合はSCALEが提供する全ての機能が有効にならない。
   \end{itemize}
 \end{itemize}
 
@@ -48,10 +48,10 @@
 \caption{対応確認済みOS（全てx86-64の64bit版）}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} OS名 & 確認済みバージョン & 備考 \\ \hline
- CentOS                & 6.5、6.6、7.0、7.1 & 左記以外も正常動作する可能性が高い \\ \hline
+ CentOS                & 6.5、6.6、7.0、7.1 & 左記のバージョン以外での動作は保証しない \\ \hline
  openSUSE              & 13.2               &  \\ \hline
  SUSE Enterprise Linux & 11.1、11.3         & 11.1ではGNUコンパイラは使用不可 \\ \hline
- fedora                & 20                 & 左記以外も正常動作する可能性が高い \\ \hline
+ fedora                & 20                 & 左記のバージョン以外での動作は保証しない \\ \hline
  Vine Linux            & 6.2、6.3           &  \\ \hline
  Mac OS X              & 10.10 Yosemite     &  \\ \hline
 \end{tabularx}
@@ -65,7 +65,7 @@
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} コンパイラ名 & 確認済みバージョン & 備考 \\ \hline
  GNU (gcc/gfortran)    & 4.4.x, 4.8.x           & 4.4.xではコンパイル時にWarningが出ることがある \\ \hline
- Intel (icc/ifort)     & 13.0.1、14.0.2、15.0.0 & 2013年以降のバージョンであれば左記以外も正常動作する可能性が高い\\ \hline
+ Intel (icc/ifort)     & 13.0.1、14.0.2、15.0.0 & 2013年以降のバージョンであれば左記以外も正常動作する可能性が高い（動作は保証しない）\\ \hline
  PGI (gcc/pgfortran)   & 14.3                   &  \\ \hline
 \end{tabularx}
 \label{tab:compatible_compiler}
@@ -103,14 +103,14 @@
 \section{ライブラリ環境のインストール}
 \label{sec:inst_env}
 %====================================================================================
-実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}章を参照のこと。
+実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、付録 \ref{sec:env_setting}章を参照のこと。
 第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは、
-それらのライブラリ環境がインストールされていることを想定して進める。
+それらのライブラリ環境がインストールされていることを前提として進める。
 
 描画ツールは何を使っても良いが、対応を確認している描画ツールについての詳細とインストール方法についての情報は
-Appendix \ref{sec:env_vis_tools}を参照のこと。
+付録 \ref{sec:env_vis_tools}を参照のこと。
 第3章および第4章のチュートリアルではGrADSを使って描画する方法を紹介する。
-その他にGphysを使って、結果のクイックビューを行う方法については、\ref{sec:quicklook}節にて説明する。
+その他にGphysを使って結果のクイックビューを行う方法については、\ref{sec:quicklook}節にて説明する。
 
 
 
@@ -143,7 +143,7 @@ Appendix \ref{sec:env_vis_tools}を参照のこと。
 \subsubsection{Makedefファイルと環境変数の設定}
 %-----------------------------------------------------------------------------------
 
-SCALEはコンパイルするとき、独自の環境変数"\verb|SCALE_SYS|"で与えられた名称に対応した、
+SCALEはコンパイルするとき、独自の環境変数"\verb|SCALE_SYS|"に設定した
 Makedefファイルを使用してコンパイルが行われる。
 Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境に
 対応するファイル（\verb|Makedef.***|）が準備されており、これらの中から自分の環境にあったものを設定する。
@@ -177,9 +177,9 @@ Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境
 環境変数設定を\verb|.bashrc|などの環境設定ファイルに記述しておくと便利である。\\
 
 
-チュートリアル通り進めている場合は、Appendix \ref{sec:env_setting}章で説明する以外にPATHの設定をする
+チュートリアル通り進めている場合は、付録 \ref{sec:env_setting}章で説明する以外にPATHの設定をする
 必要はないが、環境が異なる場合には上述に加えて次の設定が必要になる。
-HDF5とNetCDF4について、下記のようにPATHを設定する。
+HDF5とNetCDF4については、下記のようにPATHを設定する。
 例えば、Intel コンパイラを利用して自分で"\verb|/opt|"下にHDF5とNetCDF4を
 インストールした場合を想定して、HDF5は\verb"/opt/hdf5"、netcdf4は\verb|/opt/netcdf|に
 それぞれインストールされている場合の例を示す。
@@ -207,21 +207,21 @@ Intel コンパイラ等を利用して自分でHDF5をインストールした�
 \subsubsection{コンパイル}
 %-----------------------------------------------------------------------------------
 
-チュートリアル用のディレクトリに移動して，makeコマンドによってコンパイルを行う．
+チュートリアル用のディレクトリに移動して、makeコマンドによってコンパイルを行う。
 \begin{verbatim}
  $ cd scale/scale-rm/test/tutorial/bin
  $ make -j 4
 \end{verbatim}
-\verb|make|のあとの \verb|"-j 4"| は，
-コンパイル時の並列数を示しており，
-例では4並列コンパイルを行うことを指示している．
-実行環境によっては並列数を増やすこともできる．
-このmakeによってSCALEライブラリ，およびSCALE-RMモデルのコンパイルが行われ，
+\verb|make|のあとの \verb|"-j 4"| は、
+コンパイル時の並列数を示しており、
+例では4並列コンパイルを行うことを指示している。
+実行環境によっては並列数を増やすこともできる。
+このmakeによってSCALEライブラリ、およびSCALE-RMモデルのコンパイルが行われ、
 結果として
 \begin{verbatim}
  scale-rm  scale-rm_init  scale-rm_pp
 \end{verbatim}
-の3つの実行ファイルが生成されていればコンパイルは成功である．\\
+の3つの実行ファイルが生成されていればコンパイルは成功である。\\
 
 下記のコマンドで作成された実行バイナリを消去できる。
 \begin{verbatim}
