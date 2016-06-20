@@ -78,7 +78,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_PHY_FILE)
 
-    if( OCEAN_TYPE .ne. 'FILE' ) then
+    if( OCEAN_TYPE /= 'FILE' ) then
        write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
        call PRC_MPIstop
     end if

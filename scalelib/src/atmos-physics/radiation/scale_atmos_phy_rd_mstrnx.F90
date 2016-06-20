@@ -332,7 +332,7 @@ contains
        I_MPAE2RD(MP_QA+iaero) = I_AE2RD(iaero)
     enddo
 
-    !--- setup vartical grid for radiation (larger TOA than LES domain)
+    !--- setup vartical grid for radiation (larger TOA than Model domain)
     call RD_PROFILE_setup_zgrid( RD_KMAX,  RD_KADD, & ! [IN]
                                  RD_zh(:), RD_z(:)  ) ! [INOUT]
 
@@ -490,14 +490,14 @@ contains
     if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI ) then
        do ihydro = 1, MP_QA
           iq = I_MP2ALL(ihydro)
-          if ( iq .ne. I_QC .and. iq .ne. I_QI ) then
+          if ( iq /= I_QC .AND. iq /= I_QI ) then
 !OCL XFILL
              MP_Qe(:,:,:,ihydro) = 0.0_RP
           end if
        end do
     end if
 
-    ! marge basic profile and value in LES domain
+    ! marge basic profile and value in model domain
 
     if ( RD_PROFILE_use_climatology ) then
        call RD_PROFILE_read( RD_KMAX,                & ! [IN]
@@ -519,8 +519,6 @@ contains
                              RD_aerosol_radi(:,:),   & ! [OUT]
                              RD_cldfrac     (:)      ) ! [OUT]
     endif
-
-    ! marge basic profile and value in LES domain
 
 !OCL XFILL
     do j = JS, JE
@@ -690,7 +688,7 @@ contains
 
     call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
 
-    ! return to grid coordinate of LES domain
+    ! return to grid coordinate of model domain
     do ic = 1, 2
     do j  = JS, JE
     do i  = IS, IE

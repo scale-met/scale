@@ -27,12 +27,13 @@ VPATH = common:                     \
         atmos-physics/turbulence:   \
         atmos-physics/aerosol:      \
         atmos-physics/chemistry:    \
-        atmos-les:                  \
-        atmos-les/communication:    \
-        atmos-les/grid:             \
-        atmos-les/io:               \
-        atmos-les/dynamics:         \
-        atmos-les/forcing:          \
+        atmos-rm:                   \
+        atmos-rm/communication:     \
+        atmos-rm/grid:              \
+        atmos-rm/io:                \
+        atmos-rm/numeric:           \
+        atmos-rm/dynamics:          \
+        atmos-rm/forcing:           \
         land:                       \
         land/grid:                  \
         ocean:                      \
@@ -113,16 +114,48 @@ else
   OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
 
+OBJS_DYN = scale_atmos_dyn_tinteg_short.o	\
+           scale_atmos_dyn_tinteg_large.o	\
+           scale_atmos_dyn_tinteg_large_euler.o	\
+           scale_atmos_dyn_tinteg_large_rk3.o	\
+           scale_atmos_dyn_tinteg_tracer.o	\
+           scale_atmos_dyn_tinteg_tracer_euler.o	\
+           scale_atmos_dyn_tinteg_tracer_rk3.o	\
+           scale_atmos_dyn_tstep_short.o	\
+           scale_atmos_dyn_tstep_large.o	\
+           scale_atmos_dyn_tstep_large_fvm_heve.o	\
+           scale_atmos_dyn_tstep_tracer.o	\
+           scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
+           scale_atmos_dyn_fvm_flux.o	\
+           scale_atmos_dyn_fvm_flux_ud1.o	\
+           scale_atmos_dyn_fvm_flux_cd2.o	\
+           scale_atmos_dyn_fvm_flux_ud3.o	\
+           scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
+           scale_atmos_dyn_fvm_flux_cd4.o	\
+           scale_atmos_dyn_fvm_flux_ud5.o	\
+           scale_atmos_dyn_fvm_flux_cd6.o
+ifeq ($(DYNAMICS),)
+  OBJS_DYN += scale_atmos_dyn_tstep_short_fvm_heve.o	\
+              scale_atmos_dyn_tstep_short_fvm_hevi.o	\
+              scale_atmos_dyn_tstep_short_fvm_hivi.o
+else
+  OBJS_DYN += scale_atmos_dyn_tstep_short_$(DYNAMICS).o
+endif
+
+ifeq ($(TINTEG),)
+  OBJS_DYN += scale_atmos_dyn_tinteg_short_rk3.o	\
+              scale_atmos_dyn_tinteg_short_rk4.o
+else
+  OBJS_DYN += scale_atmos_dyn_tinteg_short_$(TINTEG).o
+endif
+
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
-	scale_atmos_dyn_rk.o	\
-	scale_atmos_dyn_rk_heve.o	\
-	scale_atmos_dyn_rk_hevi.o	\
-	scale_atmos_dyn_rk_hivi.o	\
-	scale_atmos_dyn_rk_none.o	\
+	$(OBJS_DYN)	\
 	scale_atmos_phy_ae.o	\
 	scale_atmos_phy_ae_dummy.o	\
+	$(OBJS_NUMERIC_FDM)	\
 	$(OBJS_AE)	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
@@ -172,8 +205,8 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_land_sfc.o	\
 	scale_land_sfc_slab.o	\
 	scale_landuse.o	\
-	scale_les_process.o	\
-	scale_les_statistics.o	\
+	scale_rm_process.o	\
+	scale_rm_statistics.o	\
 	scale_mapproj.o	\
 	scale_matrix.o	\
 	scale_monitor.o	\
@@ -202,25 +235,28 @@ OBJS_NAME = $(scale_rdma)	\
 
 OBJS =  $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 
-OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o \
-	$(OBJ_DIR)/scale_prof.o \
-	$(OBJ_DIR)/scale_comm.o \
-	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o \
-	$(OBJ_DIR)/scale_atmos_sub_saturation.o \
-	$(OBJ_DIR)/scale_atmos_phy_mp_common.o \
-	$(OBJ_DIR)/scale_atmos_phy_mp_convert.o \
-	$(OBJ_DIR)/scale_tracer.o \
-	$(OBJ_DIR)/scale_tracer_sdm.o \
-	$(OBJ_DIR)/scale_stdio.o \
-	$(OBJ_DIR)/scale_history.o \
-	$(OBJ_DIR)/scale_const.o \
-	$(OBJ_DIR)/scale_time.o \
-	$(OBJ_DIR)/scale_grid_index.o \
-	$(OBJ_DIR)/scale_topography.o \
-	$(OBJ_DIR)/scale_grid_cartesian.o \
-	$(OBJ_DIR)/scale_grid_real.o \
-	$(OBJ_DIR)/scale_gridtrans.o \
-	$(OBJ_DIR)/scale_les_process.o
+OBJS_FOR_DYN = $(OBJ_DIR)/scale_atmos_dyn.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_common.o	\
+	$(patsubst %,$(OBJ_DIR)/%,$(OBJS_DYN))
+
+OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o	\
+	$(OBJ_DIR)/scale_prof.o	\
+	$(OBJ_DIR)/scale_comm.o	\
+	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o	\
+	$(OBJ_DIR)/scale_atmos_sub_saturation.o	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_common.o	\
+	$(OBJ_DIR)/scale_tracer.o	\
+	$(OBJ_DIR)/scale_tracer_sdm.o	\
+	$(OBJ_DIR)/scale_stdio.o	\
+	$(OBJ_DIR)/scale_history.o	\
+	$(OBJ_DIR)/scale_const.o	\
+	$(OBJ_DIR)/scale_time.o	\
+	$(OBJ_DIR)/scale_grid_index.o	\
+	$(OBJ_DIR)/scale_topography.o	\
+	$(OBJ_DIR)/scale_grid_cartesian.o	\
+	$(OBJ_DIR)/scale_grid_real.o	\
+	$(OBJ_DIR)/scale_gridtrans.o	\
+	$(OBJ_DIR)/scale_rm_process.o
 
 all:
 	$(MAKE) makedir
@@ -259,10 +295,6 @@ else
 modules: $(OBJS)
 	install $(MODS) $(MODDIR)
 endif
-
-
-
-
 
 makesdm: $(OBJS_FOR_SDM)
 	$(MAKE) -C $(MTDIR)
@@ -341,20 +373,13 @@ $(MODDIR)/%.mod : %.mod
 
 $(OBJ_DIR)/%.o : %.F90
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn.o:
+$(OBJS_FOR_DYN) :
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_common.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_heve.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_hevi.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_hivi.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_dyn_rk_none.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+
+scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb $< > $@
+#	erb fname=$@ $< > $@
+
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
 
@@ -366,3 +391,4 @@ $(OBJ_DIR)/scale_rdma.o : scale_rdma.c
 ifneq ($(IGNOREDEP),T)
 -include depend
 endif
+# DO NOT DELETE

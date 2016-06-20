@@ -63,7 +63,7 @@ module mod_prof
 
     firsttime = .true.
     do p = 1, mp
-       if ( trim(inname) .eq. trim(pname(p)) ) then
+       if ( trim(inname) == trim(pname(p)) ) then
           pid       = p
           firsttime = .false.
           exit
@@ -90,7 +90,7 @@ module mod_prof
     ! -----
 
     do p = 1, mp
-       if ( trim(inname) .eq. trim(pname(p)) ) then
+       if ( trim(inname) == trim(pname(p)) ) then
           pid = p
           exit
        endif

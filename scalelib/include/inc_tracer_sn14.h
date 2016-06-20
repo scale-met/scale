@@ -4,7 +4,7 @@
   !
   !-----------------------------------------------------------------------------
   !
-  !++ scale-les tracer parameters (2-moment bulk 6 category)
+  !++ tracer parameters (2-moment bulk 6 category)
   !
   !-----------------------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: TRACER_TYPE = "SN14"

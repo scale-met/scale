@@ -105,7 +105,7 @@ contains
        time1(3) = 5
        time1(4) = 10
        time1(5) = 20
-       time1(6) = 41 ! birthday of SCALE-LES
+       time1(6) = 41 ! birthday of SCALE
        time2    = 0.0_RP
     else
        call date_and_time(values=time1)

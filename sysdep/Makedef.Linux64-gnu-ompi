@@ -19,7 +19,7 @@ SSE_FLAGS = -mtune=native
 
 FFLAGS_CORE = -m64 \
               -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
-              -fconvert=big-endian -frecord-marker=4
+              -fconvert=big-endian -frecord-marker=4 -ffree-form -ffree-line-length-none
 
 FFLAGS_FAST  = -O3 $(SSE_FLAGS) $(FFLAGS_CORE) $(GNUCPPOPT) \
                -funroll-loops -finline-functions -fprefetch-loop-arrays \

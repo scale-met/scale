@@ -1,7 +1,7 @@
 SCALE-LETKF
 =========
 
-SCALE-LETKF is a LETKF data assimilation package for the SCALE-LES model.
+SCALE-LETKF is a LETKF data assimilation package for the SCALE-RM model.
 
 
 Get the submodule
@@ -12,8 +12,8 @@ Get the submodule
 
 Build
 -----
-- build the SCALE-LES first (set up SCALE_SYS environmental variable)
- % cd scale-les/src
+- build the SCALE-RM first (set up SCALE_SYS environmental variable)
+ % cd scale-rm/src
  % make
 
 - link or copy the configuration file

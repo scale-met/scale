@@ -464,7 +464,7 @@ module scale_atmos_phy_mp_sn14
 
   !
   ! metrics of vertical coordinate
-  ! not used in SCALE-LES
+  ! not used in SCALE-RM
   !
   real(RP), private, allocatable, save :: gsgam2_d (:,:,:)
   real(RP), private, allocatable, save :: gsgam2h_d(:,:,:)
@@ -514,7 +514,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SN14'
 
-    if ( MP_TYPE .ne. 'SN14' ) then
+    if ( MP_TYPE /= 'SN14' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not SN14. Check!'
        call PRC_MPIstop
     end if
@@ -2216,7 +2216,7 @@ contains
        read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
 100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_sn14_nucleation)
        flag_first=.false.
-       if( MP_couple_aerosol .and. nucl_twomey ) then
+       if( MP_couple_aerosol .AND. nucl_twomey ) then
         write(IO_FID_LOG,*) "nucl_twomey should be false when MP_couple_aerosol is true, stop"
         call PRC_MPIstop
        endif
@@ -2291,7 +2291,7 @@ contains
          do j = JS, JE
          do i = IS, IE
          do k = KS, KE
-            if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+            if( ssw(k,i,j) > 1.e-10_RP .AND. pre(k,i,j) > 300.E+2_RP ) then
                nc_new(k,i,j) = max( CCN(k,i,j), c_ccn )
             else
                nc_new(k,i,j) = 0.0_RP
@@ -2311,7 +2311,7 @@ contains
            ! effective vertical velocity (maximum vertical velocity in turbulent flow)
            weff_max(k,i,j) = weff(k,i,j) + sigma_w(k,i,j)
            ! large scale upward motion region and saturated
-           if( (weff(k,i,j) > 1.E-8_RP) .and. (ssw(k,i,j) > 1.E-10_RP)  .and. pre(k,i,j) > 300.E+2_RP )then
+           if( (weff(k,i,j) > 1.E-8_RP) .AND. (ssw(k,i,j) > 1.E-10_RP)  .AND. pre(k,i,j) > 300.E+2_RP )then
               ! Lohmann (2002), eq.(1)
               nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
               nc_new(k,i,j) = a_max*nc_new_max**b_max
@@ -2326,7 +2326,7 @@ contains
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+             if( ssw(k,i,j) > 1.e-10_RP .AND. pre(k,i,j) > 300.E+2_RP ) then
                 nc_new(k,i,j) = c_ccn*ssw(k,i,j)**kappa
              else
                 nc_new(k,i,j) = 0.0_RP
@@ -2356,7 +2356,7 @@ contains
        nc_new_below(KS,i,j) = 0.0_RP
 !       do k=KS, KE
            ! search maximum value of nc_new
-!          if(  ( nc_new(k,i,j) < nc_new_below(k,i,j) ) .or. &
+!          if(  ( nc_new(k,i,j) < nc_new_below(k,i,j) ) .OR. &
 !               ( nc_new_below(k,i,j) > c_ccn_map(1,i,j)*0.05_RP ) )then ! 5% of c_ccn
 !               ( nc_new_below(k,i,j) > c_ccn*0.05_RP ) )then ! 5% of c_ccn
 !             flag_nucleation(k,i,j) = .false.
@@ -2374,7 +2374,7 @@ contains
             ! nucleation occurs at only cloud base.
             ! if CCN is more than below parcel, nucleation newly occurs
             ! effective vertical velocity
-            if ( flag_nucleation(k,i,j) .and. & ! large scale upward motion region and saturated
+            if ( flag_nucleation(k,i,j) .AND. & ! large scale upward motion region and saturated
                  tem(k,i,j) > tem_ccn_low ) then
                dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
                dncdt_max    = dlcdt_max/xc_min
@@ -2399,8 +2399,8 @@ contains
             ! nucleation occurs at only cloud base.
             ! if CCN is more than below parcel, nucleation newly occurs
             ! effective vertical velocity
-            if ( flag_nucleation(k,i,j) .and. & ! large scale upward motion region and saturated
-                 tem(k,i,j) > tem_ccn_low .and. &
+            if ( flag_nucleation(k,i,j) .AND. & ! large scale upward motion region and saturated
+                 tem(k,i,j) > tem_ccn_low .AND. &
                  nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
                dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
                dncdt_max    = dlcdt_max/xc_min
@@ -2419,7 +2419,7 @@ contains
          do i = IS, IE
          do k = KS, KE
             ! effective vertical velocity
-            if(  tem(k,i,j) > tem_ccn_low .and. &
+            if(  tem(k,i,j) > tem_ccn_low .AND. &
                  nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
                dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
                dncdt_max    = dlcdt_max/xc_min
@@ -2455,9 +2455,9 @@ contains
        wdssi          = min( w_dssidz(k,i,j)+dssidt_rad(k,i,j), 0.01_RP)
        wssi           = min( ssi(k,i,j), ssi_max)
        ! SB06(34),(35)
-       if(  ( wdssi    > eps        ) .and. & !
-            (tem(k,i,j) < 273.15_RP   ) .and. & !
-            (rhoq(I_NI,k,i,j)  < in_max     ) .and. &
+       if(  ( wdssi    > eps        ) .AND. & !
+            (tem(k,i,j) < 273.15_RP   ) .AND. & !
+            (rhoq(I_NI,k,i,j)  < in_max     ) .AND. &
             (wssi      >= eps       ) )then   !
 !             PNIccn(k,i,j) = min(dni_max, c_in_map(1,i,j)*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
           if( inucl_w ) then
@@ -3415,7 +3415,7 @@ contains
        ! Notice! melting only occurs where T > 273.15 K else doesn't.
        ! [fix] 08/05/08 T.Mitsui, Gm could be both positive and negative value.
        !       See Pruppacher and Klett(1997) eq.(16-79) or Rasmussen and Pruppacher(1982)
-       sw = ( sign(0.5_RP,temc) + 0.5_RP ) * ( sign(0.5_RP,Gm-eps) + 0.5_RP ) ! sw = 1 if( (temc>=0.0_RP) .and. (Gm>0.0_RP) ), otherwise sw = 0
+       sw = ( sign(0.5_RP,temc) + 0.5_RP ) * ( sign(0.5_RP,Gm-eps) + 0.5_RP ) ! sw = 1 if( (temc>=0.0_RP) .AND. (Gm>0.0_RP) ), otherwise sw = 0
        !  if Gm==0 then rh and tem is critical value for melting process.
        ! 08/05/16 [Mod] T.Mitsui, change term of PLimlt. N_i => L_i/ (limited x_i)
        ! because melting never occur when N_i=0.
@@ -4061,12 +4061,12 @@ contains
                      -rhoq2(I_QC,k,i,j) - 1e30_RP*(sw+1.0_RP) )*abs(sw) != -lc for sw=-1, -inf for sw=1
        dep_dqr = max( dt*PQ(I_LRdep,k,i,j)*fac1, &
                      -rhoq2(I_QR,k,i,j) - 1e30_RP*(sw+1.0_RP) )*abs(sw) != -lr for sw=-1, -inf for sw=1
-!       if     ( (dcnd >  eps) .and. (dlvsw > eps) )then
+!       if     ( (dcnd >  eps) .AND. (dlvsw > eps) )then
 !          ! always supersaturated
 !          fac1    = min(dlvsw,dcnd)/dcnd
 !          dep_dqc =  dt*PQ(I_LCdep,k,i,j)*fac1
 !          dep_dqr =  dt*PQ(I_LRdep,k,i,j)*fac1
-!       else if( (dcnd < -eps) .and. (dlvsw < -eps) )then
+!       else if( (dcnd < -eps) .AND. (dlvsw < -eps) )then
 !          ! always unsaturated
 !          fac1    = max( dlvsw,dcnd )/dcnd
 !          dep_dqc = max( dt*PQ(I_LCdep,k,i,j)*fac1, -rhoq2(I_QC,k,i,j) )
@@ -4105,13 +4105,13 @@ contains
        dep_dqg = max( dt*PQ(I_LGdep,k,i,j) &
                       * ( 1.0_RP-abs(sw) + fac2*abs(sw) ), & != fac2 for sw=-1,1, 1 for sw=0
                      -rhoq2(I_QG,k,i,j) - 1e30_RP*(sw+1.0_RP) )      != -lg for sw=-1, -inf for sw=0,1
-!       if      ( (ddep >  eps) .and. (dlvsi > eps) )then
+!       if      ( (ddep >  eps) .AND. (dlvsi > eps) )then
 !          ! always supersaturated
 !          fac2    = min(dlvsi,ddep)/ddep
 !          dep_dqi = dt*PQ(I_LIdep,k,i,j)*fac2
 !          dep_dqs = dt*PQ(I_LSdep,k,i,j)*fac2
 !          dep_dqg = dt*PQ(I_LGdep,k,i,j)*fac2
-!       else if ( (ddep < -eps) .and. (dlvsi < -eps) )then
+!       else if ( (ddep < -eps) .AND. (dlvsi < -eps) )then
 !          ! always unsaturated
 !          fac2    = max(dlvsi,ddep)/ddep
 !          dep_dqi = max(dt*PQ(I_LIdep,k,i,j)*fac2, -rhoq2(I_QI,k,i,j) )

@@ -451,7 +451,7 @@ contains
       dres = 1.0_DP - T1 / ( KARMAN * GRAV * dL ) * ( dUstarC**2 / dTstarC - UstarC**2 / TstarC )
 
       ! convergence test with residual and error levels
-      if( abs( res      ) < BULKFLUX_res_min .or. &
+      if( abs( res      ) < BULKFLUX_res_min .OR. &
           abs( res/dres ) < BULKFLUX_err_min      ) then
         exit
       end if

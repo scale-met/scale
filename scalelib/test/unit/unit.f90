@@ -11,7 +11,7 @@ program unit
      PRC_LOCAL_setup,  &
      PRC_MPIfinish, &
      PRC_MPIstart
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
      PRC_setup
   use scale_const, only: &
      CONST_setup

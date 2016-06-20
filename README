@@ -32,8 +32,8 @@ Build
  % make depend
  % make
 
-- make and run the test cases of scale-les
- % cd scale-les/test/case/hydrostatic/500m (example)
+- make and run the test cases of scale-rm
+ % cd scale-rm/test/case/hydrostatic/500m (example)
  % make
  % make run
 
@@ -50,7 +50,7 @@ Switch options will be activated only when the value is "T"
 * AGGRESSIVE : enable aggressive optimization on the K computer
 * DEBUG : enable debug mode
 * IGNOREDEP : avoid checking of source dependency at the time of compile
-* NOINIT : skip making scale-les_pp, scale-les_init
+* NOINIT : skip making scale-rm_pp, scale-rm_init
 * NOMPI : compile without using MPI library (only for util tools)
 * CHECK_MASS : calculate and check total mass in dynamical core (for debug)
 * RDMA : (obsolete) : use special routine of RDMA communication on the K computer

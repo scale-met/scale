@@ -4,7 +4,7 @@
   !
   !------------------------------------------------------------
   !
-  !++ scale-les grid parameter for inc_aetracer_none
+  !++ grid parameter for inc_aetracer_none
   !
   !------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: AETRACER_TYPE = "DUMMY"

@@ -80,7 +80,7 @@ contains
     NKAP(1:AE_CTG) = NAKAP(1:AE_CTG)
     NSIZ(1:AE_CTG) = NASIZ(1:AE_CTG)
 
-    if( maxval( NKAP ) /= 1 .or. minval( NKAP ) /= 1 ) then
+    if( maxval( NKAP ) /= 1 .OR. minval( NKAP ) /= 1 ) then
      write(*,*) 'xxx NKAP(:) /= 1 is not supported now, Stop!'
      call PRC_MPIstop
     end if
