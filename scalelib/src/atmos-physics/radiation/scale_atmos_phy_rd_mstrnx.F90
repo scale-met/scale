@@ -1085,7 +1085,7 @@ contains
     real(RP), intent(in)  :: fact_land   (IA,JA)
     real(RP), intent(in)  :: fact_urban  (IA,JA)
     real(RP), intent(out) :: rflux       (rd_kmax+1,IA,JA,2,2,MSTRN_ncloud)
-    real(RP), intent(out) :: rflux_sfc_dn(IA,JA,2,2)                        ! surface downward radiation flux (SW/LW,direct/diffuse)
+    real(RP), intent(out) :: rflux_sfc_dn(IA,JA,2,2)                        ! surface downward radiation flux (LW/SW,direct/diffuse)
 
     ! for P-T fitting
     real(RP) :: dz_std (rd_kmax,IA,JA)       ! layer thickness at 0C, 1atm [cm]
@@ -1793,7 +1793,7 @@ contains
     integer,  intent(in)  :: iw, ich
     real(RP), intent(in)  :: cosSZA0    (IA,JA)                          ! cos(SZA) = mu0
     real(RP), intent(in)  :: fsol       (IA,JA)                          ! solar radiation intensity
-    integer,  intent(in)  :: irgn                                        ! 1:SW 2:LW
+    integer,  intent(in)  :: irgn                                        ! 1:LW 2:SW
     real(RP), intent(in)  :: tau        (rd_kmax,IA,JA,    MSTRN_ncloud) ! total optical thickness          (clear-sky/cloud)
     real(RP), intent(in)  :: omg        (rd_kmax,IA,JA,    MSTRN_ncloud) ! single scattering albedo         (clear-sky/cloud)
     real(RP), intent(in)  :: g          (rd_kmax,IA,JA,0:2,MSTRN_ncloud) ! two-stream approximation factors (clear-sky/cloud)

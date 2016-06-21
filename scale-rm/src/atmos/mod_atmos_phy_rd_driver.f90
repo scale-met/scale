@@ -155,7 +155,9 @@ contains
        I_SW, &
        I_LW, &
        I_dn, &
-       I_up
+       I_up, &
+       I_direct, &
+       I_diffuse
     use mod_atmos_vars, only: &
        TEMP,              &
        PRES,              &
@@ -429,6 +431,9 @@ contains
        call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', nohalo=.true. )
        call HIST_in( SFCFLX_SW_up(:,:), 'SFLX_SW_up',   'SFC upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
        call HIST_in( SFCFLX_SW_dn(:,:), 'SFLX_SW_dn',   'SFC downward shortwave radiation flux', 'W/m2', nohalo=.true. )
+
+       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_direct), 'SFLX_SW_dn_direct',  'SFC down. shortwave ratio direct',  'W/m2', nohalo=.true. )
+       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_diffuse),'SFLX_SW_dn_diffuse', 'SFC down. shortwave ratio diffuse', 'W/m2', nohalo=.true. )
 
        call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
        call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave  radiation flux', 'W/m2', nohalo=.true. )
