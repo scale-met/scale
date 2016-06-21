@@ -991,6 +991,7 @@ contains
 %   idx = ( [":"]*d ).join(",")
 %   ["SP", "DP"].each do |rp|
   subroutine FileWrite<%=d%>DReal<%=rp%>( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -999,6 +1000,7 @@ contains
     implicit none
 
     real(<%=rp%>), intent(in) :: var(<%=idx%>)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -1011,7 +1013,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(<%=idx%>), ts, te, <%=rp%>, & ! (in)
+    call file_write_data( fid, vid, var(<%=idx%>), ts, te, <%=rp%>, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count

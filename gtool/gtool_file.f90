@@ -1896,6 +1896,7 @@ contains
   ! interface FileWrite
   !-----------------------------------------------------------------------------
   subroutine FileWrite1DRealSP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1904,6 +1905,7 @@ contains
     implicit none
 
     real(SP), intent(in) :: var(:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -1916,7 +1918,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:), ts, te, SP, & ! (in)
+    call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
@@ -1931,6 +1933,7 @@ contains
     return
   end subroutine FileWrite1DRealSP
   subroutine FileWrite1DRealDP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1939,6 +1942,7 @@ contains
     implicit none
 
     real(DP), intent(in) :: var(:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -1951,7 +1955,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:), ts, te, DP, & ! (in)
+    call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
@@ -1966,6 +1970,7 @@ contains
     return
   end subroutine FileWrite1DRealDP
   subroutine FileWrite2DRealSP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1974,6 +1979,7 @@ contains
     implicit none
 
     real(SP), intent(in) :: var(:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -1986,7 +1992,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:), ts, te, SP, & ! (in)
+    call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
@@ -2001,6 +2007,7 @@ contains
     return
   end subroutine FileWrite2DRealSP
   subroutine FileWrite2DRealDP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -2009,6 +2016,7 @@ contains
     implicit none
 
     real(DP), intent(in) :: var(:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -2021,7 +2029,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:), ts, te, DP, & ! (in)
+    call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
@@ -2036,6 +2044,7 @@ contains
     return
   end subroutine FileWrite2DRealDP
   subroutine FileWrite3DRealSP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -2044,6 +2053,7 @@ contains
     implicit none
 
     real(SP), intent(in) :: var(:,:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -2056,7 +2066,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:), ts, te, SP, & ! (in)
+    call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
@@ -2071,6 +2081,7 @@ contains
     return
   end subroutine FileWrite3DRealSP
   subroutine FileWrite3DRealDP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -2079,6 +2090,7 @@ contains
     implicit none
 
     real(DP), intent(in) :: var(:,:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -2091,7 +2103,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:), ts, te, DP, & ! (in)
+    call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
@@ -2106,6 +2118,7 @@ contains
     return
   end subroutine FileWrite3DRealDP
   subroutine FileWrite4DRealSP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -2114,6 +2127,7 @@ contains
     implicit none
 
     real(SP), intent(in) :: var(:,:,:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -2126,7 +2140,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:,:), ts, te, SP, & ! (in)
+    call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
@@ -2141,6 +2155,7 @@ contains
     return
   end subroutine FileWrite4DRealSP
   subroutine FileWrite4DRealDP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -2149,6 +2164,7 @@ contains
     implicit none
 
     real(DP), intent(in) :: var(:,:,:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
@@ -2161,7 +2177,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:,:), ts, te, DP, & ! (in)
+    call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
