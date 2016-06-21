@@ -218,6 +218,7 @@ contains
           next_coords(2) = coords_E(2)
           call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_SE), ierr)
        endif
+       call MPI_COMM_FREE(iptbl,ierr)
     endif
 
     next(:) = max(PRC_next(:),-1) ! avoid if MPI_PROC_NULL < -1
