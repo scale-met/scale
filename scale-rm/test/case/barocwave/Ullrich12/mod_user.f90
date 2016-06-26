@@ -70,9 +70,10 @@ contains
        RPlanet => CONST_RADIUS
     
     use scale_grid, only : &
-       CY => GRID_CY, &
-       FY => GRID_FY, &
-       RFDY => GRID_RFDY
+       CY => GRID_CY,      &
+       FY => GRID_FY,      &
+       RFDY => GRID_RFDY,  &
+       GRID_DOMAIN_CENTER_Y
     
     use scale_atmos_dyn, only: &
        CORIOLI
@@ -111,7 +112,7 @@ contains
     
     f0 = 2.0_RP*OHM*sin( Phi0Deg*PI/180.0_RP )
     beta0 = 2.0_RP*OHM/RPlanet*cos( Phi0Deg*PI/180.0_RP )
-    y0 = 0.5_RP*(FY(JE) - FY(JS-1))
+    y0 = GRID_DOMAIN_CENTER_Y
     
     do j = JS-1,JE+1
     do i = IS-1,IE+1

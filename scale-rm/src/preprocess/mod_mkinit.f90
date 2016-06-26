@@ -2584,7 +2584,7 @@ contains
 
           if ( itr > ITRMAX ) then
              write(*,*) "* (X,Y,Z)=", GRID_CX(i), GRID_CY(j), GRID_CZ(k)
-             write(*,*) "Fail the convegence of iteration. Check!"
+             write(*,*) "Fail the convergence of iteration. Check!"
              write(*,*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
              call PRC_MPIstop
           end if
