@@ -1,7 +1,7 @@
 % # -*- f90 -*-
 % # vi: set sw=4 ts=8:
 <%
- order = [ ["cd2",2], ["ud3",2], ["ud3Koren1993",2], ["cd4",2], ["ud5",3], ["cd6",3] ]
+ order = [ ["ud1",2], ["cd2",2], ["ud3",2], ["ud3Koren1993",2], ["cd4",2], ["ud5",3], ["cd6",3] ]
 %>
 !-------------------------------------------------------------------------------
 !> module scale_atmos_dyn_fvm_flux
@@ -202,7 +202,7 @@ module scale_atmos_dyn_fvm_flux
   !
   !-----------------------------------------------------------------------------
 contains
-
+  
   !-----------------------------------------------------------------------------
   !> setup
   subroutine ATMOS_DYN_FVM_flux_setup( &
@@ -211,7 +211,8 @@ contains
          PRC_MPIstop
 <%
   funcs = Hash.new
-  order.each do |o, nh|
+  order.each do |o_, nh|
+    o = (o_ == "ud1") ? "ud1wrap" : o_
     ary = Array.new
     ary.push "ATMOS_DYN_FVM_flux_valueW_Z_#{o}"
     ["Z", "X", "Y"].each do |dir|
@@ -232,10 +233,12 @@ contains
     character(len=*), intent(in) :: scheme_tracer
 
     select case ( scheme )
-<%   order.each do |o, nh| %>
+<%   order.each do |o, nh| 
+     o_ = (o == "ud1") ? "ud1wrap" : o
+%>
     case ( "<%= o.upcase %>" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation'
-<% funcs[o].each do |func| %>
+<% funcs[o_].each do |func| %>
       <%= func.sub(/_[^_]+\Z/,"") %> => <%= func %>
 <% end %>
 <%# func %>
@@ -256,10 +259,12 @@ contains
     end select
 
     select case ( scheme_tracer )
-<%   order.each do |o, nh| %>
+<%   order.each do |o, nh| 
+    o_ = (o == "ud1") ? "ud1wrap" : o
+%>
     case ( "<%= o.upcase %>" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation of tracer'
-<% funcs[o].each do |func|
+<% funcs[o_].each do |func|
      unless /value/ =~ func %>
       <%= func.sub(/_[^_]+\Z/,"") %>_tracer => <%= func %>
 <%   end
@@ -282,7 +287,6 @@ contains
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup
-
 
 end module scale_atmos_dyn_fvm_flux
 

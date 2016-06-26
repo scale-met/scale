@@ -65,6 +65,8 @@ module scale_atmos_dyn
   !
   !++ Public parameters & variables
   !
+  real(RP), public, allocatable :: CORIOLI   (:,:)       ! coriolis term
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -87,7 +89,6 @@ module scale_atmos_dyn
   logical,  private              :: BND_S
   logical,  private              :: BND_N
 
-  real(RP), private, allocatable :: CORIOLI   (:,:)       ! coriolis term
   real(RP), private, allocatable :: mflx_hi   (:,:,:,:)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
 
   real(RP), private, allocatable :: num_diff  (:,:,:,:,:)

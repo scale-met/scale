@@ -1,24 +1,35 @@
 #!/bin/env ruby
 
+# Computatinal domain
+# - Lx=40000 km, Ly=6000 km, Lz=30 km
+#
+
 require 'fileutils'
 
-TIME_DURATION_SEC       = "600.D0"
-HISTORY_TINTERVAL_SEC   = "50.D0"
+TIME_DT_SEC             = "480.0D0"
+TIME_DURATION_SEC       = "1296000.D0"
+HISTORY_TINTERVAL_HOUR   = "24.D0"
 CONF_GEN_RESOL_HASHLIST = \
 [ \
-  { "TAG"=>"500m", "DX"=>500E0, "DZ"=>500.0E0, 
-    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>1.0, "NPRCX"=> 1, "NPRCY"=>1}, \
-  { "TAG"=>"250m", "DX"=>250E0, "DZ"=>250.0E0, 
-    "KMAX"=>4, "IMAX"=>80, "JMAX"=>3, "DTDYN"=>0.5, "NPRCX"=> 1, "NPRCY"=>1}, \
-  { "TAG"=>"125m", "DX"=>125E0, "DZ"=>125E0, 
-    "KMAX"=>4, "IMAX"=>160, "JMAX"=>3, "DTDYN"=>0.25, "NPRCX"=> 1, "NPRCY"=>1}, \
-  { "TAG"=>"063m", "DX"=>62.5E0, "DZ"=>62.5E0, 
-    "KMAX"=>4, "IMAX"=>80, "JMAX"=>3, "DTDYN"=>0.125, "NPRCX"=> 4, "NPRCY"=>1} \
+  # 100x30x30
+  { "TAG"=>"400km", "DX"=>400.0E3, "DY"=>400.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>480.0E0, "NPRCX"=> 5, "NPRCY"=>1}, \
+  # 200x60x30
+  { "TAG"=>"200km", "DX"=>200.0E3, "DY"=>200.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>240.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
+  # 400x120x30
+  { "TAG"=>"100km", "DX"=>100.0E3, "DY"=>100.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>30, "DTDYN"=>120.0E0, "NPRCX"=> 20, "NPRCY"=>2}, \
+  # 800x240x30
+  { "TAG"=>"050km", "DX"=> 50.0E3, "DY"=> 50.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 60.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
+  # 1600x480x30
+  { "TAG"=>"025km", "DX"=> 25.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 30.0E0, "NPRCX"=>40, "NPRCY"=>8}, \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
-  {"TAG"=>"RECT", "SHAPE_NC"=>"RECT"}, \
-  {"TAG"=>"COSBELL", "SHAPE_NC"=>"BUBBLE"} \
+  {"TAG"=>"CTRL"}, \
 ]
 CONF_GEN_NUMERIC_HASHLIST = \
 [ \
@@ -28,12 +39,15 @@ CONF_GEN_NUMERIC_HASHLIST = \
 
 #########################################################
 
-def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
+def gen_init_conf( conf_name,
+                   nprocx, nprocy, imax, jmax, kmax, dx, dy, dz )
+
   f = File.open(conf_name, "w")
   f.print <<EOS
 #####
 #
-# SCALE-RM mkinit configulation for linear advection test (1D)
+# SCALE-RM mkinit configulation for baroclinic wave test in a channel
+# (following experimental setup in Ullrich and Jablonowsski 2012)
 #
 #####
 
@@ -44,20 +58,19 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
 &PARAM_PRC
  PRC_NUM_X       = #{nprocx},  
  PRC_NUM_Y       = #{nprocy},
+ PRC_PERIODIC_Y  = .false.,
 /
 
 &PARAM_INDEX
  KMAX = #{kmax}, 
  IMAX = #{imax}, IHALO = 3, 
- JMAX = 3, JHALO = 3,
+ JMAX = #{jmax}, JHALO = 3,
 /
 
 &PARAM_GRID
  DZ =  #{dz}, 
  DX =  #{dx},  
- DY =  #{dx}, 
- BUFFER_DZ =   0.D0,  
- BUFFFACT  =   1.D0,
+ DY =  #{dy}, 
 /
 
 &PARAM_TIME
@@ -70,95 +83,71 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
  STATISTICS_use_globalcomm = .true.,
 /
 
-&PARAM_ATMOS_VARS
- ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "init",
-/
-
 &PARAM_TRACER
- TRACER_TYPE = 'SN14',
+ TRACER_TYPE = 'DRY',
 /
 
 &PARAM_ATMOS_VARS
  ATMOS_RESTART_OUTPUT         = .true.,
  ATMOS_RESTART_OUT_BASENAME   = "init",
-/
-
-&PARAM_CONST
- CONST_GRAV      =   0.00000000000000     ,
 /
 
 &PARAM_MKINIT
- MKINIT_initname = "TRACERBUBBLE",
+ MKINIT_initname = "BAROCWAVE",
 /
 
-&PARAM_BUBBLE
- BBL_CZ = 10.0D3,
- BBL_CX = 10.0D3,
- BBL_CY = 12.0D3,
- BBL_RZ = 1.0D14,
- BBL_RX = 3.0D3,
- BBL_RY = 1.0D14,
+&PARAM_MKINIT_BAROCWAVE
+ REF_TEMP   = 288.D0,
+ REF_PRES   = 1.D5,
+ LAPSE_RATE = 5.D-3,
+ Phi0Deg    = 45.D0,
+ U0         = 35.D0,
+ b          = 2.D0,
+ Up         = 1.D0,
 /
-
-&PARAM_RECT
- RCT_CZ = 10.0D3,
- RCT_CX = 10.0D3,
- RCT_CY = 12.0D3,
- RCT_RZ = 1.0D14,
- RCT_RX = 3.0D3,
- RCT_RY = 1.0D14,
-/
-
-&PARAM_MKINIT_TRACERBUBBLE
- ENV_U     = 40.D0,
- ENV_V     = 0.D0, 
- SHAPE_NC  = '#{shape_nc}', 
- BBL_NC    = 1.D0,
-/
-
 EOS
   f.close
   
 end
 
-def gen_run_conf( conf_name, 
-      nprocx, nprocy,
-      imax, kmax, dx, dz, dtsec_dyn,
-      shape_nc, flxEvalType, fctFlag, dataDir)
-1
+def gen_run_conf( conf_name,
+                  nprocx, nprocy,
+                  imax, jmax, kmax, dx, dy, dz, dtsec_dyn,
+                  flxEvalType, fctFlag, dataDir )
+
+
   f = File.open(conf_name, "w")
   f.print <<EOS
 #####
 #
-# SCALE-RM run configulation for linear advection test (1D)
+# SCALE-RM run configulation for baroclinic wave test in a channel
+# (following experimental setup in Ullrich and Jablonowsski 2012)
 #
 #####
 
 &PARAM_PRC
  PRC_NUM_X       = #{nprocx},  
  PRC_NUM_Y       = #{nprocy},
+ PRC_PERIODIC_Y  = .false.,
 /
 
 &PARAM_INDEX
  KMAX = #{kmax}, 
  IMAX = #{imax}, IHALO = 3, 
- JMAX = 3, JHALO = 3,
+ JMAX = #{jmax}, JHALO = 3,
 /
 
 &PARAM_GRID
  DZ =  #{dz}, 
  DX =  #{dx},  
- DY =  #{dx}, 
- BUFFER_DZ =   0.D0,  
- BUFFFACT  =   1.D0,
+ DY =  #{dy}, 
 /
 &PARAM_TIME
  TIME_STARTDATE             = 0000, 1, 1, 0, 0, 0,
  TIME_STARTMS               = 0.D0,
  TIME_DURATION              = #{TIME_DURATION_SEC},
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = #{dtsec_dyn}, 
+ TIME_DT                    = #{TIME_DT_SEC},
  TIME_DT_UNIT               = "SEC",
  TIME_DT_ATMOS_DYN          = #{dtsec_dyn}, 
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
@@ -170,18 +159,12 @@ def gen_run_conf( conf_name,
 /
 
 &PARAM_TRACER
- TRACER_TYPE = 'SN14',
-/
-
-&PARAM_CONST
- CONST_GRAV      =   0.00000000000000     ,
-/
-&PARAM_ATMOS_HYDROSTATIC
- HYDROSTATIC_uselapserate = .true.,
+ TRACER_TYPE = 'DRY',
 /
 
 &PARAM_ATMOS
- ATMOS_DYN_TYPE    = "FVM-HEVE",
+! ATMOS_DYN_TYPE    = "FVM-HEVE",
+ ATMOS_DYN_TYPE    = "FVM-HEVI",
 /
 
 &PARAM_ATMOS_VARS
@@ -196,48 +179,47 @@ def gen_run_conf( conf_name,
 
 &PARAM_ATMOS_BOUNDARY
  ATMOS_BOUNDARY_TYPE       = "CONST",
- ATMOS_BOUNDARY_USE_VELZ   = .true.,
+ ATMOS_BOUNDARY_USE_VELZ   = .false.,
  ATMOS_BOUNDARY_VALUE_VELZ =  0.D0,
  ATMOS_BOUNDARY_TAUZ       = 10.D0,
 /
 
 &PARAM_ATMOS_DYN
  ATMOS_DYN_TINTEG_LARGE_TYPE = "EULER",
- ATMOS_DYN_TINTEG_SHORT_TYPE = "RK4",
+ ATMOS_DYN_TINTEG_SHORT_TYPE = "RK3WS2002",
  ATMOS_DYN_TINTEG_TRACER_TYPE = "RK3WS2002",
  ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",             
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_TRACER      = ${fctFlag}, 
+ ATMOS_DYN_ENABLE_CORIOLIS = T
 /
 
 &PARAM_USER
  USER_do = .true., 
- InitShape = "#{shape_nc}"
+ Phi0Deg = 45.D0, 
 /
-
 
 &PARAM_HISTORY
  HISTORY_DEFAULT_BASENAME  = "history",
- HISTORY_DEFAULT_TINTERVAL = #{HISTORY_TINTERVAL_SEC},
- HISTORY_DEFAULT_TUNIT     = "SEC",
+ HISTORY_DEFAULT_TINTERVAL = #{HISTORY_TINTERVAL_HOUR},
+ HISTORY_DEFAULT_TUNIT     = "HOUR",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL8",
+ HISTORY_DEFAULT_DATATYPE  = "REAL4",
+ HISTORY_DEFAULT_ZINTERP   = .true.,
  HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&HISTITEM item='DENS'    /
 &HISTITEM item='U'    /
 &HISTITEM item='V'    /
 &HISTITEM item='W'    /
-&HISTITEM item='NC'   /
-&HISTITEM item='l2error'   /
-&HISTITEM item='linferror'   /
-
+&HISTITEM item='PT'   /
+&HISTITEM item='PRES'   /
+&HISTITEM item='T' /
 
 &PARAM_MONITOR
- MONITOR_STEP_INTERVAL = 12,
+ MONITOR_STEP_INTERVAL = 30,
 /
 
 &MONITITEM item='QDRY' /
@@ -266,12 +248,13 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
       
         init_conf_name = "#{dataDir}init.conf" 
         gen_init_conf(init_conf_name, 
-                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["KMAX"], 
-                      resol_hash["DX"], resol_hash["DZ"], case_hash["SHAPE_NC"] )
+                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
+                      resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"]  )
+
         run_conf_name = "#{dataDir}run.conf"
         gen_run_conf(run_conf_name, 
-                     resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["KMAX"], 
-                     resol_hash["DX"], resol_hash["DZ"], resol_hash["DTDYN"], case_hash["SHAPE_NC"], 
+                     resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
+                     resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], 
                      numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir )
       }
     }

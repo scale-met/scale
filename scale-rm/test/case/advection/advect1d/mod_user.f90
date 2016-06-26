@@ -207,7 +207,7 @@ contains
           write(*,*) "t=", NOWTSEC, "l2=", l2_error, "linf=", linf_error
        end if
        call HIST_in( l2_error, 'l2error', 'l2error', '1' )
-       call HIST_in( linf_error, 'linf', 'linf', '1' )
+       call HIST_in( linf_error, 'linferror', 'linferror', '1' )
        call HIST_in( (QTRC(:,:,:,I_NC) - ExactSol)**2, 'NC_diff', 'NC_diff', '1' )
     endif
 
@@ -266,60 +266,60 @@ contains
   end subroutine ConvCheck
 
   
-  subroutine eval_RHS(var, mflx_hi, exactRHS, lblFluxScheme)
-
-    use scale_grid, only : &
-         CDZ => GRID_CDZ
-    
-    real(RP), intent(in) :: var(KA,IA,JA)
-    real(RP), intent(in) :: mflx_hi(KA,IA,JA,3), exactRHS(KA,IA,JA)
-    character(*), intent(in) :: lblFluxScheme
-
-    integer :: IIS, IIE, JJS, JJE, i, j
-    real(RP) :: qflx_hi(KA,IA,JA,3)
-    real(RP) :: GSQRT(KA,IA,JA,7)
-    real(RP) :: num_diff(KA,IA,JA,5,3)
-    real(RP) :: RHS(KA,IA,JA)
-    real(RP) :: l2_error
-    real(RP) :: linf_error
-
-
-    call ATMOS_DYN_FVM_flux_setup(lblFluxScheme)
-    
-    num_diff = 0.0_RP
-    GSQRT = 1.0_RP
-    
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       call ATMOS_DYN_FVM_fluxX_XYZ( qflx_hi(:,:,:,XDIR), & ! (out)
-            mflx_hi(:,:,:,XDIR), var, GSQRT(:,:,:,I_UYZ), & ! (in)
-            num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
-            CDZ, & ! (in)
-            IIS, IIE, JJS, JJE ) ! (in)
-       
-    enddo
-    enddo
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-      do j = JJS, JJE
-      do i = IIS, IIE 
-         RHS(:,i,j) = (qflx_hi(:,i,j,XDIR) - qflx_hi(:,i-1,j,XDIR)) * RCDX(i)
-      enddo
-      enddo
-    enddo
-    enddo
-
-    l2_error = calc_l2error(RHS, exactRHS)
-    linf_error = calc_linferror(RHS, exactRHS)
-    write(*,*) "FluxScheme=", trim(lblFluxScheme), ", l2error=", l2_error, " linf=", linf_error
-    
-  end subroutine eval_RHS
+!!$  subroutine eval_RHS(var, mflx_hi, exactRHS, lblFluxScheme)
+!!$
+!!$    use scale_grid, only : &
+!!$         CDZ => GRID_CDZ
+!!$    
+!!$    real(RP), intent(in) :: var(KA,IA,JA)
+!!$    real(RP), intent(in) :: mflx_hi(KA,IA,JA,3), exactRHS(KA,IA,JA)
+!!$    character(*), intent(in) :: lblFluxScheme
+!!$
+!!$    integer :: IIS, IIE, JJS, JJE, i, j
+!!$    real(RP) :: qflx_hi(KA,IA,JA,3)
+!!$    real(RP) :: GSQRT(KA,IA,JA,7)
+!!$    real(RP) :: num_diff(KA,IA,JA,5,3)
+!!$    real(RP) :: RHS(KA,IA,JA)
+!!$    real(RP) :: l2_error
+!!$    real(RP) :: linf_error
+!!$
+!!$
+!!$    call ATMOS_DYN_FVM_flux_setup(lblFluxScheme)
+!!$    
+!!$    num_diff = 0.0_RP
+!!$    GSQRT = 1.0_RP
+!!$    
+!!$    do JJS = JS, JE, JBLOCK
+!!$    JJE = JJS+JBLOCK-1
+!!$    do IIS = IS, IE, IBLOCK
+!!$    IIE = IIS+IBLOCK-1
+!!$
+!!$       call ATMOS_DYN_FVM_fluxX_XYZ( qflx_hi(:,:,:,XDIR), & ! (out)
+!!$            mflx_hi(:,:,:,XDIR), var, GSQRT(:,:,:,I_UYZ), & ! (in)
+!!$            num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
+!!$            CDZ, & ! (in)
+!!$            IIS, IIE, JJS, JJE ) ! (in)
+!!$       
+!!$    enddo
+!!$    enddo
+!!$
+!!$    do JJS = JS, JE, JBLOCK
+!!$    JJE = JJS+JBLOCK-1
+!!$    do IIS = IS, IE, IBLOCK
+!!$    IIE = IIS+IBLOCK-1
+!!$      do j = JJS, JJE
+!!$      do i = IIS, IIE 
+!!$         RHS(:,i,j) = (qflx_hi(:,i,j,XDIR) - qflx_hi(:,i-1,j,XDIR)) * RCDX(i)
+!!$      enddo
+!!$      enddo
+!!$    enddo
+!!$    enddo
+!!$
+!!$    l2_error = calc_l2error(RHS, exactRHS)
+!!$    linf_error = calc_linferror(RHS, exactRHS)
+!!$    write(*,*) "FluxScheme=", trim(lblFluxScheme), ", l2error=", l2_error, " linf=", linf_error
+!!$    
+!!$  end subroutine eval_RHS
 
   !----------------------------------------------------------
   
