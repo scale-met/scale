@@ -122,10 +122,12 @@ contains
        ATMOS_PHY_AE                 => ATMOS_PHY_AE_dummy
        ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_dummy_EffectiveRadius
     case ( 'KAJINO13' )
-       call ATMOS_PHY_AE_kajino13_setup( AE_TYPE )
-       ATMOS_PHY_AE                 => ATMOS_PHY_AE_kajino13
-       ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_kajino13_EffectiveRadius
-       write(*,*) '### aerosol type(', AE_TYPE, '). is not recommended in current version!'
+!       call ATMOS_PHY_AE_kajino13_setup( AE_TYPE )
+!       ATMOS_PHY_AE                 => ATMOS_PHY_AE_kajino13
+!       ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_kajino13_EffectiveRadius
+!       write(*,*) '### aerosol type(', AE_TYPE, '). is not recommended in current version!'
+       write(*,*) '### aerosol type(', AE_TYPE, '). is not supported in current version! Stop'
+       call PRC_MPIstop
     case default
        write(*,*) 'xxx invalid aerosol type(', AE_TYPE, '). CHECK!'
        call PRC_MPIstop
