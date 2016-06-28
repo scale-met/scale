@@ -79,10 +79,10 @@ module mod_atmos_phy_rd_vars
   integer,                private, parameter :: I_TOAFLX_LW_dn =  6
   integer,                private, parameter :: I_TOAFLX_SW_up =  7
   integer,                private, parameter :: I_TOAFLX_SW_dn =  8
-  integer,                private, parameter :: I_SFLX_SW_dir  =  9
-  integer,                private, parameter :: I_SFLX_SW_dif  = 10
-  integer,                private, parameter :: I_SFLX_LW_dir  = 11
-  integer,                private, parameter :: I_SFLX_LW_dif  = 12
+  integer,                private, parameter :: I_SFLX_LW_dir  =  9
+  integer,                private, parameter :: I_SFLX_LW_dif  = 10
+  integer,                private, parameter :: I_SFLX_SW_dir  = 11
+  integer,                private, parameter :: I_SFLX_SW_dif  = 12
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -96,10 +96,10 @@ module mod_atmos_phy_rd_vars
                   'TOAFLX_LW_dn', &
                   'TOAFLX_SW_up', &
                   'TOAFLX_SW_dn', &
-                  'SFLX_SW_dir',  &
-                  'SFLX_SW_dif',  &
                   'SFLX_LW_dir',  &
-                  'SFLX_LW_dif'   /
+                  'SFLX_LW_dif',  &
+                  'SFLX_SW_dir',  &
+                  'SFLX_SW_dif'   /
   data VAR_DESC / 'surface upward   longwave  flux',   &
                   'surface downward longwave  flux',   &
                   'surface upward   shortwave flux',   &
@@ -108,10 +108,10 @@ module mod_atmos_phy_rd_vars
                   'TOA downward longwave  flux',       &
                   'TOA upward   shortwave flux',       &
                   'TOA downward shortwave flux',       &
-                  'sfc. down. shortwave flux direct',  &
-                  'sfc. down. shortwave flux diffuse', &
                   'sfc. down. longwave  flux direct',  &
-                  'sfc. down. longwave  flux diffuse'  /
+                  'sfc. down. longwave  flux diffuse', &
+                  'sfc. down. shortwave flux direct',  &
+                  'sfc. down. shortwave flux diffuse'  /
   data VAR_UNIT / 'W/m2', &
                   'W/m2', &
                   'W/m2', &
