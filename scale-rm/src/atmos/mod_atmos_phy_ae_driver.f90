@@ -135,31 +135,30 @@ contains
     if ( update_flag ) then
 
 !OCL XFILL
-
-       CCN(:,:,:) = 0.0_RP ! reset
-       CCN_t(:,:,:) = 0.0_RP ! reset
+       CCN      (:,:,:)   = 0.0_RP ! reset
+!OCL XFILL
+       CCN_t    (:,:,:)   = 0.0_RP ! reset
+!OCL XFILL
        RHOQ_t_AE(:,:,:,:) = 0.0_RP ! reset
 
        NREG(:,:,:) = EVAPORATE(:,:,:) * dt_AE
 
-       call ATMOS_PHY_AE( DENS, & ! [IN]
-                          MOMZ, & ! [IN]
-                          MOMX, & ! [IN]
-                          MOMY, & ! [IN]
-                          RHOT, & ! [IN]
-                          AE_EMIT, & ! [IN]
-                          NREG,    & ! [IN]
-                          QTRC, & ! [INOUT]
-                          CN ,  & ! [OUT]
-                          CCN,  & ! [OUT]
+       call ATMOS_PHY_AE( DENS,     & ! [IN]
+                          MOMZ,     & ! [IN]
+                          MOMX,     & ! [IN]
+                          MOMY,     & ! [IN]
+                          RHOT,     & ! [IN]
+                          AE_EMIT,  & ! [IN]
+                          NREG,     & ! [IN]
+                          QTRC,     & ! [INOUT]
+                          CN ,      & ! [OUT]
+                          CCN,      & ! [OUT]
                           RHOQ_t_AE ) ! [INOUT]
 
        CCN_t(:,:,:) = CCN(:,:,:) / dt_AE
 
-!       CCN(:,:,:) = 0.0_RP ! tentative
-
-       call HIST_in( CN(:,:,:)*1e-6_RP,  'CN',  'condensation nucrei', 'num/cc' )
-       call HIST_in( CCN(:,:,:)*1e-6_RP, 'CCN', 'cloud condensation nucrei', 'num/cc' )
+       call HIST_in( CN (:,:,:)*1.E-6_RP, 'CN',  'condensation nucrei',       'num/cc' )
+       call HIST_in( CCN(:,:,:)*1.E-6_RP, 'CCN', 'cloud condensation nucrei', 'num/cc' )
 
     endif
 

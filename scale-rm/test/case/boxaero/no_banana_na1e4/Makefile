@@ -23,7 +23,6 @@ DATDIR      = ../../../data
 DATPARAM    =
 DATDISTS    =
 
-CODE_DIR = $(PWD)
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
