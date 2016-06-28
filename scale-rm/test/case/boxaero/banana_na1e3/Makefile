@@ -24,8 +24,6 @@ DATPARAM    =
 DATDISTS    =
 
 CODE_DIR = $(PWD)
-ORG_SRCS = mod_user.f90
-
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
