@@ -462,7 +462,10 @@ int32_t file_set_tattr( int32_t  fid,   // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
 #endif
 
   CHECK_ERROR( nc_put_att_text(ncid, varid, key, strlen(val), val) );
@@ -490,7 +493,10 @@ int32_t file_put_axis( int32_t fid,        // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
 #endif
 
   if ( nc_inq_dimid(ncid, dim_name, &dimid) != NC_NOERR ) // check if existed
@@ -504,6 +510,76 @@ int32_t file_put_axis( int32_t fid,        // (in)
 #ifdef NETCDF3
   CHECK_ERROR( nc_enddef(ncid) );
   files[fid]->defmode = 0;
+#endif
+
+  switch ( precision ) {
+  case 8:
+    CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
+    break;
+  case 4:
+    CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) );
+    break;
+  default:
+    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    return ERROR_CODE;
+  }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_def_axis( int32_t fid,        // (in)
+		       char   *name,       // (in)
+		       char   *desc,       // (in)
+		       char   *units,      // (in)
+		       char   *dim_name,   // (in)
+		       int32_t dtype,      // (in)
+		       int32_t dim_size)   // (in)
+{
+  int ncid, dimid, varid;
+  nc_type xtype = -1;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
+#endif
+
+  if ( nc_inq_dimid(ncid, dim_name, &dimid) != NC_NOERR ) // check if existed
+    CHECK_ERROR( nc_def_dim(ncid, dim_name, dim_size, &dimid) );
+
+  TYPE2NCTYPE(dtype, xtype);
+  CHECK_ERROR( nc_def_var(ncid, name, xtype, 1, &dimid, &varid) );
+  CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) );
+  CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_write_axis( int32_t fid,        // (in)
+		         char   *name,       // (in)
+		         void*   val,        // (in)
+		         int32_t precision)  // (in)
+{
+  int ncid, varid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+  if (files[fid]->defmode == 1) {
+    CHECK_ERROR( nc_enddef(ncid) );
+    files[fid]->defmode = 0;
+  }
 #endif
 
   switch ( precision ) {
@@ -542,7 +618,10 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
 #endif
 
   dimids = malloc(sizeof(int)*ndims);
@@ -559,6 +638,80 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
 #ifdef NETCDF3
   CHECK_ERROR( nc_enddef(ncid) );
   files[fid]->defmode = 0;
+#endif
+
+  switch ( precision ) {
+  case 8:
+    CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
+    break;
+  case 4:
+    CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) );
+    break;
+  default:
+    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    return ERROR_CODE;
+  }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_def_associated_coordinates( int32_t fid,        // (in)
+					 char   *name,       // (in)
+					 char   *desc,       // (in)
+					 char   *units,      // (in)
+					 char   **dim_names, // (in)
+					 int32_t ndims,      // (in)
+					 int32_t dtype)      // (in)
+{
+  int ncid, *dimids, varid;
+  nc_type xtype = -1;
+  int i;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
+#endif
+
+  dimids = malloc(sizeof(int)*ndims);
+  for (i=0; i<ndims; i++)
+    CHECK_ERROR( nc_inq_dimid(ncid, dim_names[i], dimids+ndims-i-1) );
+
+  TYPE2NCTYPE(dtype, xtype);
+
+  CHECK_ERROR( nc_def_var(ncid, name, xtype, ndims, dimids, &varid) );
+  CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) );
+  CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) );
+  free(dimids);
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_write_associated_coordinates( int32_t fid,        // (in)
+					   char   *name,       // (in)
+					   void*   val,        // (in)
+					   int32_t precision)  // (in)
+{
+  int ncid, varid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+  if (files[fid]->defmode == 1) {
+    CHECK_ERROR( nc_enddef(ncid) );
+    files[fid]->defmode = 0;
+  }
 #endif
 
   switch ( precision ) {
@@ -616,7 +769,10 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   vars[nvar]->count = NULL;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
 #endif
 
   // get time variable
@@ -789,9 +945,91 @@ int32_t file_write_data( int32_t  fid,        // (in)
   ncid = vars[vid]->ncid;
 
 #ifdef NETCDF3
-  if ( files[fid]->defmode == 1) { CHECK_ERROR( nc_enddef(ncid) ); files[fid]->defmode = 0; }
+  if (files[fid]->defmode == 1) {
+    CHECK_ERROR( nc_enddef(ncid) );
+    files[fid]->defmode = 0;
+  }
 #endif
 
+  varid = vars[vid]->varid;
+  if ( vars[vid]->t != NULL ) { // have time dimension
+    if ( vars[vid]->t->count < 0 ||  // first time
+	 t_end > vars[vid]->t->t + TEPS ) { // time goes next step
+      vars[vid]->t->count += 1;
+      vars[vid]->t->t = t_end;
+      size_t index[2];
+      index[0] = vars[vid]->t->count;
+      CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->varid, index, &t_end) );
+      index[1] = 0;
+      CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->bndsid, index, &t_start) );
+      index[1] = 1;
+      CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->bndsid, index, &t_end) );
+      vars[vid]->start[0] = vars[vid]->t->count;
+    } else {
+      size_t nt = vars[vid]->t->count + 1;
+      double t[nt];
+      size_t s[1];
+      int flag, n;
+      s[0] = 0;
+      CHECK_ERROR( nc_get_vara_double(ncid, vars[vid]->t->varid, s, &nt, t) );
+      flag = 1;
+      for(n=nt-1;n>=0;n--) {
+	if ( fabs(t[n]-t_end) < TEPS ) {
+	  vars[vid]->start[0] = n;
+	  flag = 0;
+	  break;
+	}
+      }
+      if ( flag ) {
+	fprintf(stderr, "cannot find time: %f\n", t_end);
+	fprintf(stderr, "  time count is : %d, last time is: %f, diff is: %e\n", vars[vid]->t->count < 0, vars[vid]->t->t, vars[vid]->t->t-t_end);
+	fprintf(stderr, "  time is: ");
+	for (n=0;n<nt;n++) fprintf(stderr, "%f, ", t[n]);
+	fprintf(stderr, "\n");
+	return ERROR_CODE;
+      }
+    }
+  }
+
+  switch (precision) {
+  case 8:
+    CHECK_ERROR( nc_put_vara_double(ncid, varid, vars[vid]->start, vars[vid]->count, (double*)var) );
+    break;
+  case 4:
+    CHECK_ERROR( nc_put_vara_float(ncid, varid, vars[vid]->start, vars[vid]->count, (float*)var) );
+    break;
+  default:
+    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    return ERROR_CODE;
+  }
+
+  CHECK_ERROR( nc_sync(ncid) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_enddef( int32_t fid ) // (in)
+{
+  int ncid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_enddef(ncid) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_write_var( int32_t  vid,        // (in)
+			void    *var,        // (in)
+			real64_t t_start,    // (in)
+			real64_t t_end,      // (in)
+			int32_t  precision)  // (in)
+{
+  int ncid, varid;
+
+  if ( vars[vid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = vars[vid]->ncid;
   varid = vars[vid]->varid;
   if ( vars[vid]->t != NULL ) { // have time dimension
     if ( vars[vid]->t->count < 0 ||  // first time

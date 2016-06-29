@@ -23,6 +23,7 @@ module mod_admin_restart
   !++ Public procedure
   !
   public :: ADMIN_restart_setup
+  public :: ADMIN_restart
 
   !-----------------------------------------------------------------------------
   !
@@ -231,5 +232,41 @@ contains
 
     return
   end subroutine ADMIN_restart_setup
+
+  subroutine ADMIN_restart
+    use mod_ocean_vars, only: &
+       OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
+       OCEAN_restart_create, &
+       OCEAN_restart_def_var, &
+       OCEAN_restart_enddef, &
+       OCEAN_restart_write_var, &
+       OCEAN_restart_close
+    use mod_land_vars, only: &
+       LAND_sw_restart => LAND_RESTART_OUTPUT
+    use mod_urban_vars, only: &
+       URBAN_sw_restart => URBAN_RESTART_OUTPUT
+    use mod_atmos_vars, only: &
+       ATMOS_sw_restart => ATMOS_RESTART_OUTPUT
+    use mod_admin_time, only: &
+       TIME_DOATMOS_restart,  &
+       TIME_DOLAND_restart,   &
+       TIME_DOURBAN_restart,  &
+       TIME_DOOCEAN_restart
+    implicit none
+
+    ! restart files can be different for different models
+
+    ! cread restart netCDF file
+    if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_create
+    ! define metadata in netCDF file
+    if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_def_var
+    ! exit define mode
+    if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_enddef
+    ! write variabes to netCDF file
+    if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_write_var
+    ! clode the restart file
+    if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_close
+
+  end subroutine ADMIN_restart
 
 end module mod_admin_restart

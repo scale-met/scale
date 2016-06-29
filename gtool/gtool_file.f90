@@ -36,17 +36,24 @@ module gtool_file
   public :: FileOpen
   public :: FileCreate
   public :: FileSetOption
+  public :: FileDefAxis
   public :: FilePutAxis
+  public :: FileWriteAxis
+  public :: FileDefAssociatedCoordinates
   public :: FilePutAssociatedCoordinates
+  public :: FileWriteAssociatedCoordinates
   public :: FileAddVariable
+  public :: FileDefineVariable
   public :: FileSetTAttr
   public :: FileGetShape
   public :: FileGetDatainfo
   public :: FileGetAllDatainfo
   public :: FileRead
   public :: FileWrite
+  public :: FileWriteVar
   public :: FileGetGlobalAttribute
   public :: FileSetGlobalAttribute
+  public :: FileEndDef
   public :: FileClose
   public :: FileCloseAll
   public :: FileMakeFname
@@ -55,6 +62,10 @@ module gtool_file
      module procedure FilePutAxisRealSP
      module procedure FilePutAxisRealDP
   end interface FilePutAxis
+  interface FileWriteAxis
+     module procedure FileWriteAxisRealSP
+     module procedure FileWriteAxisRealDP
+  end interface FileWriteAxis
   interface FilePutAssociatedCoordinates
     module procedure FilePut1DAssociatedCoordinatesRealSP
     module procedure FilePut1DAssociatedCoordinatesRealDP
@@ -65,6 +76,16 @@ module gtool_file
     module procedure FilePut4DAssociatedCoordinatesRealSP
     module procedure FilePut4DAssociatedCoordinatesRealDP
   end interface FilePutAssociatedCoordinates
+  interface FileWriteAssociatedCoordinates
+    module procedure FileWrite1DAssociatedCoordinatesRealSP
+    module procedure FileWrite1DAssociatedCoordinatesRealDP
+    module procedure FileWrite2DAssociatedCoordinatesRealSP
+    module procedure FileWrite2DAssociatedCoordinatesRealDP
+    module procedure FileWrite3DAssociatedCoordinatesRealSP
+    module procedure FileWrite3DAssociatedCoordinatesRealDP
+    module procedure FileWrite4DAssociatedCoordinatesRealSP
+    module procedure FileWrite4DAssociatedCoordinatesRealDP
+  end interface FileWriteAssociatedCoordinates
   interface FileAddVariable
      module procedure FileAddVariableNoT
      module procedure FileAddVariableRealSP
@@ -90,6 +111,16 @@ module gtool_file
     module procedure FileWrite4DRealSP
     module procedure FileWrite4DRealDP
   end interface FileWrite
+  interface FileWriteVar
+    module procedure FileWriteVar1DRealSP
+    module procedure FileWriteVar1DRealDP
+    module procedure FileWriteVar2DRealSP
+    module procedure FileWriteVar2DRealDP
+    module procedure FileWriteVar3DRealSP
+    module procedure FileWriteVar3DRealDP
+    module procedure FileWriteVar4DRealSP
+    module procedure FileWriteVar4DRealDP
+  end interface FileWriteVar
   interface FileGetGlobalAttribute
      module procedure FileGetGlobalAttributeText
      module procedure FileGetGlobalAttributeInt
@@ -522,6 +553,76 @@ contains
     return
   end subroutine FilePutAxisRealDP
 
+  subroutine FileDefAxis( &
+       fid,      & ! (in)
+       name,     & ! (in)
+       desc,     & ! (in)
+       units,    & ! (in)
+       dim_name, & ! (in)
+       dtype,    & ! (in)
+       dim_size  ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: dim_name
+    integer,          intent(in) :: dtype
+    integer,          intent(in) :: dim_size
+
+    integer error
+    intrinsic size
+
+    call file_def_axis( fid, name, desc, units, dim_name, dtype, dim_size, & ! (in)
+         error                                                             ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put axis')
+    end if
+
+    return
+  end subroutine FileDefAxis
+
+  !-----------------------------------------------------------------------------
+  ! interface FileWriteAxis
+  !-----------------------------------------------------------------------------
+  subroutine FileWriteAxisRealSP( &
+       fid,      & ! (in)
+       name,     & ! (in)
+       val       ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(SP),    intent(in) :: val(:)
+
+    integer error
+    intrinsic size
+
+    call file_write_axis( fid, name, val, SP, & ! (in)
+         error                                   ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put axis')
+    end if
+
+    return
+  end subroutine FileWriteAxisRealSP
+  subroutine FileWriteAxisRealDP( &
+       fid,      & ! (in)
+       name,     & ! (in)
+       val       ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(DP),    intent(in) :: val(:)
+
+    integer error
+    intrinsic size
+
+    call file_write_axis( fid, name, val, DP, & ! (in)
+         error                                   ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put axis')
+    end if
+
+    return
+  end subroutine FileWriteAxisRealDP
+
   !-----------------------------------------------------------------------------
   ! interface FilePutAssociatedCoordinates
   !-----------------------------------------------------------------------------
@@ -758,6 +859,189 @@ contains
     return
   end subroutine FilePut4DAssociatedCoordinatesRealDP
 
+  subroutine FileDefAssociatedCoordinates( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype      ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: dim_names(:)
+    integer,          intent(in) :: dtype
+
+    integer error
+    intrinsic size
+
+    call file_def_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileDefAssociatedCoordinates
+
+  !-----------------------------------------------------------------------------
+  ! interface FileWriteAssociatedCoordinates
+  !-----------------------------------------------------------------------------
+  subroutine FileWrite1DAssociatedCoordinatesRealSP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(SP),    intent(in) :: val(:)
+
+    integer error
+    intrinsic size
+
+    call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+         error                                                     ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileWrite1DAssociatedCoordinatesRealSP
+  subroutine FileWrite1DAssociatedCoordinatesRealDP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(DP),    intent(in) :: val(:)
+
+    integer error
+    intrinsic size
+
+    call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+         error                                                     ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileWrite1DAssociatedCoordinatesRealDP
+  subroutine FileWrite2DAssociatedCoordinatesRealSP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(SP),    intent(in) :: val(:,:)
+
+    integer error
+    intrinsic size
+
+    call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+         error                                                     ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileWrite2DAssociatedCoordinatesRealSP
+  subroutine FileWrite2DAssociatedCoordinatesRealDP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(DP),    intent(in) :: val(:,:)
+
+    integer error
+    intrinsic size
+
+    call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+         error                                                     ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileWrite2DAssociatedCoordinatesRealDP
+  subroutine FileWrite3DAssociatedCoordinatesRealSP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(SP),    intent(in) :: val(:,:,:)
+
+    integer error
+    intrinsic size
+
+    call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+         error                                                     ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileWrite3DAssociatedCoordinatesRealSP
+  subroutine FileWrite3DAssociatedCoordinatesRealDP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(DP),    intent(in) :: val(:,:,:)
+
+    integer error
+    intrinsic size
+
+    call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+         error                                                     ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileWrite3DAssociatedCoordinatesRealDP
+  subroutine FileWrite4DAssociatedCoordinatesRealSP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(SP),    intent(in) :: val(:,:,:,:)
+
+    integer error
+    intrinsic size
+
+    call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+         error                                                     ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileWrite4DAssociatedCoordinatesRealSP
+  subroutine FileWrite4DAssociatedCoordinatesRealDP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    real(DP),    intent(in) :: val(:,:,:,:)
+
+    integer error
+    intrinsic size
+
+    call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+         error                                                     ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FileWrite4DAssociatedCoordinatesRealDP
+
   !-----------------------------------------------------------------------------
   ! interface FileAddVariable
   !-----------------------------------------------------------------------------
@@ -929,6 +1213,83 @@ contains
 
     return
   end subroutine FileAddVariableRealDP
+
+  subroutine FileDefineVariable( &
+       fid,     & ! (in)
+       vid,     & ! (out)
+       varname, & ! (in)
+       desc,    & ! (in)
+       units,   & ! (in)
+       ndims,   & ! (in)
+       dims,    & ! (in)
+       dtype,   & ! (in)
+       tint,    & ! (in) optional
+       tavg     & ! (in) optional
+       )
+    integer,          intent(out) :: vid
+    integer,          intent( in) :: fid
+    character(len=*), intent( in) :: varname
+    character(len=*), intent( in) :: desc
+    character(len=*), intent( in) :: units
+    integer,          intent( in) :: ndims
+    character(len=*), intent( in) :: dims(:)
+    integer,          intent( in) :: dtype
+    real(DP),         intent( in), optional :: tint
+    logical,          intent( in), optional :: tavg
+
+    real(DP) :: tint_
+    integer  :: itavg
+    integer  :: error
+    integer  :: n
+
+    intrinsic size
+    !---------------------------------------------------------------------------
+
+    vid = -1
+    do n = 1, File_vid_count
+       if ( File_vid_fid_list(n) == fid .and. &
+            varname == File_vname_list(n) ) then
+          vid = File_vid_list(n)
+       end if
+    enddo
+
+    if ( vid < 0 ) then ! variable registration
+       !--- register new variable
+       write(message,*) '*** [File] Var registration'
+       call Log("I", message)
+       write(message,*) '*** variable name: ', trim(varname)
+       call Log("I", message)
+
+       if ( .NOT. present(tint) ) then
+          tint_ = -1.0_DP
+       endif
+
+       if ( present(tavg) ) then
+          if ( tavg ) then
+             itavg = 1
+          else
+             itavg = 0
+          end if
+       else
+          itavg = 0
+       end if
+
+       call file_add_variable( vid,                        & ! (out)
+            fid, varname, desc, units, dims, ndims, dtype, & ! (in)
+            tint_, itavg,                                  & ! (in)
+            error                                          ) ! (out)
+       if ( error /= SUCCESS_CODE ) then
+          call Log('E', 'xxx failed to add variable: '//trim(varname))
+       end if
+
+       File_vname_list  (File_vid_count) = trim(varname)
+       File_vid_list    (File_vid_count) = vid
+       File_vid_fid_list(File_vid_count) = fid
+       File_vid_count                    = File_vid_count + 1
+    endif
+
+    return
+  end subroutine FileDefineVariable
 
   !-----------------------------------------------------------------------------
   ! FileSetTAttr
@@ -2191,6 +2552,323 @@ contains
 
     return
   end subroutine FileWrite4DRealDP
+
+  !-----------------------------------------------------------------------------
+  ! interface FileWriteVar
+  !-----------------------------------------------------------------------------
+  subroutine FileWriteVar1DRealSP( &
+      vid,     & ! (in)
+      var,     & ! (in)
+      t_start, & ! (in)
+      t_end    & ! (in)
+      )
+    implicit none
+
+    real(SP), intent(in) :: var(:)
+    integer,  intent(in) :: vid
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
+
+    real(DP) :: ts, te
+
+    integer :: error, n
+    character(len=100) :: str
+    !---------------------------------------------------------------------------
+
+    ts = t_start
+    te = t_end
+    call file_write_var( vid, var(:), ts, te, SP, & ! (in)
+         error                                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
+       call Log('E', trim(str))
+    end if
+
+    return
+  end subroutine FileWriteVar1DRealSP
+  subroutine FileWriteVar1DRealDP( &
+      vid,     & ! (in)
+      var,     & ! (in)
+      t_start, & ! (in)
+      t_end    & ! (in)
+      )
+    implicit none
+
+    real(DP), intent(in) :: var(:)
+    integer,  intent(in) :: vid
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
+
+    real(DP) :: ts, te
+
+    integer :: error, n
+    character(len=100) :: str
+    !---------------------------------------------------------------------------
+
+    ts = t_start
+    te = t_end
+    call file_write_var( vid, var(:), ts, te, DP, & ! (in)
+         error                                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
+       call Log('E', trim(str))
+    end if
+
+    return
+  end subroutine FileWriteVar1DRealDP
+  subroutine FileWriteVar2DRealSP( &
+      vid,     & ! (in)
+      var,     & ! (in)
+      t_start, & ! (in)
+      t_end    & ! (in)
+      )
+    implicit none
+
+    real(SP), intent(in) :: var(:,:)
+    integer,  intent(in) :: vid
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
+
+    real(DP) :: ts, te
+
+    integer :: error, n
+    character(len=100) :: str
+    !---------------------------------------------------------------------------
+
+    ts = t_start
+    te = t_end
+    call file_write_var( vid, var(:,:), ts, te, SP, & ! (in)
+         error                                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
+       call Log('E', trim(str))
+    end if
+
+    return
+  end subroutine FileWriteVar2DRealSP
+  subroutine FileWriteVar2DRealDP( &
+      vid,     & ! (in)
+      var,     & ! (in)
+      t_start, & ! (in)
+      t_end    & ! (in)
+      )
+    implicit none
+
+    real(DP), intent(in) :: var(:,:)
+    integer,  intent(in) :: vid
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
+
+    real(DP) :: ts, te
+
+    integer :: error, n
+    character(len=100) :: str
+    !---------------------------------------------------------------------------
+
+    ts = t_start
+    te = t_end
+    call file_write_var( vid, var(:,:), ts, te, DP, & ! (in)
+         error                                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
+       call Log('E', trim(str))
+    end if
+
+    return
+  end subroutine FileWriteVar2DRealDP
+  subroutine FileWriteVar3DRealSP( &
+      vid,     & ! (in)
+      var,     & ! (in)
+      t_start, & ! (in)
+      t_end    & ! (in)
+      )
+    implicit none
+
+    real(SP), intent(in) :: var(:,:,:)
+    integer,  intent(in) :: vid
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
+
+    real(DP) :: ts, te
+
+    integer :: error, n
+    character(len=100) :: str
+    !---------------------------------------------------------------------------
+
+    ts = t_start
+    te = t_end
+    call file_write_var( vid, var(:,:,:), ts, te, SP, & ! (in)
+         error                                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
+       call Log('E', trim(str))
+    end if
+
+    return
+  end subroutine FileWriteVar3DRealSP
+  subroutine FileWriteVar3DRealDP( &
+      vid,     & ! (in)
+      var,     & ! (in)
+      t_start, & ! (in)
+      t_end    & ! (in)
+      )
+    implicit none
+
+    real(DP), intent(in) :: var(:,:,:)
+    integer,  intent(in) :: vid
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
+
+    real(DP) :: ts, te
+
+    integer :: error, n
+    character(len=100) :: str
+    !---------------------------------------------------------------------------
+
+    ts = t_start
+    te = t_end
+    call file_write_var( vid, var(:,:,:), ts, te, DP, & ! (in)
+         error                                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
+       call Log('E', trim(str))
+    end if
+
+    return
+  end subroutine FileWriteVar3DRealDP
+  subroutine FileWriteVar4DRealSP( &
+      vid,     & ! (in)
+      var,     & ! (in)
+      t_start, & ! (in)
+      t_end    & ! (in)
+      )
+    implicit none
+
+    real(SP), intent(in) :: var(:,:,:,:)
+    integer,  intent(in) :: vid
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
+
+    real(DP) :: ts, te
+
+    integer :: error, n
+    character(len=100) :: str
+    !---------------------------------------------------------------------------
+
+    ts = t_start
+    te = t_end
+    call file_write_var( vid, var(:,:,:,:), ts, te, SP, & ! (in)
+         error                                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
+       call Log('E', trim(str))
+    end if
+
+    return
+  end subroutine FileWriteVar4DRealSP
+  subroutine FileWriteVar4DRealDP( &
+      vid,     & ! (in)
+      var,     & ! (in)
+      t_start, & ! (in)
+      t_end    & ! (in)
+      )
+    implicit none
+
+    real(DP), intent(in) :: var(:,:,:,:)
+    integer,  intent(in) :: vid
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
+
+    real(DP) :: ts, te
+
+    integer :: error, n
+    character(len=100) :: str
+    !---------------------------------------------------------------------------
+
+    ts = t_start
+    te = t_end
+    call file_write_var( vid, var(:,:,:,:), ts, te, DP, & ! (in)
+         error                                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
+       call Log('E', trim(str))
+    end if
+
+    return
+  end subroutine FileWriteVar4DRealDP
+
+  !-----------------------------------------------------------------------------
+  subroutine FileEndDef( &
+       fid & ! (in)
+       )
+    implicit none
+
+    integer, intent(in) :: fid
+
+    integer :: error, n
+    !---------------------------------------------------------------------------
+
+    if ( fid < 0 ) return
+
+    do n = 1, File_fid_count-1
+       if ( File_fid_list(n) == fid ) exit
+    end do
+    if ( fid .NE. File_fid_list(n) ) then
+       write(message,*) 'xxx invalid fid' , fid
+       call Log('E', message)
+    end if
+    call file_enddef( fid , & ! (in)
+         error             ) ! (out)
+    if ( error .EQ. SUCCESS_CODE ) then
+       write(message, '(1x,A,i3)') '*** [File] File enddef : NO.', n
+       call Log('I', message)
+       call Log('I', '*** enddef filename: ' // trim(File_fname_list(n)))
+    else
+       call Log('E', 'xxx failed to exit define mode')
+    end if
+
+    return
+  end subroutine FileEndDef
 
   !-----------------------------------------------------------------------------
   subroutine FileClose( &
