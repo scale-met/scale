@@ -242,7 +242,12 @@ contains
        OCEAN_restart_write_var, &
        OCEAN_restart_close
     use mod_land_vars, only: &
-       LAND_sw_restart => LAND_RESTART_OUTPUT
+       LAND_sw_restart => LAND_RESTART_OUTPUT, &
+       LAND_restart_create, &
+       LAND_restart_def_var, &
+       LAND_restart_enddef, &
+       LAND_restart_write_var, &
+       LAND_restart_close
     use mod_urban_vars, only: &
        URBAN_sw_restart => URBAN_RESTART_OUTPUT
     use mod_atmos_vars, only: &
@@ -258,14 +263,19 @@ contains
 
     ! cread restart netCDF file
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_create
+    if( LAND_sw_restart  .AND. TIME_DOLAND_restart )  call LAND_restart_create
     ! define metadata in netCDF file
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_def_var
+    if( LAND_sw_restart  .AND. TIME_DOLAND_restart )  call LAND_restart_def_var
     ! exit define mode
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_enddef
+    if( LAND_sw_restart  .AND. TIME_DOLAND_restart )  call LAND_restart_enddef
     ! write variabes to netCDF file
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_write_var
+    if( LAND_sw_restart  .AND. TIME_DOLAND_restart )  call LAND_restart_write_var
     ! clode the restart file
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_restart_close
+    if( LAND_sw_restart  .AND. TIME_DOLAND_restart )  call LAND_restart_close
 
   end subroutine ADMIN_restart
 

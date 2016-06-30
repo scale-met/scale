@@ -375,8 +375,12 @@ int32_t file_set_global_attribute_text( int32_t  fid,    // (in)
   ncid = files[fid]->ncid;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
 #endif
+
   CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, key, strlen(value), value) );
 
   return SUCCESS_CODE;
@@ -393,8 +397,12 @@ int32_t file_set_global_attribute_int( int32_t  fid,   // (in)
   ncid = files[fid]->ncid;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
 #endif
+
   CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, key, NC_INT, len, value) );
 
   return SUCCESS_CODE;
@@ -411,8 +419,12 @@ int32_t file_set_global_attribute_float( int32_t  fid,   // (in)
   ncid = files[fid]->ncid;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
 #endif
+
   CHECK_ERROR( nc_put_att_float(ncid, NC_GLOBAL, key, NC_FLOAT, len, value) );
 
   return SUCCESS_CODE;
@@ -429,8 +441,12 @@ int32_t file_set_global_attribute_double( int32_t  fid,   // (in)
   ncid = files[fid]->ncid;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) );
+    files[fid]->defmode = 1;
+  }
 #endif
+
   CHECK_ERROR( nc_put_att_double(ncid, NC_GLOBAL, key, NC_DOUBLE, len, value) );
 
   return SUCCESS_CODE;
@@ -1015,7 +1031,12 @@ int32_t file_enddef( int32_t fid ) // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
-  CHECK_ERROR( nc_enddef(ncid) );
+#ifdef NETCDF3
+  if (files[fid]->defmode == 1) {
+    CHECK_ERROR( nc_enddef(ncid) );
+    files[fid]->defmode = 0;
+  }
+#endif
 
   return SUCCESS_CODE;
 }

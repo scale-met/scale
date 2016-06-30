@@ -2854,7 +2854,7 @@ contains
        if ( File_fid_list(n) == fid ) exit
     end do
     if ( fid .NE. File_fid_list(n) ) then
-       write(message,*) 'xxx invalid fid' , fid
+       write(message,*) 'xxx in FileEndDef invalid fid' , fid
        call Log('E', message)
     end if
     call file_enddef( fid , & ! (in)
@@ -2888,8 +2888,9 @@ contains
     do n = 1, File_fid_count-1
        if ( File_fid_list(n) == fid ) exit
     end do
+    if ( n .EQ. File_fid_count-1 ) return  ! already closed
     if ( fid /= File_fid_list(n) ) then
-       write(message,*) 'xxx invalid fid' , fid
+       write(message,*) 'xxx in FileClose invalid fid' , fid
        call Log('E', message)
     end if
     call file_close( fid , & ! (in)
