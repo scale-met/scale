@@ -2889,6 +2889,7 @@ contains
        if ( File_fid_list(n) == fid ) exit
     end do
     if ( n .EQ. File_fid_count-1 ) return  ! already closed
+
     if ( fid /= File_fid_list(n) ) then
        write(message,*) 'xxx in FileClose invalid fid' , fid
        call Log('E', message)

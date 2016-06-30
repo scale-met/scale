@@ -36,11 +36,11 @@ module mod_ocean_vars
   public :: OCEAN_vars_total
   public :: OCEAN_vars_external_in
 
-  public :: OCEAN_restart_create
-  public :: OCEAN_restart_def_var
-  public :: OCEAN_restart_enddef
-  public :: OCEAN_restart_write_var
-  public :: OCEAN_restart_close
+  public :: OCEAN_vars_restart_create
+  public :: OCEAN_vars_restart_def_var
+  public :: OCEAN_vars_restart_enddef
+  public :: OCEAN_vars_restart_write_var
+  public :: OCEAN_vars_restart_close
 
   !-----------------------------------------------------------------------------
   !
@@ -99,8 +99,6 @@ module mod_ocean_vars
   real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
 
-  integer, public :: restart_fid = -1  ! file ID
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -131,6 +129,7 @@ module mod_ocean_vars
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
+  integer,                private            :: restart_fid = -1  ! file ID
 
   data VAR_NAME / 'OCEAN_TEMP',      &
                   'OCEAN_SFC_TEMP',  &
@@ -565,7 +564,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Create ocean restart file
-  subroutine OCEAN_restart_create
+  subroutine OCEAN_vars_restart_create
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
@@ -591,11 +590,11 @@ contains
     endif
 
     return
-  end subroutine OCEAN_restart_create
+  end subroutine OCEAN_vars_restart_create
 
   !-----------------------------------------------------------------------------
   !> Exit netCDF define mode
-  subroutine OCEAN_restart_enddef
+  subroutine OCEAN_vars_restart_enddef
     use scale_fileio, only: &
        FILEIO_enddef
     implicit none
@@ -605,11 +604,11 @@ contains
     endif
 
     return
-  end subroutine OCEAN_restart_enddef
+  end subroutine OCEAN_vars_restart_enddef
 
   !-----------------------------------------------------------------------------
   !> Close restart file
-  subroutine OCEAN_restart_close
+  subroutine OCEAN_vars_restart_close
     use scale_fileio, only: &
        FILEIO_close
     implicit none
@@ -620,11 +619,11 @@ contains
     endif
 
     return
-  end subroutine OCEAN_restart_close
+  end subroutine OCEAN_vars_restart_close
 
   !-----------------------------------------------------------------------------
   !> Define ocean variables in restart file
-  subroutine OCEAN_restart_def_var
+  subroutine OCEAN_vars_restart_def_var
     use scale_fileio, only: &
        FILEIO_def_var
     implicit none
@@ -665,11 +664,11 @@ contains
     endif
 
     return
-  end subroutine OCEAN_restart_def_var
+  end subroutine OCEAN_vars_restart_def_var
 
   !-----------------------------------------------------------------------------
   !> Write ocean variables to restart file
-  subroutine OCEAN_restart_write_var
+  subroutine OCEAN_vars_restart_write_var
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
@@ -712,6 +711,6 @@ contains
     endif
 
     return
-  end subroutine OCEAN_restart_write_var
+  end subroutine OCEAN_vars_restart_write_var
 
 end module mod_ocean_vars

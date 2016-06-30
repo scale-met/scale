@@ -37,6 +37,12 @@ module mod_urban_vars
   public :: URBAN_vars_total
   public :: URBAN_vars_external_in
 
+  public :: URBAN_vars_restart_create
+  public :: URBAN_vars_restart_def_var
+  public :: URBAN_vars_restart_enddef
+  public :: URBAN_vars_restart_write_var
+  public :: URBAN_vars_restart_close
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -151,6 +157,8 @@ module mod_urban_vars
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the urban variables
+  integer,                private            :: VAR_ID(VMAX)   !< ID    of the urban variables
+  integer,                private            :: restart_fid = -1  ! file ID
 
   data VAR_NAME / 'URBAN_TR' ,       &
                   'URBAN_TB' ,       &
@@ -764,5 +772,200 @@ contains
 
     return
   end subroutine URBAN_vars_external_in
+
+  !-----------------------------------------------------------------------------
+  !> Create urban restart file
+  subroutine URBAN_vars_restart_create
+    use scale_time, only: &
+       TIME_gettimelabel
+    use scale_fileio, only: &
+       FILEIO_create
+    use mod_urban_admin, only: &
+       URBAN_sw
+    implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
+    !---------------------------------------------------------------------------
+
+    if ( URBAN_sw .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
+
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(URBAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (URBAN) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** filename: ', trim(basename)
+
+       call FILEIO_create( restart_fid, basename, URBAN_RESTART_OUT_TITLE, URBAN_RESTART_OUT_DTYPE )
+    endif
+
+    return
+  end subroutine URBAN_vars_restart_create
+
+  !-----------------------------------------------------------------------------
+  !> Exit netCDF define mode
+  subroutine URBAN_vars_restart_enddef
+    use scale_fileio, only: &
+       FILEIO_enddef
+    implicit none
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_enddef( restart_fid ) ! [IN]
+    endif
+
+    return
+  end subroutine URBAN_vars_restart_enddef
+
+  !-----------------------------------------------------------------------------
+  !> Close restart file
+  subroutine URBAN_vars_restart_close
+    use scale_fileio, only: &
+       FILEIO_close
+    implicit none
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_close( restart_fid ) ! [IN]
+       restart_fid = -1
+    endif
+
+    return
+  end subroutine URBAN_vars_restart_close
+
+  !-----------------------------------------------------------------------------
+  !> Define urban variables in restart file
+  subroutine URBAN_vars_restart_def_var
+    use scale_fileio, only: &
+       FILEIO_def_var
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TR), VAR_NAME(I_TR), VAR_DESC(I_TR), &
+                            VAR_UNIT(I_TR), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TB), VAR_NAME(I_TB), VAR_DESC(I_TB), &
+                            VAR_UNIT(I_TB), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TG), VAR_NAME(I_TG), VAR_DESC(I_TG), &
+                            VAR_UNIT(I_TG), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TC), VAR_NAME(I_TC), VAR_DESC(I_TC), &
+                            VAR_UNIT(I_TC), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_QC), VAR_NAME(I_QC), VAR_DESC(I_QC), &
+                            VAR_UNIT(I_QC), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_UC), VAR_NAME(I_UC), VAR_DESC(I_UC), &
+                            VAR_UNIT(I_UC), 'XY', URBAN_RESTART_OUT_DTYPE )
+
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TRL), VAR_NAME(I_TRL), VAR_DESC(I_TRL), &
+                            VAR_UNIT(I_TRL), 'Urban', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TBL), VAR_NAME(I_TBL), VAR_DESC(I_TBL), &
+                            VAR_UNIT(I_TBL), 'Urban', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TGL), VAR_NAME(I_TGL), VAR_DESC(I_TGL), &
+                            VAR_UNIT(I_TGL), 'Urban', URBAN_RESTART_OUT_DTYPE )
+
+       call FILEIO_def_var( restart_fid, VAR_ID(I_RAINR), VAR_NAME(I_RAINR), VAR_DESC(I_RAINR), &
+                            VAR_UNIT(I_RAINR), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_RAINB), VAR_NAME(I_RAINB), VAR_DESC(I_RAINB), &
+                            VAR_UNIT(I_RAINB), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_RAING), VAR_NAME(I_RAING), VAR_DESC(I_RAING), &
+                            VAR_UNIT(I_RAING), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_ROFF), VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  &
+                            VAR_UNIT(I_ROFF), 'XY', URBAN_RESTART_OUT_DTYPE )
+
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFC_TEMP), VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), &
+                            VAR_UNIT(I_SFC_TEMP), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_ALB_LW), VAR_NAME(I_ALB_LW), VAR_DESC(I_ALB_LW), &
+                            VAR_UNIT(I_ALB_LW), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_ALB_SW), VAR_NAME(I_ALB_SW), VAR_DESC(I_ALB_SW), &
+                            VAR_UNIT(I_ALB_SW), 'XY', URBAN_RESTART_OUT_DTYPE )
+
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_MW), VAR_NAME(I_SFLX_MW), VAR_DESC(I_SFLX_MW), &
+                            VAR_UNIT(I_SFLX_MW), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_MU), VAR_NAME(I_SFLX_MU), VAR_DESC(I_SFLX_MU), &
+                            VAR_UNIT(I_SFLX_MU), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_MV), VAR_NAME(I_SFLX_MV), VAR_DESC(I_SFLX_MV), &
+                            VAR_UNIT(I_SFLX_MV), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_SH), VAR_NAME(I_SFLX_SH), VAR_DESC(I_SFLX_SH), &
+                            VAR_UNIT(I_SFLX_SH), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_LH), VAR_NAME(I_SFLX_LH), VAR_DESC(I_SFLX_LH), &
+                            VAR_UNIT(I_SFLX_LH), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_GH), VAR_NAME(I_SFLX_GH), VAR_DESC(I_SFLX_GH), &
+                            VAR_UNIT(I_SFLX_GH), 'XY', URBAN_RESTART_OUT_DTYPE )
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_evap), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), &
+                            VAR_UNIT(I_SFLX_evap), 'XY', URBAN_RESTART_OUT_DTYPE )
+
+    endif
+
+    return
+  end subroutine URBAN_vars_restart_def_var
+
+  !-----------------------------------------------------------------------------
+  !> Write urban restart
+  subroutine URBAN_vars_restart_write_var
+    use scale_fileio, only: &
+       FILEIO_write_var
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call URBAN_vars_total
+
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TR), URBAN_TR(:,:),                  & ! [IN] 
+                          VAR_NAME(I_TR), 'XY', nohalo=.true.                            ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TB), URBAN_TB(:,:),                  & ! [IN]
+                          VAR_NAME(I_TB), 'XY', nohalo=.true.                            ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TG), URBAN_TG(:,:),                  & ! [IN]
+                          VAR_NAME(I_TG), 'XY', nohalo=.true.                            ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TC), URBAN_TC(:,:),                  & ! [IN]
+                          VAR_NAME(I_TC), 'XY', nohalo=.true.                            ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_QC), URBAN_QC(:,:),                  & ! [IN]
+                          VAR_NAME(I_QC), 'XY', nohalo=.true.                            ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_UC), URBAN_UC(:,:),                  & ! [IN]
+                          VAR_NAME(I_UC), 'XY', nohalo=.true.                            ) ! [IN]
+
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TRL), URBAN_TRL(:,:,:),              & ! [IN]
+                          VAR_NAME(I_TRL), 'Urban', nohalo=.true.                        ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TBL), URBAN_TBL(:,:,:),              & ! [IN]
+                          VAR_NAME(I_TBL), 'Urban', nohalo=.true.                        ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TGL), URBAN_TGL(:,:,:),              & ! [IN]
+                          VAR_NAME(I_TGL), 'Urban', nohalo=.true.                        ) ! [IN]
+
+       call FILEIO_write_var( restart_fid, VAR_ID(I_RAINR), URBAN_RAINR(:,:),            & ! [IN]
+                          VAR_NAME(I_RAINR), 'XY', nohalo=.true.                         ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_RAINB), URBAN_RAINB(:,:),            & ! [IN]
+                          VAR_NAME(I_RAINB), 'XY', nohalo=.true.                         ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_RAING), URBAN_RAING(:,:),            & ! [IN]
+                          VAR_NAME(I_RAING), 'XY', nohalo=.true.                         ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_ROFF), URBAN_ROFF(:,:),              & ! [IN]
+                          VAR_NAME(I_ROFF),  'XY', nohalo=.true.                         ) ! [IN]
+
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFC_TEMP), URBAN_SFC_TEMP(:,:),      & ! [IN]
+                          VAR_NAME(I_SFC_TEMP), 'XY', nohalo=.true.                      ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_ALB_LW), URBAN_SFC_albedo(:,:,I_LW), & ! [IN]
+                          VAR_NAME(I_ALB_LW), 'XY', nohalo=.true.                        ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_ALB_SW), URBAN_SFC_albedo(:,:,I_SW), & ! [IN]
+                          VAR_NAME(I_ALB_SW), 'XY', nohalo=.true.                        ) ! [IN]
+
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_MW), URBAN_SFLX_MW(:,:),        & ! [IN]
+                          VAR_NAME(I_SFLX_MW), 'XY', nohalo=.true.                       ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_MU), URBAN_SFLX_MU(:,:),        & ! [IN]
+                          VAR_NAME(I_SFLX_MU), 'XY', nohalo=.true.                       ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_MV), URBAN_SFLX_MV(:,:),        & ! [IN]
+                          VAR_NAME(I_SFLX_MV), 'XY', nohalo=.true.                       ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_SH), URBAN_SFLX_SH(:,:),        & ! [IN]
+                          VAR_NAME(I_SFLX_SH), 'XY', nohalo=.true.                       ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_LH), URBAN_SFLX_LH(:,:),        & ! [IN]
+                          VAR_NAME(I_SFLX_LH), 'XY', nohalo=.true.                       ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_GH), URBAN_SFLX_GH(:,:),        & ! [IN]
+                          VAR_NAME(I_SFLX_GH), 'XY', nohalo=.true.                       ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_evap), URBAN_SFLX_evap(:,:),    & ! [IN]
+                          VAR_NAME(I_SFLX_evap), 'XY', nohalo=.true.                     ) ! [IN]
+
+    endif
+
+    return
+  end subroutine URBAN_vars_restart_write_var
 
 end module mod_urban_vars

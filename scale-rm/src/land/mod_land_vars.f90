@@ -37,11 +37,11 @@ module mod_land_vars
   public :: LAND_vars_total
   public :: LAND_vars_external_in
 
-  public :: LAND_restart_create
-  public :: LAND_restart_def_var
-  public :: LAND_restart_enddef
-  public :: LAND_restart_write_var
-  public :: LAND_restart_close
+  public :: LAND_vars_restart_create
+  public :: LAND_vars_restart_def_var
+  public :: LAND_vars_restart_enddef
+  public :: LAND_vars_restart_write_var
+  public :: LAND_vars_restart_close
 
   public :: convert_WS2VWC
 
@@ -112,8 +112,6 @@ module mod_land_vars
   integer,  public, parameter   :: I_Z0H              = 7 ! roughness length for heat        [m]
   integer,  public, parameter   :: I_Z0E              = 8 ! roughness length for vapor       [m]
 
-  integer, public :: restart_fid = -1  ! file ID
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -145,6 +143,7 @@ module mod_land_vars
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
+  integer,                private            :: restart_fid = -1  ! file ID
 
   data VAR_NAME / 'LAND_TEMP',      &
                   'LAND_WATER',     &
@@ -765,7 +764,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Create land restart file
-  subroutine LAND_restart_create
+  subroutine LAND_vars_restart_create
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
@@ -791,11 +790,11 @@ contains
     endif
 
     return
-  end subroutine LAND_restart_create
+  end subroutine LAND_vars_restart_create
 
   !-----------------------------------------------------------------------------
   !> Exit netCDF define mode
-  subroutine LAND_restart_enddef
+  subroutine LAND_vars_restart_enddef
     use scale_fileio, only: &
        FILEIO_enddef
     implicit none
@@ -805,11 +804,11 @@ contains
     endif
 
     return
-  end subroutine LAND_restart_enddef
+  end subroutine LAND_vars_restart_enddef
 
   !-----------------------------------------------------------------------------
   !> Close restart file
-  subroutine LAND_restart_close
+  subroutine LAND_vars_restart_close
     use scale_fileio, only: &
        FILEIO_close
     implicit none
@@ -820,11 +819,11 @@ contains
     endif
 
     return
-  end subroutine LAND_restart_close
+  end subroutine LAND_vars_restart_close
 
   !-----------------------------------------------------------------------------
   !> Define land variables in restart file
-  subroutine LAND_restart_def_var
+  subroutine LAND_vars_restart_def_var
     use scale_fileio, only: &
        FILEIO_def_var
     implicit none
@@ -861,11 +860,11 @@ contains
     endif
 
     return
-  end subroutine LAND_restart_def_var
+  end subroutine LAND_vars_restart_def_var
 
   !-----------------------------------------------------------------------------
   !> Write land variables to restart file
-  subroutine LAND_restart_write_var
+  subroutine LAND_vars_restart_write_var
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
@@ -904,6 +903,6 @@ contains
     endif
 
     return
-  end subroutine LAND_restart_write_var
+  end subroutine LAND_vars_restart_write_var
 
 end module mod_land_vars
