@@ -55,11 +55,6 @@ contains
 
     character(len=*), intent(in) :: OCEAN_TYPE
 
-    character(len=H_LONG) :: OCEAN_PHY_IN_BASENAME = ''
-
-    NAMELIST / PARAM_OCEAN_PHY_FILE / &
-         OCEAN_PHY_IN_BASENAME
-
     integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -67,29 +62,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FILE] / Categ[OCEAN PHY] / Origin[SCALElib]'
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_OCEAN_PHY_FILE,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_PHY_FILE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_PHY_FILE)
-
     if( OCEAN_TYPE /= 'FILE' ) then
        write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
        call PRC_MPIstop
     end if
-
-    if ( OCEAN_PHY_IN_BASENAME == '' ) then
-       write(*,*) 'xxx OCEAN_PHY_IN_BASENAME is empty. Set it!'
-       call PRC_MPIstop
-    end if
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input file name : ', OCEAN_PHY_IN_BASENAME
 
     ! judge to run slab ocean model
     allocate( is_OCN(IA,JA) )
@@ -149,6 +125,11 @@ contains
          error           ) ! (out)
     if ( error ) then
        write(*,*) 'xxx Failed to read "OCEAN_TEMP" data from file!'
+       write(*,*) 'xxx set namelist EXTITEM, for example'
+       write(*,*) ' &EXTITEM'
+       write(*,*) '  basename   = "filename",'
+       write(*,*) '  varname    = "OCEAN_TEMP",'
+       write(*,*) ' /'
        call PRC_MPIstop
     end if
 
