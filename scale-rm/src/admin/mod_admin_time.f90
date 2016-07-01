@@ -878,10 +878,10 @@ contains
 
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
        WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
-       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6,A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I7,A,I7,A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
                                                               ' WCLOCK:', WALLCLOCK_elapse
     else
-       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
+       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I7,A,I7)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
     endif
 
     return
