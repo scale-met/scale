@@ -85,6 +85,14 @@ module scale_fileio
   real(RP), private, allocatable :: AXIS_LATX(:,:) ! [deg]
   real(RP), private, allocatable :: AXIS_LATY(:,:) ! [deg]
   real(RP), private, allocatable :: AXIS_LATXY(:,:) ! [deg]
+
+  integer,  private, parameter :: File_nfile_max = 512   ! number limit of file
+                                ! Keep consistency with "FILE_MAX" in gtool_netcdf.c
+  logical,  private,      save :: File_axes_written(File_nfile_max)
+                                ! whether axes have been written
+  logical,  private,      save :: File_nozcoord(File_nfile_max)
+                                ! whether nozcoord is true or false
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -1738,6 +1746,13 @@ contains
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
        call FILEIO_def_axes( fid, dtype, nozcoord ) ! [IN]
+       File_axes_written(fid) = .FALSE.
+       if ( present( nozcoord ) ) then
+          File_nozcoord(fid) = nozcoord
+       else
+          File_nozcoord(fid) = .FALSE.
+       endif
+
        if ( present( subsec ) ) then
           call FileSetGlobalAttribute( fid, "time", (/subsec/) )
        else
@@ -1771,6 +1786,12 @@ contains
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     call FileEndDef( fid ) ! [IN]
+
+    ! At first write axis variables
+    if ( .NOT. File_axes_written(fid) ) then
+       call FILEIO_write_axes(fid, File_nozcoord(fid))
+       File_axes_written(fid) = .TRUE.
+    endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1875,7 +1896,7 @@ contains
 
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', dtype, LKE-LKS+1 )
-       call FileDefAxis( fid, 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', dtype, LKE-LKS   )
+       call FileDefAxis( fid, 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', dtype, LKE-LKS+2 )
        call FileDefAxis( fid, 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', dtype, LKE-LKS+1 )
 
        call FileDefAxis( fid, 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', dtype, UKE-UKS+1 )

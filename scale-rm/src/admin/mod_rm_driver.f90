@@ -364,9 +364,9 @@ contains
       ! restart output
       ! if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
       ! if( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
+      ! if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
+      ! if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
       call ADMIN_restart
-      if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
-      if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
 
       if( TIME_DOend ) exit
 

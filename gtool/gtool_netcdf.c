@@ -588,8 +588,7 @@ int32_t file_write_axis( int32_t fid,        // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
-  if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
-    return ALREADY_EXISTED_CODE;
+  CHECK_ERROR( nc_inq_varid(ncid, name, &varid) )
 
 #ifdef NETCDF3
   if (files[fid]->defmode == 1) {
@@ -720,8 +719,7 @@ int32_t file_write_associated_coordinates( int32_t fid,        // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
-  if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
-    return ALREADY_EXISTED_CODE;
+  CHECK_ERROR( nc_inq_varid(ncid, name, &varid) );
 
 #ifdef NETCDF3
   if (files[fid]->defmode == 1) {

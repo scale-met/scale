@@ -597,7 +597,7 @@ contains
 
     call file_write_axis( fid, name, val, SP, & ! (in)
          error                                   ) ! (out)
-    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+    if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to put axis')
     end if
 
@@ -616,7 +616,7 @@ contains
 
     call file_write_axis( fid, name, val, DP, & ! (in)
          error                                   ) ! (out)
-    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+    if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to put axis')
     end if
 
@@ -2888,10 +2888,10 @@ contains
     do n = 1, File_fid_count-1
        if ( File_fid_list(n) == fid ) exit
     end do
-    if ( n .EQ. File_fid_count-1 ) return  ! already closed
+    if ( n .EQ. File_fid_count ) return  ! already closed
 
     if ( fid /= File_fid_list(n) ) then
-       write(message,*) 'xxx in FileClose invalid fid' , fid
+       write(message,*) 'xxx in FileClose invalid fid ', fid
        call Log('E', message)
     end if
     call file_close( fid , & ! (in)

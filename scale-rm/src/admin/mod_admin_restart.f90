@@ -256,7 +256,12 @@ contains
        URBAN_vars_restart_write_var, &
        URBAN_vars_restart_close
     use mod_atmos_vars, only: &
-       ATMOS_sw_restart => ATMOS_RESTART_OUTPUT
+       ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
+       ATMOS_vars_restart_create, &
+       ATMOS_vars_restart_def_var, &
+       ATMOS_vars_restart_enddef, &
+       ATMOS_vars_restart_write_var, &
+       ATMOS_vars_restart_close
     use mod_admin_time, only: &
        TIME_DOATMOS_restart,  &
        TIME_DOLAND_restart,   &
@@ -270,22 +275,31 @@ contains
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_create
     if(  LAND_sw_restart .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_create
     if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_create
+    if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_create
+
     ! define metadata in netCDF file
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_def_var
     if(  LAND_sw_restart .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_def_var
     if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_def_var
+    if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_def_var
+
     ! exit define mode
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_enddef
     if(  LAND_sw_restart .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_enddef
     if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_enddef
+    if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_enddef
+
     ! write variabes to netCDF file
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write_var
     if(  LAND_sw_restart .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_write_var
     if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write_var
+    if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write_var
+
     ! clode the restart file
     if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_close
     if(  LAND_sw_restart .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_close
     if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_close
+    if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_close
 
   end subroutine ADMIN_restart
 
