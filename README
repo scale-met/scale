@@ -20,7 +20,7 @@ Build
  % SCALE_SYS=Linux64-gnu-ompi (example)
 
 - make dc_utils library
- % cd dc_uitls
+ % cd dc_utils
  % make
 
 - make gtool library
@@ -29,7 +29,7 @@ Build
 
 - make scalelib library
  % cd scalelib/src
- % make depend
+ % make dependency
  % make
 
 - make and run the test cases of scale-rm
