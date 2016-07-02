@@ -43,6 +43,7 @@ module gtool_history
   public :: HistoryAddVariable
   public :: HistoryPutAxis
   public :: HistoryPutAssociatedCoordinates
+  public :: HistoryWriteAxes
   public :: HistorySetTAttr
   public :: HistoryQuery
   public :: HistoryPut
@@ -102,6 +103,8 @@ module gtool_history
      character(len=File_HSHORT) :: units
      character(len=File_HSHORT) :: dim
      integer                    :: type
+     integer                    :: dim_size
+     integer                    :: id
      real(DP), pointer          :: var(:)
      logical                    :: down
   end type axis
@@ -112,6 +115,7 @@ module gtool_history
      character(len=File_HSHORT) :: dims(4)
      integer                    :: ndims
      integer                    :: type
+     integer                    :: id
      real(DP), pointer          :: var(:)
   end type assoc
 
@@ -167,6 +171,7 @@ module gtool_history
   integer,                    allocatable :: History_tstrstep(:)
   integer,                    allocatable :: History_tlststep(:)
   real(DP),                   allocatable :: History_tsumsec (:)
+  logical,                    allocatable :: History_axis_written(:)
 
 
   real(DP), parameter  :: eps = 1.D-10 !> epsilon for timesec
@@ -378,6 +383,8 @@ contains
     allocate( History_tlststep(History_req_nmax) )
     allocate( History_tsumsec (History_req_nmax) )
 
+    allocate( History_axis_written (History_req_nmax) )
+
     if ( fid_conf > 0 ) rewind(fid_conf)
     memsize = 0
     ni = 0
@@ -465,8 +472,8 @@ contains
        FileSetOption,   &
        FileAddVariable, &
        FileSetTAttr,    &
-       FilePutAxis,     &
-       FilePutAssociatedCoordinates
+       FileDefAxis,     &
+       FileDefAssociatedCoordinates
     implicit none
 
     character(len=*), intent(in)  :: varname
@@ -556,20 +563,24 @@ contains
                    enddo
                 endif
 
+                ! define registered history variables in file
                 do m = 1, History_axis_count
-                   call FilePutAxis( History_fid(id),                             & ! (in)
-                                     History_axis(m)%name,  History_axis(m)%desc, & ! (in)
-                                     History_axis(m)%units, History_axis(m)%dim,  & ! (in)
-                                     History_axis(m)%type,  History_axis(m)%var   ) ! (in)
+                   History_axis(m)%id = id
+                   call FileDefAxis( History_fid(id),                                & ! (in)
+                                     History_axis(m)%name,  History_axis(m)%desc,    & ! (in)
+                                     History_axis(m)%units, History_axis(m)%dim,     & ! (in)
+                                     History_axis(m)%type,  History_axis(m)%dim_size ) ! (in)
                 enddo
 
                 do m = 1, History_assoc_count
-                   call FilePutAssociatedCoordinates( History_fid(id),                                 & ! (in)
+                   History_assoc(m)%id = id
+                   call FileDefAssociatedCoordinates( History_fid(id),                                 & ! (in)
                                                       History_assoc(m)%name, History_assoc(m)%desc,    & ! (in)
                                                       History_assoc(m)%units,                          & ! (in)
                                                       History_assoc(m)%dims(1:History_assoc(m)%ndims), & ! (in)
-                                                      History_assoc(m)%type, History_assoc(m)%var      ) ! (in)
+                                                      History_assoc(m)%type                            ) ! (in)
                 enddo
+                History_axis_written(id) = .FALSE.
 
              endif
 
@@ -639,6 +650,43 @@ contains
   end subroutine HistoryAddVariable
 
   !-----------------------------------------------------------------------------
+  subroutine HistoryWriteAxes
+    use gtool_file, only: &
+       FileEndDef,        &
+       FileWriteAxis,     &
+       FileWriteAssociatedCoordinates
+    implicit none
+
+    integer :: m
+
+    !---------------------------------------------------------------------------
+
+    if ( History_req_nmax == 0 ) return
+
+    ! Assume all history axes are written into the same file
+    if ( History_axis_written(History_axis(1)%id) ) return
+
+    call FileEndDef( History_fid(History_axis(1)%id) )
+
+    ! write registered history variables to file
+    do m = 1, History_axis_count
+       call FileWriteAxis( History_fid(History_axis(m)%id), & ! (in)
+                           History_axis(m)%name,            & ! (in)
+                           History_axis(m)%var              ) ! (in)
+    enddo
+
+    do m = 1, History_assoc_count
+       call FileWriteAssociatedCoordinates( History_fid(History_assoc(m)%id), & ! (in)
+                                            History_assoc(m)%name,            & ! (in)
+                                            History_assoc(m)%var              ) ! (in)
+    enddo
+
+    History_axis_written(History_axis(1)%id) = .TRUE.
+
+    return
+  end subroutine HistoryWriteAxes
+
+  !-----------------------------------------------------------------------------
   ! interface HistoryPutAxis
   !-----------------------------------------------------------------------------
   subroutine HistoryPutAxisSP( &
@@ -681,11 +729,12 @@ contains
 
     if ( History_axis_count < History_axis_limit ) then
        History_axis_count = History_axis_count + 1
-       History_axis(History_axis_count)%name  = name
-       History_axis(History_axis_count)%desc  = desc
-       History_axis(History_axis_count)%units = units
-       History_axis(History_axis_count)%dim   = dim
-       History_axis(History_axis_count)%type  = type
+       History_axis(History_axis_count)%name      = name
+       History_axis(History_axis_count)%desc      = desc
+       History_axis(History_axis_count)%units     = units
+       History_axis(History_axis_count)%dim       = dim
+       History_axis(History_axis_count)%type      = type
+       History_axis(History_axis_count)%dim_size  = size(var)
        allocate(History_axis(History_axis_count)%var(size(var)))
        History_axis(History_axis_count)%var = var
        if ( present(down) ) then
@@ -740,11 +789,12 @@ contains
 
     if ( History_axis_count < History_axis_limit ) then
        History_axis_count = History_axis_count + 1
-       History_axis(History_axis_count)%name  = name
-       History_axis(History_axis_count)%desc  = desc
-       History_axis(History_axis_count)%units = units
-       History_axis(History_axis_count)%dim   = dim
-       History_axis(History_axis_count)%type  = type
+       History_axis(History_axis_count)%name      = name
+       History_axis(History_axis_count)%desc      = desc
+       History_axis(History_axis_count)%units     = units
+       History_axis(History_axis_count)%dim       = dim
+       History_axis(History_axis_count)%type      = type
+       History_axis(History_axis_count)%dim_size  = size(var)
        allocate(History_axis(History_axis_count)%var(size(var)))
        History_axis(History_axis_count)%var = var
        if ( present(down) ) then
@@ -1953,6 +2003,10 @@ contains
 
     integer :: n
     !---------------------------------------------------------------------------
+
+    ! Write registered axis variables to history file
+    ! This subroutine must be called after all HIST_reg calls are completed
+    call HistoryWriteAxes
 
     do n = 1, History_id_count
        call HistoryWrite( n, step_now )

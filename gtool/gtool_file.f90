@@ -575,7 +575,7 @@ contains
     call file_def_axis( fid, name, desc, units, dim_name, dtype, dim_size, & ! (in)
          error                                                             ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put axis')
+       call Log('E', 'xxx failed to define axis')
     end if
 
     return
@@ -596,9 +596,9 @@ contains
     intrinsic size
 
     call file_write_axis( fid, name, val, SP, & ! (in)
-         error                                   ) ! (out)
+         error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to put axis')
+       call Log('E', 'xxx failed to write axis')
     end if
 
     return
@@ -615,9 +615,9 @@ contains
     intrinsic size
 
     call file_write_axis( fid, name, val, DP, & ! (in)
-         error                                   ) ! (out)
+         error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to put axis')
+       call Log('E', 'xxx failed to write axis')
     end if
 
     return
@@ -1312,7 +1312,7 @@ contains
          key, val,   & ! (in)
          error       ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put axis')
+       call Log('E', 'xxx failed to set attr for axis')
     end if
 
     return

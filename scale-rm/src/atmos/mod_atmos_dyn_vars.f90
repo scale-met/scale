@@ -81,7 +81,7 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_DYN_TYPE
     use scale_atmos_dyn_tstep_short, only: &
-       ATMOS_DYN_tstep_short_regist
+       ATMOS_DYN_Tstep_short_regist
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN_VARS / &
@@ -109,7 +109,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_VARS)
 
-    call ATMOS_DYN_tstep_short_regist( ATMOS_DYN_TYPE, & ! [IN]
+    call ATMOS_DYN_Tstep_short_regist( ATMOS_DYN_TYPE, & ! [IN]
                                        VA,             & ! [OUT]
                                        VAR_NAME,       & ! [OUT]
                                        VAR_DESC,       & ! [OUT]
