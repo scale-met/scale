@@ -538,19 +538,7 @@ SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER\_TYPEとA
 \end{tabularx}
 }}}\\
 
-を追記し、さらにinit.confに記載されているPARAM\_MKINITに「flg\_bin = .true. 」を追加する必要がある。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_MKINIT| \\
-\verb|　 　  〜　中略　〜|\\
-\verb| flg_bin = .true.| \\
-\verb|　 　  〜　中略　〜|\\
-\verb|/| \\
-\end{tabularx}
-}}}\\
-
+を追記する必要がある。\\
 この場合も、{\bf init.confとrun.confに記載されるPARAM\_BINは同一にする必要がある}。
 SUZUKI10を選択した時には、micpara.datという
 雲微物理の計算に必要なファイルが自動生成される。micpara.datがすでに存在する場合は存在する場合はあるものを利用するが、
