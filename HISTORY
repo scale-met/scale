@@ -1,6 +1,6 @@
 = Release History
 
-== 2016-06-07 (5.0.0)
+== 2016-07-05 (5.0.0)
 * Changes:
   * change name SCALE-LES to SCALE-RM (also name of binary)
   * change time format of restart file name (yyyymmdd-hhmmss.mmm)
@@ -11,6 +11,7 @@
   * Enable to integrate with tendencies of physical processes without advection
   * Enable to output clear-sky radiation flux
   * Add the Deardroff (1980) scheme for SGS turbulence
+  * Add the Kajino (2013) scheme for aerosol microphisics (experimental)
   * Enable to use multiple data sources for topography and landuse
   * Enable to put barrier at call of the rap time routine
 * Implovements:
