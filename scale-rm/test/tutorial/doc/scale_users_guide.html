@@ -537,7 +537,7 @@ SN14    ：氷雲を含む2-momentバルク法(Seiki and Nakajima 2014)
 SUZUKI10：1-momentビン法(Suzuki et al. 2010，氷雲を含むか否かはオプションで選択)</code></pre>
 <p>このときことに注意されたい． SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER_TYPEとATMOS_PHY_MP_TYPEを変更するだけで実行可能である。 一方SUZUKI10を選択した場合は、init.conf、run.confの双方に<br /></p>
 <p><br /></p>
-<p>を追記し、さらにinit.confに記載されているPARAM_MKINITに「flg_bin = .true. 」を追加する必要がある。<br /></p>
+<p>を追記する必要がある。<br /></p>
 <p><br /></p>
 <p>この場合も、<span><strong>init.confとrun.confに記載されるPARAM_BINは同一にする必要がある</strong></span>。 SUZUKI10を選択した時には、micpara.datという 雲微物理の計算に必要なファイルが自動生成される。micpara.datがすでに存在する場合は存在する場合はあるものを利用するが、 nbinが変わると新たに作成しなければならない。micpara.datにnbinの情報が記載されているが、もしrun.confに記載されるnbinと micpara.datに記載されているnbinが異なれば、<br /></p>
 <p><br /></p>
