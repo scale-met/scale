@@ -157,9 +157,9 @@ runディレクトリの中には、\verb|run.conf|という名前の
 \begin{verbatim}
  $ tail -f LOG_d01.pe000000
 \end{verbatim}
-正常にジョブが終了すれば、\verb|history_d01.pe######.nc|と
-\verb|restart_d01.pe######.nc|という名前のファイルがMPIプロセス数だけ、
-つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）。
+正常にジョブが終了すれば、\verb|history_d01.pe######.nc|
+という名前のファイルがMPIプロセス数だけ、
+つまり4つ生成される（\verb|######|にはMPIプロセスの番号が入る）。
 historyファイルは計算結果の出力ファイルであり、
 \verb|HISTITEM|に指定した変数のみ書き出される。
 restartファイルは対応する時刻を開始時刻として

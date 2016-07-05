@@ -6,13 +6,24 @@
  scale/scale-rm/test/tutorial/real/
 \end{verbatim}
 の下で行う。
-以降の説明で\verb|${Tutrial_DIR}|は、\verb|scale/scale-rm/test/tutorial/|を絶対PATHで示すこととする。
+これ以降の説明では、\verb|scale/scale-rm/test/tutorial/|の絶対PATHを
+\verb|${Tutrial_DIR}|と示すこととする。
+\verb|${Tutrial_DIR}|以下のディレクトリ構造は下記の通りである。
+\begin{verbatim}
+  init/
+  net2g/
+  pp/
+  run/
+  sample/  : サンプルのconfファイル
+  tools/   : tutrial実行のためのツール
+\end{verbatim}
 
-SCALE-RMモデルの実行過程は、図 \ref{fig:howto}に示されるように
+SCALE-RMモデルの実行過程は、図\ref{fig:howto}に示されるように
 \begin{enumerate}
-\item pp : 地形・海陸分布データの作成
-\item init : 初期値・境界値データの作成
-\item run : 時間積分を行う（モデル本体の実行）
+\item pp    : 地形・土地利用データの作成
+\item init  : 初期値・境界値データの作成
+\item run   : 時間積分を行う（モデル本体の実行）
+\item net2g : 出力データのNetCDFからGrADS形式への変換（オプション） 
 \end{enumerate}
 といった手順で実行する。
 

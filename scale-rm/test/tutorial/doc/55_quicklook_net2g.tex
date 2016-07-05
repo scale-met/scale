@@ -265,8 +265,9 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 となっており、net2gの実行にあたってはdomain 1は12-MPI並列、domain 2は36-MPI並列で実行される。ここで
 指定するMPIプロセス数は、SCALE本体の実行時に使用したMPIプロセス数の約数でなければならない。
 
-それぞれのドメインについて実行するnet2gのconfigファイルは、それぞれ``net2g.3d.d01.conf''と
-``net2g.3d.d02.conf''と指定さえている。このconfigファイルは31個のバルク番号ディレクトリの中に
+それぞれのドメインについて実行するnet2gのconfigファイルは、
+それぞれ``net2g.3d.d01.conf''と``net2g.3d.d02.conf''と指定されている。
+このconfigファイルは31個のバルク番号ディレクトリの中に
 収められてことを想定している。
 
 この例では、1つのジョブあたり、$12 + 36 = 48$プロセスを使用し、全体で31ジョブあるので総計で1488プロセスを
@@ -328,7 +329,7 @@ SCALE本体とは独立なので、ディレクトリを任意の場所に移動
 \verb|start time of convert data| \\
 \textcolor{blue}{\verb| 1           <- 任意の番号の時間から変換可能 |} \\
 \verb|end time of convert data| \\
-\textcolor{blue}{\verb| 10          <- 変換を修了する時間|} \\
+\textcolor{blue}{\verb| 10          <- 変換を終了する時間|} \\
 \verb|Imput number of variable| \\
 \verb|0 -> all variable output from model| \\
 \textcolor{blue}{\verb| X           <- 変換したい変数の数|} \\
