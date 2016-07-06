@@ -41,6 +41,9 @@ module scale_atmos_phy_rd_common
   ! for band region
   integer,  public, parameter :: I_LW = 1
   integer,  public, parameter :: I_SW = 2
+  ! for band region
+  integer,  public, parameter :: I_direct  = 1
+  integer,  public, parameter :: I_diffuse = 2
 
   !-----------------------------------------------------------------------------
   !

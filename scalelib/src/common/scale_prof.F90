@@ -62,6 +62,7 @@ module scale_prof
 
   integer,                  private, parameter :: PROF_default_rap_level = 2
   integer,                  private            :: PROF_rap_level         = 2
+  logical,                  private            :: PROF_mpi_barrier       = .false.
 
 #ifdef _PAPI_
   integer(DP),private :: PROF_PAPI_flops     = 0   !> total floating point operations since the first call
@@ -80,12 +81,13 @@ contains
     implicit none
 
     namelist / PARAM_PROF / &
-         PROF_rap_level
+         PROF_rap_level, &
+         PROF_mpi_barrier
 
     integer :: ierr
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROF] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROF] / Categ[COMMON] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -97,6 +99,9 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PROF)
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Rap output level              = ', PROF_rap_level
+    if( IO_L ) write(IO_FID_LOG,*) '*** Add MPI_barrier in every rap? = ', PROF_mpi_barrier
 
     PROF_prefix = ''
 
@@ -125,6 +130,7 @@ contains
   !> Start raptime
   subroutine PROF_rapstart( rapname_base, level )
     use scale_process, only: &
+       PRC_MPIbarrier, &
        PRC_MPItime
     implicit none
 
@@ -149,6 +155,8 @@ contains
 
     id = get_rapid( rapname, level_ )
 
+    if(PROF_mpi_barrier) call PRC_MPIbarrier
+
     PROF_raptstr(id) = PRC_MPItime()
     PROF_rapnstr(id) = PROF_rapnstr(id) + 1
 
@@ -168,6 +176,7 @@ contains
   !> Save raptime
   subroutine PROF_rapend( rapname_base, level )
     use scale_process, only: &
+       PRC_MPIbarrier, &
        PRC_MPItime
     implicit none
 
@@ -189,6 +198,8 @@ contains
     id = get_rapid( rapname, level_ )
 
     if( level_ > PROF_rap_level ) return
+
+    if(PROF_mpi_barrier) call PRC_MPIbarrier
 
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
@@ -235,8 +246,8 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) .le. PROF_rap_level .and. &
-                  PROF_grpid(id) == gid .and. &
+             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
+                  PROF_grpid(id) == gid .AND. &
                   IO_L ) then
                 write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
                      '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
@@ -265,8 +276,8 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) .le. PROF_rap_level .and. &
-                  PROF_grpid(id) == gid .and. &
+             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
+                  PROF_grpid(id) == gid .AND. &
                   fid > 0 ) then
                 write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I9)') &
                      '*** ID=',id,' : ',PROF_rapname(id), &

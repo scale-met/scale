@@ -76,7 +76,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SURFACE FLUX] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Bulk scheme'
 
@@ -128,6 +128,8 @@ contains
        ATMOS_THERMODYN_templhv
     use scale_roughness, only: &
        ROUGHNESS
+    use scale_bulkflux, only: &
+       BULKFLUX
     implicit none
 
     real(RP), intent(in)    :: ATM_TEMP  (IA,JA)    ! temperature at the lowermost layer (cell center) [K]
@@ -164,40 +166,19 @@ contains
     real(RP) :: SFC_Z0H_t(IA,JA)
     real(RP) :: SFC_Z0E_t(IA,JA)
 
-    real(RP) :: ATM_Uabs(IA,JA) ! absolute velocity at z1 [m/s]
-    real(RP) :: ATM_POTT(IA,JA) ! potential temperature at z1, based on the local surface pressure [K]
     real(RP) :: SFC_QSAT(IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
 
-    real(RP) :: Cm  (IA,JA)     ! bulk coefficient for momentum
-    real(RP) :: Ch  (IA,JA)     ! bulk coefficient for heat
-    real(RP) :: Ce  (IA,JA)     ! bulk coefficient for vapor
-    real(RP) :: R10M(IA,JA)
-    real(RP) :: R2H (IA,JA)
-    real(RP) :: R2E (IA,JA)
-
-    real(RP) :: Uabs_lim, RovCP
+    real(RP) :: PBL(IA,JA)
     real(RP) :: LHV (IA,JA)
+    real(RP) :: Ustar
+    real(RP) :: Tstar
+    real(RP) :: Qstar
+    real(RP) :: Uabs
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux(bulk)'
-
-    RovCP = Rdry / CPdry
-
-    do j = JS, JE
-    do i = IS, IE
-       ATM_Uabs(i,j) = sqrt( ATM_W(i,j)*ATM_W(i,j) &
-                           + ATM_U(i,j)*ATM_U(i,j) &
-                           + ATM_V(i,j)*ATM_V(i,j) ) ! at cell center
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-       ! potential temperature based on the local surface pressure (not 1000hPa)
-       ATM_POTT(i,j) = ATM_TEMP(i,j) * ( SFC_PRES(i,j) / ATM_PRES(i,j) )**RovCP
-    enddo
-    enddo
 
     call ROUGHNESS( SFC_Z0M_t(:,:), & ! [OUT]
                     SFC_Z0H_t(:,:), & ! [OUT]
@@ -214,61 +195,46 @@ contains
     SFC_Z0H(:,:) = SFC_Z0H(:,:) + SFC_Z0H_t(:,:) * dt
     SFC_Z0E(:,:) = SFC_Z0E(:,:) + SFC_Z0E_t(:,:) * dt
 
-    call SF_bulkcoef( ATM_Uabs(:,:), & ! [IN]
-                      ATM_POTT(:,:), & ! [IN]
-                      ATM_Z1  (:,:), & ! [IN]
-                      SFC_TEMP(:,:), & ! [IN]
-                      SFC_Z0M (:,:), & ! [IN]
-                      SFC_Z0H (:,:), & ! [IN]
-                      SFC_Z0E (:,:), & ! [IN]
-                      Cm      (:,:), & ! [OUT]
-                      Ch      (:,:), & ! [OUT]
-                      Ce      (:,:), & ! [OUT]
-                      R10M    (:,:), & ! [OUT]
-                      R2H     (:,:), & ! [OUT]
-                      R2E     (:,:)  ) ! [OUT]
-
-    !-----< momentum >-----
-
-    do j = JS, JE
-    do i = IS, IE
-       Uabs_lim = min( max( ATM_Uabs(i,j), ATMOS_PHY_SF_U_minM ), ATMOS_PHY_SF_U_maxM )
-
-       SFLX_MW(i,j) = -Cm(i,j) * Uabs_lim * SFC_DENS(i,j) * ATM_W(i,j)
-       SFLX_MU(i,j) = -Cm(i,j) * Uabs_lim * SFC_DENS(i,j) * ATM_U(i,j)
-       SFLX_MV(i,j) = -Cm(i,j) * Uabs_lim * SFC_DENS(i,j) * ATM_V(i,j)
-    enddo
-    enddo
-
-    !-----< heat flux >-----
-
-    do j = JS, JE
-    do i = IS, IE
-       Uabs_lim = min( max( ATM_Uabs(i,j), ATMOS_PHY_SF_U_minH ), ATMOS_PHY_SF_U_maxH )
-
-       SFLX_SH(i,j) = Ch(i,j) * Uabs_lim * SFC_DENS(i,j) * CPdry * ( SFC_TEMP(i,j) - ATM_POTT(i,j) )
-    enddo
-    enddo
-
     call SATURATION_pres2qsat_all( SFC_QSAT(:,:), & ! [OUT]
                                    SFC_TEMP(:,:), & ! [IN]
                                    SFC_PRES(:,:)  ) ! [IN]
 
     call ATMOS_THERMODYN_templhv( LHV, ATM_TEMP )
 
-    do j = JS, JE
-    do i = IS, IE
-       Uabs_lim = min( max( ATM_Uabs(i,j), ATMOS_PHY_SF_U_minE ), ATMOS_PHY_SF_U_maxE )
-
-       SFLX_LH(i,j) = Ce(i,j) * Uabs_lim * SFC_DENS(i,j) * LHV(i,j) * SFC_beta(i,j) * ( SFC_QSAT(i,j) - ATM_QTRC(i,j,I_QV) )
-    enddo
-    enddo
-
-    !-----< mass flux >-----
-
     SFLX_QTRC(:,:,:) = 0.0_RP
+    PBL(:,:) = 100.0_RP ! tentative
     do j = JS, JE
     do i = IS, IE
+
+       call BULKFLUX( &
+            Ustar,              & ! [OUT]
+            Tstar,              & ! [OUT]
+            Qstar,              & ! [OUT]
+            Uabs,               & ! [OUT]
+            ATM_TEMP(i,j),      & ! [IN]
+            SFC_TEMP(i,j),      & ! [IN]
+            ATM_PRES(i,j),      & ! [IN]
+            SFC_PRES(i,j),      & ! [IN]
+            ATM_QTRC(i,j,I_QV), & ! [IN]
+            SFC_QSAT(i,j),      & ! [IN]
+            ATM_U   (i,j),      & ! [IN]
+            ATM_V   (i,j),      & ! [IN]
+            ATM_Z1  (i,j),      & ! [IN]
+            PBL     (i,j),      & ! [IN]
+            SFC_Z0M (i,j),      & ! [IN]
+            SFC_Z0H (i,j),      & ! [IN]
+            SFC_Z0E (i,j)       ) ! [IN]
+
+       !-----< momentum >-----
+       SFLX_MW(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_W(i,j)
+       SFLX_MU(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_U(i,j)
+       SFLX_MV(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_V(i,j)
+
+       !-----< heat flux >-----
+       SFLX_SH(i,j) = -CPdry    * ATM_DENS(i,j) * Ustar * Tstar
+       SFLX_LH(i,j) = -LHV(i,j) * ATM_DENS(i,j) * Ustar * Qstar * SFC_beta(i,j)
+
+       !-----< mass flux >-----
        SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
     enddo
     enddo
@@ -277,17 +243,14 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       U10   (i,j) = R10M(i,j) * ATM_U   (i,j)
-       V10   (i,j) = R10M(i,j) * ATM_V   (i,j)
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-       T2(i,j) = (          R2H(i,j) ) * ATM_TEMP(i,j) &
-               + ( 1.0_RP - R2H(i,j) ) * SFC_TEMP(i,j)
-       Q2(i,j) = (          R2E(i,j) ) * ATM_QTRC(i,j,I_QV) &
-               + ( 1.0_RP - R2E(i,j) ) * SFC_beta(i,j) * SFC_QSAT(i,j)
+       U10(i,j) = ATM_U(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
+       V10(i,j) = ATM_V(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
+       T2 (i,j) = SFC_TEMP(i,j) + ( ATM_TEMP(i,j) - SFC_TEMP(i,j) ) &
+                * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0H(i,j) ) ) &
+                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0H(i,j) ) )
+       Q2 (i,j) = SFC_QSAT(i,j) + ( ATM_QTRC(i,j,I_QV) - SFC_QSAT(i,j) ) &
+                * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0E(i,j) ) ) &
+                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
     enddo
     enddo
 

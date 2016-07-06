@@ -69,8 +69,9 @@ module gtool_file_h
      character(LEN=File_HSHORT) :: dim_name(MAX_RANK)
      integer                    :: dim_size(MAX_RANK)
      integer                    :: step
-     real(DP)                    :: time_start
-     real(DP)                    :: time_end
+     real(DP)                   :: time_start
+     real(DP)                   :: time_end
+     character(LEN=File_HMID)   :: time_units
      integer                    :: fid
   endtype datainfo
 

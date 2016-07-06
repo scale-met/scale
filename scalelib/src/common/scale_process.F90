@@ -37,6 +37,7 @@ module scale_process
   public :: PRC_MPIsplit
   public :: PRC_MPIsplit_letkf
 
+  public :: PRC_MPIbarrier
   public :: PRC_MPItime
   public :: PRC_MPItimestat
 
@@ -114,7 +115,7 @@ contains
     call MPI_Init(ierr)
 
     PRC_mpi_alive = .true.
-
+    PRC_UNIVERSAL_handler = MPI_ERRHANDLER_NULL
     call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
 
     comm = MPI_COMM_WORLD
@@ -251,6 +252,13 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if (PRC_UNIVERSAL_handler .NE. MPI_ERRHANDLER_NULL) then
+        call MPI_Errhandler_free(PRC_UNIVERSAL_handler, ierr)
+    endif
+    if (PRC_ABORT_handler .NE. MPI_ERRHANDLER_NULL) then
+        call MPI_Errhandler_free(PRC_ABORT_handler, ierr)
+    endif
+
     ! Stop MPI
     if ( PRC_mpi_alive ) then
        if ( IO_L ) then
@@ -345,7 +353,7 @@ contains
        do i = 1, NUM_DOMAIN
           total_nmax = total_nmax + PRC_DOMAINS(i)
        enddo
-       if ( total_nmax .ne. ORG_nmax ) then
+       if ( total_nmax /= ORG_nmax ) then
           if ( PRC_UNIVERSAL_IsMaster ) write (*,*) ""
           if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
           if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
@@ -533,7 +541,7 @@ contains
 
        do i = 1, NUM_DOMAIN
        do j = 1, NUM_DOMAIN
-          if ( PRC_DOMAINS(i) .eq. PRC_ORDER(j) .and. touch(j) < 0 ) then
+          if ( PRC_DOMAINS(i) == PRC_ORDER(j) .AND. touch(j) < 0 ) then
              DOM2COL(i         ) = j - 1  ! domain_num --> color_num
              COL2DOM(DOM2COL(i)) = i      ! color_num  --> domain_num
              touch(j) = 1
@@ -548,14 +556,14 @@ contains
           id_parent = i - 1
           id_child  = i + 1
 
-          if ( 1 <= id_parent .and. id_parent <= NUM_DOMAIN ) then
+          if ( 1 <= id_parent .AND. id_parent <= NUM_DOMAIN ) then
              PARENT_COL(i) = DOM2COL(id_parent)
           endif
-          if ( 1 <= id_child  .and. id_child  <= NUM_DOMAIN ) then
+          if ( 1 <= id_child  .AND. id_child  <= NUM_DOMAIN ) then
              CHILD_COL(i) = DOM2COL(id_child)
           endif
 
-          if ( PRC_UNIVERSAL_IsMaster .and. LOG_SPLIT ) then
+          if ( PRC_UNIVERSAL_IsMaster .AND. LOG_SPLIT ) then
              write( *, '(1X,A,I2,1X,A,I2,2(2X,A,I2))' )  &
                   "DOMAIN: ", i, "MY_COL: ", DOM2COL(i), &
                   "PARENT: COL= ", PARENT_COL(i), "CHILD: COL= ", CHILD_COL(i)
@@ -616,10 +624,10 @@ contains
           id_parent = i - 1
           id_child  = i + 1
 
-          if ( 1 <= id_parent .and. id_parent <= NUM_DOMAIN ) then
+          if ( 1 <= id_parent .AND. id_parent <= NUM_DOMAIN ) then
              RO_PARENT_COL(i) = RO_DOM2COL(id_parent)
           endif
-          if ( 1 <= id_child  .and. id_child  <= NUM_DOMAIN ) then
+          if ( 1 <= id_child  .AND. id_child  <= NUM_DOMAIN ) then
              RO_CHILD_COL(i) = RO_DOM2COL(id_child)
           endif
        enddo
@@ -645,7 +653,7 @@ contains
           PRC_ROOT(COLOR_LIST(i+1)) = i
           COL_FILE(COLOR_LIST(i+1)) = RO_CONF_FILES(order)
        endif
-       if ( LOG_SPLIT .and. PRC_UNIVERSAL_IsMaster ) then
+       if ( LOG_SPLIT .AND. PRC_UNIVERSAL_IsMaster ) then
           write ( *, '(1X,4(A,I5))' ) "PE:", i, "   COLOR:", COLOR_LIST(i+1), &
                 "   KEY:", KEY_LIST(i+1), "   PRC_ROOT:", PRC_ROOT(COLOR_LIST(i+1))
        endif
@@ -688,6 +696,20 @@ contains
     return
   end subroutine PRC_sort_ascd
   !-----------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
+  !> Barrier MPI
+  subroutine PRC_MPIbarrier
+    implicit none
+
+    integer  :: ierr
+    !---------------------------------------------------------------------------
+
+    if ( PRC_mpi_alive ) then
+       call MPI_barrier(PRC_LOCAL_COMM_WORLD,ierr)
+    endif
+
+  end subroutine PRC_MPIbarrier
 
   !-----------------------------------------------------------------------------
   !> Get MPI time
@@ -803,7 +825,7 @@ contains
           write(*,*) ''
        end if
 
-       if ( errcode .eq. PRC_ABORT_code ) then ! called from PRC_MPIstop
+       if ( errcode == PRC_ABORT_code ) then ! called from PRC_MPIstop
        elseif ( errcode <= MPI_ERR_LASTCODE ) then
           call MPI_ERROR_STRING(errcode, msg, len, ierr)
           if ( IO_L ) write(IO_FID_LOG,*) '++++++ ', errcode, trim(msg)
@@ -813,7 +835,7 @@ contains
           write(*,*) '++++++ Unexpected error code', errcode
        endif
 
-       if ( comm .ne. PRC_ABORT_COMM_WORLD ) then
+       if ( comm /= PRC_ABORT_COMM_WORLD ) then
           if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
           write(*,*) '++++++ Unexpected communicator'
        endif

@@ -100,7 +100,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type 1-moment bulk 3 category'
 
@@ -252,6 +252,8 @@ contains
 
        FLX_rain(:,:,:) = 0.0_RP
        FLX_snow(:,:,:) = 0.0_RP
+
+       vterm(:,:,:,:) = 0.0_RP
 
        do step = 1, MP_NSTEP_SEDIMENTATION
 

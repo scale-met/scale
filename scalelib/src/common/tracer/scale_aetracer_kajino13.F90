@@ -39,7 +39,7 @@ contains
 
     integer, allocatable :: aero_idx(:,:,:,:)
     integer :: n_kap_max, n_siz_max, ncat_max
-    real(RP) :: NASIZ(3), NAKAP(3)
+    integer :: NASIZ(3), NAKAP(3)
     character(len=H_SHORT) :: attribute, catego, aunit
 
     NAMELIST / PARAM_TRACER_KAJINO13 / &
@@ -80,7 +80,7 @@ contains
     NKAP(1:AE_CTG) = NAKAP(1:AE_CTG)
     NSIZ(1:AE_CTG) = NASIZ(1:AE_CTG)
 
-    if( maxval( NKAP ) /= 1 .or. minval( NKAP ) /= 1 ) then
+    if( maxval( NKAP ) /= 1 .OR. minval( NKAP ) /= 1 ) then
      write(*,*) 'xxx NKAP(:) /= 1 is not supported now, Stop!'
      call PRC_MPIstop
     end if
@@ -135,7 +135,7 @@ contains
 !    do ia0 = 1, N_ATR
 !      if( ia0 == 1 ) then
 !         write(attribute,'(a)') "Number"
-!         write(aunit,'(a)') "#/kg"
+!         write(aunit,'(a)') "num/kg"
 !      elseif( ia0 == 2 ) then
 !         write(attribute,'(a)') "Section"
 !         write(aunit,'(a)') "m2/kg"
@@ -155,7 +155,7 @@ contains
     do ia0 = 1, N_ATR
       if( ia0 == 1 ) then
          write(attribute,'(a)') "Number"
-         write(aunit,'(a)') "/kg"
+         write(aunit,'(a)') "num/kg"
       elseif( ia0 == 2 ) then
          write(attribute,'(a)') "Section"
          write(aunit,'(a)') "m2/kg"

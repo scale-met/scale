@@ -112,6 +112,9 @@ contains
     use scale_atmos_phy_tb_smg, only: &
        ATMOS_PHY_TB_smg_setup, &
        ATMOS_PHY_TB_smg
+    use scale_atmos_phy_tb_d1980, only: &
+       ATMOS_PHY_TB_d1980_setup, &
+       ATMOS_PHY_TB_d1980
     use scale_atmos_phy_tb_dns, only: &
        ATMOS_PHY_TB_dns_setup, &
        ATMOS_PHY_TB_dns
@@ -149,6 +152,13 @@ contains
             CDZ, CDX, CDY, &
             CZ             )
        ATMOS_PHY_TB => ATMOS_PHY_TB_smg
+
+    case ( 'D1980' )
+       call ATMOS_PHY_tb_d1980_setup( &
+            TB_TYPE,       &
+            CDZ, CDX, CDY, &
+            CZ             )
+       ATMOS_PHY_TB => ATMOS_PHY_TB_d1980
 
     case ( 'DNS' )
        call ATMOS_PHY_tb_dns_setup( &

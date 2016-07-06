@@ -95,6 +95,7 @@ module scale_atmos_saturation
      module procedure ATMOS_SATURATION_pres2qsat_all_1D
      module procedure ATMOS_SATURATION_pres2qsat_all_2D
      module procedure ATMOS_SATURATION_pres2qsat_all_3D
+     module procedure ATMOS_SATURATION_pres2qsat_all_3D_k
   end interface ATMOS_SATURATION_pres2qsat_all
   interface ATMOS_SATURATION_pres2qsat_liq
      module procedure ATMOS_SATURATION_pres2qsat_liq_0D
@@ -666,6 +667,51 @@ contains
 
     return
   end subroutine ATMOS_SATURATION_pres2qsat_all_3D
+
+  subroutine ATMOS_SATURATION_pres2qsat_all_3D_k( &
+       qsat, &
+       temp, &
+       pres, &
+       knum  )
+    implicit none
+
+    integer,  intent(in)  :: knum
+    real(RP), intent(out) :: qsat(knum,IA,JA) !< saturation vapor mass [kg/kg]
+    real(RP), intent(in)  :: temp(knum,IA,JA) !< temperature           [K]
+    real(RP), intent(in)  :: pres(knum,IA,JA) !< pressure              [Pa]
+
+    real(RP) :: alpha, psatl, psati
+    real(RP) :: psat
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_ collapse(2)
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = 1, knum
+
+       alpha = ( temp(k,i,j)                  - ATMOS_SATURATION_LLIMIT_TEMP ) &
+             / ( ATMOS_SATURATION_ULIMIT_TEMP - ATMOS_SATURATION_LLIMIT_TEMP )
+       alpha = min( max( alpha, 0.0_RP ), 1.0_RP )
+
+       psatl = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_liq             &
+                     * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
+
+       psati = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_ice             &
+                     * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
+
+       psat = psatl * (          alpha ) &
+            + psati * ( 1.0_RP - alpha )
+
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.0_RP-EPSvap ) * psat )
+
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_pres2qsat_all_3D_k
 
   !-----------------------------------------------------------------------------
   !> calc temp & pres -> saturation vapor mass (liquid,0D)

@@ -63,7 +63,7 @@ contains
     character(len=*), intent(in) :: MP_TYPE
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** dummy process (dry Atmosphere)'
 

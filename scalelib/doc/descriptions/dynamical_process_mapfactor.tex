@@ -227,21 +227,25 @@ The momentum equations are
 \begin{align}
   \pd{\rho\hat{u}^k}{t}
   &+ mn\pd{}{\xi}\frac{\rho \hat{u} \hat{u}^k}{n}
-  + mn\pd{}{\eta}\frac{\rho \hat{v} \hat{u}^k}{m}
-  + \pd{}{\zeta}\rho \hat{w} \hat{u}^k                     \nonumber \\
-  &+ m m_k \rho \hat{u} \hat{u}^k \pd{}{\xi}\frac{1}{m_k}
-  + n m_k \rho \hat{v} \hat{u}^k \pd{}{\eta}\frac{1}{m_k}  \nonumber \\
-  &- m m_k \rho \hat{u}^2 \pd{}{\xi^k}\frac{1}{m}
-  - n m_k \rho \hat{v}^2 \pd{}{\xi^k}\frac{1}{n}
-  + \epsilon^{klm} m_l \hat{f}^l \rho \hat{u}^m        \nonumber \\
+   + mn\pd{}{\eta}\frac{\rho \hat{v} \hat{u}^k}{m}
+   + \pd{}{\zeta}\rho \hat{w} \hat{u}^k                     \nonumber \\
+  &- m m_k \rho \hat{u} \hat{u}^k \pd{}{\xi}\frac{1}{m_k}
+   - n m_k \rho \hat{v} \hat{u}^k \pd{}{\eta}\frac{1}{m_k}  \nonumber \\
+  &+ m m_k \rho \hat{u}^2 \pd{}{\xi^k}\frac{1}{m}
+   + n m_k \rho \hat{v}^2 \pd{}{\xi^k}\frac{1}{n}
+   + \epsilon^{klm} m_l \hat{f}^l \rho \hat{u}^m        \nonumber \\
   &= -m_k \pd{p}{\zeta^k} + \rho g \delta_{3k}.
 \end{align}
 This equation may also be written as 
 \begin{align}
   \pd{\rho u}{t} &+ mn\pd{}{\xi}\frac{\rho uu}{n} + mn\pd{}{\eta}\frac{\rho uv}{m} + \pd{}{\zeta}\rho uw  \nonumber \\
-  &- f\rho v - mn \rho v\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\} = -m\pd{p}{\xi}, \\
+  &- f\rho v
+   + mn \rho v\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\}
+   = -m\pd{p}{\xi}, \\
   \pd{\rho v}{t} &+ mn\pd{}{\xi}\frac{\rho uv}{n} + mn\pd{}{\eta}\frac{\rho vv}{m} + \pd{}{\zeta}\rho vw \nonumber \\
-  &+f\rho u + mn \rho u\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\} = -n\pd{p}{\eta}, \\
+  &+ f\rho u
+   - mn \rho u\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\}
+   = -n\pd{p}{\eta}, \\
   \pd{\rho w}{t} &+ mn\pd{}{\xi}\frac{\rho uw}{n} + mn\pd{}{\eta}\frac{\rho vw}{m} + \pd{}{\zeta}\rho ww = -\pd{p}{\zeta} -\rho g.
 \end{align}
 

@@ -214,7 +214,7 @@ module mod_comm
     flag = .false.
 
     if ( handle == parent ) then
-       do while ( .not. flag )
+       do while ( .NOT. flag )
           call mpi_testall( nreq_p, ireq_p, flag, istatus_p, ierr )
           num = num + 1
 
@@ -226,7 +226,7 @@ module mod_comm
 
        var(:,:,:) = UNDEF ! dummy
     elseif ( handle == child ) then
-       do while ( .not. flag )
+       do while ( .NOT. flag )
           call mpi_testall( nreq_c, ireq_c, flag, istatus_c, ierr )
           num = num + 1
 

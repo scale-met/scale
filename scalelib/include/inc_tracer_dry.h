@@ -4,7 +4,7 @@
   !
   !-----------------------------------------------------------------------------
   !
-  !++ scale-les tracer parameters (vapor only)
+  !++ tracer parameters (vapor only)
   !
   !-----------------------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: TRACER_TYPE = "DRY"
@@ -38,7 +38,7 @@
 
   data AQ_MP_NAME / 'QV' /
 
-  data AQ_MP_DESC / 'Water Vapor mixing ratio' /
+  data AQ_MP_DESC / 'Ratio of water vapor mass to total mass (Specific humidity)' /
 
   data AQ_MP_UNIT / 'kg/kg' /
 

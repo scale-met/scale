@@ -64,7 +64,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
-    if ( AE_TYPE /= 'DUMMY' .and. AE_TYPE /= 'NONE' ) then
+    if ( AE_TYPE /= 'DUMMY' .AND. AE_TYPE /= 'NONE' ) then
        write(*,*) 'xxx ATMOS_PHY_AE_TYPE is not DUMMY. Check!'
        call PRC_MPIstop
     endif
@@ -85,9 +85,10 @@ contains
           RHOT, &
           EMIT, &
           NREG, &
+          QTRC, &
           CN,   &
           CCN,  &
-          QTRC  )
+          RHOQ_t_AE )
     use scale_grid_index
     use scale_tracer
     implicit none
@@ -98,9 +99,10 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
     real(RP), intent(in)    :: NREG(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(out)   :: CN(KA,IA,JA)
     real(RP), intent(out)   :: CCN(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(dummy)'
 

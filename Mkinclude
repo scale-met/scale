@@ -26,7 +26,7 @@ GTOOLDIR    = $(TOPDIR)/gtool
 DCUTILSDIR  = $(TOPDIR)/dc_utils
 SCALELIBDIR = $(TOPDIR)/scalelib
 
-SCALELESDIR = $(TOPDIR)/scale-les
+SCALERMDIR  = $(TOPDIR)/scale-rm
 SCALEGMDIR  = $(TOPDIR)/scale-gm
 
 ifeq ($(origin INDEX_DIR), undefined)
@@ -81,4 +81,9 @@ else
    SDMDIR          =
    CONTRIB_LIBS    =
    CONTRIB_INCLUDE =
+endif
+
+# DYN2
+ifeq ($(ENABLE_DYN2),T)
+   FFLAGS        += -DDYN2
 endif

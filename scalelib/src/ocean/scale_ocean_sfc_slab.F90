@@ -59,17 +59,18 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN SFC] / Origin[SCALElib]'
 
-    if( OCEAN_TYPE == 'CONST' ) then
+    select case( OCEAN_TYPE )
+    case ( 'CONST' )
        SST_UPDATE = .false.
-    else if( OCEAN_TYPE == 'SLAB' ) then
+    case ( 'SLAB', 'FILE' )
        SST_UPDATE = .true.
-    else
+    case default
        write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
        call PRC_MPIstop
-    end if
+    end select
 
     ! judge to run slab ocean model
     allocate( is_OCN(IA,JA) )

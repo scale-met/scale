@@ -4,7 +4,7 @@
   !
   !-----------------------------------------------------------------------------
   !
-  !++ scale-les tracer parameters (1-moment bulk 6 category)
+  !++ tracer parameters (1-moment bulk 6 category)
   !
   !-----------------------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: TRACER_TYPE = "TOMITA08"
@@ -45,12 +45,12 @@
                  'QG'  /
 
   data AQ_MP_DESC / &
-                 'Water Vapor mixing ratio',   &
-                 'Cloud Water mixing ratio',   &
-                 'Rain Water mixing ratio',    &
-                 'Cloud Ice mixing ratio',     &
-                 'Snow mixing ratio',          &
-                 'Graupel mixing ratio'        /
+                 'Ratio of Water Vapor mass to total mass (Specific humidity)',   &
+                 'Ratio of Cloud Water mass to total mass',   &
+                 'Ratio of Rain Water mass to total mass',    &
+                 'Ratio of Cloud Ice mixing ratio to total mass',     &
+                 'Ratio of Snow mixing ratio to total mass',          &
+                 'Ratio of Graupel mixing ratio to total mass'        /
 
   data AQ_MP_UNIT / &
                  'kg/kg',  &

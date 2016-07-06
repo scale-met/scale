@@ -77,6 +77,7 @@ void file_get_datainfo_( datainfo_t *dinfo,       // (out)
 			 int32_t    *fid,         // (in)
 			 char       *varname,     // (in)
 			 int32_t    *step,        // (in)
+			 int32_t    *suppress,    // (in)
 			 int32_t    *error,       // (out)
 			 int32_t     varname_len) // (in)
 {
@@ -87,8 +88,12 @@ void file_get_datainfo_( datainfo_t *dinfo,       // (out)
   len = varname_len > File_HSHORT ? File_HSHORT : varname_len;
   fstr2cstr(_varname, varname, len);
 
-  *error = file_get_datainfo( dinfo, *fid, _varname, *step );
+  *error = file_get_datainfo( dinfo, *fid, _varname, *step, *suppress );
 
+  cstr2fstr(dinfo->varname, dinfo->varname, File_HSHORT);
+  cstr2fstr(dinfo->description, dinfo->description, File_HMID);
+  cstr2fstr(dinfo->units, dinfo->units, File_HSHORT);
+  cstr2fstr(dinfo->time_units, dinfo->time_units, File_HMID);
   for ( i=0; i<MAX_RANK; i++ )
     cstr2fstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
 }
@@ -99,10 +104,82 @@ void file_read_data_( void       *var,       // (out)
 {
   int i;
 
+  fstr2cstr(dinfo->varname, dinfo->varname, File_HSHORT);
+  fstr2cstr(dinfo->description, dinfo->description, File_HMID);
+  fstr2cstr(dinfo->units, dinfo->units, File_HSHORT);
+  fstr2cstr(dinfo->time_units, dinfo->time_units, File_HMID);
   for ( i=0; i<MAX_RANK; i++ )
     fstr2cstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
 
   *error = file_read_data( var, dinfo, *precision );
+}
+
+void file_get_global_attribute_text_( int32_t *fid,        // (in)
+				      char    *key,        // (in)
+				      char    *value,      // (out)
+				      int32_t *error,      // (out)
+				      int32_t  key_len,    // (in)
+				      int32_t  value_len ) // (in)
+{
+  char _key[File_HLONG+1];
+  char _value[File_HLONG+1];
+  int32_t len;
+
+  len = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, len);
+
+  *error = file_get_global_attribute_text( *fid, _key, _value, value_len );
+
+  len = value_len > File_HLONG ? File_HLONG : value_len;
+  cstr2fstr(value, _value, len);
+}
+
+void file_get_global_attribute_int_( int32_t *fid,      // (in)
+				     char    *key,      // (in)
+				     int32_t *len,      // (in)
+				     int32_t *value,    // (out)
+				     int32_t *error,    // (out)
+				     int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_global_attribute_int( *fid, _key, value, (size_t)*len );
+}
+
+void file_get_global_attribute_float_( int32_t *fid,      // (in)
+				       char    *key,      // (in)
+				       int32_t *len,      // (in)
+				       float   *value,    // (out)
+				       int32_t *error,    // (out)
+				       int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_global_attribute_float( *fid, _key, value, (size_t)*len );
+}
+
+void file_get_global_attribute_double_( int32_t *fid,      // (in)
+					char    *key,      // (in)
+					int32_t *len,      // (in)
+					double  *value,    // (out)
+					int32_t *error,    // (out)
+					int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_global_attribute_double( *fid, _key, value, (size_t)*len );
 }
 
 void file_set_global_attribute_text_( int32_t *fid,        // (in)
@@ -148,9 +225,10 @@ void file_set_global_attribute_float_( int32_t *fid,      // (in)
 				       int32_t  key_len ) // (in)
 {
   char _key[File_HLONG+1];
+  int32_t l;
 
-  key_len = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, key_len);
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
 
   *error = file_set_global_attribute_float( *fid, _key, value, (size_t)*len );
 }
@@ -163,9 +241,10 @@ void file_set_global_attribute_double_( int32_t *fid,      // (in)
 					int32_t  key_len ) // (in)
 {
   char _key[File_HLONG+1];
+  int32_t l;
 
-  key_len = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, key_len);
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
 
   *error = file_set_global_attribute_double( *fid, _key, value, (size_t)*len );
 }
@@ -175,9 +254,9 @@ void file_set_tunits_( int32_t *fid,        // (in)
 		       int32_t *error,      // (in)
 		       int32_t  len)        // (in)
 {
-  char _time_units[File_HLONG+1];
+  char _time_units[File_HMID+1];
 
-  len = len > File_HLONG ? File_HLONG : len;
+  len = len > File_HMID ? File_HMID : len;
   fstr2cstr(_time_units, time_units, len);
 
   *error = file_set_tunits( *fid, _time_units );
@@ -331,14 +410,15 @@ void file_add_variable_( int32_t  *vid,         // (out)
   free( _dims );
 }
 
-void file_write_data_( int32_t  *vid,       // (in)
+void file_write_data_( int32_t  *fid,       // (in)
+                       int32_t  *vid,       // (in)
 		       void     *var,       // (in)
 		       real64_t *t_start,   // (in)
 		       real64_t *t_end,     // (in)
 		       int32_t  *precision, // (in)
 		       int32_t  *error)     // (out)
 {
-  *error = file_write_data( *vid, var, *t_start, *t_end, *precision );
+  *error = file_write_data( *fid, *vid, var, *t_start, *t_end, *precision );
 }
 
 void file_close_( int32_t *fid ,   // (in)

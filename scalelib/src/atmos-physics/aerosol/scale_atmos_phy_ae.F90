@@ -43,9 +43,10 @@ module scale_atmos_phy_ae
           RHOT, &
           EMIT, &
           NREG, &
+          QTRC, &
           CN,   &
           CCN,  &
-          QTRC  )
+          RHOQ_t_AE )
        use scale_precision
        use scale_grid_index
        use scale_tracer
@@ -56,9 +57,10 @@ module scale_atmos_phy_ae
        real(RP), intent(inout) :: RHOT(KA,IA,JA)
        real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
        real(RP), intent(in)    :: NREG(KA,IA,JA)
+       real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
        real(RP), intent(out)   :: CN(KA,IA,JA)
        real(RP), intent(out)   :: CCN(KA,IA,JA)
-       real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+       real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)
      end subroutine ae
 
      subroutine er( RE, QTRC, RH )
@@ -120,11 +122,10 @@ contains
        ATMOS_PHY_AE                 => ATMOS_PHY_AE_dummy
        ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_dummy_EffectiveRadius
     case ( 'KAJINO13' )
-       write(*,*) 'xxx aerosol type(', AE_TYPE, '). is not supported in current version!'
-       call PRC_MPIstop
-!       call ATMOS_PHY_AE_kajino13_setup( AE_TYPE )
-!       ATMOS_PHY_AE                 => ATMOS_PHY_AE_kajino13
-!       ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_kajino13_EffectiveRadius
+       call ATMOS_PHY_AE_kajino13_setup( AE_TYPE )
+       ATMOS_PHY_AE                 => ATMOS_PHY_AE_kajino13
+       ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_kajino13_EffectiveRadius
+       write(*,*) '### aerosol type(', AE_TYPE, '). is not recommended in current version!'
     case default
        write(*,*) 'xxx invalid aerosol type(', AE_TYPE, '). CHECK!'
        call PRC_MPIstop

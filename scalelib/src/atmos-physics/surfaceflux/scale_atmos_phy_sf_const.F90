@@ -91,7 +91,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SURFACE FLUX] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Constant flux'
 

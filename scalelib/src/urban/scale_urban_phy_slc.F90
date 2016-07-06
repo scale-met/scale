@@ -158,7 +158,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLC] / Categ[URBAN PHY] / Origin[SCALElib]'
 
     allocate( DZR(UKS:UKE) )
@@ -319,8 +319,8 @@ contains
     real(RP), intent(in) :: Z1    (IA,JA)
     real(RP), intent(in) :: PBL   (IA,JA)
     real(RP), intent(in) :: PRSS  (IA,JA)
-    real(RP), intent(in) :: LWD   (IA,JA)
-    real(RP), intent(in) :: SWD   (IA,JA)
+    real(RP), intent(in) :: LWD   (IA,JA,2)
+    real(RP), intent(in) :: SWD   (IA,JA,2)
     real(RP), intent(in) :: PREC  (IA,JA)
 
     real(RP), intent(in) :: TR_URB   (IA,JA)
@@ -455,8 +455,8 @@ contains
                       U1      (i,j),      & ! [IN]
                       V1      (i,j),      & ! [IN]
                       Z1      (i,j),      & ! [IN]
-                      SWD     (i,j),      & ! [IN]
-                      LWD     (i,j),      & ! [IN]
+                      SWD     (i,j,:),    & ! [IN]
+                      LWD     (i,j,:),    & ! [IN]
                       PREC    (i,j),      & ! [IN]
                       DENS    (i,j),      & ! [IN]
                       LON,                & ! [IN]
@@ -464,7 +464,7 @@ contains
                       NOWDATE (:),        & ! [IN]
                       dt, i, j            ) ! [IN]
 
-       ! calculate tendency 
+       ! calculate tendency
        TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) / dt
        TB_URB_t(i,j) = ( TB - TB_URB(i,j) ) / dt
        TG_URB_t(i,j) = ( TG - TG_URB(i,j) ) / dt
@@ -669,8 +669,8 @@ contains
     real(RP), intent(in)    :: U1   ! u at 1st atmospheric level             [m/s]
     real(RP), intent(in)    :: V1   ! v at 1st atmospheric level             [m/s]
     real(RP), intent(in)    :: ZA   ! height of 1st atmospheric level        [m]
-    real(RP), intent(in)    :: SSG  ! downward total short wave radiation    [W/m/m]
-    real(RP), intent(in)    :: LLG  ! downward long wave radiation           [W/m/m]
+    real(RP), intent(in)    :: SSG(2) ! downward total short wave radiation    [W/m/m]
+    real(RP), intent(in)    :: LLG(2) ! downward long wave radiation           [W/m/m]
     real(RP), intent(in)    :: RAIN ! precipitation flux                     [kg/m2/s]
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
     real(RP), intent(in)    :: XLAT ! latitude                               [rad,-pi,pi]
@@ -712,7 +712,7 @@ contains
     integer , intent(in)    :: i, j
 
     !-- parameters
-    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
+!    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
 !    real(RP), parameter     :: TFa       = 0.5_RP      ! factor a in Tomita (2009)
 !    real(RP), parameter     :: TFb       = 1.1_RP      ! factor b in Tomita (2009)
     real(RP), parameter     :: redf_min  = 1.0E-2_RP   ! minimum reduced factor
@@ -856,11 +856,6 @@ contains
        call PRC_MPIstop
     endif
 
-    !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
-      SSGD = SRATIO * SSG   ! downward direct short wave radiation
-      SSGQ = SSG - SSGD     ! downward diffuse short wave radiation
-    !endif
-
     W    = 2.0_RP * 1.0_RP * HGT
     VFGS = SVF
     VFGW = 1.0_RP - SVF
@@ -868,8 +863,11 @@ contains
     VFWS = VFWG
     VFWW = 1.0_RP - 2.0_RP * VFWG
 
-    SX  = (SSGD+SSGQ)   ! downward short wave radition [W/m/m]
-    RX  = LLG           ! downward long wave radiation
+    SX   = SSG(1) + SSG(2) ! downward shortwave radiation [W/m2]
+    RX   = LLG(1) + LLG(2) ! downward longwave  radiation [W/m2]
+
+    SSGD = SSG(1)          ! downward direct  shortwave radiation [W/m2]
+    SSGQ = SSG(2)          ! downward diffuse shortwave radiation [W/m2]
 
     !--- calculate canopy wind
 
@@ -895,7 +893,7 @@ contains
     ! Radiation : Net Short Wave Radiation at roof/wall/road
     !-----------------------------------------------------------
 
-    if( SSG > 0.0_RP ) then !  SSG is downward short
+    if( SX > 0.0_RP ) then !  SSG is downward short
 
       ! currently we use no shadow effect model
       !!     IF(.NOT.SHADOW) THEN              ! no shadow effects model
@@ -984,7 +982,7 @@ contains
 
      enddo
 
-!    if( .not. (resi1 < sqrt(EPS)) ) then
+!    if( .NOT. (resi1 < sqrt(EPS)) ) then
 !       write(*,*) 'xxx Warning not converged for TR in URBAN SLC', &
 !            PRC_myrank, i,j, &
 !            resi1, G0R
@@ -995,10 +993,10 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TR was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                          [K] :', resi1
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                      [W/m2] :', SX
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                       [W/m2] :', RX
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
@@ -1009,7 +1007,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
@@ -1146,7 +1144,7 @@ contains
       !G0BP   = G0B
       !G0GP   = G0G
 
-      if ( abs(resi1) < sqrt(EPS) .and. abs(resi2) < sqrt(EPS) ) then
+      if ( abs(resi1) < sqrt(EPS) .AND. abs(resi2) < sqrt(EPS) ) then
          TB = TBL(1)
          TG = TGL(1)
          TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
@@ -1166,7 +1164,7 @@ contains
       endif
       TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
       TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
- 
+
       resi1p = resi1
       resi2p = resi2
 
@@ -1189,7 +1187,7 @@ contains
 
     enddo
 
-!    if( .not. (resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) ) then
+!    if( .NOT. (resi1 < sqrt(EPS) .AND. resi2 < sqrt(EPS) ) ) then
 !       write(*,*) 'xxx Warning not converged for TG, TB in URBAN SLC', &
 !            PRC_myrank, i,j, &
 !            resi1, resi2, TB, TG, TC, G0BP, G0GP, RB, HB, RG, HG, QC, &
@@ -1209,14 +1207,14 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TB/TG was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                   [W/m2] :', SX
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                    [W/m2] :', RX
@@ -1229,7 +1227,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG
-       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
@@ -1322,8 +1320,8 @@ contains
     ! Grid average
     !-----------------------------------------------------------
 
-    LW = LLG - LNET     ! Upward longwave radiation   [W/m/m]
-    SW = SSG - SNET     ! Upward shortwave radiation  [W/m/m]
+    LW = RX - LNET     ! Upward longwave radiation   [W/m/m]
+    SW = SX - SNET     ! Upward shortwave radiation  [W/m/m]
     RN = (SNET+LNET)    ! Net radiation [W/m/m]
 
     !--- shortwave radiation

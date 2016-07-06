@@ -41,8 +41,12 @@ module gtool_file
   public :: FileAddVariable
   public :: FileSetTAttr
   public :: FileGetShape
+  public :: FileGetDatainfo
+  public :: FileGetAllDatainfo
   public :: FileRead
   public :: FileWrite
+  public :: FileGetGlobalAttribute
+  public :: FileSetGlobalAttribute
   public :: FileClose
   public :: FileCloseAll
   public :: FileMakeFname
@@ -86,6 +90,12 @@ module gtool_file
     module procedure FileWrite4DRealSP
     module procedure FileWrite4DRealDP
   end interface FileWrite
+  interface FileGetGlobalAttribute
+     module procedure FileGetGlobalAttributeText
+     module procedure FileGetGlobalAttributeInt
+     module procedure FileGetGlobalAttributeFloat
+     module procedure FileGetGlobalAttributeDouble
+  end interface FileGetGlobalAttribute
   interface FileSetGlobalAttribute
      module procedure FileSetGlobalAttributeText
      module procedure FileSetGlobalAttributeInt
@@ -202,7 +212,7 @@ contains
          "rankidx", rankidx           ) ! (in)
 
     call file_set_tunits( fid, & ! (in)
-         time_units,           & ! (in)
+         time_units_,          & ! (in)
          error                 ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set time units')
@@ -210,6 +220,103 @@ contains
 
     return
   end subroutine FileCreate
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetGlobalAttributeText( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (out)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    character(LEN=*), intent(out) :: val
+
+    integer error
+
+    intrinsic size
+
+    call file_get_global_attribute_text( & ! (in)
+         fid, key,                       & ! (in)
+         val, error                      ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get text global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetGlobalAttributeText
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetGlobalAttributeInt( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (out)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    integer,          intent(out) :: val(:)
+
+    integer error
+
+    intrinsic size
+
+    call file_get_global_attribute_int( & ! (in)
+         fid, key, size(val),           & ! (in)
+         val, error                     ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get integer global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetGlobalAttributeInt
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetGlobalAttributeFloat( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (out)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    real(SP),          intent(out) :: val(:)
+
+    integer error
+
+    intrinsic size
+
+    call file_get_global_attribute_float( & ! (in)
+         fid, key, size(val),            & ! (in)
+         val, error                      ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get float global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetGlobalAttributeFloat
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetGlobalAttributeDouble( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (out)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    real(DP),          intent(out) :: val(:)
+
+    integer error
+
+    intrinsic size
+
+    call file_get_global_attribute_double( & ! (in)
+         fid, key, size(val),            & ! (in)
+         val, error                      ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get double global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetGlobalAttributeDouble
+
 
   !-----------------------------------------------------------------------------
   subroutine FileSetGlobalAttributeText( &
@@ -889,7 +996,7 @@ contains
 
     !--- get data information
     call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, 0,          & ! (in)
+         fid, varname, 1, .false., & ! (in)
          error                     ) ! (out)
 
     !--- verify
@@ -907,6 +1014,231 @@ contains
 
     return
   end subroutine FileGetShape
+
+  !-----------------------------------------------------------------------------
+  ! FileGetData
+  !-----------------------------------------------------------------------------
+  subroutine FileGetDatainfo( &
+      basename,    &
+      varname,     &
+      myrank,      &
+      istep,       &
+      single,      &
+      description, &
+      units,       &
+      datatype,    &
+      dim_rank,    &
+      dim_name,    &
+      dim_size,    &
+      time_start,  &
+      time_end,    &
+      time_units   )
+    implicit none
+    character(len=*),           intent(in)  :: basename
+    character(len=*),           intent(in)  :: varname
+    integer,                    intent(in)  :: myrank
+    integer,                    intent(in)  :: istep
+    logical,                    intent(in), optional :: single
+
+    character(len=File_HMID),   intent(out), optional :: description
+    character(len=File_HSHORT), intent(out), optional :: units
+    integer,                    intent(out), optional :: datatype
+    integer,                    intent(out), optional :: dim_rank
+    character(len=File_HSHORT), intent(out), optional :: dim_name(:)
+    integer,                    intent(out), optional :: dim_size(:)
+    real(DP),                   intent(out), optional :: time_start
+    real(DP),                   intent(out), optional :: time_end
+    character(len=File_HMID),   intent(out), optional :: time_units
+
+    integer        :: fid
+    type(datainfo) :: dinfo
+
+    integer :: ndim, idim
+    real(DP):: time(1)
+
+    integer :: error
+    logical :: single_ = .false.
+
+    intrinsic size
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    if ( present(single) ) single_ = single
+
+    !--- search/register file
+    call FileOpen( fid,        & ! [OUT]
+                   basename,   & ! [IN]
+                   File_FREAD, & ! [IN]
+                   single_     ) ! [IN]
+
+    !--- get data information
+    call file_get_datainfo( dinfo,   & ! [OUT]
+                            fid,     & ! [IN]
+                            varname, & ! [IN]
+                            istep,   & ! [IN]
+                            .false., & ! [IN]
+                            error    ) ! [OUT]
+
+    !--- verify and exit
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx data info not found in '//trim(basename))
+    endif
+
+    if ( present(description) ) description = dinfo%description
+    if ( present(units)       ) units       = dinfo%units
+    if ( present(datatype)    ) datatype    = dinfo%datatype
+    if ( present(dim_rank)    ) dim_rank    = dinfo%rank
+
+    if ( present(dim_name) ) then
+       ndim = min( dinfo%rank, size(dim_name) ) ! limit dimension rank
+       do idim = 1, ndim
+          dim_name(idim) = dinfo%dim_name(idim)
+       enddo
+    end if
+    if ( present(dim_size) ) then
+       ndim = min( dinfo%rank, size(dim_size) ) ! limit dimension rank
+       do idim = 1, ndim
+          dim_size(idim) = dinfo%dim_size(idim)
+       enddo
+    end if
+
+    if ( present(time_units)  ) then
+       if ( dinfo%time_units == "" ) then
+          call FileGetGlobalAttribute( fid, "time_units", time_units )
+       else
+          time_units  = dinfo%time_units
+       end if
+    end if
+    if ( present(time_start)  ) then
+       if ( dinfo%time_units == "" ) then
+          call FileGetGlobalAttribute( fid, "time", time )
+          time_start = time(1)
+       else
+          time_start  = dinfo%time_start
+       end if
+    end if
+    if ( present(time_end)  ) then
+       if ( dinfo%time_units == "" ) then
+          call FileGetGlobalAttribute( fid, "time", time )
+          time_end = time(1)
+       else
+          time_end  = dinfo%time_end
+       end if
+    end if
+
+    return
+  end subroutine FileGetDatainfo
+
+  !-----------------------------------------------------------------------------
+  ! FileGetData
+  !-----------------------------------------------------------------------------
+  subroutine FileGetAllDatainfo( &
+      step_limit,  &
+      dim_limit,   &
+      basename,    &
+      varname,     &
+      myrank,      &
+      step_nmax,   &
+      description, &
+      units,       &
+      datatype,    &
+      dim_rank,    &
+      dim_name,    &
+      dim_size,    &
+      time_start,  &
+      time_end,    &
+      time_units,  &
+      single       )
+    implicit none
+
+    integer,                    intent(in)  :: step_limit
+    integer,                    intent(in)  :: dim_limit
+    character(len=*),           intent(in)  :: basename
+    character(len=*),           intent(in)  :: varname
+    integer,                    intent(in)  :: myrank
+    integer,                    intent(out) :: step_nmax
+    character(len=File_HMID),   intent(out) :: description
+    character(len=File_HSHORT), intent(out) :: units
+    integer,                    intent(out) :: datatype
+    integer,                    intent(out) :: dim_rank
+    character(len=File_HSHORT), intent(out) :: dim_name  (dim_limit)
+    integer,                    intent(out) :: dim_size  (dim_limit)
+    real(DP),                   intent(out) :: time_start(step_limit)
+    real(DP),                   intent(out) :: time_end  (step_limit)
+    character(len=File_HMID),   intent(out) :: time_units
+
+    logical,                    intent(in), optional :: single
+
+    integer        :: fid
+    type(datainfo) :: dinfo
+
+    integer :: ndim
+    integer :: istep, idim
+    logical :: flag_first = .true.
+
+    integer :: error
+    logical :: single_ = .false.
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    if ( present(single) ) single_ = single
+
+    !--- search/register file
+    call FileOpen( fid,        & ! [OUT]
+                   basename,   & ! [IN]
+                   File_FREAD, & ! [IN]
+                   single_     ) ! [IN]
+
+    ! initialize
+    description   = ""
+    units         = ""
+    datatype      = -1
+    dim_rank      = -1
+    dim_name  (:) = ""
+    dim_size  (:) = -1
+    time_start(:) = RMISS
+    time_end  (:) = RMISS
+
+    do istep = 1, step_limit
+       !--- get data information
+       call file_get_datainfo( dinfo,   & ! [OUT]
+                               fid,     & ! [IN]
+                               varname, & ! [IN]
+                               istep,   & ! [IN]
+                               .true.,  & ! [IN]
+                               error    ) ! [OUT]
+
+       !--- verify and exit
+       if ( error /= SUCCESS_CODE ) then
+          step_nmax = istep - 1
+          exit
+       endif
+
+       if ( flag_first ) then
+          flag_first = .false.
+
+          description = dinfo%description
+          units       = dinfo%units
+          datatype    = dinfo%datatype
+          dim_rank    = dinfo%rank
+
+          ndim = min( dinfo%rank, dim_limit ) ! limit dimension rank
+          do idim = 1, ndim
+             dim_name(idim) = dinfo%dim_name(idim)
+             dim_size(idim) = dinfo%dim_size(idim)
+          enddo
+
+          time_units        = dinfo%time_units
+       endif
+
+       time_start(istep) = dinfo%time_start
+       time_end  (istep) = dinfo%time_end
+    enddo
+
+    return
+  end subroutine FileGetAllDatainfo
 
   !-----------------------------------------------------------------------------
   ! interface File_read
@@ -950,9 +1282,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1031,9 +1363,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1112,9 +1444,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1193,9 +1525,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1274,9 +1606,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1355,9 +1687,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1436,9 +1768,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1517,9 +1849,9 @@ contains
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, step,       & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
@@ -1564,6 +1896,7 @@ contains
   ! interface FileWrite
   !-----------------------------------------------------------------------------
   subroutine FileWrite1DRealSP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1572,28 +1905,35 @@ contains
     implicit none
 
     real(SP), intent(in) :: var(:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:), ts, te, SP, & ! (in)
+    call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
     return
   end subroutine FileWrite1DRealSP
   subroutine FileWrite1DRealDP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1602,28 +1942,35 @@ contains
     implicit none
 
     real(DP), intent(in) :: var(:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:), ts, te, DP, & ! (in)
+    call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
     return
   end subroutine FileWrite1DRealDP
   subroutine FileWrite2DRealSP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1632,28 +1979,35 @@ contains
     implicit none
 
     real(SP), intent(in) :: var(:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:), ts, te, SP, & ! (in)
+    call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
     return
   end subroutine FileWrite2DRealSP
   subroutine FileWrite2DRealDP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1662,28 +2016,35 @@ contains
     implicit none
 
     real(DP), intent(in) :: var(:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:), ts, te, DP, & ! (in)
+    call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
     return
   end subroutine FileWrite2DRealDP
   subroutine FileWrite3DRealSP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1692,28 +2053,35 @@ contains
     implicit none
 
     real(SP), intent(in) :: var(:,:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:), ts, te, SP, & ! (in)
+    call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
     return
   end subroutine FileWrite3DRealSP
   subroutine FileWrite3DRealDP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1722,28 +2090,35 @@ contains
     implicit none
 
     real(DP), intent(in) :: var(:,:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:), ts, te, DP, & ! (in)
+    call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
     return
   end subroutine FileWrite3DRealDP
   subroutine FileWrite4DRealSP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1752,28 +2127,35 @@ contains
     implicit none
 
     real(SP), intent(in) :: var(:,:,:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:,:), ts, te, SP, & ! (in)
+    call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
     return
   end subroutine FileWrite4DRealSP
   subroutine FileWrite4DRealDP( &
+      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
@@ -1782,22 +2164,28 @@ contains
     implicit none
 
     real(DP), intent(in) :: var(:,:,:,:)
+    integer,  intent(in) :: fid
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:,:), ts, te, DP, & ! (in)
+    call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 

@@ -1,0 +1,113 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  File 54_namelist_history.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{出力変数の追加・変更}
+\label{sec:output}
+%====================================================================================
+ここでは、``run.***.conf''ファイルの中の出力変数の設定方法について説明する。
+history出力ファイルへ新たに出力変数を追加するには、正式には次の2段階の手続きが必要である。
+
+\begin{enumerate}
+\item ソースファイル内の設定。対象の変数をhistory出力するための設定で、この手続きにより、出力のための準備が行われる。
+\item run.conf内の設定。実際にhistoryに出力するかどうかを指定。コンパイルし直すことなく、実験毎に変更可能。
+\end{enumerate}
+頻繁に使用する予報変数や主要な変数については、すでに1の手続きは行われているため、2の手続きだけを行えばよい。
+2の手続きだけで出力可能な変数については、Appendix\ref{app:vari_hist}にリストアップしてあるので、そちらを参照すること。
+これ以外の変数をユーザーが書き出したい場合は、1の手続きが必要であるがここでは割愛する。
+
+
+history出力ファイルへの変数の追加は、下記のフォーマットに従ってrun.confに追記すればよい。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&HISTITEM ITEM     = "[character]",| \\
+\textcolor{cyan}{\verb|         BASENAME = "[character]",|} \\
+\textcolor{cyan}{\verb|         TINTERVAL= [real],|} \\
+\textcolor{cyan}{\verb|         TUNIT    = "[character]", |} \\
+\textcolor{cyan}{\verb|         TAVERAGE = [logical],|} \\
+\textcolor{cyan}{\verb|         ZINTERP  = [logical], |} \\
+\textcolor{cyan}{\verb|         DATATYPE = "[character]",|} \\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+\textcolor{cyan}{水色文字}の部分はオプションである。\verb|[character]|は任意の文字列、
+\verb|[real]|は任意の浮動小数点値、\verb|[logical]|は任意の論理変数（\verb|.true.| or \verb|.false.|）
+をそれぞれ指定することを意味する。デフォルト設定は、
+つぎに説明する\verb|&PARAM_HISTORY|の項目によって定められる。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&PARAM_HISTORY| \\
+\verb|  HISTORY_DEFAULT_BASENAME  = "[character]",| \\
+\verb|  HISTORY_DEFAULT_TINTERVAL = [real],| \\
+\verb|  HISTORY_DEFAULT_TUNIT     = "[character]",| \\
+\verb|  HISTORY_DEFAULT_TAVERAGE  = [logical],| \\
+\verb|  HISTORY_DEFAULT_ZINTERP   = [logical],| \\
+\verb|  HISTORY_DEFAULT_DATATYPE  = "[character]",| \\
+\verb|  HISTORY_OUTPUT_STEP0      = [logical],| \\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+上記のとおり、変数毎の個別の設定群とデフォルト設定群の違いはあるが、各設定変数の意味は同じである。
+それらの各設定変数の説明は以下の通りである。\\
+%%\begin{table}[h]
+%{\renewcommand\arraystretch{1.2}
+%\begin{tabular}{ll}
+%\hline
+
+\begin{table}[htb]
+\begin{center}
+\caption{出力ファイル設定変数の説明}
+\begin{tabularx}{150mm}{|l|X|} \hline
+ \rowcolor[gray]{0.9} 設定変数 & 説明 \\ \hline
+ ITEM                   & 変数名。 Appendix \ref{app:vari_hist}を参照\\ \hline
+ BASENAME               & 出力ファイル名 BASENAME\_xxxxxx.ncとなる。xxxxxxはノード番号\\ \hline
+ TINTERVAL              & 出力間隔\\ \hline
+ TUNIT                  & TINTERVALで指定した出力間隔の単位\\ \hline
+ TAVERAGE               & .false.=瞬間値、.true.=平均値として出力する；平均値の場合、
+ 出力タイミングの直前のTINTERVAL間の平均値\\ \hline
+ DATATYPE               & 出力値の型；''REAL4'',''REAL8''など\\ \hline
+ ZINTERP                & .false.=モデル面、.true.=Z面（FZ面$?$、CZ面$?$）の値として出力\\ \hline
+ HISTORY\_OUTPUT\_STEP0 & .true.=初期時刻(t=0)の値を出力、.false.=出力しない；\verb|&PARAM_HISTORY|でのみ有効\\ \hline
+\end{tabularx}
+\label{tab:history_settings}
+\end{center}
+\end{table}
+
+\verb|&PARAM_HISTORY|の\verb|HISTORY_DEFAULT_TINTERVAL|は、デフォルトのhistory出力間隔を設定する変数だが、
+出力アイテム毎に出力間隔を設定することもできる。一部の変数でhistory出力間隔を変更したい場合の記述例を次に挙げる。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&PARAM_HISTORY| \\
+\verb|  HISTORY_DEFAULT_BASENAME  = "history_d03",| \\
+\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.D0,| \\
+\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",| \\
+\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,| \\
+\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",| \\
+\verb|  HISTORY_DEFAULT_ZINTERP   = .false.,| \\
+\verb|  HISTORY_OUTPUT_STEP0      = .true.,| \\
+\verb|/| \\
+ \\
+\verb|&HISTITEM item="T"    /| \\
+\verb|&HISTITEM item="PRES" /| \\
+\verb|&HISTITEM item="U"    /| \\
+\verb|&HISTITEM item="V"    /| \\
+\verb|　 　 　〜　中略　〜|\\
+ \\
+\verb|&HISTITEM item="RAIN", taverage=.true., tinterval=600.D0 /| \\
+\end{tabularx}
+}}}\\
+
+上記のように設定すると、``RAIN''は600秒の出力間隔で、それ以外は3600秒の出力間隔となる。
+以上で、出力変数の追加・変更についての説明を終える。
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

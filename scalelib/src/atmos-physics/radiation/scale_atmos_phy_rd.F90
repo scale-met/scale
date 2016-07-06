@@ -52,7 +52,8 @@ module scale_atmos_phy_rd
           temp_sfc, albedo_land, &
           solins, cosSZA,        &
           flux_rad,              &
-          flux_rad_top           )
+          flux_rad_top,          &
+          flux_sfc_dn            )
        use scale_precision
        use scale_grid_index
        use scale_tracer
@@ -70,8 +71,9 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: albedo_land (IA,JA,2)
        real(RP), intent(in)  :: solins      (IA,JA)
        real(RP), intent(in)  :: cosSZA      (IA,JA)
-       real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
-       real(RP), intent(out) :: flux_rad_top(IA,JA,2,2)
+       real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2,2)
+       real(RP), intent(out) :: flux_rad_top(IA,JA,2,2,2)
+       real(RP), intent(out) :: flux_sfc_dn (IA,JA,2,2)
      end subroutine rd
   end interface
   procedure(rd), pointer :: ATMOS_PHY_RD => NULL()

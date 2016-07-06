@@ -74,7 +74,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[LAND PHY] / Origin[SCALE-LES]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[LAND PHY] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -351,8 +351,8 @@ contains
              enddo
           else
              do k = LKS, LKE
-                TEMP_t (k,i,j) = 0.0_RP 
-                WATER_t(k,i,j) = 0.0_RP 
+                TEMP_t (k,i,j) = 0.0_RP
+                WATER_t(k,i,j) = 0.0_RP
              enddo
           endif
        enddo

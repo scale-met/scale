@@ -209,8 +209,7 @@ contains
 
     call CALENDAR_date2char( startchardate,     & ! [OUT]
                              TIME_STARTDATE(:), & ! [IN]
-                             TIME_STARTMS,      & ! [IN]
-                             TIME_OFFSET_YEAR   ) ! [IN]
+                             TIME_STARTMS       ) ! [IN]
 
     TIME_END    = TIME_START  + TIME_LSTEP_MAX * TIME_DTL
     TIME_NSTART = 0
@@ -237,8 +236,7 @@ contains
 
     call CALENDAR_date2char( endchardate,     & ! [OUT]
                              TIME_ENDDATE(:), & ! [IN]
-                             TIME_ENDMS,      & ! [IN]
-                             TIME_OFFSET_YEAR ) ! [IN]
+                             TIME_ENDMS       ) ! [IN]
 
     write(ADM_LOG_FID,*)
     write(ADM_LOG_FID,*) '====== Time management ======'
@@ -269,8 +267,7 @@ contains
        TIME_NOWDATE,     &
        TIME_NOWMS,       &
        TIME_NOWSTEP,     &
-       TIME_NSTEP,       &
-       TIME_OFFSET_YEAR
+       TIME_NSTEP
     implicit none
 
     character(len=27) :: nowchardate
@@ -278,8 +275,7 @@ contains
 
     call CALENDAR_date2char( nowchardate,     & ! [OUT]
                              TIME_NOWDATE(:), & ! [IN]
-                             TIME_NOWMS,      & ! [IN]
-                             TIME_OFFSET_YEAR ) ! [IN]
+                             TIME_NOWMS       ) ! [IN]
 
     write(ADM_LOG_FID,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
     if( ADM_prc_me == ADM_prc_run_master ) then

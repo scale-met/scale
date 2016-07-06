@@ -127,8 +127,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '*** Bulk coefficient parameter'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[BULKFLUX] / Categ[COUPLER] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -144,8 +144,10 @@ contains
 
     select case( BULKFLUX_TYPE )
     case ( 'U95' )
+       if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : Uno et al.(1995)'
        BULKFLUX => BULKFLUX_U95
     case ( 'B91W01' )
+       if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : Beljaars (1991) and Wilson (2001)'
        BULKFLUX => BULKFLUX_B91W01
     case default
        write(*,*) ' xxx Unsupported TYPE. STOP'
@@ -449,7 +451,7 @@ contains
       dres = 1.0_DP - T1 / ( KARMAN * GRAV * dL ) * ( dUstarC**2 / dTstarC - UstarC**2 / TstarC )
 
       ! convergence test with residual and error levels
-      if( abs( res      ) < BULKFLUX_res_min .or. &
+      if( abs( res      ) < BULKFLUX_res_min .OR. &
           abs( res/dres ) < BULKFLUX_err_min      ) then
         exit
       end if

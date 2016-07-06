@@ -7,7 +7,7 @@
 \end{tabular}
 }
 \\
- The SCALE-LES has three types of cloud microphysics models. We will show description of these models below.
+ The SCALE-RM has three types of cloud microphysics models. We will show description of these models below.
 
 \subsection{Kessler Parameterization}
 An one-moment bulk microphysical scheme, which treats only warm cloud (cloud and rain), is implemented in SCALE. This scehem predicts mixing ratio of cloud ($Q_{cloud}$) and rain ($Q_{rain}$). Cloud microphysical processes treated in this scheme is saturation adjustment (corresponding to nucleatioin, evaporation, and condensation of cloud), evaporation, auto-conversion, accretion, and sedimentation. The tendency of $Q_{cloud}$, $Q_{rain}$, and $Q_{v}$ (vapor mixing ratio) is given as
@@ -134,12 +134,12 @@ In the case of liquid water droplets, absence of shape variability makes formula
 \begin{array}{l}
 a_{R_{s}}D(1-exp(-b_{R_{s}}D)),\;\;(D<D_{0,r}) \\
 a_{R_{l}}-b_{R_{l}}exp(-c_{R_{l}}D),\;\;(D>D_{0,r}) \\
-\label{sn14}
+\label{sn13}
 \end{array}
 \right.
 \end{eqnarray}
 
-where $a_{R_{s}} = 4000 s^{-1}$, $b_{R_{s}}=12000 m^{-1}$, $a_{R_{l}}=9.65 m s^{-1}$, $b_{R_{l}} = 10.43 m s^{-1}$, $c_{R_{l}} = 600 m^{-1}$, and $D_{0}$, $r=7.45\times10^{-4}$ m. This formulation approaches the quadratic form of Stokes’ Law in the limit for small diameter. In addition, the data of Gunn and Kinzer (1948) agrees well with the terminal velocities calculated by theoretical formulation based on the boundary layer theory (Bohm, 1992). Therefore, we applied eq.\ref{sn14} for the sedimentation of rain (Fig. \ref{figsn2-11}2 11). Here it is mentioned that the reference atmosphere of the formulation is $T = 293 K$, $p = 1000hPa$, and relative humidity is 0.5 (Gunn and Kinzer, 1948).
+where $a_{R_{s}} = 4000 s^{-1}$, $b_{R_{s}}=12000 m^{-1}$, $a_{R_{l}}=9.65 m s^{-1}$, $b_{R_{l}} = 10.43 m s^{-1}$, $c_{R_{l}} = 600 m^{-1}$, and $D_{0}$, $r=7.45\times10^{-4}$ m. This formulation approaches the quadratic form of Stokes’ Law in the limit for small diameter. In addition, the data of Gunn and Kinzer (1948) agrees well with the terminal velocities calculated by theoretical formulation based on the boundary layer theory (Bohm, 1992). Therefore, we applied eq.\ref{sn13} for the sedimentation of rain (Fig. \ref{figsn2-11}2 11). Here it is mentioned that the reference atmosphere of the formulation is $T = 293 K$, $p = 1000hPa$, and relative humidity is 0.5 (Gunn and Kinzer, 1948).
 
 \subsubsection{Terminal velocity of solid water particles for the reference atmosphere}
 In the case of ice particles, we derive the theoretical formulation of the terminal velocity following to Mitchell (1996). In general the aerodynamic drag force $F_{D}$ on a particle is expressed as follows,
@@ -275,7 +275,7 @@ v_{t,js}&=&a_{v,js}x^{b_{v,js}},\;\;(js=i,s,g)\label{sn33}\\
 \bar{v_{k,js,true}}(\bar{D_{id}})&=&\sum_{i=1}^{imax}x^{k}v_{t,js,true}f_{logD}(lnD_{i},\bar{D_{id}},L)\Delta ln D/L\nonumber
 \end{eqnarray}
 
-where $D_{1}=10\mu m$, $D_{imax}=10mm$, $i_{max}=1000$, and L is arbitrary constant. The fitting ranges of the mean volume diameter in eq.\ref{sn34} are from 20 to 400 $\mu$m for the small branch and from 200 to 2000 $\mu m$ for the large branch. The derived parameters are summarized in Table \ref{table_sn14-2-9}.\\ 
+where $D_{1}=10\mu m$, $D_{imax}=10mm$, $i_{max}=1000$, and L is arbitrary constant. The fitting ranges of the mean volume diameter in eq.\ref{sn34} are from 20 to 400 $\mu$m for the small branch and from 200 to 2000 $\mu m$ for the large branch. The derived parameters are summarized in Table \ref{table_sn14-2-9}.\\
 Secondly the terminal velocity with a certain mean diameter is calculated by interpolating between the two branches in the logaritgmic scale of the diameter. Here we practically use the mean diameter weighted by the kth moments of DSD in the interpolation. The formulation of the weighted terminal velocities of the rain droplets and solid particles are as shown in the following,
 
 \begin{eqnarray}
@@ -292,7 +292,7 @@ w_{k,js}&=&max(0.0, \;min(1.0,0.5(1+ln(\bar{D_{k,js}}/D_{0,k,js}))))\;\;(js=i,s,
 N_{r}(D)&=&N_{0,r}D^{-\mu_{D,r}}exp(-\lambda_{D,r}D)
 \end{eqnarray}
 
-where $D_{0,r}$ and $D_{0,js}$ are the branch points of the fitting curves (see Table \ref{table_sn14-2-10}). Here we apply the form of the modified gamma distribution for the diameter as a DSD of rain droplets. Derivation and correspondences of the coefficient $N_{0,r}$ the slope parameter $\lambda_{D}$,$r$ and shape parameter $\mu D$ appeared in the modified gamma distribution are described in Appendix B. Weighted terminl velocities of ice particles for two branches, and, are calculated by eq.\ref{sn35}. Fig.\ref{figsn2-13} shows the terminal velocity of rain droplets weighted by number and mass concentration. Our method gives better results than the results by the approximated method applied in Seifert and Beheng (2006) in the range within their upper and lower limit. Fig.\ref{figsn2-14} shows terminal velocities of ice particles weighted by the number and the mass concentration. 
+where $D_{0,r}$ and $D_{0,js}$ are the branch points of the fitting curves (see Table \ref{table_sn14-2-10}). Here we apply the form of the modified gamma distribution for the diameter as a DSD of rain droplets. Derivation and correspondences of the coefficient $N_{0,r}$ the slope parameter $\lambda_{D}$,$r$ and shape parameter $\mu D$ appeared in the modified gamma distribution are described in Appendix B. Weighted terminl velocities of ice particles for two branches, and, are calculated by eq.\ref{sn35}. Fig.\ref{figsn2-13} shows the terminal velocity of rain droplets weighted by number and mass concentration. Our method gives better results than the results by the approximated method applied in Seifert and Beheng (2006) in the range within their upper and lower limit. Fig.\ref{figsn2-14} shows terminal velocities of ice particles weighted by the number and the mass concentration.
 
 
 \begin{table}[h]
@@ -334,7 +334,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 \end{center}
 \end{table}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.3]{./figure/D_vt_sn14.eps}
 \end{center}
@@ -342,7 +342,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 \label{figsn2-11}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.3]{./figure/D_vt_sn14-ice.eps}
 \end{center}
@@ -350,7 +350,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 \label{figsn2-12}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.4]{./figure/D_vt_sn14-1.eps}
 \end{center}
@@ -358,7 +358,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 \label{figsn2-13}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.4]{./figure/D_vt_sn14-ice-1.eps}
 \end{center}
@@ -368,7 +368,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 
 \subsubsection{Detailed description of cloud microphysics}
 Cloud microphysics is mainly categorized into two physics. One is phase change among the gas, liquid, and solid phases. Another is the collection process among all the particles. In addition, all the hydrometeors are vertically transported by gravitational sedimentation. Phase change depends on the thermodynamics of environment air and affects thermodynamics itself through latent heat release. In contrast, collection is an internal growth process with less interaction with the atmosphere. Since the growth speed of the collection process is much faster than that of phase change, the role of the collection process is a key to determine the lifetime of cloud (e.g. lifetime effect). Finally, gravitational sedimentation determines the removal rate of cloud from the atmosphere. Directly it removes cloud by transportation, and indirectly by the collection process via collision volume (swept volume).\\
-The cloud microphysics scheme developed in this study basically follows Seifert and Beheng (2006). Their two-moment bulk cloud microphysics scheme is remarkable in improvement of the collection process by using a bin cloud microphysics scheme. After their works, we modify the cloud nucleation process (Twomey 1959; and Lohmann 2002), the condensation process (Morrison et al. 2005), and the formulation of the terminal velocities (Mitchell, 1996) with expectation of the application to global cloud resolving simulations. We describe production and reduction terms of the mass concentration and the number concentration in the following sub-sections. 
+The cloud microphysics scheme developed in this study basically follows Seifert and Beheng (2006). Their two-moment bulk cloud microphysics scheme is remarkable in improvement of the collection process by using a bin cloud microphysics scheme. After their works, we modify the cloud nucleation process (Twomey 1959; and Lohmann 2002), the condensation process (Morrison et al. 2005), and the formulation of the terminal velocities (Mitchell, 1996) with expectation of the application to global cloud resolving simulations. We describe production and reduction terms of the mass concentration and the number concentration in the following sub-sections.
 
 \subsubsection{Phase change}
 \subsubsection{Condensation/evaporation}
@@ -389,7 +389,7 @@ Here $G_{lv}$ is a coefficient related with vapor and thermal diffusion, $D_{v}$
 we can consider eq.\ref{sn69} from a different view point as follows,
 
 \begin{eqnarray}
-\frac{\partial M_{jl}^{k}}{\partial t}\Bigr|_{cnd,evp}&\cong& \int_{0}^{\infty}f_{jl}(x)x^{k}\Bigl[\frac{1}{x}\frac{\partial x}{\partial t}\Bigr|_{cnd,evp}\Bigr]dx\label{sn69}\nonumber\\
+\frac{\partial M_{jl}^{k}}{\partial t}\Bigr|_{cnd,evp}&\cong& \int_{0}^{\infty}f_{jl}(x)x^{k}\Bigl[\frac{1}{x}\frac{\partial x}{\partial t}\Bigr|_{cnd,evp}\Bigr]dx\nonumber\\
 &=&\int_{0}^{\infty}\frac{f_{jl}(x)x^{k}}{\tau}dx,\;\tau\equiv\frac{x}{\frac{\partial x}{\partial t}}\bigr|_{cnd,evp}\label{sn70}
 \end{eqnarray}
 
@@ -598,7 +598,7 @@ where super saturation ratio $S_{w,100}$ is in ％. They use $C_{ccn} = 1.26 \ti
 \begin{array}{l}
 C_{ccn}\kappa_{ccn}S_{w,100}^{\kappa_{ccn}-1}\frac{\partial S_{w,100}}{\partial z}w\nonumber\\
 (S_{w,100}>0,\;w\frac{\partial S_{w,100}}{\partial z}>0,\;and\;S_{w,100}<1.1) \nonumber\\
-0,\;\;(else) 
+0,\;\;(else)
 \end{array}
 \right.\\
 \label{sn108}
@@ -690,7 +690,7 @@ log_{10}(10^{-3}J_{hom})=
 \begin{array}{l}
 25.63-243.4-14.75T_{c}-0.307T_{c}^{2},\;\;(-65^{o}C>T_{c}) \nonumber \\
 -0.00287T_{c}^{3}-0.0000102T_{c}^{4},\;\;(-65^{o}C\leq T_{c}<-30^{o}C)\nonumber \\
--7.63-2.996(T_{c}+30),\;\;(-30^{o}C< T_{c})\nonumber 
+-7.63-2.996(T_{c}+30),\;\;(-30^{o}C< T_{c})\nonumber
 \end{array}
 \label{sn121}
 \right.
@@ -737,7 +737,7 @@ As a result, the melting rate of a single ice particle is described as follows,
 &+&\frac{D_{v}L_{v0}}{R_{v}}\bigr(\frac{p_{v}}{T}-\frac{p_{sw}(T_{0})}{T}\bigr)F_{vf}(x_{js})\Bigr]\;\;(js=i,s,g)\label{sn128}
 \end{eqnarray}
 
-where $D_{T}$ is diffusivity of heat, and $T_{0} = 273.15 K$ is melting point. The growth rate of moments can be formulated by using a melting time scale $\tau_{mlt}$ defined as follows, 
+where $D_{T}$ is diffusivity of heat, and $T_{0} = 273.15 K$ is melting point. The growth rate of moments can be formulated by using a melting time scale $\tau_{mlt}$ defined as follows,
 
 \begin{eqnarray}
 \tau_{mlt}&\equiv&\frac{x_{js}}{\bigl(\frac{dx_{js}}{dt}\bigr)_{mlt}}\label{sn129}\\
@@ -783,27 +783,22 @@ With a few assumptions and a little algebra, Seifert and Beheng (2001) derived t
 \frac{\partial L_{c}}{\partial t}\Bigr|_{acc}&=&-k_{cr}L_{c}L_{r}\bigl(\frac{\rho_{0}}{\rho}\bigr)^{1/2}\label{sn147}\\
 \frac{\partial N_{r}}{\partial t}\Bigr|_{slc}&=&-k_{rr}L_{r}L_{r}\bigl(\frac{\rho_{0}}{\rho}\bigr)^{1/2}\label{sn148}
 \end{eqnarray}
-
 with $k_{rr} = 4.33 m^{3}kg^{-1}s^{-1}$, and where density factors are introduced by Seifert and Beheng (2006a) in order to correct the effect of terminal velocity on the collision efficiency. In addition to the analytical derivation, Seifert and Beheng (2001) made corrections depending on the development stage by using the dimensionless internal time scale. Since moment bulk methods cannot represented complicated changes of high-order moments, the corrections are necessary as DSD undergoes evolution by the collection processes. Firstly, the auto-conversion rate is represented by $\tau$ by substituting eq.\ref{sn141} to eq.\ref{sn143},
-
 \begin{eqnarray}
 \frac{\partial \tau}{\partial t}\Bigr|_{aut}=\frac{k_{cc}}{20x^{*}}\frac{(\nu_{c}+2)(\nu_{c}+4)}{(\nu_{c}+1)^{2}}\frac{\rho_{0}}{\rho}x_{c}^{2}L(1-\tau^{2})\label{sn149}
 \end{eqnarray}
 
 The assumptions used in the derivation of eq.\ref{sn149} are valid for the initial stage of collisional growth. Therefore, the additional collection by a universal function $\phi_{aut}$ was introduced by Seifert and Beheng (2001) as follows,
-
 \begin{eqnarray}
 \frac{\partial \tau}{\partial t}\Bigr|_{aut}=\frac{k_{cc}}{20x^{*}}\frac{(\nu_{c}+2)(\nu_{c}+4)}{(\nu_{c}+1)^{2}}\frac{\rho_{0}}{\rho}x_{c}^{2}L_{c}^{2}x_{c}^{2}\bigl[(1-\tau^{2})+\phi_{aut}(\tau)\bigr]\label{sn150}
 \end{eqnarray}
 
 Similarly, the correction for the accretion rate is also made by a universal function $\phi_{acc}$,
-
 \begin{eqnarray}
 \frac{\partial \tau}{\partial t}\Bigr|_{acc}=k_{cr}L\bigl(\frac{\rho_{0}}{\rho}\bigr)^{1/2}(1-\tau)\tau\phi_{acc}(\tau)\label{sn151}
 \end{eqnarray}
 
 In contrast to the correction for the auto-conversion rate, the assumptions used in the derivation of the accretion rate is valid for the mature stage of the collisional growth. Therefore a correction function is multiplied so that $\phi_{aut}$ becomes zero for the beginning of the collisional growth and one for the mature stage of the collisional growth. Here, it is recognized that the growth rate of the dimensional internal time scale is proportional to LWC in eq.\ref{sn150} and eq.\ref{sn151}. Therefore, the parameterizations developed by Seifert and Beheng (2001) satisfy the similarity included in the SCE. Finally, the universal functions are derived by fitting to the results by a bin cloud microphysics model,
-
 \begin{eqnarray}
 \phi_{aut}(\tau)&=&400\tau^{0.7}(1-\tau^{0.7})^{3}\label{152}\\
 \phi_{acc}(\tau)&=&\bigl(\frac{\tau}{\tau+5\times 10^{-5}}\bigr)^{4}\label{153}
@@ -827,7 +822,7 @@ where $\phi_{brk}$ is a universal function of break-up, and $\Delta \bar{D}_{r}\
 \begin{array}{l}
 2exp(\kappa_{brk}\Delta\bar{D}_{r})-1,\;\;(\bar{D}_{r}>\bar{D}_{eq}) \\
 \kappa_{brk}\Delta\bar{D}_{r}+1,\;\;(\bar{D}_{eq}\geq \bar{D}_{r}>0.35\times 10^{-3}m) \\
--1,\;\;(0.35\times10^{-3}>\bar{D}_{r}) 
+-1,\;\;(0.35\times10^{-3}>\bar{D}_{r})
 \label{sn155}
 \end{array}
 \right.
@@ -872,7 +867,7 @@ Here, the difference of the terminal velocities, and the collection efficiency i
 \begin{eqnarray}
 \frac{\partial L_{b}}{\partial t}\Bigr|_{col,ab}&\cong&-\frac{\pi}{4}\bar{E}_{ab}\bar{\Delta v_{t,ab}^{1}}\nonumber\\
 &\times&\int_{0}^{\infty}\int_{0}^{\infty}f_{a}(x)f_{b}(y)\bigl[D_{a}(x)+D_{b}(y)\bigr]^{2}ydxdy\label{sn161}\\
-\frac{\partial L_{a}}{\partial t}\Bigr|_{col,ab}&\cong&\frac{\pi}{4}\bar{E}_{ab}\bar{\Delta v_{t,ab}^{1}}\int_{0}^{\infty}\int_{0}^{\infty}f_{a}(x)f_{b}(y)\bigl[D_{a}(x)+D_{b}(y)\bigr]^{2}ydxdy\label{sn162}\nonumber\\
+\frac{\partial L_{a}}{\partial t}\Bigr|_{col,ab}&\cong&\frac{\pi}{4}\bar{E}_{ab}\bar{\Delta v_{t,ab}^{1}}\int_{0}^{\infty}\int_{0}^{\infty}f_{a}(x)f_{b}(y)\bigl[D_{a}(x)+D_{b}(y)\bigr]^{2}ydxdy\nonumber\\
 &=&-\frac{\partial L_{b}}{\partial t}\label{sn162}\\
 \frac{\partial N_{b}}{\partial t}\Bigr|_{col,ab}&\cong&-\frac{\pi}{4}\bar{E}_{ab}\bar{\Delta v_{t,ab}^{0}}\int_{0}^{\infty}\nonumber\\
 &\times&\int_{0}^{\infty}f_{a}(x)f_{b}(y)\bigl[D_{a}(x)+D_{b}(y)\bigr]^{2}dxdy\label{sn163}\\
@@ -946,7 +941,7 @@ Finally, the characteristic velocity difference are derived by substituting eq.\
 &\times&\Bigl[\frac{\Gamma\bigl(\frac{v_{a}+1}{\mu_{a}}\bigr)}{\Gamma\bigl(\frac{v_{a}+2}{\mu_{a}}\bigr)}\Bigr]^{b_{v,a}}\Bigl[\frac{\Gamma\bigl(\frac{v_{b}+1}{\mu_{b}}\bigr)}{\Gamma\bigl(\frac{v_{b}+2}{\mu_{b}}\bigr)}\Bigr]^{b_{v,b}}\label{sn172}
 \end{eqnarray}
 
-Here, it is noticed that the notation “ab” in $\theta_{ab}^{k}$ is not symmetric because $\theta_{ab}^{k}$ is weighted by the mass of collected particle to the power of “k”. Integrations in eq.\ref{sn161} and eq.\ref{sn163} are similarly calculated as follows, 
+Here, it is noticed that the notation “ab” in $\theta_{ab}^{k}$ is not symmetric because $\theta_{ab}^{k}$ is weighted by the mass of collected particle to the power of “k”. Integrations in eq.\ref{sn161} and eq.\ref{sn163} are similarly calculated as follows,
 
 
 \begin{eqnarray}
@@ -1012,7 +1007,7 @@ The sticking efficiency is considered only in the case of the collision between 
 \left\{
 \begin{array}{l}
 exp[0.09\times T_{c}],\;\;(T_{c}\leq 0^{o}C) \\
-1,\;\;(T_{c}> 0^{o}C) 
+1,\;\;(T_{c}> 0^{o}C)
 \label{sn185}
 \end{array}
 \right.
@@ -1035,7 +1030,7 @@ with $a_{\delta} = 0.883$, $b_{\delta} = 0.093$, $c_{\delta} = 0.00348$, and $d_
 
 
 \subsubsection{The collision case 2: a+b $\rightarrow$ c}
- The case is the same as the case 1 except for the growing particles. 
+ The case is the same as the case 1 except for the growing particles.
 
 \begin{eqnarray}
 \frac{\partial f_{b}(y)}{\partial t}\Bigr|_{col,abs}&=&-\int_{0}^{\infty}f_{b}(y)f_{a}(x)K_{ab}(x,y)dx\label{sn189}\\
@@ -1147,7 +1142,7 @@ The conversion rate of number concentration is as follows,
 The conversion coefficient of riming particle $\bar{x}/\bar{x}_{crit,pconv}$ is shown in Fig.\ref{figsn2-23}. In this formulation, small ice particles are likely to convert into graupel in riming because small ice particles have simple geometry and are almost sphere. In order to suppress the conversion of small ice particles, partial conversion are limited to ice particles with the mean diameter of more than 500 $\mu m$.
 
 \subsubsection{Ice multiplication}
-It has been observed that the number concentration of ice particles can be up to several orders of magnitude larger than ice nuclei in atmospheric cloud (Pruppacher and Klett, 1997). Among the possible mechanisms to explain the fact, the Hallet-Mossop mechanism has been received in many literatures and widely applied in cloud microphysics schemes. The Hallet-Mossop mechanism is based on the fact that ice splintering occurs when many liquid droplets are collected by graupel. Cotton et al. (1986) applied the formulations based on the observations by Hallet and Mossop (1974), and Mossop (1976). 
+It has been observed that the number concentration of ice particles can be up to several orders of magnitude larger than ice nuclei in atmospheric cloud (Pruppacher and Klett, 1997). Among the possible mechanisms to explain the fact, the Hallet-Mossop mechanism has been received in many literatures and widely applied in cloud microphysics schemes. The Hallet-Mossop mechanism is based on the fact that ice splintering occurs when many liquid droplets are collected by graupel. Cotton et al. (1986) applied the formulations based on the observations by Hallet and Mossop (1974), and Mossop (1976).
 Hallet and Mossop (1974) reported that approximately 350 ice splinters were produced for every $10^{-3} g$ of rime accreted by a graupel at -5 degC. The parameterization is formulated with the temperature correction f1 in the units of mks as follows,
 
 \begin{eqnarray}
@@ -1190,7 +1185,7 @@ In contrast to Cotton et al. (1986), we evaluate the incomplete gamma function w
 
 Here, it should be noticed that we may double count the ice multiplication process due to the Hallet-Mossop mechanism by using the two formulations. Those two formulations may be two independent processes or the interpretations of the same process in different two development stages. Since the process is poorly understood by the lack of observation, the assessment of the process by a set of sensitivity studies is necessary in the future.
 
-\begin{figure}[]
+\begin{figure}[htpb]
 \begin{center}
 \includegraphics[scale=0.75]{./figure/mod_gamma_dist.eps}
 \end{center}
@@ -1198,7 +1193,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-17}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.5]{./figure/density_max_num.eps}
 \end{center}
@@ -1206,7 +1201,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-18}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.5]{./figure/cond_timescale.eps}
 \end{center}
@@ -1214,7 +1209,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-19}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.5]{./figure/homo_frz_rate.eps}
 \end{center}
@@ -1222,7 +1217,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-20}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.25]{./figure/univ_function.eps}
 \end{center}
@@ -1230,7 +1225,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-21}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.25]{./figure/stic_effic.eps}
 \end{center}
@@ -1238,7 +1233,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-22}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[htpb]
 \begin{center}
 \includegraphics[scale=0.5]{./figure/partial_conversion_coef.eps}
 \end{center}
@@ -1257,7 +1252,7 @@ M^{0}=N&=&\alpha\int_{0}^{\infty}x^{\nu}exp(\lambda x^{\mu})dx\nonumber\\
 M^{1}=L&=&\frac{\alpha}{\lambda^{(\nu+2)/\mu}\mu}\Gamma\bigl(\frac{\nu+1}{\mu}\bigr)\nonumber
 \end{eqnarray}
 
-Then $\alpha$ is expressed as, 
+Then $\alpha$ is expressed as,
 
 \begin{eqnarray}
 \alpha=\frac{N\mu\lambda^{(\nu+1)/\mu}}{\Gamma\bigl(\frac{\nu+1}{\mu}\bigr)}=\frac{L\mu \lambda^{(\nu+2)/\mu}}{\Gamma\bigl(\frac{\nu+2}{\mu}\bigr)}\nonumber
@@ -1303,7 +1298,7 @@ The time evolution of $f_{c}^{(\mu)}(m,t)$ and $f_{a}(m,t)$ are shown as:
 \end{eqnarray}
 
 where $\Bigl[\;\Bigr]_{***}$ show change of SDF by each cloud growth processes. The detail of these processes will be shown later.\\
- The change of SDFs by advection and gravitational falling (i.e. first and second term of eq. \ref{s10-1}, and \ref{s10-2}  ) are calculated by dynamical core of SCALE-LES3 shown in section 3.
+ The change of SDFs by advection and gravitational falling (i.e. first and second term of eq. \ref{s10-1}, and \ref{s10-2}  ) are calculated by dynamical core of SCALE-RM shown in section 3.
 
 
 \subsubsection{Discretization of Size Distribution Function(SDF)}
@@ -1406,7 +1401,7 @@ a_{i,0}&=&-\frac{1}{24}\bigl( f_{i+1}(t)-26f_{i}(t)+f_{i-1}(t) \bigr)\nonumber\\
 a_{i,1}&=&\frac{1}{2}\bigl( f_{i+1}(t)-f_{i-1}(t) \bigr)\nonumber\\
 a_{i,2}&=&\frac{1}{2}\bigl( f_{i+1}(t)-2f_{i}(t)+f_{i-1}(t) \bigr)\nonumber\\
 c_{i}^{\pm}&=&\pm\bigl( c^{n}_{i+1/2}\pm | c^{n}_{i+1/2}|\bigr )/2\nonumber\\
-c^{n}_{i+1/2}&=&U^{n}_{i+1/2}\frac{\Delta t}{\Delta \eta}\label{s10-12}
+c^{n}_{i+1/2}&=&U^{n}_{i+1/2}\frac{\Delta t}{\Delta \eta}
 \end{eqnarray}
 
 Since the super saturation ($S^{(\mu)}$) can change during time step ($\Delta t$), we apply a method shown below to reflect the change of supersaturation during $\Delta t$.\\
@@ -1463,7 +1458,7 @@ Collision/Coagulation process are calculated by solving Stochastic Collision Equ
 &-&f(m)\int_0^{\infty}f(m'')K(m,m'')dm''\label{s10-14}
 \end{eqnarray}
 
-where $K(m,m')$ is collection kernel function. Three types of the kernel function, i.e. Long type kernel (Long, 1974\cite{long_1974}), Golovin type kernel (Golovin, 1963\cite{golovin_1963}) and Hydro-dynamic dynamic kernel as shown eq. \ref{s10-15} are implemented into the SCALE-LES3.
+where $K(m,m')$ is collection kernel function. Three types of the kernel function, i.e. Long type kernel (Long, 1974\cite{long_1974}), Golovin type kernel (Golovin, 1963\cite{golovin_1963}) and Hydro-dynamic dynamic kernel as shown eq. \ref{s10-15} are implemented into the SCALE-RM.
 
 \begin{eqnarray}
 K(m,m')=\pi(r(m)-r(m'))\left| V(m)-V(m')\right |E_{col}(m,m')E_{coag}(m,m')\label{s10-15}
@@ -1471,7 +1466,7 @@ K(m,m')=\pi(r(m)-r(m'))\left| V(m)-V(m')\right |E_{col}(m,m')E_{coag}(m,m')\labe
 
 where $r(m)$ is radius of hydrometeros whose mass is $m$, and $V(m)$ is terminal velocity of hydrometeors. The terminal velocity of each species of hydrometeor and each size are shown in Figure \ref{figs10-term} $E_{col}$, and $E_{coag}$ is collision effieiency and coagulation efficiansy, respectively.\\
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \begin{center}
 \includegraphics[scale=0.9]{./figure/terminal-velocity.eps}
 \end{center}
@@ -1480,7 +1475,7 @@ where $r(m)$ is radius of hydrometeros whose mass is $m$, and $V(m)$ is terminal
 \end{figure}
 
 
-Although the stochastic collision equation can be apply for collision/coagulation of one type of hydrometeros (i.e. liquid water), the SCALE-LES3 predicts 7 types of hydrometeors, and interactions of these types hydrometeors (i.e. riming/aggregation) must be calculated. To calculate the interaction of all 7 types of hydrometeors, the extented stochastic collision equation:
+Although the stochastic collision equation can be apply for collision/coagulation of one type of hydrometeros (i.e. liquid water), the SCALE-RM predicts 7 types of hydrometeors, and interactions of these types hydrometeors (i.e. riming/aggregation) must be calculated. To calculate the interaction of all 7 types of hydrometeors, the extented stochastic collision equation:
 
 \begin{eqnarray}
 \Bigr[\frac{\partial f^{(\mu)}(m)}{\partial t}\Bigr]_{coll/coag/rim/agg}&=&\nonumber\\
@@ -1507,7 +1502,7 @@ H    & G/H & G/H & G/H & G/H & H   \\ \hline
 \end{table}
 
 
-To solve the stochastic collision equation, a scheme developed by Bott (1998)\cite{bott_1998} was implemented into SCLAE-LES3.\\
+To solve the stochastic collision equation, a scheme developed by Bott (1998)\cite{bott_1998} was implemented into SCLAE-RM.\\
 The Bott (1998)\cite{bott_1998} scheme calculate evolution of mass density distribution ($g(\eta)=mf(\eta)$, $\eta=\log(m)$). The stochastic collision equation can be transferred to
 
 \begin{eqnarray}
@@ -1549,7 +1544,7 @@ a_{k,2}&=&-\frac{1}{2}(g_{k+1}^{(\lambda)}-2g_{k}^{(\lambda)}+g_{k-1}^{(\lambda)
 \end{eqnarray}
 
 These procedure is applied for all bin of all types of hydrometeors.\\
-In addition, to calculate this process fastly, a scheme of Sato et al. (2009)\cite{sato_etal_2009} are also implemented into SCALE-LES3.
+In addition, to calculate this process fastly, a scheme of Sato et al. (2009)\cite{sato_etal_2009} are also implemented into SCALE-RM.
 
 \subsubsection{Freezing}
 The calculation of freezing process is based on a parameterization of Bigg (1953)\cite{bigg_1953}. The parameterization is calculated number density of water ($f_{c}^{(w)}$), wchich can be freezed:
@@ -1563,14 +1558,14 @@ where $a_{fr}=10^{-4}s^{-1}$, and $b_{fr}=0.66^{o}C^{-1}$ are emperical paramete
 The eq. \ref{s10-24} can transfer to
 
 \begin{eqnarray}
-\frac{\partial g^{(w)(m)}}{\partial t}&=&-\frac{g^{(w)}(m)}{\tau_{fr}(m)}\label{s10-25}\\
+\frac{\partial g^{(w)(m)}}{\partial t}&=&-\frac{g^{(w)}(m)}{\tau_{fr}(m)}\\
 \tau_{fr,i}&=&\frac{\exp\bigl (b_{fr}(T_{0}-T)\bigr )}{a_{fr}m}\nonumber
 \end{eqnarray}
 
 From this equation, The mass change of i-th bin during $\Delta t$ is given as
 
 \begin{eqnarray}
-g_{i}^{(w)}(t+\Delta t)=g_{i}^{(w)}-Frz_{i}\label{s10-25}\\
+g_{i}^{(w)}(t+\Delta t)=g_{i}^{(w)}-Frz_{i}\\
 \left \{
 \begin{array}{r}
 g_{i}^{(plate)}(t+\Delta t)=g_{i}^{(plate)}+Frz_{i}\:\:\: (r_{w}<200\mu m)\\

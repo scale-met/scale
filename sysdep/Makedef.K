@@ -46,7 +46,7 @@ RDMA = -U_USE_RDMA
 FC     = mpifrtpx
 SFC    = frtpx
 
-FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
+FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2 -x100
 #FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -M

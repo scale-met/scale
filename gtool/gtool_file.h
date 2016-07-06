@@ -49,6 +49,7 @@ typedef struct{
   int32_t  step;
   real64_t time_start;
   real64_t time_end;
+  char     time_units[File_HMID];
   int32_t  fid;
 } datainfo_t; 
 
@@ -62,14 +63,35 @@ extern int32_t file_set_option( int32_t  fid,      // (in)
 				char    *key,      // (in)
 				char    *val);     // (in)
 
-extern int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
-				  int32_t     fid,     // (in)
-				  char       *varname, // (in)
-				  int32_t     step);   // (in)
+extern int32_t file_get_datainfo( datainfo_t *dinfo,    // (out)
+				  int32_t     fid,      // (in)
+				  char       *varname,  // (in)
+				  int32_t     step,     // (in)
+				  int32_t     suppress);// (in)
 
 extern int32_t file_read_data( void       *var,        // (out)
 			       datainfo_t *dinfo,      // (in)
 			       int32_t     precision); // (in)
+
+extern int32_t file_get_global_attribute_text( int32_t  fid,   // (in)
+					       char    *key,   // (in)
+					       char    *value, // (out)
+					       int32_t  len);  // (in)
+
+extern int32_t file_get_global_attribute_int( int32_t  fid,   // (in)
+					      char    *key,   // (in)
+					      int32_t *value, // (out)
+					      size_t   len);  // (in)
+
+extern int32_t file_get_global_attribute_float( int32_t  fid,   // (in)
+						char    *key,   // (in)
+						float   *value, // (out)
+						size_t   len);  // (in)
+
+extern int32_t file_get_global_attribute_double( int32_t  fid,   // (in)
+						 char    *key,   // (in)
+						 double  *value, // (out)
+						 size_t   len);  // (in)
 
 extern int32_t file_set_global_attribute_text( int32_t  fid,    // (in)
 					       char    *key,    // (in)
@@ -129,7 +151,8 @@ extern int32_t file_add_variable( int32_t *vid,     // (out)
 				  real64_t tint,    // (in)
 				  int32_t  tavg);   // (in)
 
-extern int32_t file_write_data( int32_t  vid,        // (in)
+extern int32_t file_write_data( int32_t  fid,        // (in)
+                                int32_t  vid,        // (in)
 				void    *var,        // (in)
 				real64_t t_start,    // (in)
 				real64_t t_end,      // (in)

@@ -1,10 +1,13 @@
 TOPDIR = ../..
 include $(TOPDIR)/Mkinclude
 
-all: html
+all: dox
 
 
-html:
+dox:
 	ruby $(TOPDIR)/utils/mkdoc.rb .
 
-.PHONY: html
+clean:
+	rm -rf dox
+
+.PHONY: dox clean

@@ -73,7 +73,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[LAND SFC] / Origin[SCALElib]'
 
     !--- read namelist
@@ -312,7 +312,7 @@ contains
                  - 2.0_RP * TCS(i,j) / DZG(i,j)
 
             ! convergence test with residual and error levels
-            if( abs( res      ) < LAND_SFC_SLAB_res_min .or. &
+            if( abs( res      ) < LAND_SFC_SLAB_res_min .OR. &
                 abs( res/dres ) < LAND_SFC_SLAB_err_min      ) then
               exit
             end if
