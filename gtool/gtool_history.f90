@@ -1921,7 +1921,8 @@ contains
           call Log('I', message)
        endif
 
-       call FileWrite( History_vid   (itemid),         & ! id
+       call FileWrite( History_fid   (itemid),         & ! file id
+                       History_vid   (itemid),         & ! variable id
                        History_varsum(1:isize,itemid), & ! data
                        time_str,                       & ! start time
                        time_end                        ) ! end   time

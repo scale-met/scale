@@ -374,6 +374,9 @@ int32_t file_set_global_attribute_text( int32_t  fid,    // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+#endif
   CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, key, strlen(value), value) );
 
   return SUCCESS_CODE;
@@ -389,6 +392,9 @@ int32_t file_set_global_attribute_int( int32_t  fid,   // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+#endif
   CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, key, NC_INT, len, value) );
 
   return SUCCESS_CODE;
@@ -404,6 +410,9 @@ int32_t file_set_global_attribute_float( int32_t  fid,   // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+#endif
   CHECK_ERROR( nc_put_att_float(ncid, NC_GLOBAL, key, NC_FLOAT, len, value) );
 
   return SUCCESS_CODE;
@@ -419,6 +428,9 @@ int32_t file_set_global_attribute_double( int32_t  fid,   // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
+#endif
   CHECK_ERROR( nc_put_att_double(ncid, NC_GLOBAL, key, NC_DOUBLE, len, value) );
 
   return SUCCESS_CODE;
@@ -450,15 +462,10 @@ int32_t file_set_tattr( int32_t  fid,   // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
 #endif
 
   CHECK_ERROR( nc_put_att_text(ncid, varid, key, strlen(val), val) );
-
-#ifdef NETCDF3
-  CHECK_ERROR( nc_enddef(ncid) );
-  files[fid]->defmode = 0;
-#endif
 
   return SUCCESS_CODE;
 }
@@ -483,7 +490,7 @@ int32_t file_put_axis( int32_t fid,        // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
 #endif
 
   if ( nc_inq_dimid(ncid, dim_name, &dimid) != NC_NOERR ) // check if existed
@@ -535,7 +542,7 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
 #endif
 
   dimids = malloc(sizeof(int)*ndims);
@@ -609,7 +616,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   vars[nvar]->count = NULL;
 
 #ifdef NETCDF3
-  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) { CHECK_ERROR( nc_redef(ncid) ); files[fid]->defmode = 1; }
 #endif
 
   // get time variable
@@ -761,11 +768,6 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   }
 #endif
 
-#ifdef NETCDF3
-  CHECK_ERROR( nc_enddef(ncid) );
-  files[fid]->defmode = 0;
-#endif
-
   vars[nvar]->varid = varid;
   *vid = nvar;
   nvar++;
@@ -773,7 +775,8 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_write_data( int32_t  vid,        // (in)
+int32_t file_write_data( int32_t  fid,        // (in)
+                         int32_t  vid,        // (in)
 			 void    *var,        // (in)
 			 real64_t t_start,    // (in)
 			 real64_t t_end,      // (in)
@@ -782,7 +785,13 @@ int32_t file_write_data( int32_t  vid,        // (in)
   int ncid, varid;
 
   if ( vars[vid] == NULL ) return ALREADY_CLOSED_CODE;
+
   ncid = vars[vid]->ncid;
+
+#ifdef NETCDF3
+  if ( files[fid]->defmode == 1) { CHECK_ERROR( nc_enddef(ncid) ); files[fid]->defmode = 0; }
+#endif
+
   varid = vars[vid]->varid;
   if ( vars[vid]->t != NULL ) { // have time dimension
     if ( vars[vid]->t->count < 0 ||  // first time

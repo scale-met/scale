@@ -710,7 +710,7 @@ contains
     allocate( var1D(dim1_max) )
 
     var1D(1:dim1_max) = var(dim1_S:dim1_E)
-    call FileWrite( vid, var1D(:), NOWSEC, NOWSEC ) ! [IN]
+    call FileWrite( fid, vid, var1D(:), NOWSEC, NOWSEC ) ! [IN]
 
     deallocate( var1D )
 
@@ -915,7 +915,7 @@ contains
     allocate( var2D(dim1_max,dim2_max) )
 
     var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-    call FileWrite( vid, var2D(:,:), NOWSEC, NOWSEC ) ! [IN]
+    call FileWrite( fid, vid, var2D(:,:), NOWSEC, NOWSEC ) ! [IN]
 
     deallocate( var2D )
 
@@ -1160,7 +1160,7 @@ contains
     allocate( var3D(dim1_max,dim2_max,dim3_max) )
 
     var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-    call FileWrite( vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
+    call FileWrite( fid, vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
 
     deallocate( var3D )
 
@@ -1335,7 +1335,7 @@ contains
 
        nowtime = (timetarg-1) * time_interval
        var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-       call FileWrite( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+       call FileWrite( fid, vid, var2D(:,:), nowtime, nowtime ) ! [IN]
     else
        nowtime = 0.0_DP
        do n = 1, step
@@ -1369,7 +1369,7 @@ contains
           end if
 
           var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-          call FileWrite( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+          call FileWrite( fid, vid, var2D(:,:), nowtime, nowtime ) ! [IN]
           nowtime = nowtime + time_interval
        enddo
     endif
@@ -1559,7 +1559,7 @@ contains
 
        nowtime = (timetarg-1) * time_interval
        var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-       call FileWrite( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+       call FileWrite( fid, vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
     else
        nowtime = 0.0_DP
        do n = 1, step
@@ -1601,7 +1601,7 @@ contains
           end if
 
           var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-          call FileWrite( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+          call FileWrite( fid, vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
           nowtime = nowtime + time_interval
        enddo
     endif

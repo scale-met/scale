@@ -602,6 +602,7 @@ contains
     do n = 1, nbin
       if( radc( n ) > rbnd ) then
         nbnd = n
+        exit
       endif
     enddo
     if( IO_L ) write(IO_FID_LOG,'(A,ES15.7,A)')  '*** Radius between cloud and rain is ', radc(nbnd), '[m]'
@@ -887,7 +888,7 @@ contains
              Gaer_ijk(n,ijkcount)   = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxaer
           enddo
 
-          if ( TEMP(k,i,j) < CONST_TEM00 ) then ! cold
+          if ( TEMP(k,i,j) < CONST_TEM00 .AND. nspc > 1 ) then ! cold
             ijkcount_cold = ijkcount_cold + 1
             index_cold(ijkcount_cold) = ijkcount
           else ! warm
@@ -1128,35 +1129,70 @@ contains
     do i = IS, IE
     do k = KS, KE
        do n = 1, nbnd
-         QHYD_out(k,i,j,1) = QHYD_out(k,i,j,1) + Ghyd_ijk(n,il,ijk) / DENS(k,i,j) * dxmic
+         QHYD_out(k,i,j,1) = QHYD_out(k,i,j,1) + QTRC(k,i,j,QQS+(il-1)*nbin+n)
        enddo
        do n = nbnd+1, nbin
-         QHYD_out(k,i,j,2) = QHYD_out(k,i,j,2) + Ghyd_ijk(n,il,ijk) / DENS(k,i,j) * dxmic
-       enddo
-       do m = ic, id
-        do n = 1, nbin
-         QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
-        enddo
-       enddo
-       do n = 1, nbin
-         QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + Ghyd_ijk(n,iss,ijk) / DENS(k,i,j) * dxmic
-       enddo
-       do n = 1, nbin
-         QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + Ghyd_ijk(n,ig,ijk) / DENS(k,i,j) * dxmic
-       enddo
-       do n = 1, nbin
-         QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + Ghyd_ijk(n,ih,ijk) / DENS(k,i,j) * dxmic
+         QHYD_out(k,i,j,2) = QHYD_out(k,i,j,2) + QTRC(k,i,j,QQS+(il-1)*nbin+n)
        enddo
     enddo
     enddo
     enddo
+    if( nspc > 1 ) then
+      do j = JS, JE
+      do i = IS, IE
+      do k = KS, KE
+         do m = ic, id
+          do n = 1, nbin
+           QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
+          enddo
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + Ghyd_ijk(n,iss,ijk) / DENS(k,i,j) * dxmic
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + Ghyd_ijk(n,ig,ijk) / DENS(k,i,j) * dxmic
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + Ghyd_ijk(n,ih,ijk) / DENS(k,i,j) * dxmic
+         enddo
+      enddo
+      enddo
+      enddo
+    endif
+
+    if( nspc > 1 ) then
+
+      do j = JS, JE
+      do i = IS, IE
+      do k = KS, KE
+         do m = ic, id
+          do n = 1, nbin
+           QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + QTRC(k,i,j,QQS+(m-1)*nbin+n)
+          enddo
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + QTRC(k,i,j,QQS+(iss-1)*nbin+n)
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + QTRC(k,i,j,QQS+(ig-1)*nbin+n)
+         enddo
+         do n = 1, nbin
+           QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + QTRC(k,i,j,QQS+(ih-1)*nbin+n)
+         enddo
+      enddo
+      enddo
+      enddo
+
+    endif
 
     call HIST_in( QHYD_out(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
     call HIST_in( QHYD_out(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
-    call HIST_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
-    call HIST_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
-    call HIST_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
-    call HIST_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
+    if( nspc > 1 ) then
+      call HIST_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
+      call HIST_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
+      call HIST_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
+      call HIST_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
+    endif
 
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
     SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
@@ -1639,21 +1675,23 @@ contains
                    evaporate(:),  & ! [OUT]
                    dtime          ) ! [IN]
 
-    call icephase( ijkmax,        & ! [IN]
-                   dens(:),       & ! [IN]
-                   pres(:),       & ! [IN]
-                   temp(:),       & ! [INOUT]
-                   qvap(:),       & ! [INOUT]
-                   gc  (:,:,:),   & ! [INOUT]
-                   dtime          ) ! [IN]
+    if( nspc > 1 ) then
+      call icephase( ijkmax,        & ! [IN]
+                     dens(:),       & ! [IN]
+                     pres(:),       & ! [IN]
+                     temp(:),       & ! [INOUT]
+                     qvap(:),       & ! [INOUT]
+                     gc  (:,:,:),   & ! [INOUT]
+                     dtime          ) ! [IN]
 
-    call mixphase( ijkmax,        & ! [IN]
-                   dens(:),       & ! [IN]
-                   pres(:),       & ! [IN]
-                   temp(:),       & ! [INOUT]
-                   qvap(:),       & ! [INOUT]
-                   gc  (:,:,:),   & ! [INOUT]
-                   dtime          ) ! [IN]
+      call mixphase( ijkmax,        & ! [IN]
+                     dens(:),       & ! [IN]
+                     pres(:),       & ! [IN]
+                     temp(:),       & ! [INOUT]
+                     qvap(:),       & ! [INOUT]
+                     gc  (:,:,:),   & ! [INOUT]
+                     dtime          ) ! [IN]
+    endif
 
     return
   end subroutine cndevpsbl
@@ -1699,21 +1737,23 @@ contains
                    ga(:,:)        ) ! [INOUT]
     endif
 
-    call icephase( ijkmax,        & ! [IN]
-                   dens(:),       & ! [IN]
-                   pres(:),       & ! [IN]
-                   temp(:),       & ! [INOUT]
-                   qvap(:),       & ! [INOUT]
-                   gc  (:,:,:),   & ! [INOUT]
-                   dtime          ) ! [IN]
+    if( nspc > 1 ) then
+      call icephase( ijkmax,        & ! [IN]
+                     dens(:),       & ! [IN]
+                     pres(:),       & ! [IN]
+                     temp(:),       & ! [INOUT]
+                     qvap(:),       & ! [INOUT]
+                     gc  (:,:,:),   & ! [INOUT]
+                     dtime          ) ! [IN]
 
-    call mixphase( ijkmax,        & ! [IN]
-                   dens(:),       & ! [IN]
-                   pres(:),       & ! [IN]
-                   temp(:),       & ! [INOUT]
-                   qvap(:),       & ! [INOUT]
-                   gc  (:,:,:),   & ! [INOUT]
-                   dtime          ) ! [IN]
+      call mixphase( ijkmax,        & ! [IN]
+                     dens(:),       & ! [IN]
+                     pres(:),       & ! [IN]
+                     temp(:),       & ! [INOUT]
+                     qvap(:),       & ! [INOUT]
+                     gc  (:,:,:),   & ! [INOUT]
+                     dtime          ) ! [IN]
+    endif
 
     return
   end subroutine cndevpsbla
@@ -1887,6 +1927,7 @@ contains
        qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
        cefliq = ( ssliq(ijk)+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)*qlevp(ijk)/cp/rvap/temp(ijk)/temp(ijk) )
        a = - cefliq*sumliq(ijk)*gtliq(ijk)/dens(ijk)   ! a of eq. (A.19) of Suzuki (2004)
+       a = a + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
 
        sliqtnd = zerosw * &
                ( ssliq(ijk) * ( exp( a*dtcnd(ijk) )-1.0_RP )/( a*dtcnd(ijk) ) &
@@ -2009,7 +2050,8 @@ contains
        do nn  = 1, loopflg(ijk)
        do myu = 1, il
        do mm  = 1, iflg( myu,ijk )
-          regene_gcn(ijk) = regene_gcn(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
+          regene_gcn(ijk) = regene_gcn(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic ) &
+                          * min( uadv(1,myu,ijk),0.0_RP )/( uadv(1,myu,ijk) + EPS )
        enddo
        enddo
        enddo
@@ -2263,6 +2305,7 @@ contains
 
         cefice = ( ssice(ijk)+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)*qlsbl(ijk)/cp/rvap/temp(ijk)/temp(ijk) )
         d = - cefice*sumice(ijk)*gtice(ijk)/dens(ijk)  ! d of (A.19) of Suzuki (2004)
+        d = d + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
 
         sicetnd = zerosw * &
                 ( ssice(ijk) * ( exp( d*dtcnd(ijk) )-1.0_RP )/( d*dtcnd(ijk) ) &
@@ -2383,7 +2426,8 @@ contains
        do nn  = 1, loopflg(ijk)
        do myu = 2, nspc
        do mm  = 1, iflg( myu,ijk )
-           dumm_regene(ijk) = dumm_regene(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
+           dumm_regene(ijk) = dumm_regene(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic ) &
+                            * min( uadv(1,myu,ijk),0.0_RP )/( uadv(1,myu,ijk) + EPS )
        enddo
        enddo
        enddo
@@ -2652,13 +2696,17 @@ contains
          c = - cef3*sumliq(ijk)*gtliq(ijk)/dens(ijk)  ! c of (A.19) of Suzuki (2004)
          d = - cef4*sumice(ijk)*gtice(ijk)/dens(ijk)  ! d of (A.19) of Suzuki (2004)
 
+         b = b + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
          !--- eigenvalues
          rmdplus = ( ( a+d ) + sqrt( ( a-d )**2 + 4.0_RP*b*c ) ) * 0.50_RP
          rmdmins = ( ( a+d ) - sqrt( ( a-d )**2 + 4.0_RP*b*c ) ) * 0.50_RP
 
+         rmdplus = rmdplus + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
+         rmdmins = rmdmins + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
+
          !--- supersaturation tendency
-         ssplus = ( ( rmdmins-a )*ssliq(ijk) - b*ssice(ijk) )/b/( rmdmins-rmdplus )
-         ssmins = ( ( a-rmdplus )*ssliq(ijk) + b*ssice(ijk) )/b/( rmdmins-rmdplus )
+         ssplus = ( ( rmdmins-a )*ssliq(ijk) - b*ssice(ijk) )/b/( rmdmins-rmdplus + EPS * ( 1.0_RP - zerosw ) )
+         ssmins = ( ( a-rmdplus )*ssliq(ijk) + b*ssice(ijk) )/b/( rmdmins-rmdplus + EPS * ( 1.0_RP - zerosw ) )
 
          tplus = ( exp( rmdplus*dtcnd(ijk) )-1.0_RP )/( rmdplus*dtcnd(ijk) ) &
                * ( 0.5_RP + sign( 0.5_RP,abs(rmdplus*dtcnd(ijk)-0.1_RP) ) ) &
@@ -2791,7 +2839,8 @@ contains
        do nn  = 1, loopflg(ijk)
        do myu = 1, nspc
        do mm  = 1, iflg( myu,ijk )
-           dumm_regene(ijk) = dumm_regene(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
+           dumm_regene(ijk) = dumm_regene(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic ) &
+                            * min( uadv(1,myu,ijk),0.0_RP )/( uadv(1,myu,ijk)+EPS )
        enddo
        enddo
        enddo
@@ -3853,7 +3902,7 @@ contains
        do ihydro = 1, MP_QA
        do k = KS, KE
        do j = JS, JE
-       do i = IS, JE
+       do i = IS, IE
          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
             sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
                                ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
@@ -3881,7 +3930,7 @@ contains
        do ihydro = 1, I_mp_QC
        do k = KS, KE
        do j = JS, JE
-       do i = IS, JE
+       do i = IS, IE
          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
             sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
                                ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
@@ -3931,6 +3980,7 @@ contains
     integer  :: i, j, k, iq, ihydro
     !---------------------------------------------------------------------------
 
+    Qe(:,:,:,:) = 0.0_RP
     if( nspc > 1 ) then
        do k = KS, KE
        do j = JS, JE

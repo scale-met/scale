@@ -410,14 +410,15 @@ void file_add_variable_( int32_t  *vid,         // (out)
   free( _dims );
 }
 
-void file_write_data_( int32_t  *vid,       // (in)
+void file_write_data_( int32_t  *fid,       // (in)
+                       int32_t  *vid,       // (in)
 		       void     *var,       // (in)
 		       real64_t *t_start,   // (in)
 		       real64_t *t_end,     // (in)
 		       int32_t  *precision, // (in)
 		       int32_t  *error)     // (out)
 {
-  *error = file_write_data( *vid, var, *t_start, *t_end, *precision );
+  *error = file_write_data( *fid, *vid, var, *t_start, *t_end, *precision );
 }
 
 void file_close_( int32_t *fid ,   // (in)

@@ -43,17 +43,16 @@ module mod_atmos_dyn_driver
 
   character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_LARGE_TYPE    = 'EULER'        ! Type of time integration
                                                                    ! 'RK3'
-  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE    = 'RK3WS2002'
-                                                                   ! 'RK4'
-                                                                   ! 'RK3'
-  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE   = 'EULER'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE    = 'RK4'
                                                                    ! 'RK3WS2002'
+                                                                   ! 'RK3'
+  character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE   = 'RK3WS2002'
+                                                                   ! 'EULER'
 
   character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_TYPE        = 'CD4'          ! Type of advective flux scheme (FVM)
-  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_TRACER_TYPE = 'CD4'
+  character(len=H_SHORT), public :: ATMOS_DYN_FVM_FLUX_TRACER_TYPE = 'UD3KOREN1993'
                                                                    ! 'CD2'
                                                                    ! 'UD3'
-                                                                   ! 'UD3KOREN1993'
                                                                    ! 'CD4'
                                                                    ! 'UD5'
                                                                    ! 'CD6'
@@ -69,7 +68,7 @@ module mod_atmos_dyn_driver
   ! Numerical filter
   integer,  private :: ATMOS_DYN_NUMERICAL_DIFF_order        = 1
   real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER  = 1.0E-4_RP ! nondimensional numerical diffusion for tracer
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef_TRACER  = 0.0_RP    ! nondimensional numerical diffusion for tracer
   real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact     = 1.0_RP
   logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate = .true.
 
@@ -82,11 +81,8 @@ module mod_atmos_dyn_driver
   ! Flux-Corrected Transport limiter
   logical,  private :: ATMOS_DYN_FLAG_FCT_momentum           = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_T                  = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER             = .true.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER             = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream       = .true.
-
-  ! Flux adjustment at lateral boundary
-  integer,  private :: ATMOS_DYN_adjust_flux_cell            = 1         ! number of cells adjusting lateral boundary flux
 
   !-----------------------------------------------------------------------------
 contains

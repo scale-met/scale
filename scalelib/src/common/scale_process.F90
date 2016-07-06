@@ -115,7 +115,7 @@ contains
     call MPI_Init(ierr)
 
     PRC_mpi_alive = .true.
-
+    PRC_UNIVERSAL_handler = MPI_ERRHANDLER_NULL
     call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
 
     comm = MPI_COMM_WORLD
@@ -251,6 +251,13 @@ contains
 
     integer :: ierr
     !---------------------------------------------------------------------------
+
+    if (PRC_UNIVERSAL_handler .NE. MPI_ERRHANDLER_NULL) then
+        call MPI_Errhandler_free(PRC_UNIVERSAL_handler, ierr)
+    endif
+    if (PRC_ABORT_handler .NE. MPI_ERRHANDLER_NULL) then
+        call MPI_Errhandler_free(PRC_ABORT_handler, ierr)
+    endif
 
     ! Stop MPI
     if ( PRC_mpi_alive ) then

@@ -84,9 +84,9 @@ contains
     endif
 
     if ( LOG_LEVEL > 0 ) then
-       LOG_DBUG = .false.
-    else
        LOG_DBUG = .true.
+    else
+       LOG_DBUG = .false.
     endif
 
     if ( open_file .and. LOUT ) then

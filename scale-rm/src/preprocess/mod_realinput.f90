@@ -274,7 +274,7 @@ contains
           write(NUM,'(I5.5)') n-1
           BASENAME_WITHNUM = trim(BASENAME_ATMOS)//"_"//NUM
        else
-          BASENAME_WITHNUM = trim(BASENAME_ORG)
+          BASENAME_WITHNUM = trim(BASENAME_ATMOS)
        end if
 
        if( IO_L ) write(IO_FID_LOG,*) ' '
@@ -618,6 +618,7 @@ contains
 
        skip_steps = max(NUMBER_OF_SKIP_TSTEPS - ns + 1, 0)
        ns = max(ns, NUMBER_OF_SKIP_TSTEPS+1)
+
        ! read all prepared data
        call ParentSurfaceInput( LAND_TEMP_org,        &
                                 LAND_WATER_org,       &
@@ -950,7 +951,7 @@ contains
     real(RP) :: qc(KA,IA,JA)
 
     integer :: k, i, j, iq
-    integer :: n
+    integer :: n, nn
     character(len=H_SHORT)  :: mptype_run
     !---------------------------------------------------------------------------
 
@@ -1004,6 +1005,7 @@ contains
     end if
 
     do n = skiplen+1, timelen
+       nn = n - skiplen
 
        if ( do_read_atom ) then
 
@@ -1014,7 +1016,8 @@ contains
                                         pres_org, dens_org, pott_org, & ! (out)
                                         qtrc_org,                     & ! (out)
                                         flg_bin, flg_intrp,           & ! (in)
-                                        basename_org, dims, n         ) ! (in)
+                                        basename_org, mptype_parent,  & ! (in)
+                                        dims, n         ) ! (in)
 
           case ( iWRFARW ) ! TYPE: WRF-ARW
 
@@ -1203,13 +1206,13 @@ contains
                                  IA, JA, KS, KE         )
 
        do iq = 1, QA
-          call INTRPNEST_interp_3d( qtrc    (:,:,:,iq,n),  &
+          call INTRPNEST_interp_3d( qtrc    (:,:,:,iq,nn), &
                                     qtrc_org(:,:,:,iq),    &
-                                    hfact   (:,:,:),     &
-                                    vfact   (:,:,:,:,:), &
-                                    kgrd    (:,:,:,:,:), &
-                                    igrd    (:,:,:),     &
-                                    jgrd    (:,:,:),     &
+                                    hfact   (:,:,:),       &
+                                    vfact   (:,:,:,:,:),   &
+                                    kgrd    (:,:,:,:,:),   &
+                                    igrd    (:,:,:),       &
+                                    jgrd    (:,:,:),       &
                                     IA, JA, KS, KE         )
        end do
 
@@ -1217,7 +1220,7 @@ contains
           ! use logarithmic density to interpolate more accurately
 
           dens_org = log( dens_org )
-          call INTRPNEST_interp_3d( dens    (:,:,:,n),   &
+          call INTRPNEST_interp_3d( dens    (:,:,:,nn),  &
                                     dens_org(:,:,:),     &
                                     hfact   (:,:,:),     &
                                     vfact   (:,:,:,:,:), &
@@ -1245,20 +1248,20 @@ contains
           qc = 0.0_RP
           if ( I_QC > 0 ) then
              do iq = QWS, QWE
-               qc(:,:,:) = qc(:,:,:) + QTRC(:,:,:,iq,n)
+               qc(:,:,:) = qc(:,:,:) + QTRC(:,:,:,iq,nn)
              enddo
           end if
 #endif
           ! make density & pressure profile in moist condition
-          call HYDROSTATIC_buildrho_real( dens    (:,:,:,n),      & ! [OUT]
-                                          temp    (:,:,:),        & ! [OUT]
-                                          pres    (:,:,:),        & ! [INOUT]
-                                          pott    (:,:,:),        & ! [IN]
-                                          qtrc    (:,:,:,I_QV,n), & ! [IN]
-                                          qc      (:,:,:)        ) ! [IN]
+          call HYDROSTATIC_buildrho_real( dens    (:,:,:,nn),      & ! [OUT]
+                                          temp    (:,:,:),         & ! [OUT]
+                                          pres    (:,:,:),         & ! [INOUT]
+                                          pott    (:,:,:),         & ! [IN]
+                                          qtrc    (:,:,:,I_QV,nn), & ! [IN]
+                                          qc      (:,:,:)          ) ! [IN]
 
-          call COMM_vars8( dens(:,:,:,n), 1 )
-          call COMM_wait ( dens(:,:,:,n), 1 )
+          call COMM_vars8( dens(:,:,:,nn), 1 )
+          call COMM_wait ( dens(:,:,:,nn), 1 )
 
        end if
 
@@ -1266,52 +1269,52 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE-1
-          momz(k,i,j,n) = velz(k,i,j) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+          momz(k,i,j,nn) = velz(k,i,j) * ( dens(k+1,i,j,nn) + dens(k,i,j,nn) ) * 0.5_RP
        end do
        end do
        end do
        do j = 1, JA
        do i = 1, IA
-          momz(KE,i,j,n) = 0.0_RP
+          momz(KE,i,j,nn) = 0.0_RP
        end do
        end do
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          rhot(k,i,j,n) = pott(k,i,j) * dens(k,i,j,n)
+          rhot(k,i,j,nn) = pott(k,i,j) * dens(k,i,j,nn)
        end do
        end do
        end do
        do j = 1, JA
        do i = 1, IA-1
        do k = KS, KE
-          momx(k,i,j,n) = velx(k,i,j) * ( dens(k  ,i+1,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+          momx(k,i,j,nn) = velx(k,i,j) * ( dens(k,i+1,j,nn) + dens(k,i,j,nn) ) * 0.5_RP
        end do
        end do
        end do
        do j = 1, JA
        do k = KS, KE
-          momx(k,IA,j,n) = velx(k,IA,j) * dens(k,IA,j,n)
+          momx(k,IA,j,nn) = velx(k,IA,j) * dens(k,IA,j,nn)
        end do
        end do
-       call COMM_vars8( momx(:,:,:,n), 1 )
+       call COMM_vars8( momx(:,:,:,nn), 1 )
 
        do j = 1, JA-1
        do i = 1, IA
        do k = KS, KE
-          momy(k,i,j,n) = vely(k,i,j) * ( dens(k  ,i  ,j+1,n) + dens(k,i,j,n) ) * 0.5_RP
+          momy(k,i,j,nn) = vely(k,i,j) * ( dens(k,i,j+1,nn) + dens(k,i,j,nn) ) * 0.5_RP
        end do
        end do
        end do
        do i = 1, IA
        do k = KS, KE
-          momy(k,i,JA,n) = vely(k,i,JA) * dens(k,i,JA,n)
+          momy(k,i,JA,nn) = vely(k,i,JA) * dens(k,i,JA,nn)
        end do
        end do
-       call COMM_vars8( momy(:,:,:,n), 2 )
+       call COMM_vars8( momy(:,:,:,nn), 2 )
 
-       call COMM_wait ( momx(:,:,:,n), 1, .false. )
-       call COMM_wait ( momy(:,:,:,n), 2, .false. )
+       call COMM_wait ( momx(:,:,:,nn), 1, .false. )
+       call COMM_wait ( momy(:,:,:,nn), 2, .false. )
 
     end do
 
@@ -1532,6 +1535,7 @@ contains
 
        lmdlid = iSCALE
        serial_land = .false.
+       do_read_land = .true.
        call ParentLandSetupSCALE( ldims ) ! (out)
        use_waterratio = .false.
 
@@ -1627,8 +1631,10 @@ contains
     select case(trim(filetype_ocean))
     case('SCALE-RM')
 
+       timelen = -1
        omdlid = iSCALE
        serial_ocean = .false.
+       do_read_ocean = .true.
        call ParentOceanSetupSCALE( odims )
        update_coord = .false.
 
@@ -1780,15 +1786,15 @@ contains
          ParentLandInputGrADS
     implicit none
 
-    real(RP),         intent(out) :: tg(LKMAX,IA,JA)
-    real(RP),         intent(out) :: strg(LKMAX,IA,JA)
-    real(RP),         intent(out) :: lst(IA,JA)
-    real(RP),         intent(out) :: albg(IA,JA,2)
-    real(RP),         intent(out) :: tc_urb(IA,JA)
-    real(RP),         intent(out) :: qc_urb(IA,JA)
-    real(RP),         intent(out) :: uc_urb(IA,JA)
-    real(RP),         intent(out) :: ust(IA,JA)
-    real(RP),         intent(out) :: albu(IA,JA,2)
+    real(RP),         intent(inout) :: tg(LKMAX,IA,JA)
+    real(RP),         intent(inout) :: strg(LKMAX,IA,JA)
+    real(RP),         intent(inout) :: lst(IA,JA)
+    real(RP),         intent(inout) :: albg(IA,JA,2)
+    real(RP),         intent(inout) :: tc_urb(IA,JA)
+    real(RP),         intent(inout) :: qc_urb(IA,JA)
+    real(RP),         intent(inout) :: uc_urb(IA,JA)
+    real(RP),         intent(inout) :: ust(IA,JA)
+    real(RP),         intent(inout) :: albu(IA,JA,2)
     real(RP),         intent(out) :: tw(:,:,:)
     real(RP),         intent(out) :: sst(:,:,:)
     real(RP),         intent(out) :: albw(:,:,:,:)
@@ -1848,7 +1854,7 @@ contains
     real(RP) :: pres
 
     integer :: i, j
-    integer :: n
+    integer :: n, nn
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -2001,6 +2007,7 @@ contains
 
 
     do n = skiplen+1, timelen
+       nn = n - skiplen
 
        if ( do_read_ocean ) then
 
@@ -2158,15 +2165,15 @@ contains
                                              odims(1), odims(2)            ) ! [IN]
        end if
 
-       call INTRPNEST_interp_2d( tw(:,:,n), tw_org(:,:), hfact(:,:,:), &
+       call INTRPNEST_interp_2d( tw(:,:,nn), tw_org(:,:), hfact(:,:,:), &
                                  igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( sst(:,:,n), sst_org(:,:), hfact(:,:,:), &
+       call INTRPNEST_interp_2d( sst(:,:,nn), sst_org(:,:), hfact(:,:,:), &
                                  igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( albw(:,:,I_LW,n), albw_org(:,:,I_LW), hfact(:,:,:), &
+       call INTRPNEST_interp_2d( albw(:,:,I_LW,nn), albw_org(:,:,I_LW), hfact(:,:,:), &
                                  igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( albw(:,:,I_SW,n), albw_org(:,:,I_SW), hfact(:,:,:), &
+       call INTRPNEST_interp_2d( albw(:,:,I_SW,nn), albw_org(:,:,I_SW), hfact(:,:,:), &
                                  igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( z0w(:,:,n),   z0w_org(:,:),   hfact(:,:,:), &
+       call INTRPNEST_interp_2d( z0w(:,:,nn),   z0w_org(:,:),   hfact(:,:,:), &
                                  igrd(:,:,:), jgrd(:,:,:), IA, JA )
 
        if ( first ) then
@@ -2175,8 +2182,8 @@ contains
           do j = 1, JA
           do i = 1, IA
              if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
-                lst(i,j)   = sst(i,j,n)
-                ust(i,j)   = sst(i,j,n)
+                lst(i,j)   = sst(i,j,nn)
+                ust(i,j)   = sst(i,j,nn)
              endif
           enddo
           enddo

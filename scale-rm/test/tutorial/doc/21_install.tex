@@ -9,14 +9,14 @@
 %====================================================================================
 ここでは、SCALEのインストール、および実行に必要な環境について説明する。
 以下に説明するもの以外に、SCALEは、理化学研究所 計算科学研究機構のスーパーコンピュータ「京」、
-及びFujitsu PRIME-HPC FX10の環境に対応している。
+及びFujitsu PRIME-HPC FX10の環境で動作確認されている。
 
-\noindent {\bf 必須のシステム環境}
+\noindent {\bf 推奨のシステム環境}
 \begin{itemize}
   \item {\bf システムハードウェア構成}
   \begin{itemize}
     \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上を搭載したシステムが望ましい。
-    \item {\bf Memory} : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が搭載されたシステムが必要となる。
+    \item {\bf Memory} : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が搭載されたシステムが必要となる (倍精度浮動小数点使用時)。
     \item {\bf HDD} : 実験内容によって変化するが、Tutorialの現実大気実験を実行するには約3GBのディスク空き容量が必要となる。
   \end{itemize}
 
@@ -30,14 +30,14 @@
   \item {\bf MPIライブラリ} : MPI1.0/2.0 に対応するMPIライブラリを必要とする。
         対応確認済みMPIライブラリについては、表\ref{tab:compatible_mpi}を参照のこと。
   \item {\bf ファイルI/Oライブラリ} : gzip、HDF5、NetCDF4を必要とする。\\
-        HDF5/NetCDF4の代わりに、NetCDF3でも動作するが、この場合はSCALEが提供する全ての機能が有効にならない可能性がある。
+        HDF5/NetCDF4の代わりに、NetCDF3でも動作するが、出力ファイルサイズが大きくなる。
   \end{itemize}
 \end{itemize}
 
 
 \noindent {\bf あると便利なシステム環境}
 \begin{itemize}
-  \item {\bf データ変換ツール}：wgrib、wgrib2やNCL等があれば、SCALEで直接サポートしないデータを外部入力データとして利用できる。現実大気実験のTutorialでは、実際にwgrib2を利用する。
+  \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、SCALEで読込可能な入力データの作成が可能である。現実大気実験のTutorialでは、実際にwgrib2を利用する。
   \item {\bf 描画環境}：GrADS、GPhys/Ruby-DCL、ncviewなどがあれば計算結果を描画することができる。
   \item {\bf 演算性能評価}：演算性能評価としてPAPIライブラリを使用が可能である。
 \end{itemize}
@@ -48,10 +48,10 @@
 \caption{対応確認済みOS（全てx86-64の64bit版）}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} OS名 & 確認済みバージョン & 備考 \\ \hline
- CentOS                & 6.5、6.6、7.0、7.1 & 左記以外も正常動作する可能性が高い \\ \hline
+ CentOS                & 6.5、6.6、7.0、7.1 &  \\ \hline
  openSUSE              & 13.2               &  \\ \hline
  SUSE Enterprise Linux & 11.1、11.3         & 11.1ではGNUコンパイラは使用不可 \\ \hline
- fedora                & 20                 & 左記以外も正常動作する可能性が高い \\ \hline
+ fedora                & 20                 &  \\ \hline
  Vine Linux            & 6.2、6.3           &  \\ \hline
  Mac OS X              & 10.10 Yosemite     &  \\ \hline
 \end{tabularx}
@@ -65,7 +65,7 @@
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} コンパイラ名 & 確認済みバージョン & 備考 \\ \hline
  GNU (gcc/gfortran)    & 4.4.x, 4.8.x           & 4.4.xではコンパイル時にWarningが出ることがある \\ \hline
- Intel (icc/ifort)     & 13.0.1、14.0.2、15.0.0 & 2013年以降のバージョンであれば左記以外も正常動作する可能性が高い\\ \hline
+ Intel (icc/ifort)     & 13.0.1、14.0.2、15.0.0 & 2013年以降のバージョンを推奨 \\ \hline
  PGI (gcc/pgfortran)   & 14.3                   &  \\ \hline
 \end{tabularx}
 \label{tab:compatible_compiler}
@@ -77,8 +77,8 @@
 \caption{対応確認済みMPIライブラリ}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} MPIライブラリ名 & 確認済みバージョン & 備考 \\ \hline
- openMPI   & 1.8.5                    & 左記以外も正常動作する可能性が高い \\ \hline
- Intel MPI & 4.0 Update 3、4.1.0、5.0 & 2013年以降のバージョンであれば左記以外も正常動作する可能性が高い \\ \hline
+ openMPI   & 1.8.5                    & \\ \hline
+ Intel MPI & 4.0 Update 3、4.1.0、5.0 & 2013年以降のバージョンを推奨 \\ \hline
  SGI MPT   & 2.05、2.09               & Intel Compilerとの組み合わせで確認済み \\ \hline
 \end{tabularx}
 \label{tab:compatible_mpi}
@@ -89,7 +89,7 @@
 \subsection{本書で想定する環境}
 \label{sec:assumed_env}
 %====================================================================================
-本書の以降すべての説明において、下記の環境であることを前提として説明をすすめる。
+本書の以降すべての説明は、下記の環境を前提として記述している。
 
 \begin{itemize}
  \item {\bf CPU} : 第\ref{sec:tuto_ideal}章は物理コアが2コア、第\ref{sec:tuto_real}章は4コアを搭載
@@ -103,14 +103,14 @@
 \section{ライブラリ環境のインストール}
 \label{sec:inst_env}
 %====================================================================================
-実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}章を参照のこと。
+実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、付録 \ref{sec:env_setting}章を参照のこと。
 第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは、
-それらのライブラリ環境がインストールされていることを想定して進める。
+それらのライブラリ環境がインストールされていることを前提として進める。
 
 描画ツールは何を使っても良いが、対応を確認している描画ツールについての詳細とインストール方法についての情報は
-Appendix \ref{sec:env_vis_tools}を参照のこと。
+付録 \ref{sec:env_vis_tools}を参照のこと。
 第3章および第4章のチュートリアルではGrADSを使って描画する方法を紹介する。
-その他にGphysを使って、結果のクイックビューを行う方法については、\ref{sec:quicklook}節にて説明する。
+その他にGPhysを使って結果のクイックビューを行う方法については、\ref{sec:quicklook}節にて説明する。
 
 
 
@@ -131,9 +131,9 @@ Appendix \ref{sec:env_vis_tools}を参照のこと。
  \url{http://scale.aics.riken.jp/ja/download/index.html}\\
 よりダウンロードできる。
 ソースコードのtarballファイルを展開すると\verb|scale/|というディレクトリができる。
-\verb|{ver}|には、``v020''等のバーション番号が入る。
+\verb|{ver}|には、``5.0.0''等のバーション番号が入る。
 \begin{verbatim}
- $ tar -zxvf SCALE_{ver}.tar.gz
+ $ tar -zxvf scale-{ver}.tar.gz
  $ ls
   scale/
 \end{verbatim}
@@ -143,7 +143,7 @@ Appendix \ref{sec:env_vis_tools}を参照のこと。
 \subsubsection{Makedefファイルと環境変数の設定}
 %-----------------------------------------------------------------------------------
 
-SCALEはコンパイルするとき、独自の環境変数"\verb|SCALE_SYS|"で与えられた名称に対応した、
+SCALEはコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
 Makedefファイルを使用してコンパイルが行われる。
 Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境に
 対応するファイル（\verb|Makedef.***|）が準備されており、これらの中から自分の環境にあったものを設定する。
@@ -177,9 +177,9 @@ Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境
 環境変数設定を\verb|.bashrc|などの環境設定ファイルに記述しておくと便利である。\\
 
 
-チュートリアル通り進めている場合は、Appendix \ref{sec:env_setting}章で説明する以外にPATHの設定をする
+チュートリアル通り進めている場合は、付録 \ref{sec:env_setting}章で説明する以外にPATHの設定をする
 必要はないが、環境が異なる場合には上述に加えて次の設定が必要になる。
-HDF5とNetCDF4について、下記のようにPATHを設定する。
+HDF5とNetCDF4については、下記のようにPATHを設定する。
 例えば、Intel コンパイラを利用して自分で"\verb|/opt|"下にHDF5とNetCDF4を
 インストールした場合を想定して、HDF5は\verb"/opt/hdf5"、netcdf4は\verb|/opt/netcdf|に
 それぞれインストールされている場合の例を示す。
@@ -187,41 +187,31 @@ HDF5とNetCDF4について、下記のようにPATHを設定する。
  $ export HDF5="/opt/hdf5"
  $ export NETCDF4="/opt/netcdf"
 \end{verbatim}
-
-Intel コンパイラ等を利用して自分でHDF5をインストールした場合は、ライブラリのインストールパスが
-異なるので、\verb"sysdep/Makdef.Linux64-intel-impi"ファイルの記述を変更する必要がある。
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb| ～～中略～～| \\
-\verb|###### NetCDF library| \\
-\verb|NETCDF_INCLUDE ?= -I$(NETCDF4)/include| \\
-\verb|NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib| \\
-\verb|　　　-lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz| \\
-\verb| ～～中略～～| \\
-\end{tabularx}
-}}\\
-上記のように、\verb"-L$(HDF5)/lib64"の記述を\verb"-L$(HDF5)/lib"に変更する。
-
+この場合は、ライブラリは \verb|lib| ディレクトリ以下に、インクルードファイルは \verb|include| ディレクトリ以下に配置されていることが前提となる。
+それ以外の場合は、適宜環境変数 \verb|NETCDF_INCLUDE|、 \verb|NETCDF_LIBS|を設定する必要がある。
+\begin{verbatim}
+ $ export NETCDF_INCLUDE="-I/opt/netcdf/include"
+ $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -hdf5_hl -lhdf5 -lm -lz"
+\end{verbatim}
 
 \subsubsection{コンパイル}
 %-----------------------------------------------------------------------------------
 
-チュートリアル用のディレクトリに移動して，makeコマンドによってコンパイルを行う．
+チュートリアル用のディレクトリに移動して、makeコマンドによってコンパイルを行う。
 \begin{verbatim}
  $ cd scale/scale-rm/test/tutorial/bin
  $ make -j 4
 \end{verbatim}
-\verb|make|のあとの \verb|"-j 4"| は，
-コンパイル時の並列数を示しており，
-例では4並列コンパイルを行うことを指示している．
-実行環境によっては並列数を増やすこともできる．
-このmakeによってSCALEライブラリ，およびSCALE-RMモデルのコンパイルが行われ，
+\verb|make|のあとの \verb|"-j 4"| は、
+コンパイル時の並列数を示しており、
+例では4並列コンパイルを行うことを指示している。
+実行環境によっては並列数を増やすこともできる。
+このmakeによってSCALE、およびSCALE-RMのコンパイルが行われ、
 結果として
 \begin{verbatim}
  scale-rm  scale-rm_init  scale-rm_pp
 \end{verbatim}
-の3つの実行ファイルが生成されていればコンパイルは成功である．\\
+の3つの実行ファイルが生成されていればコンパイルは成功である。\\
 
 下記のコマンドで作成された実行バイナリを消去できる。
 \begin{verbatim}
@@ -236,10 +226,10 @@ Intel コンパイラ等を利用して自分でHDF5をインストールした�
 
 {\bf 注意点}
 \begin{itemize}
-\item SCALEライブラリは，scaleのTOPディレクトリ直下の
- \verb|scale/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われ，
- \verb|".lib"|という名前の隠しディレクトリとして
- \verb|bin/|ディレクトリ内へコピーされる．
+\item SCALEは、scaleのTOPディレクトリ直下の
+ \verb|scale/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われる。
+ SCALE-RM は、コンパイルを実行したディレクトリの下の
+ \verb|".lib"|という名前の隠しディレクトリの中にコンパイルされたオブジェクトファイルが置かれ、実行バイナリファイルはカレントディレクトリにコピーされる。
 \item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 DEBUG=T"|としてコンパイルする。
 \item 細かくコンパイルオプションを変更したい場合は、\verb|Makedef.***|のファイルを編集する。
 %\item 開発版ソースコードをコンパイルしている場合，

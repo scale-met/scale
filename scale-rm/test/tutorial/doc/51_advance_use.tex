@@ -60,10 +60,10 @@ Face Pointと呼ぶ。そして、これらの頭文字と方向を組み合わ�
 500 mの均等間隔に設定されていることがわかる。例えば、2 kmの格子間隔で実験がしたければ、
 ここに``\verb|2000.D0|''と記述すればよい。
 
-一方、\verb|FX(:)|の項目は鉛直方向の格子点位置を直接指定している。ここには示していないが、同じconfigファイル中の
+一方、\verb|FZ(:)|の項目は鉛直方向の格子点位置を直接指定している。ここには示していないが、同じconfigファイル中の
 \verb|PARAM_INDEX|の項目に``\verb|KMAX = 97|''として鉛直97層であると設定されているため、最下層から再上層まで
 97層分の位置が指定されている。これを見れば、最下層の高度は80 m、最上層の高度は約20 kmであるとわかる。
-モデルの鉛直層とり方を変えたい場合は、これに習って\verb|KMAX|で指定した層数に応じて高度をしていすればよい
+モデルの鉛直層とり方を変えたい場合は、これに習って\verb|KMAX|で指定した層数に応じて高度を指定すればよい
 \footnote{独自の鉛直層設定の作成をサポートするツールとして、scale/scale-rm/util/makevgridのディレクトリ下に
 ``make\_vgrid.f90''というFortranプログラムといくつかのサンプルnamelistが用意されている。これをコンパイルして
 実行すれば直ちにconfigファイルに貼り付けて使用できるフォーマットになった鉛直層設定を作成できる。}
@@ -89,9 +89,11 @@ SCALEで計算される大気場が乖離することを防ぐための「緩和
 BDX_{i+1}={BDX_{i}}^{BUFFFACT} \nonumber \\
 BDX_{1}=DX_{default} \nonumber
 \end{eqnarray}
-ここで、$i$はバッファー領域内の格子点番号を表し、計算領域の内側から外側へ向かって番号が振られる。
-$DX_{default}$は\verb|PARAM_GRID|の項目で設定される元々の\verb|DX|を意味する。
-$i$の最大値$ni$は、$\sum_{i=1}^ni BDX_{i} > BUFFER_{DX}$の関係を達成する最小の数として決定される。
+ここで、$i$はバッファー領域内の格子点番号を表し、
+計算領域の内側から外側へ向かって番号が振られる。
+$DX_{default}$は\verb|PARAM_GRID|の項目で設定される
+元々の\verb|DX|を意味する。
+$i$の最大値$n$は、$\sum_{i=1}^n BDX_{i} > BUFFER_{DX}$の関係を達成する最小の数として決定される。
 したがって、``\verb|BUFFFACT = 1.0|''ならば、格子間隔をストレッチせずに等間隔であることを意味し、
 ``\verb|BUFFFACT = 1.2|''ならば、計算領域の内側から境界へ向けて、格子点間距離がもともとの格子間隔から
 1.2倍の割合で広がっていくことを意味する。\verb|BUFFFACT|の値を大きくすると、バッファー領域の幅が同じでも
@@ -166,13 +168,13 @@ X方向、およびY方向のMPIプロセスの割付設定は、configファイ
 
 \noindent まずMPIプロセス数については\verb|PRC_NUM_X = 2|、\verb|PRC_NUM_Y = 2|と設定されているため、
 X方向、Y方向ともに2分割されており、総計として4つのMPIプロセスを使用した計算となることがわかる。
-一方、1つのMPIプロセスあたりの格子点数については、\verb|IMAX = 30|、\verb|JMAX = 30|と指定されているため、
+一方、1つのMPIプロセスあたりの格子点数については、\verb|IMAX = 60|、\verb|JMAX = 60|と指定されているため、
 総格子点数としては、X方向、Y方向ともに$2 \times 60 = 120$となり120格子点である。
 同じconfigファイル内に記載されている\verb|PARAM_GRID|の項目の\verb|DX|、\verb|DY|はともに15000 m（15 km）
 と指定されているため、$120 grid \times 15 km = 1800 km$の計算から、$1800 km \times 1800 km$の正方形の計算領域
 が設定されていることがわかる。
 
-\verb|PARAM_PRC|の項目の\verb|PRC_PERIODIC_X|、\verb|PRC_PERIODIC_Y|は側面境界条件に関する設定である。
+\verb|PARAM_TIME|の項目の\verb|PRC_PERIODIC_X|、\verb|PRC_PERIODIC_Y|は側面境界条件に関する設定である。
 その詳細は次節で説明する。
 
 
@@ -538,22 +540,10 @@ SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER\_TYPEとA
 \end{tabularx}
 }}}\\
 
-を追記し、さらにinit.confに記載されているPARAM\_MKINITに「flg\_bin = .true. 」を追加する必要がある。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_MKINIT| \\
-\verb|　 　  〜　中略　〜|\\
-\verb| flg_bin = .true.| \\
-\verb|　 　  〜　中略　〜|\\
-\verb|/| \\
-\end{tabularx}
-}}}\\
-
+を追記する必要がある。\\
 この場合も、{\bf init.confとrun.confに記載されるPARAM\_BINは同一にする必要がある}。
 SUZUKI10を選択した時には、micpara.datという
-雲微物理の計算に必要なファイルが自動生成される。micpara.datがすでに存在する場合は存在する場合はあるものを利用するが、
+雲微物理の計算に必要なファイルが自動生成される。micpara.datがすでに存在する場合はあるものを利用するが、
 nbinが変わると新たに作成しなければならない。micpara.datにnbinの情報が記載されているが、もしrun.confに記載されるnbinと
 micpara.datに記載されているnbinが異なれば、\\
 

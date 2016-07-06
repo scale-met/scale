@@ -66,6 +66,7 @@ module scale_comm
   public :: COMM_horizontal_min
   public :: COMM_gather
   public :: COMM_bcast
+  public :: COMM_cleanup
 
   interface COMM_vars
      module procedure COMM_vars_2D
@@ -3489,6 +3490,41 @@ contains
 
     return
   end subroutine copy_boundary_2D
+
+  subroutine COMM_cleanup
+    use mpi
+    implicit none
+
+    NAMELIST / PARAM_COMM / &
+       COMM_vsize_max_pc, &
+       COMM_USE_MPI_PC
+
+    integer :: i, j, ierr
+    !---------------------------------------------------------------------------
+
+    deallocate( recvpack_W2P )
+    deallocate( recvpack_E2P )
+    deallocate( sendpack_P2W )
+    deallocate( sendpack_P2E )
+#ifdef DEBUG
+    deallocate( use_packbuf )
+#endif
+
+    deallocate( req_cnt )
+    deallocate( req_list )
+
+    if ( COMM_USE_MPI_PC ) then
+       do j=1, COMM_vsize_max_pc
+          do i=1, COMM_nreq_MAX+1
+             if (preq_list(i,j) .NE. MPI_REQUEST_NULL) &
+                 call MPI_REQUEST_FREE(preq_list(i,j), ierr)
+          enddo
+       enddo
+       deallocate( preq_cnt )
+       deallocate( preq_list )
+       deallocate( pseqid )
+    end if
+  end subroutine COMM_cleanup
 
 end module scale_comm
 !-------------------------------------------------------------------------------

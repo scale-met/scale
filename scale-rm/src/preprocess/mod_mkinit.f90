@@ -703,12 +703,6 @@ contains
     real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]
     real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]
 
-    real(RP) :: d_min_inp(3)
-    real(RP) :: d_max_inp(3)
-    real(RP) :: k_min_inp(3)
-    real(RP) :: k_max_inp(3)
-    integer  :: n_kap_inp(3)
-
     real(RP), parameter :: d_min_def = 1.e-9_RP ! default lower bound of 1st size bin
     real(RP), parameter :: d_max_def = 1.e-5_RP ! upper bound of last size bin
     integer,  parameter :: n_kap_def = 1        ! number of kappa bins
@@ -716,6 +710,12 @@ contains
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
     real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]
     real(RP), parameter :: cleannumber = 1.e-3_RP
+
+    real(RP) :: d_min_inp(3) = d_min_def
+    real(RP) :: d_max_inp(3) = d_max_def
+    real(RP) :: k_min_inp(3) = k_min_def
+    real(RP) :: k_max_inp(3) = k_max_def
+    integer  :: n_kap_inp(3) = n_kap_def
 
     NAMELIST / PARAM_AERO / &
        m0_init, &
@@ -4941,7 +4941,7 @@ enddo
     enddo
     enddo
 
-    if( AETRACER_TYPE /= 'KAJINO13' ) then
+    if( AETRACER_TYPE == 'KAJINO13' ) then
       call AEROSOL_setup
     endif
 
@@ -5077,7 +5077,7 @@ enddo
 
     call flux_setup
 
-    if ( AETRACER_TYPE /= 'KAJINO13' ) then
+    if( AETRACER_TYPE == 'KAJINO13' ) then
       call AEROSOL_setup
     endif
 

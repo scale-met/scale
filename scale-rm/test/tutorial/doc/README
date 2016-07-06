@@ -4,7 +4,7 @@
 ----------------------------------------------
 
 * make a PDF file
- >$ sh usersguide_make.sh
+ >$ make pdf
 
  then you will get a pdf file "scale_users_guide"
  in the current directory.
@@ -17,4 +17,4 @@
   http://www.ctan.org/tex-archive/macros/latex/contrib/wallpaper
 
 ----------------------------------------------
-(last update: 9 July, 2015)
+(last update: 16 Jun, 2016)

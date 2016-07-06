@@ -2006,6 +2006,8 @@ contains
     enddo
     enddo
 
+    velw(:,:,:,:) = 0.0_RP
+
     do step = 1, MP_NSTEP_SEDIMENTATION
 
        call MP_terminal_velocity( velw(:,:,:,:), & ! [OUT]

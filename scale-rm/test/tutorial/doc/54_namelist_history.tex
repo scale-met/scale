@@ -74,7 +74,7 @@ history出力ファイルへの変数の追加は、下記のフォーマット�
  出力タイミングの直前のTINTERVAL間の平均値\\ \hline
  DATATYPE               & 出力値の型；''REAL4'',''REAL8''など\\ \hline
  ZINTERP                & .false.=モデル面、.true.=Z面（FZ面$?$、CZ面$?$）の値として出力\\ \hline
- HISTORY\_OUTPUT\_STEP0 & .false.=初期時刻(t=0)の値を出力、.true.=出力しない；\verb|&PARAM_HISTORY|でのみ有効\\ \hline
+ HISTORY\_OUTPUT\_STEP0 & .true.=初期時刻(t=0)の値を出力、.false.=出力しない；\verb|&PARAM_HISTORY|でのみ有効\\ \hline
 \end{tabularx}
 \label{tab:history_settings}
 \end{center}

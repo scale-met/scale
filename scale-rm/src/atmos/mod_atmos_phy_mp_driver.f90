@@ -228,7 +228,7 @@ contains
        call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', nohalo=.true. )
-       call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number', '#/m3/s', nohalo=.true. )
+       call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number', 'num/m3/s', nohalo=.true. )
 
        call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP', 'kg/m3/s'  , nohalo=.true. )
        call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP', 'kg/m2/s2' , nohalo=.true. )

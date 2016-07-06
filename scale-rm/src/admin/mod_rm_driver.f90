@@ -90,7 +90,8 @@ contains
     use scale_fileio, only: &
        FILEIO_setup
     use scale_comm, only: &
-       COMM_setup
+       COMM_setup , &
+       COMM_cleanup
     use scale_topography, only: &
        TOPO_setup
     use scale_landuse, only: &
@@ -398,6 +399,8 @@ contains
     call PROF_rapstart('Monit', 2)
     call MONIT_finalize
     call PROF_rapend  ('Monit', 2)
+
+    call COMM_cleanup
 
     call PROF_rapstart('File', 2)
     call FileCloseAll

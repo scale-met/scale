@@ -8,6 +8,9 @@ PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
+ifndef PREPDIR
+PREPDIR     = ..
+endif
 
 # user-defined source files
 CODE_DIR    = .
@@ -25,7 +28,7 @@ TPROC       = 9
 # required data (parameters,distributed files)
 DATDIR      = ../../../data
 DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm,land/param.bucket.conf
-DATDISTS    = ../topo/topo,../landuse/landuse
+DATDISTS    = $(PREPDIR)/topo/topo,$(PREPDIR)/landuse/landuse
 
 
 

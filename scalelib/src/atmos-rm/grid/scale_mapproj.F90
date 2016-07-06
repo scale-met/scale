@@ -22,9 +22,6 @@ module scale_mapproj
   use scale_grid_index
 
   use scale_const, only: &
-     PI     => CONST_PI,     &
-     D2R    => CONST_D2R,    &
-     RADIUS => CONST_RADIUS, &
      UNDEF  => CONST_UNDEF
   !-----------------------------------------------------------------------------
   implicit none
@@ -102,31 +99,35 @@ module scale_mapproj
                                                ! 'MER'
                                                ! 'EC'
 
-  real(RP), private :: MPRJ_hemisphere         ! hemisphere flag: 1=north, -1=south
+  real(DP), private :: MPRJ_hemisphere         ! hemisphere flag: 1=north, -1=south
 
-  real(RP), private :: MPRJ_basepoint_x        ! position of base point in the model [m]
-  real(RP), private :: MPRJ_basepoint_y        ! position of base point in the model [m]
+  real(DP), private :: MPRJ_basepoint_x        ! position of base point in the model [m]
+  real(DP), private :: MPRJ_basepoint_y        ! position of base point in the model [m]
 
-  real(RP), private :: MPRJ_pole_x             ! position of north/south pole in the model [m]
-  real(RP), private :: MPRJ_pole_y             ! position of north/south pole in the model [m]
-  real(RP), private :: MPRJ_eq_x               ! position of equator at the base lon. in the model [m]
-  real(RP), private :: MPRJ_eq_y               ! position of equator at the base lon. in the model [m]
+  real(DP), private :: MPRJ_pole_x             ! position of north/south pole in the model [m]
+  real(DP), private :: MPRJ_pole_y             ! position of north/south pole in the model [m]
+  real(DP), private :: MPRJ_eq_x               ! position of equator at the base lon. in the model [m]
+  real(DP), private :: MPRJ_eq_y               ! position of equator at the base lon. in the model [m]
 
-  real(RP), private :: MPRJ_rotation =  0.0_RP ! rotation factor (only for 'NONE' type)
+  real(DP), private :: MPRJ_rotation =  0.0_DP ! rotation factor (only for 'NONE' type)
 
-  real(RP), private :: MPRJ_LC_lat1  = 30.0_RP ! standard latitude1 for L.C. projection [deg]
-  real(RP), private :: MPRJ_LC_lat2  = 60.0_RP ! standard latitude2 for L.C. projection [deg]
-  real(RP), private :: MPRJ_LC_c               ! conformal factor
-  real(RP), private :: MPRJ_LC_fact            ! pre-calc factor
+  real(DP), private :: MPRJ_LC_lat1  = 30.0_DP ! standard latitude1 for L.C. projection [deg]
+  real(DP), private :: MPRJ_LC_lat2  = 60.0_DP ! standard latitude2 for L.C. projection [deg]
+  real(DP), private :: MPRJ_LC_c               ! conformal factor
+  real(DP), private :: MPRJ_LC_fact            ! pre-calc factor
 
-  real(RP), private :: MPRJ_PS_lat             ! standard latitude1 for P.S. projection [deg]
-  real(RP), private :: MPRJ_PS_fact            ! pre-calc factor
+  real(DP), private :: MPRJ_PS_lat             ! standard latitude1 for P.S. projection [deg]
+  real(DP), private :: MPRJ_PS_fact            ! pre-calc factor
 
-  real(RP), private :: MPRJ_M_lat              ! standard latitude1 for Mer. projection [deg]
-  real(RP), private :: MPRJ_M_fact             ! pre-calc factor
+  real(DP), private :: MPRJ_M_lat              ! standard latitude1 for Mer. projection [deg]
+  real(DP), private :: MPRJ_M_fact             ! pre-calc factor
 
-  real(RP), private :: MPRJ_EC_lat             ! standard latitude1 for E.C. projection [deg]
-  real(RP), private :: MPRJ_EC_fact            ! pre-calc factor
+  real(DP), private :: MPRJ_EC_lat             ! standard latitude1 for E.C. projection [deg]
+  real(DP), private :: MPRJ_EC_fact            ! pre-calc factor
+
+  real(DP), private :: PI
+  real(DP), private :: D2R
+  real(DP), private :: RADIUS
 
   !-----------------------------------------------------------------------------
 contains
@@ -135,6 +136,10 @@ contains
   subroutine MPRJ_setup( DOMAIN_CENTER_X, DOMAIN_CENTER_Y )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+     PI_RP     => CONST_PI,     &
+     D2R_RP    => CONST_D2R,    &
+     RADIUS_RP => CONST_RADIUS
     implicit none
 
     real(RP), intent(in) :: DOMAIN_CENTER_X !< center position of global domain [m]: x
@@ -158,6 +163,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[MAPPROJ]/Categ[GRID]'
+
+    PI     = real(PI_RP,     kind=DP)
+    D2R    = real(D2R_RP,    kind=DP)
+    RADIUS = real(RADIUS_RP, kind=DP)
 
     MPRJ_basepoint_x = UNDEF
     MPRJ_basepoint_y = UNDEF
@@ -419,8 +428,8 @@ contains
     real(RP), intent(out) :: lon ! [rad]
     real(RP), intent(out) :: lat ! [rad]
 
-    real(RP) :: gno(2)
-    real(RP) :: rho, gmm
+    real(DP) :: gno(2)
+    real(DP) :: rho, gmm
     !---------------------------------------------------------------------------
 
     gno(1) = ( (y-MPRJ_basepoint_y) * sin(MPRJ_rotation*D2R) &
@@ -431,7 +440,7 @@ contains
     rho = sqrt( gno(1) * gno(1) + gno(2) * gno(2) )
     gmm = atan( rho )
 
-    if ( rho == 0.0_RP ) then
+    if ( rho == 0.0_DP ) then
        lon = MPRJ_basepoint_lon * D2R
        lat = MPRJ_basepoint_lat * D2R
     else
@@ -461,17 +470,19 @@ contains
     real(RP), intent(out) :: x
     real(RP), intent(out) :: y
 
-    real(RP) :: gno(2)
-    real(RP) :: cos_gmm
+    real(DP) :: lat_d
+    real(DP) :: gno(2)
+    real(DP) :: cos_gmm
     !---------------------------------------------------------------------------
     ! http://mathworld.wolfram.com/GnomonicProjection.html
 
-    cos_gmm = sin(MPRJ_basepoint_lat*D2R) * sin(lat) + &
-          cos(MPRJ_basepoint_lat*D2R) * cos(lat) * cos(lon - MPRJ_basepoint_lon*D2R)
+    lat_d = real(lat,kind=DP)
+    cos_gmm = sin(MPRJ_basepoint_lat*D2R) * sin(lat_d) &
+            + cos(MPRJ_basepoint_lat*D2R) * cos(lat_d) * cos(lon - MPRJ_basepoint_lon*D2R)
 
-    gno(1) = (cos(lat) * sin(lon - MPRJ_basepoint_lon*D2R)) / cos_gmm
-    gno(2) = (cos(MPRJ_basepoint_lat*D2R) * sin(lat) - &
-              sin(MPRJ_basepoint_lat*D2R) * cos(lat) * cos(lon - MPRJ_basepoint_lon*D2R)) / cos_gmm
+    gno(1) = (cos(lat_d) * sin(lon - MPRJ_basepoint_lon*D2R)) / cos_gmm
+    gno(2) = (cos(MPRJ_basepoint_lat*D2R) * sin(lat_d) &
+            - sin(MPRJ_basepoint_lat*D2R) * cos(lat_d) * cos(lon - MPRJ_basepoint_lon*D2R)) / cos_gmm
 
     x = MPRJ_basepoint_x + (gno(1) * cos(MPRJ_rotation*D2R) &
                           - gno(2) * sin(MPRJ_rotation*D2R)) * RADIUS
@@ -537,8 +548,8 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP) :: lat1rot, lat2rot
-    real(RP) :: dlon, latrot, dist
+    real(DP) :: lat1rot, lat2rot
+    real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
     if ( MPRJ_LC_lat1 >= MPRJ_LC_lat2 ) then
@@ -547,24 +558,24 @@ contains
     endif
 
     ! check hemisphere: 1=north, -1=south
-    MPRJ_hemisphere = sign(1.0_RP,MPRJ_LC_lat1+MPRJ_LC_lat2)
+    MPRJ_hemisphere = sign(1.0_DP,MPRJ_LC_lat1+MPRJ_LC_lat2)
 
-    lat1rot = 0.5_RP*PI - MPRJ_hemisphere * MPRJ_LC_lat1 * D2R
-    lat2rot = 0.5_RP*PI - MPRJ_hemisphere * MPRJ_LC_lat2 * D2R
+    lat1rot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_LC_lat1 * D2R
+    lat2rot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_LC_lat2 * D2R
 
     ! calc conformal factor c
     MPRJ_LC_c = ( log( sin(lat1rot) ) - log( sin(lat2rot) ) ) &
-              / ( log( tan(0.5_RP*lat1rot) ) - log( tan(0.5_RP*lat2rot) ) )
+              / ( log( tan(0.5_DP*lat1rot) ) - log( tan(0.5_DP*lat2rot) ) )
 
     ! pre-calc factor
-    MPRJ_LC_fact = sin(lat1rot) / MPRJ_LC_c / tan(0.5_RP*lat1rot)**MPRJ_LC_c
+    MPRJ_LC_fact = sin(lat1rot) / MPRJ_LC_c / tan(0.5_DP*lat1rot)**MPRJ_LC_c
 
     ! calc (x,y) at pole point
-    dlon = 0.0_RP
+    dlon = 0.0_DP
 
-    latrot = 0.5_RP*PI - MPRJ_hemisphere * MPRJ_basepoint_lat * D2R
+    latrot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_basepoint_lat * D2R
 
-    dist = MPRJ_LC_fact * RADIUS * tan(0.5_RP*latrot)**MPRJ_LC_c
+    dist = MPRJ_LC_fact * RADIUS * tan(0.5_DP*latrot)**MPRJ_LC_c
 
     MPRJ_pole_x = MPRJ_basepoint_x -                   dist * sin(MPRJ_LC_c*dlon)
     MPRJ_pole_y = MPRJ_basepoint_y + MPRJ_hemisphere * dist * cos(MPRJ_LC_c*dlon)
@@ -595,7 +606,7 @@ contains
     real(RP), intent(out) :: lon ! [rad]
     real(RP), intent(out) :: lat ! [rad]
 
-    real(RP) :: xx, yy, dist
+    real(DP) :: xx, yy, dist
     !---------------------------------------------------------------------------
 
     xx =                    ( x - MPRJ_pole_x ) / RADIUS / MPRJ_LC_fact
@@ -604,10 +615,10 @@ contains
     dist = sqrt( xx*xx + yy*yy )
 
     lon = MPRJ_basepoint_lon * d2r + atan2(xx,yy) / MPRJ_LC_c
-    lon = mod( lon+2.0_RP*PI, 2.0_RP*PI )
+    lon = mod( lon+2.0_DP*PI, 2.0_DP*PI )
 
     ! check hemisphere: 1=north, -1=south
-    lat = MPRJ_hemisphere * ( 0.5_RP*PI - 2.0_RP*atan( dist**(1.0_RP/MPRJ_LC_c) ) )
+    lat = MPRJ_hemisphere * ( 0.5_DP*PI - 2.0_DP*atan( dist**(1.0_DP/MPRJ_LC_c) ) )
 
     return
   end subroutine MPRJ_LambertConformal_xy2lonlat
@@ -626,16 +637,16 @@ contains
     real(RP), intent(out) :: x
     real(RP), intent(out) :: y
 
-    real(RP) :: dlon, latrot, dist
+    real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
-    if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
+    if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
+    if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
-    latrot = 0.5_RP*PI - lat
+    latrot = 0.5_DP*PI - lat
 
-    dist = MPRJ_LC_fact * RADIUS * tan(0.5_RP*latrot)**MPRJ_LC_c
+    dist = MPRJ_LC_fact * RADIUS * tan(0.5_DP*latrot)**MPRJ_LC_c
 
     x = MPRJ_pole_x +                   dist * sin(MPRJ_LC_c*dlon)
     y = MPRJ_pole_y - MPRJ_hemisphere * dist * cos(MPRJ_LC_c*dlon)
@@ -655,15 +666,15 @@ contains
     real(RP), intent(out) :: m1 (IA,JA)
     real(RP), intent(out) :: m2 (IA,JA)
 
-    real(RP) :: latrot
+    real(DP) :: latrot
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = 1, JA
     do i = 1, IA
-       latrot = 0.5_RP*PI - MPRJ_hemisphere * lat(i,j)
+       latrot = 0.5_DP*PI - MPRJ_hemisphere * lat(i,j)
 
-       m1(i,j) = MPRJ_LC_fact / sin(latrot) * MPRJ_LC_c * tan(0.5_RP*latrot)**MPRJ_LC_c
+       m1(i,j) = MPRJ_LC_fact / sin(latrot) * MPRJ_LC_c * tan(0.5_DP*latrot)**MPRJ_LC_c
        m2(i,j) = m1(i,j)
     enddo
     enddo
@@ -682,13 +693,13 @@ contains
     real(RP), intent(in)  :: lon   ! [rad]
     real(RP), intent(in)  :: lat   ! [rad]
 
-    real(RP) :: dlon
-    real(RP) :: alpha
+    real(DP) :: dlon
+    real(DP) :: alpha
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    if( dlon >  PI ) dlon = dlon - PI*2.0_RP
-    if( dlon < -PI ) dlon = dlon + PI*2.0_RP
+    if( dlon >  PI ) dlon = dlon - PI*2.0_DP
+    if( dlon < -PI ) dlon = dlon + PI*2.0_DP
     alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
     rotc(1) = cos( alpha )
     rotc(2) = sin( alpha )
@@ -707,8 +718,8 @@ contains
     real(RP), intent(in)  :: lon (IA,JA) ! [rad]
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
-    real(RP) :: dlon
-    real(RP) :: alpha
+    real(DP) :: dlon
+    real(DP) :: alpha
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -716,8 +727,8 @@ contains
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       if( dlon >  PI ) dlon = dlon - PI*2.0_RP
-       if( dlon < -PI ) dlon = dlon + PI*2.0_RP
+       if( dlon >  PI ) dlon = dlon - PI*2.0_DP
+       if( dlon < -PI ) dlon = dlon + PI*2.0_DP
        alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
        rotc(i,j,1) = cos( alpha )
        rotc(i,j,2) = sin( alpha )
@@ -732,24 +743,24 @@ contains
   subroutine MPRJ_PolarStereographic_setup
     implicit none
 
-    real(RP) :: lat0
-    real(RP) :: dlon, latrot, dist
+    real(DP) :: lat0
+    real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
     ! check hemisphere: 1=north, -1=south
-    MPRJ_hemisphere = sign(1.0_RP,MPRJ_PS_lat)
+    MPRJ_hemisphere = sign(1.0_DP,MPRJ_PS_lat)
 
     lat0 = MPRJ_hemisphere * MPRJ_PS_lat * D2R
 
     ! pre-calc factor
-    MPRJ_PS_fact = 1.0_RP + sin(lat0)
+    MPRJ_PS_fact = 1.0_DP + sin(lat0)
 
     ! calc (x,y) at pole point
-    dlon = 0.0_RP
+    dlon = 0.0_DP
 
-    latrot = 0.5_RP*PI - MPRJ_hemisphere * MPRJ_basepoint_lat * D2R
+    latrot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_basepoint_lat * D2R
 
-    dist = MPRJ_PS_fact * RADIUS * tan(0.5_RP*latrot)
+    dist = MPRJ_PS_fact * RADIUS * tan(0.5_DP*latrot)
 
     MPRJ_pole_x = MPRJ_basepoint_x -                   dist * sin(dlon)
     MPRJ_pole_y = MPRJ_basepoint_y + MPRJ_hemisphere * dist * cos(dlon)
@@ -778,7 +789,7 @@ contains
     real(RP), intent(out) :: lon ! [rad]
     real(RP), intent(out) :: lat ! [rad]
 
-    real(RP) :: xx, yy, dist
+    real(DP) :: xx, yy, dist
     !---------------------------------------------------------------------------
 
     xx =                    ( x - MPRJ_pole_x ) / RADIUS / MPRJ_PS_fact
@@ -787,8 +798,8 @@ contains
     dist = sqrt( xx*xx + yy*yy )
 
     lon = MPRJ_basepoint_lon * D2R + atan2(xx,yy)
-    lon = mod( lon+2.0_RP*PI, 2.0_RP*PI )
-    lat = MPRJ_hemisphere * ( 0.5_RP*PI - 2.0_RP*atan(dist) )
+    lon = mod( lon+2.0_DP*PI, 2.0_DP*PI )
+    lat = MPRJ_hemisphere * ( 0.5_DP*PI - 2.0_DP*atan(dist) )
 
     return
   end subroutine MPRJ_PolarStereographic_xy2lonlat
@@ -807,14 +818,14 @@ contains
     real(RP), intent(out) :: x
     real(RP), intent(out) :: y
 
-    real(RP) :: dlon, latrot, dist
+    real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
 
-    latrot = 0.5_RP*PI - lat
+    latrot = 0.5_DP*PI - lat
 
-    dist = MPRJ_PS_fact * RADIUS * tan(0.5_RP*latrot)
+    dist = MPRJ_PS_fact * RADIUS * tan(0.5_DP*latrot)
 
     x = MPRJ_pole_x +                   dist * sin(dlon)
     y = MPRJ_pole_y - MPRJ_hemisphere * dist * cos(dlon)
@@ -839,7 +850,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       m1(i,j) = MPRJ_PS_fact / ( 1.0_RP + sin(MPRJ_hemisphere*lat(i,j)) )
+       m1(i,j) = MPRJ_PS_fact / ( 1.0_DP + sin(MPRJ_hemisphere*lat(i,j)) )
        m2(i,j) = m1(i,j)
     enddo
     enddo
@@ -858,13 +869,13 @@ contains
     real(RP), intent(in)  :: lon   ! [rad]
     real(RP), intent(in)  :: lat   ! [rad]
 
-    real(RP) :: dlon
-    real(RP) :: alpha
+    real(DP) :: dlon
+    real(DP) :: alpha
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    if( dlon >  PI ) dlon = dlon - PI*2.0_RP
-    if( dlon < -PI ) dlon = dlon + PI*2.0_RP
+    if( dlon >  PI ) dlon = dlon - PI*2.0_DP
+    if( dlon < -PI ) dlon = dlon + PI*2.0_DP
     alpha = - dlon * MPRJ_hemisphere
     rotc(1) = cos( alpha )
     rotc(2) = sin( alpha )
@@ -883,8 +894,8 @@ contains
     real(RP), intent(in)  :: lon (IA,JA) ! [rad]
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
-    real(RP) :: dlon
-    real(RP) :: alpha
+    real(DP) :: dlon
+    real(DP) :: alpha
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -892,8 +903,8 @@ contains
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       if( dlon >  PI ) dlon = dlon - PI*2.0_RP
-       if( dlon < -PI ) dlon = dlon + PI*2.0_RP
+       if( dlon >  PI ) dlon = dlon - PI*2.0_DP
+       if( dlon < -PI ) dlon = dlon + PI*2.0_DP
        alpha = - dlon * MPRJ_hemisphere
        rotc(i,j,1) = cos( alpha )
        rotc(i,j,2) = sin( alpha )
@@ -908,8 +919,8 @@ contains
   subroutine MPRJ_Mercator_setup
     implicit none
 
-    real(RP) :: lat0
-    real(RP) :: latrot, dist
+    real(DP) :: lat0
+    real(DP) :: latrot, dist
     !---------------------------------------------------------------------------
 
     lat0 = MPRJ_M_lat * D2R
@@ -918,9 +929,9 @@ contains
     MPRJ_M_fact = cos(lat0)
 
     ! calc (x,y) at (lon,lat) = (base,0)
-    latrot = 0.5_RP*PI - MPRJ_basepoint_lat * D2R
+    latrot = 0.5_DP*PI - MPRJ_basepoint_lat * D2R
 
-    dist = 1.0_RP / tan(0.5_RP*latrot)
+    dist = 1.0_DP / tan(0.5_DP*latrot)
 
     MPRJ_eq_x = MPRJ_basepoint_x
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_M_fact * log(dist)
@@ -948,15 +959,15 @@ contains
     real(RP), intent(out) :: lon ! [rad]
     real(RP), intent(out) :: lat ! [rad]
 
-    real(RP) :: xx, yy
+    real(DP) :: xx, yy
     !---------------------------------------------------------------------------
 
     xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_M_fact
     yy = ( y - MPRJ_eq_y ) / RADIUS / MPRJ_M_fact
 
     lon = xx + MPRJ_basepoint_lon * D2R
-    lon = mod( lon+2.0_RP*PI, 2.0_RP*PI )
-    lat = 0.5_RP*PI - 2.0_RP*atan( 1.0_RP/exp(yy) )
+    lon = mod( lon+2.0_DP*PI, 2.0_DP*PI )
+    lat = 0.5_DP*PI - 2.0_DP*atan( 1.0_DP/exp(yy) )
 
     return
   end subroutine MPRJ_Mercator_xy2lonlat
@@ -975,14 +986,14 @@ contains
     real(RP), intent(out) :: x
     real(RP), intent(out) :: y
 
-    real(RP) :: dlon, latrot, dist
+    real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
 
-    latrot = 0.5_RP*PI - lat
+    latrot = 0.5_DP*PI - lat
 
-    dist = 1.0_RP / tan(0.5_RP*latrot)
+    dist = 1.0_DP / tan(0.5_DP*latrot)
 
     x = MPRJ_eq_x + RADIUS * MPRJ_M_fact * dlon
     y = MPRJ_eq_y + RADIUS * MPRJ_M_fact * log(dist)
@@ -1006,7 +1017,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       m1(i,j) = MPRJ_M_fact / cos(lat(i,j))
+       m1(i,j) = MPRJ_M_fact / cos(real(lat(i,j),kind=DP))
        m2(i,j) = m1(i,j)
     enddo
     enddo
@@ -1047,7 +1058,7 @@ contains
   subroutine MPRJ_EquidistantCylindrical_setup
     implicit none
 
-    real(RP) :: lat0
+    real(DP) :: lat0
     !---------------------------------------------------------------------------
 
     lat0 = MPRJ_EC_lat * D2R
@@ -1081,14 +1092,14 @@ contains
     real(RP), intent(out) :: lon ! [rad]
     real(RP), intent(out) :: lat ! [rad]
 
-    real(RP) :: xx, yy
+    real(DP) :: xx, yy
     !---------------------------------------------------------------------------
 
     xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_EC_fact
     yy = ( y - MPRJ_eq_y ) / RADIUS
 
     lon = xx + MPRJ_basepoint_lon * D2R
-    lon = mod( lon+2.0_RP*PI, 2.0_RP*PI )
+    lon = mod( lon+2.0_DP*PI, 2.0_DP*PI )
     lat = yy
 
     return
@@ -1108,7 +1119,7 @@ contains
     real(RP), intent(out) :: x
     real(RP), intent(out) :: y
 
-    real(RP) :: dlon
+    real(DP) :: dlon
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
@@ -1135,7 +1146,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       m1(i,j) = MPRJ_EC_fact / cos(lat(i,j))
+       m1(i,j) = MPRJ_EC_fact / cos(real(lat(i,j),kind=DP))
        m2(i,j) = 1.0_RP
     enddo
     enddo
