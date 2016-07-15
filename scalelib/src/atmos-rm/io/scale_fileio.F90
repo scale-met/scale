@@ -88,9 +88,10 @@ module scale_fileio
 
   integer,  private, parameter :: File_nfile_max = 512   ! number limit of file
                                 ! Keep consistency with "FILE_MAX" in gtool_netcdf.c
-  logical,  private,      save :: File_axes_written(File_nfile_max)
+  logical,  private,      save :: File_axes_written(0:File_nfile_max-1)
                                 ! whether axes have been written
-  logical,  private,      save :: File_nozcoord(File_nfile_max)
+  !                             ! fid starts from zero so index should start from zero
+  logical,  private,      save :: File_nozcoord(0:File_nfile_max-1)
                                 ! whether nozcoord is true or false
 
   !-----------------------------------------------------------------------------
