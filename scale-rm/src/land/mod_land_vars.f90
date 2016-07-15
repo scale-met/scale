@@ -37,6 +37,12 @@ module mod_land_vars
   public :: LAND_vars_total
   public :: LAND_vars_external_in
 
+  public :: LAND_vars_restart_create
+  public :: LAND_vars_restart_def_var
+  public :: LAND_vars_restart_enddef
+  public :: LAND_vars_restart_write_var
+  public :: LAND_vars_restart_close
+
   public :: convert_WS2VWC
 
   !-----------------------------------------------------------------------------
@@ -136,6 +142,8 @@ module mod_land_vars
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
+  integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
+  integer,                private            :: restart_fid = -1  ! file ID
 
   data VAR_NAME / 'LAND_TEMP',      &
                   'LAND_WATER',     &
@@ -753,5 +761,148 @@ contains
 
     return
   end function convert_WS2VWC
+
+  !-----------------------------------------------------------------------------
+  !> Create land restart file
+  subroutine LAND_vars_restart_create
+    use scale_time, only: &
+       TIME_gettimelabel
+    use scale_fileio, only: &
+       FILEIO_create
+    use mod_land_admin, only: &
+       LAND_sw
+    implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
+    !---------------------------------------------------------------------------
+
+    if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
+
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_create(restart_fid, basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE)
+    endif
+
+    return
+  end subroutine LAND_vars_restart_create
+
+  !-----------------------------------------------------------------------------
+  !> Exit netCDF define mode
+  subroutine LAND_vars_restart_enddef
+    use scale_fileio, only: &
+       FILEIO_enddef
+    implicit none
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_enddef( restart_fid ) ! [IN]
+    endif
+
+    return
+  end subroutine LAND_vars_restart_enddef
+
+  !-----------------------------------------------------------------------------
+  !> Close restart file
+  subroutine LAND_vars_restart_close
+    use scale_fileio, only: &
+       FILEIO_close
+    implicit none
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_close( restart_fid ) ! [IN]
+       restart_fid = -1
+    endif
+
+    return
+  end subroutine LAND_vars_restart_close
+
+  !-----------------------------------------------------------------------------
+  !> Define land variables in restart file
+  subroutine LAND_vars_restart_def_var
+    use scale_fileio, only: &
+       FILEIO_def_var
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TEMP),      VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      &
+                            VAR_UNIT(I_TEMP),      'Land', LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_WATER),     VAR_NAME(I_WATER),     VAR_DESC(I_WATER),     &
+                            VAR_UNIT(I_WATER),     'Land', LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFC_TEMP),  VAR_NAME(I_SFC_TEMP),  VAR_DESC(I_SFC_TEMP),  &
+                            VAR_UNIT(I_SFC_TEMP),  'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_ALB_LW),    VAR_NAME(I_ALB_LW),    VAR_DESC(I_ALB_LW),    &
+                            VAR_UNIT(I_ALB_LW),    'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_ALB_SW),    VAR_NAME(I_ALB_SW),    VAR_DESC(I_ALB_SW),    &
+                            VAR_UNIT(I_ALB_SW),    'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_MW),   VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   &
+                            VAR_UNIT(I_SFLX_MW),   'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_MU),   VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   &
+                            VAR_UNIT(I_SFLX_MU),   'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_MV),   VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   &
+                            VAR_UNIT(I_SFLX_MV),   'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_SH),   VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   &
+                            VAR_UNIT(I_SFLX_SH),   'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_LH),   VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   &
+                            VAR_UNIT(I_SFLX_LH),   'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_GH),   VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   &
+                            VAR_UNIT(I_SFLX_GH),   'XY',   LAND_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_SFLX_evap), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), &
+                            VAR_UNIT(I_SFLX_evap), 'XY',   LAND_RESTART_OUT_DTYPE)
+
+    endif
+
+    return
+  end subroutine LAND_vars_restart_def_var
+
+  !-----------------------------------------------------------------------------
+  !> Write land variables to restart file
+  subroutine LAND_vars_restart_write_var
+    use scale_fileio, only: &
+       FILEIO_write_var
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call LAND_vars_total
+
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TEMP),      LAND_TEMP(:,:,:),          & ! [IN]
+                              VAR_NAME(I_TEMP),      'Land', nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_WATER),     LAND_WATER(:,:,:),         & ! [IN]
+                              VAR_NAME(I_WATER),     'Land', nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFC_TEMP),  LAND_SFC_TEMP(:,:),        & ! [IN]
+                              VAR_NAME(I_SFC_TEMP),  'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_ALB_LW),    LAND_SFC_albedo(:,:,I_LW), & ! [IN]
+                              VAR_NAME(I_ALB_LW),    'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_ALB_SW),    LAND_SFC_albedo(:,:,I_SW), & ! [IN]
+                              VAR_NAME(I_ALB_SW),    'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_MW),   LAND_SFLX_MW(:,:),         & ! [IN]
+                              VAR_NAME(I_SFLX_MW),   'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_MU),   LAND_SFLX_MU(:,:),         & ! [IN]
+                              VAR_NAME(I_SFLX_MU),   'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_MV),   LAND_SFLX_MV(:,:),         & ! [IN]
+                              VAR_NAME(I_SFLX_MV),   'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_SH),   LAND_SFLX_SH(:,:),         & ! [IN]
+                              VAR_NAME(I_SFLX_SH),   'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_LH),   LAND_SFLX_LH(:,:),         & ! [IN]
+                              VAR_NAME(I_SFLX_LH),   'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_GH),   LAND_SFLX_GH(:,:),         & ! [IN]
+                              VAR_NAME(I_SFLX_GH),   'XY',   nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_SFLX_evap), LAND_SFLX_evap(:,:),       & ! [IN]
+                              VAR_NAME(I_SFLX_evap), 'XY',   nohalo=.true.                 ) ! [IN]
+
+    endif
+
+    return
+  end subroutine LAND_vars_restart_write_var
 
 end module mod_land_vars
