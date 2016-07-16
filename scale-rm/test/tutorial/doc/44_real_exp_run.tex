@@ -11,7 +11,7 @@
 
 runディレクトリの中には、\verb|run.conf|という名前の
 コンフィグファイルが準備されており、
-ドメインの位置や格子点数など、チュートリアル用の設定（Table\ref{tab:grids}）に合わせてある。
+ドメインの位置や格子点数など、チュートリアル用の設定（表\ref{tab:grids}）に合わせてある。
 モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用する。
 これらのファイルの場所は、\verb|run.conf|内の
 \verb|TOPO_IN_BASENAME|、\verb|LANDUSE_IN_BASENAME|、
@@ -48,22 +48,22 @@ runディレクトリの中には、\verb|run.conf|という名前の
 
 \verb|run.conf|の設定の中で時間積分に関する設定は、\verb|PARAM_TIME|の項目にある。\\
 
-\noindent {\gt
+\noindent {\gt\small
 \ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_TIME| \\
-\verb| TIME_STARTDATE          = 2014, 8, 10, 0, 0, 0,| 　← 時間積分を開始する時刻 \\
-\verb| TIME_STARTMS            = 0.D0,| \\
-\verb| TIME_DURATION           = 12.0D0,| 　 　 　← 積分期間 \\
-\verb| TIME_DURATION_UNIT      = "HOUR",| 　← \verb|TIME_DURATION|の単位\\
-\verb| TIME_DT                 = 60.0D0,| 　   　　 　　 　← トレーサー移流計算の時間ステップ\\
-\verb| TIME_DT_UNIT            = "SEC",| 　 　 　 　 　← \verb|TIME_DT|の単位\\
-\verb| TIME_DT_ATMOS_DYN       = 30.0D0,|   　　　← トレーサー移流計算以外の力学過程の時間ステップ\\
-\verb| TIME_DT_ATMOS_DYN_UNIT  = "SEC",| 　← \verb|TIME_DT_ATMOS_DYN|の単位\\
+\begin{tabularx}{150mm}{ll}
+\verb|&PARAM_TIME| & \\
+\verb| TIME_STARTDATE     = 2014, 8, 10, 0, 0, 0,| &← 時間積分を開始する時刻 \\
+\verb| TIME_STARTMS       = 0.D0,| &\\
+\verb| TIME_DURATION      = 12.0D0,| &← 積分期間 \\
+\verb| TIME_DURATION_UNIT = "HOUR",| &← \verb|TIME_DURATION|の単位\\
+\verb| TIME_DT            = 60.0D0,| &← トレーサー移流計算の時間ステップ\\
+\verb| TIME_DT_UNIT       = "SEC",|  &← \verb|TIME_DT|の単位\\
+\verb| TIME_DT_ATMOS_DYN  = 30.0D0,| &← トレーサー移流計算以外の力学過程の時間ステップ\\
+\verb| TIME_DT_ATMOS_DYN_UNIT = "SEC",| &← \verb|TIME_DT_ATMOS_DYN|の単位\\
  \\
-\verb| ～～中略～～| \\
+\verb| ～～中略～～| &\\
  \\
-\verb|/| \\
+\verb|/| &\\
 \end{tabularx}
 }}\\
 
@@ -128,7 +128,7 @@ runディレクトリの中には、\verb|run.conf|という名前の
 \noindent その他に実験で使用される物理過程の設定は、
 \verb|PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN|の項目に
 記述されているので、実行前にチェックすること。
-詳細なコンフィグファイルの内容については、Appendix \ref{app:namelist}を参照されたい。
+詳細なコンフィグファイルの内容については、付録\ref{app:namelist}を参照されたい。
 
 %
 \subsubsection{実行}
@@ -145,27 +145,27 @@ runディレクトリの中には、\verb|run.conf|という名前の
 \end{verbatim}
 準備が整ったら、4つのMPIプロセスを使用してscale-rmを実行する。
 \begin{verbatim}
-  $ mpirun -n 4 ./scale-rm run.conf < /dev/null >&log&
+  $ mpirun -n 4 ./scale-rm run.conf < /dev/null >& log &
 \end{verbatim}
 
-実行にはおおよそ1〜2時間を要する（評価環境では93分）。長時間の実行になるため、上記のように
-標準出力をファイルへ書き出すようにしてバックグラウンドで実行すると便利である。
+実行にはある程度時間を要する(評価環境では93分)ため、
+上記のように標準出力をファイルへ書き出すようにして
+バックグラウンドで実行すると便利である。
 計算が開始されれば，処理内容のログとして、
-\verb|"LOG_d01.pe000000"|ファイルが生成されるので、
-例えば下記のようなコマンドで\verb|"LOG_d01.pe000000"|ファイルを参照すれば、
-どこまで計算が進んでいるかチェックすることができる。
+\verb|"LOG_d01.pe000000"|が生成される。
+さらに、ジョブが正常に終了すると、
 \begin{verbatim}
- $ tail -f LOG_d01.pe000000
+ $ ls
+  history_d01.pe000000.nc
+  history_d01.pe000001.nc
+  history_d01.pe000002.nc
+  history_d01.pe000003.nc
 \end{verbatim}
-正常にジョブが終了すれば、\verb|history_d01.pe######.nc|
-という名前のファイルがMPIプロセス数だけ、
-つまり4つ生成される（\verb|######|にはMPIプロセスの番号が入る）。
-historyファイルは計算結果の出力ファイルであり、
-\verb|HISTITEM|に指定した変数のみ書き出される。
-restartファイルは対応する時刻を開始時刻として
-再計算を開始するための初期値ファイルである。
-次節でhistoryデータをGrADSで描画可能なバイナリーデータに変換して
-結果を確認する方法について説明する。
+が作成される。
+\verb|history_d01.pe######.nc|は
+\verb|HISTITEM|に指定した出力変数が書き出される。
+\verb|######|はMPIプロセス番号を表している。
+
 
 %####################################################################################
 

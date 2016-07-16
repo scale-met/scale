@@ -11,7 +11,7 @@ init では、SCALE計算に必要な初期値・境界値データを作成す�
 
 initディレクトリの中には、\verb|init.conf|という名前のコンフィグファイルが準備されている。
 \verb|pp.conf|と同様に、実験設定に合わせて、この\verb|init.conf|を書き換える必要があるが、
-チュートリアル用の\verb|init.conf|ファイルはTable\ref{tab:grids}の設定に
+チュートリアル用の\verb|init.conf|ファイルは表\ref{tab:grids}の設定に
 すでに合わせてある。
 初期値・境界値データの作成には前節で作成した地形・土地利用データを利用する。
 これは、\verb|init.conf|の中で、下記のように相対PATHを用いて参照するように設定されている。\\
@@ -41,7 +41,7 @@ initディレクトリの中には、\verb|init.conf|という名前のコンフ
 \verb|   BOUNDARY_UPDATE_DT   = 21600.D0,| 　  　      {\small ← 入力データの時間間隔} \\
 \verb|   INTERP_SERC_DIV_NUM  = 20,|   　  　    　  　    {\small ← 内挿計算用のチューニングパラメータ} \\
 \verb|   PARENT_MP_TYPE       = 3,| \\
-\verb|   USE_FILE_DENSITY     = .false.,| 　  　     {\small ← 親モデルのdensityデータを使うか} \\
+\verb|   USE_FILE_DENSITY     = .false.,| 　  　     {\small ← 親モデルの大気密度データを使うか} \\
 \verb|   USE_FILE_LANDWATER   = .true.,|   　  　    {\small ← 親モデルの土壌水分データを使うか} \\
 \verb|   INTRP_LAND_SFC_TEMP  = "mask",|    　  　   {\small ← 親モデルの欠測値処理方法} \\
 \verb|   INTRP_LAND_TEMP      = "fill",| \\
@@ -55,7 +55,7 @@ initディレクトリの中には、\verb|init.conf|という名前のコンフ
 \noindent \verb|FILETYPE_ORG|は入力する気象場データのファイルフォーマットに
 関するパラメータを設定しており、ここでは
 grads形式のデータを読み込むことを指定している。
-詳細なコンフィグファイルの内容については、Appendix \ref{app:namelist}を参照されたい。
+詳細なコンフィグファイルの内容については、付録\ref{app:namelist}を参照されたい。
 
 次に、コンパイル済みのバイナリをinitディレクトリへリンクする。
 \begin{verbatim}
@@ -66,7 +66,7 @@ initディレクトリの中に準備されている\verb|"gradsinput-link_FNL.s
 \begin{verbatim}
   $ sh gradsinput-link_FNL.sh
 \end{verbatim}
-下記のgrads形式のファイルにリンクが張れれば成功。\\
+下記のgrads形式のファイルにリンクが張れれば成功である。\\
 
 \noindent {\gt
 \fbox{
@@ -95,12 +95,24 @@ initディレクトリの中に準備されている\verb|"gradsinput-link_FNL.s
  $ mpirun -n 4 ./scale-rm_init init.conf
 \end{verbatim}
 
-実行にはおおよそ45秒を要する。正常にジョブが終了すれば、
-\verb|boundary_d01.pe######.nc|と\verb|init_d01_00019094400.000.pe######.nc|というファイルが
-MPIプロセス数だけ、つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）。
-それぞれ、境界値データと初期値データが入ってるおり、境界値データには複数の時刻のデータが1つのファイルに含まれている。
-初期値ファイルの名前のうち\verb|"00019094400.000"|の部分は，モデル内で算出された実験開始時刻を表している。
-処理内容のログとして、\verb|init_LOG_d01.pe000000|という名前でログファイルも出力されるので内容を確かめておくこと。
+正常にジョブが終了すると、
+\begin{verbatim}
+ $ ls
+  boundary_d01.pe000000.nc
+  boundary_d01.pe000001.nc
+  boundary_d01.pe000002.nc
+  boundary_d01.pe000003.nc
+  init_d01_20140810-000000.000.pe000000.nc
+  init_d01_20140810-000000.000.pe000001.nc
+  init_d01_20140810-000000.000.pe000002.nc
+  init_d01_20140810-000000.000.pe000003.nc
+  init_LOG_d01.pe000000
+\end{verbatim}
+が作成される。
+\verb|boundary_d01.pe######.nc|は境界値データ、
+\verb|init_d01_20140810-000000.000.pe######.nc|は初期値データ、
+\verb|init_LOG_d01.pe######|はログファイルである。
+\verb|######|はMPIプロセス番号を表している。
 
 
 \vspace{1cm}

@@ -1,0 +1,110 @@
+\subsection{物理スキーム} \label{sec:adv_physics}
+%------------------------------------------------------
+本節では雲物理モデルや乱流モデルなどの物理モデルの利用方法を説明する。
+チュートリアル実験で用いてきた物理モデルについて理解するためにconfigファイルの設定を再確認しながら説明をすすめる。
+ここでは例として、理想実験チュートリアルのsampleディレクトリ内にある\verb|run_R20kmx20kmDX500m.conf|を取り上げる。
+
+
+\subsubsection{雲微物理スキームの設定} \label{sec:adv_microphys}
+%------------------------------------------------------
+チュートリアルでは、\cite{tomita_2008}の1-momentバルク法を用いていたが、SCALEには暖かい雲のみを考慮する1-momentバルク法
+(\cite{kessler_1969})，氷雲を含んだ2-momentバルク法(\cite{sn_2014})、1-momentビン法の４種類の雲微物理スキーム
+(\cite{suzuki_etal_2010})も利用することが可能である。
+これらの雲微物理スキームの選択は，init.confとrun.confに記載されているPARAM\_TRACERに含まれる
+``TRACER\_TYPE''及び，PARAM\_ATMOSに含まれる``ATMOS\_PHY\_MP\_TYPE''によって設定する。
+{\bf 両者は同じにする必要があり}，選択する雲微物理スキームによって以下のように設定する。
+
+\begin{verbatim}
+KESSLER ：水雲のみの1-momentバルク法(Kessler 1969)
+TOMITA08：氷雲を含む1-momentバルク法(Tomita 2008)
+SN14    ：氷雲を含む2-momentバルク法(Seiki and Nakajima 2014)
+SUZUKI10：1-momentビン法(Suzuki et al. 2010，氷雲を含むか否かはオプションで選択)
+\end{verbatim}
+
+このとき\textcolor{red}{TRACER\_TYPEとATMOS\_PHY\_MP\_TYPEはinit.conf，run.confで同一にする必要がある}ことに注意されたい．
+SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER\_TYPEとATMOS\_PHY\_MP\_TYPEを変更するだけで実行可能である。
+一方SUZUKI10を選択した場合は、init.conf、run.confの双方に\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&PARAM_BIN| \\
+\verb| nbin   = 33, (ビンの数)| \\
+\verb| ICEFLG =  1, (氷雲を考慮するか否か，0->水雲のみ，1->氷雲も含む)| \\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+を追記する必要がある。\\
+この場合も、{\bf init.confとrun.confに記載されるPARAM\_BINは同一にする必要がある}。
+SUZUKI10を選択した時には、micpara.datという
+雲微物理の計算に必要なファイルが自動生成される。micpara.datがすでに存在する場合はあるものを利用するが、
+nbinが変わると新たに作成しなければならない。micpara.datにnbinの情報が記載されているが、もしrun.confに記載されるnbinと
+micpara.datに記載されているnbinが異なれば、\\
+
+\noindent {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+\verb|xxx nbin in inc_tracer and nbin in micpara.dat is different check!| \\
+\end{tabularx}
+}}\\
+
+\noindent というエラーメッセージを標準出力に出力して計算が落ちるようになっている。
+そのため、nbinを変更した際は、micpara.datを消去して
+新たに作り直す必要がある（micpara.datを消して再度SCALEをSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される）。
+
+
+\subsubsection{乱流スキームの設定} \label{sec:adv_turbulence}
+%------------------------------------------------------
+理想実験チュートリアルでは乱流スキームは導入されていなかったが、SCALEにはSmagorinsky typeの乱流スキーム
+\citep{smagorinsky_1963, lilly_1962, Brown_etal_1994, Scotti_1993}と
+Mellor-Yamada Level 3の
+乱流スキーム(MYNN, \cite{my_1982},\cite{nakanishi_2004})が導入されている。
+これらを利用するには，init.confとrun.conf双方のPARAM\_ATMOSに「ATMOS\_PHY\_TB\_TYPE」を加える。
+
+\begin{verbatim}
+ATMOS_PHY_TB_TYPE="SMAGORINSKY" (Smagorinsky typeのサブグリッドモデル)
+ATMOS_PHY_TB_TYPE="MYNN" (Mellor-Yamada Level 3のRANSモデル）
+\end{verbatim}
+
+またrun.confのPARAM\_TIMEに
+
+\begin{verbatim}
+ TIME_DT_ATMOS_PHY_TB       = 0.10D0,  (乱流スキームの時間ステップ)
+ TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",　（TIME_DT_ATMOS_PHY_TBの単位）
+\end{verbatim}
+
+を加える。これらを設定した上で，run.shを実行することで，乱流スキームを考慮した計算が可能になる．
+地表面フラックスのバルク係数を決めるスキーム，放射スキーム，都市スキームなどに関しては，
+現実事例を対象とした４章を参照されたい．
+
+
+\subsubsection{放射過程の設定} \label{sec:adv_radiation}
+%------------------------------------------------------
+SCALEには、放射過程としてMSTRN (\cite{sekiguchi_2008})が実装されている。ここでは、MSTRNの設定方法を説明する。
+
+放射モデルを実行するには、各種外部データとパラメタテーブルが必要である。
+オゾンのプロファイルなどの外部データとパラメタテーブルは、``scale-rm/test/data/rad/''の中に与えられている。
+放射過程を利用する実験を行う場合は、必ず``scale-rm/test/data/rad/''下の外部データとパラメタテーブルが必要である。
+%詳細に関しては随時説明を加えていく。
+
+
+\subsubsection{陸面・海洋上の地表面フラックスモデルの設定} \label{sec:adv_landocean}
+%------------------------------------------------------
+SCALEには、陸面モデルとしてバケツモデル（バルク交換係数は \cite{beljaars_1991}; \cite{wilson_2001}に基づく）が
+実装されている。また海洋上のフラックスモデルとしてスラブモデルが実装されている。
+ここでは、陸面モデルと海洋モデルの設定方法について説明する。
+
+陸面モデルを実行するには、土地利用データとそれに対応するパラメタテーブルが必要である。
+パラメタテーブルは、``scale-rm/test/data/land/''の中に``param.bucket.conf''というファイルで与えられている。
+中には10種類を超える土地利用区分とそれらに対応する粗度長などのパラメタが与えられている。陸面が存在する領域で実験
+を行う場合は、必ず``param.bucket.conf''のパラメタテーブルが必要である。
+%詳細に関しては随時説明を加えていく。
+
+
+%\subsubsection{都市モデルの設定} \label{sec:adv_urban}
+%------------------------------------------------------
+%SCALEには、都市モデルとして単層キャノピーモデル(\cite{kusaka_2001})が実装されている。
+%ここでは都市モデルの設定方法について説明する。
+%詳細に関しては随時説明を加えていく。
+

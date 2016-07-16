@@ -11,7 +11,7 @@ ppディレクトリの中には、\verb|pp.conf|という名前の
 コンフィグファイルが準備されている。
 ドメインの位置や格子点数など、実験設定に合わせて、
 適宜\verb|pp.conf|を編集する必要があるが、
-チュートリアルではすでにTable \ref{tab:grids}の設定に
+チュートリアルではすでに表\ref{tab:grids}の設定に
 従って編集済みの\verb|pp.conf|が用意されているためそのまま利用する。
 \verb|pp.conf|の設定の中で特に注意するべき項目は、\verb|PARAM_CONVERT|である。\\
 
@@ -29,7 +29,7 @@ ppディレクトリの中には、\verb|pp.conf|という名前の
 \verb|.true.|となっていることが、
 それぞれ地形と土地利用の処理を行うことを意味している。
 詳細なコンフィグファイルの内容については、
-Appendix \ref{app:namelist}を参照されたい。
+付録\ref{app:namelist}を参照されたい。
 
 次に、コンパイル済みのバイナリと入力データをppディレクトリへリンクする。
 \begin{verbatim}
@@ -37,7 +37,7 @@ Appendix \ref{app:namelist}を参照されたい。
  $ ln -s ${SCALE_DB}/topo    ./
  $ ln -s ${SCALE_DB}/landuse ./
 \end{verbatim}
-今回は、Table \ref{tab:grids}に示されているように。
+今回は、表\ref{tab:grids}に示されているように。
 4つのMPIプロセスを使用する設定なので次のように実行する。
 \begin{verbatim}
  $ mpirun -n 4 ./scale-rm_pp pp.conf

@@ -7,6 +7,7 @@
 # target file name
 TEXNAME  = scale_users_guide
 VERFNAME = 00_version.tex
+VERTEMPL = 00_version_template.tex
 
 # commands to compile documents
 LATEX    = platex
@@ -27,11 +28,11 @@ clean:
 	$(DVIPDF) $(TEXNAME)
 
 .tex.dvi:
-	$(shell echo "\newcommand{\version}{$(VERSION)}" > $(VERFNAME))
-	$(LATEX) $(TEXNAME)
+	$(shell cat $(VERTEMPL) | sed s/"#VERSION#"/$(VERSION)/g > $(VERFNAME))
+	$(LATEX)  $(TEXNAME)
 	$(BIBTEX) $(TEXNAME)
-	$(LATEX) $(TEXNAME)
-	$(LATEX) $(TEXNAME)
+	$(LATEX)  $(TEXNAME)
+	$(LATEX)  $(TEXNAME)
 
 html: $(TEXNAME).html
 	$(HTMLBIN) $(TEXNAME).tex -o ${TEXNAME}.html

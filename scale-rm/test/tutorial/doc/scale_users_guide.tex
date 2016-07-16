@@ -20,13 +20,15 @@
  bookmarksopen=true,
  colorlinks=true,
  linkcolor=red,
- citecolor=green,
+ citecolor=cyan,
  urlcolor=cyan,
 }
 %\setlength{\textwidth}{42zw}
 %\setlength{\textheight}{40\baselineskip}
 \usepackage[top=30mm,bottom=35mm,left=30mm,right=30mm]{geometry}
 \usepackage{wallpaper}
+%\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\renewcommand{\thefootnote}{*\arabic{footnote})}
 
 \begin{document}
 \CenterWallPaper{1.0}{figure/title_wallpaper.eps}
@@ -35,20 +37,20 @@
 \ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.eps}
 \tableofcontents
 
-\chapter{Overview}
+\chapter{概要}
 \label{sec:overview}
 \input{11_introduction}
-%\input{12_exp_intro}
+\input{12_notation}
 
-\chapter{Installation}
+\chapter{インストール}
 \label{sec:install}
 \input{21_install}
 
-\chapter{SCALE-RM Tutorial: Ideal case}
+\chapter{チュートリアル: 理想実験}
 \label{sec:tuto_ideal}
 \input{31_ideal_exp}
 
-\chapter{SCALE-RM Tutorial: Real case}
+\chapter{チュートリアル: 現実実験}
 \label{sec:tuto_real}
 \input{41_real_exp_prep}
 \input{42_real_exp_pp}
@@ -56,13 +58,21 @@
 \input{44_real_exp_run}
 \input{45_real_exp_net2g.tex}
 
-\chapter{SCALE-RM Advance use}
+\chapter{各種設定: 基礎編}
+\label{sec:basic}
+\input{51_basic_use}
+\input{52_basic_scheme_dyn}
+\input{53_basic_scheme_phys}
+
+
+\chapter{各種設定: 実用編}
 \label{sec:advance}
-\input{51_advance_use}
-\input{52_online_nesting}
-\input{53_scheme_list}
-\input{54_namelist_history}
-\input{55_quicklook_net2g}
+\input{61_advance_use}
+\input{61_input}
+\input{62_online_nesting}
+\input{63_scheme_list}
+\input{64_namelist_history}
+\input{65_quicklook_net2g}
 
 \bibliographystyle{plainnat}
 \bibliography{reference}

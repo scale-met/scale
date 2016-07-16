@@ -2,22 +2,26 @@
 %  File 21_install.tex
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-本章では、SCALE-RMの使用方法と、SCALEチュートリアルを実行するための環境の準備について説明する。
+本章では、SCALEのコンパイル及び、実行に必要な環境について説明する。
 
 \section{必要なシステム環境}
 \label{sec:req_env}
 %====================================================================================
-ここでは、SCALEのインストール、および実行に必要な環境について説明する。
-以下に説明するもの以外に、SCALEは、理化学研究所 計算科学研究機構のスーパーコンピュータ「京」、
-及びFujitsu PRIME-HPC FX10の環境で動作確認されている。
+
+以下に説明するもの以外に、SCALEは、
+理化学研究所 計算科学研究機構のスーパーコンピュータ「京」、
+及びFujitsu PRIME-HPC FX10の環境でも動作確認されている。\\
 
 \noindent {\bf 推奨のシステム環境}
 \begin{itemize}
-  \item {\bf システムハードウェア構成}
+  \item {\bf システムハードウェア構成}\\
+必要なハードウェアは実験設定に依存するが、
+ここでは第\ref{sec:tuto_ideal}章と第\ref{sec:tuto_real}章の
+チュートリアル実行に必要なスベックを示す。
   \begin{itemize}
-    \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上を搭載したシステムが望ましい。
-    \item {\bf Memory} : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が搭載されたシステムが必要となる (倍精度浮動小数点使用時)。
-    \item {\bf HDD} : 実験内容によって変化するが、Tutorialの現実大気実験を実行するには約3GBのディスク空き容量が必要となる。
+    \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上が望ましい。
+    \item {\bf Memory} : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が必要 (倍精度浮動小数点使用時)。
+    \item {\bf HDD} : 現実大気実験には約3GBのディスク空き容量が必要。
   \end{itemize}
 
   \item {\bf システムソフトウェア構成}
@@ -37,9 +41,9 @@
 
 \noindent {\bf あると便利なシステム環境}
 \begin{itemize}
-  \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、SCALEで読込可能な入力データの作成が可能である。現実大気実験のTutorialでは、実際にwgrib2を利用する。
-  \item {\bf 描画環境}：GrADS、GPhys/Ruby-DCL、ncviewなどがあれば計算結果を描画することができる。
-  \item {\bf 演算性能評価}：演算性能評価としてPAPIライブラリを使用が可能である。
+  \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、SCALEで読込可能な入力データの作成が可能である。Tutorialの現実大気実験では、wgrib2を使用する。
+  \item {\bf 描画環境}：GrADS、GPhys/Ruby-DCL、ncviewなど。
+  \item {\bf 演算性能評価}：PAPIライブラリが使用可能。
 \end{itemize}
 
 
@@ -86,68 +90,60 @@
 \end{table}
 
 
-\subsection{本書で想定する環境}
-\label{sec:assumed_env}
-%====================================================================================
-本書の以降すべての説明は、下記の環境を前提として記述している。
-
-\begin{itemize}
- \item {\bf CPU} : 第\ref{sec:tuto_ideal}章は物理コアが2コア、第\ref{sec:tuto_real}章は4コアを搭載
- \item {\bf Memory} : 第\ref{sec:tuto_ideal}章は512MB、第\ref{sec:tuto_real}章は2GB
- \item {\bf OS} : Linux OS x86-64 (CentOS 6.6、CentOS 7.1、openSUSE 13.2のいずれか)
- \item {\bf コンパイラ} : GNU コンパイラ（gcc/gfortran）
- \item {\bf MPIライブラリ} : openMPI（リポジトリ経由でのインストール）
-\end{itemize}
-
 
 \section{ライブラリ環境のインストール}
 \label{sec:inst_env}
 %====================================================================================
-実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、付録 \ref{sec:env_setting}章を参照のこと。
+SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ、NetCDF, HDF5, MPI 等)
+のインストールを行う。
+詳細は、付録 \ref{sec:env_setting}章を参照のこと。
 第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは、
 それらのライブラリ環境がインストールされていることを前提として進める。
 
-描画ツールは何を使っても良いが、対応を確認している描画ツールについての詳細とインストール方法についての情報は
+描画ツールとして、
+第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルでは
+クイックビューのためGPhysを使用する。
+また、GrADSを使った結果の描画方法についても紹介する。
+これらの描画ツールの詳細とインストール方法については
 付録 \ref{sec:env_vis_tools}を参照のこと。
-第3章および第4章のチュートリアルではGrADSを使って描画する方法を紹介する。
-その他にGPhysを使って結果のクイックビューを行う方法については、\ref{sec:quicklook}節にて説明する。
 
 
 
 \section{SCALEのコンパイル} \label{sec:source_code}
 %====================================================================================
 
-
 以下の説明で使用した環境は次のとおりである。
 \begin{itemize}
 \item CPU: Intel Core i5 2410M 2コア/4スレッド
 \item Memory: DDR3-1333 4GB
 \item OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64
+\item GNU C/C++, Fortran compiler (付録\ref{sec:env_setting}章参照)
 \end{itemize}
 
-\subsubsection{ソースコードの入手}
+\subsection{ソースコードの入手}
 %-----------------------------------------------------------------------------------
 安定版ソースコードは、\\
  \url{http://scale.aics.riken.jp/ja/download/index.html}\\
 よりダウンロードできる。
 ソースコードのtarballファイルを展開すると\verb|scale/|というディレクトリができる。
-\verb|{ver}|には、``5.0.1''等のバーション番号が入る。
+\verb|{ver}|には、``\version''等のバーション番号が入る。
 \begin{verbatim}
  $ tar -zxvf scale-{ver}.tar.gz
- $ ls
-  scale/
+ $ ls ./
+   scale/
 \end{verbatim}
 
 
 
-\subsubsection{Makedefファイルと環境変数の設定}
+\subsection{Makedefファイルと環境変数の設定}
 %-----------------------------------------------------------------------------------
 
 SCALEはコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
 Makedefファイルを使用してコンパイルが行われる。
 Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境に
-対応するファイル（\verb|Makedef.***|）が準備されており、これらの中から自分の環境にあったものを設定する。
-本書で対応を確認している環境について対応するMakedefファイルを表\ref{tab:makedef}にまとめた。
+対応するファイル（\verb|Makedef.***|）が準備されており、
+これらの中から自分の環境にあったものを設定する。
+動作確認済みの環境と対応するMakedefファイルを表\ref{tab:makedef}に示す。
 
 \begin{table}[htb]
 \begin{center}
@@ -167,34 +163,37 @@ Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境
 \footnotetext[1]{京やFX10では、専用にチューニングされた富士通コンパイラ、及びMPIライブラリを使用する。
 また、クロスコンパイルを行うので``fccpx/frtpx''や``mpiccpx/mpifrtpx''といったコンパイラを用いる。}
 
-ここでは、先述のとおりLinux OS、GNUコンパイラ、およびopenMPIを使用することを想定しているため、
-\verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる。下記のコマンドによって環境変数の値を設定する。
+
+Linux OS、GNUコンパイラ、openMPIを使用する場合には、
+\verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる。
+下記の通り、環境変数を設定する。
 \begin{verbatim}
  $ export SCALE_SYS="Linux64-gnu-ompi"
 \end{verbatim}
-自分の環境に合致するものがなければ、既存ファイルをベースにして作成する。
-実行環境がいつも同じに決まっている場合は、常に同じMakedefファイルを使用するために、
-環境変数設定を\verb|.bashrc|などの環境設定ファイルに記述しておくと便利である。\\
+自分の環境に合致するものがなければ、既存ファイルをベースに各自作成する。
+実行環境が常に同じであるならば、
+環境変数の設定を\verb|.bashrc|などの環境設定ファイルに
+記述しておくと便利である。\\
 
 
-チュートリアル通り進めている場合は、付録 \ref{sec:env_setting}章で説明する以外にPATHの設定をする
-必要はないが、環境が異なる場合には上述に加えて次の設定が必要になる。
-HDF5とNetCDF4については、下記のようにPATHを設定する。
-例えば、Intel コンパイラを利用して自分で"\verb|/opt|"下にHDF5とNetCDF4を
-インストールした場合を想定して、HDF5は\verb"/opt/hdf5"、netcdf4は\verb|/opt/netcdf|に
-それぞれインストールされている場合の例を示す。
+各種ライブラリのインストールを
+付録\ref{sec:env_setting}章に従って行った場合を除き、
+下記のPATHの設定が必要となる。
+HDF5とNetCDF4については、下記のように環境変数を設定する。
+例えば、Intel コンパイラを利用して、
+HDF5を\verb"/opt/hdf5"、NetCDF4を\verb|/opt/netcdf|に
+それぞれインストールした場合の例を示す。
+適宜、各自の環境に応じて読み替えて設定すること。
 \begin{verbatim}
  $ export HDF5="/opt/hdf5"
  $ export NETCDF4="/opt/netcdf"
-\end{verbatim}
-この場合は、ライブラリは \verb|lib| ディレクトリ以下に、インクルードファイルは \verb|include| ディレクトリ以下に配置されていることが前提となる。
-それ以外の場合は、適宜環境変数 \verb|NETCDF_INCLUDE|、 \verb|NETCDF_LIBS|を設定する必要がある。
-\begin{verbatim}
  $ export NETCDF_INCLUDE="-I/opt/netcdf/include"
  $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -hdf5_hl -lhdf5 -lm -lz"
 \end{verbatim}
 
-\subsubsection{コンパイル}
+
+\subsection{コンパイル}
+\label{sec:compile}
 %-----------------------------------------------------------------------------------
 
 チュートリアル用のディレクトリに移動して、makeコマンドによってコンパイルを行う。
@@ -203,25 +202,26 @@ HDF5とNetCDF4については、下記のようにPATHを設定する。
  $ make -j 4
 \end{verbatim}
 \verb|make|のあとの \verb|"-j 4"| は、
-コンパイル時の並列数を示しており、
-例では4並列コンパイルを行うことを指示している。
-実行環境によっては並列数を増やすこともできる。
-このmakeによってSCALE、およびSCALE-RMのコンパイルが行われ、
-結果として
+コンパイル時の並列数(例では4並列)を示しており、
+実行環境によって並列数を指定すれば良い。
+コンパイルが成功すると下記3つの実行ファイルが生成される。
 \begin{verbatim}
  scale-rm  scale-rm_init  scale-rm_pp
 \end{verbatim}
-の3つの実行ファイルが生成されていればコンパイルは成功である。\\
+
 
 下記のコマンドで作成された実行バイナリを消去できる。
 \begin{verbatim}
  $ make clean
 \end{verbatim}
-ただし、この場合はコンパイルされたライブラリは消去されないため、全てのコンパイル済みファイルを消去したい場合は、
+ただし、この場合、コンパイルされたライブラリは消去されないため、
+全てのコンパイル済みファイルを消去したい場合は、
 \begin{verbatim}
  $ make allclean
 \end{verbatim}
-とする。コンパイラを変更したり、コンパイルオプションを変更して再コンパイルする場合は、"allclean"を実行すること。
+とする。
+コンパイル環境、コンパイルオプションを変更して再コンパイルする場合は、
+``allclean''を実行すること。
 
 
 {\bf 注意点}
@@ -238,31 +238,35 @@ HDF5とNetCDF4については、下記のようにPATHを設定する。
 \end{itemize}
 
 
-\section{後処理ツールのコンパイル} \label{sec:source_net2g}
+
+\section{後処理ツール(net2g)のコンパイル} \label{sec:source_net2g}
 %====================================================================================
 
-第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルでは、
-GrADSを使用して図化する方法を紹介している。このとき、SCALE-RMの分割
-出力ファイル（\verb|history.******.nc|）を結合し、GrADSで直接読み込めるデータ形式へ
-変換する後処理ツール「net2g」を使用する。
-ここでは、このnet2gのコンパイル方法について説明する。
+SCALE-RMの出力ファイルは、ノードごとに分割されて出力される。
+SCALEでは、これら出力ファイル（\verb|history.******.nc|）を結合し、
+GrADSで直接読み込めるデータ形式へ
+変換する後処理ツール「net2g」を提供している。
+第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルでも使用する。
+ここでは、net2gのコンパイル方法について説明する。
 
-net2gはSCALE本体から独立したツールになっている（ただしMakedefファイルを除く）ため、
-任意の場所へコピーしてコンパイルすることができるが、
-コンパイルにはNetCDFライブラリが必要であり、また並列実行するためにはMPIライブラリが必要である。
-従って、以降はこれらのライブラリがインストールされている環境であることを想定して進める。\\
+%net2gはSCALE本体から独立したツールになっている
+%（ただしMakedefファイルを除く）ため、
+%任意の場所へコピーしてコンパイルすることができるが、
+%コンパイルにはNetCDFライブラリが必要であり、
+%また並列実行するためにはMPIライブラリが必要である。
+%従って、以降はこれらのライブラリがインストールされている環境であることを想定して進める。\\
 
 
-まず、Makedefファイル設定のために環境変数を設定する。
-SCALE本体のコンパイル時と同じように、使用する環境にあったMakedefファイルを
-選択し、下記のコマンドにて設定する。
-
+まず、SCALE本体のコンパイル時と同様に
+使用する環境にあったMakedefファイル設定のための環境変数を設定する
+(\ref{sec:compile}節コンパイル参照)。
 \begin{verbatim}
- $ export SCALE_SYS="Linux64-gnu-ompi"
+ $ export SCALE_SYS="Linux64-gnu-ompi"  //GNUコンパイラ、openMPIを使用する場合
 \end{verbatim}
 
-その後、net2gのディレクトリに移動して、makeコマンドによってコンパイルを行う。
-MPIライブラリを用いた並列実行を行うためのバイナリは、下記のコマンドによって生成される。
+次に、net2gのディレクトリに移動し、makeする。
+MPIライブラリを用いた並列実行を行うためのバイナリは、
+下記のコマンドによって生成される。
 \begin{verbatim}
  $ cd scale/scale-rm/util/netcdf2grads_h
  $ make -j 2
@@ -272,7 +276,7 @@ MPIライブラリが無い場合など、逐次実行バイナリを生成す�
  $ make -j 2 NOMPI=T
 \end{verbatim}
 としてコンパイルを行う。
-結果として、"net2g"という名前の実行ファイルが生成されていればコンパイルは成功である．\\
+"net2g"という名前の実行ファイルが生成されていればコンパイルは成功である．\\
 
 下記のコマンドで作成された実行バイナリを消去できる。
 \begin{verbatim}
