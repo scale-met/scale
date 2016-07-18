@@ -94,6 +94,7 @@ module scale_fileio
   logical,  private,      save :: File_nozcoord(0:File_nfile_max-1)
                                 ! whether nozcoord is true or false
 
+  integer,  private,      save :: write_buf_amount = 0  ! sum of write buffer amounts
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -1666,13 +1667,15 @@ contains
     use scale_process, only: &
        PRC_masterrank, &
        PRC_myrank,     &
-       PRC_MPIstop
+       PRC_MPIstop,    &
+       PRC_LOCAL_COMM_WORLD
     use scale_rm_process, only: &
        PRC_2Drank
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
        NOWMS   => TIME_NOWMS,   &
        NOWSEC  => TIME_NOWDAYSEC
+    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,           intent(out) :: fid      !< file ID
@@ -1688,6 +1691,7 @@ contains
     integer :: dtype
     logical :: append_sw
     logical :: fileexisted
+    integer :: comm
     character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
@@ -1720,33 +1724,31 @@ contains
     ! create a netCDF file if not already existed. Otherwise, open it.
     if ( present(date) ) then
       call getCFtunits(tunits, date)
-
-      call FileCreate( fid,                 & ! [OUT]
-                       fileexisted,         & ! [OUT]
-                       basename,            & ! [IN]
-                       title,               & ! [IN]
-                       H_SOURCE,            & ! [IN]
-                       H_INSTITUTE,         & ! [IN]
-                       PRC_masterrank,      & ! [IN]
-                       PRC_myrank,          & ! [IN]
-                       rankidx,             & ! [IN]
-                       time_units = tunits, & ! [IN]
-                       append = append_sw   ) ! [IN]
     else
-      call FileCreate( fid,               & ! [OUT]
-                       fileexisted,       & ! [OUT]
-                       basename,          & ! [IN]
-                       title,             & ! [IN]
-                       H_SOURCE,          & ! [IN]
-                       H_INSTITUTE,       & ! [IN]
-                       PRC_masterrank,    & ! [IN]
-                       PRC_myrank,        & ! [IN]
-                       rankidx,           & ! [IN]
-                       append = append_sw ) ! [IN]
+      tunits = 'seconds'
     endif
 
+    if ( IO_PNETCDF ) then
+       comm = PRC_LOCAL_COMM_WORLD
+    else
+       comm = MPI_COMM_NULL
+    end if
+
+    call FileCreate( fid,                 & ! [OUT]
+                     fileexisted,         & ! [OUT]
+                     basename,            & ! [IN]
+                     title,               & ! [IN]
+                     H_SOURCE,            & ! [IN]
+                     H_INSTITUTE,         & ! [IN]
+                     PRC_masterrank,      & ! [IN]
+                     PRC_myrank,          & ! [IN]
+                     rankidx,             & ! [IN]
+                     time_units = tunits, & ! [IN]
+                     append = append_sw,  & ! [IN]
+                     comm = comm          ) ! [IN]
+
     if ( .NOT. fileexisted ) then ! do below only once when file is created
-       call FILEIO_def_axes( fid, dtype, nozcoord ) ! [IN]
+       call FILEIO_def_axes( fid, dtype, xy = nozcoord ) ! [IN]
        File_axes_written(fid) = .FALSE.
        if ( present( nozcoord ) ) then
           File_nozcoord(fid) = nozcoord
@@ -1777,7 +1779,8 @@ contains
   subroutine FILEIO_enddef( &
        fid)
     use gtool_file, only: &
-       FileEndDef
+       FileEndDef, &
+       FileAttachBuffer
     implicit none
 
     integer, intent(in) :: fid  !< file ID
@@ -1788,11 +1791,16 @@ contains
 
     call FileEndDef( fid ) ! [IN]
 
-    ! At first write axis variables
+    ! If called the first time, write axis variables
     if ( .NOT. File_axes_written(fid) ) then
-       call FILEIO_write_axes(fid, File_nozcoord(fid))
+       if ( IO_PNETCDF ) then
+          call FILEIO_write_axes_par(fid, File_nozcoord(fid))
+          call FileAttachBuffer(fid, write_buf_amount)
+       else
+          call FILEIO_write_axes(fid, File_nozcoord(fid))
+       end if
        File_axes_written(fid) = .TRUE.
-    endif
+    end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1804,7 +1812,9 @@ contains
   subroutine FILEIO_close( &
        fid)
     use gtool_file, only: &
-       FileClose
+       FileClose, &
+       FileFlush, &
+       FileDetachBuffer
     implicit none
 
     integer, intent(in) :: fid  !< file ID
@@ -1812,6 +1822,12 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( IO_PNETCDF ) then
+       call FileFlush( fid )
+       call FileDetachBuffer( fid )
+       write_buf_amount = 0
+    end if
 
     call FileClose( fid ) ! [IN]
 
@@ -1832,7 +1848,9 @@ contains
        FileDefAssociatedCoordinates
     use scale_rm_process, only: &
        PRC_NUM_X, &
-       PRC_NUM_Y
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     implicit none
 
     integer, intent(in) :: fid
@@ -1841,7 +1859,27 @@ contains
 
     character(len=2) :: AXIS_name(2)
     logical :: xy_
+
+    integer :: IAG, JAG
+    integer :: XG, YG
     !---------------------------------------------------------------------------
+
+    ! array size (global domain)
+    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
+    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
+
+    ! global size for x and xh
+    if ( PRC_PERIODIC_X ) then
+       XG = IMAX*PRC_NUM_X
+    else
+       XG = IAG
+    end if
+    ! global size for y and yh
+    if ( PRC_PERIODIC_Y ) then
+       YG = JMAX*PRC_NUM_Y
+    else
+       YG = JAG
+    end if
 
     if ( present(xy) ) then
        xy_ = xy
@@ -1852,13 +1890,24 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'z',   'Z',               'm', 'z',   dtype, KE-KS+1 )
     end if
-    call FileDefAxis( fid, 'x',   'X',               'm', 'x',   dtype, IEB-ISB+1 )
-    call FileDefAxis( fid, 'y',   'Y',               'm', 'y',   dtype, JEB-JSB+1 )
+    if ( .NOT. IO_PNETCDF ) then
+       call FileDefAxis( fid, 'x',   'X',               'm', 'x',   dtype, IEB-ISB+1 )
+       call FileDefAxis( fid, 'y',   'Y',               'm', 'y',   dtype, JEB-JSB+1 )
+    else
+       call FileDefAxis( fid, 'x',   'X',               'm', 'x',   dtype, XG )
+       call FileDefAxis( fid, 'y',   'Y',               'm', 'y',   dtype, YG )
+    end if
+
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, KE-KS+1 )
     end if
-    call FileDefAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, IEB-ISB+1 )
-    call FileDefAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, JEB-JSB+1 )
+    if ( .NOT. IO_PNETCDF ) then
+       call FileDefAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, IEB-ISB+1 )
+       call FileDefAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, JEB-JSB+1 )
+    else
+       call FileDefAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, XG )
+       call FileDefAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, YG )
+    end if
 
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, LKE-LKS+1 )
@@ -1867,28 +1916,49 @@ contains
        call FileDefAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKE-UKS+1 )
     end if
 
-
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  dtype, KA )
     end if
-    call FileDefAxis( fid, 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  dtype, IA )
-    call FileDefAxis( fid, 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  dtype, JA )
+    if ( .NOT. IO_PNETCDF ) then
+       call FileDefAxis( fid, 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  dtype, IA )
+       call FileDefAxis( fid, 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  dtype, JA )
+    else
+       call FileDefAxis( fid, 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  dtype, IAG )
+       call FileDefAxis( fid, 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  dtype, JAG )
+    end if
+
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  dtype, KA+1 )
     end if
-    call FileDefAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, IA+1 )
-    call FileDefAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, JA+1 )
+    if ( .NOT. IO_PNETCDF ) then
+       call FileDefAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, IA+1 )
+       call FileDefAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, JA+1 )
+    else
+       call FileDefAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, IAG+1 )
+       call FileDefAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, JAG+1 )
+    end if
 
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, KA )
     end if
-    call FileDefAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, IA )
-    call FileDefAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, JA )
+    if ( .NOT. IO_PNETCDF ) then
+       call FileDefAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, IA )
+       call FileDefAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, JA )
+    else
+       call FileDefAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, IAG )
+       call FileDefAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, JAG )
+    end if
+
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, KA-1 )
     end if
-    call FileDefAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, IA-1 )
-    call FileDefAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, JA-1 )
+    if ( .NOT. IO_PNETCDF ) then
+       call FileDefAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, IA-1 )
+       call FileDefAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, JA-1 )
+    else
+       call FileDefAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, IAG-1 )
+       call FileDefAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, JAG-1 )
+    end if
 
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', dtype, LKE-LKS+1 )
@@ -1903,13 +1973,24 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, KA )
     end if
-    call FileDefAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, IA )
-    call FileDefAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, JA )
+    if ( .NOT. IO_PNETCDF ) then
+       call FileDefAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, IA )
+       call FileDefAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, JA )
+    else
+       call FileDefAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, IAG )
+       call FileDefAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, JAG )
+    end if
+
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, KA )
     end if
-    call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, IA )
-    call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, JA )
+    if ( .NOT. IO_PNETCDF ) then
+       call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, IA )
+       call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, JA )
+    else
+       call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, IAG )
+       call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, JAG )
+    end if
 
     call FileDefAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, IAG )
     call FileDefAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, JAG )
@@ -2103,6 +2184,303 @@ contains
   end subroutine FILEIO_write_axes
 
   !-----------------------------------------------------------------------------
+  !> write axes to the file in parallel
+  subroutine FILEIO_write_axes_par( &
+       fid,   &
+       xy     )
+    use gtool_file, only: &
+       FileWriteAxis,  &
+       FileWriteAssociatedCoordinates, &
+       FileFlush
+    use scale_grid, only: &
+       GRID_CZ,    &
+       GRID_CX,    &
+       GRID_CY,    &
+       GRID_FZ,    &
+       GRID_FX,    &
+       GRID_FY,    &
+       GRID_CDZ,   &
+       GRID_CDX,   &
+       GRID_CDY,   &
+       GRID_FDZ,   &
+       GRID_FDX,   &
+       GRID_FDY,   &
+       GRID_CBFZ,  &
+       GRID_CBFX,  &
+       GRID_CBFY,  &
+       GRID_FBFZ,  &
+       GRID_FBFX,  &
+       GRID_FBFY,  &
+       GRID_CXG,   &
+       GRID_CYG,   &
+       GRID_FXG,   &
+       GRID_FYG,   &
+       GRID_CBFXG, &
+       GRID_CBFYG, &
+       GRID_FBFXG, &
+       GRID_FBFYG
+    use scale_land_grid, only: &
+       GRID_LCZ, &
+       GRID_LFZ
+    use scale_urban_grid, only: &
+       GRID_UCZ, &
+       GRID_UFZ
+    use scale_process, only: &
+       PRC_myrank
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
+    implicit none
+
+    integer, intent(in) :: fid
+    logical, intent(in), optional :: xy
+
+    logical :: xy_
+    integer :: rankidx(2)
+    integer :: XS, XE   ! start and end indices for X dimension
+    integer :: YS, YE   ! start and end indices for Y dimension
+    integer :: start(2), count(2)
+    !---------------------------------------------------------------------------
+
+    if ( present(xy) ) then
+       xy_ = xy
+    else
+       xy_ = .false.
+    end if
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    ! For parallel I/O, not all variables are written by all processes.
+    ! 1. Let PRC_myrank 0 writes all z axes
+    ! 2. Let processes (rankidx(2) == 0) write x axes  (bottom row processes)
+    !        rankidx(1) == 0           writes west HALO
+    !        rankidx(1) == PRC_NUM_X-1 writes east HALO
+    !        others                    writes without HALO
+    ! 3. Let processes (rankidx(1) == 0) write y axes  (left column processes)
+    !        rankidx(1) == 0           writes south HALO
+    !        rankidx(1) == PRC_NUM_Y-1 writes north HALO
+    !        others                    writes without HALO
+
+    if ( .NOT. xy_ .AND. PRC_myrank .EQ. 0 ) then
+       start(1) = 1
+       count(1) = KE - KS + 1
+       call FileWriteAxis( fid, 'z',   GRID_CZ(KS:KE),    start, count )
+       call FileWriteAxis( fid, 'zh',  GRID_FZ(KS:KE),    start, count )
+       count(1) = LKE - LKS + 1
+       call FileWriteAxis( fid, 'lz',  GRID_LCZ(LKS:LKE), start, count )
+       call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS:LKE), start, count )
+       count(1) = UKE - UKS + 1
+       call FileWriteAxis( fid, 'uz',  GRID_UCZ(UKS:UKE), start, count )
+       call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS:UKE), start, count )
+    end if
+
+    ! calculate start/end indices for processes along x/xh dimension
+    XS = IHALO + 1
+    XE = IHALO + IMAX
+    start(1) = IMAX * rankidx(1) + 1
+    count(1) = IMAX
+    if ( .NOT. PRC_PERIODIC_X ) then
+       start(1) = start(1) + IHALO
+       if ( rankidx(1) .EQ. 0 ) then
+          XS = 1
+          start(1) = 1
+          count(1) = count(1) + IHALO
+       end if
+       if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then
+          XE = XE + IHALO
+          count(1) = count(1) + IHALO
+       end if
+    end if
+    if ( rankidx(2) .EQ. 0 ) then  ! south most row processes
+       call FileWriteAxis( fid, 'x',   GRID_CX(XS:XE), start, count )
+       ! GRID_FX starts with 0, representing the right wall of grid cells
+       call FileWriteAxis( fid, 'xh',  GRID_FX(XS:XE), start, count )
+    end if
+
+    ! calculate start/end indices for processes along y/yh dimension
+    YS = JHALO + 1
+    YE = JHALO + JMAX
+    start(1) = JMAX * rankidx(2) + 1
+    count(1) = JMAX
+    if ( .NOT. PRC_PERIODIC_Y ) then
+       start(1) = start(1) + JHALO
+       if ( rankidx(2) .EQ. 0 ) then
+          YS = 1
+          start(1) = 1
+          count(1) = count(1) + JHALO
+       end if
+       if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then
+          YE = YE + JHALO
+          count(1) = count(1) + JHALO
+       end if
+    end if
+    if ( rankidx(1) .EQ. 0 ) then  ! west most column processes
+       call FileWriteAxis( fid, 'y',   GRID_CY(YS:YE), start, count )
+       call FileWriteAxis( fid, 'yh',  GRID_FY(YS:YE), start, count )
+    end if
+
+    if ( .NOT. xy_ .AND. PRC_myrank .EQ. 0 ) then
+       start(1) = 1
+       count(1) = KA
+       call FileWriteAxis( fid, 'CZ',   GRID_CZ,   start, count )
+       call FileWriteAxis( fid, 'CDZ',  GRID_CDZ,  start, count )
+       count(1) = LKE - LKS + 1
+       call FileWriteAxis( fid, 'LCZ',  GRID_LCZ,  start, count )
+       count(1) = LKE - LKS + 2
+       call FileWriteAxis( fid, 'LFZ',  GRID_LFZ,  start, count )
+       count(1) = LKE - LKS + 1
+       call FileWriteAxis( fid, 'LCDZ', GRID_LCZ,  start, count )
+       count(1) = UKE - UKS + 1
+       call FileWriteAxis( fid, 'UCZ',  GRID_UCZ,  start, count )
+       count(1) = UKE - UKS + 2
+       call FileWriteAxis( fid, 'UFZ',  GRID_UFZ,  start, count )
+       count(1) = UKE - UKS + 1
+       call FileWriteAxis( fid, 'UCDZ', GRID_UCZ,  start, count )
+       count(1) = KA
+       call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ, start, count )
+       call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ, start, count )
+       count(1) = KA + 1
+       call FileWriteAxis( fid, 'FZ',   GRID_FZ,   start, count )
+       count(1) = KA - 1
+       call FileWriteAxis( fid, 'FDZ',  GRID_FDZ,  start, count )
+    end if
+
+    ! calculate start/end indices for processes along CX dimension
+    XS = IHALO + 1
+    XE = IHALO + IMAX
+    start(1) = IMAX * rankidx(1) + IHALO + 1
+    count(1) = IMAX
+    if ( rankidx(1) .EQ. 0 ) then
+       XS = 1
+       start(1) = 1
+       count(1) = count(1) + IHALO
+    end if
+    if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then
+       XE = XE + IHALO
+       count(1) = count(1) + IHALO
+    end if
+    if ( rankidx(2) .EQ. 0 ) then  ! south most row processes
+       call FileWriteAxis( fid, 'CX',   GRID_CX  (XS:XE), start, count )
+       call FileWriteAxis( fid, 'CDX',  GRID_CDX (XS:XE), start, count )
+       call FileWriteAxis( fid, 'CBFX', GRID_CBFX(XS:XE), start, count )
+       call FileWriteAxis( fid, 'FBFX', GRID_FBFX(XS:XE), start, count )
+       ! FX is CX + 1
+       if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then
+          XE = XE + 1
+          count(1) = count(1) + 1
+       end if
+       ! Note index of GRID_FX starts with 0
+       call FileWriteAxis( fid, 'FX', GRID_FX(XS-1:XE-1), start, count )
+       ! FDX is CX - 1
+       if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then
+          XE = XE - 2
+          count(1) = count(1) - 2
+       end if
+       call FileWriteAxis( fid, 'FDX', GRID_FDX(XS:XE), start, count )
+    end if
+
+    ! calculate start/end indices for processes along CY dimension
+    YS = JHALO + 1
+    YE = JHALO + JMAX
+    start(1) = JMAX * rankidx(2) + JHALO + 1
+    count(1) = JMAX
+    if ( rankidx(2) .EQ. 0 ) then
+       YS = 1
+       start(1) = 1
+       count(1) = count(1) + JHALO
+    end if
+    if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then
+       YE = YE + JHALO
+       count(1) = count(1) + JHALO
+    end if
+    if ( rankidx(1) .EQ. 0 ) then  ! west most column processes
+       call FileWriteAxis( fid, 'CY',   GRID_CY  (YS:YE), start, count )
+       call FileWriteAxis( fid, 'CDY',  GRID_CDY (YS:YE), start, count )
+       call FileWriteAxis( fid, 'CBFY', GRID_CBFY(YS:YE), start, count )
+       call FileWriteAxis( fid, 'FBFY', GRID_FBFY(YS:YE), start, count )
+       ! FY is CY + 1
+       if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then
+          YE = YE + 1
+          count(1) = count(1) + 1
+       end if
+       ! Note index of GRID_FY starts with 0
+       call FileWriteAxis( fid, 'FY', GRID_FY(YS-1:YE-1), start, count )
+       ! FDY is CY - 1
+       if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then
+          YE = YE - 2
+          count(1) = count(1) - 2
+       end if
+       call FileWriteAxis( fid, 'FDY', GRID_FDY(YS:YE), start, count )
+    end if
+
+    ! global axes (skipped ?)
+    ! call FileWriteAxis( fid, 'CXG', GRID_CXG )
+    ! call FileWriteAxis( fid, 'CYG', GRID_CYG )
+    ! call FileWriteAxis( fid, 'FXG', GRID_FXG )
+    ! call FileWriteAxis( fid, 'FYG', GRID_FYG )
+    !
+    ! call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG )
+    ! call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG )
+    ! call FileWriteAxis( fid, 'FBFXG', GRID_FBFXG )
+    ! call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG )
+
+    ! associate coordinates (dimensions: x/xh, y/yh)
+
+    ! calculate start/end indices for processes along x/xh dimension
+    XS = IHALO + 1
+    XE = IHALO + IMAX
+    start(1) = IMAX * rankidx(1) + 1
+    count(1) = IMAX
+    if ( .NOT. PRC_PERIODIC_X ) then
+       start(1) = start(1) + IHALO
+       if ( rankidx(1) .EQ. 0 ) then
+          XS = 1
+          start(1) = 1
+          count(1) = count(1) + IHALO
+       end if
+       if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then
+          XE = XE + IHALO
+          count(1) = count(1) + IHALO
+       end if
+    end if
+
+    ! calculate start/end indices for processes along y/yh dimension
+    YS = JHALO + 1
+    YE = JHALO + JMAX
+    start(2) = JMAX * rankidx(2) + 1
+    count(2) = JMAX
+    if ( .NOT. PRC_PERIODIC_Y ) then
+       start(2) = start(2) + JHALO
+       if ( rankidx(2) .EQ. 0 ) then
+          YS = 1
+          start(2) = 1
+          count(2) = count(2) + JHALO
+       end if
+       if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then
+          YE = YE + JHALO
+          count(2) = count(2) + JHALO
+       end if
+    end if
+
+    call FileWriteAssociatedCoordinates( fid, 'lon' ,   AXIS_LON  (XS:XE, YS:YE), start, count )
+    call FileWriteAssociatedCoordinates( fid, 'lon_uy', AXIS_LONX (XS:XE, YS:YE), start, count )
+    call FileWriteAssociatedCoordinates( fid, 'lon_xv', AXIS_LONY (XS:XE, YS:YE), start, count )
+    call FileWriteAssociatedCoordinates( fid, 'lon_uv', AXIS_LONXY(XS:XE, YS:YE), start, count )
+    call FileWriteAssociatedCoordinates( fid, 'lat' ,   AXIS_LAT  (XS:XE, YS:YE), start, count )
+    call FileWriteAssociatedCoordinates( fid, 'lat_uy', AXIS_LATX (XS:XE, YS:YE), start, count )
+    call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATY (XS:XE, YS:YE), start, count )
+    call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATXY(XS:XE, YS:YE), start, count )
+
+    call FileFlush( fid )  ! PnetCDF only
+
+    return
+  end subroutine FILEIO_write_axes_par
+
+  !-----------------------------------------------------------------------------
   !> Define a variable to file
   subroutine FILEIO_def_var( &
        fid,      &
@@ -2131,7 +2509,7 @@ contains
     character(len=*),   intent(in)  :: datatype !< data type (REAL8/REAL4/default)
     real(RP), optional, intent(in)  :: timeintv !< time interval [sec]
 
-    integer           :: dtype, ndims
+    integer           :: dtype, ndims, elm_size
     character(len=2)  :: dims(3)
     real(DP)          :: time_interval
     !---------------------------------------------------------------------------
@@ -2140,13 +2518,17 @@ contains
 
     if ( datatype == 'REAL8' ) then
        dtype = File_REAL8
+       elm_size = 4
     elseif( datatype == 'REAL4' ) then
        dtype = File_REAL4
+       elm_size = 8
     else
        if ( RP == 8 ) then
           dtype = File_REAL8
+          elm_size = 8
        elseif( RP == 4 ) then
           dtype = File_REAL4
+          elm_size = 4
        else
           write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
           call PRC_MPIstop
@@ -2156,57 +2538,73 @@ contains
     if ( axistype == 'Z' ) then        ! 1D variable
        ndims = 1
        dims(1) = 'z'
+       write_buf_amount = write_buf_amount + KA * elm_size
     elseif( axistype == 'X' ) then
        ndims = 1
        dims(1) = 'x'
+       write_buf_amount = write_buf_amount + IA * elm_size
     elseif( axistype == 'Y' ) then
        ndims = 1
        dims(1) = 'y'
+       write_buf_amount = write_buf_amount + JA * elm_size
     elseif ( axistype == 'XY' ) then   ! 2D variable
        ndims = 2
        dims(1) = 'x'
        dims(2) = 'y'
+       write_buf_amount = write_buf_amount + IA * JA * elm_size
     elseif ( axistype == 'UY' ) then
        ndims = 2
        dims(1) = 'xh'
        dims(2) = 'y'
+       write_buf_amount = write_buf_amount + IA * JA * elm_size
     elseif ( axistype == 'XV' ) then
        ndims = 2
        dims(1) = 'x'
        dims(2) = 'yh'
+       write_buf_amount = write_buf_amount + IA * JA * elm_size
     elseif ( axistype == 'UV' ) then
        ndims = 2
        dims(1) = 'xh'
        dims(2) = 'yh'
+       write_buf_amount = write_buf_amount + IA * JA * elm_size
     elseif( axistype == 'ZX' ) then
        ndims = 2
        dims(1) = 'z'
        dims(2) = 'x'
+       write_buf_amount = write_buf_amount + KA * IA * elm_size
     elseif ( axistype == 'ZXY' ) then  ! 3D variable
        ndims = 3
        dims = (/'z','x','y'/)
+       write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
     elseif( axistype == 'ZHXY' ) then
        ndims = 3
        dims = (/'zh','x ','y '/)
+       write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
     elseif( axistype == 'ZXHY' ) then
        ndims = 3
        dims = (/'z ','xh','y '/)
+       write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
     elseif( axistype == 'ZXYH' ) then
        ndims = 3
        dims = (/'z ','x ','yh'/)
+       write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
     elseif( axistype == 'Land' ) then
        ndims = 3
        dims = (/'lz','x ','y '/)
+       write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size
     elseif( axistype == 'Urban' ) then
        ndims = 3
        dims = (/'uz','x ','y '/)
+       write_buf_amount = write_buf_amount + UKMAX * IA * JA * elm_size
     elseif ( axistype == 'XYT' ) then  ! 3D variable with time dimension
        ndims = 2
        dims(1) = 'x'
        dims(2) = 'y'
+       write_buf_amount = write_buf_amount + IA * JA * elm_size ! TODO: need to count the number of steps
     elseif ( axistype == 'ZXYT' ) then ! 4D variable
        ndims = 3
        dims = (/'z','x','y'/)
+       write_buf_amount = write_buf_amount + KA * IA * JA * elm_size ! TODO: need to count the number of steps
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -2236,7 +2634,14 @@ contains
     use gtool_file, only: &
        FileWriteVar
     use scale_process, only: &
+       PRC_myrank,     &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     use scale_time, only: &
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
@@ -2250,22 +2655,62 @@ contains
     integer               :: dim1_max, dim1_S, dim1_E
     real(RP), allocatable :: var1D(:)
 
+    integer :: rankidx(2)
+    integer :: start(1), count(1)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
     if ( axistype == 'Z' ) then
        dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
+       if ( IO_PNETCDF ) then
+          start(1) = 1
+          count(1) = 0
+          if ( PRC_myrank .EQ. 0 ) count(1) = KMAX  ! only rank 0 writes
+       end if
     elseif( axistype == 'X' ) then
        dim1_max = IMAXB
        dim1_S   = ISB
        dim1_E   = IEB
+       if ( IO_PNETCDF ) then
+          start(1) = IMAX * rankidx(1) + 1
+          count(1) = IMAX
+          if ( .NOT. PRC_PERIODIC_X ) then
+             start(1) = start(1) + IHALO
+             if ( rankidx(1) .EQ. 0 ) then ! west most process
+                start(1) = 1
+                count(1) = count(1) + IHALO
+             end if
+             if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then ! east most process
+                count(1) = count(1) + IHALO
+             end if
+          end if
+          if ( rankidx(2) .GT. 0 ) count(1) = 0  ! only south most row processes write
+       end if
     elseif( axistype == 'Y' ) then
        dim1_max = JMAXB
        dim1_S   = JSB
        dim1_E   = JEB
+       if ( IO_PNETCDF ) then
+          start(1) = JMAX * rankidx(2) + 1
+          count(1) = JMAX
+          if ( .NOT. PRC_PERIODIC_Y ) then
+             start(1) = start(1) + JHALO
+             if ( rankidx(2) .EQ. 0 ) then ! south most process
+                start(1) = 1
+                count(1) = count(1) + JHALO
+             end if
+             if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then ! north most process
+                count(1) = count(1) + JHALO
+             end if
+          end if
+          if ( rankidx(1) .GT. 0 ) count(1) = 0  ! only west most column processes write
+       end if
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -2274,7 +2719,11 @@ contains
     allocate( var1D(dim1_max) )
 
     var1D(1:dim1_max) = var(dim1_S:dim1_E)
-    call FileWriteVar( vid, var1D(:), NOWSEC, NOWSEC ) ! [IN]
+    if ( IO_PNETCDF ) then
+       call FileWriteVar( vid, var1D(:), NOWSEC, NOWSEC, start, count ) ! [IN]
+    else
+       call FileWriteVar( vid, var1D(:), NOWSEC, NOWSEC ) ! [IN]
+    end if
 
     deallocate( var1D )
 
@@ -2297,7 +2746,14 @@ contains
     use gtool_file, only: &
        FileWriteVar
     use scale_process, only: &
+       PRC_myrank,     &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     use scale_time, only: &
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
@@ -2317,9 +2773,42 @@ contains
 
     integer :: i, j
     logical :: nohalo_
+    integer :: rankidx(2)
+    integer :: start(2), count(2)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    if ( IO_PNETCDF ) then
+       start(1) = IMAX * rankidx(1) + 1
+       count(1) = IMAX
+       if ( .NOT. PRC_PERIODIC_X ) then
+          start(1) = start(1) + IHALO
+          if ( rankidx(1) .EQ. 0 ) then ! west most processes
+             start(1) = 1
+             count(1) = count(1) + IHALO
+          end if
+          if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then ! east most processes
+             count(1) = count(1) + IHALO
+          end if
+       end if
+
+       start(2) = JMAX * rankidx(2) + 1
+       count(2) = JMAX
+       if ( .NOT. PRC_PERIODIC_Y ) then
+          start(2) = start(2) + JHALO
+          if ( rankidx(2) .EQ. 0 ) then ! south most processes
+             start(2) = 1
+             count(2) = count(2) + JHALO
+          end if
+          if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then ! north most processes
+             count(2) = count(2) + JHALO
+          end if
+       end if
+    end if
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -2359,6 +2848,13 @@ contains
        dim1_E   = KE
        dim2_S   = ISB
        dim2_E   = IEB
+       if ( IO_PNETCDF ) then
+          start(2) = start(1)
+          count(2) = count(1)
+          start(1) = 1
+          count(1) = KMAX
+          if ( rankidx(2) .GT. 0 ) count(1) = 0  ! only south most row processes write
+       end if
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -2396,7 +2892,11 @@ contains
     allocate( var2D(dim1_max,dim2_max) )
 
     var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-    call FileWriteVar( vid, var2D(:,:), NOWSEC, NOWSEC ) ! [IN]
+    if ( IO_PNETCDF ) then
+       call FileWriteVar( vid, var2D(:,:), NOWSEC, NOWSEC, start, count ) ! [IN]
+    else
+       call FileWriteVar( vid, var2D(:,:), NOWSEC, NOWSEC ) ! [IN]
+    end if
 
     deallocate( var2D )
 
@@ -2419,13 +2919,20 @@ contains
     use gtool_file, only: &
        FileWriteVar
     use scale_process, only: &
+       PRC_myrank,     &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     use scale_time, only: &
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
-    integer,           intent(in)  :: fid      !< file ID
-    integer,           intent(in)  :: vid      !< netCDF variable ID
+    integer,           intent(in)  :: fid        !< file ID
+    integer,           intent(in)  :: vid        !< netCDF variable ID
     real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
     character(len=*),  intent(in)  :: varname    !< name        of the variable
     character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
@@ -2441,9 +2948,44 @@ contains
 
     integer :: i, j, k
     logical :: nohalo_
+    integer :: rankidx(2)
+    integer :: start(3), count(3)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    if ( IO_PNETCDF ) then
+       start(1) = 1
+
+       start(2) = IMAX * rankidx(1) + 1
+       count(2) = IMAX
+       if ( .NOT. PRC_PERIODIC_X ) then
+          start(2) = start(2) + IHALO
+          if ( rankidx(1) .EQ. 0 ) then ! west most processes
+             start(2) = 1
+             count(2) = count(2) + IHALO
+          end if
+          if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then ! east most processes
+             count(2) = count(2) + IHALO
+          end if
+       end if
+
+       start(3) = JMAX * rankidx(2) + 1
+       count(3) = JMAX
+       if ( .NOT. PRC_PERIODIC_Y ) then
+          start(3) = start(3) + JHALO
+          if ( rankidx(2) .EQ. 0 ) then ! south most processes
+             start(3) = 1
+             count(3) = count(3) + JHALO
+          end if
+          if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then ! north most processes
+             count(3) = count(3) + JHALO
+          end if
+       end if
+    end if
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -2513,6 +3055,8 @@ contains
        call PRC_MPIstop
     endif
 
+    if ( IO_PNETCDF ) count(1) = dim1_max
+
     varhalo(:,:,:) = var(:,:,:)
 
     if ( nohalo_ ) then
@@ -2553,7 +3097,11 @@ contains
     allocate( var3D(dim1_max,dim2_max,dim3_max) )
 
     var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-    call FileWriteVar( vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
+    if ( IO_PNETCDF ) then
+       call FileWriteVar( vid, var3D(:,:,:), NOWSEC, NOWSEC, start, count ) ! [IN]
+    else
+       call FileWriteVar( vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
+    end if
 
     deallocate( var3D )
 
@@ -2578,7 +3126,14 @@ contains
     use gtool_file, only: &
        FileWriteVar
     use scale_process, only: &
+       PRC_myrank,     &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     implicit none
 
     integer,           intent(in)  :: fid          !< file ID
@@ -2601,9 +3156,42 @@ contains
     integer :: step
     integer :: i, j, n
     logical :: nohalo_
+    integer :: rankidx(2)
+    integer :: start(3), count(3)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    if ( IO_PNETCDF ) then
+       start(1) = IMAX * rankidx(1) + 1
+       count(1) = IMAX
+       if ( .NOT. PRC_PERIODIC_X ) then
+          start(1) = start(1) + IHALO
+          if ( rankidx(1) .EQ. 0 ) then ! west most processes
+             start(1) = 1
+             count(1) = count(1) + IHALO
+          end if
+          if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then ! east most processes
+             count(1) = count(1) + IHALO
+          end if
+       end if
+
+       start(2) = JMAX * rankidx(2) + 1
+       count(2) = JMAX
+       if ( .NOT. PRC_PERIODIC_Y ) then
+          start(2) = start(2) + JHALO
+          if ( rankidx(2) .EQ. 0 ) then ! south most processes
+             start(2) = 1
+             count(2) = count(2) + JHALO
+          end if
+          if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then ! north most processes
+             count(2) = count(2) + JHALO
+          end if
+       end if
+    end if
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -2657,7 +3245,11 @@ contains
 
        nowtime = (timetarg-1) * time_interval
        var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-       call FileWriteVar( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+       if ( IO_PNETCDF ) then
+          call FileWriteVar( vid, var2D(:,:), nowtime, nowtime, start, count ) ! [IN]
+       else
+          call FileWriteVar( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+       end if
     else
        nowtime = 0.0_DP
        do n = 1, step
@@ -2691,7 +3283,11 @@ contains
           end if
 
           var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-          call FileWriteVar( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+          if ( IO_PNETCDF ) then
+             call FileWriteVar( vid, var2D(:,:), nowtime, nowtime, start, count ) ! [IN]
+          else
+             call FileWriteVar( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+          end if
           nowtime = nowtime + time_interval
        enddo
     endif
@@ -2719,7 +3315,14 @@ contains
     use gtool_file, only: &
        FileWriteVar
     use scale_process, only: &
+       PRC_myrank,     &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     implicit none
 
     integer,           intent(in)  :: fid          !< file ID
@@ -2740,13 +3343,48 @@ contains
     real(RP), allocatable :: var3D(:,:,:)
     real(DP) :: time_interval, nowtime
 
-
     integer :: step
     integer :: i, j, k, n
     logical :: nohalo_
+    integer :: rankidx(2)
+    integer :: start(4), count(4)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    if ( IO_PNETCDF ) then
+       start(1) = 1
+       count(1) = KMAX
+
+       start(2) = IMAX * rankidx(1) + 1
+       count(2) = IMAX
+       if ( .NOT. PRC_PERIODIC_X ) then
+          start(2) = start(2) + IHALO
+          if ( rankidx(1) .EQ. 0 ) then ! west most processes
+             start(2) = 1
+             count(2) = count(2) + IHALO
+          end if
+          if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then ! east most processes
+             count(2) = count(2) + IHALO
+          end if
+       end if
+
+       start(3) = JMAX * rankidx(2) + 1
+       count(3) = JMAX
+       if ( .NOT. PRC_PERIODIC_Y ) then
+          start(3) = start(3) + JHALO
+          if ( rankidx(2) .EQ. 0 ) then ! south most processes
+             start(3) = 1
+             count(3) = count(3) + JHALO
+          end if
+          if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then ! north most processes
+             count(3) = count(3) + JHALO
+          end if
+       end if
+    end if
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -2811,7 +3449,11 @@ contains
 
        nowtime = (timetarg-1) * time_interval
        var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-       call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+       if ( IO_PNETCDF ) then
+          call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime, start, count ) ! [IN]
+       else
+          call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+       endif
     else
        nowtime = 0.0_DP
        do n = 1, step
@@ -2853,7 +3495,11 @@ contains
           end if
 
           var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-          call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+          if ( IO_PNETCDF ) then
+             call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime, start, count ) ! [IN]
+          else
+             call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+          end if
           nowtime = nowtime + time_interval
        enddo
     endif

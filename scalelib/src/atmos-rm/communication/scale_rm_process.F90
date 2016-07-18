@@ -51,6 +51,9 @@ module scale_rm_process
   logical, public              :: PRC_HAS_E
   logical, public              :: PRC_HAS_S
 
+  logical, public              :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
+  logical, public              :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -83,8 +86,6 @@ contains
        PRC_IsMaster
     implicit none
 
-    logical :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
-    logical :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
     logical :: PRC_CART_REORDER = .false. !< flag for rank reordering over the cartesian map
 
     namelist / PARAM_PRC / &

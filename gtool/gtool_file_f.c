@@ -47,6 +47,22 @@ void file_open_( int32_t *fid,       // (out)
   *error = file_open( fid, _fname, *mode );
 }
 
+void file_open_par_( int32_t *fid,       // (out)
+		     char    *fname,     // (in)
+		     int32_t *mode,      // (in)
+		     int32_t *comm,      // (in)
+		     int32_t *error,     // (out)
+		     int32_t  fname_len) // (in)
+{
+  char _fname[File_HLONG+1];
+  int32_t len;
+
+  len = fname_len > File_HLONG ? File_HLONG : fname_len;
+  fstr2cstr(_fname, fname, len);
+
+  *error = file_open_par( fid, _fname, *mode, MPI_Comm_f2c(*comm) );
+}
+
 void file_set_option_( int32_t *fid,      // (in)
 		       char    *filetype, // (in)
 		       char    *key,      // (in)
@@ -374,6 +390,38 @@ void file_write_axis_( int32_t *fid,          // (in)
   *error = file_write_axis( *fid, _name, val, *precision );
 }
 
+void file_write_axis_par_( int32_t *fid,          // (in)
+		           char    *name,         // (in)
+		           void    *val,          // (in)
+		           int32_t *precision,    // (in)
+		           int32_t *ndims,        // (in)
+		           int32_t *start,        // (in)
+		           int32_t *count,        // (in)
+		           int32_t *error,        // (out)
+		           int32_t  name_len)     // (in)
+{
+  char _name[File_HSHORT+1];
+  int len;
+  MPI_Offset start_[2], count_[2];
+
+  len = name_len > File_HSHORT ? File_HSHORT : name_len;
+  fstr2cstr(_name, name, len);
+
+  /* axes are either 1D or 2D */
+  if (*ndims == 2) {
+    start_[0] = start[1] - 1;
+    start_[1] = start[0] - 1;
+    count_[0] = count[1];
+    count_[1] = count[0];
+  }
+  else { /* *ndims == 1 */
+    start_[0] = start[0] - 1;
+    count_[0] = count[0];
+  }
+
+  *error = file_write_axis_par( *fid, _name, val, *precision, start_, count_ );
+}
+
 void file_put_associated_coordinates_( int32_t *fid,          // (in)
 				       char    *name,         // (in)
 				       char    *desc,         // (in)
@@ -468,6 +516,30 @@ void file_write_associated_coordinates_( int32_t *fid,          // (in)
   *error = file_write_associated_coordinates( *fid, _name, val, *precision );
 }
 
+void file_write_associated_coordinates_par_( int32_t *fid,          // (in)
+				             char    *name,         // (in)
+				             void    *val,          // (in)
+				             int32_t *precision,    // (in)
+				             int32_t *ndims,        // (in)
+				             int32_t *start,        // (in)
+				             int32_t *count,        // (in)
+				             int32_t *error,        // (out)
+				             int32_t  name_len)     // (in)
+{
+  char _name[File_HSHORT+1];
+  int i, len;
+  MPI_Offset start_[4], count_[4];
+
+  len = name_len > File_HSHORT ? File_HSHORT : name_len;
+  fstr2cstr(_name, name, len);
+
+  for (i=0; i<*ndims; i++) {
+      start_[i] = start[*ndims - i - 1] -  1;
+      count_[i] = count[*ndims - i - 1];
+  }
+  *error = file_write_associated_coordinates_par( *fid, _name, val, *precision, start_, count_ );
+}
+
 void file_add_variable_( int32_t  *vid,         // (out)
 			 int32_t  *fid,         // (in)
 			 char     *varname,     // (in)
@@ -535,6 +607,26 @@ void file_write_var_( int32_t  *vid,       // (in)
   *error = file_write_var( *vid, var, *t_start, *t_end, *precision );
 }
 
+void file_write_var_par_( int32_t  *vid,       // (in)
+		          void     *var,       // (in)
+		          real64_t *t_start,   // (in)
+		          real64_t *t_end,     // (in)
+		          int32_t  *precision, // (in)
+		          int32_t  *ndims,     // (in)
+		          int32_t  *start,     // (in)
+		          int32_t  *count,     // (in)
+		          int32_t  *error)     // (out)
+{
+  int i;
+  MPI_Offset start_[4], count_[4]; /* assume max ndims is 4 */
+
+  for (i=0; i<*ndims; i++) {
+      start_[i] = start[*ndims - i - 1] -  1;
+      count_[i] = count[*ndims - i - 1];
+  }
+  *error = file_write_var_par( *vid, var, *t_start, *t_end, *precision, start_, count_ );
+}
+
 void file_close_( int32_t *fid ,   // (in)
 		  int32_t *error ) // (out)
 {
@@ -545,4 +637,23 @@ void file_enddef_( int32_t *fid ,   // (in)
 		   int32_t *error ) // (out)
 {
   *error = file_enddef( *fid );
+}
+
+void file_attach_buffer_( int32_t *fid ,       // (in)
+		          int32_t *buf_amount, // (out)
+		          int32_t *error )     // (out)
+{
+  *error = file_attach_buffer( *fid, *buf_amount );
+}
+
+void file_detach_buffer_( int32_t *fid ,       // (in)
+		          int32_t *error )     // (out)
+{
+  *error = file_detach_buffer( *fid );
+}
+
+void file_flush_( int32_t *fid ,   // (in)
+		  int32_t *error ) // (out)
+{
+  *error = file_flush( *fid );
 }

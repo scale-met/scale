@@ -61,6 +61,7 @@ module scale_stdio
   logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
   logical,               public            :: IO_LOG_NML_SUPPRESS = .false. !< suppress all of log output?
+  logical,               public            :: IO_PNETCDF          = .false. !< do parallel I/O through PnetCDF
 
   !-----------------------------------------------------------------------------
   !
@@ -89,7 +90,8 @@ contains
        IO_LOG_BASENAME,     &
        IO_LOG_SUPPRESS,     &
        IO_LOG_ALLNODE,      &
-       IO_LOG_NML_SUPPRESS
+       IO_LOG_NML_SUPPRESS, &
+       IO_PNETCDF
 
     character(len=H_MID),  intent(in) :: MODELNAME !< name of the model
     logical,               intent(in) :: call_from_launcher  !< flag to get command argument

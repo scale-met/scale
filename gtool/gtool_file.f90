@@ -54,9 +54,12 @@ module gtool_file
   public :: FileGetGlobalAttribute
   public :: FileSetGlobalAttribute
   public :: FileEndDef
+  public :: FileFlush
   public :: FileClose
   public :: FileCloseAll
   public :: FileMakeFname
+  public :: FileAttachBuffer
+  public :: FileDetachBuffer
 
   interface FilePutAxis
      module procedure FilePutAxisRealSP
@@ -177,7 +180,9 @@ contains
        rankidx,     & ! (in)
        single,      & ! (in) optional
        time_units,  & ! (in) optional
-       append       ) ! (in) optional
+       append,      & ! (in) optional
+       comm         ) ! (in) optional
+    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent(out)           :: fid
@@ -192,6 +197,7 @@ contains
     character(LEN=*), intent( in), optional :: time_units
     logical,          intent( in), optional :: single
     logical,          intent( in), optional :: append
+    integer,          intent( in), optional :: comm ! MPI communicator
 
     character(len=File_HMID) :: time_units_
     logical :: single_
@@ -225,7 +231,8 @@ contains
          existed,    & ! (out)
          basename,   & ! (in)
          mode,       & ! (in)
-         single_     & ! (in)
+         single_,    & ! (in)
+         comm        & ! (in)
          )
 
     if ( existed ) return
@@ -237,10 +244,12 @@ contains
          "source", source             ) ! (in)
     call FileSetGlobalAttribute( fid, & ! (in)
          "institution", institution   ) ! (in)
-    call FileSetGlobalAttribute( fid, & ! (in)
-         "myrank", (/myrank/)         ) ! (in)
-    call FileSetGlobalAttribute( fid, & ! (in)
-         "rankidx", rankidx           ) ! (in)
+    if ( .NOT. present(comm) .OR. comm .EQ. MPI_COMM_NULL ) then
+       call FileSetGlobalAttribute( fid, & ! (in)
+            "myrank", (/myrank/)         ) ! (in)
+       call FileSetGlobalAttribute( fid, & ! (in)
+            "rankidx", rankidx           ) ! (in)
+    end if
 
     call file_set_tunits( fid, & ! (in)
          time_units_,          & ! (in)
@@ -472,7 +481,8 @@ contains
       fid,       & ! (out)
       basename,  & ! (in)
       mode,      & ! (in)
-      single     & ! (in) optional
+      single,    & ! (in) optional
+      comm       & ! (in) optional
       )
     implicit none
 
@@ -480,15 +490,16 @@ contains
     character(LEN=*), intent( in) :: basename
     integer,          intent( in) :: mode
     logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: comm
 
     logical :: existed
     logical :: single_ = .false.
 
     if ( present(single) ) single_ = single
 
-    call FileGetfid( fid,        & ! (out)
-         existed,                & ! (out)
-         basename, mode, single_ ) ! (in)
+    call FileGetfid( fid,              & ! (out)
+         existed,                      & ! (out)
+         basename, mode, single_, comm ) ! (in)
 
     return
   end subroutine FileOpen
@@ -587,16 +598,26 @@ contains
   subroutine FileWriteAxisRealSP( &
        fid,      & ! (in)
        name,     & ! (in)
-       val       ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(SP),    intent(in) :: val(:)
+       val,      & ! (in)
+       start,    & ! (in)
+       count     ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(SP),    intent(in)           :: val(:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_axis( fid, name, val, SP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_axis_par( fid, name, val, SP, & ! (in)
+            size(shape(val)), start, count,               & ! (in)
+            error                                         ) ! (out)
+    else
+       call file_write_axis( fid, name, val, SP, & ! (in)
+            error                                     ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to write axis')
     end if
@@ -606,16 +627,26 @@ contains
   subroutine FileWriteAxisRealDP( &
        fid,      & ! (in)
        name,     & ! (in)
-       val       ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(DP),    intent(in) :: val(:)
+       val,      & ! (in)
+       start,    & ! (in)
+       count     ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(DP),    intent(in)           :: val(:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_axis( fid, name, val, DP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_axis_par( fid, name, val, DP, & ! (in)
+            size(shape(val)), start, count,               & ! (in)
+            error                                         ) ! (out)
+    else
+       call file_write_axis( fid, name, val, DP, & ! (in)
+            error                                     ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to write axis')
     end if
@@ -892,16 +923,26 @@ contains
   subroutine FileWrite1DAssociatedCoordinatesRealSP( &
        fid,       & ! (in)
        name,      & ! (in)
-       val        ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(SP),    intent(in) :: val(:)
+       val,       & ! (in)
+       start,     & ! (in)
+       count      ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(SP),    intent(in)           :: val(:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
-         error                                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_associated_coordinates_par( fid, name, val, SP, & ! (in)
+            size(shape(val)), start, count,                                 & ! (in)
+            error                                                           ) ! (out)
+    else
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            error                                                       ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put associated coordinates')
     end if
@@ -911,16 +952,26 @@ contains
   subroutine FileWrite1DAssociatedCoordinatesRealDP( &
        fid,       & ! (in)
        name,      & ! (in)
-       val        ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(DP),    intent(in) :: val(:)
+       val,       & ! (in)
+       start,     & ! (in)
+       count      ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(DP),    intent(in)           :: val(:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
-         error                                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_associated_coordinates_par( fid, name, val, DP, & ! (in)
+            size(shape(val)), start, count,                                 & ! (in)
+            error                                                           ) ! (out)
+    else
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            error                                                       ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put associated coordinates')
     end if
@@ -930,16 +981,26 @@ contains
   subroutine FileWrite2DAssociatedCoordinatesRealSP( &
        fid,       & ! (in)
        name,      & ! (in)
-       val        ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(SP),    intent(in) :: val(:,:)
+       val,       & ! (in)
+       start,     & ! (in)
+       count      ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(SP),    intent(in)           :: val(:,:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
-         error                                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_associated_coordinates_par( fid, name, val, SP, & ! (in)
+            size(shape(val)), start, count,                                 & ! (in)
+            error                                                           ) ! (out)
+    else
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            error                                                       ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put associated coordinates')
     end if
@@ -949,16 +1010,26 @@ contains
   subroutine FileWrite2DAssociatedCoordinatesRealDP( &
        fid,       & ! (in)
        name,      & ! (in)
-       val        ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(DP),    intent(in) :: val(:,:)
+       val,       & ! (in)
+       start,     & ! (in)
+       count      ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(DP),    intent(in)           :: val(:,:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
-         error                                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_associated_coordinates_par( fid, name, val, DP, & ! (in)
+            size(shape(val)), start, count,                                 & ! (in)
+            error                                                           ) ! (out)
+    else
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            error                                                       ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put associated coordinates')
     end if
@@ -968,16 +1039,26 @@ contains
   subroutine FileWrite3DAssociatedCoordinatesRealSP( &
        fid,       & ! (in)
        name,      & ! (in)
-       val        ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(SP),    intent(in) :: val(:,:,:)
+       val,       & ! (in)
+       start,     & ! (in)
+       count      ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(SP),    intent(in)           :: val(:,:,:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
-         error                                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_associated_coordinates_par( fid, name, val, SP, & ! (in)
+            size(shape(val)), start, count,                                 & ! (in)
+            error                                                           ) ! (out)
+    else
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            error                                                       ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put associated coordinates')
     end if
@@ -987,16 +1068,26 @@ contains
   subroutine FileWrite3DAssociatedCoordinatesRealDP( &
        fid,       & ! (in)
        name,      & ! (in)
-       val        ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(DP),    intent(in) :: val(:,:,:)
+       val,       & ! (in)
+       start,     & ! (in)
+       count      ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(DP),    intent(in)           :: val(:,:,:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
-         error                                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_associated_coordinates_par( fid, name, val, DP, & ! (in)
+            size(shape(val)), start, count,                                 & ! (in)
+            error                                                           ) ! (out)
+    else
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            error                                                       ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put associated coordinates')
     end if
@@ -1006,16 +1097,26 @@ contains
   subroutine FileWrite4DAssociatedCoordinatesRealSP( &
        fid,       & ! (in)
        name,      & ! (in)
-       val        ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(SP),    intent(in) :: val(:,:,:,:)
+       val,       & ! (in)
+       start,     & ! (in)
+       count      ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(SP),    intent(in)           :: val(:,:,:,:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
-         error                                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_associated_coordinates_par( fid, name, val, SP, & ! (in)
+            size(shape(val)), start, count,                                 & ! (in)
+            error                                                           ) ! (out)
+    else
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            error                                                       ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put associated coordinates')
     end if
@@ -1025,16 +1126,26 @@ contains
   subroutine FileWrite4DAssociatedCoordinatesRealDP( &
        fid,       & ! (in)
        name,      & ! (in)
-       val        ) ! (in)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: name
-    real(DP),    intent(in) :: val(:,:,:,:)
+       val,       & ! (in)
+       start,     & ! (in)
+       count      ) ! (in)
+    integer,          intent(in)           :: fid
+    character(len=*), intent(in)           :: name
+    real(DP),    intent(in)           :: val(:,:,:,:)
+    integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size
+    intrinsic size, shape
 
-    call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
-         error                                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_associated_coordinates_par( fid, name, val, DP, & ! (in)
+            size(shape(val)), start, count,                                 & ! (in)
+            error                                                           ) ! (out)
+    else
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            error                                                       ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put associated coordinates')
     end if
@@ -2560,7 +2671,9 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count    & ! (in)
       )
     implicit none
 
@@ -2568,17 +2681,27 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic size, shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_var( vid, var(:), ts, te, SP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_var_par( vid, var(:), ts, te, SP, & ! (in)
+            size(shape(var)), start, count,                          & ! (in)
+            error                                                    ) ! (out)
+    else
+       call file_write_var( vid, var(:), ts, te, SP, & ! (in)
+            error                                                ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2595,7 +2718,9 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count    & ! (in)
       )
     implicit none
 
@@ -2603,17 +2728,27 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic size, shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_var( vid, var(:), ts, te, DP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_var_par( vid, var(:), ts, te, DP, & ! (in)
+            size(shape(var)), start, count,                          & ! (in)
+            error                                                    ) ! (out)
+    else
+       call file_write_var( vid, var(:), ts, te, DP, & ! (in)
+            error                                                ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2630,7 +2765,9 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count    & ! (in)
       )
     implicit none
 
@@ -2638,17 +2775,27 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic size, shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_var( vid, var(:,:), ts, te, SP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_var_par( vid, var(:,:), ts, te, SP, & ! (in)
+            size(shape(var)), start, count,                          & ! (in)
+            error                                                    ) ! (out)
+    else
+       call file_write_var( vid, var(:,:), ts, te, SP, & ! (in)
+            error                                                ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2665,7 +2812,9 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count    & ! (in)
       )
     implicit none
 
@@ -2673,17 +2822,27 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic size, shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_var( vid, var(:,:), ts, te, DP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_var_par( vid, var(:,:), ts, te, DP, & ! (in)
+            size(shape(var)), start, count,                          & ! (in)
+            error                                                    ) ! (out)
+    else
+       call file_write_var( vid, var(:,:), ts, te, DP, & ! (in)
+            error                                                ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2700,7 +2859,9 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count    & ! (in)
       )
     implicit none
 
@@ -2708,17 +2869,27 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic size, shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_var( vid, var(:,:,:), ts, te, SP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_var_par( vid, var(:,:,:), ts, te, SP, & ! (in)
+            size(shape(var)), start, count,                          & ! (in)
+            error                                                    ) ! (out)
+    else
+       call file_write_var( vid, var(:,:,:), ts, te, SP, & ! (in)
+            error                                                ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2735,7 +2906,9 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count    & ! (in)
       )
     implicit none
 
@@ -2743,17 +2916,27 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic size, shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_var( vid, var(:,:,:), ts, te, DP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_var_par( vid, var(:,:,:), ts, te, DP, & ! (in)
+            size(shape(var)), start, count,                          & ! (in)
+            error                                                    ) ! (out)
+    else
+       call file_write_var( vid, var(:,:,:), ts, te, DP, & ! (in)
+            error                                                ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2770,7 +2953,9 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count    & ! (in)
       )
     implicit none
 
@@ -2778,17 +2963,27 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic size, shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_var( vid, var(:,:,:,:), ts, te, SP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_var_par( vid, var(:,:,:,:), ts, te, SP, & ! (in)
+            size(shape(var)), start, count,                          & ! (in)
+            error                                                    ) ! (out)
+    else
+       call file_write_var( vid, var(:,:,:,:), ts, te, SP, & ! (in)
+            error                                                ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2805,7 +3000,9 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count    & ! (in)
       )
     implicit none
 
@@ -2813,17 +3010,27 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic size, shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_var( vid, var(:,:,:,:), ts, te, DP, & ! (in)
-         error                                     ) ! (out)
+    if ( present(start) ) then
+       call file_write_var_par( vid, var(:,:,:,:), ts, te, DP, & ! (in)
+            size(shape(var)), start, count,                          & ! (in)
+            error                                                    ) ! (out)
+    else
+       call file_write_var( vid, var(:,:,:,:), ts, te, DP, & ! (in)
+            error                                                ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2869,6 +3076,109 @@ contains
 
     return
   end subroutine FileEndDef
+
+  !-----------------------------------------------------------------------------
+  subroutine FileAttachBuffer( &
+       fid,       & ! (in)
+       buf_amount ) ! (in)
+    implicit none
+
+    integer, intent(in) :: fid
+    integer, intent(in) :: buf_amount
+
+    integer :: error, n
+    !---------------------------------------------------------------------------
+
+    if ( fid < 0 ) return
+
+    do n = 1, File_fid_count-1
+       if ( File_fid_list(n) == fid ) exit
+    end do
+    if ( fid .NE. File_fid_list(n) ) then
+       write(message,*) 'xxx in FileAttachBuffer invalid fid' , fid
+       call Log('E', message)
+    end if
+    call file_attach_buffer( fid, buf_amount, & ! (in)
+         error                                ) ! (out)
+    if ( error .EQ. SUCCESS_CODE ) then
+       write(message, '(1x,A,i3)') '*** [File] File Attach Buffer : NO.', n
+       call Log('I', message)
+       call Log('I', '*** attach buffer for filename: ' // trim(File_fname_list(n)))
+    else
+       call Log('E', 'xxx failed to attach buffer in PnetCDF')
+    end if
+
+    return
+  end subroutine FileAttachBuffer
+
+  !-----------------------------------------------------------------------------
+  subroutine FileDetachBuffer( &
+       fid        ) ! (in)
+    implicit none
+
+    integer, intent(in) :: fid
+
+    integer :: error, n
+    !---------------------------------------------------------------------------
+
+    if ( fid < 0 ) return
+
+    do n = 1, File_fid_count-1
+       if ( File_fid_list(n) == fid ) exit
+    end do
+    if ( n .EQ. File_fid_count ) return  ! already closed
+
+    if ( fid .NE. File_fid_list(n) ) then
+       write(message,*) 'xxx in FileDetachBuffer invalid fid' , fid
+       call Log('E', message)
+    end if
+    call file_detach_buffer( fid, & ! (in)
+         error                    ) ! (out)
+    if ( error .EQ. SUCCESS_CODE ) then
+       write(message, '(1x,A,i3)') '*** [File] File Detach Buffer : NO.', n
+       call Log('I', message)
+       call Log('I', '*** detach buffer for filename: ' // trim(File_fname_list(n)))
+    else
+       call Log('E', 'xxx failed to detach buffer in PnetCDF')
+    end if
+
+    return
+  end subroutine FileDetachBuffer
+
+  !-----------------------------------------------------------------------------
+  subroutine FileFlush( &
+       fid & ! (in)
+       )
+    implicit none
+
+    integer, intent(in) :: fid
+
+    integer :: error, n
+    !---------------------------------------------------------------------------
+
+    if ( fid < 0 ) return
+
+    do n = 1, File_fid_count-1
+       if ( File_fid_list(n) == fid ) exit
+    end do
+    if ( n .EQ. File_fid_count ) return  ! already closed
+
+    if ( fid .NE. File_fid_list(n) ) then
+       write(message,*) 'xxx in FileFlush invalid fid' , fid
+       call Log('E', message)
+    end if
+    call file_flush( fid,  & ! (in)
+         error             ) ! (out)
+    if ( error .EQ. SUCCESS_CODE ) then
+       write(message, '(1x,A,i3)') '*** [File] File flush : NO.', n
+       call Log('I', message)
+       call Log('I', '*** FileFlush filename: ' // trim(File_fname_list(n)))
+    else
+       call Log('E', 'xxx failed to flush PnetCDF pending requests')
+    end if
+
+    return
+  end subroutine FileFlush
 
   !-----------------------------------------------------------------------------
   subroutine FileClose( &
@@ -2962,7 +3272,9 @@ contains
       existed,    &
       basename,   &
       mode,       &
-      single      )
+      single,     &
+      comm        )
+    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent(out) :: fid
@@ -2970,19 +3282,25 @@ contains
     character(LEN=*), intent( in) :: basename
     integer,          intent( in) :: mode
     logical,          intent( in) :: single
-
+    integer,          intent( in), optional :: comm
 
     character(LEN=File_HSHORT) :: rwname(0:2)
     data rwname / 'READ','WRITE','APPEND' /
 
     character(LEN=File_HLONG) :: fname
-    integer                  :: n
+    integer                   :: n
+    logical                   :: pio
 
     integer :: error
     !---------------------------------------------------------------------------
 
     !--- register new file and open
-    if ( single ) then
+    pio = .FALSE.
+    if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) then
+       ! parallel I/O on a single shared netCDF file
+       fname = basename
+       pio = .TRUE.
+    elseif ( single ) then
        fname = trim(basename)//'.peall'
     else
        call FileMakeFname(fname,trim(basename),'pe',mpi_myrank,6)
@@ -2999,9 +3317,16 @@ contains
        return
     end if
 
-    call file_open( fid, & ! (out)
-         fname, mode,    & ! (in)
-         error           ) ! (out)
+    if ( pio ) then
+       call file_open_par( fid,  & ! (out)
+            fname, mode, comm,   & ! (in)
+            error                ) ! (out)
+    else
+       call file_open( fid, & ! (out)
+            fname, mode,    & ! (in)
+            error           ) ! (out)
+    end if
+
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to open file :'//trim(fname)//'.nc')
     end if

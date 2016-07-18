@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <mpi.h>
 
 /* character length */
 #define File_HSHORT  16
@@ -54,9 +55,14 @@ typedef struct{
 } datainfo_t; 
 
 
-extern int32_t file_open( int32_t *fid,   // (out)
-			  char    *fname, // (in)
-			  int32_t  mode); // (in)
+extern int32_t file_open( int32_t  *fid,   // (out)
+			  char     *fname, // (in)
+			  int32_t   mode); // (in)
+
+extern int32_t file_open_par( int32_t  *fid,   // (out)
+			      char     *fname, // (in)
+			      int32_t   mode,  // (in)
+			      MPI_Comm  comm); // (in)
 
 extern int32_t file_set_option( int32_t  fid,      // (in)
 				char    *filetype, // (in)
@@ -143,6 +149,13 @@ extern int32_t file_write_axis( int32_t fid,        // (in)
 			        void   *val,        // (in)
 			        int32_t precision); // (in)
 
+extern int32_t file_write_axis_par( int32_t     fid,        // (in)
+			            char       *name,       // (in)
+			            void       *val,        // (in)
+			            int32_t     precision,  // (in)
+			            MPI_Offset *start,      // (in)
+			            MPI_Offset *count);     // (in)
+
 extern int32_t file_put_associated_coordinates( int32_t fid,        // (in)
 						char   *name,       // (in)
 						char   *desc,       // (in)
@@ -165,6 +178,13 @@ extern int32_t file_write_associated_coordinates( int32_t fid,        // (in)
 						  char   *name,       // (in)
 						  void   *val,        // (in)
 						  int32_t precision); // (in)
+
+extern int32_t file_write_associated_coordinates_par( int32_t     fid,        // (in)
+						      char       *name,       // (in)
+						      void       *val,        // (in)
+						      int32_t     precision,  // (in)
+						      MPI_Offset *start,      // (in)
+						      MPI_Offset *count);     // (in)
 
 extern int32_t file_add_variable( int32_t *vid,     // (out)
 				  int32_t  fid,     // (in)
@@ -190,7 +210,21 @@ extern int32_t file_write_var( int32_t  vid,        // (in)
 			       real64_t t_end,      // (in)
 			       int32_t  precision); // (in)
 
+extern int32_t file_write_var_par( int32_t     vid,       // (in)
+			           void       *var,       // (in)
+			           real64_t    t_start,   // (in)
+			           real64_t    t_end,     // (in)
+			           int32_t     precision, // (in)
+			           MPI_Offset *start,     // (in)
+			           MPI_Offset *count);    // (in)
+
 extern int32_t file_enddef( int32_t fid ); // (in)
+
+extern int32_t file_attach_buffer( int32_t fid, int32_t buf_amount ); // (in)
+
+extern int32_t file_detach_buffer( int32_t fid ); // (in)
+
+extern int32_t file_flush( int32_t fid ); // (in)
 
 extern int32_t file_close( int32_t fid ); // (in)
 
