@@ -50,24 +50,22 @@ module mod_atmos_phy_cp_vars
   character(len=H_MID),  public :: ATMOS_PHY_CP_RESTART_OUT_TITLE    = 'ATMOS_PHY_CP restart' !< title    of the output file
   character(len=H_MID),  public :: ATMOS_PHY_CP_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
-  real(RP), public, allocatable :: ATMOS_PHY_CP_DENS_t(:,:,:)   ! tendency DENS [kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMZ_t(:,:,:)   ! tendency MOMZ [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMX_t(:,:,:)   ! tendency MOMX [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMY_t(:,:,:)   ! tendency MOMY [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_DENS_t(:,:,:)    ! tendency DENS [kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMZ_t(:,:,:)    ! tendency MOMZ [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMY_t(:,:,:)    ! tendency MOMY [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOT_t(:,:,:)    ! tendency RHOT [K*kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_CP_MFLX_cloudbase(:,:) ! cloud base mass flux [kg/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_convrain(:,:)  ! convective rain [kg/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_cloudtop(:,:)       ! cloud top height [m]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_cloudbase(:,:)      ! cloud base height [m]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_dp(:,:,:)   ! cloud fraction (deep convection) [0-1]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_sh(:,:,:)   ! cloud fraction (shallow convection) [0-1]
-  ! only use kf scheme
-  real(RP), public, allocatable :: ATMOS_PHY_CP_kf_nca(:,:)         ! advection/cumulus convection timescale/dt for KF[step]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_kf_w0avg(:,:,:)       ! rannning mean vertical wind velocity for KF[m/s]
-
-
+  real(RP), public, allocatable :: ATMOS_PHY_CP_MFLX_cloudbase(:,:)   ! cloud base mass flux [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_convrain (:,:)   ! convective rain [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_cloudtop      (:,:)   ! cloud top  height [m]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_cloudbase     (:,:)   ! cloud base height [m]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_dp    (:,:,:) ! cloud fraction (deep    convection) [0-1]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_sh    (:,:,:) ! cloud fraction (shallow convection) [0-1]
+  ! only for K-F scheme
+  real(RP), public, allocatable :: ATMOS_PHY_CP_kf_nca        (:,:)   ! advection/cumulus convection timescale/dt for KF[step]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_kf_w0avg      (:,:,:) ! running mean vertical wind velocity for KF[m/s]
 
   !-----------------------------------------------------------------------------
   !
@@ -93,42 +91,40 @@ module mod_atmos_phy_cp_vars
   integer,                private            :: VAR_ID  (VMAX) !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
 
-  data VAR_NAME / 'MFLX_cloudbase' , &
-                  'SFLX_convrain'  , &
-                  'cloudtop'       , &
-                  'cloudbase'      , &
-                  'cldfrac_dp'     , &
-                  'cldfrac_sh'     , &
-                  'kf_nca'         , &
-                  'kf_w0avg'        &
-                  /
-  data VAR_DESC / 'cloud base mass flux', &
-       'convective rain', &
-       'cloud top height', &
-       'cloud base height', &
-       'cloud fraction (deep convection)', &
-       'cloud fraction (shallow convection)', &
-       'advection/cumulus convection timescale/dt for KF', &
-       'rannning mean vertical wind velocity for KF' &
-       /
+  data VAR_NAME / 'MFLX_cloudbase',  &
+                  'SFLX_convrain',   &
+                  'cloudtop',        &
+                  'cloudbase',       &
+                  'cldfrac_dp',      &
+                  'cldfrac_sh',      &
+                  'kf_nca',          &
+                  'kf_w0avg'         /
+  data VAR_DESC / 'cloud base mass flux',                             &
+                  'convective rain',                                  &
+                  'cloud top height',                                 &
+                  'cloud base height',                                &
+                  'cloud fraction (deep convection)',                 &
+                  'cloud fraction (shallow convection)',              &
+                  'advection/cumulus convection timescale/dt for KF', &
+                  'running mean vertical wind velocity for KF'        /
   data VAR_UNIT / 'kg/m2/s', &
-       'kg/m2/s', &
-       'm', &
-       'm', &
-       '0-1', &
-       '0-1', &
-       'step', &
-       'm/s' &
-       /
+                  'kg/m2/s', &
+                  'm',       &
+                  'm',       &
+                  '0-1',     &
+                  '0-1',     &
+                  'step',    &
+                  'm/s'      /
 
   ! tendency names
-  integer,                private, save      :: VMAX_tend = 2!+QA   !< number of the tendency variables dens+rhot+QA
-  integer,                private, save      :: I_cp_dens_t  = 1
-  integer,                private, save      :: I_cp_rhot_t  = 2
-  integer,private,    allocatable, save      :: I_cp_rhoq_t(:)!(QA) = 2+I_qv,2+i_qc....
-  character(len=H_SHORT), private,allocatable, save      :: VAR_tend_NAME(:)!(VMAX_tend) !< name  of the variables
-  character(len=H_MID),   private,allocatable, save      :: VAR_tend_DESC(:)!(VMAX_tend) !< desc. of the variables
-  character(len=H_SHORT), private,allocatable, save      :: VAR_tend_UNIT(:)!(VMAX_tend) !< unit  of the variables
+  integer,                private              :: VMAX_t       !< number of the tendency variables dens+rhot+QA
+  integer,                private              :: I_cp_dens_t = 1
+  integer,                private              :: I_cp_rhot_t = 2
+
+  character(len=H_SHORT), private, allocatable :: VAR_t_NAME(:) !< name  of the variables
+  character(len=H_MID),   private, allocatable :: VAR_t_DESC(:) !< desc. of the variables
+  character(len=H_SHORT), private, allocatable :: VAR_t_UNIT(:) !< unit  of the variables
+  integer,                private, allocatable :: VAR_t_ID  (:) !< ID    of the variables
 
   !-----------------------------------------------------------------------------
 contains
@@ -150,6 +146,7 @@ contains
 
     integer :: ierr
     integer :: iv
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -161,46 +158,50 @@ contains
     allocate( ATMOS_PHY_CP_MOMY_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_CP_RHOT_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QA) )
-    ATMOS_PHY_CP_DENS_t(:,:,:)   = 0._RP!UNDEF
+    ATMOS_PHY_CP_DENS_t(:,:,:)   = 0.0_RP
     ATMOS_PHY_CP_MOMZ_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_MOMX_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_MOMY_t(:,:,:)   = UNDEF
-    ATMOS_PHY_CP_RHOT_t(:,:,:)   = 0._RP!UNDEF
-    ATMOS_PHY_CP_RHOQ_t(:,:,:,:) = 0._RP!UNDEF
+    ATMOS_PHY_CP_RHOT_t(:,:,:)   = 0.0_RP
+    ATMOS_PHY_CP_RHOQ_t(:,:,:,:) = 0.0_RP
 
-    allocate( ATMOS_PHY_CP_MFLX_cloudbase(IA,JA) )
-    allocate( ATMOS_PHY_CP_SFLX_convrain (IA,JA) )
-    allocate( ATMOS_PHY_CP_cloudtop      (IA,JA) )
-    allocate( ATMOS_PHY_CP_cloudbase     (IA,JA) )
-    allocate( ATMOS_PHY_CP_cldfrac_dp (KA,IA,JA) )
-    allocate( ATMOS_PHY_CP_cldfrac_sh (KA,IA,JA) )
-    allocate( ATMOS_PHY_CP_kf_nca        (IA,JA) )
-    allocate( ATMOS_PHY_CP_kf_w0avg   (KA,IA,JA) )
-    ATMOS_PHY_CP_MFLX_cloudbase (:,:)   = 0._RP
-    ATMOS_PHY_CP_SFLX_convrain  (:,:)   = 0._RP
-    ATMOS_PHY_CP_cloudtop       (:,:)   = 0._RP
-    ATMOS_PHY_CP_cloudbase      (:,:)   = 0._RP
-    ATMOS_PHY_CP_cldfrac_dp     (:,:,:) = 0._RP
-    ATMOS_PHY_CP_cldfrac_sh     (:,:,:) = 0._RP
-    ATMOS_PHY_CP_kf_nca         (:,:)   = -100._RP
-    ATMOS_PHY_CP_kf_w0avg       (:,:,:) = 0._RP
+    allocate( ATMOS_PHY_CP_MFLX_cloudbase(IA,JA)    )
+    allocate( ATMOS_PHY_CP_SFLX_convrain (IA,JA)    )
+    allocate( ATMOS_PHY_CP_cloudtop      (IA,JA)    )
+    allocate( ATMOS_PHY_CP_cloudbase     (IA,JA)    )
+    allocate( ATMOS_PHY_CP_cldfrac_dp    (KA,IA,JA) )
+    allocate( ATMOS_PHY_CP_cldfrac_sh    (KA,IA,JA) )
+    allocate( ATMOS_PHY_CP_kf_nca        (IA,JA)    )
+    allocate( ATMOS_PHY_CP_kf_w0avg      (KA,IA,JA) )
+    ATMOS_PHY_CP_MFLX_cloudbase(:,:)   =    0.0_RP
+    ATMOS_PHY_CP_SFLX_convrain (:,:)   =    0.0_RP
+    ATMOS_PHY_CP_cloudtop      (:,:)   =    0.0_RP
+    ATMOS_PHY_CP_cloudbase     (:,:)   =    0.0_RP
+    ATMOS_PHY_CP_cldfrac_dp    (:,:,:) =    0.0_RP
+    ATMOS_PHY_CP_cldfrac_sh    (:,:,:) =    0.0_RP
+    ATMOS_PHY_CP_kf_nca        (:,:)   = -100.0_RP
+    ATMOS_PHY_CP_kf_w0avg      (:,:,:) =    0.0_RP
+
     ! for tendency restart
-    allocate( I_cp_rhoq_t(QA))
-    I_cp_rhoq_t(:) = (/(I_cp_rhot_t+iv,iv=1,QA)/)
-    VMAX_tend = VMAX_tend + QA
-    allocate (VAR_tend_NAME(VMAX_tend))
-    allocate (VAR_tend_DESC(VMAX_tend))
-    allocate (VAR_tend_UNIT(VMAX_tend))
-    VAR_tend_NAME(I_cp_dens_t) = 'DENS_t_CP' ; VAR_tend_DESC(I_cp_dens_t) = 'tendency DENS in CP'
-    VAR_tend_UNIT(I_cp_dens_t) = 'kg/m3/s'
-    VAR_tend_NAME(I_cp_rhot_t) = 'RHOT_t_CP' ; VAR_tend_DESC(I_cp_rhot_t) = 'tendency RHOT in CP'
-    VAR_tend_UNIT(I_cp_rhot_t) = 'K*kg/m3/s'
-    ! moisture
-    do iv = 1,QA
-       VAR_tend_NAME(I_cp_rhoq_t(iv)) = trim(AQ_NAME(iv))//'_t_CP'
-       VAR_tend_DESC(I_cp_rhoq_t(iv)) = 'tendency rho*'//trim(AQ_NAME(iv))//'in CP'
-       VAR_tend_UNIT(I_cp_rhoq_t(iv)) = 'kg/m3/s'
-    end do
+    VMAX_t = 2 + QA
+    allocate( VAR_t_NAME(VMAX_t) )
+    allocate( VAR_t_DESC(VMAX_t) )
+    allocate( VAR_t_UNIT(VMAX_t) )
+    allocate( VAR_t_ID  (VMAX_t) )
+
+    VAR_t_NAME(I_cp_dens_t) = 'DENS_t_CP'
+    VAR_t_DESC(I_cp_dens_t) = 'tendency DENS in CP'
+    VAR_t_UNIT(I_cp_dens_t) = 'kg/m3/s'
+    VAR_t_NAME(I_cp_rhot_t) = 'RHOT_t_CP'
+    VAR_t_DESC(I_cp_rhot_t) = 'tendency RHOT in CP'
+    VAR_t_UNIT(I_cp_rhot_t) = 'K*kg/m3/s'
+
+    do iq = 1, QA
+       VAR_t_NAME(2+iq) = trim(AQ_NAME(iq))//'_t_CP'
+       VAR_t_DESC(2+iq) = 'tendency rho*'//trim(AQ_NAME(iq))//'in CP'
+       VAR_t_UNIT(2+iq) = 'kg/m3/s'
+    enddo
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_CP_VARS,iostat=ierr)
@@ -220,12 +221,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
                   '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
+
     ! tendency
-    do iv = 1, VMAX_tend
+    do iv = 1, VMAX_t
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
-                  '*** NO.',iv+VMAX,'|',VAR_tend_NAME(iv),'|',VAR_tend_DESC(iv),'[',VAR_tend_UNIT(iv),']'
+                  '*** NO.',iv+VMAX,'|',VAR_t_NAME(iv),'|',VAR_t_DESC(iv),'[',VAR_t_UNIT(iv),']'
     enddo
-    !
+
     if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_PHY_CP_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_PHY_CP_RESTART_IN_BASENAME)
@@ -251,17 +253,18 @@ contains
        COMM_wait
     implicit none
 
-    integer :: i,j
+    integer :: i, j
+    integer :: iq
     !---------------------------------------------------------------------------
-    ! 3d var
+
     do j  = JS, JE
     do i  = IS, IE
        ATMOS_PHY_CP_cldfrac_dp(   1:KS-1,i,j) = ATMOS_PHY_CP_cldfrac_dp(KS,i,j)
        ATMOS_PHY_CP_cldfrac_dp(KE+1:KA,  i,j) = ATMOS_PHY_CP_cldfrac_dp(KE,i,j)
        ATMOS_PHY_CP_cldfrac_sh(   1:KS-1,i,j) = ATMOS_PHY_CP_cldfrac_sh(KS,i,j)
        ATMOS_PHY_CP_cldfrac_sh(KE+1:KA,  i,j) = ATMOS_PHY_CP_cldfrac_sh(KE,i,j)
-       ATMOS_PHY_CP_kf_w0avg(   1:KS-1,i,j)   = ATMOS_PHY_CP_kf_w0avg(KS,i,j)
-       ATMOS_PHY_CP_kf_w0avg(KE+1:KA,  i,j)   = ATMOS_PHY_CP_kf_w0avg(KE,i,j)
+       ATMOS_PHY_CP_kf_w0avg  (   1:KS-1,i,j) = ATMOS_PHY_CP_kf_w0avg  (KS,i,j)
+       ATMOS_PHY_CP_kf_w0avg  (KE+1:KA,  i,j) = ATMOS_PHY_CP_kf_w0avg  (KE,i,j)
     enddo
     enddo
 
@@ -273,7 +276,6 @@ contains
     call COMM_vars8( ATMOS_PHY_CP_cldfrac_sh     (:,:,:), 6 )
     call COMM_vars8( ATMOS_PHY_CP_kf_nca         (:,:)  , 7 )
     call COMM_vars8( ATMOS_PHY_CP_kf_w0avg       (:,:,:), 8 )
-
     call COMM_wait ( ATMOS_PHY_CP_MFLX_cloudbase (:,:)  , 1 )
     call COMM_wait ( ATMOS_PHY_CP_SFLX_convrain  (:,:)  , 2 )
     call COMM_wait ( ATMOS_PHY_CP_cloudtop       (:,:)  , 3 )
@@ -282,17 +284,22 @@ contains
     call COMM_wait ( ATMOS_PHY_CP_cldfrac_sh     (:,:,:), 6 )
     call COMM_wait ( ATMOS_PHY_CP_kf_nca         (:,:)  , 7 )
     call COMM_wait ( ATMOS_PHY_CP_kf_w0avg       (:,:,:), 8 )
+
     ! tendency
-    call COMM_vars8( ATMOS_PHY_CP_DENS_t (:,:,:),1+8)
-    call COMM_vars8( ATMOS_PHY_CP_RHOT_t (:,:,:),2+8)
-    do i = 1,QA
-       call COMM_vars8( ATMOS_PHY_CP_RHOQ_t (:,:,:,i),2+i+8)
-    end do
-    call COMM_wait( ATMOS_PHY_CP_DENS_t (:,:,:),1+8)
-    call COMM_wait( ATMOS_PHY_CP_RHOT_t (:,:,:),2+8)
-    do i = 1,QA
-       call COMM_wait( ATMOS_PHY_CP_RHOQ_t (:,:,:,i),2+i+8)
-    end do
+    call COMM_vars8( ATMOS_PHY_CP_DENS_t(:,:,:), VMAX+1 )
+    call COMM_vars8( ATMOS_PHY_CP_RHOT_t(:,:,:), VMAX+2 )
+
+    do iq = 1, QA
+       call COMM_vars8( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VMAX+2+iq )
+    enddo
+
+    call COMM_wait ( ATMOS_PHY_CP_DENS_t(:,:,:), VMAX+1 )
+    call COMM_wait ( ATMOS_PHY_CP_RHOT_t(:,:,:), VMAX+2 )
+
+    do iq = 1, QA
+       call COMM_wait ( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VMAX+2+iq )
+    enddo
+
     return
   end subroutine ATMOS_PHY_CP_vars_fillhalo
 
@@ -304,8 +311,9 @@ contains
     use scale_rm_statistics, only: &
        STAT_total
     implicit none
-    integer  :: iq
+
     real(RP) :: total
+    integer  :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -314,48 +322,50 @@ contains
     if ( ATMOS_PHY_CP_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_CP_RESTART_IN_BASENAME)
 
-       call FILEIO_read( ATMOS_PHY_CP_MFLX_cloudbase(:,:), &                            ! [OUT]
-                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(1), 'XY', step=1 )  ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_SFLX_convrain(:,:),  &                            ! [OUT]
-                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(2), 'XY', step=1 )  ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_cloudtop(:,:),       &                            ! [OUT]
-                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(3), 'XY', step=1 )  ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_cloudbase(:,:),      &                            ! [OUT]
-                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(4), 'XY', step=1 )  ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_cldfrac_dp(:,:,:),   &                            ! [OUT]
+       call FILEIO_read( ATMOS_PHY_CP_MFLX_cloudbase(:,:),                            & ! [OUT]
+                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(1), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_SFLX_convrain(:,:),                             & ! [OUT]
+                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(2), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_cloudtop(:,:),                                  & ! [OUT]
+                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(3), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_cloudbase(:,:),                                 & ! [OUT]
+                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(4), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_cldfrac_dp(:,:,:),                              & ! [OUT]
                          ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_cldfrac_sh(:,:,:),   &                            ! [OUT]
+       call FILEIO_read( ATMOS_PHY_CP_cldfrac_sh(:,:,:),                              & ! [OUT]
                          ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(6), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_kf_nca(:,:),         &                            ! [OUT]
-                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(7), 'XY', step=1 )  ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_kf_w0avg(:,:,:),     &                            ! [OUT]
+       call FILEIO_read( ATMOS_PHY_CP_kf_nca(:,:),                                    & ! [OUT]
+                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(7), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_kf_w0avg(:,:,:),                                & ! [OUT]
                          ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(8), 'ZXY', step=1 ) ! [IN]
        ! tendency
-       call FILEIO_read( ATMOS_PHY_CP_DENS_t(:,:,:),                           &  ! [OUT]
-                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_tend_NAME(I_cp_dens_t), 'ZXY', step=1 )  ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_RHOT_t(:,:,:),                           &  ! [OUT]
-                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_tend_NAME(I_cp_rhot_t), 'ZXY', step=1 )  ! [IN]
-       do iq = 1,QA
-          call FILEIO_read( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq),                           &  ! [OUT]
-                            ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_tend_NAME(I_cp_rhoq_t(iq)), 'ZXY', step=1 )  ! [IN]
-       end do
+       call FILEIO_read( ATMOS_PHY_CP_DENS_t(:,:,:),                                    & ! [OUT]
+                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_t_NAME(1), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_RHOT_t(:,:,:),                                    & ! [OUT]
+                         ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_t_NAME(2), 'ZXY', step=1 ) ! [IN]
+       do iq = 1, QA
+          call FILEIO_read( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq),                                    & ! [OUT]
+                            ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_t_NAME(2+iq), 'ZXY', step=1 ) ! [IN]
+       enddo
 
        call ATMOS_PHY_CP_vars_fillhalo
 
-       call STAT_total( total, ATMOS_PHY_CP_MFLX_cloudbase(:,:), VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_CP_SFLX_convrain(:,:) , VAR_NAME(2) )
-       call STAT_total( total, ATMOS_PHY_CP_cloudtop(:,:)      , VAR_NAME(3) )
-       call STAT_total( total, ATMOS_PHY_CP_cloudbase(:,:)     , VAR_NAME(4) )
-       call STAT_total( total, ATMOS_PHY_CP_cldfrac_dp(:,:,:)  , VAR_NAME(5) )
-       call STAT_total( total, ATMOS_PHY_CP_cldfrac_sh(:,:,:)  , VAR_NAME(6) )
-       call STAT_total( total, ATMOS_PHY_CP_kf_nca(:,:)        , VAR_NAME(7) )
-       call STAT_total( total, ATMOS_PHY_CP_kf_w0avg(:,:,:)    , VAR_NAME(8) )
+       call STAT_total( total, ATMOS_PHY_CP_MFLX_cloudbase(:,:)  , VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_CP_SFLX_convrain (:,:)  , VAR_NAME(2) )
+       call STAT_total( total, ATMOS_PHY_CP_cloudtop      (:,:)  , VAR_NAME(3) )
+       call STAT_total( total, ATMOS_PHY_CP_cloudbase     (:,:)  , VAR_NAME(4) )
+       call STAT_total( total, ATMOS_PHY_CP_cldfrac_dp    (:,:,:), VAR_NAME(5) )
+       call STAT_total( total, ATMOS_PHY_CP_cldfrac_sh    (:,:,:), VAR_NAME(6) )
+       call STAT_total( total, ATMOS_PHY_CP_kf_nca        (:,:)  , VAR_NAME(7) )
+       call STAT_total( total, ATMOS_PHY_CP_kf_w0avg      (:,:,:), VAR_NAME(8) )
+
        ! tendency
-       call STAT_total( total, ATMOS_PHY_CP_DENS_t(:,:,:)    , VAR_tend_NAME(I_cp_dens_t) )
-       call STAT_total( total, ATMOS_PHY_CP_RHOT_t(:,:,:)    , VAR_tend_NAME(I_cp_rhot_t) )
-       do iq = 1,QA
-          call STAT_total( total, ATMOS_PHY_CP_RHOQ_t(:,:,:,iq)    , VAR_tend_NAME(I_cp_rhoq_t(iq)) )
-       end do
+       call STAT_total( total, ATMOS_PHY_CP_DENS_t(:,:,:), VAR_t_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_CP_RHOT_t(:,:,:), VAR_t_NAME(2) )
+
+       do iq = 1, QA
+          call STAT_total( total, ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VAR_t_NAME(2+iq) )
+       enddo
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_CP is not specified.'
     endif
@@ -370,11 +380,15 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
+    use scale_rm_statistics, only: &
+       STAT_total
     implicit none
 
     character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
-    integer :: iq
+
+    real(RP) :: total
+    integer  :: iq
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_CP_RESTART_OUT_BASENAME /= '' ) then
@@ -386,34 +400,31 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_CP) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_write( ATMOS_PHY_CP_MFLX_cloudbase(:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE, &  ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  )  ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_SFLX_convrain(:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,  &  ! [IN]
-                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  )  ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_cloudtop(:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,       &  ! [IN]
-                          VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'XY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  )  ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_cloudbase(:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,      &  ! [IN]
-                          VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'XY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  )  ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_cldfrac_dp(:,:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,   &  ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_MFLX_cloudbase(:,:), basename,   ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_SFLX_convrain(:,:), basename,    ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_cloudtop(:,:), basename,         ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_cloudbase(:,:), basename,        ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_cldfrac_dp(:,:,:), basename,     ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(5), VAR_DESC(5), VAR_UNIT(5), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_cldfrac_sh(:,:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,   &  ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_cldfrac_sh(:,:,:), basename,     ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(6), VAR_DESC(6), VAR_UNIT(6), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_kf_nca(:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,         &  ! [IN]
-                          VAR_NAME(7), VAR_DESC(7), VAR_UNIT(7), 'XY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  )  ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_kf_w0avg(:,:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,     &  ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_kf_nca(:,:), basename,           ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(7), VAR_DESC(7), VAR_UNIT(7), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_kf_w0avg(:,:,:), basename,       ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(8), VAR_DESC(8), VAR_UNIT(8), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
        ! tendency
-       call FILEIO_write( ATMOS_PHY_CP_DENS_t(:,:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,               & ! [IN]
-                       VAR_tend_NAME(I_cp_dens_t), VAR_tend_DESC(I_cp_dens_t), VAR_tend_UNIT(I_cp_dens_t),     & ! [IN]
-                      'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  )                                                   ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_RHOT_t(:,:,:), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,               & ! [IN]
-                       VAR_tend_NAME(I_cp_rhot_t), VAR_tend_DESC(I_cp_rhot_t), VAR_tend_UNIT(I_cp_rhot_t),     & ! [IN]
-                       'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  )                                                  ! [IN]
-       do iq = 1,QA
-          call FILEIO_write( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), basename,  ATMOS_PHY_CP_RESTART_OUT_TITLE,         & ! [IN]
-               VAR_tend_NAME(I_cp_rhoq_t(iq)), VAR_tend_DESC(I_cp_rhoq_t(iq)), VAR_tend_UNIT(I_cp_rhoq_t(iq)), & ! [IN]
-               'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  )                                                          ! [IN]
-       end do
+       call FILEIO_write( ATMOS_PHY_CP_DENS_t(:,:,:), basename,               ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_t_NAME(1), VAR_t_DESC(1), VAR_t_UNIT(1), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_RHOT_t(:,:,:), basename,               ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_t_NAME(2), VAR_t_DESC(2), VAR_t_UNIT(2), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       do iq = 1, QA
+          call FILEIO_write( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), basename,                     ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+                             VAR_t_NAME(2+iq), VAR_t_DESC(2+iq), VAR_t_UNIT(2+iq), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       enddo
     endif
 
     return
@@ -430,6 +441,7 @@ contains
 
     character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
+
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_CP_RESTART_OUT_BASENAME /= '' ) then
@@ -485,11 +497,38 @@ contains
        FILEIO_def_var
     implicit none
 
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if ( restart_fid .NE. -1 ) then
-       call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
-                            VAR_UNIT(1), 'XY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+
+       call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1),   &
+                            VAR_UNIT(1), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(2), VAR_NAME(2), VAR_DESC(2),   &
+                            VAR_UNIT(2), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(3), VAR_NAME(3), VAR_DESC(3),   &
+                            VAR_UNIT(3), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(4), VAR_NAME(4), VAR_DESC(4),   &
+                            VAR_UNIT(4), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(5), VAR_NAME(5), VAR_DESC(5),   &
+                            VAR_UNIT(5), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(6), VAR_NAME(6), VAR_DESC(6),   &
+                            VAR_UNIT(6), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(7), VAR_NAME(7), VAR_DESC(7),   &
+                            VAR_UNIT(7), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(8), VAR_NAME(8), VAR_DESC(8),   &
+                            VAR_UNIT(8), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+
+       call FILEIO_def_var( restart_fid, VAR_t_ID(1), VAR_t_NAME(1), VAR_t_DESC(1), &
+                            VAR_t_UNIT(1), 'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE   ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_t_ID(2), VAR_t_NAME(2), VAR_t_DESC(2), &
+                            VAR_t_UNIT(2), 'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE   ) ! [IN]
+
+       do iq = 1, QA
+          call FILEIO_def_var( restart_fid, VAR_t_ID(2+iq), VAR_t_NAME(2+iq), VAR_t_DESC(2+iq), &
+                               VAR_t_UNIT(2+iq), 'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE         ) ! [IN]
+       enddo
+
     endif
 
     return
@@ -502,11 +541,37 @@ contains
        FILEIO_write_var
     implicit none
 
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if ( restart_fid .NE. -1 ) then
+
        call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_CP_MFLX_cloudbase(:,:), &
-                              VAR_NAME(1), 'XY' ) ! [IN]
+                              VAR_NAME(1), 'XY'  ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_CP_SFLX_convrain(:,:),  &
+                              VAR_NAME(2), 'XY'  ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(3), ATMOS_PHY_CP_cloudtop(:,:),       &
+                              VAR_NAME(3), 'XY'  ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(4), ATMOS_PHY_CP_cloudbase(:,:),      &
+                              VAR_NAME(4), 'XY'  ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(5), ATMOS_PHY_CP_cldfrac_dp(:,:,:),   &
+                              VAR_NAME(5), 'ZXY' ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(6), ATMOS_PHY_CP_cldfrac_sh(:,:,:),   &
+                              VAR_NAME(6), 'ZXY' ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(7), ATMOS_PHY_CP_kf_nca(:,:),         &
+                              VAR_NAME(7), 'XY'  ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(8), ATMOS_PHY_CP_kf_w0avg(:,:,:),     &
+                              VAR_NAME(8), 'ZXY' ) ! [IN]
+       ! tendency
+       call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_CP_DENS_t(:,:,:), &
+                              VAR_t_NAME(1), 'ZXY' ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_CP_RHOT_t(:,:,:), &
+                              VAR_t_NAME(2), 'ZXY' ) ! [IN]
+       do iq = 1, QA
+          call FILEIO_write_var( restart_fid, VAR_ID(2+iq), ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), &
+                                 VAR_t_NAME(2+iq), 'ZXY' ) ! [IN]
+       enddo
+
     endif
 
     return
