@@ -2490,7 +2490,8 @@ contains
        unit,     &
        axistype, &
        datatype, &
-       timeintv  )
+       timeintv, &
+       nsteps    )
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -2508,6 +2509,7 @@ contains
     character(len=*),   intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*),   intent(in)  :: datatype !< data type (REAL8/REAL4/default)
     real(RP), optional, intent(in)  :: timeintv !< time interval [sec]
+    integer,  optional, intent(in)  :: nsteps   !< number of time steps
 
     integer           :: dtype, ndims, elm_size
     character(len=2)  :: dims(3)
@@ -2600,11 +2602,19 @@ contains
        ndims = 2
        dims(1) = 'x'
        dims(2) = 'y'
-       write_buf_amount = write_buf_amount + IA * JA * elm_size ! TODO: need to count the number of steps
+       if ( present(nsteps) ) then
+          write_buf_amount = write_buf_amount + IA * JA * elm_size * nsteps
+       else
+          write_buf_amount = write_buf_amount + IA * JA * elm_size
+       end if
     elseif ( axistype == 'ZXYT' ) then ! 4D variable
        ndims = 3
        dims = (/'z','x','y'/)
-       write_buf_amount = write_buf_amount + KA * IA * JA * elm_size ! TODO: need to count the number of steps
+       if ( present(nsteps) ) then
+         write_buf_amount = write_buf_amount + KA * IA * JA * elm_size * nsteps
+       else
+         write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
+       end if
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
