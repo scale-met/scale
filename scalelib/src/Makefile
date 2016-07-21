@@ -67,6 +67,14 @@ else
   FFLAGS += -DMP=$(MP)
 endif
 
+ifeq ($(CP),)
+  OBJS_CP = scale_atmos_phy_cp_kf.o	\
+            scale_atmos_phy_cp_kf_sub.o
+else
+  OBJS_CP = scale_atmos_phy_cp_$(CP).o
+  FFLAGS += -DMP=$(CP)
+endif
+
 ifeq ($(AE),)
   OBJS_AE = scale_atmos_phy_ae_dummy.o	\
             scale_atmos_phy_ae_kajino13.o
@@ -157,6 +165,8 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_phy_ae_dummy.o	\
 	$(OBJS_NUMERIC_FDM)	\
 	$(OBJS_AE)	\
+	scale_atmos_phy_cp.o	\
+	$(OBJS_CP)	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
 	$(OBJS_MP)	\
