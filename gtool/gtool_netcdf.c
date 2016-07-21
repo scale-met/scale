@@ -1428,7 +1428,6 @@ int32_t file_write_var_par( int32_t     vid,        // (in)
       index[1] = 1;
       CHECK_ERROR( ncmpi_bput_var1_double(ncid, vars[vid]->t->bndsid, index, &t_end, NULL) )
       vars[vid]->start[0] = vars[vid]->t->count;
-      start[0] = vars[vid]->start[0];  // start along the time dimension
     } else {
       MPI_Offset nt = (MPI_Offset) vars[vid]->t->count + 1;
       double t[nt];
@@ -1440,7 +1439,6 @@ int32_t file_write_var_par( int32_t     vid,        // (in)
       for(n=nt-1;n>=0;n--) {
 	if ( fabs(t[n]-t_end) < TEPS ) {
 	  vars[vid]->start[0] = n;
-          start[0] = vars[vid]->start[0];  // start along the time dimension
 	  flag = 0;
 	  break;
 	}
@@ -1454,6 +1452,8 @@ int32_t file_write_var_par( int32_t     vid,        // (in)
 	return ERROR_CODE;
       }
     }
+    start[0] = vars[vid]->start[0];  // start along the time dimension
+    count[0] = vars[vid]->count[0];
   }
 
   switch (precision) {
