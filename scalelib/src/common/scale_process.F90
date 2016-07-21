@@ -338,25 +338,25 @@ contains
     integer :: itag, ierr
     !---------------------------------------------------------------------------
 
-    INTRA_COMM       = ORG_COMM
-    inter_parent     = MPI_COMM_NULL
-    inter_child      = MPI_COMM_NULL
-    fname_local      = CONF_FILES(1)
+    INTRA_COMM   = ORG_COMM
+    inter_parent = MPI_COMM_NULL
+    inter_child  = MPI_COMM_NULL
+    fname_local  = CONF_FILES(1)
 
     if ( NUM_DOMAIN > 1 ) then ! multi domain run
        call MPI_COMM_RANK(ORG_COMM,ORG_myrank,ierr)
        call MPI_COMM_SIZE(ORG_COMM,ORG_nmax,  ierr)
-       allocate ( COLOR_LIST(0:ORG_nmax-1) )
-       allocate ( KEY_LIST  (0:ORG_nmax-1) )
+       allocate( COLOR_LIST(0:ORG_nmax-1) )
+       allocate( KEY_LIST  (0:ORG_nmax-1) )
 
        total_nmax = 0
        do i = 1, NUM_DOMAIN
           total_nmax = total_nmax + PRC_DOMAINS(i)
        enddo
        if ( total_nmax /= ORG_nmax ) then
-          if ( PRC_UNIVERSAL_IsMaster ) write (*,*) ""
-          if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
-          if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
+          if( PRC_UNIVERSAL_IsMaster ) write(*,*) ""
+          if( PRC_UNIVERSAL_IsMaster ) write(*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
+          if( PRC_UNIVERSAL_IsMaster ) write(*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
           call PRC_MPIstop
        endif
 
@@ -364,18 +364,18 @@ contains
        if ( bulk_split ) then
           reordering = .false.
        endif
-       call PRC_MPIcoloring( ORG_COMM,     & ! [in ]
-                             NUM_DOMAIN,   & ! [in ]
-                             PRC_DOMAINS,  & ! [in ]
-                             CONF_FILES,   & ! [in ]
-                             reordering,   & ! [in ]
-                             LOG_SPLIT,    & ! [in ]
-                             COLOR_LIST,   & ! [out]
-                             PRC_ROOT,     & ! [out]
-                             KEY_LIST,     & ! [out]
-                             PARENT_COL,   & ! [out]
-                             CHILD_COL,    & ! [out]
-                             COL_FILE      ) ! [out]
+       call PRC_MPIcoloring( ORG_COMM,    & ! [IN]
+                             NUM_DOMAIN,  & ! [IN]
+                             PRC_DOMAINS, & ! [IN]
+                             CONF_FILES,  & ! [IN]
+                             reordering,  & ! [IN]
+                             LOG_SPLIT,   & ! [IN]
+                             COLOR_LIST,  & ! [OUT]
+                             PRC_ROOT,    & ! [OUT]
+                             KEY_LIST,    & ! [OUT]
+                             PARENT_COL,  & ! [OUT]
+                             CHILD_COL,   & ! [OUT]
+                             COL_FILE     ) ! [OUT]
 
 
        ! split comm_world
@@ -413,20 +413,20 @@ contains
        if ( .NOT. bulk_split ) then
           do i = 1, NUM_DOMAIN-1
              itag = i*100
-             if ( do_create_p(i) ) then ! as a parent
-                call MPI_INTERCOMM_CREATE( INTRA_COMM, PRC_masterrank,           &
-                                           ORG_COMM,   PRC_ROOT(CHILD_COL(i)), &
-                                           itag, inter_child,  ierr)
-             elseif ( do_create_c(i) ) then ! as a child
-                call MPI_INTERCOMM_CREATE( INTRA_COMM, PRC_masterrank,           &
+             if    ( do_create_p(i) ) then ! as a parent
+                call MPI_INTERCOMM_CREATE( INTRA_COMM, PRC_masterrank,          &
+                                           ORG_COMM,   PRC_ROOT(CHILD_COL(i)),  &
+                                           itag, inter_child,  ierr             )
+             elseif( do_create_c(i) ) then ! as a child
+                call MPI_INTERCOMM_CREATE( INTRA_COMM, PRC_masterrank,          &
                                            ORG_COMM,   PRC_ROOT(PARENT_COL(i)), &
-                                           itag, inter_parent, ierr)
+                                           itag, inter_parent, ierr             )
              endif
              call MPI_BARRIER(ORG_COMM, ierr)
           enddo
        endif
 
-       deallocate ( COLOR_LIST, KEY_LIST )
+       deallocate( COLOR_LIST, KEY_LIST )
 
     elseif ( NUM_DOMAIN == 1 ) then ! single domain run
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "*** a single comunicator"
@@ -441,12 +441,12 @@ contains
   !-----------------------------------------------------------------------------
   !> MPI Communicator Split for SCALE-LETKF ensemble
   subroutine PRC_MPIsplit_letkf( &
-      ORG_COMM,         & ! [in ]
-      mem_np,           & ! [in ]
-      nitmax,           & ! [in ]
-      nprocs,           & ! [in ]
-      proc2mem,         & ! [in ]
-      INTRA_COMM        ) ! [out]
+      ORG_COMM,  &
+      mem_np,    &
+      nitmax,    &
+      nprocs,    &
+      proc2mem,  &
+      INTRA_COMM )
     implicit none
 
     integer, intent(in)  :: ORG_COMM
@@ -461,20 +461,21 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call MPI_COMM_RANK( ORG_COMM, ORG_myrank, ierr)
+    call MPI_COMM_RANK( ORG_COMM, ORG_myrank, ierr )
 
     if ( proc2mem(1,1,ORG_myrank+1) >= 1 ) then
        color = proc2mem(1,1,ORG_myrank+1) - 1
-       key = proc2mem(2,1,ORG_myrank+1)
+       key   = proc2mem(2,1,ORG_myrank+1)
     else
        color = MPI_UNDEFINED
-       key = MPI_UNDEFINED
-    end if
+       key   = MPI_UNDEFINED
+    endif
 
-    call MPI_COMM_SPLIT( ORG_COMM,               &
-                         color, &
-                         key,   &
-                         intra_comm, ierr )
+    call MPI_COMM_SPLIT( ORG_COMM,   &
+                         color,      &
+                         key,        &
+                         intra_comm, &
+                         ierr        )
 
     return
   end subroutine PRC_MPIsplit_letkf
@@ -583,25 +584,25 @@ contains
        enddo
 
        !--- set relationship by ordering of relationship number
-       PARENT_COL(:)   = -1
-       CHILD_COL(:)    = -1
+       PARENT_COL(:) = -1
+       CHILD_COL (:) = -1
        do i = 1, NUM_DOMAIN-1
           PARENT_COL(i) = RO_PARENT_COL( DOM2ORDER(i+1) ) ! from child to parent
-          CHILD_COL(i)  = RO_CHILD_COL ( DOM2ORDER(i)   ) ! from parent to child
+          CHILD_COL (i) = RO_CHILD_COL ( DOM2ORDER(i)   ) ! from parent to child
        enddo
 
        do i = 1, NUM_DOMAIN
-          if ( PRC_UNIVERSAL_IsMaster ) write ( *, * ) ""
-          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I2,A,I5)' ) "ORDER (",i,") -> DOMAIN: ", ORDER2DOM(i)
-          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,I5)' ) "NUM PRC_DOMAINS(",i,")  = ", RO_PRC_DOMAINS(i)
-          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,I3)' ) "MY COLOR(",i,") = ", RO_DOM2COL(ORDER2DOM(i))
-          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,I3)' ) "PARENT COLOR(",i,") = ", RO_PARENT_COL(i)
-          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,I3)' ) "CHILD COLOR(",i,") = ", RO_CHILD_COL(i)
-          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,A)'  ) "CONF_FILES(",i,")    = ", trim(RO_CONF_FILES(i))
+          if( PRC_UNIVERSAL_IsMaster ) write(*,*)                ""
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I2,A,I5)') "ORDER (",i,") -> DOMAIN: ", ORDER2DOM(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,I5)') "NUM PRC_DOMAINS(",i,")  = ", RO_PRC_DOMAINS(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,I3)') "MY COLOR(",i,") = ", RO_DOM2COL(ORDER2DOM(i))
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,I3)') "PARENT COLOR(",i,") = ", RO_PARENT_COL(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,I3)') "CHILD COLOR(",i,") = ", RO_CHILD_COL(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,A)' ) "CONF_FILES(",i,")    = ", trim(RO_CONF_FILES(i))
        enddo
-       if ( PRC_UNIVERSAL_IsMaster ) write ( *, * ) ""
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) ""
 
-       do i=1, NUM_DOMAIN
+       do i = 1, NUM_DOMAIN
           COL_FILE(i-1) = RO_CONF_FILES(i) ! final copy
        enddo
 
@@ -667,7 +668,6 @@ contains
 
     return
   end subroutine PRC_MPIcoloring
-  !-----------------------------------------------------------------------------
 
   !-----------------------------------------------------------------------------
   !> quicksort (ascending order)
@@ -695,7 +695,6 @@ contains
     if ( j+1 < bottom ) call PRC_sort_ascd( a, j+1, bottom )
     return
   end subroutine PRC_sort_ascd
-  !-----------------------------------------------------------------------------
 
   !-----------------------------------------------------------------------------
   !> Barrier MPI
@@ -723,7 +722,7 @@ contains
     if ( PRC_mpi_alive ) then
        time = real(MPI_WTIME(), kind=DP)
     else
-       call cpu_time(time)
+       call CPU_TIME(time)
     endif
 
   end function PRC_MPItime
@@ -769,7 +768,7 @@ contains
                        vsize,                &
                        MPI_DOUBLE_PRECISION, &
                        p,                    &
-                       PRC_LOCAL_COMM_WORLD,     &
+                       PRC_LOCAL_COMM_WORLD, &
                        ierr                  )
     enddo
 
@@ -814,40 +813,41 @@ contains
           write(IO_FID_LOG,'(32A32)') '                                '
           write(IO_FID_LOG,*) '++++++ Abort MPI'
           write(IO_FID_LOG,*) ''
-       end if
+       endif
 
        if ( IO_L ) then
-          write(*,*) '++++++ BULK   ID: ',PRC_UNIVERSAL_jobID
-          write(*,*) '++++++ DOMAIN ID: ',PRC_GLOBAL_domainID
-          write(*,*) '++++++ MASTER LOCATION: ',PRC_UNIVERSAL_myrank,'/',PRC_UNIVERSAL_nprocs
-          write(*,*) '++++++ GLOBAL LOCATION: ',PRC_GLOBAL_myrank,'/',PRC_GLOBAL_nprocs
-          write(*,*) '++++++ LOCAL  LOCATION: ',PRC_myrank,'/',PRC_nprocs
+          write(*,*) '++++++ BULK   ID       : ', PRC_UNIVERSAL_jobID
+          write(*,*) '++++++ DOMAIN ID       : ', PRC_GLOBAL_domainID
+          write(*,*) '++++++ MASTER LOCATION : ', PRC_UNIVERSAL_myrank,'/',PRC_UNIVERSAL_nprocs
+          write(*,*) '++++++ GLOBAL LOCATION : ', PRC_GLOBAL_myrank,'/',PRC_GLOBAL_nprocs
+          write(*,*) '++++++ LOCAL  LOCATION : ', PRC_myrank,'/',PRC_nprocs
           write(*,*) ''
-       end if
+       endif
 
-       if ( errcode == PRC_ABORT_code ) then ! called from PRC_MPIstop
-       elseif ( errcode <= MPI_ERR_LASTCODE ) then
+       if    ( errcode == PRC_ABORT_code ) then ! called from PRC_MPIstop
+          ! do nothing
+       elseif( errcode <= MPI_ERR_LASTCODE ) then
           call MPI_ERROR_STRING(errcode, msg, len, ierr)
-          if ( IO_L ) write(IO_FID_LOG,*) '++++++ ', errcode, trim(msg)
-          write(*,*) '++++++ ', errcode, trim(msg)
+          if( IO_L ) write(IO_FID_LOG,*) '++++++ ', errcode, trim(msg)
+          write(*,*)                     '++++++ ', errcode, trim(msg)
        else
-          if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
-          write(*,*) '++++++ Unexpected error code', errcode
+          if( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
+          write(*,*)                     '++++++ Unexpected error code', errcode
        endif
 
        if ( comm /= PRC_ABORT_COMM_WORLD ) then
-          if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
-          write(*,*) '++++++ Unexpected communicator'
+          if( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
+          write(*,*)                     '++++++ Unexpected communicator'
        endif
-       if ( IO_L ) write(IO_FID_LOG,*) ''
-       write(*,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       write(*,*)                     ''
     endif
 
     call FileCloseAll
 
     ! Close logfile, configfile
     if ( IO_L ) then
-       if ( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+       if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
     endif
     close(IO_FID_CONF)
 
