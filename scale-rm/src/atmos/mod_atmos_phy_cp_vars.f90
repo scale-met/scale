@@ -58,7 +58,7 @@ module mod_atmos_phy_cp_vars
   real(RP), public, allocatable :: ATMOS_PHY_CP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_CP_MFLX_cloudbase(:,:)   ! cloud base mass flux [kg/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_convrain (:,:)   ! convective rain [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_rain     (:,:)   ! convective rain [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cloudtop      (:,:)   ! cloud top  height [m]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cloudbase     (:,:)   ! cloud base height [m]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_dp    (:,:,:) ! cloud fraction (deep    convection) [0-1]
@@ -166,7 +166,7 @@ contains
     ATMOS_PHY_CP_RHOQ_t(:,:,:,:) = 0.0_RP
 
     allocate( ATMOS_PHY_CP_MFLX_cloudbase(IA,JA)    )
-    allocate( ATMOS_PHY_CP_SFLX_convrain (IA,JA)    )
+    allocate( ATMOS_PHY_CP_SFLX_rain     (IA,JA)    )
     allocate( ATMOS_PHY_CP_cloudtop      (IA,JA)    )
     allocate( ATMOS_PHY_CP_cloudbase     (IA,JA)    )
     allocate( ATMOS_PHY_CP_cldfrac_dp    (KA,IA,JA) )
@@ -174,7 +174,7 @@ contains
     allocate( ATMOS_PHY_CP_kf_nca        (IA,JA)    )
     allocate( ATMOS_PHY_CP_kf_w0avg      (KA,IA,JA) )
     ATMOS_PHY_CP_MFLX_cloudbase(:,:)   =    0.0_RP
-    ATMOS_PHY_CP_SFLX_convrain (:,:)   =    0.0_RP
+    ATMOS_PHY_CP_SFLX_rain     (:,:)   =    0.0_RP
     ATMOS_PHY_CP_cloudtop      (:,:)   =    0.0_RP
     ATMOS_PHY_CP_cloudbase     (:,:)   =    0.0_RP
     ATMOS_PHY_CP_cldfrac_dp    (:,:,:) =    0.0_RP
@@ -269,7 +269,7 @@ contains
     enddo
 
     call COMM_vars8( ATMOS_PHY_CP_MFLX_cloudbase (:,:)  , 1 )
-    call COMM_vars8( ATMOS_PHY_CP_SFLX_convrain  (:,:)  , 2 )
+    call COMM_vars8( ATMOS_PHY_CP_SFLX_rain      (:,:)  , 2 )
     call COMM_vars8( ATMOS_PHY_CP_cloudtop       (:,:)  , 3 )
     call COMM_vars8( ATMOS_PHY_CP_cloudbase      (:,:)  , 4 )
     call COMM_vars8( ATMOS_PHY_CP_cldfrac_dp     (:,:,:), 5 )
@@ -277,7 +277,7 @@ contains
     call COMM_vars8( ATMOS_PHY_CP_kf_nca         (:,:)  , 7 )
     call COMM_vars8( ATMOS_PHY_CP_kf_w0avg       (:,:,:), 8 )
     call COMM_wait ( ATMOS_PHY_CP_MFLX_cloudbase (:,:)  , 1 )
-    call COMM_wait ( ATMOS_PHY_CP_SFLX_convrain  (:,:)  , 2 )
+    call COMM_wait ( ATMOS_PHY_CP_SFLX_rain      (:,:)  , 2 )
     call COMM_wait ( ATMOS_PHY_CP_cloudtop       (:,:)  , 3 )
     call COMM_wait ( ATMOS_PHY_CP_cloudbase      (:,:)  , 4 )
     call COMM_wait ( ATMOS_PHY_CP_cldfrac_dp     (:,:,:), 5 )
@@ -324,7 +324,7 @@ contains
 
        call FILEIO_read( ATMOS_PHY_CP_MFLX_cloudbase(:,:),                            & ! [OUT]
                          ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(1), 'XY',  step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_SFLX_convrain(:,:),                             & ! [OUT]
+       call FILEIO_read( ATMOS_PHY_CP_SFLX_rain(:,:),                                 & ! [OUT]
                          ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(2), 'XY',  step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_CP_cloudtop(:,:),                                  & ! [OUT]
                          ATMOS_PHY_CP_RESTART_IN_BASENAME, VAR_NAME(3), 'XY',  step=1 ) ! [IN]
@@ -351,7 +351,7 @@ contains
        call ATMOS_PHY_CP_vars_fillhalo
 
        call STAT_total( total, ATMOS_PHY_CP_MFLX_cloudbase(:,:)  , VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_CP_SFLX_convrain (:,:)  , VAR_NAME(2) )
+       call STAT_total( total, ATMOS_PHY_CP_SFLX_rain     (:,:)  , VAR_NAME(2) )
        call STAT_total( total, ATMOS_PHY_CP_cloudtop      (:,:)  , VAR_NAME(3) )
        call STAT_total( total, ATMOS_PHY_CP_cloudbase     (:,:)  , VAR_NAME(4) )
        call STAT_total( total, ATMOS_PHY_CP_cldfrac_dp    (:,:,:), VAR_NAME(5) )
@@ -402,7 +402,7 @@ contains
 
        call FILEIO_write( ATMOS_PHY_CP_MFLX_cloudbase(:,:), basename,   ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_CP_SFLX_convrain(:,:), basename,    ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( ATMOS_PHY_CP_SFLX_rain(:,:), basename,        ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_PHY_CP_cloudtop(:,:), basename,         ATMOS_PHY_CP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
@@ -548,7 +548,7 @@ contains
 
        call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_CP_MFLX_cloudbase(:,:), &
                               VAR_NAME(1), 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_CP_SFLX_convrain(:,:),  &
+       call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_CP_SFLX_rain(:,:),      &
                               VAR_NAME(2), 'XY'  ) ! [IN]
        call FILEIO_write_var( restart_fid, VAR_ID(3), ATMOS_PHY_CP_cloudtop(:,:),       &
                               VAR_NAME(3), 'XY'  ) ! [IN]
