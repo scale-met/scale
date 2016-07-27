@@ -124,7 +124,7 @@ contains
        RHOT_t_CP      => ATMOS_PHY_CP_RHOT_t,         &
        RHOQ_t_CP      => ATMOS_PHY_CP_RHOQ_t,         &
        MFLX_cloudbase => ATMOS_PHY_CP_MFLX_cloudbase, &
-       SFLX_convrain  => ATMOS_PHY_CP_SFLX_convrain,  &  ! convective rain [kg/m2/s]
+       SFLX_rain      => ATMOS_PHY_CP_SFLX_rain,      &  ! convective rain [kg/m2/s]
        cloudtop       => ATMOS_PHY_CP_cloudtop,       &  ! cloud top height [m]
        cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
        cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) [0-1]
@@ -155,7 +155,7 @@ contains
                           RHOT_t_CP,      & ! [INOUT]
                           RHOQ_t_CP,      & ! [INOUT]
                           MFLX_cloudbase, & ! [INOUT]
-                          SFLX_convrain,  & ! [OUT]
+                          SFLX_rain,    & ! [OUT]
                           cloudtop,       & ! [OUT]
                           cloudbase,      & ! [OUT]
                           cldfrac_dp,     & ! [OUT]
@@ -182,12 +182,14 @@ contains
        enddo
        enddo
 
-       call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',                             'kg/m2/s', nohalo=.true. )
-       call HIST_in( SFLX_convrain (:,:),   'CONVRAIN',  'surface convective rain rate',                     'kg/m2/s', nohalo=.true. )
-       call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',                              'm',       nohalo=.true. )
-       call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',                             'm',       nohalo=.true. )
-       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep convection)',              '0-1',     nohalo=.true. )
-       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow convection)',           '0-1',     nohalo=.true. )
+       call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', nohalo=.true. )
+       call HIST_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', nohalo=.true. )
+       call HIST_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', nohalo=.true. )
+       call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       nohalo=.true. )
+       call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
+       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '0-1',     nohalo=.true. )
+       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '0-1',     nohalo=.true. )
+
        call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
        call HIST_in( kf_w0avg      (:,:,:), 'kf_w0avg',  'rannning mean vertical wind velocity for KF',      'kg/m2/s', nohalo=.true. )
 

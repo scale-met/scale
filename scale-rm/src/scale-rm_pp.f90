@@ -194,10 +194,10 @@ program scalerm_launcher
   endif
 
   if ( EXECUTE_MODEL ) then
-     call scalerm     ( local_comm,            & ! [IN]
+     call scalerm     ( local_comm,       & ! [IN]
                         intercomm_parent, & ! [IN]
                         intercomm_child,  & ! [IN]
-                        local_cnf_fname        ) ! [IN]
+                        local_cnf_fname   ) ! [IN]
   endif
 
   ! stop MPI

@@ -1214,6 +1214,11 @@ contains
        SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
     use scale_atmos_adiabat, only: &
        ADIABAT_cape => ATMOS_ADIABAT_cape
+    use mod_atmos_phy_cp_vars, only: &
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
+    use mod_atmos_phy_mp_vars, only: &
+       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
     implicit none
 
     real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
@@ -1253,6 +1258,8 @@ contains
 
     real(RP) :: MSE   (KA,IA,JA) ! MSE        [m2/s2]
     real(RP) :: LHvap (KA,IA,JA) ! latent heat for vaporization [m2/s2]
+
+    real(RP) :: PREC  (IA,JA)    ! surface precipitation rate CP+MP [kg/m2/s]
 
     real(RP) :: DENS_PRIM(KA,IA,JA) ! horiz. deviation of density    [kg/m3]
     real(RP) :: W_PRIM   (KA,IA,JA) ! horiz. deviation of w          [m/s]
@@ -2109,6 +2116,14 @@ contains
        enddo
     endif
     call HIST_in( MSE(:,:,:), 'MSE', 'moist static energy', 'm2/s2' )
+
+    do j = JS, JE
+    do i = IS, IE
+       PREC(i,j) = SFLX_rain_CP(i,j)                     &
+                 + SFLX_rain_MP(i,j) + SFLX_snow_MP(i,j)
+    enddo
+    enddo
+    call HIST_in( PREC(:,:), 'PREC', 'surface precipitation rate (total)', 'kg/m2/s' )
 
     return
   end subroutine ATMOS_vars_history

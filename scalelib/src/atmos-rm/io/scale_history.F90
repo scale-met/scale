@@ -46,12 +46,14 @@ module scale_history
      module procedure HIST_in_2D
      module procedure HIST_in_3D
   end interface HIST_in
+
   interface HIST_put
      module procedure HIST_put_0D
      module procedure HIST_put_1D
      module procedure HIST_put_2D
      module procedure HIST_put_3D
   end interface HIST_put
+
   interface HIST_get
      module procedure HIST_get_1D
      module procedure HIST_get_2D
@@ -72,10 +74,11 @@ module scale_history
   !
   !++ Private parameters & variables
   !
-  logical :: enabled
-  integer :: im, jm
-  integer :: ims, ime
-  integer :: jms, jme
+  logical, private :: enabled
+  integer, private :: im,  jm
+  integer, private :: ims, ime
+  integer, private :: jms, jme
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -107,8 +110,8 @@ contains
          HIST_BND
 
     real(DP) :: start_daysec
-    integer :: rankidx(2)
-    integer :: ierr
+    integer  :: rankidx(2)
+    integer  :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -125,52 +128,47 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_HIST)
 
-
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
 
     start_daysec = TIME_STARTDAYSEC
-!    if ( TIME_OFFSET_YEAR > 0 ) then
-!       HISTORY_T_SINCE = '0000-01-01 00:00:00'
-!       write(HISTORY_T_SINCE(1:4),'(i4)') TIME_OFFSET_YEAR
-!    end if
     if ( TIME_NOWDATE(1) > 0 ) then
-       write(HISTORY_T_SINCE, '(i4.4,a1,i2.2,a1,i2.2,a1,i2.2,a1,i2.2,a1,i2.2)') &
-            TIME_NOWDATE(1),'-',TIME_NOWDATE(2),'-',TIME_NOWDATE(3),' ', &
-            TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6)
+       write(HISTORY_T_SINCE, '(I4.4,5(A1,I2.2))') &
+                              TIME_NOWDATE(1),'-',TIME_NOWDATE(2),'-',TIME_NOWDATE(3),' ', &
+                              TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6)
        start_daysec = TIME_NOWMS
-    end if
+    endif
 
     if ( HIST_BND ) then
-       im = IMAXB
-       jm = JMAXB
+       im  = IMAXB
+       jm  = JMAXB
        ims = ISB
        ime = IEB
        jms = JSB
        jme = JEB
     else
-       im = IMAX
-       jm = JMAX
+       im  = IMAX
+       jm  = JMAX
        ims = IS
        ime = IE
        jms = JS
        jme = JE
-    end if
+    endif
 
-    call HistoryInit( HISTORY_H_TITLE,                &
-                      H_SOURCE,                       &
-                      H_INSTITUTE,                    &
-                      im*jm*KMAX,                     &
-                      PRC_masterrank,                 &
-                      PRC_myrank,                     &
-                      rankidx,                        &
-                      start_daysec,                   &
-                      TIME_DTSEC,                     &
-                      time_units   = HISTORY_T_UNITS, &
-                      time_since   = HISTORY_T_SINCE, &
-                      namelist_fid = IO_FID_CONF      )
+    call HistoryInit( HISTORY_H_TITLE,                & ! [IN]
+                      H_SOURCE,                       & ! [IN]
+                      H_INSTITUTE,                    & ! [IN]
+                      im*jm*KMAX,                     & ! [IN]
+                      PRC_masterrank,                 & ! [IN]
+                      PRC_myrank,                     & ! [IN]
+                      rankidx,                        & ! [IN]
+                      start_daysec,                   & ! [IN]
+                      TIME_DTSEC,                     & ! [IN]
+                      time_units   = HISTORY_T_UNITS, & ! [IN]
+                      time_since   = HISTORY_T_SINCE, & ! [IN]
+                      namelist_fid = IO_FID_CONF      ) ! [IN]
 
     call HIST_put_axes
 
@@ -526,19 +524,19 @@ contains
        if ( present(zdim) ) then
           if ( zdim=='half' ) then
              dims(1) = "zh"
-          end if
-       end if
+          endif
+       endif
 
     else
 
        xh = .false.
        if ( present(xdim) ) then
           if ( xdim=='half' ) xh = .true.
-       end if
+       endif
        yh = .false.
        if ( present(ydim) ) then
           if ( ydim=='half' ) yh = .true.
-       end if
+       endif
 
        if ( xh .AND. yh ) then
           dims(1) = 'lon_uv'
@@ -556,7 +554,7 @@ contains
           dims(1) = 'lon'
           dims(2) = 'lat'
           dims(3) = 'height'
-       end if
+       endif
 
        if ( present(zdim) ) then
           if ( zdim=='land' ) then
@@ -576,11 +574,11 @@ contains
                 dims(3) = 'height_xvw'
              else
                 dims(3) = 'height_xyw'
-             end if
-          end if
+             endif
+          endif
        endif
 
-    end if
+    endif
 
     call HistoryAddVariable( item,         & ! [IN]
                              dims(1:ndim), & ! [IN]
@@ -755,7 +753,7 @@ contains
           var2(i + (j-1)*im) = RMISS
        enddo
        enddo
-    end if
+    endif
 
     call HistoryPut(itemid, TIME_NOWSTEP, var2)
 
@@ -892,7 +890,7 @@ contains
              var2(i + (j-1)*isize) = RMISS
           enddo
           enddo
-       end if
+       endif
 
        call HistoryPut(itemid, TIME_NOWSTEP, var2(1:isize*jsize))
 
@@ -955,7 +953,7 @@ contains
           enddo
           enddo
           enddo
-       end if
+       endif
 
        call HistoryPut(itemid, TIME_NOWSTEP, var2)
 
@@ -1037,7 +1035,7 @@ contains
     call HIST_reg( itemid,              & ! [OUT]
                    zinterp,             & ! [OUT]
                    item, desc, unit, 1, & ! [IN]
-                   zdim = zd            ) ! [IN]
+                   zdim=zd              ) ! [IN]
 
     call HIST_query( itemid, & ! [IN]
                      do_put  ) ! [OUT]
@@ -1086,13 +1084,14 @@ contains
     call HIST_reg( itemid,              & ! [OUT]
                    zinterp,             & ! [OUT]
                    item, desc, unit, 2, & ! [IN]
-                   xdim = xd, ydim = yd ) ! [IN]
+                   xdim=xd, ydim=yd     ) ! [IN]
 
     call HIST_query( itemid, & ! [IN]
                      do_put  ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( itemid, var, nohalo = nohalo ) ! [IN]
+       call HIST_put( itemid, var,  & ! [IN]
+                      nohalo=nohalo ) ! [IN]
     endif
 
     return
@@ -1136,18 +1135,18 @@ contains
     if( present(ydim) ) yd = ydim
     if( present(zdim) ) zd = zdim
 
-    call HIST_reg( itemid,                       & ! [OUT]
-                   zinterp,                      & ! [OUT]
-                   item, desc, unit, 3,          & ! [IN]
-                   xdim = xd, ydim = yd, zdim=zd ) ! [IN]
+    call HIST_reg( itemid,                   & ! [OUT]
+                   zinterp,                  & ! [OUT]
+                   item, desc, unit, 3,      & ! [IN]
+                   xdim=xd, ydim=yd, zdim=zd ) ! [IN]
 
     call HIST_query( itemid, & ! [IN]
                      do_put  ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( itemid, var, zinterp,          & ! [IN]
-                      xdim = xd, ydim = yd, zdim=zd, & ! [IN]
-                      nohalo = nohalo                ) ! [IN]
+       call HIST_put( itemid, var, zinterp,      & ! [IN]
+                      xdim=xd, ydim=yd, zdim=zd, & ! [IN]
+                      nohalo=nohalo              ) ! [IN]
     endif
 
     return
