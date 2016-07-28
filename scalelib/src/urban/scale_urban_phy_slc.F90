@@ -27,6 +27,7 @@ module scale_urban_phy_slc
   !++ Public procedure
   !
   public :: URBAN_PHY_SLC_setup
+  public :: URBAN_PHY_SLC_init
   public :: URBAN_PHY_SLC
 
   !-----------------------------------------------------------------------------
@@ -201,6 +202,35 @@ contains
 
     return
   end subroutine URBAN_PHY_SLC_setup
+
+  subroutine URBAN_PHY_SLC_init( &
+        Z0M,         &
+        Z0H,         &
+        Z0E          )
+    use scale_grid_index
+    use scale_urban_grid_index
+
+    real(RP), intent(out) :: Z0M     (IA,JA)
+    real(RP), intent(out) :: Z0H     (IA,JA)
+    real(RP), intent(out) :: Z0E     (IA,JA)
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+
+    if( is_URB(i,j) ) then
+       Z0M(i,j) = Z0C
+       Z0H(i,j) = Z0HC
+       Z0E(i,j) = Z0HC
+    endif
+
+    end do
+    end do
+
+    return
+  end subroutine URBAN_PHY_SLC_init
 
   subroutine URBAN_PHY_SLC( &
         TR_URB_t,    &

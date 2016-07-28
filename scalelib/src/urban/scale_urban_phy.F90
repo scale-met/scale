@@ -157,9 +157,22 @@ module scale_urban_phy
        integer,  intent(in) :: NOWDATE(6)
        real(DP), intent(in) :: dt
      end subroutine urb
+     subroutine ui(     &
+           Z0M,         &
+           Z0H,         &
+           Z0E          )
+       use scale_precision
+       use scale_grid_index
+       use scale_urban_grid_index
+       real(RP), intent(out) :: Z0M     (IA,JA)
+       real(RP), intent(out) :: Z0H     (IA,JA)
+       real(RP), intent(out) :: Z0E     (IA,JA)
+     end subroutine ui
   end interface
   procedure(urb), pointer :: URBAN_PHY => NULL()
+  procedure(ui),  pointer :: URBAN_PHY_init => NULL()
   public :: URBAN_PHY
+  public :: URBAN_PHY_init
 
   !-----------------------------------------------------------------------------
   !
@@ -181,7 +194,8 @@ contains
        PRC_MPIstop
     use scale_urban_phy_slc, only: &
        URBAN_PHY_SLC_setup, &
-       URBAN_PHY_SLC
+       URBAN_PHY_SLC      , &
+       URBAN_PHY_SLC_init
     implicit none
 
     character(len=*), intent(in) :: URBAN_TYPE
@@ -190,7 +204,8 @@ contains
     select case( URBAN_TYPE )
     case ( 'SLC' )
        call URBAN_PHY_SLC_setup( URBAN_TYPE )
-       URBAN_PHY => URBAN_PHY_SLC
+       URBAN_PHY      => URBAN_PHY_SLC
+       URBAN_PHY_init => URBAN_PHY_SLC_init
     case default
        write(*,*) 'xxx invalid Urban type(', trim(URBAN_TYPE), '). CHECK!'
        call PRC_MPIstop

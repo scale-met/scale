@@ -88,6 +88,11 @@ contains
           call PROF_rapstart('URB_Physics', 1)
           call URBAN_PHY_driver( update_flag = .true. )
           call PROF_rapend  ('URB_Physics', 1)
+       else
+          ! only for get several parameters
+          call PROF_rapstart('URB_Physics', 1)
+          call URBAN_PHY_driver( update_flag = .false. )
+          call PROF_rapend  ('URB_Physics', 1)
        end if
 
     end if
@@ -113,7 +118,8 @@ contains
     use scale_grid_real, only: &
        REAL_Z1
     use scale_urban_phy, only: &
-       URBAN_PHY
+       URBAN_PHY,        &
+       URBAN_PHY_init
     use mod_urban_vars, only: &
        URBAN_TR,         &
        URBAN_TB,         &
@@ -270,6 +276,11 @@ contains
        call HIST_in( URBAN_RAING_t(:,:), 'URBAN_RAING_t', 'tendency of URBAN_RAING', 'K' )
        call HIST_in( URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  'tendency of URBAN_ROFF',  'K' )
 
+    else  
+       ! get parameters
+       call URBAN_PHY_init( URBAN_Z0M       (:,:),      & ! [OUT]
+                            URBAN_Z0H       (:,:),      & ! [OUT]
+                            URBAN_Z0E       (:,:)       ) ! [OUT]
     endif
 
     if ( STATISTICS_checktotal ) then
