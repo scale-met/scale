@@ -766,6 +766,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer  :: i, j, k
     !---------------------------------------------------------------------------
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     allocate( pd_tile_num(0:PARENT_PRC_nprocs(HANDLE)-1,2) )
 
     k = 0 ! MPI process number starts from zero
@@ -891,6 +895,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer :: xlocg, ylocg  ! location over whole domain
     !---------------------------------------------------------------------------
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     rank  = NEST_TILE_ID(iloc)
     xloc  = mod( iloc-1, NEST_TILE_NUM_X ) + 1
     yloc  = int( real(iloc-1) / real(NEST_TILE_NUM_X) ) + 1
@@ -956,6 +964,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer  :: istatus(MPI_STATUS_SIZE)
     integer  :: tag
     !---------------------------------------------------------------------------
+
+    if( .not. USE_NESTING ) then
+       return
+    end if
 
     tag   = INTERCOMM_ID(HANDLE) * 100
     ileng = 14
@@ -1129,6 +1141,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer :: tag
     !---------------------------------------------------------------------------
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     tag = INTERCOMM_ID(HANDLE) * 100
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
@@ -1173,6 +1189,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer :: tag
     logical :: ping_error
     !---------------------------------------------------------------------------
+
+    if( .not. USE_NESTING ) then
+       return
+    end if
 
     tag        = INTERCOMM_ID(HANDLE) * 100
     ping_error = .false.
@@ -1246,6 +1266,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     integer :: i, j, k
     !---------------------------------------------------------------------------
+
+    if( .not. USE_NESTING ) then
+       return
+    end if
 
     tag = INTERCOMM_ID(HANDLE) * 100
 
@@ -1443,6 +1467,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     integer :: i, k, rq
     !---------------------------------------------------------------------------
+
+    if( .not. USE_NESTING ) then
+       return
+    end if
 
     tagbase = INTERCOMM_ID(HANDLE) * 100
     rq      = 0
@@ -1664,6 +1692,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer, parameter :: cosin = 1
     integer, parameter :: sine  = 2
     !---------------------------------------------------------------------------
+
+    if( .not. USE_NESTING ) then
+       return
+    end if
 
     if ( BND_QA > I_BNDQA ) then
        if( IO_L ) write(*,*) 'xxx internal error: BND_QA is larger than I_BNDQA [nest/grid]'
@@ -1978,6 +2010,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer :: iq
     !---------------------------------------------------------------------------
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     if ( BND_QA > I_BNDQA ) then
        write(*,*) 'xxx internal error: about BND_QA [nest/grid]'
        call PRC_MPIstop
@@ -2076,6 +2112,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     logical :: flag
     !---------------------------------------------------------------------------
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !-------------------------------------------------------- parent
        !--- Nothing to do
@@ -2144,6 +2184,11 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     logical :: no_zstag    = .true.
     logical :: logarithmic = .false.
     !---------------------------------------------------------------------------
+
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     logarithmic = .false.
     if ( present(flag_dens) ) then
     if ( flag_dens ) then
@@ -2314,6 +2359,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     logical :: logarithmic = .false.
     !---------------------------------------------------------------------------
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     logarithmic = .false.
     if ( present(flag_dens) ) then
     if ( flag_dens ) then
@@ -2412,6 +2461,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer, intent(in) :: HANDLE  !< id number of nesting relation in this process target
     !---------------------------------------------------------------------------
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
 
@@ -2453,6 +2506,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 !    num  = 0
 !    flag = .false.
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     req_count2 = 0
     do i=1, req_count
        if (ireq(i) /= MPI_REQUEST_NULL) then
@@ -2491,6 +2548,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     logical :: flag
     !---------------------------------------------------------------------------
 
+    if( .not. USE_NESTING ) then
+       return
+    end if
+
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
        call PROF_rapstart('NEST_test_P', 2)
@@ -2520,6 +2581,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     integer :: ierr
     !---------------------------------------------------------------------------
+
+    if( .not. USE_NESTING ) then
+       return
+    end if
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes'
     call MPI_BARRIER(PRC_GLOBAL_COMM_WORLD, ierr)
