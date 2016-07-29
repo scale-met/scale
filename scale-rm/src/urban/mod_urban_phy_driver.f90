@@ -54,6 +54,10 @@ contains
     use mod_urban_admin, only: &
        URBAN_TYPE, &
        URBAN_sw
+    use mod_urban_vars, only: &
+       URBAN_Z0M, &
+       URBAN_Z0H, &
+       URBAN_Z0E
     implicit none
     !---------------------------------------------------------------------------
 
@@ -63,7 +67,10 @@ contains
     if ( URBAN_sw ) then
 
        ! setup library component
-       call URBAN_PHY_setup( URBAN_TYPE )
+       call URBAN_PHY_setup( URBAN_TYPE,     & ! [IN]
+                             URBAN_Z0M(:,:), & ! [OUT]
+                             URBAN_Z0H(:,:), & ! [OUT]
+                             URBAN_Z0E(:,:)  ) ! [OUT]
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -87,11 +94,6 @@ contains
           ! run once (only for the diagnostic value)
           call PROF_rapstart('URB_Physics', 1)
           call URBAN_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('URB_Physics', 1)
-       else
-          ! only for get several parameters
-          call PROF_rapstart('URB_Physics', 1)
-          call URBAN_PHY_driver( update_flag = .false. )
           call PROF_rapend  ('URB_Physics', 1)
        end if
 
@@ -118,8 +120,7 @@ contains
     use scale_grid_real, only: &
        REAL_Z1
     use scale_urban_phy, only: &
-       URBAN_PHY,        &
-       URBAN_PHY_init
+       URBAN_PHY
     use mod_urban_vars, only: &
        URBAN_TR,         &
        URBAN_TB,         &
@@ -276,11 +277,6 @@ contains
        call HIST_in( URBAN_RAING_t(:,:), 'URBAN_RAING_t', 'tendency of URBAN_RAING', 'K' )
        call HIST_in( URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  'tendency of URBAN_ROFF',  'K' )
 
-    else  
-       ! get parameters
-       call URBAN_PHY_init( URBAN_Z0M       (:,:),      & ! [OUT]
-                            URBAN_Z0H       (:,:),      & ! [OUT]
-                            URBAN_Z0E       (:,:)       ) ! [OUT]
     endif
 
     if ( STATISTICS_checktotal ) then

@@ -27,7 +27,6 @@ module scale_urban_phy_slc
   !++ Public procedure
   !
   public :: URBAN_PHY_SLC_setup
-  public :: URBAN_PHY_SLC_init
   public :: URBAN_PHY_SLC
 
   !-----------------------------------------------------------------------------
@@ -112,14 +111,21 @@ module scale_urban_phy_slc
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine URBAN_PHY_SLC_setup( URBAN_TYPE )
+  subroutine URBAN_PHY_SLC_setup( &
+       URBAN_TYPE, &
+       Z0M, &
+       Z0H, &
+       Z0E  )
     use scale_process, only: &
        PRC_MPIstop
     use scale_landuse, only: &
        LANDUSE_fact_urban
     implicit none
 
-    character(len=*), intent(in) :: URBAN_TYPE
+    character(len=*), intent(in)  :: URBAN_TYPE
+    real(RP)        , intent(out) :: Z0M(IA,JA)
+    real(RP)        , intent(out) :: Z0H(IA,JA)
+    real(RP)        , intent(out) :: Z0E(IA,JA)
     integer                      :: i, j
 
     NAMELIST / PARAM_URBAN_PHY_SLC / &
@@ -200,37 +206,20 @@ contains
     enddo
     enddo
 
-    return
-  end subroutine URBAN_PHY_SLC_setup
-
-  subroutine URBAN_PHY_SLC_init( &
-        Z0M,         &
-        Z0H,         &
-        Z0E          )
-    use scale_grid_index
-    use scale_urban_grid_index
-
-    real(RP), intent(out) :: Z0M     (IA,JA)
-    real(RP), intent(out) :: Z0H     (IA,JA)
-    real(RP), intent(out) :: Z0E     (IA,JA)
-
-    integer :: k, i, j
-    !---------------------------------------------------------------------------
-
     do j = JS, JE
     do i = IS, IE
 
-    if( is_URB(i,j) ) then
-       Z0M(i,j) = Z0C
-       Z0H(i,j) = Z0HC
-       Z0E(i,j) = Z0HC
-    endif
+       if( is_URB(i,j) ) then
+          Z0M(i,j) = Z0C
+          Z0H(i,j) = Z0HC
+          Z0E(i,j) = Z0HC
+       endif
 
     end do
     end do
 
     return
-  end subroutine URBAN_PHY_SLC_init
+  end subroutine URBAN_PHY_SLC_setup
 
   subroutine URBAN_PHY_SLC( &
         TR_URB_t,    &
