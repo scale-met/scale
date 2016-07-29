@@ -176,7 +176,11 @@ module scale_urban_phy
   !-----------------------------------------------------------------------------
 contains
 
-  subroutine URBAN_PHY_setup( URBAN_TYPE )
+  subroutine URBAN_PHY_setup( &
+       URBAN_TYPE, &
+       Z0M, &
+       Z0H, &
+       Z0E  )
     use scale_process, only: &
        PRC_MPIstop
     use scale_urban_phy_slc, only: &
@@ -184,13 +188,17 @@ contains
        URBAN_PHY_SLC
     implicit none
 
-    character(len=*), intent(in) :: URBAN_TYPE
+    character(len=*), intent(in)  :: URBAN_TYPE
+    real(RP),         intent(out) :: Z0M(IA,JA)
+    real(RP),         intent(out) :: Z0H(IA,JA)
+    real(RP),         intent(out) :: Z0E(IA,JA)
     !---------------------------------------------------------------------------
 
     select case( URBAN_TYPE )
     case ( 'SLC' )
-       call URBAN_PHY_SLC_setup( URBAN_TYPE )
-       URBAN_PHY => URBAN_PHY_SLC
+       call URBAN_PHY_SLC_setup( URBAN_TYPE,   & ! (in)
+                                 Z0M, Z0H, Z0E ) ! (out)
+       URBAN_PHY      => URBAN_PHY_SLC
     case default
        write(*,*) 'xxx invalid Urban type(', trim(URBAN_TYPE), '). CHECK!'
        call PRC_MPIstop
