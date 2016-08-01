@@ -1,3 +1,80 @@
-\section{スキームの変更}
-\subsection{力学スキーム}
+\section{力学スキーム}
 \label{sec:dyn}
+
+\subsection{数値解法}
+
+設定は、confファイルの\verb|PARAM_ATMOS|で設定する。\\
+
+\noindent {\gt\small
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_DYN_TYPE    = "HEVI", | & ; \verb|HEVI|: 水平陽解法-鉛直陰解法\\
+                                     & ; \verb|HEVE|: 陽解法\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+
+\subsection{空間空間差分スキーム}
+
+設定は、confファイルの\verb|PARAM_ATMOS_DYN|で設定する。
+また、空間スキームによってはHaloの設定も必要である。
+スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。\\
+
+\noindent {\gt\small
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+ \verb|&PARAM_ATMOS_DYN  | & \\
+ \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|       & ; 時間スキームより選択\\
+ \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,| & ; 時間スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = CD4,|       & ; 空間スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
+ \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|   & ; 非負保証スキームより選択\\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2, |    & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |     & \\
+ \verb|ATMOS_DYN_enable_coriolis            = .true.,|    & \\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+
+\begin{table}[h]
+\begin{center}
+  \caption{力学スキームの設定}
+  \label{tab:nml_atm_dyn}
+  \begin{tabularx}{150mm}{llXX} \hline
+    \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
+    \multicolumn{3}{l}{時間スキーム} & 推奨の\verb|TIME_DT_ATMOS_DYN|と\verb|TIME_DT| \\ \hline
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{1}{l}{Heun's 3rd order Runge-Kutta scheme} & \multicolumn{1}{l}{XX sec, XX sec}\\
+    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{1}{X}{Wicker and Skamarock (2002) 3段ルンゲクッタスキーム} & \multicolumn{1}{l}{XX sec, XX sec}\\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{1}{l}{4th order Runge-Kutta scheme} & \multicolumn{1}{l}{XX sec, XX sec}\\
+    \hline
+    \multicolumn{3}{l}{空間スキーム} & 最小の設定格子数(Haloの数)\\ \hline
+    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2-nd order central difference schemes} & \multicolumn{1}{l}{1}\\
+    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4-th order central difference schemes} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6-th order central difference schemes} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3-rd order upwind difference schemes} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5-th order upwind difference schemes} & \multicolumn{1}{l}{3}\\
+    \hline
+    \multicolumn{4}{l}{非負保証スキーム}\\ \hline
+    & \multicolumn{1}{l}{\verb|xx|} & \multicolumn{1}{l}{フラックス修正法} &  \\
+    & \multicolumn{1}{l}{\verb|xx|} & \multicolumn{1}{X}{Koren (1993) filter (3次風上差分スキーム使用時のみ)} & \\
+\hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+空間スキームがCD4, UD3以外の場合(Haloの数が2以外の場合)、Haloの設定も必要である。
+Haloの数は、n次の空間スキームに対して$\lceil n/2 \rceil$である。\\
+
+\noindent {\gt\small
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+ \verb|&PARAM_INDEX | &  \\
+ \verb| IHALO = 2,|   & ; $\lceil n/2 \rceil$を設定\\
+ \verb| JHALO = 2,|   & ; $\lceil n/2 \rceil$を設定\\
+ \verb|/ | & \\
+\end{tabularx}
+}}\\
+
