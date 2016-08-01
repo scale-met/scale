@@ -3,20 +3,18 @@
 \section{時間積分を行う：run}
 %-------------------------------------------------------%
 \subsubsection{run.confの準備}
-ここではいよいよSCALE-RMモデルを実行する。
-まず、runディレクトリへ移動する。
+runディレクトリへ移動する。
 \begin{verbatim}
  $ cd ${Tutrial_DIR}/real/run
 \end{verbatim}
-
+%
 runディレクトリの中には、\verb|run.conf|という名前の
 コンフィグファイルが準備されており、
 ドメインの位置や格子点数など、チュートリアル用の設定（表\ref{tab:grids}）に合わせてある。
-モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用する。
-これらのファイルの場所は、\verb|run.conf|内の
-\verb|TOPO_IN_BASENAME|、\verb|LANDUSE_IN_BASENAME|、
-\verb|RESTART_IN_BASENAME|、および\verb|ATMOS_BOUNDARY_IN_BASENAME|で
-指定している。\\
+モデル本体の実行には
+事前に作成した地形・土地利用データや初期値・境界値データを利用する。
+これらのファイルの指定は、
+\verb|run.conf|の下記部分で設定する。\\
 
 \noindent {\gt
 \ovalbox{
@@ -31,7 +29,7 @@ runディレクトリの中には、\verb|run.conf|という名前の
  \\
 \verb|&PARAM_RESTART| \\
 \verb|   RESTART_OUTPUT      = .false.,| \\
-\verb|   RESTART_IN_BASENAME = "../init/init_d01_00019094400.000",| \\
+\verb|   RESTART_IN_BASENAME = "../init/init_d01_20140810-000000.000",| \\
 \verb|/| \\
  \\
 \verb|&PARAM_ATMOS_BOUNDARY| \\
@@ -46,7 +44,8 @@ runディレクトリの中には、\verb|run.conf|という名前の
 }}\\
 
 
-\verb|run.conf|の設定の中で時間積分に関する設定は、\verb|PARAM_TIME|の項目にある。\\
+\verb|run.conf|の設定の中で時間積分に関する設定は、
+\verb|PARAM_TIME|の項目にある。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -143,7 +142,7 @@ runディレクトリの中には、\verb|run.conf|という名前の
  $ ln -s ../../../data/land/* ./   <- 陸面スキーム用のパラメータファイル
  $ ln -s ../../../data/rad/*  ./   <- 放射スキーム用のパラメータファイル
 \end{verbatim}
-準備が整ったら、4つのMPIプロセスを使用してscale-rmを実行する。
+準備が整ったら、4-MPI並列によりscale-rmを実行する。
 \begin{verbatim}
   $ mpirun -n 4 ./scale-rm run.conf < /dev/null >& log &
 \end{verbatim}

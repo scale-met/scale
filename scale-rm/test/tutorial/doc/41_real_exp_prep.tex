@@ -1,11 +1,10 @@
 
 このチュートリアルでは、図 \ref{fig:domain}に示した
 領域を対象とした現実大気実験を行う。
-現実大気実験用のチュートリアルは
+現実大気実験用のチュートリアルは、下記で行う。
 \begin{verbatim}
  scale/scale-rm/test/tutorial/real/
 \end{verbatim}
-の下で行う。
 これ以降の説明では、\verb|scale/scale-rm/test/tutorial/|の絶対PATHを
 \verb|${Tutrial_DIR}|と示すこととする。
 \verb|${Tutrial_DIR}|以下のディレクトリ構造は下記の通りである。
@@ -18,7 +17,7 @@
   tools/   : tutrial実行のためのツール
 \end{verbatim}
 
-SCALE-RMモデルの実行過程は、図\ref{fig:howto}に示されるように
+SCALE-RMの実行過程は、図\ref{fig:howto}に示されるように
 \begin{enumerate}
 \item pp    : 地形・土地利用データの作成
 \item init  : 初期値・境界値データの作成
@@ -43,7 +42,7 @@ SCALE-RMモデルの実行過程は、図\ref{fig:howto}に示されるように
 (例えば、15kmの水平解像度で積雲パラメタリゼーションなし)
 ご留意頂きたい。
 
-このチュートリアルを実行するには、下記の条件を満たす計算機環境が必要である。
+このチュートリアルを実行するには、下記の条件を満たす計算機環境が推奨される。
 \begin{itemize}
 \item CPU: 2コア/4スレッド以上の演算コアを持つCPU（4コア以上を推奨）
 \item Memory容量: 4GB以上をプログラムに割当可能（8GB以上を搭載した計算機を推奨）
@@ -86,35 +85,32 @@ SCALE-RMモデルの実行過程は、図\ref{fig:howto}に示されるように
 %-------------------------------------------------------%
 
 現実大気実験のシミュレーションを行う場合、SCALE本体に加えて
-境界値データが必要になる。境界値データとしては下記が必要である。
-{\color{blue}青字}は必須の変数、その他は任意である。
+境界値データが必要になる。境界値データとしては表\ref{tab:real_bnd}
+が必要である。{\color{blue}青字}は必須の変数、その他は任意である。
 
-\begin{itemize}
-\item 地形データ(SCALEモデルの地形を準備する)
- \begin{itemize}
-  \item {\color{blue}標高データ}
-  \item {\color{blue}土地利用データ}
- \end{itemize}
-\item 初期値境界値データ
- \begin{itemize}
-   \item {\color{blue}親モデルの緯度・経度}
-   \item 3次元大気データ
-     \begin{itemize}
-       \item {\color{blue}東西風速, 南北風速, 気温, 比湿(相対湿度), 気圧, ジオポテンシャル高度}
-     \end{itemize}
-   \item 2次元大気データ
-     \begin{itemize}
-       \item 海面更正気圧, 地上気圧, 10m東西風速, 10m南北風速, 2m気温, 2m比湿(相対湿度)
-     \end{itemize}
-   \item 2次元陸面データ
-     \begin{itemize}
-       \item 親モデルの海陸マップ
-       \item {\color{blue}地表面温度}
-       \item {\color{blue}土壌データの深さ情報, 土壌温度}, 土壌水分(体積含水率 or 飽和度)
-     \end{itemize}
-   \item 2次元海面データ 海面水温
- \end{itemize}
-\end{itemize}
+\begin{table}[h]
+\begin{center}
+  \caption{現実大気実験に必要な初期値境界値データ}
+  \label{tab:real_bnd}
+  \begin{tabularx}{150mm}{llX} \hline
+    \multicolumn{3}{l}{地形データ(SCALE-RMの地形を用意する)}\\ \hline
+    & \multicolumn{2}{l}{\color{blue}{標高データ}}\\
+    & \multicolumn{2}{l}{\color{blue}{土地利用データ}}\\ \hline
+    \multicolumn{3}{l}{初期値境界値データ}\\ \hline
+    &  \multicolumn{2}{l}{\color{blue}{親モデルの緯度・経度}}\\
+    &  \multicolumn{2}{l}{(3次元大気データ)}\\
+    & &  \multicolumn{1}{l}{\color{blue}{東西風速, 南北風速, 気温, 比湿(相対湿度), 気圧, ジオポテンシャル高度}} \\
+    &  \multicolumn{2}{l}{(2次元大気データ)}\\
+    & & 海面更正気圧, 地上気圧, 10m東西風速, 10m南北風速, 2m気温, 2m比湿(相対湿度) \\
+    &  \multicolumn{2}{l}{(2次元陸面データ)}\\
+    & &  \multicolumn{1}{l}{親モデルの海陸マップ}\\
+    & &  \multicolumn{1}{l}{\color{blue}{地表面温度}}\\
+    & &  \multicolumn{1}{l}{{\color{blue}{親モデル土壌データの深さ情報, 土壌温度}}, 土壌水分(体積含水率 or 飽和度)}\\
+    &  \multicolumn{2}{l}{(2次元海面データ)}\\
+　　& &  \multicolumn{1}{l}{海面水温}\\ \hline
+  \end{tabularx}
+\end{center}
+\end{table}
 
 
 \subsubsection{地形データと土地利用データ}
@@ -124,8 +120,7 @@ SCALEのそれぞれの格子点における地形、海陸分布、土地利用
 ユーザーが全球の任意の地域を対象とした計算ができるよう、
 フォーマット変換済みの
 標高データ USGS(U.S. Geological Survey) のGTOPO30 と、
-土地利用データ GLCCv2、
-を提供している。
+土地利用データ GLCCv2 を提供している。
 
 \begin{enumerate}
 \item データのダウンロード\\

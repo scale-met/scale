@@ -154,14 +154,13 @@ Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境
  Linux OS x86-64 & icc/ifort & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
               & icc/ifort    & SGI-MPT & Makedef.Linux64-intel-mpt \\ \hline
  Mac OS X     & gcc/gfortran & openMPI & Makedef.MacOSX-gnu-ompi \\ \hline
- スーパーコンピュータ「京」 & original\footnotemark[1] & original\footnotemark[1] & Makedef.K \\ \hline
- Fujitsu PRIME-HPC FX10   & original\footnotemark[1] & original\footnotemark[1] & Makedef.FX10 \\ \hline
+ スーパーコンピュータ「京」 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.K \\ \hline
+ Fujitsu PRIME-HPC FX10   & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX10 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
 \end{center}
 \end{table}
-\footnotetext[1]{京やFX10では、専用にチューニングされた富士通コンパイラ、及びMPIライブラリを使用する。
-また、クロスコンパイルを行うので``fccpx/frtpx''や``mpiccpx/mpifrtpx''といったコンパイラを用いる。}
+
 
 
 Linux OS、GNUコンパイラ、openMPIを使用する場合には、
