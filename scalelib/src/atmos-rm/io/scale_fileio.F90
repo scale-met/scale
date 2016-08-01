@@ -30,14 +30,18 @@ module scale_fileio
   !++ Public procedure
   !
   public :: FILEIO_setup
+  public :: FILEIO_cleanup
   public :: FILEIO_set_coordinates
   public :: FILEIO_set_axes
   public :: FILEIO_read
   public :: FILEIO_write
+  public :: FILEIO_flush
 
   public :: FILEIO_create
+  public :: FILEIO_open
   public :: FILEIO_def_var
   public :: FILEIO_enddef
+  public :: FILEIO_read_var
   public :: FILEIO_write_var
   public :: FILEIO_close
 
@@ -47,6 +51,13 @@ module scale_fileio
      module procedure FILEIO_read_3D
      module procedure FILEIO_read_4D
   end interface FILEIO_read
+
+  interface FILEIO_read_var
+     module procedure FILEIO_read_var_1D
+     module procedure FILEIO_read_var_2D
+     module procedure FILEIO_read_var_3D
+     module procedure FILEIO_read_var_4D
+  end interface FILEIO_read_var
 
   interface FILEIO_write
      module procedure FILEIO_write_1D
@@ -96,14 +107,107 @@ module scale_fileio
 
   integer,  private,      save :: write_buf_amount = 0  ! sum of write buffer amounts
 
-  integer,  private,      save :: XS, XS_NO_PERIODIC         ! start local array index along X dim
-  integer,  private,      save :: XE, XE_NO_PERIODIC         ! end   local array index along X dim
-  integer,  private,      save :: YS, YS_NO_PERIODIC         ! start local array index along Y dim
-  integer,  private,      save :: YE, YE_NO_PERIODIC         ! end   local array index along Y dim
-  integer,  private,      save :: startX, startX_NO_PERIODIC ! start global array index along X dim
-  integer,  private,      save :: countX, countX_NO_PERIODIC ! request length to global array along X dim
-  integer,  private,      save :: startY, startY_NO_PERIODIC ! start global array index along Y dim
-  integer,  private,      save :: countY, countY_NO_PERIODIC ! request length to global array along Y dim
+  ! global star and count for XY and XYT
+  integer,  private,      save :: startXY(3),           countXY(3)
+  integer,  private,      save :: startWestXY(3),       countWestXY(3)
+  integer,  private,      save :: startEastXY(3),       countEastXY(3)
+  integer,  private,      save :: startSouthXY(3),      countSouthXY(3)
+  integer,  private,      save :: startNorthXY(3),      countNorthXY(3)
+  integer,  private,      save :: startSouthWestXY(3),  countSouthWestXY(3)
+  integer,  private,      save :: startSouthEastXY(3),  countSouthEastXY(3)
+  integer,  private,      save :: startNorthWestXY(3),  countNorthWestXY(3)
+  integer,  private,      save :: startNorthEastXY(3),  countNorthEastXY(3)
+
+  ! global star and count for ZX
+  integer,  private,      save :: startZX(2),           countZX(2)
+  integer,  private,      save :: startWestZX(2),       countWestZX(2)
+  integer,  private,      save :: startEastZX(2),       countEastZX(2)
+
+  ! global star and count for ZXY, ZXYT
+  integer,  private,      save :: startZXY(4),           countZXY(4)
+  integer,  private,      save :: startWestZXY(4),       countWestZXY(4)
+  integer,  private,      save :: startEastZXY(4),       countEastZXY(4)
+  integer,  private,      save :: startSouthZXY(4),      countSouthZXY(4)
+  integer,  private,      save :: startNorthZXY(4),      countNorthZXY(4)
+  integer,  private,      save :: startSouthWestZXY(4),  countSouthWestZXY(4)
+  integer,  private,      save :: startSouthEastZXY(4),  countSouthEastZXY(4)
+  integer,  private,      save :: startNorthWestZXY(4),  countNorthWestZXY(4)
+  integer,  private,      save :: startNorthEastZXY(4),  countNorthEastZXY(4)
+
+  ! global star and count for Land
+  integer,  private,      save :: startLAND(3),           countLAND(3)
+  integer,  private,      save :: startWestLAND(3),       countWestLAND(3)
+  integer,  private,      save :: startEastLAND(3),       countEastLAND(3)
+  integer,  private,      save :: startSouthLAND(3),      countSouthLAND(3)
+  integer,  private,      save :: startNorthLAND(3),      countNorthLAND(3)
+  integer,  private,      save :: startSouthWestLAND(3),  countSouthWestLAND(3)
+  integer,  private,      save :: startSouthEastLAND(3),  countSouthEastLAND(3)
+  integer,  private,      save :: startNorthWestLAND(3),  countNorthWestLAND(3)
+  integer,  private,      save :: startNorthEastLAND(3),  countNorthEastLAND(3)
+
+  ! global star and count for Urban
+  integer,  private,      save :: startURBAN(3),           countURBAN(3)
+  integer,  private,      save :: startWestURBAN(3),       countWestURBAN(3)
+  integer,  private,      save :: startEastURBAN(3),       countEastURBAN(3)
+  integer,  private,      save :: startSouthURBAN(3),      countSouthURBAN(3)
+  integer,  private,      save :: startNorthURBAN(3),      countNorthURBAN(3)
+  integer,  private,      save :: startSouthWestURBAN(3),  countSouthWestURBAN(3)
+  integer,  private,      save :: startSouthEastURBAN(3),  countSouthEastURBAN(3)
+  integer,  private,      save :: startNorthWestURBAN(3),  countNorthWestURBAN(3)
+  integer,  private,      save :: startNorthEastURBAN(3),  countNorthEastURBAN(3)
+
+  ! MPI element datatype for restart variables
+  integer,  private,      save :: dtype
+
+  ! MPI derived datatype for XY, XYT
+  integer,  private,      save :: centerTypeXY
+  integer,  private,      save :: westTypeXY
+  integer,  private,      save :: eastTypeXY
+  integer,  private,      save :: southTypeXY
+  integer,  private,      save :: northTypeXY
+  integer,  private,      save :: southwestTypeXY
+  integer,  private,      save :: southeastTypeXY
+  integer,  private,      save :: northwestTypeXY
+  integer,  private,      save :: northeastTypeXY
+
+  ! MPI derived datatype for ZX
+  integer,  private,      save :: centerTypeZX
+  integer,  private,      save :: westTypeZX
+  integer,  private,      save :: eastTypeZX
+
+  ! MPI derived datatype for ZXY, ZXYT
+  integer,  private,      save :: centerTypeZXY
+  integer,  private,      save :: westTypeZXY
+  integer,  private,      save :: eastTypeZXY
+  integer,  private,      save :: southTypeZXY
+  integer,  private,      save :: northTypeZXY
+  integer,  private,      save :: southwestTypeZXY
+  integer,  private,      save :: southeastTypeZXY
+  integer,  private,      save :: northwestTypeZXY
+  integer,  private,      save :: northeastTypeZXY
+
+  ! MPI derived datatype for Land
+  integer,  private,      save :: centerTypeLAND
+  integer,  private,      save :: westTypeLAND
+  integer,  private,      save :: eastTypeLAND
+  integer,  private,      save :: southTypeLAND
+  integer,  private,      save :: northTypeLAND
+  integer,  private,      save :: southwestTypeLAND
+  integer,  private,      save :: southeastTypeLAND
+  integer,  private,      save :: northwestTypeLAND
+  integer,  private,      save :: northeastTypeLAND
+
+  ! MPI derived datatype for Urban
+  integer,  private,      save :: centerTypeURBAN
+  integer,  private,      save :: westTypeURBAN
+  integer,  private,      save :: eastTypeURBAN
+  integer,  private,      save :: southTypeURBAN
+  integer,  private,      save :: northTypeURBAN
+  integer,  private,      save :: southwestTypeURBAN
+  integer,  private,      save :: southeastTypeURBAN
+  integer,  private,      save :: northwestTypeURBAN
+  integer,  private,      save :: northeastTypeURBAN
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -129,8 +233,29 @@ contains
     allocate( AXIS_LATY(IMAXB,JMAXB) )
     allocate( AXIS_LATXY(IMAXB,JMAXB) )
 
+    if ( IO_PNETCDF ) call Construct_Derived_Datatype
+
     return
   end subroutine FILEIO_setup
+
+  !-----------------------------------------------------------------------------
+  !> deallocate buffers
+  subroutine FILEIO_cleanup
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( AXIS_LON   )
+    deallocate( AXIS_LONX  )
+    deallocate( AXIS_LONY  )
+    deallocate( AXIS_LONXY )
+    deallocate( AXIS_LAT   )
+    deallocate( AXIS_LATX  )
+    deallocate( AXIS_LATY  )
+    deallocate( AXIS_LATXY )
+
+    call Free_Derived_Datatype
+
+  end subroutine FILEIO_cleanup
 
   !-----------------------------------------------------------------------------
   !> set latlon and z
@@ -343,6 +468,725 @@ contains
 
     return
   end subroutine FILEIO_set_axes
+
+  subroutine Construct_Derived_Datatype
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
+    use MPI
+    implicit none
+
+    integer err, order
+    integer sizes(3), subsizes(3), sub_off(3)
+    integer XSG, YSG
+    integer XS, XE, YS, YE
+    !---------------------------------------------------------------------------
+    order = MPI_ORDER_FORTRAN
+
+    centerTypeXY        = MPI_DATATYPE_NULL
+    westTypeXY          = MPI_DATATYPE_NULL
+    eastTypeXY          = MPI_DATATYPE_NULL
+    southTypeXY         = MPI_DATATYPE_NULL
+    northTypeXY         = MPI_DATATYPE_NULL
+    southwestTypeXY     = MPI_DATATYPE_NULL
+    southeastTypeXY     = MPI_DATATYPE_NULL
+    northwestTypeXY     = MPI_DATATYPE_NULL
+    northeastTypeXY     = MPI_DATATYPE_NULL
+    centerTypeZX        = MPI_DATATYPE_NULL
+    westTypeZX          = MPI_DATATYPE_NULL
+    eastTypeZX          = MPI_DATATYPE_NULL
+
+    centerTypeZXY       = MPI_DATATYPE_NULL
+    westTypeZXY         = MPI_DATATYPE_NULL
+    eastTypeZXY         = MPI_DATATYPE_NULL
+    southTypeZXY        = MPI_DATATYPE_NULL
+    northTypeZXY        = MPI_DATATYPE_NULL
+    southwestTypeZXY    = MPI_DATATYPE_NULL
+    southeastTypeZXY    = MPI_DATATYPE_NULL
+    northwestTypeZXY    = MPI_DATATYPE_NULL
+    northeastTypeZXY    = MPI_DATATYPE_NULL
+
+    centerTypeLAND      = MPI_DATATYPE_NULL
+    westTypeLAND        = MPI_DATATYPE_NULL
+    eastTypeLAND        = MPI_DATATYPE_NULL
+    southTypeLAND       = MPI_DATATYPE_NULL
+    northTypeLAND       = MPI_DATATYPE_NULL
+    southwestTypeLAND   = MPI_DATATYPE_NULL
+    southeastTypeLAND   = MPI_DATATYPE_NULL
+    northwestTypeLAND   = MPI_DATATYPE_NULL
+    northeastTypeLAND   = MPI_DATATYPE_NULL
+
+    centerTypeURBAN     = MPI_DATATYPE_NULL
+    westTypeURBAN       = MPI_DATATYPE_NULL
+    eastTypeURBAN       = MPI_DATATYPE_NULL
+    southTypeURBAN      = MPI_DATATYPE_NULL
+    northTypeURBAN      = MPI_DATATYPE_NULL
+    southwestTypeURBAN  = MPI_DATATYPE_NULL
+    southeastTypeURBAN  = MPI_DATATYPE_NULL
+    northwestTypeURBAN  = MPI_DATATYPE_NULL
+    northeastTypeURBAN  = MPI_DATATYPE_NULL
+
+    dtype = MPI_FLOAT
+    if ( RP .EQ. 8 ) dtype = MPI_DOUBLE_PRECISION
+
+    if ( .NOT. PRC_PERIODIC_X .AND. .NOT. PRC_PERIODIC_Y) then
+       ! for axistype == 'XY'
+       startXY(1) = IS_inG - IHALO
+       startXY(2) = JS_inG - JHALO
+       countXY(1) = IA
+       countXY(2) = JA
+
+       ! for axistype == 'ZXY'
+       startZXY(1)   = 1
+       startZXY(2:3) = startXY(1:2)
+       countZXY(1)   = KA
+       countZXY(2:3) = countXY(1:2)
+       ! construct MPI subarray data type
+       sizes(1)    = KA
+       sizes(2)    = IA
+       sizes(3)    = JA
+       subsizes(1) = KMAX
+       subsizes(2) = IA
+       subsizes(3) = JA
+       sub_off(1)  = KS - 1   ! MPI start index starts with 0
+       sub_off(2)  = 0
+       sub_off(3)  = 0
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, centerTypeZXY, err)
+       call MPI_Type_commit(centerTypeZXY, err)
+
+       ! for axistype == 'Land'
+       startLAND(1)   = 1
+       startLAND(2:3) = startXY(1:2)
+       countLAND(1)   = LKMAX
+       countLAND(2:3) = countXY(1:2)
+       ! construct MPI subarray data type
+       sizes(1)    = LKMAX
+       subsizes(1) = LKMAX
+       sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, centerTypeLAND, err)
+       call MPI_Type_commit(centerTypeLAND, err)
+
+       ! for axistype == 'URBAN'
+       startURBAN(1)   = 1
+       startURBAN(2:3) = startXY(1:2)
+       countURBAN(1)   = UKMAX
+       countURBAN(2:3) = countXY(1:2)
+       ! construct MPI subarray data type
+       sizes(1)    = UKMAX
+       subsizes(1) = UKMAX
+       sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, centerTypeURBAN, err)
+       call MPI_Type_commit(centerTypeURBAN, err)
+    else
+       sizes(2)    = IA
+       sizes(3)    = JA
+
+       if ( PRC_PERIODIC_X ) then
+          XSG = ISGB-IHALO
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) XSG = 1
+          XS = 1
+          XE = IA
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 )           XS = IS
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) XE = IE
+          startXY(1) = XSG
+          countXY(1) = IA
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 )           countXY(1) = countXY(1) - IHALO
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) countXY(1) = countXY(1) - IHALO
+       end if
+       if ( PRC_PERIODIC_Y ) then
+          YSG = JSGB-JHALO
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) YSG = 1
+          YS = 1
+          YE = JA
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 )           YS = JS
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) YE = JE
+          startXY(2) = YSG
+          countXY(2) = JA
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 )           countXY(2) = countXY(2) - JHALO
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) countXY(2) = countXY(2) - JHALO
+       end if
+       ! construct MPI subarray data type
+       subsizes(2) = XE-XS+1
+       subsizes(3) = YE-YS+1
+       sub_off(2)  = XS - 1   ! MPI start index starts with 0
+       sub_off(3)  = YS - 1
+
+       ! for axistype == 'XY'
+       call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, centerTypeXY, err)
+       call MPI_Type_commit(centerTypeXY, err)
+
+       ! for axistype == 'ZXY'
+       sizes(1)    = KA
+       subsizes(1) = KMAX
+       sub_off(1)  = KS - 1   ! MPI start index starts with 0
+       startZXY(1)   = 1
+       startZXY(2:3) = startXY(1:2)
+       countZXY(1)   = KMAX
+       countZXY(2:3) = countXY(1:2)
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, centerTypeZXY, err)
+       call MPI_Type_commit(centerTypeZXY, err)
+
+       ! for axistype == 'Land'
+       sizes(1)    = LKMAX
+       subsizes(1) = LKMAX
+       sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+       startLAND(1)   = 1
+       startLAND(2:3) = startXY(1:2)
+       countLAND(1)   = LKMAX
+       countLAND(2:3) = countXY(1:2)
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, centerTypeLAND, err)
+       call MPI_Type_commit(centerTypeLAND, err)
+
+       ! for axistype == 'Urban'
+       sizes(1)    = UKMAX
+       subsizes(1) = UKMAX
+       sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+       startURBAN(1)   = 1
+       startURBAN(2:3) = startXY(1:2)
+       countURBAN(1)   = UKMAX
+       countURBAN(2:3) = countXY(1:2)
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, centerTypeURBAN, err)
+       call MPI_Type_commit(centerTypeURBAN, err)
+
+       ! boundary processes need 2nd read
+       if ( PRC_PERIODIC_X ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then ! west column processes
+             startWestXY(1) = IMAXG - IHALO + 1
+             startWestXY(2) = JSGB - JHALO
+             countWestXY(1) = IHALO
+             countWestXY(2) = JA
+             XS = 1
+             XE = IHALO
+             YS = 1
+             YE = JA
+             if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then ! south-west corner process
+                startWestXY(2) = startWestXY(2) + JHALO
+                countWestXY(2) = countWestXY(2) - JHALO
+                YS = YS + JHALO
+             end if
+             if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then ! north-west corner process
+                countWestXY(2) = countWestXY(2) - JHALO
+                YE = YE - JHALO
+             end if
+             ! construct MPI subarray data type
+             sizes(2)    = IA
+             sizes(3)    = JA
+             subsizes(2) = XE-XS+1
+             subsizes(3) = YE-YS+1
+             sub_off(2)  = XS - 1   ! MPI start index starts with 0
+             sub_off(3)  = YS - 1
+             call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, westTypeXY, err)
+             call MPI_Type_commit(westTypeXY, err)
+             ! for axistype == 'ZXY'
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startWestZXY(1)   = 1
+             startWestZXY(2:3) = startWestXY(1:2)
+             countWestZXY(1)   = KMAX
+             countWestZXY(2:3) = countWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, westTypeZXY, err)
+             call MPI_Type_commit(westTypeZXY, err)
+             ! for axistype == 'Land'
+             sizes(1)    = LKMAX
+             subsizes(1) = LKMAX
+             sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+             startWestLAND(1)   = 1
+             startWestLAND(2:3) = startWestXY(1:2)
+             countWestLAND(1)   = LKMAX
+             countWestLAND(2:3) = countWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, westTypeLAND, err)
+             call MPI_Type_commit(westTypeLAND, err)
+             ! for axistype == 'Urban'
+             sizes(1)    = UKMAX
+             subsizes(1) = UKMAX
+             sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+             startWestURBAN(1)   = 1
+             startWestURBAN(2:3) = startWestXY(1:2)
+             countWestURBAN(1)   = UKMAX
+             countWestURBAN(2:3) = countWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, westTypeURBAN, err)
+             call MPI_Type_commit(westTypeURBAN, err)
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then ! east column processes
+             startEastXY(1) = 1
+             startEastXY(2) = JSGB - JHALO
+             countEastXY(1) = IHALO
+             countEastXY(2) = JA
+             XS = IE+1
+             XE = IA
+             YS = 1
+             YE = JA
+             if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then ! south-east corner process
+                startEastXY(2) = startEastXY(2) + JHALO
+                countEastXY(2) = countEastXY(2) - JHALO
+                YS = YS + JHALO
+             end if
+             if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then ! north-east corner process
+                countEastXY(2) = countEastXY(2) - JHALO
+                YE = YE - JHALO
+             end if
+             ! construct MPI subarray data type
+             sizes(2)    = IA
+             sizes(3)    = JA
+             subsizes(2) = XE-XS+1
+             subsizes(3) = YE-YS+1
+             sub_off(2)  = XS - 1   ! MPI start index starts with 0
+             sub_off(3)  = YS - 1
+             call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, eastTypeXY, err)
+             call MPI_Type_commit(eastTypeXY, err)
+             ! for axistype == 'ZXY'
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startEastZXY(1)   = 1
+             startEastZXY(2:3) = startEastXY(1:2)
+             countEastZXY(1)   = KMAX
+             countEastZXY(2:3) = countEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, eastTypeZXY, err)
+             call MPI_Type_commit(eastTypeZXY, err)
+             ! for axistype == 'Land'
+             sizes(1)    = LKMAX
+             subsizes(1) = LKMAX
+             sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+             startEastLAND(1)   = 1
+             startEastLAND(2:3) = startEastXY(1:2)
+             countEastLAND(1)   = LKMAX
+             countEastLAND(2:3) = countEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, eastTypeLAND, err)
+             call MPI_Type_commit(eastTypeLAND, err)
+             ! for axistype == 'Urban'
+             sizes(1)    = UKMAX
+             subsizes(1) = UKMAX
+             sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+             startEastURBAN(1)   = 1
+             startEastURBAN(2:3) = startEastXY(1:2)
+             countEastURBAN(1)   = UKMAX
+             countEastURBAN(2:3) = countEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, eastTypeURBAN, err)
+             call MPI_Type_commit(eastTypeURBAN, err)
+          end if
+       end if
+
+       if ( PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then ! south row processes
+             startSouthXY(1) = ISGB - IHALO
+             startSouthXY(2) = JMAXG - JHALO + 1
+             countSouthXY(1) = IA
+             countSouthXY(2) = JHALO
+             XS = 1
+             XE = IA
+             YS = 1
+             YE = JHALO
+             ! local buffer = (1:IA, 1:JHALO)
+             if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then ! south-west corner process
+                startSouthXY(1) = startSouthXY(1) + IHALO
+                countSouthXY(1) = countSouthXY(1) - IHALO
+                XS = XS + IHALO
+             end if
+             if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then ! south-east corner process
+                countSouthXY(1) = countSouthXY(1) - IHALO
+                XE = XE - IHALO
+             end if
+             ! construct MPI subarray data type
+             sizes(2)    = IA
+             sizes(3)    = JA
+             subsizes(2) = XE-XS+1
+             subsizes(3) = YE-YS+1
+             sub_off(2)  = XS - 1   ! MPI start index starts with 0
+             sub_off(3)  = YS - 1
+             call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, southTypeXY, err)
+             call MPI_Type_commit(southTypeXY, err)
+             ! for axistype == 'ZXY'
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startSouthZXY(1)   = 1
+             startSouthZXY(2:3) = startSouthXY(1:2)
+             countSouthZXY(1)   = KMAX
+             countSouthZXY(2:3) = countSouthXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southTypeZXY, err)
+             call MPI_Type_commit(southTypeZXY, err)
+             ! for axistype == 'Land'
+             sizes(1)    = LKMAX
+             subsizes(1) = LKMAX
+             sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+             startSouthLAND(1)   = 1
+             startSouthLAND(2:3) = startSouthXY(1:2)
+             countSouthLAND(1)   = LKMAX
+             countSouthLAND(2:3) = countSouthXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southTypeLAND, err)
+             call MPI_Type_commit(southTypeLAND, err)
+             ! for axistype == 'Urban'
+             sizes(1)    = UKMAX
+             subsizes(1) = UKMAX
+             sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+             startSouthURBAN(1)   = 1
+             startSouthURBAN(2:3) = startSouthXY(1:2)
+             countSouthURBAN(1)   = UKMAX
+             countSouthURBAN(2:3) = countSouthXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southTypeURBAN, err)
+             call MPI_Type_commit(southTypeURBAN, err)
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then ! north row processes
+             startNorthXY(1) = ISGB - IHALO
+             startNorthXY(2) = 1
+             countNorthXY(1) = IA
+             countNorthXY(2) = JHALO
+             XS = 1
+             XE = IA
+             YS = JE+1
+             YE = JA
+             if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then ! north-west corner process
+                startNorthXY(1) = startNorthXY(1) + IHALO
+                countNorthXY(1) = countNorthXY(1) - IHALO
+                XS = XS + IHALO
+             end if
+             if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then ! north-east corner process
+                countNorthXY(1) = countNorthXY(1) - IHALO
+                XE = XE - IHALO
+             end if
+             ! construct MPI subarray data type
+             sizes(2)    = IA
+             sizes(3)    = JA
+             subsizes(2) = XE-XS+1
+             subsizes(3) = YE-YS+1
+             sub_off(2)  = XS - 1   ! MPI start index starts with 0
+             sub_off(3)  = YS - 1
+             call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, northTypeXY, err)
+             call MPI_Type_commit(northTypeXY, err)
+             ! for axistype == 'ZXY'
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startNorthZXY(1)   = 1
+             startNorthZXY(2:3) = startNorthXY(1:2)
+             countNorthZXY(1)   = KMAX
+             countNorthZXY(2:3) = countNorthXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northTypeZXY, err)
+             call MPI_Type_commit(northTypeZXY, err)
+             ! for axistype == 'Land'
+             sizes(1)    = LKMAX
+             subsizes(1) = LKMAX
+             sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+             startNorthLAND(1)   = 1
+             startNorthLAND(2:3) = startNorthXY(1:2)
+             countNorthLAND(1)   = LKMAX
+             countNorthLAND(2:3) = countNorthXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northTypeLAND, err)
+             call MPI_Type_commit(northTypeLAND, err)
+             ! for axistype == 'Urban'
+             sizes(1)    = UKMAX
+             subsizes(1) = UKMAX
+             sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+             startNorthURBAN(1)   = 1
+             startNorthURBAN(2:3) = startNorthXY(1:2)
+             countNorthURBAN(1)   = UKMAX
+             countNorthURBAN(2:3) = countNorthXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northTypeURBAN, err)
+             call MPI_Type_commit(northTypeURBAN, err)
+          end if
+       end if
+
+       ! 4 corner processes read corner rectangle
+       if ( PRC_PERIODIC_X .OR. PRC_PERIODIC_Y ) then
+          sizes(2)    = IA
+          sizes(3)    = JA
+          subsizes(2) = IHALO
+          subsizes(3) = JHALO
+
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! south-west
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startSouthWestXY(1) = IMAXG - IHALO + 1
+             startSouthWestXY(2) = JMAXG - JHALO + 1
+             countSouthWestXY(1) = IHALO
+             countSouthWestXY(2) = JHALO
+             ! construct MPI subarray data type
+             sub_off(2)  = 0   ! MPI start index starts with 0
+             sub_off(3)  = 0
+             call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, southwestTypeXY, err)
+             call MPI_Type_commit(southwestTypeXY, err)
+             ! for axistype == 'ZXY'
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startSouthWestZXY(1)   = 1
+             startSouthWestZXY(2:3) = startSouthWestXY(1:2)
+             countSouthWestZXY(1)   = KMAX
+             countSouthWestZXY(2:3) = countSouthWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southwestTypeZXY, err)
+             call MPI_Type_commit(southwestTypeZXY, err)
+             ! for axistype == 'Land'
+             sizes(1)    = LKMAX
+             subsizes(1) = LKMAX
+             sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+             startSouthWestLAND(1)   = 1
+             startSouthWestLAND(2:3) = startSouthWestXY(1:2)
+             countSouthWestLAND(1)   = LKMAX
+             countSouthWestLAND(2:3) = countSouthWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southwestTypeLAND, err)
+             call MPI_Type_commit(southwestTypeLAND, err)
+             ! for axistype == 'Urban'
+             sizes(1)    = UKMAX
+             subsizes(1) = UKMAX
+             sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+             startSouthWestURBAN(1)   = 1
+             startSouthWestURBAN(2:3) = startSouthWestXY(1:2)
+             countSouthWestURBAN(1)   = UKMAX
+             countSouthWestURBAN(2:3) = countSouthWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southwestTypeURBAN, err)
+             call MPI_Type_commit(southwestTypeURBAN, err)
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! south-east
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             startSouthEastXY(1) = 1
+             startSouthEastXY(2) = JMAXG - JHALO + 1
+             countSouthEastXY(1) = IHALO
+             countSouthEastXY(2) = JHALO
+             ! construct MPI subarray data type
+             sub_off(2)  = IE   ! MPI start index starts with 0
+             sub_off(3)  = 0
+             call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, southeastTypeXY, err)
+             call MPI_Type_commit(southeastTypeXY, err)
+             ! for axistype == 'ZXY'
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startSouthEastZXY(1)   = 1
+             startSouthEastZXY(2:3) = startSouthEastXY(1:2)
+             countSouthEastZXY(1)   = KMAX
+             countSouthEastZXY(2:3) = countSouthEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southeastTypeZXY, err)
+             call MPI_Type_commit(southeastTypeZXY, err)
+             ! for axistype == 'Land'
+             sizes(1)    = LKMAX
+             subsizes(1) = LKMAX
+             sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+             startSouthEastLAND(1)   = 1
+             startSouthEastLAND(2:3) = startSouthEastXY(1:2)
+             countSouthEastLAND(1)   = LKMAX
+             countSouthEastLAND(2:3) = countSouthEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southeastTypeLAND, err)
+             call MPI_Type_commit(southeastTypeLAND, err)
+             ! for axistype == 'Urban'
+             sizes(1)    = UKMAX
+             subsizes(1) = UKMAX
+             sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+             startSouthEastURBAN(1)   = 1
+             startSouthEastURBAN(2:3) = startSouthEastXY(1:2)
+             countSouthEastURBAN(1)   = UKMAX
+             countSouthEastURBAN(2:3) = countSouthEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, southeastTypeURBAN, err)
+             call MPI_Type_commit(southeastTypeURBAN, err)
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! north-west
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             startNorthWestXY(1) = IMAXG - IHALO + 1
+             startNorthWestXY(2) = 1
+             countNorthWestXY(1) = IHALO
+             countNorthWestXY(2) = JHALO
+             ! construct MPI subarray data type
+             sub_off(2)  = 0   ! MPI start index starts with 0
+             sub_off(3)  = JE
+             call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, northwestTypeXY, err)
+             call MPI_Type_commit(northwestTypeXY, err)
+             ! for axistype == 'ZXY'
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startNorthWestZXY(1)   = 1
+             startNorthWestZXY(2:3) = startNorthWestXY(1:2)
+             countNorthWestZXY(1)   = KMAX
+             countNorthWestZXY(2:3) = countNorthWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northwestTypeZXY, err)
+             call MPI_Type_commit(northwestTypeZXY, err)
+             ! for axistype == 'Land'
+             sizes(1)    = LKMAX
+             subsizes(1) = LKMAX
+             sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+             startNorthWestLAND(1)   = 1
+             startNorthWestLAND(2:3) = startNorthWestXY(1:2)
+             countNorthWestLAND(1)   = LKMAX
+             countNorthWestLAND(2:3) = countNorthWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northwestTypeLAND, err)
+             call MPI_Type_commit(northwestTypeLAND, err)
+             ! for axistype == 'Urban'
+             sizes(1)    = UKMAX
+             subsizes(1) = UKMAX
+             sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+             startNorthWestURBAN(1)   = 1
+             startNorthWestURBAN(2:3) = startNorthWestXY(1:2)
+             countNorthWestURBAN(1)   = UKMAX
+             countNorthWestURBAN(2:3) = countNorthWestXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northwestTypeURBAN, err)
+             call MPI_Type_commit(northwestTypeURBAN, err)
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! north-east
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             startNorthEastXY(1) = 1
+             startNorthEastXY(2) = 1
+             countNorthEastXY(1) = IHALO
+             countNorthEastXY(2) = JHALO
+             ! construct MPI subarray data type
+             sub_off(2)  = IE   ! MPI start index starts with 0
+             sub_off(3)  = JE
+             call MPI_Type_create_subarray(2, sizes(2:3), subsizes(2:3), sub_off(2:3), order, dtype, northeastTypeXY, err)
+             call MPI_Type_commit(northeastTypeXY, err)
+             ! for axistype == 'ZXY'
+             sizes(1)    = KA
+             subsizes(1) = KMAX
+             sub_off(1)  = KS - 1   ! MPI start index starts with 0
+             startNorthEastZXY(1)   = 1
+             startNorthEastZXY(2:3) = startNorthEastXY(1:2)
+             countNorthEastZXY(1)   = KMAX
+             countNorthEastZXY(2:3) = countNorthEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northeastTypeZXY, err)
+             call MPI_Type_commit(northeastTypeZXY, err)
+             ! for axistype == 'Land'
+             sizes(1)    = LKMAX
+             subsizes(1) = LKMAX
+             sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+             startNorthEastLAND(1)   = 1
+             startNorthEastLAND(2:3) = startNorthEastXY(1:2)
+             countNorthEastLAND(1)   = LKMAX
+             countNorthEastLAND(2:3) = countNorthEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northeastTypeLAND, err)
+             call MPI_Type_commit(northeastTypeLAND, err)
+             ! for axistype == 'Urban'
+             sizes(1)    = UKMAX
+             subsizes(1) = UKMAX
+             sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+             startNorthEastURBAN(1)   = 1
+             startNorthEastURBAN(2:3) = startNorthEastXY(1:2)
+             countNorthEastURBAN(1)   = UKMAX
+             countNorthEastURBAN(2:3) = countNorthEastXY(1:2)
+             call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, dtype, northeastTypeURBAN, err)
+             call MPI_Type_commit(northeastTypeURBAN, err)
+          end if
+       end if
+    end if
+
+    ! for axistype == 'ZX'
+    sizes(1)    = KA
+    subsizes(1) = KMAX
+    sizes(1)    = KA
+    subsizes(1) = KMAX
+    startZX(1)  = KHALO+1
+    countZX(1)  = KHALO
+    sub_off(1)  = KHALO   ! MPI start index starts with 0
+    if ( .NOT. PRC_PERIODIC_X ) then  ! read data and halos in one call
+       startZX(2)  = IS_inG - IHALO
+       countZX(2)  = IA
+       sizes(2)    = IA
+       subsizes(2) = IMAXB
+       sub_off(2)  = ISB-1   ! MPI start index starts with 0
+       call MPI_Type_create_subarray(2, sizes, subsizes, sub_off, order, dtype, centerTypeZX, err)
+       call MPI_Type_commit(centerTypeZX, err)
+    else
+       XSG = ISGB - IHALO
+       if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) XSG = 1
+       XS = 1
+       XE = IA
+       if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 )           XS = IS
+       if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) XE = IE
+       startZX(2) = XSG
+       countZX(2) = IA
+       if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 )           countZX(2) = countZX(2) - IHALO
+       if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) countZX(2) = countZX(2) - IHALO
+       sizes(2)    = IA
+       subsizes(2) = XE-XS+1
+       sub_off(2)  = XS-1   ! MPI start index starts with 0
+       call MPI_Type_create_subarray(2, sizes, subsizes, sub_off, order, dtype, centerTypeZX, err)
+       call MPI_Type_commit(centerTypeZX, err)
+       if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then
+          ! west-most process reads its west-side of halos
+          startWestZX(1) = KHALO+1
+          countWestZX(1) = KHALO
+          startWestZX(2) = IMAXG-IHALO+1
+          countWestZX(2) = IHALO
+          sizes(2)    = IA
+          subsizes(2) = IHALO
+          sub_off(2)  = 0   ! MPI start index starts with 0
+          call MPI_Type_create_subarray(2, sizes, subsizes, sub_off, order, dtype, westTypeZX, err)
+          call MPI_Type_commit(westTypeZX, err)
+       elseif ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then
+          ! east-most process reads its east-side of halos
+          startEastZX(1) = KHALO+1
+          countEastZX(1) = KHALO
+          startEastZX(2) = 1
+          countEastZX(2) = IHALO
+          sizes(2)    = IA
+          subsizes(2) = IHALO
+          sub_off(2)  = IE   ! MPI start index starts with 0
+          call MPI_Type_create_subarray(2, sizes, subsizes, sub_off, order, dtype, eastTypeZX, err)
+          call MPI_Type_commit(eastTypeZX, err)
+       end if
+    end if
+
+  end subroutine Construct_Derived_Datatype
+
+  subroutine Free_Derived_Datatype
+    use MPI
+    implicit none
+    integer err
+
+    if ( .NOT. IO_PNETCDF ) return
+
+    if (    centerTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(   centerTypeXY, err)
+    if (      westTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     westTypeXY, err)
+    if (      eastTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     eastTypeXY, err)
+    if (     southTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(    southTypeXY, err)
+    if (     northTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(    northTypeXY, err)
+    if ( southwestTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(southwestTypeXY, err)
+    if ( southeastTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(southeastTypeXY, err)
+    if ( northwestTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(northwestTypeXY, err)
+    if ( northeastTypeXY      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(northeastTypeXY, err)
+    if (    centerTypeZX      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(   centerTypeZX, err)
+    if (      westTypeZX      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     westTypeZX, err)
+    if (      eastTypeZX      .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     eastTypeZX, err)
+
+    if (    centerTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(   centerTypeZXY, err)
+    if (      westTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     westTypeZXY, err)
+    if (      eastTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     eastTypeZXY, err)
+    if (     southTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(    southTypeZXY, err)
+    if (     northTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(    northTypeZXY, err)
+    if ( southwestTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(southwestTypeZXY, err)
+    if ( southeastTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(southeastTypeZXY, err)
+    if ( northwestTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(northwestTypeZXY, err)
+    if ( northeastTypeZXY     .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(northeastTypeZXY, err)
+
+    if (    centerTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(   centerTypeLAND, err)
+    if (      westTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     westTypeLAND, err)
+    if (      eastTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     eastTypeLAND, err)
+    if (     southTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(    southTypeLAND, err)
+    if (     northTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(    northTypeLAND, err)
+    if ( southwestTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(southwestTypeLAND, err)
+    if ( southeastTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(southeastTypeLAND, err)
+    if ( northwestTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(northwestTypeLAND, err)
+    if ( northeastTypeLAND    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(northeastTypeLAND, err)
+
+    if (    centerTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(   centerTypeURBAN, err)
+    if (      westTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     westTypeURBAN, err)
+    if (      eastTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(     eastTypeURBAN, err)
+    if (     southTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(    southTypeURBAN, err)
+    if (     northTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(    northTypeURBAN, err)
+    if ( southwestTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(southwestTypeURBAN, err)
+    if ( southeastTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(southeastTypeURBAN, err)
+    if ( northwestTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(northwestTypeURBAN, err)
+    if ( northeastTypeURBAN   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(northeastTypeURBAN, err)
+
+  end subroutine Free_Derived_Datatype
 
   !-----------------------------------------------------------------------------
   !> Read 1D data from file
@@ -612,6 +1456,564 @@ contains
 
     return
   end subroutine FILEIO_read_4D
+
+  !-----------------------------------------------------------------------------
+  !> Read 1D data from file
+  subroutine FILEIO_read_var_1D( &
+       var,      &
+       fid,      &
+       varname,  &
+       axistype, &
+       step      )
+    use gtool_file, only: &
+       FileRead
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
+    use MPI
+    implicit none
+
+    real(RP),         intent(out) :: var(:)   !< value of the variable
+    integer,          intent(in)  :: fid      !< file ID
+    character(len=*), intent(in)  :: varname  !< name of the variable
+    character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
+    integer,          intent(in)  :: step     !< step number
+
+    integer               :: XS, XE, YS, YE  ! local buffer indices
+    integer               :: XSG, YSG        ! global array indices
+    integer               :: dtype
+    integer               :: start(1)   ! start offset of globale variable
+    integer               :: count(1)   ! request length to the globale variable
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
+
+    dtype = MPI_FLOAT
+    if ( RP .EQ. 8 ) dtype = MPI_DOUBLE_PRECISION
+
+    if ( axistype .EQ. 'Z' ) then
+       start(1) = 1
+       count(1) = KMAX
+       call FileRead( var, fid, varname, step, KMAX, dtype, start, count )
+    elseif( axistype .EQ. 'X' ) then
+       if ( .NOT. PRC_PERIODIC_X ) then  ! read data and halos in one call
+          start(1) = IS_inG - IHALO
+          count(1) = IA
+          call FileRead( var, fid, varname, step, IA, dtype, start, count )
+       else
+          XSG = ISGB - IHALO
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) XSG = 1
+          XS = 1
+          XE = IA
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 )           XS = IS
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) XE = IE
+          start(1) = XSG
+          count(1) = IA
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 )           count(1) = count(1) - IHALO
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) count(1) = count(1) - IHALO
+          call FileRead( var(XS:XE), fid, varname, step, count(1), dtype, start, count )
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then
+             ! west-most process reads its west-side of halos
+             start(1) = IMAXG-IHALO+1
+             count(1) = IHALO
+             call FileRead( var(1:IHALO), fid, varname, step, IHALO, dtype, start, count )
+          elseif ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then
+             ! east-most process reads its east-side of halos
+             start(1) = 1
+             count(1) = IHALO
+             call FileRead( var(IE+1:IA), fid, varname, step, IHALO, dtype, start, count )
+          end if
+       end if
+    elseif( axistype .EQ. 'Y' ) then
+       if ( .NOT. PRC_PERIODIC_Y ) then  ! read data and halos in one call
+          start(1) = JS_inG - JHALO
+          count(1) = JA
+          call FileRead( var, fid, varname, step, JA, dtype, start, count )
+       else
+          YSG = JSGB - JHALO
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) YSG = 1
+          YS = 1
+          YE = JA
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 )           YS = JS
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) YE = JE
+          start(1) = YSG
+          count(1) = JA
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 )           count(1) = count(1) - JHALO
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) count(1) = count(1) - JHALO
+          call FileRead( var(YS:YE), fid, varname, step, count(1), dtype, start, count )
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             ! south-most process reads its south-side of halos
+             start(1) = JMAXG-JHALO+1
+             count(1) = JHALO
+             call FileRead( var(1:JHALO), fid, varname, step, JHALO, dtype, start, count )
+          elseif ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_Y-1 ) then
+             ! north-most process reads its north-side of halos
+             start(1) = 1
+             count(1) = JHALO
+             call FileRead( var(JE+1:JA), fid, varname, step, JHALO, dtype, start, count )
+          end if
+       end if
+    else
+       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       call PRC_MPIstop
+    endif
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILEIO_read_var_1D
+
+  !-----------------------------------------------------------------------------
+  !> Read 2D data from file
+  subroutine FILEIO_read_var_2D( &
+       var,      &
+       fid,      &
+       varname,  &
+       axistype, &
+       step      )
+    use gtool_file, only: &
+       FileRead
+    use scale_process, only: &
+       PRC_myrank,  &
+       PRC_MPIstop, &
+       PRC_LOCAL_COMM_WORLD
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
+    use MPI
+    implicit none
+
+    real(RP),         intent(out) :: var(:,:) !< value of the variable
+    integer,          intent(in)  :: fid      !< file ID
+    character(len=*), intent(in)  :: varname  !< name of the variable
+    character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
+    integer,          intent(in)  :: step     !< step number
+
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
+
+    if ( axistype .EQ. 'XY' ) then
+       if ( .NOT. PRC_PERIODIC_X .AND. .NOT. PRC_PERIODIC_Y) then
+          call FileRead( var, fid, varname, step, IA*JA, dtype, startXY, countXY )
+       else
+          call FileRead( var, fid, varname, step, 1, centerTypeXY, startXY, countXY )
+       end if
+
+       ! boundary processes need 2nd or 3rd read
+       if ( PRC_PERIODIC_X ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) & ! west column processes read west halos
+             call FileRead( var, fid, varname, step, 1, westTypeXY, startWestXY, countWestXY )
+
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) & ! east column processes read east halos
+             call FileRead( var, fid, varname, step, 1, eastTypeXY, startEastXY, countEastXY )
+       end if
+
+       if ( PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) & ! south row processes read south halos
+             call FileRead( var, fid, varname, step, 1, southTypeXY, startSouthXY, countSouthXY )
+
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) & ! north row processes read north halos
+             call FileRead( var, fid, varname, step, 1, northTypeXY, startNorthXY, countNorthXY )
+       end if
+
+       ! 4 corner processes read corner rectangle
+       if ( PRC_PERIODIC_X .OR. PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! south-west
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, 1, southwestTypeXY, startSouthWestXY, countSouthWestXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! south-east
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, 1, southeastTypeXY, startSouthEastXY, countSouthEastXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! north-west
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, 1, northwestTypeXY, startNorthWestXY, countNorthWestXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! north-east
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, 1, northeastTypeXY, startNorthEastXY, countNorthEastXY )
+          end if
+       end if
+    elseif( axistype .EQ. 'ZX' ) then
+       if ( .NOT. PRC_PERIODIC_X ) then  ! read data and halos in one call
+          call FileRead( var, fid, varname, step, 1, centerTypeZX, startZX, countZX )
+       else
+          call FileRead( var, fid, varname, step, countZX(2), centerTypeZX, startZX, countZX )
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then
+             ! west-most process reads its west-side of halos
+             call FileRead( var, fid, varname, step, IHALO, westTypeZX, startWestZX, countWestZX )
+          elseif ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then
+             ! east-most process reads its east-side of halos
+             call FileRead( var, fid, varname, step, IHALO, eastTypeZX, startEastZX, countEastZX )
+          end if
+       end if
+    else
+       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       call PRC_MPIstop
+    endif
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILEIO_read_var_2D
+
+  !-----------------------------------------------------------------------------
+  !> Read 3D data from file
+  subroutine FILEIO_read_var_3D( &
+       var,      &
+       fid,      &
+       varname,  &
+       axistype, &
+       step      )
+    use gtool_file, only: &
+       FileRead
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_MPIstop, &
+       PRC_LOCAL_COMM_WORLD
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
+    implicit none
+
+    real(RP),         intent(out) :: var(:,:,:) !< value of the variable
+    integer,          intent(in)  :: fid        !< file ID
+    character(len=*), intent(in)  :: varname    !< name of the variable
+    character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y/T)
+    integer,          intent(in)  :: step       !< step number
+
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
+
+    if ( axistype .EQ. 'ZXY' ) then
+       call FileRead( var, fid, varname, step, 1, centerTypeZXY, startZXY, countZXY )
+
+       ! boundary processes need 2nd or 3rd read
+       if ( PRC_PERIODIC_X ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then ! west column processes read west halos
+             call FileRead( var, fid, varname, step, 1, westTypeZXY, startWestZXY, countWestZXY )
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then ! east column processes read east halos
+             call FileRead( var, fid, varname, step, 1, eastTypeZXY, startEastZXY, countEastZXY )
+          end if
+       end if
+
+       if ( PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then ! south row processes read south halos
+             call FileRead( var, fid, varname, step, 1, southTypeZXY, startSouthZXY, countSouthZXY )
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then ! north row processes read north halos
+             call FileRead( var, fid, varname, step, 1, northTypeZXY, startNorthZXY, countNorthZXY )
+          end if
+       end if
+
+       ! 4 corner processes read corner rectangle
+       if ( PRC_PERIODIC_X .OR. PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! south-west
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, 1, southwestTypeZXY, startSouthWestZXY, countSouthWestZXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! south-east
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, 1, southeastTypeZXY, startSouthEastZXY, countSouthEastZXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! north-west
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, 1, northwestTypeZXY, startNorthWestZXY, countNorthWestZXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! north-east
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, 1, northeastTypeZXY, startNorthEastZXY, countNorthEastZXY )
+          end if
+       end if
+    else if ( axistype .EQ. 'XYT' ) then
+       startXY(3)          = 1
+       startWestXY(3)      = 1
+       startEastXY(3)      = 1
+       startSouthXY(3)     = 1
+       startNorthXY(3)     = 1
+       startSouthWestXY(3) = 1
+       startSouthEastXY(3) = 1
+       startNorthWestXY(3) = 1
+       startNorthEastXY(3) = 1
+
+       countXY(3)          = step
+       countWestXY(3)      = step
+       countEastXY(3)      = step
+       countSouthXY(3)     = step
+       countNorthXY(3)     = step
+       countSouthWestXY(3) = step
+       countSouthEastXY(3) = step
+       countNorthWestXY(3) = step
+       countNorthEastXY(3) = step
+
+       if ( .NOT. PRC_PERIODIC_X .AND. .NOT. PRC_PERIODIC_Y) then
+          call FileRead( var, fid, varname, step, step*IA*JA, dtype, startXY, countXY )
+       else
+          call FileRead( var, fid, varname, step, step, centerTypeXY, startXY, countXY )
+       end if
+
+       ! boundary processes need 2nd or 3rd read
+       if ( PRC_PERIODIC_X ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) & ! west column processes read west halos
+             call FileRead( var, fid, varname, step, step, westTypeXY, startWestXY, countWestXY )
+
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) & ! east column processes read east halos
+             call FileRead( var, fid, varname, step, step, eastTypeXY, startEastXY, countEastXY )
+       end if
+
+       if ( PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) & ! south row processes read south halos
+             call FileRead( var, fid, varname, step, step, southTypeXY, startSouthXY, countSouthXY )
+
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) & ! north row processes read north halos
+             call FileRead( var, fid, varname, step, step, northTypeXY, startNorthXY, countNorthXY )
+       end if
+
+       ! 4 corner processes read corner rectangle
+       if ( PRC_PERIODIC_X .OR. PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! south-west
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, step, southwestTypeXY, startSouthWestXY, countSouthWestXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! south-east
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, step, southeastTypeXY, startSouthEastXY, countSouthEastXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! north-west
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, step, northwestTypeXY, startNorthWestXY, countNorthWestXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! north-east
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, step, northeastTypeXY, startNorthEastXY, countNorthEastXY )
+          end if
+       end if
+    else if ( axistype .EQ. 'Land' ) then
+       call FileRead( var, fid, varname, step, 1, centerTypeLAND, startLAND, countLAND )
+
+       ! boundary processes need 2nd or 3rd read
+       if ( PRC_PERIODIC_X ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then ! west column processes read west halos
+             call FileRead( var, fid, varname, step, 1, westTypeLAND, startWestLAND, countWestLAND )
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then ! east column processes read east halos
+             call FileRead( var, fid, varname, step, 1, eastTypeLAND, startEastLAND, countEastLAND )
+          end if
+       end if
+
+       if ( PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then ! south row processes read south halos
+             call FileRead( var, fid, varname, step, 1, southTypeLAND, startSouthLAND, countSouthLAND )
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then ! north row processes read north halos
+             call FileRead( var, fid, varname, step, 1, northTypeLAND, startNorthLAND, countNorthLAND )
+          end if
+       end if
+
+       ! 4 corner processes read corner rectangle
+       if ( PRC_PERIODIC_X .OR. PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! south-west
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, 1, southwestTypeLAND, startSouthWestLAND, countSouthWestLAND )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! south-east
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, 1, southeastTypeLAND, startSouthEastLAND, countSouthEastLAND )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! north-west
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, 1, northwestTypeLAND, startNorthWestLAND, countNorthWestLAND )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! north-east
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, 1, northeastTypeLAND, startNorthEastLAND, countNorthEastLAND )
+          end if
+       end if
+    else if ( axistype .EQ. 'Urban' ) then
+       call FileRead( var, fid, varname, step, 1, centerTypeURBAN, startURBAN, countURBAN )
+
+       ! boundary processes need 2nd or 3rd read
+       if ( PRC_PERIODIC_X ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then ! west column processes read west halos
+             call FileRead( var, fid, varname, step, 1, westTypeURBAN, startWestURBAN, countWestURBAN )
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then ! east column processes read east halos
+             call FileRead( var, fid, varname, step, 1, eastTypeURBAN, startEastURBAN, countEastURBAN )
+          end if
+       end if
+
+       if ( PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then ! south row processes read south halos
+             call FileRead( var, fid, varname, step, 1, southTypeURBAN, startSouthURBAN, countSouthURBAN )
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then ! north row processes read north halos
+             call FileRead( var, fid, varname, step, 1, northTypeURBAN, startNorthURBAN, countNorthURBAN )
+          end if
+       end if
+
+       ! 4 corner processes read corner rectangle
+       if ( PRC_PERIODIC_X .OR. PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! south-west
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, 1, southwestTypeURBAN, startSouthWestURBAN, countSouthWestURBAN )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! south-east
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, 1, southeastTypeURBAN, startSouthEastURBAN, countSouthEastURBAN )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! north-west
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, 1, northwestTypeURBAN, startNorthWestURBAN, countNorthWestURBAN )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! north-east
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, 1, northeastTypeURBAN, startNorthEastURBAN, countNorthEastURBAN )
+          end if
+       end if
+    else
+       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       call PRC_MPIstop
+    endif
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILEIO_read_var_3D
+
+  !-----------------------------------------------------------------------------
+  !> Read 4D data from file
+  subroutine FILEIO_read_var_4D( &
+       var,      &
+       fid,      &
+       varname,  &
+       axistype, &
+       step      )
+    use gtool_file, only: &
+       FileRead
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_MPIstop, &
+       PRC_LOCAL_COMM_WORLD
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
+    implicit none
+
+    real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
+    integer,          intent(in)  :: fid          !< file ID
+    character(len=*), intent(in)  :: varname      !< name of the variable
+    character(len=*), intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
+    integer,          intent(in)  :: step         !< step number
+
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 4D var: ', trim(varname)
+
+    if ( axistype .EQ. 'ZXYT' ) then
+       startZXY(4)          = 1
+       startWestZXY(4)      = 1
+       startEastZXY(4)      = 1
+       startSouthZXY(4)     = 1
+       startNorthZXY(4)     = 1
+       startSouthWestZXY(4) = 1
+       startSouthEastZXY(4) = 1
+       startNorthWestZXY(4) = 1
+       startNorthEastZXY(4) = 1
+
+       countZXY(4)          = step
+       countWestZXY(4)      = step
+       countEastZXY(4)      = step
+       countSouthZXY(4)     = step
+       countNorthZXY(4)     = step
+       countSouthWestZXY(4) = step
+       countSouthEastZXY(4) = step
+       countNorthWestZXY(4) = step
+       countNorthEastZXY(4) = step
+
+       call FileRead( var, fid, varname, step, step, centerTypeZXY, startZXY, countZXY )
+
+       ! boundary processes need 2nd or 3rd read
+       if ( PRC_PERIODIC_X ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 ) then ! west column processes read west halos
+             call FileRead( var, fid, varname, step, step, westTypeZXY, startWestZXY, countWestZXY )
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 ) then ! east column processes read east halos
+             call FileRead( var, fid, varname, step, step, eastTypeZXY, startEastZXY, countEastZXY )
+          end if
+       end if
+
+       if ( PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then ! south row processes read south halos
+             call FileRead( var, fid, varname, step, step, southTypeZXY, startSouthZXY, countSouthZXY )
+          end if
+
+          if ( PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then ! north row processes read north halos
+             call FileRead( var, fid, varname, step, step, northTypeZXY, startNorthZXY, countNorthZXY )
+          end if
+       end if
+
+       ! 4 corner processes read corner rectangle
+       if ( PRC_PERIODIC_X .OR. PRC_PERIODIC_Y ) then
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! south-west
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, step, southwestTypeZXY, startSouthWestZXY, countSouthWestZXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! south-east
+               PRC_2Drank(PRC_myrank,2) .EQ. 0 ) then
+             call FileRead( var, fid, varname, step, step, southeastTypeZXY, startSouthEastZXY, countSouthEastZXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. 0 .AND. & ! north-west
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, step, northwestTypeZXY, startNorthWestZXY, countNorthWestZXY )
+          end if
+          if ( PRC_2Drank(PRC_myrank,1) .EQ. PRC_NUM_X-1 .AND. & ! north-east
+               PRC_2Drank(PRC_myrank,2) .EQ. PRC_NUM_Y-1 ) then
+             call FileRead( var, fid, varname, step, step, northeastTypeZXY, startNorthEastZXY, countNorthEastZXY )
+          end if
+       end if
+    else
+       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       call PRC_MPIstop
+    endif
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILEIO_read_var_4D
 
   !-----------------------------------------------------------------------------
   !> Write 1D data to file
@@ -1657,47 +3059,44 @@ contains
   end subroutine getCFtunits
 
   !-----------------------------------------------------------------------------
-  !> Calculate indices for local array and global arrays
-  subroutine Calc_Index( &
-       local_rank,   &
-       local_nprocs, &
-       local_size,   &
-       is_periodic,  &
-       halo,         &
-       s_indx,       &
-       e_indx,       &
-       start,        &
-       count         )
+  !> open a netCDF file for read
+  subroutine FILEIO_open( &
+       fid,      &
+       basename  )
+    use gtool_file_h, only: &
+       File_FREAD
+    use gtool_file, only: &
+       FileOpen
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_LOCAL_COMM_WORLD
+    use MPI, only : MPI_COMM_NULL
     implicit none
 
-    integer, intent(in)  :: local_rank    ! PRC_2Drank(PRC_myrank,1) or PRC_2Drank(PRC_myrank,2)
-    integer, intent(in)  :: local_nprocs  ! PRC_NUM_X or PRC_NUM_Y
-    integer, intent(in)  :: local_size    ! IMAX or JMAX
-    logical, intent(in)  :: is_periodic   ! PRC_PERIODIC_X or PRC_PERIODIC_Y
-    integer, intent(in)  :: halo          ! IHALO or JHALO
-    integer, intent(out) :: s_indx        ! start index of local array along X or Y dim
-    integer, intent(out) :: e_indx        ! end   index of local array along X or Y dim
-    integer, intent(out) :: start         ! start index of global array along X or Y dim
-    integer, intent(out) :: count         ! request length of global array along X or Y dim
+    integer,          intent(out) :: fid      !< file ID
+    character(len=*), intent(in)  :: basename !< basename of the file
+
+    integer :: comm
     !---------------------------------------------------------------------------
 
-    s_indx = halo + 1
-    e_indx = halo + local_size
-    start = local_size * local_rank + 1
-    count = local_size
-    if ( .NOT. is_periodic ) then
-       start = start + halo
-       if ( local_rank .EQ. 0 ) then ! this process writes halos at the beginning
-          s_indx = 1
-          start = 1
-          count = count + halo
-       end if
-       if ( local_rank .EQ. local_nprocs - 1 ) then ! this process writes halos at the end
-          e_indx = e_indx + halo
-          count = count + halo
-       end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( IO_PNETCDF ) then  ! user input parameter indicates to do PnetCDF I/O
+       comm = PRC_LOCAL_COMM_WORLD
+    else
+       comm = MPI_COMM_NULL
     end if
-  end subroutine Calc_Index
+
+    call FileOpen( fid,                & ! [OUT]
+                   basename,           & ! [IN]
+                   File_FREAD,         & ! [IN]
+                   comm = comm,        & ! [IN]
+                   myrank = PRC_myrank ) ! [IN]
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
+
+    return
+  end subroutine FILEIO_open
 
   !-----------------------------------------------------------------------------
   !> Create/open a netCDF file
@@ -1722,11 +3121,7 @@ contains
        PRC_MPIstop,    &
        PRC_LOCAL_COMM_WORLD
     use scale_rm_process, only: &
-       PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y, &
-       PRC_PERIODIC_X, &
-       PRC_PERIODIC_Y
+       PRC_2Drank
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
        NOWMS   => TIME_NOWMS,   &
@@ -1757,14 +3152,14 @@ contains
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
     ! dtype is used to define the data type of axis variables in file
-    if ( datatype == 'REAL8' ) then
+    if ( datatype .EQ. 'REAL8' ) then
        dtype = File_REAL8
-    elseif( datatype == 'REAL4' ) then
+    elseif( datatype .EQ. 'REAL4' ) then
        dtype = File_REAL4
     else
-       if ( RP == 8 ) then
+       if ( RP .EQ. 8 ) then
           dtype = File_REAL8
-       elseif( RP == 4 ) then
+       elseif( RP .EQ. 4 ) then
           dtype = File_REAL4
        else
           write(*,*) 'xxx unsupported data type. Check!', trim(datatype)
@@ -1823,16 +3218,6 @@ contains
           call getCFtunits(tunits, NOWDATE)
        end if
        call FileSetGlobalAttribute( fid, "time_units", tunits )
-
-       ! calculate local and global array indices in FILEIO_write_axes_par and FILEIO_write_var
-       call Calc_Index( rankidx(1), PRC_NUM_X, IMAX, PRC_PERIODIC_X, IHALO,                    & ! (in)
-                        XS, XE, startX, countX                                                 ) ! (out)
-       call Calc_Index( rankidx(1), PRC_NUM_X, IMAX, .FALSE.,        IHALO,                    & ! (in)
-                        XS_NO_PERIODIC, XE_NO_PERIODIC, startX_NO_PERIODIC, countX_NO_PERIODIC ) ! (out)
-       call Calc_Index( rankidx(2), PRC_NUM_Y, JMAX, PRC_PERIODIC_Y, JHALO,                    & ! (in)
-                        YS, YE, startY, countY                                                 ) ! (out)
-       call Calc_Index( rankidx(2), PRC_NUM_Y, JMAX, .FALSE.,        JHALO,                    & ! (in)
-                        YS_NO_PERIODIC, YE_NO_PERIODIC, startY_NO_PERIODIC, countY_NO_PERIODIC ) ! (out)
     endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -1876,6 +3261,29 @@ contains
   end subroutine FILEIO_enddef
 
   !-----------------------------------------------------------------------------
+  !> Flush all pending requests to a netCDF file (PnetCDF only)
+  subroutine FILEIO_flush( &
+       fid)
+    use gtool_file, only: &
+       FileFlush
+    implicit none
+
+    integer, intent(in) :: fid  !< file ID
+
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( IO_PNETCDF ) then
+       call FileFlush( fid )        ! flush all pending read/write requests
+    end if
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
+
+    return
+  end subroutine FILEIO_flush
+
+  !-----------------------------------------------------------------------------
   !> Close a netCDF file
   subroutine FILEIO_close( &
        fid)
@@ -1893,8 +3301,10 @@ contains
 
     if ( IO_PNETCDF ) then
        call FileFlush( fid )        ! flush all pending read/write requests
-       call FileDetachBuffer( fid ) ! detach PnetCDF aggregation buffer
-       write_buf_amount = 0         ! reset write request amount
+       if ( write_buf_amount .GT. 0 ) then
+          call FileDetachBuffer( fid ) ! detach PnetCDF aggregation buffer
+          write_buf_amount = 0         ! reset write request amount
+       end if
     end if
 
     call FileClose( fid ) ! [IN]
@@ -2284,6 +3694,10 @@ contains
        GRID_CYG,   &
        GRID_FXG,   &
        GRID_FYG,   &
+       GRID_CDXG,  &
+       GRID_CDYG,  &
+       GRID_FDXG,  &
+       GRID_FDYG,  &
        GRID_CBFXG, &
        GRID_CBFYG, &
        GRID_FBFXG, &
@@ -2298,8 +3712,8 @@ contains
        PRC_myrank
     use scale_rm_process, only: &
        PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     implicit none
 
     integer, intent(in) :: fid
@@ -2307,7 +3721,7 @@ contains
 
     logical :: xy_
     integer :: rankidx(2)
-    integer :: start(2), count(2)
+    integer :: start(2)
     !---------------------------------------------------------------------------
 
     if ( present(xy) ) then
@@ -2332,100 +3746,65 @@ contains
 
     if ( .NOT. xy_ .AND. PRC_myrank .EQ. 0 ) then
        start(1) = 1
-       count(1) = KE - KS + 1
-       call FileWriteAxis( fid, 'z',   GRID_CZ(KS:KE),    start, count )
-       call FileWriteAxis( fid, 'zh',  GRID_FZ(KS:KE),    start, count )
-       count(1) = LKE - LKS + 1
-       call FileWriteAxis( fid, 'lz',  GRID_LCZ(LKS:LKE), start, count )
-       call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS:LKE), start, count )
-       count(1) = UKE - UKS + 1
-       call FileWriteAxis( fid, 'uz',  GRID_UCZ(UKS:UKE), start, count )
-       call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS:UKE), start, count )
+       call FileWriteAxis( fid, 'z',   GRID_CZ(KS:KE),    start )
+       call FileWriteAxis( fid, 'zh',  GRID_FZ(KS:KE),    start )
+       call FileWriteAxis( fid, 'lz',  GRID_LCZ(LKS:LKE), start )
+       call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS:LKE), start )
+       call FileWriteAxis( fid, 'uz',  GRID_UCZ(UKS:UKE), start )
+       call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS:UKE), start )
     end if
 
     if ( rankidx(2) .EQ. 0 ) then  ! south most row processes write x/xh
-       start(1) = startX
-       count(1) = countX
-       call FileWriteAxis( fid, 'x',   GRID_CX(XS:XE), start, count )
-       ! GRID_FX starts with 0, representing the right wall of grid cells
-       call FileWriteAxis( fid, 'xh',  GRID_FX(XS:XE), start, count )
+       if ( PRC_PERIODIC_X ) then
+          start(1) = ISGB
+       else
+          start(1) = ISGA
+       end if
+       call FileWriteAxis( fid, 'x',   GRID_CX(ISB:IEB), start )
+       call FileWriteAxis( fid, 'xh',  GRID_FX(ISB:IEB), start )
     end if
 
     if ( rankidx(1) .EQ. 0 ) then  ! west most column processes write y/yh
-       start(1) = startY
-       count(1) = countY
-       call FileWriteAxis( fid, 'y',   GRID_CY(YS:YE), start, count )
-       call FileWriteAxis( fid, 'yh',  GRID_FY(YS:YE), start, count )
+       if ( PRC_PERIODIC_Y ) then
+          start(1) = JSGB
+       else
+          start(1) = JSGA
+       end if
+       call FileWriteAxis( fid, 'y',   GRID_CY(JSB:JEB), start )
+       call FileWriteAxis( fid, 'yh',  GRID_FY(JSB:JEB), start )
     end if
 
     if ( .NOT. xy_ .AND. PRC_myrank .EQ. 0 ) then
        start(1) = 1
-       count(1) = KA
-       call FileWriteAxis( fid, 'CZ',   GRID_CZ,   start, count )
-       call FileWriteAxis( fid, 'CDZ',  GRID_CDZ,  start, count )
-       count(1) = LKE - LKS + 1
-       call FileWriteAxis( fid, 'LCZ',  GRID_LCZ,  start, count )
-       count(1) = LKE - LKS + 2
-       call FileWriteAxis( fid, 'LFZ',  GRID_LFZ,  start, count )
-       count(1) = LKE - LKS + 1
-       call FileWriteAxis( fid, 'LCDZ', GRID_LCZ,  start, count )
-       count(1) = UKE - UKS + 1
-       call FileWriteAxis( fid, 'UCZ',  GRID_UCZ,  start, count )
-       count(1) = UKE - UKS + 2
-       call FileWriteAxis( fid, 'UFZ',  GRID_UFZ,  start, count )
-       count(1) = UKE - UKS + 1
-       call FileWriteAxis( fid, 'UCDZ', GRID_UCZ,  start, count )
-       count(1) = KA
-       call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ, start, count )
-       call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ, start, count )
-       count(1) = KA + 1
-       call FileWriteAxis( fid, 'FZ',   GRID_FZ,   start, count )
-       count(1) = KA - 1
-       call FileWriteAxis( fid, 'FDZ',  GRID_FDZ,  start, count )
+       call FileWriteAxis( fid, 'CZ',   GRID_CZ,   start )
+       call FileWriteAxis( fid, 'CDZ',  GRID_CDZ,  start )
+       call FileWriteAxis( fid, 'LCZ',  GRID_LCZ,  start )
+       call FileWriteAxis( fid, 'LFZ',  GRID_LFZ,  start )
+       call FileWriteAxis( fid, 'LCDZ', GRID_LCZ,  start )
+       call FileWriteAxis( fid, 'UCZ',  GRID_UCZ,  start )
+       call FileWriteAxis( fid, 'UFZ',  GRID_UFZ,  start )
+       call FileWriteAxis( fid, 'UCDZ', GRID_UCZ,  start )
+       call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ, start )
+       call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ, start )
+       call FileWriteAxis( fid, 'FZ',   GRID_FZ,   start )
+       call FileWriteAxis( fid, 'FDZ',  GRID_FDZ,  start )
     end if
 
-    if ( rankidx(2) .EQ. 0 ) then  ! south most row processes write these variables
-       start(1) = startX_NO_PERIODIC
-       count(1) = countX_NO_PERIODIC
-       call FileWriteAxis( fid, 'CX',   GRID_CX  (XS_NO_PERIODIC:XE_NO_PERIODIC), start, count )
-       call FileWriteAxis( fid, 'CDX',  GRID_CDX (XS_NO_PERIODIC:XE_NO_PERIODIC), start, count )
-       call FileWriteAxis( fid, 'CBFX', GRID_CBFX(XS_NO_PERIODIC:XE_NO_PERIODIC), start, count )
-       call FileWriteAxis( fid, 'FBFX', GRID_FBFX(XS_NO_PERIODIC:XE_NO_PERIODIC), start, count )
-       if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) then
-          ! FX is CX + 1
-          count(1) = countX_NO_PERIODIC + 1
-          ! Note index of GRID_FX starts with 0
-          call FileWriteAxis( fid, 'FX',  GRID_FX (XS_NO_PERIODIC-1:XE_NO_PERIODIC),   start, count )
-          ! FDX is CX - 1
-          count(1) = countX_NO_PERIODIC - 1
-          call FileWriteAxis( fid, 'FDX', GRID_FDX(XS_NO_PERIODIC  :XE_NO_PERIODIC-1), start, count )
-       else
-          ! Note index of GRID_FX starts with 0
-          call FileWriteAxis( fid, 'FX',  GRID_FX (XS_NO_PERIODIC-1:XE_NO_PERIODIC-1), start, count )
-          call FileWriteAxis( fid, 'FDX', GRID_FDX(XS_NO_PERIODIC  :XE_NO_PERIODIC),   start, count )
-       end if
-    end if
-
-    if ( rankidx(1) .EQ. 0 ) then  ! west most column processes write these variables
-       start(1) = startY_NO_PERIODIC
-       count(1) = countY_NO_PERIODIC
-       call FileWriteAxis( fid, 'CY',   GRID_CY  (YS_NO_PERIODIC:YE_NO_PERIODIC), start, count )
-       call FileWriteAxis( fid, 'CDY',  GRID_CDY (YS_NO_PERIODIC:YE_NO_PERIODIC), start, count )
-       call FileWriteAxis( fid, 'CBFY', GRID_CBFY(YS_NO_PERIODIC:YE_NO_PERIODIC), start, count )
-       call FileWriteAxis( fid, 'FBFY', GRID_FBFY(YS_NO_PERIODIC:YE_NO_PERIODIC), start, count )
-       if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) then
-          ! FY is CY + 1
-          count(1) = countY_NO_PERIODIC + 1
-          ! Note index of GRID_FY starts with 0
-          call FileWriteAxis( fid, 'FY',  GRID_FY (YS_NO_PERIODIC-1:YE_NO_PERIODIC),   start, count )
-          ! FDY is CY - 1
-          count(1) = countY_NO_PERIODIC - 1
-          call FileWriteAxis( fid, 'FDY', GRID_FDY(YS_NO_PERIODIC  :YE_NO_PERIODIC-1), start, count )
-       else
-          ! Note index of GRID_FY starts with 0
-          call FileWriteAxis( fid, 'FY',  GRID_FY (YS_NO_PERIODIC-1:YE_NO_PERIODIC-1), start, count )
-          call FileWriteAxis( fid, 'FDY', GRID_FDY(YS_NO_PERIODIC  :YE_NO_PERIODIC),   start, count )
-       end if
+    if ( PRC_myrank .EQ. 0 ) then ! rank 0 writes entire global axes
+      ! these axes always include halos when written to file regardless of PRC_PERIODIC
+       start(1) = 1
+       call FileWriteAxis( fid, 'CX',   GRID_CXG,   start )
+       call FileWriteAxis( fid, 'CDX',  GRID_CDXG,  start )
+       call FileWriteAxis( fid, 'CBFX', GRID_CBFXG, start )
+       call FileWriteAxis( fid, 'FBFX', GRID_FBFX,  start )
+       call FileWriteAxis( fid, 'FDX',  GRID_FDX,   start )
+       call FileWriteAxis( fid, 'FX',   GRID_FXG,   start )
+       call FileWriteAxis( fid, 'CY',   GRID_CYG,   start )
+       call FileWriteAxis( fid, 'CDY',  GRID_CDYG,  start )
+       call FileWriteAxis( fid, 'CBFY', GRID_CBFYG, start )
+       call FileWriteAxis( fid, 'FBFY', GRID_FBFYG, start )
+       call FileWriteAxis( fid, 'FDY',  GRID_FDYG,  start )
+       call FileWriteAxis( fid, 'FY',   GRID_FYG,   start )
     end if
 
     ! global axes: skip 8 axes below when IO_PNETCDF is true, as all axes are now global
@@ -2440,19 +3819,25 @@ contains
     ! call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG )
 
     ! associate coordinates (dimensions: x/xh, y/yh)
-
-    start(1) = startX
-    count(1) = countX
-    start(2) = startY
-    count(2) = countY
-    call FileWriteAssociatedCoordinates( fid, 'lon' ,   AXIS_LON  (XS:XE, YS:YE), start, count )
-    call FileWriteAssociatedCoordinates( fid, 'lon_uy', AXIS_LONX (XS:XE, YS:YE), start, count )
-    call FileWriteAssociatedCoordinates( fid, 'lon_xv', AXIS_LONY (XS:XE, YS:YE), start, count )
-    call FileWriteAssociatedCoordinates( fid, 'lon_uv', AXIS_LONXY(XS:XE, YS:YE), start, count )
-    call FileWriteAssociatedCoordinates( fid, 'lat' ,   AXIS_LAT  (XS:XE, YS:YE), start, count )
-    call FileWriteAssociatedCoordinates( fid, 'lat_uy', AXIS_LATX (XS:XE, YS:YE), start, count )
-    call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATY (XS:XE, YS:YE), start, count )
-    call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATXY(XS:XE, YS:YE), start, count )
+    ! They are allocated with sizes (IMAXB,JMAXB)
+    if ( PRC_PERIODIC_X ) then
+       start(1) = ISGB
+    else
+       start(1) = ISGA
+    end if
+    if ( PRC_PERIODIC_Y ) then
+       start(2) = JSGB
+    else
+       start(2) = JSGA
+    end if
+    call FileWriteAssociatedCoordinates( fid, 'lon' ,   AXIS_LON  (:,:), start )
+    call FileWriteAssociatedCoordinates( fid, 'lon_uy', AXIS_LONX (:,:), start )
+    call FileWriteAssociatedCoordinates( fid, 'lon_xv', AXIS_LONY (:,:), start )
+    call FileWriteAssociatedCoordinates( fid, 'lon_uv', AXIS_LONXY(:,:), start )
+    call FileWriteAssociatedCoordinates( fid, 'lat' ,   AXIS_LAT  (:,:), start )
+    call FileWriteAssociatedCoordinates( fid, 'lat_uy', AXIS_LATX (:,:), start )
+    call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATY (:,:), start )
+    call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATXY(:,:), start )
 
     call FileFlush( fid )  ! PnetCDF only
 
@@ -2497,17 +3882,17 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( datatype == 'REAL8' ) then
+    if ( datatype .EQ. 'REAL8' ) then
        dtype = File_REAL8
        elm_size = 4
-    elseif( datatype == 'REAL4' ) then
+    elseif( datatype .EQ. 'REAL4' ) then
        dtype = File_REAL4
        elm_size = 8
     else
-       if ( RP == 8 ) then
+       if ( RP .EQ. 8 ) then
           dtype = File_REAL8
           elm_size = 8
-       elseif( RP == 4 ) then
+       elseif( RP .EQ. 4 ) then
           dtype = File_REAL4
           elm_size = 4
        else
@@ -2516,68 +3901,68 @@ contains
        endif
     endif
 
-    if ( axistype == 'Z' ) then        ! 1D variable
+    if ( axistype .EQ. 'Z' ) then        ! 1D variable
        ndims = 1
        dims(1) = 'z'
        write_buf_amount = write_buf_amount + KA * elm_size
-    elseif( axistype == 'X' ) then
+    elseif( axistype .EQ. 'X' ) then
        ndims = 1
        dims(1) = 'x'
        write_buf_amount = write_buf_amount + IA * elm_size
-    elseif( axistype == 'Y' ) then
+    elseif( axistype .EQ. 'Y' ) then
        ndims = 1
        dims(1) = 'y'
        write_buf_amount = write_buf_amount + JA * elm_size
-    elseif ( axistype == 'XY' ) then   ! 2D variable
+    elseif ( axistype .EQ. 'XY' ) then   ! 2D variable
        ndims = 2
        dims(1) = 'x'
        dims(2) = 'y'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-    elseif ( axistype == 'UY' ) then
+    elseif ( axistype .EQ. 'UY' ) then
        ndims = 2
        dims(1) = 'xh'
        dims(2) = 'y'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-    elseif ( axistype == 'XV' ) then
+    elseif ( axistype .EQ. 'XV' ) then
        ndims = 2
        dims(1) = 'x'
        dims(2) = 'yh'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-    elseif ( axistype == 'UV' ) then
+    elseif ( axistype .EQ. 'UV' ) then
        ndims = 2
        dims(1) = 'xh'
        dims(2) = 'yh'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-    elseif( axistype == 'ZX' ) then
+    elseif( axistype .EQ. 'ZX' ) then
        ndims = 2
        dims(1) = 'z'
        dims(2) = 'x'
        write_buf_amount = write_buf_amount + KA * IA * elm_size
-    elseif ( axistype == 'ZXY' ) then  ! 3D variable
+    elseif ( axistype .EQ. 'ZXY' ) then  ! 3D variable
        ndims = 3
        dims = (/'z','x','y'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-    elseif( axistype == 'ZHXY' ) then
+    elseif( axistype .EQ. 'ZHXY' ) then
        ndims = 3
        dims = (/'zh','x ','y '/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-    elseif( axistype == 'ZXHY' ) then
+    elseif( axistype .EQ. 'ZXHY' ) then
        ndims = 3
        dims = (/'z ','xh','y '/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-    elseif( axistype == 'ZXYH' ) then
+    elseif( axistype .EQ. 'ZXYH' ) then
        ndims = 3
        dims = (/'z ','x ','yh'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-    elseif( axistype == 'Land' ) then
+    elseif( axistype .EQ. 'Land' ) then
        ndims = 3
        dims = (/'lz','x ','y '/)
        write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size
-    elseif( axistype == 'Urban' ) then
+    elseif( axistype .EQ. 'Urban' ) then
        ndims = 3
        dims = (/'uz','x ','y '/)
        write_buf_amount = write_buf_amount + UKMAX * IA * JA * elm_size
-    elseif ( axistype == 'XYT' ) then  ! 3D variable with time dimension
+    elseif ( axistype .EQ. 'XYT' ) then  ! 3D variable with time dimension
        ndims = 2
        dims(1) = 'x'
        dims(2) = 'y'
@@ -2586,7 +3971,7 @@ contains
        else
           write_buf_amount = write_buf_amount + IA * JA * elm_size
        end if
-    elseif ( axistype == 'ZXYT' ) then ! 4D variable
+    elseif ( axistype .EQ. 'ZXYT' ) then ! 4D variable
        ndims = 3
        dims = (/'z','x','y'/)
        if ( present(nsteps) ) then
@@ -2626,7 +4011,9 @@ contains
        PRC_myrank,     &
        PRC_MPIstop
     use scale_rm_process, only: &
-       PRC_2Drank
+       PRC_2Drank, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     use scale_time, only: &
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
@@ -2637,11 +4024,10 @@ contains
     character(len=*), intent(in)  :: varname  !< name of the variable
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
 
-    integer               :: dim1_max, dim1_S, dim1_E
-    real(RP), allocatable :: var1D(:)
-
+    integer :: dim1_max, dim1_S, dim1_E
     integer :: rankidx(2)
-    integer :: start(1), count(1)
+    integer :: start(1)
+    logical :: exec = .TRUE.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2649,48 +4035,41 @@ contains
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
-    if ( axistype == 'Z' ) then
+    if ( axistype .EQ. 'Z' ) then
        dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
-       if ( IO_PNETCDF ) then
-          start(1) = 1
-          count(1) = 0
-          if ( PRC_myrank .EQ. 0 ) count(1) = KMAX  ! only rank 0 writes
-       end if
-    elseif( axistype == 'X' ) then
+       start(1) = 1
+       if ( IO_PNETCDF .AND. PRC_myrank .GT. 0 ) &
+          exec = .FALSE.  ! only rank 0 writes
+    elseif( axistype .EQ. 'X' ) then
        dim1_max = IMAXB
        dim1_S   = ISB
        dim1_E   = IEB
-       if ( IO_PNETCDF ) then
-          start(1) = startX
-          count(1) = countX
-          if ( rankidx(2) .GT. 0 ) count(1) = 0  ! only south most row processes write
-       end if
-    elseif( axistype == 'Y' ) then
+       if ( PRC_PERIODIC_X ) then
+          start(1) = ISGB
+       else
+          start(1) = ISGA
+       endif
+       if ( IO_PNETCDF .AND. rankidx(2) .GT. 0 ) &
+          exec = .FALSE.  ! only south most row processes write
+    elseif( axistype .EQ. 'Y' ) then
        dim1_max = JMAXB
        dim1_S   = JSB
        dim1_E   = JEB
-       if ( IO_PNETCDF ) then
-          start(1) = startY
-          count(1) = countY
-          if ( rankidx(1) .GT. 0 ) count(1) = 0  ! only west most column processes write
-       end if
+       if ( PRC_PERIODIC_Y ) then
+          start(1) = JSGB
+       else
+          start(1) = JSGA
+       endif
+       if ( IO_PNETCDF .AND. rankidx(1) .GT. 0 ) &
+          exec = .FALSE.  ! only west most column processes write
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     endif
 
-    allocate( var1D(dim1_max) )
-
-    var1D(1:dim1_max) = var(dim1_S:dim1_E)
-    if ( IO_PNETCDF ) then
-       call FileWriteVar( vid, var1D(:), NOWSEC, NOWSEC, start, count ) ! [IN]
-    else
-       call FileWriteVar( vid, var1D(:), NOWSEC, NOWSEC ) ! [IN]
-    end if
-
-    deallocate( var1D )
+    if ( exec ) call FileWriteVar( vid, var(dim1_S:dim1_E), NOWSEC, NOWSEC, start ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -2714,7 +4093,9 @@ contains
        PRC_myrank,     &
        PRC_MPIstop
     use scale_rm_process, only: &
-       PRC_2Drank
+       PRC_2Drank, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     use scale_time, only: &
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
@@ -2730,12 +4111,12 @@ contains
 
     integer               :: dim1_max, dim1_S, dim1_E
     integer               :: dim2_max, dim2_S, dim2_E
-    real(RP), allocatable :: var2D(:,:)
 
     integer :: i, j
     logical :: nohalo_
     integer :: rankidx(2)
-    integer :: start(2), count(2)
+    integer :: start(2)
+    logical :: exec = .TRUE.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2744,101 +4125,97 @@ contains
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
     if ( IO_PNETCDF ) then
-       start(1) = startX
-       count(1) = countX
-       start(2) = startY
-       count(2) = countY
+       if ( PRC_PERIODIC_X ) then
+          start(1) = ISGB
+       else
+          start(1) = ISGA
+       endif
+       if ( PRC_PERIODIC_Y ) then
+          start(2) = JSGB
+       else
+          start(2) = JSGA
+       endif
     end if
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
 
-    if ( axistype == 'XY' ) then
+    if ( axistype .EQ. 'XY' ) then
        dim1_max = IMAXB
        dim2_max = JMAXB
        dim1_S   = ISB
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
-    elseif ( axistype == 'UY' ) then
+    elseif ( axistype .EQ. 'UY' ) then
        dim1_max = IMAXB
        dim2_max = JMAXB
        dim1_S   = ISB
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
-    elseif ( axistype == 'XV' ) then
+    elseif ( axistype .EQ. 'XV' ) then
        dim1_max = IMAXB
        dim2_max = JMAXB
        dim1_S   = ISB
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
-    elseif ( axistype == 'UV' ) then
+    elseif ( axistype .EQ. 'UV' ) then
        dim1_max = IMAXB
        dim2_max = JMAXB
        dim1_S   = ISB
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
-    elseif( axistype == 'ZX' ) then
+    elseif( axistype .EQ. 'ZX' ) then
        dim1_max = KMAX
        dim2_max = IMAXB
        dim1_S   = KS
        dim1_E   = KE
        dim2_S   = ISB
        dim2_E   = IEB
-       if ( IO_PNETCDF ) then
-          start(2) = start(1)
-          count(2) = count(1)
-          start(1) = 1
-          count(1) = KMAX
-          if ( rankidx(2) .GT. 0 ) count(1) = 0  ! only south most row processes write
-       end if
+       start(2) = start(1)
+       start(1) = 1
+       if ( IO_PNETCDF .AND. rankidx(2) .GT. 0 ) &
+          exec = .FALSE.  ! only south most row processes write
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     endif
 
-    varhalo(:,:) = var(:,:)
+    if ( exec ) then
+       varhalo(:,:) = var(:,:)
 
-    if ( nohalo_ ) then
-       ! W halo
-       do j = 1, JA
-       do i = 1, IS-1
-          varhalo(i,j) = RMISS
-       end do
-       end do
-       ! E halo
-       do j = 1, JA
-       do i = IE+1, IA
-          varhalo(i,j) = RMISS
-       end do
-       end do
-       ! S halo
-       do j = 1, JS-1
-       do i = 1, IA
-          varhalo(i,j) = RMISS
-       end do
-       end do
-       ! N halo
-       do j = JE+1, JA
-       do i = 1, IA
-          varhalo(i,j) = RMISS
-       end do
-       end do
+       if ( nohalo_ ) then
+          ! W halo
+          do j = 1, JA
+          do i = 1, IS-1
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! E halo
+          do j = 1, JA
+          do i = IE+1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! S halo
+          do j = 1, JS-1
+          do i = 1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+          ! N halo
+          do j = JE+1, JA
+          do i = 1, IA
+             varhalo(i,j) = RMISS
+          end do
+          end do
+       end if
+
+       call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), NOWSEC, NOWSEC, start ) ! [IN]
     end if
-
-    allocate( var2D(dim1_max,dim2_max) )
-
-    var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-    if ( IO_PNETCDF ) then
-       call FileWriteVar( vid, var2D(:,:), NOWSEC, NOWSEC, start, count ) ! [IN]
-    else
-       call FileWriteVar( vid, var2D(:,:), NOWSEC, NOWSEC ) ! [IN]
-    end if
-
-    deallocate( var2D )
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -2860,6 +4237,9 @@ contains
        FileWriteVar
     use scale_process, only: &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     use scale_time, only: &
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
@@ -2877,11 +4257,9 @@ contains
     integer          :: dim2_max, dim2_S, dim2_E
     integer          :: dim3_max, dim3_S, dim3_E
 
-    real(RP), allocatable :: var3D(:,:,:)
-
     integer :: i, j, k
     logical :: nohalo_
-    integer :: start(3), count(3)
+    integer :: start(3)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2889,7 +4267,21 @@ contains
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
 
-    if ( axistype == 'ZXY' ) then
+    if ( IO_PNETCDF ) then
+       start(1) = 1
+       if ( PRC_PERIODIC_X ) then
+          start(2) = ISGB
+       else
+          start(2) = ISGA
+       endif
+       if ( PRC_PERIODIC_Y ) then
+          start(3) = JSGB
+       else
+          start(3) = JSGA
+       endif
+    end if
+
+    if ( axistype .EQ. 'ZXY' ) then
        dim1_max = KMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -2899,7 +4291,7 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
-    elseif( axistype == 'ZHXY' ) then
+    elseif( axistype .EQ. 'ZHXY' ) then
        dim1_max = KMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -2909,7 +4301,7 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
-    elseif( axistype == 'ZXHY' ) then
+    elseif( axistype .EQ. 'ZXHY' ) then
        dim1_max = KMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -2919,7 +4311,7 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
-    elseif( axistype == 'ZXYH' ) then
+    elseif( axistype .EQ. 'ZXYH' ) then
        dim1_max = KMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -2929,7 +4321,7 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
-    elseif( axistype == 'Land' ) then
+    elseif( axistype .EQ. 'Land' ) then
        dim1_max = LKMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -2939,7 +4331,7 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
-    elseif( axistype == 'Urban' ) then
+    elseif( axistype .EQ. 'Urban' ) then
        dim1_max = UKMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -2953,15 +4345,6 @@ contains
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     endif
-
-    if ( IO_PNETCDF ) then
-       start(1) = 1
-       count(1) = dim1_max
-       start(2) = startX
-       count(2) = countX
-       start(3) = startY
-       count(3) = countY
-    end if
 
     varhalo(:,:,:) = var(:,:,:)
 
@@ -3000,16 +4383,8 @@ contains
        end do
     end if
 
-    allocate( var3D(dim1_max,dim2_max,dim3_max) )
-
-    var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-    if ( IO_PNETCDF ) then
-       call FileWriteVar( vid, var3D(:,:,:), NOWSEC, NOWSEC, start, count ) ! [IN]
-    else
-       call FileWriteVar( vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
-    end if
-
-    deallocate( var3D )
+    call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                       NOWSEC, NOWSEC, start ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -3033,6 +4408,9 @@ contains
        FileWriteVar
     use scale_process, only: &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     implicit none
 
     integer,           intent(in)  :: fid          !< file ID
@@ -3049,13 +4427,12 @@ contains
     integer          :: dim1_max, dim1_S, dim1_E
     integer          :: dim2_max, dim2_S, dim2_E
 
-    real(RP), allocatable :: var2D(:,:)
     real(DP) :: time_interval, nowtime
 
     integer :: step
     integer :: i, j, n
     logical :: nohalo_
-    integer :: start(3), count(3)
+    integer :: start(3)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -3066,7 +4443,7 @@ contains
     time_interval = timeintv
     step = size(var(ISB,JSB,:))
 
-    if ( axistype == 'XYT' ) then
+    if ( axistype .EQ. 'XYT' ) then
        dim1_max = IMAXB
        dim2_max = JMAXB
        dim1_S   = ISB
@@ -3079,14 +4456,18 @@ contains
     endif
 
     if ( IO_PNETCDF ) then
-       start(1) = startX
-       count(1) = countX
-       start(2) = startY
-       count(2) = countY
-       ! start(3) and count(3) will be calculated in file_write_var_par()
+       if ( PRC_PERIODIC_X ) then
+          start(1) = ISGB
+       else
+          start(1) = ISGA
+       endif
+       if ( PRC_PERIODIC_Y ) then
+          start(2) = JSGB
+       else
+          start(2) = JSGA
+       endif
+       ! start(3) will be calculated in file_write_var_par()
     end if
-
-    allocate( var2D(dim1_max,dim2_max) )
 
     if ( present(timetarg) ) then
        varhalo(:,:) = var(:,:,timetarg)
@@ -3119,12 +4500,7 @@ contains
        end if
 
        nowtime = (timetarg-1) * time_interval
-       var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-       if ( IO_PNETCDF ) then
-          call FileWriteVar( vid, var2D(:,:), nowtime, nowtime, start, count ) ! [IN]
-       else
-          call FileWriteVar( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
-       end if
+       call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), nowtime, nowtime, start ) ! [IN]
     else
        nowtime = 0.0_DP
        do n = 1, step
@@ -3157,17 +4533,10 @@ contains
              end do
           end if
 
-          var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-          if ( IO_PNETCDF ) then
-             call FileWriteVar( vid, var2D(:,:), nowtime, nowtime, start, count ) ! [IN]
-          else
-             call FileWriteVar( vid, var2D(:,:), nowtime, nowtime ) ! [IN]
-          end if
+          call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), nowtime, nowtime, start ) ! [IN]
           nowtime = nowtime + time_interval
        enddo
     endif
-
-    deallocate( var2D )
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -3191,6 +4560,9 @@ contains
        FileWriteVar
     use scale_process, only: &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     implicit none
 
     integer,           intent(in)  :: fid          !< file ID
@@ -3208,7 +4580,6 @@ contains
     integer          :: dim2_max, dim2_S, dim2_E
     integer          :: dim3_max, dim3_S, dim3_E
 
-    real(RP), allocatable :: var3D(:,:,:)
     real(DP) :: time_interval, nowtime
 
     integer :: step
@@ -3222,10 +4593,25 @@ contains
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
 
+    if ( IO_PNETCDF ) then
+       start(1) = 1
+       if ( PRC_PERIODIC_X ) then
+          start(2) = ISGB
+       else
+          start(2) = ISGA
+       endif
+       if ( PRC_PERIODIC_Y ) then
+          start(3) = JSGB
+       else
+          start(3) = JSGA
+       endif
+       ! start(4) will be calculated in file_write_var_par()
+    end if
+
     time_interval = timeintv
     step = size(var(KS,ISB,JSB,:))
 
-    if ( axistype == 'ZXYT' ) then
+    if ( axistype .EQ. 'ZXYT' ) then
        dim1_max = KMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -3239,18 +4625,6 @@ contains
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     endif
-
-    if ( IO_PNETCDF ) then
-       start(1) = 1
-       count(1) = KMAX
-       start(2) = startX
-       count(2) = countX
-       start(3) = startY
-       count(3) = countY
-       ! start(4) and count(4) will be calculated in file_write_var_par()
-    end if
-
-    allocate( var3D(dim1_max,dim2_max,dim3_max) )
 
     if ( present(timetarg) ) then
        varhalo(:,:,:) = var(:,:,:,timetarg)
@@ -3291,12 +4665,8 @@ contains
        end if
 
        nowtime = (timetarg-1) * time_interval
-       var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-       if ( IO_PNETCDF ) then
-          call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime, start, count ) ! [IN]
-       else
-          call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
-       endif
+       call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                          nowtime, nowtime, start ) ! [IN]
     else
        nowtime = 0.0_DP
        do n = 1, step
@@ -3337,17 +4707,11 @@ contains
              end do
           end if
 
-          var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-          if ( IO_PNETCDF ) then
-             call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime, start, count ) ! [IN]
-          else
-             call FileWriteVar( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
-          end if
+          call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                             nowtime, nowtime, start ) ! [IN]
           nowtime = nowtime + time_interval
        enddo
     endif
-
-    deallocate( var3D )
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 

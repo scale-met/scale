@@ -103,6 +103,14 @@ module gtool_file
     module procedure FileRead3DRealDP
     module procedure FileRead4DRealSP
     module procedure FileRead4DRealDP
+    module procedure FileReadVar1DRealSP
+    module procedure FileReadVar1DRealDP
+    module procedure FileReadVar2DRealSP
+    module procedure FileReadVar2DRealDP
+    module procedure FileReadVar3DRealSP
+    module procedure FileReadVar3DRealDP
+    module procedure FileReadVar4DRealSP
+    module procedure FileReadVar4DRealDP
   end interface FileRead
   interface FileWrite
     module procedure FileWrite1DRealSP
@@ -482,7 +490,8 @@ contains
       basename,  & ! (in)
       mode,      & ! (in)
       single,    & ! (in) optional
-      comm       & ! (in) optional
+      comm,      & ! (in) optional
+      myrank     & ! (in) optional
       )
     implicit none
 
@@ -491,11 +500,13 @@ contains
     integer,          intent( in) :: mode
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: comm
+    integer,          intent( in), optional :: myrank
 
     logical :: existed
     logical :: single_ = .false.
 
     if ( present(single) ) single_ = single
+    if ( present(myrank) ) mpi_myrank = myrank
 
     call FileGetfid( fid,              & ! (out)
          existed,                      & ! (out)
@@ -599,23 +610,22 @@ contains
        fid,      & ! (in)
        name,     & ! (in)
        val,      & ! (in)
-       start,    & ! (in)
-       count     ) ! (in)
+       start     ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size, shape
+    intrinsic shape
 
     if ( present(start) ) then
-       call file_write_axis_par( fid, name, val, SP, & ! (in)
-            size(shape(val)), start, count,               & ! (in)
-            error                                         ) ! (out)
+       call file_write_axis( fid, name, val, SP, & ! (in)
+            start, shape(val),                        & ! (in)
+            error                                     ) ! (out)
     else
        call file_write_axis( fid, name, val, SP, & ! (in)
+            (/1/), shape(val),                        & ! (in)
             error                                     ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -628,23 +638,22 @@ contains
        fid,      & ! (in)
        name,     & ! (in)
        val,      & ! (in)
-       start,    & ! (in)
-       count     ) ! (in)
+       start     ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
-    intrinsic size, shape
+    intrinsic shape
 
     if ( present(start) ) then
-       call file_write_axis_par( fid, name, val, DP, & ! (in)
-            size(shape(val)), start, count,               & ! (in)
-            error                                         ) ! (out)
+       call file_write_axis( fid, name, val, DP, & ! (in)
+            start, shape(val),                        & ! (in)
+            error                                     ) ! (out)
     else
        call file_write_axis( fid, name, val, DP, & ! (in)
+            (/1/), shape(val),                        & ! (in)
             error                                     ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -924,23 +933,22 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start,     & ! (in)
-       count      ) ! (in)
+       start      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
     intrinsic size, shape
 
     if ( present(start) ) then
-       call file_write_associated_coordinates_par( fid, name, val, SP, & ! (in)
-            size(shape(val)), start, count,                                 & ! (in)
-            error                                                           ) ! (out)
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            1, start, shape(val),                                  & ! (in)
+            error                                                       ) ! (out)
     else
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            1, (/1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
@@ -953,23 +961,22 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start,     & ! (in)
-       count      ) ! (in)
+       start      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
     intrinsic size, shape
 
     if ( present(start) ) then
-       call file_write_associated_coordinates_par( fid, name, val, DP, & ! (in)
-            size(shape(val)), start, count,                                 & ! (in)
-            error                                                           ) ! (out)
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            1, start, shape(val),                                  & ! (in)
+            error                                                       ) ! (out)
     else
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            1, (/1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
@@ -982,23 +989,22 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start,     & ! (in)
-       count      ) ! (in)
+       start      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
     intrinsic size, shape
 
     if ( present(start) ) then
-       call file_write_associated_coordinates_par( fid, name, val, SP, & ! (in)
-            size(shape(val)), start, count,                                 & ! (in)
-            error                                                           ) ! (out)
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            2, start, shape(val),                                  & ! (in)
+            error                                                       ) ! (out)
     else
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            2, (/1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
@@ -1011,23 +1017,22 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start,     & ! (in)
-       count      ) ! (in)
+       start      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
     intrinsic size, shape
 
     if ( present(start) ) then
-       call file_write_associated_coordinates_par( fid, name, val, DP, & ! (in)
-            size(shape(val)), start, count,                                 & ! (in)
-            error                                                           ) ! (out)
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            2, start, shape(val),                                  & ! (in)
+            error                                                       ) ! (out)
     else
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            2, (/1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
@@ -1040,23 +1045,22 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start,     & ! (in)
-       count      ) ! (in)
+       start      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:,:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
     intrinsic size, shape
 
     if ( present(start) ) then
-       call file_write_associated_coordinates_par( fid, name, val, SP, & ! (in)
-            size(shape(val)), start, count,                                 & ! (in)
-            error                                                           ) ! (out)
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            3, start, shape(val),                                  & ! (in)
+            error                                                       ) ! (out)
     else
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            3, (/1,1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
@@ -1069,23 +1073,22 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start,     & ! (in)
-       count      ) ! (in)
+       start      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:,:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
     intrinsic size, shape
 
     if ( present(start) ) then
-       call file_write_associated_coordinates_par( fid, name, val, DP, & ! (in)
-            size(shape(val)), start, count,                                 & ! (in)
-            error                                                           ) ! (out)
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            3, start, shape(val),                                  & ! (in)
+            error                                                       ) ! (out)
     else
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            3, (/1,1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
@@ -1098,23 +1101,22 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start,     & ! (in)
-       count      ) ! (in)
+       start      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:,:,:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
     intrinsic size, shape
 
     if ( present(start) ) then
-       call file_write_associated_coordinates_par( fid, name, val, SP, & ! (in)
-            size(shape(val)), start, count,                                 & ! (in)
-            error                                                           ) ! (out)
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            4, start, shape(val),                                  & ! (in)
+            error                                                       ) ! (out)
     else
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            4, (/1,1,1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
@@ -1127,23 +1129,22 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start,     & ! (in)
-       count      ) ! (in)
+       start      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:,:,:)
     integer,          intent(in), optional :: start(:)
-    integer,          intent(in), optional :: count(:)
 
     integer error
     intrinsic size, shape
 
     if ( present(start) ) then
-       call file_write_associated_coordinates_par( fid, name, val, DP, & ! (in)
-            size(shape(val)), start, count,                                 & ! (in)
-            error                                                           ) ! (out)
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            4, start, shape(val),                                  & ! (in)
+            error                                                       ) ! (out)
     else
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            4, (/1,1,1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
@@ -2364,6 +2365,535 @@ contains
     return
   end subroutine FileRead4DRealDP
 
+  subroutine FileReadVar1DRealSP( &
+      var,           & ! (out)
+      fid,           & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      ntypes,        & ! (in)
+      dtype,         & ! (in)
+      start,         & ! (in)
+      count,         & ! (in)
+      allow_missing  & ! (in) optional
+      )
+    use MPI, only : MPI_COMM_NULL
+    implicit none
+
+    real(SP),    intent(out)           :: var(:)
+    integer,          intent( in)           :: fid
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: step
+    integer,          intent( in)           :: ntypes      ! number of dtypes
+    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in)           :: start(:)    ! request starts to global variable
+    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+
+    type(datainfo) :: dinfo
+    integer :: error
+
+    intrinsic size, shape
+    !---------------------------------------------------------------------------
+
+    !--- get data information
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:) = 0.0_SP
+          else
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
+          end if
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
+    end if
+
+    if ( dinfo%rank /= 1 ) then
+       write(message,*) 'xxx rank is not 1', dinfo%rank
+       call Log('E', message)
+    end if
+
+    call file_read_data_par( var(:),                    & ! (out)
+         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data value')
+    end if
+
+    return
+  end subroutine FileReadVar1DRealSP
+  subroutine FileReadVar1DRealDP( &
+      var,           & ! (out)
+      fid,           & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      ntypes,        & ! (in)
+      dtype,         & ! (in)
+      start,         & ! (in)
+      count,         & ! (in)
+      allow_missing  & ! (in) optional
+      )
+    use MPI, only : MPI_COMM_NULL
+    implicit none
+
+    real(DP),    intent(out)           :: var(:)
+    integer,          intent( in)           :: fid
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: step
+    integer,          intent( in)           :: ntypes      ! number of dtypes
+    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in)           :: start(:)    ! request starts to global variable
+    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+
+    type(datainfo) :: dinfo
+    integer :: error
+
+    intrinsic size, shape
+    !---------------------------------------------------------------------------
+
+    !--- get data information
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:) = 0.0_DP
+          else
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
+          end if
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
+    end if
+
+    if ( dinfo%rank /= 1 ) then
+       write(message,*) 'xxx rank is not 1', dinfo%rank
+       call Log('E', message)
+    end if
+
+    call file_read_data_par( var(:),                    & ! (out)
+         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data value')
+    end if
+
+    return
+  end subroutine FileReadVar1DRealDP
+  subroutine FileReadVar2DRealSP( &
+      var,           & ! (out)
+      fid,           & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      ntypes,        & ! (in)
+      dtype,         & ! (in)
+      start,         & ! (in)
+      count,         & ! (in)
+      allow_missing  & ! (in) optional
+      )
+    use MPI, only : MPI_COMM_NULL
+    implicit none
+
+    real(SP),    intent(out)           :: var(:,:)
+    integer,          intent( in)           :: fid
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: step
+    integer,          intent( in)           :: ntypes      ! number of dtypes
+    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in)           :: start(:)    ! request starts to global variable
+    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+
+    type(datainfo) :: dinfo
+    integer :: error
+
+    intrinsic size, shape
+    !---------------------------------------------------------------------------
+
+    !--- get data information
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:) = 0.0_SP
+          else
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
+          end if
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
+    end if
+
+    if ( dinfo%rank /= 2 ) then
+       write(message,*) 'xxx rank is not 2', dinfo%rank
+       call Log('E', message)
+    end if
+
+    call file_read_data_par( var(:,:),                    & ! (out)
+         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data value')
+    end if
+
+    return
+  end subroutine FileReadVar2DRealSP
+  subroutine FileReadVar2DRealDP( &
+      var,           & ! (out)
+      fid,           & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      ntypes,        & ! (in)
+      dtype,         & ! (in)
+      start,         & ! (in)
+      count,         & ! (in)
+      allow_missing  & ! (in) optional
+      )
+    use MPI, only : MPI_COMM_NULL
+    implicit none
+
+    real(DP),    intent(out)           :: var(:,:)
+    integer,          intent( in)           :: fid
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: step
+    integer,          intent( in)           :: ntypes      ! number of dtypes
+    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in)           :: start(:)    ! request starts to global variable
+    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+
+    type(datainfo) :: dinfo
+    integer :: error
+
+    intrinsic size, shape
+    !---------------------------------------------------------------------------
+
+    !--- get data information
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:) = 0.0_DP
+          else
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
+          end if
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
+    end if
+
+    if ( dinfo%rank /= 2 ) then
+       write(message,*) 'xxx rank is not 2', dinfo%rank
+       call Log('E', message)
+    end if
+
+    call file_read_data_par( var(:,:),                    & ! (out)
+         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data value')
+    end if
+
+    return
+  end subroutine FileReadVar2DRealDP
+  subroutine FileReadVar3DRealSP( &
+      var,           & ! (out)
+      fid,           & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      ntypes,        & ! (in)
+      dtype,         & ! (in)
+      start,         & ! (in)
+      count,         & ! (in)
+      allow_missing  & ! (in) optional
+      )
+    use MPI, only : MPI_COMM_NULL
+    implicit none
+
+    real(SP),    intent(out)           :: var(:,:,:)
+    integer,          intent( in)           :: fid
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: step
+    integer,          intent( in)           :: ntypes      ! number of dtypes
+    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in)           :: start(:)    ! request starts to global variable
+    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+
+    type(datainfo) :: dinfo
+    integer :: error
+
+    intrinsic size, shape
+    !---------------------------------------------------------------------------
+
+    !--- get data information
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:,:) = 0.0_SP
+          else
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
+          end if
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
+    end if
+
+    if ( dinfo%rank /= 3 ) then
+       write(message,*) 'xxx rank is not 3', dinfo%rank
+       call Log('E', message)
+    end if
+
+    call file_read_data_par( var(:,:,:),                    & ! (out)
+         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data value')
+    end if
+
+    return
+  end subroutine FileReadVar3DRealSP
+  subroutine FileReadVar3DRealDP( &
+      var,           & ! (out)
+      fid,           & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      ntypes,        & ! (in)
+      dtype,         & ! (in)
+      start,         & ! (in)
+      count,         & ! (in)
+      allow_missing  & ! (in) optional
+      )
+    use MPI, only : MPI_COMM_NULL
+    implicit none
+
+    real(DP),    intent(out)           :: var(:,:,:)
+    integer,          intent( in)           :: fid
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: step
+    integer,          intent( in)           :: ntypes      ! number of dtypes
+    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in)           :: start(:)    ! request starts to global variable
+    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+
+    type(datainfo) :: dinfo
+    integer :: error
+
+    intrinsic size, shape
+    !---------------------------------------------------------------------------
+
+    !--- get data information
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:,:) = 0.0_DP
+          else
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
+          end if
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
+    end if
+
+    if ( dinfo%rank /= 3 ) then
+       write(message,*) 'xxx rank is not 3', dinfo%rank
+       call Log('E', message)
+    end if
+
+    call file_read_data_par( var(:,:,:),                    & ! (out)
+         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data value')
+    end if
+
+    return
+  end subroutine FileReadVar3DRealDP
+  subroutine FileReadVar4DRealSP( &
+      var,           & ! (out)
+      fid,           & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      ntypes,        & ! (in)
+      dtype,         & ! (in)
+      start,         & ! (in)
+      count,         & ! (in)
+      allow_missing  & ! (in) optional
+      )
+    use MPI, only : MPI_COMM_NULL
+    implicit none
+
+    real(SP),    intent(out)           :: var(:,:,:,:)
+    integer,          intent( in)           :: fid
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: step
+    integer,          intent( in)           :: ntypes      ! number of dtypes
+    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in)           :: start(:)    ! request starts to global variable
+    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+
+    type(datainfo) :: dinfo
+    integer :: error
+
+    intrinsic size, shape
+    !---------------------------------------------------------------------------
+
+    !--- get data information
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:,:,:) = 0.0_SP
+          else
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
+          end if
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
+    end if
+
+    if ( dinfo%rank /= 4 ) then
+       write(message,*) 'xxx rank is not 4', dinfo%rank
+       call Log('E', message)
+    end if
+
+    call file_read_data_par( var(:,:,:,:),                    & ! (out)
+         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data value')
+    end if
+
+    return
+  end subroutine FileReadVar4DRealSP
+  subroutine FileReadVar4DRealDP( &
+      var,           & ! (out)
+      fid,           & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      ntypes,        & ! (in)
+      dtype,         & ! (in)
+      start,         & ! (in)
+      count,         & ! (in)
+      allow_missing  & ! (in) optional
+      )
+    use MPI, only : MPI_COMM_NULL
+    implicit none
+
+    real(DP),    intent(out)           :: var(:,:,:,:)
+    integer,          intent( in)           :: fid
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: step
+    integer,          intent( in)           :: ntypes      ! number of dtypes
+    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in)           :: start(:)    ! request starts to global variable
+    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+
+    type(datainfo) :: dinfo
+    integer :: error
+
+    intrinsic size, shape
+    !---------------------------------------------------------------------------
+
+    !--- get data information
+    call file_get_datainfo( dinfo,    & ! (out)
+         fid, varname, step, .false., & ! (in)
+         error                        ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:,:,:) = 0.0_DP
+          else
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
+          end if
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
+    end if
+
+    if ( dinfo%rank /= 4 ) then
+       write(message,*) 'xxx rank is not 4', dinfo%rank
+       call Log('E', message)
+    end if
+
+    call file_read_data_par( var(:,:,:,:),                    & ! (out)
+         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data value')
+    end if
+
+    return
+  end subroutine FileReadVar4DRealDP
+
   !-----------------------------------------------------------------------------
   ! interface FileWrite
   !-----------------------------------------------------------------------------
@@ -2672,8 +3202,7 @@ contains
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count    & ! (in)
+      start    & ! (in)
       )
     implicit none
 
@@ -2681,27 +3210,21 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:)
+    integer,  intent(in) :: start(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
 
-    intrinsic size, shape
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    if ( present(start) ) then
-       call file_write_var_par( vid, var(:), ts, te, SP, & ! (in)
-            size(shape(var)), start, count,                          & ! (in)
-            error                                                    ) ! (out)
-    else
-       call file_write_var( vid, var(:), ts, te, SP, & ! (in)
-            error                                                ) ! (out)
-    end if
+    call file_write_var( vid, var(:), ts, te, SP, & ! (in)
+         1, start, shape(var),                           & ! (in)
+         error                                                ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2719,8 +3242,7 @@ contains
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count    & ! (in)
+      start    & ! (in)
       )
     implicit none
 
@@ -2728,27 +3250,21 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:)
+    integer,  intent(in) :: start(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
 
-    intrinsic size, shape
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    if ( present(start) ) then
-       call file_write_var_par( vid, var(:), ts, te, DP, & ! (in)
-            size(shape(var)), start, count,                          & ! (in)
-            error                                                    ) ! (out)
-    else
-       call file_write_var( vid, var(:), ts, te, DP, & ! (in)
-            error                                                ) ! (out)
-    end if
+    call file_write_var( vid, var(:), ts, te, DP, & ! (in)
+         1, start, shape(var),                           & ! (in)
+         error                                                ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2766,8 +3282,7 @@ contains
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count    & ! (in)
+      start    & ! (in)
       )
     implicit none
 
@@ -2775,27 +3290,21 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:)
+    integer,  intent(in) :: start(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
 
-    intrinsic size, shape
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    if ( present(start) ) then
-       call file_write_var_par( vid, var(:,:), ts, te, SP, & ! (in)
-            size(shape(var)), start, count,                          & ! (in)
-            error                                                    ) ! (out)
-    else
-       call file_write_var( vid, var(:,:), ts, te, SP, & ! (in)
-            error                                                ) ! (out)
-    end if
+    call file_write_var( vid, var(:,:), ts, te, SP, & ! (in)
+         2, start, shape(var),                           & ! (in)
+         error                                                ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2813,8 +3322,7 @@ contains
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count    & ! (in)
+      start    & ! (in)
       )
     implicit none
 
@@ -2822,27 +3330,21 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:)
+    integer,  intent(in) :: start(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
 
-    intrinsic size, shape
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    if ( present(start) ) then
-       call file_write_var_par( vid, var(:,:), ts, te, DP, & ! (in)
-            size(shape(var)), start, count,                          & ! (in)
-            error                                                    ) ! (out)
-    else
-       call file_write_var( vid, var(:,:), ts, te, DP, & ! (in)
-            error                                                ) ! (out)
-    end if
+    call file_write_var( vid, var(:,:), ts, te, DP, & ! (in)
+         2, start, shape(var),                           & ! (in)
+         error                                                ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2860,8 +3362,7 @@ contains
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count    & ! (in)
+      start    & ! (in)
       )
     implicit none
 
@@ -2869,27 +3370,21 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:)
+    integer,  intent(in) :: start(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
 
-    intrinsic size, shape
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    if ( present(start) ) then
-       call file_write_var_par( vid, var(:,:,:), ts, te, SP, & ! (in)
-            size(shape(var)), start, count,                          & ! (in)
-            error                                                    ) ! (out)
-    else
-       call file_write_var( vid, var(:,:,:), ts, te, SP, & ! (in)
-            error                                                ) ! (out)
-    end if
+    call file_write_var( vid, var(:,:,:), ts, te, SP, & ! (in)
+         3, start, shape(var),                           & ! (in)
+         error                                                ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2907,8 +3402,7 @@ contains
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count    & ! (in)
+      start    & ! (in)
       )
     implicit none
 
@@ -2916,27 +3410,21 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:)
+    integer,  intent(in) :: start(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
 
-    intrinsic size, shape
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    if ( present(start) ) then
-       call file_write_var_par( vid, var(:,:,:), ts, te, DP, & ! (in)
-            size(shape(var)), start, count,                          & ! (in)
-            error                                                    ) ! (out)
-    else
-       call file_write_var( vid, var(:,:,:), ts, te, DP, & ! (in)
-            error                                                ) ! (out)
-    end if
+    call file_write_var( vid, var(:,:,:), ts, te, DP, & ! (in)
+         3, start, shape(var),                           & ! (in)
+         error                                                ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2954,8 +3442,7 @@ contains
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count    & ! (in)
+      start    & ! (in)
       )
     implicit none
 
@@ -2963,27 +3450,21 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:)
+    integer,  intent(in) :: start(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
 
-    intrinsic size, shape
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    if ( present(start) ) then
-       call file_write_var_par( vid, var(:,:,:,:), ts, te, SP, & ! (in)
-            size(shape(var)), start, count,                          & ! (in)
-            error                                                    ) ! (out)
-    else
-       call file_write_var( vid, var(:,:,:,:), ts, te, SP, & ! (in)
-            error                                                ) ! (out)
-    end if
+    call file_write_var( vid, var(:,:,:,:), ts, te, SP, & ! (in)
+         4, start, shape(var),                           & ! (in)
+         error                                                ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -3001,8 +3482,7 @@ contains
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count    & ! (in)
+      start    & ! (in)
       )
     implicit none
 
@@ -3010,27 +3490,21 @@ contains
     integer,  intent(in) :: vid
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:)
+    integer,  intent(in) :: start(:)
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
 
-    intrinsic size, shape
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    if ( present(start) ) then
-       call file_write_var_par( vid, var(:,:,:,:), ts, te, DP, & ! (in)
-            size(shape(var)), start, count,                          & ! (in)
-            error                                                    ) ! (out)
-    else
-       call file_write_var( vid, var(:,:,:,:), ts, te, DP, & ! (in)
-            error                                                ) ! (out)
-    end if
+    call file_write_var( vid, var(:,:,:,:), ts, te, DP, & ! (in)
+         4, start, shape(var),                           & ! (in)
+         error                                                ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -3157,6 +3631,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( fid < 0 ) return
+    if ( File_fid_count == 1 ) return
 
     do n = 1, File_fid_count-1
        if ( File_fid_list(n) == fid ) exit

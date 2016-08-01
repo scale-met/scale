@@ -37,8 +37,10 @@ module mod_ocean_vars
   public :: OCEAN_vars_external_in
 
   public :: OCEAN_vars_restart_create
+  public :: OCEAN_vars_restart_open
   public :: OCEAN_vars_restart_def_var
   public :: OCEAN_vars_restart_enddef
+  public :: OCEAN_vars_restart_read_var
   public :: OCEAN_vars_restart_write_var
   public :: OCEAN_vars_restart_close
 
@@ -322,6 +324,31 @@ contains
   end subroutine OCEAN_vars_setup
 
   !-----------------------------------------------------------------------------
+  !> Open ocean restart file for read
+  subroutine OCEAN_vars_restart_open
+    use scale_fileio, only: &
+       FILEIO_open
+    use mod_ocean_admin, only: &
+       OCEAN_sw
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) ***'
+
+    if ( OCEAN_sw .and. OCEAN_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(OCEAN_RESTART_IN_BASENAME)
+
+       call FILEIO_open( restart_fid,              & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME ) ! [IN]
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
+    endif
+
+    return
+  end subroutine OCEAN_vars_restart_open
+
+  !-----------------------------------------------------------------------------
   !> Read ocean restart
   subroutine OCEAN_vars_restart_read
     use scale_time, only: &
@@ -387,6 +414,56 @@ contains
 
     return
   end subroutine OCEAN_vars_restart_read
+
+  !-----------------------------------------------------------------------------
+  !> Read ocean restart
+  subroutine OCEAN_vars_restart_read_var
+    use scale_fileio, only: &
+       FILEIO_read_var, &
+       FILEIO_flush
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call FILEIO_read_var( OCEAN_TEMP(:,:),                                 & ! [OUT]
+                             restart_fid, VAR_NAME(I_TEMP),      'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFC_TEMP(:,:),                             & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFC_TEMP),  'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFC_albedo(:,:,I_LW),                      & ! [OUT]
+                             restart_fid, VAR_NAME(I_ALB_LW),    'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFC_albedo(:,:,I_SW),                      & ! [OUT]
+                             restart_fid, VAR_NAME(I_ALB_SW),    'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFC_Z0M(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFC_Z0M),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFC_Z0H(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFC_Z0H),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFC_Z0E(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFC_Z0E),   'XY', step=1 ) ! [IN]
+
+       call FILEIO_read_var( OCEAN_SFLX_MW(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFLX_MU(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFLX_MV(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFLX_SH(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFLX_LH(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFLX_WH(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_WH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( OCEAN_SFLX_evap(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
+
+       ! commit all pending read requests
+       call FILEIO_flush( restart_fid ) ! [IN]
+
+       call OCEAN_vars_total
+    endif
+
+    return
+  end subroutine OCEAN_vars_restart_read_var
 
   !-----------------------------------------------------------------------------
   !> Write ocean restart

@@ -38,8 +38,10 @@ module mod_urban_vars
   public :: URBAN_vars_external_in
 
   public :: URBAN_vars_restart_create
+  public :: URBAN_vars_restart_open
   public :: URBAN_vars_restart_def_var
   public :: URBAN_vars_restart_enddef
+  public :: URBAN_vars_restart_read_var
   public :: URBAN_vars_restart_write_var
   public :: URBAN_vars_restart_close
 
@@ -417,6 +419,30 @@ contains
   end subroutine URBAN_vars_setup
 
   !-----------------------------------------------------------------------------
+  !> Open urban restart file for read
+  subroutine URBAN_vars_restart_open
+    use scale_fileio, only: &
+       FILEIO_open
+    use mod_urban_admin, only: &
+       URBAN_sw
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (URBAN) ***'
+
+    if ( URBAN_sw .and. URBAN_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(URBAN_RESTART_IN_BASENAME)
+
+       call FILEIO_open( restart_fid, URBAN_RESTART_IN_BASENAME )
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for urban is not specified.'
+    endif
+
+    return
+  end subroutine URBAN_vars_restart_open
+
+  !-----------------------------------------------------------------------------
   !> Read urban restart
   subroutine URBAN_vars_restart_read
     use scale_time, only: &
@@ -504,6 +530,78 @@ contains
 
     return
   end subroutine URBAN_vars_restart_read
+
+  !-----------------------------------------------------------------------------
+  !> Read urban restart
+  subroutine URBAN_vars_restart_read_var
+    use scale_fileio, only: &
+       FILEIO_read_var, &
+       FILEIO_flush
+    use mod_urban_admin, only: &
+       URBAN_sw
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call FILEIO_read_var( URBAN_TR(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_TR), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_TB(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_TB), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_TG(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_TG), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_TC(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_TC), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_QC(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_QC), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_UC(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_UC), 'XY', step=1 ) ! [IN]
+
+       call FILEIO_read_var( URBAN_TRL(:,:,:),                             & ! [OUT]
+                             restart_fid, VAR_NAME(I_TRL), 'Urban', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_TBL(:,:,:),                             & ! [OUT]
+                             restart_fid, VAR_NAME(I_TBL), 'Urban', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_TGL(:,:,:),                             & ! [OUT]
+                             restart_fid, VAR_NAME(I_TGL), 'Urban', step=1 ) ! [IN]
+
+       call FILEIO_read_var( URBAN_RAINR(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_RAINR), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_RAINB(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_RAINB), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_RAING(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_RAING), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_ROFF(:,:),                             & ! [OUT]
+                             restart_fid, VAR_NAME(I_ROFF),  'XY', step=1 ) ! [IN]
+
+       call FILEIO_read_var( URBAN_SFC_TEMP(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFC_TEMP), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_SFC_albedo(:,:,I_LW),                     & ! [OUT]
+                             restart_fid, VAR_NAME(I_ALB_LW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_SFC_albedo(:,:,I_SW),                     & ! [OUT]
+                             restart_fid, VAR_NAME(I_ALB_SW),   'XY', step=1 ) ! [IN]
+
+       call FILEIO_read_var( URBAN_SFLX_MW(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_SFLX_MU(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_SFLX_MV(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_SFLX_SH(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_SFLX_LH(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_SFLX_GH(:,:),                              & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_GH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( URBAN_SFLX_evap(:,:),                            & ! [OUT]
+                             restart_fid, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
+
+       call FILEIO_flush( restart_fid )
+
+       call URBAN_vars_total
+    endif
+
+    return
+  end subroutine URBAN_vars_restart_read_var
 
   !-----------------------------------------------------------------------------
   !> Write urban restart

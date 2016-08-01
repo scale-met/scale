@@ -86,7 +86,8 @@ contains
     use scale_urban_grid, only: &
        URBAN_GRID_setup
     use scale_fileio, only: &
-       FILEIO_setup
+       FILEIO_setup, &
+       FILEIO_cleanup
     use scale_comm, only: &
        COMM_setup , &
        COMM_cleanup
@@ -128,7 +129,7 @@ contains
        ATMOS_driver_config
     use mod_admin_restart, only: &
        ADMIN_restart_setup, &
-       ADMIN_restart
+       ADMIN_restart_write
     use mod_admin_time, only: &
        ADMIN_TIME_setup,      &
        ADMIN_TIME_checkstate, &
@@ -372,7 +373,7 @@ contains
       ! if( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
       ! if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
       ! if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-      call ADMIN_restart
+      call ADMIN_restart_write
 
       if( TIME_DOend ) exit
 
@@ -407,6 +408,9 @@ contains
     call PROF_rapstart('Monit', 2)
     call MONIT_finalize
     call PROF_rapend  ('Monit', 2)
+
+    ! clean up resource allocated for I/O
+    call FILEIO_cleanup
 
     call COMM_cleanup
 
@@ -461,14 +465,13 @@ contains
        LAND_do
     use mod_urban_admin, only: &
        URBAN_do
+    use mod_admin_restart, only: &
+       ADMIN_restart_read
     implicit none
     !---------------------------------------------------------------------------
 
     ! read restart data
-    if( ATMOS_do ) call ATMOS_vars_restart_read
-    if( OCEAN_do ) call OCEAN_vars_restart_read
-    if( LAND_do  ) call LAND_vars_restart_read
-    if( URBAN_do ) call URBAN_vars_restart_read
+    call ADMIN_restart_read
 
     ! setup user-defined procedure before setup of other components
     call USER_resume0

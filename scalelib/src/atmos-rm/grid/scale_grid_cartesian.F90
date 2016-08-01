@@ -84,6 +84,10 @@ module scale_grid
   real(RP), public, allocatable :: GRID_FYG  (:) !< face   coordinate [m]: y, global
   real(RP), public, allocatable :: GRID_CXG  (:) !< center coordinate [m]: x, global
   real(RP), public, allocatable :: GRID_CYG  (:) !< center coordinate [m]: y, global
+  real(RP), public, allocatable :: GRID_FDXG (:) !< center coordinate [m]: x, global
+  real(RP), public, allocatable :: GRID_FDYG (:) !< center coordinate [m]: y, global
+  real(RP), public, allocatable :: GRID_CDXG (:) !< center coordinate [m]: x, global
+  real(RP), public, allocatable :: GRID_CDYG (:) !< center coordinate [m]: y, global
   real(RP), public, allocatable :: GRID_FBFXG(:) !< face   buffer factor [0-1]: x, global
   real(RP), public, allocatable :: GRID_FBFYG(:) !< face   buffer factor [0-1]: y, global
   real(RP), public, allocatable :: GRID_CBFXG(:) !< center buffer factor [0-1]: x, global
@@ -230,6 +234,10 @@ contains
     allocate( GRID_FYG  (0:JAG) )
     allocate( GRID_CXG  (  IAG) )
     allocate( GRID_CYG  (  JAG) )
+    allocate( GRID_FDXG (IAG-1) )
+    allocate( GRID_FDYG (JAG-1) )
+    allocate( GRID_CDXG (  IAG) )
+    allocate( GRID_CDYG (  JAG) )
     allocate( GRID_CBFXG(  IAG) )
     allocate( GRID_CBFYG(  JAG) )
     allocate( GRID_FBFXG(  IAG) )
@@ -329,7 +337,7 @@ contains
        bufftotx = bufftotx + buffx(i)
     enddo
     ibuff = i - 1
-    imain = IAG - 2*ibuff - 2*IHALO
+    imain = IMAXG - 2*ibuff
 
     if ( imain < 0 ) then
        write(*,*) 'xxx Buffer size (', bufftotx*2.0_RP, ') must be smaller than global domain size (X). Use smaller BUFFER_DX!'
@@ -369,6 +377,13 @@ contains
        GRID_FXG(i) = GRID_FXG(i-1) + buffx(ibuff)
        GRID_CXG(i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
     enddo
+
+    do i = 1, IAG
+       GRID_CDXG(i) = GRID_FXG(i) - GRID_FXG(i-1)
+    end do
+    do i = 1, IAG-1
+       GRID_FDXG(i) = GRID_CXG(i+1)-GRID_CXG(i)
+    end do
 
     ! calc buffer factor (global domaim)
     GRID_CBFXG(:) = 0.0_RP
@@ -450,6 +465,13 @@ contains
        GRID_FYG(j) = GRID_FYG(j-1) + buffy(jbuff)
        GRID_CYG(j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
     enddo
+
+    do j = 1, JAG
+       GRID_CDYG(j) = GRID_FYG(j) - GRID_FYG(j-1)
+    end do
+    do j = 1, JAG-1
+       GRID_FDYG(j) = GRID_CYG(j+1)-GRID_CYG(j)
+    end do
 
     ! calc buffer factor (global domaim)
     GRID_CBFYG(:) = 0.0_RP

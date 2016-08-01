@@ -378,7 +378,7 @@ contains
        URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
        URBAN_vars_restart_write
     use mod_admin_restart, only: &
-       ADMIN_restart
+       ADMIN_restart_write
     use mod_admin_time, only: &
        TIME_DOATMOS_restart,  &
        TIME_DOLAND_restart,   &
@@ -525,7 +525,7 @@ contains
       TIME_DOLAND_restart  = .TRUE.
       TIME_DOURBAN_restart = .TRUE.
       TIME_DOATMOS_restart = .TRUE.
-      call ADMIN_restart
+      call ADMIN_restart_write
 
     endif
 

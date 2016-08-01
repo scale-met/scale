@@ -36,8 +36,10 @@ module mod_atmos_phy_sf_vars
   public :: ATMOS_PHY_SF_vars_external_in
 
   public :: ATMOS_PHY_SF_vars_restart_create
+  public :: ATMOS_PHY_SF_vars_restart_open
   public :: ATMOS_PHY_SF_vars_restart_def_var
   public :: ATMOS_PHY_SF_vars_restart_enddef
+  public :: ATMOS_PHY_SF_vars_restart_read_var
   public :: ATMOS_PHY_SF_vars_restart_write_var
   public :: ATMOS_PHY_SF_vars_restart_close
 
@@ -294,6 +296,34 @@ contains
   end subroutine ATMOS_PHY_SF_vars_fillhalo
 
   !-----------------------------------------------------------------------------
+  !> Open restart file for read
+  subroutine ATMOS_PHY_SF_vars_restart_open
+    use scale_fileio, only: &
+       FILEIO_open
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_SF) ***'
+
+    if ( ATMOS_PHY_SF_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_SF_RESTART_IN_BASENAME)
+
+       call FILEIO_open( restart_fid, ATMOS_PHY_SF_RESTART_IN_BASENAME )
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_SF is not specified.'
+       ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
+       ATMOS_PHY_SF_SFC_albedo(:,:,:) = ATMOS_PHY_SF_DEFAULT_SFC_albedo
+       ATMOS_PHY_SF_SFC_Z0M   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_SFC_Z0H   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_SFC_Z0E   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+    endif
+
+    return
+  end subroutine ATMOS_PHY_SF_vars_restart_open
+
+  !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_SF_vars_restart_read
     use scale_const, only: &
@@ -359,6 +389,53 @@ contains
 
     return
   end subroutine ATMOS_PHY_SF_vars_restart_read
+
+  !-----------------------------------------------------------------------------
+  !> Read restart
+  subroutine ATMOS_PHY_SF_vars_restart_read_var
+    use scale_const, only: &
+       I_SW => CONST_I_SW, &
+       I_LW => CONST_I_LW
+    use scale_fileio, only: &
+       FILEIO_read_var, &
+       FILEIO_flush
+    use scale_rm_statistics, only: &
+       STAT_total
+    implicit none
+
+    real(RP) :: total
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call FILEIO_read_var( ATMOS_PHY_SF_SFC_TEMP  (:,:),          & ! [OUT]
+                             restart_fid, VAR_NAME(1), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW),     & ! [OUT]
+                             restart_fid, VAR_NAME(2), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW),     & ! [OUT]
+                             restart_fid, VAR_NAME(3), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( ATMOS_PHY_SF_SFC_Z0M   (:,:),          & ! [OUT]
+                             restart_fid, VAR_NAME(4), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( ATMOS_PHY_SF_SFC_Z0H   (:,:),          & ! [OUT]
+                             restart_fid, VAR_NAME(5), 'XY', step=1 ) ! [IN]
+       call FILEIO_read_var( ATMOS_PHY_SF_SFC_Z0E   (:,:),          & ! [OUT]
+                             restart_fid, VAR_NAME(6), 'XY', step=1 ) ! [IN]
+
+       call FILEIO_flush( restart_fid )
+
+       ! halos have been read from file
+       ! call ATMOS_PHY_SF_vars_fillhalo
+
+       call STAT_total( total, ATMOS_PHY_SF_SFC_TEMP  (:,:),      VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), VAR_NAME(2) )
+       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), VAR_NAME(3) )
+       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0M   (:,:),      VAR_NAME(4) )
+       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0H   (:,:),      VAR_NAME(5) )
+       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0E   (:,:),      VAR_NAME(6) )
+    endif
+
+    return
+  end subroutine ATMOS_PHY_SF_vars_restart_read_var
 
   !-----------------------------------------------------------------------------
   !> Write restart

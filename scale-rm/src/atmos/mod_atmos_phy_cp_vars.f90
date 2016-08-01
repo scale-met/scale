@@ -34,8 +34,10 @@ module mod_atmos_phy_cp_vars
   public :: ATMOS_PHY_CP_vars_restart_write
 
   public :: ATMOS_PHY_CP_vars_restart_create
+  public :: ATMOS_PHY_CP_vars_restart_open
   public :: ATMOS_PHY_CP_vars_restart_def_var
   public :: ATMOS_PHY_CP_vars_restart_enddef
+  public :: ATMOS_PHY_CP_vars_restart_read_var
   public :: ATMOS_PHY_CP_vars_restart_write_var
   public :: ATMOS_PHY_CP_vars_restart_close
 
@@ -322,6 +324,29 @@ contains
   end subroutine ATMOS_PHY_CP_vars_fillhalo
 
   !-----------------------------------------------------------------------------
+  !> Open restart file for read
+  subroutine ATMOS_PHY_CP_vars_restart_open
+    use scale_fileio, only: &
+       FILEIO_open
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_CP) ***'
+
+    if ( ATMOS_PHY_CP_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_CP_RESTART_IN_BASENAME)
+
+       call FILEIO_open( restart_fid, ATMOS_PHY_CP_RESTART_IN_BASENAME )
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_CP is not specified.'
+    endif
+
+    return
+  end subroutine ATMOS_PHY_CP_vars_restart_open
+
+  !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_CP_vars_restart_read
     use scale_time, only: &
@@ -401,6 +426,34 @@ contains
 
     return
   end subroutine ATMOS_PHY_CP_vars_restart_read
+
+  !-----------------------------------------------------------------------------
+  !> Read restart
+  subroutine ATMOS_PHY_CP_vars_restart_read_var
+    use scale_fileio, only: &
+       FILEIO_read_var, &
+       FILEIO_flush
+    use scale_rm_statistics, only: &
+       STAT_total
+    implicit none
+
+    real(RP) :: total
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_read_var( ATMOS_PHY_CP_MFLX_cloudbase(:,:),      & ! [OUT]
+                             restart_fid, VAR_NAME(1), 'XY', step=1 ) ! [IN]
+
+       call FILEIO_flush( restart_fid )
+
+       ! halos have been read from file
+       ! call ATMOS_PHY_CP_vars_fillhalo
+
+       call STAT_total( total, ATMOS_PHY_CP_MFLX_cloudbase(:,:), VAR_NAME(1) )
+    endif
+
+    return
+  end subroutine ATMOS_PHY_CP_vars_restart_read_var
 
   !-----------------------------------------------------------------------------
   !> Write restart
