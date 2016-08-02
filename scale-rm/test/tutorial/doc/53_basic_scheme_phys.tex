@@ -243,6 +243,10 @@ micpara.datに記載されているnbinが異なれば、\\
 \noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | &\\
+\verb|/             | & \\
+\\
 \verb|&PARAM_OCEAN  | & \\
 \verb| OCEAN_TYPE = "CONST", | & ; 表\ref{tab:nml_ocean}より選択。\\
 \verb|/             | & \\
@@ -315,6 +319,10 @@ micpara.datに記載されているnbinが異なれば、\\
 \noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & \\
+\verb|/             | & \\
+\\
 \verb|&PARAM_LAND  | & \\
 \verb| LAND_TYPE = "SLAB", | & ; 表\ref{tab:nml_land}より選択。\\
 \verb|/             | & \\
@@ -325,7 +333,7 @@ micpara.datに記載されているnbinが異なれば、\\
 \begin{center}
   \caption{陸面スキームの選択肢}
   \label{tab:nml_land}
-  \begin{tabularx}{150mm}{lXX} \hline
+  \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
       \verb|CONST| & 土壌温度・土壌水分・地表面温度 初期値固定 &  \\
       \verb|SLAB|  & 熱拡散、バケツモデルモデル   &  \\
@@ -365,7 +373,7 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 \begin{center}
   \caption{バルクフラックススキームの選択肢}
   \label{tab:nml_bulk}
-  \begin{tabularx}{150mm}{lXX} \hline
+  \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
       \verb|B91W01| & デフォルト & \citet{beljaars_1991,wilson_2001}\\
       \verb|U95|    &            & \citet{uno_1995}\\
@@ -391,6 +399,10 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 \noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | &\\
+\verb|/             | & \\
+\\
 \verb|&PARAM_URBAN  | & \\
 \verb| URBAN_TYPE="SLC", | & ; 表\ref{tab:nml_urban}より選択。\\
 \verb|/             | & \\
@@ -401,7 +413,7 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 \begin{center}
   \caption{都市スキームの選択肢}
   \label{tab:nml_urban}
-  \begin{tabularx}{150mm}{lXX} \hline
+  \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
       \verb|SLC|  & 単層キャノピーモデル   & \citet{kusaka_2001} \\
     \hline
