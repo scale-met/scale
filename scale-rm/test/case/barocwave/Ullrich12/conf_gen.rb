@@ -6,26 +6,26 @@
 
 require 'fileutils'
 
-TIME_DT_SEC             = "480.0D0"
+TIME_DT_SEC             = "720.0D0"
 TIME_DURATION_SEC       = "1296000.D0"
 HISTORY_TINTERVAL_HOUR   = "24.D0"
 CONF_GEN_RESOL_HASHLIST = \
 [ \
-  # 100x30x30
+  # 100x30x30, dt=16 min
   { "TAG"=>"400km", "DX"=>400.0E3, "DY"=>400.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>480.0E0, "NPRCX"=> 5, "NPRCY"=>1}, \
-  # 200x60x30
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>720.0E0, "NPRCX"=> 5, "NPRCY"=>1}, \
+  # grid:200x60x30, dt=8 min
   { "TAG"=>"200km", "DX"=>200.0E3, "DY"=>200.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>240.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
-  # 400x120x30
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>360.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
+  # grid:400x120x30, dt=4 min
   { "TAG"=>"100km", "DX"=>100.0E3, "DY"=>100.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>20, "JMAX"=>30, "DTDYN"=>120.0E0, "NPRCX"=> 20, "NPRCY"=>2}, \
-  # 800x240x30
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>30, "DTDYN"=>180.0E0, "NPRCX"=> 20, "NPRCY"=>2}, \
+  # grid:800x240x30, dt=2 min
   { "TAG"=>"050km", "DX"=> 50.0E3, "DY"=> 50.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 60.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
-  # 1600x480x30
+    "KMAX"=>30, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 90.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
+  # grid:1600x480x30, dt=1 min
   { "TAG"=>"025km", "DX"=> 25.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 30.0E0, "NPRCX"=>40, "NPRCY"=>8}, \
+    "KMAX"=>30, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 45.0E0, "NPRCX"=>40, "NPRCY"=>8}, \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
@@ -217,6 +217,7 @@ def gen_run_conf( conf_name,
 &HISTITEM item='PT'   /
 &HISTITEM item='PRES'   /
 &HISTITEM item='T' /
+&HISTITEM item='VOR' /
 
 &PARAM_MONITOR
  MONITOR_STEP_INTERVAL = 30,
