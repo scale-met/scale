@@ -1,9 +1,11 @@
-\section{力学スキーム}
-\label{sec:dyn}
+\section{力学スキームの設定}
+\label{sec:basic_dyn}
+%------------------------------------------------------
+
 
 \subsection{数値解法}
-
-設定は、confファイルの\verb|PARAM_ATMOS|で設定する。\\
+%------------------------------------------------------
+設定は、confファイルの\verb|PARAM_ATMOS|の\verb|ATMOS_DYN_TYPE|で設定する。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -16,8 +18,8 @@
 }}\\
 
 
-\subsection{空間空間差分スキーム}
-
+\subsection{時間・空間差分スキーム}
+%------------------------------------------------------
 設定は、confファイルの\verb|PARAM_ATMOS_DYN|で設定する。
 また、空間スキームによってはHaloの設定も必要である。
 スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。\\
@@ -37,6 +39,7 @@
 \verb|/             | & \\
 \end{tabularx}
 }}\\
+
 
 
 \begin{table}[h]

@@ -184,7 +184,7 @@ configファイル（\verb|run.conf|）を元にして一部の項目を説明�
 %各Namelistの詳細はAppendixを参照されたい．
 
 
-\subsection{積分時間と積分時間間隔の設定} \label{sec:adv_timeintiv}
+\section{積分時間と積分時間間隔の設定} \label{sec:timeintiv}
 %------------------------------------------------------
 例えば理想実験チュートリアルでは、積分時間は1時間とし、時間積分間隔として力学過程は1.0秒、雲物理過程は10.0秒で実行したが、
 積分時間を伸ばしたい場合や、計算にかかる時間を短くするために積分時間間隔を長くしたり、計算不安定を防ぐために
@@ -213,5 +213,12 @@ configファイル（\verb|run.conf|）を元にして一部の項目を説明�
 
 上記の各部分を変更することで積分時間や積分時間間隔を変更することができる。
 
+
+%またrun.confのPARAM\_TIMEに
+%\begin{verbatim}
+% TIME_DT_ATMOS_PHY_TB       = 0.10D0,  (乱流スキームの時間ステップ)
+% TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",　（TIME_DT_ATMOS_PHY_TBの単位）
+%\end{verbatim}
+%を加える。
 
 

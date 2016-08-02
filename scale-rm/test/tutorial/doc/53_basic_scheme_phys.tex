@@ -1,45 +1,77 @@
-\subsection{物理スキーム} \label{sec:adv_physics}
+\section{物理スキームの設定} \label{sec:basic_physics}
 %------------------------------------------------------
-本節では雲物理モデルや乱流モデルなどの物理モデルの利用方法を説明する。
-チュートリアル実験で用いてきた物理モデルについて理解するためにconfigファイルの設定を再確認しながら説明をすすめる。
-ここでは例として、理想実験チュートリアルのsampleディレクトリ内にある\verb|run_R20kmx20kmDX500m.conf|を取り上げる。
 
-
-\subsubsection{雲微物理スキームの設定} \label{sec:adv_microphys}
+\subsection{雲微物理スキーム} \label{sec:basic_microphys}
 %------------------------------------------------------
-チュートリアルでは、\cite{tomita_2008}の1-momentバルク法を用いていたが、SCALEには暖かい雲のみを考慮する1-momentバルク法
-(\cite{kessler_1969})，氷雲を含んだ2-momentバルク法(\cite{sn_2014})、1-momentビン法の４種類の雲微物理スキーム
-(\cite{suzuki_etal_2010})も利用することが可能である。
-これらの雲微物理スキームの選択は，init.confとrun.confに記載されているPARAM\_TRACERに含まれる
-``TRACER\_TYPE''及び，PARAM\_ATMOSに含まれる``ATMOS\_PHY\_MP\_TYPE''によって設定する。
-{\bf 両者は同じにする必要があり}，選択する雲微物理スキームによって以下のように設定する。
+雲微物理スキームの選択は、init.confとrun.conf中の
+\verb|PARAM_TRACER|の\verb|TRACER_TYPE|、
+及び、\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_MP_TYPE|で設定する。
+このとき{\color{red}{\verb|TRACER_TYPE|と\verb|ATMOS_PHY_MP_TYPE|は同じものを設定し}}
+、かつ、\textcolor{red}{init.conf，run.confで同一の設定}とする必要がある。
+雲微物理スキームを計算する(callする)タイミングは、
+\verb|PARAM_TIME|で設定するが、これについては
+第\ref{sec:timeintiv}節を参照のこと。\\
 
-\begin{verbatim}
-KESSLER ：水雲のみの1-momentバルク法(Kessler 1969)
-TOMITA08：氷雲を含む1-momentバルク法(Tomita 2008)
-SN14    ：氷雲を含む2-momentバルク法(Seiki and Nakajima 2014)
-SUZUKI10：1-momentビン法(Suzuki et al. 2010，氷雲を含むか否かはオプションで選択)
-\end{verbatim}
 
-このとき\textcolor{red}{TRACER\_TYPEとATMOS\_PHY\_MP\_TYPEはinit.conf，run.confで同一にする必要がある}ことに注意されたい．
-SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER\_TYPEとATMOS\_PHY\_MP\_TYPEを変更するだけで実行可能である。
-一方SUZUKI10を選択した場合は、init.conf、run.confの双方に\\
 
-\noindent {\small {\gt
+\noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_BIN| \\
-\verb| nbin   = 33, (ビンの数)| \\
-\verb| ICEFLG =  1, (氷雲を考慮するか否か，0->水雲のみ，1->氷雲も含む)| \\
-\verb|/| \\
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_MP_TYPE = "TOMITA08", | & ; 表\ref{tab:nml_atm_mp}より選択。\\
+\verb|/             | & \\
+\\
+\verb|&PARAM_TRACER | & \\
+\verb| TRACER_TYPE = ``TOMITA08'', | & \verb|ATMOS_PHY_MP_TYPE|と同じスキーム。\\
+\verb|/             | & \\
 \end{tabularx}
-}}}\\
+}}\\
 
-を追記する必要がある。\\
-この場合も、{\bf init.confとrun.confに記載されるPARAM\_BINは同一にする必要がある}。
-SUZUKI10を選択した時には、micpara.datという
-雲微物理の計算に必要なファイルが自動生成される。micpara.datがすでに存在する場合はあるものを利用するが、
-nbinが変わると新たに作成しなければならない。micpara.datにnbinの情報が記載されているが、もしrun.confに記載されるnbinと
+\begin{table}[h]
+\begin{center}
+  \caption{雲微物理スキームの設定}
+  \label{tab:nml_atm_mp}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+     \verb|OFF|      & \textcolor{red}{使用しない,どういう状態を想定?} &  \\
+     \verb|DRY|      & \textcolor{red}{どういう状態を想定?, OFFとの違いは?} &  \\
+     \verb|KESSLER|  & 水雲のみの1-momentバルク法 & \citet{kessler_1969} \\
+     \verb|TOMITA08| & 氷雲を含む1-momentバルク法 & \citet{tomita_2008} \\
+     \verb|SN14|     & 氷雲を含む2-momentバルク法 & \citet{sn_2014} \\
+     \verb|SUZUKI10| & 1-momentビン法(氷雲を含むか否かはオプションで選択) & \citet{suzuki_etal_2010} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\verb|SUZUKI10|以外を選択した場合は、
+init.conf、run.confのTRACER\_TYPEとATMOS\_PHY\_MP\_TYPEを
+変更するだけで実行可能である。
+
+
+\subsubsection{SUZUKI10}
+%---------------------------
+\verb|ATMOS_PHY_MP_TYPE = "SUZUKI10"|を選択した場合は、init.conf、run.confの双方に
+下記を追加する必要がある。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_BIN|   &  \\
+\verb| nbin   = 33, & (ビンの数)| \\
+\verb| ICEFLG =  1, & (氷雲を考慮するか否か，0->水雲のみ，1->氷雲も含む)| \\
+\verb|/|            & \\
+\end{tabularx}
+}}\\
+
+この場合も、
+{\color{red}{init.confとrun.confに記載される\verb|PARAM_BIN|は同一にする必要がある}}。
+\verb|SUZUKI10|を選択した時には、micpara.datという
+雲微物理の計算に必要なファイルが自動生成される。
+micpara.datがすでに存在する場合はあるものを利用するが、
+nbinが変わると新たに作成しなければならない。
+micpara.datにnbinの情報が記載されているが、
+もしrun.confに記載されるnbinと
 micpara.datに記載されているnbinが異なれば、\\
 
 \noindent {\gt
@@ -51,60 +83,330 @@ micpara.datに記載されているnbinが異なれば、\\
 
 \noindent というエラーメッセージを標準出力に出力して計算が落ちるようになっている。
 そのため、nbinを変更した際は、micpara.datを消去して
-新たに作り直す必要がある（micpara.datを消して再度SCALEをSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される）。
+新たに作り直す必要がある
+(micpara.datを消して再度SCALEをSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される)。
 
 
-\subsubsection{乱流スキームの設定} \label{sec:adv_turbulence}
+
+\subsection{乱流スキーム} \label{sec:basic_turbulence}
 %------------------------------------------------------
-理想実験チュートリアルでは乱流スキームは導入されていなかったが、SCALEにはSmagorinsky typeの乱流スキーム
-\citep{smagorinsky_1963, lilly_1962, Brown_etal_1994, Scotti_1993}と
-Mellor-Yamada Level 3の
-乱流スキーム(MYNN, \cite{my_1982},\cite{nakanishi_2004})が導入されている。
-これらを利用するには，init.confとrun.conf双方のPARAM\_ATMOSに「ATMOS\_PHY\_TB\_TYPE」を加える。
 
+乱流スキームの選択は，init.confとrun.conf中の
+\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_TB_TYPE|で設定する。
+乱流スキームを計算する(callする)タイミングは、
+\verb|PARAM_TIME|で設定するが、これについては
+第\ref{sec:timeintiv}節を参照のこと。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_TB_TYPE = "MYNN", | & ; 表\ref{tab:nml_atm_tb}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{乱流スキームの設定}
+  \label{tab:nml_atm_tb}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+      \verb|OFF|          & \textcolor{red}{使用しない,どういう状態を想定?} &  \\
+      \verb|SMAGORINSKY|  & Smagorinsky typeのサブグリッドモデル    & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
+      \verb|D1980|        & Deardorff(1980)サブグリットモデル &\citet{Deardorff_1980} \\
+      \verb|MYNN|         & MYNN Level 2.5 乱流モデル & \citet{my_1982,nakanishi_2004} \\
+      \verb|HYBRID|       & MYNN と SMAGORINSKYのハイブリット &  \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+
+
+\subsection{放射スキーム} \label{sec:basic_radiation}
+%------------------------------------------------------
+放射スキームの選択は、init.confとrun.conf中の
+\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_RD_TYPE|で設定する。
+放射スキームを計算する(callする)タイミングは、
+\verb|PARAM_TIME|で設定するが、これについては
+第\ref{sec:timeintiv}節を参照のこと。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_RD_TYPE = "MSTRN", | & ; 表\ref{tab:nml_atm_rd}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{放射スキームの選択肢}
+  \label{tab:nml_atm_rd}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+      \verb|OFF|    & \textcolor{red}{使用しない, どういう状態を想定?} &  \\
+      \verb|MSTRN|  & MSTRN-X    & \citet{sekiguchi_2008} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\verb|MSTRN|を実行するには、各種外部データとパラメタテーブルが必要である。
+オゾンのプロファイルなどの外部データとパラメタテーブルは、
 \begin{verbatim}
-ATMOS_PHY_TB_TYPE="SMAGORINSKY" (Smagorinsky typeのサブグリッドモデル)
-ATMOS_PHY_TB_TYPE="MYNN" (Mellor-Yamada Level 3のRANSモデル）
+  scale-rm/test/data/rad/
 \end{verbatim}
+に用意されている。
+放射スキームを利用する場合は、これらのファイルが必要となる。
 
-またrun.confのPARAM\_TIMEに
 
+
+\subsection{地表面(大気下端境界)} \label{sec:basic_surface}
+%------------------------------------------------------
+大気下端境界の設定は、init.confとrun.conf中の
+\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE|で設定する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & ; 表\ref{tab:nml_atm_sf}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{大気下端境界の選択肢}
+  \label{tab:nml_atm_sf}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明              \\ \hline
+      \verb|OFF|     & \textcolor{red}{ゼロフラックスを想定}   \\
+      \verb|CONST|   & Surface fluxを任意の値に固定             \\ %詳細は、表\ref{tab:sfcflux}参照。
+      \verb|BULK|    & バルクモデル \textcolor{red}{これって陸面バルクとどう違うの? パラメータだけ?海想定?}  \\
+      \verb|COUPLE|  & 海・陸面・都市モデル使用する場合に選択   \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+地表面スキームをcallするタイミングは、
+\verb|PARAM_TIME|で設定するが、これについては
+第\ref{sec:timeintiv}節を参照のこと。
+
+
+\subsubsection{CONST設定}
+%---------------------------
+\verb|ATMOS_PHY_SF_TYPE = "CONST"|を選択した場合は、run.confで
+下記を設定することにより、任意の値に固定することが可能である。
+下記の値はデフォルトの設定を示す。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+ \\
+ \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
+ \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: Bulk coefficient is constant \\
+                                                  & 1: Friction velocity is constant \\
+ \verb| ATMOS_PHY_SF_U_minM         =    0.0_DP | & Minimum limit of absolute velocity for momentum [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011_DP | & Constant bulk coefficient for momentum [NIL] \\
+                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0| のとき有効) \\
+ \verb| ATMOS_PHY_SF_CM_min         = 1.0E-5_DP | & Minimum limit of bulk coefficient for momentum [NIL] \\
+                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
+ \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25_DP | & Constant friction velocity [m/s] \\
+                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
+ \verb| ATMOS_PHY_SF_Const_SH       =   15.0_DP | & Constant surface sensible heat flux [W/m2] \\
+ \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =  .false.  | & Diurnal modulation for sensible heat flux? [logical]\\
+ \verb| ATMOS_PHY_SF_Const_FREQ     =   24.0_DP | & Frequency of sensible heat flux modulation [hour]\\
+ \verb| ATMOS_PHY_SF_Const_LH       =  115.0_DP | & Constant surface latent   heat flux [W/m2] \\
+ \verb|/|            & \\
+ \\
+\end{tabularx}
+}}}\\
+
+
+\subsection{海洋スキーム(大気-海面フラックス)} \label{sec:basic_ocean}
+%------------------------------------------------------
+
+海洋スキームをONにする場合、
+\verb|&PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|とする必要がある。
+海洋スキームの選択は、init.confとrun.conf中の
+\verb|PARAM_OCEAN|の\verb|OCEAN_TYPE|で設定する。
+海洋スキームを計算（フラックスをupdate）するタイミングは、
+\verb|PARAM_TIME|で設定するが、これについては
+第\ref{sec:timeintiv}節を参照のこと。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_OCEAN  | & \\
+\verb| OCEAN_TYPE = "CONST", | & ; 表\ref{tab:nml_ocean}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{海洋スキームの選択肢}
+  \label{tab:nml_ocean}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 \\ \hline
+      \verb|OFF|   & 土地利用にOCEANがない場合のみ使用可    \\
+      \verb|CONST| & 初期値固定                              \\
+      \verb|FILE|  & 外部ファイルから与える (時間変化あり)   \\
+      \verb|SLAB|  & 海洋スラブモデル                        \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+\subsubsection{海洋スラブモデル}
+%---------------------------
+\verb|OCEAN_TYPE = "SLAB"|を選択した場合は、init.confとrun.confで
+モデルの深さを設定することができる。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+ \verb|&PARAM_OCEAN_PHY_SLAB                 | & \\
+ \verb|  OCEAN_PHY_SLAB_DEPTH   = 10.0_DP,   | & ; デフォルト設定 \\
+ \verb|/|            & \\
+\end{tabularx}
+}}\\
+
+
+\subsubsection{外部ファイル入力}
+%---------------------------
+\verb|OCEAN_TYPE = "FILE"|を選択した場合は、init.confとrun.confで
+外部入力ファイルの設定が必要である。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+ \verb|&EXTITEM            |                       & \\
+ \verb| basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
+ \verb| varname    = "OCEAN_TEMP",               | & ; \verb|"OCEAN_TEMP"|と書く。\\
+ \verb| step_limit = 1800, |                        & \\
+ \verb| step_fixed =  -1,  |                        & \\
+ \verb| enable_periodic_year  = .false.,|           & \\
+ \verb| enable_periodic_month = .false.,|           & \\
+ \verb| enable_periodic_day   = .false.,|           & \\
+ \verb|/|            & \\
+\end{tabularx}
+}}\\
+
+
+
+\subsection{陸面モデル(大気-陸面フラックス)} \label{sec:basic_land}
+%------------------------------------------------------
+陸面モデルをONにする場合、
+\verb|&PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|である必要がある。
+陸面モデルの選択は、init.confとrun.conf中の
+\verb|PARAM_LAND|の\verb|LAND_TYPE|で設定する。
+陸面モデルを計算する(callする)タイミングは、
+\verb|PARAM_TIME|で設定するが、これについては
+第\ref{sec:timeintiv}節を参照のこと。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_LAND  | & \\
+\verb| LAND_TYPE = "SLAB", | & ; 表\ref{tab:nml_land}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{陸面スキームの選択肢}
+  \label{tab:nml_land}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+      \verb|CONST| & 土壌温度・土壌水分・地表面温度 初期値固定 &  \\
+      \verb|SLAB|  & 熱拡散、バケツモデルモデル   &  \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+
+\subsubsection{陸面スラブモデル}
+%---------------------------
+\verb|LAND_TYPE = "SLAB"|を選択した場合は、
+土地利用データとそれに対応するパラメタテーブルが必要である。
+パラメタテーブルは、
 \begin{verbatim}
- TIME_DT_ATMOS_PHY_TB       = 0.10D0,  (乱流スキームの時間ステップ)
- TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",　（TIME_DT_ATMOS_PHY_TBの単位）
+  scale-rm/test/data/land/param.bucket.conf
 \end{verbatim}
+に用意されている。
+ファイルには、各土地利用区分とそれに対応する粗度長などのパラメタが与えられている。
+陸面スラブモデルを使用する場合は、このパラメタテーブルが必要である。
 
-を加える。これらを設定した上で，run.shを実行することで，乱流スキームを考慮した計算が可能になる．
-地表面フラックスのバルク係数を決めるスキーム，放射スキーム，都市スキームなどに関しては，
-現実事例を対象とした４章を参照されたい．
+
+フラックス計算に使用するバルク交換係数の計算スキームは 
+run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_BULKFLUX  | & \\
+\verb| BULKFLUX_TYPE = "B91W01", | & ; 表\ref{tab:nml_bulk}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{バルクフラックススキームの選択肢}
+  \label{tab:nml_bulk}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+      \verb|B91W01| & デフォルト & \citet{beljaars_1991,wilson_2001}\\
+      \verb|U95|    &            & \citet{uno_1995}\\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
 
 
-\subsubsection{放射過程の設定} \label{sec:adv_radiation}
+
+
+\subsection{都市モデル(大気-都市面フラックス)} \label{sec:basic_urban}
 %------------------------------------------------------
-SCALEには、放射過程としてMSTRN (\cite{sekiguchi_2008})が実装されている。ここでは、MSTRNの設定方法を説明する。
 
-放射モデルを実行するには、各種外部データとパラメタテーブルが必要である。
-オゾンのプロファイルなどの外部データとパラメタテーブルは、``scale-rm/test/data/rad/''の中に与えられている。
-放射過程を利用する実験を行う場合は、必ず``scale-rm/test/data/rad/''下の外部データとパラメタテーブルが必要である。
-%詳細に関しては随時説明を加えていく。
+都市モデルをONにする場合、
+\verb|&PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|である必要がある。
+都市モデルの選択は、init.confとrun.conf中の
+\verb|PARAM_URBAN|の\verb|URBAN_TYPE|で設定する。
+都市モデルを計算する(callする)タイミングは、
+\verb|PARAM_TIME|で設定するが、これについては
+第\ref{sec:timeintiv}節を参照のこと。\\
 
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_URBAN  | & \\
+\verb| URBAN_TYPE="SLC", | & ; 表\ref{tab:nml_urban}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
 
-\subsubsection{陸面・海洋上の地表面フラックスモデルの設定} \label{sec:adv_landocean}
-%------------------------------------------------------
-SCALEには、陸面モデルとしてバケツモデル（バルク交換係数は \cite{beljaars_1991}; \cite{wilson_2001}に基づく）が
-実装されている。また海洋上のフラックスモデルとしてスラブモデルが実装されている。
-ここでは、陸面モデルと海洋モデルの設定方法について説明する。
+\begin{table}[h]
+\begin{center}
+  \caption{都市スキームの選択肢}
+  \label{tab:nml_urban}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+      \verb|SLC|  & 単層キャノピーモデル   & \citet{kusaka_2001} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
 
-陸面モデルを実行するには、土地利用データとそれに対応するパラメタテーブルが必要である。
-パラメタテーブルは、``scale-rm/test/data/land/''の中に``param.bucket.conf''というファイルで与えられている。
-中には10種類を超える土地利用区分とそれらに対応する粗度長などのパラメタが与えられている。陸面が存在する領域で実験
-を行う場合は、必ず``param.bucket.conf''のパラメタテーブルが必要である。
-%詳細に関しては随時説明を加えていく。
-
-
-%\subsubsection{都市モデルの設定} \label{sec:adv_urban}
-%------------------------------------------------------
-%SCALEには、都市モデルとして単層キャノピーモデル(\cite{kusaka_2001})が実装されている。
-%ここでは都市モデルの設定方法について説明する。
-%詳細に関しては随時説明を加えていく。
 

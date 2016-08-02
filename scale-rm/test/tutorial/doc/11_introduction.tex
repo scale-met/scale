@@ -107,7 +107,7 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
 \begin{itemize}
  \item 乱流過程: 複数から選択可能
    \begin{itemize}
-    \item Smagorinsky-Lilly typeのサブグリッドモデル \citep{smagorinsky_1963,lilly_1962}
+    \item Smagorinsky-Lilly typeのサブグリッドモデル \citep{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993}
     \item Deardorff(1980) サブグリットモデル \citep{Deardorff_1980}
     \item MYNN2.5境界層モデル \citep{my_1982,nakanishi_2004}
    \end{itemize}
@@ -121,7 +121,8 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
  \item 放射過程: MSTRN-X \citep{sekiguchi_2008}
  \item 地表面モデル
   \begin{itemize}
-   \item 陸面モデル: バケツモデル \citep[バルク交換係数は][]{beljaars_1991,wilson_2001}
+   \item 陸面モデル: 熱拡散・バケツモデル\\
+         (バルク交換係数:\citep{beljaars_1991,wilson_2001}もしくは\citep{uno_1995})
    \item 海洋モデル:（スラブモデル）
    \item 都市モデル: 単層キャノピーモデル \citep{kusaka_2001}
   \end{itemize}
