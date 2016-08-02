@@ -362,7 +362,7 @@ contains
     HANDLING_NUM           = 0
     NEST_Filiation(:)      = 0
     ONLINE_WAIT_LIMIT      = 999999999
-    ONLINE_AGGRESSIVE_COMM = .false.
+    ONLINE_AGGRESSIVE_COMM = .true.
     interp_search_divnum   = 10
 
     !--- read namelist
