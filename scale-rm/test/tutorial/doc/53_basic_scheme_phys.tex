@@ -33,8 +33,8 @@
   \label{tab:nml_atm_mp}
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-     \verb|OFF|      & \textcolor{red}{使用しない,どういう状態を想定?} &  \\
-     \verb|DRY|      & \textcolor{red}{どういう状態を想定?, OFFとの違いは?} &  \\
+     \verb|OFF|      & \textcolor{雲微物理を使用しないが、$TRACER_TYPE$で指定した雲微物理に対応した予報変数を含める} &  \\
+     \verb|DRY|      & \textcolor{雲物理を使用しない（予報変数に雲微物理に関連した変数を一切含めない）} &  \\
      \verb|KESSLER|  & 水雲のみの1-momentバルク法 & \citet{kessler_1969} \\
      \verb|TOMITA08| & 氷雲を含む1-momentバルク法 & \citet{tomita_2008} \\
      \verb|SN14|     & 氷雲を含む2-momentバルク法 & \citet{sn_2014} \\
@@ -70,7 +70,7 @@ init.conf、run.confのTRACER\_TYPEとATMOS\_PHY\_MP\_TYPEを
 雲微物理の計算に必要なファイルが自動生成される。
 micpara.datがすでに存在する場合はあるものを利用するが、
 nbinが変わると新たに作成しなければならない。
-micpara.datにnbinの情報が記載されているが、
+micpara.datの１行目にnbinの情報が記載されているが、
 もしrun.confに記載されるnbinと
 micpara.datに記載されているnbinが異なれば、\\
 
