@@ -33,8 +33,8 @@
   \label{tab:nml_atm_mp}
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-     \verb|OFF|      & \textcolor{雲微物理を使用しないが、$TRACER_TYPE$で指定した雲微物理に対応した予報変数を含める} &  \\
-     \verb|DRY|      & \textcolor{雲物理を使用しない（予報変数に雲微物理に関連した変数を一切含めない）} &  \\
+     \verb|OFF|      & 雲微物理スキームを使用しないが、\verb|TRACER_TYPE|で指定した雲微物理に対応した予報変数を含める &  \\
+     \verb|DRY|      & 雲微物理スキームを使用しない（予報変数に雲微物理に関連した変数を一切含めない）&  \\
      \verb|KESSLER|  & 水雲のみの1-momentバルク法 & \citet{kessler_1969} \\
      \verb|TOMITA08| & 氷雲を含む1-momentバルク法 & \citet{tomita_2008} \\
      \verb|SN14|     & 氷雲を含む2-momentバルク法 & \citet{sn_2014} \\
@@ -354,7 +354,7 @@ micpara.datに記載されているnbinが異なれば、\\
 \end{verbatim}
 に用意されている。
 ファイルには、各土地利用区分とそれに対応する粗度長などのパラメタが与えられている。
-陸面スラブモデルを使用する場合は、このパラメタテーブルが必要である。
+
 
 
 フラックス計算に使用するバルク交換係数の計算スキームは 
