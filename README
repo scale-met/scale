@@ -19,24 +19,9 @@ Build
 - set SCALE_SYS environmental variable (see the sysdef directory)
  % SCALE_SYS=Linux64-gnu-ompi (example)
 
-- make dc_utils library
- % cd dc_utils
+- make in the directory of test cases of scale-rm
+ % cd scale-rm/test/tutorial/bin/ (example)
  % make
-
-- make gtool library
- % cd gtool
- % make
-
-- make scalelib library
- % cd scalelib/src
- % make dependency
- % make
-
-- make and run the test cases of scale-rm
- % cd scale-rm/test/case/hydrostatic/500m (example)
- % make
- % make run
-
 
 
 Available Option List
