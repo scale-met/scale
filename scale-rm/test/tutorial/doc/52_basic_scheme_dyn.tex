@@ -32,7 +32,7 @@
  \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,| & ; 時間スキームより選択\\
  \verb|ATMOS_DYN_FVM_FLUX_TYPE              = CD4,|       & ; 空間スキームより選択\\
  \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
- \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|   & ; 非負保証スキームより選択\\
+ \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|   & ; FCTスキームを利用するかどうか\\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2, |    & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |     & \\
  \verb|ATMOS_DYN_enable_coriolis            = .true.,|    & \\
@@ -59,10 +59,7 @@
     & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6-th order central difference schemes} & \multicolumn{1}{l}{3}\\
     & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3-rd order upwind difference schemes} & \multicolumn{1}{l}{2}\\
     & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5-th order upwind difference schemes} & \multicolumn{1}{l}{3}\\
-    \hline
-    \multicolumn{4}{l}{非負保証スキーム}\\ \hline
-    & \multicolumn{1}{l}{\verb|xx|} & \multicolumn{1}{l}{フラックス修正法} &  \\
-    & \multicolumn{1}{l}{\verb|xx|} & \multicolumn{1}{X}{Koren (1993) filter (3次風上差分スキーム使用時のみ)} & \\
+    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3-rd order upwind difference schemes with Koren (1993) filter} & \\
 \hline
   \end{tabularx}
 \end{center}
@@ -80,4 +77,3 @@ Haloの数は、n次の空間スキームに対して$\lceil n/2 \rceil$であ�
  \verb|/ | & \\
 \end{tabularx}
 }}\\
-

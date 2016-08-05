@@ -1,11 +1,13 @@
 \section{積分時間と積分時間間隔の設定} \label{sec:timeintiv}
 %------------------------------------------------------
-例えば理想実験チュートリアルでは、積分時間は1時間とし、時間積分間隔として力学過程は1.0秒、雲物理過程は10.0秒で実行したが、
-積分時間を伸ばしたい場合や、計算にかかる時間を短くするために積分時間間隔を長くしたり、計算不安定を防ぐために
-積分時間間隔を短くすることがあるだろう。
+理想実験チュートリアルでは、積分時間は1時間とし、タイムステップ(時間積分間隔)として力学過程は1.0秒、雲物理過程は10.0秒とした。
+積分時間やタイムステップは、実験の目的や設定によって適切に設定する必要がある。
+例えば、積分時間を伸ばしたい場合や、逆に短くしたりすることがあるだろう。
+また、空間解像度を変えた場合はそれに応じたタイムステップを設定する必要があるし、同じ解像度でも計算不安定を防ぐためにタイムステップを短くすることもあるだろう。
 
-積分時間と積分時間間隔の設定は、configファイル\verb|run_***.conf|の\verb|PARAM_PRC|の項目を編集することで設定できる。
-この項目はモデル本体の実行だけで有効である。理想実験チュートリアルで使用した\verb|run_R20kmDX500m.conf|の例を示す。\\
+積分時間とタイムステップの設定は、configファイル\verb|run_***.conf|の\verb|PARAM_PRC|の項目を編集することで設定できる。
+この項目はモデルの実行時のみで有効であり、初期化作成時には無効である。
+理想実験チュートリアルで使用した\verb|run_R20kmDX500m.conf|の例を示す。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -13,11 +15,11 @@
 \verb|&PARAM_TIME|\\
 \verb| TIME_STARTDATE             = 0000, 1, 1, 0, 0, 0,|(計算開始の日付:放射過程を用いる実験等で必要)\\
 \verb| TIME_STARTMS               = 0.D0,| (計算開始時刻[mili sec])\\
-\verb| TIME_DURATION              = 3600.0D0,| (積分時間[単位はTIME\_DURATION\_UNITで決定])\\
+\verb| TIME_DURATION              = 3600.0D0,| (積分時間[単位はTIME\_DURATION\_UNITで設定])\\
 \verb| TIME_DURATION_UNIT         = "SEC",| (積分時間TIME\_DURATIONの単位)\\
-\verb| TIME_DT                    = 5.0D0,| (移流のタイムステップ)\\
+\verb| TIME_DT                    = 5.0D0,| (トレーサー移流のタイムステップ)\\
 \verb| TIME_DT_UNIT               = "SEC",| (TIME\_DTの単位)\\
-\verb| TIME_DT_ATMOS_DYN          = 1.0D0,| (力学過程のタイムステップ)\\
+\verb| TIME_DT_ATMOS_DYN          = 1.0D0,| (力学過程計算のタイムステップ)\\
 \verb| TIME_DT_ATMOS_DYN_UNIT     = "SEC",| (TIME\_DT\_ATMOS\_DYNの単位)\\
 \verb| TIME_DT_ATMOS_PHY_MP       = 10.0D0,| (雲物理過程のタイムステップ)\\
 \verb| TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",| (TIME\_DT\_ATMOS\_PHY\_MPの単位)\\
@@ -25,14 +27,14 @@
 \end{tabularx}
 }}}\\
 
-上記の各部分を変更することで積分時間や積分時間間隔を変更することができる。
+上記の各部分を変更することで積分時間やタイムステップを変更することができる。
+\verb|TIME_DT| は、トレーサー移流のためのタイムステップであり、格子間隔と移流速度からクーラン条件(CFL条件)を満たすように決定する。つまり、格子間隔を移流速度で割った値が取りうる最少値よりも小さな値を設定する。
+\verb|TIME_DT_ATMOS_DYN| は、力学変数の時間積分のためのタイムステップであり、音速で制約される。計算安定性のためには、\verb|ATMOS_DYN_TINTEG_SHORT_TYPE| が \verb|RK4| の場合には最少格子間隔(HE-VI利用時には水平の最少格子間隔)を 420 m/s で割った値が、\verb|RK3| の場合には 840 m/s で割った値が目安となる。
 
 
 %またrun.confのPARAM\_TIMEに
 %\begin{verbatim}
-% TIME_DT_ATMOS_PHY_TB       = 0.10D0,  (乱流スキームの時間ステップ)
+% TIME_DT_ATMOS_PHY_TB       = 0.10D0,  (乱流スキームのタイムステップ)
 % TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",　（TIME_DT_ATMOS_PHY_TBの単位）
 %\end{verbatim}
 %を加える。
-
-
