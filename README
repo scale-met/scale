@@ -19,9 +19,18 @@ Build
 - set SCALE_SYS environmental variable (see the sysdef directory)
  % SCALE_SYS=Linux64-gnu-ompi (example)
 
-- make in the directory of test cases of scale-rm
- % cd scale-rm/test/tutorial/bin/ (example)
+- build the execution binary files in the directory of the test cases of scale-rm
+ e.g.,
+ % cd scale-rm/test/tutorial/bin/
  % make
+
+- generate the initial files and run the integration
+ e.g.,
+ % cd ../ideal
+ % ln -s ../bin/scale-rm_init ./
+ % mpirun -n 2 ./scale-rm_init init_R20kmDX500m.conf
+ % ln -s ../bin/scale-rm ./
+ % mpirun -n 2 ./scale-rm run_R20kmDX500m.conf
 
 
 Available Option List
