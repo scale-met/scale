@@ -2266,21 +2266,21 @@ contains
     implicit none
 
     ! Nondimenstional numbers for a cavity flow problem
-    real(RP) :: REYNOLDS_NUM = 4.D02
+    real(RP) :: REYNOLDS_NUM = 1.D03
     real(RP) :: MACH_NUM     = 3.D-2
-    real(RP) :: TEMP0        = 300.D0
-
+    real(RP) :: Ulid         = 1.D01
+    real(RP) :: PRES0        = 1.D05
+    
     NAMELIST / PARAM_MKINIT_CAVITYFLOW / &
+         Ulid        , &
+         PRES0       , &
          REYNOLDS_NUM, &
-         MACH_NUM,     &
-         TEMP0
+         MACH_NUM
 
     real(RP) :: DENS0
     real(RP) :: TEMP
-    real(RP) :: Gam, Cs2
-
-    real(RP), parameter :: PRES0 = 1000.E+2_RP
-    real(RP), parameter :: Ulid  = 10.0_RP
+    real(RP) :: Gam
+    real(RP) :: Cs2
 
     integer :: k, i, j
     integer :: ierr

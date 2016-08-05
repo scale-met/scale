@@ -37,6 +37,13 @@ module mod_user
   use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_setup, &
        ATMOS_DYN_FVM_fluxX_XYZ
+
+  use scale_time, only: &
+       DTSEC => TIME_DTSEC, &
+       NOWTSEC => TIME_NOWSEC
+  
+  use mod_atmos_vars, only: &
+       DENS, RHOT, QTRC
   
   !-----------------------------------------------------------------------------
   implicit none
@@ -64,6 +71,15 @@ module mod_user
   !++ Private parameters & variables
   !
   logical,  private, save :: USER_do = .false. !< do user step?
+
+  real(RP), parameter :: &
+       WaveNumCOS = 2d0,           &         
+       RxCOSBELL  = 3.0e3_RP,      &
+       RxRECT     = 1.5e3_RP,      &
+       XIni       = 10.0e3_RP,     &
+       Lx         = 20.0e3_RP
+
+
   character(len=H_SHORT), private, save :: InitShape 
   real(RP), private, parameter :: PI = acos(-1.0_RP)
   
@@ -123,8 +139,26 @@ contains
   subroutine USER_resume
 
     implicit none
+
+    real(RP) :: x_
+    integer :: k, i, j
+    
     !---------------------------------------------------------------------------
 
+    if ( NOWTSEC == 0.0_RP ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          x_ = CX(i)
+          select case(InitShape)
+          case('COS')
+             QTRC(k,i,j,I_NC) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )
+          end select
+       enddo
+       enddo
+       enddo
+    end if
+    
     ! calculate diagnostic value and input to history buffer    
     call USER_step
 
@@ -136,30 +170,12 @@ contains
   subroutine USER_step
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       GRAV  => CONST_GRAV    
-    
-    use scale_time, only: &
-         DTSEC => TIME_DTSEC, &
-         NOWTSEC => TIME_NOWSEC
-    
-    use mod_atmos_vars, only: &
-       DENS, &
-       RHOT, QTRC
-    
     use scale_history, only: &
        HIST_in
 
     implicit none
 
     real(RP) :: PT_diff(KA,IA,JA), ExactSol(KA,IA,JA)
-    real(RP), parameter :: &
-         WaveNumCOS = 2d0,     &         
-         RxCOSBELL = 3.0e3_RP, &
-         RxRECT    = 1.5e3_RP, &
-         XIni = 10.0e3_RP,     &
-         Lx   = 20.0e3_RP,     &
-         PI = acos(-1.0_RP)
     
     real(RP) :: r, xshift, x_, dist2
     real(RP) :: l2_error

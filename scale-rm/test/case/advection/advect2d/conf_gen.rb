@@ -209,7 +209,7 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = ${fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
 /
 
 &PARAM_USER
