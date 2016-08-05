@@ -65,8 +65,11 @@
 \end{center}
 \end{table}
 
+トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。つまり \verb|ATMOS_DYN_FLUX_TRACER_TYPE| として \verb|UD3KOREN1993| 以外を選択した場合は、\verb|ATMOS_DYN_FLAG_FCT_TRACER| を \verb|.true.| としてFCTを利用するのがよい。
+
+
 空間スキームがCD4, UD3以外の場合(Haloの数が2以外の場合)、Haloの設定も必要である。
-Haloの数は、n次の空間スキームに対して$\lceil n/2 \rceil$である。\\
+Haloの数は、n次の空間スキームに対して$\lceil n/2 \rceil$である。ここで、$\lceil \rceil$ は天井感数である。\\
 
 \noindent {\gt\small
 \ovalbox{
