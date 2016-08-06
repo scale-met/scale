@@ -23,7 +23,7 @@
 \verb|/             | & \\
 \\
 \verb|&PARAM_TRACER | & \\
-\verb| TRACER_TYPE = ``TOMITA08'', | & \verb|ATMOS_PHY_MP_TYPE|と同じスキーム。\\
+\verb| TRACER_TYPE = "TOMITA08", | & \verb|ATMOS_PHY_MP_TYPE|と同じスキーム。\\
 \verb|/             | & \\
 \end{tabularx}
 }}\\
@@ -45,7 +45,7 @@
 \end{table}
 
 \verb|SUZUKI10|以外を選択した場合は、
-init.conf、run.confのTRACER\_TYPEとATMOS\_PHY\_MP\_TYPEを
+init.conf、run.confの\verb|TRACER_TYPE|と\verb|ATMOS_PHY_MP_TYPE|を
 変更するだけで実行可能である。
 
 
@@ -335,6 +335,7 @@ micpara.datに記載されているnbinが異なれば、\\
   \label{tab:nml_land}
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+      \verb|OFF|   & 土地利用にLANDがない場合のみ使用可  &  \\
       \verb|CONST| & 土壌温度・土壌水分・地表面温度 初期値固定 &  \\
       \verb|SLAB|  & 熱拡散、バケツモデルモデル   &  \\
     \hline
@@ -415,6 +416,7 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
   \label{tab:nml_urban}
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+      \verb|OFF|  & 土地利用にURBANがない場合のみ使用可 &   \\
       \verb|SLC|  & 単層キャノピーモデル   & \citet{kusaka_2001} \\
     \hline
   \end{tabularx}

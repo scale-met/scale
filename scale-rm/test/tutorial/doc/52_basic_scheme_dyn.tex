@@ -11,18 +11,31 @@
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_DYN_TYPE    = "HEVI", | & ; \verb|HEVI|: 水平陽解法-鉛直陰解法\\
-                                     & ; \verb|HEVE|: 陽解法\\
+\verb| ATMOS_DYN_TYPE    = "HEVI", | & ; 表\ref{tab:nml_dyn}より選択。\\
 \verb|/             | & \\
 \end{tabularx}
 }}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{数値解法の選択肢}
+  \label{tab:nml_dyn}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 備考\\ \hline
+      \verb|HEVE|  & 水平陽解法-鉛直陽解法 & \\
+      \verb|HEVI|  & 水平陽解法-鉛直陰解法 & 推奨(特に実大気実験)\\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
 
 
 \subsection{時間・空間差分スキーム}
 %------------------------------------------------------
 設定は、confファイルの\verb|PARAM_ATMOS_DYN|で設定する。
 また、空間スキームによってはHaloの設定も必要である。
-スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。\\
+下記の設定は推奨設定である。
+その他、スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -48,10 +61,10 @@
   \label{tab:nml_atm_dyn}
   \begin{tabularx}{150mm}{llXX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
-    \multicolumn{3}{l}{時間スキーム} & 推奨の\verb|TIME_DT_ATMOS_DYN|と\verb|TIME_DT| \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{1}{l}{Heun's 3rd order Runge-Kutta scheme} & \multicolumn{1}{l}{XX sec, XX sec}\\
-    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{1}{X}{Wicker and Skamarock (2002) 3段ルンゲクッタスキーム} & \multicolumn{1}{l}{XX sec, XX sec}\\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{1}{l}{4th order Runge-Kutta scheme} & \multicolumn{1}{l}{XX sec, XX sec}\\
+    \multicolumn{3}{l}{時間スキーム} & 推奨のタイムステップ \\ \hline
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{1}{l}{Heun's 3rd order Runge-Kutta scheme} & \multicolumn{1}{l}{第\ref{sec:timeintiv}節参照}\\
+    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{1}{X}{Wicker and Skamarock (2002) 3段ルンゲクッタスキーム} & \\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{1}{l}{4th order Runge-Kutta scheme} & \\
     \hline
     \multicolumn{3}{l}{空間スキーム} & 最小の設定格子数(Haloの数)\\ \hline
     & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2-nd order central difference schemes} & \multicolumn{1}{l}{1}\\
@@ -65,11 +78,13 @@
 \end{center}
 \end{table}
 
-トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。つまり \verb|ATMOS_DYN_FLUX_TRACER_TYPE| として \verb|UD3KOREN1993| 以外を選択した場合は、\verb|ATMOS_DYN_FLAG_FCT_TRACER| を \verb|.true.| としてFCTを利用するのがよい。
+トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。\\
+つまり \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE| として \verb|UD3KOREN1993| 以外を選択した場合は、
+\verb|ATMOS_DYN_FLAG_FCT_TRACER| を \verb|.true.| としてFCTを利用するのがよい。
 
 
 空間スキームがCD4, UD3以外の場合(Haloの数が2以外の場合)、Haloの設定も必要である。
-Haloの数は、n次の空間スキームに対して$\lceil n/2 \rceil$である。ここで、$\lceil \rceil$ は天井感数である。\\
+Haloの数は、n次の空間スキームに対して$\lceil n/2 \rceil$である。ここで、$\lceil \rceil$ は天井関数である。\\
 
 \noindent {\gt\small
 \ovalbox{
