@@ -49,12 +49,14 @@
 \end{table}
 
 
-次に、どの変数を出力するか、また各出力変数毎の出力形式の設定を、run.**.confの\verb|&HISTITEM|で行う。
+次に、どの変数を出力するか、また各出力変数毎の出力形式の設定を、
+run.**.confの\verb|HISTITEM|に追加する。
 \verb|ITEM|に設定された変数が出力される。
 \textcolor{blue}{青色文字}の部分はオプションで、
-オプション変数が特に指定されていない場合は \verb|&PARAM_HISTORY| 内の設定が適用される。
-つまり、出力は、基本的には \verb|&PARAM_HISTORY| に従って行われるが、
-\verb|&HISTITEM|のオプション設定をすることにより、
+オプション変数が特に指定されていない場合は 
+\verb|PARAM_HISTORY| 内の設定が適用される。
+つまり、出力は、基本的には \verb|PARAM_HISTORY| に従って行われるが、
+\verb|HISTITEM|のオプション設定をすることにより、
 各変数ごとに出力形式を指定することが可能である。\\
 
 
@@ -80,12 +82,12 @@
 \begin{tabularx}{150mm}{|l|X|} \hline
  \rowcolor[gray]{0.9} 設定変数 & 説明 \\ \hline
  \verb|ITEM      | & 変数名。 付録\ref{app:vari_hist}を参照\\ \hline
- \verb|BASENAME  | & \verb|HISTORY_DEFAULT_BASENAME|に同じ。\\ \hline
- \verb|TINTERVAL | & \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\ \hline
+ \verb|BASENAME  | & \verb|HISTORY_DEFAULT_BASENAME|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
+ \verb|TINTERVAL | & \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
  \verb|TUNIT     | & \verb|TINTERVAL|で指定した出力間隔の単位。\\ \hline
- \verb|TAVERAGE  | & \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\ \hline
- \verb|DATATYPE  | & \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\ \hline
- \verb|ZINTERP   | & \verb|HISTORY_DEFAULT_ZINTERP|に同じ。\\ \hline
+ \verb|TAVERAGE  | & \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
+ \verb|DATATYPE  | & \verb|HISTORY_DEFAULT_DATATYPE|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
+ \verb|ZINTERP   | & \verb|HISTORY_DEFAULT_ZINTERP|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
 \end{tabularx}
 \label{tab:histitem}
 \end{center}
