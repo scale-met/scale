@@ -21,15 +21,13 @@ SCALEではMPIプロセス数も考慮する必要がある。
 2以上の時は、計算領域を水平方向にn個に分割して行う。
 namelistで設定する格子数(\verb|IMAX|, \verb|JMAX|, \verb|KMAX|)は、
 1つのMPIプロセスが担当する格子点数を与える仕様となっている。
-以上の関係から、計算領域の全体の総格子点数は下記のように計算される。
-
+以上の関係から、計算領域全体の総格子点数は、
 \begin{eqnarray}
  総格子数 = (\verb|IMAX| \times \verb|PRC_NUM_X|)
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
    \times (\verb|KMAX| )  \nonumber
 \end{eqnarray}
-
-次節以降では、MPIプロセス数、格子数、格子間隔、それぞれの設定方法について詳しく説明する。
+である。次節以降では、MPIプロセス数、格子数、格子間隔、それぞれの設定方法について詳しく説明する。
 
 
 \subsection{MPIプロセス数}
@@ -47,8 +45,8 @@ MPIプロセス数を変更するには、
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_PRC| & \\
-\verb| PRC_NUM_X       = 2,| & X方向（東西方向）のMPI並列分割数 \\
-\verb| PRC_NUM_Y       = 1,| & Y方向（南北方向）のMPI並列分割数 \\
+\verb| PRC_NUM_X       = 2,| & ; X方向（東西方向）のMPI並列分割数 \\
+\verb| PRC_NUM_Y       = 1,| & ; Y方向（南北方向）のMPI並列分割数 \\
 \verb|/|\\
 \end{tabularx}
 }}}\\
