@@ -10,7 +10,40 @@ runディレクトリへ移動する。
 %
 runディレクトリの中には、\verb|run.conf|という名前の
 コンフィグファイルが準備されており、
-ドメインの位置や格子点数など、チュートリアル用の設定（表\ref{tab:grids}）に合わせてある。
+ドメインの位置や格子点数など、
+チュートリアル用の設定（表\ref{tab:grids}）に合わせて設定されている。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&PARAM_PRC| \\
+\verb| PRC_NUM_X      = 2,| \\
+\verb| PRC_NUM_Y      = 2,| \\
+\verb| PRC_PERIODIC_X = .false.,| \\
+\verb| PRC_PERIODIC_Y = .false.,| \\
+\verb|/| \\
+ \\
+\verb|&PARAM_INDEX| \\
+\verb| KMAX = 36,| \\
+\verb| IMAX = 60,| \\
+\verb| JMAX = 60,| \\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+
+X方向、Y方向ともに2分割されており、
+総計として4つのMPIプロセスを使用する設定となっている。
+1つのMPIプロセスあたりの格子点数については、
+\verb|IMAX = 60|、\verb|JMAX = 60|と指定されているため、
+X方向、Y方向の総格子点数は、ともに$2 \times 60$ で120である。
+計算ドメインの大きさは、
+\verb|PARAM_GRID|の項目の\verb|DX|、\verb|DY|はともに15000 m（15 km）
+と指定されているため、
+120 個$\times$ 15 km より、1800 km $\times$ 1800 km の正方形の計算領域
+が設定されていることがわかる。
+
+
 モデル本体の実行には
 事前に作成した地形・土地利用データや初期値・境界値データを利用する。
 これらのファイルの指定は、
