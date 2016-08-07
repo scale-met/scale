@@ -303,6 +303,10 @@ contains
     use scale_interpolation_nest, only: &
        INTRPNEST_setup,            &
        INTRPNEST_interp_fact_llz
+    use scale_atmos_hydrometer, only: &
+       I_QV
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     integer, intent(in), optional :: inter_parent
@@ -464,9 +468,11 @@ contains
 !         endif
 
          if( ONLINE_BOUNDARY_USE_QHYD ) then
-            NEST_BND_QA = QA
+            NEST_BND_QA = QA_MP
+         else if ( I_QV > 0 ) then
+            NEST_BND_QA = 1
          else
-            NEST_BND_QA = I_QV
+            NEST_BND_QA = 0
          endif
 
 if( IO_L ) write(IO_FID_LOG,*) "flag_parent", flag_parent, "flag_child", flag_child

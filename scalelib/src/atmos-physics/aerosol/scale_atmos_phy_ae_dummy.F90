@@ -28,6 +28,7 @@ module scale_atmos_phy_ae_dummy
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_AE_dummy_config
   public :: ATMOS_PHY_AE_dummy_setup
   public :: ATMOS_PHY_AE_dummy
 
@@ -37,7 +38,13 @@ module scale_atmos_phy_ae_dummy
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: AE_DENS(:) ! aerosol density [kg/m3]=[g/L]
+  integer, public, parameter :: QA_AE  = 0
+
+  character(len=H_SHORT), public, target :: ATMOS_PHY_AE_dummy_NAME(QA_AE)
+  character(len=H_MID)  , public, target :: ATMOS_PHY_AE_dummy_DESC(QA_AE)
+  character(len=H_SHORT), public, target :: ATMOS_PHY_AE_dummy_UNIT(QA_AE)
+
+  real(RP), public, target :: ATMOS_PHY_AE_dummy_DENS(QA_AE) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -50,13 +57,16 @@ module scale_atmos_phy_ae_dummy
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup
-  subroutine ATMOS_PHY_AE_dummy_setup( AE_TYPE )
+  !> Config
+  subroutine ATMOS_PHY_AE_dummy_config( &
+       AE_TYPE, &
+       QA_AE, QS_AE )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-
-    character(len=*), intent(in) :: AE_TYPE
+    character(len=*), intent(in)  :: AE_TYPE
+    integer,          intent(out) :: QA_AE
+    integer,          intent(out) :: QS_AE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -69,8 +79,16 @@ contains
        call PRC_MPIstop
     endif
 
-    allocate( AE_DENS(AE_QA) )
-    AE_DENS(:) = 0.0_RP
+    QA_AE = 0
+    QS_AE = -1
+
+    return
+  end subroutine ATMOS_PHY_AE_dummy_config
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_PHY_AE_dummy_setup
+    implicit none
 
     return
   end subroutine ATMOS_PHY_AE_dummy_setup
@@ -78,26 +96,28 @@ contains
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
   subroutine ATMOS_PHY_AE_dummy( &
-          DENS, &
-          MOMZ, &
-          MOMX, &
-          MOMY, &
-          RHOT, &
-          EMIT, &
-          NREG, &
-          QTRC, &
-          CN,   &
-          CCN,  &
-          RHOQ_t_AE )
+       QQA,  &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       EMIT, &
+       NREG, &
+       QTRC, &
+       CN,   &
+       CCN,  &
+       RHOQ_t_AE )
     use scale_grid_index
     use scale_tracer
     implicit none
+    integer,  intent(in)    :: QQA
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
+    real(RP), intent(inout) :: EMIT(KA,IA,JA,QQA)
     real(RP), intent(in)    :: NREG(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(out)   :: CN(KA,IA,JA)
@@ -122,14 +142,18 @@ contains
     use scale_tracer
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_atmos_aerosol, only: &
+       N_AE
     implicit none
-
-    real(RP), intent(out) :: Re  (KA,IA,JA,AE_QA) ! effective radius
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: RH  (KA,IA,JA)       ! relative humidity         [0-1]
+    real(RP), intent(out) :: Re  (KA,IA,JA,N_AE) ! effective radius
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)   ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: RH  (KA,IA,JA)      ! relative humidity         [0-1]
+    integer :: iq
     !---------------------------------------------------------------------------
 
-    Re(:,:,:,:) = UNDEF
+    do iq = 1, N_AE
+       Re(:,:,:,iq) = 0.0_RP
+    end do
 
 !    Re(:,:,:,I_ae_seasalt) = 2.E-4_RP
 !    Re(:,:,:,I_ae_dust   ) = 4.E-6_RP

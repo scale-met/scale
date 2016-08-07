@@ -177,7 +177,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
        PHI, GSQRT,                                           &
        J13G, J23G, J33G, MAPF,                               &
-       AQ_CV,                                                &
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        BND_W, BND_E, BND_S, BND_N,                           &
        ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
@@ -194,8 +194,8 @@ contains
        EPS    => CONST_EPS, &
        P0     => CONST_PRE00, &
        Rdry   => CONST_Rdry, &
-       Rvap   => CONST_Rvap, &
-       CVdry  => CONST_CVdry
+       CVdry  => CONST_CVdry, &
+       CPdry  => CONST_CPdry
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -286,7 +286,10 @@ contains
     real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
     real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factor
 
-    real(RP), intent(in)    :: AQ_CV(QQA)
+    real(RP), intent(in)    :: AQ_R   (QA)
+    real(RP), intent(in)    :: AQ_CV  (QA)
+    real(RP), intent(in)    :: AQ_CP  (QA)
+    real(RP), intent(in)    :: AQ_MASS(QA)
 
     real(RP), intent(in)    :: REF_dens(KA,IA,JA)
     real(RP), intent(in)    :: REF_pott(KA,IA,JA)
@@ -436,15 +439,19 @@ contains
           PRES = P0 * ( Rdry * RHOT(k,i,j) / P0 )**CPovCV
           RT2P(k,i,j) = CPovCV * PRES / RHOT(k,i,j)
 #else
+          Rtot  = 0.0_RP
           CVtot = 0.0_RP
+          CPtot = 0.0_RP
           QDRY  = 1.0_RP
-          do iq = QQS, QQE
+          do iq = 1, QA
+             Rtot  = Rtot + AQ_R(iq) * QTRC(k,i,j,iq)
              CVtot = CVtot + AQ_CV(iq) * QTRC(k,i,j,iq)
-             QDRY  = QDRY  - QTRC(k,i,j,iq)
+             CPtot = CPtot + AQ_CP(iq) * QTRC(k,i,j,iq)
+             QDRY  = QDRY  - QTRC(k,i,j,iq) * AQ_MASS(iq)
           enddo
-          CVtot = CVdry * QDRY + CVtot
-          Rtot  = Rdry  * QDRY + Rvap * QTRC(k,i,j,I_QV)
-          CPtot = CVtot + Rtot
+          Rtot  = Rtot  + Rdry  * QDRY
+          CVtot = CVtot + CVdry * QDRY
+          CPtot = CPtot + CPdry * QDRY
           PRES = P0 * ( Rtot * RHOT(k,i,j) / P0 )**( CPtot / CVtot )
           RT2P(k,i,j) = CPtot / CVtot * PRES / RHOT(k,i,j)
 #endif

@@ -65,7 +65,6 @@ module mod_realinput
   private :: ParentSurfaceInput
   private :: ParentOceanBoundary
   private :: interp_OceanLand_data
-  private :: diagnose_number_concentration
 
   !-----------------------------------------------------------------------------
   !
@@ -168,6 +167,8 @@ contains
          MOMY, &
          RHOT, &
          QTRC
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
     logical, intent(in)  :: flg_intrp ! flag for interpolation of SBM(S10) from outer bulk-MP model
@@ -225,7 +226,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_ATMOS)
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        flg_bin = .true.
     else
        flg_bin = .false.
@@ -903,12 +904,20 @@ contains
          rotc => GTRANS_ROTC
     use scale_atmos_thermodyn, only: &
          THERMODYN_pott => ATMOS_THERMODYN_pott
+    use scale_atmos_hydrometer, only: &
+         HYDROMETER_diagnose_number_concentration => ATMOS_HYDROMETER_diagnose_number_concentration, &
+         I_QV, &
+         I_QC, &
+         QLS, &
+         QLE
     use scale_atmos_hydrostatic, only: &
          HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_interpolation_nest, only: &
          INTRPNEST_domain_compatibility, &
          INTRPNEST_interp_fact_llz, &
          INTRPNEST_interp_3d
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     use mod_realinput_scale, only: &
          ParentAtomOpenSCALE, &
          ParentAtomInputSCALE
@@ -958,8 +967,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Input]'
 
-    select case (TRACER_TYPE)
-    case ("DRY")
+    select case (ATMOS_PHY_MP_TYPE)
+    case ("DRY", "NONE")
        mptype_run = 'dry'
     case ("KESSLER")
        mptype_run = 'single'
@@ -970,7 +979,7 @@ contains
     case ("SUZUKI10")
        mptype_run = 'single-bin'
     case default
-       write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
+       write(*,*) 'xxx Unsupported ATMOS_PHY_MP_TYPE (', trim(ATMOS_PHY_MP_TYPE), '). Check!'
        call PRC_MPIstop
     end select
 
@@ -1046,10 +1055,13 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)+2
-                call THERMODYN_pott( pott_org(k,i,j),  & ! [OUT]
-                                     temp_org(k,i,j),  & ! [IN]
-                                     pres_org(k,i,j),  & ! [IN]
-                                     qtrc_org(k,i,j,:) ) ! [IN]
+                call THERMODYN_pott( pott_org(k,i,j),   & ! [OUT]
+                                     temp_org(k,i,j),   & ! [IN]
+                                     pres_org(k,i,j),   & ! [IN]
+                                     qtrc_org(k,i,j,:), & ! [IN]
+                                     TRACER_CV(:),      & ! [IN]
+                                     TRACER_R(:),       & ! [IN]
+                                     TRACER_MASS(:)     ) ! [IN]
              end do
              end do
              end do
@@ -1183,7 +1195,7 @@ contains
 
        if( trim(mptype_run)=='double' .and. mptype_parent <= 6 )then
           if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
-          call diagnose_number_concentration( qtrc_org(:,:,:,:) ) ! [inout]
+          call HYDROMETER_diagnose_number_concentration( qtrc_org(:,:,:,:) ) ! [inout]
        endif
 
        do j = 1, dims(3)
@@ -1242,12 +1254,10 @@ contains
                                     IA, JA, KS, KE,      &
                                     logwegt=.true.       )
 
-#ifdef DRY
           qc = 0.0_RP
-#else
-          qc = 0.0_RP
+#ifndef DRY
           if ( I_QC > 0 ) then
-             do iq = QWS, QWE
+             do iq = QLS, QLE
                qc(:,:,:) = qc(:,:,:) + QTRC(:,:,:,iq,nn)
              enddo
           end if
@@ -1448,8 +1458,8 @@ contains
        end do
        end do
        call FILEIO_write( buffer, basename, title,                                           &
-                          AQ_NAME(iq), 'Reference '//trim(AQ_NAME(iq)), AQ_UNIT(iq), 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt, nowdate                       )
+            TRACER_NAME(iq), 'Reference '//trim(TRACER_NAME(iq)), TRACER_UNIT(iq), 'ZXYT', &
+            atmos_boundary_out_dtype, update_dt, nowdate                       )
     end do
 
     deallocate( buffer )
@@ -1766,6 +1776,8 @@ contains
          LCZ  => GRID_LCZ
     use scale_atmos_thermodyn, only: &
          THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_hydrometer, only: &
+         I_QV
     use scale_landuse, only: &
          lsmask_nest => LANDUSE_frac_land
     use mod_realinput_scale, only: &
@@ -1935,11 +1947,14 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-          call THERMODYN_temp_pres( temp,          & ! [OUT]
-                                    pres,          & ! [OUT] not used
-                                    dens(KS,i,j),  & ! [IN]
-                                    rhot(KS,i,j),  & ! [IN]
-                                    qtrc(KS,i,j,:) ) ! [IN]
+          call THERMODYN_temp_pres( temp,           & ! [OUT]
+                                    pres,           & ! [OUT] not used
+                                    dens(KS,i,j),   & ! [IN]
+                                    rhot(KS,i,j),   & ! [IN]
+                                    qtrc(KS,i,j,:), & ! [IN]
+                                    TRACER_CV(:),   & ! [IN]
+                                    TRACER_R(:),    & ! [IN]
+                                    TRACER_MASS(:)  ) ! [IN]
 
           tc_urb(i,j) = temp
 #ifdef DRY
@@ -2815,40 +2830,5 @@ contains
     enddo
 
   end subroutine replace_misval_map
-
-  !-----------------------------------------------------------------------------
-  subroutine diagnose_number_concentration( &
-      qvars      & ! (inout)
-      )
-    use scale_const, only: &
-         PI => CONST_PI
-    implicit none
-    real(RP), intent(inout) :: qvars(:,:,:,:)
-
-    real(RP), parameter :: Dc   =  20.D-6  ! typical particle diameter for cloud  [m]
-    real(RP), parameter :: Dr   = 200.D-6  ! typical particle diameter for rain   [m]
-    real(RP), parameter :: Di   =  80.D-6  ! typical particle diameter for ice    [m]
-    real(RP), parameter :: Ds   =  80.D-6  ! typical particle diameter for snow   [m]
-    real(RP), parameter :: Dg   = 200.D-6  ! typical particle diameter for grapel [m]
-    real(RP), parameter :: RHOw = 1000.D0  ! typical density for warm particles   [kg/m3]
-    real(RP), parameter :: RHOf =  100.D0  ! typical density for frozen particles [kg/m3]
-    real(RP), parameter :: RHOg =  400.D0  ! typical density for grapel particles [kg/m3]
-    real(RP), parameter :: b    =  3.D0    ! assume spherical form
-
-    real(RP) :: piov6
-    !---------------------------------------------------------------------------
-
-#ifndef DRY
-    piov6 = pi / 6.0_RP
-
-    qvars(:,:,:,I_NC) = qvars(:,:,:,I_QC) / ( (piov6*RHOw) * Dc**b )
-    qvars(:,:,:,I_NR) = qvars(:,:,:,I_QR) / ( (piov6*RHOw) * Dr**b )
-    qvars(:,:,:,I_NI) = qvars(:,:,:,I_QI) / ( (piov6*RHOf) * Di**b )
-    qvars(:,:,:,I_NS) = qvars(:,:,:,I_QS) / ( (piov6*RHOf) * Ds**b )
-    qvars(:,:,:,I_NG) = qvars(:,:,:,I_QG) / ( (piov6*RHOg) * Dg**b )
-#endif
-
-    return
-  end subroutine diagnose_number_concentration
 
 end module mod_realinput

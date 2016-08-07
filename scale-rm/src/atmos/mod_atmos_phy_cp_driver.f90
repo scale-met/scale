@@ -103,6 +103,9 @@ contains
        HIST_in
     use scale_atmos_phy_cp, only: &
        ATMOS_PHY_CP
+    use scale_atmos_phy_mp, only: &
+       QS_MP, &
+       QE_MP
     use mod_atmos_vars, only: &
        DENS,              &
        MOMZ,              &
@@ -199,9 +202,9 @@ contains
        call HIST_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , nohalo=.true. )
        call HIST_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', nohalo=.true. )
 
-       do iq = 1, QA
-          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_CP', &
-                        'tendency rho*'//trim(AQ_NAME(iq))//'in CP', 'kg/m3/s', nohalo=.true. )
+       do iq = QS_MP, QE_MP
+          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//'in CP', 'kg/m3/s', nohalo=.true. )
        enddo
 
     endif
@@ -219,8 +222,8 @@ contains
     enddo
     enddo
 
+    do iq = QS_MP,  QE_MP
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do iq = 1,  QA
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -237,8 +240,8 @@ contains
        call STAT_total( total, MOMY_t_CP(:,:,:), 'MOMY_t_CP' )
        call STAT_total( total, RHOT_t_CP(:,:,:), 'RHOT_t_CP' )
 
-       do iq = 1, QA
-          call STAT_total( total, RHOQ_t_CP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_CP' )
+       do iq = QS_MP, QE_MP
+          call STAT_total( total, RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP' )
        enddo
     endif
 

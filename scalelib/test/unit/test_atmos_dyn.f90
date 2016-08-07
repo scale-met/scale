@@ -82,7 +82,10 @@ module test_atmos_dyn
   real(RP) :: J33G
   real(RP), allocatable :: MAPF(:,:,:,:)
 
+  real(RP), allocatable :: AQ_R(:)
   real(RP), allocatable :: AQ_CV(:)
+  real(RP), allocatable :: AQ_CP(:)
+  real(RP), allocatable :: AQ_MASS(:)
 
   integer  :: nd_order
   real(RP) :: nd_coef
@@ -190,7 +193,10 @@ contains
 
   allocate( MAPF(IA,JA,2,4) )
 
+  allocate( AQ_R(QA) )
   allocate( AQ_CV(QA) )
+  allocate( AQ_CP(QA) )
+  allocate( AQ_MASS(QA) )
 
   allocate( ZERO(KA,IA,JA) )
 
@@ -240,7 +246,10 @@ contains
 
   MOMZ(KE,:,:) = 0.0_RP
 
+  AQ_R(:) = 1.0_RP
   AQ_CV(:) = 1.0_RP
+  AQ_CP(:) = 1.0_RP
+  AQ_MASS(:) = 1.0_RP
 
   do j = 1, JA
   do i = 1, IA
@@ -325,7 +334,7 @@ subroutine test_undef
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-          AQ_CV,                                       & ! (in)
+          AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
           DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -379,7 +388,7 @@ subroutine test_const
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-       AQ_CV,                                       & ! (in)
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -479,7 +488,7 @@ subroutine test_conserve
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-         AQ_CV,                                       & ! (in)
+         AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
          DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -607,7 +616,7 @@ subroutine test_cwc
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-       AQ_CV,                                       & ! (in)
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -695,7 +704,7 @@ subroutine test_fctminmax
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-       AQ_CV,                                       & ! (in)
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        0.0_RP, 0.0_RP, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)

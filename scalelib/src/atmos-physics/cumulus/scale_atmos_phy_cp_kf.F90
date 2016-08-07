@@ -3629,5 +3629,5 @@ contains
     GdCP = - GRAV/CP ! inital set
     return
   end subroutine kf_lutab
-  !
+
 end module scale_atmos_phy_cp_kf

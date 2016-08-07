@@ -28,6 +28,7 @@ module mod_atmos_phy_ae_driver
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_AE_driver_config
   public :: ATMOS_PHY_AE_driver_setup
   public :: ATMOS_PHY_AE_driver_resume
   public :: ATMOS_PHY_AE_driver
@@ -47,6 +48,26 @@ module mod_atmos_phy_ae_driver
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_AE_driver_config
+    use scale_atmos_phy_ae, only: &
+       ATMOS_PHY_AE_config
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_AE_TYPE!, &
+!       ATMOS_sw_phy_ae
+
+    ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
+!    if ( ATMOS_sw_phy_ae ) then
+       call ATMOS_PHY_AE_config( ATMOS_PHY_AE_TYPE )
+
+!    else
+!       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
+!    endif
+
+    return
+  end subroutine ATMOS_PHY_AE_driver_config
+
+  !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_AE_driver_setup
     use scale_atmos_phy_ae, only: &
@@ -64,7 +85,7 @@ contains
 !    if ( ATMOS_sw_phy_ae ) then
 
        ! setup library component
-       call ATMOS_PHY_AE_setup( ATMOS_PHY_AE_TYPE )
+       call ATMOS_PHY_AE_setup
 
 !    else
 !       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -104,7 +125,10 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_ae, only: &
-       ATMOS_PHY_AE
+       ATMOS_PHY_AE, &
+       QA_AE, &
+       QS_AE, &
+       QE_AE
     use mod_atmos_vars, only: &
        DENS,              &
        MOMZ,              &
@@ -129,7 +153,7 @@ contains
 
     real(RP) :: total ! dummy
 
-    integer  :: k, i, j, iq
+    integer  :: k, i, j, iq, iqa
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -149,7 +173,8 @@ contains
        enddo
        enddo
 
-       call ATMOS_PHY_AE( DENS,     & ! [IN]
+       call ATMOS_PHY_AE( QA_AE,    & ! [IN]
+                          DENS,     & ! [IN]
                           MOMZ,     & ! [IN]
                           MOMX,     & ! [IN]
                           MOMY,     & ! [IN]
@@ -169,7 +194,7 @@ contains
     endif
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do iq = 1, QA
+    do iq = QS_AE, QE_AE
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -180,8 +205,8 @@ contains
     enddo
 
     if ( STATISTICS_checktotal ) then
-       do iq = 1, QA
-          call STAT_total( total, RHOQ_t_AE(:,:,:,iq), trim(AQ_NAME(iq))//'_t_AE' )
+       do iq = QS_AE, QE_AE
+          call STAT_total( total, RHOQ_t_AE(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_AE' )
        enddo
     endif
 

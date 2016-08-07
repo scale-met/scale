@@ -158,6 +158,13 @@ contains
        I_up, &
        I_direct, &
        I_diffuse
+    use scale_atmos_hydrometer, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG
     use mod_atmos_vars, only: &
        TEMP,              &
        PRES,              &
@@ -320,15 +327,40 @@ contains
           SDOWN3D    = 0.0_RP
           GSW        = 0.0_RP
 
+          if ( I_QV > 0 ) then
+             QV3D(:,:,:) = QTRC(:,:,:,I_QV)
+          else
+             QV3D = 0.0_RP
+          end if
+          if ( I_QC > 0 ) then
+             QC3D(:,:,:) = QTRC(:,:,:,I_QC)
+          else
+             QC3D = 0.0_RP
+          end if
+          if ( I_QR > 0 ) then
+             QR3D(:,:,:) = QTRC(:,:,:,I_QR)
+          else
+             QR3D = 0.0_RP
+          end if
+          if ( I_QI > 0 ) then
+             QI3D(:,:,:) = QTRC(:,:,:,I_QI)
+          else
+             QI3D = 0.0_RP
+          end if
+          if ( I_QS > 0 ) then
+             QS3D(:,:,:) = QTRC(:,:,:,I_QS)
+          else
+             QS3D = 0.0_RP
+          end if
+          if ( I_QG > 0 ) then
+             QG3D(:,:,:) = QTRC(:,:,:,I_QG)
+          else
+             QG3D = 0.0_RP
+          end if
+
           do j = 1, JA
           do i = 1, IA
           do k = 1, KA
-             QV3D (i,k,j) = QTRC(k,i,j,I_QV)
-             QC3D (i,k,j) = QTRC(k,i,j,I_QC)
-             QR3D (i,k,j) = QTRC(k,i,j,I_QR)
-             QI3D (i,k,j) = QTRC(k,i,j,I_QI)
-             QS3D (i,k,j) = QTRC(k,i,j,I_QS)
-             QG3D (i,k,j) = QTRC(k,i,j,I_QG)
              T3D  (i,k,j) = TEMP(k,i,j)                       ! temperature (K)
              RHO3D(i,k,j) = DENS(k,i,j)                       ! density (kg/m^3)
              P3D  (i,k,j) = PRES(k,i,j)                       ! pressure (Pa)

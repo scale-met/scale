@@ -135,6 +135,9 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME, &
+       QA_MP
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_CP_VARS / &
@@ -183,7 +186,7 @@ contains
     ATMOS_PHY_CP_kf_w0avg      (:,:,:) =    0.0_RP
 
     ! for tendency restart
-    VMAX_t = 2 + QA
+    VMAX_t = 2 + QA_MP
     allocate( VAR_t_NAME(VMAX_t) )
     allocate( VAR_t_DESC(VMAX_t) )
     allocate( VAR_t_UNIT(VMAX_t) )
@@ -196,9 +199,9 @@ contains
     VAR_t_DESC(I_cp_rhot_t) = 'tendency RHOT in CP'
     VAR_t_UNIT(I_cp_rhot_t) = 'K*kg/m3/s'
 
-    do iq = 1, QA
+    do iq = 1, QA_MP
        VAR_t_NAME(2+iq) = trim(AQ_NAME(iq))//'_t_CP'
-       VAR_t_DESC(2+iq) = 'tendency rho*'//trim(AQ_NAME(iq))//'in CP'
+       VAR_t_DESC(2+iq) = 'tendency rho*'//trim(AQ_NAME(iq))//' in CP'
        VAR_t_UNIT(2+iq) = 'kg/m3/s'
     enddo
 

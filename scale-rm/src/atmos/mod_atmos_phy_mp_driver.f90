@@ -28,6 +28,7 @@ module mod_atmos_phy_mp_driver
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_MP_driver_config
   public :: ATMOS_PHY_MP_driver_setup
   public :: ATMOS_PHY_MP_driver_resume
   public :: ATMOS_PHY_MP_driver
@@ -46,6 +47,22 @@ module mod_atmos_phy_mp_driver
   !
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_MP_driver_config
+    use scale_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_config
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_sw_phy_mp
+
+    if ( ATMOS_sw_phy_mp ) then
+       call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_driver_config
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_MP_driver_setup
@@ -66,7 +83,7 @@ contains
     if ( ATMOS_sw_phy_mp ) then
 
        ! setup library component
-       call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
+       call ATMOS_PHY_MP_setup
 
     else
 
@@ -110,7 +127,10 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP
+       ATMOS_PHY_MP, &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     use mod_atmos_vars, only: &
        DENS,              &
        MOMZ,              &
@@ -207,7 +227,7 @@ contains
        enddo
 
 !OCL XFILL
-       do iq = 1, QA
+       do iq = QS_MP, QE_MP
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -236,9 +256,9 @@ contains
        call HIST_in( MOMY_t_MP(:,:,:), 'MOMY_t_MP', 'tendency MOMY in MP', 'kg/m2/s2' , nohalo=.true. )
        call HIST_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP', 'K*kg/m3/s', nohalo=.true. )
 
-       do iq = 1, QA
-          call HIST_in( RHOQ_t_MP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_MP', &
-                        'tendency rho*'//trim(AQ_NAME(iq))//'in MP', 'kg/m3/s', nohalo=.true. )
+       do iq = QS_MP, QE_MP
+          call HIST_in( RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//'in MP', 'kg/m3/s', nohalo=.true. )
        enddo
 
     endif
@@ -256,8 +276,8 @@ contains
     enddo
     enddo
 
+    do iq = QS_MP, QE_MP
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do iq = 1,  QA
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -274,8 +294,8 @@ contains
        call STAT_total( total, MOMY_t_MP(:,:,:), 'MOMY_t_MP' )
        call STAT_total( total, RHOT_t_MP(:,:,:), 'RHOT_t_MP' )
 
-       do iq = 1, QA
-          call STAT_total( total, RHOQ_t_MP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_MP' )
+       do iq = QS_MP, QE_MP
+          call STAT_total( total, RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP' )
        enddo
     endif
 

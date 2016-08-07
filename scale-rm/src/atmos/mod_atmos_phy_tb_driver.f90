@@ -161,6 +161,8 @@ contains
        calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
        calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
        calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi
+    use scale_atmos_hydrometer, only: &
+       I_QV
     use mod_atmos_vars, only: &
        DENS => DENS_av,   &
        MOMZ => MOMZ_av,   &
@@ -329,8 +331,8 @@ contains
        call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K.kg/m3/s', nohalo=.true. )
 
        do iq = 1, QA
-          call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(AQ_NAME(iq))//'_t_TB',                      &
-                        'RHO*'//trim(AQ_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
+          call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB',                      &
+                        'RHO*'//trim(TRACER_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
        enddo
 
        call HIST_in( QFLX_MOMZ(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ', 'SGS Z FLUX of MOMZ', 'kg/m/s2', &
@@ -361,61 +363,18 @@ contains
        call HIST_in( QFLX_RHOT(:,:,:,YDIR), 'SGS_YFLX_RHOT', 'SGS Y FLUX of RHOT', 'K*kg/m2/s', &
                      ydim='half', nohalo=.true.)
 
-       if ( I_QV > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QV), 'SGS_ZFLX_QV', 'SGS Z FLUX of QV', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QV), 'SGS_XFLX_QV', 'SGS X FLUX of QV', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QV), 'SGS_YFLX_QV', 'SGS Y FLUX of QV', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
 
-#ifndef DRY
-       if ( I_QC > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QC), 'SGS_ZFLX_QC', 'SGS Z FLUX of QC', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QC), 'SGS_XFLX_QC', 'SGS X FLUX of QC', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QC), 'SGS_YFLX_QC', 'SGS Y FLUX of QC', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-
-       if ( I_QR > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QR), 'SGS_ZFLX_QR', 'SGS Z FLUX of QR', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QR), 'SGS_XFLX_QR', 'SGS X FLUX of QR', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QR), 'SGS_YFLX_QR', 'SGS Y FLUX of QR', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-
-       if ( I_QI > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QI), 'SGS_ZFLX_QI', 'SGS Z FLUX of QI', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QI), 'SGS_XFLX_QI', 'SGS X FLUX of QI', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QI), 'SGS_YFLX_QI', 'SGS Y FLUX of QI', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-
-       if ( I_QS > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QS), 'SGS_ZFLX_QS', 'SGS Z FLUX of QS', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QS), 'SGS_XFLX_QS', 'SGS X FLUX of QS', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QS), 'SGS_YFLX_QS', 'SGS Y FLUX of QS', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-
-       if ( I_QG > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QG), 'SGS_ZFLX_QG', 'SGS Z FLUX of QG', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QG), 'SGS_XFLX_QG', 'SGS X FLUX of QG', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QG), 'SGS_YFLX_QG', 'SGS Y FLUX of QG', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-#endif
+       do iq = 1, QA
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,iq), &
+               'SGS_ZFLX_'//trim(TRACER_NAME(iq)), 'SGS Z FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
+               zdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,iq), &
+               'SGS_XFLX_'//trim(TRACER_NAME(iq)), 'SGS X FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
+               xdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,iq), &
+               'SGS_YFLX_'//trim(TRACER_NAME(iq)), 'SGS Y FLUX of '//trim(TRACER_NAME(ia)), 'kg/m2/s', &
+               ydim='half', nohalo=.true.)
+       end do
 
        if ( STATISTICS_checktotal ) then
           call STAT_total( total, MOMZ_t_TB(:,:,:), 'MOMZ_t_TB' )
@@ -428,7 +387,7 @@ contains
           call STAT_total( total, Pr(:,:,:), 'Pr' )
 
           do iq = 1, QA
-             call STAT_total( total, RHOQ_t_TB(:,:,:,iq), trim(AQ_NAME(iq))//'_t_TB' )
+             call STAT_total( total, RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB' )
           enddo
        endif
 

@@ -96,6 +96,9 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_atmos_phy_mp, only: &
+       QS_MP, &
+       QE_MP
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP_VARS / &
@@ -117,7 +120,7 @@ contains
     allocate( ATMOS_PHY_MP_MOMX_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_MOMY_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_RHOT_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_RHOQ_t(KA,IA,JA,QA) )
+    allocate( ATMOS_PHY_MP_RHOQ_t(KA,IA,JA,QS_MP:QE_MP) )
     allocate( ATMOS_PHY_MP_EVAPORATE(KA,IA,JA)    )
     ! tentative approach
     ATMOS_PHY_MP_DENS_t(:,:,:)   = 0.0_RP

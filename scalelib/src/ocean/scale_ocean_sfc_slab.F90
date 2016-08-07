@@ -129,8 +129,8 @@ contains
       STB   => CONST_STB
     use scale_bulkflux, only: &
       BULKFLUX
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_templhv
+    use scale_atmos_hydrometer, only: &
+       ATMOS_HYDROMETER_templhv
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
@@ -191,7 +191,7 @@ contains
     end do
     end do
 
-    call ATMOS_THERMODYN_templhv( LHV, TMPA )
+    call ATMOS_HYDROMETER_templhv( LHV, TMPA )
 
     do j = JS, JE
     do i = IS, IE

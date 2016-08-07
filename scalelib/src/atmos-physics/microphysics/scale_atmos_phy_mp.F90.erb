@@ -33,20 +33,8 @@ module scale_atmos_phy_mp
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_MP_setup
+  public :: ATMOS_PHY_MP_config
 
-  !-----------------------------------------------------------------------------
-  !
-  !++ Public parameters & variables
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private procedure
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private parameters & variables
-  !
   abstract interface
      subroutine mp( &
           DENS,      &
@@ -73,6 +61,8 @@ module scale_atmos_phy_mp
        real(RP), intent(out)   :: SFLX_rain(IA,JA)
        real(RP), intent(out)   :: SFLX_snow(IA,JA)
      end subroutine mp
+     subroutine su
+     end subroutine su
      subroutine cf( &
           cldfrac, &
           QTRC     )
@@ -90,59 +80,88 @@ module scale_atmos_phy_mp
        use scale_precision
        use scale_grid_index
        use scale_tracer
-       real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius          [cm]
+       use scale_atmos_hydrometer, only: N_HYD
+       real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
        real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
        real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
      end subroutine er
      subroutine mr( &
-          Qe,    &
-          QTRC0  )
+          Qe,   &
+          QTRC0 )
        use scale_precision
        use scale_grid_index
        use scale_tracer
-       real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
+       use scale_atmos_hydrometer, only: N_HYD
+       real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
      end subroutine mr
   end interface
   procedure(mp), pointer :: ATMOS_PHY_MP => NULL()
+  procedure(su), pointer :: ATMOS_PHY_MP_setup => NULL()
   procedure(cf), pointer :: ATMOS_PHY_MP_CloudFraction => NULL()
   procedure(er), pointer :: ATMOS_PHY_MP_EffectiveRadius => NULL()
   procedure(mr), pointer :: ATMOS_PHY_MP_MixingRatio => NULL()
   public :: ATMOS_PHY_MP
+  public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP_CloudFraction
   public :: ATMOS_PHY_MP_EffectiveRadius
   public :: ATMOS_PHY_MP_MixingRatio
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  integer, public    :: QA_MP  ! number of cloud microphysical tracers
+  integer, public    :: QS_MP  ! start index in QTRC
+  integer, public    :: QE_MP  ! end   index in QTRC
 
+  character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_NAME(:)
+  character(len=H_MID),   pointer, public :: ATMOS_PHY_MP_DESC(:)
+  character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_UNIT(:)
   real(RP), pointer, public :: ATMOS_PHY_MP_DENS(:)
-
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private procedure
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+  !
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_config( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef MP
     use NAME(scale_atmos_phy_mp_, MP,), only: &
+       NAME(ATMOS_PHY_MP_, MP, _config), &
        NAME(ATMOS_PHY_MP_, MP, _setup), &
        NAME(ATMOS_PHY_MP_, MP,), &
        NAME(ATMOS_PHY_MP_, MP, _CloudFraction), &
        NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius), &
        NAME(ATMOS_PHY_MP_, MP, _MixingRatio), &
-       NAME(ATMOS_PHY_MP_, MP, _DENS) => ATMOS_PHY_MP_DENS
+       NAME(ATMOS_PHY_MP_, MP, _NAME), &
+       NAME(ATMOS_PHY_MP_, MP, _DESC), &
+       NAME(ATMOS_PHY_MP_, MP, _UNIT), &
+       NAME(ATMOS_PHY_MP_, MP, _DENS)
 #else
 % types.each do |type|
     use scale_atmos_phy_mp_<%=type%>, only: &
+       ATMOS_PHY_MP_<%=type%>_config, &
        ATMOS_PHY_MP_<%=type%>_setup, &
        ATMOS_PHY_MP_<%=type%>, &
        ATMOS_PHY_MP_<%=type%>_CloudFraction, &
        ATMOS_PHY_MP_<%=type%>_EffectiveRadius, &
        ATMOS_PHY_MP_<%=type%>_MixingRatio, &
-       ATMOS_PHY_MP_<%=type%>_DENS => ATMOS_PHY_MP_DENS
+       ATMOS_PHY_MP_<%=type%>_NAME, &
+       ATMOS_PHY_MP_<%=type%>_DESC, &
+       ATMOS_PHY_MP_<%=type%>_UNIT, &
+       ATMOS_PHY_MP_<%=type%>_DENS
 % end
 #endif
     implicit none
@@ -151,27 +170,41 @@ contains
     !---------------------------------------------------------------------------
 
 #ifdef MP
-    call NAME(ATMOS_PHY_MP_, MP, _setup)( MP_TYPE )
+    call NAME(ATMOS_PHY_MP_, MP, _config)( &
+         MP_TYPE,     & ! (in)
+         QA_MP, QS_MP ) ! (out)
     ATMOS_PHY_MP                 => NAME(ATMOS_PHY_MP_, MP,)
+    ATMOS_PHY_MP_setup           => NAME(ATMOS_PHY_MP_, MP, _setup)
     ATMOS_PHY_MP_CloudFraction   => NAME(ATMOS_PHY_MP_, MP, _CloudFraction)
     ATMOS_PHY_MP_EffectiveRadius => NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius)
     ATMOS_PHY_MP_MixingRatio     => NAME(ATMOS_PHY_MP_, MP, _MixingRatio)
+    ATMOS_PHY_MP_NAME            => NAME(ATMOS_PHY_MP_, MP, _NAME)
+    ATMOS_PHY_MP_DESC            => NAME(ATMOS_PHY_MP_, MP, _DESC)
+    ATMOS_PHY_MP_UNIT            => NAME(ATMOS_PHY_MP_, MP, _UNIT)
     ATMOS_PHY_MP_DENS            => NAME(ATMOS_PHY_MP_, MP, _DENS)
 #else
     select case ( MP_TYPE )
 % types.each do |type|
     case ( '<%=type.upcase%>' )
-       call ATMOS_PHY_MP_<%=type%>_setup( MP_TYPE )
+       call ATMOS_PHY_MP_<%=type%>_config( &
+            MP_TYPE,     & ! (in)
+            QA_MP, QS_MP ) ! (out)
        ATMOS_PHY_MP                 => ATMOS_PHY_MP_<%=type%>
+       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_<%=type%>_setup
        ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_<%=type%>_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_<%=type%>_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_<%=type%>_MixingRatio
+       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_<%=type%>_NAME
+       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_<%=type%>_DESC
+       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_<%=type%>_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_<%=type%>_DENS
 % end
     end select
 #endif
 
+    QE_MP = QS_MP + QA_MP - 1
+
     return
-  end subroutine ATMOS_PHY_MP_setup
+  end subroutine ATMOS_PHY_MP_config
 
 end module scale_atmos_phy_mp

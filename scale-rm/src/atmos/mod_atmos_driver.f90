@@ -30,6 +30,7 @@ module mod_atmos_driver
   !
   !++ Public procedure
   !
+  public :: ATMOS_driver_config
   public :: ATMOS_driver_setup
   public :: ATMOS_driver_resume1
   public :: ATMOS_driver_resume2
@@ -52,6 +53,21 @@ module mod_atmos_driver
   !
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_driver_config
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver_config
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE_driver_config
+    implicit none
+
+    call ATMOS_PHY_MP_driver_config
+    call ATMOS_PHY_AE_driver_config
+
+    return
+  end subroutine ATMOS_driver_config
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_driver_setup

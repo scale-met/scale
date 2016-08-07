@@ -85,6 +85,10 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_atmos_phy_ae, only: &
+       QA_AE, &
+       QS_AE, &
+       QE_AE
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_AE_VARS / &
@@ -101,7 +105,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS PHY_AE] / Origin[SCALE-RM]'
 
-    allocate( ATMOS_PHY_AE_RHOQ_t(KA,IA,JA,QA) )
+    allocate( ATMOS_PHY_AE_RHOQ_t(KA,IA,JA,QS_AE:QE_AE) )
     ATMOS_PHY_AE_RHOQ_t(:,:,:, :) = UNDEF
 
     allocate( ATMOS_PHY_AE_CCN(KA,IA,JA) )
