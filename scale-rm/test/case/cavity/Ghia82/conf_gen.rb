@@ -18,19 +18,20 @@ Re    = Ulid * L / KDiff
 
 #################################################################
 
-TIME_DT_SEC             = "3.0D0"
 TIME_DURATION_SEC       = "864000.D0"
 HISTORY_TINTERVAL_SEC   = "7200.0D0"
 CONF_GEN_RESOL_HASHLIST = \
 [ \
+  { "TAG"=>"1000m", "DX"=>1000E0, "DY"=> 1000E0, "DZ"=>1000E0, 
+    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>6.0, "DTDYN"=>1.2E0, "NPRCX"=> 1, "NPRCY"=>1}, \
   { "TAG"=>"500m", "DX"=>500E0, "DY"=> 500E0, "DZ"=>500E0, 
-    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DTDYN"=>0.6E0, "NPRCX"=> 2, "NPRCY"=>2}, \
+    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>3.0, "DTDYN"=>0.6E0, "NPRCX"=> 2, "NPRCY"=>2}, \
   { "TAG"=>"250m", "DX"=>250E0, "DY"=> 250E0, "DZ"=>250.0E0,
-    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DTDYN"=>0.3E0, "NPRCX"=> 4, "NPRCY"=>4}, \
-#  { "TAG"=>"100m", "DX"=>100E0, "DZ"=>100.0E0,
-#    "KMAX"=>64, "IMAX"=>64, "JMAX"=>3, "DTDYN"=>0.125E0, "NPRCX"=> 8, "NPRCY"=>1}, \
-#  { "TAG"=>"050m", "DX"=>50E0, "DZ"=>50.0E0,
-#    "KMAX"=>128, "IMAX"=>64, "JMAX"=>3, "DTDYN"=>0.0625E0, "NPRCX"=>16, "NPRCY"=>1}, \
+    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>3.0, "DTDYN"=>0.3E0, "NPRCX"=> 4, "NPRCY"=>4}, \
+  { "TAG"=>"125m", "DX"=>125E0, "DY"=> 125E0, "DZ"=>125.0E0,
+    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>1.5, "DTDYN"=>0.15E0, "NPRCX"=> 8, "NPRCY"=>8}, \
+  { "TAG"=>"063m", "DX"=> 62.5E0, "DY"=>  62.5E0, "DZ"=> 62.5E0,
+    "IMAX"=>80, "JMAX"=>80, "KMAX"=>1, "DT"=>1.5, "DTDYN"=>0.075E0, "NPRCX"=> 4, "NPRCY"=>4}, \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
@@ -130,7 +131,8 @@ end
 
 def gen_run_conf( conf_name,
                   nprocx, nprocy,
-                  imax, jmax, kmax, dx, dy, dz, dtsec_dyn,
+                  imax, jmax, kmax, dx, dy, dz,
+                  dtsec, dtsec_dyn,
                   flxEvalType, fctFlag, dataDir )
 
   f = File.open(conf_name, "w")
@@ -172,7 +174,7 @@ def gen_run_conf( conf_name,
  TIME_STARTMS               = 0.D0,
  TIME_DURATION              = #{TIME_DURATION_SEC},
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = #{TIME_DT_SEC},
+ TIME_DT                    = #{dtsec},
  TIME_DT_UNIT               = "SEC",
  TIME_DT_ATMOS_DYN          = #{dtsec_dyn}, 
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
@@ -227,7 +229,7 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",             
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
- ATMOS_DYN_DIVDMP_COEF          = 0.D0,
+ ATMOS_DYN_DIVDMP_COEF          = 1.D-3,
  ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
 /
 
@@ -296,7 +298,7 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
         run_conf_name = "#{dataDir}run.conf"
         gen_run_conf(run_conf_name, 
                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                     resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], 
+                     resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DT"], resol_hash["DTDYN"], 
                      numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir )
       }
     }

@@ -79,7 +79,6 @@ module mod_user
        XIni       = 10.0e3_RP,     &
        Lx         = 20.0e3_RP
 
-
   character(len=H_SHORT), private, save :: InitShape 
   real(RP), private, parameter :: PI = acos(-1.0_RP)
   

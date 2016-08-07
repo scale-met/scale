@@ -38,7 +38,14 @@ module mod_user
   use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_setup, &
        ATMOS_DYN_FVM_fluxX_XYZ
-  
+
+  use scale_time, only: &
+       DTSEC => TIME_DTSEC, &
+       NOWTSEC => TIME_NOWSEC
+
+  use mod_atmos_vars, only: &
+       DENS, RHOT, QTRC
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -65,10 +72,21 @@ module mod_user
   !++ Private parameters & variables
   !
   logical,  private, save :: USER_do = .false. !< do user step?
+
+  real(RP), parameter :: &
+       WaveNumCOS = 2d0,         &         
+       RCOSBELL = 1.5e3_RP,      &
+       RRECT    = 1.5e3_RP,      &
+       XIni     = 10.0e3_RP,     &
+       YIni     = 10.0e3_RP,     &
+       Lx       = 20.0e3_RP,     &
+       Ly       = 20.0e3_RP,     &
+       ENV_U    = 40.0e0_RP,     &
+       ENV_V    = 40.0e0_RP
+
   character(len=H_SHORT), private, save :: InitShape  
   real(RP), private, parameter :: PI = acos(-1.0_RP)
-
-
+  
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -127,14 +145,31 @@ contains
   !-----------------------------------------------------------------------------
   !> Resuming operation
   subroutine USER_resume
-    use mod_atmos_dyn_vars, only: &
-         & PROG
-    use mod_atmos_vars, only: &
-         & DENS, QTRC
 
     implicit none
+
+    real(RP) :: x_
+    real(RP) :: y_
+    integer :: k, i, j
+    
     !---------------------------------------------------------------------------
 
+    if ( NOWTSEC == 0.0_RP ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          x_ = CX(i)
+          y_ = CY(j)
+          select case(InitShape)
+          case('COS')
+             QTRC(k,i,j,I_NC) =  cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )  &
+                  &             *cos( WaveNumCOS * 2.0_RP * PI / Lx *  y_ )
+             
+          end select
+       enddo
+       enddo
+       enddo
+    end if
     
     ! calculate diagnostic value and input to history buffer
     call USER_step
@@ -164,17 +199,6 @@ contains
     implicit none
 
     real(RP) :: PT_diff(KA,IA,JA), ExactSol(KA,IA,JA)
-    real(RP), parameter :: &
-         WaveNumCOS = 2d0,         &         
-         RCOSBELL = 1.5e3_RP,      &
-         RRECT    = 3.0e3_RP,      &
-         XIni     = 10.0e3_RP,     &
-         YIni     = 10.0e3_RP,     &
-         Lx       = 20.0e3_RP,     &
-         Ly       = 20.0e3_RP,     &
-         ENV_U    = 40.0e0_RP,     &
-         ENV_V    = 40.0e0_RP,     &
-         PI = acos(-1.0_RP)
 
     real(RP) :: x_, y_
     real(RP) :: xshift, yshift
@@ -210,7 +234,8 @@ contains
 
           select case(InitShape)
           case("COS")
-             ExactSol(k,i,j) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )
+             ExactSol(k,i,j) =  cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ ) &
+                  &            *cos( WaveNumCOS * 2.0_RP * PI / Lx *  y_ )
           case("BUBBLE") ! COSBELL
              dist2 = ((x_ - XIni)**2 + (y_ - YIni)**2)/RCOSBELL**2
              ExactSol(k,i,j) = cos( 0.5_RP * PI * sqrt(min(dist2, 1.0_RP)) )**2

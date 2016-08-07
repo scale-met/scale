@@ -8,11 +8,12 @@ include NumRu
 
 ################################################################################
 
-CASE_LIST  = ["COSBELL","RECT"]
+CASE_LIST  = ["COS", "COSBELL","RECT"]
 RESOL_LIST = ["500m", "250m", "125m", "063m"]
 FLXSCHEME_LIST = [
   "UD1", "UD3", "UD5", "CD2", "CD4", "CD6",
-  "UD3_FCT", "UD5_FCT", "CD2_FCT", "CD4_FCT", "CD6_FCT"  
+  "UD3_FCT", "UD5_FCT", "CD2_FCT", "CD4_FCT", "CD6_FCT",
+  "UD3_FCTori", "UD5_FCTori", "CD2_FCTori", "CD4_FCTori", "CD6_FCTori"  
 ]
 TIME_LIST = [50.0, 100.0, 200.0, 300.0, 400.0, 500.0, 600.0]
 

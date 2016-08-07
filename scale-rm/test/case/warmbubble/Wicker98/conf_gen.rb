@@ -39,8 +39,8 @@ def gen_init_conf( conf_name,
   f.print <<EOS
 #####
 #
-# SCALE-RM mkinit configulation for coldbubble test
-# (following experimental setup in Straka et al. 1993)
+# SCALE-RM mkinit configulation for rising warmbubble test
+# (following experimental setup in Wicker and Skmarock et al. 1998)
 #
 #####
 
@@ -199,7 +199,7 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.1D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = ${fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
 /
 
 !&PARAM_USER

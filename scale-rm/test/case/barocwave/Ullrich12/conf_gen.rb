@@ -6,10 +6,11 @@
 
 require 'fileutils'
 
-TIME_DT_SEC             = "720.0D0"
-TIME_DURATION_SEC       = "1296000.D0"
+TIME_DT_SEC              = "720.0D0"
+TIME_DURATION_SEC        = "1296000.D0"
+TIME_DURATION_SEC_STEADY = "86400.D0"
 HISTORY_TINTERVAL_HOUR   = "24.D0"
-CONF_GEN_RESOL_HASHLIST = \
+CONF_GEN_RESOL_HASHLIST  = \
 [ \
   # 100x30x30, dt=16 min
   { "TAG"=>"400km", "DX"=>400.0E3, "DY"=>400.0E3, "DZ"=>1000.0, \
@@ -29,7 +30,7 @@ CONF_GEN_RESOL_HASHLIST = \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
-  {"TAG"=>"CTRL"}, \
+  {"TAG"=>"CTRL"}, {"TAG"=>"STEADY"} \
 ]
 CONF_GEN_NUMERIC_HASHLIST = \
 [ \
@@ -37,10 +38,13 @@ CONF_GEN_NUMERIC_HASHLIST = \
   {"TAG"=>"FVM_UD1"}, {"TAG"=>"FVM_UD3"}, {"TAG"=>"FVM_UD5"},  \
 ]
 
+# The maximum amplitude of zonal wind perturbation
+Up = 1.0
+
 #########################################################
 
 def gen_init_conf( conf_name,
-                   nprocx, nprocy, imax, jmax, kmax, dx, dy, dz )
+                   nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, u0_p )
 
   f = File.open(conf_name, "w")
   f.print <<EOS
@@ -103,7 +107,7 @@ def gen_init_conf( conf_name,
  Phi0Deg    = 45.D0,
  U0         = 35.D0,
  b          = 2.D0,
- Up         = 1.D0,
+ Up         = #{u0_p},
 /
 EOS
   f.close
@@ -113,7 +117,7 @@ end
 def gen_run_conf( conf_name,
                   nprocx, nprocy,
                   imax, jmax, kmax, dx, dy, dz, dtsec_dyn,
-                  flxEvalType, fctFlag, dataDir )
+                  flxEvalType, fctFlag, dataDir, time_duration )
 
 
   f = File.open(conf_name, "w")
@@ -145,7 +149,7 @@ def gen_run_conf( conf_name,
 &PARAM_TIME
  TIME_STARTDATE             = 0000, 1, 1, 0, 0, 0,
  TIME_STARTMS               = 0.D0,
- TIME_DURATION              = #{TIME_DURATION_SEC},
+ TIME_DURATION              = #{time_duration},
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = #{TIME_DT_SEC},
  TIME_DT_UNIT               = "SEC",
@@ -192,7 +196,7 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = ${fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
  ATMOS_DYN_ENABLE_CORIOLIS = T
 /
 
@@ -233,9 +237,20 @@ EOS
 f.close
 end
 
+initParam_hash = {}
+initParam_hash["STEADY"] = {"u0_p"=>0.0}
+initParam_hash["CTRL"]   = {"u0_p"=>Up}
+
+runParam_hash = {}
+runParam_hash["STEADY"] = {"DURATION_SEC"=>TIME_DURATION_SEC_STEADY}
+runParam_hash["CTRL"] = {"DURATION_SEC"=>TIME_DURATION_SEC}
+
 CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
   CONF_GEN_CASE_HASH_LIST.each{|case_hash|
     CONF_GEN_NUMERIC_HASHLIST.each{|numeric_hash|
+
+      initParam = initParam_hash[case_hash["TAG"]]
+      
       ["F", "T"].each{|fct_flag|
 
         dataDir = "./#{resol_hash["TAG"]}/#{case_hash["TAG"]}/"
@@ -250,13 +265,14 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
         init_conf_name = "#{dataDir}init.conf" 
         gen_init_conf(init_conf_name, 
                       resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                      resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"]  )
+                      resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"],  initParam["u0_p"] )
 
+        runParam = runParam_hash[case_hash["TAG"]]
         run_conf_name = "#{dataDir}run.conf"
         gen_run_conf(run_conf_name, 
                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
                      resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], 
-                     numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir )
+                     numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir, runParam["DURATION_SEC"] )
       }
     }
   }

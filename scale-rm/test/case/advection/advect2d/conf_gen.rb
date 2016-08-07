@@ -17,8 +17,9 @@ CONF_GEN_RESOL_HASHLIST = \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
-  {"TAG"=>"RECT", "SHAPE_NC"=>"RECT"}, \
-  {"TAG"=>"COSBELL", "SHAPE_NC"=>"BUBBLE"} \
+  {"TAG"=>"COS", "SHAPE_NC"=>"BUBBLE"},     \
+  {"TAG"=>"COSBELL", "SHAPE_NC"=>"BUBBLE"}, \
+  {"TAG"=>"RECT", "SHAPE_NC"=>"RECT"},      \
 ]
 CONF_GEN_NUMERIC_HASHLIST = \
 [ \
@@ -33,7 +34,7 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, shape
   f.print <<EOS
 #####
 #
-# SCALE-RM mkinit configulation for linear advection test (1D)
+# SCALE-RM mkinit configulation for linear advection test (2D)
 #
 #####
 
@@ -125,7 +126,9 @@ end
 def gen_run_conf( conf_name, 
       nprocx, nprocy,
       imax, jmax, kmax, dx, dy, dz, dtsec_dyn,
-      shape_nc, flxEvalType, fctFlag, dataDir )
+      shape_nc, flxEvalType,
+      fctFlag, is_FCT_along_stream,
+      dataDir )
 
   f = File.open(conf_name, "w")
   f.print <<EOS
@@ -209,7 +212,8 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_TRACER       = #{fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_ALONG_STREAM = #{is_FCT_along_stream}
 /
 
 &PARAM_USER
@@ -251,30 +255,38 @@ EOS
 f.close
 end
 
+fct_hash = {}
+fct_hash["OFF"]     = {"fct_flag"=>"F", "is_FCT_along_stream"=>"F", "dirSuffix"=>""}
+fct_hash["ON"]      = {"fct_flag"=>"T", "is_FCT_along_stream"=>"T", "dirSuffix"=>"_FCT"}
+fct_hash["ON-ori"]  = {"fct_flag"=>"T", "is_FCT_along_stream"=>"F", "dirSuffix"=>"_FCTori"}
+
 CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
   CONF_GEN_CASE_HASH_LIST.each{|case_hash|
     CONF_GEN_NUMERIC_HASHLIST.each{|numeric_hash|
-      ["F", "T"].each{|fct_flag|
 
-        dataDir = "./#{resol_hash["TAG"]}/#{case_hash["TAG"]}/"
-        dataDir += fct_flag=="T" ? "#{numeric_hash["TAG"]}_FCT/" : "#{numeric_hash["TAG"]}/"
+      ["OFF", "ON", "ON-ori"].each{|fct_sw|
 
-        puts "Generate init.conf and run.conf (Dir=#{dataDir}) .."
-        if !File.exists?(dataDir) then
-          puts "Create directory .."
-          FileUtils.mkdir_p(dataDir)
-        end
+        fct_param = fct_hash[fct_sw]
+        dataDir = "./#{resol_hash["TAG"]}/#{case_hash["TAG"]}/#{numeric_hash["TAG"]}#{fct_param["dirSuffix"]}/"
+          
+          puts "Generate init.conf and run.conf (Dir=#{dataDir}) .."
+          if !File.exists?(dataDir) then
+            puts "Create directory .."
+            FileUtils.mkdir_p(dataDir)
+          end
       
-        init_conf_name = "#{dataDir}init.conf" 
-        gen_init_conf(init_conf_name, 
-                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                      resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], case_hash["SHAPE_NC"] )
-        run_conf_name = "#{dataDir}run.conf"
-        gen_run_conf(run_conf_name, 
-                     resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                     resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], case_hash["SHAPE_NC"], 
-                     numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir )
+          init_conf_name = "#{dataDir}init.conf" 
+          gen_init_conf(init_conf_name, 
+                        resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
+                        resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], case_hash["SHAPE_NC"] )
+          run_conf_name = "#{dataDir}run.conf"
+          gen_run_conf(run_conf_name, 
+                       resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
+                       resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], case_hash["SHAPE_NC"], 
+                       numeric_hash["TAG"].sub("FVM_",""), fct_param["fct_flag"], fct_param["is_FCT_along_stream"],
+                       dataDir )
+        }
       }
-    }
+
   }
 }
