@@ -3,15 +3,21 @@
 
 本書は初めて領域気象気候モデル(SCALE-RM)
 を利用するユーザー向けに解説したユーザーズガイドです。
-本書はSCALE-RM version \version に対応した説明になっています。
-第\ref{sec:overview}章でSCALEの概要について説明し、
-第\ref{sec:install}章で必要な環境、およびインストール方法を説明します。
+気象気候ライブラリーSCALE version \version に対応した説明を記載します。
+現在、SCALEを利用するため、領域モデルSCALE-RMと全球モデルSCALE-GMが
+用意されていますが、後者は、力学コアの整備のみされています。
+そのため、本版では、SCALE-RMの使い方についてのみ詳しく述べています。
+SCALE-GMについては、次版で詳しく記載される予定です。
+SCALE-RMの使い方を通して、SCALEを他のモデルからの呼び出す方法を
+習得することも可能です。
+第\ref{sec:overview}章でSCALEの概要について、
+第\ref{sec:install}章で必要な環境、およびインストール方法について説明します。
 続いて、第\ref{sec:tuto_ideal}章で理想実験、
 第\ref{sec:tuto_real}章で現実大気実験の実行方法について
 簡単な例を示しながら説明します。
 第\ref{sec:install}章から第\ref{sec:tuto_real}章までは
 ひと繋がりのチュートリアルとなっており、
-SCALE-RMを初めて使うユーザーは一通り通読することを勧めます。
+SCALE-RMを初めて使うユーザーは一通り通読することをお勧めます。
 第\ref{sec:basic}章以降は、設定の変更、機能やツールの説明が記載されています。
 
 %%%
@@ -24,10 +30,10 @@ SCALE-RMを初めて使うユーザーは一通り通読することを勧めま
 %--------------------------------------------------------------%
 
 SCALE (Scalable Computing for Advanced Library and Environment)は
-計算機を用いて気象・気候科学の問題にアプローチする際に、
-ユーザーが研究を進めやすいように、
-事前処理から数値計算、解析に至るまですべての過程を網羅する数値計算ライブラリを
-目指したソフトウェアであり、下記に挙げるような特徴を持つ。
+計算機を用いて気象・気候科学計算を行う上で、
+研究を進めやすいように事前処理から数値計算、
+解析に至るまですべての過程を網羅する数値計算ライブラリを
+目指したソフトウェアである。下記に挙げるような特徴を持つ。
 \begin{itemize}
 \item SCALEは、「BSD-2ライセンス」のもとオープンソースソフトウェア
 として提供されており、商用、非商用に関わらず自由な利用・改変・再配布が可能である。
@@ -36,6 +42,8 @@ SCALE (Scalable Computing for Advanced Library and Environment)は
 といった組み上げ済みの数値モデルが含まれている。
 \item SCALEには、次節で説明する様々なコンポーネントが導入されており、
 必要に応じて取り替えることが可能である。
+\item SCALEで提供されている物理過程は、他の数値モデルへ組み込んで
+使用することも可能である。
 \end{itemize}
 
 ライセンスの詳細は、トップディレクトリ直下の``\verb|scale/LICENSE|''のファイルに記述されている。
@@ -55,7 +63,7 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
 
 \noindent{\bf フレームワーク関係}
 \begin{itemize}
- \item カーテシアン(Cartesian)グリッドシステム（Arakawa C-grid）
+ \item カーテシアン格子系（Cartesian Arakawa C-grid）
  \item MPI通信を用いた二次元領域分割
  \item 各種投影法(Map-projection \& Map-factors)
  \item ネスティングシステム（1-way：親→子のみ）
@@ -68,6 +76,7 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
    \begin{itemize}
     \item WRF-ARW、NICAM、その他GrADSフォーマットでの入力に対応
    \end{itemize}
+ \item 出力はすべてnetcdf3または4に対応。
 \end{itemize}
 
 {\bf 力学コア関係}
@@ -81,14 +90,14 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
    \end{itemize}
  \item 空間差分:
     \begin{itemize}
-      \item 2次中央差分(2-nd order central difference schemes)
-      \item 4次中央差分(4-th order central difference schemes)
-      \item 6次中央差分(6-th order central difference schemes)
-      \item 3次風上差分(3-rd order upwind difference schemes)
+      \item 2次中央差分(2-nd order central difference scheme)
+      \item 4次中央差分(4-th order central difference scheme)
+      \item 6次中央差分(6-th order central difference scheme)
+      \item 3次風上差分(3-rd order upwind difference scheme)
 %      \item 3次風上差分（Koren(1993)filterあり）(3rd order upwind difference scheme with \citet{Koren_1993} filter)
-      \item 5次風上差分(5-th order upwind difference schemes)
+      \item 5次風上差分(5-th order upwind difference scheme)
     \end{itemize}
- \item 時間差分:
+ \item 時間差分:(詳細は、\citet{scale_2015}を参照のこと)
     \begin{itemize}
       \item 3次ルンゲクッタスキーム(Heun's 3rd order Runge-Kutta scheme)
       \item Wicker and Skamarock (2002) 3段ルンゲクッタスキーム \citep[3-step Runge-Kutta scheme of ][]{Wicker_2002}
@@ -97,9 +106,9 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
  \item 非負保証:
     \begin{itemize}
       \item フラックス修正法(Flux Corrected Transport)
-      \item Koren (1993) filter \citep{Koren_1993} (3次風上差分スキーム使用時のみ)
+      \item Koren (1993)フィルター \citep{Koren_1993} (3次風上差分スキーム使用時のみ)
     \end{itemize}
- \item 数値フィルター: 4次超粘性(4-th Hyper diffusion)
+ \item 数値フィルター: 4次超粘性・拡散(4-th order hyper-viscosity/diffusion)
  \item 地形: 地形に沿った座標系(Terrain following coordinate)
 \end{itemize}
 
@@ -108,23 +117,23 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
 \begin{itemize}
  \item 乱流過程: 複数から選択可能
    \begin{itemize}
-    \item Smagorinsky-Lilly typeのサブグリッドモデル \citep{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993}
+    \item Smagorinsky-Lilly 型のサブグリッドモデル \citep{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993}
     \item Deardorff(1980) サブグリットモデル \citep{Deardorff_1980}
     \item MYNN2.5境界層モデル \citep{my_1982,nakanishi_2004}
    \end{itemize}
  \item 雲微物理: 複数から選択可能
    \begin{itemize}
-    \item Kessler type バルクモデル \citep{kessler_1969}
+    \item 3-class single momoent バルクモデル\citep{kessler_1969}
     \item 6-class single moment バルクモデル \citep{tomita_2008}
     \item 6-class double moment バルクモデル \citep{sn_2014}
     \item ビン法雲モデル \citep{suzuki_etal_2010}
    \end{itemize}
- \item 放射過程: MSTRN-X \citep{sekiguchi_2008}
+ \item 放射過程: k分布ベース放射スキーム\citep{sekiguchi_2008}
  \item 地表面モデル
   \begin{itemize}
    \item 陸面モデル: 熱拡散・バケツモデル\\
          (バルク交換係数:\citep{beljaars_1991,wilson_2001}もしくは\citep{uno_1995})
-   \item 海洋モデル:（スラブモデル）
+   \item 海洋モデル:初期値固定・外部入力（時間変化あり）/スラブモデル
    \item 都市モデル: 単層キャノピーモデル \citep{kusaka_2001}
   \end{itemize}
 \end{itemize}
@@ -157,13 +166,13 @@ SCALEは次世代のスーパーコンピュータから小型PCクラスター�
 広く用いられる事を念頭において開発されており、
 気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が
 共同で開発を行っている。
-そのため、スーパーコンピュータ「京」やFujitsu FX10等の
-スーパーコンピュータ上でも、
+そのため、スーパーコンピュータ「京」や富士通FX10等の
+スーパーコンピュータに加え、インテル機のような汎用計算機でも
 高い計算効率がでるように設計されている。
 ユーザーには、スーパーコンピュータ「京」を
 はじめとする並列計算機に対してチューニングされた
 モデルコンポーネントや解析システム、テストセット、
-そして「開発環境」を提供する。
+そして開発環境を提供する。
 
 SCALEを利用した数値モデルとして、
 SCALE-RMが含まれている(図 \ref{fig:scale-rm})。
@@ -173,8 +182,8 @@ SCALE-RM は、予報変数などをコンテナを持ち、
 SCALEのコンポーネントを適切に呼び出すことで時間発展計算を行っている。
 ユーザーは、必要に応じて、各コンポーネントを選択し、
 組み合わせて使用することが可能である。
-このSCALE-RMを気象研究に適用した事例には
-\citet{satoy_2014}、\citet{satoy_2015}がある。
+%このSCALE-RMを気象研究に適用した事例には
+%\citet{satoy_2014}、\citet{satoy_2015}がある。
 %ユーザーは、SCALEを用いてSCALE-RMと同様な方法によって
 %新たなモデル作ることができる。
 
