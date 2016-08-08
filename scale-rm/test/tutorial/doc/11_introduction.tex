@@ -85,8 +85,8 @@ netcdf4ファイル I/O
  \item 方程式系: 3次元完全圧縮非静力学方程式系
  \item 数値解法: 陽解法と陰解法の両方を実装
    \begin{itemize}
-    \item HE-VE(陽解法)
-    \item HE-VI(水平方向は陽解法-鉛直方向は陰解法)
+    \item 完全陽解法(HE-VE:Horizontally Explicit and Vertically Explicit method)
+    \item 水平陽解法-鉛直陰解法(HE-VI:Horizontally Explicit and Vertically Implicit method)
 %    \item HI-VI(陰解法)
    \end{itemize}
  \item 空間差分:
@@ -101,7 +101,7 @@ netcdf4ファイル I/O
  \item 時間差分:(詳細は、\citet{scale_2015}を参照のこと)
     \begin{itemize}
       \item 3次ルンゲクッタスキーム(Heun's 3rd order Runge-Kutta scheme)
-      \item Wicker and Skamarock (2002) 3段ルンゲクッタスキーム \citep[3-step Runge-Kutta scheme of ][]{Wicker_2002}
+      \item Wicker and Skamarock (2002)'s 3段ルンゲクッタスキーム (\citep[3-step Runge-Kutta scheme of ][]{Wicker_2002})
       \item 4次ルンゲクッタスキーム(4th order Runge-Kutta scheme)
     \end{itemize}
  \item 非負保証:

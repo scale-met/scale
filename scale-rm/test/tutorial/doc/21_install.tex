@@ -38,7 +38,9 @@
 \noindent {\bf あると便利なシステム環境}
 \begin{itemize}
   \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、SCALEで読込可能な入力データの作成が可能である。Tutorialの現実大気実験では、wgrib2を使用する。
-  \item {\bf 描画環境}：GrADS、GPhys/Ruby-DCL、ncviewなど。
+  \item {\bf 描画環境}：GrADS\footnote{http://cola.gmu.edu/grads/}、
+GPhys/Ruby-DCL\footnote{https://www.gfd-dennou.org/arch/ruby/products/gphys/}、
+ncview\footnote{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}など。
   \item {\bf 演算性能評価}：PAPIライブラリ\footnote{http://icl.utk.edu/papi/}が使用可能。
 \end{itemize}
 
@@ -124,12 +126,12 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 安定版ソースコードは、\\
  \url{http://scale.aics.riken.jp/ja/download/index.html}\\
 よりダウンロードできる。
-ソースコードのtarballファイルを展開すると\verb|scale-$ver/|というディレクトリができる。
-\verb|{ver}|には、``\version''等のバーション番号が入る。
+ソースコードのtarballファイルを展開すると\verb|scale-{ver}/|というディレクトリができる。
+\verb|{ver}|には、バーション番号が入る。現行は、``\version''である。
 \begin{verbatim}
  $ tar -zxvf scale-{ver}.tar.gz
  $ ls ./
-   scale-$ver/
+   scale-{ver}/
 \end{verbatim}
 %%% ?????
 %%% verbatim環境で、マクロ\versionを表記するには？？？？？
@@ -140,7 +142,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 
 SCALEはコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
 Makedefファイルを使用してコンパイルが行われる。
-Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境に
+Makdefファイルは、\verb|scale-{ver}/sysdep/|内にいくつかの計算機環境に
 対応するファイル（\verb|Makedef.***|）が準備されており、
 これらの中から自分の環境にあったものを設定する。
 動作確認済みの環境と対応するMakedefファイルを表\ref{tab:makedef}に示す。
@@ -227,7 +229,7 @@ HDF5を\verb"/opt/hdf5"、NetCDF4を\verb|/opt/netcdf|に
 {\bf 注意点}
 \begin{itemize}
 \item SCALEは、scaleのTOPディレクトリ直下の
- \verb|scale-$ver/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われる。
+ \verb|scale-{ver}/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われる。
  SCALE-RM は、コンパイルを実行したディレクトリの下の
  \verb|".lib"|という名前の隠しディレクトリの中にコンパイルされたオブジェクトファイルが置かれ、実行バイナリファイルはカレントディレクトリにコピーされる。
 \item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 DEBUG=T"|としてコンパイルする。
@@ -268,7 +270,7 @@ GrADSで直接読み込めるデータ形式へ
 MPIライブラリを用いた並列実行を行うためのバイナリは、
 下記のコマンドによって生成される。
 \begin{verbatim}
- $ cd scale/scale-rm/util/netcdf2grads_h
+ $ cd scale-{ver}/scale-rm/util/netcdf2grads_h
  $ make -j 2
 \end{verbatim}
 MPIライブラリが無い場合など、逐次実行バイナリを生成するためには、\\
