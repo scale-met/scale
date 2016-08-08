@@ -13,7 +13,7 @@ ppディレクトリの中には、\verb|pp.conf|という名前の
 適宜\verb|pp.conf|を編集する必要があるが、
 チュートリアルではすでに表\ref{tab:grids}の設定に
 従って編集済みの\verb|pp.conf|が用意されているためそのまま利用する。
-\verb|pp.conf|の設定の中で特に注意するべき項目は、\verb|PARAM_CONVERT|である。\\
+\verb|pp.conf|の設定の中で確認してほしい項目は、\verb|PARAM_CONVERT|である。\\
 
 \noindent {\gt
 \ovalbox{
@@ -43,7 +43,7 @@ pp実行ディレクトリへリンクする。
 \begin{verbatim}
  $ mpirun -n 4 ./scale-rm_pp pp.conf
 \end{verbatim}
-実行にはおおよそ15秒を要する。
+本節使用した環境において、実行にはおおよそ15秒を要する。
 ジョブが正常に終了すれば、\verb|topo_d01.pe######.nc|と\\
 \verb|landuse_d01.pe######.nc|と
 いうファイルがMPIプロセス数だけ、つまり4つずつ生成される（

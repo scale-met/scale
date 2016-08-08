@@ -1,7 +1,7 @@
 
 このチュートリアルでは、図 \ref{fig:tutrial_real_domain}に示した
 領域を対象とした現実大気実験を行う。
-現実大気実験用のチュートリアルは、下記で行う。
+以下のディレクトリーに移動して作業を行う。
 \begin{verbatim}
  scale/scale-rm/test/tutorial/real/
 \end{verbatim}
@@ -138,7 +138,7 @@ SCALE用の地形・土地利用のデータを\\
 
 \item パスの設定\\
 makeを使ったジョブスクリプトを使用する場合には、
-展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくと便利である
+展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくことが必須である。
 (以後、\verb|${SCALE_DB}|と表記)。
 \begin{verbatim}
   $ export SCALE_DB=${path_to_directory_of_scale_database}/scale_database
