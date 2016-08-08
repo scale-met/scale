@@ -8,10 +8,6 @@
 \label{sec:req_env}
 %====================================================================================
 
-以下に説明するもの以外に、SCALEは、
-理化学研究所 計算科学研究機構のスーパーコンピュータ「京」、
-及びFujitsu PRIME-HPC FX10の環境でも動作確認されている。\\
-
 \noindent {\bf 推奨のシステム環境}
 \begin{itemize}
   \item {\bf システムハードウェア構成}\\
@@ -43,7 +39,7 @@
 \begin{itemize}
   \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、SCALEで読込可能な入力データの作成が可能である。Tutorialの現実大気実験では、wgrib2を使用する。
   \item {\bf 描画環境}：GrADS、GPhys/Ruby-DCL、ncviewなど。
-  \item {\bf 演算性能評価}：PAPIライブラリが使用可能。
+  \item {\bf 演算性能評価}：PAPIライブラリ\footnote{http://icl.utk.edu/papi/}が使用可能。
 \end{itemize}
 
 
@@ -89,6 +85,9 @@
 \end{center}
 \end{table}
 
+以上で説明したもの以外に、SCALEは、
+理化学研究所 計算科学研究機構のスーパーコンピュータ「京」、
+及びFujitsu PRIME-HPC FX10の環境でも動作確認されている。
 
 
 \section{ライブラリ環境のインストール}
@@ -125,15 +124,16 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 安定版ソースコードは、\\
  \url{http://scale.aics.riken.jp/ja/download/index.html}\\
 よりダウンロードできる。
-ソースコードのtarballファイルを展開すると\verb|scale/|というディレクトリができる。
+ソースコードのtarballファイルを展開すると\verb|scale-$ver/|というディレクトリができる。
 \verb|{ver}|には、``\version''等のバーション番号が入る。
 \begin{verbatim}
  $ tar -zxvf scale-{ver}.tar.gz
  $ ls ./
-   scale/
+   scale-$ver/
 \end{verbatim}
-
-
+%%% ?????
+%%% verbatim環境で、マクロ\versionを表記するには？？？？？
+%%% ?????
 
 \subsection{Makedefファイルと環境変数の設定}
 %-----------------------------------------------------------------------------------
@@ -187,7 +187,8 @@ HDF5を\verb"/opt/hdf5"、NetCDF4を\verb|/opt/netcdf|に
  $ export HDF5="/opt/hdf5"
  $ export NETCDF4="/opt/netcdf"
  $ export NETCDF_INCLUDE="-I/opt/netcdf/include"
- $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -hdf5_hl -lhdf5 -lm -lz"
+ $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 \\
+-lnetcdff -hdf5_hl -lhdf5 -lm -lz"
 \end{verbatim}
 
 
@@ -197,7 +198,7 @@ HDF5を\verb"/opt/hdf5"、NetCDF4を\verb|/opt/netcdf|に
 
 チュートリアル用のディレクトリに移動して、makeコマンドによってコンパイルを行う。
 \begin{verbatim}
- $ cd scale/scale-rm/test/tutorial/bin
+ $ cd scale-$ver/scale-rm/test/tutorial/bin
  $ make -j 4
 \end{verbatim}
 \verb|make|のあとの \verb|"-j 4"| は、
@@ -226,7 +227,7 @@ HDF5を\verb"/opt/hdf5"、NetCDF4を\verb|/opt/netcdf|に
 {\bf 注意点}
 \begin{itemize}
 \item SCALEは、scaleのTOPディレクトリ直下の
- \verb|scale/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われる。
+ \verb|scale-$ver/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われる。
  SCALE-RM は、コンパイルを実行したディレクトリの下の
  \verb|".lib"|という名前の隠しディレクトリの中にコンパイルされたオブジェクトファイルが置かれ、実行バイナリファイルはカレントディレクトリにコピーされる。
 \item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 DEBUG=T"|としてコンパイルする。
@@ -259,10 +260,10 @@ GrADSで直接読み込めるデータ形式へ
 まず、SCALE本体のコンパイル時と同様に
 使用する環境にあったMakedefファイル設定のための環境変数を設定する
 (\ref{sec:compile}節コンパイル参照)。
-\begin{verbatim}
- $ export SCALE_SYS="Linux64-gnu-ompi"  //GNUコンパイラ、openMPIを使用する場合
-\end{verbatim}
-
+%\begin{verbatim}
+% $ export SCALE_SYS="Linux64-gnu-ompi"  //GNUコンパイラ、openMPIを使用する場合
+%\end{verbatim}
+%
 次に、net2gのディレクトリに移動し、makeする。
 MPIライブラリを用いた並列実行を行うためのバイナリは、
 下記のコマンドによって生成される。
