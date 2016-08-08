@@ -33,7 +33,7 @@
 これらに加えて、本章のチュートリアルでは、
 描画ツールとしてGrADSを使用する。
 gpviewは、結果の確認用に利用することができる。
-GrADSおよびgpview(Gphys)との詳細やインストール方法については、
+GrADSおよびgpview(GPhys)との詳細やインストール方法については、
 付録 \ref{sec:env_vis_tools}節を参照のこと。
 
 
@@ -171,7 +171,7 @@ configファイルに\verb|init_R20kmDX500m.conf|を用いて、
 もし、4-MPI並列で実行すれば、4つの初期値ファイルが生成される。
 これらのファイル名の末尾が``.nc''で終わるファイルは
 NetCDF形式のファイルであり、
-Gphys/Ruby-DCLやncviewといったツールで直接読むことができる。
+GPhys/Ruby-DCLやncviewといったツールで直接読むことができる。
 
 
 \subsection{モデル本体の実行}
@@ -219,7 +219,7 @@ configファイルには``\verb|run_R20kmDX500m.conf|''を指定する。
 ここでは、計算結果を描画するための後処理について説明する。本書のチュートリアルでは、
 NetCDF形式の分散ファイルを1つのファイルにまとめ、ユーザーが解析しやすいDirect-Accessの
 単純バイナリ形式（GrADS形式）に変換する方法を説明する。
-%Gphys/Ruby-DCLを使うと
+%GPhys/Ruby-DCLを使うと
 %分割ファイルのまま直接描画することができるが、この方法については\ref{sec:quicklook}節を
 %参照してもらいたい。
 

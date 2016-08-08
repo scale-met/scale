@@ -3,7 +3,12 @@
 \label{sec:env_setting}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-ここでは、SCALEのインストールに必要なライブラリ環境のインストール方法について説明する。
+SCALEのインストールに必要なライブラリ環境のインストール方法について説明する。
+ここでの記載内容は、こちらのテスト環境でのインストールプロセスを示しているものであって
+必ずしも全く同じとは限らない。
+うまくいかない場合には、それぞれのツール・ライブラリの開発元に直接問い合わせること。
+
+
 Linuxをインストール後、各種プログラムのインストールにはコマンドライン端末を使う。
 本書で説明するライブラリ環境のインストールにあたっては、root権限が必要になる。したがって、
 想定する環境は、ユーザーがroot権限を所持しているサーバーや、自前のデスクトップマシンといった環境である。
@@ -167,9 +172,9 @@ rpm\_check\_debug を実行しています\\
 \end{verbatim}
 
 
-%\subsubsection{Installation of Gphys}
+%\subsubsection{Installation of GPhys}
 %CentOSの場合、yumリポジトリに地球電脳倶楽部のGFD-Dennouリポジトリを登録することで、
-%簡単にGphysをインストールできる。
+%簡単にGPhysをインストールできる。
 %root権限で、GFD-Dennouリポジトリを次のような内容で登録する。
 %
 %\begin{verbatim}
@@ -184,7 +189,7 @@ rpm\_check\_debug を実行しています\\
 % enabled=1
 % gpgcheck=0
 %\end{verbatim}
-%編集が終わったら、yumでGphysをインストールする。
+%編集が終わったら、yumでGPhysをインストールする。
 %\begin{verbatim}
 % # yum install gphys
 %\end{verbatim}
@@ -541,7 +546,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
 %\item coreutils : GNU core utils。様々な場面で必要になる。
 %\item gawk, gsed : Mac OS Xに付属するawk,sedはGNU版と機能が異なるため、こちらが必要になる時がある。
 %\item gnuplot : グラフ描画に利用。
-%\item ImageMagick : Gphysから出力したPostScriptファイルをpngやアニメーションgifに変換する時に利用。
+%\item ImageMagick : GPhysから出力したPostScriptファイルをpngやアニメーションgifに変換する時に利用。
 %\end{itemize}
 
 
@@ -579,11 +584,11 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
 ここに挙げた以外のツールで解析・描画することももちろん可能である。
 
 \begin{itemize}
-\item Gphys / Ruby-DCL by 地球電脳倶楽部\\
+\item GPhys / Ruby-DCL by 地球電脳倶楽部\\
  \begin{itemize}
   \item URL： \url{http://ruby.gfd-dennou.org/products/gphys/}
   \item 概略：SCALEの出力ファイルは、MPI並列の計算領域分割に従ってMPIプロセスごとに
-              NetCDF形式の分割ファイルとして出力される。Gphysの"gpview"や"gpvect"といった
+              NetCDF形式の分割ファイルとして出力される。GPhysの"gpview"や"gpvect"といった
               描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。
   \item インストール方法：本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。\\
                         \url{http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm}\\
@@ -615,7 +620,7 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
 
 \vspace{1cm}
 \noindent {\Large\em COLUMN} \hrulefill
-\subsubsection{Mac OS XにおけるGphys / Ruby-DCLのインストール}
+\subsubsection{Mac OS XにおけるGPhys / Ruby-DCLのインストール}
 
 macports-JPが作成しているリポジトリから、Mac OS X用のGPhysをインストールできる。
 以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。
@@ -627,7 +632,7 @@ macports-JPが作成しているリポジトリから、Mac OS X用のGPhysを�
 \begin{verbatim}
  file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports
 \end{verbatim}
-これで、Gphysと関連ライブラリをmacportsで一括インストールできるようになる。
+これで、GPhysと関連ライブラリをmacportsで一括インストールできるようになる。
 今回はruby1.9向けのrb19-gphysをインストールすることにする。
 
 \begin{verbatim}
