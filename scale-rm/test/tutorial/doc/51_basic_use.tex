@@ -10,9 +10,9 @@ SCALEではMPIプロセス数も考慮する必要がある。
 
 %\begin{figure}[h]
 %\begin{center}
-%  \includegraphics[width=0.9\hsize]{./figure/scale_grid.png}\\
+%  \includegraphics[width=0.9\hsize]{./figure/domain.png}\\
 %  \caption{SCALE-RMモデルの実行過程}
-%  \label{fig:scale_grid}
+%  \label{fig:domain}
 %\end{center}
 %\end{figure}
 
@@ -129,17 +129,18 @@ SCALEの格子系はArakawa-Cグリッド、
 Center Pointと呼び、コントロールボリュームの面に位置する格子点
 （Center Pointに対して1/2ずれている）をFace Pointと呼ぶ。
 SCALEでは、これらの頭文字と方向を組み合わせて
-\verb|CX、CY、CZ|や\verb|FX、FY、FZ|と定義している。
-（図\ref{fig:scale_grid})。
+\verb|CX、CY、CZ|や\verb|FX、FY、FZ|と定義している（図\ref{fig:scale_grid})。
 
 
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./figure/Center-Face.eps}\\
-  \caption{SCALE-RMの格子の定義。\verb|PARAM_GRID|で\verb|FZ|を指定する時は、HALOを除いた計算領域下端の格子からk=1として与える(図b参照)。(ただし、SCALE本体では、HALOを含む領域の左下端の格子をi,j,k=1と定義している。)}
+  \caption{SCALE-RMの格子の定義。PARAM\_GRIDでFZを指定する時は、HALOを除いた計算領域下端の格子からk=1として与える(図b参照)。(ただし、SCALE本体では、HALOを含む領域の左下端の格子をi, j, k=1と定義している。{\textcolor{red}{図修正中}}}
   \label{fig:scale_grid}
 \end{center}
 \end{figure}
+
+
 
 直接格子点の位置を指定する場合は、Z方向のFace Pointの位置を
 \verb|FZ(:)|に指定
