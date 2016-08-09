@@ -41,36 +41,3 @@ SCALEライブラリには５種類の雲モデルが実装されている。氷
 上記の４種類の雲微物理は１→４の順に高精度になるが、その分計算コストも高くなる。
 
 
-\section{雲微物理スキームの選択方法}
-%====================================================================================
-
-1-momentビン法を用いる際は、init.confに以下の項目を追加する必要がある。\\
-
-\noindent {\gt \ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_MKINIT_RF01| \\
-\verb| PERTURB_AMP=0.02d0,| \\
-\verb| RANDOM_LIMIT=5,| \\
-\verb| RANDOM_FLAG=1| \\
-\verb|/| \\
- \\
-\verb|&PARAM_BIN| \\
-\verb| nbin   = 33,| \\
-\verb| ICEFLG =  0,| \\
-\verb| nccn   =  0,| \\
-\verb| kphase =  0,| \\
-\verb|/| \\
- \\
-\verb|&PARAM_SBMAERO| \\
-\verb| F0_AERO =   1.D7,| \\
-\verb| R0_AERO =   1.D-7,| \\
-\verb| R_MAX   =   1.D-6,| \\
-\verb| R_MIN   =   1.D-8,| \\
-\verb| A_ALPHA =   3.D0,| \\
-\verb| rhoa    = 2.25D3,| \\
-\verb|/| \\
-\end{tabularx}
-}}\\
-
-それぞれの意味は「雲微物理スキームのオプションとNamelist」の章を参照されたい。
-
