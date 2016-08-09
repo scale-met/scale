@@ -1,5 +1,9 @@
 = Release History
 
+== 2016-08-04 (5.0.1)
+* Bug fixs:
+  * Fix wrong dependency for making SCALE-GM
+
 == 2016-07-05 (5.0.0)
 * Changes:
   * change name SCALE-LES to SCALE-RM (also name of binary)

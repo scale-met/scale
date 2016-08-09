@@ -1340,15 +1340,15 @@ contains
              qnext_min = min( Qin_minL, Qin_minU, q_pl(n,k,l) )
              qnext_max = max( Qin_maxL, Qin_maxU, q_pl(n,k,l) )
 
-             Cin      = (      inflagL ) * ( ck_pl(n,k  ,l,1) ) &
-                      + (      inflagU ) * ( ck_pl(n,k+1,l,2) )
-             Cout     = ( 1.0_RP-inflagL ) * ( ck_pl(n,k  ,l,1) ) &
-                      + ( 1.0_RP-inflagU ) * ( ck_pl(n,k+1,l,2) )
+             Cin      = (        inflagL ) * ( ck_pl(n,k,l,1) ) &
+                      + (        inflagU ) * ( ck_pl(n,k,l,2) )
+             Cout     = ( 1.0_RP-inflagL ) * ( ck_pl(n,k,l,1) ) &
+                      + ( 1.0_RP-inflagU ) * ( ck_pl(n,k,l,2) )
 
-             CQin_max = (      inflagL ) * ( ck_pl(n,k  ,l,1) * Qin_maxL ) &
-                      + (      inflagU ) * ( ck_pl(n,k+1,l,2) * Qin_maxU )
-             CQin_min = (      inflagL ) * ( ck_pl(n,k  ,l,1) * Qin_minL ) &
-                      + (      inflagU ) * ( ck_pl(n,k+1,l,2) * Qin_minU )
+             CQin_max = (        inflagL ) * ( ck_pl(n,k,l,1) * Qin_maxL ) &
+                      + (        inflagU ) * ( ck_pl(n,k,l,2) * Qin_maxU )
+             CQin_min = (        inflagL ) * ( ck_pl(n,k,l,1) * Qin_minL ) &
+                      + (        inflagU ) * ( ck_pl(n,k,l,2) * Qin_minU )
 
              zerosw = 0.5_RP - sign(0.5_RP,abs(Cout)-EPS) ! if Cout = 0, sw = 1
 
