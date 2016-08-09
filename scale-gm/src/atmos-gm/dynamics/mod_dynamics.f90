@@ -318,8 +318,6 @@ contains
     real(RP) :: cv   (ADM_gall,   ADM_kall,ADM_lall   )
     real(RP) :: cv_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: pre0_kappa, kappa
-
     real(RP), parameter :: TKE_MIN = 0.0_RP
     real(RP)            :: TKEg_corr
 
@@ -506,19 +504,20 @@ contains
                            VMTR_C2WfactGz(:,:,:,l)  ) ! [IN]
        enddo
 
-       kappa      = Rdry / CPdry
-       pre0_kappa = PRE00**kappa
+       call THRMDYN_th ( ADM_gall,   & ! [IN]
+                         ADM_kall,   & ! [IN]
+                         ADM_lall,   & ! [IN]
+                         tem(:,:,:), & ! [IN]
+                         pre(:,:,:), & ! [IN]
+                         th (:,:,:)  ) ! [OUT]
 
-       !$acc kernels pcopy(th,eth) pcopyin(tem,pre,rho,ein) async(0)
-       do l = 1, ADM_lall
-       do k = 1, ADM_kall
-       do g = 1, ADM_gall
-          th (g,k,l) = tem(g,k,l) + pre(g,k,l)**kappa * pre0_kappa
-          eth(g,k,l) = ein(g,k,l) + pre(g,k,l) / rho(g,k,l)
-       enddo
-       enddo
-       enddo
-       !$acc end kernels
+       call THRMDYN_eth( ADM_gall,   & ! [IN]
+                         ADM_kall,   & ! [IN]
+                         ADM_lall,   & ! [IN]
+                         ein(:,:,:), & ! [IN]
+                         pre(:,:,:), & ! [IN]
+                         rho(:,:,:), & ! [IN]
+                         eth(:,:,:)  ) ! [OUT]
 
        !--- perturbations ( pre, rho with metrics )
        !$acc  kernels pcopy(pregd,rhogd) pcopyin(pre,pre_bs,rho,rho_bs,VMTR_GSGAM2) async(0)

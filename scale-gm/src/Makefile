@@ -168,7 +168,7 @@ $(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.f90 $(patsubst %,$(BUILD_DIR)/%,$
 $(BUILD_DIR)/fio.o                : fio.c $(SCALEGMDIR)/include/fio.h $(SCALEGMDIR)/include/fio_def.h
 $(BUILD_DIR)/fiof.o               : fiof.c $(SCALEGMDIR)/include/fiof.h $(SCALEGMDIR)/include/fio.h $(SCALEGMDIR)/include/fio_def.h
 $(BUILD_DIR)/orgico.o             : orgico.c $(SCALEGMDIR)/include/orgico.h $(SCALEGMDIR)/include/fio_def.h
-$(BUILD_DIR)/mod_adm.o            : mod_adm.f90            mod_misc.o
+$(BUILD_DIR)/mod_adm.o            : mod_adm.f90
 $(BUILD_DIR)/mod_fio.o            : mod_fio.f90            mod_adm.o fio.o fiof.o
 $(BUILD_DIR)/mod_comm.o           : mod_comm.f90           mod_adm.o
 $(BUILD_DIR)/mod_grd.o            : mod_grd.f90            mod_adm.o mod_comm.o mod_fio.o mod_ideal_topo.o
@@ -205,7 +205,7 @@ $(BUILD_DIR)/mod_nudge.o          : mod_nudge.f90          mod_adm.o mod_time.o 
 $(BUILD_DIR)/mod_ideal_init.o     : mod_ideal_init.f90     mod_adm.o mod_runconf.o mod_vmtr.o mod_fio.o mod_time.o mod_cnvvar.o mod_vintrpl.o mod_comm.o mod_thrmdyn.o mod_vmtr.o mod_src.o dcmip_initial_conditions_test_1_2_3_v5.o
 $(BUILD_DIR)/mod_history_vars.o   : mod_history_vars.f90   mod_adm.o mod_history.o mod_runconf.o mod_gmtr.o mod_gm_statistics.o mod_vmtr.o mod_prgvar.o mod_bsstate.o mod_cnvvar.o mod_thrmdyn.o mod_bndcnd.o mod_grd.o
 $(BUILD_DIR)/mod_mkgrd.o          : mod_mkgrd.f90          mod_adm.o mod_grd.o mod_comm.o mod_gm_statistics.o mod_gmtr.o
-$(BUILD_DIR)/mod_mnginfo_light.o  : mod_mnginfo_light.f90  mod_misc.o
+$(BUILD_DIR)/mod_mnginfo_light.o  : mod_mnginfo_light.f90
 $(BUILD_DIR)/mod_option.o         : mod_option.f90
 $(BUILD_DIR)/mod_netcdf.o         : mod_netcdf.f90
 
