@@ -119,7 +119,7 @@ contains
     end if
 
     do n = 1, NQ
-       if( IO_L ) write(IO_FID_LOG,'(a,i4,a,a,a,f6.1,a,f6.1,a,l,a,l)') &
+       if( IO_L ) write(IO_FID_LOG,'(a,i4,a,a,a,f6.1,a,f6.1,a,l1,a,l1)') &
             'register tracer: ', &
             QA+n, ', NAME=', trim(NAME(n)), ', CV=', CV_(n), ', CP=', CP_(n), ', ADVC=', ADVC_(n), ', MASS=', MASS_(n)
        TRACER_NAME(QA+n) = NAME(n)

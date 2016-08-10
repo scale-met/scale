@@ -357,13 +357,19 @@ contains
        pott, &
        temp, &
        pres, &
-       q     )
+       q,    &
+       CVq,  &
+       Rq,   &
+       mass  )
     implicit none
 
     real(RP), intent(out) :: pott(KA)    ! potential temperature [K]
     real(RP), intent(in)  :: temp(KA)    ! temperature           [K]
     real(RP), intent(in)  :: pres(KA)    ! pressure              [Pa]
     real(RP), intent(in)  :: q   (KA,QA) ! mass concentration    [kg/kg]
+    real(RP), intent(in)  :: CVq (QA)    ! specific heat         [J/kg/K]
+    real(RP), intent(in)  :: Rq  (QA)    ! gas constant          [J/kg/K]
+    real(RP), intent(in)  :: mass(QA)    !
 
     real(RP) :: qdry
     real(RP) :: Rtot, CVtot, RovCP
@@ -378,12 +384,14 @@ contains
 #else
        qdry  = 1.0_RP
        CVtot = 0.0_RP
-       do iqw = QQS, QQE
-          qdry  = qdry  - q(k,iqw)
-          CVtot = CVtot + q(k,iqw) * AQ_CV(iqw)
+       Rtot  = 0.0_RP
+       do iqw = 1, QA
+          qdry  = qdry  - q(k,iqw) * mass(iqw)
+          CVtot = CVtot + q(k,iqw) * CVq(iqw)
+          Rtot  = Rtot  + q(k,iqw) * Rq(iqw)
        enddo
        CVtot = CVdry * qdry + CVtot
-       Rtot  = Rdry  * qdry + Rvap * q(k,I_QV)
+       Rtot  = Rdry  * qdry + Rtot
 #endif
 
        RovCP = Rtot / ( CVtot + Rtot )

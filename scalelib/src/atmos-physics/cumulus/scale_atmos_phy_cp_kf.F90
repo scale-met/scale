@@ -296,8 +296,6 @@ contains
        nca,            &
        w0avg           )
     use scale_grid_index
-    use scale_tracer, only: &
-       MP_QA
     use scale_history, only: &
        HIST_in
     implicit none
@@ -516,6 +514,16 @@ contains
     use scale_const, only: &
        GRAV => CONST_GRAV, &
        R    => CONST_Rdry
+    use scale_atmos_phy_mp, only: &
+       QA_MP, &
+       QS_MP
+    use scale_atmos_hydrometer, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG
     use scale_time , only :&
        dt => TIME_DTSEC_ATMOS_PHY_CP
     use scale_grid_real, only: &
@@ -566,7 +574,7 @@ contains
     real(RP) :: rh    (KA)       ! saturate vapor [%]
     real(RP) :: deltap(KA)       ! delta Pressure [Pa]
 
-    real(RP) :: q_hyd(KA,MP_QA)  ! water mixing ratio [kg/kg]
+    real(RP) :: q_hyd(KA,QA_MP)  ! water mixing ratio [kg/kg]
     real(RP) :: dens_nw(KA)      ! density [kg/m**3]
     integer  :: nic
     real(RP) :: time_advec       ! advection timescale
@@ -631,7 +639,7 @@ contains
     !
     real(RP) :: qd(KA) ! dry mixing ratio
     ! do loop variable
-    integer  :: k, i, j, iq
+    integer  :: k, i, j, iq, iqa, ii
 
 
     do j = JS, JE
@@ -652,14 +660,17 @@ contains
        enddo
 
        do k = KS, KE
-          call THERMODYN_temp_pres( TEMP(k),      & ! [OUT]
-                                    PRES(k),      & ! [OUT]
-                                    DENS(k,i,j),  & ! [IN]
-                                    RHOT(k,i,j),  & ! [IN]
-                                    QTRC(k,i,j,:) ) ! [IN]
+          call THERMODYN_temp_pres( TEMP(k),       & ! [OUT]
+                                    PRES(k),       & ! [OUT]
+                                    DENS(k,i,j),   & ! [IN]
+                                    RHOT(k,i,j),   & ! [IN]
+                                    QTRC(k,i,j,:), & ! [IN]
+                                    TRACER_CV(:),  & ! [IN]
+                                    TRACER_R(:),   & ! [IN]
+                                    TRACER_MASS(:) ) ! [IN]
 
           ! calculate water vaper and relative humidity
-          call THERMODYN_qd( QDRY(k), QTRC(k,i,j,:) )
+          call THERMODYN_qd( QDRY(k), QTRC(k,i,j,:), TRACER_MASS(:) )
 
           call SATURATION_psat_liq( PSAT(k), TEMP(k) )
 
@@ -678,7 +689,7 @@ contains
 
        DENS_t_CP(KS:KE,i,j) = 0.0_RP
        DT_RHOT  (KS:KE,i,j) = 0.0_RP
-       do iq = 1, QQS
+       do iq = 1, QA
           DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
        end do
        cldfrac_KF (KS:KE,:) = 0.0_RP
@@ -687,9 +698,10 @@ contains
        cloudtop   (i,j) = 0.0_RP
        zlcl       (i,j) = 0.0_RP
 
-       do iq = 1, MP_QA
+       do iq = 1, QA_MP-1
+          iqa = iq + QS_MP
        do k  = KS, KE
-          q_hyd(k,iq) = QTRC(k,i,j,I_MP2ALL(iq)) / QDRY(k)
+          q_hyd(k,iq) = QTRC(k,i,j,iqa) / QDRY(k)
        enddo
        enddo
 
@@ -876,50 +888,39 @@ contains
              nca   (i,j) = KF_DT*60._RP ! convection feed back act this time span
           end if
           ! update qd
-          if (QA > 3) then ! assume TOMITA08
-             q_hyd(KS:KE,I_QC-1) = ( qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-1) )
-             q_hyd(KS:KE,I_QR-1) = ( qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-1) )
-             q_hyd(KS:KE,I_QI-1) = ( qi_nw(KS:KE) + q_hyd(KS:KE,I_QI-1) )
-             q_hyd(KS:KE,I_QS-1) = ( qs_nw(KS:KE) + q_hyd(KS:KE,I_QS-1) )
-             qd(KS:KE) = 1._RP / ( 1._RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2)) ! new qdry
-             qtrc_nw(KS:KE,I_QV) = qv_g(KS:KE)*qd(KS:kE)
-             ! new qtrc
-             do iq = 1,MP_QA
-                qtrc_nw(KS:KE,I_MP2ALL(iq)) = ( q_hyd(KS:KE,iq) )*qd(KS:kE)
-             end do
-             ! new density
-             dens_nw(KS:KE) = dens(KS:KE,i,j)
-             do iq = QQS,QQE
-                dens_nw(KS:KE) = dens_nw(KS:KE) + ( qtrc_nw(KS:KE,iq) - QTRC(KS:KE,i,j,iq) )*dens(KS:KE,i,j)
-             end do
-             ! dens_(n+1) = dens_(n) + tend_q*dens_(n)
-          else ! kessular
-             q_hyd(KS:KE,I_QC-1) = ( qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-1) )
-             q_hyd(KS:KE,I_QR-1) = ( qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-1) )
-             !
-             qd(KS:KE) = 1._RP / ( 1._RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2))
-             ! new qtrc
-             do iq = 1,MP_QA
-                qtrc_nw(KS:KE,I_MP2ALL(iq)) = ( q_hyd(KS:KE,iq) )*qd(KS:kE)
-             end do
-             ! new density
-             dens_nw(KS:KE) = dens(KS:KE,i,j)
-             do iq = QQS,QQE
-                dens_nw(KS:KE) = dens_nw(KS:KE) + ( qtrc_nw(KS:KE,iq) - QTRC(KS:KE,i,j,iq) )*dens(KS:KE,i,j)
-             end do
-             ! dens_(n+1) = dens_(n) + tend_q*dens_(n)
-          end if
+          if ( I_QC>0 ) q_hyd(KS:KE,I_QC-QS_MP) = qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-QS_MP)
+          if ( I_QR>0 ) q_hyd(KS:KE,I_QR-QS_MP) = qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-QS_MP)
+          if ( I_QI>0 ) q_hyd(KS:KE,I_QI-QS_MP) = qi_nw(KS:KE) + q_hyd(KS:KE,I_QI-QS_MP)
+          if ( I_QS>0 ) q_hyd(KS:KE,I_QS-QS_MP) = qs_nw(KS:KE) + q_hyd(KS:KE,I_QS-QS_MP)
+          if ( I_QG>0 ) q_hyd(KS:KE,I_QG-QS_MP) = qs_nw(KS:KE) + q_hyd(KS:KE,I_QG-QS_MP)
+          qd(KS:KE) = 1.0_RP / ( 1.0_RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2)) ! new qdry
+          ! new qtrc
+          qtrc_nw(KS:KE,I_QV) = qv_g(KS:KE)*qd(KS:kE)
+          do iq = 1, QA_MP-1
+             qtrc_nw(KS:KE,QS_MP+iq) = q_hyd(KS:KE,iq) * qd(KS:KE)
+          end do
+          ! new density
+          dens_nw(KS:KE) = dens(KS:KE,i,j)
+          do ii = 1, QA_MP
+             iq = QS_MP + ii - 1
+             dens_nw(KS:KE) = dens_nw(KS:KE) + ( qtrc_nw(KS:KE,iq) - QTRC(KS:KE,i,j,iq) )*dens(KS:KE,i,j)
+          end do
+          ! dens_(n+1) = dens_(n) + tend_q*dens_(n)
+
           ! calc new potential temperature
           call THERMODYN_pott(&
                pott_nw(:), &
-               temp_g(:),pres(:),qtrc_nw(:,:))
+               temp_g(:), pres(:), qtrc_nw(:,:), &
+               TRACER_CV(:), TRACER_R(:), TRACER_MASS(:) )
           ! update rhot
           rhot_nw(KS:KE) = dens_nw(KS:KE)*pott_nw(KS:KE)
           ! calc tendency
           DENS_t_CP(KS:KE,i,j) = (dens_nw(KS:KE) - dens(KS:KE,i,j))/timecp(i,j)
           DT_RHOT(KS:KE,i,j)   = (rhot_nw(KS:KE) - RHOT(KS:KE,i,j))/timecp(i,j)
-          do iq = QQS,QQE
-             DT_RHOQ(KS:KE,i,j,iq) = (dens_nw(KS:KE)*qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j)*QTRC(KS:KE,i,j,iq))/timecp(i,j)
+          do ii = 1, QA_MP
+             iq = QS_MP + ii - 1
+             DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j) * QTRC(KS:KE,i,j,iq) ) &
+                  /timecp(i,j)
           end do
           ! if noconvection then nca is same value before call. nca only modifyed convectioned
        end if

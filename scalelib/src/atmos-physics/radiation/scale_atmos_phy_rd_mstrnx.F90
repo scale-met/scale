@@ -74,8 +74,6 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: RD_aero_str   = N_HYD + 1    ! start index for aerosol
   integer,  private, parameter :: RD_aero_end   = N_HYD + N_AE ! end   index for aerosol
 
-  integer,  private :: RD_KADD = 0 !< RD_KMAX = KMAX + RD_KADD
-
   integer,  private :: RD_KMAX      ! # of computational cells: z for radiation scheme
 
   real(RP), private, allocatable :: RD_zh          (:)   ! altitude    at the interface [km]
