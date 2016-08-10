@@ -29,6 +29,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -69,6 +70,13 @@ module mod_user
   logical, private :: first = .true.
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine USER_config
+
+    return
+  end subroutine USER_config
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
