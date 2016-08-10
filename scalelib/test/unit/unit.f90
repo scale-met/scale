@@ -57,7 +57,7 @@ program unit
 
   call GRID_INDEX_setup
 
-  call ATMOS_HYDROMETER_regist(q0, 1, 0, (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/) )
+  call ATMOS_HYDROMETER_regist(q0, 1, 1, 0, (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/) )
 
   ! setup horizontal/veritical grid system
   DZ = 500.0_RP
