@@ -126,18 +126,15 @@ micpara.datに記載されているnbinが異なれば、\\
 
 
 \subsection{放射スキーム} \label{sec:basic_radiation}
-%------------------------------------------------------
-放射スキームの選択は、init.confとrun.conf中の
-\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_RD_TYPE|で設定する。
-放射スキームを計算する(callする)タイミングは、
-\verb|PARAM_TIME|で設定するが、これについては
-第\ref{sec:timeintiv}節を参照のこと。\\
+%-------------------------------------------------------------------------------
+放射スキームの選択は、init.confとrun.conf中の\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_RD_TYPE|で設定する。
+放射スキームを計算する(callする)タイミングは、\verb|PARAM_TIME|で設定する。時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_RD_TYPE = "MSTRN", | & ; 表\ref{tab:nml_atm_rd}より選択。\\
+\verb| ATMOS_PHY_RD_TYPE = "MSTRNX", | & ; 表\ref{tab:nml_atm_rd}より選択。\\
 \verb|/             | & \\
 \end{tabularx}
 }}\\
@@ -148,27 +145,48 @@ micpara.datに記載されているnbinが異なれば、\\
   \label{tab:nml_atm_rd}
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-      \verb|OFF|    & \textcolor{red}{使用しない, どういう状態を想定?} &  \\
-      \verb|MSTRN|  & MSTRN-X    & \citet{sekiguchi_2008} \\
+      \verb|OFFまたはNONE| & 放射スキームを使用しない & \\
+      \verb|MSTRNX|       & mstrnX & \citet{sekiguchi_2008} \\
+      \verb|WRF|          & mstrnX(長波)+Dudhia(短波) & \citet{dudhia_1989} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-\verb|MSTRN|を実行するには、各種外部データとパラメタテーブルが必要である。
-オゾンのプロファイルなどの外部データとパラメタテーブルは、
+放射計算のための太陽放射量は、モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
+理想実験のために、太陽放射量、緯度経度、時刻を固定することも出来る。これらは\verb|PARAM_ATMOS_SOLARINS|で設定する。
+
+
+実験設定によっては、モデルトップの高度が10-20 kmと低いことがしばしばある。そのため放射計算ではモデルトップとは別の最上層高度を設定し、
+モデルトップより上空を何層で表現するか設定するようになっている。放射用最上層を何kmにとるかは放射スキーム依存である。
+例えば\verb|MSTRNX|ではデフォルトのパラメータテーブルが想定する放射用最上層は100 kmである。追加される高度はデフォルトの場合10層で表現する。
+すなわち、モデルトップが22 kmであれば、放射スキーム内では7.8 km x 10層が追加されて計算される。
+これらは\verb|MSTRNX|なら\verb|PARAM_ATMOS_PHY_RD_MSTRN|で設定する。
+
+追加された層の気温・気圧プロファイルは外部から与える必要がある。また二酸化炭素やオゾン等の気体濃度プロファイルも必要である。
+SCALEでは気温・気圧についてはCIRA86\citet{CSR_2006}、気体種についてはMIPAS2001\citet{Remedios_2007}の気候値を用意している。
+気候値プロファイルについても、モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
+読み込むファイルは、
 \begin{verbatim}
   scale-rm/test/data/rad/
 \end{verbatim}
-に用意されている。
-放射スキームを利用する場合は、これらのファイルが必要となる。
+に用意されており、\verb|PARAM_ATMOS_PHY_RD_PROFILE|でファイルのディレクトリと名前を指定する。
+
+\verb|MSTRNX|を実行するには、放射計算のためのパラメータテーブルが必要である。デフォルトでは太陽放射から赤外放射までを29バンド111チャンネルに分割し、
+雲・エアロゾル粒子の粒径を６ビンで表した時のテーブルを用いている。
+パラメータファイル（３種類）も、
+\begin{verbatim}
+  scale-rm/test/data/rad/
+\end{verbatim}
+に用意されている。\verb|PARAM_ATMOS_PHY_RD_MSTRN|でファイルのディレクトリと名前を指定する。
 
 
 
 \subsection{地表面(大気下端境界)} \label{sec:basic_surface}
 %------------------------------------------------------
-大気下端境界の設定は、init.confとrun.conf中の
-\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE|で設定する。\\
+大気下端境界の選択は、init.confとrun.conf中の\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE|で設定する。
+海面・陸面・都市モデルを用いずに大気下端境界のフラックスを計算する(callする)タイミングは、\verb|PARAM_TIME|で設定する。
+時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
 \ovalbox{
@@ -184,26 +202,20 @@ micpara.datに記載されているnbinが異なれば、\\
   \caption{大気下端境界の選択肢}
   \label{tab:nml_atm_sf}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明              \\ \hline
-      \verb|OFF|     & \textcolor{red}{ゼロフラックスを想定}   \\
-      \verb|CONST|   & Surface fluxを任意の値に固定             \\ %詳細は、表\ref{tab:sfcflux}参照。
-      \verb|BULK|    & バルクモデル \textcolor{red}{これって陸面バルクとどう違うの? パラメータだけ?海想定?}  \\
-      \verb|COUPLE|  & 海・陸面・都市モデル使用する場合に選択   \\
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明\\ \hline
+      \verb|OFFまたはNONE| & 地表面フラックスを計算しない \\
+      \verb|CONST|   　　　& 地表面フラックスを任意の値に固定 \\
+      \verb|BULK|    　　　& 地表面フラックスをバルクモデルで計算 \\
+      \verb|COUPLE|  　　　& 海面・陸面・都市モデルそれぞれが計算するフラックスを受け取る \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-地表面スキームをcallするタイミングは、
-\verb|PARAM_TIME|で設定するが、これについては
-第\ref{sec:timeintiv}節を参照のこと。
-
-
 \subsubsection{CONST設定}
-%---------------------------
+%-------------------------------------------------------------------------------
 \verb|ATMOS_PHY_SF_TYPE = "CONST"|を選択した場合は、run.confで
-下記を設定することにより、任意の値に固定することが可能である。
-下記の値はデフォルトの設定を示す。\\
+下記を設定することにより、任意の値に固定することが可能である。下記の値はデフォルトの設定を示す。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -228,135 +240,38 @@ micpara.datに記載されているnbinが異なれば、\\
 \end{tabularx}
 }}}\\
 
+\subsubsection{BULK設定}
+%-------------------------------------------------------------------------------
+\verb|ATMOS_PHY_SF_TYPE = "BULK"|を選択した場合は、任意の地表面温度に対応したフラックスをバルクモデルに従って計算する。
+これは海洋・陸面・都市モデルを用いずに下端境界を設定する際（特に理想実験）に利用される。
+このとき、粗度は海面粗度の計算スキームを利用しているが、後述するように海面粗度は定数を与えることができ、
+また蒸発効率を決める係数（Beta）も任意の値を設定出来るため、海面に限定せず、陸面を想定した理想実験も行うことが出来る。
 
-\subsection{海洋スキーム(大気-海面フラックス)} \label{sec:basic_ocean}
-%------------------------------------------------------
-
-海洋スキームをONにする場合、
-\verb|&PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|とする必要がある。
-海洋スキームの選択は、init.confとrun.conf中の
-\verb|PARAM_OCEAN|の\verb|OCEAN_TYPE|で設定する。
-海洋スキームを計算（フラックスをupdate）するタイミングは、
-\verb|PARAM_TIME|で設定するが、これについては
-第\ref{sec:timeintiv}節を参照のこと。\\
+海面粗度を計算するスキームは、
+run.conf中の\verb|PARAM_ROUGHNESS|の\verb|ROUGHNESS_TYPE|で設定する。\\
 
 \noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | &\\
-\verb|/             | & \\
-\\
-\verb|&PARAM_OCEAN  | & \\
-\verb| OCEAN_TYPE = "CONST", | & ; 表\ref{tab:nml_ocean}より選択。\\
+\verb|&PARAM_ROUGHNESS  | & \\
+\verb| ROUGHNESS_TYPE = "MOON07", | & ; 表\ref{tab:nml_roughness}より選択。\\
 \verb|/             | & \\
 \end{tabularx}
 }}\\
 
 \begin{table}[h]
 \begin{center}
-  \caption{海洋スキームの選択肢}
-  \label{tab:nml_ocean}
-  \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 \\ \hline
-      \verb|OFF|   & 土地利用にOCEANがない場合のみ使用可    \\
-      \verb|CONST| & 初期値固定                              \\
-      \verb|FILE|  & 外部ファイルから与える (時間変化あり)   \\
-      \verb|SLAB|  & 海洋スラブモデル                        \\
-    \hline
-  \end{tabularx}
-\end{center}
-\end{table}
-
-
-\subsubsection{海洋スラブモデル}
-%---------------------------
-\verb|OCEAN_TYPE = "SLAB"|を選択した場合は、init.confとrun.confで
-モデルの深さを設定することができる。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{ll}
- \verb|&PARAM_OCEAN_PHY_SLAB                 | & \\
- \verb|  OCEAN_PHY_SLAB_DEPTH   = 10.0_DP,   | & ; デフォルト設定 \\
- \verb|/|            & \\
-\end{tabularx}
-}}\\
-
-
-\subsubsection{外部ファイル入力}
-%---------------------------
-\verb|OCEAN_TYPE = "FILE"|を選択した場合は、init.confとrun.confで
-外部入力ファイルの設定が必要である。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{ll}
- \verb|&EXTITEM            |                       & \\
- \verb| basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
- \verb| varname    = "OCEAN_TEMP",               | & ; \verb|"OCEAN_TEMP"|と書く。\\
- \verb| step_limit = 1800, |                        & \\
- \verb| step_fixed =  -1,  |                        & \\
- \verb| enable_periodic_year  = .false.,|           & \\
- \verb| enable_periodic_month = .false.,|           & \\
- \verb| enable_periodic_day   = .false.,|           & \\
- \verb|/|            & \\
-\end{tabularx}
-}}\\
-
-
-
-\subsection{陸面モデル(大気-陸面フラックス)} \label{sec:basic_land}
-%------------------------------------------------------
-陸面モデルをONにする場合、
-\verb|&PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|である必要がある。
-陸面モデルの選択は、init.confとrun.conf中の
-\verb|PARAM_LAND|の\verb|LAND_TYPE|で設定する。
-陸面モデルを計算する(callする)タイミングは、
-\verb|PARAM_TIME|で設定するが、これについては
-第\ref{sec:timeintiv}節を参照のこと。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{ll}
-\verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & \\
-\verb|/             | & \\
-\\
-\verb|&PARAM_LAND  | & \\
-\verb| LAND_TYPE = "SLAB", | & ; 表\ref{tab:nml_land}より選択。\\
-\verb|/             | & \\
-\end{tabularx}
-}}\\
-
-\begin{table}[h]
-\begin{center}
-  \caption{陸面スキームの選択肢}
-  \label{tab:nml_land}
+  \caption{海面粗度スキームの選択肢}
+  \label{tab:nml_roughness}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-      \verb|OFF|   & 土地利用にLANDがない場合のみ使用可  &  \\
-      \verb|CONST| & 土壌温度・土壌水分・地表面温度 初期値固定 &  \\
-      \verb|SLAB|  & 熱拡散、バケツモデルモデル   &  \\
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献 \\ \hline
+      \verb|MOON07|   & デフォルト & \citet{moon_2007} \\
+      \verb|MILLER92| &          & \citet{miller_1992} \\
+      \verb|CONST|    & 定数を与える & \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
-
-
-
-\subsubsection{陸面スラブモデル}
-%---------------------------
-\verb|LAND_TYPE = "SLAB"|を選択した場合は、
-土地利用データとそれに対応するパラメタテーブルが必要である。
-パラメタテーブルは、
-\begin{verbatim}
-  scale-rm/test/data/land/param.bucket.conf
-\end{verbatim}
-に用意されている。
-ファイルには、各土地利用区分とそれに対応する粗度長などのパラメタが与えられている。
-
-
 
 フラックス計算に使用するバルク交換係数の計算スキームは
 run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
@@ -375,9 +290,9 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
   \caption{バルクフラックススキームの選択肢}
   \label{tab:nml_bulk}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-      \verb|B91W01| & デフォルト & \citet{beljaars_1991,wilson_2001}\\
-      \verb|U95|    &            & \citet{uno_1995}\\
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献 \\ \hline
+      \verb|B91W01| & デフォルト & \citet{beljaars_1991,wilson_2001} \\
+      \verb|U95|    &          & \citet{uno_1995} \\
     \hline
   \end{tabularx}
 \end{center}
@@ -385,10 +300,169 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 
 
 
+\subsection{海洋モデル} \label{sec:basic_ocean}
+%-------------------------------------------------------------------------------
+海洋過程は海面の状態量の更新と大気ー海洋間のフラックス計算の２つに大別される。
+これらの過程を計算する(callする)タイミングはどちらも\verb|PARAM_TIME|で設定する。
+時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
+
+
+\subsubsection{海面スキーム}
+%-------------------------------------------------------------------------------
+海面の状態量（主に海面温度）の更新を担う海面スキームの選択は、init.confとrun.conf中の\verb|PARAM_OCEAN|の\verb|OCEAN_TYPE|で設定する。\\
+海面のアルベドは、どの海面スキームを選択しても同じ計算スキームが適用され、太陽天頂角に応じたアルベドが計算される。
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_OCEAN           | & \\
+\verb| OCEAN_TYPE = "CONST", | & ; 表\ref{tab:nml_ocean}より選択。\\
+\verb|/                      | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{海洋スキームの選択肢}
+  \label{tab:nml_ocean}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 \\ \hline
+      \verb|NONEまたはOFF| & 土地利用にOCEANがない場合のみ使用可  \\
+      \verb|CONST|        & 初期値のまま固定                   \\
+      \verb|FILE|         & 外部ファイルから与える (時間変化あり) \\
+      \verb|SLAB|         & スラブ海洋モデル                   \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+\verb|OCEAN_TYPE = "FILE"|を選択した場合は、init.confとrun.confで外部入力ファイルの設定が必要である。
+この場合、与えられた外部ファイルの空間部分布と時系列に応じて、海面温度は変化する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+ \verb|&EXTITEM                                  | & \\
+ \verb| basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
+ \verb| varname    = "OCEAN_TEMP",               | & ; \verb|"OCEAN_TEMP"|と書く。\\
+ \verb| step_limit = 1800,                       | & \\
+ \verb| step_fixed =  -1,                        | & \\
+ \verb| enable_periodic_year  = .false.,         | & \\
+ \verb| enable_periodic_month = .false.,         | & \\
+ \verb| enable_periodic_day   = .false.,         | & \\
+ \verb|/                                         | & \\
+\end{tabularx}
+}}\\
+
+
+\verb|OCEAN_TYPE = "SLAB"|を選択した場合は、init.confとrun.confでスラブ混合層の深さを設定することができる。
+この場合、大気-海洋間の熱フラックスの移動に応じて、スラブ混合層の温度は時間発展する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+ \verb|&PARAM_OCEAN_PHY_SLAB             | & \\
+ \verb|  OCEAN_PHY_SLAB_DEPTH = 10.0_DP, | & ; デフォルト設定[m] \\
+ \verb|/                                 | & \\
+\end{tabularx}
+}}\\
+
+\subsubsection{大気-海洋フラックス}
+%-------------------------------------------------------------------------------
+海面スキームで計算された大気ー海洋間フラックスを大気に反映させるには、\verb|PARAM_ATMOS|で\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|とする必要がある。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | &\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+大気ー海洋間フラックスは、複数あるバルクスキームのいずれかを用いて計算される。
+また、バルクスキーム内で利用される海面粗度長計算についても、複数のスキームが選択できる。\\
+
+海面粗度を計算するスキームは、
+run.conf中の\verb|PARAM_ROUGHNESS|の\verb|ROUGHNESS_TYPE|で設定する。\\
+
+フラックス計算に使用するバルク交換係数の計算スキームは
+run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
+
+これらの詳細については、地表面(大気下端境界)のセクションを参照のこと。
+
+
+
+\subsection{陸面モデル} \label{sec:basic_ocean}
+%-------------------------------------------------------------------------------
+陸面過程についても、海洋過程と同じく陸面の状態量の更新と大気ー陸面間のフラックス計算の２つに大別される。
+これらの過程を計算する(callする)タイミングはどちらも\verb|PARAM_TIME|で設定する。
+時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
+
+
+\subsubsection{陸面スキーム}
+%-------------------------------------------------------------------------------
+陸面の状態量（主に陸面温度と土壌温度、土壌水分量）の更新を担う陸面スキームの選択は、
+init.confとrun.conf中の\verb|PARAM_LAND|の\verb|LAND_TYPE|で設定する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_LAND  | & \\
+\verb| LAND_TYPE = "SLAB", | & ; 表\ref{tab:nml_land}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{陸面スキームの選択肢}
+  \label{tab:nml_land}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明 \\ \hline
+      \verb|NONEまたはOFF| & 土地利用にLANDがない場合のみ使用可            \\
+      \verb|SLAB|         & 熱拡散モデル＋バケツモデル                    \\
+      \verb|CONST|        & SLABで土壌温度、土壌水分量、陸面温度を更新しない \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+\verb|LAND_TYPE = "SLAB"|または\verb|LAND_TYPE = "CONST"|を選択した場合は、
+土地利用区分に応じたアルベド、粗度長等のパラメータテーブルと、土地利用区分分布の入力が必要である。
+パラメータテーブルは、
+\begin{verbatim}
+  scale-rm/test/data/land/param.bucket.conf
+\end{verbatim}
+に用意されている。\\
+
+
+\subsubsection{大気-陸面フラックス}
+%-------------------------------------------------------------------------------
+陸面スキームで計算された大気ー陸面間フラックスを大気に反映させるには、\verb|PARAM_ATMOS|で\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|とする必要がある。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | &\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+大気ー陸面間フラックスの計算スキームは、陸面スキームに対応して選択される。
+\verb|LAND_TYPE = "SLAB"|または\verb|LAND_TYPE = "CONST"|を選択した場合は、
+海面または理想実験用の地表面で用いられるバルクスキームと同じものが利用される。\\
+
+この時のフラックス計算に使用するバルク交換係数の計算スキームは
+run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
+
+
 
 \subsection{都市モデル(大気-都市面フラックス)} \label{sec:basic_urban}
 %------------------------------------------------------
-
 都市モデルをONにする場合、
 \verb|&PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|である必要がある。
 都市モデルの選択は、init.confとrun.conf中の
