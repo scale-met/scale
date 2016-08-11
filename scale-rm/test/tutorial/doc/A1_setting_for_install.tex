@@ -447,6 +447,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 
 
 \section{インストール方法(Mac OS X 編)}
+\label{sec:install_mac}
 %==========================================================================================
 
 \subsubsection{macportsを用いたインストール}
@@ -534,6 +535,41 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
 \end{verbatim}
 
 
+\subsubsection{Mac OS XにおけるGPhys / Ruby-DCLのインストール}
+
+macports-JPが作成しているリポジトリから、Mac OS X用のGPhysをインストールできる。
+以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。
+\begin{verbatim}
+ $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
+ $ /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk
+\end{verbatim}
+/opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。
+\begin{verbatim}
+ file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports
+\end{verbatim}
+これで、GPhysと関連ライブラリをmacportsで一括インストールできるようになる。
+今回はruby1.9向けのrb19-gphysをインストールすることにする。
+
+\begin{verbatim}
+ rubyのインストールと1.9の選択
+ $ sudo port install ruby19
+ $ sudo port select --set ruby ruby19
+\end{verbatim}
+\begin{verbatim}
+ 依存関係の解決を任せるかたちで、gphysのインストール
+ $ sudo port install rb19-gphys
+\end{verbatim}
+
+インストールされたruby1.9版gphysコマンドは、末尾に1.9が付いている。
+これを無くしたい場合は/opt/local/bin内でシンボリックリンクを張る。
+以下では特に頻繁に使う３つを例に挙げる。
+\begin{verbatim}
+ $ sudo ln -s gplist1.9 gplist
+ $ sudo ln -s gpvect1.9 gpvect
+ $ sudo ln -s gpview1.9 gpview
+\end{verbatim}
+
+
 %\subsubsection{その他のインストール}
 %
 %\textcolor{red}{\large 本節は部分的に削除予定；UsersGuideの中で使用していないものや、
@@ -592,7 +628,7 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
               描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。
   \item インストール方法：本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。\\
                         \url{http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm}\\
-                        Mac OS Xにおけるインストール方法は本節の末尾で説明する。
+                        Mac OS Xにおけるインストール方法は第\ref{sec:install_mac}節で説明する。
  \end{itemize}
 \item Grid Analysis and Display System (GrADS) by COLA\\
  \begin{itemize}
@@ -618,41 +654,7 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
  \end{itemize}
 \end{itemize}
 
-\vspace{1cm}
-\noindent {\Large\em COLUMN} \hrulefill
-\subsubsection{Mac OS XにおけるGPhys / Ruby-DCLのインストール}
 
-macports-JPが作成しているリポジトリから、Mac OS X用のGPhysをインストールできる。
-以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。
-\begin{verbatim}
- $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
- $ /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk
-\end{verbatim}
-/opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。
-\begin{verbatim}
- file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports
-\end{verbatim}
-これで、GPhysと関連ライブラリをmacportsで一括インストールできるようになる。
-今回はruby1.9向けのrb19-gphysをインストールすることにする。
-
-\begin{verbatim}
- rubyのインストールと1.9の選択
- $ sudo port install ruby19
- $ sudo port select --set ruby ruby19
-\end{verbatim}
-\begin{verbatim}
- 依存関係の解決を任せるかたちで、gphysのインストール
- $ sudo port install rb19-gphys
-\end{verbatim}
-
-インストールされたruby1.9版gphysコマンドは、末尾に1.9が付いている。
-これを無くしたい場合は/opt/local/bin内でシンボリックリンクを張る。
-以下では特に頻繁に使う３つを例に挙げる。
-\begin{verbatim}
- $ sudo ln -s gplist1.9 gplist
- $ sudo ln -s gpvect1.9 gpvect
- $ sudo ln -s gpview1.9 gpview
-\end{verbatim}
 
 
 

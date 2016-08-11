@@ -104,10 +104,10 @@ SCALE-RMの実行過程は、図\ref{fig:howto}に示されるように
     & & 海面更正気圧, 地上気圧, 10m東西風速, 10m南北風速, 2m気温, 2m比湿(相対湿度) \\
     &  \multicolumn{2}{l}{(2次元陸面データ)}\\
     & &  \multicolumn{1}{l}{親モデルの海陸マップ}\\
-    & &  \multicolumn{1}{l}{\color{blue}{地表面温度}}\\
+    & &  \multicolumn{1}{l}{\color{blue}{地表面温度(Skin temp)}}\\
     & &  \multicolumn{1}{l}{{\color{blue}{親モデル土壌データの深さ情報, 土壌温度}}, 土壌水分(体積含水率 or 飽和度)}\\
     &  \multicolumn{2}{l}{(2次元海面データ)}\\
-　　& &  \multicolumn{1}{l}{海面水温}\\ \hline
+　　& &  \multicolumn{1}{l}{\color{blue}{海面水温(Skin tempがある場合は省略可)}}\\ \hline
   \end{tabularx}
 \end{center}
 \end{table}

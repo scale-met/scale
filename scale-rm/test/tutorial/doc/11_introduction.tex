@@ -68,16 +68,19 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
  \item 各種投影法(Map-projection \& Map-factors)
  \item ネスティングシステム（1-way：親→子のみ）
    \begin{itemize}
-    \item オンライン実行(複数ドメインの計算を同時に実行)とオフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)を選択可能
+    \item オンライン実行(複数ドメインの計算を同時に実行)
+    \item オフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)
    \end{itemize}
  \item 複数事例一括実行 システム（バルクジョブシステム）
  \item gtoolの規約に基づく\footnote{https://www-gfd-dennou.org/arch/gtool/gtool5.htm}
 netcdf4ファイル I/O
  \item 外部データ読み込みによる初期値・境界値データ作成
    \begin{itemize}
-    \item WRF-ARW、NICAM、その他GrADSフォーマットでの入力に対応
+    \item WRF-ARW\footnote{http://www.wrf-model.org}、
+NICAM\footnote{http://nicam.jp}、
+その他GrADS\footnote{http://cola.gmu.edu/grads/}フォーマットでの入力に対応
    \end{itemize}
- \item 出力はすべてnetcdf3または4に対応。
+ \item 出力はすべてNetCDF3またはNetCDF4。
 \end{itemize}
 
 {\bf 力学コア関係}
@@ -134,7 +137,7 @@ netcdf4ファイル I/O
   \begin{itemize}
    \item 陸面モデル: 熱拡散・バケツモデル\\
          (バルク交換係数:\citep{beljaars_1991,wilson_2001}もしくは\citep{uno_1995})
-   \item 海洋モデル:初期値固定・外部入力（時間変化あり）/スラブモデル
+   \item 海洋モデル:初期値固定・外部入力（時間変化あり）・スラブモデル
    \item 都市モデル: 単層キャノピーモデル \citep{kusaka_2001}
   \end{itemize}
 \end{itemize}
