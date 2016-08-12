@@ -266,6 +266,8 @@ contains
          basename,            & ! (in)
          io_fid_grads_nml     ) ! (in)
 
+    close( io_fid_grads_nml )
+
     do ielem = 1, num_item_list_atom
        item  = item_list_atom(ielem)
        !--- check data
@@ -955,6 +957,8 @@ contains
          basename,            & ! (in)
          io_fid_grads_nml     ) ! (in)
 
+    close( io_fid_grads_nml )
+
     do ielem = 1, num_item_list_land
        item  = item_list_land(ielem)
        !--- check data
@@ -1393,6 +1397,8 @@ contains
          num_item_list_ocean, & ! (in)
          grads_ctl,           & ! (in)
          io_fid_grads_nml     ) ! (in)
+
+    close( io_fid_grads_nml )
 
     do ielem = 1, num_item_list_ocean
        item  = item_list_ocean(ielem)
