@@ -1210,16 +1210,10 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   if ( tint > 0.0 ) vars[nvar]->count[0] = 1;
 
 #ifndef NETCDF3
-  // set chunk size and deflate level
+  // set chunk size and deflate level (NetCDF-4 only)
   if ( files[fid]->deflate_level > 0 ) {
-    if ( files[fid]->shared_mode )
-      CHECK_ERROR( ncmpi_def_var_chunking(ncid, varid, NC_CHUNKED, vars[nvar]->count) )
-      CHECK_ERROR( ncmpi_def_var_deflate(ncid, varid, 0, 1, files[fid]->deflate_level) )
-    }
-    else {
-      CHECK_ERROR( nc_def_var_chunking(ncid, varid, NC_CHUNKED, vars[nvar]->count) )
-      CHECK_ERROR( nc_def_var_deflate(ncid, varid, 0, 1, files[fid]->deflate_level) )
-    }
+    CHECK_ERROR( nc_def_var_chunking(ncid, varid, NC_CHUNKED, vars[nvar]->count) )
+    CHECK_ERROR( nc_def_var_deflate(ncid, varid, 0, 1, files[fid]->deflate_level) )
   }
 #endif
 
