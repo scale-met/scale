@@ -5,7 +5,7 @@
 
 \subsection{数値解法}
 %------------------------------------------------------
-設定は、confファイルの\verb|PARAM_ATMOS|の\verb|ATMOS_DYN_TYPE|で設定する。\\
+設定は、設定ファイルの\verb|PARAM_ATMOS|の\verb|ATMOS_DYN_TYPE|で設定する。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -33,12 +33,12 @@
 \subsection{時間・空間差分スキーム}
 \label{sec:atmos_dyn_scheme}
 %------------------------------------------------------
-設定は、confファイルの\verb|PARAM_ATMOS_DYN|で設定する。
+設定は、設定ファイルの\verb|PARAM_ATMOS_DYN|で設定する。
 また、空間スキームによってはHaloの設定も必要である。
 下記の設定は推奨設定である。
 その他、スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。
 また、時間スキーム変更時には、タイムステップも考慮する必要があるが、
-それについては、第\ref{sec:timeintiv}節をを参照いただきたい。\\
+それについては、第\ref{sec:timeintiv}節をを参照のこと。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -70,12 +70,12 @@
     & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{1}{l}{4th order Runge-Kutta scheme} & \\
     \hline
     \multicolumn{3}{l}{空間スキーム} & 最小の設定格子数(Haloの数)\\ \hline
-    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2-nd order central difference schemes} & \multicolumn{1}{l}{1}\\
-    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4-th order central difference schemes} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6-th order central difference schemes} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3-rd order upwind difference schemes} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5-th order upwind difference schemes} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3-rd order upwind difference schemes with Koren (1993) filter} & \\
+f    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2-nd order central difference scheme} & \multicolumn{1}{l}{1}\\
+    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4-th order central difference scheme} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6-th order central difference scheme} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3-rd order upwind difference scheme} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5-th order upwind difference scheme} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3-rd order upwind difference scheme with Koren (1993) filter} & \\
 \hline
   \end{tabularx}
 \end{center}

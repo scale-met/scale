@@ -5,11 +5,11 @@
 \subsubsection{run.confの準備}
 runディレクトリへ移動する。
 \begin{verbatim}
- $ cd ${Tutrial_DIR}/real/run
+ $ cd ${Tutorial_DIR}/real/run
 \end{verbatim}
 %
 runディレクトリの中には、\verb|run.conf|という名前の
-コンフィグファイルが準備されており、
+設定ファイルが準備されており、
 ドメインの位置や格子点数など、
 チュートリアル用の設定（表\ref{tab:grids}）に合わせて設定されている。\\
 
@@ -160,7 +160,7 @@ X方向、Y方向の総格子点数は、ともに$2 \times 60$ で120である�
 \noindent その他に実験で使用される物理過程の設定は、
 \verb|PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN|の項目に
 記述されている。
-詳細なコンフィグファイルの内容については、付録\ref{app:namelist}を参照されたい。
+詳細な設定ファイルの内容については、付録\ref{app:namelist}を参照されたい。
 
 %
 \subsubsection{実行}
@@ -176,9 +176,13 @@ X方向、Y方向の総格子点数は、ともに$2 \times 60$ で120である�
  $ ln -s ../../../data/rad/*  ./   <- 放射スキーム用のパラメータファイル
 \end{verbatim}
 準備が整ったら、4-MPI並列によりscale-rmを実行する。
+%\begin{verbatim}
+%  $ mpirun -n 4 ./scale-rm run.conf < /dev/null >& log &
+%\end{verbatim}
 \begin{verbatim}
-  $ mpirun -n 4 ./scale-rm run.conf < /dev/null >& log &
+  $ mpirun -n 4 ./scale-rm run.conf >& log &
 \end{verbatim}
+
 
 実行にはある程度時間を要する(評価環境では93分)ため、
 上記のように標準出力をファイルへ書き出すようにして

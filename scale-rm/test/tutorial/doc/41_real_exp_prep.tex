@@ -6,8 +6,8 @@
  scale/scale-rm/test/tutorial/real/
 \end{verbatim}
 これ以降の説明では、\verb|scale/scale-rm/test/tutorial/|の絶対PATHを
-\verb|${Tutrial_DIR}|と示すこととする。
-\verb|${Tutrial_DIR}|以下のディレクトリ構造は下記の通りである。
+\verb|${Tutorial_DIR}|と示すこととする。
+\verb|${Tutorial_DIR}|以下のディレクトリ構造は下記の通りである。
 \begin{verbatim}
   init/
   net2g/
@@ -161,11 +161,11 @@ NCARのサイト
   fnl_20140810_12_00.grib2
   fnl_20140810_18_00.grib2
 \end{verbatim}
-を\verb|${Tutrial_DIR}/real/tools/|の下にダウンロードする。
+を\verb|${Tutorial_DIR}/real/tools/|の下にダウンロードする。
 
 \item データフォーマットをgribからbinaryに変換\\
  SCALEは4byte バイナリー（grads format）の境界値データを読み込むことができる。\\
-\verb|${Tutrial_DIR}/real/tools/| の中にある \verb|convert_grib2grads.sh|を実行。
+\verb|${Tutorial_DIR}/real/tools/| の中にある \verb|convert_grib2grads.sh|を実行。
 ただし、あらかじめ\verb|wgrib2|がインストールされている必要がある．
 \begin{verbatim}
   $ sh convert_grib2grads.sh

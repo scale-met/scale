@@ -6,9 +6,9 @@
 init では、SCALE計算に必要な初期値・境界値データを作成する。
 まず、initディレクトリへ移動する。
 \begin{verbatim}
- $ cd ${Tutrial_DIR}/real/init
+ $ cd ${Tutorial_DIR}/real/init
 \end{verbatim}
-ディレクトリの中には、\verb|init.conf|という名前のコンフィグファイルが準備されている。
+ディレクトリの中には、\verb|init.conf|という名前の設定ファイルが準備されている。
 \verb|pp.conf|と同様に、実験設定に合わせて、この\verb|init.conf|を書き換える必要があるが、
 チュートリアル用の\verb|init.conf|ファイルは表\ref{tab:grids}の設定に
 すでに合わせてある。
@@ -55,7 +55,7 @@ init では、SCALE計算に必要な初期値・境界値データを作成す�
 \noindent \verb|FILETYPE_ORG|は入力する気象場データのファイルフォーマットに
 関するパラメータを設定しており、ここでは
 grads形式のデータを読み込むことを指定している。
-詳細なコンフィグファイルの内容については、付録\ref{app:namelist}を参照されたい。
+詳細な設定ファイルの内容については、付録\ref{app:namelist}を参照されたい。
 
 次に、コンパイル済みのバイナリをinitディレクトリへリンクする。
 \begin{verbatim}
