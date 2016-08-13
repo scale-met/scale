@@ -2658,7 +2658,9 @@ contains
     use scale_process, only: &
        PRC_myrank
     use scale_rm_process, only: &
-       PRC_2Drank
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y
     implicit none
 
     integer, intent(in) :: fid
@@ -2667,6 +2669,7 @@ contains
     logical :: xy_
     integer :: rankidx(2)
     integer :: start(2)
+    integer :: XSB, XEB, YSB, YEB
     !---------------------------------------------------------------------------
 
     if ( present(xy) ) then
@@ -2677,6 +2680,17 @@ contains
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    ! construct indices independent from PRC_PERIODIC_X/Y
+    XSB = 1 + IHALO
+    if ( rankidx(1) .EQ. 0 ) XSB = 1
+    XEB = IMAX + IHALO
+    if ( rankidx(1) .EQ. PRC_NUM_X-1 ) XEB = IA
+
+    YSB = 1 + JHALO
+    if ( rankidx(2) .EQ. 0 ) YSB = 1
+    YEB = JMAX + JHALO
+    if ( rankidx(2) .EQ. PRC_NUM_Y-1 ) YEB = JA
 
     ! For parallel I/O, not all variables are written by all processes.
     ! 1. Let PRC_myrank 0 writes all z axes
@@ -2701,14 +2715,14 @@ contains
 
     if ( rankidx(2) .EQ. 0 ) then  ! south most row processes write x/xh
        start(1) = ISGA
-       call FileWriteAxis( fid, 'x',   GRID_CX(ISB:IEB), start )
-       call FileWriteAxis( fid, 'xh',  GRID_FX(ISB:IEB), start )
+       call FileWriteAxis( fid, 'x',   GRID_CX(XSB:XEB), start )
+       call FileWriteAxis( fid, 'xh',  GRID_FX(XSB:XEB), start )
     end if
 
     if ( rankidx(1) .EQ. 0 ) then  ! west most column processes write y/yh
        start(1) = JSGA
-       call FileWriteAxis( fid, 'y',   GRID_CY(JSB:JEB), start )
-       call FileWriteAxis( fid, 'yh',  GRID_FY(JSB:JEB), start )
+       call FileWriteAxis( fid, 'y',   GRID_CY(YSB:YEB), start )
+       call FileWriteAxis( fid, 'yh',  GRID_FY(YSB:YEB), start )
     end if
 
     if ( .NOT. xy_ .AND. PRC_myrank .EQ. 0 ) then
