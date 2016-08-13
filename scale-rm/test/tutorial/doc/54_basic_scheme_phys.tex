@@ -164,7 +164,7 @@ micpara.datに記載されているnbinが異なれば、\\
 これらは\verb|MSTRNX|なら\verb|PARAM_ATMOS_PHY_RD_MSTRN|で設定する。
 
 追加された層の気温・気圧プロファイルは外部から与える必要がある。また二酸化炭素やオゾン等の気体濃度プロファイルも必要である。
-SCALEでは気温・気圧についてはCIRA86\citet{CSR_2006}、気体種についてはMIPAS2001\citet{Remedios_2007}の気候値を用意している。
+SCALEでは気温・気圧についてはCIRA86\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006}、気体種についてはMIPAS2001\citep{Remedios_2007}の気候値を用意している。
 気候値プロファイルについても、モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
 読み込むファイルは、
 \begin{verbatim}
@@ -266,7 +266,7 @@ run.conf中の\verb|PARAM_ROUGHNESS|の\verb|ROUGHNESS_TYPE|で設定する。\\
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献 \\ \hline
       \verb|MOON07|   & デフォルト & \citet{moon_2007} \\
-      \verb|MILLER92| &          & \citet{miller_1992} \\
+      \verb|MILLER92| &            & \citet{miller_1992} \\
       \verb|CONST|    & 定数を与える & \\
     \hline
   \end{tabularx}
@@ -326,11 +326,11 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
   \caption{海洋スキームの選択肢}
   \label{tab:nml_ocean}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 \\ \hline
-      \verb|NONEまたはOFF| & 土地利用にOCEANがない場合のみ使用可  \\
-      \verb|CONST|        & 初期値のまま固定                   \\
-      \verb|FILE|         & 外部ファイルから与える (時間変化あり) \\
-      \verb|SLAB|         & スラブ海洋モデル                   \\
+    \rowcolor[gray]{0.9}  設定名 & スキームの説明                        \\ \hline
+      \verb|NONEまたはOFF|       & 土地利用にOCEANがない場合のみ使用可   \\
+      \verb|CONST|               & 初期値のまま固定                      \\
+      \verb|FILE|                & 外部ファイルから与える (時間変化あり) \\
+      \verb|SLAB|                & スラブ海洋モデル                      \\
     \hline
   \end{tabularx}
 \end{center}
