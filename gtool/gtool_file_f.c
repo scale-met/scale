@@ -515,8 +515,8 @@ void file_write_associated_coordinates_( int32_t *fid,          // (in)
 {
   char _name[File_HSHORT+1];
   int i, len;
-  MPI_Offset start_[2], count_[2];
-  /* all associated coordinates are either 1D or 2D */
+  MPI_Offset start_[4], count_[4];
+  /* all associated coordinates are up to 4D */
 
   len = name_len > File_HSHORT ? File_HSHORT : name_len;
   fstr2cstr(_name, name, len);
