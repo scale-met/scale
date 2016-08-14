@@ -371,18 +371,22 @@ contains
        URBAN_do
     use mod_ocean_vars, only: &
        OCEAN_vars_restart_open, &
+       OCEAN_vars_restart_read, &
        OCEAN_vars_restart_read_var, &
        OCEAN_vars_restart_close
     use mod_land_vars, only: &
        LAND_vars_restart_open, &
+       LAND_vars_restart_read, &
        LAND_vars_restart_read_var, &
        LAND_vars_restart_close
     use mod_urban_vars, only: &
        URBAN_vars_restart_open, &
+       URBAN_vars_restart_read, &
        URBAN_vars_restart_read_var, &
        URBAN_vars_restart_close
     use mod_atmos_vars, only: &
        ATMOS_vars_restart_open, &
+       ATMOS_vars_restart_read, &
        ATMOS_vars_restart_read_var, &
        ATMOS_vars_restart_close
     implicit none
@@ -396,10 +400,17 @@ contains
     if( URBAN_do ) call URBAN_vars_restart_open
 
     ! read restart data
-    if( ATMOS_do ) call ATMOS_vars_restart_read_var
-    if( OCEAN_do ) call OCEAN_vars_restart_read_var
-    if( LAND_do  ) call LAND_vars_restart_read_var
-    if( URBAN_do ) call URBAN_vars_restart_read_var
+    if ( IO_PNETCDF ) then
+       if( ATMOS_do ) call ATMOS_vars_restart_read_var
+       if( OCEAN_do ) call OCEAN_vars_restart_read_var
+       if( LAND_do  ) call LAND_vars_restart_read_var
+       if( URBAN_do ) call URBAN_vars_restart_read_var
+    else
+       if( ATMOS_do ) call ATMOS_vars_restart_read
+       if( OCEAN_do ) call OCEAN_vars_restart_read
+       if( LAND_do  ) call LAND_vars_restart_read
+       if( URBAN_do ) call URBAN_vars_restart_read
+    end if
 
     ! clode the restart file
     if( ATMOS_do ) call ATMOS_vars_restart_close
