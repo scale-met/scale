@@ -2,20 +2,20 @@
 このチュートリアルでは、図 \ref{fig:tutrial_real_domain}に示した
 領域を対象とした現実大気実験を行う。
 以下のディレクトリーに移動して作業を行う。
-\begin{verbatim}
- scale/scale-rm/test/tutorial/real/
-\end{verbatim}
-これ以降の説明では、\verb|scale/scale-rm/test/tutorial/|の絶対PATHを
+\begin{alltt}
+ scale-{\version}/scale-rm/test/tutorial/real/
+\end{alltt}
+これ以降の説明では、\texttt{scale-{\version}/scale-rm/test/tutorial/}の絶対PATHを
 \verb|${Tutorial_DIR}|と示すこととする。
 \verb|${Tutorial_DIR}|以下のディレクトリ構造は下記の通りである。
-\begin{verbatim}
+\begin{alltt}
   init/
   net2g/
   pp/
   run/
   sample/  : サンプルのconfファイル
   tools/   : tutrial実行のためのツール
-\end{verbatim}
+\end{alltt}
 
 SCALE-RMの実行過程は、図\ref{fig:howto}に示されるように
 \begin{enumerate}
@@ -127,22 +127,22 @@ SCALEのそれぞれの格子点における地形、海陸分布、土地利用
 SCALE用の地形・土地利用のデータを\\
  \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}\\
 より入手し、任意のディレクトリに展開しておく。
-\begin{verbatim}
+\begin{alltt}
   $ tar -zxvf scale_database.tar.gz
-\end{verbatim}
+\end{alltt}
 展開したディレクトリには、地形データと土地利用データが格納されている。
-\begin{verbatim}
+\begin{alltt}
   scale_database/topo/    <- 地形データ
   scale_database/landuse/ <- 土地利用データ
-\end{verbatim}
+\end{alltt}
 
 \item パスの設定\\
 makeを使ったジョブスクリプトを使用する場合には、
 展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくことが必須である。
 (以後、\verb|${SCALE_DB}|と表記)。
-\begin{verbatim}
+\begin{alltt}
   $ export SCALE_DB=${path_to_directory_of_scale_database}/scale_database
-\end{verbatim}
+\end{alltt}
 \end{enumerate}
 
 \subsubsection{大気・陸面・海面水温データ}
@@ -155,23 +155,23 @@ makeを使ったジョブスクリプトを使用する場合には、
 NCARのサイト
  \url{http://rda.ucar.edu/datasets/ds083.2/}\\
 から、2014年8月10日のgrib2フォーマットのデータ
-\begin{verbatim}
+\begin{alltt}
   fnl_20140810_00_00.grib2
   fnl_20140810_06_00.grib2
   fnl_20140810_12_00.grib2
   fnl_20140810_18_00.grib2
-\end{verbatim}
+\end{alltt}
 を\verb|${Tutorial_DIR}/real/tools/|の下にダウンロードする。
 
 \item データフォーマットをgribからbinaryに変換\\
  SCALEは4byte バイナリー（grads format）の境界値データを読み込むことができる。\\
 \verb|${Tutorial_DIR}/real/tools/| の中にある \verb|convert_grib2grads.sh|を実行。
 ただし、あらかじめ\verb|wgrib2|がインストールされている必要がある．
-\begin{verbatim}
+\begin{alltt}
   $ sh convert_grib2grads.sh
-\end{verbatim}
+\end{alltt}
 成功すれば、下記のファイルが作成される。
-\begin{verbatim}
+\begin{alltt}
   $ ls FNL_output/*/*
      FNL_output/201408/FNLatm_2014081000.grd
      FNL_output/201408/FNLatm_2014081006.grd
@@ -185,6 +185,6 @@ NCARのサイト
      FNL_output/201408/FNLsfc_2014081006.grd
      FNL_output/201408/FNLsfc_2014081012.grd
      FNL_output/201408/FNLsfc_2014081018.grd
-\end{verbatim}
+\end{alltt}
 \end{enumerate}
 

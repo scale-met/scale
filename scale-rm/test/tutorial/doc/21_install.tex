@@ -126,24 +126,20 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 安定版ソースコードは、\\
  \url{http://scale.aics.riken.jp/ja/download/index.html}\\
 よりダウンロードできる。
-ソースコードのtarballファイルを展開すると\verb|scale-{ver}/|というディレクトリができる。
-\verb|{ver}|には、バーション番号が入る。現行は、``\version''である。
-\begin{verbatim}
- $ tar -zxvf scale-{ver}.tar.gz
+ソースコードのtarballファイルを展開すると\texttt{scale-{\version}/}というディレクトリができる。
+\begin{alltt}
+ $ tar -zxvf scale-{\version}.tar.gz
  $ ls ./
-   scale-{ver}/
-\end{verbatim}
-%%% ?????
-%%% verbatim環境で、マクロ\versionを表記するには？？？？？
-%%% ?????
+   scale-{\version}/
+\end{alltt}
 
 \subsection{Makedefファイルと環境変数の設定}
 %-----------------------------------------------------------------------------------
 
 SCALEはコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
 Makedefファイルを使用してコンパイルが行われる。
-Makdefファイルは、\verb|scale-{ver}/sysdep/|内にいくつかの計算機環境に
-対応するファイル（\verb|Makedef.***|）が準備されており、
+Makdefファイルは、\texttt{scale-{\version}/sysdep/}内にいくつかの計算機環境に
+対応するファイル（\texttt{Makedef.***}）が準備されており、
 これらの中から自分の環境にあったものを設定する。
 動作確認済みの環境と対応するMakedefファイルを表\ref{tab:makedef}に示す。
 
@@ -168,9 +164,9 @@ Makdefファイルは、\verb|scale-{ver}/sysdep/|内にいくつかの計算機
 Linux OS、GNUコンパイラ、openMPIを使用する場合には、
 \verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる。
 下記の通り、環境変数を設定する。
-\begin{verbatim}
+\begin{alltt}
  $ export SCALE_SYS="Linux64-gnu-ompi"
-\end{verbatim}
+\end{alltt}
 自分の環境に合致するものがなければ、既存ファイルをベースに各自作成する。
 実行環境が常に同じであるならば、
 環境変数の設定を\verb|.bashrc|などの環境設定ファイルに
@@ -189,7 +185,7 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
  $ export HDF5="/opt/hdf5"
  $ export NETCDF4="/opt/netcdf"
  $ export NETCDF_INCLUDE="-I/opt/netcdf/include"
- $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 \\
+ $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 \
 -lnetcdff -hdf5_hl -lhdf5 -lm -lz"
 \end{verbatim}
 
@@ -199,28 +195,28 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 %-----------------------------------------------------------------------------------
 
 チュートリアル用のディレクトリに移動して、makeコマンドによってコンパイルを行う。
-\begin{verbatim}
- $ cd scale-$ver/scale-rm/test/tutorial/bin
+\begin{alltt}
+ $ cd scale-{\version}/scale-rm/test/tutorial/bin
  $ make -j 4
-\end{verbatim}
+\end{alltt}
 \verb|make|のあとの \verb|"-j 4"| は、
 コンパイル時の並列数(例では4並列)を示しており、
 実行環境によって並列数を指定すれば良い。
 コンパイルが成功すると下記3つの実行ファイルが生成される。
-\begin{verbatim}
+\begin{alltt}
  scale-rm  scale-rm_init  scale-rm_pp
-\end{verbatim}
+\end{alltt}
 
 
 下記のコマンドで作成された実行バイナリを消去できる。
-\begin{verbatim}
+\begin{alltt}
  $ make clean
-\end{verbatim}
+\end{alltt}
 ただし、この場合、コンパイルされたライブラリは消去されないため、
 全てのコンパイル済みファイルを消去したい場合は、
-\begin{verbatim}
+\begin{alltt}
  $ make allclean
-\end{verbatim}
+\end{alltt}
 とする。
 コンパイル環境、コンパイルオプションを変更して再コンパイルする場合は、
 ``allclean''を実行すること。
@@ -262,28 +258,28 @@ GrADSで直接読み込めるデータ形式へ
 まず、SCALE本体のコンパイル時と同様に
 使用する環境にあったMakedefファイル設定のための環境変数を設定する
 (\ref{sec:compile}節コンパイル参照)。
-%\begin{verbatim}
+%\begin{alltt}
 % $ export SCALE_SYS="Linux64-gnu-ompi"  //GNUコンパイラ、openMPIを使用する場合
-%\end{verbatim}
+%\end{alltt}
 %
 次に、net2gのディレクトリに移動し、makeする。
 MPIライブラリを用いた並列実行を行うためのバイナリは、
 下記のコマンドによって生成される。
-\begin{verbatim}
- $ cd scale-{ver}/scale-rm/util/netcdf2grads_h
+\begin{alltt}
+ $ cd scale-{\version}/scale-rm/util/netcdf2grads_h
  $ make -j 2
-\end{verbatim}
+\end{alltt}
 MPIライブラリが無い場合など、逐次実行バイナリを生成するためには、\\
-\begin{verbatim}
+\begin{alltt}
  $ make -j 2 NOMPI=T
-\end{verbatim}
+\end{alltt}
 としてコンパイルを行う。
 "net2g"という名前の実行ファイルが生成されていればコンパイルは成功である．\\
 
 下記のコマンドで作成された実行バイナリを消去できる。
-\begin{verbatim}
+\begin{alltt}
  $ make clean
-\end{verbatim}
+\end{alltt}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

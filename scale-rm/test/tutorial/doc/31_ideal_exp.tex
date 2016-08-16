@@ -25,11 +25,11 @@
 
 本章では、SCALEのコンパイルが正常に終了し、
 すでに下記のファイルが生成されているものとして説明を行う。
-\begin{verbatim} 
-  scale/scale-rm/test/tutorial/bin/scale-rm
-  scale/scale-rm/test/tutorial/bin/scale-rm_init
-  scale/scale-rm/util/netcdf2grads_h/net2g
-\end{verbatim}
+\begin{alltt} 
+  scale-{\version}/scale-rm/test/tutorial/bin/scale-rm
+  scale-{\version}/scale-rm/test/tutorial/bin/scale-rm_init
+  scale-{\version}/scale-rm/util/netcdf2grads_h/net2g
+\end{alltt}
 これらに加えて、本章のチュートリアルでは、
 描画ツールとしてGrADSを使用する。
 gpviewは、結果の確認用に利用することができる。
@@ -82,15 +82,15 @@ GrADSおよびgpview(GPhys)との詳細やインストール方法について�
 %------------------------------------------------------
 チュートリアル理想実験は、\verb|scale-rm/test/tutorial/ideal|の
 ディレクトリにて実行する。
-\begin{verbatim}
+\begin{alltt}
   $ cd scale-rm/test/tutorial/ideal
-\end{verbatim}
+\end{alltt}
 次に、このディレクトリに、
 SCALEの実行バイナリの静的リンクを張る。
-\begin{verbatim}
+\begin{alltt}
   $ ln -s ../bin/scale-rm       ./
   $ ln -s ../bin/scale-rm_init  ./
-\end{verbatim}
+\end{alltt}
 ``\verb|scale-rm|''はモデル本体、
 ``\verb|scale-rm_init|''は初期値・境界値作成ツールである。
 %もし、ここで説明するディレクトリとは異なる場所で実行している場合は、
@@ -109,9 +109,9 @@ SCALEの実行バイナリの静的リンクを張る。
 
 
 SCALEの基本的な実行コマンドは下記のとおりである。
-\begin{verbatim}
+\begin{alltt}
   $ mpirun  -n  [プロセス数]  [実行バイナリ名]  [設定ファイル]
-\end{verbatim}
+\end{alltt}
 [プロセス数]の部分にはMPI並列で使用したいプロセス数を記述する。
 [実行バイナリ]には、\verb|scale-rm|や\verb|scale-rm_init|が入る。
 そして、実験設定を記述した設定ファイルを
@@ -122,9 +122,9 @@ SCALEの基本的な実行コマンドは下記のとおりである。
 2-MPI並列(2つのMPIプロセス)
 で\verb|scale-rm_init|を実行する場合、
 コマンドは次のようになる。
-\begin{verbatim}
+\begin{alltt}
   $ mpirun  -n  2  ./scale-rm_init  init_R20kmDX500m.conf
-\end{verbatim}
+\end{alltt}
 %
 \noindent 実行が成功した場合には、コマンドラインのメッセージは
 下記のように表示される。\\
@@ -143,11 +143,11 @@ SCALEの基本的な実行コマンドは下記のとおりである。
 }}}\\
 
 \noindent この実行によって、\\
-\begin{verbatim}
+\begin{alltt}
   init_LOG.pe000000
   init_00000000000.000.pe000000.nc
   init_00000000000.000.pe000001.nc
-\end{verbatim}
+\end{alltt}
 の3つのファイルが、現在のディレクトリ下に作成される。
 ``init\_LOG.pe000000''には、
 コマンドラインには表示されない詳しい実行ログが記録されている。
@@ -178,18 +178,18 @@ GPhys/Ruby-DCLやncviewといったツールで直接読むことができる。
 %------------------------------------------------------
 並列数は、初期値作成のときと同じ数を指定する。
 設定ファイルには``\verb|run_R20kmDX500m.conf|''を指定する。
-\begin{verbatim}
+\begin{alltt}
   $ mpirun  -n  2  ./scale-rm  run_R20kmDX500m.conf
-\end{verbatim}
+\end{alltt}
 
 本書の必要要件にあった計算機であれば、2分程度で計算が終わる。
 \noindent この実行によって、\\
-\begin{verbatim}
+\begin{alltt}
   LOG.pe000000
   history.pe000000.nc
   history.pe000001.nc
   monitor.pe000000
-\end{verbatim}
+\end{alltt}
 の4つのファイルが、現在のディレクトリ下に作成されているはずである。
 ``LOG.pe000000''には、
 コマンドラインには表示されない詳しい実行ログが記録されている。
@@ -225,34 +225,34 @@ NetCDF形式の分散ファイルを1つのファイルにまとめ、ユーザ�
 
 まず、\ref{sec:source_net2g}節でコンパイルした後処理ツール``net2g''を、
 現在のディレクトリへリンクを張る。
-\begin{verbatim}
+\begin{alltt}
   $ ln -s ../../../util/netcdf2grads_h/net2g  ./
-\end{verbatim}
+\end{alltt}
 もし、ここで説明するディレクトリとは異なる場所で実行している場合は、
 リンクを張る時のディレクトリ指定に注意すること。
 
 net2gも実行方法は基本的にSCALE本体と同じである。
-\begin{verbatim}
+\begin{alltt}
   $ mpirun  -n  [プロセス数]  ./net2g  [設定ファイル]
-\end{verbatim}
+\end{alltt}
 net2g専用の``\verb|net2g.conf|''を設定ファイルとして与えて、
 つぎのように実行する。
-\begin{verbatim}
+\begin{alltt}
   $ mpirun  -n  2  ./net2g  net2g.conf
-\end{verbatim}
+\end{alltt}
 
 \noindent net2gの実行にあたっては、SCALE本体の実行時に使用したMPIプロセス数と同じか、
 その約数のプロセス数を用いて実行しなければならない。
 %HDDの読み書き速度に依存するが、本書の必要要件にあった計算機であれば2分程度で計算が終わる。
 この実行によって、書き6つのファイルが、実行ディレクトリ下に作成される。
-\begin{verbatim}
+\begin{alltt}
   QHYD_d01z-3d.ctl
   QHYD_d01z-3d.grd
   U_d01z-3d.ctl
   U_d01z-3d.grd
   W_d01z-3d.ctl
   W_d01z-3d.grd
-\end{verbatim}
+\end{alltt}
 これらのファイルはぞれぞれ、
 U（水平風東西成分）、W（鉛直風）、QHYD（全凝結物混合比）について、
 分割ファイルを1つにまとめ、Direct-Accessの単純バイナリ形式（GrADS形式）に
