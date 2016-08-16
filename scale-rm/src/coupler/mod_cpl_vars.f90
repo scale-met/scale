@@ -415,6 +415,7 @@ contains
        OCN_ATM_U          (i,j)     = OCN_ATM_U          (i,j)     * CNT_putATM_OCN + U          (i,j)
        OCN_ATM_V          (i,j)     = OCN_ATM_V          (i,j)     * CNT_putATM_OCN + V          (i,j)
        OCN_ATM_DENS       (i,j)     = OCN_ATM_DENS       (i,j)     * CNT_putATM_OCN + DENS       (i,j)
+       if ( I_QV > 0 ) &
        OCN_ATM_QV         (i,j)     = OCN_ATM_QV         (i,j)     * CNT_putATM_OCN + QTRC       (i,j,I_QV)
        OCN_ATM_PBL        (i,j)     = OCN_ATM_PBL        (i,j)     * CNT_putATM_OCN + PBL        (i,j)
        OCN_ATM_SFC_PRES   (i,j)     = OCN_ATM_SFC_PRES   (i,j)     * CNT_putATM_OCN + SFC_PRES   (i,j)
@@ -429,6 +430,7 @@ contains
        LND_ATM_U          (i,j)     = LND_ATM_U          (i,j)     * CNT_putATM_LND + U          (i,j)
        LND_ATM_V          (i,j)     = LND_ATM_V          (i,j)     * CNT_putATM_LND + V          (i,j)
        LND_ATM_DENS       (i,j)     = LND_ATM_DENS       (i,j)     * CNT_putATM_LND + DENS       (i,j)
+       if ( I_QV > 0 ) &
        LND_ATM_QV         (i,j)     = LND_ATM_QV         (i,j)     * CNT_putATM_LND + QTRC       (i,j,I_QV)
        LND_ATM_PBL        (i,j)     = LND_ATM_PBL        (i,j)     * CNT_putATM_LND + PBL        (i,j)
        LND_ATM_SFC_PRES   (i,j)     = LND_ATM_SFC_PRES   (i,j)     * CNT_putATM_LND + SFC_PRES   (i,j)
@@ -443,6 +445,7 @@ contains
        URB_ATM_U          (i,j)     = URB_ATM_U          (i,j)     * CNT_putATM_URB + U          (i,j)
        URB_ATM_V          (i,j)     = URB_ATM_V          (i,j)     * CNT_putATM_URB + V          (i,j)
        URB_ATM_DENS       (i,j)     = URB_ATM_DENS       (i,j)     * CNT_putATM_URB + DENS       (i,j)
+       if ( I_QV > 0 ) &
        URB_ATM_QV         (i,j)     = URB_ATM_QV         (i,j)     * CNT_putATM_URB + QTRC       (i,j,I_QV)
        URB_ATM_PBL        (i,j)     = URB_ATM_PBL        (i,j)     * CNT_putATM_URB + PBL        (i,j)
        URB_ATM_SFC_PRES   (i,j)     = URB_ATM_SFC_PRES   (i,j)     * CNT_putATM_URB + SFC_PRES   (i,j)
@@ -897,9 +900,11 @@ contains
                             + fact_land (i,j) * LND_SFLX_GH   (i,j) &
                             + fact_urban(i,j) * URB_SFLX_GH   (i,j)
 
+       if ( I_QV > 0 ) then
        SFLX_QTRC (i,j,I_QV) = fact_ocean(i,j) * OCN_SFLX_evap (i,j) &
                             + fact_land (i,j) * LND_SFLX_evap (i,j) &
                             + fact_urban(i,j) * URB_SFLX_evap (i,j)
+       end if
 
        U10       (i,j)      = fact_ocean(i,j) * OCN_U10       (i,j) &
                             + fact_land (i,j) * LND_U10       (i,j) &
