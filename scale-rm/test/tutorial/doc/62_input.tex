@@ -22,7 +22,7 @@
  バイナリデータ & \verb|GrADS| & データ読み込み用のnamelistを別途必要とする。 \\ \hline
  NICAMデータ &  \verb|NICAM-NETCDF| & NetCDF形式のLatLonデータに対応する。 \\ \hline
  WRFデータ &  \verb|WRF-ARW| & ``wrfout''、``wrfrst''の両方に対応する。 \\ \hline
- SCALEデータ &  \verb|SCALE-RM| & ヒストリーデータのみ対応；latlonカタログを必要とする。 \\ \hline
+ SCALEデータ &  \verb|SCALE-RM| & historyデータのみ対応；latlonカタログを必要とする。 \\ \hline
 \end{tabularx}
 \label{tab:inputdata_format}
 \end{center}
@@ -32,14 +32,14 @@
 \verb|PARAM_MKINIT_REAL|の項目中の\verb|FILETYPE_ORG|に表\ref{tab:inputdata_format}に示した設定値を
 指定することで使い分ける。
 
-最も汎用的に使用するデータ形式は「バイナリデータ」になることと思う。ここでいうバイナリデータとは、「4バイト単精度
+バイナリデータとは、「4バイト単精度
 浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。その主な使用方法は、
 第\ref{sec:tuto_real}章の現実大気実験チュートリアルで説明したとおりである。\textcolor{red}{GRIB/GRIB2のデータ形式は、
 チュートリアルで説明した方法に基づいて、バイナリデータ形式を経由してSCALEに読み込ませることができる。}
 その他に任意のデータを境界値に使用したい場合は、バイナリデータ形式に変換することで読み込ませることができる。
 
 SCALEデータ形式は主にオフライン・ネスティング実験で使用される。詳細については、\ref{sec:nest_offline}節を
-参照されたい。NICAMデータは、nativeのicosahedral grid systemデータではなく、緯度・経度座標に変換されたデータの
+参照されたい。NICAMデータは、正20面体格子データではなく、緯度・経度座標に変換されたデータの
 み読み込みに対応している。WRFデータについてはモデル出力データをそのまま使用することができる。
 %これらの読み込み方法に関しては随時説明を加えていく予定。
 

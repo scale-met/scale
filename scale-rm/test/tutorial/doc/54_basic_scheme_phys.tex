@@ -81,7 +81,7 @@ micpara.datに記載されているnbinが異なれば、\\
 \end{tabularx}
 }}\\
 
-\noindent というエラーメッセージを標準出力に出力して計算が落ちるようになっている。
+\noindent というエラーメッセージを標準出力に出力して計算を行わず終了するようになっている。
 そのため、nbinを変更した際は、micpara.datを消去して
 新たに作り直す必要がある
 (micpara.datを消して再度SCALEをSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される)。
@@ -93,7 +93,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 乱流スキームの選択は，init.confとrun.conf中の
 \verb|PARAM_ATMOS|の\verb|ATMOS_PHY_TB_TYPE|で設定する。
-乱流スキームを計算する(callする)タイミングは、
+乱流スキームをが呼び出されるタイミングは、
 \verb|PARAM_TIME|で設定するが、これについては
 第\ref{sec:timeintiv}節を参照のこと。\\
 
@@ -112,11 +112,10 @@ micpara.datに記載されているnbinが異なれば、\\
   \label{tab:nml_atm_tb}
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-      \verb|OFF|          & サブグリッドスケール乱流の寄与を計算しない &  \\
-      \verb|SMAGORINSKY|  & Smagorinsky typeのサブグリッドモデル    & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
+      \verb|OFF|          & 乱流の計算を行わない &  \\
+      \verb|SMAGORINSKY|  & Smagorinsky 型のサブグリッドモデル    & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
       \verb|D1980|        & Deardorff(1980)サブグリットモデル &\citet{Deardorff_1980} \\
       \verb|MYNN|         & MYNN Level 2.5 乱流モデル & \citet{my_1982,nakanishi_2004} \\
-      \verb|HYBRID|       & MYNN と SMAGORINSKYのハイブリット &  \\
     \hline
   \end{tabularx}
 \end{center}
@@ -128,7 +127,7 @@ micpara.datに記載されているnbinが異なれば、\\
 \subsection{放射スキーム} \label{sec:basic_radiation}
 %-------------------------------------------------------------------------------
 放射スキームの選択は、init.confとrun.conf中の\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_RD_TYPE|で設定する。
-放射スキームを計算する(callする)タイミングは、\verb|PARAM_TIME|で設定する。時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
+放射スキームが呼び出されるタイミングは、\verb|PARAM_TIME|で設定する。時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
 \ovalbox{
@@ -185,7 +184,7 @@ SCALEでは気温・気圧についてはCIRA86\footnote{http://catalogue.ceda.a
 \subsection{地表面(大気下端境界)} \label{sec:basic_surface}
 %------------------------------------------------------
 大気下端境界の選択は、init.confとrun.conf中の\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE|で設定する。
-海面・陸面・都市モデルを用いずに大気下端境界のフラックスを計算する(callする)タイミングは、\verb|PARAM_TIME|で設定する。
+海面・陸面・都市モデルを用いずに大気下端境界のフラックススキームが呼び出されるタイミングは、\verb|PARAM_TIME|で設定する。
 時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
@@ -245,7 +244,7 @@ SCALEでは気温・気圧についてはCIRA86\footnote{http://catalogue.ceda.a
 \verb|ATMOS_PHY_SF_TYPE = "BULK"|を選択した場合は、任意の地表面温度に対応したフラックスをバルクモデルに従って計算する。
 これは海洋・陸面・都市モデルを用いずに下端境界を設定する際（特に理想実験）に利用される。
 このとき、粗度は海面粗度の計算スキームを利用しているが、後述するように海面粗度は定数を与えることができ、
-また蒸発効率を決める係数（Beta）も任意の値を設定出来るため、海面に限定せず、陸面を想定した理想実験も行うことが出来る。
+また蒸発効率を決める係数も任意の値を設定出来るため、海面に限定せず、陸面を想定した理想実験も行うことが出来る。
 
 海面粗度を計算するスキームは、
 run.conf中の\verb|PARAM_ROUGHNESS|の\verb|ROUGHNESS_TYPE|で設定する。\\
@@ -303,7 +302,7 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 \subsection{海洋モデル} \label{sec:basic_ocean}
 %-------------------------------------------------------------------------------
 海洋過程は海面の状態量の更新と大気ー海洋間のフラックス計算の２つに大別される。
-これらの過程を計算する(callする)タイミングはどちらも\verb|PARAM_TIME|で設定する。
+これらの過程を計算するタイミングはどちらも\verb|PARAM_TIME|で設定する。
 時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 
@@ -397,7 +396,7 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。
 \subsection{陸面モデル} \label{sec:basic_land}
 %-------------------------------------------------------------------------------
 陸面過程についても、海洋過程と同じく陸面の状態量の更新と大気ー陸面間のフラックス計算の２つに大別される。
-これらの過程を計算する(callする)タイミングはどちらも\verb|PARAM_TIME|で設定する。
+これらの過程が呼び出されるタイミングはどちらも\verb|PARAM_TIME|で設定する。
 時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 
@@ -463,11 +462,11 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 
 \subsection{都市モデル(大気-都市面フラックス)} \label{sec:basic_urban}
 %------------------------------------------------------
-都市モデルをONにする場合、
+都市モデルを用いる場合、
 \verb|&PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|である必要がある。
 都市モデルの選択は、init.confとrun.conf中の
 \verb|PARAM_URBAN|の\verb|URBAN_TYPE|で設定する。
-都市モデルを計算する(callする)タイミングは、
+都市モデルが呼び出されるタイミングは、
 \verb|PARAM_TIME|で設定するが、これについては
 第\ref{sec:timeintiv}節を参照のこと。\\
 
@@ -490,7 +489,7 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
   \label{tab:nml_urban}
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-      \verb|OFF|  & 土地利用にURBANがない場合のみ使用可 &   \\
+      \verb|OFF|  & 土地利用に都市がない場合のみ使用可 &   \\
       \verb|SLC|  & 単層キャノピーモデル   & \citet{kusaka_2001} \\
     \hline
   \end{tabularx}

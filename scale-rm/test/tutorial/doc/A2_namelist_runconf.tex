@@ -300,21 +300,21 @@
 \subsubsection{PARAM\_HIST}
 \begin{tabularx}{150mm}{|l|c|c|X|} \hline
  \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
- \verb|HIST_BND| & logical & .true. & Nesting時にxy方向のhalo領域をヒストリーファイルに出力するか。 \\ \hline
+ \verb|HIST_BND| & logical & .true. & Nesting時にxy方向のhalo領域をhistoryファイルに出力するか。 \\ \hline
 \end{tabularx}
 
 
 \subsubsection{PARAM\_HISTORY}
 \begin{tabularx}{150mm}{|l|c|c|X|} \hline
  \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
- \verb|HISTORY_TITLE| & 文字列 & \shortstack{SCALE-RM \\ HISTORY OUTPUT} & NetCDF形式のヒストリーファイルのタイトル \\ \hline
+ \verb|HISTORY_TITLE| & 文字列 & \shortstack{SCALE-RM \\ HISTORY OUTPUT} & NetCDF形式のhistoryファイルのタイトル \\ \hline
 % \verb|HISTORY_SOURCE| & 文字列 & "OFF" & わからん \\ \hline
 % \verb|HISTORY_INSTITUTION| & 文字列 & "OFF" & わからん \\ \hline
 % \verb|HISTORY_TIME_SINCE| & 文字列 & "OFF" & わからん \\ \hline
- \verb|HISTORY_DEFAULT_BASENAME| & 文字列 & 'history' & ヒストリーファイルのファイル名（相対パス） \\ \hline
- \verb|HISTORY_DEFAULT_TINTERVAL| & 実数 & 1.0\_DP & ヒストリーを出力する時間間隔。\verb|HISTORY_DEFAULT_TUNIT|が単位となる。 \\ \hline
+ \verb|HISTORY_DEFAULT_BASENAME| & 文字列 & 'history' & historyファイルのファイル名（相対パス） \\ \hline
+ \verb|HISTORY_DEFAULT_TINTERVAL| & 実数 & 1.0\_DP & historyを出力する時間間隔。\verb|HISTORY_DEFAULT_TUNIT|が単位となる。 \\ \hline
  \verb|HISTORY_DEFAULT_TUNIT| & 文字列 & "SEC" & \verb|HISTORY_DEFAULT_TINTERVAL|の単位（SEC、HOUR、DAYが利用可能） \\ \hline
- \verb|HISTORY_DEFAULT_TAVERAGE| & logical & .false. & ヒストリーに出力する際\verb|HISTORY_DEFAULT_TINTERVAL|で指定した時間間隔ごとの時間平均を出力するか。 \\ \hline
+ \verb|HISTORY_DEFAULT_TAVERAGE| & logical & .false. & historyに出力する際\verb|HISTORY_DEFAULT_TINTERVAL|で指定した時間間隔ごとの時間平均を出力するか。 \\ \hline
  \verb|HISTORY_DEFAULT_ZINTERP| & logical & .false. & 出力時にz面への内挿をするかどうか \\ \hline
  \verb|HISTORY_DEFAULT_DATATYPE| & 文字列 & REAL4 & 出力データのprecision \\ \hline
  \verb|HISTORY_OUTPUT_STEP0| & logical & .false. & 初期時刻(t$=$0)の値を出力するかどうか \\ \hline

@@ -2,25 +2,25 @@
 \label{sec:net2g}
 %====================================================================================
 
-本節では、SCALEの領域分割されたヒストリーデータ（\verb|history.***.nc|）をGrADSで
+本節では、SCALE-RMで出力された領域分割されたhistoryデータ（\verb|history.***.nc|）をGrADSで
 読み込める形式に変換する後処理ツール``net2g''の実行方法について説明する。
 net2gのインストール方法については、\ref{sec:source_net2g}節を参照すること。net2gの実行に
 おいて注意するべき点は下記のとおりである。
 
 \begin{itemize}
  \item 使用するMPIプロセス数は、SCALEの本体の実行で使用したMPIプロセス数の約数でなければならない。
- \item ヒストリー出力形式は、``\verb|HIST_BND = .false.|''でなければならない（今後対応予定）。
+ \item history出力形式は、``\verb|HIST_BND = .false.|''でなければならない（今後対応予定）。
  \item 2次元データと3次元データは同時に変換できない（今後対応予定）。
- \item 変換できるデータはヒストリーデータのみ（今後対応予定）。
+ \item 変換できるデータはhistoryデータのみ（今後対応予定）。
 \end{itemize}
 
-``HIST\_BND''の対応、2次元データと3次元データの同時実行、そしてヒストリーデータ以外のデータへの対応は
+``HIST\_BND''の対応、2次元データと3次元データの同時実行、そしてhistoryデータ以外のデータへの対応は
 今後早急に進める予定ではあるが、どうしてもgpview等の他のツールが使えず、データの描画に支障が出る場合は、
 「旧型netcdf2grads」を使用することができる。旧型netcdf2gradsは、シングルプロセス実行しかできないが、
 上記の制限はない。旧型netcdf2gradsの概要については本節の最後に紹介する。
 
 その他に注意するべき点は、net2g実行時のMPI並列数である。net2gはMPI並列実行できるが、プログラム中の
-作業のほとんどがヒストリーファイルからのデータ読み込みである。したがって、並列ファイルシステム上でない限り、
+作業のほとんどがhistoryファイルからのデータ読み込みである。したがって、並列ファイルシステム上でない限り、
 一般に単一のディスク、もしくは単一のディスクアレイからデータを読み込む速度は、MPIプロセス数を増やしても
 向上しない。むしろ読み込み要求が立て込んで、作業効率が下がり結果として読み込み速度が落ちることもある。
 したがって、新しい環境でnet2gを実行する場合、少しMPIプロセス数を変えて実行してみて最適なMPIプロセス数を
@@ -86,8 +86,8 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
   \item \verb|DOMAIN_NUM|：ドメイン番号を指定する。デフォルト値は1である。
   \item \verb|CONFFILE|：SCALE本体を実行したときの\verb|run.***.conf|ファイルのPATHを指定する
         （ファイル名を含む）。
-  \item \verb|IDIR|：SCALE本体のヒストリー出力ファイルのPATHを指定する。
-  \item \verb|Z_LEV_TYPE|：鉛直方向のデータ変換の種類を指定する。``original''はヒストリーデータのまま
+  \item \verb|IDIR|：SCALE本体のhistory出力ファイルのPATHを指定する。
+  \item \verb|Z_LEV_TYPE|：鉛直方向のデータ変換の種類を指定する。``original''はhistoryデータのまま
         出力、``plev''は気圧高度面に変換して出力、そして``zlev''は高度面データに変換する。
         ``anal''を指定すると別途指定の簡易解析を行なって出力する（次項で説明）。デフォルト値は``plev''である。
  \end{itemize}
@@ -185,11 +185,11 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 場合の設定ファイル設定例を示している。
 
 
-\subsection{スーパーコンピュータ「京」での実行方法}
+\subsection{大型並列計算機での実行方法}
 %------------------------------------------------------
 
 スーパーコンピュータ「京」などの大型計算機で並列計算を行った場合、出力ファイルの数が多く、
-それぞれのファイルのデータ容量も大きい。そのような場合には、手元のマシンへヒストリーデータをコピーするだけの
+それぞれのファイルのデータ容量も大きい。そのような場合には、手元のマシンへhistoryデータをコピーするだけの
 ディスク空き容量がなかったり、並列ファイルシステムではないために後処理に膨大な時間がかかり、現実的な
 時間スケールで解析が行えない可能性がある。こういった場合には、SCALE本体の計算を行ったスーパーコンピュータで
 後処理も行なってしまうことをおすすめする。この目的のためにここでは、スーパーコンピュータ「京」でnet2gを
@@ -212,8 +212,9 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 使用するノード数は、SCALE本体の計算に使用したノード数の約数である必要がある。\verb|job.sh|の中身は
 下記のような内容を記述する。各パラメタの詳細等は、スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
 準備が整えば、\verb|job.sh|を使ってpjsubコマンドにてJOBを投入すればよい。実行時間が30分の制限時間に間に合わない
-場合は、一度に変換する変数の数を減らすか、鉛直層数を減らして実行する。もしくはLustreのstriping countの調整等を
-行なってもよい。\\
+場合は、一度に変換する変数の数を減らすか、鉛直層数を減らして実行する。\\
+%もしくはLustreのstriping countの調整等を
+%行なってもよい。\\
 
 \noindent {\gt \verb|job.sh|の記述例} \\
 \noindent {\small {\gt
@@ -280,75 +281,75 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 
 
 
-\subsection{旧型netcdf2gradsの使用方法}
-%------------------------------------------------------
-ここでは、シングルプロセス実行しかできないが、``HIST\_BND''の対応、そしてヒストリーデータ以外のデータにも対応
-する「旧型netcdf2grads」の実行方法概略について説明する。このプログラムは、並列版/シングル版net2gの整備が
-済み次第、サポート外となるため注意して欲しい。
+%% \subsection{旧型netcdf2gradsの使用方法}
+%% %------------------------------------------------------
+%% ここでは、シングルプロセス実行しかできないが、``HIST\_BND''の対応、そしてhistoryデータ以外のデータにも対応
+%% する「旧型netcdf2grads」の実行方法概略について説明する。このプログラムは、並列版/シングル版net2gの整備が
+%% 済み次第、サポート外となるため注意して欲しい。
 
-netcdf2gradsのソースファイルは \verb|scale/scale-rm/util/netcdf2grads/|にある。
-SCALE本体とは独立なので、ディレクトリを任意の場所に移動/コピーして使用することが可能である。
+%% netcdf2gradsのソースファイルは \verb|scale/scale-rm/util/netcdf2grads/|にある。
+%% SCALE本体とは独立なので、ディレクトリを任意の場所に移動/コピーして使用することが可能である。
 
-\subsubsection{コンパイル}
-\begin{description}
-\item[Intel compiler]\mbox{}\\
- \begin{verbatim}
- $ ifort -convert big_endian -assume byterecl -I${NETCDF4}/include 
-    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file.f90 -o convine
-  \end{verbatim}
-\item[gfortran]\mbox{}\\
-\begin{verbatim}
- $ gfortran -frecord-marker=4 --convert=big-endian -I${NETCDF4}/include
-    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file1.f90 -o convine
-\end{verbatim}
-\end{description}
+%% \subsubsection{コンパイル}
+%% \begin{description}
+%% \item[Intel compiler]\mbox{}\\
+%%  \begin{verbatim}
+%%  $ ifort -convert big_endian -assume byterecl -I${NETCDF4}/include 
+%%     -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file.f90 -o convine
+%%   \end{verbatim}
+%% \item[gfortran]\mbox{}\\
+%% \begin{verbatim}
+%%  $ gfortran -frecord-marker=4 --convert=big-endian -I${NETCDF4}/include
+%%     -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file1.f90 -o convine
+%% \end{verbatim}
+%% \end{description}
 
 
-\subsubsection{使用方法}
-実行時に，インタラクティブモードかサイレントモードかを選択することが出来る．
-\begin{verbatim}
-   Interactive mode :  ``./convine -i''
-   Silent mode      :  ``./convine -s''
-\end{verbatim}
-\begin{description}
-\item[インタラクティブモード]\mbox{}\\
-\begin{verbatim}
- $ cd netcdf2grads/
- $ ./convine -i
-\end{verbatim}
-と実行すると、下記のメッセージが出るので、指示通りに必要なファイルのパスを打ち込む。\\
+%% \subsubsection{使用方法}
+%% 実行時に，インタラクティブモードかサイレントモードかを選択することが出来る．
+%% \begin{verbatim}
+%%    Interactive mode :  ``./convine -i''
+%%    Silent mode      :  ``./convine -s''
+%% \end{verbatim}
+%% \begin{description}
+%% \item[インタラクティブモード]\mbox{}\\
+%% \begin{verbatim}
+%%  $ cd netcdf2grads/
+%%  $ ./convine -i
+%% \end{verbatim}
+%% と実行すると、下記のメッセージが出るので、指示通りに必要なファイルのパスを打ち込む。\\
 
-\noindent {\small {\gt
-\fbox{
-\begin{tabularx}{140mm}{l}
-\verb|path to configure file for run with the quotation mark| \\
-\textcolor{blue}{\verb| `${path to directory of configure file}/run.conf' <- configureファイルへのパス|} \\
-\verb|path to directory of history files with the quotation mark| \\
-\textcolor{blue}{\verb| `${path to directory of history files}/' <- SCALE-RMの出力ファイルのパス|} \\
-\verb|path to directory of output files with the quotation mark| \\
-\textcolor{blue}{\verb| `./grads/'  <- gradsファイルの出力先|} \\
-\verb|start time of convert data| \\
-\textcolor{blue}{\verb| 1           <- 任意の番号の時間から変換可能 |} \\
-\verb|end time of convert data| \\
-\textcolor{blue}{\verb| 10          <- 変換を終了する時間|} \\
-\verb|Imput number of variable| \\
-\verb|0 -> all variable output from model| \\
-\textcolor{blue}{\verb| X           <- 変換したい変数の数|} \\
-\verb|Imput variable| \\
-\textcolor{blue}{\verb| VARIABLE(PRECなど)  <- 変換したい変数名|} \\
-\end{tabularx}
-}}}\\
+%% \noindent {\small {\gt
+%% \fbox{
+%% \begin{tabularx}{140mm}{l}
+%% \verb|path to configure file for run with the quotation mark| \\
+%% \textcolor{blue}{\verb| `${path to directory of configure file}/run.conf' <- configureファイルへのパス|} \\
+%% \verb|path to directory of history files with the quotation mark| \\
+%% \textcolor{blue}{\verb| `${path to directory of history files}/' <- SCALE-RMの出力ファイルのパス|} \\
+%% \verb|path to directory of output files with the quotation mark| \\
+%% \textcolor{blue}{\verb| `./grads/'  <- gradsファイルの出力先|} \\
+%% \verb|start time of convert data| \\
+%% \textcolor{blue}{\verb| 1           <- 任意の番号の時間から変換可能 |} \\
+%% \verb|end time of convert data| \\
+%% \textcolor{blue}{\verb| 10          <- 変換を終了する時間|} \\
+%% \verb|Imput number of variable| \\
+%% \verb|0 -> all variable output from model| \\
+%% \textcolor{blue}{\verb| X           <- 変換したい変数の数|} \\
+%% \verb|Imput variable| \\
+%% \textcolor{blue}{\verb| VARIABLE(PRECなど)  <- 変換したい変数名|} \\
+%% \end{tabularx}
+%% }}}\\
 
-\noindent \textcolor{blue}{青色文字}の行は、ユーザーが入力する行である。
-うまく実行されれば、指定した出力先にctlファイルとgrdファイルが作成される。
-\item[サイレントモード]\mbox{}\\
-サイレントモードの場合は、あらかじめ、\verb|namelist.in|に必要な情報を書き入れておく．
-\begin{verbatim}
- $ cd netcdf2grads/
- $ ./convine -s
-\end{verbatim}
-と実行すれば変換が始まる。
-\end{description}
+%% \noindent \textcolor{blue}{青色文字}の行は、ユーザーが入力する行である。
+%% うまく実行されれば、指定した出力先にctlファイルとgrdファイルが作成される。
+%% \item[サイレントモード]\mbox{}\\
+%% サイレントモードの場合は、あらかじめ、\verb|namelist.in|に必要な情報を書き入れておく．
+%% \begin{verbatim}
+%%  $ cd netcdf2grads/
+%%  $ ./convine -s
+%% \end{verbatim}
+%% と実行すれば変換が始まる。
+%% \end{description}
 
 
 %####################################################################################
