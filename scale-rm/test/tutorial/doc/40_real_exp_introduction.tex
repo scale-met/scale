@@ -1,36 +1,30 @@
 %-------------------------------------------------------%
 %section{概要}
 %-------------------------------------------------------%
-
-このチュートリアルでは、図 \ref{fig:tutrial_real_domain}に示した
-領域を対象とした現実大気実験を行う。
+このチュートリアルでは、現実大気の基本的な実験方法を習得する。
 以下のディレクトリーに移動して作業を行う。
 \begin{alltt}
  scale-{\version}/scale-rm/test/tutorial/real/
 \end{alltt}
 これ以降の説明では、\texttt{scale-{\version}/scale-rm/test/tutorial/}の絶対PATHを
 \verb|${Tutorial_DIR}|と示すこととする。
-\verb|${Tutorial_DIR}|以下のディレクトリ構造は下記の通りである。
-\begin{alltt}
-  init/
-  net2g/
-  pp/
-  run/
-  sample/  : サンプルのconfファイル
-  tools/   : tutrial実行のためのツール
-\end{alltt}
-
-SCALE-RMの実行過程は、図\ref{fig:howto}に示されるように
+\verb|${Tutorial_DIR}|のディレクトリには以下のサブディレクトリがあり、
+図\ref{fig:howto}に示されるように番号に従って実行する。
 \begin{enumerate}
-\item pp    : 地形・土地利用データの作成
-\item init  : 初期値・境界値データの作成
-\item run   : 時間積分を行う（モデル本体の実行）
-\item net2g : 出力データのNetCDFからGrADS形式への変換（オプション） 
+\item  \texttt{tools/}   : tutrial実行のためのツール
+\item  \texttt{pp/}      : 地形・土地利用データの作成
+\item  \texttt{init}/    : 初期値・境界値データの作成
+\item  \texttt{run}/     : 初期条件を作るディレクトリ
+\item  \texttt{net2g/}   : 出力データのNetCDFからGrADS形式への変換（オプション） 
 \end{enumerate}
-といった手順で実行する。
+なお、以下のサブディレクトリにはネスティングの際に利用できるファイルが用意されており、
+必要に応じて参考にされたい。
+\begin{itemize}
+\item  \texttt{sample/}  : サンプルのconfファイル
+\end{itemize}
 
 
-\begin{figure}[h]
+\begin{figure}[b]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/real_procedure.eps}\\
   \caption{SCALE-RMモデルの実行過程}
@@ -39,13 +33,13 @@ SCALE-RMの実行過程は、図\ref{fig:howto}に示されるように
 \end{figure}
 
 計算領域（ドメイン）の設定は表\ref{tab:grids}のようになっている。
-チュートリアルは、SCALEの使い方を学ぶことが目的であり、
+図 \ref{fig:tutrial_real_domain}に対象領域を示す。
+なお、このチュートリアルは、SCALEの使い方を学ぶことが目的であり、
 短い時間で実行可能な設定にしている。
 領域モデルの実験設定として必ずしも適切な設定を選択しているとは限らないので
-(例えば、15kmの水平解像度で積雲パラメタリゼーションなし)
+(例えば、20kmの水平解像度で積雲パラメタリゼーションなし)
 ご留意頂きたい。
-
-このチュートリアルを実行するには、下記の条件を満たす計算機環境が推奨される。
+このチュートリアルを比較的短時間で実行するには、下記の条件を満たす計算機環境が推奨される。
 \begin{itemize}
 \item CPU: 2コア/4スレッド以上の演算コアを持つCPU（4コア以上を推奨）
 \item Memory容量: 4GB以上をプログラムに割当可能（8GB以上を搭載した計算機を推奨）
@@ -58,13 +52,6 @@ SCALE-RMの実行過程は、図\ref{fig:howto}に示されるように
 \item OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64
 \end{itemize}
 
-\begin{figure}[tb]
-\begin{center}
-  \includegraphics[width=0.5\hsize]{./figure/real_domain.eps}\\
-  \caption{計算領域．カラーシェードは地形の標高を示す．}
-  \label{fig:tutrial_real_domain}
-\end{center}
-\end{figure}
 
 \begin{table}[h]
 \begin{center}
@@ -73,13 +60,21 @@ SCALE-RMの実行過程は、図\ref{fig:howto}に示されるように
   \begin{tabularx}{150mm}{|l|X|} \hline
     \rowcolor[gray]{0.9} 項目 & 設定 \\ \hline
     MPIプロセス分割 (東西 x 南北) & 2 x 2 (合計4プロセス) \\ \hline
-    水平格子数 (東西 x 南北) & 60格子点 x 60格子点 \\ \hline
+    水平格子数 (東西 x 南北) & 90格子点 x 90格子点 \\ \hline
     鉛直層数                 & 36層                  \\ \hline
-    水平格子間隔             & dx = dy = 15km       \\ \hline
-    積分期間 & 2014年8月10日 00UTC～12UTC (12時間積分) \\ \hline
-    時間ステップ間隔 & 60 sec (720 steps) \\ \hline
+    水平格子間隔             & dx = dy = 20km       \\ \hline
+    積分期間 & 2007年7月14日 18UTC～15日00UTC (6時間積分) \\ \hline
+    時間ステップ間隔 & 90 sec (240 steps) \\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
+
+\begin{figure}[tb]
+\begin{center}
+  \includegraphics[width=0.5\hsize]{./figure/real_domain.eps}\\
+  \caption{計算領域．カラーシェードは地形の標高を示す．}
+  \label{fig:tutrial_real_domain}
+\end{center}
+\end{figure}
 
 
