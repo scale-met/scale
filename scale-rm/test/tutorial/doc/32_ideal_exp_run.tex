@@ -1,0 +1,140 @@
+\section{実行方法}
+%====================================================================================
+
+実行の流れとしては、前準備、初期値の作成、モデル本体の実行、
+後処理、そして描画といった順番で作業を進める。
+
+\subsection{前準備}
+%------------------------------------------------------
+チュートリアル理想実験は、\verb|scale-rm/test/tutorial/ideal|の
+ディレクトリにて実行する。
+\begin{alltt}
+  $ cd scale-rm/test/tutorial/ideal
+\end{alltt}
+次に、このディレクトリに、
+SCALEの実行バイナリの静的リンクを張る。
+\begin{alltt}
+  $ ln -s ../bin/scale-rm       ./
+  $ ln -s ../bin/scale-rm_init  ./
+\end{alltt}
+``\verb|scale-rm|''はモデル本体、
+``\verb|scale-rm_init|''は初期値・境界値作成ツールである。
+%もし、ここで説明するディレクトリとは異なる場所で実行している場合は、
+%リンクを張る時のディレクトリ指定に注意すること。
+
+
+\subsection{初期値作成}
+%------------------------------------------------------
+初期値の作成は、``\verb|scale-rm_init|''に
+設定ファイルを与えて実行する。
+``\verb|init_R20kmDX500m.conf|''には、
+表\ref{tab:setting_ideal}に対応した実験設定が書き込まれている。
+この設定ファイルを\verb|scale-rm_init|に与えることで、
+設定ファイルの指示に従って大気の成層構造を計算し、
+初期擾乱が設定される。
+
+
+SCALEの基本的な実行コマンドは下記のとおりである。
+\begin{alltt}
+  $ mpirun  -n  [プロセス数]  [実行バイナリ名]  [設定ファイル]
+\end{alltt}
+[プロセス数]の部分にはMPI並列で使用したいプロセス数を記述する。
+[実行バイナリ]には、\verb|scale-rm|や\verb|scale-rm_init|が入る。
+そして、実験設定を記述した設定ファイルを
+[設定ファイル]の部分に指定する。
+%
+例えば、
+設定ファイルに\verb|init_R20kmDX500m.conf|を用いて、
+2-MPI並列(2つのMPIプロセス)
+で\verb|scale-rm_init|を実行する場合、
+コマンドは次のようになる。
+\begin{alltt}
+  $ mpirun  -n  2  ./scale-rm_init  init_R20kmDX500m.conf
+\end{alltt}
+%
+\noindent 実行が成功した場合には、コマンドラインのメッセージは
+下記のように表示される。\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+ *** Start Launch System for SCALE-RM\\
+ TOTAL BULK JOB NUMBER   =    1\\
+ PROCESS NUM of EACH JOB =     2\\
+ TOTAL DOMAIN NUMBER     =    1\\
+ Flag of ABORT ALL JOBS  =  F\\
+ *** a single comunicator\\
+ *** a single comunicator\\
+\end{tabularx}
+}}}\\
+
+\noindent この実行によって、\\
+\begin{alltt}
+  init_LOG.pe000000
+  init_00000000000.000.pe000000.nc
+  init_00000000000.000.pe000001.nc
+\end{alltt}
+の3つのファイルが、現在のディレクトリ下に作成される。
+``init\_LOG.pe000000''には、
+コマンドラインには表示されない詳しい実行ログが記録されている。
+実行が正常に終了している場合、このLOGファイルの最後に\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+ ++++++ Stop MPI\\
+ *** Broadcast STOP signal\\
+ *** MPI is peacefully finalized\\
+\end{tabularx}
+}}}\\
+
+\noindent と記述される。
+
+``init\_00000000000.000.pe000000.nc''と``init\_00000000000.000.pe000001.nc''の
+2つのファイルは初期値ファイルである。
+計算領域全体を2つのMPIプロセスで分割し担当するため、
+2つのファイルが生成される。
+もし、4-MPI並列で実行すれば、4つの初期値ファイルが生成される。
+これらのファイル名の末尾が``.nc''で終わるファイルは
+NetCDF形式のファイルであり、
+GPhys/Ruby-DCLやncviewといったツールで直接読むことができる。
+
+
+\subsection{モデル本体の実行}
+%------------------------------------------------------
+並列数は、初期値作成のときと同じ数を指定する。
+設定ファイルには``\verb|run_R20kmDX500m.conf|''を指定する。
+\begin{alltt}
+  $ mpirun  -n  2  ./scale-rm  run_R20kmDX500m.conf
+\end{alltt}
+
+本書の必要要件にあった計算機であれば、2分程度で計算が終わる。
+\noindent この実行によって、\\
+\begin{alltt}
+  LOG.pe000000
+  history.pe000000.nc
+  history.pe000001.nc
+  monitor.pe000000
+\end{alltt}
+の4つのファイルが、現在のディレクトリ下に作成されているはずである。
+``LOG.pe000000''には、
+コマンドラインには表示されない詳しい実行ログが記録されている。
+実行が正常に終了している場合、このLOGファイルの最後に\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+ ++++++ Stop MPI\\
+ *** Broadcast STOP signal\\
+ *** MPI is peacefully finalized\\
+\end{tabularx}
+}}}\\
+
+\noindent と記述される。
+``history.pe000000.nc''と``history.pe000001.nc''
+の2つのファイルが計算結果が記録されたhistoryファイルである。
+2-MPI並列で実行したため、2つのファイルが生成されており、
+ファイル形式はNetCDFである。
+``monitor.pe000000''は、計算中にモニタリングしている
+物理変数の時間変化を記録したテキストファイルである。
+

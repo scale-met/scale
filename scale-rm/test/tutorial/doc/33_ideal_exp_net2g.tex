@@ -1,0 +1,79 @@
+\section{後処理と描画}
+%------------------------------------------------------
+ここでは、計算結果を描画するための後処理について説明する。本書のチュートリアルでは、
+NetCDF形式の分散ファイルを1つのファイルにまとめ、ユーザーが解析しやすいDirect-Accessの
+単純バイナリ形式（GrADS形式）に変換する方法を説明する。
+%GPhys/Ruby-DCLを使うと
+%分割ファイルのまま直接描画することができるが、この方法については\ref{sec:quicklook}節を
+%参照してもらいたい。
+
+まず、\ref{sec:source_net2g}節でコンパイルした後処理ツール``net2g''を、
+現在のディレクトリへリンクを張る。
+\begin{alltt}
+  $ ln -s ../../../util/netcdf2grads_h/net2g  ./
+\end{alltt}
+もし、ここで説明するディレクトリとは異なる場所で実行している場合は、
+リンクを張る時のディレクトリ指定に注意すること。
+
+net2gも実行方法は基本的にSCALE本体と同じである。
+\begin{alltt}
+  $ mpirun  -n  [プロセス数]  ./net2g  [設定ファイル]
+\end{alltt}
+net2g専用の``\verb|net2g.conf|''を設定ファイルとして与えて、
+つぎのように実行する。
+\begin{alltt}
+  $ mpirun  -n  2  ./net2g  net2g.conf
+\end{alltt}
+
+\noindent net2gの実行にあたっては、SCALE本体の実行時に使用したMPIプロセス数と同じか、
+その約数のプロセス数を用いて実行しなければならない。
+%HDDの読み書き速度に依存するが、本書の必要要件にあった計算機であれば2分程度で計算が終わる。
+この実行によって、書き6つのファイルが、実行ディレクトリ下に作成される。
+\begin{alltt}
+  QHYD_d01z-3d.ctl
+  QHYD_d01z-3d.grd
+  U_d01z-3d.ctl
+  U_d01z-3d.grd
+  W_d01z-3d.ctl
+  W_d01z-3d.grd
+\end{alltt}
+これらのファイルはぞれぞれ、
+U（水平風東西成分）、W（鉛直風）、QHYD（全凝結物混合比）について、
+分割ファイルを1つにまとめ、Direct-Accessの単純バイナリ形式（GrADS形式）に
+変換したgrdファイルとGrADSに読み込ませるためのctlファイルである。
+従って、このctlファイルをGrADSに読み込ませれば
+直ちに計算結果の描画が可能である。
+図\ref{fig_ideal}は、積分開始1200秒後における、
+U-WとQHYDについての鉛直断面図である。
+
+
+``\verb|net2g.conf|''の下記の行を編集することによって、
+他の変数についても変換が可能である。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&VARI|\\
+\verb| VNAME       = "U","W","QHYD"|\\
+\verb|/|\\
+\end{tabularx}
+}}}\\
+
+\noindent この``VNAME''の項目を例えば、
+\verb|"PT","RH"|と変更して実行すれば温位と相対湿度の変数に
+ついて変換する。どの変数が出力されているのかを調べるには、NetCDFのncdumpツールなどを
+使えば簡単に調べられる。net2gの詳しい使用方法は、\ref{sec:net2g}を参照してほしい。
+
+
+\begin{figure}[t]
+\begin{center}
+  \includegraphics[width=1.0\hsize]{./figure/grads_hist_ideal.eps}\\
+  \caption{積分開始後 1200 sec のY=1 kmにおける東西-鉛直断面図；
+           (a)のカラーシェードは全凝結物の混合比、
+           (b)は鉛直速度をそれぞれ示す。ベクトルは東西-鉛直断面内の風の流れを表す。}
+  \label{fig_ideal}
+\end{center}
+\end{figure}
+
+
+
