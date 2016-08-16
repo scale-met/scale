@@ -29,8 +29,8 @@
         対応確認済みコンパイラについては、表\ref{tab:compatible_compiler}を参照のこと。
   \item {\bf MPIライブラリ} : MPI1.0/2.0 に対応するMPIライブラリを必要とする。
         対応確認済みMPIライブラリについては、表\ref{tab:compatible_mpi}を参照のこと。
-  \item {\bf ファイルI/Oライブラリ} : gzip、HDF5、NetCDF4を必要とする。\\
-        HDF5/NetCDF4の代わりに、NetCDF3でも動作するが、出力ファイルサイズが大きくなる。
+  \item {\bf ファイルI/Oライブラリ} : gzip、HDF5、netCDF4を必要とする。\\
+        HDF5/netCDF4の代わりに、netCDF3でも動作するが、出力ファイルサイズが大きくなる。
   \end{itemize}
 \end{itemize}
 
@@ -38,10 +38,10 @@
 \noindent {\bf あると便利なシステム環境}
 \begin{itemize}
   \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、SCALEで読込可能な入力データの作成が可能である。Tutorialの現実大気実験では、wgrib2を使用する。
-  \item {\bf 描画環境}：GrADS\footnote{http://cola.gmu.edu/grads/}、
-GPhys/Ruby-DCL\footnote{https://www.gfd-dennou.org/arch/ruby/products/gphys/}、
-ncview\footnote{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}など。
-  \item {\bf 演算性能評価}：PAPIライブラリ\footnote{http://icl.utk.edu/papi/}が使用可能。
+  \item {\bf 描画環境}：GrADS\footnote{\url{http://cola.gmu.edu/grads/}}、
+GPhys/Ruby-DCL\footnote{\url{https://www.gfd-dennou.org/arch/ruby/products/gphys/}}、
+ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}など。
+  \item {\bf 演算性能評価}：PAPIライブラリ\footnote{\url{http://icl.utk.edu/papi/}}が使用可能。
 \end{itemize}
 
 
@@ -95,7 +95,7 @@ ncview\footnote{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}など。
 \section{ライブラリ環境のインストール}
 \label{sec:inst_env}
 %====================================================================================
-SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ、NetCDF, HDF5, MPI 等)
+SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ、netCDF, HDF5, MPI 等)
 のインストールを行う。
 詳細は、付録 \ref{sec:env_setting}章を参照のこと。
 第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは、
@@ -180,9 +180,9 @@ Linux OS、GNUコンパイラ、openMPIを使用する場合には、
 各種ライブラリのインストールを
 付録\ref{sec:env_setting}章に従って行った場合を除き、
 下記のPATHの設定が必要となる。
-HDF5とNetCDF4については、下記のように環境変数を設定する。
+HDF5とnetCDF4については、下記のように環境変数を設定する。
 例えば、Intel コンパイラを利用して、
-HDF5を\verb"/opt/hdf5"、NetCDF4を\verb|/opt/netcdf|に
+HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 それぞれインストールした場合の例を示す。
 適宜、各自の環境に応じて読み替えて設定すること。
 \begin{verbatim}
@@ -254,7 +254,7 @@ GrADSで直接読み込めるデータ形式へ
 %net2gはSCALE本体から独立したツールになっている
 %（ただしMakedefファイルを除く）ため、
 %任意の場所へコピーしてコンパイルすることができるが、
-%コンパイルにはNetCDFライブラリが必要であり、
+%コンパイルにはnetCDFライブラリが必要であり、
 %また並列実行するためにはMPIライブラリが必要である。
 %従って、以降はこれらのライブラリがインストールされている環境であることを想定して進める。\\
 
