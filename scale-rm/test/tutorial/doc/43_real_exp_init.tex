@@ -71,20 +71,25 @@ initディレクトリの中に準備されている\verb|"gradsinput-link_FNL.s
 \noindent {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
-\verb|./FNLatm_00000.grd'  -> `../tools/FNL_output/201408/FNLatm_2014081000.grd| \\
-\verb|./FNLatm_00001.grd'  -> `../tools/FNL_output/201408/FNLatm_2014081006.grd| \\
-\verb|./FNLatm_00002.grd'  -> `../tools/FNL_output/201408/FNLatm_2014081012.grd| \\
-\verb|./FNLatm_00003.grd'  -> `../tools/FNL_output/201408/FNLatm_2014081018.grd| \\
-\verb|./FNLsfc_00000.grd'  -> `../tools/FNL_output/201408/FNLsfc_2014081000.grd| \\
-\verb|./FNLsfc_00001.grd'  -> `../tools/FNL_output/201408/FNLsfc_2014081006.grd| \\
-\verb|./FNLsfc_00002.grd'  -> `../tools/FNL_output/201408/FNLsfc_2014081012.grd| \\
-\verb|./FNLsfc_00003.grd'  -> `../tools/FNL_output/201408/FNLsfc_2014081018.grd| \\
-\verb|./FNLland_00000.grd' -> `../tools/FNL_output/201408/FNLland_2014081000.grd| \\
-\verb|./FNLland_00001.grd' -> `../tools/FNL_output/201408/FNLland_2014081006.grd| \\
-\verb|./FNLland_00002.grd' -> `../tools/FNL_output/201408/FNLland_2014081012.grd| \\
-\verb|./FNLland_00003.grd' -> `../tools/FNL_output/201408/FNLland_2014081018.grd| \\
+\verb|FNLatm_00000.grd -> ../tools/FNL_output/200707/FNLatm_2007071418.grd| \\
+\verb|FNLatm_00001.grd -> ../tools/FNL_output/200707/FNLatm_2007071500.grd| \\
+\verb|FNLatm_00002.grd -> ../tools/FNL_output/200707/FNLatm_2007071506.grd| \\
+\verb|FNLatm_00003.grd -> ../tools/FNL_output/200707/FNLatm_2007071512.grd| \\
+\verb|FNLland_00000.grd -> ../tools/FNL_output/200707/FNLland_2007071418.grd| \\
+\verb|FNLland_00001.grd -> ../tools/FNL_output/200707/FNLland_2007071500.grd| \\
+\verb|FNLland_00002.grd -> ../tools/FNL_output/200707/FNLland_2007071506.grd| \\
+\verb|FNLland_00003.grd -> ../tools/FNL_output/200707/FNLland_2007071512.grd| \\
+\verb|FNLsfc_00000.grd -> ../tools/FNL_output/200707/FNLsfc_2007071418.grd| \\
+\verb|FNLsfc_00001.grd -> ../tools/FNL_output/200707/FNLsfc_2007071500.grd| \\
+\verb|FNLsfc_00002.grd -> ../tools/FNL_output/200707/FNLsfc_2007071506.grd| \\
+\verb|FNLsfc_00003.grd -> ../tools/FNL_output/200707/FNLsfc_2007071512.grd| \\
 \end{tabularx}
 }}\\
+
+
+
+
+
 
 次に、陸面の変数を用意するのに必要なパラメータファイルにリンクをはる。
 \begin{verbatim}
@@ -102,38 +107,39 @@ initディレクトリの中に準備されている\verb|"gradsinput-link_FNL.s
   boundary_d01.pe000001.nc
   boundary_d01.pe000002.nc
   boundary_d01.pe000003.nc
-  init_d01_20140810-000000.000.pe000000.nc
-  init_d01_20140810-000000.000.pe000001.nc
-  init_d01_20140810-000000.000.pe000002.nc
-  init_d01_20140810-000000.000.pe000003.nc
+  init_d01_20070714-180000.000.pe000000.nc
+  init_d01_20070714-180000.000.pe000001.nc
+  init_d01_20070714-180000.000.pe000002.nc
+  init_d01_20070714-180000.000.pe000003.nc
   init_LOG_d01.pe000000
 \end{verbatim}
 が作成される。
 \verb|boundary_d01.pe######.nc|は境界値データ、
-\verb|init_d01_20140810-000000.000.pe######.nc|は初期値データ、
+\verb|init_d01_20070714-180000.000.pe######.nc|は初期値データ、
 \verb|init_LOG_d01.pe######|はログファイルである。
 \verb|######|はMPIプロセス番号を表している。
 
 
-\vspace{1cm}
-\noindent {\Large\em OPTION} \hrulefill \\
-gpviewがインストールされている場合，作成された初期値と境界値が
-正しく作成されているかどうかを確認することが出来る。
-正しく作成されていれば、図 \ref{fig:init}と同じように描かれる。
+%% サポート外
+%% \vspace{1cm}
+%% \noindent {\Large\em OPTION} \hrulefill \\
+%% gpviewがインストールされている場合，作成された初期値と境界値が
+%% 正しく作成されているかどうかを確認することが出来る。
+%% 正しく作成されていれば、図 \ref{fig:init}と同じように描かれる。
 
-\begin{verbatim}
-$ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \
-         --xintv=10 --yintv=10 --unit_vect init_d01_20140810-000000.000.pe00*@QV      \
-         init_d01_20140810-000000.000.pe00*@MOMX init_d01_20140810-000000.000.pe00*@MOMY
-\end{verbatim}
+%% \begin{verbatim}
+%% $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \
+%%          --xintv=10 --yintv=10 --unit_vect init_d01_20140810-000000.000.pe00*@QV      \
+%%          init_d01_20140810-000000.000.pe00*@MOMX init_d01_20140810-000000.000.pe00*@MOMY
+%% \end{verbatim}
 
 
-\begin{figure}[h]
-\begin{center}
-  \includegraphics[width=0.7\hsize]{./figure/init_qv-momxy.eps}\\
-  \caption{チュートリアル実験の高さ1500mにおける初期場の様子．カラーシェードは比湿，
-           ベクトルは水平運動量フラックスを表している．}
-  \label{fig:init}
-\end{center}
-\end{figure}
+%% \begin{figure}[h]
+%% \begin{center}
+%%   \includegraphics[width=0.7\hsize]{./figure/init_qv-momxy.eps}\\
+%%   \caption{チュートリアル実験の高さ1500mにおける初期場の様子．カラーシェードは比湿，
+%%            ベクトルは水平運動量フラックスを表している．}
+%%   \label{fig:init}
+%% \end{center}
+%% \end{figure}
 

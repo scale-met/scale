@@ -56,7 +56,7 @@ SCALE用の地形・土地利用のデータを\\
 
 \item パスの設定\\
 makeを使ったジョブスクリプトを使用する場合には、
-展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくことが必須である。
+展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくことが必須である
 (以後、\verb|${SCALE_DB}|と表記)。
 \begin{alltt}
   $ export SCALE_DB=${path_to_directory_of_scale_database}/scale_database
@@ -68,41 +68,42 @@ makeを使ったジョブスクリプトを使用する場合には、
 初期値境界値データは4-byte バイナリー(grads format)に変換すれば、
 任意のデータを読み込むことが可能である。
 チュートリアルではNCEP FNL(Final) Operational Global Analysis dataを使用する。
+あらかじめ\verb|wgrib|をインストールしておく。
+\footnote{\url{http://www.cpc.ncep.noaa.gov/products/wesley/wgrib.html}}
 \begin{enumerate}
 \item データのダウンロード\\
 NCARのサイト
- \url{http://rda.ucar.edu/datasets/ds083.2/}\\
-から、2014年8月10日のgrib2フォーマットのデータ
+\url{http://rda.ucar.edu/datasets/ds083.2/}\\
+から、2007年7月14日18時から一日分のgrib1フォーマットのデータ
 \begin{alltt}
-  fnl_20140810_00_00.grib2
-  fnl_20140810_06_00.grib2
-  fnl_20140810_12_00.grib2
-  fnl_20140810_18_00.grib2
+fnl_20070714_18_00.grib1
+fnl_20070715_00_00.grib1
+fnl_20070815_06_00.grib1
+fnl_20070815_12_00.grib1
 \end{alltt}
 を\verb|${Tutorial_DIR}/real/tools/|の下にダウンロードする。
-
 \item データフォーマットをgribからbinaryに変換\\
  SCALEは4byte バイナリー（grads format）の境界値データを読み込むことができる。\\
 \verb|${Tutorial_DIR}/real/tools/| の中にある \verb|convert_grib2grads.sh|を実行。
-ただし、あらかじめ\verb|wgrib2|がインストールされている必要がある．
+
 \begin{alltt}
   $ sh convert_grib2grads.sh
 \end{alltt}
 成功すれば、下記のファイルが作成される。
 \begin{alltt}
-  $ ls FNL_output/*/*
-     FNL_output/201408/FNLatm_2014081000.grd
-     FNL_output/201408/FNLatm_2014081006.grd
-     FNL_output/201408/FNLatm_2014081012.grd
-     FNL_output/201408/FNLatm_2014081018.grd
-     FNL_output/201408/FNLland_2014081000.grd
-     FNL_output/201408/FNLland_2014081006.grd
-     FNL_output/201408/FNLland_2014081012.grd
-     FNL_output/201408/FNLland_2014081018.grd
-     FNL_output/201408/FNLsfc_2014081000.grd
-     FNL_output/201408/FNLsfc_2014081006.grd
-     FNL_output/201408/FNLsfc_2014081012.grd
-     FNL_output/201408/FNLsfc_2014081018.grd
+ $ ls -al FNL_output/*/*
+FNL_output/200707/FNLatm_2007071418.grd
+FNL_output/200707/FNLatm_2007071500.grd
+FNL_output/200707/FNLatm_2007071506.grd
+FNL_output/200707/FNLatm_2007071512.grd
+FNL_output/200707/FNLland_2007071418.grd
+FNL_output/200707/FNLland_2007071500.grd
+FNL_output/200707/FNLland_2007071506.grd
+FNL_output/200707/FNLland_2007071512.grd
+FNL_output/200707/FNLsfc_2007071418.grd
+FNL_output/200707/FNLsfc_2007071500.grd
+FNL_output/200707/FNLsfc_2007071506.grd
+FNL_output/200707/FNLsfc_2007071512.grd
 \end{alltt}
 \end{enumerate}
 
