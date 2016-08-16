@@ -17,25 +17,32 @@ HTMLBIN  = pandoc --to=html
 
 VERSION  = $(shell cat ../../../src/VERSION)
 
+SRCS = $(wildcard *.tex)
+
 all: pdf
 
 pdf: $(TEXNAME).pdf
 
-clean:
-	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc
+html: $(TEXNAME).html
 
-.dvi.pdf:
+clean:
+	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
+
+$(TEXNAME).pdf: $(TEXNAME).dvi
 	$(DVIPDF) $(TEXNAME)
 
-.tex.dvi:
-	$(shell cat $(VERTEMPL) | sed s/"#VERSION#"/$(VERSION)/g > $(VERFNAME))
+$(TEXNAME).dvi: $(VERFNAME) $(SRCS) reference.bib
 	$(LATEX)  $(TEXNAME)
 	$(BIBTEX) $(TEXNAME)
 	$(LATEX)  $(TEXNAME)
 	$(LATEX)  $(TEXNAME)
 
-html: $(TEXNAME).html
-	$(HTMLBIN) $(TEXNAME).tex -o ${TEXNAME}.html
+$(VERFNAME): $(VERTEMPL)
+	$(shell cat $< | sed s/"#VERSION#"/$(VERSION)/g > $@)
+
+$(TEXNAME).html: $(TEXNAME).tex
+	$(HTMLBIN) $< -o $@
+
 
 .SUFFIXES:
 .SUFFIXES: .tex .bbl .dvi .pdf .bib .html
