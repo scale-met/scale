@@ -224,17 +224,17 @@ SCALEでは気温・気圧についてはCIRA86\footnote{http://catalogue.ceda.a
  \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
  \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: Bulk coefficient is constant \\
                                                   & 1: Friction velocity is constant \\
- \verb| ATMOS_PHY_SF_U_minM         =    0.0_DP | & Minimum limit of absolute velocity for momentum [m/s] \\
- \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011_DP | & Constant bulk coefficient for momentum [NIL] \\
+ \verb| ATMOS_PHY_SF_U_minM         =    0.0D0  | & Minimum limit of absolute velocity for momentum [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011D0  | & Constant bulk coefficient for momentum [NIL] \\
                                                   &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0| のとき有効) \\
- \verb| ATMOS_PHY_SF_CM_min         = 1.0E-5_DP | & Minimum limit of bulk coefficient for momentum [NIL] \\
+ \verb| ATMOS_PHY_SF_CM_min         = 1.0D-5    | & Minimum limit of bulk coefficient for momentum [NIL] \\
                                                   &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
- \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25_DP | & Constant friction velocity [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25D0  | & Constant friction velocity [m/s] \\
                                                   &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
- \verb| ATMOS_PHY_SF_Const_SH       =   15.0_DP | & Constant surface sensible heat flux [W/m2] \\
+ \verb| ATMOS_PHY_SF_Const_SH       =   15.0D0  | & Constant surface sensible heat flux [W/m2] \\
  \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =  .false.  | & Diurnal modulation for sensible heat flux? [logical]\\
- \verb| ATMOS_PHY_SF_Const_FREQ     =   24.0_DP | & Frequency of sensible heat flux modulation [hour]\\
- \verb| ATMOS_PHY_SF_Const_LH       =  115.0_DP | & Constant surface latent   heat flux [W/m2] \\
+ \verb| ATMOS_PHY_SF_Const_FREQ     =   24.0D0  | & Frequency of sensible heat flux modulation [hour]\\
+ \verb| ATMOS_PHY_SF_Const_LH       =  115.0D0  | & Constant surface latent   heat flux [W/m2] \\
  \verb|/|            & \\
  \\
 \end{tabularx}
@@ -362,9 +362,9 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 \noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
- \verb|&PARAM_OCEAN_PHY_SLAB             | & \\
- \verb|  OCEAN_PHY_SLAB_DEPTH = 10.0_DP, | & ; デフォルト設定[m] \\
- \verb|/                                 | & \\
+ \verb|&PARAM_OCEAN_PHY_SLAB            | & \\
+ \verb|  OCEAN_PHY_SLAB_DEPTH = 10.0D0, | & ; デフォルト設定[m] \\
+ \verb|/                                | & \\
 \end{tabularx}
 }}\\
 

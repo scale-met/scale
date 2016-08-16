@@ -42,14 +42,15 @@ Z方向の層レベルを任意の格子点位置に指定(\verb|FZ|を与える
  \verb|BDX(|n\verb|)| &=& \verb|DX| \times \verb|BUFFFACT|^n \nonumber
 \end{eqnarray}
 ここで、$n$は緩和領域内の格子点番号を表し、計算領域の内側から外側へ向かって番号が振られる。
-緩和領域の格子数\verb|ibuff|は、$\sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) >$ \verb|BUFFER_DX| の関係を満たす最大の整数である。
-%
 緩和領域の格子間隔は、
 \verb|BUFFFACT=1.0|ならば内部領域と同じであり、
 \verb|BUFFFACT=1.2|ならば内側から外側(境界)に向かって1.2倍の割合で広がっていく。
+\verb|BUFFFACT|はいくつに設定しても良いが、計算の安定性を考慮すると 1.0から1.2 が推奨である。
+
+緩和領域の格子数\verb|ibuff|は、$\sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge$ \verb|BUFFER_DX| の関係を満たす最小の整数である。
+%
 緩和領域の幅(\verb|BUFFER_DX|)が同じでも、
 \verb|BUFFFACT|の値を大きくすると緩和領域に用意される格子数は少なくなる。
-\verb|BUFFFACT|はいくつに設定しても良いが、計算の安定性を考慮すると 1.0から1.2 が推奨である。
 ここでは、X方向の説明をしたが、Y方向、Z方向も同様である。
 
 
