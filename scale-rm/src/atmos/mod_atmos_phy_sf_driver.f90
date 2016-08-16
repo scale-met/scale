@@ -164,7 +164,8 @@ contains
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd, &
-       THERMODYN_cp => ATMOS_THERMODYN_cp
+       THERMODYN_cp => ATMOS_THERMODYN_cp, &
+       THERMODYN_r  => ATMOS_THERMODYN_r
     use scale_atmos_hydrometer, only: &
        I_QV
     use scale_atmos_phy_sf, only: &
@@ -333,9 +334,9 @@ contains
        do j = JS, JE
        do i = IS, IE
           q(:) = QTRC(KS,i,j,:)
-          call THERMODYN_qd( qdry, q, TRACER_MASS )
+          call THERMODYN_qd( qdry,  q, TRACER_MASS )
           call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
-          Rtot  = Rdry * qdry + Rvap * q(I_QV)
+          call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
           RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) ) &
                          * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
        enddo

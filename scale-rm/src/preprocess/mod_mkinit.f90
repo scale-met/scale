@@ -1488,11 +1488,19 @@ contains
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
 
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
 
     call flux_setup
 
@@ -2196,11 +2204,19 @@ contains
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
 
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( I_QV > 0.0_RP ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
 
 #ifndef DRY
     do iq = 1, QA
@@ -2453,6 +2469,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit WARMBUBBLE] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
 
@@ -2499,22 +2520,20 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    if ( I_QV > 0 ) then
-       ! calc QV from RH
-       call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-       call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    ! calc QV from RH
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
 
-       qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
-       do k = KS, KE
-          if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
-             qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-          elseif( GRID_CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
-             qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-          else                                ! Layer 3
-             qv(k,1,1) = 0.0_RP
-          endif
-       enddo
-    end if
+    qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
+    do k = KS, KE
+       if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
+          qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
+       elseif( GRID_CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
+          qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
+       else                                ! Layer 3
+          qv(k,1,1) = 0.0_RP
+       endif
+    enddo
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
@@ -2576,6 +2595,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit SUPERCELL] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_SUPERCELL,iostat=ierr)
@@ -2590,7 +2614,7 @@ contains
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
-    if ( I_QV < 1 ) QV(:) = 0.0_RP
+    QV(:) = 0.0_RP
 
     do j = JS, JE
     do i = IS, IE
@@ -2642,6 +2666,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit SQUALLLINE] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_SQUALLLINE,iostat=ierr)
@@ -2656,7 +2685,7 @@ contains
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
-    if ( I_QV < 1 ) QV(:) = 0.0_RP
+    QV(:) = 0.0_RP
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -2718,6 +2747,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit WK1982] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
 
     SFC_PRES  = Pstd
 
@@ -2781,19 +2815,17 @@ contains
     enddo
     enddo
 
-    if ( I_QV > 0 ) then
-       call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
-       call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
-       do j = JS, JE
-       do i = IS, IE
-          qv_sfc(1,i,j) = rh_sfc(1,i,j) * qsat_sfc(1,i,j)
-          do k = KS, KE
-             qv(k,i,j) = rh(k,i,j) * qsat(k,i,j)
-          enddo
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc(1,i,j) = rh_sfc(1,i,j) * qsat_sfc(1,i,j)
+       do k = KS, KE
+          qv(k,i,j) = rh(k,i,j) * qsat(k,i,j)
        enddo
-       enddo
-    end if
+    enddo
+    enddo
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
@@ -2905,6 +2937,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF01] / Categ[preprocess] / Origin[SCALE-RM]'
 
     rewind(IO_FID_CONF)
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF01,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
@@ -2964,55 +3002,52 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-    if ( I_QV > 0 ) then
+    ! calc in moist condition
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc  (1,i,j) = 9.0E-3_RP   ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0_RP
 
-       ! calc in moist condition
-       do j = JS, JE
-       do i = IS, IE
-          qv_sfc  (1,i,j) = 9.0E-3_RP   ! [kg/kg]
-          qc_sfc  (1,i,j) = 0.0_RP
-
-          do k = KS, KE
-             if    ( GRID_CZ(k) <   820.0_RP ) then ! below initial cloud top
-                qall = 9.0E-3_RP
-             elseif( GRID_CZ(k) <=  860.0_RP ) then ! boundary
-                sint = sin( pi2 * ( GRID_CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
-                qall = 9.0E-3_RP * (0.5_RP-sint) &
-                     + 1.5E-3_RP * (0.5_RP+sint)
-             elseif( GRID_CZ(k) <= 5000.0_RP ) then
-                qall = 1.5E-3_RP
-             else
-                qall = 0.0_RP
-             endif
-
-             if    ( GRID_CZ(k) <=  600.0_RP ) then
-                qc(k,i,j) = 0.0_RP
-             elseif( GRID_CZ(k) < 820.0_RP ) then ! in the cloud
-                fact = ( GRID_CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
-                qc(k,i,j) = 0.45E-3_RP * fact
-             elseif( GRID_CZ(k) <= 860.0_RP ) then ! boundary
-                sint = sin( pi2 * ( GRID_CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
-                fact = ( GRID_CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
-                qc(k,i,j) = 0.45E-3_RP * fact * (0.5_RP-sint)
-             else
-                qc(k,i,j) = 0.0_RP
-             endif
-
-             qv(k,i,j) = qall - qc(k,i,j)
-          enddo
-
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
        do k = KS, KE
-          temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
-       enddo
-       enddo
+          if    ( GRID_CZ(k) <   820.0_RP ) then ! below initial cloud top
+             qall = 9.0E-3_RP
+          elseif( GRID_CZ(k) <=  860.0_RP ) then ! boundary
+             sint = sin( pi2 * ( GRID_CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
+             qall = 9.0E-3_RP * (0.5_RP-sint) &
+                  + 1.5E-3_RP * (0.5_RP+sint)
+          elseif( GRID_CZ(k) <= 5000.0_RP ) then
+             qall = 1.5E-3_RP
+          else
+             qall = 0.0_RP
+          endif
+
+          if    ( GRID_CZ(k) <=  600.0_RP ) then
+             qc(k,i,j) = 0.0_RP
+          elseif( GRID_CZ(k) < 820.0_RP ) then ! in the cloud
+             fact = ( GRID_CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
+             qc(k,i,j) = 0.45E-3_RP * fact
+          elseif( GRID_CZ(k) <= 860.0_RP ) then ! boundary
+             sint = sin( pi2 * ( GRID_CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
+             fact = ( GRID_CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
+             qc(k,i,j) = 0.45E-3_RP * fact * (0.5_RP-sint)
+          else
+             qc(k,i,j) = 0.0_RP
+          endif
+
+          qv(k,i,j) = qall - qc(k,i,j)
        enddo
 
-    end if
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+    enddo
+    enddo
+    enddo
+
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
@@ -3176,6 +3211,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF02] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02,iostat=ierr)
     if( ierr < 0 ) then !--- missing
@@ -3230,51 +3270,48 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-    if ( I_QV > 0 ) then
+    ! calc in moist condition
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc  (1,i,j) = 9.45E-3_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
-       ! calc in moist condition
-       do j = JS, JE
-       do i = IS, IE
-          qv_sfc  (1,i,j) = 9.45E-3_RP
-          qc_sfc  (1,i,j) = 0.0_RP
-
-          do k = KS, KE
-             if ( GRID_CZ(k) < 775.0_RP ) then ! below initial cloud top
-                qall = 9.45E-3_RP ! [kg/kg]
-             else if ( GRID_CZ(k) <= 815.0_RP ) then
-                sint = sin( pi2 * (GRID_CZ(k) - 795.0_RP)/20.0_RP )
-                qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
-                     ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
-             else
-                qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ! [kg/kg]
-             endif
-             
-             if( GRID_CZ(k) < 400.0_RP ) then
-                qc(k,i,j) = 0.0_RP
-             elseif( GRID_CZ(k) < 775.0_RP ) then
-                fact = ( GRID_CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
-                qc(k,i,j) = 0.65E-3_RP * fact
-             elseif( GRID_CZ(k) <= 815.0_RP ) then
-                sint = sin( pi2 * ( GRID_CZ(k)-795.0_RP )/20.0_RP )
-                fact = ( GRID_CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
-                qc(k,i,j) = 0.65E-3_RP * fact * (1.0_RP-sint) * 0.5_RP
-             else
-                qc(k,i,j) = 0.0_RP
-             endif
-             qv(k,i,j) = qall - qc(k,i,j)
-          enddo
-
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
        do k = KS, KE
-          temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+          if ( GRID_CZ(k) < 775.0_RP ) then ! below initial cloud top
+             qall = 9.45E-3_RP ! [kg/kg]
+          else if ( GRID_CZ(k) <= 815.0_RP ) then
+             sint = sin( pi2 * (GRID_CZ(k) - 795.0_RP)/20.0_RP )
+             qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
+                  ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
+          else
+             qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ! [kg/kg]
+          endif
+
+          if( GRID_CZ(k) < 400.0_RP ) then
+             qc(k,i,j) = 0.0_RP
+          elseif( GRID_CZ(k) < 775.0_RP ) then
+             fact = ( GRID_CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
+             qc(k,i,j) = 0.65E-3_RP * fact
+          elseif( GRID_CZ(k) <= 815.0_RP ) then
+             sint = sin( pi2 * ( GRID_CZ(k)-795.0_RP )/20.0_RP )
+             fact = ( GRID_CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
+             qc(k,i,j) = 0.65E-3_RP * fact * (1.0_RP-sint) * 0.5_RP
+          else
+             qc(k,i,j) = 0.0_RP
+          endif
+          qv(k,i,j) = qall - qc(k,i,j)
        enddo
-       enddo
-       enddo
-    end if
+
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+    enddo
+    enddo
+    enddo
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
@@ -3445,6 +3482,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF02_DNS] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02_DNS,iostat=ierr)
     if( ierr < 0 ) then !--- missing
@@ -3506,13 +3548,6 @@ contains
     pott_sfc(1,:,:) = potl(ks,:,:)-0.5*(potl(ks+1,:,:)-potl(ks,:,:))
     qv_sfc  (1,:,:) = qv  (ks,:,:)-0.5*(qv  (ks+1,:,:)-qv  (ks,:,:))
     qc_sfc  (1,:,:) = qc  (ks,:,:)-0.5*(qc  (ks+1,:,:)-qc  (ks,:,:))
-
-    if ( I_QV < 1 ) then
-       qv = 0.0_RP
-       qc = 0.0_RP
-       qv_sfc = 0.0_RP
-       qc_sfc = 0.0_RP
-    end if
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
@@ -3708,6 +3743,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit RICO] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RICO,iostat=ierr)
     if( ierr < 0 ) then !--- missing
@@ -3768,43 +3808,41 @@ contains
                                qc_sfc  (:,:,:)  ) ! [IN]
 
 
-    if ( I_QV > 0 ) then
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc  (1,i,j) = 16.0E-3_RP   ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0_RP
 
-       do j = JS, JE
-       do i = IS, IE
-          qv_sfc  (1,i,j) = 16.0E-3_RP   ! [kg/kg]
-          qc_sfc  (1,i,j) = 0.0_RP
-
-          do k = KS, KE
-             !--- mixing ratio of vapor
-             if ( GRID_CZ(k) <= 740.0_RP ) then ! below initial cloud top
-                fact = ( GRID_CZ(k)-0.0_RP ) * ( 13.8E-3_RP-16.0E-3_RP ) / ( 740.0_RP-0.0_RP )
-                qall = 16.0E-3_RP + fact
-             elseif ( GRID_CZ(k) <= 3260.0_RP ) then ! boundary
-                fact = ( GRID_CZ(k)-740.0_RP ) * ( 2.4E-3_RP-13.8E-3_RP ) / ( 3260.0_RP-740.0_RP )
-                qall = 13.8E-3_RP + fact
-             elseif( GRID_CZ(k) <= 4000.0_RP ) then
-                fact = ( GRID_CZ(k)-3260.0_RP ) * ( 1.8E-3_RP-2.4E-3_RP ) / ( 4000.0_RP-3260.0_RP )
-                qall = 2.4E-3_RP + fact
-             else
-                qall = 0.0_RP
-             endif
-
-             qc(k,i,j) = 0.0_RP
-             qv(k,i,j) = qall - qc(k,i,j)
-          enddo
-
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
        do k = KS, KE
-          temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+          !--- mixing ratio of vapor
+          if ( GRID_CZ(k) <= 740.0_RP ) then ! below initial cloud top
+             fact = ( GRID_CZ(k)-0.0_RP ) * ( 13.8E-3_RP-16.0E-3_RP ) / ( 740.0_RP-0.0_RP )
+             qall = 16.0E-3_RP + fact
+          elseif ( GRID_CZ(k) <= 3260.0_RP ) then ! boundary
+             fact = ( GRID_CZ(k)-740.0_RP ) * ( 2.4E-3_RP-13.8E-3_RP ) / ( 3260.0_RP-740.0_RP )
+             qall = 13.8E-3_RP + fact
+          elseif( GRID_CZ(k) <= 4000.0_RP ) then
+             fact = ( GRID_CZ(k)-3260.0_RP ) * ( 1.8E-3_RP-2.4E-3_RP ) / ( 4000.0_RP-3260.0_RP )
+             qall = 2.4E-3_RP + fact
+          else
+             qall = 0.0_RP
+          endif
+
+          qc(k,i,j) = 0.0_RP
+          qv(k,i,j) = qall - qc(k,i,j)
        enddo
-       enddo
-       enddo
-    end if
+
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+    enddo
+    enddo
+    enddo
+
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
@@ -3865,9 +3903,7 @@ contains
 
     call RANDOM_get(rndm) ! make random
 
-    if ( I_QV < 1 ) then
-       PERTURB_AMP_QV = 0.0_RP
-    end if
+    PERTURB_AMP_QV = 0.0_RP
 
     if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
@@ -4532,6 +4568,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit GRAYZONE] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_GRAYZONE,iostat=ierr)
@@ -4545,8 +4586,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
-
-    if ( I_QV < 1 ) QV(:) = 0.0_RP
 
 !   do j = JS, JE
 !   do i = IS, IE
@@ -4659,6 +4698,11 @@ contains
        call PRC_MPIstop
     endif
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit Box model of aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
 
@@ -4672,11 +4716,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BOXAERO)
-
-    if ( I_QV < 1 ) then
-       write(*,*) 'xxx QV is not registerd'
-       call PRC_MPIstop
-    end if
 
     QTRC(:,:,:,:) = 0.0_RP
     do k = KS, KE

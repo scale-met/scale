@@ -45,6 +45,7 @@ module scale_atmos_thermodyn
   public :: ATMOS_THERMODYN_qd
   public :: ATMOS_THERMODYN_cv
   public :: ATMOS_THERMODYN_cp
+  public :: ATMOS_THERMODYN_r
   public :: ATMOS_THERMODYN_pott
   public :: ATMOS_THERMODYN_rhoe
   public :: ATMOS_THERMODYN_rhot
@@ -56,15 +57,20 @@ module scale_atmos_thermodyn
      module procedure ATMOS_THERMODYN_qd_3D
   end interface ATMOS_THERMODYN_qd
 
+  interface ATMOS_THERMODYN_cv
+     module procedure ATMOS_THERMODYN_cv_0D
+     module procedure ATMOS_THERMODYN_cv_3D
+  end interface ATMOS_THERMODYN_cv
+
   interface ATMOS_THERMODYN_cp
      module procedure ATMOS_THERMODYN_cp_0D
      module procedure ATMOS_THERMODYN_cp_3D
   end interface ATMOS_THERMODYN_cp
 
-  interface ATMOS_THERMODYN_cv
-     module procedure ATMOS_THERMODYN_cv_0D
-     module procedure ATMOS_THERMODYN_cv_3D
-  end interface ATMOS_THERMODYN_cv
+  interface ATMOS_THERMODYN_r
+     module procedure ATMOS_THERMODYN_r_0D
+     module procedure ATMOS_THERMODYN_r_3D
+  end interface ATMOS_THERMODYN_r
 
   interface ATMOS_THERMODYN_rhoe
      module procedure ATMOS_THERMODYN_rhoe_0D
@@ -179,6 +185,69 @@ contains
   end subroutine ATMOS_THERMODYN_qd_3D
 
   !-----------------------------------------------------------------------------
+  !> calc total specific heat (CV,0D)
+  subroutine ATMOS_THERMODYN_cv_0D( &
+       CVtot, &
+       q,     &
+       CVq,   &
+       qdry   )
+    implicit none
+
+    real(RP), intent(out) :: CVtot   !< total specific heat    [J/kg/K]
+    real(RP), intent(in)  :: q(QA)   !< mass concentration     [kg/kg]
+    real(RP), intent(in)  :: CVq(QA) !< specific heat          [J/kg/K]
+    real(RP), intent(in)  :: qdry    !< dry mass concentration [kg/kg]
+
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+    CVtot = qdry * CVdry
+#ifndef DRY
+    do iqw = 1, QA
+       CVtot = CVtot + q(iqw) * CVq(iqw)
+    enddo
+#endif
+
+    return
+  end subroutine ATMOS_THERMODYN_cv_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc total specific heat (CV,3D)
+  subroutine ATMOS_THERMODYN_cv_3D( &
+       CVtot, &
+       q,     &
+       CVq,   &
+       qdry   )
+    implicit none
+
+    real(RP), intent(out) :: CVtot(KA,IA,JA)    !< total specific heat    [J/kg/K]
+    real(RP), intent(in)  :: q    (KA,IA,JA,QA) !< mass concentration     [kg/kg]
+    real(RP), intent(in)  :: CVq  (QA)          !< specific heat          [J/kg/K]
+    real(RP), intent(in)  :: qdry (KA,IA,JA)    !< dry mass concentration [kg/kg]
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
+
+!       CVtot(k,i,j) = qdry(k,i,j) * CVdry
+!       do iqw = 1, QA
+!          CVtot(k,i,j) = CVtot(k,i,j) + q(k,i,j,iqw) * CVq(iqw)
+!       enddo
+
+       CALC_CV(cvtot(k,i,j), qdry(k,i,j), q, k, i, j, iqw, CVdry, CVq)
+
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_cv_3D
+
+  !-----------------------------------------------------------------------------
   !> calc total specific heat (CP,0D)
   subroutine ATMOS_THERMODYN_cp_0D( &
        CPtot, &
@@ -242,45 +311,45 @@ contains
   end subroutine ATMOS_THERMODYN_cp_3D
 
   !-----------------------------------------------------------------------------
-  !> calc total specific heat (CV,0D)
-  subroutine ATMOS_THERMODYN_cv_0D( &
-       CVtot, &
+  !> calc total gas constant (R,0D)
+  subroutine ATMOS_THERMODYN_r_0D( &
+       Rtot, &
        q,     &
-       CVq,   &
+       Rq,   &
        qdry   )
     implicit none
 
-    real(RP), intent(out) :: CVtot   !< total specific heat    [J/kg/K]
+    real(RP), intent(out) :: Rtot    !< total gas constant     [J/kg/K]
     real(RP), intent(in)  :: q(QA)   !< mass concentration     [kg/kg]
-    real(RP), intent(in)  :: CVq(QA) !< specific heat          [J/kg/K]
+    real(RP), intent(in)  :: Rq(QA)  !< gas constant           [J/kg/K]
     real(RP), intent(in)  :: qdry    !< dry mass concentration [kg/kg]
 
     integer :: iqw
     !---------------------------------------------------------------------------
 
-    CVtot = qdry * CVdry
+    Rtot = qdry * Rdry
 #ifndef DRY
     do iqw = 1, QA
-       CVtot = CVtot + q(iqw) * CVq(iqw)
+       Rtot = Rtot + q(iqw) * Rq(iqw)
     enddo
 #endif
 
     return
-  end subroutine ATMOS_THERMODYN_cv_0D
+  end subroutine ATMOS_THERMODYN_r_0D
 
   !-----------------------------------------------------------------------------
-  !> calc total specific heat (CV,3D)
-  subroutine ATMOS_THERMODYN_cv_3D( &
-       CVtot, &
+  !> calc total gas constant (R,3D)
+  subroutine ATMOS_THERMODYN_r_3D( &
+       Rtot, &
        q,     &
-       CVq,   &
+       Rq,   &
        qdry   )
     implicit none
 
-    real(RP), intent(out) :: CVtot(KA,IA,JA)    !< total specific heat    [J/kg/K]
-    real(RP), intent(in)  :: q    (KA,IA,JA,QA) !< mass concentration     [kg/kg]
-    real(RP), intent(in)  :: CVq  (QA)          !< specific heat          [J/kg/K]
-    real(RP), intent(in)  :: qdry (KA,IA,JA)    !< dry mass concentration [kg/kg]
+    real(RP), intent(out) :: Rtot(KA,IA,JA)    !< total gas constant     [J/kg/K]
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration     [kg/kg]
+    real(RP), intent(in)  :: Rq  (QA)          !< gas constant           [J/kg/K]
+    real(RP), intent(in)  :: qdry(KA,IA,JA)    !< dry mass concentration [kg/kg]
 
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
@@ -289,20 +358,16 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-
-!       CVtot(k,i,j) = qdry(k,i,j) * CVdry
-!       do iqw = 1, QA
-!          CVtot(k,i,j) = CVtot(k,i,j) + q(k,i,j,iqw) * CVq(iqw)
-!       enddo
-
-       CALC_CV(cvtot(k,i,j), qdry(k,i,j), q, k, i, j, iqw, CVdry, CVq)
-
+       Rtot(k,i,j) = qdry(k,i,j) * Rdry
+       do iqw = 1, QA
+          Rtot(k,i,j) = Rtot(k,i,j) + q(k,i,j,iqw) * Rq(iqw)
+       enddo
     enddo
     enddo
     enddo
 
     return
-  end subroutine ATMOS_THERMODYN_cv_3D
+  end subroutine ATMOS_THERMODYN_r_3D
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_pott_0D( &

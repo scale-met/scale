@@ -235,11 +235,13 @@ contains
    call ATMOS_HYDROMETER_templhv( LHV, ATM_TEMP )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
+       enddo
+       enddo
+    end if
 
     !-----< U10, T2, q2 >-----
 
@@ -255,9 +257,22 @@ contains
     do j = JS, JE
     do i = IS, IE
        T2(i,j) = ATM_TEMP(i,j)
-       Q2(i,j) = ATM_QTRC(i,j,I_QV)
     enddo
     enddo
+
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          Q2(i,j) = ATM_QTRC(i,j,I_QV)
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+          Q2(i,j) = 0.0_RP
+       enddo
+       enddo
+    end if
 
     return
   end subroutine ATMOS_PHY_SF_const
