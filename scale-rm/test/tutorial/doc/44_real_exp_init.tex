@@ -16,7 +16,7 @@ init では、SCALE計算に必要な初期値・境界値データを作成す�
 これは、\verb|init.conf|の中で、下記のように相対PATHを用いて参照するように設定されている。\\
 
 \noindent {\gt
-\ovalbox{
+f\ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_TOPO| \\
 \verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
@@ -29,7 +29,7 @@ init では、SCALE計算に必要な初期値・境界値データを作成す�
 }}\\
 
 \noindent その他に\verb|init.conf|の設定の中で特に確認してほしい項目は、
-\verb|PARAM_MKINIT_REAL|である。\\
+\namelist{PARAM_MKINIT_REAL}である。\\
 
 \noindent {\gt
 \ovalbox{
@@ -52,7 +52,7 @@ init では、SCALE計算に必要な初期値・境界値データを作成す�
 \end{tabularx}
 }}\\
 
-\noindent \verb|FILETYPE_ORG|は入力する気象場データのファイルフォーマットに
+\noindent \nmitem{FILETYPE_ORG}は入力する気象場データのファイルフォーマットに
 関するパラメータを設定しており、ここでは
 grads形式のデータを読み込むことを指定している。
 詳細な設定ファイルの内容については、付録\ref{app:namelist}を参照されたい。

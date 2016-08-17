@@ -35,10 +35,10 @@ runディレクトリの中には、\verb|run.conf|という名前の
 X方向、Y方向ともに2分割されており、
 総計として4つのMPIプロセスを使用する設定となっている。
 1つのMPIプロセスあたりの格子点数については、
-\verb|IMAX = 45|、\verb|JMAX = 45|と指定されているため、
+\nmitem{IMAX = 45}、\nmitem{JMAX = 45}と指定されているため、
 X方向、Y方向の総格子点数は、ともに$2 \times 45$ で90である。
 計算ドメインの大きさは、
-\verb|PARAM_GRID|の項目の\verb|DX|、\verb|DY|はともに20000 m（20 km）
+\namelist{PARAM_GRID}の\nmitem{DX}、\nmitem{DY}はともに20000 m（20 km）
 と指定されているため、
 90 個$\times$ 20 km より、1800 km $\times$ 1800 km の正方形の計算領域
 が設定されていることがわかる。
@@ -78,7 +78,7 @@ X方向、Y方向の総格子点数は、ともに$2 \times 45$ で90である�
 
 
 \verb|run.conf|の設定の中で時間積分に関する設定は、
-\verb|PARAM_TIME|の項目にある。\\
+\namelist{PARAM_TIME}の項目にある。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -99,13 +99,13 @@ X方向、Y方向の総格子点数は、ともに$2 \times 45$ で90である�
 \end{tabularx}
 }}\\
 
-\noindent 初期時刻\verb|TIME_STARTDATE|はUTCで指定する。
+\noindent 初期時刻は、\nmitem{TIME_STARTDATE}においてUTCで指定する。
 チュートリアルでは2007年7月14日18時UTCに設定している。
 積分のための時間ステップは、上記の他、
 それぞれの物理スキーム毎に設定できるようになっている。
 
 
-計算結果の出力に関する設定は\verb|PARAM_HISTORY|で行う。\\
+計算結果の出力に関する設定は\nmitem{PARAM_HISTORY}で行う。\\
 
 \noindent {\gt
 \ovalbox{
@@ -122,8 +122,8 @@ X方向、Y方向の総格子点数は、ともに$2 \times 45$ で90である�
 \end{tabularx}
 }}\\
 
-\noindent 上記の設定に従って、下記の\verb|HISTITEM|に羅列された変数が出力される。
-\verb|HISTITEM|ではオプション変数を加えることで、変数毎に、出力間隔を変更したり、
+\noindent 上記の設定に従って、下記の\nmitem{HISTITEM}に羅列された変数が出力される。
+\nmitem{HISTITEM}ではオプション変数を加えることで、変数毎に、出力間隔を変更したり、
 平均値を出力したりすることも可能である。
 これらの説明は\ref{sec:output}を参照されたい。\\
 
@@ -158,7 +158,7 @@ X方向、Y方向の総格子点数は、ともに$2 \times 45$ で90である�
 }}}\\
 
 \noindent その他に実験で使用される物理過程の設定は、
-\verb|PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN|の項目に
+\namelist{PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}に
 記述されている。
 詳細な設定ファイルの内容については、付録\ref{app:namelist}を参照されたい。
 

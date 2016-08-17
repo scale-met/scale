@@ -47,11 +47,9 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 \end{figure}
 
 
-
-
 \subsection{MPIプロセス数}
 
-MPIプロセス数は、各confファイルの\verb|PARAM_PRC|で指定する。
+MPIプロセス数は、設定ファイルの\namelist{PARAM_PRC}で指定する。
 先に述べた通り、SCALEの入出力ファイルは、MPIプロセス毎に分割されている。
 そのため、MPIプロセス数を変更すると分割ファイル数も必ず変わることになる。
 従って、例えば、2-MPI並列用に作成した初期値ファイルは、
