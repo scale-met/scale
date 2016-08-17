@@ -1,7 +1,9 @@
-\section{計算領域（格子数・解像度・MPIプロセス数）の指定}
+\section{対象計算領域の設定}
 \label{sec:domain}
 %=======================================================================
 
+\subsection{計算領域と解像度、格子点数、MPIプロセスの関係} \label{subsec:relation_dom_reso}
+各設定を行う前に、SCALE-RMでの計算領域、解像度、格子点数、MPIプロセスの関係を整理しておく。
 計算領域は、水平格子間隔と格子点数を指定することで決定されるようになっている。
 図\ref{fig:domain}は、
 計算領域、水平格子間隔、格子数、及びMPIプロセス数の関係を示している。
@@ -23,10 +25,10 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 計算領域は、$x$方向に\verb|PRC_NUM_X|個、$y$方向に\verb|PRC_NUM_Y|個に分割される。
 以上の関係から、計算領域全体のそれぞれの方向の格子点数および総格子点数は、
 \begin{eqnarray}
-&& x方向領域内の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
-   \times (\verb|KMAX| )  \nonumber\\
-&& y方向領域内の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|
-   \times (\verb|KMAX|\right)  \nonumber\\
+&& 領域内x方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
+   \times (\verb|KMAX| )  \label{eq:xgridnum}\\
+&& 領域内y方向の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|
+   \times (\verb|KMAX|\right)  \label{eq:ygridnum}\\
 && 領域内の総格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
    \times (\verb|KMAX| )  \nonumber
@@ -46,6 +48,18 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 \end{center}
 \end{figure}
 
+\subsection{計算領域の設定}
+
+\ref{subsec:relation_dom_reso}節で述べた関係が理解できれば、領域の設定は容易である。
+すなわち、式(\ref{eq:xgridnum},\ref{eq:ygridnum})を使って、
+\begin{eqnarray}
+&& x方向の領域の長さ = x方向の格子点数 \times \verb|DX| \nonumber\\
+&& y方向の領域の長さ = y方向の格子点数 \times \verb|DY| \nonumber
+\end{eqnarray}
+となる。ここで、\nmitem{DX,DY}は、後述するように
+\namelist{PRAM_GRID}で指定されるものである。
+逆算して、解像度と領域の大きさをを決めて、MPIプロセス数が決まると、
+ローカルな領域の格子点数が決まる。
 
 \subsection{MPIプロセス数}
 
@@ -70,7 +84,7 @@ MPIプロセス数を変更するには、
 
 
 全MPIプロセス数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  となり、
-上記の例では、X方向に2分割、Y方向に1分割（分割なし）の
+上記の例では、$x$方向に2分割、$y$方向に1分割（分割なし）の
 2-MPI並列ということになる。
 
 実行時にMPIコマンドに指定するMPIプロセス数は、
@@ -92,8 +106,8 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \subsection{水平・鉛直格子数}
 %-----------------------------------------------------------------------
 
-格子数の設定は、設定ファイル(\verb|***.conf|)の\verb|PARAM_INDEX|で行う。
-以下で設定する水平格子数の値は、
+格子数の設定は、設定ファイル(\verb|***.conf|)の\namelist{PARAM_INDEX}で行う。
+\ref{subsec:relation_dom_reso}で詳しく説明したように、以下で設定する水平格子数の値は、
 １つのMPIプロセス当たりの値であることに注意が必要である。\\
 
 \noindent {\small {\gt
@@ -101,8 +115,8 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_INDEX| & \\
 \verb| KMAX = 97,|  & 鉛直層数 \\
-\verb| IMAX = 20,|  & X方向の格子点数 \\
-\verb| JMAX = 2, |  & Y方向の格子点数 \\
+\verb| IMAX = 20,|  & プロセスあたりのx方向の格子点数 \\
+\verb| JMAX = 25,|  & プロセスあたりのy方向の格子点数 \\
 \verb|/|\\
 \end{tabularx}
 }}}\\
@@ -112,17 +126,18 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \subsection{水平・鉛直格子間隔}
 \label{sec:gridinterv}
 %-----------------------------------------------------------------------
-SCALEでは、格子点の位置を均等間隔に設定することも、
-任意の格子点位置を直接指定することもできる。
+SCALE-RMでは、水平方向には格子点の位置を均等間隔に設定する。
+鉛直方向には均等間隔でも任意の格子点位置を直接指定することもできる。
 以下で説明する
 \textcolor{red}{\bf 格子間隔の設定は、pp\_***.conf、init\_***.conf、run\_***.confの
 設定ファイルの間で一致させなければならないことに注意が必要である。}
-また、以下で設定する値は、MPIプロセス当たりの値であることに注意が必要である。
+\ref{subsec:relation_dom_reso}節で述べたように、
+以下で設定する値は、MPIプロセス当たりの値であることに注意が必要である。
 
 
 \subsubsection{等間隔で設定する場合}
 %-----------------------------------------------------------------------&
-設定ファイルの\verb|PARAM_GRID|の\verb|DX|、\verb|DY|、\verb|DZ|に
+設定ファイルの\namelist{PARAM_GRID}の\nmitem{DX,DY,DZ}に
 それぞれ、東西、南北、鉛直方向の格子間隔を指定する。
 水平格子間隔は等間隔\footnote{緩和領域は除く（第\ref{sec:buffer}節参照）}でしか設定できない。\\
 
