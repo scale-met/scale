@@ -38,6 +38,15 @@ GrADSバイナリー変換するには、\verb|netcdf2grads_h|を使用する。
  $ mpirun -n 4 ./net2g net2g.3d.conf
 \end{verbatim}
 %両方とも数秒程度で終了する。
+エラーメッセージがなく、次のメッセージだけが標準出力へ表示されて終了すれば変換完了である。\\
+
+\noindent {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+\verb|+++ MPI COMM: Corrective Finalize| \\
+\end{tabularx}
+}}\\
+
 成功すれば、下記のファイルが作成される。
 \begin{verbatim}
   MSLP_d01z-2d.ctl
