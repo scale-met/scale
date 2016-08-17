@@ -6,25 +6,33 @@
 図\ref{fig:domain}は、
 計算領域、水平格子間隔、格子数、及びMPIプロセス数の関係を示している。
 水平方向に2次元の領域分割を行うことで並列化がなされている。
-これらは、NameList\verb|PARAM_INDEX|内の項目\verb|IMAX|、\verb|JMAX|
-およびNameList\verb|PARAM_PRC|内の項目\verb|PRC_NUM_X|、\verb|PRC_NUM_Y|で
+これらは、NameList~\verb|PARAM_INDEX|内の項目\verb|IMAX|、\verb|JMAX|、
+NameList~\verb|PARAM_PRC|内の項目\verb|PRC_NUM_X|、\verb|PRC_NUM_Y|で
+水平格子間隔については、NameList~\verb|PARAM_GRD|内の項目\verb|DX|、\verb|DY|で
 設定する。
+
 ここで、注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であることである。
-すなわち、計算領域は、水平格子間隔、格子点数とともに
-各方向のMPIプロセス数を考慮して指定する必要がある。
 設定する格子数(\verb|IMAX|, \verb|JMAX|, \verb|KMAX|)は、
 1つのMPIプロセスが担当する格子点数を与える仕様となっている。
+すなわち、計算領域は、水平格子間隔、格子点数とともに
+各方向のMPIプロセス数を考慮して決定する必要がある。
 
 図\ref{fig:domain}に示すように、
-計算領域は、MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時
-計算領域を$x$方向に\verb|PRC_NUM_X|個、$y$方向に\verb|PRC_NUM_Y|個に分割される。
-以上の関係から、計算領域全体の総格子点数は、
+MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
+計算領域は、$x$方向に\verb|PRC_NUM_X|個、$y$方向に\verb|PRC_NUM_Y|個に分割される。
+以上の関係から、計算領域全体のそれぞれの方向の格子点数および総格子点数は、
 \begin{eqnarray}
- 領域内の総格子数 = (\verb|IMAX| \times \verb|PRC_NUM_X|)
+&& x方向領域内の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
+   \times (\verb|KMAX| )  \nonumber\\
+&& y方向領域内の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|
+   \times (\verb|KMAX|\right)  \nonumber\\
+&& 領域内の総格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
    \times (\verb|KMAX| )  \nonumber
 \end{eqnarray}
-である。これにそれぞれの格子間隔を掛ければ、計算領域の大きさが求まる。
+の関係となる。
+ここで、\verb|KMAX|は、鉛直方向の格子点数であり、
+NameList~\verb|PARAM_INDEX|内の項目で指定されている。
 次節以降では、MPIプロセス数、格子数、格子間隔、
 それぞれの設定方法について詳しく説明する。
 
