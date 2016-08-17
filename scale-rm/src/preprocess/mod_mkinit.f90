@@ -2614,8 +2614,6 @@ contains
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
-    QV(:) = 0.0_RP
-
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2684,8 +2682,6 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SQUALLLINE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
-
-    QV(:) = 0.0_RP
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
