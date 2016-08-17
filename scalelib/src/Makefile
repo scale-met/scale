@@ -68,8 +68,7 @@ else
 endif
 
 ifeq ($(CP),)
-  OBJS_CP = scale_atmos_phy_cp_kf.o	\
-            scale_atmos_phy_cp_kf_sub.o
+  OBJS_CP = scale_atmos_phy_cp_kf.o
 else
   OBJS_CP = scale_atmos_phy_cp_$(CP).o
   FFLAGS += -DMP=$(CP)
