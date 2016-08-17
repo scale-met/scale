@@ -6,7 +6,7 @@
 同じ解像度でも計算不安定を防ぐためにタイムステップを短くすることもある。
 
 積分時間とタイムステップの設定は、
-設定ファイル\verb|run_***.conf|の\verb|PARAM_PRC|の項目を編集することで設定できる。\\
+設定ファイル\verb|run_***.conf|の\namelist{PARAM_PRC}の項目を編集することで設定できる。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -47,12 +47,11 @@
 }}}\\
 
 
-\verb|TIME_DT| は、トレーサー移流のためのタイムステップであり、
+\nmitem{TIME_DT} は、トレーサー移流のためのタイムステップであり、
 格子間隔と移流速度から計算不安定を起こさないように
 格子間隔を移流速度で割った値が取りうる最少値よりも小さな値を設定する。
-決定する。
-\verb|TIME_DT_ATMOS_DYN| は、力学変数の時間積分のためのタイムステップであり、音速で制約される。
-計算安定性のためには、\verb|ATMOS_DYN_TINTEG_SHORT_TYPE| が \verb|RK4| の場合には
+\nmitem{TIME_DT_ATMOS_DYN} は、力学変数の時間積分のためのタイムステップであり、音速で制約される。
+計算安定性のためには、\nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} が \verb|RK4| の場合には
 最少格子間隔(HE-VI利用時には水平の最少格子間隔)を 420 m/s で割った値が、
 \verb|RK3| の場合には 840 m/s で割った値が目安となる。
 

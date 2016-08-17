@@ -4,8 +4,10 @@
 新たな変数をhistoryファイルへ追加するには、正式には次の2段階の手続きが必要である。
 
 \begin{enumerate}
-\item ソースファイルに、対象の変数をhistory出力するための設定をする。未設定の場合、run.confに\verb|&HISTITEM|を追加しても出力されない。
-\item run.conf内の設定。各変数をhistoryファイルに出力するかどうかを指定。コンパイルし直すことなく、実験毎に変更可能。
+\item ソースファイルに、対象の変数をhistory出力するための設定をする。
+未設定の場合、run.confに\namelist{HISTITEM}を追加しても出力されない。
+\item run.conf内の設定。各変数をhistoryファイルに出力するかどうかを指定。
+コンパイルし直すことなく、実験毎に変更可能。
 \end{enumerate}
 主要な変数についてはすでに1の手続きは行われているため、2の手続きだけ行えばよい。
 2の手続きだけで出力可能な変数については、
@@ -13,7 +15,7 @@
 以下では、2の手続きについて、説明する。\\
 
 まず、出力ファイルと出力形式について、run.**.confの
-\verb|&PARAM_HISTORY|に設定する。\\
+\namelist{PARAM_HISTORY}に以下の項目を設定する。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -50,13 +52,13 @@
 
 
 次に、どの変数を出力するか、また各出力変数毎の出力形式の設定を、
-run.**.confの\verb|HISTITEM|に追加する。
-\verb|ITEM|に設定された変数が出力される。
+run.**.confの\namelist{HISTITEM}に追加する。
+\nmitem{ITEM}に設定された変数が出力される。
 \textcolor{blue}{青色文字}の部分はオプションで、
 オプション変数が特に指定されていない場合は 
-\verb|PARAM_HISTORY| 内の設定が適用される。
-つまり、出力は、基本的には \verb|PARAM_HISTORY| に従って行われるが、
-\verb|HISTITEM|のオプション設定をすることにより、
+\namelist{PARAM_HISTORY}内の設定が適用される。
+つまり、出力は、基本的には \namelist{PARAM_HISTORY}に従って行われるが、
+\nmitem{HISTITEM}のオプション設定をすることにより、
 各変数ごとに出力形式を指定することが可能である。\\
 
 
