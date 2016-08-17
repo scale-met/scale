@@ -1,6 +1,6 @@
-
 %-------------------------------------------------------%
 \section{初期値・境界値データの作成：init}
+\label{sec:tutrial_real_init}
 %-------------------------------------------------------%
 
 init では、SCALE計算に必要な初期値・境界値データを作成する。
@@ -61,7 +61,7 @@ grads形式のデータを読み込むことを指定している。
 \begin{verbatim}
   $ ln -s ../../bin/scale-rm_init ./
 \end{verbatim}
-\ref{sec:real_prep}節で作成した入力データに、
+第\ref{sec:tutrial_real_prep_fnl}節で作成した入力データに、
 initディレクトリの中に準備されている\verb|"gradsinput-link_FNL.sh"|を用いてリンクをはる。
 \begin{verbatim}
   $ sh gradsinput-link_FNL.sh
