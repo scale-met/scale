@@ -7,13 +7,13 @@
 計算領域、水平格子間隔、格子数、及びMPIプロセス数の関係を示している。
 水平方向に2次元の領域分割を行うことで並列化がなされている。
 
-これらは、\namelist{PARAM_INDEX}内の項目\verb|IMAX|、\verb|JMAX|、
-\namelist{PARAM_PRC}内の項目\verb|PRC_NUM_X|、\verb|PRC_NUM_Y|で
-水平格子間隔については、\namelist{PARAM_GRD}内の項目\verb|DX|、\verb|DY|で
+これらは、\namelist{PARAM_INDEX}内の\nmitem{IMAX}、\nmitem{JMAX}、
+\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X}、\nmitem{PRC_NUM_Y}で
+水平格子間隔については、\namelist{PARAM_GRD}内の\nmitem{DX}、\nmitem{DY}で
 設定する。
 
 ここで、注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であることである。
-設定する格子数(\verb|IMAX|, \verb|JMAX|, \verb|KMAX|)は、
+設定する格子数(\nmitem{IMAX}, \nmitem{JMAX}, \nmitem{KMAX})は、
 1つのMPIプロセスが担当する格子点数を与える仕様となっている。
 すなわち、計算領域は、水平格子間隔、格子点数とともに
 各方向のMPIプロセス数を考慮して決定する必要がある。
