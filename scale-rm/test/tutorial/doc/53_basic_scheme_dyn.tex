@@ -5,7 +5,8 @@
 
 \subsection{数値解法}
 %------------------------------------------------------
-設定は、設定ファイルの\verb|PARAM_ATMOS|の\verb|ATMOS_DYN_TYPE|で設定する。\\
+時間方向の数値解法選択は、
+設定ファイルの\namelist{PARAM_ATMOS}の\nmitem{ATMOS_DYN_TYPE}で行う。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -33,8 +34,8 @@
 \subsection{時間・空間差分スキーム}
 \label{sec:atmos_dyn_scheme}
 %------------------------------------------------------
-設定は、設定ファイルの\verb|PARAM_ATMOS_DYN|で設定する。
-また、空間スキームによってはHaloの設定も必要である。
+時間・空間差分スキームの設定は、設定ファイルの\namelist{PARAM_ATMOS_DYN}で設定する。
+また、空間スキームによってはハロの数の設定も必要である。
 下記の設定は推奨設定である。
 その他、スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。
 また、時間スキーム変更時には、タイムステップも考慮する必要があるが、
@@ -57,7 +58,6 @@
 }}\\
 
 
-
 \begin{table}[h]
 \begin{center}
   \caption{力学スキームの設定}
@@ -65,37 +65,40 @@
   \begin{tabularx}{150mm}{llXX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
     \multicolumn{3}{l}{時間スキーム} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{1}{l}{Heun's 3rd order Runge-Kutta scheme} & \\
-    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{1}{X}{Wicker and Skamarock (2002) 3段ルンゲクッタスキーム} & \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{1}{l}{4th order Runge-Kutta scheme} & \\
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{3次ルンゲクッタスキーム(Heun)} \\
+    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) 3段ルンゲクッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4次ルンゲクッタスキーム} \\
     \hline
-    \multicolumn{3}{l}{空間スキーム} & 最小の設定格子数(Haloの数)\\ \hline
-f    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2-nd order central difference scheme} & \multicolumn{1}{l}{1}\\
-    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4-th order central difference scheme} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6-th order central difference scheme} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3-rd order upwind difference scheme} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5-th order upwind difference scheme} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3-rd order upwind difference scheme with Koren (1993) filter} & \\
+    \multicolumn{3}{l}{空間スキーム} & 最小の設定格子数(ハロの数)\\ \hline
+    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次中央差分} & \multicolumn{1}{l}{1}\\
+    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4次中央差分} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6次中央差分} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3次風上差分} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5次風上差分} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3次風上差分 + Koren(1993)フィルター} & \multicolumn{1}{l}{2}\\
 \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
 トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。\\
-つまり \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE| として \verb|UD3KOREN1993| 以外を選択した場合は、\\
-\verb|ATMOS_DYN_FLAG_FCT_TRACER| を \verb|.true.| としてFCTを利用するのがよい。
+つまり \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}として \nmitem{UD3KOREN1993}以外を選択した場合は、\\
+\nmitem{ATMOS_DYN_FLAG_FCT_TRACER} を \verb|.true.| としてFCTを利用するのがよい。
 
+ハロの数はデフォルトで２となっている。
+従って、空間スキームがCD4, UD3以外の場合、上記の表に記したハロの数の設定が必要である。
+設定は、\namelist{PARAM_INDEX}の中の\nmitem{IHALO,JHALO}で行う。
 
-空間スキームがCD4, UD3以外の場合(Haloの数が2以外の場合)、Haloの設定も必要である。
-Haloの数は、n次の空間スキームに対して$\lceil n/2 \rceil$である。
-ここで、$\lceil$ $\rceil$ は天井関数である。\\
+例えば、空間スキームに5次風上差分を設定した場合、
 
 \noindent {\gt\small
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
  \verb|&PARAM_INDEX | &  \\
- \verb| IHALO = 2,|   & ; $\lceil n/2 \rceil$を設定\\
- \verb| JHALO = 2,|   & ; $\lceil n/2 \rceil$を設定\\
+ \verb| IHALO = 3,|   &\\
+ \verb| JHALO = 3,|   &\\
  \verb|/ | & \\
 \end{tabularx}
 }}\\
+
+のように設定する。
