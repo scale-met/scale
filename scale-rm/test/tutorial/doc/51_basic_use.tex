@@ -134,55 +134,41 @@ SCALE-RMでは、水平方向には格子点の位置を均等間隔に設定す
 \ref{subsec:relation_dom_reso}節で述べたように、
 以下で設定する値は、MPIプロセス当たりの値であることに注意が必要である。
 
-
-\subsubsection{等間隔で設定する場合}
 %-----------------------------------------------------------------------&
+第\ref{sec:buffer}節で述べる緩和領域を覗き、
+水平格子間隔は等間隔でしか設定できない。
+鉛直格子間隔については、任意に定義することが可能である。
+すべての方向について等間隔で設定する場合には、以下のように
 設定ファイルの\namelist{PARAM_GRID}の\nmitem{DX,DY,DZ}に
 それぞれ、東西、南北、鉛直方向の格子間隔を指定する。
-水平格子間隔は等間隔\footnote{緩和領域は除く（第\ref{sec:buffer}節参照）}でしか設定できない。\\
+単位はmである。
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_GRID  | & \\
-\verb| DX = 500.D0,| & ; X方向（東西方向）の格子間隔\\
-\verb| DY = 500.D0,| & ; Y方向（南北方向）の格子間隔\\
-\verb| DZ = 500.D0,| & ; Z方向（鉛直方向）の格子間隔\\
+\verb| DX = 500.D0,| & ; x方向（東西方向）の格子間隔\\
+\verb| DY = 500.D0,| & ; y方向（南北方向）の格子間隔\\
+\verb| DZ = 500.D0,| & ; z方向（鉛直方向）の格子間隔\\
 \verb|/|\\
 \end{tabularx}
 }}}\\
 
 
-\subsubsection{任意の格子点位置を指定}
-%-----------------------------------------------------------------------&
-この設定方法は、鉛直方向にのみ有効である。
-海面高度が0として設定されることが前提で、標高を持つ位置では山岳に沿った座標系によって適切に処理される。
-SCALEの格子系は水平方向にはArakawa-Cグリッド、および鉛直方向にはLorenzグリッドである。
-すなわち、速度成分定義格子点とスカラー定義格子点がスタッガード（食い違い）になっている。
-スカラー量を定義している格子点をCenter Pointと呼び、半格子ズレた格子点をFace Pointと呼ぶ。
-なお、これは、スカラー量のコントロールボリュームに合わせた呼称である。
-SCALEでは、これらの頭文字と方向を組み合わせて
-\verb|CX、CY、CZ|や\verb|FX、FY、FZ|と定義している（図\ref{fig:scale_grid})。
+以下に、鉛直方向での任意の格子点位置を指定する場合の設定を示す。
+鉛直方向は、Lorenz格子を採用しており、
+速度成分定義格子点とスカラー定義格子点が半格子分ずれた食い違い格子にになっている。
+ここでは、スカラー量を定義している格子点をセンターポイントと呼び、
+半格子ズレた格子点をフェイスポイントと呼ぶ（図\ref{fig:scale_grid}参照)。
 
-
-\begin{figure}[h]
-\begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/Center-Face.eps}\\
-  \caption{SCALE-RMの格子の定義。PARAM\_GRIDでFZを指定する時は、HALOを除いた計算領域下端の格子からk=1として与える(図b参照)。(ただし、SCALE本体では、HALOを含む領域の左下端の格子をi, j, k=1と定義している。}
-  \label{fig:scale_grid}
-\end{center}
-\end{figure}
-
-
-
-直接格子点の位置を指定する場合は、Z方向のFace Pointの位置を
-\verb|FZ(:)|に指定
+直接格子点の位置を指定する場合は、フェイスポイントの位置を
+\namelist{PARAM_GRID}の中の\nmitem{FZ(:)}で配列として与えればよい。
 \footnote{指定の際には、シミュレーションの計算精度
 (モデルのコンパイル時に指定した浮動小数点の精度。デフォルトでは倍精度)を用いることが望ましい。}
-(単位はメートル[m]) すれば良い。
-\verb|FZ(:)|で指定する値の数は、鉛直層数（\verb|PARAM_INDEX|の\verb|KMAX|)と一致させる必要がある。
+また、\nmitem{FZ(:)}で指定する値の数は、鉛直層数
+（\namelist{PARAM_INDEX}の\nmitem{KMAX})と一致させる必要がある。
 例として理想実験のチュートリアルのrun.confファイル
-（run\_R20kmDX500m.conf）を下記に示す。\\
+（run\_R20kmDX500m.conf）を下記に示す。
 
 \noindent {\small {\gt
 \ovalbox{
@@ -209,10 +195,22 @@ SCALEでは、これらの頭文字と方向を組み合わせて
 }}}\\
 
 
+\begin{figure}[tb]
+\begin{center}
+  \includegraphics[width=0.4\hsize]{./figure/verticalface.eps}\\
+  \caption{SCALE-RMの鉛直格子の定義点。\namelist{PARAM_GRID}で\nmitem{FZ}を指定する時は、ハロを除いた計算領域下端の格子から$k=1$として与える。}
+  \label{fig:scale_grid}
+\end{center}
+\end{figure}
+なお、これらの指定では、
+標高0mでの格子点として設定され、標高を持つ位置では山岳に沿った座標系によって適切に処理される。
+
+
+
 格子点位置は任意に設定できるが、場合によっては計算不安定につながる。
 鉛直層の設定については、作成をサポートするツール（\verb|scale/scale-rm/util/makevgrid/|）が
 用意されているので参考にされたい。
 \footnote{``make\_vgrid.f90''というFortranプログラムと
 いくつかのサンプルnamelistが用意されている。}
 ツールをコンパイルして実行すれば直ちに設定ファイルに貼り付けて使用できる
-\verb|FZ|の設定が作成される。
+\nmitem{FZ(:)}の値が作成される。
