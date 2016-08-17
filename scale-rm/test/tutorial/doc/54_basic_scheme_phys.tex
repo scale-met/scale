@@ -4,15 +4,15 @@
 \subsection{雲微物理スキーム} \label{sec:basic_microphys}
 %------------------------------------------------------
 雲微物理スキームの選択は、init.confとrun.conf中の
-\verb|PARAM_TRACER|の\verb|TRACER_TYPE|、
-及び、\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_MP_TYPE|で設定する。
-このとき{\color{red}{\verb|TRACER_TYPE|と\verb|ATMOS_PHY_MP_TYPE|は普通は同じものを設定し}}
+\namelist{PARAM_TRACER}の中の\nmitem{TRACER_TYPE}、
+及び、\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。
+このとき{\color{red}{\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}は普通は同じものを設定し}}
 、かつ、\textcolor{red}{init.conf，run.confで同一の設定}とする必要がある。
-ただし、\verb|ATMOS_PHY_MP_TYPE|を\verb|OFF|とするときは、\verb|TRACER_TYPE|は何を設定してもよいが、乾燥大気の計算をする場合は\verb|TRACER_TYPE = DRY|とするのがよい。
-雲微物理スキームを計算する(callする)タイミングは、
-\verb|PARAM_TIME|で設定するが、これについては
-第\ref{sec:timeintiv}節を参照のこと。\\
-
+ただし、\nmitem{ATMOS_PHY_MP_TYPE}を\verb|OFF|とするときは、\nmitem{TRACER_TYPE}は何を設定してもよいが、乾燥大気の計算をする場合は\verb|TRACER_TYPE = DRY|とするのがよい。
+雲微物理スキームを呼び出すタイミングは、
+\namelist{PARAM_TIME}で設定するが、これについては
+第\ref{sec:timeintiv}節を参照のこと。
+以下に、氷雲を含む1-momentバルク法を用いるときの設定を示す。
 
 
 \noindent {\gt
@@ -44,14 +44,11 @@
 \end{center}
 \end{table}
 
-\verb|SUZUKI10|以外を選択した場合は、
-init.conf、run.confの\verb|TRACER_TYPE|と\verb|ATMOS_PHY_MP_TYPE|を
-変更するだけで実行可能である。
-
-
-\subsubsection{SUZUKI10}
-%---------------------------
-\verb|ATMOS_PHY_MP_TYPE = "SUZUKI10"|を選択した場合は、init.conf、run.confの双方に
+{\color{red}\verb|SUZUKI10|以外を選択する場合}は、
+init.conf、run.confの\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}を
+変更するだけで実行可能であるが、
+\verb|SUZUKI10|を選択する場合は、以下のように
+init.conf、run.confの双方に
 下記を追加する必要がある。\\
 
 \noindent {\gt
@@ -92,9 +89,9 @@ micpara.datに記載されているnbinが異なれば、\\
 %------------------------------------------------------
 
 乱流スキームの選択は，init.confとrun.conf中の
-\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_TB_TYPE|で設定する。
+\namelist{PARAM_ATMOS}の中の\nmitem{ATMOS_PHY_TB_TYPE}で以下のように設定する。
 乱流スキームをが呼び出されるタイミングは、
-\verb|PARAM_TIME|で設定するが、これについては
+\namelist{PARAM_TIME}で設定するが、これについては
 第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
@@ -126,8 +123,10 @@ micpara.datに記載されているnbinが異なれば、\\
 
 \subsection{放射スキーム} \label{sec:basic_radiation}
 %-------------------------------------------------------------------------------
-放射スキームの選択は、init.confとrun.conf中の\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_RD_TYPE|で設定する。
-放射スキームが呼び出されるタイミングは、\verb|PARAM_TIME|で設定する。時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
+放射スキームの選択は、init.confとrun.conf中の
+\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_RD_TYPE}で設定する。
+放射スキームが呼び出されるタイミングは、\namelist{PARAM_TIME}で以下のように設定する。
+時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
 \ovalbox{
@@ -152,39 +151,56 @@ micpara.datに記載されているnbinが異なれば、\\
 \end{center}
 \end{table}
 
-放射計算のための太陽放射量は、モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
-理想実験のために、太陽放射量、緯度経度、時刻を固定することも出来る。これらは\verb|PARAM_ATMOS_SOLARINS|で設定する。
+放射計算のための太陽放射量は、
+モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
+理想実験のために、太陽放射量、緯度経度、時刻を固定することも出来る。
+これらは\namelist{PARAM_ATMOS_SOLARINS}で設定する。
+%%%% 記載が必要！！！！！＊＊＊＊
 
+実験設定によっては、モデルトップの高度が10-20 kmと低いことがしばしばある。
+そのため放射計算ではモデルトップとは別の最上層高度を設定し、
+モデルトップより上空を何層で表現するか設定するようになっている。
+放射用最上層を何kmにとるかは放射スキーム依存であるが、
+例えば\verb|MSTRNX|ではデフォルトの
+パラメータテーブルが想定する放射用最上層は100kmである。
+追加される高度はデフォルトの場合10層で表現する。
+すなわち、モデルトップが22kmであれば、放射スキーム内では
+7.8km$\times$10層が追加されて計算される。
+これらは\verb|MSTRNX|なら\namelist{PARAM_ATMOS_PHY_RD_MSTRN}で設定する。
+%%%%% どこで？設定するのか？を記載する必要アリ
 
-実験設定によっては、モデルトップの高度が10-20 kmと低いことがしばしばある。そのため放射計算ではモデルトップとは別の最上層高度を設定し、
-モデルトップより上空を何層で表現するか設定するようになっている。放射用最上層を何kmにとるかは放射スキーム依存である。
-例えば\verb|MSTRNX|ではデフォルトのパラメータテーブルが想定する放射用最上層は100 kmである。追加される高度はデフォルトの場合10層で表現する。
-すなわち、モデルトップが22 kmであれば、放射スキーム内では7.8 km x 10層が追加されて計算される。
-これらは\verb|MSTRNX|なら\verb|PARAM_ATMOS_PHY_RD_MSTRN|で設定する。
-
-追加された層の気温・気圧プロファイルは外部から与える必要がある。また二酸化炭素やオゾン等の気体濃度プロファイルも必要である。
-SCALEでは気温・気圧についてはCIRA86\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006}、気体種についてはMIPAS2001\citep{Remedios_2007}の気候値を用意している。
-気候値プロファイルについても、モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
+追加された層の気温・気圧プロファイルは外部から与える必要がある。
+また二酸化炭素やオゾン等の気体濃度プロファイルも必要である。
+SCALEでは気温・気圧についてはCIRA86
+\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006}、
+気体種についてはMIPAS2001\citep{Remedios_2007}の気候値を用意している。
+気候値プロファイルについても、
+モデル実行の日付および時刻設定とモデルの計算領域の緯度経度に従って計算される。
 読み込むファイルは、
 \begin{verbatim}
   scale-rm/test/data/rad/
 \end{verbatim}
-に用意されており、\verb|PARAM_ATMOS_PHY_RD_PROFILE|でファイルのディレクトリと名前を指定する。
+に用意されており、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}でファイルのディレクトリと名前を指定する。
+%%%%% 項目の記載が必要！！！！
 
-\verb|MSTRNX|を実行するには、放射計算のためのパラメータテーブルが必要である。デフォルトでは太陽放射から赤外放射までを29バンド111チャンネルに分割し、
-雲・エアロゾル粒子の粒径を６ビンで表した時のテーブルを用いている。
-パラメータファイル（３種類）も、
+\verb|MSTRNX|を実行するには、放射計算のためのパラメータテーブルが必要である。
+デフォルトでは太陽放射から赤外放射までを29バンド111チャンネルに分割し、
+雲・エアロゾル粒子の粒径を6ビンで表した時のテーブルを用いている。
+パラメータファイル（3種類）も、
 \begin{verbatim}
   scale-rm/test/data/rad/
 \end{verbatim}
-に用意されている。\verb|PARAM_ATMOS_PHY_RD_MSTRN|でファイルのディレクトリと名前を指定する。
-
+に用意されている。
+\namelist{PARAM_ATMOS_PHY_RD_MSTRN}でファイルのディレクトリと名前を指定する。
 
 
 \subsection{地表面(大気下端境界)} \label{sec:basic_surface}
 %------------------------------------------------------
-大気下端境界の選択は、init.confとrun.conf中の\verb|PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE|で設定する。
-海面・陸面・都市モデルを用いずに大気下端境界のフラックススキームが呼び出されるタイミングは、\verb|PARAM_TIME|で設定する。
+大気下端境界の選択は、init.confとrun.conf中の
+\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_SF_TYPE}で以下のように設定する。
+海面・陸面・都市モデルを用いない場合の
+大気下端境界のフラックススキームが呼び出されるタイミングは、
+\namelist{PARAM_TIME}で設定する。
 時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
@@ -211,43 +227,49 @@ SCALEでは気温・気圧についてはCIRA86\footnote{http://catalogue.ceda.a
 \end{center}
 \end{table}
 
-\subsubsection{CONST設定}
+
 %-------------------------------------------------------------------------------
-\verb|ATMOS_PHY_SF_TYPE = "CONST"|を選択した場合は、run.confで
-下記を設定することにより、任意の値に固定することが可能である。下記の値はデフォルトの設定を示す。\\
+\subsubsection{一定値設定の場合}
+
+\nmitem{ATMOS_PHY_SF_TYPE = "CONST"}を選択した場合は、run.confで
+下記を設定することにより、
+任意の値に固定することが可能である。下記の値はデフォルトの設定を示す。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
  \\
  \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
- \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: Bulk coefficient is constant \\
-                                                  & 1: Friction velocity is constant \\
- \verb| ATMOS_PHY_SF_U_minM         =    0.0D0  | & Minimum limit of absolute velocity for momentum [m/s] \\
- \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011D0  | & Constant bulk coefficient for momentum [NIL] \\
+ \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: バルク係数を一定にする時 \\
+                                                  &            1: 摩擦速度を一定にする時 \\
+ \verb| ATMOS_PHY_SF_U_minM         =    0.0D0  | & 絶対速度の下限値 [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011D0  | & 運動量に対する一定バルク係数値 \\
                                                   &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0| のとき有効) \\
- \verb| ATMOS_PHY_SF_CM_min         = 1.0D-5    | & Minimum limit of bulk coefficient for momentum [NIL] \\
+ \verb| ATMOS_PHY_SF_CM_min         = 1.0D-5    | & 運動量に対するバルク係数の下限値 \\
                                                   &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
- \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25D0  | & Constant friction velocity [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25D0  | & 一定摩擦係数値 [m/s] \\
                                                   &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
- \verb| ATMOS_PHY_SF_Const_SH       =   15.0D0  | & Constant surface sensible heat flux [W/m2] \\
- \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =  .false.  | & Diurnal modulation for sensible heat flux? [logical]\\
- \verb| ATMOS_PHY_SF_Const_FREQ     =   24.0D0  | & Frequency of sensible heat flux modulation [hour]\\
- \verb| ATMOS_PHY_SF_Const_LH       =  115.0D0  | & Constant surface latent   heat flux [W/m2] \\
+ \verb| ATMOS_PHY_SF_Const_SH       =   15.0D0  | & 一定地表面顕熱フラックス値 [W/m2] \\
+ \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =  .false.  | & 顕熱フラックスに日変化をつけるか否か [logical]\\
+ \verb| ATMOS_PHY_SF_Const_FREQ     =   24.0D0  | & 顕熱フラックスに日変化を付けるときのサイクル [hour]\\
+ \verb| ATMOS_PHY_SF_Const_LH       =  115.0D0  | & 一定地表面潜熱フラックス値 [W/m2] \\
  \verb|/|            & \\
  \\
 \end{tabularx}
 }}}\\
 
-\subsubsection{BULK設定}
+\subsubsection{バルク設定の場合}
 %-------------------------------------------------------------------------------
-\verb|ATMOS_PHY_SF_TYPE = "BULK"|を選択した場合は、任意の地表面温度に対応したフラックスをバルクモデルに従って計算する。
+\nmitem{ATMOS_PHY_SF_TYPE = "BULK"}を選択した場合は、
+任意の地表面温度に対応したフラックスをバルクモデルに従って計算する。
 これは海洋・陸面・都市モデルを用いずに下端境界を設定する際（特に理想実験）に利用される。
-このとき、粗度は海面粗度の計算スキームを利用しているが、後述するように海面粗度は定数を与えることができ、
-また蒸発効率を決める係数も任意の値を設定出来るため、海面に限定せず、陸面を想定した理想実験も行うことが出来る。
+このとき、粗度は海面粗度の計算スキームを利用しているが、
+後述するように海面粗度は定数を与えることができ、
+また蒸発効率を決める係数も任意の値を設定出来るため、
+海面に限定せず、陸面を想定した理想実験も行うことが出来る。
 
 海面粗度を計算するスキームは、
-run.conf中の\verb|PARAM_ROUGHNESS|の\verb|ROUGHNESS_TYPE|で設定する。\\
+run.conf中の\namelist{PARAM_ROUGHNESS}の\nmitem{ROUGHNESS_TYPE}で以下のように設定する。\\
 
 \noindent {\gt
 \ovalbox{
@@ -272,8 +294,8 @@ run.conf中の\verb|PARAM_ROUGHNESS|の\verb|ROUGHNESS_TYPE|で設定する。\\
 \end{center}
 \end{table}
 
-フラックス計算に使用するバルク交換係数の計算スキームは
-run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
+また、フラックス計算に使用するバルク交換係数の計算スキームは
+run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のように設定する。\\
 
 \noindent {\gt
 \ovalbox{
@@ -302,14 +324,16 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 \subsection{海洋モデル} \label{sec:basic_ocean}
 %-------------------------------------------------------------------------------
 海洋過程は海面の状態量の更新と大気ー海洋間のフラックス計算の２つに大別される。
-これらの過程を計算するタイミングはどちらも\verb|PARAM_TIME|で設定する。
+これらの過程を計算するタイミングはどちらも\namelist{PARAM_TIME}で設定する。
 時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 
 \subsubsection{海面スキーム}
 %-------------------------------------------------------------------------------
-海面の状態量（主に海面温度）の更新を担う海面スキームの選択は、init.confとrun.conf中の\verb|PARAM_OCEAN|の\verb|OCEAN_TYPE|で設定する。\\
-海面のアルベドは、どの海面スキームを選択しても同じ計算スキームが適用され、太陽天頂角に応じたアルベドが計算される。
+海面の状態量（主に海面温度）の更新を担う海面スキームの選択は、init.confとrun.conf中の
+\namelist{PARAM_OCEAN}の\nmitem{OCEAN_TYPE}で設定する。\\
+海面のアルベドは、どの海面スキームを選択しても同じ計算スキームが適用され、
+太陽天頂角に応じたアルベドが計算される。
 
 \noindent {\gt
 \ovalbox{
@@ -369,7 +393,8 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 
 \subsubsection{大気-海洋フラックス}
 %-------------------------------------------------------------------------------
-海面スキームで計算された大気ー海洋間フラックスを大気に反映させるには、\verb|PARAM_ATMOS|で\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|とする必要がある。\\
+海面スキームで計算された大気ー海洋間フラックスを大気に反映させるには、
+\namelist{PARAM_ATMOS}で\nmitem{ATMOS_PHY_SF_TYPE = "COUPLE"}とする必要がある。\\
 
 \noindent {\gt
 \ovalbox{
@@ -384,11 +409,10 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
 また、バルクスキーム内で利用される海面粗度長計算についても、複数のスキームが選択できる。\\
 
 海面粗度を計算するスキームは、
-run.conf中の\verb|PARAM_ROUGHNESS|の\verb|ROUGHNESS_TYPE|で設定する。
+run.conf中の\namelist{PARAM_ROUGHNESS}の\nmitem{ROUGHNESS_TYPE}で設定する。
 
 フラックス計算に使用するバルク交換係数の計算スキームは
-run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。
-
+run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する。
 これらの詳細については、第\ref{sec:basic_surface}節参照のこと。
 
 
@@ -396,14 +420,14 @@ run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。
 \subsection{陸面モデル} \label{sec:basic_land}
 %-------------------------------------------------------------------------------
 陸面過程についても、海洋過程と同じく陸面の状態量の更新と大気ー陸面間のフラックス計算の２つに大別される。
-これらの過程が呼び出されるタイミングはどちらも\verb|PARAM_TIME|で設定する。
+これらの過程が呼び出されるタイミングはどちらも\namelist{PARAM_TIME}で設定する。
 時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
 
 
 \subsubsection{陸面スキーム}
 %-------------------------------------------------------------------------------
 陸面の状態量（主に陸面温度と土壌温度、土壌水分量）の更新を担う陸面スキームの選択は、
-init.confとrun.conf中の\verb|PARAM_LAND|の\verb|LAND_TYPE|で設定する。\\
+init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_TYPE}で以下のように設定する。\\
 
 \noindent {\gt
 \ovalbox{
@@ -429,7 +453,7 @@ init.confとrun.conf中の\verb|PARAM_LAND|の\verb|LAND_TYPE|で設定する。
 \end{table}
 
 
-\verb|LAND_TYPE = "SLAB"|または\verb|LAND_TYPE = "CONST"|を選択した場合は、
+\nmitem{LAND_TYPE = "SLAB"}または\nmitem{LAND_TYPE = "CONST"}を選択した場合は、
 土地利用区分に応じたアルベド、粗度長等のパラメータテーブルと、土地利用区分分布の入力が必要である。
 パラメータテーブルは、
 \begin{verbatim}
@@ -440,7 +464,8 @@ init.confとrun.conf中の\verb|PARAM_LAND|の\verb|LAND_TYPE|で設定する。
 
 \subsubsection{大気-陸面フラックス}
 %-------------------------------------------------------------------------------
-陸面スキームで計算された大気ー陸面間フラックスを大気に反映させるには、\verb|PARAM_ATMOS|で\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|とする必要がある。\\
+陸面スキームで計算された大気ー陸面間フラックスを大気に反映させるには、
+\namelist{PARAM_ATMOS}で\nmitem{ATMOS_PHY_SF_TYPE = "COUPLE"}とする必要がある。\\
 
 \noindent {\gt
 \ovalbox{
@@ -452,22 +477,22 @@ init.confとrun.conf中の\verb|PARAM_LAND|の\verb|LAND_TYPE|で設定する。
 }}\\
 
 大気ー陸面間フラックスの計算スキームは、陸面スキームに対応して選択される。
-\verb|LAND_TYPE = "SLAB"|または\verb|LAND_TYPE = "CONST"|を選択した場合は、
+\nmitem{LAND_TYPE = "SLAB"}または\nmitem{LAND_TYPE = "CONST"}を選択した場合は、
 海面または理想実験用の地表面で用いられるバルクスキームと同じものが利用される。\\
 
 この時のフラックス計算に使用するバルク交換係数の計算スキームは
-run.conf中の\verb|PARAM_BULKFLUX|の\verb|BULKFLUX_TYPE|で設定する。\\
-
+run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する。\\
+%%%% 記載必要
 
 
 \subsection{都市モデル(大気-都市面フラックス)} \label{sec:basic_urban}
 %------------------------------------------------------
 都市モデルを用いる場合、
-\verb|&PARAM_ATMOS|の\verb|ATMOS_PHY_SF_TYPE = "COUPLE"|である必要がある。
+\namelist{PARAM_ATMOS}において、\nmitem{ATMOS_PHY_SF_TYPE = "COUPLE"}である必要がある。
 都市モデルの選択は、init.confとrun.conf中の
-\verb|PARAM_URBAN|の\verb|URBAN_TYPE|で設定する。
+\namelist{PARAM_URBAN}の\nmitem{URBAN_TYPE}で以下のように設定する。
 都市モデルが呼び出されるタイミングは、
-\verb|PARAM_TIME|で設定するが、これについては
+\namelist{PARAM_TIME}で設定するが、これについては
 第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
