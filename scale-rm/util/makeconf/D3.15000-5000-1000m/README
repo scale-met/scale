@@ -1,0 +1,8 @@
+This is simple configuration generator for SCALE-RM.
+
+Usage:
+  1. Edit the file "USER.sh".
+  2. Use run command `make`.
+  3. Generate "output" directory and the configuration files in it automatically.
+
+If you want to clean the directory up, use run command `make clean`.

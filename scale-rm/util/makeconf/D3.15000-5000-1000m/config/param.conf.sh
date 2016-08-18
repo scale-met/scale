@@ -9,7 +9,7 @@ cat << EOF > param.admin.conf
 #################################################
 
 &PARAM_CONST
- CONST_THERMODYN_TYPE = "${CONST_THERMODYN_TYPE}",
+ CONST_THERMODYN_TYPE = "SIMPLE",
 /
 
 &PARAM_TRACER
@@ -124,52 +124,45 @@ cat << EOF > param.physics.conf
  ATMOS_BOUNDARY_USE_DENS       = .true.,
  ATMOS_BOUNDARY_USE_VELZ       = .true.,
  ATMOS_BOUNDARY_USE_QHYD       = ${ATMOS_BOUNDARY_USE_QHYD},
- ATMOS_BOUNDARY_VALUE_VELZ     = 0.0D0,
- ATMOS_BOUNDARY_ALPHAFACT_DENS = ${ATMOS_BOUNDARY_ALPHAFACT_DENS[$D]},
- ATMOS_BOUNDARY_TAUX           = ${ATMOS_BOUNDARY_TAUX[$D]},
- ATMOS_BOUNDARY_TAUY           = ${ATMOS_BOUNDARY_TAUY[$D]},
+ ATMOS_BOUNDARY_VALUE_VELZ     = 0.0,
+ ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,
  ATMOS_BOUNDARY_LINEAR_H       = .false.,
- ATMOS_BOUNDARY_EXP_H          = 2.d0,
+ ATMOS_BOUNDARY_EXP_H          = 2.0,
 /
 
 &PARAM_ATMOS_DYN
- ATMOS_DYN_TINTEG_LARGE_TYPE          = "${ATMOS_DYN_TINTEG_LARGE_TYPE}",
- ATMOS_DYN_TINTEG_SHORT_TYPE          = "${ATMOS_DYN_TINTEG_SHORT_TYPE}",
- ATMOS_DYN_TINTEG_TRACER_TYPE         = "${ATMOS_DYN_TINTEG_TRACER_TYPE}",
- ATMOS_DYN_FVM_FLUX_TYPE              = "${ATMOS_DYN_FVM_FLUX_TYPE}",
- ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "${ATMOS_DYN_FVM_FLUX_TRACER_TYPE}",
- ATMOS_DYN_NUMERICAL_DIFF_COEF        = ${ATMOS_DYN_NUMERICAL_DIFF_COEF},
- ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = ${ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER},
+ ATMOS_DYN_TINTEG_LARGE_TYPE          = "EULER",
+ ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
+ ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
+ ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
+ ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.01,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
  ATMOS_DYN_enable_coriolis            = .true.,
- ATMOS_DYN_FLAG_FCT_TRACER            = ${ATMOS_DYN_FLAG_FCT_TRACER},
+ ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN
  ATMOS_PHY_RD_MSTRN_KADD                  = 30,
- ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = "${RD_MSTRN_GASPARA_IN_FILENAME}",
- ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "${RD_MSTRN_AEROPARA_IN_FILENAME}",
- ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = "${RD_MSTRN_HYGROPARA_IN_FILENAME}",
+ ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = "PARAG.29",
+ ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "PARAPC.29",
+ ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = "VARDATA.RM29",
  ATMOS_PHY_RD_MSTRN_NBAND                 = 29,
 /
 
 &PARAM_ATMOS_PHY_RD_PROFILE
- ATMOS_PHY_RD_PROFILE_TOA                   = 100.D0,
- ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "${RD_PROFILE_CIRA86_IN_FILENAME}",
- ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "${RD_PROFILE_MIPAS2001_IN_BASENAME}",
+ ATMOS_PHY_RD_PROFILE_TOA                   = 100.0,
+ ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc",
+ ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "MIPAS",
 /
 
 &PARAM_ATMOS_PHY_MP_TOMITA08
- Cr             = 78.0D0,
- Cs             =  0.9D0,
- drag_g         =  2.5D0,
- beta_saut      =  6.0D-3,
- gamma_saut     =  6.0D-2,
- gamma_sacr     =  2.0D-2,
-/
-
-&PARAM_ATMOS_PHY_TB_SMG
- ATMOS_PHY_TB_SMG_consistent_tke = ${ATMOS_PHY_TB_SMG_consistent_tke[$D]},
- ATMOS_PHY_TB_SMG_implicit       = ${ATMOS_PHY_TB_SMG_implicit[$D]},
+ Cr             = 78.0,
+ Cs             =  0.9,
+ drag_g         =  2.5,
+ beta_saut      =  0.006,
+ gamma_saut     =  0.06,
+ gamma_sacr     =  0.02,
 /
 
 #################################################
@@ -183,7 +176,7 @@ cat << EOF > param.physics.conf
 /
 
 &PARAM_OCEAN_PHY_SLAB
- OCEAN_PHY_SLAB_DEPTH = 10.D0,
+ OCEAN_PHY_SLAB_DEPTH = 10.0,
 /
 
 #################################################
@@ -212,29 +205,29 @@ cat << EOF > param.physics.conf
 /
 
 &PARAM_URBAN_PHY_SLC
- ZR         = 15.0D0,
- roof_width = 7.5D0,
- road_width = 22.5D0,
- AH         = 0.0D0,
- ALH        = 0.0D0,
- STRGR      = 0.0D0,
- STRGB      = 0.0D0,
- STRGG      = 0.0D0,
- AKSR       = 2.28D0,
- AKSB       = 2.28D0,
- AKSG       = 2.28D0,
- ALBR       = 0.20D0,
- ALBB       = 0.20D0,
- ALBG       = 0.20D0,
- EPSR       = 0.97D0,
- EPSB       = 0.97D0,
- EPSG       = 0.97D0,
- Z0R        = 0.005D0,
- Z0B        = 0.005D0,
- Z0G        = 0.005D0,
- CAPR       = 2.01D6,
- CAPB       = 2.01D6,
- CAPG       = 2.01D6,
+ ZR         = 15.0,
+ roof_width = 7.5,
+ road_width = 22.5,
+ AH         = 0.0,
+ ALH        = 0.0,
+ STRGR      = 0.0,
+ STRGB      = 0.0,
+ STRGG      = 0.0,
+ AKSR       = 2.28,
+ AKSB       = 2.28,
+ AKSG       = 2.28,
+ ALBR       = 0.20,
+ ALBB       = 0.20,
+ ALBG       = 0.20,
+ EPSR       = 0.97,
+ EPSB       = 0.97,
+ EPSG       = 0.97,
+ Z0R        = 0.005,
+ Z0B        = 0.005,
+ Z0G        = 0.005,
+ CAPR       = 2.01E+6,
+ CAPB       = 2.01E+6,
+ CAPG       = 2.01E+6,
 /
 EOF
 

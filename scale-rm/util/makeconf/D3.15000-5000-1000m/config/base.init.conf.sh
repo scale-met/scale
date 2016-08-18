@@ -8,18 +8,13 @@ cat << EOF > base.init.conf
 #
 #################################################
 
-&PARAM_IO
- IO_LOG_BASENAME = "${INIT_IO_LOG_BASENAME}",
-/
-
 &PARAM_TIME
  TIME_STARTDATE = ${TIME_STARTDATE},
  TIME_STARTMS   = ${TIME_STARTMS},
 /
 
-&PARAM_STATISTICS
- STATISTICS_checktotal     = .true.,
- STATISTICS_use_globalcomm = .true.,
+&PARAM_NEST
+ NEST_INTERP_LEVEL = 4,
 /
 
 &PARAM_RESTART
@@ -36,7 +31,7 @@ cat << EOF > base.init.conf
 /
 
 &PARAM_LAND_PROPERTY
- LAND_PROPERTY_IN_FILENAME = "${INIT_LAND_PROPERTY_IN_FILENAME}",
+ LAND_PROPERTY_IN_FILENAME = "param.bucket.conf",
 /
 
 &PARAM_MKINIT
@@ -71,7 +66,12 @@ cat << EOF > base.init.conf
  INTRP_LAND_SFC_TEMP  = "mask",
 /
 
-&PARAM_NEST
- NEST_INTERP_LEVEL = 4,
+&PARAM_IO
+ IO_LOG_BASENAME = "${INIT_IO_LOG_BASENAME}",
+/
+
+&PARAM_STATISTICS
+ STATISTICS_checktotal     = .true.,
+ STATISTICS_use_globalcomm = .true.,
 /
 EOF

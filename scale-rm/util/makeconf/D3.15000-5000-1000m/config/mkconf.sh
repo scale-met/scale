@@ -17,13 +17,13 @@ else
 fi
 
 # debug information
-FMT_YEAR=`printf '%04d' ${YEAR}`
-FMT_MON=`printf '%02d' ${MON}`
-FMT_DAY=`printf '%02d' ${DAY}`
-FMT_HOUR=`printf '%02d' ${HOUR}`
-FMT_MIN=`printf '%02d' ${MIN}`
-FMT_SEC=`printf '%02d' ${SEC}`
-FMT_MSEC=`printf '%03d' ${MSEC}`
+FMT_YEAR=`printf '%04d' ${RUN_DATE_YEAR}`
+FMT_MON=`printf '%02d' ${RUN_DATE_MON}`
+FMT_DAY=`printf '%02d' ${RUN_DATE_DAY}`
+FMT_HOUR=`printf '%02d' ${RUN_DATE_HOUR}`
+FMT_MIN=`printf '%02d' ${RUN_DATE_MIN}`
+FMT_SEC=`printf '%02d' ${RUN_DATE_SEC}`
+FMT_MSEC=`printf '%03d' ${RUN_DATE_MSEC}`
 
 echo "START DATE: ${FMT_YEAR}/${FMT_MON}/${FMT_DAY} - ${FMT_HOUR}:${FMT_MIN}:${FMT_SEC}.${FMT_MSEC}"
 
@@ -69,14 +69,6 @@ if [ ${NUM_DOMAIN} -ne ${#OCEAN_TYPE[*]} ];        then echo "Error: Wrong array
 if [ ${NUM_DOMAIN} -ne ${#LAND_TYPE[*]} ];         then echo "Error: Wrong array size (LAND_TYPE).";         exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#URBAN_TYPE[*]} ];        then echo "Error: Wrong array size (URBAN_TYPE).";        exit 1; fi
 
-if [ ${NUM_DOMAIN} -ne ${#ATMOS_BOUNDARY_TAUX[*]} ]; then echo "Error: Wrong array size (ATMOS_BOUNDARY_TAUX)."; exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#ATMOS_BOUNDARY_TAUY[*]} ]; then echo "Error: Wrong array size (ATMOS_BOUNDARY_TAUY)."; exit 1; fi
-
-if [ ${NUM_DOMAIN} -ne ${#ATMOS_BOUNDARY_ALPHAFACT_DENS[*]} ]; then echo "Error: Wrong array size (ATMOS_BOUNDARY_ALPHAFACT_DENS)."; exit 1; fi
-
-if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_TB_SMG_consistent_tke[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_TB_SMG_consistent_tke)."; exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_TB_SMG_implicit[*]} ];       then echo "Error: Wrong array size (ATMOS_PHY_TB_SMG_implicit).";       exit 1; fi
-
 if [ ${NUM_DOMAIN} -ne ${#TOPOTYPE[*]} ];    then echo "Error: Wrong array size (TOPOTYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#LANDUSETYPE[*]} ]; then echo "Error: Wrong array size (LANDUSETYPE).";  exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#MAXSLOPE[*]} ];    then echo "Error: Wrong array size (MAXSLOPE).";     exit 1; fi
@@ -96,37 +88,31 @@ else
 fi
 
 # set formatted date
-YEAR=`printf '%1.f' ${YEAR}`
-MON=`printf '%1.f' ${MON}`
-DAY=`printf '%1.f' ${DAY}`
-HOUR=`printf '%1.f' ${HOUR}`
-MIN=`printf '%1.f' ${MIN}`
-SEC=`printf '%1.f' ${SEC}`
-MSEC=`printf '%1.f' ${MSEC}`
+YEAR=`printf '%1.f' ${RUN_DATE_YEAR}`
+MON=`printf '%1.f' ${RUN_DATE_MON}`
+DAY=`printf '%1.f' ${RUN_DATE_DAY}`
+HOUR=`printf '%1.f' ${RUN_DATE_HOUR}`
+MIN=`printf '%1.f' ${RUN_DATE_MIN}`
+SEC=`printf '%1.f' ${RUN_DATE_SEC}`
+MSEC=`printf '%1.f' ${RUN_DATE_MSEC}`
 
 STARTDATE=( ${YEAR} ${MON} ${DAY} ${HOUR} ${MIN} ${SEC} ${MSEC} )
+BND_STARTDATE=( ${YEAR} ${MON} ${DAY} ${HOUR} ${MIN} ${SEC} ${MSEC} )
 
 # set converting variables
 POPSCA_2D=(
-  ${HISTORY_ITEMS_SNAPSHOT_2D[*]}
-  ${HISTORY_ITEMS_AVERAGE_2D[*]}
+  ${HIST_ITEMS_SNAPSHOT_2D[*]}
+  ${HIST_ITEMS_AVERAGE_2D[*]}
 )
 POPSCA_3D=(
-  ${HISTORY_ITEMS_SNAPSHOT_3D[*]}
-  ${HISTORY_ITEMS_AVERAGE_3D[*]}
+  ${HIST_ITEMS_SNAPSHOT_3D[*]}
+  ${HIST_ITEMS_AVERAGE_3D[*]}
 )
 
-# set required spin-up time
-SPINUP_TIME=`echo ${TIME_DT_SPINUP%%.*}`
-
-# set intervals for link file
-LINK_DURATION=`echo ${TIME_DURATION%%.*}`
-
-# set intervals for boundary
-LINK_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
-
 # set number of files for boundary
-NUMBER_OF_FILES=`expr ${LINK_DURATION} / ${LINK_BOUNDARY_DT} + 1`
+INT_DURATION=`echo ${TIME_DURATION%%.*}`
+INT_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
+NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
 if [ ${NUMBER_OF_FILES} -le 1 ]; then
   NUMBER_OF_FILES=2
 fi 
@@ -134,8 +120,8 @@ fi
 # set maximum number of steps
 HISTORY_2D_INTERVAL=`echo ${TIME_DT_HISTORY_2D%%.*}`
 HISTORY_3D_INTERVAL=`echo ${TIME_DT_HISTORY_3D%%.*}`
-MAXSTEP_2D=`expr ${LINK_DURATION} / ${HISTORY_2D_INTERVAL} + 1`
-MAXSTEP_3D=`expr ${LINK_DURATION} / ${HISTORY_3D_INTERVAL} + 1`
+MAXSTEP_2D=`expr ${INT_DURATION} / ${HISTORY_2D_INTERVAL} + 1`
+MAXSTEP_3D=`expr ${INT_DURATION} / ${HISTORY_3D_INTERVAL} + 1`
 
 # set restart switch
 if [ ${INIT_BASENAME} = "init" ]; then
@@ -153,20 +139,12 @@ RUN_CONF="${INPUT_CONFIGDIR}/base.run.conf.sh"
 PARAM_CONF="${INPUT_CONFIGDIR}/param.conf.sh"
 NET2G_CONF="${INPUT_CONFIGDIR}/base.net2g.conf.sh"
 
-LAND_PROPERTY_IN_FILENAME="param.bucket.conf"
-
-RD_MSTRN_GASPARA_IN_FILENAME="PARAG.29"
-RD_MSTRN_AEROPARA_IN_FILENAME="PARAPC.29"
-RD_MSTRN_HYGROPARA_IN_FILENAME="VARDATA.RM29"
-RD_PROFILE_CIRA86_IN_FILENAME="cira.nc"
-RD_PROFILE_MIPAS2001_IN_BASENAME="MIPAS"
-
 # set time parameters
 TIME_STARTDATE="${STARTDATE[0]}, ${STARTDATE[1]}, ${STARTDATE[2]}, ${STARTDATE[3]}, ${STARTDATE[4]}, ${STARTDATE[5]}"
-TIME_STARTMS="${STARTDATE[6]}.D0"
+TIME_STARTMS="${STARTDATE[6]}.0"
 
 TIME_BND_STARTDATE="${BND_STARTDATE[0]}, ${BND_STARTDATE[1]}, ${BND_STARTDATE[2]}, ${BND_STARTDATE[3]}, ${BND_STARTDATE[4]}, ${BND_STARTDATE[5]}"
-TIME_BND_STARTMS="${BND_STARTDATE[6]}.D0"
+TIME_BND_STARTMS="${BND_STARTDATE[6]}.0"
 
 eval 'STARTDATE[0]=`printf "%04d" ${STARTDATE[0]}`'
 eval 'STARTDATE[1]=`printf "%02d" ${STARTDATE[1]}`'
@@ -234,8 +212,6 @@ do
   PP_USE_NESTING="${COPYTOPO[$D]}"
   ATMOS_BOUNDARY_START_DATE="${TIME_BND_STARTDATE}"
   ATMOS_BOUNDARY_IN_BASENAME="${BASENAME_BOUNDARY}"
-  INIT_LAND_PROPERTY_IN_FILENAME="${LAND_PROPERTY_IN_FILENAME}"
-  RUN_LAND_PROPERTY_IN_FILENAME="${LAND_PROPERTY_IN_FILENAME}"
 
   # set nesting parameters
   if [ $DNUM -lt $NUM_DOMAIN ]; then
@@ -264,7 +240,7 @@ do
   if [ $DNUM -gt 1 ]; then
     ATMOS_BOUNDARY_IN_BASENAME=""
     ATMOS_BOUNDARY_START_DATE=""
-    ATMOS_BOUNDARY_UPDATE_DT="0.D0"
+    ATMOS_BOUNDARY_UPDATE_DT="0.0"
     ATMOS_BOUNDARY_USE_QHYD=".true."
   else
     ATMOS_BOUNDARY_UPDATE_DT="${TIME_DT_BOUNDARY}"

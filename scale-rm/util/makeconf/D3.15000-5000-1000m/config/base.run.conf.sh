@@ -8,14 +8,6 @@ cat << EOF > base.run.conf
 #
 #################################################
 
-&PARAM_PROF
- PROF_mpi_barrier = .true.,
-/
-
-&PARAM_IO
- IO_LOG_BASENAME = "${RUN_IO_LOG_BASENAME}",
-/
-
 &PARAM_TIME
  TIME_STARTDATE             = ${TIME_STARTDATE},
  TIME_STARTMS               = ${TIME_STARTMS},
@@ -52,11 +44,6 @@ cat << EOF > base.run.conf
  ONLINE_SPECIFIED_MAXRQ   = 10000,
 /
 
-&PARAM_STATISTICS
- STATISTICS_checktotal     = .false.,
- STATISTICS_use_globalcomm = .false.,
-/
-
 &PARAM_RESTART
  RESTART_RUN          = ${RESTART_RUN},
  RESTART_OUTPUT       = .true.,
@@ -73,6 +60,20 @@ cat << EOF > base.run.conf
 /
 
 &PARAM_LAND_PROPERTY
- LAND_PROPERTY_IN_FILENAME = "${RUN_LAND_PROPERTY_IN_FILENAME}",
+ LAND_PROPERTY_IN_FILENAME = "param.bucket.conf",
+
+/
+
+&PARAM_IO
+ IO_LOG_BASENAME = "${RUN_IO_LOG_BASENAME}",
+/
+
+&PARAM_STATISTICS
+ STATISTICS_checktotal     = .false.,
+ STATISTICS_use_globalcomm = .false.,
+/
+
+&PARAM_PROF
+ PROF_mpi_barrier = .true.,
 /
 EOF
