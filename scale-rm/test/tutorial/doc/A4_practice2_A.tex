@@ -25,7 +25,7 @@ MPIプロセスあたりの格子数を$n$倍にすれば、
 \verb| KMAX = 36,|  & \\
 \textcolor{red}{\verb| IMAX = 60,|}  & (オリジナル設定は \verb|IMAX = 45|)\\
 \textcolor{red}{\verb| JMAX = 30,|}  & (オリジナル設定は \verb|JMAX = 45|)\\
-\verb|/| \\
+\verb|/| & \\
 \end{tabularx}
 }}}\\
 
@@ -44,12 +44,12 @@ MPI並列数を変えない場合、変更箇所は\namelist{PARAM_GRID}の\nmit
 \verb| KMAX = 36,|  & \\
 \textcolor{red}{\verb| IMAX = 180,|} &  (オリジナル設定は \verb|IMAX = 45|)\\
 \textcolor{red}{\verb| JMAX = 180,|} &  (オリジナル設定は \verb|JMAX = 45|)\\
-\verb|/| \\
+\verb|/| &\\
  \\
 \verb|&PARAM_GRID| & \\
 \textcolor{red}{\verb| DX = 5000.D0,|} & (オリジナル設定は \verb|DX = 20000.D0|)\\
 \textcolor{red}{\verb| DY = 5000.D0,|} & (オリジナル設定は \verb|DY = 20000.D0|)\\
-\verb|/| \\
+\verb|/| & \\
 \end{tabularx}
 }}}\\
 
@@ -64,6 +64,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 （第\ref{sec:timeintiv}節参照）。
 
 緩和領域も、格子間隔の20倍から40倍となるよう、変更してもよい。。。。。
+
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
