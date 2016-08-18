@@ -55,8 +55,8 @@ MPI並列数を変えない場合、変更箇所は\namelist{PARAM_GRID}の\nmit
 
 MPI並列数も変更している場合には、下記の関係を満たしていれば正解である。
 \begin{eqnarray}
-& x方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
-& y方向の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
+&& x方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
+&& y方向の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
 \end{eqnarray}
 
 これに加えて、力学変数の時間積分のためのタイムステップ
@@ -68,25 +68,19 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
 \verb|&PARAM_PRC|  & \\
-\verb| BUFFER_DX = 300000.D0, | &
-\verb| BUFFER_DY = 300000.D0, | &
-\verb|/| \\
+\verb| BUFFER_DX = 300000.D0, | & \\
+\verb| BUFFER_DY = 300000.D0, | & \\
+\verb|/| &\\
 \end{tabularx}
 }}}\\
 
-
-\item {\bf 計算領域の位置を変更}\\
-
-\item {\bf 積分時間の変更}\\
-
-init.confの説明も必要
-
-
-\item {\bf 出力変数の追加と出力時間間隔の変更}\\
-
-
-\item {\bf リスタート計算をする}\\
-
+\begin{itemize}
+\item {\bf 計算領域の位置を変更}
+\item {\bf 積分時間の変更}
+\item init.confの説明も必要
+\item {\bf 出力変数の追加と出力時間間隔の変更}
+\item {\bf リスタート計算をする}
+\end{itemize}
 
 
 \end{enumerate}
