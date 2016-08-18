@@ -1,0 +1,93 @@
+%\chapter{Q \& A}
+
+\clearpage
+\section*{回答}
+\begin{enumerate}
+\item {\bf 計算領域は変えず、MPI並列数を変更}\\
+変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX}、\nmitem{JMAX}、\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X}、\nmitem{PRC_NUM_Y}である。下記2つの式を満たしていれば正解である。
+\begin{eqnarray}
+&& MPI並列数 = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
+&& 領域内の総格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
+   \times (\verb|JMAX| \times \verb|PRC_NUM_Y|) = 8100 \nonumber
+\end{eqnarray}
+
+
+\item {\bf MPI並列数は変えず、計算領域を変更}\\
+MPIプロセスあたりの格子数を$n$倍にすれば、
+領域全体の格子数も$n$倍となる。
+変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX}、\nmitem{JMAX}のみである。
+赤文字の部分がデフォルトからの変更点を意味する。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_INDEX| & \\
+\verb| KMAX = 36,|  & \\
+\textcolor{red}{\verb| IMAX = 60,|}  & (オリジナル設定は \verb|IMAX = 45|)\\
+\textcolor{red}{\verb| JMAX = 30,|}  & (オリジナル設定は \verb|JMAX = 45|)\\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+\item {\bf 計算領域は変えず、水平格子間隔を変更}\\
+MPI並列数を変えない場合、変更箇所は\namelist{PARAM_GRID}の\nmitem{DX, DY}と
+\namelist{PARAM_INDEX}内の\nmitem{IMAX}、\nmitem{JMAX}である。
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_PRC|  & \\
+\verb| PRC_NUM_X      = 2,|  & \\
+\verb| PRC_NUM_Y      = 2,|  & \\
+\\
+\verb|&PARAM_INDEX| & \\
+\verb| KMAX = 36,|  & \\
+\textcolor{red}{\verb| IMAX = 180,|} &  (オリジナル設定は \verb|IMAX = 45|)\\
+\textcolor{red}{\verb| JMAX = 180,|} &  (オリジナル設定は \verb|JMAX = 45|)\\
+\verb|/| \\
+ \\
+\verb|&PARAM_GRID| & \\
+\textcolor{red}{\verb| DX = 5000.D0,|} & (オリジナル設定は \verb|DX = 20000.D0|)\\
+\textcolor{red}{\verb| DY = 5000.D0,|} & (オリジナル設定は \verb|DY = 20000.D0|)\\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+MPI並列数も変更している場合には、下記の関係を満たしていれば正解である。
+\begin{eqnarray}
+& x方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
+& y方向の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
+\end{eqnarray}
+
+これに加えて、力学変数の時間積分のためのタイムステップ
+\nmitem{TIME_DT_ATMOS_DYN} と\nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} の調整も必要である
+（第\ref{sec:timeintiv}節参照）。
+
+緩和領域も、格子間隔の20倍から40倍となるよう、変更してもよい。。。。。
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_PRC|  & \\
+\verb| BUFFER_DX = 300000.D0, | &
+\verb| BUFFER_DY = 300000.D0, | &
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+
+\item {\bf 計算領域の位置を変更}\\
+
+\item {\bf 積分時間の変更}\\
+
+init.confの説明も必要
+
+
+\item {\bf 出力変数の追加と出力時間間隔の変更}\\
+
+
+\item {\bf リスタート計算をする}\\
+
+
+
+\end{enumerate}
+
