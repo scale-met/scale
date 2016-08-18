@@ -5,4 +5,5 @@ Usage:
   2. Use run command `make`.
   3. Generate "output" directory and the configuration files in it automatically.
 
-If you want to clean the directory up, use run command `make clean`.
+When you stop this generator in process, you may see some junk files.
+You can use run command `make clean` and clean these junk files up.

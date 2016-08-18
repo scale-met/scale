@@ -12,4 +12,3 @@ all:
 
 clean:
 	rm -f base.*.conf param.*.conf
-	rm -rf output

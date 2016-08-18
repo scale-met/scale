@@ -131,7 +131,7 @@ else
 fi
 
 INPUT_CONFIGDIR="config"
-OUTPUT_CONFIGDIR="output"
+OUTPUT_CONFIGDIR="experiment"
 
 PP_CONF="${INPUT_CONFIGDIR}/base.pp.conf.sh"
 INIT_CONF="${INPUT_CONFIGDIR}/base.init.conf.sh"
@@ -253,7 +253,10 @@ do
   #
   #################################################
 
-  mkdir -p ${OUTPUT_CONFIGDIR}
+  mkdir -p ${OUTPUT_CONFIGDIR}/pp
+  mkdir -p ${OUTPUT_CONFIGDIR}/init
+  mkdir -p ${OUTPUT_CONFIGDIR}/run
+  mkdir -p ${OUTPUT_CONFIGDIR}/net2g
 
   source ${PP_CONF}
   source ${INIT_CONF}
@@ -264,22 +267,22 @@ do
   cat base.pp.conf \
       param.region.conf \
       param.admin.conf \
-  > ${OUTPUT_CONFIGDIR}/pp.d${FNUM}.conf
+  > ${OUTPUT_CONFIGDIR}/pp/pp.d${FNUM}.conf
 
   cat base.init.conf \
       param.region.conf \
       param.admin.conf \
-  > ${OUTPUT_CONFIGDIR}/init.d${FNUM}.conf
+  > ${OUTPUT_CONFIGDIR}/init/init.d${FNUM}.conf
 
   cat base.run.conf \
       param.region.conf \
       param.admin.conf \
       param.physics.conf \
       param.history.conf \
-  > ${OUTPUT_CONFIGDIR}/run.d${FNUM}.conf
+  > ${OUTPUT_CONFIGDIR}/run/run.d${FNUM}.conf
 
-  cat base.net2g.2D.conf > ${OUTPUT_CONFIGDIR}/net2g.2D.d${FNUM}.conf
-  cat base.net2g.3D.conf > ${OUTPUT_CONFIGDIR}/net2g.3D.d${FNUM}.conf
+  cat base.net2g.2D.conf > ${OUTPUT_CONFIGDIR}/net2g/net2g.2D.d${FNUM}.conf
+  cat base.net2g.3D.conf > ${OUTPUT_CONFIGDIR}/net2g/net2g.3D.d${FNUM}.conf
 
   rm -f base.*.conf param.*.conf
 
