@@ -80,12 +80,12 @@
 % \verb|GRID_OFFSET_X| & logical & .false. & 全ノードログ出力するかどうか。 \\ \hline
 % \verb|GRID_OFFSET_Y| & logical & .false. & 全ノードログ出力するかどうか。 \\ \hline
 % \verb|FZ| & logical & .false. & 全ノードログ出力するかどうか。 \\ \hline
- \verb|DX| & 実数 & 500.D0 & X方向のGridの間隔(m) \\ \hline
- \verb|DY| & 実数 & 500.D0 & Y方向のGridの間隔(m) \\ \hline
- \verb|DZ| & 実数 & 500.D0 & Z方向のGridの間隔(m) \\ \hline
- \verb|BUFFER_DZ| & 実数 & 0.D0 & Z方向のダンピング層（スポンジ層）の厚さ(m) \\ \hline
- \verb|BUFFER_DX| & 実数 & 0.D0 & X方向のダンピング層（スポンジ層）の厚さ(m) \\ \hline
- \verb|BUFFER_DY| & 実数 & 0.D0 & Y方向のダンピング層（スポンジ層）の厚さ(m) \\ \hline
+ \verb|DX| & 実数 & 500.D0 & {\XDIR} のGridの間隔(m) \\ \hline
+ \verb|DY| & 実数 & 500.D0 & {\YDIR}のGridの間隔(m) \\ \hline
+ \verb|DZ| & 実数 & 500.D0 & {\ZDIR}のGridの間隔(m) \\ \hline
+ \verb|BUFFER_DZ| & 実数 & 0.D0 & {\ZDIR}のダンピング層（スポンジ層）の厚さ(m) \\ \hline
+ \verb|BUFFER_DX| & 実数 & 0.D0 & {\XDIR} のダンピング層（スポンジ層）の厚さ(m) \\ \hline
+ \verb|BUFFER_DY| & 実数 & 0.D0 & {\YDIR}のダンピング層（スポンジ層）の厚さ(m) \\ \hline
  \verb|BUFFFACT| & 実数 & 1.D0 & ダンピング層でのGridの引き伸ばし度合い（$(dx)_{i+1}=(dx)^{BUFFFACT}_{i}$） \\ \hline
 \end{tabularx}
 
@@ -180,10 +180,10 @@
 \subsubsection{PARAM\_PRC}
 \begin{tabularx}{150mm}{|l|c|c|X|} \hline
  \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
- \verb|PRC_NUM_X| & 整数 &  & X方向に割り当てるプロセス数。 \\ \hline
- \verb|PRC_NUM_Y| & 整数 &  & Y方向に割り当てるプロセス数。 \\ \hline
- \verb|PRC_PERIODIC_X| & logical &  & X方向に周期境界とするかどうか。 \\ \hline
- \verb|PRC_PERIODIC_Y| & logical &  & Y方向に周期境界とするかどうか。 \\ \hline
+ \verb|PRC_NUM_X| & 整数 &  & {\XDIR} に割り当てるプロセス数。 \\ \hline
+ \verb|PRC_NUM_Y| & 整数 &  & {\YDIR}に割り当てるプロセス数。 \\ \hline
+ \verb|PRC_PERIODIC_X| & logical &  & {\XDIR} に周期境界とするかどうか。 \\ \hline
+ \verb|PRC_PERIODIC_Y| & logical &  & {\YDIR}に周期境界とするかどうか。 \\ \hline
 % \verb|PRC_CART_REORDER| & logical & .false. & 全ノードログ出力するかどうか。 \\ \hline
 \end{tabularx}
 
@@ -192,8 +192,8 @@
 \begin{tabularx}{150mm}{|l|c|c|X|} \hline
  \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
  \verb|KMAX| & 整数 &  & 大気の鉛直層数。 \\ \hline
- \verb|IMAX| & 整数 &  & プロセスあたりのX方向の格子数。 \\ \hline
- \verb|JMAX| & 整数 &  & プロセスあたりのY方向の格子数。 \\ \hline
+ \verb|IMAX| & 整数 &  & プロセスあたりの{\XDIR} の格子数。 \\ \hline
+ \verb|JMAX| & 整数 &  & プロセスあたりの{\YDIR}の格子数。 \\ \hline
 % \verb|IBLOCK| & 整数 &  & 全ノードログ出力するかどうか。 \\ \hline
 % \verb|JBLOCK| & 整数 &  & 全ノードログ出力するかどうか。 \\ \hline
 \end{tabularx}
@@ -235,12 +235,12 @@
 %\begin{tabularx}{150mm}{|l|c|c|X|} \hline
 % \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
 % \verb|DZ| & 実数 &  & 大気の鉛直層の層厚。FZと排他的設定。 \\ \hline
-% \verb|DX| & 実数 &  & 大気のX方向の格子間隔。\\ \hline
-% \verb|DY| & 実数 &  & 大気のY方向の格子間隔。\\ \hline
+% \verb|DX| & 実数 &  & 大気の{\XDIR} の格子間隔。\\ \hline
+% \verb|DY| & 実数 &  & 大気の{\YDIR}の格子間隔。\\ \hline
 % \verb|FZ| & 実数配列 &  & 大気の鉛直層の面高度。鉛直層数分の設定が必要。DZと排他的設定。 \\ \hline
 % \verb|BUFFER_DZ| & 実数 &  & 大気の最上層の緩和領域幅。 \\ \hline
-% \verb|BUFFER_DX| & 実数 &  & 大気のX方向の緩和領域幅。\\ \hline
-% \verb|BUFFER_DY| & 実数 &  & 大気のY方向の緩和領域幅。\\ \hline
+% \verb|BUFFER_DX| & 実数 &  & 大気の{\XDIR} の緩和領域幅。\\ \hline
+% \verb|BUFFER_DY| & 実数 &  & 大気の{\YDIR}の緩和領域幅。\\ \hline
 %\end{tabularx}
 
 
@@ -300,7 +300,7 @@
 \subsubsection{PARAM\_HIST}
 \begin{tabularx}{150mm}{|l|c|c|X|} \hline
  \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
- \verb|HIST_BND| & logical & .true. & Nesting時にxy方向のhalo領域をhistoryファイルに出力するか。 \\ \hline
+ \verb|HIST_BND| & logical & .true. & Nesting時にx{\YDIR}のhalo領域をhistoryファイルに出力するか。 \\ \hline
 \end{tabularx}
 
 
@@ -334,11 +334,11 @@
  \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
  \verb|USE_NESTING| & logical & .false. & ネスティング機能を使うかどうか。 \\ \hline
  \verb|LATLON_CATALOGUE_FNAME| & 文字列 &  & 入力する親ドメインのlatlonカタログのファイル名。 \\ \hline
- \verb|OFFLINE_PARENT_PRC_NUM_X| & 整数 &  & 親ドメインのMPIプロセス数（X方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
- \verb|OFFLINE_PARENT_PRC_NUM_Y| & 整数 &  & 親ドメインのMPIプロセス数（Y方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
- \verb|OFFLINE_PARENT_KMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（Z方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
- \verb|OFFLINE_PARENT_IMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（X方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
- \verb|OFFLINE_PARENT_JMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（Y方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_PRC_NUM_X| & 整数 &  & 親ドメインのMPIプロセス数（{\XDIR} ）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_PRC_NUM_Y| & 整数 &  & 親ドメインのMPIプロセス数（{\YDIR}）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_KMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（{\ZDIR}）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_IMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（{\XDIR} ）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_JMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（{\YDIR}）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
  \verb|OFFLINE_PARENT_LKMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（陸面モデル）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
  \verb|OFFLINE| & logical & .true. & オフラインかオンラインのどちらのシステムを使うか。\verb|USE_NESTING|が真のときのみ有効。 \\ \hline
  \verb|ONLINE_DOMAIN_NUM| & 整数 &  & ドメインID番号。オンライン・ネスティングのときのみ有効。 \\ \hline
@@ -580,14 +580,14 @@
  \verb|ATMOS_BOUNDARY_OUT_BASENAME| & 文字列 &  & バッファ層で緩和させる値を出力する際の出力ファイル名（設定しない場合は出力されない） \\ \hline
 % \verb|ATMOS_BOUNDARY_OUT_TITLE| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
  \verb|ATMOS_BOUNDARY_USE_VELZ| & logical & .false. &  鉛直方向の運動量にダンピングを作用させるか否か。 \\ \hline
- \verb|ATMOS_BOUNDARY_USE_VELY| & logical & .false. &  Y方向の運動量にダンピングを作用させるか否か。 \\ \hline
- \verb|ATMOS_BOUNDARY_USE_VELX| & logical & .false. &  X方向の運動量にダンピングを作用させるか否か。 \\ \hline
+ \verb|ATMOS_BOUNDARY_USE_VELY| & logical & .false. &  {\YDIR}の運動量にダンピングを作用させるか否か。 \\ \hline
+ \verb|ATMOS_BOUNDARY_USE_VELX| & logical & .false. &  {\XDIR} の運動量にダンピングを作用させるか否か。 \\ \hline
  \verb|ATMOS_BOUNDARY_USE_POTT| & logical & .false. &  温位にダンピングを作用させるか否か。 \\ \hline
  \verb|ATMOS_BOUNDARY_USE_QV| & logical & .false. &  水蒸気混合比にダンピングを作用させるか否か。 \\ \hline
  \verb|ATMOS_BOUNDARY_USE_QHYD| & logical & .false. &  水物質の混合比ににダンピングを作用させるか否か。 \\ \hline
  \verb|ATMOS_BOUNDARY_VALUE_VELZ| & 実数 & 0.D0 & 鉛直方向の運動量を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
- \verb|ATMOS_BOUNDARY_VALUE_VELX| & 実数 & 0.D0 & X方向の運動量を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
- \verb|ATMOS_BOUNDARY_VALUE_VELY| & 実数 & 0.D0 & Y方向の運動量を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
+ \verb|ATMOS_BOUNDARY_VALUE_VELX| & 実数 & 0.D0 & {\XDIR} の運動量を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
+ \verb|ATMOS_BOUNDARY_VALUE_VELY| & 実数 & 0.D0 & {\YDIR}の運動量を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
  \verb|ATMOS_BOUNDARY_VALUE_POTT| & 実数 & 3.D0 & 温位を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
 \end{tabularx}
 　\\

@@ -24,9 +24,9 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 計算領域は、$x$方向に\verb|PRC_NUM_X|個、$y$方向に\verb|PRC_NUM_Y|個に分割される。
 以上の関係から、計算領域全体のそれぞれの方向の格子点数および総格子点数は、
 \begin{eqnarray}
-&& 領域内x方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
+&& 領域内{\XDIR} の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
    \times (\verb|KMAX| )  \label{eq:xgridnum}\\
-&& 領域内y方向の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|
+&& 領域内{\YDIR}の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|
    \times (\verb|KMAX|\right)  \label{eq:ygridnum}\\
 && 領域内の総格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
@@ -52,8 +52,8 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 \ref{subsec:relation_dom_reso}節で述べた関係が理解できれば、領域の設定は容易である。
 すなわち、式(\ref{eq:xgridnum},\ref{eq:ygridnum})を使って、
 \begin{eqnarray}
-&& x方向の領域の長さ = x方向の格子点数 \times \verb|DX| \nonumber\\
-&& y方向の領域の長さ = y方向の格子点数 \times \verb|DY| \nonumber
+&& {\XDIR} の領域の長さ = {\XDIR} の格子点数 \times \verb|DX| \nonumber\\
+&& {\YDIR}の領域の長さ = {\YDIR}の格子点数 \times \verb|DY| \nonumber
 \end{eqnarray}
 となる。ここで、\nmitem{DX,DY}は、後述するように
 \namelist{PRAM_GRID}で指定されるものである。
@@ -75,8 +75,8 @@ MPIプロセス数を変更するには、
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_PRC| & \\
-\verb| PRC_NUM_X       = 2,| & ; X方向（東西方向）のMPI並列分割数 \\
-\verb| PRC_NUM_Y       = 1,| & ; Y方向（南北方向）のMPI並列分割数 \\
+\verb| PRC_NUM_X       = 2,| & ; {\XDIR} （東西方向）のMPI並列分割数 \\
+\verb| PRC_NUM_Y       = 1,| & ; {\YDIR}（南北方向）のMPI並列分割数 \\
 \verb|/|\\
 \end{tabularx}
 }}}\\
@@ -114,8 +114,8 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_INDEX| & \\
 \verb| KMAX = 97,|  & 鉛直層数 \\
-\verb| IMAX = 20,|  & プロセスあたりのx方向の格子点数 \\
-\verb| JMAX = 25,|  & プロセスあたりのy方向の格子点数 \\
+\verb| IMAX = 20,|  & プロセスあたりの{\XDIR} の格子点数 \\
+\verb| JMAX = 25,|  & プロセスあたりの{\YDIR}の格子点数 \\
 \verb|/|\\
 \end{tabularx}
 }}}\\
@@ -145,9 +145,9 @@ SCALE-RMでは、水平方向には格子点の位置を均等間隔に設定す
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_GRID  | & \\
-\verb| DX = 500.D0,| & ; x方向（東西方向）の格子間隔\\
-\verb| DY = 500.D0,| & ; y方向（南北方向）の格子間隔\\
-\verb| DZ = 500.D0,| & ; z方向（鉛直方向）の格子間隔\\
+\verb| DX = 500.D0,| & ; {\XDIR} （東西方向）の格子間隔\\
+\verb| DY = 500.D0,| & ; {\YDIR}（南北方向）の格子間隔\\
+\verb| DZ = 500.D0,| & ; {\ZDIR}（鉛直方向）の格子間隔\\
 \verb|/|\\
 \end{tabularx}
 }}}\\
@@ -172,9 +172,9 @@ SCALE-RMでは、水平方向には格子点の位置を均等間隔に設定す
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_GRID|     & \\
-\verb| DX = 500.D0,|   & x方向の格子間隔(等間隔)[m]\\
-\verb| DY = 500.D0,|   & y方向の格子間隔(等間隔)[m]\\
-\verb| FZ(:) = |       & z方向のフェイスポイントの位置[m] \\
+\verb| DX = 500.D0,|   & {\XDIR} の格子間隔(等間隔)[m]\\
+\verb| DY = 500.D0,|   & {\YDIR}の格子間隔(等間隔)[m]\\
+\verb| FZ(:) = |       & {\ZDIR}のフェイスポイントの位置[m] \\
 \verb| 　  80.000000000000000      ,| & \\
 \verb| 　  168.00000190734863      ,| & \\
 \verb| 　  264.80000610351567      ,| & \\

@@ -422,7 +422,7 @@ $200 km \div 1 km = 200$点であるので、総格子点数は$200 \times 200 \
 ComputationRate=\frac{Xgrd_{child} \times Ygrd_{child} \times Zgrd_{child} \times Ustep_{child}}
                      {Xgrd_{parent} \times Ygrd_{parent} \times Zgrd_{parent} \times Ustep_{parent}} \nonumber
 \end{eqnarray}
-ここで、$Xgrd, Ygrd, Zgrd$ はそれぞれX方向、Y方向、Z方向の格子点数を表し、Ustepは単位時間積分に必要な時間ステップ数を表す。
+ここで、$Xgrd, Ygrd, Zgrd$ はそれぞれ{\XDIR} 、{\YDIR}、{\ZDIR}の格子点数を表し、Ustepは単位時間積分に必要な時間ステップ数を表す。
 ここでの例をこの式に当てはまると、演算量比率は$(2,400,000 \times 3) \div (900,000 \times 1) = 8$であることがわかる。
 おおよそ、この割合にしたがってMPIプロセスを領域毎に分配すればよい。例えばdomain 1は4プロセス、domain 2は32プロセスを
 使用し、全体で36プロセスを使用する設定が考えられる。この場合、例えば次のように設定することができる。
@@ -439,8 +439,8 @@ ComputationRate=\frac{Xgrd_{child} \times Ygrd_{child} \times Zgrd_{child} \time
 \end{center}
 \end{table}
 
-X方向とY方向に分配するプロセス数には任意性が残るが、
-IMAXとJMAXの違を小さくとる方がHalo領域を小くすることが出来るため、計算機の演算性能を引き出しやすいと考えられる\footnote{ただし、京の場合のようにスレッド並列も併用するハイブリッド並列の場合にはY方向の格子点数をある程度大きくしてスレッド間の演算量のインバランスを小さくする必要性も出てくる。}。
+{\XDIR} と{\YDIR}に分配するプロセス数には任意性が残るが、
+IMAXとJMAXの違を小さくとる方がHalo領域を小くすることが出来るため、計算機の演算性能を引き出しやすいと考えられる\footnote{ただし、京の場合のようにスレッド並列も併用するハイブリッド並列の場合には{\YDIR}の格子点数をある程度大きくしてスレッド間の演算量のインバランスを小さくする必要性も出てくる。}。
 
 この設定は一例であり、これ以外の方法で設定しても構わない。また、ここでは格子点数と積分時間間隔だけに着目して演算量比率
 を考えたが、実際の計算には様々な物理過程も含まれるだろうし、それらを 呼び出す時間間隔も領域毎に異なるかもしれない。

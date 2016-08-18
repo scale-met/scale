@@ -55,8 +55,8 @@ MPI並列数を変えない場合、変更箇所は\namelist{PARAM_GRID}の\nmit
 
 MPI並列数も変更している場合には、下記の関係を満たしていれば正解である。
 \begin{eqnarray}
-&& x方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
-&& y方向の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
+&& {\XDIR} の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
+&& {\YDIR}の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
 \end{eqnarray}
 
 これに加えて、力学変数の時間積分のためのタイムステップ
