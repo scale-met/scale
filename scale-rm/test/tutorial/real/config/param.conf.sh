@@ -107,7 +107,7 @@ cat << EOF > param.physics.conf
 #################################################
 
 &PARAM_ATMOS_VARS
- ATMOS_VARS_CHECKRANGE = .false.,
+ ATMOS_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_ATMOS_REFSTATE
@@ -156,15 +156,6 @@ cat << EOF > param.physics.conf
  ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "MIPAS",
 /
 
-&PARAM_ATMOS_PHY_MP_TOMITA08
- Cr             = 78.0,
- Cs             =  0.9,
- drag_g         =  2.5,
- beta_saut      =  0.006,
- gamma_saut     =  0.06,
- gamma_sacr     =  0.02,
-/
-
 #################################################
 #
 # model configuration: ocean
@@ -172,7 +163,7 @@ cat << EOF > param.physics.conf
 #################################################
 
 &PARAM_OCEAN_VARS
- OCEAN_VARS_CHECKRANGE = .false.,
+ OCEAN_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_OCEAN_PHY_SLAB
@@ -186,7 +177,7 @@ cat << EOF > param.physics.conf
 #################################################
 
 &PARAM_LAND_VARS
- LAND_VARS_CHECKRANGE = .false.,
+ LAND_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_LAND_PHY_SLAB
@@ -201,33 +192,13 @@ cat << EOF > param.physics.conf
 #################################################
 
 &PARAM_URBAN_VARS
- URBAN_VARS_CHECKRANGE = .false.,
+! URBAN_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_URBAN_PHY_SLC
- ZR         = 15.0,
- roof_width = 7.5,
- road_width = 22.5,
- AH         = 0.0,
- ALH        = 0.0,
- STRGR      = 0.0,
- STRGB      = 0.0,
- STRGG      = 0.0,
- AKSR       = 2.28,
- AKSB       = 2.28,
- AKSG       = 2.28,
- ALBR       = 0.20,
- ALBB       = 0.20,
- ALBG       = 0.20,
- EPSR       = 0.97,
- EPSB       = 0.97,
- EPSG       = 0.97,
- Z0R        = 0.005,
- Z0B        = 0.005,
- Z0G        = 0.005,
- CAPR       = 2.01E+6,
- CAPB       = 2.01E+6,
- CAPG       = 2.01E+6,
+ STRGR = 0.0,
+ STRGB = 0.0,
+ STRGG = 0.0,
 /
 EOF
 

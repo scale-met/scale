@@ -31,6 +31,14 @@ cat << EOF > base.run.conf
  TIME_DT_LAND_UNIT          = "${TIME_UNIT}",
  TIME_DT_URBAN              = ${TIME_DT_URBAN[$D]},
  TIME_DT_URBAN_UNIT         = "${TIME_UNIT}",
+ TIME_DT_ATMOS_RESTART      = ${TIME_DT_RESTART},
+ TIME_DT_ATMOS_RESTART_UNIT = "${TIME_UNIT}",
+ TIME_DT_OCEAN_RESTART      = ${TIME_DT_RESTART},
+ TIME_DT_OCEAN_RESTART_UNIT = "${TIME_UNIT}",
+ TIME_DT_LAND_RESTART       = ${TIME_DT_RESTART},
+ TIME_DT_LAND_RESTART_UNIT  = "${TIME_UNIT}",
+ TIME_DT_URBAN_RESTART      = ${TIME_DT_RESTART},
+ TIME_DT_URBAN_RESTART_UNIT = "${TIME_UNIT}",
 /
 
 &PARAM_NEST
@@ -70,7 +78,7 @@ cat << EOF > base.run.conf
 
 &PARAM_STATISTICS
  STATISTICS_checktotal     = .false.,
- STATISTICS_use_globalcomm = .false.,
+ STATISTICS_use_globalcomm = .true.,
 /
 
 &PARAM_PROF

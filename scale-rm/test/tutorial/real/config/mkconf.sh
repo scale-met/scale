@@ -25,13 +25,21 @@ FMT_MIN=`printf '%02d' ${RUN_DATE_MIN}`
 FMT_SEC=`printf '%02d' ${RUN_DATE_SEC}`
 FMT_MSEC=`printf '%03d' ${RUN_DATE_MSEC}`
 
+echo ""
+echo "#################################################"
+echo "#     SCALE-RM Configuration File Generator     #"
+echo "#################################################"
+echo ""
 echo "START DATE: ${FMT_YEAR}/${FMT_MON}/${FMT_DAY} - ${FMT_HOUR}:${FMT_MIN}:${FMT_SEC}.${FMT_MSEC}"
+echo ""
 
 #################################################
 #
 # check parameters
 #
 #################################################
+
+if [ ! -n "${SCALE_DB-}" ]; then echo "Error: SCALE_DB is not defined. Check!"; exit 1; fi
 
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT[*]} ];              then echo "Error: Wrong array size (TIME_DT).";              exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_DYN[*]} ];    then echo "Error: Wrong array size (TIME_DT_ATMOS_DYN).";    exit 1; fi
@@ -133,6 +141,9 @@ fi
 INPUT_CONFIGDIR="config"
 OUTPUT_CONFIGDIR="experiment"
 
+PPDIR="../pp"
+INITDIR="../init"
+
 PP_CONF="${INPUT_CONFIGDIR}/base.pp.conf.sh"
 INIT_CONF="${INPUT_CONFIGDIR}/base.init.conf.sh"
 RUN_CONF="${INPUT_CONFIGDIR}/base.run.conf.sh"
@@ -187,21 +198,22 @@ do
   LATLON_CATALOGUE_FNAME="latlon_domain_catalogue_d${PFNUM}.txt"
 
   TOPO_IN_CATALOGUE="${TOPOTYPE[$D]}_catalogue.txt"
-  TOPO_IN_DIR="${TOPOTYPE[$D]}"
+  TOPO_IN_DIR="${TOPODIR}/${TOPOTYPE[$D]}/Products"
 
   LANDUSE_IN_CATALOGUE="${LANDUSETYPE[$D]}_catalogue.txt"
-  LANDUSE_IN_DIR="${LANDUSETYPE[$D]}"
+  LANDUSE_IN_DIR="${LANDUSEDIR}/${LANDUSETYPE[$D]}/Products"
 
-  INIT_TOPO_IN_BASENAME="topo_d${FNUM}"
-  INIT_LANDUSE_IN_BASENAME="landuse_d${FNUM}"
+  INIT_TOPO_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
+  INIT_LANDUSE_IN_BASENAME="${PPDIR}/landuse_d${FNUM}"
   INIT_IO_LOG_BASENAME="init_LOG_d${FNUM}"
   INIT_RESTART_OUT_BASENAME="init_d${FNUM}"
   BASENAME_BOUNDARY="boundary_d${FNUM}"
 
-  RUN_TOPO_IN_BASENAME="topo_d${FNUM}"
-  RUN_LANDUSE_IN_BASENAME="landuse_d${FNUM}"
+  RUN_TOPO_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
+  RUN_LANDUSE_IN_BASENAME="${PPDIR}/landuse_d${FNUM}"
   RUN_IO_LOG_BASENAME="LOG_d${FNUM}"
-  RUN_RESTART_IN_BASENAME="${INIT_BASENAME}_d${FNUM}_${INITTIME}"
+  RUN_RESTART_IN_BASENAME="${INITDIR}/${INIT_BASENAME}_d${FNUM}_${INITTIME}"
+  ATMOS_BOUNDARY_IN_BASENAME="${INITDIR}/${BASENAME_BOUNDARY}"
   RESTART_OUT_BASENAME="restart_d${FNUM}"
   HISTORY_DEFAULT_BASENAME="history_d${FNUM}"
 
@@ -211,7 +223,6 @@ do
   # copy parameters
   PP_USE_NESTING="${COPYTOPO[$D]}"
   ATMOS_BOUNDARY_START_DATE="${TIME_BND_STARTDATE}"
-  ATMOS_BOUNDARY_IN_BASENAME="${BASENAME_BOUNDARY}"
 
   # set nesting parameters
   if [ $DNUM -lt $NUM_DOMAIN ]; then
@@ -288,3 +299,15 @@ do
 
   DNUM=`expr $DNUM + 1`
 done
+
+#################################################
+#
+# set-up experimental environment
+#
+#################################################
+
+cp -a data/${BASENAME_ORG} ${OUTPUT_CONFIGDIR}/init/
+cp -a data/*.ctl           ${OUTPUT_CONFIGDIR}/net2g/
+cp -a data/*.gs            ${OUTPUT_CONFIGDIR}/net2g/
+
+source ${INPUT_CONFIGDIR}/mklink.sh

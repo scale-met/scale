@@ -52,8 +52,8 @@ cat << EOF > base.init.conf
  NUMBER_OF_FILES      = ${NUMBER_OF_FILES},
  FILETYPE_ORG         = "${FILETYPE_ORG}",
  BASENAME_ORG         = "${BASENAME_ORG}",
- INTRP_OCEAN_SFC_TEMP = "fill",
- INTRP_OCEAN_TEMP     = "fill",
+ INTRP_OCEAN_SFC_TEMP = "mask",
+ INTRP_OCEAN_TEMP     = "mask",
 /
 
 &PARAM_MKINIT_REAL_LAND
@@ -61,9 +61,9 @@ cat << EOF > base.init.conf
  FILETYPE_ORG         = "${FILETYPE_ORG}",
  BASENAME_ORG         = "${BASENAME_ORG}",
  USE_FILE_LANDWATER   = ${USE_FILE_LANDWATER},
- INTRP_LAND_TEMP      = "fill",
+ INTRP_LAND_TEMP      = "mask",
  INTRP_LAND_WATER     = "fill",
- INTRP_LAND_SFC_TEMP  = "mask",
+ INTRP_LAND_SFC_TEMP  = "fill",
 /
 
 &PARAM_IO
