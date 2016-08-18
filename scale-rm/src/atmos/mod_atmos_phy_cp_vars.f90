@@ -563,12 +563,12 @@ contains
        call FILEIO_write_var( restart_fid, VAR_ID(8), ATMOS_PHY_CP_kf_w0avg(:,:,:),     &
                               VAR_NAME(8), 'ZXY' ) ! [IN]
        ! tendency
-       call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_CP_DENS_t(:,:,:), &
+       call FILEIO_write_var( restart_fid, VAR_t_ID(1), ATMOS_PHY_CP_DENS_t(:,:,:), &
                               VAR_t_NAME(1), 'ZXY' ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_CP_RHOT_t(:,:,:), &
+       call FILEIO_write_var( restart_fid, VAR_t_ID(2), ATMOS_PHY_CP_RHOT_t(:,:,:), &
                               VAR_t_NAME(2), 'ZXY' ) ! [IN]
        do iq = 1, QA
-          call FILEIO_write_var( restart_fid, VAR_ID(2+iq), ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), &
+          call FILEIO_write_var( restart_fid, VAR_t_ID(2+iq), ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), &
                                  VAR_t_NAME(2+iq), 'ZXY' ) ! [IN]
        enddo
 
