@@ -3222,36 +3222,33 @@ contains
     real(RP), intent(in  )  :: G
     real(RP), intent(in  )  :: DZ,BOTERM,ENTERM!,RATE to be local variablebles
     real(RP), intent(inout) :: QLQOUT,QICOUT,WTW,QLIQ,QICE,QNEWLQ,QNEWIC
-    real(RP) :: qtot,qnew,pptdrg
+    real(RP) :: pptdrg
     real(RP) :: total_liq, total_ice
     ! parameter module value kf_threshold
     real(RP) :: auto_qc, auto_qi
     auto_qc = kf_threshold
     auto_qi = kf_threshold
 
-    qtot = QLIQ + QICE
-    qnew = QNEWLQ +QNEWIC
     total_liq = QLIQ + QNEWLQ
     total_ice = QICE + QNEWIC
-    qlqout = max(total_liq - auto_qc,0._RP)
-    qicout = max(total_ice - auto_qi,0._RP)
-    pptdrg = max(0.5_RP*(qtot + qnew -qlqout -qicout),0._RP) ! amount of water 
+
+    ! condensate in convective updraft is converted into precipitation
+    qlqout = max( total_liq - auto_qc, 0.0_RP )
+    qicout = max( total_ice - auto_qi, 0.0_RP )
+
+    pptdrg = max( 0.5_RP * ( total_liq + total_ice - qlqout - qicout ), 0.0_RP )
     WTW=WTW+BOTERM-ENTERM-2._RP*G*DZ*PPTDRG/1.5_RP
     IF(ABS(WTW).LT.1.E-4_RP)WTW=1.E-4_RP
-    QLIQ = total_liq - QLQOUT
-    if (QLIQ < 0._RP) then
-       QLQOUT = total_liq
-       qliq = 0._RP
-    end if
 
-    QICE = total_ice - QICOUT
-    if (QLIQ < 0._RP) then
-       QICOUT = total_ice
-       QICE = 0._RP
-    end if
+    QLIQ = max( total_liq - qlqout, 0.0_RP )
+    QLQOUT = total_liq - QLIQ
 
-    QNEWLQ=0._RP
-    QNEWIC=0._RP
+    QICE = max( total_ice - qicout, 0.0_RP )
+    QICOUT = total_ice - QICE
+
+    QNEWLQ=0.0_RP
+    QNEWIC=0.0_RP
+
     return
   end subroutine precipitation_Kessler
 
