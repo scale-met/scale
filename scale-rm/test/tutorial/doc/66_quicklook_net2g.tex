@@ -1,58 +1,82 @@
-\section{Postprocess : netcdf2grads} \label{sec:net2g}
+\section{Postprocess : net2g} \label{sec:net2g}
 %====================================================================================
 
-本節では、SCALE-RMで出力された領域分割されたhistoryデータ（\verb|history.***.nc|）をGrADSで
-読み込める形式に変換する後処理ツール``net2g''の実行方法について説明する。
-net2gのインストール方法については、\ref{sec:source_net2g}節を参照すること。net2gの実行に
-おいて注意するべき点は下記のとおりである。
+本節では、SCALEの後処理ツールnet2gについて説明する。net2gは、SCALE-RMで出力された
+領域分割のnetcdf形式historyデータ（\verb|history.***.nc|）を結合しGrADSで読み込める
+バイナリ形式に変換するツールである。
+分割データを結合することで、GrADSでの描画に適するだけでなく、Fortranプログラムなどで
+解析しやすいデータになる。
+net2gはMPI並列実行も可能であり、単一プロセス実行に比べて変換に要する時間を短縮できる。
+その他、net2gの機能として次のものが利用できる。
 
 \begin{itemize}
- \item 使用するMPIプロセス数は、SCALEの本体の実行で使用したMPIプロセス数の約数でなければならない。
- \item history出力形式は、``\verb|HIST_BND = .false.|''でなければならない（今後対応予定）。
- \item 2次元データと3次元データは同時に変換できない（今後対応予定）。
- \item 変換できるデータはhistoryデータのみ（今後対応予定）。
+ \item モデル面から任意の鉛直高度座標、鉛直気圧座標への内挿
+ \item 3次元変数に対する鉛直の積算値、平均値、最大値、最小値の出力
+ \item 3次元変数を鉛直層ごとに分割したファイルとしての出力
+ \item 時間ステップごとに分割したファイルとしての出力
 \end{itemize}
 
-``HIST\_BND''の対応、2次元データと3次元データの同時実行、そしてhistoryデータ以外のデータへの対応は
-今後早急に進める予定ではあるが、どうしてもgpview等の他のツールが使えず、データの描画に支障が出る場合は、
-「旧型netcdf2grads」を使用することができる。旧型netcdf2gradsは、シングルプロセス実行しかできないが、
-上記の制限はない。旧型netcdf2gradsの概要については本節の最後に紹介する。
+特に大規模計算結果においては、鉛直層や時間ステップごとに分割することで
+ハンドリングしやすいデータサイズにして保存することができるため便利である。
+さらに、大規模計算結果を解析するだけのケースを踏まえてポータビリティを重視した設計とし、
+SCALEライブラリに対する依存性をなくしたため、net2gだけを独立にコンパイル・実行できることも特徴である。
+net2gのインストール方法については、\ref{sec:source_net2g}節を参照すること。
 
-その他に注意するべき点は、net2g実行時のMPI並列数である。net2gはMPI並列実行できるが、プログラム中の
-作業のほとんどがhistoryファイルからのデータ読み込みである。したがって、並列ファイルシステム上でない限り、
-一般に単一のディスク、もしくは単一のディスクアレイからデータを読み込む速度は、MPIプロセス数を増やしても
-向上しない。むしろ読み込み要求が立て込んで、作業効率が下がり結果として読み込み速度が落ちることもある。
-したがって、新しい環境でnet2gを実行する場合、少しMPIプロセス数を変えて実行してみて最適なMPIプロセス数を
-予め知っておくことも必要である。
+ただし、現行のnet2gにおいては下記の制約がある。
+\begin{itemize}
+ \item net2gに使用するMPIプロセス数は、SCALE-RM実行時に使用したMPIプロセス数の約数でなければならない。
+ \item SCALE-RM実行時のhistory出力形式は、``\verb|HIST_BND = .false.|''でなければならない。
+ \item 2次元データと3次元データは同時に変換できない。
+ \item 変換できるデータはhistoryデータのみである。
+\end{itemize}
+\noindent これらの制約を無くすため、今後早急に対応を進める予定である。
 
-net2gの実行方法は、MPI並列版としてコンパイルした場合は、
+その他に注意するべき点は、net2g実行時のMPIプロセス数をむやみに大きくしないことである。
+net2gは実行内容のほとんどがデータ入出力であるため、MPIプロセス数を増やしすぎると
+読み込み/書き込み要求が立て込んで、作業効率が下がり、結果として実行速度が落ちることもある。
+特に大規模計算結果を手元のマシンで変換する際は注意が必要である。
+
+net2gの実行はMPI並列を用いて、
 \begin{verbatim}
  $ mpirun  -n  [procs]  ./net2g  net2g.conf
 \end{verbatim}
-として実行する。\verb|[procs]|には任意のMPIプロセス数を指定する。最後の``net2g.conf''はnet2gの実行設定が
-記述された設定ファイルである。一方、シングルプロセス版としてコンパイルした場合はmpiコマンドを使わずに、
+とする。\verb|[procs]|には任意のMPIプロセス数を指定する。最後の``net2g.conf''はnet2gの実行設定が
+記述された設定ファイルである。一方、シングルプロセス版としてコンパイルした場合はMPIコマンドを使わずに、
 \begin{verbatim}
  $ ./net2g  net2g.conf
 \end{verbatim}
-とする。次に設定ファイルの記述方法と設定内容について説明する。ここでは主要な設定項目を取り上げて説明する。
-ここで取り上げなかったオプションについては、``scale/scale-rm/util/netcdf2grads\_h/''のディレクトリに
-入っている``net2g.all.conf''のサンプル設定ファイルを参照してもらいたい。
+とする。
+エラーメッセージがなく、次のメッセージだけが標準出力へ表示されて終了すれば変換完了である。\\
 
-\subsubsection{設定ファイルサンプル：3次元データの変換}
+\noindent {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+\verb|+++ MPI COMM: Corrective Finalize| \\
+\end{tabularx}
+}}\\
+
+次に、3次元変数と2次元変数を変換する場合における設定ファイルの記述方法について説明する。
+それぞれ、``scale/scale-rm/util/netcdf2grads\_h/''のディレクトリに
+入っている``net2g.3d.conf''と``net2g.2d.conf''に基づいて説明する。
+本節では主要な設定項目だけを取り上げる。
+ここで触れなかったオプションについては、``scale/scale-rm/util/netcdf2grads\_h/''のディレクトリに
+入っている設定ファイルサンプル``net2g.all.conf''を参照してもらいたい。
+
+
+\subsubsection{設定ファイルサンプル：3次元変数の変換}
 %------------------------------------------------------
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&LOGOUT| \\
-\verb| LOG_BASENAME   = "LOG_d01",| \\
+\verb| LOG_BASENAME   = "LOG_d01_3d",| \\
 \verb| LOG_ALL_OUTPUT = .false.,| \\
 \verb|/| \\
  \\
 \verb|&INFO| \\
 \verb| START_TSTEP = 1,| \\
-\verb| END_TSTEP   = 121,| \\
-\verb| INC_TSTEP   = 1,| \\
+\verb| END_TSTEP   = 25,| \\
 \verb| DOMAIN_NUM  = 1,| \\
 \verb| CONFFILE    = "../run/run.d01.conf",| \\
 \verb| IDIR        = "../run",| \\
@@ -60,37 +84,35 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 \verb|/| \\
  \\
 \verb|&VARI| \\
-\verb| VNAME       = "PT","U","V","W",| \\
-\verb| TARGET_ZLEV = 850, 500, 200,| \\
+\verb| VNAME       = "PT","U","V","W","QHYD",| \\
+\verb| TARGET_ZLEV = 850,500,200,| \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
 
-\noindent 上記はあるdomain 1のデータの3次元変数を、指定した気圧高度面へ変換して出力する場合の設定ファイルの
-全記述内容の例を示している。各々の設定項目は次の説明のとおりである。
+\noindent 上記はあるdomainの3次元変数を、気圧高度面へ内挿して出力する場合の
+例を示している。各々の設定項目は次のとおりである。
 \begin{itemize}
- \item \verb|LOGOUT|の項目（この項目は必須ではない）
+ \item \namelist{LOGOUT}（このNamelistは必須ではない）
  \begin{itemize}
   \item \verb|LOG_BASENAME|：デフォルトのLOGファイル名``LOG''を変更したいときに指定する。
   \item \verb|LOG_ALL_OUTPUT|：プロセス番号0番以外もLOGファイルを出力させたい場合に``true''にする。
         デフォルト値は``false''である。
  \end{itemize}
- \item \verb|INFO|の項目
+ \item \namelist{INFO}
  \begin{itemize}
-  \item \verb|START_TSTEP|：変換を開始するNetCDFデータの最初のTime Stepを指定する。最初のいくつかの
+  \item \verb|START_TSTEP|：変換するNetCDFデータの最初のTime Stepを指定する。最初のいくつかの
         ステップを飛ばして変換したい場合に任意の値を指定する。デフォルト値は1である。
-  \item \verb|END_TSTEP|：変換を終了するNetCDFデータのTime Stepを指定する。必ず指定する。
-  \item \verb|INC_TSTEP|：NetCDFデータを読み込む時の時間軸の増加量（インクリメント）を指定する。
-        例えば1つ飛ばしで変換したい場合に任意の値を指定する。デフォルト値は1である。
+  \item \verb|END_TSTEP|：変換するNetCDFデータの最後のTime Stepを指定する。必ず指定すること。
   \item \verb|DOMAIN_NUM|：ドメイン番号を指定する。デフォルト値は1である。
-  \item \verb|CONFFILE|：SCALE本体を実行したときの\verb|run.***.conf|ファイルのPATHを指定する
+  \item \verb|CONFFILE|：SCALE-RM本体を実行したときの\verb|run.***.conf|ファイルのPATHを指定する
         （ファイル名を含む）。
-  \item \verb|IDIR|：SCALE本体のhistory出力ファイルのPATHを指定する。
-  \item \verb|Z_LEV_TYPE|：鉛直方向のデータ変換の種類を指定する。``original''はhistoryデータのまま
-        出力、``plev''は気圧高度面に変換して出力、そして``zlev''は高度面データに変換する。
+  \item \verb|IDIR|：SCALE-RM本体のhistory出力ファイルのPATHを指定する。
+  \item \verb|Z_LEV_TYPE|：鉛直方向のデータ変換の種類を指定する。``original''はモデル面、
+        ``plev''は気圧面に内挿、そして``zlev''は高度面に内挿して出力する。
         ``anal''を指定すると別途指定の簡易解析を行なって出力する（次項で説明）。デフォルト値は``plev''である。
  \end{itemize}
- \item \verb|VARI|の項目
+ \item \namelist{VARI}
  \begin{itemize}
   \item \verb|VNAME|：変換したい変数名を指定する。デフォルトでは、``PT''、``PRES''、``U''、``V''、
         ``W''、``QHYD''が指定される。
@@ -101,7 +123,7 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
  \end{itemize}
 \end{itemize}
 
-\subsubsection{設定ファイルサンプル：3次元データの変換：鉛直積算値を出す}
+\subsubsection{設定ファイル変更例：3次元変数の変換：鉛直積算値を出す}
 %------------------------------------------------------
 
 \noindent {\small {\gt
@@ -110,43 +132,54 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 \verb|&INFO| \\
 \verb|　 　 〜　中略　〜|\\
 \verb| Z_LEV_TYPE  = "anal",| \\
+\verb| ZCOUNT      = 1,| \\
 \verb|/| \\
  \\
 \verb|&ANAL| \\
-\verb| ANALYSIS    = "sum"| \\
+\verb| ANALYSIS    = "sum",| \\
 \verb|/| \\
  \\
 \verb|&VARI| \\
-\verb| VNAME       = "QC","QI","QG"| \\
+\verb| VNAME       = "QC","QI","QG",| \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
 
-\noindent 上記は設定ファイル記述例の抜粋である。
-\verb|Z_LEV_TYPE|を``anal''と指定すると
-\verb|ANAL|項目を指定できるようになる。
-これは、鉛直次元に対して何からの簡易解析を施してデータ出力する機能である。この場合は、変換後のデータは必ず水平2次元データとなるため
-、\verb|VARI|の項目の\verb|TARGET_ZLEV|は指定できない。下記に説明する以外の設定変数については、
-先の3次元変数の変換の場合と同じである。
+\noindent 上記は、簡易解析を利用する場合の設定ファイル変更例の抜粋である。
+他の設定項目については先の3次元変数の変換の場合と同じである。
+\verb|Z_LEV_TYPE|を``anal''と指定することで、3次元変数の鉛直次元に対する簡易解析が有効になり、
+\namelist{ANAL}を指定できるようになる。
+このとき変換後のデータは必ず水平2次元データとなるため、\namelist{VARI}の\nmitem{TARGET_ZLEV}は
+指定できない。
+また、2次元データ出力を指定するため、\textcolor{red}{\namelist{INFO}の\nmitem{ZCOUNT}を必ず``1''と指定する。}
+
 \begin{itemize}
- \item \verb|ANAL|の項目
+ \item \namelist{ANAL}
  \begin{itemize}
   \item \verb|ANALYSIS|：鉛直次元のの簡易解析の種類を指定する。``max''を指定すると鉛直カラム中の最大値、
         ``min''を指定するすると最小値、``sum''を指定すると鉛直カラム積算値、そして``ave''を指定すると
-        鉛直カラム平均値を算出する。デフォルト値は``ave''である。
+        鉛直カラム平均値を算出する。デフォルト値は``ave''である。現時点では、単純な積算値や平均値の出力であり、
+        混合比に密度を掛けて質量にして出力する等の機能は有していない。
  \end{itemize}
 \end{itemize}
 
-
-\subsubsection{設定ファイルサンプル：2次元データの変換}
+\subsubsection{設定ファイルサンプル：2次元変数の変換}
 %------------------------------------------------------
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
+\verb|&LOGOUT| \\
+\verb| LOG_BASENAME   = "LOG_d01_2d",| \\
+\verb|/| \\
+ \\
 \verb|&INFO| \\
-\verb|　 　 〜　中略　〜|\\
-\verb| Z_LEV_TYPE  = "original",| \\
+\verb| START_TSTEP = 1,| \\
+\verb| END_TSTEP   = 25,| \\
+\verb| DOMAIN_NUM  = 1,| \\
+\verb| CONFFILE    = "../run/run.d01.conf",| \\
+\verb| IDIR        = "../run",| \\
+\verb| ZCOUNT      = 1,| \\
 \verb|/| \\
  \\
 \verb|&VARI| \\
@@ -155,12 +188,13 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 \end{tabularx}
 }}}\\
 
-\noindent 上記は設定ファイル記述例の抜粋である。\textcolor{red}{2次元データを変換する場合は、
-{\bf Z\_LEV\_TYPE}を必ず``original''と指定する。}また、2次元データなので\verb|VARI|の項目の
-\verb|TARGET_ZLEV|は指定できない。その他の設定項目は3次元データ変換の場合と変わりない。
+\noindent 上記はあるdomainの2次元変数をデータ形式変換する場合の設定例である。
+\textcolor{red}{2次元変数の変換を指定するため、\namelist{INFO}の\nmitem{ZCOUNT}を必ず``1''と指定する。}
+また、2次元データなので\namelist{VARI}の
+\nmitem{TARGET_ZLEV}は指定できない。その他の設定項目は3次元変数変換の場合と変わりない。
 
 
-\subsubsection{設定ファイルサンプル：特殊な時間軸を持つデータの変換}
+\subsubsection{設定ファイル変更例：特殊な時間軸を持つデータの変換}
 %------------------------------------------------------
 
 \noindent {\small {\gt
@@ -177,109 +211,101 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 \end{tabularx}
 }}}\\
 
-\noindent 上記は設定ファイル記述例の抜粋である。\ref{sec:output}節の最後で説明した出力アイテム毎の
-設定で、\verb|HISTITEM|の\verb|tinterval|を設定し、一部のデータ変数が\verb|HISTORY_DEFAULT_TINTERVAL|に
-従わない場合は、net2gでは\verb|EXTRA|の設定項目を上記のように設定することで対応できる。ここでは、
-\ref{sec:output}節の最後で説明した設定に合わせて、2次元データの``RAIN''だけが600秒間隔で出力されていた
-場合の設定ファイル設定例を示している。
+\noindent 上記は設定ファイル変更例である。その他の項目は先の3次元や2次元変数の場合と同じである。
+SCALE-RM実行時に、\ref{sec:output}節の最後で説明した出力アイテム毎の設定で、\namelist{HISTITEM}の
+\nmitem{TINTERVAL}を設定し、一部の出力変数が\nmitem{HISTORY_DEFAULT_TINTERVAL}に
+従わない場合、net2gでは\namelist{EXTRA}を上記のように設定することで対応できる。
+この例では、\ref{sec:output}節の最後で説明した設定に合わせて、2次元データの``RAIN''だけが
+600秒間隔で出力された場合の例を示している。
+net2gでは、異なる出力時間間隔を同時に取り扱うことはできないため、
+複数の異なる出力間隔が存在するhistoryデータにおいては、それぞれに独立してnet2gを走らせる必要がある。
 
 
-\subsection{大型並列計算機での実行方法} \label{subsec:on_supercom}
+\subsection{大型並列計算機での実行} \label{subsec:on_supercom}
 %------------------------------------------------------
 
-スーパーコンピュータ「京」などの大型計算機で並列計算を行った場合、出力ファイルの数が多く、
+スーパーコンピュータ「京」などの大型計算機で大規模並列計算を行った場合、出力ファイルの数が多く、
 それぞれのファイルのデータ容量も大きい。そのような場合には、手元のマシンへhistoryデータをコピーするだけの
-ディスク空き容量がなかったり、並列ファイルシステムではないために後処理に膨大な時間がかかり、現実的な
-時間スケールで解析が行えない可能性がある。こういった場合には、SCALE本体の計算を行ったスーパーコンピュータで
-後処理も行なってしまうことをおすすめする。この目的のためにここでは、スーパーコンピュータ「京」でnet2gを
-使用する方法を簡単に説明する。
+ディスク容量がなかったり、後処理に膨大な時間がかかることがある。
+こういった場合には、SCALE-RM本体の計算を行ったスーパーコンピュータ上で後処理も行なってしまうことを
+おすすめする。
 
-スーパーコンピュータ「京」には、JOBのサイズや実行形態に応じたいくつかのJOBグループがあるが、
-ここでは、もっとも簡単に実行を行える``micro JOB''を対象に実行方法を説明する。micro JOBでは実行バイナリが
-``/scratch''ディレクトリの下に存在する必要があることに注意されたい。
+スーパーコンピュータ「京」では、\ref{sec:source_code}節で説明されている環境変数の設定がされていれば、
+net2gはそのままmakeコマンドでコンパイルできる。
 
-\verb|/scratch/GROUP/USER/|の下に、作業ディレクトリを用意する。そこに、
-\begin{verbatim}
-  net2g         : copy executive file
-  net2g.conf    : copy configure file
-  output/       : link to directory with scale history files
-  bindata/      : create directory for grads file output
-  job.sh        : job script for K (option)
-\end{verbatim}
-を用意する。\verb|net2g.conf|の設定と\verb|job.sh|の設定をする。\verb|net2g.conf|の\verb|INFO|項目の
-\verb|IDIR|と\verb|ODIR|は、上記設定に合わせて適切に記述しなければならない。
-使用するノード数は、SCALE本体の計算に使用したノード数の約数である必要がある。\verb|job.sh|の中身は
-下記のような内容を記述する。各パラメタの詳細等は、スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
-準備が整えば、\verb|job.sh|を使ってpjsubコマンドにてJOBを投入すればよい。実行時間が30分の制限時間に間に合わない
-場合は、一度に変換する変数の数を減らすか、鉛直層数を減らして実行する。\\
-%もしくはLustreのstriping countの調整等を
-%行なってもよい。\\
+ジョブの投入・実行方法については、スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
+net2gの実行方法や制約、注意点については通常のマシンで実行する場合と何ら変わりない。
 
-\noindent {\gt \verb|job.sh|の記述例} \\
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|#! /bin/bash -x| \\
-\verb|#PJM --rsc-list "rscgrp=micro"| \\
-\verb|#PJM --rsc-list "node=12"| \\
-\verb|#PJM --rsc-list "elapse=00:30:00"| \\
-\verb|#PJM -j| \\
-\verb|#PJM -s| \\
-\verb|#| \\
-\verb|. /work/system/Env_base| \\
-\verb|#| \\
-\verb|export PARALLEL=8| \\
-\verb|export OMP_NUM_THREADS=8| \\
-\verb|#| \\
-\verb|mpiexec -n 12 ./net2g  n2g_d01-3d.conf| \\
-\end{tabularx}
-}}}\\
+%% サポート外
+%%
+%% \noindent {\gt \verb|job.sh|の記述例} \\
+%% \noindent {\small {\gt
+%% \ovalbox{
+%% \begin{tabularx}{140mm}{l}
+%% \verb|#! /bin/bash -x| \\
+%% \verb|#PJM --rsc-list "rscgrp=micro"| \\
+%% \verb|#PJM --rsc-list "node=12"| \\
+%% \verb|#PJM --rsc-list "elapse=00:30:00"| \\
+%% \verb|#PJM -j| \\
+%% \verb|#PJM -s| \\
+%% \verb|#| \\
+%% \verb|. /work/system/Env_base| \\
+%% \verb|#| \\
+%% \verb|export PARALLEL=8| \\
+%% \verb|export OMP_NUM_THREADS=8| \\
+%% \verb|#| \\
+%% \verb|mpiexec -n 12 ./net2g  n2g_d01-3d.conf| \\
+%% \end{tabularx}
+%% }}}\\
 
 
-\subsection{バルクジョブ対応版の使用方法} \label{subsec:bulkjobuse}
-%------------------------------------------------------
+%% サポート外（今後、統合サポート予定）
+%%
+%% \subsection{バルクジョブ対応版の使用方法}
+%% %------------------------------------------------------
 
-\ref{sec:bulkjob}節で説明した「複数の実験を一括実行するバルクジョブ機能」を用いてSCALEを走らせた場合は、
-バルクジョブ対応版のnet2gを利用するのが便利である。コンパイルは、通常版のnet2gと同じである。
-``scale/scale-rm/util/netcdf2grads\_bulk''の下で\ref{sec:source_net2g}節で説明したとおりの方法で
-コンパイルすれば、バルクジョブ対応版のnet2gが生成される。
+%% \ref{sec:bulkjob}節で説明した「複数の実験を一括実行するバルクジョブ機能」を用いてSCALEを走らせた場合は、
+%% バルクジョブ対応版のnet2gを利用するのが便利である。コンパイルは、通常版のnet2gと同じである。
+%% ``scale/scale-rm/util/netcdf2grads\_bulk''の下で\ref{sec:source_net2g}節で説明したとおりの方法で
+%% コンパイルすれば、バルクジョブ対応版のnet2gが生成される。
 
-基本的な使用方法や制限事項も通常版のnet2gと同じである。net2gに渡す設定ファイルなどの記述も通常版と
-同じように記述すればよい。ただし、実行にあたっては``launch.conf''が必要になることと、\ref{sec:bulkjob}節で
-説明したバルクジョブ実行時のディレクトリ構造を準備する必要がある。SCALE本体をバルクジョブ機能で実行した
-場合にはディレクトリ構造はすでに準備されているため新たに用意する必要はない。net2gに渡す設定ファイルだけ、
-各バルク番号のディレクトリ下に設置すればよい。以下に、launch.confファイルの記述例を挙げておく。\\
+%% 基本的な使用方法や制限事項も通常版のnet2gと同じである。net2gに渡す設定ファイルなどの記述も通常版と
+%% 同じように記述すればよい。ただし、実行にあたっては``launch.conf''が必要になることと、\ref{sec:bulkjob}節で
+%% 説明したバルクジョブ実行時のディレクトリ構造を準備する必要がある。SCALE本体をバルクジョブ機能で実行した
+%% 場合にはディレクトリ構造はすでに準備されているため新たに用意する必要はない。net2gに渡す設定ファイルだけ、
+%% 各バルク番号のディレクトリ下に設置すればよい。以下に、launch.confファイルの記述例を挙げておく。\\
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_LAUNCHER| \\
-\verb| NUM_BULKJOB = 31,| \\
-\verb| NUM_DOMAIN  = 2,| \\
-\verb| PRC_DOMAINS = 12,36,| \\
-\verb| CONF_FILES  = net2g.3d.d01.conf,net2g.3d.d02.conf,| \\
-\verb|/| \\
-\end{tabularx}
-}}}\\
+%% \noindent {\small {\gt
+%% \ovalbox{
+%% \begin{tabularx}{140mm}{l}
+%% \verb|&PARAM_LAUNCHER| \\
+%% \verb| NUM_BULKJOB = 31,| \\
+%% \verb| NUM_DOMAIN  = 2,| \\
+%% \verb| PRC_DOMAINS = 12,36,| \\
+%% \verb| CONF_FILES  = net2g.3d.d01.conf,net2g.3d.d02.conf,| \\
+%% \verb|/| \\
+%% \end{tabularx}
+%% }}}\\
 
-\noindent この例の場合、一度に31個のジョブを実行している。また1つのジョブは2段オンライン・ネスティング実験
-となっており、net2gの実行にあたってはdomain 1は12-MPI並列、domain 2は36-MPI並列で実行される。ここで
-指定するMPIプロセス数は、SCALE本体の実行時に使用したMPIプロセス数の約数でなければならない。
+%% \noindent この例の場合、一度に31個のジョブを実行している。また1つのジョブは2段オンライン・ネスティング実験
+%% となっており、net2gの実行にあたってはdomain 1は12-MPI並列、domain 2は36-MPI並列で実行される。ここで
+%% 指定するMPIプロセス数は、SCALE本体の実行時に使用したMPIプロセス数の約数でなければならない。
 
-それぞれのドメインについて実行するnet2gの設定ファイルは、
-それぞれ``net2g.3d.d01.conf''と``net2g.3d.d02.conf''と指定されている。
-この設定ファイルは31個のバルク番号ディレクトリの中に
-収められてことを想定している。
+%% それぞれのドメインについて実行するnet2gの設定ファイルは、
+%% それぞれ``net2g.3d.d01.conf''と``net2g.3d.d02.conf''と指定されている。
+%% この設定ファイルは31個のバルク番号ディレクトリの中に
+%% 収められてことを想定している。
 
-この例では、1つのジョブあたり、$12 + 36 = 48$プロセスを使用し、全体で31ジョブあるので総計で1488プロセスを
-必要とする。下記のコマンドのように実行する。
+%% この例では、1つのジョブあたり、$12 + 36 = 48$プロセスを使用し、全体で31ジョブあるので総計で1488プロセスを
+%% 必要とする。下記のコマンドのように実行する。
 
-\begin{verbatim}
- $ mpirun  -n  1488  ./net2g  launch.conf
-\end{verbatim}
+%% \begin{verbatim}
+%%  $ mpirun  -n  1488  ./net2g  launch.conf
+%% \end{verbatim}
 
 
-
+%% サポート外
+%%
 %% \subsection{旧型netcdf2gradsの使用方法}
 %% %------------------------------------------------------
 %% ここでは、シングルプロセス実行しかできないが、``HIST\_BND''の対応、そしてhistoryデータ以外のデータにも対応
@@ -302,7 +328,6 @@ net2gの実行方法は、MPI並列版としてコンパイルした場合は、
 %%     -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file1.f90 -o convine
 %% \end{verbatim}
 %% \end{description}
-
 
 %% \subsubsection{使用方法}
 %% 実行時に，インタラクティブモードかサイレントモードかを選択することが出来る．
