@@ -4,15 +4,14 @@
 
 本章では、SCALEのコンパイル及び、実行に必要な環境について説明する。
 
-\section{必要なシステム環境}
-\label{sec:req_env}
+\section{必要なシステム環境} \label{sec:req_env}
 %====================================================================================
 
 \noindent {\bf 推奨のシステム環境}
 \begin{itemize}
   \item {\bf システムハードウェア構成}\\
 必要なハードウェアは実験設定に依存するが、
-ここでは第\ref{sec:tuto_ideal}章と第\ref{sec:tuto_real}章の
+ここでは第\ref{chap:tutorial_ideal}章と第\ref{chap:tutorial_real}章の
 チュートリアル実行に必要なスベックを示す。
   \begin{itemize}
     \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上が望ましい。
@@ -92,17 +91,16 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 及びFujitsu PRIME-HPC FX10の環境でも動作確認されている。
 
 
-\section{ライブラリ環境のインストール}
-\label{sec:inst_env}
+\section{ライブラリ環境のインストール} \label{sec:inst_env}
 %====================================================================================
-SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ、netCDF, HDF5, MPI 等)
+SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ、NetCDF, HDF5, MPI 等)
 のインストールを行う。
 詳細は、付録 \ref{sec:env_setting}章を参照のこと。
-第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは、
+第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルは、
 それらのライブラリ環境がインストールされていることを前提として進める。
 
 描画ツールとして、
-第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルでは
+第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルでは
 クイックビューのためGPhysを使用する。
 また、GrADSを使った結果の描画方法についても紹介する。
 これらの描画ツールの詳細とインストール方法については
@@ -110,7 +108,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 
 
 
-\section{SCALEのコンパイル} \label{sec:source_code}
+\section{SCALEのコンパイル} \label{sec:scale_compile}
 %====================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -121,7 +119,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 \item GNU C/C++, Fortran compiler (付録\ref{sec:env_setting}章参照)
 \end{itemize}
 
-\subsection{ソースコードの入手}
+\subsection{ソースコードの入手} \label{subsec:get_source_code}
 %-----------------------------------------------------------------------------------
 安定版ソースコードは、\\
  \url{http://scale.aics.riken.jp/ja/download/index.html}\\
@@ -133,7 +131,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
    scale-{\version}/
 \end{alltt}
 
-\subsection{Makedefファイルと環境変数の設定}
+\subsection{Makedefファイルと環境変数の設定} \label{subsec:set_evniromnet}
 %-----------------------------------------------------------------------------------
 
 SCALEはコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
@@ -190,8 +188,7 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 \end{verbatim}
 
 
-\subsection{コンパイル}
-\label{sec:compile}
+\subsection{コンパイル} \label{subsec:compile}
 %-----------------------------------------------------------------------------------
 
 チュートリアル用のディレクトリに移動して、makeコマンドによってコンパイルを行う。
@@ -244,7 +241,7 @@ SCALE-RMの出力ファイルは、ノードごとに分割されて出力され
 SCALEでは、これら出力ファイル（\verb|history.******.nc|）を結合し、
 GrADSで直接読み込めるデータ形式へ
 変換する後処理ツール「net2g」を提供している。
-第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルでも使用する。
+第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルでも使用する。
 ここでは、net2gのコンパイル方法について説明する。
 
 %net2gはSCALE本体から独立したツールになっている
@@ -257,7 +254,7 @@ GrADSで直接読み込めるデータ形式へ
 
 まず、SCALE本体のコンパイル時と同様に
 使用する環境にあったMakedefファイル設定のための環境変数を設定する
-(\ref{sec:compile}節コンパイル参照)。
+(\ref{subsec:compile}節コンパイル参照)。
 %\begin{alltt}
 % $ export SCALE_SYS="Linux64-gnu-ompi"  //GNUコンパイラ、openMPIを使用する場合
 %\end{alltt}
