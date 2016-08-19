@@ -5,7 +5,7 @@
 \date{\today}
 
 
-\usepackage[dvipdfmx]{graphicx}
+\usepackage[dvipdfmx]{graphicx, color}
 \usepackage[dvipdfmx]{hyperref}
 \usepackage{amsmath}
 \usepackage{ascmac}
@@ -19,11 +19,13 @@
 \usepackage{pxjahyper}
 \hypersetup{% options for hyperref
  bookmarksopen=true,
+ bookmarksnumbered=true,
  colorlinks=true,
  linkcolor=red,
  citecolor=cyan,
  urlcolor=cyan,
 }
+
 %\setlength{\textwidth}{42zw}
 %\setlength{\textheight}{40\baselineskip}
 \usepackage[top=30mm,bottom=35mm,left=30mm,right=30mm]{geometry}
@@ -66,10 +68,11 @@
 \input{51_basic_introduction}
 \input{52_basic_use}
 \input{53_basic_buffer}
-\input{54_basic_timesetting}
-\input{55_basic_history}
-\input{56_basic_scheme_dyn}
-\input{57_basic_scheme_phys}
+\input{54_basic_topo}
+\input{55_basic_timesetting}
+\input{56_basic_history}
+\input{57_basic_scheme_dyn}
+\input{58_basic_scheme_phys}
 
 \chapter{各種設定: 実用編} \label{sec:advance}
 \input{61_advance_introduction}
