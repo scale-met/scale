@@ -8,19 +8,19 @@ dt=21600
 #
 # set start date (UTC)
 #
-start_year='2014'
-start_month='08'
-start_day='10'
-start_hour='00'
+start_year='2007'
+start_month='07'
+start_day='14'
+start_hour='18'
 start_min='00'
 start_sec='00'
 #
 # set end date (UTC)
 #
-end_year='2014'
-end_month='08'
-end_day='10'
-end_hour='18'
+end_year='2007'
+end_month='07'
+end_day='15'
+end_hour='12'
 end_min='00'
 end_sec='00'
 #

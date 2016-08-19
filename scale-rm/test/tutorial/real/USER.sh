@@ -139,7 +139,7 @@ HIST_ITEMS_AVERAGE_3D=(
 
 INIT_BASENAME="init"
 
-BASENAME_ORG="namelist.grads_boundary.FNL"
+BASENAME_ORG="namelist.grads_boundary.FNL.grib1"
 FILETYPE_ORG="GrADS"
 PARENT_MP_TYPE=3
 USE_FILE_DENSITY=".false."
