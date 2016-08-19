@@ -70,7 +70,7 @@ cat << EOF > base.net2g.3D.conf
 
 &EXTRA
  EXTRA_TINTERVAL = ${TIME_DT_HISTORY_3D},
- EXTRA_TUNIT     = "${TIME_UNIT}",
+ EXTRA_TUNIT     = "${TIME_DT_UNIT}",
 /
 
 &VARI

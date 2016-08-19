@@ -154,6 +154,8 @@ NET2G_CONF="${INPUT_CONFIGDIR}/base.net2g.conf.sh"
 TIME_STARTDATE="${STARTDATE[0]}, ${STARTDATE[1]}, ${STARTDATE[2]}, ${STARTDATE[3]}, ${STARTDATE[4]}, ${STARTDATE[5]}"
 TIME_STARTMS="${STARTDATE[6]}.0"
 
+TIME_DT_UNIT="SEC" # SEC only
+
 TIME_BND_STARTDATE="${BND_STARTDATE[0]}, ${BND_STARTDATE[1]}, ${BND_STARTDATE[2]}, ${BND_STARTDATE[3]}, ${BND_STARTDATE[4]}, ${BND_STARTDATE[5]}"
 TIME_BND_STARTMS="${BND_STARTDATE[6]}.0"
 
@@ -305,9 +307,5 @@ done
 # set-up experimental environment
 #
 #################################################
-
-cp -a data/${BASENAME_ORG} ${OUTPUT_CONFIGDIR}/init/
-cp -a data/*.ctl           ${OUTPUT_CONFIGDIR}/net2g/
-cp -a data/*.gs            ${OUTPUT_CONFIGDIR}/net2g/
 
 source ${INPUT_CONFIGDIR}/mklink.sh

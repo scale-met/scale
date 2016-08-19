@@ -20,24 +20,24 @@ RUN_DATE_MIN=0
 RUN_DATE_SEC=0
 RUN_DATE_MSEC=0
 
-TIME_DURATION="21600.0"
-TIME_UNIT="SEC" # SEC only
+TIME_DURATION="6.0"
+TIME_DURATION_UNIT="HOUR" # unit: DAY / HOUR / MIN / SEC
 
-TIME_DT_RESTART="21600.0"
-TIME_DT_BOUNDARY="21600.0"
-TIME_DT_REFSTATE="10800.0"
-TIME_DT_HISTORY_2D="3600.0"
-TIME_DT_HISTORY_3D="3600.0"
+TIME_DT_RESTART="21600.0"   # unit: SEC only
+TIME_DT_BOUNDARY="21600.0"  # unit: SEC only
+TIME_DT_REFSTATE="10800.0"  # unit: SEC only
+TIME_DT_HISTORY_2D="3600.0" # unit: SEC only
+TIME_DT_HISTORY_3D="3600.0" # unit: SEC only
 
-TIME_DT=(               "60.0" ) # required parameters for each domain
-TIME_DT_ATMOS_DYN=(     "30.0" ) # required parameters for each domain
-TIME_DT_ATMOS_PHY_MP=(  "60.0" ) # required parameters for each domain
-TIME_DT_ATMOS_PHY_RD=( "600.0" ) # required parameters for each domain
-TIME_DT_ATMOS_PHY_SF=(  "60.0" ) # required parameters for each domain
-TIME_DT_ATMOS_PHY_TB=(  "60.0" ) # required parameters for each domain
-TIME_DT_OCEAN=(        "300.0" ) # required parameters for each domain
-TIME_DT_LAND=(         "300.0" ) # required parameters for each domain
-TIME_DT_URBAN=(        "300.0" ) # required parameters for each domain
+TIME_DT=(               "60.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_DYN=(     "30.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_MP=(  "60.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_RD=( "600.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_SF=(  "60.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_TB=(  "60.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_OCEAN=(        "300.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_LAND=(         "300.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_URBAN=(        "300.0" ) # required parameters for each domain - unit: SEC only
 
 #################################################
 #
