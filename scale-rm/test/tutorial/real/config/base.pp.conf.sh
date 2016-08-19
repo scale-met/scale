@@ -35,7 +35,7 @@ cat << EOF > base.pp.conf
 
 &PARAM_CNVTOPO
  CNVTOPO_name            = "${TOPOTYPE[$D]}",
- CNVTOPO_smooth_maxslope = ${MAXSLOPE[$D]},
+ CNVTOPO_smooth_maxslope = ${MAXSLOPE},
  CNVTOPO_smooth_local    = .true.,
  CNVTOPO_smooth_itelim   = 10000,
  CNVTOPO_copy_parent     = ${COPYTOPO[$D]},

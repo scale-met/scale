@@ -20,7 +20,7 @@ start_sec='00'
 end_year='2007'
 end_month='07'
 end_day='15'
-end_hour='12'
+end_hour='00'
 end_min='00'
 end_sec='00'
 #
@@ -44,7 +44,7 @@ do
 #-----
   for BND in FNLatm FNLland FNLsfc ; do
 
-    dir="../tools/FNL_output/${yyyy}${mm}"
+    dir="../../tools/FNL_output/${yyyy}${mm}"
     gpre=${BND}
     opre=${BND}
 

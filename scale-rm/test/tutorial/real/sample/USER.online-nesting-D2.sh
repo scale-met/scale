@@ -10,7 +10,7 @@
 #
 #################################################
 
-NUM_DOMAIN=1 # set number of domains
+NUM_DOMAIN=2 # set number of domains
 
 RUN_DATE_YEAR=2007
 RUN_DATE_MON=7
@@ -29,15 +29,15 @@ TIME_DT_REFSTATE="10800.0"  # unit: SEC only
 TIME_DT_HISTORY_2D="3600.0" # unit: SEC only
 TIME_DT_HISTORY_3D="3600.0" # unit: SEC only
 
-TIME_DT=(               "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_DYN=(     "45.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_PHY_MP=(  "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_PHY_RD=( "900.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_PHY_SF=(  "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_PHY_TB=(  "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_OCEAN=(        "450.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_LAND=(         "450.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_URBAN=(        "450.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT=(               "90.0"  "18.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_DYN=(     "45.0"   "9.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_MP=(  "90.0"  "18.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_RD=( "900.0" "180.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_SF=(  "90.0"  "18.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_TB=(  "90.0"  "18.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_OCEAN=(        "450.0"  "90.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_LAND=(         "450.0"  "90.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_URBAN=(        "450.0"  "90.0" ) # required parameters for each domain - unit: SEC only
 
 #################################################
 #
@@ -52,12 +52,12 @@ TIME_DT_URBAN=(        "450.0" ) # required parameters for each domain - unit: S
 #
 #################################################
 
-PRC_NUM_X=( 2 ) # required parameters for each domain
-PRC_NUM_Y=( 2 ) # required parameters for each domain
+PRC_NUM_X=( 2 4 ) # required parameters for each domain
+PRC_NUM_Y=( 2 4 ) # required parameters for each domain
  
-KMAX=( 36 ) # required parameters for each domain
-IMAX=( 45 ) # required parameters for each domain
-JMAX=( 45 ) # required parameters for each domain
+KMAX=( 36 36 ) # required parameters for each domain
+IMAX=( 45 32 ) # required parameters for each domain
+JMAX=( 45 32 ) # required parameters for each domain
 
 LKMAX=5
 LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" ) # required parameters for LKMAX
@@ -65,8 +65,8 @@ LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" ) # required parameters for LKMAX
 UKMAX=5
 UDZ=( "0.01" "0.01" "0.03" "0.05" "0.10" ) # required parameters for UKMAX
 
-DX=( "20000.0" ) # required parameters for each domain
-DY=( "20000.0" ) # required parameters for each domain
+DX=( "20000.0" "4000.0" ) # required parameters for each domain
+DY=( "20000.0" "4000.0" ) # required parameters for each domain
 
 DEF_Z=( 
 "FZ(:) =    80.841,   248.821,   429.882,   625.045,   835.409,  1062.158,
@@ -75,11 +75,18 @@ DEF_Z=(
           6243.676,  6891.642,  7590.074,  8342.904,  9154.367, 10029.028,
          10971.815, 11988.030, 13083.390, 14264.060, 15536.685, 16908.430,
          18387.010, 19980.750, 21698.615, 23550.275, 25546.155, 28113.205,"
+
+"FZ(:) =    80.841,   248.821,   429.882,   625.045,   835.409,  1062.158,
+          1306.565,  1570.008,  1853.969,  2160.047,  2489.963,  2845.575,
+          3228.883,  3642.044,  4087.384,  4567.409,  5084.820,  5642.530,
+          6243.676,  6891.642,  7590.074,  8342.904,  9154.367, 10029.028,
+         10971.815, 11988.030, 13083.390, 14264.060, 15536.685, 16908.430,
+         18387.010, 19980.750, 21698.615, 23550.275, 25546.155, 28113.205,"
 ) # required num. of parameters for each domain
 
-BUFFER_DZ=( "5000.0"   ) # required parameters for each domain
-BUFFER_DX=( "400000.0" ) # required parameters for each domain
-BUFFER_DY=( "400000.0" ) # required parameters for each domain
+BUFFER_DZ=( "5000.0"   "5000.0"  ) # required parameters for each domain
+BUFFER_DX=( "400000.0" "80000.0" ) # required parameters for each domain
+BUFFER_DY=( "400000.0" "80000.0" ) # required parameters for each domain
 
 MPRJ_BASEPOINT_LON="135.220404"
 MPRJ_BASEPOINT_LAT="34.653396"
@@ -97,15 +104,15 @@ MPRJ_LC_LAT2="40.0"
 #
 #################################################
 
-ATMOS_DYN_TYPE=(    "HEVI"     ) # required parameters for each domain
-ATMOS_PHY_MP_TYPE=( "TOMITA08" ) # required parameters for each domain
-ATMOS_PHY_RD_TYPE=( "MSTRNX"   ) # required parameters for each domain
-ATMOS_PHY_SF_TYPE=( "COUPLE"   ) # required parameters for each domain
-ATMOS_PHY_TB_TYPE=( "MYNN"     ) # required parameters for each domain
+ATMOS_DYN_TYPE=(    "HEVI"     "HEVI"     ) # required parameters for each domain
+ATMOS_PHY_MP_TYPE=( "TOMITA08" "TOMITA08" ) # required parameters for each domain
+ATMOS_PHY_RD_TYPE=( "MSTRNX"   "MSTRNX"   ) # required parameters for each domain
+ATMOS_PHY_SF_TYPE=( "COUPLE"   "COUPLE"   ) # required parameters for each domain
+ATMOS_PHY_TB_TYPE=( "MYNN"     "MYNN"     ) # required parameters for each domain
 
-OCEAN_TYPE=( "CONST" ) # required parameters for each domain
-LAND_TYPE=(  "SLAB"  ) # required parameters for each domain
-URBAN_TYPE=( "SLC"   ) # required parameters for each domain
+OCEAN_TYPE=( "CONST" "CONST" ) # required parameters for each domain
+LAND_TYPE=(  "SLAB"  "SLAB"  ) # required parameters for each domain
+URBAN_TYPE=( "SLC"   "SLC"   ) # required parameters for each domain
 
 #################################################
 #
@@ -117,7 +124,7 @@ HIST_ITEMS_SNAPSHOT_2D=(
   "MSLP"
 )
 HIST_ITEMS_SNAPSHOT_3D=(
-  "PRES" "U" "V"
+  "U" "V"
 )
 HIST_ITEMS_AVERAGE_2D=(
   "PREC"
@@ -155,9 +162,9 @@ USE_FILE_LANDWATER=".true."
 TOPODIR="${SCALE_DB}/topo"
 LANDUSEDIR="${SCALE_DB}/landuse"
 
-TOPOTYPE=(    "GTOPO30" ) # required parameters for each domain
-LANDUSETYPE=( "GLCCv2"  ) # required parameters for each domain
-COPYTOPO=(    ".false." ) # required parameters for each domain
+TOPOTYPE=(    "GTOPO30" "GTOPO30" ) # required parameters for each domain
+LANDUSETYPE=( "GLCCv2"  "GLCCv2"  ) # required parameters for each domain
+COPYTOPO=(    ".false." ".true."  ) # required parameters for each domain
 
 LIMIT_URBAN_FRACTION="0.3"
 

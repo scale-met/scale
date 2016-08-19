@@ -79,7 +79,6 @@ if [ ${NUM_DOMAIN} -ne ${#URBAN_TYPE[*]} ];        then echo "Error: Wrong array
 
 if [ ${NUM_DOMAIN} -ne ${#TOPOTYPE[*]} ];    then echo "Error: Wrong array size (TOPOTYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#LANDUSETYPE[*]} ]; then echo "Error: Wrong array size (LANDUSETYPE).";  exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#MAXSLOPE[*]} ];    then echo "Error: Wrong array size (MAXSLOPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#COPYTOPO[*]} ];    then echo "Error: Wrong array size (COPYTOPO).";     exit 1; fi
 
 #################################################
@@ -118,7 +117,14 @@ POPSCA_3D=(
 )
 
 # set number of files for boundary
-INT_DURATION=`echo ${TIME_DURATION%%.*}`
+case ${TIME_DURATION_UNIT} in
+  "DAY"  ) TIME_DURATION_UNIT_SEC=86400 ;;
+  "HOUR" ) TIME_DURATION_UNIT_SEC=3600  ;;
+  "MIN"  ) TIME_DURATION_UNIT_SEC=60    ;;
+  "SEC"  ) TIME_DURATION_UNIT_SEC=1     ;;
+  *      ) echo 'Error: Undefined type of TIME_DURATION_UNIT.' ;;
+esac
+INT_DURATION=`expr ${TIME_DURATION%%.*} \* ${TIME_DURATION_UNIT_SEC}`
 INT_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
 NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
 if [ ${NUMBER_OF_FILES} -le 1 ]; then
@@ -143,12 +149,14 @@ OUTPUT_CONFIGDIR="experiment"
 
 PPDIR="../pp"
 INITDIR="../init"
+RUNDIR="../run"
 
 PP_CONF="${INPUT_CONFIGDIR}/base.pp.conf.sh"
 INIT_CONF="${INPUT_CONFIGDIR}/base.init.conf.sh"
 RUN_CONF="${INPUT_CONFIGDIR}/base.run.conf.sh"
 PARAM_CONF="${INPUT_CONFIGDIR}/param.conf.sh"
 NET2G_CONF="${INPUT_CONFIGDIR}/base.net2g.conf.sh"
+LAUNCH_CONF="${INPUT_CONFIGDIR}/base.launch.conf.sh"
 
 # set time parameters
 TIME_STARTDATE="${STARTDATE[0]}, ${STARTDATE[1]}, ${STARTDATE[2]}, ${STARTDATE[3]}, ${STARTDATE[4]}, ${STARTDATE[5]}"
@@ -182,14 +190,19 @@ do
   FNUM=`printf "%02d" $DNUM`
   PFNUM=`printf "%02d" $PDNUM`
 
+  # set numbers of domain process
+  eval 'PRC_DOMAINS[$D]=`expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`'
+
   # set names of config files
   eval 'INIT_CONF_FILES[$D]="init.d${FNUM}.conf"'
   eval 'RUN_CONF_FILES[$D]="run.d${FNUM}.conf"'
-  eval 'NET2G_2D_CONF_FILES[$D]="net2g.2D.d${FNUM}.conf"'
-  eval 'NET2G_3D_CONF_FILES[$D]="net2g.3D.d${FNUM}.conf"'
 
   # set vertical axis
   LINE_Z="${DEF_Z[$D]}"
+
+  # set maximum slope of topography
+  Z1=`echo ${LINE_Z} | awk '{print $3}' | head -1`
+  MAXSLOPE=`echo "scale=3; a( ${Z1} / ${DX[$D]} ) * 180 / 3.14159265" | bc -l | sed -e "s/^\./0./g"`
 
   # set filenames for each domain
   PP_IO_LOG_BASENAME="pp_LOG_d${FNUM}"
@@ -301,6 +314,24 @@ do
 
   DNUM=`expr $DNUM + 1`
 done
+
+#################################################
+#
+# make launcher
+#
+#################################################
+
+IFS="," eval 'LIST_PRC_DOMAINS="${PRC_DOMAINS[*]}"'
+IFS="," eval 'LIST_INIT_CONF_FILES="${INIT_CONF_FILES[*]}"'
+IFS="," eval 'LIST_RUN_CONF_FILES="${RUN_CONF_FILES[*]}"'
+
+LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/ /\",\"/g"`
+LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/ /\",\"/g"`
+
+source ${LAUNCH_CONF}
+
+mv -f base.init.launch.conf ${OUTPUT_CONFIGDIR}/init/init.launch.conf
+mv -f base.run.launch.conf ${OUTPUT_CONFIGDIR}/run/run.launch.conf
 
 #################################################
 #
