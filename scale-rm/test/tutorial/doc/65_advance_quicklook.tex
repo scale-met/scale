@@ -1,11 +1,11 @@
-\section{Postprocess : net2g} \label{sec:net2g}
+\section{\SecAdvancePostprosess} \label{sec:net2g}
 %====================================================================================
 
 本節では、SCALEの後処理ツールnet2gについて説明する。net2gは、SCALE-RMで出力された
-領域分割のnetcdf形式historyデータ（\verb|history.***.nc|）を結合しGrADSで読み込める
+領域分割のNetCDF形式historyデータ（\verb|history.***.nc|）を結合しGrADSで読み込める
 バイナリ形式に変換するツールである。
-分割データを結合することで、GrADSでの描画に適するだけでなく、Fortranプログラムなどで
-解析しやすいデータになる。
+分割データを結合することで、GrADSでの描画に適するだけでなく、
+Fortranプログラムなどで解析しやすいデータになる。
 net2gはMPI並列実行も可能であり、単一プロセス実行に比べて変換に要する時間を短縮できる。
 その他、net2gの機能として次のものが利用できる。
 
@@ -17,31 +17,36 @@ net2gはMPI並列実行も可能であり、単一プロセス実行に比べて
 \end{itemize}
 
 特に大規模計算結果においては、鉛直層や時間ステップごとに分割することで
-ハンドリングしやすいデータサイズにして保存することができるため便利である。
+扱いやすいデータサイズにして保存することができるため便利である。
 さらに、大規模計算結果を解析するだけのケースを踏まえてポータビリティを重視した設計とし、
-SCALEライブラリに対する依存性をなくしたため、net2gだけを独立にコンパイル・実行できることも特徴である。
+SCALEライブラリに対する依存性をなくしたため、
+net2gだけを独立にコンパイル・実行できることも特徴である。
 net2gのインストール方法については、\ref{sec:source_net2g}節を参照すること。
 
 ただし、現行のnet2gにおいては下記の制約がある。
 \begin{itemize}
- \item net2gに使用するMPIプロセス数は、SCALE-RM実行時に使用したMPIプロセス数の約数でなければならない。
+ \item net2gに使用するMPIプロセス数は、
+SCALE-RM実行時に使用したMPIプロセス数の約数でなければならない。
  \item SCALE-RM実行時のhistory出力形式は、``\verb|HIST_BND = .false.|''でなければならない。
  \item 2次元データと3次元データは同時に変換できない。
  \item 変換できるデータはhistoryデータのみである。
 \end{itemize}
-\noindent これらの制約を無くすため、今後早急に対応を進める予定である。
+これらの制約を無くすため、今後早急に対応を進める予定である。
 
 その他に注意するべき点は、net2g実行時のMPIプロセス数をむやみに大きくしないことである。
 net2gは実行内容のほとんどがデータ入出力であるため、MPIプロセス数を増やしすぎると
-読み込み/書き込み要求が立て込んで、作業効率が下がり、結果として実行速度が落ちることもある。
+ストアレージへの読み込み/書き込み要求が多くなり、
+結果として、効率が下がり実行速度が落ちることもある。
 特に大規模計算結果を手元のマシンで変換する際は注意が必要である。
 
 net2gの実行はMPI並列を用いて、
 \begin{verbatim}
  $ mpirun  -n  [procs]  ./net2g  net2g.conf
 \end{verbatim}
-とする。\verb|[procs]|には任意のMPIプロセス数を指定する。最後の``net2g.conf''はnet2gの実行設定が
-記述された設定ファイルである。一方、シングルプロセス版としてコンパイルした場合はMPIコマンドを使わずに、
+とする。\verb|[procs]|には任意のMPIプロセス数を指定する。
+最後の``net2g.conf''はnet2gの実行設定が
+記述された設定ファイルである。
+一方、シングルプロセス版としてコンパイルした場合はMPIコマンドを使わずに、
 \begin{verbatim}
  $ ./net2g  net2g.conf
 \end{verbatim}
@@ -56,10 +61,10 @@ net2gの実行はMPI並列を用いて、
 }}\\
 
 次に、3次元変数と2次元変数を変換する場合における設定ファイルの記述方法について説明する。
-それぞれ、``scale/scale-rm/util/netcdf2grads\_h/''のディレクトリに
+それぞれ、``scale-\version/scale-rm/util/netcdf2grads\_h/''のディレクトリに
 入っている``net2g.3d.conf''と``net2g.2d.conf''に基づいて説明する。
 本節では主要な設定項目だけを取り上げる。
-ここで触れなかったオプションについては、``scale/scale-rm/util/netcdf2grads\_h/''のディレクトリに
+ここで触れなかったオプションについては、``scale-\version/scale-rm/util/netcdf2grads\_h/''のディレクトリに
 入っている設定ファイルサンプル``net2g.all.conf''を参照してもらいたい。
 
 
@@ -95,28 +100,28 @@ net2gの実行はMPI並列を用いて、
 \begin{itemize}
  \item \namelist{LOGOUT}（このNamelistは必須ではない）
  \begin{itemize}
-  \item \verb|LOG_BASENAME|：デフォルトのLOGファイル名``LOG''を変更したいときに指定する。
-  \item \verb|LOG_ALL_OUTPUT|：プロセス番号0番以外もLOGファイルを出力させたい場合に``true''にする。
+  \item \nmitem{LOG_BASENAME}：デフォルトのLOGファイル名``LOG''を変更したいときに指定する。
+  \item \nmitem{LOG_ALL_OUTPUT}：プロセス番号0番以外もLOGファイルを出力させたい場合に``true''にする。
         デフォルト値は``false''である。
  \end{itemize}
  \item \namelist{INFO}
  \begin{itemize}
-  \item \verb|START_TSTEP|：変換するNetCDFデータの最初のTime Stepを指定する。最初のいくつかの
+  \item \nmitem{START_TSTEP}：変換するNetCDFデータの最初のTime Stepを指定する。最初のいくつかの
         ステップを飛ばして変換したい場合に任意の値を指定する。デフォルト値は1である。
-  \item \verb|END_TSTEP|：変換するNetCDFデータの最後のTime Stepを指定する。必ず指定すること。
-  \item \verb|DOMAIN_NUM|：ドメイン番号を指定する。デフォルト値は1である。
-  \item \verb|CONFFILE|：SCALE-RM本体を実行したときの\verb|run.***.conf|ファイルのPATHを指定する
+  \item \nmitem{END_TSTEP}：変換するNetCDFデータの最後のTime Stepを指定する。必ず指定すること。
+  \item \nmitem{DOMAIN_NUM}：ドメイン番号を指定する。デフォルト値は1である。
+  \item \nmitem{CONFFILE}：SCALE-RM本体を実行したときの\verb|run.***.conf|ファイルのPATHを指定する
         （ファイル名を含む）。
-  \item \verb|IDIR|：SCALE-RM本体のhistory出力ファイルのPATHを指定する。
-  \item \verb|Z_LEV_TYPE|：鉛直方向のデータ変換の種類を指定する。``original''はモデル面、
+  \item \nmitem{IDIR}：SCALE-RM本体のhistory出力ファイルのPATHを指定する。
+  \item \nmitem{Z_LEV_TYPE}：鉛直方向のデータ変換の種類を指定する。``original''はモデル面、
         ``plev''は気圧面に内挿、そして``zlev''は高度面に内挿して出力する。
         ``anal''を指定すると別途指定の簡易解析を行なって出力する（次項で説明）。デフォルト値は``plev''である。
  \end{itemize}
  \item \namelist{VARI}
  \begin{itemize}
-  \item \verb|VNAME|：変換したい変数名を指定する。デフォルトでは、``PT''、``PRES''、``U''、``V''、
+  \item \nmitem{VNAME}：変換したい変数名を指定する。デフォルトでは、``PT''、``PRES''、``U''、``V''、
         ``W''、``QHYD''が指定される。
-  \item \verb|TARGET_ZLEV|：\verb|Z_LEV_TYPE|に応じた変換高度を指定する。plevの場合は``hPa''、
+  \item \nmitem{TARGET_ZLEV}：\nmitem{Z_LEV_TYPE}に応じた変換高度を指定する。plevの場合は``hPa''、
         zlevの場合は``m''、そしてoriginalの場合は格子点番号で指定する。デフォルトでは、
         1000hPa、975hPa、950hPa、925hPa、900hPa、850hPa、800hPa、700hPa、600hPa、500hPa、400hPa、
         300hPa、250hPa、200hPaの14層が指定される。 
@@ -145,9 +150,9 @@ net2gの実行はMPI並列を用いて、
 \end{tabularx}
 }}}\\
 
-\noindent 上記は、簡易解析を利用する場合の設定ファイル変更例の抜粋である。
+上記は、簡易解析を利用する場合の設定ファイル変更例の抜粋である。
 他の設定項目については先の3次元変数の変換の場合と同じである。
-\verb|Z_LEV_TYPE|を``anal''と指定することで、3次元変数の鉛直次元に対する簡易解析が有効になり、
+\nmitem{Z_LEV_TYPE}を``anal''と指定することで、3次元変数の鉛直次元に対する簡易解析が有効になり、
 \namelist{ANAL}を指定できるようになる。
 このとき変換後のデータは必ず水平2次元データとなるため、\namelist{VARI}の\nmitem{TARGET_ZLEV}は
 指定できない。
@@ -156,7 +161,7 @@ net2gの実行はMPI並列を用いて、
 \begin{itemize}
  \item \namelist{ANAL}
  \begin{itemize}
-  \item \verb|ANALYSIS|：鉛直次元のの簡易解析の種類を指定する。``max''を指定すると鉛直カラム中の最大値、
+  \item \nmitem{ANALYSIS}：鉛直次元のの簡易解析の種類を指定する。``max''を指定すると鉛直カラム中の最大値、
         ``min''を指定するすると最小値、``sum''を指定すると鉛直カラム積算値、そして``ave''を指定すると
         鉛直カラム平均値を算出する。デフォルト値は``ave''である。現時点では、単純な積算値や平均値の出力であり、
         混合比に密度を掛けて質量にして出力する等の機能は有していない。
@@ -211,29 +216,30 @@ net2gの実行はMPI並列を用いて、
 \end{tabularx}
 }}}\\
 
-\noindent 上記は設定ファイル変更例である。その他の項目は先の3次元や2次元変数の場合と同じである。
+上記は設定ファイル変更例である。その他の項目は先の3次元や2次元変数の場合と同じである。
 SCALE-RM実行時に、\ref{sec:output}節の最後で説明した出力アイテム毎の設定で、\namelist{HISTITEM}の
 \nmitem{TINTERVAL}を設定し、一部の出力変数が\nmitem{HISTORY_DEFAULT_TINTERVAL}に
 従わない場合、net2gでは\namelist{EXTRA}を上記のように設定することで対応できる。
 この例では、\ref{sec:output}節の最後で説明した設定に合わせて、2次元データの``RAIN''だけが
 600秒間隔で出力された場合の例を示している。
 net2gでは、異なる出力時間間隔を同時に取り扱うことはできないため、
-複数の異なる出力間隔が存在するhistoryデータにおいては、それぞれに独立してnet2gを走らせる必要がある。
+複数の異なる出力間隔が存在するhistoryデータにおいては、
+それぞれに独立してnet2gを走らせる必要がある。
 
-
-\subsection{大型並列計算機での実行} \label{subsec:on_supercom}
-%------------------------------------------------------
-
+\subsubsection{大型並列計算機での実行}
 スーパーコンピュータ「京」などの大型計算機で大規模並列計算を行った場合、出力ファイルの数が多く、
-それぞれのファイルのデータ容量も大きい。そのような場合には、手元のマシンへhistoryデータをコピーするだけの
-ディスク容量がなかったり、後処理に膨大な時間がかかることがある。
-こういった場合には、SCALE-RM本体の計算を行ったスーパーコンピュータ上で後処理も行なってしまうことを
+それぞれのファイルのデータ容量も大きい。
+そのような場合には、手元のマシンへhistoryデータをコピーするだけのディスク容量がなかったり、
+後処理に膨大な時間がかかることがある。
+こういった場合には、
+SCALE-RM本体の計算を行ったスーパーコンピュータ上で後処理も行なってしまうことを
 おすすめする。
 
-スーパーコンピュータ「京」では、\ref{subsec:evniromnet}節で説明されている環境変数の設定がされていれば、
+スーパーコンピュータ「京」では、
+\ref{subsec:evniromnet}節で説明されている環境変数の設定がされていれば、
 net2gはそのままmakeコマンドでコンパイルできる。
-
-ジョブの投入・実行方法については、スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
+ジョブの投入・実行方法については、
+スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
 net2gの実行方法や制約、注意点については通常のマシンで実行する場合と何ら変わりない。
 
 %% サポート外
