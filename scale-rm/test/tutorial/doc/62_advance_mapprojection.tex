@@ -15,6 +15,22 @@
 \end{tabularx}
 }}}\\
 
+\begin{table}[b]
+\begin{center}
+\caption{SCALEで選択できる地図投影法}
+\begin{tabularx}{150mm}{|l|X|} \hline
+ \rowcolor[gray]{0.9} 地図投影法 & \verb|MPRJ_type| \\ \hline
+ 地図投影なし（理想実験用）& \verb|NONE| \\ \hline
+ ランベルト正角円錐図法 & \verb|LC| \\ \hline
+ 極心平射図法（ポーラーステレオ） & \verb|PS| \\ \hline
+ メルカトル図法 & \verb|MER| \\ \hline
+ 正距円筒図法 & \verb|EC| \\ \hline
+\end{tabularx}
+\label{tab:map_proj}
+\end{center}
+\end{table}
+
+
 \noindent
 まず\nmitem{MPRJ_basepoint_lat}と\nmitem{MPRJ_basepoint_lon}は、
 計算領域の中心の緯度・経度を表す。
@@ -32,23 +48,11 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 このため、設定された投影法では、実距離に基づいた緯度・経度座標が計算される。
 この緯度・経度情報は、すべてのSCALEのNetCDF形式の出力ファイルに含まれている。
 
+
+
 \nmitem{MPRJ_type}は、地図投影法の種類を表しており、\verb|MER|はメルカトル図法を意味する。
 SCALEで現在選択できる地図投影法とその指定文字列は表\ref{tab:map_proj}のとおりである。
 
-\begin{table}[tbh]
-\begin{center}
-\caption{SCALEで選択できる地図投影法}
-\begin{tabularx}{150mm}{|l|X|} \hline
- \rowcolor[gray]{0.9} 地図投影法 & \verb|MPRJ_type| \\ \hline
- 地図投影なし（理想実験用）& \verb|NONE| \\ \hline
- ランベルト正角円錐図法 & \verb|LC| \\ \hline
- 極心平射図法（ポーラーステレオ） & \verb|PS| \\ \hline
- メルカトル図法 & \verb|MER| \\ \hline
- 正距円筒図法 & \verb|EC| \\ \hline
-\end{tabularx}
-\label{tab:map_proj}
-\end{center}
-\end{table}
 
 ここで、ランベルト正角円錐図法の設定方法については、設定方法が異なるため以下に説明する。
 ここでは、現実大気実験チュートリアルで使用した\verb|run.conf|ファイルを例に挙げる。\\

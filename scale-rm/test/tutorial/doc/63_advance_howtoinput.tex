@@ -1,18 +1,9 @@
-\section{任意のデータをSCALEで使用する} \label{sec:adv_datainput}
+\section{\SecAdvanceInputDataSetting} \label{sec:adv_datainput}
 %====================================================================================
 
-%\subsection{Topography and Landuse}
-
-%現在のSCALEでは用意されている地形・土地利用データよりも
-%高い解像度での計算ができない。
-%高解像度計算のためには、ユーザーが適宜データを用意する必要がある。
-
-%scale-rmでは日本領域については国土地理院のデータをもとにした地形，土地利用に関するデータベースを別途提供している（2.2節を参照）．
-
-
-\subsection{初期値・境界値データ} \label{sec:adv_bnddata}
+%\subsection{初期値・境界値データ} \label{sec:adv_bnddata}
 %------------------------------------------------------
-現在、SCALEでは下記のデータの読み込みとそれらに基づく初期値・境界値作成に対応している。
+現在、SCALE-RMでは下記のデータの読み込みとそれらに基づく初期値・境界値作成に対応している。
 
 \begin{table}[htb]
 \begin{center}
@@ -29,8 +20,7 @@
 \end{table}
 
 これらの使い分けは、初期値・境界値作成時、すなわち``scale-rm\_init''の実行時の設定ファイルの
-\verb|PARAM_MKINIT_REAL|の項目中の\verb|FILETYPE_ORG|に表\ref{tab:inputdata_format}に示した設定値を
-指定することで使い分ける。
+\namelist{PARAM_MKINIT_REAL}の項目中の\nmitem{FILETYPE_ORG}に表\ref{tab:inputdata_format}に示した設定値を指定することで使い分ける。
 
 バイナリデータとは、「4バイト単精度
 浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。その主な使用方法は、
