@@ -1,7 +1,7 @@
-\section{物理スキームの設定} \label{sec:basic_physics}
+\section{物理スキームの設定} \label{chap:basic_usel_physics}
 %------------------------------------------------------
 
-\subsection{雲微物理スキーム} \label{sec:basic_microphys}
+\subsection{雲微物理スキーム} \label{chap:basic_usel_microphys}
 %------------------------------------------------------
 雲微物理スキームの選択は、init.confとrun.conf中の
 \namelist{PARAM_TRACER}の中の\nmitem{TRACER_TYPE}、
@@ -85,7 +85,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 
 
-\subsection{乱流スキーム} \label{sec:basic_turbulence}
+\subsection{乱流スキーム} \label{chap:basic_usel_turbulence}
 %------------------------------------------------------
 
 乱流スキームの選択は，init.confとrun.conf中の
@@ -121,7 +121,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 
 
-\subsection{放射スキーム} \label{sec:basic_radiation}
+\subsection{放射スキーム} \label{chap:basic_usel_radiation}
 %-------------------------------------------------------------------------------
 放射スキームの選択は、init.confとrun.conf中の
 \namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_RD_TYPE}で設定する。
@@ -194,7 +194,7 @@ SCALEでは気温・気圧についてはCIRA86
 \namelist{PARAM_ATMOS_PHY_RD_MSTRN}でファイルのディレクトリと名前を指定する。
 
 
-\subsection{地表面(大気下端境界)} \label{sec:basic_surface}
+\subsection{地表面(大気下端境界)} \label{chap:basic_usel_surface}
 %------------------------------------------------------
 大気下端境界の選択は、init.confとrun.conf中の
 \namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_SF_TYPE}で以下のように設定する。
@@ -321,7 +321,7 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のよ�
 
 
 
-\subsection{海洋モデル} \label{sec:basic_ocean}
+\subsection{海洋モデル} \label{chap:basic_usel_ocean}
 %-------------------------------------------------------------------------------
 海洋過程は海面の状態量の更新と大気ー海洋間のフラックス計算の２つに大別される。
 これらの過程を計算するタイミングはどちらも\namelist{PARAM_TIME}で設定する。
@@ -413,11 +413,11 @@ run.conf中の\namelist{PARAM_ROUGHNESS}の\nmitem{ROUGHNESS_TYPE}で設定す�
 
 フラックス計算に使用するバルク交換係数の計算スキームは
 run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する。
-これらの詳細については、第\ref{sec:basic_surface}節参照のこと。
+これらの詳細については、第\ref{chap:basic_usel_surface}節参照のこと。
 
 
 
-\subsection{陸面モデル} \label{sec:basic_land}
+\subsection{陸面モデル} \label{chap:basic_usel_land}
 %-------------------------------------------------------------------------------
 陸面過程についても、海洋過程と同じく陸面の状態量の更新と大気ー陸面間のフラックス計算の２つに大別される。
 これらの過程が呼び出されるタイミングはどちらも\namelist{PARAM_TIME}で設定する。
@@ -485,7 +485,7 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する�
 %%%% 記載必要
 
 
-\subsection{都市モデル(大気-都市面フラックス)} \label{sec:basic_urban}
+\subsection{都市モデル(大気-都市面フラックス)} \label{chap:basic_usel_urban}
 %------------------------------------------------------
 都市モデルを用いる場合、
 \namelist{PARAM_ATMOS}において、\nmitem{ATMOS_PHY_SF_TYPE = "COUPLE"}である必要がある。

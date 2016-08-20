@@ -11,7 +11,7 @@
 \begin{itemize}
   \item {\bf システムハードウェア構成}\\
 必要なハードウェアは実験設定に依存するが、
-ここでは第\ref{chap:tutorial_ideal}章と第\ref{chap:tutorial_real}章の
+ここでは第\ref{chap:tutorial_ideal}章と第\ref{chap:tutorial_reall}章の
 チュートリアル実行に必要なスベックを示す。
   \begin{itemize}
     \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上が望ましい。
@@ -95,12 +95,12 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 %====================================================================================
 SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ、NetCDF, HDF5, MPI 等)
 のインストールを行う。
-詳細は、付録 \ref{sec:env_setting}章を参照のこと。
-第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルは、
+詳細は、付録 \ref{achap:env_setting}章を参照のこと。
+第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_reall}章のチュートリアルは、
 それらのライブラリ環境がインストールされていることを前提として進める。
 
 描画ツールとして、
-第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルでは
+第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_reall}章のチュートリアルでは
 クイックビューのためGPhysを使用する。
 また、GrADSを使った結果の描画方法についても紹介する。
 これらの描画ツールの詳細とインストール方法については
@@ -116,7 +116,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 \item CPU: Intel Core i5 2410M 2コア/4スレッド
 \item Memory: DDR3-1333 4GB
 \item OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64
-\item GNU C/C++, Fortran compiler (付録\ref{sec:env_setting}章参照)
+\item GNU C/C++, Fortran compiler (付録\ref{achap:env_setting}章参照)
 \end{itemize}
 
 \subsection{ソースコードの入手} \label{subsec:get_source_code}
@@ -131,7 +131,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
    scale-{\version}/
 \end{alltt}
 
-\subsection{Makedefファイルと環境変数の設定} \label{subsec:set_evniromnet}
+\subsection{Makedefファイルと環境変数の設定} \label{subsec:evniromnet}
 %-----------------------------------------------------------------------------------
 
 SCALEはコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
@@ -172,7 +172,7 @@ Linux OS、GNUコンパイラ、openMPIを使用する場合には、
 
 
 各種ライブラリのインストールを
-付録\ref{sec:env_setting}章に従って行った場合を除き、
+付録\ref{achap:env_setting}章に従って行った場合を除き、
 下記のPATHの設定が必要となる。
 HDF5とnetCDF4については、下記のように環境変数を設定する。
 例えば、Intel コンパイラを利用して、
@@ -241,7 +241,7 @@ SCALE-RMの出力ファイルは、ノードごとに分割されて出力され
 SCALEでは、これら出力ファイル（\verb|history.******.nc|）を結合し、
 GrADSで直接読み込めるデータ形式へ
 変換する後処理ツール「net2g」を提供している。
-第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルでも使用する。
+第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_reall}章のチュートリアルでも使用する。
 ここでは、net2gのコンパイル方法について説明する。
 
 %net2gはSCALE本体から独立したツールになっている

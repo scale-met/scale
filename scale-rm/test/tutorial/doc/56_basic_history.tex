@@ -10,7 +10,7 @@
 \end{enumerate}
 主要な変数についてはすでに1の手続きは行われているため、2の手続きだけ行えばよい。
 2の手続きだけで出力可能な変数については、
-付録\ref{app:vari_hist}にリストアップしてあるので、そちらを参照すること。
+付録\ref{achap:histroy_item}にリストアップしてあるので、そちらを参照すること。
 以下では、2の手続きについて、説明する。\\
 
 まず、出力ファイルと出力形式について、run.**.confの
@@ -82,7 +82,7 @@ run.**.confの\namelist{HISTITEM}に追加する。
 \caption{出力ファイルと出力形式の説明}
 \begin{tabularx}{150mm}{|l|X|} \hline
  \rowcolor[gray]{0.9} 設定変数 & 説明 \\ \hline
- \verb|ITEM      | & 変数名。 付録\ref{app:vari_hist}を参照\\ \hline
+ \verb|ITEM      | & 変数名。 付録\ref{achap:histroy_item}を参照\\ \hline
  \verb|BASENAME  | & \verb|HISTORY_DEFAULT_BASENAME|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
  \verb|TINTERVAL | & \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
  \verb|TUNIT     | & \verb|TINTERVAL|で指定した出力間隔の単位。\\ \hline
