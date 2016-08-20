@@ -50,7 +50,6 @@ module gtool_file
   public :: FileGetAllDatainfo
   public :: FileRead
   public :: FileWrite
-  public :: FileWriteVar
   public :: FileGetGlobalAttribute
   public :: FileSetGlobalAttribute
   public :: FileEndDef
@@ -122,16 +121,6 @@ module gtool_file
     module procedure FileWrite4DRealSP
     module procedure FileWrite4DRealDP
   end interface FileWrite
-  interface FileWriteVar
-    module procedure FileWriteVar1DRealSP
-    module procedure FileWriteVar1DRealDP
-    module procedure FileWriteVar2DRealSP
-    module procedure FileWriteVar2DRealDP
-    module procedure FileWriteVar3DRealSP
-    module procedure FileWriteVar3DRealDP
-    module procedure FileWriteVar4DRealSP
-    module procedure FileWriteVar4DRealDP
-  end interface FileWriteVar
   interface FileGetGlobalAttribute
      module procedure FileGetGlobalAttributeText
      module procedure FileGetGlobalAttributeInt
@@ -933,26 +922,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
             1, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
             1, (/1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -961,26 +962,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
             1, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
             1, (/1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -989,26 +1002,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
             2, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
             2, (/1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -1017,26 +1042,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
             2, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
             2, (/1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -1045,26 +1082,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:,:)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
             3, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
             3, (/1,1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -1073,26 +1122,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:,:)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
             3, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
             3, (/1,1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -1101,26 +1162,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:,:,:)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
             4, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, SP, & ! (in)
             4, (/1,1,1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -1129,26 +1202,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:,:,:)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
             4, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, DP, & ! (in)
             4, (/1,1,1,1/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -2902,26 +2987,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(SP), intent(in) :: var(:)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
+            1, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2939,26 +3043,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(DP), intent(in) :: var(:)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
+            1, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -2976,26 +3099,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(SP), intent(in) :: var(:,:)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
+            2, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -3013,26 +3155,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(DP), intent(in) :: var(:,:)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
+            2, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -3050,26 +3211,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(SP), intent(in) :: var(:,:,:)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
+            3, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -3087,26 +3267,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(DP), intent(in) :: var(:,:,:)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
+            3, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -3124,26 +3323,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(SP), intent(in) :: var(:,:,:,:)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
+            4, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -3161,26 +3379,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(DP), intent(in) :: var(:,:,:,:)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
+            4, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -3193,330 +3430,6 @@ contains
 
     return
   end subroutine FileWrite4DRealDP
-
-  !-----------------------------------------------------------------------------
-  ! interface FileWriteVar
-  !-----------------------------------------------------------------------------
-  subroutine FileWriteVar1DRealSP( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(SP), intent(in) :: var(:)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(:), ts, te, SP, & ! (in)
-         1, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar1DRealSP
-  subroutine FileWriteVar1DRealDP( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(DP), intent(in) :: var(:)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(:), ts, te, DP, & ! (in)
-         1, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar1DRealDP
-  subroutine FileWriteVar2DRealSP( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(SP), intent(in) :: var(:,:)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(:,:), ts, te, SP, & ! (in)
-         2, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar2DRealSP
-  subroutine FileWriteVar2DRealDP( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(DP), intent(in) :: var(:,:)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(:,:), ts, te, DP, & ! (in)
-         2, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar2DRealDP
-  subroutine FileWriteVar3DRealSP( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(SP), intent(in) :: var(:,:,:)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(:,:,:), ts, te, SP, & ! (in)
-         3, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar3DRealSP
-  subroutine FileWriteVar3DRealDP( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(DP), intent(in) :: var(:,:,:)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(:,:,:), ts, te, DP, & ! (in)
-         3, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar3DRealDP
-  subroutine FileWriteVar4DRealSP( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(SP), intent(in) :: var(:,:,:,:)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(:,:,:,:), ts, te, SP, & ! (in)
-         4, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar4DRealSP
-  subroutine FileWriteVar4DRealDP( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(DP), intent(in) :: var(:,:,:,:)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(:,:,:,:), ts, te, DP, & ! (in)
-         4, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar4DRealDP
 
   !-----------------------------------------------------------------------------
   subroutine FileEndDef( &

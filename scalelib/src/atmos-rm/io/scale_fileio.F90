@@ -2949,7 +2949,7 @@ contains
        varname,  &
        axistype  )
     use gtool_file, only: &
-       FileWriteVar
+       FileWrite
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -2999,7 +2999,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if ( exec ) call FileWriteVar( vid, var(dim1_S:dim1_E), NOWSEC, NOWSEC, start ) ! [IN]
+    if ( exec ) call FileWrite( fid, vid, var(dim1_S:dim1_E), NOWSEC, NOWSEC, start ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -3018,7 +3018,7 @@ contains
     use gtool_file, only: &
        RMISS
     use gtool_file, only: &
-       FileWriteVar
+       FileWrite
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -3120,9 +3120,9 @@ contains
           end do
           end do
 
-          call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), NOWSEC, NOWSEC, start ) ! [IN]
+          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), NOWSEC, NOWSEC, start ) ! [IN]
        else
-          call FileWriteVar( vid, var(dim1_S:dim1_E,dim2_S:dim2_E), NOWSEC, NOWSEC, start ) ! [IN]
+          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E), NOWSEC, NOWSEC, start ) ! [IN]
        end if
 
     end if
@@ -3144,7 +3144,7 @@ contains
     use gtool_file, only: &
        RMISS
     use gtool_file, only: &
-       FileWriteVar
+       FileWrite
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -3254,11 +3254,11 @@ contains
        end do
        end do
 
-       call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                          NOWSEC, NOWSEC, start ) ! [IN]
+       call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                       NOWSEC, NOWSEC, start ) ! [IN]
     else
-       call FileWriteVar( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                          NOWSEC, NOWSEC, start ) ! [IN]
+       call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                       NOWSEC, NOWSEC, start ) ! [IN]
     end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -3280,7 +3280,7 @@ contains
     use gtool_file, only: &
        RMISS
     use gtool_file, only: &
-       FileWriteVar
+       FileWrite
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -3375,9 +3375,9 @@ contains
           end do
           end do
 
-          call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), nowtime, nowtime, start ) ! [IN]
+          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), nowtime, nowtime, start ) ! [IN]
        else
-          call FileWriteVar( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), nowtime, nowtime, start ) ! [IN]
+          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), nowtime, nowtime, start ) ! [IN]
        end if
     else
        nowtime = 0.0_DP
@@ -3410,9 +3410,9 @@ contains
              end do
              end do
 
-             call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), nowtime, nowtime, start ) ! [IN]
+             call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), nowtime, nowtime, start ) ! [IN]
           else
-             call FileWriteVar( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), nowtime, nowtime, start ) ! [IN]
+             call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), nowtime, nowtime, start ) ! [IN]
           end if
           nowtime = nowtime + time_interval
        enddo
@@ -3437,7 +3437,7 @@ contains
     use gtool_file, only: &
        RMISS
     use gtool_file, only: &
-       FileWriteVar
+       FileWrite
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -3545,11 +3545,11 @@ contains
           end do
           end do
 
-          call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                             nowtime, nowtime, start ) ! [IN]
+          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                          nowtime, nowtime, start ) ! [IN]
        else
-          call FileWriteVar( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg), &
-                             nowtime, nowtime, start ) ! [IN]
+          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg), &
+                          nowtime, nowtime, start ) ! [IN]
        end if
     else
        nowtime = 0.0_DP
@@ -3590,11 +3590,11 @@ contains
              end do
              end do
 
-             call FileWriteVar( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                                nowtime, nowtime, start ) ! [IN]
+             call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                             nowtime, nowtime, start ) ! [IN]
           else
-             call FileWriteVar( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
-                                nowtime, nowtime, start ) ! [IN]
+             call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
+                             nowtime, nowtime, start ) ! [IN]
           end if
           nowtime = nowtime + time_interval
        enddo

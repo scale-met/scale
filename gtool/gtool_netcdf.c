@@ -1224,83 +1224,6 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_write_data( int32_t  fid,        // (in)
-                         int32_t  vid,        // (in)
-			 void    *var,        // (in)
-			 real64_t t_start,    // (in)
-			 real64_t t_end,      // (in)
-			 int32_t  precision)  // (in)
-{
-  int ncid, varid;
-
-  if ( vars[vid] == NULL ) return ALREADY_CLOSED_CODE;
-
-  ncid = vars[vid]->ncid;
-
-#ifdef NETCDF3
-  if (files[fid]->defmode == 1) {
-    CHECK_ERROR( nc_enddef(ncid) )
-    files[fid]->defmode = 0;
-  }
-#endif
-
-  varid = vars[vid]->varid;
-  if ( vars[vid]->t != NULL ) { // have time dimension
-    if ( vars[vid]->t->count < 0 ||  // first time
-	 t_end > vars[vid]->t->t + TEPS ) { // time goes next step
-      vars[vid]->t->count += 1;
-      vars[vid]->t->t = t_end;
-      size_t index[2];
-      index[0] = vars[vid]->t->count;
-      CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->varid, index, &t_end) )
-      index[1] = 0;
-      CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->bndsid, index, &t_start) )
-      index[1] = 1;
-      CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->bndsid, index, &t_end) )
-      vars[vid]->start[0] = vars[vid]->t->count;
-    } else {
-      size_t nt = vars[vid]->t->count + 1;
-      double t[nt];
-      size_t s[1];
-      int flag, n;
-      s[0] = 0;
-      CHECK_ERROR( nc_get_vara_double(ncid, vars[vid]->t->varid, s, &nt, t) )
-      flag = 1;
-      for(n=nt-1;n>=0;n--) {
-	if ( fabs(t[n]-t_end) < TEPS ) {
-	  vars[vid]->start[0] = n;
-	  flag = 0;
-	  break;
-	}
-      }
-      if ( flag ) {
-	fprintf(stderr, "cannot find time: %f\n", t_end);
-	fprintf(stderr, "  time count is : %d, last time is: %f, diff is: %e\n", vars[vid]->t->count < 0, vars[vid]->t->t, vars[vid]->t->t-t_end);
-	fprintf(stderr, "  time is: ");
-	for (n=0;n<nt;n++) fprintf(stderr, "%f, ", t[n]);
-	fprintf(stderr, "\n");
-	return ERROR_CODE;
-      }
-    }
-  }
-
-  switch (precision) {
-  case 8:
-    CHECK_ERROR( nc_put_vara_double(ncid, varid, vars[vid]->start, vars[vid]->count, (double*)var) )
-    break;
-  case 4:
-    CHECK_ERROR( nc_put_vara_float(ncid, varid, vars[vid]->start, vars[vid]->count, (float*)var) )
-    break;
-  default:
-    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
-    return ERROR_CODE;
-  }
-
-  CHECK_ERROR( nc_sync(ncid) )
-
-  return SUCCESS_CODE;
-}
-
 int32_t file_enddef( int32_t fid ) // (in)
 {
   int ncid;
@@ -1364,31 +1287,40 @@ int32_t file_flush( int32_t fid ) // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_write_var( int32_t     vid,        // (in)
-			void       *var,        // (in)
-			real64_t    t_start,    // (in)
-			real64_t    t_end,      // (in)
-			int32_t     precision,  // (in)
-			MPI_Offset *start,      // (in)
-			MPI_Offset *count)      // (in)
+int32_t file_write_data( int32_t     fid,        // (in)
+                         int32_t     vid,        // (in)
+			 void       *var,        // (in)
+			 real64_t    t_start,    // (in)
+			 real64_t    t_end,      // (in)
+			 int32_t     precision,  // (in)
+			 MPI_Offset *start,      // (in)
+			 MPI_Offset *count)      // (in)
 {
   int ncid, varid;
   if ( vars[vid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = vars[vid]->ncid;
+
+#ifdef NETCDF3
+  if ( files[fid]->defmode == 1 && ! vars[vid]->shared_mode ) {
+    CHECK_ERROR( nc_enddef(ncid) )
+    files[fid]->defmode = 0;
+  }
+#endif
+
   varid = vars[vid]->varid;
   if ( vars[vid]->t != NULL ) { // have time dimension
     if ( vars[vid]->t->count < 0 ||  // first time
          t_end > vars[vid]->t->t + TEPS ) { // time goes next step
       vars[vid]->t->count += 1;
       vars[vid]->t->t = t_end;
-      if ( vars[vid]->shared_mode ) {
+      if ( vars[vid]->shared_mode ) { // write a new value to variable time
         MPI_Offset index[2];
         index[0] = (MPI_Offset) vars[vid]->t->count;
-        CHECK_PNC_ERROR( ncmpi_bput_var1_double(ncid, vars[vid]->t->varid, index, &t_end, NULL) )
+        CHECK_PNC_ERROR( ncmpi_put_var1_double_all(ncid, vars[vid]->t->varid, index, &t_end) )
         index[1] = 0;
-        CHECK_PNC_ERROR( ncmpi_bput_var1_double(ncid, vars[vid]->t->bndsid, index, &t_start, NULL) )
+        CHECK_PNC_ERROR( ncmpi_put_var1_double_all(ncid, vars[vid]->t->bndsid, index, &t_start ) )
         index[1] = 1;
-        CHECK_PNC_ERROR( ncmpi_bput_var1_double(ncid, vars[vid]->t->bndsid, index, &t_end, NULL) )
+        CHECK_PNC_ERROR( ncmpi_put_var1_double_all(ncid, vars[vid]->t->bndsid, index, &t_end ) )
       } else {
         size_t index[2];
         index[0] = vars[vid]->t->count;
@@ -1404,11 +1336,9 @@ int32_t file_write_var( int32_t     vid,        // (in)
       double t[nt];
       int flag, n;
       if ( vars[vid]->shared_mode ) {
-        MPI_Offset ntp = (MPI_Offset) nt;
-        MPI_Offset s[1];
-        s[0] = 0;
-        CHECK_PNC_ERROR( ncmpi_get_vara_double_all(ncid, vars[vid]->t->varid, s, &ntp, t) )
-        nt = ntp;
+        MPI_Offset c = (MPI_Offset) nt;
+        MPI_Offset s=0;
+        CHECK_PNC_ERROR( ncmpi_get_vara_double_all(ncid, vars[vid]->t->varid, &s, &c, t) )
       } else {
         size_t s[1];
         s[0] = 0;
@@ -1431,8 +1361,17 @@ int32_t file_write_var( int32_t     vid,        // (in)
         return ERROR_CODE;
       }
     }
-    start[0] = vars[vid]->start[0];  // start along the time dimension
-    count[0] = vars[vid]->count[0];
+    if ( vars[vid]->shared_mode ) {
+      // add time dimension to start[0] and count[0]
+      int i, ndims;
+      CHECK_PNC_ERROR( ncmpi_inq_varndims(ncid, varid, &ndims) )
+      for (i=ndims-1; i>0; i--) {
+        start[i] = start[i-1];
+        count[i] = count[i-1];
+      }
+      start[0] = vars[vid]->start[0];  // start along the time dimension
+      count[0] = vars[vid]->count[0];
+    }
   }
 
   switch (precision) {

@@ -580,20 +580,10 @@ void file_write_data_( int32_t  *fid,       // (in)
 		       real64_t *t_start,   // (in)
 		       real64_t *t_end,     // (in)
 		       int32_t  *precision, // (in)
+		       int32_t  *ndims,     // (in)
+		       int32_t  *start,     // (in)
+		       int32_t  *count,     // (in)
 		       int32_t  *error)     // (out)
-{
-  *error = file_write_data( *fid, *vid, var, *t_start, *t_end, *precision );
-}
-
-void file_write_var_( int32_t  *vid,       // (in)
-		      void     *var,       // (in)
-		      real64_t *t_start,   // (in)
-		      real64_t *t_end,     // (in)
-		      int32_t  *precision, // (in)
-		      int32_t  *ndims,     // (in)
-		      int32_t  *start,     // (in)
-		      int32_t  *count,     // (in)
-		      int32_t  *error)     // (out)
 {
   int i;
   MPI_Offset start_[4], count_[4]; /* assume max ndims is 4 */
@@ -602,7 +592,7 @@ void file_write_var_( int32_t  *vid,       // (in)
       start_[i] = start[*ndims - i - 1] -  1;
       count_[i] = count[*ndims - i - 1];
   }
-  *error = file_write_var( *vid, var, *t_start, *t_end, *precision, start_, count_ );
+  *error = file_write_data( *fid, *vid, var, *t_start, *t_end, *precision, start_, count_ );
 }
 
 void file_close_( int32_t *fid ,   // (in)

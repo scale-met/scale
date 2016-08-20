@@ -52,7 +52,6 @@ module gtool_file
   public :: FileGetAllDatainfo
   public :: FileRead
   public :: FileWrite
-  public :: FileWriteVar
   public :: FileGetGlobalAttribute
   public :: FileSetGlobalAttribute
   public :: FileEndDef
@@ -109,13 +108,6 @@ module gtool_file
 %   end
 % end
   end interface FileWrite
-  interface FileWriteVar
-% for n in 1..4
-%   %w(SP DP).each do |rp|
-    module procedure FileWriteVar<%=n%>DReal<%=rp%>
-%   end
-% end
-  end interface FileWriteVar
   interface FileGetGlobalAttribute
      module procedure FileGetGlobalAttributeText
      module procedure FileGetGlobalAttributeInt
@@ -624,26 +616,38 @@ contains
        fid,       & ! (in)
        name,      & ! (in)
        val,       & ! (in)
-       start      ) ! (in)
+       start,     & ! (in)
+       count,     & ! (in)
+       ndims      ) ! (in)
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(<%=rp%>),    intent(in)           :: val(<%=Array.new(n){":"}.join(",")%>)
     integer,          intent(in), optional :: start(:)
+    integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
+    integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
     integer error
     intrinsic size, shape
 
-    if ( present(start) ) then
+    if ( present(ndims) ) then
+       ! Note this is called for history coordinates which have been reshaped
+       ! from 2D/3D into 1D array. In this case, start and count must be also present
+       call file_write_associated_coordinates( fid, name, val, <%=rp%>, & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
+    else if ( present(start) ) then
+       ! Note this is called for restart coordinates
        call file_write_associated_coordinates( fid, name, val, <%=rp%>, & ! (in)
             <%=n%>, start, shape(val),                                  & ! (in)
             error                                                       ) ! (out)
     else
+       ! Note this is for the one-file-per-process I/O method
        call file_write_associated_coordinates( fid, name, val, <%=rp%>, & ! (in)
             <%=n%>, (/<%=([1]*n).join(",")%>/), shape(val),             & ! (in)
             error                                                       ) ! (out)
     end if
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -1313,26 +1317,45 @@ contains
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
-      t_end    & ! (in)
+      t_end,   & ! (in)
+      start,   & ! (in)
+      count,   & ! (in)
+      ndims    & ! (in)
       )
     implicit none
 
     real(<%=rp%>), intent(in) :: var(<%=idx%>)
-    integer,  intent(in) :: fid
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    integer,  intent(in)           :: fid
+    integer,  intent(in)           :: vid
+    real(DP), intent(in)           :: t_start
+    real(DP), intent(in)           :: t_end
+    integer,  intent(in), optional :: start(:)
+    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
+    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
 
     real(DP) :: ts, te
 
     integer :: error, n
     character(len=100) :: str
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = t_start
     te = t_end
-    call file_write_data( fid, vid, var(<%=idx%>), ts, te, <%=rp%>, & ! (in)
-         error                                     ) ! (out)
+
+    if ( present(ndims) ) then
+       ! history variable has been reshaped to 1D
+       ! In this case, count must be present
+       call file_write_data( fid, vid, var(<%=idx%>), ts, te, <%=rp%>, & ! (in)
+            ndims, start, count,                                       & ! (in)
+            error                                                      ) ! (out)
+    else
+       ! this is for restart variable which keeps its original shape
+       call file_write_data( fid, vid, var(<%=idx%>), ts, te, <%=rp%>, & ! (in)
+            <%=d%>, start, shape(var),                                 & ! (in)
+            error                                                      ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        do n = 1, File_vid_count
           if ( File_vid_list(n) == vid ) then
@@ -1345,55 +1368,6 @@ contains
 
     return
   end subroutine FileWrite<%=d%>DReal<%=rp%>
-%   end
-% end
-
-  !-----------------------------------------------------------------------------
-  ! interface FileWriteVar
-  !-----------------------------------------------------------------------------
-% for d in 1..4
-%   idx = ( [":"]*d ).join(",")
-%   ["SP", "DP"].each do |rp|
-  subroutine FileWriteVar<%=d%>DReal<%=rp%>( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    & ! (in)
-      )
-    implicit none
-
-    real(<%=rp%>), intent(in) :: var(<%=idx%>)
-    integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
-    integer,  intent(in) :: start(:)
-
-    real(DP) :: ts, te
-
-    integer :: error, n
-    character(len=100) :: str
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    ts = t_start
-    te = t_end
-    call file_write_var( vid, var(<%=idx%>), ts, te, <%=rp%>, & ! (in)
-         <%=d%>, start, shape(var),                           & ! (in)
-         error                                                ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       do n = 1, File_vid_count
-          if ( File_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
-             exit
-          end if
-       enddo
-       call Log('E', trim(str))
-    end if
-
-    return
-  end subroutine FileWriteVar<%=d%>DReal<%=rp%>
 %   end
 % end
 
