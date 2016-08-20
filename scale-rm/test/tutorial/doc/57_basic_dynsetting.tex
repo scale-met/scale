@@ -1,8 +1,8 @@
-\section{力学スキームの設定} \label{sec:atmos_dyn}
+\section{\SecBasicDynamicsSetting} \label{sec:atmos_dyn}
 %------------------------------------------------------
 
 
-\subsection{数値解法}  \label{subsec:atmos_dyn_sover}
+\subsection{\SubsecDynsolverSetting}  \label{subsec:atmos_dyn_sover}
 %------------------------------------------------------
 時間方向の数値解法選択は、
 設定ファイルの\namelist{PARAM_ATMOS}の\nmitem{ATMOS_DYN_TYPE}で行う。\\
@@ -30,7 +30,7 @@
 \end{table}
 
 
-\subsection{時間・空間差分スキーム} \label{subsec:atmos_dyn_scheme}
+\subsection{\SubsecDynSchemeSetting} \label{subsec:atmos_dyn_scheme}
 %------------------------------------------------------
 時間・空間差分スキームの設定は、設定ファイルの\namelist{PARAM_ATMOS_DYN}で設定する。
 また、空間スキームによってはハロの数の設定も必要である。

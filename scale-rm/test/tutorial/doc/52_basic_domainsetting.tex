@@ -1,7 +1,8 @@
-\section{対象計算領域の設定} \label{sec:domain}
+%\section{対象計算領域の設定} \label{sec:domain}
+\section{\SecBasicDomainSetting} \label{sec:domain}
 %=======================================================================
 
-\subsection{計算領域と解像度、格子点数、MPIプロセスの関係} \label{subsec:relation_dom_reso}
+\subsection{\SubsecRelationOfResoGridProcess} \label{subsec:relation_dom_reso}
 各設定を行う前に、SCALE-RMでの計算領域、解像度、格子点数、MPIプロセスの関係を整理しておく。
 計算領域は、水平格子間隔と格子点数を指定することで決定されるようになっている。
 図\ref{fig:domain}は、
@@ -47,7 +48,7 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 \end{center}
 \end{figure}
 
-\subsection{計算領域の設定} \label{subsec:relation_dom_reso2}
+\subsection{\SubsecDomainSetting} \label{subsec:relation_dom_reso2}
 
 \ref{subsec:relation_dom_reso}節で述べた関係が理解できれば、領域の設定は容易である。
 すなわち、式(\ref{eq:xgridnum},\ref{eq:ygridnum})を使って、
@@ -102,7 +103,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 
 
-\subsection{水平・鉛直格子数} \label{subsec:relation_dom_reso4}
+\subsection{\SubsecGridNumSettng} \label{subsec:relation_dom_reso4}
 %-----------------------------------------------------------------------
 
 格子数の設定は、設定ファイル(\verb|***.conf|)の\namelist{PARAM_INDEX}で行う。
@@ -122,7 +123,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 
 
-\subsection{水平・鉛直格子間隔} \label{subsec:gridinterv}
+\subsection{\SubsecGridIntvSettng} \label{subsec:gridinterv}
 %-----------------------------------------------------------------------
 SCALE-RMでは、水平方向には格子点の位置を均等間隔に設定する。
 鉛直方向には均等間隔でも任意の格子点位置を直接指定することもできる。
