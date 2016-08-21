@@ -1,23 +1,23 @@
 \section{はじめに} \label{sec:introduction}
 %==============================================================%
 
-本書は初めて領域気象気候モデル(SCALE-RM)
+本書は初めて領域気象気候モデル({\scalerm})
 を利用するユーザー向けに解説したユーザーズガイドです。
-気象気候ライブラリーSCALE version \version に対応した説明を記載します。
-現在、SCALEを利用するため、領域モデルSCALE-RMと全球モデルSCALE-GMが
+気象気候ライブラリー\scalelib version \version に対応した説明を記載します。
+現在、\scalelib を利用するため、領域モデル\scalerm と全球モデル\scalegmが
 用意されていますが、後者は、力学コアの整備のみされています。
-そのため、本版では、SCALE-RMの使い方についてのみ詳しく述べています。
-SCALE-GMについては、次版で詳しく記載される予定です。
-SCALE-RMの使い方を通して、SCALEを他のモデルからの呼び出す方法を
+そのため、本版では、\scalerm の使い方についてのみ詳しく述べています。
+\scalegm については、次版で詳しく記載される予定です。
+\scalerm の使い方を通して、\scalelib を他のモデルからの呼び出す方法を
 習得することも可能です。
-第\ref{chap:overview}章でSCALEの概要について、
+第\ref{chap:overview}章で\scalelib の概要について、
 第\ref{chap:install}章で必要な環境、およびインストール方法について説明します。
 続いて、第\ref{chap:tutorial_ideal}章で基本的な操作方法、
 第\ref{chap:tutorial_real}章で現実大気実験の実行方法について
 簡単な例を示しながら説明します。
 第\ref{chap:install}章から第\ref{chap:tutorial_real}章までは
 ひと繋がりのチュートリアルとなっており、
-SCALE-RMを初めて使うユーザーは一通り通読することをお勧めます。
+\scalerm を初めて使うユーザーは一通り通読することをお勧めます。
 第\ref{chap:basic_usel}章以降は、設定の変更、機能やツールの説明が記載されています。
 
 %%%
@@ -26,36 +26,36 @@ SCALE-RMを初めて使うユーザーは一通り通読することをお勧め
 
 
 
-\subsection{SCALEの特徴} \label{subsec:scale_feature}
+\subsection{\scalelib の特徴} \label{subsec:scale_feature}
 %--------------------------------------------------------------%
 
-SCALE (Scalable Computing for Advanced Library and Environment)は
+\scalelib (Scalable Computing for Advanced Library and Environment)は
 計算機を用いて気象・気候科学計算を行う上で、
 研究を進めやすいように事前処理から数値計算、
 解析に至るまですべての過程を網羅する数値計算ライブラリを
 目指したソフトウェアである。下記に挙げるような特徴を持つ。
 \begin{itemize}
-\item SCALEは、「BSD-2ライセンス」のもとオープンソースソフトウェア
+\item \scalelib は、「BSD-2ライセンス」のもとオープンソースソフトウェア
 として提供されており、商用、非商用に関わらず自由な利用・改変・再配布が可能である。
-\item SCALEには、SCALE-RM(SCALE-Regional Model)、
+\item \scalelib には、\scalerm (SCALE-Regional Model)、
 %SCALE-GM(SCALE-Global Model)
 といった組み上げ済みの数値モデルが含まれている。
-\item SCALEには、次節で説明する様々なコンポーネントが導入されており、
+\item \scalelib には、次節で説明する様々なコンポーネントが導入されており、
 必要に応じて取り替えることが可能である。
-\item SCALEで提供されている物理過程は、他の数値モデルへ組み込んで
+\item \scalelib で提供されている物理過程は、他の数値モデルへ組み込んで
 使用することも可能である。
 \end{itemize}
 
 ライセンスの詳細は、トップディレクトリ直下の``\verb|scale/LICENSE|''のファイルに記述されている。
-SCALEの使用前に一読しておくこと。またSCALEのWebページにも説明が記載されているので必要に応じて
+\scalelib の使用前に一読しておくこと。またSCALEのWebページにも説明が記載されているので必要に応じて
 参照すること（\url{http://scale.aics.riken.jp/}）。
 
 
 
-\subsection{SCALE-RMモデルの構成}  \label{subsec:sturcture_scale_rm}
+\subsection{\scalerm の構成}  \label{subsec:sturcture_scale_rm}
 %--------------------------------------------------------------%
-現在、SCALEには下記のコンポーネントが実装されている。
-SCALE-RM ではすべてのコンポーネントが利用可能である。
+現在、\scalelib には下記のコンポーネントが実装されている。
+\scalerm ではすべてのコンポーネントが利用可能である。
 詳細なモデル構成や差分化手法については、
 \citet{scale_2015}、\citet{satoy_2015b}、
 および\citet{nishizawa_2015}を参照されたい。\\
@@ -72,9 +72,9 @@ SCALE-RM ではすべてのコンポーネントが利用可能である。
     \item オフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)
    \end{itemize}
  \item 複数事例一括実行 システム（バルクジョブシステム）
- \item CF 規約\footnote{\url{http:/cfconventions.org}}に基づく netCDF ファイル I/O
+ \item CF 規約\footnote{\url{http:/cfconventions.org}}に基づく \netcdf ファイル I/O
    \begin{itemize}
-   \item netCDF3 または netCDF4 形式
+   \item {\netcdf}3 または {\netcdf}4 形式
    \end{itemize}
  \item 外部データ読み込みによる初期値・境界値データ作成
    \begin{itemize}
@@ -95,10 +95,10 @@ NICAM\footnote{\url{http://nicam.jp}}、
    \end{itemize}
  \item 空間差分:
     \begin{itemize}
-      \item 2次中央差分(2-nd order central difference scheme)
-      \item 4次中央差分(4-th order central difference scheme)
-      \item 6次中央差分(6-th order central difference scheme)
-      \item 3次風上差分(3-rd order upwind difference scheme)
+      \item 2次中央差分(2nd order central difference scheme)
+      \item 4次中央差分(4th order central difference scheme)
+      \item 6次中央差分(6th order central difference scheme)
+      \item 3次風上差分(3rd order upwind difference scheme)
 %      \item 3次風上差分（Koren(1993)filterあり）(3rd order upwind difference scheme with \citet{Koren_1993} filter)
       \item 5次風上差分(5-th order upwind difference scheme)
     \end{itemize}
@@ -143,30 +143,30 @@ NICAM\footnote{\url{http://nicam.jp}}、
   \end{itemize}
 \end{itemize}
 
-上記に加え、SCALE-RM のコンポーネントとして、
+上記に加え、\scalerm のコンポーネントとして、
 現実事例の計算に必要な地形や土地利用データを作成するツール、
 理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。
 
-次節でSCALEの思想とモデルの関係について説明するが、
-SCALE-RMの実行とは直接関係ないため、
+次節で\scalelib の思想とモデルの関係について説明するが、
+\scalerm の実行とは直接関係ないため、
 必要なければ読み飛ばしても構わない。
 
 
-\subsection{SCALEのライブラリとモデル} \label{subsec:scalelib_model}
+\subsection{\scalelib のライブラリとモデル} \label{subsec:scalelib_model}
 
 \begin{figure}[htb]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/library.eps}\\
-  \caption{SCALEのねらい}
+  \caption{\scalelib のねらい}
   \label{fig:scale}
 \end{center}
 \end{figure}
 
-SCALEは、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に
+\scalelib は、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に
 開発が進められている気象・気候科学計算向けのライブラリである。
-図 \ref{fig:scale}にSCALEの思想の概念図を示す。
+図 \ref{fig:scale}に\scalelib の思想の概念図を示す。
 この図に示されるような諸問題に対応することを目指している。
-SCALEは次世代のスーパーコンピュータから小型PCクラスターに至るまで
+\scalelib は次世代のスーパーコンピュータから小型PCクラスターに至るまで
 広く用いられる事を念頭において開発されており、
 気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が
 共同で開発を行っている。
@@ -179,18 +179,14 @@ SCALEは次世代のスーパーコンピュータから小型PCクラスター�
 提供する。
 
 
-SCALEを利用した数値モデルとして、
-SCALE-RMが含まれている(図 \ref{fig:scale-rm})。
+\scalelib を利用した数値モデルとして、
+\scalerm が含まれている(図 \ref{fig:scale-rm})。
 格子系、力学コア、各種物理過程などの基本的なコンポーネントは
-SCALEが提供する。
-SCALE-RM は、予報変数などを配列を持ち、
-SCALEのコンポーネントを適切に呼び出すことで時間発展計算を行っている。
+\scalelib が提供する。
+\scalerm は、予報変数などを配列を持ち、
+\scalelib のコンポーネントを適切に呼び出すことで時間発展計算を行っている。
 ユーザーは、必要に応じて、各コンポーネントを選択し、
 組み合わせて使用することが可能である。
-%このSCALE-RMを気象研究に適用した事例には
-%\citet{satoy_2014}、\citet{satoy_2015}がある。
-%ユーザーは、SCALEを用いてSCALE-RMと同様な方法によって
-%新たなモデル作ることができる。
 
 
 \begin{figure}[hbt]

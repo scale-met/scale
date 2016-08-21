@@ -2,7 +2,7 @@
 %  File 21_install.tex
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-本章では、SCALEのコンパイル及び、実行に必要な環境について説明する。
+本章では、\scalelib と\scalerm のコンパイル及び、実行に必要な環境について説明する。
 
 \section{必要なシステム環境} \label{sec:req_env}
 %====================================================================================
@@ -36,7 +36,7 @@
 
 \noindent {\bf あると便利なシステム環境}
 \begin{itemize}
-  \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、SCALEで読込可能な入力データの作成が可能である。Tutorialの現実大気実験では、wgrib2を使用する。
+  \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、\scalerm で読込可能な入力データの作成が可能である。チュートリアルの現実大気実験では、wgribを使用する。
   \item {\bf 描画環境}：\grads \footnote{\url{http://cola.gmu.edu/grads/}}、
 GPhys/Ruby-DCL\footnote{\url{https://www.gfd-dennou.org/arch/ruby/products/gphys/}}、
 ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}など。
@@ -86,14 +86,14 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 \end{center}
 \end{table}
 
-以上で説明したもの以外に、SCALEは、
+以上で説明したもの以外に、\scalelib は、
 理化学研究所 計算科学研究機構のスーパーコンピュータ「京」、
 及びFujitsu PRIME-HPC FX10の環境でも動作確認されている。
 
 
 \section{ライブラリ環境のインストール} \label{sec:inst_env}
 %====================================================================================
-SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ、NetCDF, HDF5, MPI 等)
+\scalelib ライブラリに必要な各種ライブラリ(C, Fortranコンパイラ、NetCDF, HDF5, MPI 等)
 のインストールを行う。
 詳細は、付録 \ref{achap:env_setting}章を参照のこと。
 第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルは、
@@ -108,7 +108,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 
 
 
-\section{SCALEのコンパイル} \label{sec:scale_compile}
+\section{\scalelib のコンパイル} \label{sec:scale_compile}
 %====================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -134,7 +134,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 \subsection{Makedefファイルと環境変数の設定} \label{subsec:evniromnet}
 %-----------------------------------------------------------------------------------
 
-SCALEはコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
+\scalelib はコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
 Makedefファイルを使用してコンパイルが行われる。
 Makdefファイルは、\texttt{scale-{\version}/sysdep/}内にいくつかの計算機環境に
 対応するファイル（\texttt{Makedef.***}）が準備されており、
@@ -221,9 +221,9 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 
 {\bf 注意点}
 \begin{itemize}
-\item SCALEは、scaleのTOPディレクトリ直下の
+\item \scalelib は、scaleのTOPディレクトリ直下の
  \verb|scale-{ver}/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われる。
- SCALE-RM は、コンパイルを実行したディレクトリの下の
+ \scalerm は、コンパイルを実行したディレクトリの下の
  \verb|".lib"|という名前の隠しディレクトリの中にコンパイルされたオブジェクトファイルが置かれ、実行バイナリファイルはカレントディレクトリにコピーされる。
 \item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 DEBUG=T"|としてコンパイルする。
 \item 細かくコンパイルオプションを変更したい場合は、\verb|Makedef.***|のファイルを編集する。
@@ -237,8 +237,8 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 \section{後処理ツール(net2g)のコンパイル} \label{sec:source_net2g}
 %====================================================================================
 
-SCALE-RMの出力ファイルは、ノードごとに分割されて出力される。
-SCALEでは、これら出力ファイル（\verb|history.******.nc|）を結合し、
+\scalerm の出力ファイルは、ノードごとに分割されて出力される。
+\scalelib では、これら出力ファイル（\verb|history.******.nc|）を結合し、
 \grads で直接読み込めるデータ形式へ
 変換する後処理ツール「net2g」を提供している。
 第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルでも使用する。
