@@ -1,9 +1,9 @@
-\section{\SecBasicTopoSetting} \label{sec:basic_usel_topo}
+\subsection{\SecBasicTopoSetting} \label{subsec:basic_usel_topo}
 %-----------------------------------------------------------------------
 
 SCALE-RMでは地形データに対しモデル下端の格子面を傾斜させて地形を表現するTerrain followingを採用している。
 力学計算過程において安定的に計算を実行するためには、この地形の傾斜角度が45度以下でなければならない。
-水平の最大格子間隔をDX [m]、鉛直の最小格子間隔をDZ [m]とすると、地形傾斜角度θ [deg]は次の式で計算される。
+水平の最大格子間隔をDX [m]、鉛直の最小格子間隔をDZ [m]とすると、地形傾斜角度$\theta$[deg]は次の式で計算される。
 
 \[ \theta = \arctan( DZ/DX ) * 180/pi \]
 
