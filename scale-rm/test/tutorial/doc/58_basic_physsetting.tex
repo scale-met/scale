@@ -125,8 +125,8 @@ micpara.datに記載されているnbinが異なれば、\\
 %-------------------------------------------------------------------------------
 放射スキームの選択は、init.confとrun.conf中の
 \namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_RD_TYPE}で設定する。
-放射スキームが呼び出されるタイミングは、\namelist{PARAM_TIME}で以下のように設定する。
-時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
+放射スキームが呼び出されるタイミングは、\namelist{PARAM_TIME}で設定するが、
+これについては第\ref{sec:timeintiv}節を参照のこと。\\
 
 \noindent {\gt
 \ovalbox{
@@ -154,8 +154,27 @@ micpara.datに記載されているnbinが異なれば、\\
 放射計算のための太陽放射量は、
 モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
 理想実験のために、太陽放射量、緯度経度、時刻を固定することも出来る。
-これらは\namelist{PARAM_ATMOS_SOLARINS}で設定する。
-%%%% 記載が必要！！！！！＊＊＊＊
+これらは\namelist{PARAM_ATMOS_SOLARINS}で設定する。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_ATMOS_SOLARINS        | & \\
+\verb| ATMOS_SOLARINS_constant    = 1360.250117   | & 太陽定数 [W/m2] \\
+\verb| ATMOS_SOLARINS_fixedlatlon = .false.       | & 放射計算の緯度経度を固定するかどうか\\
+\verb| ATMOS_SOLARINS_fixeddate   = .false.       | & 放射計算の日時を固定するかどうか\\
+\verb| ATMOS_SOLARINS_lon         = 135.221       | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の経度 [deg.] \\
+\verb| ATMOS_SOLARINS_lat         =  34.653       | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の緯度 [deg.]\\
+\verb| ATMOS_SOLARINS_date = -1,-1,-1,-1,-1,-1,   | & \verb|ATMOS_SOLARINS_fixeddate=.true.|の場合の年月日時刻 [Y,M,D,H,M,S]\\
+\verb|/|            & \\
+\end{tabularx}
+}}}\\
+
+上記は初期値を示している。
+\namelist{PARAM_MAPPROJ}の\nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat}が設定されている場合には、
+\nmitem{ATMOS_SOLARINS_lon,ATMOS_SOLARINS_lat}の初期値は、\\
+\nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat}がそれぞれ与えられる。
+
 
 実験設定によっては、モデルトップの高度が10-20 kmと低いことがしばしばある。
 そのため放射計算ではモデルトップとは別の最上層高度を設定し、
@@ -166,8 +185,33 @@ micpara.datに記載されているnbinが異なれば、\\
 追加される高度はデフォルトの場合10層で表現する。
 すなわち、モデルトップが22kmであれば、放射スキーム内では
 7.8km$\times$10層が追加されて計算される。
-これらは\verb|MSTRNX|なら\namelist{PARAM_ATMOS_PHY_RD_MSTRN}で設定する。
-%%%%% どこで？設定するのか？を記載する必要アリ
+これらは\verb|MSTRNX|なら\namelist{PARAM_ATMOS_PHY_RD_MSTRN}で設定する。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_ATMOS_PHY_RD_MSTRN | & \\
+\verb| ATMOS_PHY_RD_MSTRN_KADD                  = 10 | & モデルトップから大気トップまでの間の放射計算用の層数 \\
+\verb| ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = "PARAG.29"     | & ガスパラメータの入力ファイル \\
+\verb| ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "PARAPC.29"    | & エアロゾルパラメータの入力ファイル\\ 
+\verb| ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = "VARDATA.RM29" | & 吸湿性エアロゾルパラメータの入力ファイル\\
+\verb| ATMOS_PHY_RD_MSTRN_nband                 = 29             | &  wave bands\\
+\verb| ATMOS_PHY_RD_MSTRN_nptype                = 11             | & エアロゾルの種類の数\\
+\verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              | & radius mode for hygroscopic parameter\\
+\verb| ATMOS_PHY_RD_MSTRN_ONLY_QCI              = .false.        | & ? \\
+\verb|/| & \\
+\end{tabularx}
+}}}\\
+
+\verb|MSTRNX|を実行するには、放射計算のためのパラメータテーブルが必要である。
+デフォルトでは太陽放射から赤外放射までを29バンド111チャンネルに分割し、
+雲・エアロゾル粒子の粒径を6ビンで表した時のテーブルを用いている。
+パラメータファイル（3種類）も、
+\begin{verbatim}
+  scale-rm/test/data/rad/
+\end{verbatim}
+に用意されている。
+\namelist{PARAM_ATMOS_PHY_RD_MSTRN}でファイルのディレクトリと名前を指定する。
 
 追加された層の気温・気圧プロファイルは外部から与える必要がある。
 また二酸化炭素やオゾン等の気体濃度プロファイルも必要である。
@@ -180,18 +224,29 @@ SCALEでは気温・気圧についてはCIRA86
 \begin{verbatim}
   scale-rm/test/data/rad/
 \end{verbatim}
-に用意されており、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}でファイルのディレクトリと名前を指定する。
-%%%%% 項目の記載が必要！！！！
+に用意されており、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}でファイルのディレクトリと名前を指定する。\\
 
-\verb|MSTRNX|を実行するには、放射計算のためのパラメータテーブルが必要である。
-デフォルトでは太陽放射から赤外放射までを29バンド111チャンネルに分割し、
-雲・エアロゾル粒子の粒径を6ビンで表した時のテーブルを用いている。
-パラメータファイル（3種類）も、
-\begin{verbatim}
-  scale-rm/test/data/rad/
-\end{verbatim}
-に用意されている。
-\namelist{PARAM_ATMOS_PHY_RD_MSTRN}でファイルのディレクトリと名前を指定する。
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
+\verb| ATMOS_PHY_RD_PROFILE_TOA                   = 100.0     | & 大気最上層(TOA)の高さ [km] \\
+\verb| ATMOS_PHY_RD_PROFILE_use_climatology       = .true.    | & \textcolor{red}{具体的にどういうこと？}\\
+\verb| ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc" | & \verb|CIRA86 (NetCDF format)|ファイル  \\
+\verb| ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "."       | & \verb|MIPAS2001 (ASCII format)|のディレクトリの場所 \\
+\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = ""        | & (user,ASCII format) \textcolor{red}{これ、使えますか？} \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CO2               = .true.    | & \textcolor{red}{falseにするとどうなる？}\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_O3                = .true.    | & \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_N2O               = .true.    | & \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CO                = .true.    | & \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CH4               = .true.    | & \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_O2                = .true.    | & \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CFC               = .true.    | & \\
+\verb|/| & \\
+\end{tabularx}
+}}}\\
+
 
 
 \subsection{\SubsecSurfaceSetting} \label{subsec:basic_usel_surface}
