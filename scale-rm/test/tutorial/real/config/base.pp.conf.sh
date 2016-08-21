@@ -1,0 +1,73 @@
+#!/bin/bash
+
+cat << EOF > base.pp.conf
+
+#################################################
+#
+# model configuration: pp.conf only
+#
+#################################################
+
+&PARAM_NEST
+ USE_NESTING               = ${PP_USE_NESTING},
+ OFFLINE                   = .true.,
+ OFFLINE_PARENT_PRC_NUM_X  = ${PARENT_PRC_NUM_X},
+ OFFLINE_PARENT_PRC_NUM_Y  = ${PARENT_PRC_NUM_Y},
+ OFFLINE_PARENT_KMAX       = ${PARENT_KMAX},
+ OFFLINE_PARENT_IMAX       = ${PARENT_IMAX},
+ OFFLINE_PARENT_JMAX       = ${PARENT_JMAX},
+ OFFLINE_PARENT_LKMAX      = ${PARENT_LKMAX},
+ LATLON_CATALOGUE_FNAME    = "${LATLON_CATALOGUE_FNAME}",
+/
+
+&PARAM_TOPO
+ TOPO_OUT_BASENAME = "${TOPO_OUT_BASENAME}",
+/
+
+&PARAM_LANDUSE
+ LANDUSE_OUT_BASENAME = "${LANDUSE_OUT_BASENAME}",
+/
+
+&PARAM_CONVERT
+ CONVERT_TOPO    = .true.,
+ CONVERT_LANDUSE = .true.,
+/
+
+&PARAM_CNVTOPO
+ CNVTOPO_name            = "${TOPOTYPE[$D]}",
+ CNVTOPO_smooth_maxslope = ${MAXSLOPE},
+ CNVTOPO_smooth_local    = .true.,
+ CNVTOPO_smooth_itelim   = 10000,
+ CNVTOPO_copy_parent     = ${COPYTOPO[$D]},
+/
+
+&PARAM_COPYTOPO
+ COPYTOPO_IN_BASENAME   = "${COPYTOPO_IN_BASENAME}",
+ COPYTOPO_ENTIRE_REGION = .false.,
+ COPYTOPO_LINEAR_H      = .true.,
+/
+
+&PARAM_CNVTOPO_${TOPOTYPE[$D]}
+ ${TOPOTYPE[$D]}_IN_CATALOGUE = "${TOPO_IN_CATALOGUE}",
+ ${TOPOTYPE[$D]}_IN_DIR       = "${TOPO_IN_DIR}",
+/
+
+&PARAM_CNVLANDUSE
+ CNVLANDUSE_name = "${LANDUSETYPE[$D]}",
+/
+
+&PARAM_CNVLANDUSE_${LANDUSETYPE[$D]}
+ ${LANDUSETYPE[$D]}_IN_CATALOGUE  = "${LANDUSE_IN_CATALOGUE}",
+ ${LANDUSETYPE[$D]}_IN_DIR        = "${LANDUSE_IN_DIR}",
+ limit_urban_fraction = ${LIMIT_URBAN_FRACTION},
+/
+
+&PARAM_IO
+ IO_LOG_BASENAME = "${PP_IO_LOG_BASENAME}",
+/
+
+&PARAM_DOMAIN_CATALOGUE
+ DOMAIN_CATALOGUE_FNAME  = "${DOMAIN_CATALOGUE_FNAME}",
+ DOMAIN_CATALOGUE_OUTPUT = .true.,
+/
+EOF
