@@ -13,8 +13,10 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 ドメインの位置や格子点数など、実験設定に合わせて、
 適宜\verb|pp.conf|を編集する必要があるが、
 チュートリアルではすでに表\ref{tab:grids}の設定に
-従って編集済みの\verb|pp.d01.conf|が用意されているためそのまま利用する。
-\verb|pp.d01.conf|の設定の中で確認してほしい項目は、\namelist{PARAM_CONVERT}である。\\
+従って編集済みの\verb|pp.d01.conf|が用意されているため、
+そのまま利用する。
+\verb|pp.d01.conf|の設定の中で、
+\namelist{PARAM_CONVERT}の中の以下の項目を確認してほしい。\\
 
 \noindent {\gt
 \ovalbox{
@@ -29,12 +31,17 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 \noindent 上記のように\nmitem{CONVERT_TOPO}と\nmitem{CONVERT_LANDUSE}が
 \verb|.true.|となっていることが、
 それぞれ地形と土地利用の処理を行うことを意味している。
-詳細なコンフィグファイルの内容については、付録\ref{achap:namelist}を参照されたい。
+詳細な設定ファイルの内容については、付録\ref{achap:namelist}を参照されたい。
 
-また、\verb|${SCALE_DB}|が適切に設定されている場合、
-\nmitem{GTOPO30_IN_DIR}と\nmitem{GLCCv2_IN_DIR}に
-地形データと土地利用データの場所が適切に設定されているはずなので
+また、環境変数\verb|${SCALE_DB}|が適切に設定されている場合、
+\namelist{PARAM_CNVTOPO_GTOPO30}の中の
+\nmitem{GTOPO30_IN_DIR}と\nmitem{GLCCv2_IN_DIR}で設定されているディレクトリーに
+地形データと土地利用データの場所が適切に設定されているかどうかを
 確認しておくこと。\\
+
+\proofcomment{上記意味不明。環境変数で競ってしているのに、
+なぜ、設定ファイルで設定しなおさねばならないのか？？？}
+
 
 \noindent {\gt
 \ovalbox{

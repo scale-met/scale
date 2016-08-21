@@ -2,7 +2,7 @@
 \section{入力データ(境界データ)の準備} \label{sec:tutrial_real_data}
 %-------------------------------------------------------%
 
-現実大気実験のシミュレーションを行う場合、SCALE本体に加えて
+現実大気実験のシミュレーションを行う場合、\scalerm 本体に加えて
 境界値データが必要になる。境界値データとしては表\ref{tab:real_bnd}
 が必要である。{\color{blue}青字}は必須の変数、その他は任意である。
 
@@ -11,7 +11,7 @@
   \caption{現実大気実験に必要な初期値境界値データ}
   \label{tab:real_bnd}
   \begin{tabularx}{150mm}{llX} \hline
-    \multicolumn{3}{l}{地形データ(SCALE-RMの地形を用意する)}\\ \hline
+    \multicolumn{3}{l}{地形データ(\scalerm の地形を用意する)}\\ \hline
     & \multicolumn{2}{l}{\color{blue}{標高データ}}\\
     & \multicolumn{2}{l}{\color{blue}{土地利用データ}}\\ \hline
     \multicolumn{3}{l}{初期値境界値データ}\\ \hline
@@ -33,7 +33,7 @@
 
 \subsubsection{地形データと土地利用データ}
 標高データと土地利用データは実験設定に従って、
-SCALEのそれぞれの格子点における地形、海陸分布、土地利用を
+\scalerm のそれぞれの格子点における地形、海陸分布、土地利用を
 作成するために使用する。
 ユーザーが全球の任意の地域を対象とした計算ができるよう、
 フォーマット変換済みの
@@ -42,7 +42,7 @@ SCALEのそれぞれの格子点における地形、海陸分布、土地利用
 
 \begin{enumerate}
 \item データのダウンロード\\
-SCALE用の地形・土地利用のデータを\\
+\scalerm 用の地形・土地利用のデータを\\
  \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}\\
 より入手し、任意のディレクトリに展開しておく。
 \begin{alltt}
@@ -59,16 +59,19 @@ makeを使ったジョブスクリプトを使用する場合には、
 展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくことが必須である
 (以後、\verb|${SCALE_DB}|と表記)。
 \begin{alltt}
-  $ export SCALE_DB=${path_to_directory_of_scale_database}/scale_database
+  $ export SCALE_DB=$\{path_to_directory_of_scale_database\}/scale_database
 \end{alltt}
 \end{enumerate}
 
+\proofcomment{
+path\_to\_directory\_of\_scale\_databaseが何を意味しているのかの記述不足
+}
+
 \subsubsection{大気・陸面・海面水温データ}
-初期値境界値データは4-byte バイナリー(grads format)に変換すれば、
+初期値境界値データは4byteバイナリー(GraDS形式、以降''binary形式''と表記する)に変換すれば、
 任意のデータを読み込むことが可能である。
 チュートリアルではNCEP FNL(Final) Operational Global Analysis dataを使用する。
-あらかじめ\verb|wgrib|をインストールしておく。
-\footnote{\url{http://www.cpc.ncep.noaa.gov/products/wesley/wgrib.html}}
+あらかじめ\verb|wgrib|をインストールしておく\footnote{\url{http://www.cpc.ncep.noaa.gov/products/wesley/wgrib.html}}。
 \begin{enumerate}
 \item データのダウンロード\\
 NCARのサイト
@@ -81,8 +84,8 @@ fnl_20070815_06_00.grib1
 fnl_20070815_12_00.grib1
 \end{alltt}
 を\verb|${Tutorial_DIR}/real/tools/|の下にダウンロードする。
-\item データフォーマットをgribからbinaryに変換\\
- SCALEは4byte バイナリー（grads format）の境界値データを読み込むことができる。\\
+\item データフォーマットをgrib形式からbinary形式に変換\\
+ \scalerm はbinary形式の境界値データを読み込むことができる。\\
 \verb|${Tutorial_DIR}/real/tools/| の中にある \verb|convert_grib2grads_FNLgrib1.sh|を実行。
 
 \begin{alltt}

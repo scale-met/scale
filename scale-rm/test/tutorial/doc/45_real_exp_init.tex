@@ -2,8 +2,7 @@
 \section{初期値・境界値データの作成：init} \label{sec:tutrial_real_init}
 %-------------------------------------------------------%
 
-init では、SCALE計算に必要な初期値・境界値データを作成する。
-まず、initディレクトリへ移動する。
+initディレクトリーでは、\scalerm 計算に必要な初期値・境界値データを作成する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/init
  $ ls 
@@ -29,8 +28,8 @@ f\ovalbox{
 \end{tabularx}
 }}\\
 
-\noindent その他に\verb|init.d01.conf|の設定の中で特に確認してほしい項目は、
-\namelist{PARAM_MKINIT_REAL}である。\\
+\noindent その他に\verb|init.d01.conf|の設定の中で特に確認してほしいは、
+\namelist{PARAM_MKINIT_REAL}の内容である。\\
 
 \noindent {\gt
 \ovalbox{
@@ -55,7 +54,7 @@ f\ovalbox{
 
 \noindent \nmitem{FILETYPE_ORG}は入力する気象場データのファイルフォーマットに
 関するパラメータを設定しており、ここでは
-grads形式のデータを読み込むことを指定している。
+{\grads}形式のデータを読み込むことを指定している。
 詳細な設定ファイルの内容については、付録\ref{achap:namelist}を参照されたい。
 
 
@@ -65,7 +64,7 @@ grads形式のデータを読み込むことを指定している。
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh
 \end{verbatim}
-下記のgrads形式のファイルにリンクが張れれば成功である。\\
+下記の{\grads}形式のファイルにリンクが張れれば成功である。\\
 
 \noindent {\gt
 \fbox{
@@ -86,7 +85,7 @@ grads形式のデータを読み込むことを指定している。
 }}\\
 
 
-次に、grads形式のバイナリデータを読み込むためのnamelistファイルをinitディレクトリへリンクする。
+次に、{\grads}形式のバイナリデータを読み込むためのnamelistファイルをinitディレクトリへリンクする。
 \begin{verbatim}
   $ ln -s ../../data/namelist.grads_boundary.FNL.grib1 ./
 \end{verbatim}
