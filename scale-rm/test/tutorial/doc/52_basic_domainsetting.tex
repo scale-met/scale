@@ -2,8 +2,8 @@
 \section{\SecBasicDomainSetting} \label{sec:domain}
 %=======================================================================
 
-\subsection{\SubsecRelationOfResoGridProcess} \label{subsec:relation_dom_reso}
-各設定を行う前に、SCALE-RMでの計算領域、解像度、格子点数、MPIプロセスの関係を整理しておく。
+\subsubsection{\SubsecRelationOfResoGridProcess} \label{subsec:relation_dom_reso}
+各設定を行う前に、\scalerm での計算領域、解像度、格子点数、MPIプロセスの関係を整理しておく。
 計算領域は、水平格子間隔と格子点数を指定することで決定されるようになっている。
 図\ref{fig:domain}は、
 計算領域、水平格子間隔、格子数、及びMPIプロセス数の関係を示している。
@@ -50,7 +50,7 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 
 \subsection{\SubsecDomainSetting} \label{subsec:relation_dom_reso2}
 
-\ref{subsec:relation_dom_reso}節で述べた関係が理解できれば、領域の設定は容易である。
+前節で述べた関係が理解できれば、領域の設定は容易である。
 すなわち、式(\ref{eq:xgridnum},\ref{eq:ygridnum})を使って、
 \begin{eqnarray}
 && {\XDIR} の領域の長さ = {\XDIR} の格子点数 \times \verb|DX| \nonumber\\
@@ -61,10 +61,10 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 逆算して、解像度と領域の大きさをを決めて、MPIプロセス数が決まると、
 ローカルな領域の格子点数が決まる。
 
-\subsection{MPIプロセス数} \label{subsec:relation_dom_reso3}
+\subsection{\SubsecMPIProcess} \label{subsec:relation_dom_reso3}
 
 MPIプロセス数は、設定ファイルの\namelist{PARAM_PRC}で指定する。
-先に述べた通り、SCALEの入出力ファイルは、MPIプロセス毎に分割されている。
+先に述べた通り、\scalerm の入出力ファイルは、MPIプロセス毎に分割されている。
 そのため、MPIプロセス数を変更すると分割ファイル数も必ず変わることになる。
 従って、例えば、2-MPI並列用に作成した初期値ファイルは、
 4-MPI並列のモデル実行には使用できない。
@@ -107,8 +107,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 %-----------------------------------------------------------------------
 
 格子数の設定は、設定ファイル(\verb|***.conf|)の\namelist{PARAM_INDEX}で行う。
-\ref{subsec:relation_dom_reso}で詳しく説明したように、以下で設定する水平格子数の値は、
-１つのMPIプロセス当たりの値であることに注意が必要である。\\
+以下で設定する水平格子数の値は、１つのMPIプロセス当たりの値であることに注意が必要である。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -125,12 +124,11 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 \subsection{\SubsecGridIntvSettng} \label{subsec:gridinterv}
 %-----------------------------------------------------------------------
-SCALE-RMでは、水平方向には格子点の位置を均等間隔に設定する。
+\scalerm では、水平方向には格子点の位置を均等間隔に設定する。
 鉛直方向には均等間隔でも任意の格子点位置を直接指定することもできる。
 以下で説明する
 \textcolor{red}{\bf 格子間隔の設定は、pp\_***.conf、init\_***.conf、run\_***.confの
 設定ファイルの間で一致させなければならないことに注意が必要である。}
-\ref{subsec:relation_dom_reso}節で述べたように、
 以下で設定する値は、MPIプロセス当たりの値であることに注意が必要である。
 
 %-----------------------------------------------------------------------&
@@ -197,7 +195,7 @@ SCALE-RMでは、水平方向には格子点の位置を均等間隔に設定す
 \begin{figure}[tb]
 \begin{center}
   \includegraphics[width=0.4\hsize]{./figure/verticalface.eps}\\
-  \caption{SCALE-RMの鉛直格子の定義点。\namelist{PARAM_GRID}で\nmitem{FZ}を指定する時は、ハロを除いた計算領域下端の格子から$k=1$として与える。}
+  \caption{\scalerm の鉛直格子の定義点。\namelist{PARAM_GRID}で\nmitem{FZ}を指定する時は、ハロを除いた計算領域下端の格子から$k=1$として与える。}
   \label{fig:scale_grid}
 \end{center}
 \end{figure}

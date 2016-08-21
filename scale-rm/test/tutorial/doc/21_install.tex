@@ -37,7 +37,7 @@
 \noindent {\bf あると便利なシステム環境}
 \begin{itemize}
   \item {\bf データ変換ツール}：wgrib、wgrib2やNCLにより、SCALEで読込可能な入力データの作成が可能である。Tutorialの現実大気実験では、wgrib2を使用する。
-  \item {\bf 描画環境}：GrADS\footnote{\url{http://cola.gmu.edu/grads/}}、
+  \item {\bf 描画環境}：\grads \footnote{\url{http://cola.gmu.edu/grads/}}、
 GPhys/Ruby-DCL\footnote{\url{https://www.gfd-dennou.org/arch/ruby/products/gphys/}}、
 ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}など。
   \item {\bf 演算性能評価}：PAPIライブラリ\footnote{\url{http://icl.utk.edu/papi/}}が使用可能。
@@ -102,7 +102,7 @@ SCALEライブラリに必要な各種ライブラリ(C, Fortranコンパイラ�
 描画ツールとして、
 第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルでは
 クイックビューのためGPhysを使用する。
-また、GrADSを使った結果の描画方法についても紹介する。
+また、\grads を使った結果の描画方法についても紹介する。
 これらの描画ツールの詳細とインストール方法については
 付録 \ref{sec:env_vis_tools}を参照のこと。
 
@@ -239,7 +239,7 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 
 SCALE-RMの出力ファイルは、ノードごとに分割されて出力される。
 SCALEでは、これら出力ファイル（\verb|history.******.nc|）を結合し、
-GrADSで直接読み込めるデータ形式へ
+\grads で直接読み込めるデータ形式へ
 変換する後処理ツール「net2g」を提供している。
 第\ref{chap:tutorial_ideal}章、第\ref{chap:tutorial_real}章のチュートリアルでも使用する。
 ここでは、net2gのコンパイル方法について説明する。
