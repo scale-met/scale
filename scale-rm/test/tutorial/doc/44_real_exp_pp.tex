@@ -4,15 +4,17 @@
 
 ppディレクトリへ移動し、現実実験のための地形データ、土地利用データを作成する。
 \begin{verbatim}
- $ cd ${Tutorial_DIR}/real/pp
+ $ cd ${Tutorial_DIR}/real/experiment/pp/
+ $ ls 
+  pp.d01.conf scale-rm_pp
 \end{verbatim}
-ppディレクトリの中には、\verb|pp.conf|という名前の
+ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 設定ファイルが準備されている。
 ドメインの位置や格子点数など、実験設定に合わせて、
 適宜\verb|pp.conf|を編集する必要があるが、
 チュートリアルではすでに表\ref{tab:grids}の設定に
-従って編集済みの\verb|pp.conf|が用意されているためそのまま利用する。
-\verb|pp.conf|の設定の中で確認してほしい項目は、\namelist{PARAM_CONVERT}である。\\
+従って編集済みの\verb|pp.d01.conf|が用意されているためそのまま利用する。
+\verb|pp.d01.conf|の設定の中で確認してほしい項目は、\namelist{PARAM_CONVERT}である。\\
 
 \noindent {\gt
 \ovalbox{
@@ -27,16 +29,30 @@ ppディレクトリの中には、\verb|pp.conf|という名前の
 \noindent 上記のように\nmitem{CONVERT_TOPO}と\nmitem{CONVERT_LANDUSE}が
 \verb|.true.|となっていることが、
 それぞれ地形と土地利用の処理を行うことを意味している。
-詳細なコンフィグファイルの内容については、
-付録\ref{achap:namelist}を参照されたい。
+詳細なコンフィグファイルの内容については、付録\ref{achap:namelist}を参照されたい。
 
-次に、コンパイル済みのバイナリと入力データを
-pp実行ディレクトリへリンクする。
-\begin{verbatim}
- $ ln -s ../../bin/scale-rm_pp ./
- $ ln -s ${SCALE_DB}/topo    ./
- $ ln -s ${SCALE_DB}/landuse ./
-\end{verbatim}
+また、\verb|${SCALE_DB}|が適切に設定されている場合、
+\nmitem{GTOPO30_IN_DIR}と\nmitem{GLCCv2_IN_DIR}に
+地形データと土地利用データの場所が適切に設定されているはずなので
+確認しておくこと。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&PARAM_CNVTOPO_GTOPO30| \\
+\verb| GTOPO30_IN_CATALOGUE = "GTOPO30_catalogue.txt",|\\
+\verb| GTOPO30_IN_DIR       = "./topo/GTOPO30/Products",|\\
+\verb|/|\\
+\\
+\verb|&PARAM_CNVLANDUSE_GLCCv2|\\
+\verb| GLCCv2_IN_CATALOGUE = "GLCCv2_catalogue.txt",|\\
+\verb| GLCCv2_IN_DIR       = "./landuse/GLCCv2/Products",|\\
+\verb| limit_urban_fraction = 0.3D0,|\\
+\verb|/|\\
+\end{tabularx}
+}}\\
+
+
 今回は、表\ref{tab:grids}に示されているように。
 4つのMPIプロセスを使用する設定なので次のように実行する。
 \begin{verbatim}

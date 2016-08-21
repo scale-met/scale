@@ -1,5 +1,5 @@
 %-------------------------------------------------------%
-\section{境界データの準備} \label{sec:tutrial_real_prep}
+\section{入力データ(境界データ)の準備} \label{sec:tutrial_real_data}
 %-------------------------------------------------------%
 
 現実大気実験のシミュレーションを行う場合、SCALE本体に加えて
@@ -83,10 +83,10 @@ fnl_20070815_12_00.grib1
 を\verb|${Tutorial_DIR}/real/tools/|の下にダウンロードする。
 \item データフォーマットをgribからbinaryに変換\\
  SCALEは4byte バイナリー（grads format）の境界値データを読み込むことができる。\\
-\verb|${Tutorial_DIR}/real/tools/| の中にある \verb|convert_grib2grads.sh|を実行。
+\verb|${Tutorial_DIR}/real/tools/| の中にある \verb|convert_grib2grads_FNLgrib1.sh|を実行。
 
 \begin{alltt}
-  $ sh convert_grib2grads.sh
+  $ sh convert_grib2grads_FNLgrib1.sh
 \end{alltt}
 成功すれば、下記のファイルが作成される。
 \begin{alltt}

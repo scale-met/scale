@@ -4,10 +4,10 @@
 \subsubsection{run.confの準備}
 runディレクトリへ移動する。
 \begin{verbatim}
- $ cd ${Tutorial_DIR}/real/run
+ $ cd ${Tutorial_DIR}/real/experiment/run
 \end{verbatim}
 %
-runディレクトリの中には、\verb|run.conf|という名前の
+runディレクトリの中には、\verb|run.d01.conf|という名前の
 設定ファイルが準備されており、
 ドメインの位置や格子点数など、
 チュートリアル用の設定（表\ref{tab:grids}）に合わせて設定されている。\\
@@ -76,7 +76,7 @@ runディレクトリの中には、\verb|run.conf|という名前の
 }}\\
 
 
-\verb|run.conf|の設定の中で時間積分に関する設定は、
+\verb|run.d01.conf|の設定の中で時間積分に関する設定は、
 \namelist{PARAM_TIME}の項目にある。\\
 
 \noindent {\gt\small
@@ -163,20 +163,20 @@ runディレクトリの中には、\verb|run.conf|という名前の
 
 %
 \subsubsection{実行}
-コンパイル済みのバイナリをrunディレクトリへリンクする。
 
+実行に必要なファイルとして、下記が用意されている。
 \begin{verbatim}
- $ ln -s ../../bin/scale-rm ./
+ $ ls 
+  MIPAS  PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc  : 放射スキーム用のパラメータファイル
+  run.d01.conf       : 設定ファイル
+  param.bucket.conf  : 陸面スキーム用のパラメータファイル
+  scale-rm           : SCALE-RM 実行バイナリ
+  run.launch.conf    : ネスティング計算用のlaunchファイル（チュートリアルでは使用しない）
 \end{verbatim}
-陸面過程や放射過程のモデルを起動するためのパラメータファイルに
-リンクを張る。
-\begin{verbatim}
- $ ln -s ../../../data/land/* ./   <- 陸面スキーム用のパラメータファイル
- $ ln -s ../../../data/rad/*  ./   <- 放射スキーム用のパラメータファイル
-\end{verbatim}
+%
 準備が整ったら、4-MPI並列によりscale-rmを実行する。
 \begin{verbatim}
-  $ mpirun -n 4 ./scale-rm run.conf >& log &
+  $ mpirun -n 4 ./scale-rm run.d01.conf >& log &
 \end{verbatim}
 
 

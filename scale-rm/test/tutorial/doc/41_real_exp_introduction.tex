@@ -2,27 +2,14 @@
 \section{概要} \label{sec:tutrial_real_intro}
 %-------------------------------------------------------%
 このチュートリアルでは、現実大気の基本的な実験方法を習得する。
-以下のディレクトリーに移動して作業を行う。
-\begin{alltt}
- scale-{\version}/scale-rm/test/tutorial/real/
-\end{alltt}
-これ以降の説明では、\texttt{scale-{\version}/scale-rm/test/tutorial/}の絶対PATHを
-\verb|${Tutorial_DIR}|と示すこととする。
-\verb|${Tutorial_DIR}|のディレクトリには以下のサブディレクトリがあり、
-番号に従って実行する(図\ref{fig:howto}参照のこと）。
+現実大気実験は、次の流れ(図\ref{fig:howto}) に従って実行する。
 \begin{enumerate}
-\item  \texttt{tools/}   : tutrial実行のためのツール
-\item  \texttt{pp/}      : 地形・土地利用データの作成
-\item  \texttt{init}/    : 初期値・境界値データの作成
-\item  \texttt{run}/     : 初期条件を作るディレクトリ
-\item  \texttt{net2g/}   : 出力データのNetCDFからGrADS形式への変換（オプション） 
+\item  入力データの準備 (基本各自で準備。チュートリアルでは \verb|tools/| で行う。)
+\item  \texttt{pp}      : 地形・土地利用データの作成
+\item  \texttt{init}    : 初期値・境界値データの作成
+\item  \texttt{run}     : 初期条件を作るディレクトリ
+\item  \texttt{net2g}   : 出力データのNetCDFからGrADS形式への変換（オプション） 
 \end{enumerate}
-なお、以下のサブディレクトリにはネスティングの際に利用できるファイルが用意されており、
-必要に応じて参考にされたい。
-\begin{itemize}
-\item  \texttt{sample/}  : サンプルの設定ファイル
-\end{itemize}
-
 
 \begin{figure}[b]
 \begin{center}
@@ -32,9 +19,10 @@
 \end{center}
 \end{figure}
 
-計算領域（ドメイン）の設定は表\ref{tab:grids}のようになっている。
+
+チュートリアルの現実大気実験の計算領域（ドメイン）の設定は表\ref{tab:grids}のようになっている。
 図 \ref{fig:tutrial_real_domain}に対象領域を示す。
-なお、このチュートリアルは、SCALEの使い方を学ぶことが目的であり、
+このチュートリアルは、SCALEの使い方を学ぶことが目的であり、
 短い時間で実行可能な設定にしている。
 領域モデルの実験設定として必ずしも適切な設定を選択しているとは限らないので
 (例えば、20kmの水平解像度で積雲パラメタリゼーションなし)
@@ -45,14 +33,6 @@
 \item Memory容量: 4GB以上をプログラムに割当可能（8GB以上を搭載した計算機を推奨）
 \item HDD空き容量: 7GB以上の空き容量
 \end{itemize}
-
-%% 
-%% 本節の説明で使用した環境は次のとおりである。
-%% \begin{itemize}
-%% \item CPU: Intel Xeon E5-2620 2.0GHz 6コア（ただし4コアのみ使用）
-%% \item Memory: DDR3-1333 (4 channel, 32GB搭載)
-%% \item OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64
-%% \end{itemize}
 
 
 \begin{table}[h]
