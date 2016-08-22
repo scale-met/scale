@@ -59,9 +59,10 @@ module scale_atmos_phy_rd_mstrnx
   !++ Private parameters & variables
   !
   real(RP), private, parameter :: RD_cosSZA_min = 0.017_RP ! minimum SZA (>89.0)
-  real(RP), private, parameter :: RD_EPS        = 1.E-4_RP ! minimum SZA (>89.0)
+  real(RP), private, parameter :: RD_EPS        = 1.E-4_RP
 
-  integer,  private :: RD_KADD = 0 !< RD_KMAX = KMAX + RD_KADD
+  real(RP), private :: RD_TOA  = 100.0_RP !< top of atmosphere [km]
+  integer,  private :: RD_KADD = 10       !< RD_KMAX = KMAX + RD_KADD
 
   integer,  private :: RD_KMAX      ! # of computational cells: z for radiation scheme
   integer,  private :: RD_naero     ! # of cloud/aerosol species
@@ -231,6 +232,7 @@ contains
 
     character(len=*), intent(in) :: RD_TYPE
 
+    real(RP)              :: ATMOS_PHY_RD_MSTRN_TOA
     integer               :: ATMOS_PHY_RD_MSTRN_KADD
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
@@ -240,6 +242,7 @@ contains
     integer               :: ATMOS_PHY_RD_MSTRN_nradius
 
     namelist / PARAM_ATMOS_PHY_RD_MSTRN / &
+       ATMOS_PHY_RD_MSTRN_TOA,                   &
        ATMOS_PHY_RD_MSTRN_KADD,                  &
        ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME,   &
        ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME,  &
@@ -264,6 +267,7 @@ contains
     endif
 
     !--- read namelist
+    ATMOS_PHY_RD_MSTRN_TOA                   = RD_TOA
     ATMOS_PHY_RD_MSTRN_KADD                  = RD_KADD
     ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = MSTRN_GASPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = MSTRN_AEROPARA_INPUTFILE
@@ -282,6 +286,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_MSTRN)
 
+    RD_TOA                    = ATMOS_PHY_RD_MSTRN_TOA
     RD_KADD                   = ATMOS_PHY_RD_MSTRN_KADD
     MSTRN_GASPARA_INPUTFILE   = ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME
     MSTRN_AEROPARA_INPUTFILE  = ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
@@ -333,8 +338,8 @@ contains
     enddo
 
     !--- setup vartical grid for radiation (larger TOA than Model domain)
-    call RD_PROFILE_setup_zgrid( RD_KMAX,  RD_KADD, & ! [IN]
-                                 RD_zh(:), RD_z(:)  ) ! [INOUT]
+    call RD_PROFILE_setup_zgrid( RD_TOA, RD_KMAX, RD_KADD, & ! [IN]
+                                 RD_zh(:), RD_z(:)         ) ! [INOUT]
 
     !--- read climatological profile
     call RD_PROFILE_read( RD_KMAX,                & ! [IN]
