@@ -229,6 +229,7 @@ contains
     call FileSetGlobalAttribute( fid, & ! (in)
          "institution", institution   ) ! (in)
     if ( .NOT. present(comm) .OR. comm .EQ. MPI_COMM_NULL ) then
+       ! for shared-file parallel I/O, skip MPI process attributes
        call FileSetGlobalAttribute( fid, & ! (in)
             "myrank", (/myrank/)         ) ! (in)
        call FileSetGlobalAttribute( fid, & ! (in)
