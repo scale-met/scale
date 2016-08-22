@@ -242,6 +242,7 @@ contains
     call FileSetGlobalAttribute( fid, & ! (in)
          "institution", institution   ) ! (in)
     if ( .NOT. present(comm) .OR. comm .EQ. MPI_COMM_NULL ) then
+       ! for shared-file parallel I/O, skip MPI process attributes
        call FileSetGlobalAttribute( fid, & ! (in)
             "myrank", (/myrank/)         ) ! (in)
        call FileSetGlobalAttribute( fid, & ! (in)
@@ -3016,25 +3017,27 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(start) ) then
-       start_(:) = start(:)
-    else
-       start_(:) = 1
-    end if
-
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
-       ! In this case, count must be present
+       ! In this case, start and count must be present
 
+       if ( .not. present(start) ) then
+          call Log('E', 'start argument is neccessary when ndims is specified')
+       end if
        if ( .not. present(count) ) then
           call Log('E', 'count argument is neccessary when ndims is specified')
        end if
 
        call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
-            ndims, start_, count,                                      & ! (in)
+            ndims, start, count,                                       & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
+       if ( present(start) ) then
+          start_(:) = start(:)
+       else
+          start_(:) = 1
+       end if
        call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
             1, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
@@ -3085,25 +3088,27 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(start) ) then
-       start_(:) = start(:)
-    else
-       start_(:) = 1
-    end if
-
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
-       ! In this case, count must be present
+       ! In this case, start and count must be present
 
+       if ( .not. present(start) ) then
+          call Log('E', 'start argument is neccessary when ndims is specified')
+       end if
        if ( .not. present(count) ) then
           call Log('E', 'count argument is neccessary when ndims is specified')
        end if
 
        call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
-            ndims, start_, count,                                      & ! (in)
+            ndims, start, count,                                       & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
+       if ( present(start) ) then
+          start_(:) = start(:)
+       else
+          start_(:) = 1
+       end if
        call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
             1, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
@@ -3154,25 +3159,27 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(start) ) then
-       start_(:) = start(:)
-    else
-       start_(:) = 1
-    end if
-
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
-       ! In this case, count must be present
+       ! In this case, start and count must be present
 
+       if ( .not. present(start) ) then
+          call Log('E', 'start argument is neccessary when ndims is specified')
+       end if
        if ( .not. present(count) ) then
           call Log('E', 'count argument is neccessary when ndims is specified')
        end if
 
        call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
-            ndims, start_, count,                                      & ! (in)
+            ndims, start, count,                                       & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
+       if ( present(start) ) then
+          start_(:) = start(:)
+       else
+          start_(:) = 1
+       end if
        call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
             2, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
@@ -3223,25 +3230,27 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(start) ) then
-       start_(:) = start(:)
-    else
-       start_(:) = 1
-    end if
-
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
-       ! In this case, count must be present
+       ! In this case, start and count must be present
 
+       if ( .not. present(start) ) then
+          call Log('E', 'start argument is neccessary when ndims is specified')
+       end if
        if ( .not. present(count) ) then
           call Log('E', 'count argument is neccessary when ndims is specified')
        end if
 
        call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
-            ndims, start_, count,                                      & ! (in)
+            ndims, start, count,                                       & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
+       if ( present(start) ) then
+          start_(:) = start(:)
+       else
+          start_(:) = 1
+       end if
        call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
             2, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
@@ -3292,25 +3301,27 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(start) ) then
-       start_(:) = start(:)
-    else
-       start_(:) = 1
-    end if
-
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
-       ! In this case, count must be present
+       ! In this case, start and count must be present
 
+       if ( .not. present(start) ) then
+          call Log('E', 'start argument is neccessary when ndims is specified')
+       end if
        if ( .not. present(count) ) then
           call Log('E', 'count argument is neccessary when ndims is specified')
        end if
 
        call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
-            ndims, start_, count,                                      & ! (in)
+            ndims, start, count,                                       & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
+       if ( present(start) ) then
+          start_(:) = start(:)
+       else
+          start_(:) = 1
+       end if
        call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
             3, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
@@ -3361,25 +3372,27 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(start) ) then
-       start_(:) = start(:)
-    else
-       start_(:) = 1
-    end if
-
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
-       ! In this case, count must be present
+       ! In this case, start and count must be present
 
+       if ( .not. present(start) ) then
+          call Log('E', 'start argument is neccessary when ndims is specified')
+       end if
        if ( .not. present(count) ) then
           call Log('E', 'count argument is neccessary when ndims is specified')
        end if
 
        call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
-            ndims, start_, count,                                      & ! (in)
+            ndims, start, count,                                       & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
+       if ( present(start) ) then
+          start_(:) = start(:)
+       else
+          start_(:) = 1
+       end if
        call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
             3, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
@@ -3430,25 +3443,27 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(start) ) then
-       start_(:) = start(:)
-    else
-       start_(:) = 1
-    end if
-
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
-       ! In this case, count must be present
+       ! In this case, start and count must be present
 
+       if ( .not. present(start) ) then
+          call Log('E', 'start argument is neccessary when ndims is specified')
+       end if
        if ( .not. present(count) ) then
           call Log('E', 'count argument is neccessary when ndims is specified')
        end if
 
        call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
-            ndims, start_, count,                                      & ! (in)
+            ndims, start, count,                                       & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
+       if ( present(start) ) then
+          start_(:) = start(:)
+       else
+          start_(:) = 1
+       end if
        call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
             4, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
@@ -3499,25 +3514,27 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(start) ) then
-       start_(:) = start(:)
-    else
-       start_(:) = 1
-    end if
-
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
-       ! In this case, count must be present
+       ! In this case, start and count must be present
 
+       if ( .not. present(start) ) then
+          call Log('E', 'start argument is neccessary when ndims is specified')
+       end if
        if ( .not. present(count) ) then
           call Log('E', 'count argument is neccessary when ndims is specified')
        end if
 
        call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
-            ndims, start_, count,                                      & ! (in)
+            ndims, start, count,                                       & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
+       if ( present(start) ) then
+          start_(:) = start(:)
+       else
+          start_(:) = 1
+       end if
        call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
             4, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
