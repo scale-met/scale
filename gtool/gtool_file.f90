@@ -3005,6 +3005,8 @@ contains
 
     real(DP) :: ts, te
 
+    integer :: start_(1)
+
     integer :: error, n
     character(len=100) :: str
 
@@ -3014,16 +3016,27 @@ contains
     ts = t_start
     te = t_end
 
+    if ( present(start) ) then
+       start_(:) = start(:)
+    else
+       start_(:) = 1
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, count must be present
+
+       if ( .not. present(count) ) then
+          call Log('E', 'count argument is neccessary when ndims is specified')
+       end if
+
        call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
-            ndims, start, count,                                       & ! (in)
+            ndims, start_, count,                                      & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        call file_write_data( fid, vid, var(:), ts, te, SP, & ! (in)
-            1, start, shape(var),                                 & ! (in)
+            1, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -3061,6 +3074,8 @@ contains
 
     real(DP) :: ts, te
 
+    integer :: start_(1)
+
     integer :: error, n
     character(len=100) :: str
 
@@ -3070,16 +3085,27 @@ contains
     ts = t_start
     te = t_end
 
+    if ( present(start) ) then
+       start_(:) = start(:)
+    else
+       start_(:) = 1
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, count must be present
+
+       if ( .not. present(count) ) then
+          call Log('E', 'count argument is neccessary when ndims is specified')
+       end if
+
        call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
-            ndims, start, count,                                       & ! (in)
+            ndims, start_, count,                                      & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        call file_write_data( fid, vid, var(:), ts, te, DP, & ! (in)
-            1, start, shape(var),                                 & ! (in)
+            1, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -3117,6 +3143,8 @@ contains
 
     real(DP) :: ts, te
 
+    integer :: start_(2)
+
     integer :: error, n
     character(len=100) :: str
 
@@ -3126,16 +3154,27 @@ contains
     ts = t_start
     te = t_end
 
+    if ( present(start) ) then
+       start_(:) = start(:)
+    else
+       start_(:) = 1
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, count must be present
+
+       if ( .not. present(count) ) then
+          call Log('E', 'count argument is neccessary when ndims is specified')
+       end if
+
        call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
-            ndims, start, count,                                       & ! (in)
+            ndims, start_, count,                                      & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        call file_write_data( fid, vid, var(:,:), ts, te, SP, & ! (in)
-            2, start, shape(var),                                 & ! (in)
+            2, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -3173,6 +3212,8 @@ contains
 
     real(DP) :: ts, te
 
+    integer :: start_(2)
+
     integer :: error, n
     character(len=100) :: str
 
@@ -3182,16 +3223,27 @@ contains
     ts = t_start
     te = t_end
 
+    if ( present(start) ) then
+       start_(:) = start(:)
+    else
+       start_(:) = 1
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, count must be present
+
+       if ( .not. present(count) ) then
+          call Log('E', 'count argument is neccessary when ndims is specified')
+       end if
+
        call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
-            ndims, start, count,                                       & ! (in)
+            ndims, start_, count,                                      & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        call file_write_data( fid, vid, var(:,:), ts, te, DP, & ! (in)
-            2, start, shape(var),                                 & ! (in)
+            2, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -3229,6 +3281,8 @@ contains
 
     real(DP) :: ts, te
 
+    integer :: start_(3)
+
     integer :: error, n
     character(len=100) :: str
 
@@ -3238,16 +3292,27 @@ contains
     ts = t_start
     te = t_end
 
+    if ( present(start) ) then
+       start_(:) = start(:)
+    else
+       start_(:) = 1
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, count must be present
+
+       if ( .not. present(count) ) then
+          call Log('E', 'count argument is neccessary when ndims is specified')
+       end if
+
        call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
-            ndims, start, count,                                       & ! (in)
+            ndims, start_, count,                                      & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        call file_write_data( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
-            3, start, shape(var),                                 & ! (in)
+            3, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -3285,6 +3350,8 @@ contains
 
     real(DP) :: ts, te
 
+    integer :: start_(3)
+
     integer :: error, n
     character(len=100) :: str
 
@@ -3294,16 +3361,27 @@ contains
     ts = t_start
     te = t_end
 
+    if ( present(start) ) then
+       start_(:) = start(:)
+    else
+       start_(:) = 1
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, count must be present
+
+       if ( .not. present(count) ) then
+          call Log('E', 'count argument is neccessary when ndims is specified')
+       end if
+
        call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
-            ndims, start, count,                                       & ! (in)
+            ndims, start_, count,                                      & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        call file_write_data( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
-            3, start, shape(var),                                 & ! (in)
+            3, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -3341,6 +3419,8 @@ contains
 
     real(DP) :: ts, te
 
+    integer :: start_(4)
+
     integer :: error, n
     character(len=100) :: str
 
@@ -3350,16 +3430,27 @@ contains
     ts = t_start
     te = t_end
 
+    if ( present(start) ) then
+       start_(:) = start(:)
+    else
+       start_(:) = 1
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, count must be present
+
+       if ( .not. present(count) ) then
+          call Log('E', 'count argument is neccessary when ndims is specified')
+       end if
+
        call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
-            ndims, start, count,                                       & ! (in)
+            ndims, start_, count,                                      & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        call file_write_data( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
-            4, start, shape(var),                                 & ! (in)
+            4, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
@@ -3397,6 +3488,8 @@ contains
 
     real(DP) :: ts, te
 
+    integer :: start_(4)
+
     integer :: error, n
     character(len=100) :: str
 
@@ -3406,16 +3499,27 @@ contains
     ts = t_start
     te = t_end
 
+    if ( present(start) ) then
+       start_(:) = start(:)
+    else
+       start_(:) = 1
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, count must be present
+
+       if ( .not. present(count) ) then
+          call Log('E', 'count argument is neccessary when ndims is specified')
+       end if
+
        call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
-            ndims, start, count,                                       & ! (in)
+            ndims, start_, count,                                      & ! (in)
             error                                                      ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        call file_write_data( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
-            4, start, shape(var),                                 & ! (in)
+            4, start_, shape(var),                                & ! (in)
             error                                                      ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
