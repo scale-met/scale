@@ -31,8 +31,8 @@
 
 \scalelib (Scalable Computing for Advanced Library and Environment)は
 計算機を用いて気象・気候科学計算を行う上で、
-研究を進めやすいように事前処理から数値計算、
-解析に至るまですべての過程を網羅する数値計算ライブラリを
+研究を進めやすいようにプレ処理から数値シミュレーション、ポスト処理、
+解析に至るまですべての過程を網羅する気象・気候数値計算ライブラリを
 目指したソフトウェアである。下記に挙げるような特徴を持つ。
 \begin{itemize}
 \item \scalelib は、「BSD-2ライセンス」のもとオープンソースソフトウェア
@@ -46,113 +46,14 @@
 使用することも可能である。
 \end{itemize}
 
-ライセンスの詳細は、トップディレクトリ直下の``\verb|scale/LICENSE|''のファイルに記述されている。
+ライセンスの詳細は、トップディレクトリ直下の\texttt{scale-\version/LICENSE}のファイルに記述されている。
 \scalelib の使用前に一読しておくこと。またSCALEのWebページにも説明が記載されているので必要に応じて
 参照すること（\url{http://scale.aics.riken.jp/}）。
 
+本節の以下では\scalelib の思想とモデルの関係について説明するが、
+\scalerm の実行とは直接関係ないため、必要なければ読み飛ばしても構わない。
 
-
-\subsection{\scalerm の構成}  \label{subsec:sturcture_scale_rm}
-%--------------------------------------------------------------%
-現在、\scalelib には下記のコンポーネントが実装されている。
-\scalerm ではすべてのコンポーネントが利用可能である。
-詳細なモデル構成や差分化手法については、
-\citet{scale_2015}、\citet{satoy_2015b}、
-および\citet{nishizawa_2015}を参照されたい。\\
-
-
-\noindent{\bf フレームワーク関係}
-\begin{itemize}
- \item カーテシアン格子系（Cartesian Arakawa C-grid）
- \item MPI通信を用いた二次元領域分割
- \item 各種投影法(Map-projection \& Map-factors)
- \item ネスティングシステム（1-way：親→子のみ）
-   \begin{itemize}
-    \item オンライン実行(複数ドメインの計算を同時に実行)
-    \item オフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)
-   \end{itemize}
- \item 複数事例一括実行 システム（バルクジョブシステム）
- \item CF 規約\footnote{\url{http:/cfconventions.org}}に基づく \netcdf ファイル I/O
-   \begin{itemize}
-   \item {\netcdf}3 または {\netcdf}4 形式
-   \end{itemize}
- \item 外部データ読み込みによる初期値・境界値データ作成
-   \begin{itemize}
-    \item WRF-ARW\footnote{\url{http://www.wrf-model.org}}、
-NICAM\footnote{\url{http://nicam.jp}}、
-その他\grads \footnote{\url{http://cola.gmu.edu/grads/}}フォーマットでの入力に対応
-   \end{itemize}
-\end{itemize}
-
-{\bf 力学コア関係}
-\begin{itemize}
- \item 方程式系: 3次元完全圧縮非静力学方程式系
- \item 数値解法: 陽解法と陰解法の両方を実装
-   \begin{itemize}
-    \item 水平陽解鉛直陽解法(HE-VE:Horizontally Explicit and Vertically Explicit method)
-    \item 水平陽解法-鉛直陰解法(HE-VI:Horizontally Explicit and Vertically Implicit method)
-%    \item HI-VI(陰解法)
-   \end{itemize}
- \item 空間差分:
-    \begin{itemize}
-      \item 2次中央差分(2nd order central difference scheme)
-      \item 4次中央差分(4th order central difference scheme)
-      \item 6次中央差分(6th order central difference scheme)
-      \item 3次風上差分(3rd order upwind difference scheme)
-%      \item 3次風上差分（Koren(1993)filterあり）(3rd order upwind difference scheme with \citet{Koren_1993} filter)
-      \item 5次風上差分(5-th order upwind difference scheme)
-    \end{itemize}
- \item 時間差分:(詳細は、\citet{scale_2015}を参照のこと)
-    \begin{itemize}
-      \item 3次ルンゲクッタスキーム(Heun's 3rd order Runge-Kutta scheme)
-      \item Wicker and Skamarock (2002)'s 3段ルンゲクッタスキーム \citep[3-step Runge-Kutta scheme of ][]{Wicker_2002}
-      \item 4次ルンゲクッタスキーム(4th order Runge-Kutta scheme)
-    \end{itemize}
- \item 非負保証:
-    \begin{itemize}
-      \item フラックス修正法(Flux Corrected Transport)
-      \item Koren (1993)フィルター \citep{Koren_1993} (3次風上差分スキーム使用時のみ)
-    \end{itemize}
- \item 数値フィルター: 4次超粘性・拡散(4-th order hyper-viscosity/diffusion)
- \item 地形: 地形に沿った座標系(Terrain following coordinate)
-\end{itemize}
-
-
-{\bf 物理過程}
-\begin{itemize}
- \item 乱流過程: 複数から選択可能
-   \begin{itemize}
-    \item Smagorinsky-Lilly 型のサブグリッドモデル \citep{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993}
-    \item Deardorff(1980) サブグリットモデル \citep{Deardorff_1980}
-    \item MYNN2.5境界層モデル \citep{my_1982,nakanishi_2004}
-   \end{itemize}
- \item 雲微物理: 複数から選択可能
-   \begin{itemize}
-    \item 3-class single momoent バルクモデル\citep{kessler_1969}
-    \item 6-class single moment バルクモデル \citep{tomita_2008}
-    \item 6-class double moment バルクモデル \citep{sn_2014}
-    \item ビン法雲モデル \citep{suzuki_etal_2010}
-   \end{itemize}
- \item 放射過程: k分布ベース放射スキーム\citep{sekiguchi_2008}
- \item 地表面モデル
-  \begin{itemize}
-   \item 陸面モデル: 熱拡散・バケツモデル
-   \item 海洋モデル: 初期値固定・外部入力（時間変化あり）・スラブモデル
-   \item 都市モデル: 単層キャノピーモデル \citep{kusaka_2001}
-   \item バルク交換係数(陸面および海面): 普遍関数によるバルク法\citep{beljaars_1991,wilson_2001}もしくは Louis 型バルク法\citep{uno_1995}
-  \end{itemize}
-\end{itemize}
-
-上記に加え、\scalerm のコンポーネントとして、
-現実事例の計算に必要な地形や土地利用データを作成するツール、
-理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。
-
-次節で\scalelib の思想とモデルの関係について説明するが、
-\scalerm の実行とは直接関係ないため、
-必要なければ読み飛ばしても構わない。
-
-
-\subsection{\scalelib のライブラリとモデル} \label{subsec:scalelib_model}
+\Item{\scalelib のライブラリとモデルの関係について}
 
 \begin{figure}[htb]
 \begin{center}
@@ -196,5 +97,105 @@ NICAM\footnote{\url{http://nicam.jp}}、
   \label{fig:scale-rm}
 \end{center}
 \end{figure}
+
+
+
+
+\subsection{\scalerm の構成}  \label{subsec:sturcture_scale_rm}
+%--------------------------------------------------------------%
+現在、\scalerm には下記のコンポーネントが実装されている。
+\scalerm ではすべてのコンポーネントが利用可能である。
+詳細なモデル構成や差分化手法については、
+\citet{scale_2015}、\citet{satoy_2015b}、
+および\citet{nishizawa_2015}を参照されたい。\\
+
+
+%\noindent{\bf \underline{フレームワーク関係}
+\Item{フレームワーク関係}
+\begin{itemize}
+ \item 距離座標に基づいたカーテシアン格子系
+ \item MPI通信を用いた二次元領域分割
+ \item 各種投影法
+ \item ネスティングシステム（1 way：親領域$\to$子領域）
+   \begin{itemize}
+    \item オンライン実行(複数ドメインの計算を同時に実行)
+    \item オフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)
+   \end{itemize}
+ \item 複数事例一括実行 システム（バルクジョブシステム）
+ \item CF 規約\footnote{\url{http:/cfconventions.org}}に基づく \netcdf ファイル I/O
+   \begin{itemize}
+   \item {\netcdf}3 または {\netcdf}4 形式
+   \end{itemize}
+\proofcomment{CFのリンクが適切でないように思います。確認後リンクを針直してください。}
+ \item 外部データ読み込みによる初期値・境界値データ作成
+   \begin{itemize}
+    \item WRF-ARW\footnote{\url{http://www.wrf-model.org/}}、
+      NICAM\footnote{\url{http://nicam.jp/}}、
+      その他\grads \footnote{\url{http://cola.gmu.edu/grads/}}フォーマットでの入力に対応
+   \end{itemize}
+\end{itemize}
+
+{\bf 力学コア関係}
+\begin{itemize}
+ \item 方程式系: 3次元完全圧縮非静力学方程式系
+ \item 数値解法: 陽解法と陰解法の両方を実装
+   \begin{itemize}
+    \item 水平陽解鉛直陽解法
+    \item 水平陽解法-鉛直陰解法
+%    \item HI-VI(陰解法)
+   \end{itemize}
+ \item 空間差分: フラックス形式
+    \begin{itemize}
+      \item 2次中央差分
+      \item 4次中央差分
+      \item 6次中央差分
+      \item 3次風上差分
+      \item 5次風上差分
+    \end{itemize}
+ \item 時間差分:(詳細は、\citet{scale_2015}を参照のこと)
+    \begin{itemize}
+      \item Heun型3次ルンゲクッタスキーム
+      \item \citet{Wicker_2002}'s 3段ルンゲクッタスキーム 
+      \item 4次ルンゲクッタスキーム
+    \end{itemize}
+ \item 非負保証:
+    \begin{itemize}
+      \item フラックス修正法\\
+\proofcomment{FCTのリファレンスを付けてください。}
+      \item \citet{Koren_1993}フィルター  (3次風上差分スキーム使用時のみ)
+    \end{itemize}
+ \item 数値フィルター: 4次超粘性・拡散
+ \item 地形: 地形に沿った座標系
+\end{itemize}
+
+
+{\bf 物理過程}
+\begin{itemize}
+ \item 乱流過程: 複数から選択可能
+   \begin{itemize}
+    \item \citet{smagorinsky_1963} \& \citet{lilly_1962}型のサブグリッドモデル (\citet{Brown_etal_1994}と\citet{Scotti_1993}による補正)
+    \item \citet{Deardorff_1980} サブグリットモデル 
+    \item \citet{my_1982,nakanishi_2004}によるMYNN2.5境界層モデル 
+   \end{itemize}
+ \item 雲微物理: 複数から選択可能
+   \begin{itemize}
+    \item \citet{kessler_1969}による3-class single momoent バルクモデル
+    \item \citet{tomita_2008}による6-class single moment バルクモデル 
+    \item \citet{sn_2014}による6-class double moment バルクモデル 
+    \item \citet{suzuki_etal_2010}によるビン法雲モデル 
+   \end{itemize}
+ \item 放射過程: \citet{sekiguchi_2008}によるk分布ベース放射スキーム
+ \item 地表面モデル
+  \begin{itemize}
+   \item 陸面モデル: 熱拡散・バケツモデル
+   \item 海洋モデル: 初期値固定・外部入力（時間変化あり）・スラブモデル
+   \item 都市モデル: \citet{kusaka_2001}による単層キャノピーモデル 
+   \item バルク交換係数(陸面および海面): \citet{beljaars_1991,wilson_2001}による普遍関数によるバルク法
+     もしくは \citet{uno_1995}によるLouis 型バルク法
+  \end{itemize}
+\end{itemize}
+上記に加え、\scalerm のコンポーネントとして、
+現実事例の計算に必要な地形や土地利用データを作成するツール、
+理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。
 
 
