@@ -265,6 +265,14 @@ contains
        ATMOS_PHY_CP_cldfrac_sh(KE+1:KA,  i,j) = ATMOS_PHY_CP_cldfrac_sh(KE,i,j)
        ATMOS_PHY_CP_kf_w0avg  (   1:KS-1,i,j) = ATMOS_PHY_CP_kf_w0avg  (KS,i,j)
        ATMOS_PHY_CP_kf_w0avg  (KE+1:KA,  i,j) = ATMOS_PHY_CP_kf_w0avg  (KE,i,j)
+       ATMOS_PHY_CP_DENS_t    (   1:KS-1,i,j) = ATMOS_PHY_CP_DENS_t    (KS,i,j)
+       ATMOS_PHY_CP_DENS_t    (KE+1:KA  ,i,j) = ATMOS_PHY_CP_DENS_t    (KE,i,j)
+       ATMOS_PHY_CP_RHOT_t    (   1:KS-1,i,j) = ATMOS_PHY_CP_RHOT_t    (KS,i,j)
+       ATMOS_PHY_CP_RHOT_t    (KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOT_t    (KE,i,j)
+       do iq = 1, QA
+          ATMOS_PHY_CP_RHOQ_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOQ_t(KS,i,j,iq)
+          ATMOS_PHY_CP_RHOQ_t(KE+1:KA  ,i,j,iq) = ATMOS_PHY_CP_RHOQ_t(KE,i,j,iq)
+       end do
     enddo
     enddo
 
@@ -276,14 +284,6 @@ contains
     call COMM_vars8( ATMOS_PHY_CP_cldfrac_sh     (:,:,:), 6 )
     call COMM_vars8( ATMOS_PHY_CP_kf_nca         (:,:)  , 7 )
     call COMM_vars8( ATMOS_PHY_CP_kf_w0avg       (:,:,:), 8 )
-    call COMM_wait ( ATMOS_PHY_CP_MFLX_cloudbase (:,:)  , 1 )
-    call COMM_wait ( ATMOS_PHY_CP_SFLX_rain      (:,:)  , 2 )
-    call COMM_wait ( ATMOS_PHY_CP_cloudtop       (:,:)  , 3 )
-    call COMM_wait ( ATMOS_PHY_CP_cloudbase      (:,:)  , 4 )
-    call COMM_wait ( ATMOS_PHY_CP_cldfrac_dp     (:,:,:), 5 )
-    call COMM_wait ( ATMOS_PHY_CP_cldfrac_sh     (:,:,:), 6 )
-    call COMM_wait ( ATMOS_PHY_CP_kf_nca         (:,:)  , 7 )
-    call COMM_wait ( ATMOS_PHY_CP_kf_w0avg       (:,:,:), 8 )
 
     ! tendency
     call COMM_vars8( ATMOS_PHY_CP_DENS_t(:,:,:), VMAX+1 )
@@ -292,6 +292,15 @@ contains
     do iq = 1, QA
        call COMM_vars8( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VMAX+2+iq )
     enddo
+
+    call COMM_wait ( ATMOS_PHY_CP_MFLX_cloudbase (:,:)  , 1 )
+    call COMM_wait ( ATMOS_PHY_CP_SFLX_rain      (:,:)  , 2 )
+    call COMM_wait ( ATMOS_PHY_CP_cloudtop       (:,:)  , 3 )
+    call COMM_wait ( ATMOS_PHY_CP_cloudbase      (:,:)  , 4 )
+    call COMM_wait ( ATMOS_PHY_CP_cldfrac_dp     (:,:,:), 5 )
+    call COMM_wait ( ATMOS_PHY_CP_cldfrac_sh     (:,:,:), 6 )
+    call COMM_wait ( ATMOS_PHY_CP_kf_nca         (:,:)  , 7 )
+    call COMM_wait ( ATMOS_PHY_CP_kf_w0avg       (:,:,:), 8 )
 
     call COMM_wait ( ATMOS_PHY_CP_DENS_t(:,:,:), VMAX+1 )
     call COMM_wait ( ATMOS_PHY_CP_RHOT_t(:,:,:), VMAX+2 )

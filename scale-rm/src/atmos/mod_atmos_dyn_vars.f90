@@ -20,6 +20,7 @@ module mod_atmos_dyn_vars
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -62,7 +63,6 @@ module mod_atmos_dyn_vars
   !++ Private parameters & variables
   !
   integer,                private, parameter :: VMAX = 100     !< max of number of the variables
-  integer,                private            :: VA   = 0       !< number of the variables
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
