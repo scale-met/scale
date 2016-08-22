@@ -58,18 +58,17 @@ module scale_atmos_phy_rd_profile
   !
   !++ Private parameters & variables
   !
-  real(RP),              private :: PROFILE_TOA = 100.0_RP              !< top of atmosphere [km]
-  character(len=H_LONG), private :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
-  character(len=H_LONG), private :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
-  character(len=H_LONG), private :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
-  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO2   = .true.
-  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O3    = .true.
-  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_N2O   = .true.
-  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO    = .true.
-  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CH4   = .true.
-  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O2    = .true.
-  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CFC   = .true.
-  logical,               private :: debug                   = .false.   !< debug mode?
+  character(len=H_LONG), private :: PROFILE_CIRA86_fname         = "cira.nc" !< file (CIRA86,netCDF format)
+  character(len=H_LONG), private :: PROFILE_MIPAS2001_dir        = "."       !< dir  (MIPAS2001,ASCII format)
+  character(len=H_LONG), private :: PROFILE_USER_fname           = ""        !< file (user,ASCII format)
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO2 = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O3  = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_N2O = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO  = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CH4 = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O2  = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CFC = .true.
+  logical,               private :: debug                        = .false.   !< debug mode?
 
   integer,  private              :: CIRA_ntime
   integer,  private              :: CIRA_nplev
@@ -83,52 +82,52 @@ module scale_atmos_phy_rd_profile
   real(RP), private, allocatable :: interp_temp(:)   ! [K]
   real(RP), private, allocatable :: interp_z   (:)   ! [km]
 
-  integer,  private, parameter :: MIPAS_kmax  = 121
-  integer,  private, parameter :: MIPAS_ntime = 2
-  real(RP), private            :: MIPAS_nd  (0:MIPAS_ntime+1) ! [day]
-  real(RP), private            :: MIPAS_lat (5)               ! [rad]
-  real(RP), private            :: MIPAS_z   (MIPAS_kmax,4)    ! [km]
-  real(RP), private            :: MIPAS_pres(MIPAS_kmax,4)    ! (not used) [hPa]
-  real(RP), private            :: MIPAS_temp(MIPAS_kmax,4)    ! (not used) [K]
-  real(RP), private            :: MIPAS_gas (MIPAS_kmax,30,4) ! [ppmv]
+  integer,  private, parameter   :: MIPAS_kmax  = 121
+  integer,  private, parameter   :: MIPAS_ntime = 2
+  real(RP), private              :: MIPAS_nd  (0:MIPAS_ntime+1) ! [day]
+  real(RP), private              :: MIPAS_lat (5)               ! [rad]
+  real(RP), private              :: MIPAS_z   (MIPAS_kmax,4)    ! [km]
+  real(RP), private              :: MIPAS_pres(MIPAS_kmax,4)    ! (not used) [hPa]
+  real(RP), private              :: MIPAS_temp(MIPAS_kmax,4)    ! (not used) [K]
+  real(RP), private              :: MIPAS_gas (MIPAS_kmax,30,4) ! [ppmv]
 
-  integer,  private, parameter :: I_tropic   =  1
-  integer,  private, parameter :: I_midlat   =  2
-  integer,  private, parameter :: I_polarsum =  3
-  integer,  private, parameter :: I_polarwin =  4
+  integer,  private, parameter   :: I_tropic   =  1
+  integer,  private, parameter   :: I_midlat   =  2
+  integer,  private, parameter   :: I_polarsum =  3
+  integer,  private, parameter   :: I_polarwin =  4
 
-  integer,  private, parameter :: I_N2     =  1
-  integer,  private, parameter :: I_O2     =  2
-  integer,  private, parameter :: I_CO2    =  3
-  integer,  private, parameter :: I_O3     =  4
-  integer,  private, parameter :: I_H2O    =  5
-  integer,  private, parameter :: I_CH4    =  6
-  integer,  private, parameter :: I_N2O    =  7
-  integer,  private, parameter :: I_HNO3   =  8
-  integer,  private, parameter :: I_CO     =  9
-  integer,  private, parameter :: I_NO2    = 10
-  integer,  private, parameter :: I_N2O5   = 11
-  integer,  private, parameter :: I_ClO    = 12
-  integer,  private, parameter :: I_HOCl   = 13
-  integer,  private, parameter :: I_ClONO2 = 14
-  integer,  private, parameter :: I_NO     = 15
-  integer,  private, parameter :: I_HNO4   = 16
-  integer,  private, parameter :: I_HCN    = 17
-  integer,  private, parameter :: I_NH3    = 18
-  integer,  private, parameter :: I_F11    = 19
-  integer,  private, parameter :: I_F12    = 20
-  integer,  private, parameter :: I_F14    = 21
-  integer,  private, parameter :: I_F22    = 22
-  integer,  private, parameter :: I_CCl4   = 23
-  integer,  private, parameter :: I_COF2   = 24
-  integer,  private, parameter :: I_H2O2   = 25
-  integer,  private, parameter :: I_C2H2   = 26
-  integer,  private, parameter :: I_C2H6   = 27
-  integer,  private, parameter :: I_OCS    = 28
-  integer,  private, parameter :: I_SO2    = 29
-  integer,  private, parameter :: I_SF6    = 30
+  integer,  private, parameter   :: I_N2     =  1
+  integer,  private, parameter   :: I_O2     =  2
+  integer,  private, parameter   :: I_CO2    =  3
+  integer,  private, parameter   :: I_O3     =  4
+  integer,  private, parameter   :: I_H2O    =  5
+  integer,  private, parameter   :: I_CH4    =  6
+  integer,  private, parameter   :: I_N2O    =  7
+  integer,  private, parameter   :: I_HNO3   =  8
+  integer,  private, parameter   :: I_CO     =  9
+  integer,  private, parameter   :: I_NO2    = 10
+  integer,  private, parameter   :: I_N2O5   = 11
+  integer,  private, parameter   :: I_ClO    = 12
+  integer,  private, parameter   :: I_HOCl   = 13
+  integer,  private, parameter   :: I_ClONO2 = 14
+  integer,  private, parameter   :: I_NO     = 15
+  integer,  private, parameter   :: I_HNO4   = 16
+  integer,  private, parameter   :: I_HCN    = 17
+  integer,  private, parameter   :: I_NH3    = 18
+  integer,  private, parameter   :: I_F11    = 19
+  integer,  private, parameter   :: I_F12    = 20
+  integer,  private, parameter   :: I_F14    = 21
+  integer,  private, parameter   :: I_F22    = 22
+  integer,  private, parameter   :: I_CCl4   = 23
+  integer,  private, parameter   :: I_COF2   = 24
+  integer,  private, parameter   :: I_H2O2   = 25
+  integer,  private, parameter   :: I_C2H2   = 26
+  integer,  private, parameter   :: I_C2H6   = 27
+  integer,  private, parameter   :: I_OCS    = 28
+  integer,  private, parameter   :: I_SO2    = 29
+  integer,  private, parameter   :: I_SF6    = 30
 
-  logical, private :: report_firsttime = .true. !< true at only first report
+  logical,  private              :: report_firsttime = .true. !< true at only first report
 
   !-----------------------------------------------------------------------------
 contains
@@ -139,13 +138,11 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP)              :: ATMOS_PHY_RD_PROFILE_TOA
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
 
     namelist / PARAM_ATMOS_PHY_RD_PROFILE / &
-       ATMOS_PHY_RD_PROFILE_TOA,                   &
        ATMOS_PHY_RD_PROFILE_use_climatology,       &
        ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME,    &
        ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME, &
@@ -166,7 +163,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD PROFILE]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ climatological profile'
 
-    ATMOS_PHY_RD_PROFILE_TOA                   = PROFILE_TOA
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir
     ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = PROFILE_USER_fname
@@ -183,7 +179,6 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
-    PROFILE_TOA             = ATMOS_PHY_RD_PROFILE_TOA
     PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     PROFILE_USER_fname      = ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
@@ -1115,6 +1110,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup vertical grid for radiation
   subroutine ATMOS_PHY_RD_PROFILE_setup_zgrid( &
+       toa,  &
        kmax, &
        kadd, &
        zh,   &
@@ -1124,6 +1120,7 @@ contains
        FZ  => GRID_FZ
     implicit none
 
+    real(RP), intent(in)    :: toa        !< top of atmosphere [km]
     integer,  intent(in)    :: kmax       !< number of vertical grid
     integer,  intent(in)    :: kadd       !< number of additional vertical grid
     real(RP), intent(inout) :: zh(kmax+1) !< altitude at the interface [km]
@@ -1135,9 +1132,9 @@ contains
 
     if ( kadd > 0 ) then
        !--- additional layer over the computational domain
-       dz = ( PROFILE_TOA - FZ(KE)*1.E-3_RP ) / real( kadd, kind=RP )
+       dz = ( toa - FZ(KE)*1.E-3_RP ) / real( kadd, kind=RP )
 
-       zh(1) = PROFILE_TOA
+       zh(1) = toa
        do k = 2, kadd
           zh(k) = zh(k-1) - dz
        enddo
