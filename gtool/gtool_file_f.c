@@ -35,6 +35,7 @@ static void cstr2fstr( char   *fstr, // (out)
 void file_open_( int32_t *fid,       // (out)
 		 char    *fname,     // (in)
 		 int32_t *mode,      // (in)
+		 int32_t *comm,      // (in)
 		 int32_t *error,     // (out)
 		 int32_t  fname_len) // (in)
 {
@@ -44,23 +45,7 @@ void file_open_( int32_t *fid,       // (out)
   len = fname_len > File_HLONG ? File_HLONG : fname_len;
   fstr2cstr(_fname, fname, len);
 
-  *error = file_open( fid, _fname, *mode );
-}
-
-void file_open_par_( int32_t *fid,       // (out)
-		     char    *fname,     // (in)
-		     int32_t *mode,      // (in)
-		     int32_t *comm,      // (in)
-		     int32_t *error,     // (out)
-		     int32_t  fname_len) // (in)
-{
-  char _fname[File_HLONG+1];
-  int32_t len;
-
-  len = fname_len > File_HLONG ? File_HLONG : fname_len;
-  fstr2cstr(_fname, fname, len);
-
-  *error = file_open_par( fid, _fname, *mode, MPI_Comm_f2c(*comm) );
+  *error = file_open( fid, _fname, *mode, MPI_Comm_f2c(*comm) );
 }
 
 void file_set_option_( int32_t *fid,      // (in)

@@ -3342,7 +3342,7 @@ contains
 
     start(1) = ISGA
     start(2) = JSGA
-    ! start(3) will be calculated in file_write_var_par()
+    ! start(3) time dimension will be set in file_write_data()
 
     if ( present(timetarg) ) then
        nowtime = (timetarg-1) * time_interval
@@ -3482,7 +3482,7 @@ contains
     start(1) = 1
     start(2) = ISGA
     start(3) = JSGA
-    ! start(4) will be calculated in file_write_var_par()
+    ! start(4) time dimension will be set in file_write_data()
 
     time_interval = timeintv
     step = size(var(KS,ISB,JSB,:))

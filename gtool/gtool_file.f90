@@ -3662,7 +3662,7 @@ contains
       mode,       &
       single,     &
       comm        )
-    use MPI, only : MPI_COMM_NULL
+    use MPI, only : MPI_COMM_NULL, MPI_COMM_SELF
     implicit none
 
     integer,          intent(out) :: fid
@@ -3677,17 +3677,17 @@ contains
 
     character(LEN=File_HLONG) :: fname
     integer                   :: n
-    logical                   :: pio
 
     integer :: error
+    integer :: comm_
     !---------------------------------------------------------------------------
 
     !--- register new file and open
-    pio = .FALSE.
+    comm_ = MPI_COMM_NULL
     if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) then
        ! parallel I/O on a single shared netCDF file
        fname = basename
-       pio = .TRUE.
+       comm_ = comm
     elseif ( single ) then
        fname = trim(basename)//'.peall'
     else
@@ -3705,15 +3705,9 @@ contains
        return
     end if
 
-    if ( pio ) then
-       call file_open_par( fid,  & ! (out)
-            fname, mode, comm,   & ! (in)
-            error                ) ! (out)
-    else
-       call file_open( fid, & ! (out)
-            fname, mode,    & ! (in)
-            error           ) ! (out)
-    end if
+    call file_open( fid,     & ! (out)
+         fname, mode, comm_, & ! (in)
+         error               ) ! (out)
 
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to open file :'//trim(fname)//'.nc')

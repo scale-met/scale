@@ -93,7 +93,6 @@ typedef struct {
   int ncid;
   int varid;
   tdim_t *t;
-  int shared_mode;
   size_t *start;
   size_t *count;
 } varinfo_t;
@@ -111,12 +110,14 @@ static tdim_t *tdims[VAR_MAX];
 static int nt = 0;
 
 
-int32_t file_open( int32_t *fid,    // (out)
-		   char    *fname,  // (in)
-		   int32_t  mode )  // (in)
+int32_t file_open( int32_t  *fid,     // (out)
+		   char     *fname,   // (in)
+		   int32_t   mode,    // (in)
+		   MPI_Comm  comm )   // (in)
 {
   int ncid;
   int len;
+  int shared_mode;
   char _fname[File_HLONG+4];
 
   if ( nfile >= FILE_MAX ) {
@@ -129,19 +130,33 @@ int32_t file_open( int32_t *fid,    // (out)
   if (fname[len-3] != '.' || fname[len-2] != 'n' || fname[len-1] != 'c' )
     strcat(_fname, ".nc");
 
+  if ( comm == MPI_COMM_NULL || comm == MPI_COMM_SELF )
+    shared_mode = 0;
+  else
+    shared_mode = 1;
+
   switch ( mode ) {
   case File_FREAD:
-    CHECK_ERROR( nc_open(_fname, NC_NOWRITE, &ncid) )
+    if ( shared_mode )
+      CHECK_PNC_ERROR( ncmpi_open(comm, _fname, NC_NOWRITE, MPI_INFO_NULL, &ncid) )
+    else
+      CHECK_ERROR( nc_open(_fname, NC_NOWRITE, &ncid) )
     break;
   case File_FWRITE:
+    if ( shared_mode )
+      CHECK_PNC_ERROR( ncmpi_create(comm, _fname, NC_CLOBBER, MPI_INFO_NULL, &ncid) )
+    else
 #ifdef NETCDF3
-    CHECK_ERROR( nc_create(_fname, NC_CLOBBER, &ncid) )
+      CHECK_ERROR( nc_create(_fname, NC_CLOBBER, &ncid) )
 #else
-    CHECK_ERROR( nc_create(_fname, NC_CLOBBER|NC_NETCDF4, &ncid) )
+      CHECK_ERROR( nc_create(_fname, NC_CLOBBER|NC_NETCDF4, &ncid) )
 #endif
     break;
   case File_FAPPEND:
-    CHECK_ERROR( nc_open(_fname, NC_WRITE, &ncid) )
+    if ( shared_mode )
+      CHECK_PNC_ERROR( ncmpi_open(comm, _fname, NC_WRITE, MPI_INFO_NULL, &ncid) )
+    else
+      CHECK_ERROR( nc_open(_fname, NC_WRITE, &ncid) )
     break;
   default:
     fprintf(stderr, "invalid mode type\n");
@@ -157,58 +172,7 @@ int32_t file_open( int32_t *fid,    // (out)
   else
     files[nfile]->defmode = 0;
 #endif
-  files[nfile]->shared_mode = 0;  /* file is not shared among processes */
-  strcpy(files[nfile]->fname, fname);
-  *fid = nfile;
-  nfile++;
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_open_par( int32_t  *fid,     // (out)
-		       char     *fname,   // (in)
-		       int32_t   mode,    // (in)
-		       MPI_Comm  comm )   // (in)
-{
-  int ncid;
-  int len;
-  char _fname[File_HLONG+4];
-
-  if ( nfile >= FILE_MAX ) {
-    fprintf(stderr, "exceed max number of file limit\n");
-    return ERROR_CODE;
-  }
-
-  len = strlen(fname);
-  strcpy(_fname, fname);
-  if (fname[len-3] != '.' || fname[len-2] != 'n' || fname[len-1] != 'c' )
-    strcat(_fname, ".nc");
-
-  switch ( mode ) {
-  case File_FREAD:
-    CHECK_PNC_ERROR( ncmpi_open(comm, _fname, NC_NOWRITE, MPI_INFO_NULL, &ncid) )
-    break;
-  case File_FWRITE:
-    CHECK_PNC_ERROR( ncmpi_create(comm, _fname, NC_CLOBBER, MPI_INFO_NULL, &ncid) )
-    break;
-  case File_FAPPEND:
-    CHECK_PNC_ERROR( ncmpi_open(comm, _fname, NC_WRITE, MPI_INFO_NULL, &ncid) )
-    break;
-  default:
-    fprintf(stderr, "invalid mode type\n");
-    return ERROR_CODE;
-  }
-
-  files[nfile] = (fileinfo_t*) malloc(sizeof(fileinfo_t));
-  files[nfile]->ncid = ncid;
-  files[nfile]->deflate_level = DEFAULT_DEFLATE_LEVEL;
-#ifdef NETCDF3
-  if ( mode == File_FWRITE)
-    files[nfile]->defmode = 1;
-  else
-    files[nfile]->defmode = 0;
-#endif
-  files[nfile]->shared_mode = 1;  /* file is shared among processes */
+  files[nfile]->shared_mode = shared_mode;  /* shared-file I/O mode */
   strcpy(files[nfile]->fname, fname);
   *fid = nfile;
   nfile++;
@@ -1006,7 +970,6 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   vars[nvar]->t = NULL;
   vars[nvar]->start = NULL;
   vars[nvar]->count = NULL;
-  vars[nvar]->shared_mode = files[fid]->shared_mode;
 
 #ifdef NETCDF3
   if (files[fid]->defmode == 0) {
@@ -1301,7 +1264,7 @@ int32_t file_write_data( int32_t     fid,        // (in)
   ncid = vars[vid]->ncid;
 
 #ifdef NETCDF3
-  if ( files[fid]->defmode == 1 && ! vars[vid]->shared_mode ) {
+  if ( files[fid]->defmode == 1 && ! files[fid]->shared_mode ) {
     CHECK_ERROR( nc_enddef(ncid) )
     files[fid]->defmode = 0;
   }
@@ -1313,7 +1276,7 @@ int32_t file_write_data( int32_t     fid,        // (in)
          t_end > vars[vid]->t->t + TEPS ) { // time goes next step
       vars[vid]->t->count += 1;
       vars[vid]->t->t = t_end;
-      if ( vars[vid]->shared_mode ) { // write a new value to variable time
+      if ( files[fid]->shared_mode ) { // write a new value to variable time
         MPI_Offset index[2];
         index[0] = (MPI_Offset) vars[vid]->t->count;
         CHECK_PNC_ERROR( ncmpi_put_var1_double_all(ncid, vars[vid]->t->varid, index, &t_end) )
@@ -1335,7 +1298,7 @@ int32_t file_write_data( int32_t     fid,        // (in)
       size_t nt = vars[vid]->t->count + 1;
       double t[nt];
       int flag, n;
-      if ( vars[vid]->shared_mode ) {
+      if ( files[fid]->shared_mode ) {
         MPI_Offset c = (MPI_Offset) nt;
         MPI_Offset s=0;
         CHECK_PNC_ERROR( ncmpi_get_vara_double_all(ncid, vars[vid]->t->varid, &s, &c, t) )
@@ -1361,7 +1324,7 @@ int32_t file_write_data( int32_t     fid,        // (in)
         return ERROR_CODE;
       }
     }
-    if ( vars[vid]->shared_mode ) {
+    if ( files[fid]->shared_mode ) {
       // add time dimension to start[0] and count[0]
       int i, ndims;
       CHECK_PNC_ERROR( ncmpi_inq_varndims(ncid, varid, &ndims) )
@@ -1376,13 +1339,13 @@ int32_t file_write_data( int32_t     fid,        // (in)
 
   switch (precision) {
   case 8:
-    if ( vars[vid]->shared_mode )
+    if ( files[fid]->shared_mode )
       CHECK_PNC_ERROR( ncmpi_bput_vara_double(ncid, varid, start, count, (double*)var, NULL) )
     else
       CHECK_ERROR( nc_put_vara_double(ncid, varid, vars[vid]->start, vars[vid]->count, (double*)var) )
     break;
   case 4:
-    if ( vars[vid]->shared_mode )
+    if ( files[fid]->shared_mode )
       CHECK_PNC_ERROR( ncmpi_bput_vara_float(ncid, varid, start, count, (float*)var, NULL) )
     else
       CHECK_ERROR( nc_put_vara_float(ncid, varid, vars[vid]->start, vars[vid]->count, (float*)var) )
@@ -1399,15 +1362,9 @@ int32_t file_close( int32_t fid ) // (in)
 {
   int ncid;
   int i;
-  int shared_mode;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
-
-  shared_mode = files[fid]->shared_mode;
-
-  free( files[fid] );
-  files[fid] = NULL;
 
   for (i=0; i<nvar; i++) {
     if ( vars[i] != NULL && vars[i]->ncid == ncid ) {
@@ -1425,10 +1382,13 @@ int32_t file_close( int32_t fid ) // (in)
     }
   }
 
-  if ( shared_mode )
+  if ( files[fid]->shared_mode )
     CHECK_PNC_ERROR( ncmpi_close(ncid) )
   else
     CHECK_ERROR( nc_close(ncid) )
+
+  free( files[fid] );
+  files[fid] = NULL;
 
   return SUCCESS_CODE;
 }

@@ -57,12 +57,8 @@ typedef struct{
 
 extern int32_t file_open( int32_t  *fid,   // (out)
 			  char     *fname, // (in)
-			  int32_t   mode); // (in)
-
-extern int32_t file_open_par( int32_t  *fid,   // (out)
-			      char     *fname, // (in)
-			      int32_t   mode,  // (in)
-			      MPI_Comm  comm); // (in)
+			  int32_t   mode,  // (in)
+			  MPI_Comm  comm); // (in)
 
 extern int32_t file_set_option( int32_t  fid,      // (in)
 				char    *filetype, // (in)
