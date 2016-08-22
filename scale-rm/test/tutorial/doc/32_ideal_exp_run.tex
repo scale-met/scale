@@ -59,10 +59,8 @@ SCALEの基本的な実行コマンドは下記のとおりである。
 \fbox{
 \begin{tabularx}{140mm}{l}
  *** Start Launch System for SCALE-RM\\
- TOTAL BULK JOB NUMBER   =    1\\
- PROCESS NUM of EACH JOB =     2\\
- TOTAL DOMAIN NUMBER     =    1\\
- Flag of ABORT ALL JOBS  =  F\\
+ *** Execute preprocess? :  T\\
+ *** Execute model?      :  F\\
  *** a single comunicator\\
  *** a single comunicator\\
 \end{tabularx}
@@ -71,8 +69,8 @@ SCALEの基本的な実行コマンドは下記のとおりである。
 \noindent この実行によって、\\
 \begin{alltt}
   init_LOG.pe000000
-  init_00000000000.000.pe000000.nc
-  init_00000000000.000.pe000001.nc
+  init_00000101-000000.000.pe000000.nc
+  init_00000101-000000.000.pe000001.nc
 \end{alltt}
 の3つのファイルが、現在のディレクトリ下に作成される。
 ``init\_LOG.pe000000''には、
@@ -83,14 +81,14 @@ SCALEの基本的な実行コマンドは下記のとおりである。
 \ovalbox{
 \begin{tabularx}{140mm}{l}
  ++++++ Stop MPI\\
- *** Broadcast STOP signal\\
+ \\
  *** MPI is peacefully finalized\\
 \end{tabularx}
 }}}\\
 
 \noindent と記述される。
 
-``init\_00000000000.000.pe000000.nc''と``init\_00000000000.000.pe000001.nc''の
+``init_00000101-000000.000.pe000000.nc''と``init_00000101-000000.000.pe000001.nc''の
 2つのファイルは初期値ファイルである。
 計算領域全体を2つのMPIプロセスで分割し担当するため、
 2つのファイルが生成される。
@@ -114,9 +112,8 @@ GPhys/Ruby-DCLやncviewといったツールで直接読むことができる。
   LOG.pe000000
   history.pe000000.nc
   history.pe000001.nc
-  monitor.pe000000
 \end{alltt}
-の4つのファイルが、現在のディレクトリ下に作成されているはずである。
+の3つのファイルが、現在のディレクトリ下に作成されているはずである。
 ``LOG.pe000000''には、
 コマンドラインには表示されない詳しい実行ログが記録されている。
 実行が正常に終了している場合、このLOGファイルの最後に\\
@@ -125,7 +122,7 @@ GPhys/Ruby-DCLやncviewといったツールで直接読むことができる。
 \ovalbox{
 \begin{tabularx}{140mm}{l}
  ++++++ Stop MPI\\
- *** Broadcast STOP signal\\
+ \\
  *** MPI is peacefully finalized\\
 \end{tabularx}
 }}}\\
@@ -135,6 +132,6 @@ GPhys/Ruby-DCLやncviewといったツールで直接読むことができる。
 の2つのファイルが計算結果が記録されたhistoryファイルである。
 2-MPI並列で実行したため、2つのファイルが生成されており、
 ファイル形式はNetCDFである。
-``monitor.pe000000''は、計算中にモニタリングしている
-物理変数の時間変化を記録したテキストファイルである。
+%``monitor.pe000000''は、計算中にモニタリングしている
+%物理変数の時間変化を記録したテキストファイルである。
 
