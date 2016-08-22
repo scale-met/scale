@@ -241,8 +241,9 @@ contains
          "source", source             ) ! (in)
     call FileSetGlobalAttribute( fid, & ! (in)
          "institution", institution   ) ! (in)
+
     if ( .NOT. present(comm) .OR. comm .EQ. MPI_COMM_NULL ) then
-       ! for shared-file parallel I/O, skip MPI process attributes
+       ! for shared-file parallel I/O, skip attributes related to MPI processes
        call FileSetGlobalAttribute( fid, & ! (in)
             "myrank", (/myrank/)         ) ! (in)
        call FileSetGlobalAttribute( fid, & ! (in)
@@ -315,15 +316,15 @@ contains
        )
     integer,          intent(in) :: fid
     character(LEN=*), intent(in) :: key
-    real(SP),          intent(out) :: val(:)
+    real(SP),    intent(out) :: val(:)
 
     integer error
 
     intrinsic size
 
     call file_get_global_attribute_float( & ! (in)
-         fid, key, size(val),            & ! (in)
-         val, error                      ) ! (out)
+         fid, key, size(val),                          & ! (in)
+         val, error                                    ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get float global attribute: '//trim(key))
     end if
@@ -339,15 +340,15 @@ contains
        )
     integer,          intent(in) :: fid
     character(LEN=*), intent(in) :: key
-    real(DP),          intent(out) :: val(:)
+    real(DP),    intent(out) :: val(:)
 
     integer error
 
     intrinsic size
 
     call file_get_global_attribute_double( & ! (in)
-         fid, key, size(val),            & ! (in)
-         val, error                      ) ! (out)
+         fid, key, size(val),                          & ! (in)
+         val, error                                    ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get double global attribute: '//trim(key))
     end if
@@ -410,15 +411,15 @@ contains
        )
     integer,          intent(in) :: fid
     character(LEN=*), intent(in) :: key
-    real(SP),          intent(in) :: val(:)
+    real(SP),    intent(in) :: val(:)
 
     integer error
 
     intrinsic size
 
     call file_set_global_attribute_float( fid, & ! (in)
-         key, val, size(val),                & ! (in)
-         error                               ) ! (out)
+         key, val, size(val),                               & ! (in)
+         error                                              ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set float global attribute: '//trim(key))
     end if
@@ -434,15 +435,15 @@ contains
        )
     integer,          intent(in) :: fid
     character(LEN=*), intent(in) :: key
-    real(DP),          intent(in) :: val(:)
+    real(DP),    intent(in) :: val(:)
 
     integer error
 
     intrinsic size
 
     call file_set_global_attribute_double( fid, & ! (in)
-         key, val, size(val),                & ! (in)
-         error                               ) ! (out)
+         key, val, size(val),                               & ! (in)
+         error                                              ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set double global attribute: '//trim(key))
     end if
@@ -464,9 +465,8 @@ contains
 
     integer error
 
-    call file_set_option( fid,                & ! (in)
-                          filetype, key, val, & ! (in)
-                          error               ) ! (out)
+    call file_set_option( fid, filetype, key, val, & ! (in)
+                          error                    ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set option')
     end if
@@ -498,8 +498,7 @@ contains
     if ( present(single) ) single_ = single
     if ( present(myrank) ) mpi_myrank = myrank
 
-    call FileGetfid( fid,              & ! (out)
-         existed,                      & ! (out)
+    call FileGetfid( fid, existed,     & ! (out)
          basename, mode, single_, comm ) ! (in)
 
     return
@@ -522,14 +521,13 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_name
     integer,          intent(in) :: dtype
-    real(SP),         intent(in) :: val(:)
+    real(SP),    intent(in) :: val(:)
 
     integer error
     intrinsic size
 
-    call file_put_axis( fid,                                          & ! (in)
-         name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
-         error                                                   ) ! (out)
+    call file_put_axis( fid, name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
+         error                                                                            ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put axis')
     end if
@@ -550,14 +548,13 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_name
     integer,          intent(in) :: dtype
-    real(DP),         intent(in) :: val(:)
+    real(DP),    intent(in) :: val(:)
 
     integer error
     intrinsic size
 
-    call file_put_axis( fid,                                          & ! (in)
-         name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
-         error                                                   ) ! (out)
+    call file_put_axis( fid, name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
+         error                                                                            ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put axis')
     end if
@@ -610,13 +607,11 @@ contains
     intrinsic shape
 
     if ( present(start) ) then
-       call file_write_axis( fid, name, val, SP, & ! (in)
-            start, shape(val),                        & ! (in)
-            error                                     ) ! (out)
+       call file_write_axis( fid, name, val, SP, start, shape(val), & ! (in)
+            error                                                        ) ! (out)
     else
-       call file_write_axis( fid, name, val, SP, & ! (in)
-            (/1/), shape(val),                        & ! (in)
-            error                                     ) ! (out)
+       call file_write_axis( fid, name, val, SP, (/1/), shape(val), & ! (in)
+            error                                                        ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to write axis')
@@ -638,13 +633,11 @@ contains
     intrinsic shape
 
     if ( present(start) ) then
-       call file_write_axis( fid, name, val, DP, & ! (in)
-            start, shape(val),                        & ! (in)
-            error                                     ) ! (out)
+       call file_write_axis( fid, name, val, DP, start, shape(val), & ! (in)
+            error                                                        ) ! (out)
     else
-       call file_write_axis( fid, name, val, DP, & ! (in)
-            (/1/), shape(val),                        & ! (in)
-            error                                     ) ! (out)
+       call file_write_axis( fid, name, val, DP, (/1/), shape(val), & ! (in)
+            error                                                        ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to write axis')
@@ -670,7 +663,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(SP),         intent(in) :: val(:)
+    real(SP),    intent(in) :: val(:)
 
     integer error
     intrinsic size
@@ -699,7 +692,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(DP),         intent(in) :: val(:)
+    real(DP),    intent(in) :: val(:)
 
     integer error
     intrinsic size
@@ -728,7 +721,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(SP),         intent(in) :: val(:,:)
+    real(SP),    intent(in) :: val(:,:)
 
     integer error
     intrinsic size
@@ -757,7 +750,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(DP),         intent(in) :: val(:,:)
+    real(DP),    intent(in) :: val(:,:)
 
     integer error
     intrinsic size
@@ -786,7 +779,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(SP),         intent(in) :: val(:,:,:)
+    real(SP),    intent(in) :: val(:,:,:)
 
     integer error
     intrinsic size
@@ -815,7 +808,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(DP),         intent(in) :: val(:,:,:)
+    real(DP),    intent(in) :: val(:,:,:)
 
     integer error
     intrinsic size
@@ -844,7 +837,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(SP),         intent(in) :: val(:,:,:,:)
+    real(SP),    intent(in) :: val(:,:,:,:)
 
     integer error
     intrinsic size
@@ -873,7 +866,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(DP),         intent(in) :: val(:,:,:,:)
+    real(DP),    intent(in) :: val(:,:,:,:)
 
     integer error
     intrinsic size
@@ -1285,7 +1278,7 @@ contains
     character(len=*), intent( in) :: units
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
-    real(SP),         intent( in) :: tint
+    real(SP),    intent( in) :: tint
     logical,          intent( in), optional :: tavg
 
     real(DP) :: tint8
@@ -1357,7 +1350,7 @@ contains
     character(len=*), intent( in) :: units
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
-    real(DP),         intent( in) :: tint
+    real(DP),    intent( in) :: tint
     logical,          intent( in), optional :: tavg
 
     real(DP) :: tint8
@@ -1813,7 +1806,7 @@ contains
       )
     implicit none
 
-    real(SP),         intent(out)           :: var(:)
+    real(SP),    intent(out)           :: var(:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -1875,8 +1868,8 @@ contains
     end do
 
     call file_read_data( var(:), & ! (out)
-         dinfo, SP,                  & ! (in)
-         error                       ) ! (out)
+         dinfo, SP,                & ! (in)
+         error                          ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -1894,7 +1887,7 @@ contains
       )
     implicit none
 
-    real(DP),         intent(out)           :: var(:)
+    real(DP),    intent(out)           :: var(:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -1956,8 +1949,8 @@ contains
     end do
 
     call file_read_data( var(:), & ! (out)
-         dinfo, DP,                  & ! (in)
-         error                       ) ! (out)
+         dinfo, DP,                & ! (in)
+         error                          ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -1975,7 +1968,7 @@ contains
       )
     implicit none
 
-    real(SP),         intent(out)           :: var(:,:)
+    real(SP),    intent(out)           :: var(:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -2037,8 +2030,8 @@ contains
     end do
 
     call file_read_data( var(:,:), & ! (out)
-         dinfo, SP,                  & ! (in)
-         error                       ) ! (out)
+         dinfo, SP,                & ! (in)
+         error                          ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2056,7 +2049,7 @@ contains
       )
     implicit none
 
-    real(DP),         intent(out)           :: var(:,:)
+    real(DP),    intent(out)           :: var(:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -2118,8 +2111,8 @@ contains
     end do
 
     call file_read_data( var(:,:), & ! (out)
-         dinfo, DP,                  & ! (in)
-         error                       ) ! (out)
+         dinfo, DP,                & ! (in)
+         error                          ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2137,7 +2130,7 @@ contains
       )
     implicit none
 
-    real(SP),         intent(out)           :: var(:,:,:)
+    real(SP),    intent(out)           :: var(:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -2199,8 +2192,8 @@ contains
     end do
 
     call file_read_data( var(:,:,:), & ! (out)
-         dinfo, SP,                  & ! (in)
-         error                       ) ! (out)
+         dinfo, SP,                & ! (in)
+         error                          ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2218,7 +2211,7 @@ contains
       )
     implicit none
 
-    real(DP),         intent(out)           :: var(:,:,:)
+    real(DP),    intent(out)           :: var(:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -2280,8 +2273,8 @@ contains
     end do
 
     call file_read_data( var(:,:,:), & ! (out)
-         dinfo, DP,                  & ! (in)
-         error                       ) ! (out)
+         dinfo, DP,                & ! (in)
+         error                          ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2299,7 +2292,7 @@ contains
       )
     implicit none
 
-    real(SP),         intent(out)           :: var(:,:,:,:)
+    real(SP),    intent(out)           :: var(:,:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -2361,8 +2354,8 @@ contains
     end do
 
     call file_read_data( var(:,:,:,:), & ! (out)
-         dinfo, SP,                  & ! (in)
-         error                       ) ! (out)
+         dinfo, SP,                & ! (in)
+         error                          ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2380,7 +2373,7 @@ contains
       )
     implicit none
 
-    real(DP),         intent(out)           :: var(:,:,:,:)
+    real(DP),    intent(out)           :: var(:,:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -2442,8 +2435,8 @@ contains
     end do
 
     call file_read_data( var(:,:,:,:), & ! (out)
-         dinfo, DP,                  & ! (in)
-         error                       ) ! (out)
+         dinfo, DP,                & ! (in)
+         error                          ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -3553,6 +3546,7 @@ contains
   end subroutine FileWrite4DRealDP
 
   !-----------------------------------------------------------------------------
+  ! exit netCDF define mode and enter data mode
   subroutine FileEndDef( &
        fid & ! (in)
        )
@@ -3573,7 +3567,7 @@ contains
        call Log('E', message)
     end if
     call file_enddef( fid , & ! (in)
-         error             ) ! (out)
+         error              ) ! (out)
     if ( error .EQ. SUCCESS_CODE ) then
        write(message, '(1x,A,i3)') '*** [File] File enddef : NO.', n
        call Log('I', message)
@@ -3586,6 +3580,7 @@ contains
   end subroutine FileEndDef
 
   !-----------------------------------------------------------------------------
+  ! This subroutine is used when PnetCDF I/O method is enabled
   subroutine FileAttachBuffer( &
        fid,       & ! (in)
        buf_amount ) ! (in)
@@ -3620,6 +3615,7 @@ contains
   end subroutine FileAttachBuffer
 
   !-----------------------------------------------------------------------------
+  ! This subroutine is used when PnetCDF I/O method is enabled
   subroutine FileDetachBuffer( &
        fid        ) ! (in)
     implicit none
@@ -3654,6 +3650,7 @@ contains
   end subroutine FileDetachBuffer
 
   !-----------------------------------------------------------------------------
+  ! This subroutine is used when PnetCDF I/O method is enabled
   subroutine FileFlush( &
        fid & ! (in)
        )

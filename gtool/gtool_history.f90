@@ -132,7 +132,7 @@ module gtool_history
      real(DP), pointer          :: var(:)
      logical                    :: down
      integer                    :: gdim_size  ! global dimension size
-     integer                    :: start      ! global array start index
+     integer                    :: start(1)   ! global array start index
   end type axis
 
   type assoc
@@ -606,8 +606,8 @@ contains
     integer,          intent(in)  :: now_step
     character(len=*), intent(in), optional :: zcoord
     character(len=*), intent(in), optional :: options  ! 'filetype1:key1=val1&filetype2:key2=val2&...'
-    integer,          intent(in), optional :: start(:) ! global indices of this process's write request
-    integer,          intent(in), optional :: count(:) ! length of this process's write request
+    integer,          intent(in), optional :: start(:) ! global subarray starting indices of this process's write request
+    integer,          intent(in), optional :: count(:) ! lengths of this process's write request along each dimension
     integer,          intent(in), optional :: comm     ! MPI communicator
 
     character(len=File_HMID) :: tunits
@@ -627,6 +627,7 @@ contains
 
     nregist = 0
 
+    ! check whether shared-file I/O method is enabled
     shared_file_io = .FALSE.
     if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) shared_file_io = .TRUE.
 
@@ -709,11 +710,12 @@ contains
                    enddo
                 endif
 
-                ! define axis
+                ! define registered history axis variables in the newly created file
+                ! actual writing axis variables are deferred to HistoryWriteAxes
                 do m = 1, History_axis_count
                    History_axis(m)%id = id
 
-                   if ( shared_file_io ) then
+                   if ( shared_file_io ) then ! for shared-file I/O, define axis in its global size
                       dim_size = History_axis(m)%gdim_size ! axis global size
                    else
                       dim_size = History_axis(m)%dim_size
@@ -728,7 +730,8 @@ contains
                                      dim_size                 ) ! [IN]
                 enddo
 
-                ! define associated coordinate
+                ! define registered history associated coordinate variables in the newly created file
+                ! actual writing coordinate variables are deferred to HistoryWriteAxes
                 do m = 1, History_assoc_count
                    History_assoc(m)%id = id
 
@@ -746,7 +749,7 @@ contains
                                                       History_assoc(m)%dtype                           ) ! [IN]
                 enddo
 
-                ! allows PnetCDF to use an internal buffer of size io_buffer_size
+                ! allows PnetCDF to allocate an internal buffer of size io_buffer_size
                 ! to aggregate write requests for history variables
                 call FileAttachBuffer( History_vars(id)%fid, io_buffer_size )
 
@@ -757,8 +760,9 @@ contains
              ! Add new variable
              dtsec = real(History_vars(id)%dstep,kind=DP) * History_DTSEC
 
-             ! history variable has been reshaped to 1D, count is the original shape
-             ! History_ndims(id) stores its original number of dimensions
+             ! history variable has been reshaped to 1D, we preserve the
+             ! original shape in count(:) and History_count(:,id)
+             ! History_ndims(id) stores number of dimensions of original shape
              History_vars(id)%ndims    = size(dims)
 
              History_vars(id)%start(:) = 1
@@ -899,9 +903,9 @@ contains
        if ( present(gsize) ) &  ! global dimension size
           History_axis(History_axis_count)%gdim_size = gsize
        if ( present(start) ) then  ! global subarray starting indices
-          History_axis(History_axis_count)%start = start
+          History_axis(History_axis_count)%start(1) = start
        else
-          History_axis(History_axis_count)%start = 1
+          History_axis(History_axis_count)%start(1) = 1
        end if
     else
        write(message,*) 'xxx Number of axis exceeds the limit.'
@@ -981,9 +985,9 @@ contains
        if ( present(gsize) ) &  ! global dimension size
           History_axis(History_axis_count)%gdim_size = gsize
        if ( present(start) ) then  ! global subarray starting indices
-          History_axis(History_axis_count)%start = start
+          History_axis(History_axis_count)%start(1) = start
        else
-          History_axis(History_axis_count)%start = 1
+          History_axis(History_axis_count)%start(1) = 1
        end if
     else
        write(message,*) 'xxx Number of axis exceeds the limit.'
@@ -1054,7 +1058,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its original shape in count
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
        History_assoc(id)%count(1:1) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:1) = start(1:1)
@@ -1130,7 +1134,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its original shape in count
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
        History_assoc(id)%count(1:1) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:1) = start(1:1)
@@ -1206,7 +1210,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its original shape in count
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
        History_assoc(id)%count(1:2) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:2) = start(1:2)
@@ -1282,7 +1286,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its original shape in count
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
        History_assoc(id)%count(1:2) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:2) = start(1:2)
@@ -1358,7 +1362,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its original shape in count
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
        History_assoc(id)%count(1:3) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:3) = start(1:3)
@@ -1434,7 +1438,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its original shape in count
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
        History_assoc(id)%count(1:3) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:3) = start(1:3)
@@ -1510,7 +1514,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its original shape in count
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
        History_assoc(id)%count(1:4) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:4) = start(1:4)
@@ -1586,7 +1590,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its original shape in count
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
        History_assoc(id)%count(1:4) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:4) = start(1:4)
@@ -2094,10 +2098,11 @@ contains
     integer :: fid, prev_fid
     !---------------------------------------------------------------------------
 
-    ! Write registered axis variables to history file
-    ! This subroutine must be called after all HIST_reg calls are completed
+    ! Note this subroutine must be called after all HIST_reg calls are completed
+    ! Write registered history axes to history file
     call HistoryWriteAxes
 
+    ! Write registered history variables to history file
     do id = 1, History_id_count
        call HistoryWrite( id,      & ! [IN]
                           step_now ) ! [IN]
@@ -2146,8 +2151,8 @@ contains
     ! write registered history variables to file
     do m = 1, History_axis_count
        id = History_axis(m)%id
-       if ( History_axis(m)%start > 0 ) then
-          start(1) = History_axis(m)%start
+       if ( History_axis(m)%start(1) > 0 ) then
+          start(1) = History_axis(m)%start(1)
           call FileWriteAxis( History_vars(id)%fid, & ! [IN]
                               History_axis(m)%name, & ! [IN]
                               History_axis(m)%var,  & ! [IN]
@@ -2284,7 +2289,6 @@ contains
     return
   end subroutine HistoryWrite
 
-  !-----------------------------------------------------------------------------
   ! interface HistoryGet
   !-----------------------------------------------------------------------------
   subroutine HistoryGet1DDP( &
