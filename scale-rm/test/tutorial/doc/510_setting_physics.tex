@@ -173,7 +173,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 上記は初期値を示している。
 \namelist{PARAM_MAPPROJ}の\nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat}が設定されている場合には、
-\nmitem{ATMOS_SOLARINS_lon,ATMOS_SOLARINS_lat}の初期値は、
+\nmitem{ATMOS_SOLARINS_lon,ATMOS_SOLARINS_lat}の初期値は、\\
 \nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat}がそれぞれ与えられる。\\
 
 
@@ -512,11 +512,11 @@ init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_TYPE}で以下の
 \begin{center}
   \caption{陸面スキームの選択肢}
   \label{tab:nml_land}
-  \begin{tabularx}{150mm}{llX} \hline
+  \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 \\ \hline
       \verb|NONEまたはOFF| & 陸面モデルを利用しない                       \\
-      \verb|SLAB|         & 熱拡散モデル＋バケツモデル                    \\
-      \verb|CONST|        & SLABで土壌温度、土壌水分量、陸面温度を更新しない \\
+      \verb|SLAB|          & 熱拡散モデル＋バケツモデル                    \\
+      \verb|CONST|         & SLABで土壌温度、土壌水分量、陸面温度を更新しない \\
     \hline
   \end{tabularx}
 \end{center}
