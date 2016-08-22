@@ -49,8 +49,6 @@ module mod_atmos_phy_sf_driver
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), private :: ATMOS_PHY_SF_beta = 1.0_RP
-
 contains
   !-----------------------------------------------------------------------------
   !> Setup
@@ -76,25 +74,11 @@ contains
        CPL_sw
     implicit none
 
-    NAMELIST / PARAM_ATMOS_PHY_SF / &
-         ATMOS_PHY_SF_beta
-
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_SF] / Origin[SCALE-RM]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF)
 
     if ( ATMOS_sw_phy_sf ) then
 
@@ -234,7 +218,6 @@ contains
 
     real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
     real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
-    real(RP) :: beta  (IA,JA)
     real(RP) :: total ! dummy
 
     real(RP) :: q(QA)
@@ -259,8 +242,6 @@ contains
                              SFC_PRES (:,:)    ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
-          beta(:,:) = ATMOS_PHY_SF_beta
-
           call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
                              PRES      (KS,:,:),   & ! [IN]
                              W         (KS,:,:),   & ! [IN]
@@ -276,7 +257,6 @@ contains
                              SFLX_SW_dn(:,:),      & ! [IN]
                              SFC_TEMP  (:,:),      & ! [IN]
                              SFC_albedo(:,:,:),    & ! [IN]
-                             beta      (:,:),      & ! [IN]
                              SFC_Z0M   (:,:),      & ! [INOUT]
                              SFC_Z0H   (:,:),      & ! [INOUT]
                              SFC_Z0E   (:,:),      & ! [INOUT]

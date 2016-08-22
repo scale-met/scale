@@ -53,7 +53,7 @@ module scale_atmos_phy_sf
           ATM_Z1, dt,                                  &
           SFC_DENS, SFC_PRES,                          &
           SFLX_LW_dn, SFLX_SW_dn,                      &
-          SFC_TEMP, SFC_albedo, SFC_beta,              &
+          SFC_TEMP, SFC_albedo,                        &
           SFC_Z0M, SFC_Z0H, SFC_Z0E,                   &
           SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_LH, &
           SFLX_QTRC,                                   &
@@ -78,7 +78,6 @@ module scale_atmos_phy_sf
        real(RP), intent(in)    :: SFLX_SW_dn(IA,JA)    ! downward shortwave radiation flux at the surface [J/m2/s]
        real(RP), intent(in)    :: SFC_TEMP  (IA,JA)    ! temperature at the surface skin [K]
        real(RP), intent(in)    :: SFC_albedo(IA,JA,2)  ! surface albedo (LW/SW) [0-1]
-       real(RP), intent(in)    :: SFC_beta  (IA,JA)    ! evaporation efficiency [0-1]
        real(RP), intent(inout) :: SFC_Z0M   (IA,JA)    ! surface roughness length (momentum) [m]
        real(RP), intent(inout) :: SFC_Z0H   (IA,JA)    ! surface roughness length (heat) [m]
        real(RP), intent(inout) :: SFC_Z0E   (IA,JA)    ! surface roughness length (vapor) [m]
