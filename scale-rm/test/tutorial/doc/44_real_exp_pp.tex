@@ -11,7 +11,7 @@ ppディレクトリへ移動し、現実実験のための地形データ、土
 ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 設定ファイルが準備されている。
 ドメインの位置や格子点数など、実験設定に合わせて、
-適宜\verb|pp.conf|を編集する必要があるが、
+適宜\verb|pp.d01.conf|を編集する必要があるが、
 チュートリアルではすでに表\ref{tab:grids}の設定に
 従って編集済みの\verb|pp.d01.conf|が用意されているため、
 そのまま利用する。
@@ -63,7 +63,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 今回は、表\ref{tab:grids}に示されているように。
 4つのMPIプロセスを使用する設定なので次のように実行する。
 \begin{verbatim}
- $ mpirun -n 4 ./scale-rm_pp pp.conf
+ $ mpirun -n 4 ./scale-rm_pp pp.d01.conf
 \end{verbatim}
 %本節使用した環境において、実行にはおおよそ15秒を要する。
 ジョブが正常に終了すれば、\verb|topo_d01.pe######.nc|と\\

@@ -60,17 +60,24 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \verb|/| \\
  \\
 \verb|&PARAM_RESTART| \\
-\verb|   RESTART_OUTPUT      = .false.,| \\
-\verb|   RESTART_IN_BASENAME = "../init/init_d01_20070714-180000.000",| \\
+\verb| RESTART_RUN          = .false.,|\\
+\verb| RESTART_OUTPUT       = .true., |\\
+\verb| RESTART_OUT_BASENAME = "restart_d01",|\\
+\verb| RESTART_IN_BASENAME  = "../init/init_d01_20070714-180000.000",|\\
 \verb|/| \\
  \\
 \verb|&PARAM_ATMOS_BOUNDARY| \\
-\verb|   ATMOS_BOUNDARY_TYPE        = "REAL",| \\
-\verb|   ATMOS_BOUNDARY_IN_BASENAME = "../init/boundary_d01",| \\
-\verb|   ATMOS_BOUNDARY_USE_VELZ    = .true.,| \\
-\verb|   ATMOS_BOUNDARY_USE_QHYD    = .false.,| \\
-\verb|   ATMOS_BOUNDARY_VALUE_VELZ  = 0.0D0,| \\
-\verb|   ATMOS_BOUNDARY_UPDATE_DT   = 21600.0D0,| \\
+\verb| ATMOS_BOUNDARY_TYPE           = "REAL",                |\\
+\verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/boundary_d01",|\\
+\verb| ATMOS_BOUNDARY_START_DATE     = 2007, 7, 14, 18, 0, 0, |\\
+\verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.0,               |\\
+\verb| ATMOS_BOUNDARY_USE_DENS       = .true.,     |\\
+\verb| ATMOS_BOUNDARY_USE_VELZ       = .true.,     |\\
+\verb| ATMOS_BOUNDARY_USE_QHYD       = .false.,    |\\
+\verb| ATMOS_BOUNDARY_VALUE_VELZ     = 0.0,        |\\
+\verb| ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,        |\\
+\verb| ATMOS_BOUNDARY_LINEAR_H       = .false.,    |\\
+\verb| ATMOS_BOUNDARY_EXP_H          = 2.0,        |\\
 \verb|/| \\
 \end{tabularx}
 }}\\
@@ -83,7 +90,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_TIME| & \\
-\verb| TIME_STARTDATE     = 2007, 7, 14, 0, 0, 0,| &← 時間積分を開始する時刻 \\
+\verb| TIME_STARTDATE     = 2007, 7, 14, 18, 0, 0,| &← 時間積分を開始する時刻 \\
 \verb| TIME_STARTMS       = 0.D0,| &\\
 \verb| TIME_DURATION      = 6.0D0,| &← 積分期間 \\
 \verb| TIME_DURATION_UNIT = "HOUR",| &← \verb|TIME_DURATION|の単位\\
@@ -129,20 +136,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \noindent {{\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&HISTITEM item="DENS" /| 　  　        　& 密度 (3次元) \\
-\verb|&HISTITEM item="MOMZ" /| 　  　        　& 鉛直運動量 (3次元) \\
-\verb|&HISTITEM item="MOMX" /| 　  　        　& X方向水平運動量 (3次元) \\
-\verb|&HISTITEM item="MOMY" /| 　  　        　& Y方向水平運動量 (3次元) \\
-\verb|&HISTITEM item="RHOT" /| 　  　        　& 密度X温位 (3次元) \\
-\verb|&HISTITEM item="QV"   /| 　  　    　    & 水蒸気の混合比 (3次元) \\
-\verb|&HISTITEM item="QHYD" /| 　  　        　& 凝結水物質の混合比　(3次元) \\
-\verb|&HISTITEM item="T"    /| 　  　     　   & 温度 (3次元) \\
-\verb|&HISTITEM item="PRES" /| 　  　        　& 圧力 (3次元) \\
-\verb|&HISTITEM item="U"    /| 　  　      　  & X方向水平速度成分 (3次元) \\
-\verb|&HISTITEM item="V"    /| 　  　      　  & Y方向水平速度成分 (3次元) \\
-\verb|&HISTITEM item="W"    /| 　  　      　  & 鉛直方向速度成分 (3次元) \\
-\verb|&HISTITEM item="PT"   /| 　  　   　     & 温位 (3次元) \\
-\verb|&HISTITEM item="RH"   /| 　   　   　    & 相対湿度 (3次元) \\
+\verb|&HISTITEM item="MSLP" /| 　   　    　   & 海面更正気圧 \\
 \verb|&HISTITEM item="PREC" /| 　   　    　   & 降水強度 (2次元) \\
 \verb|&HISTITEM item="OLR"  /| 　    　        & 外向き赤外放射(2次元) \\
 \verb|&HISTITEM item="U10" / |　     　        & 地表10mでのX方向水平速度成分(2次元) \\
@@ -151,8 +145,17 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \verb|&HISTITEM item="Q2"  / |　     　  　   　&  地表2mでの水蒸気混合比 (2次元) \\
 \verb|&HISTITEM item="SFC_PRES"   /| 　     　　& 地表気圧 (2次元) \\
 \verb|&HISTITEM item="SFC_TEMP"   /| 　   　　　& バルクの地表面温度 (2次元) \\
-\verb|&HISTITEM item="LAND_SFC_TEMP" /| 　　  & 陸面での地表面温度 (2次元) \\
-\verb|&HISTITEM item="URBAN_SFC_TEMP"/|　　　 & 都市での地表面温度 (2次元) \\
+\verb|&HISTITEM item="DENS" /| 　  　        　& 密度 (3次元) \\
+\verb|&HISTITEM item="QV"   /| 　  　    　    & 水蒸気の混合比 (3次元) \\
+\verb|&HISTITEM item="QHYD" /| 　  　        　& 凝結水物質の混合比　(3次元) \\
+\verb|&HISTITEM item="PRES" /| 　  　        　& 圧力 (3次元) \\
+\verb|&HISTITEM item="U"    /| 　  　      　  & X方向水平速度成分 (3次元) \\
+\verb|&HISTITEM item="V"    /| 　  　      　  & Y方向水平速度成分 (3次元) \\
+\verb|&HISTITEM item="T"    /| 　  　     　   & 温度 (3次元) \\
+\verb|&HISTITEM item="W"    /| 　  　      　  & 鉛直方向速度成分 (3次元) \\
+\verb|&HISTITEM item="Uabs" /| 　  　      　  & 風速 (3次元) \\
+\verb|&HISTITEM item="PT"   /| 　  　   　     & 温位 (3次元) \\
+\verb|&HISTITEM item="RH"   /| 　   　   　    & 相対湿度 (3次元) \\
 \end{tabularx}
 }}}\\
 

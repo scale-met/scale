@@ -72,7 +72,7 @@ init.d01.conf  init.launch.conf  param.bucket.conf  scale-rm_init
 
 
 第\ref{sec:tutrial_real_data}節で作成した入力データに、
-\verb|${Tutorial_DIR}/real/data|ディレクトリに準備されている\verb|"gradsinput-link_FNL.sh"|を用いてリンクをはる。
+\verb|${Tutorial_DIR}/real/data|ディレクトリに準備されている\verb|"gradsinput-link_FNL.sh"|を用いてリンクをはる。(Mac OSを使用している場合は、シェルスクリプトの \verb|date| を \verb|gdate| に変更する。)
 \begin{verbatim}
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh
