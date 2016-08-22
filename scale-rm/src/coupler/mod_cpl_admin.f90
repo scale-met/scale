@@ -44,6 +44,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_ADMIN_setup
+    use scale_process, only: &
+       PRC_MPIstop
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_sw_phy_sf
     use mod_ocean_admin, only: &
        OCEAN_sw
     use mod_land_admin, only: &
@@ -72,6 +77,20 @@ contains
 
     if ( CPL_sw ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Coupler : ON'
+
+       if ( ATMOS_PHY_SF_TYPE == 'COUPLE' ) then
+          ! do nothing
+       elseif( ATMOS_PHY_SF_TYPE == 'NONE' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** -> Surface Flux Type is forced to change from NONE to COUPLE.'
+          ! overwrite
+          ATMOS_PHY_SF_TYPE = 'COUPLE'
+          ATMOS_sw_phy_sf   = .true.
+       else
+          if( IO_L ) write(IO_FID_LOG,*) '*** Surface Flux : ', trim(ATMOS_PHY_SF_TYPE)
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx Setting conflicts between coupler and surface flux! STOP.'
+          write(*,*)                     'xxx Setting conflicts between coupler and surface flux! STOP.'
+          call PRC_MPIstop
+       endif
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Coupler : OFF'
     endif
