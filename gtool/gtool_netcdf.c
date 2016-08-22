@@ -44,7 +44,7 @@ static int32_t ERROR_SUPPRESS = 0;
     type = File_INTEGER2;					\
     break;							\
   default:                                                      \
-    fprintf(stderr, "unsuppoted data type: %d\n", xtype);	\
+    fprintf(stderr, "unsupported data type: %d\n", xtype);	\
     return ERROR_CODE;						\
   }								\
   }
@@ -59,7 +59,7 @@ static int32_t ERROR_SUPPRESS = 0;
     nctype = NC_DOUBLE;						\
     break;							\
   default:							\
-    fprintf(stderr, "unsuppoted data type: %d\n", xtype);	\
+    fprintf(stderr, "unsupported data type: %d\n", xtype);	\
     return ERROR_CODE;						\
   }								\
   }
@@ -75,7 +75,7 @@ typedef struct {
   int defmode;
 #endif
   int shared_mode;
-  char fname[256];
+  char fname[256];  // used for debugging, to be deleted
 } fileinfo_t;
 
 typedef struct {
@@ -274,7 +274,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   dinfo->rank = tdim >= 0 ? rank -1 : rank; // do not count time dimension
   // dim_name and dim_size
   for (i=0; i<dinfo->rank; i++) {
-    // note: C and Fortran orders are opposit
+    // note: C and Fortran orders are opposite
     if ( files[fid]->shared_mode ) {
       MPI_Offset size_;
       CHECK_PNC_ERROR( ncmpi_inq_dim(ncid, dimids[rank-i-1], name, &size_) )
@@ -342,7 +342,7 @@ int32_t file_read_data( void       *var,        // (out)
   start = (size_t*) malloc(sizeof(size_t)*rank);
   count = (size_t*) malloc(sizeof(size_t)*rank);
   for (i=0; i<dinfo->rank; i++) {
-    // note: C and Fortran orders are opposit
+    // note: C and Fortran orders are opposite
     start[rank -i-1] = 0;
     count[rank -i-1] = dinfo->dim_size[i];
   }
@@ -366,7 +366,7 @@ int32_t file_read_data( void       *var,        // (out)
   default:
     free(start);
     free(count);
-    fprintf(stderr, "unsuppoted data precision: %d\n", precision );
+    fprintf(stderr, "unsupported data precision: %d\n", precision );
     return ERROR_CODE;
   }
 
@@ -672,7 +672,7 @@ int32_t file_put_axis( int32_t fid,        // (in)
     CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) )
     break;
   default:
-    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    fprintf(stderr, "unsupported data precision: %d\n", precision);
     return ERROR_CODE;
   }
 
@@ -766,7 +766,7 @@ int32_t file_write_axis( int32_t     fid,       // (in)
       CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) )
     break;
   default:
-    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    fprintf(stderr, "unsupported data precision: %d\n", precision);
     return ERROR_CODE;
   }
 
@@ -824,7 +824,7 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
     CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) )
     break;
   default:
-    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    fprintf(stderr, "unsupported data precision: %d\n", precision);
     return ERROR_CODE;
   }
 
@@ -925,7 +925,7 @@ int32_t file_write_associated_coordinates( int32_t     fid,        // (in)
       CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) )
     break;
   default:
-    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    fprintf(stderr, "unsupported data precision: %d\n", precision);
     return ERROR_CODE;
   }
 
@@ -1043,7 +1043,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   }
 
   // get dimension IDs
-  // note: C and Fortran order are opposit
+  // note: C and Fortran order are opposite
   n = ndims;
   if ( tint > 0.0 ) { // add time dimension
     dimids[0] = vars[nvar]->t->dimid;
@@ -1351,7 +1351,7 @@ int32_t file_write_data( int32_t     fid,        // (in)
       CHECK_ERROR( nc_put_vara_float(ncid, varid, vars[vid]->start, vars[vid]->count, (float*)var) )
     break;
   default:
-    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    fprintf(stderr, "unsupported data precision: %d\n", precision);
     return ERROR_CODE;
   }
 
