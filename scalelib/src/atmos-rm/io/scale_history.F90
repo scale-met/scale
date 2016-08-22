@@ -209,6 +209,9 @@ contains
     end if
 
     if ( IO_PNETCDF ) then
+       ! When using PnetCDF to perform parallel I/O, the variables store in
+       ! the shared file will always include global halos, regardless
+       ! PRC_PERIODIC_X and PRC_PERIODIC_Y
        im = IMAX
        jm = JMAX
        ims = 1    + IHALO
@@ -365,16 +368,16 @@ contains
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
-    ! For parallel I/O, not all variables are written by all processes.
-    ! 1. Let PRC_myrank 0 writes all z axes
-    ! 2. Let processes (rankidx(2) == 0) write x axes  (south-most processes)
-    !        rankidx(1) == 0           writes west HALO
-    !        rankidx(1) == PRC_NUM_X-1 writes east HALO
-    !        others                    writes without HALO
-    ! 3. Let processes (rankidx(1) == 0) write y axes  (west-most processes)
-    !        rankidx(1) == 0           writes south HALO
-    !        rankidx(1) == PRC_NUM_Y-1 writes north HALO
-    !        others                    writes without HALO
+    ! For parallel I/O, some variables are written by a subset of processes.
+    ! 1. Only PRC_myrank 0 writes all z axes
+    ! 2. Only south-most processes (rankidx(2) == 0) write x axes
+    !         rankidx(1) == 0           writes west HALO
+    !         rankidx(1) == PRC_NUM_X-1 writes east HALO
+    !         others                    writes without HALO
+    ! 3. Only west-most processes (rankidx(1) == 0) write y axes
+    !         rankidx(1) == 0           writes south HALO
+    !         rankidx(1) == PRC_NUM_Y-1 writes north HALO
+    !         others                    writes without HALO
 
     startX = ISGA
     startY = JSGA
@@ -802,6 +805,7 @@ contains
           dims(2) = 'lat'
        endif
 
+       ! start and count will be used by PnetCDF I/O
        start(1) = ISGA
        start(2) = JSGA
        start(3) = 1

@@ -111,9 +111,9 @@ module gtool_history
      integer                    :: size           !> Size of array
      real(DP)                   :: timesum        !> Buffer for time
      real(DP), pointer          :: varsum(:)      !> Buffer for value
-     integer                    :: ndims          !> Number of dimension
-     integer                    :: start(4)
-     integer                    :: count(4)
+     integer                    :: ndims          !> variable's original no. dimensions
+     integer                    :: start(4)       !> global subarray starting indices
+     integer                    :: count(4)       !> global subarray request sizes
   end type vars
 
   type axis
@@ -203,7 +203,7 @@ module gtool_history
   character(LEN=LOG_LMSG),    private              :: message        = ''
   logical,                    private              :: debug          = .false.
 
-  integer,                    private              :: io_buffer_size
+  integer,                    private              :: io_buffer_size                    !>  internal buffer for PnetCDF
 
 contains
   !-----------------------------------------------------------------------------
@@ -414,12 +414,15 @@ contains
 
     allocate( History_req(History_req_count) )
 
+    ! allows PnetCDF to use an internal buffer to aggregate write requests
     io_buffer_size = array_size * History_req_count * 8
 
     ! read history request
+
+
     memsize = 0
     reqid   = 0
-    rewind(fid)
+    if ( fid > 0 ) rewind(fid)
     do n = 1, History_req_limit
        ! set default
        ITEM      = ''
@@ -706,7 +709,7 @@ contains
                    History_axis(m)%id = id
 
                    if ( shared_file_io ) then
-                      dim_size = History_axis(m)%gdim_size
+                      dim_size = History_axis(m)%gdim_size ! axis global size
                    else
                       dim_size = History_axis(m)%dim_size
                    end if
@@ -738,7 +741,8 @@ contains
                                                       History_assoc(m)%dtype                           ) ! [IN]
                 enddo
 
-                ! allows PnetCDF to use an internal buffer
+                ! allows PnetCDF to use an internal buffer of size io_buffer_size
+                ! to aggregate write requests for history variables
                 call FileAttachBuffer( History_vars(id)%fid, io_buffer_size )
 
                 History_vars(id)%axis_written = .false.
@@ -748,9 +752,8 @@ contains
              ! Add new variable
              dtsec = real(History_vars(id)%dstep,kind=DP) * History_DTSEC
 
-             ! history variable has been reshaped to 1D, we preserve the
-             ! original shape in count(:) and History_vars(id)%count(:)
-             ! History_ndims(id) stores number of dimensions of original shape
+             ! history variable has been reshaped to 1D, count is the original shape
+             ! History_ndims(id) stores its original number of dimensions
              History_vars(id)%ndims    = size(dims)
 
              History_vars(id)%start(:) = 1
@@ -768,7 +771,7 @@ contains
                                    dtsec,                    & ! [IN]
                                    History_vars(id)%taverage ) ! [IN]
 
-             if ( .NOT. fileexisted ) then
+             if ( .not. fileexisted ) then
                 do m = 1, History_axis_count
                    if ( History_axis(m)%down ) then
                       call FileSetTAttr( History_vars(id)%fid, History_axis(m)%name, 'positive', 'down' )
@@ -889,9 +892,9 @@ contains
        else
           History_axis(History_axis_count)%down = .false.
        endif
-       if ( present(gsize) ) &
+       if ( present(gsize) ) &  ! global dimension size
           History_axis(History_axis_count)%gdim_size = gsize
-       if ( present(start) ) then
+       if ( present(start) ) then  ! global subarray starting indices
           History_axis(History_axis_count)%start = start
        else
           History_axis(History_axis_count)%start = 1
@@ -968,7 +971,7 @@ contains
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
 
        ! start and count are used for parallel I/O to a single shared file
-       ! since var is reshaped into 1D array, we need to save its shape in count
+       ! since var is reshaped into 1D array, we need to save its original shape in count
        History_assoc(id)%count(1:<%=n%>) = shape(var)
        if ( present(start) ) then
           History_assoc(id)%start(1:<%=n%>) = start(1:<%=n%>)
@@ -1143,6 +1146,8 @@ contains
     do id = 1, History_id_count
        fid = History_vars(id)%fid
        if ( fid .NE. prev_fid ) then
+          ! when using PnetCDF, the above HistoryWrite() only posts write requests
+          ! Now we need to commit the requests to the file
           call FileFlush( fid )
           prev_fid = fid
        end if
@@ -1200,7 +1205,7 @@ contains
                                             History_assoc(m)%ndims  ) ! [IN]
     enddo
 
-    ! for parallel I/O, flush all pending nonblocking write requests
+    ! for PnetCDF I/O, flush all pending nonblocking write requests
     prev_fid = -1
     do m = 1, History_axis_count
        id = History_axis(m)%id
@@ -1222,6 +1227,7 @@ contains
     ! Assume all history axes are written into the same file
     id = History_axis(1)%id
 
+    ! mark the axes have been written
     History_vars(id)%axis_written = .true.
 
     return
@@ -1287,10 +1293,10 @@ contains
 
        if ( History_vars(id)%count(1) .GT. 0 ) then
 
-          ! for one-file-per-process I/O method, History_vars(:)%count(1) == 1
+          ! for one-file-per-process I/O method, History_vars(:)%count(1) == 1 always
           ! for one file shared by all processes, History_vars(:)%count(1) >= 0,
-          ! being 0 indicates a 1D history variable, which will be written
-          ! by only south-most processes in parallel
+          ! being 0 indicates a 1D history variable, which will only be written by the
+          ! south-most processes in parallel, or a z axis to be written by rank 0 only
           call FileWrite( History_vars(id)%fid,             & ! [IN]
                           History_vars(id)%vid,             & ! [IN]
                           History_vars(id)%varsum(1:isize), & ! [IN]
@@ -1418,6 +1424,7 @@ contains
     do id = 1, History_id_count
        fid = History_vars(id)%fid 
        if ( fid .NE. prev_fid ) then
+          ! Release the internal buffer previously allowed to be used by PnetCDF
           call FileDetachBuffer( fid )
           call FileClose( fid )
           prev_fid =  fid
