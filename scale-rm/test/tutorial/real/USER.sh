@@ -114,13 +114,12 @@ URBAN_TYPE=( "SLC"   ) # required parameters for each domain
 #################################################
 
 HIST_ITEMS_SNAPSHOT_2D=(
-  "MSLP"
+  "MSLP" "PREC" "OLR" "U10" "V10" "T2" "Q2" "SFC_PRES" "SFC_TEMP"
 )
 HIST_ITEMS_SNAPSHOT_3D=(
-  "PRES" "U" "V"
+  "DENS" "QV" "QHYD" "PRES" "U" "V" "T" "W" "Uabs" "PT" "RH"
 )
 HIST_ITEMS_AVERAGE_2D=(
-  "PREC"
 )
 HIST_ITEMS_AVERAGE_3D=(
 )
