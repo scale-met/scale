@@ -44,10 +44,10 @@
 \end{center}
 \end{table}
 
-{\color{red}\verb|SUZUKI10|以外を選択する場合}は、
+\verb|SUZUKI10|以外を選択する場合は、
 init.conf、run.confの\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}を
 変更するだけで実行可能であるが、
-\verb|SUZUKI10|を選択する場合は、以下のように
+{\color{red}\verb|SUZUKI10|を選択する場合}は、以下のように
 init.conf、run.confの双方に
 下記を追加する必要がある。\\
 
@@ -269,6 +269,16 @@ micpara.datに記載されているnbinが異なれば、\\
 大気下端境界のフラックス計算スキームの選択は、init.confとrun.conf中の
 \namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_SF_TYPE}で以下のように設定する。\\
 
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & ; 表\ref{tab:nml_atm_sf}より選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+
 海面・陸面・都市モデルを用いない場合の大気下端境界は、
 理想実験のための仮想的な地表面であることを想定している。
 この大気下端境界のフラックス計算を行うスキームが呼び出されるタイミングは、
@@ -283,14 +293,6 @@ NONEが設定されている場合は自動的にCOUPLEに変更される。
 大気下端境界のフラックススキームが呼び出されるタイミングは、
 受け取った状態量・フラックスを出力する間隔として用いられる。\\
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{ll}
-\verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & ; 表\ref{tab:nml_atm_sf}より選択。\\
-\verb|/             | & \\
-\end{tabularx}
-}}\\
 
 \begin{table}[h]
 \begin{center}
@@ -413,7 +415,10 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のよ�
 \namelist{PARAM_OCEAN}の\nmitem{OCEAN_TYPE}で設定する。
 海面・陸面・都市モデルのいずれかひとつでも用いられていて、
 \namelist{PARAM LANDUSE}で入力・設定された土地利用分布に海面が含まれている場合、
-\nmitem{OCEAN_TYPE == NONEまたはOFF}を選択することは出来ない。\\
+\nmitem{OCEAN_TYPE = NONEまたはOFF}を選択することは出来ない。\\
+
+\proofcomment{もし、そのような設定をしたら、どのような振る舞い、あるいは、どのようなエラーハンドリングしているのかを記述ください。}
+
 海面のアルベドは、どの海面スキームを選択しても同じ計算スキームが適用され、
 太陽天頂角に応じたアルベドが計算される。\\
 
@@ -497,7 +502,7 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する�
 init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_TYPE}で以下のように設定する。
 海面・陸面・都市モデルのいずれかひとつでも用いられていて、
 \namelist{PARAM LANDUSE}で入力・設定された土地利用分布に陸面が含まれている場合、
-\nmitem{LAND_TYPE == NONEまたはOFF}を選択することは出来ない。\\
+\nmitem{LAND_TYPE = NONEまたはOFF}を選択することは出来ない。\\
 
 \noindent {\gt
 \ovalbox{
@@ -555,7 +560,7 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する�
 init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_TYPE}で以下のように設定する。
 海面・陸面・都市モデルのいずれかひとつでも用いられていて、
 \namelist{PARAM LANDUSE}で入力・設定された土地利用分布に都市が含まれている場合、
-\nmitem{URBAN_TYPE == NONEまたはOFF}を選択することは出来ない。\\
+\nmitem{URBAN_TYPE = NONEまたはOFF}を選択することは出来ない。\\
 
 \noindent {\gt
 \ovalbox{
