@@ -200,10 +200,6 @@ do
   # set vertical axis
   LINE_Z="${DEF_Z[$D]}"
 
-  # set maximum slope of topography
-  Z1=`echo ${LINE_Z} | awk '{print $3}' | head -1`
-  MAXSLOPE=`echo "scale=3; a( ${Z1} / ${DX[$D]} ) * 180 / 3.14159265" | bc -l | sed -e "s/^\./0./g"`
-
   # set filenames for each domain
   PP_IO_LOG_BASENAME="pp_LOG_d${FNUM}"
   DOMAIN_CATALOGUE_FNAME="latlon_domain_catalogue_d${FNUM}.txt"
