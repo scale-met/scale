@@ -299,14 +299,14 @@ contains
        ATMOS_vars_restart_create,    &
        ATMOS_vars_restart_def_var,   &
        ATMOS_vars_restart_enddef,    &
-       ATMOS_vars_restart_write_var, &
+       ATMOS_vars_restart_write, &
        ATMOS_vars_restart_close
     use mod_ocean_vars, only: &
        OCEAN_RESTART_OUTPUT,         &
        OCEAN_vars_restart_create,    &
        OCEAN_vars_restart_def_var,   &
        OCEAN_vars_restart_enddef,    &
-       OCEAN_vars_restart_write_var, &
+       OCEAN_vars_restart_write, &
        OCEAN_vars_restart_close
     use mod_land_vars, only: &
        LAND_RESTART_OUTPUT,         &
@@ -346,10 +346,10 @@ contains
     if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_enddef
 
     ! write variabes to netCDF file
-    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write_var
+    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
     if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_write_var
     if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write_var
-    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write_var
+    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
 
     ! clode the restart file
     if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_close

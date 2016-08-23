@@ -150,7 +150,6 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,                         &
        ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
-       ATMOS_vars_restart_write,                 &
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
@@ -162,8 +161,7 @@ contains
        OCEAN_do
     use mod_ocean_vars, only: &
        OCEAN_vars_setup,                         &
-       OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
-       OCEAN_vars_restart_write
+       OCEAN_sw_restart => OCEAN_RESTART_OUTPUT
     use mod_ocean_driver, only: &
        OCEAN_driver_setup, &
        OCEAN_driver
@@ -172,8 +170,7 @@ contains
        LAND_do
     use mod_land_vars, only: &
        LAND_vars_setup,                        &
-       LAND_sw_restart => LAND_RESTART_OUTPUT, &
-       LAND_vars_restart_write
+       LAND_sw_restart => LAND_RESTART_OUTPUT
     use mod_land_driver, only: &
        LAND_driver_setup, &
        LAND_driver
@@ -182,8 +179,7 @@ contains
        URBAN_do
     use mod_urban_vars, only: &
        URBAN_vars_setup,                         &
-       URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
-       URBAN_vars_restart_write
+       URBAN_sw_restart => URBAN_RESTART_OUTPUT
     use mod_urban_driver, only: &
        URBAN_driver_setup, &
        URBAN_driver

@@ -41,7 +41,6 @@ module mod_ocean_vars
   public :: OCEAN_vars_restart_def_var
   public :: OCEAN_vars_restart_enddef
   public :: OCEAN_vars_restart_read_var
-  public :: OCEAN_vars_restart_write_var
   public :: OCEAN_vars_restart_close
 
   !-----------------------------------------------------------------------------
@@ -328,16 +327,29 @@ contains
   subroutine OCEAN_vars_restart_open
     use scale_fileio, only: &
        FILEIO_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use mod_ocean_admin, only: &
        OCEAN_sw
     implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) ***'
-
     if ( OCEAN_sw .and. OCEAN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(OCEAN_RESTART_IN_BASENAME)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) ***'
+
+       if ( OCEAN_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(OCEAN_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(OCEAN_RESTART_IN_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call FILEIO_open( restart_fid,              & ! [OUT]
                          OCEAN_RESTART_IN_BASENAME ) ! [IN]
@@ -464,85 +476,6 @@ contains
 
     return
   end subroutine OCEAN_vars_restart_read_var
-
-  !-----------------------------------------------------------------------------
-  !> Write ocean restart
-  subroutine OCEAN_vars_restart_write
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_write
-    use mod_ocean_admin, only: &
-       OCEAN_sw
-    implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
-    !---------------------------------------------------------------------------
-
-    if ( OCEAN_sw .and. OCEAN_RESTART_OUT_BASENAME /= '' ) then
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (OCEAN) ***'
-
-       if ( OCEAN_RESTART_OUT_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(OCEAN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(OCEAN_RESTART_OUT_BASENAME)
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call OCEAN_vars_total
-
-       call FILEIO_write( OCEAN_TEMP(:,:),            basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TEMP),           VAR_DESC(I_TEMP),        VAR_UNIT(I_TEMP),        & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_TEMP(:,:),        basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFC_TEMP),       VAR_DESC(I_SFC_TEMP),    VAR_UNIT(I_SFC_TEMP),    & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_albedo(:,:,I_LW), basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_ALB_LW),         VAR_DESC(I_ALB_LW),      VAR_UNIT(I_ALB_LW),      & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_albedo(:,:,I_SW), basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_ALB_SW),         VAR_DESC(I_ALB_SW),      VAR_UNIT(I_ALB_SW),      & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_Z0M(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFC_Z0M),        VAR_DESC(I_SFC_Z0M),     VAR_UNIT(I_SFC_Z0M),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_Z0H(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFC_Z0H),        VAR_DESC(I_SFC_Z0H),     VAR_UNIT(I_SFC_Z0H),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_Z0E(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFC_Z0E),        VAR_DESC(I_SFC_Z0E),     VAR_UNIT(I_SFC_Z0E),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_MW(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_MW),        VAR_DESC(I_SFLX_MW),     VAR_UNIT(I_SFLX_MW),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_MU(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_MU),        VAR_DESC(I_SFLX_MU),     VAR_UNIT(I_SFLX_MU),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_MV(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_MV),        VAR_DESC(I_SFLX_MV),     VAR_UNIT(I_SFLX_MV),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_SH(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_SH),        VAR_DESC(I_SFLX_SH),     VAR_UNIT(I_SFLX_SH),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_LH(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_LH),        VAR_DESC(I_SFLX_LH),     VAR_UNIT(I_SFLX_LH),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_WH(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_WH),        VAR_DESC(I_SFLX_WH),     VAR_UNIT(I_SFLX_WH),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_evap(:,:),       basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_evap),      VAR_DESC(I_SFLX_evap),   VAR_UNIT(I_SFLX_evap),   & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
-
-    endif
-
-    return
-  end subroutine OCEAN_vars_restart_write
 
   !-----------------------------------------------------------------------------
   !> History output set for ocean variables
@@ -777,7 +710,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write ocean variables to restart file
-  subroutine OCEAN_vars_restart_write_var
+  subroutine OCEAN_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
@@ -820,6 +753,6 @@ contains
     endif
 
     return
-  end subroutine OCEAN_vars_restart_write_var
+  end subroutine OCEAN_vars_restart_write
 
 end module mod_ocean_vars
