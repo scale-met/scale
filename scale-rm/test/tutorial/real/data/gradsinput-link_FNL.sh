@@ -32,7 +32,7 @@ function uruu() {
            fi
        fi
    fi
-   echo $1 ${endday[2]}
+   #echo $1 ${endday[2]}
    return
 }
 #---------------------------------------------------
