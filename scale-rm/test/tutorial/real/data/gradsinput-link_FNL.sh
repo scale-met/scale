@@ -8,39 +8,85 @@ dt=21600
 #
 # set start date (UTC)
 #
-start_year='2007'
-start_month='07'
-start_day='14'
-start_hour='18'
-start_min='00'
-start_sec='00'
+syear=2007
+smonth=7
+sday=14
+shour=18
 #
 # set end date (UTC)
 #
-end_year='2007'
-end_month='07'
-end_day='15'
-end_hour='00'
-end_min='00'
-end_sec='00'
+eyear=2007
+emonth=07
+eday=15
+ehour=12
 #
-#-----------------------------------------
+#---------------------------------------------------
+function uruu() {
+   endday=(0 31 28 31 30 31 30 31 31 30 31 30 31)
+   if [ $(($1%4)) -eq 0 ] ;then
+       endday[2]=29
+       if [ $(($1%100)) -eq 0 ] ;then
+           endday[2]=28
+           if [ $(($1%400)) -eq 0 ] ;then
+           endday[2]=29
+           fi
+       fi
+   fi
+   echo $1 ${endday[2]}
+   return
+}
+#---------------------------------------------------
 fn=0
 
-start_unix_sec=`date -u -d "${start_year}-${start_month}-${start_day} ${start_hour}:${start_min}:${start_sec}" +%s`
-end_unix_sec=`date -u -d "${end_year}-${end_month}-${end_day} ${end_hour}:${end_min}:${end_sec}" +%s`
+syyyymmdd=`printf "%4.4d%2.2d%2.2d" $syear $smonth $sday`
+eyyyymmdd=`printf "%4.4d%2.2d%2.2d" $eyear $emonth $eday`
+echo $syyyymmdd $eyyyymmdd
 
-unix_sec=${start_unix_sec}
-while [ ${unix_sec} -le ${end_unix_sec} ];
-do
-  yyyy=`date -u -d "@${unix_sec}" +%Y`
-  mm=`date -u -d "@${unix_sec}" +%m`
-  dd=`date -u -d "@${unix_sec}" +%d`
-  hh=`date -u -d "@${unix_sec}" +%H`
-  nn=`date -u -d "@${unix_sec}" +%M`
-  ss=`date -u -d "@${unix_sec}" +%S`
+iyear=${syear}
+while [ ${iyear} -le ${eyear} ] ; do
 
-  fmtd_fn=`printf "%05d" $fn`
+    uruu $iyear
+
+    imonth=1
+    end_month=12
+    if [ ${iyear} -eq ${syear} ] ;then
+        imonth=${smonth}
+    fi
+    if [ ${iyear} -eq ${eyear} ] ;then
+        end_month=${emonth}
+    fi
+    while [ ${imonth} -le ${end_month} ] ;do
+
+        iday=1
+        end_day=${endday[$imonth]}
+        if [ ${iyear} -eq ${syear} ]&&[ ${imonth} -eq ${smonth} ] ;then
+            iday=${sday}
+        fi
+        if [ ${iyear} -eq ${eyear} ]&&[ ${imonth} -eq ${emonth} ] ;then
+            end_day=${eday}
+        fi
+
+        while [ ${iday} -le ${end_day} ] ;do
+
+            iyyyymmdd=`printf "%4.4d%2.2d%2.2d" $iyear $imonth $iday`
+
+            if [ ${iyyyymmdd} -eq ${syyyymmdd} ] ; then
+                hour_list=`seq -s" " ${shour} 6 18`
+            elif [ ${iyyyymmdd} -eq ${eyyyymmdd} ] ; then
+                hour_list=`seq -s" " 0 6 ${ehour}`
+            else
+                hour_list=`seq -s" " 0 6 18`
+            fi
+
+            echo ${hour_list}
+            for ihour in ${hour_list} ; do
+
+               yyyy=`printf "%4.4d" $iyear`
+               mm=`printf "%2.2d" $imonth`
+               dd=`printf "%2.2d" $iday`
+               hh=`printf "%2.2d" $ihour`
+
+               fmtd_fn=`printf "%05d" $fn`
 #-----
   for BND in FNLatm FNLland FNLsfc ; do
 
@@ -54,7 +100,17 @@ do
   done # BND
 #-----
 
-  fn=`expr ${fn} \+ 1`
-  unix_sec=`expr ${unix_sec} \+ ${dt}`
+               fn=`expr ${fn} \+ 1`
+
+            done # hh
+
+        iday=$((iday+1))
+        done
+
+    imonth=$((imonth+1))
+    done
+
+iyear=$((iyear+1))
 done
+
 
