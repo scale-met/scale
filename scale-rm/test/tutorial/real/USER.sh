@@ -158,6 +158,7 @@ TOPOTYPE=(    "GTOPO30" ) # required parameters for each domain
 LANDUSETYPE=( "GLCCv2"  ) # required parameters for each domain
 COPYTOPO=(    ".false." ) # required parameters for each domain
 
+SLOPE_RATIO="1.0"
 LIMIT_URBAN_FRACTION="0.3"
 
 #################################################
