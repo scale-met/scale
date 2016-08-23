@@ -50,7 +50,6 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_def_var
   public :: ATMOS_vars_restart_enddef
   public :: ATMOS_vars_restart_read_var
-  public :: ATMOS_vars_restart_write_var
   public :: ATMOS_vars_restart_check_var
   public :: ATMOS_vars_restart_close
 
@@ -1140,108 +1139,6 @@ contains
 
     return
   end subroutine ATMOS_vars_restart_read_var
-
-  !-----------------------------------------------------------------------------
-  !> Write restart of atmospheric variables
-  subroutine ATMOS_vars_restart_write
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_write
-    use mod_atmos_admin, only: &
-       ATMOS_sw_dyn,      &
-       ATMOS_sw_phy_mp,   &
-       ATMOS_sw_phy_ae,   &
-       ATMOS_sw_phy_ch,   &
-       ATMOS_sw_phy_rd,   &
-       ATMOS_sw_phy_sf,   &
-       ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
-    use mod_atmos_dyn_vars, only: &
-       ATMOS_DYN_vars_restart_write
-    use mod_atmos_phy_mp_vars, only: &
-       ATMOS_PHY_MP_vars_restart_write
-    use mod_atmos_phy_ae_vars, only: &
-       ATMOS_PHY_AE_vars_restart_write
-    use mod_atmos_phy_ch_vars, only: &
-       ATMOS_PHY_CH_vars_restart_write
-    use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_vars_restart_write
-    use mod_atmos_phy_sf_vars, only: &
-       ATMOS_PHY_SF_vars_restart_write
-    use mod_atmos_phy_tb_vars, only: &
-       ATMOS_PHY_TB_vars_restart_write
-    use mod_atmos_phy_cp_vars, only: &
-       ATMOS_PHY_CP_vars_restart_write
-#ifdef _SDM
-    use scale_atmos_phy_mp_sdm, only: &
-       sd_rest_flg_out, &
-       ATMOS_PHY_MP_sdm_restart_out
-    use scale_time, only: &
-       NOWSEC => TIME_NOWSEC
-#endif
-    implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
-
-    integer :: iq
-    !---------------------------------------------------------------------------
-
-#ifdef _SDM
-    if( sd_rest_flg_out ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***'
-       call ATMOS_PHY_MP_sdm_restart_out(NOWSEC)
-    endif
-#endif
-
-    if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
-
-       if ( ATMOS_RESTART_OUT_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(ATMOS_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(ATMOS_RESTART_OUT_BASENAME)
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call ATMOS_vars_fillhalo
-
-       call ATMOS_vars_total
-
-       call FILEIO_write( DENS(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( MOMZ(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), 'ZHXY', ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( MOMX(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), 'ZXHY', ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( MOMY(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), 'ZXYH', ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( RHOT(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
-
-       do iq = 1, QA
-          call FILEIO_write( QTRC(:,:,:,iq), basename,                                  ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                             TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
-       enddo
-
-    endif
-
-    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_write
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write
-    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_write
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
-
-    return
-  end subroutine ATMOS_vars_restart_write
 
   !-----------------------------------------------------------------------------
   !> Check and compare between last data and sample data
@@ -3295,7 +3192,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write restart of atmospheric variables
-  subroutine ATMOS_vars_restart_write_var
+  subroutine ATMOS_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write_var
     use mod_atmos_admin, only: &
@@ -3367,6 +3264,6 @@ contains
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write_var
 
     return
-  end subroutine ATMOS_vars_restart_write_var
+  end subroutine ATMOS_vars_restart_write
 
 end module mod_atmos_vars
