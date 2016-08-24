@@ -122,7 +122,7 @@
     \item オフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)
    \end{itemize}
  \item 複数事例一括実行 システム（バルクジョブシステム）
- \item CF 規約\footnote{\url{http://cfconventions.org}}に基づく \netcdf ファイル I/O
+ \item CF 規約\footnote{\url{http://cfconventions.org/}}に基づく \netcdf ファイル I/O
    \begin{itemize}
    \item {\netcdf}3 または {\netcdf}4 形式
    \end{itemize}
@@ -161,8 +161,9 @@
     \end{itemize}
  \item 非負保証:
     \begin{itemize}
-      \item フラックス修正法\\
+      \item フラックス修正法 \citep[Flux Corrected Transport, FCT; ][]{zalesak_1979}\\
 \proofcomment{FCTのリファレンスを付けてください。}
+\replycomment{付けました(西澤)}
       \item \citet{Koren_1993}フィルター  (3次風上差分スキーム使用時のみ)
     \end{itemize}
  \item 数値フィルター: 4次超粘性・拡散

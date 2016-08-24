@@ -373,9 +373,10 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \namelist{PARAM_GRID}の中の\nmitem{DX, DY, DZ}で指定した通りであるが、
 \nmitem{BUFFFACT}に1以上の値を設定することで、ストレッチさせることも可能である。
 ただし、格子間隔を等間隔で指定した場合、
-この\nmitem{BUFFFACT}の設定は、X, Y, {\ZDIR}すべてに適用されることの注意されたい。
+この\nmitem{BUFFFACT}の設定は、X, Y, {\ZDIR}すべてに適用される。
+それぞれの方向に別々に設定したい場合は、\nmitem{BUFFFACT_X}, \nmitem{BUFFFACT_Y}, \nmitem{BUFFFACT_Z}を指定する。
 {\ZDIR}の層レベルを任意の格子点位置に指定する場合、
-すなわち、\nmitem{FZ(:)}を与える場合(第\ref{subsec:gridinterv}節参照のこと)には適用されない。
+すなわち、\nmitem{FZ(:)}を与える場合(第\ref{subsec:gridinterv}節参照のこと)にはストレッチの設定は適用されない。
 
 緩和領域内の格子間隔 (\verb|BDX|) は次の通り決定される。
 \begin{eqnarray}
@@ -387,18 +388,33 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \nmitem{BUFFFACT=1.2}ならば内側から外側(境界)に向かって1.2倍の割合で広がっていく。
 \nmitem{BUFFFACT}はいくつに設定しても良いが、計算の安定性を考慮すると 1.0から1.2 が推奨である。
 
-緩和領域の格子数\verb|ibuff|は、
+緩和領域の格子数 \verb|ibuff|は、
 \begin{eqnarray}
-\sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \verb|BUFFER_DX| \nonumber
+\sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
 \end{eqnarray}
-の関係を満たす最小の整数で自動的に計算される。
+の関係を満たす最小の整数で自動的に計算され、緩和領域の大きさ\verb|BUFFER|$_x$は、
+\[
+  \verb|BUFFER|_x = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}-1 }}{ \nmitemeq{BUFFFACT}-1 }
+\]
+となる。
+結局、緩和領域を除いた計算領域の大きさは、
+\[
+\nmitemeq{DX} \times ( \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X} - 2 \times \verb|ibuff| )
+\]
+となる。
 %
 緩和領域の幅\nmitem{BUFFER_DX}が同じでも、
 \nmitem{BUFFFACT}の値を大きくすると緩和領域に用意される格子数は少なくなる。
 ここでは、{\XDIR} の説明をしたが、{\YDIR}、{\ZDIR}も同様である。
+ただし、{\ZDIR} については下端には緩和領域が取られないため、緩和領域を除いた計算領域の大きさは
+\[
+\nmitemeq{DZ} \times ( \nmitemeq{KMAX} - \verb|kbuff| )
+\]
+となる。
 
 \proofcomment{ここは何度よんでも理解がしにくいです。結局この設定によって、真の対象領域は、
-どこなのか？を図に書いて説明してください}
+  どこなのか？を図に書いて説明してください}
+\replycomment{式を追加しました。図はヨッシーに発注しています。(西澤)}
 
 
 一般に、緩和領域の大きさ、緩和格子点の数については、解く問題により、明確な指標はない。
