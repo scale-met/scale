@@ -49,6 +49,10 @@ ifeq ($(ENABLE_FIXEDINDEX),T)
       FFLAGS += -D_FIXEDINDEX_
 endif
 
+ifeq ($(SINGLE),T)
+      FFLAGS += -DSINGLE
+endif
+
 ifeq ($(ENABLE_OPENMP),T)
       FFLAGS += -openmp -openmp-report
 endif
