@@ -1,132 +1,69 @@
 \section{\SecBasicOutputSetting} \label{sec:output}
 %====================================================================================
-新たな変数をhistoryファイルへ追加するには、正式には次の2段階の手続きが必要である。
-
-\begin{enumerate}
-\item ソースファイルに、対象の変数をhistory出力するための設定をする。
-未設定の場合、run.confに\namelist{HISTITEM}を追加しても出力されない。
-\item run.conf内の設定。各変数をhistoryファイルに出力するかどうかを指定。
-コンパイルし直すことなく、実験毎に変更可能。
-\end{enumerate}
-主要な変数についてはすでに1の手続きは行われているため、2の手続きだけ行えばよい。
-2の手続きだけで出力可能な変数については、
-付録\ref{achap:histroy_item}にリストアップしてあるので、そちらを参照すること。
-以下では、2の手続きについて、説明する。\\
 
 \proofcomment{１の手続き方法を書かないのであれば、１は、削除です。ソースコードレベルを
-いじるらせるのかどうかは、debatableですが、このままだと、１に書いてある意味が何の情報にもなりません。}
+いじるらせるのかどうかは、debatableですが、このままだと、１に書いてある意味が何の情報にもなりません。}\\
+\replycomment{削除しました(足立)}
 
 
-まず、出力ファイルと出力形式について、run.**.confの
-\namelist{PARAM_HISTORY}に以下の項目を設定する。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{ll}
-\verb|&PARAM_HISTORY| \\
-\verb|  HISTORY_DEFAULT_BASENAME  |& \verb| = "[character]",| \\
-\verb|  HISTORY_DEFAULT_TINTERVAL |& \verb| = [real],| \\
-\verb|  HISTORY_DEFAULT_TUNIT     |& \verb| = "[character]",| \\
-\verb|  HISTORY_DEFAULT_TAVERAGE  |& \verb| = [logical],| \\
-\verb|  HISTORY_DEFAULT_ZINTERP   |& \verb| = [logical],| \\
-\verb|  HISTORY_DEFAULT_DATATYPE  |& \verb| = "[character]",| \\
-\verb|  HISTORY_OUTPUT_STEP0      |& \verb| = [logical],| \\
-\verb|/| \\
-\end{tabularx}
-}}}\\
-
-\begin{table}[htb]
-\begin{center}
-\caption{出力ファイルと出力形式の説明}
-\begin{tabularx}{150mm}{|l|X|} \hline
- \rowcolor[gray]{0.9} 設定変数 & 説明 \\ \hline
- \verb|HISTORY_DEFAULT_BASENAME  | & 出力ファイル名。\verb|BASENAME_xxxxxx.nc|に出力される。\verb|xxxxxx|はノード番号。\\ \hline
- \verb|HISTORY_DEFAULT_TINTERVAL | & 出力の時間間隔 \\ \hline
- \verb|HISTORY_DEFAULT_TUNIT     | & \verb|HISTORY_DEFAULT_TINTERVAL|の単位\\ \hline
- \verb|HISTORY_DEFAULT_TAVERAGE  | & \verb|.false.| : 瞬間値、\verb|.true.| : 平均値。平均値の場合、
- 出力タイミングの直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。\\ \hline
- \verb|HISTORY_DEFAULT_DATATYPE  | & 出力値の型。``REAL4'',``REAL8''など。\\ \hline
- \verb|HISTORY_DEFAULT_ZINTERP   | & 鉛直内挿するかどうか。\verb|.false.| : モデル面出力、\verb|.true.| : Z面に内挿した値として出力。\\ \hline
- \verb|HISTORY_OUTPUT_STEP0      | & 初期時刻(t=0)の値を出力するかどうか。\verb|.true.| :出力、\verb|.false.| : 出力しない。\\ \hline
-\end{tabularx}
-\label{tab:history_settings}
-\end{center}
-\end{table}
-
-
-次に、どの変数を出力するか、また各出力変数毎の出力形式の設定を、
-run.**.confの\namelist{HISTITEM}に追加する。
-\nmitem{ITEM}に設定された変数が出力される。
-\textcolor{blue}{青色文字}の部分はオプションで、
-オプション変数が特に指定されていない場合は 
-\namelist{PARAM_HISTORY}内の設定が適用される。
-つまり、出力は、基本的には \namelist{PARAM_HISTORY}に従って行われるが、
-\nmitem{HISTITEM}のオプション設定をすることにより、
-各変数ごとに出力形式を指定することが可能である。\\
-
+計算結果の出力ファイルと出力形式の設定、及び、出力する変数の追加は、
+\namelist{PARAM_HISTORY}と\namelist{HISTITEM}で行う。
+まず、出力ファイルと出力形式の設定を、\verb|run.**.conf|の\namelist{PARAM_HISTORY} で行う。\\
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&HISTITEM|\\
-                 \verb| ITEM     = "[character]",| \\
-\textcolor{blue}{\verb| BASENAME = "[character]",|} \\
-\textcolor{blue}{\verb| TINTERVAL= [real],|} \\
-\textcolor{blue}{\verb| TUNIT    = "[character]", |} \\
-\textcolor{blue}{\verb| TAVERAGE = [logical],|} \\
-\textcolor{blue}{\verb| ZINTERP  = [logical], |} \\
-\textcolor{blue}{\verb| DATATYPE = "[character]",|} \\
-\verb|/| \\
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_HISTORY| & \\
+\verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & 出力ファイル名の頭。 \\
+\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|       & 出力の時間間隔。 \\
+\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & \verb|HISTORY_DEFAULT_TINTERVAL|の単位。 \\
+\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & \verb|.false.|: 瞬間値、\verb|.true.|: 平均値。\\
+\verb|  HISTORY_DEFAULT_ZINTERP   = .false.,|       & 鉛直内挿するかどうか。\\
+                                                    & \verb|.false.|: モデル面出力。\\
+                                                    & \verb|.true.|: Z面に内挿した値を出力。\\
+\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & 出力データの型。\verb|REAL4|, \verb|REAL8|など。\\
+\verb|  HISTORY_OUTPUT_STEP0      = .true.,|        & 初期時刻(t=0)の値を出力するかどうか。\\
+                                                    & \verb|.true.|: 出力、\verb|.false.|: 出力しない。\\ 
+\verb|/| & \\
 \end{tabularx}
 }}}\\
 
+\verb|HISTORY_DEFAULT_TAVERAGE = .true.|として、平均値での出力を設定した場合、
+出力するタイミング直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。
+次に、出力する変数の設定を\namelist{HISTITEM}で行う。
+\namelist{HISTITEM}は変数毎に設定するため、出力したい変数の数だけ追加することになる。
+また、それぞれの変数の出力形式は、基本的に \namelist{PARAM_HISTORY} の設定に準ずるが、
+変数毎に設定を変更することも可能である。\\
 
-\begin{table}[htb]
-\begin{center}
-\caption{出力ファイルと出力形式の説明}
-\begin{tabularx}{150mm}{|l|X|} \hline
- \rowcolor[gray]{0.9} 設定変数 & 説明 \\ \hline
- \verb|ITEM      | & 変数名。 付録\ref{achap:histroy_item}を参照\\ \hline
- \verb|BASENAME  | & \verb|HISTORY_DEFAULT_BASENAME|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
- \verb|TINTERVAL | & \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
- \verb|TUNIT     | & \verb|TINTERVAL|で指定した出力間隔の単位。\\ \hline
- \verb|TAVERAGE  | & \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
- \verb|DATATYPE  | & \verb|HISTORY_DEFAULT_DATATYPE|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
- \verb|ZINTERP   | & \verb|HISTORY_DEFAULT_ZINTERP|に同じ。ただし、変数(\verb|ITEM|)のみに適用。\\ \hline
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&HISTITEM| &\\
+\verb| ITEM     = "RAIN",    | &  変数名。 出力可能な変数は付録\ref{achap:histroy_item}を参照 \\
+\verb| BASENAME = "rain_d01",| & (オプション) \verb|HISTORY_DEFAULT_BASENAME|に同じ。但し、変数(\verb|ITEM|)のみに適用 \\
+\verb| TINTERVAL= "600.0",   | & (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。但し、変数(\verb|ITEM|)のみに適用 \\
+\verb| TUNIT    = "SEC",     | & (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。但し、変数(\verb|ITEM|)のみに適用 \\
+\verb| TAVERAGE = .true.,    | & (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。但し、変数(\verb|ITEM|)のみに適用\\
+\verb| ZINTERP  = .false.,   | & (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。但し、変数(\verb|ITEM|)のみに適用。\\
+\verb| DATATYPE = "REAL4",   | & (オプション) \verb|HISTORY_DEFAULT_ZINTERP|に同じ。但し、変数(\verb|ITEM|)のみに適用\\
+\verb|/| & \\
 \end{tabularx}
-\label{tab:histitem}
-\end{center}
-\end{table}
+}}}\\
 
-
-
-下記に記述例を示す。
-下記の設定では、\verb|history_d03.xxxxxx.nc|に4バイト実数で、
-3600秒毎に\verb|HISTITEM|に指定されている変数が出力される。
-ただし、``RAIN''については、600秒の出力間隔で、
-前600秒の平均値として出力されることを意味している。\\
+上記では、明示的にすべての設定を書いているが、\nmitem{HISTORY_DEFAULT_***} と同じ設定であれば
+それらが適用されるので明記する必要はない。
+例えば、上記の\namelist{PARAM_HISTORY}の設定に、下記を組み合わせた場合には、
+\verb|history_d01.xxxxxx.nc|に4バイト実数で、3600秒毎に \nmitem|HISTITEM| で指定された変数の瞬間値が出力される。
+ただし、\verb|RAIN|については、600秒の出力間隔で、前600秒の平均値として出力されることを意味している。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
-\verb|&PARAM_HISTORY| \\
-\verb|  HISTORY_DEFAULT_BASENAME  = "history_d03",| \\
-\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.D0,| \\
-\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",| \\
-\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,| \\
-\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",| \\
-\verb|  HISTORY_DEFAULT_ZINTERP   = .false.,| \\
-\verb|  HISTORY_OUTPUT_STEP0      = .true.,| \\
-\verb|/| \\
- \\
-\verb|&HISTITEM item="T"    /| \\
-\verb|&HISTITEM item="PRES" /| \\
-\verb|&HISTITEM item="U"    /| \\
-\verb|&HISTITEM item="V"    /| \\
-\verb|　 　 　〜　中略　〜|\\
-\verb|&HISTITEM item="RAIN", taverage=.true., tinterval=600.D0 /| \\
+\verb|&HISTITEM  ITEM = "T" /|
+\verb|&HISTITEM  ITEM = "U" /|
+\verb|&HISTITEM  ITEM = "V" /|
+\verb|&HISTITEM  ITEM = "RAIN",  TINTERVAL = "600.0", TAVERAGE = .true. /|
 \end{tabularx}
 }}}\\
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
