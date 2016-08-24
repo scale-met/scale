@@ -16,22 +16,18 @@ gpviewならばhistoryデータを変換することなく直接作図するこ�
 %-----------------------------------------------------------------------------------
 プロセスごとに分割された{\netcdf}形式のhistoryファイルから
 {\grads}バイナリー変換するには、\verb|net2g|を使用する。
-詳細な使用方法は \ref{sec:net2g}節を参照頂くこととして、
-ここでは最低限の手続きのみ説明する。まず、net2gディレクトリへ移動する。
+詳細な使用方法は \ref{sec:net2g}節を参照頂くこととし、
+ここでは最低限の手続きのみ説明する。まず、\verb|net2g|ディレクトリへ移動する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/net2g
+ $ ls 
+   net2g -> ../../../../../util/netcdf2grads_h/net2g
+   net2g.2D.d01.conf
+   net2g.3D.d01.conf
 \end{verbatim}
-
-\ref{sec:source_net2g}節でコンパイルしたバイナリーファイルに
-リンクが貼られている。
-\\
-
-\noindent {\gt
-\fbox{
-\begin{tabularx}{140mm}{l}
-\verb|net2g -> ../../../../../util/netcdf2grads_h/net2g | \\
-\end{tabularx}
-}}\\
+中には設定ファイルとバイナリファイルがあり、
+バイナリファイルは\ref{sec:source_net2g}節のコンパイルにより作成された
+実行ファイルにリンクが貼られている。\\
 
 ここでは例として、2次元変数であるMSLP、PRECを、
 3次元変数として850hPa,500h,200hPa面のU、Vを変換する．
@@ -121,5 +117,5 @@ SCALE-RMのXY格子座標で、ctlファイルを作成する。
 \end{center}
 \end{figure}
 
-\proofcomment{熱力学が変わったため、結果が異なるはずです。この図は、5.0.0リリース版で作りました。作り直しが必要と思います。}
-
+\proofcomment{熱力学が変わったため、結果が異なるはずです。この図は、5.0.0リリース版で作りました。作り直しが必要と思います。}\\
+\replycomment{安藤さんに差し替えてもらいました(足立)}
