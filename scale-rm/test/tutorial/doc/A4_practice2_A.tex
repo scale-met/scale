@@ -4,11 +4,11 @@
 \section*{回答}
 \begin{enumerate}
 \item {\bf 計算領域は変えず、MPI並列数を変更したい}\\
-変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX,JMAX}、\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X,PRC_NUM_Y}である。下記2つの式を満たしていれば正解である。
+変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX,JMAX}、\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X,PRC_NUM_Y}である。下記3つの式を満たしていれば正解である。
 \begin{eqnarray}
 && MPI並列数 = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
-&& 領域内の総格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
-   \times (\verb|JMAX| \times \verb|PRC_NUM_Y|) = 8100 \nonumber
+&& X方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
+&& Y方向の格子数 = \times (\verb|JMAX| \times \verb|PRC_NUM_Y|) = 90 \nonumber
 \end{eqnarray}
 
 
@@ -84,8 +84,8 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_MAPPROJ                      | & \\
-\textcolor{red}{\verb| MPRJ_basepoint_lon = 139.757D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lon = 135.220404D0,|)\\
-\textcolor{red}{\verb| MPRJ_basepoint_lat =  35.688D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lat =  34.653396D0,|)\\
+\textcolor{red}{\verb| MPRJ_basepoint_lon = 139.454D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lon = 135.220404D0,|)\\
+\textcolor{red}{\verb| MPRJ_basepoint_lat =  35.413D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lat =  34.653396D0,|)\\
 \verb| MPRJ_type          = 'LC',         | & \\
 \verb| MPRJ_LC_lat1       =  30.00D0,     | & \\
 \verb| MPRJ_LC_lat2       =  40.00D0,     | & \\
@@ -102,7 +102,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 \verb|&PARAM_TIME| & \\
 \verb| TIME_STARTDATE             = 2007, 7, 14, 18, 0, 0, | & \\
 \verb| TIME_STARTMS               = 0.D0,                  | & \\
-\textcolor{red}{\verb| TIME_DURATION = 12.0D0,             |} &\\
+\textcolor{red}{\verb| TIME_DURATION = 12.0D0,             |} 
                                                      &  (オリジナル設定は\verb| 6.0D0,|) \\
 \verb| TIME_DURATION_UNIT         = "HOUR",              | & \\
 \verb|/| & \\
@@ -185,7 +185,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 \nmitem{TIME_DT_LAND_RESTART},\nmitem{TIME_DT_URBAN_RESTART}の設定は必要ない。
 また、\nmitem{TIME_DURATION}が3時間以上に設定されている場合には、
 \nmitem{TIME_DT_ATMOS_RESTART},\nmitem{TIME_DT_OCEAN_RESTART},\\
-\nmitem{TIME_DT_LAND_RESTART},\nmitem{TIME_DT_URBAN_RESTART,}に３時間、もしくは、10800 (sec) を整数で割った商を指定している必要がある。
+\nmitem{TIME_DT_LAND_RESTART},\nmitem{TIME_DT_URBAN_RESTART,}に３時間、もしくは、10800 (sec) の約数かつ\nmitem{TIME_DT}の倍数を指定している必要がある。
 
 
 
@@ -205,7 +205,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 \textcolor{red}{\verb| RESTART_RUN          = .true.,               |} & \textcolor{red}{必須}\\
 \verb| RESTART_OUTPUT      = .true.,                |                  & あってもなくてもよい。\\
 \textcolor{red}{\verb| RESTART_IN_BASENAME = "restart_d01_20070714-210000.000",|} & \textcolor{red}{必須}\\
-\verb| RESTART_OUT_BASENAME = "restart2_d01",| & あってもなくても良い。\\
+\verb| RESTART_OUT_BASENAME = "restart2_d01",| & あってもなくてもよい。\\
 \verb|/| & \\
 \\
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
