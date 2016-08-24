@@ -31,12 +31,18 @@ module scale_vector
   public :: VECTR_intersec
   public :: VECTR_anticlockwise
   public :: VECTR_triangle
+  public :: VECTR_triangle_plane
+  public :: VECTR_rotation
   public :: VECTR_distance
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+  integer, public, parameter :: I_Xaxis = 1
+  integer, public, parameter :: I_Yaxis = 2
+  integer, public, parameter :: I_Zaxis = 3
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -55,21 +61,21 @@ contains
        lat, &
        lon  )
     use scale_const, only: &
-       CONST_EPS
+       EPS => CONST_EPS
     implicit none
 
-    real(RP),intent(in)  :: x
-    real(RP),intent(in)  :: y
-    real(RP),intent(in)  :: z
-    real(RP),intent(out) :: lat
-    real(RP),intent(out) :: lon
+    real(RP), intent(in)  :: x
+    real(RP), intent(in)  :: y
+    real(RP), intent(in)  :: z
+    real(RP), intent(out) :: lat
+    real(RP), intent(out) :: lon
 
     real(RP) :: length, length_h
     !---------------------------------------------------------------------------
 
     length = sqrt( x*x + y*y + z*z )
 
-    if ( length < CONST_EPS ) then ! 3D vector length is
+    if ( length < EPS ) then ! 3D vector length is
        lat = 0.0_RP
        lon = 0.0_RP
        return
@@ -89,7 +95,7 @@ contains
 
     length_h = sqrt( x*x + y*y )
 
-    if ( length_h < CONST_EPS ) then
+    if ( length_h < EPS ) then
        lon = 0.0_RP
        return
     endif
@@ -117,12 +123,12 @@ contains
        radius )
     implicit none
 
-    real(RP),intent(in)  :: lat
-    real(RP),intent(in)  :: lon
-    real(RP),intent(out) :: x
-    real(RP),intent(out) :: y
-    real(RP),intent(out) :: z
-    real(RP),intent(in)  :: radius
+    real(RP), intent(in)  :: lat
+    real(RP), intent(in)  :: lon
+    real(RP), intent(out) :: x
+    real(RP), intent(out) :: y
+    real(RP), intent(out) :: z
+    real(RP), intent(in)  :: radius
     !---------------------------------------------------------------------------
 
     x = radius * cos(lat) * cos(lon)
@@ -138,7 +144,7 @@ contains
     implicit none
 
     real(RP), intent(out) :: nv(3)                  ! normal vector
-    real(RP), intent(in ) :: a(3), b(3), c(3), d(3) ! x,y,z(cartesian)
+    real(RP), intent(in)  :: a(3), b(3), c(3), d(3) ! x,y,z(cartesian)
     !---------------------------------------------------------------------------
 
     nv(1) = ( b(2)-a(2) ) * ( d(3)-c(3) ) &
@@ -157,7 +163,7 @@ contains
     implicit none
 
     real(RP), intent(out) :: l
-    real(RP), intent(in ) :: a(3), b(3), c(3), d(3) ! x,y,z(cartesian)
+    real(RP), intent(in)  :: a(3), b(3), c(3), d(3) ! x,y,z(cartesian)
     !---------------------------------------------------------------------------
     ! if a=c=zero-vector and b=d, result is abs|a|^2
 
@@ -174,7 +180,7 @@ contains
     implicit none
 
     real(RP), intent(out) :: l
-    real(RP), intent(in ) :: a(3) ! x,y,z(cartesian)
+    real(RP), intent(in)  :: a(3) ! x,y,z(cartesian)
     !---------------------------------------------------------------------------
 
     l = a(1)*a(1) + a(2)*a(2) + a(3)*a(3)
@@ -189,7 +195,7 @@ contains
     implicit none
 
     real(RP), intent(out) :: angle
-    real(RP), intent(in ) :: a(3), b(3), c(3)
+    real(RP), intent(in)  :: a(3), b(3), c(3)
 
     real(RP) :: nv(3), nvlenS, nvlenC
     !---------------------------------------------------------------------
@@ -205,22 +211,22 @@ contains
   !-----------------------------------------------------------------------------
   !> judge intersection of two vector
   subroutine VECTR_intersec( ifcross, p, a, b, c, d )
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
-    logical, intent(out) :: ifcross
+    logical,  intent(out) :: ifcross
     ! .true. : line a->b and c->d intersect
     ! .false.: line a->b and c->d do not intersect and p = (0,0)
     real(RP), intent(out) :: p(3) ! intersection point
-    real(RP), intent(in ) :: a(3), b(3), c(3), d(3)
+    real(RP), intent(in)  :: a(3), b(3), c(3), d(3)
 
     real(RP), parameter :: o(3) = 0.0_RP
 
-    real(RP)            :: oaob(3), ocod(3), cdab(3)
-    real(RP)            :: ip, length
-    real(RP)            :: angle_aop, angle_pob, angle_aob
-    real(RP)            :: angle_cop, angle_pod, angle_cod
-
-    real(RP), parameter :: eps = 1.E-12_RP
+    real(RP) :: oaob(3), ocod(3), cdab(3)
+    real(RP) :: ip, length
+    real(RP) :: angle_aop, angle_pob, angle_aob
+    real(RP) :: angle_cop, angle_pod, angle_cod
     !---------------------------------------------------------------------
 
     call VECTR_cross( oaob, o, a, o, b )
@@ -231,27 +237,27 @@ contains
     call VECTR_dot  ( ip, o, cdab, o, a )
 
     p(:) = cdab(:) / sign(length,ip)
-!    write(ADM_LOG_FID,*), "p:", p(:)
+!    write(IO_FID_LOG,*), "p:", p(:)
 
     call VECTR_angle( angle_aop, a, o, p )
     call VECTR_angle( angle_pob, p, o, b )
     call VECTR_angle( angle_aob, a, o, b )
-!    write(ADM_LOG_FID,*), "angle a-p-b:", angle_aop, angle_pob, angle_aob
+!    write(IO_FID_LOG,*), "angle a-p-b:", angle_aop, angle_pob, angle_aob
 
     call VECTR_angle( angle_cop, c, o, p )
     call VECTR_angle( angle_pod, p, o, d )
     call VECTR_angle( angle_cod, c, o, d )
-!    write(ADM_LOG_FID,*), "angle c-p-d:", angle_cop, angle_pod, angle_cod
+!    write(IO_FID_LOG,*), "angle c-p-d:", angle_cop, angle_pod, angle_cod
 
-!    write(ADM_LOG_FID,*), "judge:", angle_aob-(angle_aop+angle_pob), angle_cod-(angle_cop+angle_pod)
+!    write(IO_FID_LOG,*), "judge:", angle_aob-(angle_aop+angle_pob), angle_cod-(angle_cop+angle_pod)
 
     ! --- judge intersection
-    if (       abs(angle_aob-(angle_aop+angle_pob)) < eps &
-         .AND. abs(angle_cod-(angle_cop+angle_pod)) < eps &
-         .AND. abs(angle_aop) > eps                       &
-         .AND. abs(angle_pob) > eps                       &
-         .AND. abs(angle_cop) > eps                       &
-         .AND. abs(angle_pod) > eps                       ) then
+    if (       abs(angle_aob-(angle_aop+angle_pob)) < EPS &
+         .AND. abs(angle_cod-(angle_cop+angle_pod)) < EPS &
+         .AND. abs(angle_aop) > EPS                       &
+         .AND. abs(angle_pob) > EPS                       &
+         .AND. abs(angle_cop) > EPS                       &
+         .AND. abs(angle_pod) > EPS                       ) then
        ifcross = .true.
     else
        ifcross = .false.
@@ -264,17 +270,18 @@ contains
   !---------------------------------------------------------------------
   !> bubble sort anticlockwise by angle
   subroutine VECTR_anticlockwise( vertex, nvert )
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
-    integer, intent(in)    :: nvert
+    integer,  intent(in)    :: nvert
     real(RP), intent(inout) :: vertex(nvert,3)
 
     real(RP), parameter :: o(3) = 0.0_RP
-    real(RP)            :: v1(3), v2(3), v3(3)
-    real(RP)            :: xp(3), ip
-    real(RP)            :: angle1, angle2
 
-    real(RP), parameter :: eps = 1.E-12_RP
+    real(RP) :: v1(3), v2(3), v3(3)
+    real(RP) :: xp(3), ip
+    real(RP) :: angle1, angle2
 
     integer :: i, j
     !---------------------------------------------------------------------
@@ -288,8 +295,8 @@ contains
        call VECTR_cross( xp(:), v1(:), v2(:), v1(:), v3(:) )
        call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
 
-       if ( ip < -eps ) then ! right hand : exchange
-!          write(ADM_LOG_FID,*) 'exchange by ip', i, '<->',j
+       if ( ip < -EPS ) then ! right hand : exchange
+!          write(IO_FID_LOG,*) 'exchange by ip', i, '<->',j
           vertex(i,:) = v2(:)
           vertex(j,:) = v3(:)
        endif
@@ -305,11 +312,11 @@ contains
     call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
     call VECTR_angle( angle1, v1(:), o, v2(:) )
     call VECTR_angle( angle2, v1(:), o, v3(:) )
-!    write(ADM_LOG_FID,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
+!    write(IO_FID_LOG,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
 
-    if (       abs(ip)                 < eps  &      ! on the same line
+    if (       abs(ip)                 < EPS  &      ! on the same line
          .AND. abs(angle2)-abs(angle1) < 0.0_RP ) then ! which is far?
-!       write(ADM_LOG_FID,*) 'exchange by angle', 2, '<->', 3
+!       write(IO_FID_LOG,*) 'exchange by angle', 2, '<->', 3
        vertex(2,:) = v3(:)
        vertex(3,:) = v2(:)
     endif
@@ -321,11 +328,11 @@ contains
     call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
     call VECTR_angle( angle1, v1(:), o, v2(:) )
     call VECTR_angle( angle2, v1(:), o, v3(:) )
-!    write(ADM_LOG_FID,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
+!    write(IO_FID_LOG,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
 
-    if (       abs(ip)                 < eps  &      ! on the same line
+    if (       abs(ip)                 < EPS  &      ! on the same line
          .AND. abs(angle2)-abs(angle1) < 0.0_RP ) then ! which is far?
-!       write(ADM_LOG_FID,*) 'exchange by angle', nvert, '<->', nvert-1
+!       write(IO_FID_LOG,*) 'exchange by angle', nvert, '<->', nvert-1
        vertex(nvert,  :) = v3(:)
        vertex(nvert-1,:) = v2(:)
     endif
@@ -334,14 +341,16 @@ contains
   end subroutine VECTR_anticlockwise
 
   !-----------------------------------------------------------------------------
+  !> calc triangle area
+  !> @return area
   function VECTR_triangle( &
-       a, b, c,      & !--- IN : three point vectors on a sphere.
-       polygon_type, & !--- IN : sphere triangle or plane one?
-       radius      ) & !--- IN : radius
-       result(area)    !--- OUT : triangle area
+       a, b, c,      &
+       polygon_type, &
+       radius      ) &
+       result(area)
     use scale_const, only: &
-       CONST_EPS, &
-       CONST_PI
+       PI  => CONST_PI, &
+       EPS => CONST_EPS
     implicit none
 
     real(RP),         intent(in) :: a(3), b(3), c(3)
@@ -374,7 +383,7 @@ contains
        call VECTR_abs( r  , a(:)   )
 
        prd = 0.5_RP * prd !! triangle area
-       if ( r < CONST_EPS * radius ) then
+       if ( r < EPS ) then
           print *, "zero length?", a(:)
        else
           r = 1.0_RP / r   !! 1 / length
@@ -390,8 +399,8 @@ contains
        call VECTR_abs( abab, oaob(:) )
        call VECTR_abs( acac, oaoc(:) )
 
-       if ( abab < CONST_EPS * radius .OR. acac < CONST_EPS * radius ) then
-          !write(*,'(A,3(ES20.10))') "zero length abab or acac:", abab/radius, acac/radius
+       if ( abab < EPS .OR. acac < EPS ) then
+          !write(*,'(A,3(ES20.10))') "zero length abab or acac:", abab, acac
           return
        endif
 
@@ -403,8 +412,8 @@ contains
        call VECTR_abs( bcbc, oboc(:) )
        baba = abab
 
-       if ( bcbc < CONST_EPS * radius .OR. baba < CONST_EPS * radius ) then
-          !write(*,'(A,3(ES20.10))') "zero length bcbc or baba:", bcbc/radius, baba/radius
+       if ( bcbc < EPS .OR. baba < EPS ) then
+          !write(*,'(A,3(ES20.10))') "zero length bcbc or baba:", bcbc, baba
           return
        endif
 
@@ -416,20 +425,106 @@ contains
        caca = acac
        cbcb = bcbc
 
-       if ( caca < CONST_EPS * radius .OR. cbcb < CONST_EPS * radius ) then
-          !write(*,'(A,3(ES20.10))') "zero length caca or cbcb:", caca/radius, cbcb/radius
+       if ( caca < EPS .OR. cbcb < EPS ) then
+          !write(*,'(A,3(ES20.10))') "zero length caca or cbcb:", caca, cbcb
           return
        endif
 
        call VECTR_angle( angle(3), ocoa(:), o(:), ocob(:) )
 
        ! calc area
-       area = ( angle(1)+angle(2)+angle(3) - CONST_PI ) * radius*radius
+       area = ( angle(1)+angle(2)+angle(3) - PI ) * radius*radius
 
     endif
 
     return
   end function VECTR_triangle
+
+  !-----------------------------------------------------------------------------
+  !> calc triangle area on plane
+  !> @return area
+  function VECTR_triangle_plane( &
+       a, b, c ) &
+       result(area)
+    implicit none
+
+    real(RP), intent(in) :: a(3), b(3), c(3)
+    real(RP)             :: area
+    !
+    real(RP) :: len_ab, len_ac, prd
+    !---------------------------------------------------------------------------
+
+    call VECTR_dot( len_ab, a, b, a, b )
+    call VECTR_dot( len_ac, a, c, a, c )
+    call VECTR_dot( prd   , a, b, a, c )
+
+    area = 0.5_RP * sqrt( len_ab * len_ac - prd * prd )
+
+  end function VECTR_triangle_plane
+
+  !-----------------------------------------------------------------------------
+  !> Apply rotation matrix
+  subroutine VECTR_rotation( &
+      a,     &
+      angle, &
+      iaxis  )
+    implicit none
+
+    real(RP), intent(inout) :: a(3)
+    real(RP), intent(in)    :: angle
+    integer,  intent(in)    :: iaxis
+
+    real(RP) :: m(3,3), b(3)
+    !---------------------------------------------------------------------------
+
+    if ( iaxis == I_Xaxis ) then
+       m(1,1) =        1.0_RP
+       m(1,2) =        0.0_RP
+       m(1,3) =        0.0_RP
+
+       m(2,1) =        0.0_RP
+       m(2,2) =  cos(angle)
+       m(2,3) =  sin(angle)
+
+       m(3,1) =        0.0_RP
+       m(3,2) = -sin(angle)
+       m(3,3) =  cos(angle)
+    elseif( iaxis == I_Yaxis ) then
+       m(1,1) =  cos(angle)
+       m(1,2) =        0.0_RP
+       m(1,3) = -sin(angle)
+
+       m(2,1) =        0.0_RP
+       m(2,2) =        1.0_RP
+       m(2,3) =        0.0_RP
+
+       m(3,1) =  sin(angle)
+       m(3,2) =        0.0_RP
+       m(3,3) =  cos(angle)
+    elseif( iaxis == I_Zaxis ) then
+       m(1,1) =  cos(angle)
+       m(1,2) =  sin(angle)
+       m(1,3) =        0.0_RP
+
+       m(2,1) = -sin(angle)
+       m(2,2) =  cos(angle)
+       m(2,3) =        0.0_RP
+
+       m(3,1) =        0.0_RP
+       m(3,2) =        0.0_RP
+       m(3,3) =        1.0_RP
+    else
+       return
+    endif
+
+    b(1) = m(1,1) * a(1) + m(1,2) * a(2) + m(1,3) * a(3)
+    b(2) = m(2,1) * a(1) + m(2,2) * a(2) + m(2,3) * a(3)
+    b(3) = m(3,1) * a(1) + m(3,2) * a(2) + m(3,3) * a(3)
+
+    a(:) = b(:)
+
+    return
+  end subroutine VECTR_rotation
 
   !-----------------------------------------------------------------------
   !> Get horizontal distance on the sphere
