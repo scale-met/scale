@@ -43,10 +43,10 @@
 \end{tabularx}
 }}}\\
 
-上記の例では、\verb|restart1_***|というリスタートファイルからリスタート計算を開始し、
-6時間に1回、リスタートファイルを\verb|restart2_***|という名前で出力する設定となっている。
-\nmitem{TIME_DT_ATMOS_RESTART, TIME_DT_OCEAN_RESTART,TIME_DT_LAND_RESTART,TIME_DT_URBAN_RESTART,}
-が指定されていない場合には、積分時刻の最終時刻(\nmitem{TIME_DURATION})にファイルが作成される。
+上記の例では、\verb|restart1_***|という入力ファイルからリスタート計算を開始し、
+6時間(21600 sec)に1回、リスタートファイルを\verb|restart2_***|という名前で出力する設定となっている。
+\nmitem{TIME_DT_ATMOS_RESTART, TIME_DT_OCEAN_RESTART,TIME_DT_LAND_RESTART,TIME_DT_URBAN_RESTART}
+が指定されていない場合には、積分時刻の最終時刻\nmitem{TIME_DURATION}にファイルが作成される。
 \nmitem{RESTART_RUN}を\verb|.false.|として\nmitem{RESTART_IN_BASENAME}に\verb|scale-rm_init|で作成した初期値ファイル
 （\verb|init_***|）を指定すれば通常計算が実行され、
 \nmitem{RESTART_RUN}を\verb|.true.|として\nmitem{RESTART_IN_BASENAME}にリスタートファイルを指定すれば
@@ -55,8 +55,8 @@
 チュートリアル、および、本書解説では便宜上、\verb|scale-rm_init|で作成した初期値ファイルの名前を\verb|init_***|とし、リスタートファイルのファイル名を\verb|restart_***|としているが、これに限らない。
 
 
-現実実験の場合、初期値以外に\verb|scale-rm_init|で作成した境界値ファイルが必要である。\\
-\namelist{&PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_START_DATE}に
+現実大気実験の場合、初期値以外に\verb|scale-rm_init|で作成した境界値ファイルが必要である。\\
+\namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_START_DATE}に
 境界値ファイル\verb|boundary_***|の初期時刻を設定しておくことで、リスタート計算時に
 適切な時刻のデータを読み込むことが可能である。
 \nmitem{ATMOS_BOUNDARY_START_DATE}の設定がない場合には、
@@ -74,7 +74,8 @@
 \end{tabularx}
 }}}\\
 
-\nmitem{ATMOS_BOUNDARY_START_DATE}と\nmitem{ATMOS_BOUNDARY_UPDATE_DT}は、
-今後、上記で指定せず、境界値ファイル(\netcdf)から直接読み込むように変更予定である。
+%\nmitem{ATMOS_BOUNDARY_START_DATE}と\nmitem{ATMOS_BOUNDARY_UPDATE_DT}は、
+%今後、上記で指定せず、境界値ファイル(\netcdf)から直接読み込むように変更予定である。
 
-\proofcomment{予定はかかなくていいのではないか？要検討}
+\proofcomment{予定はかかなくていいのではないか？要検討}\\
+\replycomment{削除しました(足立)}
