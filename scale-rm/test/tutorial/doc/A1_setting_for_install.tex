@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SCALEのインストールに必要なライブラリ環境のインストール方法について説明する。
+SCALEのインストールに必要なコンパイラやライブラリ環境のインストール方法について説明する。
 ここでの記載内容は、こちらのテスト環境でのインストールプロセスを示しているものであって
 必ずしも全く同じとは限らない。
 うまくいかない場合には、それぞれのツール・ライブラリの開発元に直接問い合わせること。
@@ -14,7 +14,7 @@ Linuxをインストール後、各種プログラムのインストールには
 また本節では、HDF5, NetCDF, MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
 GNU compiler以外のIntel compilerなどを利用する場合は、各自でインストール方法を調べてインストールすること。\\
 
-\noindent ここでインストールするライブラリ環境は、主に下記の4点である。
+\noindent ここでインストールするコンパイラおよびライブラリ環境は、主に下記の4点である。
 \begin{itemize}
 \item GNU C/C++, fortran compiler
 \item HDF5 Library (\url{https://www.hdfgroup.org/HDF5/})
@@ -132,13 +132,18 @@ rpm\_check\_debug を実行しています\\
  # yum install wgrib wgrib2
 \end{verbatim}
 
-\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
-デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ # yum install lapack lapack-devel
+\end{verbatim}
 
 \noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{chap:tutorial_real}章：Tutorial: Real case で
 外部入力データのプレ処理を行うために使用する。}
 
-\noindent {\small ＊"yum -y install package name"として実行することで、インストール前の再確認をスキップできる。}
+\noindent {\small ＊"yum -y install package name" のように ``-y'' オプションをつけて実行することで、インストール前の再確認をスキップできる。}
 
 
 \subsubsection{環境変数の設定}
@@ -283,15 +288,19 @@ Running transaction\\
  # yum install netcdf-devel netcdf-static
  # yum install netcdf-fortran-devel
  # yum install openmpi-devel
- # yum install lapack lapack-devel
  # yum install wgrib wgrib2
+\end{verbatim}
+
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ # yum install lapack lapack-devel
 \end{verbatim}
 
 \noindent \textcolor{red}{\small ＊fortran用のモジュールファイルは別パッケージになっている。
 "netcdf-fortran-devel"のインストールを忘れないこと。}
-
-\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
-デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
 
 \noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{chap:tutorial_real}章：Tutorial: Real case で
 外部入力データのプレ処理を行うために使用する。}
@@ -403,13 +412,17 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
  $ sudo zypper install hdf5-devel hdf5-devel-static
  $ sudo zypper install netcdf-devel netcdf-devel-static
  $ sudo zypper install netcdf-fortran-devel netcdf-fortran-static
- $ sudo zypper install lapack-devel lapack-devel-static
  $ sudo zypper install openmpi-devel openmpi-devel-static
  $ sudo zypper install wgrib wgrib2
 \end{verbatim}
 
-\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
-デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ $ sudo zypper install lapack-devel lapack-devel-static
+\end{verbatim}
 
 \noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{chap:tutorial_real}章：Tutorial: Real case で
 外部入力データのプレ処理を行うために使用する。}
@@ -537,7 +550,7 @@ macports-JPが作成しているリポジトリから、Mac OS X用のGPhysを�
 以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。
 \begin{verbatim}
  $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
- $ /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk
+  /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk
 \end{verbatim}
 /opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。
 \begin{verbatim}
@@ -622,10 +635,15 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
   \item 概略：SCALEの出力ファイルは、MPI並列の計算領域分割に従ってMPIプロセスごとに
               NetCDF形式の分割ファイルとして出力される。GPhysの"gpview"や"gpvect"といった
               描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。
-  \item インストール方法：本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。\\
-                        \url{http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm}\\
-                        Mac OS Xにおけるインストール方法は第\ref{chap:install_mac}節で説明する。
- \end{itemize}
+  \item インストール方法：
+  地球電脳倶楽部のWebページに、主なOSでのインストール方法についての解説がある。\\
+  \url{https://www.gfd-dennou.org/library/ruby/tutorial/install/index-j.html}\\
+  本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。\\
+  \url{http://www.gfd-dennou.org/library/cc-env/rpm-dennou/index.html.ja}\\
+   Mac OS Xにおけるインストール方法は第\ref{chap:install_mac}節で説明している他、
+   \url{https://www.gfd-dennou.org/library/ruby/products/macports/index-j.html}
+   でも解説されている。
+   \end{itemize}
 \item Grid Analysis and Display System (GrADS) by COLA\\
  \begin{itemize}
   \item URL： \url{http://iges.org/grads/}
