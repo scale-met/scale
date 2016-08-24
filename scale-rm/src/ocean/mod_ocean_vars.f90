@@ -337,10 +337,10 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if ( OCEAN_sw .and. OCEAN_RESTART_IN_BASENAME /= '' ) then
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) ***'
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) ***'
+    if ( OCEAN_sw .and. OCEAN_RESTART_IN_BASENAME /= '' ) then
 
        if ( OCEAN_RESTART_IN_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
