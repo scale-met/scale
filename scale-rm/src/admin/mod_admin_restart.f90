@@ -288,6 +288,7 @@ contains
   end subroutine ADMIN_restart_setup
 
   !-----------------------------------------------------------------------------
+  !> Write data to restart files
   subroutine ADMIN_restart_write
     use mod_admin_time, only: &
        TIME_DOATMOS_restart,  &
@@ -360,6 +361,8 @@ contains
     return
   end subroutine ADMIN_restart_write
 
+  !-----------------------------------------------------------------------------
+  !> Read from restart files
   subroutine ADMIN_restart_read
     use mod_atmos_admin, only: &
        ATMOS_do
@@ -372,51 +375,40 @@ contains
     use mod_ocean_vars, only: &
        OCEAN_vars_restart_open, &
        OCEAN_vars_restart_read, &
-       OCEAN_vars_restart_read_var, &
        OCEAN_vars_restart_close
     use mod_land_vars, only: &
        LAND_vars_restart_open, &
        LAND_vars_restart_read, &
-       LAND_vars_restart_read_var, &
        LAND_vars_restart_close
     use mod_urban_vars, only: &
        URBAN_vars_restart_open, &
        URBAN_vars_restart_read, &
-       URBAN_vars_restart_read_var, &
        URBAN_vars_restart_close
     use mod_atmos_vars, only: &
        ATMOS_vars_restart_open, &
        ATMOS_vars_restart_read, &
-       ATMOS_vars_restart_read_var, &
        ATMOS_vars_restart_close
     implicit none
 
     ! restart files can be different for different models
 
     ! open restart netCDF file
-    if( ATMOS_do ) call ATMOS_vars_restart_open
-    if( OCEAN_do ) call OCEAN_vars_restart_open
-    if( LAND_do  ) call LAND_vars_restart_open
-    if( URBAN_do ) call URBAN_vars_restart_open
+    if ( ATMOS_do ) call ATMOS_vars_restart_open
+    if ( OCEAN_do ) call OCEAN_vars_restart_open
+    if ( LAND_do  ) call LAND_vars_restart_open
+    if ( URBAN_do ) call URBAN_vars_restart_open
 
     ! read restart data
-    if ( IO_PNETCDF ) then
-       if( ATMOS_do ) call ATMOS_vars_restart_read_var
-       if( OCEAN_do ) call OCEAN_vars_restart_read_var
-       if( LAND_do  ) call LAND_vars_restart_read_var
-       if( URBAN_do ) call URBAN_vars_restart_read_var
-    else
-       if( ATMOS_do ) call ATMOS_vars_restart_read
-       if( OCEAN_do ) call OCEAN_vars_restart_read
-       if( LAND_do  ) call LAND_vars_restart_read
-       if( URBAN_do ) call URBAN_vars_restart_read
-    end if
+    if ( ATMOS_do ) call ATMOS_vars_restart_read
+    if ( OCEAN_do ) call OCEAN_vars_restart_read
+    if ( LAND_do  ) call LAND_vars_restart_read
+    if ( URBAN_do ) call URBAN_vars_restart_read
 
     ! clode the restart file
-    if( ATMOS_do ) call ATMOS_vars_restart_close
-    if( OCEAN_do ) call OCEAN_vars_restart_close
-    if( LAND_do  ) call LAND_vars_restart_close
-    if( URBAN_do ) call URBAN_vars_restart_close
+    if ( ATMOS_do ) call ATMOS_vars_restart_close
+    if ( OCEAN_do ) call OCEAN_vars_restart_close
+    if ( LAND_do  ) call LAND_vars_restart_close
+    if ( URBAN_do ) call URBAN_vars_restart_close
 
   end subroutine ADMIN_restart_read
 

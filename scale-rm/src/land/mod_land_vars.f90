@@ -41,7 +41,6 @@ module mod_land_vars
   public :: LAND_vars_restart_open
   public :: LAND_vars_restart_def_var
   public :: LAND_vars_restart_enddef
-  public :: LAND_vars_restart_read_var
   public :: LAND_vars_restart_close
 
   public :: convert_WS2VWC
@@ -396,7 +395,8 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_open( restart_fid, basename )
+       call FILEIO_open( restart_fid, & ! [OUT]
+                         basename     ) ! [IN]
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
     endif
@@ -410,69 +410,7 @@ contains
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_read
-    use scale_time, only: &
-       TIME_gettimelabel
-    use mod_land_admin, only: &
-       LAND_sw
-    implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) ***'
-
-    if ( LAND_sw .and. LAND_RESTART_IN_BASENAME /= '' ) then
-
-       if ( LAND_RESTART_IN_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(LAND_RESTART_IN_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(LAND_RESTART_IN_BASENAME)
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call FILEIO_read( LAND_TEMP (:,:,:),                              & ! [OUT]
-                         basename, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
-       call FILEIO_read( LAND_WATER(:,:,:),                              & ! [OUT]
-                         basename, VAR_NAME(I_WATER),     'Land', step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_TEMP(:,:),                             & ! [OUT]
-                         basename, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_albedo(:,:,I_LW),                      & ! [OUT]
-                         basename, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                      & ! [OUT]
-                         basename, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MW(:,:),                              & ! [OUT]
-                         basename, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MU(:,:),                              & ! [OUT]
-                         basename, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MV(:,:),                              & ! [OUT]
-                         basename, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_SH(:,:),                              & ! [OUT]
-                         basename, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_LH(:,:),                              & ! [OUT]
-                         basename, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_GH(:,:),                              & ! [OUT]
-                         basename, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_evap(:,:),                            & ! [OUT]
-                         basename, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
-
-       call LAND_vars_total
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
-    endif
-
-    return
-  end subroutine LAND_vars_restart_read
-
-  !-----------------------------------------------------------------------------
-  !> Read land restart
-  subroutine LAND_vars_restart_read_var
-    use scale_fileio, only: &
-       FILEIO_read_var, &
+       FILEIO_read, &
        FILEIO_flush
     use mod_land_admin, only: &
        LAND_sw
@@ -481,38 +419,41 @@ contains
 
     if ( restart_fid .NE. -1 ) then
 
-       call FILEIO_read_var( LAND_TEMP (:,:,:),                                 & ! [OUT]
-                             restart_fid, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_WATER(:,:,:),                                 & ! [OUT]
-                             restart_fid, VAR_NAME(I_WATER),     'Land', step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFC_TEMP(:,:),                                & ! [OUT]
-                             restart_fid, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFC_albedo(:,:,I_LW),                         & ! [OUT]
-                             restart_fid, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFC_albedo(:,:,I_SW),                         & ! [OUT]
-                             restart_fid, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFLX_MW(:,:),                                 & ! [OUT]
-                             restart_fid, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFLX_MU(:,:),                                 & ! [OUT]
-                             restart_fid, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFLX_MV(:,:),                                 & ! [OUT]
-                             restart_fid, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFLX_SH(:,:),                                 & ! [OUT]
-                             restart_fid, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFLX_LH(:,:),                                 & ! [OUT]
-                             restart_fid, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFLX_GH(:,:),                                 & ! [OUT]
-                             restart_fid, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read_var( LAND_SFLX_evap(:,:),                               & ! [OUT]
-                             restart_fid, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_TEMP (:,:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
+       call FILEIO_read( LAND_WATER(:,:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_WATER),     'Land', step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_TEMP(:,:),                                & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_albedo(:,:,I_LW),                         & ! [OUT]
+                         restart_fid, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                         & ! [OUT]
+                         restart_fid, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MW(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MU(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MV(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_SH(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_LH(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_GH(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_evap(:,:),                               & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
 
-       call FILEIO_flush( restart_fid )
+       if ( IO_PNETCDF ) &
+          call FILEIO_flush( restart_fid )
 
        call LAND_vars_total
+    else
+       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for land.'
     endif
 
     return
-  end subroutine LAND_vars_restart_read_var
+  end subroutine LAND_vars_restart_read
 
   !-----------------------------------------------------------------------------
   !> History output set for land variables

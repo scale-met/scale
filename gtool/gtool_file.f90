@@ -2449,11 +2449,13 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
+      allow_missing, & ! (in) optional
+      single,        & ! (in) optional
       ntypes,        & ! (in)
       dtype,         & ! (in)
       start,         & ! (in)
-      count,         & ! (in)
-      allow_missing  & ! (in) optional
+      count          & ! (in)
       )
     use MPI, only : MPI_COMM_NULL
     implicit none
@@ -2462,17 +2464,21 @@ contains
     integer,          intent( in)           :: fid
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: ntypes      ! number of dtypes
-    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in)           :: start(:)    ! request starts to global variable
-    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: ntypes      ! number of dtypes
+    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    ! request starts to global variable
+    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
     integer :: error
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2501,9 +2507,15 @@ contains
        call Log('E', message)
     end if
 
-    call file_read_data_par( var(:),                    & ! (out)
-         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-         error                                                 ) ! (out)
+    if (present(ntypes) ) then
+       call file_read_data_par( var(:),                    & ! (out)
+            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+            error                                                 ) ! (out)
+    else
+       call file_read_data( var(:), & ! (out)
+            dinfo, SP,                & ! (in)
+            error                          ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2515,11 +2527,13 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
+      allow_missing, & ! (in) optional
+      single,        & ! (in) optional
       ntypes,        & ! (in)
       dtype,         & ! (in)
       start,         & ! (in)
-      count,         & ! (in)
-      allow_missing  & ! (in) optional
+      count          & ! (in)
       )
     use MPI, only : MPI_COMM_NULL
     implicit none
@@ -2528,17 +2542,21 @@ contains
     integer,          intent( in)           :: fid
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: ntypes      ! number of dtypes
-    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in)           :: start(:)    ! request starts to global variable
-    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: ntypes      ! number of dtypes
+    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    ! request starts to global variable
+    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
     integer :: error
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2567,9 +2585,15 @@ contains
        call Log('E', message)
     end if
 
-    call file_read_data_par( var(:),                    & ! (out)
-         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-         error                                                 ) ! (out)
+    if (present(ntypes) ) then
+       call file_read_data_par( var(:),                    & ! (out)
+            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+            error                                                 ) ! (out)
+    else
+       call file_read_data( var(:), & ! (out)
+            dinfo, DP,                & ! (in)
+            error                          ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2581,11 +2605,13 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
+      allow_missing, & ! (in) optional
+      single,        & ! (in) optional
       ntypes,        & ! (in)
       dtype,         & ! (in)
       start,         & ! (in)
-      count,         & ! (in)
-      allow_missing  & ! (in) optional
+      count          & ! (in)
       )
     use MPI, only : MPI_COMM_NULL
     implicit none
@@ -2594,17 +2620,21 @@ contains
     integer,          intent( in)           :: fid
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: ntypes      ! number of dtypes
-    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in)           :: start(:)    ! request starts to global variable
-    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: ntypes      ! number of dtypes
+    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    ! request starts to global variable
+    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
     integer :: error
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2633,9 +2663,15 @@ contains
        call Log('E', message)
     end if
 
-    call file_read_data_par( var(:,:),                    & ! (out)
-         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-         error                                                 ) ! (out)
+    if (present(ntypes) ) then
+       call file_read_data_par( var(:,:),                    & ! (out)
+            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+            error                                                 ) ! (out)
+    else
+       call file_read_data( var(:,:), & ! (out)
+            dinfo, SP,                & ! (in)
+            error                          ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2647,11 +2683,13 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
+      allow_missing, & ! (in) optional
+      single,        & ! (in) optional
       ntypes,        & ! (in)
       dtype,         & ! (in)
       start,         & ! (in)
-      count,         & ! (in)
-      allow_missing  & ! (in) optional
+      count          & ! (in)
       )
     use MPI, only : MPI_COMM_NULL
     implicit none
@@ -2660,17 +2698,21 @@ contains
     integer,          intent( in)           :: fid
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: ntypes      ! number of dtypes
-    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in)           :: start(:)    ! request starts to global variable
-    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: ntypes      ! number of dtypes
+    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    ! request starts to global variable
+    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
     integer :: error
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2699,9 +2741,15 @@ contains
        call Log('E', message)
     end if
 
-    call file_read_data_par( var(:,:),                    & ! (out)
-         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-         error                                                 ) ! (out)
+    if (present(ntypes) ) then
+       call file_read_data_par( var(:,:),                    & ! (out)
+            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+            error                                                 ) ! (out)
+    else
+       call file_read_data( var(:,:), & ! (out)
+            dinfo, DP,                & ! (in)
+            error                          ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2713,11 +2761,13 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
+      allow_missing, & ! (in) optional
+      single,        & ! (in) optional
       ntypes,        & ! (in)
       dtype,         & ! (in)
       start,         & ! (in)
-      count,         & ! (in)
-      allow_missing  & ! (in) optional
+      count          & ! (in)
       )
     use MPI, only : MPI_COMM_NULL
     implicit none
@@ -2726,17 +2776,21 @@ contains
     integer,          intent( in)           :: fid
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: ntypes      ! number of dtypes
-    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in)           :: start(:)    ! request starts to global variable
-    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: ntypes      ! number of dtypes
+    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    ! request starts to global variable
+    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
     integer :: error
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2765,9 +2819,15 @@ contains
        call Log('E', message)
     end if
 
-    call file_read_data_par( var(:,:,:),                    & ! (out)
-         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-         error                                                 ) ! (out)
+    if (present(ntypes) ) then
+       call file_read_data_par( var(:,:,:),                    & ! (out)
+            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+            error                                                 ) ! (out)
+    else
+       call file_read_data( var(:,:,:), & ! (out)
+            dinfo, SP,                & ! (in)
+            error                          ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2779,11 +2839,13 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
+      allow_missing, & ! (in) optional
+      single,        & ! (in) optional
       ntypes,        & ! (in)
       dtype,         & ! (in)
       start,         & ! (in)
-      count,         & ! (in)
-      allow_missing  & ! (in) optional
+      count          & ! (in)
       )
     use MPI, only : MPI_COMM_NULL
     implicit none
@@ -2792,17 +2854,21 @@ contains
     integer,          intent( in)           :: fid
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: ntypes      ! number of dtypes
-    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in)           :: start(:)    ! request starts to global variable
-    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: ntypes      ! number of dtypes
+    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    ! request starts to global variable
+    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
     integer :: error
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2831,9 +2897,15 @@ contains
        call Log('E', message)
     end if
 
-    call file_read_data_par( var(:,:,:),                    & ! (out)
-         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-         error                                                 ) ! (out)
+    if (present(ntypes) ) then
+       call file_read_data_par( var(:,:,:),                    & ! (out)
+            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+            error                                                 ) ! (out)
+    else
+       call file_read_data( var(:,:,:), & ! (out)
+            dinfo, DP,                & ! (in)
+            error                          ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2845,11 +2917,13 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
+      allow_missing, & ! (in) optional
+      single,        & ! (in) optional
       ntypes,        & ! (in)
       dtype,         & ! (in)
       start,         & ! (in)
-      count,         & ! (in)
-      allow_missing  & ! (in) optional
+      count          & ! (in)
       )
     use MPI, only : MPI_COMM_NULL
     implicit none
@@ -2858,17 +2932,21 @@ contains
     integer,          intent( in)           :: fid
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: ntypes      ! number of dtypes
-    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in)           :: start(:)    ! request starts to global variable
-    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: ntypes      ! number of dtypes
+    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    ! request starts to global variable
+    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
     integer :: error
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2897,9 +2975,15 @@ contains
        call Log('E', message)
     end if
 
-    call file_read_data_par( var(:,:,:,:),                    & ! (out)
-         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-         error                                                 ) ! (out)
+    if (present(ntypes) ) then
+       call file_read_data_par( var(:,:,:,:),                    & ! (out)
+            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+            error                                                 ) ! (out)
+    else
+       call file_read_data( var(:,:,:,:), & ! (out)
+            dinfo, SP,                & ! (in)
+            error                          ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if
@@ -2911,11 +2995,13 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
+      allow_missing, & ! (in) optional
+      single,        & ! (in) optional
       ntypes,        & ! (in)
       dtype,         & ! (in)
       start,         & ! (in)
-      count,         & ! (in)
-      allow_missing  & ! (in) optional
+      count          & ! (in)
       )
     use MPI, only : MPI_COMM_NULL
     implicit none
@@ -2924,17 +3010,21 @@ contains
     integer,          intent( in)           :: fid
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: ntypes      ! number of dtypes
-    integer,          intent( in)           :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in)           :: start(:)    ! request starts to global variable
-    integer,          intent( in)           :: count(:)    ! request sizes to global variable
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    logical,          intent( in), optional :: single
+    integer,          intent( in), optional :: ntypes      ! number of dtypes
+    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    ! request starts to global variable
+    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
     integer :: error
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2963,9 +3053,15 @@ contains
        call Log('E', message)
     end if
 
-    call file_read_data_par( var(:,:,:,:),                    & ! (out)
-         dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-         error                                                 ) ! (out)
+    if (present(ntypes) ) then
+       call file_read_data_par( var(:,:,:,:),                    & ! (out)
+            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
+            error                                                 ) ! (out)
+    else
+       call file_read_data( var(:,:,:,:), & ! (out)
+            dinfo, DP,                & ! (in)
+            error                          ) ! (out)
+    end if
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to get data value')
     end if

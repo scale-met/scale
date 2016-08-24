@@ -37,7 +37,6 @@ module mod_atmos_phy_cp_vars
   public :: ATMOS_PHY_CP_vars_restart_open
   public :: ATMOS_PHY_CP_vars_restart_def_var
   public :: ATMOS_PHY_CP_vars_restart_enddef
-  public :: ATMOS_PHY_CP_vars_restart_read_var
   public :: ATMOS_PHY_CP_vars_restart_write_var
   public :: ATMOS_PHY_CP_vars_restart_close
 
@@ -326,42 +325,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Open restart file for read
   subroutine ATMOS_PHY_CP_vars_restart_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_open
     implicit none
 
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_CP) ***'
-
-    if ( ATMOS_PHY_CP_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_CP_RESTART_IN_BASENAME)
-
-       call FILEIO_open( restart_fid, ATMOS_PHY_CP_RESTART_IN_BASENAME )
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_CP is not specified.'
-    endif
-
-    return
-  end subroutine ATMOS_PHY_CP_vars_restart_open
-
-  !-----------------------------------------------------------------------------
-  !> Read restart
-  subroutine ATMOS_PHY_CP_vars_restart_read
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_read
-    use scale_rm_statistics, only: &
-       STAT_total
-    implicit none
-
     character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
-
-    real(RP) :: total
-    integer  :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -378,33 +349,63 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_read( ATMOS_PHY_CP_MFLX_cloudbase(:,:),    & ! [OUT]
-                         basename, VAR_NAME(1), 'XY',  step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_SFLX_rain(:,:),         & ! [OUT]
-                         basename, VAR_NAME(2), 'XY',  step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_cloudtop(:,:),          & ! [OUT]
-                         basename, VAR_NAME(3), 'XY',  step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_cloudbase(:,:),         & ! [OUT]
-                         basename, VAR_NAME(4), 'XY',  step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_cldfrac_dp(:,:,:),      & ! [OUT]
-                         basename, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_cldfrac_sh(:,:,:),      & ! [OUT]
-                         basename, VAR_NAME(6), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_kf_nca(:,:),            & ! [OUT]
-                         basename, VAR_NAME(7), 'XY',  step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_kf_w0avg(:,:,:),        & ! [OUT]
-                         basename, VAR_NAME(8), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_open( restart_fid, basename )
+
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_CP is not specified.'
+    endif
+
+    return
+  end subroutine ATMOS_PHY_CP_vars_restart_open
+
+  !-----------------------------------------------------------------------------
+  !> Read restart
+  subroutine ATMOS_PHY_CP_vars_restart_read
+    use scale_fileio, only: &
+       FILEIO_read, &
+       FILEIO_flush
+    use scale_rm_statistics, only: &
+       STAT_total
+    implicit none
+
+    real(RP) :: total
+    integer  :: iq
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid > 0 ) then
+
+       call FILEIO_read( ATMOS_PHY_CP_MFLX_cloudbase(:,:),                            & ! [OUT]
+                         restart_fid, VAR_NAME(1), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_SFLX_rain(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(2), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_cloudtop(:,:),                                  & ! [OUT]
+                         restart_fid, VAR_NAME(3), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_cloudbase(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(4), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_cldfrac_dp(:,:,:),                              & ! [OUT]
+                         restart_fid, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_cldfrac_sh(:,:,:),                              & ! [OUT]
+                         restart_fid, VAR_NAME(6), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_kf_nca(:,:),                                    & ! [OUT]
+                         restart_fid, VAR_NAME(7), 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_kf_w0avg(:,:,:),                                & ! [OUT]
+                         restart_fid, VAR_NAME(8), 'ZXY', step=1 ) ! [IN]
        ! tendency
-       call FILEIO_read( ATMOS_PHY_CP_DENS_t(:,:,:),            & ! [OUT]
-                         basename, VAR_t_NAME(1), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_CP_RHOT_t(:,:,:),            & ! [OUT]
-                         basename, VAR_t_NAME(2), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_DENS_t(:,:,:),                                    & ! [OUT]
+                         restart_fid, VAR_t_NAME(1), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_CP_RHOT_t(:,:,:),                                    & ! [OUT]
+                         restart_fid, VAR_t_NAME(2), 'ZXY', step=1 ) ! [IN]
        do iq = 1, QA
-          call FILEIO_read( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq),            & ! [OUT]
-                            basename, VAR_t_NAME(2+iq), 'ZXY', step=1 ) ! [IN]
+          call FILEIO_read( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq),                                    & ! [OUT]
+                            restart_fid, VAR_t_NAME(2+iq), 'ZXY', step=1 ) ! [IN]
        enddo
 
-       call ATMOS_PHY_CP_vars_fillhalo
+       if ( IO_PNETCDF ) then
+          call FILEIO_flush( restart_fid )
+          ! halos have been read from file
+       else
+          call ATMOS_PHY_CP_vars_fillhalo
+       end if
 
        call STAT_total( total, ATMOS_PHY_CP_MFLX_cloudbase(:,:)  , VAR_NAME(1) )
        call STAT_total( total, ATMOS_PHY_CP_SFLX_rain     (:,:)  , VAR_NAME(2) )
@@ -420,40 +421,13 @@ contains
        do iq = 1, QA
           call STAT_total( total, ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VAR_t_NAME(2+iq) )
        enddo
+
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_CP is not specified.'
+       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_CP.'
     endif
 
     return
   end subroutine ATMOS_PHY_CP_vars_restart_read
-
-  !-----------------------------------------------------------------------------
-  !> Read restart
-  subroutine ATMOS_PHY_CP_vars_restart_read_var
-    use scale_fileio, only: &
-       FILEIO_read_var, &
-       FILEIO_flush
-    use scale_rm_statistics, only: &
-       STAT_total
-    implicit none
-
-    real(RP) :: total
-    !---------------------------------------------------------------------------
-
-    if ( restart_fid .NE. -1 ) then
-       call FILEIO_read_var( ATMOS_PHY_CP_MFLX_cloudbase(:,:),      & ! [OUT]
-                             restart_fid, VAR_NAME(1), 'XY', step=1 ) ! [IN]
-
-       call FILEIO_flush( restart_fid )
-
-       ! halos have been read from file
-       ! call ATMOS_PHY_CP_vars_fillhalo
-
-       call STAT_total( total, ATMOS_PHY_CP_MFLX_cloudbase(:,:), VAR_NAME(1) )
-    endif
-
-    return
-  end subroutine ATMOS_PHY_CP_vars_restart_read_var
 
   !-----------------------------------------------------------------------------
   !> Write restart

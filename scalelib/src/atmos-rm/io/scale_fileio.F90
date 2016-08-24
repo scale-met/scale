@@ -41,7 +41,6 @@ module scale_fileio
   public :: FILEIO_open
   public :: FILEIO_def_var
   public :: FILEIO_enddef
-  public :: FILEIO_read_var
   public :: FILEIO_write_var
   public :: FILEIO_close
 
@@ -50,14 +49,12 @@ module scale_fileio
      module procedure FILEIO_read_2D
      module procedure FILEIO_read_3D
      module procedure FILEIO_read_4D
-  end interface FILEIO_read
 
-  interface FILEIO_read_var
      module procedure FILEIO_read_var_1D
      module procedure FILEIO_read_var_2D
      module procedure FILEIO_read_var_3D
      module procedure FILEIO_read_var_4D
-  end interface FILEIO_read_var
+  end interface FILEIO_read
 
   interface FILEIO_write
      module procedure FILEIO_write_1D
@@ -400,8 +397,6 @@ contains
 
     integer err, order
     integer sizes(3), subsizes(3), sub_off(3)
-    integer XSG, YSG
-    integer XS, XE, YS, YE
     !---------------------------------------------------------------------------
     order = MPI_ORDER_FORTRAN
 
@@ -793,34 +788,53 @@ contains
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
 
-    integer               :: XS, XE, YS, YE  ! local buffer indices
-    integer               :: XSG, YSG        ! global array indices
-    integer               :: start(1)   ! start offset of globale variable
-    integer               :: count(1)   ! request length to the globale variable
+    integer :: dim1_S, dim1_E
+    integer :: start(1)   ! start offset of globale variable
+    integer :: count(1)   ! request length to the globale variable
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
+    if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
 
-    if ( axistype .EQ. 'Z' ) then
-       start(1) = 1
-       count(1) = KMAX
-       call FileRead( var, fid, varname, step, KMAX, etype, start, count )
-    elseif( axistype .EQ. 'X' ) then
-       ! read data and halos in one call
-       start(1) = IS_inG - IHALO
-       count(1) = IA
-       call FileRead( var, fid, varname, step, IA, etype, start, count )
-    elseif( axistype .EQ. 'Y' ) then
-       ! read data and halos in one call
-       start(1) = JS_inG - JHALO
-       count(1) = JA
-       call FileRead( var, fid, varname, step, JA, etype, start, count )
+    if ( IO_PNETCDF ) then
+       ! read data and halos into the local buffer
+       if ( axistype .EQ. 'Z' ) then
+          start(1) = 1
+          count(1) = KMAX
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=KMAX, dtype=etype, start=start, count=count )
+       elseif( axistype .EQ. 'X' ) then
+          start(1) = IS_inG - IHALO
+          count(1) = IA
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=IA, dtype=etype, start=start, count=count )
+       elseif( axistype .EQ. 'Y' ) then
+          start(1) = JS_inG - JHALO
+          count(1) = JA
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=JA, dtype=etype, start=start, count=count )
+       else
+          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
+       if ( axistype == 'Z' ) then
+          dim1_S   = KS
+          dim1_E   = KE
+       elseif( axistype == 'X' ) then
+          dim1_S   = ISB
+          dim1_E   = IEB
+       elseif( axistype == 'Y' ) then
+          dim1_S   = JSB
+          dim1_E   = JEB
+       else
+          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
+
+       call FileRead( var(dim1_S:dim1_E), fid, varname, step, PRC_myrank )
+    end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -854,21 +868,46 @@ contains
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
 
+    integer :: dim1_S, dim1_E
+    integer :: dim2_S, dim2_E
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
+    if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
 
-    ! read data and halos in one call
-    if ( axistype .EQ. 'XY' ) then
-       call FileRead( var, fid, varname, step, IA*JA, etype, startXY, countXY )
-    elseif( axistype .EQ. 'ZX' ) then
-       call FileRead( var, fid, varname, step, 1, centerTypeZX, startZX, countZX )
+    if ( IO_PNETCDF ) then
+       ! read data and halos into the local buffer
+       if ( axistype .EQ. 'XY' ) then
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=IA*JA, dtype=etype, start=startXY, count=countXY )
+       elseif( axistype .EQ. 'ZX' ) then
+          ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
+          ! derived datatype to describe the layout of local read buffer
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
+       else
+          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
+       if ( axistype == 'XY' ) then
+          dim1_S   = ISB
+          dim1_E   = IEB
+          dim2_S   = JSB
+          dim2_E   = JEB
+       elseif( axistype == 'ZX' ) then
+          dim1_S   = KS
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+       else
+          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
+
+       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step, PRC_myrank )
+    end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -901,26 +940,73 @@ contains
     character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y/T)
     integer,          intent(in)  :: step       !< step number
 
+    integer :: dim1_S, dim1_E
+    integer :: dim2_S, dim2_E
+    integer :: dim3_S, dim3_E
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
+    if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
 
-    if ( axistype .EQ. 'ZXY' ) then
-       call FileRead( var, fid, varname, step, 1, centerTypeZXY, startZXY, countZXY )
-    else if ( axistype .EQ. 'XYT' ) then
-       startXY(3) = 1
-       countXY(3) = step
-       call FileRead( var, fid, varname, step, step*IA*JA, etype, startXY, countXY )
-    else if ( axistype .EQ. 'Land' ) then
-       call FileRead( var, fid, varname, step, 1, centerTypeLAND, startLAND, countLAND )
-    else if ( axistype .EQ. 'Urban' ) then
-       call FileRead( var, fid, varname, step, 1, centerTypeURBAN, startURBAN, countURBAN )
+    if ( IO_PNETCDF ) then
+       ! read data and halos into the local buffer
+       ! Because KHALO is not saved in files, we use MPI derived datatypes to
+       ! describe the layout of local read buffer
+       if ( axistype .EQ. 'ZXY' ) then
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY )
+       else if ( axistype .EQ. 'XYT' ) then
+          startXY(3) = 1
+          countXY(3) = step
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY )
+       else if ( axistype .EQ. 'Land' ) then
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND )
+       else if ( axistype .EQ. 'Urban' ) then
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
+       else
+          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
+       if ( axistype == 'ZXY' ) then
+          dim1_S   = KS
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       else if ( axistype == 'XYT' ) then
+          dim1_S   = ISB
+          dim1_E   = IEB
+          dim2_S   = JSB
+          dim2_E   = JEB
+          dim3_S   = 1
+          dim3_E   = step
+       else if ( axistype == 'Land' ) then
+          dim1_S   = LKS
+          dim1_E   = LKE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       else if ( axistype == 'Urban' ) then
+          dim1_S   = UKS
+          dim1_E   = UKE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       else
+          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
+
+       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), fid, varname, step, PRC_myrank )
+    end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -953,20 +1039,44 @@ contains
     character(len=*), intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
     integer,          intent(in)  :: step         !< step number
 
+    integer :: dim1_S, dim1_E
+    integer :: dim2_S, dim2_E
+    integer :: dim3_S, dim3_E
+    integer :: dim4_S, dim4_E
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 4D var: ', trim(varname)
 
-    if ( axistype .EQ. 'ZXYT' ) then
-       startZXY(4) = 1
-       countZXY(4) = step
-       call FileRead( var, fid, varname, step, step, centerTypeZXY, startZXY, countZXY )
+    if ( IO_PNETCDF ) then
+       ! read data and halos into the local buffer
+       if ( axistype .EQ. 'ZXYT' ) then
+          startZXY(4) = 1
+          countZXY(4) = step
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY )
+       else
+          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
+       if ( axistype == 'ZXYT' ) then
+          dim1_S   = KS
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+          dim4_S   = 1
+          dim4_E   = step
+       else
+          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
+
+       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), fid, varname, step, PRC_myrank )
+    end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 

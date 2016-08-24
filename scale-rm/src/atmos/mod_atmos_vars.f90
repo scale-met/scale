@@ -49,7 +49,6 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_open
   public :: ATMOS_vars_restart_def_var
   public :: ATMOS_vars_restart_enddef
-  public :: ATMOS_vars_restart_read_var
   public :: ATMOS_vars_restart_check_var
   public :: ATMOS_vars_restart_close
 
@@ -871,6 +870,8 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        GRAV  => CONST_GRAV
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_open
     use scale_atmos_thermodyn, only: &
@@ -904,16 +905,25 @@ contains
        ATMOS_PHY_CP_vars_restart_open
     implicit none
 
-    integer  :: iq
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS) ***'
 
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_RESTART_IN_BASENAME)
 
-       call FILEIO_open( restart_fid, ATMOS_RESTART_IN_BASENAME )
+       if ( ATMOS_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_RESTART_IN_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_open( restart_fid, basename )
     else
        write(*,*) '*** restart file for atmosphere is not specified. STOP!'
        call PRC_MPIstop
@@ -948,7 +958,11 @@ contains
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_read
+       FILEIO_read, &
+       FILEIO_flush
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE, &
        ATMOS_sw_dyn,      &
@@ -977,47 +991,53 @@ contains
        ATMOS_PHY_CP_vars_restart_read
     implicit none
 
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
-
-    integer  :: iq
+    integer  :: i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS) ***'
+    if ( restart_fid .NE. -1 ) then
 
-    if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
-
-       if ( ATMOS_RESTART_IN_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(ATMOS_RESTART_IN_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(ATMOS_RESTART_IN_BASENAME)
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call FILEIO_read( DENS(:,:,:),                         & ! [OUT]
-                         basename, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMZ(:,:,:),                         & ! [OUT]
-                         basename, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMX(:,:,:),                         & ! [OUT]
-                         basename, VAR_NAME(3), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMY(:,:,:),                         & ! [OUT]
-                         basename, VAR_NAME(4), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( RHOT(:,:,:),                         & ! [OUT]
-                         basename, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( DENS(:,:,:),                            & ! [OUT]
+                         restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMZ(:,:,:),                            & ! [OUT]
+                         restart_fid, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMX(:,:,:),                            & ! [OUT]
+                         restart_fid, VAR_NAME(3), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMY(:,:,:),                            & ! [OUT]
+                         restart_fid, VAR_NAME(4), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( RHOT(:,:,:),                            & ! [OUT]
+                         restart_fid, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_read( QTRC(:,:,:,iq),                          & ! [OUT]
-                            basename, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
+          call FILEIO_read( QTRC(:,:,:,iq),                             & ! [OUT]
+                            restart_fid, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
        enddo
 
-       call ATMOS_vars_fillhalo
+       if ( IO_PNETCDF ) then
+          call FILEIO_flush( restart_fid )
+          ! X/Y halos have been read from file
+
+          ! fill k halos
+          do j  = 1, JA
+          do i  = 1, IA
+             DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+             MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+             MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+             MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
+             RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+             DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+             MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+             MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+             MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
+             RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+          enddo
+          enddo
+       else
+          call ATMOS_vars_fillhalo
+       end if
 
        call ATMOS_vars_total
     else
-       write(*,*) '*** restart file for atmosphere is not specified. STOP!'
+       write(*,*) '*** invalid restart file ID for atmosphere. STOP!'
        call PRC_MPIstop
     endif
 
@@ -1030,115 +1050,17 @@ contains
        QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
     endif
 
-    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_read
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_read
-    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_read
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_read
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
+    if ( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_read
+    if ( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_read
+    if ( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_read
+    if ( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
+    if ( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read
+    if ( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_read
+    if ( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
+    if ( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
 
     return
   end subroutine ATMOS_vars_restart_read
-
-  !-----------------------------------------------------------------------------
-  !> Read restart of atmospheric variables
-  subroutine ATMOS_vars_restart_read_var
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_const, only: &
-       GRAV  => CONST_GRAV
-    use scale_fileio, only: &
-       FILEIO_read_var, &
-       FILEIO_flush
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use mod_atmos_admin, only: &
-       ATMOS_USE_AVERAGE, &
-       ATMOS_sw_dyn,      &
-       ATMOS_sw_phy_mp,   &
-       ATMOS_sw_phy_ae,   &
-       ATMOS_sw_phy_ch,   &
-       ATMOS_sw_phy_rd,   &
-       ATMOS_sw_phy_sf,   &
-       ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
-    use mod_atmos_dyn_vars, only: &
-       ATMOS_DYN_vars_restart_read_var
-    use mod_atmos_phy_mp_vars, only: &
-       ATMOS_PHY_MP_vars_restart_read_var
-    use mod_atmos_phy_ae_vars, only: &
-       ATMOS_PHY_AE_vars_restart_read_var
-    use mod_atmos_phy_ch_vars, only: &
-       ATMOS_PHY_CH_vars_restart_read_var
-    use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_vars_restart_read_var
-    use mod_atmos_phy_sf_vars, only: &
-       ATMOS_PHY_SF_vars_restart_read_var
-    use mod_atmos_phy_tb_vars, only: &
-       ATMOS_PHY_TB_vars_restart_read_var
-    use mod_atmos_phy_cp_vars, only: &
-       ATMOS_PHY_CP_vars_restart_read_var
-    implicit none
-
-    integer  :: i, j, iq
-    !---------------------------------------------------------------------------
-
-    if ( restart_fid .NE. -1 ) then
-
-       call FILEIO_read_var( DENS(:,:,:),                            & ! [OUT]
-                             restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read_var( MOMZ(:,:,:),                            & ! [OUT]
-                             restart_fid, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read_var( MOMX(:,:,:),                            & ! [OUT]
-                             restart_fid, VAR_NAME(3), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read_var( MOMY(:,:,:),                            & ! [OUT]
-                             restart_fid, VAR_NAME(4), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read_var( RHOT(:,:,:),                            & ! [OUT]
-                             restart_fid, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
-
-       do iq = 1, QA
-          call FILEIO_read_var( QTRC(:,:,:,iq),                         & ! [OUT]
-                                restart_fid, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
-       enddo
-
-       call FILEIO_flush( restart_fid )
-
-       ! halos have been read from file
-       ! call ATMOS_vars_fillhalo
-
-       ! fill k halos
-       do j  = 1, JA
-       do i  = 1, IA
-          DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-          MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
-          MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
-          MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
-          RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-          DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
-          MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
-          MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
-          MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
-          RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
-       enddo
-       enddo
-
-       call ATMOS_vars_total
-    endif
-
-    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_read_var
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_read_var
-    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_read_var
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read_var
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read_var
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_read_var
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read_var
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read_var
-
-    return
-  end subroutine ATMOS_vars_restart_read_var
 
   !-----------------------------------------------------------------------------
   !> Check and compare between last data and sample data
@@ -1310,7 +1232,7 @@ contains
        PRC_myrank
     use scale_fileio, only: &
        FILEIO_open, &
-       FILEIO_read_var, &
+       FILEIO_read, &
        FILEIO_flush
     use gtool_file_h, only: &
        File_FREAD
@@ -1342,7 +1264,7 @@ contains
 
     call FILEIO_open( fid, basename )
 
-    call FILEIO_read_var( restart_atmos(:,:,:), fid, 'DENS', 'ZXY', step=1 )
+    call FILEIO_read( restart_atmos(:,:,:), fid, 'DENS', 'ZXY', step=1 )
     call FILEIO_flush( fid )
     DENS_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
@@ -1357,7 +1279,7 @@ contains
     enddo
     enddo
 
-    call FILEIO_read_var( restart_atmos(:,:,:), fid, 'MOMZ', 'ZXY', step=1 )
+    call FILEIO_read( restart_atmos(:,:,:), fid, 'MOMZ', 'ZXY', step=1 )
     call FILEIO_flush( fid )
     MOMZ_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
@@ -1372,7 +1294,7 @@ contains
     enddo
     enddo
 
-    call FILEIO_read_var( restart_atmos(:,:,:), fid, 'MOMX', 'ZXY', step=1 )
+    call FILEIO_read( restart_atmos(:,:,:), fid, 'MOMX', 'ZXY', step=1 )
     call FILEIO_flush( fid )
     MOMX_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
@@ -1387,7 +1309,7 @@ contains
     enddo
     enddo
 
-    call FILEIO_read_var( restart_atmos(:,:,:), fid, 'MOMY', 'ZXY', step=1 )
+    call FILEIO_read( restart_atmos(:,:,:), fid, 'MOMY', 'ZXY', step=1 )
     call FILEIO_flush( fid )
     MOMY_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
@@ -1402,7 +1324,7 @@ contains
     enddo
     enddo
 
-    call FILEIO_read_var( restart_atmos(:,:,:), fid, 'RHOT', 'ZXY', step=1 )
+    call FILEIO_read( restart_atmos(:,:,:), fid, 'RHOT', 'ZXY', step=1 )
     call FILEIO_flush( fid )
     RHOT_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
@@ -1418,7 +1340,7 @@ contains
     enddo
 
     do iq = 1, QA
-       call FILEIO_read_var( restart_atmos(:,:,:), fid, TRACER_NAME(iq), 'ZXY', step=1 )
+       call FILEIO_read( restart_atmos(:,:,:), fid, TRACER_NAME(iq), 'ZXY', step=1 )
        call FILEIO_flush( fid )
        QTRC_check(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
        do k = KS, KE

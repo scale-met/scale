@@ -38,7 +38,6 @@ module mod_atmos_dyn_vars
   public :: ATMOS_DYN_vars_restart_open
   public :: ATMOS_DYN_vars_restart_def_var
   public :: ATMOS_DYN_vars_restart_enddef
-  public :: ATMOS_DYN_vars_restart_read_var
   public :: ATMOS_DYN_vars_restart_write_var
   public :: ATMOS_DYN_vars_restart_close
 
@@ -198,42 +197,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Open restart file for read
   subroutine ATMOS_DYN_vars_restart_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_open
     implicit none
 
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_DYN) ***'
-
-    if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
-
-       call FILEIO_open( restart_fid, ATMOS_DYN_RESTART_IN_BASENAME )
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_DYN is not specified.'
-    endif
-
-    return
-  end subroutine ATMOS_DYN_vars_restart_open
-
-  !-----------------------------------------------------------------------------
-  !> Read restart
-  subroutine ATMOS_DYN_vars_restart_read
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_read
-    use scale_rm_statistics, only: &
-       STAT_total
-    implicit none
-
     character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
-
-    real(RP) :: total
-    integer  :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -250,29 +221,19 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       do iv = 1, VA
-          call FILEIO_read( PROG(:,:,:,iv),                                            & ! [OUT]
-                            basename, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
-
-       enddo
-
-       call ATMOS_DYN_vars_fillhalo
-
-       do iv = 1, VA
-          call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
-       enddo
+       call FILEIO_open( restart_fid, basename )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_DYN is not specified.'
     endif
 
     return
-  end subroutine ATMOS_DYN_vars_restart_read
+  end subroutine ATMOS_DYN_vars_restart_open
 
   !-----------------------------------------------------------------------------
   !> Read restart
-  subroutine ATMOS_DYN_vars_restart_read_var
+  subroutine ATMOS_DYN_vars_restart_read
     use scale_fileio, only: &
-       FILEIO_read_var, &
+       FILEIO_read, &
        FILEIO_flush
     use scale_rm_statistics, only: &
        STAT_total
@@ -284,32 +245,36 @@ contains
 
     if ( restart_fid .NE. -1 ) then
        do iv = 1, VA
-          call FILEIO_read_var( PROG(:,:,:,iv),                          & ! [OUT]
-                                restart_fid, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
+          call FILEIO_read( PROG(:,:,:,iv),                          & ! [OUT]
+                            restart_fid, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
        enddo
 
-       call FILEIO_flush( restart_fid )
+       if ( IO_PNETCDF ) then
+          call FILEIO_flush( restart_fid )
+          ! X/Y halos have been read from file
 
-       ! halos have been read from file
-       ! call ATMOS_DYN_vars_fillhalo
-
-       ! fill K halos
-       do iv = 1, VA
-          do j  = 1, JA
-          do i  = 1, IA
-             PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
-             PROG(KE+1:KA,  i,j,iv) = PROG(KE,i,j,iv)
+          ! fill K halos
+          do iv = 1, VA
+             do j  = 1, JA
+             do i  = 1, IA
+                PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
+                PROG(KE+1:KA,  i,j,iv) = PROG(KE,i,j,iv)
+             enddo
+             enddo
           enddo
-          enddo
-       enddo
+       else
+          call ATMOS_DYN_vars_fillhalo
+       end if
 
        do iv = 1, VA
           call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
        enddo
+    else
+       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_DYN.'
     endif
 
     return
-  end subroutine ATMOS_DYN_vars_restart_read_var
+  end subroutine ATMOS_DYN_vars_restart_read
 
   !-----------------------------------------------------------------------------
   !> Write restart
