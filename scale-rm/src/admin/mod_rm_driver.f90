@@ -138,10 +138,6 @@ contains
        TIME_DOLAND_step,      &
        TIME_DOURBAN_step,     &
        TIME_DOOCEAN_step,     &
-       TIME_DOATMOS_restart,  &
-       TIME_DOLAND_restart,   &
-       TIME_DOURBAN_restart,  &
-       TIME_DOOCEAN_restart,  &
        TIME_DOresume,         &
        TIME_DOend
     use mod_atmos_admin, only: &
@@ -149,7 +145,6 @@ contains
        ATMOS_do
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,                         &
-       ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
@@ -160,8 +155,7 @@ contains
        OCEAN_admin_setup, &
        OCEAN_do
     use mod_ocean_vars, only: &
-       OCEAN_vars_setup,                         &
-       OCEAN_sw_restart => OCEAN_RESTART_OUTPUT
+       OCEAN_vars_setup
     use mod_ocean_driver, only: &
        OCEAN_driver_setup, &
        OCEAN_driver
@@ -169,8 +163,7 @@ contains
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
-       LAND_vars_setup,                        &
-       LAND_sw_restart => LAND_RESTART_OUTPUT
+       LAND_vars_setup
     use mod_land_driver, only: &
        LAND_driver_setup, &
        LAND_driver
@@ -178,8 +171,7 @@ contains
        URBAN_admin_setup, &
        URBAN_do
     use mod_urban_vars, only: &
-       URBAN_vars_setup,                         &
-       URBAN_sw_restart => URBAN_RESTART_OUTPUT
+       URBAN_vars_setup
     use mod_urban_driver, only: &
        URBAN_driver_setup, &
        URBAN_driver
@@ -338,7 +330,7 @@ contains
       ! report current time
       call ADMIN_TIME_checkstate
 
-      if ( TIME_DORESUME ) then
+      if ( TIME_DOresume ) then
          ! resume state from restart files
          call resume_state
 
