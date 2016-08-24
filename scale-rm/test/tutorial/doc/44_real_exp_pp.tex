@@ -33,14 +33,15 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 それぞれ地形と土地利用の処理を行うことを意味している。
 %詳細な設定ファイルの内容については、付録\ref{achap:namelist}を参照されたい。
 
-また、環境変数\verb|${SCALE_DB}|が適切に設定されている場合、
+また、
 \namelist{PARAM_CNVTOPO_GTOPO30}の中の\nmitem{GTOPO30_IN_DIR}と
-\namelist{PARAM_CNVLANDUSE_GLCCv2}の中の\nmitem{GLCCv2_IN_DIR}で設定されている
-ディレクトリーに地形データと土地利用データの場所が適切に設定されているかどうかを
-確認しておくこと。\\
+\namelist{PARAM_CNVLANDUSE_GLCCv2}の中の\nmitem{GLCCv2_IN_DIR}は、
+地形データと土地利用データの場所を示しており、
+環境変数\verb|${SCALE_DB}|で設定された場所が指定されている。\\
 
 \proofcomment{上記意味不明。環境変数で競ってしているのに、
-なぜ、設定ファイルで設定しなおさねばならないのか？？？}
+なぜ、設定ファイルで設定しなおさねばならないのか？？？}\\
+\replycomment{修正しました(足立)}\\
 
 
 \noindent {\gt
