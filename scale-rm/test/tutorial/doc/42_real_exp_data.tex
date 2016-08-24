@@ -59,14 +59,12 @@ makeを使ったジョブスクリプトを使用する場合には、
 展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくことが必須である
 (以後、\verb|${SCALE_DB}|と表記)。
 \begin{alltt}
-  $ export SCALE_DB=''scale_databaseへの絶対パス''
+  $ export SCALE_DB="scale_databaseがあるディレクトリの絶対パス/scale_database"
 \end{alltt}
 \end{enumerate}
 
-\proofcomment{
-path\_to\_directory\_of\_scale\_databaseが何を意味しているのかの記述不足
-修正しました。
-}
+\proofcomment{path\_to\_directory\_of\_scale\_databaseが何を意味しているのかの記述不足。}\\
+\replycomment{修正しました(足立)}
 
 \subsubsection{大気・陸面・海面水温データ}
 初期値境界値データは4byteバイナリー(\grads 形式、以降''binary形式''と表記する)に変換すれば、
