@@ -320,7 +320,7 @@ contains
        URBAN_vars_restart_create,    &
        URBAN_vars_restart_def_var,   &
        URBAN_vars_restart_enddef,    &
-       URBAN_vars_restart_write_var, &
+       URBAN_vars_restart_write,     &
        URBAN_vars_restart_close
     implicit none
     !---------------------------------------------------------------------------
@@ -348,7 +348,7 @@ contains
     ! write variabes to netCDF file
     if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
     if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_write
-    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write_var
+    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
     if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
 
     ! clode the restart file

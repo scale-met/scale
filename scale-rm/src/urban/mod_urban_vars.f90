@@ -42,7 +42,6 @@ module mod_urban_vars
   public :: URBAN_vars_restart_def_var
   public :: URBAN_vars_restart_enddef
   public :: URBAN_vars_restart_read_var
-  public :: URBAN_vars_restart_write_var
   public :: URBAN_vars_restart_close
 
   !-----------------------------------------------------------------------------
@@ -421,20 +420,33 @@ contains
   !-----------------------------------------------------------------------------
   !> Open urban restart file for read
   subroutine URBAN_vars_restart_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_open
     use mod_urban_admin, only: &
        URBAN_sw
     implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (URBAN) ***'
 
     if ( URBAN_sw .and. URBAN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(URBAN_RESTART_IN_BASENAME)
 
-       call FILEIO_open( restart_fid, URBAN_RESTART_IN_BASENAME )
+       if ( URBAN_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(URBAN_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(URBAN_RESTART_IN_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_open( restart_fid, basename )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for urban is not specified.'
     endif
@@ -602,116 +614,6 @@ contains
 
     return
   end subroutine URBAN_vars_restart_read_var
-
-  !-----------------------------------------------------------------------------
-  !> Write urban restart
-  subroutine URBAN_vars_restart_write
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_write
-    use mod_urban_admin, only: &
-       URBAN_sw
-    implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
-    !---------------------------------------------------------------------------
-
-    if ( URBAN_sw .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (URBAN) ***'
-
-       if ( URBAN_RESTART_OUT_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(URBAN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(URBAN_RESTART_OUT_BASENAME)
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call URBAN_vars_total
-
-       call FILEIO_write( URBAN_TR(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TR), VAR_DESC(I_TR), VAR_UNIT(I_TR),    & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
-       call FILEIO_write( URBAN_TB(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TB), VAR_DESC(I_TB), VAR_UNIT(I_TB),    & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
-       call FILEIO_write( URBAN_TG(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TG), VAR_DESC(I_TG), VAR_UNIT(I_TG),    & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
-       call FILEIO_write( URBAN_TC(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TC), VAR_DESC(I_TC), VAR_UNIT(I_TC),    & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
-       call FILEIO_write( URBAN_QC(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_QC), VAR_DESC(I_QC), VAR_UNIT(I_QC),    & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
-       call FILEIO_write( URBAN_UC(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_UC), VAR_DESC(I_UC), VAR_UNIT(I_UC),    & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
-
-       call FILEIO_write( URBAN_TRL(:,:,:), basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TRL), VAR_DESC(I_TRL), VAR_UNIT(I_TRL),   & ! [IN]
-                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.      ) ! [IN]
-       call FILEIO_write( URBAN_TBL(:,:,:), basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TBL), VAR_DESC(I_TBL), VAR_UNIT(I_TBL),   & ! [IN]
-                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.      ) ! [IN]
-       call FILEIO_write( URBAN_TGL(:,:,:), basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TGL), VAR_DESC(I_TGL), VAR_UNIT(I_TGL),   & ! [IN]
-                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.      ) ! [IN]
-
-       call FILEIO_write( URBAN_RAINR(:,:),  basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
-                          VAR_NAME(I_RAINR), VAR_DESC(I_RAINR), VAR_UNIT(I_RAINR), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
-       call FILEIO_write( URBAN_RAINB(:,:),  basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
-                          VAR_NAME(I_RAINB), VAR_DESC(I_RAINB), VAR_UNIT(I_RAINB), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
-       call FILEIO_write( URBAN_RAING(:,:),  basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
-                          VAR_NAME(I_RAING), VAR_DESC(I_RAING), VAR_UNIT(I_RAING), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
-       call FILEIO_write( URBAN_ROFF(:,:),   basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
-                          VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  VAR_UNIT(I_ROFF),  & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
-
-       call FILEIO_write( URBAN_SFC_TEMP(:,:), basename, URBAN_RESTART_OUT_TITLE,           & ! [IN]
-                          VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                      ) ! [IN]
-       call FILEIO_write( URBAN_SFC_albedo(:,:,I_LW), basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
-                          VAR_NAME(I_ALB_LW), VAR_DESC(I_ALB_LW), VAR_UNIT(I_ALB_LW),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                      ) ! [IN]
-       call FILEIO_write( URBAN_SFC_albedo(:,:,I_SW), basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
-                          VAR_NAME(I_ALB_SW), VAR_DESC(I_ALB_SW), VAR_UNIT(I_ALB_SW),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                      ) ! [IN]
-
-       call FILEIO_write( URBAN_SFLX_MW(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
-                          VAR_NAME(I_SFLX_MW), VAR_DESC(I_SFLX_MW), VAR_UNIT(I_SFLX_MW),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( URBAN_SFLX_MU(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
-                          VAR_NAME(I_SFLX_MU), VAR_DESC(I_SFLX_MU), VAR_UNIT(I_SFLX_MU),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( URBAN_SFLX_MV(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
-                          VAR_NAME(I_SFLX_MV), VAR_DESC(I_SFLX_MV), VAR_UNIT(I_SFLX_MV),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( URBAN_SFLX_SH(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
-                          VAR_NAME(I_SFLX_SH), VAR_DESC(I_SFLX_SH), VAR_UNIT(I_SFLX_SH),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( URBAN_SFLX_LH(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
-                          VAR_NAME(I_SFLX_LH), VAR_DESC(I_SFLX_LH), VAR_UNIT(I_SFLX_LH),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( URBAN_SFLX_GH(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
-                          VAR_NAME(I_SFLX_GH), VAR_DESC(I_SFLX_GH), VAR_UNIT(I_SFLX_GH),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( URBAN_SFLX_evap(:,:), basename, URBAN_RESTART_OUT_TITLE,             & ! [IN]
-                          VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-
-    endif
-
-    return
-  end subroutine URBAN_vars_restart_write
 
   !-----------------------------------------------------------------------------
   !> History output set for urban variables
@@ -1030,7 +932,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write urban restart
-  subroutine URBAN_vars_restart_write_var
+  subroutine URBAN_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
@@ -1095,6 +997,6 @@ contains
     endif
 
     return
-  end subroutine URBAN_vars_restart_write_var
+  end subroutine URBAN_vars_restart_write
 
 end module mod_urban_vars
