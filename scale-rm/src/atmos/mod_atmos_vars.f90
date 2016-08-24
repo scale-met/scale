@@ -49,7 +49,6 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_open
   public :: ATMOS_vars_restart_def_var
   public :: ATMOS_vars_restart_enddef
-  public :: ATMOS_vars_restart_check_var
   public :: ATMOS_vars_restart_close
 
   !-----------------------------------------------------------------------------
@@ -1063,137 +1062,6 @@ contains
   end subroutine ATMOS_vars_restart_read
 
   !-----------------------------------------------------------------------------
-  !> Check and compare between last data and sample data
-  subroutine ATMOS_vars_restart_check
-    use scale_process, only: &
-       PRC_myrank
-    use gtool_file, only: &
-       FileRead
-    implicit none
-
-    real(RP) :: DENS_check(KA,IA,JA)    ! Density    [kg/m3]
-    real(RP) :: MOMZ_check(KA,IA,JA)    ! momentum z [kg/s/m2]
-    real(RP) :: MOMX_check(KA,IA,JA)    ! momentum x [kg/s/m2]
-    real(RP) :: MOMY_check(KA,IA,JA)    ! momentum y [kg/s/m2]
-    real(RP) :: RHOT_check(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
-    real(RP) :: QTRC_check(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
-
-    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
-
-    character(len=H_LONG) :: basename
-
-    logical :: datacheck
-    integer :: k, i, j, iq
-    !---------------------------------------------------------------------------
-
-    call PROF_rapstart('Debug')
-
-    write(*,*) 'Compare last Data with ', trim(ATMOS_RESTART_CHECK_BASENAME), 'on PE=', PRC_myrank
-    write(*,*) '*** criterion = ', ATMOS_RESTART_CHECK_CRITERION
-    datacheck = .true.
-
-    basename = ATMOS_RESTART_CHECK_BASENAME
-
-    call FileRead( restart_atmos(:,:,:), basename, 'DENS', 1, PRC_myrank )
-    DENS_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       if ( abs( DENS(k,i,j)-DENS_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
-          write(*,*) 'xxx there is the difference  : ', DENS(k,i,j)-DENS_check(k,i,j)
-          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'DENS'
-          datacheck = .false.
-       endif
-    enddo
-    enddo
-    enddo
-
-    call FileRead( restart_atmos(:,:,:), basename, 'MOMZ', 1, PRC_myrank )
-    MOMZ_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       if ( abs( MOMZ(k,i,j)-MOMZ_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
-          write(*,*) 'xxx there is the difference  : ', MOMZ(k,i,j)-MOMZ_check(k,i,j)
-          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'MOMZ'
-          datacheck = .false.
-       endif
-    enddo
-    enddo
-    enddo
-
-    call FileRead( restart_atmos(:,:,:), basename, 'MOMX', 1, PRC_myrank )
-    MOMX_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       if ( abs( MOMX(k,i,j)-MOMX_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
-          write(*,*) 'xxx there is the difference  : ', MOMX(k,i,j)-MOMX_check(k,i,j)
-          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'MOMX'
-          datacheck = .false.
-       endif
-    enddo
-    enddo
-    enddo
-
-    call FileRead( restart_atmos(:,:,:), basename, 'MOMY', 1, PRC_myrank )
-    MOMY_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       if ( abs( MOMY(k,i,j)-MOMY_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
-          write(*,*) 'xxx there is the difference  : ', MOMY(k,i,j)-MOMY_check(k,i,j)
-          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'MOMY'
-          datacheck = .false.
-       endif
-    enddo
-    enddo
-    enddo
-
-    call FileRead( restart_atmos(:,:,:), basename, 'RHOT', 1, PRC_myrank )
-    RHOT_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       if ( abs( RHOT(k,i,j)-RHOT_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
-          write(*,*) 'xxx there is the difference  : ', RHOT(k,i,j)-RHOT_check(k,i,j)
-          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'RHOT'
-          datacheck = .false.
-       endif
-    enddo
-    enddo
-    enddo
-
-    do iq = 1, QA
-       call FileRead( restart_atmos(:,:,:), basename, TRACER_NAME(iq), 1, PRC_myrank )
-       QTRC_check(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          if ( abs( QTRC(k,i,j,iq)-QTRC_check(k,i,j,iq) ) > ATMOS_RESTART_CHECK_CRITERION ) then
-             write(*,*) 'xxx there is the difference  : ', QTRC(k,i,j,iq)-QTRC_check(k,i,j,iq)
-             write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, TRACER_NAME(iq)
-             datacheck = .false.
-          endif
-       enddo
-       enddo
-       enddo
-    enddo
-
-    if (datacheck) then
-       if( IO_L ) write(IO_FID_LOG,*) 'Data Check Clear.'
-       write(*,*) 'Data Check Clear.'
-    else
-       if( IO_L ) write(IO_FID_LOG,*) 'Data Check Failed. See std. output.'
-       write(*,*) 'Data Check Failed.'
-    endif
-
-    call PROF_rapend('Debug')
-
-    return
-  end subroutine ATMOS_vars_restart_check
-
-  !-----------------------------------------------------------------------------
   !> Set pressure for history output
   subroutine ATMOS_vars_history_setpres
     use scale_grid_real, only: &
@@ -1227,15 +1095,16 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Check and compare between last data and sample data
-  subroutine ATMOS_vars_restart_check_var
+  subroutine ATMOS_vars_restart_check
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_process, only: &
        PRC_myrank
     use scale_fileio, only: &
        FILEIO_open, &
        FILEIO_read, &
-       FILEIO_flush
-    use gtool_file_h, only: &
-       File_FREAD
+       FILEIO_flush, &
+       FILEIO_close
     implicit none
 
     real(RP) :: DENS_check(KA,IA,JA)    ! Density    [kg/m3]
@@ -1245,9 +1114,8 @@ contains
     real(RP) :: RHOT_check(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
     real(RP) :: QTRC_check(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
 
-    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
-
     character(len=H_LONG) :: basename
+    character(len=20)     :: timelabel
 
     logical :: datacheck
     integer :: k, i, j, iq
@@ -1264,9 +1132,18 @@ contains
 
     call FILEIO_open( fid, basename )
 
-    call FILEIO_read( restart_atmos(:,:,:), fid, 'DENS', 'ZXY', step=1 )
-    call FILEIO_flush( fid )
-    DENS_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FILEIO_read( DENS_check(:,:,:), fid, 'DENS', 'ZXY', step=1 )
+    call FILEIO_read( MOMZ_check(:,:,:), fid, 'MOMZ', 'ZXY', step=1 )
+    call FILEIO_read( MOMX_check(:,:,:), fid, 'MOMX', 'ZXY', step=1 )
+    call FILEIO_read( MOMY_check(:,:,:), fid, 'MOMY', 'ZXY', step=1 )
+    call FILEIO_read( RHOT_check(:,:,:), fid, 'RHOT', 'ZXY', step=1 )
+    do iq = 1, QA
+       call FILEIO_read( QTRC_check(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', step=1 )
+    end do
+    if ( IO_PNETCDF ) call FILEIO_flush( fid )
+
+    call FILEIO_close( fid ) ! [IN]
+
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1279,9 +1156,6 @@ contains
     enddo
     enddo
 
-    call FILEIO_read( restart_atmos(:,:,:), fid, 'MOMZ', 'ZXY', step=1 )
-    call FILEIO_flush( fid )
-    MOMZ_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1294,9 +1168,6 @@ contains
     enddo
     enddo
 
-    call FILEIO_read( restart_atmos(:,:,:), fid, 'MOMX', 'ZXY', step=1 )
-    call FILEIO_flush( fid )
-    MOMX_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1309,9 +1180,6 @@ contains
     enddo
     enddo
 
-    call FILEIO_read( restart_atmos(:,:,:), fid, 'MOMY', 'ZXY', step=1 )
-    call FILEIO_flush( fid )
-    MOMY_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1324,9 +1192,6 @@ contains
     enddo
     enddo
 
-    call FILEIO_read( restart_atmos(:,:,:), fid, 'RHOT', 'ZXY', step=1 )
-    call FILEIO_flush( fid )
-    RHOT_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1340,9 +1205,6 @@ contains
     enddo
 
     do iq = 1, QA
-       call FILEIO_read( restart_atmos(:,:,:), fid, TRACER_NAME(iq), 'ZXY', step=1 )
-       call FILEIO_flush( fid )
-       QTRC_check(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
@@ -1367,7 +1229,7 @@ contains
     call PROF_rapend('Debug')
 
     return
-  end subroutine ATMOS_vars_restart_check_var
+  end subroutine ATMOS_vars_restart_check
 
   !-----------------------------------------------------------------------------
   !> History output set for atmospheric variables
