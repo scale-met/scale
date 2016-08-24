@@ -1,41 +1,69 @@
+################################################################################
 #
-# ------ FOR MacOSX & gfortran4.9 & OpenMPI1.7 -----
+# ------ For MacOSX & gnu fortran&C & openmpi -----
 #
+################################################################################
 
-##### for computation
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
 
-FFLAGS_FAST = -cpp -O3 -m64 \
-              -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
-              -fconvert=big-endian -frecord-marker=4 -ffree-form -ffree-line-length-none
+FC  = mpif90
+SFC = gfortran
+MODDIROPT = -J
+
+FFLAGS_FAST  = -cpp -O3 -m64 \
+               -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
+               -fconvert=big-endian -frecord-marker=4 -ffree-form -ffree-line-length-none    \
+               -ffpe-summary=none
+
+FFLAGS_DYN   = $(FFLAGS)
 
 FFLAGS_DEBUG = -cpp -O0 -m64 \
                -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
                -fconvert=big-endian -frecord-marker=4 -ffree-form -ffree-line-length-none    \
-               -ffpe-trap=invalid,zero,overflow -finit-integer=-32768 -finit-real=nan -finit-logical=false -finit-character=9 \
+               -ffpe-trap=invalid,zero,overflow -finit-integer=-32768 -finit-real=nan -finit-logical=false -finit-character=9         \
                -Wall -Wextra -Wcharacter-truncation -Wunderflow -fbounds-check -Warray-temporaries -Wuninitialized -Wconversion-extra \
-               -g -fbacktrace \
+               -g -fbacktrace                                                                \
                -DDEBUG
 
-FC     = mpif90
-FFLAGS = $(FFLAGS_FAST)
-#FFLAGS = $(FFLAGS_DEBUG)
 
-FFLAGS_DYN = $(FFLAGS)
 
-MODDIROPT ?= -J
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
 
-CC     = mpicc
-CFLAGS = -O3 -m64 -g
+CC  = mpicc
+
+CFLAGS_FAST  = -O3 -m64
+CFLAGS_DEBUG = -O0 -m64 -g
+
+
+
+##### Special setting
+
+SSE_FLAGS = -mtune=native
+#SSE_FLAGS = -mtune=native -mavx
+
+FFLAGS_SYSDEPEND = $(SSE_FLAGS)
+CFLAGS_SYSDEPEND = $(SSE_FLAGS)
+
+
+
+##### Linker setting
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
+
+
+
+################################################################################
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I/opt/local/include
 NETCDF_LIBS    ?= -L/opt/local/lib -lnetcdff -lnetcdf
 
 ###### Lapack
-LAPACK_LIBS    ?= -L/opt/local/lib -llapack -lf77blas -latlas
+LAPACK_LIBS    ?=
+# example: -L/opt/local/lib -llapack -lcblas -lf77blas -latlas
 
 ##### for frontend
 INSTALL = install

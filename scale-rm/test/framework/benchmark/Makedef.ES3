@@ -41,9 +41,9 @@ CFLAGS_DEBUG = $(CFLAGS_FAST)
 
 ### Performance monitor
 # disable
-PERF_MONIT = -Nftrace
+#PERF_MONIT = -Nftrace
 # enable
-#PERF_MONIT = -ftrace
+PERF_MONIT = -ftrace
 
 FFLAGS_SYSDEPEND = $(PERF_MONIT) -D__ES2
 CFLAGS_SYSDEPEND = $(PERF_MONIT) -D__ES2

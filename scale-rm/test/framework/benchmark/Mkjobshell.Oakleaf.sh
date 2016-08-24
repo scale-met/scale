@@ -12,27 +12,59 @@ DATPARAM=(`echo ${8} | tr -s ',' ' '`)
 DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 
 # System specific
-MPIEXEC="impijob"
+MPIEXEC="mpiexec"
 
-# Generate run.sh
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+fi
+
+array=( `echo ${TPROC} | tr -s 'x' ' '`)
+x=${array[0]}
+y=${array[1]:-1}
+let xy="${x} * ${y}"
+
+# for Oakleaf-FX
+# if [ ${xy} -gt 480 ]; then
+#    rscgrp="x-large"
+# elif [ ${xy} -gt 372 ]; then
+#    rscgrp="large"
+# elif [ ${xy} -gt 216 ]; then
+#    rscgrp="medium"
+# elif [ ${xy} -gt 12 ]; then
+#    rscgrp="small"
+# else
+#    rscgrp="short"
+# fi
+rscgrp="debug"
+
+
+
+
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR Linux64 & intel C&fortran & intel mpi & LSF-----
+# ------ For Oakleaf-FX -----
 #
 ################################################################################
-#BSUB -n ${TPROC}
-#BSUB -q dl
-#BSUB -a intelmpi
-#BSUB -J ${BINNAME}
-#BSUB -o STDOUT
-#BSUB -e STDERR
-export FORT_FMT_RECL=400
-export OMP_NUM_THREADS=1
-
-cd ${RUNDIR}
+#PJM --rsc-list "rscgrp=${rscgrp}"
+#PJM --rsc-list "node=${TPROC}"
+#PJM --rsc-list "elapse=00:20:00"
+#PJM -j
+#PJM -s
+#
+module load netCDF
+module load netCDF-fortran
+module load HDF5/1.8.9
+module list
+#
+export PARALLEL=8
+export OMP_NUM_THREADS=8
 
 EOF1
 
@@ -67,9 +99,12 @@ fi
 
 cat << EOF2 >> ./run.sh
 
+rm -rf ./prof
+mkdir -p ./prof
+
 # run
-${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
+${RUN_INIT}
+${RUN_BIN}
 
 ################################################################################
 EOF2
