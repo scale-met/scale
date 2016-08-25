@@ -14,10 +14,6 @@ module mod_runconf
   !
   use scale_precision
   use scale_stdio
-  use scale_prof
-
-  use mod_adm, only: &
-     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -36,16 +32,16 @@ module mod_runconf
   !---< Component Selector >---
 
   !--- Dynamics
-  integer,                 public :: NON_HYDRO_ALPHA    = 1 ! Nonhydrostatic/hydrostatic flag
-  integer,                 public :: DYN_DIV_NUM        = 1
+  integer,                public :: NON_HYDRO_ALPHA    = 1 ! Nonhydrostatic/hydrostatic flag
+  integer,                public :: DYN_DIV_NUM        = 1
   character(len=H_SHORT), public :: TRC_ADV_TYPE       = 'MIURA2004'
   character(len=H_SHORT), public :: NDIFF_LOCATION     = 'IN_LARGE_STEP2'
-  logical,                 public :: FLAG_NUDGING       = .false.
-  logical,                 public :: THUBURN_LIM        = .true.  ! [add] 20130613 R.Yoshida
+  logical,                public :: FLAG_NUDGING       = .false.
+  logical,                public :: THUBURN_LIM        = .true.  ! [add] 20130613 R.Yoshida
 
   !--- Physics
   character(len=H_SHORT), public :: RAIN_TYPE          = 'DRY'
-  logical,                 public :: opt_2moment_water  = .false.
+  logical,                public :: opt_2moment_water  = .false.
 
   character(len=H_SHORT), public :: CP_TYPE            = 'NONE'
   character(len=H_SHORT), public :: MP_TYPE            = 'NONE'
@@ -97,7 +93,7 @@ module mod_runconf
 
   integer, public            :: TRC_vmax   =  0 ! total number of tracers
 
-  character(len=H_SHORT), public, allocatable :: TRC_name(:) ! short name  of tracer [add] H.Yashiro 20110819
+  character(len=H_SHORT), public, allocatable :: TRC_name(:) ! short name  of tracer
   character(len=H_MID),   public, allocatable :: WLABEL  (:) ! description of tracer
 
   integer, public            :: NQW_MAX    =  0 ! subtotal number of water mass tracers
@@ -133,19 +129,18 @@ module mod_runconf
   !--- specific heat of water on const pressure
   real(RP), public, allocatable :: CVW(:)
   real(RP), public, allocatable :: CPW(:)
-  !--- Latent heat
-  real(RP), public            :: LHV
-  real(RP), public            :: LHF
-  real(RP), public            :: LHS
+
   !--- No. of band for rad.
   integer, public, parameter :: NRBND     = 3
   integer, public, parameter :: NRBND_VIS = 1
   integer, public, parameter :: NRBND_NIR = 2
   integer, public, parameter :: NRBND_IR  = 3
+
   !--- direct/diffuse
   integer, public, parameter :: NRDIR         = 2
   integer, public, parameter :: NRDIR_DIRECT  = 1
   integer, public, parameter :: NRDIR_DIFFUSE = 2
+
   !--- roughness  parameter
   integer, public, parameter :: NTYPE_Z0 = 3
   integer, public, parameter :: N_Z0M    = 1
@@ -165,9 +160,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine RUNCONF_setup
-    use mod_adm, only: &
-       ADM_CTL_FID, &
-       ADM_proc_stop
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     namelist /RUNCONFPARAM/ &
@@ -197,18 +191,18 @@ contains
     !---------------------------------------------------------------------------
 
     !--- read parameters
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '+++ Module[runconf]/Category[nhm share]'
-    rewind(ADM_CTL_FID)
-    read(ADM_CTL_FID,nml=RUNCONFPARAM,iostat=ierr)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[runconf]/Category[nhm share]'
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=RUNCONFPARAM,iostat=ierr)
     if ( ierr < 0 ) then
-       write(ADM_LOG_FID,*) '*** RUNCONFPARAM is not specified. use default.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** RUNCONFPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*,          *) 'xxx Not appropriate names in namelist RUNCONFPARAM. STOP.'
-       write(ADM_LOG_FID,*) 'xxx Not appropriate names in namelist RUNCONFPARAM. STOP.'
-       call ADM_proc_stop
+       write(*         ,*) 'xxx Not appropriate names in namelist RUNCONFPARAM. STOP.'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist RUNCONFPARAM. STOP.'
+       call PRC_MPIstop
     endif
-    write(ADM_LOG_FID,nml=RUNCONFPARAM)
+    if( IO_L ) write(IO_FID_LOG,nml=RUNCONFPARAM)
 
     call RUNCONF_component_setup
 
@@ -222,15 +216,13 @@ contains
   !-----------------------------------------------------------------------------
   !> component check
   subroutine RUNCONF_component_setup
-    use mod_adm, only: &
-       ADM_proc_stop
     implicit none
     !---------------------------------------------------------------------------
 
-    if( THUBURN_LIM ) then  ![add] 20130613 R.Yoshida
-       write(ADM_LOG_FID,*) 'Run with \"Thuburn Limiter\" in MIURA2004 Advection'
+    if( THUBURN_LIM ) then ![add] 20130613 R.Yoshida
+       if( IO_L ) write(IO_FID_LOG,*) 'Run with \"Thuburn Limiter\" in MIURA2004 Advection'
     else
-       write(ADM_LOG_FID,*) '### Without \"Thuburn Limiter\" in MIURA2004 Advection'
+       if( IO_L ) write(IO_FID_LOG,*) '### Without \"Thuburn Limiter\" in MIURA2004 Advection'
     endif
 
     return
@@ -239,8 +231,8 @@ contains
   !-----------------------------------------------------------------------------
   !> tracer setup
   subroutine RUNCONF_tracer_setup
-    use mod_adm, only: &
-       ADM_proc_stop
+    use scale_process, only: &
+       PRC_MPIstop
     use mod_chemvar, only: &
        CHEMVAR_setup, &
        CHEM_TRC_vmax, &
@@ -276,9 +268,9 @@ contains
        I_QS    = TRC_vmax + 5
        I_QG    = TRC_vmax + 6
     else
-       write(*,          *) 'xxx You must set RAIN_TYPE to DRY,CLOUD_PARAM,WARM or COLD. STOP.'
-       write(ADM_LOG_FID,*) 'xxx You must set RAIN_TYPE to DRY,CLOUD_PARAM,WARM or COLD. STOP.'
-       call ADM_proc_stop
+       write(*,         *) 'xxx You must set RAIN_TYPE to DRY,CLOUD_PARAM,WARM or COLD. STOP.'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx You must set RAIN_TYPE to DRY,CLOUD_PARAM,WARM or COLD. STOP.'
+       call PRC_MPIstop
     endif
     NQW_STR  = TRC_vmax + 1
     NQW_END  = TRC_vmax + NQW_MAX
@@ -389,17 +381,17 @@ contains
     DIAG_vmax  = DIAG_vmax0 + TRC_vmax
     I_qend     = DIAG_vmax
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '*** Prognostic Tracers'
-    write(ADM_LOG_FID,*) '|=========================================================|'
-    write(ADM_LOG_FID,*) '|       :varname         :description                     |'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Prognostic Tracers'
+    if( IO_L ) write(IO_FID_LOG,*) '|=========================================================|'
+    if( IO_L ) write(IO_FID_LOG,*) '|       :varname         :description                     |'
     do v = 1, TRC_vmax
-       write(ADM_LOG_FID,'(1x,A,I4,A,A16,A,A,A)') '|ID=', v, ':', TRC_name(v), ':', WLABEL(v),'|'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,A16,A,A,A)') '|ID=', v, ':', TRC_name(v), ':', WLABEL(v),'|'
     enddo
-    write(ADM_LOG_FID,*) '|=========================================================|'
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '*** thermodynamic(water) tracers'
-    write(ADM_LOG_FID,*) '-->', NQW_MAX, ' tracers(',NQW_STR,'-',NQW_END,')'
+    if( IO_L ) write(IO_FID_LOG,*) '|=========================================================|'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** thermodynamic(water) tracers'
+    if( IO_L ) write(IO_FID_LOG,*) '-->', NQW_MAX, ' tracers(',NQW_STR,'-',NQW_END,')'
 
     return
   end subroutine RUNCONF_tracer_setup
@@ -407,49 +399,97 @@ contains
   !-----------------------------------------------------------------------------
   !> thermodynamic setup
   subroutine RUNCONF_thermodyn_setup
-    use mod_adm, only: &
-       ADM_proc_stop
     use scale_const, only: &
-       CONST_CVvap, &
-       CONST_CPvap, &
-       CONST_CL,    &
-       CONST_CI,    &
-       CONST_LHV00, &
-       CONST_LHS00, &
-       CONST_LHF00
+       CONST_THERMODYN_TYPE, &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CVdry => CONST_CVdry, &
+       CVvap => CONST_CVvap, &
+       CL    => CONST_CL,    &
+       CI    => CONST_CI
     implicit none
 
     integer :: v
     !---------------------------------------------------------------------------
+    ! 'SIMPLE': standard approximation CVD * T
+    ! 'EXACT': exact formulation
+    !         -> if warm rain
+    !            qd*CVD*T + qv*CVV*T + (qc+qr)*CPL*T
+    !         -> if cold rain
+    !            qd*CVD*T + qv*CVV*T + (qc+qr)*CPL*T
+    !            + (qi+qs)*CPI*T
 
     !--- Heat capacity for thermodynamics
     allocate( CVW(NQW_STR:NQW_END) )
     allocate( CPW(NQW_STR:NQW_END) )
 
-    LHV = CONST_LHV00
-    LHS = CONST_LHS00
-    LHF = CONST_LHF00
-    do v = NQW_STR, NQW_END
-       if    ( v == I_QV ) then ! vapor
-          CVW(v) = CONST_CVvap
-          CPW(v) = CONST_CPvap
-       elseif( v == I_QC ) then ! cloud
-          CVW(v) = CONST_CL
-          CPW(v) = CONST_CL
-       elseif( v == I_QR ) then ! rain
-          CVW(v) = CONST_CL
-          CPW(v) = CONST_CL
-       elseif( v == I_QI ) then ! ice
-          CVW(v) = CONST_CI
-          CPW(v) = CONST_CI
-       elseif( v == I_QS ) then ! snow
-          CVW(v) = CONST_CI
-          CPW(v) = CONST_CI
-       elseif( v == I_QG ) then ! graupel
-          CVW(v) = CONST_CI
-          CPW(v) = CONST_CI
-       endif
-    enddo
+    if ( CONST_THERMODYN_TYPE == 'SIMPLE' ) then
+       do v = NQW_STR, NQW_END
+          if    ( v == I_QV ) then ! vapor
+             CVW(v) = CVdry
+             CPW(v) = CPdry
+          elseif( v == I_QC ) then ! cloud
+             CVW(v) = CVdry
+             CPW(v) = CVdry
+          elseif( v == I_QR ) then ! rain
+             CVW(v) = CVdry
+             CPW(v) = CVdry
+          elseif( v == I_QI ) then ! ice
+             CVW(v) = CVdry
+             CPW(v) = CVdry
+          elseif( v == I_QS ) then ! snow
+             CVW(v) = CVdry
+             CPW(v) = CVdry
+          elseif( v == I_QG ) then ! graupel
+             CVW(v) = CVdry
+             CPW(v) = CVdry
+          endif
+       enddo
+    elseif( CONST_THERMODYN_TYPE == 'SIMPLE2' ) then
+       do v = NQW_STR, NQW_END
+          if    ( v == I_QV ) then ! vapor
+             CVW(v) = CVvap
+             CPW(v) = CPvap
+          elseif( v == I_QC ) then ! cloud
+             CVW(v) = CPvap
+             CPW(v) = CPvap
+          elseif( v == I_QR ) then ! rain
+             CVW(v) = CPvap
+             CPW(v) = CPvap
+          elseif( v == I_QI ) then ! ice
+             CVW(v) = CPvap
+             CPW(v) = CPvap
+          elseif( v == I_QS ) then ! snow
+             CVW(v) = CPvap
+             CPW(v) = CPvap
+          elseif( v == I_QG ) then ! graupel
+             CVW(v) = CPvap
+             CPW(v) = CPvap
+          endif
+       enddo
+    elseif( CONST_THERMODYN_TYPE == 'EXACT' ) then
+       do v = NQW_STR, NQW_END
+          if    ( v == I_QV ) then ! vapor
+             CVW(v) = CVvap
+             CPW(v) = CPvap
+          elseif( v == I_QC ) then ! cloud
+             CVW(v) = CL
+             CPW(v) = CL
+          elseif( v == I_QR ) then ! rain
+             CVW(v) = CL
+             CPW(v) = CL
+          elseif( v == I_QI ) then ! ice
+             CVW(v) = CI
+             CPW(v) = CI
+          elseif( v == I_QS ) then ! snow
+             CVW(v) = CI
+             CPW(v) = CI
+          elseif( v == I_QG ) then ! graupel
+             CVW(v) = CI
+             CPW(v) = CI
+          endif
+       enddo
+    endif
 
     return
   end subroutine RUNCONF_thermodyn_setup

@@ -344,4 +344,3 @@ contains
   end function IO_CNF_open
 
 end module scale_stdio
-!-------------------------------------------------------------------------------

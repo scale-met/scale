@@ -77,6 +77,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Land grid index information ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** z-axis levels :', LKMAX
 
+    return
   end subroutine LAND_GRID_INDEX_setup
 
 end module scale_land_grid_index

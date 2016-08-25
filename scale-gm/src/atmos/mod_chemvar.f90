@@ -2,7 +2,7 @@
 !> Module tracer variable
 !!
 !! @par Description
-!!          This module contains the chemical or general-perpose tracer variables
+!!         This module contains the chemical or general-perpose tracer variables
 !!
 !! @author Team SCALE
 !<
@@ -14,10 +14,6 @@ module mod_chemvar
   !
   use scale_precision
   use scale_stdio
-  use scale_prof
-
-  use mod_adm, only: &
-     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -32,10 +28,10 @@ module mod_chemvar
   !
   !++ Public parameters & variables
   !
-  integer,                 public, parameter   :: CHEM_TRC_vlim = 100
-  integer,                 public              :: CHEM_TRC_vmax = 1
-  character(len=H_SHORT),  public, allocatable :: CHEM_TRC_name(:) ! short name  of tracer
-  character(len=H_MID),    public, allocatable :: CHEM_TRC_desc(:) ! description of tracer
+  integer,                public, parameter   :: CHEM_TRC_vlim = 100
+  integer,                public              :: CHEM_TRC_vmax = 1
+  character(len=H_SHORT), public, allocatable :: CHEM_TRC_name(:) ! short name  of tracer
+  character(len=H_MID),   public, allocatable :: CHEM_TRC_desc(:) ! description of tracer
 
   !-----------------------------------------------------------------------------
   !
@@ -50,9 +46,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CHEMVAR_setup
-    use mod_adm, only: &
-       ADM_CTL_FID, &
-       ADM_proc_stop
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     namelist /CHEMVARPARAM/ &
@@ -63,18 +58,18 @@ contains
     !---------------------------------------------------------------------------
 
     !--- read parameters
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '+++ Module[chemvar]/Category[nhm share]'
-    rewind(ADM_CTL_FID)
-    read(ADM_CTL_FID,nml=CHEMVARPARAM,iostat=ierr)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[chemvar]/Category[nhm share]'
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=CHEMVARPARAM,iostat=ierr)
     if ( ierr < 0 ) then
-       write(ADM_LOG_FID,*) '*** CHEMVARPARAM is not specified. use default.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** CHEMVARPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*,          *) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
-       write(ADM_LOG_FID,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
-       call ADM_proc_stop
+       write(*         ,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
+       call PRC_MPIstop
     endif
-    write(ADM_LOG_FID,nml=CHEMVARPARAM)
+    if( IO_L ) write(IO_FID_LOG,nml=CHEMVARPARAM)
 
     allocate( CHEM_TRC_name(CHEM_TRC_vmax) )
     allocate( CHEM_TRC_desc(CHEM_TRC_vmax) )
@@ -89,15 +84,15 @@ contains
 
   !-----------------------------------------------------------------------------
   function chemvar_getid( tracername )
-    use mod_adm, only: &
-       ADM_proc_stop
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     character(len=*), intent(in) :: tracername
     integer                      :: chemvar_getid
 
     character(len=H_SHORT) :: tname
-    integer           :: itrc
+    integer                :: itrc
     !---------------------------------------------------------------------------
 
     tname = trim(tracername)
@@ -112,8 +107,8 @@ contains
     enddo
 
     if ( chemvar_getid <= 0 ) then
-       write(ADM_LOG_FID,*) 'xxx INDEX does not exist =>', tname
-       call ADM_proc_stop
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx INDEX does not exist =>', tname
+       call PRC_MPIstop
     endif
 
   end function chemvar_getid

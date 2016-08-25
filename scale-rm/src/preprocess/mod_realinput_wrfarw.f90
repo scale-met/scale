@@ -878,4 +878,3 @@ contains
   end subroutine wrf_arwpost_calc_uvmet
 
 end module mod_realinput_wrfarw
-!-------------------------------------------------------------------------------

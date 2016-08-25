@@ -2,7 +2,7 @@
 !> Module numerical filter
 !!
 !! @par Description
-!!          This module contains subroutines for numerical smoothings or filters
+!!         This module contains subroutines for numerical smoothings or filters
 !!
 !! @author NICAM developers, Team SCALE
 !<
@@ -16,8 +16,13 @@ module mod_numfilter
   use scale_stdio
   use scale_prof
 
-  use mod_adm, only: &
-     ADM_LOG_FID
+  use mod_runconf, only: &
+     I_RHOG,   &
+     I_RHOGVX, &
+     I_RHOGVY, &
+     I_RHOGVZ, &
+     I_RHOGW,  &
+     I_RHOGE
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -60,27 +65,19 @@ module mod_numfilter
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: I_RHOG     = 1 ! Density x G^1/2 x gamma^2
-  integer, private, parameter :: I_RHOGVX   = 2 ! Density x G^1/2 x gamma^2 x Horizontal velocity (X-direction)
-  integer, private, parameter :: I_RHOGVY   = 3 ! Density x G^1/2 x gamma^2 x Horizontal velocity (Y-direction)
-  integer, private, parameter :: I_RHOGVZ   = 4 ! Density x G^1/2 x gamma^2 x Horizontal velocity (Z-direction)
-  integer, private, parameter :: I_RHOGW    = 5 ! Density x G^1/2 x gamma^2 x Vertical   velocity
-  integer, private, parameter :: I_RHOGE    = 6 ! Density x G^1/2 x gamma^2 x Internal Energy
-  integer, private, parameter :: I_RHOGETOT = 7 ! Density x G^1/2 x gamma^2 x Total Energy
-
   real(RP), public,  allocatable :: rayleigh_coef  (:)             ! Rayleigh damping coefficient at cell center
   real(RP), private, allocatable :: rayleigh_coef_h(:)             ! Rayleigh damping coefficient at cell wall
-  logical, private              :: rayleigh_damp_only_w = .false. ! damp only w?
+  logical,  private              :: rayleigh_damp_only_w = .false. ! damp only w?
 
   real(RP), public,  allocatable :: Kh_coef   (:,:,:)              ! horizontal diffusion coefficient at cell center
   real(RP), private, allocatable :: Kh_coef_pl(:,:,:)
-  integer, private              :: lap_order_hdiff = 2            ! laplacian order
+  integer,  private              :: lap_order_hdiff = 2            ! laplacian order
   real(RP), private              :: hdiff_fact_rho  = 1.E-2_RP
   real(RP), private              :: hdiff_fact_q    = 0.0_RP
   real(RP), private              :: Kh_coef_minlim  = 0.E+00_RP
   real(RP), private              :: Kh_coef_maxlim  = 1.E+30_RP
 
-  logical, private              :: hdiff_nonlinear = .false.
+  logical,  private              :: hdiff_nonlinear = .false.
   real(RP), private              :: ZD_hdiff_nl     = 25000.0_RP     ! hight for decay of nonlinear diffusion
 
   real(RP), public,  allocatable :: Kh_coef_lap1   (:,:,:)         ! Kh_coef but 1st order laplacian
@@ -91,68 +88,68 @@ module mod_numfilter
 
   real(RP), public,  allocatable :: divdamp_coef   (:,:,:)         ! divergence damping coefficient at cell center
   real(RP), private, allocatable :: divdamp_coef_pl(:,:,:)
-  integer, private              :: lap_order_divdamp = 2          ! laplacian order
+  integer,  private              :: lap_order_divdamp = 2          ! laplacian order
   real(RP), private              :: divdamp_coef_v    = 0.0_RP
 
   real(RP), public,  allocatable :: divdamp_2d_coef   (:,:,:)      ! divergence damping coefficient at cell center
   real(RP), private, allocatable :: divdamp_2d_coef_pl(:,:,:)
-  integer, private              :: lap_order_divdamp_2d = 1       ! laplacian order
+  integer,  private              :: lap_order_divdamp_2d = 1       ! laplacian order
 
-  logical, private              :: dep_hgrid = .false.            ! depend on the horizontal grid spacing?
+  logical,  private              :: dep_hgrid = .false.            ! depend on the horizontal grid spacing?
   real(RP), private              :: AREA_ave                       ! averaged grid area
 
-  logical, private              :: smooth_1var = .true.           ! should be false for stretched grid [add] S.Iga 20120721
+  logical,  private              :: smooth_1var = .true.           ! should be false for stretched grid [add] S.Iga 20120721
 
-  logical, private              :: deep_effect = .false.
+  logical,  private              :: deep_effect = .false.
   real(RP), private, allocatable :: Kh_deep_factor       (:)
   real(RP), private, allocatable :: Kh_deep_factor_h     (:)
   real(RP), private, allocatable :: Kh_lap1_deep_factor  (:)
   real(RP), private, allocatable :: Kh_lap1_deep_factor_h(:)
   real(RP), private, allocatable :: divdamp_deep_factor  (:)
 
-  logical, private              :: debug = .false.
+  logical,  private              :: debug = .false.
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine numfilter_setup
-    use mod_adm, only: &
-       ADM_CTL_FID,   &
-       ADM_proc_stop, &
-       ADM_GLEVEL,    &
-       ADM_kall
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_const, only: &
-       PI     => CONST_PI, &
+       PI     => CONST_PI,    &
        RADIUS => CONST_RADIUS
+    use mod_adm, only: &
+       ADM_glevel, &
+       ADM_kall
     use mod_grd, only: &
        GRD_gz,   &
        GRD_gzh
     implicit none
 
     ! rayleigh damping
-    real(RP)                 :: alpha_r         = 0.0_RP                 ! coefficient for rayleigh damping
-    real(RP)                 :: ZD              = 25000.0_RP             ! lower limit of rayleigh damping [m]
+    real(RP)               :: alpha_r         = 0.0_RP                 ! coefficient for rayleigh damping
+    real(RP)               :: ZD              = 25000.0_RP             ! lower limit of rayleigh damping [m]
     ! horizontal diffusion
     character(len=H_SHORT) :: hdiff_type      = 'NONDIM_COEF'        ! diffusion type
-    real(RP)                 :: gamma_h         = 1.0_RP / 16.0_RP / 10.0_RP ! coefficient    for horizontal diffusion
-    real(RP)                 :: tau_h           = 160000.0_RP            ! e-folding time for horizontal diffusion [sec]
+    real(RP)               :: gamma_h         = 1.0_RP / 16.0_RP / 10.0_RP ! coefficient    for horizontal diffusion
+    real(RP)               :: tau_h           = 160000.0_RP            ! e-folding time for horizontal diffusion [sec]
     ! horizontal diffusion (1st order laplacian)
     character(len=H_SHORT) :: hdiff_type_lap1 = 'DIRECT'             ! diffusion type
-    real(RP)                 :: gamma_h_lap1    = 0.0_RP                 ! height-dependent gamma_h but 1st-order laplacian
-    real(RP)                 :: tau_h_lap1      = 160000.0_RP            ! height-dependent tau_h   but 1st-order laplacian [sec]
-    real(RP)                 :: ZD_hdiff_lap1   = 25000.0_RP             ! lower limit of horizontal diffusion [m]
+    real(RP)               :: gamma_h_lap1    = 0.0_RP                 ! height-dependent gamma_h but 1st-order laplacian
+    real(RP)               :: tau_h_lap1      = 160000.0_RP            ! height-dependent tau_h   but 1st-order laplacian [sec]
+    real(RP)               :: ZD_hdiff_lap1   = 25000.0_RP             ! lower limit of horizontal diffusion [m]
     ! vertical diffusion
-    real(RP)                 :: gamma_v         = 0.0_RP                 ! coefficient of vertical diffusion
+    real(RP)               :: gamma_v         = 0.0_RP                 ! coefficient of vertical diffusion
     ! 3D divergence damping
     character(len=H_SHORT) :: divdamp_type    = 'NONDIM_COEF'        ! damping type
-    real(RP)                 :: alpha_d         = 0.0_RP                 ! coefficient    for divergence damping
-    real(RP)                 :: tau_d           = 132800.0_RP            ! e-folding time for divergence damping
-    real(RP)                 :: alpha_dv        = 0.0_RP                 ! vertical coefficient
+    real(RP)               :: alpha_d         = 0.0_RP                 ! coefficient    for divergence damping
+    real(RP)               :: tau_d           = 132800.0_RP            ! e-folding time for divergence damping
+    real(RP)               :: alpha_dv        = 0.0_RP                 ! vertical coefficient
     ! 2D divergence damping
     character(len=H_SHORT) :: divdamp_2d_type = 'NONDIM_COEF'        ! damping type
-    real(RP)                 :: alpha_d_2d      = 0.0_RP                 ! coefficient    for divergence damping
-    real(RP)                 :: tau_d_2d        = 1328000.0_RP           ! e-folding time for divergence damping [sec]
-    real(RP)                 :: ZD_d_2d         = 25000.0_RP             ! lower limit of divergence damping [m]
+    real(RP)               :: alpha_d_2d      = 0.0_RP                 ! coefficient    for divergence damping
+    real(RP)               :: tau_d_2d        = 1328000.0_RP           ! e-folding time for divergence damping [sec]
+    real(RP)               :: ZD_d_2d         = 25000.0_RP             ! lower limit of divergence damping [m]
 
     namelist / NUMFILTERPARAM / &
        alpha_r,              &
@@ -189,23 +186,23 @@ contains
 
     real(RP) :: global_area, global_grid
 
-    integer :: k
-    integer :: ierr
+    integer  :: k
+    integer  :: ierr
     !---------------------------------------------------------------------------
 
     !--- read parameters
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '+++ Module[numfilter]/Category[nhm dynamics]'
-    rewind(ADM_CTL_FID)
-    read(ADM_CTL_FID,nml=NUMFILTERPARAM,iostat=ierr)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[numfilter]/Category[nhm dynamics]'
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=NUMFILTERPARAM,iostat=ierr)
     if ( ierr < 0 ) then
-       write(ADM_LOG_FID,*) '*** NUMFILTERPARAM is not specified. use default.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** NUMFILTERPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*,          *) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
-       write(ADM_LOG_FID,*) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
-       call ADM_proc_stop
+       write(*         ,*) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
+       call PRC_MPIstop
     endif
-    write(ADM_LOG_FID,nml=NUMFILTERPARAM)
+    if( IO_L ) write(IO_FID_LOG,nml=NUMFILTERPARAM)
 
     global_area = 4.0_RP * PI * RADIUS * RADIUS
     global_grid = 10.0_RP * 4.0_RP**ADM_GLEVEL
@@ -256,8 +253,8 @@ contains
     divdamp_deep_factor  (:) = 0.0_RP
 
     if ( deep_effect ) then
-       write(ADM_LOG_FID,*) 'xxx this feature is tentatively suspended. stop.'
-       call ADM_proc_stop
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx this feature is tentatively suspended. stop.'
+       call PRC_MPIstop
        do k = 1, ADM_kall
           Kh_deep_factor       (k) = ( (GRD_gz (k)+RADIUS) / RADIUS )**(2*lap_order_hdiff)
           Kh_deep_factor_h     (k) = ( (GRD_gzh(k)+RADIUS) / RADIUS )**(2*lap_order_hdiff)
@@ -275,12 +272,12 @@ contains
   subroutine numfilter_rayleigh_damping_setup( &
        alpha, &
        zlimit )
+    use scale_const, only: &
+       EPS => CONST_EPS
     use mod_adm, only: &
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use scale_const, only: &
-       EPS => CONST_EPS
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz,   &
@@ -292,7 +289,7 @@ contains
 
     real(RP) :: fact(ADM_kall)
 
-    integer :: k
+    integer  :: k
     !---------------------------------------------------------------------------
 
     if ( alpha > 0.0_RP ) NUMFILTER_DOrayleigh = .true.
@@ -300,7 +297,7 @@ contains
     allocate( rayleigh_coef  (ADM_kall) )
     allocate( rayleigh_coef_h(ADM_kall) )
 
-    call height_factor( ADM_kall, GRD_gz(:), GRD_htop, zlimit, fact(:) )
+    call height_factor( ADM_kall, GRD_gz (:), GRD_htop, zlimit, fact(:) )
 
     rayleigh_coef(:) = alpha * fact(:)
 
@@ -308,23 +305,23 @@ contains
 
     rayleigh_coef_h(:) = alpha * fact(:)
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '-----   Rayleigh damping   -----'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '-----   Rayleigh damping   -----'
 
     if ( NUMFILTER_DOrayleigh ) then
        if ( debug ) then
-          write(ADM_LOG_FID,*) '    z[m]      ray.coef   e-time(2DX)'
+          if( IO_L ) write(IO_FID_LOG,*) '    z[m]      ray.coef   e-time(2DX)'
           k = ADM_kmax + 1
-          write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gzh(k), rayleigh_coef_h(k), 1.0_RP/( rayleigh_coef_h(k)+EPS )
+          if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,3E14.6)') GRD_gzh(k), rayleigh_coef_h(k), 1.0_RP/( rayleigh_coef_h(k)+EPS )
           do k = ADM_kmax, ADM_kmin, -1
-             write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gz (k), rayleigh_coef  (k), 1.0_RP/( rayleigh_coef  (k)+EPS )
-             write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gzh(k), rayleigh_coef_h(k), 1.0_RP/( rayleigh_coef_h(k)+EPS )
+             if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,3E14.6)') GRD_gz (k), rayleigh_coef  (k), 1.0_RP/( rayleigh_coef  (k)+EPS )
+             if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,3E14.6)') GRD_gzh(k), rayleigh_coef_h(k), 1.0_RP/( rayleigh_coef_h(k)+EPS )
           enddo
        else
-          write(ADM_LOG_FID,*) '=> used.'
+          if( IO_L ) write(IO_FID_LOG,*) '=> used.'
        endif
     else
-       write(ADM_LOG_FID,*) '=> not used.'
+       if( IO_L ) write(IO_FID_LOG,*) '=> not used.'
     endif
 
     return
@@ -343,6 +340,9 @@ contains
        gamma_lap1,      &
        tau_lap1,        &
        zlimit_lap1      )
+    use scale_const, only: &
+       PI  => CONST_PI, &
+       EPS => CONST_EPS
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
@@ -352,9 +352,6 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use scale_const, only: &
-       PI  => CONST_PI,       &
-       EPS => CONST_EPS
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -374,26 +371,26 @@ contains
     logical,          intent(in) :: dep_hgrid       ! depend on each horizontal grid?
     logical,          intent(in) :: smooth_1var     ! apply smoothing to coef?
     integer,          intent(in) :: lap_order       ! laplacian order
-    real(RP),          intent(in) :: gamma           ! coefficient    for horizontal diffusion
-    real(RP),          intent(in) :: tau             ! e-folding time for horizontal diffusion
+    real(RP),         intent(in) :: gamma           ! coefficient    for horizontal diffusion
+    real(RP),         intent(in) :: tau             ! e-folding time for horizontal diffusion
     character(len=*), intent(in) :: hdiff_type_lap1 ! type of horizontal diffusion (lap1)
-    real(RP),          intent(in) :: gamma_lap1      ! coefficient    for horizontal diffusion (lap1)
-    real(RP),          intent(in) :: tau_lap1        ! e-folding time for horizontal diffusion (lap1)
-    real(RP),          intent(in) :: zlimit_lap1     ! lower limit of horizontal diffusion (lap1) [m]
+    real(RP),         intent(in) :: gamma_lap1      ! coefficient    for horizontal diffusion (lap1)
+    real(RP),         intent(in) :: tau_lap1        ! e-folding time for horizontal diffusion (lap1)
+    real(RP),         intent(in) :: zlimit_lap1     ! lower limit of horizontal diffusion (lap1) [m]
 
     real(RP) :: fact(ADM_kall)
 
-    real(RP) :: e_fold_time   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: e_fold_time   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: e_fold_time_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: coef_max, coef_min
     real(RP) :: eft_max,  eft_min
 
     real(RP) :: large_step_dt
 
-    integer :: k, l
+    integer  :: k, l
     !---------------------------------------------------------------------------
 
-    allocate( Kh_coef   (ADM_gall,   ADM_kall,ADM_lall   ) )
+    allocate( Kh_coef   (ADM_gall   ,ADM_kall,ADM_lall   ) )
     allocate( Kh_coef_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl) )
     Kh_coef   (:,:,:) = 0.0_RP
     Kh_coef_pl(:,:,:) = 0.0_RP
@@ -408,7 +405,7 @@ contains
     elseif( hdiff_type == "NONDIM_COEF" ) then
        if( gamma > 0.0_RP ) NUMFILTER_DOhorizontaldiff = .true.
 
-       large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=RP)
+       large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=DP)
 
        ! gamma is a non-dimensional number.
        if ( dep_hgrid ) then
@@ -471,8 +468,8 @@ contains
 
     endif
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '-----   Horizontal numerical diffusion   -----'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '-----   Horizontal numerical diffusion   -----'
     if ( NUMFILTER_DOhorizontaldiff ) then
        if ( .NOT. hdiff_nonlinear ) then
           if ( debug ) then
@@ -492,27 +489,27 @@ contains
                 enddo
              endif
 
-             write(ADM_LOG_FID,*) '    z[m]      max coef      min coef  max eft(2DX)  min eft(2DX)'
+             if( IO_L ) write(IO_FID_LOG,*) '    z[m]      max coef      min coef  max eft(2DX)  min eft(2DX)'
              do k = ADM_kmax, ADM_kmin, -1
                 eft_max  = GTL_max_k( e_fold_time, e_fold_time_pl, k )
                 eft_min  = GTL_min_k( e_fold_time, e_fold_time_pl, k )
                 coef_max = GTL_max_k( Kh_coef, Kh_coef_pl, k )
                 coef_min = GTL_min_k( Kh_coef, Kh_coef_pl, k )
-                write(ADM_LOG_FID,'(1x,F8.2,4ES14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
+                if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,4E14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
              enddo
           else
-             write(ADM_LOG_FID,*) '=> used.'
+             if( IO_L ) write(IO_FID_LOG,*) '=> used.'
           endif
        else
-          write(ADM_LOG_FID,*) '=> Nonlinear filter is used.'
+          if( IO_L ) write(IO_FID_LOG,*) '=> Nonlinear filter is used.'
        endif
     else
-       write(ADM_LOG_FID,*) '=> not used.'
+       if( IO_L ) write(IO_FID_LOG,*) '=> not used.'
     endif
 
 
 
-    allocate( Kh_coef_lap1   (ADM_gall,   ADM_kall,ADM_lall   ) )
+    allocate( Kh_coef_lap1   (ADM_gall   ,ADM_kall,ADM_lall   ) )
     allocate( Kh_coef_lap1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl) )
     Kh_coef_lap1    = 0.0_RP
     Kh_coef_lap1_pl = 0.0_RP
@@ -527,7 +524,7 @@ contains
     elseif( hdiff_type_lap1 == "NONDIM_COEF" ) then
        if( gamma_lap1 > 0.0_RP ) NUMFILTER_DOhorizontaldiff_lap1 = .true.
 
-       large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=RP)
+       large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=DP)
 
        ! gamma is a non-dimensional number.
        if ( dep_hgrid ) then
@@ -594,8 +591,8 @@ contains
        enddo
     endif
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '-----   Horizontal numerical diffusion (1st order laplacian)   -----'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '-----   Horizontal numerical diffusion (1st order laplacian)   -----'
     if ( NUMFILTER_DOhorizontaldiff_lap1 ) then
        if ( debug ) then
           do l = 1, ADM_lall
@@ -612,19 +609,19 @@ contains
              enddo
           endif
 
-          write(ADM_LOG_FID,*) '    z[m]      max coef      min coef  max eft(2DX)  min eft(2DX)'
+          if( IO_L ) write(IO_FID_LOG,*) '    z[m]      max coef      min coef  max eft(2DX)  min eft(2DX)'
           do k = ADM_kmax, ADM_kmin, -1
              eft_max  = GTL_max_k( e_fold_time,  e_fold_time_pl,  k )
              eft_min  = GTL_min_k( e_fold_time,  e_fold_time_pl,  k )
              coef_max = GTL_max_k( Kh_coef_lap1, Kh_coef_lap1_pl, k )
              coef_min = GTL_min_k( Kh_coef_lap1, Kh_coef_lap1_pl, k )
-             write(ADM_LOG_FID,'(1x,F8.2,4ES14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
+             if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,4E14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
           enddo
        else
-          write(ADM_LOG_FID,*) '=> used.'
+          if( IO_L ) write(IO_FID_LOG,*) '=> used.'
        endif
     else
-       write(ADM_LOG_FID,*) '=> not used.'
+       if( IO_L ) write(IO_FID_LOG,*) '=> not used.'
     endif
 
     return
@@ -634,13 +631,13 @@ contains
   !> setup coefficient for vertical numerical diffusion
   subroutine numfilter_vdiffusion_setup( &
        gamma )
+    use scale_const, only: &
+       PI  => CONST_PI, &
+       EPS => CONST_EPS
     use mod_adm, only: &
        ADM_kall, &
        ADM_kmin, &
        ADM_kmax
-    use scale_const, only: &
-       PI  => CONST_PI,       &
-       EPS => CONST_EPS
     use mod_grd, only: &
        GRD_gz,   &
        GRD_gzh,  &
@@ -656,7 +653,7 @@ contains
 
     real(RP) :: large_step_dt
 
-    integer :: k
+    integer  :: k
     !---------------------------------------------------------------------------
 
     if ( gamma > 0.0_RP ) NUMFILTER_DOverticaldiff = .true.
@@ -664,28 +661,28 @@ contains
     allocate( Kv_coef  (ADM_kall) )
     allocate( Kv_coef_h(ADM_kall) )
 
-    large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=RP)
+    large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=DP)
 
     ! 6th order vertical numerical diffusion
     Kv_coef  (:) = gamma * GRD_dgz (:)**6 / large_step_dt
     Kv_coef_h(:) = gamma * GRD_dgzh(:)**6 / large_step_dt
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '-----   Vertical numerical diffusion   -----'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '-----   Vertical numerical diffusion   -----'
     if ( NUMFILTER_DOverticaldiff ) then
        if ( debug ) then
-          write(ADM_LOG_FID,*) '    z[m]          coef   e-time(2DX)'
+          if( IO_L ) write(IO_FID_LOG,*) '    z[m]          coef   e-time(2DX)'
           k = ADM_kmax + 1
-          write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gzh(k), Kv_coef_h(k), (GRD_dgzh(k)/PI)**6 / ( Kv_coef_h(k)+EPS )
+          if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,3E14.6)') GRD_gzh(k), Kv_coef_h(k), (GRD_dgzh(k)/PI)**6 / ( Kv_coef_h(k)+EPS )
           do k = ADM_kmax, ADM_kmin, -1
-             write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gzh(k), Kv_coef_h(k), (GRD_dgzh(k)/PI)**6 / ( Kv_coef_h(k)+EPS )
-             write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gz (k), Kv_coef  (k), (GRD_dgz (k)/PI)**6 / ( Kv_coef  (k)+EPS )
+             if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,3E14.6)') GRD_gzh(k), Kv_coef_h(k), (GRD_dgzh(k)/PI)**6 / ( Kv_coef_h(k)+EPS )
+             if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,3E14.6)') GRD_gz (k), Kv_coef  (k), (GRD_dgz (k)/PI)**6 / ( Kv_coef  (k)+EPS )
           enddo
        else
-          write(ADM_LOG_FID,*) '=> used.'
+          if( IO_L ) write(IO_FID_LOG,*) '=> used.'
        endif
     else
-       write(ADM_LOG_FID,*) '=> not used.'
+       if( IO_L ) write(IO_FID_LOG,*) '=> not used.'
     endif
 
     return
@@ -701,6 +698,10 @@ contains
        alpha,        &
        tau,          &
        alpha_v       )
+    use scale_const, only: &
+       PI    => CONST_PI,   &
+       EPS   => CONST_EPS,  &
+       SOUND => CONST_SOUND
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
@@ -710,10 +711,6 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use scale_const, only: &
-       PI    => CONST_PI,       &
-       EPS   => CONST_EPS, &
-       SOUND => CONST_SOUND
     use mod_grd, only: &
        GRD_gz
     use mod_gmtr, only: &
@@ -732,11 +729,11 @@ contains
     logical,          intent(in) :: dep_hgrid    ! depend on each horizontal grid?
     logical,          intent(in) :: smooth_1var  ! apply smoothing to coef?
     integer,          intent(in) :: lap_order    ! laplacian order
-    real(RP),          intent(in) :: alpha        ! coefficient    for divergence damping
-    real(RP),          intent(in) :: tau          ! e-folding time for divergence damping
-    real(RP),          intent(in) :: alpha_v      ! coefficient    for divergence damping
+    real(RP),         intent(in) :: alpha        ! coefficient    for divergence damping
+    real(RP),         intent(in) :: tau          ! e-folding time for divergence damping
+    real(RP),         intent(in) :: alpha_v      ! coefficient    for divergence damping
 
-    real(RP) :: e_fold_time   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: e_fold_time   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: e_fold_time_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
     real(RP) :: coef
@@ -745,10 +742,10 @@ contains
 
     real(RP) :: small_step_dt
 
-    integer :: k, l
+    integer  :: k, l
     !---------------------------------------------------------------------------
 
-    allocate( divdamp_coef   (ADM_gall,   ADM_kall,ADM_lall   ) )
+    allocate( divdamp_coef   (ADM_gall   ,ADM_kall,ADM_lall   ) )
     allocate( divdamp_coef_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl) )
     divdamp_coef    = 0.0_RP
     divdamp_coef_pl = 0.0_RP
@@ -765,7 +762,7 @@ contains
     elseif( divdamp_type == "NONDIM_COEF" ) then
        if( alpha > 0.0_RP ) NUMFILTER_DOdivdamp = .true.
 
-       small_step_dt = TIME_DTS / real(DYN_DIV_NUM,kind=RP)
+       small_step_dt = TIME_DTS / real(DYN_DIV_NUM,kind=DP)
 
        ! alpha_d is a non-dimensional number.
        ! alpha_d * (c_s)^p * dt^{2p-1}
@@ -810,8 +807,8 @@ contains
        divdamp_coef(:,:,:) = max( divdamp_coef(:,:,:), Kh_coef_minlim )
     endif
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '-----   3D divergence damping   -----'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '-----   3D divergence damping   -----'
     if ( NUMFILTER_DOdivdamp ) then
        if ( debug ) then
           do l = 1, ADM_lall
@@ -832,24 +829,24 @@ contains
              enddo
           endif
 
-          write(ADM_LOG_FID,*) '    z[m]      max coef      min coef  max eft(2DX)  min eft(2DX)'
+          if( IO_L ) write(IO_FID_LOG,*) '    z[m]      max coef      min coef  max eft(2DX)  min eft(2DX)'
           do k = ADM_kmax, ADM_kmin, -1
              eft_max  = GTL_max_k( e_fold_time,  e_fold_time_pl,  k )
              eft_min  = GTL_min_k( e_fold_time,  e_fold_time_pl,  k )
              coef_max = GTL_max_k( divdamp_coef, divdamp_coef_pl, k )
              coef_min = GTL_min_k( divdamp_coef, divdamp_coef_pl, k )
-             write(ADM_LOG_FID,'(1x,F8.2,4ES14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
+             if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,4E14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
           enddo
        else
-          write(ADM_LOG_FID,*) '=> used.'
+          if( IO_L ) write(IO_FID_LOG,*) '=> used.'
        endif
     else
-       write(ADM_LOG_FID,*) '=> not used.'
+       if( IO_L ) write(IO_FID_LOG,*) '=> not used.'
     endif
 
     if( alpha_v > 0.0_RP ) NUMFILTER_DOdivdamp_v = .true.
 
-    small_step_dt = TIME_DTS / real(DYN_DIV_NUM,kind=RP)
+    small_step_dt = TIME_DTS / real(DYN_DIV_NUM,kind=DP)
 
     divdamp_coef_v = -alpha_v * SOUND * SOUND * small_step_dt
 
@@ -865,6 +862,10 @@ contains
        alpha,        &
        tau,          &
        zlimit        )
+    use scale_const, only: &
+       PI    => CONST_PI,   &
+       EPS   => CONST_EPS,  &
+       SOUND => CONST_SOUND
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
@@ -874,10 +875,6 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use scale_const, only: &
-       PI    => CONST_PI,       &
-       EPS   => CONST_EPS, &
-       SOUND => CONST_SOUND
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -896,13 +893,13 @@ contains
     character(len=*), intent(in) :: divdamp_type ! type of divergence damping
     logical,          intent(in) :: dep_hgrid    ! depend on each horizontal grid?
     integer,          intent(in) :: lap_order    ! laplacian order
-    real(RP),          intent(in) :: alpha        ! coefficient    for divergence damping
-    real(RP),          intent(in) :: tau          ! e-folding time for divergence damping
-    real(RP),          intent(in) :: zlimit       ! lower limit of divergence damping [m]
+    real(RP),         intent(in) :: alpha        ! coefficient    for divergence damping
+    real(RP),         intent(in) :: tau          ! e-folding time for divergence damping
+    real(RP),         intent(in) :: zlimit       ! lower limit of divergence damping [m]
 
     real(RP) :: fact(ADM_kall)
 
-    real(RP) :: e_fold_time   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: e_fold_time   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: e_fold_time_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
     real(RP) :: coef
@@ -911,10 +908,10 @@ contains
 
     real(RP) :: small_step_dt
 
-    integer :: k, l
+    integer  :: k, l
     !---------------------------------------------------------------------------
 
-    allocate( divdamp_2d_coef   (ADM_gall,   ADM_kall,ADM_lall   ) )
+    allocate( divdamp_2d_coef   (ADM_gall   ,ADM_kall,ADM_lall   ) )
     allocate( divdamp_2d_coef_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl) )
     divdamp_2d_coef    = 0.0_RP
     divdamp_2d_coef_pl = 0.0_RP
@@ -931,7 +928,7 @@ contains
     elseif( divdamp_type == "NONDIM_COEF" ) then
        if( alpha > 0.0_RP ) NUMFILTER_DOdivdamp_2d = .true.
 
-       small_step_dt = TIME_DTS / real(DYN_DIV_NUM,kind=RP)
+       small_step_dt = TIME_DTS / real(DYN_DIV_NUM,kind=DP)
 
        ! alpha is the non-dimensional number.
        ! alpha * (c_s)^p * dt^{2p-1}
@@ -985,8 +982,8 @@ contains
        enddo
     endif
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '-----   2D divergence damping   -----'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '-----   2D divergence damping   -----'
     if ( NUMFILTER_DOdivdamp_2d ) then
        if ( debug ) then
           do l = 1, ADM_lall
@@ -1007,19 +1004,19 @@ contains
              e_fold_time_pl(:,:,:) = 0.0_RP
           endif
 
-          write(ADM_LOG_FID,*) '    z[m]      max coef      min coef  max eft(2DX)  min eft(2DX)'
+          if( IO_L ) write(IO_FID_LOG,*) '    z[m]      max coef      min coef  max eft(2DX)  min eft(2DX)'
           do k = ADM_kmax, ADM_kmin, -1
              eft_max  = GTL_max_k( e_fold_time,  e_fold_time_pl,  k )
              eft_min  = GTL_min_k( e_fold_time,  e_fold_time_pl,  k )
              coef_max = GTL_max_k( divdamp_coef, divdamp_coef_pl, k )
              coef_min = GTL_min_k( divdamp_coef, divdamp_coef_pl, k )
-             write(ADM_LOG_FID,'(1x,F8.2,4ES14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
+             if( IO_L ) write(IO_FID_LOG,'(1x,F8.2,4E14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
           enddo
        else
-          write(ADM_LOG_FID,*) '=> used.'
+          if( IO_L ) write(IO_FID_LOG,*) '=> used.'
        endif
     else
-       write(ADM_LOG_FID,*) '=> not used.'
+       if( IO_L ) write(IO_FID_LOG,*) '=> not used.'
     endif
 
     return
@@ -1047,36 +1044,40 @@ contains
        ADM_kmin,    &
        ADM_kmax
     use mod_vmtr, only: &
-       VMTR_C2Wfact,    &
-       VMTR_C2Wfact_pl
+       VMTR_getIJ_C2Wfact
     implicit none
 
-    real(RP), intent(in)    :: rhog      (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: rhog      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rhog_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: vx        (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: vx        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: vx_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: vy        (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: vy        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: vy_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: vz        (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: vz        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: vz_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: w         (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: w         (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: w_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(inout) :: frhogvx   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(inout) :: frhogvx   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(inout) :: frhogvx_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(inout) :: frhogvy   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(inout) :: frhogvy   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(inout) :: frhogvy_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(inout) :: frhogvz   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(inout) :: frhogvz   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(inout) :: frhogvz_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(inout) :: frhogw    (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(inout) :: frhogw    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(inout) :: frhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
+    real(RP) :: VMTR_C2Wfact   (ADM_gall   ,ADM_kall,2,ADM_lall   )
+    real(RP) :: VMTR_C2Wfact_pl(ADM_gall_pl,ADM_kall,2,ADM_lall_pl)
+
     real(RP) :: coef
-    integer :: g, k, l
+    integer  :: g, k, l
     !---------------------------------------------------------------------------
 
     if( .NOT. NUMFILTER_DOrayleigh ) return
 
-    call PROF_rapstart('____numfilter_rayleigh_damping')
+    call PROF_rapstart('____numfilter_rayleigh_damping',2)
+
+    call VMTR_getIJ_C2Wfact( VMTR_C2Wfact, VMTR_C2Wfact_pl )
 
     if ( .NOT. rayleigh_damp_only_w ) then
        do l = 1, ADM_lall
@@ -1128,7 +1129,7 @@ contains
        enddo
     endif
 
-    call PROF_rapend('____numfilter_rayleigh_damping')
+    call PROF_rapend('____numfilter_rayleigh_damping',2)
 
     return
   end subroutine numfilter_rayleigh_damping
@@ -1146,29 +1147,36 @@ contains
        q,          q_pl,         &
        tendency,   tendency_pl,  &
        tendency_q, tendency_q_pl )
+    use scale_const, only: &
+       CVdry => CONST_CVdry
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
        ADM_lall_pl, &
+       ADM_jall,    &
+       ADM_iall,    &
        ADM_gall,    &
        ADM_gall_pl, &
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use scale_const, only: &
-       CVdry => CONST_CVdry
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
     use mod_oprt, only: &
-       OPRT_horizontalize_vec, &
        OPRT_laplacian,         &
-       OPRT_diffusion
+       OPRT_diffusion,         &
+       OPRT_horizontalize_vec, &
+       OPRT_coef_lap,          &
+       OPRT_coef_lap_pl,       &
+       OPRT_coef_intp,         &
+       OPRT_coef_intp_pl,      &
+       OPRT_coef_diff,         &
+       OPRT_coef_diff_pl
     use mod_vmtr, only: &
-       VMTR_C2Wfact,    &
-       VMTR_C2Wfact_pl
+       VMTR_getIJ_C2Wfact
     use mod_time, only: &
        TIME_DTL
     use mod_runconf, only: &
@@ -1182,50 +1190,50 @@ contains
        tem_bs_pl
     implicit none
 
-    real(RP), intent(in)  :: rhog         (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: rhog         (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: rhog_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: rho          (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: rho          (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: rho_pl       (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: vx           (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: vx           (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: vx_pl        (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: vy           (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: vy           (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: vy_pl        (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: vz           (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: vz           (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: vz_pl        (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: w            (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: w            (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: w_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: tem          (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: tem          (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: tem_pl       (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: q            (ADM_gall,   ADM_kall,ADM_lall   ,TRC_VMAX)
+    real(RP), intent(in)  :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
     real(RP), intent(in)  :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
-    real(RP), intent(out) :: tendency     (ADM_gall,   ADM_kall,ADM_lall   ,7)
-    real(RP), intent(out) :: tendency_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl,7)
-    real(RP), intent(out) :: tendency_q   (ADM_gall,   ADM_kall,ADM_lall   ,TRC_VMAX)
+    real(RP), intent(out) :: tendency     (ADM_gall   ,ADM_kall,ADM_lall   ,6)
+    real(RP), intent(out) :: tendency_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
+    real(RP), intent(out) :: tendency_q   (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
     real(RP), intent(out) :: tendency_q_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
 
-    real(RP) :: KH_coef_h        (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: KH_coef_h        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: KH_coef_h_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: KH_coef_lap1_h   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: KH_coef_lap1_h   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: KH_coef_lap1_h_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: vtmp        (ADM_gall,   ADM_kall,ADM_lall   ,6)
+    real(RP) :: vtmp        (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP) :: vtmp_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: vtmp2       (ADM_gall,   ADM_kall,ADM_lall   ,6)
+    real(RP) :: vtmp2       (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP) :: vtmp2_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
 
-    real(RP) :: qtmp        (ADM_gall,   ADM_kall,ADM_lall   ,TRC_VMAX)
+    real(RP) :: qtmp        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
     real(RP) :: qtmp_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
-    real(RP) :: qtmp2       (ADM_gall,   ADM_kall,ADM_lall   ,TRC_VMAX)
+    real(RP) :: qtmp2       (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
     real(RP) :: qtmp2_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
 
-    real(RP) :: vtmp_lap1   (ADM_gall,   ADM_kall,ADM_lall   ,6)
+    real(RP) :: vtmp_lap1   (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP) :: vtmp_lap1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: qtmp_lap1   (ADM_gall,   ADM_kall,ADM_lall   ,TRC_VMAX)
+    real(RP) :: qtmp_lap1   (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
     real(RP) :: qtmp_lap1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
 
-    real(RP) :: wk       (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: wk       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: wk_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhog_h   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhog_h   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhog_h_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
     real(RP), parameter :: cfact = 2.0_RP
@@ -1237,17 +1245,29 @@ contains
 
     real(RP) :: large_step_dt
 
-    integer :: g, k, l, nq, p
+    real(RP) :: IxJ_vtmp     (ADM_iall,ADM_jall,ADM_kall,ADM_lall,6)
+    real(RP) :: IxJ_vtmp2    (ADM_iall,ADM_jall,ADM_kall,ADM_lall,6)
+    real(RP) :: IxJ_vtmp_lap1(ADM_iall,ADM_jall,ADM_kall,ADM_lall,6)
+    real(RP) :: IxJ_qtmp     (ADM_iall,ADM_jall,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP) :: IxJ_qtmp2    (ADM_iall,ADM_jall,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP) :: IxJ_qtmp_lap1(ADM_iall,ADM_jall,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP) :: IxJ_wk       (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+
+    real(RP) :: VMTR_C2Wfact   (ADM_gall   ,ADM_kall,2,ADM_lall   )
+    real(RP) :: VMTR_C2Wfact_pl(ADM_gall_pl,ADM_kall,2,ADM_lall_pl)
+
+    integer  :: g, k, l, nq, p
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('____numfilter_hdiffusion')
+    call PROF_rapstart('____numfilter_hdiffusion',2)
 
+    call VMTR_getIJ_C2Wfact( VMTR_C2Wfact, VMTR_C2Wfact_pl )
 
     if ( hdiff_nonlinear ) then
        call height_factor( ADM_kall, GRD_gz(:), GRD_htop, ZD_hdiff_nl, fact(:) )
 
        kh_max(:) = ( 1.0_RP - fact(:) ) * Kh_coef_maxlim &
-                 + (        fact(:) ) * Kh_coef_minlim
+                 + (          fact(:) ) * Kh_coef_minlim
     endif
 
     rhog_h(:,ADM_kmin-1,:) = 0.0_RP
@@ -1293,23 +1313,30 @@ contains
     ! high order laplacian
     do p = 1, lap_order_hdiff
        ! for momentum
-       call OPRT_laplacian( vtmp2(:,:,:,1), vtmp2_pl(:,:,:,1), & ! [OUT]
-                            vtmp (:,:,:,1), vtmp_pl (:,:,:,1)  ) ! [IN]
 
-       call OPRT_laplacian( vtmp2(:,:,:,2), vtmp2_pl(:,:,:,2), & ! [OUT]
-                            vtmp (:,:,:,2), vtmp_pl (:,:,:,2)  ) ! [IN]
+       IxJ_vtmp = reshape(vtmp,shape(IxJ_vtmp))
 
-       call OPRT_laplacian( vtmp2(:,:,:,3), vtmp2_pl(:,:,:,3), & ! [OUT]
-                            vtmp (:,:,:,3), vtmp_pl (:,:,:,3)  ) ! [IN]
+       call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,1), vtmp2_pl        (:,:,:,1), & ! [OUT]
+                            IxJ_vtmp     (:,:,:,:,1), vtmp_pl         (:,:,:,1), & ! [IN]
+                            OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
 
-       call OPRT_laplacian( vtmp2(:,:,:,4), vtmp2_pl(:,:,:,4), & ! [OUT]
-                            vtmp (:,:,:,4), vtmp_pl (:,:,:,4)  ) ! [IN]
+       call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,2), vtmp2_pl        (:,:,:,2), & ! [OUT]
+                            IxJ_vtmp     (:,:,:,:,2), vtmp_pl         (:,:,:,2), & ! [IN]
+                            OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
+
+       call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,3), vtmp2_pl        (:,:,:,3), & ! [OUT]
+                            IxJ_vtmp     (:,:,:,:,3), vtmp_pl         (:,:,:,3), & ! [IN]
+                            OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
+
+       call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,4), vtmp2_pl        (:,:,:,4), & ! [OUT]
+                            IxJ_vtmp     (:,:,:,:,4), vtmp_pl         (:,:,:,4), & ! [IN]
+                            OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
 
        ! for scalar
        if ( p == lap_order_hdiff ) then
 
           if ( hdiff_nonlinear ) then
-             large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=RP)
+             large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=DP)
 
              do l = 1, ADM_lall
              do k = 1, ADM_kall
@@ -1354,23 +1381,36 @@ contains
           wk   (:,:,:) = rhog   (:,:,:) * CVdry * KH_coef   (:,:,:)
           wk_pl(:,:,:) = rhog_pl(:,:,:) * CVdry * KH_coef_pl(:,:,:)
 
-          call OPRT_diffusion( vtmp2(:,:,:,5), vtmp2_pl(:,:,:,5), & ! [OUT]
-                               vtmp (:,:,:,5), vtmp_pl (:,:,:,5), & ! [IN]
-                               wk   (:,:,:)  , wk_pl   (:,:,:)    ) ! [IN]
+          IxJ_wk = reshape(wk,shape(IxJ_wk))
+
+          call OPRT_diffusion( IxJ_vtmp2     (:,:,:,:,5),   vtmp2_pl         (:,:,:,5), & ! [OUT]
+                               IxJ_vtmp      (:,:,:,:,5),   vtmp_pl          (:,:,:,5), & ! [IN]
+                               IxJ_wk        (:,:,:,:),     wk_pl            (:,:,:),   & ! [IN]
+                               OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                               OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)    ) ! [IN]
 
           wk   (:,:,:) = rhog   (:,:,:) * hdiff_fact_rho * KH_coef   (:,:,:)
           wk_pl(:,:,:) = rhog_pl(:,:,:) * hdiff_fact_rho * KH_coef_pl(:,:,:)
 
-          call OPRT_diffusion( vtmp2(:,:,:,6), vtmp2_pl(:,:,:,6), & ! [OUT]
-                               vtmp (:,:,:,6), vtmp_pl (:,:,:,6), & ! [IN]
-                               wk   (:,:,:)  , wk_pl   (:,:,:)    ) ! [IN]
-       else
-          call OPRT_laplacian( vtmp2(:,:,:,5), vtmp2_pl(:,:,:,5), & ! [OUT]
-                               vtmp (:,:,:,5), vtmp_pl (:,:,:,5)  ) ! [IN]
+          IxJ_wk = reshape(wk,shape(IxJ_wk))
 
-          call OPRT_laplacian( vtmp2(:,:,:,6), vtmp2_pl(:,:,:,6), & ! [OUT]
-                               vtmp (:,:,:,6), vtmp_pl (:,:,:,6)  ) ! [IN]
+          call OPRT_diffusion( IxJ_vtmp2     (:,:,:,:,6),   vtmp2_pl         (:,:,:,6), & ! [OUT]
+                               IxJ_vtmp      (:,:,:,:,6),   vtmp_pl          (:,:,:,6), & ! [IN]
+                               IxJ_wk        (:,:,:,:),     wk_pl            (:,:,:),   & ! [IN]
+                               OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                               OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)    ) ! [IN]
+       else
+          call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,5), vtmp2_pl        (:,:,:,5), & ! [OUT]
+                               IxJ_vtmp     (:,:,:,:,5), vtmp_pl         (:,:,:,5), & ! [IN]
+                               OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
+
+          call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,6), vtmp2_pl        (:,:,:,6), & ! [OUT]
+                               IxJ_vtmp     (:,:,:,:,6), vtmp_pl         (:,:,:,6), & ! [IN]
+                               OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
+
        endif
+
+       vtmp2 = reshape(IxJ_vtmp2,shape(vtmp2))
 
        vtmp   (:,:,:,:) = -vtmp2   (:,:,:,:)
        vtmp_pl(:,:,:,:) = -vtmp2_pl(:,:,:,:)
@@ -1385,31 +1425,47 @@ contains
        KH_coef_lap1_h   (:,:,:) = KH_coef_lap1   (:,:,:)
        KH_coef_lap1_h_pl(:,:,:) = KH_coef_lap1_pl(:,:,:)
 
-       call OPRT_laplacian( vtmp2    (:,:,:,1), vtmp2_pl    (:,:,:,1), & ! [OUT]
-                            vtmp_lap1(:,:,:,1), vtmp_lap1_pl(:,:,:,1)  ) ! [IN]
+       IxJ_vtmp_lap1 = reshape(vtmp_lap1,shape(IxJ_vtmp_lap1))
 
-       call OPRT_laplacian( vtmp2    (:,:,:,2), vtmp2_pl    (:,:,:,2), & ! [OUT]
-                            vtmp_lap1(:,:,:,2), vtmp_lap1_pl(:,:,:,2)  ) ! [IN]
+       call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,1), vtmp2_pl        (:,:,:,1), & ! [OUT]
+                            IxJ_vtmp_lap1(:,:,:,:,1), vtmp_lap1_pl    (:,:,:,1), & ! [IN]
+                            OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
 
-       call OPRT_laplacian( vtmp2    (:,:,:,3), vtmp2_pl    (:,:,:,3), & ! [OUT]
-                            vtmp_lap1(:,:,:,3), vtmp_lap1_pl(:,:,:,3)  ) ! [IN]
+       call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,2), vtmp2_pl        (:,:,:,2), & ! [OUT]
+                            IxJ_vtmp_lap1(:,:,:,:,2), vtmp_lap1_pl    (:,:,:,2), & ! [IN]
+                            OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
 
-       call OPRT_laplacian( vtmp2    (:,:,:,4), vtmp2_pl    (:,:,:,4), & ! [OUT]
-                            vtmp_lap1(:,:,:,4), vtmp_lap1_pl(:,:,:,4)  ) ! [IN]
+       call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,3), vtmp2_pl        (:,:,:,3), & ! [OUT]
+                            IxJ_vtmp_lap1(:,:,:,:,3), vtmp_lap1_pl    (:,:,:,3), & ! [IN]
+                            OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
+
+       call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,4), vtmp2_pl        (:,:,:,4), & ! [OUT]
+                            IxJ_vtmp_lap1(:,:,:,:,4), vtmp_lap1_pl    (:,:,:,4), & ! [IN]
+                            OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
 
        wk   (:,:,:) = rhog   (:,:,:) * CVdry * KH_coef_lap1   (:,:,:)
        wk_pl(:,:,:) = rhog_pl(:,:,:) * CVdry * KH_coef_lap1_pl(:,:,:)
 
-       call OPRT_diffusion( vtmp2    (:,:,:,5), vtmp2_pl    (:,:,:,5), & ! [OUT]
-                            vtmp_lap1(:,:,:,5), vtmp_lap1_pl(:,:,:,5), & ! [IN]
-                            wk       (:,:,:),   wk_pl       (:,:,:)    ) ! [IN]
+       IxJ_wk = reshape(wk,shape(IxJ_wk))
+
+       call OPRT_diffusion( IxJ_vtmp2     (:,:,:,:,5),   vtmp2_pl         (:,:,:,5), & ! [OUT]
+                            IxJ_vtmp_lap1 (:,:,:,:,5),   vtmp_lap1_pl     (:,:,:,5), & ! [IN]
+                            IxJ_wk        (:,:,:,:),     wk_pl            (:,:,:),   & ! [IN]
+                            OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                            OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)    ) ! [IN]
 
        wk   (:,:,:) = rhog   (:,:,:) * hdiff_fact_rho * KH_coef_lap1   (:,:,:)
        wk_pl(:,:,:) = rhog_pl(:,:,:) * hdiff_fact_rho * KH_coef_lap1_pl(:,:,:)
 
-       call OPRT_diffusion( vtmp2    (:,:,:,6), vtmp2_pl    (:,:,:,6), & ! [OUT]
-                            vtmp_lap1(:,:,:,6), vtmp_lap1_pl(:,:,:,6), & ! [IN]
-                            wk       (:,:,:),   wk_pl       (:,:,:)    ) ! [IN]
+       IxJ_wk = reshape(wk,shape(IxJ_wk))
+
+       call OPRT_diffusion( IxJ_vtmp2     (:,:,:,:,6),   vtmp2_pl         (:,:,:,6), & ! [OUT]
+                            IxJ_vtmp_lap1 (:,:,:,:,6),   vtmp_lap1_pl     (:,:,:,6), & ! [IN]
+                            IxJ_wk        (:,:,:,:),     wk_pl            (:,:,:),   & ! [IN]
+                            OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                            OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)    ) ! [IN]
+
+       vtmp2 = reshape(IxJ_vtmp2,shape(vtmp2))
 
        vtmp_lap1   (:,:,:,:) = -vtmp2   (:,:,:,:)
        vtmp_lap1_pl(:,:,:,:) = -vtmp2_pl(:,:,:,:)
@@ -1439,7 +1495,6 @@ contains
 
        do g = 1, ADM_gall
           tendency(g,k,l,I_RHOGE   ) = - ( vtmp(g,k,l,5) + vtmp_lap1(g,k,l,5) )
-          tendency(g,k,l,I_RHOGETOT) = - ( vtmp(g,k,l,5) + vtmp_lap1(g,k,l,5) )
           tendency(g,k,l,I_RHOG    ) = - ( vtmp(g,k,l,6) + vtmp_lap1(g,k,l,6) )
        enddo
     enddo
@@ -1461,7 +1516,6 @@ contains
 
           do g = 1, ADM_gall_pl
              tendency_pl(g,k,l,I_RHOGE   ) = - ( vtmp_pl(g,k,l,5) + vtmp_lap1_pl(g,k,l,5) )
-             tendency_pl(g,k,l,I_RHOGETOT) = - ( vtmp_pl(g,k,l,5) + vtmp_lap1_pl(g,k,l,5) )
              tendency_pl(g,k,l,I_RHOG    ) = - ( vtmp_pl(g,k,l,6) + vtmp_lap1_pl(g,k,l,6) )
           enddo
        enddo
@@ -1470,9 +1524,9 @@ contains
        tendency_pl(:,:,:,:) = 0.0_RP
     endif
 
-    call OPRT_horizontalize_vec( tendency(:,:,:,I_RHOGVX), tendency_pl(:,:,:,I_RHOGVX), & !--- [INOUT]
-                                 tendency(:,:,:,I_RHOGVY), tendency_pl(:,:,:,I_RHOGVY), & !--- [INOUT]
-                                 tendency(:,:,:,I_RHOGVZ), tendency_pl(:,:,:,I_RHOGVZ)  ) !--- [INOUT]
+    call OPRT_horizontalize_vec( tendency(:,:,:,I_RHOGVX), tendency_pl(:,:,:,I_RHOGVX), & ! [INOUT]
+                                 tendency(:,:,:,I_RHOGVY), tendency_pl(:,:,:,I_RHOGVY), & ! [INOUT]
+                                 tendency(:,:,:,I_RHOGVZ), tendency_pl(:,:,:,I_RHOGVZ)  ) ! [INOUT]
 
     !---------------------------------------------------------------------------
     ! For tracer
@@ -1493,22 +1547,31 @@ contains
        ! high order laplacian filter
        do p = 1, lap_order_hdiff
 
+          IxJ_qtmp = reshape(qtmp,shape(IxJ_qtmp))
+
           if ( p == lap_order_hdiff ) then
 
              wk   (:,:,:) = rhog   (:,:,:) * hdiff_fact_q * KH_coef   (:,:,:)
              wk_pl(:,:,:) = rhog_pl(:,:,:) * hdiff_fact_q * KH_coef_pl(:,:,:)
 
+             IxJ_wk = reshape(wk,shape(IxJ_wk))
+
              do nq = 1, TRC_VMAX
-                call OPRT_diffusion( qtmp2(:,:,:,nq), qtmp2_pl(:,:,:,nq), & ! [OUT]
-                                     qtmp (:,:,:,nq), qtmp_pl (:,:,:,nq), & ! [IN]
-                                     wk   (:,:,:),    wk_pl   (:,:,:)     ) ! [IN]
+                call OPRT_diffusion( IxJ_qtmp2     (:,:,:,:,nq),  qtmp2_pl         (:,:,:,nq), & ! [OUT]
+                                     IxJ_qtmp      (:,:,:,:,nq),  qtmp_pl          (:,:,:,nq), & ! [IN]
+                                     IxJ_wk        (:,:,:,:),     wk_pl            (:,:,:),    & ! [IN]
+                                     OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:),  & ! [IN]
+                                     OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)     ) ! [IN]
              enddo
           else
              do nq = 1, TRC_VMAX
-                call OPRT_laplacian( qtmp2(:,:,:,nq), qtmp2_pl(:,:,:,nq), & ! [OUT]
-                                     qtmp (:,:,:,nq), qtmp_pl (:,:,:,nq)  ) ! [IN]
+                call OPRT_laplacian( IxJ_qtmp2    (:,:,:,:,nq), qtmp2_pl        (:,:,:,nq), & ! [OUT]
+                                     IxJ_qtmp     (:,:,:,:,nq), qtmp_pl         (:,:,:,nq), & ! [IN]
+                                     OPRT_coef_lap(:,:,:,:),    OPRT_coef_lap_pl(:,:)       ) ! [IN]
              enddo
           endif
+
+          qtmp2 = reshape(IxJ_qtmp2,shape(qtmp2))
 
           qtmp   (:,:,:,:) = -qtmp2   (:,:,:,:)
           qtmp_pl(:,:,:,:) = -qtmp2_pl(:,:,:,:)
@@ -1520,14 +1583,22 @@ contains
        !--- 1st order laplacian filter
        if ( NUMFILTER_DOhorizontaldiff_lap1 ) then
 
+          IxJ_qtmp_lap1 = reshape(qtmp_lap1,shape(IxJ_qtmp_lap1))
+
           wk   (:,:,:) = rhog   (:,:,:) * hdiff_fact_q * KH_coef_lap1   (:,:,:)
           wk_pl(:,:,:) = rhog_pl(:,:,:) * hdiff_fact_q * KH_coef_lap1_pl(:,:,:)
 
+          IxJ_wk = reshape(wk,shape(IxJ_wk))
+
           do nq = 1, TRC_VMAX
-             call OPRT_diffusion( qtmp2    (:,:,:,nq), qtmp2_pl    (:,:,:,nq), & ! [OUT]
-                                  qtmp_lap1(:,:,:,nq), qtmp_lap1_pl(:,:,:,nq), & ! [IN]
-                                  wk       (:,:,:),    wk_pl       (:,:,:)     ) ! [IN]
+             call OPRT_diffusion( IxJ_qtmp2     (:,:,:,:,nq),  qtmp2_pl         (:,:,:,nq), & ! [OUT]
+                                  IxJ_qtmp_lap1 (:,:,:,:,nq),  qtmp_lap1_pl     (:,:,:,nq), & ! [IN]
+                                  IxJ_wk        (:,:,:,:),     wk_pl            (:,:,:),    & ! [IN]
+                                  OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:),  & ! [IN]
+                                  OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)     ) ! [IN]
           enddo
+
+          qtmp2 = reshape(IxJ_qtmp2,shape(qtmp2))
 
           qtmp_lap1   (:,:,:,:) = -qtmp2   (:,:,:,:)
           qtmp_lap1_pl(:,:,:,:) = -qtmp2_pl(:,:,:,:)
@@ -1562,7 +1633,7 @@ contains
        tendency_q_pl(:,:,:,:) = 0.0_RP
     endif ! apply filter to tracer?
 
-    call PROF_rapend('____numfilter_hdiffusion')
+    call PROF_rapend('____numfilter_hdiffusion',2)
 
     return
   end subroutine numfilter_hdiffusion
@@ -1580,6 +1651,8 @@ contains
        q,          q_pl,         &
        tendency,   tendency_pl,  &
        tendency_q, tendency_q_pl )
+    use scale_const, only: &
+       CVdry => CONST_CVdry
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
@@ -1589,20 +1662,17 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use scale_const, only: &
-       CVdry => CONST_CVdry
     use mod_grd, only: &
        GRD_rdgz,  &
        GRD_rdgzh
     use mod_oprt, only: &
        OPRT_horizontalize_vec
     use mod_vmtr, only: &
-       VMTR_GSGAM2H,    &
-       VMTR_GSGAM2H_pl, &
-       VMTR_C2Wfact,    &
-       VMTR_C2Wfact_pl
+       VMTR_getIJ_GSGAM2H, &
+       VMTR_getIJ_C2Wfact
     use mod_runconf, only: &
-       TRC_VMAX
+       TRC_VMAX,     &
+       TRC_ADV_TYPE
     use mod_bsstate, only: &
        rho_bs,    &
        rho_bs_pl, &
@@ -1610,7 +1680,7 @@ contains
        tem_bs_pl
     implicit none
 
-    real(RP), intent(in)    :: rhog         (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: rhog         (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rhog_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(in)    :: rho          (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rho_pl       (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -1626,9 +1696,9 @@ contains
     real(RP), intent(in)    :: tem_pl       (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(in)    :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
     real(RP), intent(in)    :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
-    real(RP), intent(inout) :: tendency     (ADM_gall,   ADM_kall,ADM_lall   ,7)
-    real(RP), intent(inout) :: tendency_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl,7)
-    real(RP), intent(inout) :: tendency_q   (ADM_gall,   ADM_kall,ADM_lall   ,TRC_VMAX)
+    real(RP), intent(inout) :: tendency     (ADM_gall   ,ADM_kall,ADM_lall   ,6)
+    real(RP), intent(inout) :: tendency_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
+    real(RP), intent(inout) :: tendency_q   (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
     real(RP), intent(inout) :: tendency_q_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
 
     integer, parameter :: vmax  = 6
@@ -1649,12 +1719,20 @@ contains
     real(RP) :: vtmp1   (ADM_gall   ,ADM_kall,ADM_lall   ,vmax+TRC_VMAX)
     real(RP) :: vtmp1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,vmax+TRC_VMAX)
 
-    integer :: g, k, l, nq, p
+    real(RP) :: VMTR_GSGAM2H   (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: VMTR_GSGAM2H_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: VMTR_C2Wfact   (ADM_gall   ,ADM_kall,2,ADM_lall   )
+    real(RP) :: VMTR_C2Wfact_pl(ADM_gall_pl,ADM_kall,2,ADM_lall_pl)
+
+    integer  :: g, k, l, nq, p
     !---------------------------------------------------------------------------
 
     if( .NOT. NUMFILTER_DOverticaldiff ) return
 
-    call PROF_rapstart('____numfilter_vdiffusion')
+    call PROF_rapstart('____numfilter_vdiffusion',2)
+
+    call VMTR_getIJ_GSGAM2H( VMTR_GSGAM2H, VMTR_GSGAM2H_pl )
+    call VMTR_getIJ_C2Wfact( VMTR_C2Wfact, VMTR_C2Wfact_pl )
 
     do l = 1, ADM_lall
        do k = ADM_kmin, ADM_kmax+1
@@ -1817,14 +1895,6 @@ contains
        enddo
        enddo
 
-       do nq = 1, TRC_VMAX
-       do k = ADM_kmin, ADM_kmax+1
-       do g = 1, ADM_gall
-          flux(g,k,l,vmax+nq) = Kv_coef_h(k) * ( vtmp0(g,k,l,vmax+nq) - vtmp0(g,k-1,l,vmax+nq) ) * GRD_rdgzh(k)
-       enddo
-       enddo
-       enddo
-
        !--- update tendency
        do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
@@ -1833,7 +1903,6 @@ contains
           tendency(g,k,l,I_RHOGVY  ) = tendency(g,k,l,I_RHOGVY  ) + ( flux(g,k+1,l,I_VY ) - flux(g,k,l,I_VY ) ) * GRD_rdgz(k)
           tendency(g,k,l,I_RHOGVZ  ) = tendency(g,k,l,I_RHOGVZ  ) + ( flux(g,k+1,l,I_VZ ) - flux(g,k,l,I_VZ ) ) * GRD_rdgz(k)
           tendency(g,k,l,I_RHOGE   ) = tendency(g,k,l,I_RHOGE   ) + ( flux(g,k+1,l,I_TEM) - flux(g,k,l,I_TEM) ) * GRD_rdgz(k)
-          tendency(g,k,l,I_RHOGETOT) = tendency(g,k,l,I_RHOGETOT) + ( flux(g,k+1,l,I_TEM) - flux(g,k,l,I_TEM) ) * GRD_rdgz(k)
        enddo
        enddo
 
@@ -1843,13 +1912,23 @@ contains
        enddo
        enddo
 
-       do nq = 1, TRC_VMAX
-       do k = ADM_kmin, ADM_kmax
-       do g = 1, ADM_gall
-          tendency_q(g,k,l,nq) = tendency_q(g,k,l,nq) + ( flux(g,k+1,l,vmax+nq) - flux(g,k,l,vmax+nq) ) * GRD_rdgz(k)
-       enddo
-       enddo
-       enddo
+       if ( TRC_ADV_TYPE /= 'MIURA2004' ) then
+          do nq = 1, TRC_VMAX
+          do k = ADM_kmin, ADM_kmax+1
+          do g = 1, ADM_gall
+             flux(g,k,l,vmax+nq) = Kv_coef_h(k) * ( vtmp0(g,k,l,vmax+nq) - vtmp0(g,k-1,l,vmax+nq) ) * GRD_rdgzh(k)
+          enddo
+          enddo
+          enddo
+
+          do nq = 1, TRC_VMAX
+          do k = ADM_kmin, ADM_kmax
+          do g = 1, ADM_gall
+             tendency_q(g,k,l,nq) = tendency_q(g,k,l,nq) + ( flux(g,k+1,l,vmax+nq) - flux(g,k,l,vmax+nq) ) * GRD_rdgz(k)
+          enddo
+          enddo
+          enddo
+       endif
     enddo
 
     if ( ADM_have_pl ) then
@@ -2002,15 +2081,6 @@ contains
           enddo
           enddo
 
-          do nq = 1, TRC_VMAX
-          do k = ADM_kmin, ADM_kmax+1
-          do g = 1, ADM_gall
-             flux_pl(g,k,l,vmax+nq) = Kv_coef_h(k) * ( vtmp0_pl(g,k,l,vmax+nq)-vtmp0_pl(g,k-1,l,vmax+nq) ) &
-                                    * GRD_rdgzh(k) * rhog_h_pl(g,k,l)
-          enddo
-          enddo
-          enddo
-
           !--- update tendency
           do k = ADM_kmin, ADM_kmax
           do g = 1, ADM_gall
@@ -2024,8 +2094,6 @@ contains
                                            + ( flux_pl(g,k+1,l,I_VZ ) - flux_pl(g,k,l,I_VZ ) ) * GRD_rdgz(k)
              tendency_pl(g,k,l,I_RHOGE   ) = tendency_pl(g,k,l,I_RHOGE   ) &
                                            + ( flux_pl(g,k+1,l,I_TEM) - flux_pl(g,k,l,I_TEM) ) * GRD_rdgz(k)
-             tendency_pl(g,k,l,I_RHOGETOT) = tendency_pl(g,k,l,I_RHOGETOT) &
-                                           + ( flux_pl(g,k+1,l,I_TEM) - flux_pl(g,k,l,I_TEM) ) * GRD_rdgz(k)
           enddo
           enddo
 
@@ -2036,23 +2104,34 @@ contains
           enddo
           enddo
 
-          do nq = 1, TRC_VMAX
-          do k = ADM_kmin, ADM_kmax
-          do g = 1, ADM_gall
-             tendency_q_pl(g,k,l,nq) = tendency_q_pl(g,k,l,nq) &
-                                     + ( flux_pl(g,k+1,l,vmax+nq) - flux_pl(g,k,l,vmax+nq) ) * GRD_rdgz(k)
-          enddo
-          enddo
-          enddo
+          if ( TRC_ADV_TYPE /= 'MIURA2004' ) then
+             do nq = 1, TRC_VMAX
+             do k = ADM_kmin, ADM_kmax+1
+             do g = 1, ADM_gall
+                flux_pl(g,k,l,vmax+nq) = Kv_coef_h(k) * ( vtmp0_pl(g,k,l,vmax+nq)-vtmp0_pl(g,k-1,l,vmax+nq) ) &
+                                       * GRD_rdgzh(k) * rhog_h_pl(g,k,l)
+             enddo
+             enddo
+             enddo
+
+             do nq = 1, TRC_VMAX
+             do k = ADM_kmin, ADM_kmax
+             do g = 1, ADM_gall
+                tendency_q_pl(g,k,l,nq) = tendency_q_pl(g,k,l,nq) &
+                                        + ( flux_pl(g,k+1,l,vmax+nq) - flux_pl(g,k,l,vmax+nq) ) * GRD_rdgz(k)
+             enddo
+             enddo
+             enddo
+          endif
 
        enddo
     endif
 
-    call OPRT_horizontalize_vec( tendency(:,:,:,I_RHOGVX), tendency_pl(:,:,:,I_RHOGVX), & !--- [INOUT]
-                                 tendency(:,:,:,I_RHOGVY), tendency_pl(:,:,:,I_RHOGVY), & !--- [INOUT]
-                                 tendency(:,:,:,I_RHOGVZ), tendency_pl(:,:,:,I_RHOGVZ)  ) !--- [INOUT]
+    call OPRT_horizontalize_vec( tendency(:,:,:,I_RHOGVX), tendency_pl(:,:,:,I_RHOGVX), & ! [INOUT]
+                                 tendency(:,:,:,I_RHOGVY), tendency_pl(:,:,:,I_RHOGVY), & ! [INOUT]
+                                 tendency(:,:,:,I_RHOGVZ), tendency_pl(:,:,:,I_RHOGVZ)  ) ! [INOUT]
 
-    call PROF_rapend('____numfilter_vdiffusion')
+    call PROF_rapend('____numfilter_vdiffusion',2)
 
     return
   end subroutine numfilter_vdiffusion
@@ -2072,6 +2151,8 @@ contains
        ADM_have_pl, &
        ADM_lall,    &
        ADM_lall_pl, &
+       ADM_jall,    &
+       ADM_iall,    &
        ADM_gall,    &
        ADM_gall_pl, &
        ADM_kall,    &
@@ -2081,9 +2162,22 @@ contains
        COMM_data_transfer
     use mod_grd, only:  &
        GRD_rdgzh
+    use mod_vmtr, only: &
+       VMTR_RGSQRTH,     &
+       VMTR_RGSQRTH_pl,  &
+       VMTR_RGAM,        &
+       VMTR_RGAM_pl,     &
+       VMTR_RGAMH,       &
+       VMTR_RGAMH_pl,    &
+       VMTR_C2WfactGz,   &
+       VMTR_C2WfactGz_pl
     use mod_oprt, only: &
+       OPRT_divdamp,           &
        OPRT_horizontalize_vec, &
-       OPRT_divdamp
+       OPRT_coef_intp,         &
+       OPRT_coef_intp_pl,      &
+       OPRT_coef_diff,         &
+       OPRT_coef_diff_pl
     use mod_oprt3d, only: &
        OPRT3D_divdamp
     use mod_src, only: &
@@ -2091,35 +2185,46 @@ contains
        I_SRC_default
     implicit none
 
-    real(RP), intent(in)  :: rhogvx   (ADM_gall,   ADM_kall,ADM_lall   ) ! rho*Vx ( G^1/2 x gam2 )
+    real(RP), intent(in)  :: rhogvx   (ADM_gall   ,ADM_kall,ADM_lall   ) ! rho*Vx ( G^1/2 x gam2 )
     real(RP), intent(in)  :: rhogvx_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: rhogvy   (ADM_gall,   ADM_kall,ADM_lall   ) ! rho*Vy ( G^1/2 x gam2 )
+    real(RP), intent(in)  :: rhogvy   (ADM_gall   ,ADM_kall,ADM_lall   ) ! rho*Vy ( G^1/2 x gam2 )
     real(RP), intent(in)  :: rhogvy_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: rhogvz   (ADM_gall,   ADM_kall,ADM_lall   ) ! rho*Vy ( G^1/2 x gam2 )
+    real(RP), intent(in)  :: rhogvz   (ADM_gall   ,ADM_kall,ADM_lall   ) ! rho*Vy ( G^1/2 x gam2 )
     real(RP), intent(in)  :: rhogvz_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: rhogw    (ADM_gall,   ADM_kall,ADM_lall   ) ! rho*w  ( G^1/2 x gam2 )
+    real(RP), intent(in)  :: rhogw    (ADM_gall   ,ADM_kall,ADM_lall   ) ! rho*w  ( G^1/2 x gam2 )
     real(RP), intent(in)  :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: gdx      (ADM_gall,   ADM_kall,ADM_lall   ) ! (grad div)_x ( G^1/2 x gam2 )
+    real(RP), intent(out) :: gdx      (ADM_gall   ,ADM_kall,ADM_lall   ) ! (grad div)_x ( G^1/2 x gam2 )
     real(RP), intent(out) :: gdx_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: gdy      (ADM_gall,   ADM_kall,ADM_lall   ) ! (grad div)_x ( G^1/2 x gam2 )
+    real(RP), intent(out) :: gdy      (ADM_gall   ,ADM_kall,ADM_lall   ) ! (grad div)_x ( G^1/2 x gam2 )
     real(RP), intent(out) :: gdy_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: gdz      (ADM_gall,   ADM_kall,ADM_lall   ) ! (grad div)_x ( G^1/2 x gam2 )
+    real(RP), intent(out) :: gdz      (ADM_gall   ,ADM_kall,ADM_lall   ) ! (grad div)_x ( G^1/2 x gam2 )
     real(RP), intent(out) :: gdz_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: gdvz     (ADM_gall,   ADM_kall,ADM_lall   ) ! (grad div)_x ( G^1/2 x gam2 )
+    real(RP), intent(out) :: gdvz     (ADM_gall   ,ADM_kall,ADM_lall   ) ! (grad div)_x ( G^1/2 x gam2 )
     real(RP), intent(out) :: gdvz_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: vtmp    (ADM_gall,   ADM_kall,ADM_lall   ,3)
+    real(RP) :: vtmp    (ADM_gall   ,ADM_kall,ADM_lall   ,3)
     real(RP) :: vtmp_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,3)
-    real(RP) :: vtmp2   (ADM_gall,   ADM_kall,ADM_lall   ,3)
+    real(RP) :: vtmp2   (ADM_gall   ,ADM_kall,ADM_lall   ,3)
     real(RP) :: vtmp2_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,3)
 
-    real(RP) :: cnv     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: IxJ_rhogvx        (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_rhogvy        (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_rhogvz        (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_rhogw         (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_vtmp          (ADM_iall,ADM_jall,ADM_kall,ADM_lall,3)
+    real(RP) :: IxJ_vtmp2         (ADM_iall,ADM_jall,ADM_kall,ADM_lall,3)
+    real(RP) :: IxJ_VMTR_RGSQRTH  (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_VMTR_RGAM     (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_VMTR_RGAMH    (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_VMTR_C2WfactGz(ADM_iall,ADM_jall,ADM_kall,6,ADM_lall)
+
+    real(RP) :: cnv     (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: cnv_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    integer :: k, l, p
+    integer  :: k, l, p
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('____numfilter_divdamp')
+    call PROF_rapstart('____numfilter_divdamp',2)
 
     if ( .NOT. NUMFILTER_DOdivdamp ) then
        gdx    (:,:,:) = 0.0_RP
@@ -2130,18 +2235,35 @@ contains
        gdz_pl (:,:,:) = 0.0_RP
        gdvz   (:,:,:) = 0.0_RP
        gdvz_pl(:,:,:) = 0.0_RP
-       call PROF_rapend('____numfilter_divdamp')
+       call PROF_rapend('____numfilter_divdamp',2)
        return
     endif
 
+    IxJ_rhogvx         = reshape(rhogvx        ,shape(IxJ_rhogvx        ))
+    IxJ_rhogvy         = reshape(rhogvy        ,shape(IxJ_rhogvy        ))
+    IxJ_rhogvz         = reshape(rhogvz        ,shape(IxJ_rhogvz        ))
+    IxJ_rhogw          = reshape(rhogw         ,shape(IxJ_rhogw         ))
+    IxJ_VMTR_RGSQRTH   = reshape(VMTR_RGSQRTH  ,shape(IxJ_VMTR_RGSQRTH  ))
+    IxJ_VMTR_RGAM      = reshape(VMTR_RGAM     ,shape(IxJ_VMTR_RGAM     ))
+    IxJ_VMTR_RGAMH     = reshape(VMTR_RGAMH    ,shape(IxJ_VMTR_RGAMH    ))
+    IxJ_VMTR_C2WfactGz = reshape(VMTR_C2WfactGz,shape(IxJ_VMTR_C2WfactGz))
+
     !--- 3D divergence divdamp
-    call OPRT3D_divdamp( vtmp2(:,:,:,1), vtmp2_pl(:,:,:,1), & ! [OUT]
-                         vtmp2(:,:,:,2), vtmp2_pl(:,:,:,2), & ! [OUT]
-                         vtmp2(:,:,:,3), vtmp2_pl(:,:,:,3), & ! [OUT]
-                         rhogvx(:,:,:),  rhogvx_pl(:,:,:),  & ! [IN]
-                         rhogvy(:,:,:),  rhogvy_pl(:,:,:),  & ! [IN]
-                         rhogvz(:,:,:),  rhogvz_pl(:,:,:),  & ! [IN]
-                         rhogw (:,:,:),  rhogw_pl (:,:,:)   ) ! [IN]
+    call OPRT3D_divdamp( IxJ_vtmp2         (:,:,:,:,1),   vtmp2_pl         (:,:,:,1), & ! [OUT]
+                         IxJ_vtmp2         (:,:,:,:,2),   vtmp2_pl         (:,:,:,2), & ! [OUT]
+                         IxJ_vtmp2         (:,:,:,:,3),   vtmp2_pl         (:,:,:,3), & ! [OUT]
+                         IxJ_rhogvx        (:,:,:,:),     rhogvx_pl        (:,:,:),   & ! [IN]
+                         IxJ_rhogvy        (:,:,:,:),     rhogvy_pl        (:,:,:),   & ! [IN]
+                         IxJ_rhogvz        (:,:,:,:),     rhogvz_pl        (:,:,:),   & ! [IN]
+                         IxJ_rhogw         (:,:,:,:),     rhogw_pl         (:,:,:),   & ! [IN]
+                         OPRT_coef_intp    (:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                         OPRT_coef_diff    (:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:),   & ! [IN]
+                         IxJ_VMTR_RGSQRTH  (:,:,:,:),     VMTR_RGSQRTH_pl  (:,:,:),   & ! [IN]
+                         IxJ_VMTR_RGAM     (:,:,:,:),     VMTR_RGAM_pl     (:,:,:),   & ! [IN]
+                         IxJ_VMTR_RGAMH    (:,:,:,:),     VMTR_RGAMH_pl    (:,:,:),   & ! [IN]
+                         IxJ_VMTR_C2WfactGz(:,:,:,:,:),   VMTR_C2WfactGz_pl(:,:,:,:)  ) ! [IN]
+
+    vtmp2 = reshape(IxJ_vtmp2,shape(vtmp2))
 
     if ( lap_order_divdamp > 1 ) then
        do p = 1, lap_order_divdamp-1
@@ -2152,13 +2274,20 @@ contains
           vtmp   (:,:,:,:) = -vtmp2   (:,:,:,:)
           vtmp_pl(:,:,:,:) = -vtmp2_pl(:,:,:,:)
 
+          IxJ_vtmp = reshape(vtmp,shape(IxJ_vtmp))
+
           !--- 2D dinvergence divdamp
-          call OPRT_divdamp( vtmp2(:,:,:,1), vtmp2_pl(:,:,:,1), & ! [OUT]
-                             vtmp2(:,:,:,2), vtmp2_pl(:,:,:,2), & ! [OUT]
-                             vtmp2(:,:,:,3), vtmp2_pl(:,:,:,3), & ! [OUT]
-                             vtmp (:,:,:,1), vtmp_pl (:,:,:,1), & ! [IN]
-                             vtmp (:,:,:,2), vtmp_pl (:,:,:,2), & ! [IN]
-                             vtmp (:,:,:,3), vtmp_pl (:,:,:,3)  ) ! [IN]
+          call OPRT_divdamp( IxJ_vtmp2     (:,:,:,:,1),   vtmp2_pl         (:,:,:,1), & ! [OUT]
+                             IxJ_vtmp2     (:,:,:,:,2),   vtmp2_pl         (:,:,:,2), & ! [OUT]
+                             IxJ_vtmp2     (:,:,:,:,3),   vtmp2_pl         (:,:,:,3), & ! [OUT]
+                             IxJ_vtmp      (:,:,:,:,1),   vtmp_pl          (:,:,:,1), & ! [IN]
+                             IxJ_vtmp      (:,:,:,:,2),   vtmp_pl          (:,:,:,2), & ! [IN]
+                             IxJ_vtmp      (:,:,:,:,3),   vtmp_pl          (:,:,:,3), & ! [IN]
+                             OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                             OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)    ) ! [IN]
+
+          vtmp2 = reshape(IxJ_vtmp2,shape(vtmp2))
+
        enddo ! lap_order
     endif
 
@@ -2173,9 +2302,9 @@ contains
        gdz_pl(:,:,:) = divdamp_coef_pl(:,:,:) * vtmp2_pl(:,:,:,3)
     endif
 
-    call OPRT_horizontalize_vec( gdx(:,:,:), gdx_pl(:,:,:), & !--- [INOUT]
-                                 gdy(:,:,:), gdy_pl(:,:,:), & !--- [INOUT]
-                                 gdz(:,:,:), gdz_pl(:,:,:)  ) !--- [INOUT]
+    call OPRT_horizontalize_vec( gdx(:,:,:), gdx_pl(:,:,:), & ! [INOUT]
+                                 gdy(:,:,:), gdy_pl(:,:,:), & ! [INOUT]
+                                 gdz(:,:,:), gdz_pl(:,:,:)  ) ! [INOUT]
 
     if ( NUMFILTER_DOdivdamp_v ) then
 
@@ -2211,7 +2340,7 @@ contains
        gdvz_pl(:,:,:) = 0.0_RP
     endif
 
-    call PROF_rapend('____numfilter_divdamp')
+    call PROF_rapend('____numfilter_divdamp',2)
 
     return
   end subroutine numfilter_divdamp
@@ -2229,39 +2358,51 @@ contains
        ADM_have_pl, &
        ADM_lall,    &
        ADM_lall_pl, &
+       ADM_jall,    &
+       ADM_iall,    &
        ADM_gall,    &
        ADM_gall_pl, &
        ADM_kall
     use mod_comm, only: &
        COMM_data_transfer
     use mod_oprt, only: &
+       OPRT_divdamp,           &
        OPRT_horizontalize_vec, &
-       OPRT_divdamp
+       OPRT_coef_intp,         &
+       OPRT_coef_intp_pl,      &
+       OPRT_coef_diff,         &
+       OPRT_coef_diff_pl
     implicit none
 
-    real(RP), intent(in)  :: rhogvx   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: rhogvx   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: rhogvx_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: rhogvy   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: rhogvy   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: rhogvy_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: rhogvz   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: rhogvz   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: rhogvz_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP), intent(out) :: gdx      (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(out) :: gdx      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(out) :: gdx_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: gdy      (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(out) :: gdy      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(out) :: gdy_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: gdz      (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(out) :: gdz      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(out) :: gdz_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: vtmp    (ADM_gall,   ADM_kall,ADM_lall   ,3)
+    real(RP) :: vtmp    (ADM_gall   ,ADM_kall,ADM_lall   ,3)
     real(RP) :: vtmp_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,3)
-    real(RP) :: vtmp2   (ADM_gall,   ADM_kall,ADM_lall   ,3)
+    real(RP) :: vtmp2   (ADM_gall   ,ADM_kall,ADM_lall   ,3)
     real(RP) :: vtmp2_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,3)
 
-    integer :: p
+    real(RP) :: IxJ_rhogvx(ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_rhogvy(ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_rhogvz(ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+    real(RP) :: IxJ_vtmp  (ADM_iall,ADM_jall,ADM_kall,ADM_lall,3)
+    real(RP) :: IxJ_vtmp2 (ADM_iall,ADM_jall,ADM_kall,ADM_lall,3)
+
+    integer  :: p
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('____numfilter_divdamp_2d')
+    call PROF_rapstart('____numfilter_divdamp_2d',2)
 
     if ( .NOT. NUMFILTER_DOdivdamp_2d ) then
        gdx   (:,:,:) = 0.0_RP
@@ -2270,17 +2411,25 @@ contains
        gdy_pl(:,:,:) = 0.0_RP
        gdz   (:,:,:) = 0.0_RP
        gdz_pl(:,:,:) = 0.0_RP
-       call PROF_rapend('____numfilter_divdamp_2d')
+       call PROF_rapend('____numfilter_divdamp_2d',2)
        return
     endif
 
+    IxJ_rhogvx = reshape(rhogvx,shape(IxJ_rhogvx))
+    IxJ_rhogvy = reshape(rhogvy,shape(IxJ_rhogvy))
+    IxJ_rhogvz = reshape(rhogvz,shape(IxJ_rhogvz))
+
     !--- 2D dinvergence divdamp
-    call OPRT_divdamp( vtmp2(:,:,:,1), vtmp2_pl(:,:,:,1), & ! [OUT]
-                       vtmp2(:,:,:,2), vtmp2_pl(:,:,:,2), & ! [OUT]
-                       vtmp2(:,:,:,3), vtmp2_pl(:,:,:,3), & ! [OUT]
-                       rhogvx(:,:,:),  rhogvx_pl(:,:,:),  & ! [IN]
-                       rhogvy(:,:,:),  rhogvy_pl(:,:,:),  & ! [IN]
-                       rhogvz(:,:,:),  rhogvz_pl(:,:,:)   ) ! [IN]
+    call OPRT_divdamp( IxJ_vtmp2     (:,:,:,:,1),   vtmp2_pl         (:,:,:,1), & ! [OUT]
+                       IxJ_vtmp2     (:,:,:,:,2),   vtmp2_pl         (:,:,:,2), & ! [OUT]
+                       IxJ_vtmp2     (:,:,:,:,3),   vtmp2_pl         (:,:,:,3), & ! [OUT]
+                       IxJ_rhogvx    (:,:,:,:),     rhogvx_pl        (:,:,:),   & ! [IN]
+                       IxJ_rhogvy    (:,:,:,:),     rhogvy_pl        (:,:,:),   & ! [IN]
+                       IxJ_rhogvz    (:,:,:,:),     rhogvz_pl        (:,:,:),   & ! [IN]
+                       OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                       OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)    ) ! [IN]
+
+    vtmp2 = reshape(IxJ_vtmp2,shape(vtmp2))
 
     if ( lap_order_divdamp_2d > 1 ) then
        do p = 1, lap_order_divdamp_2d-1
@@ -2291,13 +2440,19 @@ contains
           vtmp   (:,:,:,:) = -vtmp2   (:,:,:,:)
           vtmp_pl(:,:,:,:) = -vtmp2_pl(:,:,:,:)
 
+          IxJ_vtmp = reshape(vtmp,shape(IxJ_vtmp))
+
           !--- 2D dinvergence divdamp
-          call OPRT_divdamp( vtmp2(:,:,:,1), vtmp2_pl(:,:,:,1), & ! [OUT]
-                             vtmp2(:,:,:,2), vtmp2_pl(:,:,:,2), & ! [OUT]
-                             vtmp2(:,:,:,3), vtmp2_pl(:,:,:,3), & ! [OUT]
-                             vtmp (:,:,:,1), vtmp_pl (:,:,:,1), & ! [IN]
-                             vtmp (:,:,:,2), vtmp_pl (:,:,:,2), & ! [IN]
-                             vtmp (:,:,:,3), vtmp_pl (:,:,:,3)  ) ! [IN]
+          call OPRT_divdamp( IxJ_vtmp2     (:,:,:,:,1),   vtmp2_pl         (:,:,:,1), & ! [OUT]
+                             IxJ_vtmp2     (:,:,:,:,2),   vtmp2_pl         (:,:,:,2), & ! [OUT]
+                             IxJ_vtmp2     (:,:,:,:,3),   vtmp2_pl         (:,:,:,3), & ! [OUT]
+                             IxJ_vtmp      (:,:,:,:,1),   vtmp_pl          (:,:,:,1), & ! [IN]
+                             IxJ_vtmp      (:,:,:,:,2),   vtmp_pl          (:,:,:,2), & ! [IN]
+                             IxJ_vtmp      (:,:,:,:,3),   vtmp_pl          (:,:,:,3), & ! [IN]
+                             OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                             OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)    ) ! [IN]
+
+          vtmp2 = reshape(IxJ_vtmp2,shape(vtmp2))
 
        enddo ! lap_order
     endif
@@ -2313,11 +2468,11 @@ contains
        gdz_pl(:,:,:) = divdamp_2d_coef_pl(:,:,:) * vtmp2_pl(:,:,:,3)
     endif
 
-    call OPRT_horizontalize_vec( gdx(:,:,:), gdx_pl(:,:,:), & !--- [INOUT]
-                                 gdy(:,:,:), gdy_pl(:,:,:), & !--- [INOUT]
-                                 gdz(:,:,:), gdz_pl(:,:,:)  ) !--- [INOUT]
+    call OPRT_horizontalize_vec( gdx(:,:,:), gdx_pl(:,:,:), & ! [INOUT]
+                                 gdy(:,:,:), gdy_pl(:,:,:), & ! [INOUT]
+                                 gdz(:,:,:), gdz_pl(:,:,:)  ) ! [INOUT]
 
-    call PROF_rapend('____numfilter_divdamp_2d')
+    call PROF_rapend('____numfilter_divdamp_2d',2)
 
     return
   end subroutine numfilter_divdamp_2d
@@ -2330,6 +2485,8 @@ contains
        ADM_have_pl, &
        ADM_lall,    &
        ADM_lall_pl, &
+       ADM_jall,    &
+       ADM_iall,    &
        ADM_gall,    &
        ADM_gall_pl, &
        ADM_kall
@@ -2339,7 +2496,9 @@ contains
        GMTR_area,    &
        GMTR_area_pl
     use mod_oprt, only: &
-       OPRT_laplacian
+       OPRT_laplacian,  &
+       OPRT_coef_lap,   &
+       OPRT_coef_lap_pl
     implicit none
 
     real(RP), intent(inout) :: s   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -2351,10 +2510,13 @@ contains
     real(RP) :: vtmp2_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,1)
 
     real(RP), parameter :: ggamma_h = 1.0_RP / 16.0_RP / 10.0_RP
-    integer, parameter :: itelim = 80
+    integer,  parameter :: itelim = 80
 
-    integer :: p, ite
-    integer :: k, l
+    real(RP) :: IxJ_vtmp (ADM_iall,ADM_jall,ADM_kall,ADM_lall,1)
+    real(RP) :: IxJ_vtmp2(ADM_iall,ADM_jall,ADM_kall,ADM_lall,1)
+
+    integer  :: p, ite
+    integer  :: k, l
     !---------------------------------------------------------------------------
 
     do ite = 1, itelim
@@ -2370,11 +2532,13 @@ contains
        call COMM_data_transfer( vtmp, vtmp_pl )
 
        do p = 1, 2
-          vtmp2   (:,:,:,:) = 0.0_RP
-          vtmp2_pl(:,:,:,:) = 0.0_RP
+          IxJ_vtmp = reshape(vtmp,shape(IxJ_vtmp))
 
-          call OPRT_laplacian( vtmp2(:,:,:,1), vtmp2_pl(:,:,:,1), & ! [OUT]
-                               vtmp (:,:,:,1), vtmp_pl (:,:,:,1)  ) ! [IN]
+          call OPRT_laplacian( IxJ_vtmp2    (:,:,:,:,1), vtmp2_pl        (:,:,:,1), & ! [OUT]
+                               IxJ_vtmp     (:,:,:,:,1), vtmp_pl         (:,:,:,1), & ! [IN]
+                               OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
+
+          vtmp2 = reshape(IxJ_vtmp2,shape(vtmp2))
 
           vtmp   (:,:,:,:) = -vtmp2   (:,:,:,:)
           vtmp_pl(:,:,:,:) = -vtmp2_pl(:,:,:,:)
@@ -2420,7 +2584,7 @@ contains
        PI => CONST_PI
     implicit none
 
-    integer, intent(in)  :: kdim          ! number of vertical grid
+    integer,  intent(in)  :: kdim          ! number of vertical grid
     real(RP), intent(in)  :: z(kdim)       ! height [m]
     real(RP), intent(in)  :: z_top         ! height top [m]
     real(RP), intent(in)  :: z_bottomlimit ! bottom limit of the factor [m]
@@ -2428,7 +2592,7 @@ contains
 
     real(RP) :: sw
 
-    integer :: k
+    integer  :: k
     !---------------------------------------------------------------------------
 
     do k = 1, kdim

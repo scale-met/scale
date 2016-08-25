@@ -1,0 +1,100 @@
+################################################################################
+#
+# NICAM driver config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 5,
+    rlevel      = 0,
+    vlayer      = 60,
+    rgnmngfname = "rl00-prc10.info",
+/
+
+&GRDPARAM
+    hgrid_io_mode = "ADVANCED",
+    hgrid_fname   = "boundary_GL05RL00",
+    VGRID_fname   = "vgrid60_500m_dcmip.dat",
+    topo_fname    = "NONE",
+/
+
+&TIMEPARAM
+    DTL         = 2.D0,
+    INTEG_TYPE  = "RK3",
+    LSTEP_MAX   = 36,
+    start_date  = 0000,1,1,0,0,0
+/
+
+&RUNCONFPARAM
+    RUNNAME         = 'DCMIP2012-21',
+    NDIFF_LOCATION  = 'IN_LARGE_STEP2',
+/
+
+&BSSTATEPARAM
+    ref_type = 'NOBASE',
+/
+
+&RESTARTPARAM
+    input_io_mode     = 'IDEAL',
+    output_io_mode    = 'ADVANCED',
+    output_basename   = 'restart_all_GL05RL00z60',
+    restart_layername = 'ZS60_500m_DCMIP',
+/
+
+##### DCMIP 2012 Test 1-1: 3D Deformational Flow
+&DYCORETESTPARAM
+    init_type = 'Mountainwave',
+    test_case = '2-0'
+/
+
+&IDEALTOPOPARAM
+    topo_type = 'Schar_Steep',
+/
+
+&IDEALTOPOPARAM_Schar_Steep
+    center_lon =   45.D0,
+    center_lat =    0.D0,
+    H0         =  250.D0,
+    d          = 5000.D0,
+    QSI        = 4000.D0,
+/
+
+&CNSTPARAM
+    earth_radius        = 6.37122E+6,
+    earth_angvel        =      0.E0,
+    small_planet_factor =    500.E0,
+    earth_gravity       = 9.80616E0,
+    gas_cnst            =   287.0E0,
+    specific_heat_pre   =  1004.5E0,
+/
+
+&NUMFILTERPARAM
+    hdiff_type        = 'DIRECT',
+    lap_order_hdiff   = 2,
+    gamma_h           = 9.00E7,
+    divdamp_type      = 'DIRECT',
+    lap_order_divdamp = 2,
+    alpha_d           = 9.00E7,
+/
+
+&EMBUDGETPARAM
+    MNT_ON   = .true.,
+    MNT_INTV = 50    ,
+/
+
+&NMHISD
+    output_io_mode   = 'ADVANCED' ,
+    histall_fname    = 'history'  ,
+    hist3D_layername = 'Z60_500m_DCMIP',
+    NO_VINTRPL       = .false.    ,
+    output_type      = 'SNAPSHOT' ,
+    step             = 1          ,
+    doout_step0      = .true.     ,
+/
+
+&NMHIST item='ml_u',        file='u',     ktype='3D' /
+&NMHIST item='ml_v',        file='v',     ktype='3D' /
+&NMHIST item='ml_w',        file='w',     ktype='3D' /
+&NMHIST item='ml_tem',      file='t',     ktype='3D' /
+
+################################################################################

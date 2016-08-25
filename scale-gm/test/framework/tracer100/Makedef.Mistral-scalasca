@@ -1,0 +1,57 @@
+#
+# ------ For Linux 64bit & intel fortran&C&mpi on Mistral -----
+#
+#--------------------------------------------------------------------------
+#             LOAD MODULES BELOW BEFORE COMPILE SOFTWARES
+#                      intel, intelmpi, scalasca
+#--------------------------------------------------------------------------
+
+FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
+               -assume byterecl -convert big_endian \
+               -fp-model source                     \
+               -mcmodel=medium -heap-arrays
+
+FFLAGS_DEBUG = -fpp -m64 -O0                         \
+               -assume byterecl -convert big_endian  \
+               -fpe0 -fp-model source                \
+               -check bounds -warn all -g -traceback \
+               -mcmodel=medium -heap-arrays
+
+FC     = skin --mpp=mpi --thread=none mpiifort
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
+
+CC     = skin mpiicc
+CFLAGS_FAST  = -O3 -xHost -ip -mcmodel=medium
+CFLAGS_DEBUG = -O0 -mcmodel=medium
+
+CFLAGS = $(CFLAGS_FAST)
+#CFLAGS = $(CFLAGS_DEBUG)
+
+##### Special Options #####
+
+ifeq ($(ENABLE_OPENMP),T)
+	FFLAGS += -qopenmp -qopenmp-report
+endif
+
+ifeq ($(ENABLE_NETCDF),T)
+	FFLAGS      += $(shell nf-config --fflags)
+	CFLAGS      += $(shell nc-config --cflags)
+	NETCDF_LIBS ?= $(shell nf-config --flibs) $(shell nc-config --libs)
+endif
+
+LAPACK_LIBS    ?= -mkl
+
+###########################
+
+MODDIROPT ?= -module $(BUILDDIR)
+OBJDIR    ?= $(BUILDDIR)
+
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
+
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = sbatch

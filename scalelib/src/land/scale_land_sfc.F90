@@ -141,6 +141,7 @@ contains
        LAND_SFC => LAND_SFC_SLAB
     end select
 
+    return
   end subroutine LAND_SFC_setup
 
 end module scale_land_sfc

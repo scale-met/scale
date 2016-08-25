@@ -1286,4 +1286,3 @@ contains
   end subroutine HIST_write
 
 end module scale_history
-!-------------------------------------------------------------------------------

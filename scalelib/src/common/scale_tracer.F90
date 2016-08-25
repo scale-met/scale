@@ -635,6 +635,7 @@ contains
      AQ_UNIT(QA_MP+1:QA_MP+QA_AE) = AQ_AE_UNIT(1:QA_AE)
 #endif
 
+    return
   end subroutine TRACER_setup
 
 end module scale_tracer

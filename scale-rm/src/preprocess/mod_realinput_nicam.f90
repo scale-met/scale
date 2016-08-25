@@ -392,7 +392,7 @@ contains
     use gtool_file, only: &
          FileRead
     use scale_external_io, only: &
-         ExternalFileRead, & 
+         ExternalFileRead, &
          ExternalFileReadOffset
     implicit none
 
@@ -595,7 +595,7 @@ contains
     use gtool_file, only: &
          FileRead
     use scale_external_io, only: &
-         ExternalFileRead, & 
+         ExternalFileRead, &
          ExternalFileReadOffset
     implicit none
 
@@ -649,4 +649,3 @@ contains
   end subroutine ParentOceanInputNICAM
 
 end module mod_realinput_nicam
-!-------------------------------------------------------------------------------

@@ -204,6 +204,7 @@ contains
        call PRC_MPIstop
     end select
 
+    return
   end subroutine URBAN_PHY_setup
 
 end module scale_urban_phy

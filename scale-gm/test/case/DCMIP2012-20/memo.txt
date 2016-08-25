@@ -1,0 +1,3 @@
+DCMIP2012
+Test CASE 2-0
+Hydrostatic balance test on a small planet

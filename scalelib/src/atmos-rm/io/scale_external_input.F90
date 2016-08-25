@@ -866,4 +866,3 @@ contains
   end subroutine EXTIN_time_advance
 
 end module scale_external_input
-!-------------------------------------------------------------------------------

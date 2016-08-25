@@ -504,4 +504,3 @@ contains
   end subroutine MONIT_finalize
 
 end module scale_monitor
-!-------------------------------------------------------------------------------

@@ -184,7 +184,7 @@ contains
 
     integer,          intent(out) :: dims(6)
     character(len=H_LONG), intent(in) :: basename
-    
+
 
     NAMELIST / PARAM_MKINIT_REAL_GrADS / &
         upper_qv_type
@@ -1970,4 +1970,3 @@ contains
   end subroutine close_grads_file
 
 end module mod_realinput_grads
-!-------------------------------------------------------------------------------

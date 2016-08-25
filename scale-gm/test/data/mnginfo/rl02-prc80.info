@@ -1,0 +1,1526 @@
+ &RGN_INFO
+ NUM_OF_RGN      =         160
+ /
+ &RGN_LINK_INFO
+ RGNID   =           1,
+ SW      =          93,           3,
+ NW      =          80,           3,
+ NE      =           5,           1,
+ SE      = 2*2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           2,
+ SW      =          94,           3,
+ NW      =           1,           4,
+ NE      =           6,           1,
+ SE      =           3,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           3,
+ SW      =          95,           3,
+ NW      =           2,           4,
+ NE      =           7,           1,
+ SE      =           4,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           4,
+ SW      =          96,           3,
+ NW      =           3,           4,
+ NE      =           8,           1,
+ SE      =         145,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           5,
+ SW      =           1,           3,
+ NW      =          79,           3,
+ NE      =           9,           1,
+ SE      =           6,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           6,
+ SW      =           2,           3,
+ NW      =           5,           4,
+ NE      =          10,           1,
+ SE      =           7,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           7,
+ SW      = 2*3,
+ NW      =           6,           4,
+ NE      =          11,           1,
+ SE      =           8,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           8,
+ SW      =           4,           3,
+ NW      =           7,           4,
+ NE      =          12,           1,
+ SE      =         149,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           9,
+ SW      =           5,           3,
+ NW      =          78,           3,
+ NE      =          13,           1,
+ SE      =          10,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          10,
+ SW      =           6,           3,
+ NW      =           9,           4,
+ NE      =          14,           1,
+ SE      =          11,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          11,
+ SW      =           7,           3,
+ NW      =          10,           4,
+ NE      =          15,           1,
+ SE      =          12,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          12,
+ SW      =           8,           3,
+ NW      =          11,           4,
+ NE      =          16,           1,
+ SE      =         153,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          13,
+ SW      =           9,           3,
+ NW      =          77,           3,
+ NE      =          29,           2,
+ SE      =          14,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          14,
+ SW      =          10,           3,
+ NW      =          13,           4,
+ NE      =          25,           2,
+ SE      =          15,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          15,
+ SW      =          11,           3,
+ NW      =          14,           4,
+ NE      =          21,           2,
+ SE      =          16,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          16,
+ SW      =          12,           3,
+ NW      =          15,           4,
+ NE      =          17,           2,
+ SE      =         157,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          17,
+ SW      =         157,           3,
+ NW      =          16,           3,
+ NE      =          21,           1,
+ SE      =          18,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          18,
+ SW      =         158,           3,
+ NW      =          17,           4,
+ NE      =          22,           1,
+ SE      =          19,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          19,
+ SW      =         159,           3,
+ NW      =          18,           4,
+ NE      =          23,           1,
+ SE      =          20,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          20,
+ SW      =         160,           3,
+ NW      =          19,           4,
+ NE      =          24,           1,
+ SE      =         129,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          21,
+ SW      =          17,           3,
+ NW      =          15,           3,
+ NE      =          25,           1,
+ SE      =          22,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          22,
+ SW      =          18,           3,
+ NW      =          21,           4,
+ NE      =          26,           1,
+ SE      =          23,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          23,
+ SW      =          19,           3,
+ NW      =          22,           4,
+ NE      =          27,           1,
+ SE      =          24,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          24,
+ SW      =          20,           3,
+ NW      =          23,           4,
+ NE      =          28,           1,
+ SE      =         133,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          25,
+ SW      =          21,           3,
+ NW      =          14,           3,
+ NE      =          29,           1,
+ SE      =          26,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          26,
+ SW      =          22,           3,
+ NW      =          25,           4,
+ NE      =          30,           1,
+ SE      =          27,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          27,
+ SW      =          23,           3,
+ NW      =          26,           4,
+ NE      =          31,           1,
+ SE      =          28,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          28,
+ SW      =          24,           3,
+ NW      =          27,           4,
+ NE      =          32,           1,
+ SE      =         137,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          29,
+ SW      =          25,           3,
+ NW      =          13,           3,
+ NE      =          45,           2,
+ SE      =          30,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          30,
+ SW      =          26,           3,
+ NW      =          29,           4,
+ NE      =          41,           2,
+ SE      =          31,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          31,
+ SW      =          27,           3,
+ NW      =          30,           4,
+ NE      =          37,           2,
+ SE      =          32,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          32,
+ SW      =          28,           3,
+ NW      =          31,           4,
+ NE      =          33,           2,
+ SE      =         141,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          33,
+ SW      =         141,           3,
+ NW      =          32,           3,
+ NE      =          37,           1,
+ SE      =          34,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          34,
+ SW      =         142,           3,
+ NW      =          33,           4,
+ NE      =          38,           1,
+ SE      =          35,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          35,
+ SW      =         143,           3,
+ NW      =          34,           4,
+ NE      =          39,           1,
+ SE      =          36,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          36,
+ SW      =         144,           3,
+ NW      =          35,           4,
+ NE      =          40,           1,
+ SE      =         113,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          37,
+ SW      =          33,           3,
+ NW      =          31,           3,
+ NE      =          41,           1,
+ SE      =          38,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          38,
+ SW      =          34,           3,
+ NW      =          37,           4,
+ NE      =          42,           1,
+ SE      =          39,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          39,
+ SW      =          35,           3,
+ NW      =          38,           4,
+ NE      =          43,           1,
+ SE      =          40,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          40,
+ SW      =          36,           3,
+ NW      =          39,           4,
+ NE      =          44,           1,
+ SE      =         117,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          41,
+ SW      =          37,           3,
+ NW      =          30,           3,
+ NE      =          45,           1,
+ SE      =          42,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          42,
+ SW      =          38,           3,
+ NW      =          41,           4,
+ NE      =          46,           1,
+ SE      =          43,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          43,
+ SW      =          39,           3,
+ NW      =          42,           4,
+ NE      =          47,           1,
+ SE      =          44,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          44,
+ SW      =          40,           3,
+ NW      =          43,           4,
+ NE      =          48,           1,
+ SE      =         121,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          45,
+ SW      =          41,           3,
+ NW      =          29,           3,
+ NE      =          61,           2,
+ SE      =          46,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          46,
+ SW      =          42,           3,
+ NW      =          45,           4,
+ NE      =          57,           2,
+ SE      =          47,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          47,
+ SW      =          43,           3,
+ NW      =          46,           4,
+ NE      =          53,           2,
+ SE      =          48,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          48,
+ SW      =          44,           3,
+ NW      =          47,           4,
+ NE      =          49,           2,
+ SE      =         125,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          49,
+ SW      =         125,           3,
+ NW      =          48,           3,
+ NE      =          53,           1,
+ SE      =          50,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          50,
+ SW      =         126,           3,
+ NW      =          49,           4,
+ NE      =          54,           1,
+ SE      =          51,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          51,
+ SW      =         127,           3,
+ NW      =          50,           4,
+ NE      =          55,           1,
+ SE      =          52,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          52,
+ SW      =         128,           3,
+ NW      =          51,           4,
+ NE      =          56,           1,
+ SE      =          97,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          53,
+ SW      =          49,           3,
+ NW      =          47,           3,
+ NE      =          57,           1,
+ SE      =          54,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          54,
+ SW      =          50,           3,
+ NW      =          53,           4,
+ NE      =          58,           1,
+ SE      =          55,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          55,
+ SW      =          51,           3,
+ NW      =          54,           4,
+ NE      =          59,           1,
+ SE      =          56,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          56,
+ SW      =          52,           3,
+ NW      =          55,           4,
+ NE      =          60,           1,
+ SE      =         101,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          57,
+ SW      =          53,           3,
+ NW      =          46,           3,
+ NE      =          61,           1,
+ SE      =          58,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          58,
+ SW      =          54,           3,
+ NW      =          57,           4,
+ NE      =          62,           1,
+ SE      =          59,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          59,
+ SW      =          55,           3,
+ NW      =          58,           4,
+ NE      =          63,           1,
+ SE      =          60,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          60,
+ SW      =          56,           3,
+ NW      =          59,           4,
+ NE      =          64,           1,
+ SE      =         105,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          61,
+ SW      =          57,           3,
+ NW      =          45,           3,
+ NE      =          77,           2,
+ SE      =          62,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          62,
+ SW      =          58,           3,
+ NW      =          61,           4,
+ NE      =          73,           2,
+ SE      =          63,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          63,
+ SW      =          59,           3,
+ NW      =          62,           4,
+ NE      =          69,           2,
+ SE      =          64,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          64,
+ SW      =          60,           3,
+ NW      =          63,           4,
+ NE      =          65,           2,
+ SE      =         109,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          65,
+ SW      =         109,           3,
+ NW      =          64,           3,
+ NE      =          69,           1,
+ SE      =          66,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          66,
+ SW      =         110,           3,
+ NW      =          65,           4,
+ NE      =          70,           1,
+ SE      =          67,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          67,
+ SW      =         111,           3,
+ NW      =          66,           4,
+ NE      =          71,           1,
+ SE      =          68,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          68,
+ SW      =         112,           3,
+ NW      =          67,           4,
+ NE      =          72,           1,
+ SE      =          81,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          69,
+ SW      =          65,           3,
+ NW      =          63,           3,
+ NE      =          73,           1,
+ SE      =          70,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          70,
+ SW      =          66,           3,
+ NW      =          69,           4,
+ NE      =          74,           1,
+ SE      =          71,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          71,
+ SW      =          67,           3,
+ NW      =          70,           4,
+ NE      =          75,           1,
+ SE      =          72,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          72,
+ SW      =          68,           3,
+ NW      =          71,           4,
+ NE      =          76,           1,
+ SE      =          85,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          73,
+ SW      =          69,           3,
+ NW      =          62,           3,
+ NE      =          77,           1,
+ SE      =          74,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          74,
+ SW      =          70,           3,
+ NW      =          73,           4,
+ NE      =          78,           1,
+ SE      =          75,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          75,
+ SW      =          71,           3,
+ NW      =          74,           4,
+ NE      =          79,           1,
+ SE      =          76,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          76,
+ SW      =          72,           3,
+ NW      =          75,           4,
+ NE      =          80,           1,
+ SE      =          89,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          77,
+ SW      =          73,           3,
+ NW      =          61,           3,
+ NE      =          13,           2,
+ SE      =          78,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          78,
+ SW      =          74,           3,
+ NW      =          77,           4,
+ NE      =           9,           2,
+ SE      =          79,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          79,
+ SW      =          75,           3,
+ NW      =          78,           4,
+ NE      =           5,           2,
+ SE      =          80,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          80,
+ SW      =          76,           3,
+ NW      =          79,           4,
+ NE      =           1,           2,
+ SE      =          93,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          81,
+ SW      =         112,           4,
+ NW      =          68,           4,
+ NE      =          85,           1,
+ SE      =          82,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          82,
+ SW      =         108,           4,
+ NW      =          81,           4,
+ NE      =          86,           1,
+ SE      =          83,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          83,
+ SW      =         104,           4,
+ NW      =          82,           4,
+ NE      =          87,           1,
+ SE      =          84,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          84,
+ SW      =         100,           4,
+ NW      =          83,           4,
+ NE      =          88,           1,
+ SE      =         148,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          85,
+ SW      =          81,           3,
+ NW      =          72,           4,
+ NE      =          89,           1,
+ SE      =          86,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          86,
+ SW      =          82,           3,
+ NW      =          85,           4,
+ NE      =          90,           1,
+ SE      =          87,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          87,
+ SW      =          83,           3,
+ NW      =          86,           4,
+ NE      =          91,           1,
+ SE      =          88,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          88,
+ SW      =          84,           3,
+ NW      =          87,           4,
+ NE      =          92,           1,
+ SE      =         147,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          89,
+ SW      =          85,           3,
+ NW      =          76,           4,
+ NE      =          93,           1,
+ SE      =          90,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          90,
+ SW      =          86,           3,
+ NW      =          89,           4,
+ NE      =          94,           1,
+ SE      =          91,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          91,
+ SW      =          87,           3,
+ NW      =          90,           4,
+ NE      =          95,           1,
+ SE      =          92,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          92,
+ SW      =          88,           3,
+ NW      =          91,           4,
+ NE      =          96,           1,
+ SE      =         146,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          93,
+ SW      =          89,           3,
+ NW      =          80,           4,
+ NE      = 2*1,
+ SE      =          94,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          94,
+ SW      =          90,           3,
+ NW      =          93,           4,
+ NE      =           2,           1,
+ SE      =          95,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          95,
+ SW      =          91,           3,
+ NW      =          94,           4,
+ NE      =           3,           1,
+ SE      =          96,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          96,
+ SW      =          92,           3,
+ NW      =          95,           4,
+ NE      =           4,           1,
+ SE      =         145,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          97,
+ SW      =         128,           4,
+ NW      =          52,           4,
+ NE      =         101,           1,
+ SE      =          98,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          98,
+ SW      =         124,           4,
+ NW      =          97,           4,
+ NE      =         102,           1,
+ SE      =          99,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          99,
+ SW      =         120,           4,
+ NW      =          98,           4,
+ NE      =         103,           1,
+ SE      =         100,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         100,
+ SW      =         116,           4,
+ NW      =          99,           4,
+ NE      =         104,           1,
+ SE      =          84,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         101,
+ SW      =          97,           3,
+ NW      =          56,           4,
+ NE      =         105,           1,
+ SE      =         102,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         102,
+ SW      =          98,           3,
+ NW      =         101,           4,
+ NE      =         106,           1,
+ SE      =         103,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         103,
+ SW      =          99,           3,
+ NW      =         102,           4,
+ NE      =         107,           1,
+ SE      =         104,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         104,
+ SW      =         100,           3,
+ NW      =         103,           4,
+ NE      =         108,           1,
+ SE      =          83,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         105,
+ SW      =         101,           3,
+ NW      =          60,           4,
+ NE      =         109,           1,
+ SE      =         106,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         106,
+ SW      =         102,           3,
+ NW      =         105,           4,
+ NE      =         110,           1,
+ SE      =         107,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         107,
+ SW      =         103,           3,
+ NW      =         106,           4,
+ NE      =         111,           1,
+ SE      =         108,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         108,
+ SW      =         104,           3,
+ NW      =         107,           4,
+ NE      =         112,           1,
+ SE      =          82,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         109,
+ SW      =         105,           3,
+ NW      =          64,           4,
+ NE      =          65,           1,
+ SE      =         110,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         110,
+ SW      =         106,           3,
+ NW      =         109,           4,
+ NE      =          66,           1,
+ SE      =         111,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         111,
+ SW      =         107,           3,
+ NW      =         110,           4,
+ NE      =          67,           1,
+ SE      =         112,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         112,
+ SW      =         108,           3,
+ NW      =         111,           4,
+ NE      =          68,           1,
+ SE      =          81,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         113,
+ SW      =         144,           4,
+ NW      =          36,           4,
+ NE      =         117,           1,
+ SE      =         114,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         114,
+ SW      =         140,           4,
+ NW      =         113,           4,
+ NE      =         118,           1,
+ SE      =         115,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         115,
+ SW      =         136,           4,
+ NW      =         114,           4,
+ NE      =         119,           1,
+ SE      =         116,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         116,
+ SW      =         132,           4,
+ NW      =         115,           4,
+ NE      =         120,           1,
+ SE      =         100,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         117,
+ SW      =         113,           3,
+ NW      =          40,           4,
+ NE      =         121,           1,
+ SE      =         118,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         118,
+ SW      =         114,           3,
+ NW      =         117,           4,
+ NE      =         122,           1,
+ SE      =         119,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         119,
+ SW      =         115,           3,
+ NW      =         118,           4,
+ NE      =         123,           1,
+ SE      =         120,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         120,
+ SW      =         116,           3,
+ NW      =         119,           4,
+ NE      =         124,           1,
+ SE      =          99,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         121,
+ SW      =         117,           3,
+ NW      =          44,           4,
+ NE      =         125,           1,
+ SE      =         122,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         122,
+ SW      =         118,           3,
+ NW      =         121,           4,
+ NE      =         126,           1,
+ SE      =         123,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         123,
+ SW      =         119,           3,
+ NW      =         122,           4,
+ NE      =         127,           1,
+ SE      =         124,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         124,
+ SW      =         120,           3,
+ NW      =         123,           4,
+ NE      =         128,           1,
+ SE      =          98,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         125,
+ SW      =         121,           3,
+ NW      =          48,           4,
+ NE      =          49,           1,
+ SE      =         126,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         126,
+ SW      =         122,           3,
+ NW      =         125,           4,
+ NE      =          50,           1,
+ SE      =         127,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         127,
+ SW      =         123,           3,
+ NW      =         126,           4,
+ NE      =          51,           1,
+ SE      =         128,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         128,
+ SW      =         124,           3,
+ NW      =         127,           4,
+ NE      =          52,           1,
+ SE      =          97,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         129,
+ SW      =         160,           4,
+ NW      =          20,           4,
+ NE      =         133,           1,
+ SE      =         130,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         130,
+ SW      =         156,           4,
+ NW      =         129,           4,
+ NE      =         134,           1,
+ SE      =         131,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         131,
+ SW      =         152,           4,
+ NW      =         130,           4,
+ NE      =         135,           1,
+ SE      =         132,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         132,
+ SW      =         148,           4,
+ NW      =         131,           4,
+ NE      =         136,           1,
+ SE      =         116,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         133,
+ SW      =         129,           3,
+ NW      =          24,           4,
+ NE      =         137,           1,
+ SE      =         134,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         134,
+ SW      =         130,           3,
+ NW      =         133,           4,
+ NE      =         138,           1,
+ SE      =         135,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         135,
+ SW      =         131,           3,
+ NW      =         134,           4,
+ NE      =         139,           1,
+ SE      =         136,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         136,
+ SW      =         132,           3,
+ NW      =         135,           4,
+ NE      =         140,           1,
+ SE      =         115,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         137,
+ SW      =         133,           3,
+ NW      =          28,           4,
+ NE      =         141,           1,
+ SE      =         138,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         138,
+ SW      =         134,           3,
+ NW      =         137,           4,
+ NE      =         142,           1,
+ SE      =         139,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         139,
+ SW      =         135,           3,
+ NW      =         138,           4,
+ NE      =         143,           1,
+ SE      =         140,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         140,
+ SW      =         136,           3,
+ NW      =         139,           4,
+ NE      =         144,           1,
+ SE      =         114,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         141,
+ SW      =         137,           3,
+ NW      =          32,           4,
+ NE      =          33,           1,
+ SE      =         142,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         142,
+ SW      =         138,           3,
+ NW      =         141,           4,
+ NE      =          34,           1,
+ SE      =         143,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         143,
+ SW      =         139,           3,
+ NW      =         142,           4,
+ NE      =          35,           1,
+ SE      =         144,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         144,
+ SW      =         140,           3,
+ NW      =         143,           4,
+ NE      =          36,           1,
+ SE      =         113,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         145,
+ SW      =          96,           4,
+ NW      = 2*4,
+ NE      =         149,           1,
+ SE      =         146,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         146,
+ SW      =          92,           4,
+ NW      =         145,           4,
+ NE      =         150,           1,
+ SE      =         147,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         147,
+ SW      =          88,           4,
+ NW      =         146,           4,
+ NE      =         151,           1,
+ SE      =         148,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         148,
+ SW      =          84,           4,
+ NW      =         147,           4,
+ NE      =         152,           1,
+ SE      =         132,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         149,
+ SW      =         145,           3,
+ NW      =           8,           4,
+ NE      =         153,           1,
+ SE      =         150,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         150,
+ SW      =         146,           3,
+ NW      =         149,           4,
+ NE      =         154,           1,
+ SE      =         151,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         151,
+ SW      =         147,           3,
+ NW      =         150,           4,
+ NE      =         155,           1,
+ SE      =         152,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         152,
+ SW      =         148,           3,
+ NW      =         151,           4,
+ NE      =         156,           1,
+ SE      =         131,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         153,
+ SW      =         149,           3,
+ NW      =          12,           4,
+ NE      =         157,           1,
+ SE      =         154,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         154,
+ SW      =         150,           3,
+ NW      =         153,           4,
+ NE      =         158,           1,
+ SE      =         155,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         155,
+ SW      =         151,           3,
+ NW      =         154,           4,
+ NE      =         159,           1,
+ SE      =         156,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         156,
+ SW      =         152,           3,
+ NW      =         155,           4,
+ NE      =         160,           1,
+ SE      =         130,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =         157,
+ SW      =         153,           3,
+ NW      =          16,           4,
+ NE      =          17,           1,
+ SE      =         158,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         158,
+ SW      =         154,           3,
+ NW      =         157,           4,
+ NE      =          18,           1,
+ SE      =         159,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         159,
+ SW      =         155,           3,
+ NW      =         158,           4,
+ NE      =          19,           1,
+ SE      =         160,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =         160,
+ SW      =         156,           3,
+ NW      =         159,           4,
+ NE      =          20,           1,
+ SE      =         129,           1
+ /
+ &PROC_INFO
+ NUM_OF_PROC     =          80
+ /
+ &RGN_MNG_INFO
+ PEID    =           1,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =           1,           2, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           2,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =           3,           4, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           3,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =           5,           6, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           4,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =           7,           8, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           5,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =           9,          10, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           6,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          11,          12, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           7,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          13,          14, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           8,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          15,          16, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           9,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          17,          18, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          10,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          19,          20, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          11,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          21,          22, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          12,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          23,          24, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          13,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          25,          26, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          14,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          27,          28, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          15,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          29,          30, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          16,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          31,          32, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          17,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          33,          34, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          18,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          35,          36, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          19,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          37,          38, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          20,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          39,          40, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          21,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          41,          42, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          22,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          43,          44, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          23,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          45,          46, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          24,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          47,          48, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          25,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          49,          50, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          26,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          51,          52, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          27,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          53,          54, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          28,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          55,          56, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          29,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          57,          58, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          30,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          59,          60, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          31,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          61,          62, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          32,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          63,          64, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          33,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          65,          66, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          34,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          67,          68, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          35,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          69,          70, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          36,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          71,          72, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          37,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          73,          74, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          38,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          75,          76, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          39,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          77,          78, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          40,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          79,          80, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          41,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          81,          82, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          42,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          83,          84, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          43,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          85,          86, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          44,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          87,          88, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          45,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          89,          90, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          46,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          91,          92, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          47,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          93,          94, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          48,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          95,          96, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          49,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          97,          98, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          50,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =          99,         100, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          51,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         101,         102, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          52,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         103,         104, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          53,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         105,         106, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          54,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         107,         108, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          55,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         109,         110, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          56,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         111,         112, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          57,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         113,         114, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          58,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         115,         116, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          59,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         117,         118, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          60,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         119,         120, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          61,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         121,         122, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          62,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         123,         124, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          63,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         125,         126, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          64,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         127,         128, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          65,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         129,         130, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          66,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         131,         132, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          67,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         133,         134, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          68,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         135,         136, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          69,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         137,         138, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          70,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         139,         140, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          71,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         141,         142, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          72,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         143,         144, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          73,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         145,         146, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          74,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         147,         148, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          75,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         149,         150, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          76,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         151,         152, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          77,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         153,         154, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          78,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         155,         156, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          79,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         157,         158, 2558*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =          80,
+ NUM_OF_MNG      =           2,
+ MNG_RGNID       =         159,         160, 2558*-1
+ /
