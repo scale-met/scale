@@ -1,0 +1,48 @@
+#
+# ------ For Linux64 & intel fortran&C & intel mpi + Parallelnavi -----
+#
+
+FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
+               -assume byterecl -convert big_endian \
+               -fp-model source                     \
+               -mcmodel=medium -heap-arrays
+
+FFLAGS_DEBUG = -fpp -m64 -O0                         \
+               -assume byterecl -convert big_endian  \
+               -fpe0 -fp-model source                \
+               -check bounds -warn all -g -traceback \
+               -mcmodel=medium -heap-arrays
+
+FC     = mpiifort
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
+
+CC     = mpiicc
+CFLAGS = -O3 -xHost -ip -mcmodel=medium
+
+##### Special Options #####
+
+ifeq ($(ENABLE_OPENMP),T)
+	FFLAGS += -openmp -openmp-report
+endif
+
+ifeq ($(ENABLE_NETCDF),T)
+	NETCDF_INCLUDE ?= -I$(NETCDF4)/include
+	NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+	FFLAGS         += $(NETCDF_INCLUDE)
+	CFLAGS         += $(NETCDF_INCLUDE)
+endif
+
+###########################
+
+MODDIROPT ?= -module $(BUILDDIR)
+OBJDIR    ?= $(BUILDDIR)
+
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
+
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = pjsub

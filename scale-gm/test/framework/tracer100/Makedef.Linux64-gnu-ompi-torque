@@ -1,0 +1,83 @@
+################################################################################
+#
+# ------ For SGI ICE X (Linux64 & gnu fortran&C & openmpi + Torque -----
+#
+################################################################################
+
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+
+FC     = mpifort
+SFC    = gfortran
+
+# GCC version selector
+GCC_GTEQ_440 := $(shell expr `gcc -dumpversion | sed -e 's/\.\([0-9][0-9]\)/\1/g' -e 's/\.\([0-9]\)/0\1/g' -e 's/^[0-9]\{3,4\}$$/&00/'` \>= 40400)
+ifeq ($(GCC_GTEQ_440),1)
+  GNUCPPOPT = -cpp
+  MODDIROPT = -J
+else
+  GNUCPPOPT = -x f95-cpp-input
+  MODDIROPT = -M
+endif
+
+FFLAGS_CORE = -m64 \
+              -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
+              -fconvert=big-endian -frecord-marker=4 -ffree-form -ffree-line-length-none
+
+FFLAGS_FAST  = -O3 $(FFLAGS_CORE) \
+               -funroll-loops -finline-functions -fprefetch-loop-arrays \
+               -mcmodel=medium
+
+FFLAGS_DYN   = $(FFLAGS)
+
+FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) \
+               -ffpe-trap=invalid,zero,overflow -finit-integer=-32768 -finit-real=nan -finit-logical=false -finit-character=9 \
+               -Wall -Wextra -Wcharacter-truncation -Wunderflow -fbounds-check \
+               -g -fbacktrace \
+               -DDEBUG
+
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+
+CC     = gcc
+
+CFLAGS_FAST  = -O3 -m64
+CFLAGS_DEBUG = -O0
+
+
+
+##### Special setting
+
+SSE_FLAGS = -mtune=native
+#SSE_FLAGS = -mtune=native -mavx
+
+FFLAGS_SYSDEPEND = $(SSE_FLAGS) $(GNUCPPOPT)
+CFLAGS_SYSDEPEND = $(SSE_FLAGS)
+
+
+
+##### Linker setting
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS_CORE)
+
+
+
+################################################################################
+
+###### NetCDF library
+NETCDF_INCLUDE ?= -I$(NETCDF4)/include
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+
+###### Lapack
+LAPACK_LIBS    ?=
+# example: -llapack
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = qsub

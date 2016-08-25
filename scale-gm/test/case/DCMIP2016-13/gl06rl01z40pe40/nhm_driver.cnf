@@ -1,0 +1,127 @@
+################################################################################
+#
+# NICAM driver config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 6,
+    rlevel      = 1,
+    vlayer      = 40,
+    rgnmngfname = "rl01-prc40.info",
+/
+
+&GRDPARAM
+    hgrid_io_mode = "ADVANCED",
+    hgrid_fname   = "boundary_GL06RL01",
+    VGRID_fname   = "vgrid40_cnst_20km_dcmip2016.dat",
+    vgrid_scheme  = "LINEAR",
+    topo_fname    = "NONE",
+/
+
+&TIMEPARAM
+    DTL         = 2.D0,
+    INTEG_TYPE  = "RK3",
+    LSTEP_MAX   = 3600,
+    start_date  = 0000,1,1,0,0,0
+/
+
+&RUNCONFPARAM
+    RUNNAME        = 'DCMIP2016-13',
+    NDIFF_LOCATION = 'IN_LARGE_STEP2',
+    THUBURN_LIM    = .true.,
+    RAIN_TYPE      = "WARM",
+    AF_TYPE        = 'DCMIP',
+/
+
+&BSSTATEPARAM
+    ref_type = 'NOBASE',
+/
+
+&RESTARTPARAM
+    input_io_mode     = 'IDEAL',
+    output_io_mode    = 'ADVANCED',
+    output_basename   = 'restart_all_GL06RL01z40',
+    restart_layername = 'ZSALL42_DCMIP16',
+/
+
+##### DCMIP2016-13: Supercell Experiment
+##case 1: with initial perturbation
+##case 2: without initial perturbation
+&DYCORETESTPARAM
+    init_type  = 'Supercell',
+    test_case  = '1',
+/
+
+&FORCING_PARAM
+    NEGATIVE_FIXER   = .true.,
+    UPDATE_TOT_DENS  = .true.,
+/
+
+&FORCING_DCMIP_PARAM
+    SET_DCMIP2016_13 = .true.,
+/
+
+&CNSTPARAM
+    earth_radius        = 6.37122E+6,
+    earth_angvel        =      0.E0,
+    small_planet_factor =    120.E0,
+    earth_gravity       = 9.80616E0,
+    gas_cnst            =   287.0E0,
+    specific_heat_pre   =  1004.5E0,
+/
+
+&NUMFILTERPARAM
+    lap_order_hdiff   = 2,
+    hdiff_type        = 'NONLINEAR1',
+    Kh_coef_maxlim    = 1.200E+10,
+    Kh_coef_minlim    = 1.200E+09,
+    ZD_hdiff_nl       = 12000.E0,
+    divdamp_type      = 'DIRECT',
+    lap_order_divdamp = 2,
+    alpha_d           = 1.20E+09,
+/
+
+&EMBUDGETPARAM
+    MNT_ON   = .true.,
+    MNT_INTV = 72    ,
+/
+
+&NMHISD
+    output_io_mode   = 'ADVANCED' ,
+    histall_fname    = 'history'  ,
+    hist3D_layername = 'ZSDEF40_DCMIP16',
+    NO_VINTRPL       = .false.    ,
+    output_type      = 'SNAPSHOT' ,
+    step             = 150        ,
+    doout_step0      = .true.     ,
+/
+
+&NMHIST item='ml_u',     file='u',    ktype='3D' /
+&NMHIST item='ml_v',     file='v',    ktype='3D' /
+&NMHIST item='ml_w',     file='w',    ktype='3D' /
+&NMHIST item='ml_pres',  file='prs',  ktype='3D' /
+&NMHIST item='ml_tem',   file='t',    ktype='3D' /
+&NMHIST item='sl_ps',    file='ps',   ktype='2D' /
+&NMHIST item='sl_u850',  file='u850', ktype='2D' /
+&NMHIST item='sl_v850',  file='v850', ktype='2D' /
+&NMHIST item='sl_w850',  file='w850', ktype='2D' /
+&NMHIST item='sl_t850',  file='t850', ktype='2D' /
+&NMHIST item='sl_w500',  file='w500', ktype='2D' /
+&NMHIST item='sl_t500',  file='t500', ktype='2D' /
+
+&NMHIST item='ml_af_fvx',  file='forcing_vx',  ktype='3D' /
+&NMHIST item='ml_af_fvy',  file='forcing_vy',  ktype='3D' /
+&NMHIST item='ml_af_fvz',  file='forcing_vz',  ktype='3D' /
+&NMHIST item='ml_af_fe',   file='forcing_e',   ktype='3D' /
+&NMHIST item='ml_af_fq01', file='forcing_qv',  ktype='3D' /
+&NMHIST item='ml_af_fq02', file='forcing_qc',  ktype='3D' /
+&NMHIST item='ml_af_fq03', file='forcing_qr',  ktype='3D' /
+
+&NMHIST item='ml_qv',      file='qv',   ktype='3D' /
+&NMHIST item='ml_qc',      file='qc',   ktype='3D' /
+&NMHIST item='ml_qr',      file='qr',   ktype='3D' /
+
+&NMHIST item='sl_af_prcp', file='prcp', ktype='2D', output_type='AVERAGE' /
+
+################################################################################

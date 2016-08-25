@@ -1,0 +1,142 @@
+################################################################################
+#
+# NICAM driver config
+#
+################################################################################
+
+&PARAM_IO
+ IO_LOG_ALLNODE = .false.,
+/
+
+&ADMPARAM
+    glevel      = 6,
+    rlevel      = 2,
+    vlayer      = 30,
+    rgnmngfname = "rl02-prc160.info",
+/
+
+&GRDPARAM
+    hgrid_io_mode = "ADVANCED",
+    hgrid_fname   = "boundary_GL06RL02",
+    VGRID_fname   = "vgrid30_stretch_30km_dcmip2016v2.dat",
+    vgrid_scheme  = "LINEAR",
+    topo_fname    = "NONE",
+/
+
+&TIMEPARAM
+    DTL         = 480.D0,
+    INTEG_TYPE  = "RK3",
+    LSTEP_MAX   = 32400,
+    start_date  = 0000,1,1,0,0,0
+/
+
+&RUNCONFPARAM
+    RUNNAME        = 'DCMIP2016-21',
+    NDIFF_LOCATION = 'IN_LARGE_STEP2',
+    THUBURN_LIM    = .true.,
+    RAIN_TYPE      = "WARM",
+    AF_TYPE        = 'DCMIP',
+/
+
+&BSSTATEPARAM
+    ref_type = 'NOBASE',
+/
+
+&RESTARTPARAM
+    input_io_mode     = 'IDEAL',
+    output_io_mode    = 'ADVANCED',
+    output_basename   = 'restart_all_GL06RL02z30',
+    restart_layername = 'ZSALL32_DMP16v2',
+/
+
+##### DCMIP2016-21: Moist Held-Suarez
+##case 5: no perturbation / with moisture
+&DYCORETESTPARAM
+    init_type   = 'Jablonowski-Moist',
+    test_case   = '5',
+    chemtracer  = .false.,
+    prs_rebuild = .false.,
+/
+
+&FORCING_PARAM
+    NEGATIVE_FIXER   = .true.,
+    UPDATE_TOT_DENS  = .true.,
+/
+
+&FORCING_DCMIP_PARAM
+    SET_DCMIP2016_21  = .true.,
+    SET_DCMIP2016_LSC = .true.,
+/
+
+&PARAM_CONST
+    CONST_THERMODYN_TYPE    = "SIMPLE",
+    CONST_RADIUS            = 6.37122E+6,
+    CONST_OHM               =   7.292E-5,
+    CONST_SmallPlanetFactor =      1.E0,
+    CONST_GRAV              = 9.80616E0,
+    CONST_Rdry              =   287.0E0,
+    CONST_CPdry             =  1004.5E0,
+/
+
+&NUMFILTERPARAM
+    lap_order_hdiff   = 2,
+    hdiff_type        = 'NONLINEAR1',
+    Kh_coef_maxlim    = 1.6E+16,
+    Kh_coef_minlim    = 1.6E+15,
+    ZD_hdiff_nl       = 20.E+3,
+    divdamp_type      = 'NONDIM_COEF',
+    lap_order_divdamp = 2,
+    alpha_d           = 5.0E-1,
+/
+
+&EMBUDGETPARAM
+    MNT_ON   = .true.,
+    MNT_INTV = 5400,
+/
+
+&NMHISD
+    output_io_mode   = 'ADVANCED',
+    histall_fname    = 'history' ,
+    hist3D_layername = 'ZSDEF30_DMP16v2',
+    histPL_layername = 'STDPL18' ,
+    NO_VINTRPL       = .true.    ,
+    output_type      = 'AVERAGE' ,
+    step             = 180       ,
+    doout_step0      = .false.   ,
+    npreslev         = 18        ,
+    pres_levs        = 1000, 925, 850, 775, 700, 600, 500, 400, 300, 250, 200, 150, 100, 70, 50, 30, 20, 10,
+/
+
+&NMHIST item='ml_pres', file='prs',  ktype='3D' /
+&NMHIST item='ml_hgt',  file='z',    ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_tem',  file='t',    ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_u',    file='u',    ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_v',    file='v',    ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_w',    file='w',    ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_omg',  file='omg',  ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_qv',   file='qv',   ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_th',   file='th',   ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_thv',  file='thv',  ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_mse',  file='mse',  ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_rh',   file='rh',   ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_rha',  file='rha',  ktype='3D', out_prelev=.true. /
+
+&NMHIST item='sl_ps',   file='ps',   ktype='2D' /
+
+&NMHIST item='ml_du',      file='du',          ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_dv',      file='dv',          ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_dtem',    file='dtem',        ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_dq',      file='dq',          ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_af_fvx',  file='forcing_vx',  ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_af_fvy',  file='forcing_vy',  ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_af_fvz',  file='forcing_vz',  ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_af_fe',   file='forcing_e',   ktype='3D', out_prelev=.true. /
+&NMHIST item='ml_af_fq01', file='forcing_qv',  ktype='3D', out_prelev=.true. /
+
+&NMHIST item='sl_t100',    file='t100',        ktype='2D', output_type='SNAPSHOT', step=45 /
+&NMHIST item='sl_u250',    file='u250',        ktype='2D', output_type='SNAPSHOT', step=45 /
+&NMHIST item='sl_v250',    file='v250',        ktype='2D', output_type='SNAPSHOT', step=45 /
+&NMHIST item='sl_w250',    file='w250',        ktype='2D', output_type='SNAPSHOT', step=45 /
+&NMHIST item='sl_af_prcp', file='prcp',        ktype='2D', output_type='SNAPSHOT', step=45 /
+
+################################################################################

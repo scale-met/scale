@@ -1,0 +1,3 @@
+DCMIP2012
+Test CASE 1-3
+2D solid-body rotation of thin cloud-like tracer in the presence of orography
