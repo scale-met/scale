@@ -8,3 +8,8 @@
 *.pdf
 *.toc
 *.log
+
+scale-gm/test/data/grid/boundary/gl05rl01*
+scale-gm/test/data/grid/boundary/gl06*
+scale-gm/test/data/grid/llmap/gl05/rl01*
+scale-gm/test/data/grid/llmap/gl06*

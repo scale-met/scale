@@ -1,0 +1,300 @@
+ &RGN_INFO
+ NUM_OF_RGN      =          40
+ /
+ &RGN_LINK_INFO
+ RGNID   =           1,
+ SW      =          23,           3,
+ NW      =          20,           3,
+ NE      =           3,           1,
+ SE      = 2*2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           2,
+ SW      =          24,           3,
+ NW      =           1,           4,
+ NE      =           4,           1,
+ SE      =          37,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           3,
+ SW      =           1,           3,
+ NW      =          19,           3,
+ NE      =           7,           2,
+ SE      =           4,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           4,
+ SW      =           2,           3,
+ NW      =           3,           4,
+ NE      =           5,           2,
+ SE      =          39,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           5,
+ SW      =          39,           3,
+ NW      =           4,           3,
+ NE      =           7,           1,
+ SE      =           6,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           6,
+ SW      =          40,           3,
+ NW      =           5,           4,
+ NE      =           8,           1,
+ SE      =          33,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           7,
+ SW      =           5,           3,
+ NW      = 2*3,
+ NE      =          11,           2,
+ SE      =           8,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           8,
+ SW      =           6,           3,
+ NW      =           7,           4,
+ NE      =           9,           2,
+ SE      =          35,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =           9,
+ SW      =          35,           3,
+ NW      =           8,           3,
+ NE      =          11,           1,
+ SE      =          10,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          10,
+ SW      =          36,           3,
+ NW      =           9,           4,
+ NE      =          12,           1,
+ SE      =          29,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          11,
+ SW      =           9,           3,
+ NW      =           7,           3,
+ NE      =          15,           2,
+ SE      =          12,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          12,
+ SW      =          10,           3,
+ NW      =          11,           4,
+ NE      =          13,           2,
+ SE      =          31,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          13,
+ SW      =          31,           3,
+ NW      =          12,           3,
+ NE      =          15,           1,
+ SE      =          14,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          14,
+ SW      =          32,           3,
+ NW      =          13,           4,
+ NE      =          16,           1,
+ SE      =          25,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          15,
+ SW      =          13,           3,
+ NW      =          11,           3,
+ NE      =          19,           2,
+ SE      =          16,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          16,
+ SW      =          14,           3,
+ NW      =          15,           4,
+ NE      =          17,           2,
+ SE      =          27,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          17,
+ SW      =          27,           3,
+ NW      =          16,           3,
+ NE      =          19,           1,
+ SE      =          18,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          18,
+ SW      =          28,           3,
+ NW      =          17,           4,
+ NE      =          20,           1,
+ SE      =          21,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          19,
+ SW      =          17,           3,
+ NW      =          15,           3,
+ NE      =           3,           2,
+ SE      =          20,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          20,
+ SW      =          18,           3,
+ NW      =          19,           4,
+ NE      =           1,           2,
+ SE      =          23,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          21,
+ SW      =          28,           4,
+ NW      =          18,           4,
+ NE      =          23,           1,
+ SE      =          22,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          22,
+ SW      =          26,           4,
+ NW      =          21,           4,
+ NE      =          24,           1,
+ SE      =          38,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          23,
+ SW      =          21,           3,
+ NW      =          20,           4,
+ NE      = 2*1,
+ SE      =          24,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          24,
+ SW      =          22,           3,
+ NW      =          23,           4,
+ NE      =           2,           1,
+ SE      =          37,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          25,
+ SW      =          32,           4,
+ NW      =          14,           4,
+ NE      =          27,           1,
+ SE      =          26,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          26,
+ SW      =          30,           4,
+ NW      =          25,           4,
+ NE      =          28,           1,
+ SE      =          22,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          27,
+ SW      =          25,           3,
+ NW      =          16,           4,
+ NE      =          17,           1,
+ SE      =          28,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          28,
+ SW      =          26,           3,
+ NW      =          27,           4,
+ NE      =          18,           1,
+ SE      =          21,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          29,
+ SW      =          36,           4,
+ NW      =          10,           4,
+ NE      =          31,           1,
+ SE      =          30,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          30,
+ SW      =          34,           4,
+ NW      =          29,           4,
+ NE      =          32,           1,
+ SE      =          26,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          31,
+ SW      =          29,           3,
+ NW      =          12,           4,
+ NE      =          13,           1,
+ SE      =          32,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          32,
+ SW      =          30,           3,
+ NW      =          31,           4,
+ NE      =          14,           1,
+ SE      =          25,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          33,
+ SW      =          40,           4,
+ NW      =           6,           4,
+ NE      =          35,           1,
+ SE      =          34,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          34,
+ SW      =          38,           4,
+ NW      =          33,           4,
+ NE      =          36,           1,
+ SE      =          30,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          35,
+ SW      =          33,           3,
+ NW      =           8,           4,
+ NE      =           9,           1,
+ SE      =          36,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          36,
+ SW      =          34,           3,
+ NW      =          35,           4,
+ NE      =          10,           1,
+ SE      =          29,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          37,
+ SW      =          24,           4,
+ NW      =           2,           4,
+ NE      =          39,           1,
+ SE      =          38,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          38,
+ SW      =          22,           4,
+ NW      =          37,           4,
+ NE      =          40,           1,
+ SE      =          34,           1
+ /
+ &RGN_LINK_INFO
+ RGNID   =          39,
+ SW      =          37,           3,
+ NW      = 2*4,
+ NE      =           5,           1,
+ SE      =          40,           2
+ /
+ &RGN_LINK_INFO
+ RGNID   =          40,
+ SW      =          38,           3,
+ NW      =          39,           4,
+ NE      =           6,           1,
+ SE      =          33,           1
+ /
+ &PROC_INFO
+ NUM_OF_PROC     =           2
+ /
+ &RGN_MNG_INFO
+ PEID    =           1,
+ NUM_OF_MNG      =          20,
+ MNG_RGNID       =           1,           2,           3,           4,           5,           6,           7,           8,
+            9,          10,          11,          12,          13,          14,          15,          16,          17,          18,
+           19,          20, 2540*-1
+ /
+ &RGN_MNG_INFO
+ PEID    =           2,
+ NUM_OF_MNG      =          20,
+ MNG_RGNID       =          21,          22,          23,          24,          25,          26,          27,          28,
+           29,          30,          31,          32,          33,          34,          35,          36,          37,          38,
+           39,          40, 2540*-1
+ /
