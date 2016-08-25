@@ -49,14 +49,6 @@
 親領域の設定ファイルを\verb|***.parent.conf| 、
 子領域の設定ファイルを\verb|***.child.conf| と表記する。
 
-~~\\
-\proofcomment{青字と赤字の使い分けのポリシーを一貫してください。これは全文書に渡って。。。
-赤字は、「かなり注意」と言う意味と思いますが、青字はどういうポリシーでしょうか?}
-\replycomment{基本的に青字は使わないことにします。使う場合には、青字は〇〇を意味する
-というように、説明を入れるとにします(足立)}
-\proofcomment{了解。最終レビューで確認します。本件明記,残}
-~~\\
-
 \begin{figure}[t]
 \begin{center}
   \includegraphics[width=1.0\hsize]{./figure/nesting_sample.eps}\\
@@ -69,9 +61,13 @@
 \end{figure}
 
 
+~~\\
 \proofcomment{青字と赤字の使い分けのポリシーを一貫してください。これは全文書に渡って。。。
-赤字は、「かなり注意」と言う意味と思いますが、青字はどういうポリシーでしょうか?}\\
-\replycomment{基本的に青字は使わないことにします。使う場合には、青字は〇〇を意味するというように、説明を入れることにします(足立)}
+赤字は、「かなり注意」と言う意味と思いますが、青字はどういうポリシーでしょうか?}
+\replycomment{基本的に青字は使わないことにします。使う場合には、青字は〇〇を意味する
+というように、説明を入れるとにします(足立)}
+\proofcomment{了解。最終レビューで確認します。本件明記,残}
+~~\\
 
 
 \subsection{\SubsecOflineNesting} \label{subsec:nest_offline}
@@ -141,6 +137,7 @@
 子領域の側面境界条件を更新したい時間間隔に設定すること。
 短い時間間隔でデータを出力する場合には、ディスク空き容量に注意されたい。
 
+
 ~~\\
 \proofcomment{上記、HISTORY\_DEFAULT\_TUNIT  = "SEC"と書いてありますが、
 秒しか許されないのでしょうか?}
@@ -156,11 +153,13 @@
   LAND_SFC_TEMP, URBAN_SFC_TEMP, OCEAN_SFC_TEMP
   OCEAN_ALB_LW, OCEAN_ALB_SW, LAND_ALB_LW, LAND_ALB_SW
   OCEAN_TEMP, OCEAN_SFC_Z0M, LAND_TEMP, LAND_WATER
-{\small （親の雲微物理モデルに合わせて出力; 例えばTomita08なら全て）}
+(親の雲微物理モデルに合わせて出力; 例えばTomita08なら全て)
   QV, QC, QR, QI, QS, QG
-{\small （親の雲微物理モデルに合わせて出力; 例えばTomita08なら不要）}
+(親の雲微物理モデルに合わせて出力; 例えばTomita08なら不要)
   NC, NR, NI, NS, NG
 \end{alltt}
+
+\proofcomment{ここの変数、違っていると思うのですが...（足立）、URBANは? T2, Q2は必須?}
 
 設定が完了したら、\verb|scale-rm|を実行して親領域の時間積分計算を行う。
 
