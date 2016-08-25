@@ -14,23 +14,18 @@ DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 # System specific
 MPIEXEC="mpiexec"
 
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+fi
+
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
 x=${array[0]}
 y=${array[1]:-1}
 let xy="${x} * ${y}"
-
-# for Oakleaf-FX
-# if [ ${xy} -gt 480 ]; then
-#    rscgrp="x-large"
-# elif [ ${xy} -gt 372 ]; then
-#    rscgrp="large"
-# elif [ ${xy} -gt 216 ]; then
-#    rscgrp="medium"
-# elif [ ${xy} -gt 12 ]; then
-#    rscgrp="small"
-# else
-#    rscgrp="short"
-# fi
 
 # for AICS-FX10
 if [ ${xy} -gt 96 ]; then
@@ -38,17 +33,18 @@ if [ ${xy} -gt 96 ]; then
 elif [ ${xy} -gt 24 ]; then
    rscgrp="large"
 else
-#   rscgrp="interact"
    rscgrp="large"
 fi
 
-# Generate run.sh
+
+
+
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for FX10
+# ------ For FX10
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
@@ -61,7 +57,6 @@ cat << EOF1 > ./run.sh
 #
 export PARALLEL=16
 export OMP_NUM_THREADS=16
-#export fu08bf=1
 
 EOF1
 
@@ -97,8 +92,8 @@ fi
 cat << EOF2 >> ./run.sh
 
 # run
-${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
+${RUN_INIT}
+${RUN_BIN}
 
 ################################################################################
 EOF2

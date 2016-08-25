@@ -14,6 +14,14 @@ DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 # System specific
 MPIEXEC="mpiexec"
 
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+fi
+
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
 x=${array[0]}
 y=${array[1]:-1}
@@ -22,11 +30,15 @@ let xy="${x} * ${y}"
 # for RICC-FX100
 NNODE=`expr $NMPI / 2`
 
+
+
+
+
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for FX100
+# ------ For FX100
 #
 ################################################################################
 #PJM -L rscunit=gwmpc
@@ -41,7 +53,6 @@ cat << EOF1 > ./run.sh
 #
 export PARALLEL=16
 export OMP_NUM_THREADS=16
-#export fu08bf=1
 
 EOF1
 
@@ -77,8 +88,8 @@ fi
 cat << EOF2 >> ./run.sh
 
 # run
-${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
+${RUN_INIT}
+${RUN_BIN}
 
 ################################################################################
 EOF2

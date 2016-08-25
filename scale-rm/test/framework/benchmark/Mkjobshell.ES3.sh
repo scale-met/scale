@@ -14,15 +14,23 @@ DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 # System specific
 MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"
 
-RUNDIR=`pwd`
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
+fi
 
-# Generate run.sh
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+fi
+
+
+
+
 
 cat << EOF1 > ./run.sh
 #!/bin/sh
 ################################################################################
 #
-# for Earth Simulator 2 (L system)
+# ------ For Earth Simulator 3 (L system)
 #
 ################################################################################
 #PBS -T mpisx
@@ -46,17 +54,31 @@ cat << EOF1 > ./run.sh
 #PBS -O "${RUNDIR}/,0:./"
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+${RUN_INIT}
+${RUN_BIN}
 
 ################################################################################
 EOF1
+
+
+
+
+
+RUNDIR=`pwd`
+
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+fi
 
 cat << EOF2 > ./run_S.sh
 #!/bin/sh
 ################################################################################
 #
-# for Earth Simulator 2 (S system)
+# ------ For Earth Simulator 3 (S system)
 #
 ################################################################################
 #PBS -T mpisx
@@ -75,8 +97,8 @@ cat << EOF2 > ./run_S.sh
 cd ${RUNDIR}
 
 # run
-${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
+${RUN_INIT}
+${RUN_BIN}
 
 ################################################################################
 EOF2

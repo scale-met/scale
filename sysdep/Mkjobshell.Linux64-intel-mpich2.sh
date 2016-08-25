@@ -14,13 +14,23 @@ DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 # System specific
 MPIEXEC="mpirun -np ${TPROC}"
 
-# Generate run.sh
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+fi
+
+
+
+
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR Linux64 & intel C&fortran & mpich2 -----
+# ------ For Linux64 & intel fortran&C & mpich2 -----
 #
 ################################################################################
 export FORT_FMT_RECL=400
@@ -60,8 +70,8 @@ fi
 cat << EOF2 >> ./run.sh
 
 # run
-${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
+${RUN_INIT}
+${RUN_BIN}
 
 ################################################################################
 EOF2

@@ -1,48 +1,63 @@
+################################################################################
 #
-# ------ FOR Linux 64bit & pgi fortran&C & openmpi -----
+# ------ For Linux64 & pgi fortran&C & openmpi -----
 #
+################################################################################
 
-##### for computation
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
 
-FFLAGS_FAST = -Mpreprocess -O2 -fastsse -Mipa=fast,inline -m64 \
-              -Mbyteswapio                       \
-              -Mflushz -pc 64                    \
-              -mcmodel=medium                    \
-              -Msmartalloc=huge -DHEVI_BICGSTAB
+FC  = mpif90
+SFC = pgfortran
+MODDIROPT = -module
 
-#FFLAGS_DEBUG = -Mpreprocess -O2 -m64 \
-#                -pg                             \
-#              -Mbyteswapio                       \
-#              -Mflushz -pc 80                    \
-#              -mcmodel=medium                    \
-#              -Msmartalloc=huge
+FFLAGS_FAST  = -Mpreprocess -m64 -O2 -fastsse -Mipa=fast,inline \
+               -Mbyteswapio -Mflushz -pc 64                     \
+               -mcmodel=medium -Msmartalloc=huge
 
-FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
-               -Mbyteswapio                      \
-               -Ktrap=fp -pc 64                  \
-               -Mbounds -Mstandard -g -traceback \
-               -mcmodel=medium -Minfo
+FFLAGS_DYN   = $(FFLAGS)
 
-FC     = mpif90
-FFLAGS = $(FFLAGS_FAST)
-#FFLAGS = $(FFLAGS_DEBUG)
+FFLAGS_DEBUG = -Mpreprocess -m64 -O2                            \
+               -Mbyteswapio -Mflushz -pc 80                     \
+               -mcmodel=medium -Msmartalloc=huge                \
+               -pg                                              \
+               -DDEBUG
 
-FFLAGS_DYN ?= $(FFLAGS)
 
-MODDIROPT ?= -module
 
-CC     = mpicc
-CFLAGS = -fastsse -mcmodel=medium
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+
+CC  = mpicc
+
+CFLAGS_FAST  = -fastsse -mcmodel=medium
+CFLAGS_DEBUG = -mcmodel=medium
+
+
+
+##### Special setting
+
+FFLAGS_SYSDEPEND = -D__PGI
+CFLAGS_SYSDEPEND = -D__PGI
+
+
+
+##### Linker setting
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
+
+
+
+################################################################################
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I$(NETCDF4)/include
 NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lcurl -lhdf5_hl -lhdf5 -lm -lz
 
 ###### Lapack
-LAPACK_LIBS    ?= -lacml
+LAPACK_LIBS    ?=
+# example: -lacml
 
 ##### for frontend
 INSTALL = install

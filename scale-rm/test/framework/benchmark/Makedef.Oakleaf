@@ -1,6 +1,6 @@
 ################################################################################
 #
-# ------ For FX10 -----
+# ------ For Oakleaf-FX -----
 #
 ################################################################################
 
@@ -22,10 +22,10 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
 FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
                    -Kautoobjstack   \
                    -Ktemparraystack \
-                   -Kinstance=16    \
+                   -Kinstance=8     \
                    -Kswp_strong
 
-FFLAGS_DYN   = $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2 -x100
+FFLAGS_DYN   = $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
 
 FFLAGS_DEBUG = -O0                                                       \
                -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
@@ -72,11 +72,11 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?=
-NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
+NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz -lm
 
 ###### Lapack
 LAPACK_LIBS    ?=
-# example: -SSL2
+# example: -SSL2BLAMP
 
 ##### for frontend
 INSTALL = install
