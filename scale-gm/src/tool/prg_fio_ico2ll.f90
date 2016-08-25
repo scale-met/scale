@@ -16,14 +16,13 @@ program fio_ico2ll
   !
   use mpi
   use scale_precision
+  use mod_io_param
   use scale_stdio
   use scale_prof
-
-  use mod_adm, only: &
-     ADM_LOG_FID,    &
-     ADM_mpi_alive,  &
-     ADM_COMM_WORLD, &
-     ADM_prc_all
+  use scale_process, only: &
+     PRC_LOCAL_COMM_WORLD, &
+     PRC_nprocs,           &
+     PRC_mpi_alive
   use scale_const, only: &
      CONST_UNDEF, &
      CONST_UNDEF4
@@ -31,16 +30,7 @@ program fio_ico2ll
      CALENDAR_daysec2date,   &
      CALENDAR_adjust_daysec
   use mod_fio, only: &
-     FIO_REAL4,       &
-     FIO_REAL8,       &
-     FIO_BIG_ENDIAN,  &
-     FIO_ICOSAHEDRON, &
-     FIO_IGA_LCP,     &
-     FIO_IGA_MLCP,    &
-     FIO_INTEG_FILE,  &
-     FIO_SPLIT_FILE,  &
-     FIO_FREAD,       &
-     headerinfo,      &
+     headerinfo, &
      datainfo
   use mod_mnginfo_light, only: &
      MNG_mnginfo_input,   &
@@ -67,34 +57,35 @@ program fio_ico2ll
   integer,      save :: fmax
 
   !--- NAMELIST
-  integer                   :: glevel              = -1
-  integer                   :: rlevel              = -1
+  integer                :: glevel              = -1
+  integer                :: rlevel              = -1
   character(len=H_SHORT) :: grid_topology       = 'ICOSAHEDRON'
-                                                   ! 'LCP'
-                                                   ! 'MLCP'
-  logical                   :: complete            = .false.
+                                                ! 'LCP'
+                                                ! 'MLCP'
+  logical                :: complete            = .false.
   character(len=H_LONG)  :: mnginfo             = ''
   character(len=H_LONG)  :: layerfile_dir       = ''
   character(len=H_LONG)  :: llmap_base          = ''
   character(len=H_LONG)  :: topo_base           = ''
   character(len=H_LONG)  :: infile(flim)        = ''
-  integer                   :: step_str            = 1
-  integer                   :: step_end            = max_nstep
+  integer                :: step_str            = 1
+  integer                :: step_end            = max_nstep
   character(len=H_LONG)  :: outfile_dir         = '.'
   character(len=H_SHORT) :: outfile_prefix      = ''
-  integer                   :: outfile_rec         = 1
-  logical                   :: lon_swap            = .false.
-  logical                   :: use_NearestNeighbor = .false.
-  logical                   :: devide_template     = .false.
-  logical                   :: output_grads        = .true.
-  logical                   :: output_gtool        = .false.
-  logical                   :: output_netcdf       = .false.   ! [add] 13-04-18
-  logical                   :: datainfo_nodep_pe   = .true.    ! <- can be .true. if data header do not depend on pe.
+  integer                :: outfile_rec         = 1
+  logical                :: lon_swap            = .false.
+  logical                :: use_NearestNeighbor = .false.
+  logical                :: devide_template     = .false.
+  logical                :: output_grads        = .true.
+  logical                :: output_gtool        = .false.
+  logical                :: output_netcdf       = .false.   ! [add] 13-04-18
+  logical                :: datainfo_nodep_pe   = .true.    ! <- can be .true. if data header do not depend on pe.
   character(len=H_SHORT) :: selectvar(max_nvar) = ''
-  integer                   :: nlim_llgrid         = 10000000  ! limit number of lat-lon grid in 1 ico region
-  logical                   :: comm_smallchunk     = .true.    ! apply MPI_Allreduce for each k-layer?
+  integer                :: nlim_llgrid         = 10000000  ! limit number of lat-lon grid in 1 ico region
+  logical                :: comm_smallchunk     = .true.    ! apply MPI_Allreduce for each k-layer?
+  logical                :: dcmip2016           = .false.   ! CF mode for dcmip2016
 
-  logical                   :: help = .false.
+  logical                :: help = .false.
 
   namelist /OPTION/ glevel,              &
                     rlevel,              &
@@ -120,15 +111,16 @@ program fio_ico2ll
                     selectvar,           &
                     nlim_llgrid,         &
                     comm_smallchunk,     &
+                    dcmip2016,           &
                     help
 
   !-----------------------------------------------------------------------------
   character(len=H_LONG) :: infname   = ""
   character(len=H_LONG) :: outbase   = ""
   character(len=H_LONG) :: layerfile = ""
-  integer                  :: fmode
-  integer                  :: gtopology
-  logical                  :: allvar = .true.
+  integer               :: fmode
+  integer               :: gtopology
+  logical               :: allvar = .true.
 
   ! ll grid coordinate
   integer              :: imax, jmax
@@ -152,26 +144,29 @@ program fio_ico2ll
   integer, allocatable :: ifid_topo(:)
   real(8), allocatable :: topo(:,:,:)
 
-  integer                                :: num_of_data
-  integer                                :: nvar
+  integer                             :: num_of_data
+  integer                             :: nvar
   character(len=H_SHORT), allocatable :: var_name(:)
   character(len=H_MID),   allocatable :: var_desc(:)
   character(len=H_SHORT), allocatable :: var_unit(:)
+  character(len=H_SHORT)              :: var_name_nc
+  character(len=H_MID)                :: var_desc_nc
+  character(len=H_SHORT)              :: var_unit_nc
   character(len=H_SHORT), allocatable :: var_layername(:)
-  integer,                   allocatable :: var_datatype(:)
-  integer,                   allocatable :: var_nlayer(:)
-  integer,                   allocatable :: var_nstep(:)
-  integer(8),                allocatable :: var_time_str(:)
-  integer(8),                allocatable :: var_dt(:)
-  logical,                   allocatable :: var_xi2z(:)
-  real(8),                   allocatable :: var_ztop(:)
-  real(8),                   allocatable :: var_zgrid(:,:)
+  integer,                allocatable :: var_datatype(:)
+  integer,                allocatable :: var_nlayer(:)
+  integer,                allocatable :: var_nstep(:)
+  integer(8),             allocatable :: var_time_str(:)
+  integer(8),             allocatable :: var_dt(:)
+  logical,                allocatable :: var_xi2z(:)
+  real(8),                allocatable :: var_ztop(:)
+  real(8),                allocatable :: var_zgrid(:,:)
   ! header
-  character(len=16),         allocatable :: var_gthead(:,:)
+  character(len=16),      allocatable :: var_gthead(:,:)
   ! NetCDF handler
-  type(netcdf_handler)                   :: nc              ! [add] 13-04-18
-  character(len=1024)                    :: nc_time_units   ! [add] 13-04-18
-  character(len=4)                       :: date_str_tmp(6) ! [add] 13-04-18
+  type(netcdf_handler)                :: nc              ! [add] 13-04-18
+  character(len=1024)                 :: nc_time_units   ! [add] 13-04-18
+  character(len=4)                    :: date_str_tmp(6) ! [add] 13-04-18
 
   ! ico data
   integer              :: GALL
@@ -196,23 +191,21 @@ program fio_ico2ll
   integer          :: pstr, pend, pp
 
   character(len=H_LONG) :: fname
-  character(len=20)        :: tmpl
-  character(len=16)        :: gthead(64)
-  integer(8)               :: nowsec
-  integer(8)               :: recsize ! [mod] 12-04-19 H.Yashiro
-  integer                  :: kmax, num_of_step, step, date_str(6)
+  character(len=20)     :: tmpl
+  character(len=16)     :: gthead(64)
+  integer(8)            :: nowsec
+  integer(8)            :: recsize ! [mod] 12-04-19 H.Yashiro
+  integer               :: kmax, num_of_step, step, date_str(6)
 
-  integer :: histday
-  real(8) :: histsec
-  real(8) :: histms
-  integer :: offset_year
+  integer :: histday, offset_year
+  real(8) :: histsec, histms
 
   logical :: addvar
   logical :: exist_topo
   integer :: ntemp
   real(8) :: wtemp
   integer :: fid, did, ofid, irec, ierr
-  integer :: v, t, p, l, k, n, i, j
+  integer :: v, t, p, l, k, n, i, j, rgnid
   real(8) :: pi
   !=============================================================================
 
@@ -234,11 +227,11 @@ program fio_ico2ll
   endif
 
   if ( grid_topology=="ICOSAHEDRON" ) then
-     gtopology = FIO_ICOSAHEDRON
+     gtopology = IO_ICOSAHEDRON
   elseif( grid_topology=="LCP" ) then
-     gtopology = FIO_IGA_LCP
+     gtopology = IO_IGA_LCP
   elseif( grid_topology=="MLCP" ) then
-     gtopology = FIO_IGA_MLCP
+     gtopology = IO_IGA_MLCP
   else
      write(*,*) "Unknown type of Grid toporogy:",grid_topology
      stop
@@ -272,10 +265,10 @@ program fio_ico2ll
 
   !--- prepare region infomation
   if (complete) then ! all region
-    fmode = FIO_INTEG_FILE
+    fmode = IO_INTEG_FILE
     call MNG_mnginfo_noinput( rlevel )
   else               ! region specified by mnginfo
-    fmode = FIO_SPLIT_FILE
+    fmode = IO_SPLIT_FILE
     call MNG_mnginfo_input( rlevel, trim(mnginfo) )
   endif
 
@@ -284,28 +277,28 @@ program fio_ico2ll
   call MPI_Comm_size(MPI_COMM_WORLD, prc_nall,   ierr)
   call MPI_Comm_rank(MPI_COMM_WORLD, prc_myrank, ierr)
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  ADM_mpi_alive  = .true.
-  ADM_COMM_WORLD = MPI_COMM_WORLD
-  ADM_prc_all    = prc_nall
+  PRC_mpi_alive        = .true.
+  PRC_LOCAL_COMM_WORLD = MPI_COMM_WORLD
+  PRC_nprocs           = prc_nall
 
   call PROF_rapstart('FIO_ICO2LL_MPI')
 
-  ! borrow ADM_LOG_FID to share log file id between other module
-  ADM_LOG_FID = IO_get_available_fid()
+  ! borrow IO_FID_LOG to share log file id between other module
+  IO_FID_LOG = IO_get_available_fid()
   if (output_netcdf) then
-     call NETCDF_set_logfid( ADM_LOG_FID )
+     call NETCDF_set_logfid( IO_FID_LOG )
   endif
 
   write(rankstr,'(I6.6)') prc_myrank
-  open(ADM_LOG_FID, file='msg.pe'//trim(rankstr) )
-  write(ADM_LOG_FID,*) "+++ Parallel Execution, Use MPI"
+  open(IO_FID_LOG, file='LOG_ico2ll.pe'//trim(rankstr) )
+  write(IO_FID_LOG,*) "+++ Parallel Execution, Use MPI"
 
   PALL_global = MNG_PALL
   LALL_global = 10 * (4**rlevel)
   LALL_local  = LALL_global / PALL_global
 
   if ( mod( PALL_global, prc_nall) /= 0 ) then
-     write(ADM_LOG_FID,*) "*** Invalid processor number, STOP:", PALL_global, prc_nall
+     write(IO_FID_LOG,*) "*** Invalid processor number, STOP:", PALL_global, prc_nall
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
      call MPI_FINALIZE(ierr)
      stop
@@ -314,18 +307,18 @@ program fio_ico2ll
   prc_nlocal = PALL_global / prc_nall
   pstr       = prc_myrank*prc_nlocal + 1
   pend       = prc_myrank*prc_nlocal + prc_nlocal
-  write(ADM_LOG_FID,*) "*** Number of Total .pexxxxxx files: ", PALL_global
-  write(ADM_LOG_FID,*) "*** Number of PE to packing precess: ", prc_nall
-  write(ADM_LOG_FID,*) "*** The rank of this process       : ", prc_myrank
-  write(ADM_LOG_FID,*) "*** Number of files for this rank  : ", prc_nlocal
-  write(ADM_LOG_FID,*) "*** file ID to pack                : ", pstr-1, " - ", pend-1
+  write(IO_FID_LOG,*) "*** Number of Total .pexxxxxx files: ", PALL_global
+  write(IO_FID_LOG,*) "*** Number of PE to packing precess: ", prc_nall
+  write(IO_FID_LOG,*) "*** The rank of this process       : ", prc_myrank
+  write(IO_FID_LOG,*) "*** Number of files for this rank  : ", prc_nlocal
+  write(IO_FID_LOG,*) "*** file ID to pack                : ", pstr-1, " - ", pend-1
 
   !--- setup
   call fio_syscheck()
 
   !#########################################################
 
-  write(ADM_LOG_FID,*) '*** llmap read start'
+  write(IO_FID_LOG,*) '*** llmap read start'
   call PROF_rapstart('READ LLMAP')
 
   !--- Read lat-lon grid information
@@ -365,8 +358,9 @@ program fio_ico2ll
      pp = p - pstr + 1
 
      do l = 1, LALL_local
-        call IO_make_idstr(fname,trim(llmap_base),'rgn',MNG_prc_tab(l,p)-1)
-        write(ADM_LOG_FID,*) 'l=', MNG_prc_tab(l,p)
+        rgnid = MNG_prc_tab(l,p)
+        call IO_make_idstr(fname,trim(llmap_base),'rgn',rgnid,isrgn=.true.)
+        write(IO_FID_LOG,*) 'p=', p, 'l=', l, 'rgnid=', rgnid
 
         fid = IO_get_available_fid()
         open(fid,file=trim(fname),form='unformatted',status='old',iostat=ierr)
@@ -427,11 +421,11 @@ program fio_ico2ll
   enddo
 
   call PROF_rapend('READ LLMAP')
-  write(ADM_LOG_FID,*) '*** llmap read end'
+  write(IO_FID_LOG,*) '*** llmap read end'
 
   !#########################################################
 
-  write(ADM_LOG_FID,*) '*** icodata read start'
+  write(IO_FID_LOG,*) '*** icodata read start'
   call PROF_rapstart('OPEN ICODATA')
 
   ! Read icodata information (all process)
@@ -441,7 +435,7 @@ program fio_ico2ll
 
   do p = pstr, pend
      pp = p - pstr + 1
-     write(ADM_LOG_FID,*) 'p=', pp
+     write(IO_FID_LOG,*) 'p=', pp
 
      if (complete) then ! all region
         infname = trim(infile(1))//'.rgnall'
@@ -451,17 +445,17 @@ program fio_ico2ll
      prc_tab_C(1:LALL_local) = MNG_prc_tab(1:LALL_local,p)-1
 
      if ( pp == 1 ) then
-        call fio_put_commoninfo( fmode,          &
-                                 FIO_BIG_ENDIAN, &
-                                 gtopology,      &
-                                 glevel,         &
-                                 rlevel,         &
-                                 LALL_local,     &
-                                 prc_tab_C       )
+        call fio_put_commoninfo( fmode,         &
+                                 IO_BIG_ENDIAN, &
+                                 gtopology,     &
+                                 glevel,        &
+                                 rlevel,        &
+                                 LALL_local,    &
+                                 prc_tab_C      )
      endif
 
      call fio_register_file(ifid(pp),trim(infname))
-     call fio_fopen(ifid(pp),FIO_FREAD)
+     call fio_fopen(ifid(pp),IO_FREAD)
 
      if ( datainfo_nodep_pe .AND. pp > 1 ) then ! assume that datainfo do not depend on pe.
         call fio_read_pkginfo          ( ifid(pp) )
@@ -474,11 +468,11 @@ program fio_ico2ll
   enddo
 
   call PROF_rapend('OPEN ICODATA')
-  write(ADM_LOG_FID,*) '*** icodata read end'
+  write(IO_FID_LOG,*) '*** icodata read end'
 
   !#########################################################
 
-  write(ADM_LOG_FID,*) '*** header check start'
+  write(IO_FID_LOG,*) '*** header check start'
   call PROF_rapstart('CHECK HEADER')
 
   !--- check all header
@@ -572,12 +566,12 @@ program fio_ico2ll
               enddo
 
               if ( dinfo%layername(1:5) == 'ZSALL' ) then ! check Xi2Z
-                 write(ADM_LOG_FID,*) '*** Try to convert Xi -> Z : ', dinfo%varname
+                 write(IO_FID_LOG,*) '*** Try to convert Xi -> Z : ', dinfo%varname
                  var_xi2z(nvar) = .true.
                  var_ztop(nvar) = 0.5D0 * ( var_zgrid(kmax-1,nvar) + var_zgrid(kmax,nvar) )
 
                  if ( kmax == dinfo%num_of_layer+2 ) then ! trim HALO
-                    write(ADM_LOG_FID,*) '*** trim HALO: ', trim(dinfo%layername)
+                    write(IO_FID_LOG,*) '*** trim HALO: ', trim(dinfo%layername)
                     do k = 1, kmax-2
                        var_zgrid(k,nvar) = var_zgrid(k+1,nvar)
                     enddo
@@ -595,8 +589,8 @@ program fio_ico2ll
   GALL = ( (2**(glevel-rlevel))+2 ) &
        * ( (2**(glevel-rlevel))+2 )
 
-  write(ADM_LOG_FID,*) '*** get variable informations'
-  write(ADM_LOG_FID,*) 'num_of_data    : ', num_of_data
+  write(IO_FID_LOG,*) '*** get variable informations'
+  write(IO_FID_LOG,*) 'num_of_data    : ', num_of_data
 
   if ( nvar == 0 ) then
      write(*,*) 'No variables to convert. Finish.'
@@ -604,11 +598,11 @@ program fio_ico2ll
   endif
 
   call PROF_rapend('CHECK HEADER')
-  write(ADM_LOG_FID,*) '*** header check end'
+  write(IO_FID_LOG,*) '*** header check end'
 
   !#########################################################
 
-  write(ADM_LOG_FID,*) '*** topography read start'
+  write(IO_FID_LOG,*) '*** topography read start'
   call PROF_rapstart('READ TOPOGRAPHY')
 
   call PROF_rapstart('+Communication')
@@ -637,7 +631,7 @@ program fio_ico2ll
 
   if ( topo_base == '' ) then
 
-     write(ADM_LOG_FID,*) '*** topography file is not specified. no vertical conversion.'
+     write(IO_FID_LOG,*) '*** topography file is not specified. no vertical conversion.'
      var_xi2z(:) = .false. ! reset flag
 
   else
@@ -652,7 +646,7 @@ program fio_ico2ll
 
      do p = pstr, pend
         pp = p - pstr + 1
-        write(ADM_LOG_FID,*) 'p=', pp
+        write(IO_FID_LOG,*) 'p=', pp
 
         prc_tab_C(1:LALL_local) = MNG_prc_tab(1:LALL_local,p)-1
 
@@ -663,7 +657,7 @@ program fio_ico2ll
         endif
 
         call fio_register_file(ifid_topo(pp),trim(infname))
-        call fio_fopen(ifid_topo(pp),FIO_FREAD)
+        call fio_fopen(ifid_topo(pp),IO_FREAD)
 
         if ( datainfo_nodep_pe .AND. pp > 1 ) then ! assume that datainfo do not depend on pe.
            call fio_read_pkginfo          ( ifid_topo(pp) )
@@ -684,12 +678,12 @@ program fio_ico2ll
               exist_topo = .true.
 
               !--- read from pe000xx file
-              if ( dinfo%datatype == FIO_REAL4 ) then
+              if ( dinfo%datatype == IO_REAL4 ) then
 
                  call fio_read_data(ifid_topo(pp),did,data4allrgn(:))
                  data8allrgn(:) = real(data4allrgn(:),kind=8)
 
-              elseif( dinfo%datatype == FIO_REAL8 ) then
+              elseif( dinfo%datatype == IO_REAL8 ) then
 
                  call fio_read_data(ifid_topo(pp),did,data8allrgn(:))
 
@@ -700,7 +694,7 @@ program fio_ico2ll
         enddo
 
         if ( .NOT. exist_topo ) then
-           write(ADM_LOG_FID,*) '*** topography data topo is not found in ', trim(infname), " ! STOP."
+           write(IO_FID_LOG,*) '*** topography data topo is not found in ', trim(infname), " ! STOP."
            stop
         endif
 
@@ -715,10 +709,10 @@ program fio_ico2ll
   endif
 
   call PROF_rapend('READ TOPOGRAPHY')
-  write(ADM_LOG_FID,*) '*** topography read end'
+  write(IO_FID_LOG,*) '*** topography read end'
 
-  write(ADM_LOG_FID,*) '########## Variable List ########## '
-  write(ADM_LOG_FID,*) 'ID |NAME            |STEPS|Layername       |START FROM         |DT [sec]|Xi2Z?'
+  write(IO_FID_LOG,*) '########## Variable List ########## '
+  write(IO_FID_LOG,*) 'ID |NAME            |STEPS|Layername       |START FROM         |DT [sec]|Xi2Z?'
   do v = 1, nvar
      histday     = 0
      histsec     = real(var_time_str(v),kind=RP)
@@ -733,13 +727,13 @@ program fio_ico2ll
                                 offset_year  ) ! [IN]
 
      write(tmpl,'(I4.4,"/",I2.2,"/",I2.2,1x,I2.2,":",I2.2,":",I2.2)') date_str(:)
-     write(ADM_LOG_FID,'(1x,I3,A1,A16,A1,I5,A1,A16,A1,A19,A1,I8,A1,L5)') &
+     write(IO_FID_LOG,'(1x,I3,A1,A16,A1,I5,A1,A16,A1,A19,A1,I8,A1,L5)') &
               v,'|',var_name(v),'|',var_nstep(v),'|',var_layername(v),'|', tmpl,'|', var_dt(v), '|', var_xi2z(v)
   enddo
 
   !#########################################################
 
-  write(ADM_LOG_FID,*) '*** convert start : PaNDa format to lat-lon data'
+  write(IO_FID_LOG,*) '*** convert start : PaNDa format to lat-lon data'
   call PROF_rapstart('CONVERT')
 
   !--- start weighting summation
@@ -770,9 +764,9 @@ program fio_ico2ll
         if (output_grads) then ! GrADS Format
 
            call PROF_rapstart('+FILE O GRADS')
-           write(ADM_LOG_FID,*)
-           write(ADM_LOG_FID,*) 'Output: ', trim(outbase)//'.grd', recsize, imax, jmax, kmax
-           write(*          ,*) 'Output: ', trim(outbase)//'.grd'
+           write(IO_FID_LOG,*)
+           write(IO_FID_LOG,*) 'Output: ', trim(outbase)//'.grd', recsize, imax, jmax, kmax
+           write(*         ,*) 'Output: ', trim(outbase)//'.grd'
 
            open( unit   = ofid,                  &
                  file   = trim(outbase)//'.grd', &
@@ -783,7 +777,7 @@ program fio_ico2ll
            irec = 1
 
            if ( outfile_rec > 1 ) then
-              write(ADM_LOG_FID,*) 'Change output record position : start from step ', outfile_rec
+              write(IO_FID_LOG,*) 'Change output record position : start from step ', outfile_rec
               irec = outfile_rec
            endif
            call PROF_rapend  ('+FILE O GRADS')
@@ -791,9 +785,9 @@ program fio_ico2ll
         elseif(output_gtool) then ! GTOOL3 Format
 
            call PROF_rapstart('+FILE O GTOOL')
-           write(ADM_LOG_FID,*)
-           write(ADM_LOG_FID,*) 'Output: ', trim(outbase)//'.gt3', recsize, imax, jmax, kmax
-           write(*          ,*) 'Output: ', trim(outbase)//'.gt3'
+           write(IO_FID_LOG,*)
+           write(IO_FID_LOG,*) 'Output: ', trim(outbase)//'.gt3', recsize, imax, jmax, kmax
+           write(*         ,*) 'Output: ', trim(outbase)//'.gt3'
 
            open( unit   = ofid,                  &
                  file   = trim(outbase)//'.gt3', &
@@ -821,9 +815,9 @@ program fio_ico2ll
         elseif(output_netcdf) then ! NetCDF format [add] 13-04-18 C.Kodama
 
            call PROF_rapstart('+FILE O NETCDF')
-           write(ADM_LOG_FID,*)
-           write(ADM_LOG_FID,*) 'Output: ', trim(outbase)//'.nc'
-           write(*          ,*) 'Output: ', trim(outbase)//'.nc'
+           write(IO_FID_LOG,*)
+           write(IO_FID_LOG,*) 'Output: ', trim(outbase)//'.nc'
+           write(*         ,*) 'Output: ', trim(outbase)//'.nc'
 
            histday     = 0
            histsec     = real(var_time_str(v),kind=RP)
@@ -841,7 +835,7 @@ program fio_ico2ll
               write( date_str_tmp(j), '(I4)' ) date_str(j)
               date_str_tmp(j) = adjustl( date_str_tmp(j) )
               if ( j == 1 ) then
-                 write(date_str_tmp(j),'(2A)') ('0',i=1,4-len_trim(date_str_tmp(j))), trim(date_str_tmp(j))
+                 write(date_str_tmp(j),'(4A)') ('0',i=1,4-len_trim(date_str_tmp(j))), trim(date_str_tmp(j))
               else
                  write(date_str_tmp(j),'(2A)') ('0',i=1,2-len_trim(date_str_tmp(j))), trim(date_str_tmp(j))
               endif
@@ -854,7 +848,7 @@ program fio_ico2ll
                                            ':',              trim(date_str_tmp(5)), &
                                            ':',              trim(date_str_tmp(6))
 
-           write(ADM_LOG_FID,*) '  nc_time_units = ', trim(nc_time_units)
+           write(IO_FID_LOG,*) '  nc_time_units = ', trim(nc_time_units)
 
            allocate( lon_tmp(imax) )
 
@@ -863,6 +857,17 @@ program fio_ico2ll
               lon_tmp(imax/2+1:imax) = ( lon(1:imax/2) + 2*pi ) * 180.D0 / pi
            else
               lon_tmp(:) = lon(:) * 180.D0 / pi
+           endif
+
+           if ( dcmip2016 ) then
+              call cf_desc_unit( var_name_nc, & ! [OUT]
+                                 var_desc_nc, & ! [OUT]
+                                 var_unit_nc, & ! [OUT]
+                                 var_name(v)  ) ! [IN]
+           else
+              var_name_nc = trim(var_name(v))
+              var_desc_nc = trim(var_desc(v))
+              var_unit_nc = trim(var_unit(v))
            endif
 
            call netcdf_open_for_write( nc,                                       & ! [OUT]
@@ -879,9 +884,9 @@ program fio_ico2ll
                                        time        = (/ (real(t-1,8)*real(var_dt(v),8)/real(60,8),t=1,num_of_step) /), & ! [IN]
                                        lev_units   ='m',                         & ! [IN]
                                        time_units  = trim(nc_time_units),        & ! [IN]
-                                       var_name    = trim(var_name(v)),          & ! [IN]
-                                       var_desc    = trim(var_desc(v)),          & ! [IN]
-                                       var_units   = trim(var_unit(v)),          & ! [IN]
+                                       var_name    = trim(var_name_nc),          & ! [IN]
+                                       var_desc    = trim(var_desc_nc),          & ! [IN]
+                                       var_units   = trim(var_unit_nc),          & ! [IN]
                                        var_missing = CONST_UNDEF4                 ) ! [IN]
 
            deallocate(lon_tmp)
@@ -905,8 +910,8 @@ program fio_ico2ll
         !--- open output file (every timestep)
         if (devide_template) then
            tmpl = sec2template(nowsec)
-           write(ADM_LOG_FID,*)
-           write(ADM_LOG_FID,*) 'Output: ', trim(outbase)//'.'//trim(tmpl)//'.grd'
+           write(IO_FID_LOG,*)
+           write(IO_FID_LOG,*) 'Output: ', trim(outbase)//'.'//trim(tmpl)//'.grd'
 
            open( unit   = ofid,             &
                  file   = trim(outbase)//'.'//trim(tmpl)//'.grd', &
@@ -936,11 +941,11 @@ program fio_ico2ll
            endif
 
            !--- read from pe000xx file
-           if ( var_datatype(v) == FIO_REAL4 ) then
+           if ( var_datatype(v) == IO_REAL4 ) then
 
               call fio_read_data(ifid(pp),did,data4allrgn(:))
 
-           elseif( var_datatype(v) == FIO_REAL8 ) then
+           elseif( var_datatype(v) == IO_REAL8 ) then
 
               call fio_read_data(ifid(pp),did,data8allrgn(:))
 
@@ -956,10 +961,10 @@ program fio_ico2ll
            do l = 1, LALL_local
               if ( t == 1 ) then
                  if ( mod(l,10) == 0 ) then
-                    write(ADM_LOG_FID,'(1x,I6.6)')              MNG_prc_tab(l,p)
-                    write(ADM_LOG_FID,'(A)',advance='no')       '          '
+                    write(IO_FID_LOG,'(1x,I6.6)')              MNG_prc_tab(l,p)
+                    write(IO_FID_LOG,'(A)',advance='no')       '          '
                  else
-                    write(ADM_LOG_FID,'(1x,I6.6)',advance='no') MNG_prc_tab(l,p)
+                    write(IO_FID_LOG,'(1x,I6.6)',advance='no') MNG_prc_tab(l,p)
                  endif
               endif
 
@@ -968,8 +973,8 @@ program fio_ico2ll
                  call PROF_rapstart('+Xi2Z')
 
                  if ( var_ztop(v) < 0.D0 ) then
-                    write(ADM_LOG_FID,*) '*** Ztop is not specified.'
-                    write(ADM_LOG_FID,*) '*** It will be determined by the vertical axis info in ZSALL**.txt.'
+                    write(IO_FID_LOG,*) '*** Ztop is not specified.'
+                    write(IO_FID_LOG,*) '*** It will be determined by the vertical axis info in ZSALL**.txt.'
                     stop
                  endif
 
@@ -1033,7 +1038,7 @@ program fio_ico2ll
 
            enddo ! region LOOP
 
-           if ( t==1 ) write(ADM_LOG_FID,*)
+           if ( t==1 ) write(IO_FID_LOG,*)
 
         enddo ! PE LOOP
 
@@ -1089,7 +1094,7 @@ program fio_ico2ll
            else
               write(var_gthead(25,v),'(I16)') int( nowsec/60,kind=4 )
            endif
-           write(var_gthead(27,v),'(A16)') calendar_ss2cc_gtool(nowsec)
+           write(var_gthead(27,v),'(A16)') CALENDAR_ss2cc_gtool(nowsec)
            gthead(:) = var_gthead(:,v)
 
            write(ofid) gthead(:)
@@ -1112,7 +1117,7 @@ program fio_ico2ll
            close(ofid)
         endif
 
-        write(ADM_LOG_FID,*) ' +append step:', step
+        write(IO_FID_LOG,*) ' +append step:', step
 
         endif ! ##### master?
 
@@ -1170,7 +1175,7 @@ program fio_ico2ll
   enddo ! PE LOOP
 
   call PROF_rapend('CONVERT')
-  write(ADM_LOG_FID,*) '*** convert finished! '
+  write(IO_FID_LOG,*) '*** convert finished! '
 
   call PROF_rapend('FIO_ICO2LL_MPI')
   call PROF_rapreport
@@ -1178,15 +1183,13 @@ program fio_ico2ll
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   call MPI_FINALIZE(ierr)
 
-  close(ADM_LOG_FID)
+  close(IO_FID_LOG)
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> read option
   subroutine readoption
-    use mod_misc, only : &
-      IO_get_available_fid
     use mod_tool_option, only: &
       OPT_convert, &
       OPT_fid
@@ -1274,15 +1277,12 @@ contains
           form   = 'formatted', &
           status = 'replace'    )
 
-       ! S.Iga051226=>
        if ( devide_template ) then
-          ! W. Yanase 081008   use %h2 instead of %f2 for GrADS template
           write(fid,'(A)') 'DSET ^'//trim(outfile)//'.%y4-%m2-%d2-%h2h%n2m'//'.grd'
           write(fid,'(A)') 'OPTIONS TEMPLATE '
        else
           write(fid,'(A)') 'DSET ^'//trim(outfile)//'.grd'
        endif
-       ! S.Iga051226<=
 
        write(fid,'(A)')      'TITLE NICAM data output'
        write(fid,'(A)')      'OPTIONS BIG_ENDIAN '
@@ -1307,21 +1307,21 @@ contains
           write(fid,'(10(1x,F9.2))') (alt(k),k=1,kmax)
        endif
 
-       s1 = trim( sec2initplate(time_str) ) ! S.Iga060508
-       s2 = trim( timeincrement(int(dt)) )  ! S.Iga060508
+       s1 = trim( sec2initplate(time_str) )
+       s2 = trim( timeincrement(int(dt)) )
        write(fid,'(A,I5,2A,1x,A)') 'TDEF ',nstep, ' LINEAR ', trim(s1), trim(s2)
 
-       write(fid,'(a,i5)') 'VARS ', 1
+       write(fid,'(A,I5)') 'VARS ', 1
        if ( kmax == 1 ) then
-          write(fid,'(a,2i5,1x,a)') trim(varname), 0, 99, 'NONE'
+          write(fid,'(A,2I5,1x,A)') trim(varname), 0,    99, 'NONE'
        else
-          write(fid,'(a,2i5,1x,a)') trim(varname), kmax, 99, 'NONE'
+          write(fid,'(A,2I5,1x,A)') trim(varname), kmax, 99, 'NONE'
        endif
-       write(fid,'(a)') 'ENDVARS '
+       write(fid,'(A)') 'ENDVARS '
     close(fid)
 
-    write(ADM_LOG_FID,'(A,A)') 'Generate ',trim(outfile)//'.ctl'
-    write(*          ,'(A,A)') 'Generate ',trim(outfile)//'.ctl'
+    write(IO_FID_LOG,'(A,A)') 'Generate ',trim(outfile)//'.ctl'
+    write(*         ,'(A,A)') 'Generate ',trim(outfile)//'.ctl'
 
   end subroutine makegradsctl
 
@@ -1343,20 +1343,20 @@ contains
       lon_swap     )
     implicit none
 
-    character(len=16),         intent(out) :: gthead(64)
-    character(len=H_LONG),  intent( in) :: outfile_dir
-    character(len=H_SHORT), intent( in) :: varname
-    character(len=H_MID),   intent( in) :: description
-    character(len=H_SHORT), intent( in) :: unit
-    character(len=H_SHORT), intent( in) :: layername
-    integer,                   intent( in) :: imax
-    integer,                   intent( in) :: jmax
-    integer,                   intent( in) :: kmax
-    real(8),                   intent( in) :: lon(imax)
-    real(8),                   intent( in) :: lat(jmax)
-    real(8),                   intent( in) :: alt(kmax)
-    integer(8),                intent( in) :: dt
-    logical,                   intent( in) :: lon_swap
+    character(len=16),      intent(out) :: gthead(64)
+    character(len=H_LONG),  intent(in)  :: outfile_dir
+    character(len=H_SHORT), intent(in)  :: varname
+    character(len=H_MID),   intent(in)  :: description
+    character(len=H_SHORT), intent(in)  :: unit
+    character(len=H_SHORT), intent(in)  :: layername
+    integer,                intent(in)  :: imax
+    integer,                intent(in)  :: jmax
+    integer,                intent(in)  :: kmax
+    real(8),                intent(in)  :: lon(imax)
+    real(8),                intent(in)  :: lat(jmax)
+    real(8),                intent(in)  :: alt(kmax)
+    integer(8),             intent(in)  :: dt
+    logical,                intent(in)  :: lon_swap
 
     character(len=16) :: axhead(64)
     character(len=16) :: hitem
@@ -1532,6 +1532,11 @@ contains
        write(axhead(41),'(ES16.7)') real(maxval(alt),kind=4)
        write(axhead(42),'(ES16.7)')  1000.E0
        write(axhead(43),'(ES16.7)') 10000.E0
+       if ( layername(1:5) == "STDPL" ) then
+          write(axhead(44),'(I16)'  ) -2
+       else
+          write(axhead(44),'(I16)'  ) 1
+       endif
        write(axhead(64),'(I16)'  ) kmax
 
        write(fid) axhead
@@ -1540,7 +1545,7 @@ contains
        close(fid)
     endif
 
-
+    return
   end subroutine makegtoolheader
 
   !-----------------------------------------------------------------------------
@@ -1620,7 +1625,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calendar, sec. -> character (YYYYMMDD HHMMSS)
-  function calendar_ss2cc_gtool(datesec) result(template)
+  function CALENDAR_ss2cc_gtool(datesec) result(template)
     implicit none
 
     integer(8)        :: datesec
@@ -1643,7 +1648,7 @@ contains
 
     write (template,'(i4.4,i2.2,i2.2,1x,i2.2,i2.2,i2.2,1x)') (d(i),i=1,6)
 
-  end function calendar_ss2cc_gtool
+  end function CALENDAR_ss2cc_gtool
 
   !-----------------------------------------------------------------------------
   subroutine VINTRPL_Xi2Z( &
@@ -1760,5 +1765,156 @@ contains
 
     return
   end subroutine VINTRPL_Xi2Z
+
+  !-----------------------------------------------------------------------------
+  subroutine cf_desc_unit( &
+      var_name_nc, &
+      var_desc_nc, &
+      var_unit_nc, &
+      var_name     )
+    implicit none
+
+    character(len=H_SHORT), intent(out) :: var_name_nc
+    character(len=H_MID),   intent(out) :: var_desc_nc
+    character(len=H_SHORT), intent(out) :: var_unit_nc
+    character(len=H_SHORT), intent(in)  :: var_name
+    !---------------------------------------------------------------------------
+
+    select case( trim(var_name) )
+    case ( 'U', 'u' )
+       var_name_nc = "U"
+       var_desc_nc = "Zonal wind"
+       var_unit_nc = "m/s"
+    case ( 'V', 'v' )
+       var_name_nc = "V"
+       var_desc_nc = "Meridional wind"
+       var_unit_nc = "m/s"
+    case ( 'W', 'w' )
+       var_name_nc = "W"
+       var_desc_nc = "Vertical velocity"
+       var_unit_nc = "m/s"
+    case ( 'PRS', 'prs' )
+       var_name_nc = "P"
+       var_desc_nc = "Pressure"
+       var_unit_nc = "Pa"
+    case ( 'T', 't' )
+       var_name_nc = "T"
+       var_desc_nc = "Temperature"
+       var_unit_nc = "K"
+    case ( 'PS', 'ps' )
+       var_name_nc = "PS"
+       var_desc_nc = "Surface pressure"
+       var_unit_nc = "Pa"
+    case ( 'U500', 'u500' )
+       var_name_nc = "U500"
+       var_desc_nc = "Zonal wind at 500 hPa"
+       var_unit_nc = "m/s"
+    case ( 'U850', 'u850' )
+       var_name_nc = "U850"
+       var_desc_nc = "Zonal wind at 850 hPa"
+       var_unit_nc = "m/s"
+    case ( 'V500', 'v500' )
+       var_name_nc = "V500"
+       var_desc_nc = "Meridional wind at 500 hPa"
+       var_unit_nc = "m/s"
+    case ( 'V850', 'v850' )
+       var_name_nc = "V850"
+       var_desc_nc = "Meridional wind at 850 hPa"
+       var_unit_nc = "m/s"
+    case ( 'W500', 'w500' )
+       var_name_nc = "W500"
+       var_desc_nc = "Vertical velocity at 500 hPa"
+       var_unit_nc = "m/s"
+    case ( 'W850', 'w850' )
+       var_name_nc = "W850"
+       var_desc_nc = "Vertical velocity at 850 hPa"
+       var_unit_nc = "m/s"
+    case ( 'T500', 't500' )
+       var_name_nc = "T500"
+       var_desc_nc = "Temperature at 500 hPa"
+       var_unit_nc = "K"
+    case ( 'T850', 't850' )
+       var_name_nc = "T850"
+       var_desc_nc = "Temperature at 850 hPa"
+       var_unit_nc = "K"
+    case ( 'QV', 'qv' )
+       var_name_nc = "Q"
+       var_desc_nc = "Specific humidity"
+       var_unit_nc = "kg/kg"
+    case ( 'QC', 'qc' )
+       var_name_nc = "Qc"
+       var_desc_nc = "Cloud water mixing ratio"
+       var_unit_nc = "kg/kg"
+    case ( 'QR', 'qr' )
+       var_name_nc = "Qr"
+       var_desc_nc = "Rain water mixing ratio"
+       var_unit_nc = "kg/kg"
+    case ( 'PASV1', 'pasv1' )
+       var_name_nc = "Q1"
+       var_desc_nc = "Singlet chlorine mixing ratio"
+       var_unit_nc = "kg/kg"
+    case ( 'PASV2', 'pasv2' )
+       var_name_nc = "Q2"
+       var_desc_nc = "Chlorine gas mixing ratio"
+       var_unit_nc = "kg/kg"
+    case ( 'PRCP', 'prcp' )
+       var_name_nc = "PRECL"
+       var_desc_nc = "Large-scale precipitation rate"
+       var_unit_nc = "m/s"
+    case ( 'CL_COLUMN', 'cl_column' )
+       var_name_nc = "Q1c"
+       var_desc_nc = "Singlet chlorine mixing ratio (column)"
+       var_unit_nc = "kg/kg"
+    case ( 'CL2_COLUMN', 'cl2_column' )
+       var_name_nc = "Q2c"
+       var_desc_nc = "Chlorine gas mixing ratio (column)"
+       var_unit_nc = "kg/kg"
+    case ( 'CLY_COLUMN', 'cly_column' )
+       var_name_nc = "Cly"
+       var_desc_nc = "Cl and Cl2 the weighted sum (column)"
+       var_unit_nc = "kg/kg"
+    case ( 'FORCING_VX', 'forcing_vx' )
+       var_name_nc = "Fvx"
+       var_desc_nc = "Forcing term of horizontal velocity: vx"
+       var_unit_nc = "m/s-2"
+    case ( 'FORCING_VY', 'forcing_vy' )
+       var_name_nc = "Fvy"
+       var_desc_nc = "Forcing term of horizontal velocity: vx"
+       var_unit_nc = "m/s-2"
+    case ( 'FORCING_VZ', 'forcing_vz' )
+       var_name_nc = "Fvz"
+       var_desc_nc = "Forcing term of horizontal velocity: vx"
+       var_unit_nc = "m/s-2"
+    case ( 'FORCING_E', 'forcing_e' )
+       var_name_nc = "Fe"
+       var_desc_nc = "Forcing term of moist internal energy"
+       var_unit_nc = "J/kg/s"
+    case ( 'FORCING_QV', 'forcing_qv' )
+       var_name_nc = "Fqv"
+       var_desc_nc = "Forcing term of specific humidity"
+       var_unit_nc = "kg/kg/s"
+    case ( 'FORCING_QC', 'forcing_qc' )
+       var_name_nc = "Fqc"
+       var_desc_nc = "Forcing term of cloud water mixing ratio"
+       var_unit_nc = "mkg/kg/s"
+    case ( 'FORCING_QR', 'forcing_qr' )
+       var_name_nc = "Fqr"
+       var_desc_nc = "Forcing term of cloud water mixing ratio"
+       var_unit_nc = "kg/kg/s"
+    case ( 'FORCING_CL', 'forcing_cl' )
+       var_name_nc = "Fcl"
+       var_desc_nc = "Forcing term of Singlet chlorine mixing ratio"
+       var_unit_nc = "kg/kg/s"
+    case ( 'FORCING_CL2', 'forcing_cl2' )
+       var_name_nc = "Fcl2"
+       var_desc_nc = "Forcing term of Chlorine gas mixing ratio"
+       var_unit_nc = "kg/kg/s"
+    case default
+       var_name_nc = trim(var_name)
+       var_desc_nc = "NIL"
+       var_unit_nc = "NIL"
+    end select
+
+  end subroutine cf_desc_unit
 
 end program fio_ico2ll

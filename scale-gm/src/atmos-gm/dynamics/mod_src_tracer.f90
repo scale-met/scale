@@ -2,7 +2,7 @@
 !> Module tracer advection
 !!
 !! @par Description
-!!          This module contains subroutines for tracer advection
+!!         This module contains subroutines for tracer advection
 !!
 !! @author NICAM developers, Team SCALE
 !<
@@ -17,7 +17,6 @@ module mod_src_tracer
   use scale_prof
 
   use mod_adm, only: &
-     ADM_LOG_FID,    &
      TI  => ADM_TI,  &
      TJ  => ADM_TJ,  &
      AI  => ADM_AI,  &
@@ -29,17 +28,14 @@ module mod_src_tracer
      YDIR => GRD_YDIR, &
      ZDIR => GRD_ZDIR
   use mod_gmtr, only: &
-     P_RAREA => GMTR_P_RAREA, &
-     T_RAREA => GMTR_T_RAREA, &
-     W1      => GMTR_T_W1,    &
-     W2      => GMTR_T_W2,    &
-     W3      => GMTR_T_W3,    &
+     P_RAREA => GMTR_p_RAREA, &
+     T_RAREA => GMTR_t_RAREA, &
+     W1      => GMTR_t_W1,    &
+     W2      => GMTR_t_W2,    &
+     W3      => GMTR_t_W3,    &
      HNX     => GMTR_A_HNX,   &
      HNY     => GMTR_A_HNY,   &
      HNZ     => GMTR_A_HNZ,   &
-     HTX     => GMTR_A_HTX,   &
-     HTY     => GMTR_A_HTY,   &
-     HTZ     => GMTR_A_HTZ,   &
      TNX     => GMTR_A_TNX,   &
      TNY     => GMTR_A_TNY,   &
      TNZ     => GMTR_A_TNZ,   &
@@ -87,6 +83,8 @@ contains
        frhog,       frhog_pl,       & !--- IN    : hyperviscosity tendency for rhog
        dt,                          & !--- IN    : delta t
        thubern_lim                  ) !--- IN    : switch of thubern limiter
+    use scale_const, only: &
+       EPS => CONST_EPS
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
@@ -94,98 +92,102 @@ contains
        ADM_gall,    &
        ADM_gall_pl, &
        ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax,    &
-       ADM_gall_1d, &
        ADM_gmin,    &
        ADM_gmax,    &
        ADM_gslf_pl, &
        ADM_gmin_pl, &
-       ADM_gmax_pl
-    use scale_const, only: &
-       EPS => CONST_EPS
+       ADM_gmax_pl, &
+       ADM_kmin,    &
+       ADM_kmax
     use mod_grd, only: &
        GRD_rdgz, &
        GRD_afac, &
        GRD_bfac
     use mod_vmtr, only: &
-       VMTR_C2WfactGz,    &
-       VMTR_C2WfactGz_pl, &
-       VMTR_RGSQRTH,      &
-       VMTR_RGSQRTH_pl,   &
-       VMTR_RGAM,         &
-       VMTR_RGAM_pl,      &
-       VMTR_RGAMH,        &
-       VMTR_RGAMH_pl
+       VMTR_getIJ_RGSQRTH,  &
+       VMTR_getIJ_RGAM,     &
+       VMTR_getIJ_RGAMH,    &
+       VMTR_getIJ_C2WfactGz
     implicit none
 
-    integer, intent(in)    :: vmax
-    real(RP), intent(inout) :: rhogq         (ADM_gall,   ADM_kall,ADM_lall,   vmax)
+    integer,  intent(in)    :: vmax
+    real(RP), intent(inout) :: rhogq         (ADM_gall   ,ADM_kall,ADM_lall   ,vmax)
     real(RP), intent(inout) :: rhogq_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl,vmax)
-    real(RP), intent(in)    :: rhog_in       (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: rhog_in       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rhog_in_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: rhog_mean     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: rhog_mean     (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rhog_mean_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: rhogvx_mean   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: rhogvx_mean   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rhogvx_mean_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: rhogvy_mean   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: rhogvy_mean   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rhogvy_mean_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: rhogvz_mean   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: rhogvz_mean   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rhogvz_mean_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: rhogw_mean    (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: rhogw_mean    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: rhogw_mean_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: frhog         (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: frhog         (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: frhog_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(in)    :: dt
-    logical, intent(in)    :: thubern_lim  ![add] 20130613 R.Yoshida
+    logical,  intent(in)    :: thubern_lim  ![add] 20130613 R.Yoshida
 
-    real(RP) :: rhog     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhog     (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhog_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogvx   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhogvx   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhogvx_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogvy   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhogvy   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhogvy_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogvz   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhogvz   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhogvz_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: q        (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: d        (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: d        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: d_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: q_h      (ADM_gall,   ADM_kall,ADM_lall   )   ! q at layer face
+    real(RP) :: q_h      (ADM_gall   ,ADM_kall,ADM_lall   )   ! q at layer face
     real(RP) :: q_h_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: flx_v    (ADM_gall,   ADM_kall,ADM_lall   )   ! mass flux
+    real(RP) :: flx_v    (ADM_gall   ,ADM_kall,ADM_lall   )   ! mass flux
     real(RP) :: flx_v_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: ck       (ADM_gall,   ADM_kall,ADM_lall,   2) ! Courant number
+    real(RP) :: ck       (ADM_gall   ,ADM_kall,ADM_lall   ,2) ! Courant number
     real(RP) :: ck_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,2)
 
-    real(RP) :: q_a      (ADM_gall,   ADM_kall,ADM_lall   ,6) ! q at cell face
+    real(RP) :: q_a      (ADM_gall   ,ADM_kall,ADM_lall   ,6) ! q at cell face
     real(RP) :: q_a_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl  )
-    real(RP) :: flx_h    (ADM_gall,   ADM_kall,ADM_lall   ,6) ! mass flux
+    real(RP) :: flx_h    (ADM_gall   ,ADM_kall,ADM_lall   ,6) ! mass flux
     real(RP) :: flx_h_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl  )
-    real(RP) :: ch       (ADM_gall,   ADM_kall,ADM_lall   ,6) ! Courant number
+    real(RP) :: ch       (ADM_gall   ,ADM_kall,ADM_lall   ,6) ! Courant number
     real(RP) :: ch_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl  )
-    real(RP) :: cmask    (ADM_gall,   ADM_kall,ADM_lall   ,6) ! upwind direction mask
+    real(RP) :: cmask    (ADM_gall   ,ADM_kall,ADM_lall   ,6) ! upwind direction mask
     real(RP) :: cmask_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl  )
-    real(RP) :: GRD_xc   (ADM_gall,   ADM_kall,ADM_lall,   AI:AJ,XDIR:ZDIR) ! mass centroid position
+    real(RP) :: GRD_xc   (ADM_gall   ,ADM_kall,ADM_lall   ,AI:AJ,XDIR:ZDIR) ! mass centroid position
     real(RP) :: GRD_xc_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,      XDIR:ZDIR)
+
+    real(RP) :: VMTR_RGSQRTH     (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: VMTR_RGSQRTH_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: VMTR_RGAM        (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: VMTR_RGAM_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: VMTR_RGAMH       (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: VMTR_RGAMH_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: VMTR_C2WfactGz   (ADM_gall   ,ADM_kall,6,ADM_lall   )
+    real(RP) :: VMTR_C2WfactGz_pl(ADM_gall_pl,ADM_kall,6,ADM_lall_pl)
 
     real(RP), parameter :: b1 = 0.0_RP
     real(RP), parameter :: b2 = 1.0_RP
     real(RP), parameter :: b3 = 1.0_RP - (b1+b2)
 
-    integer :: nstart, nend
-    integer :: g, k, l, v, iq
-
-    integer :: suf, i, j
-    suf(i,j) = ADM_gall_1d * ((j)-1) + (i)
+    integer  :: nstart, nend
+    integer  :: g, k, l, v, iq
     !---------------------------------------------------------------------------
+
+    call VMTR_getIJ_RGSQRTH  ( VMTR_RGSQRTH,   VMTR_RGSQRTH_pl   )
+    call VMTR_getIJ_RGAM     ( VMTR_RGAM,      VMTR_RGAM_pl      )
+    call VMTR_getIJ_RGAMH    ( VMTR_RGAMH,     VMTR_RGAMH_pl     )
+    call VMTR_getIJ_C2WfactGz( VMTR_C2WfactGz, VMTR_C2WfactGz_pl )
 
     !---------------------------------------------------------------------------
     ! Vertical Advection (fractioanl step) : 1st
     !---------------------------------------------------------------------------
-    call PROF_rapstart('____Vertical_Adv')
+    call PROF_rapstart('____Vertical_Adv',2)
 
     do l = 1, ADM_lall
        do k = ADM_kmin+1, ADM_kmax
@@ -274,8 +276,8 @@ contains
           q(:,:,l) = rhogq(:,:,l,iq) / rhog_in(:,:,l)
 
           do k = ADM_kmin, ADM_kmax+1
-             q_h(:,k,l) = 0.5_RP * ( GRD_afac(k) * q(:,k,  l) &
-                                  + GRD_bfac(k) * q(:,k-1,l) )
+             q_h(:,k,l) = GRD_afac(k) * q(:,k,  l) &
+                        + GRD_bfac(k) * q(:,k-1,l)
           enddo
           q_h(:,ADM_kmin-1,l) = 0.0_RP
        enddo
@@ -285,8 +287,8 @@ contains
              q_pl(:,:,l) = rhogq_pl(:,:,l,iq) / rhog_in_pl(:,:,l)
 
              do k = ADM_kmin, ADM_kmax+1
-                q_h_pl(:,k,l) = 0.5_RP * ( GRD_afac(k) * q_pl(:,k,  l) &
-                                        + GRD_bfac(k) * q_pl(:,k-1,l) )
+                q_h_pl(:,k,l) = GRD_afac(k) * q_pl(:,k,  l) &
+                              + GRD_bfac(k) * q_pl(:,k-1,l)
              enddo
              q_h_pl(:,ADM_kmin-1,l) = 0.0_RP
           enddo
@@ -320,8 +322,8 @@ contains
 
              do k = ADM_kmin, ADM_kmax
              do g = 1, ADM_gall_pl
-                rhogq_pl(g,k,l,iq) = rhogq_pl(g,k,l,iq) - ( flx_v_pl(g,k+1,l)*q_h_pl(g,k+1,l) &
-                                                          - flx_v_pl(g,k,  l)*q_h_pl(g,k,  l) &
+                rhogq_pl(g,k,l,iq) = rhogq_pl(g,k,l,iq) - ( flx_v_pl(g,k+1,l) * q_h_pl(g,k+1,l) &
+                                                          - flx_v_pl(g,k,  l) * q_h_pl(g,k,  l) &
                                                           ) * GRD_rdgz(k)
              enddo
              enddo
@@ -339,11 +341,6 @@ contains
                                          ) * GRD_rdgz(k)  &
                                        + b1 * frhog(g,k,l) * dt
        enddo
-       enddo
-
-       do k = ADM_kmin, ADM_kmax
-          rhog(suf(ADM_gmax+1,ADM_gmin-1),k,l) = rhog(suf(ADM_gmax+1,ADM_gmin),k,l)
-          rhog(suf(ADM_gmin-1,ADM_gmax+1),k,l) = rhog(suf(ADM_gmin,ADM_gmax+1),k,l)
        enddo
        rhog(:,ADM_kmin-1,l) = rhog_in(:,ADM_kmin,l)
        rhog(:,ADM_kmax+1,l) = rhog_in(:,ADM_kmax,l)
@@ -365,11 +362,11 @@ contains
        enddo
     endif
 
-    call PROF_rapend('____Vertical_Adv')
+    call PROF_rapend('____Vertical_Adv',2)
     !---------------------------------------------------------------------------
     ! Horizontal advection by MIURA scheme
     !---------------------------------------------------------------------------
-    call PROF_rapstart('____Horizontal_Adv')
+    call PROF_rapstart('____Horizontal_Adv',2)
 
     do l = 1, ADM_lall
        d(:,:,l) = b2 * frhog(:,:,l) / rhog(:,:,l) * dt
@@ -470,11 +467,6 @@ contains
                                                  + flx_h(g,k,l,6) * q_a(g,k,l,6) )
           enddo
           enddo
-
-          do k = 1, ADM_kall
-             rhog(suf(ADM_gmax+1,ADM_gmin-1),k,l) = rhog(suf(ADM_gmax+1,ADM_gmin),k,l)
-             rhog(suf(ADM_gmin-1,ADM_gmax+1),k,l) = rhog(suf(ADM_gmin,ADM_gmax+1),k,l)
-          enddo
        enddo
 
        if ( ADM_have_pl ) then
@@ -506,11 +498,6 @@ contains
                                      + flx_h(g,k,l,6) ) + b2 * frhog(g,k,l) * dt
        enddo
        enddo
-
-       do k = 1, ADM_kall
-          rhog(suf(ADM_gmax+1,ADM_gmin-1),k,l) = rhog(suf(ADM_gmax+1,ADM_gmin),k,l)
-          rhog(suf(ADM_gmin-1,ADM_gmax+1),k,l) = rhog(suf(ADM_gmin,ADM_gmax+1),k,l)
-       enddo
     enddo
 
     if ( ADM_have_pl ) then
@@ -526,11 +513,11 @@ contains
        enddo
     endif
 
-    call PROF_rapend('____Horizontal_Adv')
+    call PROF_rapend('____Horizontal_Adv',2)
     !---------------------------------------------------------------------------
     ! Vertical Advection (fractioanl step) : 2nd
     !---------------------------------------------------------------------------
-    call PROF_rapstart('____Vertical_Adv')
+    call PROF_rapstart('____Vertical_Adv',2)
 
     do l = 1, ADM_lall
        d(:,:,l) = b3 * frhog(:,:,l) * dt / rhog(:,:,l)
@@ -567,8 +554,8 @@ contains
           q(:,:,l) = rhogq(:,:,l,iq) / rhog(:,:,l)
 
           do k = ADM_kmin, ADM_kmax+1
-             q_h(:,k,l) = 0.5_RP * ( GRD_afac(k) * q(:,k,  l) &
-                                  + GRD_bfac(k) * q(:,k-1,l) )
+             q_h(:,k,l) = GRD_afac(k) * q(:,k,  l) &
+                        + GRD_bfac(k) * q(:,k-1,l)
           enddo
           q_h(:,ADM_kmin-1,l) = 0.0_RP
        enddo
@@ -578,8 +565,8 @@ contains
              q_pl(:,:,l) = rhogq_pl(:,:,l,iq) / rhog_pl(:,:,l)
 
              do k = ADM_kmin, ADM_kmax+1
-                q_h_pl(:,k,l) = 0.5_RP * ( GRD_afac(k) * q_pl(:,k,  l) &
-                                        + GRD_bfac(k) * q_pl(:,k-1,l) )
+                q_h_pl(:,k,l) = GRD_afac(k) * q_pl(:,k,  l) &
+                              + GRD_bfac(k) * q_pl(:,k-1,l)
              enddo
              q_h_pl(:,ADM_kmin-1,l) = 0.0_RP
           enddo
@@ -604,6 +591,11 @@ contains
                                                  ) * GRD_rdgz(k)
           enddo
           enddo
+
+          do g = 1, ADM_gall
+             rhogq(g,ADM_kmin-1,l,iq) = 0.0_RP
+             rhogq(g,ADM_kmax+1,l,iq) = 0.0_RP
+          enddo
        enddo
 
        if ( ADM_have_pl ) then
@@ -618,11 +610,16 @@ contains
                                                           ) * GRD_rdgz(k)
              enddo
              enddo
+
+             do g = 1, ADM_gall_pl
+                rhogq_pl(g,ADM_kmin-1,l,iq) = 0.0_RP
+                rhogq_pl(g,ADM_kmax+1,l,iq) = 0.0_RP
+             enddo
           enddo
        endif
     enddo ! tracer q LOOP
 
-    call PROF_rapend('____Vertical_Adv')
+    call PROF_rapend('____Vertical_Adv',2)
 
     return
   end subroutine src_tracer_advection
@@ -637,6 +634,8 @@ contains
        rhovy,  rhovy_pl,  &
        rhovz,  rhovz_pl,  &
        dt                 )
+    use scale_const, only: &
+       EPS => CONST_EPS
     use mod_adm, only: &
        ADM_have_pl,    &
        ADM_have_sgp,   &
@@ -651,19 +650,16 @@ contains
        ADM_gslf_pl,    &
        ADM_gmin_pl,    &
        ADM_gmax_pl
-    use scale_const, only: &
-       EPS => CONST_EPS
     use mod_grd, only: &
        GRD_xr,   &
        GRD_xr_pl
     use mod_gmtr, only: &
-       GMTR_P_var_pl, &
-       GMTR_T_var,    &
-       GMTR_T_var_pl, &
-       GMTR_A_var_pl
-    use mod_oprt, only: &
-       cinterp_HN,  &
-       cinterp_PRA
+       GMTR_p,    &
+       GMTR_p_pl, &
+       GMTR_t,    &
+       GMTR_t_pl, &
+       GMTR_a,    &
+       GMTR_a_pl
     implicit none
 
     real(RP), intent(out) :: flx_h    (ADM_gall   ,ADM_kall,ADM_lall   ,6)               ! horizontal mass flux
@@ -705,12 +701,9 @@ contains
 
     integer :: nstart,nend
     integer :: n, k, l, v
-
-    integer :: suf,i,j
-    suf(i,j) = ADM_gall_1d * ((j)-1) + (i)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('____Horizontal_Adv_flux')
+    call PROF_rapstart('____Horizontal_Adv_flux',2)
 
     do l = 1, ADM_lall
     do k = 1, ADM_kall
@@ -723,19 +716,19 @@ contains
           ij     = n
           ip1j   = n + 1
 
-          rhot_TI  (n) = rho  (ij  ,k,l) * GMTR_T_var(n,K0,l,TI,W1) &
-                       + rho  (ip1j,k,l) * GMTR_T_var(n,K0,l,TI,W2)
-          rhovxt_TI(n) = rhovx(ij  ,k,l) * GMTR_T_var(n,K0,l,TI,W1) &
-                       + rhovx(ip1j,k,l) * GMTR_T_var(n,K0,l,TI,W2)
-          rhovyt_TI(n) = rhovy(ij  ,k,l) * GMTR_T_var(n,K0,l,TI,W1) &
-                       + rhovy(ip1j,k,l) * GMTR_T_var(n,K0,l,TI,W2)
-          rhovzt_TI(n) = rhovz(ij  ,k,l) * GMTR_T_var(n,K0,l,TI,W1) &
-                       + rhovz(ip1j,k,l) * GMTR_T_var(n,K0,l,TI,W2)
+          rhot_TI  (n) = rho  (ij  ,k,l) * GMTR_t(n,K0,l,TI,W1) &
+                       + rho  (ip1j,k,l) * GMTR_t(n,K0,l,TI,W2)
+          rhovxt_TI(n) = rhovx(ij  ,k,l) * GMTR_t(n,K0,l,TI,W1) &
+                       + rhovx(ip1j,k,l) * GMTR_t(n,K0,l,TI,W2)
+          rhovyt_TI(n) = rhovy(ij  ,k,l) * GMTR_t(n,K0,l,TI,W1) &
+                       + rhovy(ip1j,k,l) * GMTR_t(n,K0,l,TI,W2)
+          rhovzt_TI(n) = rhovz(ij  ,k,l) * GMTR_t(n,K0,l,TI,W1) &
+                       + rhovz(ip1j,k,l) * GMTR_t(n,K0,l,TI,W2)
 
-          rhot_TJ  (n) = rho  (ij  ,k,l) * GMTR_T_var(n,K0,l,TJ,W1)
-          rhovxt_TJ(n) = rhovx(ij  ,k,l) * GMTR_T_var(n,K0,l,TJ,W1)
-          rhovyt_TJ(n) = rhovy(ij  ,k,l) * GMTR_T_var(n,K0,l,TJ,W1)
-          rhovzt_TJ(n) = rhovz(ij  ,k,l) * GMTR_T_var(n,K0,l,TJ,W1)
+          rhot_TJ  (n) = rho  (ij  ,k,l) * GMTR_t(n,K0,l,TJ,W1)
+          rhovxt_TJ(n) = rhovx(ij  ,k,l) * GMTR_t(n,K0,l,TJ,W1)
+          rhovyt_TJ(n) = rhovy(ij  ,k,l) * GMTR_t(n,K0,l,TJ,W1)
+          rhovzt_TJ(n) = rhovz(ij  ,k,l) * GMTR_t(n,K0,l,TJ,W1)
        enddo
 
        ! (i,j+1),(i+1,j+1)
@@ -743,27 +736,19 @@ contains
           ijp1   = n     + ADM_gall_1d
           ip1jp1 = n + 1 + ADM_gall_1d
 
-          rhot_TI  (n) = rhot_TI  (n) &
-                       + rho  (ip1jp1,k,l) * GMTR_T_var(n,K0,l,TI,W3)
-          rhovxt_TI(n) = rhovxt_TI(n) &
-                       + rhovx(ip1jp1,k,l) * GMTR_T_var(n,K0,l,TI,W3)
-          rhovyt_TI(n) = rhovyt_TI(n) &
-                       + rhovy(ip1jp1,k,l) * GMTR_T_var(n,K0,l,TI,W3)
-          rhovzt_TI(n) = rhovzt_TI(n) &
-                       + rhovz(ip1jp1,k,l) * GMTR_T_var(n,K0,l,TI,W3)
+          rhot_TI  (n) = rhot_TI  (n) + rho  (ip1jp1,k,l) * GMTR_t(n,K0,l,TI,W3)
+          rhovxt_TI(n) = rhovxt_TI(n) + rhovx(ip1jp1,k,l) * GMTR_t(n,K0,l,TI,W3)
+          rhovyt_TI(n) = rhovyt_TI(n) + rhovy(ip1jp1,k,l) * GMTR_t(n,K0,l,TI,W3)
+          rhovzt_TI(n) = rhovzt_TI(n) + rhovz(ip1jp1,k,l) * GMTR_t(n,K0,l,TI,W3)
 
-          rhot_TJ  (n) = rhot_TJ  (n) &
-                       + rho  (ip1jp1,k,l) * GMTR_T_var(n,K0,l,TJ,W2) &
-                       + rho  (ijp1  ,k,l) * GMTR_T_var(n,K0,l,TJ,W3)
-          rhovxt_TJ(n) = rhovxt_TJ(n) &
-                       + rhovx(ip1jp1,k,l) * GMTR_T_var(n,K0,l,TJ,W2) &
-                       + rhovx(ijp1  ,k,l) * GMTR_T_var(n,K0,l,TJ,W3)
-          rhovyt_TJ(n) = rhovyt_TJ(n) &
-                       + rhovy(ip1jp1,k,l) * GMTR_T_var(n,K0,l,TJ,W2) &
-                       + rhovy(ijp1  ,k,l) * GMTR_T_var(n,K0,l,TJ,W3)
-          rhovzt_TJ(n) = rhovzt_TJ(n) &
-                       + rhovz(ip1jp1,k,l) * GMTR_T_var(n,K0,l,TJ,W2) &
-                       + rhovz(ijp1  ,k,l) * GMTR_T_var(n,K0,l,TJ,W3)
+          rhot_TJ  (n) = rhot_TJ  (n) + rho  (ip1jp1,k,l) * GMTR_t(n,K0,l,TJ,W2) &
+                                      + rho  (ijp1  ,k,l) * GMTR_t(n,K0,l,TJ,W3)
+          rhovxt_TJ(n) = rhovxt_TJ(n) + rhovx(ip1jp1,k,l) * GMTR_t(n,K0,l,TJ,W2) &
+                                      + rhovx(ijp1  ,k,l) * GMTR_t(n,K0,l,TJ,W3)
+          rhovyt_TJ(n) = rhovyt_TJ(n) + rhovy(ip1jp1,k,l) * GMTR_t(n,K0,l,TJ,W2) &
+                                      + rhovy(ijp1  ,k,l) * GMTR_t(n,K0,l,TJ,W3)
+          rhovzt_TJ(n) = rhovzt_TJ(n) + rhovz(ip1jp1,k,l) * GMTR_t(n,K0,l,TJ,W2) &
+                                      + rhovz(ijp1  ,k,l) * GMTR_t(n,K0,l,TJ,W3)
        enddo
 
        if ( ADM_have_sgp(l) ) then
@@ -788,12 +773,12 @@ contains
           rhovyt2 = rhovyt_TJ(ijm1) + rhovyt_TI(ij)
           rhovzt2 = rhovzt_TJ(ijm1) + rhovzt_TI(ij)
 
-          flux = 0.5_RP * ( rhovxt2 * cinterp_HN(ij,l,AI ,1) &
-                         + rhovyt2 * cinterp_HN(ij,l,AI ,2) &
-                         + rhovzt2 * cinterp_HN(ij,l,AI ,3) )
+          flux = 0.5_RP * ( rhovxt2 * GMTR_a(ij,k0,l,AI ,HNX) &
+                          + rhovyt2 * GMTR_a(ij,k0,l,AI ,HNY) &
+                          + rhovzt2 * GMTR_a(ij,k0,l,AI ,HNZ) )
 
-          flx_h(ij  ,k,l,1) =  flux * cinterp_PRA(ij  ,l) * dt
-          flx_h(ip1j,k,l,4) = -flux * cinterp_PRA(ip1j,l) * dt
+          flx_h(ij  ,k,l,1) =  flux * GMTR_p(ij  ,k0,l,P_RAREA) * dt
+          flx_h(ip1j,k,l,4) = -flux * GMTR_p(ip1j,k0,l,P_RAREA) * dt
 
           GRD_xc(n,k,l,AI,XDIR) = GRD_xr(n,K0,l,AI,XDIR) - rhovxt2 * rrhoa2 * dt * 0.5_RP
           GRD_xc(n,k,l,AI,YDIR) = GRD_xr(n,K0,l,AI,YDIR) - rhovyt2 * rrhoa2 * dt * 0.5_RP
@@ -812,12 +797,12 @@ contains
           rhovyt2 = rhovyt_TI(ij) + rhovyt_TJ(ij)
           rhovzt2 = rhovzt_TI(ij) + rhovzt_TJ(ij)
 
-          flux = 0.5_RP * ( rhovxt2 * cinterp_HN(ij,l,AIJ,1) &
-                         + rhovyt2 * cinterp_HN(ij,l,AIJ,2) &
-                         + rhovzt2 * cinterp_HN(ij,l,AIJ,3) )
+          flux = 0.5_RP * ( rhovxt2 * GMTR_a(ij,k0,l,AIJ,HNX) &
+                          + rhovyt2 * GMTR_a(ij,k0,l,AIJ,HNY) &
+                          + rhovzt2 * GMTR_a(ij,k0,l,AIJ,HNZ) )
 
-          flx_h(ij    ,k,l,2) =  flux * cinterp_PRA(ij    ,l) * dt
-          flx_h(ip1jp1,k,l,5) = -flux * cinterp_PRA(ip1jp1,l) * dt
+          flx_h(ij    ,k,l,2) =  flux * GMTR_p(ij    ,k0,l,P_RAREA) * dt
+          flx_h(ip1jp1,k,l,5) = -flux * GMTR_p(ip1jp1,k0,l,P_RAREA) * dt
 
           GRD_xc(n,k,l,AIJ,XDIR) = GRD_xr(n,K0,l,AIJ,XDIR) - rhovxt2 * rrhoa2 * dt * 0.5_RP
           GRD_xc(n,k,l,AIJ,YDIR) = GRD_xr(n,K0,l,AIJ,YDIR) - rhovyt2 * rrhoa2 * dt * 0.5_RP
@@ -837,12 +822,12 @@ contains
           rhovyt2 = rhovyt_TJ(ij) + rhovyt_TI(im1j)
           rhovzt2 = rhovzt_TJ(ij) + rhovzt_TI(im1j)
 
-          flux = 0.5_RP * ( rhovxt2 * cinterp_HN(ij,l,AJ ,1) &
-                         + rhovyt2 * cinterp_HN(ij,l,AJ ,2) &
-                         + rhovzt2 * cinterp_HN(ij,l,AJ ,3) )
+          flux = 0.5_RP * ( rhovxt2 * GMTR_a(ij,k0,l,AJ ,HNX) &
+                          + rhovyt2 * GMTR_a(ij,k0,l,AJ ,HNY) &
+                          + rhovzt2 * GMTR_a(ij,k0,l,AJ ,HNZ) )
 
-          flx_h(ij  ,k,l,3) =  flux * cinterp_PRA(ij  ,l) * dt
-          flx_h(ijp1,k,l,6) = -flux * cinterp_PRA(ijp1,l) * dt
+          flx_h(ij  ,k,l,3) =  flux * GMTR_p(ij  ,k0,l,P_RAREA) * dt
+          flx_h(ijp1,k,l,6) = -flux * GMTR_p(ijp1,k0,l,P_RAREA) * dt
 
           GRD_xc(n,k,l,AJ,XDIR) = GRD_xr(n,K0,l,AJ,XDIR) - rhovxt2 * rrhoa2 * dt * 0.5_RP
           GRD_xc(n,k,l,AJ,YDIR) = GRD_xr(n,K0,l,AJ,YDIR) - rhovyt2 * rrhoa2 * dt * 0.5_RP
@@ -867,18 +852,18 @@ contains
              ijp1 = v + 1
              if( ijp1 == ADM_gmax_pl + 1 ) ijp1 = ADM_gmin_pl
 
-             rhot_pl  (v) = rho_pl  (n   ,k,l) * GMTR_T_var_pl(ij,K0,l,W1) &
-                          + rho_pl  (ij  ,k,l) * GMTR_T_var_pl(ij,K0,l,W2) &
-                          + rho_pl  (ijp1,k,l) * GMTR_T_var_pl(ij,K0,l,W3)
-             rhovxt_pl(v) = rhovx_pl(n   ,k,l) * GMTR_T_var_pl(ij,K0,l,W1) &
-                          + rhovx_pl(ij  ,k,l) * GMTR_T_var_pl(ij,K0,l,W2) &
-                          + rhovx_pl(ijp1,k,l) * GMTR_T_var_pl(ij,K0,l,W3)
-             rhovyt_pl(v) = rhovy_pl(n   ,k,l) * GMTR_T_var_pl(ij,K0,l,W1) &
-                          + rhovy_pl(ij  ,k,l) * GMTR_T_var_pl(ij,K0,l,W2) &
-                          + rhovy_pl(ijp1,k,l) * GMTR_T_var_pl(ij,K0,l,W3)
-             rhovzt_pl(v) = rhovz_pl(n   ,k,l) * GMTR_T_var_pl(ij,K0,l,W1) &
-                          + rhovz_pl(ij  ,k,l) * GMTR_T_var_pl(ij,K0,l,W2) &
-                          + rhovz_pl(ijp1,k,l) * GMTR_T_var_pl(ij,K0,l,W3)
+             rhot_pl  (v) = rho_pl  (n   ,k,l) * GMTR_t_pl(ij,K0,l,W1) &
+                          + rho_pl  (ij  ,k,l) * GMTR_t_pl(ij,K0,l,W2) &
+                          + rho_pl  (ijp1,k,l) * GMTR_t_pl(ij,K0,l,W3)
+             rhovxt_pl(v) = rhovx_pl(n   ,k,l) * GMTR_t_pl(ij,K0,l,W1) &
+                          + rhovx_pl(ij  ,k,l) * GMTR_t_pl(ij,K0,l,W2) &
+                          + rhovx_pl(ijp1,k,l) * GMTR_t_pl(ij,K0,l,W3)
+             rhovyt_pl(v) = rhovy_pl(n   ,k,l) * GMTR_t_pl(ij,K0,l,W1) &
+                          + rhovy_pl(ij  ,k,l) * GMTR_t_pl(ij,K0,l,W2) &
+                          + rhovy_pl(ijp1,k,l) * GMTR_t_pl(ij,K0,l,W3)
+             rhovzt_pl(v) = rhovz_pl(n   ,k,l) * GMTR_t_pl(ij,K0,l,W1) &
+                          + rhovz_pl(ij  ,k,l) * GMTR_t_pl(ij,K0,l,W2) &
+                          + rhovz_pl(ijp1,k,l) * GMTR_t_pl(ij,K0,l,W3)
           enddo
 
           do v = ADM_gmin_pl, ADM_gmax_pl
@@ -891,11 +876,11 @@ contains
              rhovyt2 = rhovyt_pl(ijm1) + rhovyt_pl(ij)
              rhovzt2 = rhovzt_pl(ijm1) + rhovzt_pl(ij)
 
-             flux = 0.5_RP * ( rhovxt2 * GMTR_A_var_pl(ij,K0,l,HNX) &
-                            + rhovyt2 * GMTR_A_var_pl(ij,K0,l,HNY) &
-                            + rhovzt2 * GMTR_A_var_pl(ij,K0,l,HNZ) )
+             flux = 0.5_RP * ( rhovxt2 * GMTR_a_pl(ij,K0,l,HNX) &
+                             + rhovyt2 * GMTR_a_pl(ij,K0,l,HNY) &
+                             + rhovzt2 * GMTR_a_pl(ij,K0,l,HNZ) )
 
-             flx_h_pl(v,k,l) = flux * GMTR_P_var_pl(n,K0,l,P_RAREA) * dt
+             flx_h_pl(v,k,l) = flux * GMTR_p_pl(n,K0,l,P_RAREA) * dt
 
              GRD_xc_pl(v,k,l,XDIR) = GRD_xr_pl(v,K0,l,XDIR) - rhovxt2 * rrhoa2 * dt * 0.5_RP
              GRD_xc_pl(v,k,l,YDIR) = GRD_xr_pl(v,K0,l,YDIR) - rhovyt2 * rrhoa2 * dt * 0.5_RP
@@ -906,7 +891,7 @@ contains
        enddo
     endif
 
-    call PROF_rapend  ('____Horizontal_Adv_flux')
+    call PROF_rapend  ('____Horizontal_Adv_flux',2)
 
     return
   end subroutine horizontal_flux
@@ -919,9 +904,12 @@ contains
        cmask,  cmask_pl, &
        GRD_xc, GRD_xc_pl )
     use mod_adm, only: &
+       ADM_nxyz,    &
        ADM_have_pl, &
        ADM_lall,    &
        ADM_lall_pl, &
+       ADM_iall,    &
+       ADM_jall,    &
        ADM_gall,    &
        ADM_gall_pl, &
        ADM_kall,    &
@@ -937,7 +925,9 @@ contains
        GRD_x,   &
        GRD_x_pl
     use mod_oprt, only: &
-       OPRT_gradient
+       OPRT_gradient,    &
+       OPRT_coef_grad,   &
+       OPRT_coef_grad_pl
     implicit none
 
     real(RP), intent(out) :: q_a      (ADM_gall   ,ADM_kall,ADM_lall   ,6)               ! q at cell face
@@ -949,8 +939,8 @@ contains
     real(RP), intent(in)  :: GRD_xc   (ADM_gall   ,ADM_kall,ADM_lall   ,AI:AJ,XDIR:ZDIR) ! position of the mass centroid
     real(RP), intent(in)  :: GRD_xc_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,      XDIR:ZDIR)
 
-    real(RP)  :: gradq   (ADM_gall   ,ADM_kall,ADM_lall   ,XDIR:ZDIR) ! grad(q)
-    real(RP)  :: gradq_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,XDIR:ZDIR)
+    real(RP)  :: gradq   (ADM_gall   ,ADM_kall,ADM_lall   ,ADM_nxyz) ! grad(q)
+    real(RP)  :: gradq_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,ADM_nxyz)
 
     real(RP) :: q_ap1(ADM_gall), q_am1(ADM_gall)
     real(RP) :: q_ap2(ADM_gall), q_am2(ADM_gall)
@@ -960,6 +950,9 @@ contains
     real(RP) :: q_ap6(ADM_gall), q_am6(ADM_gall)
     real(RP) :: q_ap, q_am
 
+    real(RP) :: IxJ_gradq(ADM_iall,ADM_jall,ADM_kall,ADM_lall,ADM_nxyz)
+    real(RP) :: IxJ_q    (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
+
     integer :: ij
     integer :: ip1j, ijp1, ip1jp1
     integer :: im1j, ijm1, im1jm1
@@ -967,15 +960,17 @@ contains
     integer :: kall, gall_1d
     integer :: nstart1, nstart2, nstart3, nstart4, nend
     integer :: n, k, l, v
-
-    integer :: suf,i,j
-    suf(i,j) = ADM_gall_1d * ((j)-1) + (i)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('____Horizontal_Adv_remap')
+    call PROF_rapstart('____Horizontal_Adv_remap',2)
 
-    call OPRT_gradient( q    (:,:,:),   q_pl    (:,:,:),  & ![IN]
-                        gradq(:,:,:,:), gradq_pl(:,:,:,:) ) ![OUT]
+    IxJ_q = reshape(q,shape(IxJ_q))
+
+    call OPRT_gradient( IxJ_gradq     (:,:,:,:,:), gradq_pl         (:,:,:,:), & ! [OUT]
+                        IxJ_q         (:,:,:,:),   q_pl             (:,:,:),   & ! [IN]
+                        OPRT_coef_grad(:,:,:,:,:), OPRT_coef_grad_pl(:,:,:)    ) ! [IN]
+
+    gradq = reshape(IxJ_gradq,shape(gradq))
 
     call COMM_data_transfer( gradq(:,:,:,:), gradq_pl(:,:,:,:) )
 
@@ -1160,42 +1155,42 @@ contains
 
           !$omp do
           do n = nstart1, nend
-             q_a(n,k,l,1) = (      cmask(n,k,l,1) ) * q_am1(n) &
+             q_a(n,k,l,1) = (        cmask(n,k,l,1) ) * q_am1(n) &
                           + ( 1.0_RP-cmask(n,k,l,1) ) * q_ap1(n)
           enddo
           !$omp end do nowait
 
           !$omp do
           do n = nstart1, nend
-             q_a(n,k,l,2) = (      cmask(n,k,l,2) ) * q_am2(n) &
+             q_a(n,k,l,2) = (        cmask(n,k,l,2) ) * q_am2(n) &
                           + ( 1.0_RP-cmask(n,k,l,2) ) * q_ap2(n)
           enddo
           !$omp end do nowait
 
           !$omp do
           do n = nstart1, nend
-             q_a(n,k,l,3) = (      cmask(n,k,l,3) ) * q_am3(n) &
+             q_a(n,k,l,3) = (        cmask(n,k,l,3) ) * q_am3(n) &
                           + ( 1.0_RP-cmask(n,k,l,3) ) * q_ap3(n)
           enddo
           !$omp end do nowait
 
           !$omp do
           do n = nstart1, nend
-             q_a(n,k,l,4) = (      cmask(n,k,l,4) ) * q_am4(n) &
+             q_a(n,k,l,4) = (        cmask(n,k,l,4) ) * q_am4(n) &
                           + ( 1.0_RP-cmask(n,k,l,4) ) * q_ap4(n)
           enddo
           !$omp end do nowait
 
           !$omp do
           do n = nstart1, nend
-             q_a(n,k,l,5) = (      cmask(n,k,l,5) ) * q_am5(n) &
+             q_a(n,k,l,5) = (        cmask(n,k,l,5) ) * q_am5(n) &
                           + ( 1.0_RP-cmask(n,k,l,5) ) * q_ap5(n)
           enddo
           !$omp end do nowait
 
           !$omp do
           do n = nstart1, nend
-             q_a(n,k,l,6) = (      cmask(n,k,l,6) ) * q_am6(n) &
+             q_a(n,k,l,6) = (        cmask(n,k,l,6) ) * q_am6(n) &
                           + ( 1.0_RP-cmask(n,k,l,6) ) * q_ap6(n)
           enddo
           !$omp end do
@@ -1218,14 +1213,14 @@ contains
                              + gradq_pl(v,k,l,YDIR) * ( GRD_xc_pl(v,k,l,YDIR) - GRD_x_pl(v,K0,l,YDIR) ) &
                              + gradq_pl(v,k,l,ZDIR) * ( GRD_xc_pl(v,k,l,ZDIR) - GRD_x_pl(v,K0,l,ZDIR) )
 
-          q_a_pl(v,k,l) = (      cmask_pl(v,k,l) ) * q_am &
+          q_a_pl(v,k,l) = (        cmask_pl(v,k,l) ) * q_am &
                         + ( 1.0_RP-cmask_pl(v,k,l) ) * q_ap
        enddo
        enddo
        enddo
     endif
 
-    call PROF_rapend  ('____Horizontal_Adv_remap')
+    call PROF_rapend  ('____Horizontal_Adv_remap',2)
 
     return
   end subroutine horizontal_remap
@@ -1236,6 +1231,9 @@ contains
        q,   q_pl,   &
        d,   d_pl,   &
        ck,  ck_pl   )
+    use scale_const, only: &
+       BIG => CONST_HUGE, &
+       EPS => CONST_EPS
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_gall,    &
@@ -1245,18 +1243,15 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use scale_const, only: &
-       HUGE => CONST_HUGE, &
-       EPS  => CONST_EPS
     implicit none
 
-    real(RP), intent(inout) :: q_h   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(inout) :: q_h   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(inout) :: q_h_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: q     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: q     (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: q_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: d     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)    :: d     (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: d_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: ck    (ADM_gall,   ADM_kall,ADM_lall   ,2)
+    real(RP), intent(in)    :: ck    (ADM_gall   ,ADM_kall,ADM_lall   ,2)
     real(RP), intent(in)    :: ck_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,2)
 
     real(RP) :: Qout_min   (ADM_gall,   ADM_kall)
@@ -1275,7 +1270,7 @@ contains
     integer :: n, k, l
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('____Vertical_Adv_limiter')
+    call PROF_rapstart('____Vertical_Adv_limiter',2)
 
     do l = 1, ADM_lall
 
@@ -1284,23 +1279,23 @@ contains
           inflagL = 0.5_RP - sign(0.5_RP, ck(n,k  ,l,1)) ! incoming flux: flag=1
           inflagU = 0.5_RP - sign(0.5_RP,-ck(n,k+1,l,1)) ! incoming flux: flag=1
 
-          Qin_minL = min( q(n,k,l), q(n,k-1,l) ) + ( 1.0_RP-inflagL ) * HUGE
-          Qin_minU = min( q(n,k,l), q(n,k+1,l) ) + ( 1.0_RP-inflagU ) * HUGE
-          Qin_maxL = max( q(n,k,l), q(n,k-1,l) ) - ( 1.0_RP-inflagL ) * HUGE
-          Qin_maxU = max( q(n,k,l), q(n,k+1,l) ) - ( 1.0_RP-inflagU ) * HUGE
+          Qin_minL = min( q(n,k,l), q(n,k-1,l) ) + ( 1.0_RP-inflagL ) * BIG
+          Qin_minU = min( q(n,k,l), q(n,k+1,l) ) + ( 1.0_RP-inflagU ) * BIG
+          Qin_maxL = max( q(n,k,l), q(n,k-1,l) ) - ( 1.0_RP-inflagL ) * BIG
+          Qin_maxU = max( q(n,k,l), q(n,k+1,l) ) - ( 1.0_RP-inflagU ) * BIG
 
           qnext_min = min( Qin_minL, Qin_minU, q(n,k,l) )
           qnext_max = max( Qin_maxL, Qin_maxU, q(n,k,l) )
 
-          Cin      = (      inflagL ) * ( ck(n,k,l,1) ) &
-                   + (      inflagU ) * ( ck(n,k,l,2) )
+          Cin      = (        inflagL ) * ( ck(n,k,l,1) ) &
+                   + (        inflagU ) * ( ck(n,k,l,2) )
           Cout     = ( 1.0_RP-inflagL ) * ( ck(n,k,l,1) ) &
                    + ( 1.0_RP-inflagU ) * ( ck(n,k,l,2) )
 
-          CQin_max = (      inflagL ) * ( ck(n,k,l,1) * Qin_maxL ) &
-                   + (      inflagU ) * ( ck(n,k,l,2) * Qin_maxU )
-          CQin_min = (      inflagL ) * ( ck(n,k,l,1) * Qin_minL ) &
-                   + (      inflagU ) * ( ck(n,k,l,2) * Qin_minU )
+          CQin_max = (        inflagL ) * ( ck(n,k,l,1) * Qin_maxL ) &
+                   + (        inflagU ) * ( ck(n,k,l,2) * Qin_maxU )
+          CQin_min = (        inflagL ) * ( ck(n,k,l,1) * Qin_minL ) &
+                   + (        inflagU ) * ( ck(n,k,l,2) * Qin_minU )
 
           zerosw = 0.5_RP - sign(0.5_RP,abs(Cout)-EPS) ! if Cout = 0, sw = 1
 
@@ -1317,7 +1312,7 @@ contains
        do n = 1, ADM_gall
           inflagL = 0.5_RP - sign(0.5_RP,ck(n,k,l,1)) ! incoming flux: flag=1
 
-          q_h(n,k,l) = (      inflagL ) * max( min( q_h(n,k,l), Qout_max(n,k-1) ), Qout_min(n,k-1) ) &
+          q_h(n,k,l) = (        inflagL ) * max( min( q_h(n,k,l), Qout_max(n,k-1) ), Qout_min(n,k-1) ) &
                      + ( 1.0_RP-inflagL ) * max( min( q_h(n,k,l), Qout_max(n,k  ) ), Qout_min(n,k  ) )
        enddo
        enddo
@@ -1332,10 +1327,10 @@ contains
              inflagL = 0.5_RP - sign(0.5_RP, ck_pl(n,k  ,l,1)) ! incoming flux: flag=1
              inflagU = 0.5_RP - sign(0.5_RP,-ck_pl(n,k+1,l,1)) ! incoming flux: flag=1
 
-             Qin_minL = min( q_pl(n,k,l), q_pl(n,k-1,l) ) + ( 1.0_RP-inflagL ) * HUGE
-             Qin_minU = min( q_pl(n,k,l), q_pl(n,k+1,l) ) + ( 1.0_RP-inflagU ) * HUGE
-             Qin_maxL = max( q_pl(n,k,l), q_pl(n,k-1,l) ) - ( 1.0_RP-inflagL ) * HUGE
-             Qin_maxU = max( q_pl(n,k,l), q_pl(n,k+1,l) ) - ( 1.0_RP-inflagU ) * HUGE
+             Qin_minL = min( q_pl(n,k,l), q_pl(n,k-1,l) ) + ( 1.0_RP-inflagL ) * BIG
+             Qin_minU = min( q_pl(n,k,l), q_pl(n,k+1,l) ) + ( 1.0_RP-inflagU ) * BIG
+             Qin_maxL = max( q_pl(n,k,l), q_pl(n,k-1,l) ) - ( 1.0_RP-inflagL ) * BIG
+             Qin_maxU = max( q_pl(n,k,l), q_pl(n,k+1,l) ) - ( 1.0_RP-inflagU ) * BIG
 
              qnext_min = min( Qin_minL, Qin_minU, q_pl(n,k,l) )
              qnext_max = max( Qin_maxL, Qin_maxU, q_pl(n,k,l) )
@@ -1365,7 +1360,7 @@ contains
           do n = 1, ADM_gall_pl
              inflagL = 0.5_RP - sign(0.5_RP,ck_pl(n,k,l,1)) ! incoming flux: flag=1
 
-             q_h_pl(n,k,l) = (      inflagL ) * max( min( q_h_pl(n,k,l), Qout_max_pl(n,k-1) ), Qout_min_pl(n,k-1) ) &
+             q_h_pl(n,k,l) = (        inflagL ) * max( min( q_h_pl(n,k,l), Qout_max_pl(n,k-1) ), Qout_min_pl(n,k-1) ) &
                            + ( 1.0_RP-inflagL ) * max( min( q_h_pl(n,k,l), Qout_max_pl(n,k  ) ), Qout_min_pl(n,k  ) )
           enddo
           enddo
@@ -1373,7 +1368,7 @@ contains
        enddo
     endif
 
-    call PROF_rapend  ('____Vertical_Adv_limiter')
+    call PROF_rapend  ('____Vertical_Adv_limiter',2)
 
     return
   end subroutine vertical_limiter_thuburn
@@ -1386,6 +1381,9 @@ contains
        d,      d_pl,    &
        ch,     ch_pl,   &
        cmask,  cmask_pl )
+    use scale_const, only: &
+       BIG => CONST_HUGE, &
+       EPS => CONST_EPS
     use mod_adm, only: &
        ADM_have_pl,    &
        ADM_have_sgp,   &
@@ -1400,9 +1398,6 @@ contains
        ADM_gslf_pl,    &
        ADM_gmin_pl,    &
        ADM_gmax_pl
-    use scale_const, only: &
-       HUGE => CONST_HUGE, &
-       EPS  => CONST_EPS
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -1450,12 +1445,9 @@ contains
 
     integer :: nstart, nend
     integer :: n, k, l, v
-
-    integer :: suf,i,j
-    suf(i,j) = ADM_gall_1d * ((j)-1) + (i)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('____Horizontal_Adv_limiter')
+    call PROF_rapstart('____Horizontal_Adv_limiter',2)
 
     !---< (i) define inflow bounds, eq.(32)&(33) >---
     do l = 1, ADM_lall
@@ -1478,31 +1470,31 @@ contains
           q_min_AJ  = min( q(ij,k,l), q(ip1jp1,k,l), q(ijp1,k,l), q(im1j,k,l) )
           q_max_AJ  = max( q(ij,k,l), q(ip1jp1,k,l), q(ijp1,k,l), q(im1j,k,l) )
 
-          Qin(ij,    k,l,I_min,1) = (        cmask(n,k,l,1) ) * q_min_AI         &
-                                  + ( 1.0_RP-cmask(n,k,l,1) ) * HUGE
-          Qin(ip1j,  k,l,I_min,4) = (        cmask(n,k,l,1) ) * HUGE    &
+          Qin(ij,    k,l,I_min,1) = (        cmask(n,k,l,1) ) * q_min_AI &
+                                  + ( 1.0_RP-cmask(n,k,l,1) ) * BIG
+          Qin(ip1j,  k,l,I_min,4) = (        cmask(n,k,l,1) ) * BIG      &
                                   + ( 1.0_RP-cmask(n,k,l,1) ) * q_min_AI
-          Qin(ij,    k,l,I_max,1) = (        cmask(n,k,l,1) ) * q_max_AI         &
-                                  + ( 1.0_RP-cmask(n,k,l,1) ) * (-HUGE)
-          Qin(ip1j,  k,l,I_max,4) = (        cmask(n,k,l,1) ) * (-HUGE) &
+          Qin(ij,    k,l,I_max,1) = (        cmask(n,k,l,1) ) * q_max_AI &
+                                  + ( 1.0_RP-cmask(n,k,l,1) ) * (-BIG)
+          Qin(ip1j,  k,l,I_max,4) = (        cmask(n,k,l,1) ) * (-BIG)   &
                                   + ( 1.0_RP-cmask(n,k,l,1) ) * q_max_AI
 
-          Qin(ij,    k,l,I_min,2) = (        cmask(n,k,l,2) ) * q_min_AIJ        &
-                                  + ( 1.0_RP-cmask(n,k,l,2) ) * HUGE
-          Qin(ip1jp1,k,l,I_min,5) = (        cmask(n,k,l,2) ) * HUGE    &
+          Qin(ij,    k,l,I_min,2) = (        cmask(n,k,l,2) ) * q_min_AIJ &
+                                  + ( 1.0_RP-cmask(n,k,l,2) ) * BIG
+          Qin(ip1jp1,k,l,I_min,5) = (        cmask(n,k,l,2) ) * BIG       &
                                   + ( 1.0_RP-cmask(n,k,l,2) ) * q_min_AIJ
-          Qin(ij,    k,l,I_max,2) = (        cmask(n,k,l,2) ) * q_max_AIJ        &
-                                  + ( 1.0_RP-cmask(n,k,l,2) ) * (-HUGE)
-          Qin(ip1jp1,k,l,I_max,5) = (        cmask(n,k,l,2) ) * (-HUGE) &
+          Qin(ij,    k,l,I_max,2) = (        cmask(n,k,l,2) ) * q_max_AIJ &
+                                  + ( 1.0_RP-cmask(n,k,l,2) ) * (-BIG)
+          Qin(ip1jp1,k,l,I_max,5) = (        cmask(n,k,l,2) ) * (-BIG)    &
                                   + ( 1.0_RP-cmask(n,k,l,2) ) * q_max_AIJ
 
-          Qin(ij,    k,l,I_min,3) = (        cmask(n,k,l,3) ) * q_min_AJ         &
-                                  + ( 1.0_RP-cmask(n,k,l,3) ) * HUGE
-          Qin(ijp1,  k,l,I_min,6) = (        cmask(n,k,l,3) ) * HUGE    &
+          Qin(ij,    k,l,I_min,3) = (        cmask(n,k,l,3) ) * q_min_AJ &
+                                  + ( 1.0_RP-cmask(n,k,l,3) ) * BIG
+          Qin(ijp1,  k,l,I_min,6) = (        cmask(n,k,l,3) ) * BIG      &
                                   + ( 1.0_RP-cmask(n,k,l,3) ) * q_min_AJ
-          Qin(ij,    k,l,I_max,3) = (        cmask(n,k,l,3) ) * q_max_AJ         &
-                                  + ( 1.0_RP-cmask(n,k,l,3) ) * (-HUGE)
-          Qin(ijp1,  k,l,I_max,6) = (        cmask(n,k,l,3) ) * (-HUGE) &
+          Qin(ij,    k,l,I_max,3) = (        cmask(n,k,l,3) ) * q_max_AJ &
+                                  + ( 1.0_RP-cmask(n,k,l,3) ) * (-BIG)
+          Qin(ijp1,  k,l,I_max,6) = (        cmask(n,k,l,3) ) * (-BIG)   &
                                   + ( 1.0_RP-cmask(n,k,l,3) ) * q_max_AJ
        enddo
 
@@ -1519,13 +1511,13 @@ contains
           q_min_AI  = min( q(ij,k,l), q(ip1j,k,l), q(ip1jp1,k,l), q(ijm1,k,l) )
           q_max_AI  = max( q(ij,k,l), q(ip1j,k,l), q(ip1jp1,k,l), q(ijm1,k,l) )
 
-          Qin(ij,    k,l,I_min,1) = (      cmask(n,k,l,1) ) * q_min_AI         &
-                                  + ( 1.0_RP-cmask(n,k,l,1) ) * HUGE
-          Qin(ip1j,  k,l,I_min,4) = (      cmask(n,k,l,1) ) * HUGE    &
+          Qin(ij,    k,l,I_min,1) = (        cmask(n,k,l,1) ) * q_min_AI &
+                                  + ( 1.0_RP-cmask(n,k,l,1) ) * BIG
+          Qin(ip1j,  k,l,I_min,4) = (        cmask(n,k,l,1) ) * BIG      &
                                   + ( 1.0_RP-cmask(n,k,l,1) ) * q_min_AI
-          Qin(ij,    k,l,I_max,1) = (      cmask(n,k,l,1) ) * q_max_AI         &
-                                  + ( 1.0_RP-cmask(n,k,l,1) ) * (-HUGE)
-          Qin(ip1j,  k,l,I_max,4) = (      cmask(n,k,l,1) ) * (-HUGE) &
+          Qin(ij,    k,l,I_max,1) = (        cmask(n,k,l,1) ) * q_max_AI &
+                                  + ( 1.0_RP-cmask(n,k,l,1) ) * (-BIG)
+          Qin(ip1j,  k,l,I_max,4) = (        cmask(n,k,l,1) ) * (-BIG)   &
                                   + ( 1.0_RP-cmask(n,k,l,1) ) * q_max_AI
        enddo
 
@@ -1542,13 +1534,13 @@ contains
           q_min_AIJ = min( q(ij,k,l), q(ip1jp1,k,l), q(ip1j,k,l), q(ijp1,k,l) )
           q_max_AIJ = max( q(ij,k,l), q(ip1jp1,k,l), q(ip1j,k,l), q(ijp1,k,l) )
 
-          Qin(ij,    k,l,I_min,2) = (      cmask(n,k,l,2) ) * q_min_AIJ        &
-                                  + ( 1.0_RP-cmask(n,k,l,2) ) * HUGE
-          Qin(ip1jp1,k,l,I_min,5) = (      cmask(n,k,l,2) ) * HUGE    &
+          Qin(ij,    k,l,I_min,2) = (        cmask(n,k,l,2) ) * q_min_AIJ &
+                                  + ( 1.0_RP-cmask(n,k,l,2) ) * BIG
+          Qin(ip1jp1,k,l,I_min,5) = (        cmask(n,k,l,2) ) * BIG       &
                                   + ( 1.0_RP-cmask(n,k,l,2) ) * q_min_AIJ
-          Qin(ij,    k,l,I_max,2) = (      cmask(n,k,l,2) ) * q_max_AIJ        &
-                                  + ( 1.0_RP-cmask(n,k,l,2) ) * (-HUGE)
-          Qin(ip1jp1,k,l,I_max,5) = (      cmask(n,k,l,2) ) * (-HUGE) &
+          Qin(ij,    k,l,I_max,2) = (        cmask(n,k,l,2) ) * q_max_AIJ &
+                                  + ( 1.0_RP-cmask(n,k,l,2) ) * (-BIG)
+          Qin(ip1jp1,k,l,I_max,5) = (        cmask(n,k,l,2) ) * (-BIG)    &
                                   + ( 1.0_RP-cmask(n,k,l,2) ) * q_max_AIJ
        enddo
 
@@ -1565,13 +1557,13 @@ contains
           q_min_AJ  = min( q(ij,k,l), q(ijp1,k,l), q(ip1jp1,k,l), q(im1j,k,l) )
           q_max_AJ  = max( q(ij,k,l), q(ijp1,k,l), q(ip1jp1,k,l), q(im1j,k,l) )
 
-          Qin(ij,    k,l,I_min,3) = (      cmask(n,k,l,3) ) * q_min_AJ         &
-                                  + ( 1.0_RP-cmask(n,k,l,3) ) * HUGE
-          Qin(ijp1,  k,l,I_min,6) = (      cmask(n,k,l,3) ) * HUGE    &
+          Qin(ij,    k,l,I_min,3) = (        cmask(n,k,l,3) ) * q_min_AJ &
+                                  + ( 1.0_RP-cmask(n,k,l,3) ) * BIG
+          Qin(ijp1,  k,l,I_min,6) = (        cmask(n,k,l,3) ) * BIG      &
                                   + ( 1.0_RP-cmask(n,k,l,3) ) * q_min_AJ
-          Qin(ij,    k,l,I_max,3) = (      cmask(n,k,l,3) ) * q_max_AJ         &
-                                  + ( 1.0_RP-cmask(n,k,l,3) ) * (-HUGE)
-          Qin(ijp1,  k,l,I_max,6) = (      cmask(n,k,l,3) ) * (-HUGE) &
+          Qin(ij,    k,l,I_max,3) = (        cmask(n,k,l,3) ) * q_max_AJ &
+                                  + ( 1.0_RP-cmask(n,k,l,3) ) * (-BIG)
+          Qin(ijp1,  k,l,I_max,6) = (        cmask(n,k,l,3) ) * (-BIG)   &
                                   + ( 1.0_RP-cmask(n,k,l,3) ) * q_max_AJ
        enddo
 
@@ -1585,13 +1577,13 @@ contains
           q_min_AIJ = min( q(ij,k,l), q(ip1jp1,k,l), q(ip2jp1,k,l), q(ijp1,k,l) )
           q_max_AIJ = max( q(ij,k,l), q(ip1jp1,k,l), q(ip2jp1,k,l), q(ijp1,k,l) )
 
-          Qin(ij,    k,l,I_min,2) = (      cmask(n,k,l,2) ) * q_min_AIJ        &
-                                  + ( 1.0_RP-cmask(n,k,l,2) ) * HUGE
-          Qin(ip1jp1,k,l,I_min,5) = (      cmask(n,k,l,2) ) * HUGE    &
+          Qin(ij,    k,l,I_min,2) = (        cmask(n,k,l,2) ) * q_min_AIJ &
+                                  + ( 1.0_RP-cmask(n,k,l,2) ) * BIG
+          Qin(ip1jp1,k,l,I_min,5) = (        cmask(n,k,l,2) ) * BIG       &
                                   + ( 1.0_RP-cmask(n,k,l,2) ) * q_min_AIJ
-          Qin(ij,    k,l,I_max,2) = (      cmask(n,k,l,2) ) * q_max_AIJ        &
-                                  + ( 1.0_RP-cmask(n,k,l,2) ) * (-HUGE)
-          Qin(ip1jp1,k,l,I_max,5) = (      cmask(n,k,l,2) ) * (-HUGE) &
+          Qin(ij,    k,l,I_max,2) = (        cmask(n,k,l,2) ) * q_max_AIJ &
+                                  + ( 1.0_RP-cmask(n,k,l,2) ) * (-BIG)
+          Qin(ip1jp1,k,l,I_max,5) = (        cmask(n,k,l,2) ) * (-BIG)    &
                                   + ( 1.0_RP-cmask(n,k,l,2) ) * q_max_AIJ
        endif
 
@@ -1684,13 +1676,13 @@ contains
                 q_min_pl = min( q_pl(n,k,l), q_pl(ij,k,l), q_pl(ijm1,k,l), q_pl(ijp1,k,l) )
                 q_max_pl = max( q_pl(n,k,l), q_pl(ij,k,l), q_pl(ijm1,k,l), q_pl(ijp1,k,l) )
 
-                Qin_pl(ij,k,l,I_min,1) = (      cmask_pl(ij,k,l) ) * q_min_pl         &
-                                       + ( 1.0_RP-cmask_pl(ij,k,l) ) * HUGE
-                Qin_pl(ij,k,l,I_min,2) = (      cmask_pl(ij,k,l) ) * HUGE    &
+                Qin_pl(ij,k,l,I_min,1) = (        cmask_pl(ij,k,l) ) * q_min_pl &
+                                       + ( 1.0_RP-cmask_pl(ij,k,l) ) * BIG
+                Qin_pl(ij,k,l,I_min,2) = (        cmask_pl(ij,k,l) ) * BIG      &
                                        + ( 1.0_RP-cmask_pl(ij,k,l) ) * q_min_pl
-                Qin_pl(ij,k,l,I_max,1) = (      cmask_pl(ij,k,l) ) * q_max_pl         &
-                                       + ( 1.0_RP-cmask_pl(ij,k,l) ) * (-HUGE)
-                Qin_pl(ij,k,l,I_max,2) = (      cmask_pl(ij,k,l) ) * (-HUGE) &
+                Qin_pl(ij,k,l,I_max,1) = (        cmask_pl(ij,k,l) ) * q_max_pl &
+                                       + ( 1.0_RP-cmask_pl(ij,k,l) ) * (-BIG)
+                Qin_pl(ij,k,l,I_max,2) = (        cmask_pl(ij,k,l) ) * (-BIG)   &
                                        + ( 1.0_RP-cmask_pl(ij,k,l) ) * q_max_pl
              enddo
           enddo
@@ -1742,21 +1734,21 @@ contains
           ijp1   = n     + ADM_gall_1d
           ip1jp1 = n + 1 + ADM_gall_1d
 
-          q_a(n,k,l,1) = (      cmask(n,k,l,1) ) * min(max(q_a(n,k,l,1), Qin (ij    ,k,l,I_min,1)), Qin (ij    ,k,l,I_max,1)) &
+          q_a(n,k,l,1) = (        cmask(n,k,l,1) ) * min(max(q_a(n,k,l,1), Qin (ij    ,k,l,I_min,1)), Qin (ij    ,k,l,I_max,1)) &
                        + ( 1.0_RP-cmask(n,k,l,1) ) * min(max(q_a(n,k,l,1), Qin (ip1j  ,k,l,I_min,4)), Qin (ip1j  ,k,l,I_max,4))
-          q_a(n,k,l,1) = (      cmask(n,k,l,1) ) * max(min(q_a(n,k,l,1), Qout(ip1j  ,k,l,I_max  )), Qout(ip1j  ,k,l,I_min  )) &
+          q_a(n,k,l,1) = (        cmask(n,k,l,1) ) * max(min(q_a(n,k,l,1), Qout(ip1j  ,k,l,I_max  )), Qout(ip1j  ,k,l,I_min  )) &
                        + ( 1.0_RP-cmask(n,k,l,1) ) * max(min(q_a(n,k,l,1), Qout(ij    ,k,l,I_max  )), Qout(ij    ,k,l,I_min  ))
           q_a(ip1j,k,l,4) = q_a(n,k,l,1)
 
-          q_a(n,k,l,2) = (      cmask(n,k,l,2) ) * min(max(q_a(n,k,l,2), Qin (ij    ,k,l,I_min,2)), Qin (ij    ,k,l,I_max,2)) &
+          q_a(n,k,l,2) = (        cmask(n,k,l,2) ) * min(max(q_a(n,k,l,2), Qin (ij    ,k,l,I_min,2)), Qin (ij    ,k,l,I_max,2)) &
                        + ( 1.0_RP-cmask(n,k,l,2) ) * min(max(q_a(n,k,l,2), Qin (ip1jp1,k,l,I_min,5)), Qin (ip1jp1,k,l,I_max,5))
-          q_a(n,k,l,2) = (      cmask(n,k,l,2) ) * max(min(q_a(n,k,l,2), Qout(ip1jp1,k,l,I_max  )), Qout(ip1jp1,k,l,I_min  )) &
+          q_a(n,k,l,2) = (        cmask(n,k,l,2) ) * max(min(q_a(n,k,l,2), Qout(ip1jp1,k,l,I_max  )), Qout(ip1jp1,k,l,I_min  )) &
                        + ( 1.0_RP-cmask(n,k,l,2) ) * max(min(q_a(n,k,l,2), Qout(ij    ,k,l,I_max  )), Qout(ij    ,k,l,I_min  ))
           q_a(ip1jp1,k,l,5) = q_a(n,k,l,2)
 
-          q_a(n,k,l,3) = (      cmask(n,k,l,3) ) * min(max(q_a(n,k,l,3), Qin (ij    ,k,l,I_min,3)), Qin (ij    ,k,l,I_max,3)) &
+          q_a(n,k,l,3) = (        cmask(n,k,l,3) ) * min(max(q_a(n,k,l,3), Qin (ij    ,k,l,I_min,3)), Qin (ij    ,k,l,I_max,3)) &
                        + ( 1.0_RP-cmask(n,k,l,3) ) * min(max(q_a(n,k,l,3), Qin (ijp1  ,k,l,I_min,6)), Qin (ijp1  ,k,l,I_max,6))
-          q_a(n,k,l,3) = (      cmask(n,k,l,3) ) * max(min(q_a(n,k,l,3), Qout(ijp1  ,k,l,I_max  )), Qout(ijp1  ,k,l,I_min  )) &
+          q_a(n,k,l,3) = (        cmask(n,k,l,3) ) * max(min(q_a(n,k,l,3), Qout(ijp1  ,k,l,I_max  )), Qout(ijp1  ,k,l,I_min  )) &
                        + ( 1.0_RP-cmask(n,k,l,3) ) * max(min(q_a(n,k,l,3), Qout(ij    ,k,l,I_max  )), Qout(ij    ,k,l,I_min  ))
           q_a(ijp1,k,l,6) = q_a(n,k,l,3)
        enddo
@@ -1769,18 +1761,31 @@ contains
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do v = ADM_gmin_pl, ADM_gmax_pl
-          q_a_pl(v,k,l) = (      cmask_pl(v,k,l) ) * min(max(q_a_pl(v,k,l), Qin_pl (v,k,l,I_min,1)), Qin_pl (v,k,l,I_max,1)) &
+          q_a_pl(v,k,l) = (        cmask_pl(v,k,l) ) * min(max(q_a_pl(v,k,l), Qin_pl (v,k,l,I_min,1)), Qin_pl (v,k,l,I_max,1)) &
                         + ( 1.0_RP-cmask_pl(v,k,l) ) * min(max(q_a_pl(v,k,l), Qin_pl (v,k,l,I_min,2)), Qin_pl (v,k,l,I_max,2))
-          q_a_pl(v,k,l) = (      cmask_pl(v,k,l) ) * max(min(q_a_pl(v,k,l), Qout_pl(v,k,l,I_max  )), Qout_pl(v,k,l,I_min  )) &
+          q_a_pl(v,k,l) = (        cmask_pl(v,k,l) ) * max(min(q_a_pl(v,k,l), Qout_pl(v,k,l,I_max  )), Qout_pl(v,k,l,I_min  )) &
                         + ( 1.0_RP-cmask_pl(v,k,l) ) * max(min(q_a_pl(v,k,l), Qout_pl(n,k,l,I_max  )), Qout_pl(n,k,l,I_min  ))
        enddo
        enddo
        enddo
     endif
 
-    call PROF_rapend  ('____Horizontal_Adv_limiter')
+    call PROF_rapend  ('____Horizontal_Adv_limiter',2)
 
     return
   end subroutine horizontal_limiter_thuburn
+
+  !-----------------------------------------------------------------------------
+  integer function suf(i,j)
+    use mod_adm, only: &
+       ADM_gall_1d
+    implicit none
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    suf = ADM_gall_1d * (j-1) + i
+
+  end function suf
 
 end module mod_src_tracer

@@ -15,9 +15,6 @@ module mod_extdata
   use scale_precision
   use scale_stdio
   use scale_prof
-
-  use mod_adm, only: &
-     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -37,6 +34,7 @@ module mod_extdata
   !++ Private procedures
   !
   private :: data_read
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -46,24 +44,24 @@ module mod_extdata
 
   !--- type definition of information of external data
   type, private :: extdatainfo
-     character(len=H_LONG) :: fname             !--- data file name
-     character(len=H_LONG) :: dataname          !--- data name
-     character(len=H_LONG) :: input_io_mode     !--- io mode                  ! [add] H.Yashiro 20110826
-     integer                 :: input_size        !--- double/single precision
-     character(len=H_SHORT)     :: layer_type        !--- type of layer : 'ATM' or 'SFC'
-     character(len=H_SHORT)     :: layername         !--- name of layer            ! [add] H.Yashiro 20110826
-     integer                 :: kall              !--- number of layer
-     integer                 :: num_of_data       !--- number of data
-     integer, pointer        :: data_date(:,:)    !--- date of each data piece
-     real(RP), pointer        :: data_time(:)      !--- time[sec] of each data piecce
-     integer                 :: data_rec(2)       !--- data record ( forward & backward )
-     integer                 :: fix_rec           !--- record number if it's fixed
-     logical                 :: opt_fix_rec       !--- flag for fix record number
-     logical                 :: opt_monthly_cnst  !--- no time interpolation in a month
-     logical                 :: opt_periodic_year !--- flag for periodic year
-     real(RP)                 :: defval            !--- default value
-     real(RP), pointer        :: v(:,:,:,:)        !--- data stoarege for regular region
-     real(RP), pointer        :: v_pl(:,:,:,:)     !--- data stoarege for poler region
+     character(len=H_LONG)  :: fname             !--- data file name
+     character(len=H_LONG)  :: dataname          !--- data name
+     character(len=H_SHORT) :: input_io_mode     !--- io mode
+     integer                :: input_size        !--- double/single precision
+     character(len=H_SHORT) :: layer_type        !--- type of layer : 'ATM' or 'SFC'
+     character(len=H_SHORT) :: layername         !--- name of layer
+     integer                :: kall              !--- number of layer
+     integer                :: num_of_data       !--- number of data
+     integer,  pointer      :: data_date(:,:)    !--- date of each data piece
+     real(DP), pointer      :: data_time(:)      !--- time[sec] of each data piecce
+     integer                :: data_rec(2)       !--- data record ( forward & backward )
+     integer                :: fix_rec           !--- record number if it's fixed
+     logical                :: opt_fix_rec       !--- flag for fix record number
+     logical                :: opt_monthly_cnst  !--- no time interpolation in a month
+     logical                :: opt_periodic_year !--- flag for periodic year
+     real(RP)               :: defval            !--- default value
+     real(RP), pointer      :: v(:,:,:,:)        !--- data stoarege for regular region
+     real(RP), pointer      :: v_pl(:,:,:,:)     !--- data stoarege for poler region
   end type extdatainfo
 
   type(extdatainfo), allocatable, private :: info(:)
@@ -72,57 +70,58 @@ module mod_extdata
 contains
   !-----------------------------------------------------------------------------
   subroutine extdata_setup
-    use mod_adm, only : &
-       ADM_CTL_FID,  &
-       ADM_LOG_FID,  &
-       ADM_KNONE,    &
-       ADM_kall,     &
-       ADM_gall,     &
-       ADM_lall,     &
-       ADM_gall_pl,  &
-       ADM_lall_pl,  &
-       ADM_proc_stop
-    use mod_fio, only: &
-       FIO_seek
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_calendar, only: &
        CALENDAR_daysec2date,    &
        CALENDAR_date2daysec,    &
        CALENDAR_adjust_daysec,  &
        CALENDAR_combine_daysec
+    use mod_adm, only: &
+       ADM_KNONE,    &
+       ADM_kall,     &
+       ADM_gall,     &
+       ADM_lall,     &
+       ADM_gall_pl,  &
+       ADM_lall_pl
+    use mod_fio, only: &
+       FIO_seek
+    use mod_hio, only: &
+       HIO_seek
     use mod_time, only: &
        ctime => TIME_CTIME
     implicit none
 
-    character(len=H_LONG) :: fname
-    character(len=H_LONG) :: dataname
-    character(len=H_LONG) :: input_io_mode ! [add] H.Yashiro 20110826
-    integer                     :: input_size
-    character(len=H_SHORT)     :: layer_type
-    character(len=H_SHORT)     :: layername ! [add] H.Yashiro 20110826
-    integer                     :: nlayer    ! [add] H.Yashiro 20131030
-    integer                     :: num_of_data
-    integer                     :: data_date(6,max_num_of_data)
-    integer                     :: fix_rec
-    logical                     :: opt_fix_rec
-    logical                     :: opt_monthly_cnst
-    logical                     :: opt_periodic_year
-    real(RP)                     :: defval
-    ! [Add] 12/02/01 T.Seiki
+    character(len=H_LONG)  :: fname
+    character(len=H_LONG)  :: dataname
+    character(len=H_SHORT) :: input_io_mode
+    integer                :: input_size
+    character(len=H_SHORT) :: layer_type
+    character(len=H_SHORT) :: layername
+    integer                :: nlayer
+    integer                :: num_of_data
+    integer                :: data_date(6,max_num_of_data)
+    integer                :: fix_rec
+    logical                :: opt_fix_rec
+    logical                :: opt_monthly_cnst
+    logical                :: opt_periodic_year
+    real(RP)               :: defval
+
     integer :: ddata_date(6)
     logical :: opt_increment_date
 
     namelist /nm_extdata/   &
          fname,             &
          dataname,          &
-         input_io_mode,     & ! [add] H.Yashiro 20110826
+         input_io_mode,     &
          input_size,        &
          layer_type,        &
-         layername,         & ! [add] H.Yashiro 20110826
-         nlayer,            & ! [add] H.Yashiro 20131030
+         layername,         &
+         nlayer,            &
          num_of_data,       &
          data_date,         &
-         ddata_date,        & ! [Add] 12/02/01 T.Seiki
-         opt_increment_date,& ! [Add] 12/02/01 T.Seiki
+         ddata_date,        &
+         opt_increment_date,&
          fix_rec,           &
          opt_fix_rec,       &
          opt_monthly_cnst,  &
@@ -131,13 +130,11 @@ contains
 
     integer  :: cdate(6)
 
-    integer  :: extday
-    real(DP) :: extsec
-    real(DP) :: extms
-    integer  :: offset_year
+    integer  :: extday, offset_year
+    real(DP) :: extsec, extms
 
-    integer :: ierr
-    integer :: np, im
+    integer  :: ierr
+    integer  :: np, im
     !---------------------------------------------------------------------------
 
     extday      = 0
@@ -154,14 +151,14 @@ contains
 
     !--- search the number of data files.
     max_extdata = 0
-    rewind(ADM_CTL_FID)
+    rewind(IO_FID_CONF)
     do
-       read(ADM_CTL_FID, nml=nm_extdata, iostat=ierr)
+       read(IO_FID_CONF, nml=nm_extdata, iostat=ierr)
 
        if ( ierr>0 ) then
-          write(ADM_LOG_FID,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
-          write(ADM_LOG_FID,*) ' *** WARNING : Not appropriate names in namelist!! CHECK!!'
-          call ADM_proc_stop
+          if( IO_L ) write(IO_FID_LOG,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
+          if( IO_L ) write(IO_FID_LOG,*) ' *** WARNING : Not appropriate names in namelist!! CHECK!!'
+          call PRC_MPIstop
        endif
 
        if(ierr < 0) exit
@@ -172,18 +169,17 @@ contains
     !--- allocation of data information array
     allocate( info(max_extdata) )
 
-    ! -> [add&mod] H.Yashiro 20110826
     !--- read namelist, again.
-    rewind(ADM_CTL_FID)
+    rewind(IO_FID_CONF)
     do np=1, max_extdata
 
        !--- intialization
        fname             = ''
        dataname          = ''
-       input_io_mode     = 'LEGACY' ! [add] H.Yashiro 20110826
+       input_io_mode     = 'ADVANCED'
        input_size        = 8
        layer_type        = ''
-       layername         = 'ZSSFC1' ! [add] H.Yashiro 20110826
+       layername         = 'ZSSFC1'
        num_of_data       = 1
        data_date(:,:)    = 1
        fix_rec           = 1
@@ -191,12 +187,11 @@ contains
        opt_monthly_cnst  = .false.
        opt_periodic_year = .false.
        defval            = 0.0_RP
-       ! [Add] 12/02/01 T.Seiki
        ddata_date(:)     = 0
        opt_increment_date= .false.
        !
        !--- read namelist
-       read(ADM_CTL_FID, nml=nm_extdata, iostat=ierr)
+       read(IO_FID_CONF, nml=nm_extdata, iostat=ierr)
 
        if ( trim(layer_type) == 'ATM' ) then
           info(np)%kall = ADM_kall
@@ -205,63 +200,54 @@ contains
        elseif( trim(layer_type) == 'NUM' ) then
           info(np)%kall = nlayer
        else
-          write(ADM_LOG_FID,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
-          write(ADM_LOG_FID,*) 'xxx invlalid type of layer_type.', trim(layer_type)
-          call ADM_proc_stop
+          if( IO_L ) write(IO_FID_LOG,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx invlalid type of layer_type.', trim(layer_type)
+          call PRC_MPIstop
        endif
 
-       ! <- [add] H.Yashiro 20110826
-       if ( input_io_mode == 'ADVANCED' ) then
-          !--- Advanced I/O verifies;
-          !---  info(np)%layername
-          !---  info(np)%kall
-          !
-          !--- Advanced I/O overwrites;
-          !---  info(np)%input_size
-          !---  info(np)%num_of_data
-          !---  info(np)%data_date
-          !---  info(np)%data_rec(1)
+       ! IO_seek verifies;
+       !  info(np)%layername
+       !  info(np)%kall
+       !
+       ! IO_seek overwrites;
+       !  info(np)%input_size
+       !  info(np)%num_of_data
+       !  info(np)%data_date
+       !  info(np)%data_rec(1)
+       if ( input_io_mode == 'POH5' ) then
 
-          call FIO_seek( info(np)%data_rec(1), & !--- [out]
-                         num_of_data,          & !--- [overwrite]
-                         data_date,            & !--- [overwrite]
-                         input_size,           & !--- [overwrite]
-                         fname,                & !--- [in]
-                         dataname,             & !--- [in]
-                         layername,            & !--- [in]
-                         1,                    & !--- [in]
-                         info(np)%kall,        & !--- [in]
-                         ctime,                & !--- [in]
-                         cdate,                & !--- [in]
-                         opt_periodic_year     ) !--- [in]
+          call HIO_seek( info(np)%data_rec(1), & ! [OUT]
+                         num_of_data,          & ! [INOUT]
+                         data_date,            & ! [INOUT]
+                         input_size,           & ! [INOUT]
+                         fname,                & ! [IN]
+                         dataname,             & ! [IN]
+                         layername,            & ! [IN]
+                         1,                    & ! [IN]
+                         info(np)%kall,        & ! [IN]
+                         ctime,                & ! [IN]
+                         cdate,                & ! [IN]
+                         opt_periodic_year     ) ! [IN]
 
-       elseif( input_io_mode == 'LEGACY' ) then
-          if (opt_increment_date) then
-             do im = 2, num_of_data
-                data_date(1:6,im) = data_date(1:6,im-1) + ddata_date(1:6)
+       elseif( input_io_mode == 'ADVANCED' ) then
 
-                call CALENDAR_date2daysec( extday,          & ! [OUT]
-                                           extsec,          & ! [OUT]
-                                           data_date(:,im), & ! [IN]
-                                           extms,           & ! [IN]
-                                           offset_year      ) ! [IN]
+          call FIO_seek( info(np)%data_rec(1), & ! [OUT]
+                         num_of_data,          & ! [INOUT]
+                         data_date,            & ! [INOUT]
+                         input_size,           & ! [INOUT]
+                         fname,                & ! [IN]
+                         dataname,             & ! [IN]
+                         layername,            & ! [IN]
+                         1,                    & ! [IN]
+                         info(np)%kall,        & ! [IN]
+                         ctime,                & ! [IN]
+                         cdate,                & ! [IN]
+                         opt_periodic_year     ) ! [IN]
 
-                call CALENDAR_daysec2date( data_date(:,im), & ! [OUT]
-                                           extms,           & ! [OUT]
-                                           extday,          & ! [IN]
-                                           extsec,          & ! [IN]
-                                           offset_year      ) ! [IN]
-             enddo
-          endif
-
-          if (opt_periodic_year) then ! [add] C.Kodama 2010.07.26
-             data_date(1,1:num_of_data) = cdate(1)
-          endif
        else
-          write(ADM_LOG_FID,*) 'xxx Invalid input_io_mode!', trim(input_io_mode)
-          call ADM_proc_stop
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid input_io_mode!', trim(input_io_mode)
+          call PRC_MPIstop
        endif
-       ! -> [add] H.Yashiro 20110826
 
        allocate( info(np)%data_date(6,num_of_data) )
        allocate( info(np)%data_time(  num_of_data) )
@@ -271,7 +257,7 @@ contains
        !--- store information
        info(np)%fname             = trim(fname)
        info(np)%dataname          = trim(dataname)
-       info(np)%input_io_mode     = trim(input_io_mode) ! [add] H.Yashiro 20110826
+       info(np)%input_io_mode     = trim(input_io_mode)
        info(np)%input_size        = input_size
        info(np)%layer_type        = trim(layer_type)
        info(np)%layername         = trim(layername)
@@ -290,7 +276,7 @@ contains
        if ( opt_monthly_cnst .AND. num_of_data /= 12 ) then
           write(*,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
           write(*,*) '---- ERROR! : inconsistent data num in monthly fix version!'
-          call ADM_proc_stop
+          call PRC_MPIstop
        endif
 
        info(np)%data_date(:,1:num_of_data) = data_date(:,1:num_of_data)
@@ -322,17 +308,7 @@ contains
           info(np)%data_rec(1) = cdate(2)
           info(np)%data_rec(2) = cdate(2)
 
-       elseif(info(np)%opt_periodic_year) then ! [add] C.Kodama 2010.07.26
-
-          if( info(np)%input_io_mode == 'LEGACY' ) then
-             info(np)%data_rec(1) = 1
-             do im = 1, info(np)%num_of_data
-                if ( ctime < info(np)%data_time(im) ) then
-                   info(np)%data_rec(1) = im
-                   exit
-                endif
-             enddo
-          endif
+       elseif(info(np)%opt_periodic_year) then
 
           if( info(np)%data_rec(1) == 1 ) then
              info(np)%data_rec(2) = info(np)%num_of_data
@@ -342,21 +318,10 @@ contains
 
        else !--- default
 
-          if( info(np)%input_io_mode == 'LEGACY' ) then
-             info(np)%data_rec(1) = 1
-             do im = 1, info(np)%num_of_data
-                if ( ctime < info(np)%data_time(im) ) then
-                   info(np)%data_rec(1) = im
-                   exit
-                endif
-             enddo
-          endif
-
           if ( info(np)%data_rec(1) == 1 ) then
-             write(ADM_LOG_FID,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
-             write(ADM_LOG_FID,*) '--- ERROR : data time is not consistent ', &
-                       'with the simulation time! : ', trim(info(np)%dataname )
-             call ADM_proc_stop
+             if( IO_L ) write(IO_FID_LOG,*) 'xxx data time is not consistent with the simulation time! : ', &
+                                 trim(info(np)%dataname )
+             call PRC_MPIstop
           else !--- default
              info(np)%data_rec(2) = info(np)%data_rec(1)-1
           endif
@@ -367,39 +332,38 @@ contains
        call data_read( np )
 
     enddo
-    ! <- [add&mod] H.Yashiro 20110826
 
     !--- output information
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
-    write(ADM_LOG_FID,*) '===================================================='
-    write(ADM_LOG_FID,*) '--- Number of maximum external data  : ',max_extdata
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
+    if( IO_L ) write(IO_FID_LOG,*) '===================================================='
+    if( IO_L ) write(IO_FID_LOG,*) '--- Number of maximum external data  : ',max_extdata
     do np = 1, max_extdata
-       write(ADM_LOG_FID,'(1x,A,I4,A,A)') '--- variable [',np,'] : ', trim(info(np)%dataname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,A)') '--- variable [',np,'] : ', trim(info(np)%dataname)
     enddo
-    write(ADM_LOG_FID,*) '===================================================='
+    if( IO_L ) write(IO_FID_LOG,*) '===================================================='
 
     do np = 1, max_extdata
-       write(ADM_LOG_FID,*)
-       write(ADM_LOG_FID,'(1x,A,I4,A)') '============ External file NO. : ',np,' ============='
-       write(ADM_LOG_FID,*) '--- fname             : ', trim(info(np)%fname)
-       write(ADM_LOG_FID,*) '--- dataname          : ', trim(info(np)%dataname)
-       write(ADM_LOG_FID,*) '--- input_io_mode     : ', trim(info(np)%input_io_mode) ! [add] H.Yashiro 20110826
-       write(ADM_LOG_FID,*) '--- input_size        : ', info(np)%input_size
-       write(ADM_LOG_FID,*) '--- layer_type        : ', info(np)%layer_type
-       write(ADM_LOG_FID,*) '--- layername         : ', info(np)%layername ! [add] H.Yashiro 20110826
-       write(ADM_LOG_FID,*) '--- num_of_data       : ', info(np)%num_of_data
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A)') '============ External file NO. : ',np,' ============='
+       if( IO_L ) write(IO_FID_LOG,*) '--- fname             : ', trim(info(np)%fname)
+       if( IO_L ) write(IO_FID_LOG,*) '--- dataname          : ', trim(info(np)%dataname)
+       if( IO_L ) write(IO_FID_LOG,*) '--- input_io_mode     : ', trim(info(np)%input_io_mode)
+       if( IO_L ) write(IO_FID_LOG,*) '--- input_size        : ', info(np)%input_size
+       if( IO_L ) write(IO_FID_LOG,*) '--- layer_type        : ', info(np)%layer_type
+       if( IO_L ) write(IO_FID_LOG,*) '--- layername         : ', info(np)%layername
+       if( IO_L ) write(IO_FID_LOG,*) '--- num_of_data       : ', info(np)%num_of_data
        do im = 1, info(np)%num_of_data
-          write(ADM_LOG_FID,'(1x,A,6(I4,1x))') '--- data_date         : ', info(np)%data_date(:,im)
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,6(I4,1x))') '--- data_date         : ', info(np)%data_date(:,im)
        enddo
-       write(ADM_LOG_FID,*) '--- opt_fix_rec       : ', info(np)%opt_fix_rec
-       write(ADM_LOG_FID,*) '--- opt_monthly_cnst  : ', info(np)%opt_monthly_cnst
-       write(ADM_LOG_FID,*) '--- opt_periodic_year : ', info(np)%opt_periodic_year
-       write(ADM_LOG_FID,*) '--- defval            : ', info(np)%defval
+       if( IO_L ) write(IO_FID_LOG,*) '--- opt_fix_rec       : ', info(np)%opt_fix_rec
+       if( IO_L ) write(IO_FID_LOG,*) '--- opt_monthly_cnst  : ', info(np)%opt_monthly_cnst
+       if( IO_L ) write(IO_FID_LOG,*) '--- opt_periodic_year : ', info(np)%opt_periodic_year
+       if( IO_L ) write(IO_FID_LOG,*) '--- defval            : ', info(np)%defval
        if ( info(np)%input_io_mode == 'ADVANCED' ) then
-         write(ADM_LOG_FID,*) '--- first step        : ', info(np)%data_rec(1)
+         if( IO_L ) write(IO_FID_LOG,*) '--- first step        : ', info(np)%data_rec(1)
        endif
-       write(ADM_LOG_FID,*) '====================================================='
+       if( IO_L ) write(IO_FID_LOG,*) '====================================================='
     enddo
 
     return
@@ -412,23 +376,23 @@ contains
        l_region, & !--- IN    : index of region
        ctime,    & !--- IN    : record number of data on current time
        eflag     )
-    use mod_adm, only: &
-      ADM_LOG_FID,     &
-      ADM_gall_in,     &
-      ADM_IopJop,      &
-      ADM_GIoJo,       &
-      ADM_proc_stop
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_calendar, only: &
        CALENDAR_daysec2date,    &
        CALENDAR_date2daysec,    &
        CALENDAR_adjust_daysec,  &
        CALENDAR_combine_daysec
+    use mod_adm, only: &
+       ADM_gall_in, &
+       ADM_gmin,    &
+       ADM_gmax
     implicit none
 
     real(RP),         intent(inout) :: gdata(:,:) ! data is inout to retain initilized value.
     character(len=*), intent(in)    :: DNAME      ! data name
     integer,          intent(in)    :: l_region
-    real(RP),         intent(in)    :: ctime      ! current time
+    real(DP),         intent(in)    :: ctime      ! current time
     logical,          intent(out)   :: eflag
     !
     real(RP) :: dt !-- delta t between two timestep data
@@ -437,15 +401,13 @@ contains
     !--- data ID
     integer  :: np
     integer  :: data_date_prev(6), cdate(6)
-    real(RP) :: data_time_prev
+    real(DP) :: data_time_prev
 
-    integer  :: extday
-    real(DP) :: extsec
-    real(DP) :: extms
-    integer  :: offset_year
+    integer  :: extday, offset_year
+    real(DP) :: extsec, extms
 
     integer  :: kall, gall
-    integer  :: im, n, k
+    integer  :: im, i, j, k, n
     !---------------------------------------------------------------------------
 
     eflag = .false.
@@ -466,7 +428,7 @@ contains
     if (      kall /= info(np)%kall &
          .OR. gall /= ADM_gall_in   ) then
        write(*,*) 'xxx Array size of gdata is not consistent!', trim(DNAME)
-       call ADM_proc_stop
+       call PRC_MPIstop
     endif
 
     !--- update external data
@@ -500,7 +462,7 @@ contains
           if ( ctime > info(np)%data_time(info(np)%data_rec(1)) ) then
              !<-- current time pass the current data
 
-             write(ADM_LOG_FID,*) '*** Update external data :',trim(info(np)%dataname)
+             if( IO_L ) write(IO_FID_LOG,*) '*** Update external data :',trim(info(np)%dataname)
 
              !--- increment of data_rec
              info(np)%data_rec(2) = info(np)%data_rec(1)
@@ -508,8 +470,8 @@ contains
              if (       ( info(np)%data_rec(1) > info(np)%num_of_data ) &
                   .AND. ( .not. info(np)%opt_periodic_year )            ) then
 
-                write(ADM_LOG_FID,*) 'xxx This run is over the land surface data range.'
-                call ADM_proc_stop
+                if( IO_L ) write(IO_FID_LOG,*) 'xxx This run is over the land surface data range.'
+                call PRC_MPIstop
 
              elseif( ( info(np)%data_rec(1) > info(np)%num_of_data ) .and. &
                      ( info(np)%opt_periodic_year ) ) then
@@ -532,9 +494,9 @@ contains
                 enddo
 
                 !--- output of message.
-                write(ADM_LOG_FID,*) '*** data date is updated as follows.'
+                if( IO_L ) write(IO_FID_LOG,*) '*** data date is updated as follows.'
                 do im = 1,info(np)%num_of_data
-                   write(ADM_LOG_FID,*) ' ----- data_date(',im,') : ', info(np)%data_date(:,im)
+                   if( IO_L ) write(IO_FID_LOG,*) ' ----- data_date(',im,') : ', info(np)%data_date(:,im)
                 enddo
 
              endif
@@ -572,10 +534,15 @@ contains
     endif
 
     do k = 1, kall
-    do n = 1, ADM_gall_in
-       gdata(n,k) = info(np)%v(ADM_IopJop(n,ADM_GIoJo),k,l_region,1) * (     wt) &
-                  + info(np)%v(ADM_IopJop(n,ADM_GIoJo),k,l_region,2) * (1.0_RP-wt)
-    enddo
+       n = 1
+       do j = ADM_gmin, ADM_gmax+1
+       do i = ADM_gmin, ADM_gmax+1
+          gdata(n,k) = info(np)%v(suf(i,j),k,l_region,1) * (       wt) &
+                     + info(np)%v(suf(i,j),k,l_region,2) * (1.0_RP-wt)
+
+          n = n + 1
+       enddo
+       enddo
     enddo
 
     return
@@ -583,12 +550,12 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine data_read( np )
-    use mod_adm, only : &
-      ADM_LOG_FID
-    use mod_fio, only : &
-      FIO_input
-    use mod_comm, only : &
-      COMM_var
+    use mod_comm, only: &
+       COMM_var
+    use mod_fio, only: &
+       FIO_input
+    use mod_hio, only: &
+       HIO_input
     implicit none
 
     integer, intent(in) :: np
@@ -600,38 +567,50 @@ contains
     info(np)%v_pl(:,:,:,:) = info(np)%defval
 
     do n = 1, 2 !--- forward & backward
-       ! <- [add] H.Yashiro 20110826
-       if ( info(np)%input_io_mode == 'ADVANCED' ) then
+       if ( info(np)%input_io_mode == 'POH5' ) then
 
-          call FIO_input( info(np)%v(:,:,:,n), &
-                          info(np)%fname,      &
-                          info(np)%dataname,   &
-                          info(np)%layername,  &
-                          1,info(np)%kall,     &
-                          info(np)%data_rec(n) )
+          call HIO_input( info(np)%v(:,:,:,n), & ! [OUT]
+                          info(np)%fname,      & ! [IN]
+                          info(np)%dataname,   & ! [IN]
+                          info(np)%layername,  & ! [IN]
+                          1,info(np)%kall,     & ! [IN]
+                          info(np)%data_rec(n) ) ! [IN]
 
-       elseif( info(np)%input_io_mode == 'LEGACY' ) then
-       ! -> [add] H.Yashiro 20110826
+       elseif( info(np)%input_io_mode == 'ADVANCED' ) then
 
-!          call GTL_input_var2_da( trim(info(np)%fname),            &
-!                                  info(np)%v(:,:,:,n),             &
-!                                  1, info(np)%kall,                &
-!                                  recnum=info(np)%data_rec(n),     &
-!                                  input_size = info(np)%input_size )
+          call FIO_input( info(np)%v(:,:,:,n), & ! [OUT]
+                          info(np)%fname,      & ! [IN]
+                          info(np)%dataname,   & ! [IN]
+                          info(np)%layername,  & ! [IN]
+                          1,info(np)%kall,     & ! [IN]
+                          info(np)%data_rec(n) ) ! [IN]
 
        endif
     enddo
 
     call COMM_var( info(np)%v, info(np)%v_pl, info(np)%kall, 2 )
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '===== READ EXTERNAL DATA ============================'
-    write(ADM_LOG_FID,'(1x,A,I4,A,A)') '--- variable [',np,'] : ', trim(info(np)%dataname)
-    write(ADM_LOG_FID,*) '--- forward  data step(record) number : ',info(np)%data_rec(1)
-    write(ADM_LOG_FID,*) '--- backward data step(record) number : ',info(np)%data_rec(2)
-    write(ADM_LOG_FID,*) '====================================================='
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '===== READ EXTERNAL DATA ============================'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,A)') '--- variable [',np,'] : ', trim(info(np)%dataname)
+    if( IO_L ) write(IO_FID_LOG,*) '--- forward  data step(record) number : ',info(np)%data_rec(1)
+    if( IO_L ) write(IO_FID_LOG,*) '--- backward data step(record) number : ',info(np)%data_rec(2)
+    if( IO_L ) write(IO_FID_LOG,*) '====================================================='
 
     return
   end subroutine data_read
+
+  !-----------------------------------------------------------------------------
+  integer function suf(i,j)
+    use mod_adm, only: &
+       ADM_gall_1d
+    implicit none
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    suf = ADM_gall_1d * (j-1) + i
+
+  end function suf
 
 end module mod_extdata
