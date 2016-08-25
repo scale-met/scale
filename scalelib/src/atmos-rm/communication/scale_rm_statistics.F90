@@ -370,4 +370,3 @@ contains
   end subroutine STAT_detail
 
 end module scale_rm_statistics
-!-------------------------------------------------------------------------------

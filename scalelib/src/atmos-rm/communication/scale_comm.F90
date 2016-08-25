@@ -3527,4 +3527,3 @@ contains
   end subroutine COMM_cleanup
 
 end module scale_comm
-!-------------------------------------------------------------------------------

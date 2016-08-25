@@ -142,4 +142,3 @@ contains
   end subroutine RANDOM_get
 
 end module scale_random
-!-------------------------------------------------------------------------------

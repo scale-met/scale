@@ -180,6 +180,5 @@ contains
     return
 
   end subroutine ATMOS_PHY_MP_sdm_Mixingratio
-  !-----------------------------------------------------------------------------
 
 end module scale_atmos_phy_mp_sdm

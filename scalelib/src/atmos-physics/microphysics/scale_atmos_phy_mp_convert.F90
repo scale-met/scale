@@ -129,7 +129,7 @@ contains
     integer  :: fid_micpara
     real(RP) :: coef0, coef1, coef2
     real(RP) :: tmp_hyd, n_hyd, lambda_hyd
-    real(RP) :: dummy( nbin ), radc( nbin ) 
+    real(RP) :: dummy( nbin ), radc( nbin )
     integer  :: k, i, j, iq, ierr
     integer  :: nnbin, nnspc, nn
     !---------------------------------------------------------------------------
@@ -156,7 +156,7 @@ contains
     rho_sdf(3)   = 100.0_RP
     rho_sdf(4)   = 400.0_RP
 
-    !---- initiate 
+    !---- initiate
     allocate( read3Di( PARENT_IMAX(handle), PARENT_JMAX(handle), dims(1) ) )
     allocate( qtrc_tmp(dims(1)+2,dims(2),dims(3),11) )
 
@@ -206,7 +206,7 @@ contains
 
       write(*,*) 'xxx micpara.dat does not exist. check!'
       call PRC_MPIstop
-      
+
     endif
 
     call FileRead( read3Di(:,:,:), BASENAME_ORG, "QV", it, rank )
@@ -288,7 +288,7 @@ contains
 !       enddo
 !       enddo
 !       enddo
-  
+
        call FileRead( read3Di(:,:,:), BASENAME_ORG, "QR", it, rank )
        do k = 1, dims(1)
           qtrc_tmp(k+2,xs:xe,ys:ye,I_QR) = read3Di(:,:,k)
@@ -342,7 +342,7 @@ contains
          do k = 1, dims(1)
          do i = xs, xe
          do j = ys, ye
-  
+
            do iq = 1, nbin
               dummy(iq) = coef1 / sigma_sdf(1) * rho_sdf(1) * radc( iq )**3 &
                         * exp (  &
@@ -350,12 +350,12 @@ contains
                               / sigma_sdf(1) / sigma_sdf(1) &
                               )
            enddo
-  
+
            tmp_hyd = 0.0_RP
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
-  
+
            coef2 = ( &
                      qtrc_tmp(k+2,i,j,I_QC)+qtrc_tmp(k+2,i,j,I_QR) &
                    + qtrc_tmp(k+2,i,j,I_QS)+qtrc_tmp(k+2,i,j,I_QI) &
@@ -365,7 +365,7 @@ contains
            do iq = 1, nbin
              qtrc_org(k+2,i,j,I_QV+(il-1)*nbin+iq) = coef2 * dummy(iq)
            enddo
-  
+
          enddo
          enddo
          enddo
@@ -384,18 +384,18 @@ contains
                               / sigma_sdf(1) / sigma_sdf(1) &
                               )
            enddo
- 
+
            tmp_hyd = 0.0_RP
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
- 
+
            coef2 = ( qtrc_tmp(k+2,i,j,I_QC)+qtrc_tmp(k+2,i,j,I_QR) ) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
              qtrc_org(k+2,i,j,I_QV+(il-1)*nbin+iq) = coef2 * dummy(iq)
            enddo
- 
+
            !--- Ice put into plate bin (log-normal)
            do iq = 1, nbin
               dummy(iq) = coef1 / sigma_sdf(2) * rho_sdf(2) * radc( iq )**3 &
@@ -404,12 +404,12 @@ contains
                               / sigma_sdf(2) / sigma_sdf(2) &
                               )
            enddo
- 
+
            tmp_hyd = 0.0_RP
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
- 
+
            coef2 = qtrc_tmp(k+2,i,j,I_QI) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
@@ -430,7 +430,7 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
- 
+
            coef2 = qtrc_tmp(k+2,i,j,I_QS) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
@@ -451,7 +451,7 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
- 
+
            coef2 = qtrc_tmp(k+2,i,j,I_QG) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
@@ -480,7 +480,7 @@ contains
          do k = 1, dims(1)
             qtrc_org(k+2,xs:xe,ys:ye,iq) = read3Di(:,:,k)
          end do
-      end do         
+      end do
 
     else
 
@@ -494,13 +494,13 @@ contains
     deallocate( qtrc_tmp )
     return
   end subroutine ATMOS_PHY_MP_bulk2bin
+
   !-----------------------------------------------------------------------------
   !> Bin to Bulk
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_bin2bulk
     !---------------------------------------------------------------------------
 
     return
   end subroutine ATMOS_PHY_MP_bin2bulk
-  !-----------------------------------------------------------------------------
+
 end module scale_atmos_phy_mp_convert

@@ -254,4 +254,3 @@ contains
   end subroutine CONST_setup
 
 end module scale_const
-!-------------------------------------------------------------------------------

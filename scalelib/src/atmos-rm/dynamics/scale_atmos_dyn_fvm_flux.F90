@@ -454,7 +454,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd2
 
 
-      
+
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
@@ -507,7 +507,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3
 
 
-      
+
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
@@ -560,7 +560,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3Koren1993
 
 
-      
+
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
@@ -613,7 +613,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd4
 
 
-      
+
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
@@ -666,7 +666,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud5
 
 
-      
+
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
          call PRC_MPIstop
@@ -719,7 +719,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd6
 
 
-      
+
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
          call PRC_MPIstop
@@ -777,7 +777,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_cd2
 
 
-      
+
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
@@ -828,7 +828,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3
 
 
-      
+
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
@@ -879,7 +879,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3Koren1993
 
 
-      
+
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
@@ -930,7 +930,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_cd4
 
 
-      
+
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
          call PRC_MPIstop
@@ -981,7 +981,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud5
 
 
-      
+
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
          call PRC_MPIstop
@@ -1032,7 +1032,7 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_cd6
 
 
-      
+
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
          call PRC_MPIstop
@@ -1052,9 +1052,6 @@ contains
 
 
 end module scale_atmos_dyn_fvm_flux
-
-!-------------------------------------------------------------------------------
-
 
 !--
 ! vi:set readonly sw=4 ts=8
