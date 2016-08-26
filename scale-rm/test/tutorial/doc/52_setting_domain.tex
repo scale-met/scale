@@ -3,31 +3,33 @@
 %=======================================================================
 
 %\Item{\SubsecRelationOfResoGridProcess}
-各設定を行う前に、\scalerm での対象計算領域の格子点数とMPIプロセスの関係を整理しておく。
-計算領域は、水平格子間隔と格子点数を指定することで決定されるようになっている。
+まず、\scalerm での対象計算領域の格子点数とMPIプロセスの関係を整理しておく。
+計算領域は、水平格子間隔と格子点数およびMPIプロセス数を指定することで決定されるようになっている。
 図\ref{fig:domain}は、
 計算領域、水平格子間隔、格子数、及びMPIプロセス数の関係を示している。
 水平方向に2次元の領域分割を行うことで並列化がなされている。
 
-これらは、\namelist{PARAM_INDEX}内の\nmitem{IMAX,JMAX}、
+格子点数およびMPIプロセス数は、
+\namelist{PARAM_INDEX}内の\nmitem{IMAX,JMAX}、\\
 \namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X,PRC_NUM_Y}で設定する。
 %水平格子間隔については、\namelist{PARAM_GRID}内の\nmitem{DX,DY}で設定する。
 
-ここで、注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であることである。
-設定する格子数(\nmitem{IMAX, JMAX,KMAX})は、
-1つのMPIプロセスが担当する格子点数を与える仕様となっている。
-すなわち、計算領域は、
-水平格子間隔、格子点数とともに各方向のMPIプロセス数を考慮して決定する必要がある。
 
 図\ref{fig:domain}に示すように、
-MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
-計算領域は、\XDIR に\nmitem{PRC_NUM_X}個、\YDIR に\nmitem{PRC_NUM_Y}個に分割される。
+計算領域全体が、\XDIR に\nmitem{PRC_NUM_X}個、\YDIR に\nmitem{PRC_NUM_Y}個に分割され、それぞれが1つのMPIプロセスによって担当される。
+
+それぞれのMPIプロセスは、\nmitem{IMAX,JMAX,KMAX}個の格子を受け持つ。
+ここで、注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であり、
+計算領域全体の格子点数ではないことである。
+すなわち、計算領域は、水平格子間隔、格子点数とともにMPIプロセス数にも依存する。
+
+
 以上の関係から、計算領域全体のそれぞれの方向の格子点数および総格子点数は、
 \begin{eqnarray}
-&& 領域内{\XDIR} の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
-   \times (\verb|KMAX| )  \label{eq:xgridnum}\\
-&& 領域内{\YDIR}の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|
-   \times (\verb|KMAX|\right)  \label{eq:ygridnum}\\
+&& 領域内{\XDIR} の格子数 = \verb|IMAX| \times \verb|PRC_NUM_X|
+   \label{eq:xgridnum}\\
+&& 領域内{\YDIR}の格子数 = \verb|JMAX| \times \verb|PRC_NUM_Y|
+   \label{eq:ygridnum}\\
 && 領域内の総格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
    \times (\verb|KMAX| )  \nonumber
@@ -41,7 +43,7 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./figure/domain_decomposition.eps}\\
-  \caption{計算領域に対する、水平格子間隔(DX, DY)、1MPIプロセスあたりの格子数(IMAX, JMAX)、MPIプロセス数(PRC\_NUM\_X, PRC\_NUM\_Y)の関係。
+  \caption{計算領域に対する、水平格子間隔(DX, DY)、MPIプロセスあたりの格子数(IMAX, JMAX)、MPIプロセス数(PRC\_NUM\_X, PRC\_NUM\_Y)の関係。
 水色領域は、ある1つのMPIプロセスが担当する領域。}
   \label{fig:domain}
 \end{center}
@@ -52,13 +54,13 @@ MPIプロセス数が$n$(=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)の時、
 前節で述べた関係が理解できれば、領域の設定は容易である。
 すなわち、式(\ref{eq:xgridnum},\ref{eq:ygridnum})を使って、
 \begin{eqnarray}
-&& {\XDIR} の領域の長さ = {\XDIR} の格子点数 \times \verb|DX| \nonumber\\
+&& {\XDIR}の領域の長さ = {\XDIR} の格子点数 \times \verb|DX| \nonumber\\
 && {\YDIR}の領域の長さ = {\YDIR}の格子点数 \times \verb|DY| \nonumber
 \end{eqnarray}
 となる。ここで、\nmitem{DX,DY}は、後述するように
 \namelist{PRAM_GRID}で指定されるものである。
-逆算して、解像度と領域の大きさをを決めて、MPIプロセス数が決まると、
-ローカルな領域の格子点数が決まる。
+解像度と領域の大きさが決っている場合、MPIプロセス数が決まると、
+逆算してMPIプロセスあたりの格子点数が決まる。
 
 \subsection{\SubsecMPIProcess} \label{subsec:relation_dom_reso3}
 
@@ -89,7 +91,7 @@ MPIプロセス数を変更するには、
 実行時にMPIコマンドに指定するMPIプロセス数は、
 この総MPIプロセス数を指定しなければならない。
 この条件を満たさない場合は、下記のメッセージが
-LOGファイルなどに出力されて計算は行われず、直ちに終了する。
+標準出力に出力されて計算は行われず、直ちに終了する。
 
 \noindent {\small {\gt
 \ovalbox{
@@ -124,7 +126,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \subsection{\SubsecGridIntvSettng} \label{subsec:gridinterv}
 %-----------------------------------------------------------------------
 \scalerm では、水平方向に格子間隔を一定値で設定する。
-鉛直方向には、均等間隔でも任意の格子点位置を直接指定することもできる。
+鉛直方向には、等間隔でも任意の格子点位置を直接指定することもできる。
 以下で説明する
 \textcolor{red}{\bf 格子間隔の設定は、pp\_***.conf、init\_***.conf、run\_***.confの
 設定ファイルの間で一致させなければならないことに注意が必要である。}
@@ -132,8 +134,8 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 ~\\
 
 %-----------------------------------------------------------------------&
-第\ref{subsec:buffer}節で述べる緩和領域を覗き、
-水平格子間隔は等間隔でしか設定できない。
+第\ref{subsec:buffer}節で述べる緩和領域を除き、
+水平格子間隔は等間隔でのみ設定可能である。
 鉛直格子間隔については、任意に定義することが可能である。
 すべての方向について等間隔で設定する場合には、以下のように
 設定ファイルの\namelist{PARAM_GRID}の\nmitem{DX,DY,DZ}に
@@ -154,7 +156,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 以下に、鉛直方向での任意の格子点位置を指定する場合の設定を示す。
 鉛直方向は、ローレンツ格子を採用しており、
-速度成分定義格子点とスカラー定義格子点が半格子分ずれた食い違い格子にになっている。
+速度成分定義格子点とスカラー定義格子点が半格子分ずれた食い違い格子になっている。
 ここでは、スカラー量を定義している格子点をセンターポイントと呼び、
 半格子ズレた格子点をフェイスポイントと呼ぶ（図\ref{fig:scale_grid}参照)。
 
@@ -195,12 +197,12 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \begin{figure}[tb]
 \begin{center}
   \includegraphics[width=0.4\hsize]{./figure/verticalface.eps}\\
-  \caption{\scalerm の鉛直格子の定義点。\namelist{PARAM_GRID}で\nmitem{FZ}を指定する時は、ハロを除いた計算領域下端の格子から$k=1$として与える。}
+  \caption{\scalerm の鉛直格子のフェイスポイントの定義点。\namelist{PARAM_GRID}で\nmitem{FZ}を指定する時は、地表面を除いた計算領域下端第1層目上端の位置から$k=1$として与える。}
   \label{fig:scale_grid}
 \end{center}
 \end{figure}
 なお、これらの指定では、
-標高0mでの格子点として設定され、標高を持つ位置では山岳に沿った座標系によって適切に処理される。
+標高0mでの格子点として設定され、標高を持つ位置では地形に沿った座標系によって適切に処理される。
 
 
 格子点位置は任意に設定できるが、場合によっては計算不安定につながる。
@@ -247,15 +249,16 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 \noindent
 まず\nmitem{MPRJ_basepoint_lat}と\nmitem{MPRJ_basepoint_lon}は、
-計算領域の中心の緯度・経度を表す。
+基準点の緯度・経度を表す。
+デフォルトでは基準点は計算領域の中心である。
 SCALE-RMでは、北緯を正、南緯を負の値として表現し、
-経度は0度を起点に右回りで表現するため、
+経度は0度を起点に右回りで表現する。
 この設定例では計算領域の
 中心が北緯35.360556度、東経138.727778度に位置することになる。
 この場所を中心に指定された大きさで、計算領域が設定される。\\
 \nmitem{MPRJ_type}は、地図投影法の種類を表しており、\verb|MER|はメルカトル図法を意味する。
 \scalerm で現在選択できる地図投影法とその指定文字列は表\ref{tab:map_proj}のとおりである。
-メルカトル図法を用いた場合、投射する円筒に接する基準緯線は\nmitem{MPRJ_M_lat}で任意の値に設定する。
+メルカトル図法を用いた場合、投射する円筒に接する基準緯線は\nmitem{MPRJ_M_lat}で設定する。
 通常、基準緯線は赤道にとることが多いが、基準緯線に近いほど歪みが少なく正確に記述できるので、
 \nmitem{MPRJ_M_lat}を指定しない場合は\nmitem{MPRJ_basepoint_lat}が基準緯線として用いられる。
 
@@ -279,7 +282,7 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \scalerm では、2標準緯線型の投影方法を採用している。
 両標準緯線に挟まれた領域では、
 緯線・経線の長さの比が地球楕円体面上における長さの比と近くなるように調節される。
-南側、北側の標準緯線はそれぞれ\nmitem{MPRJ_LC_lat1}と\nmitem{MPRJ_LC_lat2}で設定する。
+南側、北側の標準緯線をそれぞれ\nmitem{MPRJ_LC_lat1}と\nmitem{MPRJ_LC_lat2}で設定する。
 値の単位はdegreeである。
 
 さらに下記のように\nmitem{MPRJ_basepoint_x}と\nmitem{MPRJ_basepoint_y}という変数を用いることで、
@@ -321,7 +324,7 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 
 \subsection{\SecBasicBufferSetting} \label{subsec:buffer}
 %-----------------------------------------------------------------------
-モデル最上層では意図しない重力波の反射が起こる。
+モデル最上層では音波や重力波の非物理的な反射が起こる。
 また、側面境界では現実大気実験を行う際に境界条件と対象領域の間に値の不一致が起こる。
 これを回避するため、「緩和領域」を設ける。
 \scalerm では計算領域の境界のすぐ内側に緩和領域を設定することができる。
@@ -354,8 +357,8 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \[
 \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
 \]
-の関係を満たす最小の整数で自動的に計算され、
-緩和領域の大きさ \verb|BUFFER|$_X$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$)
+の関係を満たす最小の整数で自動的に計算される。
+したがって、緩和領域の大きさ $\verb|BUFFER|_{\verb|X|}$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$)
 は必ずしも \nmitem{BUFFER_DX} と一致するわけではないことに注意が必要である。
 結局、緩和領域を除いた計算領域の大きさは、
 \[
@@ -381,6 +384,18 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \end{figure}
 
 
+一般に、緩和領域の大きさ、緩和格子点の数については、解く問題により、明確な指標はない。
+\scalerm では、鉛直方向（計算領域トップ）の緩和格子点は5点以上、
+水平方向（側面境界付近）の緩和格子点は20〜40点程度を推奨している。
+実験設定や事例によっては、さらに緩和格子点を増やしたり、
+後述のストレッチ係数を用いて緩和領域を広げたり、
+緩和の時定数を調整したりする必要があるだろう。
+時定数とは、目標値との差が$1/e$になるまでの時間である。
+緩和の時定数は、
+\namelist{PARAM_ATMOS_BOUNDARY}の中の
+\nmitem{ATMOS_BOUNDARY_taux,ATMOS_BOUNDARY_tauy,ATMOS_BOUNDARY_tauz}によって秒単位で設定する。
+デフォルトの値は $10 \Delta t$ であり、これは、10タイムステップで$1/e$になることに相当する。
+タイムステップについては、第\ref{sec:timeintiv}節を参照のこと。
 
 \subsubsection{緩和領域の格子間隔をストレッチさせる}
 
@@ -391,49 +406,38 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 この\nmitem{BUFFFACT}の設定は、X, Y, {\ZDIR}すべてに適用される。
 それぞれの方向に別々に設定したい場合は、\nmitem{BUFFFACT_X}, \nmitem{BUFFFACT_Y}, \nmitem{BUFFFACT_Z}を指定する。
 {\ZDIR}の層レベルを任意の格子点位置に指定する場合、
-すなわち、\nmitem{FZ(:)}を与える場合(第\ref{subsec:gridinterv}節参照のこと)にはストレッチの設定は適用されない。
+すなわち、\nmitem{FZ(:)}を与える場合(第\ref{subsec:gridinterv}節参照のこと)にはストレッチの設定は{\ZDIR}には適用されない。
 
 緩和領域内の格子間隔 (\verb|BDX|) は次の通り決定される。
 \begin{eqnarray}
  \verb|BDX(|n\verb|)| &=& \verb|DX| \times \verb|BUFFFACT|^n \nonumber
 \end{eqnarray}
-ここで、$n$は緩和領域内の格子点番号を表し、計算領域の内側から外側へ向かって番号が振られる。
+ここで、$n$は緩和領域内の格子点番号を表し、計算領域の内側から外側へ向う番号である。
 緩和領域の格子間隔は、
 \nmitem{BUFFFACT=1.0}ならば内部領域と同じであり、
 \nmitem{BUFFFACT=1.2}ならば内側から外側(境界)に向かって1.2倍の割合で広がっていく。
-\nmitem{BUFFFACT}はいくつに設定しても良いが、計算の安定性を考慮すると 1.0から1.2 が推奨である。
+\nmitem{BUFFFACT}はいくつに設定しても良いが、計算の安定性を考慮すると 1.0から1.2 が推奨される。
 
 
-緩和領域の大きさ\verb|BUFFER|$_X$は、
+緩和領域の大きさ$\verb|BUFFER|_{\verb|X|}$は、
 \[
-  \verb|BUFFER|_X = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}-1 }}{ \nmitemeq{BUFFFACT}-1 }
+  \verb|BUFFER|_{\verb|X|} = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}-1 }}{ \nmitemeq{BUFFFACT}-1 }
 \]
 となる。
 %
 緩和領域の幅\nmitem{BUFFER_DX}が同じでも、
-\nmitem{BUFFFACT}の値を大きくすると緩和領域に用意される格子数は少なくなる。
+\nmitem{BUFFFACT}の値を大きくすると緩和領域の格子数は少なくなる。
 
-一般に、緩和領域の大きさ、緩和格子点の数については、解く問題により、明確な指標はない。
-\scalerm では、鉛直方向（計算領域トップ）の緩和格子点は5点以上、
-水平方向（側面境界付近）の緩和格子点は20〜40点程度を推奨している。
-実験設定や事例によっては、さらに緩和格子点を増やしたり、
-ストレッチ係数を用いて緩和領域を広げたり、
-緩和の時定数を調整したりする必要があるだろう。
-時定数とは、目標値との差が$1/e$になるまでの時間である。
-緩和の時定数は、
-\namelist{PARAM_ATMOS_BOUNDARY}の中の
-\nmitem{ATMOS_BOUNDARY_taux,ATMOS_BOUNDARY_tauy,ATMOS_BOUNDARY_tauz}によって秒単位で設定する。
-デフォルトの値は $10 \Delta t$ であり、これは、10タイムステップで$1/e$になることに相当する。
-タイムステップについては、第\ref{sec:timeintiv}節を参照のこと。
+
 
 
 \subsection{\SecBasicTopoSetting} \label{subsec:basic_usel_topo}
 %-----------------------------------------------------------------------
 
 \scalerm では地形データに対しモデル下端の格子面を傾斜させて地形を表現する山岳に沿った座標系を採用している。
-水平の最大格子間隔を$DX_{max}$[m]、鉛直の最小格子間隔を$DZ_{min}$[m]とすると、許容される最大の地形傾斜角度$\theta_{max}$[deg]は次の式で計算される。
-
-\[ \theta_{max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ_{min}}/\mathrm{DX_{max}} ) \times 180/\pi \]
+許容される最大の地形傾斜角度$\theta_{\max}$[deg]は次の式で計算される。
+\[ \theta_{max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ} / \mathrm{DX} ) \times 180/\pi \]
+ここで、$\mathrm{DZ}, \mathrm{DX}$は、それぞれ鉛直と水平の格子間隔である。
 
 \scalerm ではRATIOのデフォルト値を1.0に設定している。
 RATIOの設定を、1.0よりも大きくすれば地形がより細かく、1.0よりも小さくすれば地形がより粗く表現される。
@@ -447,7 +451,7 @@ RATIOの設定を、1.0よりも大きくすれば地形がより細かく、1.0
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_CNVTOPO  |                  & \\
  \verb|CNVTOPO_name                  = "GTOPO30", | & ; 使用する地形データ名\\
- \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; DZのDXに対する比の倍率 \\
+ \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; 許容する傾斜のDZ/DXに対する倍率 \\
  \verb|CNVTOPO_smooth_local          = .true.,    | & ; 最大傾斜角度を超えた格子のみ平滑化を行うかどうか \\
  \verb|CNVTOPO_copyparent            = .false.,   | & ; 緩和領域に親ドメインの地形をコピーするかどうか \\
 \verb|/|\\
@@ -467,7 +471,7 @@ RATIOの設定を、1.0よりも大きくすれば地形がより細かく、1.0
 一般的に、多段ネスティング計算を行う場合、
 子ドメインのほうが空間解像度が細かいため、地形もシャープに表現される。
 このとき、親ドメインと子ドメインの地形表現が異なるために、
-子ドメインの緩和領域に挿入される親ドメインの大気データを外挿する必要が発生し、不整合を起こすことがある。
+子ドメインの緩和領域で用いられる親ドメインの大気データと不整合を起こすことがある。
 これを回避するために、
 \nmitem{CNVTOPO_copyparent}を\verb|.true.|とすることで、親ドメインの地形を子ドメインの緩和領域にコピーすることができる。
 親ドメインが存在しない場合は\nmitem{CNVTOPO_copyparent}を必ず\verb|.false.|に設定しなければならない。

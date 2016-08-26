@@ -23,7 +23,7 @@
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 備考\\ \hline
       \verb|HEVE|  & 水平陽解法-鉛直陽解法 & \\
-      \verb|HEVI|  & 水平陽解法-鉛直陰解法 & 推奨(特に実大気実験)\\
+      \verb|HEVI|  & 水平陽解法-鉛直陰解法 & 実大気実験ではこちらを推奨\\
     \hline
   \end{tabularx}
 \end{center}
@@ -64,11 +64,11 @@
   \begin{tabularx}{150mm}{llXX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
     \multicolumn{3}{l}{時間スキーム} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{3次ルンゲクッタスキーム(Heun)} \\
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{3次3段ルンゲクッタスキーム(Heun)} \\
     & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) 3段ルンゲクッタスキーム} \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4次ルンゲクッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4次4段ルンゲクッタスキーム} \\
     \hline
-    \multicolumn{3}{l}{空間スキーム} & 最小の設定格子数(ハロの数)\\ \hline
+    \multicolumn{3}{l}{空間スキーム} & 最小のハロ格子数\\ \hline
     & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次中央差分} & \multicolumn{1}{l}{1}\\
     & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4次中央差分} & \multicolumn{1}{l}{2}\\
     & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6次中央差分} & \multicolumn{1}{l}{3}\\
@@ -80,15 +80,17 @@
 \end{center}
 \end{table}
 
-トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。\\
-つまり \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}として \nmitem{UD3KOREN1993}以外を選択した場合は、\\
+トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。
+\nmitem{UD3KOREN1993}は非負保証スキームであるが、
+それ以外は非負が保証されない。
+つまり \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}として \nmitem{UD3KOREN1993}以外を選択した場合は、
 \nmitem{ATMOS_DYN_FLAG_FCT_TRACER} を \verb|.true.| としてFCTを利用するのがよい。
 
-ハロの数はデフォルトで２となっている。
+ハロの格子数はデフォルトで2となっている。
 従って、空間スキームがCD4, UD3以外の場合、上記の表に記したハロの数の設定が必要である。
 設定は、\namelist{PARAM_INDEX}の中の\nmitem{IHALO,JHALO}で行う。
 
-例えば、空間スキームに5次風上差分を設定した場合、
+例えば、空間スキームとして5次風上差分を設定した場合、
 
 \noindent {\gt\small
 \ovalbox{

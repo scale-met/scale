@@ -38,7 +38,7 @@
 \end{itemize}
 
 
-この設定を\verb|run.parent.conf|に適用すると下記のようになる。\textcolor{red}{赤文字}で示した部分が、上記の注意点・変更点に対応する部分である。\\
+この設定を\verb|run.d0.conf|に適用すると下記のようになる。\textcolor{red}{赤文字}で示した部分が、上記の注意点・変更点に対応する部分である。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -67,7 +67,7 @@
 その他、\namelist{PARAM_HISTORY}の各項目の詳細は、第\ref{sec:output}節を参照のこと。
 
 また、子領域の初期値/境界値データ作成に必要な変数全てを
-\verb|run.parent.conf|ファイルの\namelist{HISTITEM}に追加しておく必要がある。
+\verb|run.d0.conf|ファイルの\namelist{HISTITEM}に追加しておく必要がある。
 オフライン・ネスティングに必要な変数は、下記の通りである。
 設定が完了したら、\verb|scale-rm|を実行して親領域の時間積分計算を行う。
 
@@ -88,14 +88,14 @@
 \subsubsection{親領域の出力ファイルを用いて子領域の初期値/境界値を作成する}
 次に、計算が終わった親領域のhistoryデータを用いて、子領域の初期値/境界値を作成する。
 実行するプログラムは、通常の初期値/境界値作成と同じ \verb|scale-rm_init| だが、
-\verb|init.child.conf|を下記のように設定する。\\
+\verb|init.d1.conf|を下記のように設定する。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_MKINIT_REAL| &\\
 \verb| BASENAME_BOUNDARY   = "boundary",| &\\
-\textcolor{red}{\verb| BASENAME_ORG        = "history",|}  & \verb|run.parent.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
+\textcolor{red}{\verb| BASENAME_ORG        = "history",|}  & \verb|run.d0.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
 \textcolor{red}{\verb| FILETYPE_ORG        = "SCALE-RM",|} & \\
 \textcolor{red}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
 \textcolor{red}{\verb| BOUNDARY_UPDATE_DT  = 600.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
@@ -104,12 +104,12 @@
 \textcolor{red}{\verb|&PARAM_NEST|} & \\
 \textcolor{red}{\verb| USE_NESTING               = .true.,|} & \\
 \textcolor{red}{\verb| OFFLINE                   = .true.,|} & \\
-\textcolor{red}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 4,|}  & \verb|run.parent.conf|の\verb|PRC_NUM_X|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 4,|}  & \verb|run.parent.conf|の\verb|PRC_NUM_Y|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_KMAX       = 35,|} & \verb|run.parent.conf|の\verb|KMAX|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_IMAX       = 40,|} & \verb|run.parent.conf|の\verb|IMAX|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_JMAX       = 40,|} & \verb|run.parent.conf|の\verb|JMAX|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_LKMAX      = 5,|}  & \verb|run.parent.conf|の\verb|LKMAX|\\
+\textcolor{red}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 4,|}  & \verb|run.d0.conf|の\verb|PRC_NUM_X|\\
+\textcolor{red}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 4,|}  & \verb|run.d0.conf|の\verb|PRC_NUM_Y|\\
+\textcolor{red}{\verb| OFFLINE_PARENT_KMAX       = 35,|} & \verb|run.d0.conf|の\verb|KMAX|\\
+\textcolor{red}{\verb| OFFLINE_PARENT_IMAX       = 40,|} & \verb|run.d0.conf|の\verb|IMAX|\\
+\textcolor{red}{\verb| OFFLINE_PARENT_JMAX       = 40,|} & \verb|run.d0.conf|の\verb|JMAX|\\
+\textcolor{red}{\verb| OFFLINE_PARENT_LKMAX      = 5,|}  & \verb|run.d0.conf|の\verb|LKMAX|\\
 \textcolor{red}{\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.txt",|} & 親領域を実行した時に作成したカタログファイル\\
 \textcolor{red}{\verb|/|} &\\
 \end{tabularx}
@@ -117,13 +117,13 @@
 
 
 \scalerm の出力データから初期値境界値を作成する場合は、\nmitem{FILETYPE_ORG}に\verb|SCALE-RM|を指定する。
-\nmitem{BOUNDARY_UPDATE_DT}は、基本的に、親領域の設定ファイル(\verb|run.parent.conf|)の
+\nmitem{BOUNDARY_UPDATE_DT}は、基本的に、親領域の設定ファイル(\verb|run.d0.conf|)の
 \nmitem{HISTORY_DEFAULT_TINTERVAL}と同じ設定を記述する。
 %
 \namelist{PARAM_NEST}の項目は、ネスティング実験のための設定項目である。
 オフライン・ネスティングでは、\nmitem{USE_NESTNG=.true., OFFLINE=.true.}と設定する。
 \nmitem{OFFLINE_PARENT_**} で始まる6つの設定変数は親領域の設定を記述する変数である。
-親領域の設定ファイル(\verb|run.parent.conf|) を参照して正しく設定すること。
+親領域の設定ファイル(\verb|run.d0.conf|) を参照して正しく設定すること。
 
 
 設定の編集が完了したら、\verb|scale-rm_init|を実行し、子領域の初期値/境界値を作成する。\\
@@ -145,7 +145,7 @@
 初期値/境界値作成が終わったら、子領域の計算 (\verb|scale-rm|) を実行する。
 子領域の実行は、通常の現実大気実験と同じである。
 1点だけ注意すべき点として、
-\verb|run.child.conf|の\namelist{PARAM_MKINIT_REAL}の\nmitem{BOUNDARY_UPDATE_DT}を、
+\verb|run.d1.conf|の\namelist{PARAM_MKINIT_REAL}の\nmitem{BOUNDARY_UPDATE_DT}を、
 初期値/境界値作成で使用した親領域のhistoryデータ出力間隔に合っているか確認すること。
 現在のところ、この設定に親領域と子領域間で不整合あっても警告やエラーメッセージが発せられないまま、
 計算が進み、場合によっては正常終了してしまうため注意が必要である。

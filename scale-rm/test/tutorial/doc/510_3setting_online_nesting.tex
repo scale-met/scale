@@ -56,7 +56,7 @@
 オンライン・ネスティングのための設定を追加する。
 \namelist{PARAM_NEST}は、ネスティング実験のための設定項目である。\\
 
-\noindent {\gt \verb|run.parent.conf|の編集内容}\\
+\noindent {\gt \verb|run.d0.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
 \begin{tabularx}{145mm}{lX}
@@ -74,7 +74,7 @@
 
 \vspace{0.5cm}
 
-\noindent {\gt \verb|run.child.conf|の編集内容}\\
+\noindent {\gt \verb|run.d1.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
 \begin{tabularx}{145mm}{lX}
@@ -132,7 +132,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \subsubsection{launchファイルの編集}
 \label{subsubsec:launch}
 オンライン・ネスティング実験の実行には、
-\verb|run.***.conf|の他に、起動用設定ファイル\verb|**.launch.conf|が必要である。
+\verb|run.***.conf|の他に、起動用設定ファイル\verb|launch.conf|が必要である。
 以下のような新規ファイルを作成する。\\
 
 \noindent {\small {\gt
