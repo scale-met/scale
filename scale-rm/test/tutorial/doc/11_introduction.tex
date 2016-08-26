@@ -2,8 +2,8 @@
 %==============================================================%
 
 本書は初めて領域気象気候モデル({\scalerm})
-を利用するユーザー向けに解説したユーザーズガイドです。
-気象気候ライブラリー\scalelib version \version に対応した説明を記載します。
+を利用する人に向けた解説書です。
+気象気候ライブラリー\scalelib  version \version に対応した説明を記載します。
 現在、\scalelib を利用するため、領域モデル\scalerm と全球モデル\scalegm が
 用意されていますが、後者は、力学コアの整備のみされています。
 そのため、本版では、\scalerm の使い方についてのみ詳しく述べています。
@@ -41,13 +41,13 @@
 %SCALE-GM(SCALE-Global Model)
 といった組み上げ済みの数値モデルが含まれている。
 \item \scalelib には、次節で説明する様々なコンポーネントが導入されており、
-必要に応じて取り替えることが可能である。
+行いたい実験に合わせて選択利用することが可能である。
 \item \scalelib で提供されている物理過程は、他の数値モデルへ組み込んで
 使用することも可能である。
 \end{itemize}
 
 ライセンスの詳細は、トップディレクトリ直下の\texttt{scale-\version/LICENSE}のファイルに記述されている。
-\scalelib の使用前に一読しておくこと。またSCALEのWebページにも説明が記載されているので必要に応じて
+\scalelib の使用前に一読しておくこと。またSCALEのWebページにもソフトウェアの説明が記載されているので必要に応じて
 参照すること（\url{http://scale.aics.riken.jp/}）。
 
 本節の以下では\scalelib の思想とモデルの関係について説明するが、
@@ -78,17 +78,18 @@
 はじめとする並列計算機に対してチューニングされた
 モデルコンポーネントや解析システム、テストセットなどを
 提供する。
-
+\proofcomment{(八代)「京」と「インテル機」の対比はどういう意味か？CPUアーキテクチャということ？それとも規模？}
+\proofcomment{(八代)並列計算機に対してチューニングとは？}
 
 \scalelib を利用した数値モデルとして、
 \scalerm が含まれている(図 \ref{fig:scale-rm})。
-格子系、力学コア、各種物理過程などの基本的なコンポーネントは
+並列プロセスの管理、ファイル入出力、プロセス間通信や格子情報の設定は\scalelib が提供し、
+格子配置のデータや境界値データは\scalelib で読み込まれて利用される。
+大気流体の支配方程式を解く部分（流体力学コア、力学過程）と雲微物理や大気放射のような諸物理過程を解く部分は
 \scalelib が提供する。
-\scalerm は、予報変数などを配列を持ち、
-\scalelib のコンポーネントを適切に呼び出すことで時間発展計算を行っている。
-ユーザーは、必要に応じて、各コンポーネントを選択し、
-組み合わせて使用することが可能である。
-
+\scalerm は入力された大気状態のデータ（予報変数）を保持し、\scalelib が提供する機能を組み合わせ、
+各コンポーネントを適切に呼び出すことで時間発展計算を行っている。
+ユーザーは必要に応じて利用するコンポーネントを選択し、組み合わせてシミュレーションを行うことが出来る。
 
 \begin{figure}[hbt]
 \begin{center}
@@ -109,13 +110,11 @@
 \citet{scale_2015}、\citet{satoy_2015b}、
 および\citet{nishizawa_2015}を参照されたい。\\
 
-
-%\noindent{\bf \underline{フレームワーク関係}
-\Item{フレームワーク関係}
+{\bf フレームワーク}
 \begin{itemize}
- \item 距離座標に基づいたカーテシアン格子系
+ \item 距離座標に基づいた三次元カーテシアン格子系
  \item MPI通信を用いた二次元領域分割
- \item 各種投影法
+ \item 各種地図投影法
  \item ネスティングシステム（1 way：親領域$\to$子領域）
    \begin{itemize}
     \item オンライン実行(複数ドメインの計算を同時に実行)
@@ -126,7 +125,9 @@
    \begin{itemize}
    \item {\netcdf}3 または {\netcdf}4 形式
    \end{itemize}
- \item 外部データ読み込みによる初期値・境界値データ作成
+ \item 理想実験のための初期値データ生成
+ \item 外部データ読み込みによる標高・土地利用区分データの変換作成
+ \item 外部データ読み込みによる初期値・境界値データ変換作成
    \begin{itemize}
     \item WRF-ARW\footnote{\url{http://www.wrf-model.org/}}、
       NICAM\footnote{\url{http://nicam.jp/}}、
@@ -139,7 +140,7 @@
  \item 方程式系: 3次元完全圧縮非静力学方程式系
  \item 数値解法: 陽解法と陰解法の両方を実装
    \begin{itemize}
-    \item 水平陽解鉛直陽解法
+    \item 水平陽解法-鉛直陽解法
     \item 水平陽解法-鉛直陰解法
 %    \item HI-VI(陰解法)
    \end{itemize}
@@ -154,7 +155,7 @@
  \item 時間差分:(詳細は、\citet{scale_2015}を参照のこと)
     \begin{itemize}
       \item Heun型3次ルンゲクッタスキーム
-      \item \citet{Wicker_2002}'s 3段ルンゲクッタスキーム 
+      \item \citet{Wicker_2002}の3段ルンゲクッタスキーム
       \item 4次ルンゲクッタスキーム
     \end{itemize}
  \item 非負保証:
@@ -166,34 +167,29 @@
  \item 地形: 地形に沿った座標系
 \end{itemize}
 
-
 {\bf 物理過程}
 \begin{itemize}
  \item 乱流過程: 複数から選択可能
    \begin{itemize}
     \item \citet{smagorinsky_1963} \& \citet{lilly_1962}型のサブグリッドモデル (\citet{Brown_etal_1994}と\citet{Scotti_1993}による補正)
-    \item \citet{Deardorff_1980} サブグリットモデル 
-    \item \citet{my_1982,nakanishi_2004}によるMYNN2.5境界層モデル 
+    \item \citet{Deardorff_1980} サブグリットモデル
+    \item \citet{my_1982,nakanishi_2004}によるMYNN2.5境界層モデル
    \end{itemize}
  \item 雲微物理: 複数から選択可能
    \begin{itemize}
-    \item \citet{kessler_1969}による3-class single momoent バルクモデル
-    \item \citet{tomita_2008}による6-class single moment バルクモデル 
-    \item \citet{sn_2014}による6-class double moment バルクモデル 
-    \item \citet{suzuki_etal_2010}によるビン法雲モデル 
+    \item \citet{kessler_1969}による3-class 1モーメントバルクモデル
+    \item \citet{tomita_2008}による6-class 1モーメントバルクモデル
+    \item \citet{sn_2014}による6-class 2モーメントバルクモデル
+    \item \citet{suzuki_etal_2010}によるビン法モデル
    \end{itemize}
- \item 放射過程: \citet{sekiguchi_2008}によるk分布ベース放射スキーム
+ \item 放射過程: \citet{sekiguchi_2008}による相関k分布法ブロードバンド大気放射伝達モデル
  \item 地表面モデル
   \begin{itemize}
    \item 陸面モデル: 熱拡散・バケツモデル
-   \item 海洋モデル: 初期値固定・外部入力（時間変化あり）・スラブモデル
-   \item 都市モデル: \citet{kusaka_2001}による単層キャノピーモデル 
+   \item 海洋モデル: 初期値固定・外部データ入力・スラブモデル
+   \item 都市モデル: \citet{kusaka_2001}による単層キャノピーモデル
    \item バルク交換係数(陸面および海面): \citet{beljaars_1991,wilson_2001}による普遍関数によるバルク法
      もしくは \citet{uno_1995}によるLouis 型バルク法
   \end{itemize}
 \end{itemize}
-上記に加え、\scalerm のコンポーネントとして、
-現実事例の計算に必要な地形や土地利用データを作成するツール、
-理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。
-
 
