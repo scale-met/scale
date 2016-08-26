@@ -54,7 +54,7 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
  SUSE Enterprise Linux & 11.1、11.3         & 11.1ではGNUコンパイラは使用不可 \\ \hline
  fedora                & 20                 &  \\ \hline
  Vine Linux            & 6.2、6.3           &  \\ \hline
- Mac OS X              & 10.10 Yosemite     &  \\ \hline
+ Mac OS X              & 10.10(Yosemite)    &  \\ \hline
 \end{tabularx}
 \label{tab:compatible_os}
 \end{center}
@@ -65,7 +65,7 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 \caption{対応確認済みコンパイラ}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} コンパイラ名 & 確認済みバージョン & 備考 \\ \hline
- GNU (gcc/gfortran)    & 4.4.x~4.9.x           & 4.4.xではコンパイル時にWarningが出ることがある \\ \hline
+ GNU (gcc/gfortran)    & 4.4.x、4.9.x           & 4.4.xではコンパイル時にWarningが出ることがある \\ \hline
  Intel (icc/ifort)     & 13.0.1、14.0.2、15.0.0 & 2013年以降のバージョンを推奨 \\ \hline
  PGI (gcc/pgfortran)   & 14.3                   &  \\ \hline
 \end{tabularx}
@@ -83,7 +83,7 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 \caption{対応確認済みMPIライブラリ}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} MPIライブラリ名 & 確認済みバージョン & 備考 \\ \hline
- openMPI   & 1.8.5                    & \\ \hline
+ openMPI   & 1.8.5、1.10.3            & \\ \hline
  Intel MPI & 4.0 Update 3、4.1.0、5.0 & 2013年以降のバージョンを推奨 \\ \hline
  SGI MPT   & 2.05、2.09               & Intel Compilerとの組み合わせで確認済み \\ \hline
 \end{tabularx}
@@ -126,14 +126,14 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 
 \subsection{ソースコードの入手} \label{subsec:get_source_code}
 %-----------------------------------------------------------------------------------
-安定版ソースコードは、\\
- \url{http://scale.aics.riken.jp/ja/download/index.html}\\
+最新のリリース版ソースコードは、\\
+\url{http://scale.aics.riken.jp/ja/download/index.html}\\
 よりダウンロードできる。
 ソースコードのtarballファイルを展開すると\texttt{scale-{\version}/}というディレクトリができる。
 \begin{alltt}
  $ tar -zxvf scale-{\version}.tar.gz
  $ ls ./
-   scale-{\version}/
+    scale-{\version}/
 \end{alltt}
 
 \subsection{Makedefファイルと環境変数の設定} \label{subsec:evniromnet}
@@ -151,12 +151,12 @@ Makdefファイルは、\texttt{scale-{\version}/sysdep/}内にいくつかの�
 \caption{環境例と対応するMakedefファイル}
 \begin{tabularx}{150mm}{|l|l|X|l|} \hline
  \rowcolor[gray]{0.9} OS/計算機 & コンパイラ & MPI & Makedefファイル \\ \hline
-              & gcc/gfortran & openMPI & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
+                 & gcc/gfortran & openMPI & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
  Linux OS x86-64 & icc/ifort & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
-              & icc/ifort    & SGI-MPT & Makedef.Linux64-intel-mpt \\ \hline
- Mac OS X     & gcc/gfortran & openMPI & Makedef.MacOSX-gnu-ompi \\ \hline
+                 & icc/ifort    & SGI-MPT & Makedef.Linux64-intel-mpt \\ \hline
+ Mac OS X        & gcc/gfortran & openMPI & Makedef.MacOSX-gnu-ompi \\ \hline
  スーパーコンピュータ「京」 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.K \\ \hline
- Fujitsu PRIME-HPC FX10   & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX10 \\ \hline
+ Fujitsu PRIME-HPC FX10 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX10 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
 \end{center}
@@ -196,15 +196,15 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 \subsection{コンパイル} \label{subsec:compile}
 %-----------------------------------------------------------------------------------
 
-チュートリアル用のディレクトリに移動して、makeコマンドによってコンパイルを行う。
+\scalerm ソースディレクトリに移動して、makeコマンドによってコンパイルを行う。
 \begin{alltt}
- $ cd scale-{\version}/scale-rm/test/tutorial/bin
+ $ cd scale-{\version}/scale-rm/src
  $ make -j 4
 \end{alltt}
 \verb|make|のあとの \verb|"-j 4"| は、
 コンパイル時の並列数(例では4並列)を示しており、
 実行環境によって並列数を指定すれば良い。
-コンパイルが成功すると下記3つの実行ファイルが生成される。
+コンパイルが成功すると下記3つの実行ファイルがscale-{\version}/bin 以下に生成される。
 \begin{alltt}
  scale-rm  scale-rm_init  scale-rm_pp
 \end{alltt}
@@ -221,13 +221,14 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 \end{alltt}
 とする。
 コンパイル環境、コンパイルオプションを変更して再コンパイルする場合は、
-``allclean''を実行すること。
+``allclean''を実行すること。\\
+
 
 
 {\bf 注意点}
 \begin{itemize}
 \item \scalelib は、scaleのTOPディレクトリ直下の
- \verb|scale-{ver}/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われる。
+ scale-{\version}/scalelib/ というディレクトリ内でコンパイルとアーカイブが行われる。
  \scalerm は、コンパイルを実行したディレクトリの下の
  \verb|".lib"|という名前の隠しディレクトリの中にコンパイルされたオブジェクトファイルが置かれ、実行バイナリファイルはカレントディレクトリにコピーされる。
 \item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 DEBUG=T"|としてコンパイルする。
@@ -271,12 +272,13 @@ MPIライブラリを用いた並列実行を行うためのバイナリは、
  $ cd scale-{\version}/scale-rm/util/netcdf2grads_h
  $ make -j 2
 \end{alltt}
-MPIライブラリが無い場合など、逐次実行バイナリを生成するためには、\\
+MPIライブラリが無い場合など、逐次実行バイナリを生成するためには、
 \begin{alltt}
  $ make -j 2 NOMPI=T
 \end{alltt}
 としてコンパイルを行う。
 "net2g"という名前の実行ファイルが生成されていればコンパイルは成功である．\\
+
 
 下記のコマンドで作成された実行バイナリを消去できる。
 \begin{alltt}
