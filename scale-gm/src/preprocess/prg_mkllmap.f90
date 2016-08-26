@@ -7,7 +7,7 @@
 !! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
-program prg_mkllmap
+program mkllmap
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -35,6 +35,7 @@ program prg_mkllmap
   use mod_latlon, only: &
      LATLON_setup, &
      LATLON_ico_setup
+  !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
   !
@@ -59,14 +60,13 @@ program prg_mkllmap
   call IO_setup( 'NICAM-DC',   & ! [IN]
                  'mkllmap.cnf' ) ! [IN]
 
-  !---< Local process management setup >---
+  ! setup MPI
   call PRC_LOCAL_setup( comm_world, & ! [IN]
                         myrank,     & ! [OUT]
                         ismaster    ) ! [OUT]
 
-  !---< Logfile setup >---
-  call IO_LOG_setup( myrank,  & ! [IN]
-                     ismaster ) ! [IN]
+  ! setup Log
+  call IO_LOG_setup( myrank, ismaster )
 
   !--- < cnst module setup > ---
   call CONST_setup
@@ -102,6 +102,7 @@ program prg_mkllmap
 
   call LATLON_setup( output_dir )
 
+  !--- finalize all process
   call PRC_MPIfinish
 
-end program prg_mkllmap
+end program mkllmap

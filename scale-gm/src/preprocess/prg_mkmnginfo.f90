@@ -7,7 +7,7 @@
 !! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
-program prg_mkmnginfo
+program mkmnginfo
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -1429,5 +1429,5 @@ contains
     return
   end subroutine generate_mngtab_1dmd_on_sphere
 
-end program prg_mkmnginfo
+end program mkmnginfo
 

@@ -215,9 +215,13 @@ contains
     call IO_LOG_setup( myrank, ismaster )
     call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
+    !---< admin module setup >---
+    call ADM_setup
+
     ! setup PROF
     call PROF_setup
 
+    !###########################################################################
     ! profiler start
     call PROF_setprefx('INIT')
     call PROF_rapstart('Initialize',0)
@@ -231,9 +235,6 @@ contains
 
     ! setup random number
     call RANDOM_setup
-
-    !---< admin module setup >---
-    call ADM_setup
 
     !---< I/O module setup >---
     call FIO_setup

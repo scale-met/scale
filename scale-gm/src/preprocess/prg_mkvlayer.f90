@@ -7,7 +7,7 @@
 !! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
-program prg_mkvlayer
+program mkvlayer
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -198,4 +198,4 @@ contains
     return
   end subroutine output_layer
 
-end program prg_mkvlayer
+end program mkvlayer

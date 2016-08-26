@@ -55,16 +55,18 @@ program mkrawgrid
   call IO_setup( 'NICAM-DC',     & ! [IN]
                  'mkrawgrid.cnf' ) ! [IN]
 
-  !---< Local process management setup >---
+  ! setup MPI
   call PRC_LOCAL_setup( comm_world, & ! [IN]
                         myrank,     & ! [OUT]
                         ismaster    ) ! [OUT]
 
-  !---< Logfile setup >---
-  call IO_LOG_setup( myrank,  & ! [IN]
-                     ismaster ) ! [IN]
+  ! setup Log
+  call IO_LOG_setup( myrank, ismaster )
 
-  !---< profiler module setup >---
+  !---< admin module setup >---
+  call ADM_setup
+
+  ! setup PROF
   call PROF_setup
 
   !#############################################################################
@@ -73,9 +75,6 @@ program mkrawgrid
 
   !---< cnst module setup >---
   call CONST_setup
-
-  !---< admin module setup >---
-  call ADM_setup
 
   !---< I/O module setup >---
   call FIO_setup

@@ -180,5 +180,4 @@ program scalegm_launcher
   ! stop MPI
   call PRC_MPIfinish
 
-  stop
 end program scalegm_launcher
