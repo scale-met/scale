@@ -16,7 +16,9 @@
 に用意されている。
 これは、初期設定として現実大気実験のチュートリアルに合わせた設定となっているが、
 ユーザーが任意の設定に変更することが可能な仕組みとなっている。
-本章で説明した箇所のほとんどを網羅している。
+本章で説明する箇所の多くを\verb|USER.sh|で設定できるが、
+それぞれのネイムリストの説明については次節以降を参照していただきたい。
+
 
 \subsubsection{ツールの使い方}
 
@@ -30,7 +32,7 @@
 現在は、\verb|tutorial|の設定になっているので、
 実際には以下のようにチュートリアル設定を残しておくことを勧める。
 \begin{verbatim}
- $ mv experiment/ tutorial/    : (もしあれば)
+ $ mv experiment/ tutorial/    : (\verb|experiment|がある場合)
  $ cp USER.sh USER_tutorial.sh
  ... USER.shを編集 ...
  $ make
