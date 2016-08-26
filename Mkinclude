@@ -10,7 +10,7 @@ else
 endif
 
 ifeq ($(origin BINDIR), undefined)
-   BINDIR = $(INST_DIR)/bin/$(SCALE_SYS)
+   BINDIR = $(INST_DIR)/bin
 endif
 
 ifeq ($(origin LIBDIR), undefined)
