@@ -7,7 +7,7 @@
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{150mm}{lX}
+\begin{tabularx}{140mm}{lX}
 \verb|&PARAM_HISTORY| & \\
 \verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & 出力ファイル名の頭。 \\
 \verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|       & 出力の時間間隔。 \\
@@ -23,6 +23,9 @@
 \end{tabularx}
 }}}\\
 
+\nmitem{HISTORY_DEFAULT_TUNIT}の単位は、\\
+\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|
+より選択可能である。\\
 \verb|HISTORY_DEFAULT_TAVERAGE = .true.|として、平均値での出力を設定した場合、
 出力するタイミング直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。
 次に、出力する変数の設定を\namelist{HISTITEM}で行う。
@@ -32,32 +35,34 @@
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{150mm}{lX}
+\begin{tabularx}{140mm}{lX}
 \verb|&HISTITEM| &\\
 \verb| ITEM     = "RAIN",    | &  変数名。 出力可能な変数は付録\ref{achap:histroy_item}を参照 \\
-\verb| BASENAME = "rain_d01",| & (オプション) \verb|HISTORY_DEFAULT_BASENAME|に同じ。但し、変数(\verb|ITEM|)のみに適用 \\
-\verb| TINTERVAL= "600.0",   | & (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。但し、変数(\verb|ITEM|)のみに適用 \\
-\verb| TUNIT    = "SEC",     | & (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。但し、変数(\verb|ITEM|)のみに適用 \\
-\verb| TAVERAGE = .true.,    | & (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。但し、変数(\verb|ITEM|)のみに適用\\
-\verb| ZINTERP  = .false.,   | & (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。但し、変数(\verb|ITEM|)のみに適用。\\
-\verb| DATATYPE = "REAL4",   | & (オプション) \verb|HISTORY_DEFAULT_ZINTERP|に同じ。但し、変数(\verb|ITEM|)のみに適用\\
+\verb| BASENAME = "rain_d01",| & (オプション) \verb|HISTORY_DEFAULT_BASENAME|に同じ。\\
+\verb| TINTERVAL= "600.0",   | & (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
+\verb| TUNIT    = "SEC",     | & (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
+\verb| TAVERAGE = .true.,    | & (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\
+\verb| ZINTERP  = .false.,   | & (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
+\verb| DATATYPE = "REAL4",   | & (オプション) \verb|HISTORY_DEFAULT_ZINTERP|に同じ。\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
-上記では、明示的にすべての設定を書いているが、\nmitem{HISTORY_DEFAULT_***} と同じ設定であれば
+(オプション)の項目は、変数(\verb|ITEM|)にのみ適用される。
+上記では、明示的にすべての設定を書いているが、
+\nmitem{HISTORY_DEFAULT_***} と同じ設定であれば
 それらが適用されるので明記する必要はない。
 例えば、上記の\namelist{PARAM_HISTORY}の設定に、下記を組み合わせた場合には、
-\verb|history_d01.xxxxxx.nc|に4バイト実数で、3600秒毎に \nmitem|HISTITEM| で指定された変数の瞬間値が出力される。
+\verb|history_d01.xxxxxx.nc|に4バイト実数で、3600秒毎に \nmitem{HISTITEM} で指定された変数の瞬間値が出力される。
 ただし、\verb|RAIN|については、600秒の出力間隔で、前600秒の平均値として出力されることを意味している。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
-\verb|&HISTITEM  ITEM = "T" /|
-\verb|&HISTITEM  ITEM = "U" /|
-\verb|&HISTITEM  ITEM = "V" /|
-\verb|&HISTITEM  ITEM = "RAIN",  TINTERVAL = "600.0", TAVERAGE = .true. /|
+\verb|&HISTITEM  ITEM = "T" /|\\
+\verb|&HISTITEM  ITEM = "U" /|\\
+\verb|&HISTITEM  ITEM = "V" /|\\
+\verb|&HISTITEM  ITEM = "RAIN",  TINTERVAL = "600.0", TAVERAGE = .true. /|\\
 \end{tabularx}
 }}}\\
 
