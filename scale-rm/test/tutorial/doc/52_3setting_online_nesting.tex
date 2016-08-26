@@ -1,28 +1,24 @@
 \subsection{\SubsecOnlineNesting} \label{subsec:nest_online}
 %------------------------------------------------------
 
-オンライン・ネスティング実験の場合、
-現在のところ、親領域と子領域の積分時間は一致している必要があり、
+オンライン・ネスティング実行時の制約として、
+親領域と子領域の積分時間は一致している必要があり、
 かつ、親領域の時間ステップは子領域の時間ステップの倍数でなければならない。
-\scalerm ではオンライン・ネスティングであっても、
-親領域と子領域の間で鉛直層数、鉛直層設定、地図投影法、そして
-物理スキームが異なっていても構わない。
+一方、親領域と子領域の間で鉛直層数、鉛直レベル、地図投影法、物理スキームは一致している必要はない。
 
-オフライン・ネスティング実験では、各領域の計算を逐次的に実行する必要があったが、
 オンライン・ネスティング実験では全ての領域の計算を同時に実行する。
-現在は、親領域から子領域へのみデータ受け渡しを行う、いわゆる
-``1-wayネスティング''のみをサポートしている。
-オンライン・ネスティング実験でサポートするネスティング段数は、最大で10段までである。
+現在は、親領域から子領域に対してデータの受け渡しを行う、一方向ネスティングのみをサポートしている。
+オンライン・ネスティング実験でサポートするネスティングの段数は、最大で10段までである。
 
 \scalerm のオンライン・ネスティング実験は、
 複数の領域を逐次的に時間積分計算を進めるのではなく、並列的に時間積分計算を行う。
 図\ref{fig_mpisplit}に示すイメージ図のように、
 与えられたMPIプロセスを分割してそれぞれの領域に分配し、
 各々の領域が独立したモデルのように計算を進める。
-後ほど説明するが、複数の領域を立ち上げるために実行時には``launch.conf''という
+後ほど説明するが、複数の領域を立ち上げるために実行時には\verb|launch.conf|という
 起動用の設定ファイルが別途必要になる。
 
-\begin{figure}[t]
+\begin{figure}[ht]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./figure/mpisplit_nesting.eps}\\
   \caption{オンライン・ネスティング実験のMPIプロセス配分イメージ. 全部で13のプロセスを立ち上げ、これを適切に分配することで、
@@ -33,21 +29,25 @@
 \end{figure}
 
 
-ここでは、最も単純な2段ネスティングの例を説明する。親領域は解像度は粗いが広領域の外側領域で、
-子領域は領域は狭いが高解像度の内側領域であることを想定する。
-オンライン・ネスティング実験を行う場合は、``scale-rm''のモデル本体実行前に全ての領域について、
+オンライン・ネスティングに必要な設定は複数ある他、設定の不具合があると計算が正常に行われない。
+設定の詳細は以下の説明を参照することとし、実際の設定ファイル(\verb|**.conf|)は
+第\ref{sec:basic_makeconf}節で説明する実験セット作成サポートツールで作成すること。
+
+
+ここでは、最も単純な2段ネスティングの例を説明する。
+オンライン・ネスティング実験を行う場合は、\verb|scale-rm|のモデル本体実行前に全ての領域について、
 地形/土地利用データの作成、及び初期値/境界値データの作成を事前に行っておく必要がある。
 従って、親領域と子領域それぞれについて、
-``pp.***.conf''、``init.***.conf''、そして``run.***.conf''ファイルを事前に作成し、
+\verb|pp.***.conf|、\verb|init.***.conf|、そして\verb|run.***.conf|ファイルを事前に作成し、
 親領域、子領域ともに地形/土地利用データの作成、
 及び初期値/境界値データの作成を終えていることを想定して説明を進める。
-ここで説明するオンライン・ネスティング実験の設定を記述した設定ファイルがチュートリアルディレクトリの下、
+ここで説明するオンライン・ネスティング実験の設定を記述した設定ファイルが
 \verb|${Tutorial_dir}/real/sample/online_nesting|に置いてあるので、
 説明を読み進める上で参考にしてもらいたい。
 
 
 \subsubsection{設定ファイルの編集}
-まず、親領域、子領域それぞれに``run.***.conf''ファイルを編集する。
+まず、親領域、子領域それぞれに\verb|run.***.conf|ファイルを編集する。
 
 \noindent {\gt \verb|run.parent.conf|の編集内容}\\
 {\small {\gt
@@ -103,9 +103,9 @@
 \caption{3段ネスティング実験の設定例}
 \begin{tabularx}{150mm}{|l|l|l|X|} \hline
  \rowcolor[gray]{0.9} 領域 & \verb|ONLINE_DOMAIN_NUM| & \verb|ONLINE_IAM_PARENT| & \verb|ONLINE_IAM_CHILD|\\ \hline
- 最外領域 & 1 & \textcolor{blue}{true} & \textcolor{red}{false} \\ \hline
- 中間領域 & 2 & \textcolor{blue}{true} & \textcolor{blue}{true} \\ \hline
- 最内領域 & 3 & \textcolor{red}{false} & \textcolor{blue}{true} \\ \hline
+ 最外領域 & 1 & .true.  & .false. \\ \hline
+ 中間領域 & 2 & .true.  & .true. \\ \hline
+ 最内領域 & 3 & .false. & .true. \\ \hline
 \end{tabularx}
 \label{tab:triple_nested}
 \end{center}
@@ -113,7 +113,7 @@
 
 \noindent 最外領域は親領域としてのみ働き、最内領域は子領域としてのみ働く。
 一方、中間領域は最外領域に対しては子領域、
-最内領域に対しては親領域として働くため両方共``true''となる。
+最内領域に対しては親領域として働くため両方共\verb|.true.|となる。
 
 さて、設定ファイルの編集内容の説明に戻る。\nmitem{ONLINE_BOUNDARY_USE_QHYD}は、
 「側面境界条件として親領域の凝結物の混合比を使うかどうか」を指定する設定変数である。
@@ -124,21 +124,19 @@
 凝結物自体が移流して入ってくる設定も選択肢に入るだろう。
 側面境界付近で雲が立ちにくい問題を解決したり、親領域との乖離を抑制したりする働きがある。
 
-%最後の\verb|ONLINE_AGGRESSIVE_COMM|はオンライン・ネスティング時の領域間通信に関する最適化変数である。
-%通常は、``true''と設定して実行する。
-
 
 \subsubsection{launchファイルの編集}
-オンライン・ネスティング実験の実行には、``run.***.conf''の他に、起動用設定ファイル``launch.conf''が必要である。
+オンライン・ネスティング実験の実行には、
+\verb|run.***.conf|の他に、起動用設定ファイル\verb|**.launch.conf|が必要である。
 以下のような新規ファイルを作成する。\\
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_LAUNCHER| \\
-\verb| NUM_DOMAIN  = 2,| \\
-\verb| CONF_FILES  = run.parent.conf,run.child.conf,| \\
-\verb| PRC_DOMAINS = 4,9,| \\
+\begin{tabularx}{140mm}{lX}
+\verb|&PARAM_LAUNCHER|     & \\
+\verb| NUM_DOMAIN  = 2,|   & \\
+\verb| CONF_FILES  = run.parent.conf, run.child.conf,| \\
+\verb| PRC_DOMAINS = 4, 9,| & \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
@@ -193,188 +191,96 @@ historyファイルのほかに、LOGファイル、topoファイル、landuse�
 
 
 \subsubsection{MPIプロセスの分配ガイドライン}
-SCALE-RMのオンライン・ネスティング実験は、図\ref{fig_mpisplit}のイメージ図で説明したように、MPIプロセスを分割し、複数の領域
-に分配する。現在のところ、その分配割合はユーザーに委ねられているため、適切にMPIプロセスを分配しなければ余計な計算時間が
-かかってしまう。ここでは、適切にMPIプロセスを分配するためのガイドラインについて説明する。ガイドラインは、領域毎に
-\textcolor{blue}{「単位あたりの時間積分にかかる1プロセスあたりの演算量を揃える」}という単純なものである。
-ここでは、以下に示す2段オンライン・ネスティング実験を行う場合を想定し、ガイドラインに沿ったプロセス分配方法の例を示す。
-``domain 1''は外側の親領域、``domain 2''は内側の子領域を意味する。
+%-------------------------------------------------------------------------
+オンライン・ネスティング実験は、図\ref{fig_mpisplit}に示した通り、複数の領域間でMPIプロセスを共有しない。
+つまり、それぞれのMPIプロセスは、どれか１つのネスティング領域の一部を担当することになる。
+このため、ユーザーは、使用可能なMPIプロセス数のうち、各領域の計算にいくつのMPIプロセスを割り当てるかを
+決める必要がある。割り当て配分のバランスが悪いと、待ち時間が発生し、計算時間が余計にかかってしまう。
+これを避けるためには、領域毎に、時間積分にかかる1プロセスあたりの演算量を揃えればよい。
+具体的な見積もり方法は下記の通りである。
 
-\begin{table}[htb]
-\begin{center}
-\caption{2段オンライン・ネスティング実験の設定想定}
-\begin{tabularx}{150mm}{|l|l|X|} \hline
- \rowcolor[gray]{0.9} 設定項目 & domain 1 & domain 2 \\ \hline
- 計算領域 & 450 km $\times$ 450 km & 200 km $\times$ 200 km \\ \hline
- DX \& DY（X,Y同一設定） & 3 km & 1 km \\ \hline
- 鉛直層設定 & 40層 & 60層 \\ \hline
- 積分時間間隔（DT）& 30 sec & 10 sec \\ \hline
- 積分時間 & 3600 sec & 3600 sec \\ \hline
-\end{tabularx}
-\label{tab:nest_proc_guide1}
-\end{center}
-\end{table}
-
-このとき、親領域の水平方向の一辺の格子点数は、$450 \mathrm{km} \div 3 \mathrm{km} = 150$点であるので、総格子点数は
-$X \times Y \times Z = 150 \times 150 \times 40 = 900,000$点である。一方、子領域の水平方向の一辺の格子点数は、
-$200 \mathrm{km} \div 1 \mathrm{km} = 200$点であるので、
-総格子点数は$200 \times 200 \times 60 = 2,400,000$点である。1つの時間ステップの
-積分を行うのにこれだけの格子点について計算を行わなければならない。
-
-積分時間間隔は格子間隔に依存するために領域毎に異なる。この例では、domain 1は30 secだが、domain 2は10 secであり、
-3倍の差がある。したがって、同じ30 secという積分時間に対してdomain 2は3倍多くの時間ステップ、つまり3倍の演算量を要する。
-これらを考慮して、簡単な領域間の演算量比率（Computation Rate）の指標を考えると下記の式で表される。
+ここではN個の領域(N段ネスティング)を考える。
+n番目の領域の{\XDIR}, {\YDIR}, {\ZDIR}の格子数をそれぞれ\verb|IMAX_n|, \verb|JMAX_n|, \verb|KMAX_n|
+と表し、時間積分のタイムステップ\nmitem{TIME_DT}を \verb|DT_n|と表すことにする。
+この時、一番外側領域(n=1)の時間積分のタイムステップを積分するのに必要なn番目の領域の計算ステップ数は、
 \begin{eqnarray}
-ComputationRate=\frac{Xgrd_{child} \times Ygrd_{child} \times Zgrd_{child} \times Ustep_{child}}
-                     {Xgrd_{parent} \times Ygrd_{parent} \times Zgrd_{parent} \times Ustep_{parent}} \nonumber
+ \verb|TSTEP_n| = \verb|DT_1| / \verb|DT_n|  \nonumber
 \end{eqnarray}
-ここで、$Xgrd, Ygrd, Zgrd$ はそれぞれ{\XDIR} 、{\YDIR}、{\ZDIR}の格子点数を表し、Ustepは単位時間積分に必要な時間ステップ数を表す。
-ここでの例をこの式に当てはまると、
-演算量比率は$(2,400,000 \times 3) \div (900,000 \times 1) = 8$であることがわかる。
-おおよそ、この割合にしたがってMPIプロセスを領域毎に分配すればよい。
-例えばdomain 1は4プロセス、domain 2は32プロセスを
-使用し、全体で36プロセスを使用する設定が考えられる。
-この場合、例えば次のように設定することができる。
+となり、領域全体での計算ステップ数は
+\begin{eqnarray}
+ \verb|OPR_n| = \verb|IMAX_n| \times \verb|JMAX_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
+\end{eqnarray}
+となる。故に、n番目の領域に配分するMPIプロセス数の目安は、全MPIプロセス数を \verb|MPI_total|として
+\begin{eqnarray}
+ \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} }
+\end{eqnarray}
+と見積もることができる。
 
-\begin{table}[htb]
-\begin{center}
-\caption{2段オンライン・ネスティング実験のMPIプロセス設定例}
-\begin{tabularx}{150mm}{|l|l|X|} \hline
- \rowcolor[gray]{0.9} 設定項目 & domain 1 & domain 2 \\ \hline
- MPIプロセス（X $\times$ Y） & 2 $\times$ 2 & 4 $\times$ 8 \\ \hline
- 水平格子点数（IMAX $\times$ JMAX） & 75 $\times$ 75 & 50 $\times$ 25 \\ \hline
-\end{tabularx}
-\label{tab:nest_proc_guide2}
-\end{center}
-\end{table}
 
-{\XDIR} と{\YDIR}に分配するプロセス数には任意性が残るが、
-IMAXとJMAXの違を小さくとる方がハロ領域を小くすることが出来るため、
+%ここでは、以下に示す2段オンライン・ネスティング実験を行う場合を想定し、ガイドラインに沿ったプロセス分配方法の例を示す。
+%``domain 1''は外側の親領域、``domain 2''は内側の子領域を意味する。
+%
+%\begin{table}[htb]
+%\begin{center}
+%\caption{2段オンライン・ネスティング実験の設定想定}
+%\begin{tabularx}{150mm}{|l|l|X|} \hline
+% \rowcolor[gray]{0.9} 設定項目 & domain 1 & domain 2 \\ \hline
+% 計算領域 & 450 km $\times$ 450 km & 200 km $\times$ 200 km \\ \hline
+% DX \& DY（X,Y同一設定） & 3 km & 1 km \\ \hline
+% 鉛直層設定 & 40層 & 60層 \\ \hline
+% 積分時間間隔（DT）& 30 sec & 10 sec \\ \hline
+% 積分時間 & 3600 sec & 3600 sec \\ \hline
+%\end{tabularx}
+%\label{tab:nest_proc_guide1}
+%\end{center}
+%\end{table}
+%
+%このとき、親領域の水平方向の一辺の格子点数は、$450 \mathrm{km} \div 3 \mathrm{km} = 150$点であるので、総格子点数は
+%$X \times Y \times Z = 150 \times 150 \times 40 = 900,000$点である。一方、子領域の水平方向の一辺の格子点数は、
+%$200 \mathrm{km} \div 1 \mathrm{km} = 200$点であるので、
+%総格子点数は$200 \times 200 \times 60 = 2,400,000$点である。1つの時間ステップの
+%積分を行うのにこれだけの格子点について計算を行わなければならない。
+%
+%積分時間間隔は格子間隔に依存するために領域毎に異なる。この例では、domain 1は30 secだが、domain 2は10 secであり、
+%3倍の差がある。したがって、同じ30 secという積分時間に対してdomain 2は3倍多くの時間ステップ、つまり3倍の演算量を要する。
+%これらを考慮して、簡単な領域間の演算量比率（Computation Rate）の指標を考えると下記の式で表される。
+%\begin{eqnarray}
+%ComputationRate=\frac{Xgrd_{child} \times Ygrd_{child} \times Zgrd_{child} \times Ustep_{child}}
+%                     {Xgrd_{parent} \times Ygrd_{parent} \times Zgrd_{parent} \times Ustep_{parent}} \nonumber
+%\end{eqnarray}
+%ここで、$Xgrd, Ygrd, Zgrd$ はそれぞれ{\XDIR} 、{\YDIR}、{\ZDIR}の格子点数を表し、Ustepは単位時間積分に必要な時間ステップ数を表す。
+%ここでの例をこの式に当てはまると、
+%演算量比率は$(2,400,000 \times 3) \div (900,000 \times 1) = 8$であることがわかる。
+%おおよそ、この割合にしたがってMPIプロセスを領域毎に分配すればよい。
+%例えばdomain 1は4プロセス、domain 2は32プロセスを
+%使用し、全体で36プロセスを使用する設定が考えられる。
+%この場合、例えば次のように設定することができる。
+
+%\begin{table}[htb]
+%\begin{center}
+%\caption{2段オンライン・ネスティング実験のMPIプロセス設定例}
+%\begin{tabularx}{150mm}{|l|l|X|} \hline
+% \rowcolor[gray]{0.9} 設定項目 & domain 1 & domain 2 \\ \hline
+% MPIプロセス（X $\times$ Y） & 2 $\times$ 2 & 4 $\times$ 8 \\ \hline
+% 水平格子点数（IMAX $\times$ JMAX） & 75 $\times$ 75 & 50 $\times$ 25 \\ \hline
+%\end{tabularx}
+%\label{tab:nest_proc_guide2}
+%\end{center}
+%\end{table}
+
+{\XDIR} と{\YDIR}に分配するプロセス数\nmitem{PRC_NUM_X, PRC_NUM_Y}には任意性が残るが、
+\verb|IMAX|と\verb|JMAX|の違いが小さくなるように設定する方がハロ領域を少なくすることが出来るため、
 計算機の演算性能を引き出しやすいと考えられる\footnote{ただし、京の場合のようにスレッド並列も併用するハイブリッド並列の場合には{\YDIR}の格子点数をある程度大きくしてスレッド間の演算量のインバランスを小さくする必要性も出てくる。}。
 
-この設定は一例であり、
-これ以外の方法で設定しても構わない。
-また、ここでは格子点数と積分時間間隔だけに着目して演算量比率を考えたが、
-実際の計算には様々な物理過程も含まれるだろうし、
-それらを 呼び出す時間間隔も領域毎に異なるかもしれない。
-さらに領域内通信や領域間通信のMPI通信にかかる時間も影響を及ぼす。
+
+以上の説明では、格子点数と積分時間のタイムステップだけを考慮して演算量比率を考えたが、
+実際の計算では、物理過程の計算時間間隔も領域毎に異なる可能性があり、
+領域内通信や領域間通信のMPI通信にかかる時間の違いも計算時間に影響を及ぼす。
 オンライン・ネスティングの設定では、
-最も計算負荷が高い領域(通常は最内領域)が時間積分を実行し続ける
-(MPI通信のための待ち時間が最小になる)ようにプロセスを分配するのが効率的である場合が多い。
-同じ設定で何度も実験を行うような場合には、
-上記の方法である程度の見通しをつけた上で、いくらかの微調整を行うことをおすすめする。
-以上でオンライン・ネスティングの実行方法の説明を終える。
-
-
-\subsection{子領域における地形の取り扱い} \label{subsec:nest_topo}
-%------------------------------------------------------
-ネスティング実験を行う際、領域間の格子間隔比率が大きい場合などに
-子領域の緩和領域内で不整合が発生する
-可能性がある。
-緩和領域内は親領域の計算結果を用いて一部の変数を緩和していくが、地形の表現性が異なる
-ことで、子領域にとっては正しくない値へ引きずられる可能性がある。
-例えば、子領域では斜面上の小さな谷として
-表現されている地形が、親領域では格子間隔が大きすぎて
-谷がなくスムーズな斜面として表現される場合が考えられる。
-
-こういった不整合を無くすために、緩和領域では親領域の地形を用い、内側領域では子領域自身の地形を用いる
-「地形コピー」の機能が実装されている。この機能を使えば、図\ref{fig_topocopy}に示すように緩和領域は完全に
-親領域に一致する地形で、内側に移る地形遷移領域内では親領域と子領域のミックス、それより内側では完全に
-子領域の地形という設定を構築することができる。以降、その設定方法と実行手順を説明する。
-基本的には、オフライン・ネスティングのフレームワークを利用して進める。
-
-\proofcomment{この文書では、オンラインが推奨されています。ですのでオンラインの記述も必要かと思います。}
-
-ここで説明する地形コピーの設定を記述した``pp.d0*.conf''ファイルがチュートリアルディレクトリ
-\verb|${Tutorial_dir}/real/sample/online_nesting|に置いてあるので、
-説明を読み進める上で参考にしてもらいたい。
-
-\begin{figure}[tb]
-\begin{center}
-  \includegraphics[width=0.4\hsize]{./figure/topo_copy.eps}\\
-  \caption{地形コピーを適用した子領域の地形データ水平分布. 最外の水色の2格子(Haloの数。水平差分スキームによって異る)は側面境界で、それより内側の赤色の線で
-           囲われた領域が計算領域である。緑色の部分が緩和領域、桃色の部分が地形遷移領域、そして最内の白色の
-           部分が子領域の地形をもつ領域である。地形遷移領域では外側から内側にかけて徐々に親領域の地形データから
-           子領域の地形データへ遷移する。}
-  \label{fig_topocopy}
-\end{center}
-\end{figure}
-
-まず親領域の``pp.d01.conf''ファイルを編集して、計算領域の大きさを子領域へ伝えるために緯度経度カタログ
-ファイルを出力するように設定する。具体的には、下記の記述を``pp.d01.conf''ファイルに追記する。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_DOMAIN_CATALOGUE| \\
-\verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue.txt",| \\
-\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,| \\
-\verb|/| \\
-\end{tabularx}
-}}}\\
-
-\noindent その他の設定項目は通常通りで良い。編集ができたら親領域の地形データ作成を実行する（つまり、
-scale-rm\_ppを実行する）。ここで、出力データは、``topo\_d01.pe***.nc''というファイル名で保存されていると
-想定する。次に、子領域の``pp.d02.conf''ファイルを編集する。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_CNVTOPO| \\
-\verb|　 　 　〜　中略　〜|\\
-\verb| CNVTOPO_copy_parent     = .true.,| \\
-\verb|/| \\
- \\
-\verb|&PARAM_COPYTOPO| \\
-\verb| COPYTOPO_IN_BASENAME   = "topo_d01",| \\
-\verb| COPYTOPO_ENTIRE_REGION = .false.,| \\
-\verb| COPYTOPO_LINEAR_H      = .true.,| \\
-\verb|/| \\
- \\
-\verb|&PARAM_NEST| \\
-\verb| USE_NESTING               = .true.,| \\
-\verb| OFFLINE                   = .true.,| \\
-\verb| OFFLINE_PARENT_PRC_NUM_X  = 4,| \\
-\verb| OFFLINE_PARENT_PRC_NUM_Y  = 4,| \\
-\verb| OFFLINE_PARENT_KMAX       = 35,| \\
-\verb| OFFLINE_PARENT_IMAX       = 40,| \\
-\verb| OFFLINE_PARENT_JMAX       = 40,| \\
-\verb| OFFLINE_PARENT_LKMAX      = 5,| \\
-\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.txt",| \\
-\verb|/| \\
-\end{tabularx}
-}}}\\
-
-\noindent 
-地形コピーを用いるには、もともと設定ファイルにある\namelist{PARAM_CNVTOPO}の項目に、
-\nmitem{CNVTOPO_copy_parent = .true.}
-という記述を加える。
-次の\namelist{PARAM_COPYTOPO}は、
-地形コピーの設定項目群であり、すべて追記すること。
-1つ目の\nmitem{COPYTOPO_IN_BASENAME}は、
-親領域の地形データのPATHを指定する。ここでは、親領域の
-出力データは``topo\_d01.pe***.nc''というファイル名で
-カレントディレクトリに保存されていると指定している。
-2つ目の\nmitem{COPYTOPO_ENTIRE_REGION}は、全領域でコピーするかどうかを決定するオプションである。
-このスイッチをtrueにすると、図\ref{fig_topocopy}に示された桃色と白色の領域は無くなり、全て緑色の
-完全コピー領域になる。3つ目の\nmitem{COPYTOPO_LINEAR_H}は、
-地形遷移領域の遷移具合を調整するスイッチである。
-\nmitem{COPYTOPO_LINEAR_H}がtrueだと線形プロファイルで遷移し、
-falseだと指数関数プロファイルで遷移する。
-
-地形遷移領域の幅は、デフォルト設定では緩和領域と同じ幅になる。緩和領域の設定と同じ要領で、
-\nmitem{COPYTOPO_TRANSITION_DX}、\nmitem{COPYTOPO_TRANSITION_DY}、
-および\nmitem{COPYTOPO_TRANSFACT}の
-変数を使って任意の幅に設定することができる。
-
-最後の\namelist{PARAM_NEST}の項目はオフライン・ネスティング実験の
-フレームワークを利用するための設定項目であり、
-全て追記する必要がある。
-設定変数の詳しい説明は、\ref{subsec:nest_offline}節の
-オフライン・ネスティング実験の説明を参照してほしい。
-
-設定ファイルの編集が終われば、子領域の地形データ作成を実行する。3つ以上の領域がある場合は、
-上記の実行過程を外側領域から順に繰り返せばよい。
+最も計算負荷が高い領域(通常は最内領域)でMPI通信のための待ち時間が最小となるように
+プロセスを分配するのが効率的であることが多い。
+大規模計算や長期積分、繰り返し行うような実験の場合には、
+上記の方法で効率的な配分を見積もり、いくらかの微調整を行うことを勧める。
 
 
 
