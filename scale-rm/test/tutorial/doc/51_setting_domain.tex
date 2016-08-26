@@ -338,9 +338,9 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_GRID  |            & \\
- \verb|BUFFER_DZ = 5000.D0,   | & ; {\ZDIR}（モデルトップから下向き方向）の緩和領域の幅 [m]\\
- \verb|BUFFER_DX = 300000.D0, | & ; {\XDIR} （東西方向）の緩和領域の幅 [m]\\
- \verb|BUFFER_DY = 300000.D0, | & ; {\YDIR}（南北方向）の緩和領域の幅 [m]\\
+ \verb|BUFFER_DZ = 5000.D0,   | & ; {\ZDIR}（モデルトップから下向き方向）の緩和領域の幅(参考値) [m]\\
+ \verb|BUFFER_DX = 300000.D0, | & ; {\XDIR} （東西方向）の緩和領域の幅(参考値) [m]\\
+ \verb|BUFFER_DY = 300000.D0, | & ; {\YDIR}（南北方向）の緩和領域の幅(参考値) [m]\\
  \verb|BUFFFACT  = 1.D0,      | & ; 緩和領域内の格子間隔に対するストレッチ係数(デフォルトは1.0)\\
 \verb|/|\\
 \end{tabularx}
@@ -352,6 +352,38 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 緩和領域は、計算領域内に設定されるため、
 ナッジングの影響を受けない領域(緩和領域を除いた範囲)は
 計算領域よりも狭くなることに注意が必要である。
+
+緩和領域の格子数 \verb|ibuff|は、
+\[
+\sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
+\]
+の関係を満たす最小の整数で自動的に計算され、
+緩和領域の大きさ \verb|BUFFER|$_x$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$)
+は必ずしも \nmitem{BUFFER_DX} と一致するわけではないことに注意が必要である。
+結局、緩和領域を除いた計算領域の大きさは、
+\[
+\nmitemeq{DX} \times ( \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X} - 2 \times \verb|ibuff| )
+\]
+となる。
+
+ここでは、{\XDIR} の説明をしたが、{\YDIR}、{\ZDIR}も同様である。
+ただし、{\ZDIR} については下端には緩和領域が取られないため、緩和領域を除いた計算領域の大きさは
+\[
+\nmitemeq{DZ} \times ( \nmitemeq{KMAX} - \verb|kbuff| )
+\]
+となる。
+
+
+\begin{figure}[t]
+\begin{center}
+  \includegraphics[width=0.8\hsize]{./figure/buffer_xz.eps}\\
+  \caption{計算領域における緩和領域の配置：斜線部分が緩和領域を意味する。
+  図はXZ断面だが、Y方向にも同一の配置である。}
+  \label{fig:buff_xz}
+\end{center}
+\end{figure}
+
+
 
 \subsubsection{緩和領域の格子間隔をストレッチさせる}
 
@@ -374,29 +406,15 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \nmitem{BUFFFACT=1.2}ならば内側から外側(境界)に向かって1.2倍の割合で広がっていく。
 \nmitem{BUFFFACT}はいくつに設定しても良いが、計算の安定性を考慮すると 1.0から1.2 が推奨である。
 
-緩和領域の格子数 \verb|ibuff|は、
-\begin{eqnarray}
-\sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
-\end{eqnarray}
-の関係を満たす最小の整数で自動的に計算され、緩和領域の大きさ\verb|BUFFER|$_x$は、
+
+緩和領域の大きさ\verb|BUFFER|$_x$は、
 \[
   \verb|BUFFER|_x = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}-1 }}{ \nmitemeq{BUFFFACT}-1 }
-\]
-となる。
-結局、緩和領域を除いた計算領域の大きさは、
-\[
-\nmitemeq{DX} \times ( \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X} - 2 \times \verb|ibuff| )
 \]
 となる。
 %
 緩和領域の幅\nmitem{BUFFER_DX}が同じでも、
 \nmitem{BUFFFACT}の値を大きくすると緩和領域に用意される格子数は少なくなる。
-ここでは、{\XDIR} の説明をしたが、{\YDIR}、{\ZDIR}も同様である。
-ただし、{\ZDIR} については下端には緩和領域が取られないため、緩和領域を除いた計算領域の大きさは
-\[
-\nmitemeq{DZ} \times ( \nmitemeq{KMAX} - \verb|kbuff| )
-\]
-となる。
 
 \proofcomment{ここは何度よんでも理解がしにくいです。結局この設定によって、真の対象領域は、
   どこなのか？を図に書いて説明してください}
@@ -417,15 +435,6 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \nmitem{ATMOS_BOUNDARY_taux,ATMOS_BOUNDARY_tauy,ATMOS_BOUNDARY_tauz}によって秒単位で設定する。
 デフォルトの値は $10 \Delta t$ であり、これは、10タイムステップで$1/e$になることに相当する。
 タイムステップについては、第\ref{sec:timeintiv}節を参照のこと。
-
-\begin{figure}[t]
-\begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/buffer_xz.eps}\\
-  \caption{計算領域における緩和領域の配置：斜線部分が緩和領域を意味する。
-  図はXZ断面だが、Y方向にも同一の配置である。}
-  \label{fig:buff_xz}
-\end{center}
-\end{figure}
 
 
 \subsection{\SecBasicTopoSetting} \label{subsec:basic_usel_topo}
