@@ -12,6 +12,8 @@ program mkrawgrid
   !
   !++ Used modules
   !
+  use dc_log, only: &
+     LogInit
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -41,8 +43,15 @@ program mkrawgrid
   implicit none
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+#include "scale-gm.h"
+  !-----------------------------------------------------------------------------
+  !
   !++ parameters & variables
   !
+  character(len=H_MID), parameter :: MODELNAME = "SCALE-GM ver. "//VERSION
+
   integer :: comm_world
   integer :: myrank
   logical :: ismaster
@@ -51,9 +60,10 @@ program mkrawgrid
   !---< MPI start >---
   call PRC_MPIstart( comm_world ) ! [OUT]
 
-  !---< STDIO setup >---
-  call IO_setup( 'NICAM-DC',     & ! [IN]
-                 'mkrawgrid.cnf' ) ! [IN]
+  !########## Initial setup ##########
+
+  ! setup standard I/O
+  call IO_setup( MODELNAME, .false. )
 
   ! setup MPI
   call PRC_LOCAL_setup( comm_world, & ! [IN]
@@ -62,6 +72,7 @@ program mkrawgrid
 
   ! setup Log
   call IO_LOG_setup( myrank, ismaster )
+  call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
   !---< admin module setup >---
   call ADM_setup

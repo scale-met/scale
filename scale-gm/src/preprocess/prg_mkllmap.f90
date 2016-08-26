@@ -12,6 +12,8 @@ program mkllmap
   !
   !++ Used modules
   !
+  use dc_log, only: &
+     LogInit
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -39,8 +41,15 @@ program mkllmap
   implicit none
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+#include "scale-gm.h"
+  !-----------------------------------------------------------------------------
+  !
   !++ parameters & variables
   !
+  character(len=H_MID), parameter :: MODELNAME = "SCALE-GM ver. "//VERSION
+
   integer :: comm_world
   integer :: myrank
   logical :: ismaster
@@ -56,9 +65,10 @@ program mkllmap
   !---< MPI start >---
   call PRC_MPIstart( comm_world ) ! [OUT]
 
-  !---< STDIO setup >---
-  call IO_setup( 'NICAM-DC',   & ! [IN]
-                 'mkllmap.cnf' ) ! [IN]
+  !########## Initial setup ##########
+
+  ! setup standard I/O
+  call IO_setup( MODELNAME, .false. )
 
   ! setup MPI
   call PRC_LOCAL_setup( comm_world, & ! [IN]
@@ -67,6 +77,14 @@ program mkllmap
 
   ! setup Log
   call IO_LOG_setup( myrank, ismaster )
+  call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+
+  ! setup PROF
+  call PROF_setup
+
+  !#############################################################################
+  call PROF_setprefx('INIT')
+  call PROF_rapstart('Initialize',0)
 
   !--- < cnst module setup > ---
   call CONST_setup
@@ -83,6 +101,11 @@ program mkllmap
 
   !--- < grid module setup > ---
   call GRD_setup
+
+  call PROF_rapend('Initialize',0)
+  !#############################################################################
+  call PROF_setprefx('MAIN')
+  call PROF_rapstart('Main_MKLLMAP',0)
 
   !--- read parameters
   if( IO_L ) write(IO_FID_LOG,*)
@@ -101,6 +124,11 @@ program mkllmap
   call LATLON_ico_setup
 
   call LATLON_setup( output_dir )
+
+  call PROF_rapend('Main_MKLLMAP',0)
+  !#############################################################################
+
+  call PROF_rapreport
 
   !--- finalize all process
   call PRC_MPIfinish
