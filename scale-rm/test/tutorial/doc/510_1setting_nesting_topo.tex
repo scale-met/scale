@@ -108,7 +108,11 @@
 子領域は親領域の地形データ作成時に出力されるカタログデータを必要とするため、
 地形データの作成は、親領域から順番に実行する。
 3つ以上の領域がある場合も、手続きは同様である。
-\begin{}
-   
-\end{enumerate}
+下記の例で、\verb|[PRCnum]|はそれぞれの計算で必要なMPIプロセス数を示す。
+
+\begin{verbatim}
+ $ mpirun -n [PRCnum] ./scale-rm_pp pp.d01.conf
+ $ mpirun -n [PRCnum] ./scale-rm_pp pp.d02.conf
+ $ mpirun -n [PRCnum] ./scale-rm_pp pp.d03.conf
+\end{verbatim}
 
