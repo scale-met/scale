@@ -1,36 +1,45 @@
 \section{\SecAdvanceInputDataSetting} \label{sec:adv_datainput}
 %====================================================================================
 
-%\subsection{初期値・境界値データ} \label{sec:adv_bnddata}
-%------------------------------------------------------
 現在、\scalerm では初期値・境界値作成おいて、下記のデータの読み込みに対応している。
 
 \begin{table}[htb]
 \begin{center}
 \caption{\scalelib が読込に対応する外部入力データフォーマット}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
- \rowcolor[gray]{0.9} データ形式 & \verb|FILETYPE_ORG| & 備考 \\ \hline
- バイナリデータ & \verb|GrADS| & データ読み込み用のnamelistを別途必要とする。 \\ \hline
- NICAMデータ &  \verb|NICAM-NETCDF| & NetCDF形式のLatLonデータに対応する。 \\ \hline
- WRFデータ &  \verb|WRF-ARW| & ``wrfout''、``wrfrst''の両方に対応する。 \\ \hline
- SCALEデータ &  \verb|SCALE-RM| & historyデータのみ対応；latlonカタログを必要とする。 \\ \hline
+ \rowcolor[gray]{0.9} データ形式      & \verb|FILETYPE_ORG|  & 備考 \\ \hline
+ SCALEデータ    & \verb|SCALE-RM|     & historyデータのみ対応；latlonカタログを必要とする。 \\ \hline
+ バイナリデータ & \verb|GrADS|        & データ読み込み用のnamelistを別途必要とする。 \\ \hline
+ NICAMデータ    & \verb|NICAM-NETCDF| & NetCDF形式のLatLonデータに対応する。 \\ \hline
+ WRFデータ      & \verb|WRF-ARW|      & ``wrfout''、``wrfrst''の両方に対応する。 \\ \hline
 \end{tabularx}
 \label{tab:inputdata_format}
 \end{center}
 \end{table}
 
-初期値・境界値作成時、すなわち``scale-rm\_init''の実行時の設定ファイルの
-\namelist{PARAM_MKINIT_REAL}の項目中の\nmitem{FILETYPE_ORG}に表\ref{tab:inputdata_format}に示した値を設定することで入力データフォーマットを指定する。
 
-バイナリデータとは、「4バイト単精度
-浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。その主な使用方法は、
-第\ref{chap:tutorial_real}章の現実大気実験チュートリアルで説明したとおりである。\textcolor{red}{GRIB/GRIB2のデータ形式は、
-チュートリアルで説明した方法に基づいて、バイナリデータ形式を経由してSCALEに読み込ませることができる。}
-その他に任意のデータを境界値に使用したい場合は、バイナリデータ形式に変換することで読み込ませることができる。
+初期値・境界値データのフォーマットの指定は、
+\verb|scale-rm_init|の設定ファイル(\verb|init.**.conf|)で、
+\namelist{PARAM_MKINIT_REAL_***}の\nmitem{FILETYPE_ORG}の項目で指定する。
 
-SCALEデータ形式は主にオフライン・ネスティング実験で使用される。詳細については、\ref{subsec:nest_offline}節を
-参照されたい。NICAMデータは、正20面体格子データではなく、緯度・経度座標に変換されたデータの
-み読み込みに対応している。WRFデータについてはモデル出力データをそのまま使用することができる。
-%これらの読み込み方法に関しては随時説明を加えていく予定。
+SCALEデータ形式は主にオフライン・ネスティング実験で使用される。
+詳細については、\ref{subsec:nest_offline}節を参照されたい。
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+NICAMデータは、正20面体格子データではなく、緯度・経度座標に変換されたデータのみ読み込みに対応している。
+WRFデータについてはモデル出力データをそのまま使用することができる。
+
+バイナリデータとは、「4バイト単精度浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。
+\textcolor{red}{GRIB/GRIB2のデータ形式は、チュートリアルで説明した方法に基づいて、
+バイナリデータ形式を経由してSCALEに読み込ませることができる。}
+その他にも、任意のデータを境界値に使用したい場合は、バイナリデータ形式に変換することで読み込ませることができる。
+下記では、バイナリデータの読み込み手続きについて説明する。
+
+%%%---------------------------------------------------------------------------------%%%%
+
+\subsection{\SecAdvanceInputDataSetting} \label{sec:adv_datainput}
+
+
+
+
+
+
