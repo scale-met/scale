@@ -412,6 +412,7 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
   どこなのか？を図に書いて説明してください}
 \replycomment{式を追加しました。図はヨッシーに発注しています。(西澤)}
 \proofcomment{了解しました。絵の追加を待って、本件終了させます。(富田)}
+\replycomment{図を追加しました(吉田)}
 
 
 一般に、緩和領域の大きさ、緩和格子点の数については、解く問題により、明確な指標はない。
@@ -426,6 +427,16 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \nmitem{ATMOS_BOUNDARY_taux,ATMOS_BOUNDARY_tauy,ATMOS_BOUNDARY_tauz}によって秒単位で設定する。
 デフォルトの値は $10 \Delta t$ であり、これは、10タイムステップで$1/e$になることに相当する。
 タイムステップについては、第\ref{sec:timeintiv}節を参照のこと。
+
+\begin{figure}[t]
+\begin{center}
+  \includegraphics[width=0.8\hsize]{./figure/buffer_xz.eps}\\
+  \caption{計算領域における緩和領域の配置：斜線部分が緩和領域を意味する。
+  図はXZ断面だが、Y方向にも同一の配置である。}
+  \label{fig:buff_xz}
+\end{center}
+\end{figure}
+
 
 \subsection{\SecBasicTopoSetting} \label{subsec:basic_usel_topo}
 %-----------------------------------------------------------------------
