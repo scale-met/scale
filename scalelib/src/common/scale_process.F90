@@ -263,8 +263,7 @@ contains
     if ( PRC_mpi_alive ) then
        if ( IO_L ) then
           write(IO_FID_LOG,*)
-          write(IO_FID_LOG,*) '++++++ Stop MPI'
-          write(IO_FID_LOG,*)
+          write(IO_FID_LOG,*) '++++++ Finalize MPI...'
        endif
 
        ! free splitted communicator
@@ -275,7 +274,7 @@ contains
        call MPI_Barrier(PRC_UNIVERSAL_COMM_WORLD,ierr)
 
        call MPI_Finalize(ierr)
-       if( IO_L ) write(IO_FID_LOG,*) '*** MPI is peacefully finalized'
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ MPI is peacefully finalized'
     endif
 
     ! Close logfile, configfile
@@ -284,8 +283,7 @@ contains
     endif
     close(IO_FID_CONF)
 
-    ! Stop program
-    stop
+    return
   end subroutine PRC_MPIfinish
 
   !-----------------------------------------------------------------------------
