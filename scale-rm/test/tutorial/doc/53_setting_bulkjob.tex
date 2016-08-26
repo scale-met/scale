@@ -126,21 +126,21 @@ MPI並列としての構造は共通していなければならない点に注�
 必要とする。
 
 実行すると得られるLOGファイルに、MPIプロセスを分割した時の情報が示されている。LOGファイルを開いて最初の
-「SCALEロゴ」のあとに下記のようなメッセージが出力される。\\
+「SCALEロゴ」のあとに下記のようなメッセージが出力される。下記、ドメイン1のプロセス0からの出力例である。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb| ++++++ Start MPI| \\
-\verb| *** UNIVERSAL_COMM_WORLD        :        0| \\
+\verb| *** UNIVERSAL_COMM_WORLD        :        0| <-- 環境によって値が異なる\\
 \verb| *** total process [UNIVERSAL]   :      135| \\
 \verb| *** my process ID [UNIVERSAL]   :       36| \\
 \verb| *** master rank?  [UNIVERSAL]   :        F| \\
-\verb| *** GLOBAL_COMM_WORLD           :        3| \\
+\verb| *** GLOBAL_COMM_WORLD           :        3| <-- 環境によって値が異なる \\
 \verb| *** total process [GLOBAL]      :       45| \\
 \verb| *** my process ID [GLOBAL]      :       36| \\
 \verb| *** master rank?  [GLOBAL]      :        F| \\
-\verb| *** LOCAL_COMM_WORLD            :        4| \\
+\verb| *** LOCAL_COMM_WORLD            :        4| <-- 環境によって値が異なる \\
 \verb| *** total process [LOCAL]       :        9| \\
 \verb| *** my process ID [LOCAL]       :        0| \\
 \verb| *** master rank?  [LOCAL]       :        T| \\
@@ -152,14 +152,21 @@ MPI並列としての構造は共通していなければならない点に注�
 
 
 \proofcomment{以下の記述、上の表とあっていますか？あってないように思います。総プロセス数は、１３５ではないの？？？何度何度も言っていますので、担当者へ確認をとられたと思いますし、合っているの化も知れませんが、私には理解不能でした。}
+\replycomment{以下の記述が間違っていました。修正しました。(吉田)}
 
 これらのうち、\verb|[LOCAL]|と表記されている項目はドメイン内のプロセスグループ、\verb|[GLOBAL]|と表記されている項目は
-ネスティング・グループ、\verb|[UNIVERSAL]|と表記されて項目はジョブ・グループに関する情報である。
-したがって、このLOGメッセージから、当該ドメインは12-MPI並列で実行されており、オンライン・ネスティング実験は総計で
-48プロセス使用して実行され、バルクジョブ全体では1488プロセスが使用されているため、同時に31個のジョブが走っていたことがわかる。
+ネスティンググループ、\verb|[UNIVERSAL]|と表記されて項目はジョブグループに関する情報である。
+\verb|LOCAL|グループは\verb|GLOBAL|グループに包含され、さらに\verb|GLOBAL|グループは\verb|UNIVERSAL|グループに包含される。
+\verb|total process|は各グループの全プロセス数、\verb|my process ID|はあるグループで見た時のプロセス番号を表している。
+
+この例では、\verb|total process [UNIVERSAL]|は135と表記され、実行時に指定したとおり、全体で135のプロセスが起動したことがわかる。
+また、\verb|total process [GLOBAL]|は45であり、これは1ジョブあたり45プロセスを使用したことを表している。
+この例はドメイン1におけるLOGメッセージであるため、\verb|total process [LOCAL]|は9で正しい。ドメイン2のLOGメッセージを
+確認した場合は、36と表記される。
+LOGファイルやhistoryファイルの番号に対応するプロセス番号は、\verb|my process ID [UNIVERSAL]|である。
 異常終了したときにも、この表記法に従ってメッセージが出力されるので、これを理解しているとバルクジョブ機能を使って多量に
-走らせている場合にも、どのプロセスがエラーを発生したのか即座に判断できる。ちなみに現在のバルクジョブ機能では、
-1つのジョブがエラーを発生し、異常終了状態に入ると全てのジョブが異常終了する。
+走らせている場合にも、どのプロセスがエラーを発生したのか即座に判断できる。現在のバルクジョブ機能では、
+1つのジョブがエラーを発生し、異常終了状態に入ると全てのジョブが異常終了することに注意すること。
 
 
 
