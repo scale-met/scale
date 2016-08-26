@@ -20,7 +20,7 @@
 親領域と子領域それぞれについて、\verb|pp.***.conf|、\verb|init.***.conf|、
 そして\verb|run.***.conf|ファイルを事前に作成し、
 親領域、子領域ともに地形・土地利用データの作成 (\verb|scale-rm_pp|) が、
-親領域については、初期値/境界値データの作成 (\verb|scale-rm_ini|) が終わっていることを想定して説明を進める。
+親領域については、初期値/境界値データの作成 (\verb|scale-rm_init|) が終わっていることを想定して説明を進める。
 ここで説明するオフライン・ネスティング実験の設定を記述した設定ファイルが
 チュートリアルディレクトリ\verb|${Tutorial_dir}/real/sample/offline_nesting|
 に置いてあるので、説明を読み進める上で参考にしてもらいたい。
@@ -93,7 +93,7 @@
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
-\verb|&PARAM_MKINIT_REAL| &\\
+\verb|&PARAM_MKINIT_REAL_ATMOS| &\\
 \verb| BASENAME_BOUNDARY   = "boundary",| &\\
 \textcolor{red}{\verb| BASENAME_ORG        = "history",|}  & \verb|run.d0.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
 \textcolor{red}{\verb| FILETYPE_ORG        = "SCALE-RM",|} & \\
@@ -145,7 +145,7 @@
 初期値/境界値作成が終わったら、子領域の計算 (\verb|scale-rm|) を実行する。
 子領域の実行は、通常の現実大気実験と同じである。
 1点だけ注意すべき点として、
-\verb|run.d1.conf|の\namelist{PARAM_MKINIT_REAL}の\nmitem{BOUNDARY_UPDATE_DT}を、
+\verb|run.d1.conf|の\namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_UPDATE_DT}が
 初期値/境界値作成で使用した親領域のhistoryデータ出力間隔に合っているか確認すること。
 現在のところ、この設定に親領域と子領域間で不整合あっても警告やエラーメッセージが発せられないまま、
 計算が進み、場合によっては正常終了してしまうため注意が必要である。
@@ -154,15 +154,14 @@
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
-\verb|&PARAM_MKINIT_REAL| \\
+\verb|&PARAM_ATMOS_BOUNDARY| \\
 \verb|　 　 　〜　中略　〜|\\
-\textcolor{red}{\verb| BOUNDARY_UPDATE_DT  = 600.D0,|} \\
+\textcolor{red}{\verb| ATMOS_BOUNDARY_UPDATE_DT  = 600.D0,|} \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
 
 \noindent 
-
 多段のオフライン・ネスティング実験を行いたい場合は、以上の過程を繰り返せばよい。
 つまり、子領域として時間積分計算した結果を再度、親領域と見立てて、
 さらに内側の孫領域の初期値/境界値作成を行なえばよい。
