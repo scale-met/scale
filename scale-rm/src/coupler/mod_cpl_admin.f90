@@ -55,9 +55,13 @@ contains
        LAND_sw
     use mod_urban_admin, only: &
        URBAN_sw
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean, &
+       LANDUSE_fact_land,  &
+       LANDUSE_fact_urban
     implicit none
+
+    real(RP) :: checkfact
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -75,6 +79,31 @@ contains
        CPL_sw = .false.
     endif
 
+    ! Check consistency of OCEAN_sw and LANDUSE_fact_ocean
+    checkfact = maxval( LANDUSE_fact_ocean(:,:) )
+    if ( .NOT. OCEAN_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       write(*,*)                     'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check consistency of LAND_sw and LANDUSE_fact_land
+    checkfact = maxval( LANDUSE_fact_land(:,:) )
+    if ( .NOT. LAND_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
+       write(*,*)                     'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check consistency of URBAN_sw and LANDUSE_fact_urban
+    checkfact = maxval( LANDUSE_fact_urban(:,:) )
+    if ( .NOT. URBAN_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
+       write(*,*)                     'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check Atmos_Surface setting
     if ( CPL_sw ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Coupler : ON'
 
