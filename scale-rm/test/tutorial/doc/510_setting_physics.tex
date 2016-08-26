@@ -415,9 +415,17 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のよ�
 \namelist{PARAM_OCEAN}の\nmitem{OCEAN_TYPE}で設定する。
 海面・陸面・都市モデルのいずれかひとつでも用いられていて、
 \namelist{PARAM LANDUSE}で入力・設定された土地利用分布に海面が含まれている場合、
-\nmitem{OCEAN_TYPE = NONEまたはOFF}を選択することは出来ない。\\
+\nmitem{OCEAN_TYPE = NONEまたはOFF}を選択することは出来ない。この条件を満たさない場合は、下記のメッセージが
+LOGファイルなどに出力されて計算は行われず、直ちに終了する。
 
-\proofcomment{もし、そのような設定をしたら、どのような振る舞い、あるいは、どのようなエラーハンドリングしているのかを記述ください。}
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|xxx Ocean fraction exists, but ocean components never called. STOP.| \\
+\end{tabularx}
+}}}\\
+
+\proofcomment{もし、そのような設定をしたら、どのような振る舞い、あるいは、どのようなエラーハンドリングしているのかを記述ください。(八代)}
 
 海面のアルベドは、どの海面スキームを選択しても同じ計算スキームが適用され、
 太陽天頂角に応じたアルベドが計算される。\\
@@ -502,7 +510,15 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する�
 init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_TYPE}で以下のように設定する。
 海面・陸面・都市モデルのいずれかひとつでも用いられていて、
 \namelist{PARAM LANDUSE}で入力・設定された土地利用分布に陸面が含まれている場合、
-\nmitem{LAND_TYPE = NONEまたはOFF}を選択することは出来ない。\\
+\nmitem{LAND_TYPE = NONEまたはOFF}を選択することは出来ない。この条件を満たさない場合は、下記のメッセージが
+LOGファイルなどに出力されて計算は行われず、直ちに終了する。
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|xxx Land  fraction exists, but land  components never called. STOP.| \\
+\end{tabularx}
+}}}\\
 
 \noindent {\gt
 \ovalbox{
@@ -560,7 +576,15 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する�
 init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_TYPE}で以下のように設定する。
 海面・陸面・都市モデルのいずれかひとつでも用いられていて、
 \namelist{PARAM LANDUSE}で入力・設定された土地利用分布に都市が含まれている場合、
-\nmitem{URBAN_TYPE = NONEまたはOFF}を選択することは出来ない。\\
+\nmitem{URBAN_TYPE = NONEまたはOFF}を選択することは出来ない。この条件を満たさない場合は、下記のメッセージが
+LOGファイルなどに出力されて計算は行われず、直ちに終了する。
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|xxx Urban fraction exists, but urban components never called. STOP.| \\
+\end{tabularx}
+}}}\\
 
 \noindent {\gt
 \ovalbox{
