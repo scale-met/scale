@@ -358,7 +358,7 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
 \]
 の関係を満たす最小の整数で自動的に計算され、
-緩和領域の大きさ \verb|BUFFER|$_x$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$)
+緩和領域の大きさ \verb|BUFFER|$_X$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$)
 は必ずしも \nmitem{BUFFER_DX} と一致するわけではないことに注意が必要である。
 結局、緩和領域を除いた計算領域の大きさは、
 \[
@@ -407,9 +407,9 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \nmitem{BUFFFACT}はいくつに設定しても良いが、計算の安定性を考慮すると 1.0から1.2 が推奨である。
 
 
-緩和領域の大きさ\verb|BUFFER|$_x$は、
+緩和領域の大きさ\verb|BUFFER|$_X$は、
 \[
-  \verb|BUFFER|_x = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}-1 }}{ \nmitemeq{BUFFFACT}-1 }
+  \verb|BUFFER|_X = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}-1 }}{ \nmitemeq{BUFFFACT}-1 }
 \]
 となる。
 %
