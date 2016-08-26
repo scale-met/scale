@@ -65,13 +65,18 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 \caption{対応確認済みコンパイラ}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} コンパイラ名 & 確認済みバージョン & 備考 \\ \hline
- GNU (gcc/gfortran)    & 4.4.x, 4.8.x           & 4.4.xではコンパイル時にWarningが出ることがある \\ \hline
+ GNU (gcc/gfortran)    & 4.4.x~4.9.x           & 4.4.xではコンパイル時にWarningが出ることがある \\ \hline
  Intel (icc/ifort)     & 13.0.1、14.0.2、15.0.0 & 2013年以降のバージョンを推奨 \\ \hline
  PGI (gcc/pgfortran)   & 14.3                   &  \\ \hline
 \end{tabularx}
 \label{tab:compatible_compiler}
 \end{center}
 \end{table}
+
+\scalelib のソースコードはFortran2003規格に基づく機能を利用している。
+そのため、Fortran2003の基本的な機能をサポートしたコンパイラが必要となる。
+例えばGNU gfotranの場合、バージョン4.3以前ではFortran2003規格のサポートが不十分であるため、
+\scalelib の利用環境として用いることは出来ない。
 
 \begin{table}[htb]
 \begin{center}
