@@ -45,7 +45,7 @@
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_DOMAIN_CATALOGUE|  & \\
 \verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue.d01.txt",| & カタログファイルのファイル名\\
 \verb| DOMAIN_CATALOGUE_OUTPUT = .true.,| & カタログファイルを出力するかどうか \\
@@ -59,7 +59,7 @@
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_CNVTOPO|  &\\
 \verb|　 　 　〜　中略　〜| & \\
 \verb| CNVTOPO_copy_parent     = .true.,| & 地形コピー機能を適用するかどうか\\
@@ -92,7 +92,8 @@
 3つ目の\nmitem{COPYTOPO_LINEAR_H}は地形遷移領域の遷移具合を調整するスイッチである。
 \nmitem{COPYTOPO_LINEAR_H}が\verb|.true.|だと、親領域の地形と子領域の地形の混合割合が
 線形的に変化するのに対し、\verb|.false.|だと指数関数的に変化する。
-緩和領域の設定と同じ要領で、\nmitem{COPYTOPO_TRANSITION_DX}、\nmitem{COPYTOPO_TRANSITION_DY}、
+緩和領域の設定と同じ要領で、\nmitem{COPYTOPO_TRANSITION_DX}、\\
+\nmitem{COPYTOPO_TRANSITION_DY}、
 及び、\nmitem{COPYTOPO_TRANSFACT}により任意の幅に設定することができる。
 
 

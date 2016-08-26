@@ -7,8 +7,8 @@
 一方、親領域と子領域の間で鉛直層数、鉛直レベル、地図投影法、物理スキームは一致している必要はない。
 
 オンライン・ネスティング実験では全ての領域の計算を同時に実行する。
-現在は、親領域から子領域に対してデータの受け渡しを行う、一方向ネスティングのみをサポートしている。
-オンライン・ネスティング実験でサポートするネスティングの段数は、最大で10段までである。
+現在は、親領域から子領域に対してデータの受け渡しを行う一方向ネスティングのみをサポートしている。
+また、サポートするネスティングの段数は、最大で10段までである。
 
 \scalerm のオンライン・ネスティング実験は、
 複数の領域を逐次的に時間積分計算を進めるのではなく、並列的に時間積分計算を行う。
@@ -17,6 +17,11 @@
 各々の領域が独立したモデルのように計算を進める。
 後ほど説明するが、複数の領域を立ち上げるために実行時には\verb|launch.conf|という
 起動用の設定ファイルが別途必要になる。
+
+オンライン・ネスティングに必要な設定は複数ある他、設定の不具合があると計算が正常に行われない。
+設定の詳細は以下の説明を参照することとし、実際の設定ファイル(\verb|**.conf|)は
+第\ref{sec:basic_makeconf}節で説明する実験セット作成サポートツールで作成すること。
+
 
 \begin{figure}[ht]
 \begin{center}
@@ -29,38 +34,40 @@
 \end{figure}
 
 
-オンライン・ネスティングに必要な設定は複数ある他、設定の不具合があると計算が正常に行われない。
-設定の詳細は以下の説明を参照することとし、実際の設定ファイル(\verb|**.conf|)は
-第\ref{sec:basic_makeconf}節で説明する実験セット作成サポートツールで作成すること。
 
 
-ここでは、最も単純な2段ネスティングの例を説明する。
-オンライン・ネスティング実験を行う場合は、\verb|scale-rm|のモデル本体実行前に全ての領域について、
-地形/土地利用データの作成、及び初期値/境界値データの作成を事前に行っておく必要がある。
-従って、親領域と子領域それぞれについて、
-\verb|pp.***.conf|、\verb|init.***.conf|、そして\verb|run.***.conf|ファイルを事前に作成し、
-親領域、子領域ともに地形/土地利用データの作成、
-及び初期値/境界値データの作成を終えていることを想定して説明を進める。
+以下では、最も単純な2段ネスティングの例を示しながら、
+オンライン・ネスティング実験のための設定について説明する。
+%を行う場合は、\verb|scale-rm|のモデル本体実行前に全ての領域について、
+%地形/土地利用データの作成、及び初期値/境界値データの作成を事前に行っておく必要がある。
+%従って、親領域と子領域それぞれについて、
+%\verb|pp.***.conf|、\verb|init.***.conf|、そして\verb|run.***.conf|ファイルを事前に作成し、
 ここで説明するオンライン・ネスティング実験の設定を記述した設定ファイルが
 \verb|${Tutorial_dir}/real/sample/online_nesting|に置いてあるので、
 説明を読み進める上で参考にしてもらいたい。
+また、すでに、親領域、子領域ともに地形/土地利用データの作成、
+及び初期値/境界値データの作成を終えているものとして説明を進める。
+それぞれの領域の地形データの作成手順は、第\ref{subsec:nest_topo}節に示したとおりであり、
+初期値/境界値データの作成は、通常計算（シングル領域計算）の場合と同じである。
 
 
 \subsubsection{設定ファイルの編集}
-まず、親領域、子領域それぞれに\verb|run.***.conf|ファイルを編集する。
+まず、親領域と子領域のそれぞれの設定ファイル(\verb|run.***.conf|)において、
+オンライン・ネスティングのための設定を追加する。
+\namelist{PARAM_NEST}は、ネスティング実験のための設定項目である。\\
 
 \noindent {\gt \verb|run.parent.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_NEST| \\
-\verb| USE_NESTING              = .true.,| \\
-\verb| OFFLINE                  = .false.,| \\
-\verb| ONLINE_DOMAIN_NUM        = 1,| \\
-\verb| ONLINE_IAM_PARENT        = .true.,| \\
-\verb| ONLINE_IAM_DAUGHTER      = .false.,| \\
-\verb| ONLINE_BOUNDARY_USE_QHYD = .true.,| \\
-\verb| ONLINE_AGGRESSIVE_COMM   = .true.,| \\
+\begin{tabularx}{145mm}{lX}
+\verb|&PARAM_NEST|                          & \\
+\verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
+\verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
+\verb| ONLINE_DOMAIN_NUM        = 1,      | & 領域の番号。外側から1番。\\
+\verb| ONLINE_IAM_PARENT        = .true., | & \\
+\verb| ONLINE_IAM_DAUGHTER      = .false.,| & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
@@ -70,42 +77,41 @@
 \noindent {\gt \verb|run.child.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_NEST| \\
-\verb| USE_NESTING              = .true.,| \\
-\verb| OFFLINE                  = .false.,| \\
-\verb| ONLINE_DOMAIN_NUM        = 2,| \\
-\verb| ONLINE_IAM_PARENT        = .false.,| \\
-\verb| ONLINE_IAM_DAUGHTER      = .true.,| \\
-\verb| ONLINE_BOUNDARY_USE_QHYD = .true.,| \\
-\verb| ONLINE_AGGRESSIVE_COMM   = .true.,| \\
+\begin{tabularx}{145mm}{lX}
+\verb|&PARAM_NEST| & \\
+\verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
+\verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
+\verb| ONLINE_DOMAIN_NUM        = 2,      | & 領域の番号。外側から1番。\\
+\verb| ONLINE_IAM_PARENT        = .false.,| & \\
+\verb| ONLINE_IAM_DAUGHTER      = .true., | & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
 
-\noindent 上記の\namelist{PARAM_NEST}の項目は、ネスティング実験のために新たに加える項目である。
-もともとの設定ファイルには項目自体がないので、自分で設定ファイルに追記する。最初の2つの項目
+\noindent 
 \nmitem{USE_NESTING = .true., OFFLINE = .false.}によって、
 オンライン・ネスティング実験であることが決定される。
 \nmitem{ ONLINE_}で始まる設定変数はオンライン・ネスティング実験
 専用の設定変数である。\nmitem{ONLINE_DOMAIN_NUM}は、
-領域のID番号であり、外側領域から内側領域へ順番に
-番号を振っていく。ここでは、親領域は1番、子領域は2番と設定する。
-
-\nmitem{ONLINE_IAM_PARENT}と\nmitem{ONLINE_IAM_DAUGHTER}は各領域の役割を設定するパラメータである。
-これらの変数は、``In online nesting system, I am parent (or, I am child).''という意味で覚えれば設定を間違うことはない。
-少し脇道にそれるが、
-ここで説明している設定より複雑なものとして、図\ref{fig_nestsample}のような
-3段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}に示した。
+領域のID番号であり、外側領域から内側領域へ順番に番号を振っていく。
+ここでは、親領域は1番、子領域は2番と設定する。
+\nmitem{ONLINE_IAM_PARENT}と\nmitem{ONLINE_IAM_DAUGHTER}は、各領域が複数のネスティング領域の中でどこに位置するかを示している。
+ネイムリストの名前から明らかなように、
+\verb|ONLINE_IAM_PARENT=.true.|であれば、子領域にデータを受け渡し、
+\verb|ONLINE_IAM_DAUGHTER=.true.|であれば、境界値データは親領域から受け取るようになる。
+%これらの変数は、``In online nesting system, I am parent (or, I am child).''という意味で覚えれば設定を間違うことはない。
+N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}に示す。
 
 \begin{table}[htb]
 \begin{center}
-\caption{3段ネスティング実験の設定例}
-\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+\caption{N段ネスティング実験の設定例}
+\begin{tabularx}{145mm}{|l|l|l|X|} \hline
  \rowcolor[gray]{0.9} 領域 & \verb|ONLINE_DOMAIN_NUM| & \verb|ONLINE_IAM_PARENT| & \verb|ONLINE_IAM_CHILD|\\ \hline
- 最外領域 & 1 & .true.  & .false. \\ \hline
- 中間領域 & 2 & .true.  & .true. \\ \hline
- 最内領域 & 3 & .false. & .true. \\ \hline
+ 最外領域 & 1               & .true.  & .false. \\ \hline
+ 中間領域 & 2\verb|〜|(N-1) & .true.  & .true. \\ \hline
+ 最内領域 & N               & .false. & .true. \\ \hline
 \end{tabularx}
 \label{tab:triple_nested}
 \end{center}
@@ -114,15 +120,13 @@
 \noindent 最外領域は親領域としてのみ働き、最内領域は子領域としてのみ働く。
 一方、中間領域は最外領域に対しては子領域、
 最内領域に対しては親領域として働くため両方共\verb|.true.|となる。
-
-さて、設定ファイルの編集内容の説明に戻る。\nmitem{ONLINE_BOUNDARY_USE_QHYD}は、
-「側面境界条件として親領域の凝結物の混合比を使うかどうか」を指定する設定変数である。
+\nmitem{ONLINE_BOUNDARY_USE_QHYD}は、
+「側面境界条件として親領域の凝結物の混合比を使うかどうか」を指定する。
 外部入力データから側面境界条件を作成するときには通常使わないが、
-ネスティングの場合、領域間の物理スキームの違いがなかったり、
-解像度もそれほど大きく離れていないため、
-側面境界から
-凝結物自体が移流して入ってくる設定も選択肢に入るだろう。
-側面境界付近で雲が立ちにくい問題を解決したり、親領域との乖離を抑制したりする働きがある。
+ネスティングの場合、領域間の物理スキームの違いがなかったり、解像度もそれほど大きく離れていないため、
+親領域で計算した凝結物を子領域の境界条件として与えることが可能である。
+流入境界付近での雲や降水の生成の遅れの影響を小さくすることが期待される。
+
 
 
 \subsubsection{launchファイルの編集}
@@ -134,42 +138,39 @@
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
-\verb|&PARAM_LAUNCHER|     & \\
-\verb| NUM_DOMAIN  = 2,|   & \\
-\verb| CONF_FILES  = run.parent.conf, run.child.conf,| \\
-\verb| PRC_DOMAINS = 4, 9,| & \\
-\verb|/| \\
+\verb|&PARAM_LAUNCHER|      & \\
+\verb| NUM_DOMAIN  = 2,|    & 領域の数\\
+\verb| PRC_DOMAINS = 4, 9,| & それぞれの領域で使用するMPIプロセス数 (領域の数だけ必要)\\
+\verb| CONF_FILES  = run.parent.conf, run.child.conf,| & それぞれの領域の設定ファイル (領域の数だけ必要)\\
+\verb|/|& \\
 \end{tabularx}
 }}}\\
 
-\noindent 図\ref{fig_mpisplit}のイメージを思い浮かべながら設定を確認してもらいたい。
-\namelist{PARAM_LAUNCHER}の項目のうち、
-\nmitem{NUM_DOMAIN = 2}が「2つの領域を起動する」ことを表しており、
-\nmitem{CONF_FILES}の項目に羅列されたファイル名は、
-各々の領域で読み込む設定ファイルを指定している。
-\nmitem{PRC_DOMAINS}は各々の領域で使用するMPIプロセス数を
-指定する。
-\nmitem{PRC_DOMAINS}は、
-\nmitem{CONF_FILES}で羅列した順番で指定しなければならない。従ってこの場合、
-親領域は4-MPI並列、
-子領域は9-MPI並列で実行するように指定されている。ここで指定するMPIプロセス数は、
-各々の``run.***.conf''で指定されている総MPIプロセス数と合致させなければならない。
-この2段オンライン・ネスティング実験で使用する総MPIプロセス数は、$4 + 9 = 13$プロセスとなる。
+\noindent 
+\nmitem{PRC_DOMAINS}と\nmitem{CONF_FILES}の記載順は対応している必要がある。
+上記の例の場合、親領域は4-MPI並列、子領域は9-MPI並列で実行するように指定されている。
+ここで指定するMPIプロセス数は、各々の領域の設定ファイル (\verb|run.***.conf|) で指定されている
+総MPIプロセス数(\verb|[PRCnum]|=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)と一致させなければならない。
 
 実行時には、シングル領域計算とは異なり、\verb|launch.conf|を引数に指定し、計算全体で使用するMPIプロセス数を
 指定して実行する。
 \begin{verbatim}
- $ mpirun  -n  13  ./scale-rm  launch.conf
+ $ mpirun  -n  [PRC_num]  ./scale-rm  launch.conf
 \end{verbatim}
 
-実行にあたって注意することは、複数の領域の計算を同時に実行するため、\textcolor{red}{領域間で設定ファイルに
-記述された出力ファイル名を領域毎に変更しなければならない}ことである。たとえば，``history.pe***.nc''は、
-``history\_d01.pe***.nc''、``history\_d02.pe***.nc''といったように領域毎に名前を変えながらどの領域の
-出力データであるか判別がつくように設定ファイルの記述を設定する。
-historyファイルのほかに、LOGファイル、topoファイル、landuseファイル、boundaryファイル、initファイル、restartファイル、
-そしてmonitorファイルの名前を変更しておく必要がある。
+実行にあたって注意することは、複数の領域の計算を同時に実行するため、
+出力ファイル(\verb|historyファイル, LOGファイル, restartファイル|など) の書き出し先が重複しない様に設定しなければならない。
+例えば、\verb|historyファイル|は\verb|history_d01.pe***.nc, history_d02.pe***.nc|といったように
+領域毎にファイル名を変えることで、どの領域の出力データであるか判別がつくように指定する。
+出力ファイルのほか、入力ファイルである\verb|topoファイル, landuseファイル, boundaryファイル, initファイル|
+の名前も注意が必要である。
 
-実行時に次のようなエラーメッセージが出力されて計算が異常終了することがある。\\
+実行時に次のようなエラーメッセージが出力されて計算が異常終了することがある。
+これは、子領域で設定された計算領域が親領域の計算領域よりも大きいことを意味するエラーメッセージである。
+``SW search''のエラーが出る場合は子領域の西側か南側が親領域の外側に出ており、``NE search''のエラーが出る場合は
+子領域の東側か北側が親領域の外側に出ていることを意味している。再度設定を確認し、地形・土地利用データ、および
+初期値/境界値作成からやり直すこと。\\
+
 
 \noindent {\small {\gt
 \fbox{
@@ -185,10 +186,6 @@ historyファイルのほかに、LOGファイル、topoファイル、landuse�
 \end{tabularx}
 }}}\\
 
-\noindent これは、子領域で設定された計算領域が親領域の計算領域よりも大きいことを意味するエラーメッセージである。
-``SW search''のエラーが出る場合は子領域の西側か南側が親領域の外側に出ており、``NE search''のエラーが出る場合は
-子領域の東側か北側が親領域の外側に出ていることを意味している。再度設定を確認し、地形・土地利用データ、および
-初期値/境界値作成からやり直すこと。
 
 
 \subsubsection{MPIプロセスの分配ガイドライン}
