@@ -66,11 +66,6 @@
 短い時間間隔でデータを出力する場合には、ディスクの空き容量にも注意が必要である。
 その他、\namelist{PARAM_HISTORY}の各項目の詳細は、第\ref{sec:output}節を参照のこと。
 
-~\\
-\proofcomment{上記、HISTORY\_DEFAULT\_TUNIT  = "SEC"と書いてありますが、秒しか許されないのでしょうか?}
-\replycomment{秒以外にも対応可能です。\ref{sec:output}に追記。(足立)}
-~\\
-
 また、子領域の初期値/境界値データ作成に必要な変数全てを
 \verb|run.parent.conf|ファイルの\namelist{HISTITEM}に追加しておく必要がある。
 オフライン・ネスティングに必要な変数は、下記の通りである。
