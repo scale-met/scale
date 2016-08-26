@@ -79,13 +79,15 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 \item {\bf 計算領域の位置を変更したい}\\
 
 計算領域の中心位置の座標を下記の通り、変更すれば良い。
+ここで、単位を度で設定する必要があることに注意すること。
+例えば、139度45.4分 = 139 + 45.5/60 度。
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_MAPPROJ                      | & \\
-\textcolor{red}{\verb| MPRJ_basepoint_lon = 139.454D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lon = 135.220404D0,|)\\
-\textcolor{red}{\verb| MPRJ_basepoint_lat =  35.413D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lat =  34.653396D0,|)\\
+\textcolor{red}{\verb| MPRJ_basepoint_lon = 139.7567D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lon = 135.220404D0,|)\\
+\textcolor{red}{\verb| MPRJ_basepoint_lat =  35.6883D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lat =  34.653396D0,|)\\
 \verb| MPRJ_type          = 'LC',         | & \\
 \verb| MPRJ_LC_lat1       =  30.00D0,     | & \\
 \verb| MPRJ_LC_lat2       =  40.00D0,     | & \\
