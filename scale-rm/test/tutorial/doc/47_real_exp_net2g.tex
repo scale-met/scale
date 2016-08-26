@@ -17,28 +17,30 @@ gpviewならばhistoryデータを変換することなく直接作図するこ�
 プロセスごとに分割された{\netcdf}形式のhistoryファイルから
 {\grads}バイナリー変換するには、\verb|net2g|を使用する。
 詳細な使用方法は \ref{sec:net2g}節を参照頂くこととし、
-ここでは最低限の手続きのみ説明する。まず、\verb|net2g|ディレクトリへ移動する。
+ここでは最低限の手続きのみ説明する。\\
+
+まず、\verb|net2g|ディレクトリへ移動する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/net2g
- $ ls 
-   net2g -> ../../../../../util/netcdf2grads_h/net2g
-   net2g.2D.d01.conf
-   net2g.3D.d01.conf
+ $ ls
+    net2g -> ../../../../../util/netcdf2grads_h/net2g
+    net2g.2D.d01.conf
+    net2g.3D.d01.conf
 \end{verbatim}
 中には設定ファイルとバイナリファイルがあり、
 バイナリファイルは\ref{sec:source_net2g}節のコンパイルにより作成された
 実行ファイルにリンクが貼られている。\\
 
-ここでは例として、2次元変数であるMSLP、PRECを、
-3次元変数として850hPa,500h,200hPa面のU、Vを変換する．
+ここでは例として、2次元変数のMSLP、PRECの変換と、
+3次元変数のU、Vを850hPa,500h,200hPa面で抽出して変換する手順について説明する。
 2次元変数のための設定ファイルは\verb|net2g.2D.d01.conf|に、
 3次元変数のための設定ファイルは\verb|net2g.3D.d01.conf|に用意している。
 
 \verb|netcdf2grads_h|実行時のプロセス数は、
 計算実行時に使用したプロセス数の約数である必要がある。
-ここでは、計算に用いたのと同じ4プロセスを使用する。
-現在、net2gでは2次元変数と3次元変数を同時に変換することはできないため、
-それぞれに実行する。
+ここでは、計算に用いた時と同じ4プロセスを使用する。
+net2gでは2次元変数と3次元変数を同時に変換することはできないため、
+別々に実行する。
 \begin{verbatim}
  $ mpirun -n 4 ./net2g net2g.2D.d01.conf
  $ mpirun -n 4 ./net2g net2g.3D.d01.conf
@@ -71,21 +73,19 @@ gpviewならばhistoryデータを変換することなく直接作図するこ�
 %-----------------------------------------------------------------------------------
 現在のバージョンの\verb|net2g|では、
 SCALE-RMのXY格子座標で、ctlファイルを作成する。
-今後、緯度経度座標で描画するためのctlファイルを
-出力できるようにする予定であるが、
-現バージョンは未対応のため、緯度経度座標で作図するためのctlを
-\verb|${Tutorial_DIR}/real/data|ディレクトリに用意してある。
-コピーして使用してほしい。
+緯度経度座標で作図するためのctlを
+\verb|${Tutorial_DIR}/real/data|ディレクトリに用意してあるので、
+サンプルとして利用してほしい。\footnote{今後、緯度経度座標で描画するためのctlファイルを出力できるようにする予定。}
 \begin{verbatim}
  $ cp ../../data/*_lcc.ctl ./
  $ ls
-  MSLP_d01z-2d_lcc.ctl
-  PREC_d01z-2d_lcc.ctl
-  U_d01z-3d_lcc.ctl
-  V_d01z-3d_lcc.ctl
+    MSLP_d01z-2d_lcc.ctl
+    PREC_d01z-2d_lcc.ctl
+    U_d01z-3d_lcc.ctl
+    V_d01z-3d_lcc.ctl
 \end{verbatim}
 
-計算結果確認用の図を作成するためのスクリプト\verb|checkfig.gs|を使って作図する。
+計算結果確認用の図を作成するための\grads スクリプト\verb|checkfig.gs|を使って作図する。
 \begin{verbatim}
  $ cp ../../data/checkfig.gs ./
  $ grads -blc checkfig.gs

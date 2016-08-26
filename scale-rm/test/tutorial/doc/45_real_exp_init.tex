@@ -5,16 +5,19 @@
 initディレクトリーでは、\scalerm 計算に必要な初期値・境界値データを作成する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/init
- $ ls 
-init.d01.conf  init.launch.conf  param.bucket.conf  scale-rm_init
+ $ ls
+    init.d01.conf
+    init.launch.conf
+    param.bucket.conf
+    scale-rm_init
 \end{verbatim}
 ディレクトリの中には、\verb|init.d01.conf|という名前の設定ファイルが準備されている。
 他に\verb|init.launch.conf|というファイルも作成されているが、ここでは使用しない。
 \verb|pp.d01.conf|と同様に、実験設定に合わせて、この\verb|init.d01.conf|を書き換える必要があるが、
 チュートリアル用の\verb|init.d01.conf|ファイルは表\ref{tab:grids}の設定に
 すでに合わせてある。
-初期値・境界値データの作成には前節で作成した地形・土地利用データを利用する。
-これは、\verb|init.d01.conf|の中で、下記のように相対PATHを用いて参照するように設定されている。\\
+初期値・境界値データの作成には前節で作成した地形データを利用する。
+これは、\verb|init.d01.conf|の中で、下記のように相対パスを用いて参照するように設定されている。\\
 
 \noindent {\gt
 \ovalbox{
@@ -24,7 +27,7 @@ init.d01.conf  init.launch.conf  param.bucket.conf  scale-rm_init
 \verb|/| \\
  \\
 \verb|&PARAM_LANDUSE| \\
-\verb|   LANDUSE_IN_BASENAME  = "../pp/landuse_d01",| \\
+\verb|   LANDUSE_IN_BASENAME = "../pp/landuse_d01",| \\
 \verb|/| \\
 \end{tabularx}
 }}\\
@@ -73,7 +76,9 @@ init.d01.conf  init.launch.conf  param.bucket.conf  scale-rm_init
 
 
 第\ref{sec:tutrial_real_data}節で作成した入力データに、
-\verb|${Tutorial_DIR}/real/data|ディレクトリに準備されている\verb|"gradsinput-link_FNL.sh"|を用いてリンクをはる。(Mac OSを使用している場合は、シェルスクリプトの \verb|date| を \verb|gdate| に変更する。)
+\verb|${Tutorial_DIR}/real/data|ディレクトリに準備されている\verb|"gradsinput-link_FNL.sh"|を用いてリンクをはる。
+\footnote{ MacOSXの場合は組み込まれているdate関数が Linux等と異なるため、
+シェルスクリプトのdateをgdateに変更する必要がある。}
 \begin{verbatim}
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh
@@ -112,20 +117,20 @@ init.d01.conf  init.launch.conf  param.bucket.conf  scale-rm_init
 正常にジョブが終了すると、
 \begin{verbatim}
  $ ls
-  boundary_d01.pe000000.nc
-  boundary_d01.pe000001.nc
-  boundary_d01.pe000002.nc
-  boundary_d01.pe000003.nc
-  init_d01_20070714-180000.000.pe000000.nc
-  init_d01_20070714-180000.000.pe000001.nc
-  init_d01_20070714-180000.000.pe000002.nc
-  init_d01_20070714-180000.000.pe000003.nc
-  init_LOG_d01.pe000000
+    boundary_d01.pe000000.nc
+    boundary_d01.pe000001.nc
+    boundary_d01.pe000002.nc
+    boundary_d01.pe000003.nc
+    init_d01_20070714-180000.000.pe000000.nc
+    init_d01_20070714-180000.000.pe000001.nc
+    init_d01_20070714-180000.000.pe000002.nc
+    init_d01_20070714-180000.000.pe000003.nc
+    init_LOG_d01.pe000000
 \end{verbatim}
 が作成される。
 \verb|boundary_d01.pe######.nc|は境界値データ、
 \verb|init_d01_20070714-180000.000.pe######.nc|は初期値データ、
-\verb|init_LOG_d01.pe######|はログファイルである。
+\verb|init_LOG_d01.pe000000|はログファイルである。
 \verb|######|はMPIプロセス番号を表している。
 
 

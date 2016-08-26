@@ -1,12 +1,13 @@
 %-------------------------------------------------------%
-\section{地形・土地利用データの作成：pp} \label{sec:tutrial_real_pp}
+\section{地形データの作成：pp} \label{sec:tutrial_real_pp}
 %-------------------------------------------------------%
 
-ppディレクトリへ移動し、現実実験のための地形データ、土地利用データを作成する。
+ppディレクトリへ移動し、現実実験のための地形データを作成する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/pp/
- $ ls 
-  pp.d01.conf scale-rm_pp
+ $ ls
+    pp.d01.conf
+    scale-rm_pp
 \end{verbatim}
 ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 設定ファイルが準備されている。
@@ -16,13 +17,13 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 従って編集済みの\verb|pp.d01.conf|が用意されているため、
 そのまま利用する。
 \verb|pp.d01.conf|の設定の中で、
-\namelist{PARAM_CONVERT}の中の以下の項目を確認してほしい。\\
+以下の\namelist{PARAM_CONVERT}の項目を確認してほしい。\\
 
 \noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_CONVERT| \\
-\verb|  CONVERT_TOPO = .true.,| \\
+\verb|  CONVERT_TOPO    = .true.,| \\
 \verb|  CONVERT_LANDUSE = .true.,| \\
 \verb|/| \\
 \end{tabularx}
@@ -30,13 +31,13 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent 上記のように\nmitem{CONVERT_TOPO}と\nmitem{CONVERT_LANDUSE}が
 \verb|.true.|となっていることが、
-それぞれ地形と土地利用の処理を行うことを意味している。
+それぞれ標高データと土地利用区分データの処理を行うことを意味している。
 %詳細な設定ファイルの内容については、付録\ref{achap:namelist}を参照されたい。
 
 また、
 \namelist{PARAM_CNVTOPO_GTOPO30}の中の\nmitem{GTOPO30_IN_DIR}と
 \namelist{PARAM_CNVLANDUSE_GLCCv2}の中の\nmitem{GLCCv2_IN_DIR}は、
-地形データと土地利用データの場所を示しており、
+標高データと土地利用区分データの場所を示しており、
 環境変数\verb|${SCALE_DB}|で設定された場所が指定されている。\\
 
 \noindent {\gt
@@ -48,8 +49,8 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 \verb|/|\\
 \\
 \verb|&PARAM_CNVLANDUSE_GLCCv2|\\
-\verb| GLCCv2_IN_CATALOGUE = "GLCCv2_catalogue.txt",|\\
-\verb| GLCCv2_IN_DIR       = "./landuse/GLCCv2/Products",|\\
+\verb| GLCCv2_IN_CATALOGUE  = "GLCCv2_catalogue.txt",|\\
+\verb| GLCCv2_IN_DIR        = "./landuse/GLCCv2/Products",|\\
 \verb| limit_urban_fraction = 0.3D0,|\\
 \verb|/|\\
 \end{tabularx}
@@ -66,7 +67,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 \verb|landuse_d01.pe######.nc|と
 いうファイルがMPIプロセス数だけ、つまり4つずつ生成される（
 \verb|######|にはMPIプロセスの番号が入る）。
-それぞれ、各格子点における地形と土地利用の情報が入っている。
+それぞれ、各格子点における標高、海陸比率、湖比率、都市被覆率、植生比率、土地(植生)利用区分の情報が入っている。
 実行時のログは、\verb|pp_LOG_d01.pe000000|に出力されるので内容を確かめておくこと。
 
 
@@ -74,7 +75,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 %% \vspace{1cm}
 %% \noindent {\Large\em OPTION} \hrulefill \\
 %% gpviewがインストールされている場合、次のコマンドによって、
-%% 作成された地形と土地利用データが正しく作成されているかどうか
+%% 作成された地形データが正しく作成されているかどうか
 %% 確認することが出来る．正しく作成されていれば，図 \ref{fig:tutrial_real_domain}と同様の図ができる．
 %% \begin{verbatim}
 %%   $ gpview topo_d01.pe00000*@TOPO --aspect=1 --nocont

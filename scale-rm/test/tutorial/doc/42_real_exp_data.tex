@@ -13,7 +13,7 @@
   \begin{tabularx}{150mm}{llX} \hline
     \multicolumn{3}{l}{地形データ(\scalerm の地形を用意する)}\\ \hline
     & \multicolumn{2}{l}{\color{blue}{標高データ}}\\
-    & \multicolumn{2}{l}{\color{blue}{土地利用データ}}\\ \hline
+    & \multicolumn{2}{l}{\color{blue}{土地利用区分データ}}\\ \hline
     \multicolumn{3}{l}{初期値境界値データ}\\ \hline
     &  \multicolumn{2}{l}{\color{blue}{親モデルの緯度・経度}}\\
     &  \multicolumn{2}{l}{(3次元大気データ)}\\
@@ -30,32 +30,36 @@
 \end{center}
 \end{table}
 
+\proofcomment{(八代)表4.2は変換に必要な外部データのリストですか？それとも変換後の入力データのリストですか？} \\
+\proofcomment{(八代)\scalerm の地形という言葉が曖昧です。}
 
-\subsubsection{地形データと土地利用データ}
-標高データと土地利用データは実験設定に従って、
-\scalerm のそれぞれの格子点における地形、海陸分布、土地利用を
+
+\subsubsection{標高データと土地利用区分データ}
+標高データと土地利用区分データは実験設定に従って、
+\scalerm のそれぞれの格子点における標高、海陸比率、湖比率、都市被覆率、植生比率、土地(植生)利用区分を
 作成するために使用する。
 ユーザーが全球の任意の地域を対象とした計算ができるよう、
 フォーマット変換済みの
 標高データ USGS(U.S. Geological Survey) のGTOPO30 と、
-土地利用データ GLCCv2 を提供している。
+土地利用区分データ GLCCv2 を提供している。
+%これらのデータベースを作成にするにあたり、施された前処理手順の詳細については、〇〇を参照すること（Todo）。
 
 \begin{enumerate}
 \item データのダウンロード\\
-\scalerm 用の地形・土地利用のデータを\\
+\scalerm 用の標高・土地利用区分のデータを\\
  \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}\\
 より入手し、任意のディレクトリに展開しておく。
 \begin{alltt}
   $ tar -zxvf scale_database.tar.gz
 \end{alltt}
-展開したディレクトリには、地形データと土地利用データが格納されている。
+展開したディレクトリには、標高データと土地利用区分データが格納されている。
 \begin{alltt}
-  scale_database/topo/    <- 地形データ
-  scale_database/landuse/ <- 土地利用データ
+  scale_database/topo/    <- 標高データ
+  scale_database/landuse/ <- 土地利用区分データ
 \end{alltt}
 
 \item パスの設定\\
-makeを使ったジョブスクリプトを使用する場合には、
+makeを用いたジョブスクリプト生成を利用するためには、
 展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくことが必須である
 (以後、\verb|${SCALE_DB}|と表記)。
 データベースがあるディレクトリを
@@ -79,10 +83,10 @@ NCARのサイト
 \url{http://rda.ucar.edu/datasets/ds083.2/}\\
 から、2007年7月14日18時から一日分のgrib1フォーマットのデータ
 \begin{alltt}
-fnl_20070714_18_00.grib1
-fnl_20070715_00_00.grib1
-fnl_20070815_06_00.grib1
-fnl_20070815_12_00.grib1
+ fnl_20070714_18_00.grib1
+ fnl_20070715_00_00.grib1
+ fnl_20070815_06_00.grib1
+ fnl_20070815_12_00.grib1
 \end{alltt}
 を\verb|scale-|{\version}\verb|/scale-rm/test/tutorial/real/tools/|の下にダウンロードする。
 
@@ -90,24 +94,24 @@ fnl_20070815_12_00.grib1
  \verb|scale-|{\version}\verb|/scale-rm/test/tutorial/real/tools/| の中にある \verb|convert_grib2grads_FNLgrib1.sh|を実行。
 
 \begin{alltt}
-  $ cd scale-{\version}/scale-rm/test/tutorial/real/tools/
-  $ sh convert_grib2grads_FNLgrib1.sh
+ $ cd ${Tutorial_DIR}/real/tools/
+ $ sh convert_grib2grads_FNLgrib1.sh
 \end{alltt}
 成功すれば、下記のファイルが作成される。
 \begin{alltt}
- $ ls -al FNL_output/*/*
-FNL_output/200707/FNLatm_2007071418.grd
-FNL_output/200707/FNLatm_2007071500.grd
-FNL_output/200707/FNLatm_2007071506.grd
-FNL_output/200707/FNLatm_2007071512.grd
-FNL_output/200707/FNLland_2007071418.grd
-FNL_output/200707/FNLland_2007071500.grd
-FNL_output/200707/FNLland_2007071506.grd
-FNL_output/200707/FNLland_2007071512.grd
-FNL_output/200707/FNLsfc_2007071418.grd
-FNL_output/200707/FNLsfc_2007071500.grd
-FNL_output/200707/FNLsfc_2007071506.grd
-FNL_output/200707/FNLsfc_2007071512.grd
+ $ ls FNL_output/*/*
+    FNL_output/200707/FNLatm_2007071418.grd
+    FNL_output/200707/FNLatm_2007071500.grd
+    FNL_output/200707/FNLatm_2007071506.grd
+    FNL_output/200707/FNLatm_2007071512.grd
+    FNL_output/200707/FNLland_2007071418.grd
+    FNL_output/200707/FNLland_2007071500.grd
+    FNL_output/200707/FNLland_2007071506.grd
+    FNL_output/200707/FNLland_2007071512.grd
+    FNL_output/200707/FNLsfc_2007071418.grd
+    FNL_output/200707/FNLsfc_2007071500.grd
+    FNL_output/200707/FNLsfc_2007071506.grd
+    FNL_output/200707/FNLsfc_2007071512.grd
 \end{alltt}
 \end{enumerate}
 

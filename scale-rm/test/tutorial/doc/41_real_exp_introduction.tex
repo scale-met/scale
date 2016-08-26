@@ -1,14 +1,14 @@
 %-------------------------------------------------------%
 \section{概要} \label{sec:tutrial_real_intro}
 %-------------------------------------------------------%
-このチュートリアルでは、現実大気の基本的な実験方法を習得する。
+本章では、チュートリアルとして準備した現実大気実験の基本的な実行手順を習得する。
 現実大気実験は、次の流れ(図\ref{fig:howto}) に従って実行する。
 \begin{enumerate}
 \item  入力データの準備 (基本各自で準備。チュートリアルでは \verb|tools/| で行う。)
-\item  \texttt{pp}      : 地形・土地利用データの作成
+\item  \texttt{pp}      : 地形データの作成
 \item  \texttt{init}    : 初期値・境界値データの作成
-\item  \texttt{run}     : 初期条件を作るディレクトリ
-\item  \texttt{net2g}   : 出力データの\netcdf から\grads 形式への変換（オプション） 
+\item  \texttt{run}     : シミュレーションの実行
+\item  \texttt{net2g}   : 出力データの\netcdf から\grads 形式への変換（オプション）
 \end{enumerate}
 
 \begin{figure}[b]
@@ -18,6 +18,10 @@
   \label{fig:howto}
 \end{center}
 \end{figure}
+
+
+これ以降の説明では、\texttt{scale-{\version}/scale-rm/test/tutorial/}の絶対パスを
+\verb|${Tutorial_DIR}|と示すこととする。
 
 
 チュートリアルの現実大気実験の計算領域（ドメイン）の設定は表\ref{tab:grids}のようになっている。
@@ -54,7 +58,7 @@
 \begin{figure}[tb]
 \begin{center}
   \includegraphics[width=0.5\hsize]{./figure/real_domain.eps}\\
-  \caption{計算領域．カラーシェードは地形の標高を示す．}
+  \caption{計算領域．カラーシェードは標高を示す．}
   \label{fig:tutrial_real_domain}
 \end{center}
 \end{figure}

@@ -1,5 +1,5 @@
 %-------------------------------------------------------%
-\section{時間積分を行う：run} \label{sec:tutrial_real_run}
+\section{シミュレーションの実行：run} \label{sec:tutrial_real_run}
 %-------------------------------------------------------%
 \subsubsection{run.confの準備}
 runディレクトリへ移動する。
@@ -45,7 +45,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 
 
 モデル本体の実行には
-事前に作成した地形・土地利用データや初期値・境界値データを利用する。
+事前に作成した地形データや初期値・境界値データを利用する。
 これらのファイルの指定は、
 \verb|run.d01.conf|の下記部分で設定する。\\
 
@@ -129,7 +129,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \end{tabularx}
 }}\\
 
-\noindent 上記の設定に従って、下記の\nmitem{HISTITEM}に羅列された変数が出力される。
+\noindent 上記の設定に従って、下記の\nmitem{HISTITEM}に列挙された変数が出力される。
 \nmitem{HISTITEM}ではオプション変数を加えることで、変数毎に、出力間隔を変更したり、
 平均値を出力したりすることも可能である。
 これらの説明は\ref{sec:output}を参照されたい。\\
@@ -170,12 +170,12 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 
 実行に必要なファイルとして、下記が用意されている。
 \begin{alltt}
- $ ls 
-  MIPAS  PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc  : 放射スキーム用のパラメータファイル
-  run.d01.conf       : 設定ファイル
-  param.bucket.conf  : 陸面スキーム用のパラメータファイル
-  scale-rm           : \scalerm 実行バイナリ
-  run.launch.conf    : ネスティング計算用のlaunchファイル（チュートリアルでは使用しない）
+ $ ls
+    MIPAS\ PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc  : 放射スキーム用のパラメータファイル
+    run.d01.conf      : 設定ファイル
+    param.bucket.conf : 陸面スキーム用のパラメータファイル
+    scale-rm          : \scalerm 実行バイナリ
+    run.launch.conf   : ネスティング計算用のlaunchファイル（チュートリアルでは使用しない）
 \end{alltt}
 %
 準備が整ったら、4-MPI並列により\scalerm を実行する。
