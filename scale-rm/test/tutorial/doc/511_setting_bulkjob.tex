@@ -14,8 +14,8 @@
 ここでは、3つの2段オンライン・ネスティング実験を例に説明する
 （積分期間、もしくは計算領域中心が異なっている3つのサブジョブを想定している）。
 %
-各サブジョブの設定内容のうち、\verb|**.launch.conf|で設定される指定
-(\verb|**launch.conf|の\namelist{PARAM_LAUNCHER}の\nmitem{NUM_DOMAIN, PRC_DOMAINS, CONF_FILES};
+各サブジョブの設定内容のうち、\verb|launch.conf|で設定される指定
+(\verb|launch.conf|の\namelist{PARAM_LAUNCHER}の\nmitem{NUM_DOMAIN, PRC_DOMAINS, CONF_FILES};
 第\ref{subsubsec:launch}節参照) は共通していなければならないが、
 それ以外の設定内容(例えば、積分時間や使用するスキーム、1つのMPIプロセスあたりの格子数など)は
 異なっていても構わない。
