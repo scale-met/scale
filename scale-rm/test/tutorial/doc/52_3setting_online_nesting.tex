@@ -196,21 +196,24 @@ historyファイルのほかに、LOGファイル、topoファイル、landuse�
 つまり、それぞれのMPIプロセスは、どれか１つのネスティング領域の一部を担当することになる。
 このため、ユーザーは、使用可能なMPIプロセス数のうち、各領域の計算にいくつのMPIプロセスを割り当てるかを
 決める必要がある。割り当て配分のバランスが悪いと、待ち時間が発生し、計算時間が余計にかかってしまう。
-これを避けるためには、領域毎に、時間積分にかかる1プロセスあたりの演算量を揃えればよい。
+これを避けるためには、領域毎に、時間積分にかかる1プロセスあたりの計算量（ここでは格子数と
+タイムステップ数の積として定義）を揃えればよい。
+\footnote{正確を期すなら演算量を見積もる必要がある。}
 具体的な見積もり方法は下記の通りである。
 
 ここではN個の領域(N段ネスティング)を考える。
 n番目の領域の{\XDIR}, {\YDIR}, {\ZDIR}の格子数をそれぞれ\verb|IMAX_n|, \verb|JMAX_n|, \verb|KMAX_n|
-と表し、時間積分のタイムステップ\nmitem{TIME_DT}を \verb|DT_n|と表すことにする。
-この時、一番外側領域(n=1)の時間積分のタイムステップを積分するのに必要なn番目の領域の計算ステップ数は、
+と表し、時間積分のタイムステップ\nmitem{TIME_DT}を\verb|DT_n|と表すことにする。
+この時、一番外側領域(n=1)の時間積分のタイムステップ\verb|DT_1|を基準とし、この時間を積分するのに
+必要なn番目の領域の計算ステップ数は、
 \begin{eqnarray}
  \verb|TSTEP_n| = \verb|DT_1| / \verb|DT_n|  \nonumber
 \end{eqnarray}
-となり、領域全体での計算ステップ数は
+と表される。領域全体での計算量は、領域が持つ格子数と掛けて
 \begin{eqnarray}
  \verb|OPR_n| = \verb|IMAX_n| \times \verb|JMAX_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
 \end{eqnarray}
-となる。故に、n番目の領域に配分するMPIプロセス数の目安は、全MPIプロセス数を \verb|MPI_total|として
+と見積もられる。故に、n番目の領域に配分するMPIプロセス数の目安は、全MPIプロセス数を \verb|MPI_total|として
 \begin{eqnarray}
  \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} }
 \end{eqnarray}
@@ -269,7 +272,7 @@ n番目の領域の{\XDIR}, {\YDIR}, {\ZDIR}の格子数をそれぞれ\verb|IMA
 %\end{table}
 
 {\XDIR} と{\YDIR}に分配するプロセス数\nmitem{PRC_NUM_X, PRC_NUM_Y}には任意性が残るが、
-\verb|IMAX|と\verb|JMAX|の違いが小さくなるように設定する方がハロ領域を少なくすることが出来るため、
+\verb|IMAX|と\verb|JMAX|の違いが小さくなるように設定する方がHALO領域を少なくすることが出来るため、
 計算機の演算性能を引き出しやすいと考えられる\footnote{ただし、京の場合のようにスレッド並列も併用するハイブリッド並列の場合には{\YDIR}の格子点数をある程度大きくしてスレッド間の演算量のインバランスを小さくする必要性も出てくる。}。
 
 
