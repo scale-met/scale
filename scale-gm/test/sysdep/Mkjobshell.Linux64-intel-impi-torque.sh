@@ -9,7 +9,7 @@ TOPDIR=${6}
 BINNAME=${7}
 
 # System specific
-MPIEXEC="mpirun --mca btl openib,sm,self --bind-to core"
+MPIEXEC="impijob"
 
 GL=`printf %02d ${GLEV}`
 RL=`printf %02d ${RLEV}`
@@ -45,7 +45,7 @@ cat << EOF1 > run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ For SGI ICE X (Linux64 & gnu fortran&C & openmpi + Torque -----
+# ------ For SGI ICE X (Linux64 & intel fortran&C & openmpi + Torque -----
 #
 ################################################################################
 #PBS -q ${rscgrp}
@@ -55,20 +55,10 @@ cat << EOF1 > run.sh
 #PBS -o STDOUT
 #PBS -e STDERR
 export FORT_FMT_RECL=400
-export GFORTRAN_UNBUFFERED_ALL=Y
 
 source /etc/profile.d/modules.sh
 module unload mpt/2.12
-module unload intelcompiler
-module unload intelmpi
-module unload hdf5
-module unload netcdf4/4.3.3.1-intel
-module unload netcdf4/fortran-4.4.2-intel
-module load gcc/4.7.2
-module load openmpi/1.10.1-gcc
-module load hdf5/1.8.16
-module load netcdf4/4.3.3.1
-module load netcdf4/fortran-4.4.2
+module load intelmpi/5.1.2.150
 
 cd \$PBS_O_WORKDIR
 
@@ -95,7 +85,7 @@ cat << EOFICO2LL1 > ico2ll.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ For SGI ICE X (Linux64 & gnu fortran&C & openmpi + Torque -----
+# ------ For SGI ICE X (Linux64 & intel fortran&C & openmpi + Torque -----
 #
 ################################################################################
 #PBS -q ${rscgrp}
@@ -109,16 +99,7 @@ export GFORTRAN_UNBUFFERED_ALL=Y
 
 source /etc/profile.d/modules.sh
 module unload mpt/2.12
-module unload intelcompiler
-module unload intelmpi
-module unload hdf5
-module unload netcdf4/4.3.3.1-intel
-module unload netcdf4/fortran-4.4.2-intel
-module load gcc/4.7.2
-module load openmpi/1.10.1-gcc
-module load hdf5/1.8.16
-module load netcdf4/4.3.3.1
-module load netcdf4/fortran-4.4.2
+module load intelmpi/5.1.2.150
 
 cd \$PBS_O_WORKDIR
 
