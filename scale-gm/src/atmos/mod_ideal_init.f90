@@ -749,6 +749,7 @@ contains
        enddo
        ps = real( DP_ps, kind=RP )
 
+       prs(1) = ps
        k      = ADM_kmin
        prs(k) = ps - rho(k) * g * ( GRD_vz(n,k,l,GRD_Z) - GRD_vz(n,k,l,GRD_ZH) )
        do k = ADM_kmin+1, ADM_kmax
