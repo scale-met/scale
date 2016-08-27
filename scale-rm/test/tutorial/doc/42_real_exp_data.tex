@@ -66,9 +66,9 @@ makeを用いたジョブスクリプト生成を利用するためには、
 \begin{alltt}
   $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
 \end{alltt}
-\end{enumerate}
 ここで、\verb|${path_to_directory_of_scale_database}|は、
 データベースがあるディレクトリである。
+\end{enumerate}
 
 \subsubsection{大気・陸面・海面水温データ}
 初期値境界値データは4byteバイナリー(\grads 形式、以降''binary形式''と表記する)に変換すれば、
@@ -88,10 +88,12 @@ NCARのサイト
  fnl_20070815_06_00.grib1
  fnl_20070815_12_00.grib1
 \end{alltt}
-を\verb|scale-|{\version}\verb|/scale-rm/test/tutorial/real/tools/|の下にダウンロードする。
+を\texttt{scale-{\version}/scale-rm/test/tutorial/real/tools/}の下にダウンロードする。
 
 \item データフォーマットをgrib形式からbinary形式に変換\\
- \verb|scale-|{\version}\verb|/scale-rm/test/tutorial/real/tools/| の中にある \verb|convert_grib2grads_FNLgrib1.sh|を実行。
+ \texttt{scale-{\version}/scale-rm/test/tutorial/real/tools/} の中にある\\
+ \verb|convert_grib2grads_FNLgrib1.sh|を実行。
+
 
 \begin{alltt}
  $ cd ${Tutorial_DIR}/real/tools/

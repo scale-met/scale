@@ -38,23 +38,23 @@
 \end{itemize}
 
 
-この設定を\verb|run.d01.conf|に適用すると下記のようになる。\textcolor{red}{赤文字}で示した部分が、上記の注意点・変更点に対応する部分である。\\
+この設定を\verb|run.d01.conf|に適用すると下記のようになる。\textcolor{blue}{青文字}で示した部分が、上記の注意点・変更点に対応する部分である。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_DOMAIN_CATALOGUE| & \\
-\textcolor{red}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & カタログファイルを出力。\\
+\textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & カタログファイルを出力。\\
 \verb|/| &\\
  & \\
 \verb|&PARAM_HISTORY| &\\
 \verb| HISTORY_DEFAULT_BASENAME  = "history",| & \\
-\textcolor{red}{\verb| HISTORY_DEFAULT_TINTERVAL = 600.D0,|} & historyデータの出力時間間隔。\\
+\textcolor{blue}{\verb| HISTORY_DEFAULT_TINTERVAL = 600.D0,|} & historyデータの出力時間間隔。\\
 \verb| HISTORY_DEFAULT_TUNIT     = "SEC",|   & \verb|HISTORY_DEFAULT_TINTERVAL|の単位。\\
 \verb| HISTORY_DEFAULT_TAVERAGE  = .false.,| & \\
 \verb| HISTORY_DEFAULT_DATATYPE  = "REAL4",| & \\
-\textcolor{red}{\verb| HISTORY_DEFAULT_ZINTERP   = .false.,|} & モデル面データを出力。\\
-\textcolor{red}{\verb| HISTORY_OUTPUT_STEP0      = .true.,|}  & t=0の値を出力に含める。 \\
+\textcolor{blue}{\verb| HISTORY_DEFAULT_ZINTERP   = .false.,|} & モデル面データを出力。\\
+\textcolor{blue}{\verb| HISTORY_OUTPUT_STEP0      = .true.,|}  & t=0の値を出力に含める。 \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
@@ -95,23 +95,23 @@
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_MKINIT_REAL_ATMOS| &\\
 \verb| BASENAME_BOUNDARY   = "boundary",| &\\
-\textcolor{red}{\verb| BASENAME_ORG        = "history",|}  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
-\textcolor{red}{\verb| FILETYPE_ORG        = "SCALE-RM",|} & \\
-\textcolor{red}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
-\textcolor{red}{\verb| BOUNDARY_UPDATE_DT  = 600.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
+\textcolor{blue}{\verb| BASENAME_ORG        = "history",|}  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
+\textcolor{blue}{\verb| FILETYPE_ORG        = "SCALE-RM",|} & \\
+\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
+\textcolor{blue}{\verb| BOUNDARY_UPDATE_DT  = 600.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
 \verb|/| &\\
  & \\
-\textcolor{red}{\verb|&PARAM_NEST|} & \\
-\textcolor{red}{\verb| USE_NESTING               = .true.,|} & \\
-\textcolor{red}{\verb| OFFLINE                   = .true.,|} & \\
-\textcolor{red}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 4,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 4,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_KMAX       = 35,|} & \verb|run.d01.conf|の\verb|KMAX|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_IMAX       = 40,|} & \verb|run.d01.conf|の\verb|IMAX|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_JMAX       = 40,|} & \verb|run.d01.conf|の\verb|JMAX|\\
-\textcolor{red}{\verb| OFFLINE_PARENT_LKMAX      = 5,|}  & \verb|run.d01.conf|の\verb|LKMAX|\\
-\textcolor{red}{\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.txt",|} & 親領域を実行した時に作成したカタログファイル\\
-\textcolor{red}{\verb|/|} &\\
+\textcolor{blue}{\verb|&PARAM_NEST|} & \\
+\textcolor{blue}{\verb| USE_NESTING               = .true.,|} & \\
+\textcolor{blue}{\verb| OFFLINE                   = .true.,|} & \\
+\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 4,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 4,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_KMAX       = 35,|} & \verb|run.d01.conf|の\verb|KMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_IMAX       = 40,|} & \verb|run.d01.conf|の\verb|IMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_JMAX       = 40,|} & \verb|run.d01.conf|の\verb|JMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_LKMAX      = 5,|}  & \verb|run.d01.conf|の\verb|LKMAX|\\
+\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.txt",|} & 親領域を実行した時に作成したカタログファイル\\
+\verb|/| &\\
 \end{tabularx}
 }}}\\
 
@@ -156,7 +156,7 @@
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_ATMOS_BOUNDARY| \\
 \verb|　 　 　〜　中略　〜|\\
-\textcolor{red}{\verb| ATMOS_BOUNDARY_UPDATE_DT  = 600.D0,|} \\
+\textcolor{blue}{\verb| ATMOS_BOUNDARY_UPDATE_DT  = 600.D0,|} \\
 \verb|/| \\
 \end{tabularx}
 }}}\\

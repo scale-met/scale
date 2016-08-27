@@ -34,7 +34,7 @@
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
    \times (\verb|KMAX| )  \nonumber
 \end{eqnarray}
-の関係となる。
+となる。
 ここで、\nmitem{KMAX}は、鉛直方向の格子点数であり、
 \namelist{PARAM_INDEX}内の項目で指定されている。
 次節以降では、MPIプロセス数、格子数、格子間隔、
@@ -43,7 +43,7 @@
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./figure/domain_decomposition.eps}\\
-  \caption{計算領域に対する、水平格子間隔(DX, DY)、MPIプロセスあたりの格子数(IMAX, JMAX)、MPIプロセス数(PRC\_NUM\_X, PRC\_NUM\_Y)の関係。
+  \caption{計算領域に対する、水平格子間隔(\verb|DX|, \verb|DY|)、MPIプロセスあたりの格子数(\verb|IMAX|, \verb|JMAX|)、MPIプロセス数(\verb|PRC_NUM_X|, \verb|PRC_NUM_Y|)の関係。
 水色領域は、ある1つのMPIプロセスが担当する領域。}
   \label{fig:domain}
 \end{center}
@@ -54,7 +54,7 @@
 前節で述べた関係が理解できれば、領域の設定は容易である。
 すなわち、式(\ref{eq:xgridnum},\ref{eq:ygridnum})を使って、
 \begin{eqnarray}
-&& {\XDIR}の領域の長さ = {\XDIR} の格子点数 \times \verb|DX| \nonumber\\
+&& {\XDIR}の領域の長さ = {\XDIR}の格子点数 \times \verb|DX| \nonumber\\
 && {\YDIR}の領域の長さ = {\YDIR}の格子点数 \times \verb|DY| \nonumber
 \end{eqnarray}
 となる。ここで、\nmitem{DX,DY}は、後述するように
@@ -84,12 +84,10 @@ MPIプロセス数を変更するには、
 }}}\\
 
 
-全MPIプロセス数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  となり、
-上記の例では、\XDIR に2分割、\YDIR に1分割（分割なし）の
-2-MPI並列ということになる。
+総MPIプロセス数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  となり、
+上記の例では、\XDIR に2分割、\YDIR に1分割（分割なし）の 2-MPI並列ということになる。
 
-実行時にMPIコマンドに指定するMPIプロセス数は、
-この総MPIプロセス数を指定しなければならない。
+実行時にMPIコマンドに指定するMPIプロセス数は、総MPIプロセス数を指定しなければならない。
 この条件を満たさない場合は、下記のメッセージが
 標準出力に出力されて計算は行われず、直ちに終了する。
 
@@ -115,7 +113,7 @@ MPIプロセス数を変更するには、
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_INDEX| & \\
 \verb| KMAX = 97,|  & 鉛直層数 \\
-\verb| IMAX = 20,|  & プロセスあたりの{\XDIR} の格子点数 \\
+\verb| IMAX = 20,|  & プロセスあたりの{\XDIR}の格子点数 \\
 \verb| JMAX = 25,|  & プロセスあたりの{\YDIR}の格子点数 \\
 \verb|/|\\
 \end{tabularx}
@@ -140,7 +138,7 @@ MPIプロセス数を変更するには、
 すべての方向について等間隔で設定する場合には、以下のように
 設定ファイルの\namelist{PARAM_GRID}の\nmitem{DX,DY,DZ}に
 それぞれ、東西、南北、鉛直方向の格子間隔を指定する。
-単位はmである。
+単位は[m]である。
 
 \noindent {\small {\gt
 \ovalbox{
@@ -158,10 +156,10 @@ MPIプロセス数を変更するには、
 鉛直方向は、ローレンツ格子を採用しており、
 速度成分定義格子点とスカラー定義格子点が半格子分ずれた食い違い格子になっている。
 ここでは、スカラー量を定義している格子点をセンターポイントと呼び、
-半格子ズレた格子点をフェイスポイントと呼ぶ（図\ref{fig:scale_grid}参照)。
+半格子ズレた格子点をフェイスポイントと呼ぶ。
 
 直接格子点の位置を指定する場合は、フェイスポイントの位置を
-\namelist{PARAM_GRID}の中の\nmitem{FZ(:)}で配列として与えればよい。
+\namelist{PARAM_GRID}の中の\nmitem{FZ(:)}で配列として与えればよい（図\ref{fig:scale_grid}参照)。
 \footnote{指定の際には、シミュレーションの計算精度
 (モデルのコンパイル時に指定した浮動小数点の精度。デフォルトでは倍精度)を用いることが望ましい。}
 また、\nmitem{FZ(:)}で指定する値の数は、鉛直層数
@@ -201,13 +199,13 @@ MPIプロセス数を変更するには、
   \label{fig:scale_grid}
 \end{center}
 \end{figure}
-なお、これらの指定では、
+
+なお、これらの指定は、
 標高0mでの格子点として設定され、標高を持つ位置では地形に沿った座標系によって適切に処理される。
 
-
-格子点位置は任意に設定できるが、場合によっては計算不安定につながる。
+格子点位置は任意に設定できるが、設定によっては計算不安定につながる。
 鉛直層の設定については、作成をサポートするツールが、\texttt{scale-\version/scale-rm/util/makevgrid/}
-ディレクトリの中に`make\_vgrid.f90''というFortranプログラムと
+ディレクトリの中に \verb|make_vgrid.f90|というFortranプログラムと
 いくつかのサンプルnamelistが用意されているので、参考にされたい。
 ツールをコンパイルして実行すれば直ちに設定ファイルに貼り付けて使用できる
 \nmitem{FZ(:)}の値が作成される。
@@ -230,7 +228,7 @@ MPIプロセス数を変更するには、
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_GRID  |            & \\
  \verb|BUFFER_DZ = 5000.D0,   | & ; {\ZDIR}（モデルトップから下向き方向）の緩和領域の幅(参考値) [m]\\
- \verb|BUFFER_DX = 300000.D0, | & ; {\XDIR} （東西方向）の緩和領域の幅(参考値) [m]\\
+ \verb|BUFFER_DX = 300000.D0, | & ; {\XDIR}（東西方向）の緩和領域の幅(参考値) [m]\\
  \verb|BUFFER_DY = 300000.D0, | & ; {\YDIR}（南北方向）の緩和領域の幅(参考値) [m]\\
  \verb|BUFFFACT  = 1.D0,      | & ; 緩和領域内の格子間隔に対するストレッチ係数(デフォルトは1.0)\\
 \verb|/|\\
@@ -257,7 +255,7 @@ MPIプロセス数を変更するには、
 \]
 となる。
 
-ここでは、{\XDIR} の説明をしたが、{\YDIR}、{\ZDIR}も同様である。
+ここでは、{\XDIR}の説明をしたが、{\YDIR}、{\ZDIR}も同様である。
 ただし、{\ZDIR} については下端には緩和領域が取られないため、緩和領域を除いた計算領域の大きさは
 \[
 \nmitemeq{DZ} \times ( \nmitemeq{KMAX} - \verb|kbuff| )
@@ -318,7 +316,4 @@ MPIプロセス数を変更するには、
 %
 緩和領域の幅\nmitem{BUFFER_DX}が同じでも、
 \nmitem{BUFFFACT}の値を大きくすると緩和領域の格子数は少なくなる。
-
-
-
 

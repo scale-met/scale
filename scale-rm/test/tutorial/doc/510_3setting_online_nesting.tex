@@ -141,7 +141,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \verb|&PARAM_LAUNCHER|      & \\
 \verb| NUM_DOMAIN  = 2,|    & 領域の数\\
 \verb| PRC_DOMAINS = 4, 9,| & それぞれの領域で使用するMPIプロセス数 (領域の数だけ必要)\\
-\verb| CONF_FILES  = run.parent.conf, run.child.conf,| & それぞれの領域の設定ファイル (領域の数だけ必要)\\
+\verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & それぞれの領域の設定ファイル (領域の数だけ必要)\\
 \verb|/|& \\
 \end{tabularx}
 }}}\\
@@ -155,7 +155,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 実行時には、シングル領域計算とは異なり、\verb|launch.conf|を引数に指定し、計算全体で使用するMPIプロセス数を
 指定して実行する。
 \begin{verbatim}
- $ mpirun  -n  [PRC_num]  ./scale-rm  launch.conf
+ $ mpirun  -n  [プロセス数]  ./scale-rm  launch.conf
 \end{verbatim}
 
 実行にあたって注意することは、複数の領域の計算を同時に実行するため、
@@ -207,11 +207,11 @@ n番目の領域の{\XDIR}, {\YDIR}, {\ZDIR}の格子数をそれぞれ\verb|IMA
 \begin{eqnarray}
  \verb|TSTEP_n| = \verb|DT_1| / \verb|DT_n|  \nonumber
 \end{eqnarray}
-と表される。領域全体での計算量は、領域が持つ格子数と掛けて
+と表される。領域全体での計算量は、領域が持つ格子数を掛けて
 \begin{eqnarray}
  \verb|OPR_n| = \verb|IMAX_n| \times \verb|JMAX_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
 \end{eqnarray}
-と見積もられる。故に、n番目の領域に配分するMPIプロセス数の目安は、全MPIプロセス数を \verb|MPI_total|として
+と見積もられる。n番目の領域に配分するMPIプロセス数の目安は、全MPIプロセス数を \verb|MPI_total|として
 \begin{eqnarray}
  \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} }
 \end{eqnarray}
