@@ -38,7 +38,6 @@ module mod_atmos_phy_rd_vars
   public :: ATMOS_PHY_RD_vars_restart_open
   public :: ATMOS_PHY_RD_vars_restart_def_var
   public :: ATMOS_PHY_RD_vars_restart_enddef
-  public :: ATMOS_PHY_RD_vars_restart_write_var
   public :: ATMOS_PHY_RD_vars_restart_close
 
   !-----------------------------------------------------------------------------
@@ -381,82 +380,6 @@ contains
   end subroutine ATMOS_PHY_RD_vars_restart_read
 
   !-----------------------------------------------------------------------------
-  !> Write restart
-  subroutine ATMOS_PHY_RD_vars_restart_write
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_write
-    use scale_rm_statistics, only: &
-       STAT_total
-    implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
-
-    real(RP) :: total
-    !---------------------------------------------------------------------------
-
-    if ( ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_AE) ***'
-
-       if ( ATMOS_PHY_RD_RESTART_OUT_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call ATMOS_PHY_RD_vars_fillhalo
-
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10) )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11) )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
-
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_LW_up(:,:)    , basename,     ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(1) , VAR_DESC(1) , VAR_UNIT(1) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_LW_dn(:,:)    , basename,     ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(2) , VAR_DESC(2) , VAR_UNIT(2) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_SW_up(:,:)    , basename,     ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(3) , VAR_DESC(3) , VAR_UNIT(3) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_SW_dn(:,:)    , basename,     ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(4) , VAR_DESC(4) , VAR_UNIT(4) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_TOAFLX_LW_up(:,:)    , basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(5) , VAR_DESC(5) , VAR_UNIT(5) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:)    , basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(6) , VAR_DESC(6) , VAR_UNIT(6) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_TOAFLX_SW_up(:,:)    , basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(7) , VAR_DESC(7) , VAR_UNIT(7) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:)    , basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(8) , VAR_DESC(8) , VAR_UNIT(8) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_downall(:,:,1,1), basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(9) , VAR_DESC(9) , VAR_UNIT(9) , 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_downall(:,:,1,2), basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(10), VAR_DESC(10), VAR_UNIT(10), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_downall(:,:,2,1), basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(11), VAR_DESC(11), VAR_UNIT(11), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_downall(:,:,2,2), basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(12), VAR_DESC(12), VAR_UNIT(12), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-
-    endif
-
-    return
-  end subroutine ATMOS_PHY_RD_vars_restart_write
-
-  !-----------------------------------------------------------------------------
   !> Input from External I/O
   subroutine ATMOS_PHY_RD_vars_external_in( &
       init_value_in  )
@@ -594,7 +517,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
-  subroutine ATMOS_PHY_RD_vars_restart_write_var
+  subroutine ATMOS_PHY_RD_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write_var
     use scale_rm_statistics, only: &
@@ -649,6 +572,6 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_RD_vars_restart_write_var
+  end subroutine ATMOS_PHY_RD_vars_restart_write
 
 end module mod_atmos_phy_rd_vars

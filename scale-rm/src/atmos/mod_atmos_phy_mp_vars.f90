@@ -38,7 +38,6 @@ module mod_atmos_phy_mp_vars
   public :: ATMOS_PHY_MP_vars_restart_open
   public :: ATMOS_PHY_MP_vars_restart_def_var
   public :: ATMOS_PHY_MP_vars_restart_enddef
-  public :: ATMOS_PHY_MP_vars_restart_write_var
   public :: ATMOS_PHY_MP_vars_restart_close
 
   !-----------------------------------------------------------------------------
@@ -268,52 +267,6 @@ contains
   end subroutine ATMOS_PHY_MP_vars_restart_read
 
   !-----------------------------------------------------------------------------
-  !> Write restart
-  subroutine ATMOS_PHY_MP_vars_restart_write
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_write
-    use scale_rm_statistics, only: &
-       STAT_total
-    implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
-
-    real(RP) :: total
-    !---------------------------------------------------------------------------
-
-    if ( ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_AE) ***'
-
-       if ( ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call ATMOS_PHY_MP_vars_fillhalo
-
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
-
-       call FILEIO_write( ATMOS_PHY_MP_SFLX_rain(:,:), basename,       ATMOS_PHY_MP_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_MP_SFLX_snow(:,:), basename,       ATMOS_PHY_MP_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
-
-    endif
-
-    return
-  end subroutine ATMOS_PHY_MP_vars_restart_write
-
-  !-----------------------------------------------------------------------------
   !> Create restart file
   subroutine ATMOS_PHY_MP_vars_restart_create
     use scale_time, only: &
@@ -400,7 +353,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write restart
-  subroutine ATMOS_PHY_MP_vars_restart_write_var
+  subroutine ATMOS_PHY_MP_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write_var
     use scale_rm_statistics, only: &
@@ -425,6 +378,6 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_MP_vars_restart_write_var
+  end subroutine ATMOS_PHY_MP_vars_restart_write
 
 end module mod_atmos_phy_mp_vars

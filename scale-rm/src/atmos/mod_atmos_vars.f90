@@ -873,6 +873,8 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
@@ -2989,25 +2991,25 @@ contains
        ATMOS_sw_phy_tb,   &
        ATMOS_sw_phy_cp
     use mod_atmos_dyn_vars, only: &
-       ATMOS_DYN_vars_restart_write_var
+       ATMOS_DYN_vars_restart_write
     use mod_atmos_phy_mp_vars, only: &
-       ATMOS_PHY_MP_vars_restart_write_var
+       ATMOS_PHY_MP_vars_restart_write
     use mod_atmos_phy_ae_vars, only: &
-       ATMOS_PHY_AE_vars_restart_write_var
+       ATMOS_PHY_AE_vars_restart_write
     use mod_atmos_phy_ch_vars, only: &
-       ATMOS_PHY_CH_vars_restart_write_var
+       ATMOS_PHY_CH_vars_restart_write
     use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_vars_restart_write_var
+       ATMOS_PHY_RD_vars_restart_write
     use mod_atmos_phy_sf_vars, only: &
-       ATMOS_PHY_SF_vars_restart_write_var
+       ATMOS_PHY_SF_vars_restart_write
     use mod_atmos_phy_tb_vars, only: &
-       ATMOS_PHY_TB_vars_restart_write_var
+       ATMOS_PHY_TB_vars_restart_write
     use mod_atmos_phy_cp_vars, only: &
-       ATMOS_PHY_CP_vars_restart_write_var
+       ATMOS_PHY_CP_vars_restart_write
 #ifdef _SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
-       ATMOS_PHY_MP_sdm_restart_write_var
+       ATMOS_PHY_MP_sdm_restart_write
 #endif
     implicit none
 
@@ -3016,7 +3018,7 @@ contains
 
 #ifdef _SDM
     if( sd_rest_flg_out ) then
-       call ATMOS_PHY_MP_sdm_restart_write_var
+       call ATMOS_PHY_MP_sdm_restart_write
     endif
 #endif
 
@@ -3038,14 +3040,14 @@ contains
 
     endif
 
-    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_write_var
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write_var
-    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_write_var
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write_var
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write_var
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write_var
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write_var
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write_var
+    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_write
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write
+    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_write
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
 
     return
   end subroutine ATMOS_vars_restart_write

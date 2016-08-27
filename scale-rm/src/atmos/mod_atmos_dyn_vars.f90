@@ -38,7 +38,6 @@ module mod_atmos_dyn_vars
   public :: ATMOS_DYN_vars_restart_open
   public :: ATMOS_DYN_vars_restart_def_var
   public :: ATMOS_DYN_vars_restart_enddef
-  public :: ATMOS_DYN_vars_restart_write_var
   public :: ATMOS_DYN_vars_restart_close
 
   !-----------------------------------------------------------------------------
@@ -276,46 +275,6 @@ contains
     return
   end subroutine ATMOS_DYN_vars_restart_read
 
-  !-----------------------------------------------------------------------------
-  !> Write restart
-  subroutine ATMOS_DYN_vars_restart_write
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_write
-    implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
-
-    integer :: iv
-    !---------------------------------------------------------------------------
-
-    if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
-
-       if ( ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(ATMOS_DYN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(ATMOS_DYN_RESTART_OUT_BASENAME)
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       do iv = 1, VA
-          call FILEIO_write( PROG(:,:,:,iv), basename,                        ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
-                             VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE  ) ! [IN]
-       enddo
-
-    endif
-
-    return
-  end subroutine ATMOS_DYN_vars_restart_write
-
-  !-----------------------------------------------------------------------------
   !> Create restart file
   subroutine ATMOS_DYN_vars_restart_create
     use scale_time, only: &
@@ -405,7 +364,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
-  subroutine ATMOS_DYN_vars_restart_write_var
+  subroutine ATMOS_DYN_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
@@ -422,6 +381,6 @@ contains
     endif
 
     return
-  end subroutine ATMOS_DYN_vars_restart_write_var
+  end subroutine ATMOS_DYN_vars_restart_write
 
 end module mod_atmos_dyn_vars
