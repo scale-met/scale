@@ -71,7 +71,7 @@ MPIプロセス数を変更すると分割ファイル数も必ず変わるこ�
 4-MPI並列のモデル実行には使用できない。
 MPIプロセス数を変更するには、
 \verb|pp_***.conf|、\verb|init_***.conf|、\verb|run_***.conf| の
-すべてを編集・変更し、\verb|pp|, \verb|init| から行う必要がある。\\
+すべてを編集・変更し、\verb|pp|、\verb|init| から行う必要がある。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -199,9 +199,9 @@ MPIプロセス数を変更するには、
   \label{fig:scale_grid}
 \end{center}
 \end{figure}
+なお、指定された鉛直高度は
+標高がない場所（海上）での鉛直格子点位置として設定され、標高がある場所では地形に沿った座標系によって適切に処理される。
 
-なお、これらの指定は、
-標高0mでの格子点として設定され、標高を持つ位置では地形に沿った座標系によって適切に処理される。
 
 格子点位置は任意に設定できるが、設定によっては計算不安定につながる。
 鉛直層の設定については、作成をサポートするツールが、\texttt{scale-\version/scale-rm/util/makevgrid/}
@@ -222,6 +222,8 @@ MPIプロセス数を変更するには、
 緩和領域の幅は、設定ファイルの\namelist{PARAM_GRID}の中で設定する。
 以下に例を示す。
 設定はすべての設定ファイルにおいて共通していなければならない。\\
+
+\proofcomment{(八代)境界条件と対象領域が何を指しているのか直感的にわかりません。} \\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -292,8 +294,8 @@ MPIプロセス数を変更するには、
 \namelist{PARAM_GRID}の中の\nmitem{DX, DY, DZ}で指定した通りであるが、
 \nmitem{BUFFFACT}に1以上の値を設定することで、ストレッチさせることも可能である。
 ただし、格子間隔を等間隔で指定した場合、
-この\nmitem{BUFFFACT}の設定は、X, Y, {\ZDIR}すべてに適用される。
-それぞれの方向に別々に設定したい場合は、\nmitem{BUFFFACT_X}, \nmitem{BUFFFACT_Y}, \nmitem{BUFFFACT_Z}を指定する。
+この\nmitem{BUFFFACT}の設定は、X、Y、{\ZDIR}すべてに適用される。
+それぞれの方向に別々に設定したい場合は、\nmitem{BUFFFACT_X}、\nmitem{BUFFFACT_Y}、\nmitem{BUFFFACT_Z}を指定する。
 {\ZDIR}の層レベルを任意の格子点位置に指定する場合、
 すなわち、\nmitem{FZ(:)}を与える場合(第\ref{subsec:gridinterv}節参照のこと)にはストレッチの設定は{\ZDIR}には適用されない。
 
