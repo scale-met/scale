@@ -2,9 +2,10 @@
 %-----------------------------------------------------------------------
 
 \scalerm では地形データに対しモデル下端の格子面を傾斜させて地形を表現する山岳に沿った座標系を採用している。
-水平の最大格子間隔を$DX_{max}$[m]、鉛直の最小格子間隔を$DZ_{min}$[m]とすると、許容される最大の地形傾斜角度$\theta_{max}$[deg]は次の式で計算される。
+許容される最大の地形傾斜角度$\theta_{\max}$[deg]は次の式で計算される。
 
-\[ \theta_{max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ_{min}}/\mathrm{DX_{max}} ) \times 180/\pi \]
+\[ \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} ) \times 180/\pi \]
+ここで、\mathrm{DZ}, \mathrm{DX} は、それぞれ鉛直と水平の格子間隔である。
 
 \scalerm ではRATIOのデフォルト値を1.0に設定している。
 RATIOの設定を、1.0よりも大きくすれば地形がより細かく、1.0よりも小さくすれば地形がより粗く表現される。
@@ -18,7 +19,7 @@ RATIOの設定を、1.0よりも大きくすれば地形がより細かく、1.0
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_CNVTOPO  |                  & \\
  \verb|CNVTOPO_name                  = "GTOPO30", | & ; 使用する地形データ名\\
- \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; DZのDXに対する比の倍率 \\
+ \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; 許容する傾斜の\mathrm{DZ}/\mathrm{DX}に対する倍率 \\
  \verb|CNVTOPO_smooth_local          = .true.,    | & ; 最大傾斜角度を超えた格子のみ平滑化を行うかどうか \\
  \verb|CNVTOPO_copyparent            = .false.,   | & ; 緩和領域に親ドメインの地形をコピーするかどうか \\
 \verb|/|\\
@@ -35,10 +36,11 @@ RATIOの設定を、1.0よりも大きくすれば地形がより細かく、1.0
 前者は、最大傾斜角度以内のシャープな地形構造を残すことができるので、細かな地形表現を望む場合に選択する。
 
 上記の計算式で分かるように、許容される最大傾斜角度は空間解像度に応じて変わる。
+\nmitem{CNVTOPO_copyparent}は、ネスティング計算のための設定項目である。
 一般的に、多段ネスティング計算を行う場合、
 子ドメインのほうが空間解像度が細かいため、地形もシャープに表現される。
 このとき、親ドメインと子ドメインの地形表現が異なるために、
-子ドメインの緩和領域に挿入される親ドメインの大気データを外挿する必要が発生し、不整合を起こすことがある。
+子ドメインの緩和領域で用いられる親ドメインの大気データと不整合を起こすことがある。
 これを回避するために、
 \nmitem{CNVTOPO_copyparent}を\verb|.true.|とすることで、親ドメインの地形を子ドメインの緩和領域にコピーすることができる。
 親ドメインが存在しない場合は\nmitem{CNVTOPO_copyparent}を必ず\verb|.false.|に設定しなければならない。
