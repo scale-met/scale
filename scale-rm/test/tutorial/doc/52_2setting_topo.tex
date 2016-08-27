@@ -5,7 +5,7 @@
 許容される最大の地形傾斜角度$\theta_{\max}$[deg]は次の式で計算される。
 
 \[ \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} ) \times 180/\pi \]
-ここで、\mathrm{DZ}, \mathrm{DX} は、それぞれ鉛直と水平の格子間隔である。
+ここで、$\mathrm{DZ}$, $\mathrm{DX}$ は、それぞれ鉛直と水平の格子間隔である。
 
 \scalerm ではRATIOのデフォルト値を1.0に設定している。
 RATIOの設定を、1.0よりも大きくすれば地形がより細かく、1.0よりも小さくすれば地形がより粗く表現される。
@@ -19,7 +19,7 @@ RATIOの設定を、1.0よりも大きくすれば地形がより細かく、1.0
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_CNVTOPO  |                  & \\
  \verb|CNVTOPO_name                  = "GTOPO30", | & ; 使用する地形データ名\\
- \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; 許容する傾斜の\mathrm{DZ}/\mathrm{DX}に対する倍率 \\
+ \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; 許容する傾斜の$\mathrm{DZ}$/$\mathrm{DX}$に対する倍率 \\
  \verb|CNVTOPO_smooth_local          = .true.,    | & ; 最大傾斜角度を超えた格子のみ平滑化を行うかどうか \\
  \verb|CNVTOPO_copyparent            = .false.,   | & ; 緩和領域に親ドメインの地形をコピーするかどうか \\
 \verb|/|\\
