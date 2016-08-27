@@ -456,7 +456,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 \end{verbatim}
 
 
-\section{インストール方法(Mac OS X 編)} \label{chap:install_mac} 
+\section{インストール方法(Mac OS X 編)} \label{chap:install_mac}
 %==========================================================================================
 
 \subsubsection{macportsを用いたインストール}
@@ -482,9 +482,9 @@ Apple Mac OS XでのSCALE実行環境を整備する方法について説明す�
 
 次にmacports本体をインストールする。
 \url{https://www.macports.org/}
-
+必要なパッケージインストーラーをダウンロードし、インストールを進める。\\
 macportsとmacportsが管理するパッケージは/opt/local以下に配置される。
-インストール時に\verb|.bash_profile|に、/opt/local/binへのパスが張られているので確認されたし。
+インストール時に\verb|.bash_profile|に、/opt/local/binへのパスが張られているので確認されたい。
 macportsはコマンドラインから操作する。主要なコマンドは以下の通り。
 
 \begin{verbatim}
@@ -520,7 +520,7 @@ macportsはコマンドラインから操作する。主要なコマンドは以
 
 macportsはパッケージの依存関係を解決してくれるが、必要なvariantsを備えたセットを作るには、
 順番にインストールしていく方が問題が少ない。以下にsudo port installしていく順番とvariantsの設定を示す。
-今回はgcc4.9の利用を想定している。
+この例ではgcc4.9を利用する。
 \begin{verbatim}
  $ gcc49
  $ openmpi-gcc49 +threads
@@ -530,12 +530,29 @@ macportsはパッケージの依存関係を解決してくれるが、必要な
  $ netcdf-fortran +gcc49 +openmpi
 \end{verbatim}
 
-最近のmacportsでは、gccとmpiライブラリはselectで選択する。
-この操作を行うと、gfortran等の一般的な名前でエイリアスが作られてパスが通るようになる。
+macportsでは複数のコンパイラとMPIライブラリをインストール出来るため、
+その中で利用するものを選択する必要がある。
+今回の場合、gccとMPIライブラリが該当する。
+この操作を行うと、gfortran等の一般的な名前でエイリアスが作られてPATHが通るようになる。
 \begin{verbatim}
  $ sudo port select --set gcc mp-gcc49
  $ sudo port select --set mpi openmpi-gcc49-fortran
 \end{verbatim}
+
+インストールしたNetCDFライブラリを用いるときのPATHの設定は以下の通りである。
+.bash_profile をエディタで開き、
+ $ emacs ~/.bash_profile
+下記をファイルに追加して、環境変数の設定を記述する。
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+ \\
+ \verb|export NETCDF_INCLUDE="-I/opt/local/include"|\\
+ \verb|export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,-headerpad_max_install_names -lnetcdf"|\\
+ \\
+\end{tabularx}
+}}\\
 
 SCALEは陰解法計算の部分で、数値計算ライブラリを利用するオプションがある。
 もし必要ならば、macportsからATLASをインストールすることが出来る。
@@ -543,56 +560,42 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
  $ atlas +gcc49
 \end{verbatim}
 
+追加する環境変数の設定は以下の通りである。
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+ \\
+ \verb|export LAPACK_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"|\\
+ \\
+\end{tabularx}
+}}\\
 
 \subsubsection{Mac OS XにおけるGPhys / Ruby-DCLのインストール}
 
-macports-JPが作成しているリポジトリから、Mac OS X用のGPhysをインストールできる。
-以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。
-\begin{verbatim}
- $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
-  /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk
-\end{verbatim}
-/opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。
-\begin{verbatim}
- file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports
-\end{verbatim}
-これで、GPhysと関連ライブラリをmacportsで一括インストールできるようになる。
-今回はruby1.9向けのrb19-gphysをインストールすることにする。
+GphysはRubyのパッケージ管理システムRubyGemsを通してインストールできる。
+詳細な情報については、(\url{https://www.hdfgroup.org/HDF5/})を参照されたい。
+まず必要であればrubyのインストールをmacportsを用いて行う。この例ではRuby2.1を利用することにする。
 
 \begin{verbatim}
- rubyのインストールと1.9の選択
- $ sudo port install ruby19
- $ sudo port select --set ruby ruby19
+ $ sudo port install ruby21
+ $ sudo port select --set ruby ruby21
 \end{verbatim}
+
+次にmacportsを用いて、Gphysに必要なライブラリをインストールする。
+
 \begin{verbatim}
- 依存関係の解決を任せるかたちで、gphysのインストール
- $ sudo port install rb19-gphys
+ $ sudo port install fftw-3
+ $ sudo port install gsl
+ $ sudo port install C-DCL6
 \end{verbatim}
 
-インストールされたruby1.9版gphysコマンドは、末尾に1.9が付いている。
-これを無くしたい場合は/opt/local/bin内でシンボリックリンクを張る。
-以下では特に頻繁に使う３つを例に挙げる。
+最後にRubyGemsを用いて、Gphysをインストールする。
+
 \begin{verbatim}
- $ sudo ln -s gplist1.9 gplist
- $ sudo ln -s gpvect1.9 gpvect
- $ sudo ln -s gpview1.9 gpview
+ $ sudo gem install gphys
 \end{verbatim}
 
-
-%\subsubsection{その他のインストール}
-%
-%\textcolor{red}{\large 本節は部分的に削除予定；UsersGuideの中で使用していないものや、
-%単純なユーザーにとって必要のないものには触れないようにする。}
-%
-%macportsでインストールできるパッケージのうち、重要なものを以下に紹介する。
-%
-%\begin{itemize}
-%\item git, git-flow : ソースコード開発時に利用する。
-%\item coreutils : GNU core utils。様々な場面で必要になる。
-%\item gawk, gsed : Mac OS Xに付属するawk,sedはGNU版と機能が異なるため、こちらが必要になる時がある。
-%\item gnuplot : グラフ描画に利用。
-%\item ImageMagick : GPhysから出力したPostScriptファイルをpngやアニメーションgifに変換する時に利用。
-%\end{itemize}
 
 
 \section{インストール方法 (スーパーコンピュータ「京」 編)} \label{chap:install_supercom}
