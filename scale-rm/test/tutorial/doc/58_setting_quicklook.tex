@@ -97,7 +97,7 @@ net2gの実行はMPI並列を用いて、
 \noindent 上記はあるdomainの3次元変数を、気圧高度面へ内挿して出力する場合の
 例を示している。各々の設定項目は次のとおりである。
 \begin{itemize}
- \item \namelist{LOGOUT}（このNamelistは必須ではない）
+ \item \namelist{LOGOUT}（このネームリストは必須ではない）
  \begin{itemize}
   \item \nmitem{LOG_BASENAME}：デフォルトのLOGファイル名``LOG''を変更したいときに指定する。
   \item \nmitem{LOG_ALL_OUTPUT}：プロセス番号0番以外もLOGファイルを出力させたい場合に``true''にする。
@@ -123,7 +123,7 @@ net2gの実行はMPI並列を用いて、
   \item \nmitem{TARGET_ZLEV}：\nmitem{Z_LEV_TYPE}に応じた変換高度を指定する。plevの場合は``hPa''、
         zlevの場合は``m''、そしてoriginalの場合は格子点番号で指定する。デフォルトでは、
         1000hPa、975hPa、950hPa、925hPa、900hPa、850hPa、800hPa、700hPa、600hPa、500hPa、400hPa、
-        300hPa、250hPa、200hPaの14層が指定される。 
+        300hPa、250hPa、200hPaの14層が指定される。
  \end{itemize}
 \end{itemize}
 
