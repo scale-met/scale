@@ -171,7 +171,7 @@ contains
         clev = "ave"
      end select
      if ( vtype == vt_2d ) clev = "-2d"
-    if ( T_MERGE_OUT ) then
+     if ( T_MERGE_OUT ) then
         fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev
         fname2 = trim(varname)//'_d'//cdom//'z'//clev
      else
@@ -191,10 +191,16 @@ contains
      write( FID_CTL, '(5(1x,ES15.7))') cy(1:ny)*1.d-3
 
      select case( vtype )
-     case ( vt_urban, vt_land, vt_tpmsk )
+     case ( vt_tpmsk )
         write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
      case ( vt_2d )
         write( FID_CTL, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
+     case ( vt_urban, vt_land )
+        if ( Z_MERGE_OUT ) then
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", ZCOUNT, "linear", "1 1"
+        else
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,i4)') "ZDEF", 1, "LEVELS", zz
+        endif
      case ( vt_3d, vt_height )
         if ( Z_MERGE_OUT ) then
            if ( atype == a_conv .and. ctype == c_pres ) then
@@ -203,7 +209,7 @@ contains
               write( FID_CTL, '(a,3x,i7,1x,a,1x,5(1x,ES15.7))') "ZDEF", ZCOUNT, "LEVELS", vgrid(1:ZCOUNT)*1.d-3
            endif
         else
-           write( FID_CTL, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", real(zz, kind=SP)
         endif
 
      end select
@@ -312,10 +318,16 @@ contains
 
 
      select case( vtype )
-     case ( vt_urban, vt_land, vt_tpmsk )
+     case ( vt_tpmsk )
         write( FID_CTLM, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
      case ( vt_2d )
         write( FID_CTLM, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
+     case ( vt_urban, vt_land )
+        if ( Z_MERGE_OUT ) then
+           write( FID_CTLM, '(a,3x,i7,1x,a,1x,a)') "ZDEF", ZCOUNT, "linear", "1 1"
+        else
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,i4)') "ZDEF", 1, "LEVELS", zz
+        endif
      case ( vt_3d, vt_height )
         if ( Z_MERGE_OUT ) then
            if ( atype == a_conv .and. ctype == c_pres ) then
@@ -324,7 +336,7 @@ contains
               write( FID_CTLM, '(a,3x,i7,1x,a,1x,5(1x,ES15.7))') "ZDEF", ZCOUNT, "LEVELS", vgrid(1:ZCOUNT)*1.d-3
            endif
         else
-           write( FID_CTLM, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
+           write( FID_CTLM, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", real(zz, kind=SP)
         endif
 
      end select
