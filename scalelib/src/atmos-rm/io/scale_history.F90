@@ -94,6 +94,7 @@ module scale_history
   integer,                private              :: ims, ime
   integer,                private              :: jms, jme
 
+  logical, private :: HIST_BND = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -122,8 +123,6 @@ contains
     character(len=H_MID) :: HISTORY_H_TITLE = 'SCALE-RM HISTORY OUTPUT' !< title of the output file
     character(len=H_MID) :: HISTORY_T_SINCE
     real(RP)             :: HIST_PRES(HIST_PRES_nlim)                   !< pressure level to output [hPa]
-
-    logical :: HIST_BND = .false.
 
     NAMELIST / PARAM_HIST / &
        HIST_PRES_nlayer, &
@@ -206,34 +205,6 @@ contains
        ime = IE
        jms = JS
        jme = JE
-    end if
-
-    if ( IO_PNETCDF ) then
-       ! When using PnetCDF to perform parallel I/O, the variables store in
-       ! the shared file will always include global halos, regardless
-       ! PRC_PERIODIC_X and PRC_PERIODIC_Y
-       im = IMAX
-       jm = JMAX
-       ims = 1    + IHALO
-       ime = IMAX + IHALO
-       jms = 1    + JHALO
-       jme = JMAX + JHALO
-       if ( rankidx(1) .EQ. 0 ) then
-          im = im + IHALO
-          ims = 1
-       end if
-       if ( rankidx(1) .EQ. PRC_NUM_X-1 ) then
-          im = im + IHALO
-          ime = IA
-       end if
-       if ( rankidx(2) .EQ. 0 ) then
-          jm = jm + JHALO
-          jms = 1
-       end if
-       if ( rankidx(2) .EQ. PRC_NUM_Y-1 ) then
-          jm = jm + JHALO
-          jme = JA
-       end if
     end if
 
     km = max( LKMAX, UKMAX, KMAX )
@@ -361,9 +332,8 @@ contains
     integer :: rankidx(2)
     integer :: start(3)
     integer :: startX, startY, startZ
+    integer :: XAG, YAG
     !---------------------------------------------------------------------------
-
-    ! When using PnetCDF to write to a shared file, it always includes halos
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -379,20 +349,29 @@ contains
     !         rankidx(1) == PRC_NUM_Y-1 writes north HALO
     !         others                    writes without HALO
 
-    startX = ISGA
-    startY = JSGA
+    if ( HIST_BND ) then
+       startX = ISGB   ! global subarray starting index
+       startY = JSGB   ! global subarray starting index
+       XAG    = IAGB
+       YAG    = JAGB
+    else
+       startX = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
+       startY = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
+       XAG    = IMAXG
+       YAG    = JMAXG
+    end if
     startZ = 1
     if ( rankidx(2) .GT. 0 ) startX = -1   ! only south-most processes write
     if ( rankidx(1) .GT. 0 ) startY = -1   ! only west-most processes write
     if ( PRC_myrank .GT. 0 ) startZ = -1   ! only rank 0 writes Z axes
 
-    ! for the shared-file I/O method, the axes are global (gsize) and always with halos
+    ! for the shared-file I/O method, the axes are global (gsize)
     ! for one-file-per-process I/O method, the axes size is equal to the local buffer size
-    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime), gsize=IAG,  start=startX )
-    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme), gsize=JAG,  start=startY )
+    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime), gsize=XAG,  start=startX )
+    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme), gsize=YAG,  start=startY )
     call HistoryPutAxis( 'z',   'Z',               'm', 'z',   GRID_CZ(KS:KE),   gsize=KMAX, start=startZ )
-    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(ims:ime), gsize=IAG,  start=startX )
-    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jms:jme), gsize=JAG,  start=startY )
+    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(ims:ime), gsize=XAG,  start=startX )
+    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jms:jme), gsize=YAG,  start=startY )
     call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ(KS:KE),   gsize=KMAX, start=startZ )
 
     if ( HIST_PRES_nlayer > 0 ) then
@@ -478,8 +457,13 @@ contains
     call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG, gsize=JAG, start=startZ )
 
     ! associate coordinates
-    start(1) = ISGA
-    start(2) = JSGA
+    if ( HIST_BND ) then
+       start(1) = ISGB   ! global subarray starting index
+       start(2) = JSGB   ! global subarray starting index
+    else
+       start(1) = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
+       start(2) = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
+    end if
     start(3) = 1
 
     do k = 1, KMAX
@@ -779,8 +763,10 @@ contains
           endif
        endif
 
+       ! for shared-file parallel I/O, only rank 0 writes variables with only Z dimension
        start(1) = 1
        count(1) = KMAX
+       if ( PRC_myrank .GT. 0 ) count(1) = 0
 
     elseif ( ndim == 2 ) then
 
@@ -809,22 +795,11 @@ contains
           dims(2) = 'lat'
        endif
 
-       ! start and count will be used by PnetCDF I/O
-       start(1) = ISGA
-       start(2) = JSGA
-       count(1) = IMAX
-       count(2) = JMAX
-
-       ! for shared-file parallel I/O, files always contain global halos
-       if ( rankidx(1) .EQ. 0 )           count(1) = count(1) + IHALO
-       if ( rankidx(1) .EQ. PRC_NUM_X-1 ) count(1) = count(1) + IHALO
-       if ( rankidx(2) .EQ. 0 )           count(2) = count(2) + JHALO
-       if ( rankidx(2) .EQ. PRC_NUM_Y-1 ) count(2) = count(2) + JHALO
-
     elseif ( ndim == 3 ) then
 
        ! check half/full level for vertical/horizontal
        flag_half_x = .false.
+
        if ( present(xdim) ) then
           if( xdim == 'half' ) flag_half_x = .true.
        endif
@@ -874,18 +849,8 @@ contains
        endif
 
        ! start and count will be used by PnetCDF I/O
-       start(1) = ISGA
-       start(2) = JSGA
        start(3) = 1
-       count(1) = IMAX
-       count(2) = JMAX
        count(3) = KMAX
-
-       ! for shared-file parallel I/O, files always contain global halos
-       if ( rankidx(1) .EQ. 0 )           count(1) = count(1) + IHALO
-       if ( rankidx(1) .EQ. PRC_NUM_X-1 ) count(1) = count(1) + IHALO
-       if ( rankidx(2) .EQ. 0 )           count(2) = count(2) + JHALO
-       if ( rankidx(2) .EQ. PRC_NUM_Y-1 ) count(2) = count(2) + JHALO
 
        if ( present(zdim) ) then
           if    ( zdim == 'land'      ) then
@@ -910,12 +875,25 @@ contains
 
     endif
 
+    if ( ndim >= 2 ) then
+       ! start and count will be used by PnetCDF I/O
+       if ( HIST_BND ) then
+          start(1) = ISGB
+          start(2) = JSGB
+          count(1) = IMAXB
+          count(2) = JMAXB
+       else
+          ! for the case the shared-file contains no halos
+          start(1) = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
+          start(2) = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
+          count(1) = IMAX
+          count(2) = JMAX
+       end if
+    end if
+
 
     if ( IO_PNETCDF ) then  ! user input parameter indicates to do PnetCDF I/O
        comm = PRC_LOCAL_COMM_WORLD
-       ! only rank 0 writes in this case
-       ! for shared-file parallel I/O, only rank 0 writes variables with only Z dimension
-       if ( PRC_myrank .GT. 0 ) count(1) = 0
     else
        comm = MPI_COMM_NULL
     end if
