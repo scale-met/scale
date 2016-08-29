@@ -185,7 +185,7 @@ contains
       zlev,         & ! [out]
       cz, cdz,      & ! [out]
       p_cx, p_cdx,  & ! [out]
-      p_cy, p_cdy   ) ! [out]
+      p_cy, p_cdy  ) ! [out]
     implicit none
 
     integer, intent(in) :: imnge
@@ -258,15 +258,19 @@ contains
       atype,      & ! [in ]
       ctype,      & ! [in ]
       vtype,      & ! [in ]
+      long_name,  & ! [out]
+      unit,       & ! [out]
       p_var       ) ! [out]
     implicit none
 
     integer, intent(in) :: imnge, nm, it
     integer, intent(in) :: nxp, nyp, mnxp, mnyp
     integer, intent(in) :: zz, nz(3)
-    character(CMID), intent(in)  :: varname
-    integer,         intent(in)  :: atype, ctype, vtype
-    real(SP),        intent(out) :: p_var(:,:)
+    character(CMID),  intent(in)  :: varname
+    integer,          intent(in)  :: atype, ctype, vtype
+    character(len=*), intent(out) :: long_name
+    character(len=*), intent(out) :: unit
+    real(SP),         intent(out) :: p_var(:,:)
 
     integer :: start_3d(4)
     integer :: start_2d(3)
@@ -286,6 +290,7 @@ contains
     character(6)    :: num
     logical         :: logwgt = .false.
 
+    integer :: lnameLength,unameLength
     integer :: ncid, varid
     integer :: istat
     logical :: flag_bnd = .false.
@@ -326,6 +331,31 @@ contains
 
     istat = nf90_inq_varid( ncid, trim(varname), varid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+
+    istat = nf90_inquire_attribute(ncid, varid, "long_name", len = lnameLength)
+    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+
+    istat = nf90_inquire_attribute(ncid, varid, "units", len = unameLength)
+    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+
+    !Allocate space to hold attribute values, check string lengths
+    if(len(long_name) < lnameLength)then
+       print *, "Not enough space to put attribute values. long_name"
+       call handle_err(istat, __LINE__)
+    end if
+    if(len(unit) < unameLength)then
+       print *, "Not enough space to put attribute values. unit"
+       call handle_err(istat, __LINE__)
+    end if
+
+
+    ! Read the attributes.
+    istat = nf90_get_att(ncid, varid, "long_name", long_name)
+    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+
+    istat = nf90_get_att(ncid, varid, "units", unit)
+    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+    unit="["//trim(unit)//"]"
 
     select case( vtype )
     case ( vt_urban )

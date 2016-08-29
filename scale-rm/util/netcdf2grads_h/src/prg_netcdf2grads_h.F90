@@ -33,6 +33,7 @@ program netcdf2grads_h
   real(SP),allocatable :: zlev(:), cz(:), cdz(:)
   real(SP),allocatable :: cx(:), cdx(:)
   real(SP),allocatable :: cy(:), cdy(:)
+  real(SP),allocatable :: lon(:,:), lat(:,:)
   real(SP),allocatable :: var_2d(:,:)
   real(SP),allocatable :: p_var(:,:)
   real(SP),allocatable :: p_ref(:,:,:)
@@ -45,8 +46,10 @@ program netcdf2grads_h
 
   real(SP),allocatable :: p_cx(:), p_cdx(:)     ! partial grid data
   real(SP),allocatable :: p_cy(:), p_cdy(:)     ! partial grid data
+  real(SP),allocatable :: p_lon(:,:), p_lat(:,:)
 
   real(SP),allocatable :: vgrid(:)
+
 
   integer :: vtype = -1
   integer :: atype = -1
@@ -100,8 +103,35 @@ program netcdf2grads_h
   character(6)    :: num
   character(CLNG) :: ncfile
   character(CMID) :: varname
+  character(CLNG) :: long_name
+  character(CMID) :: unit
   character(CMID) :: fconf
   character(CLNG) :: fname_save
+
+  !----------------------------------------------------------------------------------------
+  ! Below variables are not required for net2g
+  logical :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
+  logical :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
+  logical :: PRC_CART_REORDER = .false. !< flag for rank reordering over the cartesian map
+  real    :: MPRJ_basepoint_x        ! position of base point in the model [m]
+  real    :: MPRJ_basepoint_y        ! position of base point in the model [m]
+  real    :: MPRJ_rotation =  0.0_DP ! rotation factor (only for 'NONE' type)
+  real    :: MPRJ_PS_lat             ! standard latitude1 for P.S. projection [deg]
+  real    :: MPRJ_PS_fact            ! pre-calc factor
+  real    :: MPRJ_M_lat              ! standard latitude1 for Mer. projection [deg]
+  real    :: MPRJ_EC_lat             ! standard latitude1 for E.C. projection [deg]
+  character(len=CMID) :: HISTORY_TITLE
+  character(len=CMID) :: HISTORY_SOURCE
+  character(len=CMID) :: HISTORY_INSTITUTION
+  character(len=CMID) :: HISTORY_TIME_UNITS
+  character(len=CMID) :: HISTORY_TIME_SINCE
+  real                :: HISTORY_DTSEC
+  real                :: HISTORY_STARTDAYSEC
+  logical             :: HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
+  real                :: HISTORY_OUTPUT_START  = 0.0_DP  !> start time for output in second
+  logical             :: HISTORY_ERROR_PUTMISS = .false.
+  logical             :: HISTORY_DEFAULT_TAVERAGE  = .false.
+  character(len=CSHT) :: HISTORY_DEFAULT_DATATYPE  = 'REAL4'
   !-----------------------------------------------------------------------------------------
 
   namelist /LOGOUT/            &
@@ -109,6 +139,7 @@ program netcdf2grads_h
     LOG_ALL_OUTPUT,            &
     LOG_LEVEL
   namelist /INFO/              &
+    TIME_STARTDATE,            &
     START_TSTEP,               &
     END_TSTEP,                 &
     INC_TSTEP,                 &
@@ -120,7 +151,8 @@ program netcdf2grads_h
     ODIR,                      &
     Z_LEV_TYPE,                &
     Z_MERGE_OUT,               &
-    T_MERGE_OUT
+    T_MERGE_OUT,               &
+    MAPPROJ_ctl
   namelist /EXTRA/             &
     EXTRA_TINTERVAL,           &
     EXTRA_TUNIT
@@ -129,20 +161,46 @@ program netcdf2grads_h
   namelist /VARI/              &
     VNAME,                     &
     TARGET_ZLEV
-  namelist /GRADS/             &
-    DELT,                      &
-    STIME
 
-  namelist  / PARAM_TIME /     &
-    TIME_STARTDATE
-  namelist  / PARAM_PRC /      &
+  ! read from run.conf
+  !namelist  /PARAM_TIME/       &
+  !  TIME_STARTDATE
+
+  namelist  /PARAM_PRC/        &
     PRC_NUM_X,                 &
-    PRC_NUM_Y
-  namelist  / PARAM_HISTORY /  &
+    PRC_NUM_Y,                 &
+    PRC_PERIODIC_X,            & ! not required
+    PRC_PERIODIC_Y,            & ! not required
+    PRC_CART_REORDER             ! not required
+
+  namelist /PARAM_MAPPROJ/     &
+    MPRJ_basepoint_lon,        &
+    MPRJ_basepoint_lat,        &
+    MPRJ_type,                 &
+    MPRJ_LC_lat1,              &
+    MPRJ_LC_lat2,              &
+    MPRJ_basepoint_x,          & ! not required
+    MPRJ_basepoint_y,          & ! not required
+    MPRJ_rotation,             & ! not required
+    MPRJ_PS_lat,               & ! currently not required
+    MPRJ_M_lat,                & ! currently not required
+    MPRJ_EC_lat                  ! currently not required
+
+  namelist  /PARAM_HISTORY/    &
     HISTORY_DEFAULT_BASENAME,  &
     HISTORY_DEFAULT_TINTERVAL, &
     HISTORY_DEFAULT_TUNIT,     &
-    HISTORY_DEFAULT_ZINTERP
+    HISTORY_DEFAULT_ZINTERP,   &
+    HISTORY_TITLE,             & ! not required
+    HISTORY_SOURCE,            & ! not required
+    HISTORY_INSTITUTION,       & ! not required
+    HISTORY_TIME_UNITS,        & ! not required
+    HISTORY_DEFAULT_TAVERAGE,  & ! not required
+    HISTORY_DEFAULT_DATATYPE,  & ! not required
+    HISTORY_OUTPUT_STEP0,      & ! not required
+    HISTORY_OUTPUT_START,      & ! not required
+    HISTORY_ERROR_PUTMISS        ! not required
+
   namelist  /PARAM_HIST/       &
     HIST_BND
   !-----------------------------------------------------------------------------------------
@@ -219,8 +277,8 @@ program netcdf2grads_h
      endif
   endif
   do nm = 1, nmnge
-     call netcdf_read_grid( rk_mnge(nm), nm, nxgp, nygp,            &
-                            zlev, cz, cdz, p_cx, p_cdx, p_cy, p_cdy )
+     call netcdf_read_grid( rk_mnge(nm), nm, nxgp, nygp,             &
+                            zlev, cz, cdz, p_cx, p_cdx, p_cy, p_cdy  )
   enddo
 
 #ifdef MPIUSE
@@ -231,12 +289,56 @@ program netcdf2grads_h
 #else
   call combine_grid( p_cx, p_cdx, p_cy, p_cdy )
 #endif
+
   if ( Z_MERGE_OUT ) call make_vgrid
+
+
+  !---read lon,lat data
+
+  varname = 'lon'
+  call netcdf_var_dim( ncfile, varname, ndim )
+  call set_vtype( ndim, varname, vtype, atype )
+  zz = 1
+  do nm = 1, nmnge
+     varname = 'lon'
+     call netcdf_read_var( rk_mnge(nm), nm, nxp, nyp, mnxp, mnyp,   &
+          it, zz, nz_all, varname, atype, ctype, vtype, long_name, unit, p_lon )
+     varname = 'lat'
+     call netcdf_read_var( rk_mnge(nm), nm, nxp, nyp, mnxp, mnyp,   &
+          it, zz, nz_all, varname, atype, ctype, vtype, long_name, unit, p_lat )
+  enddo
+
+#ifdef MPIUSE
+  call comm_gather_vars( mnxp, mnyp, nmnge, p_lon, recvbuf )
+#endif
+  if ( irank == master ) then
+#ifdef MPIUSE
+     call combine_vars_2d( recvbuf, lon)
+#else
+     call combine_vars_2d( p_lon, lon )
+#endif
+  endif
+
+#ifdef MPIUSE
+  call comm_gather_vars( mnxp, mnyp, nmnge, p_lat, recvbuf )
+#endif
+  if ( irank == master ) then
+#ifdef MPIUSE
+     call combine_vars_2d( recvbuf, lat)
+#else
+     call combine_vars_2d( p_lat, lat)
+#endif
+  endif
 
   !--- read data and combine
   nst = START_TSTEP
   nen = END_TSTEP
-  nt  = (nen - nst + 1) / INC_TSTEP
+  if ( .not. T_MERGE_OUT )then ! nt is used for TDEF in ctl file
+     nt = 1
+  else
+     nt  = (nen - nst + 1) / INC_TSTEP
+  endif
+
   !if ( nt > max_tcount ) then
   !   write (*, *) "ERROR: overflow maximum of tcount"
   !   call err_abort( 1, __LINE__, loc_main )
@@ -289,7 +391,7 @@ program netcdf2grads_h
 
               do nm = 1, nmnge
                  call netcdf_read_var( rk_mnge(nm), nm, nxp, nyp, mnxp, mnyp,  &
-                                       it, zz, nz_all, varname, atype, ctype, vtype, p_var )
+                                       it, zz, nz_all, varname, atype, ctype, vtype, long_name, unit, p_var )
               enddo
 
 #ifdef MPIUSE
@@ -302,20 +404,13 @@ program netcdf2grads_h
 #else
                  call combine_vars_2d( p_var, var_2d )
 #endif
-                 if ( iz /= 1 .and. Z_MERGE_OUT ) then
+                 !if ( iz /= 1 .and. Z_MERGE_OUT ) then
                     call io_write_vars( var_2d, varname, atype, vtype, &
                                         idom, nx, ny, zz, irec_timelev )
-                 else
-                    if ( T_MERGE_OUT ) then
-                       if (irec_time==1) call io_create_ctl( varname, atype, ctype, vtype, idom, &
-                                                             nx, ny, zz, nt, cx, cy, vgrid, zlev )
-                    else
-                       call io_create_ctl( varname, atype, ctype, vtype, idom, &
-                                           nx, ny, zz, 1, cx, cy, vgrid, zlev )
-                    endif
-                    call io_write_vars( var_2d, varname, atype, vtype, &
-                                        idom, nx, ny, zz, irec_timelev )
-                 endif
+                 !else
+                 !   call io_write_vars( var_2d, varname, atype, vtype, &
+                 !                       idom, nx, ny, zz, irec_timelev )
+                 !endif
               endif
 
               irec_timelev = irec_timelev + 1
@@ -327,7 +422,7 @@ program netcdf2grads_h
            zz = 1
            do nm = 1, nmnge
               call netcdf_read_var( rk_mnge(nm), nm, nxp, nyp, mnxp, mnyp,   &
-                                    it, zz, nz_all, varname, atype, ctype, vtype, p_var )
+                                    it, zz, nz_all, varname, atype, ctype, vtype, long_name, unit, p_var )
            enddo
 
 #ifdef MPIUSE
@@ -341,13 +436,6 @@ program netcdf2grads_h
 #else
               call combine_vars_2d( p_var, var_2d )
 #endif
-              if ( T_MERGE_OUT ) then
-                 if (irec_time == 1) call io_create_ctl( varname, atype, ctype, vtype, idom, &
-                                                         nx, ny, zz, nt, cx, cy, vgrid, zlev )
-              else
-                 call io_create_ctl( varname, atype, ctype, vtype, idom, &
-                                     nx, ny, zz, 1, cx, cy, vgrid, zlev )
-              endif
               call io_write_vars( var_2d, varname, atype, vtype, &
                                   idom, nx, ny, zz, irec_time )
            endif
@@ -356,6 +444,36 @@ program netcdf2grads_h
         !-----------------------------------------------------------------------------------
            call err_abort( 0, __LINE__, loc_main )
         end select
+
+        if ( irank == master ) then  ! make ctl file
+
+           if( ( T_MERGE_OUT .and. (irec_time == 1) ).or.( .not. T_MERGE_OUT ) )then
+
+              if ( .not. Z_MERGE_OUT ) then
+                 do iz = 1, ZCOUNT                 !--- level loop
+                    if ( atype == a_slice ) then
+                       zz = TARGET_ZLEV(iz)
+                    elseif ( atype == a_conv ) then
+                       zz = TARGET_ZLEV(iz)
+                    endif
+                    call io_create_ctl( varname, atype, ctype, vtype, idom, &
+                         nx, ny, zz, nt, cx, cy, vgrid, zlev, long_name, unit )
+                    if ( MAPPROJ_ctl )then
+                       call io_create_ctl_mproj( varname, atype, ctype, vtype, idom, &
+                            nx, ny, zz, nt, cx, cy, vgrid, zlev, minval(lon), minval(lat), long_name, unit )
+                    endif
+                 enddo
+              else
+                 call io_create_ctl( varname, atype, ctype, vtype, idom, &
+                      nx, ny, 1, nt, cx, cy, vgrid, zlev, long_name, unit )
+                 if ( MAPPROJ_ctl )then
+                    call io_create_ctl_mproj( varname, atype, ctype, vtype, idom, &
+                         nx, ny, 1, nt, cx, cy, vgrid, zlev, minval(lon), minval(lat), long_name, unit )
+                 endif
+              endif
+
+           endif
+        endif
 
      enddo !--- var loop
 
@@ -608,9 +726,9 @@ contains
     endif
     if ( LOUT ) write( FID_LOG,* ) ""
 
-    rewind( FID_CONF )
-    read  ( FID_CONF, nml=GRADS, iostat=ierr )
-    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=GRADS )
+    !rewind( FID_CONF )
+    !read  ( FID_CONF, nml=GRADS, iostat=ierr )
+    !if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=GRADS )
 
     close ( FID_CONF )
 
@@ -623,8 +741,8 @@ contains
        call err_abort( 1, __LINE__, loc_main )
     endif
 
-    read  ( FID_RCNF, nml=PARAM_TIME, iostat=ierr )
-    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_TIME )
+    !read  ( FID_RCNF, nml=PARAM_TIME, iostat=ierr )
+    !if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_TIME )
 
     rewind( FID_RCNF )
     read  ( FID_RCNF, nml=PARAM_PRC, iostat=ierr )
@@ -637,6 +755,12 @@ contains
     rewind( FID_RCNF )
     read  ( FID_RCNF, nml=PARAM_HISTORY, iostat=ierr )
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_HISTORY )
+
+    if ( MAPPROJ_ctl )then
+       rewind( FID_RCNF )
+       read  ( FID_RCNF, nml=PARAM_MAPPROJ, iostat=ierr )
+       if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_MAPPROJ )
+    endif
 
     close(FID_RCNF)
 
@@ -749,6 +873,9 @@ contains
     allocate( cz          (nz+2*nzh                   ) )
     allocate( zlev        (nz                         ) )
 
+    allocate( p_lon       (mnxp, mnyp*nmnge           ) )
+    allocate( p_lat       (mnxp, mnyp*nmnge           ) )
+
 #ifdef MPIUSE
     if ( irank == master ) then
        allocate( var_2d    (nx,               ny               ) )
@@ -756,6 +883,8 @@ contains
        allocate( cy        (ny                                 ) )
        allocate( cdx       (nx                                 ) )
        allocate( cdy       (ny                                 ) )
+       allocate( lon       (nx,               ny               ) )
+       allocate( lat       (nx,               ny               ) )
        allocate( recvbuf   (mnxp,             mnyp*nmnge*tproc ) )
        allocate( cx_gather (nxgp*nmnge*tproc                   ) )
        allocate( cy_gather (nygp*nmnge*tproc                   ) )
@@ -774,6 +903,8 @@ contains
     allocate( cy        (ny    ) )
     allocate( cdx       (nx    ) )
     allocate( cdy       (ny    ) )
+    allocate( lon       (nx, ny) )
+    allocate( lat       (nx, ny) )
 #endif
 
     return
