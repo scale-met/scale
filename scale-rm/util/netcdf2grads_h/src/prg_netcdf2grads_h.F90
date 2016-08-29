@@ -294,18 +294,14 @@ program netcdf2grads_h
 
 
   !---read lon,lat data
-
-  varname = 'lon'
-  call netcdf_var_dim( ncfile, varname, ndim )
-  call set_vtype( ndim, varname, vtype, atype )
   zz = 1
   do nm = 1, nmnge
      varname = 'lon'
      call netcdf_read_var( rk_mnge(nm), nm, nxp, nyp, mnxp, mnyp,   &
-          it, zz, nz_all, varname, atype, ctype, vtype, long_name, unit, p_lon )
+          it, zz, nz_all, varname, a_slice, -1, vt_tpmsk, long_name, unit, p_lon )
      varname = 'lat'
      call netcdf_read_var( rk_mnge(nm), nm, nxp, nyp, mnxp, mnyp,   &
-          it, zz, nz_all, varname, atype, ctype, vtype, long_name, unit, p_lat )
+          it, zz, nz_all, varname, a_slice, -1, vt_tpmsk, long_name, unit, p_lat )
   enddo
 
 #ifdef MPIUSE
