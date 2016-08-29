@@ -55,6 +55,7 @@ module mod_net2g_vars
   logical,         public :: Z_LEV_LIST     = .false.
   logical,         public :: Z_MERGE_OUT    = .true.  ! only for slice and conv
   logical,         public :: T_MERGE_OUT    = .true.
+  logical,         public :: MAPPROJ_ctl    = .true.
 
   character(CSHT), public :: ANALYSIS       = "ave" ! max, min, sum, ave
 
@@ -66,6 +67,12 @@ module mod_net2g_vars
   character(5),    public :: HISTORY_DEFAULT_TUNIT
   logical,         public :: HISTORY_DEFAULT_ZINTERP = .true.
   logical,         public :: HIST_BND = .true.
+
+  real(DP),        public :: MPRJ_basepoint_lon
+  real(DP),        public :: MPRJ_basepoint_lat
+  character(CSHT), public :: MPRJ_type
+  real(DP),        public :: MPRJ_LC_lat1
+  real(DP),        public :: MPRJ_LC_lat2
 
   integer,         public :: FID_LOG        = 22
   logical,         public :: LOUT           = .false.
