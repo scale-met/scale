@@ -2,12 +2,17 @@
 *.mod
 *~
 *.a
+
 *.bak
 *.aux
 *.dvi
 *.pdf
 *.toc
 *.log
+*.bbl
+*.blg
+*.fls
+*.out
 
 scale-gm/test/data/grid/boundary/gl05rl01*
 scale-gm/test/data/grid/boundary/gl06*

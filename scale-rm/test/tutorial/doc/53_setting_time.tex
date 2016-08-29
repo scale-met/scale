@@ -1,0 +1,76 @@
+%\newpage
+\section{\SecBasicIntegrationSetting} \label{sec:timeintiv}
+%------------------------------------------------------
+積分時間やタイムステップは、実験の目的や設定によって適切に設定する必要がある。
+空間解像度を変えた場合はそれに応じたタイムステップを設定する必要があり、
+同じ解像度でも計算不安定を防ぐためにタイムステップを短くすることもある。
+
+積分時間とタイムステップの設定は、
+設定ファイル\verb|run_***.conf|の\namelist{PARAM_PRC}の項目を編集することで設定できる。\\
+
+\proofcomment{(八代)なぜ設定ファイル名は、run\_***なのにinit.***と名前の付け方が別なのですか？}
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{lX}
+\verb|&PARAM_TIME| & \\
+\verb| TIME_STARTDATE             = 2014, 8, 10, 0, 0, 0,| & 計算開始の日付:放射過程を用いる実験等で必要\\
+\verb| TIME_STARTMS               = 0.D0,  | & 計算開始時刻[mili sec]\\
+\verb| TIME_DURATION              = 12.0D0,| & 積分時間[単位は\verb|TIME_DURATION_UNIT|で設定]\\
+\verb| TIME_DURATION_UNIT         = "HOUR",| & \verb|TIME_DURATION|の単位\\
+\verb| TIME_DT                    = 60.0D0,| & 時間積分のタイムステップ\\
+\verb| TIME_DT_UNIT               = "SEC", | & \verb|TIME_DT|の単位 \\
+\verb| TIME_DT_ATMOS_DYN          = 30.0D0,| & 力学過程計算のタイムステップ\\
+\verb| TIME_DT_ATMOS_DYN_UNIT     = "SEC", | & \verb|TIME_DT_ATMOS_DYN|の単位\\
+\verb| TIME_DT_ATMOS_PHY_MP       = 60.0D0,| & 雲物理過程計算のタイムステップ \\
+\verb| TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC", | & \verb|TIME_DT_ATMOS_PHY_MP|の単位\\
+\verb| TIME_DT_ATMOS_PHY_TB       = 60.0D0,| & 乱流過程計算のタイムステップ \\
+\verb| TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC", | & \verb|TIME_DT_ATMOS_PHY_TB|の単位\\
+\verb| TIME_DT_ATMOS_PHY_RD       = 600.0D0, | & 放射過程計算のタイムステップ \\
+\verb| TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",  | & \verb|TIME_DT_ATMOS_PHY_RD|の単位\\
+\verb| TIME_DT_ATMOS_PHY_SF       = 60.0D0, | & 大気下端境界（フラックス）過程計算のタイムステップ\\
+\verb| TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",  | & \verb|TIME_DT_ATMOS_PHY_SF|の単位\\
+\verb| TIME_DT_OCEAN              = 300.0D0,| & 海面過程計算のタイムステップ\\
+\verb| TIME_DT_OCEAN_UNIT         = "SEC",  | & \verb|TIME_DT_OCEAN|の単位\\
+\verb| TIME_DT_LAND               = 300.0D0,| & 陸面過程計算のタイムステップ\\
+\verb| TIME_DT_LAND_UNIT          = "SEC",  | & \verb|TIME_DT_LAND|の単位\\
+\verb| TIME_DT_URBAN              = 300.0D0,| & 都市過程計算のタイムステップ\\
+\verb| TIME_DT_URBAN_UNIT         = "SEC",  | & \verb|TIME_DT_URBAN|の単位\\
+\verb| TIME_DT_ATMOS_RESTART      = 21600.D0, | & リスタートファイル(大気)の出力間隔\\
+\verb| TIME_DT_ATMOS_RESTART_UNIT = "SEC",    | & \verb|TIME_DT_ATMOS_RESTART|の単位\\
+\verb| TIME_DT_OCEAN_RESTART      = 21600.D0, | & リスタートファイル(海面)の出力間隔\\
+\verb| TIME_DT_OCEAN_RESTART_UNIT = "SEC",    | & \verb|TIME_DT_OCEAN_RESTART|の単位\\
+\verb| TIME_DT_LAND_RESTART       = 21600.D0, | & リスタートファイル(陸面)の出力間隔\\
+\verb| TIME_DT_LAND_RESTART_UNIT  = "SEC",    | & \verb|TIME_DT_LAND_RESTART|の単位\\
+\verb| TIME_DT_URBAN_RESTART      = 21600.D0, | & リスタートファイル(都市)の出力間隔\\
+\verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",    | & \verb|TIME_DT_URBAN_RESTART|の単位\\
+\verb|/|\\
+\end{tabularx}
+}}}\\
+
+
+\nmitem{TIME_DT} は、時間積分計算におけるタイムステップであり、$\Delta t$ と呼ばれることが多い。
+トレーサー移流計算のタイムステップとして使われるほか、すべての物理過程計算のタイムステップの基本単位となる。
+タイムステップは、計算不安定を起こさないように
+格子間隔を移流速度で割った値が取りうる最少値よりも小さな値を設定する。
+
+力学変数の時間積分のためのタイムステップは移流速度ではなく音速で制約されるため、一般には上記のタイムステップよりも小さくとる必要がある。この時間間隔は、\nmitem{TIME_DT_ATMOS_DYN} で設定し、\nmitem{TIME_DT}の約数である必要があることに注意すること。
+\nmitem{TIME_DT_ATMOS_DYN}の値は、計算安定性のため主に時間積分スキームに依存し、
+\nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} が \verb|RK4| の場合には
+最少格子間隔(HE-VI利用時には水平の最少格子間隔)を 420 m/s で割った値が、
+\verb|RK3| の場合には 840 m/s で割った値が目安となる。
+
+それぞれの物理過程のタイムステップは各過程が与えるテンデンシーが更新されるタイミングを表す。
+各過程は利用される場合、モデルのセットアップ時に一度計算され、テンデンシーが設定される。
+その後、各過程に設定した時間間隔でテンデンシーが更新される。時間間隔は\nmitem{TIME_DT}の倍数であることが望ましい。
+
+%海面・陸面・都市モデルの内部においても物理過程が存在、各過程のタイムステップでテンデンシーが更新される。
+
+海面・陸面・都市モデルを利用する場合は、大気側で下端境界（フラックス）過程の計算は行われない。
+各地表面過程が計算した状態値・フラックスを海陸フラクションや都市被覆率に応じて重み付け平均を行いながら受け取る。
+このとき、\nmitem{TIME_DT_ATMOS_PHY_SF} は受け取った値をHISTORY出力に渡す時間間隔にのみ用いられる。
+
+リスタートファイルの出力間隔と、各過程の計算間隔についても気をつけなければいけない。上で示したとおり、
+各課程のテンデンシーは必ずセットアップ時に更新される。そのため、リスタートファイルの出力間隔が
+すべての利用する過程の計算時間間隔の倍数になっていない場合、通しで時間積分を行った場合と
+途中で停止してリスタートを行った場合の結果に差が生まれる。

@@ -65,6 +65,7 @@ NETCDF_LIBS    ?= -L/usr/lib64 -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
 ###### Lapack
 LAPACK_LIBS    ?=
 # example: -llapack
+#LAPACK_LIBS    ?= -llapack
 
 ##### for frontend
 INSTALL = install

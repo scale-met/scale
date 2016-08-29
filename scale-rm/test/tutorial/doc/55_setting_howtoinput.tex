@@ -1,0 +1,154 @@
+\section{\SecAdvanceInputDataSetting} \label{sec:adv_datainput}
+%====================================================================================
+
+\scalerm では初期値・境界値作成において、表\ref{tab:inputdata_format}に示す外部入力データの読み込みに対応している。
+
+\begin{table}[htb]
+\begin{center}
+\caption{\scalelib が読み込みに対応する外部入力データフォーマット}
+\begin{tabularx}{150mm}{|l|l|X|} \hline
+ \rowcolor[gray]{0.9} データ形式      & \verb|FILETYPE_ORG|  & 備考 \\ \hline
+ SCALEデータ   & \verb|SCALE-RM|     & historyデータのみ対応ｍlatlonカタログを必要とする。 \\ \hline
+ バイナリデータ & \verb|GrADS|        & データ読み込み用のネームリストを別途必要とする。       \\ \hline
+ NICAMデータ   & \verb|NICAM-NETCDF| & NetCDF形式の緯度経度格子に変換されたデータに対応する。 \\ \hline
+ WRFデータ     & \verb|WRF-ARW|      & ``wrfout''、``wrfrst''の両方に対応する。          \\ \hline
+\end{tabularx}
+\label{tab:inputdata_format}
+\end{center}
+\end{table}
+
+
+外部入力する初期値・境界値データを変換する作業は、\verb|scale-rm_init|プログラムで行ない、
+詳細は実行時に使用する設定ファイル(\verb|init.**.conf|)の中で設定する。\\
+このうち、入力データフォーマットの指定は、\namelist{PARAM_MKINIT_REAL_***}の\nmitem{FILETYPE_ORG}
+で指定する。表\ref{tab:inputdata_format}に設定するための値を示す。
+
+SCALEデータ形式は主にオフライン・ネスティング実験で使用される。
+詳細については、\ref{subsec:nest_offline}節を参照されたい。
+
+NICAMデータ形式は正20面体格子座標系ではなく、緯度経度座標系に変換されたデータの読み込みにのみ対応している。
+
+WRFデータ形式についてはモデル出力データをそのまま使用することができる。
+
+バイナリデータ形式とは、「4バイト単精度浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。
+\textcolor{red}{GRIB/GRIB2のデータ形式は、チュートリアルで説明した方法に基づいて、
+バイナリデータ形式を経由してSCALEに読み込ませることができる。}
+その他にも、任意のデータを境界値に使用したい場合は、バイナリデータ形式に変換することで読み込ませることができる。
+下記では、バイナリデータの読み込み手続きについて説明する。
+
+%%%---------------------------------------------------------------------------------%%%%
+\subsubsection{バイナリデータの読み込み} \label{sec:datainput_grads}
+
+バイナリデータは{\grads}で読み込める形式でユーザーが用意する\\
+(\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})。\\
+SCALEでは、ctlファイルの代わりに、データのファイル名とデータ構造の情報を含む
+ネームリストファイル(\verb|namelist.grads_boundary**|)を用意する。
+
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{l}
+\\
+\verb|#| \\
+\verb|# Dimension    |  \\
+\verb|#|                \\
+\verb|&nml_grads_grid|  \\
+\verb| outer_nx     = 360,|~~~ !大気データのx方向の格子数 \\
+\verb| outer_ny     = 181,|~~~ !大気データのy方向の格子数 \\
+\verb| outer_nz     = 26, |~~~ !大気データのz方向の層数 \\
+\verb| outer_nl     = 4,  |~~~ !土壌データの層数 \\
+\verb|/|                \\
+\\
+\verb|#              |  \\
+\verb|# Variables    |  \\
+\verb|#              |  \\
+\verb|&grdvar  item='lon',     dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /  |  \\
+\verb|&grdvar  item='lat',     dtype='linear',  swpoint=90.0d0,  dd=-1.0d0 / |  \\
+\verb|&grdvar  item='plev',    dtype='levels',  lnum=26,| \\
+~~~\verb|      lvars=100000,97500,...(省略)...,2000,1000, /     |  \\
+\verb|&grdvar  item='MSLP',    dtype='map',     fname='FNLsfc', startrec=1,  totalrec=6   / |  \\
+\verb|&grdvar  item='PSFC',    dtype='map',     fname='FNLsfc', startrec=2,  totalrec=6   / |  \\
+\verb|&grdvar  item='U10',     dtype='map',     fname='FNLsfc', startrec=3,  totalrec=6   / |  \\
+\verb|&grdvar  item='V10',     dtype='map',     fname='FNLsfc', startrec=4,  totalrec=6   / |  \\
+\verb|&grdvar  item='T2',      dtype='map',     fname='FNLsfc', startrec=5,  totalrec=6   / |  \\
+\verb|&grdvar  item='RH2',     dtype='map',     fname='FNLsfc', startrec=6,  totalrec=6   / |  \\
+\verb|&grdvar  item='HGT',     dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 / |  \\
+\verb|&grdvar  item='U',       dtype='map',     fname='FNLatm', startrec=27, totalrec=125 / |  \\
+\verb|&grdvar  item='V',       dtype='map',     fname='FNLatm', startrec=53, totalrec=125 / |  \\
+\verb|&grdvar  item='T',       dtype='map',     fname='FNLatm', startrec=79, totalrec=125 / |  \\
+\verb|&grdvar  item='RH',      dtype='map',     fname='FNLatm', startrec=105,totalrec=125, knum=21 /  |  \\
+\verb|&grdvar  item='llev',    dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
+\verb|&grdvar  item='lsmask',  dtype='map',     fname='FNLland', startrec=1, totalrec=10 /  |  \\
+\verb|&grdvar  item='SKINT',   dtype='map',     fname='FNLland', startrec=2, totalrec=10 /  |  \\
+\verb|&grdvar  item='STEMP',   dtype='map',     fname='FNLland', startrec=3, totalrec=10,|\\
+~~~~~~~~\verb| missval=9.999e+20 /|  \\
+\verb|&grdvar  item='SMOISVC', dtype='map',     fname='FNLland', startrec=7, totalrec=10,|\\
+~~~~~~~~\verb| missval=9.999e+20 /|  \\
+\\
+\end{tabularx}
+}}}\\
+
+
+大気データの格子数を\verb|outer_nx,outer_ny,outer_nz|で指定し、
+土壌データ(STEMP, SMOISVC) の層数を\verb|outer_nl|に指定する。
+\namelist{grdvar}は、各変数のデータの与え方に応じて形式が異なる。\\
+
+\begin{table}[h]
+\begin{center}
+\caption{\namelist{grdvar}の変数}
+\label{tab:namelist_grdvar}
+\begin{tabularx}{150mm}{l|l|X} \hline
+\rowcolor[gray]{0.9} \verb|grdvar|の項目  & 説明 & 備考 \\ \hline
+\multicolumn{1}{l}{item}    & \multicolumn{1}{l}{変数名} & 表\ref{tab:grdvar_item}より選択      \\
+\multicolumn{1}{l}{dtype}   & \multicolumn{1}{l}{データ形式} & \verb|linear, levels, map|から選択 \\\hline
+\multicolumn{3}{l}{\nmitem{dtype}が\verb|linear|の場合のネームリスト} \\ \hline
+\multicolumn{1}{l}{swpoint}  & \multicolumn{1}{l}{スタートポイントの値} &  \\
+\multicolumn{1}{l}{dd}       & \multicolumn{1}{l}{差分}                 &  \\ \hline
+\multicolumn{3}{l}{\verb|dtype|が\verb|levels|の場合のネームリスト}        \\ \hline
+\multicolumn{1}{l}{lnum}     & \multicolumn{1}{l}{レベルの数(層数)}     &  \\
+\multicolumn{1}{l}{lvars}    & \multicolumn{1}{l}{各層の値}             &  \\ \hline
+\multicolumn{3}{l}{\verb|dtype|が\verb|map|の場合のネームリスト}           \\ \hline
+\multicolumn{1}{l}{fname   } & \multicolumn{1}{l}{ファイル名の頭      }     &  \\
+\multicolumn{1}{l}{startrec} & \multicolumn{1}{l}{レコード番号        }     &  \multicolumn{1}{l}{t=1 の時刻の値}\\
+\multicolumn{1}{l}{totalrec} & \multicolumn{1}{l}{１時刻全変数あたりのレコード}  &  \\
+\multicolumn{1}{l}{knum    } & \multicolumn{1}{l}{3次元データのz方向の層数} & \multicolumn{1}{l}{(オプション)\verb|outer_nz|と異なる場合}\\
+\multicolumn{1}{l}{missval}  & \multicolumn{1}{l}{欠陥値の値 　　　　}　    & \multicolumn{1}{l}{(オプション)}\\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{\namelist{grdvar}の\nmitem{item}の変数リスト}
+\begin{tabularx}{150mm}{ll|l|X} \hline
+ \rowcolor[gray]{0.9} 必須($\ast$) & 変数名 & 説明 & 単位\\ \hline
+$\ast$ & \verb|lon|  & 経度データ & [deg.] \\
+$\ast$ &\verb|lat|  & 緯度データ & [deg.] \\
+$\ast$ &\verb|plev| & 気圧データ & [Pa] \\
+$\ast$ &\verb|HGT|  & 高度(ジオポテンシャル)データ& [m] \\
+$\ast$ &\verb|U|    & 東西風速 & [m/s] \\
+$\ast$ &\verb|V|    & 南北風速 & [m/s] \\
+$\ast$ &\verb|T|    & 気温     & [K] \\
+$\ast$ &\verb|QV|   & 比湿 (RH がある場合は省略可) & [kg/kg] \\
+$\ast$ &\verb|RH|   & 相対湿度 (QVがある場合は省略可) & [\%] \\
+   &\verb|MSLP| & 海面更正気圧 & [Pa] \\
+   &\verb|PSFC| & 地上気圧 & [Pa] \\
+   &\verb|U10|  & 10m 東西風速 & [m/s] \\
+   &\verb|V10|  & 10m 南北風速& [m/s] \\
+   &\verb|T2|   & 2m 気温  &   [K] \\
+   &\verb|Q2|   & 2m 比湿(RH2がある場合は省略可) &[kg/kg] \\
+   &\verb|RH2|  & 2m 相対湿度 (Q2がある場合は省略可) & [\%] \\
+   &\verb|lsmask| & 海陸分布   &  \\
+$\ast$ &\verb|SKINT|  & 地表面温度 & [K] \\
+$\ast$ &\verb|llev|   & 土壌の深さ情報 &[m] \\
+$\ast$ &\verb|STEMP|  & 土壌温度   & [K] \\
+     &\verb|SMOISVC| & 土壌水分   & [] \\
+$\ast$ &\verb|SST|     & 海面温度(SKINTがある場合は省略可) & \\
+\end{tabularx}
+\label{tab:grdvar_item}
+\end{center}
+\end{table}
+
+\proofcomment{(八代)土壌水分の単位は[kg/kg]？総体積に対する値かそれとも空隙体積に対する値か？}
+
+

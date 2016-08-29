@@ -58,6 +58,7 @@ NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lcurl -lhdf
 ###### Lapack
 LAPACK_LIBS    ?=
 # example: -lacml
+#LAPACK_LIBS    ?= -lacml
 
 ##### for frontend
 INSTALL = install

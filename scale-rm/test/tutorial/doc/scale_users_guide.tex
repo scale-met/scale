@@ -5,10 +5,11 @@
 \date{\today}
 
 
-\usepackage[dvipdfmx]{graphicx}
+\usepackage[dvipdfmx]{graphicx, color}
 \usepackage[dvipdfmx]{hyperref}
 \usepackage{amsmath}
 \usepackage{ascmac}
+\usepackage{alltt}
 \usepackage[round]{natbib}
 \usepackage{tabularx}
 \usepackage{color}
@@ -18,15 +19,23 @@
 \usepackage{pxjahyper}
 \hypersetup{% options for hyperref
  bookmarksopen=true,
+ bookmarksnumbered=true,
  colorlinks=true,
- linkcolor=red,
- citecolor=green,
+% linkcolor=red,
+ linkcolor=cyan,
+ citecolor=cyan,
  urlcolor=cyan,
 }
+
 %\setlength{\textwidth}{42zw}
 %\setlength{\textheight}{40\baselineskip}
 \usepackage[top=30mm,bottom=35mm,left=30mm,right=30mm]{geometry}
 \usepackage{wallpaper}
+%\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\renewcommand{\thefootnote}{*\arabic{footnote})}
+
+\input{local_macro}
+
 
 \begin{document}
 \CenterWallPaper{1.0}{figure/title_wallpaper.eps}
@@ -35,43 +44,65 @@
 \ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.eps}
 \tableofcontents
 
-\chapter{Overview}
-\label{sec:overview}
+\chapter{概要} \label{chap:overview}
 \input{11_introduction}
-%\input{12_exp_intro}
+\input{12_notation}
 
-\chapter{Installation}
-\label{sec:install}
+\chapter{インストール} \label{chap:install}
 \input{21_install}
 
-\chapter{SCALE-RM Tutorial: Ideal case}
-\label{sec:tuto_ideal}
-\input{31_ideal_exp}
+\chapter{動作確認と基本的な操作について} \label{chap:tutorial_ideal}
+\input{31_ideal_exp_introduction}
+\input{32_ideal_exp_run}
+\input{33_ideal_exp_net2g}
+\input{34_ideal_exp_last}
 
-\chapter{SCALE-RM Tutorial: Real case}
-\label{sec:tuto_real}
-\input{41_real_exp_prep}
-\input{42_real_exp_pp}
-\input{43_real_exp_init}
-\input{44_real_exp_run}
-\input{45_real_exp_net2g.tex}
+\chapter{簡単な現実実験の方法} \label{chap:tutorial_real}
+\input{41_real_exp_introduction}
+\input{42_real_exp_data}
+\input{43_real_exp_prep}
+\input{44_real_exp_pp}
+\input{45_real_exp_init}
+\input{46_real_exp_run}
+\input{47_real_exp_net2g}
 
-\chapter{SCALE-RM Advance use}
-\label{sec:advance}
-\input{51_advance_use}
-\input{52_online_nesting}
-\input{53_scheme_list}
-\input{54_namelist_history}
-\input{55_quicklook_net2g}
+\chapter{各種設定} \label{chap:basic_usel}
+\input{50_setting_introduction}
+\input{52_0setting_domain}
+\input{52_1setting_mapproj}
+\input{52_2setting_topo}
+\input{55_setting_howtoinput}
+\clearpage
+\input{53_setting_time}
+\input{54_setting_history}
+\input{56_setting_dynamics}
+\input{57_setting_physics}
+\input{58_setting_quicklook}
+\input{59_setting_restart}
+\input{510_0setting_nesting}
+\input{510_1setting_nesting_topo}
+\input{510_2setting_offline_nesting}
+\input{510_3setting_online_nesting}
+\input{511_setting_bulkjob}
+\input{51_setting_makeconf}
 
 \bibliographystyle{plainnat}
 \bibliography{reference}
 
 \begin{appendix}
+\chapter{ライブラリ環境のインストール} \label{achap:env_setting}
 \input{A1_setting_for_install}
-\input{A2_namelist_runconf}
-\input{A3_variables_for_history}
-\input{A4_cloud_microphysics}
+\chapter{設定ファイル"run.conf"のネームリストと出力変数リスト} \label{achap:namelist}
+\input{A2_namelist}
+%\chapter{実行設定ファイル''run.conf''の中のネームリスト} \label{achap:namelist}
+%\input{A2_namelist_runconf}
+%\chapter{history出力できる変数一覧} \label{achap:histroy_item}
+%\input{A3_variables_for_history}
+\chapter{よくある質問とその回答 : FAQ} \label{achap:practice}
+\input{A4_practice1_Q}
+\input{A4_practice2_A}
+%\chapter{雲微物理モデルの概要} \label{achap:overview_microphysics}
+%\input{A5_cloud_microphysics}
 \end{appendix}
 
 %backmatter

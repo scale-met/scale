@@ -7,6 +7,7 @@
 # target file name
 TEXNAME  = scale_users_guide
 VERFNAME = 00_version.tex
+VERTEMPL = 00_version_template.tex
 
 # commands to compile documents
 LATEX    = platex
@@ -16,25 +17,32 @@ HTMLBIN  = pandoc --to=html
 
 VERSION  = $(shell cat ../../../src/VERSION)
 
+SRCS = $(wildcard *.tex)
+
 all: pdf
 
 pdf: $(TEXNAME).pdf
 
-clean:
-	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc
+html: $(TEXNAME).html
 
-.dvi.pdf:
+clean:
+	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
+
+$(TEXNAME).pdf: $(TEXNAME).dvi
 	$(DVIPDF) $(TEXNAME)
 
-.tex.dvi:
-	$(shell echo "\newcommand{\version}{$(VERSION)}" > $(VERFNAME))
-	$(LATEX) $(TEXNAME)
+$(TEXNAME).dvi: $(VERFNAME) $(SRCS) reference.bib
+	$(LATEX)  $(TEXNAME)
 	$(BIBTEX) $(TEXNAME)
-	$(LATEX) $(TEXNAME)
-	$(LATEX) $(TEXNAME)
+	$(LATEX)  $(TEXNAME)
+	$(LATEX)  $(TEXNAME)
 
-html: $(TEXNAME).html
-	$(HTMLBIN) $(TEXNAME).tex -o ${TEXNAME}.html
+$(VERFNAME): $(VERTEMPL)
+	$(shell cat $< | sed s/"#VERSION#"/$(VERSION)/g > $@)
+
+$(TEXNAME).html: $(TEXNAME).tex
+	$(HTMLBIN) $< -o $@
+
 
 .SUFFIXES:
 .SUFFIXES: .tex .bbl .dvi .pdf .bib .html

@@ -20,18 +20,19 @@ cat << EOF > base.net2g.2D.conf
 /
 
 &INFO
- START_TSTEP = 1,
- END_TSTEP   = ${MAXSTEP_2D},
- INC_TSTEP   = 1,
- DOMAIN_NUM  = ${DNUM},
- ZSTART      = 1,
- ZCOUNT      = 1,
- CONFFILE    = "./${RUNDIR}/run.d${FNUM}.conf",
- IDIR        = "./${RUNDIR}",
- ODIR        = ".",
- Z_LEV_TYPE  = "original",
- Z_MERGE_OUT = .false.,
- T_MERGE_OUT = .true.,
+ TIME_STARTDATE = ${TIME_STARTDATE},
+ START_TSTEP    = 1,
+ END_TSTEP      = ${MAXSTEP_2D},
+ INC_TSTEP      = 1,
+ DOMAIN_NUM     = ${DNUM},
+ ZSTART         = 1,
+ ZCOUNT         = 1,
+ CONFFILE       = "./${RUNDIR}/run.d${FNUM}.conf",
+ IDIR           = "./${RUNDIR}",
+ ODIR           = ".",
+ Z_LEV_TYPE     = "original",
+ Z_MERGE_OUT    = .false.,
+ T_MERGE_OUT    = .true.,
 /
 
 &VARI
@@ -54,18 +55,19 @@ cat << EOF > base.net2g.3D.conf
 /
 
 &INFO
- START_TSTEP = 1,
- END_TSTEP   = ${MAXSTEP_3D},
- INC_TSTEP   = 1,
- DOMAIN_NUM  = ${DNUM},
- ZSTART      = 1,
- ZCOUNT      = ${#POPSCA_PLEV[*]},
- CONFFILE    = "./${RUNDIR}/run.d${FNUM}.conf",
- IDIR        = "./${RUNDIR}",
- ODIR        = ".",
- Z_LEV_TYPE  = "plev",
- Z_MERGE_OUT = .true.,
- T_MERGE_OUT = .true.,
+ TIME_STARTDATE = ${TIME_STARTDATE},
+ START_TSTEP    = 1,
+ END_TSTEP      = ${MAXSTEP_3D},
+ INC_TSTEP      = 1,
+ DOMAIN_NUM     = ${DNUM},
+ ZSTART         = 1,
+ ZCOUNT         = ${#POPSCA_PLEV[*]},
+ CONFFILE       = "./${RUNDIR}/run.d${FNUM}.conf",
+ IDIR           = "./${RUNDIR}",
+ ODIR           = ".",
+ Z_LEV_TYPE     = "plev",
+ Z_MERGE_OUT    = .true.,
+ T_MERGE_OUT    = .true.,
 /
 
 &EXTRA
