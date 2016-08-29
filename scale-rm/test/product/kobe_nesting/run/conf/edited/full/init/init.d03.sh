@@ -10,7 +10,7 @@
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
 #-------------------------------------------------------------------------------
-#PJM --stgin  "rank=* /data/ra000006/a00000/scale/src/bin/scale-rm_init  %r:./"
+#PJM --stgin  "rank=* /data/ra000006/a00000/scale/bin/scale-rm_init  %r:./"
 #PJM --stgin  "rank=* ../config/init.d03.conf                             %r:./"
 #PJM --stgin  "rank=* ./extdata/*.nc                                      %r:./"
 #PJM --stgin  "rank=* ../input/domain_03/topo_d03.pe%06r.nc               %r:./"

@@ -1,6 +1,6 @@
 ################################################################################
 #
-# ------ For Linux64 & intel fortran&C & intel mpi -----
+# ------ For SGI ICE X (Linux64 & intel fortran&C & intel mpi + Torque -----
 #
 ################################################################################
 
@@ -31,7 +31,7 @@ FFLAGS_DEBUG = -fpp -m64 -O0                        \
 ##### C setting
 #CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
 
-CC = mpiicc
+CC  = mpiicc
 
 CFLAGS_FAST  = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
 CFLAGS_DEBUG = -O0
@@ -60,7 +60,7 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I$(NETCDF4)/include
-NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib64 -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
 
 ###### Lapack
 LAPACK_LIBS    ?=
@@ -71,4 +71,4 @@ INSTALL = install
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib
-JOBSUB  = sh
+JOBSUB  = qsub

@@ -11,7 +11,7 @@
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
 #-------------------------------------------------------------------------------
-#PJM --stgin  "rank=* /data/ra000006/a00000/scale/src/bin/scale-rm        %r:./"
+#PJM --stgin  "rank=* /data/ra000006/a00000/scale/bin/scale-rm        %r:./"
 #PJM --stgin  "rank=* ../config/run.d02.s.conf                             %r:./"
 #PJM --stgin  "rank=* ../init/domain_02/init_d02_00023587200.000.pe%06r.nc %r:./"
 #PJM --stgin  "rank=* ../init/domain_02/boundary_d02.pe%06r.nc             %r:./"

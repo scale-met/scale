@@ -203,5 +203,7 @@ program scalerm_launcher
   ! stop MPI
   call PRC_MPIfinish
 
+  if( universal_master ) write(*,*) '*** End   Launch System for SCALE-RM'
+
   stop
 end program scalerm_launcher
