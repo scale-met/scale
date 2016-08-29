@@ -21,9 +21,11 @@
 そして\verb|run.***.conf|ファイルを事前に作成し、
 親領域、子領域ともに地形・土地利用データの作成 (\verb|scale-rm_pp|) が、
 親領域については、初期値/境界値データの作成 (\verb|scale-rm_init|) が終わっていることを想定して説明を進める。
-ここで説明するオフライン・ネスティング実験の設定を記述した設定ファイルが
-チュートリアルディレクトリ\verb|${Tutorial_dir}/real/sample/offline_nesting|
-に置いてあるので、説明を読み進める上で参考にしてもらいたい。
+ここで説明するオフライン・ネスティング実験の設定を記述した設定ファイルは、サンプル設定ファイル
+\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-parent.sh|および
+\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-child.sh|
+をそれぞれUSER.shに置き換えて、実験セット準備ツールを実行した場合に作成される。
+説明を読み進める上で参考にしてもらいたい。
 
 \subsubsection{親領域の時間積分計算を行う}
 基本的には通常のシングルドメインの場合と同じ方法で実行すればよいが、
@@ -38,18 +40,20 @@
 \end{itemize}
 
 
-この設定を\verb|run.d01.conf|に適用すると下記のようになる。\textcolor{blue}{青文字}で示した部分が、上記の注意点・変更点に対応する部分である。\\
+この設定を\verb|run.d01.conf|に適用すると下記のようになる。
+\textcolor{blue}{青文字}で示した部分が、上記の注意点・変更点に対応する部分である。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_DOMAIN_CATALOGUE| & \\
+\verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue_d01.txt",| & カタログファイルのファイル名\\
 \textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & カタログファイルを出力。\\
 \verb|/| &\\
  & \\
 \verb|&PARAM_HISTORY| &\\
 \verb| HISTORY_DEFAULT_BASENAME  = "history",| & \\
-\textcolor{blue}{\verb| HISTORY_DEFAULT_TINTERVAL = 600.D0,|} & historyデータの出力時間間隔。\\
+\textcolor{blue}{\verb| HISTORY_DEFAULT_TINTERVAL = 900.D0,|} & historyデータの出力時間間隔。\\
 \verb| HISTORY_DEFAULT_TUNIT     = "SEC",|   & \verb|HISTORY_DEFAULT_TINTERVAL|の単位。\\
 \verb| HISTORY_DEFAULT_TAVERAGE  = .false.,| & \\
 \verb| HISTORY_DEFAULT_DATATYPE  = "REAL4",| & \\
@@ -59,7 +63,8 @@
 \end{tabularx}
 }}}\\
 
-カタログファイルの出力設定を\verb|.true.|にすると、\verb|latlon_domain_catalogue.txt|というカタログファイルが出力される。
+カタログファイルの出力設定を\verb|.true.|にすると、\verb|latlon_domain_catalogue_d01.txt|というカタログファイルが出力される。
+実験セット準備ツールを使用した場合、同ファイルがppディレクトリに出力されているので、そちらを参照すること。
 この中には、親領域の計算で各MPIプロセスが担当する計算領域の四隅の緯度・経度が記述されている。
 \nmitem{HISTORY_DEFAULT_TINTERVAL}はhistoryデータの出力間隔を示し、
 子領域の側面境界条件を更新したい時間間隔に設定する。
@@ -93,24 +98,36 @@
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{lX}
-\verb|&PARAM_MKINIT_REAL_ATMOS| &\\
-\verb| BASENAME_BOUNDARY   = "boundary",| &\\
-\textcolor{blue}{\verb| BASENAME_ORG        = "history",|}  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
-\textcolor{blue}{\verb| FILETYPE_ORG        = "SCALE-RM",|} & \\
-\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
-\textcolor{blue}{\verb| BOUNDARY_UPDATE_DT  = 600.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
-\verb|/| &\\
- & \\
 \textcolor{blue}{\verb|&PARAM_NEST|} & \\
 \textcolor{blue}{\verb| USE_NESTING               = .true.,|} & \\
 \textcolor{blue}{\verb| OFFLINE                   = .true.,|} & \\
-\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 4,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 4,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_KMAX       = 35,|} & \verb|run.d01.conf|の\verb|KMAX|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_IMAX       = 40,|} & \verb|run.d01.conf|の\verb|IMAX|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_JMAX       = 40,|} & \verb|run.d01.conf|の\verb|JMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_KMAX       = 36,|} & \verb|run.d01.conf|の\verb|KMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_IMAX       = 45,|} & \verb|run.d01.conf|の\verb|IMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_JMAX       = 45,|} & \verb|run.d01.conf|の\verb|JMAX|\\
 \textcolor{blue}{\verb| OFFLINE_PARENT_LKMAX      = 5,|}  & \verb|run.d01.conf|の\verb|LKMAX|\\
-\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.txt",|} & 親領域を実行した時に作成したカタログファイル\\
+\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue_d01.txt",|} & 親領域を実行した時に作成したカタログファイル\\
+\textcolor{blue}{\verb|/|} &\\
+ & \\
+\verb|&PARAM_MKINIT_REAL_ATMOS| &\\
+\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
+\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
+\verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
+\verb| BASENAME_BOUNDARY   = "boundary_d01",| &\\
+\textcolor{blue}{\verb| BOUNDARY_UPDATE_DT  = 900.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
+\verb|/| &\\
+ & \\
+\verb|&PARAM_MKINIT_REAL_OCEAN| &\\
+\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
+\verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
+\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
+\verb|/| &\\
+ & \\
+\verb|&PARAM_MKINIT_REAL_LAND| &\\
+\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
+\verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
+\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
 \verb|/| &\\
 \end{tabularx}
 }}}\\
@@ -156,7 +173,7 @@
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_ATMOS_BOUNDARY| \\
 \verb|　 　 　〜　中略　〜|\\
-\textcolor{blue}{\verb| ATMOS_BOUNDARY_UPDATE_DT  = 600.D0,|} \\
+\textcolor{blue}{\verb| ATMOS_BOUNDARY_UPDATE_DT  = 900.D0,|} \\
 \verb|/| \\
 \end{tabularx}
 }}}\\

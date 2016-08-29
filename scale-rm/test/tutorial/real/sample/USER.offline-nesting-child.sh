@@ -24,20 +24,20 @@ TIME_DURATION="6.0"
 TIME_DURATION_UNIT="HOUR" # unit: DAY / HOUR / MIN / SEC
 
 TIME_DT_RESTART="10800.0"   # unit: SEC only
-TIME_DT_BOUNDARY="21600.0"  # unit: SEC only
+TIME_DT_BOUNDARY="900.0"    # unit: SEC only
 TIME_DT_REFSTATE="10800.0"  # unit: SEC only
-TIME_DT_HISTORY_2D="3600.0" # unit: SEC only
-TIME_DT_HISTORY_3D="3600.0" # unit: SEC only
+TIME_DT_HISTORY_2D="150.0"  # unit: SEC only
+TIME_DT_HISTORY_3D="150.0"  # unit: SEC only
 
-TIME_DT=(               "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_DYN=(     "45.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_PHY_MP=(  "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_PHY_RD=( "900.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_PHY_SF=(  "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_ATMOS_PHY_TB=(  "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_OCEAN=(        "450.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_LAND=(         "450.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_URBAN=(        "450.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT=(               "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_DYN=(      "7.5" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_MP=(  "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_RD=( "150.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_SF=(  "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_TB=(  "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_OCEAN=(         "75.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_LAND=(          "75.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_URBAN=(         "75.0" ) # required parameters for each domain - unit: SEC only
 
 #################################################
 #
@@ -52,12 +52,12 @@ TIME_DT_URBAN=(        "450.0" ) # required parameters for each domain - unit: S
 #
 #################################################
 
-PRC_NUM_X=( 2 ) # required parameters for each domain
-PRC_NUM_Y=( 2 ) # required parameters for each domain
+PRC_NUM_X=( 4 ) # required parameters for each domain
+PRC_NUM_Y=( 4 ) # required parameters for each domain
  
-KMAX=( 36 ) # required parameters for each domain
-IMAX=( 45 ) # required parameters for each domain
-JMAX=( 45 ) # required parameters for each domain
+KMAX=( 60 ) # required parameters for each domain
+IMAX=( 32 ) # required parameters for each domain
+JMAX=( 32 ) # required parameters for each domain
 
 LKMAX=5
 LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" ) # required parameters for LKMAX
@@ -65,23 +65,27 @@ LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" ) # required parameters for LKMAX
 UKMAX=5
 UDZ=( "0.01" "0.01" "0.03" "0.05" "0.10" ) # required parameters for UKMAX
 
-DX=( "20000.0" ) # required parameters for each domain
-DY=( "20000.0" ) # required parameters for each domain
+DX=( "7000.0" ) # required parameters for each domain
+DY=( "7000.0" ) # required parameters for each domain
 
 DEF_Z=( 
-"FZ(:) =     80.8410,   248.8210,   429.8820,   625.0450,   835.4090,
-           1062.1580,  1306.5650,  1570.0080,  1853.9690,  2160.0470,
-           2489.9630,  2845.5750,  3228.8830,  3642.0440,  4087.3840,
-           4567.4090,  5084.8200,  5642.5300,  6243.6760,  6891.6420,
-           7590.0740,  8342.9040,  9154.3670, 10029.0280, 10971.8150,
-          11988.0300, 13083.3900, 14264.0600, 15536.6850, 16908.4300,
-          18387.0100, 19980.7500, 21698.6150, 23550.2750, 25546.1550,
-          28113.2050,"
+"FZ(:) =     40.0000,    80.0000,   120.0000,   160.0000,   200.0000,
+            243.2800,   290.1089,   340.7779,   395.6016,   454.9209,
+            519.1044,   588.5510,   663.6921,   744.9949,   832.9644,
+            928.1475,  1031.1355,  1142.5686,  1263.1392,  1393.5966,
+           1534.7515,  1687.4811,  1852.7345,  2031.5387,  2225.0049,
+           2434.3352,  2660.8306,  2905.8984,  3171.0618,  3457.9685,
+           3768.4016,  4104.2900,  4467.7212,  4860.9536,  5286.4312,
+           5746.7979,  6244.9146,  6783.8770,  7367.0342,  7998.0103,
+           8680.7266,  9419.4258, 10218.6982, 11083.5107, 12019.2383,
+          13019.2383, 14019.2383, 15019.2383, 16019.2383, 17019.2383,
+          18019.2383, 19019.2383, 20019.2383, 21019.2383, 22019.2383,
+          23019.2383, 24019.2383, 25019.2383, 26019.2383, 27019.2383,"
 ) # required num. of parameters for each domain
 
 BUFFER_DZ=( "5000.0"   ) # required parameters for each domain
-BUFFER_DX=( "400000.0" ) # required parameters for each domain
-BUFFER_DY=( "400000.0" ) # required parameters for each domain
+BUFFER_DX=( "140000.0" ) # required parameters for each domain
+BUFFER_DY=( "140000.0" ) # required parameters for each domain
 
 MPRJ_BASEPOINT_LON="135.220404"
 MPRJ_BASEPOINT_LAT="34.653396"
@@ -116,10 +120,16 @@ URBAN_TYPE=( "SLC"   ) # required parameters for each domain
 #################################################
 
 HIST_ITEMS_SNAPSHOT_2D=(
-  "MSLP" "PREC" "OLR" "U10" "V10" "T2" "Q2" "SFC_PRES" "SFC_TEMP"
+  "MSLP" "U10" "V10" "T2" "Q2"
+  "PREC" "OLR" "SFC_PRES" "SFC_TEMP"
+  "OCEAN_SFC_TEMP" "LAND_SFC_TEMP" "URBAN_SFC_TEMP"
+  "OCEAN_ALB_LW" "OCEAN_ALB_SW" "LAND_ALB_LW" "LAND_ALB_SW"
+  "OCEAN_TEMP" "OCEAN_SFC_Z0M" "LAND_TEMP" "LAND_WATER"
 )
 HIST_ITEMS_SNAPSHOT_3D=(
-  "DENS" "QV" "QHYD" "PRES" "U" "V" "T" "W" "Uabs" "PT" "RH"
+  "DENS" "MOMZ" "MOMX" "MOMY" "RHOT"
+  "QV" "QC" "QR" "QI" "QS" "QG" "QHYD"
+  "PRES" "U" "V" "T" "W" "Uabs" "PT" "RH"
 )
 HIST_ITEMS_AVERAGE_2D=(
 )
@@ -137,8 +147,8 @@ HIST_ITEMS_AVERAGE_3D=(
 
 INIT_BASENAME="init"
 
-BASENAME_ORG="namelist.grads_boundary.FNL.grib1"
-FILETYPE_ORG="GrADS"
+BASENAME_ORG="history_d01"
+FILETYPE_ORG="SCALE-RM"
 PARENT_MP_TYPE=3
 USE_FILE_DENSITY=".false."
 USE_FILE_LANDWATER=".true."

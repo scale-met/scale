@@ -42,8 +42,9 @@
 %地形/土地利用データの作成、及び初期値/境界値データの作成を事前に行っておく必要がある。
 %従って、親領域と子領域それぞれについて、
 %\verb|pp.***.conf|、\verb|init.***.conf|、そして\verb|run.***.conf|ファイルを事前に作成し、
-ここで説明するオンライン・ネスティング実験の設定を記述した設定ファイルが
-\verb|${Tutorial_dir}/real/sample/online_nesting|に置いてあるので、
+ここで説明するオンライン・ネスティング実験の設定を記述した設定ファイルは、サンプル設定ファイル
+\verb|${Tutorial_dir}/real/sample/USER.online-nesting.sh|を
+USER.shに置き換えて、実験セット準備ツールを実行した場合に作成される。
 説明を読み進める上で参考にしてもらいたい。
 また、すでに、親領域、子領域ともに地形/土地利用データの作成、
 及び初期値/境界値データの作成を終えているものとして説明を進める。
@@ -140,7 +141,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \begin{tabularx}{140mm}{lX}
 \verb|&PARAM_LAUNCHER|      & \\
 \verb| NUM_DOMAIN  = 2,|    & 領域の数\\
-\verb| PRC_DOMAINS = 4, 9,| & それぞれの領域で使用するMPIプロセス数 (領域の数だけ必要)\\
+\verb| PRC_DOMAINS = 4, 16,| & それぞれの領域で使用するMPIプロセス数 (領域の数だけ必要)\\
 \verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & それぞれの領域の設定ファイル (領域の数だけ必要)\\
 \verb|/|& \\
 \end{tabularx}
@@ -148,7 +149,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 
 \noindent 
 \nmitem{PRC_DOMAINS}と\nmitem{CONF_FILES}の記載順は対応している必要がある。
-上記の例の場合、親領域は4-MPI並列、子領域は9-MPI並列で実行するように指定されている。
+上記の例の場合、親領域は4-MPI並列、子領域は16-MPI並列で実行するように指定されている。
 ここで指定するMPIプロセス数は、各々の領域の設定ファイル (\verb|run.***.conf|) で指定されている
 総MPIプロセス数(\verb|[PRCnum]|=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)と一致させなければならない。
 

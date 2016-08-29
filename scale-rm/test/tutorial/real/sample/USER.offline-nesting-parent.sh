@@ -26,8 +26,8 @@ TIME_DURATION_UNIT="HOUR" # unit: DAY / HOUR / MIN / SEC
 TIME_DT_RESTART="10800.0"   # unit: SEC only
 TIME_DT_BOUNDARY="21600.0"  # unit: SEC only
 TIME_DT_REFSTATE="10800.0"  # unit: SEC only
-TIME_DT_HISTORY_2D="3600.0" # unit: SEC only
-TIME_DT_HISTORY_3D="3600.0" # unit: SEC only
+TIME_DT_HISTORY_2D="900.0"  # unit: SEC only
+TIME_DT_HISTORY_3D="900.0"  # unit: SEC only
 
 TIME_DT=(               "90.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_DYN=(     "45.0" ) # required parameters for each domain - unit: SEC only
@@ -116,10 +116,16 @@ URBAN_TYPE=( "SLC"   ) # required parameters for each domain
 #################################################
 
 HIST_ITEMS_SNAPSHOT_2D=(
-  "MSLP" "PREC" "OLR" "U10" "V10" "T2" "Q2" "SFC_PRES" "SFC_TEMP"
+  "MSLP" "U10" "V10" "T2" "Q2"
+  "PREC" "OLR" "SFC_PRES" "SFC_TEMP"
+  "OCEAN_SFC_TEMP" "LAND_SFC_TEMP" "URBAN_SFC_TEMP"
+  "OCEAN_ALB_LW" "OCEAN_ALB_SW" "LAND_ALB_LW" "LAND_ALB_SW"
+  "OCEAN_TEMP" "OCEAN_SFC_Z0M" "LAND_TEMP" "LAND_WATER"
 )
 HIST_ITEMS_SNAPSHOT_3D=(
-  "DENS" "QV" "QHYD" "PRES" "U" "V" "T" "W" "Uabs" "PT" "RH"
+  "DENS" "MOMZ" "MOMX" "MOMY" "RHOT"
+  "QV" "QC" "QR" "QI" "QS" "QG" "QHYD"
+  "PRES" "U" "V" "T" "W" "Uabs" "PT" "RH"
 )
 HIST_ITEMS_AVERAGE_2D=(
 )

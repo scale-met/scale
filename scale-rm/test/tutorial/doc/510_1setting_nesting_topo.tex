@@ -17,8 +17,9 @@
 地形コピー機能は自動的に適用される設定となっている。
 
 
-ここで説明する地形コピーの設定を記述した\verb|pp.d0*.conf|ファイルがチュートリアルディレクトリ
-\verb|${Tutorial_dir}/real/sample/online_nesting|に置いてあるので、
+ここで説明する地形コピーの設定を記述した\verb|pp.d0*.conf|ファイルは、サンプル設定ファイル
+\verb|${Tutorial_dir}/real/sample/USER.online-nesting.sh|を
+USER.shに置き換えて、実験セット準備ツールを実行した場合に作成される。
 説明を読み進める上で参考にしてもらいたい。
 %
 以降、具体的な設定方法と実行手順を説明する。
@@ -41,7 +42,7 @@
 
 まず親領域の地形データ作成時(\verb|scale-rm_pp|)に
 計算領域の大きさを子領域へ伝えるためにカタログファイルを出力するよう設定する。
-具体的には、\verb|pp.d01.conf|に下記の設定を追加する。\\
+具体的には、\verb|pp.d01.conf|に下記の設定が必要となる。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -60,6 +61,18 @@
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
+\verb|&PARAM_NEST| & \\
+\verb| USE_NESTING               = .true.,| & \\
+\verb| OFFLINE                   = .true.,| & \\
+\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,     | & 親領域の\verb|PRC_NUM_X| \\
+\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,     | & 親領域の\verb|PRC_NUM_Y| \\
+\verb| OFFLINE_PARENT_KMAX       = 36,    | & 親領域の\verb|KMAX|      \\
+\verb| OFFLINE_PARENT_IMAX       = 45,    | & 親領域の\verb|IMAX|      \\
+\verb| OFFLINE_PARENT_JMAX       = 45,    | & 親領域の\verb|JMAX|      \\
+\verb| OFFLINE_PARENT_LKMAX      = 5,     | & 親領域の\verb|LKMAX|     \\
+\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.d01.txt",| & 親領域のカタログファイル  \\
+\verb|/| &\\
+ & \\
 \verb|&PARAM_CNVTOPO|  &\\
 \verb|　 　 　〜　中略　〜| & \\
 \verb| CNVTOPO_copy_parent     = .true.,| & 地形コピー機能を適用するかどうか\\
@@ -70,18 +83,6 @@
 \verb| COPYTOPO_ENTIRE_REGION = .false.,|    & 子領域の全域に親領域の地形をコピーするかどうか\\
 \verb| COPYTOPO_LINEAR_H      = .true.,|     & \\
 \verb|/| & \\
- & \\
-\verb|&PARAM_NEST| & \\
-\verb| USE_NESTING               = .true.,| & \\
-\verb| OFFLINE                   = .true.,| & \\
-\verb| OFFLINE_PARENT_PRC_NUM_X  = 4,     | & 親領域の\verb|PRC_NUM_X| \\
-\verb| OFFLINE_PARENT_PRC_NUM_Y  = 4,     | & 親領域の\verb|PRC_NUM_Y| \\
-\verb| OFFLINE_PARENT_KMAX       = 35,    | & 親領域の\verb|KMAX|      \\
-\verb| OFFLINE_PARENT_IMAX       = 40,    | & 親領域の\verb|IMAX|      \\
-\verb| OFFLINE_PARENT_JMAX       = 40,    | & 親領域の\verb|JMAX|      \\
-\verb| OFFLINE_PARENT_LKMAX      = 5,     | & 親領域の\verb|LKMAX|     \\
-\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.d01.txt",| & 親領域のカタログファイル  \\
-\verb|/| &\\
 \end{tabularx}
 }}}\\
 
