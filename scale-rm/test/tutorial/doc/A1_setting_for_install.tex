@@ -129,17 +129,16 @@ rpm\_check\_debug を実行しています\\
  # yum install hdf5-devel hdf5-static
  # yum install netcdf-devel netcdf-static
  # yum install openmpi-devel
- # yum install lapack lapack-devel
  # yum install wgrib wgrib2
 \end{verbatim}
 
-% SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
-% \footnote{\url{http://www.netlib.org/lapack/}}
-% を利用するオプションがある。
-% もし必要ならば、Lapack もインストールすること。
-% \begin{verbatim}
-%  # yum install lapack lapack-devel
-% \end{verbatim}
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ # yum install lapack lapack-devel
+\end{verbatim}
 
 \noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{chap:tutorial_real}章：Tutorial: Real case で
 外部入力データのプレ処理を行うために使用する。}
@@ -289,17 +288,16 @@ Running transaction\\
  # yum install netcdf-devel netcdf-static
  # yum install netcdf-fortran-devel
  # yum install openmpi-devel
- # yum install lapack lapack-devel
  # yum install wgrib wgrib2
 \end{verbatim}
 
-% SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
-% \footnote{\url{http://www.netlib.org/lapack/}}
-% を利用するオプションがある。
-% もし必要ならば、Lapack もインストールすること。
-% \begin{verbatim}
-%  # yum install lapack lapack-devel
-% \end{verbatim}
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ # yum install lapack lapack-devel
+\end{verbatim}
 
 \noindent \textcolor{red}{\small ＊fortran用のモジュールファイルは別パッケージになっている。
 "netcdf-fortran-devel"のインストールを忘れないこと。}
@@ -415,17 +413,16 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
  $ sudo zypper install netcdf-devel netcdf-devel-static
  $ sudo zypper install netcdf-fortran-devel netcdf-fortran-static
  $ sudo zypper install openmpi-devel openmpi-devel-static
- $ sudo zypper install lapack-devel lapack-devel-static
  $ sudo zypper install wgrib wgrib2
 \end{verbatim}
 
-% SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
-% \footnote{\url{http://www.netlib.org/lapack/}}
-% を利用するオプションがある。
-% もし必要ならば、Lapack もインストールすること。
-% \begin{verbatim}
-%  $ sudo zypper install lapack-devel lapack-devel-static
-% \end{verbatim}
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ $ sudo zypper install lapack-devel lapack-devel-static
+\end{verbatim}
 
 \noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{chap:tutorial_real}章：Tutorial: Real case で
 外部入力データのプレ処理を行うために使用する。}
