@@ -13,15 +13,16 @@
 実験設定を表\ref{tab:setting_ideal}に示す。
 
 \begin{table}[htb]
-n\begin{center}
+\begin{minipage}{150mm}
+\begin{center}
 \caption{本章での理想実験の実験設定}
 \begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} 項目 & 設定内容 & 備考 \\ \hline
  MPIプロセス数 & 東西：2、南北：1 & 計2プロセスでの並列計算を行う \\ \hline
  水平格子間隔 & 東西：500 m、南北：1000 m & 東西-鉛直の面を切り取った準2次元実験である \\ \hline
- 水平格子点数 & 東西：40、南北：2\footnotemark &  \\ \hline
- 鉛直層数     & 97層（トップ：20 km）& 下層ほど細かい層間隔をとったストレッチ設定である \\ \hline
- 側面境界条件 & 周期境界 & 東西、南北とも \\ \hline
+ 水平格子点数 & 東西：40、南北：2\footnote{現在は２次元実験を行うための枠組みは用意されていないが、{\YDIR}に同じ値をもつ初期値を与える事で２次元実験に相当する実験を行うことが可能である。この場合、ハロの格子数と同じ数の格子数を{\YDIR}に設定する必要がある。ハロの必要格子数については\ref{subsec:atmos_dyn_scheme}参照。} &  \\ \hline
+ 鉛直層数     & 97層（トップ：20 km）& 下層ほど細かい層厚をもつストレッチ設定である \\ \hline
+ 側面境界条件 & 周期境界 & 東西、南北境界とも \\ \hline
  積分時間間隔 & 5 sec      & 雲微物理スキームは10 sec毎 \\ \hline
  積分期間     & 3,600 sec  & 720 steps \\ \hline
  データ出力間隔 & 300 sec  &  \\ \hline
@@ -34,9 +35,9 @@ n\begin{center}
 \end{tabularx}
 \label{tab:setting_ideal}
 \end{center}
+%\footnotetext{現在は２次元実験を行うための枠組みは用意されていないが、{\YDIR}に同じ値をもつ初期値を与える事で２次元実験に相当する実験を行うことが可能である。この場合、ハロの格子数と同じ数の格子数を{\YDIR}に設定する必要がある。ハロの必要格子数については\ref{subsec:atmos_dyn_scheme}参照。}
+\end{minipage}
 \end{table}
-\footnotetext{現在は２次元実験を行うための枠組みは用意されていないが、{\YDIR}に同じ値をもつ初期値を与える事で２次元実験に相当する実験を行うことが可能である。この場合、ハロの格子数と同じ数の格子数を{\YDIR}に設定する必要がある。ハロの必要格子数については\ref{subsec:atmos_dyn_scheme}参照。}
-
 
 
 \subsection{前準備} \label{subsec:ideal_exp_prepare}
@@ -55,10 +56,10 @@ scale-{\version}/binにある実行バイナリへの静的リンクを張る。
 
 \subsection{初期値作成} \label{subsec:ideal_exp_init}
 %------------------------------------------------------
-初期値の作成は、``\verb|scale-rm_init|''に
+初期値の作成は、\verb|scale-rm_init|に
 設定ファイルを与えて実行する。
-``\verb|init_R20kmDX500m.conf|''には、
-表\ref{tab:setting_ideal}に対応した実験設定が書き込まれている。
+\verb|init_R20kmDX500m.conf| には、
+表\ref{tab:setting_ideal} に対応した実験設定が書き込まれている。
 この設定ファイルを\verb|scale-rm_init|に与えることで、
 設定ファイルの指示に従って大気の成層構造を計算し、
 初期擾乱が設定される。
@@ -66,18 +67,17 @@ scale-{\version}/binにある実行バイナリへの静的リンクを張る。
 
 SCALEの基本的な実行コマンドは下記のとおりである。
 \begin{alltt}
-  $ mpirun  -n  [プロセス数]  [実行バイナリ名]  [設定ファイル]
+  $ mpirun  -n [プロセス数]  [実行バイナリ名]  [設定ファイル]
 \end{alltt}
 [プロセス数]の部分にはMPI並列で使用したいプロセス数を記述する。
 [実行バイナリ]には、\verb|scale-rm|や\verb|scale-rm_init|が入る。
-そして、実験設定を記述した設定ファイルを
-[設定ファイル]の部分に指定する。
+そして、実験設定を記述した設定ファイルを[設定ファイル]の部分に指定する。
 %
 例えば、
-\verb|init_R20kmDX500m.conf|には2-MPI並列(2つのMPIプロセス)を使って計算するように指定されている。
+\verb|init_R20kmDX500m.conf|は2-MPI並列(2つのMPIプロセス)を使って計算するように指定されている。
 \verb|scale-rm_init|を実行するコマンドは次のように記述する。
 \begin{alltt}
-  $ mpirun  -n  2  ./scale-rm_init  init_R20kmDX500m.conf
+  $ mpirun  -n 2  ./scale-rm_init  init_R20kmDX500m.conf
 \end{alltt}
 %
 \noindent 実行が成功した場合には、コマンドラインのメッセージは
