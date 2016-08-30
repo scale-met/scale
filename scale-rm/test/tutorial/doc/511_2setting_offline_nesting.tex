@@ -7,24 +7,25 @@
  \item 子領域の積分期間は、親領域の積分期間と同じもしくはそれより短い必要がある。
 \end{itemize}
 
+~\\
 また、オフライン・ネスティング実験の実行過程は次のようになる。
-{\gt
 \begin{enumerate}
  \item 親領域の時間積分計算を行う。
  \item 親領域のhistory出力ファイルを用いて子領域の初期値/境界値を作成する。
  \item 作成した初期値/境界値を用いて子領域の時間積分計算を行う。
 \end{enumerate}
-}
+
 
 以下、この流れに沿って説明を進める。
 親領域と子領域それぞれについて、\verb|pp.***.conf|、\verb|init.***.conf|、
 そして\verb|run.***.conf|ファイルを事前に作成し、
 親領域、子領域ともに地形・土地利用データの作成 (\verb|scale-rm_pp|) が、
 親領域については、初期値/境界値データの作成 (\verb|scale-rm_init|) が終わっていることを想定して説明を進める。
-ここで説明するオフライン・ネスティング実験の設定を記述した設定ファイルは、サンプル設定ファイル
+ここで説明するオフライン・ネスティング実験の設定を記述した設定ファイルは、
+サンプル設定ファイル
 \verb|${Tutorial_dir}/real/sample/USER.offline-nesting-parent.sh|および
 \verb|${Tutorial_dir}/real/sample/USER.offline-nesting-child.sh|
-をそれぞれUSER.shに置き換えて、実験セット準備ツールを実行した場合に作成される。
+をそれぞれUSER.shに置き換えて、実験セット一式準備ツールを実行すると作成される。
 説明を読み進める上で参考にしてもらいたい。
 
 \subsubsection{親領域の時間積分計算を行う}
@@ -32,7 +33,7 @@
 \verb|run.***.conf|の設定で次の5点に注意する必要がある。
 
 \begin{itemize}
- \item 子領域の計算に必要な変数全てを、親領域のhistory出力。
+ \item 子領域の計算に必要な変数全てを、親領域の計算時にhistory出力する。
  \item 親領域のhistory出力間隔を適度に細かくとること。
  \item 親領域のhistory出力データは、モデル面のデータを出力すること。
  \item 親領域の計算領域を子領域へ伝える「カタログファイル」(以下参照のこと)を出力する。
@@ -97,7 +98,7 @@
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \textcolor{blue}{\verb|&PARAM_NEST|} & \\
 \textcolor{blue}{\verb| USE_NESTING               = .true.,|} & \\
 \textcolor{blue}{\verb| OFFLINE                   = .true.,|} & \\
@@ -133,17 +134,21 @@
 }}}\\
 
 
-\scalerm の出力データから初期値境界値を作成する場合は、\nmitem{FILETYPE_ORG}に\verb|SCALE-RM|を指定する。
+\scalerm の出力データから初期値境界値を作成する場合は、
+\nmitem{FILETYPE_ORG}に\verb|"SCALE-RM"|を指定する。
 \nmitem{BOUNDARY_UPDATE_DT}は、基本的に、親領域の設定ファイル(\verb|run.d01.conf|)の
 \nmitem{HISTORY_DEFAULT_TINTERVAL}と同じ設定を記述する。
 %
 \namelist{PARAM_NEST}の項目は、ネスティング実験のための設定項目である。
 オフライン・ネスティングでは、\nmitem{USE_NESTNG=.true., OFFLINE=.true.}と設定する。
-\nmitem{OFFLINE_PARENT_**} で始まる6つの設定変数は親領域の設定を記述する変数である。
-親領域の設定ファイル(\verb|run.d01.conf|) を参照して正しく設定すること。
+\nmitem{OFFLINE_PARENT_***} で始まる6つの設定変数は親領域の設定を記述する変数である。
+親領域の設定ファイル(\verb|run.d01.conf|) を参照して正しく設定すること。\\
 
 
-設定の編集が完了したら、\verb|scale-rm_init|を実行し、子領域の初期値/境界値を作成する。\\
+設定の編集が完了したら、\verb|scale-rm_init|を実行し、子領域の初期値/境界値を作成する。
+実行時に下記のようなメッセージが表示されて計算が止まる場合は、
+子領域の計算領域が親領域の計算領域の外側に取られている部分がある。
+この場合は、各領域の大きさや領域中心の設定を見直す必要がある。\\
 
 \noindent {\small {\gt
 \fbox{
@@ -153,9 +158,6 @@
 \end{tabularx}
 }}}\\
 
-\noindent 実行時に上記のようなメッセージが表示されて計算が止まる場合は、
-子領域の計算領域が親領域の計算領域の外側に取られている部分がある。
-この場合は、各領域の大きさや領域中心の設定を見直す必要がある。
 
 
 \subsubsection{作成した初期値/境界値を用いて子領域の時間積分計算を行う}
@@ -182,5 +184,3 @@
 多段のオフライン・ネスティング実験を行いたい場合は、以上の過程を繰り返せばよい。
 つまり、子領域として時間積分計算した結果を再度、親領域と見立てて、
 さらに内側の孫領域の初期値/境界値作成を行なえばよい。
-
-

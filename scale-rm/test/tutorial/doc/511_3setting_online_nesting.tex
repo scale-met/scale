@@ -94,7 +94,7 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \noindent 
 \nmitem{USE_NESTING = .true., OFFLINE = .false.}によって、
 オンライン・ネスティング実験であることが決定される。
-\nmitem{ ONLINE_}で始まる設定変数はオンライン・ネスティング実験
+\nmitem{ONLINE_**}で始まる設定変数はオンライン・ネスティング実験
 専用の設定変数である。\nmitem{ONLINE_DOMAIN_NUM}は、
 領域のID番号であり、外側領域から内側領域へ順番に番号を振っていく。
 ここでは、親領域は1番、子領域は2番と設定する。
@@ -133,8 +133,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \subsubsection{launchファイルの編集}
 \label{subsubsec:launch}
 オンライン・ネスティング実験の実行には、
-\verb|run.***.conf|の他に、起動用設定ファイル\verb|launch.conf|が必要である。
-以下のような新規ファイルを作成する。\\
+\verb|run.***.conf|の他に、起動用設定ファイル\verb|launch.conf|が必要である。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -151,16 +150,15 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \nmitem{PRC_DOMAINS}と\nmitem{CONF_FILES}の記載順は対応している必要がある。
 上記の例の場合、親領域は4-MPI並列、子領域は16-MPI並列で実行するように指定されている。
 ここで指定するMPIプロセス数は、各々の領域の設定ファイル (\verb|run.***.conf|) で指定されている
-総MPIプロセス数(\verb|[PRCnum]|=\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)と一致させなければならない。
+総MPIプロセス数(\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)と一致させなければならない。
 
-実行時には、シングル領域計算とは異なり、\verb|launch.conf|を引数に指定し、計算全体で使用するMPIプロセス数を
-指定して実行する。
+実行時には、シングル領域計算とは異なり、\verb|launch.conf|を引数に指定し、計算全体で使用するMPIプロセス数を指定して実行する。例えば、上記の例だとプロセス数は20となる。
 \begin{verbatim}
  $ mpirun  -n  [プロセス数]  ./scale-rm  launch.conf
 \end{verbatim}
 
 実行にあたって注意することは、複数の領域の計算を同時に実行するため、
-出力ファイル(\verb|historyファイル, LOGファイル, restartファイル|など) の書き出し先が重複しない様に設定しなければならない。
+出力ファイル(\verb|historyファイル, LOGファイル, restartファイル|など) の書き出し先が重複しないように設定する必要がある。
 例えば、\verb|historyファイル|は\verb|history_d01.pe***.nc, history_d02.pe***.nc|といったように
 領域毎にファイル名を変えることで、どの領域の出力データであるか判別がつくように指定する。
 出力ファイルのほか、入力ファイルである\verb|topoファイル, landuseファイル, boundaryファイル, initファイル|
@@ -196,8 +194,8 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 このため、ユーザーは、使用可能なMPIプロセス数のうち、各領域の計算にいくつのMPIプロセスを割り当てるかを
 決める必要がある。割り当て配分のバランスが悪いと、待ち時間が発生し、計算時間が余計にかかってしまう。
 これを避けるためには、領域毎に、時間積分にかかる1プロセスあたりの計算量（ここでは格子数と
-タイムステップ数の積として定義）を揃えればよい。
-\footnote{正確を期すなら演算量を見積もる必要がある。}
+タイムステップ数の積として定義）を揃えればよい
+\footnote{正確を期すなら演算量を見積もる必要がある。}。
 具体的な見積もり方法は下記の通りである。
 
 ここではN個の領域(N段ネスティング)を考える。
