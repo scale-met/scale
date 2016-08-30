@@ -24,6 +24,14 @@ net2g専用の``\verb|net2g.conf|''を設定ファイルとして与えて、
 \begin{alltt}
   $ mpirun  -n  2  ./net2g  net2g.conf
 \end{alltt}
+エラーメッセージがなく、下記のメッセージだけが標準出力へ表示されていれば正常に変換完了である。\\
+
+\noindent {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+\verb|+++ MPI COMM: Corrective Finalize| \\
+\end{tabularx}
+}}\\
 
 \noindent net2gの実行にあたっては、SCALE本体の実行時に使用したMPIプロセス数と同じか、
 その約数のプロセス数を用いて実行しなければならない。
