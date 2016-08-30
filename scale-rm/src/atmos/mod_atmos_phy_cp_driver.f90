@@ -155,7 +155,7 @@ contains
                           RHOT_t_CP,      & ! [INOUT]
                           RHOQ_t_CP,      & ! [INOUT]
                           MFLX_cloudbase, & ! [INOUT]
-                          SFLX_rain,    & ! [OUT]
+                          SFLX_rain,      & ! [OUT]
                           cloudtop,       & ! [OUT]
                           cloudbase,      & ! [OUT]
                           cldfrac_dp,     & ! [OUT]
