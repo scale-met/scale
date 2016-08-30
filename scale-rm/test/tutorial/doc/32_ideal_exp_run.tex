@@ -60,14 +60,13 @@ scale-{\version}/binにある実行バイナリへの静的リンクを張る。
 設定ファイルを与えて実行する。
 \verb|init_R20kmDX500m.conf| には、
 表\ref{tab:setting_ideal} に対応した実験設定が書き込まれている。
-この設定ファイルを\verb|scale-rm_init|に与えることで、
-設定ファイルの指示に従って大気の成層構造を計算し、
-初期擾乱が設定される。
+この設定ファイルを\verb|scale-rm_init|に与えて実行することで、
+設定ファイルの指示に従って大気の成層構造を計算し、初期擾乱が設定される。
 
 
 SCALEの基本的な実行コマンドは下記のとおりである。
 \begin{alltt}
-  $ mpirun  -n [プロセス数]  [実行バイナリ名]  [設定ファイル]
+  $ mpirun  -n  [プロセス数]  [実行バイナリ名]  [設定ファイル]
 \end{alltt}
 [プロセス数]の部分にはMPI並列で使用したいプロセス数を記述する。
 [実行バイナリ]には、\verb|scale-rm|や\verb|scale-rm_init|が入る。
@@ -77,10 +76,10 @@ SCALEの基本的な実行コマンドは下記のとおりである。
 \verb|init_R20kmDX500m.conf|は2-MPI並列(2つのMPIプロセス)を使って計算するように指定されている。
 \verb|scale-rm_init|を実行するコマンドは次のように記述する。
 \begin{alltt}
-  $ mpirun  -n 2  ./scale-rm_init  init_R20kmDX500m.conf
+  $ mpirun  -n  2  ./scale-rm_init  init_R20kmDX500m.conf
 \end{alltt}
 %
-\noindent 実行が成功した場合には、コマンドラインのメッセージは
+\noindent 実行が成功した場合、コマンドラインのメッセージは
 下記のように表示される。\\
 
 \noindent {\small {\gt
@@ -103,23 +102,23 @@ SCALEの基本的な実行コマンドは下記のとおりである。
   init_00000101-000000.000.pe000001.nc
 \end{alltt}
 の3つのファイルが、現在のディレクトリ下に作成される。
-``init\_LOG.pe000000''には、
+ログファイル(\verb|init_LOG.pe000000|)には、
 コマンドラインには表示されない詳しい実行ログが記録されている。
-この例では2つのMPIプロセスを利用しているが、
-デフォルト設定では0番目のプロセス（マスターランク）のログファイルだけが
-出力される。すべてのプロセスの実行ログを出力するよう設定を変更することも出来る。
+ファイル名の\verb|pe|の後の数字は、MPIのプロセス番号を示している。
+例では2つのMPIプロセスを利用しているが、
+デフォルト設定では0番目のプロセス（マスターランク）のログファイルだけが出力される。
+%すべてのプロセスの実行ログを出力するよう設定を変更することも出来る。
 実行が正常に終了している場合、このLOGファイルの最後に\\
 
 \noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
- ++++++ Finalize MPI\\
+ ++++++ Finalize MPI...\\
  ++++++ MPI is peacefully finalized\\
 \end{tabularx}
 }}}\\
 
-\noindent と記述される。
-
+\noindent と記述される。\\
 \verb|init_00000101-000000.000.pe000000.nc|と\verb|init_00000101-000000.000.pe000001.nc|の
 2つのファイルは初期値ファイルであり、それぞれおおよそ100KBのファイルサイズになる。
 計算領域全体を2つのMPIプロセスで分割し担当するため、
@@ -134,36 +133,35 @@ GPhys/Ruby-DCLやncviewといったツールで直接読むことができる。
 \subsection{モデル本体の実行} \label{subsec:ideal_exp_run}
 %------------------------------------------------------
 プロセス並列数は、初期値作成のときと同じ数を指定する。
-設定ファイルには``\verb|run_R20kmDX500m.conf|''を指定する。
+設定ファイルには \verb|run_R20kmDX500m.conf| を指定する。
 \begin{alltt}
   $ mpirun  -n  2  ./scale-rm  run_R20kmDX500m.conf
 \end{alltt}
 
 本書の必要要件にあった計算機であれば、2分程度で計算が終わる。
-\noindent この実行によって、\\
+\noindent この実行によって、
 \begin{alltt}
   LOG.pe000000
   history.pe000000.nc
   history.pe000001.nc
 \end{alltt}
 の3つのファイルが、現在のディレクトリ下に作成されているはずである。
-``LOG.pe000000''には、
+\verb|LOG.pe000000| には、
 コマンドラインには表示されない詳しい実行ログが記録されている。
 実行が正常に終了している場合、このLOGファイルの最後に\\
 
 \noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
- ++++++ Finalize MPI\\
+ ++++++ Finalize MPI...\\
  ++++++ MPI is peacefully finalized\\
 \end{tabularx}
 }}}\\
 
 \noindent と記述される。
-``history.pe000000.nc''と``history.pe000001.nc''
-の2つのファイルが計算結果が記録されたhistoryファイルであり、それぞれおおよそ5.4MBのファイルサイズになる。
-2-MPI並列で実行したため、2つのファイルが生成されており、
-ファイル形式はNetCDFである。
+\verb|history.pe000000.nc| と \verb|history.pe000001.nc|
+の2つのファイルが計算結果が記録されたhistoryファイルであり、それぞれおおよそ14MBのファイルサイズになる。
+2-MPI並列で実行したため、2つのファイルが生成されており、ファイル形式はNetCDFである。
 %``monitor.pe000000''は、計算中にモニタリングしている
 %物理変数の時間変化を記録したテキストファイルである。
 
