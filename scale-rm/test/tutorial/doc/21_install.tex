@@ -129,7 +129,7 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 最新のリリース版ソースコードは、\\
 \url{http://scale.aics.riken.jp/ja/download/index.html}\\
 よりダウンロードできる。
-ソースコードのtarballファイルを展開すると\texttt{scale-{\version}/}というディレクトリができる。
+ソースコードのtarballファイルを展開すると\texttt{scale-{\version}/} というディレクトリができる。
 \begin{alltt}
  $ tar -zxvf scale-{\version}.tar.gz
  $ ls ./
@@ -139,12 +139,13 @@ ncview\footnote{\url{http://meteora.ucsd.edu/~piece/ncview\_home\_page.html}}な
 \subsection{Makedefファイルと環境変数の設定} \label{subsec:evniromnet}
 %-----------------------------------------------------------------------------------
 
-\scalelib はコンパイルするとき、環境変数"\verb|SCALE_SYS|"に設定した
+\scalelib はコンパイルするとき、環境変数``\verb|SCALE_SYS|''に設定した
 Makedefファイルを使用してコンパイルが行われる。
-Makdefファイルは、\texttt{scale-{\version}/sysdep/}内にいくつかの計算機環境に
+Makedefファイルは、\texttt{scale-{\version}/sysdep/}内にいくつかの計算機環境に
 対応するファイル（\texttt{Makedef.***}）が準備されており、
 これらの中から自分の環境にあったものを設定する。
 動作確認済みの環境と対応するMakedefファイルを表\ref{tab:makedef}に示す。
+自分の環境に合致するものがなければ、既存ファイルをベースに各自作成する。
 
 \begin{table}[htb]
 \begin{center}
@@ -163,14 +164,13 @@ Makdefファイルは、\texttt{scale-{\version}/sysdep/}内にいくつかの�
 \end{table}
 
 
-
 Linux OS、GNUコンパイラ、openMPIを使用する場合には、
 \verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる。
+別の環境でインストールを行っている場合には、適宜、表\ref{tab:makedef}に従って読み替えること。
 下記の通り、環境変数を設定する。
 \begin{alltt}
  $ export SCALE_SYS="Linux64-gnu-ompi"
 \end{alltt}
-自分の環境に合致するものがなければ、既存ファイルをベースに各自作成する。
 実行環境が常に同じであるならば、
 環境変数の設定を\verb|.bashrc|などの環境設定ファイルに
 記述しておくと便利である。\\
@@ -189,7 +189,7 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
  $ export NETCDF4="/opt/netcdf"
  $ export NETCDF_INCLUDE="-I/opt/netcdf/include"
  $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 \
--lnetcdff -hdf5_hl -lhdf5 -lm -lz"
+      -lnetcdff -hdf5_hl -lhdf5 -lm -lz"
 \end{verbatim}
 
 
@@ -210,7 +210,7 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 \end{alltt}
 
 
-下記のコマンドで作成された実行バイナリを消去できる。
+また、コンパイルをやり直したい場合など、下記のコマンドで作成された実行バイナリを消去できる。
 \begin{alltt}
  $ make clean
 \end{alltt}
@@ -230,12 +230,10 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 \item \scalelib は、scaleのTOPディレクトリ直下の
  scale-{\version}/scalelib/ というディレクトリ内でコンパイルとアーカイブが行われる。
  \scalerm は、コンパイルを実行したディレクトリの下の
- \verb|".lib"|という名前の隠しディレクトリの中にコンパイルされたオブジェクトファイルが置かれ、実行バイナリファイルはカレントディレクトリにコピーされる。
+ \verb|".lib"|という名前の隠しディレクトリの中にコンパイルされたオブジェクトファイルが置かれる。
+% 実行バイナリファイルはカレントディレクトリにコピーされる。
 \item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 DEBUG=T"|としてコンパイルする。
 \item 細かくコンパイルオプションを変更したい場合は、\verb|Makedef.***|のファイルを編集する。
-%\item 開発版ソースコードをコンパイルしている場合，
-% 一部のコンパイラバージョンにおいて、コンパイルが正常に終了しないケースがある．
-% そのような場合はSCALE開発チームまでご報告ください．
 \end{itemize}
 
 
@@ -258,13 +256,9 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
 %従って、以降はこれらのライブラリがインストールされている環境であることを想定して進める。\\
 
 
-まず、SCALE本体のコンパイル時と同様に
+まず、SCALE本体のコンパイル時と同様に、
 使用する環境にあったMakedefファイル設定のための環境変数を設定する
 (\ref{subsec:compile}節コンパイル参照)。
-%\begin{alltt}
-% $ export SCALE_SYS="Linux64-gnu-ompi"  //GNUコンパイラ、openMPIを使用する場合
-%\end{alltt}
-%
 次に、net2gのディレクトリに移動し、makeする。
 MPIライブラリを用いた並列実行を行うためのバイナリは、
 下記のコマンドによって生成される。
@@ -277,7 +271,7 @@ MPIライブラリが無い場合など、逐次実行バイナリを生成す�
  $ make -j 2 NOMPI=T
 \end{alltt}
 としてコンパイルを行う。
-"net2g"という名前の実行ファイルが生成されていればコンパイルは成功である．\\
+\verb|net2g|という名前の実行ファイルが生成されていればコンパイルは成功である．\\
 
 
 下記のコマンドで作成された実行バイナリを消去できる。
