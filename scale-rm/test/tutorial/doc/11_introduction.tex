@@ -3,13 +3,14 @@
 
 本書は初めて領域気象気候モデル({\scalerm})
 を利用する人に向けた解説書です。
-気象気候ライブラリー\scalelib  version \version に対応した説明を記載します。
+気象気候ライブラリー{\scalelib}  version \version に対応した説明を記載します。
 現在、\scalelib を利用するため、領域モデル\scalerm と全球モデル\scalegm が
 用意されていますが、後者は、力学コアの整備のみされています。
 そのため、本版では、\scalerm の使い方についてのみ詳しく述べています。
 \scalegm については、次版で詳しく記載される予定です。
-\scalerm の使い方を通して、\scalelib を他のモデルからの呼び出す方法を
-習得することも可能です。
+%\scalerm の使い方を通して、\scalelib を他のモデルからの呼び出す方法を
+%習得することも可能です。
+
 第\ref{chap:overview}章で\scalelib の概要について、
 第\ref{chap:install}章で必要な環境、およびインストール方法について説明します。
 続いて、第\ref{chap:tutorial_ideal}章で基本的な操作方法、
@@ -29,7 +30,7 @@
 \subsection{\scalelib の特徴} \label{subsec:scale_feature}
 %--------------------------------------------------------------%
 
-\scalelib (Scalable Computing for Advanced Library and Environment)は
+{\scalelib} (Scalable Computing for Advanced Library and Environment)は
 計算機を用いて気象・気候科学計算を行う上で、
 研究を進めやすいようにプレ処理から数値シミュレーション、ポスト処理、
 解析に至るまですべての過程を網羅する気象・気候数値計算ライブラリを
@@ -73,20 +74,19 @@
 共同で開発を行っている。
 そのため、スーパーコンピュータ「京」や富士通FX10等の
 スーパーコンピュータに加え、インテル機のような汎用計算機でも
-高い計算効率がでるように設計されている。
-ユーザーには、スーパーコンピュータ「京」を
-はじめとする並列計算機に対してチューニングされた
-モデルコンポーネントや解析システム、テストセットなどを
-提供する。
-\proofcomment{(八代)「京」と「インテル機」の対比はどういう意味か？CPUアーキテクチャということ？それとも規模？}
-\proofcomment{(八代)並列計算機に対してチューニングとは？}
+計算効率がでることを目指して設計されている。
 
-\scalelib を利用した数値モデルとして、
-\scalerm が含まれている(図 \ref{fig:scale-rm})。
-並列プロセスの管理、ファイル入出力、プロセス間通信や格子情報の設定は\scalelib が提供し、
-格子配置のデータや境界値データは\scalelib で読み込まれて利用される。
-大気流体の支配方程式を解く部分（流体力学コア、力学過程）と雲微物理や大気放射のような諸物理過程を解く部分は
-\scalelib が提供する。
+~\\
+\proofcomment{(八代)「京」と「インテル機」の対比はどういう意味か？CPUアーキテクチャということ？それとも規模？}\\
+\replycomment{(足立) 両方かと思います。}\\
+\proofcomment{(八代)並列計算機に対してチューニングとは？}\\
+\replycomment{(足立)なかなか、ここで、チューニングしてると書いても具体性がないので、少し削除\&修正しました}\\
+~\\
+
+\scalelib を利用した数値モデルとして、\scalerm が含まれている(図 \ref{fig:scale-rm})。
+並列プロセスの管理、ファイル入出力、プロセス間通信や格子情報の設定は\scalelib が提供する。
+大気流体の支配方程式を解く部分（流体力学コア、力学過程）と
+雲微物理や大気放射のような諸物理過程を解く部分も\scalelib が提供する。
 \scalerm は入力された大気状態のデータ（予報変数）を保持し、\scalelib が提供する機能を組み合わせ、
 各コンポーネントを適切に呼び出すことで時間発展計算を行っている。
 ユーザーは必要に応じて利用するコンポーネントを選択し、組み合わせてシミュレーションを行うことが出来る。
@@ -98,7 +98,6 @@
   \label{fig:scale-rm}
 \end{center}
 \end{figure}
-
 
 
 
@@ -129,9 +128,10 @@
  \item 外部データ読み込みによる標高・土地利用区分データの変換作成
  \item 外部データ読み込みによる初期値・境界値データ変換作成
    \begin{itemize}
-    \item WRF-ARW\footnote{\url{http://www.wrf-model.org/}}、
-      NICAM\footnote{\url{http://nicam.jp/}}、
-      その他\grads \footnote{\url{http://cola.gmu.edu/grads/}}フォーマットでの入力に対応
+    \item 
+      WRF-ARW\footnote{\url{http://www.wrf-model.org/}}、
+%      NICAM\footnote{\url{http://nicam.jp/}}、
+      \grads \footnote{\url{http://cola.gmu.edu/grads/}}フォーマットでの入力に対応
    \end{itemize}
 \end{itemize}
 
@@ -160,7 +160,7 @@
     \end{itemize}
  \item 非負保証:
     \begin{itemize}
-      \item フラックス修正法 \citep[Flux Corrected Transport, FCT; ][]{zalesak_1979}\\
+      \item フラックス修正法 \citep[Flux Corrected Transport, FCT; ][]{zalesak_1979}
       \item \citet{Koren_1993}フィルター  (3次風上差分スキーム使用時のみ)
     \end{itemize}
  \item 数値フィルター: 4次超粘性・拡散
