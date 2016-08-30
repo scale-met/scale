@@ -1,16 +1,15 @@
 \section{結果を描画する：net2g} \label{sec:quicklook}
 %####################################################################################
 
-\scalerm モデルの出力ファイルは、
-MPIプロセス毎に計算領域が分割されて、
-別々のファイルとして出力される。
-それぞれのファイルフォーマットは、
-気候・予報(CF)メタデータ規約に対応したNetCDF4形式である
-\footnote{gpviewがインストールされている場合、gpviewを使って作図することも出来る。
+ここでは、
+プロセス毎に分割された{\netcdf}形式の出力ファイル(\verb|history.**.nc|
+\footnote{gpviewがインストールされている場合、gpviewを使って作図することも出来る
 gpviewならばhistoryデータを変換することなく直接作図することができるため、クイックチェックに適している。}。
-ここでは、1) プロセス毎に分割された{\netcdf}ファイルを
-{\grads}で扱えるように１つのバイナリーファイルにまとめ、
-2) 作図して結果の確認を行う。
+)を
+{\grads}で読み込めるように１つのバイナリーファイルにまとめる
+\verb|netcdf2grads (略して、net2g)|の使い方と、変換した{\grads}バイナリーデータを使って
+結果の確認を行う。
+
 
 \subsubsection{{\grads}バイナリーに変換}
 %-----------------------------------------------------------------------------------
@@ -55,35 +54,43 @@ net2gでは2次元変数と3次元変数を同時に変換することはでき�
 }}\\
 
 成功すれば、下記のファイルが作成される。
+\verb|**.ctl|は {\scalerm} のXY格子座標のctlファイル、
+\verb|**lccr.ctl|は緯度経度座標で作図するためのctlファイルである。
+
 \begin{verbatim}
   MSLP_d01z-2d.ctl
   MSLP_d01z-2d.grd
+  MSLP_d01z-2d_lccr.ctl
   PREC_d01z-2d.ctl
   PREC_d01z-2d.grd
+  PREC_d01z-2d_lccr.ctl
   PRES_d01z-3d.ctl
   PRES_d01z-3d.grd
+  PRES_d01z-3d_lccr.ctl
   U_d01z-3d.ctl
   U_d01z-3d.grd
+  U_d01z-3d_lccr.ctl
   V_d01z-3d.ctl
   V_d01z-3d.grd
+  V_d01z-3d_lccr.ctl
 \end{verbatim}
+
+
 
 
 \subsubsection{計算結果の確認}
 %-----------------------------------------------------------------------------------
-現在のバージョンの\verb|net2g|では、
-SCALE-RMのXY格子座標で、ctlファイルを作成する。
-緯度経度座標で作図するためのctlを
-\verb|${Tutorial_DIR}/real/data|ディレクトリに用意してあるので、
-サンプルとして利用してほしい。\footnote{今後、緯度経度座標で描画するためのctlファイルを出力できるようにする予定。}
-\begin{verbatim}
- $ cp ../../data/*_lcc.ctl ./
- $ ls
-    MSLP_d01z-2d_lcc.ctl
-    PREC_d01z-2d_lcc.ctl
-    U_d01z-3d_lcc.ctl
-    V_d01z-3d_lcc.ctl
-\end{verbatim}
+
+%\verb|${Tutorial_DIR}/real/data|ディレクトリに用意してあるので、
+%サンプルとして利用してほしい。\footnote{今後、緯度経度座標で描画するためのctlファイルを出力できるようにする予定。}
+%\begin{verbatim}
+% $ cp ../../data/*_lcc.ctl ./
+% $ ls
+%    MSLP_d01z-2d_lcc.ctl
+%    PREC_d01z-2d_lcc.ctl
+%    U_d01z-3d_lcc.ctl
+%    V_d01z-3d_lcc.ctl
+%\end{verbatim}
 
 計算結果確認用の図を作成するための\grads スクリプト\verb|checkfig.gs|を使って作図する。
 \begin{verbatim}
@@ -98,6 +105,8 @@ SCALE-RMのXY格子座標で、ctlファイルを作成する。
   real_wind.png
 \end{verbatim}
 計算と変換が成功していれば、下記と同じ図が描画される。
+
+\proofcomment{(足立)最後のチェックで図の入れ替え！！！}
 
 \begin{figure}[h]
 \begin{center}
