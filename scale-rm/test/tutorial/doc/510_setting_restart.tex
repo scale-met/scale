@@ -21,7 +21,7 @@
                                                                              & 明記されていない場合は\verb|.false.|が設定される。\\
                                                                              & \verb|.true.|: リスタート計算、\verb|.false.|: 通常計算。  \\
                                                                              & \\ 
-\multicolumn{2}{l}{\verb| RESTART_IN_BASENAME  = "restart1_d01_20070714-180000.000",|}\\
+\multicolumn{2}{l}{\verb| RESTART_IN_BASENAME  = "restart1_d01_20070715-000000.000",|}\\
                                                                              & 入力する初期値ファイルの指定。\\
                                                                              & \\ 
 \verb| RESTART_OUTPUT       = .true.,                                      | & リスタートファイルを出力するかどうか。\\
@@ -31,6 +31,11 @@
 \verb|/| & \\
 \\
 \verb|&PARAM_TIME| & \\
+\verb| TIME_STARTDATE             = 2007, 7, 15, 00, 0, 0,| & リスタート計算開始時刻 \\
+\verb| TIME_STARTMS               = 0.D0,     | & 計算開始時刻[mili sec]\\
+\verb| TIME_DURATION              = 12.0D0,   | & 積分時間[単位はTIME_DURATION_UNIT で設定]\\
+\verb| TIME_DURATION_UNIT         = "HOUR'",  | & TIME_DURATION の単位 \\
+\verb|  .....  略  .....                      | & \\
 \verb| TIME_DT_ATMOS_RESTART      = 21600.D0, | & リスタートファイル(大気)の出力間隔\\
 \verb| TIME_DT_ATMOS_RESTART_UNIT = "SEC",    | & \verb|TIME_DT_ATMOS_RESTART|の単位\\
 \verb| TIME_DT_OCEAN_RESTART      = 21600.D0, | & リスタートファイル(海洋)の出力間隔\\
@@ -54,8 +59,12 @@
 なお、\scalerm は\nmitem{RESTART_IN_BASENAME}で指定されているファイル名でリスタート計算かどうかを判断しているわけではないので、ファイル名はなんでも良い。
 チュートリアル、および、本書解説では便宜上、\verb|scale-rm_init|で作成した初期値ファイルの名前を\verb|init_***.nc|とし、リスタートファイルのファイル名を\verb|restart_***.nc|としているが、これに限らない。
 
+計算開始時刻と積分時間は、リスタート計算の計算開始時刻と積分時間を設定する。
+つまり、リスタート計算のためのリスタートファイルを出力した実験とは独立した計算と考えれば良い。
+ただし、使用するスキームを変更する場合には、計算に必要な入力変数が足りないことがあるので、
+注意が必要である。
 
-現実大気実験の場合、初期値以外に\verb|scale-rm_init|で作成した境界値ファイルが必要である。\\
+さらに、現実大気実験の場合、初期値以外に\verb|scale-rm_init|で作成した境界値ファイルが必要である。\\
 \namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_START_DATE}に
 境界値ファイル\verb|boundary_***.nc|の初期時刻を設定しておくことで、リスタート計算時に
 適切な時刻のデータを読み込むことが可能である。
