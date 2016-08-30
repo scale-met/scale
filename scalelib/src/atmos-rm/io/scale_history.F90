@@ -104,7 +104,7 @@ contains
     character(len=H_SHORT) :: HISTORY_T_UNITS = 'seconds'
     character(len=H_MID)   :: HISTORY_T_SINCE = ''
 
-    logical :: HIST_BND = .true.
+    logical :: HIST_BND = .false.
 
     namelist / PARAM_HIST /      &
          HIST_BND
