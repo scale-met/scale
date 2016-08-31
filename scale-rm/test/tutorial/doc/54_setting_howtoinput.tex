@@ -89,14 +89,14 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 時間の早い方から順に5桁の数字をつける。
 \verb|scale-rm_init|では、\verb|00000|から\nmitem{NUMBER_OF_FILES}の数だけファイルを読み込む。
 ファイルが一つしかない場合は、\verb|"ファイル名.grd"|でよい。
-\verb|"ファイル名"|は後ほど紹介するネイムリストファイル内で指定する。\\
+\verb|"ファイル名"|は後ほど紹介するネームリストファイル内で指定する。\\
 \nmitem{BOUNDARY_UPDATE_DT}は、入力データの時間間隔である。\\
 \nmitem{BASENAME_BOUNDARY}は、\scalerm の格子の値に変換された境界値データの
 出力先ファイル名の頭である。
 また、初期値データの出力先は\namelist{PARAM_RESTART}の\nmitem{RESTART_OUT_BASENAME}で設定する。\\
 \scalerm では、ctlファイルの代わりに、データのファイル名とデータ構造の情報を含む
 ネームリストファイル(\verb|namelist.grads_boundary**|)を用意する。
-このネイムリストファイルへのパスは\nmitem{BASENAME_ORG}に指定する。\\
+このネームリストファイルへのパスは\nmitem{BASENAME_ORG}に指定する。\\
 以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}で指定されたものが
 \namelist{PARAM_MKINIT_REAL_OCEAN}, \namelist{PARAM_MKINIT_REAL_LAND}
 にも適用されるが、別途指定されている場合には、情報が上書きされる。\\
@@ -128,7 +128,7 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 }}}\\
 
 
-バイナリデータは{\grads}で読み込める形式でユーザーが用意する\\
+バイナリデータは{\grads}で読み込める形式でユーザが用意する\\
 (\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})。\\
 データのファイル名とデータ構造を \scalerm に教えるための
 ネームリストファイル\\

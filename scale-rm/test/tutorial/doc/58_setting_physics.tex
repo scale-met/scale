@@ -13,7 +13,7 @@
 雲微物理スキームを呼び出すタイミングは、
 \namelist{PARAM_TIME}で設定するが、これについては
 第\ref{sec:timeintiv}節を参照のこと。
-以下に、氷雲を含む1-momentバルク法を用いるときの設定を示す。\\
+以下に、氷雲を含む1モーメントバルク法を用いるときの設定を示す。\\
 
 \noindent {\gt
 \ovalbox{
@@ -35,10 +35,10 @@
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
      \verb|OFF|      & 雲微物理による相変化を計算しない &  \\
-     \verb|KESSLER|  & 水雲のみの1-momentバルク法 & \citet{kessler_1969} \\
-     \verb|TOMITA08| & 氷雲を含む1-momentバルク法 & \citet{tomita_2008} \\
-     \verb|SN14|     & 氷雲を含む2-momentバルク法 & \citet{sn_2014} \\
-     \verb|SUZUKI10| & 1-momentビン法(氷雲を含むか否かはオプションで選択) & \citet{suzuki_etal_2010} \\
+     \verb|KESSLER|  & 水雲のみの1モーメントバルク法 & \citet{kessler_1969} \\
+     \verb|TOMITA08| & 氷雲を含む1モーメントバルク法 & \citet{tomita_2008} \\
+     \verb|SN14|     & 氷雲を含む2モーメントバルク法 & \citet{sn_2014} \\
+     \verb|SUZUKI10| & 1モーメントビン法(氷雲を含むか否かはオプションで選択) & \citet{suzuki_etal_2010} \\
 %    \verb|XX|       & 超水滴法                   & \citer{Shima_etal_2009} \\
     \hline
   \end{tabularx}
@@ -153,7 +153,7 @@ micpara.datに記載されているnbinが異なれば、\\
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
       \verb|OFF|          & 乱流の計算を行わない &  \\
       \verb|SMAGORINSKY|  & Smagorinsky 型のサブグリッドモデル    & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
-      \verb|D1980|        & Deardorff(1980)サブグリットモデル &\citet{Deardorff_1980} \\
+      \verb|D1980|        & Deardorff(1980)サブグリッドモデル &\citet{Deardorff_1980} \\
       \verb|MYNN|         & MYNN Level 2.5 乱流モデル & \citet{my_1982,nakanishi_2004} \\
     \hline
   \end{tabularx}
@@ -259,7 +259,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 放射計算のために追加された層の気温・気圧プロファイルは外部から与える必要がある。
 また二酸化炭素やオゾン等の気体濃度プロファイルも必要である。
-プロファイルは気候値またはユーザーが準備したASCII形式の入力データを用いることが出来る。\\
+プロファイルは気候値またはユーザが準備したASCII形式の入力データを用いることが出来る。\\
 気候値の場合、\scalerm では気温・気圧についてはCIRA86
 \footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006}、
 気体種についてはMIPAS2001\citep{Remedios_2007}をデータベースとして用意している。
@@ -272,9 +272,9 @@ micpara.datに記載されているnbinが異なれば、\\
 \end{verbatim}
 に用意されており、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}でファイルのディレクトリと名前を指定する。\\
 
-ユーザーが準備するプロファイルの場合は、任意の層数の高度 [m]、気圧 [Pa]、気温 [K]、水蒸気量 [kg/kg]、オゾン濃度 [kg/kg]
+ユーザが準備するプロファイルの場合は、任意の層数の高度 [m]、気圧 [Pa]、気温 [K]、水蒸気量 [kg/kg]、オゾン濃度 [kg/kg]
 をASCIIファイルで記述して指定する。それ以外の気体濃度はすべて0として扱われ、時間変化も考慮しない。
-このユーザー指定ファイルの例は、
+このユーザ指定ファイルの例は、
 \begin{verbatim}
   scale-rm/test/data/rad/
 \end{verbatim}
@@ -288,7 +288,7 @@ micpara.datに記載されているnbinが異なれば、\\
 \verb| ATMOS_PHY_RD_PROFILE_use_climatology       = .true.    | & CIRA86とMIPAS2001の気候値を利用するかどうか\\
 \verb| ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc" | & \verb|CIRA86 (NetCDF format)|ファイル\\
 \verb| ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "."       | & \verb|MIPAS2001 (ASCII format)|のディレクトリ\\
-\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = ""        | & 気候値を利用しない場合に用いるユーザー指定ファイル (ASCII format)\\
+\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = ""        | & 気候値を利用しない場合に用いるユーザ指定ファイル (ASCII format)\\
 \verb| ATMOS_PHY_RD_PROFILE_USE_CO2               = .true.    | & falseの場合、強制的にCO2濃度を常に0に設定する\\
 \verb| ATMOS_PHY_RD_PROFILE_USE_O3                = .true.    | & falseの場合、強制的にO3濃度を常に0に設定する\\
 \verb| ATMOS_PHY_RD_PROFILE_USE_N2O               = .true.    | & falseの場合、強制的にN2O濃度を常に0に設定する\\
@@ -300,7 +300,7 @@ micpara.datに記載されているnbinが異なれば、\\
 \end{tabularx}
 }}}\\
 
-気候値・ユーザー指定プロファイルのいずれもモデルの高度・層数の設定とは独立に高度・層数が指定され、実行時にはモデル各層の値に内挿される。
+気候値・ユーザ指定プロファイルのいずれもモデルの高度・層数の設定とは独立に高度・層数が指定され、実行時にはモデル各層の値に内挿される。
 ただし、想定する最高高度（放射計算で考慮する大気最上層(TOA)の高さ）がプロファイルよりも高い場合、外挿となるので注意されたい。\\
 
 
