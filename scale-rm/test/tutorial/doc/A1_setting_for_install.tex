@@ -6,12 +6,13 @@ SCALEのインストールに必要なコンパイラやライブラリ環境の
 うまくいかない場合には、それぞれのツール・ライブラリの開発元に直接問い合わせること。
 
 
-Linuxをインストール後、各種プログラムのインストールにはコマンドライン端末を使う。
-本書で説明するライブラリ環境のインストールにあたっては、root権限が必要になる。したがって、
-想定する環境は、ユーザーがroot権限を所持しているサーバーや、自前のデスクトップマシンといった環境である。
-別途サーバー管理者が存在し、root権限を取得できない場合等は、必要な環境条件が整っているか問い合わせること。
+Linuxをインストール後、各種プログラムのインストールはコマンドライン端末にて行う。
+本書で説明するライブラリ環境のインストールでは、root権限が必要になる。
+したがって、想定する環境は、ユーザーがroot権限を所持しているかサーバやデスクトップマシンである。
+別途サーバー管理者が存在し、root権限を取得できない場合等は、必要な環境条件が整っているか
+サーバー管理者に問い合わせること。
 
-また本節では、HDF5, NetCDF, MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
+本節では、HDF5, NetCDF, MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
 GNU compiler以外のIntel compilerなどを利用する場合は、各自でインストール方法を調べてインストールすること。\\
 
 \noindent ここでインストールするコンパイラおよびライブラリ環境は、主に下記の4点である。
@@ -40,7 +41,7 @@ GNU compiler以外のIntel compilerなどを利用する場合は、各自でイ
 \end{itemize}
 
 
-\section{インストール方法 (Linux - CentOS 6.6 編)} \label{chap:install_centos}
+\section{インストール方法 (Linux - CentOS 6.6-6.8 編)} \label{chap:install_centos}
 %==========================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -128,7 +129,6 @@ rpm\_check\_debug を実行しています\\
  # yum install hdf5-devel hdf5-static
  # yum install netcdf-devel netcdf-static
  # yum install openmpi-devel
- # yum install lapack lapack-devel
  # yum install wgrib wgrib2
 \end{verbatim}
 
@@ -197,7 +197,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 %\end{verbatim}
 
 
-\section{インストール方法 (Linux - CentOS 7.1 編)} \label{chap:install_centos71}
+\section{インストール方法 (Linux - CentOS 7.1-7.2 編)} \label{chap:install_centos71}
 %==========================================================================================
 
 以下の説明で使用した環境は次のとおりである。

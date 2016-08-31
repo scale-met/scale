@@ -10,7 +10,7 @@
 この機能を使えば、図\ref{fig_topocopy}に示すように、子領域の緩和領域は
 完全に親領域の地形と一致させることができる。
 さらに、地形の解像度を内側にいくに従って徐々に高めていくため、
-緩和領域の内側に地形遷移領域を設定し、そこでは親領域と子領域の地形をある割合で重み付けした値を与える。
+緩和領域の内側に地形遷移領域を設定し、そこでは親領域と子領域の地形を重み付けした値を与える。
 地形遷移領域の幅は、デフォルト設定では緩和領域と同じ幅である。
 さらに内側の内部領域では完全に子領域自身の解像度に応じた地形を与える。
 実験セット一式準備ツール(第\ref{sec:basic_makeconf}節) を利用する場合には
@@ -32,7 +32,7 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 最外の水色の格子(\texttt{HALO}領域。格子数は水平差分スキームによって異なる。)は側面境界で、それより内側の赤色の線で
 囲われた領域が計算領域である。緑色の部分は緩和領域、桃色の部分は地形遷移領域、
 そして最内の白色の部分が子領域の地形をもつ領域である。
-地形遷移領域では外側から内側にかけて徐々に親領域の地形データから子領域の地形データへ遷移する。}
+地形遷移領域(桃色)では外側から内側にかけて徐々に親領域の地形データから子領域の地形データへ遷移する。}
   \label{fig_topocopy}
 \end{center}
 \end{figure}
@@ -89,19 +89,22 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \noindent 
 地形コピーを用いるには、\namelist{PARAM_CNVTOPO}の\nmitem{CNVTOPO_copy_parent}に\verb|.true.|を設定する。
 \nmitem{COPYTOPO_ENTIRE_REGION}は、全領域でコピーするかどうかを決定するオプションである。
-このスイッチを\verb|.true.|にすると、図\ref{fig_topocopy}に示されたすべての領域で親領域の地形が完全にコピーされる。
-3つ目の\nmitem{COPYTOPO_LINEAR_H}は地形遷移領域の遷移具合を調整するスイッチである。
+このスイッチを\verb|.true.|にすると、図\ref{fig_topocopy}に示されたすべての領域で親領域の地形が完全にコピーされる。\\
+\nmitem{COPYTOPO_LINEAR_H}は地形遷移領域の遷移具合を調整するスイッチである。
 \nmitem{COPYTOPO_LINEAR_H}が\verb|.true.|だと、親領域の地形と子領域の地形の混合割合が
 線形的に変化するのに対し、\verb|.false.|だと指数関数的に変化する。
 緩和領域の設定と同じ要領で、\nmitem{COPYTOPO_TRANSITION_DX}、\\
 \nmitem{COPYTOPO_TRANSITION_DY}、
 及び、\nmitem{COPYTOPO_TRANSFACT}により任意の幅に設定することができる。
 
+~\\
+\proofcomment{red}{(足立)最後の行の説明がよくわからない。}
+~\\
 
-地形コピー機能では、オフライン・ネスティング実験の
-フレームワークを利用するため、\namelist{PARAM_NEST}の全ての項目を追記する必要がある。
-設定変数の詳しい説明は、\ref{subsec:nest_offline}節の
-オフライン・ネスティング実験の説明を参照してほしい。
+%地形コピー機能では、オフライン・ネスティング実験の
+%フレームワークを利用するため、\namelist{PARAM_NEST}の全ての項目を追記する必要がある。
+%設定変数の詳しい説明は、\ref{subsec:nest_offline}節の
+%オフライン・ネスティング実験の説明を参照してほしい。
 
 
 \subsubsection{地形の作成}
@@ -110,11 +113,10 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 子領域は親領域の地形データ作成時に出力されるカタログデータを必要とするため、
 地形データの作成は、親領域から順番に実行する。
 3つ以上の領域がある場合も、手続きは同様である。
-下記の例で、\verb|[PRCnum]|はそれぞれの計算で必要なMPIプロセス数を示す。
 
 \begin{verbatim}
- $ mpirun -n [PRCnum] ./scale-rm_pp pp.d01.conf
- $ mpirun -n [PRCnum] ./scale-rm_pp pp.d02.conf
- $ mpirun -n [PRCnum] ./scale-rm_pp pp.d03.conf
+ $ mpirun -n [プロセス数] ./scale-rm_pp pp.d01.conf
+ $ mpirun -n [プロセス数] ./scale-rm_pp pp.d02.conf
+ $ mpirun -n [プロセス数] ./scale-rm_pp pp.d03.conf
 \end{verbatim}
 

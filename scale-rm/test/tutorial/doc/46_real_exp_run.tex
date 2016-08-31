@@ -11,43 +11,12 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 設定ファイルが準備されており、
 ドメインの位置や格子点数など、
 チュートリアル用の設定（表\ref{tab:grids}）に合わせて設定されている。
-他に\verb|run.launch.conf|というファイルも作成されているが、ここでは使用しない。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_PRC| \\
-\verb| PRC_NUM_X      = 2,| \\
-\verb| PRC_NUM_Y      = 2,| \\
-\verb| PRC_PERIODIC_X = .false.,| \\
-\verb| PRC_PERIODIC_Y = .false.,| \\
-\verb|/| \\
- \\
-\verb|&PARAM_INDEX| \\
-\verb| KMAX = 36,| \\
-\verb| IMAX = 45,| \\
-\verb| JMAX = 45,| \\
-\verb|/| \\
-\end{tabularx}
-}}}\\
-
-
-{\XDIR} 、{\YDIR}ともに2分割されており、
-総計として4つのMPIプロセスを使用する設定となっている。
-1つのMPIプロセスあたりの格子点数については、
-\nmitem{IMAX = 45}、\nmitem{JMAX = 45}と指定されているため、
-{\XDIR} 、{\YDIR}の総格子点数は、ともに$2 \times 45$ で90である。
-計算ドメインの大きさは、
-\namelist{PARAM_GRID}の\nmitem{DX,DY}はともに20000 m（20 km）
-と指定されているため、
-一辺の長さが90 $\times$ 20 km より、1800 km $\times$ 1800 km の正方形の計算領域
-が設定されていることがわかる。
-
+他に\verb|run.launch.conf|というファイルも作成されているが、ここでは使用しない。
 
 モデル本体の実行には
 事前に作成した地形データや初期値・境界値データを利用する。
 これらのファイルの指定は、
-\verb|run.d01.conf|の下記部分で設定する。\\
+\verb|run.d01.conf|の下記部分で設定している。\\
 
 \noindent {\gt
 \ovalbox{
@@ -85,51 +54,51 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 
 
 \verb|run.d01.conf|の設定の中で時間積分に関する設定は、
-\namelist{PARAM_TIME}の項目にある。\\
+\namelist{PARAM_TIME}の項目にある。
+初期時刻は、\nmitem{TIME_STARTDATE}にUTCで指定する。
+チュートリアルでは2007年7月14日18時UTCに設定している。
+積分時間は\nmitem{TIME_DURATION}で与える。
+積分のための時間ステップは、上記の他、
+それぞれの物理スキーム毎に設定できるようになっている。\\
 
 \noindent {\gt\small
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_TIME| & \\
-\verb| TIME_STARTDATE     = 2007, 7, 14, 18, 0, 0,| &← 時間積分を開始する時刻 \\
-\verb| TIME_STARTMS       = 0.D0,| &\\
-\verb| TIME_DURATION      = 6.0D0,| &← 積分期間 \\
-\verb| TIME_DURATION_UNIT = "HOUR",| &← \verb|TIME_DURATION|の単位\\
-\verb| TIME_DT            = 90.0D0,| &← トレーサー移流計算の時間ステップ\\
-\verb| TIME_DT_UNIT       = "SEC",|  &← \verb|TIME_DT|の単位\\
-\verb| TIME_DT_ATMOS_DYN  = 45.0D0,| &← トレーサー移流計算以外の力学過程の時間ステップ\\
-\verb| TIME_DT_ATMOS_DYN_UNIT = "SEC",| &← \verb|TIME_DT_ATMOS_DYN|の単位\\
+\verb| TIME_STARTDATE         = 2007, 7, 14, 18, 0, 0,| & ← 時間積分を開始する時刻 \\
+\verb| TIME_STARTMS           = 0.D0,  | &\\
+\verb| TIME_DURATION          = 6.0D0, | & ← 積分期間 \\
+\verb| TIME_DURATION_UNIT     = "HOUR",| & ← \verb|TIME_DURATION|の単位\\
+\verb| TIME_DT                = 90.0D0,| & ← トレーサー移流計算の時間ステップ\\
+\verb| TIME_DT_UNIT           = "SEC", | & ← \verb|TIME_DT|の単位\\
+\verb| TIME_DT_ATMOS_DYN      = 45.0D0,| & ← トレーサー移流計算以外の力学過程の時間ステップ\\
+\verb| TIME_DT_ATMOS_DYN_UNIT = "SEC", | & ← \verb|TIME_DT_ATMOS_DYN|の単位\\
  \\
-\verb| ～～中略～～| &\\
+\verb|   ..... 略 .....              | & \\
  \\
 \verb|/| &\\
 \end{tabularx}
 }}\\
-
-\noindent 初期時刻は、\nmitem{TIME_STARTDATE}においてUTCで指定する。
-チュートリアルでは2007年7月14日18時UTCに設定している。
-積分のための時間ステップは、上記の他、
-それぞれの物理スキーム毎に設定できるようになっている。
 
 
 計算結果の出力に関する設定は\nmitem{PARAM_HISTORY}で行う。\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
-\verb|&PARAM_HISTORY| \\
-\verb|   HISTORY_DEFAULT_BASENAME  = "history_d01",| 　← 出力するファイル名\\
-\verb|   HISTORY_DEFAULT_TINTERVAL = 3600.D0,| 　 　 　← 出力時間間隔\\
-\verb|   HISTORY_DEFAULT_TUNIT     = "SEC",| 　 　 　 　 　← 出力時間間隔の単位\\
-\verb|   HISTORY_DEFAULT_TAVERAGE  = .false.,| \\
-\verb|   HISTORY_DEFAULT_DATATYPE  = "REAL4",| \\
-\verb|   HISTORY_DEFAULT_ZINTERP   = .false.,| 　← 出力時に高さ面へ内挿するかどうか\\
-\verb|   HISTORY_OUTPUT_STEP0      = .true.,| 　← 初期時刻(t=0)の値を出力するかどうか\\
+\begin{tabularx}{140mm}{ll}
+\verb|&PARAM_HISTORY| & \\
+\verb|   HISTORY_DEFAULT_BASENAME  = "history_d01",| & ← 出力するファイル名\\
+\verb|   HISTORY_DEFAULT_TINTERVAL = 3600.D0,      | & ← 出力時間間隔\\
+\verb|   HISTORY_DEFAULT_TUNIT     = "SEC",        | & ← 出力時間間隔の単位\\
+\verb|   HISTORY_DEFAULT_TAVERAGE  = .false.,      | & \\
+\verb|   HISTORY_DEFAULT_DATATYPE  = "REAL4",      | & \\
+\verb|   HISTORY_DEFAULT_ZINTERP   = .false.,      | & ← 出力時に高さ面へ内挿するかどうか\\
+\verb|   HISTORY_OUTPUT_STEP0      = .true.,       | & ← 初期時刻(t=0)の値を出力するかどうか\\
 \verb|/| \\
 \end{tabularx}
 }}\\
 
-\noindent 上記の設定に従って、下記の\nmitem{HISTITEM}に列挙された変数が出力される。
+上記の設定に従って、下記の\nmitem{HISTITEM}に列挙された変数が出力される。
 \nmitem{HISTITEM}ではオプション変数を加えることで、変数毎に、出力間隔を変更したり、
 平均値を出力したりすることも可能である。
 これらの説明は\ref{sec:output}を参照されたい。\\
@@ -137,33 +106,36 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \noindent {{\gt
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&HISTITEM item="MSLP" /| 　   　    　   & 海面更正気圧 \\
-\verb|&HISTITEM item="PREC" /| 　   　    　   & 降水強度 (2次元) \\
-\verb|&HISTITEM item="OLR"  /| 　    　        & 外向き赤外放射(2次元) \\
-\verb|&HISTITEM item="U10" / |　     　        & 地表10mでのX方向水平速度成分(2次元) \\
-\verb|&HISTITEM item="V10" / |　     　        & 地表10mでのY方向水平速度成分(2次元) \\
-\verb|&HISTITEM item="T2"  / |　     　  　   　& 地表2mでの温度　(2次元) \\
-\verb|&HISTITEM item="Q2"  / |　     　  　   　&  地表2mでの水蒸気混合比 (2次元) \\
-\verb|&HISTITEM item="SFC_PRES"   /| 　     　　& 地表気圧 (2次元) \\
-\verb|&HISTITEM item="SFC_TEMP"   /| 　   　　　& バルクの地表面温度 (2次元) \\
-\verb|&HISTITEM item="DENS" /| 　  　        　& 密度 (3次元) \\
-\verb|&HISTITEM item="QV"   /| 　  　    　    & 水蒸気の混合比 (3次元) \\
-\verb|&HISTITEM item="QHYD" /| 　  　        　& 凝結水物質の混合比　(3次元) \\
-\verb|&HISTITEM item="PRES" /| 　  　        　& 圧力 (3次元) \\
-\verb|&HISTITEM item="U"    /| 　  　      　  & X方向水平速度成分 (3次元) \\
-\verb|&HISTITEM item="V"    /| 　  　      　  & Y方向水平速度成分 (3次元) \\
-\verb|&HISTITEM item="T"    /| 　  　     　   & 温度 (3次元) \\
-\verb|&HISTITEM item="W"    /| 　  　      　  & 鉛直方向速度成分 (3次元) \\
-\verb|&HISTITEM item="Uabs" /| 　  　      　  & 風速 (3次元) \\
-\verb|&HISTITEM item="PT"   /| 　  　   　     & 温位 (3次元) \\
-\verb|&HISTITEM item="RH"   /| 　   　   　    & 相対湿度 (3次元) \\
+\verb|&HISTITEM item="MSLP" /| 　   　  & 海面更正気圧 \\
+\verb|&HISTITEM item="PREC" /| 　   　  & 降水強度 (2次元) \\
+\verb|&HISTITEM item="OLR"  /| 　    　 & 外向き赤外放射(2次元) \\
+\verb|&HISTITEM item="U10" / |　     　 & 地表10mでのX方向水平速度成分(2次元) \\
+\verb|&HISTITEM item="V10" / |　     　 & 地表10mでのY方向水平速度成分(2次元) \\
+\verb|&HISTITEM item="T2"  / |　     　 & 地表2mでの温度　(2次元) \\
+\verb|&HISTITEM item="Q2"  / |　     　 &  地表2mでの水蒸気混合比 (2次元) \\
+\verb|&HISTITEM item="SFC_PRES"   /| 　 & 地表気圧 (2次元) \\
+\verb|&HISTITEM item="SFC_TEMP"   /| 　 & バルクの地表面温度 (2次元) \\
+\verb|&HISTITEM item="DENS" /| 　  　   & 密度 (3次元) \\
+\verb|&HISTITEM item="QV"   /| 　  　   & 水蒸気の混合比 (3次元) \\
+\verb|&HISTITEM item="QHYD" /| 　  　   & 凝結水物質の混合比　(3次元) \\
+\verb|&HISTITEM item="PRES" /| 　  　   & 圧力 (3次元) \\
+\verb|&HISTITEM item="U"    /| 　  　   & X方向水平速度成分 (3次元) \\
+\verb|&HISTITEM item="V"    /| 　  　   & Y方向水平速度成分 (3次元) \\
+\verb|&HISTITEM item="T"    /| 　  　   & 温度 (3次元) \\
+\verb|&HISTITEM item="W"    /| 　  　   & 鉛直方向速度成分 (3次元) \\
+\verb|&HISTITEM item="Uabs" /| 　  　   & 風速 (3次元) \\
+\verb|&HISTITEM item="PT"   /| 　  　   & 温位 (3次元) \\
+\verb|&HISTITEM item="RH"   /| 　   　  & 相対湿度 (3次元) \\
 \end{tabularx}
 }}}\\
 
-\noindent その他に実験で使用される物理過程の設定は、
+\noindent その他、実験で使用されるスキームの設定として、
+力学過程の設定は、
+\namelist{&PARAM_ATMOS_DYN}
+物理過程の設定は、
 \namelist{PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}に
 記述されている。
-詳細な設定ファイルの内容については、付録\ref{achap:namelist}を参照されたい。
+詳細な内容については、第\ref{sec:atmos_dyn}節,\ref{sec:basic_usel_physics}節を参照されたい。
 
 %
 \subsubsection{シミュレーションの実行}
@@ -171,11 +143,13 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 実行に必要なファイルとして、下記が用意されている。
 \begin{alltt}
  $ ls
-    MIPAS\ PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc  : 放射スキーム用のパラメータファイル
+    MIPAS\ PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc
+                                  : 放射スキーム用のパラメータファイル
     run.d01.conf      : 設定ファイル
     param.bucket.conf : 陸面スキーム用のパラメータファイル
     scale-rm          : \scalerm 実行バイナリ
-    run.launch.conf   : ネスティング計算用のlaunchファイル（チュートリアルでは使用しない）
+    run.launch.conf   : ネスティング計算用のlaunchファイル
+                       （チュートリアルでは使用しない）
 \end{alltt}
 %
 準備が整ったら、4-MPI並列により\scalerm を実行する。
@@ -187,9 +161,18 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 実行にはある程度時間を要するため、
 上記のように標準出力をファイルへ書き出すようにして
 バックグラウンドで実行すると便利である。
-計算が開始されれば，処理内容のログとして、
-\verb|"LOG_d01.pe000000"|が生成される。
-さらに、ジョブが正常に終了すると、
+計算が開始されれば，処理内容のログとして、\verb|"LOG_d01.pe000000"|が生成される。
+さらに、ジョブが正常に終了すると、\verb|"LOG_d01.pe000000"|に\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+ ++++++ Finalize MPI...\\
+ ++++++ MPI is peacefully finalized\\
+\end{tabularx}
+}}}\\
+
+\noindent と出力され、下記のファイルが作成される。
 \begin{verbatim}
  $ ls
   history_d01.pe000000.nc
@@ -197,10 +180,14 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
   history_d01.pe000002.nc
   history_d01.pe000003.nc
 \end{verbatim}
-が作成される。
-\verb|history_d01.pe######.nc|は
-\nmitem{HISTITEM}に指定した出力変数が書き出される。
+それぞれ、おおよそ23MBのファイルサイズとなる。
+モデルの出力ファイル(\verb|history_d01.pe######.nc|)は、
+MPIプロセス毎に計算領域が分割されて、
+\nmitem{HISTITEM}で指定した出力変数が出力される。
 \verb|######|はMPIプロセス番号を表している。
+ファイルフォーマットは、
+気候・予報(CF)メタデータ規約に対応したNetCDF4形式である。
+
 
 
 %####################################################################################

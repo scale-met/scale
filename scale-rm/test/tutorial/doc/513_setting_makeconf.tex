@@ -1,10 +1,11 @@
 \section{\SecMakeconfTool} \label{sec:basic_makeconf}
 %------------------------------------------------------
 
-現在、実験のための設定ファイル\verb|**.conf|は\verb|pp, init, run|用に
+現在、実験のための設定ファイル\verb|***.conf|は\verb|pp, init, run|用に
 それぞれ用意することになっているが、本章で説明した通り、
 3つの設定ファイルで共通するネームリストが、不一致である場合モデルが動かない。
 設定ミスを防ぎ、簡易に設定ファイルを用意するためのサポートツールが
+下記に用意されている。
 \begin{alltt}
  $ cd ${Tutorial_DIR}/real/
  $ ls
@@ -12,11 +13,22 @@
     README   : 実験セット一式作成ツールに関するREADME
     USER.sh  : 実験設定の指定
     config/  : 実験セット一式作成つーつのためのファイル(ユーザーは基本書き換えない)
+    sample   : USER.sh のサンプルスクリプト
 \end{alltt}
-に用意されている。
 これは、初期設定として現実大気実験のチュートリアルに合わせた設定となっているが、
 ユーザーが任意の設定に変更することが可能な仕組みとなっている。
 本章で説明した箇所の多くを\verb|USER.sh|で設定できるようになっている。
+
+また、\verb|sample/| 以下に、いくつかの実験設定を想定した
+サンプルスクリプトが用意されている。
+必要に応じて、\verb|USER.sh|にコピーの上、使用していただきたい。
+\begin{alltt}
+ $ ls sample/
+   USER.default.sh                 : USER.shと同じ。チュートリアル実大気実験用。(シングルドメイン用)
+   USER.offline-nesting-child.sh   : オフラインネスティングの子領域用。
+   USER.offline-nesting-parent.sh  : オフラインネスティングの親領域用。
+   USER.online-nesting.sh          : オンラインネスティング用。
+\end{alltt}
 
 
 \subsubsection{ツールの使い方}
@@ -41,14 +53,9 @@
 
 \subsubsection{\texttt{USER.sh}の編集}
 
-まず、ドメインの数を指定する。\verb|NUM_DOMAIN|が1であればネストなし、
-2以上であればオンラインネスティングの設定で複数ドメイン用の設定ファイル(\verb|**.conf|)と
-ランチャーファイル(\verb|**.launch.conf|)が用意される。
-オフラインネスティングには対応していない。
-\begin{verbatim}
-  NUM_DOMAIN=1 # set number of domains
-\end{verbatim}
-
+まず、サンプルプログラムの中、最も想定する実験設定に近いスクリプトを
+\verb|USER.sh| に上書きコピーする。
+スクリプトの中を見ると、まず、ドメインの数を指定する\verb|NUM_DOMAIN|がある。
 その下には、設定ファイルのネームリストで設定する項目が並んでいるので、
 それぞれの項目の設定を書き込んでいけば良い。
 \verb|"# required parameters for each domain"| というコメントがあるところには

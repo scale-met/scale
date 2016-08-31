@@ -13,7 +13,7 @@
 ** MSLP
 **
 'set parea 1 9 1 7.5'
-'open MSLP_d01z-2d_lcc.ctl'
+'open MSLP_d01z-2d_lccr.ctl'
 'set grads off'
 'set t 7'
 'set clevs 98000 98500 99000 99500 100000 100500 101000'
@@ -27,7 +27,7 @@
 ** PREC
 **
 'set parea 1 9 1 7.5'
-'open PREC_d01z-2d_lcc.ctl'
+'open PREC_d01z-2d_lccr.ctl'
 'set grads off'
 'set t 7'
 'set clevs 0 5 10 15 20 25 30 35 40'
@@ -41,8 +41,8 @@
 ** WIND
 **
 'set parea 1 9 1 7.5'
-'open U_d01z-3d_lcc.ctl'
-'open V_d01z-3d_lcc.ctl'
+'open U_d01z-3d_lccr.ctl'
+'open V_d01z-3d_lccr.ctl'
 'set grads off'
 ***'set lev 500'
 'set lev 850'

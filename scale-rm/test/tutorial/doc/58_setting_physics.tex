@@ -3,17 +3,17 @@
 
 \subsection{\SubsecMicrophysicsSetting} \label{subsec:basic_usel_microphys}
 %------------------------------------------------------
-雲微物理スキームの選択は、init.confとrun.conf中の
-\namelist{PARAM_TRACER}の中の\nmitem{TRACER_TYPE}、
-及び、\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。
+雲微物理スキームの選択は、\verb|init.conf|と\verb|run.conf|のうち、
+\namelist{PARAM_TRACER}の\nmitem{TRACER_TYPE}、
+及び、\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。\\
 このとき{\color{red}{\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}は普通は同じものを設定し}}
-、かつ、\textcolor{red}{init.conf，run.confで同一の設定}とする必要がある。
-ただし、\nmitem{ATMOS_PHY_MP_TYPE}を\verb|OFF|とするときは、\nmitem{TRACER_TYPE}は何を設定してもよいが、乾燥大気の計算をする場合は\verb|TRACER_TYPE = DRY|とするのがよい。
+、かつ、\textcolor{red}{\texttt{init.conf}、\texttt{run.conf}で同一の設定}とする必要がある。
+ただし、\nmitem{ATMOS_PHY_MP_TYPE}を\verb|OFF|とするときは、
+\nmitem{TRACER_TYPE}は何を設定してもよいが、乾燥大気の計算をする場合は\verb|TRACER_TYPE = "DRY"|とするのがよい。
 雲微物理スキームを呼び出すタイミングは、
 \namelist{PARAM_TIME}で設定するが、これについては
 第\ref{sec:timeintiv}節を参照のこと。
-以下に、氷雲を含む1-momentバルク法を用いるときの設定を示す。
-
+以下に、氷雲を含む1-momentバルク法を用いるときの設定を示す。\\
 
 \noindent {\gt
 \ovalbox{
@@ -44,11 +44,45 @@
 \end{center}
 \end{table}
 
+\begin{enumerate}
+\item {\bf 氷を含まない1モーメントバルク法\cite{kessler_1969}}\\
+1モーメントバルク法は粒径分布関数を３次のモーメント（質量）のみで表現する。
+このスキームでは雲粒と雨粒のカテゴリを考慮し、
+雲粒混合比（QC[kg/kg]）と雨粒混合比（QR[kg/kg]）を予報する。\\
+粒径分布はデルタ関数、すなわち雲粒のサイズは全て同じと仮定することでで表現する。
+雲粒と雨粒の半径はそれぞれ8µm、100µmと与えられている。\\
+考慮する雲粒の成長過程は、雲粒生成（飽和調整）、凝結・蒸発、衝突併合、落下である。
+\item {\bf 氷を含む1モーメントバルク法\cite{tomita_2008}}\\
+このスキームでは\cite{kessler_1969}と同じく、粒径分布関数を３次のモーメント（質量）のみで表現する。
+雲粒、雨粒、氷粒、雪片、あられの５カテゴリを考慮し、
+それぞれの質量混合比（QC、QR、QI、QS、QG[kg/kg]）を予報する。\\
+粒径分布については雲粒と氷粒をデルタ分布（それぞれ半径8µm、40µm）、
+その他はMarshall-Palmer分布を仮定して表現する。\\
+考慮する成長過程は雲粒生成（飽和調整）、凝結・蒸発、衝突併合、落下である。
+\item {\bf 氷を含む2モーメントバルク法\cite{sn_2014}}\\
+氷を含む2モーメントバルク法は粒径分布関数を質量に加えて、０次のモーメント（個数）で表現する。
+雲粒、雨粒、氷粒、雪片、あられの５カテゴリを考慮し、
+それぞれの質量混合比（QC、QR、QI、QS、QG）と数密度（NC、NR、NI、NS、NG）を予報する。\\
+粒径分布は一般ガンマ関数で近似して表現する。\\
+考慮する成長過程は雲粒生成、凝結・蒸発、衝突併合、分裂、落下である。
+\item {\bf 1モーメントビン法\cite{suzuki_etal_2010}}\\
+1モーメントビン法は粒径分布関数を差分化して陽に表現する。
+差分化された各粒径分布関数をビンと呼ぶためビン法と呼ばれる。
+雲粒、雨粒、氷粒、雪片、あられ、ひょうの６カテゴリを考慮し、
+各粒径ビンの質量混合比を予報する。\\
+粒径分布は陽に与えられ、ビン数のとりかたによって分布の表現精度が異なる。\\
+考慮する成長過程は雲粒生成、凝結・蒸発、衝突併合、落下である。
+\end{enumerate}
+
+上記の４種類の雲微物理は１から４の順に高精度になるが、
+その分計算コストも高くなる。\\
+
+
 \verb|SUZUKI10|以外を選択する場合は、
-init.conf、run.confの\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}を
+\verb|init.conf|、\verb|run.conf|の\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}を
 変更するだけで実行可能であるが、
-{\color{red}\verb|SUZUKI10|を選択する場合}は、以下のように
-init.conf、run.confの双方に
+{\color{red}\texttt{SUZUKI10}を選択する場合}は、以下のように
+\verb|init.conf|、\verb|run.conf|の双方に
 下記を追加する必要がある。\\
 
 \noindent {\gt
@@ -62,13 +96,13 @@ init.conf、run.confの双方に
 }}\\
 
 この場合も、
-{\color{red}{init.confとrun.confに記載される\verb|PARAM_BIN|は同一にする必要がある}}。
+{\color{red}{\texttt{init.conf}、\texttt{run.conf}に記載される\verb|PARAM_BIN|は同一にする必要がある}}。
 \verb|SUZUKI10|を選択した時には、micpara.datという
 雲微物理の計算に必要なファイルが自動生成される。
 micpara.datがすでに存在する場合はあるものを利用するが、
 nbinが変わると新たに作成しなければならない。
 micpara.datの１行目にnbinの情報が記載されているが、
-もしrun.confに記載されるnbinと
+もし\verb|run.conf|に記載されるnbinと
 micpara.datに記載されているnbinが異なれば、\\
 
 \noindent {\gt
@@ -81,7 +115,7 @@ micpara.datに記載されているnbinが異なれば、\\
 \noindent というエラーメッセージを標準出力に出力して計算を行わず終了するようになっている。
 そのため、nbinを変更した際は、micpara.datを消去して
 新たに作り直す必要がある
-(micpara.datを消して再度\scalerm をSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される)。
+(micpara.datを消して再度\scalerm を\verb|SUZUKI10|を用いて実行すれば自動的に新しいmicpara.datが生成される)。
 
 
 
@@ -172,9 +206,9 @@ micpara.datに記載されているnbinが異なれば、\\
 }}}\\
 
 \namelist{PARAM_MAPPROJ}の\nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat}が設定されている場合には、
-\nmitem{ATMOS_SOLARINS_lon,ATMOS_SOLARINS_lat}は、\\
-\nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat}がそれぞれ与えられる。\\
-
+\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat}には、\\
+\nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}がそれぞれ与えられる。
+\namelist{PARAM_MAPPROJ}の説明は、第\ref{subsec:adv_mapproj}節参照。\\
 
 
 実験設定によっては、モデルトップの高度が10-20 kmと低いことがしばしばある。
@@ -374,6 +408,7 @@ run.conf中の\namelist{PARAM_ROUGHNESS}の\nmitem{ROUGHNESS_TYPE}で以下の�
 \end{center}
 \end{table}
 
+~\\
 また、フラックス計算に使用するバルク交換係数の計算スキームは
 run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のように設定する。\\
 

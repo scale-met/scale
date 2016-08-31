@@ -3,19 +3,20 @@
 %-------------------------------------------------------%
 
 現実大気実験のシミュレーションを行う場合、\scalerm 本体に与える
-境界値データが必要になる。境界値データとしては表\ref{tab:real_bnd}
-が必要である。{\color{blue}青字}は必須の変数、その他は任意である。
+境界値データが必要になる。境界値作成のための外部入力データとして
+表\ref{tab:real_bnd}のデータが必要である。
+{\color{blue}青字}は必須の変数、その他は任意である。
 
 \begin{table}[h]
 \begin{center}
-  \caption{現実大気実験に必要な初期値境界値データ}
+  \caption{現実大気実験に必要な外部入力データ}
   \label{tab:real_bnd}
   \begin{tabularx}{150mm}{llX} \hline
-    \multicolumn{3}{l}{地形データ(\scalerm の地形を用意する)}\\ \hline
+    \multicolumn{3}{l}{\scalerm の地形と土地利用を作成するための元データ}\\ \hline
     & \multicolumn{2}{l}{\color{blue}{標高データ}}\\
     & \multicolumn{2}{l}{\color{blue}{土地利用区分データ}}\\ \hline
-    \multicolumn{3}{l}{初期値境界値データ}\\ \hline
-    &  \multicolumn{2}{l}{\color{blue}{親モデルの緯度・経度}}\\
+    \multicolumn{3}{l}{\scalerm の初期値境界値を作成するための外部入力データ(一般的にはGCMデータ)}\\ \hline
+    &  \multicolumn{2}{l}{\color{blue}{親モデルの緯度・経度情報}}\\
     &  \multicolumn{2}{l}{(3次元大気データ)}\\
     & &  \multicolumn{1}{l}{\color{blue}{東西風速、南北風速、気温、比湿(相対湿度)、気圧、ジオポテンシャル高度}} \\
     &  \multicolumn{2}{l}{(2次元大気データ)}\\
@@ -30,8 +31,9 @@
 \end{center}
 \end{table}
 
-\proofcomment{(八代)表4.2は変換に必要な外部データのリストですか？それとも変換後の入力データのリストですか？} \\
-\proofcomment{(八代)\scalerm の地形という言葉が曖昧です。}
+\proofcomment{(八代) 表4.2は変換に必要な外部データのリストですか？それとも変換後の入力データのリストですか？} \\
+\proofcomment{(八代) \scalerm の地形という言葉が曖昧です。}\\
+\replycomment{(足立) 外部入力データの話です。。修正しました！}
 
 
 \subsubsection{標高データと土地利用区分データ}
@@ -49,29 +51,31 @@
 \scalerm 用の標高・土地利用区分のデータを\\
  \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}\\
 より入手し、任意のディレクトリに展開しておく。
-\begin{alltt}
-  $ tar -zxvf scale_database.tar.gz
-\end{alltt}
 展開したディレクトリには、標高データと土地利用区分データが格納されている。
 \begin{alltt}
-  scale_database/topo/    <- 標高データ
-  scale_database/landuse/ <- 土地利用区分データ
+  $ tar -zxvf scale_database.tar.gz
+  $ ls 
+    scale_database/topo/    <- 標高データ
+    scale_database/landuse/ <- 土地利用区分データ
 \end{alltt}
 
 \item パスの設定\\
-makeを用いたジョブスクリプト生成を利用するためには、
-展開先のディレクトリを \verb|SCALE_DB| という環境変数に設定しておくことが必須である
-(以後、\verb|${SCALE_DB}|と表記)。
-データベースがあるディレクトリを
-\begin{alltt}
+現実大気実験の実験に必要なファイル一式の準備には、
+makeを用いた「実験セット一式作成ツール」を用いる。
+このツールを利用するためには、
+標高・土地利用区分データの\verb|tar|ファイルの展開先ディレクトリを、
+\verb|SCALE_DB| という環境変数に設定しておくことが必須である (以後、\verb|${SCALE_DB}|と表記)。
+\begin{verbatim}
   $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
-\end{alltt}
+\end{verbatim}
 ここで、\verb|${path_to_directory_of_scale_database}|は、
 データベースがあるディレクトリである。
 \end{enumerate}
 
+
+
 \subsubsection{大気・陸面・海面水温データ}
-初期値境界値データは4byteバイナリー(\grads 形式、以降''binary形式''と表記する)に変換すれば、
+初期値境界値データは4byteバイナリー(\grads 形式、以降``binary形式''と表記する)に変換すれば、
 任意のデータを読み込むことが可能である。
 基本的に、バイナリーデータはユーザー自身が用意する。
 チュートリアルではNCEP FNL(Final) Operational Global Analysis data を使用する方法を示す。
@@ -83,22 +87,20 @@ NCARのサイト
 \url{http://rda.ucar.edu/datasets/ds083.2/}\\
 から、2007年7月14日18時から一日分のgrib1フォーマットのデータ
 \begin{alltt}
- fnl_20070714_18_00.grib1
- fnl_20070715_00_00.grib1
- fnl_20070815_06_00.grib1
- fnl_20070815_12_00.grib1
+  fnl_20070714_18_00.grib1
+  fnl_20070715_00_00.grib1
+  fnl_20070815_06_00.grib1
+  fnl_20070815_12_00.grib1
 \end{alltt}
-を\texttt{scale-{\version}/scale-rm/test/tutorial/real/tools/}の下にダウンロードする。
+を\verb|${Tutorial_DIR}/real/tools/|の下にダウンロードする。
 
 \item データフォーマットをgrib形式からbinary形式に変換\\
- \texttt{scale-{\version}/scale-rm/test/tutorial/real/tools/} の中にある\\
- \verb|convert_grib2grads_FNLgrib1.sh|を実行。
+ \verb|${Tutorial_DIR}/real/tools/| にある\verb|convert_grib2grads_FNLgrib1.sh|を実行。
 
-
-\begin{alltt}
+\begin{verbatim}
  $ cd ${Tutorial_DIR}/real/tools/
  $ sh convert_grib2grads_FNLgrib1.sh
-\end{alltt}
+\end{verbatim}
 成功すれば、下記のファイルが作成される。
 \begin{alltt}
  $ ls FNL_output/*/*

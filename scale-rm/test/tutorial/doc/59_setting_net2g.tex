@@ -36,14 +36,13 @@ SCALE-RM実行時に使用したMPIプロセス数の約数でなければなら
 net2gは実行内容のほとんどがデータ入出力であるため、MPIプロセス数を増やしすぎると
 ストレージへの読み込み/書き込み要求が多くなり、
 結果として、効率が下がり実行速度が落ちることもある。
-特に大規模計算結果を手元のマシンで変換する際は注意が必要である。
+特に大規模計算結果を手元のマシンで変換する際は注意が必要である。\\
 
 net2gの実行はMPI並列を用いて、
 \begin{verbatim}
- $ mpirun  -n  [procs]  ./net2g  net2g.conf
+ $ mpirun  -n  [プロセス数]  ./net2g  net2g.conf
 \end{verbatim}
-とする。\verb|[procs]|には任意のMPIプロセス数を指定する。
-最後の\verb|net2g.conf|はnet2gの実行設定が
+とする。最後の\verb|net2g.conf|はnet2gの実行設定が
 記述された設定ファイルである。
 一方、シングルプロセス版としてコンパイルした場合はMPIコマンドを使わずに、
 \begin{verbatim}
@@ -79,12 +78,13 @@ net2gの実行はMPI並列を用いて、
 \verb|/| \\
  \\
 \verb|&INFO| \\
-\verb| START_TSTEP = 1,| \\
-\verb| END_TSTEP   = 25,| \\
-\verb| DOMAIN_NUM  = 1,| \\
-\verb| CONFFILE    = "../run/run.d01.conf",| \\
-\verb| IDIR        = "../run",| \\
-\verb| Z_LEV_TYPE  = "plev",| \\
+\verb| TIME_STARTDATE = 2007, 7, 14, 18, 0, 0,|\\
+\verb| START_TSTEP    = 1,| \\
+\verb| END_TSTEP      = 25,| \\
+\verb| DOMAIN_NUM     = 1,| \\
+\verb| CONFFILE       = "../run/run.d01.conf",| \\
+\verb| IDIR           = "../run",| \\
+\verb| Z_LEV_TYPE     = "plev",| \\
 \verb|/| \\
  \\
 \verb|&VARI| \\
@@ -231,7 +231,7 @@ net2gでは、異なる出力時間間隔を同時に取り扱うことはでき
 そのような場合には、手元のマシンへhistoryデータをコピーするだけのディスク容量がなかったり、
 後処理に膨大な時間がかかることがある。
 こういった場合には、
-SCALE-RM本体の計算を行ったスーパーコンピュータ上で後処理も行なってしまうことを
+\scalerm 本体の計算を行ったスーパーコンピュータ上で後処理も行なってしまうことを
 おすすめする。
 
 スーパーコンピュータ「京」では、
@@ -240,6 +240,7 @@ net2gはそのままmakeコマンドでコンパイルできる。
 ジョブの投入・実行方法については、
 スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
 net2gの実行方法や制約、注意点については通常のマシンで実行する場合と何ら変わりない。
+
 
 %% サポート外
 %%

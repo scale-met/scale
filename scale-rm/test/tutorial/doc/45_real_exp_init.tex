@@ -2,7 +2,7 @@
 \section{初期値・境界値データの作成：init} \label{sec:tutrial_real_init}
 %-------------------------------------------------------%
 
-initディレクトリーでは、\scalerm 計算に必要な初期値・境界値データを作成する。
+initディレクトリでは、\scalerm 計算に必要な初期値・境界値データを作成する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/init
  $ ls
@@ -39,7 +39,7 @@ initディレクトリーでは、\scalerm 計算に必要な初期値・境界�
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_MKINIT_REAL_ATMOS| & \\
 \verb| NUMBER_OF_FILES      = 2,|                                   & {\small ← 読み込むファイルの数} \\
 \verb| FILETYPE_ORG         = "GrADS",|                             & {\small ← 表\ref{tab:inputdata_format}に示す設定値を指定} \\
@@ -51,38 +51,35 @@ initディレクトリーでは、\scalerm 計算に必要な初期値・境界�
 \verb|/| \\
 \\
 \verb|&PARAM_MKINIT_REAL_OCEAN| & \\
-\verb| NUMBER_OF_FILES      = 2,|                                   & {\small ← 読み込むファイルの数} \\
-\verb| FILETYPE_ORG         = "GrADS",|                             & {\small ← 表\ref{tab:inputdata_format}に示す設定値を指定} \\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",| & \\
-\verb| INTRP_OCEAN_SFC_TEMP = "mask",|                              & \\
-\verb| INTRP_OCEAN_TEMP     = "mask",|                              & \\
+\verb|   ..... 略 .....              |  & \\
+\verb| INTRP_OCEAN_SFC_TEMP = "mask",|                              & {\small ← SSTの欠測値処理方法} \\
+\verb| INTRP_OCEAN_TEMP     = "mask",|                              & {\small ← SSTの欠測値処理方法} \\
 \verb|/| \\
 \\
 \verb|&PARAM_MKINIT_REAL_LAND| & \\
-\verb| NUMBER_OF_FILES      = 2,|                                   & {\small ← 読み込むファイルの数} \\
-\verb| FILETYPE_ORG         = "GrADS",|                             & {\small ← 表\ref{tab:inputdata_format}に示す設定値を指定} \\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",| & \\
+\verb|   ..... 略 .....              | & \\
 \verb| USE_FILE_LANDWATER   = .true.,|                              & {\small ← 親モデルの土壌水分データを使うか} \\
-\verb| INTRP_LAND_TEMP      = "mask",|                              & {\small ← 入力データの時間間隔} \\
-\verb| INTRP_LAND_WATER     = "fill",|                              & \\
-\verb| INTRP_LAND_SFC_TEMP  = "fill",|                              & {\small ← 親モデルの欠測値処理方法} \\
+\verb| INTRP_LAND_TEMP      = "mask",|                              & {\small ← 土壌温度の欠測値処理方法} \\
+\verb| INTRP_LAND_WATER     = "fill",|                              & {\small ← 土壌水分の欠測値処理方法} \\
+\verb| INTRP_LAND_SFC_TEMP  = "fill",|                              & {\small ← 地表面温度の欠測値処理方法} \\
 \verb|/| \\
 \end{tabularx}
 }}\\
 
 \noindent \nmitem{FILETYPE_ORG}は入力する気象場データのファイルフォーマットに
 関するパラメータを設定しており、ここでは
-{\grads}形式のデータを読み込むことを指定している。
-詳細な設定ファイルの内容については、付録\ref{achap:namelist}を参照されたい。
+{\grads}形式のデータを読み込むため``\verb|grads|''と指定している。
+詳細な設定ファイルの内容については、第\ref{sec:adv_datainput}節を参照されたい。
 
 
-第\ref{sec:tutrial_real_data}節で作成した入力データに、
-\verb|${Tutorial_DIR}/real/data|ディレクトリに準備されている\verb|"gradsinput-link_FNL.sh"|を用いてリンクをはる。
+第\ref{sec:tutrial_real_data}節用意した、バイナリー形式に変換した入力データ(FNL)を
+作業ディレクトリにリンクを張る。リンクをはるためのスクリプトが、
+\verb|${Tutorial_DIR}/real/data|の\verb|"gradsinput-link_FNL.sh"|に用意されている。
 \begin{verbatim}
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh
 \end{verbatim}
-下記の{\grads}形式のファイルにリンクが張れれば成功である。\\
+下記のリンクが作成されていれば成功である。\\
 
 \noindent {\gt
 \fbox{
@@ -103,7 +100,8 @@ initディレクトリーでは、\scalerm 計算に必要な初期値・境界�
 }}\\
 
 
-次に、{\grads}形式のバイナリデータを読み込むためのnamelistファイルをinitディレクトリへリンクする。
+次に、{\grads}形式のバイナリデータをSCALEで読み込むためのnamelistファイルを
+initディレクトリへリンクする。
 \begin{verbatim}
   $ ln -s ../../data/namelist.grads_boundary.FNL.grib1 ./
 \end{verbatim}
@@ -126,9 +124,20 @@ initディレクトリーでは、\scalerm 計算に必要な初期値・境界�
     init_d01_20070714-180000.000.pe000003.nc
     init_LOG_d01.pe000000
 \end{verbatim}
-が作成される。
-\verb|boundary_d01.pe######.nc|は境界値データ、
-\verb|init_d01_20070714-180000.000.pe######.nc|は初期値データ、
+が作成され、\verb|init_LOG_d01.pe000000|の最後に\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+ ++++++ Finalize MPI...\\
+ ++++++ MPI is peacefully finalized\\
+\end{tabularx}
+}}}\\
+
+\noindent
+と出力される。
+\verb|boundary_d01.pe######.nc|は境界値データで約5.8MBのファイルサイズとなり、
+\verb|init_d01_20070714-180000.000.pe######.nc|は初期値データで約3.5MBのファイルサイズとなる。
 \verb|init_LOG_d01.pe000000|はログファイルである。
 \verb|######|はMPIプロセス番号を表している。
 

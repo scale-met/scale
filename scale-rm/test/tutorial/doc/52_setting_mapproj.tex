@@ -4,8 +4,8 @@
 それぞれの投影法を用いた際の各格子点での緯度・経度座標が計算される。
 緯度・経度情報は、すべてのSCALEのNetCDF形式の出力ファイルに含まれる。\\
 計算領域の位置と投影法は、設定ファイルの\nmitem{PARAM_MAPPROJ}の項目を編集することで設定できる。
-\textcolor{red}{\bf この設定も、pp\_***.conf、init\_***.conf、run\_***.confの設定ファイルの間で
-必ず一致させなければならない。}はじめに下記の例をもとに説明する。\\
+この設定も、\textcolor{red}{基本的に\texttt{pp.conf}, \texttt{init.conf}, \texttt{run.conf}の設定ファイル間で一致させなければならない。}
+まずはじめに、下記の例をもとに説明する。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -34,7 +34,7 @@
 \end{table}
 
 \noindent
-まず\nmitem{MPRJ_basepoint_lat, MPRJ_basepoint_lon}は、
+\nmitem{MPRJ_basepoint_lat, MPRJ_basepoint_lon}は、
 それぞれ基準点の緯度・経度を表す。
 デフォルトでは基準点は計算領域の中心である。
 SCALE-RMでは、北緯を正、南緯を負の値として表現し、
@@ -50,17 +50,17 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \nmitem{MPRJ_M_lat}を指定しない場合は\nmitem{MPRJ_basepoint_lat}が基準緯線として用いられる。
 
 投影法の中でも利用頻度が高いランベルト正角円錐図法の設定について以下に説明する。
-ここでは、現実大気実験チュートリアルで使用した\verb|run.conf|ファイルを例に挙げる。\\
+ここでは、現実大気実験チュートリアルで使用した\verb|run.d01.conf|ファイルを例に挙げる。\\
 
 {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_MAPPROJ| \\
-\verb| MPRJ_basepoint_lon = 135.220404D0,| \\
-\verb| MPRJ_basepoint_lat = 34.653396D0,| \\
+\verb| MPRJ_basepoint_lon = 135.220404,| \\
+\verb| MPRJ_basepoint_lat = 34.653396,| \\
 \verb| MPRJ_type          = 'LC',| \\
-\verb| MPRJ_LC_lat1       =  30.00D0,| \\
-\verb| MPRJ_LC_lat2       =  40.00D0,| \\
+\verb| MPRJ_LC_lat1       =  30.0,| \\
+\verb| MPRJ_LC_lat2       =  40.0,| \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
@@ -79,13 +79,13 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_MAPPROJ| \\
-\verb| MPRJ_basepoint_lon = 135.220404D0,| \\
-\verb| MPRJ_basepoint_lat = 34.653396D0,| \\
-\verb| MPRJ_basepoint_x   = 100.0D0,| \\
-\verb| MPRJ_basepoint_y   = 100.0D0,| \\
+\verb| MPRJ_basepoint_lon = 135.220404,| \\
+\verb| MPRJ_basepoint_lat = 34.653396,| \\
+\verb| MPRJ_basepoint_x   = 100.0,| \\
+\verb| MPRJ_basepoint_y   = 100.0,| \\
 \verb| MPRJ_type          = 'LC',| \\
-\verb| MPRJ_LC_lat1       =  30.00D0,| \\
-\verb| MPRJ_LC_lat2       =  40.00D0,| \\
+\verb| MPRJ_LC_lat1       = 30.0,| \\
+\verb| MPRJ_LC_lat2       = 40.0,| \\
 \verb|/| \\
 \end{tabularx}
 }}}\\~\\
@@ -95,9 +95,9 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 計算領域の南西端（左下角）からの距離で指定するパラメータで、値の単位は[m]である。
 これらを指定しない場合、地図投影中心は計算領域中心に設定される。
 地図投影中心を指定しない場合とした場合を比較したものを図\ref{fig:map_lc}に示す。
-図\ref{fig:map_lc}aは、デフォルト設定で地図投影中心と計算領域中心が一致している場合、
-図\ref{fig:map_lc}bは、地図投影中心をずらすよう指定した場合の関係を表している。
-図\ref{fig:map_lc}bでは計算領域の南西端から
+図\ref{fig:map_lc}(a)は、デフォルト設定で地図投影中心と計算領域中心が一致している場合、
+図\ref{fig:map_lc}(b)は、地図投影中心をずらすよう指定した場合の関係を表している。
+図\ref{fig:map_lc}(b)では計算領域の南西端から
 \nmitem{MPRJ_basepoint_x, MPRJ_basepoint_y}で指定した距離だけ離れた位置に投影中心が設定される。
 
 \begin{figure}[t]
