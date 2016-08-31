@@ -316,19 +316,10 @@ MPIプロセス数を変更するには、
 
 緩和領域の大きさ$\verb|BUFFER|_{\verb|X|}$は、
 \[
-  \verb|BUFFER|_{\verb|X|} = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}-1 }}{ \nmitemeq{BUFFFACT}-1 }
+  \verb|BUFFER|_{\verb|X|} = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}}-1}{ \nmitemeq{BUFFFACT}-1 }
 \]
 となる。
 %
 緩和領域の幅\nmitem{BUFFER_DX}が同じでも、
 \nmitem{BUFFFACT}の値を大きくすると緩和領域の格子数は少なくなる。
 
-~\\
-\proofcomment{(足立) すみません、この式、、、}\\
-%\[
-%          BIFFER_X = DX \times BUFFACT + DX \times BUFFACT^2 + ... + DX \times BUFFACT^{ibuff}  \\
-%BIFFER_X / BUFFACT = DX + DX \time BUFFACT + ... + DX \times BUFFACT^{ibuff-1}  \\
-%BIFFER_X (1 - 1/BUFFACT) = DX \times BUFFACT^{ibuff} - DX\\
-%BIFFER_X = DX \times \frac{(BUFFACT^{ibuff} - 1)}{(1- 1/BUFFACT)}\\
-%\]
-~\\

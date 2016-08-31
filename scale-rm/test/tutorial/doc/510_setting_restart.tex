@@ -19,9 +19,9 @@
 \verb|&PARAM_RESTART| & \\
 \verb| RESTART_RUN          = .true.,                                      | & リスタート計算かどうかの指定。\\
                                                                              & 明記されていない場合は\verb|.false.|が設定される。\\
-                                                                             & \verb|.true.|: リスタート計算、\verb|.false.|: 通常計算。  \\
+                                                                             & \verb|.true.|: リスタート計算、\verb|.false.|: 通常計算。\\
                                                                              & \\ 
-\multicolumn{2}{l}{\verb| RESTART_IN_BASENAME  = "restart1_d01_20070715-000000.000",|}\\
+\multicolumn{2}{l}{\verb| RESTART_IN_BASENAME  = "restart1_d01_20070715-000000.000",|} \\
                                                                              & 入力する初期値ファイルの指定。\\
                                                                              & \\ 
 \verb| RESTART_OUTPUT       = .true.,                                      | & リスタートファイルを出力するかどうか。\\
@@ -32,21 +32,22 @@
 \\
 \verb|&PARAM_TIME| & \\
 \verb| TIME_STARTDATE             = 2007, 7, 15, 00, 0, 0,| & リスタート計算開始時刻 \\
-\verb| TIME_STARTMS               = 0.D0,     | & 計算開始時刻[mili sec]\\
-\verb| TIME_DURATION              = 12.0D0,   | & 積分時間[単位はTIME_DURATION_UNIT で設定]\\
-\verb| TIME_DURATION_UNIT         = "HOUR'",  | & TIME_DURATION の単位 \\
-\verb|  .....  略  .....                      | & \\
-\verb| TIME_DT_ATMOS_RESTART      = 21600.D0, | & リスタートファイル(大気)の出力間隔\\
-\verb| TIME_DT_ATMOS_RESTART_UNIT = "SEC",    | & \verb|TIME_DT_ATMOS_RESTART|の単位\\
-\verb| TIME_DT_OCEAN_RESTART      = 21600.D0, | & リスタートファイル(海洋)の出力間隔\\
-\verb| TIME_DT_OCEAN_RESTART_UNIT = "SEC",    | & \verb|TIME_DT_OCEAN_RESTART|の単位\\
-\verb| TIME_DT_LAND_RESTART       = 21600.D0, | & リスタートファイル(陸面)の出力間隔\\
-\verb| TIME_DT_LAND_RESTART_UNIT  = "SEC",    | & \verb|TIME_DT_LAND_RESTART|の単位\\
-\verb| TIME_DT_URBAN_RESTART      = 21600.D0, | & リスタートファイル(都市)の出力間隔\\
-\verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",    | & \verb|TIME_DT_URBAN_RESTART|の単位\\
+\verb| TIME_STARTMS               = 0.D0,                 | & 計算開始時刻[mili sec]\\
+\verb| TIME_DURATION              = 12.0D0,               | & 積分時間[単位は\verb|TIME_DURATION_UNIT|で設定]\\
+\verb| TIME_DURATION_UNIT         = "HOUR",               | & \verb|TIME_DURATION|の単位 \\
+\verb|  .....  略  .....                                  | & \\
+\verb| TIME_DT_ATMOS_RESTART      = 21600.D0,             | & リスタートファイル(大気)の出力間隔\\
+\verb| TIME_DT_ATMOS_RESTART_UNIT = "SEC",                | & \verb|TIME_DT_ATMOS_RESTART|の単位\\
+\verb| TIME_DT_OCEAN_RESTART      = 21600.D0,             | & リスタートファイル(海洋)の出力間隔\\
+\verb| TIME_DT_OCEAN_RESTART_UNIT = "SEC",                | & \verb|TIME_DT_OCEAN_RESTART|の単位\\
+\verb| TIME_DT_LAND_RESTART       = 21600.D0,             | & リスタートファイル(陸面)の出力間隔\\
+\verb| TIME_DT_LAND_RESTART_UNIT  = "SEC",                | & \verb|TIME_DT_LAND_RESTART|の単位\\
+\verb| TIME_DT_URBAN_RESTART      = 21600.D0,             | & リスタートファイル(都市)の出力間隔\\
+\verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",                | & \verb|TIME_DT_URBAN_RESTART|の単位\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
+
 
 上記の例では、\verb|restart1_***|という入力ファイルからリスタート計算を開始し、
 6時間(21600 sec)に1回、リスタートファイルを\verb|restart2_***|という名前で出力する設定となっている。
