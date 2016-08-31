@@ -128,7 +128,6 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 }}}\\
 
 
-\clearpage
 バイナリデータは{\grads}で読み込める形式でユーザーが用意する\\
 (\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})。\\
 データのファイル名とデータ構造を \scalerm に教えるための
@@ -178,6 +177,7 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 
 大気データの格子数を\verb|outer_nx,outer_ny,outer_nz|で指定し、
 土壌データ(STEMP, SMOISVC) の層数を\verb|outer_nl|に指定する。\\
+
 QVやRHのデータは、他の大気データよりも低い層までしか提供されていない場合がある。
 その場合、データがある層の数を\verb|knum|で指定するが、それより上の層の
 QVの値の見積もり方について、２種類の手法が用意されている。
@@ -193,7 +193,8 @@ QVの値の見積もり方について、２種類の手法が用意されてい
 \end{tabularx}
 }}}\\
 
-\newpage
+
+~\\
 \namelist{grdvar}は、各変数のデータの与え方に応じて必要な変数が異なる。\\
 
 {\small
@@ -250,8 +251,8 @@ $\ast$ &\verb|RH|      & 相対湿度 (QVがある場合は省略可) & [\%] & \
 $\ast$ &\verb|SKINT|   & 地表面温度      & [K]      & \verb|map| \\
 $\ast$ &\verb|llev|    & 土壌の深さ情報  & [m]      & \verb|levels| \\
 $\ast$ &\verb|STEMP|   & 土壌温度        & [K]      & \verb|map| \\
-($\ast$) &\verb|SMOISVC| & 土壌水分(体積含水率:vormetric water content) & [] & \verb|map| \\
-($\ast$) &\verb|SMOISDS| & 土壌水分(飽和度:degree of saturation)        & [] & \verb|map| \\
+($\ast$) &\verb|SMOISVC| & 土壌水分(体積含水率)     & [-] & \verb|map| \\
+($\ast$) &\verb|SMOISDS| & 土壌水分(飽和度)         & [-] & \verb|map| \\
 $\ast$ &\verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K] & \verb|map|\\
 \end{tabularx}
 \label{tab:grdvar_item}
@@ -259,9 +260,11 @@ $\ast$ &\verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K] & 
 \end{table}
 }
 
-
+ここで、体積含水率は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)、
+飽和度は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)
+である。
 
 ~\\
-\proofcomment{(八代) 土壌水分の単位は[kg/kg]？総体積に対する値かそれとも空隙体積に対する値か？}
-\replycomment{(足立) 明日最終確認}
+\proofcomment{(八代) 土壌水分の単位は[kg/kg]？総体積に対する値かそれとも空隙体積に対する値か？}\\
+\replycomment{(足立) 修正しました}
 ~\\
