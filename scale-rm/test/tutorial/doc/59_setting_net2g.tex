@@ -78,13 +78,14 @@ net2gの実行はMPI並列を用いて、
 \verb|/| \\
  \\
 \verb|&INFO| \\
-\verb| TIME_STARTDATE = 2007, 7, 14, 18, 0, 0,|\\
+\verb| TIME_STARTDATE = 2000, 1, 1, 0, 0, 0,| \\
 \verb| START_TSTEP    = 1,| \\
 \verb| END_TSTEP      = 25,| \\
 \verb| DOMAIN_NUM     = 1,| \\
 \verb| CONFFILE       = "../run/run.d01.conf",| \\
 \verb| IDIR           = "../run",| \\
 \verb| Z_LEV_TYPE     = "plev",| \\
+\verb| MAPPROJ_ctl    = .true. | \\
 \verb|/| \\
  \\
 \verb|&VARI| \\
@@ -105,6 +106,7 @@ net2gの実行はMPI並列を用いて、
  \end{itemize}
  \item \namelist{INFO}
  \begin{itemize}
+  \item \nmitem{TIME_STARTDATE}：変換するNetCDFデータの最初の日時
   \item \nmitem{START_TSTEP}：変換するNetCDFデータの最初のTime Stepを指定する。最初のいくつかの
         ステップを飛ばして変換したい場合に任意の値を指定する。デフォルト値は1である。
   \item \nmitem{END_TSTEP}：変換するNetCDFデータの最後のTime Stepを指定する。必ず指定すること。
@@ -115,6 +117,7 @@ net2gの実行はMPI並列を用いて、
   \item \nmitem{Z_LEV_TYPE}：鉛直方向のデータ変換の種類を指定する。``original''はモデル面、
         ``plev''は気圧面に内挿、そして``zlev''は高度面に内挿して出力する。
         ``anal''を指定すると別途指定の簡易解析を行なって出力する（次項で説明）。デフォルト値は``plev''である。
+  \item \nmitem{MAPPROJ_ctl}：\verb|pdef|を使った投影図法に対応したctlファイルを出力するかどうか。
  \end{itemize}
  \item \namelist{VARI}
  \begin{itemize}
@@ -178,12 +181,14 @@ net2gの実行はMPI並列を用いて、
 \verb|/| \\
  \\
 \verb|&INFO| \\
+\verb| TIME_STARTDATE = 2000, 1, 1, 0, 0, 0,| \\
 \verb| START_TSTEP = 1,| \\
 \verb| END_TSTEP   = 25,| \\
 \verb| DOMAIN_NUM  = 1,| \\
 \verb| CONFFILE    = "../run/run.d01.conf",| \\
 \verb| IDIR        = "../run",| \\
 \verb| ZCOUNT      = 1,| \\
+\verb| MAPPROJ_ctl    = .true.|\\
 \verb|/| \\
  \\
 \verb|&VARI| \\
