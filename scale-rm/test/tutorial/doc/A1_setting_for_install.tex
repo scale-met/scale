@@ -476,8 +476,8 @@ Apple Mac OS XでのSCALE実行環境を整備する方法について説明す�
  # xcode-select --install
 \end{verbatim}
 \begin{verbatim}
- ライセンス条項の承認
- # xcodebuild -license
+ ライセンス条項の承認（root権限必要）
+ # sudo xcodebuild -license
 \end{verbatim}
 
 次にmacports本体をインストールする。
@@ -597,6 +597,18 @@ GphysはRubyのパッケージ管理システムRubyGemsを通してインスト
 \begin{verbatim}
  $ sudo gem install gphys
 \end{verbatim}
+
+%\subsubsection{Mac OS XにおけるGrADSのインストール}（Todo）
+
+\subsubsection{Mac OS Xでの実行時の注意点}
+
+Mac OS Xを用いて\scalerm プログラムを実行すると、実行時に
+「アプリケーション"scale-rm"へのネットワーク受信接続を許可しますか？」
+というダイアログが出ることがあります。
+これはコンパイルしたバイナリがマシンをまたいだMPI通信をするかファイアウォール機能が確認するためです。
+コンパイルし直すたびにMPI並列数の分だけダイアログが出てきてしまいますが、今のところ表示を回避するためには
+「システム環境設定」の「セキュリティとプライバシー」項目で「ファイアウォール」のタブを選択し、
+プログラムの実行時にファイアウォールを切る方法しかありません。
 
 
 
