@@ -112,14 +112,13 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 }}}\\
 
 また、\verb|scale-rm_init|の境界値を12時間以上用意している必要がある。
-チュートリアルでは24時間分のデータを用意しているので、
-チュートリアルで用意した境界値データをそのまま使用することが可能である。
+第\ref{sec:adv_datainput}節を参照し、\nmitem{NUMBER_OF_FILES}の数を3に変更する。
 
 
 \item {\bf 出力変数の追加と出力時間間隔の変更したい}\\
 
-例えば、出力時間間隔を30分に変更したい時には、\namelist{PARAM_HISTORY}の中の\nmitem{HISTORY_DEFAULT_TINTERVAL}
-を下記のように変更する。
+例えば、出力時間間隔を30分に変更したい時には、\namelist{PARAM_HISTORY}の中の
+\nmitem{HISTORY_DEFAULT_TINTERVAL}を下記のように変更する。
 また、出力変数を追加したい時には、\namelist{HISTITEM}の中の\nmitem{ITEM}に追加したい変数を指定する。
 変数名に関しては、\ref{achap:namelist}章を参照のこと。
 以下では、地表面での上向き、下向き短波フラックスを追加した例である。\\
