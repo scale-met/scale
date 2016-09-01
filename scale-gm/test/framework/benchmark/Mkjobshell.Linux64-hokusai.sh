@@ -2,7 +2,7 @@
 
 GLEV=${1}
 RLEV=${2}
-NMPI=${3}
+TPROC=${3}
 ZL=${4}
 VGRID=${5}
 TOPDIR=${6}
@@ -10,18 +10,18 @@ BINNAME=${7}
 
 # System specific
 PEpNODE=16
-MPIEXEC="mpirun -np ${NMPI} -ppn ${PEpNODE}"
+MPIEXEC="mpirun -np ${TPROC} -ppn ${PEpNODE}"
 
 GL=`printf %02d ${GLEV}`
 RL=`printf %02d ${RLEV}`
-if   [ ${NMPI} -ge 10000 ]; then
-	NP=`printf %05d ${NMPI}`
-elif [ ${NMPI} -ge 1000 ]; then
-	NP=`printf %04d ${NMPI}`
-elif [ ${NMPI} -ge 100 ]; then
-	NP=`printf %03d ${NMPI}`
+if   [ ${TPROC} -ge 10000 ]; then
+	NP=`printf %05d ${TPROC}`
+elif [ ${TPROC} -ge 1000 ]; then
+	NP=`printf %04d ${TPROC}`
+elif [ ${TPROC} -ge 100 ]; then
+	NP=`printf %03d ${TPROC}`
 else
-	NP=`printf %02d ${NMPI}`
+	NP=`printf %02d ${TPROC}`
 fi
 
 dir2d=gl${GL}rl${RL}pe${NP}
@@ -32,7 +32,7 @@ res3d=GL${GL}RL${RL}z${ZL}
 MNGINFO=rl${RL}-prc${NP}.info
 
 # for RICC-CLUSTER
-NNODE=`expr $NMPI / ${PEpNODE}`
+NNODE=`expr $TPROC / ${PEpNODE}`
 
 cat << EOF1 > run.sh
 #! /bin/bash -x

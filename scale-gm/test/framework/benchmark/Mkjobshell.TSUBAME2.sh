@@ -2,25 +2,25 @@
 
 GLEV=${1}
 RLEV=${2}
-NMPI=${3}
+TPROC=${3}
 ZL=${4}
 VGRID=${5}
 TOPDIR=${6}
 BINNAME=${7}
 
 # System specific
-MPIEXEC="mpirun -n ${NMPI} -hostfile \$PBS_NODEFILE ../Wrapper.TSUBAME2_nvprof"
+MPIEXEC="mpirun -n ${TPROC} -hostfile \$PBS_NODEFILE ../Wrapper.TSUBAME2_nvprof"
 
 GL=`printf %02d ${GLEV}`
 RL=`printf %02d ${RLEV}`
-if   [ ${NMPI} -ge 10000 ]; then
-	NP=`printf %05d ${NMPI}`
-elif [ ${NMPI} -ge 1000 ]; then
-	NP=`printf %04d ${NMPI}`
-elif [ ${NMPI} -ge 100 ]; then
-	NP=`printf %03d ${NMPI}`
+if   [ ${TPROC} -ge 10000 ]; then
+	NP=`printf %05d ${TPROC}`
+elif [ ${TPROC} -ge 1000 ]; then
+	NP=`printf %04d ${TPROC}`
+elif [ ${TPROC} -ge 100 ]; then
+	NP=`printf %03d ${TPROC}`
 else
-	NP=`printf %02d ${NMPI}`
+	NP=`printf %02d ${TPROC}`
 fi
 
 dir2d=gl${GL}rl${RL}pe${NP}
@@ -40,7 +40,7 @@ cat << EOF0 > run.sh
 
 chmod u+x ../Wrapper.TSUBAME2_nvprof
 chmod u+x ./run2.sh
-t2sub -q G -N ${res3d} -W group_list=t2g-14IAL -l select=${NMPI}:ncpus=1:mpiprocs=1:gpus=1:mem=12gb -l place=scatter -l walltime=00:10:00 ./run2.sh
+t2sub -q G -N ${res3d} -W group_list=t2g-14IAL -l select=${TPROC}:ncpus=1:mpiprocs=1:gpus=1:mem=12gb -l place=scatter -l walltime=00:10:00 ./run2.sh
 
 EOF0
 

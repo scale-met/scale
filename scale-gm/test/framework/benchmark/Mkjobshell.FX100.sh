@@ -2,7 +2,7 @@
 
 GLEV=${1}
 RLEV=${2}
-NMPI=${3}
+TPROC=${3}
 ZL=${4}
 VGRID=${5}
 TOPDIR=${6}
@@ -13,14 +13,14 @@ MPIEXEC="mpiexec"
 
 GL=`printf %02d ${GLEV}`
 RL=`printf %02d ${RLEV}`
-if   [ ${NMPI} -ge 10000 ]; then
-	NP=`printf %05d ${NMPI}`
-elif [ ${NMPI} -ge 1000 ]; then
-	NP=`printf %04d ${NMPI}`
-elif [ ${NMPI} -ge 100 ]; then
-	NP=`printf %03d ${NMPI}`
+if   [ ${TPROC} -ge 10000 ]; then
+	NP=`printf %05d ${TPROC}`
+elif [ ${TPROC} -ge 1000 ]; then
+	NP=`printf %04d ${TPROC}`
+elif [ ${TPROC} -ge 100 ]; then
+	NP=`printf %03d ${TPROC}`
 else
-	NP=`printf %02d ${NMPI}`
+	NP=`printf %02d ${TPROC}`
 fi
 
 dir2d=gl${GL}rl${RL}pe${NP}
@@ -31,7 +31,7 @@ res3d=GL${GL}RL${RL}z${ZL}
 MNGINFO=rl${RL}-prc${NP}.info
 
 # for RICC-FX100
-NNODE=`expr $NMPI / 2`
+NNODE=`expr $TPROC / 2`
 
 PROF1="fipp -C -Srange -Ihwm,nocall -d prof"
 PROF2="fipp -C -Srange -Inohwm,call -d prof_call"
@@ -46,7 +46,7 @@ cat << EOF1 > run.sh
 #PJM -L rscunit=gwmpc
 #PJM -L rscgrp=batch
 #PJM -L node=${NNODE}
-#PJM --mpi proc=${NMPI}
+#PJM --mpi proc=${TPROC}
 #PJM -L elapse=00:30:00
 #PJM -j
 #PJM -s
@@ -92,7 +92,7 @@ cat << EOFICO2LL1 > ico2ll.sh
 #PJM -L rscunit=gwmpc
 #PJM -L rscgrp=batch
 #PJM -L node=${NNODE}
-#PJM --mpi proc=${NMPI}
+#PJM --mpi proc=${TPROC}
 #PJM -L elapse=00:30:00
 #PJM -j
 #PJM -s
