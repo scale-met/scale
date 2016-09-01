@@ -663,15 +663,20 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
    \end{itemize}
 \item Grid Analysis and Display System (GrADS) by COLA\\
  \begin{itemize}
-  \item URL： \url{http://iges.org/grads/}
+  \item URL： \url{http://cola.gmu.edu/grads/}
   \item 概略：言わずと知れた描画ツール。SCALEのNetCDF形式の分割ファイルをそのまま読むことはできない
              ため、SCALEで提供している出力データの後処理ツール"\verb|netcdf2grads_h|"を使用して分割ファイルを結合し、
              GrADSで読み込めるファイル形式に変換する必要ある。"\verb|netcdf2grads_h|"のインストール方法は、
 本書の第\ref{sec:inst_env}章、使用方法は第3章、および第4章を参照のこと。
-  \item インストール方法：\url{http://iges.org/grads/downloads.html}を参照のこと。
+  \item インストール方法：\url{http://cola.gmu.edu/grads/downloads}を参照のこと。
                         CentOS6、CentOS7ではEPELリポジトリを登録していればyumコマンドによって、
                         openSUSE 13ではhome\_ocefpafリポジトリを登録していればzypperコマンドによって
                         インストールできる。
+                        GrADS本体のインストールし、バイナリが保存されている場所にPATHを通す。\\
+                        次に、描画に必要なスクリプト集（.gs）を\url{ftp://cola.gmu.edu/grads/scripts}からダウンロードする。\\
+                       （例えばwgetを用いる場合は「wget ftp://cola.gmu.edu/grads/scripts/*.gs」）。スクリプトを保存した場所に
+                        環境変数GASCRPを設定する。（例えばスクリプトを/usr/local/grads/script/に保存した場合は
+                        「export GASCRP="/usr/local/grads/script"」）
  \end{itemize}
 \item Ncview: a NetCDF visual browser by David W. Pierce\\
  \begin{itemize}
