@@ -12,7 +12,7 @@ Linuxをインストール後、各種プログラムのインストールはコ
 別途サーバー管理者が存在し、root権限を取得できない場合等は、必要な環境条件が整っているか
 サーバー管理者に問い合わせること。
 
-本節では、HDF5, NetCDF, MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
+本節では、HDF5、NetCDF、MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
 GNU compiler以外のIntel compilerなどを利用する場合は、各自でインストール方法を調べてインストールすること。\\
 
 \noindent ここでインストールするコンパイラおよびライブラリ環境は、主に下記の4点である。
@@ -71,7 +71,7 @@ CentOS 6.6では、ソフトウェアのインストールに"yum"コマンド�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 読み込んだプラグイン:fastestmirror, refresh-packagekit, security\\
 インストール処理の設定をしています\\
 Loading mirror speeds from cached hostfile\\
@@ -157,7 +157,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -227,7 +227,7 @@ CentOS 7.1では、ソフトウェアのインストールに"yum"コマンド�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 読み込んだプラグイン:fastestmirror, langpacks\\
 base                                                      3.6 kB     00:00\\
 extras                                                    3.4 kB     00:00\\
@@ -318,7 +318,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -374,7 +374,7 @@ openSUSEでは一般にユーザがrootユーザにスイッチすることを�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  リポジトリ 'home\_ocefpaf' を追加しています ...............................完了 \\
  リポジトリ 'home\_ocefpaf' を正常に追加しました\\
  有効         : はい (Y)\\
@@ -400,7 +400,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  鍵を拒否しますか (R)？ 一時的に信頼しますか (T)？ \\
  それとも今後ずっと信頼しますか (A)？ [r/t/a/? 全てのオプションを表示] (r): a
 \end{tabularx}
@@ -439,7 +439,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -548,7 +548,7 @@ macportsでは複数のコンパイラとMPIライブラリをインストール
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|export NETCDF_INCLUDE="-I/opt/local/include"|\\
  \verb|export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,-headerpad_max_install_names -lnetcdf"|\\
@@ -566,7 +566,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|export LAPACK_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"|\\
  \\

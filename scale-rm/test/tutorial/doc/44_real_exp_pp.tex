@@ -18,7 +18,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 そのまま利用する。
 
 \verb|pp.d01.conf|のネームリストのうち、領域に関係する設定は
-\namelist{PARAM_PRC},\namelist{PARAM_INDEX},\namelist{PARAM_GRID}
+\namelist{PARAM_PRC}、\namelist{PARAM_INDEX}、\namelist{PARAM_GRID}
 で行っている。
 {\XDIR} 、{\YDIR}ともに2分割されており、
 総計として4つのMPIプロセスを使用する設定となっている。
@@ -33,7 +33,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_PRC| \\
 \verb| PRC_NUM_X      = 2,| \\
 \verb| PRC_NUM_Y      = 2,| \\
@@ -72,7 +72,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_CONVERT| \\
 \verb|  CONVERT_TOPO    = .true.,| \\
 \verb|  CONVERT_LANDUSE = .true.,| \\
@@ -88,7 +88,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_CNVTOPO_GTOPO30| \\
 \verb| GTOPO30_IN_CATALOGUE = "GTOPO30_catalogue.txt",|\\
 \verb| GTOPO30_IN_DIR       = "./topo/GTOPO30/Products",|\\
@@ -114,7 +114,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  ++++++ Finalize MPI...\\
  ++++++ MPI is peacefully finalized\\
 \end{tabularx}

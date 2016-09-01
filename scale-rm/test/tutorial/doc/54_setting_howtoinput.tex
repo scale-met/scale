@@ -8,7 +8,7 @@
 \caption{\scalelib が読み込みに対応する外部入力データフォーマット}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} データ形式      & \verb|FILETYPE_ORG|  & 備考 \\ \hline
- SCALEデータ   & \verb|SCALE-RM|     & historyデータのみ対応ｍlatlonカタログを必要とする。 \\ \hline
+ SCALEデータ   & \verb|SCALE-RM|     & historyデータのみ対応。latlonカタログを必要とする。 \\ \hline
  バイナリデータ & \verb|GrADS|        & データ読み込み用のネームリストを別途必要とする。       \\ \hline
 % NICAMデータ   & \verb|NICAM-NETCDF| & NetCDF形式の緯度経度格子に変換されたデータに対応する。 \\ \hline
  WRFデータ     & \verb|WRF-ARW|      & ``wrfout''、``wrfrst''の両方に対応する。          \\ \hline
@@ -98,7 +98,7 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 ネームリストファイル(\verb|namelist.grads_boundary**|)を用意する。
 このネームリストファイルへのパスは\nmitem{BASENAME_ORG}に指定する。\\
 以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}で指定されたものが
-\namelist{PARAM_MKINIT_REAL_OCEAN}, \namelist{PARAM_MKINIT_REAL_LAND}
+\namelist{PARAM_MKINIT_REAL_OCEAN}、\namelist{PARAM_MKINIT_REAL_LAND}
 にも適用されるが、別途指定されている場合には、情報が上書きされる。\\
 %
 \nmitem{USE_FILE_DENSITY}は\verb|FILETYPE_ORG="SCALE-RM"|用のオプションなので、
@@ -112,7 +112,7 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 領域全体に一定条件を与える場合には、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_LAND}に
 \verb|USE_FILE_LANDWATER = .false.| を追加すれば良い。
 また、土壌水分の条件は、土壌空隙率に対する水が占める割合を
-\verb|INIT_LANDWATER_RATIO|で与える。デフォルト値は 0.5 である。
+\verb|INIT_LANDWATER_RATIO| で与える。デフォルト値は 0.5 である。
 また、単位体積に対する空隙率は土地利用に応じて変わる。\\
 
 \noindent {\small {\gt
@@ -175,8 +175,8 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 \end{tabularx}
 }}}\\
 
-大気データの格子数を\verb|outer_nx,outer_ny,outer_nz|で指定し、
-土壌データ(STEMP, SMOISVC) の層数を\verb|outer_nl|に指定する。\\
+大気データの格子数を\verb|outer_nx, outer_ny, outer_nz|で指定し、
+土壌データ(STEMP、SMOISVC) の層数を\verb|outer_nl|に指定する。\\
 
 QVやRHのデータは、他の大気データよりも低い層までしか提供されていない場合がある。
 その場合、データがある層の数を\verb|knum|で指定するが、それより上の層の
@@ -230,9 +230,9 @@ QVの値の見積もり方について、２種類の手法が用意されてい
 \caption{\namelist{grdvar}の\nmitem{item}の変数リスト}
 \begin{tabularx}{150mm}{rl|l|l|X} \hline
  \rowcolor[gray]{0.9} \multicolumn{1}{l}{必須変数} & \multicolumn{1}{l}{変数名} &\multicolumn{1}{l}{説明} &  \multicolumn{1}{l}{単位} & \multicolumn{1}{X}{\nmitem{dtype}} \\ \hline
-$\ast$ &\verb|lon|     & 経度データ      & [deg.]   & \verb|linear,map| \\
-$\ast$ &\verb|lat|     & 緯度データ      & [deg.]   & \verb|linear,map| \\
-$\ast$ &\verb|plev|    & 気圧データ      & [Pa]     & \verb|levels,map| \\
+$\ast$ &\verb|lon|     & 経度データ      & [deg.]   & \verb|linear, map| \\
+$\ast$ &\verb|lat|     & 緯度データ      & [deg.]   & \verb|linear, map| \\
+$\ast$ &\verb|plev|    & 気圧データ      & [Pa]     & \verb|levels, map| \\
 $\ast$ &\verb|HGT|     & 高度(ジオポテンシャル)データ& [m] & \verb|map| \\
 $\ast$ &\verb|U|       & 東西風速        & [m/s]    & \verb|map| \\
 $\ast$ &\verb|V|       & 南北風速        & [m/s]    & \verb|map| \\

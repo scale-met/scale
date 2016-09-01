@@ -4,7 +4,7 @@
 \section*{回答}
 \begin{enumerate}
 \item {\bf 計算領域は変えず、MPI並列数を変更したい}\\
-変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX,JMAX}、\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X,PRC_NUM_Y}である。下記3つの式を満たしていれば正解である。
+変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX, JMAX}、\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}である。下記3つの式を満たしていれば正解である。
 \begin{eqnarray}
 && MPI並列数 = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
 && X方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
@@ -15,12 +15,12 @@
 \item {\bf MPI並列数は変えず、計算領域を変更したい}\\
 MPIプロセスあたりの格子数を$n$倍にすれば、
 領域全体の格子数も$n$倍となる。
-変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX,JMAX}のみである。
+変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX, JMAX}のみである。
 赤文字の部分がデフォルトからの変更点を意味する。\\
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_INDEX| & \\
 \verb| KMAX = 36,|  & \\
 \textcolor{red}{\verb| IMAX = 60,|}  & (オリジナル設定は \verb|IMAX = 45|)\\
@@ -35,7 +35,7 @@ MPI並列数を変えない場合、変更箇所は\namelist{PARAM_GRID}の\nmit
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_PRC|  & \\
 \verb| PRC_NUM_X      = 2,|  & \\
 \verb| PRC_NUM_Y      = 2,|  & \\
@@ -67,7 +67,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_PRC|  & \\
 \verb| BUFFER_DX = 100000.D0, | & (オリジナル設定は\verb|BUFFER_DX = 400000.D0,|) \\
 \verb| BUFFER_DY = 100000.D0, | & (オリジナル設定は\verb|BUFFER_DY = 400000.D0,|) \\
@@ -100,11 +100,11 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_TIME| & \\
 \verb| TIME_STARTDATE             = 2007, 7, 14, 18, 0, 0, | & \\
 \verb| TIME_STARTMS               = 0.D0,                  | & \\
-\textcolor{red}{\verb| TIME_DURATION = 12.0D0,             |} 
+\textcolor{red}{\verb| TIME_DURATION = 12.0D0,             |}
                                                      &  (オリジナル設定は\verb| 6.0D0,|) \\
 \verb| TIME_DURATION_UNIT         = "HOUR",              | & \\
 \verb|/| & \\
@@ -125,7 +125,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_HISTORY | & \\
 \verb| HISTORY_DEFAULT_BASENAME  = "history_d01", | & \\
 \textcolor{red}{\verb| HISTORY_DEFAULT_TINTERVAL = 1800.D0,|} & (オリジナル設定は\verb|3600.D0,|) \\
@@ -147,7 +147,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_TIME| & \\
 \verb| TIME_STARTDATE             = 2007, 7, 14, 18, 0, 0, | & \\
 \verb| TIME_STARTMS               = 0.D0, | & \\
@@ -160,7 +160,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 \textcolor{red}{\verb| TIME_DT_OCEAN_RESTART_UNIT = "SEC",    |} & \\
 \textcolor{red}{\verb| TIME_DT_LAND_RESTART       = 10800.D0, |} & \\
 \textcolor{red}{\verb| TIME_DT_LAND_RESTART_UNIT  = "SEC",    |} & \\
-\textcolor{red}{\verb| TIME_DT_URBAN_RESTART      = 10800.D0, |} & \\ 
+\textcolor{red}{\verb| TIME_DT_URBAN_RESTART      = 10800.D0, |} & \\
 \textcolor{red}{\verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",    |} & \\
 \verb|/| & \\
 \\
@@ -182,11 +182,11 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 
 
 \nmitem{TIME_DURATION}が3時間に設定されている場合には、リスタートファイルは積分終了時に出力されるため、
-\nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART},\\
-\nmitem{TIME_DT_LAND_RESTART},\nmitem{TIME_DT_URBAN_RESTART}の設定は必要ない。
+\nmitem{TIME_DT_ATMOS_RESTART}、\nmitem{TIME_DT_OCEAN_RESTART}、\\
+\nmitem{TIME_DT_LAND_RESTART}、\nmitem{TIME_DT_URBAN_RESTART}の設定は必要ない。
 また、\nmitem{TIME_DURATION}が3時間以上に設定されている場合には、
-\nmitem{TIME_DT_ATMOS_RESTART},\nmitem{TIME_DT_OCEAN_RESTART},\\
-\nmitem{TIME_DT_LAND_RESTART},\nmitem{TIME_DT_URBAN_RESTART,}に３時間、もしくは、10800 (sec) の約数かつ\nmitem{TIME_DT}の倍数を指定している必要がある。
+\nmitem{TIME_DT_ATMOS_RESTART}、\nmitem{TIME_DT_OCEAN_RESTART}、\\
+\nmitem{TIME_DT_LAND_RESTART}、\nmitem{TIME_DT_URBAN_RESTART}に３時間、もしくは10800 (sec) の約数かつ\nmitem{TIME_DT}の倍数を指定している必要がある。
 
 
 
@@ -194,7 +194,7 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_TIME| & \\
 \textcolor{red}{\verb| TIME_STARTDATE             = 2007, 7, 14, 21, 0, 0, |} & \\
 \verb| TIME_STARTMS               = 0.D0, | & \\

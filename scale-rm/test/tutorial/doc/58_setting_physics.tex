@@ -17,7 +17,7 @@
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_PHY_MP_TYPE = "TOMITA08", | & ; 表\ref{tab:nml_atm_mp}より選択。\\
 \verb|/             | & \\
@@ -95,7 +95,7 @@
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_BIN|   &  \\
 \verb| nbin   = 33, & (ビンの数)| \\
 \verb| ICEFLG =  1, & (氷雲を考慮するか否か，0->水雲のみ，1->氷雲も含む)| \\
@@ -115,7 +115,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 \noindent {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx nbin in inc_tracer and nbin in micpara.dat is different check!| \\
 \end{tabularx}
 }}\\
@@ -138,7 +138,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_PHY_TB_TYPE = "MYNN", | & ; 表\ref{tab:nml_atm_tb}より選択。\\
 \verb|/             | & \\
@@ -172,7 +172,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_PHY_RD_TYPE = "MSTRNX", | & ; 表\ref{tab:nml_atm_rd}より選択。\\
 \verb|/             | & \\
@@ -312,7 +312,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & ; 表\ref{tab:nml_atm_sf}より選択。\\
 \verb|/             | & \\
@@ -395,7 +395,7 @@ run.conf中の\namelist{PARAM_ROUGHNESS}の\nmitem{ROUGHNESS_TYPE}で以下の�
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ROUGHNESS  | & \\
 \verb| ROUGHNESS_TYPE = "MOON07", | & ; 表\ref{tab:nml_roughness}より選択。\\
 \verb|/             | & \\
@@ -422,7 +422,7 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のよ�
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_BULKFLUX  | & \\
 \verb| BULKFLUX_TYPE = "B91W01", | & ; 表\ref{tab:nml_bulk}より選択。\\
 \verb|/             | & \\
@@ -461,14 +461,14 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx Ocean fraction exists, but ocean components never called. STOP.| \\
 \end{tabularx}
 }}}\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_OCEAN           | & \\
 \verb| OCEAN_TYPE = "CONST", | & ; 表\ref{tab:nml_ocean}より選択。\\
 \verb|/                      | & \\
@@ -495,7 +495,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
  \verb|&EXTITEM                                  | & \\
  \verb| basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
  \verb| varname    = "OCEAN_TEMP",               | & ; \verb|"OCEAN_TEMP"|と書く。\\
@@ -513,7 +513,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
  \verb|&PARAM_OCEAN_PHY_SLAB           | & \\
  \verb| OCEAN_PHY_SLAB_DEPTH = 10.0D0, | & ; デフォルト設定[m] \\
  \verb|/                               | & \\
@@ -554,14 +554,14 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx Land  fraction exists, but land  components never called. STOP.| \\
 \end{tabularx}
 }}}\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_LAND  | & \\
 \verb| LAND_TYPE = "SLAB", | & ; 表\ref{tab:nml_land}より選択。\\
 \verb|/             | & \\
@@ -619,14 +619,14 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx Urban fraction exists, but urban components never called. STOP.| \\
 \end{tabularx}
 }}}\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_URBAN         | & \\
 \verb| URBAN_TYPE = "SLC", | & ; 表\ref{tab:nml_urban}より選択。\\
 \verb|/                    | & \\

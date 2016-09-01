@@ -60,7 +60,7 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \noindent {\gt \verb|run.d01.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
-\begin{tabularx}{145mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_NEST|                          & \\
 \verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
 \verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
@@ -78,7 +78,7 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \noindent {\gt \verb|run.d02.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
-\begin{tabularx}{145mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_NEST| & \\
 \verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
 \verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
@@ -91,7 +91,7 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \end{tabularx}
 }}}\\
 
-\noindent 
+\noindent
 \nmitem{USE_NESTING = .true., OFFLINE = .false.}によって、
 オンライン・ネスティング実験であることが決定される。
 \nmitem{ONLINE_**}で始まる設定変数はオンライン・ネスティング実験
@@ -108,7 +108,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \begin{table}[htb]
 \begin{center}
 \caption{N段ネスティング実験の設定例}
-\begin{tabularx}{145mm}{|l|l|l|X|} \hline
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
  \rowcolor[gray]{0.9} 領域 & \verb|ONLINE_DOMAIN_NUM| & \verb|ONLINE_IAM_PARENT| & \verb|ONLINE_IAM_CHILD|\\ \hline
  最外領域 & 1               & .true.  & .false. \\ \hline
  中間領域 & 2\verb|〜|(N-1) & .true.  & .true. \\ \hline
@@ -137,7 +137,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_LAUNCHER|      & \\
 \verb| NUM_DOMAIN  = 2,|    & 領域の数\\
 \verb| PRC_DOMAINS = 4, 16,| & それぞれの領域で使用するMPIプロセス数 (領域の数だけ必要)\\
@@ -146,7 +146,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \end{tabularx}
 }}}\\
 
-\noindent 
+\noindent
 \nmitem{PRC_DOMAINS}と\nmitem{CONF_FILES}の記載順は対応している必要がある。
 上記の例の場合、親領域は4-MPI並列、子領域は16-MPI並列で実行するように指定されている。
 ここで指定するMPIプロセス数は、各々の領域の設定ファイル (\verb|run.***.conf|) で指定されている
@@ -173,14 +173,14 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx region of daughter domain is larger than that of parent: SW search| \\
 \end{tabularx}
 }}}\\
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx region of daughter domain is larger than that of parent: NE search| \\
 \end{tabularx}
 }}}\\
@@ -199,7 +199,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 具体的な見積もり方法は下記の通りである。
 
 ここではN個の領域(N段ネスティング)を考える。
-n番目の領域の{\XDIR}, {\YDIR}, {\ZDIR}の格子数をそれぞれ\verb|IMAX_n|, \verb|JMAX_n|, \verb|KMAX_n|
+n番目の領域の{\XDIR}、{\YDIR}、{\ZDIR}の格子数をそれぞれ\verb|IMAX_n|、\verb|JMAX_n|、\verb|KMAX_n|
 と表し、時間積分のタイムステップ\nmitem{TIME_DT}を\verb|DT_n|と表すことにする。
 この時、一番外側領域(n=1)の時間積分のタイムステップ\verb|DT_1|を基準とし、この時間を積分するのに
 必要なn番目の領域の計算ステップ数は、

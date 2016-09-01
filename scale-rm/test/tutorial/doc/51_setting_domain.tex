@@ -10,15 +10,15 @@
 水平方向に2次元の領域分割を行うことで並列化がなされている。
 
 格子点数およびMPIプロセス数は、
-\namelist{PARAM_INDEX}内の\nmitem{IMAX,JMAX}、\\
-\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X,PRC_NUM_Y}で設定する。
-%水平格子間隔については、\namelist{PARAM_GRID}内の\nmitem{DX,DY}で設定する。
+\namelist{PARAM_INDEX}内の\nmitem{IMAX, JMAX}、\\
+\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}で設定する。
+%水平格子間隔については、\namelist{PARAM_GRID}内の\nmitem{DX, DY}で設定する。
 
 
 図\ref{fig:domain}に示すように、
 計算領域全体が、\XDIR に\nmitem{PRC_NUM_X}個、\YDIR に\nmitem{PRC_NUM_Y}個に分割され、それぞれが1つのMPIプロセスによって担当される。
 
-それぞれのMPIプロセスは、\nmitem{IMAX,JMAX,KMAX}個の格子を受け持つ。
+それぞれのMPIプロセスは、\nmitem{IMAX, JMAX, KMAX}個の格子を受け持つ。
 ここで、注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であり、
 計算領域全体の格子点数ではないことである。
 すなわち、計算領域は、水平格子間隔、格子点数とともにMPIプロセス数にも依存する。
@@ -38,7 +38,7 @@
 ここで、\nmitem{KMAX}は、鉛直方向の格子点数であり、
 \namelist{PARAM_INDEX}内の項目で指定される。
 
-また、領域全体の大きさは、式(\ref{eq:xgridnum}, \ref{eq:ygridnum})を使って、
+また、領域全体の大きさは、式(\ref{eq:xgridnum}、\ref{eq:ygridnum})を使って、
 \begin{eqnarray}
 && {\XDIR}の領域の長さ = {\XDIR}の格子点数 \times \verb|DX| \nonumber\\
 && {\YDIR}の領域の長さ = {\YDIR}の格子点数 \times \verb|DY| \nonumber
@@ -51,7 +51,7 @@
 次節以降では、MPIプロセス数、格子数、格子間隔、
 それぞれの設定方法について詳しく説明する。
 また、本節内の設定は、
-\textcolor{red}{基本的に\texttt{pp.conf}, \texttt{init.conf}, \texttt{run.conf}の設定ファイル間で一致させなければならない}
+\textcolor{red}{基本的に\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない}
 ことに注意が必要である。
 
 
@@ -78,7 +78,7 @@ MPIプロセス数を変更するには、
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_PRC| & \\
 \verb| PRC_NUM_X       = 2,| & ; {\XDIR}（東西方向）のMPI並列分割数 \\
 \verb| PRC_NUM_Y       = 1,| & ; {\YDIR}（南北方向）のMPI並列分割数 \\
@@ -96,7 +96,7 @@ MPIプロセス数を変更するには、
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx total number of node does not match that requested. Check!| \\
 \end{tabularx}
 }}}\\
@@ -113,7 +113,7 @@ MPIプロセス数を変更するには、
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_INDEX| & \\
 \verb| KMAX = 97,|  & ; 鉛直層数 \\
 \verb| IMAX = 20,|  & ; プロセスあたりの{\XDIR}の格子点数 \\
@@ -130,13 +130,13 @@ MPIプロセス数を変更するには、
 水平格子間隔は等間隔でのみ設定可能である。
 鉛直格子間隔については、任意に定義することが可能である。
 すべての方向について等間隔で設定する場合には、以下のように
-設定ファイルの\namelist{PARAM_GRID}の\nmitem{DX,DY,DZ}に
+設定ファイルの\namelist{PARAM_GRID}の\nmitem{DX, DY, DZ}に
 それぞれ、東西、南北、鉛直方向の格子間隔を指定する。
 単位は[m]である。\\
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_GRID  | & \\
 \verb| DX = 500.D0,| & ; {\XDIR}（東西方向）の格子間隔\\
 \verb| DY = 500.D0,| & ; {\YDIR}（南北方向）の格子間隔\\
@@ -163,7 +163,7 @@ MPIプロセス数を変更するには、
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_GRID|     & \\
 \verb| DX = 500.D0,|   & {\XDIR} の格子間隔(等間隔)[m]\\
 \verb| DY = 500.D0,|   & {\YDIR}の格子間隔(等間隔)[m]\\
