@@ -143,25 +143,25 @@ initディレクトリへリンクする。
 
 
 %% サポート外
-%% \vspace{1cm}
-%% \noindent {\Large\em OPTION} \hrulefill \\
-%% gpviewがインストールされている場合，作成された初期値と境界値が
-%% 正しく作成されているかどうかを確認することが出来る。
-%% 正しく作成されていれば、図 \ref{fig:init}と同じように描かれる。
+\vspace{1cm}
+\noindent {\Large\em OPTION} \hrulefill \\
+gpviewがインストールされている場合，作成された初期値と境界値が
+正しく作成されているかどうかを確認することが出来る。
+正しく作成されていれば、図 \ref{fig:init}と同じように描かれる。
 
-%% \begin{verbatim}
-%% $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \
-%%          --xintv=10 --yintv=10 --unit_vect init_d01_20140810-000000.000.pe00*@QV      \
-%%          init_d01_20140810-000000.000.pe00*@MOMX init_d01_20140810-000000.000.pe00*@MOMY
-%% \end{verbatim}
+\begin{verbatim}
+ $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \
+          --xintv=10 --yintv=10 --unit_vect init_d01_20070714-180000.000.pe00*@QV      \
+          init_d01_20070714-180000.000.pe00*@MOMX init_d01_20070714-180000.000.pe00*@MOMY
+\end{verbatim}
 
 
-%% \begin{figure}[h]
-%% \begin{center}
-%%   \includegraphics[width=0.7\hsize]{./figure/init_qv-momxy.eps}\\
-%%   \caption{チュートリアル実験の高さ1500mにおける初期場の様子．カラーシェードは比湿，
-%%            ベクトルは水平運動量フラックスを表している．}
-%%   \label{fig:init}
-%% \end{center}
-%% \end{figure}
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[width=0.7\hsize]{./figure/real_init_qv-momxy.eps}\\
+  \caption{チュートリアル実験の高さ1500mにおける初期場の様子．カラーシェードは比湿，
+           ベクトルは水平運動量フラックスを表している．}
+  \label{fig:init}
+\end{center}
+\end{figure}
 
