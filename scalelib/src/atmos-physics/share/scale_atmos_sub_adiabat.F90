@@ -215,7 +215,7 @@ contains
     CAPE(:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       if ( kLFC(i,j) > Kstr .AND. kLNB(i,j) > Kstr ) then
+       if ( kLFC(i,j) >= Kstr .AND. kLNB(i,j) > Kstr ) then
           do k = kLFC(i,j), kLNB(i,j)
              CAPE(i,j) = CAPE(i,j) + BUOY_pf(k-1,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) )
           enddo
@@ -226,7 +226,7 @@ contains
     CIN(:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       if ( kLFC(i,j) > Kstr ) then
+       if ( kLFC(i,j) >= Kstr ) then
           do k = Kstr+1, kLFC(i,j)
              CIN (i,j) = CIN (i,j) + BUOY_pf(k-1,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) )
           enddo
