@@ -2,7 +2,6 @@
 \section{\SecBasicDomainSetting} \label{sec:domain}
 %=======================================================================
 
-%\Item{\SubsecRelationOfResoGridProcess}
 まず、\scalerm での対象計算領域の格子点数とMPIプロセスの関係を整理しておく。
 計算領域は、水平格子間隔と格子点数およびMPIプロセス数を指定することで決定されるようになっている。
 図\ref{fig:domain}は、
@@ -206,7 +205,7 @@ MPIプロセス数を変更するには、
 \nmitem{FZ(:)}の値が作成される。
 
 
-\subsection{\SecBasicBufferSetting} \label{subsec:buffer}
+\subsection{\SubsecBasicBufferSetting} \label{subsec:buffer}
 %-----------------------------------------------------------------------
 モデル最上層では音波や重力波の非物理的な反射が起こる。
 また、側面境界では現実大気実験を行う際に境界条件として与えられる入力データと

@@ -50,8 +50,9 @@
 
 
 上記の例では、\verb|restart1_***|という入力ファイルからリスタート計算を開始し、
-6時間(21600 sec)に1回、リスタートファイルを\verb|restart2_***|という名前で出力する設定となっている。
-\nmitem{TIME_DT_ATMOS_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_LAND_RESTART, TIME_DT_URBAN_RESTART}
+6時間(21600 sec)に1回、リスタートファイルを\verb|restart2_***|という名前で出力する設定となっている。\\
+\nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, \\
+\nmitem{TIME_DT_URBAN_RESTART}
 が指定されていない場合には、積分時刻の最終時刻\nmitem{TIME_DURATION}にファイルが作成される。
 \nmitem{RESTART_RUN}を\verb|.false.|として\nmitem{RESTART_IN_BASENAME}に\verb|scale-rm_init|で作成した初期値ファイル
 （\verb|init_***|）を指定すれば通常計算が実行され、

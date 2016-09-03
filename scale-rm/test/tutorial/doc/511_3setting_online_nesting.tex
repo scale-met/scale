@@ -95,14 +95,14 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \nmitem{USE_NESTING = .true., OFFLINE = .false.}によって、
 オンライン・ネスティング実験であることが決定される。
 \nmitem{ONLINE_**}で始まる設定変数はオンライン・ネスティング実験
-専用の設定変数である。\nmitem{ONLINE_DOMAIN_NUM}は、
+専用の設定変数である。
+\nmitem{ONLINE_DOMAIN_NUM}は、
 領域のID番号であり、外側領域から内側領域へ順番に番号を振っていく。
 ここでは、親領域は1番、子領域は2番と設定する。
 \nmitem{ONLINE_IAM_PARENT}と\nmitem{ONLINE_IAM_DAUGHTER}は、各領域が複数のネスティング領域の中でどこに位置するかを示している。
 namelistの名前から明らかなように、
 \verb|ONLINE_IAM_PARENT=.true.|であれば、子領域にデータを受け渡し、
 \verb|ONLINE_IAM_DAUGHTER=.true.|であれば、境界値データは親領域から受け取るようになる。
-%これらの変数は、``In online nesting system, I am parent (or, I am child).''という意味で覚えれば設定を間違うことはない。
 N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}に示す。
 
 \begin{table}[htb]
@@ -120,7 +120,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 
 \noindent 最外領域は親領域としてのみ働き、最内領域は子領域としてのみ働く。
 一方、中間領域は最外領域に対しては子領域、
-最内領域に対しては親領域として働くため両方共\verb|.true.|となる。
+最内領域に対しては親領域として働くため両方共\verb|.true.|となる。\\
 \nmitem{ONLINE_BOUNDARY_USE_QHYD}は、
 「側面境界条件として親領域の凝結物の値を使うかどうか」を指定する。
 外部入力データから側面境界条件を作成するときには通常使わないが、
