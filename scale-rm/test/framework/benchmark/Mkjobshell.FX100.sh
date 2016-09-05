@@ -28,7 +28,7 @@ y=${array[1]:-1}
 let xy="${x} * ${y}"
 
 # for RICC-FX100
-NNODE=`expr $NMPI / 2`
+NNODE=`expr $TPROC / 2`
 
 
 
@@ -44,7 +44,7 @@ cat << EOF1 > ./run.sh
 #PJM -L rscunit=gwmpc
 #PJM -L rscgrp=batch
 #PJM -L node=${NNODE}
-#PJM --mpi proc=${NMPI}
+#PJM --mpi proc=${TPROC}
 #PJM -L elapse=12:00:00
 #PJM -j
 #PJM -s

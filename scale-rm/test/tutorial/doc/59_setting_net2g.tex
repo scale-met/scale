@@ -53,7 +53,7 @@ net2gの実行はMPI並列を用いて、
 
 \noindent {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|+++ MPI COMM: Corrective Finalize| \\
 \end{tabularx}
 }}\\
@@ -71,7 +71,7 @@ net2gの実行はMPI並列を用いて、
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&LOGOUT| \\
 \verb| LOG_BASENAME   = "LOG_d01_3d",| \\
 \verb| LOG_ALL_OUTPUT = .false.,| \\
@@ -135,7 +135,7 @@ net2gの実行はMPI並列を用いて、
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&INFO| \\
 \verb|　 　 〜　中略　〜|\\
 \verb| Z_LEV_TYPE  = "anal",| \\
@@ -165,8 +165,7 @@ net2gの実行はMPI並列を用いて、
  \begin{itemize}
   \item \nmitem{ANALYSIS}：鉛直次元のの簡易解析の種類を指定する。``max''を指定すると鉛直カラム中の最大値、
         ``min''を指定するすると最小値、``sum''を指定すると鉛直カラム積算値、そして``ave''を指定すると
-        鉛直カラム平均値を算出する。デフォルト値は``ave''である。現時点では、単純な積算値や平均値の出力であり、
-        混合比に密度を掛けて質量にして出力する等の機能は有していない。
+        鉛直カラム平均値を算出する。デフォルト値は``ave''である。
  \end{itemize}
 \end{itemize}
 
@@ -175,7 +174,7 @@ net2gの実行はMPI並列を用いて、
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&LOGOUT| \\
 \verb| LOG_BASENAME   = "LOG_d01_2d",| \\
 \verb|/| \\
@@ -208,7 +207,7 @@ net2gの実行はMPI並列を用いて、
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&EXTRA| \\
 \verb| EXTRA_TINTERVAL = 600.0,| \\
 \verb| EXTRA_TUNIT     = "SEC",| \\
@@ -252,7 +251,7 @@ net2gの実行方法や制約、注意点については通常のマシンで実
 %% \noindent {\gt \verb|job.sh|の記述例} \\
 %% \noindent {\small {\gt
 %% \ovalbox{
-%% \begin{tabularx}{140mm}{l}
+%% \begin{tabularx}{150mm}{l}
 %% \verb|#! /bin/bash -x| \\
 %% \verb|#PJM --rsc-list "rscgrp=micro"| \\
 %% \verb|#PJM --rsc-list "node=12"| \\
@@ -288,7 +287,7 @@ net2gの実行方法や制約、注意点については通常のマシンで実
 
 %% \noindent {\small {\gt
 %% \ovalbox{
-%% \begin{tabularx}{140mm}{l}
+%% \begin{tabularx}{150mm}{l}
 %% \verb|&PARAM_LAUNCHER| \\
 %% \verb| NUM_BULKJOB = 31,| \\
 %% \verb| NUM_DOMAIN  = 2,| \\

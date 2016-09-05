@@ -17,8 +17,8 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 従って編集済みの\verb|pp.d01.conf|が用意されているため、
 そのまま利用する。
 
-\verb|pp.d01.conf|のネイムリストのうち、領域に関係する設定は
-\namelist{PARAM_PRC},\namelist{PARAM_INDEX},\namelist{PARAM_GRID}
+\verb|pp.d01.conf|のネームリストのうち、領域に関係する設定は
+\namelist{PARAM_PRC}、\namelist{PARAM_INDEX}、\namelist{PARAM_GRID}
 で行っている。
 {\XDIR} 、{\YDIR}ともに2分割されており、
 総計として4つのMPIプロセスを使用する設定となっている。
@@ -33,7 +33,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_PRC| \\
 \verb| PRC_NUM_X      = 2,| \\
 \verb| PRC_NUM_Y      = 2,| \\
@@ -72,7 +72,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_CONVERT| \\
 \verb|  CONVERT_TOPO    = .true.,| \\
 \verb|  CONVERT_LANDUSE = .true.,| \\
@@ -88,7 +88,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_CNVTOPO_GTOPO30| \\
 \verb| GTOPO30_IN_CATALOGUE = "GTOPO30_catalogue.txt",|\\
 \verb| GTOPO30_IN_DIR       = "./topo/GTOPO30/Products",|\\
@@ -114,7 +114,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  ++++++ Finalize MPI...\\
  ++++++ MPI is peacefully finalized\\
 \end{tabularx}
@@ -133,7 +133,7 @@ MPIプロセス数だけ、つまり4つずつ生成される（\verb|######|に
  \noindent {\Large\em OPTION} \hrulefill \\
  gpviewがインストールされている場合、次のコマンドによって、
  作成された地形データが正しく作成されているかどうか
- 確認することが出来る。正しく作成されていれば、図 \ref{fig:tutrial_real_domain}と同様の図ができる．
+ 確認することが出来る。正しく作成されていれば、図 \ref{fig:tutrial_real_domain}と同様の図ができる。
  \begin{verbatim}
    $ gpview topo_d01.pe00000*@TOPO --aspect=1 --nocont
    $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1 --nocont

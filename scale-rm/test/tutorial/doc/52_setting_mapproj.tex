@@ -1,15 +1,15 @@
-\section{\SecAdvanceMapprojectionSetting} \label{subsec:adv_mapproj}
+\section{\SecMapprojectionSetting} \label{subsec:adv_mapproj}
 %------------------------------------------------------
 \scalerm では、まず実距離に基づいた格子点が配置され、その格子点位置と緯度経度基準点の情報を元に、
 それぞれの投影法を用いた際の各格子点での緯度・経度座標が計算される。
 緯度・経度情報は、すべてのSCALEのNetCDF形式の出力ファイルに含まれる。\\
 計算領域の位置と投影法は、設定ファイルの\nmitem{PARAM_MAPPROJ}の項目を編集することで設定できる。
-この設定も、\textcolor{red}{基本的に\texttt{pp.conf}, \texttt{init.conf}, \texttt{run.conf}の設定ファイル間で一致させなければならない。}
+この設定も、\textcolor{red}{基本的に\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない。}
 まずはじめに、下記の例をもとに説明する。\\
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_MAPPROJ| \\
 \verb| MPRJ_basepoint_lon = 138.727778D0,| \\
 \verb| MPRJ_basepoint_lat = 35.360556D0,| \\
@@ -54,7 +54,7 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 
 {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_MAPPROJ| \\
 \verb| MPRJ_basepoint_lon = 135.220404,| \\
 \verb| MPRJ_basepoint_lat = 34.653396,| \\
@@ -77,7 +77,7 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 
 {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_MAPPROJ| \\
 \verb| MPRJ_basepoint_lon = 135.220404,| \\
 \verb| MPRJ_basepoint_lat = 34.653396,| \\

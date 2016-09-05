@@ -20,7 +20,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_TOPO| \\
 \verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
 \verb|/| \\
@@ -85,7 +85,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_HISTORY| & \\
 \verb|   HISTORY_DEFAULT_BASENAME  = "history_d01",| & ← 出力するファイル名\\
 \verb|   HISTORY_DEFAULT_TINTERVAL = 3600.D0,      | & ← 出力時間間隔\\
@@ -105,19 +105,19 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 
 \noindent {{\gt
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&HISTITEM item="MSLP" /| 　   　  & 海面更正気圧 \\
 \verb|&HISTITEM item="PREC" /| 　   　  & 降水強度 (2次元) \\
 \verb|&HISTITEM item="OLR"  /| 　    　 & 外向き赤外放射(2次元) \\
 \verb|&HISTITEM item="U10" / |　     　 & 地表10mでのX方向水平速度成分(2次元) \\
 \verb|&HISTITEM item="V10" / |　     　 & 地表10mでのY方向水平速度成分(2次元) \\
 \verb|&HISTITEM item="T2"  / |　     　 & 地表2mでの温度　(2次元) \\
-\verb|&HISTITEM item="Q2"  / |　     　 &  地表2mでの水蒸気混合比 (2次元) \\
+\verb|&HISTITEM item="Q2"  / |　     　 &  地表2mでの水蒸気比湿 (2次元) \\
 \verb|&HISTITEM item="SFC_PRES"   /| 　 & 地表気圧 (2次元) \\
 \verb|&HISTITEM item="SFC_TEMP"   /| 　 & バルクの地表面温度 (2次元) \\
 \verb|&HISTITEM item="DENS" /| 　  　   & 密度 (3次元) \\
-\verb|&HISTITEM item="QV"   /| 　  　   & 水蒸気の混合比 (3次元) \\
-\verb|&HISTITEM item="QHYD" /| 　  　   & 凝結水物質の混合比　(3次元) \\
+\verb|&HISTITEM item="QV"   /| 　  　   & 水蒸気比湿 (3次元) \\
+\verb|&HISTITEM item="QHYD" /| 　  　   & 全凝結物の全質量に対する比　(3次元) \\
 \verb|&HISTITEM item="PRES" /| 　  　   & 圧力 (3次元) \\
 \verb|&HISTITEM item="U"    /| 　  　   & X方向水平速度成分 (3次元) \\
 \verb|&HISTITEM item="V"    /| 　  　   & Y方向水平速度成分 (3次元) \\
@@ -135,7 +135,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 物理過程の設定は、
 \namelist{PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}に
 記述されている。
-詳細な内容については、第\ref{sec:atmos_dyn}節,\ref{sec:basic_usel_physics}節を参照されたい。
+詳細な内容については、第\ref{sec:atmos_dyn}節、\ref{sec:basic_usel_physics}節を参照されたい。
 
 %
 \subsubsection{シミュレーションの実行}
@@ -158,7 +158,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \end{verbatim}
 
 
-実行にはある程度時間を要するため、
+実行にはある程度時間を要するため（上記のマシンで計算完了までに10〜20分を要した）、
 上記のように標準出力をファイルへ書き出すようにして
 バックグラウンドで実行すると便利である。
 計算が開始されれば，処理内容のログとして、\verb|"LOG_d01.pe000000"|が生成される。
@@ -166,7 +166,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  ++++++ Finalize MPI...\\
  ++++++ MPI is peacefully finalized\\
 \end{tabularx}

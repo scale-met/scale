@@ -9,7 +9,7 @@
 
 \noindent {\gt\small
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_DYN_TYPE    = "HEVI", | & ; 表\ref{tab:nml_dyn}より選択。\\
 \verb|/             | & \\
@@ -42,7 +42,7 @@
 
 \noindent {\gt\small
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
  \verb|&PARAM_ATMOS_DYN  | & \\
  \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|       & ; 時間スキームより選択\\
  \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,| & ; 時間スキームより選択\\
@@ -88,13 +88,13 @@
 
 ハロの格子数はデフォルトで2となっている。
 従って、空間スキームがCD4、UD3以外の場合、上記の表に記したハロの数の設定が必要である。
-設定は、\namelist{PARAM_INDEX}の中の\nmitem{IHALO,JHALO}で行う。
+設定は、\namelist{PARAM_INDEX}の中の\nmitem{IHALO, JHALO}で行う。
 
 例えば、空間スキームとして5次風上差分を設定した場合、\\
 
 \noindent {\gt\small
 \ovalbox{
-\begin{tabularx}{140mm}{ll}
+\begin{tabularx}{150mm}{ll}
  \verb|&PARAM_INDEX | &  \\
  \verb| IHALO = 3,|   &\\
  \verb| JHALO = 3,|   &\\

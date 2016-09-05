@@ -25,7 +25,7 @@
 \begin{figure}[t]
 \begin{center}
   \includegraphics[width=0.6\hsize]{./figure/bulkjob_directory_structure.eps}\\
-  \caption{バルクジョブ機能を使って\texttt|scale-rm|を実行する場合のディレクトリ構造. ``0000''や``0001''はジョブ番号に対応する名前のディレクトリ(ジョブディレクトリ)である。各ジョブディレクトリの中には、サブジョブの実行に必要なすべてのファイルを用意する。}
+  \caption{バルクジョブ機能を使って\texttt{scale-rm}を実行する場合のディレクトリ構造. ``0000''や``0001''はジョブ番号に対応する名前のディレクトリ(ジョブディレクトリ)である。各ジョブディレクトリの中には、サブジョブの実行に必要なすべてのファイルを用意する。}
   \label{fig_bulkjob}
 \end{center}
 \end{figure}
@@ -33,13 +33,13 @@
 
 バルクジョブ機能は、オンライン・ネスティングで利用した
 MPIプロセスを分割・分配する機能を拡張したものである。
-したがって、ジョブの起動のために\verb|launch.conf|ファイルが必要になる。
+従って、ジョブの起動のために\verb|launch.conf|ファイルが必要になる。
 オンライン・ネスティング実験とバルクジョブ機能を併用して実行する場合も
 \verb|launch.conf|ファイルは1つで良い。\\
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_LAUNCHER|       & \\
 \verb| NUM_BULKJOB = 3,|     & サブジョブの数\\
 \verb| NUM_DOMAIN  = 2,|     & ネスティング領域の数\\
@@ -64,7 +64,7 @@ MPIプロセスを分割・分配する機能を拡張したものである。
 ディレクトリ名は、サブジョブのジョブ番号を4桁の数字で表したもので、
 ジョブ番号はゼロから設定される。
 それぞれのジョブディレクトリには、各サブジョブの実験に必要なすべてのファイル
-(設定ファイル, 入力ファイル, 出力ファイルを格納するディレクトリなど) を用意する。
+(設定ファイル、入力ファイル、出力ファイルを格納するディレクトリなど) を用意する。
 %
 各ジョブディレクトリ内の設定ファイルは、通常の設定と同じであるが、
 適切な入力ファイルが設定されているかどうか、注意が必要である。
@@ -74,7 +74,7 @@ MPIプロセスを分割・分配する機能を拡張したものである。
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|&PARAM_IO| \\
 \verb| IO_LOG_BASENAME = "0000/LOG_d01",| \\
 \verb|/| \\
@@ -128,7 +128,7 @@ LOGファイルを開くと、最初の「SCALEロゴ」のあとに下記のよ
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb| ++++++ Start MPI|  & \\
 \verb| *** UNIVERSAL_COMM_WORLD        :        0| &; 実行環境によって値が異なる\\
 \verb| *** total process [UNIVERSAL]   :      135| &\\

@@ -1,4 +1,4 @@
-\section{\SecAdvanceInputDataSetting} \label{sec:adv_datainput}
+\section{\SecInputDataSetting} \label{sec:adv_datainput}
 %====================================================================================
 
 \scalerm では初期値・境界値作成において、表\ref{tab:inputdata_format}に示す外部入力データの読み込みに対応している。
@@ -8,7 +8,7 @@
 \caption{\scalelib が読み込みに対応する外部入力データフォーマット}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} データ形式      & \verb|FILETYPE_ORG|  & 備考 \\ \hline
- SCALEデータ   & \verb|SCALE-RM|     & historyデータのみ対応ｍlatlonカタログを必要とする。 \\ \hline
+ SCALEデータ   & \verb|SCALE-RM|     & historyデータのみ対応。latlonカタログを必要とする。 \\ \hline
  バイナリデータ & \verb|GrADS|        & データ読み込み用のネームリストを別途必要とする。       \\ \hline
 % NICAMデータ   & \verb|NICAM-NETCDF| & NetCDF形式の緯度経度格子に変換されたデータに対応する。 \\ \hline
  WRFデータ     & \verb|WRF-ARW|      & ``wrfout''、``wrfrst''の両方に対応する。          \\ \hline
@@ -89,16 +89,16 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 時間の早い方から順に5桁の数字をつける。
 \verb|scale-rm_init|では、\verb|00000|から\nmitem{NUMBER_OF_FILES}の数だけファイルを読み込む。
 ファイルが一つしかない場合は、\verb|"ファイル名.grd"|でよい。
-\verb|"ファイル名"|は後ほど紹介するネイムリストファイル内で指定する。\\
+\verb|"ファイル名"|は後ほど紹介するネームリストファイル内で指定する。\\
 \nmitem{BOUNDARY_UPDATE_DT}は、入力データの時間間隔である。\\
 \nmitem{BASENAME_BOUNDARY}は、\scalerm の格子の値に変換された境界値データの
 出力先ファイル名の頭である。
 また、初期値データの出力先は\namelist{PARAM_RESTART}の\nmitem{RESTART_OUT_BASENAME}で設定する。\\
 \scalerm では、ctlファイルの代わりに、データのファイル名とデータ構造の情報を含む
 ネームリストファイル(\verb|namelist.grads_boundary**|)を用意する。
-このネイムリストファイルへのパスは\nmitem{BASENAME_ORG}に指定する。\\
+このネームリストファイルへのパスは\nmitem{BASENAME_ORG}に指定する。\\
 以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}で指定されたものが
-\namelist{PARAM_MKINIT_REAL_OCEAN}, \namelist{PARAM_MKINIT_REAL_LAND}
+\namelist{PARAM_MKINIT_REAL_OCEAN}、\namelist{PARAM_MKINIT_REAL_LAND}
 にも適用されるが、別途指定されている場合には、情報が上書きされる。\\
 %
 \nmitem{USE_FILE_DENSITY}は\verb|FILETYPE_ORG="SCALE-RM"|用のオプションなので、
@@ -112,7 +112,7 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 領域全体に一定条件を与える場合には、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_LAND}に
 \verb|USE_FILE_LANDWATER = .false.| を追加すれば良い。
 また、土壌水分の条件は、土壌空隙率に対する水が占める割合を
-\verb|INIT_LANDWATER_RATIO|で与える。デフォルト値は 0.5 である。
+\verb|INIT_LANDWATER_RATIO| で与える。デフォルト値は 0.5 である。
 また、単位体積に対する空隙率は土地利用に応じて変わる。\\
 
 \noindent {\small {\gt
@@ -128,8 +128,7 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 }}}\\
 
 
-\clearpage
-バイナリデータは{\grads}で読み込める形式でユーザーが用意する\\
+バイナリデータは{\grads}で読み込める形式でユーザが用意する\\
 (\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})。\\
 データのファイル名とデータ構造を \scalerm に教えるための
 ネームリストファイル\\
@@ -176,8 +175,9 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 \end{tabularx}
 }}}\\
 
-大気データの格子数を\verb|outer_nx,outer_ny,outer_nz|で指定し、
-土壌データ(STEMP, SMOISVC) の層数を\verb|outer_nl|に指定する。\\
+大気データの格子数を\verb|outer_nx, outer_ny, outer_nz|で指定し、
+土壌データ(STEMP、SMOISVC) の層数を\verb|outer_nl|に指定する。\\
+
 QVやRHのデータは、他の大気データよりも低い層までしか提供されていない場合がある。
 その場合、データがある層の数を\verb|knum|で指定するが、それより上の層の
 QVの値の見積もり方について、２種類の手法が用意されている。
@@ -193,7 +193,8 @@ QVの値の見積もり方について、２種類の手法が用意されてい
 \end{tabularx}
 }}}\\
 
-\newpage
+
+~\\
 \namelist{grdvar}は、各変数のデータの与え方に応じて必要な変数が異なる。\\
 
 {\small
@@ -227,11 +228,12 @@ QVの値の見積もり方について、２種類の手法が用意されてい
 \begin{table}[hbt]
 \begin{center}
 \caption{\namelist{grdvar}の\nmitem{item}の変数リスト}
+\label{tab:grdvar_item}
 \begin{tabularx}{150mm}{rl|l|l|X} \hline
  \rowcolor[gray]{0.9} \multicolumn{1}{l}{必須変数} & \multicolumn{1}{l}{変数名} &\multicolumn{1}{l}{説明} &  \multicolumn{1}{l}{単位} & \multicolumn{1}{X}{\nmitem{dtype}} \\ \hline
-$\ast$ &\verb|lon|     & 経度データ      & [deg.]   & \verb|linear,map| \\
-$\ast$ &\verb|lat|     & 緯度データ      & [deg.]   & \verb|linear,map| \\
-$\ast$ &\verb|plev|    & 気圧データ      & [Pa]     & \verb|levels,map| \\
+$\ast$ &\verb|lon|     & 経度データ      & [deg.]   & \verb|linear, map| \\
+$\ast$ &\verb|lat|     & 緯度データ      & [deg.]   & \verb|linear, map| \\
+$\ast$ &\verb|plev|    & 気圧データ      & [Pa]     & \verb|levels, map| \\
 $\ast$ &\verb|HGT|     & 高度(ジオポテンシャル)データ& [m] & \verb|map| \\
 $\ast$ &\verb|U|       & 東西風速        & [m/s]    & \verb|map| \\
 $\ast$ &\verb|V|       & 南北風速        & [m/s]    & \verb|map| \\
@@ -243,25 +245,23 @@ $\ast$ &\verb|RH|      & 相対湿度 (QVがある場合は省略可) & [\%] & \
        &\verb|U10|     & 10m 東西風速    & [m/s]    & \verb|map| \\
        &\verb|V10|     & 10m 南北風速    & [m/s]    & \verb|map| \\
        &\verb|T2|      & 2m 気温         & [K]      & \verb|map| \\
-       &\verb|Q2|      & 2m 比湿(RH2がある場合は省略可)   &[kg/kg] & \verb|map| \\
-       &\verb|RH2|     & 2m 相対湿度 (Q2がある場合は省略可) & [\%] & \verb|map| \\
+       &\verb|Q2|      & 2m 比湿 (RH2がある場合は省略可)   &[kg/kg] & \verb|map| \\
+       &\verb|RH2|     & 2m 相対湿度 (Q2がある場合は省略可) & [\%]  & \verb|map| \\
        &\verb|TOPO|    & GCMの地形       & [m]      & \verb|map| \\
        &\verb|lsmask|  & GCMの海陸分布   & 0:海1:陸 & \verb|map| \\
 $\ast$ &\verb|SKINT|   & 地表面温度      & [K]      & \verb|map| \\
 $\ast$ &\verb|llev|    & 土壌の深さ情報  & [m]      & \verb|levels| \\
 $\ast$ &\verb|STEMP|   & 土壌温度        & [K]      & \verb|map| \\
-($\ast$) &\verb|SMOISVC| & 土壌水分(体積含水率:vormetric water content) & [] & \verb|map| \\
-($\ast$) &\verb|SMOISDS| & 土壌水分(飽和度:degree of saturation)        & [] & \verb|map| \\
+($\ast$) &\verb|SMOISVC| & 土壌水分(体積含水率)     & [-] & \verb|map| \\
+($\ast$) &\verb|SMOISDS| & 土壌水分(飽和度)         & [-] & \verb|map| \\
 $\ast$ &\verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K] & \verb|map|\\
 \end{tabularx}
-\label{tab:grdvar_item}
 \end{center}
 \end{table}
 }
 
-
-
-~\\
-\proofcomment{(八代) 土壌水分の単位は[kg/kg]？総体積に対する値かそれとも空隙体積に対する値か？}
-\replycomment{(足立) 明日最終確認}
-~\\
+表\ref{tab:grdvar_item}のうち、体積含水率は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)、
+飽和度は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)
+である。
+\namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{USE_FILE_LANDWATER}が\verb|.true.|
+の場合、\verb|SMOISVC|か\verb|SMOISDS|のどちらかを用意する必要がある。

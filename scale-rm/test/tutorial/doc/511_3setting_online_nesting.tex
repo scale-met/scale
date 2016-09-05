@@ -38,10 +38,7 @@
 
 以下では、最も単純な2段ネスティングの例を示しながら、
 オンライン・ネスティング実験のための設定について説明する。
-%を行う場合は、\verb|scale-rm|のモデル本体実行前に全ての領域について、
-%地形/土地利用データの作成、及び初期値/境界値データの作成を事前に行っておく必要がある。
-%従って、親領域と子領域それぞれについて、
-%\verb|pp.***.conf|、\verb|init.***.conf|、そして\verb|run.***.conf|ファイルを事前に作成し、
+%
 ここで説明するオンライン・ネスティング実験の設定を記述した設定ファイルは、サンプル設定ファイル
 \verb|${Tutorial_dir}/real/sample/USER.online-nesting.sh|を
 USER.shに置き換えて、実験セット準備ツールを実行した場合に作成される。
@@ -60,7 +57,7 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \noindent {\gt \verb|run.d01.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
-\begin{tabularx}{145mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_NEST|                          & \\
 \verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
 \verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
@@ -78,7 +75,7 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \noindent {\gt \verb|run.d02.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
-\begin{tabularx}{145mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_NEST| & \\
 \verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
 \verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
@@ -91,24 +88,24 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \end{tabularx}
 }}}\\
 
-\noindent 
+\noindent
 \nmitem{USE_NESTING = .true., OFFLINE = .false.}によって、
 オンライン・ネスティング実験であることが決定される。
 \nmitem{ONLINE_**}で始まる設定変数はオンライン・ネスティング実験
-専用の設定変数である。\nmitem{ONLINE_DOMAIN_NUM}は、
+専用の設定変数である。
+\nmitem{ONLINE_DOMAIN_NUM}は、
 領域のID番号であり、外側領域から内側領域へ順番に番号を振っていく。
 ここでは、親領域は1番、子領域は2番と設定する。
 \nmitem{ONLINE_IAM_PARENT}と\nmitem{ONLINE_IAM_DAUGHTER}は、各領域が複数のネスティング領域の中でどこに位置するかを示している。
 namelistの名前から明らかなように、
 \verb|ONLINE_IAM_PARENT=.true.|であれば、子領域にデータを受け渡し、
 \verb|ONLINE_IAM_DAUGHTER=.true.|であれば、境界値データは親領域から受け取るようになる。
-%これらの変数は、``In online nesting system, I am parent (or, I am child).''という意味で覚えれば設定を間違うことはない。
 N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}に示す。
 
 \begin{table}[htb]
 \begin{center}
 \caption{N段ネスティング実験の設定例}
-\begin{tabularx}{145mm}{|l|l|l|X|} \hline
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
  \rowcolor[gray]{0.9} 領域 & \verb|ONLINE_DOMAIN_NUM| & \verb|ONLINE_IAM_PARENT| & \verb|ONLINE_IAM_CHILD|\\ \hline
  最外領域 & 1               & .true.  & .false. \\ \hline
  中間領域 & 2\verb|〜|(N-1) & .true.  & .true. \\ \hline
@@ -120,9 +117,9 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 
 \noindent 最外領域は親領域としてのみ働き、最内領域は子領域としてのみ働く。
 一方、中間領域は最外領域に対しては子領域、
-最内領域に対しては親領域として働くため両方共\verb|.true.|となる。
+最内領域に対しては親領域として働くため両方共\verb|.true.|となる。\\
 \nmitem{ONLINE_BOUNDARY_USE_QHYD}は、
-「側面境界条件として親領域の凝結物の混合比を使うかどうか」を指定する。
+「側面境界条件として親領域の凝結物の値を使うかどうか」を指定する。
 外部入力データから側面境界条件を作成するときには通常使わないが、
 ネスティングの場合、領域間の物理スキームの違いがなかったり、解像度もそれほど大きく離れていないため、
 親領域で計算した凝結物を子領域の境界条件として与えることが可能である。
@@ -137,7 +134,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 
 \noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{lX}
+\begin{tabularx}{150mm}{lX}
 \verb|&PARAM_LAUNCHER|      & \\
 \verb| NUM_DOMAIN  = 2,|    & 領域の数\\
 \verb| PRC_DOMAINS = 4, 16,| & それぞれの領域で使用するMPIプロセス数 (領域の数だけ必要)\\
@@ -146,7 +143,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \end{tabularx}
 }}}\\
 
-\noindent 
+\noindent
 \nmitem{PRC_DOMAINS}と\nmitem{CONF_FILES}の記載順は対応している必要がある。
 上記の例の場合、親領域は4-MPI並列、子領域は16-MPI並列で実行するように指定されている。
 ここで指定するMPIプロセス数は、各々の領域の設定ファイル (\verb|run.***.conf|) で指定されている
@@ -173,14 +170,14 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx region of daughter domain is larger than that of parent: SW search| \\
 \end{tabularx}
 }}}\\
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 \verb|xxx region of daughter domain is larger than that of parent: NE search| \\
 \end{tabularx}
 }}}\\
@@ -191,7 +188,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 %-------------------------------------------------------------------------
 オンライン・ネスティング実験は、図\ref{fig_mpisplit}に示した通り、複数の領域間でMPIプロセスを共有しない。
 つまり、それぞれのMPIプロセスは、どれか１つのネスティング領域の一部を担当することになる。
-このため、ユーザーは、使用可能なMPIプロセス数のうち、各領域の計算にいくつのMPIプロセスを割り当てるかを
+このため、ユーザは、使用可能なMPIプロセス数のうち、各領域の計算にいくつのMPIプロセスを割り当てるかを
 決める必要がある。割り当て配分のバランスが悪いと、待ち時間が発生し、計算時間が余計にかかってしまう。
 これを避けるためには、領域毎に、時間積分にかかる1プロセスあたりの計算量（ここでは格子数と
 タイムステップ数の積として定義）を揃えればよい
@@ -199,7 +196,7 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 具体的な見積もり方法は下記の通りである。
 
 ここではN個の領域(N段ネスティング)を考える。
-n番目の領域の{\XDIR}, {\YDIR}, {\ZDIR}の格子数をそれぞれ\verb|IMAX_n|, \verb|JMAX_n|, \verb|KMAX_n|
+n番目の領域の{\XDIR}、{\YDIR}、{\ZDIR}の格子数をそれぞれ\verb|IMAX_n|、\verb|JMAX_n|、\verb|KMAX_n|
 と表し、時間積分のタイムステップ\nmitem{TIME_DT}を\verb|DT_n|と表すことにする。
 この時、一番外側領域(n=1)の時間積分のタイムステップ\verb|DT_1|を基準とし、この時間を積分するのに
 必要なn番目の領域の計算ステップ数は、
@@ -216,57 +213,6 @@ n番目の領域の{\XDIR}, {\YDIR}, {\ZDIR}の格子数をそれぞれ\verb|IMA
 \end{eqnarray}
 と見積もることができる。
 
-
-%ここでは、以下に示す2段オンライン・ネスティング実験を行う場合を想定し、ガイドラインに沿ったプロセス分配方法の例を示す。
-%``domain 1''は外側の親領域、``domain 2''は内側の子領域を意味する。
-%
-%\begin{table}[htb]
-%\begin{center}
-%\caption{2段オンライン・ネスティング実験の設定想定}
-%\begin{tabularx}{150mm}{|l|l|X|} \hline
-% \rowcolor[gray]{0.9} 設定項目 & domain 1 & domain 2 \\ \hline
-% 計算領域 & 450 km $\times$ 450 km & 200 km $\times$ 200 km \\ \hline
-% DX \& DY（X,Y同一設定） & 3 km & 1 km \\ \hline
-% 鉛直層設定 & 40層 & 60層 \\ \hline
-% 積分時間間隔（DT）& 30 sec & 10 sec \\ \hline
-% 積分時間 & 3600 sec & 3600 sec \\ \hline
-%\end{tabularx}
-%\label{tab:nest_proc_guide1}
-%\end{center}
-%\end{table}
-%
-%このとき、親領域の水平方向の一辺の格子点数は、$450 \mathrm{km} \div 3 \mathrm{km} = 150$点であるので、総格子点数は
-%$X \times Y \times Z = 150 \times 150 \times 40 = 900,000$点である。一方、子領域の水平方向の一辺の格子点数は、
-%$200 \mathrm{km} \div 1 \mathrm{km} = 200$点であるので、
-%総格子点数は$200 \times 200 \times 60 = 2,400,000$点である。1つの時間ステップの
-%積分を行うのにこれだけの格子点について計算を行わなければならない。
-%
-%積分時間間隔は格子間隔に依存するために領域毎に異なる。この例では、domain 1は30 secだが、domain 2は10 secであり、
-%3倍の差がある。したがって、同じ30 secという積分時間に対してdomain 2は3倍多くの時間ステップ、つまり3倍の演算量を要する。
-%これらを考慮して、簡単な領域間の演算量比率（Computation Rate）の指標を考えると下記の式で表される。
-%\begin{eqnarray}
-%ComputationRate=\frac{Xgrd_{child} \times Ygrd_{child} \times Zgrd_{child} \times Ustep_{child}}
-%                     {Xgrd_{parent} \times Ygrd_{parent} \times Zgrd_{parent} \times Ustep_{parent}} \nonumber
-%\end{eqnarray}
-%ここで、$Xgrd, Ygrd, Zgrd$ はそれぞれ{\XDIR} 、{\YDIR}、{\ZDIR}の格子点数を表し、Ustepは単位時間積分に必要な時間ステップ数を表す。
-%ここでの例をこの式に当てはまると、
-%演算量比率は$(2,400,000 \times 3) \div (900,000 \times 1) = 8$であることがわかる。
-%おおよそ、この割合にしたがってMPIプロセスを領域毎に分配すればよい。
-%例えばdomain 1は4プロセス、domain 2は32プロセスを
-%使用し、全体で36プロセスを使用する設定が考えられる。
-%この場合、例えば次のように設定することができる。
-
-%\begin{table}[htb]
-%\begin{center}
-%\caption{2段オンライン・ネスティング実験のMPIプロセス設定例}
-%\begin{tabularx}{150mm}{|l|l|X|} \hline
-% \rowcolor[gray]{0.9} 設定項目 & domain 1 & domain 2 \\ \hline
-% MPIプロセス（X $\times$ Y） & 2 $\times$ 2 & 4 $\times$ 8 \\ \hline
-% 水平格子点数（IMAX $\times$ JMAX） & 75 $\times$ 75 & 50 $\times$ 25 \\ \hline
-%\end{tabularx}
-%\label{tab:nest_proc_guide2}
-%\end{center}
-%\end{table}
 
 {\XDIR} と{\YDIR}に分配するプロセス数\nmitem{PRC_NUM_X, PRC_NUM_Y}には任意性が残るが、
 \verb|IMAX|と\verb|JMAX|の違いが小さくなるように設定する方がHALO領域を少なくすることが出来るため、

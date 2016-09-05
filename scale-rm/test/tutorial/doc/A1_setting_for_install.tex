@@ -8,11 +8,11 @@ SCALEのインストールに必要なコンパイラやライブラリ環境の
 
 Linuxをインストール後、各種プログラムのインストールはコマンドライン端末にて行う。
 本書で説明するライブラリ環境のインストールでは、root権限が必要になる。
-したがって、想定する環境は、ユーザーがroot権限を所持しているかサーバやデスクトップマシンである。
+従って、想定する環境は、ユーザがroot権限を所持しているかサーバやデスクトップマシンである。
 別途サーバー管理者が存在し、root権限を取得できない場合等は、必要な環境条件が整っているか
 サーバー管理者に問い合わせること。
 
-本節では、HDF5, NetCDF, MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
+本節では、HDF5、NetCDF、MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
 GNU compiler以外のIntel compilerなどを利用する場合は、各自でインストール方法を調べてインストールすること。\\
 
 \noindent ここでインストールするコンパイラおよびライブラリ環境は、主に下記の4点である。
@@ -71,7 +71,7 @@ CentOS 6.6では、ソフトウェアのインストールに"yum"コマンド�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 読み込んだプラグイン:fastestmirror, refresh-packagekit, security\\
 インストール処理の設定をしています\\
 Loading mirror speeds from cached hostfile\\
@@ -157,7 +157,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -227,7 +227,7 @@ CentOS 7.1では、ソフトウェアのインストールに"yum"コマンド�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 読み込んだプラグイン:fastestmirror, langpacks\\
 base                                                      3.6 kB     00:00\\
 extras                                                    3.4 kB     00:00\\
@@ -318,7 +318,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -354,8 +354,8 @@ openSUSE 13.2では、一部のライブラリを外部リポジトリ
 このリポジトリには、grads、ncview、GMT、ncl、そしてcdoといったツール群も含まれており便利である。
 
 openSUSE 13.2では、ソフトウェアのインストールに"zypper"コマンドを利用する。
-openSUSEでは一般にユーザーがrootユーザーにスイッチすることを推奨しておらず、
-デフォルトのままOSをインストールすると"su"コマンドによってrootユーザーに
+openSUSEでは一般にユーザがrootユーザにスイッチすることを推奨しておらず、
+デフォルトのままOSをインストールすると"su"コマンドによってrootユーザに
 スイッチすることはできないので、"sudo"コマンドを利用してインストール作業を行う。
 すべての作業を行うまえに、下記のコマンドにてパッケージをアップデートしておくことをおすすめする。
 \begin{verbatim}
@@ -374,7 +374,7 @@ openSUSEでは一般にユーザーがrootユーザーにスイッチするこ�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  リポジトリ 'home\_ocefpaf' を追加しています ...............................完了 \\
  リポジトリ 'home\_ocefpaf' を正常に追加しました\\
  有効         : はい (Y)\\
@@ -400,7 +400,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  鍵を拒否しますか (R)？ 一時的に信頼しますか (T)？ \\
  それとも今後ずっと信頼しますか (A)？ [r/t/a/? 全てのオプションを表示] (r): a
 \end{tabularx}
@@ -439,7 +439,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -476,8 +476,8 @@ Apple Mac OS XでのSCALE実行環境を整備する方法について説明す�
  # xcode-select --install
 \end{verbatim}
 \begin{verbatim}
- ライセンス条項の承認
- # xcodebuild -license
+ ライセンス条項の承認（root権限必要）
+ # sudo xcodebuild -license
 \end{verbatim}
 
 次にmacports本体をインストールする。
@@ -548,10 +548,11 @@ macportsでは複数のコンパイラとMPIライブラリをインストール
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|export NETCDF_INCLUDE="-I/opt/local/include"|\\
- \verb|export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,-headerpad_max_install_names -lnetcdf"|\\
+ \verb|export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,\ |\\
+ \verb|-headerpad_max_install_names -lnetcdf"|\\
  \\
 \end{tabularx}
 }}\\
@@ -566,7 +567,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|export LAPACK_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"|\\
  \\
@@ -575,7 +576,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
 
 \subsubsection{Mac OS XにおけるGPhys / Ruby-DCLのインストール}
 
-GphysはRubyのパッケージ管理システムRubyGemsを通してインストールできる。
+{\gphys}はRubyのパッケージ管理システムRubyGemsを通してインストールできる。
 詳細な情報については、(\url{https://www.hdfgroup.org/HDF5/})を参照されたい。
 まず必要であればrubyのインストールをmacportsを用いて行う。この例ではRuby2.1を利用することにする。
 
@@ -584,7 +585,7 @@ GphysはRubyのパッケージ管理システムRubyGemsを通してインスト
  $ sudo port select --set ruby ruby21
 \end{verbatim}
 
-次にmacportsを用いて、Gphysに必要なライブラリをインストールする。
+次にmacportsを用いて、{\gphys}に必要なライブラリをインストールする。
 
 \begin{verbatim}
  $ sudo port install fftw-3
@@ -592,11 +593,23 @@ GphysはRubyのパッケージ管理システムRubyGemsを通してインスト
  $ sudo port install C-DCL6
 \end{verbatim}
 
-最後にRubyGemsを用いて、Gphysをインストールする。
+最後にRubyGemsを用いて、{\gphys}をインストールする。
 
 \begin{verbatim}
  $ sudo gem install gphys
 \end{verbatim}
+
+%\subsubsection{Mac OS XにおけるGrADSのインストール}（Todo）
+
+\subsubsection{Mac OS Xでの実行時の注意点}
+
+Mac OS Xを用いて\scalerm プログラムを実行すると、実行時に
+「アプリケーション"scale-rm"へのネットワーク受信接続を許可しますか？」
+というダイアログが出ることがあります。
+これはコンパイルしたバイナリがマシンをまたいだMPI通信をするかファイアウォール機能が確認するためです。
+コンパイルし直すたびにMPI並列数の分だけダイアログが出てきてしまいますが、今のところ表示を回避するためには
+「システム環境設定」の「セキュリティとプライバシー」項目で「ファイアウォール」のタブを選択し、
+プログラムの実行時にファイアウォールを切る方法しかありません。
 
 
 
@@ -634,11 +647,11 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
 ここに挙げた以外のツールで解析・描画することももちろん可能である。
 
 \begin{itemize}
-\item GPhys / Ruby-DCL by 地球電脳倶楽部\\
+\item GPhys / Ruby-DCL by 地球電脳倶楽部
  \begin{itemize}
   \item URL： \url{http://ruby.gfd-dennou.org/products/gphys/}
   \item 概略：SCALEの出力ファイルは、MPI並列の計算領域分割に従ってMPIプロセスごとに
-              NetCDF形式の分割ファイルとして出力される。GPhysの"gpview"や"gpvect"といった
+              NetCDF形式の分割ファイルとして出力される。{\gphys}の"gpview"や"gpvect"といった
               描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。
   \item インストール方法：
   地球電脳倶楽部のWebページに、主なOSでのインストール方法についての解説がある。\\
@@ -649,19 +662,26 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
    \url{https://www.gfd-dennou.org/library/ruby/products/macports/index-j.html}
    でも解説されている。
    \end{itemize}
-\item Grid Analysis and Display System (GrADS) by COLA\\
+\item Grid Analysis and Display System (GrADS) by COLA
  \begin{itemize}
-  \item URL： \url{http://iges.org/grads/}
+  \item URL： \url{http://cola.gmu.edu/grads/}
   \item 概略：言わずと知れた描画ツール。SCALEのNetCDF形式の分割ファイルをそのまま読むことはできない
              ため、SCALEで提供している出力データの後処理ツール"\verb|netcdf2grads_h|"を使用して分割ファイルを結合し、
              GrADSで読み込めるファイル形式に変換する必要ある。"\verb|netcdf2grads_h|"のインストール方法は、
 本書の第\ref{sec:inst_env}章、使用方法は第3章、および第4章を参照のこと。
-  \item インストール方法：\url{http://iges.org/grads/downloads.html}を参照のこと。
+  \item インストール方法：\url{http://cola.gmu.edu/grads/downloads}を参照のこと。
                         CentOS6、CentOS7ではEPELリポジトリを登録していればyumコマンドによって、
                         openSUSE 13ではhome\_ocefpafリポジトリを登録していればzypperコマンドによって
                         インストールできる。
+                        GrADS本体のインストールし、バイナリが保存されている場所にPATHを通す。\\
+                        次に、描画に必要なスクリプト集（.gs）を\url{ftp://cola.gmu.edu/grads/scripts}からダウンロードする。
+                        例えばwgetを用いる場合は\\
+                        「wget ftp://cola.gmu.edu/grads/scripts/*.gs」\\
+                        スクリプトを保存した場所に環境変数GASCRPを設定する。\\
+                        例えばスクリプトを/usr/local/grads/script/に保存した場合は\\
+                        「export GASCRP="/usr/local/grads/script"」
  \end{itemize}
-\item Ncview: a NetCDF visual browser by David W. Pierce\\
+\item Ncview: a NetCDF visual browser by David W. Pierce
  \begin{itemize}
   \item URL： \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}
   \item 概略：NetCDF形式ファイルのクイックビューアーである。SCALEの分割ファイルを結合して描画することは
@@ -672,8 +692,5 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
                         インストールできる。
  \end{itemize}
 \end{itemize}
-
-
-
 
 
