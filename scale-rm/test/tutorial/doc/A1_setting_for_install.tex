@@ -576,7 +576,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
 
 \subsubsection{Mac OS XにおけるGPhys / Ruby-DCLのインストール}
 
-GphysはRubyのパッケージ管理システムRubyGemsを通してインストールできる。
+{\gphys}はRubyのパッケージ管理システムRubyGemsを通してインストールできる。
 詳細な情報については、(\url{https://www.hdfgroup.org/HDF5/})を参照されたい。
 まず必要であればrubyのインストールをmacportsを用いて行う。この例ではRuby2.1を利用することにする。
 
@@ -585,7 +585,7 @@ GphysはRubyのパッケージ管理システムRubyGemsを通してインスト
  $ sudo port select --set ruby ruby21
 \end{verbatim}
 
-次にmacportsを用いて、Gphysに必要なライブラリをインストールする。
+次にmacportsを用いて、{\gphys}に必要なライブラリをインストールする。
 
 \begin{verbatim}
  $ sudo port install fftw-3
@@ -593,7 +593,7 @@ GphysはRubyのパッケージ管理システムRubyGemsを通してインスト
  $ sudo port install C-DCL6
 \end{verbatim}
 
-最後にRubyGemsを用いて、Gphysをインストールする。
+最後にRubyGemsを用いて、{\gphys}をインストールする。
 
 \begin{verbatim}
  $ sudo gem install gphys
@@ -647,11 +647,11 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
 ここに挙げた以外のツールで解析・描画することももちろん可能である。
 
 \begin{itemize}
-\item GPhys / Ruby-DCL by 地球電脳倶楽部\\
+\item GPhys / Ruby-DCL by 地球電脳倶楽部
  \begin{itemize}
   \item URL： \url{http://ruby.gfd-dennou.org/products/gphys/}
   \item 概略：SCALEの出力ファイルは、MPI並列の計算領域分割に従ってMPIプロセスごとに
-              NetCDF形式の分割ファイルとして出力される。GPhysの"gpview"や"gpvect"といった
+              NetCDF形式の分割ファイルとして出力される。{\gphys}の"gpview"や"gpvect"といった
               描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。
   \item インストール方法：
   地球電脳倶楽部のWebページに、主なOSでのインストール方法についての解説がある。\\
@@ -662,7 +662,7 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
    \url{https://www.gfd-dennou.org/library/ruby/products/macports/index-j.html}
    でも解説されている。
    \end{itemize}
-\item Grid Analysis and Display System (GrADS) by COLA\\
+\item Grid Analysis and Display System (GrADS) by COLA
  \begin{itemize}
   \item URL： \url{http://cola.gmu.edu/grads/}
   \item 概略：言わずと知れた描画ツール。SCALEのNetCDF形式の分割ファイルをそのまま読むことはできない
@@ -681,7 +681,7 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
                         例えばスクリプトを/usr/local/grads/script/に保存した場合は\\
                         「export GASCRP="/usr/local/grads/script"」
  \end{itemize}
-\item Ncview: a NetCDF visual browser by David W. Pierce\\
+\item Ncview: a NetCDF visual browser by David W. Pierce
  \begin{itemize}
   \item URL： \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}
   \item 概略：NetCDF形式ファイルのクイックビューアーである。SCALEの分割ファイルを結合して描画することは
@@ -692,8 +692,5 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
                         インストールできる。
  \end{itemize}
 \end{itemize}
-
-
-
 
 
