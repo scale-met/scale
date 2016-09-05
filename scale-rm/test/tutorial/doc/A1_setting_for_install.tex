@@ -551,7 +551,8 @@ macportsでは複数のコンパイラとMPIライブラリをインストール
 \begin{tabularx}{150mm}{l}
  \\
  \verb|export NETCDF_INCLUDE="-I/opt/local/include"|\\
- \verb|export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,-headerpad_max_install_names -lnetcdf"|\\
+ \verb|export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,\ |\\
+ \verb|-headerpad_max_install_names -lnetcdf"|\\
  \\
 \end{tabularx}
 }}\\
@@ -674,9 +675,11 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
                         インストールできる。
                         GrADS本体のインストールし、バイナリが保存されている場所にPATHを通す。\\
                         次に、描画に必要なスクリプト集（.gs）を\url{ftp://cola.gmu.edu/grads/scripts}からダウンロードする。
-                       （例えばwgetを用いる場合は「wget ftp://cola.gmu.edu/grads/scripts/*.gs」）。\\
-                        スクリプトを保存した場所に環境変数GASCRPを設定する（例えばスクリプトを/usr/local/grads/script/に保存した場合は
-                        「export GASCRP="/usr/local/grads/script"」）。
+                        例えばwgetを用いる場合は\\
+                        「wget ftp://cola.gmu.edu/grads/scripts/*.gs」\\
+                        スクリプトを保存した場所に環境変数GASCRPを設定する。\\
+                        例えばスクリプトを/usr/local/grads/script/に保存した場合は\\
+                        「export GASCRP="/usr/local/grads/script"」
  \end{itemize}
 \item Ncview: a NetCDF visual browser by David W. Pierce\\
  \begin{itemize}
