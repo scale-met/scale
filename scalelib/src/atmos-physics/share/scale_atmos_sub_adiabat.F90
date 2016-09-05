@@ -319,7 +319,7 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-    do k = Kstr, KE+2
+    do k = Kstr, KE
        TEMP_p(k,i,j) = TEMP(k,i,j) ! first guess
 
        ! T1: unsaturated temperature, S = U1(PRES, TEMP_unsat, qtot_p)
