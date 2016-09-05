@@ -19,24 +19,18 @@ Build
 - set SCALE_SYS environmental variable (see the sysdef directory)
  % SCALE_SYS=Linux64-gnu-ompi (example)
 
-- make dc_utils library
- % cd dc_uitls
+- build the execution binary files in the directory of the test cases of scale-rm
+ e.g.,
+ % cd rootdir/scale-rm/src/
  % make
 
-- make gtool library
- % cd gtool
- % make
-
-- make scalelib library
- % cd scalelib/src
- % make depend
- % make
-
-- make and run the test cases of scale-rm
- % cd scale-rm/test/case/hydrostatic/500m (example)
- % make
- % make run
-
+- generate the initial files and run the integration
+ e.g.,
+ % cd rootdir/scale-rm/test/tutorial/ideal
+ % ln -s ../../../../bin/scale-rm_init ./
+ % mpirun -n 2 ./scale-rm_init init_R20kmDX500m.conf
+ % ln -s ../../../../bin/scale-rm      ./
+ % mpirun -n 2 ./scale-rm run_R20kmDX500m.conf
 
 
 Available Option List
@@ -46,7 +40,7 @@ You can enable options below by setting as environment variables, for example,
  % export OPTION_NAME=T
 Switch options will be activated only when the value is "T"
 
-* ENABLE_FIXEDINDEX : fix index size of horizontal/vertical grid （inc_index.h is required）
+* ENABLE_FIXEDINDEX : fix size of horizontal/vertical grids （inc_index.h is required, see scalelib/include/inc_index.h.sample）
 * AGGRESSIVE : enable aggressive optimization on the K computer
 * DEBUG : enable debug mode
 * IGNOREDEP : avoid checking of source dependency at the time of compile
@@ -55,7 +49,7 @@ Switch options will be activated only when the value is "T"
 * CHECK_MASS : calculate and check total mass in dynamical core (for debug)
 * RDMA : (obsolete) : use special routine of RDMA communication on the K computer
 * ENABLE_PAPI : enable using PAPI (library is required)
-* USE_NETCDF3 : use NetCDF3 instead fo NetCDF4
+* USE_NETCDF3 : use NetCDF3 instead of NetCDF4
 
 - Fixed component
 You can fix several model component at the time of compile.

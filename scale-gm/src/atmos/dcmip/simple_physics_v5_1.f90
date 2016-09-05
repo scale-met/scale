@@ -1,49 +1,81 @@
-subroutine simple_physics (pcols, pver, dtime, lat, t, q, u, v, pmid, pint, pdel, rpdel, ps, precl, test)
-!----------------------------------------------------------------------- 
-! 
-! Purpose: Simple Physics Package
+!-----------------------------------------------------------------------
 !
-! Author: K. A. Reed (University of Michigan, kareed@umich.edu)
-!         version 5 
-!         July/8/2012
+!  Date:  January 13, 2016 (Version 5)
+!
+!  Simple Physics Package
+!
+!  SIMPLE_PHYSICS includes large-scale precipitation, surface fluxes and
+!  boundary-leyer mixing. The processes are time-split in that order.
+!  A partially implicit formulation is used to foster numerical
+!  stability. The routine assumes that the model levels are ordered
+!  in a top-down approach, e.g. level 1 denotes the uppermost full model
+!  level.
+!
+!  This routine is based on an implementation which was developed for
+!  the NCAR Community Atmosphere Model (CAM). Adjustments for other
+!  models may be necessary.
+!
+!  The routine provides both updates of the state variables u, v, T, q
+!  (these are local copies of u,v,T,q within this physics routine) and
+!  also collects their time tendencies. The latter might be used to
+!  couple the physics and dynamics in a process-split way. For a
+!  time-split coupling, the final state should be given to the
+!  dynamical core for the next time step.
+!              
+! Test:      0 = Reed and Jablonowski (2011) tropical cyclone test
+!            1 = Moist baroclinic instability test
+!
+!  SUBROUTINE SIMPLE_PHYSICS(pcols, pver, dtime, lat, t, q, u, v, pmid, pint, pdel, rpdel, ps, precl, test)
+!
+!  Input variables:
+!     pcols  - number of atmospheric columns (#)
+!     pver   - number of model levels (#)
+!     dtime  - time step (s)
+!     lat    - latitude (radians)
+!     t      - temperature at model levels (K)
+!     q      - specific humidity at model levels (gm/gm)
+!     u      - zonal wind at model levels (m/s)
+!     v      - meridional wind at model levels (m/s)
+!     pmid   - pressure at model levels (Pa)
+!     pint   - pressure at interfaces (Pa)
+!     pdel   - layer thickness (Pa)
+!     rpdel  - reciprocal of layer thickness (1/Pa)
+!     ps     - surface pressure (Pa)
+!     test   - test case to use for sea-surface temperatures
+!
+!  Output variables:
+!     Increments are added into t, q, u, v, pmid, pint, pdel, rpdel and ps
+!     which are returned to the routine from which SIMPLE_PHYSICS was
+!     called.  Precpitation is returned via precl.
 !
 !  Change log:
 !  v2: removal of some NCAR CAM-specific 'use' associations
-!  v3: corrected precl(i) computation, the precipitation rate is now computed via a vertical integral, the previous single-level computation in v2 was a bug
-!  v3: corrected dtdt(i,1) computation, the term '-(i,1)' was missing the temperature variable: '-t(i,1)'
-!  v4: modified and enhanced parameter list to make the routine truly standalone, the number of columns and vertical levels have been added: pcols, pver
+!  v3: corrected precl(i) computation, the precipitation rate is now
+!      computed via a vertical integral, the previous single-level
+!      computation in v2 was a bug
+!  v3: corrected dtdt(i,1) computation, the term '-(i,1)' was missing
+!      the temperature variable: '-t(i,1)'
+!  v4: modified and enhanced parameter list to make the routine truly
+!      standalone, the number of columns and vertical levels have been
+!      added: pcols, pver
 !  v4: 'ncol' has been removed, 'pcols' is used instead
-!  v5: the sea surface temperature (SST) field Tsurf is now an array, the SST now depends on the latitude
-!  v5: addition of the latitude array 'lat' and the flag 'test' in the parameter list
-!      if test = 0: constant SST is used, correct setting for the tropical cyclone test case 5-1
-!      if test = 1: newly added latitude-dependent SST is used, correct setting for the moist baroclinic wave test with simple-physics (test 4-3)
-! 
-! Description: Includes large-scale precipitation, surface fluxes and
-!              boundary-leyer mixing. The processes are time-split
-!              in that order. A partially implicit formulation is
-!              used to foster numerical stability.
-!              The routine assumes that the model levels are ordered
-!              in a top-down approach, e.g. level 1 denotes the uppermost
-!              full model level.
-!
-!              This routine is based on an implementation which was
-!              developed for the NCAR Community Atmosphere Model (CAM).
-!              Adjustments for other models will be necessary.
-!
-!              The routine provides both updates of the state variables
-!              u, v, T, q (these are local copies of u,v,T,q within this physics
-!              routine) and also collects their time tendencies.
-!              The latter might be used to couple the physics and dynamics
-!              in a process-split way. For a time-split coupling, the final
-!              state should be given to the dynamical core for the next time step.
-! Test:      0 = Reed and Jablonowski (2011) tropical cyclone test case (test 5-1)
-!            1 = Moist baroclinic instability test (test 4-3)
-!
+!  v5: the sea surface temperature (SST) field Tsurf is now an array,
+!      the SST now depends on the latitude
+!  v5: addition of the latitude array 'lat' and the flag 'test' in the
+!      parameter list
+!      if test = 0: constant SST is used, correct setting for the
+!                   tropical cyclone test
+!      if test = 1: newly added latitude-dependent SST is used,
+!                   correct setting for the moist baroclinic wave test
+!                   with simple-physics
 !
 ! Reference: Reed, K. A. and C. Jablonowski (2012), Idealized tropical cyclone 
 !            simulations of intermediate complexity: A test case for AGCMs, 
 !            J. Adv. Model. Earth Syst., Vol. 4, M04001, doi:10.1029/2011MS000099
 !-----------------------------------------------------------------------
+
+SUBROUTINE SIMPLE_PHYSICS(pcols, pver, dtime, lat, t, q, u, v, pmid, pint, pdel, rpdel, ps, precl, test)
+
   ! use physics_types     , only: physics_dme_adjust   ! This is for CESM/CAM
   ! use cam_diagnostics,    only: diag_phys_writeout   ! This is for CESM/CAM
 
@@ -453,5 +485,5 @@ subroutine simple_physics (pcols, pver, dtime, lat, t, q, u, v, pmid, pint, pdel
   !  call physics_dme_adjust(state, tend, qini, dtime)   ! This is for CESM/CAM
 
    return
-end subroutine simple_physics 
+end subroutine SIMPLE_PHYSICS
 

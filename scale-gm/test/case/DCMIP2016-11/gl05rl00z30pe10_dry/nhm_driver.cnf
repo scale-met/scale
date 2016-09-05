@@ -1,0 +1,121 @@
+################################################################################
+#
+# NICAM driver config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 5,
+    rlevel      = 0,
+    vlayer      = 30,
+    rgnmngfname = "rl00-prc10.info",
+/
+
+&GRDPARAM
+    hgrid_io_mode = "ADVANCED",
+    hgrid_fname   = "boundary_GL05RL00",
+    VGRID_fname   = "vgrid30_stretch_30km_dcmip2016v2.dat",
+    vgrid_scheme  = "LINEAR",
+    topo_fname    = "NONE",
+/
+
+&TIMEPARAM
+    DTL         = 600.D0,
+    INTEG_TYPE  = "RK3",
+    LSTEP_MAX   = 2160,
+    start_date  = 0000,1,1,0,0,0
+/
+
+&RUNCONFPARAM
+    RUNNAME        = 'DCMIP2016-11',
+    NDIFF_LOCATION = 'IN_LARGE_STEP2',
+    THUBURN_LIM    = .true.,
+    RAIN_TYPE      = "DRY",
+    CHEM_TYPE      = 'PASSIVE',
+    AF_TYPE        = 'NONE',
+/
+
+&CHEMVARPARAM
+    CHEM_TRC_vmax = 2,
+/
+
+&BSSTATEPARAM
+    ref_type = 'NOBASE',
+/
+
+&RESTARTPARAM
+    input_io_mode     = 'IDEAL',
+    output_io_mode    = 'ADVANCED',
+    output_basename   = 'restart_all_GL05RL00z30',
+    restart_layername = 'ZSALL32_DMP16v2',
+/
+
+##### DCMIP2016-11: Moist Baroclinic Wave
+##case 1: perturbation: exponential / with moisture
+##case 2: perturbation: stream function / with moisture
+##case 3: perturbation: exponential / without moisture
+##case 4: perturbation: stream function / without moisture
+##case 5: no perturbation / with moisture
+##case 6: no perturbation / without moisture
+&DYCORETESTPARAM
+    init_type   = 'Jablonowski-Moist',
+    test_case   = '6',
+    chemtracer  = .true.,
+    prs_rebuild = .true.,
+/
+
+&FORCING_PARAM
+    UPDATE_TOT_DENS  = .false.,
+/
+
+&FORCING_DCMIP_PARAM
+    SET_DCMIP2016_11 = .true.,
+/
+
+&CNSTPARAM
+    earth_radius        = 6.37122E+6,
+    earth_angvel        =   7.292E-5,
+    small_planet_factor =      1.E0,
+    earth_gravity       = 9.80616E0,
+    gas_cnst            =   287.0E0,
+    specific_heat_pre   =  1004.5E0,
+/
+
+&NUMFILTERPARAM
+    hdiff_type        = 'DIRECT',
+    lap_order_hdiff   = 2,
+    gamma_h           = 1.20E16,
+    divdamp_type      = 'DIRECT',
+    lap_order_divdamp = 2,
+    alpha_d           = 1.20E16,
+/
+
+&EMBUDGETPARAM
+    MNT_ON   = .true.,
+    MNT_INTV = 72    ,
+/
+
+&NMHISD
+    output_io_mode   = 'ADVANCED' ,
+    histall_fname    = 'history'  ,
+    hist3D_layername = 'ZSDEF30_DMP16v2',
+    NO_VINTRPL       = .false.    ,
+    output_type      = 'SNAPSHOT' ,
+    step             = 144        ,
+    doout_step0      = .true.     ,
+/
+
+&NMHIST item='ml_u',     file='u',    ktype='3D' /
+&NMHIST item='ml_v',     file='v',    ktype='3D' /
+&NMHIST item='ml_w',     file='w',    ktype='3D' /
+&NMHIST item='ml_pres',  file='prs',  ktype='3D' /
+&NMHIST item='ml_tem',   file='t',    ktype='3D' /
+&NMHIST item='sl_ps',    file='ps',   ktype='2D' /
+&NMHIST item='sl_u850',  file='u850', ktype='2D' /
+&NMHIST item='sl_v850',  file='v850', ktype='2D' /
+&NMHIST item='sl_w850',  file='w850', ktype='2D' /
+&NMHIST item='sl_t850',  file='t850', ktype='2D' /
+&NMHIST item='sl_w500',  file='w500', ktype='2D' /
+&NMHIST item='sl_t500',  file='t500', ktype='2D' /
+
+################################################################################

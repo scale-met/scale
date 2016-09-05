@@ -13,23 +13,21 @@ module mod_thrmdyn
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
-  use scale_prof
-
+  use scale_const, only: &
+     Rdry   => CONST_Rdry,  &
+     CPdry  => CONST_CPdry, &
+     CVdry  => CONST_CVdry, &
+     Rvap   => CONST_Rvap,  &
+     LHV    => CONST_LHV,   &
+     LHF    => CONST_LHF,   &
+     PRE00  => CONST_PRE00, &
+     TEM00  => CONST_TEM00, &
+     PSAT0  => CONST_PSAT0, &
+     EPSvap => CONST_EPSvap
   use mod_adm, only: &
-     ADM_LOG_FID,      &
      kdim => ADM_kall, &
      kmin => ADM_kmin, &
      kmax => ADM_kmax
-  use scale_const, only: &
-     Rdry  => CONST_Rdry,  &
-     CPdry => CONST_CPdry, &
-     CVdry => CONST_CVdry, &
-     Rvap  => CONST_Rvap,  &
-     PRE00 => CONST_PRE00, &
-     TEM00 => CONST_TEM00, &
-     PSAT0 => CONST_PSAT0, &
-     EPSV  => CONST_EPSvap
   use mod_runconf, only: &
      nqmax => TRC_VMAX, &
      NQW_STR,           &
@@ -40,8 +38,6 @@ module mod_thrmdyn
      I_QI,              &
      I_QS,              &
      I_QG,              &
-     LHV,               &
-     LHF,               &
      CVW,               &
      CPW
   !-----------------------------------------------------------------------------
@@ -62,7 +58,6 @@ module mod_thrmdyn
   public :: THRMDYN_qd
   public :: THRMDYN_cv
   public :: THRMDYN_cp
-  public :: THRMDYN_rho
   public :: THRMDYN_pre
   public :: THRMDYN_ein
   public :: THRMDYN_tem
@@ -84,11 +79,6 @@ module mod_thrmdyn
   interface THRMDYN_cp
      module procedure THRMDYN_cp_ijk
   end interface THRMDYN_cp
-
-  interface THRMDYN_rho
-     module procedure THRMDYN_rho_ijk
-     module procedure THRMDYN_rho_ijkl
-  end interface THRMDYN_rho
 
   interface THRMDYN_pre
      module procedure THRMDYN_pre_ijk
@@ -147,8 +137,8 @@ contains
        qd     )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: q (ijdim,kdim,nqmax) ! tracer  mass concentration [kg/kg]
     real(RP), intent(out) :: qd(ijdim,kdim)       ! dry air mass concentration [kg/kg]
 
@@ -183,9 +173,9 @@ contains
        qd     )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
-    integer, intent(in)  :: ldim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
+    integer,  intent(in)  :: ldim
     real(RP), intent(in)  :: q (ijdim,kdim,ldim,nqmax) ! tracer  mass concentration [kg/kg]
     real(RP), intent(out) :: qd(ijdim,kdim,ldim)       ! dry air mass concentration [kg/kg]
 
@@ -222,8 +212,8 @@ contains
        cv     )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: qd(ijdim,kdim)       ! dry air mass concentration [kg/kg]
     real(RP), intent(in)  :: q (ijdim,kdim,nqmax) ! tracer  mass concentration [kg/kg]
     real(RP), intent(out) :: cv(ijdim,kdim)       ! specific heat [J/kg/K]
@@ -259,8 +249,8 @@ contains
        cp     )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: qd(ijdim,kdim)       ! dry air mass concentration [kg/kg]
     real(RP), intent(in)  :: q (ijdim,kdim,nqmax) ! tracer  mass concentration [kg/kg]
     real(RP), intent(out) :: cp(ijdim,kdim)       ! specific heat [J/kg/K]
@@ -287,78 +277,6 @@ contains
   end subroutine THRMDYN_cp_ijk
 
   !-----------------------------------------------------------------------------
-  !> calculate density
-  subroutine THRMDYN_rho_ijk( &
-       ijdim, &
-       kdim,  &
-       tem,   &
-       pre,   &
-       qd,    &
-       q,     &
-       rho    )
-    implicit none
-
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
-    real(RP), intent(in)  :: tem(ijdim,kdim)       ! temperature [K]
-    real(RP), intent(in)  :: pre(ijdim,kdim)       ! pressure    [Pa]
-    real(RP), intent(in)  :: qd (ijdim,kdim)       ! dry air mass concentration [kg/kg]
-    real(RP), intent(in)  :: q  (ijdim,kdim,nqmax) ! tracer  mass concentration [kg/kg]
-    real(RP), intent(out) :: rho(ijdim,kdim)       ! density     [kg/m3]
-
-    integer :: ij, k
-    !---------------------------------------------------------------------------
-
-    !$acc kernels pcopy(rho) pcopyin(pre,tem,qd,q) async(0)
-    do k  = 1, kdim
-    do ij = 1, ijdim
-       rho(ij,k) = pre(ij,k) / tem(ij,k) / ( qd(ij,k)*Rdry + q(ij,k,I_QV)*Rvap )
-    enddo
-    enddo
-    !$acc end kernels
-
-    return
-  end subroutine THRMDYN_rho_ijk
-
-  !-----------------------------------------------------------------------------
-  !> calculate density
-  subroutine THRMDYN_rho_ijkl( &
-       ijdim, &
-       kdim,  &
-       ldim,  &
-       tem,   &
-       pre,   &
-       qd,    &
-       q,     &
-       rho    )
-    implicit none
-
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
-    integer, intent(in)  :: ldim
-    real(RP), intent(in)  :: tem(ijdim,kdim,ldim)       ! temperature [K]
-    real(RP), intent(in)  :: pre(ijdim,kdim,ldim)       ! pressure    [Pa]
-    real(RP), intent(in)  :: qd (ijdim,kdim,ldim)       ! dry air mass concentration [kg/kg]
-    real(RP), intent(in)  :: q  (ijdim,kdim,ldim,nqmax) ! tracer  mass concentration [kg/kg]
-    real(RP), intent(out) :: rho(ijdim,kdim,ldim)       ! density     [kg/m3]
-
-    integer :: ij, k, l
-    !---------------------------------------------------------------------------
-
-    !$acc kernels pcopy(rho) pcopyin(pre,tem,qd,q) async(0)
-    do l  = 1, ldim
-    do k  = 1, kdim
-    do ij = 1, ijdim
-       rho(ij,k,l) = pre(ij,k,l) / tem(ij,k,l) / ( qd(ij,k,l)*Rdry + q(ij,k,l,I_QV)*Rvap )
-    enddo
-    enddo
-    enddo
-    !$acc end kernels
-
-    return
-  end subroutine THRMDYN_rho_ijkl
-
-  !-----------------------------------------------------------------------------
   !> calculate pressure
   subroutine THRMDYN_pre_ijk( &
        ijdim, &
@@ -370,8 +288,8 @@ contains
        pre    )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: rho(ijdim,kdim)       ! density     [kg/m3]
     real(RP), intent(in)  :: tem(ijdim,kdim)       ! temperature [K]
     real(RP), intent(in)  :: qd (ijdim,kdim)       ! dry air mass concentration [kg/kg]
@@ -403,8 +321,8 @@ contains
        ein    )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: tem(ijdim,kdim)       ! temperature [K]
     real(RP), intent(in)  :: qd (ijdim,kdim)       ! dry air mass concentration [kg/kg]
     real(RP), intent(in)  :: q  (ijdim,kdim,nqmax) ! tracer  mass concentration [kg/kg]
@@ -445,8 +363,8 @@ contains
        tem    )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: ein(ijdim,kdim)       ! internal energy [J]
     real(RP), intent(in)  :: qd (ijdim,kdim)       ! dry air mass concentration [kg/kg]
     real(RP), intent(in)  :: q  (ijdim,kdim,nqmax) ! tracer  mass concentration [kg/kg]
@@ -486,24 +404,23 @@ contains
        th     )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: tem(ijdim,kdim) ! temperature [K]
     real(RP), intent(in)  :: pre(ijdim,kdim) ! pressure    [Pa]
     real(RP), intent(out) :: th (ijdim,kdim) ! potential temperature [K]
 
-    real(RP) :: pre0_kappa, kappa
+    real(RP) :: RovCP
 
-    integer :: ij, k
+    integer  :: ij, k
     !---------------------------------------------------------------------------
 
-    kappa = Rdry /Cpdry
-    pre0_kappa = PRE00**kappa
+    RovCP = Rdry / CPdry
 
     !$acc kernels pcopy(th) pcopyin(tem,pre) async(0)
     do k  = 1, kdim
     do ij = 1, ijdim
-       th(ij,k) = tem(ij,k) + pre(ij,k)**kappa * pre0_kappa
+       th(ij,k) = tem(ij,k) * ( PRE00 / pre(ij,k) )**RovCP
     enddo
     enddo
     !$acc end kernels
@@ -522,26 +439,25 @@ contains
        th     )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
-    integer, intent(in)  :: ldim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
+    integer,  intent(in)  :: ldim
     real(RP), intent(in)  :: tem(ijdim,kdim,ldim) ! temperature [K]
     real(RP), intent(in)  :: pre(ijdim,kdim,ldim) ! pressure    [Pa]
     real(RP), intent(out) :: th (ijdim,kdim,ldim) ! potential temperature [K]
 
-    real(RP) :: pre0_kappa, kappa
+    real(RP) :: RovCP
 
-    integer :: ij, k, l
+    integer  :: ij, k, l
     !---------------------------------------------------------------------------
 
-    kappa = Rdry /Cpdry
-    pre0_kappa = PRE00**kappa
+    RovCP = Rdry / CPdry
 
     !$acc kernels pcopy(th) pcopyin(tem,pre) async(0)
     do l  = 1, ldim
     do k  = 1, kdim
     do ij = 1, ijdim
-       th(ij,k,l) = tem(ij,k,l) + pre(ij,k,l)**kappa * pre0_kappa
+       th(ij,k,l) = tem(ij,k,l) * ( PRE00 / pre(ij,k,l) )**RovCP
     enddo
     enddo
     enddo
@@ -561,8 +477,8 @@ contains
        eth    )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: ein(ijdim,kdim) ! internal energy [J]
     real(RP), intent(in)  :: pre(ijdim,kdim) ! pressure    [Pa]
     real(RP), intent(in)  :: rho(ijdim,kdim) ! density     [kg/m3]
@@ -594,9 +510,9 @@ contains
        eth    )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
-    integer, intent(in)  :: ldim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
+    integer,  intent(in)  :: ldim
     real(RP), intent(in)  :: ein(ijdim,kdim,ldim) ! internal energy [J]
     real(RP), intent(in)  :: pre(ijdim,kdim,ldim) ! pressure    [Pa]
     real(RP), intent(in)  :: rho(ijdim,kdim,ldim) ! density     [kg/m3]
@@ -630,8 +546,8 @@ contains
        ent    )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
     real(RP), intent(in)  :: tem(ijdim,kdim)
     real(RP), intent(in)  :: pre(ijdim,kdim)
     real(RP), intent(in)  :: qd (ijdim,kdim)
@@ -660,8 +576,8 @@ contains
     !$acc kernels pcopy(ent) pcopyin(tem,pre,qd,q) async(0)
     do k  = 1, kdim
     do ij = 1, ijdim
-       Pdry = max( pre(ij,k) * EPSV*qd(ij,k) / ( EPSV*qd(ij,k) + q(ij,k,I_QV) ), EPS )
-       Pvap = max( pre(ij,k) * q(ij,k,I_QV)  / ( EPSV*qd(ij,k) + q(ij,k,I_QV) ), EPS )
+       Pdry = max( pre(ij,k) * EPSvap*qd(ij,k) / ( EPSvap*qd(ij,k) + q(ij,k,I_QV) ), EPS )
+       Pvap = max( pre(ij,k) * q(ij,k,I_QV)    / ( EPSvap*qd(ij,k) + q(ij,k,I_QV) ), EPS )
 
        ent(ij,k) = qd(ij,k)      * CPdry * log( tem(ij,k)/TEM00 ) &
                  - qd(ij,k)      * Rdry  * log( Pdry     /PRE00 ) &
@@ -701,9 +617,9 @@ contains
        ein    )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
-    integer, intent(in)  :: ldim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
+    integer,  intent(in)  :: ldim
     real(RP), intent(in)  :: tem(ijdim,kdim,ldim)       ! temperature [K]
     real(RP), intent(in)  :: pre(ijdim,kdim,ldim)       ! pressure    [Pa]
     real(RP), intent(in)  :: q  (ijdim,kdim,ldim,nqmax) ! tracer  mass concentration [kg/kg]
@@ -713,7 +629,7 @@ contains
     real(RP) :: cv(ijdim,kdim,ldim)
     real(RP) :: qd(ijdim,kdim,ldim)
 
-    integer :: ij, k, l, nq
+    integer  :: ij, k, l, nq
     !---------------------------------------------------------------------------
 
     !$acc kernels pcopy(rho,ein,cv,qd) pcopyin(pre,tem,q,CVW) async(0)
@@ -755,9 +671,9 @@ contains
        pre    )
     implicit none
 
-    integer, intent(in)  :: ijdim
-    integer, intent(in)  :: kdim
-    integer, intent(in)  :: ldim
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
+    integer,  intent(in)  :: ldim
     real(RP), intent(in)  :: ein(ijdim,kdim,ldim)       ! internal energy [J]
     real(RP), intent(in)  :: rho(ijdim,kdim,ldim)       ! density     [kg/m3]
     real(RP), intent(in)  :: q  (ijdim,kdim,ldim,nqmax) ! tracer  mass concentration [kg/kg]
@@ -767,7 +683,7 @@ contains
     real(RP) :: cv(ijdim,kdim,ldim)
     real(RP) :: qd(ijdim,kdim,ldim)
 
-    integer :: ij, k, l, nq
+    integer  :: ij, k, l, nq
     !---------------------------------------------------------------------------
 
     !$acc kernels pcopy(tem,pre,cv,qd) pcopyin(ein,rho,q,CVW) async(0)

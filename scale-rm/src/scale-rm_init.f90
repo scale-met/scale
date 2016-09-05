@@ -187,21 +187,23 @@ program scalerm_launcher
   endif
 
   if ( EXECUTE_PREPROCESS ) then
-     call scalerm_prep  ( local_comm,            & ! [IN]
+     call scalerm_prep( local_comm,            & ! [IN]
                         intercomm_parent_null, & ! [IN]
                         intercomm_child_null,  & ! [IN]
                         local_cnf_fname        ) ! [IN]
   endif
 
   if ( EXECUTE_MODEL ) then
-     call scalerm     ( local_comm,            & ! [IN]
+     call scalerm     ( local_comm,       & ! [IN]
                         intercomm_parent, & ! [IN]
                         intercomm_child,  & ! [IN]
-                        local_cnf_fname        ) ! [IN]
+                        local_cnf_fname   ) ! [IN]
   endif
 
   ! stop MPI
   call PRC_MPIfinish
+
+  if( universal_master ) write(*,*) '*** End   Launch System for SCALE-RM'
 
   stop
 end program scalerm_launcher

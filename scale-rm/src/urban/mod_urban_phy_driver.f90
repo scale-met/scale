@@ -54,6 +54,10 @@ contains
     use mod_urban_admin, only: &
        URBAN_TYPE, &
        URBAN_sw
+    use mod_urban_vars, only: &
+       URBAN_Z0M, &
+       URBAN_Z0H, &
+       URBAN_Z0E
     implicit none
     !---------------------------------------------------------------------------
 
@@ -63,7 +67,10 @@ contains
     if ( URBAN_sw ) then
 
        ! setup library component
-       call URBAN_PHY_setup( URBAN_TYPE )
+       call URBAN_PHY_setup( URBAN_TYPE,     & ! [IN]
+                             URBAN_Z0M(:,:), & ! [OUT]
+                             URBAN_Z0H(:,:), & ! [OUT]
+                             URBAN_Z0E(:,:)  ) ! [OUT]
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'

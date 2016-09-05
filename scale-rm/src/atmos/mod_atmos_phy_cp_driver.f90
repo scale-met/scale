@@ -49,8 +49,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CP_driver_setup
-!    use scale_atmos_phy_cp, only: &
-!       ATMOS_PHY_CP_setup
+    use scale_atmos_phy_cp, only: &
+         ATMOS_PHY_CP_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_CP_TYPE, &
        ATMOS_sw_phy_cp
@@ -63,11 +63,11 @@ contains
     if ( ATMOS_sw_phy_cp ) then
 
        ! setup library component
-       !call ATMOS_PHY_CP_setup( ATMOS_PHY_CP_TYPE )
+       call ATMOS_PHY_CP_setup( ATMOS_PHY_CP_TYPE )
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
-    end if
+    endif
 
     return
   end subroutine ATMOS_PHY_CP_driver_setup
@@ -94,34 +94,43 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_CP_driver( update_flag )
-!     use scale_time, only: &
-!        dt_CP => TIME_DTSEC_ATMOS_PHY_CP
+    use scale_time, only: &
+       dt_CP => TIME_DTSEC_ATMOS_PHY_CP
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
        HIST_in
-!    use scale_atmos_phy_cp, only: &
-!       ATMOS_PHY_CP
+    use scale_atmos_phy_cp, only: &
+       ATMOS_PHY_CP
     use mod_atmos_vars, only: &
-!        DENS,              &
-!        MOMZ,              &
-!        MOMX,              &
-!        MOMY,              &
-!        RHOT,              &
-!        QTRC,              &
+       DENS,              &
+       MOMZ,              &
+       MOMX,              &
+       MOMY,              &
+       RHOT,              &
+       QTRC,              &
+       DENS_t => DENS_tp, &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
        RHOT_t => RHOT_tp, &
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_cp_vars, only: &
-       MOMZ_t_CP      => ATMOS_PHY_CP_MOMZ_t,        &
-       MOMX_t_CP      => ATMOS_PHY_CP_MOMX_t,        &
-       MOMY_t_CP      => ATMOS_PHY_CP_MOMY_t,        &
-       RHOT_t_CP      => ATMOS_PHY_CP_RHOT_t,        &
-       RHOQ_t_CP      => ATMOS_PHY_CP_RHOQ_t,        &
-       MFLX_cloudbase => ATMOS_PHY_CP_MFLX_cloudbase
+       DENS_t_CP      => ATMOS_PHY_CP_DENS_t,         &
+       MOMZ_t_CP      => ATMOS_PHY_CP_MOMZ_t,         &
+       MOMX_t_CP      => ATMOS_PHY_CP_MOMX_t,         &
+       MOMY_t_CP      => ATMOS_PHY_CP_MOMY_t,         &
+       RHOT_t_CP      => ATMOS_PHY_CP_RHOT_t,         &
+       RHOQ_t_CP      => ATMOS_PHY_CP_RHOQ_t,         &
+       MFLX_cloudbase => ATMOS_PHY_CP_MFLX_cloudbase, &
+       SFLX_rain      => ATMOS_PHY_CP_SFLX_rain,      &  ! convective rain [kg/m2/s]
+       cloudtop       => ATMOS_PHY_CP_cloudtop,       &  ! cloud top height [m]
+       cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
+       cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) [0-1]
+       cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) [0-1]
+       kf_nca         => ATMOS_PHY_CP_kf_nca,         &  ! advection/cumulus convection timescale/dt for KF [step]
+       kf_w0avg       => ATMOS_PHY_CP_kf_w0avg           ! rannning mean vertical wind velocity      for KF [m/s]
     implicit none
 
     logical, intent(in) :: update_flag
@@ -133,40 +142,75 @@ contains
 
     if ( update_flag ) then
 
-!       call ATMOS_PHY_CP( DENS,          & ! [IN]
-!                          MOMZ,          & ! [IN]
-!                          MOMX,          & ! [IN]
-!                          MOMY,          & ! [IN]
-!                          RHOT,          & ! [IN]
-!                          QTRC,          & ! [IN]
-!                          MOMZ_t_CP,     & ! [INOUT]
-!                          MOMX_t_CP,     & ! [INOUT]
-!                          MOMY_t_CP,     & ! [INOUT]
-!                          RHOT_t_CP,     & ! [INOUT]
-!                          RHOQ_t_CP,     & ! [INOUT]
-!                          MFLX_cloudbase ) ! [INOUT]
+       call ATMOS_PHY_CP( DENS,           & ! [IN]
+                          MOMZ,           & ! [IN]
+                          MOMX,           & ! [IN]
+                          MOMY,           & ! [IN]
+                          RHOT,           & ! [IN]
+                          QTRC,           & ! [IN]
+                          DENS_t_CP,      & ! [INOUT]
+                          MOMZ_t_CP,      & ! [INOUT]
+                          MOMX_t_CP,      & ! [INOUT]
+                          MOMY_t_CP,      & ! [INOUT]
+                          RHOT_t_CP,      & ! [INOUT]
+                          RHOQ_t_CP,      & ! [INOUT]
+                          MFLX_cloudbase, & ! [INOUT]
+                          SFLX_rain,      & ! [OUT]
+                          cloudtop,       & ! [OUT]
+                          cloudbase,      & ! [OUT]
+                          cldfrac_dp,     & ! [OUT]
+                          cldfrac_sh,     & ! [OUT]
+                          kf_nca,         & ! [OUT]
+                          kf_w0avg        ) ! [OUT]
 
-       ! tentative!
+       ! tentative reset
 !OCL XFILL
-       MOMZ_t_CP(:,:,:)    = 0.0_RP
-!OCL XFILL
-       MOMX_t_CP(:,:,:)    = 0.0_RP
-!OCL XFILL
-       MOMY_t_CP(:,:,:)    = 0.0_RP
-!OCL XFILL
-       RHOT_t_CP(:,:,:)    = 0.0_RP
-!OCL XFILL
-       RHOQ_t_CP(:,:,:,:)  = 0.0_RP
-!OCL XFILL
-       MFLX_cloudbase(:,:) = 0.0_RP
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          MOMZ_t_CP(k,i,j) = 0.0_RP
+          MOMX_t_CP(k,i,j) = 0.0_RP
+          MOMY_t_CP(k,i,j) = 0.0_RP
+       enddo
+       enddo
+       enddo
 
-       call HIST_in( MFLX_cloudbase(:,:), 'CBMFX', 'cloud base mass flux', 'kg/m2/s' )
+!OCL XFILL
+       do j  = JS, JE
+       do i  = IS, IE
+          MFLX_cloudbase(i,j) = 0.0_RP
+       enddo
+       enddo
+
+       call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', nohalo=.true. )
+       call HIST_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', nohalo=.true. )
+       call HIST_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', nohalo=.true. )
+       call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       nohalo=.true. )
+       call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
+       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '0-1',     nohalo=.true. )
+       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '0-1',     nohalo=.true. )
+
+       call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
+       call HIST_in( kf_w0avg      (:,:,:), 'kf_w0avg',  'rannning mean vertical wind velocity for KF',      'kg/m2/s', nohalo=.true. )
+
+       call HIST_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , nohalo=.true. )
+       call HIST_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( MOMX_t_CP(:,:,:), 'MOMX_t_CP', 'tendency MOMX in CP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', nohalo=.true. )
+
+       do iq = 1, QA
+          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_CP', &
+                        'tendency rho*'//trim(AQ_NAME(iq))//'in CP', 'kg/m3/s', nohalo=.true. )
+       enddo
+
     endif
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_CP(k,i,j)
        MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_CP(k,i,j)
        MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_CP(k,i,j)
        MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_CP(k,i,j)
@@ -176,7 +220,7 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do iq = 1, QA
+    do iq = 1,  QA
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -187,6 +231,7 @@ contains
     enddo
 
     if ( STATISTICS_checktotal ) then
+       call STAT_total( total, DENS_t_CP(:,:,:), 'DENS_t_CP' )
        call STAT_total( total, MOMZ_t_CP(:,:,:), 'MOMZ_t_CP' )
        call STAT_total( total, MOMX_t_CP(:,:,:), 'MOMX_t_CP' )
        call STAT_total( total, MOMY_t_CP(:,:,:), 'MOMY_t_CP' )

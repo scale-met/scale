@@ -1,0 +1,3 @@
+DCMIP2012
+Test CASE 1-2
+3D Hadley-like meridional circulation

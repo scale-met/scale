@@ -1,0 +1,267 @@
+\section{\SecInputDataSetting} \label{sec:adv_datainput}
+%====================================================================================
+
+\scalerm では初期値・境界値作成において、表\ref{tab:inputdata_format}に示す外部入力データの読み込みに対応している。
+
+\begin{table}[htb]
+\begin{center}
+\caption{\scalelib が読み込みに対応する外部入力データフォーマット}
+\begin{tabularx}{150mm}{|l|l|X|} \hline
+ \rowcolor[gray]{0.9} データ形式      & \verb|FILETYPE_ORG|  & 備考 \\ \hline
+ SCALEデータ   & \verb|SCALE-RM|     & historyデータのみ対応。latlonカタログを必要とする。 \\ \hline
+ バイナリデータ & \verb|GrADS|        & データ読み込み用のネームリストを別途必要とする。       \\ \hline
+% NICAMデータ   & \verb|NICAM-NETCDF| & NetCDF形式の緯度経度格子に変換されたデータに対応する。 \\ \hline
+ WRFデータ     & \verb|WRF-ARW|      & ``wrfout''、``wrfrst''の両方に対応する。          \\ \hline
+\end{tabularx}
+\label{tab:inputdata_format}
+\end{center}
+\end{table}
+
+
+外部入力する初期値・境界値データを変換する作業は、\verb|scale-rm_init|プログラムで行ない、
+詳細は実行時に使用する設定ファイル(\verb|init.conf|)の中で設定する。\\
+このうち、入力データフォーマットの指定は、\namelist{PARAM_MKINIT_REAL_***}の\nmitem{FILETYPE_ORG}
+で指定する。表\ref{tab:inputdata_format}に設定するための値を示す。
+
+SCALEデータ形式は主にオフライン・ネスティング実験で使用される。
+詳細については、\ref{subsec:nest_offline}節を参照されたい。
+
+%NICAMデータ形式は正20面体格子座標系ではなく、緯度経度座標系に変換されたデータの読み込みにのみ対応している。
+
+WRFデータ形式についてはモデル出力データをそのまま使用することができる。
+ただし、SCALEの境界値データ作成に必要な出力変数が全て出力されている必要がある。
+
+バイナリデータ形式とは、「4バイト単精度浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。
+GRIB/GRIB2 データは、チュートリアルで説明した方法に基づいて、
+バイナリデータ形式に変換することで {\scalerm} に読み込ませることができる。
+その他にも、任意のデータを境界値に使用したい場合は、
+バイナリデータ形式に変換すれば読み込ませることができる。
+下記では、バイナリデータの読み込み手続きについて説明する。
+
+%%%---------------------------------------------------------------------------------%%%%
+\subsubsection{バイナリデータの読み込み} \label{sec:datainput_grads}
+
+入力データフォーマットの指定は、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_***}で設定する。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{l}
+\verb|&PARAM_RESTART|\\
+\verb| RESTART_OUTPUT       = .true.,|\\
+\verb| RESTART_OUT_BASENAME = "init_d01",|\\
+\verb|/|\\
+\\
+\verb|&PARAM_MKINIT_REAL_ATMOS|\\
+\verb| NUMBER_OF_FILES      = 2,|\\
+\verb| FILETYPE_ORG         = "GrADS",|\\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",|\\
+\verb| BASENAME_BOUNDARY    = "boundary_d01",|\\
+\verb| BOUNDARY_UPDATE_DT   = 21600.0,|\\
+\verb| PARENT_MP_TYPE       = 3,|\\
+\verb| USE_FILE_DENSITY     = .false.,|\\
+\verb|/|\\
+\\
+\verb|&PARAM_MKINIT_REAL_OCEAN|\\
+\verb| NUMBER_OF_FILES      = 2,|\\
+\verb| FILETYPE_ORG         = "GrADS",|\\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",|\\
+\verb| INTRP_OCEAN_SFC_TEMP = "mask",|\\
+\verb| INTRP_OCEAN_TEMP     = "mask",|\\
+\verb|/|\\
+\\
+\verb|&PARAM_MKINIT_REAL_LAND|\\
+\verb| NUMBER_OF_FILES      = 2,|\\
+\verb| FILETYPE_ORG         = "GrADS",|\\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",|\\
+\verb| USE_FILE_LANDWATER   = .true.,|\\
+\verb| INTRP_LAND_TEMP      = "mask",|\\
+\verb| INTRP_LAND_WATER     = "fill",|\\
+\verb| INTRP_LAND_SFC_TEMP  = "fill",|\\
+\verb|/|\\
+\\
+\end{tabularx}
+}}}\\
+
+
+バイナリデータを読み込むときは、\nmitem{FILETYPE_ORG}に\verb|"GrADS"|を設定する。\\
+\nmitem{NUMBER_OF_FILES}は、読み込むファイルの数である。
+入力ファイルが時間方向に複数に分かれている場合は、\verb|"ファイル名.XXXXX.grd"|のように
+時間の早い方から順に5桁の数字をつける。
+\verb|scale-rm_init|では、\verb|00000|から\nmitem{NUMBER_OF_FILES}の数だけファイルを読み込む。
+ファイルが一つしかない場合は、\verb|"ファイル名.grd"|でよい。
+\verb|"ファイル名"|は後ほど紹介するネームリストファイル内で指定する。\\
+\nmitem{BOUNDARY_UPDATE_DT}は、入力データの時間間隔である。\\
+\nmitem{BASENAME_BOUNDARY}は、\scalerm の格子の値に変換された境界値データの
+出力先ファイル名の頭である。
+また、初期値データの出力先は\namelist{PARAM_RESTART}の\nmitem{RESTART_OUT_BASENAME}で設定する。\\
+\scalerm では、ctlファイルの代わりに、データのファイル名とデータ構造の情報を含む
+ネームリストファイル(\verb|namelist.grads_boundary**|)を用意する。
+このネームリストファイルへのパスは\nmitem{BASENAME_ORG}に指定する。\\
+以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}で指定されたものが
+\namelist{PARAM_MKINIT_REAL_OCEAN}、\namelist{PARAM_MKINIT_REAL_LAND}
+にも適用されるが、別途指定されている場合には、情報が上書きされる。\\
+%
+\nmitem{USE_FILE_DENSITY}は\verb|FILETYPE_ORG="SCALE-RM"|用のオプションなので、
+バイナリデータ読み込みのときは常に\verb|.false.|とする。
+\nmitem{PARENT_MP_TYPE}は親モデルの水物質カテゴリーのタイプであるが、
+バイナリデータ読み込みのときは常に\verb| 3 |に設定する。\\
+
+
+土壌水分の設定については、親モデルから与える方法と、領域全体に一定条件を与える方法の２種類ある。
+親モデルから与える場合には、３次元の土壌水分データを用意する必要がある。
+領域全体に一定条件を与える場合には、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_LAND}に
+\verb|USE_FILE_LANDWATER = .false.| を追加すれば良い。
+また、土壌水分の条件は、土壌空隙率に対する水が占める割合を
+\verb|INIT_LANDWATER_RATIO| で与える。デフォルト値は 0.5 である。
+また、単位体積に対する空隙率は土地利用に応じて変わる。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_MKINIT_REAL_LAND| &\\
+\verb| USE_FILE_LANDWATER   = .false.| & 土壌水分をファイルから読むかどうか。デフォルトは\verb|.true.| \\
+\verb| INIT_LANDWATER_RATIO = 0.5    | & \verb|USE_FILE_LANDWATER=.false.|の場合、 \\
+                                       & 空隙率に対する水が占める割合。\\
+\verb|  .....略.....                 | & \\
+\verb|/| & \\
+\end{tabularx}
+}}}\\
+
+
+バイナリデータは{\grads}で読み込める形式でユーザが用意する\\
+(\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})。\\
+データのファイル名とデータ構造を \scalerm に教えるための
+ネームリストファイル\\
+(\verb|namelist.grads_boundary**|)の一例を下記に示す。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{l}
+\verb|#| \\
+\verb|# Dimension    |  \\
+\verb|#|                \\
+\verb|&nml_grads_grid|  \\
+\verb| outer_nx     = 360,|~~~   ; 大気データのx方向の格子数 \\
+\verb| outer_ny     = 181,|~~~   ; 大気データのy方向の格子数 \\
+\verb| outer_nz     = 26, |~~~~~ ; 大気データのz方向の層数 \\
+\verb| outer_nl     = 4,  |~~~~~~ ; 土壌データの層数 \\
+\verb|/|                \\
+\\
+\verb|#              |  \\
+\verb|# Variables    |  \\
+\verb|#              |  \\
+\verb|&grdvar  item='lon',     dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /  |  \\
+\verb|&grdvar  item='lat',     dtype='linear',  swpoint=90.0d0,  dd=-1.0d0 / |  \\
+\verb|&grdvar  item='plev',    dtype='levels',  lnum=26,| \\
+~~~\verb|      lvars=100000,97500,...(省略)...,2000,1000, /     |  \\
+\verb|&grdvar  item='MSLP',    dtype='map',     fname='FNLsfc', startrec=1,  totalrec=6   / |  \\
+\verb|&grdvar  item='PSFC',    dtype='map',     fname='FNLsfc', startrec=2,  totalrec=6   / |  \\
+\verb|&grdvar  item='U10',     dtype='map',     fname='FNLsfc', startrec=3,  totalrec=6   / |  \\
+\verb|&grdvar  item='V10',     dtype='map',     fname='FNLsfc', startrec=4,  totalrec=6   / |  \\
+\verb|&grdvar  item='T2',      dtype='map',     fname='FNLsfc', startrec=5,  totalrec=6   / |  \\
+\verb|&grdvar  item='RH2',     dtype='map',     fname='FNLsfc', startrec=6,  totalrec=6   / |  \\
+\verb|&grdvar  item='HGT',     dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 / |  \\
+\verb|&grdvar  item='U',       dtype='map',     fname='FNLatm', startrec=27, totalrec=125 / |  \\
+\verb|&grdvar  item='V',       dtype='map',     fname='FNLatm', startrec=53, totalrec=125 / |  \\
+\verb|&grdvar  item='T',       dtype='map',     fname='FNLatm', startrec=79, totalrec=125 / |  \\
+\verb|&grdvar  item='RH',      dtype='map',     fname='FNLatm', startrec=105,totalrec=125, knum=21 /  |  \\
+\verb|&grdvar  item='llev',    dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
+\verb|&grdvar  item='lsmask',  dtype='map',     fname='FNLland', startrec=1, totalrec=10 /  |  \\
+\verb|&grdvar  item='SKINT',   dtype='map',     fname='FNLland', startrec=2, totalrec=10 /  |  \\
+\verb|&grdvar  item='STEMP',   dtype='map',     fname='FNLland', startrec=3, totalrec=10,|\\
+~~~~~~~~\verb| missval=9.999e+20 /|  \\
+\verb|&grdvar  item='SMOISVC', dtype='map',     fname='FNLland', startrec=7, totalrec=10,|\\
+~~~~~~~~\verb| missval=9.999e+20 /|  \\
+\end{tabularx}
+}}}\\
+
+大気データの格子数を\verb|outer_nx, outer_ny, outer_nz|で指定し、
+土壌データ(STEMP、SMOISVC) の層数を\verb|outer_nl|に指定する。\\
+
+QVやRHのデータは、他の大気データよりも低い層までしか提供されていない場合がある。
+その場合、データがある層の数を\verb|knum|で指定するが、それより上の層の
+QVの値の見積もり方について、２種類の手法が用意されている。
+デフォルトは \verb| upper_qv_type = "ZERO"| である。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_MKINIT_REAL_GrADS| & \\
+\verb| upper_qv_type = "ZERO"| & \verb|"ZERO"|: QV=0 \\
+                               & \verb|"COPY"|: データがある最上層のRHをコピー\\
+\verb|/|\\
+\end{tabularx}
+}}}\\
+
+
+~\\
+\namelist{grdvar}は、各変数のデータの与え方に応じて必要な変数が異なる。\\
+
+{\small
+\begin{table}[htb]
+\begin{center}
+\caption{\namelist{grdvar}の変数}
+\label{tab:namelist_grdvar}
+\begin{tabularx}{150mm}{llX} \hline
+\rowcolor[gray]{0.9} \verb|grdvar|の項目  & 説明 & 備考 \\ \hline
+\multicolumn{1}{l}{item}    & \multicolumn{1}{l}{変数名} & 表\ref{tab:grdvar_item}より選択      \\
+\multicolumn{1}{l}{dtype}   & \multicolumn{1}{l}{データ形式} & \verb|"linear", "levels", "map"|から選択 \\\hline
+\multicolumn{3}{l}{\nmitem{dtype}が\verb|"linear"|の場合のネームリスト (\verb|"lon", "lat"|専用)} \\ \hline
+\multicolumn{1}{l}{swpoint}  & \multicolumn{1}{l}{スタートポイントの値} &  \\
+\multicolumn{1}{l}{dd}       & \multicolumn{1}{l}{増分}                 &  \\ \hline
+\multicolumn{3}{l}{\nmitem{dtype}が\verb|"levels"|の場合のネームリスト (\verb|"plev", "llev"|専用)} \\ \hline
+\multicolumn{1}{l}{lnum}     & \multicolumn{1}{l}{レベルの数(層数)}     &  \\
+\multicolumn{1}{l}{lvars}    & \multicolumn{1}{l}{各層の値}             &  \\ \hline
+\multicolumn{3}{l}{\nmitem{dtype}が\verb|"map"|の場合のネームリスト}           \\ \hline
+\multicolumn{1}{l}{fname}    & \multicolumn{1}{l}{ファイル名の頭}       &  \\
+\multicolumn{1}{l}{startrec} & \multicolumn{1}{l}{変数\nmitem{item}のレコード番号} &  \multicolumn{1}{l}{t=1 の時刻の値}\\
+\multicolumn{1}{l}{totalrec} & \multicolumn{1}{l}{全変数一時刻あたりのレコード長}  &  \\
+\multicolumn{1}{l}{knum}     & \multicolumn{1}{l}{3次元データのz方向の層数} & \multicolumn{1}{l}{(オプション) \verb|outer_nz|と異なる場合。}\\
+                             &                                  & \multicolumn{1}{l}{~~~~~~~~~~ RHとQVのみ使用可。}\\
+\multicolumn{1}{l}{missval}  & \multicolumn{1}{l}{欠陥値の値}   　    & \multicolumn{1}{l}{(オプション)}\\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+}
+
+{\small
+\begin{table}[hbt]
+\begin{center}
+\caption{\namelist{grdvar}の\nmitem{item}の変数リスト}
+\label{tab:grdvar_item}
+\begin{tabularx}{150mm}{rl|l|l|X} \hline
+ \rowcolor[gray]{0.9} \multicolumn{1}{l}{必須変数} & \multicolumn{1}{l}{変数名} &\multicolumn{1}{l}{説明} &  \multicolumn{1}{l}{単位} & \multicolumn{1}{X}{\nmitem{dtype}} \\ \hline
+$\ast$ &\verb|lon|     & 経度データ      & [deg.]   & \verb|linear, map| \\
+$\ast$ &\verb|lat|     & 緯度データ      & [deg.]   & \verb|linear, map| \\
+$\ast$ &\verb|plev|    & 気圧データ      & [Pa]     & \verb|levels, map| \\
+$\ast$ &\verb|HGT|     & 高度(ジオポテンシャル)データ& [m] & \verb|map| \\
+$\ast$ &\verb|U|       & 東西風速        & [m/s]    & \verb|map| \\
+$\ast$ &\verb|V|       & 南北風速        & [m/s]    & \verb|map| \\
+$\ast$ &\verb|T|       & 気温            & [K]      & \verb|map| \\
+$\ast$ &\verb|QV|      & 比湿 (RH がある場合は省略可) & [kg/kg] & \verb|map| \\
+$\ast$ &\verb|RH|      & 相対湿度 (QVがある場合は省略可) & [\%] & \verb|map| \\
+       &\verb|MSLP|    & 海面更正気圧    & [Pa]     & \verb|map| \\
+       &\verb|PSFC|    & 地上気圧        & [Pa]     & \verb|map| \\
+       &\verb|U10|     & 10m 東西風速    & [m/s]    & \verb|map| \\
+       &\verb|V10|     & 10m 南北風速    & [m/s]    & \verb|map| \\
+       &\verb|T2|      & 2m 気温         & [K]      & \verb|map| \\
+       &\verb|Q2|      & 2m 比湿 (RH2がある場合は省略可)   &[kg/kg] & \verb|map| \\
+       &\verb|RH2|     & 2m 相対湿度 (Q2がある場合は省略可) & [\%]  & \verb|map| \\
+       &\verb|TOPO|    & GCMの地形       & [m]      & \verb|map| \\
+       &\verb|lsmask|  & GCMの海陸分布   & 0:海1:陸 & \verb|map| \\
+$\ast$ &\verb|SKINT|   & 地表面温度      & [K]      & \verb|map| \\
+$\ast$ &\verb|llev|    & 土壌の深さ情報  & [m]      & \verb|levels| \\
+$\ast$ &\verb|STEMP|   & 土壌温度        & [K]      & \verb|map| \\
+($\ast$) &\verb|SMOISVC| & 土壌水分(体積含水率)     & [-] & \verb|map| \\
+($\ast$) &\verb|SMOISDS| & 土壌水分(飽和度)         & [-] & \verb|map| \\
+$\ast$ &\verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K] & \verb|map|\\
+\end{tabularx}
+\end{center}
+\end{table}
+}
+
+表\ref{tab:grdvar_item}のうち、体積含水率は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)、
+飽和度は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)
+である。
+\namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{USE_FILE_LANDWATER}が\verb|.true.|
+の場合、\verb|SMOISVC|か\verb|SMOISDS|のどちらかを用意する必要がある。

@@ -368,6 +368,13 @@ contains
     use mod_urban_vars, only: &
        URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
        URBAN_vars_restart_write
+    use mod_admin_restart, only: &
+       ADMIN_restart
+    use mod_admin_time, only: &
+       TIME_DOATMOS_restart,  &
+       TIME_DOLAND_restart,   &
+       TIME_DOURBAN_restart,  &
+       TIME_DOOCEAN_restart
     implicit none
 
     integer :: iq
@@ -499,10 +506,16 @@ contains
       call LANDUSE_write
 
       ! output restart file
-      if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
-      if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
-      if( LAND_sw_restart  ) call LAND_vars_restart_write
-      if( URBAN_sw_restart ) call URBAN_vars_restart_write
+      ! if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
+      ! if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
+      ! if( LAND_sw_restart  ) call LAND_vars_restart_write
+      ! if( URBAN_sw_restart ) call URBAN_vars_restart_write
+      TIME_DOOCEAN_restart = .TRUE.
+      TIME_DOLAND_restart  = .TRUE.
+      TIME_DOURBAN_restart = .TRUE.
+      TIME_DOATMOS_restart = .TRUE.
+      call ADMIN_restart
+
     endif
 
     return
@@ -5102,4 +5115,3 @@ enddo
   end subroutine MKINIT_real
 
 end module mod_mkinit
-!-------------------------------------------------------------------------------

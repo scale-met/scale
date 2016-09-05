@@ -34,6 +34,12 @@ module mod_atmos_phy_mp_vars
   public :: ATMOS_PHY_MP_vars_restart_read
   public :: ATMOS_PHY_MP_vars_restart_write
 
+  public :: ATMOS_PHY_MP_vars_restart_create
+  public :: ATMOS_PHY_MP_vars_restart_def_var
+  public :: ATMOS_PHY_MP_vars_restart_enddef
+  public :: ATMOS_PHY_MP_vars_restart_write_var
+  public :: ATMOS_PHY_MP_vars_restart_close
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -71,6 +77,8 @@ module mod_atmos_phy_mp_vars
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
+  integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
+  integer,                private            :: restart_fid = -1  ! file ID
 
   data VAR_NAME / 'SFLX_rain', &
                   'SFLX_snow'  /
@@ -242,7 +250,7 @@ contains
        call ATMOS_PHY_MP_vars_fillhalo
 
        call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
 
        call FILEIO_write( ATMOS_PHY_MP_SFLX_rain(:,:), basename,       ATMOS_PHY_MP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
@@ -253,5 +261,115 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_write
+
+  !-----------------------------------------------------------------------------
+  !> Create restart file
+  subroutine ATMOS_PHY_MP_vars_restart_create
+    use scale_time, only: &
+       TIME_gettimelabel
+    use scale_fileio, only: &
+       FILEIO_create
+    implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
+
+    !---------------------------------------------------------------------------
+
+    if ( ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
+
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_MP) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_create(restart_fid, basename, ATMOS_PHY_MP_RESTART_OUT_TITLE, &
+                          ATMOS_PHY_MP_RESTART_OUT_DTYPE)
+
+    endif
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_restart_create
+
+  !-----------------------------------------------------------------------------
+  !> Exit netCDF define mode
+  subroutine ATMOS_PHY_MP_vars_restart_enddef
+    use scale_fileio, only: &
+       FILEIO_enddef
+    implicit none
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_enddef( restart_fid ) ! [IN]
+    endif
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_restart_enddef
+
+  !-----------------------------------------------------------------------------
+  !> Close restart file
+  subroutine ATMOS_PHY_MP_vars_restart_close
+    use scale_fileio, only: &
+       FILEIO_close
+    implicit none
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_close( restart_fid ) ! [IN]
+       restart_fid = -1
+    endif
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_restart_close
+
+  !-----------------------------------------------------------------------------
+  !> Define variables in restart file
+  subroutine ATMOS_PHY_MP_vars_restart_def_var
+    use scale_fileio, only: &
+       FILEIO_def_var
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
+                            VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(2), VAR_NAME(2), VAR_DESC(2), &
+                            VAR_UNIT(2), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
+
+    endif
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_restart_def_var
+
+  !-----------------------------------------------------------------------------
+  !> Write restart
+  subroutine ATMOS_PHY_MP_vars_restart_write_var
+    use scale_fileio, only: &
+       FILEIO_write_var
+    use scale_rm_statistics, only: &
+       STAT_total
+    implicit none
+
+    real(RP) :: total
+    !---------------------------------------------------------------------------
+
+    if ( restart_fid .NE. -1 ) then
+
+       call ATMOS_PHY_MP_vars_fillhalo
+
+       call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
+
+       call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_MP_SFLX_rain(:,:), &
+                          VAR_NAME(1), 'XY' ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_MP_SFLX_snow(:,:), &
+                          VAR_NAME(2), 'XY' ) ! [IN]
+
+    endif
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_restart_write_var
 
 end module mod_atmos_phy_mp_vars

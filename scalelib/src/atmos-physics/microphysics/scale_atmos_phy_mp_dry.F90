@@ -102,7 +102,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
-    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA) 
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
@@ -184,6 +184,5 @@ contains
     return
 
   end subroutine ATMOS_PHY_MP_dry_Mixingratio
-  !-----------------------------------------------------------------------------
 
 end module scale_atmos_phy_mp_dry

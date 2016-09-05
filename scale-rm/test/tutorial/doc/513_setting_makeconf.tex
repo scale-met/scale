@@ -1,0 +1,67 @@
+\section{\SecMakeconfTool} \label{sec:basic_makeconf}
+%------------------------------------------------------
+
+現在、実験のための設定ファイル\verb|***.conf|は\verb|pp, init, run|用に
+それぞれ用意することになっているが、本章で説明した通り、
+3つの設定ファイルで共通するネームリストが、不一致である場合モデルが動かない。
+設定ミスを防ぎ、簡易に設定ファイルを用意するためのサポートツールが
+下記に用意されている。
+\begin{alltt}
+ $ cd ${Tutorial_DIR}/real/
+ $ ls
+    Makefile : 実験セット一式作成のためのMakeファイル
+    README   : 実験セット一式作成ツールに関するREADME
+    USER.sh  : 実験設定の指定
+    config/  : 実験セット一式作成つーつのためのファイル(ユーザは基本書き換えない)
+    sample   : USER.sh のサンプルスクリプト
+\end{alltt}
+これは、初期設定として現実大気実験のチュートリアルに合わせた設定となっているが、
+ユーザが任意の設定に変更することが可能な仕組みとなっている。
+本章で説明した箇所の多くを\verb|USER.sh|で設定できるようになっている。
+
+また、\verb|sample/| 以下に、いくつかの実験設定を想定した
+サンプルスクリプトが用意されている。
+必要に応じて、\verb|USER.sh|にコピーの上、使用していただきたい。
+\begin{alltt}
+ $ ls sample/
+   USER.default.sh                 : USER.shと同じ。チュートリアル実大気実験用。(シングルドメイン用)
+   USER.offline-nesting-child.sh   : オフラインネスティングの子領域用。
+   USER.offline-nesting-parent.sh  : オフラインネスティングの親領域用。
+   USER.online-nesting.sh          : オンラインネスティング用。
+\end{alltt}
+
+
+\subsubsection{ツールの使い方}
+
+使い方はREADMEに書かれているように、以下の通りである。
+\begin{enumerate}
+  \item ユーザが希望する任意の実験設定に従って、\verb|USER.sh|を編集する。
+  \item \verb|make|コマンドを実行する。
+  \item 実験に必要な設定ファイル一式が\verb|experiment|ディレクトリ以下に作成される。
+\end{enumerate}
+
+現在は、\verb|tutorial|の設定になっているので、
+実際には以下のようにチュートリアル設定を残しておくことを勧める。
+\begin{verbatim}
+ $ mv experiment/ tutorial/    : (すでにexperimentディレクトリがある場合)
+ $ cp USER.sh USER_tutorial.sh
+ ... USER.shを編集 ...
+ $ make
+ $ cp -rL experiment 任意の場所/ : SCALEのソースがあるディレクトリ以外の場所も可
+\end{verbatim}
+
+
+\subsubsection{\texttt{USER.sh}の編集}
+
+まず、サンプルプログラムの中、最も想定する実験設定に近いスクリプトを
+\verb|USER.sh| に上書きコピーする。
+スクリプトの中を見ると、まず、ドメインの数を指定する\verb|NUM_DOMAIN|がある。
+その下には、設定ファイルのネームリストで設定する項目が並んでいるので、
+それぞれの項目の設定を書き込んでいけば良い。
+\verb|"# required parameters for each domain"| というコメントがあるところには
+ドメインの数だけ設定変数をスペースで区切って用意する。
+この時、\verb|NUM_DOMAIN|で設定したネスティングドメインの数と変数の数が不一致だと
+メッセージが出力され、実験セットが作成されずに終了してしまうので必ず一致させること。
+\verb|USER.sh|にない項目については、デフォルトの設定で出力されるので
+\verb|experiment|ディレクトリ以下に作成された設定ファイルを直接変更すればよい。
+

@@ -603,4 +603,3 @@ contains
   end subroutine CALENDAR_ymdhms2mjd
 
 end module scale_calendar
-!-------------------------------------------------------------------------------

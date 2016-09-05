@@ -15,9 +15,6 @@ module mod_embudget
   use scale_precision
   use scale_stdio
   use scale_prof
-
-  use mod_adm, only: &
-     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -64,11 +61,9 @@ module mod_embudget
 contains
   !-----------------------------------------------------------------------------
   subroutine embudget_setup
-    use mod_adm, only: &
-       ADM_CTL_FID,        &
-       ADM_proc_stop,      &
-       ADM_prc_me,         &
-       ADM_prc_run_master
+    use scale_process, only: &
+       PRC_IsMaster, &
+       PRC_MPIstop
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI      => CONST_PI
@@ -84,28 +79,28 @@ contains
     !---------------------------------------------------------------------------
 
     !--- read parameters
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '+++ Module[embudget]/Category[nhm share]'
-    rewind(ADM_CTL_FID)
-    read(ADM_CTL_FID,nml=EMBUDGETPARAM,iostat=ierr)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[embudget]/Category[nhm share]'
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=EMBUDGETPARAM,iostat=ierr)
     if ( ierr < 0 ) then
-       write(ADM_LOG_FID,*) '*** EMBUDGETPARAM is not specified. use default.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** EMBUDGETPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*,          *) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
-       write(ADM_LOG_FID,*) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
-       call ADM_proc_stop
+       write(*         ,*) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
+       call PRC_MPIstop
     endif
-    write(ADM_LOG_FID,nml=EMBUDGETPARAM)
+    if( IO_L ) write(IO_FID_LOG,nml=EMBUDGETPARAM)
 
     if(.not.MNT_ON) return
 
     Mass_budget_factor   = 1.0_RP / ( TIME_DTL * real(MNT_INTV,kind=RP) * 4.0_RP * PI * RADIUS * RADIUS ) ! [kg/step] -> [kg/m2/s]
     Energy_budget_factor = 1.0_RP / ( TIME_DTL * real(MNT_INTV,kind=RP) * 4.0_RP * PI * RADIUS * RADIUS ) ! [J /step] -> [W/m2]
-    write(ADM_LOG_FID,*) "Mass_budget_factor   = ", Mass_budget_factor
-    write(ADM_LOG_FID,*) "Energy_budget_factor = ", Energy_budget_factor
+    if( IO_L ) write(IO_FID_LOG,*) "Mass_budget_factor   = ", Mass_budget_factor
+    if( IO_L ) write(IO_FID_LOG,*) "Energy_budget_factor = ", Energy_budget_factor
 
     ! open budget.info file
-    if ( ADM_prc_me == ADM_prc_run_master ) then
+    if ( PRC_IsMaster ) then
        MNT_m_fid  = IO_get_available_fid()
        open( unit   = MNT_m_fid,          &
              file   = 'MASS_BUDGET.info', &
@@ -133,7 +128,7 @@ contains
 
     if( .NOT. MNT_ON ) return
 
-    if ( mod(TIME_CSTEP,MNT_INTV) == 0 ) then
+    if ( mod(TIME_CSTEP-1,MNT_INTV) == 0 ) then
        call diagnose_energy_mass
     endif
 
@@ -142,24 +137,24 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine diagnose_energy_mass
-    use mod_adm, only: &
-       ADM_prc_me,         &
-       ADM_prc_run_master, &
-       ADM_have_pl,        &
-       ADM_lall,           &
-       ADM_lall_pl,        &
-       ADM_gall,           &
-       ADM_gall_pl,        &
-       ADM_kall
+    use scale_process, only: &
+       PRC_IsMaster
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
-       PI      => CONST_PI,      &
-       CV      => CONST_CVdry
+       PI     => CONST_PI,     &
+       CVdry  => CONST_CVdry,  &
+       LHV    => CONST_LHV,    &
+       LHF    => CONST_LHF
+    use mod_adm, only: &
+       ADM_have_pl, &
+       ADM_lall,    &
+       ADM_lall_pl, &
+       ADM_gall,    &
+       ADM_gall_pl, &
+       ADM_kall
     use mod_vmtr, only: &
-       VMTR_RGSGAM2,    &
-       VMTR_RGSGAM2_pl, &
-       VMTR_PHI,        &
-       VMTR_PHI_pl
+       VMTR_getIJ_RGSGAM2, &
+       VMTR_getIJ_PHI
     use mod_time, only: &
        TIME_CSTEP, &
        TIME_DTL
@@ -176,8 +171,6 @@ contains
        I_QI,     &
        I_QS,     &
        I_QG,     &
-       LHV,      &
-       LHF,      &
        CVW
     use mod_prgvar, only: &
        prgvar_get_withdiag
@@ -187,41 +180,41 @@ contains
        THRMDYN_qd
     implicit none
 
-    real(RP) :: rhog     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhog     (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhog_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogvx   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhogvx   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhogvx_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogvy   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhogvy   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhogvy_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogvz   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhogvz   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhogvz_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogw    (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhogw    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhoge    (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogq    (ADM_gall,   ADM_kall,ADM_lall   ,TRC_vmax)
+    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
     real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
 
-    real(RP) :: rho      (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: rho      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rho_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: pre      (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: pre      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: pre_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: tem      (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: tem      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: tem_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: vx       (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: vx       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: vx_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: vy       (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: vy       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: vy_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: vz       (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: vz       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: vz_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: w        (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: w        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: w_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: q        (ADM_gall,   ADM_kall,ADM_lall   ,TRC_vmax)
+    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
     real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
 
-    real(RP) :: qd    (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: qd    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: qd_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: tmp   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP) :: tmp   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: tmp_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
     real(RP) :: rhoq_sum    (TRC_vmax)
@@ -248,8 +241,16 @@ contains
     real(RP) :: rhokin_sum_diff
     real(RP) :: rhoetot_sum_diff
 
+    real(RP) :: VMTR_RGSGAM2   (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: VMTR_RGSGAM2_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: VMTR_PHI       (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: VMTR_PHI_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+
     integer :: nq
     !---------------------------------------------------------------------------
+
+    call VMTR_getIJ_RGSGAM2( VMTR_RGSGAM2, VMTR_RGSGAM2_pl )
+    call VMTR_getIJ_PHI    ( VMTR_PHI,     VMTR_PHI_pl     )
 
     call prgvar_get_withdiag( rhog,   rhog_pl,   & ! [OUT]
                               rhogvx, rhogvx_pl, & ! [OUT]
@@ -327,9 +328,9 @@ contains
     rhophi_sum = GTL_global_sum( tmp, tmp_pl )
 
     !--- internal energy (dry air)
-    tmp = rho * qd * CV * tem
+    tmp = rho * qd * CVdry * tem
     if ( ADM_have_pl ) then
-       tmp_pl = rho_pl * qd_pl * CV * tem_pl
+       tmp_pl = rho_pl * qd_pl * CVdry * tem_pl
     endif
     rhoein_qd_sum = GTL_global_sum( tmp, tmp_pl )
 
@@ -362,12 +363,12 @@ contains
     enddo
 
     !--- kinetic energy
-    call cnvvar_rhogkin( rhog,   rhog_pl,   & !--- [IN]
-                         rhogvx, rhogvx_pl, & !--- [IN]
-                         rhogvy, rhogvy_pl, & !--- [IN]
-                         rhogvz, rhogvz_pl, & !--- [IN]
-                         rhogw,  rhogw_pl,  & !--- [IN]
-                         tmp,    tmp_pl     ) !--- [OUT]
+    call cnvvar_rhogkin( rhog,   rhog_pl,   & ! [IN]
+                         rhogvx, rhogvx_pl, & ! [IN]
+                         rhogvy, rhogvy_pl, & ! [IN]
+                         rhogvz, rhogvz_pl, & ! [IN]
+                         rhogw,  rhogw_pl,  & ! [IN]
+                         tmp,    tmp_pl     ) ! [OUT]
 
     tmp(:,:,:) = tmp(:,:,:) * VMTR_RGSGAM2(:,:,:)
     if ( ADM_have_pl ) then
@@ -408,7 +409,7 @@ contains
        rhoetot_sum_diff = ( rhoetot_sum - rhoetot_sum_old ) * Energy_budget_factor
     endif
 
-    if ( ADM_prc_me == ADM_prc_run_master ) then
+    if ( PRC_IsMaster ) then
        if ( first ) then
           write(MNT_m_fid,'(A6)' ,advance='no') '#STEP'
           write(MNT_m_fid,'(A16)',advance='no') 'Day'

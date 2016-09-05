@@ -32,13 +32,20 @@ module scale_precision
   !-----------------------------------------------------------------------------
   integer, public, parameter :: SP = dc_SP ! Single Precision: kind(0.E0)
   integer, public, parameter :: DP = dc_DP ! Double Precision: kind(0.D0)
+
+  integer, public, parameter :: SP_PREC = precision(0.E0)
+  integer, public, parameter :: DP_PREC = precision(0.D0)
+
 #ifdef SINGLE
-  integer, public, parameter :: RP = SP ! single precision
+  integer, public, parameter :: RP      = SP      ! single precision
+  integer, public, parameter :: RP_PREC = SP_PREC
 #else
-  integer, public, parameter :: RP = DP ! double precision
+  integer, public, parameter :: RP      = DP      ! double precision
+  integer, public, parameter :: RP_PREC = DP_PREC
 #endif
-  !
+
   !-----------------------------------------------------------------------------
+  !
   !++ Private procedure
   !
   !-----------------------------------------------------------------------------
@@ -47,4 +54,3 @@ module scale_precision
   !
   !-----------------------------------------------------------------------------
 end module scale_precision
-!-------------------------------------------------------------------------------

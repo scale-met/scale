@@ -2,7 +2,7 @@
 
 GLEV=${1}
 RLEV=${2}
-NMPI=${3}
+TPROC=${3}
 ZL=${4}
 VGRID=${5}
 TOPDIR=${6}
@@ -13,14 +13,14 @@ MPIEXEC="mpiexec"
 
 GL=`printf %02d ${GLEV}`
 RL=`printf %02d ${RLEV}`
-if   [ ${NMPI} -ge 10000 ]; then
-	NP=`printf %05d ${NMPI}`
-elif [ ${NMPI} -ge 1000 ]; then
-	NP=`printf %04d ${NMPI}`
-elif [ ${NMPI} -ge 100 ]; then
-	NP=`printf %03d ${NMPI}`
+if   [ ${TPROC} -ge 10000 ]; then
+	NP=`printf %05d ${TPROC}`
+elif [ ${TPROC} -ge 1000 ]; then
+	NP=`printf %04d ${TPROC}`
+elif [ ${TPROC} -ge 100 ]; then
+	NP=`printf %03d ${TPROC}`
 else
-	NP=`printf %02d ${NMPI}`
+	NP=`printf %02d ${TPROC}`
 fi
 
 dir2d=gl${GL}rl${RL}pe${NP}
@@ -31,9 +31,9 @@ res3d=GL${GL}RL${RL}z${ZL}
 MNGINFO=rl${RL}-prc${NP}.info
 
 # for K computer
-if [ ${NMPI} -gt 36864 ]; then
+if [ ${TPROC} -gt 36864 ]; then
    rscgrp="huge"
-elif [ ${NMPI} -gt 384 ]; then
+elif [ ${TPROC} -gt 384 ]; then
    rscgrp="large"
 else
    rscgrp="small"
@@ -47,7 +47,7 @@ cat << EOF1 > run.sh
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
-#PJM --rsc-list "node=${NMPI}"
+#PJM --rsc-list "node=${TPROC}"
 #PJM --rsc-list "elapse=03:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
@@ -82,7 +82,7 @@ cat << EOFICO2LL1 > ico2ll.sh
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
-#PJM --rsc-list "node=${NMPI}"
+#PJM --rsc-list "node=${TPROC}"
 #PJM --rsc-list "elapse=00:30:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"

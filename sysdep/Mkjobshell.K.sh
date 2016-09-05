@@ -14,6 +14,14 @@ DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 # System specific
 MPIEXEC="mpiexec"
 
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+fi
+
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
 x=${array[0]}
 y=${array[1]:-1}
@@ -27,13 +35,15 @@ else
    rscgrp="small"
 fi
 
-# Generate run.sh
+
+
+
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K computer
+# ------ For K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
@@ -72,7 +82,7 @@ if [ ! ${DATDISTS[0]} = "" ]; then
 fi
 
 cat << EOF2 >> ./run.sh
-#PJM --stgout "rank=* %r:./*      ./"
+#PJM --stgout "rank=* %r:./* ./"
 #PJM -j
 #PJM -s
 #
@@ -80,11 +90,10 @@ cat << EOF2 >> ./run.sh
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=8
-#export fu08bf=1
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+${RUN_INIT}
+${RUN_BIN}
 
 ################################################################################
 EOF2

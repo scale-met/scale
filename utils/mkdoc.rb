@@ -259,30 +259,32 @@ system("mkdir -p #{output_dir}")
 File.open("#{output_dir}/namelist.dox","w") do |file|
   file.print <<EOL
 !> @page namelist NAMELIST Parameters
-!> <ul>
+!> <table>
+!> <tr><th>Variable name</th><th>NAMELIST Group</th><th>module name</th></tr>
 EOL
   nm_params.sort.each do |name,ary|
     list = ary.map do |mod, group|
-      file.print "!>    <li>#{name} in #{group}: @ref namelist_#{mod}_#{group} \"#{mod}\"\n"
+      file.print "!>    <tr><td>#{name}</td><td>@ref namelist_#{mod}_#{group} \"#{group}\"</td><td>#{mod}</td></tr>\n"
     end
   end
   file.print <<EOL
-!>    </ul>
+!>    </table>
 EOL
 end
 
 File.open("#{output_dir}/history.dox","w") do |file|
   file.print <<EOL
 !> @page history History Variables
-!> <ul>
+!> <table>
+!> <tr><th>Variable name</th><th>module name</th></tr>
 EOL
   history.sort.each do |name,list|
     list = list.map{|mod|
       "@ref history_#{mod} \"#{mod}\""
     }
-    file.print "!>    <li>#{name}: #{list.join(", ")}</li>\n"
+    file.print "!>    <tr><td>#{name}</td><td>#{list.join(", ")}</td></tr>\n"
   end
   file.print <<EOL
-!>    </ul>
+!>    </table>
 EOL
 end

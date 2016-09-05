@@ -985,4 +985,3 @@ contains
   end subroutine ATMOS_SOLARINS_insolation_2D
 
 end module scale_atmos_solarins
-!-------------------------------------------------------------------------------

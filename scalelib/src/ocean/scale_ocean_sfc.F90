@@ -155,6 +155,7 @@ contains
        OCEAN_SFC_SimpleAlbedo => OCEAN_SFC_SLAB_SimpleAlbedo
     end select
 
+    return
   end subroutine OCEAN_SFC_setup
 
 end module scale_ocean_sfc

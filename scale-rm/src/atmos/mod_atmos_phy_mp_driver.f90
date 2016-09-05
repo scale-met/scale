@@ -179,7 +179,7 @@ contains
        enddo
        enddo
        enddo
-  
+
        CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
 
        call ATMOS_PHY_MP( DENS0    (:,:,:),   & ! [INOUT]
@@ -225,10 +225,10 @@ contains
        end do
        end do
 
-       call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', nohalo=.true. )
-       call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', nohalo=.true. )
-       call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', nohalo=.true. )
-       call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number', 'num/m3/s', nohalo=.true. )
+       call HIST_in( SFLX_rain(:,:),   'RAIN',      'surface rain rate by MP',          'kg/m2/s',  nohalo=.true. )
+       call HIST_in( SFLX_snow(:,:),   'SNOW',      'surface snow rate by MP',          'kg/m2/s',  nohalo=.true. )
+       call HIST_in( precip   (:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  nohalo=.true. )
+       call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', nohalo=.true. )
 
        call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP', 'kg/m3/s'  , nohalo=.true. )
        call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP', 'kg/m2/s2' , nohalo=.true. )

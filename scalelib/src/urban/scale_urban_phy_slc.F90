@@ -111,14 +111,21 @@ module scale_urban_phy_slc
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine URBAN_PHY_SLC_setup( URBAN_TYPE )
+  subroutine URBAN_PHY_SLC_setup( &
+       URBAN_TYPE, &
+       Z0M, &
+       Z0H, &
+       Z0E  )
     use scale_process, only: &
        PRC_MPIstop
     use scale_landuse, only: &
        LANDUSE_fact_urban
     implicit none
 
-    character(len=*), intent(in) :: URBAN_TYPE
+    character(len=*), intent(in)  :: URBAN_TYPE
+    real(RP)        , intent(out) :: Z0M(IA,JA)
+    real(RP)        , intent(out) :: Z0H(IA,JA)
+    real(RP)        , intent(out) :: Z0E(IA,JA)
     integer                      :: i, j
 
     NAMELIST / PARAM_URBAN_PHY_SLC / &
@@ -198,6 +205,18 @@ contains
       endif
     enddo
     enddo
+
+    do j = JS, JE
+    do i = IS, IE
+
+       if( is_URB(i,j) ) then
+          Z0M(i,j) = Z0C
+          Z0H(i,j) = Z0HC
+          Z0E(i,j) = Z0HC
+       endif
+
+    end do
+    end do
 
     return
   end subroutine URBAN_PHY_SLC_setup

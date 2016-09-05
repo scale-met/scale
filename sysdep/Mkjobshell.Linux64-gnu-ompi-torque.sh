@@ -12,26 +12,36 @@ DATPARAM=(`echo ${8} | tr -s ',' ' '`)
 DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 
 # System specific
-MPIEXEC="mpirun --mca btl openib,self -np ${TPROC}"
+MPIEXEC="mpirun --mca btl openib,sm,self --bind-to core"
 
-NNODE=`expr \( $TPROC - 1 \) / 8 + 1`
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+fi
+
+NNODE=`expr \( $TPROC - 1 \) / 24 + 1`
 NPROC=`expr $TPROC / $NNODE`
 
 if [ ${NNODE} -gt 16 ]; then
    rscgrp="l"
-elif [ ${TPROC} -gt 3 ]; then
+elif [ ${NNODE} -gt 3 ]; then
    rscgrp="m"
 else
    rscgrp="s"
 fi
 
-# Generate run.sh
+
+
+
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR SGI ICE X (Linux64 & gnu C&fortran & openmpi + Torque -----
+# ------ For SGI ICE X (Linux64 & gnu fortran&C & openmpi + Torque -----
 #
 ################################################################################
 #PBS -q ${rscgrp}
@@ -87,15 +97,6 @@ if [ ! ${DATDISTS[0]} = "" ]; then
          fi
       done
    done
-fi
-
-
-if [ ! ${INITNAME} = "NONE" ]; then
-  RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
-fi
-
-if [ ! ${BINNAME} = "NONE" ]; then
-  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
 fi
 
 cat << EOF2 >> ./run.sh

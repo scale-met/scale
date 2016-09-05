@@ -43,6 +43,12 @@ module mod_atmos_vars
   public :: ATMOS_vars_diagnostics
   public :: ATMOS_vars_monitor
 
+  public :: ATMOS_vars_restart_create
+  public :: ATMOS_vars_restart_def_var
+  public :: ATMOS_vars_restart_enddef
+  public :: ATMOS_vars_restart_write_var
+  public :: ATMOS_vars_restart_close
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -108,11 +114,13 @@ module mod_atmos_vars
   logical,                private :: ATMOS_VARS_CHECKRANGE          = .false.
   real(RP),               private :: ATMOS_VARS_CHECKCFL            = 0.0_RP
 
-  integer,                private, parameter :: VMAX   = 5       !< number of the variables
+  integer,                private, parameter   :: VMAX   = 5       !< number of the variables
 
-  character(len=H_SHORT), private            :: VAR_NAME(VMAX)
-  character(len=H_MID),   private            :: VAR_DESC(VMAX)
-  character(len=H_SHORT), private            :: VAR_UNIT(VMAX)
+  character(len=H_SHORT), private              :: VAR_NAME(VMAX)
+  character(len=H_MID),   private              :: VAR_DESC(VMAX)
+  character(len=H_SHORT), private              :: VAR_UNIT(VMAX)
+  integer,                private, allocatable :: VAR_ID(:)
+  integer,                private              :: restart_fid = -1  ! file ID
 
   data VAR_NAME / 'DENS', &
                   'MOMZ', &
@@ -1206,6 +1214,11 @@ contains
        SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
     use scale_atmos_adiabat, only: &
        ADIABAT_cape => ATMOS_ADIABAT_cape
+    use mod_atmos_phy_cp_vars, only: &
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
+    use mod_atmos_phy_mp_vars, only: &
+       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
     implicit none
 
     real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
@@ -1245,6 +1258,8 @@ contains
 
     real(RP) :: MSE   (KA,IA,JA) ! MSE        [m2/s2]
     real(RP) :: LHvap (KA,IA,JA) ! latent heat for vaporization [m2/s2]
+
+    real(RP) :: PREC  (IA,JA)    ! surface precipitation rate CP+MP [kg/m2/s]
 
     real(RP) :: DENS_PRIM(KA,IA,JA) ! horiz. deviation of density    [kg/m3]
     real(RP) :: W_PRIM   (KA,IA,JA) ! horiz. deviation of w          [m/s]
@@ -2102,6 +2117,14 @@ contains
     endif
     call HIST_in( MSE(:,:,:), 'MSE', 'moist static energy', 'm2/s2' )
 
+    do j = JS, JE
+    do i = IS, IE
+       PREC(i,j) = SFLX_rain_CP(i,j)                     &
+                 + SFLX_rain_MP(i,j) + SFLX_snow_MP(i,j)
+    enddo
+    enddo
+    call HIST_in( PREC(:,:), 'PREC', 'surface precipitation rate (total)', 'kg/m2/s' )
+
     return
   end subroutine ATMOS_vars_history
 
@@ -2587,5 +2610,364 @@ contains
 
     return
   end subroutine ATMOS_vars_monitor
+
+  !-----------------------------------------------------------------------------
+  !> Create atmospheric restart file
+  subroutine ATMOS_vars_restart_create
+    use scale_time, only: &
+       TIME_gettimelabel
+    use scale_fileio, only: &
+       FILEIO_create
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_cp
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_restart_create
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_restart_create
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_restart_create
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_restart_create
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_restart_create
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_restart_create
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_restart_create
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_create
+#ifdef _SDM
+    use scale_atmos_phy_mp_sdm, only: &
+       sd_rest_flg_out, &
+       ATMOS_PHY_MP_sdm_restart_create
+    use scale_time, only: &
+       NOWSEC => TIME_NOWSEC
+#endif
+    implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
+
+    integer :: iq
+    !---------------------------------------------------------------------------
+
+#ifdef _SDM
+    if( sd_rest_flg_out ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***'
+       call ATMOS_PHY_MP_sdm_restart_create(NOWSEC)
+    endif
+#endif
+
+    if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
+
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(ATMOS_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_create(restart_fid, basename, ATMOS_RESTART_OUT_TITLE, ATMOS_RESTART_OUT_DTYPE)
+
+       allocate( VAR_ID(VMAX+QA) )
+    endif
+
+    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_create
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_create
+    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_create
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_create
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_create
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_create
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_create
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_create
+
+    return
+  end subroutine ATMOS_vars_restart_create
+
+  !-----------------------------------------------------------------------------
+  !> Exit netCDF define mode
+  subroutine ATMOS_vars_restart_enddef
+    use scale_fileio, only: &
+       FILEIO_enddef
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_cp
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_restart_enddef
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_restart_enddef
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_restart_enddef
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_restart_enddef
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_restart_enddef
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_restart_enddef
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_restart_enddef
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_enddef
+#ifdef _SDM
+    use scale_atmos_phy_mp_sdm, only: &
+       sd_rest_flg_out, &
+       ATMOS_PHY_MP_sdm_restart_enddef
+#endif
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+#ifdef _SDM
+    if( sd_rest_flg_out ) then
+       call ATMOS_PHY_MP_sdm_restart_enddef
+    endif
+#endif
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_enddef( restart_fid ) ! [IN]
+    endif
+
+    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_enddef
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_enddef
+    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_enddef
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_enddef
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_enddef
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_enddef
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_enddef
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_enddef
+
+    return
+  end subroutine ATMOS_vars_restart_enddef
+
+  !-----------------------------------------------------------------------------
+  !> Close restart file
+  subroutine ATMOS_vars_restart_close
+    use scale_fileio, only: &
+       FILEIO_close
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_cp
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_restart_close
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_restart_close
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_restart_close
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_restart_close
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_restart_close
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_restart_close
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_restart_close
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_close
+#ifdef _SDM
+    use scale_atmos_phy_mp_sdm, only: &
+       sd_rest_flg_out, &
+       ATMOS_PHY_MP_sdm_restart_close
+#endif
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+#ifdef _SDM
+    if( sd_rest_flg_out ) then
+       call ATMOS_PHY_MP_sdm_restart_close
+    endif
+#endif
+
+    if ( restart_fid .NE. -1 ) then
+       call FILEIO_close( restart_fid ) ! [IN]
+       restart_fid = -1
+
+       deallocate( VAR_ID )
+    endif
+
+    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_close
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_close
+    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_close
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_close
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_close
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_close
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_close
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_close
+
+    return
+  end subroutine ATMOS_vars_restart_close
+
+  !-----------------------------------------------------------------------------
+  !> Define atmospheric variables in restart file
+  subroutine ATMOS_vars_restart_def_var
+    use scale_fileio, only: &
+       FILEIO_def_var
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_cp
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_restart_def_var
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_restart_def_var
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_restart_def_var
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_restart_def_var
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_restart_def_var
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_restart_def_var
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_restart_def_var
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_def_var
+#ifdef _SDM
+    use scale_atmos_phy_mp_sdm, only: &
+       sd_rest_flg_out, &
+       ATMOS_PHY_MP_sdm_restart_def_var
+#endif
+    implicit none
+
+    integer iq
+    !---------------------------------------------------------------------------
+
+#ifdef _SDM
+    if( sd_rest_flg_out ) then
+       call ATMOS_PHY_MP_sdm_restart_def_var
+    endif
+#endif
+
+    if ( restart_fid .NE. -1 ) then
+
+       call FILEIO_def_var( restart_fid, VAR_ID(I_DENS), VAR_NAME(I_DENS), VAR_DESC(I_DENS), & ! [IN]
+                            VAR_UNIT(I_DENS), 'ZXY',  ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(I_MOMZ), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), & ! [IN]
+                            VAR_UNIT(I_MOMZ), 'ZHXY', ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(I_MOMX), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), & ! [IN]
+                            VAR_UNIT(I_MOMX), 'ZXHY', ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(I_MOMY), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), & ! [IN]
+                            VAR_UNIT(I_MOMY), 'ZXYH', ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(I_RHOT), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), & ! [IN]
+                            VAR_UNIT(I_RHOT), 'ZXY',  ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
+
+       do iq = 1, QA
+          call FILEIO_def_var( restart_fid, VAR_ID(VMAX+iq), AQ_NAME(iq), AQ_DESC(iq), & ! [IN]
+                               AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE       ) ! [IN]
+       enddo
+
+    endif
+
+    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_def_var
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_def_var
+    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_def_var
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_def_var
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_def_var
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_def_var
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_def_var
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_def_var
+
+    return
+  end subroutine ATMOS_vars_restart_def_var
+
+  !-----------------------------------------------------------------------------
+  !> Write restart of atmospheric variables
+  subroutine ATMOS_vars_restart_write_var
+    use scale_fileio, only: &
+       FILEIO_write_var
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_cp
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_restart_write_var
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_restart_write_var
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_restart_write_var
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_restart_write_var
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_restart_write_var
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_restart_write_var
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_restart_write_var
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_write_var
+#ifdef _SDM
+    use scale_atmos_phy_mp_sdm, only: &
+       sd_rest_flg_out, &
+       ATMOS_PHY_MP_sdm_restart_write_var
+#endif
+    implicit none
+
+    integer iq
+    !---------------------------------------------------------------------------
+
+#ifdef _SDM
+    if( sd_rest_flg_out ) then
+       call ATMOS_PHY_MP_sdm_restart_write_var
+    endif
+#endif
+
+    if ( restart_fid .NE. -1 ) then
+
+       call ATMOS_vars_fillhalo
+
+       call ATMOS_vars_total
+
+       call FILEIO_write_var( restart_fid, VAR_ID(I_DENS), DENS(:,:,:), VAR_NAME(I_DENS), 'ZXY'  ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_MOMZ), MOMZ(:,:,:), VAR_NAME(I_MOMZ), 'ZHXY' ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_MOMX), MOMX(:,:,:), VAR_NAME(I_MOMX), 'ZXHY' ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_MOMY), MOMY(:,:,:), VAR_NAME(I_MOMY), 'ZXYH' ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_RHOT), RHOT(:,:,:), VAR_NAME(I_RHOT), 'ZXY'  ) ! [IN]
+
+       do iq = 1, QA
+          call FILEIO_write_var( restart_fid, VAR_ID(VMAX+iq), QTRC(:,:,:,iq), AQ_NAME(iq), 'ZXY' ) ! [IN]
+       enddo
+
+    endif
+
+    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_write_var
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write_var
+    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_write_var
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write_var
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write_var
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write_var
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write_var
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write_var
+
+    return
+  end subroutine ATMOS_vars_restart_write_var
 
 end module mod_atmos_vars

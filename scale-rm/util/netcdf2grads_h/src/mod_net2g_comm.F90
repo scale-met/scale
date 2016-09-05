@@ -238,13 +238,13 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    sendcounts = mnxp * mnyp * nmnge 
-    recvcounts = mnxp * mnyp * nmnge 
+    sendcounts = mnxp * mnyp * nmnge
+    recvcounts = mnxp * mnyp * nmnge
 
 !OCL XFILL
     sendbuf(:,:) = UNDEF_SP
 !OCL XFILL
-    do jjy = 1, mnyp*nmnge 
+    do jjy = 1, mnyp*nmnge
     do iix = 1, mnxp
        sendbuf(iix,jjy) = invar(iix,jjy)
     enddo

@@ -45,7 +45,10 @@ module scale_grid
   real(RP), public              :: BUFFER_DZ = 0.0_RP   !< thickness of buffer region [m]: z
   real(RP), public              :: BUFFER_DX = 0.0_RP   !< thickness of buffer region [m]: x
   real(RP), public              :: BUFFER_DY = 0.0_RP   !< thickness of buffer region [m]: y
-  real(RP), public              :: BUFFFACT  = 1.0_RP   !< strech factor for dx/dy/dz of buffer region
+  real(RP), public              :: BUFFFACT  = 1.0_RP   !< default strech factor for dx/dy/dz of buffer region
+  real(RP), public              :: BUFFFACT_X = -1.0_RP !< strech factor for dx of buffer region
+  real(RP), public              :: BUFFFACT_Y = -1.0_RP !< strech factor for dy of buffer region
+  real(RP), public              :: BUFFFACT_Z = -1.0_RP !< strech factor for dz of buffer region
 
   real(RP), public              :: GRID_DOMAIN_CENTER_X !< center position of global domain [m]: x
   real(RP), public              :: GRID_DOMAIN_CENTER_Y !< center position of global domain [m]: y
@@ -127,6 +130,9 @@ contains
        BUFFER_DX,         &
        BUFFER_DY,         &
        BUFFFACT,          &
+       BUFFFACT_X,        &
+       BUFFFACT_Y,        &
+       BUFFFACT_Z,        &
        FZ,                &
        debug
 
@@ -148,6 +154,10 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_GRID)
+
+    if ( BUFFFACT_X < 0.0_RP ) BUFFFACT_X = BUFFFACT
+    if ( BUFFFACT_Y < 0.0_RP ) BUFFFACT_Y = BUFFFACT
+    if ( BUFFFACT_Z < 0.0_RP ) BUFFFACT_Z = BUFFFACT
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Atmosphere grid information ***'
@@ -328,13 +338,13 @@ contains
     do i = 1, IAG
        if( bufftotx >= BUFFER_DX ) exit
 
-       buffx(i) = buffx(i-1) * BUFFFACT
+       buffx(i) = buffx(i-1) * BUFFFACT_X
        bufftotx = bufftotx + buffx(i)
     enddo
     ibuff = i - 1
     imain = IAG - 2*ibuff - 2*IHALO
 
-    if ( imain < 1 ) then
+    if ( imain < 0 ) then
        write(*,*) 'xxx Buffer size (', bufftotx*2.0_RP, ') must be smaller than global domain size (X). Use smaller BUFFER_DX!'
        call PRC_MPIstop
     endif
@@ -409,13 +419,13 @@ contains
     do j = 1, JAG
        if( bufftoty >= BUFFER_DY ) exit
 
-       buffy(j) = buffy(j-1) * BUFFFACT
+       buffy(j) = buffy(j-1) * BUFFFACT_Y
        bufftoty = bufftoty + buffy(j)
     enddo
     jbuff = j - 1
     jmain = JAG - 2*jbuff - 2*JHALO
 
-    if ( jmain < 1 ) then
+    if ( jmain < 0 ) then
        write(*,*) 'xxx Buffer size (', bufftoty*2.0_RP, ') must be smaller than global domain size (Y). Use smaller BUFFER_DY!'
        call PRC_MPIstop
     endif
@@ -508,7 +518,7 @@ contains
        kbuff = KMAX - k
        kmain = k
 
-       if ( kmain == 1 ) then
+       if ( kmain < 0 ) then
           write(*,*) 'xxx Buffer size (', bufftotz, ') must be smaller than domain size (z). Use smaller BUFFER_DZ!'
           call PRC_MPIstop
        endif
@@ -544,13 +554,13 @@ contains
        do k = 1, KA
           if( bufftotz >= BUFFER_DZ ) exit
 
-          buffz(k) = buffz(k-1) * BUFFFACT
+          buffz(k) = buffz(k-1) * BUFFFACT_Z
           bufftotz = bufftotz + buffz(k)
        enddo
        kbuff = k - 1
        kmain = KE - KS + 1 - kbuff
 
-       if ( kmain < 1 ) then
+       if ( kmain < 0 ) then
           write(*,*) 'xxx Buffer size (', bufftotz, ') must be smaller than domain size (z). Use smaller BUFFER_DZ!'
           call PRC_MPIstop
        endif

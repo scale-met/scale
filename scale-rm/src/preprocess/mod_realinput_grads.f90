@@ -184,7 +184,7 @@ contains
 
     integer,          intent(out) :: dims(6)
     character(len=H_LONG), intent(in) :: basename
-    
+
 
     NAMELIST / PARAM_MKINIT_REAL_GrADS / &
         upper_qv_type
@@ -265,6 +265,8 @@ contains
          num_item_list_atom,  & ! (in)
          basename,            & ! (in)
          io_fid_grads_nml     ) ! (in)
+
+    close( io_fid_grads_nml )
 
     do ielem = 1, num_item_list_atom
        item  = item_list_atom(ielem)
@@ -955,6 +957,8 @@ contains
          basename,            & ! (in)
          io_fid_grads_nml     ) ! (in)
 
+    close( io_fid_grads_nml )
+
     do ielem = 1, num_item_list_land
        item  = item_list_land(ielem)
        !--- check data
@@ -1393,6 +1397,8 @@ contains
          num_item_list_ocean, & ! (in)
          grads_ctl,           & ! (in)
          io_fid_grads_nml     ) ! (in)
+
+    close( io_fid_grads_nml )
 
     do ielem = 1, num_item_list_ocean
        item  = item_list_ocean(ielem)
@@ -1964,4 +1970,3 @@ contains
   end subroutine close_grads_file
 
 end module mod_realinput_grads
-!-------------------------------------------------------------------------------

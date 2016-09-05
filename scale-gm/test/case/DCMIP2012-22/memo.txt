@@ -1,0 +1,3 @@
+DCMIP2012
+Test CASE 2-2
+Mountain waves over a Schar-type mountain on a small planet with wind shear

@@ -709,7 +709,7 @@ int32_t fio_read_datainfo_tmpdata( int32_t fid )
   int32_t i, ijklall, v;
 
   if(tdata == NULL){
-    tdata = (struct type_tmpdata *)malloc(sizeof(struct type_tmpdata)*(10*(int32_t)(pow(4,common.rlevel)))); /* common.num_of_rgn >= fid */
+    tdata = (struct type_tmpdata *)malloc(sizeof(struct type_tmpdata)*(10*(int32_t)(round(pow(4,common.rlevel))))); /* common.num_of_rgn >= fid */
     for( i=0; i<common.num_of_rgn; i++ ){ tdata[i].tmpdata = NULL; }
 
   }
@@ -824,8 +824,8 @@ int32_t fio_write_data_1rgn( int32_t fid,
   int64_t datasize;
   void *_data;
 
-  ijkall = (pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel)+2)
-                   * (pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel)+2)
+  ijkall = (round(pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel))+2)
+    * (round(pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel))+2)
          * finfo[fid].dinfo[did].num_of_layer;
 
   datasize = ijkall * precision[finfo[fid].dinfo[did].datatype];
@@ -1161,8 +1161,8 @@ int32_t fio_valid_datainfo( int32_t fid )
   int64_t datasize;
   char* str_dtype[5] = { "XXXX","REAL4","REAL8","INTEGER4","INTEGER8" };
 
-  ijall = (pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel)+2)
-                  * (pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel)+2);
+  ijall = (round(pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel))+2)
+    * (round(pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel))+2);
 
   for( did=0; did<finfo[fid].header.num_of_data; did++ ) {
     datasize = ijall
@@ -1386,8 +1386,8 @@ int32_t fio_dump_finfo( int32_t fid,
   }
   fio_read_datainfo( fid );
 
-  ijall = (pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel)+2)
-                  * (pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel)+2);
+  ijall = (round(pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel))+2)
+    * (round(pow(2,finfo[fid].header.glevel-finfo[fid].header.rlevel))+2);
 
   /* package info */
   printf( "============ DATA PACKAGE DEFINITION =============\n" );

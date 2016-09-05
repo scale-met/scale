@@ -199,7 +199,7 @@ contains
     real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: pott_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
-    logical,          intent(in)  :: flg_bin            ! flag for SBM(S10) 
+    logical,          intent(in)  :: flg_bin            ! flag for SBM(S10)
     logical,          intent(in)  :: flg_intrp          ! flag for interpolation of SBM
     character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: mptype_parent
@@ -650,4 +650,3 @@ contains
   end subroutine ParentOceanInputSCALE
 
 end module mod_realinput_scale
-!-------------------------------------------------------------------------------

@@ -432,8 +432,8 @@ contains
        call HIST_in( SFCFLX_SW_up(:,:), 'SFLX_SW_up',   'SFC upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
        call HIST_in( SFCFLX_SW_dn(:,:), 'SFLX_SW_dn',   'SFC downward shortwave radiation flux', 'W/m2', nohalo=.true. )
 
-       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_direct), 'SFLX_SW_dn_direct',  'SFC down. shortwave ratio direct',  'W/m2', nohalo=.true. )
-       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_diffuse),'SFLX_SW_dn_diffuse', 'SFC down. shortwave ratio diffuse', 'W/m2', nohalo=.true. )
+       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_direct), 'SFLX_SW_dn_dirct',   'SFC down. shortwave ratio direct',  'W/m2', nohalo=.true. )
+       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_diffuse),'SFLX_SW_dn_diffs',   'SFC down. shortwave ratio diffuse', 'W/m2', nohalo=.true. )
 
        call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
        call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave  radiation flux', 'W/m2', nohalo=.true. )

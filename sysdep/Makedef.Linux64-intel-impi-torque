@@ -1,0 +1,74 @@
+################################################################################
+#
+# ------ For SGI ICE X (Linux64 & intel fortran&C & intel mpi + Torque -----
+#
+################################################################################
+
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+
+FC  = mpiifort
+SFC = ifort
+MODDIROPT = -module
+
+FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
+               -assume byterecl -convert big_endian \
+               -fp-model source                     \
+               -mcmodel=medium -heap-arrays
+
+FFLAGS_DYN   = $(FFLAGS)
+
+FFLAGS_DEBUG = -fpp -m64 -O0                        \
+               -assume byterecl -convert big_endian \
+               -fpe0 -fp-model source               \
+               -check all -warn all -g -traceback   \
+               -mcmodel=medium -heap-arrays         \
+               -assume nobuffered_io                \
+               -DDEBUG
+
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+
+CC  = mpiicc
+
+CFLAGS_FAST  = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
+CFLAGS_DEBUG = -O0
+
+
+
+##### Special setting
+
+ifeq ($(DISABLE_VEC),T)
+   NOVEC = -no-vec
+endif
+
+FFLAGS_SYSDEPEND = $(NOVEC)
+CFLAGS_SYSDEPEND =
+
+FFLAGS_TENTATIVE = -no-ip -no-ipo
+
+##### Linker setting
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+
+
+################################################################################
+
+###### NetCDF library
+NETCDF_INCLUDE ?= -I$(NETCDF4)/include
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+
+###### Lapack
+LAPACK_LIBS    ?=
+example: -mkl=sequential
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = qsub

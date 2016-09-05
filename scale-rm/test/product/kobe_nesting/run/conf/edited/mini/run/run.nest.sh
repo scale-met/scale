@@ -18,7 +18,7 @@
 
 ##### FOR TOP PARENT DOMAIN
 #-------------------------------------------------------------------------------
-#PJM --stgin  "rank=* /data/ra000006/a00000/scale/src/bin/scale-rm        %r:./"
+#PJM --stgin  "rank=* /data/ra000006/a00000/scale/bin/scale-rm        %r:./"
 #PJM --stgin  "rank=* ../config/run.d01.conf                               %r:./"
 #PJM --stgin  "rank=* ../init/domain_01/init_d01_00023587200.000.pe%06r.nc %r:./"
 #PJM --stgin  "rank=* ../init/domain_01/boundary_d01.pe%06r.nc             %r:./"
@@ -53,7 +53,7 @@
 #PJM --stgin  "rank=0 ../input/domain_04/landuse_d04.pe*.nc              %r:../"
 
 #>>> COMMON FILES
-#PJM --stgin  "rank=0 /data/ra000006/a00000/scale/src/bin/scale-rm       0:../"
+#PJM --stgin  "rank=0 /data/ra000006/a00000/scale/bin/scale-rm       0:../"
 #PJM --stgin  "rank=0 /data/ra000006/SCALE/database/rad/PARAG.29          0:../"
 #PJM --stgin  "rank=0 /data/ra000006/SCALE/database/rad/PARAPC.29         0:../"
 #PJM --stgin  "rank=0 /data/ra000006/SCALE/database/rad/VARDATA.RM29      0:../"
