@@ -40,9 +40,9 @@ module scale_grid_index
   include "inc_index.h"
   include "inc_index_common.h"
 #else
-  integer, public :: KMAX   = -1 !< # of computational cells: z
-  integer, public :: IMAX   = -1 !< # of computational cells: x
-  integer, public :: JMAX   = -1 !< # of computational cells: y
+  integer, public :: KMAX   = -1 !< # of computational cells: z, local
+  integer, public :: IMAX   = -1 !< # of computational cells: x, local
+  integer, public :: JMAX   = -1 !< # of computational cells: y, local
 
   integer, public :: IBLOCK = -1 !< block size for cache blocking: x
   integer, public :: JBLOCK = -1 !< block size for cache blocking: y
@@ -65,6 +65,14 @@ module scale_grid_index
   integer, public :: KIJMAX = -1 !< # of computational cells: z*x*y
 #endif
 
+  integer, public :: IMAXG  = -1 !< # of computational cells: x, global
+  integer, public :: JMAXG  = -1 !< # of computational cells: y, global
+
+  integer, public :: ISG         !< start point of the inner domain: x, global
+  integer, public :: IEG         !< end   point of the inner domain: x, global
+  integer, public :: JSG         !< start point of the inner domain: y, global
+  integer, public :: JEG         !< end   point of the inner domain: y, global
+
   ! indices considering boundary
   integer, public :: IMAXB
   integer, public :: JMAXB
@@ -74,11 +82,6 @@ module scale_grid_index
   integer, public :: JEB
   integer, public :: IEH         !< end   point of inner domain: x, local (half level)
   integer, public :: JEH         !< end   point of inner domain: y, local (half level)
-
-  integer, public :: ISG         !< start point of the inner domain: x, global
-  integer, public :: IEG         !< end   point of the inner domain: x, global
-  integer, public :: JSG         !< start point of the inner domain: y, global
-  integer, public :: JEG         !< end   point of the inner domain: y, global
 
   !-----------------------------------------------------------------------------
   !
@@ -108,6 +111,8 @@ contains
 
 #ifndef _FIXEDINDEX_
     namelist / PARAM_INDEX / &
+       IMAXG,  &
+       JMAXG,  &
        KMAX,   &
        IMAX,   &
        JMAX,   &
@@ -127,6 +132,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** fixed index mode'
+
+    IMAXG = IMAX * PRC_NUM_Y
+    JMAXG = JMAX * PRC_NUM_Y
 #else
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -139,6 +147,50 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_INDEX)
 
+    if ( IMAXG * JMAXG < 0 ) then
+       write(*,*) 'xxx Both IMAXG and JMAXG must set! ', IMAXG, JMAXG
+       call PRC_MPIstop
+    endif
+    if ( IMAX * JMAX < 0 ) then
+       write(*,*) 'xxx Both IMAX and JMAX must set! ', IMAX, JMAX
+       call PRC_MPIstop
+    endif
+
+    if ( IMAX > 0 .AND. JMAX > 0 ) then
+       IMAXG = IMAX * PRC_NUM_X
+       JMAXG = JMAX * PRC_NUM_Y
+    elseif( IMAXG > 0 .AND. JMAXG > 0 ) then
+       IMAX = (IMAXG-1) / PRC_NUM_X + 1
+       JMAX = (JMAXG-1) / PRC_NUM_Y + 1
+
+       if ( mod(IMAXG,PRC_NUM_X) > 0 ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx number of IMAXG should be divisible by PRC_NUM_X'
+          if( IO_L ) write(*         ,*) 'xxx number of IMAXG should be divisible by PRC_NUM_X'
+          call PRC_MPIstop
+!           if( IO_L ) write(IO_FID_LOG,*) '*** number of IMAXG should be divisible by PRC_NUM_X'
+!           if( IO_L ) write(IO_FID_LOG,*) '*** Small IMAX is used in ranks(X,*)=', PRC_NUM_X-1
+!           if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then
+!              IMAX = IMAXG - IMAX * (PRC_NUM_X-1)
+!              if( IO_L ) write(IO_FID_LOG,*) '*** Small IMAX is used in this rank. IMAX=', IMAX
+!           endif
+       endif
+
+       if ( mod(JMAXG,PRC_NUM_Y) > 0 ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx number of JMAXG should be divisible by PRC_NUM_Y'
+          if( IO_L ) write(*         ,*) 'xxx number of JMAXG should be divisible by PRC_NUM_Y'
+          call PRC_MPIstop
+!           if( IO_L ) write(IO_FID_LOG,*) '*** number of JMAXG should be divisible by PRC_NUM_Y'
+!           if( IO_L ) write(IO_FID_LOG,*) '*** Small JMAX is used in ranks(*,Y)=', PRC_NUM_Y-1
+!           if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then
+!              JMAX = JMAXG - JMAX * (PRC_NUM_Y-1)
+!              if( IO_L ) write(IO_FID_LOG,*) '*** Small JMAX is used in this rank. JMAX=', JMAX
+!           endif
+       endif
+    else
+       write(*,*) 'xxx IMAXG&JMAXG or IMAX&JMAX must set!'
+       call PRC_MPIstop
+    endif
+
     if ( IMAX < IHALO ) then
        write(*,*) 'xxx number of grid size IMAX must >= IHALO! ', IMAX, IHALO
        call PRC_MPIstop
@@ -148,16 +200,16 @@ contains
        call PRC_MPIstop
     endif
 
-    KA   = KMAX + KHALO * 2
-    IA   = IMAX + IHALO * 2
-    JA   = JMAX + JHALO * 2
+    KA = KMAX + KHALO * 2
+    IA = IMAX + IHALO * 2
+    JA = JMAX + JHALO * 2
 
-    KS   = 1    + KHALO
-    KE   = KMAX + KHALO
-    IS   = 1    + IHALO
-    IE   = IMAX + IHALO
-    JS   = 1    + JHALO
-    JE   = JMAX + JHALO
+    KS = 1    + KHALO
+    KE = KMAX + KHALO
+    IS = 1    + IHALO
+    IE = IMAX + IHALO
+    JS = 1    + JHALO
+    JE = JMAX + JHALO
 
     if( IBLOCK == -1 ) IBLOCK = IMAX
     if( JBLOCK == -1 ) JBLOCK = JMAX
@@ -183,12 +235,13 @@ contains
     ! index considering boundary region
     IMAXB = IMAX
     JMAXB = JMAX
-    ISB = IS
-    IEB = IE
-    JSB = JS
-    JEB = JE
-    IEH = IE
-    JEH = JE
+    ISB   = IS
+    IEB   = IE
+    JSB   = JS
+    JEB   = JE
+    IEH   = IE
+    JEH   = JE
+
     if ( .NOT. PRC_HAS_W ) then
        IMAXB = IMAXB + IHALO
        ISB = 1
@@ -210,19 +263,24 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere grid index information ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Computational Grid (global)  :', &
-                                                       KMAX,           ' x ',                       &
-                                                       IMAX*PRC_NUM_X, ' x ',                       &
-                                                       JMAX*PRC_NUM_Y
+    if( IO_L ) write(IO_FID_LOG,'(1x,3(A,I6))') '*** No. of Computational Grid (global)  :', &
+                                                KMAX,' x ',IMAXG,' x ',JMAXG
+
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Computational Grid (local)   :', &
-                                                       KMAX,' x ',IMAX,' x ',JMAX
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Grid (including HALO, local) :', &
-                                                       KA," x ",IA," x ",JA
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6)')      '*** Global index of local grid (X)      :', &
-                                                       ISG," - ",IEG
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6)')      '*** Global index of local grid (Y)      :', &
-                                                       JSG," - ",JEG
+    if( IO_L ) write(IO_FID_LOG,'(1x,3(A,I6))') '*** No. of Computational Grid (local)   :', &
+                                                KMAX,' x ',IMAX,' x ',JMAX
+    if( IO_L ) write(IO_FID_LOG,'(1x,3(A,I6))') '*** No. of Grid (including HALO, local) :', &
+                                                KA," x ",IA," x ",JA
+    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Local index of inner grid (X)       :', &
+                                                ISB," - ",IEB
+    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Local index of inner grid (Y)       :', &
+                                                JSB," - ",JEB
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (X)      :', &
+                                                ISG," - ",IEG
+    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (Y)      :', &
+                                                JSG," - ",JEG
 
   end subroutine GRID_INDEX_setup
 
