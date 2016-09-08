@@ -118,6 +118,8 @@ contains
        Z0E  )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_landuse, only: &
        LANDUSE_fact_urban
     implicit none
@@ -126,7 +128,6 @@ contains
     real(RP)        , intent(out) :: Z0M(IA,JA)
     real(RP)        , intent(out) :: Z0H(IA,JA)
     real(RP)        , intent(out) :: Z0E(IA,JA)
-    integer                      :: i, j
 
     NAMELIST / PARAM_URBAN_PHY_SLC / &
        DTS_MAX,    &
@@ -162,18 +163,12 @@ contains
        TGLEND,     &
        BOUND
 
+    integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLC] / Categ[URBAN PHY] / Origin[SCALElib]'
-
-    allocate( DZR(UKS:UKE) )
-    allocate( DZB(UKS:UKE) )
-    allocate( DZG(UKS:UKE) )
-    DZR(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
-    DZB(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
-    DZG(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -185,6 +180,13 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN_PHY_SLC)
+
+    allocate( DZR(UKS:UKE) )
+    allocate( DZB(UKS:UKE) )
+    allocate( DZG(UKS:UKE) )
+    DZR(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    DZB(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    DZG(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
 
     ahdiurnal(:) = (/ 0.356, 0.274, 0.232, 0.251, 0.375, 0.647, 0.919, 1.135, 1.249, 1.328, &
                       1.365, 1.363, 1.375, 1.404, 1.457, 1.526, 1.557, 1.521, 1.372, 1.206, &
@@ -198,25 +200,26 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-      if( LANDUSE_fact_urban(i,j) > 0.0_RP )then
-        is_URB(i,j) = .true.
-      else
-        is_URB(i,j) = .false.
-      endif
+       if ( LANDUSE_fact_urban(i,j) > 0.0_RP ) then
+          is_URB(i,j) = .true.
+       else
+          is_URB(i,j) = .false.
+       endif
     enddo
     enddo
 
+    Z0M(:,:) = UNDEF
+    Z0H(:,:) = UNDEF
+    Z0E(:,:) = UNDEF
     do j = JS, JE
     do i = IS, IE
-
-       if( is_URB(i,j) ) then
+       if ( is_URB(i,j) ) then
           Z0M(i,j) = Z0C
           Z0H(i,j) = Z0HC
           Z0E(i,j) = Z0HC
        endif
-
-    end do
-    end do
+    enddo
+    enddo
 
     return
   end subroutine URBAN_PHY_SLC_setup

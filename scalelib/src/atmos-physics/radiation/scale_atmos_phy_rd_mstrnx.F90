@@ -2008,7 +2008,13 @@ contains
        if ( icloud == 1 ) then
           cf(:,:,:) = 0.0_RP
        else
-          cf(:,:,:) = cldfrac(:,:,:)
+          do j = JS, JE
+          do i = IS, IE
+          do k = 1, rd_kmax
+             cf(k,i,j) = cldfrac(k,i,j)
+          enddo
+          enddo
+          enddo
        endif
 
        !$acc loop gang
