@@ -141,7 +141,13 @@ contains
 !OCL XFILL
        RHOQ_t_AE(:,:,:,:) = 0.0_RP ! reset
 
-       NREG(:,:,:) = EVAPORATE(:,:,:) * dt_AE
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          NREG(k,i,j) = EVAPORATE(k,i,j) * dt_AE
+       enddo
+       enddo
+       enddo
 
        call ATMOS_PHY_AE( DENS,     & ! [IN]
                           MOMZ,     & ! [IN]

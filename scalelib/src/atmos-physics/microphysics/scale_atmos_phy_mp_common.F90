@@ -75,8 +75,8 @@ contains
     call PROF_rapstart('MP_filter', 3)
 
     !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
 
        diffq = 0.0_RP

@@ -295,7 +295,7 @@ contains
     OCN_ATM_QV         (:,:)     = UNDEF
     OCN_ATM_PBL        (:,:)     = UNDEF
     OCN_ATM_SFC_PRES   (:,:)     = UNDEF
-    OCN_ATM_SFLX_rad_dn(:,:,2,2) = UNDEF
+    OCN_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     OCN_ATM_cosSZA     (:,:)     = UNDEF
     OCN_ATM_SFLX_rain  (:,:)     = UNDEF
     OCN_ATM_SFLX_snow  (:,:)     = UNDEF
@@ -322,7 +322,7 @@ contains
     LND_ATM_QV         (:,:)     = UNDEF
     LND_ATM_PBL        (:,:)     = UNDEF
     LND_ATM_SFC_PRES   (:,:)     = UNDEF
-    LND_ATM_SFLX_rad_dn(:,:,2,2) = UNDEF
+    LND_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     LND_ATM_cosSZA     (:,:)     = UNDEF
     LND_ATM_SFLX_rain  (:,:)     = UNDEF
     LND_ATM_SFLX_snow  (:,:)     = UNDEF
@@ -349,7 +349,7 @@ contains
     URB_ATM_QV         (:,:)     = UNDEF
     URB_ATM_PBL        (:,:)     = UNDEF
     URB_ATM_SFC_PRES   (:,:)     = UNDEF
-    URB_ATM_SFLX_rad_dn(:,:,2,2) = UNDEF
+    URB_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     URB_ATM_cosSZA     (:,:)     = UNDEF
     URB_ATM_SFLX_rain  (:,:)     = UNDEF
     URB_ATM_SFLX_snow  (:,:)     = UNDEF
