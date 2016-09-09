@@ -54,6 +54,12 @@ ifeq ($(ENABLE_OPENMP),T)
    FFLAGS += -openmp -openmp-report
 endif
 
+# NetCDF setting
+# These settings are inquired in order of:
+# The environment variable->Makedef.XXX->here
+NETCDF_INCLUDE ?= $(shell nf-config --fflags) $(shell nc-config --cflags)
+NETCDF_LIBS    ?= $(shell nf-config --flibs)  $(shell nc-config --libs)
+
 ifeq ($(ENABLE_PAPI),T)
    FFLAGS      += -D_PAPI_
    PAPI_INCLUDE = -I$(PAPI)/include

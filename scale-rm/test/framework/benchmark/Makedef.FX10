@@ -71,12 +71,20 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
+# Default settings
 NETCDF_INCLUDE ?=
-NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
+NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
+# export NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
 
-###### Lapack
+###### Lapack library
+# Default settings
 LAPACK_LIBS    ?=
-# example: -SSL2
+# Or, please set environment variable
+# example:
+# export LAPACK_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

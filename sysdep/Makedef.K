@@ -77,12 +77,20 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
+# Default settings
 NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
 NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"
+# export NETCDF_LIBS="-L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm"
 
-###### Lapack
+###### Lapack library
+# Default settings
 LAPACK_LIBS    ?=
-# example: -SSL2
+# Or, please set environment variable
+# example:
+# export LAPACK_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

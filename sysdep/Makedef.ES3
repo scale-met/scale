@@ -60,11 +60,20 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
+# Default settings
 NETCDF_INCLUDE ?= -I/SX/usr/include
 NETCDF_LIBS    ?= -L/SX/usr/lib0 -lnetcdf
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/SX/usr/include"
+# export NETCDF_LIBS="-L/SX/usr/lib0 -lnetcdf"
 
-###### Lapack
+###### Lapack library
+# Default settings
 LAPACK_LIBS    ?=
+# Or, please set environment variable
+# example:
+# export LAPACK_LIBS="-L/SX/opt/mathkeisan/inst/lib0 -llapack -lblas"
 
 ##### for frontend
 INSTALL = install
