@@ -85,8 +85,6 @@ contains
        URBAN_GRID_INDEX_setup
     use scale_urban_grid, only: &
        URBAN_GRID_setup
-    use scale_tracer, only: &
-       TRACER_setup
     use scale_fileio, only: &
        FILEIO_setup
     use scale_comm, only: &
@@ -117,6 +115,8 @@ contains
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_setup
+    use scale_atmos_hydrometer, only: &
+       ATMOS_HYDROMETER_setup
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
     use scale_bulkflux, only: &
@@ -124,6 +124,8 @@ contains
     use scale_roughness, only: &
        ROUGHNESS_setup
 
+    use mod_atmos_driver, only: &
+       ATMOS_driver_config
     use mod_admin_restart, only: &
        ADMIN_restart_setup, &
        ADMIN_restart
@@ -189,6 +191,7 @@ contains
     use mod_cpl_vars, only: &
        CPL_vars_setup
     use mod_user, only: &
+       USER_config, &
        USER_setup, &
        USER_step
     implicit none
@@ -247,8 +250,18 @@ contains
     call URBAN_GRID_INDEX_setup
     call URBAN_GRID_setup
 
+
+    ! setup submodel administrator
+    call ATMOS_admin_setup
+    call OCEAN_admin_setup
+    call LAND_admin_setup
+    call URBAN_admin_setup
+    call CPL_admin_setup
+
     ! setup tracer index
-    call TRACER_setup
+    call ATMOS_HYDROMETER_setup
+    call ATMOS_driver_config
+    call USER_config
 
     ! setup file I/O
     call FILEIO_setup
@@ -291,13 +304,6 @@ contains
 
     call BULKFLUX_setup
     call ROUGHNESS_setup
-
-    ! setup submodel administrator
-    call ATMOS_admin_setup
-    call OCEAN_admin_setup
-    call LAND_admin_setup
-    call URBAN_admin_setup
-    call CPL_admin_setup
 
     ! setup variable container
     call ATMOS_vars_setup

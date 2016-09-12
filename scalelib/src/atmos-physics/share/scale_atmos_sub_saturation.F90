@@ -33,8 +33,6 @@ module scale_atmos_saturation
      CVvap  => CONST_CVvap,  &
      CL     => CONST_CL,     &
      CI     => CONST_CI,     &
-     LHV    => CONST_LHV,    &
-     LHS    => CONST_LHS,    &
      PSAT0  => CONST_PSAT0,  &
      EPSvap => CONST_EPSvap, &
      TEM00  => CONST_TEM00
@@ -166,6 +164,9 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_THERMODYN_TYPE
+    use scale_atmos_hydrometer, only: &
+       LHV, &
+       LHS
     implicit none
 
     NAMELIST / PARAM_ATMOS_SATURATION / &
@@ -1239,8 +1240,8 @@ contains
   !-----------------------------------------------------------------------------
   ! (d qsw/d T)_{rho}: partial difference of qsat_water
   subroutine ATMOS_SATURATION_dqsw_dtem_rho( dqsdtem, temp, dens )
-    use scale_const, only: &
-       LHV0 => CONST_LHV0
+    use scale_atmos_hydrometer, only: &
+         ATMOS_HYDROMETER_templhv
     implicit none
 
     real(RP), intent(out) :: dqsdtem(KA,IA,JA)
@@ -1267,7 +1268,7 @@ contains
             * ( TEM * RTEM00 )**CPovR_liq             &
             * exp( LovR_liq * ( RTEM00 - 1.0_RP/TEM ) )
 
-       lhv = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
+       call ATMOS_HYDROMETER_templhv( lhv, temp(k,i,j) )
 
        dqsdtem(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
                       * ( lhv / ( Rvap * temp(k,i,j) ) - 1.0_RP )
@@ -1282,8 +1283,8 @@ contains
   ! (d qsi/d T)_{rho}: partial difference of qsat_ice
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqsi_dtem_rho( dqsdtem, temp, dens )
-    use scale_const, only: &
-       LHS0 => CONST_LHS0
+    use scale_atmos_hydrometer, only: &
+         ATMOS_HYDROMETER_templhs
     implicit none
 
     real(RP), intent(out) :: dqsdtem(KA,IA,JA)
@@ -1291,7 +1292,7 @@ contains
     real(RP), intent(in)  :: dens   (KA,IA,JA)
 
     real(RP) :: psat ! saturation vapor pressure
-    real(RP) :: lhv  ! latent heat for condensation
+    real(RP) :: lhs  ! latent heat for condensation
 
     real(RP) :: RTEM00, TEM
 
@@ -1300,7 +1301,7 @@ contains
 
     RTEM00   = 1.0_RP / TEM00
 
-    !$omp parallel do private(i,j,k,TEM,psat,lhv) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,TEM,psat,lhs) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1309,10 +1310,11 @@ contains
        psat = PSAT0                                   &
             * ( TEM * RTEM00 )**CPovR_ice             &
             * exp( LovR_ice * ( RTEM00 - 1.0_RP/TEM ) )
-       lhv = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
+
+       call ATMOS_HYDROMETER_templhs( lhs, temp(k,i,j) )
 
        dqsdtem(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                      * ( lhv / ( Rvap * temp(k,i,j) ) - 1.0_RP )
+                      * ( lhs / ( Rvap * temp(k,i,j) ) - 1.0_RP )
     enddo
     enddo
     enddo
@@ -1324,8 +1326,8 @@ contains
   ! (d qs/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqsw_dtem_dpre( dqsdtem, dqsdpre, temp, pres )
-    use scale_const, only: &
-       LHV0 => CONST_LHV0
+    use scale_atmos_hydrometer, only: &
+         ATMOS_HYDROMETER_templhv
     implicit none
 
     real(RP), intent(out) :: dqsdtem(KA,IA,JA)
@@ -1357,7 +1359,7 @@ contains
        den1 = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat ) &
             * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat )
        den2 = den1 * Rvap * temp(k,i,j) * temp(k,i,j)
-       lhv  = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
+       call ATMOS_HYDROMETER_templhv( lhv, temp(k,i,j) )
 
        dqsdpre(k,i,j) = - EPSvap * psat / den1
        dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhv * pres(k,i,j)
@@ -1372,8 +1374,8 @@ contains
   ! (d qsi/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqsi_dtem_dpre( dqsdtem, dqsdpre, temp, pres )
-    use scale_const, only: &
-       LHS0 => CONST_LHS0
+    use scale_atmos_hydrometer, only: &
+         ATMOS_HYDROMETER_templhs
     implicit none
 
     real(RP), intent(out) :: dqsdtem(KA,IA,JA)
@@ -1382,7 +1384,7 @@ contains
     real(RP), intent(in)  :: pres   (KA,IA,JA)
 
     real(RP) :: psat ! saturation vapor pressure
-    real(RP) :: lhv  ! latent heat for condensation
+    real(RP) :: lhs  ! latent heat for condensation
 
     real(RP) :: den1, den2 ! denominator
     real(RP) :: RTEM00, TEM
@@ -1392,7 +1394,7 @@ contains
 
     RTEM00   = 1.0_RP / TEM00
 
-    !$omp parallel do private(i,j,k,TEM,psat,den1,den2,lhv) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,TEM,psat,den1,den2,lhs) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1405,10 +1407,10 @@ contains
        den1 = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat ) &
             * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat )
        den2 = den1 * Rvap * temp(k,i,j) * temp(k,i,j)
-       lhv  = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
+       call ATMOS_HYDROMETER_templhs( lhs, temp(k,i,j) )
 
        dqsdpre(k,i,j) = - EPSvap * psat / den1
-       dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhv * pres(k,i,j)
+       dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhs * pres(k,i,j)
     enddo
     enddo
     enddo

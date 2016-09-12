@@ -74,9 +74,6 @@ module scale_const
   real(RP), public, parameter :: CONST_EMELT   = 3.4E5_RP
   real(RP), public, parameter :: CONST_TMELT   = 273.15_RP
 
-  real(RP), public            :: CONST_LHV                           !< latent heat of vaporizaion for use
-  real(RP), public            :: CONST_LHS                           !< latent heat of sublimation for use
-  real(RP), public            :: CONST_LHF                           !< latent heat of fusion      for use
   real(RP), public, parameter :: CONST_LHV0    = 2.5008E6_RP         !< latent heat of vaporizaion at 0C [J/kg]
   real(RP), public            :: CONST_LHV00                         !< latent heat of vaporizaion at 0K [J/kg]
   real(RP), public, parameter :: CONST_LHS0    = 2.8342E6_RP         !< latent heat of sublimation at 0C [J/kg]
@@ -180,19 +177,6 @@ contains
     CONST_LHS00   = CONST_LHS0 - ( CONST_CPvap - CONST_CI ) * CONST_TEM00
     CONST_LHF00   = CONST_LHF0 - ( CONST_CL    - CONST_CI ) * CONST_TEM00
 
-    if ( CONST_THERMODYN_TYPE == 'EXACT' ) then
-       CONST_LHV = CONST_LHV00
-       CONST_LHS = CONST_LHS00
-       CONST_LHF = CONST_LHF00
-    elseif( CONST_THERMODYN_TYPE == 'SIMPLE' ) then
-       CONST_LHV = CONST_LHV0
-       CONST_LHS = CONST_LHS0
-       CONST_LHF = CONST_LHF0
-    else
-       write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(CONST_THERMODYN_TYPE)
-       call PRC_MPIstop
-    endif
-
     CONST_SOUND = sqrt( CONST_CPdry * CONST_Rdry / ( CONST_CPdry - CONST_Rdry ) * CONST_TEM00 )
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -237,9 +221,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of sublimation at 0K           [J/kg] : LHS00   = ', CONST_LHS00
     if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of fusion      at 0K           [J/kg] : LHF00   = ', CONST_LHF00
     if( IO_L ) write(IO_FID_LOG,*) '*** Thermodynamics calculation type : ', trim(CONST_THERMODYN_TYPE)
-    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of vaporizaion (used)          [J/kg] : LHV     = ', CONST_LHV
-    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of sublimation (used)          [J/kg] : LHS     = ', CONST_LHS
-    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of fusion      (used)          [J/kg] : LHF     = ', CONST_LHF
     if( IO_L ) write(IO_FID_LOG,*) '*** saturate pressure of water vapor at 0C       [Pa] : PSAT0   = ', CONST_PSAT0
     if( IO_L ) write(IO_FID_LOG,*) '*** density of water                          [kg/m3] : DWATR   = ', CONST_DWATR
     if( IO_L ) write(IO_FID_LOG,*) '*** density of ice                            [kg/m3] : DICE    = ', CONST_DICE

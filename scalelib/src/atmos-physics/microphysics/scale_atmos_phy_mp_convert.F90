@@ -23,7 +23,7 @@ module scale_atmos_phy_mp_convert
   use scale_prof
   use scale_grid_index
   use scale_tracer
-  use scale_tracer_suzuki10, only: &
+  use scale_atmos_phy_mp_suzuki10, only: &
       nbin, &
       nccn, &
       nspc
@@ -92,6 +92,12 @@ contains
        SF_gamma
     use gtool_file, only: &
        FileRead
+    use scale_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_NAME, &
+       QA_MP, &
+       QS_MP
+    use scale_atmos_hydrometer, only: &
+       I_QV
     implicit none
 
     integer,          intent(in) :: xs, xe
@@ -124,13 +130,17 @@ contains
        MP_TYPE_INNER
 
     real(RP), allocatable :: read3Di(:,:,:)
-    real(RP), allocatable :: qtrc_tmp(:,:,:,:)
+    real(RP), allocatable :: qc_tmp(:,:,:)
+    real(RP), allocatable :: qr_tmp(:,:,:)
+    real(RP), allocatable :: qi_tmp(:,:,:)
+    real(RP), allocatable :: qs_tmp(:,:,:)
+    real(RP), allocatable :: qg_tmp(:,:,:)
 
     integer  :: fid_micpara
     real(RP) :: coef0, coef1, coef2
     real(RP) :: tmp_hyd, n_hyd, lambda_hyd
-    real(RP) :: dummy( nbin ), radc( nbin )
-    integer  :: k, i, j, iq, ierr
+    real(RP) :: dummy( nbin ), radc( nbin ) 
+    integer  :: k, i, j, iq, iqa, ierr
     integer  :: nnbin, nnspc, nn
     !---------------------------------------------------------------------------
 
@@ -158,7 +168,11 @@ contains
 
     !---- initiate
     allocate( read3Di( PARENT_IMAX(handle), PARENT_JMAX(handle), dims(1) ) )
-    allocate( qtrc_tmp(dims(1)+2,dims(2),dims(3),11) )
+    allocate( qc_tmp(dims(1)+2,dims(2),dims(3)) )
+    allocate( qr_tmp(dims(1)+2,dims(2),dims(3)) )
+    allocate( qi_tmp(dims(1)+2,dims(2),dims(3)) )
+    allocate( qs_tmp(dims(1)+2,dims(2),dims(3)) )
+    allocate( qg_tmp(dims(1)+2,dims(2),dims(3)) )
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_BIN2BULK,iostat=ierr)
@@ -222,27 +236,13 @@ contains
 
        call FileRead( read3Di(:,:,:), BASENAME_ORG, "QC", it, rank )
        do k = 1, dims(1)
-          qtrc_tmp(k+2,xs:xe,ys:ye,I_QC) = read3Di(:,:,k)
+          qc_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
-!       do k = 1, dims(1)
-!       do i = xs, xe
-!       do j = ys, ye
-!          qtrc_tmp(k+2,i,j,I_QC) = qtrc_tmp(k+2,i,j,I_QC)*dens_org(k+2,i,j)
-!       enddo
-!       enddo
-!       enddo
 
        call FileRead( read3Di(:,:,:), BASENAME_ORG, "QR", it, rank )
        do k = 1, dims(1)
-          qtrc_tmp(k+2,xs:xe,ys:ye,I_QR) = read3Di(:,:,k)
+          qr_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
-!       do k = 1, dims(1)
-!       do i = xs, xe
-!       do j = ys, ye
-!          qtrc_tmp(k+2,i,j,I_QR) = qtrc_tmp(k+2,i,j,I_QR)*dens_org(k+2,i,j)
-!       enddo
-!       enddo
-!       enddo
 
        do k = 1, dims(1)
        do i = xs, xe
@@ -261,10 +261,10 @@ contains
             tmp_hyd = tmp_hyd + dummy(iq)
          enddo
 
-         coef2 = ( qtrc_tmp(k+2,i,j,I_QC)+qtrc_tmp(k+2,i,j,I_QR) ) &
+         coef2 = ( qc_tmp(k+2,i,j)+qr_tmp(k+2,i,j) ) &
                / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
          do iq = 1, nbin
-           qtrc_org(k+2,i,j,I_QV+iq) = coef2 * dummy(iq)
+           qtrc_org(k+2,i,j,QS_MP+iq) = coef2 * dummy(iq)
          enddo
 
        enddo
@@ -279,7 +279,7 @@ contains
 
        call FileRead( read3Di(:,:,:), BASENAME_ORG, "QC", it, rank )
        do k = 1, dims(1)
-          qtrc_tmp(k+2,xs:xe,ys:ye,I_QC) = read3Di(:,:,k)
+          qc_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
 !       do k = 1, dims(1)
 !       do i = xs, xe
@@ -291,51 +291,23 @@ contains
 
        call FileRead( read3Di(:,:,:), BASENAME_ORG, "QR", it, rank )
        do k = 1, dims(1)
-          qtrc_tmp(k+2,xs:xe,ys:ye,I_QR) = read3Di(:,:,k)
+          qr_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
-!       do k = 1, dims(1)
-!       do i = xs, xe
-!       do j = ys, ye
-!          qtrc_tmp(k+2,i,j,I_QR) = qtrc_tmp(k+2,i,j,I_QR)*dens_org(k+2,i,j)
-!       enddo
-!       enddo
-!       enddo
 
        call FileRead( read3Di(:,:,:), BASENAME_ORG, "QI", it, rank )
        do k = 1, dims(1)
-          qtrc_tmp(k+2,xs:xe,ys:ye,I_QI) = read3Di(:,:,k)
+          qi_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
-!       do k = 1, dims(1)
-!       do i = xs, xe
-!       do j = ys, ye
-!          qtrc_tmp(k+2,i,j,I_QI) = qtrc_tmp(k+2,i,j,I_QI)*dens_org(k+2,i,j)
-!       enddo
-!       enddo
-!       enddo
 
        call FileRead( read3Di(:,:,:), BASENAME_ORG, "QS", it, rank )
        do k = 1, dims(1)
-          qtrc_tmp(k+2,xs:xe,ys:ye,I_QS) = read3Di(:,:,k)
+          qs_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
-!       do k = 1, dims(1)
-!       do i = xs, xe
-!       do j = ys, ye
-!          qtrc_tmp(k+2,i,j,I_QS) = qtrc_tmp(k+2,i,j,I_QS)*dens_org(k+2,i,j)
-!       enddo
-!       enddo
-!       enddo
 
        call FileRead( read3Di(:,:,:), BASENAME_ORG, "QG", it, rank )
        do k = 1, dims(1)
-          qtrc_tmp(k+2,xs:xe,ys:ye,I_QG) = read3Di(:,:,k)
+          qg_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
-!       do k = 1, dims(1)
-!       do i = xs, xe
-!       do j = ys, ye
-!          qtrc_tmp(k+2,i,j,I_QG) = qtrc_tmp(k+2,i,j,I_QG)*dens_org(k+2,i,j)
-!       enddo
-!       enddo
-!       enddo
 
        if( nspc == 1 ) then !--- put all hydrometeors to liquid (warm bin)
 
@@ -357,13 +329,13 @@ contains
            enddo
 
            coef2 = ( &
-                     qtrc_tmp(k+2,i,j,I_QC)+qtrc_tmp(k+2,i,j,I_QR) &
-                   + qtrc_tmp(k+2,i,j,I_QS)+qtrc_tmp(k+2,i,j,I_QI) &
-                   + qtrc_tmp(k+2,i,j,I_QG) &
+                     qc_tmp(k+2,i,j)+qr_tmp(k+2,i,j) &
+                   + qs_tmp(k+2,i,j)+qi_tmp(k+2,i,j) &
+                   + qg_tmp(k+2,i,j) &
                    ) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
-             qtrc_org(k+2,i,j,I_QV+(il-1)*nbin+iq) = coef2 * dummy(iq)
+             qtrc_org(k+2,i,j,QS_MP+(il-1)*nbin+iq) = coef2 * dummy(iq)
            enddo
 
          enddo
@@ -389,11 +361,11 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
-
-           coef2 = ( qtrc_tmp(k+2,i,j,I_QC)+qtrc_tmp(k+2,i,j,I_QR) ) &
+ 
+           coef2 = ( qc_tmp(k+2,i,j)+qr_tmp(k+2,i,j) ) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
-             qtrc_org(k+2,i,j,I_QV+(il-1)*nbin+iq) = coef2 * dummy(iq)
+             qtrc_org(k+2,i,j,QS_MP+(il-1)*nbin+iq) = coef2 * dummy(iq)
            enddo
 
            !--- Ice put into plate bin (log-normal)
@@ -409,18 +381,18 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
-
-           coef2 = qtrc_tmp(k+2,i,j,I_QI) &
+ 
+           coef2 = qi_tmp(k+2,i,j) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
-             qtrc_org(k+2,i,j,I_QV+(ip-1)*nbin+iq) = coef2 * dummy(iq)
+             qtrc_org(k+2,i,j,QS_MP+(ip-1)*nbin+iq) = coef2 * dummy(iq)
            enddo
 
            !--- Snow put into snow bin (gamma)
            n_hyd = coef0 * n0_sdf(3) * rho_sdf(3)
            lambda_hyd = ( PI * rho_sdf(3) / 6.0_RP *n0_sdf(3) * SF_gamma(4.0_RP) &
-                      / ( qtrc_tmp(k+2,i,j,I_QS) &
-                        + (0.50_RP-sign(0.50_RP,qtrc_tmp(k+2,i,j,I_QS)-EPS)) &
+                      / ( qs_tmp(k+2,i,j) &
+                        + (0.50_RP-sign(0.50_RP,qs_tmp(k+2,i,j)-EPS)) &
                         ) )**(0.25_RP)
            do iq = 1, nbin
               dummy(iq) = n_hyd * radc( iq )**3 &
@@ -430,18 +402,18 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
-
-           coef2 = qtrc_tmp(k+2,i,j,I_QS) &
+ 
+           coef2 = qs_tmp(k+2,i,j) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
-             qtrc_org(k+2,i,j,I_QV+(iss-1)*nbin+iq) = coef2 * dummy(iq)
+             qtrc_org(k+2,i,j,QS_MP+(iss-1)*nbin+iq) = coef2 * dummy(iq)
            enddo
 
            !--- Graupel put into Graupel bin (gamma)
            n_hyd = coef0 * n0_sdf(4) * rho_sdf(4)
            lambda_hyd = ( PI * rho_sdf(4) / 6.0_RP *n0_sdf(4) * SF_gamma(4.0_RP) &
-                      / ( qtrc_tmp(k+2,i,j,I_QG) &
-                        + (0.50_RP-sign(0.50_RP,qtrc_tmp(k+2,i,j,I_QG)-EPS)) &
+                      / ( qg_tmp(k+2,i,j) &
+                        + (0.50_RP-sign(0.50_RP,qg_tmp(k+2,i,j)-EPS)) &
                         ) )**(0.25_RP)
            do iq = 1, nbin
               dummy(iq) = n_hyd * radc( iq )**3 &
@@ -451,11 +423,11 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
-
-           coef2 = qtrc_tmp(k+2,i,j,I_QG) &
+ 
+           coef2 = qg_tmp(k+2,i,j) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
-             qtrc_org(k+2,i,j,I_QV+(ig-1)*nbin+iq) = coef2 * dummy(iq)
+             qtrc_org(k+2,i,j,QS_MP+(ig-1)*nbin+iq) = coef2 * dummy(iq)
            enddo
 
          enddo
@@ -475,10 +447,11 @@ contains
       if( IO_L ) write(IO_FID_LOG,*)
       if( IO_L ) write(IO_FID_LOG,*) '+++ SDF of Bin model is created directory'
       if( IO_L ) write(IO_FID_LOG,*) '+++ from Bin microphysical model'
-      do iq = 1, QA
-         call FileRead( read3Di(:,:,:), BASENAME_ORG, AQ_NAME(iq), it, rank )
+      do iq = 1, QA_MP
+         iqa = QS_MP + iq - 1
+         call FileRead( read3Di(:,:,:), BASENAME_ORG, ATMOS_PHY_MP_NAME(iq), it, rank )
          do k = 1, dims(1)
-            qtrc_org(k+2,xs:xe,ys:ye,iq) = read3Di(:,:,k)
+            qtrc_org(k+2,xs:xe,ys:ye,iqa) = read3Di(:,:,k)
          end do
       end do
 
@@ -491,7 +464,12 @@ contains
     endif
 
     deallocate( read3Di )
-    deallocate( qtrc_tmp )
+    deallocate( qc_tmp )
+    deallocate( qr_tmp )
+    deallocate( qi_tmp )
+    deallocate( qs_tmp )
+    deallocate( qg_tmp )
+
     return
   end subroutine ATMOS_PHY_MP_bulk2bin
 

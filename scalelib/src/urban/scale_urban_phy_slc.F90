@@ -673,8 +673,8 @@ contains
        STB    => CONST_STB,     &    ! stefan-Boltzman constant [MKS unit]
        TEM00  => CONST_TEM00,   &    ! temperature reference (0 degree C) [K]
        PRE00  => CONST_PRE00         ! pressure reference [Pa]
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_templhv
+    use scale_atmos_hydrometer, only: &
+       ATMOS_HYDROMETER_templhv
     use scale_atmos_saturation, only: &
        qsat   => ATMOS_SATURATION_pres2qsat_all
     implicit none
@@ -828,7 +828,7 @@ contains
     ! Set parameters
     !-----------------------------------------------------------
 
-    call ATMOS_THERMODYN_templhv( LHV, TA )
+    call ATMOS_HYDROMETER_templhv( LHV, TA )
 
     RovCP = Rdry / CPdry
     THA   = TA * ( PRE00 / PRSA )**RovCP

@@ -913,6 +913,11 @@ contains
     !##### Tracers #####
     do iq = 1, QA
 
+       if ( .not. TRACER_ADVC(iq) ) then
+          qflx_sgs_rhoq(:,:,:,:,iq) = 0.0_RP
+          cycle
+       end if
+
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK

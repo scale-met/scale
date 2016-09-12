@@ -23,8 +23,20 @@ module scale_atmos_phy_mp_tomita08
   use scale_prof
   use scale_grid_index
 
-  use scale_tracer_tomita08
-  use scale_tracer, only: QA
+  use scale_atmos_hydrometer, only: &
+     N_HYD, &
+     I_QV, &
+     I_QC, &
+     I_QR, &
+     I_QI, &
+     I_QS, &
+     I_QG, &
+     I_HC, &
+     I_HR, &
+     I_HI, &
+     I_HS, &
+     I_HG
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -32,6 +44,7 @@ module scale_atmos_phy_mp_tomita08
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_MP_tomita08_config
   public :: ATMOS_PHY_MP_tomita08_setup
   public :: ATMOS_PHY_MP_tomita08
   public :: ATMOS_PHY_MP_tomita08_CloudFraction
@@ -42,7 +55,37 @@ module scale_atmos_phy_mp_tomita08
   !
   !++ Public parameters & variables
   !
-  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  integer, private, parameter :: QA_MP  = 6
+
+  character(len=H_SHORT), public, target :: ATMOS_PHY_MP_tomita08_NAME(QA_MP)
+  character(len=H_MID)  , public, target :: ATMOS_PHY_MP_tomita08_DESC(QA_MP)
+  character(len=H_SHORT), public, target :: ATMOS_PHY_MP_tomita08_UNIT(QA_MP)
+
+  real(RP), public, target :: ATMOS_PHY_MP_tomita08_DENS(N_HYD) ! hydrometeor density [kg/m3]=[g/L]
+
+  data ATMOS_PHY_MP_tomita08_NAME / &
+                 'QV', &
+                 'QC', &
+                 'QR', &
+                 'QI', &
+                 'QS', &
+                 'QG'  /
+
+  data ATMOS_PHY_MP_tomita08_DESC / &
+                 'Ratio of Water Vapor mass to total mass (Specific humidity)',   &
+                 'Ratio of Cloud Water mass to total mass',   &
+                 'Ratio of Rain Water mass to total mass',    &
+                 'Ratio of Cloud Ice mixing ratio to total mass',     &
+                 'Ratio of Snow mixing ratio to total mass',          &
+                 'Ratio of Graupel mixing ratio to total mass'        /
+
+  data ATMOS_PHY_MP_tomita08_UNIT / &
+                 'kg/kg',  &
+                 'kg/kg',  &
+                 'kg/kg',  &
+                 'kg/kg',  &
+                 'kg/kg',  &
+                 'kg/kg'   /
 
   !-----------------------------------------------------------------------------
   !
@@ -56,6 +99,15 @@ module scale_atmos_phy_mp_tomita08
   !
   !++ Private parameters & variables
   !
+  integer, private, parameter :: I_mp_QC =  1
+  integer, private, parameter :: I_mp_QR =  2
+  integer, private, parameter :: I_mp_QI =  3
+  integer, private, parameter :: I_mp_QS =  4
+  integer, private, parameter :: I_mp_QG =  5
+
+  integer, private :: QS_MP
+  integer, private :: QE_MP
+
   logical,  private :: MP_donegative_fixer  = .true.  ! apply negative fixer?
   logical,  private :: MP_doprecipitation   = .true.  ! apply sedimentation (precipitation)?
   logical,  private :: MP_couple_aerosol    = .false. ! apply CCN effect?
@@ -272,11 +324,52 @@ module scale_atmos_phy_mp_tomita08
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_MP_tomita08_config( &
+       MP_TYPE, &
+       QA, QS   )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_atmos_hydrometer, only: &
+       ATMOS_HYDROMETER_regist
+    implicit none
+    character(len=*), intent(in) :: MP_TYPE
+    integer, intent(out) :: QA
+    integer, intent(out) :: QS
+    !---------------------------------------------------------------------------
+
+    if ( MP_TYPE /= 'TOMITA08' ) then
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not TOMITA08. Check!'
+       call PRC_MPIstop
+    endif
+
+    call ATMOS_HYDROMETER_regist( QS,  & ! (out)
+                                  1, 2, 3, & ! (in)
+                                  ATMOS_PHY_MP_tomita08_NAME, & ! (in)
+                                  ATMOS_PHY_MP_tomita08_DESC, & ! (in)
+                                  ATMOS_PHY_MP_tomita08_UNIT  ) ! (in)
+
+    QA = QA_MP
+    QS_MP = QS
+    QE_MP = QS + QA - 1
+
+    I_QV = QS
+    I_QC = QS + I_mp_QC
+    I_QR = QS + I_mp_QR
+    I_QI = QS + I_mp_QI
+    I_QS = QS + I_mp_QS
+    I_QG = QS + I_mp_QG
+
+    return
+  end subroutine ATMOS_PHY_MP_tomita08_config
+
+  !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_MP_tomita08_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_tomita08_setup
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
+       UNDEF  => CONST_UNDEF, &
        PI     => CONST_PI,    &
        GRAV   => CONST_GRAV,  &
        dens_w => CONST_DWATR,  &
@@ -289,9 +382,6 @@ contains
        CDZ => GRID_CDZ
     use scale_history, only: &
        HIST_reg
-    implicit none
-
-    character(len=*), intent(in) :: MP_TYPE
 
     real(RP) :: autoconv_nc    = Nc_ocn  !< number concentration of cloud water [1/cc]
     logical  :: enable_kk2000  = .false. !< use scheme by Khairoutdinov and Kogan (2000)
@@ -332,21 +422,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** TOMITA08: 1-moment bulk 6 category'
-
-    if ( MP_TYPE /= 'TOMITA08' ) then
-       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not TOMITA08. Check!'
-       call PRC_MPIstop
-    endif
-
-    if (      I_QV <= 0 &
-         .OR. I_QC <= 0 &
-         .OR. I_QR <= 0 &
-         .OR. I_QI <= 0 &
-         .OR. I_QS <= 0 &
-         .OR. I_QG <= 0 ) then
-       write(*,*) 'xxx TOMITA08 needs QV/C/R/I/S/G tracer. Check!'
-       call PRC_MPIstop
-    endif
 
     allocate( work3D(KA,IA,JA) )
     work3D(:,:,:) = 0.0_RP
@@ -398,11 +473,12 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** Use Roh scheme?                : ', enable_roh2014
     if ( IO_L ) write(IO_FID_LOG,*)
 
-    ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w
-    ATMOS_PHY_MP_DENS(I_mp_QR) = dens_w
-    ATMOS_PHY_MP_DENS(I_mp_QI) = dens_i
-    ATMOS_PHY_MP_DENS(I_mp_QS) = dens_s
-    ATMOS_PHY_MP_DENS(I_mp_QG) = dens_g
+    ATMOS_PHY_MP_tomita08_DENS(:) = UNDEF
+    ATMOS_PHY_MP_tomita08_DENS(I_HC) = dens_w
+    ATMOS_PHY_MP_tomita08_DENS(I_HR) = dens_w
+    ATMOS_PHY_MP_tomita08_DENS(I_HI) = dens_i
+    ATMOS_PHY_MP_tomita08_DENS(I_HS) = dens_s
+    ATMOS_PHY_MP_tomita08_DENS(I_HG) = dens_g
 
     !--- empirical coefficients A, B, C, D
     Ar = PI * dens_w / 6.0_RP
@@ -502,7 +578,10 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_tracer, only: &
-       QAD => QA
+       QA, &
+       TRACER_R, &
+       TRACER_CV, &
+       TRACER_MASS
     use scale_atmos_thermodyn, only: &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
@@ -518,7 +597,7 @@ contains
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
@@ -530,7 +609,7 @@ contains
     real(RP) :: temp  (KA,IA,JA)
     real(RP) :: pres  (KA,IA,JA)
 
-    real(RP) :: vterm     (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+    real(RP) :: vterm     (KA,IA,JA,QA_MP-1) ! terminal velocity of each tracer [m/s]
     real(RP) :: FLX_rain  (KA,IA,JA)
     real(RP) :: FLX_snow  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
@@ -543,14 +622,18 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(tomita08)'
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
-                               RHOT(:,:,:),  & ! [INOUT]
-                               QTRC(:,:,:,:) ) ! [INOUT]
+       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
+                               RHOT(:,:,:),   & ! [INOUT]
+                               QTRC(:,:,:,:), & ! [INOUT]
+                               I_QV           ) ! [IN]
     endif
 
-    call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
-                         RHOT(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_rhoe( RHOE(:,:,:),   & ! [OUT]
+                         RHOT(:,:,:),   & ! [IN]
+                         QTRC(:,:,:,:), & ! [IN]
+                         TRACER_CV(:),  & ! [IN]
+                         TRACER_R(:),   & ! [IN]
+                         TRACER_MASS(:) ) ! [IN]
 
     !##### MP Main #####
     call MP_tomita08( RHOE_t(:,:,:),   & ! [OUT]
@@ -569,11 +652,14 @@ contains
 
        do step = 1, MP_NSTEP_SEDIMENTATION
 
-          call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
-                                      pres(:,:,:),  & ! [OUT]
-                                      DENS(:,:,:),  & ! [IN]
-                                      RHOE(:,:,:),  & ! [IN]
-                                      QTRC(:,:,:,:) ) ! [IN]
+          call THERMODYN_temp_pres_E( temp(:,:,:),   & ! [OUT]
+                                      pres(:,:,:),   & ! [OUT]
+                                      DENS(:,:,:),   & ! [IN]
+                                      RHOE(:,:,:),   & ! [IN]
+                                      QTRC(:,:,:,:), & ! [IN]
+                                      TRACER_CV(:),  & ! [IN]
+                                      TRACER_R(:),   & ! [IN]
+                                      TRACER_MASS(:) ) ! [IN]
 
           call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
                                   DENS (:,:,:),   & ! [IN]
@@ -588,8 +674,11 @@ contains
                                  MOMY    (:,:,:),       & ! [INOUT]
                                  RHOE    (:,:,:),       & ! [INOUT]
                                  QTRC    (:,:,:,:),     & ! [INOUT]
+                                 QA_MP,                 & ! [IN]
+                                 QS_MP,                 & ! [IN]
                                  vterm   (:,:,:,:),     & ! [IN]
                                  temp    (:,:,:),       & ! [IN]
+                                 TRACER_CV(:),          & ! [IN]
                                  MP_DTSEC_SEDIMENTATION ) ! [IN]
 
           do j = JS, JE
@@ -607,10 +696,10 @@ contains
        vterm(:,:,:,:) = 0.0_RP
     endif
 
-    call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
-    call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s' )
-    call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
-    call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_mp_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_mp_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_mp_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_mp_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
 
     do j = JS, JE
     do i = IS, IE
@@ -625,6 +714,9 @@ contains
                                    RHOE  (:,:,:),   & ! [INOUT]
                                    QTRC  (:,:,:,:), & ! [INOUT]
                                    DENS  (:,:,:),   & ! [IN]
+                                   I_QV,            & ! [IN]
+                                   I_QC,            & ! [IN]
+                                   I_QI,            & ! [IN]
                                    only_liquid      ) ! [IN]
 
     do j = JS, JE
@@ -639,14 +731,18 @@ contains
 
     !##### END MP Main #####
 
-    call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
-                         RHOE(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_rhot( RHOT(:,:,:),   & ! [OUT]
+                         RHOE(:,:,:),   & ! [IN]
+                         QTRC(:,:,:,:), & ! [IN]
+                         TRACER_CV(:),  & ! [IN]
+                         TRACER_R(:),   & ! [IN]
+                         TRACER_MASS(:) ) ! [IN]
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
-                               RHOT(:,:,:),  & ! [INOUT]
-                               QTRC(:,:,:,:) ) ! [INOUT]
+       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
+                               RHOT(:,:,:),   & ! [INOUT]
+                               QTRC(:,:,:,:), & ! [INOUT]
+                               I_QV           ) ! [IN]
     endif
 
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
@@ -674,14 +770,20 @@ contains
        DWATR => CONST_DWATR
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
+    use scale_tracer, only: &
+       QA, &
+       TRACER_R, &
+       TRACER_CV, &
+       TRACER_MASS
     use scale_history, only: &
        HIST_query, &
        HIST_put
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E, &
-       ATMOS_THERMODYN_templhv, &
-       ATMOS_THERMODYN_templhs, &
-       ATMOS_THERMODYN_templhf
+       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+    use scale_atmos_hydrometer, only: &
+       ATMOS_HYDROMETER_templhv, &
+       ATMOS_HYDROMETER_templhs, &
+       ATMOS_HYDROMETER_templhf
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
@@ -706,7 +808,7 @@ contains
     real(RP) :: rhoe
     real(RP) :: temp
     real(RP) :: pres
-    real(RP) :: q(QA)
+    real(RP) :: q(QS_MP:QE_MP)
     real(RP) :: Sliq  ! saturated ratio S for liquid water [0-1]
     real(RP) :: Sice  ! saturated ratio S for ice water    [0-1]
 
@@ -764,7 +866,7 @@ contains
     real(RP) :: net, fac, fac_sw, fac_warm, fac_ice
     real(RP) :: w(w_nmax)
 
-    real(RP) :: tend(I_QV:I_QG)
+    real(RP) :: tend(QS_MP:QE_MP)
 
     real(RP) :: zerosw
     real(RP) :: tmp
@@ -800,11 +902,14 @@ contains
 
     rdt = 1.0_RP / dt
 
-    call THERMODYN_temp_pres_E( TEMP0(:,:,:),  & ! [OUT]
-                                PRES0(:,:,:),  & ! [OUT]
-                                DENS0(:,:,:),  & ! [IN]
-                                RHOE0(:,:,:),  & ! [IN]
-                                QTRC0(:,:,:,:) ) ! [IN]
+    call THERMODYN_temp_pres_E( TEMP0(:,:,:),   & ! [OUT]
+                                PRES0(:,:,:),   & ! [OUT]
+                                DENS0(:,:,:),   & ! [IN]
+                                RHOE0(:,:,:),   & ! [IN]
+                                QTRC0(:,:,:,:), & ! [IN]
+                                TRACER_CV(:),   & ! [IN]
+                                TRACER_R(:),    & ! [IN]
+                                TRACER_MASS(:)  ) ! [IN]
 
     call SATURATION_dens2qsat_liq( QSATL(:,:,:), & ! [OUT]
                                    TEMP0(:,:,:), & ! [IN]
@@ -819,9 +924,9 @@ contains
                                     a2   (:,:,:), & ! [OUT]
                                     ma2  (:,:,:)  ) ! [OUT]
 
-    call ATMOS_THERMODYN_templhv( LHVEx, TEMP0 )
-    call ATMOS_THERMODYN_templhf( LHFEx, TEMP0 )
-    call ATMOS_THERMODYN_templhs( LHSEx, TEMP0 )
+    call ATMOS_HYDROMETER_templhv( LHVEx, TEMP0 )
+    call ATMOS_HYDROMETER_templhf( LHFEx, TEMP0 )
+    call ATMOS_HYDROMETER_templhs( LHSEx, TEMP0 )
 
 !$omp parallel do &
 !$omp private(tend, coef_bt, coef_at, q, w) &
@@ -846,7 +951,7 @@ contains
        rhoe = RHOE0(k,i,j)
        temp = TEMP0(k,i,j)
        pres = PRES0(k,i,j)
-       do iq = I_QV, I_QG
+       do iq = QS_MP, QE_MP
           q(iq) = QTRC0(k,i,j,iq)
        enddo
 
@@ -1635,9 +1740,11 @@ contains
        QTRC0  )
     use scale_const, only: &
        TEM00 => CONST_TEM00
+    use scale_tracer, only: &
+       QA
     implicit none
 
-    real(RP), intent(out) :: vterm(KA,IA,JA,QA)
+    real(RP), intent(out) :: vterm(KA,IA,JA,QA_MP-1)
     real(RP), intent(in)  :: DENS0(KA,IA,JA)
     real(RP), intent(in)  :: TEMP0(KA,IA,JA)
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)
@@ -1667,7 +1774,7 @@ contains
        ! store to work
        dens = DENS0(k,i,j)
        temc = TEMP0(k,i,j) - TEM00
-       do iq = I_QV, I_QG
+       do iq = QS_MP, QE_MP
           q(iq) = QTRC0(k,i,j,iq)
        enddo
 
@@ -1721,12 +1828,11 @@ contains
 
        !---< terminal velocity >
        zerosw = 0.5_RP + sign(0.5_RP, q(I_QI) - 1.E-8_RP )
-       vterm(k,i,j,I_QV) = 0.0_RP
-       vterm(k,i,j,I_QC) = 0.0_RP
-       vterm(k,i,j,I_QI) = -3.29_RP * ( dens * q(I_QI) * zerosw )**0.16_RP
-       vterm(k,i,j,I_QR) = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
-       vterm(k,i,j,I_QS) = -Cs * rho_fact * RMOMs_Vt
-       vterm(k,i,j,I_QG) = -Cg * rho_fact * GAM_1bgdg / GAM_1bg * RLMDg_dg
+       vterm(k,i,j,I_mp_QC) = 0.0_RP
+       vterm(k,i,j,I_mp_QI) = -3.29_RP * ( dens * q(I_QI) * zerosw )**0.16_RP
+       vterm(k,i,j,I_mp_QR) = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
+       vterm(k,i,j,I_mp_QS) = -Cs * rho_fact * RMOMs_Vt
+       vterm(k,i,j,I_mp_QG) = -Cg * rho_fact * GAM_1bgdg / GAM_1bg * RLMDg_dg
     enddo
     enddo
     enddo
@@ -1812,11 +1918,11 @@ contains
        QTRC     )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA
+       QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
 
     real(RP) :: qcriteria = 0.005E-3_RP ! 0.005g/kg, Tompkins & Craig
 
@@ -1828,8 +1934,8 @@ contains
     do i  = IS, IE
     do k  = KS, KE
        qhydro = 0.0_RP
-       do iq = 1, MP_QA
-          qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
+       do iq = QS_MP+1, QE_MP
+          qhydro = qhydro + QTRC(k,i,j,iq)
        enddo
        cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-qcriteria)
     enddo
@@ -1850,18 +1956,17 @@ contains
     use scale_const, only: &
        TEM00 => CONST_TEM00
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QA
+    use scale_atmos_hydrometer, only: &
+       N_HYD
     implicit none
-
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
+    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
 
     real(RP) :: dens
     real(RP) :: temc
-    real(RP) :: q(QA)
     real(RP) :: RLMDr, RLMDs, RLMDg
 
     real(RP), parameter :: um2cm = 100.0_RP
@@ -1876,34 +1981,30 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    Re(:,:,:,I_mp_QC) =  re_qc * um2cm
-    Re(:,:,:,I_mp_QI) =  re_qi * um2cm
+    Re(:,:,:,I_HC) =  re_qc * um2cm
+    Re(:,:,:,I_HI) =  re_qi * um2cm
+    Re(:,:,:,I_HG+1:) = 0.0_RP
 
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
        dens = DENS0(k,i,j)
        temc = TEMP0(k,i,j) - TEM00
-       do iq = I_QV, I_QG
-          q(iq) = QTRC0(k,i,j,iq)
-       enddo
 
        ! slope parameter lambda
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QR) - 1.E-12_RP )
-       RLMDr = sqrt(sqrt( dens * q(I_QR) / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP - zerosw )
-
+       zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QR) - 1.E-12_RP )
+       RLMDr = sqrt(sqrt( dens * QTRC0(k,i,j,I_QR) / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP - zerosw )
        ! Effective radius is defined by r3m/r2m = 1.5/lambda
-       Re(k,i,j,I_mp_QR) = 1.5_RP * RLMDr * um2cm
+       Re(k,i,j,I_HR) = 1.5_RP * RLMDr * um2cm
 
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QS) - 1.E-12_RP )
-       RLMDs = sqrt(sqrt( dens * q(I_QS) / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP - zerosw )
 
+       zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QS) - 1.E-12_RP )
+       RLMDs = sqrt(sqrt( dens * QTRC0(k,i,j,I_QS) / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP - zerosw )
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       rhoqs  = dens * q(I_QS)
+       rhoqs  = dens * QTRC0(k,i,j,I_QS)
        zerosw = 0.5_RP - sign(0.5_RP, rhoqs - 1.E-12_RP )
        Xs2    = rhoqs / As * ( 1.0_RP - zerosw )
-
        tems       = min( -0.1_RP, temc )
        coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
        coef_at(2) = coef_a( 3) + tems * ( coef_a( 4) + tems *   coef_a( 7) )
@@ -1920,14 +2021,12 @@ contains
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
        MOMs_1bs = 10.0_RP**loga_ * Xs2**b_
+       Re(k,i,j,I_HS) = (        sw_roh2014 ) * 0.5_RP * MOMs_1bs / ( MOMs_2 + zerosw ) * um2cm &
+                      + ( 1.0_RP-sw_roh2014 ) * 1.5_RP * RLMDs * um2cm
 
-       Re(k,i,j,I_mp_QS) = (        sw_roh2014 ) * 0.5_RP * MOMs_1bs / ( MOMs_2 + zerosw ) * um2cm &
-                         + ( 1.0_RP-sw_roh2014 ) * 1.5_RP * RLMDs * um2cm
-
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QG) - 1.E-12_RP )
-       RLMDg = sqrt(sqrt( dens * q(I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP - zerosw )
-
-       Re(k,i,j,I_mp_QG) = 1.5_RP * RLMDg * um2cm
+       zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QG) - 1.E-12_RP )
+       RLMDg = sqrt(sqrt( dens * QTRC0(k,i,j,I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP - zerosw )
+       Re(k,i,j,I_HG) = 1.5_RP * RLMDg * um2cm
     enddo
     enddo
     enddo
@@ -1938,23 +2037,26 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_tomita08_Mixingratio( &
-       Qe,    &
-       QTRC0  )
+       Qe,   &
+       QTRC0 )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QA
+    use scale_atmos_hydrometer, only: &
+       N_HYD
     implicit none
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
-
-    integer  :: ihydro
+    integer :: ihydro, iqa
     !---------------------------------------------------------------------------
 
-    do ihydro = 1, MP_QA
-       Qe(:,:,:,ihydro) = QTRC0(:,:,:,I_MP2ALL(ihydro))
-    enddo
+    Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_QC)
+    Qe(:,:,:,I_HR) = QTRC0(:,:,:,I_QR)
+    Qe(:,:,:,I_HI) = QTRC0(:,:,:,I_QI)
+    Qe(:,:,:,I_HS) = QTRC0(:,:,:,I_QS)
+    Qe(:,:,:,I_HG) = QTRC0(:,:,:,I_QG)
+    Qe(:,:,:,I_HG+1:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_Mixingratio

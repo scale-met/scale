@@ -180,6 +180,8 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        THERMODYN_pott      => ATMOS_THERMODYN_pott
+    use scale_atmos_phy_mp, only: &
+       QS_MP
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
     use scale_topography, only: &
@@ -220,7 +222,7 @@ contains
     integer :: xloc, yloc
     integer :: rank
 
-    integer :: k, i, j, iq
+    integer :: k, i, j, iq, iqa
     logical :: lack_of_val
     !---------------------------------------------------------------------------
 
@@ -270,6 +272,10 @@ contains
           rhot_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
+       do iq = 1, QA
+          qtrc_org(:,xs:xe,ys:ye,iq) = 0.0_RP
+       end do
+
        if( flg_bin .and. flg_intrp ) then  !--- tracers created from parent domain by interpolation
 
           if( IO_L ) write(IO_FID_LOG,*) '+++ SDF of SBM(S10) is interpolated from Qxx and Nxx'
@@ -291,14 +297,12 @@ contains
        else !--- tracers of paremt domain directly used
 
           do iq = 1, mptype_parent
-             call FileRead( read3D(:,:,:), BASENAME_ORG, AQ_NAME(iq), it, rank )
+             iqa = QS_MP + iq - 1
+             call FileRead( read3D(:,:,:), BASENAME_ORG, TRACER_NAME(iq), it, rank )
              do k = 1, dims(1)
-                qtrc_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
+                qtrc_org(k+2,xs:xe,ys:ye,iqa) = read3D(:,:,k)
              end do
-             qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
-          end do
-          do iq = mptype_parent+1, QA
-             qtrc_org(:,xs:xe,ys:ye,iq) = 0.0_RP
+             qtrc_org(2,xs:xe,ys:ye,iqa) = qtrc_org(3,xs:xe,ys:ye,iqa)
           end do
 
        endif
@@ -365,7 +369,10 @@ contains
                                     pres_org(k,i,j),   & ! [OUT]
                                     dens_org(k,i,j),   & ! [IN]
                                     rhot_org(k,i,j),   & ! [IN]
-                                    qtrc_org(k,i,j,:)  ) ! [IN]
+                                    qtrc_org(k,i,j,:), & ! [IN]
+                                    TRACER_CV(:),      & ! [IN]
+                                    TRACER_R(:),       & ! [IN]
+                                    TRACER_MASS(:)     ) ! [IN]
           pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
        end do
        pott_org(1:2,i,j) = pott_org(3,i,j)

@@ -572,6 +572,8 @@ contains
        INTERP_vertical_xi2z
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_hydrometer, only: &
+       I_QV
     implicit none
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
@@ -589,11 +591,15 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** [REFSTATE] update reference state'
 
-       call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
-                                 pres(:,:,:),  & ! [OUT]
-                                 DENS(:,:,:),  & ! [IN]
-                                 RHOT(:,:,:),  & ! [IN]
-                                 QTRC(:,:,:,:) ) ! [IN]
+       call THERMODYN_temp_pres( temp(:,:,:),   & ! [OUT]
+                                 pres(:,:,:),   & ! [OUT]
+                                 DENS(:,:,:),   & ! [IN]
+                                 RHOT(:,:,:),   & ! [IN]
+                                 QTRC(:,:,:,:), & ! [IN]
+                                 TRACER_CV(:),  & ! [IN]
+                                 TRACER_CP(:),  & ! [IN]
+                                 TRACER_MASS(:) ) ! [IN]
+
 
        do j = 1, JA
        do i = 1, IA
@@ -623,20 +629,22 @@ contains
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), work(:,:,:) )
 
-       call INTERP_vertical_xi2z( QTRC(:,:,:,I_QV), & ! [IN]
-                                  work(:,:,:)       ) ! [OUT]
+       if ( I_QV > 0 ) then
+          call INTERP_vertical_xi2z( QTRC(:,:,:,I_QV), & ! [IN]
+                                     work(:,:,:)       ) ! [OUT]
 
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv  (:), work(:,:,:) )
+          call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv  (:), work(:,:,:) )
+       end if
 
        do k = KE-1, KS, -1 ! fill undefined value
           if( ATMOS_REFSTATE1D_dens(k) <= 0.0_RP ) ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)
           if( ATMOS_REFSTATE1D_temp(k) <= 0.0_RP ) ATMOS_REFSTATE1D_temp(k) = ATMOS_REFSTATE1D_temp(k+1)
           if( ATMOS_REFSTATE1D_pres(k) <= 0.0_RP ) ATMOS_REFSTATE1D_pres(k) = ATMOS_REFSTATE1D_pres(k+1)
           if( ATMOS_REFSTATE1D_pott(k) <= 0.0_RP ) ATMOS_REFSTATE1D_pott(k) = ATMOS_REFSTATE1D_pott(k+1)
-          if( ATMOS_REFSTATE1D_qv  (k) <= 0.0_RP ) ATMOS_REFSTATE1D_qv  (k) = ATMOS_REFSTATE1D_qv  (k+1)
+          if( I_QV > 0 .and. ATMOS_REFSTATE1D_qv  (k) <= 0.0_RP ) ATMOS_REFSTATE1D_qv  (k) = ATMOS_REFSTATE1D_qv  (k+1)
        enddo
        call smoothing( ATMOS_REFSTATE1D_pott(:) )
-       call smoothing( ATMOS_REFSTATE1D_qv  (:) )
+       if ( I_QV > 0 ) call smoothing( ATMOS_REFSTATE1D_qv  (:) )
 
        call ATMOS_REFSTATE_calc3D
 

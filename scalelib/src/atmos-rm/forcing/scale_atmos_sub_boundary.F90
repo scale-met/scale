@@ -209,6 +209,8 @@ contains
        OFFLINE,             &
        ONLINE_IAM_PARENT,   &
        ONLINE_IAM_DAUGHTER
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
@@ -295,9 +297,11 @@ contains
     endif
 
     if( ATMOS_BOUNDARY_USE_QHYD ) then
-       BND_QA = QA
+       BND_QA = QA_MP
+    else if ( QA_MP > 0 ) then
+       BND_QA = 1
     else
-       BND_QA = I_QV
+       BND_QA = 0
     end if
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
@@ -889,7 +893,7 @@ contains
           ATMOS_BOUNDARY_alpha_POTT(:,:,:) = 0.0_RP
        end if
        if ( .NOT. ATMOS_BOUNDARY_USE_QV   ) then
-          ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1) = 0.0_RP
+          if ( BND_QA > 0 ) ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1) = 0.0_RP
        end if
        if ( .NOT. ATMOS_BOUNDARY_USE_QHYD ) then
           do iq = 2, BND_QA
@@ -978,6 +982,8 @@ contains
        GRID_CBFY
     use scale_const, only: &
        EPS => CONST_EPS
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
@@ -1091,6 +1097,9 @@ contains
        FILEIO_write
     use scale_grid_nest, only: &
        ONLINE_USE_VELZ
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME, &
+       AQ_UNIT => ATMOS_PHY_MP_UNIT
     implicit none
 
     integer :: iq
@@ -1934,6 +1943,8 @@ contains
        FileRead
     use scale_process, only: &
        PRC_myrank
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
 
     integer, intent(in) :: ref
@@ -2454,6 +2465,8 @@ contains
        ATMOS_BOUNDARY_VELY, &
        ATMOS_BOUNDARY_POTT, &
        ATMOS_BOUNDARY_QTRC )
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME
     use scale_history, only: &
        HIST_in
     implicit none

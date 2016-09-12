@@ -96,7 +96,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
        PHI, GSQRT,                                           &
        J13G, J23G, J33G, MAPF,                               &
-       AQ_CV,                                                &
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        BND_W, BND_E, BND_S, BND_N,                           &
        ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
@@ -199,7 +199,10 @@ contains
     real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
     real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factor
 
-    real(RP), intent(in)    :: AQ_CV(QQA)
+    real(RP), intent(in)    :: AQ_R   (QA)
+    real(RP), intent(in)    :: AQ_CV  (QA)
+    real(RP), intent(in)    :: AQ_CP  (QA)
+    real(RP), intent(in)    :: AQ_MASS(QA)
 
     real(RP), intent(in)    :: REF_dens(KA,IA,JA)
     real(RP), intent(in)    :: REF_pott(KA,IA,JA)
@@ -315,7 +318,7 @@ contains
                RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                          & ! (in)
                PHI, GSQRT,                                                  & ! (in)
                J13G, J23G, J33G, MAPF,                                      & ! (in)
-               AQ_CV,                                                       & ! (in)
+               AQ_R, AQ_CV, AQ_CP, AQ_MASS,                                 & ! (in)
                REF_dens, REF_pott, REF_qv, REF_pres,                        & ! (in)
                BND_W, BND_E, BND_S, BND_N,                                  & ! (in)
                ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS,        & ! (in)

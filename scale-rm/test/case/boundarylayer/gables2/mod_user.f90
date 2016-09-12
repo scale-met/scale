@@ -20,7 +20,6 @@ module mod_user
   use scale_stdio
   use scale_prof
   use scale_grid_index
-  use scale_tracer
   use scale_index
   use scale_land_grid_index
   !-----------------------------------------------------------------------------
@@ -30,6 +29,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -65,8 +65,50 @@ module mod_user
   real(RP) :: Vg = -9.0_RP
   real(RP) :: lat = 37.6_RP
 
+
+  integer, parameter :: QA = 3
+  character(len=H_SHORT) :: QNAME(QA)
+  character(len=H_MID)   :: QDESC(QA)
+  character(len=H_SHORT) :: QUNIT(QA)
+
+  data QNAME / &
+                 'QV', &
+                 'QC', &
+                 'QI'  /
+
+  data QDESC / &
+                 'Ratio of Water Vapor mass to total mass (Specific humidity)',   &
+                 'Ratio of Cloud Water mass to total mass', &
+                 'Ratio of Cloud Ice mass to total mass'   /
+
+  data QUNIT / &
+                 'kg/kg', &
+                 'kg/kg', &
+                 'kg/kg'  /
+
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine USER_config
+    use scale_atmos_hydrometer, only: &
+         ATMOS_HYDROMETER_regist, &
+         I_QV, &
+         I_QC, &
+         I_QI
+    implicit none
+    integer :: QS
+
+    call ATMOS_HYDROMETER_regist( QS, & ! (out)
+                                  1, 1, 1,  & ! (in)
+                                  QNAME, QDESC, QUNIT ) ! (in)
+
+    I_QV = QS
+    I_QC = QS + 1
+    I_QI = QS + 2
+
+    return
+  end subroutine USER_config
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -106,6 +148,8 @@ contains
   subroutine USER_resume0
     use scale_atmos_hydrostatic, only: &
        buildrho => ATMOS_HYDROSTATIC_buildrho
+    use scale_atmos_hydrometer, only: &
+       I_QV
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &

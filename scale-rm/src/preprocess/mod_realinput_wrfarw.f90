@@ -177,6 +177,18 @@ contains
          ExternalFileRead
     use scale_atmos_thermodyn, only: &
          THERMODYN_pott => ATMOS_THERMODYN_pott
+    use scale_atmos_hydrometer, only: &
+         I_QV, &
+         I_QC, &
+         I_QR, &
+         I_QI, &
+         I_QS, &
+         I_QG, &
+         I_NC, &
+         I_NR, &
+         I_NI, &
+         I_NS, &
+         I_NG
     implicit none
     real(RP),         intent(out) :: velz_org(:,:,:)
     real(RP),         intent(out) :: llvelx_org(:,:,:)

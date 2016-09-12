@@ -931,6 +931,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_atmos_hydrometer, only: &
+       I_QV
     implicit none
 
     real(RP), intent(out) :: num_diff_q(KA,IA,JA,3)

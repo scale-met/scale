@@ -88,8 +88,6 @@ contains
        URBAN_GRID_INDEX_setup
     use scale_urban_grid, only: &
        URBAN_GRID_setup
-    use scale_tracer, only: &
-       TRACER_setup
     use scale_fileio, only: &
        FILEIO_setup
     use scale_comm, only: &
@@ -113,9 +111,12 @@ contains
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_setup
+    use scale_atmos_hydrometer, only: &
+       ATMOS_HYDROMETER_setup
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
-
+    use mod_atmos_driver, only: &
+       ATMOS_driver_config
     use mod_admin_restart, only: &
        ADMIN_restart_setup
     use mod_admin_time, only: &
@@ -149,6 +150,8 @@ contains
     use mod_mkinit, only: &
        MKINIT_setup, &
        MKINIT
+    use mod_user, only: &
+       USER_config
     implicit none
 
     integer,               intent(in) :: comm_world
@@ -204,8 +207,17 @@ contains
     call URBAN_GRID_INDEX_setup
     call URBAN_GRID_setup
 
-    ! setup tracer index
-    call TRACER_setup
+    ! setup submodel administrator
+    call ATMOS_admin_setup
+    call OCEAN_admin_setup
+    call LAND_admin_setup
+    call URBAN_admin_setup
+    call CPL_admin_setup
+
+    ! setup tracer
+    call ATMOS_HYDROMETER_setup
+    call ATMOS_driver_config
+    call USER_config
 
     ! setup file I/O
     call FILEIO_setup
@@ -240,13 +252,6 @@ contains
     call ATMOS_HYDROSTATIC_setup
     call ATMOS_THERMODYN_setup
     call ATMOS_SATURATION_setup
-
-    ! setup submodel administrator
-    call ATMOS_admin_setup
-    call OCEAN_admin_setup
-    call LAND_admin_setup
-    call URBAN_admin_setup
-    call CPL_admin_setup
 
     ! setup variable container
     call ATMOS_vars_setup

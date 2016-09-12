@@ -27,8 +27,13 @@ module scale_atmos_phy_mp_kessler
   use scale_prof
   use scale_grid_index
 
-  use scale_tracer_kessler
-  use scale_tracer, only: QA
+  use scale_atmos_hydrometer, only: &
+       N_HYD, &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_HC, &
+       I_HR
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -36,6 +41,7 @@ module scale_atmos_phy_mp_kessler
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_MP_kessler_config
   public :: ATMOS_PHY_MP_kessler_setup
   public :: ATMOS_PHY_MP_kessler
   public :: ATMOS_PHY_MP_kessler_CloudFraction
@@ -46,7 +52,28 @@ module scale_atmos_phy_mp_kessler
   !
   !++ Public parameters & variables
   !
-  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  integer, public, parameter :: QA_MP  = 3
+
+  character(len=H_SHORT), public, target :: ATMOS_PHY_MP_kessler_NAME(QA_MP)
+  character(len=H_MID)  , public, target :: ATMOS_PHY_MP_kessler_DESC(QA_MP)
+  character(len=H_SHORT), public, target :: ATMOS_PHY_MP_kessler_UNIT(QA_MP)
+
+  real(RP), public, target :: ATMOS_PHY_MP_kessler_DENS(N_HYD) ! hydrometeor density [kg/m3]=[g/L]
+
+  data ATMOS_PHY_MP_kessler_NAME / &
+                 'QV', &
+                 'QC', &
+                 'QR'  /
+
+  data ATMOS_PHY_MP_kessler_DESC / &
+                 'Ratio of Water Vapor mass to total mass (Specific humidity)',   &
+                 'Ratio of Cloud Water mass to total mass', &
+                 'Ratio of Rain Water mass to total mass'   /
+
+  data ATMOS_PHY_MP_kessler_UNIT / &
+                 'kg/kg', &
+                 'kg/kg', &
+                 'kg/kg'  /
 
   !-----------------------------------------------------------------------------
   !
@@ -67,19 +94,63 @@ module scale_atmos_phy_mp_kessler
 
   logical,  private :: first = .true.
 
-  integer, private, save  :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
-  integer, private, save  :: MP_NSTEP_SEDIMENTATION
+  integer,  private, save :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
+  integer,  private, save :: MP_NSTEP_SEDIMENTATION
   real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
   real(DP), private, save :: MP_DTSEC_SEDIMENTATION
+
+  integer, private, parameter :: I_mp_QC = 1
+  integer, private, parameter :: I_mp_QR = 2
+  integer, private, save :: QS_MP
+  integer, private, save :: QE_MP
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_MP_kessler_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_kessler_config( &
+       MP_TYPE, &
+       QA, QS   )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_tracer, only: &
+       TRACER_regist
+    use scale_atmos_hydrometer, only: &
+       ATMOS_HYDROMETER_regist
+    implicit none
+    character(len=*), intent(in) :: MP_TYPE
+    integer, intent(out) :: QA
+    integer, intent(out) :: QS
+    !---------------------------------------------------------------------------
+
+    if ( MP_TYPE /= 'KESSLER' ) then
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
+       call PRC_MPIstop
+    endif
+
+    call ATMOS_HYDROMETER_regist( QS_MP, & ! (out)
+                                  1, 2, 0,  & ! (in)
+                                  ATMOS_PHY_MP_kessler_NAME, & ! (in)
+                                  ATMOS_PHY_MP_kessler_DESC, & ! (in)
+                                  ATMOS_PHY_MP_kessler_UNIT  ) ! (in)
+    QA = QA_MP
+    QS = QS_MP
+    QE_MP = QS_MP + QA_MP - 1
+
+    I_QV = QS
+    I_QC = QS + I_mp_QC
+    I_QR = QS + I_mp_QR
+
+    return
+  end subroutine ATMOS_PHY_MP_kessler_config
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_PHY_MP_kessler_setup
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
+       CONST_UNDEF, &
        CONST_DWATR
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
@@ -87,7 +158,8 @@ contains
        CDZ => GRID_CDZ
     implicit none
 
-    character(len=*), intent(in) :: MP_TYPE
+    real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
+    integer :: nstep_max
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation, &
@@ -95,28 +167,13 @@ contains
        MP_ntmax_sedimentation, &
        MP_couple_aerosol
 
-    real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
-    integer :: nstep_max
     integer :: ierr
+
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type 1-moment bulk 3 category'
-
-    if ( MP_TYPE /= 'KESSLER' ) then
-       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
-       call PRC_MPIstop
-    endif
-
-    if (      I_QV <= 0 &
-         .OR. I_QC <= 0 &
-         .OR. I_QR <= 0 ) then
-       write(*,*) 'xxx KESSLER needs QV, QC, QR tracer. Check!'
-       call PRC_MPIstop
-    endif
-
-    allocate( factor_vterm(KA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -138,8 +195,12 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                : ', MP_donegative_fixer
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)? : ', MP_doprecipitation
 
-    ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
-    ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
+    allocate( factor_vterm(KA) )
+
+
+    ATMOS_PHY_MP_kessler_DENS(:) = CONST_UNDEF
+    ATMOS_PHY_MP_kessler_DENS(I_HC) = CONST_DWATR
+    ATMOS_PHY_MP_kessler_DENS(I_HR) = CONST_DWATR
 
     nstep_max = int( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ ) )
     MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
@@ -174,7 +235,10 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_tracer, only: &
-       QAD => QA
+       QA, &
+       TRACER_R, &
+       TRACER_CV, &
+       TRACER_MASS
     use scale_atmos_thermodyn, only: &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
@@ -190,19 +254,19 @@ contains
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
     real(RP) :: RHOE_t(KA,IA,JA)
-    real(RP) :: QTRC_t(KA,IA,JA,QAD)
+    real(RP) :: QTRC_t(KA,IA,JA,QA)
     real(RP) :: RHOE  (KA,IA,JA)
     real(RP) :: temp  (KA,IA,JA)
     real(RP) :: pres  (KA,IA,JA)
 
-    real(RP) :: vterm   (KA,IA,JA,QAD) ! terminal velocity of each tracer [m/s]
+    real(RP) :: vterm   (KA,IA,JA,QA_MP-1) ! terminal velocity of each tracer [m/s]
     real(RP) :: FLX_rain(KA,IA,JA)
     real(RP) :: FLX_snow(KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
@@ -229,14 +293,18 @@ contains
     EVAPORATE(:,:,:)   = 0.0_RP
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
-                               RHOT(:,:,:),  & ! [INOUT]
-                               QTRC(:,:,:,:) ) ! [INOUT]
+       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
+                               RHOT(:,:,:),   & ! [INOUT]
+                               QTRC(:,:,:,:), & ! [INOUT]
+                               I_QV           ) ! [IN]
     endif
 
-    call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
-                         RHOT(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_rhoe( RHOE(:,:,:),   & ! [OUT]
+                         RHOT(:,:,:),   & ! [IN]
+                         QTRC(:,:,:,:), & ! [IN]
+                         TRACER_CV(:),  & ! [IN]
+                         TRACER_R(:),   & ! [IN]
+                         TRACER_MASS(:) ) ! [IN]
 
     !##### MP Main #####
     RHOE_t(:,:,:)   = 0.0_RP
@@ -261,11 +329,14 @@ contains
                                 DENS (:,:,:),   & ! [IN]
                                 QTRC (:,:,:,:)  ) ! [IN]
 
-         call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
-                                     pres(:,:,:),  & ! [OUT]
-                                     DENS(:,:,:),  & ! [IN]
-                                     RHOE(:,:,:),  & ! [IN]
-                                     QTRC(:,:,:,:) ) ! [IN]
+         call THERMODYN_temp_pres_E( temp(:,:,:),   & ! [OUT]
+                                     pres(:,:,:),   & ! [OUT]
+                                     DENS(:,:,:),   & ! [IN]
+                                     RHOE(:,:,:),   & ! [IN]
+                                     QTRC(:,:,:,:), & ! [IN]
+                                     TRACER_CV(:),  & ! [IN]
+                                     TRACER_R(:),   & ! [IN]
+                                     TRACER_MASS(:) ) ! [IN]
 
          call MP_precipitation( wflux_rain(:,:,:),     & ! [OUT]
                                 wflux_snow(:,:,:),     & ! [OUT]
@@ -275,8 +346,11 @@ contains
                                 MOMY    (:,:,:),       & ! [INOUT]
                                 RHOE    (:,:,:),       & ! [INOUT]
                                 QTRC    (:,:,:,:),     & ! [INOUT]
+                                QA_MP,                 & ! [IN]
+                                QS_MP,                 & ! [IN]
                                 vterm   (:,:,:,:),     & ! [IN]
                                 temp    (:,:,:),       & ! [IN]
+                                TRACER_CV(:),          & ! [IN]
                                 MP_DTSEC_SEDIMENTATION ) ! [IN]
 
          do j = JS, JE
@@ -302,20 +376,27 @@ contains
                                    RHOE  (:,:,:),       & ! [INOUT]
                                    QTRC  (:,:,:,:),     & ! [INOUT]
                                    DENS  (:,:,:),       & ! [IN]
+                                   I_QV,                & ! [IN]
+                                   I_QC,                & ! [IN]
+                                   -1,                  & ! [IN]
                                    flag_liquid = .true. ) ! [IN]
 
-    call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_mp_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
 
     !##### END MP Main #####
 
-    call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
-                         RHOE(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_rhot( RHOT(:,:,:),   & ! [OUT]
+                         RHOE(:,:,:),   & ! [IN]
+                         QTRC(:,:,:,:), & ! [IN]
+                         TRACER_CV(:),  & ! [IN]
+                         TRACER_R(:),   & ! [IN]
+                         TRACER_MASS(:) ) ! [IN]
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
-                               RHOT(:,:,:),  & ! [INOUT]
-                               QTRC(:,:,:,:) ) ! [INOUT]
+       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
+                               RHOT(:,:,:),   & ! [INOUT]
+                               QTRC(:,:,:,:), & ! [INOUT]
+                               I_QV           ) ! [IN]
     endif
 
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
@@ -332,12 +413,17 @@ contains
        RHOE0,  &
        QTRC0,  &
        DENS0   )
-    use scale_const, only: &
-       LHV => CONST_LHV
+    use scale_tracer, only: &
+       QA, &
+       TRACER_R, &
+       TRACER_CV, &
+       TRACER_MASS
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+    use scale_atmos_hydrometer, only: &
+       LHV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     implicit none
@@ -379,11 +465,14 @@ contains
 
     rdt = 1.0_RP / dt
 
-    call THERMODYN_temp_pres_E( TEMP0(:,:,:),  & ! [OUT]
-                                PRES0(:,:,:),  & ! [OUT]
-                                DENS0(:,:,:),  & ! [IN]
-                                RHOE0(:,:,:),  & ! [IN]
-                                QTRC0(:,:,:,:) ) ! [IN]
+    call THERMODYN_temp_pres_E( TEMP0(:,:,:),   & ! [OUT]
+                                PRES0(:,:,:),   & ! [OUT]
+                                DENS0(:,:,:),   & ! [IN]
+                                RHOE0(:,:,:),   & ! [IN]
+                                QTRC0(:,:,:,:), & ! [IN]
+                                TRACER_CV(:),   & ! [IN]
+                                TRACER_R(:),    & ! [IN]
+                                TRACER_MASS(:)  ) ! [IN]
 
     call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
                                    TEMP0(:,:,:), & ! [IN]
@@ -471,11 +560,13 @@ contains
        vterm, &
        DENS0, &
        QTRC0  )
+    use scale_tracer, only: &
+       QA
     use scale_atmos_refstate, only: &
        REFSTATE_dens => ATMOS_REFSTATE_dens
     implicit none
 
-    real(RP), intent(out) :: vterm(KA,IA,JA,QA)
+    real(RP), intent(out) :: vterm(KA,IA,JA,QA_MP-1)
     real(RP), intent(in)  :: DENS0(KA,IA,JA)
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)
 
@@ -488,7 +579,6 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       vterm(k,i,j,I_QV) = 0.0_RP
        vterm(k,i,j,I_QC) = 0.0_RP
     enddo
     enddo
@@ -515,13 +605,13 @@ contains
        QTRC     )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA
+       QA
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq
@@ -531,8 +621,8 @@ contains
     do i  = IS, IE
     do k  = KS, KE
        qhydro = 0.0_RP
-       do iq = 1, MP_QA
-          qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
+       do iq = QS_MP+1, QE_MP
+          qhydro = qhydro + QTRC(k,i,j,iq)
        enddo
        cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
     enddo
@@ -551,20 +641,29 @@ contains
        TEMP0  )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QA
+    use scale_atmos_hydrometer, only: &
+       N_HYD
     implicit none
-
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
+    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
 
     real(RP), parameter :: um2cm = 100.0_RP
+
+    integer :: ih
     !---------------------------------------------------------------------------
 
-    Re(:,:,:,I_mp_QC) =   8.E-6_RP * um2cm
-    Re(:,:,:,I_mp_QR) = 100.E-6_RP * um2cm
+    do ih = 1, N_HYD
+       if ( ih == I_HC ) then
+          Re(:,:,:,ih) =   8.E-6_RP * um2cm
+       else if ( ih == I_HR ) then
+          Re(:,:,:,ih) = 100.E-6_RP * um2cm
+       else
+          Re(:,:,:,ih) = 0.0_RP
+       end if
+    end do
 
     return
   end subroutine ATMOS_PHY_MP_kessler_EffectiveRadius
@@ -572,20 +671,29 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_kessler_Mixingratio( &
-       Qe,    &
-       QTRC0  )
+       Qe,   &
+       QTRC0 )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QA
+    use scale_atmos_hydrometer, only: &
+       N_HYD
     implicit none
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
+    integer :: ih
     !---------------------------------------------------------------------------
 
-    Qe(:,:,:,I_mp_QC) = QTRC0(:,:,:,I_QC)
-    Qe(:,:,:,I_mp_QR) = QTRC0(:,:,:,I_QR)
+    do ih = 1, N_HYD
+       if ( ih == I_HC ) then
+          Qe(:,:,:,ih) = QTRC0(:,:,:,I_QC)
+       else if ( ih == I_HR ) then
+          Qe(:,:,:,ih) = QTRC0(:,:,:,I_QR)
+       else
+          Qe(:,:,:,ih) = 0.0_RP
+       end if
+    end do
 
     return
   end subroutine ATMOS_PHY_MP_kessler_Mixingratio

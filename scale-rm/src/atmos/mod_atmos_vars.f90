@@ -14,6 +14,7 @@
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
+#include "macro_thermodyn.h"
 module mod_atmos_vars
   !-----------------------------------------------------------------------------
   !
@@ -296,7 +297,7 @@ contains
     allocate( MOMX(KA,IA,JA)    )
     allocate( MOMY(KA,IA,JA)    )
     allocate( RHOT(KA,IA,JA)    )
-    allocate( QTRC(KA,IA,JA,QA) )
+    allocate( QTRC(KA,IA,JA,max(QA,1)) )
 
     if ( ATMOS_USE_AVERAGE ) then
        allocate( DENS_avw(KA,IA,JA)    )
@@ -304,7 +305,7 @@ contains
        allocate( MOMX_avw(KA,IA,JA)    )
        allocate( MOMY_avw(KA,IA,JA)    )
        allocate( RHOT_avw(KA,IA,JA)    )
-       allocate( QTRC_avw(KA,IA,JA,QA) )
+       allocate( QTRC_avw(KA,IA,JA,max(QA,1)) )
 
        DENS_av => DENS_avw
        MOMZ_av => MOMZ_avw
@@ -326,7 +327,7 @@ contains
     allocate( MOMX_tp(KA,IA,JA)    )
     allocate( MOMY_tp(KA,IA,JA)    )
     allocate( RHOT_tp(KA,IA,JA)    )
-    allocate( RHOQ_tp(KA,IA,JA,QA) )
+    allocate( RHOQ_tp(KA,IA,JA,max(QA,1)) )
 
     allocate( TEMP(KA,IA,JA) )
     allocate( PRES(KA,IA,JA) )
@@ -359,7 +360,7 @@ contains
     enddo
     do iq = 1, QA
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
-                  '*** NO.',5+iq,'|',AQ_NAME(iq),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
+                  '*** NO.',5+iq,'|',TRACER_NAME(iq),'|', TRACER_DESC(iq),'[', TRACER_UNIT(iq),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -403,7 +404,7 @@ contains
 
     !##### todo: the part below should be moved to the mod_atmos_diag #####
 
-    allocate( AQ_HIST_id (QA))
+    allocate( AQ_HIST_id (max(QA,1)))
 
     VAR_HIST_id(:) = -1
     AQ_HIST_id (:) = -1
@@ -417,7 +418,7 @@ contains
     call HIST_reg( VAR_HIST_id(I_MOMY), zinterp, VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, ydim='half' )
     call HIST_reg( VAR_HIST_id(I_RHOT), zinterp, VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
-       call HIST_reg( AQ_HIST_id(iq), zinterp, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
+       call HIST_reg( AQ_HIST_id(iq), zinterp, TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3 )
     enddo
 
     call HIST_reg( AD_HIST_id(I_W   ) , zinterp, 'W',     'velocity w',             'm/s',    ndim=3 )
@@ -921,7 +922,7 @@ contains
 
        do iq = 1, QA
           call FILEIO_read( QTRC(:,:,:,iq),                                       & ! [OUT]
-                            ATMOS_RESTART_IN_BASENAME, AQ_NAME(iq), 'ZXY', step=1 ) ! [IN]
+                            ATMOS_RESTART_IN_BASENAME, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
        enddo
 
        call ATMOS_vars_fillhalo
@@ -1033,7 +1034,7 @@ contains
 
        do iq = 1, QA
           call FILEIO_write( QTRC(:,:,:,iq), basename,                         ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                             AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE     ) ! [IN]
+                             TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE     ) ! [IN]
        enddo
 
     endif
@@ -1153,14 +1154,14 @@ contains
     enddo
 
     do iq = 1, QA
-       call FileRead( restart_atmos(:,:,:), basename, AQ_NAME(iq), 1, PRC_myrank )
+       call FileRead( restart_atmos(:,:,:), basename, TRACER_NAME(iq), 1, PRC_myrank )
        QTRC_check(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
           if ( abs( QTRC(k,i,j,iq)-QTRC_check(k,i,j,iq) ) > ATMOS_RESTART_CHECK_CRITERION ) then
              write(*,*) 'xxx there is the difference  : ', QTRC(k,i,j,iq)-QTRC_check(k,i,j,iq)
-             write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, AQ_NAME(iq)
+             write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, TRACER_NAME(iq)
              datacheck = .false.
           endif
        enddo
@@ -1190,8 +1191,6 @@ contains
        Rvap  => CONST_Rvap,  &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
-       LHV   => CONST_LHV,   &
-       LHF   => CONST_LHF,   &
        P00   => CONST_PRE00
     use scale_grid, only: &
        RCDX => GRID_RCDX, &
@@ -1204,10 +1203,19 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_thermodyn, only: &
-       THERMODYN_qd      => ATMOS_THERMODYN_qd,      &
-       THERMODYN_templhv => ATMOS_THERMODYN_templhv, &
-       CPw => AQ_CP,                                 &
-       CVw => AQ_CV
+       THERMODYN_qd      => ATMOS_THERMODYN_qd
+    use scale_atmos_hydrometer, only: &
+       I_QV, &
+       I_QC, &
+       QHS, &
+       QHE, &
+       QLS, &
+       QLE, &
+       QIS, &
+       QIE, &
+       LHV, &
+       LHF, &
+       HYDROMETER_templhv => ATMOS_HYDROMETER_templhv
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
@@ -1234,6 +1242,7 @@ contains
 
     real(RP) :: RTOT  (KA,IA,JA) ! Total gas constant  [J/kg/K]
     real(RP) :: CPTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
+    real(RP) :: CVTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
     real(RP) :: CPovCV(KA,IA,JA) ! Cp/Cv
 
     real(RP) :: POTL  (KA,IA,JA) ! liquid water potential temperature [K]
@@ -1309,7 +1318,7 @@ contains
     call HIST_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY) )
     call HIST_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT) )
     do iq = 1, QA
-       call HIST_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq) )
+       call HIST_in( QTRC(:,:,:,iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq) )
     enddo
 
     ! prepare and history output of diagnostic variables
@@ -1359,8 +1368,9 @@ contains
 !    endif
 
     if ( AD_PREP_sw(I_QDRY) > 0 ) then
-       call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                          QTRC(:,:,:,:) ) ! [IN]
+       call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
+                          QTRC(:,:,:,:), & ! [IN]
+                          TRACER_MASS(:) ) ! [IN]
     endif
 
     if ( AD_PREP_sw(I_QTOT) > 0 ) then
@@ -1377,11 +1387,7 @@ contains
     if ( AD_PREP_sw(I_QHYD) > 0 ) then
 !OCL XFILL
        QHYD(:,:,:) = 0.0_RP
-
-       do iq = QWS, QWE
-         QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,iq)
-       enddo
-       do iq = QIS, QIE
+       do iq = QHS, QHE
          QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,iq)
        enddo
     endif
@@ -1389,8 +1395,7 @@ contains
     if ( AD_PREP_sw(I_QLIQ) > 0 ) then
 !OCL XFILL
        QLIQ(:,:,:) = 0.0_RP
-
-       do iq = QWS, QWE
+       do iq = QLS, QLE
          QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC(:,:,:,iq)
        enddo
     endif
@@ -1398,7 +1403,6 @@ contains
     if ( AD_PREP_sw(I_QICE) > 0 ) then
 !OCL XFILL
        QICE(:,:,:) = 0.0_RP
-
        do iq = QIS, QIE
          QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,iq)
        enddo
@@ -1446,7 +1450,7 @@ contains
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
+          CALC_R(RTOT(k,i,j), QDRY(k,i,j), QTRC, k, i, j, iq, Rdry, TRACER_R)
        enddo
        enddo
        enddo
@@ -1459,17 +1463,11 @@ contains
        do i  = ISB, IEB
        do k  = KS, KE
           CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       do iq = QQS, QQE
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
-       enddo
+          CVTOT(k,i,j) = CVdry * QDRY(k,i,j)
+          do iq = 1, QA
+             CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * TRACER_CP(iq)
+             CVTOT(k,i,j) = CVTOT(k,i,j) + QTRC(k,i,j,iq) * TRACER_CV(iq)
+          end do
        enddo
        enddo
        enddo
@@ -1479,7 +1477,7 @@ contains
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
+          CPovCV(k,i,j) = CPTOT(k,i,j) / CVTOT(k,i,j)
        enddo
        enddo
        enddo
@@ -1942,18 +1940,19 @@ contains
        enddo
        enddo
 
-       do iq = QQS, QQE
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
+       do iq = 1, QA
           ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
        enddo
        enddo
        enddo
        enddo
 
+       if ( I_QV > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j  = JSB, JEB
        do i  = ISB, IEB
@@ -1963,6 +1962,7 @@ contains
        enddo
        enddo
        enddo
+       end if
 
        do iq = QIS, QIE
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
@@ -2076,7 +2076,10 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          POTTv(k,i,j) = POTT(k,i,j) * ( 1.0_RP + 0.61_RP * QTRC(k,i,j,I_QV) - 1.61 * QTRC(k,i,j,I_QC) )
+          fact = 1.0_RP
+          if ( I_QV > 0 ) fact = fact + 0.61_RP * QTRC(k,i,j,I_QV)
+          if ( I_QC > 0 ) fact = fact - 1.61 * QTRC(k,i,j,I_QC)
+          POTTv(k,i,j) = POTT(k,i,j) * fact
        enddo
        enddo
        enddo
@@ -2102,8 +2105,8 @@ contains
     call HIST_in( PBLH(:,:), 'PBLH', 'PBL height', 'm' )
 
     if ( AD_PREP_sw(I_MSE) > 0 ) then
-       call THERMODYN_templhv( LHvap(:,:,:), & ! [OUT]
-                               TEMP (:,:,:)  ) ! [IN]
+       call HYDROMETER_templhv( LHvap(:,:,:), & ! [OUT]
+                                TEMP (:,:,:)  ) ! [IN]
 
        do j = JS, JE
        do i = IS, IE
@@ -2133,9 +2136,7 @@ contains
   subroutine ATMOS_vars_total
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
-       CVdry => CONST_CVdry, &
-       LHV   => CONST_LHV,   &
-       LHF   => CONST_LHF
+       CVdry => CONST_CVdry
     use scale_grid_real, only: &
        REAL_CZ
     use scale_rm_statistics, only: &
@@ -2143,8 +2144,13 @@ contains
        STAT_total
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-       CVw => AQ_CV
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_hydrometer, only: &
+       I_QV, &
+       QIS, &
+       QIE, &
+       LHV, &
+       LHF
     implicit none
 
     real(RP) :: W   (KA,IA,JA) ! velocity w at cell center [m/s]
@@ -2177,17 +2183,21 @@ contains
        do iq = 1, QA
           RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
 
-          call STAT_total( total, RHOQ(:,:,:), AQ_NAME(iq) )
+          call STAT_total( total, RHOQ(:,:,:), TRACER_NAME(iq) )
        enddo
 
-       call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                          QTRC(:,:,:,:) ) ! [IN]
+       call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
+                          QTRC(:,:,:,:), & ! [IN]
+                          TRACER_MASS(:) ) ! [IN]
 
-       call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
-                                 PRES(:,:,:),  & ! [OUT]
-                                 DENS(:,:,:),  & ! [IN]
-                                 RHOT(:,:,:),  & ! [IN]
-                                 QTRC(:,:,:,:) ) ! [IN]
+       call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
+                                 PRES(:,:,:),   & ! [OUT]
+                                 DENS(:,:,:),   & ! [IN]
+                                 RHOT(:,:,:),   & ! [IN]
+                                 QTRC(:,:,:,:), & ! [IN]
+                                 TRACER_CV(:),  & ! [IN]
+                                 TRACER_R(:),   & ! [IN]
+                                 TRACER_MASS(:) ) ! [IN]
 
        RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
 
@@ -2212,12 +2222,14 @@ contains
                                                + V(k,i,j)**2 )
 
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
-          do iq = QQS, QQE
+          do iq = 1, QA
              ENGI(k,i,j) = ENGI(k,i,j) &
-                         + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+                         + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
           enddo
 
-          ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+          if ( I_QV > 0 ) then
+             ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+          end if
 
           do iq = QIS, QIE
              ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
@@ -2253,11 +2265,14 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Calc diagnostics'
 
-    call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
-                              PRES(:,:,:),  & ! [OUT]
-                              DENS(:,:,:),  & ! [IN]
-                              RHOT(:,:,:),  & ! [IN]
-                              QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
+                              PRES(:,:,:),   & ! [OUT]
+                              DENS(:,:,:),   & ! [IN]
+                              RHOT(:,:,:),   & ! [IN]
+                              QTRC(:,:,:,:), & ! [IN]
+                              TRACER_CV(:),  & ! [IN]
+                              TRACER_R(:),   & ! [IN]
+                              TRACER_MASS(:) ) ! [IN]
 
 !OCL XFILL
     do j = 1, JA
@@ -2346,9 +2361,7 @@ contains
        PRC_myrank
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
-       CVdry => CONST_CVdry, &
-       LHV   => CONST_LHV,   &
-       LHF   => CONST_LHF
+       CVdry => CONST_CVdry
     use scale_grid, only: &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
@@ -2373,8 +2386,13 @@ contains
        TIME_DTSEC_ATMOS_DYN
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-       CVw => AQ_CV
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_hydrometer, only: &
+       I_QV, &
+       QIS, &
+       QIE, &
+       LHV, &
+       LHF
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
@@ -2422,6 +2440,7 @@ contains
     call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3, isflux=.false. )
 
     !##### Mass Budget #####
+
     do iq = 1, QA
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
@@ -2433,13 +2452,14 @@ contains
        enddo
        enddo
 
-       call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3, isflux=.false. )
+       call MONIT_in( RHOQ(:,:,:), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3, isflux=.false. )
     enddo
 
     ! total dry airmass
 
-    call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                       QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
+                       QTRC(:,:,:,:), & ! [IN]
+                       TRACER_MASS(:) ) ! [IN]
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
@@ -2478,11 +2498,14 @@ contains
 
     !##### Energy Budget #####
 
-    call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
-                              PRES(:,:,:),  & ! [OUT]
-                              DENS(:,:,:),  & ! [IN]
-                              RHOT(:,:,:),  & ! [IN]
-                              QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
+                              PRES(:,:,:),   & ! [OUT]
+                              DENS(:,:,:),   & ! [IN]
+                              RHOT(:,:,:),   & ! [IN]
+                              QTRC(:,:,:,:), & ! [IN]
+                              TRACER_CV(:),  & ! [IN]
+                              TRACER_R(:),   & ! [IN]
+                              TRACER_MASS(:) ) ! [IN]
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -2495,12 +2518,14 @@ contains
                                             + V(k,i,j)**2 )
 
        ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
-       do iq = QQS, QQE
+       do iq = 1, QA
           ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
        enddo
 
-       ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+       if ( I_QV > 0 ) then
+          ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+       end if
 
        do iq = QIS, QIE
           ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
@@ -2539,10 +2564,10 @@ contains
     enddo
     enddo
 
-    call MONIT_put( AD_MONIT_id(I_ENGT), ENGT(:,:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGP), ENGP(:,:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGK), ENGK(:,:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGI), ENGI(:,:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGT), ENGT(:,:,:) )
 
     call MONIT_put( AD_MONIT_id(I_ENGFLXT), ENGFLXT(:,:) )
 
@@ -2876,8 +2901,8 @@ contains
                             VAR_UNIT(I_RHOT), 'ZXY',  ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_def_var( restart_fid, VAR_ID(VMAX+iq), AQ_NAME(iq), AQ_DESC(iq), & ! [IN]
-                               AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE       ) ! [IN]
+          call FILEIO_def_var( restart_fid, VAR_ID(VMAX+iq), TRACER_NAME(iq), TRACER_DESC(iq), & ! [IN]
+                               TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE       ) ! [IN]
        enddo
 
     endif
@@ -2953,7 +2978,7 @@ contains
        call FILEIO_write_var( restart_fid, VAR_ID(I_RHOT), RHOT(:,:,:), VAR_NAME(I_RHOT), 'ZXY'  ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_write_var( restart_fid, VAR_ID(VMAX+iq), QTRC(:,:,:,iq), AQ_NAME(iq), 'ZXY' ) ! [IN]
+          call FILEIO_write_var( restart_fid, VAR_ID(VMAX+iq), QTRC(:,:,:,iq), TRACER_NAME(iq), 'ZXY' ) ! [IN]
        enddo
 
     endif

@@ -233,8 +233,6 @@ contains
        RHOQ_tp
     use mod_atmos_dyn_vars, only: &
        PROG
-    use scale_atmos_thermodyn, only: &
-       AQ_CV
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_dens, &
        ATMOS_REFSTATE_pott, &
@@ -277,7 +275,7 @@ contains
                        REAL_PHI,                                             & ! [IN]
                        GTRANS_GSQRT,                                         & ! [IN]
                        GTRANS_J13G, GTRANS_J23G, GTRANS_J33G, GTRANS_MAPF,   & ! [IN]
-                       AQ_CV,                                                & ! [IN]
+                       TRACER_R, TRACER_CV, TRACER_CP, TRACER_MASS,          & ! [IN]
                        ATMOS_REFSTATE_dens,                                  & ! [IN]
                        ATMOS_REFSTATE_pott,                                  & ! [IN]
                        ATMOS_REFSTATE_qv,                                    & ! [IN]

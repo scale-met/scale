@@ -51,26 +51,20 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config before setup of other components
+  !> Config
   subroutine USER_config
     use scale_tracer, only: &
-       TRACER_regist
+         TRACER_regist
+    use scale_atmos_hydrometer, only: &
+         I_NC
     implicit none
+    !---------------------------------------------------------------------------
 
-    ! if you want to add tracers, call the TRACER_regist subroutine.
-    ! e.g.,
-!    integer, parameter :: NQ = 1
-!    integer :: QS
-!    character(len=H_SHORT) :: NAME(NQ)
-!    character(len=H_MID)   :: DESC(NQ)
-!    character(len=H_SHORT) :: UNIT(NQ)
-!
-!    data NAME (/ 'name' /)
-!    data DESC (/ 'tracer name' /)
-!    data UNIT (/ 'kg/kg' /)
-!
-!    call TRACER_regist( QS,   & ! (out)
-!         NQ, NAME, DESC, UNIT ) ! (in)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
+
+    call TRACER_REGIST( I_NC, &
+         1, (/'NC'/), (/'Passive tracer'/), (/'1'/) )
 
     return
   end subroutine USER_config
@@ -78,32 +72,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup before setup of other components
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
-
-    namelist / PARAM_USER / &
-       USER_do
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** This module is dummy.'
 
     return
   end subroutine USER_setup

@@ -102,25 +102,6 @@ else
   FFLAGS += -DTB=$(TB)
 endif
 
-ifeq ($(TRACER),)
-  OBJS_TRACER = scale_tracer_dry.o	\
-                scale_tracer_kessler.o	\
-                scale_tracer_sdm.o	\
-                scale_tracer_sn14.o	\
-                scale_tracer_suzuki10.o	\
-                scale_tracer_tomita08.o
-else
-  OBJS_TRACER = scale_tracer_$(TRACER).o
-  FFLAGS += -DTRACER=$(TRACER)
-endif
-
-ifeq ($(AETRACER),)
-  OBJS_AETRACER = scale_aetracer_none.o	\
-                  scale_aetracer_kajino13.o
-else
-  OBJS_AETRACER = scale_aetracer_$(AETRACER).o
-endif
-
 OBJS_DYN = scale_atmos_dyn_tinteg_short.o	\
            scale_atmos_dyn_tinteg_large.o	\
            scale_atmos_dyn_tinteg_large_euler.o	\
@@ -188,6 +169,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_sub_saturation.o	\
 	scale_atmos_sub_solarins.o	\
 	scale_atmos_sub_thermodyn.o	\
+	scale_atmos_sub_hydrometer.o	\
 	scale_atmos_sub_adiabat.o	\
 	scale_bulkflux.o	\
 	scale_calendar.o	\
@@ -234,8 +216,6 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_time.o	\
 	scale_topography.o	\
 	scale_tracer.o	\
-	$(OBJS_TRACER)	\
-	$(OBJS_AETRACER)	\
 	scale_urban_grid.o	\
 	scale_urban_grid_index.o	\
 	scale_urban_phy.o	\
