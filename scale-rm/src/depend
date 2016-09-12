@@ -23,7 +23,7 @@ $(BUILD_DIR)/mod_cnvlanduse.o: preprocess/mod_cnvlanduse.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_cnvtopo.o: preprocess/mod_cnvtopo.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_copytopo.o
 $(BUILD_DIR)/mod_convert.o: preprocess/mod_convert.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_cnvlanduse.o $(BUILD_DIR)/mod_cnvtopo.o
 $(BUILD_DIR)/mod_copytopo.o: preprocess/mod_copytopo.f90 $(DEPENDLIB)
-$(BUILD_DIR)/mod_cpl_admin.o: coupler/mod_cpl_admin.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_land_admin.o $(BUILD_DIR)/mod_ocean_admin.o $(BUILD_DIR)/mod_urban_admin.o
+$(BUILD_DIR)/mod_cpl_admin.o: coupler/mod_cpl_admin.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_land_admin.o $(BUILD_DIR)/mod_ocean_admin.o $(BUILD_DIR)/mod_urban_admin.o
 $(BUILD_DIR)/mod_cpl_driver.o: coupler/mod_cpl_driver.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_cpl_vars.o: coupler/mod_cpl_vars.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_land_admin.o: land/mod_land_admin.f90 $(DEPENDLIB)

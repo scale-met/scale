@@ -95,6 +95,10 @@ module scale_atmos_hydrometer
   integer, public :: QIS = -1
   integer, public :: QIE = -2
 
+  real(RP), public :: LHV      !< latent heat of vaporizaion for use
+  real(RP), public :: LHS      !< latent heat of sublimation for use
+  real(RP), public :: LHF      !< latent heat of fusion      for use
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -109,6 +113,8 @@ module scale_atmos_hydrometer
   real(RP), private :: CP_WATER !< CP for water [J/kg/K]
   real(RP), private :: CV_ICE   !< CV for ice   [J/kg/K]
   real(RP), private :: CP_ICE   !< CP for ice   [J/kg/K]
+
+  real(RP), private :: THERMODYN_EMASK = 1.0_RP
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -121,7 +127,15 @@ contains
        CVvap          => CONST_CVvap,          &
        CL             => CONST_CL,             &
        CI             => CONST_CI,             &
+       LHV00          => CONST_LHV00,          &
+       LHS00          => CONST_LHS00,          &
+       LHF00          => CONST_LHF00,          &
+       LHV0           => CONST_LHV0,           &
+       LHS0           => CONST_LHS0,           &
+       LHF0           => CONST_LHF0,           &
        THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
     !---------------------------------------------------------------------------
 
@@ -133,18 +147,33 @@ contains
        CV_VAPOR = CVvap
        CP_VAPOR = CPvap
        CV_WATER = CL
-       CP_WATER = CL
+       CP_WATER = CV_WATER
        CV_ICE = CI
-       CP_ICE = CI
+       CP_ICE = CV_ICE
+
+       LHV = LHV00
+       LHS = LHS00
+       LHF = LHF00
+       THERMODYN_EMASK = 1.0_RP
 
     elseif( THERMODYN_TYPE == 'SIMPLE' ) then
 
-       CV_VAPOR = CVdry
-       CP_VAPOR = CPdry
-       CV_WATER = CVdry
-       CP_WATER = CPdry
-       CV_ICE = CVdry
-       CP_ICE = CPdry
+       CV_VAPOR = CVvap
+       CP_VAPOR = CPvap
+       CV_WATER = CVvap
+       CP_WATER = CV_WATER
+       CV_ICE = CVvap
+       CP_ICE = CV_ICE
+
+       LHV = LHV0
+       LHS = LHS0
+       LHF = LHF0
+       THERMODYN_EMASK = 0.0_RP
+
+    else
+
+       write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(THERMODYN_TYPE)
+       call PRC_MPIstop
 
     endif
 
@@ -270,7 +299,7 @@ contains
     real(RP), intent(in)  :: temp ! temperature           [K]
     !---------------------------------------------------------------------------
 
-    lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp - TEM00 )
+    lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp - TEM00 ) * THERMODYN_EMASK
 
     return
   end subroutine ATMOS_HYDROMETER_templhv_0D
@@ -292,7 +321,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       lhv(i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(i,j) - TEM00 )
+       lhv(i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
     enddo
 
@@ -316,7 +345,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       lhv(k,i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 )
+       lhv(k,i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
     enddo
     enddo
@@ -337,7 +366,7 @@ contains
     real(RP), intent(in)  :: temp  ! temperature           [K]
     !---------------------------------------------------------------------------
 
-    lhs = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp - TEM00 )
+    lhs = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp - TEM00 ) * THERMODYN_EMASK
 
     return
   end subroutine ATMOS_HYDROMETER_templhs_0D
@@ -359,7 +388,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       lhs(i,j) = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp(i,j) - TEM00 )
+       lhs(i,j) = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
     enddo
 
@@ -384,7 +413,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       lhs(k,i,j) = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp(k,i,j) - TEM00 )
+       lhs(k,i,j) = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
     enddo
     enddo
@@ -405,7 +434,7 @@ contains
     real(RP), intent(in)  :: temp ! temperature           [K]
     !---------------------------------------------------------------------------
 
-    lhf = LHF0 + ( CP_WATER - CP_ICE ) * ( temp - TEM00 )
+    lhf = LHF0 + ( CP_WATER - CP_ICE ) * ( temp - TEM00 ) * THERMODYN_EMASK
 
     return
   end subroutine ATMOS_HYDROMETER_templhf_0D
@@ -427,7 +456,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       lhf(i,j) = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(i,j) - TEM00 )
+       lhf(i,j) = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
     enddo
 
@@ -452,7 +481,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       lhf(k,i,j) = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(k,i,j) - TEM00 )
+       lhf(k,i,j) = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
     enddo
     enddo
@@ -512,7 +541,7 @@ contains
          - qdry    * Rdry  * log( pres_dry / PRE00 )
 
     if ( I_QV > 0 ) then
-       lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp - TEM00 )
+       lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp - TEM00 ) * THERMODYN_EMASK
        pres_vap = max( pres * q(I_QV) * Rvap / Rtot, EPS )
        entr = entr &
             + q(I_QV) * CP_VAPOR * logT_T0 &
@@ -531,7 +560,7 @@ contains
 
     ! ice
     if ( QIS > 0 ) then
-       lhf = LHF0 + ( CP_WATER - CP_ICE   ) * ( temp - TEM00 )
+       lhf = LHF0 + ( CP_WATER - CP_ICE   ) * ( temp - TEM00 ) * THERMODYN_EMASK
        qice = 0.0_RP
        do iqw = QIS, QIE
           qice = qice + q(iqw)
@@ -600,7 +629,7 @@ contains
                  - qdry    * Rdry  * log( pres_dry / PRE00 )
 
        if ( I_QV > 0 ) then
-          lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(i,j) - TEM00 )
+          lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
           pres_vap = max( pres(i,j) * q(i,j,I_QV) * Rvap / Rtot, EPS )
           entr(i,j) = entr(i,j) &
                + q(i,j,I_QV) * CP_VAPOR * logT_T0 &
@@ -619,7 +648,7 @@ contains
 
        ! ice
        if ( QIS > 0 ) then
-          lhf = LHF0 + ( CP_WATER - CP_ICE   ) * ( temp(i,j) - TEM00 )
+          lhf = LHF0 + ( CP_WATER - CP_ICE   ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
           qice = 0.0_RP
           do iqw = QIS, QIE
              qice = qice + q(i,j,iqw)
@@ -691,7 +720,7 @@ contains
                    - qdry    * Rdry  * log( pres_dry / PRE00 )
 
        if ( I_QV > 0 ) then
-          lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 )
+          lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
           pres_vap = max( pres(k,i,j) * q(k,i,j,I_QV) * Rvap / Rtot, EPS )
           entr(k,i,j) = entr(k,i,j) &
                + q(k,i,j,I_QV) * CP_VAPOR * logT_T0 &
@@ -710,7 +739,7 @@ contains
 
        ! ice
        if ( QIS > 0 ) then
-          lhf = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(k,i,j) - TEM00 )
+          lhf = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
           qice = 0.0_RP
           do iqw = QIS, QIE
              qice = qice + q(k,i,j,iqw)

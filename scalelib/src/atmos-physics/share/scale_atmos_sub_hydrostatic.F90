@@ -112,10 +112,9 @@ module scale_atmos_hydrostatic
   logical,  private              :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
   integer,  private              :: HYDROSTATIC_buildrho_real_kref = 1
 
-
   real(RP), private :: CV_qv
-  real(RP), private :: CV_qc
   real(RP), private :: CP_qv
+  real(RP), private :: CV_qc
   real(RP), private :: CP_qc
 
   !-----------------------------------------------------------------------------
@@ -127,6 +126,12 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_EPS
+    use scale_tracer, only: &
+       TRACER_CV, &
+       TRACER_CP
+    use scale_atmos_hydrometer, only: &
+       I_QV, &
+       I_QC
     implicit none
 
     NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
@@ -156,15 +161,18 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
     if( IO_L ) write(IO_FID_LOG,*) '*** buildrho conversion criteria : ', criteria
 
-    if ( THERMODYN_TYPE == 'EXACT' ) then
-       CV_qv = CVvap
-       CP_qv = CPvap
-       CV_qc = CL
-    elseif( THERMODYN_TYPE == 'SIMPLE' ) then
-       CV_qv = CVdry
-       CP_qv = CVdry
-       CV_qc = CVdry
-    endif
+    if ( I_QV > 0 ) then
+       CV_qv = TRACER_CV(I_QV)
+       CP_qv = TRACER_CP(I_QV)
+    else
+       CV_qv = 0.0_RP
+       CP_qv = 0.0_RP
+    end if
+    if ( I_QC > 0 ) then
+       CV_qc = TRACER_CP(I_QC)
+    else
+       CV_qc = 0.0_RP
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_setup

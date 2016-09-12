@@ -47,7 +47,6 @@ module mod_mkinit
      Pstd  => CONST_Pstd,  &
      Rdry  => CONST_Rdry,  &
      CPdry => CONST_CPdry, &
-     LHV   => CONST_LHV,   &
      P00   => CONST_PRE00, &
      I_SW  => CONST_I_SW,  &
      I_LW  => CONST_I_LW
@@ -69,6 +68,8 @@ module mod_mkinit
      REAL_FZ
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
+  use scale_atmos_hydrometer, only: &
+     LHV
   use scale_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,       &
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &

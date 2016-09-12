@@ -134,15 +134,15 @@ contains
        I_QC,       &
        I_QI,       &
        flag_liquid )
-    use scale_const, only: &
-       LHV => CONST_LHV, &
-       LHF => CONST_LHF
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd          => ATMOS_THERMODYN_qd,         &
        THERMODYN_cv          => ATMOS_THERMODYN_cv,         &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+    use scale_atmos_hydrometer, only: &
+       LHV, &
+       LHF
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
@@ -262,7 +262,7 @@ contains
        do i = ISB, IEB
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
-                        + QTRC1(k,i,j,I_QV) * LHV     &
+                        + QTRC1(k,i,j,I_QV) * LHV &
                         - QTRC1(k,i,j,I_QI) * LHF
 
           QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
@@ -384,12 +384,12 @@ contains
        Emoist, &
        I_QV,   &
        I_QC    )
-    use scale_const, only: &
-       LHV => CONST_LHV
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
        THERMODYN_cv => ATMOS_THERMODYN_cv
+    use scale_atmos_hydrometer, only: &
+       LHV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        CVovR_liq, &
@@ -536,13 +536,13 @@ contains
        I_QV,   &
        I_QC,   &
        I_QI    )
-    use scale_const, only: &
-       LHV => CONST_LHV,  &
-       LHF => CONST_LHF
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
        THERMODYN_cv => ATMOS_THERMODYN_cv
+    use scale_atmos_hydrometer, only: &
+       LHV, &
+       LHF
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &

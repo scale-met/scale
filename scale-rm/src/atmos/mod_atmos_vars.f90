@@ -1191,8 +1191,6 @@ contains
        Rvap  => CONST_Rvap,  &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
-       LHV   => CONST_LHV,   &
-       LHF   => CONST_LHF,   &
        P00   => CONST_PRE00
     use scale_grid, only: &
        RCDX => GRID_RCDX, &
@@ -1215,6 +1213,8 @@ contains
        QLE, &
        QIS, &
        QIE, &
+       LHV, &
+       LHF, &
        HYDROMETER_templhv => ATMOS_HYDROMETER_templhv
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
@@ -2136,9 +2136,7 @@ contains
   subroutine ATMOS_vars_total
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
-       CVdry => CONST_CVdry, &
-       LHV   => CONST_LHV,   &
-       LHF   => CONST_LHF
+       CVdry => CONST_CVdry
     use scale_grid_real, only: &
        REAL_CZ
     use scale_rm_statistics, only: &
@@ -2150,7 +2148,9 @@ contains
     use scale_atmos_hydrometer, only: &
        I_QV, &
        QIS, &
-       QIE
+       QIE, &
+       LHV, &
+       LHF
     implicit none
 
     real(RP) :: W   (KA,IA,JA) ! velocity w at cell center [m/s]
@@ -2361,9 +2361,7 @@ contains
        PRC_myrank
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
-       CVdry => CONST_CVdry, &
-       LHV   => CONST_LHV,   &
-       LHF   => CONST_LHF
+       CVdry => CONST_CVdry
     use scale_grid, only: &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
@@ -2392,7 +2390,9 @@ contains
     use scale_atmos_hydrometer, only: &
        I_QV, &
        QIS, &
-       QIE
+       QIE, &
+       LHV, &
+       LHF
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow

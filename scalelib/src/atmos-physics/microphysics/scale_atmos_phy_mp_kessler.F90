@@ -418,12 +418,12 @@ contains
        TRACER_R, &
        TRACER_CV, &
        TRACER_MASS
-    use scale_const, only: &
-       LHV => CONST_LHV
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+    use scale_atmos_hydrometer, only: &
+       LHV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     implicit none
