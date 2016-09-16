@@ -760,10 +760,14 @@ contains
           cpa(k,i,j) = cva(k,i,j) + Rmoist
           CALC_PRE( pres_ae(k,i,j), DENS(k,i,j), th(k,i,j), Rmoist, cpa(k,i,j), CONST_PRE00 )
           temp_ae(k,i,j) = pres_ae(k,i,j) / ( DENS(k,i,j) * Rmoist )
-          qv_ae(k,i,j) = QTRC(k,i,j,I_QV)
-          !--- calculate super saturation of water
-          call pres2qsat_liq( qsat_tmp,temp_ae(k,i,j),pres_ae(k,i,j) )
-          ssliq_ae(k,i,j) = qv_ae(k,i,j)/qsat_tmp - 1.0_RP
+          if ( I_QV > 0 ) then
+             qv_ae(k,i,j) = QTRC(k,i,j,I_QV)
+             !--- calculate super saturation of water
+             call pres2qsat_liq( qsat_tmp,temp_ae(k,i,j),pres_ae(k,i,j) )
+             ssliq_ae(k,i,j) = qv_ae(k,i,j)/qsat_tmp - 1.0_RP
+          else
+             ssliq_ae(k,i,j) = - 1.0_RP
+          end if
        enddo
 
     enddo
@@ -2462,8 +2466,12 @@ contains
                 * ( DENS(k,i,j)*Rmoist*pott/CONST_PRE00 )**( cpa/cva )
           temp = pres / ( DENS(k,i,j) * Rmoist )
           !--- calculate super saturation of water
-          call SATURATION_pres2qsat_liq( qsat_tmp,temp,pres )
-          ssliq = QTRC(k,i,j,I_QV)/qsat_tmp - 1.0_RP
+          if ( I_QV > 0 ) then
+             call SATURATION_pres2qsat_liq( qsat_tmp,temp,pres )
+             ssliq = QTRC(k,i,j,I_QV)/qsat_tmp - 1.0_RP
+          else
+             ssliq = - 1.0_RP
+          end if
           call aerosol_activation( &
                c_kappa, ssliq, temp, ia_m0, ia_m2, ia_m3, &
                N_ATR,n_siz_max,n_kap_max,n_ctg,NSIZ,n_kap, &
