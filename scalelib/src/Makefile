@@ -169,7 +169,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_sub_saturation.o	\
 	scale_atmos_sub_solarins.o	\
 	scale_atmos_sub_thermodyn.o	\
-	scale_atmos_sub_hydrometer.o	\
+	scale_atmos_sub_hydrometeor.o	\
 	scale_atmos_sub_adiabat.o	\
 	scale_bulkflux.o	\
 	scale_calendar.o	\
@@ -186,7 +186,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_index.o		\
 	scale_gridtrans.o	\
 	scale_history.o	\
-	scale_intepolation.o	\
+	scale_interpolation.o	\
 	scale_interpolation_nest.o	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\

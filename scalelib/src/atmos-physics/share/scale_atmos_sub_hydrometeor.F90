@@ -520,7 +520,6 @@ contains
     real(RP) :: lhv, lhf
     real(RP) :: qdry, qliq, qice, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
-    real(RP) :: sq
 
     integer :: iqw
     !---------------------------------------------------------------------------
@@ -604,7 +603,6 @@ contains
     real(RP) :: lhv, lhf
     real(RP) :: qdry, qliq, qice, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
-    real(RP) :: sq
 
     integer :: i, j, iqw
     !---------------------------------------------------------------------------
@@ -695,7 +693,6 @@ contains
     real(RP) :: lhv, lhf
     real(RP) :: qdry, qliq, qice, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
-    real(RP) :: sq
 
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
