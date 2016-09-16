@@ -288,6 +288,10 @@ contains
          P00   => CONST_PRE00
     use scale_time, only: &
        dtrd =>  TIME_DTSEC_ATMOS_PHY_RD
+    use scale_atmos_hydrometer, only: &
+       I_QV, &
+       QLS, &
+       QLE
     use mod_admin_time, only: &
        do_phy_rd => TIME_DOATMOS_PHY_RD
     implicit none
@@ -473,15 +477,13 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
+                Q_rate( k,i,j,: ) = 0.0_RP
                 ratesum = 0.0_RP
-                do iq = 1, QQA
+                do iq = I_QV, QLE
                    ratesum = ratesum + QTRC(k,i,j,iq)
                 enddo
-                do iq = 1, QQA
+                do iq = I_QV, QLE
                    Q_rate( k,i,j,iq ) = QTRC(k,i,j,iq) / ratesum
-                enddo
-                do iq = QQA+1, QA
-                   Q_rate( k,i,j,iq ) = 0.0_RP
                 enddo
              enddo
              enddo
@@ -533,7 +535,7 @@ contains
        k_cldtop = -1
        do k = KS, KE
           QTOT = 0.0_RP
-          do iq = QQS, QWE
+          do iq = I_QV, QLE
              QTOT = QTOT + QTRC(k,i,j,iq)
           enddo
           if( QTOT < 8.E-3_RP ) exit ! above cloud
@@ -551,7 +553,7 @@ contains
 
           do k2 = KS, KE
              QWSUM = 0.0_RP
-             do iq = QWS, QWE
+             do iq = QLS, QLE
                 QWSUM = QWSUM + QTRC(k2,i,j,iq)
              enddo
              dQ = kappa * CDZ(k2) * DENS(k2,i,j) * QWSUM
@@ -570,7 +572,7 @@ contains
            dZ_CBRT = dZ**(1.0_RP/3.0_RP)
 
            QTOT = 0.0_RP
-           do iq = QQS, QWE
+           do iq = I_QV, QLE
               QTOT = QTOT + QTRC(k,i,j,iq)
            enddo
 
