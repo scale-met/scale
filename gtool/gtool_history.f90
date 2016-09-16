@@ -40,8 +40,6 @@ module gtool_history
   !++ Public procedures
   !
   public :: HistoryInit
-  public :: HistorySetHgt
-  public :: HistorySetPres
   public :: HistoryCheck
   public :: HistoryAddVariable
   public :: HistoryPutAxis
@@ -159,6 +157,8 @@ module gtool_history
   !
   !++ Public parameters & variables
   !
+  integer,                    public, parameter    :: History_PAXIS_nlimit   = 100       !> Number limit of pressure layer
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -169,53 +169,43 @@ module gtool_history
   !
 
   ! From upstream side of the library
-  integer,                    private              :: History_master                                      !> Number of master rank
-  integer,                    private              :: History_myrank                                      !> Number of my rank
-  integer,                    private, allocatable :: History_rankidx(:)                                  !> Index number in the 2D rank mesh
+  integer,                    private              :: History_master                    !> Number of master rank
+  integer,                    private              :: History_myrank                    !> Number of my rank
+  integer,                    private, allocatable :: History_rankidx(:)                !> Index number in the 2D rank mesh
 
-  real(DP),                   private              :: History_STARTDAYSEC                                 !> Start date [second]
-  real(DP),                   private              :: History_DTSEC                                       !> Delta t    [second]
-  character(len=File_HMID),   private              :: History_TIME_SINCE                      = ''        !> Offset time
+  real(DP),                   private              :: History_STARTDAYSEC               !> Start date [second]
+  real(DP),                   private              :: History_DTSEC                     !> Delta t    [second]
+  character(len=File_HMID),   private              :: History_TIME_SINCE    = ''        !> Offset time
 
   ! From NAMELIST or upstream side of the library
-  character(len=File_HMID),   private              :: History_TITLE                                       !> Header information of the output file: title
-  character(len=File_HMID),   private              :: History_SOURCE                                      !> Header information of the output file: model name
-  character(len=File_HMID),   private              :: History_INSTITUTION                                 !> Header information of the output file: institution
-  character(len=File_HMID),   private              :: History_TIME_UNITS                      = 'seconds' !> Unit for time axis
+  character(len=File_HMID),   private              :: History_TITLE                     !> Header information of the output file: title
+  character(len=File_HMID),   private              :: History_SOURCE                    !> Header information of the output file: model name
+  character(len=File_HMID),   private              :: History_INSTITUTION               !> Header information of the output file: institution
+  character(len=File_HMID),   private              :: History_TIME_UNITS    = 'seconds' !> Unit for time axis
 
-  logical,                    private              :: History_OUTPUT_STEP0                    = .false.   !> Output value at step=0?
-  real(DP),                   private              :: History_OUTPUT_WAIT                     = 0.0_DP    !> Time length to suppress output [sec]
+  logical,                    private              :: History_OUTPUT_STEP0  = .false.   !> Output value at step=0?
+  real(DP),                   private              :: History_OUTPUT_WAIT   = 0.0_DP    !> Time length to suppress output [sec]
 
-  logical,                    private              :: History_OUTPUT_PRES                     = .false.   !> At least one variable outputs in pressure coordinate?
-  integer,                    private, parameter   :: History_PRES_NLIMIT                     = 100       !> Number limit of pressure layer
-  integer,                    private              :: History_PRES_NLAYER                     = -1        !> Number of pressure layer
-  real(DP),                   private              :: History_PRES_VALUE(History_PRES_NLIMIT) = 0.0_DP    !> Pressure at each layer [hPa]
+  logical,                    private              :: History_ERROR_PUTMISS = .false.   !> Abort if the value is never stored after last output?
 
-  logical,                    private              :: History_ERROR_PUTMISS                   = .false.   !> Abort if the value is never stored after last output?
-
-  !
-  integer,                    private, parameter   :: History_req_limit = 1000  !> number limit for history item request
-  integer,                    private              :: History_req_count = 0     !> number of requested item
+  ! working
+  integer,                    private, parameter   :: History_req_limit     = 1000      !> number limit for history item request
+  integer,                    private              :: History_req_count     = 0         !> number of requested item
   type(request),              private, allocatable :: History_req(:)
 
-  integer,                    private              :: History_id_count  = 0     !> number of registered item
+  integer,                    private              :: History_id_count      = 0         !> number of registered item
   type(vars),                 private, allocatable :: History_vars(:)
 
-  integer,                    private, parameter   :: History_axis_limit = 100  !> number limit of axes
-  integer,                    private              :: History_axis_count =   0
+  integer,                    private, parameter   :: History_axis_limit    = 100       !> number limit of axes
+  integer,                    private              :: History_axis_count    =   0
   type(axis),                 private              :: History_axis(History_axis_limit)
 
-  integer,                    private, parameter   :: History_assoc_limit = 20  !> number limit of associated coordinates
-  integer,                    private              :: History_assoc_count =  0
+  integer,                    private, parameter   :: History_assoc_limit   = 20        !> number limit of associated coordinates
+  integer,                    private              :: History_assoc_count   =  0
   type(assoc),                private              :: History_assoc(History_assoc_limit)
 
-  real(DP),                   private, parameter   :: eps = 1.D-10              !> epsilon for timesec
+  real(DP),                   private, parameter   :: eps                   = 1.D-10    !> epsilon for timesec
 
-  integer,                    private              :: History_ksize  = -1       !< array size k
-  integer,                    private              :: History_isize  = -1       !< array size i
-  integer,                    private              :: History_jsize  = -1       !< array size j
-
-  logical,                    private              :: exists_topo    = .false.
   real(DP),                   private              :: laststep_write = -1
   logical,                    private              :: firsttime      = .true.
   character(LEN=LOG_LMSG),    private              :: message        = ''
@@ -225,6 +215,9 @@ module gtool_history
 contains
   !-----------------------------------------------------------------------------
   subroutine HistoryInit( &
+       output_paxis,      &
+       paxis_nlayer,      &
+       paxis_value,       &
        ksize,             &
        isize,             &
        jsize,             &
@@ -252,10 +245,11 @@ contains
        File_REAL4, &
        File_REAL8, &
        File_preclist
-    use gtool_zinterp, only: &
-       Zinterp_setindex
     implicit none
 
+    logical,          intent(out)          :: output_paxis
+    integer,          intent(out)          :: paxis_nlayer
+    real(DP),         intent(out)          :: paxis_value(History_PAXIS_nlimit)
     integer,          intent(in)           :: ksize
     integer,          intent(in)           :: isize
     integer,          intent(in)           :: jsize
@@ -289,6 +283,9 @@ contains
     character(len=File_HSHORT) :: History_DEFAULT_DATATYPE  = 'REAL4' !> data type
                                                                       !> REAL4 : single precision
                                                                       !> REAL8 : double precision
+
+    integer  :: History_PRES_NLAYER                      = -1     !> Number of pressure layer
+    real(DP) :: History_PRES_VALUE(History_PAXIS_nlimit) = 0.0_DP !> Pressure at each layer [hPa]
 
     NAMELIST / PARAM_HISTORY / &
        History_TITLE,             &
@@ -400,8 +397,8 @@ contains
        call Log('E',message)
     endif
 
-    if ( History_PRES_NLAYER > History_PRES_NLIMIT ) then
-       write(message,*) 'xxx History_PRES_NLAYER is exceed! limit = ', History_PRES_NLIMIT
+    if ( History_PRES_NLAYER > History_PAXIS_nlimit ) then
+       write(message,*) 'xxx History_PRES_NLAYER is exceed! limit = ', History_PAXIS_nlimit
        call Log('E',message)
     endif
 
@@ -420,14 +417,9 @@ contains
        enddo
     endif
 
-    History_ksize = ksize
-    History_isize = isize
-    History_jsize = jsize
-
-    call Zinterp_setindex( History_ksize,      & ! [IN]
-                           History_isize,      & ! [IN]
-                           History_jsize,      & ! [IN]
-                           History_PRES_NLAYER ) ! [IN]
+    output_paxis   = .false.
+    paxis_nlayer   = History_PRES_NLAYER
+    paxis_value(:) = History_PRES_VALUE(:)
 
     array_size = isize * jsize * max(ksize,History_PRES_NLAYER)
 
@@ -521,7 +513,7 @@ contains
              call Log('E',message)
           endif
           History_req(reqid)%zinterp = 3
-          History_OUTPUT_PRES        = .true.
+          output_paxis               = .true.
        case default
           write(message,*) 'xxx ZINTERP has invalid name. ', trim(ZINTERP)
           call Log('E',message)
@@ -565,102 +557,8 @@ contains
        allocate( History_vars(n)%varsum(array_size) )
     enddo
 
-    if ( History_OUTPUT_PRES ) then
-       call HistoryPutAxis( 'pz', 'Pressure', 'hPa', 'pz',             &
-                            History_PRES_VALUE(1:History_PRES_NLAYER), &
-                            down=.true.                                )
-    endif
-
     return
   end subroutine HistoryInit
-
-  !-----------------------------------------------------------------------------
-  subroutine HistorySetHgt( &
-       ksize,     &
-       isize,     &
-       jsize,     &
-       xi_C,      &
-       xi_F,      &
-       Z_C,       &
-       Z_F,       &
-       TOPO_exist )
-    use gtool_zinterp, only: &
-       Zinterp_setcoef_HGT
-    implicit none
-
-    integer,  intent(in) :: ksize
-    integer,  intent(in) :: isize
-    integer,  intent(in) :: jsize
-    real(DP), intent(in) :: Xi_C(  ksize)
-    real(DP), intent(in) :: Xi_F(0:ksize)
-    real(DP), intent(in) :: Z_C (  ksize,isize,jsize)
-    real(DP), intent(in) :: Z_F (0:ksize,isize,jsize)
-    logical,  intent(in) :: TOPO_exist
-    !---------------------------------------------------------------------------
-
-    if (      ksize /= History_ksize &
-         .OR. isize /= History_isize &
-         .OR. jsize /= History_jsize ) then
-       write(message,*) 'xxx Not appropriate array size. check!', &
-                        ksize, History_ksize, &
-                        isize, History_isize, &
-                        jsize, History_jsize
-       call Log('E',message)
-    endif
-
-    exists_topo = TOPO_exist
-
-    call Zinterp_setcoef_HGT( ksize,       & ! [IN]
-                              isize,       & ! [IN]
-                              jsize,       & ! [IN]
-                              Xi_C(:),     & ! [IN]
-                              Xi_F(:),     & ! [IN]
-                              Z_C (:,:,:), & ! [IN]
-                              Z_F (:,:,:)  ) ! [IN]
-
-    return
-  end subroutine HistorySetHgt
-
-  !-----------------------------------------------------------------------------
-  subroutine HistorySetPres( &
-       ksize,    &
-       isize,    &
-       jsize,    &
-       Pres_atm, &
-       Pres_sfc  )
-    use gtool_zinterp, only: &
-       Zinterp_setcoef_PRES
-    implicit none
-
-    integer,  intent(in) :: ksize
-    integer,  intent(in) :: isize
-    integer,  intent(in) :: jsize
-    real(DP), intent(in) :: Pres_atm(ksize,isize,jsize) ! pressure in Xi coordinate [hPa]
-    real(DP), intent(in) :: Pres_sfc(      isize,jsize) ! surface pressure          [hPa]
-    !---------------------------------------------------------------------------
-
-    if( .NOT. History_OUTPUT_PRES ) return
-
-    if (      ksize /= History_ksize &
-         .OR. isize /= History_isize &
-         .OR. jsize /= History_jsize ) then
-       write(message,*) 'xxx Not appropriate array size. check!', &
-                        ksize, History_ksize, &
-                        isize, History_isize, &
-                        jsize, History_jsize
-       call Log('E',message)
-    endif
-
-    call Zinterp_setcoef_PRES( ksize,                                    & ! [IN]
-                               isize,                                    & ! [IN]
-                               jsize,                                    & ! [IN]
-                               History_PRES_NLAYER,                      & ! [IN]
-                               Pres_atm(:,:,:),                          & ! [IN]
-                               Pres_sfc(:,:),                            & ! [IN]
-                               History_PRES_VALUE(1:History_PRES_NLAYER) ) ! [IN]
-
-    return
-  end subroutine HistorySetPres
 
   !-----------------------------------------------------------------------------
   subroutine HistoryCheck( &
@@ -1573,25 +1471,30 @@ contains
   subroutine HistoryQuery( &
        item,     &
        step_now, &
-       answer    )
+       answer,   &
+       zinterp   )
     implicit none
 
     character(len=*), intent(in)  :: item
     integer,          intent(in)  :: step_now
     logical,          intent(out) :: answer
+    integer,          intent(out) :: zinterp
 
     integer :: id
     !---------------------------------------------------------------------------
 
-    answer = .false.
+    answer  = .false.
+    zinterp = -1
 
     ! note: multiple put may be necessary for the item
     do id = 1, History_id_count
        if ( item == History_vars(id)%item ) then
           if    ( History_vars(id)%taverage ) then
-             answer = .true.
+             answer  = .true.
+             zinterp = History_vars(id)%zinterp
           elseif( step_now == History_vars(id)%laststep_write + History_vars(id)%dstep ) then
-             answer = .true.
+             answer  = .true.
+             zinterp = History_vars(id)%zinterp
           endif
        endif
     enddo
@@ -1624,188 +1527,6 @@ contains
 
     return
   end subroutine HistoryPut0DNameSP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut0DNameDP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(DP),         intent(in) :: var
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut0DIdDP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut0DNameDP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut1DNameSP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(SP),         intent(in) :: var(:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut1DIdSP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut1DNameSP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut1DNameDP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(DP),         intent(in) :: var(:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut1DIdDP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut1DNameDP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut2DNameSP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(SP),         intent(in) :: var(:,:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut2DIdSP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut2DNameSP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut2DNameDP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(DP),         intent(in) :: var(:,:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut2DIdDP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut2DNameDP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut3DNameSP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(SP),         intent(in) :: var(:,:,:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut3DIdSP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut3DNameSP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut3DNameDP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(DP),         intent(in) :: var(:,:,:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut3DIdDP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut3DNameDP
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut0DIdSP( &
@@ -1853,6 +1574,32 @@ contains
   end subroutine HistoryPut0DIdSP
 
   !-----------------------------------------------------------------------------
+  subroutine HistoryPut0DNameDP( &
+       item,     &
+       step_now, &
+       var       )
+    implicit none
+
+    character(len=*), intent(in) :: item
+    integer,          intent(in) :: step_now
+    real(DP),         intent(in) :: var
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    ! note: multiple put may be necessary for the item
+    do id = 1, History_id_count
+       if ( item == History_vars(id)%item ) then
+          call HistoryPut0DIdDP( id,       & ! [IN]
+                                 step_now, & ! [IN]
+                                 var       ) ! [IN]
+       endif
+    enddo
+
+    return
+  end subroutine HistoryPut0DNameDP
+
+  !-----------------------------------------------------------------------------
   subroutine HistoryPut0DIdDP( &
        id,       &
        step_now, &
@@ -1896,6 +1643,32 @@ contains
 
     return
   end subroutine HistoryPut0DIdDP
+
+  !-----------------------------------------------------------------------------
+  subroutine HistoryPut1DNameSP( &
+       item,     &
+       step_now, &
+       var       )
+    implicit none
+
+    character(len=*), intent(in) :: item
+    integer,          intent(in) :: step_now
+    real(SP),         intent(in) :: var(:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    ! note: multiple put may be necessary for the item
+    do id = 1, History_id_count
+       if ( item == History_vars(id)%item ) then
+          call HistoryPut1DIdSP( id,       & ! [IN]
+                                 step_now, & ! [IN]
+                                 var       ) ! [IN]
+       endif
+    enddo
+
+    return
+  end subroutine HistoryPut1DNameSP
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut1DIdSP( &
@@ -1950,6 +1723,32 @@ contains
   end subroutine HistoryPut1DIdSP
 
   !-----------------------------------------------------------------------------
+  subroutine HistoryPut1DNameDP( &
+       item,     &
+       step_now, &
+       var       )
+    implicit none
+
+    character(len=*), intent(in) :: item
+    integer,          intent(in) :: step_now
+    real(DP),         intent(in) :: var(:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    ! note: multiple put may be necessary for the item
+    do id = 1, History_id_count
+       if ( item == History_vars(id)%item ) then
+          call HistoryPut1DIdDP( id,       & ! [IN]
+                                 step_now, & ! [IN]
+                                 var       ) ! [IN]
+       endif
+    enddo
+
+    return
+  end subroutine HistoryPut1DNameDP
+
+  !-----------------------------------------------------------------------------
   subroutine HistoryPut1DIdDP( &
        id,       &
        step_now, &
@@ -2002,6 +1801,32 @@ contains
   end subroutine HistoryPut1DIdDP
 
   !-----------------------------------------------------------------------------
+  subroutine HistoryPut2DNameSP( &
+       item,     &
+       step_now, &
+       var       )
+    implicit none
+
+    character(len=*), intent(in) :: item
+    integer,          intent(in) :: step_now
+    real(SP),         intent(in) :: var(:,:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    ! note: multiple put may be necessary for the item
+    do id = 1, History_id_count
+       if ( item == History_vars(id)%item ) then
+          call HistoryPut2DIdSP( id,       & ! [IN]
+                                 step_now, & ! [IN]
+                                 var       ) ! [IN]
+       endif
+    enddo
+
+    return
+  end subroutine HistoryPut2DNameSP
+
+  !-----------------------------------------------------------------------------
   subroutine HistoryPut2DIdSP( &
        id,       &
        step_now, &
@@ -2034,7 +1859,7 @@ contains
     if ( History_vars(id)%taverage ) then
        do j = 1, vsize(2)
        do i = 1, vsize(1)
-          idx = (j-1)*vsize(i)+i
+          idx = (j-1)*vsize(1)+i
           History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var(i,j) * dt
        enddo
        enddo
@@ -2043,7 +1868,7 @@ contains
     else
        do j = 1, vsize(2)
        do i = 1, vsize(1)
-          idx = (j-1)*vsize(i)+i
+          idx = (j-1)*vsize(1)+i
           History_vars(id)%varsum(idx) = var(i,j)
        enddo
        enddo
@@ -2056,6 +1881,32 @@ contains
 
     return
   end subroutine HistoryPut2DIdSP
+
+  !-----------------------------------------------------------------------------
+  subroutine HistoryPut2DNameDP( &
+       item,     &
+       step_now, &
+       var       )
+    implicit none
+
+    character(len=*), intent(in) :: item
+    integer,          intent(in) :: step_now
+    real(DP),         intent(in) :: var(:,:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    ! note: multiple put may be necessary for the item
+    do id = 1, History_id_count
+       if ( item == History_vars(id)%item ) then
+          call HistoryPut2DIdDP( id,       & ! [IN]
+                                 step_now, & ! [IN]
+                                 var       ) ! [IN]
+       endif
+    enddo
+
+    return
+  end subroutine HistoryPut2DNameDP
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut2DIdDP( &
@@ -2090,7 +1941,7 @@ contains
     if ( History_vars(id)%taverage ) then
        do j = 1, vsize(2)
        do i = 1, vsize(1)
-          idx = (j-1)*vsize(i)+i
+          idx = (j-1)*vsize(1)+i
           History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var(i,j) * dt
        enddo
        enddo
@@ -2099,7 +1950,7 @@ contains
     else
        do j = 1, vsize(2)
        do i = 1, vsize(1)
-          idx = (j-1)*vsize(i)+i
+          idx = (j-1)*vsize(1)+i
           History_vars(id)%varsum(idx) = var(i,j)
        enddo
        enddo
@@ -2114,26 +1965,46 @@ contains
   end subroutine HistoryPut2DIdDP
 
   !-----------------------------------------------------------------------------
+  subroutine HistoryPut3DNameSP( &
+       item,     &
+       step_now, &
+       var       )
+    implicit none
+
+    character(len=*), intent(in) :: item
+    integer,          intent(in) :: step_now
+    real(SP),         intent(in) :: var(:,:,:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    ! note: multiple put may be necessary for the item
+    do id = 1, History_id_count
+       if ( item == History_vars(id)%item ) then
+          call HistoryPut3DIdSP( id,       & ! [IN]
+                                 step_now, & ! [IN]
+                                 var       ) ! [IN]
+       endif
+    enddo
+
+    return
+  end subroutine HistoryPut3DNameSP
+
+  !-----------------------------------------------------------------------------
   subroutine HistoryPut3DIdSP( &
        id,       &
        step_now, &
        var       )
-    use gtool_zinterp, only: &
-       Zinterp_xi2z, &
-       Zinterp_xi2p
     implicit none
 
     integer,  intent(in) :: id
     integer,  intent(in) :: step_now
     real(SP), intent(in) :: var(:,:,:)
 
-    real(SP) :: var_Z(History_ksize      ,History_isize,History_jsize)
-    real(SP) :: var_P(History_PRES_NLAYER,History_isize,History_jsize)
-
     real(DP) :: dt
     integer  :: idx
     integer  :: vsize(3)
-    integer  :: k, i, j
+    integer  :: i, j, k
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2149,112 +2020,29 @@ contains
        call Log('E',message)
     endif
 
-    if    (       History_vars(id)%zinterp == 2 &
-            .AND. exists_topo                   &
-            .AND. vsize(1) == History_ksize     ) then ! z*->z interpolation
+    if ( History_vars(id)%taverage ) then
+       do k = 1, vsize(3)
+       do j = 1, vsize(2)
+       do i = 1, vsize(1)
+          idx = ((k-1)*vsize(2)+(j-1))*vsize(1)+i
+          History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var(i,j,k) * dt
+       enddo
+       enddo
+       enddo
 
-       if (      vsize(2) /= History_isize &
-            .OR. vsize(3) /= History_jsize ) then
-          write(message,*) 'xxx Not appropriate array size. check!', &
-                           vsize(2), History_isize, &
-                           vsize(3), History_jsize
-          call Log('E',message)
-       endif
+       History_vars(id)%timesum = History_vars(id)%timesum + dt
+    else
+       do k = 1, vsize(3)
+       do j = 1, vsize(2)
+       do i = 1, vsize(1)
+          idx = ((k-1)*vsize(2)+(j-1))*vsize(1)+i
+          History_vars(id)%varsum(idx) = var(i,j,k)
+       enddo
+       enddo
+       enddo
 
-       call Zinterp_xi2z( vsize(1),     & ! [IN]
-                          vsize(2),     & ! [IN]
-                          vsize(3),     & ! [IN]
-                          var  (:,:,:), & ! [IN]
-                          var_Z(:,:,:)  ) ! [OUT]
-
-       if ( History_vars(id)%taverage ) then
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, vsize(1)
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var_Z(k,i,j) * dt
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = History_vars(id)%timesum + dt
-       else
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, vsize(1)
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = var_Z(k,i,j)
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = 0.0_DP
-       endif
-
-    elseif(       History_vars(id)%zinterp == 3 &
-            .AND. vsize(1) == History_ksize     ) then ! z*->p interpolation
-
-       if (      vsize(2) /= History_isize &
-            .OR. vsize(3) /= History_jsize ) then
-          write(message,*) 'xxx Not appropriate array size. check!', &
-                           vsize(2), History_isize, &
-                           vsize(3), History_jsize
-          call Log('E',message)
-       endif
-
-       call Zinterp_xi2p( vsize(1),            & ! [IN]
-                          vsize(2),            & ! [IN]
-                          vsize(3),            & ! [IN]
-                          History_PRES_NLAYER, & ! [IN]
-                          var  (:,:,:),        & ! [IN]
-                          var_P(:,:,:)         ) ! [OUT]
-
-       if ( History_vars(id)%taverage ) then
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, History_PRES_NLAYER
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var_P(k,i,j) * dt
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = History_vars(id)%timesum + dt
-       else
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, History_PRES_NLAYER
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = var_P(k,i,j)
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = 0.0_DP
-       endif
-
-    else ! no interpolation
-
-       if ( History_vars(id)%taverage ) then
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, vsize(1)
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var(k,i,j) * dt
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = History_vars(id)%timesum + dt
-       else
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, vsize(1)
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = var(k,i,j)
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = 0.0_DP
-       endif
-
+       History_vars(id)%timesum = 0.0_DP
     endif
-
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
@@ -2263,26 +2051,46 @@ contains
   end subroutine HistoryPut3DIdSP
 
   !-----------------------------------------------------------------------------
+  subroutine HistoryPut3DNameDP( &
+       item,     &
+       step_now, &
+       var       )
+    implicit none
+
+    character(len=*), intent(in) :: item
+    integer,          intent(in) :: step_now
+    real(DP),         intent(in) :: var(:,:,:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    ! note: multiple put may be necessary for the item
+    do id = 1, History_id_count
+       if ( item == History_vars(id)%item ) then
+          call HistoryPut3DIdDP( id,       & ! [IN]
+                                 step_now, & ! [IN]
+                                 var       ) ! [IN]
+       endif
+    enddo
+
+    return
+  end subroutine HistoryPut3DNameDP
+
+  !-----------------------------------------------------------------------------
   subroutine HistoryPut3DIdDP( &
        id,       &
        step_now, &
        var       )
-    use gtool_zinterp, only: &
-       Zinterp_xi2z, &
-       Zinterp_xi2p
     implicit none
 
     integer,  intent(in) :: id
     integer,  intent(in) :: step_now
     real(DP), intent(in) :: var(:,:,:)
 
-    real(DP) :: var_Z(History_ksize      ,History_isize,History_jsize)
-    real(DP) :: var_P(History_PRES_NLAYER,History_isize,History_jsize)
-
     real(DP) :: dt
     integer  :: idx
     integer  :: vsize(3)
-    integer  :: k, i, j
+    integer  :: i, j, k
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2298,112 +2106,29 @@ contains
        call Log('E',message)
     endif
 
-    if    (       History_vars(id)%zinterp == 2 &
-            .AND. exists_topo                   &
-            .AND. vsize(1) == History_ksize     ) then ! z*->z interpolation
+    if ( History_vars(id)%taverage ) then
+       do k = 1, vsize(3)
+       do j = 1, vsize(2)
+       do i = 1, vsize(1)
+          idx = ((k-1)*vsize(2)+(j-1))*vsize(1)+i
+          History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var(i,j,k) * dt
+       enddo
+       enddo
+       enddo
 
-       if (      vsize(2) /= History_isize &
-            .OR. vsize(3) /= History_jsize ) then
-          write(message,*) 'xxx Not appropriate array size. check!', &
-                           vsize(2), History_isize, &
-                           vsize(3), History_jsize
-          call Log('E',message)
-       endif
+       History_vars(id)%timesum = History_vars(id)%timesum + dt
+    else
+       do k = 1, vsize(3)
+       do j = 1, vsize(2)
+       do i = 1, vsize(1)
+          idx = ((k-1)*vsize(2)+(j-1))*vsize(1)+i
+          History_vars(id)%varsum(idx) = var(i,j,k)
+       enddo
+       enddo
+       enddo
 
-       call Zinterp_xi2z( vsize(1),     & ! [IN]
-                          vsize(2),     & ! [IN]
-                          vsize(3),     & ! [IN]
-                          var  (:,:,:), & ! [IN]
-                          var_Z(:,:,:)  ) ! [OUT]
-
-       if ( History_vars(id)%taverage ) then
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, vsize(1)
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var_Z(k,i,j) * dt
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = History_vars(id)%timesum + dt
-       else
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, vsize(1)
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = var_Z(k,i,j)
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = 0.0_DP
-       endif
-
-    elseif(       History_vars(id)%zinterp == 3 &
-            .AND. vsize(1) == History_ksize     ) then ! z*->p interpolation
-
-       if (      vsize(2) /= History_isize &
-            .OR. vsize(3) /= History_jsize ) then
-          write(message,*) 'xxx Not appropriate array size. check!', &
-                           vsize(2), History_isize, &
-                           vsize(3), History_jsize
-          call Log('E',message)
-       endif
-
-       call Zinterp_xi2p( vsize(1),            & ! [IN]
-                          vsize(2),            & ! [IN]
-                          vsize(3),            & ! [IN]
-                          History_PRES_NLAYER, & ! [IN]
-                          var  (:,:,:),        & ! [IN]
-                          var_P(:,:,:)         ) ! [OUT]
-
-       if ( History_vars(id)%taverage ) then
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, History_PRES_NLAYER
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var_P(k,i,j) * dt
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = History_vars(id)%timesum + dt
-       else
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, History_PRES_NLAYER
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = var_P(k,i,j)
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = 0.0_DP
-       endif
-
-    else ! no interpolation
-
-       if ( History_vars(id)%taverage ) then
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, vsize(1)
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var(k,i,j) * dt
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = History_vars(id)%timesum + dt
-       else
-          do j = 1, vsize(3)
-          do i = 1, vsize(2)
-          do k = 1, vsize(1)
-             idx = (k-1)*vsize(3)*vsize(2) + (j-1)*vsize(2) + i
-             History_vars(id)%varsum(idx) = var(k,i,j)
-          enddo
-          enddo
-          enddo
-          History_vars(id)%timesum = 0.0_DP
-       endif
-
+       History_vars(id)%timesum = 0.0_DP
     endif
-
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now

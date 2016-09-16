@@ -80,12 +80,17 @@ module scale_history
   integer, private :: ims, ime
   integer, private :: jms, jme
 
+  logical,  private              :: HIST_OUTPUT_PAXIS
+  integer,  private              :: HIST_PAXIS_nlayer !> Number of pressure layer
+  real(RP), private, allocatable :: HIST_PAXIS(:)     !> pressure level to output [Pa]
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine HIST_setup
     use gtool_history, only: &
+       History_PAXIS_nlimit, &
        HistoryInit
     use scale_process, only: &
        PRC_MPIstop,    &
@@ -99,6 +104,8 @@ contains
        TIME_DTSEC,       &
        TIME_STARTDAYSEC, &
        TIME_OFFSET_YEAR
+    use scale_interpolation, only: &
+       INTERP_setup_pres
     implicit none
 
     character(len=H_MID)   :: HISTORY_H_TITLE = 'SCALE-RM HISTORY OUTPUT' !< title of the output file
@@ -109,9 +116,12 @@ contains
     NAMELIST / PARAM_HIST / &
        HIST_BND
 
+    real(DP) :: HIST_PAXIS_hPa(History_PAXIS_nlimit)! pressure level to output [hPa]
+
     real(DP) :: start_daysec
     integer  :: rankidx(2)
     integer  :: ierr
+    integer  :: k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -162,7 +172,10 @@ contains
        jme = JE
     endif
 
-    call HistoryInit( KMAX, im, jm,                    & ! [IN]
+    call HistoryInit( HIST_OUTPUT_PAXIS,               & ! [OUT]
+                      HIST_PAXIS_nlayer,               & ! [OUT]
+                      HIST_PAXIS_hPa(:),               & ! [OUT]
+                      KMAX, im, jm,                    & ! [IN]
                       PRC_masterrank,                  & ! [IN]
                       PRC_myrank,                      & ! [IN]
                       rankidx(:),                      & ! [IN]
@@ -174,10 +187,17 @@ contains
                       time_since    = HISTORY_T_SINCE, & ! [IN]
                       namelist_fid  = IO_FID_CONF      ) ! [IN]
 
+    if ( HIST_OUTPUT_PAXIS ) then
+       allocate( HIST_PAXIS(HIST_PAXIS_nlayer) )
+
+       do k = 1, HIST_PAXIS_nlayer
+          HIST_PAXIS(k) = HIST_PAXIS_hPa(k) * 100.0_RP ! [hPa->Pa]
+       enddo
+
+       call INTERP_setup_pres( HIST_PAXIS_nlayer ) ! [IN]
+    endif
 
     call HIST_put_axes
-
-    call HIST_sethgt
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -258,6 +278,10 @@ contains
     call HistoryPutAxis( 'xh',   'X (half level)',                    'm', 'xh',  GRID_FX(ims:ime) )
     call HistoryPutAxis( 'yh',   'Y (half level)',                    'm', 'yh',  GRID_FY(jms:jme) )
     call HistoryPutAxis( 'zh',   'Z (half level)',                    'm', 'zh',  GRID_FZ(KS:KE)   )
+
+    if ( HIST_OUTPUT_PAXIS ) then
+       call HistoryPutAxis( 'pz', 'Pressure', 'hPa', 'pz', HIST_PAXIS(:)/100.0_RP, down=.true. )
+    endif
 
     call HistoryPutAxis( 'lz',   'LZ',                                'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true. )
     call HistoryPutAxis( 'lzh',  'LZ (half level)',                   'm', 'lzh', GRID_LFZ(LKS:LKE), down=.true. )
@@ -492,99 +516,24 @@ contains
   end subroutine HIST_switch
 
   !-----------------------------------------------------------------------------
-  !> set interpolation factor for height coordinate
-  subroutine HIST_sethgt
-    use gtool_history, only: &
-       HistorySetHgt
-    use scale_grid, only: &
-       GRID_CZ, &
-       GRID_FZ
-    use scale_topography, only: &
-       TOPO_exist
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
-    implicit none
-
-    real(DP) :: Xi_C(  KMAX)
-    real(DP) :: Xi_F(0:KMAX)
-    real(DP) :: Z_C (  KMAX,im,jm)
-    real(DP) :: Z_F (0:KMAX,im,jm)
-
-    integer :: k, i, j
-    !---------------------------------------------------------------------------
-
-    do k = 1, KMAX
-       Xi_C(k) = real(GRID_CZ(KS+k-1),kind=DP)
-    enddo
-
-    do k = 0, KMAX
-       Xi_F(k) = real(GRID_FZ(KS+k-1),kind=DP)
-    enddo
-
-    do j = 1, jm
-    do i = 1, im
-    do k = 1, KMAX
-       Z_C(k,i,j) = real(REAL_CZ(KS+k-1,ims+i-1,jms+j-1),kind=DP)
-    enddo
-    enddo
-    enddo
-
-    do j = 1, jm
-    do i = 1, im
-    do k = 0, KMAX
-       Z_F(k,i,j) = real(REAL_FZ(KS+k-1,ims+i-1,jms+j-1),kind=DP)
-    enddo
-    enddo
-    enddo
-
-    call HistorySetHgt( KMAX, im, jm, & ! [IN]
-                        Xi_C(:),      & ! [IN]
-                        Xi_F(:),      & ! [IN]
-                        Z_C (:,:,:),  & ! [IN]
-                        Z_F (:,:,:),  & ! [IN]
-                        TOPO_exist    ) ! [IN]
-
-    return
-  end subroutine HIST_sethgt
-
-  !-----------------------------------------------------------------------------
   !> set interpolation factor for pressure coordinate
   subroutine HIST_setpres( &
        PRES,    &
        SFC_PRES )
-    use gtool_history, only: &
-       HistorySetPres
+    use scale_interpolation, only: &
+       INTERP_update_pres
     implicit none
 
-    real(RP), intent(in) :: PRES    (KA,IA,JA)
-    real(RP), intent(in) :: SFC_PRES(   IA,JA)
-
-    real(DP) :: Pres_atm(KMAX,im,jm) ! pressure         [hPa]
-    real(DP) :: Pres_sfc(     im,jm) ! surface pressure [hPa]
-
-    integer :: k, i, j
+    real(RP), intent(in) :: PRES    (KA,IA,JA) ! pressure in Xi coordinate [Pa]
+    real(RP), intent(in) :: SFC_PRES(   IA,JA) ! surface pressure          [Pa]
     !---------------------------------------------------------------------------
 
-    do j = 1, jm
-    do i = 1, im
-    do k = 1, KMAX
-       Pres_atm(k,i,j) = real(PRES(KS+k-1,ims+i-1,jms+j-1)/1.E2_RP,kind=DP)
-    enddo
-    enddo
-    enddo
-
-    do j = 1, jm
-    do i = 1, im
-    do k = 1, KMAX
-       Pres_sfc(i,j) = real(SFC_PRES(ims+i-1,jms+j-1)/1.E2_RP,kind=DP)
-    enddo
-    enddo
-    enddo
-
-    call HistorySetPres( KMAX, im, jm,    & ! [IN]
-                         Pres_atm(:,:,:), & ! [IN]
-                         Pres_sfc(:,:)    ) ! [IN]
+    if ( HIST_OUTPUT_PAXIS ) then
+       call INTERP_update_pres( HIST_PAXIS_nlayer, & ! [IN]
+                                PRES      (:,:,:), & ! [IN]
+                                SFC_PRES  (:,:)  , & ! [IN]
+                                HIST_PAXIS(:)      ) ! [IN]
+    endif
 
     return
   end subroutine HIST_setpres
@@ -714,15 +663,17 @@ contains
   !> Check time to putting data
   subroutine HIST_query( &
        item,   &
-       answer  )
+       answer, &
+       zinterp )
     use gtool_history, only: &
        HistoryQuery
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
 
-    character(len=*), intent(in)  :: item   !< name of the item
-    logical,          intent(out) :: answer !< is it time to store?
+    character(len=*), intent(in)  :: item    !< name of the item
+    logical,          intent(out) :: answer  !< is it time to store?
+    integer,          intent(out) :: zinterp !< interpolation type 1)mdl 2)z 3)p
     !---------------------------------------------------------------------------
 
     answer = .false.
@@ -733,7 +684,8 @@ contains
 
     call HistoryQuery( item,         & ! [IN]
                        TIME_NOWSTEP, & ! [IN]
-                       answer        ) ! [OUT]
+                       answer,       & ! [OUT]
+                       zinterp       ) ! [OUT]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -743,16 +695,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
   subroutine HIST_put_0D( &
-       item, &
-       var   )
+       item,   &
+       var,    &
+       zinterp )
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
 
-    character(len=*), intent(in)  :: item   !< name of the item
-    real(RP),         intent(in)  :: var    !< value
+    character(len=*), intent(in)  :: item       !< name of the item
+    real(RP),         intent(in)  :: var        !< value
+    integer,          intent(in)  :: zinterp    !< interpolation type 1)mdl 2)z 3)p
     !---------------------------------------------------------------------------
 
     if( .NOT. enabled ) return
@@ -771,16 +725,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
   subroutine HIST_put_1D( &
-       item, &
-       var   )
+       item,   &
+       var,    &
+       zinterp )
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
 
-    character(len=*), intent(in)  :: item   !< name of the item
-    real(RP),         intent(in)  :: var(:) !< value
+    character(len=*), intent(in)  :: item       !< name of the item
+    real(RP),         intent(in)  :: var(:)     !< value
+    integer,          intent(in)  :: zinterp    !< interpolation type 1)mdl 2)z 3)p
 
     real(RP) :: var_trim(KMAX)
 
@@ -797,7 +753,7 @@ contains
 
     call HistoryPut( item,         & ! [IN]
                      TIME_NOWSTEP, & ! [IN]
-                     var_trim(:)       ) ! [IN]
+                     var_trim(:)   ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -807,9 +763,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 2D data to history buffer
   subroutine HIST_put_2D( &
-       item,  &
-       var,   &
-       nohalo )
+       item,    &
+       var,     &
+       zinterp, &
+       nohalo   )
     use gtool_file, only: &
        RMISS
     use gtool_history, only: &
@@ -818,11 +775,12 @@ contains
        TIME_NOWSTEP
     implicit none
 
-    character(len=*), intent(in)  :: item   !< name of the item
-    real(RP),         intent(in)  :: var(:,:) !< value
+    character(len=*), intent(in)  :: item       !< name of the item
+    real(RP),         intent(in)  :: var(:,:)   !< value
+    integer,          intent(in)  :: zinterp    !< interpolation type 1)mdl 2)z 3)p
     logical,          intent(in), optional :: nohalo
 
-    real(RP) :: var_trim(im,jm)
+    real(RP) :: var_trim(im*jm)
 
     logical  :: nohalo_
     integer  :: i, j
@@ -834,7 +792,7 @@ contains
 
     do j = 1, jm
     do i = 1, im
-       var_trim(i,j) = var(ims+i-1,jms+j-1)
+       var_trim((j-1)*im+i) = var(ims+i-1,jms+j-1)
     enddo
     enddo
 
@@ -845,32 +803,32 @@ contains
        ! W halo
        do j = 1, jm
        do i = 1, IS-ims
-          var_trim(i,j) = RMISS
+          var_trim((j-1)*im+i) = RMISS
        enddo
        enddo
        ! E halo
        do j = 1, jm
        do i = IE-ims+2, ime-ims+1
-          var_trim(i,j) = RMISS
+          var_trim((j-1)*im+i) = RMISS
        enddo
        enddo
        ! S halo
        do j = 1, JS-jms
        do i = 1, im
-          var_trim(i,j) = RMISS
+          var_trim((j-1)*im+i) = RMISS
        enddo
        enddo
        ! N halo
        do j = JE-jms+2, jme-jms+1
        do i = 1, im
-          var_trim(i,j) = RMISS
+          var_trim((j-1)*im+i) = RMISS
        enddo
        enddo
     endif
 
     call HistoryPut( item,         & ! [IN]
                      TIME_NOWSTEP, & ! [IN]
-                     var_trim(:,:) ) ! [IN]
+                     var_trim(:)   ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -882,6 +840,7 @@ contains
   subroutine HIST_put_3D( &
        item,    &
        var,     &
+       zinterp, &
        xdim,    &
        ydim,    &
        zdim,    &
@@ -892,10 +851,15 @@ contains
        HistoryPut
     use scale_time, only: &
        TIME_NOWSTEP
+    use scale_interpolation, only: &
+       INTERP_vertical_xi2z, &
+       INTERP_vertical_xi2p, &
+       INTERP_available
     implicit none
 
-    character(len=*), intent(in)  :: item   !< name of the item
+    character(len=*), intent(in)  :: item       !< name of the item
     real(RP),         intent(in)  :: var(:,:,:) !< value
+    integer,          intent(in)  :: zinterp    !< interpolation type 1)mdl 2)z 3)p
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
@@ -905,10 +869,15 @@ contains
     integer                :: isize, jsize, ksize
     integer                :: istart, jstart, kstart
 
-    real(RP) :: var_trim(KMAX,im,jm)
+    real(RP) :: var_Z   (KA               ,IA,JA)
+    real(RP) :: var_P   (HIST_PAXIS_nlayer,IA,JA)
+    real(RP) :: var_trim(KMAX             *im*jm)
 
+    integer  :: s(3)
     logical  :: nohalo_
     integer  :: i, j, k, ijk
+
+    intrinsic shape
     !---------------------------------------------------------------------------
 
     if( .NOT. enabled ) return
@@ -965,52 +934,96 @@ contains
         kstart = KS
     end select
 
-    do j = 1, jsize
-    do i = 1, isize
-    do k = 1, ksize
-       var_trim(k,i,j) = var(kstart+k-1,istart+i-1,jstart+j-1)
-    enddo
-    enddo
-    enddo
+    s(:) = shape(var)
+
+    if (       s(1)    == KA    &
+         .AND. ksize   == KMAX  &
+         .AND. zinterp == 2     &
+         .AND. INTERP_available ) then ! z*->z interpolation
+
+       call PROF_rapstart('FILE_O_interp', 2)
+       call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
+                                  var_Z(:,:,:)  ) ! [OUT]
+       call PROF_rapend  ('FILE_O_interp', 2)
+
+       do k = 1, ksize
+       do j = 1, jsize
+       do i = 1, isize
+          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = var_Z(kstart+k-1,istart+i-1,jstart+j-1)
+       enddo
+       enddo
+       enddo
+
+    elseif(       s(1)    == KA    &
+            .AND. ksize   == KMAX  &
+            .AND. zinterp == 3     ) then ! z*->p interpolation
+
+       ksize = HIST_PAXIS_nlayer
+
+       call PROF_rapstart('FILE_O_interp', 2)
+       call INTERP_vertical_xi2p( HIST_PAXIS_nlayer, & ! [IN]
+                                  var  (:,:,:),      & ! [IN]
+                                  var_P(:,:,:)       ) ! [OUT]
+       call PROF_rapend  ('FILE_O_interp', 2)
+
+       do k = 1, ksize
+       do j = 1, jsize
+       do i = 1, isize
+          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = var_P(kstart+k-1,istart+i-1,jstart+j-1)
+       enddo
+       enddo
+       enddo
+
+    else ! no interpolation
+
+       do k = 1, ksize
+       do j = 1, jsize
+       do i = 1, isize
+          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = var(kstart+k-1,istart+i-1,jstart+j-1)
+       enddo
+       enddo
+       enddo
+
+    endif
 
     if ( nohalo_ ) then
           ! W halo
+       do k = 1, ksize
        do j = 1, jsize
        do i = 1, IS-istart
-       do k = 1, ksize
-          var_trim(k,i,j) = RMISS
+          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = RMISS
        enddo
        enddo
        enddo
        ! E halo
+       do k = 1, ksize
        do j = 1, jsize
        do i = IE-istart+2, ime-istart+1
-       do k = 1, ksize
-          var_trim(k,i,j) = RMISS
+          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = RMISS
        enddo
        enddo
        enddo
        ! S halo
+       do k = 1, ksize
        do j = 1, JS-jstart
        do i = 1, isize
-       do k = 1, ksize
-          var_trim(k,i,j) = RMISS
+          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = RMISS
        enddo
        enddo
        enddo
        ! N halo
+       do k = 1, ksize
        do j = JE-jstart+2, jme-jstart+1
        do i = 1, isize
-       do k = 1, ksize
-          var_trim(k,i,j) = RMISS
+          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = RMISS
        enddo
        enddo
        enddo
     endif
 
-    call HistoryPut( item,                 & ! [IN]
-                     TIME_NOWSTEP,         & ! [IN]
-                     var_trim(1:ksize,:,:) ) ! [IN]
+    call HistoryPut( item,                         & ! [IN]
+                     TIME_NOWSTEP,                 & ! [IN]
+                     var_trim(1:isize*jsize*ksize) ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1033,6 +1046,7 @@ contains
 
     integer :: itemid
     logical :: do_put
+    integer :: zinterp
     !---------------------------------------------------------------------------
 
     if( .NOT. enabled ) return
@@ -1044,10 +1058,11 @@ contains
                      0       ) ! [IN]
 
     call HIST_query( item,   & ! [IN]
-                     do_put  ) ! [OUT]
+                     do_put, & ! [OUT]
+                     zinterp ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( item, var ) ! [IN]
+       call HIST_put( item, var, zinterp ) ! [IN]
     endif
 
     return
@@ -1073,6 +1088,7 @@ contains
 
     integer :: itemid
     logical :: do_put
+    integer :: zinterp
     !---------------------------------------------------------------------------
 
     if( .NOT. enabled ) return
@@ -1088,10 +1104,11 @@ contains
                      zdim=zd ) ! [IN]
 
     call HIST_query( item,   & ! [IN]
-                     do_put  ) ! [OUT]
+                     do_put, & ! [OUT]
+                     zinterp ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( item, var ) ! [IN]
+       call HIST_put( item, var, zinterp ) ! [IN]
     endif
 
     return
@@ -1121,6 +1138,7 @@ contains
 
     integer :: itemid
     logical :: do_put
+    integer :: zinterp
     !---------------------------------------------------------------------------
 
     if( .NOT. enabled ) return
@@ -1138,12 +1156,13 @@ contains
                      xdim=xd, & ! [IN]
                      ydim=yd  ) ! [IN]
 
-    call HIST_query( item,    & ! [IN]
-                     do_put   ) ! [OUT]
+    call HIST_query( item,   & ! [IN]
+                     do_put, & ! [OUT]
+                     zinterp ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( item, var,    & ! [IN]
-                      nohalo=nohalo ) ! [IN]
+       call HIST_put( item, var, zinterp, & ! [IN]
+                      nohalo=nohalo       ) ! [IN]
     endif
 
     return
@@ -1175,6 +1194,7 @@ contains
 
     integer :: itemid
     logical :: do_put
+    integer :: zinterp
     !---------------------------------------------------------------------------
 
     if( .NOT. enabled ) return
@@ -1195,11 +1215,12 @@ contains
                      ydim=yd, & ! [IN]
                      zdim=zd  ) ! [IN]
 
-    call HIST_query( item,    & ! [IN]
-                     do_put   ) ! [OUT]
+    call HIST_query( item,   & ! [IN]
+                     do_put, & ! [OUT]
+                     zinterp ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( item, var,                 & ! [IN]
+       call HIST_put( item, var, zinterp,        & ! [IN]
                       xdim=xd, ydim=yd, zdim=zd, & ! [IN]
                       nohalo=nohalo              ) ! [IN]
     endif

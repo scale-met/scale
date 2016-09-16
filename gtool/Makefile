@@ -17,7 +17,6 @@ DEPENDLIB = $(LIBDIR)/libdcutils.a
 MODS = \
 	gtool_file_h.o  \
 	gtool_file.o    \
-	gtool_zinterp.o \
 	gtool_history.o \
 	gtool_file_f.o  \
 	gtool_netcdf.o
@@ -42,8 +41,7 @@ $(LIBNAME): $(MODS)
 
 gtool_file_h.o  : gtool_file_h.f90  $(DEPENDLIB)
 gtool_file.o    : gtool_file.f90    $(DEPENDLIB) gtool_file_h.o
-gtool_zinterp.o : gtool_zinterp.f90 $(DEPENDLIB) gtool_file.o
-gtool_history.o : gtool_history.f90 $(DEPENDLIB) gtool_file_h.o gtool_file.o gtool_zinterp.o
+gtool_history.o : gtool_history.f90 $(DEPENDLIB) gtool_file_h.o gtool_file.o
 gtool_file_f.o  : gtool_file_f.c
 gtool_netcdf.o  : gtool_netcdf.c
 
