@@ -969,7 +969,7 @@ contains
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = var_P(kstart+k-1,istart+i-1,jstart+j-1)
+          var_trim((k-1)*jsize*isize+(j-1)*isize+i) = var_P(k,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo

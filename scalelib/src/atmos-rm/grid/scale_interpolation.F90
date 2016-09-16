@@ -321,12 +321,22 @@ contains
     integer :: k, i, j, kk, kp
     !---------------------------------------------------------------------------
 
-    LnPRES    (:,:,:) = dlog( PRES    (:,:,:) )
-    LnSFC_PRES(:,:)   = dlog( SFC_PRES(:,:)   )
-    LnPaxis   (:)     = dlog( Paxis   (:)     )
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
+       LnPRES(k,i,j) = dlog( PRES(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JSB, JEB
+    do i = ISB, IEB
+       LnSFC_PRES(i,j) = dlog( SFC_PRES(i,j) )
+    enddo
+    enddo
+    LnPaxis(:) = dlog( Paxis(:) )
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, Kpres
        if ( LnPaxis(k) >= LnSFC_PRES(i,j) ) then
 
@@ -336,7 +346,7 @@ contains
           INTERP_xi2p_coef(k,i,j,2) = 0.0_DP
           INTERP_xi2p_coef(k,i,j,3) = 1.0_DP ! set UNDEF
 
-       elseif( LnPaxis(k) >= LnPRES(1,i,j) ) then
+       elseif( LnPaxis(k) >= LnPRES(KS,i,j) ) then
 
           INTERP_xi2p_idx (k,i,j,1) = KS     ! dummmy
           INTERP_xi2p_idx (k,i,j,2) = KS
@@ -344,7 +354,7 @@ contains
           INTERP_xi2p_coef(k,i,j,2) = 1.0_DP
           INTERP_xi2p_coef(k,i,j,3) = 0.0_DP
 
-       elseif( LnPaxis(k) < LnPRES(KA,i,j) ) then
+       elseif( LnPaxis(k) < LnPRES(KE,i,j) ) then
 
           INTERP_xi2p_idx (k,i,j,1) = KE     ! dummmy
           INTERP_xi2p_idx (k,i,j,2) = KE     ! dummmy
