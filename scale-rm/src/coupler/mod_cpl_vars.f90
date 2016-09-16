@@ -168,11 +168,50 @@ contains
   subroutine CPL_vars_setup
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean, &
+       LANDUSE_fact_land,  &
+       LANDUSE_fact_urban
+    use mod_ocean_admin, only: &
+       OCEAN_sw
+    use mod_land_admin, only: &
+       LAND_sw
+    use mod_urban_admin, only: &
+       URBAN_sw
     implicit none
+
+    real(RP) :: checkfact
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[CPL] / Origin[SCALE-RM]'
+
+    ! Check consistency of OCEAN_sw and LANDUSE_fact_ocean
+    checkfact = maxval( LANDUSE_fact_ocean(:,:) )
+    if ( .NOT. OCEAN_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       write(*,*)                     'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check consistency of LAND_sw and LANDUSE_fact_land
+    checkfact = maxval( LANDUSE_fact_land(:,:) )
+    if ( .NOT. LAND_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
+       write(*,*)                     'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check consistency of URBAN_sw and LANDUSE_fact_urban
+    checkfact = maxval( LANDUSE_fact_urban(:,:) )
+    if ( .NOT. URBAN_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
+       write(*,*)                     'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
 
     allocate( OCN_SFC_TEMP  (IA,JA)   )
     allocate( OCN_SFC_albedo(IA,JA,2) )
