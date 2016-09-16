@@ -568,7 +568,7 @@ contains
     real(RP) :: pres  (KA)       ! pressure [Pa]
     real(RP) :: qv    (KA)       ! water vapor mixing ratio[kg/kg]
     real(RP) :: QDRY  (KA)       ! ratio of dry air
-    real(RP) :: qes   (KA)       ! saturate vapor [kg/kg]
+    !real(RP) :: qes   (KA)       ! saturate vapor [kg/kg]
     real(RP) :: PSAT  (KA)       ! saturation vaper pressure
     real(RP) :: QSAT  (KA)       ! saturate water vaper mixing ratio [kg/kg]
     real(RP) :: rh    (KA)       ! saturate vapor [%]
@@ -713,7 +713,7 @@ contains
             ! [IN]
             deltaz(:,i,j), Z(:,i,j), & ! deltaz and height[m]
             qv    (:),       & ! water vapor mixing ratio [kg/kg]
-            qes   (:),       & ! saturation water vapor mixing ratio
+            QSAT  (:),       & ! saturation water vapor mixing ratio
             pres  (:),       & ! pressure [Pa]
             deltap(:),       & ! interval of pressure [Pa]
             temp  (:),       & ! temperature [K]
