@@ -672,9 +672,12 @@ contains
           ! calculate water vaper and relative humidity
           call THERMODYN_qd( QDRY(k), QTRC(k,i,j,:), TRACER_MASS(:) )
 
-          call SATURATION_psat_liq( PSAT(k), TEMP(k) )
+          ! temporary: WRF TYPE equations are used to maintain consistency with kf_main
+          !call SATURATION_psat_liq( PSAT(k), TEMP(k) )
+          !QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
+          PSAT(k) = ALIQ*EXP((BLIQ*TEMP(K)-CLIQ)/(TEMP(K)-DLIQ))
+          QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(K) - PSAT(k) )
 
-          QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
           QV  (k) = QTRC(k,i,j,I_QV) / QDRY(k)
           QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
           rh  (k) = QV(k) / QSAT(k)
@@ -2150,8 +2153,12 @@ contains
           end if
           call tpmix2dd(pres(k_dstart),theta_ed(k_dstart),temp_d(k_dstart),qvs_tmp)
           temp_d(k_dstart) = temp_d(k_dstart) - dtempmlt
+
           !! use check theis subroutine is this
-          call ATMOS_SATURATION_psat_liq(es,temp_d(k_dstart)) !saturation vapar pressure
+          !temporary: WRF TYPE equations are used to maintain consistency
+          !call ATMOS_SATURATION_psat_liq(es,temp_d(k_dstart)) !saturation vapar pressure
+          es = ALIQ*EXP((BLIQ*temp_d(k_dstart)-CLIQ)/(temp_d(k_dstart)-DLIQ))
+
           qvs_tmp = 0.622_RP*es/(pres(k_dstart) - es )
           !! Bolton 1980 pseudoequivalent potential temperature
           theta_ed(k_dstart) = temp_d(k_dstart)*(PRE00/pres(k_dstart))**(0.2854_RP*(1._RP - 0.28_RP*qvs_tmp))*   &
@@ -2177,7 +2184,11 @@ contains
                 RL    = XLV0 - XLV1*temp_d(kk)
                 dtmp  = RL*qvs_tmp*(1._RP - rhh )/(CP + RL*rhh*qvs_tmp*dssdt )
                 T1rh  = temp_d(kk) + dtmp
-                call ATMOS_SATURATION_psat_liq(es,T1rh) !saturation vapar pressure
+
+                !temporary: WRF TYPE equations are used to maintain consistency
+                !call ATMOS_SATURATION_psat_liq(es,T1rh) !saturation vapar pressure
+                es = ALIQ*EXP((BLIQ*T1rh-CLIQ)/(T1rh-DLIQ))
+
                 es = RHH*es
                 qsrh = 0.622_RP*es/(pres(kk) - es)
                 if(qsrh < qv_d(kk) ) then
@@ -2726,8 +2737,12 @@ contains
        end do
        temp_mix = temp_mix/dpthmx
        qv_mix   = qv_mix/dpthmx
+
        ! calc saturate water vapor pressure
-       call ATMOS_SATURATION_psat_liq(es,temp_mix)
+       ! temporary: WRF TYPE equations are used to maintain consistency
+       !call ATMOS_SATURATION_psat_liq(es,temp_mix)
+       es = ALIQ*EXP((BLIQ*temp_mix-CLIQ)/(temp_mix-DLIQ))
+
        qvss = 0.622_RP*es/(presmix -es) ! saturate watervapor
        !!
        !!... Remove supersaturation for diagnostic purposes, if necessary..
@@ -3308,6 +3323,7 @@ contains
     A=(CLIQ-BLIQ*DLIQ)/((TU-DLIQ)*(TU-DLIQ))
     DTFRZ = RLF*QFRZ/(CPP+RLS*QU*A)
     TU = TU+DTFRZ
+    ! temporary: WRF TYPE equations are used to maintain consistency
     !      call ATMOS_SATURATION_psat_liq(ES,TU) !saturation vapar pressure
 
     ES = ALIQ*EXP((BLIQ*TU-CLIQ)/(TU-DLIQ))
