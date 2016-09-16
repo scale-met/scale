@@ -102,7 +102,7 @@ module scale_atmos_phy_cp_kf
   real(RP),private, save       :: DEEPLIFETIME    = 1800._RP ! minimum lifetimescale of deep convection
   real(RP),private, save       :: SHALLOWLIFETIME = 2400._RP ! shallow convection liftime 
   real(RP),private, save       :: DEPTH_USL       = 300._RP  ! depth of updraft source layer  [hPa]!!
-  logical ,private, save       :: WARMRAIN        = .false.  ! QA<=3 then ??
+  logical ,private, save       :: WARMRAIN        = .false.  ! I_QI<1
   logical ,private, save       :: KF_LOG          = .false.  ! KF infomation output to log file(not ERROR messeage)
   real(RP),private, save       :: kf_threshold    = 1.e-3_RP ! kessler type autoconversion rate
   integer ,private, save       :: stepkf                     !! triger select will be modifid
@@ -141,6 +141,12 @@ contains
     use scale_grid,only: &
        DX => DX, &
        DY => DY
+    use scale_atmos_hydrometer, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS
     implicit none
 
     character(len=*), intent(in) :: CP_TYPE
@@ -148,8 +154,6 @@ contains
     ! tunning parameters, original parameter set is from KF2004 and NO2007
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_rate      =   0.03_RP ! ratio of cloud water and precipitation (Ogura and Cho 1973)
     integer  :: PARAM_ATMOS_PHY_CP_kf_trigger   = 1         ! trigger function type 1:KF2004 3:NO2007
-    logical  :: PARAM_ATMOS_PHY_CP_kf_qs        = .true.    ! qs is allowed?
-    logical  :: PARAM_ATMOS_PHY_CP_kf_qi        = .true.    ! qi is allowed?
     real(DP) :: PARAM_ATMOS_PHY_CP_kf_dt        =    5.0_DP ! KF convection check time interval [min]
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_dlcape    =    0.1_RP ! cape decleace rate
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800.0_RP ! minimum lifetime scale of deep convection [sec]
@@ -157,14 +161,11 @@ contains
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300.0_RP ! depth of updraft source layer [hPa]
     integer  :: PARAM_ATMOS_PHY_CP_kf_prec      = 1         ! precipitation type 1:Ogura-Cho(1973) 2:Kessler
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3_RP  ! autoconversion rate for Kessler
-    logical  :: PARAM_ATMOS_PHY_CP_kf_warmrain  = .false.   ! QQA is less equal to 3?
     logical  :: PARAM_ATMOS_PHY_CP_kf_LOG       = .false.   ! output log?
 
     NAMELIST / PARAM_ATMOS_PHY_CP_KF / &
        PARAM_ATMOS_PHY_CP_kf_rate,      &
        PARAM_ATMOS_PHY_CP_kf_trigger,   &
-       PARAM_ATMOS_PHY_CP_kf_qs,        &
-       PARAM_ATMOS_PHY_CP_kf_qi,        &
        PARAM_ATMOS_PHY_CP_kf_dt,        &
        PARAM_ATMOS_PHY_CP_kf_dlcape,    &
        PARAM_ATMOS_PHY_CP_kf_dlifetime, &
@@ -172,12 +173,12 @@ contains
        PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, &
        PARAM_ATMOS_PHY_CP_kf_prec,      &
        PARAM_ATMOS_PHY_CP_kf_thres,     &
-       PARAM_ATMOS_PHY_CP_kf_warmrain,  &
        PARAM_ATMOS_PHY_CP_kf_LOG,       &
        PARAM_ATMOS_PHY_CP_kf_wadapt, &
        PARAM_ATMOS_PHY_CP_kf_w_time
 
     integer :: k, i, j
+    integer :: QS
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -188,6 +189,29 @@ contains
     if ( CP_TYPE /= 'KF' ) then
        write(*,*) 'xxx ATMOS_PHY_CP_TYPE is not KF. Check!'
        call PRC_MPIstop
+    endif
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+    if ( I_QC < 1 ) then
+       write(*,*) 'xxx QC is not registered'
+       call PRC_MPIstop
+    end if
+    if ( I_QR < 1 ) then
+       write(*,*) 'xxx QR is not registered'
+       call PRC_MPIstop
+    end if
+
+    if ( I_QI < 1 ) then
+       WARMRAIN = .true.
+    else
+       WARMRAIN = .false.
+       if ( I_QS < 1 ) then
+          write(*,*) 'xxx QI is registerd, but QS is not registered'
+          call PRC_MPIstop
+       end if
     endif
 
     if ( abs(TIME_DTSEC_ATMOS_PHY_CP-TIME_DTSEC) > 0.0_DP ) then
@@ -216,8 +240,6 @@ contains
 
     call CP_kf_param( PARAM_ATMOS_PHY_CP_kf_rate,      &
                       PARAM_ATMOS_PHY_CP_kf_trigger,   &
-                      PARAM_ATMOS_PHY_CP_kf_qs,        &
-                      PARAM_ATMOS_PHY_CP_kf_qi,        &
                       PARAM_ATMOS_PHY_CP_kf_dt,        &
                       PARAM_ATMOS_PHY_CP_kf_dlcape,    &
                       PARAM_ATMOS_PHY_CP_kf_dlifetime, &
@@ -225,7 +247,6 @@ contains
                       PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, &
                       PARAM_ATMOS_PHY_CP_kf_prec,      &
                       PARAM_ATMOS_PHY_CP_kf_thres,     &
-                      PARAM_ATMOS_PHY_CP_kf_warmrain,  &
                       PARAM_ATMOS_PHY_CP_kf_LOG ,      &
                       TIME_DSTEP_KF                    )
 
@@ -234,15 +255,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) "*** Interval for check [step]                       : ", TIME_DSTEP_KF
     if( IO_L ) write(IO_FID_LOG,*) "*** Ogura-Cho condense material convert rate        : ", PARAM_ATMOS_PHY_CP_kf_rate
     if( IO_L ) write(IO_FID_LOG,*) "*** Trigger function type, 1:KF2004 3:NO2007        : ", PARAM_ATMOS_PHY_CP_kf_trigger
-    if( IO_L ) write(IO_FID_LOG,*) "*** Exist qi?                                       : ", PARAM_ATMOS_PHY_CP_kf_qi
-    if( IO_L ) write(IO_FID_LOG,*) "*** Exist qs?                                       : ", PARAM_ATMOS_PHY_CP_kf_qs
     if( IO_L ) write(IO_FID_LOG,*) "*** CAPE decrease rate                              : ", PARAM_ATMOS_PHY_CP_kf_dlcape
     if( IO_L ) write(IO_FID_LOG,*) "*** Minimum lifetime scale of deep convection [sec] : ", PARAM_ATMOS_PHY_CP_kf_dlifetime
     if( IO_L ) write(IO_FID_LOG,*) "*** Lifetime of shallow convection            [sec] : ", PARAM_ATMOS_PHY_CP_kf_slifetime
     if( IO_L ) write(IO_FID_LOG,*) "*** Updraft souce layer depth                 [hPa] : ", PARAM_ATMOS_PHY_CP_kf_DEPTH_USL
     if( IO_L ) write(IO_FID_LOG,*) "*** Precipitation type 1:Ogura-Cho(1973) 2:Kessler  : ", PARAM_ATMOS_PHY_CP_kf_prec
     if( IO_L ) write(IO_FID_LOG,*) "*** Kessler type precipitation's threshold          : ", PARAM_ATMOS_PHY_CP_kf_thres
-    if( IO_L ) write(IO_FID_LOG,*) "*** Warm rain?                                      : ", PARAM_ATMOS_PHY_CP_kf_warmrain
+    if( IO_L ) write(IO_FID_LOG,*) "*** Warm rain?                                      : ", WARMRAIN
     if( IO_L ) write(IO_FID_LOG,*) "*** Use running mean of w in adaptive timestep?     : ", PARAM_ATMOS_PHY_CP_kf_wadapt
     if( IO_L ) write(IO_FID_LOG,*) "*** Fixed time scale for running mean of w          : ", PARAM_ATMOS_PHY_CP_kf_w_time
     if( IO_L ) write(IO_FID_LOG,*) "*** Output log?                                     : ", PARAM_ATMOS_PHY_CP_kf_LOG
@@ -425,8 +444,6 @@ contains
        ![IN]
        RATE_in,            &
        TRIGGER_in,         & ! INOUT
-       FLAG_QS_in,         &
-       FLAG_QI_in,         &
        KF_DT_in,           &
        DELCAPE_in ,        &
        DEEPLIFETIME_in,    &
@@ -434,7 +451,6 @@ contains
        DEPTH_USL_in,       &
        KF_prec_in,         &
        KF_threshold_in,    &
-       WARMRAIN_in,        &
        KF_LOG_in,          &
        stepkf_in     )
     use scale_process, only: &
@@ -442,7 +458,6 @@ contains
     implicit none
     real(RP),intent(in) :: RATE_in
     integer, intent(inout) :: TRIGGER_in
-    logical, intent(in) :: FLAG_QS_in,FLAG_QI_in
     real(RP),intent(in) :: KF_DT_in
     real(RP),intent(in) :: DELCAPE_in
     real(RP),intent(in) :: DEEPLIFETIME_in
@@ -450,7 +465,6 @@ contains
     real(RP),intent(in) :: DEPTH_USL_in
     integer, intent(in) :: KF_prec_in
     real(RP),intent(in) :: KF_threshold_in
-    logical, intent(in) :: WARMRAIN_in
     logical, intent(in) :: KF_LOG_in
     integer, intent(in) :: stepkf_in
     !
@@ -462,14 +476,11 @@ contains
        TRIGGER_in = 3
     end if
     TRIGGER         = TRIGGER_in
-    FLAG_QS         = FLAG_QS_in
-    FLAG_QI         = FLAG_QI_in
     KF_DT           = KF_DT_in
     DELCAPE         = DELCAPE_in
     DEEPLIFETIME    = DEEPLIFETIME_in
     SHALLOWLIFETIME = SHALLOWLIFETIME_in
     DEPTH_USL       = DEPTH_USL_in
-    WARMRAIN        = WARMRAIN_in
     KF_prec         = KF_prec_in
     KF_threshold    = KF_threshold_in
     KF_LOG          = KF_LOG_in
@@ -522,8 +533,7 @@ contains
        I_QC, &
        I_QR, &
        I_QI, &
-       I_QS, &
-       I_QG
+       I_QS
     use scale_time , only :&
        dt => TIME_DTSEC_ATMOS_PHY_CP
     use scale_grid_real, only: &
@@ -568,7 +578,7 @@ contains
     real(RP) :: pres  (KA)       ! pressure [Pa]
     real(RP) :: qv    (KA)       ! water vapor mixing ratio[kg/kg]
     real(RP) :: QDRY  (KA)       ! ratio of dry air
-    real(RP) :: qes   (KA)       ! saturate vapor [kg/kg]
+    !real(RP) :: qes   (KA)       ! saturate vapor [kg/kg]
     real(RP) :: PSAT  (KA)       ! saturation vaper pressure
     real(RP) :: QSAT  (KA)       ! saturate water vaper mixing ratio [kg/kg]
     real(RP) :: rh    (KA)       ! saturate vapor [%]
@@ -672,9 +682,12 @@ contains
           ! calculate water vaper and relative humidity
           call THERMODYN_qd( QDRY(k), QTRC(k,i,j,:), TRACER_MASS(:) )
 
-          call SATURATION_psat_liq( PSAT(k), TEMP(k) )
+          ! temporary: WRF TYPE equations are used to maintain consistency with kf_main
+          !call SATURATION_psat_liq( PSAT(k), TEMP(k) )
+          !QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
+          PSAT(k) = ALIQ*EXP((BLIQ*TEMP(K)-CLIQ)/(TEMP(K)-DLIQ))
+          QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(K) - PSAT(k) )
 
-          QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
           QV  (k) = QTRC(k,i,j,I_QV) / QDRY(k)
           QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
           rh  (k) = QV(k) / QSAT(k)
@@ -710,7 +723,7 @@ contains
             ! [IN]
             deltaz(:,i,j), Z(:,i,j), & ! deltaz and height[m]
             qv    (:),       & ! water vapor mixing ratio [kg/kg]
-            qes   (:),       & ! saturation water vapor mixing ratio
+            QSAT  (:),       & ! saturation water vapor mixing ratio
             pres  (:),       & ! pressure [Pa]
             deltap(:),       & ! interval of pressure [Pa]
             temp  (:),       & ! temperature [K]
@@ -888,11 +901,10 @@ contains
              nca   (i,j) = KF_DT*60._RP ! convection feed back act this time span
           end if
           ! update qd
-          if ( I_QC>0 ) q_hyd(KS:KE,I_QC-QS_MP) = qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-QS_MP)
-          if ( I_QR>0 ) q_hyd(KS:KE,I_QR-QS_MP) = qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-QS_MP)
+          q_hyd(KS:KE,I_QC-QS_MP) = qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-QS_MP)
+          q_hyd(KS:KE,I_QR-QS_MP) = qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-QS_MP)
           if ( I_QI>0 ) q_hyd(KS:KE,I_QI-QS_MP) = qi_nw(KS:KE) + q_hyd(KS:KE,I_QI-QS_MP)
           if ( I_QS>0 ) q_hyd(KS:KE,I_QS-QS_MP) = qs_nw(KS:KE) + q_hyd(KS:KE,I_QS-QS_MP)
-          if ( I_QG>0 ) q_hyd(KS:KE,I_QG-QS_MP) = qs_nw(KS:KE) + q_hyd(KS:KE,I_QG-QS_MP)
           qd(KS:KE) = 1.0_RP / ( 1.0_RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2)) ! new qdry
           ! new qtrc
           qtrc_nw(KS:KE,I_QV) = qv_g(KS:KE)*qd(KS:kE)
@@ -2150,8 +2162,12 @@ contains
           end if
           call tpmix2dd(pres(k_dstart),theta_ed(k_dstart),temp_d(k_dstart),qvs_tmp)
           temp_d(k_dstart) = temp_d(k_dstart) - dtempmlt
+
           !! use check theis subroutine is this
-          call ATMOS_SATURATION_psat_liq(es,temp_d(k_dstart)) !saturation vapar pressure
+          !temporary: WRF TYPE equations are used to maintain consistency
+          !call ATMOS_SATURATION_psat_liq(es,temp_d(k_dstart)) !saturation vapar pressure
+          es = ALIQ*EXP((BLIQ*temp_d(k_dstart)-CLIQ)/(temp_d(k_dstart)-DLIQ))
+
           qvs_tmp = 0.622_RP*es/(pres(k_dstart) - es )
           !! Bolton 1980 pseudoequivalent potential temperature
           theta_ed(k_dstart) = temp_d(k_dstart)*(PRE00/pres(k_dstart))**(0.2854_RP*(1._RP - 0.28_RP*qvs_tmp))*   &
@@ -2177,7 +2193,11 @@ contains
                 RL    = XLV0 - XLV1*temp_d(kk)
                 dtmp  = RL*qvs_tmp*(1._RP - rhh )/(CP + RL*rhh*qvs_tmp*dssdt )
                 T1rh  = temp_d(kk) + dtmp
-                call ATMOS_SATURATION_psat_liq(es,T1rh) !saturation vapar pressure
+
+                !temporary: WRF TYPE equations are used to maintain consistency
+                !call ATMOS_SATURATION_psat_liq(es,T1rh) !saturation vapar pressure
+                es = ALIQ*EXP((BLIQ*T1rh-CLIQ)/(T1rh-DLIQ))
+
                 es = RHH*es
                 qsrh = 0.622_RP*es/(pres(kk) - es)
                 if(qsrh < qv_d(kk) ) then
@@ -2726,8 +2746,12 @@ contains
        end do
        temp_mix = temp_mix/dpthmx
        qv_mix   = qv_mix/dpthmx
+
        ! calc saturate water vapor pressure
-       call ATMOS_SATURATION_psat_liq(es,temp_mix)
+       ! temporary: WRF TYPE equations are used to maintain consistency
+       !call ATMOS_SATURATION_psat_liq(es,temp_mix)
+       es = ALIQ*EXP((BLIQ*temp_mix-CLIQ)/(temp_mix-DLIQ))
+
        qvss = 0.622_RP*es/(presmix -es) ! saturate watervapor
        !!
        !!... Remove supersaturation for diagnostic purposes, if necessary..
@@ -2973,7 +2997,7 @@ contains
     !! calc new theta (SCALE theta) 
     !! then return tendency
     !! warm rain
-    if (WARMRAIN) then ! assume Kessuler scheem?
+    if (WARMRAIN) then
        !!
        !...IF ICE PHASE IS NOT ALLOWED, MELT ALL FROZEN HYDROMETEORS...         
        !!
@@ -2986,42 +3010,39 @@ contains
           qs_nw(kk)  = 0._RP
        end do
        return
-    elseif(.not. FLAG_QS ) then
+!    elseif( ???? ) then
        !!
        !!...IF ICE PHASE IS ALLOWED, BUT MIXED PHASE IS NOT, MELT FROZEN HYDROME   
        !!...BELOW THE MELTING LEVEL, FREEZE LIQUID WATER ABOVE THE MELTING LEVEL  
        !!
-       do kk = KS,KE
-          cpm = cp*(1._RP + 0.887*qv_g(kk))
-          if(kk < k_ml) then
-             temp_g(kk) = temp_g(kk) - (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
-          elseif(kk > k_ml) then! kk == k_ml no melt
-             temp_g(kk) = temp_g(kk) + (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
-          end if
-          qc_nw(kk) = qc_nw(kk) + qi_nw(kk)
-          qr_nw(kk) = qr_nw(kk) + qs_nw(kk)
-          qi_nw(kk) = 0._RP
-          qs_nw(kk) = 0._RP
-       end do
-       return
+!!$       do kk = KS,KE
+!!$          cpm = cp*(1._RP + 0.887*qv_g(kk))
+!!$          if(kk < k_ml) then
+!!$             temp_g(kk) = temp_g(kk) - (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
+!!$          elseif(kk > k_ml) then! kk == k_ml no melt
+!!$             temp_g(kk) = temp_g(kk) + (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
+!!$          end if
+!!$          qc_nw(kk) = qc_nw(kk) + qi_nw(kk)
+!!$          qr_nw(kk) = qr_nw(kk) + qs_nw(kk)
+!!$          qi_nw(kk) = 0._RP
+!!$          qs_nw(kk) = 0._RP
+!!$       end do
+!!$       return
        !!
        !!...IF MIXED PHASE HYDROMETEORS ARE ALLOWED, FEED BACK CONVECTIVE TENDENCIES
        !!...OF HYDROMETEORS DIRECTLY...    
        !!
-    elseif( FLAG_QS ) then
-       if(.not.FLAG_QI) then
-          do kk = KS, KE
-             qs_nw(kk) =  qs_nw(kk) + qi_nw(kk)
-          end do
-       end if
+    else
+!!$       if( I_QI < 1 ) then
+!!$          do kk = KS, KE
+!!$             qs_nw(kk) =  qs_nw(kk) + qi_nw(kk)
+!!$          end do
+!!$       end if
        return
-    else ! not allow
-       write(*,*) "xxx ERROR@KF,NOTallow namelist"
-       write(*,*) "!!!!!Moiture setting error in KF check namelist"
-       call PRC_MPIstop
     end if
     return
   end subroutine CP_kf_compensational
+
   !! calc exner  function for potential temperature(contain water vapor)
   subroutine calcexn( pres,qv,exn) ! emanuel 1994 111pp ! check potential temperature definition
     use scale_const,only :&
@@ -3308,6 +3329,7 @@ contains
     A=(CLIQ-BLIQ*DLIQ)/((TU-DLIQ)*(TU-DLIQ))
     DTFRZ = RLF*QFRZ/(CPP+RLS*QU*A)
     TU = TU+DTFRZ
+    ! temporary: WRF TYPE equations are used to maintain consistency
     !      call ATMOS_SATURATION_psat_liq(ES,TU) !saturation vapar pressure
 
     ES = ALIQ*EXP((BLIQ*TU-CLIQ)/(TU-DLIQ))
