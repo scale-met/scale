@@ -39,6 +39,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_read
   public :: ATMOS_vars_restart_write
   public :: ATMOS_vars_restart_check
+  public :: ATMOS_vars_history_setpres
   public :: ATMOS_vars_history
   public :: ATMOS_vars_total
   public :: ATMOS_vars_diagnostics
@@ -141,60 +142,59 @@ module mod_atmos_vars
 
   ! history output of prognostic variables
   integer, private              :: VAR_HIST_id(VMAX)
-
-  integer, private, allocatable :: AQ_HIST_id(:)
+  integer, private, allocatable :: AQ_HIST_id (:)
 
   ! history & monitor output of diagnostic variables
   integer, private, parameter :: AD_nmax = 70 ! number of diagnostic variables for history output
 
-  integer, private, parameter :: I_W     =  1 ! velocity w at cell center
-  integer, private, parameter :: I_U     =  2 ! velocity u at cell center
-  integer, private, parameter :: I_V     =  3 ! velocity v at cell center
-  integer, private, parameter :: I_POTT  =  4 ! potential temperature
+  integer, private, parameter :: I_W            =  1 ! velocity w at cell center
+  integer, private, parameter :: I_U            =  2 ! velocity u at cell center
+  integer, private, parameter :: I_V            =  3 ! velocity v at cell center
+  integer, private, parameter :: I_POTT         =  4 ! potential temperature
 
-  integer, private, parameter :: I_QDRY  =  5 ! ratio of dry air            to total mass
-  integer, private, parameter :: I_QTOT  =  6 ! ratio of total tracer       to total mass
-  integer, private, parameter :: I_QHYD  =  7 ! ratio of total hydrometeor  to total mass
-  integer, private, parameter :: I_QLIQ  =  8 ! ratio of total liquid water to total mass
-  integer, private, parameter :: I_QICE  =  9 ! ratio of total ice    water to total mass
+  integer, private, parameter :: I_QDRY         =  5 ! ratio of dry air            to total mass
+  integer, private, parameter :: I_QTOT         =  6 ! ratio of total tracer       to total mass
+  integer, private, parameter :: I_QHYD         =  7 ! ratio of total hydrometeor  to total mass
+  integer, private, parameter :: I_QLIQ         =  8 ! ratio of total liquid water to total mass
+  integer, private, parameter :: I_QICE         =  9 ! ratio of total ice    water to total mass
 
-  integer, private, parameter :: I_LWP   = 10 ! liquid water path
-  integer, private, parameter :: I_IWP   = 11 ! ice water path
-  integer, private, parameter :: I_PW    = 12 ! ice water path
+  integer, private, parameter :: I_LWP          = 10 ! liquid water path
+  integer, private, parameter :: I_IWP          = 11 ! ice water path
+  integer, private, parameter :: I_PW           = 12 ! ice water path
 
-  integer, private, parameter :: I_RTOT  = 13 ! total gas constant
-  integer, private, parameter :: I_CPTOT = 14 ! total heat capacity (constant pressure)
-  integer, private, parameter :: I_PRES  = 15 ! pressure
-  integer, private, parameter :: I_TEMP  = 16 ! temperature
+  integer, private, parameter :: I_RTOT         = 13 ! total gas constant
+  integer, private, parameter :: I_CPTOT        = 14 ! total heat capacity (constant pressure)
+  integer, private, parameter :: I_PRES         = 15 ! pressure
+  integer, private, parameter :: I_TEMP         = 16 ! temperature
 
-  integer, private, parameter :: I_POTL  = 17 ! liquid water potential temperature
-  integer, private, parameter :: I_RHA   = 18 ! relative humidity (liquid+ice)
-  integer, private, parameter :: I_RHL   = 19 ! relative humidity against to liquid
-  integer, private, parameter :: I_RHI   = 20 ! relative humidity against to ice
+  integer, private, parameter :: I_POTL         = 17 ! liquid water potential temperature
+  integer, private, parameter :: I_RHA          = 18 ! relative humidity (liquid+ice)
+  integer, private, parameter :: I_RHL          = 19 ! relative humidity against to liquid
+  integer, private, parameter :: I_RHI          = 20 ! relative humidity against to ice
 
-  integer, private, parameter :: I_VOR   = 21 ! vertical vorticity
-  integer, private, parameter :: I_DIV   = 22 ! divergence
-  integer, private, parameter :: I_HDIV  = 23 ! horizontal divergence
+  integer, private, parameter :: I_VOR          = 21 ! vertical vorticity
+  integer, private, parameter :: I_DIV          = 22 ! divergence
+  integer, private, parameter :: I_HDIV         = 23 ! horizontal divergence
 
-  integer, private, parameter :: I_DENS_PRIM = 24 ! prime term of density
-  integer, private, parameter :: I_W_PRIM    = 25 ! prime term of w
-  integer, private, parameter :: I_U_PRIM    = 26 ! prime term of u
-  integer, private, parameter :: I_V_PRIM    = 27 ! prime term of v
-  integer, private, parameter :: I_POTT_PRIM = 28 ! prime term of potential temperature
-  integer, private, parameter :: I_W_PRIM2   = 29 ! variance of w
-  integer, private, parameter :: I_PT_W_PRIM = 30 ! resolved scale heat flux
-  integer, private, parameter :: I_W_PRIM3   = 31 ! skewness of w
-  integer, private, parameter :: I_TKE_RS    = 32 ! resolved scale TKE
+  integer, private, parameter :: I_DENS_PRIM    = 24 ! prime term of density
+  integer, private, parameter :: I_W_PRIM       = 25 ! prime term of w
+  integer, private, parameter :: I_U_PRIM       = 26 ! prime term of u
+  integer, private, parameter :: I_V_PRIM       = 27 ! prime term of v
+  integer, private, parameter :: I_POTT_PRIM    = 28 ! prime term of potential temperature
+  integer, private, parameter :: I_W_PRIM2      = 29 ! variance of w
+  integer, private, parameter :: I_PT_W_PRIM    = 30 ! resolved scale heat flux
+  integer, private, parameter :: I_W_PRIM3      = 31 ! skewness of w
+  integer, private, parameter :: I_TKE_RS       = 32 ! resolved scale TKE
 
-  integer, private, parameter :: I_ENGP  = 33 ! potential energy
-  integer, private, parameter :: I_ENGK  = 34 ! kinetic   energy
-  integer, private, parameter :: I_ENGI  = 35 ! internal  energy
-  integer, private, parameter :: I_ENGT  = 36 ! total     energy
+  integer, private, parameter :: I_ENGP         = 33 ! potential energy
+  integer, private, parameter :: I_ENGK         = 34 ! kinetic   energy
+  integer, private, parameter :: I_ENGI         = 35 ! internal  energy
+  integer, private, parameter :: I_ENGT         = 36 ! total     energy
 
-  integer, private, parameter :: I_ENGSFC_SH = 37
-  integer, private, parameter :: I_ENGSFC_LH = 38
-  integer, private, parameter :: I_ENGSFC_RD = 39
-  integer, private, parameter :: I_ENGTOA_RD = 40
+  integer, private, parameter :: I_ENGSFC_SH    = 37
+  integer, private, parameter :: I_ENGSFC_LH    = 38
+  integer, private, parameter :: I_ENGSFC_RD    = 39
+  integer, private, parameter :: I_ENGTOA_RD    = 40
 
   integer, private, parameter :: I_ENGSFC_LW_up = 41
   integer, private, parameter :: I_ENGSFC_LW_dn = 42
@@ -284,7 +284,6 @@ contains
        ATMOS_VARS_CHECKRANGE,          &
        ATMOS_VARS_CHECKCFL
 
-    logical :: zinterp ! dummy
     integer :: ierr
     integer :: iv, iq
     !---------------------------------------------------------------------------
@@ -412,108 +411,108 @@ contains
     AD_MONIT_id(:) = -1
     AD_PREP_sw (:) = -1
 
-    call HIST_reg( VAR_HIST_id(I_DENS), zinterp, VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
-    call HIST_reg( VAR_HIST_id(I_MOMZ), zinterp, VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, zdim='half' )
-    call HIST_reg( VAR_HIST_id(I_MOMX), zinterp, VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, xdim='half' )
-    call HIST_reg( VAR_HIST_id(I_MOMY), zinterp, VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, ydim='half' )
-    call HIST_reg( VAR_HIST_id(I_RHOT), zinterp, VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
+    call HIST_reg( VAR_HIST_id(I_DENS), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
+    call HIST_reg( VAR_HIST_id(I_MOMZ), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, zdim='half' )
+    call HIST_reg( VAR_HIST_id(I_MOMX), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, xdim='half' )
+    call HIST_reg( VAR_HIST_id(I_MOMY), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, ydim='half' )
+    call HIST_reg( VAR_HIST_id(I_RHOT), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
-       call HIST_reg( AQ_HIST_id(iq), zinterp, TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3 )
+       call HIST_reg( AQ_HIST_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3 )
     enddo
 
-    call HIST_reg( AD_HIST_id(I_W   ) , zinterp, 'W',     'velocity w',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_U   ) , zinterp, 'U',     'velocity u',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_V   ) , zinterp, 'V',     'velocity v',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_POTT) , zinterp, 'PT',    'potential temp.',        'K',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W)        , 'W',         'velocity w',                     'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_U)        , 'U',         'velocity u',                     'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_V)        , 'V',         'velocity v',                     'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_POTT)     , 'PT',        'potential temp.',                'K',      ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_QDRY) , zinterp, 'QDRY',  'dry air',                'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QTOT) , zinterp, 'QTOT',  'total water',            'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QHYD) , zinterp, 'QHYD',  'total hydrometeors',     'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QLIQ) , zinterp, 'QLIQ',  'total liquid water',     'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QICE) , zinterp, 'QICE',  'total ice water',        'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QDRY)     , 'QDRY',      'dry air',                        'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QTOT)     , 'QTOT',      'total water',                    'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QHYD)     , 'QHYD',      'total hydrometeors',             'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QLIQ)     , 'QLIQ',      'total liquid water',             'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QICE)     , 'QICE',      'total ice water',                'kg/kg',  ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_LWP)  , zinterp, 'LWP',   'liquid water path',      'g/m2',   ndim=2 )
-    call HIST_reg( AD_HIST_id(I_IWP)  , zinterp, 'IWP',   'ice water path',         'g/m2',   ndim=2 )
-    call HIST_reg( AD_HIST_id(I_PW )  , zinterp, 'PW',    'precipitable water',     'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LWP)      , 'LWP',       'liquid water path',              'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_IWP)      , 'IWP',       'ice water path',                 'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_PW )      , 'PW',        'precipitable water',             'g/m2',   ndim=2 )
 
-    call HIST_reg( AD_HIST_id(I_RTOT) , zinterp, 'RTOT',  'Total gas constant',     'J/kg/K', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_CPTOT), zinterp, 'CPTOT', 'Total heat capacity',    'J/kg/K', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_PRES) , zinterp, 'PRES',  'pressure',               'Pa',     ndim=3 )
-    call HIST_reg( AD_HIST_id(I_TEMP) , zinterp, 'T',     'temperature',            'K',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RTOT)     , 'RTOT',      'Total gas constant',             'J/kg/K', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_CPTOT)    , 'CPTOT',     'Total heat capacity',            'J/kg/K', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_PRES)     , 'PRES',      'pressure',                       'Pa',     ndim=3 )
+    call HIST_reg( AD_HIST_id(I_TEMP)     , 'T',         'temperature',                    'K',      ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_POTL) , zinterp, 'LWPT',  'liq. potential temp.',   'K',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHA)  , zinterp, 'RHA',   'relative humidity(liq+ice)', '%',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHL)  , zinterp, 'RH',    'relative humidity(liq)', '%',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHI)  , zinterp, 'RHI',   'relative humidity(ice)', '%',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_POTL)     , 'LWPT',      'liq. potential temp.',           'K',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHA)      , 'RHA',       'relative humidity(liq+ice)',     '%',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHL)      , 'RH',        'relative humidity(liq)',         '%',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHI)      , 'RHI',       'relative humidity(ice)',         '%',      ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_VOR)  , zinterp, 'VOR',   'vertical vorticity',     '1/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_DIV)  , zinterp, 'DIV',   'divergence',             '1/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_HDIV) , zinterp, 'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_Uabs) , zinterp, 'Uabs',  'absolute velocity',      'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_VOR)      , 'VOR',       'vertical vorticity',             '1/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_DIV)      , 'DIV',       'divergence',                     '1/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_HDIV)     , 'HDIV',      'horizontal divergence',          '1/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_Uabs)     , 'Uabs',      'absolute velocity',              'm/s',    ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_CAPE) , zinterp, 'CAPE',  'convection avail. pot. energy', 'm2/s2', ndim=2 )
-    call HIST_reg( AD_HIST_id(I_CIN)  , zinterp, 'CIN',   'convection inhibition',         'm2/s2', ndim=2 )
-    call HIST_reg( AD_HIST_id(I_LCL)  , zinterp, 'LCL',   'lifted condensation level',     'm',     ndim=2 )
-    call HIST_reg( AD_HIST_id(I_LFC)  , zinterp, 'LFC',   'level of free convection',      'm',     ndim=2 )
-    call HIST_reg( AD_HIST_id(I_LNB)  , zinterp, 'LNB',   'level of neutral buoyancy',     'm',     ndim=2 )
+    call HIST_reg( AD_HIST_id(I_CAPE)     , 'CAPE',      'convection avail. pot. energy',  'm2/s2',  ndim=2 )
+    call HIST_reg( AD_HIST_id(I_CIN)      , 'CIN',       'convection inhibition',          'm2/s2',  ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LCL)      , 'LCL',       'lifted condensation level',      'm',      ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LFC)      , 'LFC',       'level of free convection',       'm',      ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LNB)      , 'LNB',       'level of neutral buoyancy',      'm',      ndim=2 )
 
-    call HIST_reg( AD_HIST_id(I_PBLH) , zinterp, 'PBLH',  'PBL height',             'm',      ndim=2 )
-    call HIST_reg( AD_HIST_id(I_MSE)  , zinterp, 'MSE',   'moist static energy',    'm2/s2',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_PBLH)     , 'PBLH',      'PBL height',                     'm',      ndim=2 )
+    call HIST_reg( AD_HIST_id(I_MSE)      , 'MSE',       'moist static energy',            'm2/s2',  ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_DENS_MEAN), zinterp, 'DENS_MEAN', 'horiz. mean of density',    'kg/m3', ndim=1 )
-    call HIST_reg( AD_HIST_id(I_W_MEAN),    zinterp, 'W_MEAN',    'horiz. mean of w',           'm/s',  ndim=1 )
-    call HIST_reg( AD_HIST_id(I_U_MEAN),    zinterp, 'U_MEAN',    'horiz. mean of u',           'm/s',  ndim=1 )
-    call HIST_reg( AD_HIST_id(I_V_MEAN),    zinterp, 'V_MEAN',    'horiz. mean of v',           'm/s',  ndim=1 )
-    call HIST_reg( AD_HIST_id(I_POTT_MEAN), zinterp, 'PT_MEAN',   'horiz. mean of pot.',        'K',    ndim=1 )
-    call HIST_reg( AD_HIST_id(I_T_MEAN),    zinterp, 'T_MEAN',    'horiz. mean of t',           'K',    ndim=1 )
-    call HIST_reg( AD_HIST_id(I_QV_MEAN),   zinterp, 'QV_MEAN',   'horiz. mean of QV',          '1',    ndim=1 )
-    call HIST_reg( AD_HIST_id(I_QHYD_MEAN), zinterp, 'QHYD_MEAN', 'horiz. mean of QHYD',        '1',    ndim=1 )
-    call HIST_reg( AD_HIST_id(I_QLIQ_MEAN), zinterp, 'QLIQ_MEAN', 'horiz. mean of QLIQ',        '1',    ndim=1 )
-    call HIST_reg( AD_HIST_id(I_QICE_MEAN), zinterp, 'QICE_MEAN', 'horiz. mean of QICE',        '1',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_DENS_MEAN), 'DENS_MEAN', 'horiz. mean of density',         'kg/m3',  ndim=1 )
+    call HIST_reg( AD_HIST_id(I_W_MEAN)   , 'W_MEAN',    'horiz. mean of w',               'm/s',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_U_MEAN)   , 'U_MEAN',    'horiz. mean of u',               'm/s',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_V_MEAN)   , 'V_MEAN',    'horiz. mean of v',               'm/s',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_POTT_MEAN), 'PT_MEAN',   'horiz. mean of pot.',            'K',      ndim=1 )
+    call HIST_reg( AD_HIST_id(I_T_MEAN)   , 'T_MEAN',    'horiz. mean of t',               'K',      ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QV_MEAN)  , 'QV_MEAN',   'horiz. mean of QV',              '1',      ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QHYD_MEAN), 'QHYD_MEAN', 'horiz. mean of QHYD',            '1',      ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QLIQ_MEAN), 'QLIQ_MEAN', 'horiz. mean of QLIQ',            '1',      ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QICE_MEAN), 'QICE_MEAN', 'horiz. mean of QICE',            '1',      ndim=1 )
 
-    call HIST_reg( AD_HIST_id(I_DENS_PRIM), zinterp, 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_W_PRIM   ), zinterp, 'W_PRIM',    'horiz. deviation of w',          'm/s',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_U_PRIM   ), zinterp, 'U_PRIM',    'horiz. deviation of u',          'm/s',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_V_PRIM   ), zinterp, 'V_PRIM',    'horiz. deviation of v',          'm/s',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_POTT_PRIM), zinterp, 'PT_PRIM',   'horiz. deviation of pot. temp.', 'K',     ndim=3 )
-    call HIST_reg( AD_HIST_id(I_W_PRIM2  ), zinterp, 'W_PRIM2',   'variance of w',                  'm2/s2', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_PT_W_PRIM), zinterp, 'PT_W_PRIM', 'resolved scale heat flux',       'W/s',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_W_PRIM3  ), zinterp, 'W_PRIM3',   'skewness of w',                  'm3/s3', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_TKE_RS   ), zinterp, 'TKE_RS',    'resolved scale TKE',             'm2/s2', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_DENS_PRIM), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W_PRIM   ), 'W_PRIM',    'horiz. deviation of w',          'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_U_PRIM   ), 'U_PRIM',    'horiz. deviation of u',          'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_V_PRIM   ), 'V_PRIM',    'horiz. deviation of v',          'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_POTT_PRIM), 'PT_PRIM',   'horiz. deviation of pot. temp.', 'K',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W_PRIM2  ), 'W_PRIM2',   'variance of w',                  'm2/s2',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_PT_W_PRIM), 'PT_W_PRIM', 'resolved scale heat flux',       'W/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W_PRIM3  ), 'W_PRIM3',   'skewness of w',                  'm3/s3',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_TKE_RS   ), 'TKE_RS',    'resolved scale TKE',             'm2/s2',  ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_ENGT) , zinterp, 'ENGT',  'total energy',           'J/m3',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_ENGP) , zinterp, 'ENGP',  'potential energy',       'J/m3',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_ENGK) , zinterp, 'ENGK',  'kinetic energy',         'J/m3',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_ENGI) , zinterp, 'ENGI',  'internal energy',        'J/m3',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_ENGT)     , 'ENGT',      'total energy',                   'J/m3',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_ENGP)     , 'ENGP',      'potential energy',               'J/m3',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_ENGK)     , 'ENGK',      'kinetic energy',                 'J/m3',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_ENGI)     , 'ENGI',      'internal energy',                'J/m3',   ndim=3 )
 
     !-----< monitor output setup >-----
 
-    call MONIT_reg( AD_MONIT_id(I_QDRY), 'QDRY', 'dry air mass',     'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_QTOT), 'QTOT', 'water mass',       'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_EVAP), 'EVAP', 'evaporation',      'kg', ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_PRCP), 'PRCP', 'precipitation',    'kg', ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_QDRY)        , 'QDRY',         'dry air mass',      'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_QTOT)        , 'QTOT',         'water mass',        'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_EVAP)        , 'EVAP',         'evaporation',       'kg', ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_PRCP)        , 'PRCP',         'precipitation',     'kg', ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGT), 'ENGT', 'total     energy', 'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGP), 'ENGP', 'potential energy', 'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGK), 'ENGK', 'kinetic   energy', 'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGI), 'ENGI', 'internal  energy', 'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGT)        , 'ENGT',         'total     energy',  'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGP)        , 'ENGP',         'potential energy',  'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGK)        , 'ENGK',         'kinetic   energy',  'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGI)        , 'ENGI',         'internal  energy',  'J',  ndim=3, isflux=.false. )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGFLXT), 'ENGFLXT', 'total energy flux', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGFLXT)     , 'ENGFLXT',      'total energy flux', 'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SH), 'ENGSFC_SH', 'total     energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LH), 'ENGSFC_LH', 'potential energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_RD), 'ENGSFC_RD', 'kinetic   energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_RD), 'ENGTOA_RD', 'internal  energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SH)   , 'ENGSFC_SH',    'total     energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LH)   , 'ENGSFC_LH',    'potential energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_RD)   , 'ENGSFC_RD',    'kinetic   energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_RD)   , 'ENGTOA_RD',    'internal  energy',  'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_up), 'ENGSFC_LW_up', 'total     energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'potential energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_up), 'ENGSFC_SW_up', 'kinetic   energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'internal  energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_up), 'ENGSFC_LW_up', 'total     energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'potential energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_up), 'ENGSFC_SW_up', 'kinetic   energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'internal  energy',  'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_up), 'ENGTOA_LW_up', 'total     energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'potential energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_up), 'ENGTOA_SW_up', 'kinetic   energy', 'J',  ndim=2, isflux=.true. )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'internal  energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_up), 'ENGTOA_LW_up', 'total     energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'potential energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_up), 'ENGTOA_SW_up', 'kinetic   energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'internal  energy',  'J',  ndim=2, isflux=.true.  )
 
     if ( AD_HIST_id(I_W) > 0 ) then
        AD_PREP_sw(I_W) = 1
@@ -1181,6 +1180,38 @@ contains
 
     return
   end subroutine ATMOS_vars_restart_check
+
+  !-----------------------------------------------------------------------------
+  !> Set pressure for history output
+  subroutine ATMOS_vars_history_setpres
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_Z1
+    use scale_topography, only: &
+       TOPO_Zsfc
+    use scale_atmos_bottom, only: &
+       BOTTOM_estimate => ATMOS_BOTTOM_estimate
+    use scale_history, only: &
+       HIST_setpres
+    implicit none
+
+    real(RP) :: SFC_DENS(IA,JA)
+    real(RP) :: SFC_PRES(IA,JA)
+    !---------------------------------------------------------------------------
+
+    call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
+                          PRES     (:,:,:), & ! [IN]
+                          REAL_CZ  (:,:,:), & ! [IN]
+                          TOPO_Zsfc(:,:),   & ! [IN]
+                          REAL_Z1  (:,:),   & ! [IN]
+                          SFC_DENS (:,:),   & ! [OUT]
+                          SFC_PRES (:,:)    ) ! [OUT]
+
+    call HIST_setpres( PRES    (:,:,:),  & ! [IN]
+                       SFC_PRES(:,:)     ) ! [IN]
+
+    return
+  end subroutine ATMOS_vars_history_setpres
 
   !-----------------------------------------------------------------------------
   !> History output set for atmospheric variables

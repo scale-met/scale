@@ -32,20 +32,14 @@ module scale_history
   !++ Public procedures
   !
   public :: HIST_setup
+  public :: HIST_switch
+  public :: HIST_setpres
   public :: HIST_reg
   public :: HIST_query
-  public :: HIST_in
   public :: HIST_put
+  public :: HIST_in
   public :: HIST_get
   public :: HIST_write
-  public :: HIST_switch
-
-  interface HIST_in
-     module procedure HIST_in_0D
-     module procedure HIST_in_1D
-     module procedure HIST_in_2D
-     module procedure HIST_in_3D
-  end interface HIST_in
 
   interface HIST_put
      module procedure HIST_put_0D
@@ -53,6 +47,13 @@ module scale_history
      module procedure HIST_put_2D
      module procedure HIST_put_3D
   end interface HIST_put
+
+  interface HIST_in
+     module procedure HIST_in_0D
+     module procedure HIST_in_1D
+     module procedure HIST_in_2D
+     module procedure HIST_in_3D
+  end interface HIST_in
 
   interface HIST_get
      module procedure HIST_get_1D
@@ -101,13 +102,12 @@ contains
     implicit none
 
     character(len=H_MID)   :: HISTORY_H_TITLE = 'SCALE-RM HISTORY OUTPUT' !< title of the output file
-    character(len=H_SHORT) :: HISTORY_T_UNITS = 'seconds'
-    character(len=H_MID)   :: HISTORY_T_SINCE = ''
+    character(len=H_MID)   :: HISTORY_T_SINCE
 
     logical :: HIST_BND = .false.
 
-    namelist / PARAM_HIST /      &
-         HIST_BND
+    NAMELIST / PARAM_HIST / &
+       HIST_BND
 
     real(DP) :: start_daysec
     integer  :: rankidx(2)
@@ -130,15 +130,20 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    rankidx(1) = PRC_2Drank(PRC_myrank, 1)
-    rankidx(2) = PRC_2Drank(PRC_myrank, 2)
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
     start_daysec = TIME_STARTDAYSEC
     if ( TIME_NOWDATE(1) > 0 ) then
-       write(HISTORY_T_SINCE, '(I4.4,5(A1,I2.2))') &
-                              TIME_NOWDATE(1),'-',TIME_NOWDATE(2),'-',TIME_NOWDATE(3),' ', &
-                              TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6)
+       write(HISTORY_T_SINCE,'(I4.4,5(A1,I2.2))')      TIME_NOWDATE(1), &
+                                                  '-', TIME_NOWDATE(2), &
+                                                  '-', TIME_NOWDATE(3), &
+                                                  ' ', TIME_NOWDATE(4), &
+                                                  ':', TIME_NOWDATE(5), &
+                                                  ':', TIME_NOWDATE(6)
        start_daysec = TIME_NOWMS
+    else
+       HISTORY_T_SINCE = ''
     endif
 
     if ( HIST_BND ) then
@@ -157,20 +162,22 @@ contains
        jme = JE
     endif
 
-    call HistoryInit( HISTORY_H_TITLE,                & ! [IN]
-                      H_SOURCE,                       & ! [IN]
-                      H_INSTITUTE,                    & ! [IN]
-                      im*jm*KMAX,                     & ! [IN]
-                      PRC_masterrank,                 & ! [IN]
-                      PRC_myrank,                     & ! [IN]
-                      rankidx,                        & ! [IN]
-                      start_daysec,                   & ! [IN]
-                      TIME_DTSEC,                     & ! [IN]
-                      time_units   = HISTORY_T_UNITS, & ! [IN]
-                      time_since   = HISTORY_T_SINCE, & ! [IN]
-                      namelist_fid = IO_FID_CONF      ) ! [IN]
+    call HistoryInit( KMAX, im, jm,                    & ! [IN]
+                      PRC_masterrank,                  & ! [IN]
+                      PRC_myrank,                      & ! [IN]
+                      rankidx(:),                      & ! [IN]
+                      HISTORY_H_TITLE,                 & ! [IN]
+                      H_SOURCE,                        & ! [IN]
+                      H_INSTITUTE,                     & ! [IN]
+                      time_start    = start_daysec,    & ! [IN]
+                      time_interval = TIME_DTSEC,      & ! [IN]
+                      time_since    = HISTORY_T_SINCE, & ! [IN]
+                      namelist_fid  = IO_FID_CONF      ) ! [IN]
+
 
     call HIST_put_axes
+
+    call HIST_sethgt
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -178,16 +185,6 @@ contains
 
     return
   end subroutine HIST_setup
-
-  !-----------------------------------------------------------------------------
-  !> set switch
-  subroutine HIST_switch( switch )
-    logical, intent(in) :: switch
-
-    enabled = switch
-
-    return
-  end subroutine HIST_switch
 
   !-----------------------------------------------------------------------------
   !> Put axis coordinate to history file
@@ -255,52 +252,50 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime) )
-    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme) )
-    call HistoryPutAxis( 'z',   'Z',               'm', 'z',   GRID_CZ(KS:KE) )
-    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(ims:ime) )
-    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jms:jme) )
-    call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ(KS:KE) )
+    call HistoryPutAxis( 'x',    'X',                                 'm', 'x',   GRID_CX(ims:ime) )
+    call HistoryPutAxis( 'y',    'Y',                                 'm', 'y',   GRID_CY(jms:jme) )
+    call HistoryPutAxis( 'z',    'Z',                                 'm', 'z',   GRID_CZ(KS:KE)   )
+    call HistoryPutAxis( 'xh',   'X (half level)',                    'm', 'xh',  GRID_FX(ims:ime) )
+    call HistoryPutAxis( 'yh',   'Y (half level)',                    'm', 'yh',  GRID_FY(jms:jme) )
+    call HistoryPutAxis( 'zh',   'Z (half level)',                    'm', 'zh',  GRID_FZ(KS:KE)   )
 
-    call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true. )
-    call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS:LKE), down=.true. )
+    call HistoryPutAxis( 'lz',   'LZ',                                'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true. )
+    call HistoryPutAxis( 'lzh',  'LZ (half level)',                   'm', 'lzh', GRID_LFZ(LKS:LKE), down=.true. )
+    call HistoryPutAxis( 'uz',   'UZ',                                'm', 'uz',  GRID_UCZ(UKS:UKE), down=.true. )
+    call HistoryPutAxis( 'uzh',  'UZ (half level)',                   'm', 'uzh', GRID_UFZ(UKS:UKE), down=.true. )
 
-    call HistoryPutAxis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS:UKE), down=.true. )
-    call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS:UKE), down=.true. )
+    call HistoryPutAxis( 'CZ',   'Atmos Grid Center Position Z',      'm', 'CZ',  GRID_CZ )
+    call HistoryPutAxis( 'CX',   'Atmos Grid Center Position X',      'm', 'CX',  GRID_CX )
+    call HistoryPutAxis( 'CY',   'Atmos Grid Center Position Y',      'm', 'CY',  GRID_CY )
+    call HistoryPutAxis( 'FZ',   'Atmos Grid Face Position Z',        'm', 'FZ',  GRID_FZ )
+    call HistoryPutAxis( 'FX',   'Atmos Grid Face Position X',        'm', 'FX',  GRID_FX )
+    call HistoryPutAxis( 'FY',   'Atmos Grid Face Position Y',        'm', 'FY',  GRID_FY )
 
-    call HistoryPutAxis( 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ )
-    call HistoryPutAxis( 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  GRID_CX )
-    call HistoryPutAxis( 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CY )
-    call HistoryPutAxis( 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ )
-    call HistoryPutAxis( 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  GRID_FX )
-    call HistoryPutAxis( 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FY )
+    call HistoryPutAxis( 'CDZ',  'Grid Cell length Z',                'm', 'CZ',  GRID_CDZ )
+    call HistoryPutAxis( 'CDX',  'Grid Cell length X',                'm', 'CX',  GRID_CDX )
+    call HistoryPutAxis( 'CDY',  'Grid Cell length Y',                'm', 'CY',  GRID_CDY )
+    call HistoryPutAxis( 'FDZ',  'Grid distance Z',                   'm', 'FDZ', GRID_FDZ )
+    call HistoryPutAxis( 'FDX',  'Grid distance X',                   'm', 'FDX', GRID_FDX )
+    call HistoryPutAxis( 'FDY',  'Grid distance Y',                   'm', 'FDY', GRID_FDY )
 
-    call HistoryPutAxis( 'CDZ',  'Grid Cell length Z', 'm', 'CZ',  GRID_CDZ )
-    call HistoryPutAxis( 'CDX',  'Grid Cell length X', 'm', 'CX',  GRID_CDX )
-    call HistoryPutAxis( 'CDY',  'Grid Cell length Y', 'm', 'CY',  GRID_CDY )
-    call HistoryPutAxis( 'FDZ',  'Grid distance Z',    'm', 'FDZ', GRID_FDZ )
-    call HistoryPutAxis( 'FDX',  'Grid distance X',    'm', 'FDX', GRID_FDX )
-    call HistoryPutAxis( 'FDY',  'Grid distance Y',    'm', 'FDY', GRID_FDY )
+    call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z',       'm', 'LCZ', GRID_LCZ, down=.true. )
+    call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',         'm', 'LFZ', GRID_LFZ, down=.true. )
+    call HistoryPutAxis( 'LCDZ', 'Land Grid Cell length Z',           'm', 'LCZ', GRID_LCDZ )
+    call HistoryPutAxis( 'UCZ',  'Urban Grid Center Position Z',      'm', 'UCZ', GRID_UCZ, down=.true. )
+    call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',        'm', 'UFZ', GRID_UFZ, down=.true. )
+    call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',          'm', 'UCZ', GRID_UCDZ )
 
-    call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ, down=.true. )
-    call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ, down=.true. )
-    call HistoryPutAxis( 'LCDZ', 'Land Grid Cell length Z',     'm', 'LCZ', GRID_LCDZ )
+    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z',          '1', 'CZ',  GRID_CBFZ)
+    call HistoryPutAxis('CBFX',  'Boundary factor Center X',          '1', 'CX',  GRID_CBFX)
+    call HistoryPutAxis('CBFY',  'Boundary factor Center Y',          '1', 'CY',  GRID_CBFY)
+    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',            '1', 'CZ',  GRID_FBFZ)
+    call HistoryPutAxis('FBFX',  'Boundary factor Face X',            '1', 'CX',  GRID_FBFX)
+    call HistoryPutAxis('FBFY',  'Boundary factor Face Y',            '1', 'CY',  GRID_FBFY)
 
-    call HistoryPutAxis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ, down=.true.  )
-    call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ , down=.true. )
-    call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ )
-
-    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
-    call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)
-    call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY)
-    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ)
-    call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX)
-    call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY)
-
-    call HistoryPutAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG)
-    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG)
-    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',   'm', 'FXG', GRID_FXG)
-    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',   'm', 'FYG', GRID_FYG)
+    call HistoryPutAxis('CXG',   'Grid Center Position X (global)',   'm', 'CXG', GRID_CXG)
+    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)',   'm', 'CYG', GRID_CYG)
+    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',     'm', 'FXG', GRID_FXG)
+    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',     'm', 'FYG', GRID_FYG)
 
     call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG)
     call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG)
@@ -312,15 +307,15 @@ contains
        AXIS(1:im,1:jm,k) = REAL_CZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ','y ', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height' , 'height'             ,     &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+    call HistoryPutAssociatedCoordinates( 'height', 'height',              &
+                                          'm', AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
        AXIS(1:im,1:jm,k) = REAL_FZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ','y ', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_xyw' , 'height (half level xyw)'             ,     &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+    call HistoryPutAssociatedCoordinates( 'height_xyw', 'height (half level xyw)', &
+                                          'm', AXIS_name(1:3), AXIS(:,:,:)         )
 
     do k = 1, KMAX
     do j = 1, jm
@@ -335,8 +330,8 @@ contains
     enddo
     enddo
     AXIS_name(1:3) = (/'xh','y ', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_uyz' , 'height (half level uyz)'             ,     &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+    call HistoryPutAssociatedCoordinates( 'height_uyz', 'height (half level uyz)', &
+                                          'm', AXIS_name(1:3), AXIS(:,:,:)         )
 
     do k = 1, KMAX
     do j = 1, jm-1
@@ -351,8 +346,8 @@ contains
     enddo
     enddo
     AXIS_name(1:3) = (/'x ','yh', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_xvz' , 'height (half level xvz)'             ,     &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+    call HistoryPutAssociatedCoordinates( 'height_xvz', 'height (half level xvz)', &
+                                          'm', AXIS_name(1:3), AXIS(:,:,:)         )
 
     do k = 1, KMAX
     do j = 1, jm-1
@@ -373,8 +368,8 @@ contains
     enddo
     enddo
     AXIS_name(1:3) = (/'xh','yh', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_uvz' , 'height (half level uvz)'             ,     &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+    call HistoryPutAssociatedCoordinates( 'height_uvz', 'height (half level uvz)', &
+                                          'm', AXIS_name(1:3), AXIS(:,:,:)         )
 
     do k = 1, KMAX
     do j = 1, jm
@@ -389,8 +384,8 @@ contains
     enddo
     enddo
     AXIS_name(1:3) = (/'xh','y ', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_uyw' , 'height (half level uyw)'             ,     &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+    call HistoryPutAssociatedCoordinates( 'height_uyw', 'height (half level uyw)', &
+                                          'm', AXIS_name(1:3), AXIS(:,:,:)         )
 
     do k = 1, KMAX
     do j = 1, jm-1
@@ -405,8 +400,8 @@ contains
     enddo
     enddo
     AXIS_name(1:3) = (/'x ','yh', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_xvw' , 'height (half level xvw)'             ,     &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+    call HistoryPutAssociatedCoordinates( 'height_xvw', 'height (half level xvw)', &
+                                          'm', AXIS_name(1:3), AXIS(:,:,:)         )
 
     do k = 1, KMAX
     do j = 1, jm-1
@@ -427,43 +422,47 @@ contains
     enddo
     enddo
     AXIS_name(1:3) = (/'xh','yh', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_uvw' , 'height (half level uvw)'             ,     &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+    call HistoryPutAssociatedCoordinates( 'height_uvw', 'height (half level uvw)', &
+                                          'm', AXIS_name(1:3), AXIS(:,:,:)         )
 
     AXIS(1:im,1:jm,1) = REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ','y '/)
-    call HistoryPutAssociatedCoordinates( 'lon' , 'longitude'             ,     &
-                                          'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
+    call HistoryPutAssociatedCoordinates( 'lon', 'longitude',                         &
+                                          'degrees_east', AXIS_name(1:2), AXIS(:,:,1) )
 
     AXIS(1:im,1:jm,1) = REAL_LONX(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh','y '/)
-    call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',     &
-                                          'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
+    call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',      &
+                                          'degrees_east', AXIS_name(1:2), AXIS(:,:,1) )
+
     AXIS(1:im,1:jm,1) = REAL_LONY(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ','yh'/)
-    call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',     &
-                                          'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
+    call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',      &
+                                          'degrees_east', AXIS_name(1:2), AXIS(:,:,1) )
+
     AXIS(1:im,1:jm,1) = REAL_LONXY(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh','yh'/)
-    call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',     &
-                                          'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
+    call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',      &
+                                          'degrees_east', AXIS_name(1:2), AXIS(:,:,1) )
 
     AXIS(1:im,1:jm,1) = REAL_LAT (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ','y '/)
-    call HistoryPutAssociatedCoordinates( 'lat' , 'latitude'              ,     &
+    call HistoryPutAssociatedCoordinates( 'lat', 'latitude',                           &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
 
     AXIS(1:im,1:jm,1) = REAL_LATX(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh','y '/)
-    call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)' ,     &
+    call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)',        &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
+
     AXIS(1:im,1:jm,1) = REAL_LATY(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ','yh'/)
-    call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)' ,     &
+    call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)',        &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
+
     AXIS(1:im,1:jm,1) = REAL_LATXY(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh','yh'/)
-    call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)' ,     &
+    call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)',        &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
 
     AXIS(1:im,1:jm,1) = TOPO_Zsfc(ims:ime,jms:jme)
@@ -480,114 +479,231 @@ contains
   end subroutine HIST_put_axes
 
   !-----------------------------------------------------------------------------
+  !> set switch
+  subroutine HIST_switch( switch )
+    implicit none
+
+    logical, intent(in) :: switch
+    !---------------------------------------------------------------------------
+
+    enabled = switch
+
+    return
+  end subroutine HIST_switch
+
+  !-----------------------------------------------------------------------------
+  !> set interpolation factor for height coordinate
+  subroutine HIST_sethgt
+    use gtool_history, only: &
+       HistorySetHgt
+    use scale_grid, only: &
+       GRID_CZ, &
+       GRID_FZ
+    use scale_topography, only: &
+       TOPO_exist
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
+    implicit none
+
+    real(DP) :: Xi_C(  KMAX)
+    real(DP) :: Xi_F(0:KMAX)
+    real(DP) :: Z_C (  KMAX,im,jm)
+    real(DP) :: Z_F (0:KMAX,im,jm)
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do k = 1, KMAX
+       Xi_C(k) = real(GRID_CZ(KS+k-1),kind=DP)
+    enddo
+
+    do k = 0, KMAX
+       Xi_F(k) = real(GRID_FZ(KS+k-1),kind=DP)
+    enddo
+
+    do j = 1, jm
+    do i = 1, im
+    do k = 1, KMAX
+       Z_C(k,i,j) = real(REAL_CZ(KS+k-1,ims+i-1,jms+j-1),kind=DP)
+    enddo
+    enddo
+    enddo
+
+    do j = 1, jm
+    do i = 1, im
+    do k = 0, KMAX
+       Z_F(k,i,j) = real(REAL_FZ(KS+k-1,ims+i-1,jms+j-1),kind=DP)
+    enddo
+    enddo
+    enddo
+
+    call HistorySetHgt( KMAX, im, jm, & ! [IN]
+                        Xi_C(:),      & ! [IN]
+                        Xi_F(:),      & ! [IN]
+                        Z_C (:,:,:),  & ! [IN]
+                        Z_F (:,:,:),  & ! [IN]
+                        TOPO_exist    ) ! [IN]
+
+    return
+  end subroutine HIST_sethgt
+
+  !-----------------------------------------------------------------------------
+  !> set interpolation factor for pressure coordinate
+  subroutine HIST_setpres( &
+       PRES,    &
+       SFC_PRES )
+    use gtool_history, only: &
+       HistorySetPres
+    implicit none
+
+    real(RP), intent(in) :: PRES    (KA,IA,JA)
+    real(RP), intent(in) :: SFC_PRES(   IA,JA)
+
+    real(DP) :: Pres_atm(KMAX,im,jm) ! pressure         [hPa]
+    real(DP) :: Pres_sfc(     im,jm) ! surface pressure [hPa]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = 1, jm
+    do i = 1, im
+    do k = 1, KMAX
+       Pres_atm(k,i,j) = real(PRES(KS+k-1,ims+i-1,jms+j-1)/1.E2_RP,kind=DP)
+    enddo
+    enddo
+    enddo
+
+    do j = 1, jm
+    do i = 1, im
+    do k = 1, KMAX
+       Pres_sfc(i,j) = real(SFC_PRES(ims+i-1,jms+j-1)/1.E2_RP,kind=DP)
+    enddo
+    enddo
+    enddo
+
+    call HistorySetPres( KMAX, im, jm,    & ! [IN]
+                         Pres_atm(:,:,:), & ! [IN]
+                         Pres_sfc(:,:)    ) ! [IN]
+
+    return
+  end subroutine HIST_setpres
+
+  !-----------------------------------------------------------------------------
   !> Register/Append variable to history file
   subroutine HIST_reg( &
-       itemid,  &
-       zinterp, &
-       item,    &
-       desc,    &
-       unit,    &
-       ndim,    &
-       xdim,    &
-       ydim,    &
-       zdim     )
+       itemid, &
+       item,   &
+       desc,   &
+       unit,   &
+       ndim,   &
+       xdim,   &
+       ydim,   &
+       zdim    )
     use gtool_history, only: &
-       HistoryAddVariable
+       HistoryAddVariable, &
+       HistoryCheck
     use scale_time, only: &
        NOWSTEP => TIME_NOWSTEP
     implicit none
 
-    integer,          intent(out) :: itemid  !< index number of the item
-    logical,          intent(out) :: zinterp !< z* -> z flag of the item
-    character(len=*), intent(in)  :: item    !< name         of the item
-    character(len=*), intent(in)  :: desc    !< description  of the item
-    character(len=*), intent(in)  :: unit    !< unit         of the item
-    integer,          intent(in)  :: ndim    !< dimension    of the item
-
+    integer,          intent(out) :: itemid !< index number of the item
+    character(len=*), intent(in)  :: item   !< name         of the item
+    character(len=*), intent(in)  :: desc   !< description  of the item
+    character(len=*), intent(in)  :: unit   !< unit         of the item
+    integer,          intent(in)  :: ndim   !< dimension    of the item
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
-    logical :: xh
-    logical :: yh
-
-    logical :: existed
+    logical :: flag_half_x
+    logical :: flag_half_y
 
     character(len=H_SHORT) :: dims(3)
     !---------------------------------------------------------------------------
 
+    if( .NOT. enabled ) return
+
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( ndim == 1 ) then
+    call HistoryCheck( item,  & ! [IN]
+                       itemid ) ! [OUT]
 
-       dims(1) = "z"
-       if ( present(zdim) ) then
-          if ( zdim=='half' ) then
-             dims(1) = "zh"
-          endif
-       endif
+    if ( itemid < 0 ) then
 
-    else
+       if ( ndim == 1 ) then
 
-       xh = .false.
-       if ( present(xdim) ) then
-          if ( xdim=='half' ) xh = .true.
-       endif
-       yh = .false.
-       if ( present(ydim) ) then
-          if ( ydim=='half' ) yh = .true.
-       endif
-
-       if ( xh .AND. yh ) then
-          dims(1) = 'lon_uv'
-          dims(2) = 'lat_uv'
-          dims(3) = 'height_uvz'
-       else if ( xh ) then
-          dims(1) = 'lon_uy'
-          dims(2) = 'lat_uy'
-          dims(3) = 'height_uyz'
-       else if ( yh ) then
-          dims(1) = 'lon_xv'
-          dims(2) = 'lat_xv'
-          dims(3) = 'height_xvz'
-       else
-          dims(1) = 'lon'
-          dims(2) = 'lat'
-          dims(3) = 'height'
-       endif
-
-       if ( present(zdim) ) then
-          if ( zdim=='land' ) then
-             dims(3) = 'lz'
-          else if ( zdim=='landhalf' ) then
-             dims(3) = 'lzh'
-          else if ( zdim=='urban' ) then
-             dims(3) = 'uz'
-          else if ( zdim=='urbanhalf' ) then
-             dims(3) = 'uzh'
-          else if ( zdim=='half' ) then
-             if ( xh .AND. yh ) then
-                dims(3) = 'height_uvw'
-             else if ( xh ) then
-                dims(3) = 'height_uyw'
-             else if ( yh ) then
-                dims(3) = 'height_xvw'
-             else
-                dims(3) = 'height_xyw'
+          ! check half/full level for vertical
+          dims(1) = "z"
+          if ( present(zdim) ) then
+             if ( zdim == 'half' ) then
+                dims(1) = "zh"
              endif
           endif
+
+       else
+
+          ! check half/full level for horizontal
+          flag_half_x = .false.
+          if ( present(xdim) ) then
+             if( xdim == 'half' ) flag_half_x = .true.
+          endif
+
+          flag_half_y = .false.
+          if ( present(ydim) ) then
+             if( ydim == 'half' ) flag_half_y = .true.
+          endif
+
+          if    ( flag_half_x .AND. flag_half_y ) then
+             dims(1) = 'lon_uv'
+             dims(2) = 'lat_uv'
+             dims(3) = 'height_uvz'
+          elseif( flag_half_x ) then
+             dims(1) = 'lon_uy'
+             dims(2) = 'lat_uy'
+             dims(3) = 'height_uyz'
+          elseif( flag_half_y ) then
+             dims(1) = 'lon_xv'
+             dims(2) = 'lat_xv'
+             dims(3) = 'height_xvz'
+          else
+             dims(1) = 'lon'
+             dims(2) = 'lat'
+             dims(3) = 'height'
+          endif
+
+          ! check vertical coordinate
+          if ( present(zdim) ) then
+             if    ( zdim == 'land' ) then
+                dims(3) = 'lz'
+             elseif( zdim == 'landhalf' ) then
+                dims(3) = 'lzh'
+             elseif( zdim == 'urban' ) then
+                dims(3) = 'uz'
+             elseif( zdim == 'urbanhalf' ) then
+                dims(3) = 'uzh'
+             elseif( zdim == 'half' ) then
+                if    ( flag_half_x .AND. flag_half_y ) then
+                   dims(3) = 'height_uvw'
+                elseif( flag_half_x ) then
+                   dims(3) = 'height_uyw'
+                elseif( flag_half_y ) then
+                   dims(3) = 'height_xvw'
+                else
+                   dims(3) = 'height_xyw'
+                endif
+             endif
+          endif
+
        endif
 
+       call HistoryAddVariable( itemid,       & ! [OUT]
+                                item,         & ! [IN]
+                                dims(1:ndim), & ! [IN]
+                                desc,         & ! [IN]
+                                unit,         & ! [IN]
+                                NOWSTEP       ) ! [IN]
     endif
-
-    call HistoryAddVariable( item,         & ! [IN]
-                             dims(1:ndim), & ! [IN]
-                             desc,         & ! [IN]
-                             unit,         & ! [IN]
-                             NOWSTEP,      & ! [IN]
-                             itemid,       & ! [OUT]
-                             zinterp,      & ! [OUT]
-                             existed       ) ! [OUT]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -597,7 +713,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Check time to putting data
   subroutine HIST_query( &
-       itemid, &
+       item,   &
        answer  )
     use gtool_history, only: &
        HistoryQuery
@@ -605,20 +721,19 @@ contains
        TIME_NOWSTEP
     implicit none
 
-    integer, intent(in)  :: itemid !< index number of the item
-    logical, intent(out) :: answer !< is it time to store?
-
+    character(len=*), intent(in)  :: item   !< name of the item
+    logical,          intent(out) :: answer !< is it time to store?
     !---------------------------------------------------------------------------
 
     answer = .false.
 
-    if ( .NOT. enabled ) return
-
-    if ( itemid < 0 ) return
+    if( .NOT. enabled ) return
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    call HistoryQuery(itemid, TIME_NOWSTEP, answer)
+    call HistoryQuery( item,         & ! [IN]
+                       TIME_NOWSTEP, & ! [IN]
+                       answer        ) ! [OUT]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -628,26 +743,25 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
   subroutine HIST_put_0D( &
-       itemid, &
-       var     )
+       item, &
+       var   )
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
 
-    integer,  intent(in) :: itemid !< index number of the item
-    real(RP), intent(in) :: var    !< value
-
+    character(len=*), intent(in)  :: item   !< name of the item
+    real(RP),         intent(in)  :: var    !< value
     !---------------------------------------------------------------------------
 
-    if ( .NOT. enabled ) return
-
-    if ( itemid < 0 ) return
+    if( .NOT. enabled ) return
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    call HistoryPut(itemid, TIME_NOWSTEP, var)
+    call HistoryPut( item,         & ! [IN]
+                     TIME_NOWSTEP, & ! [IN]
+                     var           ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -657,32 +771,33 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
   subroutine HIST_put_1D( &
-       itemid, &
-       var     )
+       item, &
+       var   )
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
 
-    integer,  intent(in) :: itemid !< index number of the item
-    real(RP), intent(in) :: var(:) !< value
+    character(len=*), intent(in)  :: item   !< name of the item
+    real(RP),         intent(in)  :: var(:) !< value
 
-    real(RP) :: var2(KMAX)
+    real(RP) :: var_trim(KMAX)
+
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if ( .NOT. enabled ) return
-
-    if ( itemid < 0 ) return
+    if( .NOT. enabled ) return
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     do k = 1, KMAX
-       var2(k) = var(KS+k-1)
+       var_trim(k) = var(KS+k-1)
     enddo
 
-    call HistoryPut(itemid, TIME_NOWSTEP, var2)
+    call HistoryPut( item,         & ! [IN]
+                     TIME_NOWSTEP, & ! [IN]
+                     var_trim(:)       ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -692,9 +807,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 2D data to history buffer
   subroutine HIST_put_2D( &
-       itemid, &
-       var,    &
-       nohalo  )
+       item,  &
+       var,   &
+       nohalo )
     use gtool_file, only: &
        RMISS
     use gtool_history, only: &
@@ -703,59 +818,59 @@ contains
        TIME_NOWSTEP
     implicit none
 
-    integer,  intent(in) :: itemid   !< index number of the item
-    real(RP), intent(in) :: var(:,:) !< value
+    character(len=*), intent(in)  :: item   !< name of the item
+    real(RP),         intent(in)  :: var(:,:) !< value
+    logical,          intent(in), optional :: nohalo
 
-    logical,  intent(in), optional :: nohalo
+    real(RP) :: var_trim(im,jm)
 
-    real(RP) :: var2(im*jm)
+    logical  :: nohalo_
     integer  :: i, j
-    logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    if ( .NOT. enabled ) return
-
-    if ( itemid < 0 ) return
+    if( .NOT. enabled ) return
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     do j = 1, jm
     do i = 1, im
-       var2(i + (j-1)*im) = var(ims+i-1,jms+j-1)
+       var_trim(i,j) = var(ims+i-1,jms+j-1)
     enddo
     enddo
 
     nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
+    if( present(nohalo) ) nohalo_ = nohalo
 
     if ( nohalo_ ) then
        ! W halo
        do j = 1, jm
        do i = 1, IS-ims
-          var2(i + (j-1)*im) = RMISS
+          var_trim(i,j) = RMISS
        enddo
        enddo
        ! E halo
        do j = 1, jm
        do i = IE-ims+2, ime-ims+1
-          var2(i + (j-1)*im) = RMISS
+          var_trim(i,j) = RMISS
        enddo
        enddo
        ! S halo
        do j = 1, JS-jms
        do i = 1, im
-          var2(i + (j-1)*im) = RMISS
+          var_trim(i,j) = RMISS
        enddo
        enddo
        ! N halo
        do j = JE-jms+2, jme-jms+1
        do i = 1, im
-          var2(i + (j-1)*im) = RMISS
+          var_trim(i,j) = RMISS
        enddo
        enddo
     endif
 
-    call HistoryPut(itemid, TIME_NOWSTEP, var2)
+    call HistoryPut( item,         & ! [IN]
+                     TIME_NOWSTEP, & ! [IN]
+                     var_trim(:,:) ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -765,9 +880,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 3D data to history buffer
   subroutine HIST_put_3D( &
-       itemid,  &
+       item,    &
        var,     &
-       zinterp, &
        xdim,    &
        ydim,    &
        zdim,    &
@@ -778,39 +892,26 @@ contains
        HistoryPut
     use scale_time, only: &
        TIME_NOWSTEP
-    use scale_interpolation, only: &
-       INTERP_vertical_xi2z, &
-       INTERP_available
     implicit none
 
-    integer,  intent(in) :: itemid     !< index number of the item
-    real(RP), intent(in) :: var(:,:,:) !< value
-    logical,  intent(in) :: zinterp    !< vertical interpolation?
-
+    character(len=*), intent(in)  :: item   !< name of the item
+    real(RP),         intent(in)  :: var(:,:,:) !< value
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
     logical,          intent(in), optional :: nohalo
 
-    intrinsic shape
-    integer :: s(3)
-
     character(len=H_SHORT) :: xd, yd, zd
+    integer                :: isize, jsize, ksize
+    integer                :: istart, jstart, kstart
 
-    real(RP), allocatable :: var_Z(:,:,:)
-    real(RP), allocatable :: var2 (:)
+    real(RP) :: var_trim(KMAX,im,jm)
 
-    integer :: i, j, k
-    integer :: isize, jsize, ksize
-    integer :: iall, jall, kall
-    integer :: istart, jstart, kstart
-
-    logical :: nohalo_
+    logical  :: nohalo_
+    integer  :: i, j, k, ijk
     !---------------------------------------------------------------------------
 
-    if ( .NOT. enabled ) return
-
-    if ( itemid < 0 ) return
+    if( .NOT. enabled ) return
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
@@ -822,145 +923,94 @@ contains
     if( present(zdim) ) zd = zdim
 
     nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
-
+    if( present(nohalo) ) nohalo_ = nohalo
 
     ! select dimension
     select case ( xd )
+      case ('half')
+        isize  = im
+        istart = ims
       case default
         isize  = im
-        iall   = IA
         istart = ims
     end select
+
     select case ( yd )
+      case ('half')
+        jsize  = jm
+        jstart = jms
       case default
         jsize  = jm
-        jall   = JA
         jstart = jms
     end select
+
     select case ( zd )
       case ('land')
         ksize  = LKMAX
-        kall   = LKE
+        kstart = LKS
+      case ('landhalf')
+        ksize  = LKMAX
         kstart = LKS
       case ('urban')
         ksize  = UKMAX
-        kall   = UKE
         kstart = UKS
+      case ('urbanhalf')
+        ksize  = UKMAX
+        kstart = UKS
+      case ('half')
+        ksize  = KMAX
+        kstart = KS
       case default
         ksize  = KMAX
-        kall   = KA
-        Kstart = KS
+        kstart = KS
     end select
 
-    allocate( var_Z(kall,iall,jall)    )
-    allocate( var2 (ksize*isize*jsize) )
+    do j = 1, jsize
+    do i = 1, isize
+    do k = 1, ksize
+       var_trim(k,i,j) = var(kstart+k-1,istart+i-1,jstart+j-1)
+    enddo
+    enddo
+    enddo
 
-    s = shape(var)
-    if ( s(1) == 1 ) then
-
+    if ( nohalo_ ) then
+          ! W halo
        do j = 1, jsize
+       do i = 1, IS-istart
+       do k = 1, ksize
+          var_trim(k,i,j) = RMISS
+       enddo
+       enddo
+       enddo
+       ! E halo
+       do j = 1, jsize
+       do i = IE-istart+2, ime-istart+1
+       do k = 1, ksize
+          var_trim(k,i,j) = RMISS
+       enddo
+       enddo
+       enddo
+       ! S halo
+       do j = 1, JS-jstart
        do i = 1, isize
-          var2(i + (j-1)*isize) = var(1,istart+i-1,jstart+j-1)
+       do k = 1, ksize
+          var_trim(k,i,j) = RMISS
        enddo
        enddo
-
-       if ( nohalo_ ) then
-          ! W halo
-          do j = 1, jsize
-          do i = 1, IS-ims
-             var2(i + (j-1)*isize) = RMISS
-          enddo
-          enddo
-          ! E halo
-          do j = 1, jsize
-          do i = IE-ims+2, ime-ims+1
-             var2(i + (j-1)*isize) = RMISS
-          enddo
-          enddo
-          ! S halo
-          do j = 1, JS-jms
-          do i = 1, isize
-             var2(i + (j-1)*isize) = RMISS
-          enddo
-          enddo
-          ! N halo
-          do j = JE-jms+2, jme-jms+1
-          do i = 1, isize
-             var2(i + (j-1)*isize) = RMISS
-          enddo
-          enddo
-       endif
-
-       call HistoryPut(itemid, TIME_NOWSTEP, var2(1:isize*jsize))
-
-    else
-       if (       ksize == KMAX    &
-            .AND. zinterp          &
-            .AND. INTERP_available ) then
-          call PROF_rapstart('FILE_O_interp', 2)
-          call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
-                                     var_Z(:,:,:)  ) ! [OUT]
-          call PROF_rapend  ('FILE_O_interp', 2)
-
-          do k = 1, ksize
-          do j = 1, jsize
-          do i = 1, isize
-             var2(i + (j-1)*isize + (k-1)*jsize*isize) = var_Z(kstart+k-1,istart+i-1,jstart+j-1)
-          enddo
-          enddo
-          enddo
-       else
-          do k = 1, ksize
-          do j = 1, jsize
-          do i = 1, isize
-             var2(i + (j-1)*isize + (k-1)*jsize*isize) = var(kstart+k-1,istart+i-1,jstart+j-1)
-          enddo
-          enddo
-          enddo
-       endif
-
-       if ( nohalo_ ) then
-          ! W halo
-          do k = 1, ksize
-          do j = 1, jsize
-          do i = 1, IS-ims
-             var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
-          enddo
-          enddo
-          enddo
-          ! E halo
-          do k = 1, ksize
-          do j = 1, jsize
-          do i = IE-ims+2, ime-ims+1
-             var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
-          enddo
-          enddo
-          enddo
-          ! S halo
-          do k = 1, ksize
-          do j = 1, JS-jms
-          do i = 1, isize
-             var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
-          enddo
-          enddo
-          enddo
-          ! N halo
-          do k = 1, ksize
-          do j = JE-jms+2, jme-jms+1
-          do i = 1, isize
-             var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
-          enddo
-          enddo
-          enddo
-       endif
-
-       call HistoryPut(itemid, TIME_NOWSTEP, var2)
-
+       enddo
+       ! N halo
+       do j = JE-jstart+2, jme-jstart+1
+       do i = 1, isize
+       do k = 1, ksize
+          var_trim(k,i,j) = RMISS
+       enddo
+       enddo
+       enddo
     endif
 
-    deallocate( var_Z )
-    deallocate( var2  )
+    call HistoryPut( item,                 & ! [IN]
+                     TIME_NOWSTEP,         & ! [IN]
+                     var_trim(1:ksize,:,:) ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -981,24 +1031,23 @@ contains
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: unit
 
-    integer           :: itemid
-    logical           :: zinterp
-    logical           :: do_put
+    integer :: itemid
+    logical :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .NOT. enabled ) return
+    if( .NOT. enabled ) return
 
+    call HIST_reg  ( itemid, & ! [OUT]
+                     item,   & ! [IN]
+                     desc,   & ! [IN]
+                     unit,   & ! [IN]
+                     0       ) ! [IN]
 
-    call HIST_reg( itemid,              & ! [OUT]
-                   zinterp,             & ! [OUT]
-                   item, desc, unit, 0 )  ! [IN]
-
-
-    call HIST_query( itemid, & ! [IN]
+    call HIST_query( item,   & ! [IN]
                      do_put  ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( itemid, var ) ! [IN]
+       call HIST_put( item, var ) ! [IN]
     endif
 
     return
@@ -1014,34 +1063,35 @@ contains
        zdim  )
     implicit none
 
-    real(RP),         intent(in) :: var(:)
-    character(len=*), intent(in) :: item
-    character(len=*), intent(in) :: desc
-    character(len=*), intent(in) :: unit
-
+    real(RP),         intent(in)  :: var(:)
+    character(len=*), intent(in)  :: item
+    character(len=*), intent(in)  :: desc
+    character(len=*), intent(in)  :: unit
     character(len=*), intent(in), optional :: zdim
 
     character(len=H_SHORT) :: zd
-    integer           :: itemid
-    logical           :: zinterp
-    logical           :: do_put
+
+    integer :: itemid
+    logical :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .NOT. enabled ) return
+    if( .NOT. enabled ) return
 
     zd = ''
     if( present(zdim) ) zd = zdim
 
-    call HIST_reg( itemid,              & ! [OUT]
-                   zinterp,             & ! [OUT]
-                   item, desc, unit, 1, & ! [IN]
-                   zdim=zd              ) ! [IN]
+    call HIST_reg  ( itemid, & ! [OUT]
+                     item,   & ! [IN]
+                     desc,   & ! [IN]
+                     unit,   & ! [IN]
+                     1,      & ! [IN]
+                     zdim=zd ) ! [IN]
 
-    call HIST_query( itemid, & ! [IN]
+    call HIST_query( item,   & ! [IN]
                      do_put  ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( itemid, var ) ! [IN]
+       call HIST_put( item, var ) ! [IN]
     endif
 
     return
@@ -1059,38 +1109,40 @@ contains
        nohalo )
     implicit none
 
-    real(RP),         intent(in) :: var(:,:) !< value
-    character(len=*), intent(in) :: item     !< name        of the item
-    character(len=*), intent(in) :: desc     !< description of the item
-    character(len=*), intent(in) :: unit     !< unit        of the item
-
+    real(RP),         intent(in)  :: var(:,:) !< value
+    character(len=*), intent(in)  :: item     !< name        of the item
+    character(len=*), intent(in)  :: desc     !< description of the item
+    character(len=*), intent(in)  :: unit     !< unit        of the item
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     logical,          intent(in), optional :: nohalo
 
     character(len=H_SHORT) :: xd, yd
-    integer           :: itemid
-    logical           :: zinterp
-    logical           :: do_put
+
+    integer :: itemid
+    logical :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .NOT. enabled ) return
+    if( .NOT. enabled ) return
 
     xd = ''
     yd = ''
     if( present(xdim) ) xd = xdim
     if( present(ydim) ) yd = ydim
 
-    call HIST_reg( itemid,              & ! [OUT]
-                   zinterp,             & ! [OUT]
-                   item, desc, unit, 2, & ! [IN]
-                   xdim=xd, ydim=yd     ) ! [IN]
+    call HIST_reg  ( itemid,  & ! [OUT]
+                     item,    & ! [IN]
+                     desc,    & ! [IN]
+                     unit,    & ! [IN]
+                     2,       & ! [IN]
+                     xdim=xd, & ! [IN]
+                     ydim=yd  ) ! [IN]
 
-    call HIST_query( itemid, & ! [IN]
-                     do_put  ) ! [OUT]
+    call HIST_query( item,    & ! [IN]
+                     do_put   ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( itemid, var,  & ! [IN]
+       call HIST_put( item, var,    & ! [IN]
                       nohalo=nohalo ) ! [IN]
     endif
 
@@ -1110,23 +1162,22 @@ contains
        nohalo )
     implicit none
 
-    real(RP),         intent(in) :: var(:,:,:) !< value
-    character(len=*), intent(in) :: item       !< name        of the item
-    character(len=*), intent(in) :: desc       !< description of the item
-    character(len=*), intent(in) :: unit       !< unit        of the item
-
+    real(RP),         intent(in)  :: var(:,:,:) !< value
+    character(len=*), intent(in)  :: item       !< name        of the item
+    character(len=*), intent(in)  :: desc       !< description of the item
+    character(len=*), intent(in)  :: unit       !< unit        of the item
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
     logical,          intent(in), optional :: nohalo
 
     character(len=H_SHORT) :: xd, yd, zd
-    integer           :: itemid
-    logical           :: zinterp
-    logical           :: do_put
+
+    integer :: itemid
+    logical :: do_put
     !---------------------------------------------------------------------------
 
-    if ( .NOT. enabled ) return
+    if( .NOT. enabled ) return
 
     xd = ''
     yd = ''
@@ -1135,16 +1186,20 @@ contains
     if( present(ydim) ) yd = ydim
     if( present(zdim) ) zd = zdim
 
-    call HIST_reg( itemid,                   & ! [OUT]
-                   zinterp,                  & ! [OUT]
-                   item, desc, unit, 3,      & ! [IN]
-                   xdim=xd, ydim=yd, zdim=zd ) ! [IN]
+    call HIST_reg  ( itemid,  & ! [OUT]
+                     item,    & ! [IN]
+                     desc,    & ! [IN]
+                     unit,    & ! [IN]
+                     3,       & ! [IN]
+                     xdim=xd, & ! [IN]
+                     ydim=yd, & ! [IN]
+                     zdim=zd  ) ! [IN]
 
-    call HIST_query( itemid, & ! [IN]
-                     do_put  ) ! [OUT]
+    call HIST_query( item,    & ! [IN]
+                     do_put   ) ! [OUT]
 
     if ( do_put ) then
-       call HIST_put( itemid, var, zinterp,      & ! [IN]
+       call HIST_put( item, var,                 & ! [IN]
                       xdim=xd, ydim=yd, zdim=zd, & ! [IN]
                       nohalo=nohalo              ) ! [IN]
     endif
@@ -1164,12 +1219,11 @@ contains
        HistoryGet
     implicit none
 
-    real(RP),         intent(out) :: var(:)   !< value
-    character(len=*), intent(in)  :: basename !< basename of the file
-    character(len=*), intent(in)  :: varname  !< name of the variable
-    integer,          intent(in)  :: step     !< step number
-
-    logical,          intent(in), optional :: allow_missing
+    real(RP),         intent(out) :: var(:)     !< value
+    character(len=*), intent(in)  :: basename   !< basename of the file
+    character(len=*), intent(in)  :: varname    !< name of the variable
+    integer,          intent(in)  :: step       !< step number
+    logical,          intent(in), optional :: allow_missing !< allow data is missing?
 
     logical :: am
     !---------------------------------------------------------------------------
@@ -1202,12 +1256,11 @@ contains
        HistoryGet
     implicit none
 
-    real(RP),         intent(out) :: var(:,:) !< value
-    character(len=*), intent(in)  :: basename !< basename of the file
-    character(len=*), intent(in)  :: varname  !< name of the variable
-    integer,          intent(in)  :: step     !< step number
-
-    logical,          intent(in), optional :: allow_missing
+    real(RP),         intent(out) :: var(:,:)   !< value
+    character(len=*), intent(in)  :: basename   !< basename of the file
+    character(len=*), intent(in)  :: varname    !< name of the variable
+    integer,          intent(in)  :: step       !< step number
+    logical,          intent(in), optional :: allow_missing !< allow data is missing?
 
     logical :: am
     !---------------------------------------------------------------------------
@@ -1244,8 +1297,7 @@ contains
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
     integer,          intent(in)  :: step       !< step number
-
-    logical,          intent(in), optional :: allow_missing
+    logical,          intent(in), optional :: allow_missing !< allow data is missing?
 
     logical :: am
     !---------------------------------------------------------------------------

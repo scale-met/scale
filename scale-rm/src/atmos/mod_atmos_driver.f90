@@ -135,18 +135,19 @@ contains
   !> Resume
   subroutine ATMOS_driver_resume1
     use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics, &
-       DENS,                   &
-       MOMZ,                   &
-       MOMX,                   &
-       MOMY,                   &
-       RHOT,                   &
-       QTRC,                   &
-       DENS_tp,                &
-       MOMZ_tp,                &
-       MOMX_tp,                &
-       MOMY_tp,                &
-       RHOT_tp,                &
+       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_history_setpres, &
+       DENS,                       &
+       MOMZ,                       &
+       MOMX,                       &
+       MOMY,                       &
+       RHOT,                       &
+       QTRC,                       &
+       DENS_tp,                    &
+       MOMZ_tp,                    &
+       MOMX_tp,                    &
+       MOMY_tp,                    &
+       RHOT_tp,                    &
        RHOQ_tp
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_resume
@@ -204,6 +205,7 @@ contains
 
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_diagnostics
+    call ATMOS_vars_history_setpres
 
     !########## Set Surface Boundary Condition ##########
     call PROF_rapstart('ATM_SfcExch', 2)
@@ -290,20 +292,21 @@ contains
        ATMOS_sw_phy_tb, &
        ATMOS_sw_phy_cp
     use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics, &
-       ATMOS_vars_history,     &
-       ATMOS_vars_monitor,     &
-       DENS,                   &
-       MOMZ,                   &
-       MOMX,                   &
-       MOMY,                   &
-       RHOT,                   &
-       QTRC,                   &
-       DENS_tp,                &
-       MOMZ_tp,                &
-       MOMX_tp,                &
-       MOMY_tp,                &
-       RHOT_tp,                &
+       ATMOS_vars_history,         &
+       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_history_setpres, &
+       ATMOS_vars_monitor,         &
+       DENS,                       &
+       MOMZ,                       &
+       MOMX,                       &
+       MOMY,                       &
+       RHOT,                       &
+       QTRC,                       &
+       DENS_tp,                    &
+       MOMZ_tp,                    &
+       MOMX_tp,                    &
+       MOMY_tp,                    &
+       RHOT_tp,                    &
        RHOQ_tp
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver
@@ -367,6 +370,7 @@ contains
     !########## Calculate diagnostic variables ##########
     call PROF_rapstart('ATM_History', 1)
     call ATMOS_vars_diagnostics
+    call ATMOS_vars_history_setpres
     call PROF_rapend  ('ATM_History', 1)
 
     !########## Microphysics ##########
