@@ -76,7 +76,7 @@ module scale_history
   !++ Private parameters & variables
   !
   logical, private :: enabled
-  integer, private :: im,  jm
+  integer, private :: im,  jm, km
   integer, private :: ims, ime
   integer, private :: jms, jme
 
@@ -172,10 +172,12 @@ contains
        jme = JE
     endif
 
+    km = max( LKMAX, UKMAX, KMAX )
+
     call HistoryInit( HIST_OUTPUT_PAXIS,               & ! [OUT]
                       HIST_PAXIS_nlayer,               & ! [OUT]
                       HIST_PAXIS_hPa(:),               & ! [OUT]
-                      KMAX, im, jm,                    & ! [IN]
+                      im, jm, km,                      & ! [IN]
                       PRC_masterrank,                  & ! [IN]
                       PRC_myrank,                      & ! [IN]
                       rankidx(:),                      & ! [IN]
@@ -871,7 +873,7 @@ contains
 
     real(RP) :: var_Z   (KA               ,IA,JA)
     real(RP) :: var_P   (HIST_PAXIS_nlayer,IA,JA)
-    real(RP) :: var_trim(KMAX             *im*jm)
+    real(RP) :: var_trim(km*im*jm)
 
     integer  :: s(3)
     logical  :: nohalo_

@@ -328,11 +328,13 @@ contains
     enddo
     enddo
     enddo
+
     do j = JSB, JEB
     do i = ISB, IEB
        LnSFC_PRES(i,j) = dlog( SFC_PRES(i,j) )
     enddo
     enddo
+
     LnPaxis(:) = dlog( Paxis(:) )
 
     do j = JSB, JEB

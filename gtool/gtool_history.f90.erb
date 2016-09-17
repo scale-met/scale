@@ -206,9 +206,9 @@ contains
        output_paxis,      &
        paxis_nlayer,      &
        paxis_value,       &
-       ksize,             &
        isize,             &
        jsize,             &
+       ksize,             &
        master,            &
        myrank,            &
        rankidx,           &
@@ -238,9 +238,9 @@ contains
     logical,          intent(out)          :: output_paxis
     integer,          intent(out)          :: paxis_nlayer
     real(DP),         intent(out)          :: paxis_value(History_PAXIS_nlimit)
-    integer,          intent(in)           :: ksize
     integer,          intent(in)           :: isize
     integer,          intent(in)           :: jsize
+    integer,          intent(in)           :: ksize
     integer,          intent(in)           :: master
     integer,          intent(in)           :: myrank
     integer,          intent(in)           :: rankidx(:)
@@ -650,7 +650,9 @@ contains
              History_vars(id)%zinterp  = History_req(reqid)%zinterp
 
              ndim     = size(dims(:))
-             dims_(:) = dims(:)
+             dims_(:) = ''
+
+             dims_(1:ndim) = dims(1:ndim)
              if (       ndim == 3                     &
                   .AND. History_vars(id)%zinterp == 3 ) then
                 dims_(3) = 'pz' ! overwrite
