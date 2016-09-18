@@ -591,15 +591,14 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** [REFSTATE] update reference state'
 
-       call THERMODYN_temp_pres( temp(:,:,:),   & ! [OUT]
-                                 pres(:,:,:),   & ! [OUT]
-                                 DENS(:,:,:),   & ! [IN]
-                                 RHOT(:,:,:),   & ! [IN]
-                                 QTRC(:,:,:,:), & ! [IN]
-                                 TRACER_CV(:),  & ! [IN]
-                                 TRACER_CP(:),  & ! [IN]
-                                 TRACER_MASS(:) ) ! [IN]
-
+       call THERMODYN_temp_pres( temp,       & ! [OUT]
+                                 pres,       & ! [OUT]
+                                 DENS,       & ! [IN]
+                                 RHOT,       & ! [IN]
+                                 QTRC,       & ! [IN]
+                                 TRACER_CV,  & ! [IN]
+                                 TRACER_CP,  & ! [IN]
+                                 TRACER_MASS ) ! [IN]
 
        do j = 1, JA
        do i = 1, IA
