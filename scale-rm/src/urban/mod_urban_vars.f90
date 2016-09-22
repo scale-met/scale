@@ -47,12 +47,14 @@ module mod_urban_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: URBAN_RESTART_OUTPUT       = .false.         !< output restart file?
+  logical,               public :: URBAN_RESTART_OUTPUT                = .false.         !< Output restart file?
 
-  character(len=H_LONG), public :: URBAN_RESTART_IN_BASENAME  = ''              !< basename of the restart file
-  character(len=H_LONG), public :: URBAN_RESTART_OUT_BASENAME = ''              !< basename of the output file
-  character(len=H_MID),  public :: URBAN_RESTART_OUT_TITLE    = 'URBAN restart' !< title    of the output file
-  character(len=H_MID),  public :: URBAN_RESTART_OUT_DTYPE    = 'DEFAULT'       !< REAL4 or REAL8
+  character(len=H_LONG), public :: URBAN_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
+  logical,               public :: URBAN_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
+  character(len=H_LONG), public :: URBAN_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
+  logical,               public :: URBAN_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
+  character(len=H_MID),  public :: URBAN_RESTART_OUT_TITLE             = 'URBAN restart' !< Title    of the output file
+  character(len=H_MID),  public :: URBAN_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
   real(RP), public, allocatable :: URBAN_TR   (:,:)   ! urban surface temperature of roof [K]
@@ -912,7 +914,7 @@ contains
 
        call URBAN_vars_total
 
-       call FILEIO_write_var( restart_fid, VAR_ID(I_TR), URBAN_TR(:,:),                  & ! [IN] 
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TR), URBAN_TR(:,:),                  & ! [IN]
                               VAR_NAME(I_TR), 'XY', nohalo=.true.                        ) ! [IN]
        call FILEIO_write_var( restart_fid, VAR_ID(I_TB), URBAN_TB(:,:),                  & ! [IN]
                               VAR_NAME(I_TB), 'XY', nohalo=.true.                        ) ! [IN]
