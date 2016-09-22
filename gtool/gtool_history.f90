@@ -71,21 +71,13 @@ module gtool_history
   end interface HistoryPutAssociatedCoordinates
 
   interface HistoryPut
-     module procedure HistoryPut0DNameSP
      module procedure HistoryPut0DIdSP
-     module procedure HistoryPut0DNameDP
      module procedure HistoryPut0DIdDP
-     module procedure HistoryPut1DNameSP
      module procedure HistoryPut1DIdSP
-     module procedure HistoryPut1DNameDP
      module procedure HistoryPut1DIdDP
-     module procedure HistoryPut2DNameSP
      module procedure HistoryPut2DIdSP
-     module procedure HistoryPut2DNameDP
      module procedure HistoryPut2DIdDP
-     module procedure HistoryPut3DNameSP
      module procedure HistoryPut3DIdSP
-     module procedure HistoryPut3DNameDP
      module procedure HistoryPut3DIdDP
   end interface HistoryPut
 
@@ -104,7 +96,7 @@ module gtool_history
      character(len=File_HLONG)  :: basename       !> Base name of the file
      integer                    :: dstep          !> Time unit
      logical                    :: taverage       !> Apply time average?
-     integer                    :: zinterp        !> Vertical interpolation type
+     character(len=File_HSHORT) :: zdim           !> name of 3rd axis
      integer                    :: dtype          !> Data type
   end type request
 
@@ -114,7 +106,7 @@ module gtool_history
      integer                    :: fid            !> File id of the file
      integer                    :: dstep          !> Time unit
      logical                    :: taverage       !> Apply time average?
-     integer                    :: zinterp        !> Vertical interpolation type
+     character(len=File_HSHORT) :: zdim           !> name of 3rd axis
      logical                    :: axis_written   !> Axis for this item is already written?
      integer                    :: vid            !> Variable id
 
@@ -186,7 +178,7 @@ module gtool_history
   logical,                    private              :: History_OUTPUT_STEP0  = .false.   !> Output value at step=0?
   real(DP),                   private              :: History_OUTPUT_WAIT   = 0.0_DP    !> Time length to suppress output [sec]
 
-  logical,                    private              :: History_ERROR_PUTMISS = .false.   !> Abort if the value is never stored after last output?
+  logical,                    private              :: History_ERROR_PUTMISS = .true.   !> Abort if the value is never stored after last output?
 
   ! working
   integer,                    private, parameter   :: History_req_limit     = 1000      !> number limit for history item request
@@ -206,7 +198,7 @@ module gtool_history
 
   real(DP),                   private, parameter   :: eps                   = 1.D-10    !> epsilon for timesec
 
-  real(DP),                   private              :: laststep_write = -1
+  integer,                    private              :: laststep_write = -1
   logical,                    private              :: firsttime      = .true.
   character(LEN=LOG_LMSG),    private              :: message        = ''
   logical,                    private              :: debug          = .false.
@@ -215,6 +207,8 @@ module gtool_history
 contains
   !-----------------------------------------------------------------------------
   subroutine HistoryInit( &
+       item_count,        &
+       variant_count,     &
        output_paxis,      &
        paxis_nlayer,      &
        paxis_value,       &
@@ -235,7 +229,7 @@ contains
        default_tinterval, &
        default_tunit,     &
        default_taverage,  &
-       default_zinterp,   &
+       default_zdim,      &
        default_datatype,  &
        namelist_filename, &
        namelist_fid       )
@@ -247,6 +241,8 @@ contains
        File_preclist
     implicit none
 
+    integer,          intent(out)          :: item_count
+    integer,          intent(out)          :: variant_count
     logical,          intent(out)          :: output_paxis
     integer,          intent(out)          :: paxis_nlayer
     real(DP),         intent(out)          :: paxis_value(History_PAXIS_nlimit)
@@ -267,22 +263,19 @@ contains
     real(DP),         intent(in), optional :: default_tinterval
     character(len=*), intent(in), optional :: default_tunit
     logical,          intent(in), optional :: default_taverage
-    character(len=*), intent(in), optional :: default_zinterp
+    character(len=*), intent(in), optional :: default_zdim
     character(len=*), intent(in), optional :: default_datatype
     character(len=*), intent(in), optional :: namelist_filename
     integer         , intent(in), optional :: namelist_fid
 
-    character(len=File_HLONG)  :: History_DEFAULT_BASENAME  = ''      !> base name of the file
-    real(DP)                   :: History_DEFAULT_TINTERVAL = -1.0_DP !> time interval
-    character(len=File_HSHORT) :: History_DEFAULT_TUNIT     = 'sec'   !> time unit
-    logical                    :: History_DEFAULT_TAVERAGE  = .false. !> apply time average?
-    character(len=File_HSHORT) :: History_DEFAULT_ZINTERP   = 'NONE'  !> vertical interpolation type
-                                                                      !> NONE,OFF,MDL : no interpolation
-                                                                      !> Z,HGT        : Z coordinate
-                                                                      !> P,PRES       : pressure coordinate
-    character(len=File_HSHORT) :: History_DEFAULT_DATATYPE  = 'REAL4' !> data type
-                                                                      !> REAL4 : single precision
-                                                                      !> REAL8 : double precision
+    character(len=File_HLONG)  :: History_DEFAULT_BASENAME  = ''       !> base name of the file
+    real(DP)                   :: History_DEFAULT_TINTERVAL = -1.0_DP  !> time interval
+    character(len=File_HSHORT) :: History_DEFAULT_TUNIT     = 'sec'    !> time unit
+    logical                    :: History_DEFAULT_TAVERAGE  = .false.  !> apply time average?
+    character(len=File_HSHORT) :: History_DEFAULT_ZDIM      = 'native' !> default name of z-axis (only effective check_dim3=.ture.)
+    character(len=File_HSHORT) :: History_DEFAULT_DATATYPE  = 'REAL4'  !> data type
+                                                                       !> REAL4 : single precision
+                                                                       !> REAL8 : double precision
 
     integer  :: History_PRES_NLAYER                      = -1     !> Number of pressure layer
     real(DP) :: History_PRES_VALUE(History_PAXIS_nlimit) = 0.0_DP !> Pressure at each layer [hPa]
@@ -296,7 +289,7 @@ contains
        History_DEFAULT_TINTERVAL, &
        History_DEFAULT_TUNIT,     &
        History_DEFAULT_TAVERAGE,  &
-       History_DEFAULT_ZINTERP,   &
+       History_DEFAULT_ZDIM,      &
        History_DEFAULT_DATATYPE,  &
        History_OUTPUT_STEP0,      &
        History_OUTPUT_WAIT,       &
@@ -312,7 +305,7 @@ contains
     real(DP)                   :: TINTERVAL !> time interval
     character(len=File_HSHORT) :: TUNIT     !> time unit
     logical                    :: TAVERAGE  !> apply time average?
-    character(len=File_HSHORT) :: ZINTERP   !> vertical interpolation type
+    character(len=File_HSHORT) :: ZDIM      !> vertical coordinate (for atmosphere)
     character(len=File_HSHORT) :: DATATYPE  !> data type
 
     NAMELIST / HISTITEM / &
@@ -322,7 +315,7 @@ contains
        TINTERVAL, &
        TUNIT,     &
        TAVERAGE,  &
-       ZINTERP,   &
+       ZDIM,      &
        DATATYPE
 
     integer  :: array_size
@@ -330,6 +323,9 @@ contains
     integer  :: reqid
     real(DP) :: item_dtsec
     integer  :: item_dstep
+
+    integer                    :: id1, id2, count
+    character(len=File_HSHORT) :: item1, item2
 
     integer  :: fid, ierr
     integer  :: n, k, id
@@ -359,7 +355,7 @@ contains
     if( present(default_tinterval) ) History_DEFAULT_TINTERVAL = default_tinterval
     if( present(default_tunit)     ) History_DEFAULT_TUNIT     = default_tunit
     if( present(default_taverage)  ) History_DEFAULT_TAVERAGE  = default_taverage
-    if( present(default_zinterp)   ) History_DEFAULT_ZINTERP   = default_zinterp
+    if( present(default_zdim)      ) History_DEFAULT_ZDIM      = default_zdim
     if( present(default_datatype)  ) History_DEFAULT_DATATYPE  = default_datatype
 
     fid = -1
@@ -438,6 +434,9 @@ contains
        History_req_count = History_req_count + 1
     enddo
 
+    item_count    = History_req_count
+    variant_count = 1
+
     if    ( History_req_count > History_req_limit ) then
        write(message,*) 'xxx request of history file is exceed! n >', History_req_limit
        call Log('E',message)
@@ -460,7 +459,7 @@ contains
        TINTERVAL = History_DEFAULT_TINTERVAL
        TUNIT     = History_DEFAULT_TUNIT
        TAVERAGE  = History_DEFAULT_TAVERAGE
-       ZINTERP   = History_DEFAULT_ZINTERP
+       ZDIM      = History_DEFAULT_ZDIM
        DATATYPE  = History_DEFAULT_DATATYPE
 
        read(fid,nml=HISTITEM,iostat=ierr)
@@ -501,21 +500,21 @@ contains
 
        History_req(reqid)%dstep = item_dstep
 
-       select case(ZINTERP)
-       case('NONE','OFF','MDL')
-          History_req(reqid)%zinterp = 1
-       case('Z','HGT')
-          History_req(reqid)%zinterp = 2
-       case('P','PRES','PRE')
+       select case(ZDIM)
+       case('native','AGL','MDL')
+          History_req(reqid)%zdim = 'native'
+       case('z','Z','HGT')
+          History_req(reqid)%zdim = 'z'
+       case('pz','P','PRES')
           if ( History_PRES_NLAYER < 0 ) then
              write(message,*) &
              'xxx History_PRES_NLAYER and History_PRES_VALUE must be set for output with pressure coordinate!'
              call Log('E',message)
           endif
-          History_req(reqid)%zinterp = 3
-          output_paxis               = .true.
+          History_req(reqid)%zdim = 'pz'
+          output_paxis            = .true.
        case default
-          write(message,*) 'xxx ZINTERP has invalid name. ', trim(ZINTERP)
+          write(message,*) 'xxx ZDIM has invalid name. ', trim(ZDIM)
           call Log('E',message)
        end select
 
@@ -557,30 +556,64 @@ contains
        allocate( History_vars(n)%varsum(array_size) )
     enddo
 
+    ! count number of items and variants
+    do id1 = 1, item_count
+       item1 = History_req(id1)%item
+       count = 1
+       do id2 = id1, item_count
+          item2 = History_req(id2)%item
+          if( item1 == item2 ) count = count + 1
+       enddo
+       variant_count = max( variant_count, count)
+    enddo
+
     return
   end subroutine HistoryInit
 
   !-----------------------------------------------------------------------------
   subroutine HistoryCheck( &
-       item, &
-       id    )
+       existed,   &
+       item,      &
+       dims,      &
+       check_dim3 )
     implicit none
 
+    logical,          intent(out) :: existed
     character(len=*), intent(in)  :: item
-    integer,          intent(out) :: id
+    character(len=*), intent(in)  :: dims(:)
+    logical,          intent(in)  :: check_dim3
+
+    logical :: dim3_match
+    integer :: ndim
 
     integer :: max_count
     integer :: n
+
+    intrinsic size
     !---------------------------------------------------------------------------
 
-    !--- search existing item
-    id = -1
+    existed = .false.
+
     max_count = min( History_id_count, History_req_count )
+
     do n = 1, max_count
-       if ( item == History_vars(n)%item ) then ! match (at least one) existing item
-          id = n
+
+       !--- check 3rd axis
+       dim3_match = .true.
+       ndim       = size(dims)
+       if ( ndim == 3 .AND. check_dim3 ) then
+          if ( History_vars(n)%zdim /= dims(3) ) then
+             dim3_match = .false.
+          endif
+       endif
+
+       !--- search existing item
+       if (       item == History_vars(n)%item &
+            .AND. dim3_match                   ) then ! match (at least one) existing item
+          existed = .true.
           return
        endif
+
     enddo
 
     return
@@ -588,13 +621,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryAddVariable( &
-       id,       &
-       item,     &
-       dims,     &
-       desc,     &
-       units,    &
-       now_step, &
-       options   )
+       nregist,    &
+       item,       &
+       dims,       &
+       check_dim3, &
+       desc,       &
+       units,      &
+       now_step,   &
+       options     )
     use gtool_file, only: &
        FileCreate,      &
        FileSetOption,   &
@@ -604,30 +638,37 @@ contains
        FileDefAssociatedCoordinates
     implicit none
 
-    integer,          intent(out) :: id
+    integer,          intent(out) :: nregist
     character(len=*), intent(in)  :: item
     character(len=*), intent(in)  :: dims(:)
+    logical,          intent(in)  :: check_dim3
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
     integer,          intent(in)  :: now_step
     character(len=*), intent(in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
 
-    character(len=File_HMID)   :: tunits
-    logical                    :: fileexisted
-    integer                    :: ic, ie, is, lo
-    real(DP)                   :: dtsec
-    integer                    :: ndim
-    character(len=File_HSHORT) :: dims_(3)
+    character(len=File_HMID) :: tunits
+    logical                  :: fileexisted
+    integer                  :: ic, ie, is, lo
+    real(DP)                 :: dtsec
+    logical                  :: existed
+    logical                  :: dim3_match
+    integer                  :: ndim
 
     integer :: m, reqid
+    integer :: id
 
     intrinsic size
     !---------------------------------------------------------------------------
 
-    call HistoryCheck( item, & ! [IN]
-                       id    ) ! [OUT]
+    nregist = 0
 
-    if ( id < 0 ) then ! request-register matching check
+    call HistoryCheck( existed,   & ! [OUT]
+                       item,      & ! [IN]
+                       dims(:),   & ! [IN]
+                       check_dim3 ) ! [IN]
+
+    if ( .NOT. existed ) then ! request-register matching check
 
        ! new file registration
        if ( History_TIME_SINCE == '' ) then
@@ -637,8 +678,22 @@ contains
        endif
 
        do reqid = 1, History_req_count
+
+          dim3_match = .true.
+          ndim       = size(dims)
+          if ( ndim == 3 .AND. check_dim3 ) then
+             if (       History_req(reqid)%zdim /= 'native' &
+                  .AND. History_req(reqid)%zdim /= dims(3)  ) then
+                dim3_match = .false.
+             endif
+          endif
+
           ! note: plural requests are allowed for each item
-          if ( item == History_req(reqid)%item ) then
+          if (       item == History_req(reqid)%item &
+               .AND. dim3_match                      ) then
+
+             existed = .true.
+             nregist = nregist + 1
 
              History_id_count = History_id_count + 1
              id               = History_id_count
@@ -659,15 +714,12 @@ contains
 
              History_vars(id)%dstep    = History_req(reqid)%dstep
              History_vars(id)%taverage = History_req(reqid)%taverage
-             History_vars(id)%zinterp  = History_req(reqid)%zinterp
-
-             ndim     = size(dims(:))
-             dims_(:) = ''
-
-             dims_(1:ndim) = dims(1:ndim)
-             if (       ndim == 3                     &
-                  .AND. History_vars(id)%zinterp == 3 ) then
-                dims_(3) = 'pz' ! overwrite
+             if ( ndim == 3 ) then
+                History_req(reqid)%zdim = dims(3)
+                History_vars(id)%zdim   = dims(3)
+             else
+                History_req(reqid)%zdim = ''
+                History_vars(id)%zdim   = ''
              endif
 
              if ( .NOT. fileexisted ) then ! new file
@@ -737,7 +789,7 @@ contains
                                    History_vars(id)%outname, & ! [IN]
                                    desc,                     & ! [IN]
                                    units,                    & ! [IN]
-                                   dims_(1:ndim),            & ! [IN]
+                                   dims(1:ndim),             & ! [IN]
                                    History_req(reqid)%dtype, & ! [IN]
                                    dtsec,                    & ! [IN]
                                    History_vars(id)%taverage ) ! [IN]
@@ -777,7 +829,7 @@ contains
                 call Log('I',message)
                 write(message,*) '] Time Average?       : ', History_vars(id)%taverage
                 call Log('I',message)
-                write(message,*) '] z* -> z conversion? : ', History_vars(id)%zinterp
+                write(message,*) '] axis name           : ', dims(1:ndim)
                 call Log('I',message)
                 call Log('I','')
              endif
@@ -1473,62 +1525,31 @@ contains
   subroutine HistoryQuery( &
        item,     &
        step_now, &
-       answer,   &
-       zinterp   )
+       answer    )
     implicit none
 
     character(len=*), intent(in)  :: item
     integer,          intent(in)  :: step_now
     logical,          intent(out) :: answer
-    integer,          intent(out) :: zinterp
 
     integer :: id
     !---------------------------------------------------------------------------
 
     answer  = .false.
-    zinterp = -1
 
     ! note: multiple put may be necessary for the item
     do id = 1, History_id_count
        if ( item == History_vars(id)%item ) then
           if    ( History_vars(id)%taverage ) then
-             answer  = .true.
-             zinterp = History_vars(id)%zinterp
+             answer = .true.
           elseif( step_now == History_vars(id)%laststep_write + History_vars(id)%dstep ) then
-             answer  = .true.
-             zinterp = History_vars(id)%zinterp
+             answer = .true.
           endif
        endif
     enddo
 
     return
   end subroutine HistoryQuery
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut0DNameSP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(SP),         intent(in) :: var
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut0DIdSP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut0DNameSP
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut0DIdSP( &
@@ -1576,32 +1597,6 @@ contains
   end subroutine HistoryPut0DIdSP
 
   !-----------------------------------------------------------------------------
-  subroutine HistoryPut0DNameDP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(DP),         intent(in) :: var
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut0DIdDP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut0DNameDP
-
-  !-----------------------------------------------------------------------------
   subroutine HistoryPut0DIdDP( &
        id,       &
        step_now, &
@@ -1645,32 +1640,6 @@ contains
 
     return
   end subroutine HistoryPut0DIdDP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut1DNameSP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(SP),         intent(in) :: var(:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut1DIdSP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut1DNameSP
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut1DIdSP( &
@@ -1725,32 +1694,6 @@ contains
   end subroutine HistoryPut1DIdSP
 
   !-----------------------------------------------------------------------------
-  subroutine HistoryPut1DNameDP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(DP),         intent(in) :: var(:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut1DIdDP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut1DNameDP
-
-  !-----------------------------------------------------------------------------
   subroutine HistoryPut1DIdDP( &
        id,       &
        step_now, &
@@ -1801,32 +1744,6 @@ contains
 
     return
   end subroutine HistoryPut1DIdDP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut2DNameSP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(SP),         intent(in) :: var(:,:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut2DIdSP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut2DNameSP
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut2DIdSP( &
@@ -1885,32 +1802,6 @@ contains
   end subroutine HistoryPut2DIdSP
 
   !-----------------------------------------------------------------------------
-  subroutine HistoryPut2DNameDP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(DP),         intent(in) :: var(:,:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut2DIdDP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut2DNameDP
-
-  !-----------------------------------------------------------------------------
   subroutine HistoryPut2DIdDP( &
        id,       &
        step_now, &
@@ -1965,32 +1856,6 @@ contains
 
     return
   end subroutine HistoryPut2DIdDP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut3DNameSP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(SP),         intent(in) :: var(:,:,:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut3DIdSP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut3DNameSP
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut3DIdSP( &
@@ -2051,32 +1916,6 @@ contains
 
     return
   end subroutine HistoryPut3DIdSP
-
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut3DNameDP( &
-       item,     &
-       step_now, &
-       var       )
-    implicit none
-
-    character(len=*), intent(in) :: item
-    integer,          intent(in) :: step_now
-    real(DP),         intent(in) :: var(:,:,:)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    ! note: multiple put may be necessary for the item
-    do id = 1, History_id_count
-       if ( item == History_vars(id)%item ) then
-          call HistoryPut3DIdDP( id,       & ! [IN]
-                                 step_now, & ! [IN]
-                                 var       ) ! [IN]
-       endif
-    enddo
-
-    return
-  end subroutine HistoryPut3DNameDP
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut3DIdDP( &
@@ -2553,7 +2392,7 @@ contains
     call Log('I',message)
     write(message,*) '*** Number of history item :', History_req_count
     call Log('I',message)
-    write(message,*) 'ITEM            :OUTNAME         :size    :interval[sec]:  [step]:timeavg?:zinterp'
+    write(message,*) 'ITEM            :OUTNAME         :size    :interval[sec]:  [step]:timeavg?:zdim'
     call Log('I',message)
     write(message,*) '=================================================================================='
     call Log('I',message)
@@ -2561,13 +2400,13 @@ contains
     do id = 1, History_id_count
        dtsec = real(History_vars(id)%dstep,kind=DP) * History_DTSEC
 
-       write(message,'(1x,A,1x,A,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,I7)') History_vars(id)%item,     &
+       write(message,'(1x,A,1x,A,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A6)') History_vars(id)%item,     &
                                                                      History_vars(id)%outname,  &
                                                                      History_vars(id)%size,     &
                                                                      dtsec,                     &
                                                                      History_vars(id)%dstep,    &
                                                                      History_vars(id)%taverage, &
-                                                                     History_vars(id)%zinterp
+                                                                     History_vars(id)%zdim
        call Log('I',message)
     enddo
 

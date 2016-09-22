@@ -65,7 +65,7 @@ module mod_net2g_vars
   real(DP),        public :: HISTORY_DEFAULT_TINTERVAL
   character(CMID), public :: HISTORY_DEFAULT_BASENAME
   character(5),    public :: HISTORY_DEFAULT_TUNIT
-  character(CSHT), public :: HISTORY_DEFAULT_ZINTERP = 'NONE'
+  character(CSHT), public :: HISTORY_DEFAULT_ZDIM = 'native'
   logical,         public :: HIST_BND = .true.
 
   real(DP),        public :: MPRJ_basepoint_lon
