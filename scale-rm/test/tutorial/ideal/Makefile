@@ -5,8 +5,8 @@
 ################################################################################
 
 PWD         = $(shell pwd)
-TOPDIR      = $(abspath ../../../../..)
-TESTDIR     = ../../..
+TOPDIR      = $(abspath ../../../..)
+TESTDIR     = ../..
 
 
 # user-defined source files
@@ -14,21 +14,27 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = scale-rm_pp
-INITNAME    = NONE
-BINNAME     = NONE
-PPCONF      = pp.conf
-INITCONF    = NONE
-RUNCONF     = NONE
-TPROC       = 4
+INITCONF    = init.conf
+RUNCONF     = run.conf
+TPROC       = 2
 
 # required data (parameters,distributed files)
-DATDIR      = $(SCALE_DB)/landuse/GLCCv2/Products
+DATDIR      =
 DATPARAM    =
 DATDISTS    =
 
 
-export CHECK_MASS = T
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include $(TESTDIR)/Makefile.pp.common
+include $(TESTDIR)/Makefile.tutorial.common
+
+NET2GCONF   = net2g.conf
+
+sample ?= R20kmDX500m
+
+config:
+	ln -sf ${TOPDIR}/bin/scale-rm_init .
+	ln -sf ${TOPDIR}/bin/scale-rm      .
+	ln -sf ${TOPDIR}/scale-rm/util/netcdf2grads_h/net2g .
+	cp     sample/init_$(sample).conf ./init.conf
+	cp     sample/run_$(sample).conf  ./run.conf

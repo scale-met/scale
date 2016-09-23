@@ -16,7 +16,7 @@ ifeq ($(origin INITNAME), undefined)
    INITNAME = scale-rm_init
 endif
 
-BUILD_DIR := $(PWD)/../.libs
+BUILD_DIR := $(PWD)/.libs
 INDEX_DIR := $(PWD)
 BINDIR     = $(PWD)
 
@@ -32,14 +32,30 @@ build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
                                 INDEX_DIR=$(INDEX_DIR)   \
-                                BINDIR=$(BINDIR)
+                                BINDIR=$(BINDIR)         \
+                                dynamics=$(dynamics)     \
+                                sfcflx=$(sfcflx)         \
+                                turbulence=$(turbulence) \
+                                radiation=$(radiation)   \
+                                postfix=$(postfix)
 
 run: jobshell
 	$(JOBSUB) run.sh
 
 jobshell:
-	@sh ../../Mkjobshell.pp.$(SCALE_SYS).sh $(BINDIR) $(PPNAME) $(INITNAME) $(BINNAME) $(PPCONF) $(INITCONF) $(RUNCONF) $(TPROC) \
-	                                        $(DATDIR) $(DATPARAM) $(DATDISTS); \
+	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
+		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC) \
+		                                 $(DATDIR) $(DATPARAM) $(DATDISTS); \
+	else \
+		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC) \
+		                                            $(DATDIR) $(DATPARAM) $(DATDISTS); \
+	fi
+
+run_net2g: jobshell_net2g
+	$(JOBSUB) net2g.sh
+
+jobshell_net2g:
+	@sh $(TESTDIR)/sysdep/Mkjobshell.net2g.$(SCALE_SYS).sh $(BINDIR) $(NET2GCONF) $(TPROC);
 
 
 
