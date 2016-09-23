@@ -262,11 +262,7 @@ module scale_atmos_phy_mp_tomita08
   integer,  private, parameter :: I_Pgdep   = 41 ! v->g
   integer,  private, parameter :: I_Pgsub   = 42 ! g->v
 
-  integer,                private :: w_histid (w_nmax) = -999
-  logical,                private :: w_zinterp(w_nmax) = .false.
-  character(len=H_SHORT), private :: w_name   (w_nmax)
-  character(len=H_MID),   private :: w_desc   (w_nmax) = ''
-  character(len=H_SHORT), private :: w_unit   (w_nmax) = 'kg/kg/s'
+  character(len=H_SHORT), private :: w_name(w_nmax)
 
   data w_name / 'dqv_dt ', &
                 'dqc_dt ', &
@@ -311,7 +307,7 @@ module scale_atmos_phy_mp_tomita08
                 'Pgdep  ', &
                 'Pgsub  '  /
 
-  real(RP), private, allocatable :: work3D(:,:,:) !< for history output
+  real(RP), private, allocatable :: w3d(:,:,:,:) !< for history output
 
   integer,  private :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
 
@@ -333,6 +329,7 @@ contains
     use scale_atmos_hydrometer, only: &
        ATMOS_HYDROMETER_regist
     implicit none
+
     character(len=*), intent(in) :: MP_TYPE
     integer, intent(out) :: QA
     integer, intent(out) :: QS
@@ -380,8 +377,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP
     use scale_grid, only: &
        CDZ => GRID_CDZ
-    use scale_history, only: &
-       HIST_reg
+    implicit none
 
     real(RP) :: autoconv_nc    = Nc_ocn  !< number concentration of cloud water [1/cc]
     logical  :: enable_kk2000  = .false. !< use scheme by Khairoutdinov and Kogan (2000)
@@ -423,8 +419,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** TOMITA08: 1-moment bulk 6 category'
 
-    allocate( work3D(KA,IA,JA) )
-    work3D(:,:,:) = 0.0_RP
+    allocate( w3d(KA,IA,JA,w_nmax) )
+    w3d(:,:,:,:) = 0.0_RP
 
     allocate( Nc_def(IA,JA) )
 
@@ -546,12 +542,6 @@ contains
     else
        sw_kk2000 = 0.0_RP
     endif
-
-    ! detailed tendency monitor
-    w_desc(:) = w_name(:)
-    do ip = 1, w_nmax
-       call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
-    enddo
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_setup
@@ -776,8 +766,7 @@ contains
        TRACER_CV, &
        TRACER_MASS
     use scale_history, only: &
-       HIST_query, &
-       HIST_put
+       HIST_in
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_hydrometer, only: &
@@ -1562,6 +1551,8 @@ contains
        QTRC0(k,i,j,I_QI) = QTRC0(k,i,j,I_QI) + QTRC_t(k,i,j,I_QI) * dt
        QTRC0(k,i,j,I_QS) = QTRC0(k,i,j,I_QS) + QTRC_t(k,i,j,I_QS) * dt
        QTRC0(k,i,j,I_QG) = QTRC0(k,i,j,I_QG) + QTRC_t(k,i,j,I_QG) * dt
+
+!      w3d(k,i,j,ip) = w(ip)
     enddo
     enddo
     enddo
@@ -1678,53 +1669,26 @@ contains
     enddo
     enddo
 
+!    if( IO_L ) write(IO_FID_LOG,*) "QV      MAX/MIN:", maxval(QTRC0 (:,:,:,I_QV)), minval(QTRC0 (:,:,:,I_QV))
+!    if( IO_L ) write(IO_FID_LOG,*) "QC      MAX/MIN:", maxval(QTRC0 (:,:,:,I_QC)), minval(QTRC0 (:,:,:,I_QC))
+!    if( IO_L ) write(IO_FID_LOG,*) "QR      MAX/MIN:", maxval(QTRC0 (:,:,:,I_QR)), minval(QTRC0 (:,:,:,I_QR))
+!    if( IO_L ) write(IO_FID_LOG,*) "QI      MAX/MIN:", maxval(QTRC0 (:,:,:,I_QI)), minval(QTRC0 (:,:,:,I_QI))
+!    if( IO_L ) write(IO_FID_LOG,*) "QS      MAX/MIN:", maxval(QTRC0 (:,:,:,I_QS)), minval(QTRC0 (:,:,:,I_QS))
+!    if( IO_L ) write(IO_FID_LOG,*) "QG      MAX/MIN:", maxval(QTRC0 (:,:,:,I_QG)), minval(QTRC0 (:,:,:,I_QG))
+!    if( IO_L ) write(IO_FID_LOG,*) "QV_t    MAX/MIN:", maxval(QTRC_t(:,:,:,I_QV)), minval(QTRC_t(:,:,:,I_QV))
+!    if( IO_L ) write(IO_FID_LOG,*) "QC_t    MAX/MIN:", maxval(QTRC_t(:,:,:,I_QC)), minval(QTRC_t(:,:,:,I_QC))
+!    if( IO_L ) write(IO_FID_LOG,*) "QR_t    MAX/MIN:", maxval(QTRC_t(:,:,:,I_QR)), minval(QTRC_t(:,:,:,I_QR))
+!    if( IO_L ) write(IO_FID_LOG,*) "QI_t    MAX/MIN:", maxval(QTRC_t(:,:,:,I_QI)), minval(QTRC_t(:,:,:,I_QI))
+!    if( IO_L ) write(IO_FID_LOG,*) "QS_t    MAX/MIN:", maxval(QTRC_t(:,:,:,I_QS)), minval(QTRC_t(:,:,:,I_QS))
+!    if( IO_L ) write(IO_FID_LOG,*) "QG_t    MAX/MIN:", maxval(QTRC_t(:,:,:,I_QG)), minval(QTRC_t(:,:,:,I_QG))
+!    if( IO_L ) write(IO_FID_LOG,*) "RHOE0   MAX/MIN:", maxval(RHOE0 (:,:,:)),      minval(RHOE0 (:,:,:))
+!    if( IO_L ) write(IO_FID_LOG,*) "RHOE_t  MAX/MIN:", maxval(RHOE_t(:,:,:)),      minval(RHOE_t(:,:,:))
 !    do ip = 1, w_nmax
-!       if ( w_histid(ip) > 0 ) then
-
-!          call HIST_query( w_histid(ip), & ! [IN]
-!                           do_put        ) ! [OUT]
-
-!          if ( do_put ) then
-!             do j = JS, JE
-!             do i = IS, IE
-!             do k = KS, KE
-!                work3D(k,i,j) = w(ip)
-!             enddo
-!             enddo
-!             enddo
-
-!          if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", &
-!                     maxval(work3D(KS:KE,IS:IE,JS:JE)), minval(work3D(KS:KE,IS:IE,JS:JE))
-
-
-!             call HIST_put( w_histid(ip), work3D(:,:,:), w_zinterp(ip) )
-!          endif
-!       endif
-!    enddo
-
-!    if( IO_L ) write(IO_FID_LOG,*) "tend QV MAX/MIN:", maxval(tend(I_QV,:)), minval(tend(I_QV,:))
-!    if( IO_L ) write(IO_FID_LOG,*) "tend QC MAX/MIN:", maxval(tend(I_QC,:)), minval(tend(I_QC,:))
-!    if( IO_L ) write(IO_FID_LOG,*) "tend QR MAX/MIN:", maxval(tend(I_QR,:)), minval(tend(I_QR,:))
-!    if( IO_L ) write(IO_FID_LOG,*) "tend QI MAX/MIN:", maxval(tend(I_QI,:)), minval(tend(I_QI,:))
-!    if( IO_L ) write(IO_FID_LOG,*) "tend QS MAX/MIN:", maxval(tend(I_QS,:)), minval(tend(I_QS,:))
-!    if( IO_L ) write(IO_FID_LOG,*) "tend QG MAX/MIN:", maxval(tend(I_QG,:)), minval(tend(I_QG,:))
+!       if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", &
+!                  maxval(w3d(KS:KE,IS:IE,JS:JE,ip)), minval(w3d(KS:KE,IS:IE,JS:JE,ip))
 !
-!    if( IO_L ) write(IO_FID_LOG,*) "QV MAX/MIN:", maxval(QTRC0(:,:,:,I_QV)), minval(QTRC0(:,:,:,I_QV))
-!    if( IO_L ) write(IO_FID_LOG,*) "QC MAX/MIN:", maxval(QTRC0(:,:,:,I_QC)), minval(QTRC0(:,:,:,I_QC))
-!    if( IO_L ) write(IO_FID_LOG,*) "QR MAX/MIN:", maxval(QTRC0(:,:,:,I_QR)), minval(QTRC0(:,:,:,I_QR))
-!    if( IO_L ) write(IO_FID_LOG,*) "QI MAX/MIN:", maxval(QTRC0(:,:,:,I_QI)), minval(QTRC0(:,:,:,I_QI))
-!    if( IO_L ) write(IO_FID_LOG,*) "QS MAX/MIN:", maxval(QTRC0(:,:,:,I_QS)), minval(QTRC0(:,:,:,I_QS))
-!    if( IO_L ) write(IO_FID_LOG,*) "QG MAX/MIN:", maxval(QTRC0(:,:,:,I_QG)), minval(QTRC0(:,:,:,I_QG))
-
-!    if( IO_L ) write(IO_FID_LOG,*) "QV_t MAX/MIN:", maxval(QTRC_t(:,:,:,I_QV)), minval(QTRC_t(:,:,:,I_QV))
-!    if( IO_L ) write(IO_FID_LOG,*) "QC_t MAX/MIN:", maxval(QTRC_t(:,:,:,I_QC)), minval(QTRC_t(:,:,:,I_QC))
-!    if( IO_L ) write(IO_FID_LOG,*) "QR_t MAX/MIN:", maxval(QTRC_t(:,:,:,I_QR)), minval(QTRC_t(:,:,:,I_QR))
-!    if( IO_L ) write(IO_FID_LOG,*) "QI_t MAX/MIN:", maxval(QTRC_t(:,:,:,I_QI)), minval(QTRC_t(:,:,:,I_QI))
-!    if( IO_L ) write(IO_FID_LOG,*) "QS_t MAX/MIN:", maxval(QTRC_t(:,:,:,I_QS)), minval(QTRC_t(:,:,:,I_QS))
-!    if( IO_L ) write(IO_FID_LOG,*) "QG_t MAX/MIN:", maxval(QTRC_t(:,:,:,I_QG)), minval(QTRC_t(:,:,:,I_QG))
-
-!    if( IO_L ) write(IO_FID_LOG,*) "RHOE0  MAX/MIN:", maxval(RHOE0(:,:,:)), minval(RHOE0(:,:,:))
-!    if( IO_L ) write(IO_FID_LOG,*) "RHOE_t MAX/MIN:", maxval(RHOE_t(:,:,:)), minval(RHOE_t(:,:,:))
+!       call HIST_in( w_name(ip), w3d(:,:,:,ip), 'individual tendency term in tomita08', 'kg/kg/s' )
+!    enddo
 
     call PROF_rapend  ('MP_tomita08', 3)
 

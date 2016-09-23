@@ -214,7 +214,7 @@ cat << EOF > param.history.conf
  HISTORY_DEFAULT_TUNIT     = "${TIME_DT_UNIT}",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
  HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZINTERP   = .false.,
+ HISTORY_DEFAULT_ZCOORD    = "model",
  HISTORY_OUTPUT_STEP0      = .true.,
 /
 

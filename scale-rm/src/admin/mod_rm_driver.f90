@@ -424,11 +424,11 @@ contains
     return
   end subroutine scalerm
 
-
+  !-----------------------------------------------------------------------------
   subroutine resume_state
     use mod_atmos_driver, only: &
-       ATMOS_driver_resume1,    &
-       ATMOS_driver_resume2,    &
+       ATMOS_driver_resume1, &
+       ATMOS_driver_resume2, &
        ATMOS_SURFACE_SET
     use mod_ocean_driver, only: &
        OCEAN_driver_resume, &
@@ -440,8 +440,9 @@ contains
        URBAN_driver_resume, &
        URBAN_SURFACE_SET
     use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics, &
-       ATMOS_vars_monitor,     &
+       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_history_setpres, &
+       ATMOS_vars_monitor,         &
        ATMOS_vars_restart_read
     use mod_ocean_vars, only: &
        OCEAN_vars_restart_read
@@ -461,6 +462,7 @@ contains
     use mod_urban_admin, only: &
        URBAN_do
     implicit none
+    !---------------------------------------------------------------------------
 
     ! read restart data
     if( ATMOS_do ) call ATMOS_vars_restart_read
@@ -471,11 +473,14 @@ contains
     ! setup user-defined procedure before setup of other components
     call USER_resume0
 
-    ! calc diagnostics
-    if( ATMOS_do ) call ATMOS_vars_diagnostics
+    if ( ATMOS_do ) then
+       ! calc diagnostics
+       call ATMOS_vars_diagnostics
+       call ATMOS_vars_history_setpres
 
-    ! first monitor
-    if( ATMOS_do ) call ATMOS_vars_monitor
+       ! first monitor
+       call ATMOS_vars_monitor
+    endif
 
     ! setup surface condition
     if( ATMOS_do ) call ATMOS_SURFACE_SET( countup=.false. )

@@ -13,12 +13,15 @@
 \verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; 出力の時間間隔。 \\
 \verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; \verb|HISTORY_DEFAULT_TINTERVAL|の単位。 \\
 \verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: 瞬間値、\verb|.true.|: 平均値。\\
-\verb|  HISTORY_DEFAULT_ZINTERP   = .false.,|       & ; 鉛直内挿するかどうか。\\
-                                                    & ~ \verb|.false.|: モデル面出力。\\
-                                                    & ~ \verb|.true.|: Z面に内挿した値を出力。\\
+\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|      & ; 鉛直内挿の種別。\\
+                                                    & ~ native,AGL,MDL: モデル面の値を出力(内挿しない)。\\
+                                                    & ~ z,Z,HGT: 絶対高度面に内挿した値を出力。\\
+                                                    & ~ pz,P,PRES: 気圧面に内挿した値を出力。\\
 \verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & ; 出力データの型。\verb|REAL4|, \verb|REAL8|など。\\
 \verb|  HISTORY_OUTPUT_STEP0      = .true.,|        & ; 初期時刻(t=0)の値を出力するかどうか。\\
                                                     & ~ \verb|.true.|: 出力、\verb|.false.|: 出力しない。\\
+\verb|  History_PRES_VALUE        = -1,|            & ; 気圧面内挿を用いる場合の層数。\\
+\verb|  History_PRES_NLAYER       = 0.0*100,|       & ; 気圧面内挿に用いる各層の気圧の値。下層から順にhPaで指定する。\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
@@ -43,8 +46,8 @@
 \verb| TINTERVAL= "600.0",   | &  (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
 \verb| TUNIT    = "SEC",     | &  (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
 \verb| TAVERAGE = .true.,    | &  (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\
-\verb| ZINTERP  = .false.,   | &  (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
-\verb| DATATYPE = "REAL4",   | &  (オプション) \verb|HISTORY_DEFAULT_ZINTERP|に同じ。\\
+\verb| ZCOORD   = "model",   | &  (オプション) \verb|HISTORY_DEFAULT_ZCOORD|に同じ。\\
+\verb| DATATYPE = "REAL4",   | &  (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\

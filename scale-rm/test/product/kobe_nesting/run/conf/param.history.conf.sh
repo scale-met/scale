@@ -14,7 +14,7 @@ cat << EOF > conf/param.history.conf
  HISTORY_DEFAULT_TUNIT     = "SEC",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
  HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZINTERP   = .true.,
+ HISTORY_DEFAULT_ZCOORD    = "z",
 /
 
 &HISTITEM item="DENS" /

@@ -58,7 +58,7 @@
 \verb| HISTORY_DEFAULT_TUNIT     = "SEC",|   & \verb|HISTORY_DEFAULT_TINTERVAL|の単位。\\
 \verb| HISTORY_DEFAULT_TAVERAGE  = .false.,| & \\
 \verb| HISTORY_DEFAULT_DATATYPE  = "REAL4",| & \\
-\textcolor{blue}{\verb| HISTORY_DEFAULT_ZINTERP   = .false.,|} & モデル面データを出力。\\
+\textcolor{blue}{\verb| HISTORY_DEFAULT_ZCOORD   = "model",|}  & モデル面データを出力。\\
 \textcolor{blue}{\verb| HISTORY_OUTPUT_STEP0      = .true.,|}  & t=0の値を出力に含める。 \\
 \verb|/| \\
 \end{tabularx}
@@ -180,7 +180,7 @@
 \end{tabularx}
 }}}\\
 
-\noindent 
+\noindent
 多段のオフライン・ネスティング実験を行いたい場合は、以上の過程を繰り返せばよい。
 つまり、子領域として時間積分計算した結果を再度、親領域と見立てて、
 さらに内側の孫領域の初期値/境界値作成を行なえばよい。
