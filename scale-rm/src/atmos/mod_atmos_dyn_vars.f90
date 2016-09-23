@@ -44,12 +44,14 @@ module mod_atmos_dyn_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_DYN_RESTART_OUTPUT       = .false.             !< output restart file?
+  logical,               public :: ATMOS_DYN_RESTART_OUTPUT                = .false.             !< output restart file?
 
-  character(len=H_LONG), public :: ATMOS_DYN_RESTART_IN_BASENAME  = ''                  !< basename of the restart file
-  character(len=H_LONG), public :: ATMOS_DYN_RESTART_OUT_BASENAME = ''                  !< basename of the output file
-  character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_TITLE    = 'ATMOS_DYN restart' !< title    of the output file
-  character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
+  character(len=H_LONG), public :: ATMOS_DYN_RESTART_IN_BASENAME           = ''                  !< Basename of the input  file
+  logical,               public :: ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL  = .false.             !< Add timelabel to the basename of input  file?
+  character(len=H_LONG), public :: ATMOS_DYN_RESTART_OUT_BASENAME          = ''                  !< Basename of the output file
+  logical,               public :: ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL = .true.              !< Add timelabel to the basename of output file?
+  character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_TITLE             = 'ATMOS_DYN restart' !< title    of the output file
+  character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_DTYPE             = 'DEFAULT'           !< REAL4 or REAL8
 
   ! prognostic variables
   real(RP), public, allocatable :: PROG(:,:,:,:)
@@ -231,20 +233,20 @@ contains
   subroutine ATMOS_DYN_vars_restart_write
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: & 
-       FILEIO_write 
+    use scale_fileio, only: &
+       FILEIO_write
     implicit none
-          
+
     character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
     integer :: iv
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
-    
+
        call TIME_gettimelabel( timelabel )
        write(basename,'(A,A,A)') trim(ATMOS_DYN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-    
+
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)

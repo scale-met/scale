@@ -44,12 +44,14 @@ module mod_atmos_phy_mp_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_PHY_MP_RESTART_OUTPUT       = .false.                !< output restart file?
+  logical,               public :: ATMOS_PHY_MP_RESTART_OUTPUT                = .false.                !< output restart file?
 
-  character(len=H_LONG), public :: ATMOS_PHY_MP_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG), public :: ATMOS_PHY_MP_RESTART_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_MP_RESTART_OUT_TITLE    = 'ATMOS_PHY_MP restart' !< title    of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_MP_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG), public :: ATMOS_PHY_MP_RESTART_IN_BASENAME           = ''                     !< Basename of the input  file
+  logical,               public :: ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL  = .false.                !< Add timelabel to the basename of input  file?
+  character(len=H_LONG), public :: ATMOS_PHY_MP_RESTART_OUT_BASENAME          = ''                     !< Basename of the output file
+  logical,               public :: ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL = .true.                 !< Add timelabel to the basename of output file?
+  character(len=H_MID),  public :: ATMOS_PHY_MP_RESTART_OUT_TITLE             = 'ATMOS_PHY_MP restart' !< title    of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_MP_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
   real(RP), public, allocatable :: ATMOS_PHY_MP_DENS_t(:,:,:)    ! tendency DENS [kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_MOMZ_t(:,:,:)    ! tendency MOMZ [kg/m2/s2]

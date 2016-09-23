@@ -55,17 +55,18 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_RESTART_OUTPUT           = .false.         !< output restart file?
-  logical,               public :: ATMOS_RESTART_CHECK            = .false.         !< check value consistency?
+  logical,               public :: ATMOS_RESTART_OUTPUT                = .false.         !< Output restart file?
 
-  character(len=H_LONG), public :: ATMOS_RESTART_IN_BASENAME      = ''              !< basename of the restart file
-  character(len=H_LONG), public :: ATMOS_RESTART_OUT_BASENAME     = ''              !< basename of the output file
-  character(len=H_MID),  public :: ATMOS_RESTART_OUT_TITLE        = 'ATMOS restart' !< title    of the output file
-  character(len=H_MID),  public :: ATMOS_RESTART_OUT_DTYPE        = 'DEFAULT'       !< REAL4 or REAL8
-  logical,               public :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
+  character(len=H_LONG), public :: ATMOS_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
+  logical,               public :: ATMOS_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
+  character(len=H_LONG), public :: ATMOS_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
+  logical,               public :: ATMOS_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
+  character(len=H_MID),  public :: ATMOS_RESTART_OUT_TITLE             = 'ATMOS restart' !< Title    of the output file
+  character(len=H_MID),  public :: ATMOS_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
-  character(len=H_LONG), public :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
-  real(RP),              public :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
+  logical,               public :: ATMOS_RESTART_CHECK                 = .false.         !< Check value consistency?
+  character(len=H_LONG), public :: ATMOS_RESTART_CHECK_BASENAME        = 'restart_check'
+  real(RP),              public :: ATMOS_RESTART_CHECK_CRITERION       = 1.E-6_RP
 
   ! prognostic variables
   real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
@@ -113,11 +114,10 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: ATMOS_VARS_CHECKRANGE          = .false.
-  real(RP),               private :: ATMOS_VARS_CHECKCFL            = 0.0_RP
+  logical,                private              :: ATMOS_VARS_CHECKRANGE = .false.
+  real(RP),               private              :: ATMOS_VARS_CHECKCFL   = 0.0_RP
 
   integer,                private, parameter   :: VMAX   = 5       !< number of the variables
-
   character(len=H_SHORT), private              :: VAR_NAME(VMAX)
   character(len=H_MID),   private              :: VAR_DESC(VMAX)
   character(len=H_SHORT), private              :: VAR_UNIT(VMAX)
@@ -142,10 +142,10 @@ module mod_atmos_vars
 
   ! history output of prognostic variables
   integer, private              :: VAR_HIST_id(VMAX)
-  integer, private, allocatable :: AQ_HIST_id (:)
+  integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 70 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 70        ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W            =  1 ! velocity w at cell center
   integer, private, parameter :: I_U            =  2 ! velocity u at cell center
@@ -272,16 +272,17 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_VARS / &
-       ATMOS_RESTART_IN_BASENAME,      &
-       ATMOS_RESTART_IN_ALLOWMISSINGQ, &
-       ATMOS_RESTART_OUTPUT,           &
-       ATMOS_RESTART_OUT_BASENAME,     &
-       ATMOS_RESTART_OUT_TITLE,        &
-       ATMOS_RESTART_OUT_DTYPE,        &
-       ATMOS_RESTART_CHECK,            &
-       ATMOS_RESTART_CHECK_BASENAME,   &
-       ATMOS_RESTART_CHECK_CRITERION,  &
-       ATMOS_VARS_CHECKRANGE,          &
+       ATMOS_RESTART_IN_BASENAME,           &
+       ATMOS_RESTART_IN_POSTFIX_TIMELABEL,  &
+       ATMOS_RESTART_OUTPUT,                &
+       ATMOS_RESTART_OUT_BASENAME,          &
+       ATMOS_RESTART_OUT_POSTFIX_TIMELABEL, &
+       ATMOS_RESTART_OUT_TITLE,             &
+       ATMOS_RESTART_OUT_DTYPE,             &
+       ATMOS_RESTART_CHECK,                 &
+       ATMOS_RESTART_CHECK_BASENAME,        &
+       ATMOS_RESTART_CHECK_CRITERION,       &
+       ATMOS_VARS_CHECKRANGE,               &
        ATMOS_VARS_CHECKCFL
 
     integer :: ierr
@@ -365,12 +366,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       ATMOS_RESTART_OUTPUT             &
          .AND. ATMOS_RESTART_OUT_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_RESTART_OUTPUT = .false.
@@ -864,13 +867,10 @@ contains
   subroutine ATMOS_vars_restart_read
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       GRAV  => CONST_GRAV
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_read
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE, &
        ATMOS_sw_dyn,      &
@@ -899,6 +899,9 @@ contains
        ATMOS_PHY_CP_vars_restart_read
     implicit none
 
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
+
     integer  :: iq
     !---------------------------------------------------------------------------
 
@@ -906,22 +909,30 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS) ***'
 
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_RESTART_IN_BASENAME)
 
-       call FILEIO_read( DENS(:,:,:),                                         & ! [OUT]
-                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMZ(:,:,:),                                         & ! [OUT]
-                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMX(:,:,:),                                         & ! [OUT]
-                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(3), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMY(:,:,:),                                         & ! [OUT]
-                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(4), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( RHOT(:,:,:),                                         & ! [OUT]
-                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
+       if ( ATMOS_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_RESTART_IN_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_read( DENS(:,:,:),                         & ! [OUT]
+                         basename, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMZ(:,:,:),                         & ! [OUT]
+                         basename, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMX(:,:,:),                         & ! [OUT]
+                         basename, VAR_NAME(3), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMY(:,:,:),                         & ! [OUT]
+                         basename, VAR_NAME(4), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( RHOT(:,:,:),                         & ! [OUT]
+                         basename, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_read( QTRC(:,:,:,iq),                                       & ! [OUT]
-                            ATMOS_RESTART_IN_BASENAME, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
+          call FILEIO_read( QTRC(:,:,:,iq),                          & ! [OUT]
+                            basename, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
        enddo
 
        call ATMOS_vars_fillhalo
@@ -1009,11 +1020,16 @@ contains
 
     if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
+
+       if ( ATMOS_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call ATMOS_vars_fillhalo
@@ -1032,8 +1048,8 @@ contains
                           VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_write( QTRC(:,:,:,iq), basename,                         ATMOS_RESTART_OUT_TITLE, & ! [IN]
-                             TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE     ) ! [IN]
+          call FILEIO_write( QTRC(:,:,:,iq), basename,                                  ATMOS_RESTART_OUT_TITLE, & ! [IN]
+                             TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
        enddo
 
     endif
@@ -1234,7 +1250,7 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_thermodyn, only: &
-       THERMODYN_qd      => ATMOS_THERMODYN_qd
+       THERMODYN_qd => ATMOS_THERMODYN_qd
     use scale_atmos_hydrometer, only: &
        I_QV, &
        I_QC, &
@@ -2723,11 +2739,16 @@ contains
 
     if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
+
+       if ( ATMOS_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call FILEIO_create(restart_fid, basename, ATMOS_RESTART_OUT_TITLE, ATMOS_RESTART_OUT_DTYPE)
