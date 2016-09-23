@@ -87,21 +87,21 @@ module gtool_history
 
   type request
      character(len=File_HSHORT) :: item           !> Name of variable (in the code)
+     character(len=File_HMID)   :: zcoord         !> Z-coordinate
      character(len=File_HSHORT) :: outname        !> Name of variable (for output)
      character(len=File_HLONG)  :: basename       !> Base name of the file
      integer                    :: dstep          !> Time unit
      logical                    :: taverage       !> Apply time average?
-     character(len=File_HSHORT) :: zdim           !> name of 3rd axis
      integer                    :: dtype          !> Data type
   end type request
 
   type vars
      character(len=File_HSHORT) :: item           !> Name of variable (in the code)
+     character(len=File_HMID)   :: zcoord         !> Z-coordinate
      character(len=File_HSHORT) :: outname        !> Name of variable (for output)
      integer                    :: fid            !> File id of the file
      integer                    :: dstep          !> Time unit
      logical                    :: taverage       !> Apply time average?
-     character(len=File_HSHORT) :: zdim           !> name of 3rd axis
      logical                    :: axis_written   !> Axis for this item is already written?
      integer                    :: vid            !> Variable id
 
@@ -144,8 +144,6 @@ module gtool_history
   !
   !++ Public parameters & variables
   !
-  integer,                    public, parameter    :: History_PAXIS_nlimit   = 100       !> Number limit of pressure layer
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -204,9 +202,6 @@ contains
   subroutine HistoryInit( &
        item_count,        &
        variant_count,     &
-       output_paxis,      &
-       paxis_nlayer,      &
-       paxis_value,       &
        isize,             &
        jsize,             &
        ksize,             &
@@ -221,10 +216,10 @@ contains
        time_units,        &
        time_since,        &
        default_basename,  &
+       default_zcoord,    &
        default_tinterval, &
        default_tunit,     &
        default_taverage,  &
-       default_zdim,      &
        default_datatype,  &
        namelist_filename, &
        namelist_fid       )
@@ -238,9 +233,6 @@ contains
 
     integer,          intent(out)          :: item_count
     integer,          intent(out)          :: variant_count
-    logical,          intent(out)          :: output_paxis
-    integer,          intent(out)          :: paxis_nlayer
-    real(DP),         intent(out)          :: paxis_value(History_PAXIS_nlimit)
     integer,          intent(in)           :: isize
     integer,          intent(in)           :: jsize
     integer,          intent(in)           :: ksize
@@ -255,10 +247,10 @@ contains
     character(len=*), intent(in), optional :: time_units
     character(len=*), intent(in), optional :: time_since
     character(len=*), intent(in), optional :: default_basename
+    character(len=*), intent(in), optional :: default_zcoord
     real(DP),         intent(in), optional :: default_tinterval
     character(len=*), intent(in), optional :: default_tunit
     logical,          intent(in), optional :: default_taverage
-    character(len=*), intent(in), optional :: default_zdim
     character(len=*), intent(in), optional :: default_datatype
     character(len=*), intent(in), optional :: namelist_filename
     integer         , intent(in), optional :: namelist_fid
@@ -267,13 +259,10 @@ contains
     real(DP)                   :: History_DEFAULT_TINTERVAL = -1.0_DP  !> time interval
     character(len=File_HSHORT) :: History_DEFAULT_TUNIT     = 'sec'    !> time unit
     logical                    :: History_DEFAULT_TAVERAGE  = .false.  !> apply time average?
-    character(len=File_HSHORT) :: History_DEFAULT_ZDIM      = 'native' !> default name of z-axis (only effective check_dim3=.ture.)
+    character(len=File_HSHORT) :: History_DEFAULT_ZCOORD    = ''       !> default z-coordinate
     character(len=File_HSHORT) :: History_DEFAULT_DATATYPE  = 'REAL4'  !> data type
                                                                        !> REAL4 : single precision
                                                                        !> REAL8 : double precision
-
-    integer  :: History_PRES_NLAYER                      = -1     !> Number of pressure layer
-    real(DP) :: History_PRES_VALUE(History_PAXIS_nlimit) = 0.0_DP !> Pressure at each layer [hPa]
 
     NAMELIST / PARAM_HISTORY / &
        History_TITLE,             &
@@ -284,12 +273,10 @@ contains
        History_DEFAULT_TINTERVAL, &
        History_DEFAULT_TUNIT,     &
        History_DEFAULT_TAVERAGE,  &
-       History_DEFAULT_ZDIM,      &
+       History_DEFAULT_ZCOORD,    &
        History_DEFAULT_DATATYPE,  &
        History_OUTPUT_STEP0,      &
        History_OUTPUT_WAIT,       &
-       History_PRES_NLAYER,       &
-       History_PRES_VALUE,        &
        History_ERROR_PUTMISS,     &
        debug
 
@@ -300,7 +287,7 @@ contains
     real(DP)                   :: TINTERVAL !> time interval
     character(len=File_HSHORT) :: TUNIT     !> time unit
     logical                    :: TAVERAGE  !> apply time average?
-    character(len=File_HSHORT) :: ZDIM      !> vertical coordinate (for atmosphere)
+    character(len=File_HSHORT) :: ZCOORD    !> z-coordinate
     character(len=File_HSHORT) :: DATATYPE  !> data type
 
     NAMELIST / HISTITEM / &
@@ -310,7 +297,7 @@ contains
        TINTERVAL, &
        TUNIT,     &
        TAVERAGE,  &
-       ZDIM,      &
+       ZCOORD,    &
        DATATYPE
 
     integer  :: array_size
@@ -350,7 +337,7 @@ contains
     if( present(default_tinterval) ) History_DEFAULT_TINTERVAL = default_tinterval
     if( present(default_tunit)     ) History_DEFAULT_TUNIT     = default_tunit
     if( present(default_taverage)  ) History_DEFAULT_TAVERAGE  = default_taverage
-    if( present(default_zdim)      ) History_DEFAULT_ZDIM      = default_zdim
+    if( present(default_zcoord)    ) History_DEFAULT_ZCOORD    = default_zcoord
     if( present(default_datatype)  ) History_DEFAULT_DATATYPE  = default_datatype
 
     fid = -1
@@ -388,31 +375,7 @@ contains
        call Log('E',message)
     endif
 
-    if ( History_PRES_NLAYER > History_PAXIS_nlimit ) then
-       write(message,*) 'xxx History_PRES_NLAYER is exceed! limit = ', History_PAXIS_nlimit
-       call Log('E',message)
-    endif
-
-    if ( History_PRES_NLAYER > 0 ) then
-       do k = 1, History_PRES_NLAYER
-          if ( History_PRES_VALUE(k) <= 0.0_DP ) then
-             write(message,*) &
-             'xxx Invalid value found in pressure coordinate! (k,value)=', k, History_PRES_VALUE(k)
-             call Log('E',message)
-          elseif ( History_PRES_VALUE(k+1) >= History_PRES_VALUE(k) ) then
-             write(message,*) &
-             'xxx The value of pressure coordinate must be descending order! ', &
-             '(k,value[k],value[k+1])=', k, History_PRES_VALUE(k), History_PRES_VALUE(k+1)
-             call Log('E',message)
-          endif
-       enddo
-    endif
-
-    output_paxis   = .false.
-    paxis_nlayer   = History_PRES_NLAYER
-    paxis_value(:) = History_PRES_VALUE(:)
-
-    array_size = isize * jsize * max(ksize,History_PRES_NLAYER)
+    array_size = isize * jsize * ksize
 
     ! count history request
     History_req_count = 0
@@ -454,7 +417,7 @@ contains
        TINTERVAL = History_DEFAULT_TINTERVAL
        TUNIT     = History_DEFAULT_TUNIT
        TAVERAGE  = History_DEFAULT_TAVERAGE
-       ZDIM      = History_DEFAULT_ZDIM
+       ZCOORD    = History_DEFAULT_ZCOORD
        DATATYPE  = History_DEFAULT_DATATYPE
 
        read(fid,nml=HISTITEM,iostat=ierr)
@@ -493,25 +456,8 @@ contains
           call Log('E',message)
        endif
 
-       History_req(reqid)%dstep = item_dstep
-
-       select case(ZDIM)
-       case('native','AGL','MDL')
-          History_req(reqid)%zdim = 'native'
-       case('z','Z','HGT')
-          History_req(reqid)%zdim = 'z'
-       case('pz','P','PRES')
-          if ( History_PRES_NLAYER < 0 ) then
-             write(message,*) &
-             'xxx History_PRES_NLAYER and History_PRES_VALUE must be set for output with pressure coordinate!'
-             call Log('E',message)
-          endif
-          History_req(reqid)%zdim = 'pz'
-          output_paxis            = .true.
-       case default
-          write(message,*) 'xxx ZDIM has invalid name. ', trim(ZDIM)
-          call Log('E',message)
-       end select
+       History_req(reqid)%dstep  = item_dstep
+       History_req(reqid)%zcoord = ZCOORD
 
        if    ( DATATYPE == 'REAL4' ) then
           History_req(reqid)%dtype  = File_REAL4
@@ -569,17 +515,12 @@ contains
   subroutine HistoryCheck( &
        existed,   &
        item,      &
-       dims,      &
-       check_dim3 )
+       zcoord     )
     implicit none
 
-    logical,          intent(out) :: existed
-    character(len=*), intent(in)  :: item
-    character(len=*), intent(in)  :: dims(:)
-    logical,          intent(in)  :: check_dim3
-
-    logical :: dim3_match
-    integer :: ndim
+    logical,          intent(out)          :: existed
+    character(len=*), intent(in)           :: item
+    character(len=*), intent(in), optional :: zcoord
 
     integer :: max_count
     integer :: n
@@ -593,21 +534,20 @@ contains
 
     do n = 1, max_count
 
-       !--- check 3rd axis
-       dim3_match = .true.
-       ndim       = size(dims)
-       if ( ndim == 3 .AND. check_dim3 ) then
-          if ( History_vars(n)%zdim /= dims(3) ) then
-             dim3_match = .false.
-          endif
-       endif
-
        !--- search existing item
-       if (       item == History_vars(n)%item &
-            .AND. dim3_match                   ) then ! match (at least one) existing item
-          existed = .true.
-          return
-       endif
+       if ( item == History_vars(n)%item ) then ! match (at least one) existing item
+          !--- check z-coordinate
+          if ( present(zcoord) ) then
+             if ( History_vars(n)%zcoord == zcoord ) then
+                existed = .true.
+                return
+             endif
+          else
+             existed = .true.
+             return
+          endif
+
+       end if
 
     enddo
 
@@ -616,14 +556,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryAddVariable( &
-       nregist,    &
-       item,       &
-       dims,       &
-       check_dim3, &
-       desc,       &
-       units,      &
-       now_step,   &
-       options     )
+       nregist,  &
+       item,     &
+       dims,     &
+       desc,     &
+       units,    &
+       now_step, &
+       zcoord,   &
+       options   )
     use gtool_file, only: &
        FileCreate,      &
        FileSetOption,   &
@@ -636,10 +576,10 @@ contains
     integer,          intent(out) :: nregist
     character(len=*), intent(in)  :: item
     character(len=*), intent(in)  :: dims(:)
-    logical,          intent(in)  :: check_dim3
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
     integer,          intent(in)  :: now_step
+    character(len=*), intent(in), optional :: zcoord
     character(len=*), intent(in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
 
     character(len=File_HMID) :: tunits
@@ -647,7 +587,6 @@ contains
     integer                  :: ic, ie, is, lo
     real(DP)                 :: dtsec
     logical                  :: existed
-    logical                  :: dim3_match
     integer                  :: ndim
 
     integer :: m, reqid
@@ -658,10 +597,9 @@ contains
 
     nregist = 0
 
-    call HistoryCheck( existed,   & ! [OUT]
-                       item,      & ! [IN]
-                       dims(:),   & ! [IN]
-                       check_dim3 ) ! [IN]
+    call HistoryCheck( existed, & ! [OUT]
+                       item,    & ! [IN]
+                       zcoord   ) ! [IN]
 
     if ( .NOT. existed ) then ! request-register matching check
 
@@ -672,20 +610,16 @@ contains
           tunits = trim(History_TIME_UNITS)//' since '//trim(History_TIME_SINCE)
        endif
 
+       ndim = size(dims)
+
        do reqid = 1, History_req_count
 
-          dim3_match = .true.
-          ndim       = size(dims)
-          if ( ndim == 3 .AND. check_dim3 ) then
-             if (       History_req(reqid)%zdim /= 'native' &
-                  .AND. History_req(reqid)%zdim /= dims(3)  ) then
-                dim3_match = .false.
-             endif
-          endif
-
           ! note: plural requests are allowed for each item
-          if (       item == History_req(reqid)%item &
-               .AND. dim3_match                      ) then
+          if ( item == History_req(reqid)%item ) then
+
+             if ( present(zcoord) ) then
+                if ( History_req(reqid)%zcoord /= zcoord ) cycle
+             end if
 
              existed = .true.
              nregist = nregist + 1
@@ -709,13 +643,7 @@ contains
 
              History_vars(id)%dstep    = History_req(reqid)%dstep
              History_vars(id)%taverage = History_req(reqid)%taverage
-             if ( ndim == 3 ) then
-                History_req(reqid)%zdim = dims(3)
-                History_vars(id)%zdim   = dims(3)
-             else
-                History_req(reqid)%zdim = ''
-                History_vars(id)%zdim   = ''
-             endif
+             History_vars(id)%zcoord   = History_req(reqid)%zcoord
 
              if ( .NOT. fileexisted ) then ! new file
 
@@ -819,6 +747,8 @@ contains
                 write(message,*) '] Description         : ', trim(desc)
                 call Log('I',message)
                 write(message,*) '] Unit                : ', trim(units)
+                call Log('I',message)
+                write(message,*) '] Z-coordinate        : ', trim(History_vars(id)%zcoord)
                 call Log('I',message)
                 write(message,*) '] Interval [sec,step] : ', dtsec, History_vars(id)%dstep
                 call Log('I',message)
@@ -1320,7 +1250,7 @@ contains
     call Log('I',message)
     write(message,*) '*** Number of history item :', History_req_count
     call Log('I',message)
-    write(message,*) 'ITEM            :OUTNAME         :size    :interval[sec]:  [step]:timeavg?:zdim'
+    write(message,*) 'ITEM            :OUTNAME         :size    :interval[sec]:  [step]:timeavg?:zcoord'
     call Log('I',message)
     write(message,*) '=================================================================================='
     call Log('I',message)
@@ -1334,7 +1264,7 @@ contains
                                                                      dtsec,                     &
                                                                      History_vars(id)%dstep,    &
                                                                      History_vars(id)%taverage, &
-                                                                     History_vars(id)%zdim
+                                                                     History_vars(id)%zcoord
        call Log('I',message)
     enddo
 

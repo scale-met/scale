@@ -75,20 +75,24 @@ module scale_history
   !
   !++ Private parameters & variables
   !
+  integer, parameter :: I_MODEL = 0 ! model coordinate
+  integer, parameter :: I_Z     = 0 ! z coordinate
+  integer, parameter :: I_PRES  = 0 ! pressure coordinate
+
   integer,                private              :: HIST_item_count   !< number of the history item
   character(len=H_SHORT), private, allocatable :: HIST_item   (:)   !< name   of the history item
   integer,                private, allocatable :: HIST_variant(:)   !< number of the variants      for each history item
-  character(len=H_SHORT), private, allocatable :: HIST_zdim   (:,:) !< vertical interpolation type for each variant of history item
+  integer,                private, allocatable :: HIST_zcoord (:,:) !< vertical interpolation type for each variant of history item
 
   logical, private :: enabled
   integer, private :: im,  jm, km
   integer, private :: ims, ime
   integer, private :: jms, jme
 
-  integer,  private              :: HIST_item_limit
-  logical,  private              :: HIST_OUTPUT_PAXIS
-  integer,  private              :: HIST_PAXIS_nlayer !> Number of pressure layer
-  real(RP), private, allocatable :: HIST_PAXIS(:)     !> pressure level to output [Pa]
+  integer, private :: HIST_item_limit
+  logical, private :: HIST_OUTPUT_PAXIS
+  integer, private :: HIST_PRES_nlayer = -1      !> Number of pressure layer
+  real(RP), private, allocatable :: HIST_PRES(:) !> pressure level to output [hPa]
 
   !-----------------------------------------------------------------------------
 contains
@@ -96,7 +100,6 @@ contains
   !> Setup
   subroutine HIST_setup
     use gtool_history, only: &
-       History_PAXIS_nlimit, &
        HistoryInit
     use scale_process, only: &
        PRC_MPIstop,    &
@@ -120,10 +123,11 @@ contains
     logical :: HIST_BND = .false.
 
     NAMELIST / PARAM_HIST / &
+       HIST_PRES_nlayer, &
+       HIST_PRES,        &
        HIST_BND
 
     integer  :: HIST_variant_limit
-    real(DP) :: HIST_PAXIS_hPa(History_PAXIS_nlimit)! pressure level to output [hPa]
 
     real(DP) :: start_daysec
     integer  :: rankidx(2)
@@ -133,6 +137,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HISTORY] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
+
+    HIST_PRES = -1.0_RP
+
+    allocate( HIST_PRES(KMAX+1) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -144,6 +152,28 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_HIST)
+
+    ! check pressure coordinate
+    if ( HIST_PRES_nlayer > 0 ) then
+       if ( HIST_PRES_nlayer > KMAX ) then
+          write(*,*) 'xxx number of layers of pressure is larger the KMAX'
+          call PRC_MPIstop
+       end if
+          
+       do k = 1, HIST_PRES_nlayer
+          if ( HIST_PRES(k) <= 0.0_RP ) then
+             write(*,*) 'xxx Invalid value found in pressure coordinate! (k,value)=', k, HIST_PRES(k)
+             call PRC_MPIstop
+          elseif ( HIST_PRES(k+1) >= HIST_PRES(k) ) then
+             write(*,*) 'xxx The value of pressure coordinate must be descending order! ', &
+             '(k,value[k],value[k+1])=', k, HIST_PRES(k), HIST_PRES(k+1)
+             call PRC_MPIstop
+          endif
+       enddo
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** HIST_PRES_nlayer is not set.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output with pressure coordinate is disabled'
+    endif
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
@@ -183,9 +213,6 @@ contains
 
     call HistoryInit( HIST_item_limit,                 & ! [OUT]
                       HIST_variant_limit,              & ! [OUT]
-                      HIST_OUTPUT_PAXIS,               & ! [OUT]
-                      HIST_PAXIS_nlayer,               & ! [OUT]
-                      HIST_PAXIS_hPa(:),               & ! [OUT]
                       im, jm, km,                      & ! [IN]
                       PRC_masterrank,                  & ! [IN]
                       PRC_myrank,                      & ! [IN]
@@ -202,20 +229,18 @@ contains
     if ( HIST_item_limit > 0 ) then
        allocate( HIST_item   (HIST_item_limit)                    )
        allocate( HIST_variant(HIST_item_limit)                    )
-       allocate( HIST_zdim   (HIST_item_limit,HIST_variant_limit) )
+       allocate( HIST_zcoord (HIST_item_limit,HIST_variant_limit) )
        HIST_item   (:)   = ''
        HIST_variant(:)   = 0
-       HIST_zdim   (:,:) = ''
+       HIST_zcoord (:,:) = 0
     endif
 
-    if ( HIST_OUTPUT_PAXIS ) then
-       allocate( HIST_PAXIS(HIST_PAXIS_nlayer) )
-
-       do k = 1, HIST_PAXIS_nlayer
-          HIST_PAXIS(k) = HIST_PAXIS_hPa(k) * 100.0_RP ! [hPa->Pa]
+    if ( HIST_PRES_nlayer > 0 ) then
+       do k = 1, HIST_PRES_nlayer
+          HIST_PRES(k) = HIST_PRES(k) * 100.0_RP ! [hPa->Pa]
        enddo
 
-       call INTERP_setup_pres( HIST_PAXIS_nlayer ) ! [IN]
+       call INTERP_setup_pres( HIST_PRES_nlayer ) ! [IN]
     endif
 
     call HIST_put_axes
@@ -300,8 +325,9 @@ contains
     call HistoryPutAxis( 'yh',   'Y (half level)',                    'm', 'yh',  GRID_FY(jms:jme) )
     call HistoryPutAxis( 'zh',   'Z (half level)',                    'm', 'zh',  GRID_FZ(KS:KE)   )
 
-    if ( HIST_OUTPUT_PAXIS ) then
-       call HistoryPutAxis( 'pz', 'Pressure', 'hPa', 'pz', HIST_PAXIS(:)/100.0_RP, down=.true. )
+    if ( HIST_PRES_nlayer > 0 ) then
+       call HistoryPutAxis( 'pressure', 'Pressure', 'hPa', 'pressure', &
+            HIST_PRES(:HIST_PRES_nlayer)/100.0_RP, down=.true. )
     endif
 
     call HistoryPutAxis( 'lz',   'LZ',                                'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true. )
@@ -549,11 +575,11 @@ contains
     real(RP), intent(in) :: SFC_PRES(   IA,JA) ! surface pressure          [Pa]
     !---------------------------------------------------------------------------
 
-    if ( HIST_OUTPUT_PAXIS ) then
-       call INTERP_update_pres( HIST_PAXIS_nlayer, & ! [IN]
-                                PRES      (:,:,:), & ! [IN]
-                                SFC_PRES  (:,:)  , & ! [IN]
-                                HIST_PAXIS(:)      ) ! [IN]
+    if ( HIST_PRES_nlayer > 0 ) then
+       call INTERP_update_pres( HIST_PRES_nlayer, & ! [IN]
+                                PRES     (:,:,:), & ! [IN]
+                                SFC_PRES (:,:)  , & ! [IN]
+                                HIST_PRES(:)      ) ! [IN]
     endif
 
     return
@@ -592,10 +618,9 @@ contains
 
     character(len=H_SHORT) :: dims(3)
 
-    character(len=H_SHORT) :: dims3
-    logical                :: check_dim3
     integer                :: nvariant1, nvariant2, nvariant3
     integer                :: v, id
+    logical                :: atom
     !---------------------------------------------------------------------------
 
     itemid = -1
@@ -604,8 +629,6 @@ contains
 
     if( HIST_item_limit == 0 ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
-
     do id = 1, HIST_item_count
        if ( item == HIST_item(id) ) then ! item exists
           itemid = id
@@ -613,7 +636,11 @@ contains
        endif
     enddo
 
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
     ! Try to add new item
+
+    atom = .true.
 
     if ( ndim == 1 ) then
 
@@ -707,68 +734,63 @@ contains
        if ( present(zdim) ) then
           if    ( zdim == 'land'      ) then
              dims(3) = 'lz'
+             atom = .false.
           elseif( zdim == 'landhalf'  ) then
              dims(3) = 'lzh'
+             atom = .false.
           elseif( zdim == 'urban'     ) then
              dims(3) = 'uz'
+             atom = .false.
           elseif( zdim == 'urbanhalf' ) then
              dims(3) = 'uzh'
+             atom = .false.
           endif
        endif
 
     endif
 
-    dims3 = dims(3)
+    if ( atom ) then
 
-    if (      dims3 == 'height'     &
-         .OR. dims3 == 'height_xyw' &
-         .OR. dims3 == 'height_uyz' &
-         .OR. dims3 == 'height_uyw' &
-         .OR. dims3 == 'height_xvz' &
-         .OR. dims3 == 'height_xvw' &
-         .OR. dims3 == 'height_uvz' &
-         .OR. dims3 == 'height_uvw' ) then
+       ! model coordinate (terrain following coordinate)
+       call HistoryAddVariable( nvariant1,     & ! [OUT]
+                                item,          & ! [IN]
+                                dims(1:ndim),  & ! [IN]
+                                desc,          & ! [IN]
+                                unit,          & ! [IN]
+                                NOWSTEP,       & ! [IN]
+                                'model'        ) ! [IN]
 
-       check_dim3 = .true.
-
-       dims(3) = dims3 ! terrain following coordinate
-
-       call HistoryAddVariable( nvariant1,    & ! [OUT]
-                                item,         & ! [IN]
-                                dims(1:ndim), & ! [IN]
-                                check_dim3,   & ! [IN]
-                                desc,         & ! [IN]
-                                unit,         & ! [IN]
-                                NOWSTEP       ) ! [IN]
-
-       dims(3) = 'z' ! absolute height coordinate
-
+       ! absolute height coordinate
+       dims(3) = 'z'
        call HistoryAddVariable( nvariant2,    & ! [OUT]
                                 item,         & ! [IN]
                                 dims(1:ndim), & ! [IN]
-                                check_dim3,   & ! [IN]
                                 desc,         & ! [IN]
                                 unit,         & ! [IN]
-                                NOWSTEP       ) ! [IN]
+                                NOWSTEP,      & ! [IN]
+                                'z'           ) ! [IN]
 
-       dims(3) = 'pz' ! pressure coordinate
+       ! pressure coordinate
+       if ( HIST_PRES_nlayer > 0 ) then
 
-       call HistoryAddVariable( nvariant3,    & ! [OUT]
-                                item,         & ! [IN]
-                                dims(1:ndim), & ! [IN]
-                                check_dim3,   & ! [IN]
-                                desc,         & ! [IN]
-                                unit,         & ! [IN]
-                                NOWSTEP       ) ! [IN]
+          dims(3) = 'pressure'
+          call HistoryAddVariable( nvariant3,    & ! [OUT]
+                                   item,         & ! [IN]
+                                   dims(1:ndim), & ! [IN]
+                                   desc,         & ! [IN]
+                                   unit,         & ! [IN]
+                                   NOWSTEP,      & ! [IN]
+                                   'pressure'    ) ! [IN]
+
+       else
+          nvariant3 = 0
+       end if
 
     else
-
-       check_dim3 = .false.
 
        call HistoryAddVariable( nvariant1,    & ! [OUT]
                                 item,         & ! [IN]
                                 dims(1:ndim), & ! [IN]
-                                check_dim3,   & ! [IN]
                                 desc,         & ! [IN]
                                 unit,         & ! [IN]
                                 NOWSTEP       ) ! [IN]
@@ -784,17 +806,17 @@ contains
 
        do v = 1, nvariant1
           HIST_variant(itemid)                      = HIST_variant(itemid) + 1
-          HIST_zdim   (itemid,HIST_variant(itemid)) = dims3
+          HIST_zcoord (itemid,HIST_variant(itemid)) = I_MODEL
        enddo
 
        do v = 1, nvariant2
           HIST_variant(itemid)                      = HIST_variant(itemid) + 1
-          HIST_zdim   (itemid,HIST_variant(itemid)) = 'z'
+          HIST_zcoord (itemid,HIST_variant(itemid)) = I_Z
        enddo
 
        do v = 1, nvariant3
           HIST_variant(itemid)                      = HIST_variant(itemid) + 1
-          HIST_zdim   (itemid,HIST_variant(itemid)) = 'pz'
+          HIST_zcoord (itemid,HIST_variant(itemid)) = I_PRES
        enddo
     endif
 
@@ -1041,8 +1063,8 @@ contains
     integer                :: isize, jsize, ksize
     integer                :: istart, jstart, kstart
 
-    real(RP) :: var_Z(KA               ,IA,JA)
-    real(RP) :: var_P(HIST_PAXIS_nlayer,IA,JA)
+    real(RP) :: var_Z(KA              ,IA,JA)
+    real(RP) :: var_P(HIST_PRES_nlayer,IA,JA)
 
     real(RP) :: var_trim(km*im*jm)
     logical  :: nohalo_
@@ -1119,10 +1141,10 @@ contains
 
     do v = 1, HIST_variant(itemid)
 
-       if    (       s(1)  == KA                &
-               .AND. ksize == KMAX              &
-               .AND. HIST_zdim(itemid,v) == 'z' &
-               .AND. INTERP_available           ) then ! z*->z interpolation
+       if    (       s(1)  == KA                  &
+               .AND. ksize == KMAX                &
+               .AND. HIST_zcoord(itemid,v) == I_Z &
+               .AND. INTERP_available             ) then ! z*->z interpolation
 
           call PROF_rapstart('FILE_O_interp', 2)
           call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
@@ -1137,16 +1159,16 @@ contains
           enddo
           enddo
 
-       elseif(       s(1)  == KA                 &
-               .AND. ksize == KMAX               &
-               .AND. HIST_zdim(itemid,v) == 'pz' ) then ! z*->p interpolation
+       elseif(       s(1)  == KA                     &
+               .AND. ksize == KMAX                   &
+               .AND. HIST_zcoord(itemid,v) == I_PRES ) then ! z*->p interpolation
 
-          ksize = HIST_PAXIS_nlayer
+          ksize = HIST_PRES_nlayer
 
           call PROF_rapstart('FILE_O_interp', 2)
-          call INTERP_vertical_xi2p( HIST_PAXIS_nlayer, & ! [IN]
-                                     var  (:,:,:),      & ! [IN]
-                                     var_P(:,:,:)       ) ! [OUT]
+          call INTERP_vertical_xi2p( HIST_PRES_nlayer, & ! [IN]
+                                     var  (:,:,:),     & ! [IN]
+                                     var_P(:,:,:)      ) ! [OUT]
           call PROF_rapend  ('FILE_O_interp', 2)
 
           do k = 1, ksize

@@ -310,13 +310,13 @@ contains
     implicit none
 
     integer,  intent(in) :: Kpres
-    real(DP), intent(in) :: PRES    (KA,IA,JA) ! pressure in Xi coordinate [Pa]
-    real(DP), intent(in) :: SFC_PRES(   IA,JA) ! surface pressure          [Pa]
-    real(DP), intent(in) :: Paxis   (Kpres)    ! pressure level to output  [Pa]
+    real(RP), intent(in) :: PRES    (KA,IA,JA) ! pressure in Xi coordinate [Pa]
+    real(RP), intent(in) :: SFC_PRES(   IA,JA) ! surface pressure          [Pa]
+    real(RP), intent(in) :: Paxis   (Kpres)    ! pressure level to output  [Pa]
 
-    real(DP) :: LnPRES    (KA,IA,JA) ! (log) pressure in Xi coordinate [Pa]
-    real(DP) :: LnSFC_PRES(   IA,JA) ! (log) surface pressure          [Pa]
-    real(DP) :: LnPaxis   (Kpres)    ! (log) pressure level to output  [Pa]
+    real(RP) :: LnPRES    (KA,IA,JA) ! (log) pressure in Xi coordinate [Pa]
+    real(RP) :: LnSFC_PRES(   IA,JA) ! (log) surface pressure          [Pa]
+    real(RP) :: LnPaxis   (Kpres)    ! (log) pressure level to output  [Pa]
 
     integer :: k, i, j, kk, kp
     !---------------------------------------------------------------------------
@@ -324,18 +324,18 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       LnPRES(k,i,j) = dlog( PRES(k,i,j) )
+       LnPRES(k,i,j) = log( PRES(k,i,j) )
     enddo
     enddo
     enddo
 
     do j = JSB, JEB
     do i = ISB, IEB
-       LnSFC_PRES(i,j) = dlog( SFC_PRES(i,j) )
+       LnSFC_PRES(i,j) = log( SFC_PRES(i,j) )
     enddo
     enddo
 
-    LnPaxis(:) = dlog( Paxis(:) )
+    LnPaxis(:) = log( Paxis(:) )
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -344,25 +344,25 @@ contains
 
           INTERP_xi2p_idx (k,i,j,1) = KS     ! dummmy
           INTERP_xi2p_idx (k,i,j,2) = KS     ! dummmy
-          INTERP_xi2p_coef(k,i,j,1) = 0.0_DP
-          INTERP_xi2p_coef(k,i,j,2) = 0.0_DP
-          INTERP_xi2p_coef(k,i,j,3) = 1.0_DP ! set UNDEF
+          INTERP_xi2p_coef(k,i,j,1) = 0.0_RP
+          INTERP_xi2p_coef(k,i,j,2) = 0.0_RP
+          INTERP_xi2p_coef(k,i,j,3) = 1.0_RP ! set UNDEF
 
        elseif( LnPaxis(k) >= LnPRES(KS,i,j) ) then
 
           INTERP_xi2p_idx (k,i,j,1) = KS     ! dummmy
           INTERP_xi2p_idx (k,i,j,2) = KS
-          INTERP_xi2p_coef(k,i,j,1) = 0.0_DP
-          INTERP_xi2p_coef(k,i,j,2) = 1.0_DP
-          INTERP_xi2p_coef(k,i,j,3) = 0.0_DP
+          INTERP_xi2p_coef(k,i,j,1) = 0.0_RP
+          INTERP_xi2p_coef(k,i,j,2) = 1.0_RP
+          INTERP_xi2p_coef(k,i,j,3) = 0.0_RP
 
        elseif( LnPaxis(k) < LnPRES(KE,i,j) ) then
 
           INTERP_xi2p_idx (k,i,j,1) = KE     ! dummmy
           INTERP_xi2p_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_xi2p_coef(k,i,j,1) = 0.0_DP
-          INTERP_xi2p_coef(k,i,j,2) = 0.0_DP
-          INTERP_xi2p_coef(k,i,j,3) = 1.0_DP ! set UNDEF
+          INTERP_xi2p_coef(k,i,j,1) = 0.0_RP
+          INTERP_xi2p_coef(k,i,j,2) = 0.0_RP
+          INTERP_xi2p_coef(k,i,j,3) = 1.0_RP ! set UNDEF
 
        else
 
@@ -377,7 +377,7 @@ contains
                                     / ( LnPRES (kp-1,i,j) - LnPRES (kp,i,j) )
           INTERP_xi2p_coef(k,i,j,2) = ( LnPRES (kp-1,i,j) - LnPaxis(k)      ) &
                                     / ( LnPRES (kp-1,i,j) - LnPRES (kp,i,j) )
-          INTERP_xi2p_coef(k,i,j,3) = 0.0_DP
+          INTERP_xi2p_coef(k,i,j,3) = 0.0_RP
 
        endif
     enddo
