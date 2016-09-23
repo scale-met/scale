@@ -76,8 +76,8 @@ module scale_history
   !++ Private parameters & variables
   !
   integer, parameter :: I_MODEL = 0 ! model coordinate
-  integer, parameter :: I_Z     = 0 ! z coordinate
-  integer, parameter :: I_PRES  = 0 ! pressure coordinate
+  integer, parameter :: I_Z     = 1 ! z coordinate
+  integer, parameter :: I_PRES  = 2 ! pressure coordinate
 
   integer,                private              :: HIST_item_count   !< number of the history item
   character(len=H_SHORT), private, allocatable :: HIST_item   (:)   !< name   of the history item
@@ -211,19 +211,20 @@ contains
 
     km = max( LKMAX, UKMAX, KMAX )
 
-    call HistoryInit( HIST_item_limit,                 & ! [OUT]
-                      HIST_variant_limit,              & ! [OUT]
-                      im, jm, km,                      & ! [IN]
-                      PRC_masterrank,                  & ! [IN]
-                      PRC_myrank,                      & ! [IN]
-                      rankidx(:),                      & ! [IN]
-                      HISTORY_H_TITLE,                 & ! [IN]
-                      H_SOURCE,                        & ! [IN]
-                      H_INSTITUTE,                     & ! [IN]
-                      time_start    = start_daysec,    & ! [IN]
-                      time_interval = TIME_DTSEC,      & ! [IN]
-                      time_since    = HISTORY_T_SINCE, & ! [IN]
-                      namelist_fid  = IO_FID_CONF      ) ! [IN]
+    call HistoryInit( HIST_item_limit,                  & ! [OUT]
+                      HIST_variant_limit,               & ! [OUT]
+                      im, jm, km,                       & ! [IN]
+                      PRC_masterrank,                   & ! [IN]
+                      PRC_myrank,                       & ! [IN]
+                      rankidx(:),                       & ! [IN]
+                      HISTORY_H_TITLE,                  & ! [IN]
+                      H_SOURCE,                         & ! [IN]
+                      H_INSTITUTE,                      & ! [IN]
+                      time_start     = start_daysec,    & ! [IN]
+                      time_interval  = TIME_DTSEC,      & ! [IN]
+                      time_since     = HISTORY_T_SINCE, & ! [IN]
+                      default_zcoord = 'model',         & ! [IN]
+                      namelist_fid   = IO_FID_CONF      ) ! [IN]
 
     HIST_item_count = 0
     if ( HIST_item_limit > 0 ) then
