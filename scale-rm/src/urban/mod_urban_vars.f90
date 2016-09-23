@@ -246,11 +246,13 @@ contains
     implicit none
 
     NAMELIST / PARAM_URBAN_VARS /  &
-       URBAN_RESTART_IN_BASENAME,  &
-       URBAN_RESTART_OUTPUT,       &
-       URBAN_RESTART_OUT_BASENAME, &
-       URBAN_RESTART_OUT_TITLE,    &
-       URBAN_RESTART_OUT_DTYPE,    &
+       URBAN_RESTART_IN_BASENAME,           &
+       URBAN_RESTART_IN_POSTFIX_TIMELABEL,  &
+       URBAN_RESTART_OUTPUT,                &
+       URBAN_RESTART_OUT_BASENAME,          &
+       URBAN_RESTART_OUT_POSTFIX_TIMELABEL, &
+       URBAN_RESTART_OUT_TITLE,             &
+       URBAN_RESTART_OUT_DTYPE,             &
        URBAN_VARS_CHECKRANGE
 
     integer :: ierr
@@ -397,13 +399,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( URBAN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(URBAN_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(URBAN_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', URBAN_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       URBAN_RESTART_OUTPUT             &
          .AND. URBAN_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(URBAN_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(URBAN_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', URBAN_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        URBAN_RESTART_OUTPUT = .false.
@@ -415,69 +419,82 @@ contains
   !-----------------------------------------------------------------------------
   !> Read urban restart
   subroutine URBAN_vars_restart_read
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_read
     use mod_urban_admin, only: &
        URBAN_sw
     implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (URBAN) ***'
 
     if ( URBAN_sw .and. URBAN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(URBAN_RESTART_IN_BASENAME)
 
-       call FILEIO_read( URBAN_TR(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TR), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_TB(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TB), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_TG(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TG), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_TC(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TC), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_QC(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_QC), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_UC(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_UC), 'XY', step=1 ) ! [IN]
+       if ( URBAN_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(URBAN_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(URBAN_RESTART_IN_BASENAME)
+       endif
 
-       call FILEIO_read( URBAN_TRL(:,:,:),                                           & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TRL), 'Urban', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_TBL(:,:,:),                                           & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TBL), 'Urban', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_TGL(:,:,:),                                           & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TGL), 'Urban', step=1 ) ! [IN]
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_read( URBAN_RAINR(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_RAINR), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_RAINB(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_RAINB), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_RAING(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_RAING), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_ROFF(:,:),                                           & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_ROFF),  'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TR(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_TR), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TB(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_TB), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TG(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_TG), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TC(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_TC), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_QC(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_QC), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_UC(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_UC), 'XY', step=1 ) ! [IN]
 
-       call FILEIO_read( URBAN_SFC_TEMP(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFC_albedo(:,:,I_LW),                                   & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_ALB_LW),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFC_albedo(:,:,I_SW),                                   & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_ALB_SW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TRL(:,:,:),                          & ! [OUT]
+                         basename, VAR_NAME(I_TRL), 'Urban', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TBL(:,:,:),                          & ! [OUT]
+                         basename, VAR_NAME(I_TBL), 'Urban', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TGL(:,:,:),                          & ! [OUT]
+                         basename, VAR_NAME(I_TGL), 'Urban', step=1 ) ! [IN]
 
-       call FILEIO_read( URBAN_SFLX_MW(:,:),                                            & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFLX_MU(:,:),                                            & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFLX_MV(:,:),                                            & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFLX_SH(:,:),                                            & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFLX_LH(:,:),                                            & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFLX_GH(:,:),                                            & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_GH),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFLX_evap(:,:),                                          & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_RAINR(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_RAINR), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_RAINB(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_RAINB), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_RAING(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_RAING), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_ROFF(:,:),                          & ! [OUT]
+                         basename, VAR_NAME(I_ROFF),  'XY', step=1 ) ! [IN]
+
+       call FILEIO_read( URBAN_SFC_TEMP(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_SFC_TEMP), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFC_albedo(:,:,I_LW),                  & ! [OUT]
+                         basename, VAR_NAME(I_ALB_LW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFC_albedo(:,:,I_SW),                  & ! [OUT]
+                         basename, VAR_NAME(I_ALB_SW),   'XY', step=1 ) ! [IN]
+
+       call FILEIO_read( URBAN_SFLX_MW(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_MU(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_MV(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_SH(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_LH(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_GH(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_GH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_evap(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
 
        call URBAN_vars_total
 
@@ -505,12 +522,17 @@ contains
 
     if ( URBAN_sw .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(URBAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (URBAN) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** filename: ', trim(basename)
+
+       if ( URBAN_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(URBAN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(URBAN_RESTART_OUT_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call URBAN_vars_total
 
@@ -792,14 +814,21 @@ contains
 
     if ( URBAN_sw .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(URBAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (URBAN) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** filename: ', trim(basename)
 
-       call FILEIO_create( restart_fid, basename, URBAN_RESTART_OUT_TITLE, URBAN_RESTART_OUT_DTYPE )
+       if ( URBAN_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(URBAN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(URBAN_RESTART_OUT_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_create( restart_fid,                                               & ! [OUT]
+                           basename, URBAN_RESTART_OUT_TITLE, URBAN_RESTART_OUT_DTYPE ) ! [IN]
+
     endif
 
     return

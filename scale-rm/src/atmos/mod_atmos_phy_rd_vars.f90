@@ -147,10 +147,12 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_RD_VARS / &
-       ATMOS_PHY_RD_RESTART_IN_BASENAME,  &
-       ATMOS_PHY_RD_RESTART_OUTPUT,       &
-       ATMOS_PHY_RD_RESTART_OUT_BASENAME, &
-       ATMOS_PHY_RD_RESTART_OUT_TITLE,    &
+       ATMOS_PHY_RD_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_RD_RESTART_IN_POSTFIX_TIMELABEL,  &
+       ATMOS_PHY_RD_RESTART_OUTPUT,                &
+       ATMOS_PHY_RD_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_RD_RESTART_OUT_POSTFIX_TIMELABEL, &
+       ATMOS_PHY_RD_RESTART_OUT_TITLE,             &
        ATMOS_PHY_RD_RESTART_OUT_DTYPE
 
     integer :: ierr
@@ -210,13 +212,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_PHY_RD_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_PHY_RD_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(ATMOS_PHY_RD_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_PHY_RD_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       ATMOS_PHY_RD_RESTART_OUTPUT             &
          .AND. ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_PHY_RD_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_RD_RESTART_OUTPUT = .false.
@@ -276,11 +280,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_RD_vars_restart_read
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_read
     use scale_rm_statistics, only: &
        STAT_total
     implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
 
     real(RP) :: total
     !---------------------------------------------------------------------------
@@ -289,32 +298,40 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_RD) ***'
 
     if ( ATMOS_PHY_RD_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_RD_RESTART_IN_BASENAME)
 
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_up(:,:),                                & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(1) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_dn(:,:),                                & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(2) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_up(:,:),                                & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(3) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_dn(:,:),                                & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(4) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_LW_up(:,:),                              & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(5) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),                              & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(6) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_SW_up(:,:),                              & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(7) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),                              & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(8) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,1,1),                          & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(9) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,1,2),                          & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(10), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,1),                          & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(11), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,2),                          & ! [OUT]
-                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(12), 'XY', step=1 ) ! [IN]
+       if ( ATMOS_PHY_RD_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_RD_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_RD_RESTART_IN_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_up(:,:),        & ! [OUT]
+                         basename, VAR_NAME(1) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_dn(:,:),        & ! [OUT]
+                         basename, VAR_NAME(2) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_up(:,:),        & ! [OUT]
+                         basename, VAR_NAME(3) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_dn(:,:),        & ! [OUT]
+                         basename, VAR_NAME(4) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_LW_up(:,:),      & ! [OUT]
+                         basename, VAR_NAME(5) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),      & ! [OUT]
+                         basename, VAR_NAME(6) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_SW_up(:,:),      & ! [OUT]
+                         basename, VAR_NAME(7) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),      & ! [OUT]
+                         basename, VAR_NAME(8) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,1,1),  & ! [OUT]
+                         basename, VAR_NAME(9) , 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,1,2),  & ! [OUT]
+                         basename, VAR_NAME(10), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,1),  & ! [OUT]
+                         basename, VAR_NAME(11), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,2),  & ! [OUT]
+                         basename, VAR_NAME(12), 'XY', step=1 ) ! [IN]
 
        call ATMOS_PHY_RD_vars_fillhalo
 
@@ -356,11 +373,16 @@ contains
 
     if ( ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_RD) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_AE) ***'
+
+       if ( ATMOS_PHY_RD_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call ATMOS_PHY_RD_vars_fillhalo
@@ -402,7 +424,6 @@ contains
                           VAR_NAME(11), VAR_DESC(11), VAR_UNIT(11), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_PHY_RD_SFLX_downall(:,:,2,2), basename,   ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(12), VAR_DESC(12), VAR_UNIT(12), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-
 
     endif
 
@@ -452,15 +473,20 @@ contains
 
     if ( ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_RD) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_AE) ***'
+
+       if ( ATMOS_PHY_RD_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, ATMOS_PHY_RD_RESTART_OUT_TITLE, &
-                          ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_create( restart_fid,                                                             & ! [OUT]
+                           basename, ATMOS_PHY_RD_RESTART_OUT_TITLE, ATMOS_PHY_RD_RESTART_OUT_DTYPE ) ! [IN]
 
     endif
 

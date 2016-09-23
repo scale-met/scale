@@ -188,10 +188,13 @@ contains
     implicit none
 
     NAMELIST / PARAM_OCEAN_VARS /  &
-       OCEAN_RESTART_IN_BASENAME,  &
-       OCEAN_RESTART_OUTPUT,       &
-       OCEAN_RESTART_OUT_BASENAME, &
-       OCEAN_RESTART_OUT_TITLE,    &
+       OCEAN_RESTART_IN_BASENAME,           &
+       OCEAN_RESTART_IN_POSTFIX_TIMELABEL,  &
+       OCEAN_RESTART_OUTPUT,                &
+       OCEAN_RESTART_OUT_BASENAME,          &
+       OCEAN_RESTART_OUT_POSTFIX_TIMELABEL, &
+       OCEAN_RESTART_OUT_TITLE,             &
+       OCEAN_RESTART_OUT_DTYPE,             &
        OCEAN_VARS_CHECKRANGE
 
     integer :: ierr
@@ -301,13 +304,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(OCEAN_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(OCEAN_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', OCEAN_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       OCEAN_RESTART_OUTPUT             &
          .AND. OCEAN_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(OCEAN_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(OCEAN_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', OCEAN_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        OCEAN_RESTART_OUTPUT = .false.
@@ -319,48 +324,61 @@ contains
   !-----------------------------------------------------------------------------
   !> Read ocean restart
   subroutine OCEAN_vars_restart_read
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_read
     use mod_ocean_admin, only: &
        OCEAN_sw
     implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) ***'
 
     if ( OCEAN_sw .and. OCEAN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(OCEAN_RESTART_IN_BASENAME)
 
-       call FILEIO_read( OCEAN_TEMP(:,:),                                               & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_TEMP),      'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_TEMP(:,:),                                           & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP),  'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_LW),                                    & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_ALB_LW),    'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_SW),                                    & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_ALB_SW),    'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_Z0M(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0M),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_Z0H(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0H),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_Z0E(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0E),   'XY', step=1 ) ! [IN]
+       if ( OCEAN_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(OCEAN_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(OCEAN_RESTART_IN_BASENAME)
+       endif
 
-       call FILEIO_read( OCEAN_SFLX_MW(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_MU(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_MV(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_SH(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_LH(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_WH(:,:),                                            & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_WH),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_evap(:,:),                                          & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_read( OCEAN_TEMP(:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_TEMP),      'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_TEMP(:,:),                          & ! [OUT]
+                         basename, VAR_NAME(I_SFC_TEMP),  'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_LW),                   & ! [OUT]
+                         basename, VAR_NAME(I_ALB_LW),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_SW),                   & ! [OUT]
+                         basename, VAR_NAME(I_ALB_SW),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_Z0M(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFC_Z0M),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_Z0H(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFC_Z0H),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_Z0E(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFC_Z0E),   'XY', step=1 ) ! [IN]
+
+       call FILEIO_read( OCEAN_SFLX_MW(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_MU(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_MV(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_SH(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_LH(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_WH(:,:),                           & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_WH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_evap(:,:),                         & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
 
        call OCEAN_vars_total
     else
@@ -387,11 +405,16 @@ contains
 
     if ( OCEAN_sw .and. OCEAN_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (OCEAN) ***'
+
+       if ( OCEAN_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(OCEAN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(OCEAN_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call OCEAN_vars_total
@@ -581,14 +604,21 @@ contains
 
     if ( OCEAN_sw .and. OCEAN_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (OCEAN) ***'
+
+       if ( OCEAN_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(OCEAN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(OCEAN_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, OCEAN_RESTART_OUT_TITLE, OCEAN_RESTART_OUT_DTYPE)
+       call FILEIO_create( restart_fid,                                               & ! [OUT]
+                           basename, OCEAN_RESTART_OUT_TITLE, OCEAN_RESTART_OUT_DTYPE ) ! [IN]
+
     endif
 
     return

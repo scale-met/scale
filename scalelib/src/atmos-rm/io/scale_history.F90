@@ -75,24 +75,23 @@ module scale_history
   !
   !++ Private parameters & variables
   !
-  integer, parameter :: I_MODEL = 0 ! model coordinate
-  integer, parameter :: I_Z     = 1 ! z coordinate
-  integer, parameter :: I_PRES  = 2 ! pressure coordinate
+  integer,                private, parameter   :: I_MODEL = 0           !< model coordinate
+  integer,                private, parameter   :: I_Z     = 1           !< z coordinate
+  integer,                private, parameter   :: I_PRES  = 2           !< pressure coordinate
 
-  integer,                private              :: HIST_item_count   !< number of the history item
-  character(len=H_SHORT), private, allocatable :: HIST_item   (:)   !< name   of the history item
-  integer,                private, allocatable :: HIST_variant(:)   !< number of the variants      for each history item
-  integer,                private, allocatable :: HIST_zcoord (:,:) !< vertical interpolation type for each variant of history item
+  integer,                private              :: HIST_item_limit
+  integer,                private              :: HIST_item_count       !< number of the history item
+  character(len=H_SHORT), private, allocatable :: HIST_item   (:)       !< name   of the history item
+  integer,                private, allocatable :: HIST_variant(:)       !< number of the variants      for each history item
+  integer,                private, allocatable :: HIST_zcoord (:,:)     !< vertical interpolation type for each variant of history item
 
-  logical, private :: enabled
-  integer, private :: im,  jm, km
-  integer, private :: ims, ime
-  integer, private :: jms, jme
+  integer,                private              :: HIST_PRES_nlayer = -1 !< Number of pressure layer
+  real(RP),               private, allocatable :: HIST_PRES(:)          !< pressure level to output [hPa]
 
-  integer, private :: HIST_item_limit
-  logical, private :: HIST_OUTPUT_PAXIS
-  integer, private :: HIST_PRES_nlayer = -1      !> Number of pressure layer
-  real(RP), private, allocatable :: HIST_PRES(:) !> pressure level to output [hPa]
+  logical,                private              :: enabled
+  integer,                private              :: im,  jm,  km
+  integer,                private              :: ims, ime
+  integer,                private              :: jms, jme
 
   !-----------------------------------------------------------------------------
 contains
@@ -138,9 +137,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HISTORY] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
 
-    HIST_PRES = -1.0_RP
-
     allocate( HIST_PRES(KMAX+1) )
+    HIST_PRES(:) = -1.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -159,7 +157,7 @@ contains
           write(*,*) 'xxx number of layers of pressure is larger the KMAX'
           call PRC_MPIstop
        end if
-          
+
        do k = 1, HIST_PRES_nlayer
           if ( HIST_PRES(k) <= 0.0_RP ) then
              write(*,*) 'xxx Invalid value found in pressure coordinate! (k,value)=', k, HIST_PRES(k)
@@ -327,8 +325,8 @@ contains
     call HistoryPutAxis( 'zh',   'Z (half level)',                    'm', 'zh',  GRID_FZ(KS:KE)   )
 
     if ( HIST_PRES_nlayer > 0 ) then
-       call HistoryPutAxis( 'pressure', 'Pressure', 'hPa', 'pressure', &
-            HIST_PRES(:HIST_PRES_nlayer)/100.0_RP, down=.true. )
+       call HistoryPutAxis( 'pressure', 'Pressure', 'hPa', 'pressure',         &
+                            HIST_PRES(:HIST_PRES_nlayer)/100.0_RP, down=.true. )
     endif
 
     call HistoryPutAxis( 'lz',   'LZ',                                'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true. )
@@ -619,9 +617,9 @@ contains
 
     character(len=H_SHORT) :: dims(3)
 
-    integer                :: nvariant1, nvariant2, nvariant3
-    integer                :: v, id
-    logical                :: atom
+    integer :: nvariant1, nvariant2, nvariant3
+    integer :: v, id
+    logical :: atom
     !---------------------------------------------------------------------------
 
     itemid = -1
@@ -753,13 +751,13 @@ contains
     if ( atom ) then
 
        ! model coordinate (terrain following coordinate)
-       call HistoryAddVariable( nvariant1,     & ! [OUT]
-                                item,          & ! [IN]
-                                dims(1:ndim),  & ! [IN]
-                                desc,          & ! [IN]
-                                unit,          & ! [IN]
-                                NOWSTEP,       & ! [IN]
-                                'model'        ) ! [IN]
+       call HistoryAddVariable( nvariant1,    & ! [OUT]
+                                item,         & ! [IN]
+                                dims(1:ndim), & ! [IN]
+                                desc,         & ! [IN]
+                                unit,         & ! [IN]
+                                NOWSTEP,      & ! [IN]
+                                'model'       ) ! [IN]
 
        ! absolute height coordinate
        dims(3) = 'z'
@@ -785,7 +783,7 @@ contains
 
        else
           nvariant3 = 0
-       end if
+       endif
 
     else
 
