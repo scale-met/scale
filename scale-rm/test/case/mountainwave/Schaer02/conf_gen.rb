@@ -191,7 +191,7 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
  HISTORY_DEFAULT_TUNIT     = "SEC",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
  HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZDIM      = "HGT",
+ HISTORY_DEFAULT_ZCOORD    = "z",
  HISTORY_OUTPUT_STEP0      = .true.,
 /
 

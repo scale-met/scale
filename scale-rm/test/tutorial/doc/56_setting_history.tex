@@ -13,7 +13,7 @@
 \verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; 出力の時間間隔。 \\
 \verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; \verb|HISTORY_DEFAULT_TINTERVAL|の単位。 \\
 \verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: 瞬間値、\verb|.true.|: 平均値。\\
-\verb|  HISTORY_DEFAULT_ZDIM      = "native",|      & ; 鉛直内挿の種別。\\
+\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|      & ; 鉛直内挿の種別。\\
                                                     & ~ native,AGL,MDL: モデル面の値を出力(内挿しない)。\\
                                                     & ~ z,Z,HGT: 絶対高度面に内挿した値を出力。\\
                                                     & ~ pz,P,PRES: 気圧面に内挿した値を出力。\\
@@ -46,7 +46,7 @@
 \verb| TINTERVAL= "600.0",   | &  (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
 \verb| TUNIT    = "SEC",     | &  (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
 \verb| TAVERAGE = .true.,    | &  (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\
-\verb| ZDIM     = 1,         | &  (オプション) \verb|HISTORY_DEFAULT_ZDIM|に同じ。\\
+\verb| ZCOORD   = "model",   | &  (オプション) \verb|HISTORY_DEFAULT_ZCOORD|に同じ。\\
 \verb| DATATYPE = "REAL4",   | &  (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
 \verb|/| & \\
 \end{tabularx}
