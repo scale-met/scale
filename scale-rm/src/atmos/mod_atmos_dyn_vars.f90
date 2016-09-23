@@ -87,10 +87,12 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN_VARS / &
-       ATMOS_DYN_RESTART_IN_BASENAME,  &
-       ATMOS_DYN_RESTART_OUTPUT,       &
-       ATMOS_DYN_RESTART_OUT_BASENAME, &
-       ATMOS_DYN_RESTART_OUT_TITLE,    &
+       ATMOS_DYN_RESTART_IN_BASENAME,           &
+       ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL,  &
+       ATMOS_DYN_RESTART_OUTPUT,                &
+       ATMOS_DYN_RESTART_OUT_BASENAME,          &
+       ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL, &
+       ATMOS_DYN_RESTART_OUT_TITLE,             &
        ATMOS_DYN_RESTART_OUT_DTYPE
 
     integer :: ierr
@@ -136,16 +138,16 @@ contains
        enddo
 
        if( IO_L ) write(IO_FID_LOG,*)
-
        if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL
        else
           if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
        endif
-
        if (       ATMOS_DYN_RESTART_OUTPUT             &
             .AND. ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_DYN_RESTART_OUT_BASENAME)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(ATMOS_DYN_RESTART_OUT_BASENAME)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL
        else
           if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
           ATMOS_DYN_RESTART_OUTPUT = .false.
@@ -194,25 +196,38 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_DYN_vars_restart_read
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_read
     use scale_rm_statistics, only: &
        STAT_total
     implicit none
 
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
+
     real(RP) :: total
-    integer :: iv
+    integer  :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_DYN) ***'
 
     if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
+
+       if ( ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_DYN_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_DYN_RESTART_IN_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        do iv = 1, VA
           call FILEIO_read( PROG(:,:,:,iv),                                            & ! [OUT]
-                            ATMOS_DYN_RESTART_IN_BASENAME, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
+                            basename, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
 
        enddo
 
@@ -239,21 +254,27 @@ contains
 
     character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
+
     integer :: iv
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_DYN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
+
+       if ( ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_DYN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_DYN_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        do iv = 1, VA
-          call FILEIO_write( PROG(:,:,:,iv), basename,                       ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
-                             VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE ) ! [IN]
+          call FILEIO_write( PROG(:,:,:,iv), basename,                        ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
+                             VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE  ) ! [IN]
        enddo
 
     endif
@@ -272,20 +293,27 @@ contains
 
     character(len=20)     :: timelabel
     character(len=H_LONG) :: basename
+
     integer :: iv
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_DYN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
+
+       if ( ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_DYN_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_DYN_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, ATMOS_DYN_RESTART_OUT_TITLE, &
-                          ATMOS_DYN_RESTART_OUT_DTYPE ) ! [IN]
+       call FILEIO_create( restart_fid,                                                       & ! [OUT]
+                           basename, ATMOS_DYN_RESTART_OUT_TITLE, ATMOS_DYN_RESTART_OUT_DTYPE ) ! [IN]
+
     endif
 
     return

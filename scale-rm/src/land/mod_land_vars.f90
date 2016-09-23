@@ -210,11 +210,13 @@ contains
     implicit none
 
     NAMELIST / PARAM_LAND_VARS /  &
-       LAND_RESTART_IN_BASENAME,  &
-       LAND_RESTART_OUTPUT,       &
-       LAND_RESTART_OUT_BASENAME, &
-       LAND_RESTART_OUT_TITLE,    &
-       LAND_RESTART_OUT_DTYPE,    &
+       LAND_RESTART_IN_BASENAME,           &
+       LAND_RESTART_IN_POSTFIX_TIMELABEL,  &
+       LAND_RESTART_OUTPUT,                &
+       LAND_RESTART_OUT_BASENAME,          &
+       LAND_RESTART_OUT_POSTFIX_TIMELABEL, &
+       LAND_RESTART_OUT_TITLE,             &
+       LAND_RESTART_OUT_DTYPE,             &
        LAND_VARS_CHECKRANGE
 
     integer :: ierr
@@ -322,13 +324,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(LAND_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(LAND_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', LAND_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       LAND_RESTART_OUTPUT             &
          .AND. LAND_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(LAND_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(LAND_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', LAND_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        LAND_RESTART_OUTPUT = .false.
@@ -365,43 +369,56 @@ contains
   !-----------------------------------------------------------------------------
   !> Read land restart
   subroutine LAND_vars_restart_read
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_read
     use mod_land_admin, only: &
        LAND_sw
     implicit none
+
+    character(len=20)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) ***'
 
     if ( LAND_sw .and. LAND_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(LAND_RESTART_IN_BASENAME)
 
-       call FILEIO_read( LAND_TEMP (:,:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
-       call FILEIO_read( LAND_WATER(:,:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_WATER),     'Land', step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_TEMP(:,:),                                             & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_albedo(:,:,I_LW),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MW(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MU(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MV(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_SH(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_LH(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_GH(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_evap(:,:),                                            & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
+       if ( LAND_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(LAND_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(LAND_RESTART_IN_BASENAME)
+       endif
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_read( LAND_TEMP (:,:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
+       call FILEIO_read( LAND_WATER(:,:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_WATER),     'Land', step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_TEMP(:,:),                             & ! [OUT]
+                         basename, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_albedo(:,:,I_LW),                      & ! [OUT]
+                         basename, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                      & ! [OUT]
+                         basename, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MW(:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MU(:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MV(:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_SH(:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_LH(:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_GH(:,:),                              & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_evap(:,:),                            & ! [OUT]
+                         basename, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
 
        call LAND_vars_total
     else
@@ -428,11 +445,16 @@ contains
 
     if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
+
+       if ( LAND_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(LAND_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(LAND_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call LAND_vars_total
@@ -781,14 +803,21 @@ contains
 
     if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
+
+       if ( LAND_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(LAND_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(LAND_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE)
+       call FILEIO_create( restart_fid,                                             & ! [OUT]
+                           basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE ) ! [IN]
+
     endif
 
     return

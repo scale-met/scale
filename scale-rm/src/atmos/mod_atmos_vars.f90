@@ -365,14 +365,14 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(ATMOS_RESTART_IN_BASENAME)
        if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       ATMOS_RESTART_OUTPUT             &
          .AND. ATMOS_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(ATMOS_RESTART_OUT_BASENAME)
        if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
@@ -2751,7 +2751,8 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, ATMOS_RESTART_OUT_TITLE, ATMOS_RESTART_OUT_DTYPE)
+       call FILEIO_create( restart_fid,                                               & ! [OUT]
+                           basename, ATMOS_RESTART_OUT_TITLE, ATMOS_RESTART_OUT_DTYPE ) ! [IN]
 
        allocate( VAR_ID(VMAX+QA) )
     endif
