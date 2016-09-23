@@ -365,7 +365,7 @@ contains
 
     QA = QA_AE
     QAES = QS
-    QAEE = QA + QA_AE - 1
+    QAEE = QS + QA_AE - 1
 
 
     return
