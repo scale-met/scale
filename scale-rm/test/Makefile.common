@@ -8,12 +8,28 @@ ifeq ($(origin SYSDEP_DIR), undefined)
    SYSDEP_DIR = $(TOPDIR)/sysdep
 endif
 
-ifeq ($(origin BINNAME), undefined)
-   BINNAME = scale-rm
+ifeq ($(origin PPNAME), undefined)
+   PPNAME = scale-rm_pp
 endif
 
 ifeq ($(origin INITNAME), undefined)
    INITNAME = scale-rm_init
+endif
+
+ifeq ($(origin BINNAME), undefined)
+   BINNAME = scale-rm
+endif
+
+ifeq ($(origin PPCONF), undefined)
+   PPCONF = NONE
+endif
+
+ifeq ($(origin INITCONF), undefined)
+   INITCONF = NONE
+endif
+
+ifeq ($(origin RUNCONF), undefined)
+   RUNCONF = NONE
 endif
 
 BUILD_DIR := $(PWD)/.libs
@@ -44,10 +60,16 @@ run: jobshell
 
 jobshell:
 	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC) \
+		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
+		                                 $(PPNAME) $(INITNAME) $(BINNAME)   \
+		                                 $(PPCONF) $(INITCONF) $(RUNCONF)   \
+		                                 $(TPROC)                           \
 		                                 $(DATDIR) $(DATPARAM) $(DATDISTS); \
 	else \
-		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC) \
+		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
+		                                            $(PPNAME) $(INITNAME) $(BINNAME)   \
+		                                            $(PPCONF) $(INITCONF) $(RUNCONF)   \
+		                                            $(TPROC)                           \
 		                                            $(DATDIR) $(DATPARAM) $(DATDISTS); \
 	fi
 

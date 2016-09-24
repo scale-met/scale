@@ -2,25 +2,33 @@
 
 # Arguments
 BINDIR=${1}
-INITNAME=${2}
-BINNAME=${3}
-INITCONF=${4}
-RUNCONF=${5}
-TPROC=${6}
-DATDIR=${7}
-DATPARAM=(`echo ${8} | tr -s ',' ' '`)
-DATDISTS=(`echo ${9} | tr -s ',' ' '`)
+PPNAME=${2}
+INITNAME=${3}
+BINNAME=${4}
+PPCONF=${5}
+INITCONF=${6}
+RUNCONF=${7}
+TPROC=${8}
+DATDIR=${9}
+DATPARAM=(`echo ${10} | tr -s ',' ' '`)
+DATDISTS=(`echo ${11} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"
 
-if [ ! ${INITNAME} = "NONE" ]; then
+if [ ! ${PPCONF} = "NONE" ]; then
+  RUN_PP="${MPIEXEC} ./${PPNAME} ${PPCONF} || exit"
+fi
+
+if [ ! ${INITCONF} = "NONE" ]; then
   RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
 fi
 
-if [ ! ${BINNAME} = "NONE" ]; then
+if [ ! ${RUNCONF} = "NONE" ]; then
   RUN_BIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
 fi
+
+RUNDIR=`pwd`
 
 
 
@@ -46,14 +54,17 @@ cat << EOF1 > ./run.sh
 #PBS -v F_SETBUF=102400
 #PBS -v MPISEPSELECT=3
 
+#PBS -I "${BINDIR}/${PPNAME},ALL:./"
 #PBS -I "${BINDIR}/${INITNAME},ALL:./"
 #PBS -I "${BINDIR}/${BINNAME},ALL:./"
+#PBS -I "${RUNDIR}/${PPCONF},ALL:./"
 #PBS -I "${RUNDIR}/${INITCONF},ALL:./"
 #PBS -I "${RUNDIR}/${RUNCONF},ALL:./"
 
 #PBS -O "${RUNDIR}/,0:./"
 
 # run
+${RUN_PP}
 ${RUN_INIT}
 ${RUN_BIN}
 
@@ -64,13 +75,15 @@ EOF1
 
 
 
-RUNDIR=`pwd`
+if [ ! ${PPCONF} = "NONE" ]; then
+  RUN_PP="${MPIEXEC} ${BINDIR}/${PPNAME} ${PPCONF} || exit"
+fi
 
-if [ ! ${INITNAME} = "NONE" ]; then
+if [ ! ${INITCONF} = "NONE" ]; then
   RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
 fi
 
-if [ ! ${BINNAME} = "NONE" ]; then
+if [ ! ${RUNCONF} = "NONE" ]; then
   RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
 fi
 
@@ -97,6 +110,7 @@ cat << EOF2 > ./run_S.sh
 cd ${RUNDIR}
 
 # run
+${RUN_PP}
 ${RUN_INIT}
 ${RUN_BIN}
 

@@ -9,7 +9,6 @@ TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 INDEX_DIR   = .
 
-
 # user-defined source files
 CODE_DIR    = .
 ORG_SRCS    =
@@ -24,13 +23,13 @@ turbulence = smagorinsky
 radiation  = mstrnx
 
 # parameters for run
-INITCONF    = 
-RUNCONF     = 
-TPROC       = 
+INITCONF    =
+RUNCONF     =
+TPROC       =
 
 # required data (parameters,distributed files)
-DATDIR      = 
-DATPARAM    = 
+DATDIR      =
+DATPARAM    =
 DATDISTS    =
 
 # options

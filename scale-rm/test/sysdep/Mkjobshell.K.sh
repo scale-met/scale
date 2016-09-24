@@ -2,16 +2,19 @@
 
 # Arguments
 BINDIR=${1}
-PPNAME=${2}
-INITNAME=${3}
-BINNAME=${4}
-PPCONF=${5}
-INITCONF=${6}
-RUNCONF=${7}
-TPROC=${8}
-DATDIR=${9}
-DATPARAM=(`echo ${10} | tr -s ',' ' '`)
-DATDISTS=(`echo ${11} | tr -s ',' ' '`)
+UTILDIR=${2}
+PPNAME=${3}
+INITNAME=${4}
+BINNAME=${5}
+N2GNAME=${6}
+PPCONF=${7}
+INITCONF=${8}
+RUNCONF=${9}
+N2GCONF=${10}
+TPROC=${11}
+DATDIR=${12}
+DATPARAM=(`echo ${13} | tr -s ',' ' '`)
+DATDISTS=(`echo ${14} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpiexec"
@@ -26,6 +29,10 @@ fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
   RUN_BIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+fi
+
+if [ ! ${N2GCONF} = "NONE" ]; then
+  RUN_N2G="${MPIEXEC} ${UTILDIR}/${N2GNAME} ${N2GCONF} || exit"
 fi
 
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
@@ -60,9 +67,11 @@ cat << EOF1 > ./run.sh
 #PJM --stgin  "rank=* ${BINDIR}/${PPNAME}   %r:./"
 #PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
 #PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
+#PJM --stgin  "rank=* ${UTILDIR}/${N2GNAME} %r:./"
 #PJM --stgin  "rank=*         ./${PPCONF}   %r:./"
 #PJM --stgin  "rank=*         ./${INITCONF} %r:./"
 #PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+#PJM --stgin  "rank=*         ./${N2GCONF}  %r:./"
 EOF1
 
 if [ ! ${DATPARAM[0]} = "" ]; then
@@ -105,6 +114,7 @@ export OMP_NUM_THREADS=8
 ${RUN_PP}
 ${RUN_INIT}
 ${RUN_BIN}
+${RUN_N2G}
 
 ################################################################################
 EOF2

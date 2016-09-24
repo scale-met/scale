@@ -1,17 +1,20 @@
-#! /bin/bash -x
+#! /bin/bash -x#! /bin/bash -x
 
 # Arguments
 BINDIR=${1}
-PPNAME=${2}
-INITNAME=${3}
-BINNAME=${4}
-PPCONF=${5}
-INITCONF=${6}
-RUNCONF=${7}
-TPROC=${8}
-DATDIR=${9}
-DATPARAM=(`echo ${10} | tr -s ',' ' '`)
-DATDISTS=(`echo ${11} | tr -s ',' ' '`)
+UTILDIR=${2}
+PPNAME=${3}
+INITNAME=${4}
+BINNAME=${5}
+N2GNAME=${6}
+PPCONF=${7}
+INITCONF=${8}
+RUNCONF=${9}
+N2GCONF=${10}
+TPROC=${11}
+DATDIR=${12}
+DATPARAM=(`echo ${13} | tr -s ',' ' '`)
+DATDISTS=(`echo ${14} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpiexec"
@@ -25,7 +28,11 @@ if [ ! ${INITCONF} = "NONE" ]; then
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
-  RUN_BIN="fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+fi
+
+if [ ! ${N2GCONF} = "NONE" ]; then
+  RUN_N2G="${MPIEXEC} ${UTILDIR}/${N2GNAME} ${N2GCONF} || exit"
 fi
 
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
@@ -33,19 +40,14 @@ x=${array[0]}
 y=${array[1]:-1}
 let xy="${x} * ${y}"
 
-# for Oakleaf-FX
-# if [ ${xy} -gt 480 ]; then
-#    rscgrp="x-large"
-# elif [ ${xy} -gt 372 ]; then
-#    rscgrp="large"
-# elif [ ${xy} -gt 216 ]; then
-#    rscgrp="medium"
-# elif [ ${xy} -gt 12 ]; then
-#    rscgrp="small"
-# else
-#    rscgrp="short"
-# fi
-rscgrp="debug"
+# for AICS-FX10
+if [ ${xy} -gt 96 ]; then
+   rscgrp="huge"
+elif [ ${xy} -gt 24 ]; then
+   rscgrp="large"
+else
+   rscgrp="large"
+fi
 
 
 
@@ -55,22 +57,19 @@ cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ For Oakleaf-FX -----
+# ------ For FX10
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:20:00"
+#PJM --rsc-list "elapse=12:00:00"
 #PJM -j
 #PJM -s
 #
-module load netCDF
-module load netCDF-fortran
-module load HDF5/1.8.9
-module list
+. /work/system/Env_base
 #
-export PARALLEL=8
-export OMP_NUM_THREADS=8
+export PARALLEL=16
+export OMP_NUM_THREADS=16
 
 EOF1
 
@@ -108,13 +107,11 @@ fi
 
 cat << EOF2 >> ./run.sh
 
-rm -rf ./prof
-mkdir -p ./prof
-
 # run
 ${RUN_PP}
 ${RUN_INIT}
 ${RUN_BIN}
+${RUN_N2G}
 
 ################################################################################
 EOF2
