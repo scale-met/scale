@@ -56,7 +56,7 @@ if [ ${NUM_DOMAIN} -ne ${#PRC_NUM_Y[*]} ]; then echo "Error: Wrong array size (P
 if [ ${NUM_DOMAIN} -ne ${#KMAX[*]} ];      then echo "Error: Wrong array size (KMAX).";      exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#IMAX[*]} ];      then echo "Error: Wrong array size (IMAX).";      exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#JMAX[*]} ];      then echo "Error: Wrong array size (JMAX).";      exit 1; fi
- 
+
 if [ ${LKMAX} -ne ${#LDZ[*]} ]; then echo "Error: Wrong array size (LDZ)."; exit 1; fi
 if [ ${UKMAX} -ne ${#UDZ[*]} ]; then echo "Error: Wrong array size (UDZ)."; exit 1; fi
 
@@ -129,7 +129,7 @@ INT_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
 NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
 if [ ${NUMBER_OF_FILES} -le 1 ]; then
   NUMBER_OF_FILES=2
-fi 
+fi
 
 # set maximum number of steps
 HISTORY_2D_INTERVAL=`echo ${TIME_DT_HISTORY_2D%%.*}`
@@ -336,3 +336,6 @@ mv -f base.run.launch.conf ${OUTPUT_CONFIGDIR}/run/run.launch.conf
 #################################################
 
 source ${INPUT_CONFIGDIR}/mklink.sh
+
+source ${INPUT_CONFIGDIR}/mkMakefile.sh
+
