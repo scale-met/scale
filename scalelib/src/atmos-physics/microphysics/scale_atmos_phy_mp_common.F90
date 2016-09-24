@@ -58,10 +58,14 @@ contains
   !> Negative fixer
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_negative_fixer( &
-       DENS, &
-       RHOT, &
-       QTRC, &
-       I_QV  )
+       DENS,          &
+       RHOT,          &
+       QTRC,          &
+       I_QV,          &
+       limit_negative )
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_MPIstop
     use scale_atmos_hydrometer, only: &
        QHS, &
        QHE
@@ -71,10 +75,13 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     integer,  intent(in)    :: I_QV
+    real(RP), intent(in)    :: limit_negative
 
     real(RP) :: diffq
+    real(RP) :: diffq_check(KA,IA,JA)
+    real(RP) :: diffq_min
 
-    integer :: k, i, j, iq
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_filter', 3)
@@ -82,7 +89,7 @@ contains
     !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = KS, KE
+    do k = KS,  KE
 
        diffq = 0.0_RP
        do iq = QHS, QHE
@@ -99,6 +106,7 @@ contains
 
        ! Compensate for the lack of hydrometeors by the water vapor
        QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + diffq
+       diffq_check(k,i,j) = diffq
 
        ! TODO: We have to consider energy conservation (but very small)
 
@@ -115,6 +123,29 @@ contains
     enddo
     enddo
     enddo
+
+    diffq_min = minval( diffq_check(KS:KE,ISB:IEB,JSB:JEB) )
+
+    if (       abs(limit_negative) > 0.0_RP         &
+         .AND. abs(limit_negative) < abs(diffq_min) ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx [MP_negative_fixer] large negative is found.'
+       write(*,*)                     'xxx [MP_negative_fixer] large negative is found. rank = ', PRC_myrank
+
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS,  KE
+          if (     abs(limit_negative)   < abs(diffq_check(k,i,j)) &
+              .OR. abs(QTRC(k,i,j,I_QV)) < abs(diffq_check(k,i,j)) ) then
+             if( IO_L ) write(IO_FID_LOG,*) &
+                        'xxx k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QTRC(k,i,j,I_QV)
+          endif
+       enddo
+       enddo
+       enddo
+
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx criteria: total negative hydrometeor < ', abs(limit_negative)
+       call PRC_MPIstop
+    endif
 
     call PROF_rapend('MP_filter', 3)
 

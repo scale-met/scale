@@ -99,22 +99,22 @@ module scale_atmos_phy_mp_tomita08
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: I_mp_QC =  1
-  integer, private, parameter :: I_mp_QR =  2
-  integer, private, parameter :: I_mp_QI =  3
-  integer, private, parameter :: I_mp_QS =  4
-  integer, private, parameter :: I_mp_QG =  5
+  integer,  private, parameter :: I_mp_QC =  1
+  integer,  private, parameter :: I_mp_QR =  2
+  integer,  private, parameter :: I_mp_QI =  3
+  integer,  private, parameter :: I_mp_QS =  4
+  integer,  private, parameter :: I_mp_QG =  5
+  integer,  private            :: QS_MP
+  integer,  private            :: QE_MP
 
-  integer, private :: QS_MP
-  integer, private :: QE_MP
+  logical,  private            :: MP_donegative_fixer  = .true.  ! apply negative fixer?
+  logical,  private            :: MP_doprecipitation   = .true.  ! apply sedimentation (precipitation)?
+  logical,  private            :: MP_couple_aerosol    = .false. ! apply CCN effect?
+  real(RP), private            :: MP_limit_negative    = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
 
-  logical,  private :: MP_donegative_fixer  = .true.  ! apply negative fixer?
-  logical,  private :: MP_doprecipitation   = .true.  ! apply sedimentation (precipitation)?
-  logical,  private :: MP_couple_aerosol    = .false. ! apply CCN effect?
-
-  logical,  private :: MP_doexpricit_icegen = .false. ! apply explicit ice generation?
-  logical,  private :: only_liquid          = .false.
-  real(RP), private :: sw_useicegen         = 0.0_RP
+  logical,  private            :: MP_doexpricit_icegen = .false. ! apply explicit ice generation?
+  logical,  private            :: only_liquid          = .false.
+  real(RP), private            :: sw_useicegen         = 0.0_RP
 
   real(RP), private            :: dens00 = 1.28_RP !< standard density [kg/m3]
 
@@ -386,6 +386,7 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation,     &
        MP_donegative_fixer,    &
+       MP_limit_negative,      &
        MP_doexpricit_icegen,   &
        MP_ntmax_sedimentation, &
        MP_couple_aerosol
@@ -437,6 +438,7 @@ contains
 
     if ( IO_L ) write(IO_FID_LOG,*)
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                    : ', MP_donegative_fixer
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Value limit of negative fixer (abs)       : ', abs(MP_limit_negative)
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)?     : ', MP_doprecipitation
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?           : ', MP_doexpricit_icegen
 
@@ -469,7 +471,7 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** Use Roh scheme?                : ', enable_roh2014
     if ( IO_L ) write(IO_FID_LOG,*)
 
-    ATMOS_PHY_MP_tomita08_DENS(:) = UNDEF
+    ATMOS_PHY_MP_tomita08_DENS(:)    = UNDEF
     ATMOS_PHY_MP_tomita08_DENS(I_HC) = dens_w
     ATMOS_PHY_MP_tomita08_DENS(I_HR) = dens_w
     ATMOS_PHY_MP_tomita08_DENS(I_HI) = dens_i
@@ -612,10 +614,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(tomita08)'
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
-                               RHOT(:,:,:),   & ! [INOUT]
-                               QTRC(:,:,:,:), & ! [INOUT]
-                               I_QV           ) ! [IN]
+       call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
+                               RHOT(:,:,:),      & ! [INOUT]
+                               QTRC(:,:,:,:),    & ! [INOUT]
+                               I_QV,             & ! [IN]
+                               MP_limit_negative ) ! [IN]
     endif
 
     call THERMODYN_rhoe( RHOE(:,:,:),   & ! [OUT]
@@ -729,10 +732,11 @@ contains
                          TRACER_MASS(:) ) ! [IN]
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
-                               RHOT(:,:,:),   & ! [INOUT]
-                               QTRC(:,:,:,:), & ! [INOUT]
-                               I_QV           ) ! [IN]
+       call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
+                               RHOT(:,:,:),      & ! [INOUT]
+                               QTRC(:,:,:,:),    & ! [INOUT]
+                               I_QV,             & ! [IN]
+                               MP_limit_negative ) ! [IN]
     endif
 
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)

@@ -86,23 +86,24 @@ module scale_atmos_phy_mp_kessler
   !
   !++ Private parameters & variables
   !
-  logical,  private :: MP_donegative_fixer = .true. ! apply negative fixer?
-  logical,  private :: MP_doprecipitation  = .true. ! apply sedimentation (precipitation)?
-  logical,  private :: MP_couple_aerosol  = .false. ! Consider CCN effect ?
+  integer,  private, parameter   :: I_mp_QC = 1
+  integer,  private, parameter   :: I_mp_QR = 2
+  integer,  private              :: QS_MP
+  integer,  private              :: QE_MP
+
+  logical,  private              :: MP_donegative_fixer = .true.  ! apply negative fixer?
+  logical,  private              :: MP_doprecipitation  = .true.  ! apply sedimentation (precipitation)?
+  logical,  private              :: MP_couple_aerosol   = .false. ! Consider CCN effect ?
+  real(RP), private              :: MP_limit_negative   = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
 
   real(RP), private, allocatable :: factor_vterm(:) ! collection factor for terminal velocity of QR
 
-  logical,  private :: first = .true.
+  integer,  private              :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
+  integer,  private              :: MP_NSTEP_SEDIMENTATION
+  real(RP), private              :: MP_RNSTEP_SEDIMENTATION
+  real(DP), private              :: MP_DTSEC_SEDIMENTATION
 
-  integer,  private, save :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
-  integer,  private, save :: MP_NSTEP_SEDIMENTATION
-  real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
-  real(DP), private, save :: MP_DTSEC_SEDIMENTATION
-
-  integer, private, parameter :: I_mp_QC = 1
-  integer, private, parameter :: I_mp_QR = 2
-  integer, private, save :: QS_MP
-  integer, private, save :: QE_MP
+  logical,  private              :: first = .true.
 
   !-----------------------------------------------------------------------------
 contains
@@ -162,8 +163,9 @@ contains
     integer :: nstep_max
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
-       MP_doprecipitation, &
-       MP_donegative_fixer, &
+       MP_doprecipitation,     &
+       MP_donegative_fixer,    &
+       MP_limit_negative,      &
        MP_ntmax_sedimentation, &
        MP_couple_aerosol
 
@@ -192,15 +194,9 @@ contains
     endif
 
     if ( IO_L ) write(IO_FID_LOG,*)
-    if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                : ', MP_donegative_fixer
-    if ( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)? : ', MP_doprecipitation
-
-    allocate( factor_vterm(KA) )
-
-
-    ATMOS_PHY_MP_kessler_DENS(:) = CONST_UNDEF
-    ATMOS_PHY_MP_kessler_DENS(I_HC) = CONST_DWATR
-    ATMOS_PHY_MP_kessler_DENS(I_HR) = CONST_DWATR
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                    : ', MP_donegative_fixer
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Value limit of negative fixer (abs)       : ', abs(MP_limit_negative)
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)?     : ', MP_doprecipitation
 
     nstep_max = int( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ ) )
     MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
@@ -209,9 +205,14 @@ contains
     MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(MP_ntmax_sedimentation,kind=RP)
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
 
-    if ( IO_L ) write(IO_FID_LOG,*)
-    if ( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
-    if ( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, 'step'
+    if ( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation                       : ', MP_DTSEC_SEDIMENTATION, '[s]'
+
+    ATMOS_PHY_MP_kessler_DENS(:)    = CONST_UNDEF
+    ATMOS_PHY_MP_kessler_DENS(I_HC) = CONST_DWATR
+    ATMOS_PHY_MP_kessler_DENS(I_HR) = CONST_DWATR
+
+    allocate( factor_vterm(KA) )
 
     return
   end subroutine ATMOS_PHY_MP_kessler_setup
@@ -293,10 +294,11 @@ contains
     EVAPORATE(:,:,:)   = 0.0_RP
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
-                               RHOT(:,:,:),   & ! [INOUT]
-                               QTRC(:,:,:,:), & ! [INOUT]
-                               I_QV           ) ! [IN]
+       call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
+                               RHOT(:,:,:),      & ! [INOUT]
+                               QTRC(:,:,:,:),    & ! [INOUT]
+                               I_QV,             & ! [IN]
+                               MP_limit_negative ) ! [IN]
     endif
 
     call THERMODYN_rhoe( RHOE(:,:,:),   & ! [OUT]
@@ -393,10 +395,11 @@ contains
                          TRACER_MASS(:) ) ! [IN]
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
-                               RHOT(:,:,:),   & ! [INOUT]
-                               QTRC(:,:,:,:), & ! [INOUT]
-                               I_QV           ) ! [IN]
+       call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
+                               RHOT(:,:,:),      & ! [INOUT]
+                               QTRC(:,:,:,:),    & ! [INOUT]
+                               I_QV,             & ! [IN]
+                               MP_limit_negative ) ! [IN]
     endif
 
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)

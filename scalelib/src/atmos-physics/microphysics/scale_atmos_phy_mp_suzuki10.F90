@@ -134,17 +134,23 @@ module scale_atmos_phy_mp_suzuki10
   !
   !++ Private parameters
   !
-  integer, private, parameter :: I_mp_QC  = 1
-  integer, private, parameter :: I_mp_QP  = 2
-  integer, private, parameter :: I_mp_QCL = 3
-  integer, private, parameter :: I_mp_QD  = 4
-  integer, private, parameter :: I_mp_QS  = 5
-  integer, private, parameter :: I_mp_QG  = 6
-  integer, private, parameter :: I_mp_QH  = 7
+  integer,  private, parameter   :: I_mp_QC  = 1
+  integer,  private, parameter   :: I_mp_QP  = 2
+  integer,  private, parameter   :: I_mp_QCL = 3
+  integer,  private, parameter   :: I_mp_QD  = 4
+  integer,  private, parameter   :: I_mp_QS  = 5
+  integer,  private, parameter   :: I_mp_QG  = 6
+  integer,  private, parameter   :: I_mp_QH  = 7
+  integer,  private              :: QS_MP
+  integer,  private              :: QE_MP
+  integer,  private              :: I_QV
 
-  integer, private :: QS_MP
-  integer, private :: QE_MP
-  integer, private :: I_QV
+  logical,  private              :: MP_doautoconversion = .true.  ! apply collision process ?
+  logical,  private              :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
+  logical,  private              :: MP_donegative_fixer = .true.  ! apply negative fixer?
+  logical,  private              :: MP_couple_aerosol   = .false. ! apply CCN effect?
+  real(RP), private              :: MP_limit_negative   = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
+
 
   !--- Indeces for determining species of cloud particle
   integer, parameter :: il = 1               !--- index for liquid  water
@@ -211,10 +217,6 @@ module scale_atmos_phy_mp_suzuki10
   logical :: flg_icenucl=.false.             ! flag ice nucleation
   logical :: flg_sf_aero =.false.            ! flag surface flux of aerosol
   integer, private, save :: rndm_flgp = 0    ! flag for sthastic integration for coll.-coag.
-  logical, private, save :: MP_doautoconversion = .true.  ! apply collision process ?
-  logical, private, save :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
-  logical, private, save :: MP_donegative_fixer = .true.  ! apply negative fixer?
-  logical, private, save :: MP_couple_aerosol   = .false. ! apply CCN effect?
 
   real(RP), allocatable :: marate( : )                ! mass rate of each aerosol bin to total aerosol mass
   integer, allocatable, save :: ncld( : )             ! bin number of aerosol in bin of hydrometeor
@@ -439,10 +441,11 @@ contains
     integer :: S10_RNDM_MBIN
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
+       MP_doprecipitation,     &
+       MP_donegative_fixer,    &
+       MP_limit_negative,      &
        MP_ntmax_sedimentation, &
-       MP_doautoconversion, &
-       MP_doprecipitation, &
-       MP_donegative_fixer, &
+       MP_doautoconversion,    &
        MP_couple_aerosol
 
     NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
@@ -923,10 +926,11 @@ contains
     endif
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
-                               RHOT(:,:,:),   & ! [INOUT]
-                               QTRC(:,:,:,:), & ! [INOUT]
-                               I_QV           ) ! [IN]
+       call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
+                               RHOT(:,:,:),      & ! [INOUT]
+                               QTRC(:,:,:,:),    & ! [INOUT]
+                               I_QV,             & ! [IN]
+                               MP_limit_negative ) ! [IN]
     endif
 
     call PROF_rapstart('MP_ijkconvert', 3)
@@ -1303,10 +1307,11 @@ contains
     !##### END MP Main #####
 
     if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),   & ! [INOUT]
-                               RHOT(:,:,:),   & ! [INOUT]
-                               QTRC(:,:,:,:), & ! [INOUT]
-                               I_QV           ) ! [IN]
+       call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
+                               RHOT(:,:,:),      & ! [INOUT]
+                               QTRC(:,:,:,:),    & ! [INOUT]
+                               I_QV,             & ! [IN]
+                               MP_limit_negative ) ! [IN]
     endif
 
     QHYD_out(:,:,:,:) = 0.0_RP
