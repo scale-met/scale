@@ -300,10 +300,10 @@ contains
 
     call PROF_rapreport
 
-    call FileCloseAll
-
     ! setup file I/O
     call FILEIO_cleanup
+
+    call FileCloseAll
 
     return
   end subroutine scalerm_prep

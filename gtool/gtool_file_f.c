@@ -135,8 +135,8 @@ void file_read_data_par_( void       *var,       // (out)
     fstr2cstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
 
   for (i=0; i<*ndims; i++) {
-      start_[i] = start[*ndims - i - 1] -  1;
-      count_[i] = count[*ndims - i - 1];
+      start_[i+1] = start[*ndims - i - 1] -  1;
+      count_[i+1] = count[*ndims - i - 1];
   }
   ntypes_ = (MPI_Offset)(*ntypes);
 

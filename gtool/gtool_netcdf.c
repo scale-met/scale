@@ -405,6 +405,9 @@ int32_t file_read_data_par( void         *var,        // (out)
   if (rank > dinfo->rank) { // have time dimension
     start[0] = dinfo->step - 1;
     count[0] = 1;
+  } else {
+    start = start + 1;
+    count = count + 1;
   }
 
   CHECK_PNC_ERROR( ncmpi_iget_vara(ncid, varid, start, count, var, ntypes, dtype, NULL) )

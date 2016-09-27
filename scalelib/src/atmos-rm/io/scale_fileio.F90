@@ -99,6 +99,8 @@ module scale_fileio
   logical,  private,      save :: File_axes_written(0:File_nfile_max-1)
                                 ! whether axes have been written
   !                             ! fid starts from zero so index should start from zero
+  logical,  private,      save :: File_closed(0:File_nfile_max-1)
+                                ! whether file has been closed
   logical,  private,      save :: File_nozcoord(0:File_nfile_max-1)
                                 ! whether nozcoord is true or false
 
@@ -120,6 +122,7 @@ module scale_fileio
   integer,  private,      save :: centerTypeZXY
   integer,  private,      save :: centerTypeLAND
   integer,  private,      save :: centerTypeURBAN
+
 
   !-----------------------------------------------------------------------------
 contains
@@ -148,6 +151,8 @@ contains
 
     if ( IO_PNETCDF ) call Construct_Derived_Datatype
 
+    File_closed(:) = .true.
+
     return
   end subroutine FILEIO_setup
 
@@ -167,6 +172,8 @@ contains
     deallocate( AXIS_LATXY )
 
     call Free_Derived_Datatype
+
+    call FILEIO_closeall
 
   end subroutine FILEIO_cleanup
 
@@ -522,8 +529,6 @@ contains
 
     call FILEIO_read_var_1D( var, fid, varname, axistype, step )
 
-    call FILEIO_flush( fid )
-
     call FILEIO_close( fid )
 
     return
@@ -557,8 +562,6 @@ contains
                       basename  ) ! [IN]
 
     call FILEIO_read_var_2D( var, fid, varname, axistype, step )
-
-    call FILEIO_flush( fid )
 
     call FILEIO_close( fid )
 
@@ -594,8 +597,6 @@ contains
 
     call FILEIO_read_var_3D( var, fid, varname, axistype, step )
 
-    call FILEIO_flush( fid )
-
     call FILEIO_close( fid )
 
     return
@@ -629,8 +630,6 @@ contains
                       basename  ) ! [IN]
 
     call FILEIO_read_var_4D( var, fid, varname, axistype, step )
-
-    call FILEIO_flush( fid )
 
     call FILEIO_close( fid )
 
@@ -1023,8 +1022,6 @@ contains
 
     call FILEIO_write_var_1D( fid, vid, var, varname, axistype )
 
-    call FILEIO_close( fid )
-
     return
   end subroutine FILEIO_write_1D
 
@@ -1092,8 +1089,6 @@ contains
 
     call FILEIO_write_var_2D( fid, vid, var, varname, axistype, nohalo )
 
-    call FILEIO_close( fid )
-
     return
   end subroutine FILEIO_write_2D
 
@@ -1158,8 +1153,6 @@ contains
     call FILEIO_enddef( fid )
 
     call FILEIO_write_var_3D( fid, vid, var, varname, axistype, nohalo )
-
-    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_write_3D
@@ -1232,8 +1225,6 @@ contains
 
     call FILEIO_write_var_3D_t( fid, vid, var, varname, axistype, timeintv, timetarg, nohalo )
 
-    call FILEIO_close( fid )
-
     return
   end subroutine FILEIO_write_3D_t
 
@@ -1305,8 +1296,6 @@ contains
 
     call FILEIO_write_var_4D( fid, vid, var, varname, axistype, timeintv, timetarg, nohalo )
 
-    call FILEIO_close( fid )
-
     return
   end subroutine FILEIO_write_4D
 
@@ -1344,6 +1333,8 @@ contains
                    File_FREAD,         & ! [IN]
                    comm = comm,        & ! [IN]
                    myrank = PRC_myrank ) ! [IN]
+
+    File_closed(fid) = .false.
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1481,6 +1472,8 @@ contains
        logical_str = "false"
        if (PRC_PERIODIC_Y .AND. .NOT. IO_PNETCDF) logical_str = "true"
        call FileSetGlobalAttribute( fid, "PRC_PERIODIC_Y",  trim(logical_str) )
+
+       File_closed(fid) = .false.
     endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -1562,15 +1555,21 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( IO_PNETCDF ) then
-       call FileFlush( fid )        ! flush all pending read/write requests
-       if ( write_buf_amount .GT. 0 ) then
-          call FileDetachBuffer( fid ) ! detach PnetCDF aggregation buffer
-          write_buf_amount = 0         ! reset write request amount
-       end if
-    end if
+    if ( .not. File_closed(fid) ) then
 
-    call FileClose( fid ) ! [IN]
+       if ( IO_PNETCDF ) then
+          call FileFlush( fid )        ! flush all pending read/write requests
+          if ( write_buf_amount .GT. 0 ) then
+             call FileDetachBuffer( fid ) ! detach PnetCDF aggregation buffer
+             write_buf_amount = 0         ! reset write request amount
+          end if
+       end if
+
+       call FileClose( fid ) ! [IN]
+
+       File_closed(fid) = .true.
+
+    end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -2779,7 +2778,7 @@ contains
     ! start(4) time dimension will be set in file_write_data()
 
     time_interval = timeintv
-    step = size(var(KS,ISB,JSB,:))
+    step = size(var,4)
 
     if ( axistype .EQ. 'ZXYT' ) then
        dim1_max = KMAX
@@ -2901,6 +2900,18 @@ contains
 
   !-----------------------------------------------------------------------------
   ! private
+
+  subroutine FILEIO_closeall
+    implicit none
+    integer :: fid
+
+    do fid = 0, File_nfile_max-1
+       call FILEIO_close( fid )
+    end do
+
+    return
+  end subroutine FILEIO_closeall
+
   subroutine getCFtunits(tunits, date)
     character(len=34), intent(out) :: tunits
     integer,           intent(in)  :: date(6)
