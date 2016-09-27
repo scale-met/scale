@@ -1,5 +1,4 @@
 #include "netcdf.h"
-#include "pnetcdf.h"
 #include "gtool_file.h"
 
 #define RMISS -9.9999e+30
@@ -19,6 +18,11 @@ static int32_t ERROR_SUPPRESS = 0;
     }								\
   }
 
+#ifdef PNETCDF
+#include "pnetcdf.h"
+#ifndef NETCDF3
+#define NETCDF3
+#endif
 #define CHECK_PNC_ERROR(func)					\
   {								\
     int status_ = (func);					\
@@ -30,6 +34,17 @@ static int32_t ERROR_SUPPRESS = 0;
       return ERROR_CODE;					\
     }								\
   }
+#else
+#define CHECK_PNC_ERROR(func)					\
+  {								\
+    fprintf(stderr, "pnetCDF is necessary for shared_mode\n");	\
+    fprintf(stderr, "Please re-compile with pnetCDF\n");      	\
+    return ERROR_CODE;						\
+  }
+#define ncmpi_inq_attid(a,b,c,d) NC2_ERR
+#define ncmpi_inq_varid(a,b,c)   NC2_ERR
+#define ncmpi_inq_dimid(a,b,c)   NC2_ERR
+#endif
 
 #define NCTYPE2TYPE(nctype, type)				\
   {								\
@@ -1114,12 +1129,12 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 
   TYPE2NCTYPE(dtype, xtype);
   if ( files[fid]->shared_mode ) {
-    CHECK_ERROR( ncmpi_def_var(ncid, varname, xtype, ndims, dimids, &varid) )
+    CHECK_PNC_ERROR( ncmpi_def_var(ncid, varname, xtype, ndims, dimids, &varid) )
     // put variable attribute
-    CHECK_ERROR( ncmpi_put_att_text(ncid, varid, "long_name", strlen(desc), desc) )
-    CHECK_ERROR( ncmpi_put_att_text(ncid, varid, "units", strlen(units), units) )
-    CHECK_ERROR( ncmpi_put_att_double(ncid, varid, _FillValue, xtype, 1, &rmiss) )
-    CHECK_ERROR( ncmpi_put_att_double(ncid, varid, "missing_value", xtype, 1, &rmiss) )
+    CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "long_name", strlen(desc), desc) )
+    CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "units", strlen(units), units) )
+    CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, _FillValue, xtype, 1, &rmiss) )
+    CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, "missing_value", xtype, 1, &rmiss) )
   }
   else {
     CHECK_ERROR( nc_def_var(ncid, varname, xtype, ndims, dimids, &varid) )
@@ -1194,12 +1209,12 @@ int32_t file_enddef( int32_t fid ) // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
+#ifdef NETCDF3
   if ( files[fid]->shared_mode && files[fid]->defmode == 1) {
     CHECK_PNC_ERROR( ncmpi_enddef(ncid) )
     files[fid]->defmode = 0;
   }
 
-#ifdef NETCDF3
   if (files[fid]->defmode == 1) {
     CHECK_ERROR( nc_enddef(ncid) )
     files[fid]->defmode = 0;
