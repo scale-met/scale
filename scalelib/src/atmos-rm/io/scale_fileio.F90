@@ -514,39 +514,17 @@ contains
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
 
-    integer               :: dim1_max, dim1_S, dim1_E
-    real(RP), allocatable :: var1D(:)
+    integer :: fid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    call FILEIO_open( fid,      & ! [OUT]
+                      basename  ) ! [IN]
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
+    call FILEIO_read_var_1D( var, fid, varname, axistype, step )
 
-    if ( axistype == 'Z' ) then
-       dim1_max = KMAX
-       dim1_S   = KS
-       dim1_E   = KE
-    elseif( axistype == 'X' ) then
-       dim1_max = IMAXB
-       dim1_S   = ISB
-       dim1_E   = IEB
-    elseif( axistype == 'Y' ) then
-       dim1_max = JMAXB
-       dim1_S   = JSB
-       dim1_E   = JEB
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
+    call FILEIO_flush( fid )
 
-    allocate( var1D(dim1_max) )
-
-    call FileRead( var1D(:), basename, varname, step, PRC_myrank )
-    var(dim1_S:dim1_E) = var1D(1:dim1_max)
-
-    deallocate( var1D )
-
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_read_1D
@@ -572,42 +550,17 @@ contains
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
 
-    integer               :: dim1_max, dim1_S, dim1_E
-    integer               :: dim2_max, dim2_S, dim2_E
-    real(RP), allocatable :: var2D(:,:)
+    integer :: fid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    call FILEIO_open( fid,      & ! [OUT]
+                      basename  ) ! [IN]
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
+    call FILEIO_read_var_2D( var, fid, varname, axistype, step )
 
-    if ( axistype == 'XY' ) then
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-    elseif( axistype == 'ZX' ) then
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
+    call FILEIO_flush( fid )
 
-    allocate( var2D(dim1_max,dim2_max) )
-
-    call FileRead( var2D(:,:), basename, varname, step, PRC_myrank )
-    var(dim1_S:dim1_E,dim2_S:dim2_E) = var2D(1:dim1_max,1:dim2_max)
-
-    deallocate( var2D )
-
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_read_2D
@@ -633,69 +586,17 @@ contains
     character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y/T)
     integer,          intent(in)  :: step       !< step number
 
-    integer               :: dim1_max, dim1_S, dim1_E
-    integer               :: dim2_max, dim2_S, dim2_E
-    integer               :: dim3_max, dim3_S, dim3_E
-    real(RP), allocatable :: var3D(:,:,:)
+    integer :: fid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    call FILEIO_open( fid,      & ! [OUT]
+                      basename  ) ! [IN]
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
+    call FILEIO_read_var_3D( var, fid, varname, axistype, step )
 
-    if ( axistype == 'ZXY' ) then
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else if ( axistype == 'XYT' ) then
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim3_max = step
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-       dim3_S   = 1
-       dim3_E   = step
-    else if ( axistype == 'Land' ) then
-       dim1_max = LKMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = LKS
-       dim1_E   = LKE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else if ( axistype == 'Urban' ) then
-       dim1_max = UKMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = UKS
-       dim1_E   = UKE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
+    call FILEIO_flush( fid )
 
-    allocate( var3D(dim1_max,dim2_max,dim3_max) )
-
-    call FileRead( var3D(:,:,:), basename, varname, step, PRC_myrank )
-    var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) = var3D(1:dim1_max,1:dim2_max,1:dim3_max)
-
-    deallocate( var3D )
-
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_read_3D
@@ -721,43 +622,17 @@ contains
     character(len=*), intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
     integer,          intent(in)  :: step         !< step number
 
-    integer               :: dim1_max, dim1_S, dim1_E
-    integer               :: dim2_max, dim2_S, dim2_E
-    integer               :: dim3_max, dim3_S, dim3_E
-    integer               :: dim4_max, dim4_S, dim4_E
-    real(RP), allocatable :: var4D(:,:,:,:)
+    integer :: fid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    call FILEIO_open( fid,      & ! [OUT]
+                      basename  ) ! [IN]
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 4D var: ', trim(varname)
+    call FILEIO_read_var_4D( var, fid, varname, axistype, step )
 
-    if ( axistype == 'ZXYT' ) then
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim4_max = step
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-       dim4_S   = 1
-       dim4_E   = step
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
+    call FILEIO_flush( fid )
 
-    allocate( var4D(dim1_max,dim2_max,dim3_max,dim4_max) )
-
-    call FileRead( var4D(:,:,:,:), basename, varname, step, PRC_myrank )
-    var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) = var4D(1:dim1_max,1:dim2_max,1:dim3_max,1:dim4_max)
-
-    deallocate( var4D )
-
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_read_4D
@@ -804,12 +679,12 @@ contains
           count(1) = KMAX
           call FileRead( var, fid, varname, step, PRC_myrank, &
                          ntypes=KMAX, dtype=etype, start=start, count=count )
-       elseif( axistype .EQ. 'X' ) then
+       elseif( axistype .EQ. 'X' .or. axistype .EQ. 'CX' ) then
           start(1) = IS_inG - IHALO
           count(1) = IA
           call FileRead( var, fid, varname, step, PRC_myrank, &
                          ntypes=IA, dtype=etype, start=start, count=count )
-       elseif( axistype .EQ. 'Y' ) then
+       elseif( axistype .EQ. 'Y' .or. axistype .EQ. 'CY' ) then
           start(1) = JS_inG - JHALO
           count(1) = JA
           call FileRead( var, fid, varname, step, PRC_myrank, &
@@ -825,9 +700,15 @@ contains
        elseif( axistype == 'X' ) then
           dim1_S   = ISB
           dim1_E   = IEB
+       elseif( axistype == 'CX' ) then
+          dim1_S   = 1
+          dim1_E   = IA
        elseif( axistype == 'Y' ) then
           dim1_S   = JSB
           dim1_E   = JEB
+       elseif( axistype == 'CY' ) then
+          dim1_S   = 1
+          dim1_E   = JA
        else
           write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
           call PRC_MPIstop
@@ -1130,93 +1011,19 @@ contains
     real(DP),optional, intent(in) :: subsec     !< subsec of the time
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
 
-    integer               :: dtype
-    character(len=2)      :: dims(1)
-    integer               :: dim1_max, dim1_S, dim1_E
-    real(RP), allocatable :: var1D(:)
-
-    integer :: rankidx(2)
-    logical :: fileexisted
     integer :: fid, vid
-    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    call FILEIO_create( fid, & ! [OUT]
+         basename, title, datatype, date, subsec, append )
 
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+    call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype )
 
-    if ( datatype == 'REAL8' ) then
-       dtype = File_REAL8
-    elseif( datatype == 'REAL4' ) then
-       dtype = File_REAL4
-    else
-       if ( RP == 8 ) then
-          dtype = File_REAL8
-       elseif( RP == 4 ) then
-          dtype = File_REAL4
-       else
-          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
-          call PRC_MPIstop
-       endif
-    endif
+    call FILEIO_enddef( fid )
 
-    call FileCreate( fid,            & ! [OUT]
-                     fileexisted,    & ! [OUT]
-                     basename,       & ! [IN]
-                     title,          & ! [IN]
-                     H_SOURCE,       & ! [IN]
-                     H_INSTITUTE,    & ! [IN]
-                     PRC_masterrank, & ! [IN]
-                     PRC_myrank,     & ! [IN]
-                     rankidx,        & ! [IN]
-                     append = append ) ! [IN]
+    call FILEIO_write_var_1D( fid, vid, var, varname, axistype )
 
-    if ( .NOT. fileexisted ) then ! only once
-       call FILEIO_set_axes( fid, dtype ) ! [IN]
-       if ( present( subsec ) ) then
-          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
-       else
-          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
-       end if
-       if ( present( date ) ) then
-          call getCFtunits(tunits, date)
-       else
-          call getCFtunits(tunits, NOWDATE)
-       end if
-       call FileSetGlobalAttribute( fid, "time_units", tunits )
-    endif
-
-    if ( axistype == 'Z' ) then
-       dims = (/'z'/)
-       dim1_max = KMAX
-       dim1_S   = KS
-       dim1_E   = KE
-    elseif( axistype == 'X' ) then
-       dims = (/'x'/)
-       dim1_max = IMAXB
-       dim1_S   = ISB
-       dim1_E   = IEB
-    elseif( axistype == 'Y' ) then
-       dims = (/'y'/)
-       dim1_max = JMAXB
-       dim1_S   = JSB
-       dim1_E   = JEB
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
-
-    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype ) ! [IN]
-
-    allocate( var1D(dim1_max) )
-
-    var1D(1:dim1_max) = var(dim1_S:dim1_E)
-    call FileWrite( fid, vid, var1D(:), NOWSEC, NOWSEC ) ! [IN]
-
-    deallocate( var1D )
-
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_write_1D
@@ -1267,161 +1074,25 @@ contains
     character(len=*), intent(in)  :: unit     !< unit        of the variable
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
-    integer, optional, intent(in) :: date(6)    !< ymdhms of the time
-    real(DP),optional, intent(in) :: subsec     !< subsec of the time
+    integer, optional, intent(in) :: date(6)  !< ymdhms of the time
+    real(DP),optional, intent(in) :: subsec   !< subsec of the time
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
     logical, optional, intent(in) :: nohalo   !< switch whether include halo data or not (default=false)
     logical, optional, intent(in) :: nozcoord !< switch whether include zcoordinate or not (default=false)
 
-    real(RP)              :: varhalo( size(var(:,1)), size(var(1,:)) )
-
-    integer               :: dtype
-    character(len=2)      :: dims(2)
-    integer               :: dim1_max, dim1_S, dim1_E
-    integer               :: dim2_max, dim2_S, dim2_E
-    real(RP), allocatable :: var2D(:,:)
-
-    integer :: rankidx(2)
-    logical :: fileexisted
     integer :: fid, vid
-    integer :: i, j
-    logical :: nohalo_
-    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    call FILEIO_create( fid, & ! [OUT]
+         basename, title, datatype, date, subsec, append, nozcoord )
 
-    nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
+    call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype )
 
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+    call FILEIO_enddef( fid )
 
-    if ( datatype == 'REAL8' ) then
-       dtype = File_REAL8
-    elseif( datatype == 'REAL4' ) then
-       dtype = File_REAL4
-    else
-       if ( RP == 8 ) then
-          dtype = File_REAL8
-       elseif( RP == 4 ) then
-          dtype = File_REAL4
-       else
-          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
-          call PRC_MPIstop
-       endif
-    endif
+    call FILEIO_write_var_2D( fid, vid, var, varname, axistype, nohalo )
 
-    call FileCreate( fid,            & ! [OUT]
-                     fileexisted,    & ! [OUT]
-                     basename,       & ! [IN]
-                     title,          & ! [IN]
-                     H_SOURCE,       & ! [IN]
-                     H_INSTITUTE,    & ! [IN]
-                     PRC_masterrank, & ! [IN]
-                     PRC_myrank,     & ! [IN]
-                     rankidx,        & ! [IN]
-                     append = append ) ! [IN]
-
-    if ( axistype == 'XY' ) then
-       dims = (/'x','y'/)
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-    elseif ( axistype == 'UY' ) then
-       dims = (/'xh','y '/)
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-    elseif ( axistype == 'XV' ) then
-       dims = (/'x ','yh'/)
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-    elseif ( axistype == 'UV' ) then
-       dims = (/'xh','yh'/)
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-    elseif( axistype == 'ZX' ) then
-       dims = (/'z','x'/)
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
-
-    if ( .NOT. fileexisted ) then ! only once
-       call FILEIO_set_axes( fid, dtype, nozcoord ) ! [IN]
-       if ( present( subsec ) ) then
-          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
-       else
-          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
-       end if
-       if ( present( date ) ) then
-          call getCFtunits(tunits, date)
-       else
-          call getCFtunits(tunits, NOWDATE)
-       end if
-       call FileSetGlobalAttribute( fid, "time_units", tunits )
-    endif
-
-    varhalo(:,:) = var(:,:)
-
-    if ( nohalo_ ) then
-       ! W halo
-       do j = 1, JA
-       do i = 1, IS-1
-          varhalo(i,j) = RMISS
-       end do
-       end do
-       ! E halo
-       do j = 1, JA
-       do i = IE+1, IA
-          varhalo(i,j) = RMISS
-       end do
-       end do
-       ! S halo
-       do j = 1, JS-1
-       do i = 1, IA
-          varhalo(i,j) = RMISS
-       end do
-       end do
-       ! N halo
-       do j = JE+1, JA
-       do i = 1, IA
-          varhalo(i,j) = RMISS
-       end do
-       end do
-    end if
-
-    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype ) ! [IN]
-
-    allocate( var2D(dim1_max,dim2_max) )
-
-    var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-    call FileWrite( fid, vid, var2D(:,:), NOWSEC, NOWSEC ) ! [IN]
-
-    deallocate( var2D )
-
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_write_2D
@@ -1476,197 +1147,19 @@ contains
     logical, optional, intent(in)  :: append     !< append existing (closed) file?
     logical, optional, intent(in)  :: nohalo     !< include halo data?
 
-    real(RP)         :: varhalo( size(var(:,1,1)), size(var(1,:,1)), size(var(1,1,:)) )
-
-    integer          :: dtype
-    character(len=2) :: dims(3)
-    integer          :: dim1_max, dim1_S, dim1_E
-    integer          :: dim2_max, dim2_S, dim2_E
-    integer          :: dim3_max, dim3_S, dim3_E
-
-    real(RP), allocatable :: var3D(:,:,:)
-
-    integer :: rankidx(2)
-    logical :: append_sw
-    logical :: fileexisted
     integer :: fid, vid
-    integer :: i, j, k
-    logical :: nohalo_
-    character(len=34) :: tunits
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    call FILEIO_create( fid, & ! [OUT]
+         basename, title, datatype, date, subsec, append )
 
-    nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
+    call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype )
 
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+    call FILEIO_enddef( fid )
 
-    if ( datatype == 'REAL8' ) then
-       dtype = File_REAL8
-    elseif( datatype == 'REAL4' ) then
-       dtype = File_REAL4
-    else
-       if ( RP == 8 ) then
-          dtype = File_REAL8
-       elseif( RP == 4 ) then
-          dtype = File_REAL4
-       else
-          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
-          call PRC_MPIstop
-       endif
-    endif
+    call FILEIO_write_var_3D( fid, vid, var, varname, axistype, nohalo )
 
-    append_sw = .false.
-    if ( present(append) ) then
-       append_sw = append
-    endif
-
-    call FileCreate( fid,                 & ! [OUT]
-                     fileexisted,         & ! [OUT]
-                     basename,            & ! [IN]
-                     title,               & ! [IN]
-                     H_SOURCE,            & ! [IN]
-                     H_INSTITUTE,         & ! [IN]
-                     PRC_masterrank,      & ! [IN]
-                     PRC_myrank,          & ! [IN]
-                     rankidx,             & ! [IN]
-                     append = append_sw   ) ! [IN]
-
-    if ( .NOT. fileexisted ) then ! only once
-       call FILEIO_set_axes( fid, dtype ) ! [IN]
-       if ( present( subsec ) ) then
-          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
-       else
-          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
-       end if
-       if ( present( date ) ) then
-          call getCFtunits(tunits, date)
-       else
-          call getCFtunits(tunits, NOWDATE)
-       end if
-       call FileSetGlobalAttribute( fid, "time_units", tunits )
-    endif
-
-    if ( axistype == 'ZXY' ) then
-       dims = (/'z','x','y'/)
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    elseif( axistype == 'ZHXY' ) then
-       dims = (/'zh','x ','y '/)
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    elseif( axistype == 'ZXHY' ) then
-       dims = (/'z ','xh','y '/)
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    elseif( axistype == 'ZXYH' ) then
-       dims = (/'z ','x ','yh'/)
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    elseif( axistype == 'Land' ) then
-       dims = (/'lz','x ','y '/)
-       dim1_max = LKMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = LKS
-       dim1_E   = LKE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    elseif( axistype == 'Urban' ) then
-       dims = (/'uz','x ','y '/)
-       dim1_max = UKMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = UKS
-       dim1_E   = UKE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
-
-    varhalo(:,:,:) = var(:,:,:)
-
-    if ( nohalo_ ) then
-       ! W halo
-       do k = 1, dim1_max
-       do j = 1, JA
-       do i = 1, IS-1
-          varhalo(k,i,j) = RMISS
-       end do
-       end do
-       end do
-       ! E halo
-       do k = 1, dim1_max
-       do j = 1, JA
-       do i = IE+1, IA
-          varhalo(k,i,j) = RMISS
-       end do
-       end do
-       end do
-       ! S halo
-       do k = 1, dim1_max
-       do j = 1, JS-1
-       do i = 1, IA
-          varhalo(k,i,j) = RMISS
-       end do
-       end do
-       end do
-       ! N halo
-       do k = 1, dim1_max
-       do j = JE+1, JA
-       do i = 1, IA
-          varhalo(k,i,j) = RMISS
-       end do
-       end do
-       end do
-    end if
-
-    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype ) ! [IN]
-
-    allocate( var3D(dim1_max,dim2_max,dim3_max) )
-
-    var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-    call FileWrite( fid, vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
-
-    deallocate( var3D )
-
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_write_3D
@@ -1719,166 +1212,27 @@ contains
     integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
     logical, optional, intent(in)  :: nohalo       !< include halo data?
 
-    real(RP)         :: varhalo( size(var(:,1,1)), size(var(1,:,1)) )
-
-    integer          :: dtype
-    character(len=2) :: dims(2)
-    integer          :: dim1_max, dim1_S, dim1_E
-    integer          :: dim2_max, dim2_S, dim2_E
-
-    real(RP), allocatable :: var2D(:,:)
-    real(DP) :: time_interval, nowtime
-
-    character(len=34) :: tunits
-
-    integer :: rankidx(2)
-    logical :: append_sw
-    logical :: fileexisted
     integer :: fid, vid
-    integer :: step
-    integer :: i, j, n
-    logical :: nohalo_
+    integer :: nsteps
+
+    intrinsic :: size
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
-
-    nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
-
-    time_interval = timeintv
-    step = size(var(ISB,JSB,:))
-
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
-
-    if ( datatype == 'REAL8' ) then
-       dtype = File_REAL8
-    elseif( datatype == 'REAL4' ) then
-       dtype = File_REAL4
-    else
-       if ( RP == 8 ) then
-          dtype = File_REAL8
-       elseif( RP == 4 ) then
-          dtype = File_REAL4
-       else
-          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
-          call PRC_MPIstop
-       endif
-    endif
-
-    append_sw = .false.
-    if ( present(append) ) then
-       append_sw = append
-    endif
-
-    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', tsince
-
-    call FileCreate( fid,                 & ! [OUT]
-                     fileexisted,         & ! [OUT]
-                     basename,            & ! [IN]
-                     title,               & ! [IN]
-                     H_SOURCE,            & ! [IN]
-                     H_INSTITUTE,         & ! [IN]
-                     PRC_masterrank,      & ! [IN]
-                     PRC_myrank,          & ! [IN]
-                     rankidx,             & ! [IN]
-                     time_units = tunits, & ! [IN]
-                     append = append_sw   ) ! [IN]
-
-    if ( .NOT. fileexisted ) then ! only once
-       call FILEIO_set_axes( fid, dtype ) ! [IN]
-    endif
-
-    if ( axistype == 'XYT' ) then
-       dims = (/'x','y'/)
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
-
-    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype, time_interval ) ! [IN]
-    allocate( var2D(dim1_max,dim2_max) )
+    call FILEIO_create( fid, & ! [OUT]
+         basename, title, datatype, tsince, append=append )
 
     if ( present(timetarg) ) then
-       varhalo(:,:) = var(:,:,timetarg)
-
-       if ( nohalo_ ) then
-          ! W halo
-          do j = 1, JA
-          do i = 1, IS-1
-             varhalo(i,j) = RMISS
-          end do
-          end do
-          ! E halo
-          do j = 1, JA
-          do i = IE+1, IA
-             varhalo(i,j) = RMISS
-          end do
-          end do
-          ! S halo
-          do j = 1, JS-1
-          do i = 1, IA
-             varhalo(i,j) = RMISS
-          end do
-          end do
-          ! N halo
-          do j = JE+1, JA
-          do i = 1, IA
-             varhalo(i,j) = RMISS
-          end do
-          end do
-       end if
-
-       nowtime = (timetarg-1) * time_interval
-       var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-       call FileWrite( fid, vid, var2D(:,:), nowtime, nowtime ) ! [IN]
+       nsteps = 1
     else
-       nowtime = 0.0_DP
-       do n = 1, step
-          varhalo(:,:) = var(:,:,n)
+       nsteps = size(var,3)
+    end if
+    call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype, timeintv, nsteps )
 
-          if ( nohalo_ ) then
-             ! W halo
-             do j = 1, JA
-             do i = 1, IS-1
-                varhalo(i,j) = RMISS
-             end do
-             end do
-             ! E halo
-             do j = 1, JA
-             do i = IE+1, IA
-                varhalo(i,j) = RMISS
-             end do
-             end do
-             ! S halo
-             do j = 1, JS-1
-             do i = 1, IA
-                varhalo(i,j) = RMISS
-             end do
-             end do
-             ! N halo
-             do j = JE+1, JA
-             do i = 1, IA
-                varhalo(i,j) = RMISS
-             end do
-             end do
-          end if
+    call FILEIO_enddef( fid )
 
-          var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
-          call FileWrite( fid, vid, var2D(:,:), nowtime, nowtime ) ! [IN]
-          nowtime = nowtime + time_interval
-       enddo
-    endif
+    call FILEIO_write_var_3D_t( fid, vid, var, varname, axistype, timeintv, timetarg, nohalo )
 
-    deallocate( var2D )
-
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_write_3D_t
@@ -1931,200 +1285,30 @@ contains
     integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
     logical, optional, intent(in)  :: nohalo       !< include halo data?
 
-    real(RP)         :: varhalo( size(var(:,1,1,1)), size(var(1,:,1,1)), size(var(1,1,:,1)) )
-
-    integer          :: dtype
-    character(len=2) :: dims(3)
-    integer          :: dim1_max, dim1_S, dim1_E
-    integer          :: dim2_max, dim2_S, dim2_E
-    integer          :: dim3_max, dim3_S, dim3_E
-
-    real(RP), allocatable :: var3D(:,:,:)
-    real(DP) :: time_interval, nowtime
-
-    character(len=34) :: tunits
-
-    integer :: rankidx(2)
-    logical :: append_sw
-    logical :: fileexisted
     integer :: fid, vid
-    integer :: step
-    integer :: i, j, k, n
-    logical :: nohalo_
+    integer :: nsteps
+
+    intrinsic :: size
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
-
-    nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
-
-    time_interval = timeintv
-    step = size(var(KS,ISB,JSB,:))
-
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
-
-    if ( datatype == 'REAL8' ) then
-       dtype = File_REAL8
-    elseif( datatype == 'REAL4' ) then
-       dtype = File_REAL4
-    else
-       if ( RP == 8 ) then
-          dtype = File_REAL8
-       elseif( RP == 4 ) then
-          dtype = File_REAL4
-       else
-          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
-          call PRC_MPIstop
-       endif
-    endif
-
-    append_sw = .false.
-    if ( present(append) ) then
-       append_sw = append
-    endif
-
-    call getCFtunits(tunits, tsince)
-
-    call FileCreate( fid,                 & ! [OUT]
-                     fileexisted,         & ! [OUT]
-                     basename,            & ! [IN]
-                     title,               & ! [IN]
-                     H_SOURCE,            & ! [IN]
-                     H_INSTITUTE,         & ! [IN]
-                     PRC_masterrank,      & ! [IN]
-                     PRC_myrank,          & ! [IN]
-                     rankidx,             & ! [IN]
-                     time_units = tunits, & ! [IN]
-                     append = append_sw   ) ! [IN]
-
-    if ( .NOT. fileexisted ) then ! only once
-       call FILEIO_set_axes( fid, dtype ) ! [IN]
-    endif
-
-    if ( axistype == 'ZXYT' ) then
-       dims = (/'z','x','y'/)
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
-       call PRC_MPIstop
-    endif
-
-    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype, time_interval ) ! [IN]
-    allocate( var3D(dim1_max,dim2_max,dim3_max) )
+    call FILEIO_create( fid, & ! [OUT]
+         basename, title, datatype, tsince, append=append )
 
     if ( present(timetarg) ) then
-       varhalo(:,:,:) = var(:,:,:,timetarg)
-
-       if ( nohalo_ ) then
-          ! W halo
-          do k = 1, dim1_max
-          do j = 1, JA
-          do i = 1, IS-1
-             varhalo(k,i,j) = RMISS
-          end do
-          end do
-          end do
-          ! E halo
-          do k = 1, dim1_max
-          do j = 1, JA
-          do i = IE+1, IA
-             varhalo(k,i,j) = RMISS
-          end do
-          end do
-          end do
-          ! S halo
-          do k = 1, dim1_max
-          do j = 1, JS-1
-          do i = 1, IA
-             varhalo(k,i,j) = RMISS
-          end do
-          end do
-          end do
-          ! N halo
-          do k = 1, dim1_max
-          do j = JE+1, JA
-          do i = 1, IA
-             varhalo(k,i,j) = RMISS
-          end do
-          end do
-          end do
-       end if
-
-       nowtime = (timetarg-1) * time_interval
-       var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-       call FileWrite( fid, vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+       nsteps = 1
     else
-       nowtime = 0.0_DP
-       do n = 1, step
-          varhalo(:,:,:) = var(:,:,:,n)
+       nsteps = size(var,3)
+    end if
+    call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype, timeintv, nsteps )
 
-          if ( nohalo_ ) then
-             ! W halo
-             do k = 1, dim1_max
-             do j = 1, JA
-             do i = 1, IS-1
-                varhalo(k,i,j) = RMISS
-             end do
-             end do
-             end do
-             ! E halo
-             do k = 1, dim1_max
-             do j = 1, JA
-             do i = IE+1, IA
-                varhalo(k,i,j) = RMISS
-             end do
-             end do
-             end do
-             ! S halo
-             do k = 1, dim1_max
-             do j = 1, JS-1
-             do i = 1, IA
-                varhalo(k,i,j) = RMISS
-             end do
-             end do
-             end do
-             ! N halo
-             do k = 1, dim1_max
-             do j = JE+1, JA
-             do i = 1, IA
-                varhalo(k,i,j) = RMISS
-             end do
-             end do
-             end do
-          end if
+    call FILEIO_enddef( fid )
 
-          var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-          call FileWrite( fid, vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
-          nowtime = nowtime + time_interval
-       enddo
-    endif
+    call FILEIO_write_var_4D( fid, vid, var, varname, axistype, timeintv, timetarg, nohalo )
 
-    deallocate( var3D )
-
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call FILEIO_close( fid )
 
     return
   end subroutine FILEIO_write_4D
-
-  ! private
-
-  subroutine getCFtunits(tunits, date)
-    character(len=34), intent(out) :: tunits
-    integer,           intent(in)  :: date(6)
-
-    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
-
-    return
-  end subroutine getCFtunits
 
   !-----------------------------------------------------------------------------
   !> open a netCDF file for read
@@ -2209,9 +1393,9 @@ contains
     logical, optional, intent(in)  :: nozcoord !< switch whether include zcoordinate or not (default=false)
 
     integer :: rankidx(2)
+    logical :: fileexisted
     integer :: dtype
     logical :: append_sw
-    logical :: fileexisted
     integer :: comm
     character(len=34) :: tunits
     character(len=8)  :: logical_str
@@ -3714,5 +2898,16 @@ contains
 
     return
   end subroutine FILEIO_write_var_4D
+
+  !-----------------------------------------------------------------------------
+  ! private
+  subroutine getCFtunits(tunits, date)
+    character(len=34), intent(out) :: tunits
+    integer,           intent(in)  :: date(6)
+
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
+
+    return
+  end subroutine getCFtunits
 
 end module scale_fileio

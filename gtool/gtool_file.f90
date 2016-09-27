@@ -3702,7 +3702,8 @@ contains
     if ( error .EQ. SUCCESS_CODE ) then
        write(message, '(1x,A,i3)') '*** [File] File Attach Buffer : NO.', n
        call Log('I', message)
-       call Log('I', '*** attach buffer for filename: ' // trim(File_fname_list(n)))
+       write(message, '(1x,A,i)') '*** attach buffer for filename: ' // trim(File_fname_list(n)) // ', size=', buf_amount
+       call Log('I', message)
     else
        call Log('E', 'xxx failed to attach buffer in PnetCDF')
     end if
@@ -3898,7 +3899,8 @@ contains
 
     !--- register new file and open
     comm_ = MPI_COMM_NULL
-    if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) then
+    if ( present(comm) ) comm_ = comm
+    if ( comm_ .NE. MPI_COMM_NULL ) then
        ! parallel I/O on a single shared netCDF file
        fname = basename
        comm_ = comm

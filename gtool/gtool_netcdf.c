@@ -988,7 +988,10 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 
 #ifdef NETCDF3
   if (files[fid]->defmode == 0) {
-    CHECK_ERROR( nc_redef(ncid) )
+    if ( files[fid]->shared_mode )
+      CHECK_PNC_ERROR( ncmpi_redef(ncid) )
+    else
+      CHECK_ERROR( nc_redef(ncid) )
     files[fid]->defmode = 1;
   }
 #endif
@@ -1210,13 +1213,11 @@ int32_t file_enddef( int32_t fid ) // (in)
   ncid = files[fid]->ncid;
 
 #ifdef NETCDF3
-  if ( files[fid]->shared_mode && files[fid]->defmode == 1) {
-    CHECK_PNC_ERROR( ncmpi_enddef(ncid) )
-    files[fid]->defmode = 0;
-  }
-
   if (files[fid]->defmode == 1) {
-    CHECK_ERROR( nc_enddef(ncid) )
+    if ( files[fid]->shared_mode )
+      CHECK_PNC_ERROR( ncmpi_enddef(ncid) )
+    else
+      CHECK_ERROR( nc_enddef(ncid) )
     files[fid]->defmode = 0;
   }
 #endif
