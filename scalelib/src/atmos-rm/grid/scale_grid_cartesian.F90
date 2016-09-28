@@ -161,7 +161,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Atmosphere grid information ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,3(F7.1))') '*** delta Z, X, Y [m]        :', DZ, DX, DY
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,3(1x,F9.3))') '*** delta Z, X, Y [m]        :', DZ, DX, DY
 
     if ( GRID_IN_BASENAME /= '' ) then
        call GRID_read
@@ -173,11 +173,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Domain size [km] (local) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,F8.3))') '  X:',                                                          &
+    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,F9.3))') '  X:',                                                          &
                                                   GRID_FX(0) *1.E-3_RP, ' -HALO- ', GRID_FX(IS-1)*1.E-3_RP, ' | ', &
                                                   GRID_CX(IS)*1.E-3_RP, ' - ',      GRID_CX(IE)  *1.E-3_RP, ' | ', &
                                                   GRID_FX(IE)*1.E-3_RP, ' -HALO- ', GRID_FX(IA)  *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,F8.3))') '  Y:',                    &
+    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,F9.3))') '  Y:',                    &
                                                   GRID_FY(0) *1.E-3_RP, ' -HALO- ', GRID_FY(JS-1)*1.E-3_RP, ' | ', &
                                                   GRID_CY(JS)*1.E-3_RP, ' - ',      GRID_CY(JE)  *1.E-3_RP, ' | ', &
                                                   GRID_FY(JE)*1.E-3_RP, ' -HALO- ', GRID_FY(JA)  *1.E-3_RP
@@ -192,8 +192,6 @@ contains
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
-
-    integer :: IAG, JAG
     !---------------------------------------------------------------------------
 
     ! working
@@ -226,10 +224,6 @@ contains
     allocate( GRID_FBFZ(KA) )
     allocate( GRID_FBFX(IA) )
     allocate( GRID_FBFY(JA) )
-
-    ! array size (global domain)
-    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
-    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
     ! global domain
     allocate( GRID_FXG  (0:IAG) )
@@ -309,9 +303,6 @@ contains
        PRC_NUM_Y
     implicit none
 
-    integer :: IAG ! # of x whole cells (global, with HALO)
-    integer :: JAG ! # of y whole cells (global, with HALO)
-
     real(RP), allocatable :: buffz(:), buffx(:), buffy(:)
     real(RP)              :: bufftotz, bufftotx, bufftoty
 
@@ -322,10 +313,6 @@ contains
     !---------------------------------------------------------------------------
 
     !##### coordinate in global domain #####
-
-    ! array size (global domain)
-    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
-    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
     allocate( buffx(0:IAG) )
     allocate( buffy(0:JAG) )
@@ -683,15 +670,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))')   '  Y: buffer = ', jbuff,' x 2, main = ',jmain
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Domain size [km] (global) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,7(A,F8.3))') '  Z:',                &
-                                                  GRID_FZ(0)       *1.E-3_RP, ' -HALO-                   ',   &
+    if( IO_L ) write(IO_FID_LOG,'(1x,7(A,F9.3))') '  Z:',                &
+                                                  GRID_FZ(0)       *1.E-3_RP, ' -HALO-                    ',   &
                                                   GRID_FZ(KS-1)    *1.E-3_RP, ' | ',        &
                                                   GRID_CZ(KS)      *1.E-3_RP, ' - ',        &
                                                   GRID_CZ(KE-kbuff)*1.E-3_RP, ' | ',        &
                                                   GRID_FZ(KE-kbuff)*1.E-3_RP, ' -buffer- ', &
                                                   GRID_FZ(KE)      *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FZ(KA)      *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,F8.3))') '  X:',        &
+    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,F9.3))') '  X:',        &
                                                   GRID_FXG(0)              *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FXG(IHALO)          *1.E-3_RP, ' -buffer- ', &
                                                   GRID_FXG(IHALO+ibuff)    *1.E-3_RP, ' | ',        &
@@ -700,7 +687,7 @@ contains
                                                   GRID_FXG(IAG-IHALO-ibuff)*1.E-3_RP, ' -buffer- ', &
                                                   GRID_FXG(IAG-IHALO)      *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FXG(IAG)            *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,F8.3))') '  Y:',        &
+    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,F9.3))') '  Y:',        &
                                                   GRID_FYG(0)              *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FYG(JHALO)          *1.E-3_RP, ' -buffer- ', &
                                                   GRID_FYG(JHALO+jbuff)    *1.E-3_RP, ' | ',        &

@@ -1841,12 +1841,7 @@ contains
 
     character(len=2) :: AXIS_name(2)
     logical :: xy_
-    integer :: IAG, JAG
     !---------------------------------------------------------------------------
-
-    ! array size (global domain)
-    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
-    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
     if ( present(xy) ) then
        xy_ = xy
