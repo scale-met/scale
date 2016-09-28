@@ -20,9 +20,6 @@ module scale_mapproj
   use scale_stdio
   use scale_prof
   use scale_grid_index
-
-  use scale_const, only: &
-     UNDEF  => CONST_UNDEF
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -119,10 +116,10 @@ module scale_mapproj
   real(DP), private :: MPRJ_PS_lat             ! standard latitude1 for P.S. projection [deg]
   real(DP), private :: MPRJ_PS_fact            ! pre-calc factor
 
-  real(DP), private :: MPRJ_M_lat              ! standard latitude1 for Mer. projection [deg]
+  real(DP), private :: MPRJ_M_lat    =  0.0_DP ! standard latitude1 for Mer. projection [deg]
   real(DP), private :: MPRJ_M_fact             ! pre-calc factor
 
-  real(DP), private :: MPRJ_EC_lat             ! standard latitude1 for E.C. projection [deg]
+  real(DP), private :: MPRJ_EC_lat   =  0.0_DP ! standard latitude1 for E.C. projection [deg]
   real(DP), private :: MPRJ_EC_fact            ! pre-calc factor
 
   real(DP), private :: PI
@@ -137,9 +134,10 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-     PI_RP     => CONST_PI,     &
-     D2R_RP    => CONST_D2R,    &
-     RADIUS_RP => CONST_RADIUS
+       UNDEF     => CONST_UNDEF,  &
+       PI_RP     => CONST_PI,     &
+       D2R_RP    => CONST_D2R,    &
+       RADIUS_RP => CONST_RADIUS
     implicit none
 
     real(RP), intent(in) :: DOMAIN_CENTER_X !< center position of global domain [m]: x
@@ -171,8 +169,6 @@ contains
     MPRJ_basepoint_x = UNDEF
     MPRJ_basepoint_y = UNDEF
     MPRJ_PS_lat      = UNDEF
-    MPRJ_M_lat       = UNDEF
-    MPRJ_EC_lat      = UNDEF
 
     MPRJ_basepoint_x = DOMAIN_CENTER_X
     MPRJ_basepoint_y = DOMAIN_CENTER_Y
@@ -189,10 +185,7 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MAPPROJ)
 
-
-    if( MPRJ_PS_lat      == UNDEF ) MPRJ_PS_lat      = MPRJ_basepoint_lat
-    if( MPRJ_M_lat       == UNDEF ) MPRJ_M_lat       = MPRJ_basepoint_lat
-    if( MPRJ_EC_lat      == UNDEF ) MPRJ_EC_lat      = MPRJ_basepoint_lat
+    if( MPRJ_PS_lat == UNDEF ) MPRJ_PS_lat = MPRJ_basepoint_lat
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_lon:', MPRJ_basepoint_lon
@@ -470,24 +463,28 @@ contains
     real(RP), intent(out) :: x
     real(RP), intent(out) :: y
 
-    real(DP) :: lat_d
+    real(DP) :: lat_d, lat0_d, dlon
     real(DP) :: gno(2)
     real(DP) :: cos_gmm
     !---------------------------------------------------------------------------
     ! http://mathworld.wolfram.com/GnomonicProjection.html
 
-    lat_d = real(lat,kind=DP)
-    cos_gmm = sin(MPRJ_basepoint_lat*D2R) * sin(lat_d) &
-            + cos(MPRJ_basepoint_lat*D2R) * cos(lat_d) * cos(lon - MPRJ_basepoint_lon*D2R)
+    lat_d  = real(lat,kind=DP)
+    lat0_d = real(MPRJ_basepoint_lat*D2R,kind=DP)
 
-    gno(1) = (cos(lat_d) * sin(lon - MPRJ_basepoint_lon*D2R)) / cos_gmm
-    gno(2) = (cos(MPRJ_basepoint_lat*D2R) * sin(lat_d) &
-            - sin(MPRJ_basepoint_lat*D2R) * cos(lat_d) * cos(lon - MPRJ_basepoint_lon*D2R)) / cos_gmm
+    dlon = lon - MPRJ_basepoint_lon * D2R
 
-    x = MPRJ_basepoint_x + (gno(1) * cos(MPRJ_rotation*D2R) &
-                          - gno(2) * sin(MPRJ_rotation*D2R)) * RADIUS
-    y = MPRJ_basepoint_y + (gno(1) * sin(MPRJ_rotation*D2R) &
-                          + gno(2) * cos(MPRJ_rotation*D2R)) * RADIUS
+    cos_gmm = sin(lat0_d) * sin(lat_d) &
+            + cos(lat0_d) * cos(lat_d) * cos(dlon)
+
+    gno(1) = ( cos(lat_d)  * sin(dlon)  ) / cos_gmm
+    gno(2) = ( cos(lat0_d) * sin(lat_d) &
+             - sin(lat0_d) * cos(lat_d) * cos(dlon) ) / cos_gmm
+
+    x = MPRJ_basepoint_x + ( gno(1) * cos(MPRJ_rotation*D2R) &
+                           - gno(2) * sin(MPRJ_rotation*D2R) ) * RADIUS
+    y = MPRJ_basepoint_y + ( gno(1) * sin(MPRJ_rotation*D2R) &
+                           + gno(2) * cos(MPRJ_rotation*D2R) ) * RADIUS
 
     return
   end subroutine MPRJ_None_lonlat2xy
@@ -564,7 +561,7 @@ contains
     lat2rot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_LC_lat2 * D2R
 
     ! calc conformal factor c
-    MPRJ_LC_c = ( log( sin(lat1rot) ) - log( sin(lat2rot) ) ) &
+    MPRJ_LC_c = ( log( sin(lat1rot)        ) - log( sin(lat2rot)        ) ) &
               / ( log( tan(0.5_DP*lat1rot) ) - log( tan(0.5_DP*lat2rot) ) )
 
     ! pre-calc factor
@@ -614,8 +611,7 @@ contains
 
     dist = sqrt( xx*xx + yy*yy )
 
-    lon = MPRJ_basepoint_lon * d2r + atan2(xx,yy) / MPRJ_LC_c
-    lon = mod( lon+2.0_DP*PI, 2.0_DP*PI )
+    lon = MPRJ_basepoint_lon * D2R + atan2(xx,yy) / MPRJ_LC_c
 
     ! check hemisphere: 1=north, -1=south
     lat = MPRJ_hemisphere * ( 0.5_DP*PI - 2.0_DP*atan( dist**(1.0_DP/MPRJ_LC_c) ) )
@@ -641,8 +637,7 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
-    if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
+    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
 
     latrot = 0.5_DP*PI - lat
 
@@ -698,9 +693,10 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    if( dlon >  PI ) dlon = dlon - PI*2.0_DP
-    if( dlon < -PI ) dlon = dlon + PI*2.0_DP
+    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+
     alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
+
     rotc(1) = cos( alpha )
     rotc(2) = sin( alpha )
 
@@ -727,9 +723,10 @@ contains
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       if( dlon >  PI ) dlon = dlon - PI*2.0_DP
-       if( dlon < -PI ) dlon = dlon + PI*2.0_DP
+       dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+
        alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
+
        rotc(i,j,1) = cos( alpha )
        rotc(i,j,2) = sin( alpha )
     enddo
@@ -798,7 +795,7 @@ contains
     dist = sqrt( xx*xx + yy*yy )
 
     lon = MPRJ_basepoint_lon * D2R + atan2(xx,yy)
-    lon = mod( lon+2.0_DP*PI, 2.0_DP*PI )
+
     lat = MPRJ_hemisphere * ( 0.5_DP*PI - 2.0_DP*atan(dist) )
 
     return
@@ -822,6 +819,7 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
 
     latrot = 0.5_DP*PI - lat
 
@@ -874,9 +872,10 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    if( dlon >  PI ) dlon = dlon - PI*2.0_DP
-    if( dlon < -PI ) dlon = dlon + PI*2.0_DP
+    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+
     alpha = - dlon * MPRJ_hemisphere
+
     rotc(1) = cos( alpha )
     rotc(2) = sin( alpha )
 
@@ -903,9 +902,10 @@ contains
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       if( dlon >  PI ) dlon = dlon - PI*2.0_DP
-       if( dlon < -PI ) dlon = dlon + PI*2.0_DP
+       dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+
        alpha = - dlon * MPRJ_hemisphere
+
        rotc(i,j,1) = cos( alpha )
        rotc(i,j,2) = sin( alpha )
     enddo
@@ -917,6 +917,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Mercator projection
   subroutine MPRJ_Mercator_setup
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     real(DP) :: lat0
@@ -927,6 +929,11 @@ contains
 
     ! pre-calc factor
     MPRJ_M_fact = cos(lat0)
+
+    if ( MPRJ_M_fact == 0.0_DP ) then
+       write(*,*) 'xxx MPRJ_M_lat cannot be set to pole point! value=', MPRJ_M_lat
+       call PRC_MPIstop
+    endif
 
     ! calc (x,y) at (lon,lat) = (base,0)
     latrot = 0.5_DP*PI - MPRJ_basepoint_lat * D2R
@@ -966,7 +973,7 @@ contains
     yy = ( y - MPRJ_eq_y ) / RADIUS / MPRJ_M_fact
 
     lon = xx + MPRJ_basepoint_lon * D2R
-    lon = mod( lon+2.0_DP*PI, 2.0_DP*PI )
+
     lat = 0.5_DP*PI - 2.0_DP*atan( 1.0_DP/exp(yy) )
 
     return
@@ -990,6 +997,7 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
 
     latrot = 0.5_DP*PI - lat
 
@@ -1056,6 +1064,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection
   subroutine MPRJ_EquidistantCylindrical_setup
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     real(DP) :: lat0
@@ -1065,6 +1075,11 @@ contains
 
     ! pre-calc factor
     MPRJ_EC_fact = cos(lat0)
+
+    if ( MPRJ_EC_fact == 0.0_DP ) then
+       write(*,*) 'xxx MPRJ_EC_lat cannot be set to pole point! value=', MPRJ_EC_lat
+       call PRC_MPIstop
+    endif
 
     MPRJ_eq_x = MPRJ_basepoint_x
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_basepoint_lat * D2R
@@ -1085,6 +1100,8 @@ contains
        y,   &
        lon, &
        lat  )
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(in)  :: x
@@ -1099,8 +1116,13 @@ contains
     yy = ( y - MPRJ_eq_y ) / RADIUS
 
     lon = xx + MPRJ_basepoint_lon * D2R
-    lon = mod( lon+2.0_DP*PI, 2.0_DP*PI )
+
     lat = yy
+
+    if ( abs(lat) >  0.5_DP*PI ) then
+       write(*,*) 'xxx Invalid latitude range! value=', lat
+       call PRC_MPIstop
+    endif
 
     return
   end subroutine MPRJ_EquidistantCylindrical_xy2lonlat
@@ -1123,6 +1145,7 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
 
     x = MPRJ_eq_x + RADIUS * MPRJ_EC_fact * dlon
     y = MPRJ_eq_y + RADIUS * lat
