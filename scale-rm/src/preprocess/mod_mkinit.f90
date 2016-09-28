@@ -62,7 +62,9 @@ module mod_mkinit
      GRID_FZ,  &
      GRID_FX,  &
      GRID_FY,  &
-     GRID_CXG
+     GRID_CXG, &
+     GRID_FXG, &
+     GRID_FYG
   use scale_grid_real, only: &
      REAL_CZ, &
      REAL_FZ
@@ -552,7 +554,9 @@ contains
     real(RP) :: CZ_offset
     real(RP) :: CX_offset
     real(RP) :: CY_offset
-    real(RP) :: dist
+    real(RP) :: distx, disty, distz
+
+    real(RP) :: Domain_RX, Domain_RY
 
     integer  :: ierr
     integer  :: k, i, j
@@ -584,22 +588,32 @@ contains
           CZ_offset = GRID_CZ(KS)
           CX_offset = GRID_CX(IS)
           CY_offset = GRID_CY(JS)
+          Domain_RX = GRID_FX(IE) - GRID_FX(IS-1)
+          Domain_RY = GRID_FY(JE) - GRID_FY(JS-1)
        else
           CZ_offset = 0.0_RP
           CX_offset = 0.0_RP
           CY_offset = 0.0_RP
+          Domain_RX = GRID_FXG(IAG-IHALO) - GRID_FXG(IHALO)
+          Domain_RY = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
        endif
 
+       ! make bubble coefficient
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
 
-          ! make tracer bubble
-          dist = ( (GRID_CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2 &
-               + ( (GRID_CX(i)-CX_offset-BBL_CX)/BBL_RX )**2 &
-               + ( (GRID_CY(j)-CY_offset-BBL_CY)/BBL_RY )**2
+          distz = ( (GRID_CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2
 
-          bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(dist,1.0_RP) ) )**2
+          distx = min( ( (GRID_CX(i)-CX_offset-BBL_CX          )/BBL_RX )**2, &
+                       ( (GRID_CX(i)-CX_offset-BBL_CX-Domain_RX)/BBL_RX )**2, &
+                       ( (GRID_CX(i)-CX_offset-BBL_CX+Domain_RX)/BBL_RX )**2  )
+
+          disty = min( ( (GRID_CY(j)-CY_offset-BBL_CY          )/BBL_RY )**2, &
+                       ( (GRID_CY(j)-CY_offset-BBL_CY-Domain_RY)/BBL_RY )**2, &
+                       ( (GRID_CY(j)-CY_offset-BBL_CY+Domain_RY)/BBL_RY )**2  )
+
+          bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(distz+distx+disty,1.0_RP) ) )**2
 
        enddo
        enddo
