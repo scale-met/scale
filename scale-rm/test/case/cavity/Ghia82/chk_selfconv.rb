@@ -1,61 +1,65 @@
 require "numru/gphys"
 include NumRu
 
-############
-#VAR_NAME   = "PT"
-#VAR_CUTHASH = {}
-#REFSOL_DIR = "025m/CTRL/FVM_UD5"
-#RESOL_LIST = ["400m", "200m", "100m", "050m"]
-############
-#VAR_NAME   = "PT"
-#VAR_CUTHASH = {}
-#REFSOL_DIR = "031m/CTRL/FVM_UD5"
-#RESOL_LIST = ["500m", "250m", "125m", "063m"]
-############
-#VAR_NAME   = "W"
-#VAR_CUTHASH = {}
-#REFSOL_DIR = "0125m/CTRL/FVM_UD5"
-#RESOL_LIST = ["2000m", "1000m", "0500m", "0250m"]
-#TIME_LIST = [0.0, 2.0*3600.0, 4.0*3600.0, 6.0*3600.0, 8.0*3600.0, 10.0*3600.0]
-#############
-VAR_NAME   = "W"
+#############################################################
+
+L     = 20e3
+Ulid  = 5.0E01
+
+VAR_NAME   = "V"
 VAR_CUTHASH = {}
-REFSOL_DIR = "025km/CTRL/FVM_UD5"
-RESOL_LIST = ["400km", "200km", "100km", "050km"]
-TIME_LIST = [0.0, 2.0*24.0*3600.0, 4.0*24.0*3600.0, 6.0*24.0*3600.0, 8.0*24.0*3600.0, 10.0*24.0*3600.0, 12.0*24.0*3600.0, 14.0*24.0*3600.0]
-#############
+
+REFSOL_RESOL = "063m"
+REFSOL_DIR   = "063m/CTRL/FVM_UD5"
+RESOL_LIST = ["1000m", "500m", "250m", "125m"] #, "063m"]
+
+NPRC_hash ={}
+NPRC_hash["2000m"] = {"nprcx"=> 1,"nprcy"=>1}
+NPRC_hash["1000m"] = {"nprcx"=> 1,"nprcy"=>1}
+NPRC_hash["500m"] = {"nprcx"=>2,"nprcy"=>2}
+NPRC_hash["250m"] = {"nprcx"=>4,"nprcy"=>4}
+NPRC_hash["125m"] = {"nprcx"=>8,"nprcy"=>8}
+NPRC_hash["063m"] = {"nprcx"=>8,"nprcy"=>8}
 
 CASE_LIST  = ["CTRL"]
 FLXSCHEME_LIST = ["UD1", "UD3", "UD5", "CD2", "CD4", "CD6" ]
-timeList = [0.0, 30.0]
+#timeList = [ 0.0, 0.5*86400.0, 1.0*86400.0,
+#             2.0*86400.0, 3.0*86400.0, 5.0*86400.0, 7.5*86400.0,
+#             10.0*86400.0 ]
 
-GPhys::extrapolation = true
+#GPhys::extrapolation = true
 
 ###########################################################
 
-def get_gphys(ncFileDir, varname, cutHash=nil)
-  files = /#{ncFileDir}\/history.pe(\d*).nc/
+def get_gphys(ncFileDir, varname, nprcx=1, nprcy=1, cutHash=nil)
+  files = Array.new(nprcx){Array.new(nprcy){""}}
+  for j in 0..nprcy-1
+    for i in 0..nprcx-1
+      pe_id = format("%06d", nprcx*j + i) 
+      files[i][j] = "#{ncFileDir}/history.pe#{pe_id}.nc"
+    end
+  end
   gphys = GPhys::IO.open(files, varname)
-#  p cutHash
   gphys = gphys.cut(cutHash) if cutHash != nil
+  p 'Finish getting gphys..'
   return gphys
 end
 
 def calc_ErrorNorm(gp, gp_ref, ofname)
 
+  nt_ = gp_ref.axis('time').pos.length    
+  nt = gp.axis('time').pos.length
   nx = gp.axis('x').pos.length
   ny = gp.axis('y').pos.length
   nz = gp.axis('z').pos.length
-  nt = gp.axis('time').pos.length
-  nt_ = gp_ref.axis('time').pos.length
 
-  grid = Grid.new(gp.axis('time'))
+  grid = Grid.new(gp_ref.axis('time'))
   gp_l2error = GPhys.new( grid, VArray.new(NArray.sfloat(nt), {"units"=>"1"}, "l2error") )
   gp_linferror = GPhys.new( grid, VArray.new(NArray.sfloat(nt), {"units"=>"1"}, "linferror") )
   
   tidx = 0
   gp_l2error[true] = 1.0
-  
+
   GPhys.each_along_dims(
     [gp, gp_ref, gp_l2error, gp_linferror], "time"){
     |gp_, gp_ref_,l2error,linferror|
@@ -67,7 +71,7 @@ def calc_ErrorNorm(gp, gp_ref, ofname)
     gp__ = gp_.val[false,0]
     gp_ref__ = gp_ref_.val[false,0]
     p gp_ref__
-    l2error[0] = Math.sqrt( (((gp__ - gp_ref__)**2).sum  / (gp_ref__**2).sum).to_f )
+    l2error[0] = Math.sqrt( (((gp__ - gp_ref__)**2).sum  / (Ulid**2 *nx*ny)).to_f )
     linferror[0] = ( (gp__ - gp_ref__).abs.max / gp_ref__.abs.max ).to_f 
     
     tidx = tidx + 1
@@ -85,15 +89,30 @@ def calc_ErrorNorm(gp, gp_ref, ofname)
   ofile.close
 end
 
+nprc_ref = NPRC_hash[REFSOL_RESOL]
+p "nprc_ref info:", nprc_ref
+gp_ref = get_gphys("#{REFSOL_DIR}", VAR_NAME,
+                   nprc_ref["nprcx"], nprc_ref["nprcy"], 
+                   VAR_CUTHASH)
+
 RESOL_LIST.each{|resol|
   CASE_LIST.each{|expcase|
     FLXSCHEME_LIST.each{|scheme|
       target_dir = "#{resol}/#{expcase}/FVM_#{scheme}"
       p "target dir=#{target_dir}.."
-      
-      gp = get_gphys("#{target_dir}", VAR_NAME, VAR_CUTHASH)
-      gp_ref = get_gphys("#{REFSOL_DIR}", VAR_NAME, VAR_CUTHASH)
 
+      nprc = NPRC_hash[resol]
+      p "nprc info:", nprc
+      gp = get_gphys("#{target_dir}", VAR_NAME,
+                     nprc["nprcx"], nprc["nprcy"], 
+                     VAR_CUTHASH)
+
+      nt_ = gp_ref.axis('time').pos.length
+      gp = gp.cut("time"=>  0..gp_ref.axis('time').pos.val[nt_-1])
+
+
+      #-----------------------------------
+      
       ofile = NetCDF::create("#{target_dir}/refsol_diff.nc")
 
       p gp_ref.shape
@@ -113,17 +132,20 @@ RESOL_LIST.each{|resol|
         p "tidx=#{tidx}"
         break if tidx == nt
 
-        gp_ref_  = gp_ref[false,tidx..tidx].interpolate(x.pos, y.pos, z.pos).rename(VAR_NAME+"_ref")
-        
-        gp_diff = (gp_ - gp_ref_).rename(VAR_NAME+"_diff")
+        gp_ref_  = gp_ref[false,0..0,tidx..tidx].interpolate(x.pos, y.pos).rename(VAR_NAME+"_ref")
+        p gp_ref_.shape
+        gp_diff = (gp_ - gp_ref_).rename(VAR_NAME+"_diff")#(gp_[false,0..0,0..0] - gp_ref_).rename(VAR_NAME+"_diff")
         tidx = tidx + 1
         [gp_ref_, gp_diff]
       }
-
       ofile.close
 
-      gp_ref = GPhys::IO.open("#{target_dir}/refsol_diff.nc", VAR_NAME+"_ref")
-      calc_ErrorNorm(gp, gp_ref, "#{target_dir}/error_norm.nc")
+      
+      gp_ref_intp = GPhys::IO.open("#{target_dir}/refsol_diff.nc", VAR_NAME+"_ref")
+      calc_ErrorNorm( gp.cut("x"=>0..L).cut("y"=>0..L),
+                      gp_ref_intp.cut("x"=>0..L).cut("y"=>0..L),
+                      "#{target_dir}/error_norm.nc")
+
     }
   }
 }

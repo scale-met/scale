@@ -19,8 +19,8 @@ include NumRu
 VAR_NAME   = "W"
 VAR_CUTHASH = {}
 REFSOL_DIR = "0125m/CTRL/FVM_UD5"
-RESOL_LIST = ["2000m", "1000m", "0500m", "0250m"]
-TIME_LIST = [0.0, 2.0*3600.0, 4.0*3600.0, 6.0*3600.0, 8.0*3600.0, 10.0*3600.0]
+RESOL_LIST = ["1000m", "500m", "250m", "125m"]
+TIME_LIST = [0.0, 0.5*86400.0, 1.0*86400.0, 3.0*86400.0, 6.0*86400.0, 10.0*86400.0]
 ############
 
 
@@ -35,8 +35,8 @@ def get_gphys(ncFileName, varname, cutHash=nil)
   return gphys
 end
 
-l2error_table = NArray.sfloat(CASE_LIST.length, REFSOL_LIST.length, FLXSCHEME_LIST.length, TIME_LIST.length)
-linferror_table = NArray.sfloat(CASE_LIST.length, REFSOL_LIST.length, FLXSCHEME_LIST.length,TIME_LIST.length)
+l2error_table = NArray.sfloat(CASE_LIST.length, RESOL_LIST.length, FLXSCHEME_LIST.length, TIME_LIST.length)
+linferror_table = NArray.sfloat(CASE_LIST.length, RESOL_LIST.length, FLXSCHEME_LIST.length,TIME_LIST.length)
 
 CASE_LIST.each_with_index{|expcase,c|
   RESOL_LIST.each_with_index{|resol,r|

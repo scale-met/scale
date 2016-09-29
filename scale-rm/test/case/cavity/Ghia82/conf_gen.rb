@@ -22,16 +22,18 @@ TIME_DURATION_SEC       = "864000.D0"
 HISTORY_TINTERVAL_SEC   = "7200.0D0"
 CONF_GEN_RESOL_HASHLIST = \
 [ \
+  { "TAG"=>"2000m", "DX"=>2000E0, "DY"=> 2000E0, "DZ"=>2000E0, 
+    "IMAX"=>10, "JMAX"=>10, "KMAX"=>1, "DT"=>2.4, "DTDYN"=>2.4E0, "NPRCX"=> 1, "NPRCY"=>1}, \
   { "TAG"=>"1000m", "DX"=>1000E0, "DY"=> 1000E0, "DZ"=>1000E0, 
-    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>6.0, "DTDYN"=>1.2E0, "NPRCX"=> 1, "NPRCY"=>1}, \
+    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>1.2, "DTDYN"=>1.2E0, "NPRCX"=> 1, "NPRCY"=>1}, \
   { "TAG"=>"500m", "DX"=>500E0, "DY"=> 500E0, "DZ"=>500E0, 
-    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>3.0, "DTDYN"=>0.6E0, "NPRCX"=> 2, "NPRCY"=>2}, \
+    "IMAX"=>40, "JMAX"=>40, "KMAX"=>1, "DT"=>0.6, "DTDYN"=>0.6E0, "NPRCX"=> 1, "NPRCY"=>1}, \
   { "TAG"=>"250m", "DX"=>250E0, "DY"=> 250E0, "DZ"=>250.0E0,
-    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>3.0, "DTDYN"=>0.3E0, "NPRCX"=> 4, "NPRCY"=>4}, \
+    "IMAX"=>40, "JMAX"=>40, "KMAX"=>1, "DT"=>0.3, "DTDYN"=>0.3E0, "NPRCX"=> 2, "NPRCY"=>2}, \
   { "TAG"=>"125m", "DX"=>125E0, "DY"=> 125E0, "DZ"=>125.0E0,
-    "IMAX"=>20, "JMAX"=>20, "KMAX"=>1, "DT"=>1.5, "DTDYN"=>0.15E0, "NPRCX"=> 8, "NPRCY"=>8}, \
+    "IMAX"=>40, "JMAX"=>40, "KMAX"=>1, "DT"=>0.15, "DTDYN"=>0.15E0, "NPRCX"=> 4, "NPRCY"=>4}, \
   { "TAG"=>"063m", "DX"=> 62.5E0, "DY"=>  62.5E0, "DZ"=> 62.5E0,
-    "IMAX"=>80, "JMAX"=>80, "KMAX"=>1, "DT"=>1.5, "DTDYN"=>0.075E0, "NPRCX"=> 4, "NPRCY"=>4}, \
+    "IMAX"=>40, "JMAX"=>40, "KMAX"=>1, "DT"=>0.12, "DTDYN"=>0.12E0, "NPRCX"=> 8, "NPRCY"=>8}, \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
@@ -229,7 +231,7 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",             
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
- ATMOS_DYN_DIVDMP_COEF          = 1.D-3,
+ ATMOS_DYN_DIVDMP_COEF          = 5.D-4,
  ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
 /
 

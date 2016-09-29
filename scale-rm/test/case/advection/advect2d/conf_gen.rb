@@ -17,7 +17,7 @@ CONF_GEN_RESOL_HASHLIST = \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
-  {"TAG"=>"COS", "SHAPE_NC"=>"BUBBLE"},     \
+  {"TAG"=>"COS", "SHAPE_NC"=>"COS"},     \
   {"TAG"=>"COSBELL", "SHAPE_NC"=>"BUBBLE"}, \
   {"TAG"=>"RECT", "SHAPE_NC"=>"RECT"},      \
 ]
@@ -275,10 +275,12 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
             FileUtils.mkdir_p(dataDir)
           end
       
-          init_conf_name = "#{dataDir}init.conf" 
+          init_conf_name = "#{dataDir}init.conf"
+          init_shape = case_hash["SHAPE_NC"]
+          init_shape = "BUBBLE" if  init_shape == "COS"
           gen_init_conf(init_conf_name, 
                         resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                        resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], case_hash["SHAPE_NC"] )
+                        resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], init_shape )
           run_conf_name = "#{dataDir}run.conf"
           gen_run_conf(run_conf_name, 
                        resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 

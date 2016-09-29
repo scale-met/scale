@@ -14,7 +14,7 @@ MODDIROPT = -module
 FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
                -assume byterecl -convert big_endian \
                -fp-model source                     \
-               -mcmodel=medium -heap-arrays
+               -mcmodel=medium -heap-arrays 
 
 FFLAGS_DYN   = $(FFLAGS)
 

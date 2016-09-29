@@ -22,12 +22,33 @@ module mod_user
   use scale_grid_index
   use scale_tracer
 
+  use scale_time, only: &
+       DTSEC => TIME_DTSEC, &
+       NOWTSEC => TIME_NOWSEC
+
+  use scale_const, only: &
+       PI  => CONST_PI,    &
+       OHM => CONST_OHM,   &
+       RPlanet => CONST_RADIUS, &
+       Rdry => CONST_Rdry
+  
+  use scale_atmos_refstate, only: &
+       ATMOS_REFSTATE_pres, &
+       ATMOS_REFSTATE_temp, &
+       ATMOS_REFSTATE_dens, &
+       ATMOS_REFSTATE_pott, &
+       ATMOS_REFSTATE_qv,   &
+       ATMOS_REFSTATE_write
+  
   use mod_atmos_vars, only: &
        DENS, &
        MOMX, &
        MOMY, &
        MOMZ, &
-       RHOT
+       RHOT, &
+       PRES
+
+  use scale_process
   
   !-----------------------------------------------------------------------------
   implicit none
@@ -55,7 +76,9 @@ module mod_user
   !
   logical,  private, save :: USER_do = .false. !< do user step?
   real(RP), private, save :: Phi0Deg = 45.0_RP !< Central latitude for f or beta plane
-
+  real(RP), private, allocatable :: RHOT_bc(:,:,:)
+  real(RP), private, allocatable :: DENS_bc(:,:,:)
+  
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -63,11 +86,6 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
-
-    use scale_const, only: &
-       PI  => CONST_PI,    &
-       OHM => CONST_OHM,   &
-       RPlanet => CONST_RADIUS
     
     use scale_grid, only : &
        CY => GRID_CY,      &
@@ -76,7 +94,7 @@ contains
        GRID_DOMAIN_CENTER_Y
     
     use scale_atmos_dyn, only: &
-       CORIOLI
+       CORIOLI         
     
     implicit none
 
@@ -107,7 +125,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
-
+    
+    
     ! Set coriolis parameter in f or beta plane approximation
     
     f0 = 2.0_RP*OHM*sin( Phi0Deg*PI/180.0_RP )
@@ -120,6 +139,10 @@ contains
     enddo      
     enddo
 
+    !
+    allocate( RHOT_bc(KA,IA,2) )
+    allocate( DENS_bc(KA,IA,2) )
+
     return
   end subroutine USER_setup
 
@@ -131,6 +154,14 @@ contains
     !---------------------------------------------------------------------------
     integer :: j
 
+    ! Save some information of  boundary condition
+    
+    RHOT_bc(:,:,1) = RHOT(:,:,JS) - 0.5_RP*(RHOT(:,:,JS+1) - RHOT(:,:,JS))
+    RHOT_bc(:,:,2) = RHOT(:,:,JE-1) + 1.5_RP*(RHOT(:,:,JE) - RHOT(:,:,JE-1))
+
+    DENS_bc(:,:,1) = DENS(:,:,JS) - 0.5_RP*(DENS(:,:,JS+1) - DENS(:,:,JS))
+    DENS_bc(:,:,2) = DENS(:,:,JE-1) + 1.5_RP*(DENS(:,:,JE) - DENS(:,:,JE-1))
+    
      call USER_step
     return
   end subroutine USER_resume0
@@ -138,12 +169,38 @@ contains
   !-----------------------------------------------------------------------------
   !> Resuming operation
   subroutine USER_resume
+
+    use scale_comm, only: &
+         COMM_vars8, COMM_wait
+    
     implicit none
     !---------------------------------------------------------------------------
 
     ! calculate diagnostic value and input to history buffer
     !call USER_step
 
+    if ( NOWTSEC == 0.0_RP ) then
+       ! Set background fields
+!!$       ATMOS_REFSTATE_pres(:,:,:) = PRES(:,:,:)
+!!$       ATMOS_REFSTATE_dens(:,:,:) = DENS(:,:,:)
+!!$       ATMOS_REFSTATE_pott(:,:,:) = RHOT(:,:,:)/DENS(:,:,:)
+!!$       ATMOS_REFSTATE_temp(:,:,:) = PRES(:,:,:)/(Rdry*DENS(:,:,:))
+!!$       ATMOS_REFSTATE_qv(:,:,:)   = 0.0_RP
+!!$
+!!$       call COMM_vars8( ATMOS_REFSTATE_dens(:,:,:), 1 )
+!!$       call COMM_vars8( ATMOS_REFSTATE_temp(:,:,:), 2 )
+!!$       call COMM_vars8( ATMOS_REFSTATE_pres(:,:,:), 3 )
+!!$       call COMM_vars8( ATMOS_REFSTATE_pott(:,:,:), 4 )
+!!$       call COMM_vars8( ATMOS_REFSTATE_qv  (:,:,:), 5 )
+!!$       call COMM_wait ( ATMOS_REFSTATE_dens(:,:,:), 1, .false. )
+!!$       call COMM_wait ( ATMOS_REFSTATE_temp(:,:,:), 2, .false. )
+!!$       call COMM_wait ( ATMOS_REFSTATE_pres(:,:,:), 3, .false. )
+!!$       call COMM_wait ( ATMOS_REFSTATE_pott(:,:,:), 4, .false. )
+!!$       call COMM_wait ( ATMOS_REFSTATE_qv  (:,:,:), 5, .false. )
+!!$
+!!$       call ATMOS_REFSTATE_write       
+    end if
+    
     return
   end subroutine USER_resume
 
@@ -177,7 +234,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. USER_do ) return
-
+    
     ! Apply boundary condition at y=+Ly and y=-Ly
 
     if ( .NOT. PRC_HAS_N ) then     
@@ -185,10 +242,10 @@ contains
           MOMY(:,:,JE)   = 0d0
           MOMY(:,:,JE+j  ) = - MOMY(:,:,JE-j  )
 
-          DENS(:,:,JE+j) = DENS(:,:,JE-j+1)
-          MOMX(:,:,JE+j) = MOMX(:,:,JE-j+1)          
-          MOMZ(:,:,JE+j) = MOMZ(:,:,JE-j+1)
-          RHOT(:,:,JE+j) = RHOT(:,:,JE-j+1)
+          DENS(:,:,JE+j) =  2.0_RP*DENS_bc(:,:,2) - DENS(:,:,JE-j+1)
+          MOMX(:,:,JE+j) = - MOMX(:,:,JE-j+1)          
+          MOMZ(:,:,JE+j) = - MOMZ(:,:,JE-j+1)
+          RHOT(:,:,JE+j) = 2.0_RP*RHOT_bc(:,:,2) - RHOT(:,:,JE-j+1)
        enddo
     end if
 
@@ -197,10 +254,10 @@ contains
           MOMY(:,:,JS-1) = 0d0
           MOMY(:,:,JS-j-1) = - MOMY(:,:,JS+j-1)
 
-          DENS(:,:,JS-j) = DENS(:,:,JS+j-1)
-          MOMX(:,:,JS-j) = MOMX(:,:,JS+j-1)          
-          MOMZ(:,:,JS-j) = MOMZ(:,:,JS+j-1)
-          RHOT(:,:,JS-j) = RHOT(:,:,JS+j-1)
+          DENS(:,:,JS-j) = 2.0_RP*DENS_bc(:,:,1) - DENS(:,:,JS+j-1)
+          MOMX(:,:,JS-j) = - MOMX(:,:,JS+j-1)          
+          MOMZ(:,:,JS-j) = - MOMZ(:,:,JS+j-1)
+          RHOT(:,:,JS-j) = 2.0_RP*RHOT_bc(:,:,1) - RHOT(:,:,JS+j-1)
        enddo
     end if
     

@@ -2463,6 +2463,7 @@ contains
       GRAV    => CONST_GRAV
 
     use scale_process
+
     
     implicit none
 
@@ -2518,7 +2519,7 @@ contains
 
     integer :: itr
 
-    integer, parameter :: ITRMAX = 300
+    integer, parameter :: ITRMAX = 1000
     real(RP), parameter :: CONV_EPS = 1E-15_RP
     
     !---------------------------------------------------------------------------
@@ -2549,13 +2550,11 @@ contains
     ! calc in dry condition
     !
     
-    eta(:,:,:) = 1.0E-7_RP
+    eta(:,:,:) = 1.0E-8_RP
 
     do j = JS, JE
     do i = IS, IS          !< zonaly symmetric
-    do k = KS, KE
-       del_eta = 1.0_RP
-       itr = 0
+
        y = GRID_CY(j)
        yphase  = 2.0_RP*PI*y/Ly
 
@@ -2565,43 +2564,77 @@ contains
                              - Ly**2/3.0_RP                                                        )       & 
             )
        
-       do while( abs(del_eta) > CONV_EPS )
-          ln_eta = log(eta(k,i,j))
-
-          temp_vfunc = eta(k,i,j)**(Rdry*LAPSE_RATE/Grav)
-          temp(k,i,j) = &
-               REF_TEMP*temp_vfunc &
-               + geopot_hvari/Rdry*(2.0_RP*(ln_eta/b)**2 - 1.0_RP)*exp(-(ln_eta/b)**2)
-          geopot(k,i,j) = &
-               REF_TEMP*GRAV/LAPSE_RATE*(1.0_RP - temp_vfunc)  &
-               + geopot_hvari*ln_eta*exp(-(ln_eta/b)**2)
+       pres_sfc(1,i,j) = REF_PRES
+       pott_sfc(1,i,j) = REF_TEMP - geopot_hvari/Rdry
+       qv      (:,i,j) = 0.0_RP
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc      (:,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
        
-          del_eta = -  ( - Grav*GRID_CZ(k) + geopot(k,i,j) )   & ! <- F
-               &      *( - eta(k,i,j)/(Rdry*temp(k,i,j))   )     ! <- (dF/deta)^-1
-       
-          eta(k,i,j) = eta(k,i,j) + del_eta
-          itr = itr + 1
+       do k = KS, KE
+          del_eta = 1.0_RP
 
-          if ( itr > ITRMAX ) then
-             write(*,*) "* (X,Y,Z)=", GRID_CX(i), GRID_CY(j), GRID_CZ(k)
-             write(*,*) "Fail the convergence of iteration. Check!"
-             write(*,*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
-             call PRC_MPIstop
-          end if
+          itr = 0          
+          do while( abs(del_eta) > CONV_EPS )
+             ln_eta = log(eta(k,i,j))
+
+             temp_vfunc = eta(k,i,j)**(Rdry*LAPSE_RATE/Grav)
+             temp(k,i,j) = &
+                  REF_TEMP*temp_vfunc &
+                  + geopot_hvari/Rdry*(2.0_RP*(ln_eta/b)**2 - 1.0_RP)*exp(-(ln_eta/b)**2)
+             geopot(k,i,j) = &
+                  REF_TEMP*GRAV/LAPSE_RATE*(1.0_RP - temp_vfunc)  &
+                  + geopot_hvari*ln_eta*exp(-(ln_eta/b)**2)
+
+             del_eta = -  ( - Grav*GRID_CZ(k) + geopot(k,i,j) )   & ! <- F
+                  &      *( - eta(k,i,j)/(Rdry*temp(k,i,j))   )     ! <- (dF/deta)^-1
+
+             eta(k,i,j) = eta(k,i,j) + del_eta
+             itr = itr + 1
+
+             if ( itr > ITRMAX ) then
+                write(*,*) "* (X,Y,Z)=", GRID_CX(i), GRID_CY(j), GRID_CZ(k)
+                write(*,*) "Fail the convergence of iteration. Check!"
+                write(*,*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
+                call PRC_MPIstop
+             end if
+          enddo
+          
+          PRES(k,i,j) = eta(k,i,j)*REF_PRES
+          DENS(k,i,j) = PRES(k,i,j)/(Rdry*temp(k,i,j))
+          pott(k,i,j) = temp(k,i,j)*eta(k,i,j)**(-Rdry/CPdry)
+          
        enddo
-    enddo
+
+       ! make density & pressure profile in dry condition
+       call HYDROSTATIC_buildrho( DENS    (:,i,j), & ! [OUT]
+                                  temp    (:,i,j), & ! [OUT]
+                                  pres    (:,i,j), & ! [OUT]
+                                  pott    (:,i,j), & ! [IN]
+                                  qv      (:,i,j), & ! [IN]
+                                  qc      (:,i,j), & ! [IN]
+                                  temp_sfc(1,i,j), & ! [OUT]
+                                  pres_sfc(1,i,j), & ! [IN]
+                                  pott_sfc(1,i,j), & ! [IN]
+                                  qv_sfc  (1,i,j), & ! [IN]
+                                  qc_sfc  (1,i,j)  ) ! [IN]       
     enddo
     enddo
 
     do j = JS, JE
     do k = KS, KE
+     
+
+       eta(k,IS,j) = pres(k,IS,j)/REF_PRES
        ln_eta = log(eta(k,IS,j))
        yphase = 2.0_RP*PI*GRID_CY(j)/Ly
-       PRES(k,IS:IE,j) = eta(k,IS,j)*REF_PRES
-       DENS(k,IS:IE,j) = PRES(k,IS,j)/(Rdry*temp(k,IS,j))
+!!$       PRES(k,IS:IE,j) = eta(k,IS,j)*REF_PRES
+!!$       DENS(k,IS:IE,j) = PRES(k,IS,j)/(Rdry*temp(k,IS,j))
+       DENS(k,IS:IE,j) = DENS(k,IS,j)
+       PRES(k,IS:IE,j) = PRES(k,IS,j)
        MOMX(k,IS-1:IE,j) = DENS(k,IS,j)*(-U0*sin(0.5_RP*yphase)**2*ln_eta*exp(-(ln_eta/b)**2))
-       RHOT(k,IS:IE,j) = DENS(k,IS,j)*temp(k,IS,j)*eta(k,IS,j)**(-Rdry/CPdry)
-       QTRC(k,i,j,I_QV) = 0.0_RP
+       RHOT(k,IS:IE,j) = DENS(k,IS,j)*pott(k,IS,j) !temp(k,IS,j)*eta(k,IS,j)**(-Rdry/CPdry)
+       QTRC(k,IS:IE,j,I_QV) = 0.0_RP
     enddo
     enddo
     MOMY(:,:,:) = 0.0_RP

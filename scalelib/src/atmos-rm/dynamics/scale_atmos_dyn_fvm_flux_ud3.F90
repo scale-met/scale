@@ -83,8 +83,7 @@ module scale_atmos_dyn_fvm_flux_ud3
   !++ Private parameters & variables
   !
 
-  real(RP), parameter :: F2  =  0.5_RP
-
+  real(RP), parameter :: F2  =  0.5_RP          ! F2 is always used to calculate flux near boundary.
 
 
   real(RP), parameter :: F31  = -1.0_RP/12.0_RP
@@ -142,9 +141,12 @@ contains
 
 #endif
 
+
+
        valW(KS) = F2 * ( val(KS+1)+val(KS) )
        valW(KE-1) = F2 * ( val(KE)+val(KE-1) )
 
+       
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_ud3
 

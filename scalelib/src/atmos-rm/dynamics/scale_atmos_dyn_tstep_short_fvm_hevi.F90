@@ -65,7 +65,7 @@ module scale_atmos_dyn_tstep_short_fvm_hevi
 #if 1
 #define F2H(k,p,idx) (CDZ(k+p-1)*GSQRT(k+p-1,i,j,idx)/(CDZ(k)*GSQRT(k,i,j,idx)+CDZ(k+1)*GSQRT(k+1,i,j,idx)))
 #else
-# define F2H(k,p,idx) 0.5_RP
+#define F2H(k,p,idx) 0.5_RP
 #endif
 
   !-----------------------------------------------------------------------------
@@ -689,6 +689,7 @@ contains
                     * ( F2H(k,1,I_XYZ) * ( DENS(k+1,i,j) - REF_dens(k+1,i,j) + Sr(k+1,i,j) * dtrk ) &
                       + F2H(k,2,I_XYZ) * ( DENS(k  ,i,j) - REF_dens(k  ,i,j) + Sr(k  ,i,j) * dtrk ) )
              C(k-KS+1,i,j) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
+
 #ifdef HIST_TEND
              if ( lhist ) pg_t(k,i,j,1) = pg
 #endif
@@ -729,6 +730,9 @@ contains
              ! z-momentum
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                             + ( C(k-KS+1,i,j) - MOMZ(k,i,j) )
+             MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
+                            + ( C(k-KS+1,i,j) - MOMZ0(k,i,j) )
+
 #endif
           enddo
           MOMZ_RK(KS-1,i,j) = 0.0_RP

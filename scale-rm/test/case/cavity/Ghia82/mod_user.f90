@@ -178,7 +178,7 @@ contains
 
     implicit none
 
-
+    real(RP) :: one(KA,IA,JA)
     integer :: k, i, j
     
     !---------------------------------------------------------------------------
@@ -215,6 +215,10 @@ contains
 !!$       call append_EddyDiff_wxy( MOMZ,                   & ! (inout)
 !!$            DENS        )                                  ! (in)
 
+       one = 1.0_RP
+       call append_EddyDiff_zxy( DENS,                   & ! (inout)
+            one        )                                   ! (in)
+       
        call COMM_vars8( DENS(:,:,:), I_COMM_DENS )       
 !!$       call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
        call COMM_vars8( MOMX(:,:,:), I_COMM_MOMX )
