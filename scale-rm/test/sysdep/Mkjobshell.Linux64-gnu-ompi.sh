@@ -2,19 +2,22 @@
 
 # Arguments
 BINDIR=${1}
-PPNAME=${2}
-INITNAME=${3}
-BINNAME=${4}
-PPCONF=${5}
-INITCONF=${6}
-RUNCONF=${7}
-TPROC=${8}
-DATDIR=${9}
-DATPARAM=(`echo ${10} | tr -s ',' ' '`)
-DATDISTS=(`echo ${11} | tr -s ',' ' '`)
+UTILDIR=${2}
+PPNAME=${3}
+INITNAME=${4}
+BINNAME=${5}
+N2GNAME=${6}
+PPCONF=${7}
+INITCONF=${8}
+RUNCONF=${9}
+N2GCONF=${10}
+TPROC=${11}
+DATDIR=${12}
+DATPARAM=(`echo ${13} | tr -s ',' ' '`)
+DATDISTS=(`echo ${14} | tr -s ',' ' '`)
 
 # System specific
-MPIEXEC="mpiexec"
+MPIEXEC="mpirun -np ${TPROC}"
 
 if [ ! ${PPCONF} = "NONE" ]; then
   RUN_PP="${MPIEXEC} ${BINDIR}/${PPNAME} ${PPCONF} || exit"
@@ -25,27 +28,12 @@ if [ ! ${INITCONF} = "NONE" ]; then
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
-  RUN_BIN="fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
 fi
 
-array=( `echo ${TPROC} | tr -s 'x' ' '`)
-x=${array[0]}
-y=${array[1]:-1}
-let xy="${x} * ${y}"
-
-# for Oakleaf-FX
-# if [ ${xy} -gt 480 ]; then
-#    rscgrp="x-large"
-# elif [ ${xy} -gt 372 ]; then
-#    rscgrp="large"
-# elif [ ${xy} -gt 216 ]; then
-#    rscgrp="medium"
-# elif [ ${xy} -gt 12 ]; then
-#    rscgrp="small"
-# else
-#    rscgrp="short"
-# fi
-rscgrp="debug"
+if [ ! ${N2GCONF} = "NONE" ]; then
+  RUN_N2G="${MPIEXEC} ${UTILDIR}/${N2GNAME} ${N2GCONF} || exit"
+fi
 
 
 
@@ -55,22 +43,11 @@ cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ For Oakleaf-FX -----
+# ------ For Linux64 & gnu fortran&C & openmpi -----
 #
 ################################################################################
-#PJM --rsc-list "rscgrp=${rscgrp}"
-#PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:20:00"
-#PJM -j
-#PJM -s
-#
-module load netCDF
-module load netCDF-fortran
-module load HDF5/1.8.9
-module list
-#
-export PARALLEL=8
-export OMP_NUM_THREADS=8
+export FORT_FMT_RECL=400
+export GFORTRAN_UNBUFFERED_ALL=Y
 
 EOF1
 
@@ -108,13 +85,11 @@ fi
 
 cat << EOF2 >> ./run.sh
 
-rm -rf ./prof
-mkdir -p ./prof
-
 # run
 ${RUN_PP}
 ${RUN_INIT}
 ${RUN_BIN}
+${RUN_N2G}
 
 ################################################################################
 EOF2

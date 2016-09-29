@@ -2,23 +2,29 @@
 
 # Arguments
 BINDIR=${1}
-INITNAME=${2}
-BINNAME=${3}
-INITCONF=${4}
-RUNCONF=${5}
-TPROC=${6}
-DATDIR=${7}
-DATPARAM=(`echo ${8} | tr -s ',' ' '`)
-DATDISTS=(`echo ${9} | tr -s ',' ' '`)
+PPNAME=${2}
+INITNAME=${3}
+BINNAME=${4}
+PPCONF=${5}
+INITCONF=${6}
+RUNCONF=${7}
+TPROC=${8}
+DATDIR=${9}
+DATPARAM=(`echo ${10} | tr -s ',' ' '`)
+DATDISTS=(`echo ${11} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpiexec"
 
-if [ ! ${INITNAME} = "NONE" ]; then
+if [ ! ${PPCONF} = "NONE" ]; then
+  RUN_PP="${MPIEXEC} ${BINDIR}/${PPNAME} ${PPCONF} || exit"
+fi
+
+if [ ! ${INITCONF} = "NONE" ]; then
   RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
 fi
 
-if [ ! ${BINNAME} = "NONE" ]; then
+if [ ! ${RUNCONF} = "NONE" ]; then
   RUN_BIN="fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
 fi
 
@@ -61,6 +67,9 @@ if [ ! ${DATPARAM[0]} = "" ]; then
    do
          if [ -f ${DATDIR}/${f} ]; then
             echo "ln -svf ${DATDIR}/${f} ." >> ./run.sh
+         elif [ -d ${DATDIR}/${f} ]; then
+            echo "rm -f                  ./input" >> ./run.sh
+            echo "ln -svf ${DATDIR}/${f} ./input" >> ./run.sh
          else
             echo "datafile does not found! : ${DATDIR}/${f}"
             exit 1
@@ -91,6 +100,7 @@ rm -rf ./prof
 mkdir -p ./prof
 
 # run
+${RUN_PP}
 ${RUN_INIT}
 ${RUN_BIN}
 
