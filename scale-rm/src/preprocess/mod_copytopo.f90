@@ -193,16 +193,12 @@ contains
     real(RP), allocatable :: transx(:), transy(:)
     real(RP)              :: transtotx, transtoty
 
-    integer :: IAG, JAG
     integer :: imain, ibuff, itrans
     integer :: jmain, jbuff, jtrans
     integer :: copy_is, copy_ie, copy_js, copy_je
+
     integer :: i, j, ii, jj
     !---------------------------------------------------------------------------
-
-    ! array size (global domain)
-    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
-    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
     allocate( buffx (0:IAG) )
     allocate( buffy (0:JAG) )

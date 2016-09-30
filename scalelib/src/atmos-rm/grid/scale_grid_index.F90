@@ -51,9 +51,9 @@ module scale_grid_index
   integer, public            :: IHALO  = 2  !< # of halo cells: x
   integer, public            :: JHALO  = 2  !< # of halo cells: y
 
-  integer, public :: KA          !< # of z whole cells (local, with HALO)
-  integer, public :: IA          !< # of x whole cells (local, with HALO)
-  integer, public :: JA          !< # of y whole cells (local, with HALO)
+  integer, public :: KA          !< # of whole         cells: z, local, with HALO
+  integer, public :: IA          !< # of whole         cells: x, local, with HALO
+  integer, public :: JA          !< # of whole         cells: y, local, with HALO
 
   integer, public :: KS          !< start point of inner domain: z, local
   integer, public :: KE          !< end   point of inner domain: z, local
@@ -67,11 +67,13 @@ module scale_grid_index
 
   integer, public :: IMAXG  = -1 !< # of computational cells: x, global
   integer, public :: JMAXG  = -1 !< # of computational cells: y, global
+  integer, public :: IAG         !< # of whole         cells: x, global, with HALO
+  integer, public :: JAG         !< # of whole         cells: y, global, with HALO
 
-  integer, public :: ISG         !< start point of the inner domain: x, global
-  integer, public :: IEG         !< end   point of the inner domain: x, global
-  integer, public :: JSG         !< start point of the inner domain: y, global
-  integer, public :: JEG         !< end   point of the inner domain: y, global
+  integer, public :: IS_inG      !< start point of the inner domain: x, global
+  integer, public :: IE_inG      !< end   point of the inner domain: x, global
+  integer, public :: JS_inG      !< start point of the inner domain: y, global
+  integer, public :: JE_inG      !< end   point of the inner domain: y, global
 
   ! indices considering boundary
   integer, public :: IMAXB
@@ -226,11 +228,15 @@ contains
        call PRC_MPIstop
     endif
 
+    ! array size (global domain)
+    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
+    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
+
     ! horizontal index (global domain)
-    ISG = IHALO + 1    + PRC_2Drank(PRC_myrank,1) * IMAX
-    IEG = IHALO + IMAX + PRC_2Drank(PRC_myrank,1) * IMAX
-    JSG = JHALO + 1    + PRC_2Drank(PRC_myrank,2) * JMAX
-    JEG = JHALO + JMAX + PRC_2Drank(PRC_myrank,2) * JMAX
+    IS_inG = IHALO + 1    + PRC_2Drank(PRC_myrank,1) * IMAX
+    IE_inG = IHALO + IMAX + PRC_2Drank(PRC_myrank,1) * IMAX
+    JS_inG = JHALO + 1    + PRC_2Drank(PRC_myrank,2) * JMAX
+    JE_inG = JHALO + JMAX + PRC_2Drank(PRC_myrank,2) * JMAX
 
     ! index considering boundary region
     IMAXB = IMAX
@@ -278,9 +284,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (X)      :', &
-                                                ISG," - ",IEG
+                                                IS_inG," - ",IE_inG
     if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (Y)      :', &
-                                                JSG," - ",JEG
+                                                JS_inG," - ",JE_inG
 
   end subroutine GRID_INDEX_setup
 
