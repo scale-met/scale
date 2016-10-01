@@ -667,6 +667,18 @@ contains
     do j = JS, JE
     do i = IS, IE
 
+       DENS_t_CP(KS:KE,i,j) = 0.0_RP
+       DT_RHOT  (KS:KE,i,j) = 0.0_RP
+       do iq = 1, QA
+          DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
+       end do
+       q_hyd      (KS:KE,:) = 0.0_RP
+       cldfrac_KF (KS:KE,:) = 0.0_RP
+       rainrate_cp(i,j) = 0.0_RP
+       timecp     (i,j) = 0.0_RP
+       cloudtop   (i,j) = 0.0_RP
+       zlcl       (i,j) = 0.0_RP
+
        nca(i,j) = nca(i,j) - real(TIME_DSTEP_KF,RP) * dt
 
        ! check convection
@@ -712,16 +724,16 @@ contains
        enddo
 
 
-       DENS_t_CP(KS:KE,i,j) = 0.0_RP
-       DT_RHOT  (KS:KE,i,j) = 0.0_RP
-       do iq = 1, QA
-          DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
-       end do
-       cldfrac_KF (KS:KE,:) = 0.0_RP
-       rainrate_cp(i,j) = 0.0_RP
-       timecp     (i,j) = 0.0_RP
-       cloudtop   (i,j) = 0.0_RP
-       zlcl       (i,j) = 0.0_RP
+       !DENS_t_CP(KS:KE,i,j) = 0.0_RP
+       !DT_RHOT  (KS:KE,i,j) = 0.0_RP
+       !do iq = 1, QA
+       !   DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
+       !end do
+       !cldfrac_KF (KS:KE,:) = 0.0_RP
+       !rainrate_cp(i,j) = 0.0_RP
+       !timecp     (i,j) = 0.0_RP
+       !cloudtop   (i,j) = 0.0_RP
+       !zlcl       (i,j) = 0.0_RP
 
        do iq = 1, QA_MP-1
           iqa = iq + QS_MP
