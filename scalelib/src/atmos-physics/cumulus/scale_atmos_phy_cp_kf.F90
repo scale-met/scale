@@ -663,6 +663,7 @@ contains
     ! do loop variable
     integer  :: k, i, j, iq, iqa, ii
 
+    I_convflag (:,:) = 2
 
     do j = JS, JE
     do i = IS, IE
@@ -1141,7 +1142,10 @@ contains
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     pres300 = pres(KS) - DEPTH_USL*100._RP ! pressure @ surface - 300 mb. maybe 700mb or so default depth_usl is 300hPa
-    tempv(:)   = temp(:)*(1._RP + 0.608_RP*qv(:)) ! vertual temperature
+    do kk = KS, KE
+       tempv(kk)   = temp(kk)*(1._RP + 0.608_RP*qv(kk)) ! vertual temperature
+    end do
+
     ! search above 300 hPa index  to "k_llfc"
     do kk = KS, KE
        if (pres(kk) >= pres300)  k_llfc = kk
@@ -1704,7 +1708,9 @@ contains
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    tempv = temp*(1._RP + 0.608_RP*qv)
+    do kk = KS, KE
+       tempv(kk)   = temp(kk)*(1._RP + 0.608_RP*qv(kk)) ! vertual temperature
+    end do
     ! initial updraft mass flux
     umfnewdold(:)    = 1._RP
     k_lclm1          = k_lcl - 1
