@@ -1,10 +1,21 @@
-#!/bin/env ruby
+#!/usr/bin/env ruby
+# coding: utf-8
 
-require 'fileutils'
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Generate init.conf and run.conf
+#
+# These configuration files are used for test case of density current triggred by
+# cold bubble in neutrally stratified atmosphere , following experimental setup in
+# Straka et al.(1993).
+#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 
 TIME_DURATION_SEC       = "900.D0"
 TIME_DT_SEC             = "1.D0"
 HISTORY_TINTERVAL_SEC   = "100.D0"
+
+#------------------------------------------------------------------------------------
 
 #* DOMAIN setteing
 #  - Lx=51.2 km, Lz=6.4 km
@@ -33,6 +44,8 @@ CONF_GEN_NUMERIC_HASHLIST = \
 ]
 
 #########################################################
+
+require 'fileutils'
 
 def gen_init_conf( conf_name,
                    nprocx, nprocy, imax, jmax, kmax, dx, dy, dz )

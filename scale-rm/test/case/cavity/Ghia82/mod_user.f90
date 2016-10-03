@@ -2,11 +2,12 @@
 !> module User
 !!
 !! @par Description
-!!          Set boundary condition for cavity flow
+!!          Set boundary condition and add eddy diffusion for a lid-driven cavity flow test
 !!
 !! @author Team SCALE
 !!
 !! @par History
+!! @li      2016-09-31 (Y.Kawai)   [add comments]
 !! @li      2016-08-03 (Y.Kawai)   [new]
 !!
 !<
@@ -50,6 +51,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -80,6 +82,13 @@ module mod_user
   
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine USER_config
+
+    return
+  end subroutine USER_config
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup

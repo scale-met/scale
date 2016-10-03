@@ -1,73 +1,92 @@
-#!/bin/env ruby
+#!/usr/bin/env ruby
 
-# Computatinal domain
-# - Lx=40000 km, Ly=6000 km, Lz=30 km
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Generate init.conf and run.conf
 #
+# These configuration files are used for  test cases of steady geostrophically balanced
+# flow and unstable baroclinic wave in 3D channel domain, following experimental setup
+# in Ullrich and Jablonowsski (2012).
+#
+# * The Computatinal domain is a f or beta plane 3D channel 
+#   - Lx=40000 km, Ly=6000 km, Lz=30 km (Rigid walls exist at y=0 and y=6000 km)
+# * In the unstable baroclinic wave test, we employ a sponge layer near the top layer.
+#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-require 'fileutils'
+ATMOS_DYN_TYPE           = "FVM-HEVI"  # [FVM-HEVE or FVM-HEVI]
 
-TIME_DT_SEC              = "720.0D0"
-TIME_DURATION_SEC        = "1296000.D0"
-HISTORY_TINTERVAL_HOUR   = "12.D0" #"24.D0"
-TIME_DURATION_SEC_STEADY        = "86400.D0"
-HISTORY_TINTERVAL_HOUR_STEADY   = "1.D0"
-ATMOS_DYN_TYPE           = "FVM-HEVI"  # FVM-HEVE, FVM-HEVI
-CONF_GEN_RESOL_HASHLIST  = \
-[ \
-  #-----------------------------
-  # grid:100x30x30, dt=12 min
-  { "TAG"=>"400km", "DX"=>400.0E3, "DY"=>400.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>720.0E0, "NPRCX"=> 5, "NPRCY"=>1}, \
-  # grid:100x30x60, dt=12 min
-  { "TAG"=>"400kmL60", "DX"=>400.0E3, "DY"=>400.0E3, "DZ"=>500.0, \
-    "KMAX"=>60, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>360.0E0, "NPRCX"=> 5, "NPRCY"=>1}, \
-  #-----------------------------
-  # grid:200x60x30, dt=6 min
-  { "TAG"=>"200km", "DX"=>200.0E3, "DY"=>200.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>360.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
-  # grid:200x60x60, dt=6 min
-  { "TAG"=>"200kmL60", "DX"=>200.0E3, "DY"=>200.0E3, "DZ"=>500.0, \
-    "KMAX"=>60, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>180.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
-  # grid:200x60x120, dt=6 min
-  { "TAG"=>"200kmL120", "DX"=>200.0E3, "DY"=>200.0E3, "DZ"=>250.0, \
-    "KMAX"=>120, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>360.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
-  #-----------------------------
-  # grid:400x120x30, dt=3 min
-  { "TAG"=>"100km", "DX"=>100.0E3, "DY"=>100.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>20, "JMAX"=>30, "DTDYN"=>180.0E0, "NPRCX"=> 20, "NPRCY"=>2}, \
-  # grid:400x120x60, dt=3 min
-  { "TAG"=>"100kmL60", "DX"=>100.0E3, "DY"=>100.0E3, "DZ"=>500.0, \
-    "KMAX"=>60, "IMAX"=>20, "JMAX"=>30, "DTDYN"=>90.0E0, "NPRCX"=> 20, "NPRCY"=>2}, \
-  #-----------------------------
-  # grid:800x240x30, dt=1.2 min
-  { "TAG"=>"050km", "DX"=> 50.0E3, "DY"=> 50.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 72.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
-  # grid:800x240x60, dt=1.2 min
-  { "TAG"=>"050kmL60", "DX"=> 50.0E3, "DY"=> 50.0E3, "DZ"=>500.0, \
-    "KMAX"=>60, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 72.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
-  #-----------------------------
-  # grid:1600x480x30, dt=0.75 min
-  { "TAG"=>"025km", "DX"=> 25.0E3, "DY"=> 25.0E3, "DZ"=>1000.0, \
-    "KMAX"=>30, "IMAX"=>80, "JMAX"=>60, "DTDYN"=> 36.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
-  # grid:1600x480x60, dt=0.75 min
-  { "TAG"=>"025kmL60", "DX"=> 25.0E3, "DY"=> 25.0E3, "DZ"=>500.0, \
-    "KMAX"=>60, "IMAX"=>80, "JMAX"=>60, "DTDYN"=> 36.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
-]
+
 CONF_GEN_CASE_HASH_LIST = \
 [ \
   {"TAG"=>"CTRL"},
   {"TAG"=>"STEADY"},  \
 ]
+
 CONF_GEN_NUMERIC_HASHLIST = \
 [ \
   {"TAG"=>"FVM_CD2"}, {"TAG"=>"FVM_CD4"}, {"TAG"=>"FVM_CD6"},  \
   {"TAG"=>"FVM_UD1"}, {"TAG"=>"FVM_UD3"}, {"TAG"=>"FVM_UD5"},  \
 ]
 
-# The maximum amplitude of zonal wind perturbation
-Up = 1.0
+#------------------------------------------------------------------------------------
 
-#########################################################
+# Test of steady-state geostrophically balanced flow
+TIME_DURATION_SEC_STEADY        = "86400.D0"
+HISTORY_TINTERVAL_HOUR_STEADY   = "1.D0"
+
+# Test of baroclinic instability
+TIME_DURATION_SEC        = "1296000.D0"
+HISTORY_TINTERVAL_HOUR   = "12.D0"      #
+Up                       = 1.0          # The maximum amplitude of zonal wind perturbation
+SPONGE_BUFFER_DZ         = 5000.0
+
+#---------------------------------------------------------------------------------------
+CONF_GEN_RESOL_HASHLIST  = \
+[ \
+  #-----------------------------
+  # grid: 100x30x30, dx=dy=400km, dz=1000m, dt=12 min
+  { "TAG"=>"400km", "DX"=>400.0E3, "DY"=>400.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>720.0E0, "NPRCX"=> 5, "NPRCY"=>1}, \
+  # grid:100x30x60, dx=dy=200km, dz=500m, dt=12 min
+  { "TAG"=>"400kmL60", "DX"=>400.0E3, "DY"=>400.0E3, "DZ"=>500.0, \
+    "KMAX"=>60, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>360.0E0, "NPRCX"=> 5, "NPRCY"=>1}, \
+  #-----------------------------
+  # grid:200x60x30, dx=dy=200km, dz=1000m, dt=6 min
+  { "TAG"=>"200km", "DX"=>200.0E3, "DY"=>200.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>360.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
+  # grid:200x60x60, dx=dy=200km, dz=500m, dt=6 min
+  { "TAG"=>"200kmL60", "DX"=>200.0E3, "DY"=>200.0E3, "DZ"=>500.0, \
+    "KMAX"=>60, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>360.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
+  # grid:200x60x120, dx=dy=200km, dz=250m, dt=6 min
+  { "TAG"=>"200kmL120", "DX"=>200.0E3, "DY"=>200.0E3, "DZ"=>250.0, \
+    "KMAX"=>120, "IMAX"=>20, "JMAX"=>15, "DTDYN"=>360.0E0, "NPRCX"=> 10, "NPRCY"=>2}, \
+  #-----------------------------
+  # grid:400x120x30, dx=dy=100km, dz=1000m, dt=3 min
+  { "TAG"=>"100km", "DX"=>100.0E3, "DY"=>100.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>20, "JMAX"=>30, "DTDYN"=>180.0E0, "NPRCX"=> 20, "NPRCY"=>2}, \
+  # grid:400x120x60, dx=dy=100km, dz=500m, dt=3 min
+  { "TAG"=>"100kmL60", "DX"=>100.0E3, "DY"=>100.0E3, "DZ"=>500.0, \
+    "KMAX"=>60, "IMAX"=>20, "JMAX"=>30, "DTDYN"=>180.0E0, "NPRCX"=> 20, "NPRCY"=>2}, \
+  #-----------------------------
+  # grid:800x240x30, dx=dy=50km, dz=1000m dt=1.2 min
+  { "TAG"=>"050km", "DX"=> 50.0E3, "DY"=> 50.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 72.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
+  # grid:800x240x60, dx=dy=50km, dz=500m dt=1.2 min
+  { "TAG"=>"050kmL60", "DX"=> 50.0E3, "DY"=> 50.0E3, "DZ"=>500.0, \
+    "KMAX"=>60, "IMAX"=>40, "JMAX"=>30, "DTDYN"=> 72.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
+  #-----------------------------
+  # grid:1600x480x30, dx=dy=25km, dz=500m, dt=0.6 min
+  { "TAG"=>"025km", "DX"=> 25.0E3, "DY"=> 25.0E3, "DZ"=>1000.0, \
+    "KMAX"=>30, "IMAX"=>80, "JMAX"=>60, "DTDYN"=> 36.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
+  # grid:1600x480x60, dx=dy=25km, dz=250m, dt=0.6 min
+  { "TAG"=>"025kmL60", "DX"=> 25.0E3, "DY"=> 25.0E3, "DZ"=>500.0, \
+    "KMAX"=>60, "IMAX"=>80, "JMAX"=>60, "DTDYN"=> 36.0E0, "NPRCX"=>20, "NPRCY"=>4}, \
+]
+
+############################################################################################
+
+require 'fileutils'
+
 
 def gen_init_conf( conf_name,
                    nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, u0_p )
@@ -77,7 +96,7 @@ def gen_init_conf( conf_name,
 #####
 #
 # SCALE-RM mkinit configulation for baroclinic wave test in a channel
-# (following experimental setup in Ullrich and Jablonowsski 2012)
+# (following experimental setup in Ullrich and Jablonowski 2012)
 #
 #####
 
@@ -143,7 +162,9 @@ end
 def gen_run_conf( conf_name,
                   nprocx, nprocy,
                   imax, jmax, kmax, dx, dy, dz, dtsec_dyn,
-                  flxEvalType, fctFlag, dataDir, time_duration, hst_interval )
+                  flxEvalType, fctFlag, dataDir, time_duration, hst_interval,
+                  sponge_buf_dz
+                )
 
 
   f = File.open(conf_name, "w")
@@ -151,7 +172,7 @@ def gen_run_conf( conf_name,
 #####
 #
 # SCALE-RM run configulation for baroclinic wave test in a channel
-# (following experimental setup in Ullrich and Jablonowsski 2012)
+# (following experimental setup in Ullrich and Jablonowski 2012)
 #
 #####
 
@@ -171,7 +192,7 @@ def gen_run_conf( conf_name,
  DZ =  #{dz}, 
  DX =  #{dx},  
  DY =  #{dy}, 
- BUFFER_DZ = 5000.D0,  
+ BUFFER_DZ = #{sponge_buf_dz},  
  BUFFFACT  =   1.D0,
 /
 &PARAM_TIME
@@ -179,7 +200,7 @@ def gen_run_conf( conf_name,
  TIME_STARTMS               = 0.D0,
  TIME_DURATION              = #{time_duration},
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = #{dtsec_dyn}, !#{TIME_DT_SEC},
+ TIME_DT                    = #{dtsec_dyn},
  TIME_DT_UNIT               = "SEC",
  TIME_DT_ATMOS_DYN          = #{dtsec_dyn}, 
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
@@ -240,7 +261,6 @@ def gen_run_conf( conf_name,
  HISTORY_DEFAULT_TUNIT     = "HOUR",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
  HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZINTERP   = .true.,
  HISTORY_OUTPUT_STEP0      = .true.,
 /
 
@@ -279,15 +299,20 @@ EOS
 f.close
 end
 
-initParam_hash = {}
-initParam_hash["STEADY"] = {"u0_p"=>0.0}
-initParam_hash["CTRL"]   = {"u0_p"=>Up}
+#---------------------------------------------
 
+initParam_hash = {}
 runParam_hash = {}
-runParam_hash["STEADY"] = {"DURATION_SEC"=>TIME_DURATION_SEC_STEADY,
-                           "HIST_TINTERVAL_HOUR"=>HISTORY_TINTERVAL_HOUR_STEADY }
-runParam_hash["CTRL"] = {"DURATION_SEC"=>TIME_DURATION_SEC,
-                         "HIST_TINTERVAL_HOUR"=>HISTORY_TINTERVAL_HOUR }
+
+initParam_hash["STEADY"] = { "u0_p"=>0.0 }
+runParam_hash ["STEADY"] = { "DURATION_SEC" => TIME_DURATION_SEC_STEADY,
+                             "SPONGE_BUFFER_DZ" => 0.0, 
+                             "HIST_TINTERVAL_HOUR" => HISTORY_TINTERVAL_HOUR_STEADY }
+
+initParam_hash["CTRL"]   = { "u0_p"=>Up}
+runParam_hash ["CTRL"]   = { "DURATION_SEC" => TIME_DURATION_SEC,
+                             "SPONGE_BUFFER_DZ" => SPONGE_BUFFER_DZ,
+                             "HIST_TINTERVAL_HOUR" => HISTORY_TINTERVAL_HOUR }
 
 CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
   CONF_GEN_CASE_HASH_LIST.each{|case_hash|
@@ -309,16 +334,18 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
         init_conf_name = "#{dataDir}init.conf" 
         gen_init_conf(init_conf_name, 
                       resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                      resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"],  initParam["u0_p"] )
+                      resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"],  initParam["u0_p"]
+                     )
 
         runParam = runParam_hash[case_hash["TAG"]]
         run_conf_name = "#{dataDir}run.conf"
         gen_run_conf(run_conf_name, 
                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
                      resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], 
-                     numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir, runParam["DURATION_SEC"],
-                     runParam["HIST_TINTERVAL_HOUR"] )
+                     numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir,
+                     runParam["DURATION_SEC"], runParam["HIST_TINTERVAL_HOUR"], runParam["SPONGE_BUFFER_DZ"] )
       }
     }
   }
 }
+

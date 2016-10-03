@@ -1,6 +1,13 @@
-#!/bin/env ruby
+#!/usr/bin/env ruby
+# coding: utf-8
 
-require "fileutils"
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Generate init.conf and run.conf
+#
+# These configuration files are used for  test cases of rigid-driven cavity flow, 
+# following experimental setup in Ghaia et al.(2002).
+#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ##################################################################
 
@@ -17,6 +24,8 @@ T0    = Ulid**2 / ( Ma**2 * Cpd/(Cpd-Rd) * Rd )
 Re    = Ulid * L / KDiff
 
 #################################################################
+
+require "fileutils"
 
 TIME_DURATION_SEC       = "864000.D0"
 HISTORY_TINTERVAL_SEC   = "7200.0D0"

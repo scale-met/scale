@@ -1,10 +1,20 @@
-#!/bin/env ruby
+#!/usr/bin/env ruby
+# coding: utf-8
 
-require 'fileutils'
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Generate init.conf and run.conf
+#
+# These configuration files are used for test cases of riging warm bubble, following
+# experimental setup in Wicker and Skmarock (1998).
+#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 TIME_DT_SEC             = "5.0D0"
 TIME_DURATION_SEC       = "1200.D0"
 HISTORY_TINTERVAL_SEC   = "100.D0"
+
+#------------------------------------------------------------------------------------
+
 CONF_GEN_RESOL_HASHLIST = \
 [ \
   { "TAG"=>"500m", "DX"=>500E0, "DZ"=>500.0E0, 
@@ -32,6 +42,8 @@ CONF_GEN_NUMERIC_HASHLIST = \
 
 #########################################################
 
+require 'fileutils'
+
 def gen_init_conf( conf_name,
                    nprocx, nprocy, imax, jmax, kmax, dx, dy, dz )
 
@@ -40,7 +52,7 @@ def gen_init_conf( conf_name,
 #####
 #
 # SCALE-RM mkinit configulation for rising warmbubble test
-# (following experimental setup in Wicker and Skmarock et al. 1998)
+# (following experimental setup in Wicker and Skmarock (1998))
 #
 #####
 

@@ -2,7 +2,7 @@
 !> module User
 !!
 !! @par Description
-!!          Set boundary condition for baroclinic wave in a channel.
+!!          Set coriolis parameter and boundary conditions for baroclinic wave in a channel.
 !!
 !! @author Team SCALE
 !!
@@ -57,6 +57,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -76,11 +77,19 @@ module mod_user
   !
   logical,  private, save :: USER_do = .false. !< do user step?
   real(RP), private, save :: Phi0Deg = 45.0_RP !< Central latitude for f or beta plane
+
   real(RP), private, allocatable :: RHOT_bc(:,:,:)
   real(RP), private, allocatable :: DENS_bc(:,:,:)
   
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine USER_config
+
+    return
+  end subroutine USER_config
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -154,15 +163,15 @@ contains
     !---------------------------------------------------------------------------
     integer :: j
 
-    ! Save some information of  boundary condition
-    
+    ! Save some information of inital fields to set boundary conditions. 
+    ! 
     RHOT_bc(:,:,1) = RHOT(:,:,JS) - 0.5_RP*(RHOT(:,:,JS+1) - RHOT(:,:,JS))
     RHOT_bc(:,:,2) = RHOT(:,:,JE-1) + 1.5_RP*(RHOT(:,:,JE) - RHOT(:,:,JE-1))
 
     DENS_bc(:,:,1) = DENS(:,:,JS) - 0.5_RP*(DENS(:,:,JS+1) - DENS(:,:,JS))
     DENS_bc(:,:,2) = DENS(:,:,JE-1) + 1.5_RP*(DENS(:,:,JE) - DENS(:,:,JE-1))
-    
-     call USER_step
+
+    call USER_step
     return
   end subroutine USER_resume0
 
@@ -178,28 +187,6 @@ contains
 
     ! calculate diagnostic value and input to history buffer
     !call USER_step
-
-    if ( NOWTSEC == 0.0_RP ) then
-       ! Set background fields
-!!$       ATMOS_REFSTATE_pres(:,:,:) = PRES(:,:,:)
-!!$       ATMOS_REFSTATE_dens(:,:,:) = DENS(:,:,:)
-!!$       ATMOS_REFSTATE_pott(:,:,:) = RHOT(:,:,:)/DENS(:,:,:)
-!!$       ATMOS_REFSTATE_temp(:,:,:) = PRES(:,:,:)/(Rdry*DENS(:,:,:))
-!!$       ATMOS_REFSTATE_qv(:,:,:)   = 0.0_RP
-!!$
-!!$       call COMM_vars8( ATMOS_REFSTATE_dens(:,:,:), 1 )
-!!$       call COMM_vars8( ATMOS_REFSTATE_temp(:,:,:), 2 )
-!!$       call COMM_vars8( ATMOS_REFSTATE_pres(:,:,:), 3 )
-!!$       call COMM_vars8( ATMOS_REFSTATE_pott(:,:,:), 4 )
-!!$       call COMM_vars8( ATMOS_REFSTATE_qv  (:,:,:), 5 )
-!!$       call COMM_wait ( ATMOS_REFSTATE_dens(:,:,:), 1, .false. )
-!!$       call COMM_wait ( ATMOS_REFSTATE_temp(:,:,:), 2, .false. )
-!!$       call COMM_wait ( ATMOS_REFSTATE_pres(:,:,:), 3, .false. )
-!!$       call COMM_wait ( ATMOS_REFSTATE_pott(:,:,:), 4, .false. )
-!!$       call COMM_wait ( ATMOS_REFSTATE_qv  (:,:,:), 5, .false. )
-!!$
-!!$       call ATMOS_REFSTATE_write       
-    end if
     
     return
   end subroutine USER_resume
@@ -235,7 +222,7 @@ contains
 
     if ( .not. USER_do ) return
     
-    ! Apply boundary condition at y=+Ly and y=-Ly
+    ! Apply the boundary condition at y=+Ly and y=-Ly
 
     if ( .NOT. PRC_HAS_N ) then     
        do j = 1, JHALO

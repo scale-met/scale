@@ -2,12 +2,13 @@
 !> module User
 !!
 !! @par Description
-!!          calc perturbation
+!!          Calculate the perturbations from background fields in mountain wave test case.  
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-09-05 (H.Yashiro)   [new]
+!! @li      2016-09-30 (Y.Kawai)     [modify]
+!! @li      2016-??-?? (Y.Kawai)     [copied from test case of gravity wave]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -35,6 +36,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -59,6 +61,13 @@ module mod_user
   
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine USER_config
+
+    return
+  end subroutine USER_config
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup

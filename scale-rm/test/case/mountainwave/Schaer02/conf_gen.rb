@@ -1,10 +1,34 @@
-#!/bin/env ruby
+#!/usr/bin/env ruby
+# coding: utf-8
 
-require 'fileutils'
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Generate init.conf and run.conf
+#
+# These configuration files are used for test cases of gravity waves triggred by a
+# wave-like mountain chain, following experimental setup in Schaer et al.(2002).
+#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+ATMOS_DYN_TYPE           = "FVM-HEVE"  # [FVM-HEVE or FVM-HEVI]
+
+CONF_GEN_CASE_HASH_LIST = \
+[ \
+  {"TAG"=>"CTRL"}, \
+]
+CONF_GEN_NUMERIC_HASHLIST = \
+[ \
+  {"TAG"=>"FVM_CD2"}, {"TAG"=>"FVM_CD4"}, {"TAG"=>"FVM_CD6"},  \
+  {"TAG"=>"FVM_UD1"}, {"TAG"=>"FVM_UD3"}, {"TAG"=>"FVM_UD5"},  \
+]
+
+#------------------------------------------------------------------------------------
 
 TIME_DT_SEC             = "3.0D0"
 TIME_DURATION_SEC       = "36000.D0"
 HISTORY_TINTERVAL_SEC   = "1800.D0"
+
+#---------------------------------------------------------------------------------------
+
 CONF_GEN_RESOL_HASHLIST = \
 [ \
   { "TAG"=>"2000m", "DX"=>2000E0, "DZ"=>300.0E0, 
@@ -18,17 +42,10 @@ CONF_GEN_RESOL_HASHLIST = \
   { "TAG"=>"0125m", "DX"=>125E0, "DZ"=>300.0E0,
     "KMAX"=>65, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.15E0, "NPRCX"=> 40, "NPRCY"=>1}, \
 ]
-CONF_GEN_CASE_HASH_LIST = \
-[ \
-  {"TAG"=>"CTRL"}, \
-]
-CONF_GEN_NUMERIC_HASHLIST = \
-[ \
-  {"TAG"=>"FVM_CD2"}, {"TAG"=>"FVM_CD4"}, {"TAG"=>"FVM_CD6"},  \
-  {"TAG"=>"FVM_UD1"}, {"TAG"=>"FVM_UD3"}, {"TAG"=>"FVM_UD5"},  \
-]
 
 #########################################################
+
+require 'fileutils'
 
 def gen_init_conf( conf_name,
                    nprocx, nprocy, imax, jmax, kmax, dx, dy, dz )
@@ -170,7 +187,7 @@ def gen_run_conf( conf_name,
 /
 
 &PARAM_ATMOS
- ATMOS_DYN_TYPE    = "FVM-HEVE",
+ ATMOS_DYN_TYPE    = #{ATMOS_DYN_TYPE},
 /
 
 &PARAM_ATMOS_VARS
@@ -201,7 +218,7 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = ${fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
 /
 
 &PARAM_USER

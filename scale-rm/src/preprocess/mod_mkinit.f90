@@ -2456,7 +2456,6 @@ contains
   !! is generated. 
   subroutine MKINIT_barocwave
 
-  
     use scale_const, only: &
       OHM => CONST_OHM,        &
       RPlanet => CONST_RADIUS, &
@@ -2464,6 +2463,8 @@ contains
 
     use scale_process
 
+    use scale_atmos_hydrometer, only: &
+         I_QV
     
     implicit none
 
@@ -2512,7 +2513,6 @@ contains
     real(RP) :: yphase_u
     real(RP) :: temp_vfunc
     real(RP) :: geopot_hvari
-
     
     integer :: ierr
     integer :: k, i, j
@@ -2540,40 +2540,45 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BAROCWAVE)
 
-    !
+    ! Set the center position of computational domain
     y0 = 0.5_RP*Ly
     
-    ! Calc coriolis parameter
+    ! Set coriolis parameters
     f0 = 2.0_RP*OHM*sin(phi0Deg*PI/180.0_RP)
     beta0 = (2.0_RP*OHM/RPlanet)*cos(phi0Deg*PI/180.0_RP)
+
     
-    ! calc in dry condition
-    !
+    ! Calculate eta(=p/p_s) level corresponding to z level of each (y,z) grid point 
+    ! using Newton's iteration method
     
-    eta(:,:,:) = 1.0E-8_RP
+    eta(:,:,:) = 1.0E-8_RP   ! Set first guess of eta
 
     do j = JS, JE
-    do i = IS, IS          !< zonaly symmetric
+    do i = IS, IS            ! Note that initial fields are zonaly symmetric
 
        y = GRID_CY(j)
        yphase  = 2.0_RP*PI*y/Ly
 
-       geopot_hvari = 0.5_RP*U0*(                                                                          & !<- variation
+       ! Calc horizontal variation of geopotential height
+       geopot_hvari = 0.5_RP*U0*(                                                                          & 
             (f0 - beta0*y0)*(y - 0.5_RP*Ly*(1.0_RP + sin(yphase)/PI))                                      & 
             + 0.5_RP*beta0*( y**2 - Ly*y/PI*sin(yphase) - 0.5_RP*(Ly/PI)**2*(cos(yphase) + 1.0_RP)         &
                              - Ly**2/3.0_RP                                                        )       & 
             )
-       
+
+       ! Set surface pressure and temperature 
        pres_sfc(1,i,j) = REF_PRES
        pott_sfc(1,i,j) = REF_TEMP - geopot_hvari/Rdry
+       ! Dry condition
        qv      (:,i,j) = 0.0_RP
        qv_sfc  (1,i,j) = 0.0_RP
        qc      (:,i,j) = 0.0_RP
        qc_sfc  (1,i,j) = 0.0_RP
-       
+
        do k = KS, KE
           del_eta = 1.0_RP
 
+          !-- The loop for iteration
           itr = 0          
           do while( abs(del_eta) > CONV_EPS )
              ln_eta = log(eta(k,i,j))
@@ -2598,7 +2603,7 @@ contains
                 write(*,*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
                 call PRC_MPIstop
              end if
-          enddo
+          enddo !- End of loop for iteration ----------------------------
           
           PRES(k,i,j) = eta(k,i,j)*REF_PRES
           DENS(k,i,j) = PRES(k,i,j)/(Rdry*temp(k,i,j))
@@ -2606,7 +2611,8 @@ contains
           
        enddo
 
-       ! make density & pressure profile in dry condition
+       ! Make density & pressure profile in dry condition using the profile of
+       ! potential temperature calculated above.
        call HYDROSTATIC_buildrho( DENS    (:,i,j), & ! [OUT]
                                   temp    (:,i,j), & ! [OUT]
                                   pres    (:,i,j), & ! [OUT]
@@ -2621,10 +2627,11 @@ contains
     enddo
     enddo
 
+    !-----------------------------------------------------------------------------------
+    
     do j = JS, JE
     do k = KS, KE
      
-
        eta(k,IS,j) = pres(k,IS,j)/REF_PRES
        ln_eta = log(eta(k,IS,j))
        yphase = 2.0_RP*PI*GRID_CY(j)/Ly
@@ -2639,6 +2646,8 @@ contains
     enddo
     MOMY(:,:,:) = 0.0_RP
     MOMZ(:,:,:) = 0.0_RP
+
+    !---------------------------------------------------------------------------------------
 
     ! Add the inital perturbation for zonal velocity
     do j = JS, JE
