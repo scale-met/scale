@@ -86,7 +86,7 @@ module scale_history
   integer,                private, allocatable :: HIST_zcoord (:,:)     !< vertical interpolation type for each variant of history item
 
   integer,                private              :: HIST_PRES_nlayer = -1 !< Number of pressure layer
-  real(RP),               private, allocatable :: HIST_PRES(:)          !< pressure level to output [hPa]
+  real(RP),               private, allocatable :: HIST_PRES_val(:)      !< pressure level to output [hPa]
 
   logical,                private              :: enabled
   integer,                private              :: im,  jm,  km
@@ -116,8 +116,9 @@ contains
        INTERP_setup_pres
     implicit none
 
-    character(len=H_MID)   :: HISTORY_H_TITLE = 'SCALE-RM HISTORY OUTPUT' !< title of the output file
-    character(len=H_MID)   :: HISTORY_T_SINCE
+    character(len=H_MID) :: HISTORY_H_TITLE = 'SCALE-RM HISTORY OUTPUT' !< title of the output file
+    character(len=H_MID) :: HISTORY_T_SINCE
+    real(RP)             :: HIST_PRES(100)                              !< pressure level to output [hPa]
 
     logical :: HIST_BND = .false.
 
@@ -137,9 +138,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HISTORY] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
 
-    allocate( HIST_PRES(KMAX+1) )
-    HIST_PRES(:) = -1.0_RP
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_HIST,iostat=ierr)
@@ -153,7 +151,7 @@ contains
 
     ! check pressure coordinate
     if ( HIST_PRES_nlayer > 0 ) then
-       if ( HIST_PRES_nlayer > KMAX ) then
+       if ( HIST_PRES_nlayer > 100 ) then
           write(*,*) 'xxx number of layers of pressure is larger the KMAX'
           call PRC_MPIstop
        end if
@@ -235,8 +233,10 @@ contains
     endif
 
     if ( HIST_PRES_nlayer > 0 ) then
+       allocate( HIST_PRES_val(HIST_PRES_nlayer) )
+
        do k = 1, HIST_PRES_nlayer
-          HIST_PRES(k) = HIST_PRES(k) * 100.0_RP ! [hPa->Pa]
+          HIST_PRES_val(k) = HIST_PRES(k) * 100.0_RP ! [hPa->Pa]
        enddo
 
        call INTERP_setup_pres( HIST_PRES_nlayer ) ! [IN]
@@ -326,7 +326,7 @@ contains
 
     if ( HIST_PRES_nlayer > 0 ) then
        call HistoryPutAxis( 'pressure', 'Pressure', 'hPa', 'pressure',         &
-                            HIST_PRES(:HIST_PRES_nlayer)/100.0_RP, down=.true. )
+                            HIST_PRES_val(:)/100.0_RP, down=.true. )
     endif
 
     call HistoryPutAxis( 'lz',   'LZ',                                'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true. )
@@ -575,10 +575,10 @@ contains
     !---------------------------------------------------------------------------
 
     if ( HIST_PRES_nlayer > 0 ) then
-       call INTERP_update_pres( HIST_PRES_nlayer, & ! [IN]
-                                PRES     (:,:,:), & ! [IN]
-                                SFC_PRES (:,:)  , & ! [IN]
-                                HIST_PRES(:)      ) ! [IN]
+       call INTERP_update_pres( HIST_PRES_nlayer,     & ! [IN]
+                                PRES         (:,:,:), & ! [IN]
+                                SFC_PRES     (:,:)  , & ! [IN]
+                                HIST_PRES_val(:)      ) ! [IN]
     endif
 
     return
