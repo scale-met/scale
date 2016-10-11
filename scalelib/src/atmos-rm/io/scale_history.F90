@@ -75,18 +75,19 @@ module scale_history
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter   :: I_MODEL = 0           !< model coordinate
-  integer,                private, parameter   :: I_Z     = 1           !< z coordinate
-  integer,                private, parameter   :: I_PRES  = 2           !< pressure coordinate
+  integer,                private, parameter   :: I_MODEL = 0            !< model coordinate
+  integer,                private, parameter   :: I_Z     = 1            !< z coordinate
+  integer,                private, parameter   :: I_PRES  = 2            !< pressure coordinate
 
   integer,                private              :: HIST_item_limit
-  integer,                private              :: HIST_item_count       !< number of the history item
-  character(len=H_SHORT), private, allocatable :: HIST_item   (:)       !< name   of the history item
-  integer,                private, allocatable :: HIST_variant(:)       !< number of the variants      for each history item
-  integer,                private, allocatable :: HIST_zcoord (:,:)     !< vertical interpolation type for each variant of history item
+  integer,                private              :: HIST_item_count        !< number of the history item
+  character(len=H_SHORT), private, allocatable :: HIST_item   (:)        !< name   of the history item
+  integer,                private, allocatable :: HIST_variant(:)        !< number of the variants      for each history item
+  integer,                private, allocatable :: HIST_zcoord (:,:)      !< vertical interpolation type for each variant of history item
 
-  integer,                private              :: HIST_PRES_nlayer = -1 !< Number of pressure layer
-  real(RP),               private, allocatable :: HIST_PRES_val(:)      !< pressure level to output [hPa]
+  integer,                private, parameter   :: HIST_PRES_nlim   = 300 !< limit  of index size for pressure layer
+  integer,                private              :: HIST_PRES_nlayer =  -1 !< Number of pressure layer
+  real(RP),               private, allocatable :: HIST_PRES_val(:)       !< pressure level to output [hPa]
 
   logical,                private              :: enabled
   integer,                private              :: im,  jm,  km
@@ -118,7 +119,7 @@ contains
 
     character(len=H_MID) :: HISTORY_H_TITLE = 'SCALE-RM HISTORY OUTPUT' !< title of the output file
     character(len=H_MID) :: HISTORY_T_SINCE
-    real(RP)             :: HIST_PRES(100)                              !< pressure level to output [hPa]
+    real(RP)             :: HIST_PRES(HIST_PRES_nlim)                   !< pressure level to output [hPa]
 
     logical :: HIST_BND = .false.
 
