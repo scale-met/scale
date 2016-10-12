@@ -18,8 +18,9 @@ ATMOS_DYN_TYPE           = "FVM-HEVI"  # [FVM-HEVE or FVM-HEVI]
 
 CONF_GEN_CASE_HASH_LIST = \
 [ \
-  {"TAG"=>"CTRL"},
-  {"TAG"=>"STEADY"},  \
+  {"TAG"=>"STEADY"},   \
+  {"TAG"=>"CTRL"},     \
+  {"TAG"=>"SLOFF"},    \
 ]
 
 CONF_GEN_NUMERIC_HASHLIST = \
@@ -309,10 +310,15 @@ runParam_hash ["STEADY"] = { "DURATION_SEC" => TIME_DURATION_SEC_STEADY,
                              "SPONGE_BUFFER_DZ" => 0.0, 
                              "HIST_TINTERVAL_HOUR" => HISTORY_TINTERVAL_HOUR_STEADY }
 
-initParam_hash["CTRL"]   = { "u0_p"=>Up}
+initParam_hash["CTRL"]   = { "u0_p"=>Up }
 runParam_hash ["CTRL"]   = { "DURATION_SEC" => TIME_DURATION_SEC,
                              "SPONGE_BUFFER_DZ" => SPONGE_BUFFER_DZ,
                              "HIST_TINTERVAL_HOUR" => HISTORY_TINTERVAL_HOUR }
+
+initParam_hash["SLOFF"]   = { "u0_p"=>Up }
+runParam_hash ["SLOFF"]   = { "DURATION_SEC" => TIME_DURATION_SEC,
+                              "SPONGE_BUFFER_DZ" => 0.0,
+                              "HIST_TINTERVAL_HOUR" => HISTORY_TINTERVAL_HOUR }
 
 CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
   CONF_GEN_CASE_HASH_LIST.each{|case_hash|
