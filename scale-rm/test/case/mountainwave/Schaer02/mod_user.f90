@@ -170,7 +170,7 @@ contains
        enddo
 
        call HIST_in( PT_diff(:,:,:), 'PT_diff', 'PT perturbation', 'K' )
-       call HIST_in( U_diff(:,:,:), 'U_diff', 'U perturbation', 'm/s' )
+       call HIST_in( U_diff(:,:,:), 'U_diff', 'U perturbation', 'm/s', xdim='half' )
     endif
 
     return

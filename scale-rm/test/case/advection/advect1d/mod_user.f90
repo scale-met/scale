@@ -24,26 +24,28 @@ module mod_user
   use scale_gridtrans  
   use scale_index
   use scale_tracer
-
-  use scale_grid, only : &
-       CZ => GRID_CZ, CX => GRID_CX, FX => GRID_FX, &
-       CDX => GRID_CDX, RCDX => GRID_RCDX 
-
+  use scale_const, only: &
+       PI => CONST_PI
+  use scale_grid, only: &
+       CZ   => GRID_CZ, &
+       CX   => GRID_CX, &
+       FX   => GRID_FX, &
+       CDX  => GRID_CDX, &
+       RCDX => GRID_RCDX
   use mpi
   use scale_comm, only: &
        COMM_datatype, &
        COMM_world
-  
   use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_setup, &
        ATMOS_DYN_FVM_fluxX_XYZ
-
   use scale_time, only: &
        DTSEC => TIME_DTSEC, &
        NOWTSEC => TIME_NOWSEC
-  
   use mod_atmos_vars, only: &
-       DENS, RHOT, QTRC
+       DENS, &
+       RHOT, &
+       QTRC
   
   !-----------------------------------------------------------------------------
   implicit none
@@ -72,15 +74,13 @@ module mod_user
   !
   logical,  private, save :: USER_do = .false. !< do user step?
 
-  real(RP), parameter :: &
-       WaveNumCOS = 2d0,           &         
-       RxCOSBELL  = 3.0e3_RP,      &
-       RxRECT     = 1.5e3_RP,      &
-       XIni       = 10.0e3_RP,     &
-       Lx         = 20.0e3_RP
+  real(RP), parameter :: WaveNumCOS = 2.0_RP
+  real(RP), parameter :: RxCOSBELL  = 3.0E3_RP
+  real(RP), parameter :: RxRECT     = 1.5E3_RP
+  real(RP), parameter :: XIni       = 10.0E3_RP
 
   character(len=H_SHORT), private, save :: InitShape 
-  real(RP), private, parameter :: PI = acos(-1.0_RP)
+  real(RP),               private, save :: Lx
   
   !-----------------------------------------------------------------------------
 contains
@@ -96,6 +96,8 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_grid, only : &
+       FXG   => GRID_FXG, &
     implicit none
 
     namelist / PARAM_USER / &
@@ -121,6 +123,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
+    Lx = FXG(IEG) - FXG(ISG-1)
+
     return
   end subroutine USER_setup
 
@@ -139,23 +143,21 @@ contains
 
     implicit none
 
-    real(RP) :: x_
     integer :: k, i, j
     
     !---------------------------------------------------------------------------
 
     if ( NOWTSEC == 0.0_RP ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          x_ = CX(i)
-          select case(InitShape)
-          case('COS')
-             QTRC(k,i,j,I_NC) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )
-          end select
-       enddo
-       enddo
-       enddo
+       select case(InitShape)
+       case('COS')
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             QTRC(k,i,j,I_NC) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  CX(i) )
+          enddo
+          enddo
+          enddo
+       end select
     end if
     
     ! calculate diagnostic value and input to history buffer    
@@ -230,15 +232,12 @@ contains
   end subroutine USER_step
 
   subroutine ConvCheck()
-
     use mod_atmos_dyn_vars, only: &
-         & PROG
+         PROG
     use mod_atmos_vars, only: &
-         & DENS, QTRC
-    
+         DENS, &
+         QTRC
     integer, parameter :: WaveNum = 2
-    real(RP) :: Lx
-
     real(RP) :: l2error
 
     integer :: IIS, IIE, JJS, JJE, i, j
@@ -248,7 +247,6 @@ contains
     real(RP) :: RHS(KA,IA,JA)
 
     
-    Lx = FX(IE) - FX(IS-1)
     mflx_hi = 0.0_RP
     
 !    call ATMOS_NUMERIC_FDM_setup(1, 1)

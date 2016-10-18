@@ -2455,21 +2455,21 @@ contains
   !! The initial state for a baroclinic wave test described by Ullrich and Jablonowski(2012)
   !! is generated. 
   subroutine MKINIT_barocwave
-
     use scale_const, only: &
       OHM => CONST_OHM,        &
       RPlanet => CONST_RADIUS, &
       GRAV    => CONST_GRAV
-
     use scale_process
-
+    use scale_grid, only: &
+         y0 => GRID_DOMAIN_CENTER_X, &
+         GRID_FYG
     use scale_atmos_hydrometer, only: &
          I_QV
     
     implicit none
 
     ! Parameters for global domain size
-    real(RP) :: Ly          = 6.E6_RP   ! The domain size in y-direction [m]
+    real(RP) :: Ly                      ! The domain size in y-direction [m]
     
     ! Parameters for inital stratification
     real(RP) :: REF_TEMP    = 288.E0_RP ! The reference temperature [K]
@@ -2491,14 +2491,11 @@ contains
     real(RP) :: Yc  = 2500.E3_RP      ! The center point (y) of inital perturbation
 
     NAMELIST / PARAM_MKINIT_BAROCWAVE / &
-       Ly,                             & 
        REF_TEMP, REF_PRES, LAPSE_RATE, &
        phi0Deg,                        &
        U0, b,                          &
        Up, Lp, Xc, Yc          
        
-    real(RP) :: y0
-    
     real(RP) :: CORIOLI(KA,IA,JA)
     real(RP) :: f0, beta0
     
@@ -2540,8 +2537,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BAROCWAVE)
 
-    ! Set the center position of computational domain
-    y0 = 0.5_RP*Ly
+    Ly = GRID_FYG(JAG) - GRID_FYG(0)
     
     ! Set coriolis parameters
     f0 = 2.0_RP*OHM*sin(phi0Deg*PI/180.0_RP)
@@ -2641,7 +2637,7 @@ contains
        PRES(k,IS:IE,j) = PRES(k,IS,j)
        MOMX(k,IS-1:IE,j) = DENS(k,IS,j)*(-U0*sin(0.5_RP*yphase)**2*ln_eta*exp(-(ln_eta/b)**2))
        RHOT(k,IS:IE,j) = DENS(k,IS,j)*pott(k,IS,j) !temp(k,IS,j)*eta(k,IS,j)**(-Rdry/CPdry)
-       QTRC(k,IS:IE,j,I_QV) = 0.0_RP
+       if ( I_QV > 0 ) QTRC(k,IS:IE,j,I_QV) = 0.0_RP
     enddo
     enddo
     MOMY(:,:,:) = 0.0_RP

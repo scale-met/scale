@@ -475,13 +475,13 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1wrap
 
 
-      
-      if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
+
+      if ( IHALO < 1 ) then
+         write(*,*) 'xxx IHALO must be >= ', 1
          call PRC_MPIstop
       end if
-      if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
+      if ( JHALO < 1 ) then
+         write(*,*) 'xxx JHALO must be >= ', 1
          call PRC_MPIstop
       end if
 
@@ -529,12 +529,12 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
+      if ( IHALO < 1 ) then
+         write(*,*) 'xxx IHALO must be >= ', 1
          call PRC_MPIstop
       end if
-      if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
+      if ( JHALO < 1 ) then
+         write(*,*) 'xxx JHALO must be >= ', 1
          call PRC_MPIstop
       end if
 
@@ -851,13 +851,13 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1wrap
 
 
-      
-      if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
+
+      if ( IHALO < 1 ) then
+         write(*,*) 'xxx IHALO must be >= ', 1
          call PRC_MPIstop
       end if
-      if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
+      if ( JHALO < 1 ) then
+         write(*,*) 'xxx JHALO must be >= ', 1
          call PRC_MPIstop
       end if
 
@@ -903,12 +903,12 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
+      if ( IHALO < 1 ) then
+         write(*,*) 'xxx IHALO must be >= ', 1
          call PRC_MPIstop
       end if
-      if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
+      if ( JHALO < 1 ) then
+         write(*,*) 'xxx JHALO must be >= ', 1
          call PRC_MPIstop
       end if
 

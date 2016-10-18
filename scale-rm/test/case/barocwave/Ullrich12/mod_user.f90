@@ -225,10 +225,9 @@ contains
     ! Apply the boundary condition at y=+Ly and y=-Ly
 
     if ( .NOT. PRC_HAS_N ) then     
+       MOMY(:,:,JE)   = 0.0_RP
        do j = 1, JHALO
-          MOMY(:,:,JE)   = 0d0
           MOMY(:,:,JE+j  ) = - MOMY(:,:,JE-j  )
-
           DENS(:,:,JE+j) =  2.0_RP*DENS_bc(:,:,2) - DENS(:,:,JE-j+1)
           MOMX(:,:,JE+j) = - MOMX(:,:,JE-j+1)          
           MOMZ(:,:,JE+j) = - MOMZ(:,:,JE-j+1)
@@ -237,10 +236,9 @@ contains
     end if
 
     if ( .NOT. PRC_HAS_S ) then     
+       MOMY(:,:,JS-1) = 0.0_RP
        do j = 1, JHALO
-          MOMY(:,:,JS-1) = 0d0
-          MOMY(:,:,JS-j-1) = - MOMY(:,:,JS+j-1)
-
+          if ( j < JHALO ) MOMY(:,:,JS-j-1) = - MOMY(:,:,JS+j-1)
           DENS(:,:,JS-j) = 2.0_RP*DENS_bc(:,:,1) - DENS(:,:,JS+j-1)
           MOMX(:,:,JS-j) = - MOMX(:,:,JS+j-1)          
           MOMZ(:,:,JS-j) = - MOMZ(:,:,JS+j-1)

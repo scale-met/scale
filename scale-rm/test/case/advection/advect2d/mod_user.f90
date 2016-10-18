@@ -16,33 +16,32 @@ module mod_user
   !
   !++ used modules
   !
-
-  
   use scale_precision
   use scale_stdio
   use scale_prof
   use scale_grid_index
   use scale_tracer
-
-  use scale_grid, only : &
-       CX => GRID_CX, CY => GRID_CY, &
-       FX => GRID_FX, FY => GRID_FY, &
-       CDX => GRID_CDX, CDY => GRID_CDY,            &
-       RCDX => GRID_RCDX, RCDY => GRID_RCDY
-
+  use scale_const, only: &
+       PI => CONST_PI
+  use scale_grid, only: &
+       CX   => GRID_CX,   &
+       CY   => GRID_CY,   &
+       FX   => GRID_FX,   &
+       FY   => GRID_FY,   &
+       CDX  => GRID_CDX,  &
+       CDY  => GRID_CDY,  &
+       RCDX => GRID_RCDX, &
+       RCDY => GRID_RCDY
   use mpi
   use scale_comm, only: &
        COMM_datatype, &
        COMM_world
-
   use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_setup, &
        ATMOS_DYN_FVM_fluxX_XYZ
-
   use scale_time, only: &
        DTSEC => TIME_DTSEC, &
        NOWTSEC => TIME_NOWSEC
-
   use mod_atmos_vars, only: &
        DENS, RHOT, QTRC
 
@@ -79,13 +78,12 @@ module mod_user
        RRECT    = 1.5e3_RP,      &
        XIni     = 10.0e3_RP,     &
        YIni     = 10.0e3_RP,     &
-       Lx       = 20.0e3_RP,     &
-       Ly       = 20.0e3_RP,     &
        ENV_U    = 40.0e0_RP,     &
        ENV_V    = 40.0e0_RP
 
   character(len=H_SHORT), private, save :: InitShape  
-  real(RP), private, parameter :: PI = acos(-1.0_RP)
+  real(RP),               private, save :: Lx
+  real(RP),               private, save :: Ly
   
   !-----------------------------------------------------------------------------
 contains
@@ -101,9 +99,10 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
-
+    use scale_grid, only: &
+       GRID_FXG, &
+       GRID_FYG
     implicit none
-
 
     integer :: ierr
     logical :: USER_FLAG_FCT = .false.
@@ -111,7 +110,6 @@ contains
     namelist / PARAM_USER / &
        USER_do,             &
        InitShape
-
 
     !---------------------------------------------------------------------------
 
@@ -130,6 +128,9 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
     
+    Lx = GRID_FXG(IAG-IHALO) - GRID_FXG(IHALO)
+    Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
+
     return
   end subroutine USER_setup
 
@@ -155,20 +156,20 @@ contains
     !---------------------------------------------------------------------------
 
     if ( NOWTSEC == 0.0_RP ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          x_ = CX(i)
-          y_ = CY(j)
-          select case(InitShape)
-          case('COS')
-             QTRC(k,i,j,I_NC) =  cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )  &
-                  &             *cos( WaveNumCOS * 2.0_RP * PI / Lx *  y_ )
+       select case(InitShape)
+       case('COS')
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             x_ = CX(i)
+             y_ = CY(j)
+             QTRC(k,i,j,I_NC) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )  &
+                              * cos( WaveNumCOS * 2.0_RP * PI / Lx *  y_ )
              
-          end select
-       enddo
-       enddo
-       enddo
+          enddo
+          enddo
+          enddo
+       end select
     end if
     
     ! calculate diagnostic value and input to history buffer
@@ -240,11 +241,11 @@ contains
              dist2 = ((x_ - XIni)**2 + (y_ - YIni)**2)/RCOSBELL**2
              ExactSol(k,i,j) = cos( 0.5_RP * PI * sqrt(min(dist2, 1.0_RP)) )**2
           case("RECT")
-             if(       (x_ - XIni)**2/RRECT**2 <= 1d0  &
-                 .and. (y_ - YIni)**2/RRECT**2 <= 1d0 ) then
-                ExactSol(k,i,j) = 1d0
+             if(       (x_ - XIni)**2/RRECT**2 <= 1.0_RP  &
+                 .and. (y_ - YIni)**2/RRECT**2 <= 1.0_RP ) then
+                ExactSol(k,i,j) = 1.0_RP
              else
-                ExactSol(k,i,j) = 0d0
+                ExactSol(k,i,j) = 0.0_RP
              end if
           end select
        enddo

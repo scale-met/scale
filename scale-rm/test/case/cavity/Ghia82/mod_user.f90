@@ -94,21 +94,17 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
-
     use scale_const, only: &
        PI  => CONST_PI,    &
        OHM => CONST_OHM,   &
        RPlanet => CONST_RADIUS
-    
     use scale_grid, only : &
        CY => GRID_CY,      &
        FY => GRID_FY,      &
        RFDY => GRID_RFDY,  &
        GRID_DOMAIN_CENTER_Y
-    
     use scale_atmos_dyn, only: &
        CORIOLI
-    
     implicit none
 
     namelist / PARAM_USER / &
@@ -246,9 +242,9 @@ contains
     !
     
     if ( .NOT. PRC_HAS_N ) then     
+       MOMY(:,:,JE)     = 0.0_RP
        do j = 1, JHALO
-          MOMX(:,:,JE+j)   = 2d0*Ulid - MOMX(:,:,JE-j+1) 
-          MOMY(:,:,JE)     = 0d0
+          MOMX(:,:,JE+j)   = 2.0_RP * Ulid - MOMX(:,:,JE-j+1)
           MOMY(:,:,JE+j  ) = - MOMY(:,:,JE-j  )
 
           DENS(:,:,JE+j) = DENS(:,:,JE-j+1)
@@ -258,8 +254,8 @@ contains
     end if
 
     if ( .NOT. PRC_HAS_E ) then     
+       MOMX(:,IE,:)     = 0.0_RP
        do i = 1, IHALO
-          MOMX(:,IE,:)     = 0d0
           MOMX(:,IE+i,:) = - MOMX(:,IE-i,:)
           MOMY(:,IE+i,:) = - MOMY(:,IE-i+1,:)
           
@@ -270,11 +266,11 @@ contains
     end if
     
     if ( .NOT. PRC_HAS_S ) then     
+       MOMY(:,:,JS-1) = 0.0_RP
        do j = 1, JHALO
           MOMX(:,:,JS-j) = - MOMX(:,:,JS+j-1)          
 
-          MOMY(:,:,JS-1) = 0d0
-          MOMY(:,:,JS-j-1) = - MOMY(:,:,JS+j-1)
+          if ( j < JHALO ) MOMY(:,:,JS-j-1) = - MOMY(:,:,JS+j-1)
           
           DENS(:,:,JS-j) = DENS(:,:,JS+j-1)
           MOMZ(:,:,JS-j) = MOMZ(:,:,JS+j-1)
@@ -283,9 +279,9 @@ contains
     end if
 
     if ( .NOT. PRC_HAS_W ) then     
+       MOMX(:,IS-1,:)   = 0.0_RP
        do i = 1, IHALO
-          MOMX(:,IS-1,:)   = 0d0
-          MOMX(:,IS-i-1,:) = - MOMX(:,IS+i-1,:)
+          if ( i < IHALO ) MOMX(:,IS-i-1,:) = - MOMX(:,IS+i-1,:)
           MOMY(:,IS-i,:)   = - MOMY(:,IS+i-1,:)
           
           DENS(:,IS-i,:) = DENS(:,IS+i-1,:)
