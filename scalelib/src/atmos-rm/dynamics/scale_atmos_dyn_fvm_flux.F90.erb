@@ -211,8 +211,7 @@ contains
          PRC_MPIstop
 <%
   funcs = Hash.new
-  order.each do |o_, nh|
-    o = (o_ == "ud1") ? "ud1wrap" : o_
+  order.each do |o, nh|
     ary = Array.new
     ary.push "ATMOS_DYN_FVM_flux_valueW_Z_#{o}"
     ["Z", "X", "Y"].each do |dir|
@@ -233,12 +232,10 @@ contains
     character(len=*), intent(in) :: scheme_tracer
 
     select case ( scheme )
-<%   order.each do |o, nh| 
-     o_ = (o == "ud1") ? "ud1wrap" : o
-%>
+<%   order.each do |o, nh| %>
     case ( "<%= o.upcase %>" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation'
-<% funcs[o_].each do |func| %>
+<% funcs[o].each do |func| %>
       <%= func.sub(/_[^_]+\Z/,"") %> => <%= func %>
 <% end %>
 <%# func %>
@@ -259,12 +256,10 @@ contains
     end select
 
     select case ( scheme_tracer )
-<%   order.each do |o, nh| 
-    o_ = (o == "ud1") ? "ud1wrap" : o
-%>
+<%   order.each do |o, nh| %>
     case ( "<%= o.upcase %>" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation of tracer'
-<% funcs[o_].each do |func|
+<% funcs[o].each do |func|
      unless /value/ =~ func %>
       <%= func.sub(/_[^_]+\Z/,"") %>_tracer => <%= func %>
 <%   end

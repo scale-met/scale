@@ -115,7 +115,6 @@ OBJS_DYN = scale_atmos_dyn_tinteg_short.o	\
            scale_atmos_dyn_tstep_tracer.o	\
            scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
            scale_atmos_dyn_fvm_flux.o	\
-           scale_atmos_dyn_fvm_flux_ud1wrap.o	\
 	   scale_atmos_dyn_fvm_flux_ud1.o	\
            scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_fvm_flux_ud3.o	\
@@ -369,8 +368,6 @@ $(OBJS_FOR_DYN) :
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb $< > $@
 #	erb fname=$@ $< > $@
-
-scale_atmos_dyn_fvm_flux_ud1wrap.F90 : scale_atmos_dyn_fvm_flux_ud1wrap.F90.erb
 
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<

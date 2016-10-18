@@ -280,26 +280,26 @@ contains
     use scale_process, only: &
          PRC_MPIstop
 
-   use scale_atmos_dyn_fvm_flux_ud1wrap, only: &
-      ATMOS_DYN_FVM_flux_valueW_Z_ud1wrap, &
-      ATMOS_DYN_FVM_fluxZ_XYZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxX_XYZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxY_XYZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxZ_XYW_ud1wrap, &
-      ATMOS_DYN_FVM_fluxX_XYW_ud1wrap, &
-      ATMOS_DYN_FVM_fluxY_XYW_ud1wrap, &
-      ATMOS_DYN_FVM_fluxJ13_XYW_ud1wrap, &
-      ATMOS_DYN_FVM_fluxJ23_XYW_ud1wrap, &
-      ATMOS_DYN_FVM_fluxZ_UYZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxX_UYZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxY_UYZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxJ13_UYZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxJ23_UYZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxZ_XVZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxX_XVZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxY_XVZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxJ13_XVZ_ud1wrap, &
-      ATMOS_DYN_FVM_fluxJ23_XVZ_ud1wrap
+   use scale_atmos_dyn_fvm_flux_ud1, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud1, &
+      ATMOS_DYN_FVM_fluxZ_XYZ_ud1, &
+      ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
+      ATMOS_DYN_FVM_fluxY_XYZ_ud1, &
+      ATMOS_DYN_FVM_fluxZ_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxX_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxY_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxJ13_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxJ23_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxZ_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxX_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxY_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxJ13_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxJ23_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxZ_XVZ_ud1, &
+      ATMOS_DYN_FVM_fluxX_XVZ_ud1, &
+      ATMOS_DYN_FVM_fluxY_XVZ_ud1, &
+      ATMOS_DYN_FVM_fluxJ13_XVZ_ud1, &
+      ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
 
    use scale_atmos_dyn_fvm_flux_cd2, only: &
       ATMOS_DYN_FVM_flux_valueW_Z_cd2, &
@@ -436,43 +436,43 @@ contains
     case ( "UD1" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud1 scheme is used for flux calculation'
 
-      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud1wrap
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud1
 
-      ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud1
 
-      ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_ud1
 
-      ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_ud1
 
-      ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxX_XYW => ATMOS_DYN_FVM_fluxX_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxX_XYW => ATMOS_DYN_FVM_fluxX_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxY_XYW => ATMOS_DYN_FVM_fluxY_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxY_XYW => ATMOS_DYN_FVM_fluxY_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxJ13_XYW => ATMOS_DYN_FVM_fluxJ13_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxJ13_XYW => ATMOS_DYN_FVM_fluxJ13_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxY_UYZ => ATMOS_DYN_FVM_fluxY_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxY_UYZ => ATMOS_DYN_FVM_fluxY_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_ud1
 
-      ATMOS_DYN_FVM_fluxX_XVZ => ATMOS_DYN_FVM_fluxX_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxX_XVZ => ATMOS_DYN_FVM_fluxX_XVZ_ud1
 
-      ATMOS_DYN_FVM_fluxY_XVZ => ATMOS_DYN_FVM_fluxY_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxY_XVZ => ATMOS_DYN_FVM_fluxY_XVZ_ud1
 
-      ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_ud1
 
-      ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
 
 
 
@@ -814,41 +814,41 @@ contains
     case ( "UD1" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud1 scheme is used for flux calculation of tracer'
 
-      ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud1
 
-      ATMOS_DYN_FVM_fluxX_XYZ_tracer => ATMOS_DYN_FVM_fluxX_XYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxX_XYZ_tracer => ATMOS_DYN_FVM_fluxX_XYZ_ud1
 
-      ATMOS_DYN_FVM_fluxY_XYZ_tracer => ATMOS_DYN_FVM_fluxY_XYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxY_XYZ_tracer => ATMOS_DYN_FVM_fluxY_XYZ_ud1
 
-      ATMOS_DYN_FVM_fluxZ_XYW_tracer => ATMOS_DYN_FVM_fluxZ_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxZ_XYW_tracer => ATMOS_DYN_FVM_fluxZ_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxX_XYW_tracer => ATMOS_DYN_FVM_fluxX_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxX_XYW_tracer => ATMOS_DYN_FVM_fluxX_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxY_XYW_tracer => ATMOS_DYN_FVM_fluxY_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxY_XYW_tracer => ATMOS_DYN_FVM_fluxY_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxJ13_XYW_tracer => ATMOS_DYN_FVM_fluxJ13_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxJ13_XYW_tracer => ATMOS_DYN_FVM_fluxJ13_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxJ23_XYW_tracer => ATMOS_DYN_FVM_fluxJ23_XYW_ud1wrap
+      ATMOS_DYN_FVM_fluxJ23_XYW_tracer => ATMOS_DYN_FVM_fluxJ23_XYW_ud1
 
-      ATMOS_DYN_FVM_fluxZ_UYZ_tracer => ATMOS_DYN_FVM_fluxZ_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxZ_UYZ_tracer => ATMOS_DYN_FVM_fluxZ_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxX_UYZ_tracer => ATMOS_DYN_FVM_fluxX_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxX_UYZ_tracer => ATMOS_DYN_FVM_fluxX_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxY_UYZ_tracer => ATMOS_DYN_FVM_fluxY_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxY_UYZ_tracer => ATMOS_DYN_FVM_fluxY_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxJ13_UYZ_tracer => ATMOS_DYN_FVM_fluxJ13_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxJ13_UYZ_tracer => ATMOS_DYN_FVM_fluxJ13_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxJ23_UYZ_tracer => ATMOS_DYN_FVM_fluxJ23_UYZ_ud1wrap
+      ATMOS_DYN_FVM_fluxJ23_UYZ_tracer => ATMOS_DYN_FVM_fluxJ23_UYZ_ud1
 
-      ATMOS_DYN_FVM_fluxZ_XVZ_tracer => ATMOS_DYN_FVM_fluxZ_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxZ_XVZ_tracer => ATMOS_DYN_FVM_fluxZ_XVZ_ud1
 
-      ATMOS_DYN_FVM_fluxX_XVZ_tracer => ATMOS_DYN_FVM_fluxX_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxX_XVZ_tracer => ATMOS_DYN_FVM_fluxX_XVZ_ud1
 
-      ATMOS_DYN_FVM_fluxY_XVZ_tracer => ATMOS_DYN_FVM_fluxY_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxY_XVZ_tracer => ATMOS_DYN_FVM_fluxY_XVZ_ud1
 
-      ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_ud1
 
-      ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1wrap
+      ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
 
 
 
