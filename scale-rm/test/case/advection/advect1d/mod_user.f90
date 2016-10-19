@@ -46,6 +46,8 @@ module mod_user
        DENS, &
        RHOT, &
        QTRC
+  use scale_atmos_hydrometer, only: &
+       I_NC
   
   !-----------------------------------------------------------------------------
   implicit none
@@ -87,7 +89,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine USER_config
+    use scale_tracer, only: &
+         TRACER_regist
 
+    call TRACER_REGIST( I_NC, &
+         1, (/'NC'/), (/'Passive tracer'/), (/'1'/) )
+    
     return
   end subroutine USER_config
 
@@ -97,7 +104,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only : &
-       FXG   => GRID_FXG, &
+       FXG   => GRID_FXG
     implicit none
 
     namelist / PARAM_USER / &
@@ -123,7 +130,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
-    Lx = FXG(IEG) - FXG(ISG-1)
+    Lx = FXG(IAG-IHALO) - FXG(IHALO)
 
     return
   end subroutine USER_setup

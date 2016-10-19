@@ -2461,7 +2461,7 @@ contains
       GRAV    => CONST_GRAV
     use scale_process
     use scale_grid, only: &
-         y0 => GRID_DOMAIN_CENTER_X, &
+         y0 => GRID_DOMAIN_CENTER_Y, &
          GRID_FYG
     use scale_atmos_hydrometer, only: &
          I_QV
@@ -2537,12 +2537,11 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BAROCWAVE)
 
-    Ly = GRID_FYG(JAG) - GRID_FYG(0)
+    Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
     
     ! Set coriolis parameters
     f0 = 2.0_RP*OHM*sin(phi0Deg*PI/180.0_RP)
     beta0 = (2.0_RP*OHM/RPlanet)*cos(phi0Deg*PI/180.0_RP)
-
     
     ! Calculate eta(=p/p_s) level corresponding to z level of each (y,z) grid point 
     ! using Newton's iteration method
