@@ -143,7 +143,8 @@ module mod_mkinit
   integer, public, parameter :: I_WARMBUBBLEAERO   = 28
 
   integer, public, parameter :: I_CAVITYFLOW       = 29
-
+  integer, public, parameter :: I_BAROCWAVE        = 30
+  
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -161,7 +162,8 @@ module mod_mkinit
   private :: MKINIT_turbulence
   private :: MKINIT_cavityflow
   private :: MKINIT_mountainwave
-
+  private :: MKINIT_barocwave
+  
   private :: MKINIT_warmbubble
   private :: MKINIT_supercell
   private :: MKINIT_squallline
@@ -336,6 +338,8 @@ contains
        call BUBBLE_setup
     case('CAVITYFLOW')
        MKINIT_TYPE = I_CAVITYFLOW
+    case('BAROCWAVE')
+       MKINIT_TYPE = I_BAROCWAVE
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -494,6 +498,8 @@ contains
          call MKINIT_warmbubbleaero
       case(I_CAVITYFLOW)
          call MKINIT_cavityflow
+      case(I_BAROCWAVE)
+         call MKINIT_barocwave
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -2260,21 +2266,21 @@ contains
     implicit none
 
     ! Nondimenstional numbers for a cavity flow problem
-    real(RP) :: REYNOLDS_NUM = 4.D02
+    real(RP) :: REYNOLDS_NUM = 1.D03
     real(RP) :: MACH_NUM     = 3.D-2
-    real(RP) :: TEMP0        = 300.D0
-
+    real(RP) :: Ulid         = 1.D01
+    real(RP) :: PRES0        = 1.D05
+    
     NAMELIST / PARAM_MKINIT_CAVITYFLOW / &
+         Ulid        , &
+         PRES0       , &
          REYNOLDS_NUM, &
-         MACH_NUM,     &
-         TEMP0
+         MACH_NUM
 
     real(RP) :: DENS0
     real(RP) :: TEMP
-    real(RP) :: Gam, Cs2
-
-    real(RP), parameter :: PRES0 = 1000.E+2_RP
-    real(RP), parameter :: Ulid  = 10.0_RP
+    real(RP) :: Gam
+    real(RP) :: Cs2
 
     integer :: k, i, j
     integer :: ierr
@@ -2443,6 +2449,212 @@ contains
     return
   end subroutine MKINIT_mountainwave
 
+  !-----------------------------------------------------------------------------
+  !> Make initial state 
+  !! 
+  !! The initial state for a baroclinic wave test described by Ullrich and Jablonowski(2012)
+  !! is generated. 
+  subroutine MKINIT_barocwave
+    use scale_const, only: &
+      OHM => CONST_OHM,        &
+      RPlanet => CONST_RADIUS, &
+      GRAV    => CONST_GRAV
+    use scale_process
+    use scale_grid, only: &
+         y0 => GRID_DOMAIN_CENTER_Y, &
+         GRID_FYG
+    use scale_atmos_hydrometer, only: &
+         I_QV
+    
+    implicit none
+
+    ! Parameters for global domain size
+    real(RP) :: Ly                      ! The domain size in y-direction [m]
+    
+    ! Parameters for inital stratification
+    real(RP) :: REF_TEMP    = 288.E0_RP ! The reference temperature [K]
+    real(RP) :: REF_PRES    = 1.E5_RP   ! The reference pressure [Pa]
+    real(RP) :: LAPSE_RATE  = 5.E-3_RP  ! The lapse rate [K/m]
+
+    ! Parameters associated with coriolis parameter on a beta-plane
+    real(RP) :: Phi0Deg     = 45.E0_RP  ! The central latitude [degree_north]
+
+    ! Parameters for background zonal jet
+    real(RP) :: U0 = 35.E0_RP          ! The parameter associated with zonal jet maximum amplitude  [m/s]
+    real(RP) :: b  = 2.E0_RP           ! The vertical half-width [1]
+
+    ! Parameters for inital perturbation of zonal wind with a Gaussian profile
+    !
+    real(RP) :: Up  = 1.E0_RP         ! The maximum amplitude of zonal wind perturbation [m/s]
+    real(RP) :: Lp  = 600.E3_RP       ! The width of Gaussian profile
+    real(RP) :: Xc  = 2000.E3_RP      ! The center point (x) of inital perturbation
+    real(RP) :: Yc  = 2500.E3_RP      ! The center point (y) of inital perturbation
+
+    NAMELIST / PARAM_MKINIT_BAROCWAVE / &
+       REF_TEMP, REF_PRES, LAPSE_RATE, &
+       phi0Deg,                        &
+       U0, b,                          &
+       Up, Lp, Xc, Yc          
+       
+    real(RP) :: CORIOLI(KA,IA,JA)
+    real(RP) :: f0, beta0
+    
+    real(RP) :: geopot(KA,IA,JA)
+    real(RP) :: eta(KA,IA,JA)
+    real(RP) :: temp(KA,IA,JA)
+
+    real(RP) :: y
+    real(RP) :: ln_eta
+    real(RP) :: del_eta
+    real(RP) :: yphase
+    real(RP) :: yphase_u
+    real(RP) :: temp_vfunc
+    real(RP) :: geopot_hvari
+    
+    integer :: ierr
+    integer :: k, i, j
+
+    integer :: itr
+
+    integer, parameter :: ITRMAX = 1000
+    real(RP), parameter :: CONV_EPS = 1E-15_RP
+    
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit BAROCWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_BAROCWAVE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BAROCWAVE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BAROCWAVE)
+
+    Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
+    
+    ! Set coriolis parameters
+    f0 = 2.0_RP*OHM*sin(phi0Deg*PI/180.0_RP)
+    beta0 = (2.0_RP*OHM/RPlanet)*cos(phi0Deg*PI/180.0_RP)
+    
+    ! Calculate eta(=p/p_s) level corresponding to z level of each (y,z) grid point 
+    ! using Newton's iteration method
+    
+    eta(:,:,:) = 1.0E-8_RP   ! Set first guess of eta
+
+    do j = JS, JE
+    do i = IS, IS            ! Note that initial fields are zonaly symmetric
+
+       y = GRID_CY(j)
+       yphase  = 2.0_RP*PI*y/Ly
+
+       ! Calc horizontal variation of geopotential height
+       geopot_hvari = 0.5_RP*U0*(                                                                          & 
+            (f0 - beta0*y0)*(y - 0.5_RP*Ly*(1.0_RP + sin(yphase)/PI))                                      & 
+            + 0.5_RP*beta0*( y**2 - Ly*y/PI*sin(yphase) - 0.5_RP*(Ly/PI)**2*(cos(yphase) + 1.0_RP)         &
+                             - Ly**2/3.0_RP                                                        )       & 
+            )
+
+       ! Set surface pressure and temperature 
+       pres_sfc(1,i,j) = REF_PRES
+       pott_sfc(1,i,j) = REF_TEMP - geopot_hvari/Rdry
+       ! Dry condition
+       qv      (:,i,j) = 0.0_RP
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc      (:,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          del_eta = 1.0_RP
+
+          !-- The loop for iteration
+          itr = 0          
+          do while( abs(del_eta) > CONV_EPS )
+             ln_eta = log(eta(k,i,j))
+
+             temp_vfunc = eta(k,i,j)**(Rdry*LAPSE_RATE/Grav)
+             temp(k,i,j) = &
+                  REF_TEMP*temp_vfunc &
+                  + geopot_hvari/Rdry*(2.0_RP*(ln_eta/b)**2 - 1.0_RP)*exp(-(ln_eta/b)**2)
+             geopot(k,i,j) = &
+                  REF_TEMP*GRAV/LAPSE_RATE*(1.0_RP - temp_vfunc)  &
+                  + geopot_hvari*ln_eta*exp(-(ln_eta/b)**2)
+
+             del_eta = -  ( - Grav*GRID_CZ(k) + geopot(k,i,j) )   & ! <- F
+                  &      *( - eta(k,i,j)/(Rdry*temp(k,i,j))   )     ! <- (dF/deta)^-1
+
+             eta(k,i,j) = eta(k,i,j) + del_eta
+             itr = itr + 1
+
+             if ( itr > ITRMAX ) then
+                write(*,*) "* (X,Y,Z)=", GRID_CX(i), GRID_CY(j), GRID_CZ(k)
+                write(*,*) "Fail the convergence of iteration. Check!"
+                write(*,*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
+                call PRC_MPIstop
+             end if
+          enddo !- End of loop for iteration ----------------------------
+          
+          PRES(k,i,j) = eta(k,i,j)*REF_PRES
+          DENS(k,i,j) = PRES(k,i,j)/(Rdry*temp(k,i,j))
+          pott(k,i,j) = temp(k,i,j)*eta(k,i,j)**(-Rdry/CPdry)
+          
+       enddo
+
+       ! Make density & pressure profile in dry condition using the profile of
+       ! potential temperature calculated above.
+       call HYDROSTATIC_buildrho( DENS    (:,i,j), & ! [OUT]
+                                  temp    (:,i,j), & ! [OUT]
+                                  pres    (:,i,j), & ! [OUT]
+                                  pott    (:,i,j), & ! [IN]
+                                  qv      (:,i,j), & ! [IN]
+                                  qc      (:,i,j), & ! [IN]
+                                  temp_sfc(1,i,j), & ! [OUT]
+                                  pres_sfc(1,i,j), & ! [IN]
+                                  pott_sfc(1,i,j), & ! [IN]
+                                  qv_sfc  (1,i,j), & ! [IN]
+                                  qc_sfc  (1,i,j)  ) ! [IN]       
+    enddo
+    enddo
+
+    !-----------------------------------------------------------------------------------
+    
+    do j = JS, JE
+    do k = KS, KE
+     
+       eta(k,IS,j) = pres(k,IS,j)/REF_PRES
+       ln_eta = log(eta(k,IS,j))
+       yphase = 2.0_RP*PI*GRID_CY(j)/Ly
+!!$       PRES(k,IS:IE,j) = eta(k,IS,j)*REF_PRES
+!!$       DENS(k,IS:IE,j) = PRES(k,IS,j)/(Rdry*temp(k,IS,j))
+       DENS(k,IS:IE,j) = DENS(k,IS,j)
+       PRES(k,IS:IE,j) = PRES(k,IS,j)
+       MOMX(k,IS-1:IE,j) = DENS(k,IS,j)*(-U0*sin(0.5_RP*yphase)**2*ln_eta*exp(-(ln_eta/b)**2))
+       RHOT(k,IS:IE,j) = DENS(k,IS,j)*pott(k,IS,j) !temp(k,IS,j)*eta(k,IS,j)**(-Rdry/CPdry)
+       if ( I_QV > 0 ) QTRC(k,IS:IE,j,I_QV) = 0.0_RP
+    enddo
+    enddo
+    MOMY(:,:,:) = 0.0_RP
+    MOMZ(:,:,:) = 0.0_RP
+
+    !---------------------------------------------------------------------------------------
+
+    ! Add the inital perturbation for zonal velocity
+    do j = JS, JE
+    do i = IS-1, IE
+       MOMX(KS:kE,i,j) = MOMX(KS:KE,i,j) &
+           +  DENS(KS:KE,i,j)* Up*exp( - ((GRID_FX(i) - Xc)**2 + (GRID_CY(j) - Yc)**2)/Lp**2 )
+    enddo
+    enddo
+ 
+    return
+  end subroutine MKINIT_barocwave
+  
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubble

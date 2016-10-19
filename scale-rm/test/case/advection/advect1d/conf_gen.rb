@@ -17,7 +17,8 @@ CONF_GEN_RESOL_HASHLIST = \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
-  {"TAG"=>"RECT", "SHAPE_NC"=>"RECT"}, \
+  {"TAG"=>"COS", "SHAPE_NC"=>"COS"},       \
+  {"TAG"=>"RECT", "SHAPE_NC"=>"RECT"},     \
   {"TAG"=>"COSBELL", "SHAPE_NC"=>"BUBBLE"} \
 ]
 CONF_GEN_NUMERIC_HASHLIST = \
@@ -209,7 +210,7 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = F, 
+ ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
 /
 
 &PARAM_USER
@@ -233,6 +234,7 @@ def gen_run_conf( conf_name,
 &HISTITEM item='W'    /
 &HISTITEM item='NC'   /
 &HISTITEM item='l2error'   /
+&HISTITEM item='linferror'   /
 
 
 &PARAM_MONITOR
@@ -262,11 +264,18 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
           puts "Create directory .."
           FileUtils.mkdir_p(dataDir)
         end
-      
-        init_conf_name = "#{dataDir}init.conf" 
+
+        #-------------------------------------------------------
+        init_conf_name = "#{dataDir}init.conf"
+        
+        init_shape = case_hash["SHAPE_NC"]
+        init_shape = "BUBBLE" if init_shape == "COS"
+        
         gen_init_conf(init_conf_name, 
                       resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["KMAX"], 
-                      resol_hash["DX"], resol_hash["DZ"], case_hash["SHAPE_NC"] )
+                      resol_hash["DX"], resol_hash["DZ"], init_shape )
+
+        #-------------------------------------------------------
         run_conf_name = "#{dataDir}run.conf"
         gen_run_conf(run_conf_name, 
                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["KMAX"], 

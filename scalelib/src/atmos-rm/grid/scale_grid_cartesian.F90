@@ -659,8 +659,8 @@ contains
        GRID_RFDY(j) = 1.0_RP / GRID_FDY(j)
     enddo
 
-    GRID_DOMAIN_CENTER_X = 0.5_RP * ( GRID_FXG(0) + GRID_FXG(IAG) )
-    GRID_DOMAIN_CENTER_Y = 0.5_RP * ( GRID_FYG(0) + GRID_FYG(JAG) )
+    GRID_DOMAIN_CENTER_X = 0.5_RP * ( GRID_FXG(IHALO) + GRID_FXG(IAG-IHALO) )
+    GRID_DOMAIN_CENTER_Y = 0.5_RP * ( GRID_FYG(JHALO) + GRID_FYG(JAG-JHALO) )
 
     ! report
     if( IO_L ) write(IO_FID_LOG,*)

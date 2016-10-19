@@ -634,7 +634,7 @@ contains
        enddo
 
        !-----< update momentum (z) -----
-
+       
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -708,18 +708,21 @@ contains
           call ATMOS_DYN_FVM_fluxZ_XYW_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
                MOMZ, MOMZ, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), J33G, & ! (in)
+               num_diff(:,:,:,I_MOMZ,ZDIR), & ! (in)
                CDZ, FDZ, dtrk, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxX_XYW_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
                MOMX, MOMZ, DENS, & ! (in)
                GSQRT(:,:,:,I_UYZ), MAPF(:,:,:,I_UY), & ! (in)
+               num_diff(:,:,:,I_MOMZ,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_XYW_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
                MOMY, MOMZ, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), MAPF(:,:,:,I_XV), & ! (in)
+               num_diff(:,:,:,I_MOMZ,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -944,6 +947,7 @@ contains
           call ATMOS_DYN_FVM_fluxZ_UYZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
                MOMZ, MOMX, DENS, & ! (in)
                GSQRT(:,:,:,I_UYW), J33G, & ! (in)
+               num_diff(:,:,:,I_MOMX,ZDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -951,12 +955,14 @@ contains
           call ATMOS_DYN_FVM_fluxX_UYZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
                MOMX, MOMX, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_UY), & ! (in)
+               num_diff(:,:,:,I_MOMX,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_UYZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
                MOMY, MOMX, DENS, & ! (in)
                GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_XV), & ! (in)
+               num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -1192,6 +1198,7 @@ contains
           call ATMOS_DYN_FVM_fluxZ_XVZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
                MOMZ, MOMY, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), J33G, & ! (in)
+               num_diff(:,:,:,I_MOMY,ZDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -1199,6 +1206,7 @@ contains
           call ATMOS_DYN_FVM_fluxX_XVZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
                MOMX, MOMY, DENS, & ! (in)
                GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_XY), & ! (in)
+               num_diff(:,:,:,I_MOMY,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -1207,6 +1215,7 @@ contains
           call ATMOS_DYN_FVM_fluxY_XVZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
                MOMY, MOMY, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
+               num_diff(:,:,:,I_MOMY,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -1386,18 +1395,21 @@ contains
           ! at (x, y, interface)
           call ATMOS_DYN_FVM_fluxZ_XYZ_ud1( tflx_lo(:,:,:,ZDIR), & ! (out)
                mflx_hi(:,:,:,ZDIR), POTT, GSQRT(:,:,:,I_XYZ), & ! (in)
+               num_diff(:,:,:,I_RHOT,ZDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (u, y, layer)
           call ATMOS_DYN_FVM_fluxX_XYZ_ud1( tflx_lo(:,:,:,XDIR), & ! (out)
                mflx_hi(:,:,:,XDIR), POTT, GSQRT(:,:,:,I_UYZ), & ! (in)
+               num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (x, v, layer)
           call ATMOS_DYN_FVM_fluxY_XYZ_ud1( tflx_lo(:,:,:,YDIR), & ! (out)
                mflx_hi(:,:,:,YDIR), POTT, GSQRT(:,:,:,I_XVZ), & ! (in)
+               num_diff(:,:,:,I_RHOT,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 

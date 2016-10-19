@@ -83,8 +83,7 @@ module scale_atmos_dyn_fvm_flux_ud3Koren1993
   !++ Private parameters & variables
   !
 
-  real(RP), parameter :: F2  =  0.5_RP
-
+  real(RP), parameter :: F2  =  0.5_RP          ! F2 is always used to calculate flux near boundary.
 
 
   real(RP), parameter :: F31  = -1.0_RP/12.0_RP
@@ -146,9 +145,12 @@ contains
 
 #endif
 
+
+
        valW(KS) = F2 * ( val(KS+1)+val(KS) )
        valW(KE-1) = F2 * ( val(KE)+val(KE-1) )
 
+       
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_ud3Koren1993
 
@@ -157,9 +159,7 @@ contains
   subroutine ATMOS_DYN_FVM_fluxZ_XYZ_ud3Koren1993( &
        flux,              &
        mflx, val, GSQRT,  &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -168,9 +168,7 @@ contains
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -247,9 +245,7 @@ contains
   subroutine ATMOS_DYN_FVM_fluxX_XYZ_ud3Koren1993( &
        flux,              &
        mflx, val, GSQRT,  &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -258,9 +254,7 @@ contains
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ(KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -306,9 +300,7 @@ contains
   subroutine ATMOS_DYN_FVM_fluxY_XYZ_ud3Koren1993( &
        flux,              &
        mflx, val, GSQRT,  &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -317,9 +309,7 @@ contains
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ(KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -367,9 +357,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J33G,       &
-
        num_diff,          &
-
        CDZ, FDZ,          &
        dtrk,              &
        IIS, IIE, JJS, JJE )
@@ -381,9 +369,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: J33G
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     real(RP), intent(in)  :: FDZ     (KA-1)
     real(RP), intent(in)  :: dtrk
@@ -565,9 +551,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, MAPF,       &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -578,9 +562,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -645,9 +627,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, MAPF,       &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -658,9 +638,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -726,9 +704,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J33G,       &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -739,9 +715,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: J33G
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -990,9 +964,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, MAPF,       &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -1003,9 +975,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -1056,9 +1026,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, MAPF,       &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -1069,9 +1037,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -1122,9 +1088,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J33G,       &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -1135,9 +1099,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: J33G
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -1386,9 +1348,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, MAPF,       &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -1399,9 +1359,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -1450,9 +1408,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, MAPF,       &
-
        num_diff,          &
-
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -1463,9 +1419,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 

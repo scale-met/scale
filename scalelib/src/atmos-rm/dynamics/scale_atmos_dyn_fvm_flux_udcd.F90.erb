@@ -254,9 +254,8 @@ module <%= modname %>
   !
 <% if order == 1 %>
   real(RP), parameter :: F1  =  0.5_RP
-<% else %>
-  real(RP), parameter :: F2  =  0.5_RP
 <% end %>
+  real(RP), parameter :: F2  =  0.5_RP          ! F2 is always used to calculate flux near boundary.
 <% if order%2 == 0 %>
 <%   if order >= 4 %>
   real(RP), parameter :: F41 =  7.0_RP/12.0_RP
@@ -325,10 +324,13 @@ contains
        call CHECK( __LINE__, val(KE<%=-k*2-1%>) )
 <% end %>
 #endif
-<% nh.times do |k| %>
+
+<% nh_ = ( nh > 0) ? nh : 1  %>
+<% nh_.times do |k| %>
        valW(KS<%=k%>) = <%= flux("mflx(KS#{k})", [order-(nh-k)*2,2].max, 0, "KS"+k, nil, nil, 1) %>
        valW(KE<%=-k-1%>) = <%= flux("mflx(KE#{-(k+1)})", [order-(nh-k)*2,2].max, 0, "KE"-(k+1), nil, nil, 1) %>
 <% end %>
+       
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_<%=@scheme%>
 
@@ -337,9 +339,7 @@ contains
   subroutine ATMOS_DYN_FVM_fluxZ_XYZ_<%=@scheme%>( &
        flux,              &
        mflx, val, GSQRT,  &
-<% if order >= 2 %>
        num_diff,          &
-<% end %>
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -348,9 +348,7 @@ contains
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-<% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-<% end %>
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -420,9 +418,7 @@ contains
   subroutine ATMOS_DYN_FVM_flux<%=dir%>_XYZ_<%=@scheme%>( &
        flux,              &
        mflx, val, GSQRT,  &
-<% if order >= 2 %>
        num_diff,          &
-<% end %>
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -431,9 +427,7 @@ contains
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
-<% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-<% end %>
     real(RP), intent(in)  :: CDZ(KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -472,9 +466,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J33G,       &
-<% if order >= 2 %>
        num_diff,          &
-<% end %>
        CDZ, FDZ,          &
        dtrk,              &
        IIS, IIE, JJS, JJE )
@@ -486,9 +478,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: J33G
-<% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-<% end %>
     real(RP), intent(in)  :: CDZ     (KA)
     real(RP), intent(in)  :: FDZ     (KA-1)
     real(RP), intent(in)  :: dtrk
@@ -635,9 +625,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, MAPF,       &
-<% if order >= 2 %>
        num_diff,          &
-<% end %>
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -648,9 +636,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-<% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-<% end %>
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -706,9 +692,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J33G,       &
-<% if order >= 2 %>
        num_diff,          &
-<% end %>
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -719,9 +703,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: J33G
-<% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-<% end %>
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
@@ -856,9 +838,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, MAPF,       &
-<% if order >= 2 %>
        num_diff,          &
-<% end %>
        CDZ,               &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -869,9 +849,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
-<% if order >= 2 %>
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
-<% end %>
     real(RP), intent(in)  :: CDZ     (KA)
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
