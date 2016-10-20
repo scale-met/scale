@@ -1451,7 +1451,9 @@ contains
        write(message,*) '*** variable name: ', trim(varname)
        call Log("I", message)
 
-       if ( .NOT. present(tint) ) then
+       if ( present(tint) ) then
+          tint_ = tint
+       else
           tint_ = -1.0_DP
        endif
 
