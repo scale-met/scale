@@ -1139,7 +1139,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
     // put variable attribute
     CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "long_name", strlen(desc), desc) )
     CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "units", strlen(units), units) )
-    CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, _FillValue, xtype, 1, &rmiss) )
+//    CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, _FillValue, xtype, 1, &rmiss) )
     CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, "missing_value", xtype, 1, &rmiss) )
   }
   else {
