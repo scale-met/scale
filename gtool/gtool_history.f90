@@ -107,7 +107,6 @@ module gtool_history
      integer                    :: fid            !> File id of the file
      integer                    :: dstep          !> Time unit
      logical                    :: taverage       !> Apply time average?
-     logical                    :: axis_written   !> Axis for this item is already written?
      integer                    :: vid            !> Variable id
 
      real(DP)                   :: waitsec        !> Time length to suppress output [sec]
@@ -122,7 +121,6 @@ module gtool_history
   end type vars
 
   type axis
-     integer                    :: id
      character(len=File_HSHORT) :: name
      character(len=File_HLONG)  :: desc
      character(len=File_HSHORT) :: units
@@ -136,7 +134,6 @@ module gtool_history
   end type axis
 
   type assoc
-     integer                    :: id
      character(len=File_HSHORT) :: name
      character(len=File_HLONG)  :: desc
      character(len=File_HSHORT) :: units
@@ -192,6 +189,7 @@ module gtool_history
 
   integer,                    private              :: History_id_count      = 0         !> number of registered item
   type(vars),                 private, allocatable :: History_vars(:)
+  logical,                    private, allocatable :: History_axis_written(:) !> Axis for this file is already written?
 
   integer,                    private, parameter   :: History_axis_limit    = 100       !> number limit of axes
   integer,                    private              :: History_axis_count    =   0
@@ -511,6 +509,7 @@ contains
 
     History_id_count = 0
     allocate( History_vars(History_req_count) )
+    allocate( History_axis_written(History_req_count) )
 
     do n = 1, History_req_count
        allocate( History_vars(n)%varsum(array_size) )
@@ -619,7 +618,7 @@ contains
 
     logical                  :: shared_file_io
     integer                  :: nmax, reqid
-    integer                  :: id
+    integer                  :: id, fid
     integer                  :: n, m, dim_size
 
     intrinsic size
@@ -664,7 +663,7 @@ contains
              History_vars(id)%item     = History_req(reqid)%item
              History_vars(id)%outname  = History_req(reqid)%outname
 
-             call FileCreate( History_vars(id)%fid,        & ! [OUT]
+             call FileCreate( fid,                         & ! [OUT]
                               fileexisted,                 & ! [OUT]
                               History_req(reqid)%basename, & ! [IN]
                               History_TITLE,               & ! [IN]
@@ -676,6 +675,7 @@ contains
                               time_units = tunits,         & ! [IN]
                               comm = comm                  ) ! [IN]
 
+             History_vars(id)%fid      = fid
              History_vars(id)%dstep    = History_req(reqid)%dstep
              History_vars(id)%taverage = History_req(reqid)%taverage
              History_vars(id)%zcoord   = History_req(reqid)%zcoord
@@ -694,10 +694,10 @@ contains
                             call Log('E','xxx option is invalid: '//trim(options))
                          endif
 
-                         call FileSetOption( History_vars(id)%fid, & ! [IN]
-                                             options(is  :ic-1),   & ! [IN]
-                                             options(ic+1:ie-1),   & ! [IN]
-                                             options(ie+1:m -1)    ) ! [IN]
+                         call FileSetOption( fid,                & ! [IN]
+                                             options(is  :ic-1), & ! [IN]
+                                             options(ic+1:ie-1), & ! [IN]
+                                             options(ie+1:m -1)  ) ! [IN]
 
                          ic = -1
                          ie = -1
@@ -713,15 +713,13 @@ contains
                 ! define registered history axis variables in the newly created file
                 ! actual writing axis variables are deferred to HistoryWriteAxes
                 do m = 1, History_axis_count
-                   History_axis(m)%id = id
-
                    if ( shared_file_io ) then ! for shared-file I/O, define axis in its global size
                       dim_size = History_axis(m)%gdim_size ! axis global size
                    else
                       dim_size = History_axis(m)%dim_size
                    end if
 
-                   call FileDefAxis( History_vars(id)%fid,    & ! [IN]
+                   call FileDefAxis( fid,                     & ! [IN]
                                      History_axis(m)%name,    & ! [IN]
                                      History_axis(m)%desc,    & ! [IN]
                                      History_axis(m)%units,   & ! [IN]
@@ -733,7 +731,6 @@ contains
                 ! define registered history associated coordinate variables in the newly created file
                 ! actual writing coordinate variables are deferred to HistoryWriteAxes
                 do m = 1, History_assoc_count
-                   History_assoc(m)%id = id
 
                    if ( shared_file_io ) then
                       dim_size = History_axis(m)%gdim_size
@@ -741,7 +738,7 @@ contains
                       dim_size = History_axis(m)%dim_size
                    end if
 
-                   call FileDefAssociatedCoordinates( History_vars(id)%fid,                            & ! [IN]
+                   call FileDefAssociatedCoordinates( fid,                                             & ! [IN]
                                                       History_assoc(m)%name,                           & ! [IN]
                                                       History_assoc(m)%desc,                           & ! [IN]
                                                       History_assoc(m)%units,                          & ! [IN]
@@ -751,9 +748,9 @@ contains
 
                 ! allows PnetCDF to allocate an internal buffer of size io_buffer_size
                 ! to aggregate write requests for history variables
-                call FileAttachBuffer( History_vars(id)%fid, io_buffer_size )
+                call FileAttachBuffer( fid, io_buffer_size )
 
-                History_vars(id)%axis_written = .false.
+                History_axis_written(fid) = .false.
 
              endif ! new file?
 
@@ -771,7 +768,7 @@ contains
              if ( present(count) ) History_vars(id)%count(:) = count(:)
 
              call FileAddVariable( History_vars(id)%vid,     & ! [OUT]
-                                   History_vars(id)%fid,     & ! [IN]
+                                   fid,                      & ! [IN]
                                    History_vars(id)%outname, & ! [IN]
                                    desc,                     & ! [IN]
                                    units,                    & ! [IN]
@@ -783,7 +780,7 @@ contains
              if ( .not. fileexisted ) then
                 do m = 1, History_axis_count
                    if ( History_axis(m)%down ) then
-                      call FileSetTAttr( History_vars(id)%fid, History_axis(m)%name, 'positive', 'down' )
+                      call FileSetTAttr( fid, History_axis(m)%name, 'positive', 'down' )
                    endif
                 enddo
              endif
@@ -2133,68 +2130,48 @@ contains
        FileWriteAssociatedCoordinates
     implicit none
 
-    integer :: m, id
-    integer :: fid, prev_fid
+    integer :: m, id, fid
     integer :: start(1)
     !---------------------------------------------------------------------------
 
     if( History_req_count  == 0 ) return
     if( History_axis_count == 0 ) return
 
-    ! Assume all history axes are written into the same file
-    id = History_axis(1)%id
+    do id = 1, History_id_count
 
-    if ( History_vars(id)%axis_written ) return
-
-    call FileEndDef( History_vars(id)%fid )
-
-    ! write registered history variables to file
-    do m = 1, History_axis_count
-       id = History_axis(m)%id
-       if ( History_axis(m)%start(1) > 0 ) then
-          start(1) = History_axis(m)%start(1)
-          call FileWriteAxis( History_vars(id)%fid, & ! [IN]
-                              History_axis(m)%name, & ! [IN]
-                              History_axis(m)%var,  & ! [IN]
-                              start                 ) ! [IN]
-       end if
-    enddo
-
-    do m = 1, History_assoc_count
-       id = History_assoc(m)%id
-
-       call FileWriteAssociatedCoordinates( History_vars(id)%fid,   & ! [IN]
-                                            History_assoc(m)%name,  & ! [IN]
-                                            History_assoc(m)%var,   & ! [IN]
-                                            History_assoc(m)%start, & ! [IN]
-                                            History_assoc(m)%count, & ! [IN]
-                                            History_assoc(m)%ndims  ) ! [IN]
-    enddo
-
-    ! for PnetCDF I/O, flush all pending nonblocking write requests
-    prev_fid = -1
-    do m = 1, History_axis_count
-       id = History_axis(m)%id
        fid = History_vars(id)%fid
-       if ( fid .NE. prev_fid ) then
-          call FileFlush( fid )
-          prev_fid = fid
-       end if
-    end do
-    do m = 1, History_assoc_count
-       id = History_axis(m)%id
-       fid = History_vars(id)%fid
-       if ( fid .NE. prev_fid ) then
-          call FileFlush( fid )
-          prev_fid = fid
-       end if
-    end do
 
-    ! Assume all history axes are written into the same file
-    id = History_axis(1)%id
+       if ( History_axis_written(fid) ) cycle
 
-    ! mark the axes have been written
-    History_vars(id)%axis_written = .true.
+       call FileEndDef( fid )
+
+       ! write registered history variables to file
+       do m = 1, History_axis_count
+          if ( History_axis(m)%start(1) > 0 ) then
+             start(1) = History_axis(m)%start(1)
+             call FileWriteAxis( fid,                  & ! [IN]
+                                 History_axis(m)%name, & ! [IN]
+                                 History_axis(m)%var,  & ! [IN]
+                                 start                 ) ! [IN]
+          end if
+       enddo
+
+       do m = 1, History_assoc_count
+          call FileWriteAssociatedCoordinates( fid,   & ! [IN]
+                                               History_assoc(m)%name,  & ! [IN]
+                                               History_assoc(m)%var,   & ! [IN]
+                                               History_assoc(m)%start, & ! [IN]
+                                               History_assoc(m)%count, & ! [IN]
+                                               History_assoc(m)%ndims  ) ! [IN]
+       enddo
+
+       ! for PnetCDF I/O, flush all pending nonblocking write requests
+       call FileFlush( fid )
+
+       ! mark the axes have been written
+       History_axis_written( fid ) = .true.
+
+    end do
 
     return
   end subroutine HistoryWriteAxes
