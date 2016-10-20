@@ -569,16 +569,16 @@ contains
     real(RP),intent(in) :: w0avg(KA,IA,JA)         ! running mean vertical wind velocity [m/s]
     ! [INOUT]
     real(RP),intent(inout) :: nca(IA,JA)           ! num of step convection active [step]
-    real(RP),intent(out)   :: DENS_t_CP(KA,IA,JA)  ! dens/dt
-    real(RP),intent(out)   :: DT_RHOT(KA,IA,JA)    ! dens*PT/dt
-    real(RP),intent(out)   :: DT_RHOQ(KA,IA,JA,QA) ! dens*q/dt
-    real(RP),intent(out)   :: rainrate_cp(IA,JA)   ! rain  PPTFLX(prcp_flux)/deltax**2*dt ! convective rain
-    real(RP),intent(out)   :: cldfrac_sh(KA,IA,JA) ! cloud fraction
-    real(RP),intent(out)   :: cldfrac_dp(KA,IA,JA) ! cloud fraction
-    real(RP),intent(out)   :: timecp(IA,JA)        ! timescale of cumulus parameterization
-    real(RP),intent(out)   :: cloudtop(IA,JA)      ! cloud top height
-    real(RP),intent(out)   :: zlcl(IA,JA)          ! hight of lcl cloud bottom height[m]
-    integer, intent(out)   :: I_convflag(IA,JA)    ! convection type
+    real(RP),intent(inout) :: DENS_t_CP(KA,IA,JA)  ! dens/dt
+    real(RP),intent(inout) :: DT_RHOT(KA,IA,JA)    ! dens*PT/dt
+    real(RP),intent(inout) :: DT_RHOQ(KA,IA,JA,QA) ! dens*q/dt
+    real(RP),intent(inout) :: rainrate_cp(IA,JA)   ! rain  PPTFLX(prcp_flux)/deltax**2*dt ! convective rain
+    real(RP),intent(inout) :: cldfrac_sh(KA,IA,JA) ! cloud fraction
+    real(RP),intent(inout) :: cldfrac_dp(KA,IA,JA) ! cloud fraction
+    real(RP),intent(inout) :: timecp(IA,JA)        ! timescale of cumulus parameterization
+    real(RP),intent(inout) :: cloudtop(IA,JA)      ! cloud top height
+    real(RP),intent(inout) :: zlcl(IA,JA)          ! hight of lcl cloud bottom height[m]
+    integer, intent(inout) :: I_convflag(IA,JA)    ! convection type
     !> I_convflag = 0  ==> deep convection
     !>            = 1  ==> shallow convection
     !>            = 2  ==> NONE !!
@@ -668,17 +668,17 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       DENS_t_CP(KS:KE,i,j) = 0.0_RP
-       DT_RHOT  (KS:KE,i,j) = 0.0_RP
-       do iq = 1, QA
-          DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
-       end do
-       q_hyd      (KS:KE,:) = 0.0_RP
-       cldfrac_KF (KS:KE,:) = 0.0_RP
-       rainrate_cp(i,j) = 0.0_RP
-       timecp     (i,j) = 0.0_RP
-       cloudtop   (i,j) = 0.0_RP
-       zlcl       (i,j) = 0.0_RP
+!       DENS_t_CP(KS:KE,i,j) = 0.0_RP
+!       DT_RHOT  (KS:KE,i,j) = 0.0_RP
+!       do iq = 1, QA
+!          DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
+!       end do
+!       q_hyd      (KS:KE,:) = 0.0_RP
+!       cldfrac_KF (KS:KE,:) = 0.0_RP
+!       rainrate_cp(i,j) = 0.0_RP
+!       timecp     (i,j) = 0.0_RP
+!       cloudtop   (i,j) = 0.0_RP
+!       zlcl       (i,j) = 0.0_RP
 
        nca(i,j) = nca(i,j) - real(TIME_DSTEP_KF,RP) * dt
 
@@ -725,16 +725,16 @@ contains
        enddo
 
 
-       !DENS_t_CP(KS:KE,i,j) = 0.0_RP
-       !DT_RHOT  (KS:KE,i,j) = 0.0_RP
-       !do iq = 1, QA
-       !   DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
-       !end do
-       !cldfrac_KF (KS:KE,:) = 0.0_RP
-       !rainrate_cp(i,j) = 0.0_RP
-       !timecp     (i,j) = 0.0_RP
-       !cloudtop   (i,j) = 0.0_RP
-       !zlcl       (i,j) = 0.0_RP
+       DENS_t_CP(KS:KE,i,j) = 0.0_RP
+       DT_RHOT  (KS:KE,i,j) = 0.0_RP
+       do iq = 1, QA
+          DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
+       end do
+       cldfrac_KF (KS:KE,:) = 0.0_RP
+       rainrate_cp(i,j) = 0.0_RP
+       timecp     (i,j) = 0.0_RP
+       cloudtop   (i,j) = 0.0_RP
+       zlcl       (i,j) = 0.0_RP
 
        do iq = 1, QA_MP-1
           iqa = iq + QS_MP
