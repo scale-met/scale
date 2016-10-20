@@ -3,7 +3,7 @@
 
 \subsection{Preparation}
 
-Please see the Chapter 2.1 and 2.2 of ``SCALE USERS GUIDE'' 
+Please see the Chapter 2.1 and 2.2 of ``SCALE USERS GUIDE''
 as to the details of required system environment, library, and settings of environmental parameters.
 
 SCALE-GM requires numerical computation library, Lapack.
@@ -24,13 +24,14 @@ Change directly to test case directly, for example,
 \begin{verbatim}
   > make -j 4
 \end{verbatim}
-When the compile is finished correctly, a "\verb|nhm_driver|" is created
-in the current directly, which is an executable binary of SCALE-GM.
+When the compile is finished correctly,
+a "\verb|scale-gm|" is created
+in the directly of \verb|${TOP}/scale-gm/bin|, which is an executable binary of SCALE-GM.
 
 \begin{itemize}
   \item[*] The number of -j option is a number of parallel compile processes.
    To reduce elapsed time of compile, you can specify the number
-   as more than two. We recommend 2 ~ 8 for the -j option.
+   as more than two. We recommend 2 $\sim$ 8 for the -j option.
 \end{itemize}
 
 \subsection{Run experiments}
@@ -38,8 +39,7 @@ in the current directly, which is an executable binary of SCALE-GM.
 \subsubsection{Test cases}
 
 \noindent In the \${TOP}/test/case, a lot of test cases sets are prepared.
-In those, the cases for DCMIP2016 are shown in Table 1.
-%Procedures for three ideal experiments are explained assuming the Yellowstone environment.
+For example, the cases based on DCMIP2016 are shown in Table 1.
 
  \begin{table}[b]
  \begin{center}
@@ -56,33 +56,19 @@ In those, the cases for DCMIP2016 are shown in Table 1.
 
 \subsubsection{How to run}
 
-To run the model, type "make run", and then the job script is
-displayed in standard output. Hit "q" to quit.
+To run the model,
+move to a directory of test case, and then type "make run".
+The test experiment will be started.
 
  \begin{verbatim}
    > make run
-   #! /bin/bash -x
-   ##################################################################
-   #
-   # for NCAR Yellowstone (IBM iDataPlex Sandybridge)
-   #
-   ##################################################################
-   #BSUB -a poe                  # set parallel operating environment
-   #BSUB -P SCIS0006             # project code
-   #BSUB -J nicamdc              # job name
-   #BSUB -W 00:10                # wall-clock time (hrs:mins)
-   #BSUB -n 10                   # number of tasks in job
-   #BSUB -R "span[ptile=10]"     # run four MPI tasks per node
-   #BSUB -q regular              # queue
-   #BSUB -e errors.%J.nicamdc    # error file name
-   #BSUB -o output.%J.nicamdc    # output file name
  \end{verbatim}
 
- \noindent If the job script is OK, submit a job to the machine.
- \begin{verbatim}
-  > bsub < run.sh
- \end{verbatim}
- \noindent \textcolor{blue}{{\sf Caution}} : Do not miss the symbol "\verb|<|". \\
+ %\noindent If the job script is OK, submit a job to the machine.
+ %\begin{verbatim}
+ % > bsub < run.sh
+ %\end{verbatim}
+ %\noindent \textcolor{blue}{{\sf Caution}} : Do not miss the symbol "\verb|<|". \\
 
 
 \subsection{Post process}
