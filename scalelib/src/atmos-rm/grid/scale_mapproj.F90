@@ -637,7 +637,8 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+    if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
+    if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
     latrot = 0.5_DP*PI - lat
 
@@ -693,7 +694,8 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+    if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
+    if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
     alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
 
@@ -723,7 +725,8 @@ contains
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+       if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
+       if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
        alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
 
@@ -819,7 +822,6 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
 
     latrot = 0.5_DP*PI - lat
 
@@ -872,7 +874,8 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+    if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
+    if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
     alpha = - dlon * MPRJ_hemisphere
 
@@ -902,7 +905,8 @@ contains
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
+       if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
+       if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
        alpha = - dlon * MPRJ_hemisphere
 
@@ -997,7 +1001,6 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
 
     latrot = 0.5_DP*PI - lat
 
@@ -1145,7 +1148,6 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod( dlon + 2.0_DP*PI, 2.0_DP*PI )
 
     x = MPRJ_eq_x + RADIUS * MPRJ_EC_fact * dlon
     y = MPRJ_eq_y + RADIUS * lat
