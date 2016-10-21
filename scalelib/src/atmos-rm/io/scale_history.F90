@@ -349,29 +349,38 @@ contains
     !         rankidx(1) == PRC_NUM_Y-1 writes north HALO
     !         others                    writes without HALO
 
-    if ( HIST_BND ) then
-       startX = ISGB   ! global subarray starting index
-       startY = JSGB   ! global subarray starting index
-       XAG    = IAGB
-       YAG    = JAGB
-    else
-       startX = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
-       startY = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
-       XAG    = IMAXG
-       YAG    = JMAXG
+    if ( IO_AGGREGATE ) then
+       if ( HIST_BND ) then
+          startX = ISGB   ! global subarray starting index
+          startY = JSGB   ! global subarray starting index
+          XAG    = IAGB
+          YAG    = JAGB
+       else
+          startX = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
+          startY = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
+          XAG    = IMAXG
+          YAG    = JMAXG
+       end if
+       startZ = 1
+       if ( rankidx(2) .GT. 0 ) startX = -1   ! only south-most processes write
+       if ( rankidx(1) .GT. 0 ) startY = -1   ! only west-most processes write
+       if ( PRC_myrank .GT. 0 ) startZ = -1   ! only rank 0 writes Z axes
     end if
-    startZ = 1
-    if ( rankidx(2) .GT. 0 ) startX = -1   ! only south-most processes write
-    if ( rankidx(1) .GT. 0 ) startY = -1   ! only west-most processes write
-    if ( PRC_myrank .GT. 0 ) startZ = -1   ! only rank 0 writes Z axes
 
     ! for the shared-file I/O method, the axes are global (gsize)
     ! for one-file-per-process I/O method, the axes size is equal to the local buffer size
-    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime), gsize=XAG,  start=startX )
-    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme), gsize=YAG,  start=startY )
+    if ( IO_AGGREGATE ) then
+       call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime), gsize=XAG,  start=startX )
+       call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme), gsize=YAG,  start=startY )
+       call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(ims:ime), gsize=XAG,  start=startX )
+       call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jms:jme), gsize=YAG,  start=startY )
+    else
+       call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime) )
+       call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme) )
+       call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(ims:ime) )
+       call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jms:jme) )
+    end if
     call HistoryPutAxis( 'z',   'Z',               'm', 'z',   GRID_CZ(KS:KE),   gsize=KMAX, start=startZ )
-    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(ims:ime), gsize=XAG,  start=startX )
-    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jms:jme), gsize=YAG,  start=startY )
     call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ(KS:KE),   gsize=KMAX, start=startZ )
 
     if ( HIST_PRES_nlayer > 0 ) then
@@ -386,7 +395,6 @@ contains
     call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS:UKE), down=.true., gsize=UKMAX, start=startZ )
 
     ! axes below always include halos when written to file regardless of PRC_PERIODIC_X/PRC_PERIODIC_Y
-    call HistoryPutAxis( 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,  gsize=KA,    start=startZ )
     if ( IO_AGGREGATE ) then
        call HistoryPutAxis( 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  GRID_CXG, gsize=IAG,   start=startZ )
        call HistoryPutAxis( 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CYG, gsize=JAG,   start=startZ )
@@ -394,7 +402,7 @@ contains
        call HistoryPutAxis( 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  GRID_CX )
        call HistoryPutAxis( 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CY )
     end if
-    call HistoryPutAxis( 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ,  gsize=KA+1,  start=startZ )
+    call HistoryPutAxis( 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,  gsize=KA,    start=startZ )
     if ( IO_AGGREGATE ) then
        call HistoryPutAxis( 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  GRID_FXG, gsize=IAG+1, start=startZ )
        call HistoryPutAxis( 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FYG, gsize=JAG+1, start=startZ )
@@ -402,8 +410,8 @@ contains
        call HistoryPutAxis( 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  GRID_FX )
        call HistoryPutAxis( 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FY )
     end if
+    call HistoryPutAxis( 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ,  gsize=KA+1,  start=startZ )
 
-    call HistoryPutAxis( 'CDZ',  'Grid Cell length Z', 'm', 'CZ',  GRID_CDZ,  gsize=KA,    start=startZ )
     if ( IO_AGGREGATE ) then
        call HistoryPutAxis( 'CDX',  'Grid Cell length X', 'm', 'CX',  GRID_CDXG, gsize=IAG,   start=startZ )
        call HistoryPutAxis( 'CDY',  'Grid Cell length Y', 'm', 'CY',  GRID_CDYG, gsize=JAG,   start=startZ )
@@ -411,7 +419,7 @@ contains
        call HistoryPutAxis( 'CDX',  'Grid Cell length X', 'm', 'CX',  GRID_CDX )
        call HistoryPutAxis( 'CDY',  'Grid Cell length Y', 'm', 'CY',  GRID_CDY )
     end if
-    call HistoryPutAxis( 'FDZ',  'Grid distance Z',    'm', 'FDZ', GRID_FDZ,  gsize=KA-1,  start=startZ )
+    call HistoryPutAxis( 'CDZ',  'Grid Cell length Z', 'm', 'CZ',  GRID_CDZ,  gsize=KA,    start=startZ )
     if ( IO_AGGREGATE ) then
        call HistoryPutAxis( 'FDX',  'Grid distance X',    'm', 'FDX', GRID_FDXG, gsize=IAG-1, start=startZ )
        call HistoryPutAxis( 'FDY',  'Grid distance Y',    'm', 'FDY', GRID_FDYG, gsize=JAG-1, start=startZ )
@@ -419,6 +427,7 @@ contains
        call HistoryPutAxis( 'FDX',  'Grid distance X',    'm', 'FDX', GRID_FDX )
        call HistoryPutAxis( 'FDY',  'Grid distance Y',    'm', 'FDY', GRID_FDY )
     end if
+    call HistoryPutAxis( 'FDZ',  'Grid distance Z',    'm', 'FDZ', GRID_FDZ,  gsize=KA-1,  start=startZ )
 
     call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ, down=.true., gsize=LKMAX,   start=startZ )
     call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ, down=.true., gsize=LKMAX+1, start=startZ )
@@ -428,7 +437,6 @@ contains
     call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ, down=.true., gsize=UKMAX+1, start=startZ )
     call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ,             gsize=UKMAX,   start=startZ )
 
-    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ,  gsize=KA,  start=startZ )
     if ( IO_AGGREGATE ) then
        call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFXG, gsize=IAG, start=startZ )
        call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFYG, gsize=JAG, start=startZ )
@@ -436,7 +444,7 @@ contains
        call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX )
        call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY )
     end if
-    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ,  gsize=KA,  start=startZ )
+    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ,  gsize=KA,  start=startZ )
     if ( IO_AGGREGATE ) then
        call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFXG, gsize=IAG, start=startZ )
        call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFYG, gsize=JAG, start=startZ )
@@ -444,6 +452,7 @@ contains
        call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX )
        call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY )
     end if
+    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ,  gsize=KA,  start=startZ )
 
     ! TODO: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
     call HistoryPutAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG, gsize=IAG,   start=startZ )
