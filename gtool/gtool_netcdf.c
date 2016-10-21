@@ -1265,6 +1265,8 @@ int32_t file_flush( int32_t fid ) // (in)
 
   if ( files[fid]->shared_mode )
     CHECK_PNC_ERROR( ncmpi_wait_all(ncid, NC_REQ_ALL, NULL, NULL) )
+  else
+    CHECK_ERROR( nc_sync(ncid) )
 
   return SUCCESS_CODE;
 }
