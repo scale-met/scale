@@ -401,7 +401,7 @@ contains
                             restart_fid, VAR_t_NAME(2+iq), 'ZXY', step=1 ) ! [IN]
        enddo
 
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           call FILEIO_flush( restart_fid )
           ! halos have been read from file
        else

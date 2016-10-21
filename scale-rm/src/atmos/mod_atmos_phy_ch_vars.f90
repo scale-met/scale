@@ -228,7 +228,7 @@ contains
        call FILEIO_read( ATMOS_PHY_CH_O3(:,:,:),                 & ! [OUT]
                          restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
 
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           call FILEIO_flush( restart_fid )
           ! X/Y halos have been read from file
 

@@ -520,7 +520,7 @@ contains
        call FILEIO_read( URBAN_SFLX_evap(:,:),                            & ! [OUT]
                          restart_fid, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
 
-       if ( IO_PNETCDF ) &
+       if ( IO_AGGREGATE ) &
           call FILEIO_flush( restart_fid )
 
        call URBAN_vars_total

@@ -387,7 +387,7 @@ contains
 
     ! axes below always include halos when written to file regardless of PRC_PERIODIC_X/PRC_PERIODIC_Y
     call HistoryPutAxis( 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,  gsize=KA,    start=startZ )
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        call HistoryPutAxis( 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  GRID_CXG, gsize=IAG,   start=startZ )
        call HistoryPutAxis( 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CYG, gsize=JAG,   start=startZ )
     else
@@ -395,7 +395,7 @@ contains
        call HistoryPutAxis( 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CY )
     end if
     call HistoryPutAxis( 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ,  gsize=KA+1,  start=startZ )
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        call HistoryPutAxis( 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  GRID_FXG, gsize=IAG+1, start=startZ )
        call HistoryPutAxis( 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FYG, gsize=JAG+1, start=startZ )
     else
@@ -404,7 +404,7 @@ contains
     end if
 
     call HistoryPutAxis( 'CDZ',  'Grid Cell length Z', 'm', 'CZ',  GRID_CDZ,  gsize=KA,    start=startZ )
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        call HistoryPutAxis( 'CDX',  'Grid Cell length X', 'm', 'CX',  GRID_CDXG, gsize=IAG,   start=startZ )
        call HistoryPutAxis( 'CDY',  'Grid Cell length Y', 'm', 'CY',  GRID_CDYG, gsize=JAG,   start=startZ )
     else
@@ -412,7 +412,7 @@ contains
        call HistoryPutAxis( 'CDY',  'Grid Cell length Y', 'm', 'CY',  GRID_CDY )
     end if
     call HistoryPutAxis( 'FDZ',  'Grid distance Z',    'm', 'FDZ', GRID_FDZ,  gsize=KA-1,  start=startZ )
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        call HistoryPutAxis( 'FDX',  'Grid distance X',    'm', 'FDX', GRID_FDXG, gsize=IAG-1, start=startZ )
        call HistoryPutAxis( 'FDY',  'Grid distance Y',    'm', 'FDY', GRID_FDYG, gsize=JAG-1, start=startZ )
     else
@@ -429,7 +429,7 @@ contains
     call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ,             gsize=UKMAX,   start=startZ )
 
     call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ,  gsize=KA,  start=startZ )
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFXG, gsize=IAG, start=startZ )
        call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFYG, gsize=JAG, start=startZ )
     else
@@ -437,7 +437,7 @@ contains
        call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY )
     end if
     call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ,  gsize=KA,  start=startZ )
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFXG, gsize=IAG, start=startZ )
        call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFYG, gsize=JAG, start=startZ )
     else
@@ -445,7 +445,7 @@ contains
        call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY )
     end if
 
-    ! TODO: skip 8 axes below when IO_PNETCDF is true, as all axes are now global
+    ! TODO: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
     call HistoryPutAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG, gsize=IAG,   start=startZ )
     call HistoryPutAxis('CYG',   'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG, gsize=JAG,   start=startZ )
     call HistoryPutAxis('FXG',   'Grid Face Position X (global)',   'm', 'FXG', GRID_FXG, gsize=IAG+1, start=startZ )
@@ -892,7 +892,7 @@ contains
     end if
 
 
-    if ( IO_PNETCDF ) then  ! user input parameter indicates to do PnetCDF I/O
+    if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
        comm = PRC_LOCAL_COMM_WORLD
     else
        comm = MPI_COMM_NULL

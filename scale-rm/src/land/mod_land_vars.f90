@@ -444,7 +444,7 @@ contains
        call FILEIO_read( LAND_SFLX_evap(:,:),                               & ! [OUT]
                          restart_fid, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
 
-       if ( IO_PNETCDF ) &
+       if ( IO_AGGREGATE ) &
           call FILEIO_flush( restart_fid )
 
        call LAND_vars_total

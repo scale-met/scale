@@ -149,7 +149,7 @@ contains
     allocate( AXIS_LATY(IMAXB,JMAXB) )
     allocate( AXIS_LATXY(IMAXB,JMAXB) )
 
-    if ( IO_PNETCDF ) call Construct_Derived_Datatype
+    if ( IO_AGGREGATE ) call Construct_Derived_Datatype
 
     File_closed(:) = .true.
 
@@ -490,7 +490,7 @@ contains
     implicit none
     integer err
 
-    if ( .NOT. IO_PNETCDF ) return
+    if ( .NOT. IO_AGGREGATE ) return
 
     if ( centerTypeXY    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeXY,    err)
     if ( centerTypeZX    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZX,    err)
@@ -671,7 +671,7 @@ contains
 
     if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
 
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
        if ( axistype .EQ. 'Z' ) then
           start(1) = 1
@@ -756,7 +756,7 @@ contains
 
     if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
 
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
        if ( axistype .EQ. 'XY' ) then
           call FileRead( var, fid, varname, step, PRC_myrank, &
@@ -829,7 +829,7 @@ contains
 
     if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
 
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
        ! Because KHALO is not saved in files, we use MPI derived datatypes to
        ! describe the layout of local read buffer
@@ -929,7 +929,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 4D var: ', trim(varname)
 
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
        if ( axistype .EQ. 'ZXYT' ) then
           startZXY(4) = 1
@@ -1322,7 +1322,7 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( IO_PNETCDF ) then  ! user input parameter indicates to do PnetCDF I/O
+    if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
        comm = PRC_LOCAL_COMM_WORLD
     else
        comm = MPI_COMM_NULL
@@ -1425,7 +1425,7 @@ contains
       tunits = 'seconds'
     endif
 
-    if ( IO_PNETCDF ) then  ! user input parameter indicates to do PnetCDF I/O
+    if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
        comm = PRC_LOCAL_COMM_WORLD
     else
        comm = MPI_COMM_NULL
@@ -1467,10 +1467,10 @@ contains
        call FileSetGlobalAttribute( fid, "IHALO",  (/IHALO/) )
        call FileSetGlobalAttribute( fid, "JHALO",  (/JHALO/) )
        logical_str = "false"
-       if (PRC_PERIODIC_X .AND. .NOT. IO_PNETCDF) logical_str = "true"
+       if (PRC_PERIODIC_X .AND. .NOT. IO_AGGREGATE) logical_str = "true"
        call FileSetGlobalAttribute( fid, "PRC_PERIODIC_X",  trim(logical_str) )
        logical_str = "false"
-       if (PRC_PERIODIC_Y .AND. .NOT. IO_PNETCDF) logical_str = "true"
+       if (PRC_PERIODIC_Y .AND. .NOT. IO_AGGREGATE) logical_str = "true"
        call FileSetGlobalAttribute( fid, "PRC_PERIODIC_Y",  trim(logical_str) )
 
        File_closed(fid) = .false.
@@ -1500,7 +1500,7 @@ contains
 
     ! If this enddef is called the first time, write axis variables
     if ( .NOT. File_axes_written(fid) ) then
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           call FILEIO_write_axes_par(fid, File_nozcoord(fid))
           ! Tell PnetCDF library to use a buffer of size write_buf_amount to
           ! aggregate write requests to be post in FILEIO_write_var
@@ -1530,7 +1530,7 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        call FileFlush( fid )        ! flush all pending read/write requests
     end if
 
@@ -1557,7 +1557,7 @@ contains
 
     if ( .not. File_closed(fid) ) then
 
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           call FileFlush( fid )        ! flush all pending read/write requests
           if ( write_buf_amount .GT. 0 ) then
              call FileDetachBuffer( fid ) ! detach PnetCDF aggregation buffer
@@ -1608,7 +1608,7 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'z',   'Z',               'm', 'z',   dtype, KMAX )
     end if
-    if ( .NOT. IO_PNETCDF ) then
+    if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'x',   'X',               'm', 'x',   dtype, IMAXB )
        call FileDefAxis( fid, 'y',   'Y',               'm', 'y',   dtype, JMAXB )
     else
@@ -1619,7 +1619,7 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, KMAX )
     end if
-    if ( .NOT. IO_PNETCDF ) then
+    if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, IMAXB )
        call FileDefAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, JMAXB )
     else
@@ -1637,7 +1637,7 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  dtype, KA )
     end if
-    if ( .NOT. IO_PNETCDF ) then
+    if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  dtype, IA )
        call FileDefAxis( fid, 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  dtype, JA )
     else
@@ -1648,7 +1648,7 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  dtype, KA+1 )
     end if
-    if ( .NOT. IO_PNETCDF ) then
+    if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, IA+1 )
        call FileDefAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, JA+1 )
     else
@@ -1659,7 +1659,7 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, KA )
     end if
-    if ( .NOT. IO_PNETCDF ) then
+    if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, IA )
        call FileDefAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, JA )
     else
@@ -1670,7 +1670,7 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, KA-1 )
     end if
-    if ( .NOT. IO_PNETCDF ) then
+    if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, IA-1 )
        call FileDefAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, JA-1 )
     else
@@ -1691,7 +1691,7 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, KA )
     end if
-    if ( .NOT. IO_PNETCDF ) then
+    if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, IA )
        call FileDefAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, JA )
     else
@@ -1702,7 +1702,7 @@ contains
     if ( .NOT. xy_ ) then
        call FileDefAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, KA )
     end if
-    if ( .NOT. IO_PNETCDF ) then
+    if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, IA )
        call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, JA )
     else
@@ -1710,7 +1710,7 @@ contains
        call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, JAG )
     end if
 
-    ! TODO: skip 8 axes below when IO_PNETCDF is true, as all axes are now global
+    ! TODO: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
     call FileDefAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, IAG )
     call FileDefAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, JAG )
     call FileDefAxis( fid, 'FXG', 'Grid Face Position X (global)',   'm', 'FXG', dtype, IAG+1 )
@@ -2051,7 +2051,7 @@ contains
        call FileWriteAxis( fid, 'FY',   GRID_FYG,   start )
     end if
 
-    ! global axes: skip 8 axes below when IO_PNETCDF is true, as all axes are now global
+    ! global axes: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
     ! call FileWriteAxis( fid, 'CXG', GRID_CXG )
     ! call FileWriteAxis( fid, 'CYG', GRID_CYG )
     ! call FileWriteAxis( fid, 'FXG', GRID_FXG )
@@ -2260,7 +2260,7 @@ contains
 
     integer :: dim1_S, dim1_E
     integer :: rankidx(2)
-    integer :: start(1)         ! used only when IO_PNETCDF is .true.
+    integer :: start(1)         ! used only when IO_AGGREGATE is .true.
     logical :: exec = .TRUE.
     !---------------------------------------------------------------------------
 
@@ -2273,19 +2273,19 @@ contains
        dim1_S   = KS
        dim1_E   = KE
        start(1) = 1
-       if ( IO_PNETCDF .AND. PRC_myrank .GT. 0 ) &
+       if ( IO_AGGREGATE .AND. PRC_myrank .GT. 0 ) &
           exec = .FALSE.  ! only rank 0 writes
     elseif( axistype .EQ. 'X' ) then
        dim1_S   = ISB
        dim1_E   = IEB
        start(1) = ISGA
-       if ( IO_PNETCDF .AND. rankidx(2) .GT. 0 ) &
+       if ( IO_AGGREGATE .AND. rankidx(2) .GT. 0 ) &
           exec = .FALSE.  ! only south most row processes write
     elseif( axistype .EQ. 'Y' ) then
        dim1_S   = JSB
        dim1_E   = JEB
        start(1) = JSGA
-       if ( IO_PNETCDF .AND. rankidx(1) .GT. 0 ) &
+       if ( IO_AGGREGATE .AND. rankidx(1) .GT. 0 ) &
           exec = .FALSE.  ! only west most column processes write
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
@@ -2338,7 +2338,7 @@ contains
     integer :: i, j
     logical :: nohalo_
     integer :: rankidx(2)
-    integer :: start(2)         ! used only when IO_PNETCDF is .true.
+    integer :: start(2)         ! used only when IO_AGGREGATE is .true.
     logical :: exec = .TRUE.
     !---------------------------------------------------------------------------
 
@@ -2361,7 +2361,7 @@ contains
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           if ( rankidx(1) .EQ. 0             ) dim1_S = 1
           if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim1_E = IA
           if ( rankidx(2) .EQ. 0             ) dim2_S = 1
@@ -2374,7 +2374,7 @@ contains
        dim2_E   = IEB
        start(2) = start(1)
        start(1) = 1
-       if ( IO_PNETCDF .AND. rankidx(2) .GT. 0 ) then
+       if ( IO_AGGREGATE .AND. rankidx(2) .GT. 0 ) then
           exec = .FALSE.  ! only south most row processes write
           if ( rankidx(1) .EQ. 0             ) dim2_S = 1
           if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim2_E = IA
@@ -2465,7 +2465,7 @@ contains
     integer :: i, j, k
     logical :: nohalo_
     integer :: rankidx(2)
-    integer :: start(3)         ! used only when IO_PNETCDF is .true.
+    integer :: start(3)         ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2484,7 +2484,7 @@ contains
     dim2_E   = IEB
     dim3_S   = JSB
     dim3_E   = JEB
-    if ( IO_PNETCDF ) then
+    if ( IO_AGGREGATE ) then
        if ( rankidx(1) .EQ. 0             ) dim2_S = 1
        if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim2_E = IA
        if ( rankidx(2) .EQ. 0             ) dim3_S = 1
@@ -2603,7 +2603,7 @@ contains
     integer :: i, j, n
     logical :: nohalo_
     integer :: rankidx(2)
-    integer :: start(3)         ! used only when IO_PNETCDF is .true.
+    integer :: start(3)         ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2622,7 +2622,7 @@ contains
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           if ( rankidx(1) .EQ. 0             ) dim1_S = 1
           if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim1_E = IA
           if ( rankidx(2) .EQ. 0             ) dim2_S = 1
@@ -2761,7 +2761,7 @@ contains
     integer :: i, j, k, n
     logical :: nohalo_
     integer :: rankidx(2)
-    integer :: start(4)         ! used only when IO_PNETCDF is .true.
+    integer :: start(4)         ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2788,7 +2788,7 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           if ( rankidx(1) .EQ. 0             ) dim2_S = 1
           if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim2_E = IA
           if ( rankidx(2) .EQ. 0             ) dim3_S = 1

@@ -1013,7 +1013,7 @@ contains
                             restart_fid, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
        enddo
 
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           call FILEIO_flush( restart_fid )
           ! X/Y halos have been read from file
 
@@ -1142,7 +1142,7 @@ contains
     do iq = 1, QA
        call FILEIO_read( QTRC_check(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', step=1 )
     end do
-    if ( IO_PNETCDF ) call FILEIO_flush( fid )
+    if ( IO_AGGREGATE ) call FILEIO_flush( fid )
 
     call FILEIO_close( fid ) ! [IN]
 

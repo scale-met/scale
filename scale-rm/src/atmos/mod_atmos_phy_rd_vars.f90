@@ -353,7 +353,7 @@ contains
        call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,2),     & ! [OUT]
                          restart_fid, VAR_NAME(12), 'XY', step=1 ) ! [IN]
 
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           call FILEIO_flush( restart_fid )
           ! halos have been read from file
        else

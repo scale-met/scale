@@ -402,7 +402,7 @@ contains
        call FILEIO_read( OCEAN_SFLX_evap(:,:),                            & ! [OUT]
                          restart_fid, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
 
-       if ( IO_PNETCDF ) &
+       if ( IO_AGGREGATE ) &
           ! commit all pending read requests
           call FILEIO_flush( restart_fid ) ! [IN]
 

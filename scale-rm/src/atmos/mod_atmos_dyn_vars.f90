@@ -248,7 +248,7 @@ contains
                             restart_fid, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
        enddo
 
-       if ( IO_PNETCDF ) then
+       if ( IO_AGGREGATE ) then
           call FILEIO_flush( restart_fid )
           ! X/Y halos have been read from file
 
