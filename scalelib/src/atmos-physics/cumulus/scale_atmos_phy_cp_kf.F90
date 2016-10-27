@@ -60,7 +60,7 @@ module scale_atmos_phy_cp_kf
 
   !-----------------------------------------------------------------------------
   !++ Public pparameters & variabeles
-  real(RP), public,  save       :: KF_DT           = 5._RP    ! kf time scale [min!!!!!]
+  real(RP), public,  save       :: KF_DTSEC = 300._RP    ! kf time scale [sec]
 
   !-----------------------------------------------------------------------------
   !
@@ -383,16 +383,16 @@ contains
                         QTRC         (:,:,:,:), & ! [IN]
                         w0avg        (:,:,:),   & ! [IN]
                         nca          (:,:),     & ! [INOUT]
-                        DENS_t_CP    (:,:,:),   & ! [OUT]
-                        RHOT_t_CP    (:,:,:),   & ! [OUT]
-                        RHOQ_t_CP    (:,:,:,:), & ! [OUT]
-                        SFLX_convrain(:,:),     & ! [OUT]
-                        cldfrac_sh   (:,:,:),   & ! [OUT]
-                        cldfrac_dp   (:,:,:),   & ! [OUT]
-                        lifetime     (:,:),     & ! [OUT]
-                        cloudtop     (:,:),     & ! [OUT]
-                        cloudbase    (:,:),     & ! [OUT]
-                        I_convflag   (:,:)      ) ! [OUT]
+                        DENS_t_CP    (:,:,:),   & ! [INOUT]
+                        RHOT_t_CP    (:,:,:),   & ! [INOUT]
+                        RHOQ_t_CP    (:,:,:,:), & ! [INOUT]
+                        SFLX_convrain(:,:),     & ! [INOUT]
+                        cldfrac_sh   (:,:,:),   & ! [INOUT]
+                        cldfrac_dp   (:,:,:),   & ! [INOUT]
+                        lifetime     (:,:),     & ! [INOUT]
+                        cloudtop     (:,:),     & ! [INOUT]
+                        cloudbase    (:,:),     & ! [INOUT]
+                        I_convflag   (:,:)      ) ! [INOUT]
 
        call PROF_rapend('CP_kf', 3)
     endif
@@ -430,7 +430,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( PARAM_ATMOS_PHY_CP_kf_wadapt ) then
-       fact_W0_avg = 2.0_RP * max(KF_DT,TIME_DTSEC) - TIME_DTSEC
+       fact_W0_avg = 2.0_RP * max(KF_DTSEC,TIME_DTSEC) - TIME_DTSEC
        fact_W0     = TIME_DTSEC
     else ! w_time is tuning parameter
        fact_W0_avg = real(PARAM_ATMOS_PHY_CP_kf_w_time,RP)
@@ -488,7 +488,7 @@ contains
        TRIGGER_in = 3
     end if
     TRIGGER         = TRIGGER_in
-    KF_DT           = KF_DT_in
+    KF_DTSEC        = KF_DT_in * 60.0_DP ! convert from min to sec
     DELCAPE         = DELCAPE_in
     DEEPLIFETIME    = DEEPLIFETIME_in
     SHALLOWLIFETIME = SHALLOWLIFETIME_in
@@ -520,7 +520,6 @@ contains
        w0avg,       &
        ! [INOUT]
        nca,         &
-       ! [OUT]
        DENS_t_CP,   &
        DT_RHOT,     &
        DT_RHOQ,     &
@@ -923,7 +922,7 @@ contains
              nca(i,j) = real(nic,RP)*dt ! convection feed back act this time span
           elseif (I_convflag(i,j) == 1) then ! shallow
              timecp(i,j) = SHALLOWLIFETIME
-             nca   (i,j) = KF_DT*60._RP ! convection feed back act this time span
+             nca   (i,j) = KF_DTSEC ! convection feed back act this time span
           end if
           ! update qd
           q_hyd(KS:KE,I_QC-QS_MP) = qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-QS_MP)
