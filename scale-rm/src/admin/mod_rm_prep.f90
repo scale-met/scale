@@ -89,7 +89,8 @@ contains
     use scale_urban_grid, only: &
        URBAN_GRID_setup
     use scale_fileio, only: &
-       FILEIO_setup
+       FILEIO_setup, &
+       FILEIO_cleanup
     use scale_comm, only: &
        COMM_setup
     use scale_topography, only: &
@@ -298,6 +299,9 @@ contains
     !########## Finalize ##########
 
     call PROF_rapreport
+
+    ! setup file I/O
+    call FILEIO_cleanup
 
     call FileCloseAll
 

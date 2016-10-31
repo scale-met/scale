@@ -50,6 +50,7 @@ Switch options will be activated only when the value is "T"
 * RDMA : (obsolete) : use special routine of RDMA communication on the K computer
 * ENABLE_PAPI : enable using PAPI (library is required)
 * USE_NETCDF3 : use NetCDF3 instead of NetCDF4
+* ENABLE_PNETCDF: enable using parallel-netCDF
 
 - Fixed component
 You can fix several model component at the time of compile.

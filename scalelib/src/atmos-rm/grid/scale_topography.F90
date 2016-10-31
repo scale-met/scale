@@ -114,8 +114,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Read topography
   subroutine TOPO_read
-    use gtool_file, only: &
-       FileRead
     use scale_fileio, only: &
        FILEIO_read
     use scale_process, only: &
@@ -146,8 +144,8 @@ contains
 
        TOPO_exist = .true.
 
-       call FileRead( tmp_CX(:),  TOPO_IN_BASENAME, 'CX', 1, PRC_myrank )
-       call FileRead( tmp_CY(:),  TOPO_IN_BASENAME, 'CY', 1, PRC_myrank )
+       call FILEIO_read( tmp_CX(:), TOPO_IN_BASENAME, 'CX', 'CX', 1 )
+       call FILEIO_read( tmp_CY(:), TOPO_IN_BASENAME, 'CY', 'CY', 1 )
 
        do i = 1, IA
          if( abs(tmp_CX(i) - GRID_CX(i)) > epsilon ) then

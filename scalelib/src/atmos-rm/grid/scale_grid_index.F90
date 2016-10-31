@@ -65,16 +65,6 @@ module scale_grid_index
   integer, public :: KIJMAX = -1 !< # of computational cells: z*x*y
 #endif
 
-  integer, public :: IMAXG  = -1 !< # of computational cells: x, global
-  integer, public :: JMAXG  = -1 !< # of computational cells: y, global
-  integer, public :: IAG         !< # of whole         cells: x, global, with HALO
-  integer, public :: JAG         !< # of whole         cells: y, global, with HALO
-
-  integer, public :: IS_inG      !< start point of the inner domain: x, global
-  integer, public :: IE_inG      !< end   point of the inner domain: x, global
-  integer, public :: JS_inG      !< start point of the inner domain: y, global
-  integer, public :: JE_inG      !< end   point of the inner domain: y, global
-
   ! indices considering boundary
   integer, public :: IMAXB
   integer, public :: JMAXB
@@ -84,6 +74,26 @@ module scale_grid_index
   integer, public :: JEB
   integer, public :: IEH         !< end   point of inner domain: x, local (half level)
   integer, public :: JEH         !< end   point of inner domain: y, local (half level)
+
+  ! global size and offset
+  integer, public :: IMAXG  = -1 !< # of computational cells: x, global
+  integer, public :: JMAXG  = -1 !< # of computational cells: y, global
+  integer, public :: IAG         !< # of computational grids
+  integer, public :: JAG         !< # of computational grids
+  integer, public :: IAGB        !< # of computational grids
+  integer, public :: JAGB        !< # of computational grids
+  integer, public :: IS_inG      !< start point of the inner domain: cx, global
+  integer, public :: IE_inG      !< end   point of the inner domain: cx, global
+  integer, public :: JS_inG      !< start point of the inner domain: cy, global
+  integer, public :: JE_inG      !< end   point of the inner domain: cy, global
+  integer, public :: ISGA        !< start point of the full domain: cx, global
+  integer, public :: IEGA        !< end   point of the full domain: cx, global
+  integer, public :: JSGA        !< start point of the full domain: cy, global
+  integer, public :: JEGA        !< end   point of the full domain: cy, global
+  integer, public :: ISGB        !< start point of the inner domain: x, global
+  integer, public :: IEGB        !< end   point of the inner domain: x, global
+  integer, public :: JSGB        !< start point of the inner domain: y, global
+  integer, public :: JEGB        !< end   point of the inner domain: y, global
 
   !-----------------------------------------------------------------------------
   !
@@ -102,6 +112,8 @@ contains
        PRC_MPIstop, &
        PRC_myrank
     use scale_rm_process, only: &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y, &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y,   &
@@ -229,14 +241,70 @@ contains
     endif
 
     ! array size (global domain)
-    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
-    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
+    IAG   = IMAXG + IHALO * 2
+    JAG   = JMAXG + JHALO * 2
 
     ! horizontal index (global domain)
     IS_inG = IHALO + 1    + PRC_2Drank(PRC_myrank,1) * IMAX
     IE_inG = IHALO + IMAX + PRC_2Drank(PRC_myrank,1) * IMAX
     JS_inG = JHALO + 1    + PRC_2Drank(PRC_myrank,2) * JMAX
     JE_inG = JHALO + JMAX + PRC_2Drank(PRC_myrank,2) * JMAX
+
+    if ( PRC_2Drank(PRC_myrank,1) == 0 ) then
+       ISGA = 1
+    else
+       ISGA = IS_inG
+    end if
+    if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X - 1 ) then
+       IEGA = IAG
+    else
+       IEGA = IE_inG
+    end if
+    if ( PRC_2Drank(PRC_myrank,2) == 0 ) then
+       JSGA = 1
+    else
+       JSGA = JS_inG
+    end if
+    if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y - 1 ) then
+       JEGA = JAG
+    else
+       JEGA = JE_inG
+    end if
+
+    if ( PRC_PERIODIC_X ) then
+       IAGB = IMAXG
+       ISGB = IS_inG - IHALO
+       IEGB = IE_inG - IHALO
+    else
+       IAGB = IAG
+       if ( PRC_HAS_W ) then
+          ISGB = IS_inG
+       else ! western boundary
+          ISGB = IS_inG - IHALO ! ISGB = 1
+       end if
+       if ( PRC_HAS_E ) then
+          IEGB = IE_inG
+       else ! eastern boundary
+          IEGB = IE_inG + IHALO
+       end if
+    end if
+    if ( PRC_PERIODIC_Y ) then
+       JAGB = JMAXG
+       JSGB = JS_inG - JHALO
+       JEGB = JE_inG - JHALO
+    else
+       JAGB = JAG
+       if ( PRC_HAS_S ) then
+          JSGB = JS_inG
+       else ! southern boundary
+          JSGB = JS_inG - JHALO ! JSGY = 1
+       end if
+       if ( PRC_HAS_N ) then
+          JEGB = JE_inG
+       else ! northern boundary
+          JEGB = JE_inG + JHALO
+       end if
+    end if
 
     ! index considering boundary region
     IMAXB = IMAX
@@ -269,9 +337,17 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere grid index information ***'
+
+    ! global
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,3(A,I6))') '*** No. of Computational Grid (global)  :', &
                                                 KMAX,' x ',IMAXG,' x ',JMAXG
+    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (X)      :', &
+                                                IS_inG," - ",IE_inG
+    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (Y)      :', &
+                                                JS_inG," - ",JE_inG
 
+    ! local
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,3(A,I6))') '*** No. of Computational Grid (local)   :', &
                                                 KMAX,' x ',IMAX,' x ',JMAX
@@ -282,12 +358,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Local index of inner grid (Y)       :', &
                                                 JSB," - ",JEB
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (X)      :', &
-                                                IS_inG," - ",IE_inG
-    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (Y)      :', &
-                                                JS_inG," - ",JE_inG
-
+    return
   end subroutine GRID_INDEX_setup
 
 end module scale_grid_index

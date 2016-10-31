@@ -86,7 +86,8 @@ contains
     use scale_urban_grid, only: &
        URBAN_GRID_setup
     use scale_fileio, only: &
-       FILEIO_setup
+       FILEIO_setup, &
+       FILEIO_cleanup
     use scale_comm, only: &
        COMM_setup , &
        COMM_cleanup
@@ -128,7 +129,7 @@ contains
        ATMOS_driver_config
     use mod_admin_restart, only: &
        ADMIN_restart_setup, &
-       ADMIN_restart
+       ADMIN_restart_write
     use mod_admin_time, only: &
        ADMIN_TIME_setup,      &
        ADMIN_TIME_checkstate, &
@@ -137,10 +138,6 @@ contains
        TIME_DOLAND_step,      &
        TIME_DOURBAN_step,     &
        TIME_DOOCEAN_step,     &
-       TIME_DOATMOS_restart,  &
-       TIME_DOLAND_restart,   &
-       TIME_DOURBAN_restart,  &
-       TIME_DOOCEAN_restart,  &
        TIME_DOresume,         &
        TIME_DOend
     use mod_atmos_admin, only: &
@@ -148,8 +145,6 @@ contains
        ATMOS_do
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,                         &
-       ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
-       ATMOS_vars_restart_write,                 &
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
@@ -160,9 +155,7 @@ contains
        OCEAN_admin_setup, &
        OCEAN_do
     use mod_ocean_vars, only: &
-       OCEAN_vars_setup,                         &
-       OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
-       OCEAN_vars_restart_write
+       OCEAN_vars_setup
     use mod_ocean_driver, only: &
        OCEAN_driver_setup, &
        OCEAN_driver
@@ -170,9 +163,7 @@ contains
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
-       LAND_vars_setup,                        &
-       LAND_sw_restart => LAND_RESTART_OUTPUT, &
-       LAND_vars_restart_write
+       LAND_vars_setup
     use mod_land_driver, only: &
        LAND_driver_setup, &
        LAND_driver
@@ -180,9 +171,7 @@ contains
        URBAN_admin_setup, &
        URBAN_do
     use mod_urban_vars, only: &
-       URBAN_vars_setup,                         &
-       URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
-       URBAN_vars_restart_write
+       URBAN_vars_setup
     use mod_urban_driver, only: &
        URBAN_driver_setup, &
        URBAN_driver
@@ -341,7 +330,7 @@ contains
       ! report current time
       call ADMIN_TIME_checkstate
 
-      if ( TIME_DORESUME ) then
+      if ( TIME_DOresume ) then
          ! resume state from restart files
          call resume_state
 
@@ -368,11 +357,7 @@ contains
       call MONIT_write('MAIN')
 
       ! restart output
-      ! if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
-      ! if( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
-      ! if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
-      ! if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-      call ADMIN_restart
+      call ADMIN_restart_write
 
       if( TIME_DOend ) exit
 
@@ -407,6 +392,9 @@ contains
     call PROF_rapstart('Monit', 2)
     call MONIT_finalize
     call PROF_rapend  ('Monit', 2)
+
+    ! clean up resource allocated for I/O
+    call FILEIO_cleanup
 
     call COMM_cleanup
 
@@ -461,14 +449,13 @@ contains
        LAND_do
     use mod_urban_admin, only: &
        URBAN_do
+    use mod_admin_restart, only: &
+       ADMIN_restart_read
     implicit none
     !---------------------------------------------------------------------------
 
     ! read restart data
-    if( ATMOS_do ) call ATMOS_vars_restart_read
-    if( OCEAN_do ) call OCEAN_vars_restart_read
-    if( LAND_do  ) call LAND_vars_restart_read
-    if( URBAN_do ) call URBAN_vars_restart_read
+    call ADMIN_restart_read
 
     ! setup user-defined procedure before setup of other components
     call USER_resume0

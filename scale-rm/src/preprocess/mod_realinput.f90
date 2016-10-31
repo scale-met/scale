@@ -154,7 +154,6 @@ module mod_realinput
   logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
   ! only for SCALE boundary
   logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -1350,9 +1349,16 @@ contains
        COMM_vars, &
        COMM_wait
     use scale_fileio, only: &
-       FILEIO_write
+       FILEIO_create, &
+       FILEIO_def_var, &
+       FILEIO_enddef, &
+       FILEIO_write_var
     use scale_time, only: &
        TIME_NOWDATE
+    use scale_atmos_phy_mp, only: &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     implicit none
 
     real(RP),         intent(in)   :: dens(:,:,:,:)
@@ -1370,6 +1376,7 @@ contains
     real(RP), allocatable :: buffer(:,:,:,:)
     integer :: nowdate(6)
 
+    integer :: fid, vid(5+QA_MP)
     integer :: k, i, j, n, iq
     integer :: ts, te
     !---------------------------------------------------------------------------
@@ -1385,10 +1392,26 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Boundary]'
 
-    call FILEIO_write( DENS(:,:,:,ts:te), basename, title,           &
-                       'DENS', 'Reference Density', 'kg/m3', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate  )
+    call FILEIO_create( fid, basename, title, atmos_boundary_out_dtype, nowdate )
 
+    call FILEIO_def_var( fid, vid(1), 'DENS', 'Reference Density', 'kg/m3', 'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(2), 'VELZ', 'Reference VELZ',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(3), 'VELX', 'Reference VELX',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(4), 'VELY', 'Reference VELY',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(5), 'POTT', 'Reference PT',      'K',     'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    do iq = QS_MP, QE_MP
+       call FILEIO_def_var( fid, vid(6+iq-QS_MP), TRACER_NAME(iq), 'Reference '//TRACER_NAME(iq), 'kg/kg', 'ZXYT', &
+            atmos_boundary_out_dtype, update_dt, numsteps )
+    end do
+
+    call FILEIO_enddef( fid )
+
+    call FILEIO_write_var( fid, vid(1), DENS(:,:,:,ts:te), 'DENS', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA
@@ -1398,10 +1421,7 @@ contains
     end do
     end do
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELZ', 'Reference VELZ', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(2), buffer,            'VELZ', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA-1
@@ -1414,10 +1434,7 @@ contains
     do n = ts, te
        buffer(:,IA,:,n-ts+1) = buffer(:,IA-1,:,n-ts+1)
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELX', 'Reference VELX', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(3), buffer,            'VELX', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA-1
     do i = 1, IA
@@ -1430,10 +1447,7 @@ contains
     do n = ts, te
        buffer(:,:,JA,n-ts+1) = buffer(:,:,JA-1,n-ts+1)
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELY', 'Reference VELY', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(4), buffer,            'VELY', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA
@@ -1443,11 +1457,9 @@ contains
     end do
     end do
     end do
-    call FILEIO_write( buffer, basename, title,                     &
-                       'POTT', 'Reference PT', 'K', 'ZXYT',         &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_write_var( fid, vid(5), buffer,            'POTT', 'ZXYT', update_dt )
 
-    do iq = 1, QA
+    do iq = QS_MP, QE_MP
        do n = ts, te
        do j = 1, JA
        do i = 1, IA
@@ -1457,9 +1469,7 @@ contains
        end do
        end do
        end do
-       call FILEIO_write( buffer, basename, title,                                           &
-            TRACER_NAME(iq), 'Reference '//trim(TRACER_NAME(iq)), TRACER_UNIT(iq), 'ZXYT', &
-            atmos_boundary_out_dtype, update_dt, nowdate                       )
+       call FILEIO_write_var( fid, vid(6+iq-QS_MP), buffer, TRACER_NAME(iq), 'ZXYT', update_dt )
     end do
 
     deallocate( buffer )
@@ -2227,7 +2237,10 @@ contains
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
     use scale_fileio, only: &
-         FILEIO_write
+         FILEIO_create, &
+         FILEIO_def_var, &
+         FILEIO_enddef, &
+         FILEIO_write_var
     use scale_time, only: &
          TIME_NOWDATE
     implicit none
@@ -2243,6 +2256,7 @@ contains
 
     character(len=H_MID)  :: ocean_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     integer :: nowdate(6)
+    integer :: fid, vid(5)
     integer :: ts, te
     !---------------------------------------------------------------------------
 
@@ -2255,25 +2269,31 @@ contains
     nowdate = TIME_NOWDATE
     nowdate(1) = nowdate(1)
 
-    call FILEIO_write( tw(:,:,ts:te), basename, title,              &
-                       'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_create( fid, basename, title, ocean_boundary_out_dtype, nowdate )
 
-    call FILEIO_write( sst(:,:,ts:te), basename, title,             &
-                       'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature', 'K', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_def_var( fid, vid(1), &
+         'OCEAN_TEMP',     'Reference Ocean Temperature',            'K', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(2), &
+         'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature',    'K', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(3), &
+         'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(4), &
+         'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(5), &
+         'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
 
-    call FILEIO_write( albw(:,:,I_LW,ts:te), basename, title,       &
-                       'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_enddef( fid )
 
-    call FILEIO_write( albw(:,:,I_SW,ts:te), basename, title,       &
-                       'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
-
-    call FILEIO_write( z0(:,:,ts:te), basename, title,           &
-                       'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+       call FILEIO_write_var( fid, vid(1), tw(:,:,ts:te),         'OCEAN_TEMP',    'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(2), sst(:,:,ts:te),       'OCEAN_SFC_TEMP', 'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(3), albw(:,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(4), albw(:,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(5), z0(:,:,ts:te),        'OCEAN_SFC_Z0',   'XYT', update_dt )
 
     return
   end subroutine ParentOceanBoundary

@@ -60,6 +60,16 @@ endif
 NETCDF_INCLUDE ?= $(shell nf-config --fflags) $(shell nc-config --cflags)
 NETCDF_LIBS    ?= $(shell nf-config --flibs)  $(shell nc-config --libs)
 
+ifeq ($(ENABLE_PNETCDF),T)
+   NETCDF_INCLUDE += -DPNETCDF
+else
+  ifeq ($(ENABLE_PNETCDF),)
+    ifeq ($(shell nc-config --has-pnetcdf),yes)
+      NETCDF_INCLUDE += -DPNETCDF
+    endif
+  endif
+endif
+
 ifeq ($(ENABLE_PAPI),T)
    FFLAGS      += -D_PAPI_
    PAPI_INCLUDE = -I$(PAPI)/include

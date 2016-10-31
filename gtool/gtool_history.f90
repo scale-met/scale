@@ -107,7 +107,6 @@ module gtool_history
      integer                    :: fid            !> File id of the file
      integer                    :: dstep          !> Time unit
      logical                    :: taverage       !> Apply time average?
-     logical                    :: axis_written   !> Axis for this item is already written?
      integer                    :: vid            !> Variable id
 
      real(DP)                   :: waitsec        !> Time length to suppress output [sec]
@@ -116,10 +115,12 @@ module gtool_history
      integer                    :: size           !> Size of array
      real(DP)                   :: timesum        !> Buffer for time
      real(DP), pointer          :: varsum(:)      !> Buffer for value
+     integer                    :: ndims          !> variable's original no. dimensions
+     integer                    :: start(4)       !> global subarray starting indices
+     integer                    :: count(4)       !> global subarray request sizes
   end type vars
 
   type axis
-     integer                    :: id
      character(len=File_HSHORT) :: name
      character(len=File_HLONG)  :: desc
      character(len=File_HSHORT) :: units
@@ -128,10 +129,11 @@ module gtool_history
      integer                    :: dim_size
      real(DP), pointer          :: var(:)
      logical                    :: down
+     integer                    :: gdim_size  ! global dimension size
+     integer                    :: start(1)   ! global array start index
   end type axis
 
   type assoc
-     integer                    :: id
      character(len=File_HSHORT) :: name
      character(len=File_HLONG)  :: desc
      character(len=File_HSHORT) :: units
@@ -139,6 +141,8 @@ module gtool_history
      character(len=File_HSHORT) :: dims(4)
      integer                    :: dtype
      real(DP), pointer          :: var(:)
+     integer                    :: start(4)   ! global array start indices
+     integer                    :: count(4)   ! global array request lengths
   end type assoc
 
   !-----------------------------------------------------------------------------
@@ -185,6 +189,7 @@ module gtool_history
 
   integer,                    private              :: History_id_count      = 0         !> number of registered item
   type(vars),                 private, allocatable :: History_vars(:)
+  logical,                    private, allocatable :: History_axis_written(:) !> Axis for this file is already written?
 
   integer,                    private, parameter   :: History_axis_limit    = 100       !> number limit of axes
   integer,                    private              :: History_axis_count    =   0
@@ -201,7 +206,8 @@ module gtool_history
   character(LEN=LOG_LMSG),    private              :: message        = ''
   logical,                    private              :: debug          = .false.
 
-  !-----------------------------------------------------------------------------
+  integer,                    private              :: io_buffer_size                    !>  internal buffer for PnetCDF
+
 contains
   !-----------------------------------------------------------------------------
   subroutine HistoryInit( &
@@ -408,12 +414,18 @@ contains
        return
     endif
 
+
     allocate( History_req(History_req_count) )
 
+    ! allows PnetCDF to use an internal buffer to aggregate write requests
+    io_buffer_size = array_size * History_req_count * 8
+
     ! read history request
+
+
     memsize = 0
     reqid   = 0
-    rewind(fid)
+    if ( fid > 0 ) rewind(fid)
     do n = 1, History_req_limit
        ! set default
        ITEM      = ''
@@ -497,6 +509,7 @@ contains
 
     History_id_count = 0
     allocate( History_vars(History_req_count) )
+    allocate( History_axis_written(History_req_count) )
 
     do n = 1, History_req_count
        allocate( History_vars(n)%varsum(array_size) )
@@ -568,14 +581,20 @@ contains
        units,    &
        now_step, &
        zcoord,   &
-       options   )
+       options,  &
+       start,    &
+       count,    &
+       comm      )
     use gtool_file, only: &
        FileCreate,      &
        FileSetOption,   &
        FileAddVariable, &
        FileSetTAttr,    &
        FileDefAxis,     &
-       FileDefAssociatedCoordinates
+       FileDefAssociatedCoordinates, &
+       FileAttachBuffer
+    use MPI, only: &
+       MPI_COMM_NULL
     implicit none
 
     integer,          intent(out) :: nregist
@@ -585,7 +604,10 @@ contains
     character(len=*), intent(in)  :: units
     integer,          intent(in)  :: now_step
     character(len=*), intent(in), optional :: zcoord
-    character(len=*), intent(in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
+    character(len=*), intent(in), optional :: options  ! 'filetype1:key1=val1&filetype2:key2=val2&...'
+    integer,          intent(in), optional :: start(:) ! global subarray starting indices of this process's write request
+    integer,          intent(in), optional :: count(:) ! lengths of this process's write request along each dimension
+    integer,          intent(in), optional :: comm     ! MPI communicator
 
     character(len=File_HMID) :: tunits
     logical                  :: fileexisted
@@ -594,13 +616,19 @@ contains
     logical                  :: existed
     integer                  :: ndim
 
-    integer :: m, reqid
-    integer :: id
+    logical                  :: shared_file_io
+    integer                  :: nmax, reqid
+    integer                  :: id, fid
+    integer                  :: n, m, dim_size
 
     intrinsic size
     !---------------------------------------------------------------------------
 
     nregist = 0
+
+    ! check whether shared-file I/O method is enabled
+    shared_file_io = .FALSE.
+    if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) shared_file_io = .TRUE.
 
     call HistoryCheck( existed, & ! [OUT]
                        item,    & ! [IN]
@@ -635,7 +663,7 @@ contains
              History_vars(id)%item     = History_req(reqid)%item
              History_vars(id)%outname  = History_req(reqid)%outname
 
-             call FileCreate( History_vars(id)%fid,        & ! [OUT]
+             call FileCreate( fid,                         & ! [OUT]
                               fileexisted,                 & ! [OUT]
                               History_req(reqid)%basename, & ! [IN]
                               History_TITLE,               & ! [IN]
@@ -644,8 +672,10 @@ contains
                               History_master,              & ! [IN]
                               History_myrank,              & ! [IN]
                               History_rankidx(:),          & ! [IN]
-                              time_units = tunits          ) ! [IN]
+                              time_units = tunits,         & ! [IN]
+                              comm = comm                  ) ! [IN]
 
+             History_vars(id)%fid      = fid
              History_vars(id)%dstep    = History_req(reqid)%dstep
              History_vars(id)%taverage = History_req(reqid)%taverage
              History_vars(id)%zcoord   = History_req(reqid)%zcoord
@@ -664,10 +694,10 @@ contains
                             call Log('E','xxx option is invalid: '//trim(options))
                          endif
 
-                         call FileSetOption( History_vars(id)%fid, & ! [IN]
-                                             options(is  :ic-1),   & ! [IN]
-                                             options(ic+1:ie-1),   & ! [IN]
-                                             options(ie+1:m -1)    ) ! [IN]
+                         call FileSetOption( fid,                & ! [IN]
+                                             options(is  :ic-1), & ! [IN]
+                                             options(ic+1:ie-1), & ! [IN]
+                                             options(ie+1:m -1)  ) ! [IN]
 
                          ic = -1
                          ie = -1
@@ -680,24 +710,35 @@ contains
                    enddo
                 endif
 
-                ! define axis
+                ! define registered history axis variables in the newly created file
+                ! actual writing axis variables are deferred to HistoryWriteAxes
                 do m = 1, History_axis_count
-                   History_axis(m)%id = id
+                   if ( shared_file_io ) then ! for shared-file I/O, define axis in its global size
+                      dim_size = History_axis(m)%gdim_size ! axis global size
+                   else
+                      dim_size = History_axis(m)%dim_size
+                   end if
 
-                   call FileDefAxis( History_vars(id)%fid,    & ! [IN]
+                   call FileDefAxis( fid,                     & ! [IN]
                                      History_axis(m)%name,    & ! [IN]
                                      History_axis(m)%desc,    & ! [IN]
                                      History_axis(m)%units,   & ! [IN]
                                      History_axis(m)%dim,     & ! [IN]
                                      History_axis(m)%dtype,   & ! [IN]
-                                     History_axis(m)%dim_size ) ! [IN]
+                                     dim_size                 ) ! [IN]
                 enddo
 
-                ! define associated coordinate
+                ! define registered history associated coordinate variables in the newly created file
+                ! actual writing coordinate variables are deferred to HistoryWriteAxes
                 do m = 1, History_assoc_count
-                   History_assoc(m)%id = id
 
-                   call FileDefAssociatedCoordinates( History_vars(id)%fid,                            & ! [IN]
+                   if ( shared_file_io ) then
+                      dim_size = History_axis(m)%gdim_size
+                   else
+                      dim_size = History_axis(m)%dim_size
+                   end if
+
+                   call FileDefAssociatedCoordinates( fid,                                             & ! [IN]
                                                       History_assoc(m)%name,                           & ! [IN]
                                                       History_assoc(m)%desc,                           & ! [IN]
                                                       History_assoc(m)%units,                          & ! [IN]
@@ -705,15 +746,29 @@ contains
                                                       History_assoc(m)%dtype                           ) ! [IN]
                 enddo
 
-                History_vars(id)%axis_written = .false.
+                ! allows PnetCDF to allocate an internal buffer of size io_buffer_size
+                ! to aggregate write requests for history variables
+                call FileAttachBuffer( fid, io_buffer_size )
+
+                History_axis_written(fid) = .false.
 
              endif ! new file?
 
              ! Add new variable
              dtsec = real(History_vars(id)%dstep,kind=DP) * History_DTSEC
 
+             ! history variable has been reshaped to 1D, we preserve the
+             ! original shape in count(:) and History_count(:,id)
+             ! History_ndims(id) stores number of dimensions of original shape
+             History_vars(id)%ndims    = size(dims)
+
+             History_vars(id)%start(:) = 1
+             History_vars(id)%count(:) = 1
+             if ( present(start) ) History_vars(id)%start(:) = start(:)
+             if ( present(count) ) History_vars(id)%count(:) = count(:)
+
              call FileAddVariable( History_vars(id)%vid,     & ! [OUT]
-                                   History_vars(id)%fid,     & ! [IN]
+                                   fid,                      & ! [IN]
                                    History_vars(id)%outname, & ! [IN]
                                    desc,                     & ! [IN]
                                    units,                    & ! [IN]
@@ -722,10 +777,10 @@ contains
                                    dtsec,                    & ! [IN]
                                    History_vars(id)%taverage ) ! [IN]
 
-             if ( .NOT. fileexisted ) then
+             if ( .not. fileexisted ) then
                 do m = 1, History_axis_count
                    if ( History_axis(m)%down ) then
-                      call FileSetTAttr( History_vars(id)%fid, History_axis(m)%name, 'positive', 'down' )
+                      call FileSetTAttr( fid, History_axis(m)%name, 'positive', 'down' )
                    endif
                 enddo
              endif
@@ -773,6 +828,9 @@ contains
   end subroutine HistoryAddVariable
 
   !-----------------------------------------------------------------------------
+  ! interface HistoryPutAxis
+  !-----------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   subroutine HistoryPutAxisSP( &
        name,     &
        desc,     &
@@ -780,7 +838,9 @@ contains
        dim,      &
        var,      &
        datatype, &
-       down      )
+       down,     &
+       gsize,    &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -793,6 +853,8 @@ contains
     real(SP),         intent(in) :: var(:)
     character(len=*), intent(in), optional :: datatype
     logical,          intent(in), optional :: down
+    integer,          intent(in), optional :: gsize ! global dim size
+    integer,          intent(in), optional :: start ! global subarray start indices
 
     integer :: dtype
     integer :: dim_size
@@ -835,6 +897,13 @@ contains
        else
           History_axis(History_axis_count)%down = .false.
        endif
+       if ( present(gsize) ) &  ! global dimension size
+          History_axis(History_axis_count)%gdim_size = gsize
+       if ( present(start) ) then  ! global subarray starting indices
+          History_axis(History_axis_count)%start(1) = start
+       else
+          History_axis(History_axis_count)%start(1) = 1
+       end if
     else
        write(message,*) 'xxx Number of axis exceeds the limit.'
        call Log('E',message)
@@ -851,7 +920,9 @@ contains
        dim,      &
        var,      &
        datatype, &
-       down      )
+       down,     &
+       gsize,    &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -864,6 +935,8 @@ contains
     real(DP),         intent(in) :: var(:)
     character(len=*), intent(in), optional :: datatype
     logical,          intent(in), optional :: down
+    integer,          intent(in), optional :: gsize ! global dim size
+    integer,          intent(in), optional :: start ! global subarray start indices
 
     integer :: dtype
     integer :: dim_size
@@ -906,6 +979,13 @@ contains
        else
           History_axis(History_axis_count)%down = .false.
        endif
+       if ( present(gsize) ) &  ! global dimension size
+          History_axis(History_axis_count)%gdim_size = gsize
+       if ( present(start) ) then  ! global subarray starting indices
+          History_axis(History_axis_count)%start(1) = start
+       else
+          History_axis(History_axis_count)%start(1) = 1
+       end if
     else
        write(message,*) 'xxx Number of axis exceeds the limit.'
        call Log('E',message)
@@ -916,12 +996,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut1DAssociatedCoordinatesSP( &
-       name,    &
-       desc,    &
-       units,   &
-       dims,    &
-       var,     &
-       datatype )
+       name,     &
+       desc,     &
+       units,    &
+       dims,     &
+       var,      &
+       datatype, &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -933,12 +1014,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     real(SP),         intent(in) :: var(:)
     character(len=*), intent(in), optional :: datatype
+    integer,          intent(in), optional :: start(:)
 
     integer :: dtype
     integer :: dim_size
     integer :: id
+    integer :: type
 
-    intrinsic size
+    intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
 
     if ( present(datatype) ) then
@@ -970,6 +1053,15 @@ contains
        History_assoc(id)%dims(1:1) = dims(1:1)
        History_assoc(id)%dtype     = dtype
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+
+       ! start and count are used for parallel I/O to a single shared file
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
+       History_assoc(id)%count(1:1) = shape(var)
+       if ( present(start) ) then
+          History_assoc(id)%start(1:1) = start(1:1)
+       else
+          History_assoc(id)%start = (/ 1, 1, 1, 1 /)
+       end if
     else
        write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
        call Log('E',message)
@@ -980,12 +1072,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut1DAssociatedCoordinatesDP( &
-       name,    &
-       desc,    &
-       units,   &
-       dims,    &
-       var,     &
-       datatype )
+       name,     &
+       desc,     &
+       units,    &
+       dims,     &
+       var,      &
+       datatype, &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -997,12 +1090,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     real(DP),         intent(in) :: var(:)
     character(len=*), intent(in), optional :: datatype
+    integer,          intent(in), optional :: start(:)
 
     integer :: dtype
     integer :: dim_size
     integer :: id
+    integer :: type
 
-    intrinsic size
+    intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
 
     if ( present(datatype) ) then
@@ -1034,6 +1129,15 @@ contains
        History_assoc(id)%dims(1:1) = dims(1:1)
        History_assoc(id)%dtype     = dtype
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+
+       ! start and count are used for parallel I/O to a single shared file
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
+       History_assoc(id)%count(1:1) = shape(var)
+       if ( present(start) ) then
+          History_assoc(id)%start(1:1) = start(1:1)
+       else
+          History_assoc(id)%start = (/ 1, 1, 1, 1 /)
+       end if
     else
        write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
        call Log('E',message)
@@ -1044,12 +1148,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut2DAssociatedCoordinatesSP( &
-       name,    &
-       desc,    &
-       units,   &
-       dims,    &
-       var,     &
-       datatype )
+       name,     &
+       desc,     &
+       units,    &
+       dims,     &
+       var,      &
+       datatype, &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -1061,12 +1166,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     real(SP),         intent(in) :: var(:,:)
     character(len=*), intent(in), optional :: datatype
+    integer,          intent(in), optional :: start(:)
 
     integer :: dtype
     integer :: dim_size
     integer :: id
+    integer :: type
 
-    intrinsic size
+    intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
 
     if ( present(datatype) ) then
@@ -1098,6 +1205,15 @@ contains
        History_assoc(id)%dims(1:2) = dims(1:2)
        History_assoc(id)%dtype     = dtype
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+
+       ! start and count are used for parallel I/O to a single shared file
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
+       History_assoc(id)%count(1:2) = shape(var)
+       if ( present(start) ) then
+          History_assoc(id)%start(1:2) = start(1:2)
+       else
+          History_assoc(id)%start = (/ 1, 1, 1, 1 /)
+       end if
     else
        write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
        call Log('E',message)
@@ -1108,12 +1224,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut2DAssociatedCoordinatesDP( &
-       name,    &
-       desc,    &
-       units,   &
-       dims,    &
-       var,     &
-       datatype )
+       name,     &
+       desc,     &
+       units,    &
+       dims,     &
+       var,      &
+       datatype, &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -1125,12 +1242,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     real(DP),         intent(in) :: var(:,:)
     character(len=*), intent(in), optional :: datatype
+    integer,          intent(in), optional :: start(:)
 
     integer :: dtype
     integer :: dim_size
     integer :: id
+    integer :: type
 
-    intrinsic size
+    intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
 
     if ( present(datatype) ) then
@@ -1162,6 +1281,15 @@ contains
        History_assoc(id)%dims(1:2) = dims(1:2)
        History_assoc(id)%dtype     = dtype
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+
+       ! start and count are used for parallel I/O to a single shared file
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
+       History_assoc(id)%count(1:2) = shape(var)
+       if ( present(start) ) then
+          History_assoc(id)%start(1:2) = start(1:2)
+       else
+          History_assoc(id)%start = (/ 1, 1, 1, 1 /)
+       end if
     else
        write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
        call Log('E',message)
@@ -1172,12 +1300,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut3DAssociatedCoordinatesSP( &
-       name,    &
-       desc,    &
-       units,   &
-       dims,    &
-       var,     &
-       datatype )
+       name,     &
+       desc,     &
+       units,    &
+       dims,     &
+       var,      &
+       datatype, &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -1189,12 +1318,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     real(SP),         intent(in) :: var(:,:,:)
     character(len=*), intent(in), optional :: datatype
+    integer,          intent(in), optional :: start(:)
 
     integer :: dtype
     integer :: dim_size
     integer :: id
+    integer :: type
 
-    intrinsic size
+    intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
 
     if ( present(datatype) ) then
@@ -1226,6 +1357,15 @@ contains
        History_assoc(id)%dims(1:3) = dims(1:3)
        History_assoc(id)%dtype     = dtype
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+
+       ! start and count are used for parallel I/O to a single shared file
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
+       History_assoc(id)%count(1:3) = shape(var)
+       if ( present(start) ) then
+          History_assoc(id)%start(1:3) = start(1:3)
+       else
+          History_assoc(id)%start = (/ 1, 1, 1, 1 /)
+       end if
     else
        write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
        call Log('E',message)
@@ -1236,12 +1376,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut3DAssociatedCoordinatesDP( &
-       name,    &
-       desc,    &
-       units,   &
-       dims,    &
-       var,     &
-       datatype )
+       name,     &
+       desc,     &
+       units,    &
+       dims,     &
+       var,      &
+       datatype, &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -1253,12 +1394,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     real(DP),         intent(in) :: var(:,:,:)
     character(len=*), intent(in), optional :: datatype
+    integer,          intent(in), optional :: start(:)
 
     integer :: dtype
     integer :: dim_size
     integer :: id
+    integer :: type
 
-    intrinsic size
+    intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
 
     if ( present(datatype) ) then
@@ -1290,6 +1433,15 @@ contains
        History_assoc(id)%dims(1:3) = dims(1:3)
        History_assoc(id)%dtype     = dtype
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+
+       ! start and count are used for parallel I/O to a single shared file
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
+       History_assoc(id)%count(1:3) = shape(var)
+       if ( present(start) ) then
+          History_assoc(id)%start(1:3) = start(1:3)
+       else
+          History_assoc(id)%start = (/ 1, 1, 1, 1 /)
+       end if
     else
        write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
        call Log('E',message)
@@ -1300,12 +1452,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut4DAssociatedCoordinatesSP( &
-       name,    &
-       desc,    &
-       units,   &
-       dims,    &
-       var,     &
-       datatype )
+       name,     &
+       desc,     &
+       units,    &
+       dims,     &
+       var,      &
+       datatype, &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -1317,12 +1470,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     real(SP),         intent(in) :: var(:,:,:,:)
     character(len=*), intent(in), optional :: datatype
+    integer,          intent(in), optional :: start(:)
 
     integer :: dtype
     integer :: dim_size
     integer :: id
+    integer :: type
 
-    intrinsic size
+    intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
 
     if ( present(datatype) ) then
@@ -1354,6 +1509,15 @@ contains
        History_assoc(id)%dims(1:4) = dims(1:4)
        History_assoc(id)%dtype     = dtype
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+
+       ! start and count are used for parallel I/O to a single shared file
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
+       History_assoc(id)%count(1:4) = shape(var)
+       if ( present(start) ) then
+          History_assoc(id)%start(1:4) = start(1:4)
+       else
+          History_assoc(id)%start = (/ 1, 1, 1, 1 /)
+       end if
     else
        write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
        call Log('E',message)
@@ -1364,12 +1528,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryPut4DAssociatedCoordinatesDP( &
-       name,    &
-       desc,    &
-       units,   &
-       dims,    &
-       var,     &
-       datatype )
+       name,     &
+       desc,     &
+       units,    &
+       dims,     &
+       var,      &
+       datatype, &
+       start     )
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -1381,12 +1546,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     real(DP),         intent(in) :: var(:,:,:,:)
     character(len=*), intent(in), optional :: datatype
+    integer,          intent(in), optional :: start(:)
 
     integer :: dtype
     integer :: dim_size
     integer :: id
+    integer :: type
 
-    intrinsic size
+    intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
 
     if ( present(datatype) ) then
@@ -1418,6 +1585,15 @@ contains
        History_assoc(id)%dims(1:4) = dims(1:4)
        History_assoc(id)%dtype     = dtype
        History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+
+       ! start and count are used for parallel I/O to a single shared file
+       ! since var is reshaped into 1D array, we need to preserve its original shape in count
+       History_assoc(id)%count(1:4) = shape(var)
+       if ( present(start) ) then
+          History_assoc(id)%start(1:4) = start(1:4)
+       else
+          History_assoc(id)%start = (/ 1, 1, 1, 1 /)
+       end if
     else
        write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
        call Log('E',message)
@@ -1910,69 +2086,92 @@ contains
   !-----------------------------------------------------------------------------
   subroutine HistoryWriteAll( &
        step_now )
+    use gtool_file, only: &
+       FileFlush
     implicit none
-
     integer, intent(in) :: step_now
 
     integer :: id
+    integer :: fid, prev_fid
     !---------------------------------------------------------------------------
 
-    ! Write registered axis variables to history file
-    ! This subroutine must be called after all HIST_reg calls are completed
+    ! Note this subroutine must be called after all HIST_reg calls are completed
+    ! Write registered history axes to history file
     call HistoryWriteAxes
 
+    ! Write registered history variables to history file
     do id = 1, History_id_count
        call HistoryWrite( id,      & ! [IN]
                           step_now ) ! [IN]
     enddo
+
+    prev_fid = -1
+    do id = 1, History_id_count
+       fid = History_vars(id)%fid
+       if ( fid .NE. prev_fid ) then
+          ! when using PnetCDF, the above HistoryWrite() only posts write requests
+          ! Now we need to commit the requests to the file
+          call FileFlush( fid )
+          prev_fid = fid
+       end if
+    end do
 
     return
   end subroutine HistoryWriteAll
 
   !-----------------------------------------------------------------------------
   subroutine HistoryWriteAxes
-  use dc_log, only: &
-     LOG_fid
+    use dc_log, only: &
+       LOG_fid
     use gtool_file, only: &
        FileEndDef,    &
+       FileFlush,     &
        FileWriteAxis, &
        FileWriteAssociatedCoordinates
     implicit none
 
-    integer :: m, id
+    integer :: m, id, fid
+    integer :: start(1)
     !---------------------------------------------------------------------------
 
     if( History_req_count  == 0 ) return
     if( History_axis_count == 0 ) return
 
-    ! Assume all history axes are written into the same file
-    id = History_axis(1)%id
+    do id = 1, History_id_count
 
-    if ( History_vars(id)%axis_written ) return
+       fid = History_vars(id)%fid
 
-    call FileEndDef( History_vars(id)%fid )
+       if ( History_axis_written(fid) ) cycle
 
-    ! write registered history variables to file
-    do m = 1, History_axis_count
-       id = History_axis(m)%id
+       call FileEndDef( fid )
 
-       call FileWriteAxis( History_vars(id)%fid, & ! [IN]
-                           History_axis(m)%name, & ! [IN]
-                           History_axis(m)%var   ) ! [IN]
-    enddo
+       ! write registered history variables to file
+       do m = 1, History_axis_count
+          if ( History_axis(m)%start(1) > 0 ) then
+             start(1) = History_axis(m)%start(1)
+             call FileWriteAxis( fid,                  & ! [IN]
+                                 History_axis(m)%name, & ! [IN]
+                                 History_axis(m)%var,  & ! [IN]
+                                 start                 ) ! [IN]
+          end if
+       enddo
 
-    do m = 1, History_assoc_count
-       id = History_assoc(m)%id
+       do m = 1, History_assoc_count
+          call FileWriteAssociatedCoordinates( fid,   & ! [IN]
+                                               History_assoc(m)%name,  & ! [IN]
+                                               History_assoc(m)%var,   & ! [IN]
+                                               History_assoc(m)%start, & ! [IN]
+                                               History_assoc(m)%count, & ! [IN]
+                                               History_assoc(m)%ndims  ) ! [IN]
+       enddo
 
-       call FileWriteAssociatedCoordinates( History_vars(id)%fid,  & ! [IN]
-                                            History_assoc(m)%name, & ! [IN]
-                                            History_assoc(m)%var   ) ! [IN]
-    enddo
+       ! for PnetCDF I/O, flush all pending nonblocking write requests
+       call FileFlush( fid )
 
-    ! Assume all history axes are written into the same file
-    id = History_axis(1)%id
+       ! mark the axes have been written
+       History_axis_written( fid ) = .true.
 
-    History_vars(id)%axis_written = .true.
+    end do
 
     return
   end subroutine HistoryWriteAxes
@@ -2035,11 +2234,21 @@ contains
        call CalendarSec2ymdhms( time_str, sec_str, History_TIME_UNITS )
        call CalendarSec2ymdhms( time_end, sec_end, History_TIME_UNITS )
 
-       call FileWrite( History_vars(id)%fid,             & ! [IN]
-                       History_vars(id)%vid,             & ! [IN]
-                       History_vars(id)%varsum(1:isize), & ! [IN]
-                       time_str,                         & ! [IN]
-                       time_end                          ) ! [IN]
+       if ( History_vars(id)%count(1) .GT. 0 ) then
+
+          ! for one-file-per-process I/O method, History_vars(:)%count(1) == 1 always
+          ! for one file shared by all processes, History_vars(:)%count(1) >= 0,
+          ! being 0 indicates a 1D history variable, which will only be written by the
+          ! south-most processes in parallel, or a z axis to be written by rank 0 only
+          call FileWrite( History_vars(id)%fid,             & ! [IN]
+                          History_vars(id)%vid,             & ! [IN]
+                          History_vars(id)%varsum(1:isize), & ! [IN]
+                          time_str,                         & ! [IN]
+                          time_end,                         & ! [IN]
+                          History_vars(id)%start,           & ! global subarray start indices
+                          History_vars(id)%count,           & ! global subarray lengths
+                          History_vars(id)%ndims            ) ! ndims before reshape
+       end if
     else
        if ( laststep_write < step_now ) then
           write(message,'(A)') '*** Output History: Suppressed.'
@@ -2057,6 +2266,7 @@ contains
     return
   end subroutine HistoryWrite
 
+  ! interface HistoryGet
   !-----------------------------------------------------------------------------
   subroutine HistoryGet1DDP( &
        var,           &
@@ -2350,14 +2560,23 @@ contains
   !-----------------------------------------------------------------------------
   subroutine HistoryFinalize
     use gtool_file, only: &
+       FileDetachBuffer, &
        FileClose
     implicit none
 
     integer :: id
+    integer :: fid, prev_fid
     !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileClose( History_vars(id)%fid )
+       fid = History_vars(id)%fid 
+       if ( fid .NE. prev_fid ) then
+          ! Release the internal buffer previously allowed to be used by PnetCDF
+          call FileDetachBuffer( fid )
+          call FileClose( fid )
+          prev_fid =  fid
+       end if
     enddo
 
     return
