@@ -3704,7 +3704,7 @@ contains
     if ( error .EQ. SUCCESS_CODE ) then
        write(message, '(1x,A,i3)') '*** [File] File Attach Buffer : NO.', n
        call Log('I', message)
-       write(message, '(1x,A,i)') '*** attach buffer for filename: ' // trim(File_fname_list(n)) // ', size=', buf_amount
+       write(message, '(1x,A,i10)') '*** attach buffer for filename: ' // trim(File_fname_list(n)) // ', size=', buf_amount
        call Log('I', message)
     else
        call Log('E', 'xxx failed to attach buffer in PnetCDF')
