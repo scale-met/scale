@@ -199,7 +199,7 @@ $(BUILD_DIR)/mod_oprt.o :
 	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
-	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<
 
 .PHONY : clean distclean allclean dcutils gtool scalelib depend dependency
 
