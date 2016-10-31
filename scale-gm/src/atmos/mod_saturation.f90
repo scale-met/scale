@@ -88,9 +88,10 @@ contains
        CVvap => CONST_CVvap, &
        CL    => CONST_CL,    &
        CI    => CONST_CI,    &
-       LHV   => CONST_LHV,   &
-       LHS   => CONST_LHS,   &
        TEM00 => CONST_TEM00
+    use scale_atmos_hydrometer, only: &
+       LHV, &
+       LHS
     implicit none
 
     NAMELIST / SATURATIONPARAM / &

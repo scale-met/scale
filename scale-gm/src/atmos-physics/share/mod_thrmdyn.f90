@@ -18,12 +18,13 @@ module mod_thrmdyn
      CPdry  => CONST_CPdry, &
      CVdry  => CONST_CVdry, &
      Rvap   => CONST_Rvap,  &
-     LHV    => CONST_LHV,   &
-     LHF    => CONST_LHF,   &
      PRE00  => CONST_PRE00, &
      TEM00  => CONST_TEM00, &
      PSAT0  => CONST_PSAT0, &
      EPSvap => CONST_EPSvap
+  use scale_atmos_hydrometer, only: &
+     LHV, &
+     LHF
   use mod_adm, only: &
      kdim => ADM_kall, &
      kmin => ADM_kmin, &

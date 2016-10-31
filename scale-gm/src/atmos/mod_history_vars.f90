@@ -319,8 +319,9 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CPdry => CONST_CPdry, &
-       Rvap  => CONST_Rvap,  &
-       LHV   => CONST_LHV
+       Rvap  => CONST_Rvap
+    use scale_atmos_hydrometer, only: &
+       LHV
     use mod_adm, only: &
        ADM_KNONE,   &
        ADM_have_pl, &
