@@ -28,8 +28,6 @@ program mkllmap
      ADM_setup
   use mod_fio, only: &
      FIO_setup
-  use mod_hio, only: &
-     HIO_setup
   use mod_comm, only: &
      COMM_setup
   use mod_grd, only: &
@@ -94,7 +92,6 @@ program mkllmap
 
   !---< I/O module setup >---
   call FIO_setup
-  call HIO_setup
 
   !--- < comm module setup > ---
   call COMM_setup
