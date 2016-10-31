@@ -142,9 +142,10 @@ contains
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
-       CVdry  => CONST_CVdry,  &
-       LHV    => CONST_LHV,    &
-       LHF    => CONST_LHF
+       CVdry  => CONST_CVdry
+    use scale_atmos_hydrometer, only: &
+       LHV, &
+       LHF
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
