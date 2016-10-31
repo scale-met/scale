@@ -53,13 +53,9 @@ endif
 OBJS =	\
 	fio.o                \
 	fiof.o               \
-	hio.o                \
-	hiof.o               \
-	poh5.o                \
 	mod_io_param.o       \
 	mod_adm.o            \
 	mod_fio.o            \
-	mod_hio.o            \
 	mod_comm.o           \
 	mod_ideal_topo.o     \
 	mod_grd.o            \
