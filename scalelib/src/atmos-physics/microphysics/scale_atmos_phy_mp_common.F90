@@ -777,7 +777,7 @@ contains
     integer,  intent(in)    :: QS_MP
     real(RP), intent(inout) :: vterm    (KA,IA,JA,QA_MP-1) ! terminal velocity of cloud mass
     real(RP), intent(in)    :: temp     (KA,IA,JA)
-    real(DP), intent(in)    :: CVq      (QA)
+    real(RP), intent(in)    :: CVq      (QA)
     real(DP), intent(in)    :: dt
     logical,  intent(in), optional :: vt_fixed
 
