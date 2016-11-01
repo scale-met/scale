@@ -46,6 +46,14 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -Kopenmp
+# enable + disable parallel
+#OMP = -Kopenmp,noparallel
+
 ### Performance monitor
 # disable
 PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
@@ -62,8 +70,8 @@ RDMA = -U_USE_RDMA
 # enable
 #RDMA = -D_USE_RDMA
 
-FFLAGS_SYSDEPEND = $(PERF_MONIT) $(RDMA)
-CFLAGS_SYSDEPEND = $(PERF_MONIT) $(RDMA)
+FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) $(RDMA)
+CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) $(RDMA)
 
 
 

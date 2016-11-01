@@ -39,14 +39,20 @@ CFLAGS_DEBUG = $(CFLAGS_FAST)
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -P openmp
+
 ### Performance monitor
 # disable
 #PERF_MONIT = -Nftrace
 # enable
 PERF_MONIT = -ftrace
 
-FFLAGS_SYSDEPEND = $(PERF_MONIT) -D__ES2
-CFLAGS_SYSDEPEND = $(PERF_MONIT) -D__ES2
+FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) -D__ES2
+CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) -D__ES2
 
 
 

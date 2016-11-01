@@ -50,10 +50,6 @@ ifeq ($(SINGLE),T)
    FFLAGS += -DSINGLE
 endif
 
-ifeq ($(ENABLE_OPENMP),T)
-   FFLAGS += -openmp -openmp-report
-endif
-
 # NetCDF setting
 # These settings are inquired in order of:
 # The environment variable->Makedef.XXX->here

@@ -37,8 +37,14 @@ CFLAGS_DEBUG = -mcmodel=medium
 
 ##### Special setting
 
-FFLAGS_SYSDEPEND = -D__PGI
-CFLAGS_SYSDEPEND = -D__PGI
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -mp
+
+FFLAGS_SYSDEPEND = $(OMP) -D__PGI
+CFLAGS_SYSDEPEND = $(OMP) -D__PGI
 
 
 

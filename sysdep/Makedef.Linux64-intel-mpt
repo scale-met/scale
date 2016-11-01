@@ -40,12 +40,18 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -openmp
+
 ifeq ($(DISABLE_VEC),T)
    NOVEC = -no-vec
 endif
 
-FFLAGS_SYSDEPEND = $(NOVEC)
-CFLAGS_SYSDEPEND =
+FFLAGS_SYSDEPEND = $(OMP) $(NOVEC)
+CFLAGS_SYSDEPEND = $(OMP)
 
 
 

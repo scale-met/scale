@@ -41,11 +41,17 @@ CFLAGS_DEBUG = -O0 -m64 -g
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -fopenmp
+
 SSE_FLAGS = -mtune=native
 #SSE_FLAGS = -mtune=native -mavx
 
-FFLAGS_SYSDEPEND = $(SSE_FLAGS)
-CFLAGS_SYSDEPEND = $(SSE_FLAGS)
+FFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
+CFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
 
 
 
