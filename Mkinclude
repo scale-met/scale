@@ -80,6 +80,10 @@ ifeq ($(USE_NETCDF3),T)
    CFLAGS += -DNETCDF3
 endif
 
+ifeq ($(ENABLE_MATHLIB),T)
+   FFLAGS += -D_MATHLIB
+endif
+
 ifeq ($(CHECK_MASS),T)
    FFLAGS += -DCHECK_MASS
 endif

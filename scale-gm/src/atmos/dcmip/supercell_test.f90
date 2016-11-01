@@ -157,6 +157,12 @@ CONTAINS
     ! Loop indices
     INTEGER(4) :: i, k, iter
 
+#ifndef _MATHLIB
+    write(*,*) 'This subroutine requires a math library such as LAPACK.'
+    write(*,*) 'Please set environment variable ENABLE_MATHLIB=T to use this subroutine.'
+    stop
+#endif
+
     ! Chebyshev nodes in the phi direction
     do i = 1, nphi
       phicoord(i) = - cos(dble(i-1) * pi / dble(nphi-1))
@@ -189,6 +195,7 @@ CONTAINS
         nz, zcoord, ddz(:,k), zcoord(k))
     end do
 
+#ifdef _MATHLIB
     ! Compute the int(dphi) operator via pseudoinverse
     lwork = 5*nphi
 
@@ -238,6 +245,7 @@ CONTAINS
     call DGEMM('T', 'T', &
       nz, nz, nz, 1.0d0, svdzvt, nz, svdzu, nz, 0.0d0, &
       intz, nz)
+#endif
 
     ! Sample the equatorial velocity field and its derivative
     do k = 1, nz
