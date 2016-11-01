@@ -458,7 +458,7 @@ contains
     implicit none
     real(RP),intent(in) :: RATE_in
     integer, intent(inout) :: TRIGGER_in
-    real(RP),intent(in) :: KF_DT_in
+    real(DP),intent(in) :: KF_DT_in
     real(RP),intent(in) :: DELCAPE_in
     real(RP),intent(in) :: DEEPLIFETIME_in
     real(RP),intent(in) :: SHALLOWLIFETIME_in
