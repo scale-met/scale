@@ -508,8 +508,8 @@ contains
     endif
 
     History_id_count = 0
-    allocate( History_vars(History_req_count) )
-    allocate( History_axis_written(History_req_count) )
+    allocate( History_vars        (  History_req_count) )
+    allocate( History_axis_written(0:History_req_count) )
 
     do n = 1, History_req_count
        allocate( History_vars(n)%varsum(array_size) )
@@ -2570,7 +2570,7 @@ contains
 
     prev_fid = -1
     do id = 1, History_id_count
-       fid = History_vars(id)%fid 
+       fid = History_vars(id)%fid
        if ( fid .NE. prev_fid ) then
           ! Release the internal buffer previously allowed to be used by PnetCDF
           call FileDetachBuffer( fid )
