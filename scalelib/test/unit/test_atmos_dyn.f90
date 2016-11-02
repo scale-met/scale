@@ -112,6 +112,8 @@ module test_atmos_dyn
   character(len=H_SHORT) :: DYN_Tstep_Large_TYPE
   character(len=H_SHORT) :: DYN_FVM_FLUX_TYPE
   character(len=H_SHORT) :: DYN_FVM_FLUX_TYPE_TRACER
+  real(RP)               :: wdamp_tau
+  real(RP)               :: wdamp_height
 
   integer :: k, i, j, iq
   character(len=11) :: message
@@ -223,6 +225,8 @@ contains
   DYN_Tstep_Large_TYPE = "FVM-HEVE"
   DYN_FVM_FLUX_TYPE = "CD4"
   DYN_FVM_FLUX_TYPE_TRACER = "UD3KOREN1993"
+  wdamp_tau = 10.0_RP
+  wdamp_height = 0.0_RP
 
   call ATMOS_DYN_setup( &
        DYN_Tinteg_Short_TYPE,              & ! (in)
@@ -235,6 +239,7 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
        PROG,                               & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
+       wdamp_tau, wdamp_height, FZ,        & ! (in)
        .false., lat                        ) ! (in)
 
   do k = KS+1, KE
