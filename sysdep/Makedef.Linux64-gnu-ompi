@@ -32,7 +32,7 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) \
 ##### C setting
 #CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
 
-CC  = gcc
+CC  = mpicc
 
 CFLAGS_FAST  = -O3 -m64
 CFLAGS_DEBUG = -O0 -m64 -g
