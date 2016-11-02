@@ -39,6 +39,7 @@ module scale_atmos_dyn_common
   !++ Public procedure
   !
   public :: ATMOS_DYN_filter_setup
+  public :: ATMOS_DYN_wdamp_setup
   public :: ATMOS_DYN_numfilter_coef
   public :: ATMOS_DYN_numfilter_coef_q
   public :: ATMOS_DYN_filter_tend
@@ -91,8 +92,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_filter_setup( &
-       num_diff, num_diff_q, &
-       CDZ, CDX, CDY, FDZ, FDX, FDY        )
+       num_diff, num_diff_q,        &
+       CDZ, CDX, CDY, FDZ, FDX, FDY )
     use scale_process, only: &
        PRC_MPIstop
     use scale_comm, only: &
@@ -100,12 +101,12 @@ contains
     implicit none
     real(RP), intent(inout) :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(inout) :: num_diff_q(KA,IA,JA,3)
-    real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(in)  :: CDX(IA)
-    real(RP), intent(in)  :: CDY(JA)
-    real(RP), intent(in)  :: FDZ(KA-1)
-    real(RP), intent(in)  :: FDX(IA-1)
-    real(RP), intent(in)  :: FDY(JA-1)
+    real(RP), intent(in)    :: CDZ(KA)
+    real(RP), intent(in)    :: CDX(IA)
+    real(RP), intent(in)    :: CDY(JA)
+    real(RP), intent(in)    :: FDZ(KA-1)
+    real(RP), intent(in)    :: FDX(IA-1)
+    real(RP), intent(in)    :: FDY(JA-1)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -114,7 +115,7 @@ contains
        write(*,*) 'xxx number of HALO must be at least 2 for numrical filter'
        call PRC_MPIstop
     end if
-    
+
     ! allocation
     allocate( CNZ3(3,KA,2) )
     allocate( CNX3(3,IA,2) )
@@ -318,6 +319,67 @@ contains
 
     return
   end subroutine ATMOS_DYN_filter_setup
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_DYN_wdamp_setup( &
+       wdamp_coef,              &
+       wdamp_tau, wdamp_height, &
+       FZ                       )
+    use scale_const, only: &
+       PI  => CONST_PI, &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(inout) :: wdamp_coef(KA)
+    real(RP), intent(in)    :: wdamp_tau
+    real(RP), intent(in)    :: wdamp_height
+    real(RP), intent(in)    :: FZ(0:KA)
+
+    real(RP) :: alpha, sw
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    if ( wdamp_tau <= 0.0_RP ) then
+       wdamp_coef(:) = 0.0_RP
+    elseif( FZ(KE)-wdamp_height < EPS ) then
+       wdamp_coef(:) = 0.0_RP
+    else
+       alpha = 1.0_RP / wdamp_tau
+
+       do k = KS, KE
+          sw = 0.5_RP + sign( 0.5_RP, FZ(k)-wdamp_height )
+
+          wdamp_coef(k) = alpha * sw &
+                        * 0.5_RP * ( 1.0_RP - cos( PI * (FZ(k)-wdamp_height) / (FZ(KE)-wdamp_height)) )
+       enddo
+       wdamp_coef(   1:KS-1) = wdamp_coef(KS)
+       wdamp_coef(KE+1:KA  ) = wdamp_coef(KE)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|     k     zh[m]    coef[/s] |'
+       do k = KA, KE+1, -1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       enddo
+       k = KE
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KE = TOA'
+       do k = KE-1, KS, -1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       enddo
+       k = KS-1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KS-1 = surface'
+       do k = KS-2, 1, -1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       enddo
+       k = 0
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,12x,A)')    '| ',k, FZ(k),               ' |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=============================|'
+    endif
+
+    return
+  end subroutine ATMOS_DYN_wdamp_setup
 
   !-----------------------------------------------------------------------------
   !> Calc coefficient of numerical filter
@@ -1325,7 +1387,7 @@ contains
     real(RP), intent(in)  :: RCDY(JA)
     real(RP), intent(in)  :: RFDZ(KA-1)
     real(RP), intent(in)  :: FDZ(KA-1)
-    
+
     integer :: k, i, j
 
     call PROF_rapstart("DYN_divercence", 2)

@@ -383,6 +383,10 @@ contains
 
        ATMOS_BOUNDARY_UPDATE_FLAG = .true.
 
+    elseif ( ATMOS_BOUNDARY_TYPE == 'NONE' ) then
+
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
+
     elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
 
        call ATMOS_BOUNDARY_generate

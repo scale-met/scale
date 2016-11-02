@@ -185,6 +185,7 @@ contains
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
+       wdamp_coef,                                           &
        divdmp_coef,                                          &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
@@ -321,6 +322,7 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
 
+    real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
 
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
@@ -351,7 +353,7 @@ contains
 
     real(RP) :: DENS_tq(KA,IA,JA)
     real(RP) :: diff(KA,IA,JA)
-    real(RP) :: damp
+    real(RP) :: damp, wdamp
 #ifdef HIST_TEND
     real(RP) :: damp_t(KA,IA,JA)
 #endif
@@ -645,10 +647,13 @@ contains
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+
+          wdamp = - wdamp_coef(k) * MOMZ(k,i,j) ! only for MOMZ: rayleigh damping for removal of reflected sound wave
+
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                        + damp
+                        + damp + wdamp
 #ifdef HIST_TEND
-          damp_t(k,i,j) = damp
+          damp_t(k,i,j) = damp + wdamp
 #endif
        enddo
        enddo

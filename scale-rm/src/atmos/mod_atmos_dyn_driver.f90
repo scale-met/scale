@@ -72,6 +72,10 @@ module mod_atmos_dyn_driver
   real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact     = 1.0_RP
   logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate = .true.
 
+  real(RP), private :: ATMOS_DYN_wdamp_tau                   = 0.0_RP    ! maximum tau for Rayleigh damping of w [s]
+  real(RP), private :: ATMOS_DYN_wdamp_height                            ! height       to start apply Rayleigh damping [m]
+  integer,  private :: ATMOS_DYN_wdamp_layer                 = -1        ! layer number to start apply Rayleigh damping [num]
+
   ! Coriolis force
   logical,  private :: ATMOS_DYN_enable_coriolis             = .false.   ! enable coriolis force?
 
@@ -92,6 +96,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only: &
+       GRID_FZ,  &
        GRID_CDZ, &
        GRID_CDX, &
        GRID_CDY, &
@@ -129,6 +134,9 @@ contains
        ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER,  &
        ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,     &
        ATMOS_DYN_NUMERICAL_DIFF_use_refstate, &
+       ATMOS_DYN_wdamp_tau,                   &
+       ATMOS_DYN_wdamp_height,                &
+       ATMOS_DYN_wdamp_layer,                 &
        ATMOS_DYN_enable_coriolis,             &
        ATMOS_DYN_divdmp_coef,                 &
        ATMOS_DYN_FLAG_FCT_momentum,           &
@@ -144,6 +152,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS DYN] / Origin[SCALE-RM]'
 
     if ( ATMOS_sw_dyn ) then
+       ATMOS_DYN_wdamp_height = GRID_FZ(KE)
+
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -156,6 +166,13 @@ contains
        if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
+
+       if ( ATMOS_DYN_wdamp_layer > KMAX ) then
+          write(*,*) 'xxx ATMOS_DYN_wdamp_layer should be less than total number of vertical layer(KA). Check!'
+          call PRC_MPIstop
+       elseif( ATMOS_DYN_wdamp_layer > 0 ) then
+          ATMOS_DYN_wdamp_height = GRID_FZ(ATMOS_DYN_wdamp_layer+KS-1)
+       endif
 
        if ( ATMOS_sw_dyn ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Large time step  : ', trim(ATMOS_DYN_TINTEG_LARGE_TYPE)
@@ -174,6 +191,9 @@ contains
                              PROG,                               & ! [IN]
                              GRID_CDZ, GRID_CDX, GRID_CDY,       & ! [IN]
                              GRID_FDZ, GRID_FDX, GRID_FDY,       & ! [IN]
+                             ATMOS_DYN_wdamp_tau,                & ! [IN]
+                             ATMOS_DYN_wdamp_height,             & ! [IN]
+                             GRID_FZ,                            & ! [IN]
                              ATMOS_DYN_enable_coriolis,          & ! [IN]
                              REAL_LAT,                           & ! [IN]
                              none = ATMOS_DYN_TYPE=='NONE'       ) ! [IN]
