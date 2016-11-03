@@ -28,7 +28,7 @@ DATDISTS    =
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.tutorial.common
 
-NET2GCONF   = net2g.conf
+N2GCONF     = net2g.conf
 
 sample ?= R20kmDX500m
 
