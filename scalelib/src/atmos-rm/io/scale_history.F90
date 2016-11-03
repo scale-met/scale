@@ -122,7 +122,8 @@ contains
 
     character(len=H_MID) :: HISTORY_H_TITLE = 'SCALE-RM HISTORY OUTPUT' !< title of the output file
     character(len=H_MID) :: HISTORY_T_SINCE
-    real(RP)             :: HIST_PRES(HIST_PRES_nlim)                   !< pressure level to output [hPa]
+
+    real(RP)             :: HIST_PRES(HIST_PRES_nlim) = 0.0_RP          !< pressure level to output [hPa]
 
     NAMELIST / PARAM_HIST / &
        HIST_PRES_nlayer, &
