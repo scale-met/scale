@@ -226,11 +226,11 @@ contains
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_temp_pres
     use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS, &
        I_QV, &
        I_QC, &
-       I_QI, &
-       ATMOS_HYDROMETEOR_templhv, &
-       ATMOS_HYDROMETEOR_templhs
+       I_QI
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_alpha, &
        ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_all
@@ -309,10 +309,10 @@ contains
     real(RP) :: temp(KA,IA,JA) !< temperature
     real(RP) :: pres(KA,IA,JA) !< pressure
 
-    real(RP) :: lh(KA,IA,JA)
-    real(RP) :: lhv(KA,IA,JA)
-    real(RP) :: lhs(KA,IA,JA)
+    real(RP) :: LH   (KA,IA,JA)
     real(RP) :: alpha(KA,IA,JA)
+    real(RP) :: LHV  (KA,IA,JA)
+    real(RP) :: LHS  (KA,IA,JA)
 
     real(RP) :: ac           !< \alpha_c
 
@@ -488,9 +488,10 @@ contains
                                     TRACER_CV, TRACER_R, TRACER_MASS ) ! (in)
 
 
-    call ATMOS_HYDROMETEOR_templhv( lhv, temp )
-    call ATMOS_HYDROMETEOR_templhs( lhs, temp )
-    call ATMOS_SATURATION_alpha( alpha, temp )
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+    call HYDROMETEOR_LHS( LHS(:,:,:), temp(:,:,:) )
+
+    call ATMOS_SATURATION_alpha( alpha(:,:,:), temp(:,:,:) )
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
@@ -510,11 +511,12 @@ contains
 
           Qw(k,i,j) = QTRC(k,i,j,I_QV) + ql + qs
 
-          lh(k,i,j) = lhv(k,i,j) * alpha(k,i,j) + lhs(k,i,j) * ( 1.0_RP-alpha(k,i,j) )
+          LH(k,i,j) = (        alpha(k,i,j) ) * LHV(k,i,j) &
+                    + ( 1.0_RP-alpha(k,i,j) ) * LHS(k,i,j)
 
           POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           ! liquid water potential temperature
-          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv(k,i,j) * ql + lhs(k,i,j) * qs) / ( temp(k,i,j) * CP ) )
+          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (LHV(k,i,j) * ql + LHS(k,i,j) * qs) / ( temp(k,i,j) * CP ) )
           TEML(k,i,j) = POTL(k,i,j) * temp(k,i,j) / POTT(k,i,j)
 
           ! virtual potential temperature for derivertive

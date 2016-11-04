@@ -144,8 +144,8 @@ contains
        PI     => CONST_PI,     &
        CVdry  => CONST_CVdry
     use scale_atmos_hydrometeor, only: &
-       LHV, &
-       LHF
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
@@ -247,7 +247,9 @@ contains
     real(RP) :: VMTR_PHI       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_PHI_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    integer :: nq
+    real(RP) :: LHV, LHF
+
+    integer  :: g, k, l, nq
     !---------------------------------------------------------------------------
 
     call VMTR_getIJ_RGSGAM2( VMTR_RGSGAM2, VMTR_RGSGAM2_pl )
@@ -340,17 +342,57 @@ contains
 
        tmp(:,:,:) = rho(:,:,:) * q(:,:,:,nq) * CVW(nq) * tem(:,:,:)
        if    ( nq == I_QV ) then
-          tmp(:,:,:) = tmp(:,:,:) + rho(:,:,:) * q(:,:,:,nq) * LHV ! correct latent heat
+
+          do l = 1, ADM_lall
+          do k = 1, ADM_kall
+          do g = 1, ADM_gall
+             call HYDROMETEOR_LHV( LHV, tem(g,k,l) )
+
+             tmp(g,k,l) = tmp(g,k,l) + rho(g,k,l) * q(g,k,l,nq) * LHV ! correct latent heat
+          enddo
+          enddo
+          enddo
+
        elseif( nq == I_QI .OR. nq == I_QS .OR. nq == I_QG ) then
-          tmp(:,:,:) = tmp(:,:,:) - rho(:,:,:) * q(:,:,:,nq) * LHF ! correct latent heat
+
+          do l = 1, ADM_lall
+          do k = 1, ADM_kall
+          do g = 1, ADM_gall
+             call HYDROMETEOR_LHF( LHF, tem(g,k,l) )
+
+             tmp(g,k,l) = tmp(g,k,l) - rho(g,k,l) * q(g,k,l,nq) * LHF ! correct latent heat
+          enddo
+          enddo
+          enddo
+
        endif
 
        if ( ADM_have_pl ) then
           tmp_pl(:,:,:) = rho_pl(:,:,:) * q_pl(:,:,:,nq) * CVW(nq) * tem_pl(:,:,:)
           if    ( nq == I_QV ) then
-             tmp_pl(:,:,:) = tmp_pl(:,:,:) + rho_pl(:,:,:) * q_pl(:,:,:,nq) * LHV ! correct latent heat
+
+             do l = 1, ADM_lall_pl
+             do k = 1, ADM_kall
+             do g = 1, ADM_gall_pl
+                call HYDROMETEOR_LHV( LHV, tem_pl(g,k,l) )
+
+                tmp_pl(g,k,l) = tmp_pl(g,k,l) + rho_pl(g,k,l) * q_pl(g,k,l,nq) * LHV ! correct latent heat
+             enddo
+             enddo
+             enddo
+
           elseif( nq == I_QI .OR. nq == I_QS .OR. nq == I_QG ) then
-             tmp_pl(:,:,:) = tmp_pl(:,:,:) - rho_pl(:,:,:) * q_pl(:,:,:,nq) * LHF ! correct latent heat
+
+             do l = 1, ADM_lall_pl
+             do k = 1, ADM_kall
+             do g = 1, ADM_gall_pl
+                call HYDROMETEOR_LHF( LHF, tem_pl(g,k,l) )
+
+                tmp_pl(g,k,l) = tmp_pl(g,k,l) - rho_pl(g,k,l) * q_pl(g,k,l,nq) * LHF ! correct latent heat
+             enddo
+             enddo
+             enddo
+
           endif
        endif
 

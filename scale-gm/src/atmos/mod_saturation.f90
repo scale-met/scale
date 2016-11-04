@@ -88,10 +88,11 @@ contains
        CVvap => CONST_CVvap, &
        CL    => CONST_CL,    &
        CI    => CONST_CI,    &
+       LHV00 => CONST_LHV00, &
+       LHS00 => CONST_LHS00, &
+       LHV0  => CONST_LHV0,  &
+       LHS0  => CONST_LHS0,  &
        TEM00 => CONST_TEM00
-    use scale_atmos_hydrometeor, only: &
-       LHV, &
-       LHS
     implicit none
 
     NAMELIST / SATURATIONPARAM / &
@@ -118,20 +119,27 @@ contains
     RTEM00 = 1.0_RP / TEM00
 
     if ( CONST_THERMODYN_TYPE == 'EXACT' ) then
+
        CPovR_liq = ( CPvap - CL ) / Rvap
        CPovR_ice = ( CPvap - CI ) / Rvap
        CVovR_liq = ( CVvap - CL ) / Rvap
        CVovR_ice = ( CVvap - CI ) / Rvap
+
+       LovR_liq  = LHV00 / Rvap
+       LovR_ice  = LHS00 / Rvap
+
     elseif(      CONST_THERMODYN_TYPE == 'SIMPLE'  &
             .OR. CONST_THERMODYN_TYPE == 'SIMPLE2' ) then
+
        CPovR_liq = 0.0_RP
        CPovR_ice = 0.0_RP
        CVovR_liq = 0.0_RP
        CVovR_ice = 0.0_RP
-    endif
-    LovR_liq = LHV / Rvap
-    LovR_ice = LHS / Rvap
 
+       LovR_liq  = LHV0 / Rvap
+       LovR_ice  = LHS0 / Rvap
+
+    endif
 
     dalphadT_const = 1.0_RP / ( SATURATION_ULIMIT_TEMP - SATURATION_LLIMIT_TEMP )
 
@@ -244,7 +252,7 @@ contains
 
     real(RP) :: alpha, psatl, psati
 
-    integer :: ij, k, l
+    integer  :: ij, k, l
     !---------------------------------------------------------------------------
 
     do l  = 1, ldim
@@ -306,7 +314,7 @@ contains
     real(RP), intent(in)  :: temp(ijdim,kdim,ldim) !< temperature               [K]
     real(RP), intent(out) :: psat(ijdim,kdim,ldim) !< saturation vapor pressure [Pa]
 
-    integer :: ij, k, l
+    integer  :: ij, k, l
     !---------------------------------------------------------------------------
 
     do l  = 1, ldim
@@ -358,7 +366,7 @@ contains
     real(RP), intent(in)  :: temp(ijdim,kdim,ldim) !< temperature               [K]
     real(RP), intent(out) :: psat(ijdim,kdim,ldim) !< saturation vapor pressure [Pa]
 
-    integer :: ij, k, l
+    integer  :: ij, k, l
     !---------------------------------------------------------------------------
 
     do l  = 1, ldim

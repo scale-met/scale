@@ -133,8 +133,8 @@ contains
     use scale_const, only: &
        PI    => CONST_PI
     use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       ATMOS_HYDROMETEOR_templhv
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       I_QV
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
@@ -232,7 +232,7 @@ contains
     enddo
 
     !-----< mass flux >-----
-   call ATMOS_HYDROMETEOR_templhv( LHV, ATM_TEMP )
+   call HYDROMETEOR_LHV( LHV(:,:), ATM_TEMP(:,:) )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
     if ( I_QV > 0 ) then

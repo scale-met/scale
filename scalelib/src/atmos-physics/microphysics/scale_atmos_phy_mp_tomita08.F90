@@ -774,9 +774,9 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_templhv, &
-       ATMOS_HYDROMETEOR_templhs, &
-       ATMOS_HYDROMETEOR_templhf
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS, &
+       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
@@ -863,9 +863,9 @@ contains
 
     real(RP) :: zerosw
     real(RP) :: tmp
-    real(RP) :: LHVEx(KA,IA,JA)
-    real(RP) :: LHFEx(KA,IA,JA)
-    real(RP) :: LHSEx(KA,IA,JA)
+    real(RP) :: LHV(KA,IA,JA)
+    real(RP) :: LHF(KA,IA,JA)
+    real(RP) :: LHS(KA,IA,JA)
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -917,9 +917,9 @@ contains
                                     a2   (:,:,:), & ! [OUT]
                                     ma2  (:,:,:)  ) ! [OUT]
 
-    call ATMOS_HYDROMETEOR_templhv( LHVEx, TEMP0 )
-    call ATMOS_HYDROMETEOR_templhf( LHFEx, TEMP0 )
-    call ATMOS_HYDROMETEOR_templhs( LHSEx, TEMP0 )
+    call HYDROMETEOR_LHV( LHV(:,:,:), TEMP0(:,:,:) )
+    call HYDROMETEOR_LHF( LHF(:,:,:), TEMP0(:,:,:) )
+    call HYDROMETEOR_LHS( LHS(:,:,:), TEMP0(:,:,:) )
 
 !$omp parallel do &
 !$omp private(tend, coef_bt, coef_at, q, w) &
@@ -1179,9 +1179,9 @@ contains
        Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
        NU = ( mu0 + dmu_dT * temc ) * Rdens
 
-       Glv  = 1.0_RP / ( LHVEx(k,i,j)/(Da*temp) * ( LHVEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
-       Giv  = 1.0_RP / ( LHSEx(k,i,j)/(Da*temp) * ( LHSEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
-       Gil  = 1.0_RP / LHFEx(k,i,j) * (Da*temc)
+       Glv  = 1.0_RP / ( LHV(k,i,j)/(Da*temp) * ( LHV(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
+       Giv  = 1.0_RP / ( LHS(k,i,j)/(Da*temp) * ( LHS(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
+       Gil  = 1.0_RP / LHF(k,i,j) * (Da*temc)
 
        ! [Prevp] evaporation rate of rain
        ventr = f1r * GAM_2 * RLMDr_2 + f2r * sqrt( Cr * rho_fact / NU * RLMDr_5dr ) * GAM_5dr_h
@@ -1198,7 +1198,7 @@ contains
 
        ! [Psmlt] melting rate of snow
        w(I_Psmlt) = 2.0_RP * PI * Rdens *       Gil * vents &
-                  + CL * temc / LHFEx(k,i,j) * ( w(I_Psacw) + w(I_Psacr) )
+                  + CL * temc / LHF(k,i,j) * ( w(I_Psacw) + w(I_Psacr) )
 
        ! [Pgdep/pgsub] deposition/sublimation rate for graupel
        ventg = f1g * GAM_2 * RLMDg_2 + f2g * sqrt( Cg * rho_fact / NU * RLMDg_5dg ) * GAM_5dg_h
@@ -1210,7 +1210,7 @@ contains
 
        ! [Pgmlt] melting rate of graupel
        w(I_Pgmlt) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
-                  + CL * temc / LHFEx(k,i,j) * ( w(I_Pgacw) + w(I_Pgacr) )
+                  + CL * temc / LHF(k,i,j) * ( w(I_Pgacw) + w(I_Pgacr) )
 
        ! [Pgfrz] freezing rate of graupel
        w(I_Pgfrz) = 2.0_RP * PI * Rdens * N0r * 60.0_RP * B_frz * Ar * ( exp(-A_frz*temc) - 1.0_RP ) * RLMDr_7
@@ -1581,7 +1581,7 @@ contains
           Da = ( Da0 + dDa_dT * temc )
           Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
 
-          Giv  = 1.0_RP / ( LHSEx(k,i,j)/(Da*temp) * ( LHSEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
+          Giv  = 1.0_RP / ( LHS(k,i,j)/(Da*temp) * ( LHS(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
 
           ! [Pidep] deposition/sublimation : v->i or i->v
           sw = ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc ) ) &
@@ -1663,10 +1663,10 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOE_t(k,i,j) = - DENS0(k,i,j) * ( LHVEx(k,i,j) * QTRC_t(k,i,j,I_QV) &
-                                        - LHFEx(k,i,j) * QTRC_t(k,i,j,I_QI) &
-                                        - LHFEx(k,i,j) * QTRC_t(k,i,j,I_QS) &
-                                        - LHFEx(k,i,j) * QTRC_t(k,i,j,I_QG) )
+       RHOE_t(k,i,j) = - DENS0(k,i,j) * ( LHV(k,i,j) * QTRC_t(k,i,j,I_QV) &
+                                        - LHF(k,i,j) * QTRC_t(k,i,j,I_QI) &
+                                        - LHF(k,i,j) * QTRC_t(k,i,j,I_QS) &
+                                        - LHF(k,i,j) * QTRC_t(k,i,j,I_QG) )
 
        RHOE0(k,i,j) = RHOE0(k,i,j) + RHOE_t(k,i,j) * dt
     enddo

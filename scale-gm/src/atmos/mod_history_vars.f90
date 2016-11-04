@@ -321,7 +321,7 @@ contains
        CPdry => CONST_CPdry, &
        Rvap  => CONST_Rvap
     use scale_atmos_hydrometeor, only: &
-       LHV
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use mod_adm, only: &
        ADM_KNONE,   &
        ADM_have_pl, &
@@ -457,6 +457,7 @@ contains
     real(RP) :: VMTR_PHI         (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_PHI_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
+    real(RP) :: LHV
     real(RP) :: mxval, mnval
 
     integer  :: g, k, l, nq, K0
@@ -694,9 +695,13 @@ contains
     if ( out_mse ) then
        do l = 1, ADM_lall
           do k = 1, ADM_kall
-             mse(:,k,l) = CPdry * tem(:,k,l)      &
-                        + GRAV  * ( GRD_vz(:,k,l,GRD_Z) - GRD_zs (:,K0,l,GRD_ZSFC) ) &
-                        + LHV   * q(:,k,l,I_QV)
+          do g = 1, ADM_gall
+             call HYDROMETEOR_LHV( LHV, tem(g,k,l) )
+
+             mse(g,k,l) = CPdry * tem(g,k,l)      &
+                        + GRAV  * ( GRD_vz(g,k,l,GRD_Z) - GRD_zs (g,K0,l,GRD_ZSFC) ) &
+                        + LHV   * q(g,k,l,I_QV)
+          enddo
           enddo
 
           call history_in( 'ml_mse',  mse(:,:,l) )

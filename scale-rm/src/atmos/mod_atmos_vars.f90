@@ -1256,17 +1256,16 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd
     use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF, &
        I_QV, &
        I_QC, &
-       QHS, &
-       QHE, &
-       QLS, &
-       QLE, &
-       QIS, &
-       QIE, &
-       LHV, &
-       LHF, &
-       HYDROMETEOR_templhv => ATMOS_HYDROMETEOR_templhv
+       QHS,  &
+       QHE,  &
+       QLS,  &
+       QLE,  &
+       QIS,  &
+       QIE
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
@@ -1317,7 +1316,8 @@ contains
     real(RP) :: fact
 
     real(RP) :: MSE   (KA,IA,JA) ! MSE        [m2/s2]
-    real(RP) :: LHvap (KA,IA,JA) ! latent heat for vaporization [m2/s2]
+    real(RP) :: LHV   (KA,IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: LHF   (KA,IA,JA) ! latent heat of fusion       [J/kg]
 
     real(RP) :: PREC  (IA,JA)    ! surface precipitation rate CP+MP [kg/m2/s]
 
@@ -1557,13 +1557,15 @@ contains
 !    endif
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
+       call HYDROMETEOR_LHV( LHV(:,:,:), TEMP(:,:,:) )
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k = KS, KE
           POTL(k,i,j) = POTT(k,i,j) &
-                      - LHV / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
+                      - LHV(k,i,j) / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
        enddo
        enddo
        enddo
@@ -1576,8 +1578,8 @@ contains
     end if
 
     if ( AD_HIST_id(I_RHA) > 0 ) then
-       call SATURATION_psat_all( PSAT(:,:,:), & ! [OUT]
-                                 TEMP(:,:,:)  ) ! [IN]
+       call SATURATION_psat_all( PSAT(:,:,:), TEMP(:,:,:) )
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
        do j  = JSB, JEB
@@ -1981,6 +1983,10 @@ contains
     endif
 
     if ( AD_PREP_sw(I_ENGI) > 0 ) then
+
+       call HYDROMETEOR_LHV( LHV(:,:,:), TEMP(:,:,:) )
+       call HYDROMETEOR_LHF( LHF(:,:,:), TEMP(:,:,:) )
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
        do j  = JSB, JEB
@@ -2009,7 +2015,7 @@ contains
        do i  = ISB, IEB
        do k  = KS, KE
           ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+                      + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV(k,i,j) ! Latent Heat [vapor->liquid]
        enddo
        enddo
        enddo
@@ -2021,7 +2027,7 @@ contains
        do i  = ISB, IEB
        do k  = KS, KE
           ENGI(k,i,j) = ENGI(k,i,j) &
-                      - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
+                      - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF(k,i,j) ! Latent Heat [ice->liquid]
        enddo
        enddo
        enddo
@@ -2156,15 +2162,14 @@ contains
     call HIST_in( PBLH(:,:), 'PBLH', 'PBL height', 'm' )
 
     if ( AD_PREP_sw(I_MSE) > 0 ) then
-       call HYDROMETEOR_templhv( LHvap(:,:,:), & ! [OUT]
-                                TEMP (:,:,:)  ) ! [IN]
+       call HYDROMETEOR_LHV( LHV(:,:,:), TEMP(:,:,:) )
 
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           MSE(k,i,j) = CPTOT(k,i,j) * TEMP(k,i,j)                    &
                      + GRAV * ( REAL_CZ(k,i,j) - REAL_FZ(KS-1,i,j) ) &
-                     + LHvap(k,i,j) * QTRC(k,i,j,I_QV)
+                     + LHV(k,i,j) * QTRC(k,i,j,I_QV)
        enddo
        enddo
        enddo
@@ -2197,11 +2202,11 @@ contains
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF, &
        I_QV, &
-       QIS, &
-       QIE, &
-       LHV, &
-       LHF
+       QIS,  &
+       QIE
     implicit none
 
     real(RP) :: W   (KA,IA,JA) ! velocity w at cell center [m/s]
@@ -2211,6 +2216,9 @@ contains
     real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
     real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
     real(RP) :: TEMP(KA,IA,JA) ! temperature [K]
+
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: LHF (KA,IA,JA) ! latent heat of fusion       [J/kg]
 
     real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
     real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
@@ -2258,6 +2266,9 @@ contains
 
        call STAT_total( total, RHOQ(:,:,:), 'QTOT' )
 
+       call HYDROMETEOR_LHV( LHV(:,:,:), TEMP(:,:,:) )
+       call HYDROMETEOR_LHF( LHF(:,:,:), TEMP(:,:,:) )
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
@@ -2279,11 +2290,11 @@ contains
           enddo
 
           if ( I_QV > 0 ) then
-             ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+             ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV(k,i,j) ! Latent Heat [vapor->liquid]
           end if
 
           do iq = QIS, QIE
-             ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
+             ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF(k,i,j) ! Latent Heat [ice->liquid]
           enddo
 
           ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
@@ -2439,11 +2450,11 @@ contains
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF, &
        I_QV, &
-       QIS, &
-       QIE, &
-       LHV, &
-       LHF
+       QIS,  &
+       QIE
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
@@ -2465,6 +2476,9 @@ contains
     real(RP) :: QDRY(KA,IA,JA) ! dry air         [kg/kg]
     real(RP) :: RHOQ(KA,IA,JA) ! DENS * tracer   [kg/m3]
     real(RP) :: PRCP(IA,JA)    ! rain + snow     [kg/m2/s]
+
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: LHF (KA,IA,JA) ! latent heat of fusion       [J/kg]
 
     real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
     real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
@@ -2558,6 +2572,9 @@ contains
                               TRACER_R(:),   & ! [IN]
                               TRACER_MASS(:) ) ! [IN]
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), TEMP(:,:,:) )
+    call HYDROMETEOR_LHF( LHF(:,:,:), TEMP(:,:,:) )
+
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -2575,11 +2592,11 @@ contains
        enddo
 
        if ( I_QV > 0 ) then
-          ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+          ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV(k,i,j) ! Latent Heat [vapor->liquid]
        end if
 
        do iq = QIS, QIE
-          ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
+          ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF(k,i,j) ! Latent Heat [ice->liquid]
        enddo
     enddo
     enddo

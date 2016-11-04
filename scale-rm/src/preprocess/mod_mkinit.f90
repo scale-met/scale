@@ -71,7 +71,7 @@ module mod_mkinit
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
   use scale_atmos_hydrometeor, only: &
-     LHV
+     HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
   use scale_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,       &
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
@@ -3127,6 +3127,7 @@ contains
        USE_LWSET
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3247,14 +3248,15 @@ contains
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
-
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
@@ -3404,6 +3406,7 @@ contains
        RANDOM_FLAG
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3512,10 +3515,12 @@ contains
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -3674,6 +3679,7 @@ contains
        RANDOM_FLAG
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3770,11 +3776,13 @@ contains
                                qc_sfc  (:,:,:)  ) ! [IN]
 
 !write(*,*)'chk4.1'
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     RovCP = Rdry / CPdry
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       pott(k,i,j) = potl(k,i,j) + LHV / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+       pott(k,i,j) = potl(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
     enddo
     enddo
     enddo
@@ -3939,6 +3947,7 @@ contains
        PERTURB_AMP_PT, &
        PERTURB_AMP_QV
 
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -4042,14 +4051,15 @@ contains
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
-
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]

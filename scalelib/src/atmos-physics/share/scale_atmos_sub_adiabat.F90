@@ -61,8 +61,8 @@ contains
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr
+       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
+       I_QV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     use scale_history, only: &
@@ -99,10 +99,10 @@ contains
 
     ! entropy at start point
     call HYDROMETEOR_entr( ENTR_p(Kstr,:,:),   & ! [OUT]
-                          TEMP  (Kstr,:,:),   & ! [IN]
-                          PRES  (Kstr,:,:),   & ! [IN]
-                          QTRC  (Kstr,:,:,:), & ! [IN]
-                          TRACER_R(:)         ) ! [IN]
+                           TEMP  (Kstr,:,:),   & ! [IN]
+                           PRES  (Kstr,:,:),   & ! [IN]
+                           QTRC  (Kstr,:,:,:), & ! [IN]
+                           TRACER_R(:)         ) ! [IN]
 
     ! lift parcel
     call ATMOS_ADIABAT_liftparcel( Kstr,             & ! [IN]
@@ -116,10 +116,10 @@ contains
 
     ! entropy profile (lifted parcel)
     call HYDROMETEOR_entr( ENTR_p(:,:,:),   & ! [OUT]
-                          TEMP_p(:,:,:),   & ! [IN]
-                          PRES  (:,:,:),   & ! [IN]
-                          QTRC_p(:,:,:,:), & ! [IN]
-                          TRACER_R(:)      ) ! [IN]
+                           TEMP_p(:,:,:),   & ! [IN]
+                           PRES  (:,:,:),   & ! [IN]
+                           QTRC_p(:,:,:,:), & ! [IN]
+                           TRACER_R(:)      ) ! [IN]
 
     ! parcel buoyancy
     do j = JS, JE
@@ -259,14 +259,14 @@ contains
        CPdry => CONST_CPdry, &
        Rvap  => CONST_Rvap,  &
        CPvap => CONST_CPvap, &
-       LHV0  => CONST_LHV0,  &
        PSAT0 => CONST_PSAT0, &
        PRE00 => CONST_PRE00, &
        TEM00 => CONST_TEM00
     use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV  => ATMOS_HYDROMETEOR_LHV,  &
+       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
        I_QV, &
-       I_QC, &
-       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr
+       I_QC
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
@@ -294,6 +294,7 @@ contains
     real(RP) :: ENTR_ite
     real(RP) :: TEMP_prev
     real(RP) :: dENTR_dT
+    real(RP) :: LHV
 
     real(RP), parameter :: criteria = 1.E-8_RP
     integer,  parameter :: itelim   = 100
@@ -327,6 +328,8 @@ contains
     do k = Kstr, KE
        TEMP_p(k,i,j) = TEMP(k,i,j) ! first guess
 
+       call HYDROMETEOR_LHV( LHV, TEMP_p(k,i,j) )
+
        ! T1: unsaturated temperature, S = U1(PRES, TEMP_unsat, qtot_p)
        qdry_p = 1.0_RP - qtot_p(i,j)
        Rtot   = Rdry  * qdry_p + Rvap  * qtot_p(i,j)
@@ -338,7 +341,7 @@ contains
 
        TEMP_unsat = TEM00 * exp( ( ENTR_p(i,j) + qdry_p      * Rdry * log( pres_dry / PRE00 ) &
                                                + qtot_p(i,j) * Rvap * log( pres_vap / PSAT0 ) &
-                                               - qtot_p(i,j) * LHV0 / TEM00                   ) / CPtot )
+                                               - qtot_p(i,j) * LHV / TEM00                    ) / CPtot )
 
        call SATURATION_pres2qsat_liq( qsat_unsat, & ! [OUT]
                                       TEMP_unsat, & ! [IN]
@@ -348,6 +351,8 @@ contains
        if ( qtot_p(i,j) > qsat_unsat ) then
 
           TEMP_ite = TEM00 * exp( ( ENTR_p(i,j) + Rdry * log( PRES(k,i,j) / PRE00 ) ) / CPdry )
+
+          call HYDROMETEOR_LHV( LHV, TEMP_ite )
 
           do ite = 1, itelim
 
@@ -359,17 +364,17 @@ contains
              QTRC_ite(I_QV) = min( qtot_p(i,j), qsat_ite )
 
              call HYDROMETEOR_entr( ENTR_ite,    & ! [OUT]
-                                   TEMP_ite,    & ! [IN]
-                                   PRES(k,i,j), & ! [IN]
-                                   QTRC_ite(:), & ! [IN]
-                                   TRACER_R(:)  ) ! [IN]
+                                    TEMP_ite,    & ! [IN]
+                                    PRES(k,i,j), & ! [IN]
+                                    QTRC_ite(:), & ! [IN]
+                                    TRACER_R(:)  ) ! [IN]
 
              qdry_p   = 1.0_RP - QTRC_ite(I_QV)
              CPtot    = CPdry * qdry_p + CPvap * QTRC_ite(I_QV)
 
-             dENTR_dT  = CPtot                    / TEMP_ite    &
-                       - QTRC_ite(I_QV) * LHV0    / TEMP_ite**2 &
-                       + QTRC_ite(I_QV) * LHV0**2 / TEMP_ite**3 / Rvap
+             dENTR_dT  = CPtot                   / TEMP_ite    &
+                       - QTRC_ite(I_QV) * LHV    / TEMP_ite**2 &
+                       + QTRC_ite(I_QV) * LHV**2 / TEMP_ite**3 / Rvap
              dENTR_dT  = max( dENTR_dT, EPS )
 
              TEMP_prev = TEMP_ite
