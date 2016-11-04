@@ -303,7 +303,7 @@ contains
     use scale_interpolation_nest, only: &
        INTRPNEST_setup,            &
        INTRPNEST_interp_fact_llz
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_atmos_phy_mp, only: &
        QA_MP

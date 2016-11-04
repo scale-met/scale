@@ -164,7 +164,7 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_THERMODYN_TYPE
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV, &
        LHS
     implicit none
@@ -1240,8 +1240,8 @@ contains
   !-----------------------------------------------------------------------------
   ! (d qsw/d T)_{rho}: partial difference of qsat_water
   subroutine ATMOS_SATURATION_dqsw_dtem_rho( dqsdtem, temp, dens )
-    use scale_atmos_hydrometer, only: &
-         ATMOS_HYDROMETER_templhv
+    use scale_atmos_hydrometeor, only: &
+         ATMOS_HYDROMETEOR_templhv
     implicit none
 
     real(RP), intent(out) :: dqsdtem(KA,IA,JA)
@@ -1268,7 +1268,7 @@ contains
             * ( TEM * RTEM00 )**CPovR_liq             &
             * exp( LovR_liq * ( RTEM00 - 1.0_RP/TEM ) )
 
-       call ATMOS_HYDROMETER_templhv( lhv, temp(k,i,j) )
+       call ATMOS_HYDROMETEOR_templhv( lhv, temp(k,i,j) )
 
        dqsdtem(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
                       * ( lhv / ( Rvap * temp(k,i,j) ) - 1.0_RP )
@@ -1283,8 +1283,8 @@ contains
   ! (d qsi/d T)_{rho}: partial difference of qsat_ice
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqsi_dtem_rho( dqsdtem, temp, dens )
-    use scale_atmos_hydrometer, only: &
-         ATMOS_HYDROMETER_templhs
+    use scale_atmos_hydrometeor, only: &
+         ATMOS_HYDROMETEOR_templhs
     implicit none
 
     real(RP), intent(out) :: dqsdtem(KA,IA,JA)
@@ -1311,7 +1311,7 @@ contains
             * ( TEM * RTEM00 )**CPovR_ice             &
             * exp( LovR_ice * ( RTEM00 - 1.0_RP/TEM ) )
 
-       call ATMOS_HYDROMETER_templhs( lhs, temp(k,i,j) )
+       call ATMOS_HYDROMETEOR_templhs( lhs, temp(k,i,j) )
 
        dqsdtem(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
                       * ( lhs / ( Rvap * temp(k,i,j) ) - 1.0_RP )
@@ -1326,8 +1326,8 @@ contains
   ! (d qs/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqsw_dtem_dpre( dqsdtem, dqsdpre, temp, pres )
-    use scale_atmos_hydrometer, only: &
-         ATMOS_HYDROMETER_templhv
+    use scale_atmos_hydrometeor, only: &
+         ATMOS_HYDROMETEOR_templhv
     implicit none
 
     real(RP), intent(out) :: dqsdtem(KA,IA,JA)
@@ -1359,7 +1359,7 @@ contains
        den1 = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat ) &
             * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat )
        den2 = den1 * Rvap * temp(k,i,j) * temp(k,i,j)
-       call ATMOS_HYDROMETER_templhv( lhv, temp(k,i,j) )
+       call ATMOS_HYDROMETEOR_templhv( lhv, temp(k,i,j) )
 
        dqsdpre(k,i,j) = - EPSvap * psat / den1
        dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhv * pres(k,i,j)
@@ -1374,8 +1374,8 @@ contains
   ! (d qsi/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqsi_dtem_dpre( dqsdtem, dqsdpre, temp, pres )
-    use scale_atmos_hydrometer, only: &
-         ATMOS_HYDROMETER_templhs
+    use scale_atmos_hydrometeor, only: &
+         ATMOS_HYDROMETEOR_templhs
     implicit none
 
     real(RP), intent(out) :: dqsdtem(KA,IA,JA)
@@ -1407,7 +1407,7 @@ contains
        den1 = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat ) &
             * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat )
        den2 = den1 * Rvap * temp(k,i,j) * temp(k,i,j)
-       call ATMOS_HYDROMETER_templhs( lhs, temp(k,i,j) )
+       call ATMOS_HYDROMETEOR_templhs( lhs, temp(k,i,j) )
 
        dqsdpre(k,i,j) = - EPSvap * psat / den1
        dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhs * pres(k,i,j)

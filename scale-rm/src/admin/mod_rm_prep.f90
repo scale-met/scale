@@ -112,8 +112,8 @@ contains
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_setup
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_setup
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_setup
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
     use mod_atmos_driver, only: &
@@ -216,7 +216,7 @@ contains
     call CPL_admin_setup
 
     ! setup tracer
-    call ATMOS_HYDROMETER_setup
+    call ATMOS_HYDROMETEOR_setup
     call ATMOS_driver_config
     call USER_config
 

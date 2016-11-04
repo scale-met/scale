@@ -55,7 +55,7 @@ contains
   subroutine USER_config
     use scale_tracer, only: &
          TRACER_regist
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_NC
     implicit none
     !---------------------------------------------------------------------------

@@ -22,7 +22,7 @@ module mod_thrmdyn
      TEM00  => CONST_TEM00, &
      PSAT0  => CONST_PSAT0, &
      EPSvap => CONST_EPSvap
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
      LHV, &
      LHF
   use mod_adm, only: &

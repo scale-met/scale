@@ -77,7 +77,7 @@ module scale_atmos_phy_mp_suzuki10
   use scale_atmos_thermodyn, only: &
      THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
      THERMODYN_pott      => ATMOS_THERMODYN_pott
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
      N_HYD
 
   !-----------------------------------------------------------------------------
@@ -283,8 +283,8 @@ contains
        PRC_MPIstop
     use scale_tracer, only: &
        TRACER_regist
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_regist
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_regist
     implicit none
     character(len=*), intent(in)  :: MP_TYPE
     integer,          intent(out) :: QA
@@ -376,7 +376,7 @@ contains
     NL = nbin            ! number of liquid water
     NI = nbin * (nspc-1) ! number of ice water
 
-    call ATMOS_HYDROMETER_regist( QS,    & ! (out)
+    call ATMOS_HYDROMETEOR_regist( QS,    & ! (out)
                                   1, NL, NI, & ! (in)
                                   ATMOS_PHY_MP_suzuki10_NAME(1:NL+NI+1), & ! (in)
                                   ATMOS_PHY_MP_suzuki10_DESC(1:NL+NI+1), & ! (in)
@@ -418,7 +418,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_HC, &
        I_HR, &
        I_HI, &
@@ -4066,7 +4066,7 @@ contains
        EPS => CONST_EPS
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC, &
        I_HR, &
@@ -4137,7 +4137,7 @@ contains
     enddo
     enddo
 
-    ! other hydrometers
+    ! other hydrometeors
     if ( nspc > 1 ) then
        do k = KS, KE
        do j = JS, JE
@@ -4194,7 +4194,7 @@ contains
        EPS => CONST_EPS
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC, &
        I_HR, &
@@ -4235,7 +4235,7 @@ contains
     enddo
     enddo
 
-    ! other hydrometers
+    ! other hydrometeors
     if ( nspc > 1 ) then
 
        do k = KS, KE

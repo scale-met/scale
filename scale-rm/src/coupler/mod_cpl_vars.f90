@@ -420,7 +420,7 @@ contains
        SFLX_rain,   &
        SFLX_snow,   &
        countup      )
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     implicit none
 
@@ -857,7 +857,7 @@ contains
        V10,        &
        T2,         &
        Q2          )
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_landuse, only: &
        fact_ocean => LANDUSE_fact_ocean, &

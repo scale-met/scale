@@ -1255,7 +1255,7 @@ contains
        HIST_in
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC, &
        QHS, &
@@ -1266,7 +1266,7 @@ contains
        QIE, &
        LHV, &
        LHF, &
-       HYDROMETER_templhv => ATMOS_HYDROMETER_templhv
+       HYDROMETEOR_templhv => ATMOS_HYDROMETEOR_templhv
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
@@ -2156,7 +2156,7 @@ contains
     call HIST_in( PBLH(:,:), 'PBLH', 'PBL height', 'm' )
 
     if ( AD_PREP_sw(I_MSE) > 0 ) then
-       call HYDROMETER_templhv( LHvap(:,:,:), & ! [OUT]
+       call HYDROMETEOR_templhv( LHvap(:,:,:), & ! [OUT]
                                 TEMP (:,:,:)  ) ! [IN]
 
        do j = JS, JE
@@ -2196,7 +2196,7 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        QIS, &
        QIE, &
@@ -2438,7 +2438,7 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        QIS, &
        QIE, &

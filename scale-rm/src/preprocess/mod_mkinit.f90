@@ -70,7 +70,7 @@ module mod_mkinit
      REAL_FZ
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
      LHV
   use scale_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,       &
@@ -766,7 +766,7 @@ contains
   subroutine SBMAERO_setup
     use scale_const, only: &
        PI => CONST_PI
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        QHS, &
        QHE
     use scale_atmos_phy_mp_suzuki10, only: &
@@ -1172,7 +1172,7 @@ contains
   !> Read sounding data from file
   subroutine read_sounding( &
        DENS, VELX, VELY, POTT, QV )
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     implicit none
     real(RP), intent(out) :: DENS(KA)
@@ -1317,7 +1317,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform + random disturbance )
   subroutine MKINIT_planestate
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     implicit none
 
@@ -1517,7 +1517,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for tracer bubble experiment
   subroutine MKINIT_tracerbubble
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_NC
     use mod_atmos_admin, only: &
          ATMOS_PHY_MP_TYPE
@@ -2055,7 +2055,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for turbulence experiment
   subroutine MKINIT_turbulence
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_MP_TYPE
@@ -2318,7 +2318,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform )
   subroutine MKINIT_mountainwave
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_NC
     implicit none
 
@@ -2447,7 +2447,7 @@ contains
     use scale_grid, only: &
          y0 => GRID_DOMAIN_CENTER_Y, &
          GRID_FYG
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     
     implicit none
@@ -2642,7 +2642,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubble
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     implicit none
 
@@ -2783,7 +2783,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for supercell experiment
   subroutine MKINIT_supercell
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     implicit none
 
@@ -2849,7 +2849,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     implicit none
 
@@ -2919,7 +2919,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state by Weisman and Klemp (1982)
   subroutine MKINIT_wk1982
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     implicit none
 
@@ -3100,7 +3100,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF01
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV, &
          I_QC, &
          I_NC, &
@@ -3379,7 +3379,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV, &
          I_QC, &
          I_NC, &
@@ -3644,7 +3644,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02_DNS
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV, &
          I_QC, &
          I_NC, &
@@ -3919,7 +3919,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for RICO inter comparison
   subroutine MKINIT_RICO
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV, &
          I_QC, &
          I_NC, &
@@ -4160,7 +4160,7 @@ contains
     use gtool_file, only: &
        FileGetShape, &
        FileRead
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC
     implicit none
@@ -4747,7 +4747,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for grayzone experiment
   subroutine MKINIT_grayzone
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     implicit none
 
@@ -4879,7 +4879,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state of Box model experiment for zerochemical module
   subroutine MKINIT_boxaero
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_AE_TYPE
@@ -4948,7 +4948,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubbleaero
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_AE_TYPE

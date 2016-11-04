@@ -1,8 +1,8 @@
 !-------------------------------------------------------------------------------
-!> module Hydrometer
+!> module Hydrometeor
 !!
 !! @par Description
-!!          Hydrometer module
+!!          Hydrometeor module
 !!
 !! @author Team SCALE
 !!
@@ -11,7 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module scale_atmos_hydrometer
+module scale_atmos_hydrometeor
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -26,37 +26,37 @@ module scale_atmos_hydrometer
   !
   !++ Public procedure
   !
-  public :: ATMOS_HYDROMETER_setup
-  public :: ATMOS_HYDROMETER_regist
-  public :: ATMOS_HYDROMETER_templhv
-  public :: ATMOS_HYDROMETER_templhs
-  public :: ATMOS_HYDROMETER_templhf
-  public :: ATMOS_HYDROMETER_entr
-  public :: ATMOS_HYDROMETER_diagnose_number_concentration
+  public :: ATMOS_HYDROMETEOR_setup
+  public :: ATMOS_HYDROMETEOR_regist
+  public :: ATMOS_HYDROMETEOR_templhv
+  public :: ATMOS_HYDROMETEOR_templhs
+  public :: ATMOS_HYDROMETEOR_templhf
+  public :: ATMOS_HYDROMETEOR_entr
+  public :: ATMOS_HYDROMETEOR_diagnose_number_concentration
 
-  interface ATMOS_HYDROMETER_templhv
-     module procedure ATMOS_HYDROMETER_templhv_0D
-     module procedure ATMOS_HYDROMETER_templhv_2D
-     module procedure ATMOS_HYDROMETER_templhv_3D
-  end interface ATMOS_HYDROMETER_templhv
+  interface ATMOS_HYDROMETEOR_templhv
+     module procedure ATMOS_HYDROMETEOR_templhv_0D
+     module procedure ATMOS_HYDROMETEOR_templhv_2D
+     module procedure ATMOS_HYDROMETEOR_templhv_3D
+  end interface ATMOS_HYDROMETEOR_templhv
 
-  interface ATMOS_HYDROMETER_templhs
-     module procedure ATMOS_HYDROMETER_templhs_0D
-     module procedure ATMOS_HYDROMETER_templhs_2D
-     module procedure ATMOS_HYDROMETER_templhs_3D
-  end interface ATMOS_HYDROMETER_templhs
+  interface ATMOS_HYDROMETEOR_templhs
+     module procedure ATMOS_HYDROMETEOR_templhs_0D
+     module procedure ATMOS_HYDROMETEOR_templhs_2D
+     module procedure ATMOS_HYDROMETEOR_templhs_3D
+  end interface ATMOS_HYDROMETEOR_templhs
 
-  interface ATMOS_HYDROMETER_templhf
-     module procedure ATMOS_HYDROMETER_templhf_0D
-     module procedure ATMOS_HYDROMETER_templhf_2D
-     module procedure ATMOS_HYDROMETER_templhf_3D
-  end interface ATMOS_HYDROMETER_templhf
+  interface ATMOS_HYDROMETEOR_templhf
+     module procedure ATMOS_HYDROMETEOR_templhf_0D
+     module procedure ATMOS_HYDROMETEOR_templhf_2D
+     module procedure ATMOS_HYDROMETEOR_templhf_3D
+  end interface ATMOS_HYDROMETEOR_templhf
 
-  interface ATMOS_HYDROMETER_entr
-     module procedure ATMOS_HYDROMETER_entr_0D
-     module procedure ATMOS_HYDROMETER_entr_2D
-     module procedure ATMOS_HYDROMETER_entr_3D
-  end interface ATMOS_HYDROMETER_entr
+  interface ATMOS_HYDROMETEOR_entr
+     module procedure ATMOS_HYDROMETEOR_entr_0D
+     module procedure ATMOS_HYDROMETEOR_entr_2D
+     module procedure ATMOS_HYDROMETEOR_entr_3D
+  end interface ATMOS_HYDROMETEOR_entr
 
   !-----------------------------------------------------------------------------
   !
@@ -119,7 +119,7 @@ module scale_atmos_hydrometer
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_HYDROMETER_setup
+  subroutine ATMOS_HYDROMETEOR_setup
     use scale_const, only: &
        CPdry          => CONST_CPdry,          &
        CVdry          => CONST_CVdry,          &
@@ -178,11 +178,11 @@ contains
     endif
 
     return
-  end subroutine ATMOS_HYDROMETER_setup
+  end subroutine ATMOS_HYDROMETEOR_setup
 
   !-----------------------------------------------------------------------------
   !> Regist tracer
-  subroutine ATMOS_HYDROMETER_regist( &
+  subroutine ATMOS_HYDROMETEOR_regist( &
        Q0,   &
        NV,   &
        NL,   &
@@ -284,10 +284,10 @@ contains
     end if
 
     return
-  end subroutine ATMOS_HYDROMETER_regist
+  end subroutine ATMOS_HYDROMETEOR_regist
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhv_0D( &
+  subroutine ATMOS_HYDROMETEOR_templhv_0D( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -302,10 +302,10 @@ contains
     lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp - TEM00 ) * THERMODYN_EMASK
 
     return
-  end subroutine ATMOS_HYDROMETER_templhv_0D
+  end subroutine ATMOS_HYDROMETEOR_templhv_0D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhv_2D( &
+  subroutine ATMOS_HYDROMETEOR_templhv_2D( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -326,10 +326,10 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETER_templhv_2D
+  end subroutine ATMOS_HYDROMETEOR_templhv_2D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhv_3D( &
+  subroutine ATMOS_HYDROMETEOR_templhv_3D( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -351,10 +351,10 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETER_templhv_3D
+  end subroutine ATMOS_HYDROMETEOR_templhv_3D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhs_0D( &
+  subroutine ATMOS_HYDROMETEOR_templhs_0D( &
        lhs, &
        temp )
     use scale_const, only: &
@@ -369,10 +369,10 @@ contains
     lhs = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp - TEM00 ) * THERMODYN_EMASK
 
     return
-  end subroutine ATMOS_HYDROMETER_templhs_0D
+  end subroutine ATMOS_HYDROMETEOR_templhs_0D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhs_2D( &
+  subroutine ATMOS_HYDROMETEOR_templhs_2D( &
        lhs, &
        temp )
     use scale_const, only: &
@@ -393,10 +393,10 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETER_templhs_2D
+  end subroutine ATMOS_HYDROMETEOR_templhs_2D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhs_3D( &
+  subroutine ATMOS_HYDROMETEOR_templhs_3D( &
        lhs, &
        temp )
     use scale_const, only: &
@@ -419,10 +419,10 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETER_templhs_3D
+  end subroutine ATMOS_HYDROMETEOR_templhs_3D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhf_0D( &
+  subroutine ATMOS_HYDROMETEOR_templhf_0D( &
        lhf, &
        temp )
     use scale_const, only: &
@@ -437,10 +437,10 @@ contains
     lhf = LHF0 + ( CP_WATER - CP_ICE ) * ( temp - TEM00 ) * THERMODYN_EMASK
 
     return
-  end subroutine ATMOS_HYDROMETER_templhf_0D
+  end subroutine ATMOS_HYDROMETEOR_templhf_0D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhf_2D( &
+  subroutine ATMOS_HYDROMETEOR_templhf_2D( &
        lhf, &
        temp )
     use scale_const, only: &
@@ -461,10 +461,10 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETER_templhf_2D
+  end subroutine ATMOS_HYDROMETEOR_templhf_2D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_templhf_3D( &
+  subroutine ATMOS_HYDROMETEOR_templhf_3D( &
        lhf, &
        temp )
     use scale_const, only: &
@@ -487,11 +487,11 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETER_templhf_3D
+  end subroutine ATMOS_HYDROMETEOR_templhf_3D
 
   !-----------------------------------------------------------------------------
   !> calc temp, pres, q -> entropy (0D)
-  subroutine ATMOS_HYDROMETER_entr_0D( &
+  subroutine ATMOS_HYDROMETEOR_entr_0D( &
        entr, &
        temp, &
        pres, &
@@ -570,11 +570,11 @@ contains
     end if
 
     return
-  end subroutine ATMOS_HYDROMETER_entr_0D
+  end subroutine ATMOS_HYDROMETEOR_entr_0D
 
   !-----------------------------------------------------------------------------
   !> calc temp, pres, q -> entropy (2D)
-  subroutine ATMOS_HYDROMETER_entr_2D( &
+  subroutine ATMOS_HYDROMETEOR_entr_2D( &
        entr, &
        temp, &
        pres, &
@@ -660,11 +660,11 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETER_entr_2D
+  end subroutine ATMOS_HYDROMETEOR_entr_2D
 
   !-----------------------------------------------------------------------------
   !> calc temp, pres, q -> entropy (3D)
-  subroutine ATMOS_HYDROMETER_entr_3D( &
+  subroutine ATMOS_HYDROMETEOR_entr_3D( &
        entr, &
        temp, &
        pres, &
@@ -751,10 +751,10 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETER_entr_3D
+  end subroutine ATMOS_HYDROMETEOR_entr_3D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETER_diagnose_number_concentration( &
+  subroutine ATMOS_HYDROMETEOR_diagnose_number_concentration( &
        QTRC ) ! (inout)
     use scale_const, only: &
          PI => CONST_PI
@@ -783,6 +783,6 @@ contains
     if ( I_NG > 0 ) QTRC(:,:,:,I_NG) = QTRC(:,:,:,I_QG) / ( (piov6*RHOg) * Dg**b )
 
     return
-  end subroutine ATMOS_HYDROMETER_diagnose_number_concentration
+  end subroutine ATMOS_HYDROMETEOR_diagnose_number_concentration
 
-end module scale_atmos_hydrometer
+end module scale_atmos_hydrometeor

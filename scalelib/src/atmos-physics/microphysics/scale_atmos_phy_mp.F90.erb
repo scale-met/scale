@@ -80,7 +80,7 @@ module scale_atmos_phy_mp
        use scale_precision
        use scale_grid_index
        use scale_tracer
-       use scale_atmos_hydrometer, only: N_HYD
+       use scale_atmos_hydrometeor, only: N_HYD
        real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
        real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
@@ -92,7 +92,7 @@ module scale_atmos_phy_mp
        use scale_precision
        use scale_grid_index
        use scale_tracer
-       use scale_atmos_hydrometer, only: N_HYD
+       use scale_atmos_hydrometeor, only: N_HYD
        real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
      end subroutine mr

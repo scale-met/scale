@@ -89,7 +89,7 @@ contains
        CL    => CONST_CL,    &
        CI    => CONST_CI,    &
        TEM00 => CONST_TEM00
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV, &
        LHS
     implicit none

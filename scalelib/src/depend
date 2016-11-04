@@ -153,7 +153,7 @@ MODS =	\
 	$(OBJ_DIR)/scale_atmos_dyn_tstep_short_fvm_hivi.mod	\
 	$(OBJ_DIR)/scale_atmos_dyn_tstep_tracer.mod	\
 	$(OBJ_DIR)/scale_atmos_dyn_tstep_tracer_fvm_heve.mod	\
-	$(OBJ_DIR)/scale_atmos_hydrometer.mod	\
+	$(OBJ_DIR)/scale_atmos_hydrometeor.mod	\
 	$(OBJ_DIR)/scale_atmos_hydrostatic.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_ae.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_ae_dummy.mod	\

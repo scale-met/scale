@@ -23,7 +23,7 @@ module scale_atmos_phy_mp_tomita08
   use scale_prof
   use scale_grid_index
 
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
      N_HYD, &
      I_QV, &
      I_QC, &
@@ -326,8 +326,8 @@ contains
        QA, QS   )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_regist
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_regist
     implicit none
 
     character(len=*), intent(in) :: MP_TYPE
@@ -340,7 +340,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_HYDROMETER_regist( QS,  & ! (out)
+    call ATMOS_HYDROMETEOR_regist( QS,  & ! (out)
                                   1, 2, 3, & ! (in)
                                   ATMOS_PHY_MP_tomita08_NAME, & ! (in)
                                   ATMOS_PHY_MP_tomita08_DESC, & ! (in)
@@ -773,10 +773,10 @@ contains
        HIST_in
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_templhv, &
-       ATMOS_HYDROMETER_templhs, &
-       ATMOS_HYDROMETER_templhf
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_templhv, &
+       ATMOS_HYDROMETEOR_templhs, &
+       ATMOS_HYDROMETEOR_templhf
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
@@ -917,9 +917,9 @@ contains
                                     a2   (:,:,:), & ! [OUT]
                                     ma2  (:,:,:)  ) ! [OUT]
 
-    call ATMOS_HYDROMETER_templhv( LHVEx, TEMP0 )
-    call ATMOS_HYDROMETER_templhf( LHFEx, TEMP0 )
-    call ATMOS_HYDROMETER_templhs( LHSEx, TEMP0 )
+    call ATMOS_HYDROMETEOR_templhv( LHVEx, TEMP0 )
+    call ATMOS_HYDROMETEOR_templhf( LHFEx, TEMP0 )
+    call ATMOS_HYDROMETEOR_templhs( LHSEx, TEMP0 )
 
 !$omp parallel do &
 !$omp private(tend, coef_bt, coef_at, q, w) &
@@ -1925,7 +1925,7 @@ contains
        TEM00 => CONST_TEM00
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
@@ -2010,7 +2010,7 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]

@@ -320,7 +320,7 @@ contains
        GRAV  => CONST_GRAV,  &
        CPdry => CONST_CPdry, &
        Rvap  => CONST_Rvap
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV
     use mod_adm, only: &
        ADM_KNONE,   &

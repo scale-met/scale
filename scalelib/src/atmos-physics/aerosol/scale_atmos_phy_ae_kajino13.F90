@@ -633,7 +633,7 @@ contains
        CONST_Rvap, &
        CONST_PRE00, &
        CONST_Rdry
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
@@ -2272,7 +2272,7 @@ contains
        CONST_CPdry, &
        CONST_Rdry, &
        CONST_PRE00
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq

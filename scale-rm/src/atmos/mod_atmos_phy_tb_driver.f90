@@ -161,7 +161,7 @@ contains
        calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
        calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
        calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_atmos_vars, only: &
        DENS => DENS_av,   &

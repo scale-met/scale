@@ -177,7 +177,7 @@ contains
          ExternalFileRead
     use scale_atmos_thermodyn, only: &
          THERMODYN_pott => ATMOS_THERMODYN_pott
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV, &
          I_QC, &
          I_QR, &

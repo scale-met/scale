@@ -27,7 +27,7 @@ module scale_atmos_phy_mp_kessler
   use scale_prof
   use scale_grid_index
 
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_QV, &
        I_QC, &
@@ -116,8 +116,8 @@ contains
        PRC_MPIstop
     use scale_tracer, only: &
        TRACER_regist
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_regist
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_regist
     implicit none
     character(len=*), intent(in) :: MP_TYPE
     integer, intent(out) :: QA
@@ -129,7 +129,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_HYDROMETER_regist( QS_MP, & ! (out)
+    call ATMOS_HYDROMETEOR_regist( QS_MP, & ! (out)
                                   1, 2, 0,  & ! (in)
                                   ATMOS_PHY_MP_kessler_NAME, & ! (in)
                                   ATMOS_PHY_MP_kessler_DESC, & ! (in)
@@ -425,7 +425,7 @@ contains
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
@@ -645,7 +645,7 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
@@ -679,7 +679,7 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]

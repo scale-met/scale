@@ -91,15 +91,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine USER_config
-    use scale_atmos_hydrometer, only: &
-         ATMOS_HYDROMETER_regist, &
+    use scale_atmos_hydrometeor, only: &
+         ATMOS_HYDROMETEOR_regist, &
          I_QV, &
          I_QC, &
          I_QI
     implicit none
     integer :: QS
 
-    call ATMOS_HYDROMETER_regist( QS, & ! (out)
+    call ATMOS_HYDROMETEOR_regist( QS, & ! (out)
                                   1, 1, 1,  & ! (in)
                                   QNAME, QDESC, QUNIT ) ! (in)
 
@@ -148,7 +148,7 @@ contains
   subroutine USER_resume0
     use scale_atmos_hydrostatic, only: &
        buildrho => ATMOS_HYDROSTATIC_buildrho
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_atmos_vars, only: &
        DENS, &

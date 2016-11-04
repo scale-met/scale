@@ -288,7 +288,7 @@ contains
          P00   => CONST_PRE00
     use scale_time, only: &
          dtrd =>  TIME_DTSEC_ATMOS_PHY_RD
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV, &
          QLS, &
          QLE

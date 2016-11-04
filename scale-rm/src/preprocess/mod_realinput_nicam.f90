@@ -195,7 +195,7 @@ contains
     use scale_external_io, only: &
          ExternalFileRead, &
          ExternalFileReadOffset
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     implicit none
 

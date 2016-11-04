@@ -21,7 +21,7 @@ module scale_atmos_phy_mp_dry
   use scale_stdio
   use scale_prof
   use scale_grid_index
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
        N_HYD
   !-----------------------------------------------------------------------------
   implicit none
@@ -173,7 +173,7 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
          QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          N_HYD
     implicit none
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
@@ -194,7 +194,7 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
          QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          N_HYD
     implicit none
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]

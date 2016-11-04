@@ -903,8 +903,8 @@ contains
          rotc => GTRANS_ROTC
     use scale_atmos_thermodyn, only: &
          THERMODYN_pott => ATMOS_THERMODYN_pott
-    use scale_atmos_hydrometer, only: &
-         HYDROMETER_diagnose_number_concentration => ATMOS_HYDROMETER_diagnose_number_concentration, &
+    use scale_atmos_hydrometeor, only: &
+         HYDROMETEOR_diagnose_number_concentration => ATMOS_HYDROMETEOR_diagnose_number_concentration, &
          I_QV, &
          I_QC, &
          QLS, &
@@ -1194,7 +1194,7 @@ contains
 
        if( trim(mptype_run)=='double' .and. mptype_parent <= 6 )then
           if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
-          call HYDROMETER_diagnose_number_concentration( qtrc_org(:,:,:,:) ) ! [inout]
+          call HYDROMETEOR_diagnose_number_concentration( qtrc_org(:,:,:,:) ) ! [inout]
        endif
 
        do j = 1, dims(3)
@@ -1786,7 +1786,7 @@ contains
          LCZ  => GRID_LCZ
     use scale_atmos_thermodyn, only: &
          THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     use scale_landuse, only: &
          lsmask_nest => LANDUSE_frac_land

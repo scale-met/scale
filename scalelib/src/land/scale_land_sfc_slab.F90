@@ -159,8 +159,8 @@ contains
     use scale_grid_index
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_templhv
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_templhv
     use scale_bulkflux, only: &
       BULKFLUX
     implicit none
@@ -237,7 +237,7 @@ contains
     end do
     end do
 
-    call ATMOS_HYDROMETER_templhv( LHV, TMPA )
+    call ATMOS_HYDROMETEOR_templhv( LHV, TMPA )
 
     ! update surface temperature
     if( LST_UPDATE ) then

@@ -21,8 +21,8 @@ program unit
      DZ, DX, DY, &
      GRID_allocate, &
      GRID_generate
-  use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_regist
+  use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_regist
 
   use test_atmos_phy_tb_smg
 
@@ -57,7 +57,7 @@ program unit
 
   call GRID_INDEX_setup
 
-  call ATMOS_HYDROMETER_regist(q0, 1, 1, 0, (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/) )
+  call ATMOS_HYDROMETEOR_regist(q0, 1, 1, 0, (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/) )
 
   ! setup horizontal/veritical grid system
   DZ = 500.0_RP

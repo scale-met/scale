@@ -66,7 +66,7 @@ contains
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        QHS, &
        QHE
     implicit none
@@ -171,7 +171,7 @@ contains
        THERMODYN_qd          => ATMOS_THERMODYN_qd,         &
        THERMODYN_cv          => ATMOS_THERMODYN_cv,         &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV, &
        LHF
     use scale_atmos_saturation, only: &
@@ -419,7 +419,7 @@ contains
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
        THERMODYN_cv => ATMOS_THERMODYN_cv
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
@@ -571,7 +571,7 @@ contains
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
        THERMODYN_cv => ATMOS_THERMODYN_cv
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV, &
        LHF
     use scale_atmos_saturation, only: &
@@ -758,7 +758,7 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        QLS, &
        QLE, &
        QIS, &

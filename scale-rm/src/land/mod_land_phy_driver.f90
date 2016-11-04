@@ -100,8 +100,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine LAND_PHY_driver( update_flag )
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_templhv
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_templhv
     use scale_time, only: &
        dt => TIME_DTSEC_LAND
     use scale_rm_statistics, only: &
@@ -223,7 +223,7 @@ contains
                       LAND_PROPERTY  (:,:,I_Z0E),         & ! [IN]
                       dt                                  ) ! [IN]
 
-       call ATMOS_HYDROMETER_templhv( lhv, ATMOS_TEMP )
+       call ATMOS_HYDROMETEOR_templhv( lhv, ATMOS_TEMP )
 
 !OCL XFILL
        do j = JS, JE

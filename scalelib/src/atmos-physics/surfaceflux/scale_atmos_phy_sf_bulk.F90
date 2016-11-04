@@ -123,9 +123,9 @@ contains
     use scale_const, only: &
        CPdry => CONST_CPdry, &
        Rdry  => CONST_Rdry
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
-       ATMOS_HYDROMETER_templhv
+       ATMOS_HYDROMETEOR_templhv
     use scale_atmos_phy_sf_bulkcoef, only: &
        SF_bulkcoef => ATMOS_PHY_SF_bulkcoef
     use scale_atmos_saturation, only: &
@@ -202,7 +202,7 @@ contains
                                    SFC_TEMP(:,:), & ! [IN]
                                    SFC_PRES(:,:)  ) ! [IN]
 
-    call ATMOS_HYDROMETER_templhv( LHV, ATM_TEMP )
+    call ATMOS_HYDROMETEOR_templhv( LHV, ATM_TEMP )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
     PBL(:,:) = 100.0_RP ! tentative

@@ -132,9 +132,9 @@ contains
     use scale_tracer
     use scale_const, only: &
        PI    => CONST_PI
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
-       ATMOS_HYDROMETER_templhv
+       ATMOS_HYDROMETEOR_templhv
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
@@ -232,7 +232,7 @@ contains
     enddo
 
     !-----< mass flux >-----
-   call ATMOS_HYDROMETER_templhv( LHV, ATM_TEMP )
+   call ATMOS_HYDROMETEOR_templhv( LHV, ATM_TEMP )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
     if ( I_QV > 0 ) then

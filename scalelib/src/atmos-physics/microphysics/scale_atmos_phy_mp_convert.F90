@@ -96,7 +96,7 @@ contains
        ATMOS_PHY_MP_NAME, &
        QA_MP, &
        QS_MP
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     implicit none
 

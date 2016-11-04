@@ -225,12 +225,12 @@ contains
        diffusion_solver => ATMOS_PHY_TB_diffusion_solver
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC, &
        I_QI, &
-       ATMOS_HYDROMETER_templhv, &
-       ATMOS_HYDROMETER_templhs
+       ATMOS_HYDROMETEOR_templhv, &
+       ATMOS_HYDROMETEOR_templhs
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_alpha, &
        ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_all
@@ -488,8 +488,8 @@ contains
                                     TRACER_CV, TRACER_R, TRACER_MASS ) ! (in)
 
 
-    call ATMOS_HYDROMETER_templhv( lhv, temp )
-    call ATMOS_HYDROMETER_templhs( lhs, temp )
+    call ATMOS_HYDROMETEOR_templhv( lhv, temp )
+    call ATMOS_HYDROMETEOR_templhs( lhs, temp )
     call ATMOS_SATURATION_alpha( alpha, temp )
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP

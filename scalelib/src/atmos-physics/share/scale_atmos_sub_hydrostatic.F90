@@ -129,7 +129,7 @@ contains
     use scale_tracer, only: &
        TRACER_CV, &
        TRACER_CP
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC
     implicit none
