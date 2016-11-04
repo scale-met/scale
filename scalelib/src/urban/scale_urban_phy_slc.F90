@@ -676,7 +676,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
-       qsat   => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     !-- configuration variables

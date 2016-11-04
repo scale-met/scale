@@ -100,23 +100,22 @@ module scale_atmos_phy_mp_sn14
 
   use scale_atmos_hydrometeor, only: &
      N_HYD, &
-     I_QV, &
-     I_QC, &
-     I_QR, &
-     I_QI, &
-     I_QS, &
-     I_QG, &
-     I_NC, &
-     I_NR, &
-     I_NI, &
-     I_NS, &
-     I_NG, &
-     I_HC, &
-     I_HR, &
-     I_HI, &
-     I_HS, &
+     I_QV,  &
+     I_QC,  &
+     I_QR,  &
+     I_QI,  &
+     I_QS,  &
+     I_QG,  &
+     I_NC,  &
+     I_NR,  &
+     I_NI,  &
+     I_NS,  &
+     I_NG,  &
+     I_HC,  &
+     I_HR,  &
+     I_HI,  &
+     I_HS,  &
      I_HG
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -562,6 +561,7 @@ contains
     use scale_tracer, only: &
        TRACER_regist
     implicit none
+
     character(len=*), intent(in)  :: MP_TYPE
     integer,          intent(out) :: QA
     integer,          intent(out) :: QS
@@ -574,11 +574,11 @@ contains
        call PRC_MPIstop
     end if
 
-    call ATMOS_HYDROMETEOR_regist( QS_MP, & ! (out)
-                                  1, 2, 3,  & ! (in)
-                                  ATMOS_PHY_MP_sn14_NAME(1:6), & ! (in)
-                                  ATMOS_PHY_MP_sn14_DESC(1:6), & ! (in)
-                                  ATMOS_PHY_MP_sn14_UNIT(1:6)  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS_MP,                       & ! (out)
+                                   1, 2, 3,                     & ! (in)
+                                   ATMOS_PHY_MP_sn14_NAME(1:6), & ! (in)
+                                   ATMOS_PHY_MP_sn14_DESC(1:6), & ! (in)
+                                   ATMOS_PHY_MP_sn14_UNIT(1:6)  ) ! (in)
 
     call TRACER_regist( QS2, & ! (out)
                         5,   & ! (in)
@@ -4488,6 +4488,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
+
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)     ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
@@ -4630,6 +4631,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
+
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)     ! tracer mass concentration [kg/kg]
 

@@ -896,6 +896,7 @@ contains
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall
     implicit none
+
     ! Flux from Atmosphere
     real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
     real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
@@ -957,6 +958,7 @@ contains
        LAND_SFC_TEMP,   &
        LAND_SFC_albedo
     implicit none
+
     ! Land state
     real(RP) :: LND_TEMP                ! soil temperature           [K]
     real(RP) :: LND_WATER     = 0.15_RP ! soil moisture              [m3/m3]
@@ -1012,6 +1014,7 @@ contains
        OCEAN_SFC_Z0H,    &
        OCEAN_SFC_Z0E
     implicit none
+
     ! Ocean state
     real(RP) :: OCN_TEMP                  ! ocean temperature           [K]
     real(RP) :: SFC_TEMP                  ! ocean skin temperature      [K]
@@ -1083,6 +1086,7 @@ contains
        URBAN_SFC_TEMP,   &
        URBAN_SFC_albedo
     implicit none
+
     ! urban state
     real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
     real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
@@ -1173,8 +1177,9 @@ contains
   subroutine read_sounding( &
        DENS, VELX, VELY, POTT, QV )
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     implicit none
+
     real(RP), intent(out) :: DENS(KA)
     real(RP), intent(out) :: VELX(KA)
     real(RP), intent(out) :: VELY(KA)
@@ -1318,7 +1323,7 @@ contains
   !> Make initial state ( horizontally uniform + random disturbance )
   subroutine MKINIT_planestate
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     implicit none
 
     ! Surface state
@@ -1518,7 +1523,7 @@ contains
   !> Make initial state for tracer bubble experiment
   subroutine MKINIT_tracerbubble
     use scale_atmos_hydrometeor, only: &
-         I_NC
+       I_NC
     use mod_atmos_admin, only: &
          ATMOS_PHY_MP_TYPE
     implicit none
@@ -2056,7 +2061,7 @@ contains
   !> Make initial state for turbulence experiment
   subroutine MKINIT_turbulence
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_MP_TYPE
     implicit none
@@ -2319,7 +2324,7 @@ contains
   !> Make initial state ( horizontally uniform )
   subroutine MKINIT_mountainwave
     use scale_atmos_hydrometeor, only: &
-         I_NC
+       I_NC
     implicit none
 
     ! Surface state
@@ -2643,7 +2648,7 @@ contains
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubble
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     implicit none
 
     ! Surface state
@@ -2784,7 +2789,7 @@ contains
   !> Make initial state for supercell experiment
   subroutine MKINIT_supercell
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -2850,7 +2855,7 @@ contains
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -2920,7 +2925,7 @@ contains
   !> Make initial state by Weisman and Klemp (1982)
   subroutine MKINIT_wk1982
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     implicit none
 
     ! Surface state
@@ -3101,10 +3106,10 @@ contains
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF01
     use scale_atmos_hydrometeor, only: &
-         I_QV, &
-         I_QC, &
-         I_NC, &
-         QHE
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
     use scale_atmos_phy_mp_suzuki10, only: &
          nccn
     use mod_atmos_admin, only: &
@@ -3382,10 +3387,10 @@ contains
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02
     use scale_atmos_hydrometeor, only: &
-         I_QV, &
-         I_QC, &
-         I_NC, &
-         QHE
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
     use scale_atmos_phy_mp_suzuki10, only: &
          nccn
     use mod_atmos_admin, only: &
@@ -3650,10 +3655,10 @@ contains
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02_DNS
     use scale_atmos_hydrometeor, only: &
-         I_QV, &
-         I_QC, &
-         I_NC, &
-         QHE
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
     use scale_atmos_phy_mp_suzuki10, only: &
          nccn
     use mod_atmos_admin, only: &
@@ -3775,7 +3780,6 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-!write(*,*)'chk4.1'
     call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
 
     RovCP = Rdry / CPdry
@@ -3787,7 +3791,6 @@ contains
     enddo
     enddo
 
-!write(*,*)'chk5'
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
                                temp    (:,:,:), & ! [OUT]
@@ -3811,7 +3814,6 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-!write(*,*)'chk7'
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
@@ -3928,7 +3930,7 @@ contains
   !> Make initial state for RICO inter comparison
   subroutine MKINIT_RICO
     use scale_atmos_hydrometeor, only: &
-         I_QV, &
+       I_QV, &
          I_QC, &
          I_NC, &
          QHE
@@ -4758,7 +4760,7 @@ contains
   !> Make initial state for grayzone experiment
   subroutine MKINIT_grayzone
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -4890,7 +4892,7 @@ contains
   !> Make initial state of Box model experiment for zerochemical module
   subroutine MKINIT_boxaero
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_AE_TYPE
     implicit none
@@ -4959,7 +4961,7 @@ contains
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubbleaero
     use scale_atmos_hydrometeor, only: &
-         I_QV
+       I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_AE_TYPE
     implicit none

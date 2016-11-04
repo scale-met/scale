@@ -22,13 +22,12 @@ program unit
      GRID_allocate, &
      GRID_generate
   use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_regist
+     ATMOS_HYDROMETEOR_regist
 
   use test_atmos_phy_tb_smg
-
   use test_atmos_dyn
-
   use test_comm
+  implicit none
 
   character(len=H_MID), parameter :: MODELNAME = "Unit test"
   integer :: q0

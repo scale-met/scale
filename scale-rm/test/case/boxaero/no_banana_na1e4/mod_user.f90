@@ -54,7 +54,7 @@ contains
   !> Config before setup of other components
   subroutine USER_config
     use scale_atmos_hydrometeor, only: &
-         ATMOS_HYDROMETEOR_regist
+       ATMOS_HYDROMETEOR_regist
     implicit none
 
     integer, parameter :: NQ = 1
@@ -67,8 +67,9 @@ contains
     data DESC / 'Specific humidity' /
     data UNIT / 'kg/kg' /
 
-    call ATMOS_HYDROMETEOR_regist( QS,   & ! (out)
-         1, 0, 0, NAME, DESC, UNIT ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS,              & ! (out)
+                                   1, 0, 0,         & ! (in)
+                                   NAME, DESC, UNIT ) ! (in)
 
     return
   end subroutine USER_config

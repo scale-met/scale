@@ -28,12 +28,12 @@ module scale_atmos_phy_mp_kessler
   use scale_grid_index
 
   use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_QV, &
-       I_QC, &
-       I_QR, &
-       I_HC, &
-       I_HR
+     N_HYD, &
+     I_QV,  &
+     I_QC,  &
+     I_QR,  &
+     I_HC,  &
+     I_HR
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -119,9 +119,10 @@ contains
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_regist
     implicit none
-    character(len=*), intent(in) :: MP_TYPE
-    integer, intent(out) :: QA
-    integer, intent(out) :: QS
+
+    character(len=*), intent(in)  :: MP_TYPE
+    integer,          intent(out) :: QA
+    integer,          intent(out) :: QS
     !---------------------------------------------------------------------------
 
     if ( MP_TYPE /= 'KESSLER' ) then
@@ -129,11 +130,11 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_HYDROMETEOR_regist( QS_MP, & ! (out)
-                                  1, 2, 0,  & ! (in)
-                                  ATMOS_PHY_MP_kessler_NAME, & ! (in)
-                                  ATMOS_PHY_MP_kessler_DESC, & ! (in)
-                                  ATMOS_PHY_MP_kessler_UNIT  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS_MP,                     & ! (out)
+                                   1, 2, 0,                   & ! (in)
+                                   ATMOS_PHY_MP_kessler_NAME, & ! (in)
+                                   ATMOS_PHY_MP_kessler_DESC, & ! (in)
+                                   ATMOS_PHY_MP_kessler_UNIT  ) ! (in)
     QA = QA_MP
     QS = QS_MP
     QE_MP = QS_MP + QA_MP - 1

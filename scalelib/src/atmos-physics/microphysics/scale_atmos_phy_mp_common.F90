@@ -23,8 +23,6 @@ module scale_atmos_phy_mp_common
   use scale_prof
   use scale_grid_index
   use scale_tracer
-  use scale_const, only: &
-     UNDEF => CONST_UNDEF
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -165,6 +163,10 @@ contains
        I_QC,       &
        I_QI,       &
        flag_liquid )
+#ifdef DRY
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+#endif
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
@@ -407,6 +409,7 @@ contains
     RHOE0  = UNDEF
     QTRC0  = UNDEF
 #endif
+
     return
   end subroutine ATMOS_PHY_MP_saturation_adjustment
 
@@ -422,6 +425,10 @@ contains
        Emoist, &
        I_QV,   &
        I_QC    )
+#ifdef DRY
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+#endif
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
@@ -470,7 +477,6 @@ contains
     !---------------------------------------------------------------------------
 
 #ifndef DRY
-
     dtemp_criteria = 0.1_RP**(2+RP/2)
 
     call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
@@ -576,6 +582,10 @@ contains
        I_QV,   &
        I_QC,   &
        I_QI    )
+#ifdef DRY
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+#endif
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &

@@ -139,7 +139,7 @@ contains
     integer  :: fid_micpara
     real(RP) :: coef0, coef1, coef2
     real(RP) :: tmp_hyd, n_hyd, lambda_hyd
-    real(RP) :: dummy( nbin ), radc( nbin ) 
+    real(RP) :: dummy( nbin ), radc( nbin )
     integer  :: k, i, j, iq, iqa, ierr
     integer  :: nnbin, nnspc, nn
     !---------------------------------------------------------------------------
@@ -342,7 +342,7 @@ contains
          enddo
          enddo
 
-       elseif( nspc == 7 ) then  !--- put each hydrometer to each category (ice bin)
+       elseif( nspc == 7 ) then  !--- put each hydrometeor to each category (ice bin)
 
          do k = 1, dims(1)
          do i = xs, xe
@@ -361,7 +361,7 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
- 
+
            coef2 = ( qc_tmp(k+2,i,j)+qr_tmp(k+2,i,j) ) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
@@ -381,7 +381,7 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
- 
+
            coef2 = qi_tmp(k+2,i,j) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
@@ -402,7 +402,7 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
- 
+
            coef2 = qs_tmp(k+2,i,j) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin
@@ -423,7 +423,7 @@ contains
            do iq = 1, nbin
               tmp_hyd = tmp_hyd + dummy(iq)
            enddo
- 
+
            coef2 = qg_tmp(k+2,i,j) &
                  / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
            do iq = 1, nbin

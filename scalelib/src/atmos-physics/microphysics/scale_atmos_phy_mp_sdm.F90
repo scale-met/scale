@@ -22,7 +22,7 @@ module scale_atmos_phy_mp_sdm
   use scale_prof
   use scale_grid_index
   use scale_atmos_hydrometeor, only: &
-       N_HYD
+     N_HYD
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -197,6 +197,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
+
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! Density [kg/m3]
@@ -220,6 +221,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
+
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
 
