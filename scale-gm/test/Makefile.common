@@ -18,7 +18,6 @@ SYSDEP_DIR2 = $(TOPDIR)/scale-gm/test/sysdep
 
 BUILD_DIR := $(PWD)/.libs
 INDEX_DIR := $(PWD)
-BINDIR     = $(PWD)
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
