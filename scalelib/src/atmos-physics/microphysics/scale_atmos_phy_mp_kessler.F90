@@ -582,7 +582,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       vterm(k,i,j,I_QC) = 0.0_RP
+       vterm(k,i,j,I_mp_QC) = 0.0_RP
     enddo
     enddo
     enddo
@@ -591,9 +591,9 @@ contains
     do i = IS, IE
     do k = KS, KE
        zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QR) - 1.E-12_RP )
-       vterm(k,i,j,I_QR) = - 36.34_RP * ( DENS0(k,i,j) * ( QTRC0(k,i,j,I_QR) + zerosw ) )**0.1364_RP &
-                         * REFSTATE_dens(KS,i,j) / REFSTATE_dens(k,i,j) * ( 1.0_RP - zerosw )
-!                         * factor_vterm(k) * ( 1.0_RP - zerosw )
+
+       vterm(k,i,j,I_mp_QR) = - 36.34_RP * ( DENS0(k,i,j) * ( QTRC0(k,i,j,I_QR) + zerosw ) )**0.1364_RP &
+                            * REFSTATE_dens(KS,i,j) / REFSTATE_dens(k,i,j) * ( 1.0_RP - zerosw )
     enddo
     enddo
     enddo
