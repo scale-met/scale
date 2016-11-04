@@ -1,11 +1,13 @@
 \section{Introduction}
+%###############################################################################
 
-This document is additional volume of ``SCALE USERS GUIDE''.
-This document includes a description of how to use SCALE-GM and a tutrial based on DCMIP2016.
+This document is an additional volume of ``SCALE USERS GUIDE''.
+This document includes a description of how to use SCALE-Global Model(GM) and a tutrial based on DCMIP2016.
+The SCALE-GM is global atmospheric model constructed by using SCALE library.
 The overview of SCALE library is described in Chapter 1 of ``SCALE USERS GUIDE''.
-The SCALE-GM is a part of SCALE library.
 
-In current version, SCALE-GM is used as the dynamical core package, which is a part of NICAM full model.
+In current version, SCALE-GM supports ideal simulations for the dynamical core test.
+SCALE-GM is originated from a dynamical core of Nonhydrostatic ICosahedral Atmospheric Model (NICAM).
 The development of NICAM with full physics has been co-developed mainly by
 the Japan Agency for Marine-Earth Science and Technology (JAMSTEC), Atmosphere
 and Ocean Research Institute (AORI) at The University of Tokyo, and RIKEN / Advanced
@@ -13,7 +15,7 @@ Institute for Computational Science (AICS). A reference paper for NICAM is
 Tomita and Satoh (2004), Satoh et al. (2008). See also NICAM.jp (\url{http://nicam.jp/}).
 
 \subsection{Note}
-
+%-------------------------------------------------------------------------------
  \begin{itemize}
    \item Explanations are based on bash environment below.
          In the tcsh environment, use "setenv" command instead of "export".
@@ -21,5 +23,6 @@ Tomita and Satoh (2004), Satoh et al. (2008). See also NICAM.jp (\url{http://nic
    \item A symbol of "\verb|>|" means execution of commands in the console.
    \item Gothic means output from standard output.
    \item \$\{TOP\}   means \verb|scale/scale-gm|
+   \item \$\{ROOT\}  means \verb|scale|
  \end{itemize}
 

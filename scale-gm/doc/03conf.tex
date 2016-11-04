@@ -1,43 +1,40 @@
 \section{Change Model Configurations}
-%##########################################################################################
+%###############################################################################
  {\sf Terms}
  \begin{itemize}
-   \item g-level (grid level): number of grid level, this is a number of
-         subdivision times from the original icosahedron.
-   \item r-level (region level): level of management groups. When r-level = 0,
-         the management groups are ten groups. So, the number of
-         available maximum MPI processes is ten.
+   \item g-level (grid level): number of subdivision times of the grid from the original icosahedron.
+         the number starts from 1, we recommend to use the number larger than 4.
+   \item r-level (region level): number of subdivision times of the region(tile)
+         from the original icosahedron. When r-level = 0, we have ten regions(tiles).
+         At that time, the number of available maximum MPI processes is ten.
  \end{itemize}
 
+\subsection{Change the Test Case}
+%-------------------------------------------------------------------------------
 
-\subsection{Change Test Case}
-%------------------------------------------------------------------------------
- \noindent In this section, configurations are explained here to run
- three experiments in DCMIP2016. SCALE-GM has already configuration sets
- for three test cases in the directory of \$\{TOP\}/test/case.
- At the first step, use these sets.
+ \noindent In this section, detail of the configurations of three experiments
+ in DCMIP2016 are described. Each configuration set in the directory of \verb|${TOP}/test/case|
+ is ready to go. At the first step, please use these sets as it is.
 
 \subsubsection{preparing directory}
-%------------------------------------------------------------------------------
  Change to the directory of target case. If you want to run test case 162,
- change to \${TOP}/test/case/DCMIP2016-12/. After that, make a directory.
+ change to \verb|${TOP}/test/case/DCMIP2016-12/|. After that, make a directory.
  The directory of gl05rl00z30pe40 already may exists, we assume create it newly.
  \begin{verbatim}
     > mkdir gl05rl00z30pe40
-    > cd gl05rl00z30pe40/
+    > cd    gl05rl00z30pe40
  \end{verbatim}
 
  \noindent Copy Makefile and configuration file from another directory
  of DCMIP2016 to the new direcotory, for example DCMIP2016-11.
  \begin{verbatim}
-    > cp ../../DCMIP2016-11/gl05rl00z30pe10/Makefile ./
+    > cp ../../DCMIP2016-11/gl05rl00z30pe10/Makefile       ./
     > cp ../../DCMIP2016-11/gl05rl00z30pe10/nhm_driver.cnf ./
  \end{verbatim}
 
 \subsubsection{Edit configuration file: nhm\_driver.cnf}
-%------------------------------------------------------------------------------
 
- %-------------------------------
+ %--------------------
  \vspace{0.5cm}
  \noindent {\large{\sf edit for test case 161: moist baroclinic wave}}
 
@@ -52,7 +49,7 @@
        THUBURN_LIM    = .true.,
        RAIN_TYPE      = "WARM",
        AF_TYPE        = 'DCMIP',
-      /
+     /
 
      * snip *
 
@@ -61,17 +58,16 @@
        test_case   = '1',                    <--
        chemtracer  = .true.,                 <--
        prs_rebuild = .false.,
-      /
+     /
 
      * snip *
 
      &FORCING_DCMIP_PARAM
        SET_DCMIP2016_11 = .true.,            <--
-      /
+     /
 
      * snip *
  \end{verbatim}
-
 
  \noindent \textcolor{blue}{{\sf Note}}
  \begin{itemize}
@@ -92,7 +88,7 @@
    \item "small\_planet\_factor" in CNSTPARAM should be set as 1.
  \end{itemize}
 
- %-------------------------------
+ %--------------------
  \vspace{0.5cm}
  \noindent {\large {\sf edit for test case 162: ideal tropical cyclone}}
 
@@ -107,19 +103,19 @@
        THUBURN_LIM    = .true.,
        RAIN_TYPE      = "WARM",
        AF_TYPE        = 'DCMIP',
-      /
+     /
 
      * snip *
 
      &DYCORETESTPARAM
        init_type   = 'Tropical-Cyclone',     <--
-      /
+     /
 
      * snip *
 
      &FORCING_DCMIP_PARAM
        SET_DCMIP2016_12 = .true.,            <--
-      /
+     /
 
      * snip *
  \end{verbatim}
@@ -136,8 +132,7 @@
    \item "small\_planet\_factor" in CNSTPARAM should be set as 1.
  \end{itemize}
 
-
-  %-------------------------------
+ %--------------------
  \vspace{0.5cm}
  \noindent {\large{\sf edit for test case 163: supercell}}
 
@@ -152,20 +147,20 @@
        THUBURN_LIM    = .true.,
        RAIN_TYPE      = "WARM",
        AF_TYPE        = 'DCMIP',
-      /
+     /
 
      * snip *
 
      &DYCORETESTPARAM
        init_type   = 'Supercell',            <--
        test_case  = '1',                     <--
-      /
+     /
 
      * snip *
 
      &FORCING_DCMIP_PARAM
        SET_DCMIP2016_13 = .true.,            <--
-      /
+     /
 
      * snip *
  \end{verbatim}
@@ -190,12 +185,13 @@
  by the same manner in Section 1.4.
  \begin{verbatim}
     > make run
-    > bsub < run.sh
+    > sh run.sh
  \end{verbatim}
 
 
 \subsection{Change Physics Schemes}
-%------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+
  \noindent Default settings for each test cases in DCMIP2016 is set
  in the pre-existing configuration file. You can change these settings
  as you like. Note that we have not yet checked all the combinations of
@@ -209,6 +205,7 @@
  add "\verb|SET_DCMIP2016_LSC|" with true sign. An example for test case 161
  is shown below.
 
+ %--------------------
  (symbols "\verb|<--|" means changed parameters)
  \begin{verbatim}
     > vi nhm_driver.cnf
@@ -240,7 +237,6 @@
 
      * snip *
  \end{verbatim}
-
 
  \noindent {\large{\sf use George Bryan PBL}}
 
@@ -358,7 +354,7 @@
  by the same manner in Section 1.4.
  \begin{verbatim}
     > make run
-    > bsub < run.sh
+    > sh run.sh
  \end{verbatim}
 
 
@@ -474,7 +470,5 @@
  by the same manner in Section 1.4.
  \begin{verbatim}
     > make run
-    > bsub < run.sh
+    > sh run.sh
  \end{verbatim}
-
-
