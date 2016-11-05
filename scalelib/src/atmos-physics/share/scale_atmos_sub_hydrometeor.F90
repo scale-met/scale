@@ -153,6 +153,9 @@ contains
        CV_ICE   = CI
        CP_ICE   = CV_ICE
 
+       LHV = LHV00
+       LHS = LHS00
+       LHF = LHF00
        THERMODYN_EMASK = 1.0_RP
 
     elseif( THERMODYN_TYPE == 'SIMPLE' ) then
@@ -164,6 +167,9 @@ contains
        CV_ICE   = CVvap
        CP_ICE   = CV_ICE
 
+       LHV = LHV0
+       LHS = LHS0
+       LHF = LHF0
        THERMODYN_EMASK = 0.0_RP
 
     else
@@ -580,12 +586,13 @@ contains
     real(RP), intent(in)  :: q(QA)    !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq(QA)   !< gas constantt      [J/kg/K]
 
-    real(RP) :: lhv, lhf
     real(RP) :: qdry, qliq, qice, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
-    integer :: iqw
+    integer  :: iqw
     !---------------------------------------------------------------------------
+
+    logT_T0 = log( temp / TEM00 )
 
     qdry = 1.0_RP
     Rtot = 0.0_RP
@@ -595,41 +602,31 @@ contains
     enddo
     Rtot = Rtot + Rdry * qdry
 
-    logT_T0 = log( temp / TEM00 )
-
     ! dry air + vapor
-    pres_dry = max( pres * qdry    * Rdry / Rtot, EPS )
-    entr = qdry    * CPdry * logT_T0 &
-         - qdry    * Rdry  * log( pres_dry / PRE00 )
+    pres_dry = max( pres * qdry * Rdry / Rtot, EPS )
+    entr = qdry * CPdry * logT_T0 &
+         - qdry * Rdry  * log( pres_dry / PRE00 )
 
     if ( I_QV > 0 ) then
-       lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp - TEM00 ) * THERMODYN_EMASK
        pres_vap = max( pres * q(I_QV) * Rvap / Rtot, EPS )
-       entr = entr &
-            + q(I_QV) * CP_VAPOR * logT_T0 &
-            - q(I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
-            + q(I_QV) * lhv / TEM00
+       entr = entr + q(I_QV) * CP_VAPOR * logT_T0 &
+                   - q(I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
+                   + q(I_QV) * LHV0 / TEM00
     endif
 
     ! liquid water
     if ( QLS > 0 ) then
-       qliq = 0.0_RP
        do iqw = QLS, QLE
-          qliq = qliq + q(iqw)
-       end do
-       entr = entr + qliq * CP_WATER * logT_T0
+          entr = entr + q(iqw) * CP_WATER * logT_T0
+       enddo
     endif
 
     ! ice
     if ( QIS > 0 ) then
-       lhf = LHF0 + ( CP_WATER - CP_ICE   ) * ( temp - TEM00 ) * THERMODYN_EMASK
-       qice = 0.0_RP
        do iqw = QIS, QIE
-          qice = qice + q(iqw)
-       end do
-       entr = entr &
-            + qice * CP_ICE * logT_T0 &
-            - qice * lhf / TEM00
+          entr = entr + q(iqw) * CP_ICE * logT_T0 &
+                      - q(iqw) * LHF0 / TEM00
+       enddo
     endif
 
     return
@@ -663,16 +660,17 @@ contains
     real(RP), intent(in)  :: q   (IA,JA,QA) !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq  (QA)       !< gas constant       [J/kg/K]
 
-    real(RP) :: lhv, lhf
     real(RP) :: qdry, qliq, qice, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
-    integer :: i, j, iqw
+    integer  :: i, j, iqw
     !---------------------------------------------------------------------------
 
     ! dry air + vapor
     do j = JSB, JEB
     do i = ISB, IEB
+
+       logT_T0 = log( temp(i,j) / TEM00 )
 
        qdry = 1.0_RP
        Rtot = 0.0_RP
@@ -682,41 +680,31 @@ contains
        enddo
        Rtot = Rtot + Rdry * qdry
 
-       logT_T0 = log( temp(i,j) / TEM00 )
-
        ! dry air + vapor
        pres_dry = max( pres(i,j) * qdry    * Rdry / Rtot, EPS )
        entr(i,j) = qdry    * CPdry * logT_T0 &
                  - qdry    * Rdry  * log( pres_dry / PRE00 )
 
        if ( I_QV > 0 ) then
-          lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
           pres_vap = max( pres(i,j) * q(i,j,I_QV) * Rvap / Rtot, EPS )
-          entr(i,j) = entr(i,j) &
-               + q(i,j,I_QV) * CP_VAPOR * logT_T0 &
-               - q(i,j,I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
-               + q(i,j,I_QV) * lhv / TEM00
+          entr(i,j) = entr(i,j) + q(i,j,I_QV) * CP_VAPOR * logT_T0 &
+                                - q(i,j,I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
+                                + q(i,j,I_QV) * LHV0 / TEM00
        endif
 
        ! liquid water
        if ( QLS > 0 ) then
-          qliq = 0.0_RP
           do iqw = QLS, QLE
-             qliq = qliq + q(i,j,iqw)
-          end do
-          entr(i,j) = entr(i,j) + qliq * CP_WATER * logT_T0
+             entr(i,j) = entr(i,j) + q(i,j,iqw) * CP_WATER * logT_T0
+          enddo
        endif
 
        ! ice
        if ( QIS > 0 ) then
-          lhf = LHF0 + ( CP_WATER - CP_ICE   ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
-          qice = 0.0_RP
           do iqw = QIS, QIE
-             qice = qice + q(i,j,iqw)
-          end do
-          entr(i,j) = entr(i,j) &
-                    + qice * CP_ICE * logT_T0 &
-                    - qice * lhf / TEM00
+             entr(i,j) = entr(i,j) + q(i,j,iqw) * CP_ICE * logT_T0 &
+                                   - q(i,j,iqw) * LHF0 / TEM00
+          enddo
        endif
 
     enddo
@@ -753,17 +741,19 @@ contains
     real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq  (QA)          !< gas constant       [J/kg/K]
 
-    real(RP) :: lhv, lhf
     real(RP) :: qdry, qliq, qice, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
-    integer :: k, i, j, iqw
+    integer  :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
     ! dry air + vapor
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
+
+       logT_T0 = log( temp(k,i,j) / TEM00 )
+
        qdry = 1.0_RP
        Rtot = 0.0_RP
        do iqw = 1, QA
@@ -772,41 +762,31 @@ contains
        enddo
        Rtot = Rtot + Rdry * qdry
 
-       logT_T0 = log( temp(k,i,j) / TEM00 )
-
        ! dry air + vapor
        pres_dry = max( pres(k,i,j) * qdry    * Rdry / Rtot, EPS )
        entr(k,i,j) = qdry    * CPdry * logT_T0 &
                    - qdry    * Rdry  * log( pres_dry / PRE00 )
 
        if ( I_QV > 0 ) then
-          lhv = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
           pres_vap = max( pres(k,i,j) * q(k,i,j,I_QV) * Rvap / Rtot, EPS )
-          entr(k,i,j) = entr(k,i,j) &
-               + q(k,i,j,I_QV) * CP_VAPOR * logT_T0 &
-               - q(k,i,j,I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
-               + q(k,i,j,I_QV) * lhv / TEM00
+          entr(k,i,j) = entr(k,i,j) + q(k,i,j,I_QV) * CP_VAPOR * logT_T0 &
+                                    - q(k,i,j,I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
+                                    + q(k,i,j,I_QV) * LHV0 / TEM00
        endif
 
        ! liquid water
        if ( QLS > 0 ) then
-          qliq = 0.0_RP
           do iqw = QLS, QLE
-             qliq = qliq + q(k,i,j,iqw)
-          end do
-          entr(k,i,j) = entr(k,i,j) + qliq * CP_WATER * logT_T0
+             entr(k,i,j) = entr(k,i,j) + q(k,i,j,iqw) * CP_WATER * logT_T0
+          enddo
        endif
 
        ! ice
        if ( QIS > 0 ) then
-          lhf = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
-          qice = 0.0_RP
           do iqw = QIS, QIE
-             qice = qice + q(k,i,j,iqw)
-          end do
-          entr(k,i,j) = entr(k,i,j) &
-                    + qice * CP_ICE * logT_T0 &
-                    - qice * lhf / TEM00
+             entr(k,i,j) = entr(k,i,j) + qice * CP_ICE * logT_T0 &
+                                       - qice * LHF0 / TEM00
+          enddo
        endif
 
     enddo

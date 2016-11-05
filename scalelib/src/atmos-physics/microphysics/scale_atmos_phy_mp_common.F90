@@ -174,8 +174,8 @@ contains
        THERMODYN_cv          => ATMOS_THERMODYN_cv,         &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
-       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF
+       LHV, &
+       LHF
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
@@ -196,8 +196,6 @@ contains
     real(RP) :: PRES0 (KA,IA,JA)
     real(RP) :: QDRY0 (KA,IA,JA)
     real(RP) :: CVtot (KA,IA,JA)
-    real(RP) :: LHV   (KA,IA,JA)
-    real(RP) :: LHF   (KA,IA,JA)
 
     real(RP) :: Emoist(KA,IA,JA) ! moist internal energy
     real(RP) :: QSUM1 (KA,IA,JA) ! QV+QC+QI
@@ -248,15 +246,13 @@ contains
 
     if ( I_QI <= 0 .OR. flag_liquid ) then ! warm rain
 
-       call HYDROMETEOR_LHV( LHV(:,:,:), TEMP0(:,:,:) )
-
        ! Turn QC into QV with consistency of moist internal energy
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
-                        + QTRC1(k,i,j,I_QV) * LHV(k,i,j)
+                        + QTRC1(k,i,j,I_QV) * LHV
 
           QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
                        + QTRC1(k,i,j,I_QC)
@@ -277,7 +273,7 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
-          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV(k,i,j) ) / CVtot(k,i,j)
+          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
        enddo
        enddo
        enddo
@@ -293,17 +289,14 @@ contains
 
     else ! cold rain
 
-       call HYDROMETEOR_LHV( LHV(:,:,:), TEMP0(:,:,:) )
-       call HYDROMETEOR_LHF( LHF(:,:,:), TEMP0(:,:,:) )
-
        ! Turn QC & QI into QV with consistency of moist internal energy
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
-                        + QTRC1(k,i,j,I_QV) * LHV(k,i,j) &
-                        - QTRC1(k,i,j,I_QI) * LHF(k,i,j)
+                        + QTRC1(k,i,j,I_QV) * LHV &
+                        - QTRC1(k,i,j,I_QI) * LHF
 
           QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
                        + QTRC1(k,i,j,I_QC) &
@@ -326,7 +319,7 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
-          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV(k,i,j) ) / CVtot(k,i,j)
+          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
        enddo
        enddo
        enddo
@@ -409,7 +402,6 @@ contains
     RHOE0  = UNDEF
     QTRC0  = UNDEF
 #endif
-
     return
   end subroutine ATMOS_PHY_MP_saturation_adjustment
 
@@ -434,7 +426,7 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_cv => ATMOS_THERMODYN_cv
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
+       LHV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        CVovR_liq, &
@@ -456,7 +448,6 @@ contains
     real(RP) :: temp
     real(RP) :: q(QA)
     real(RP) :: CVtot
-    real(RP) :: LHV
     real(RP) :: qsatl_new
     real(RP) :: Emoist_new ! moist internal energy
 
@@ -477,6 +468,7 @@ contains
     !---------------------------------------------------------------------------
 
 #ifndef DRY
+
     dtemp_criteria = 0.1_RP**(2+RP/2)
 
     call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
@@ -514,10 +506,9 @@ contains
        converged = .false.
        do ite = 1, itelim
 
-          call HYDROMETEOR_LHV( LHV, temp )
-
-          ! Saturation
-          call SATURATION_dens2qsat_liq( qsatl_new, temp, DENS0(k,i,j) )
+          call SATURATION_dens2qsat_liq( qsatl_new,   & ! [OUT]
+                                         temp,        & ! [IN]
+                                         DENS0(k,i,j) ) ! [IN]
 
           ! Separation
           q(I_QV) = qsatl_new
@@ -591,8 +582,8 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_cv => ATMOS_THERMODYN_cv
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
-       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF
+       LHV, &
+       LHF
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
@@ -621,7 +612,6 @@ contains
     real(RP) :: temp
     real(RP) :: q(QA)
     real(RP) :: CVtot
-    real(RP) :: LHV, LHF
     real(RP) :: alpha
     real(RP) :: qsat_new, qsatl_new, qsati_new
     real(RP) :: Emoist_new ! moist internal energy
@@ -681,8 +671,6 @@ contains
        converged = .false.
        do ite = 1, itelim
 
-          call HYDROMETEOR_LHV( LHV, temp )
-          call HYDROMETEOR_LHF( LHF, temp )
           ! liquid/ice separation factor
           call SATURATION_alpha( alpha, temp )
           ! Saturation

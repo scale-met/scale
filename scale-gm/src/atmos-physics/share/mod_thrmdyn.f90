@@ -18,10 +18,15 @@ module mod_thrmdyn
      CPdry  => CONST_CPdry, &
      CVdry  => CONST_CVdry, &
      Rvap   => CONST_Rvap,  &
+     LHV0   => CONST_LHV0,  &
+     LHF0   => CONST_LHF0,  &
      PRE00  => CONST_PRE00, &
      TEM00  => CONST_TEM00, &
      PSAT0  => CONST_PSAT0, &
      EPSvap => CONST_EPSvap
+  use scale_atmos_hydrometeor, only: &
+     LHV, &
+     LHF
   use mod_adm, only: &
      kdim => ADM_kall, &
      kmin => ADM_kmin, &
@@ -542,9 +547,6 @@ contains
        qd,    &
        q,     &
        ent    )
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
-       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF
     implicit none
 
     integer,  intent(in)  :: ijdim
@@ -557,14 +559,22 @@ contains
 
     real(RP) :: Pdry
     real(RP) :: Pvap
-    real(RP) :: LHV
-    real(RP) :: LHF
-    real(RP) :: LH (nqmax)
+    real(RP) :: LH(nqmax)
 
     real(RP), parameter :: EPS = 1.E-10_RP
 
     integer :: ij, k, nq
     !---------------------------------------------------------------------------
+
+    do nq = NQW_STR, NQW_END
+       if ( nq == I_QV ) then
+          LH(nq) =  LHV0 / TEM00
+       elseif( nq == I_QI .OR. nq == I_QS .OR. nq == I_QG ) then
+          LH(nq) = -LHF0 / TEM00
+       else
+          LH(nq) = 0.0_RP
+       endif
+    enddo
 
     !$acc kernels pcopy(ent) pcopyin(tem,pre,qd,q) async(0)
     do k  = 1, kdim
@@ -582,19 +592,6 @@ contains
     !$acc kernels pcopy(ent) pcopyin(tem,q,CVW,LH) async(0)
     do k  = 1, kdim
     do ij = 1, ijdim
-
-       call HYDROMETEOR_LHV( LHV, tem(ij,k) )
-       call HYDROMETEOR_LHF( LHF, tem(ij,k) )
-
-       do nq = NQW_STR, NQW_END
-          if ( nq == I_QV ) then
-             LH(nq) =  LHV / TEM00
-          elseif( nq == I_QI .OR. nq == I_QS .OR. nq == I_QG ) then
-             LH(nq) = -LHF / TEM00
-          else
-             LH(nq) = 0.0_RP
-          endif
-       enddo
 
        !$acc loop seq
        do nq = NQW_STR, NQW_END

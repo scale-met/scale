@@ -758,6 +758,9 @@ contains
        EPS   => CONST_EPS,   &
        Rvap  => CONST_Rvap,  &
        CL    => CONST_CL,    &
+       LHV0  => CONST_LHV0,  &
+       LHS0  => CONST_LHS0,  &
+       LHF0  => CONST_LHF0,  &
        TEM00 => CONST_TEM00, &
        PRE00 => CONST_PRE00, &
        DWATR => CONST_DWATR
@@ -1178,9 +1181,9 @@ contains
        Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
        NU = ( mu0 + dmu_dT * temc ) * Rdens
 
-       Glv  = 1.0_RP / ( LHV(k,i,j)/(Da*temp) * ( LHV(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
-       Giv  = 1.0_RP / ( LHS(k,i,j)/(Da*temp) * ( LHS(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
-       Gil  = 1.0_RP / LHF(k,i,j) * (Da*temc)
+       Glv  = 1.0_RP / ( LHV0/(Da*temp) * ( LHV0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
+       Giv  = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
+       Gil  = 1.0_RP / LHF0 * (Da*temc)
 
        ! [Prevp] evaporation rate of rain
        ventr = f1r * GAM_2 * RLMDr_2 + f2r * sqrt( Cr * rho_fact / NU * RLMDr_5dr ) * GAM_5dr_h
@@ -1197,7 +1200,7 @@ contains
 
        ! [Psmlt] melting rate of snow
        w(I_Psmlt) = 2.0_RP * PI * Rdens *       Gil * vents &
-                  + CL * temc / LHF(k,i,j) * ( w(I_Psacw) + w(I_Psacr) )
+                  + CL * temc / LHF0 * ( w(I_Psacw) + w(I_Psacr) )
 
        ! [Pgdep/pgsub] deposition/sublimation rate for graupel
        ventg = f1g * GAM_2 * RLMDg_2 + f2g * sqrt( Cg * rho_fact / NU * RLMDg_5dg ) * GAM_5dg_h
@@ -1209,7 +1212,7 @@ contains
 
        ! [Pgmlt] melting rate of graupel
        w(I_Pgmlt) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
-                  + CL * temc / LHF(k,i,j) * ( w(I_Pgacw) + w(I_Pgacr) )
+                  + CL * temc / LHF0 * ( w(I_Pgacw) + w(I_Pgacr) )
 
        ! [Pgfrz] freezing rate of graupel
        w(I_Pgfrz) = 2.0_RP * PI * Rdens * N0r * 60.0_RP * B_frz * Ar * ( exp(-A_frz*temc) - 1.0_RP ) * RLMDr_7
@@ -1580,7 +1583,7 @@ contains
           Da = ( Da0 + dDa_dT * temc )
           Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
 
-          Giv  = 1.0_RP / ( LHS(k,i,j)/(Da*temp) * ( LHS(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
+          Giv  = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
 
           ! [Pidep] deposition/sublimation : v->i or i->v
           sw = ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc ) ) &

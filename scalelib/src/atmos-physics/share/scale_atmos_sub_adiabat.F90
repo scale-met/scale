@@ -259,11 +259,11 @@ contains
        CPdry => CONST_CPdry, &
        Rvap  => CONST_Rvap,  &
        CPvap => CONST_CPvap, &
+       LHV0  => CONST_LHV0,  &
        PSAT0 => CONST_PSAT0, &
        PRE00 => CONST_PRE00, &
        TEM00 => CONST_TEM00
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV  => ATMOS_HYDROMETEOR_LHV,  &
        HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
        I_QV, &
        I_QC
@@ -294,7 +294,6 @@ contains
     real(RP) :: ENTR_ite
     real(RP) :: TEMP_prev
     real(RP) :: dENTR_dT
-    real(RP) :: LHV
 
     real(RP), parameter :: criteria = 1.E-8_RP
     integer,  parameter :: itelim   = 100
@@ -328,8 +327,6 @@ contains
     do k = Kstr, KE
        TEMP_p(k,i,j) = TEMP(k,i,j) ! first guess
 
-       call HYDROMETEOR_LHV( LHV, TEMP_p(k,i,j) )
-
        ! T1: unsaturated temperature, S = U1(PRES, TEMP_unsat, qtot_p)
        qdry_p = 1.0_RP - qtot_p(i,j)
        Rtot   = Rdry  * qdry_p + Rvap  * qtot_p(i,j)
@@ -341,7 +338,7 @@ contains
 
        TEMP_unsat = TEM00 * exp( ( ENTR_p(i,j) + qdry_p      * Rdry * log( pres_dry / PRE00 ) &
                                                + qtot_p(i,j) * Rvap * log( pres_vap / PSAT0 ) &
-                                               - qtot_p(i,j) * LHV / TEM00                    ) / CPtot )
+                                               - qtot_p(i,j) * LHV0 / TEM00                   ) / CPtot )
 
        call SATURATION_pres2qsat_liq( qsat_unsat, & ! [OUT]
                                       TEMP_unsat, & ! [IN]
@@ -351,8 +348,6 @@ contains
        if ( qtot_p(i,j) > qsat_unsat ) then
 
           TEMP_ite = TEM00 * exp( ( ENTR_p(i,j) + Rdry * log( PRES(k,i,j) / PRE00 ) ) / CPdry )
-
-          call HYDROMETEOR_LHV( LHV, TEMP_ite )
 
           do ite = 1, itelim
 
@@ -372,9 +367,9 @@ contains
              qdry_p   = 1.0_RP - QTRC_ite(I_QV)
              CPtot    = CPdry * qdry_p + CPvap * QTRC_ite(I_QV)
 
-             dENTR_dT  = CPtot                   / TEMP_ite    &
-                       - QTRC_ite(I_QV) * LHV    / TEMP_ite**2 &
-                       + QTRC_ite(I_QV) * LHV**2 / TEMP_ite**3 / Rvap
+             dENTR_dT  = CPtot                    / TEMP_ite    &
+                       - QTRC_ite(I_QV) * LHV0    / TEMP_ite**2 &
+                       + QTRC_ite(I_QV) * LHV0**2 / TEMP_ite**3 / Rvap
              dENTR_dT  = max( dENTR_dT, EPS )
 
              TEMP_prev = TEMP_ite
