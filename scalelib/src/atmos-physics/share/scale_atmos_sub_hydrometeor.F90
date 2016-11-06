@@ -100,6 +100,10 @@ module scale_atmos_hydrometeor
   integer, public            :: QIS = -1
   integer, public            :: QIE = -2
 
+  real(RP), public           :: LHV       !< latent heat of vaporization for use [J/kg]
+  real(RP), public           :: LHS       !< latent heat of sublimation  for use [J/kg]
+  real(RP), public           :: LHF       !< latent heat of fusion       for use [J/kg]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
