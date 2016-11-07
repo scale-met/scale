@@ -122,9 +122,7 @@ cat << EOF > param.physics.conf
  ATMOS_BOUNDARY_START_DATE     = ${ATMOS_BOUNDARY_START_DATE},
  ATMOS_BOUNDARY_UPDATE_DT      = ${ATMOS_BOUNDARY_UPDATE_DT},
  ATMOS_BOUNDARY_USE_DENS       = .true.,
- ATMOS_BOUNDARY_USE_VELZ       = .true.,
  ATMOS_BOUNDARY_USE_QHYD       = ${ATMOS_BOUNDARY_USE_QHYD},
- ATMOS_BOUNDARY_VALUE_VELZ     = 0.0,
  ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,
  ATMOS_BOUNDARY_LINEAR_H       = .false.,
  ATMOS_BOUNDARY_EXP_H          = 2.0,
@@ -140,6 +138,8 @@ cat << EOF > param.physics.conf
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
  ATMOS_DYN_enable_coriolis            = .true.,
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
+ ATMOS_DYN_WDAMP_TAU                  = 10.0D0,
+ ATMOS_DYN_WDAMP_HEIGHT               = 20.D3,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN
