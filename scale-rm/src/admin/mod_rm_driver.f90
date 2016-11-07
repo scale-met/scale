@@ -435,7 +435,6 @@ contains
        URBAN_SURFACE_SET
     use mod_atmos_vars, only: &
        ATMOS_vars_diagnostics, &
-       ATMOS_vars_monitor,     &
        ATMOS_vars_restart_read
     use mod_ocean_vars, only: &
        OCEAN_vars_restart_read
@@ -467,9 +466,6 @@ contains
 
     ! calc diagnostics
     if( ATMOS_do ) call ATMOS_vars_diagnostics
-
-    ! first monitor
-    if( ATMOS_do ) call ATMOS_vars_monitor
 
     ! setup surface condition
     if( ATMOS_do ) call ATMOS_SURFACE_SET( countup=.false. )
