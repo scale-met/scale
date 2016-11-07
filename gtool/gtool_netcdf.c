@@ -20,9 +20,6 @@ static int32_t ERROR_SUPPRESS = 0;
 
 #ifdef PNETCDF
 #include "pnetcdf.h"
-#ifndef NETCDF3
-#define NETCDF3
-#endif
 #define CHECK_PNC_ERROR(func)					\
   {								\
     int status_ = (func);					\
@@ -86,7 +83,7 @@ typedef struct {
   int ncid;
   char time_units[File_HMID+1];
   int deflate_level;
-#ifdef NETCDF3
+#if defined(NETCDF3) || defined(PNETCDF)
   int defmode;
 #endif
   int shared_mode;
@@ -159,10 +156,10 @@ int32_t file_open( int32_t  *fid,     // (out)
     break;
   case File_FWRITE:
     if ( shared_mode )
-      CHECK_PNC_ERROR( ncmpi_create(comm, _fname, NC_CLOBBER, MPI_INFO_NULL, &ncid) )
+      CHECK_PNC_ERROR( ncmpi_create(comm, _fname, NC_CLOBBER|NC_64BIT_OFFSET, MPI_INFO_NULL, &ncid) )
     else
 #ifdef NETCDF3
-      CHECK_ERROR( nc_create(_fname, NC_CLOBBER, &ncid) )
+      CHECK_ERROR( nc_create(_fname, NC_CLOBBER|NC_64BIT_OFFSET, &ncid) )
 #else
       CHECK_ERROR( nc_create(_fname, NC_CLOBBER|NC_NETCDF4, &ncid) )
 #endif
@@ -181,8 +178,8 @@ int32_t file_open( int32_t  *fid,     // (out)
   files[nfile] = (fileinfo_t*) malloc(sizeof(fileinfo_t));
   files[nfile]->ncid = ncid;
   files[nfile]->deflate_level = DEFAULT_DEFLATE_LEVEL;
-#ifdef NETCDF3
-  if ( mode == File_FWRITE)
+#if defined(NETCDF3) || defined(PNETCDF)
+  if ( mode == File_FWRITE )
     files[nfile]->defmode = 1;
   else
     files[nfile]->defmode = 0;
@@ -249,7 +246,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     // rank
     CHECK_PNC_ERROR( ncmpi_inq_varndims(ncid, varid, &rank) )
     CHECK_PNC_ERROR( ncmpi_inq_vardimid(ncid, varid, dimids) )
-#ifdef NETCDF3
+#if 1
     CHECK_PNC_ERROR( ncmpi_inq_unlimdim(ncid, uldims) )
     n = 1;
 #else
@@ -989,7 +986,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   vars[nvar]->start = NULL;
   vars[nvar]->count = NULL;
 
-#ifdef NETCDF3
+#if defined(NETCDF3) || defined(PNETCDF)
   if (files[fid]->defmode == 0) {
     if ( files[fid]->shared_mode )
       CHECK_PNC_ERROR( ncmpi_redef(ncid) )
@@ -1195,7 +1192,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 
 #ifndef NETCDF3
   // set chunk size and deflate level (NetCDF-4 only)
-  if ( files[fid]->deflate_level > 0 ) {
+  if ( ! files[fid]->shared_mode && files[fid]->deflate_level > 0 ) {
     CHECK_ERROR( nc_def_var_chunking(ncid, varid, NC_CHUNKED, vars[nvar]->count) )
     CHECK_ERROR( nc_def_var_deflate(ncid, varid, 0, 1, files[fid]->deflate_level) )
   }
@@ -1215,7 +1212,7 @@ int32_t file_enddef( int32_t fid ) // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
-#ifdef NETCDF3
+#if defined(NETCDF3) || defined(PNETCDF)
   if (files[fid]->defmode == 1) {
     if ( files[fid]->shared_mode )
       CHECK_PNC_ERROR( ncmpi_enddef(ncid) )
