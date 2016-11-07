@@ -341,7 +341,7 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    if ( wdamp_tau <= 0.0_RP ) then
+    if ( wdamp_height < 0.0_RP ) then
        wdamp_coef(:) = 0.0_RP
     elseif( FZ(KE)-wdamp_height < EPS ) then
        wdamp_coef(:) = 0.0_RP

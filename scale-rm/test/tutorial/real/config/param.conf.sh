@@ -138,8 +138,7 @@ cat << EOF > param.physics.conf
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
  ATMOS_DYN_enable_coriolis            = .true.,
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
- ATMOS_DYN_WDAMP_TAU                  = 10.0D0,
- ATMOS_DYN_WDAMP_HEIGHT               = 20.D3,
+ ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN

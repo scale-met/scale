@@ -72,8 +72,8 @@ module mod_atmos_dyn_driver
   real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact     = 1.0_RP
   logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate = .true.
 
-  real(RP), private :: ATMOS_DYN_wdamp_tau                   = 0.0_RP    ! maximum tau for Rayleigh damping of w [s]
-  real(RP), private :: ATMOS_DYN_wdamp_height                            ! height       to start apply Rayleigh damping [m]
+  real(RP), private :: ATMOS_DYN_wdamp_tau                   = -1.0_RP   ! maximum tau for Rayleigh damping of w [s]
+  real(RP), private :: ATMOS_DYN_wdamp_height                = -1.0_RP   ! height       to start apply Rayleigh damping [m]
   integer,  private :: ATMOS_DYN_wdamp_layer                 = -1        ! layer number to start apply Rayleigh damping [num]
 
   ! Coriolis force
@@ -152,7 +152,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS DYN] / Origin[SCALE-RM]'
 
     if ( ATMOS_sw_dyn ) then
-       ATMOS_DYN_wdamp_height = GRID_FZ(KE)
 
        !--- read namelist
        rewind(IO_FID_CONF)
@@ -173,6 +172,13 @@ contains
        elseif( ATMOS_DYN_wdamp_layer > 0 ) then
           ATMOS_DYN_wdamp_height = GRID_FZ(ATMOS_DYN_wdamp_layer+KS-1)
        endif
+
+       if ( ATMOS_DYN_wdamp_tau < 0.0_RP ) then
+          ATMOS_DYN_wdamp_tau = DT * 10.0_RP
+       elseif ( ATMOS_DYN_wdamp_tau < DT ) then
+          write(*,*) 'xxx ATMOS_DYN_wdamp_tau should be larger than TIME_DT_ATMOS_DYN. Check!'
+          call PRC_MPIstop
+       end if
 
        if ( ATMOS_sw_dyn ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Large time step  : ', trim(ATMOS_DYN_TINTEG_LARGE_TYPE)
