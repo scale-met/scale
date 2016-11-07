@@ -163,7 +163,7 @@ contains
        DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
        PROG0, PROG,                                 &
        DPRES0, RT2P, CORIOLI,                       &
-       num_diff, divdmp_coef, DDIV,                 &
+       num_diff, wdamp_coef, divdmp_coef, DDIV,     &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
        FLAG_FCT_ALONG_STREAM,                       &
        CDZ, FDZ, FDX, FDY,                          &
@@ -251,6 +251,7 @@ contains
     real(RP), intent(in) :: RT2P(KA,IA,JA)
     real(RP), intent(in) :: CORIOLI(1,IA,JA)
     real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in) :: wdamp_coef(KA)
     real(RP), intent(in) :: divdmp_coef
     real(RP), intent(in) :: DDIV(KA,IA,JA)
 
@@ -551,6 +552,7 @@ contains
                  + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                  + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) &
                  ) / GSQRT(k,i,j,I_XYW) &
+               - wdamp_coef(k) * MOMZ0(k,i,j) & ! Rayleigh damping
                + divdmp_coef * rdt  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
                + MOMZ_t(k,i,j)
        enddo

@@ -200,19 +200,19 @@ contains
   !-----------------------------------------------------------------------------
   !> RK3
   subroutine ATMOS_DYN_tinteg_short_rk4( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, PROG,     &
-       mflx_hi,  tflx_hi,                      &
-       DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t, &
-       Rtot, CVtot, CORIOLI,                   &
-       num_diff, divdmp_coef, DDIV,            &
-       FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
-       FLAG_FCT_ALONG_STREAM,                  &
-       CDZ, FDZ, FDX, FDY,                     &
-       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,     &
-       PHI, GSQRT, J13G, J23G, J33G, MAPF,     &
-       REF_pres, REF_dens,                     &
-       BND_W, BND_E, BND_S, BND_N,             &
-       dt                                      )
+       DENS, MOMZ, MOMX, MOMY, RHOT, PROG,      &
+       mflx_hi,  tflx_hi,                       &
+       DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,  &
+       Rtot, CVtot, CORIOLI,                    &
+       num_diff, wdamp_coef, divdmp_coef, DDIV, &
+       FLAG_FCT_MOMENTUM, FLAG_FCT_T,           &
+       FLAG_FCT_ALONG_STREAM,                   &
+       CDZ, FDZ, FDX, FDY,                      &
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,      &
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,      &
+       REF_pres, REF_dens,                      &
+       BND_W, BND_E, BND_S, BND_N,              &
+       dt                                       )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -242,6 +242,7 @@ contains
     real(RP), intent(in)    :: CVtot(KA,IA,JA)
     real(RP), intent(in)    :: CORIOLI(IA,JA)
     real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
     real(RP), intent(in)    :: DDIV(KA,IA,JA)
 
@@ -386,7 +387,7 @@ contains
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG,                                      & ! [IN]
                           Rtot, CVtot, CORIOLI,                             & ! [IN]
-                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
                           CDZ, FDZ, FDX, FDY,                               & ! [IN]
@@ -439,7 +440,7 @@ contains
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG_RK1,                                  & ! [IN]
                           Rtot, CVtot, CORIOLI,                             & ! [IN]
-                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
                           CDZ, FDZ, FDX, FDY,                               & ! [IN]
@@ -492,7 +493,7 @@ contains
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG_RK2,                                  & ! [IN]
                           Rtot, CVtot, CORIOLI,                             & ! [IN]
-                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
                           CDZ, FDZ, FDX, FDY,                               & ! [IN]
@@ -545,7 +546,7 @@ contains
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG_RK3,                                  & ! [IN]
                           Rtot, CVtot, CORIOLI,                             & ! [IN]
-                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
                           CDZ, FDZ, FDX, FDY,                               & ! [IN]
