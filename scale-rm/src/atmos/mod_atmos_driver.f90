@@ -204,7 +204,8 @@ contains
   !> Setup
   subroutine ATMOS_driver_resume2
     use mod_atmos_vars, only: &
-       ATMOS_vars_history
+       ATMOS_vars_history, &
+       ATMOS_vars_monitor
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_resume
     use mod_atmos_phy_sf_driver, only: &
@@ -238,6 +239,7 @@ contains
     !########## History & Monitor ##########
     call PROF_rapstart('ATM_History', 1)
     call ATMOS_vars_history
+    call ATMOS_vars_monitor
     call PROF_rapend  ('ATM_History', 1)
 
     if( IO_L ) write(IO_FID_LOG,*)
