@@ -429,7 +429,7 @@ contains
        URBAN_SURFACE_SET
     use mod_atmos_vars, only: &
        ATMOS_vars_diagnostics,     &
-       ATMOS_vars_history_setpres
+       ATMOS_vars_history_setpres, &
        ATMOS_vars_restart_read
     use mod_ocean_vars, only: &
        OCEAN_vars_restart_read
