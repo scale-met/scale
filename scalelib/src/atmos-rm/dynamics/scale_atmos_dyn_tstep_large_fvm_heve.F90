@@ -499,10 +499,12 @@ contains
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-          RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp * DENS00(k,i,j)
 #ifdef HIST_TEND
           damp_t(k,i,j) = damp
 #endif
+          damp = damp * DENS00(k,i,j)
+          RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp
+          DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp
        enddo
        enddo
        enddo
@@ -521,15 +523,6 @@ contains
        enddo
 
        call COMM_vars8( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          DENS_tq(k,i,j) = DENS_tq(k,i,j) + RHOQ_t(k,i,j,iq)
-       end do
-       end do
-       end do
-
        call COMM_wait ( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq), .false. )
 
     end do

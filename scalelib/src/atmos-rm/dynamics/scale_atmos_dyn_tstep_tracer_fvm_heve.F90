@@ -164,7 +164,7 @@ contains
        if ( FLAG_FCT_TRACER ) then
 
           call ATMOS_DYN_FVM_fluxZ_XYZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-               mflx_hi(:,:,:,ZDIR), QTRC, GSQRT(:,:,:,I_XYZ), & ! (in)
+               mflx_hi(:,:,:,ZDIR), QTRC, GSQRT(:,:,:,I_XYW), & ! (in)
                num_diff(:,:,:,ZDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
