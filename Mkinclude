@@ -1,17 +1,16 @@
 ifeq ($(ENABLE_FIXEDINDEX),T)
-      inc_index = $(INDEX_DIR)/inc_index.h
-      OBJ_DIR = $(BUILD_DIR)
-      INST_DIR = $(BUILD_DIR)
+   FFLAGS   += -D_FIXEDINDEX_
+   inc_index = $(INDEX_DIR)/inc_index.h
+   OBJ_DIR   = $(BUILD_DIR)
+   INST_DIR  = $(BUILD_DIR)
 else
-      inc_index =
-      OBJ_DIR = .
-      INST_DIR = $(TOPDIR)
+   inc_index =
+   OBJ_DIR   = .
+   INST_DIR  = $(TOPDIR)
 endif
 
-
-
 ifeq ($(origin BINDIR), undefined)
-   BINDIR = $(INST_DIR)/bin/$(SCALE_SYS)
+   BINDIR = $(INST_DIR)/bin
 endif
 
 ifeq ($(origin LIBDIR), undefined)
@@ -34,37 +33,39 @@ ifeq ($(origin INDEX_DIR), undefined)
 endif
 
 ifeq ($(AGGRESSIVE),T)
-  FFLAGS = $(FFLAGS_AGGRESSIVE) $(PERF_MONIT) $(RDMA)
+   FFLAGS = $(FFLAGS_AGGRESSIVE) $(FFLAGS_SYSDEPEND)
+   CFLAGS = $(CFLAGS_FAST)       $(CFLAGS_SYSDEPEND)
 else
-  ifeq ($(DEBUG),T)
-    FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
-    FFLAGS_DYN = $(FFLAGS)
-    CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
-  else
-    FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
-  endif
+   ifeq ($(DEBUG),T)
+      FFLAGS     = $(FFLAGS_DEBUG) $(FFLAGS_SYSDEPEND)
+      FFLAGS_DYN = $(FFLAGS)
+      CFLAGS     = $(CFLAGS_DEBUG) $(CFLAGS_SYSDEPEND)
+   else
+      FFLAGS     = $(FFLAGS_FAST)  $(FFLAGS_SYSDEPEND)
+      CFLAGS     = $(CFLAGS_FAST)  $(CFLAGS_SYSDEPEND)
+   endif
 endif
 
-ifeq ($(ENABLE_FIXEDINDEX),T)
-      FFLAGS += -D_FIXEDINDEX_
+ifeq ($(SINGLE),T)
+   FFLAGS += -DSINGLE
 endif
 
 ifeq ($(ENABLE_OPENMP),T)
-      FFLAGS += -openmp -openmp-report
+   FFLAGS += -openmp -openmp-report
 endif
 
 ifeq ($(ENABLE_PAPI),T)
-      FFLAGS += -D_PAPI_
-      PAPI_INCLUDE = -I$(PAPI)/include
-      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+   FFLAGS      += -D_PAPI_
+   PAPI_INCLUDE = -I$(PAPI)/include
+   PAPI_LIBS    = -L$(PAPI)/lib -lpapi
 endif
 
 ifeq ($(USE_NETCDF3),T)
-      CFLAGS += -DNETCDF3
+   CFLAGS += -DNETCDF3
 endif
 
 ifeq ($(CHECK_MASS),T)
-      FFLAGS += -DCHECK_MASS
+   FFLAGS += -DCHECK_MASS
 endif
 
 # Super Droplet Method (SDM)
@@ -85,5 +86,5 @@ endif
 
 # DYN2
 ifeq ($(ENABLE_DYN2),T)
-   FFLAGS        += -DDYN2
+   FFLAGS += -DDYN2
 endif

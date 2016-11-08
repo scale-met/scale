@@ -1,4 +1,4 @@
-MODULE dcmip_initial_conditions_test_5
+module dcmip_initial_conditions_test_5
 
   !=======================================================================
   !
@@ -262,4 +262,4 @@ IMPLICIT NONE
   END FUNCTION fpidFdz
 
 
-END MODULE dcmip_initial_conditions_test_5
+END module dcmip_initial_conditions_test_5

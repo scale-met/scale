@@ -239,7 +239,7 @@ contains
       <%= func.sub(/_[^_]+\Z/,"") %> => <%= func %>
 <% end %>
 <%# func %>
-      
+
       if ( IHALO < <%=nh%> ) then
          write(*,*) 'xxx IHALO must be >= ', <%=nh%>
          call PRC_MPIstop
@@ -265,7 +265,7 @@ contains
 <%   end
    end %>
 <%# func %>
-      
+
       if ( IHALO < <%=nh%> ) then
          write(*,*) 'xxx IHALO must be >= ', <%=nh%>
          call PRC_MPIstop
@@ -285,9 +285,6 @@ contains
 
 
 end module scale_atmos_dyn_fvm_flux
-
-!-------------------------------------------------------------------------------
-
 
 !--
 ! vi<%=":"%>set readonly sw=4 ts=8

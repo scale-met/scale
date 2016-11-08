@@ -50,15 +50,17 @@ module mod_cnvtopo
   !++ Private parameters & variables
   !
   character(len=H_SHORT), private :: CNVTOPO_smooth_type         = 'LAPLACIAN'
-  real(RP),               private :: CNVTOPO_smooth_maxslope
-  real(RP),               private :: CNVTOPO_smooth_maxslope_bnd
   logical,                private :: CNVTOPO_smooth_local        = .false.
-  integer,                private :: CNVTOPO_smooth_itelim       = 1000
+  integer,                private :: CNVTOPO_smooth_itelim       = 10000
 
   logical,                private :: CNVTOPO_copy_parent         = .false.
 
-  real(RP),               private :: CNVTOPO_unittile_ddeg                ! dx for unit tile [deg]
-  real(RP),               private :: CNVTOPO_oversampling_factor = 2.0_RP ! factor of min. dx against the unit tile
+  real(RP),               private :: CNVTOPO_unittile_ddeg                   ! dx for unit tile [deg]
+  real(RP),               private :: CNVTOPO_oversampling_factor   =  2.0_RP ! factor of min. dx against the unit tile
+  real(RP),               private :: CNVTOPO_smooth_maxslope_ratio =  1.0_RP ! ratio of DZDX, DZDY
+  real(RP),               private :: CNVTOPO_smooth_maxslope       = -1.0_RP ! [deg]
+
+  real(RP),               private :: CNVTOPO_smooth_maxslope_limit
 
   !-----------------------------------------------------------------------------
 contains
@@ -86,17 +88,17 @@ contains
     character(len=H_SHORT) :: CNVTOPO_name = 'NONE' ! keep backward compatibility
 
     NAMELIST / PARAM_CNVTOPO / &
-       CNVTOPO_name,                &
-       CNVTOPO_UseGTOPO30,          &
-       CNVTOPO_UseGMTED2010,        &
-       CNVTOPO_UseDEM50M,           &
-       CNVTOPO_unittile_ddeg,       &
-       CNVTOPO_oversampling_factor, &
-       CNVTOPO_smooth_maxslope,     &
-       CNVTOPO_smooth_maxslope_bnd, &
-       CNVTOPO_smooth_local,        &
-       CNVTOPO_smooth_itelim,       &
-       CNVTOPO_smooth_type,         &
+       CNVTOPO_name,                  &
+       CNVTOPO_UseGTOPO30,            &
+       CNVTOPO_UseGMTED2010,          &
+       CNVTOPO_UseDEM50M,             &
+       CNVTOPO_unittile_ddeg,         &
+       CNVTOPO_oversampling_factor,   &
+       CNVTOPO_smooth_maxslope_ratio, &
+       CNVTOPO_smooth_maxslope,       &
+       CNVTOPO_smooth_local,          &
+       CNVTOPO_smooth_itelim,         &
+       CNVTOPO_smooth_type,           &
        CNVTOPO_copy_parent
 
     real(RP) :: minslope(IA,JA)
@@ -121,48 +123,6 @@ contains
        DXL(:) = GRID_FDX(:)
        DYL(:) = GRID_FDY(:)
     endif
-
-    minslope(:,:) = HUGE
-
-    j = JS-1
-    i = IS-1
-    do k = KS, KE
-       DZDX = atan2( 2.5_RP * GRID_CDZ(k), DXL(i) ) / D2R
-       DZDY = atan2( 2.5_RP * GRID_CDZ(k), DYL(j) ) / D2R
-       minslope(IS,JS) = min( minslope(IS,JS), DZDX, DZDY )
-    enddo
-
-    j = JS-1
-    do i = IS, IE
-    do k = KS, KE
-       DZDX = atan2( 2.5_RP * GRID_CDZ(k), DXL(i) ) / D2R
-       DZDY = atan2( 2.5_RP * GRID_CDZ(k), DYL(j) ) / D2R
-       minslope(i,JS) = min( minslope(i,JS), DZDX, DZDY )
-    enddo
-    enddo
-
-    i = IS-1
-    do j = JS, JE
-    do k = KS, KE
-       DZDX = atan2( 2.5_RP * GRID_CDZ(k), DXL(i) ) / D2R
-       DZDY = atan2( 2.5_RP * GRID_CDZ(k), DYL(j) ) / D2R
-       minslope(IS,j) = min( minslope(IS,j), DZDX, DZDY )
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-       do k = KS, KE
-          DZDX = atan2( 2.5_RP * GRID_CDZ(k), DXL(i) ) / D2R
-          DZDY = atan2( 2.5_RP * GRID_CDZ(k), DYL(j) ) / D2R
-          minslope(i,j) = min( minslope(i,j), DZDX, DZDY )
-       enddo
-    enddo
-    enddo
-
-    call COMM_horizontal_min( CNVTOPO_smooth_maxslope, minslope(:,:) )
-
-    CNVTOPO_smooth_maxslope_bnd = -1.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -224,10 +184,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Use DEM 50m data, Japan region only'
     endif
 
-    if ( CNVTOPO_smooth_maxslope_bnd < 0.0_RP ) then
-       CNVTOPO_smooth_maxslope_bnd = CNVTOPO_smooth_maxslope
-    endif
-
     if ( CNVTOPO_DoNothing ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Do nothing for landuse index'
     else
@@ -243,6 +199,52 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** The size of tile [deg] = ', CNVTOPO_unittile_ddeg
        if( IO_L ) write(IO_FID_LOG,*) '*** oversampling factor    = ', CNVTOPO_oversampling_factor
     endif
+
+    if( CNVTOPO_smooth_maxslope > 0.0_RP ) then
+
+      CNVTOPO_smooth_maxslope_limit = CNVTOPO_smooth_maxslope 
+
+    else
+      minslope(:,:) = HUGE
+
+      j = JS-1
+      i = IS-1
+      do k = KS, KE
+         DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * GRID_CDZ(k), DXL(i) ) / D2R
+         DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * GRID_CDZ(k), DYL(j) ) / D2R
+         minslope(IS,JS) = min( minslope(IS,JS), DZDX, DZDY )
+      enddo
+
+      j = JS-1
+      do i = IS, IE
+      do k = KS, KE
+         DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * GRID_CDZ(k), DXL(i) ) / D2R
+         DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * GRID_CDZ(k), DYL(j) ) / D2R
+         minslope(i,JS) = min( minslope(i,JS), DZDX, DZDY )
+      enddo
+      enddo
+
+      i = IS-1
+      do j = JS, JE
+      do k = KS, KE
+         DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * GRID_CDZ(k), DXL(i) ) / D2R
+         DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * GRID_CDZ(k), DYL(j) ) / D2R
+         minslope(IS,j) = min( minslope(IS,j), DZDX, DZDY )
+      enddo
+      enddo
+
+      do j = JS, JE
+      do i = IS, IE
+      do k = KS, KE
+         DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * GRID_CDZ(k), DXL(i) ) / D2R
+         DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * GRID_CDZ(k), DYL(j) ) / D2R
+         minslope(i,j) = min( minslope(i,j), DZDX, DZDY )
+      enddo
+      enddo
+      enddo
+
+      call COMM_horizontal_min( CNVTOPO_smooth_maxslope_limit, minslope(:,:) )
+    end if
 
     return
   end subroutine CNVTOPO_setup
@@ -265,8 +267,6 @@ contains
        COPYTOPO
     implicit none
 
-    real(RP) :: Zsfc(IA,JA,2)
-    real(RP) :: frac
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -289,23 +289,7 @@ contains
           call CNVTOPO_DEM50M
        endif
 
-       Zsfc(:,:,1) = TOPO_Zsfc(:,:)
-       call CNVTOPO_smooth( Zsfc(:,:,1),            & ! (inout)
-                            CNVTOPO_smooth_maxslope ) ! (in)
-
-       Zsfc(:,:,2) = Zsfc(:,:,1)
-       call CNVTOPO_smooth( Zsfc(:,:,2),                & ! (inout)
-                            CNVTOPO_smooth_maxslope_bnd ) ! (in)
-
-       do j = 1, JA
-       do i = 1, IA
-          frac = sin( 0.5_RP * PI * max( CBFX(i), CBFY(j) ) )
-
-          TOPO_Zsfc(i,j) = ( 1.0_RP-frac ) * Zsfc(i,j,1) &
-                         + (        frac ) * Zsfc(i,j,2)
-       enddo
-       enddo
-
+       call CNVTOPO_smooth( TOPO_Zsfc(:,:) ) ! (inout)
        call TOPO_fillhalo
 
        if( CNVTOPO_copy_parent ) call COPYTOPO( TOPO_Zsfc )
@@ -934,8 +918,7 @@ contains
   !-----------------------------------------------------------------------------
   !> check slope
   subroutine CNVTOPO_smooth( &
-       Zsfc, &
-       smooth_maxslope )
+       Zsfc )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
@@ -954,7 +937,6 @@ contains
     implicit none
 
     real(RP), intent(inout) :: Zsfc(IA,JA)
-    real(RP), intent(in)    :: smooth_maxslope
 
     real(RP) :: DZsfc_DX(1,IA,JA,1) ! d(Zsfc)/dx at u-position
     real(RP) :: DZsfc_DY(1,IA,JA,1) ! d(Zsfc)/dy at v-position
@@ -977,7 +959,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit       = ', CNVTOPO_smooth_maxslope
+    if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit       = ', CNVTOPO_smooth_maxslope_limit
     if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing type    = ', CNVTOPO_smooth_type
     if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing locally = ', CNVTOPO_smooth_local
 
@@ -1014,7 +996,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** maximum slope [deg] : ', maxslope
 
-       if( maxslope < smooth_maxslope ) exit
+       if( maxslope < CNVTOPO_smooth_maxslope_limit ) exit
 
        varname(1) = "DZsfc_DX"
        call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
@@ -1079,7 +1061,7 @@ contains
                                          abs(DZsfc_DY(1,i+1,j-1,1)), &
                                          abs(DZsfc_DY(1,i  ,j  ,1)), &
                                          abs(DZsfc_DY(1,i  ,j-1,1))  &
-                                       ) - smooth_maxslope )
+                                       ) - CNVTOPO_smooth_maxslope_limit )
                 FLX_X(i,j) = FLX_X(i,j) &
                            * DXL(i) / GRID_FDX(i) &
                            * flag
@@ -1095,7 +1077,7 @@ contains
                                          abs(DZsfc_DX(1,i-1,j+1,1)), &
                                          abs(DZsfc_DX(1,i  ,j  ,1)), &
                                          abs(DZsfc_DX(1,i-1,j  ,1))  &
-                                       ) - smooth_maxslope )
+                                       ) - CNVTOPO_smooth_maxslope_limit )
                 FLX_Y(i,j) = FLX_Y(i,j) &
                            * DYL(j) / GRID_FDY(j) &
                            * flag

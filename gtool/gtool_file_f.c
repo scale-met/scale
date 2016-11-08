@@ -324,6 +324,56 @@ void file_put_axis_( int32_t *fid,          // (in)
   *error = file_put_axis( *fid, _name, _desc, _units, _dim_name, *dtype, val, *size, *precision );
 }
 
+void file_def_axis_( int32_t *fid,          // (in)
+		     char    *name,         // (in)
+		     char    *desc,         // (in)
+		     char    *units,        // (in)
+		     char    *dim_name,     // (in)
+		     int32_t *dtype,        // (in)
+		     int32_t *dim_size,     // (in)
+		     int32_t *error,        // (out)
+		     int32_t  name_len,     // (in)
+		     int32_t  desc_len,     // (in)
+		     int32_t  units_len,    // (in)
+		     int32_t  dim_name_len) // (in)
+{
+  char _name[File_HSHORT+1];
+  char _desc[File_HMID+1];
+  char _units[File_HMID+1];
+  char _dim_name[File_HSHORT+1];
+  int len;
+
+  len = name_len > File_HSHORT ? File_HSHORT : name_len;
+  fstr2cstr(_name, name, len);
+
+  len = desc_len > File_HMID ? File_HMID : desc_len;
+  fstr2cstr(_desc, desc, len);
+
+  len = units_len > File_HMID ? File_HMID : units_len;
+  fstr2cstr(_units, units, len);
+
+  len = dim_name_len > File_HSHORT ? File_HSHORT : dim_name_len;
+  fstr2cstr(_dim_name, dim_name, len);
+
+  *error = file_def_axis( *fid, _name, _desc, _units, _dim_name, *dtype, *dim_size );
+}
+
+void file_write_axis_( int32_t *fid,          // (in)
+		       char    *name,         // (in)
+		       void    *val,          // (in)
+		       int32_t *precision,    // (in)
+		       int32_t *error,        // (out)
+		       int32_t  name_len)     // (in)
+{
+  char _name[File_HSHORT+1];
+  int len;
+
+  len = name_len > File_HSHORT ? File_HSHORT : name_len;
+  fstr2cstr(_name, name, len);
+
+  *error = file_write_axis( *fid, _name, val, *precision );
+}
+
 void file_put_associated_coordinates_( int32_t *fid,          // (in)
 				       char    *name,         // (in)
 				       char    *desc,         // (in)
@@ -362,6 +412,60 @@ void file_put_associated_coordinates_( int32_t *fid,          // (in)
     fstr2cstr(_dim_names[i], dim_names+i*dim_name_len, len);
   }
   *error = file_put_associated_coordinates( *fid, _name, _desc, _units, _dim_names, *ndims, *dtype, val, *precision );
+}
+
+void file_def_associated_coordinates_( int32_t *fid,          // (in)
+				       char    *name,         // (in)
+				       char    *desc,         // (in)
+				       char    *units,        // (in)
+				       char    *dim_names,    // (in)
+				       int32_t *ndims,        // (in)
+				       int32_t *dtype,        // (in)
+				       int32_t *error,        // (out)
+				       int32_t  name_len,     // (in)
+				       int32_t  desc_len,     // (in)
+				       int32_t  units_len,    // (in)
+				       int32_t  dim_name_len) // (in)
+{
+  char _name[File_HSHORT+1];
+  char _desc[File_HMID+1];
+  char _units[File_HMID+1];
+  char **_dim_names;
+  int len;
+  int i;
+
+  len = name_len > File_HSHORT ? File_HSHORT : name_len;
+  fstr2cstr(_name, name, len);
+
+  len = desc_len > File_HMID ? File_HMID : desc_len;
+  fstr2cstr(_desc, desc, len);
+
+  len = units_len > File_HMID ? File_HMID : units_len;
+  fstr2cstr(_units, units, len);
+
+  _dim_names = (char**) malloc(sizeof(char*)*(*ndims));
+  len = dim_name_len > File_HSHORT ? File_HSHORT : dim_name_len;
+  for ( i=0; i<*ndims; i++ ) {
+    _dim_names[i] = (char*) malloc(sizeof(char)*(File_HSHORT+1));
+    fstr2cstr(_dim_names[i], dim_names+i*dim_name_len, len);
+  }
+  *error = file_def_associated_coordinates( *fid, _name, _desc, _units, _dim_names, *ndims, *dtype );
+}
+
+void file_write_associated_coordinates_( int32_t *fid,          // (in)
+				         char    *name,         // (in)
+				         void    *val,          // (in)
+				         int32_t *precision,    // (in)
+				         int32_t *error,        // (out)
+				         int32_t  name_len)     // (in)
+{
+  char _name[File_HSHORT+1];
+  int len;
+
+  len = name_len > File_HSHORT ? File_HSHORT : name_len;
+  fstr2cstr(_name, name, len);
+
+  *error = file_write_associated_coordinates( *fid, _name, val, *precision );
 }
 
 void file_add_variable_( int32_t  *vid,         // (out)
@@ -421,8 +525,24 @@ void file_write_data_( int32_t  *fid,       // (in)
   *error = file_write_data( *fid, *vid, var, *t_start, *t_end, *precision );
 }
 
+void file_write_var_( int32_t  *vid,       // (in)
+		      void     *var,       // (in)
+		      real64_t *t_start,   // (in)
+		      real64_t *t_end,     // (in)
+		      int32_t  *precision, // (in)
+		      int32_t  *error)     // (out)
+{
+  *error = file_write_var( *vid, var, *t_start, *t_end, *precision );
+}
+
 void file_close_( int32_t *fid ,   // (in)
 		  int32_t *error ) // (out)
 {
   *error = file_close( *fid );
+}
+
+void file_enddef_( int32_t *fid ,   // (in)
+		   int32_t *error ) // (out)
+{
+  *error = file_enddef( *fid );
 }

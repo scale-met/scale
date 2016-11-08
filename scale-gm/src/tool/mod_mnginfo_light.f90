@@ -12,9 +12,7 @@ module mod_mnginfo_light
   !
   !++ Used modules
   !
-  use scale_precision
   use scale_stdio
-  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -34,7 +32,6 @@ module mod_mnginfo_light
   integer, allocatable, public :: MNG_prc_rnum(:)
   integer, allocatable, public :: MNG_prc_tab (:,:)
   integer, allocatable, public :: MNG_rgn2prc (:)
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -45,7 +42,7 @@ contains
     integer,          intent(in) :: rlevel
     character(len=*), intent(in) :: fname
 
-    integer, parameter :: PRC_RGN_NMAX = 2560
+    integer, parameter :: ADM_l_limit = 2560
 
     integer :: num_of_rgn
     namelist /rgn_info/ &
@@ -57,7 +54,7 @@ contains
 
     integer :: peid
     integer :: num_of_mng
-    integer :: mng_rgnid(PRC_RGN_NMAX)
+    integer :: mng_rgnid(ADM_l_limit)
     namelist /rgn_mng_info/ &
          peid,              & !--- process ID
          num_of_mng,        & !--- number of regions be managed

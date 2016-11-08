@@ -44,15 +44,24 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_ADMIN_setup
+    use scale_process, only: &
+       PRC_MPIstop
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_sw_phy_sf
     use mod_ocean_admin, only: &
        OCEAN_sw
     use mod_land_admin, only: &
        LAND_sw
     use mod_urban_admin, only: &
        URBAN_sw
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean, &
+       LANDUSE_fact_land,  &
+       LANDUSE_fact_urban
     implicit none
+
+    real(RP) :: checkfact
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -70,8 +79,47 @@ contains
        CPL_sw = .false.
     endif
 
+    ! Check consistency of OCEAN_sw and LANDUSE_fact_ocean
+    checkfact = maxval( LANDUSE_fact_ocean(:,:) )
+    if ( .NOT. OCEAN_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       write(*,*)                     'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check consistency of LAND_sw and LANDUSE_fact_land
+    checkfact = maxval( LANDUSE_fact_land(:,:) )
+    if ( .NOT. LAND_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
+       write(*,*)                     'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check consistency of URBAN_sw and LANDUSE_fact_urban
+    checkfact = maxval( LANDUSE_fact_urban(:,:) )
+    if ( .NOT. URBAN_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
+       write(*,*)                     'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check Atmos_Surface setting
     if ( CPL_sw ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Coupler : ON'
+
+       if ( ATMOS_PHY_SF_TYPE == 'COUPLE' ) then
+          ! do nothing
+       elseif( ATMOS_PHY_SF_TYPE == 'NONE' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** -> Surface Flux Type is forced to change from NONE to COUPLE.'
+          ! overwrite
+          ATMOS_PHY_SF_TYPE = 'COUPLE'
+          ATMOS_sw_phy_sf   = .true.
+       else
+          if( IO_L ) write(IO_FID_LOG,*) '*** Surface Flux : ', trim(ATMOS_PHY_SF_TYPE)
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx Setting conflicts between coupler and surface flux! STOP.'
+          write(*,*)                     'xxx Setting conflicts between coupler and surface flux! STOP.'
+          call PRC_MPIstop
+       endif
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Coupler : OFF'
     endif

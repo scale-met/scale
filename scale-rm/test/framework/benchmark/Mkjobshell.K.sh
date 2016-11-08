@@ -14,6 +14,14 @@ DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 # System specific
 MPIEXEC="mpiexec"
 
+if [ ! ${INITNAME} = "NONE" ]; then
+  RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+  RUN_BIN="fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+fi
+
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
 x=${array[0]}
 y=${array[1]:-1}
@@ -27,13 +35,15 @@ else
    rscgrp="small"
 fi
 
-# Generate run.sh
+
+
+
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K computer
+# ------ For K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
@@ -62,10 +72,10 @@ fi
 if [ ! ${DATDISTS[0]} = "" ]; then
    for f in ${DATDISTS[@]}
    do
-      if [ -f ${DATDIR}/${f}.pe000000 ]; then
-         echo "#PJM --stgin  'rank=* ${DATDIR}/${f}.pe%06r %r:./'" >> ./run.sh
+      if [ -f ${f}.pe000000.nc ]; then
+         echo "#PJM --stgin  'rank=* ${f}.pe%06r.nc %r:./'" >> ./run.sh
       else
-         echo "datafile does not found! : ${DATDIR}/${f}.pe000000"
+         echo "datafile does not found! : ${f}.pe000000.nc"
          exit 1
       fi
    done
@@ -81,13 +91,12 @@ cat << EOF2 >> ./run.sh
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=8
-#export fu08bf=1
 
 rm -rf ./prof
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+${RUN_INIT}
+${RUN_BIN}
 
 ################################################################################
 EOF2

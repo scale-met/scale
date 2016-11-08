@@ -1,18 +1,21 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{ライブラリ環境のインストール}
-\label{sec:env_setting}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-ここでは、SCALEのインストールに必要なライブラリ環境のインストール方法について説明する。
-Linuxをインストール後、各種プログラムのインストールにはコマンドライン端末を使う。
-本書で説明するライブラリ環境のインストールにあたっては、root権限が必要になる。したがって、
-想定する環境は、ユーザーがroot権限を所持しているサーバーや、自前のデスクトップマシンといった環境である。
-別途サーバー管理者が存在し、root権限を取得できない場合等は、必要な環境条件が整っているか問い合わせること。
+SCALEのインストールに必要なコンパイラやライブラリ環境のインストール方法について説明する。
+ここでの記載内容は、こちらのテスト環境でのインストールプロセスを示しているものであって
+必ずしも全く同じとは限らない。
+うまくいかない場合には、それぞれのツール・ライブラリの開発元に直接問い合わせること。
 
-また本節では、HDF5, NetCDF, MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
+
+Linuxをインストール後、各種プログラムのインストールはコマンドライン端末にて行う。
+本書で説明するライブラリ環境のインストールでは、root権限が必要になる。
+従って、想定する環境は、ユーザがroot権限を所持しているかサーバやデスクトップマシンである。
+別途サーバー管理者が存在し、root権限を取得できない場合等は、必要な環境条件が整っているか
+サーバー管理者に問い合わせること。
+
+本節では、HDF5、NetCDF、MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
 GNU compiler以外のIntel compilerなどを利用する場合は、各自でインストール方法を調べてインストールすること。\\
 
-\noindent ここでインストールするライブラリ環境は、主に下記の4点である。
+\noindent ここでインストールするコンパイラおよびライブラリ環境は、主に下記の4点である。
 \begin{itemize}
 \item GNU C/C++, fortran compiler
 \item HDF5 Library (\url{https://www.hdfgroup.org/HDF5/})
@@ -38,7 +41,7 @@ GNU compiler以外のIntel compilerなどを利用する場合は、各自でイ
 \end{itemize}
 
 
-\section{インストール方法 (Linux - CentOS 6.6 編)}
+\section{インストール方法 (Linux - CentOS 6.6-6.8 編)} \label{chap:install_centos}
 %==========================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -68,7 +71,7 @@ CentOS 6.6では、ソフトウェアのインストールに"yum"コマンド�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 読み込んだプラグイン:fastestmirror, refresh-packagekit, security\\
 インストール処理の設定をしています\\
 Loading mirror speeds from cached hostfile\\
@@ -126,17 +129,21 @@ rpm\_check\_debug を実行しています\\
  # yum install hdf5-devel hdf5-static
  # yum install netcdf-devel netcdf-static
  # yum install openmpi-devel
- # yum install lapack lapack-devel
  # yum install wgrib wgrib2
 \end{verbatim}
 
-\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
-デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ # yum install lapack lapack-devel
+\end{verbatim}
 
-\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{sec:tuto_real}章：Tutorial: Real case で
+\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{chap:tutorial_real}章：Tutorial: Real case で
 外部入力データのプレ処理を行うために使用する。}
 
-\noindent {\small ＊"yum -y install package name"として実行することで、インストール前の再確認をスキップできる。}
+\noindent {\small ＊"yum -y install package name" のように ``-y'' オプションをつけて実行することで、インストール前の再確認をスキップできる。}
 
 
 \subsubsection{環境変数の設定}
@@ -150,7 +157,7 @@ rpm\_check\_debug を実行しています\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -167,9 +174,9 @@ rpm\_check\_debug を実行しています\\
 \end{verbatim}
 
 
-%\subsubsection{Installation of Gphys}
+%\subsubsection{Installation of GPhys}
 %CentOSの場合、yumリポジトリに地球電脳倶楽部のGFD-Dennouリポジトリを登録することで、
-%簡単にGphysをインストールできる。
+%簡単にGPhysをインストールできる。
 %root権限で、GFD-Dennouリポジトリを次のような内容で登録する。
 %
 %\begin{verbatim}
@@ -184,13 +191,13 @@ rpm\_check\_debug を実行しています\\
 % enabled=1
 % gpgcheck=0
 %\end{verbatim}
-%編集が終わったら、yumでGphysをインストールする。
+%編集が終わったら、yumでGPhysをインストールする。
 %\begin{verbatim}
 % # yum install gphys
 %\end{verbatim}
 
 
-\section{インストール方法 (Linux - CentOS 7.1 編)}
+\section{インストール方法 (Linux - CentOS 7.1-7.2 編)} \label{chap:install_centos71}
 %==========================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -220,7 +227,7 @@ CentOS 7.1では、ソフトウェアのインストールに"yum"コマンド�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
 読み込んだプラグイン:fastestmirror, langpacks\\
 base                                                      3.6 kB     00:00\\
 extras                                                    3.4 kB     00:00\\
@@ -281,17 +288,21 @@ Running transaction\\
  # yum install netcdf-devel netcdf-static
  # yum install netcdf-fortran-devel
  # yum install openmpi-devel
- # yum install lapack lapack-devel
  # yum install wgrib wgrib2
+\end{verbatim}
+
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ # yum install lapack lapack-devel
 \end{verbatim}
 
 \noindent \textcolor{red}{\small ＊fortran用のモジュールファイルは別パッケージになっている。
 "netcdf-fortran-devel"のインストールを忘れないこと。}
 
-\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
-デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
-
-\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{sec:tuto_real}章：Tutorial: Real case で
+\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{chap:tutorial_real}章：Tutorial: Real case で
 外部入力データのプレ処理を行うために使用する。}
 
 \noindent {\small ＊"yum -y install package name"として実行することで、インストール前の再確認をスキップできる。}
@@ -307,7 +318,7 @@ Running transaction\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -324,7 +335,7 @@ Running transaction\\
 \end{verbatim}
 
 
-\section{インストール方法 (Linux - openSUSE 13.2 編)}
+\section{インストール方法 (Linux - openSUSE 13.2 編)} \label{chap:install_opensuse}
 %==========================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -343,8 +354,8 @@ openSUSE 13.2では、一部のライブラリを外部リポジトリ
 このリポジトリには、grads、ncview、GMT、ncl、そしてcdoといったツール群も含まれており便利である。
 
 openSUSE 13.2では、ソフトウェアのインストールに"zypper"コマンドを利用する。
-openSUSEでは一般にユーザーがrootユーザーにスイッチすることを推奨しておらず、
-デフォルトのままOSをインストールすると"su"コマンドによってrootユーザーに
+openSUSEでは一般にユーザがrootユーザにスイッチすることを推奨しておらず、
+デフォルトのままOSをインストールすると"su"コマンドによってrootユーザに
 スイッチすることはできないので、"sudo"コマンドを利用してインストール作業を行う。
 すべての作業を行うまえに、下記のコマンドにてパッケージをアップデートしておくことをおすすめする。
 \begin{verbatim}
@@ -363,7 +374,7 @@ openSUSEでは一般にユーザーがrootユーザーにスイッチするこ�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  リポジトリ 'home\_ocefpaf' を追加しています ...............................完了 \\
  リポジトリ 'home\_ocefpaf' を正常に追加しました\\
  有効         : はい (Y)\\
@@ -389,7 +400,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 
 \noindent {\small {\gt
 \fbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  鍵を拒否しますか (R)？ 一時的に信頼しますか (T)？ \\
  それとも今後ずっと信頼しますか (A)？ [r/t/a/? 全てのオプションを表示] (r): a
 \end{tabularx}
@@ -401,15 +412,19 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
  $ sudo zypper install hdf5-devel hdf5-devel-static
  $ sudo zypper install netcdf-devel netcdf-devel-static
  $ sudo zypper install netcdf-fortran-devel netcdf-fortran-static
- $ sudo zypper install lapack-devel lapack-devel-static
  $ sudo zypper install openmpi-devel openmpi-devel-static
  $ sudo zypper install wgrib wgrib2
 \end{verbatim}
 
-\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
-デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
+SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
+\footnote{\url{http://www.netlib.org/lapack/}}
+を利用するオプションがある。
+もし必要ならば、Lapack もインストールすること。
+\begin{verbatim}
+ $ sudo zypper install lapack-devel lapack-devel-static
+\end{verbatim}
 
-\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{sec:tuto_real}章：Tutorial: Real case で
+\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{chap:tutorial_real}章：Tutorial: Real case で
 外部入力データのプレ処理を行うために使用する。}
 
 
@@ -424,7 +439,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{140mm}{l}
+\begin{tabularx}{150mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -441,7 +456,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 \end{verbatim}
 
 
-\section{インストール方法(Mac OS X 編)}
+\section{インストール方法(Mac OS X 編)} \label{chap:install_mac}
 %==========================================================================================
 
 \subsubsection{macportsを用いたインストール}
@@ -461,15 +476,15 @@ Apple Mac OS XでのSCALE実行環境を整備する方法について説明す�
  # xcode-select --install
 \end{verbatim}
 \begin{verbatim}
- ライセンス条項の承認
- # xcodebuild -license
+ ライセンス条項の承認（root権限必要）
+ # sudo xcodebuild -license
 \end{verbatim}
 
 次にmacports本体をインストールする。
 \url{https://www.macports.org/}
-
+必要なパッケージインストーラーをダウンロードし、インストールを進める。\\
 macportsとmacportsが管理するパッケージは/opt/local以下に配置される。
-インストール時に\verb|.bash_profile|に、/opt/local/binへのパスが張られているので確認されたし。
+インストール時に\verb|.bash_profile|に、/opt/local/binへのパスが張られているので確認されたい。
 macportsはコマンドラインから操作する。主要なコマンドは以下の通り。
 
 \begin{verbatim}
@@ -505,7 +520,7 @@ macportsはコマンドラインから操作する。主要なコマンドは以
 
 macportsはパッケージの依存関係を解決してくれるが、必要なvariantsを備えたセットを作るには、
 順番にインストールしていく方が問題が少ない。以下にsudo port installしていく順番とvariantsの設定を示す。
-今回はgcc4.9の利用を想定している。
+この例ではgcc4.9を利用する。
 \begin{verbatim}
  $ gcc49
  $ openmpi-gcc49 +threads
@@ -515,12 +530,32 @@ macportsはパッケージの依存関係を解決してくれるが、必要な
  $ netcdf-fortran +gcc49 +openmpi
 \end{verbatim}
 
-最近のmacportsでは、gccとmpiライブラリはselectで選択する。
-この操作を行うと、gfortran等の一般的な名前でエイリアスが作られてパスが通るようになる。
+macportsでは複数のコンパイラとMPIライブラリをインストール出来るため、
+その中で利用するものを選択する必要がある。
+今回の場合、gccとMPIライブラリが該当する。
+この操作を行うと、gfortran等の一般的な名前でエイリアスが作られてPATHが通るようになる。
 \begin{verbatim}
  $ sudo port select --set gcc mp-gcc49
  $ sudo port select --set mpi openmpi-gcc49-fortran
 \end{verbatim}
+
+インストールしたNetCDFライブラリを用いるときのPATHの設定は以下の通りである。
+\verb|.bash_profile| をエディタで開き、
+\begin{verbatim}
+ $ emacs ~/.bash_profile
+\end{verbatim}
+下記をファイルに追加して、環境変数の設定を記述する。
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{l}
+ \\
+ \verb|export NETCDF_INCLUDE="-I/opt/local/include"|\\
+ \verb|export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,\ |\\
+ \verb|-headerpad_max_install_names -lnetcdf"|\\
+ \\
+\end{tabularx}
+}}\\
 
 SCALEは陰解法計算の部分で、数値計算ライブラリを利用するオプションがある。
 もし必要ならば、macportsからATLASをインストールすることが出来る。
@@ -528,24 +563,57 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
  $ atlas +gcc49
 \end{verbatim}
 
+追加する環境変数の設定は以下の通りである。
 
-%\subsubsection{その他のインストール}
-%
-%\textcolor{red}{\large 本節は部分的に削除予定；UsersGuideの中で使用していないものや、
-%単純なユーザーにとって必要のないものには触れないようにする。}
-%
-%macportsでインストールできるパッケージのうち、重要なものを以下に紹介する。
-%
-%\begin{itemize}
-%\item git, git-flow : ソースコード開発時に利用する。
-%\item coreutils : GNU core utils。様々な場面で必要になる。
-%\item gawk, gsed : Mac OS Xに付属するawk,sedはGNU版と機能が異なるため、こちらが必要になる時がある。
-%\item gnuplot : グラフ描画に利用。
-%\item ImageMagick : Gphysから出力したPostScriptファイルをpngやアニメーションgifに変換する時に利用。
-%\end{itemize}
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{l}
+ \\
+ \verb|export LAPACK_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"|\\
+ \\
+\end{tabularx}
+}}\\
+
+\subsubsection{Mac OS XにおけるGPhys / Ruby-DCLのインストール}
+
+{\gphys}はRubyのパッケージ管理システムRubyGemsを通してインストールできる。
+詳細な情報については、(\url{https://www.hdfgroup.org/HDF5/})を参照されたい。
+まず必要であればrubyのインストールをmacportsを用いて行う。この例ではRuby2.1を利用することにする。
+
+\begin{verbatim}
+ $ sudo port install ruby21
+ $ sudo port select --set ruby ruby21
+\end{verbatim}
+
+次にmacportsを用いて、{\gphys}に必要なライブラリをインストールする。
+
+\begin{verbatim}
+ $ sudo port install fftw-3
+ $ sudo port install gsl
+ $ sudo port install C-DCL6
+\end{verbatim}
+
+最後にRubyGemsを用いて、{\gphys}をインストールする。
+
+\begin{verbatim}
+ $ sudo gem install gphys
+\end{verbatim}
+
+%\subsubsection{Mac OS XにおけるGrADSのインストール}（Todo）
+
+\subsubsection{Mac OS Xでの実行時の注意点}
+
+Mac OS Xを用いて\scalerm プログラムを実行すると、実行時に
+「アプリケーション"scale-rm"へのネットワーク受信接続を許可しますか？」
+というダイアログが出ることがあります。
+これはコンパイルしたバイナリがマシンをまたいだMPI通信をするかファイアウォール機能が確認するためです。
+コンパイルし直すたびにMPI並列数の分だけダイアログが出てきてしまいますが、今のところ表示を回避するためには
+「システム環境設定」の「セキュリティとプライバシー」項目で「ファイアウォール」のタブを選択し、
+プログラムの実行時にファイアウォールを切る方法しかありません。
 
 
-\section{インストール方法 (スーパーコンピュータ「京」 編)}
+
+\section{インストール方法 (スーパーコンピュータ「京」 編)} \label{chap:install_supercom}
 %==========================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -570,7 +638,7 @@ SCALEコンパイル時に使用する"Makedef.K"に記述されているため�
 環境変数について特に設定する必要はない。}
 
 
-\section{描画ツールのインストール}
+\section{描画ツールのインストール} \label{chap:install_drawtool}
 \label{sec:env_vis_tools}
 %==========================================================================================
 
@@ -579,29 +647,41 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
 ここに挙げた以外のツールで解析・描画することももちろん可能である。
 
 \begin{itemize}
-\item Gphys / Ruby-DCL by 地球電脳倶楽部\\
+\item GPhys / Ruby-DCL by 地球電脳倶楽部
  \begin{itemize}
   \item URL： \url{http://ruby.gfd-dennou.org/products/gphys/}
   \item 概略：SCALEの出力ファイルは、MPI並列の計算領域分割に従ってMPIプロセスごとに
-              NetCDF形式の分割ファイルとして出力される。Gphysの"gpview"や"gpvect"といった
+              NetCDF形式の分割ファイルとして出力される。{\gphys}の"gpview"や"gpvect"といった
               描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。
-  \item インストール方法：本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。\\
-                        \url{http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm}\\
-                        Mac OS Xにおけるインストール方法は本節の末尾で説明する。
- \end{itemize}
-\item Grid Analysis and Display System (GrADS) by COLA\\
+  \item インストール方法：
+  地球電脳倶楽部のWebページに、主なOSでのインストール方法についての解説がある。\\
+  \url{https://www.gfd-dennou.org/library/ruby/tutorial/install/index-j.html}\\
+  本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。\\
+  \url{http://www.gfd-dennou.org/library/cc-env/rpm-dennou/index.html.ja}\\
+   Mac OS Xにおけるインストール方法は第\ref{chap:install_mac}節で説明している他、
+   \url{https://www.gfd-dennou.org/library/ruby/products/macports/index-j.html}
+   でも解説されている。
+   \end{itemize}
+\item Grid Analysis and Display System (GrADS) by COLA
  \begin{itemize}
-  \item URL： \url{http://iges.org/grads/}
+  \item URL： \url{http://cola.gmu.edu/grads/}
   \item 概略：言わずと知れた描画ツール。SCALEのNetCDF形式の分割ファイルをそのまま読むことはできない
              ため、SCALEで提供している出力データの後処理ツール"\verb|netcdf2grads_h|"を使用して分割ファイルを結合し、
              GrADSで読み込めるファイル形式に変換する必要ある。"\verb|netcdf2grads_h|"のインストール方法は、
 本書の第\ref{sec:inst_env}章、使用方法は第3章、および第4章を参照のこと。
-  \item インストール方法：\url{http://iges.org/grads/downloads.html}を参照のこと。
+  \item インストール方法：\url{http://cola.gmu.edu/grads/downloads}を参照のこと。
                         CentOS6、CentOS7ではEPELリポジトリを登録していればyumコマンドによって、
                         openSUSE 13ではhome\_ocefpafリポジトリを登録していればzypperコマンドによって
                         インストールできる。
+                        GrADS本体のインストールし、バイナリが保存されている場所にPATHを通す。\\
+                        次に、描画に必要なスクリプト集（.gs）を\url{ftp://cola.gmu.edu/grads/scripts}からダウンロードする。
+                        例えばwgetを用いる場合は\\
+                        「wget ftp://cola.gmu.edu/grads/scripts/*.gs」\\
+                        スクリプトを保存した場所に環境変数GASCRPを設定する。\\
+                        例えばスクリプトを/usr/local/grads/script/に保存した場合は\\
+                        「export GASCRP="/usr/local/grads/script"」
  \end{itemize}
-\item Ncview: a netCDF visual browser by David W. Pierce\\
+\item Ncview: a NetCDF visual browser by David W. Pierce
  \begin{itemize}
   \item URL： \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}
   \item 概略：NetCDF形式ファイルのクイックビューアーである。SCALEの分割ファイルを結合して描画することは
@@ -612,42 +692,5 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
                         インストールできる。
  \end{itemize}
 \end{itemize}
-
-\vspace{1cm}
-\noindent {\Large\em COLUMN} \hrulefill
-\subsubsection{Mac OS XにおけるGphys / Ruby-DCLのインストール}
-
-macports-JPが作成しているリポジトリから、Mac OS X用のGPhysをインストールできる。
-以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。
-\begin{verbatim}
- $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
- $ /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk
-\end{verbatim}
-/opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。
-\begin{verbatim}
- file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports
-\end{verbatim}
-これで、Gphysと関連ライブラリをmacportsで一括インストールできるようになる。
-今回はruby1.9向けのrb19-gphysをインストールすることにする。
-
-\begin{verbatim}
- rubyのインストールと1.9の選択
- $ sudo port install ruby19
- $ sudo port select --set ruby ruby19
-\end{verbatim}
-\begin{verbatim}
- 依存関係の解決を任せるかたちで、gphysのインストール
- $ sudo port install rb19-gphys
-\end{verbatim}
-
-インストールされたruby1.9版gphysコマンドは、末尾に1.9が付いている。
-これを無くしたい場合は/opt/local/bin内でシンボリックリンクを張る。
-以下では特に頻繁に使う３つを例に挙げる。
-\begin{verbatim}
- $ sudo ln -s gplist1.9 gplist
- $ sudo ln -s gpvect1.9 gpvect
- $ sudo ln -s gpview1.9 gpview
-\end{verbatim}
-
 
 

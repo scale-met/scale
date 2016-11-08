@@ -2159,7 +2159,7 @@ contains
   real(RP), parameter :: cflfct = 0.50_RP
   real(RP) :: dumm_regene(ijkmax)
   integer :: iflg( nspc,ijkmax )
-  integer :: csum( nspc,ijkmax )
+  real(RP) :: csum( nspc,ijkmax )
   real(RP) :: f1, f2, emu, cefd, cefk, festi, psat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
@@ -5087,4 +5087,3 @@ contains
   end function fspline2
 
 end module scale_atmos_phy_mp_suzuki10
-!-------------------------------------------------------------------------------

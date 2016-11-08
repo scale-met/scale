@@ -98,7 +98,7 @@ module scale_const
   integer,  public            :: CONST_I_LW    = 1                   !< long-wave radiation index
   integer,  public            :: CONST_I_SW    = 2                   !< short-wave radiation index
 
-  character(len=H_SHORT), public :: CONST_THERMODYN_TYPE = 'EXACT' !< internal energy type
+  character(len=H_SHORT), public :: CONST_THERMODYN_TYPE = 'EXACT'   !< internal energy type
 
   !-----------------------------------------------------------------------------
   !
@@ -117,17 +117,20 @@ contains
        PRC_MPIstop
     implicit none
 
+    real(RP) :: CONST_SmallPlanetFactor = 1.0_RP !< factor for small planet
+
     namelist / PARAM_CONST / &
-       CONST_RADIUS, &
-       CONST_OHM,    &
-       CONST_GRAV,   &
-       CONST_Rdry,   &
-       CONST_CPdry,  &
-       CONST_LAPS,   &
-       CONST_Pstd,   &
-       CONST_PRE00,  &
-       CONST_Tstd,   &
-       CONST_THERMODYN_TYPE
+       CONST_RADIUS,           &
+       CONST_OHM,              &
+       CONST_GRAV,             &
+       CONST_Rdry,             &
+       CONST_CPdry,            &
+       CONST_LAPS,             &
+       CONST_Pstd,             &
+       CONST_PRE00,            &
+       CONST_Tstd,             &
+       CONST_THERMODYN_TYPE,   &
+       CONST_SmallPlanetFactor
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -160,6 +163,9 @@ contains
     CONST_EPS     =          epsilon(0.0_RP)
     CONST_EPS1    = 1.0_RP - epsilon(0.0_RP)
     CONST_HUGE    =             huge(0.0_RP)
+
+    CONST_RADIUS  = CONST_RADIUS / CONST_SmallPlanetFactor
+    CONST_OHM     = CONST_OHM    * CONST_SmallPlanetFactor
 
     CONST_CVdry   = CONST_CPdry - CONST_Rdry
     CONST_LAPSdry = CONST_GRAV / CONST_CPdry
@@ -248,4 +254,3 @@ contains
   end subroutine CONST_setup
 
 end module scale_const
-!-------------------------------------------------------------------------------

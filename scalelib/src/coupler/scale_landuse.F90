@@ -60,6 +60,7 @@ module scale_landuse
   character(len=H_LONG), private :: LANDUSE_OUT_BASENAME = ''                  !< basename of the output file
   character(len=H_MID),  private :: LANDUSE_OUT_TITLE    = 'SCALE-RM LANDUSE'  !< title    of the output file
   character(len=H_MID),  private :: LANDUSE_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
+  logical,               private :: LANDUSE_AllOcean     = .false.
   logical,               private :: LANDUSE_AllLand      = .false.
   logical,               private :: LANDUSE_AllUrban     = .false.
   logical,               private :: LANDUSE_MosaicWorld  = .false.
@@ -79,6 +80,7 @@ contains
        LANDUSE_OUT_DTYPE,    &
        LANDUSE_PFT_mosaic,   &
        LANDUSE_PFT_nmax,     &
+       LANDUSE_AllOcean,     &
        LANDUSE_AllLand,      &
        LANDUSE_AllUrban,     &
        LANDUSE_MosaicWorld
@@ -116,12 +118,15 @@ contains
     allocate( LANDUSE_fact_ocean(IA,JA) )
     allocate( LANDUSE_fact_land (IA,JA) )
     allocate( LANDUSE_fact_urban(IA,JA) )
-    LANDUSE_fact_ocean(:,:) = 1.0_RP
+    LANDUSE_fact_ocean(:,:) = 0.0_RP
     LANDUSE_fact_land (:,:) = 0.0_RP
     LANDUSE_fact_urban(:,:) = 0.0_RP
 
 
-    if    ( LANDUSE_AllLand ) then
+    if    ( LANDUSE_AllOcean ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
+       call LANDUSE_calc_fact
+    elseif( LANDUSE_AllLand ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
        call LANDUSE_calc_fact

@@ -1,13 +1,22 @@
+################################################################################
 #
-# ------ FOR Earth Simulator 3 -----
+# ------ For Earth Simulator 3 -----
 #
+################################################################################
 
-##### for computation
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+
+FC  = sxmpif90
+SFC = frtpx
+MODDIROPT = -to
 
 FFLAGS_FAST  = -C hopt                    \
                -Ep -f2003 -dW             \
                -Wf"-L fmtlist transform"  \
                -Wf"-pvctl chgpwr fullmsg"
+
+FFLAGS_DYN   = $(FFLAGS)
 
 FFLAGS_DEBUG = -C vsafe                      \
                -Ep -f2003 -dW                \
@@ -16,25 +25,39 @@ FFLAGS_DEBUG = -C vsafe                      \
                -Wf"-init heap=nan stack=nan" \
                -DDEBUG
 
-# Performance monitor
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+
+CC = sxmpic++
+
+CFLAGS_FAST  = -C vsafe
+CFLAGS_DEBUG = $(CFLAGS_FAST)
+
+
+
+##### Special setting
+
+### Performance monitor
 # disable
 PERF_MONIT = -Nftrace
-# ftrace
+# enable
 #PERF_MONIT = -ftrace
 
-FC     = sxmpif90
-FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) -D__ES2
-#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) -D__ES2
+FFLAGS_SYSDEPEND = $(PERF_MONIT) -D__ES2
+CFLAGS_SYSDEPEND = $(PERF_MONIT) -D__ES2
 
-FFLAGS_DYN ?= $(FFLAGS)
 
-MODDIROPT ?= -to
 
-CC     = sxmpic++
-CFLAGS = -C vsafe
+##### Linker setting
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
+
+
+
+################################################################################
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I/SX/usr/include

@@ -1804,6 +1804,4 @@ contains
     return
   end subroutine handle_err
 
-
 end module scale_external_io
-!-------------------------------------------------------------------------------

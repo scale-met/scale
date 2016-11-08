@@ -92,6 +92,7 @@ module scale_atmos_thermodyn
 
   interface ATMOS_THERMODYN_pott
      module procedure ATMOS_THERMODYN_pott_0D
+     module procedure ATMOS_THERMODYN_pott_1D
      module procedure ATMOS_THERMODYN_pott_3D
   end interface ATMOS_THERMODYN_pott
 
@@ -428,6 +429,48 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_pott_0D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_pott_1D( &
+       pott, &
+       temp, &
+       pres, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: pott(KA)    ! potential temperature [K]
+    real(RP), intent(in)  :: temp(KA)    ! temperature           [K]
+    real(RP), intent(in)  :: pres(KA)    ! pressure              [Pa]
+    real(RP), intent(in)  :: q   (KA,QA) ! mass concentration    [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: Rtot, CVtot, RovCP
+
+    integer :: k, iqw
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rdry
+#else
+       qdry  = 1.0_RP
+       CVtot = 0.0_RP
+       do iqw = QQS, QQE
+          qdry  = qdry  - q(k,iqw)
+          CVtot = CVtot + q(k,iqw) * AQ_CV(iqw)
+       enddo
+       CVtot = CVdry * qdry + CVtot
+       Rtot  = Rdry  * qdry + Rvap * q(k,I_QV)
+#endif
+
+       RovCP = Rtot / ( CVtot + Rtot )
+
+       pott(k) = temp(k) * ( PRE00 / pres(k) )**RovCP
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_pott_1D
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_pott_3D( &

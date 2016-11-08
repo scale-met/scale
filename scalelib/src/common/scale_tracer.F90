@@ -43,7 +43,7 @@ module scale_tracer
 #else
   integer, public :: QA
 
-  integer, public :: QA_MP 
+  integer, public :: QA_MP
   integer, public :: I_QV
   integer, public :: I_QC
   integer, public :: I_QR
@@ -71,7 +71,7 @@ module scale_tracer
   integer, public :: N_ATR   ! number of attribute
   integer, public, allocatable :: NKAP(:)
   integer, public, allocatable :: NSIZ(:)
-  integer, public :: IC_MIX 
+  integer, public :: IC_MIX
   integer, public :: IC_SEA
   integer, public :: IC_DUS
   integer, public :: IG_H2SO4
@@ -635,6 +635,7 @@ contains
      AQ_UNIT(QA_MP+1:QA_MP+QA_AE) = AQ_AE_UNIT(1:QA_AE)
 #endif
 
+    return
   end subroutine TRACER_setup
 
 end module scale_tracer

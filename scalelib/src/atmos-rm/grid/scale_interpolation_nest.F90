@@ -1949,6 +1949,8 @@ contains
     logical :: do_xdirec
     logical :: do_ydirec
     logical :: do_zdirec
+
+    intrinsic size
     !---------------------------------------------------------------------------
 
     do_xdirec = .true.
@@ -1978,7 +1980,9 @@ contains
        max_loc = maxval( lon_loc(:,:) / D2R )
        min_loc = minval( lon_loc(:,:) / D2R )
 
-       if ( max_ref < max_loc .OR. min_ref > min_loc ) then
+       if ( (min_ref+360.0_RP-max_ref) < 360.0_RP / size(lon_org,1) * 2.0_RP) then
+         ! cyclic OK
+       else if ( max_ref < max_loc .OR. min_ref > min_loc ) then
           write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
           write(*,*) 'xxx -- LONGITUDINAL direction over the limit'
           write(*,*) 'xxx -- reference max: ', max_ref

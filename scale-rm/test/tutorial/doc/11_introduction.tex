@@ -1,172 +1,90 @@
-\section{はじめに}
+\section{はじめに} \label{sec:introduction}
+%==============================================================%
 
-本書は初めて領域気象気候モデル (SCALE-RM)を利用するユーザー向けに解説したユーザーズガイドです。
-本書はSCALE-RM version \version に対応した説明になっています。
-第\ref{sec:overview}章でSCALEの概要について説明し、
-第\ref{sec:install}章で必要な環境、およびインストール方法を説明します。
-%
-続いて、第\ref{sec:tuto_ideal}章では理想実験、
-第\ref{sec:tuto_real}章では現実大気実験の実行方法について
-簡単な例示しながら説明します。
-第\ref{sec:install}章から第\ref{sec:tuto_real}章まではひと繋がりの
-チュートリアルとなっており、前章の経験や結果に基づいて説明する部分がありますのでご注意下さい。
-%
-第\ref{sec:advance}章では、チュートリアルを終えたユーザー向けに
-設定の変更、機能やツールについて説明します。
+本書は初めて領域気象気候モデル({\scalerm})
+を利用する人に向けた解説書です。
+気象気候ライブラリー{\scalelib}  version \version に対応した説明を記載します。
+現在、\scalelib を利用するため、領域モデル\scalerm と全球モデル\scalegm が
+用意されていますが、後者は、力学コアの整備のみされています。
+そのため、本版では、\scalerm の使い方についてのみ詳しく述べています。
+\scalegm については、次版で詳しく記載される予定です。
+%\scalerm の使い方を通して、\scalelib を他のモデルからの呼び出す方法を
+%習得することも可能です。
 
+第\ref{chap:overview}章で\scalelib の概要について、
+第\ref{chap:install}章で必要な環境、およびインストール方法について説明します。
+続いて、第\ref{chap:tutorial_ideal}章で基本的な操作方法、
+第\ref{chap:tutorial_real}章で現実大気実験の実行方法について
+簡単な例を示しながら説明します。
+第\ref{chap:install}章から第\ref{chap:tutorial_real}章までは
+ひと繋がりのチュートリアルとなっており、
+\scalerm を初めて使うユーザは一通り通読することをお勧めます。
+第\ref{chap:basic_usel}章以降は、設定の変更、機能やツールの説明が記載されています。
+
+%%%
 本書中の不明点やお気づきの点がございましたら、SCALE user's メーリングリスト\\
  \verb|scale-user@riken.jp|までご連絡ください。
 
 
 
-\subsection{SCALEの特徴}
-SCALE(Scalable Computing for Advanced Library and Environment)は
-計算機を用いて気象・気候科学の問題にアプローチする際に、
-ユーザーが研究を進めやすいように、
-事前処理から数値計算、解析に至るまですべての過程を網羅する数値計算ライブラリを
-目指したソフトウェアであり、下記に挙げるような特徴を持つ。
+\subsection{\scalelib の特徴} \label{subsec:scale_feature}
+%--------------------------------------------------------------%
+
+{\scalelib} (Scalable Computing for Advanced Library and Environment)は
+計算機を用いて気象・気候科学計算を行う上で、
+研究を進めやすいようにプレ処理から数値シミュレーション、ポスト処理、
+解析に至るまですべての過程を網羅する気象・気候数値計算ライブラリを
+目指したソフトウェアである。下記に挙げるような特徴を持つ。
 \begin{itemize}
-\item SCALEは、「BSD-2ライセンス」のもとでオープンソースソフトウェア
+\item \scalelib は、「BSD-2ライセンス」のもとオープンソースソフトウェア
 として提供されており、商用、非商用に関わらず自由な利用・改変・再配布が可能である。
-\item SCALEには、SCALE-RM(SCALE-Regional Model)、SCALE-GM(SCALE-Global Model)といった組み上げ済みの数値モデルが含まれている。
-\item SCALEには、次節で説明する様々なコンポーネントが導入されており、
-必要に応じて取り替えることが可能である。
+\item \scalelib には、\scalerm (SCALE-Regional Model)、
+%SCALE-GM(SCALE-Global Model)
+といった組み上げ済みの数値モデルが含まれている。
+\item \scalelib には、次節で説明する様々なコンポーネントが導入されており、
+行いたい実験に合わせて選択利用することが可能である。
+\item \scalelib で提供されている物理過程は、他の数値モデルへ組み込んで
+使用することも可能である。
 \end{itemize}
 
-ライセンスの詳細は、トップディレクトリ直下の``\verb|scale/LICENSE|''のファイルに記述されている。
-SCALEの使用前に一読しておくこと。またSCALEのWebページにも説明が記載されているので必要に応じて
+ライセンスの詳細は、トップディレクトリ直下の\texttt{scale-\version/LICENSE}のファイルに記述されている。
+\scalelib の使用前に一読しておくこと。またSCALEのWebページにもソフトウェアの説明が記載されているので必要に応じて
 参照すること（\url{http://scale.aics.riken.jp/}）。
 
-\subsection{SCALE-RMモデルの構成}
-現在、SCALEには下記のコンポーネントが実装されている。
-SCALE-RM からはすべてのコンポーネントが利用可能である。
-詳細なモデル構成や差分化手法については、
-\citet{scale_2015}、\citet{satoy_2015b}、および\citet{nishizawa_2015}を参照されたい。\\
+本節の以下では\scalelib の思想とモデルの関係について説明するが、
+\scalerm の実行とは直接関係ないため、必要なければ読み飛ばしても構わない。
 
+\Item{\scalelib のライブラリとモデルの関係について}
 
-\noindent{\bf フレームワーク関係}
-\begin{itemize}
- \item カーテシアン(Cartesian)グリッドシステム（Arakawa C-grid）
- \item MPI通信を用いた二次元領域分割
- \item Map-projection \& Map-factors
- \item Nesting システム（1-way：親→子のみ）
-   \begin{itemize}
-    \item Option: オンライン実行(複数ドメインの計算を同時に実行)とオフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)を選択可能
-   \end{itemize}
- \item 複数事例一括実行 システム（バルクジョブシステム）
- \item gtoolベースnetcdf4ファイル I/O
- \item 外部データ読み込みによる初期値・境界値データ作成
-   \begin{itemize}
-    \item Option: WRF-ARW、NICAM、その他GrADSフォーマットでの入力に対応
-   \end{itemize}
-\end{itemize}
-
-{\bf 力学コア関係}
-\begin{itemize}
- \item 方程式系: 3次元完全圧縮非静力学方程式系
- \item 数値解法: 陽解法と陰解法の両方を実装
-   \begin{itemize}
-    \item Option: HE-VE(陽解法)
-    \item Option: HE-VI(水平方向は陽解法-鉛直方向は陰解法)
-%    \item Option: HI-VI(陰解法)
-   \end{itemize}
- \item 空間差分:
-    \begin{itemize}
-      \item 2次中央差分(2-nd order central difference schemes)
-      \item 4次中央差分(4-th order central difference schemes)
-      \item 6次中央差分(6-th order central difference schemes)
-      \item 3次風上差分(3-rd order upwind difference schemes)
-%      \item 3次風上差分（Koren(1993)filterあり）(3rd order upwind difference scheme with \citet{Koren_1993} filter)
-      \item 5次風上差分(5-th order upwind difference schemes)
-    \end{itemize}
- \item 時間差分:
-    \begin{itemize}
-      \item 3次ルンゲクッタスキーム(Heun's 3rd order Runge-Kutta scheme)
-      \item Wicker and Skamarock (2002) 3段ルンゲクッタスキーム \citep[3-step Runge-Kutta scheme of ][]{Wicker_2002}
-      \item 4次ルンゲクッタスキーム(4th order Runge-Kutta scheme)
-    \end{itemize}
- \item 非負保証:
-    \begin{itemize}
-      \item フラックス修正法(Flux Corrected Transport)
-      \item Koren (1993) filter \citep{Koren_1993} (3次風上差分スキーム使用時のみ)
-    \end{itemize}
- \item 数値フィルター: 4次超粘性(4-th Hyper diffusion)
- \item 地形: Terrain following coordinate(地形に沿った座標系)
-\end{itemize}
-
-
-{\bf 物理過程}
-\begin{itemize}
- \item 乱流過程: 複数から選択可能
-   \begin{itemize}
-    \item Smagorinsky-Lilly typeのサブグリッドモデル \citep{smagorinsky_1963,lilly_1962}
-    \item Deardorff(1980) サブグリットモデル \citep{Deardorff_1980}
-    \item MYNN2.5境界層モデル \citep{my_1982,nakanishi_2004}
-   \end{itemize}
- \item 雲微物理: 複数から選択可能
-   \begin{itemize}
-    \item Kessler type バルクモデル \citep{kessler_1969}
-    \item 6-class single moment バルクモデル \citep{tomita_2008}
-    \item 6-class double moment バルクモデル \citep{sn_2014}
-    \item ビン法雲モデル \citep{suzuki_etal_2010}
-   \end{itemize}
- \item 放射過程: MSTRN-X \citep{sekiguchi_2008}
- \item 地表面モデル
-  \begin{itemize}
-   \item 陸面モデル: バケツモデル \citep[バルク交換係数は][]{beljaars_1991,wilson_2001}
-   \item 海洋モデル:（スラブモデル）
-   \item 都市モデル: 単層キャノピーモデル \citep{kusaka_2001}
-  \end{itemize}
-\end{itemize}
-
-上記に加え、SCALE-RM のコンポーネントとして、
-現実事例の計算に必要な地形や土地利用データを作成するツール、
-理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。
-
-次節でSCALEの思想とモデルの関係について説明するが、
-SCALE-RMの実行とは直接関係ないため、
-必要なければ読み飛ばしても構わない。
-
-
-\subsection{SCALEのライブラリとモデル}
-
-\begin{figure}[bh]
+\begin{figure}[htb]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/library.eps}\\
-  \caption{SCALEのねらい}
+  \caption{\scalelib のねらい}
   \label{fig:scale}
 \end{center}
 \end{figure}
 
-SCALEは、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に
+\scalelib は、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に
 開発が進められている気象・気候科学計算向けのライブラリである。
-図 \ref{fig:scale}にSCALEの思想の概念図を示す。
-この図に示されるように、SCALEは、近い将来もしくは
-現在すでに研究の足かせとなっている諸問題を解決する、もしくは解決の手助けをすることを目指している。
-SCALEは次世代のスーパーコンピュータから小型PCクラスターに至るまで
+図 \ref{fig:scale}に\scalelib の思想の概念図を示す。
+この図に示されるような諸問題に対応することを目指している。
+\scalelib は次世代のスーパーコンピュータから小型PCクラスターに至るまで
 広く用いられる事を念頭において開発されており、
-気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が共同で開発を行っている。
-そのため、スーパーコンピュータ「京」やFujitsu FX10等のスーパーコンピュータ上でも、
-高い計算効率がでるように設計されている。
-ユーザーには、スーパーコンピュータ「京」を
-はじめとする並列計算機に対してチューニングされた
-モデルコンポーネントや解析システム、テストセット、
-そして「開発環境」を提供する。
+気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が
+共同で開発を行っている。
+そのため、スーパーコンピュータ「京」や富士通FX10等の
+スーパーコンピュータに加え、インテル機のような汎用計算機でも
+計算効率がでることを目指して設計されている。
 
-SCALEを利用した数値モデルとして、
-SCALE-RMが含まれている(図 \ref{fig:scale-rm})。
-格子系、力学コア、各種物理過程などの基本的なコンポーネントは
-SCALEが提供する。
-SCALE-RM は、予報変数などをコンテナを持ち、
-SCALEのコンポーネントを適切に呼び出すことで時間発展計算を行っている。
-ユーザーは、必要に応じて、各コンポーネントを選択し、組み合わせて使用することが可能である。
-このSCALE-RMを気象研究に適用した事例には
-\citet{satoy_2014}、\citet{satoy_2015}がある。
-ユーザーは、SCALEを用いてSCALE-RMと同様な方法によって
-新たなモデル作ることができる。
+\scalelib を利用した数値モデルとして、\scalerm が含まれている(図 \ref{fig:scale-rm})。
+並列プロセスの管理、ファイル入出力、プロセス間通信や格子情報の設定は\scalelib が提供する。
+大気流体の支配方程式を解く部分（流体力学コア、力学過程）と
+雲微物理や大気放射のような諸物理過程を解く部分も\scalelib が提供する。
+\scalerm は入力された大気状態のデータ（予報変数）を保持し、\scalelib が提供する機能を組み合わせ、
+各コンポーネントを適切に呼び出すことで時間発展計算を行っている。
+ユーザは必要に応じて利用するコンポーネントを選択し、組み合わせてシミュレーションを行うことが出来る。
 
-
-\begin{figure}[tb]
+\begin{figure}[hbt]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/scale.eps}\\
   \caption{SCALEとSCALE-RMの関係}
@@ -175,65 +93,96 @@ SCALEのコンポーネントを適切に呼び出すことで時間発展計算
 \end{figure}
 
 
-\section{表記上の注意}
 
-本書中では、Unix での bash 上での実行を想定して記述している。
-異なる環境下では適宜読み替えて対応すること。
-また、本書内では特に断りがない限り、下記の表記法に従うものとする。
+\subsection{\scalerm の構成}  \label{subsec:sturcture_scale_rm}
+%--------------------------------------------------------------%
+現在、\scalerm には下記のコンポーネントが実装されている。
+\scalerm ではすべてのコンポーネントが利用可能である。
+詳細なモデル構成や差分化手法については、
+\citet{scale_2015}、\citet{satoy_2015b}、
+および\citet{nishizawa_2015}を参照されたい。\\
 
+{\bf フレームワーク}
+\begin{itemize}
+ \item 距離座標に基づいた三次元カーテシアン格子系
+ \item MPI通信を用いた二次元領域分割
+ \item 各種地図投影法
+ \item ネスティングシステム（1 way：親領域$\to$子領域）
+   \begin{itemize}
+    \item オンライン実行(複数ドメインの計算を同時に実行)
+    \item オフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)
+   \end{itemize}
+ \item 複数事例一括実行 システム（バルクジョブシステム）
+ \item CF 規約\footnote{\url{http://cfconventions.org/}}に基づく \netcdf ファイル I/O
+   \begin{itemize}
+   \item {\netcdf}3 または {\netcdf}4 形式
+   \end{itemize}
+ \item 理想実験のための初期値データ生成
+ \item 外部データ読み込みによる標高・土地利用区分データの変換作成
+ \item 外部データ読み込みによる初期値・境界値データ変換作成
+   \begin{itemize}
+    \item 
+      WRF-ARW\footnote{\url{http://www.wrf-model.org/}}、
+%      NICAM\footnote{\url{http://nicam.jp/}}、
+      \grads \footnote{\url{http://cola.gmu.edu/grads/}}フォーマットでの入力に対応
+   \end{itemize}
+\end{itemize}
 
-コマンドラインのシンボル（\verb|$, #|）は、コマンドの実行を示す。
-下記の表記の違いは、プログラムを実行する権限の違いを示している。
+{\bf 力学コア関係}
+\begin{itemize}
+ \item 方程式系: 3次元完全圧縮非静力学方程式系
+ \item 数値解法: 陽解法と陰解法の両方を実装
+   \begin{itemize}
+    \item 水平陽解法-鉛直陽解法
+    \item 水平陽解法-鉛直陰解法
+%    \item HI-VI(陰解法)
+   \end{itemize}
+ \item 空間差分: フラックス形式
+    \begin{itemize}
+      \item 2次中央差分
+      \item 4次中央差分
+      \item 6次中央差分
+      \item 3次風上差分
+      \item 5次風上差分
+    \end{itemize}
+ \item 時間差分:(詳細は、\citet{scale_2015}を参照のこと)
+    \begin{itemize}
+      \item Heun型3次ルンゲクッタスキーム
+      \item \citet{Wicker_2002}の3段ルンゲクッタスキーム
+      \item 4次ルンゲクッタスキーム
+    \end{itemize}
+ \item 非負保証:
+    \begin{itemize}
+      \item フラックス修正法 \citep[Flux Corrected Transport, FCT; ][]{zalesak_1979}
+      \item \citet{Koren_1993}フィルター  (3次風上差分スキーム使用時のみ)
+    \end{itemize}
+ \item 数値フィルター: 4次超粘性・拡散
+ \item 地形: 地形に沿った座標系
+\end{itemize}
 
-\begin{verbatim}
- #        <- root権限で実行するコマンド
- $        <- ユーザ権限で実行するコマンド
-\end{verbatim}
-権限の一時的な切り替えにはsuコマンドを用いる。
-\verb|{User_Name}|は実際のユーザ名に読み替えること。
-\begin{verbatim}
- $ su {User_Name}   <- {User_Name}のユーザー名でログイン
- $ exit             <- {User_Name}のユーザー名でログインを終了
- $ su -             <- root権限に変更
- #
-\end{verbatim}
-
-コマンドオプションにハイフンを用いると、そのユーザでのログインを行う。
-用いない場合、権限のみの変更となる。またユーザ名を省略するとrootでのログインを試す。
-ユーザの一時切り替えを終わるには、exitコマンドを用いる。
-%各プログラムをインストールするための圧縮ファイルは、/tmpにダウンロードされていると仮定する。
-%他のディレクトリにダウンロードしてある場合は、mvコマンド等を用いて/tmpに移動しておくことを勧める。
-文章表記のうち、ダブルスラッシュ（//）で始まる行は解説のためのもので、実際に記述する必要はない。
-
-下記のように四角い囲みで区切られた部分は、コマンドラインのメッセージ部分を表す。\\
-
-\noindent {\small {\gt
-\fbox{
-\begin{tabularx}{140mm}{l}
- -- -- -- -- コマンドラインのメッセージ\\
- -- -- -- -- -- -- -- -- コマンドラインのメッセージ\\
- -- -- -- -- -- -- -- -- -- -- -- -- コマンドラインのメッセージ\\
-\end{tabularx}
-}}}\\
-
-また、下記のように丸い囲みで区切られた部分は、エディタでファイルを編集する記述内容を表す、
-もしくはファイル内の記述を参照している部分である。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{140mm}{l}
- -- -- -- -- ファイル中の記述\\
- -- -- -- -- -- -- -- -- ファイル中の記述\\
- -- -- -- -- -- -- -- -- -- -- -- -- ファイル中の記述\\
-\end{tabularx}
-}}}\\
-
-
-\begin{verbatim}
- $ vi
-\end{verbatim}
-
-上記のコマンドは、汎用テキストエディタプログラムを実行を意味する。
-各自の使いやすいエディタ (gedit、emacsなど) へ適宜読み替えること。
-
+{\bf 物理過程}
+\begin{itemize}
+ \item 乱流過程: 複数から選択可能
+   \begin{itemize}
+    \item \citet{smagorinsky_1963} \& \citet{lilly_1962}型のサブグリッドモデル (\citet{Brown_etal_1994}と\citet{Scotti_1993}による補正)
+    \item \citet{Deardorff_1980} サブグリッドモデル
+    \item \citet{my_1982,nakanishi_2004}によるMYNN2.5境界層モデル
+   \end{itemize}
+ \item 雲微物理: 複数から選択可能
+   \begin{itemize}
+    \item \citet{kessler_1969}による3-class 1モーメントバルクモデル
+    \item \citet{tomita_2008}による6-class 1モーメントバルクモデル
+    \item \citet{sn_2014}による6-class 2モーメントバルクモデル
+    \item \citet{suzuki_etal_2010}によるビン法モデル
+   \end{itemize}
+ \item 放射過程: \citet{sekiguchi_2008}による相関k分布法ブロードバンド大気放射伝達モデル
+ \item 地表面モデル
+  \begin{itemize}
+   \item 陸面モデル: 熱拡散・バケツモデル
+   \item 海洋モデル: 初期値固定・外部データ入力・スラブモデル
+   \item 都市モデル: \citet{kusaka_2001}による単層キャノピーモデル
+   \item バルク交換係数(陸面および海面): \citet{beljaars_1991,wilson_2001}による普遍関数によるバルク法
+     もしくは \citet{uno_1995}によるLouis 型バルク法
+  \end{itemize}
+\end{itemize}
 

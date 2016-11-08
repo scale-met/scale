@@ -1,9 +1,27 @@
 = Release History
 
+== 2016-09-05 (5.1.0)
+* Changes:
+  * Change the tutorial test cases
+  * Update documents
+* New features:
+  * Add the Kain and Fritsch (1990) cumulus parameterization (experimental)
+  * Provide the script to prepare the configurations for real atmospheric experiments
+* Implovements:
+  * Implove netCDF I/O handling
+* Bug fixs:
+  * Fix bug in the Suzuki10 scheme
+  * Fix treatment the boundary data for restart experiment
+  * Fix handling for cyclic outer data
+
+== 2016-08-04 (5.0.1)
+* Bug fixs:
+  * Fix wrong dependency for making SCALE-GM
+
 == 2016-07-05 (5.0.0)
 * Changes:
-  * change name SCALE-LES to SCALE-RM (also name of binary)
-  * change time format of restart file name (yyyymmdd-hhmmss.mmm)
+  * Change name SCALE-LES to SCALE-RM (also name of binary)
+  * Change time format of restart file name (yyyymmdd-hhmmss.mmm)
 * New features:
   * Enable to select schemes for advection flux (CD2, UD3, UD3Koren1993, CD4, UD5, CD6; default is changed)
   * Enable to select schemes for time step (RK3, RK3WS2002, RK4; default is changed)

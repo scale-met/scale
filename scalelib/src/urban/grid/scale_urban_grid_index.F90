@@ -77,6 +77,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban grid index information ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** z-axis levels :', UKMAX
 
+    return
   end subroutine URBAN_GRID_INDEX_setup
 
 end module scale_urban_grid_index

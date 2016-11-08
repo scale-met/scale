@@ -13,11 +13,6 @@ module mod_af_trcadv
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
-  use scale_prof
-
-  use mod_adm, only: &
-     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -43,10 +38,10 @@ module mod_af_trcadv
   !
   !++ Private parameters & variables
   !
-  real(RP), private, parameter :: a  = 6371220.0_RP        ! Earth's Radius [m]
-  real(RP), private, parameter :: Rd = 287.0_RP            ! Ideal gas const dry air [J/kg*K]
-  real(RP), private, parameter :: g  = 9.80616_RP         ! Gravity [m/s2]
-  real(RP), private, parameter :: cp = 1004.5_RP          ! Specific heat capacity [J/kg*K]
+  real(RP), private, parameter :: a  = 6371220.0_RP            ! Earth's Radius [m]
+  real(RP), private, parameter :: Rd = 287.0_RP                ! Ideal gas const dry air [J/kg*K]
+  real(RP), private, parameter :: g  = 9.80616_RP              ! Gravity [m/s2]
+  real(RP), private, parameter :: cp = 1004.5_RP               ! Specific heat capacity [J/kg*K]
   real(RP), private, parameter :: pi = 3.141592653589793238_RP ! pi
 
   !-----------------------------------------------------------------------------
@@ -75,12 +70,12 @@ contains
     real(RP),intent(out) :: w
 
     real(RP), parameter :: tau     = 12.0_RP * 86400.0_RP ! period of motion 12 days
-    real(RP), parameter :: u0      = 2.0_RP*pi*a/tau    ! 2 pi a / 12 days
-    real(RP), parameter :: k0      = 10.0_RP*a/tau      ! Velocity Magnitude
-    real(RP), parameter :: omega0  = 23000.0_RP*pi/tau  ! Velocity Magnitude
-    real(RP), parameter :: T0      = 300.0_RP           ! temperature
-    real(RP), parameter :: H       = Rd * T0 / g      ! scale height
-    real(RP), parameter :: p0      = 100000.0_RP        ! reference pressure (Pa)
+    real(RP), parameter :: u0      = 2.0_RP*pi*a   / tau  ! 2 pi a / 12 days
+    real(RP), parameter :: k0      = 10.0_RP*a     / tau  ! Velocity Magnitude
+    real(RP), parameter :: omega0  = 23000.0_RP*pi / tau  ! Velocity Magnitude
+    real(RP), parameter :: T0      = 300.0_RP             ! temperature
+    real(RP), parameter :: H       = Rd * T0 / g          ! scale height
+    real(RP), parameter :: p0      = 1000.E2_RP           ! reference pressure (Pa)
 
     real(RP) :: u ! Zonal wind      [m/s]
     real(RP) :: v ! Meridional wind [m/s]
@@ -98,8 +93,8 @@ contains
     ptop   = p0 * exp(-12000.0_RP/H)
 
     s = 1.0_RP + exp( (ptop-p0) / (bs*ptop) ) &
-             - exp( (p-p0)    / (bs*ptop) ) &
-             - exp( (ptop-p)  / (bs*ptop) )
+               - exp( (p-p0)    / (bs*ptop) ) &
+               - exp( (ptop-p)  / (bs*ptop) )
 
     ud = (omega0*a) / (bs*ptop) * cos(lonp) * cos(lat)**2 * cos(dlon) &
        * ( -exp( (p-p0)/(bs*ptop) ) + exp( (ptop-p)/(bs*ptop) ) )
@@ -151,13 +146,13 @@ contains
     real(RP),intent(out) :: w
 
     real(RP), parameter :: tau  = 1.0_RP * 86400.0_RP ! period of motion 1 day (in s)
-    real(RP), parameter :: u0   = 40.0_RP           ! Zonal velocity magnitude (m/s)
-    real(RP), parameter :: w0   = 0.15_RP          ! Vertical velocity magnitude (m/s), changed in v5
-    real(RP), parameter :: T0   = 300.0_RP          ! temperature
-    real(RP), parameter :: H    = Rd * T0 / g     ! scale height
-    real(RP), parameter :: K    = 5.0_RP            ! number of Hadley-like cells
-    real(RP), parameter :: ztop = 12000.0_RP        ! model top (m)
-    real(RP), parameter :: p0   = 100000.0_RP       ! reference pressure (Pa)
+    real(RP), parameter :: u0   = 40.0_RP             ! Zonal velocity magnitude (m/s)
+    real(RP), parameter :: w0   = 0.15_RP             ! Vertical velocity magnitude (m/s), changed in v5
+    real(RP), parameter :: T0   = 300.0_RP            ! temperature
+    real(RP), parameter :: H    = Rd * T0 / g         ! scale height
+    real(RP), parameter :: K    = 5.0_RP              ! number of Hadley-like cells
+    real(RP), parameter :: ztop = 12.E3_RP            ! model top (m)
+    real(RP), parameter :: p0   = 1000.E2_RP          ! reference pressure (Pa)
 
     real(RP) :: u ! Zonal wind      [m/s]
     real(RP) :: v ! Meridional wind [m/s]
@@ -203,7 +198,7 @@ contains
 
     unit_east(1) = -sin(lon) ! x-direction
     unit_east(2) =  cos(lon) ! y-direction
-    unit_east(3) = 0.0_RP      ! z-direction
+    unit_east(3) = 0.0_RP    ! z-direction
 
     return
   end function Sp_Unit_East

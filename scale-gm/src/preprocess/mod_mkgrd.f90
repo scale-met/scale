@@ -16,16 +16,18 @@ module mod_mkgrd
   use scale_stdio
   use scale_prof
 
-  use mod_adm, only: &
-     ADM_LOG_FID
   use mod_grd, only: &
-     GRD_XDIR, &
-     GRD_YDIR, &
-     GRD_ZDIR, &
-     GRD_x,    &
-     GRD_x_pl, &
-     GRD_xt,   &
-     GRD_xt_pl
+     GRD_XDIR,  &
+     GRD_YDIR,  &
+     GRD_ZDIR,  &
+     GRD_x,     &
+     GRD_x_pl,  &
+     GRD_xt,    &
+     GRD_xt_pl, &
+     GRD_s,     &
+     GRD_s_pl,  &
+     GRD_st,    &
+     GRD_st_pl
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -47,10 +49,10 @@ module mod_mkgrd
   !
   !++ Public parameters & variables
   !
-  character(len=H_LONG), public :: MKGRD_IN_BASENAME  = ''
-  character(len=H_LONG), public :: MKGRD_OUT_BASENAME = ''
-  character(len=H_SHORT),     public :: MKGRD_IN_io_mode   = 'ADVANCED'
-  character(len=H_SHORT),     public :: MKGRD_OUT_io_mode  = 'ADVANCED'
+  character(len=H_LONG),  public :: MKGRD_IN_BASENAME  = ''
+  character(len=H_LONG),  public :: MKGRD_OUT_BASENAME = ''
+  character(len=H_SHORT), public :: MKGRD_IN_io_mode   = 'ADVANCED'
+  character(len=H_SHORT), public :: MKGRD_OUT_io_mode  = 'ADVANCED'
 
   !-----------------------------------------------------------------------------
   !
@@ -60,39 +62,36 @@ module mod_mkgrd
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: dir_vindex = 3
-
-  integer, private, parameter :: I_Xaxis = 1
-  integer, private, parameter :: I_Yaxis = 2
-  integer, private, parameter :: I_Zaxis = 3
-
-  logical, private :: MKGRD_DOSPRING    = .true.
-  logical, private :: MKGRD_DOPREROTATE = .false.
-  logical, private :: MKGRD_DOSTRETCH   = .false.
-  logical, private :: MKGRD_DOSHRINK    = .false.
-  logical, private :: MKGRD_DOROTATE    = .false.
+  logical,  private :: MKGRD_DOSPRING         = .true.
+  logical,  private :: MKGRD_DOPREROTATE      = .false.
+  logical,  private :: MKGRD_DOSTRETCH        = .false.
+  logical,  private :: MKGRD_DOSHRINK         = .false.
+  logical,  private :: MKGRD_DOROTATE         = .false.
 
   real(RP), private :: MKGRD_spring_beta      = 1.15_RP ! parameter beta for spring dynamics
-  real(RP), private :: MKGRD_prerotation_tilt =   0.0_RP ! [deg]
+  real(RP), private :: MKGRD_prerotation_tilt =  0.0_RP ! [deg]
   real(RP), private :: MKGRD_stretch_alpha    = 1.00_RP ! parameter alpha for stretch
-  integer, private :: MKGRD_shrink_level     =      0 ! shrink level (only for 1-diamond experiment)
-  real(RP), private :: MKGRD_rotation_lon     =   0.0_RP ! [deg]
-  real(RP), private :: MKGRD_rotation_lat     =  90.0_RP ! [deg]
+  integer,  private :: MKGRD_shrink_level     = 0       ! shrink level (only for 1-diamond experiment)
+  real(RP), private :: MKGRD_rotation_lon     =  0.0_RP ! [deg]
+  real(RP), private :: MKGRD_rotation_lat     = 90.0_RP ! [deg]
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MKGRD_setup
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       UNDEF  => CONST_UNDEF
     use mod_adm, only: &
-       ADM_CTL_FID,   &
-       ADM_proc_stop, &
-       ADM_gall,      &
-       ADM_gall_pl,   &
-       ADM_KNONE,     &
-       ADM_lall,      &
-       ADM_lall_pl,   &
-       ADM_TI,        &
+       ADM_nxyz,    &
+       ADM_gall,    &
+       ADM_gall_pl, &
+       ADM_KNONE,   &
+       ADM_lall,    &
+       ADM_lall_pl, &
+       ADM_TI,      &
        ADM_TJ
     implicit none
 
@@ -117,26 +116,39 @@ contains
     !---------------------------------------------------------------------------
 
     !--- read parameters
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '+++ Program[mkgrd]/Category[prep]'
-    rewind(ADM_CTL_FID)
-    read(ADM_CTL_FID,nml=PARAM_MKGRD,iostat=ierr)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Program[mkgrd]/Category[prep]'
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKGRD,iostat=ierr)
     if ( ierr < 0 ) then
-       write(ADM_LOG_FID,*) '*** PARAM_MKGRD is not specified. use default.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** PARAM_MKGRD is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*,          *) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
-       write(ADM_LOG_FID,*) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
-       call ADM_proc_stop
+       write(*         ,*) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
+       call PRC_MPIstop
     endif
-    write(ADM_LOG_FID,nml=PARAM_MKGRD)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKGRD)
 
 #ifndef _FIXEDINDEX_
-    allocate( GRD_x    (ADM_gall,   ADM_KNONE,ADM_lall,   dir_vindex) )
-    allocate( GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,dir_vindex) )
+    allocate( GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz) )
+    allocate( GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz) )
+    allocate( GRD_xt   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )
+    allocate( GRD_xt_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz) )
 
-    allocate( GRD_xt   (ADM_gall,   ADM_KNONE,ADM_lall,   ADM_TI:ADM_TJ,dir_vindex) )
-    allocate( GRD_xt_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              dir_vindex) )
+    allocate( GRD_s    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              2) )
+    allocate( GRD_s_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2) )
+    allocate( GRD_st   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,2) )
+    allocate( GRD_st_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2) )
 #endif
+    GRD_x    (:,:,:,:)   = UNDEF
+    GRD_x_pl (:,:,:,:)   = UNDEF
+    GRD_xt   (:,:,:,:,:) = UNDEF
+    GRD_xt_pl(:,:,:,:)   = UNDEF
+
+    GRD_s    (:,:,:,:)   = UNDEF
+    GRD_s_pl (:,:,:,:)   = UNDEF
+    GRD_st   (:,:,:,:,:) = UNDEF
+    GRD_st_pl(:,:,:,:)   = UNDEF
 
     return
   end subroutine MKGRD_setup
@@ -169,17 +181,17 @@ contains
 
     real(RP) :: alpha2, phi
 
-    integer :: rgnid, dmd
+    integer  :: rgnid, dmd
     real(RP) :: rdmd
 
-    integer :: rgn_all_1d, rgn_all
-    integer :: rgnid_dmd, ir, jr
+    integer  :: rgn_all_1d, rgn_all
+    integer  :: rgnid_dmd, ir, jr
 
-    integer :: nmax, nmax_prev, rl, gl
-    integer :: i, j, ij, k, l
+    integer  :: nmax, nmax_prev, rl, gl
+    integer  :: i, j, ij, k, l
     !---------------------------------------------------------------------------
 
-    write(ADM_LOG_FID,*) '*** Make standard grid system'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Make standard grid system'
 
     k = ADM_KNONE
 
@@ -317,29 +329,24 @@ contains
   !-----------------------------------------------------------------------------
   !> Apply spring dynamics
   subroutine MKGRD_spring
-    use mod_adm, only: &
-       ADM_prc_tab,     &
-       ADM_prc_me,      &
-       ADM_rgn_vnum,    &
-       ADM_W,           &
-       ADM_glevel,      &
-       ADM_gall,        &
-       ADM_gall_pl,     &
-       ADM_KNONE,       &
-       ADM_lall,        &
-       ADM_lall_pl,     &
-       ADM_IooJoo_nmax, &
-       ADM_IooJoo,      &
-       ADM_GIoJo,       &
-       ADM_GIpJo,       &
-       ADM_GIpJp,       &
-       ADM_GIoJp,       &
-       ADM_GImJo,       &
-       ADM_GImJm,       &
-       ADM_GIoJm,       &
-       ADM_gmin
     use scale_const, only: &
        PI => CONST_PI
+    use scale_vector, only: &
+       VECTR_cross, &
+       VECTR_dot,   &
+       VECTR_abs,   &
+       VECTR_angle
+    use mod_adm, only: &
+       ADM_nxyz,     &
+       ADM_KNONE,    &
+       ADM_have_sgp, &
+       ADM_glevel,   &
+       ADM_lall,     &
+       ADM_lall_pl,  &
+       ADM_gall,     &
+       ADM_gall_pl,  &
+       ADM_gmin,     &
+       ADM_gmax
     use mod_comm, only: &
        COMM_data_transfer
     use mod_gm_statistics, only: &
@@ -347,216 +354,171 @@ contains
        GTL_min
     implicit none
 
-    integer, parameter :: var_vindex = 8
-    integer, parameter :: I_Rx   = 1
-    integer, parameter :: I_Ry   = 2
-    integer, parameter :: I_Rz   = 3
-    integer, parameter :: I_Wx   = 4
-    integer, parameter :: I_Wy   = 5
-    integer, parameter :: I_Wz   = 6
-    integer, parameter :: I_Fsum = 7
-    integer, parameter :: I_Ek   = 8
+    integer,  parameter :: var_vindex = 8
+    integer,  parameter :: I_Rx   = 1
+    integer,  parameter :: I_Ry   = 2
+    integer,  parameter :: I_Rz   = 3
+    integer,  parameter :: I_Wx   = 4
+    integer,  parameter :: I_Wy   = 5
+    integer,  parameter :: I_Wz   = 6
+    integer,  parameter :: I_Fsum = 7
+    integer,  parameter :: I_Ek   = 8
 
     real(RP) :: var   ( ADM_gall,   ADM_KNONE,ADM_lall,   var_vindex)
     real(RP) :: var_pl( ADM_gall_pl,ADM_KNONE,ADM_lall_pl,var_vindex)
 
-    real(RP) :: lambda
-    real(RP) :: dbar
-
-    real(RP) :: Px(ADM_gall,0:6)
-    real(RP) :: Py(ADM_gall,0:6)
-    real(RP) :: Pz(ADM_gall,0:6)
-    real(RP) :: Fx(ADM_gall,0:6)
-    real(RP) :: Fy(ADM_gall,0:6)
-    real(RP) :: Fz(ADM_gall,0:6)
-
-    real(RP) :: fixed_point(3)
-
-    real(RP) :: Ax, Ay, Az
-    real(RP) :: Ex, Ey, Ez
-    real(RP) :: Fsumx, Fsumy, Fsumz
-    real(RP) :: Rx, Ry, Rz
-    real(RP) :: Wx, Wy, Wz
-    real(RP) :: len, d, E
-
-    integer, parameter :: itelim = 100000
-    integer            :: ite
-    real(RP) :: Fsum_max, Ek_max
-
     real(RP), parameter :: dump_coef = 1.0_RP   !> friction coefficent in spring dynamics
     real(RP), parameter :: dt        = 2.E-2_RP !> delta t for solution of spring dynamics
     real(RP), parameter :: criteria  = 1.E-4_RP !> criteria of convergence
+    real(RP)            :: lambda, dbar
 
-    integer :: rgnid
-    integer :: ij_singular
-    integer :: n, ij, k, l, m
+    real(RP)            :: P(ADM_nxyz,0:6,ADM_gall)
+    real(RP)            :: F(ADM_nxyz,1:6,ADM_gall)
+    real(RP), parameter :: o(3) = 0.0_RP
+    real(RP)            :: fixed_point(3)
+    real(RP)            :: P0Pm(3), P0PmP0(3), Fsum(3), R0(3), W0(3)
+    real(RP)            :: length, distance, E
+
+    integer,  parameter :: itelim = 10000000
+    integer             :: ite
+    real(RP)            :: Fsum_max, Ek_max
+
+    integer  :: ij
+    integer  :: ip1j, ijp1, ip1jp1
+    integer  :: im1j, ijm1, im1jm1
+
+    integer  :: i, j, k0, l, m
     !---------------------------------------------------------------------------
 
     if( .NOT. MKGRD_DOSPRING ) return
 
-    k = ADM_KNONE
-    ij_singular = suf(ADM_gmin,ADM_gmin)
+    k0 = ADM_KNONE
+
+    lambda = 2.0_RP*PI / ( 10.0_RP*2.0_RP**(ADM_glevel-1) )
+    dbar   = MKGRD_spring_beta * lambda
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Apply grid modification with spring dynamics'
+    if( IO_L ) write(IO_FID_LOG,*) '*** spring factor beta  = ', MKGRD_spring_beta
+    if( IO_L ) write(IO_FID_LOG,*) '*** length lambda       = ', lambda
+    if( IO_L ) write(IO_FID_LOG,*) '*** delta t             = ', dt
+    if( IO_L ) write(IO_FID_LOG,*) '*** conversion criteria = ', criteria
+    if( IO_L ) write(IO_FID_LOG,*) '*** dumping coefficient = ', dump_coef
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,'(3(A16))') 'itelation', 'max. Kinetic E', 'max. forcing'
 
     var   (:,:,:,:) = 0.0_RP
     var_pl(:,:,:,:) = 0.0_RP
 
-    lambda = 2.0_RP*PI / ( 10.0_RP*2.0_RP**(ADM_glevel-1) )
-
-    dbar = MKGRD_spring_beta * lambda
-
     var   (:,:,:,I_Rx:I_Rz) = GRD_x   (:,:,:,GRD_XDIR:GRD_ZDIR)
     var_pl(:,:,:,I_Rx:I_Rz) = GRD_x_pl(:,:,:,GRD_XDIR:GRD_ZDIR)
-
-    write(ADM_LOG_FID,*) '*** Apply grid modification with spring dynamics'
-    write(ADM_LOG_FID,*) '*** spring factor beta  = ', MKGRD_spring_beta
-    write(ADM_LOG_FID,*) '*** length lambda       = ', lambda
-    write(ADM_LOG_FID,*) '*** delta t             = ', dt
-    write(ADM_LOG_FID,*) '*** conversion criteria = ', criteria
-    write(ADM_LOG_FID,*) '*** dumping coefficient = ', dump_coef
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,'(3(A16))') 'itelation', 'max. Kinetic E', 'max. forcing'
 
     !--- Solving spring dynamics
     do ite = 1, itelim
 
        do l = 1, ADM_lall
-          rgnid = ADM_prc_tab(l,ADM_prc_me)
+          do j = ADM_gmin, ADM_gmax
+          do i = ADM_gmin, ADM_gmax
+             ij     = suf(i  ,j  )
+             ip1j   = suf(i+1,j  )
+             ip1jp1 = suf(i+1,j+1)
+             ijp1   = suf(i  ,j+1)
+             im1j   = suf(i-1,j  )
+             im1jm1 = suf(i-1,j-1)
+             ijm1   = suf(i  ,j-1)
 
-          do n = 1, ADM_IooJoo_nmax
-             ij = ADM_IooJoo(n,ADM_GIoJo)
+             P(GRD_XDIR,0,ij) = var(ij    ,k0,l,I_Rx)
+             P(GRD_XDIR,1,ij) = var(ip1j  ,k0,l,I_Rx)
+             P(GRD_XDIR,2,ij) = var(ip1jp1,k0,l,I_Rx)
+             P(GRD_XDIR,3,ij) = var(ijp1  ,k0,l,I_Rx)
+             P(GRD_XDIR,4,ij) = var(im1j  ,k0,l,I_Rx)
+             P(GRD_XDIR,5,ij) = var(im1jm1,k0,l,I_Rx)
+             P(GRD_XDIR,6,ij) = var(ijm1  ,k0,l,I_Rx)
 
-             Px(ij,0) = var(ADM_IooJoo(n,ADM_GIoJo),k,l,I_Rx)
-             Px(ij,1) = var(ADM_IooJoo(n,ADM_GIpJo),k,l,I_Rx)
-             Px(ij,2) = var(ADM_IooJoo(n,ADM_GIpJp),k,l,I_Rx)
-             Px(ij,3) = var(ADM_IooJoo(n,ADM_GIoJp),k,l,I_Rx)
-             Px(ij,4) = var(ADM_IooJoo(n,ADM_GImJo),k,l,I_Rx)
-             Px(ij,5) = var(ADM_IooJoo(n,ADM_GImJm),k,l,I_Rx)
-             Px(ij,6) = var(ADM_IooJoo(n,ADM_GIoJm),k,l,I_Rx)
+             P(GRD_YDIR,0,ij) = var(ij    ,k0,l,I_Ry)
+             P(GRD_YDIR,1,ij) = var(ip1j  ,k0,l,I_Ry)
+             P(GRD_YDIR,2,ij) = var(ip1jp1,k0,l,I_Ry)
+             P(GRD_YDIR,3,ij) = var(ijp1  ,k0,l,I_Ry)
+             P(GRD_YDIR,4,ij) = var(im1j  ,k0,l,I_Ry)
+             P(GRD_YDIR,5,ij) = var(im1jm1,k0,l,I_Ry)
+             P(GRD_YDIR,6,ij) = var(ijm1  ,k0,l,I_Ry)
 
-             Py(ij,0) = var(ADM_IooJoo(n,ADM_GIoJo),k,l,I_Ry)
-             Py(ij,1) = var(ADM_IooJoo(n,ADM_GIpJo),k,l,I_Ry)
-             Py(ij,2) = var(ADM_IooJoo(n,ADM_GIpJp),k,l,I_Ry)
-             Py(ij,3) = var(ADM_IooJoo(n,ADM_GIoJp),k,l,I_Ry)
-             Py(ij,4) = var(ADM_IooJoo(n,ADM_GImJo),k,l,I_Ry)
-             Py(ij,5) = var(ADM_IooJoo(n,ADM_GImJm),k,l,I_Ry)
-             Py(ij,6) = var(ADM_IooJoo(n,ADM_GIoJm),k,l,I_Ry)
-
-             Pz(ij,0) = var(ADM_IooJoo(n,ADM_GIoJo),k,l,I_Rz)
-             Pz(ij,1) = var(ADM_IooJoo(n,ADM_GIpJo),k,l,I_Rz)
-             Pz(ij,2) = var(ADM_IooJoo(n,ADM_GIpJp),k,l,I_Rz)
-             Pz(ij,3) = var(ADM_IooJoo(n,ADM_GIoJp),k,l,I_Rz)
-             Pz(ij,4) = var(ADM_IooJoo(n,ADM_GImJo),k,l,I_Rz)
-             Pz(ij,5) = var(ADM_IooJoo(n,ADM_GImJm),k,l,I_Rz)
-             Pz(ij,6) = var(ADM_IooJoo(n,ADM_GIoJm),k,l,I_Rz)
+             P(GRD_ZDIR,0,ij) = var(ij    ,k0,l,I_Rz)
+             P(GRD_ZDIR,1,ij) = var(ip1j  ,k0,l,I_Rz)
+             P(GRD_ZDIR,2,ij) = var(ip1jp1,k0,l,I_Rz)
+             P(GRD_ZDIR,3,ij) = var(ijp1  ,k0,l,I_Rz)
+             P(GRD_ZDIR,4,ij) = var(im1j  ,k0,l,I_Rz)
+             P(GRD_ZDIR,5,ij) = var(im1jm1,k0,l,I_Rz)
+             P(GRD_ZDIR,6,ij) = var(ijm1  ,k0,l,I_Rz)
+          enddo
           enddo
 
-          if ( ADM_rgn_vnum(ADM_W,rgnid) == 3 ) then ! pentagon
-             Px(ij_singular,6) = Px(ij_singular,1)
-             Py(ij_singular,6) = Py(ij_singular,1)
-             Pz(ij_singular,6) = Pz(ij_singular,1)
+          if ( ADM_have_sgp(l) ) then ! pentagon
+             P(:,6,suf(ADM_gmin,ADM_gmin)) = P(:,1,suf(ADM_gmin,ADM_gmin))
           endif
 
-          do m = 1, 6
-             do n = 1, ADM_IooJoo_nmax
-                ij = ADM_IooJoo(n,ADM_GIoJo)
+          do j = ADM_gmin, ADM_gmax
+          do i = ADM_gmin, ADM_gmax
+             ij = suf(i,j)
 
-                ! A = P0 X Pm
-                Ax = Py(ij,0) * Pz(ij,m) - Pz(ij,0) * Py(ij,m)
-                Ay = Pz(ij,0) * Px(ij,m) - Px(ij,0) * Pz(ij,m)
-                Az = Px(ij,0) * Py(ij,m) - Py(ij,0) * Px(ij,m)
+             do m = 1, 6
+                call VECTR_cross( P0Pm  (:), o(:), P(:,0,ij), o(:), P(:,m,ij) ) ! P0 X Pm
+                call VECTR_cross( P0PmP0(:), o(:), P0Pm(:),   o(:), P(:,0,ij) ) ! ( P0 X Pm ) X P0
+                call VECTR_abs  ( length, P0PmP0(:) )
 
-                ! e0 = ( P0 X Pm ) X P0
-                Ex = Ay * Pz(ij,0) - Az * Py(ij,0)
-                Ey = Az * Px(ij,0) - Ax * Pz(ij,0)
-                Ez = Ax * Py(ij,0) - Ay * Px(ij,0)
+                call VECTR_angle( distance, P(:,0,ij), o(:), P(:,m,ij) )
 
-                ! normalize
-                len = sqrt( Ex*Ex + Ey*Ey + Ez*Ez )
-
-                ! d = P0 * Pm
-                d = acos( Px(ij,0) * Px(ij,m) &
-                        + Py(ij,0) * Py(ij,m) &
-                        + Pz(ij,0) * Pz(ij,m) )
-
-                Fx(ij,m) = (d-dbar) * Ex / len
-                Fy(ij,m) = (d-dbar) * Ey / len
-                Fz(ij,m) = (d-dbar) * Ez / len
+                F(:,m,ij) = ( distance - dbar ) * P0PmP0(:) / length
              enddo
           enddo
-
-          if ( ADM_rgn_vnum(ADM_W,rgnid) == 3 ) then ! pentagon
-             Fx(ij_singular,6) = 0.0_RP
-             Fy(ij_singular,6) = 0.0_RP
-             Fz(ij_singular,6) = 0.0_RP
-          endif
-
-          do n = 1, ADM_IooJoo_nmax
-             ij = ADM_IooJoo(n,ADM_GIoJo)
-
-             Fsumx = Fx(ij,1)+Fx(ij,2)+Fx(ij,3)+Fx(ij,4)+Fx(ij,5)+Fx(ij,6)
-             Fsumy = Fy(ij,1)+Fy(ij,2)+Fy(ij,3)+Fy(ij,4)+Fy(ij,5)+Fy(ij,6)
-             Fsumz = Fz(ij,1)+Fz(ij,2)+Fz(ij,3)+Fz(ij,4)+Fz(ij,5)+Fz(ij,6)
-
-             ! check dw0/dt
-             var(ij,k,l,I_Fsum) = sqrt( Fsumx*Fsumx + Fsumy*Fsumy + Fsumz*Fsumz ) / lambda
-
-             Fx(ij,0) = Fsumx - dump_coef * var(ij,k,l,I_Wx)
-             Fy(ij,0) = Fsumy - dump_coef * var(ij,k,l,I_Wy)
-             Fz(ij,0) = Fsumz - dump_coef * var(ij,k,l,I_Wz)
           enddo
 
-          ! save value of fixed point
-          if ( ADM_rgn_vnum(ADM_W,rgnid) == 3 ) then ! pentagon
-             fixed_point(I_Rx) = var(ij_singular,k,l,I_Rx)
-             fixed_point(I_Ry) = var(ij_singular,k,l,I_Ry)
-             fixed_point(I_Rz) = var(ij_singular,k,l,I_Rz)
+          if ( ADM_have_sgp(l) ) then ! pentagon
+             F(:,6,suf(ADM_gmin,ADM_gmin)) = 0.0_RP
+
+             ! save value of fixed point
+             fixed_point(:) = var(suf(ADM_gmin,ADM_gmin),k0,l,I_Rx:I_Rz)
           endif
 
-          ! update r0
-          do n = 1, ADM_IooJoo_nmax
-             ij = ADM_IooJoo(n,ADM_GIoJo)
+          do j = ADM_gmin, ADM_gmax
+          do i = ADM_gmin, ADM_gmax
+             ij = suf(i,j)
 
-             Rx = var(ij,k,l,I_Rx) + var(ij,k,l,I_Wx) * dt
-             Ry = var(ij,k,l,I_Ry) + var(ij,k,l,I_Wy) * dt
-             Rz = var(ij,k,l,I_Rz) + var(ij,k,l,I_Wz) * dt
+             R0(:) = var(ij,k0,l,I_Rx:I_Rz)
+             W0(:) = var(ij,k0,l,I_Wx:I_Wz)
+
+             Fsum(:) = F(:,1,ij) + F(:,2,ij) + F(:,3,ij) + F(:,4,ij) + F(:,5,ij) + F(:,6,ij)
+
+             ! update R0
+             R0(:) = R0(:) + W0(:) * dt
 
              ! normalize
-             len = sqrt( Rx*Rx + Ry*Ry + Rz*Rz )
+             call VECTR_abs( length, R0(:) )
+             R0(:) = R0(:) / length
 
-             var(ij,k,l,I_Rx) = Rx / len
-             var(ij,k,l,I_Ry) = Ry / len
-             var(ij,k,l,I_Rz) = Rz / len
-          enddo
-
-          ! update w0
-          do n = 1, ADM_IooJoo_nmax
-             ij = ADM_IooJoo(n,ADM_GIoJo)
-
-             Wx = var(ij,k,l,I_Wx) + Fx(ij,0) * dt
-             Wy = var(ij,k,l,I_Wy) + Fy(ij,0) * dt
-             Wz = var(ij,k,l,I_Wz) + Fz(ij,0) * dt
+             ! update W0
+             W0(:) = W0(:) + ( Fsum(:) - dump_coef * W0(:) ) * dt
 
              ! horizontalize
-             E = var(ij,k,l,I_Rx) * Wx &
-               + var(ij,k,l,I_Ry) * Wy &
-               + var(ij,k,l,I_Rz) * Wz
+             call VECTR_dot( E, o(:), R0(:), o(:), W0(:) )
+             W0(:) = W0(:) - E * R0(:)
 
-             var(ij,k,l,I_Wx) = Wx - E * var(ij,k,l,I_Rx)
-             var(ij,k,l,I_Wy) = Wy - E * var(ij,k,l,I_Ry)
-             var(ij,k,l,I_Wz) = Wz - E * var(ij,k,l,I_Rz)
+             var(ij,k0,l,I_Rx:I_Rz) = R0(:)
+             var(ij,k0,l,I_Wx:I_Wz) = W0(:)
+
+             ! check dw0/dt
+             call VECTR_abs( length, Fsum(:) )
+             var(ij,k0,l,I_Fsum) = length / lambda
 
              ! kinetic energy
-             var(ij,k,l,I_Ek) = 0.5_RP * ( var(ij,k,l,I_Wx)*var(ij,k,l,I_Wx) &
-                                        + var(ij,k,l,I_Wy)*var(ij,k,l,I_Wy) &
-                                        + var(ij,k,l,I_Wz)*var(ij,k,l,I_Wz) )
+             call VECTR_dot( E, o(:), W0(:), o(:), W0(:) )
+             var(ij,k0,l,I_Ek) = 0.5_RP * E
+          enddo
           enddo
 
           ! restore value of fixed point
-          if ( ADM_rgn_vnum(ADM_W,rgnid) == 3 ) then
-             var(ij_singular,k,l,:)    = 0.0_RP
-             var(ij_singular,k,l,I_Rx) = fixed_point(I_Rx)
-             var(ij_singular,k,l,I_Ry) = fixed_point(I_Ry)
-             var(ij_singular,k,l,I_Rz) = fixed_point(I_Rz)
+          if ( ADM_have_sgp(l) ) then ! pentagon
+             var(suf(ADM_gmin,ADM_gmin),k0,l,:)         = 0.0_RP
+             var(suf(ADM_gmin,ADM_gmin),k0,l,I_Rx:I_Rz) = fixed_point(:)
           endif
 
        enddo ! l loop
@@ -566,7 +528,7 @@ contains
        Fsum_max = GTL_max( var(:,:,:,I_Fsum), var_pl(:,:,:,I_Fsum), 1, 1, 1 )
        Ek_max   = GTL_max( var(:,:,:,I_Ek),   var_pl(:,:,:,I_Ek)  , 1, 1, 1 )
 
-       write(ADM_LOG_FID,'(I16,4(ES16.8))') ite, Ek_max, Fsum_max
+       if( IO_L ) write(IO_FID_LOG,'(I16,4(E16.8))') ite, Ek_max, Fsum_max
 
        if( Fsum_max < criteria ) exit
 
@@ -583,15 +545,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Apply rotation before stretching, for 1-diamond grid system
   subroutine MKGRD_prerotate
-    use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_KNONE,   &
-       ADM_lall,    &
-       ADM_lall_pl
     use scale_const, only: &
        PI => CONST_PI
+    use scale_vector, only: &
+       VECTR_rotation, &
+       I_Yaxis,        &
+       I_Zaxis
+    use mod_adm, only: &
+       ADM_KNONE,   &
+       ADM_have_pl, &
+       ADM_lall,    &
+       ADM_lall_pl, &
+       ADM_gall,    &
+       ADM_gall_pl
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -601,7 +567,7 @@ contains
     real(RP) :: alpha2
 
     real(RP) :: d2r
-    integer :: ij, k, l
+    integer  :: ij, k, l
     !---------------------------------------------------------------------------
 
     if( .NOT. MKGRD_DOPREROTATE ) return
@@ -614,11 +580,11 @@ contains
     angle_y    = 0.25_RP*PI * ( 3.0_RP - sqrt(3.0_RP) )
     angle_tilt = MKGRD_prerotation_tilt * d2r
 
-    write(ADM_LOG_FID,*) '*** Apply pre-rotation'
-    write(ADM_LOG_FID,*) '*** Diamond tilting factor = ', MKGRD_prerotation_tilt
-    write(ADM_LOG_FID,*) '*** angle_z   (deg) = ', angle_z    / d2r
-    write(ADM_LOG_FID,*) '*** angle_y   (deg) = ', angle_y    / d2r
-    write(ADM_LOG_FID,*) '*** angle_tilt(deg) = ', angle_tilt / d2r
+    if( IO_L ) write(IO_FID_LOG,*) '*** Apply pre-rotation'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Diamond tilting factor = ', MKGRD_prerotation_tilt
+    if( IO_L ) write(IO_FID_LOG,*) '*** angle_z   (deg) = ', angle_z    / d2r
+    if( IO_L ) write(IO_FID_LOG,*) '*** angle_y   (deg) = ', angle_y    / d2r
+    if( IO_L ) write(IO_FID_LOG,*) '*** angle_tilt(deg) = ', angle_tilt / d2r
 
     do l = 1, ADM_lall
        do ij = 1, ADM_gall
@@ -626,16 +592,16 @@ contains
 
           ! align lowermost vertex of diamond to x-z coordinate plane
           call VECTR_rotation( g(:),    & ! [INOUT]
-                                    angle_z, & ! [IN]
-                                    I_Zaxis  ) ! [IN]
+                               angle_z, & ! [IN]
+                               I_Zaxis  ) ! [IN]
           ! rotate around y-axis, for fitting the center of diamond to north pole
           call VECTR_rotation( g(:),    & ! [INOUT]
-                                    angle_y, & ! [IN]
-                                    I_Yaxis  ) ! [IN]
+                               angle_y, & ! [IN]
+                               I_Yaxis  ) ! [IN]
           ! rotate the diamond around z-axis
           call VECTR_rotation( g(:),       & ! [INOUT]
-                                    angle_tilt, & ! [IN]
-                                    I_Zaxis     ) ! [IN]
+                               angle_tilt, & ! [IN]
+                               I_Zaxis     ) ! [IN]
 
           GRD_x(ij,k,l,:) = g(:)
        enddo
@@ -648,16 +614,16 @@ contains
 
           ! align lowermost vertex of diamond to x-z coordinate plane
           call VECTR_rotation( g(:),    & ! [INOUT]
-                                    angle_z, & ! [IN]
-                                    I_Zaxis  ) ! [IN]
+                               angle_z, & ! [IN]
+                               I_Zaxis  ) ! [IN]
           ! rotate around y-axis, for fitting the center of diamond to north pole
           call VECTR_rotation( g(:),    & ! [INOUT]
-                                    angle_y, & ! [IN]
-                                    I_Yaxis  ) ! [IN]
+                               angle_y, & ! [IN]
+                               I_Yaxis  ) ! [IN]
           ! rotate the diamond around z-axis
           call VECTR_rotation( g(:),       & ! [INOUT]
-                                    angle_tilt, & ! [IN]
-                                    I_Zaxis     ) ! [IN]
+                               angle_tilt, & ! [IN]
+                               I_Zaxis     ) ! [IN]
 
           GRD_x_pl(ij,k,l,:) = g(:)
        enddo
@@ -678,12 +644,12 @@ contains
        VECTR_xyz2latlon, &
        VECTR_latlon2xyz
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
        ADM_KNONE,   &
+       ADM_have_pl, &
        ADM_lall,    &
-       ADM_lall_pl
+       ADM_lall_pl, &
+       ADM_gall,    &
+       ADM_gall_pl
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -692,13 +658,13 @@ contains
 
     real(RP), parameter :: criteria = 1.E-10_RP
 
-    integer :: ij, k, l
+    integer  :: ij, k, l
     !---------------------------------------------------------------------------
 
     if( .NOT. MKGRD_DOSTRETCH ) return
 
-    write(ADM_LOG_FID,*) '*** Apply stretch'
-    write(ADM_LOG_FID,*) '*** Stretch factor = ', MKGRD_stretch_alpha
+    if( IO_L ) write(IO_FID_LOG,*) '*** Apply stretch'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Stretch factor = ', MKGRD_stretch_alpha
 
     k = ADM_KNONE
 
@@ -731,11 +697,11 @@ contains
        do l  = 1, ADM_lall_pl
        do ij = 1, ADM_gall_pl
 
-           call VECTR_xyz2latlon( GRD_x_pl(ij,k,l,GRD_XDIR), & ! [IN]
-                                  GRD_x_pl(ij,k,l,GRD_YDIR), & ! [IN]
-                                  GRD_x_pl(ij,k,l,GRD_ZDIR), & ! [IN]
-                                  lat,                       & ! [OUT]
-                                  lon                        ) ! [OUT]
+          call VECTR_xyz2latlon( GRD_x_pl(ij,k,l,GRD_XDIR), & ! [IN]
+                                 GRD_x_pl(ij,k,l,GRD_YDIR), & ! [IN]
+                                 GRD_x_pl(ij,k,l,GRD_ZDIR), & ! [IN]
+                                 lat,                       & ! [OUT]
+                                 lon                        ) ! [OUT]
 
           if ( 0.5_RP*PI-abs(lat) > criteria ) then
              lat_trans = asin( ( MKGRD_stretch_alpha*(1.0_RP+sin(lat)) / (1.0_RP-sin(lat)) - 1.0_RP ) &
@@ -744,12 +710,12 @@ contains
              lat_trans = lat
           endif
 
-           call VECTR_latlon2xyz( lat_trans,                 & ! [IN]
-                                  lon,                       & ! [IN]
-                                  GRD_x_pl(ij,k,l,GRD_XDIR), & ! [OUT]
-                                  GRD_x_pl(ij,k,l,GRD_YDIR), & ! [OUT]
-                                  GRD_x_pl(ij,k,l,GRD_ZDIR), & ! [OUT]
-                                  1.0_RP                     ) ! [IN]
+          call VECTR_latlon2xyz( lat_trans,                 & ! [IN]
+                                 lon,                       & ! [IN]
+                                 GRD_x_pl(ij,k,l,GRD_XDIR), & ! [OUT]
+                                 GRD_x_pl(ij,k,l,GRD_YDIR), & ! [OUT]
+                                 GRD_x_pl(ij,k,l,GRD_ZDIR), & ! [OUT]
+                                 1.0_RP                     ) ! [IN]
        enddo
        enddo
     endif
@@ -763,25 +729,25 @@ contains
   !> Apply shrinkng to grid system
   subroutine MKGRD_shrink
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
        ADM_KNONE,   &
+       ADM_have_pl, &
        ADM_lall,    &
-       ADM_lall_pl
+       ADM_lall_pl, &
+       ADM_gall,    &
+       ADM_gall_pl
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
 
     real(RP) :: o(3), g(3), len
 
-    integer :: ij, k, l, ite
+    integer  :: ij, k, l, ite
     !---------------------------------------------------------------------------
 
     if( .NOT. MKGRD_DOSHRINK ) return
 
-    write(ADM_LOG_FID,*) '*** Apply shrink'
-    write(ADM_LOG_FID,*) '*** Shrink level = ', MKGRD_shrink_level
+    if( IO_L ) write(IO_FID_LOG,*) '*** Apply shrink'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Shrink level = ', MKGRD_shrink_level
 
     k = ADM_KNONE
 
@@ -838,15 +804,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Apply rotation to grid system
   subroutine MKGRD_rotate
-    use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_KNONE,   &
-       ADM_lall,    &
-       ADM_lall_pl
     use scale_const, only: &
        PI => CONST_PI
+    use scale_vector, only: &
+       VECTR_rotation, &
+       I_Yaxis,        &
+       I_Zaxis
+    use mod_adm, only: &
+       ADM_KNONE,   &
+       ADM_have_pl, &
+       ADM_lall,    &
+       ADM_lall_pl, &
+       ADM_gall,    &
+       ADM_gall_pl
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -855,14 +825,14 @@ contains
     real(RP) :: angle_y, angle_z
 
     real(RP) :: d2r
-    integer :: ij, k, l
+    integer  :: ij, k, l
     !---------------------------------------------------------------------------
 
     if( .NOT. MKGRD_DOROTATE ) return
 
-    write(ADM_LOG_FID,*) '*** Apply rotation'
-    write(ADM_LOG_FID,*) '*** North pole -> Longitude(deg) = ', MKGRD_rotation_lon
-    write(ADM_LOG_FID,*) '*** North pole -> Latitude (deg) = ', MKGRD_rotation_lat
+    if( IO_L ) write(IO_FID_LOG,*) '*** Apply rotation'
+    if( IO_L ) write(IO_FID_LOG,*) '*** North pole -> Longitude(deg) = ', MKGRD_rotation_lon
+    if( IO_L ) write(IO_FID_LOG,*) '*** North pole -> Latitude (deg) = ', MKGRD_rotation_lat
 
     k = ADM_KNONE
 
@@ -876,12 +846,12 @@ contains
 
           ! rotate around y-axis
           call VECTR_rotation( g(:),    & ! [INOUT]
-                                    angle_y, & ! [IN]
-                                    I_Yaxis  ) ! [IN]
+                               angle_y, & ! [IN]
+                               I_Yaxis  ) ! [IN]
           ! rotate around z-axis
           call VECTR_rotation( g(:),    & ! [INOUT]
-                                    angle_z, & ! [IN]
-                                    I_Zaxis  ) ! [IN]
+                               angle_z, & ! [IN]
+                               I_Zaxis  ) ! [IN]
 
           GRD_x(ij,k,l,:) = g(:)
        enddo
@@ -894,12 +864,12 @@ contains
 
           ! rotate around y-axis
           call VECTR_rotation( g(:),    & ! [INOUT]
-                                    angle_y, & ! [IN]
-                                    I_Yaxis  ) ! [IN]
+                               angle_y, & ! [IN]
+                               I_Yaxis  ) ! [IN]
           ! rotate around z-axis
           call VECTR_rotation( g(:),    & ! [INOUT]
-                                    angle_z, & ! [IN]
-                                    I_Zaxis  ) ! [IN]
+                               angle_z, & ! [IN]
+                               I_Zaxis  ) ! [IN]
 
           GRD_x_pl(ij,k,l,:) = g(:)
        enddo
@@ -919,12 +889,12 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    write(ADM_LOG_FID,*) '*** Calc gravitational center'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Calc gravitational center'
 
-    write(ADM_LOG_FID,*) '*** center -> vertex'
+    if( IO_L ) write(IO_FID_LOG,*) '*** center -> vertex'
     call MKGRD_center2vertex
 
-    write(ADM_LOG_FID,*) '*** vertex -> center'
+    if( IO_L ) write(IO_FID_LOG,*) '*** vertex -> center'
     call MKGRD_vertex2center
 
     call COMM_data_transfer( GRD_x(:,:,:,:), GRD_x_pl(:,:,:,:) )
@@ -935,32 +905,30 @@ contains
   !-----------------------------------------------------------------------------
   !> Diagnose grid property
   subroutine MKGRD_diagnosis
+    use scale_const, only: &
+       PI     => CONST_PI,     &
+       RADIUS => CONST_RADIUS
     use scale_vector, only: &
        VECTR_cross, &
        VECTR_dot,   &
        VECTR_abs
     use mod_adm, only: &
-       ADM_prc_tab,  &
-       ADM_prc_me,   &
-       ADM_rgn_vnum, &
-       ADM_W,        &
-       ADM_glevel,   &
-       ADM_gall,     &
-       ADM_gall_pl,  &
-       ADM_KNONE,    &
-       ADM_lall,     &
-       ADM_lall_pl,  &
+       ADM_nxyz,     &
        ADM_TI,       &
        ADM_TJ,       &
+       ADM_KNONE,    &
+       ADM_glevel,   &
+       ADM_have_sgp, &
+       ADM_lall,     &
+       ADM_lall_pl,  &
+       ADM_gall,     &
+       ADM_gall_pl,  &
        ADM_gmax,     &
        ADM_gmin
-    use scale_const, only: &
-       PI     => CONST_PI,     &
-       RADIUS => CONST_RADIUS
     use mod_gmtr, only: &
-       GMTR_P_AREA, &
-       GMTR_P_var,  &
-       GMTR_P_var_pl
+       GMTR_p_AREA, &
+       GMTR_p,      &
+       GMTR_p_pl
     use mod_gm_statistics, only: &
        GTL_global_sum_srf, &
        GTL_max,            &
@@ -977,7 +945,7 @@ contains
     real(RP) :: dummy_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl)
 
     real(RP) :: len(6), ang(6)
-    real(RP) :: p(dir_vindex,0:7)
+    real(RP) :: p(ADM_nxyz,0:7)
     real(RP) :: nvlenC, nvlenS, nv(3)
 
     real(RP) :: nlen, len_tot
@@ -986,13 +954,12 @@ contains
     real(RP) :: angle_max,  length_max, length_avg
 
     real(RP) :: global_area
-    integer :: global_grid
+    integer  :: global_grid
 
-    integer :: rgnid
-    integer :: i, j, ij, k, l, m
+    integer  :: i, j, ij, k, l, m
     !---------------------------------------------------------------------------
 
-    write(ADM_LOG_FID,*) '*** Diagnose grid property'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Diagnose grid property'
 
     k = ADM_KNONE
 
@@ -1005,103 +972,100 @@ contains
     len_tot = 0.0_RP
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+    do j = ADM_gmin, ADM_gmax
+    do i = ADM_gmin, ADM_gmax
+       ij = suf(i,j)
 
-       do j = ADM_gmin, ADM_gmax
-       do i = ADM_gmin, ADM_gmax
-          ij = suf(i,j)
+       if (       ADM_have_sgp(l) &
+            .AND. i == ADM_gmin   &
+            .AND. j == ADM_gmin   ) then ! Pentagon
 
-          if (       ADM_rgn_vnum(ADM_W,rgnid) == 3 &
-               .AND. i == ADM_gmin                  &
-               .AND. j == ADM_gmin                  ) then ! Pentagon
+          p(:,0) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
+          p(:,1) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
+          p(:,2) = GRD_xt(suf(i,  j  ),k,l,ADM_TJ,:)
+          p(:,3) = GRD_xt(suf(i-1,j  ),k,l,ADM_TI,:)
+          p(:,4) = GRD_xt(suf(i-1,j-1),k,l,ADM_TJ,:)
+          p(:,5) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
+          p(:,6) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
 
-             p(:,0) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
-             p(:,1) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
-             p(:,2) = GRD_xt(suf(i,  j  ),k,l,ADM_TJ,:)
-             p(:,3) = GRD_xt(suf(i-1,j  ),k,l,ADM_TI,:)
-             p(:,4) = GRD_xt(suf(i-1,j-1),k,l,ADM_TJ,:)
-             p(:,5) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
-             p(:,6) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
+          len(:) = 0.0_RP
+          ang(:) = 0.0_RP
+          do m = 1, 5
+             ! vector length of Pm->Pm-1, Pm->Pm+1
+             call VECTR_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
+             len(m) = sqrt( len(m) )
 
-             len(:) = 0.0_RP
-             ang(:) = 0.0_RP
-             do m = 1, 5
-                ! vector length of Pm->Pm-1, Pm->Pm+1
-                call VECTR_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
-                len(m) = sqrt( len(m) )
+             ! angle of Pm-1->Pm->Pm+1
+             call VECTR_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+             call VECTR_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+             call VECTR_abs( nvlenS, nv(:) )
 
-                ! angle of Pm-1->Pm->Pm+1
-                call VECTR_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
-                call VECTR_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
-                call VECTR_abs( nvlenS, nv(:) )
+             ang(m) = atan2( nvlenS, nvlenC )
+          enddo
 
-                ang(m) = atan2( nvlenS, nvlenC )
-             enddo
+          ! maximum/minimum ratio of angle between the cell vertexes
+          angle(ij,k,l) = maxval( ang(1:5) ) / minval( ang(1:5) ) - 1.0_RP
 
-             ! maximum/minimum ratio of angle between the cell vertexes
-             angle(ij,k,l) = maxval( ang(1:5) ) / minval( ang(1:5) ) - 1.0_RP
+          ! l_mean: side length of regular pentagon =sqrt(area/1.7204774005)
+          area   = GMTR_p(ij,k,l,GMTR_p_AREA)
+          l_mean = sqrt( 4.0_RP / sqrt( 25.0_RP + 10.0_RP*sqrt(5.0_RP)) * area )
 
-             ! l_mean: side length of regular pentagon =sqrt(area/1.7204774005)
-             area   = GMTR_P_var(ij,k,l,GMTR_P_AREA)
-             l_mean = sqrt( 4.0_RP / sqrt( 25.0_RP + 10.0_RP*sqrt(5.0_RP)) * area )
+          temp = 0.0_RP
+          do m = 1, 5
+             nlen    = nlen + 1.0_RP
+             len_tot = len_tot + len(m)
 
-             temp = 0.0_RP
-             do m = 1, 5
-                nlen    = nlen + 1.0_RP
-                len_tot = len_tot + len(m)
+             temp = temp + (len(m)-l_mean) * (len(m)-l_mean)
+          enddo
+          ! distortion of side length from l_mean
+          length(ij,k,l) = sqrt( temp/5.0_RP ) / l_mean
 
-                temp = temp + (len(m)-l_mean) * (len(m)-l_mean)
-             enddo
-             ! distortion of side length from l_mean
-             length(ij,k,l) = sqrt( temp/5.0_RP ) / l_mean
+       else ! Hexagon
 
-          else ! Hexagon
+          p(:,0) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
+          p(:,1) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
+          p(:,2) = GRD_xt(suf(i,  j  ),k,l,ADM_TJ,:)
+          p(:,3) = GRD_xt(suf(i-1,j  ),k,l,ADM_TI,:)
+          p(:,4) = GRD_xt(suf(i-1,j-1),k,l,ADM_TJ,:)
+          p(:,5) = GRD_xt(suf(i-1,j-1),k,l,ADM_TI,:)
+          p(:,6) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
+          p(:,7) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
 
-             p(:,0) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
-             p(:,1) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
-             p(:,2) = GRD_xt(suf(i,  j  ),k,l,ADM_TJ,:)
-             p(:,3) = GRD_xt(suf(i-1,j  ),k,l,ADM_TI,:)
-             p(:,4) = GRD_xt(suf(i-1,j-1),k,l,ADM_TJ,:)
-             p(:,5) = GRD_xt(suf(i-1,j-1),k,l,ADM_TI,:)
-             p(:,6) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
-             p(:,7) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
+          len(:) = 0.0_RP
+          ang(:) = 0.0_RP
+          do m = 1, 6
+             ! vector length of Pm->Pm-1, Pm->Pm+1
+             call VECTR_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
+             len(m) = sqrt( len(m) )
 
-             len(:) = 0.0_RP
-             ang(:) = 0.0_RP
-             do m = 1, 6
-                ! vector length of Pm->Pm-1, Pm->Pm+1
-                call VECTR_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
-                len(m) = sqrt( len(m) )
+             ! angle of Pm-1->Pm->Pm+1
+             call VECTR_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+             call VECTR_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+             call VECTR_abs( nvlenS, nv(:) )
 
-                ! angle of Pm-1->Pm->Pm+1
-                call VECTR_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
-                call VECTR_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
-                call VECTR_abs( nvlenS, nv(:) )
+             ang(m) = atan2( nvlenS, nvlenC )
+          enddo
 
-                ang(m) = atan2( nvlenS, nvlenC )
-             enddo
+          ! maximum/minimum ratio of angle between the cell vertexes
+          angle(ij,k,l) = maxval( ang(:) ) / minval( ang(:) ) - 1.0_RP
 
-             ! maximum/minimum ratio of angle between the cell vertexes
-             angle(ij,k,l) = maxval( ang(:) ) / minval( ang(:) ) - 1.0_RP
+          ! l_mean: side length of equilateral triangle
+          area   = GMTR_p(ij,k,l,GMTR_p_AREA)
+          l_mean = sqrt( 4.0_RP / sqrt(3.0_RP) / 6.0_RP * area )
 
-             ! l_mean: side length of equilateral triangle
-             area   = GMTR_P_var(ij,k,l,GMTR_P_AREA)
-             l_mean = sqrt( 4.0_RP / sqrt(3.0_RP) / 6.0_RP * area )
+          temp = 0.0_RP
+          do m = 1, 6
+             nlen = nlen + 1.0_RP
+             len_tot = len_tot + len(m)
 
-             temp = 0.0_RP
-             do m = 1, 6
-                nlen = nlen + 1.0_RP
-                len_tot = len_tot + len(m)
+             temp = temp + (len(m)-l_mean)*(len(m)-l_mean)
+          enddo
+          ! distortion of side length from l_mean
+          length(ij,k,l) = sqrt( temp/6.0_RP ) / l_mean
 
-                temp = temp + (len(m)-l_mean)*(len(m)-l_mean)
-             enddo
-             ! distortion of side length from l_mean
-             length(ij,k,l) = sqrt( temp/6.0_RP ) / l_mean
-
-          endif
-       enddo
-       enddo
-
+       endif
+    enddo
+    enddo
     enddo
 
     dummy    (:,:,:) = 1.0_RP
@@ -1110,8 +1074,8 @@ contains
     global_grid = 10*4**ADM_glevel + 2
     sqarea_avg = sqrt( global_area / real(global_grid,kind=RP) )
 
-    sqarea   (:,:,:) = sqrt( GMTR_P_var   (:,:,:,GMTR_P_AREA) )
-    sqarea_pl(:,:,:) = sqrt( GMTR_P_var_pl(:,:,:,GMTR_P_AREA) )
+    sqarea   (:,:,:) = sqrt( GMTR_p   (:,:,:,GMTR_p_AREA) )
+    sqarea_pl(:,:,:) = sqrt( GMTR_p_pl(:,:,:,GMTR_p_AREA) )
     sqarea_max = GTL_max ( sqarea(:,:,:), sqarea_pl(:,:,:), 1, 1, 1 )
     sqarea_min = GTL_min ( sqarea(:,:,:), sqarea_pl(:,:,:), 1, 1, 1 )
 
@@ -1119,20 +1083,20 @@ contains
     length_max = GTL_max( length(:,:,:), length_pl(:,:,:), 1, 1, 1 )
     angle_max  = GTL_max( angle (:,:,:), angle_pl (:,:,:), 1, 1, 1 )
 
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '------ Diagnosis result ---'
-    write(ADM_LOG_FID,*) '--- ideal  global surface area  = ', 4.0_RP*PI*RADIUS*RADIUS*1.E-6_RP,' [km2]'
-    write(ADM_LOG_FID,*) '--- actual global surface area  = ', global_area*1.E-6_RP,' [km2]'
-    write(ADM_LOG_FID,*) '--- global total number of grid = ', global_grid
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '--- average grid interval       = ', sqarea_avg * 1.E-3_RP,' [km]'
-    write(ADM_LOG_FID,*) '--- max grid interval           = ', sqarea_max * 1.E-3_RP,' [km]'
-    write(ADM_LOG_FID,*) '--- min grid interval           = ', sqarea_min * 1.E-3_RP,' [km]'
-    write(ADM_LOG_FID,*) '--- ratio max/min grid interval = ', sqarea_max / sqarea_min
-    write(ADM_LOG_FID,*) '--- average length of arc(side) = ', length_avg * 1.E-3_RP,' [km]'
-    write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '--- max length distortion       = ', length_max * 1.E-3_RP,' [km]'
-    write(ADM_LOG_FID,*) '--- max angle distortion        = ', angle_max*180.0_RP/PI,' [deg]'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '------ Diagnosis result ---'
+    if( IO_L ) write(IO_FID_LOG,*) '--- ideal  global surface area  = ', 4.0_RP*PI*RADIUS*RADIUS*1.E-6_RP,' [km2]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- actual global surface area  = ', global_area*1.E-6_RP,' [km2]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- global total number of grid = ', global_grid
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '--- average grid interval       = ', sqarea_avg * 1.E-3_RP,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- max grid interval           = ', sqarea_max * 1.E-3_RP,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- min grid interval           = ', sqarea_min * 1.E-3_RP,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- ratio max/min grid interval = ', sqarea_max / sqarea_min
+    if( IO_L ) write(IO_FID_LOG,*) '--- average length of arc(side) = ', length_avg * 1.E-3_RP,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '--- max length distortion       = ', length_max * 1.D-3,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- max angle distortion        = ', angle_max*180.0_RP/PI,' [deg]'
 
     return
   end subroutine MKGRD_diagnosis
@@ -1145,13 +1109,13 @@ contains
       g1  )
     implicit none
 
-    integer, intent(in)  :: n0
+    integer,  intent(in)  :: n0
     real(RP), intent(in)  :: g0(n0,n0,3)
-    integer, intent(in)  :: n1
+    integer,  intent(in)  :: n1
     real(RP), intent(out) :: g1(n1,n1,3)
 
     real(RP) :: r
-    integer :: i, j, inew, jnew
+    integer  :: i, j, inew, jnew
     !---------------------------------------------------------------------------
 
     do i = 1, n0
@@ -1189,88 +1153,8 @@ contains
   end subroutine decomposition
 
   !-----------------------------------------------------------------------------
-  !> suffix calculation
-  !> @return suf
-  function suf(i,j) result(suffix)
-    use mod_adm, only: &
-       ADM_gall_1d
-    implicit none
-
-    integer :: suffix
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    suffix = ADM_gall_1d * (j-1) + i
-
-  end function suf
-
-  !-----------------------------------------------------------------------------
-  !> Apply rotation matrix
-  subroutine VECTR_rotation( &
-      a,     &
-      angle, &
-      iaxis  )
-    implicit none
-
-    real(RP), intent(inout) :: a(3)
-    real(RP), intent(in)    :: angle
-    integer, intent(in)    :: iaxis
-
-    real(RP) :: m(3,3), b(3)
-    !---------------------------------------------------------------------------
-
-    if ( iaxis == I_Xaxis ) then
-       m(1,1) =        1.0_RP
-       m(1,2) =        0.0_RP
-       m(1,3) =        0.0_RP
-
-       m(2,1) =        0.0_RP
-       m(2,2) =  cos(angle)
-       m(2,3) =  sin(angle)
-
-       m(3,1) =        0.0_RP
-       m(3,2) = -sin(angle)
-       m(3,3) =  cos(angle)
-    elseif( iaxis == I_Yaxis ) then
-       m(1,1) =  cos(angle)
-       m(1,2) =        0.0_RP
-       m(1,3) = -sin(angle)
-
-       m(2,1) =        0.0_RP
-       m(2,2) =        1.0_RP
-       m(2,3) =        0.0_RP
-
-       m(3,1) =  sin(angle)
-       m(3,2) =        0.0_RP
-       m(3,3) =  cos(angle)
-    elseif( iaxis == I_Zaxis ) then
-       m(1,1) =  cos(angle)
-       m(1,2) =  sin(angle)
-       m(1,3) =        0.0_RP
-
-       m(2,1) = -sin(angle)
-       m(2,2) =  cos(angle)
-       m(2,3) =        0.0_RP
-
-       m(3,1) =        0.0_RP
-       m(3,2) =        0.0_RP
-       m(3,3) =        1.0_RP
-    else
-       return
-    endif
-
-    b(1) = m(1,1) * a(1) + m(1,2) * a(2) + m(1,3) * a(3)
-    b(2) = m(2,1) * a(1) + m(2,2) * a(2) + m(2,3) * a(3)
-    b(3) = m(3,1) * a(1) + m(3,2) * a(2) + m(3,3) * a(3)
-
-    a(:) = b(:)
-
-    return
-  end subroutine VECTR_rotation
-
-  !-----------------------------------------------------------------------------
   !> gnomonic projection
-  subroutine VECTR_latlon2gnom( &
+  subroutine MISC_latlon2gnom( &
       x,          &
       y,          &
       lat,        &
@@ -1296,11 +1180,11 @@ contains
     y = ( cos(lat_center) * sin(lat)                       &
         - sin(lat_center) * cos(lat) * cos(lon-lon_center) ) / cosc
 
-  end subroutine VECTR_latlon2gnom
+  end subroutine MISC_latlon2gnom
 
   !-----------------------------------------------------------------------------
   !> gnomonic projection (inverse)
-  subroutine VECTR_gnom2latlon( &
+  subroutine MISC_gnom2latlon( &
       lat,        &
       lon,        &
       x,          &
@@ -1321,7 +1205,7 @@ contains
 
     rho = sqrt( x*x + y*y )
 
-    if ( rho == 0 ) then ! singular point
+    if ( rho == 0.0_RP ) then ! singular point
        lat = lat_center
        lon = lon_center
        return
@@ -1333,184 +1217,133 @@ contains
     lat = asin( cos(c)*sin(lat_center) + y*sin(c)*cos(lat_center) / rho )
 
     return
-  end subroutine VECTR_gnom2latlon
+  end subroutine MISC_gnom2latlon
 
   !-----------------------------------------------------------------------------
   !> Make center grid -> vertex grid
   subroutine MKGRD_center2vertex
+    use mod_adm, only: &
+       ADM_nxyz,     &
+       ADM_TI,       &
+       ADM_TJ,       &
+       ADM_KNONE,    &
+       ADM_have_pl,  &
+       ADM_have_sgp, &
+       ADM_lall,     &
+       ADM_lall_pl,  &
+       ADM_gall,     &
+       ADM_gmin,     &
+       ADM_gmax,     &
+       ADM_gslf_pl,  &
+       ADM_gmin_pl,  &
+       ADM_gmax_pl
     use scale_vector, only: &
        VECTR_cross, &
        VECTR_dot,   &
        VECTR_abs
-    use mod_adm, only : &
-      ADM_W,          &
-      ADM_TI,         &
-      ADM_TJ,         &
-      ADM_KNONE,      &
-      ADM_prc_tab,    &
-       ADM_have_pl,     &
-      ADM_prc_me,     &
-      ADM_rgn_vnum,   &
-      ADM_lall,       &
-      ADM_gall,       &
-      ADM_gmax,       &
-      ADM_gmin,       &
-      ADM_lall_pl,    &
-      ADM_gall_pl,    &
-      ADM_GSLF_PL,    &
-      ADM_GMAX_PL,    &
-      ADM_GMIN_PL,    &
-      ADM_ImoJmo_nmax, &
-      ADM_ImoJmo,      &
-      ADM_GIoJo,       &
-      ADM_GIoJp,       &
-      ADM_GIpJp,       &
-      ADM_GIpJo
     implicit none
 
-    real(RP) :: v    (dir_vindex,ADM_gall   ,4,ADM_TI:ADM_TJ)
-    real(RP) :: v_pl (dir_vindex,ADM_gall_pl,4)
-    real(RP) :: w    (dir_vindex,ADM_gall   ,3)
-    real(RP) :: w_pl (dir_vindex,ADM_gall_pl,3)
-    real(RP) :: gc   (dir_vindex,ADM_gall   )
-    real(RP) :: gc_pl(dir_vindex,ADM_gall_pl)
+    real(RP) :: wk   (ADM_nxyz,4,ADM_gall,ADM_TI:ADM_TJ)
+    real(RP) :: wk_pl(ADM_nxyz,4)
 
     real(RP), parameter :: o(3) = 0.0_RP
+    real(RP) :: r(3), gc(3)
+    real(RP) :: r_lenS, r_lenC, gc_len
 
-    real(RP) :: w_lenS, w_lenC, gc_len
+    integer  :: ij
+    integer  :: ip1j, ip1jp1, ijp1
 
-    integer :: rgnid
-    integer :: oo, po, pp, op
-    integer :: k, l, m, n, t
+    integer  :: i, j, k0, l, d, v, n, t, m
     !---------------------------------------------------------------------------
 
-    k  = ADM_KNONE
+    k0 = ADM_KNONE
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       do j = ADM_gmin-1, ADM_gmax
+       do i = ADM_gmin-1, ADM_gmax
+          ij     = suf(i  ,j  )
+          ip1j   = suf(i+1,j  )
+          ip1jp1 = suf(i+1,j+1)
+          ijp1   = suf(i  ,j+1)
 
-       do n = 1, ADM_ImoJmo_nmax
-          oo = ADM_ImoJmo(n,ADM_GIoJo)
-          po = ADM_ImoJmo(n,ADM_GIpJo)
-          pp = ADM_ImoJmo(n,ADM_GIpJp)
-          op = ADM_ImoJmo(n,ADM_GIoJp)
+          do d = 1, ADM_nxyz
+             wk(d,1,ij,ADM_TI) = GRD_x(ij    ,k0,l,d)
+             wk(d,2,ij,ADM_TI) = GRD_x(ip1j  ,k0,l,d)
+             wk(d,3,ij,ADM_TI) = GRD_x(ip1jp1,k0,l,d)
+             wk(d,4,ij,ADM_TI) = GRD_x(ij    ,k0,l,d)
 
-          v(GRD_XDIR,oo,1,ADM_TI) = GRD_x(oo,k,l,GRD_XDIR)
-          v(GRD_XDIR,oo,2,ADM_TI) = GRD_x(po,k,l,GRD_XDIR)
-          v(GRD_XDIR,oo,3,ADM_TI) = GRD_x(pp,k,l,GRD_XDIR)
-          v(GRD_XDIR,oo,4,ADM_TI) = GRD_x(oo,k,l,GRD_XDIR)
-
-          v(GRD_YDIR,oo,1,ADM_TI) = GRD_x(oo,k,l,GRD_YDIR)
-          v(GRD_YDIR,oo,2,ADM_TI) = GRD_x(po,k,l,GRD_YDIR)
-          v(GRD_YDIR,oo,3,ADM_TI) = GRD_x(pp,k,l,GRD_YDIR)
-          v(GRD_YDIR,oo,4,ADM_TI) = GRD_x(oo,k,l,GRD_YDIR)
-
-          v(GRD_ZDIR,oo,1,ADM_TI) = GRD_x(oo,k,l,GRD_ZDIR)
-          v(GRD_ZDIR,oo,2,ADM_TI) = GRD_x(po,k,l,GRD_ZDIR)
-          v(GRD_ZDIR,oo,3,ADM_TI) = GRD_x(pp,k,l,GRD_ZDIR)
-          v(GRD_ZDIR,oo,4,ADM_TI) = GRD_x(oo,k,l,GRD_ZDIR)
-
-          v(GRD_XDIR,oo,1,ADM_TJ) = GRD_x(oo,k,l,GRD_XDIR)
-          v(GRD_XDIR,oo,2,ADM_TJ) = GRD_x(pp,k,l,GRD_XDIR)
-          v(GRD_XDIR,oo,3,ADM_TJ) = GRD_x(op,k,l,GRD_XDIR)
-          v(GRD_XDIR,oo,4,ADM_TJ) = GRD_x(oo,k,l,GRD_XDIR)
-
-          v(GRD_YDIR,oo,1,ADM_TJ) = GRD_x(oo,k,l,GRD_YDIR)
-          v(GRD_YDIR,oo,2,ADM_TJ) = GRD_x(pp,k,l,GRD_YDIR)
-          v(GRD_YDIR,oo,3,ADM_TJ) = GRD_x(op,k,l,GRD_YDIR)
-          v(GRD_YDIR,oo,4,ADM_TJ) = GRD_x(oo,k,l,GRD_YDIR)
-
-          v(GRD_ZDIR,oo,1,ADM_TJ) = GRD_x(oo,k,l,GRD_ZDIR)
-          v(GRD_ZDIR,oo,2,ADM_TJ) = GRD_x(pp,k,l,GRD_ZDIR)
-          v(GRD_ZDIR,oo,3,ADM_TJ) = GRD_x(op,k,l,GRD_ZDIR)
-          v(GRD_ZDIR,oo,4,ADM_TJ) = GRD_x(oo,k,l,GRD_ZDIR)
+             wk(d,1,ij,ADM_TJ) = GRD_x(ij    ,k0,l,d)
+             wk(d,2,ij,ADM_TJ) = GRD_x(ip1jp1,k0,l,d)
+             wk(d,3,ij,ADM_TJ) = GRD_x(ijp1  ,k0,l,d)
+             wk(d,4,ij,ADM_TJ) = GRD_x(ij    ,k0,l,d)
+          enddo
+       enddo
        enddo
 
-       !--- execetion for the north and south.
-       v(:,suf(ADM_gmax,ADM_gmin-1),1,ADM_TI) = v(:,suf(ADM_gmax,ADM_gmin-1),1,ADM_TJ)
-       v(:,suf(ADM_gmax,ADM_gmin-1),2,ADM_TI) = v(:,suf(ADM_gmax,ADM_gmin-1),2,ADM_TJ)
-       v(:,suf(ADM_gmax,ADM_gmin-1),3,ADM_TI) = v(:,suf(ADM_gmax,ADM_gmin-1),3,ADM_TJ)
-       v(:,suf(ADM_gmax,ADM_gmin-1),4,ADM_TI) = v(:,suf(ADM_gmax,ADM_gmin-1),4,ADM_TJ)
+       !--- treat unused triangle
+       wk(:,:,suf(ADM_gmax,ADM_gmin-1),ADM_TI) = wk(:,:,suf(ADM_gmax,ADM_gmin-1),ADM_TJ)
+       wk(:,:,suf(ADM_gmin-1,ADM_gmax),ADM_TJ) = wk(:,:,suf(ADM_gmin-1,ADM_gmax),ADM_TI)
 
-       v(:,suf(ADM_gmin-1,ADM_gmax),1,ADM_TJ) = v(:,suf(ADM_gmin-1,ADM_gmax),1,ADM_TI)
-       v(:,suf(ADM_gmin-1,ADM_gmax),2,ADM_TJ) = v(:,suf(ADM_gmin-1,ADM_gmax),2,ADM_TI)
-       v(:,suf(ADM_gmin-1,ADM_gmax),3,ADM_TJ) = v(:,suf(ADM_gmin-1,ADM_gmax),3,ADM_TI)
-       v(:,suf(ADM_gmin-1,ADM_gmax),4,ADM_TJ) = v(:,suf(ADM_gmin-1,ADM_gmax),4,ADM_TI)
-
-       !--- exception for the west
-       if ( ADM_rgn_vnum(ADM_W,rgnid) == 3 ) then
-          oo = suf(ADM_gmin-1,ADM_gmin-1)
-          po = suf(ADM_gmin  ,ADM_gmin-1)
-
-          v(:,oo,1,ADM_TI) = v(:,po,1,ADM_TJ)
-          v(:,oo,2,ADM_TI) = v(:,po,2,ADM_TJ)
-          v(:,oo,3,ADM_TI) = v(:,po,3,ADM_TJ)
-          v(:,oo,4,ADM_TI) = v(:,po,4,ADM_TJ)
+       if ( ADM_have_sgp(l) ) then ! pentagon
+          wk(:,:,suf(ADM_gmin-1,ADM_gmin-1),ADM_TI) = wk(:,:,suf(ADM_gmin,ADM_gmin-1),ADM_TJ)
        endif
 
        do t = ADM_TI, ADM_TJ
+       do j = ADM_gmin-1, ADM_gmax
+       do i = ADM_gmin-1, ADM_gmax
+          ij = suf(i,j)
+
+          gc(:) = 0.0_RP
           do m = 1, 3
-             do n = 1, ADM_ImoJmo_nmax
-                oo = ADM_ImoJmo(n,ADM_GIoJo)
+             call VECTR_dot  ( r_lenC, o(:), wk(:,m,ij,t), o(:), wk(:,m+1,ij,t) )
+             call VECTR_cross( r(:),   o(:), wk(:,m,ij,t), o(:), wk(:,m+1,ij,t) )
+             call VECTR_abs  ( r_lenS, r(:) )
 
-                call VECTR_dot  ( w_lenC,    o(:), v(:,oo,m,t), o(:), v(:,oo,m+1,t) )
-                call VECTR_cross( w(:,oo,m), o(:), v(:,oo,m,t), o(:), v(:,oo,m+1,t) )
-                call VECTR_abs  ( w_lenS, w(:,oo,m) )
+             r(:) = r(:) / r_lenS * atan2( r_lenS, r_lenC )
 
-                w(:,oo,m) = w(:,oo,m) / w_lenS * atan2( w_lenS, w_lenC )
-             enddo
+             gc(:) = gc(:) + r(:)
           enddo
 
-          do n = 1, ADM_ImoJmo_nmax
-             oo = ADM_ImoJmo(n,ADM_GIoJo)
+          call VECTR_abs( gc_len, gc(:) )
 
-             gc(:,oo) = w(:,oo,1) &
-                      + w(:,oo,2) &
-                      + w(:,oo,3)
-
-             call VECTR_abs( gc_len, gc(:,oo) )
-
-             GRD_xt(oo,k,l,t,GRD_XDIR) = gc(GRD_XDIR,oo) / gc_len
-             GRD_xt(oo,k,l,t,GRD_YDIR) = gc(GRD_YDIR,oo) / gc_len
-             GRD_xt(oo,k,l,t,GRD_ZDIR) = gc(GRD_ZDIR,oo) / gc_len
-          enddo
+          GRD_xt(ij,k0,l,t,:) = gc(:) / gc_len
+       enddo
+       enddo
        enddo
 
     enddo
 
     if ( ADM_have_pl ) then
-       do l = 1, ADM_lall_pl
+       n = ADM_gslf_pl
 
-          do oo = ADM_GMIN_PL, ADM_GMAX_PL-1
-             v_pl(:,oo,1) = GRD_x_pl(ADM_GSLF_PL,k,l,:)
-             v_pl(:,oo,2) = GRD_x_pl(oo+1,       k,l,:)
-             v_pl(:,oo,3) = GRD_x_pl(oo  ,       k,l,:)
-             v_pl(:,oo,4) = GRD_x_pl(ADM_GSLF_PL,k,l,:)
+       do l = 1,ADM_lall_pl
+       do v = ADM_gmin_pl, ADM_gmax_pl
+          ij   = v
+          ijp1 = v + 1
+          if( ijp1 == ADM_gmax_pl+1 ) ijp1 = ADM_gmin_pl
+
+          do d = 1, ADM_nxyz
+             wk_pl(:,1) = GRD_x_pl(n   ,k0,l,:)
+             wk_pl(:,2) = GRD_x_pl(ij  ,k0,l,:)
+             wk_pl(:,3) = GRD_x_pl(ijp1,k0,l,:)
+             wk_pl(:,4) = GRD_x_pl(n   ,k0,l,:)
           enddo
-           v_pl(:,ADM_GMAX_PL,1) = GRD_x_pl(ADM_GSLF_PL,k,l,:)
-           v_pl(:,ADM_GMAX_PL,2) = GRD_x_pl(ADM_GMIN_PL,k,l,:)
-           v_pl(:,ADM_GMAX_PL,3) = GRD_x_pl(ADM_GMAX_PL,k,l,:)
-           v_pl(:,ADM_GMAX_PL,4) = GRD_x_pl(ADM_GSLF_PL,k,l,:)
 
-          do n = ADM_GMIN_PL, ADM_GMAX_PL
-             do m = 1, 3
-                call VECTR_dot  ( w_lenC,      o(:), v_pl(:,n,m), o(:), v_pl(:,n,m+1) )
-                call VECTR_cross( w_pl(:,n,m), o(:), v_pl(:,n,m), o(:), v_pl(:,n,m+1) )
-                call VECTR_abs  ( w_lenS, w_pl(:,n,m) )
+          gc(:) = 0.0_RP
+          do m = 1, 3
+             call VECTR_dot  ( r_lenC, o(:), wk_pl(:,m), o(:), wk_pl(:,m+1) )
+             call VECTR_cross( r(:),   o(:), wk_pl(:,m), o(:), wk_pl(:,m+1) )
+             call VECTR_abs  ( r_lenS, r(:) )
 
-                w_pl(:,n,m) = w_pl(:,n,m) / w_lenS * atan2( w_lenS, w_lenC )
-             enddo
+             r(:) = r(:) / r_lenS * atan2( r_lenS, r_lenC )
 
-             gc_pl(:,n) = w_pl(:,n,1) &
-                        + w_pl(:,n,2) &
-                        + w_pl(:,n,3)
-
-             call VECTR_abs( gc_len, gc_pl(:,n) )
-
-             GRD_xt_pl(n,k,l,GRD_XDIR) = gc_pl(GRD_XDIR,n) / gc_len
-             GRD_xt_pl(n,k,l,GRD_YDIR) = gc_pl(GRD_YDIR,n) / gc_len
-             GRD_xt_pl(n,k,l,GRD_ZDIR) = gc_pl(GRD_ZDIR,n) / gc_len
+             gc(:) = gc(:) + r(:)
           enddo
+
+          call VECTR_abs( gc_len, gc(:) )
+
+          GRD_xt_pl(v,k0,l,:) = -gc(:) / gc_len
+       enddo
        enddo
     endif
 
@@ -1520,165 +1353,137 @@ contains
   !-----------------------------------------------------------------------------
   !> Make vertex grid -> center grid
   subroutine MKGRD_vertex2center
+    use scale_const, only: &
+       EPS => CONST_EPS
+    use mod_adm, only : &
+       ADM_nxyz,     &
+       ADM_TI,       &
+       ADM_TJ,       &
+       ADM_KNONE,    &
+       ADM_have_pl,  &
+       ADM_have_sgp, &
+       ADM_vlink,    &
+       ADM_lall,     &
+       ADM_lall_pl,  &
+       ADM_gall,     &
+       ADM_gmin,     &
+       ADM_gmax,     &
+       ADM_gslf_pl
     use scale_vector, only: &
        VECTR_cross, &
        VECTR_dot,   &
        VECTR_abs
-    use mod_adm, only : &
-      ADM_W,          &
-      ADM_TI,         &
-      ADM_TJ,         &
-      ADM_KNONE,      &
-      ADM_prc_tab,    &
-       ADM_have_pl,     &
-      ADM_prc_me,     &
-      ADM_rgn_vnum,   &
-      ADM_lall,       &
-      ADM_gall,       &
-      ADM_gmin,       &
-      ADM_lall_pl,    &
-      ADM_gall_pl,    &
-      ADM_GSLF_PL,    &
-      ADM_GMAX_PL,    &
-      ADM_GMIN_PL,    &
-      ADM_IooJoo_nmax, &
-      ADM_IooJoo,      &
-      ADM_GIoJo,       &
-      ADM_GIoJm,       &
-      ADM_GImJm,       &
-      ADM_GImJo
-    use mod_grd, only : &
-      GRD_XDIR,       &
-      GRD_YDIR,       &
-      GRD_ZDIR,       &
-      GRD_x,          &
-      GRD_x_pl,       &
-      GRD_xt,         &
-      GRD_xt_pl
     implicit none
 
-    real(RP) :: v    (dir_vindex,ADM_gall   ,7)
-    real(RP) :: v_pl (dir_vindex,ADM_gall_pl,6)
-    real(RP) :: w    (dir_vindex,ADM_gall   ,6)
-    real(RP) :: w_pl (dir_vindex,ADM_gall_pl,5)
-    real(RP) :: gc   (dir_vindex,ADM_gall   )
-    real(RP) :: gc_pl(dir_vindex,ADM_gall_pl)
+    real(RP) :: wk   (ADM_nxyz,7,ADM_gall)
+    real(RP) :: wk_pl(ADM_nxyz,ADM_vlink+1)
 
     real(RP), parameter :: o(3) = 0.0_RP
+    real(RP) :: r(3), gc(3)
+    real(RP) :: r_lenS, r_lenC, gc_len
+    real(RP) :: zerosw
 
-    real(RP) :: w_lenC, w_lenS, gc_len
+    integer  :: ij
+    integer  :: im1j, im1jm1, ijm1
 
-    integer :: rgnid
-    integer :: oo, mo, mm, om
-    integer :: k, l, m, n
+    integer  :: i, j, k0, l, d, v, n, m
     !---------------------------------------------------------------------------
 
-    k  = ADM_KNONE
+    k0 = ADM_KNONE
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       do j = ADM_gmin, ADM_gmax
+       do i = ADM_gmin, ADM_gmax
+          ij     = suf(i  ,j  )
+          im1j   = suf(i-1,j  )
+          im1jm1 = suf(i-1,j-1)
+          ijm1   = suf(i  ,j-1)
 
-       do n = 1, ADM_IooJoo_nmax
-          oo = ADM_IooJoo(n,ADM_GIoJo)
-          mo = ADM_IooJoo(n,ADM_GImJo)
-          mm = ADM_IooJoo(n,ADM_GImJm)
-          om = ADM_IooJoo(n,ADM_GIoJm)
-
-          v(GRD_XDIR,oo,1) = GRD_xt(om,k,l,ADM_TJ,GRD_XDIR)
-          v(GRD_XDIR,oo,2) = GRD_xt(oo,k,l,ADM_TI,GRD_XDIR)
-          v(GRD_XDIR,oo,3) = GRD_xt(oo,k,l,ADM_TJ,GRD_XDIR)
-          v(GRD_XDIR,oo,4) = GRD_xt(mo,k,l,ADM_TI,GRD_XDIR)
-          v(GRD_XDIR,oo,5) = GRD_xt(mm,k,l,ADM_TJ,GRD_XDIR)
-          v(GRD_XDIR,oo,6) = GRD_xt(mm,k,l,ADM_TI,GRD_XDIR)
-          v(GRD_XDIR,oo,7) = GRD_xt(om,k,l,ADM_TJ,GRD_XDIR)
-
-          v(GRD_YDIR,oo,1) = GRD_xt(om,k,l,ADM_TJ,GRD_YDIR)
-          v(GRD_YDIR,oo,2) = GRD_xt(oo,k,l,ADM_TI,GRD_YDIR)
-          v(GRD_YDIR,oo,3) = GRD_xt(oo,k,l,ADM_TJ,GRD_YDIR)
-          v(GRD_YDIR,oo,4) = GRD_xt(mo,k,l,ADM_TI,GRD_YDIR)
-          v(GRD_YDIR,oo,5) = GRD_xt(mm,k,l,ADM_TJ,GRD_YDIR)
-          v(GRD_YDIR,oo,6) = GRD_xt(mm,k,l,ADM_TI,GRD_YDIR)
-          v(GRD_YDIR,oo,7) = GRD_xt(om,k,l,ADM_TJ,GRD_YDIR)
-
-          v(GRD_ZDIR,oo,1) = GRD_xt(om,k,l,ADM_TJ,GRD_ZDIR)
-          v(GRD_ZDIR,oo,2) = GRD_xt(oo,k,l,ADM_TI,GRD_ZDIR)
-          v(GRD_ZDIR,oo,3) = GRD_xt(oo,k,l,ADM_TJ,GRD_ZDIR)
-          v(GRD_ZDIR,oo,4) = GRD_xt(mo,k,l,ADM_TI,GRD_ZDIR)
-          v(GRD_ZDIR,oo,5) = GRD_xt(mm,k,l,ADM_TJ,GRD_ZDIR)
-          v(GRD_ZDIR,oo,6) = GRD_xt(mm,k,l,ADM_TI,GRD_ZDIR)
-          v(GRD_ZDIR,oo,7) = GRD_xt(om,k,l,ADM_TJ,GRD_ZDIR)
-       enddo
-
-       if ( ADM_rgn_vnum(ADM_W,rgnid) == 3 ) then
-          oo = suf(ADM_gmin,ADM_gmin)
-          v(:,oo,6) = v(:,oo,1)
-          v(:,oo,7) = v(:,oo,2)
-       endif
-
-       do m = 1, 6
-          do n = 1, ADM_IooJoo_nmax
-             oo = ADM_IooJoo(n,ADM_GIoJo)
-
-             call VECTR_dot  ( w_lenC,    o(:), v(:,oo,m), o(:), v(:,oo,m+1) )
-             call VECTR_cross( w(:,oo,m), o(:), v(:,oo,m), o(:), v(:,oo,m+1) )
-             call VECTR_abs  ( w_lenS, w(:,oo,m) )
-
-             w(:,oo,m) = w(:,oo,m) / w_lenS * atan2( w_lenS, w_lenC )
+          do d = 1, ADM_nxyz
+             wk(d,1,ij) = GRD_xt(ijm1  ,k0,l,ADM_TJ,d)
+             wk(d,2,ij) = GRD_xt(ij    ,k0,l,ADM_TI,d)
+             wk(d,3,ij) = GRD_xt(ij    ,k0,l,ADM_TJ,d)
+             wk(d,4,ij) = GRD_xt(im1j  ,k0,l,ADM_TI,d)
+             wk(d,5,ij) = GRD_xt(im1jm1,k0,l,ADM_TJ,d)
+             wk(d,6,ij) = GRD_xt(im1jm1,k0,l,ADM_TI,d)
+             wk(d,7,ij) = GRD_xt(ijm1  ,k0,l,ADM_TJ,d)
           enddo
        enddo
+       enddo
 
-       if ( ADM_rgn_vnum(ADM_W,rgnid) == 3 ) then
-          w(:,suf(ADM_gmin,ADM_gmin),6) = 0.0_RP
+       if ( ADM_have_sgp(l) ) then ! pentagon
+          wk(:,6,suf(ADM_gmin,ADM_gmin)) = wk(:,1,suf(ADM_gmin,ADM_gmin))
+          wk(:,7,suf(ADM_gmin,ADM_gmin)) = wk(:,1,suf(ADM_gmin,ADM_gmin))
        endif
 
-       do n = 1, ADM_IooJoo_nmax
-          oo = ADM_IooJoo(n,ADM_GIoJo)
+       do j = ADM_gmin, ADM_gmax
+       do i = ADM_gmin, ADM_gmax
+          ij = suf(i,j)
 
-          gc(:,oo) = w(:,oo,1) &
-                   + w(:,oo,2) &
-                   + w(:,oo,3) &
-                   + w(:,oo,4) &
-                   + w(:,oo,5) &
-                   + w(:,oo,6)
+          gc(:) = 0.0_RP
+          do m = 1, 6
+             call VECTR_dot  ( r_lenC, o(:), wk(:,m,ij), o(:), wk(:,m+1,ij) )
+             call VECTR_cross( r(:),   o(:), wk(:,m,ij), o(:), wk(:,m+1,ij) )
+             call VECTR_abs  ( r_lenS, r(:) )
 
-          call VECTR_abs( gc_len, gc(:,oo) )
+             zerosw = 0.5_RP - sign(0.5_RP,abs(r_lenS)-EPS)
+             r(:) = r(:) * ( 1.0_RP - zerosw ) / ( r_lenS + zerosw ) * atan2( r_lenS, r_lenC )
 
-          GRD_x(oo,k,l,:) = gc(:,oo) / gc_len
+             gc(:) = gc(:) + r(:)
+          enddo
+
+          call VECTR_abs( gc_len, gc(:) )
+
+          GRD_x(ij,k0,l,:) = gc(:) / gc_len
+       enddo
        enddo
     enddo
 
     if ( ADM_have_pl ) then
+       n = ADM_gslf_pl
+
        do l = 1,ADM_lall_pl
-          oo = ADM_GSLF_PL
-
-          do n = ADM_GMIN_PL, ADM_GMAX_PL
-
-             v_pl(:,oo,n-ADM_GMIN_PL+1) = GRD_xt_pl(n,k,l,:)
-
-          enddo
-          v_pl(:,oo,6) = v_pl(:,oo,1)
-
-          do m = 1, 5
-             call VECTR_dot  ( w_lenC,       o(:), v_pl(:,oo,m), o(:), v_pl(:,oo,m+1) )
-             call VECTR_cross( w_pl(:,oo,m), o(:), v_pl(:,oo,m), o(:), v_pl(:,oo,m+1) )
-             call VECTR_abs  ( w_lenS, w_pl(:,oo,m) )
-
-             w_pl(:,oo,m) = w_pl(:,oo,m) / w_lenS * atan2( w_lenS, w_lenC )
+          do d = 1, ADM_nxyz
+             do v = 1, ADM_vlink ! (ICO=5)
+                wk_pl(d,v) = GRD_xt_pl(v+1,k0,l,d)
+             enddo
+             wk_pl(d,ADM_vlink+1) = wk_pl(d,1)
           enddo
 
-          gc_pl(:,oo) = w_pl(:,oo,1) &
-                      + w_pl(:,oo,2) &
-                      + w_pl(:,oo,3) &
-                      + w_pl(:,oo,4) &
-                      + w_pl(:,oo,5)
+          gc(:) = 0.0_RP
+          do v = 1, ADM_vlink ! (ICO=5)
+             call VECTR_dot  ( r_lenC, o(:), wk_pl(:,v), o(:), wk_pl(:,v+1) )
+             call VECTR_cross( r(:),   o(:), wk_pl(:,v), o(:), wk_pl(:,v+1) )
+             call VECTR_abs  ( r_lenS, r(:) )
 
-          call VECTR_abs( gc_len, gc_pl(:,oo) )
+             r(:) = r(:) / r_lenS * atan2( r_lenS, r_lenC )
 
-          GRD_x_pl(oo,k,l,:) = -gc_pl(:,oo) / gc_len
+             gc(:) = gc(:) + r(:)
+          enddo
+
+          call VECTR_abs( gc_len, gc(:) )
+
+          GRD_x_pl(n,k0,l,:) = -gc(:) / gc_len
        enddo
     endif
 
     return
   end subroutine MKGRD_vertex2center
+
+  !-----------------------------------------------------------------------------
+  !> suffix calculation
+  !> @return suf
+  function suf(i,j) result(suffix)
+    use mod_adm, only: &
+       ADM_gall_1d
+    implicit none
+
+    integer :: suffix
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    suffix = ADM_gall_1d * (j-1) + i
+
+  end function suf
 
 end module mod_mkgrd

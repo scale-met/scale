@@ -59,21 +59,22 @@ contains
        intercomm_child,  &
        cnf_fname         )
     use scale_process, only: &
-       PRC_LOCAL_setup
+       PRC_IsMaster,    &
+       PRC_MPIstart,    &
+       PRC_LOCAL_setup, &
+       PRC_MPIfinish
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
        CALENDAR_setup
     use scale_random, only: &
        RANDOM_setup
-
     use mod_adm, only: &
-       ADM_LOG_FID,        &
-       ADM_prc_me,         &
-       ADM_prc_run_master, &
        ADM_setup
     use mod_fio, only: &
        FIO_setup
+    use mod_hio, only: &
+       HIO_setup
     use mod_comm, only: &
        COMM_setup
     use mod_grd, only: &
@@ -96,6 +97,8 @@ contains
        extdata_setup
     use mod_runconf, only: &
        runconf_setup
+    use mod_saturation, only: &
+       saturation_setup
     use mod_prgvar, only: &
        prgvar_setup,            &
        restart_input_basename,  &
@@ -122,8 +125,7 @@ contains
     !##### OpenACC (for data copy) #####
     use mod_adm, only: &
        ADM_prc_tab,  &
-       ADM_rgn_vnum, &
-       ADM_IopJop
+       ADM_rgn_vnum
     use mod_comm, only: &
        sendlist,     sendlist_pl,  &
        sendinfo,     sendinfo_pl,  &
@@ -147,19 +149,10 @@ contains
        GRD_rdgzh, &
        GRD_vz
     use mod_gmtr, only: &
-       GMTR_P_var, &
-       GMTR_T_var, &
-       GMTR_A_var
-    use mod_oprt, only: &
-       cdiv,        &
-       cgrad,       &
-       clap,        &
-       cinterp_TN,  &
-       cinterp_HN,  &
-       cinterp_TRA, &
-       cinterp_PRA
+       GMTR_p, &
+       GMTR_t, &
+       GMTR_a
     use mod_vmtr, only: &
-       VMTR_GAM2,      &
        VMTR_GAM2H,     &
        VMTR_GSGAM2,    &
        VMTR_GSGAM2H,   &
@@ -176,7 +169,6 @@ contains
        CVW
     use mod_prgvar, only: &
        PRG_var,  &
-       PRG_var1, &
        DIAG_var
     use mod_bsstate, only: &
        rho_bs, &
@@ -223,19 +215,17 @@ contains
     call IO_LOG_setup( myrank, ismaster )
     call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
-    ! setup process
+    !---< admin module setup >---
     call ADM_setup
 
     ! setup PROF
     call PROF_setup
 
-    write(ADM_LOG_FID,*) '##### start  setup     #####'
-    if ( ADM_prc_me == ADM_prc_run_master ) then
-       write(*,*) '##### start  setup     #####'
-    endif
+    !###########################################################################
+    ! profiler start
+    call PROF_setprefx('INIT')
+    call PROF_rapstart('Initialize',0)
 
-    call PROF_rapstart('Total')
-    call PROF_rapstart('Setup_ALL')
 
     ! setup constants
     call CONST_setup
@@ -248,6 +238,7 @@ contains
 
     !---< I/O module setup >---
     call FIO_setup
+    call HIO_setup
 
     !---< comm module setup >---
     call COMM_setup
@@ -274,6 +265,9 @@ contains
     !---< nhm_runconf module setup >---
     call runconf_setup
 
+    !---< saturation module setup >---
+    call saturation_setup
+
     !---< prognostic variable module setup >---
     call prgvar_setup
     call restart_input( restart_input_basename )
@@ -294,27 +288,24 @@ contains
     !---< history variable module setup >---
     call history_vars_setup
 
-    write(ADM_LOG_FID,*) '##### finish setup     #####'
-    if ( ADM_prc_me == ADM_prc_run_master ) then
-       write(*,*) '##### finish setup     #####'
-    endif
+    call PROF_rapend('Initialize', 0)
 
+    !########## main ##########
 
-    call PROF_rapend('Setup_ALL')
-
-    !#############################################################################
 #ifdef _FIPP_
-    call fipp_start()
+    call fipp_start
 #endif
-    call PROF_rapstart('Main_ALL')
+#ifdef _PAPI_
+    call PROF_PAPI_rapstart
+#endif
 
-    write(ADM_LOG_FID,*) '##### start  main loop #####'
-    if ( ADM_prc_me == ADM_prc_run_master ) then
-       write(*,*) '##### start  main loop #####'
-    endif
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
+    call PROF_setprefx('MAIN')
+    call PROF_rapstart('Main_Loop', 0)
 
     !$acc data &
-    !$acc& pcopyin(ADM_prc_tab,ADM_rgn_vnum,ADM_IopJop) &
+    !$acc& pcopyin(ADM_prc_tab,ADM_rgn_vnum) &
     !$acc& pcopyin(sendlist,sendlist_pl) &
     !$acc& pcopyin(sendinfo,sendinfo_pl) &
     !$acc& pcopyin(recvlist,recvlist_pl) &
@@ -327,7 +318,7 @@ contains
     !$acc& pcopyin(nsmax,nsmax_pl,nrmax,nrmax_pl) &
     !$acc& pcopyin(ncmax_r2r,ncmax_sgp,ncmax_r2p,ncmax_p2r) &
     !$acc& pcopyin(GRD_rdgz,GRD_rdgzh,GRD_x,GRD_xt,GRD_vz,GRD_zs) &
-    !$acc& pcopyin(GMTR_P_var,GMTR_T_var,GMTR_A_var) &
+    !$acc& pcopyin(GMTR_p,GMTR_t,GMTR_a) &
     !$acc& pcopyin(cdiv,cgrad,clap,cinterp_TN,cinterp_HN,cinterp_TRA,cinterp_PRA) &
     !$acc& pcopyin(VMTR_GAM2,VMTR_GAM2H,VMTR_GSGAM2,VMTR_GSGAM2H) &
     !$acc& pcopyin(VMTR_RGSQRTH,VMTR_RGAM,VMTR_RGAMH,VMTR_RGSGAM2,VMTR_RGSGAM2H) &
@@ -337,57 +328,72 @@ contains
     !$acc& pcopyin(divdamp_coef,Kh_coef,Kh_coef_lap1) &
     !$acc& pcopyin(Mc,Mu,Ml) &
     !$acc& pcopyin(ksumstr,cnvpre_klev,cnvpre_fac1,cnvpre_fac2) &
-    !$acc& pcopy  (PRG_var,PRG_var1,DIAG_var)
+    !$acc& pcopy  (PRG_var,DIAG_var)
 
     !--- history output at initial time
     if ( HIST_output_step0 ) then
-       TIME_CSTEP = TIME_CSTEP - 1
-       TIME_CTIME = TIME_CTIME - TIME_DTL
+       call TIME_advance( reverse=.true. )
+       call TIME_report
        call history_vars
        call TIME_advance
        call history_out
-    else
-       call TIME_report
     endif
 
     do n = 1, TIME_LSTEP_MAX
 
-       call PROF_rapstart('_Atmos')
+       call TIME_report
+
+       call PROF_rapstart('_Atmos',1)
        call dynamics_step
        call forcing_step
-       call PROF_rapend  ('_Atmos')
+       call PROF_rapend  ('_Atmos',1)
 
-       call PROF_rapstart('_History')
+       call PROF_rapstart('_History',1)
        call history_vars
+       call embudget_monitor
+
        call TIME_advance
 
-       !--- budget monitor
-       call embudget_monitor
        call history_out
 
        if (n == TIME_LSTEP_MAX) then
           call restart_output( restart_output_basename )
        endif
-       call PROF_rapend  ('_History')
+       call PROF_rapend  ('_History',1)
+
+      if( IO_L ) call flush(IO_FID_LOG)
 
     enddo
 
-    !$acc end data
-    write(ADM_LOG_FID,*) '##### finish main loop #####'
-    if ( ADM_prc_me == ADM_prc_run_master ) then
-       write(*,*) '##### finish main loop #####'
-    endif
+    call PROF_rapend('Main_Loop', 0)
 
-    call PROF_rapend('Main_ALL')
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
+    if( IO_L ) write(IO_FID_LOG,*)
+
+
+    call PROF_setprefx('FIN')
+
+    call PROF_rapstart('All', 1)
+
 #ifdef _FIPP_
-    call fipp_stop()
+    call fipp_stop
 #endif
-    !#############################################################################
+#ifdef _PAPI_
+    call PROF_PAPI_rapstop
+#endif
 
-    call PROF_rapend('Total')
-    call PROF_rapreport
+    !########## Finalize ##########
 
+    call PROF_rapstart('File', 2)
     call FileCloseAll
+    call PROF_rapend  ('File', 2)
+
+    call PROF_rapend  ('All', 1)
+
+    call PROF_rapreport
+#ifdef _PAPI_
+    call PROF_PAPI_rapreport
+#endif
 
     return
   end subroutine scalegm
