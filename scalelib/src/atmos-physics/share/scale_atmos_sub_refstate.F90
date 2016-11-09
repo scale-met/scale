@@ -572,7 +572,7 @@ contains
        INTERP_vertical_xi2z
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     implicit none
     real(RP), intent(in) :: DENS(KA,IA,JA)

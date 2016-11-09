@@ -18,11 +18,13 @@ module mod_thrmdyn
      CPdry  => CONST_CPdry, &
      CVdry  => CONST_CVdry, &
      Rvap   => CONST_Rvap,  &
+     LHV0   => CONST_LHV0,  &
+     LHF0   => CONST_LHF0,  &
      PRE00  => CONST_PRE00, &
      TEM00  => CONST_TEM00, &
      PSAT0  => CONST_PSAT0, &
      EPSvap => CONST_EPSvap
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
      LHV, &
      LHF
   use mod_adm, only: &
@@ -566,9 +568,9 @@ contains
 
     do nq = NQW_STR, NQW_END
        if ( nq == I_QV ) then
-          LH(nq) =  LHV / TEM00
+          LH(nq) =  LHV0 / TEM00
        elseif( nq == I_QI .OR. nq == I_QS .OR. nq == I_QG ) then
-          LH(nq) = -LHF / TEM00
+          LH(nq) = -LHF0 / TEM00
        else
           LH(nq) = 0.0_RP
        endif

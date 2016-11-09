@@ -21,8 +21,8 @@ module scale_atmos_phy_mp_sdm
   use scale_stdio
   use scale_prof
   use scale_grid_index
-  use scale_atmos_hydrometer, only: &
-       N_HYD
+  use scale_atmos_hydrometeor, only: &
+     N_HYD
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -90,7 +90,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Please contact SCALE developers'
     call PRC_MPIstop
 
-    ! call ATMOS_HYDROMETER_regist()
+    ! call ATMOS_HYDROMETEOR_regist()
     QA = 0
     QS = 0
 
@@ -194,9 +194,10 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
+
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! Density [kg/m3]
@@ -217,9 +218,10 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
+
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
 

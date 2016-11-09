@@ -157,10 +157,10 @@ contains
       CPdry => CONST_CPdry, &
       STB   => CONST_STB
     use scale_grid_index
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_templhv
     use scale_bulkflux, only: &
       BULKFLUX
     implicit none
@@ -225,7 +225,7 @@ contains
     real(RP) :: Uabs, dUabs   ! modified absolute velocity [m/s]
     real(RP) :: SQV, dSQV     ! saturation water vapor mixing ratio at surface [kg/kg]
 
-    real(RP) :: LHV(IA,JA)    ! latent heat for vaporization depending on temperature [J/kg]
+    real(RP) :: LHV(IA,JA)    ! latent heat of vaporization [J/kg]
 
     integer :: i, j, n
     !---------------------------------------------------------------------------
@@ -237,7 +237,7 @@ contains
     end do
     end do
 
-    call ATMOS_HYDROMETER_templhv( LHV, TMPA )
+    call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
 
     ! update surface temperature
     if( LST_UPDATE ) then

@@ -1255,18 +1255,18 @@ contains
        HIST_in
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        I_QV, &
        I_QC, &
-       QHS, &
-       QHE, &
-       QLS, &
-       QLE, &
-       QIS, &
-       QIE, &
-       LHV, &
-       LHF, &
-       HYDROMETER_templhv => ATMOS_HYDROMETER_templhv
+       QHS,  &
+       QHE,  &
+       QLS,  &
+       QLE,  &
+       QIS,  &
+       QIE,  &
+       LHV,  &
+       LHF
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
@@ -1316,8 +1316,8 @@ contains
     real(RP) :: POTTv (KA,IA,JA) ! vertual potential temperature [K]
     real(RP) :: fact
 
-    real(RP) :: MSE   (KA,IA,JA) ! MSE        [m2/s2]
-    real(RP) :: LHvap (KA,IA,JA) ! latent heat for vaporization [m2/s2]
+    real(RP) :: MSE      (KA,IA,JA) ! MSE        [m2/s2]
+    real(RP) :: LHV_local(KA,IA,JA) ! latent heat for vaporization [m2/s2]
 
     real(RP) :: PREC  (IA,JA)    ! surface precipitation rate CP+MP [kg/m2/s]
 
@@ -1557,13 +1557,15 @@ contains
 !    endif
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
+       call HYDROMETEOR_LHV( LHV_local(:,:,:), TEMP(:,:,:) )
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k = KS, KE
           POTL(k,i,j) = POTT(k,i,j) &
-                      - LHV / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
+                      - LHV_local(k,i,j) / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
        enddo
        enddo
        enddo
@@ -1576,8 +1578,8 @@ contains
     end if
 
     if ( AD_HIST_id(I_RHA) > 0 ) then
-       call SATURATION_psat_all( PSAT(:,:,:), & ! [OUT]
-                                 TEMP(:,:,:)  ) ! [IN]
+       call SATURATION_psat_all( PSAT(:,:,:), TEMP(:,:,:) )
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
        do j  = JSB, JEB
@@ -2156,15 +2158,14 @@ contains
     call HIST_in( PBLH(:,:), 'PBLH', 'PBL height', 'm' )
 
     if ( AD_PREP_sw(I_MSE) > 0 ) then
-       call HYDROMETER_templhv( LHvap(:,:,:), & ! [OUT]
-                                TEMP (:,:,:)  ) ! [IN]
+       call HYDROMETEOR_LHV( LHV_local(:,:,:), TEMP(:,:,:) )
 
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           MSE(k,i,j) = CPTOT(k,i,j) * TEMP(k,i,j)                    &
                      + GRAV * ( REAL_CZ(k,i,j) - REAL_FZ(KS-1,i,j) ) &
-                     + LHvap(k,i,j) * QTRC(k,i,j,I_QV)
+                     + LHV_local(k,i,j) * QTRC(k,i,j,I_QV)
        enddo
        enddo
        enddo
@@ -2196,11 +2197,11 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
-       QIS, &
-       QIE, &
-       LHV, &
+       QIS,  &
+       QIE,  &
+       LHV,  &
        LHF
     implicit none
 
@@ -2438,11 +2439,11 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
-       QIS, &
-       QIE, &
-       LHV, &
+       QIS,  &
+       QIE,  &
+       LHV,  &
        LHF
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &

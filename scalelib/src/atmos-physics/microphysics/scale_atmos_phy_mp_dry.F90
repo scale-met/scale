@@ -21,8 +21,8 @@ module scale_atmos_phy_mp_dry
   use scale_stdio
   use scale_prof
   use scale_grid_index
-  use scale_atmos_hydrometer, only: &
-       N_HYD
+  use scale_atmos_hydrometeor, only: &
+     N_HYD
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -116,9 +116,9 @@ contains
        SFLX_snow  )
     use scale_grid_index
     use scale_tracer, only: &
-         QA
+       QA
     use scale_const, only: &
-         UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -151,7 +151,7 @@ contains
        QTRC     )
     use scale_grid_index
     use scale_tracer, only: &
-         QA
+       QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
@@ -172,10 +172,11 @@ contains
        TEMP0  )
     use scale_grid_index
     use scale_tracer, only: &
-         QA
-    use scale_atmos_hydrometer, only: &
-         N_HYD
+       QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
+
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
@@ -193,10 +194,11 @@ contains
        QTRC0 )
     use scale_grid_index
     use scale_tracer, only: &
-         QA
-    use scale_atmos_hydrometer, only: &
-         N_HYD
+       QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
+
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
 

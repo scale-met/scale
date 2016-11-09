@@ -23,7 +23,7 @@ module scale_atmos_phy_mp_tomita08
   use scale_prof
   use scale_grid_index
 
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
      N_HYD, &
      I_QV, &
      I_QC, &
@@ -36,7 +36,6 @@ module scale_atmos_phy_mp_tomita08
      I_HI, &
      I_HS, &
      I_HG
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -326,8 +325,8 @@ contains
        QA, QS   )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_regist
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_regist
     implicit none
 
     character(len=*), intent(in) :: MP_TYPE
@@ -340,11 +339,11 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_HYDROMETER_regist( QS,  & ! (out)
-                                  1, 2, 3, & ! (in)
-                                  ATMOS_PHY_MP_tomita08_NAME, & ! (in)
-                                  ATMOS_PHY_MP_tomita08_DESC, & ! (in)
-                                  ATMOS_PHY_MP_tomita08_UNIT  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS,                         & ! (out)
+                                   1, 2, 3,                    & ! (in)
+                                   ATMOS_PHY_MP_tomita08_NAME, & ! (in)
+                                   ATMOS_PHY_MP_tomita08_DESC, & ! (in)
+                                   ATMOS_PHY_MP_tomita08_UNIT  ) ! (in)
 
     QA = QA_MP
     QS_MP = QS
@@ -759,6 +758,9 @@ contains
        EPS   => CONST_EPS,   &
        Rvap  => CONST_Rvap,  &
        CL    => CONST_CL,    &
+       LHV0  => CONST_LHV0,  &
+       LHS0  => CONST_LHS0,  &
+       LHF0  => CONST_LHF0,  &
        TEM00 => CONST_TEM00, &
        PRE00 => CONST_PRE00, &
        DWATR => CONST_DWATR
@@ -773,10 +775,9 @@ contains
        HIST_in
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_templhv, &
-       ATMOS_HYDROMETER_templhs, &
-       ATMOS_HYDROMETER_templhf
+    use scale_atmos_hydrometeor, only: &
+       LHV, &
+       LHF
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
@@ -863,9 +864,6 @@ contains
 
     real(RP) :: zerosw
     real(RP) :: tmp
-    real(RP) :: LHVEx(KA,IA,JA)
-    real(RP) :: LHFEx(KA,IA,JA)
-    real(RP) :: LHSEx(KA,IA,JA)
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -916,10 +914,6 @@ contains
                                     a1   (:,:,:), & ! [OUT]
                                     a2   (:,:,:), & ! [OUT]
                                     ma2  (:,:,:)  ) ! [OUT]
-
-    call ATMOS_HYDROMETER_templhv( LHVEx, TEMP0 )
-    call ATMOS_HYDROMETER_templhf( LHFEx, TEMP0 )
-    call ATMOS_HYDROMETER_templhs( LHSEx, TEMP0 )
 
 !$omp parallel do &
 !$omp private(tend, coef_bt, coef_at, q, w) &
@@ -1179,9 +1173,9 @@ contains
        Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
        NU = ( mu0 + dmu_dT * temc ) * Rdens
 
-       Glv  = 1.0_RP / ( LHVEx(k,i,j)/(Da*temp) * ( LHVEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
-       Giv  = 1.0_RP / ( LHSEx(k,i,j)/(Da*temp) * ( LHSEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
-       Gil  = 1.0_RP / LHFEx(k,i,j) * (Da*temc)
+       Glv  = 1.0_RP / ( LHV0/(Da*temp) * ( LHV0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
+       Giv  = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
+       Gil  = 1.0_RP / LHF0 * (Da*temc)
 
        ! [Prevp] evaporation rate of rain
        ventr = f1r * GAM_2 * RLMDr_2 + f2r * sqrt( Cr * rho_fact / NU * RLMDr_5dr ) * GAM_5dr_h
@@ -1198,7 +1192,7 @@ contains
 
        ! [Psmlt] melting rate of snow
        w(I_Psmlt) = 2.0_RP * PI * Rdens *       Gil * vents &
-                  + CL * temc / LHFEx(k,i,j) * ( w(I_Psacw) + w(I_Psacr) )
+                  + CL * temc / LHF0 * ( w(I_Psacw) + w(I_Psacr) )
 
        ! [Pgdep/pgsub] deposition/sublimation rate for graupel
        ventg = f1g * GAM_2 * RLMDg_2 + f2g * sqrt( Cg * rho_fact / NU * RLMDg_5dg ) * GAM_5dg_h
@@ -1210,7 +1204,7 @@ contains
 
        ! [Pgmlt] melting rate of graupel
        w(I_Pgmlt) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
-                  + CL * temc / LHFEx(k,i,j) * ( w(I_Pgacw) + w(I_Pgacr) )
+                  + CL * temc / LHF0 * ( w(I_Pgacw) + w(I_Pgacr) )
 
        ! [Pgfrz] freezing rate of graupel
        w(I_Pgfrz) = 2.0_RP * PI * Rdens * N0r * 60.0_RP * B_frz * Ar * ( exp(-A_frz*temc) - 1.0_RP ) * RLMDr_7
@@ -1581,7 +1575,7 @@ contains
           Da = ( Da0 + dDa_dT * temc )
           Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
 
-          Giv  = 1.0_RP / ( LHSEx(k,i,j)/(Da*temp) * ( LHSEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
+          Giv  = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
 
           ! [Pidep] deposition/sublimation : v->i or i->v
           sw = ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc ) ) &
@@ -1663,10 +1657,10 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOE_t(k,i,j) = - DENS0(k,i,j) * ( LHVEx(k,i,j) * QTRC_t(k,i,j,I_QV) &
-                                        - LHFEx(k,i,j) * QTRC_t(k,i,j,I_QI) &
-                                        - LHFEx(k,i,j) * QTRC_t(k,i,j,I_QS) &
-                                        - LHFEx(k,i,j) * QTRC_t(k,i,j,I_QG) )
+       RHOE_t(k,i,j) = - DENS0(k,i,j) * ( LHV * QTRC_t(k,i,j,I_QV) &
+                                        - LHF * QTRC_t(k,i,j,I_QI) &
+                                        - LHF * QTRC_t(k,i,j,I_QS) &
+                                        - LHF * QTRC_t(k,i,j,I_QG) )
 
        RHOE0(k,i,j) = RHOE0(k,i,j) + RHOE_t(k,i,j) * dt
     enddo
@@ -1925,9 +1919,10 @@ contains
        TEM00 => CONST_TEM00
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
+
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
@@ -2010,9 +2005,10 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
        QA
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
+
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
 

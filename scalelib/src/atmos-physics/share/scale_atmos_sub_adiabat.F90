@@ -60,9 +60,9 @@ contains
        LNB   )
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use scale_atmos_hydrometer, only: &
-       I_QV, &
-       HYDROMETER_entr => ATMOS_HYDROMETER_entr
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
+       I_QV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     use scale_history, only: &
@@ -98,11 +98,11 @@ contains
     !---------------------------------------------------------------------------
 
     ! entropy at start point
-    call HYDROMETER_entr( ENTR_p(Kstr,:,:),   & ! [OUT]
-                          TEMP  (Kstr,:,:),   & ! [IN]
-                          PRES  (Kstr,:,:),   & ! [IN]
-                          QTRC  (Kstr,:,:,:), & ! [IN]
-                          TRACER_R(:)         ) ! [IN]
+    call HYDROMETEOR_entr( ENTR_p(Kstr,:,:),   & ! [OUT]
+                           TEMP  (Kstr,:,:),   & ! [IN]
+                           PRES  (Kstr,:,:),   & ! [IN]
+                           QTRC  (Kstr,:,:,:), & ! [IN]
+                           TRACER_R(:)         ) ! [IN]
 
     ! lift parcel
     call ATMOS_ADIABAT_liftparcel( Kstr,             & ! [IN]
@@ -115,11 +115,11 @@ contains
                                    QTRC_p(:,:,:,:)   ) ! [OUT]
 
     ! entropy profile (lifted parcel)
-    call HYDROMETER_entr( ENTR_p(:,:,:),   & ! [OUT]
-                          TEMP_p(:,:,:),   & ! [IN]
-                          PRES  (:,:,:),   & ! [IN]
-                          QTRC_p(:,:,:,:), & ! [IN]
-                          TRACER_R(:)      ) ! [IN]
+    call HYDROMETEOR_entr( ENTR_p(:,:,:),   & ! [OUT]
+                           TEMP_p(:,:,:),   & ! [IN]
+                           PRES  (:,:,:),   & ! [IN]
+                           QTRC_p(:,:,:,:), & ! [IN]
+                           TRACER_R(:)      ) ! [IN]
 
     ! parcel buoyancy
     do j = JS, JE
@@ -263,10 +263,10 @@ contains
        PSAT0 => CONST_PSAT0, &
        PRE00 => CONST_PRE00, &
        TEM00 => CONST_TEM00
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
        I_QV, &
-       I_QC, &
-       HYDROMETER_entr => ATMOS_HYDROMETER_entr
+       I_QC
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
@@ -358,11 +358,11 @@ contains
              QTRC_ite(:)    = 0.0_RP ! Pseudo-adiabatic: no cloud water
              QTRC_ite(I_QV) = min( qtot_p(i,j), qsat_ite )
 
-             call HYDROMETER_entr( ENTR_ite,    & ! [OUT]
-                                   TEMP_ite,    & ! [IN]
-                                   PRES(k,i,j), & ! [IN]
-                                   QTRC_ite(:), & ! [IN]
-                                   TRACER_R(:)  ) ! [IN]
+             call HYDROMETEOR_entr( ENTR_ite,    & ! [OUT]
+                                    TEMP_ite,    & ! [IN]
+                                    PRES(k,i,j), & ! [IN]
+                                    QTRC_ite(:), & ! [IN]
+                                    TRACER_R(:)  ) ! [IN]
 
              qdry_p   = 1.0_RP - QTRC_ite(I_QV)
              CPtot    = CPdry * qdry_p + CPvap * QTRC_ite(I_QV)

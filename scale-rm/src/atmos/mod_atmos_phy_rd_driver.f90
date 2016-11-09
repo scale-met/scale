@@ -158,7 +158,7 @@ contains
        I_up, &
        I_direct, &
        I_diffuse
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC, &
        I_QR, &

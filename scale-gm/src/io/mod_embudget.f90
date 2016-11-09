@@ -143,7 +143,7 @@ contains
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
        CVdry  => CONST_CVdry
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV, &
        LHF
     use mod_adm, only: &

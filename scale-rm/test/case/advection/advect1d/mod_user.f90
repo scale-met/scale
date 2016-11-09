@@ -46,7 +46,7 @@ module mod_user
        DENS, &
        RHOT, &
        QTRC
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
        I_NC
   
   !-----------------------------------------------------------------------------

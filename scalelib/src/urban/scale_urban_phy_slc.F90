@@ -673,10 +673,10 @@ contains
        STB    => CONST_STB,     &    ! stefan-Boltzman constant [MKS unit]
        TEM00  => CONST_TEM00,   &    ! temperature reference (0 degree C) [K]
        PRE00  => CONST_PRE00         ! pressure reference [Pa]
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_templhv
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
-       qsat   => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     !-- configuration variables
@@ -818,7 +818,7 @@ contains
     real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
-    real(RP) :: LHV
+    real(RP) :: LHV                              ! latent heat of vaporization [J/kg]
     real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
 
@@ -828,7 +828,7 @@ contains
     ! Set parameters
     !-----------------------------------------------------------
 
-    call ATMOS_HYDROMETER_templhv( LHV, TA )
+    call HYDROMETEOR_LHV( LHV, TA )
 
     RovCP = Rdry / CPdry
     THA   = TA * ( PRE00 / PRSA )**RovCP

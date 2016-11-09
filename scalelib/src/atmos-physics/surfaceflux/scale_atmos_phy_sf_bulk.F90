@@ -123,9 +123,9 @@ contains
     use scale_const, only: &
        CPdry => CONST_CPdry, &
        Rdry  => CONST_Rdry
-    use scale_atmos_hydrometer, only: &
-       I_QV, &
-       ATMOS_HYDROMETER_templhv
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       I_QV
     use scale_atmos_phy_sf_bulkcoef, only: &
        SF_bulkcoef => ATMOS_PHY_SF_bulkcoef
     use scale_atmos_saturation, only: &
@@ -172,7 +172,7 @@ contains
     real(RP) :: SFC_QSAT(IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
 
     real(RP) :: PBL(IA,JA)
-    real(RP) :: LHV (IA,JA)
+    real(RP) :: LHV(IA,JA)
     real(RP) :: Ustar
     real(RP) :: Tstar
     real(RP) :: Qstar
@@ -202,7 +202,7 @@ contains
                                    SFC_TEMP(:,:), & ! [IN]
                                    SFC_PRES(:,:)  ) ! [IN]
 
-    call ATMOS_HYDROMETER_templhv( LHV, ATM_TEMP )
+    call HYDROMETEOR_LHV( LHV(:,:), ATM_TEMP(:,:) )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
     PBL(:,:) = 100.0_RP ! tentative

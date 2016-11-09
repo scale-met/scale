@@ -195,8 +195,8 @@ contains
     use scale_external_io, only: &
          ExternalFileRead, &
          ExternalFileReadOffset
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP),         intent(out) :: velz_org(:,:,:)

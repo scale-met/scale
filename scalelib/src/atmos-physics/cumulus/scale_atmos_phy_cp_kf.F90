@@ -141,7 +141,7 @@ contains
     use scale_grid,only: &
        DX => DX, &
        DY => DY
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC, &
        I_QR, &
@@ -528,7 +528,7 @@ contains
     use scale_atmos_phy_mp, only: &
        QA_MP, &
        QS_MP
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC, &
        I_QR, &
@@ -2907,7 +2907,7 @@ contains
     !! ...frc2 is the fraction of total condensate
     !!... generated that goes into precipitation
     !!
-    !! Redistribute hydrometerors according to the final mass-flux variables
+    !! Redistribute hydrometeors according to the final mass-flux variables
     !! dtheta/dt and dqv/dt is
     if (cpr > 0._RP) then
        frc2 = prcp_flux/(cpr*ainc)

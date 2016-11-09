@@ -287,11 +287,11 @@ contains
          CVdry => CONST_CVdry, &
          P00   => CONST_PRE00
     use scale_time, only: &
-         dtrd =>  TIME_DTSEC_ATMOS_PHY_RD
-    use scale_atmos_hydrometer, only: &
-         I_QV, &
-         QLS, &
-         QLE
+       dtrd =>  TIME_DTSEC_ATMOS_PHY_RD
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       QLS,  &
+       QLE
     use mod_admin_time, only: &
        do_phy_rd => TIME_DOATMOS_PHY_RD
     implicit none

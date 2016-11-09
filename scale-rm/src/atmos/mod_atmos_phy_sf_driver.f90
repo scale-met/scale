@@ -166,7 +166,7 @@ contains
        THERMODYN_qd => ATMOS_THERMODYN_qd, &
        THERMODYN_cp => ATMOS_THERMODYN_cp, &
        THERMODYN_r  => ATMOS_THERMODYN_r
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF

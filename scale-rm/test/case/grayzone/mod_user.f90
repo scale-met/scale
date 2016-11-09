@@ -395,7 +395,6 @@ contains
         P00    => CONST_PRE00,  &
         T00    => CONST_TEM00,  &
         CPd    => CONST_CPdry,  &
-        LHV    => CONST_LHV,    &
         EPSvap => CONST_EPSvap, &
         PSAT0  => CONST_PSAT0
     use mod_admin_time, only: &

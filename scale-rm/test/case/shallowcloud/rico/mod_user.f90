@@ -293,7 +293,7 @@ contains
          CPdry => CONST_CPdry, &
          Rdry  => CONST_Rdry, &
          Rvap  => CONST_Rvap, &
-         LHV   => CONST_LHV, &
+         LHV   => CONST_LHV0, &
          P00   => CONST_PRE00
     use scale_atmos_thermodyn, only: &
          CPw   => AQ_CP

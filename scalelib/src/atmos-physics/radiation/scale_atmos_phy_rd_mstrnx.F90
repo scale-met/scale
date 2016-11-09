@@ -32,7 +32,7 @@ module scale_atmos_phy_rd_mstrnx
      I_dn, &
      I_up
 
-  use scale_atmos_hydrometer, only: &
+  use scale_atmos_hydrometeor, only: &
      N_HYD
   use scale_atmos_aerosol, only: &
      N_AE
@@ -235,7 +235,7 @@ contains
        RD_PROFILE_setup       => ATMOS_PHY_RD_PROFILE_setup,       &
        RD_PROFILE_setup_zgrid => ATMOS_PHY_RD_PROFILE_setup_zgrid, &
        RD_PROFILE_read        => ATMOS_PHY_RD_PROFILE_read
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD
     use scale_atmos_aerosol, only: &
        N_AE
@@ -398,7 +398,7 @@ contains
        AE_DENS            => ATMOS_PHY_AE_DENS, &
        QA_AE, &
        QS_AE
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_QV, &
        I_HC, &

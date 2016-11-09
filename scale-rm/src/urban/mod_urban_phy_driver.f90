@@ -104,8 +104,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine URBAN_PHY_driver( update_flag )
-    use scale_atmos_hydrometer, only: &
-       ATMOS_HYDROMETER_templhv
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE,     &
        dt      => TIME_DTSEC_URBAN
@@ -182,8 +182,8 @@ contains
     logical, intent(in) :: update_flag
 
     ! works
-    real(RP) :: total ! dummy
-    real(RP) :: lhv(IA,JA)
+    real(RP) :: LHV(IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: total      ! dummy
 
     character(len=2) :: sk
 
@@ -252,12 +252,12 @@ contains
                        NOWDATE         (:),        & ! [IN]
                        dt                          ) ! [IN]
 
-       call ATMOS_HYDROMETER_templhv( lhv, ATMOS_TEMP )
+       call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
 
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
-          URBAN_SFLX_evap(i,j) = URBAN_SFLX_LH(i,j) / lhv(i,j)
+          URBAN_SFLX_evap(i,j) = URBAN_SFLX_LH(i,j) / LHV(i,j)
        end do
        end do
 

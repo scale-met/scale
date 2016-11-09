@@ -931,7 +931,7 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     implicit none
 

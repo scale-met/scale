@@ -70,8 +70,8 @@ module mod_mkinit
      REAL_FZ
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
-  use scale_atmos_hydrometer, only: &
-     LHV
+  use scale_atmos_hydrometeor, only: &
+     HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
   use scale_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,       &
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
@@ -766,7 +766,7 @@ contains
   subroutine SBMAERO_setup
     use scale_const, only: &
        PI => CONST_PI
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        QHS, &
        QHE
     use scale_atmos_phy_mp_suzuki10, only: &
@@ -896,6 +896,7 @@ contains
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall
     implicit none
+
     ! Flux from Atmosphere
     real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
     real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
@@ -957,6 +958,7 @@ contains
        LAND_SFC_TEMP,   &
        LAND_SFC_albedo
     implicit none
+
     ! Land state
     real(RP) :: LND_TEMP                ! soil temperature           [K]
     real(RP) :: LND_WATER     = 0.15_RP ! soil moisture              [m3/m3]
@@ -1012,6 +1014,7 @@ contains
        OCEAN_SFC_Z0H,    &
        OCEAN_SFC_Z0E
     implicit none
+
     ! Ocean state
     real(RP) :: OCN_TEMP                  ! ocean temperature           [K]
     real(RP) :: SFC_TEMP                  ! ocean skin temperature      [K]
@@ -1083,6 +1086,7 @@ contains
        URBAN_SFC_TEMP,   &
        URBAN_SFC_albedo
     implicit none
+
     ! urban state
     real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
     real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
@@ -1172,9 +1176,10 @@ contains
   !> Read sounding data from file
   subroutine read_sounding( &
        DENS, VELX, VELY, POTT, QV )
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
+
     real(RP), intent(out) :: DENS(KA)
     real(RP), intent(out) :: VELX(KA)
     real(RP), intent(out) :: VELY(KA)
@@ -1317,8 +1322,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform + random disturbance )
   subroutine MKINIT_planestate
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     ! Surface state
@@ -1517,8 +1522,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for tracer bubble experiment
   subroutine MKINIT_tracerbubble
-    use scale_atmos_hydrometer, only: &
-         I_NC
+    use scale_atmos_hydrometeor, only: &
+       I_NC
     use mod_atmos_admin, only: &
          ATMOS_PHY_MP_TYPE
     implicit none
@@ -2055,8 +2060,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for turbulence experiment
   subroutine MKINIT_turbulence
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_MP_TYPE
     implicit none
@@ -2318,8 +2323,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform )
   subroutine MKINIT_mountainwave
-    use scale_atmos_hydrometer, only: &
-         I_NC
+    use scale_atmos_hydrometeor, only: &
+       I_NC
     implicit none
 
     ! Surface state
@@ -2447,7 +2452,7 @@ contains
     use scale_grid, only: &
          y0 => GRID_DOMAIN_CENTER_Y, &
          GRID_FYG
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
          I_QV
     
     implicit none
@@ -2642,8 +2647,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubble
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     ! Surface state
@@ -2783,8 +2788,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for supercell experiment
   subroutine MKINIT_supercell
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -2849,8 +2854,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -2919,8 +2924,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state by Weisman and Klemp (1982)
   subroutine MKINIT_wk1982
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     ! Surface state
@@ -3100,11 +3105,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF01
-    use scale_atmos_hydrometer, only: &
-         I_QV, &
-         I_QC, &
-         I_NC, &
-         QHE
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
     use scale_atmos_phy_mp_suzuki10, only: &
          nccn
     use mod_atmos_admin, only: &
@@ -3127,6 +3132,7 @@ contains
        USE_LWSET
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3247,14 +3253,15 @@ contains
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
-
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
@@ -3379,11 +3386,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02
-    use scale_atmos_hydrometer, only: &
-         I_QV, &
-         I_QC, &
-         I_NC, &
-         QHE
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
     use scale_atmos_phy_mp_suzuki10, only: &
          nccn
     use mod_atmos_admin, only: &
@@ -3404,6 +3411,7 @@ contains
        RANDOM_FLAG
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3512,10 +3520,12 @@ contains
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -3644,11 +3654,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02_DNS
-    use scale_atmos_hydrometer, only: &
-         I_QV, &
-         I_QC, &
-         I_NC, &
-         QHE
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
     use scale_atmos_phy_mp_suzuki10, only: &
          nccn
     use mod_atmos_admin, only: &
@@ -3674,6 +3684,7 @@ contains
        RANDOM_FLAG
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3769,17 +3780,17 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-!write(*,*)'chk4.1'
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     RovCP = Rdry / CPdry
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       pott(k,i,j) = potl(k,i,j) + LHV / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+       pott(k,i,j) = potl(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
     enddo
     enddo
     enddo
 
-!write(*,*)'chk5'
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
                                temp    (:,:,:), & ! [OUT]
@@ -3803,7 +3814,6 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-!write(*,*)'chk7'
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
@@ -3919,8 +3929,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for RICO inter comparison
   subroutine MKINIT_RICO
-    use scale_atmos_hydrometer, only: &
-         I_QV, &
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
          I_QC, &
          I_NC, &
          QHE
@@ -3939,6 +3949,7 @@ contains
        PERTURB_AMP_PT, &
        PERTURB_AMP_QV
 
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -4042,14 +4053,15 @@ contains
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
-
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
@@ -4160,7 +4172,7 @@ contains
     use gtool_file, only: &
        FileGetShape, &
        FileRead
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC
     implicit none
@@ -4747,8 +4759,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for grayzone experiment
   subroutine MKINIT_grayzone
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -4879,8 +4891,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state of Box model experiment for zerochemical module
   subroutine MKINIT_boxaero
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_AE_TYPE
     implicit none
@@ -4948,8 +4960,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubbleaero
-    use scale_atmos_hydrometer, only: &
-         I_QV
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use mod_atmos_admin, only: &
          ATMOS_PHY_AE_TYPE
     implicit none

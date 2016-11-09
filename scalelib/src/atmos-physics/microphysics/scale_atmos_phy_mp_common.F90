@@ -23,8 +23,6 @@ module scale_atmos_phy_mp_common
   use scale_prof
   use scale_grid_index
   use scale_tracer
-  use scale_const, only: &
-     UNDEF => CONST_UNDEF
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -66,7 +64,7 @@ contains
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        QHS, &
        QHE
     implicit none
@@ -165,13 +163,17 @@ contains
        I_QC,       &
        I_QI,       &
        flag_liquid )
+#ifdef DRY
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+#endif
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd          => ATMOS_THERMODYN_qd,         &
        THERMODYN_cv          => ATMOS_THERMODYN_cv,         &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV, &
        LHF
     use scale_atmos_saturation, only: &
@@ -415,11 +417,15 @@ contains
        Emoist, &
        I_QV,   &
        I_QC    )
+#ifdef DRY
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+#endif
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
        THERMODYN_cv => ATMOS_THERMODYN_cv
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
@@ -567,11 +573,15 @@ contains
        I_QV,   &
        I_QC,   &
        I_QI    )
+#ifdef DRY
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+#endif
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
        THERMODYN_cv => ATMOS_THERMODYN_cv
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        LHV, &
        LHF
     use scale_atmos_saturation, only: &
@@ -758,7 +768,7 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_hydrometer, only: &
+    use scale_atmos_hydrometeor, only: &
        QLS, &
        QLE, &
        QIS, &
