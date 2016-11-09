@@ -776,9 +776,8 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
-       HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS, &
-       HYDROMETEOR_LHF => ATMOS_HYDROMETEOR_LHF
+       LHV, &
+       LHF
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
@@ -865,9 +864,6 @@ contains
 
     real(RP) :: zerosw
     real(RP) :: tmp
-    real(RP) :: LHV(KA,IA,JA)
-    real(RP) :: LHF(KA,IA,JA)
-    real(RP) :: LHS(KA,IA,JA)
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -918,10 +914,6 @@ contains
                                     a1   (:,:,:), & ! [OUT]
                                     a2   (:,:,:), & ! [OUT]
                                     ma2  (:,:,:)  ) ! [OUT]
-
-    call HYDROMETEOR_LHV( LHV(:,:,:), TEMP0(:,:,:) )
-    call HYDROMETEOR_LHF( LHF(:,:,:), TEMP0(:,:,:) )
-    call HYDROMETEOR_LHS( LHS(:,:,:), TEMP0(:,:,:) )
 
 !$omp parallel do &
 !$omp private(tend, coef_bt, coef_at, q, w) &
@@ -1665,10 +1657,10 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOE_t(k,i,j) = - DENS0(k,i,j) * ( LHV(k,i,j) * QTRC_t(k,i,j,I_QV) &
-                                        - LHF(k,i,j) * QTRC_t(k,i,j,I_QI) &
-                                        - LHF(k,i,j) * QTRC_t(k,i,j,I_QS) &
-                                        - LHF(k,i,j) * QTRC_t(k,i,j,I_QG) )
+       RHOE_t(k,i,j) = - DENS0(k,i,j) * ( LHV * QTRC_t(k,i,j,I_QV) &
+                                        - LHF * QTRC_t(k,i,j,I_QI) &
+                                        - LHF * QTRC_t(k,i,j,I_QS) &
+                                        - LHF * QTRC_t(k,i,j,I_QG) )
 
        RHOE0(k,i,j) = RHOE0(k,i,j) + RHOE_t(k,i,j) * dt
     enddo

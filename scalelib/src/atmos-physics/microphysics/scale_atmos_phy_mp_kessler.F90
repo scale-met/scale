@@ -427,7 +427,7 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
+       LHV
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     implicit none
@@ -439,7 +439,6 @@ contains
     real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
 
     ! working
-    real(RP) :: LHV  (KA,IA,JA) ! latent heat of vaporization [J/kg]
     real(RP) :: QSAT (KA,IA,JA) ! saturated water vapor [kg/kg]
     real(RP) :: TEMP0(KA,IA,JA) ! temperature           [K]
     real(RP) :: PRES0(KA,IA,JA) ! pressure              [Pa]
@@ -482,8 +481,6 @@ contains
     call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
                                    TEMP0(:,:,:), & ! [IN]
                                    DENS0(:,:,:)  ) ! [IN]
-
-    call HYDROMETEOR_LHV( LHV(:,:,:), TEMP0(:,:,:) )
 
     !$omp parallel do private(i,j,k,dens,rhoe,temp,pres,qv,qc,qr,qsatl,Sliq,dq_evap,dq_auto,dq_accr,vent_factor,dqc,dqr,dqv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -539,7 +536,7 @@ contains
        enddo
 
        do k = KS, KE
-          RHOE_t(k,i,j) = RHOE_t(k,i,j) - dens(k) * ( LHV(k,i,j) * QTRC_t(k,i,j,I_QV) )
+          RHOE_t(k,i,j) = RHOE_t(k,i,j) - dens(k) * ( LHV * QTRC_t(k,i,j,I_QV) )
        enddo
     enddo
     enddo
