@@ -152,11 +152,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** NUDGEPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist NUDGEPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist NUDGEPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist NUDGEPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=NUDGEPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=NUDGEPARAM)
 
     NDG_VMAX = 0
 
@@ -228,7 +227,7 @@ contains
     NDG_kmax1 = max(k0,k1)
 
     if ( NDG_kmin1 > NDG_kmax0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid vertical layers! STOP', NDG_kmin1, NDG_kmax0
+       write(*,*) 'xxx Invalid vertical layers! STOP', NDG_kmin1, NDG_kmax0
        call PRC_MPIstop
     endif
 

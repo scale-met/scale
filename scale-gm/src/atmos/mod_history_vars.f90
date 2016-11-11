@@ -521,7 +521,7 @@ contains
          .OR. mnval >= 2000.E+2_RP .OR. mnval <= 0.0_RP ) then ! > 2000hPa or negative?
 
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Numerical instability occurs! STOP.', mxval, mnval
-       write(*,*)          'xxx Numerical instability occurs! STOP.', mxval, mnval
+       write(*,*)                     'xxx Numerical instability occurs! STOP.', mxval, mnval
        do l = 1, ADM_lall
        do k = 1, ADM_kall
        do g = 1, ADM_gall
@@ -1023,8 +1023,8 @@ contains
           if( pre(ij,k) < plev ) exit
        enddo
        if ( k >= kdim ) then
-          write(*         ,*) 'xxx internal error! [sv_plev_uvwt/mod_history_vars] STOP.'
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx internal error! [sv_plev_uvwt/mod_history_vars] STOP.',kdim,k,plev,ij,pre(ij,:)
+          write(*,*) 'xxx internal error! [sv_plev_uvwt/mod_history_vars] STOP.', &
+                     kdim,k,plev,ij,pre(ij,:)
           call PRC_MPIstop
        endif
 

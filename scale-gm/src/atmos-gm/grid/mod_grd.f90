@@ -258,11 +258,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** GRDPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist GRDPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist GRDPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist GRDPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=GRDPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=GRDPARAM)
 
 
 
@@ -676,7 +675,7 @@ contains
           iostat = ierr           )
 
        if ( ierr /= 0 ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx No vertical grid file.'
+          write(*,*) 'xxx [GRD_input_vgrid] No vertical grid file.'
           call PRC_MPIstop
        endif
 
@@ -689,7 +688,7 @@ contains
        read(fid) gzh(:)
 
        if ( num_of_layer /= ADM_vlayer ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx inconsistency in number of vertical layers.'
+          write(*,*) 'xxx [GRD_input_vgrid] inconsistency in number of vertical layers.'
           call PRC_MPIstop
        endif
 

@@ -74,11 +74,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** IDEALTOPOPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=IDEALTOPOPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=IDEALTOPOPARAM)
 
     if    ( topo_type == 'Schar_Moderate' ) then
 
@@ -98,8 +97,7 @@ contains
                            Zsfc(:,:,:)  ) ! [OUT]
 
     else
-       write(*         ,*) 'xxx Not appropriate topo_type. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate topo_type. STOP.'
+       write(*,*) 'xxx [IDEAL_topo] Not appropriate topo_type. STOP.'
        call PRC_MPIstop
     endif
 
@@ -157,11 +155,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** IDEALTOPOPARAM_Schar_Moderate is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Moderate. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Moderate. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Moderate. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=IDEALTOPOPARAM_Schar_Moderate)
+    if( IO_LNML ) write(IO_FID_LOG,nml=IDEALTOPOPARAM_Schar_Moderate)
 
     K0 = ADM_KNONE
 
@@ -244,11 +241,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** IDEALTOPOPARAM_Schar_Steep is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Steep. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Steep. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Steep. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=IDEALTOPOPARAM_Schar_Steep)
+    if( IO_LNML ) write(IO_FID_LOG,nml=IDEALTOPOPARAM_Schar_Steep)
 
     K0 = ADM_KNONE
 

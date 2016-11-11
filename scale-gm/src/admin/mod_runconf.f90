@@ -198,11 +198,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** RUNCONFPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist RUNCONFPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist RUNCONFPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist RUNCONFPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=RUNCONFPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=RUNCONFPARAM)
 
     call RUNCONF_component_setup
 
@@ -268,8 +267,7 @@ contains
        I_QS    = TRC_vmax + 5
        I_QG    = TRC_vmax + 6
     else
-       write(*,         *) 'xxx You must set RAIN_TYPE to DRY,CLOUD_PARAM,WARM or COLD. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx You must set RAIN_TYPE to DRY,CLOUD_PARAM,WARM or COLD. STOP.'
+       write(*,*) 'xxx RAIN_TYPE must be set to DRY,CLOUD_PARAM,WARM or COLD. STOP.'
        call PRC_MPIstop
     endif
     NQW_STR  = TRC_vmax + 1

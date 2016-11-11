@@ -198,8 +198,7 @@ contains
        elseif( trim(layer_type) == 'NUM' ) then
           info(np)%kall = nlayer
        else
-          if( IO_L ) write(IO_FID_LOG,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx invlalid type of layer_type.', trim(layer_type)
+          write(*,*) 'xxx [extdata] invlalid type of layer_type.', trim(layer_type)
           call PRC_MPIstop
        endif
 
@@ -228,7 +227,7 @@ contains
                          opt_periodic_year     ) ! [IN]
 
        else
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid input_io_mode!', trim(input_io_mode)
+          write(*,*) 'xxx [extdata] Invalid input_io_mode!', trim(input_io_mode)
           call PRC_MPIstop
        endif
 
@@ -302,8 +301,8 @@ contains
        else !--- default
 
           if ( info(np)%data_rec(1) == 1 ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx data time is not consistent with the simulation time! : ', &
-                                 trim(info(np)%dataname )
+             write(*,*) 'xxx [extdata] data time is not consistent with the simulation time! : ', &
+                        trim(info(np)%dataname )
              call PRC_MPIstop
           else !--- default
              info(np)%data_rec(2) = info(np)%data_rec(1)-1
@@ -453,7 +452,7 @@ contains
              if (       ( info(np)%data_rec(1) > info(np)%num_of_data ) &
                   .AND. ( .not. info(np)%opt_periodic_year )            ) then
 
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx This run is over the land surface data range.'
+                write(*,*) 'xxx [extdata] Current time exceeded the time range of the input data.'
                 call PRC_MPIstop
 
              elseif( ( info(np)%data_rec(1) > info(np)%num_of_data ) .and. &
