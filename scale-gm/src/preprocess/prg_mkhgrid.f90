@@ -18,8 +18,7 @@ program mkhgrid
   use scale_stdio
   use scale_prof
   use scale_process, only: &
-     PRC_MPIstart,    &
-     PRC_LOCAL_setup, &
+     PRC_LOCAL_MPIstart, &
      PRC_MPIfinish
   use scale_const, only: &
      RADIUS => CONST_RADIUS, &
@@ -62,25 +61,19 @@ program mkhgrid
   !
   character(len=H_MID), parameter :: MODELNAME = "SCALE-GM ver. "//VERSION
 
-  integer :: comm_world
   integer :: myrank
   logical :: ismaster
   !=============================================================================
 
   !---< MPI start >---
-  call PRC_MPIstart( comm_world ) ! [OUT]
+  !---< MPI start >---
+  call PRC_LOCAL_MPIstart( myrank,  & ! [OUT]
+                           ismaster ) ! [OUT]
 
   !########## Initial setup ##########
 
   ! setup standard I/O
   call IO_setup( MODELNAME, .false. )
-
-  ! setup MPI
-  call PRC_LOCAL_setup( comm_world, & ! [IN]
-                        myrank,     & ! [OUT]
-                        ismaster    ) ! [OUT]
-
-  ! setup Log
   call IO_LOG_setup( myrank, ismaster )
   call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
