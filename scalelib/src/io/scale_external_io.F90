@@ -1798,7 +1798,6 @@ contains
 
     write(*,*) 'xxx Error in scale_external_io.f90 at line', line
     write(*,*) nf90_strerror(status)
-
     call PRC_MPIstop
 
     return

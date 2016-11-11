@@ -22,7 +22,7 @@ module scale_atmos_phy_ae_kajino13
   use scale_prof
   use scale_grid_index
   use scale_tracer
-  use scale_const, only: & 
+  use scale_const, only: &
       mwair => CONST_Mdry, &              ! molecular weight for dry air
       mwwat => CONST_Mvap, &              ! mean molecular weight for water vapor [g/mol]
       dnwat => CONST_DWATR, &             ! water density   [kg/m3]
@@ -125,7 +125,7 @@ module scale_atmos_phy_ae_kajino13
   integer, parameter :: ia_m3  = 3             !3. 3rd mom conc       [m3/m3]
   integer, parameter :: ia_ms  = 4             !4. mass conc          [ug/m3]
   integer, parameter :: ia_kp  = 5             !5. mean kappa * volume [-] ( ia_kp*ia_m3 nisuru)
-  integer, parameter :: ik_out = 1 
+  integer, parameter :: ik_out = 1
   !(set in subroutine aerosol_settings)
 !  integer :: n_ctg   !number of category
   integer, allocatable :: n_siz(:)              !number of size bins           (n_ctg)
@@ -154,13 +154,13 @@ module scale_atmos_phy_ae_kajino13
   logical :: flag_coag = .true.
   logical :: flag_ccn_interactive = .true.
   logical :: flag_regeneration    = .true.
-!  real(RP) :: m0_init = 0.E0      ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]    
-!  real(RP) :: dg_init = 80.E-9    ! initial number equivalen diameters of modes     [m]     
-!  real(RP) :: sg_init = 1.6       ! initial standard deviation                      [-]     
-  real(RP) :: h2so4dt = 5.E-6_RP   ! h2so4 production rate (Temporal)                [ug/m3/s]   
+!  real(RP) :: m0_init = 0.E0      ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
+!  real(RP) :: dg_init = 80.E-9    ! initial number equivalen diameters of modes     [m]
+!  real(RP) :: sg_init = 1.6       ! initial standard deviation                      [-]
+  real(RP) :: h2so4dt = 5.E-6_RP   ! h2so4 production rate (Temporal)                [ug/m3/s]
   real(RP) :: ocgasdt = 8.E-5_RP   ! other condensational bas production rate 16*h2so4dt (see Kajino et al. 2013)
 !  real(RP) :: c_ratio = 16.0_RP    ! ratio of condensable mass to h2so4 (after NPF)  [-]
-  real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]  
+  real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]
   real(RP) :: t_npf = 21600.0_RP   ! time until the gas to particle conversion occure[sec]
   integer :: n_ctg                            ! number of category
   integer :: n_trans                          ! number of total transport variables
@@ -230,7 +230,7 @@ contains
        call PRC_MPIstop
     end if
 
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_TRACER_KAJINO13)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TRACER_KAJINO13)
 
     if( AE_CTG > ncat_max ) then
        write(*,*) 'xxx AE_CTG should be smaller than', ncat_max+1, 'stop'
@@ -385,7 +385,7 @@ contains
     real(RP), allocatable :: k_min_inp(:)
     real(RP), allocatable :: k_max_inp(:)
     integer , allocatable :: n_kap_inp(:)
-    
+
     real(RP), parameter :: d_min_def = 1.E-9_RP ! default lower bound of 1st size bin
     real(RP), parameter :: d_max_def = 1.E-5_RP ! upper bound of last size bin
     integer , parameter :: n_kap_def = 1        ! number of kappa bins
@@ -393,9 +393,9 @@ contains
     real(RP), parameter :: k_max_def = 1.E0_RP  ! upper bound of last kappa bin
 
     NAMELIST / PARAM_ATMOS_PHY_AE_KAJINO13 / &
-       h2so4dt, &    
-       ocgasdt, &    
-!       c_ratio, & 
+       h2so4dt, &
+       ocgasdt, &
+!       c_ratio, &
        c_kappa, &
        t_npf, &
 !       d_min_inp, &
@@ -413,7 +413,7 @@ contains
        logk_aenucl, &
        nbins_out
 
-    integer :: it, ierr 
+    integer :: it, ierr
     !---------------------------------------------------------------------------
 
     !--- setup parameter
@@ -444,7 +444,7 @@ contains
     n_kap(1:n_ctg) = n_kap_def ! number of kappa bins
     k_min(1:n_ctg) = k_min_def ! lower bound of 1st kappa bin
     k_max(1:n_ctg) = k_max_def ! upper bound of last kappa bin
- 
+
     do it = 1, n_ctg
      if( n_ctg == 1 ) then
        write(ctg_name(it),'(a)') "Sulfate"
@@ -454,7 +454,7 @@ contains
        write(ctg_name(it),'(a)') "Dust"
      endif
     enddo
- 
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_AE_KAJINO13,iostat=ierr)
@@ -473,7 +473,7 @@ contains
 !    n_kap(1:n_ctg) = n_kap_inp(1:n_ctg)  ! number of kappa bins
 !    k_min(1:n_ctg) = k_min_inp(1:n_ctg)  ! lower bound of 1st kappa bin
 !    k_max(1:n_ctg) = k_max_inp(1:n_ctg)  ! upper bound of last kappa bin
- 
+
     !--- diagnose parameters (n_trans, n_siz_max, n_kap_max)
     n_trans   = 0
     n_siz_max = 0
@@ -483,7 +483,7 @@ contains
       n_siz_max = max(n_siz_max, n_siz(ic))
       n_kap_max = max(n_kap_max, n_kap(ic))
     enddo
-  
+
     !--- bin settings
     allocate(d_lw(n_siz_max,n_ctg))
     allocate(d_ct(n_siz_max,n_ctg))
@@ -497,7 +497,7 @@ contains
     k_lw(:,:) = 0.0_RP
     k_ct(:,:) = 0.0_RP
     k_up(:,:) = 0.0_RP
-  
+
     do ic = 1, n_ctg
       dlogd = (log(d_max(ic)) - log(d_min(ic)))/float(n_siz(ic))
       do is0 = 1, n_siz(ic)  !size bin
@@ -505,14 +505,14 @@ contains
         d_ct(is0,ic) = exp(log(d_min(ic))+dlogd*(float(is0)-0.5_RP))
         d_up(is0,ic) = exp(log(d_min(ic))+dlogd* float(is0)        )
       enddo !is (1:n_siz(ic))
-  
+
       dk  = (k_max(ic) - k_min(ic))/float(n_kap(ic))
       do ik = 1, n_kap(ic)  !size bin
         k_lw(ik,ic) = k_min(ic) + dk  * float(ik-1)
         k_ct(ik,ic) = k_min(ic) + dk  *(float(ik)-0.5_RP)
         k_up(ik,ic) = k_min(ic) + dk  * float(ik)
       enddo !ik (1:n_kap(ic))
-  
+
     enddo !ic (1:n_ctg)
 
 !find size bin of regenerated aerosols
@@ -522,8 +522,8 @@ contains
        is0_reg = is0
       endif !d_lw < dg_reg < d_up
     enddo
-  
-    !--- coagulation rule 
+
+    !--- coagulation rule
     !   [ NOTE: current version has one category and single
     !     hygroscopicity bins and thus does not consider inter-category
     !     nor inter-hygroscopicity-section coagulation ]
@@ -537,9 +537,9 @@ contains
         endif !d_ct(is2) >= d_ct(is1)
       enddo !is1 (1:n_siz(ic)  )
       enddo !is2 (1:n_siz(ic)  )
-    enddo !ik(1:n_kap(ic)) 
+    enddo !ik(1:n_kap(ic))
     enddo !ic(1:n_ctg)
-  
+
     allocate(is_i(mcomb))
     allocate(is_j(mcomb))
     allocate(is_k(mcomb))
@@ -549,7 +549,7 @@ contains
     allocate(ic_i(mcomb))
     allocate(ic_j(mcomb))
     allocate(ic_k(mcomb))
-  
+
     mc = 0
     do ic = 1, n_ctg     !=1
     do ik = 1, n_kap(ic) !=1
@@ -569,9 +569,9 @@ contains
         endif !d_ct(is2) >= d_ct(is1)
       enddo !is1 (1:n_siz(ic)  )
       enddo !is2 (1:n_siz(ic)  )
-    enddo !ik(1:n_kap(ic)) 
+    enddo !ik(1:n_kap(ic))
     enddo !ic(1:n_ctg)
-  
+
     !--- gas concentration
 !    conc_h2so4 = 0.0_RP
 !    conc_cgas = 0.0_RP
@@ -581,7 +581,7 @@ contains
     allocate( is_trans2procs(n_trans) )
     allocate( ik_trans2procs(n_trans) )
     allocate( ic_trans2procs(n_trans) )
-  
+
     it_procs2trans(:,:,:,:)= -999
     ia_trans2procs(:)      = 0
     is_trans2procs(:)      = 0
@@ -705,7 +705,7 @@ contains
             QTRC(k,i,j,QAES-1+it_procs2trans(ia_m3,is0,ik,ic)) < 0.0_RP .or. &
             QTRC(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic)) < 0.0_RP .or. &
             QTRC(k,i,j,QAES-1+it_procs2trans(ia_kp,is0,ik,ic)) < 0.0_RP ) then
-          QTRC(k,i,j,QAES-1+it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP 
+          QTRC(k,i,j,QAES-1+it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP
         endif
       enddo
       enddo
@@ -713,7 +713,7 @@ contains
     enddo
     enddo
     enddo
-    
+
     do iq = 1, QA
     do j  = JS, JE
     do i  = IS, IE
@@ -733,7 +733,7 @@ contains
     reg_factor_m3 = dg_reg**3._RP * exp( 4.5_RP *(log(sg_reg)**2._RP)) !m0_reg to m3_reg
 
     !--- convert SCALE variable to zerochem variable
-    
+
     aerosol_procs(:,:,:,:) = 0.0_RP
     aerosol_activ(:,:,:,:) = 0.0_RP
     emis_procs(:,:,:,:) = 0.0_RP
@@ -815,11 +815,11 @@ contains
             aerosol_procs(ia_trans2procs(it), &
                           is_trans2procs(it), &
                           ik_trans2procs(it), &
-                          ic_trans2procs(it)) = QTRC1(k,i,j,QAES-1+it)*DENS(k,i,j) 
+                          ic_trans2procs(it)) = QTRC1(k,i,j,QAES-1+it)*DENS(k,i,j)
             emis_procs(ia_trans2procs(it), &
                           is_trans2procs(it), &
                           ik_trans2procs(it), &
-                          ic_trans2procs(it)) = EMIT(k,i,j,it)*DENS(k,i,j) 
+                          ic_trans2procs(it)) = EMIT(k,i,j,it)*DENS(k,i,j)
        enddo !it(1:n_trans)
        ! mixing ratio [kg/kg] -> concentration [ug/m3]
        conc_gas(1:GAS_CTG) &
@@ -870,7 +870,7 @@ contains
          aerosol_procs(ia_ms,is0_reg,ik_out,ic_mix) + ms_reg !ug/m3
 ! additional attirbute to be added (ia_kp)
        endif !flag_regeneration
-       
+
 ! diagnosed variables
        do is0 = 1, n_siz(ic_mix)
          CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
@@ -890,14 +890,14 @@ contains
        do ik = 1, n_kap(ic)   !kappa bin
        do is0 = 1, n_siz(ic)   !size bin
        do ia0 = 1, N_ATR       !attributes
-          QTRC1(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j)  
+          QTRC1(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j)
        enddo !ia (1:N_ATR )
        enddo !is (1:n_siz(ic)  )
        enddo !ik (1:n_kap(ic)  )
        enddo !ic (1:n_ctg      )
        !  [ug/m3] -> mixing ratio [kg/kg]
        QTRC1(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) &
-            = conc_gas(1:GAS_CTG) / DENS(k,i,j)*1.E-9_RP 
+            = conc_gas(1:GAS_CTG) / DENS(k,i,j)*1.E-9_RP
 
        ! tiny number, tiny mass
        do ic = 1, n_ctg       !aerosol category
@@ -921,7 +921,7 @@ contains
              QTRC(k,i,j,QAES-1+it_procs2trans(ia_m3,is0,ik,ic)) < 0.0_RP .or. &
              QTRC(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic)) < 0.0_RP .or. &
              QTRC(k,i,j,QAES-1+it_procs2trans(ia_kp,is0,ik,ic)) < 0.0_RP ) then
-           QTRC(k,i,j,QAES-1+it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP 
+           QTRC(k,i,j,QAES-1+it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP
          endif
        enddo
        enddo
@@ -935,11 +935,11 @@ contains
        do ic = 1, n_ctg
        do ik = 1, n_kap(ic)
        do is0 = 1, n_siz(ic)
-           total_aerosol_mass       (k,i,j,ic) = total_aerosol_mass (k,i,j,ic) & 
+           total_aerosol_mass       (k,i,j,ic) = total_aerosol_mass (k,i,j,ic) &
                                                + QTRC1(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic))
            total_aerosol_number     (k,i,j,ic) = total_aerosol_number     (k,i,j,ic) &
                                                + QTRC1(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))
-           total_emit_aerosol_mass  (k,i,j,ic) = total_emit_aerosol_mass  (k,i,j,ic) & 
+           total_emit_aerosol_mass  (k,i,j,ic) = total_emit_aerosol_mass  (k,i,j,ic) &
                                                + EMIT(k,i,j,it_procs2trans(ia_ms,is0,ik,ic))
            total_emit_aerosol_number(k,i,j,ic) = total_emit_aerosol_number(k,i,j,ic) &
                                                + EMIT(k,i,j,it_procs2trans(ia_m0,is0,ik,ic))
@@ -997,9 +997,9 @@ contains
   ! subroutine 4. aerosol_zerochem
   !-----------------------------------------------------------------------------
   subroutine aerosol_zerochem (        &
-        deltt,                         & !--- in 
+        deltt,                         & !--- in
         temp_k, pres_pa, super,        & !--- in
-!        h2so4dt, c_ratio, c_kappa,     & !--- in                 
+!        h2so4dt, c_ratio, c_kappa,     & !--- in
         flag_npf, flag_cond, flag_coag,& !--- in
         aerosol_procs,                 & !--- inout
         conc_gas,                      & !--- inout
@@ -1010,16 +1010,16 @@ contains
     use scale_time, only: &
        TIME_NOWSEC, &
        TIME_STARTDAYSEC
-  
+
     implicit none
     ! i/o variables
     real(DP),intent(in) :: deltt      ! delta t                                         [sec]
-    real(RP),intent(in) :: temp_k     ! temperature                                     [K]  
-    real(RP),intent(in) :: pres_pa    ! pressure                                        [Pa] 
-    real(RP),intent(in) :: super      ! supersaturation                                 [-]   
+    real(RP),intent(in) :: temp_k     ! temperature                                     [K]
+    real(RP),intent(in) :: pres_pa    ! pressure                                        [Pa]
+    real(RP),intent(in) :: super      ! supersaturation                                 [-]
 !    real(RP),intent(in) :: h2so4dt    ! h2so4 production rate                           [ug/m3/s]
-!    real(RP),intent(in) :: c_ratio    ! ratio of condensable mass to h2so4 (after NPF)  [-]    
-!    real(RP),intent(in) :: c_kappa    ! hygroscopicity of condensable mass              [-]   
+!    real(RP),intent(in) :: c_ratio    ! ratio of condensable mass to h2so4 (after NPF)  [-]
+!    real(RP),intent(in) :: c_kappa    ! hygroscopicity of condensable mass              [-]
     logical, intent(in) :: flag_npf   ! (on/off) new particle formation
     logical, intent(in) :: flag_cond  ! (on/off) condensation
     logical, intent(in) :: flag_coag  ! (on/off) coagulation
@@ -1037,7 +1037,7 @@ contains
     real(RP)            :: chem_gas(GAS_CTG)
 
     chem_gas(IG_H2SO4) = h2so4dt
-    chem_gas(IG_CGAS) = ocgasdt 
+    chem_gas(IG_CGAS) = ocgasdt
 
     !--- convert unit of aerosol mass [ia=ia_ms]
     do ic = 1, n_ctg       !aerosol category
@@ -1047,7 +1047,7 @@ contains
     enddo !is (1:n_siz(ic)  )
     enddo !ik (1:n_kap(ic)  )
     enddo !ic (1:n_ctg      )
- 
+
   ! emission
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
@@ -1072,12 +1072,12 @@ contains
     enddo !is (1:n_siz(ic)  )
     enddo !ik (1:n_kap(ic)  )
     enddo !ic (1:n_ctg      )
-  
+
   ! update conc_h2so4
-!    conc_h2so4 = conc_h2so4 + h2so4dt * deltt  ! [ug/m3] 
+!    conc_h2so4 = conc_h2so4 + h2so4dt * deltt  ! [ug/m3]
     conc_gas(IG_H2SO4) = conc_gas(IG_H2SO4) + chem_gas(IG_H2SO4) * deltt  ! [ug/m3]
     conc_gas(IG_CGAS) = conc_gas(IG_CGAS) + chem_gas(IG_CGAS) * deltt  ! [ug/m3]
- 
+
     conc_gas(IG_H2SO4) = conc_gas(IG_H2SO4) + emis_gas(IG_H2SO4) * deltt  ! [ug/m3]
     conc_gas(IG_CGAS) = conc_gas(IG_CGAS) + emis_gas(IG_CGAS) * deltt  ! [ug/m3]
 
@@ -1087,7 +1087,7 @@ contains
     else
       c_ratio = 0.0_RP
     endif
- 
+
   ! new particle formation
     t_elaps = TIME_NOWSEC - TIME_STARTDAYSEC
     J_1nm      = 0._RP
@@ -1106,32 +1106,32 @@ contains
 
   ! condensation
     if (flag_cond) then
-      call PROF_rapstart('ATM_Aerosol_cond',1) 
+      call PROF_rapstart('ATM_Aerosol_cond',1)
       call aerosol_condensation(J_1nm, temp_k, pres_pa, deltt,     &
              ic_nuc, ik_nuc, is_nuc, n_ctg, n_kap, n_siz, N_ATR,   &
              n_siz_max, n_kap_max, ia_m0, ia_m2, ia_m3, ia_ms,     &
   !          d_lw, d_ct, d_up, k_lw, k_ct, k_up,                   &
              d_lw, d_ct, d_up,                                     &
              conc_gas(IG_H2SO4), c_ratio, aerosol_procs            )
-      call PROF_rapend('ATM_Aerosol_cond',1) 
+      call PROF_rapend('ATM_Aerosol_cond',1)
     endif !if flag_cond=.true.
-  
-  ! coagulation 
+
+  ! coagulation
     if (flag_coag) then
-      call PROF_rapstart('ATM_Aerosol_coag',1) 
+      call PROF_rapstart('ATM_Aerosol_coag',1)
       call aerosol_coagulation(deltt, temp_k, pres_pa,                &
              mcomb,is_i,is_j,is_k,ik_i,ik_j,ik_k,ic_i,ic_j,ic_k,      &
              N_ATR,n_siz_max,n_kap_max,n_ctg,ia_m0,ia_m2,ia_m3,ia_ms, &
              n_siz,n_kap,d_lw,d_ct,d_up,aerosol_procs)
-      call PROF_rapend('ATM_Aerosol_coag',1) 
+      call PROF_rapend('ATM_Aerosol_coag',1)
     endif !if flag_coag=.true.
-  
+
     call aerosol_activation(c_kappa, super, temp_k, ia_m0, ia_m2, ia_m3, &
                             N_ATR,n_siz_max,n_kap_max,n_ctg,n_siz,n_kap, &
                             d_ct,aerosol_procs, aerosol_activ)
-  
+
 !   conc_gas(IG_CGAS) = conc_gas(IG_H2SO4)*( c_ratio-1.0_RP )
- 
+
     !--- convert unit of aerosol mass [ia=ia_ms]
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
@@ -1155,16 +1155,16 @@ contains
     real(RP)                :: conc_num_h2so4  !H2SO4 number concentration   [#/cm3]
   !  real(RP), parameter     :: logk = -12.4_RP !constant coefficient for kinetic nucleation [-]
   ! real(RP), parameter     :: logk = -11.4_RP !constant coefficient for kinetic nucleation [-]
-  
+
     conc_num_h2so4 = conc_h2so4 * conv_m2n     ![ug/m3] -> [#/cm3]
-  
+
     !emperical formula of new particle formation rate [Kuang et al., 2008]
     J_1nm  = (10._RP**(logk_aenucl)) * conc_num_h2so4 ** 2._RP
-  
+
     return
   end subroutine aerosol_nucleation
   !----------------------------------------------------------------------------------------
-  ! subroutine 2. aerosol_condensation  
+  ! subroutine 2. aerosol_condensation
   !----------------------------------------------------------------------------------------
   subroutine aerosol_condensation(J_1nm, temp_k, pres_pa, deltt,     &
                ic_nuc, ik_nuc, is_nuc, n_ctg, n_kap, n_siz, n_atr,   &
@@ -1172,12 +1172,12 @@ contains
   !              d_lw, d_ct, d_up, k_lw, k_ct, k_up,                   &
                d_lw, d_ct, d_up,                                     &
                conc_h2so4, c_ratio, aerosol_procs )
-  
+
     implicit none
     !i/o variables
     real(RP),intent(in)    :: J_1nm      ! nucleation rate of 1nm particles [#/cm3/s]
-    real(RP),intent(in)    :: temp_k     ! temperature                      [K]  
-    real(RP),intent(in)    :: pres_pa    ! pressure                         [Pa] 
+    real(RP),intent(in)    :: temp_k     ! temperature                      [K]
+    real(RP),intent(in)    :: pres_pa    ! pressure                         [Pa]
     real(DP),intent(in)    :: deltt      ! delta t                          [sec]
     integer, intent(in)    :: ic_nuc     ! category  for 1nm new particles
     integer, intent(in)    :: ik_nuc     ! kappa bin for 1nm new particles
@@ -1192,7 +1192,7 @@ contains
     integer, intent(in)    :: ia_m2      !
     integer, intent(in)    :: ia_m3      !
     integer, intent(in)    :: ia_ms      !
-    real(RP),intent(in)    :: c_ratio    ! ratio of condensable mass to h2so4 (after NPF)  [-]    
+    real(RP),intent(in)    :: c_ratio    ! ratio of condensable mass to h2so4 (after NPF)  [-]
     real(RP),intent(in)   :: d_lw(n_siz_max,n_ctg), d_ct(n_siz_max,n_ctg), d_up(n_siz_max,n_ctg)
   ! real(RP), dimension(n_kap_max,n_ctg), intent(in)    :: k_lw, k_ct, k_up
     real(RP),intent(inout) :: conc_h2so4 !concentration [ug/m3]
@@ -1200,7 +1200,7 @@ contains
   !local variables
     real(RP), parameter  :: alpha = 0.1_RP       ! accomodation coefficient
     real(RP), parameter  :: cour  = 0.5_RP       ! courant number for condensation
-    integer              :: isplt                ! number of time splitted 
+    integer              :: isplt                ! number of time splitted
     real(RP)             :: dtsplt               ! splitted time step
     real(RP) :: sq_cbar_h2so4                   ! square of molecular speed of H2SO4 gas [m2/s2]
     real(RP) :: cbar_h2so4                      ! molecular speed of H2SO4 gas           [m/s]
@@ -1221,14 +1221,14 @@ contains
     integer  :: ic, ik, is0, i, is1, is2
 
 ! nothing happens --> in future, c_ratio is removed and condensable gas should be used
-    if (conc_h2so4 <= 0.0_RP) return 
+    if (conc_h2so4 <= 0.0_RP) return
 ! nothing happens --> in future, c_ratio is removed and condensable gas should be used
-  
+
     drive         = conc_h2so4 * mwrat_s6 * conv_ms_vl  ![ugH2SO4/m3]=>volume [m3SO4/m3]
     sq_cbar_h2so4 = 8.0_RP*rgas*temp_k/(pi*mwh2so4*1.E-3_RP)
     cbar_h2so4    = sqrt( sq_cbar_h2so4 )
     dv_h2so4      = diffsulf*(stdatmpa/pres_pa)*(temp_k/stdtemp)**1.75_RP
-  
+
     dm0dt_npf = 0.0_RP
     dm2dt_npf = 0.0_RP
     dm3dt_npf = 0.0_RP
@@ -1237,13 +1237,13 @@ contains
     dm2dt_cnd = 0.0_RP
     dm3dt_cnd = 0.0_RP
     dmsdt_cnd = 0.0_RP
-  
+
     !(npf rate)
     dm0dt_npf = J_1nm * 1.E6_RP                  ! [#/m3/s]
     dm2dt_npf = dm0dt_npf * 1.E-18_RP            ! [m2/m3/s]
     dm3dt_npf = dm0dt_npf * 1.E-27_RP            ! [m3/m3/s]
     dmsdt_npf = dm3dt_npf * pi6 * conv_vl_ms     ! [ug/m3/s]
-  
+
    !(condensation rate)
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
@@ -1251,7 +1251,7 @@ contains
 
       dm2dt_cnd(is0,ik,ic) = 0._RP
       dm3dt_cnd(is0,ik,ic) = 0._RP
-  
+
       if (aerosol_procs(ia_m0,is0,ik,ic) &
          *aerosol_procs(ia_m2,is0,ik,ic) &
          *aerosol_procs(ia_m3,is0,ik,ic) > 0._RP) then
@@ -1271,28 +1271,28 @@ contains
         != harmonic mean approach
         harm2 = gnc2 * gfm2 / ( gnc2 + gfm2 )    !m2/m3/s
         harm3 = gnc3 * gfm3 / ( gnc3 + gfm3 )    !m3/m3/s
-  
+
         dm2dt_cnd(is0,ik,ic) = harm2*drive                         !m2/m3/s
         dm3dt_cnd(is0,ik,ic) = harm3*drive                         !m3/m3/s
         dmsdt_cnd(is0,ik,ic) = dm3dt_cnd(is0,ik,ic)*pi6*conv_vl_ms !ug/m3/s
-  
+
       endif !aerosol number > 0
- 
-    enddo 
-    enddo 
-    enddo 
-  
-  ! coagulation 
+
+    enddo
+    enddo
+    enddo
+
+  ! coagulation
     !=time split
     lossrate = dmsdt_npf
-  
+
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
     do is0 = 1, n_siz(ic)   !size bin
       lossrate = lossrate + dmsdt_cnd(is0,ik,ic)
-    enddo 
-    enddo 
-    enddo 
+    enddo
+    enddo
+    enddo
 
     if (lossrate<=0._RP) return !nothing happens
 
@@ -1303,12 +1303,12 @@ contains
     loop_split: do i = 1, isplt
       tmps6      = conc_h2so4
       conc_h2so4 = conc_h2so4 - (lossrate * dtsplt) * mwrat_s6_i !ugH2SO4/m3
-  
+
       if (conc_h2so4 < 0._RP) then
         dtsplt     = tmps6 * mwrat_s6 / lossrate
         conc_h2so4 = 0._RP
       endif !conc_h2so4 < 0
-  
+
       !(npf)
       aerosol_procs(ia_m0,is_nuc,ik_nuc,ic_nuc) = & ! #/m3
           aerosol_procs(ia_m0,is_nuc,ik_nuc,ic_nuc) + dm0dt_npf * dtsplt
@@ -1318,12 +1318,12 @@ contains
           aerosol_procs(ia_m3,is_nuc,ik_nuc,ic_nuc) + dm3dt_npf * dtsplt
       aerosol_procs(ia_ms,is_nuc,ik_nuc,ic_nuc) = & ! ug/m3
           aerosol_procs(ia_ms,is_nuc,ik_nuc,ic_nuc) + dmsdt_npf * dtsplt
-  
+
      !(condensation)
       do ic = 1, n_ctg       !aerosol category
       do ik = 1, n_kap(ic)   !kappa bin
       do is0 = 1, n_siz(ic)   !size bin
-  
+
         aerosol_procs(ia_m2,is0,ik,ic) = & ! m2/m3
             aerosol_procs(ia_m2,is0,ik,ic) + dm2dt_cnd(is0,ik,ic) * dtsplt & !m2/m3
                                           * c_ratio                        !additional mass for condensation
@@ -1340,17 +1340,17 @@ contains
 
 !      if (conc_h2so4 <= 0._RP) goto 777
       if (conc_h2so4 <= 0.0_RP) exit loop_split
-  
+
     enddo loop_split
-  
+
 !    777 continue
-  
+
     conc_h2so4 = max(conc_h2so4, 0._RP)
-  
+
   !== moving center
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
-  
+
       rm0_pls = 0._RP
       rm2_pls = 0._RP
       rm3_pls = 0._RP
@@ -1359,9 +1359,9 @@ contains
       rm2_mns = 0._RP
       rm3_mns = 0._RP
       rms_mns = 0._RP
-  
+
       do is1 = 1, n_siz(ic)   !size bin
-  
+
         if (aerosol_procs(ia_m0,is1,ik,ic) &
            *aerosol_procs(ia_m2,is1,ik,ic) &
            *aerosol_procs(ia_m3,is1,ik,ic) > 0._RP) then
@@ -1385,11 +1385,11 @@ contains
               exit
             endif !d_lw(is2) < dgt < d_up(is2)
           enddo
-  
+
         endif !aerosol number > 0
 
       enddo
-  
+
       do is0 = 1, n_siz(ic)
         aerosol_procs(ia_m0,is0,ik,ic) = aerosol_procs(ia_m0,is0,ik,ic) &
                                       + rm0_pls(is0) - rm0_mns(is0)
@@ -1400,14 +1400,14 @@ contains
         aerosol_procs(ia_ms,is0,ik,ic) = aerosol_procs(ia_ms,is0,ik,ic) &
                                       + rms_pls(is0) - rms_mns(is0)
       enddo !is(1:n_siz(ic))
- 
-    enddo 
-    enddo 
-  
+
+    enddo
+    enddo
+
     return
   end subroutine aerosol_condensation
   !----------------------------------------------------------------------------------------
-  ! subroutine 3. aerosol_coagulation  
+  ! subroutine 3. aerosol_coagulation
   !----------------------------------------------------------------------------------------
   subroutine aerosol_coagulation(deltt, temp_k, pres_pa,                &
               mcomb,is_i,is_j,is_k,ik_i,ik_j,ik_k,ic_i,ic_j,ic_k,      &
@@ -1416,8 +1416,8 @@ contains
       implicit none
       !i/o variables
       real(DP),intent(in) :: deltt      ! delta t        [sec]
-      real(RP),intent(in) :: temp_k     ! temperature    [K]  
-      real(RP),intent(in) :: pres_pa    ! pressure       [Pa] 
+      real(RP),intent(in) :: temp_k     ! temperature    [K]
+      real(RP),intent(in) :: pres_pa    ! pressure       [Pa]
       integer, intent(in) :: mcomb !combinations of sections
       integer, intent(in) :: is_i(mcomb), is_j(mcomb), is_k(mcomb)
       integer, intent(in) :: ik_i(mcomb), ik_j(mcomb), ik_k(mcomb)
@@ -1430,8 +1430,8 @@ contains
       integer, intent(in) :: ia_m2      !
       integer, intent(in) :: ia_m3      !
       integer, intent(in) :: ia_ms      !
-      integer, intent(in) :: n_siz(n_ctg)      ! 
-      integer, intent(in) :: n_kap(n_ctg)      ! 
+      integer, intent(in) :: n_siz(n_ctg)      !
+      integer, intent(in) :: n_kap(n_ctg)      !
       real(RP),intent(in):: d_lw(n_siz_max,n_ctg), d_ct(n_siz_max,n_ctg), d_up(n_siz_max,n_ctg)
       real(RP),intent(inout) :: aerosol_procs(n_atr,n_siz_max,n_kap_max,n_ctg)
       !local variables
@@ -1451,20 +1451,20 @@ contains
       real(RP) :: dm0i,dm0j,dm0k,dm3i,dm3j,dm3k,dm6i,dm6j,dm6k,dmsi,dmsj,dmsk
       real(RP) :: m0t,m3t,m6t,dgt,sgt,m2t
       integer  :: mc, ic, ik, is0, is1, is2
-    
+
       dt_m0(:,:,:) = 0._RP
       dt_m3(:,:,:) = 0._RP
       dt_m6(:,:,:) = 0._RP
       dt_ms(:,:,:) = 0._RP
       sixth(:,:,:) = 0._RP
-    
+
       visair=c1*temp_k**c2/(1._RP+c3/temp_k)                ! viscosity of air [Pa s]=[kg/m/s]
       rkfm=(3._RP*boltz*temp_k /rho_kg)**0.5_RP             ![J/K*K*m3/kg]=[kg*m2/s2*m3/kg]=[m2.5/s]
       rknc= 2._RP*boltz*temp_k /(3._RP*visair)              ![J*m*s/kg]=[kg*m2/s2*m*s/kg]=[m3/s]
       c4 = pi*boltz*temp_k/(8._RP*mwair/avo*1.E-3_RP)       !
       lambda = visair/(0.499_RP*pres_pa)*c4**0.5_RP*1.E2_RP ! mean free path of air molecules   [cm]
 
-    
+
     !--- 555 coagulation combination rule loop
         do mc = 1, mcomb
           m0i = aerosol_procs(ia_m0,is_i(mc),ik_i(mc),ic_i(mc))
@@ -1477,20 +1477,20 @@ contains
           msj = aerosol_procs(ia_ms,is_j(mc),ik_j(mc),ic_j(mc))
 
           if (m0i*m2i*m3i <= 0._RP .OR. m0j*m2j*m3j <= 0._RP) cycle
-    
+
           call diag_ds(m0i,m2i,m3i,dgi,sgi,dm2)
           if (dgi <= 0._RP) dgi = d_ct(is_i(mc),ic_i(mc))
           if (sgi <= 0._RP) sgi = 1.3_RP
           call diag_ds(m0j,m2j,m3j,dgj,sgj,dm2)
           if (dgj <= 0._RP) dgj = d_ct(is_j(mc),ic_j(mc))
           if (sgj <= 0._RP) sgj = 1.3_RP
-    
+
           m6i = m0i*dgi**6._RP*exp(18._RP*(log(sgi)**2._RP))
           m6j = m0j*dgj**6._RP*exp(18._RP*(log(sgj)**2._RP))
           sixth(is_i(mc),ik_i(mc),ic_i(mc)) = m6i
           sixth(is_j(mc),ik_j(mc),ic_j(mc)) = m6j
-    
-          !intra sectional coagulation 
+
+          !intra sectional coagulation
           if ( is_i(mc) == is_j(mc) .AND. &
                ik_i(mc) == ik_j(mc) .AND. &
                ic_i(mc) == ic_j(mc) ) then
@@ -1505,7 +1505,7 @@ contains
             dm3k = -dm3i
             dm6k = -dm6i
           !inter sectional coagulation
-          else 
+          else
             call aero_inter(m0i ,m3i ,m6i ,      & !input unchanged
                             m0j ,m3j ,m6j ,      & !input unchanged
                             dm0i,dm3i,dm6i,dmsi, & !output
@@ -1516,7 +1516,7 @@ contains
                             rknc, rkfm, lambda,  & !input unchanged
                             deltt                ) !input unchanged
           endif
-    
+
           dt_m0(is_i(mc),ik_i(mc),ic_i(mc)) = dt_m0(is_i(mc),ik_i(mc),ic_i(mc)) + dm0i
           dt_m0(is_j(mc),ik_j(mc),ic_j(mc)) = dt_m0(is_j(mc),ik_j(mc),ic_j(mc)) + dm0j
           dt_m0(is_k(mc),ik_k(mc),ic_k(mc)) = dt_m0(is_k(mc),ik_k(mc),ic_k(mc)) + dm0k
@@ -1529,11 +1529,11 @@ contains
           dt_ms(is_i(mc),ik_i(mc),ic_i(mc)) = dt_ms(is_i(mc),ik_i(mc),ic_i(mc)) + dmsi
           dt_ms(is_j(mc),ik_j(mc),ic_j(mc)) = dt_ms(is_j(mc),ik_j(mc),ic_j(mc)) + dmsj
           dt_ms(is_k(mc),ik_k(mc),ic_k(mc)) = dt_ms(is_k(mc),ik_k(mc),ic_k(mc)) + dmsk
-    
+
         enddo !555 continue !mc(1:mcomb)
 
 
-        !--- redistribution 
+        !--- redistribution
         do ic = 1, n_ctg       !aerosol category
         do ik = 1, n_kap(ic)   !kappa bin
         do is0 = 1, n_siz(ic)   !size bin
@@ -1580,11 +1580,11 @@ contains
         enddo
         enddo
         enddo
-    
+
     !== moving center
         do ic = 1, n_ctg       !aerosol category
         do ik = 1, n_kap(ic)   !kappa bin
-    
+
           rm0_pls = 0._RP
           rm2_pls = 0._RP
           rm3_pls = 0._RP
@@ -1593,9 +1593,9 @@ contains
           rm2_mns = 0._RP
           rm3_mns = 0._RP
           rms_mns = 0._RP
-    
+
           do is1 = 1, n_siz(ic)   !size bin
-    
+
             if (aerosol_procs(ia_m0,is1,ik,ic) &
                *aerosol_procs(ia_m2,is1,ik,ic) &
                *aerosol_procs(ia_m3,is1,ik,ic) > 0._RP) then
@@ -1605,7 +1605,7 @@ contains
               call diag_ds(m0t,m2t,m3t,dgt,sgt,dm2)
               if (dgt <= 0._RP) dgt = d_ct(is1,ic)
               if (sgt <= 0._RP) sgt = 1.3_RP
-    
+
               do is2 = 1, n_siz(ic)
                 if (dgt >= d_lw(is2,ic) .AND. dgt < d_up(is2,ic)) then !moving center
                   rm0_pls(is2) = rm0_pls(is2) + aerosol_procs(ia_m0,is1,ik,ic) !is2 <=
@@ -1619,11 +1619,11 @@ contains
                   exit
                 endif !d_lw(is2) < dgt < d_up(is2)
               enddo
-     
+
             endif !aerosol number > 0
 
           enddo
-    
+
           do is0 = 1, n_siz(ic)
             aerosol_procs(ia_m0,is0,ik,ic) = aerosol_procs(ia_m0,is0,ik,ic) &
                                           + rm0_pls(is0) - rm0_mns(is0)
@@ -1634,26 +1634,26 @@ contains
             aerosol_procs(ia_ms,is0,ik,ic) = aerosol_procs(ia_ms,is0,ik,ic) &
                                           + rms_pls(is0) - rms_mns(is0)
           enddo !is(1:n_siz(ic))
-    
+
         enddo
         enddo
-    
-    
+
+
       return
   end subroutine aerosol_coagulation
   !----------------------------------------------------------------------------------------
-  ! subroutine 4. aerosol_activation   
+  ! subroutine 4. aerosol_activation
   !   Abdul-Razzak et al.,   JGR, 1998 [AR98]
   !   Abdul-Razzak and Ghan, JGR, 2000 [AR00]
   !----------------------------------------------------------------------------------------
   subroutine aerosol_activation(c_kappa, super, temp_k, ia_m0, ia_m2, ia_m3, &
                                 n_atr,n_siz_max,n_kap_max,n_ctg,n_siz,n_kap, &
                                 d_ct, aerosol_procs, aerosol_activ)
-    
+
       implicit none
     !i/o variables
-      real(RP),intent(in) :: super      ! supersaturation                                 [-]   
-      real(RP),intent(in) :: c_kappa    ! hygroscopicity of condensable mass              [-]   
+      real(RP),intent(in) :: super      ! supersaturation                                 [-]
+      real(RP),intent(in) :: c_kappa    ! hygroscopicity of condensable mass              [-]
       real(RP),intent(in) :: temp_k     ! temperature
       integer, intent(in) :: ia_m0, ia_m2, ia_m3
       integer, intent(in) :: n_atr
@@ -1661,8 +1661,8 @@ contains
       integer, intent(in) :: n_kap_max
       integer, intent(in) :: n_ctg
       real(RP),intent(in) :: d_ct(n_siz_max,n_ctg)
-      real(RP) :: aerosol_procs(n_atr,n_siz_max,n_kap_max,n_ctg) 
-      real(RP) :: aerosol_activ(n_atr,n_siz_max,n_kap_max,n_ctg) 
+      real(RP) :: aerosol_procs(n_atr,n_siz_max,n_kap_max,n_ctg)
+      real(RP) :: aerosol_activ(n_atr,n_siz_max,n_kap_max,n_ctg)
       integer, intent(in) :: n_siz(n_ctg), n_kap(n_ctg)
     !local variables
       real(RP),parameter :: two3 = 2._RP/3._RP
@@ -1673,7 +1673,7 @@ contains
       real(RP) :: am,scrit_am,aa,tc,st,bb,ac
       real(RP) :: m0t,m2t,m3t,dgt,sgt,dm2
       real(RP) :: d_crit                  ! critical diameter
-      real(RP) :: tmp1, tmp2, tmp3        ! 
+      real(RP) :: tmp1, tmp2, tmp3        !
       real(RP) :: ccn_frc,cca_frc,ccv_frc ! activated number,area,volume
       integer  :: is0, ik, ic
 
@@ -1682,7 +1682,7 @@ contains
       if (super<=0._RP) return
 
       smax_inv = 1._RP / super
-    
+
     !--- surface tension of water
       tc = temp_k - stdtemp
       if (tc >= 0._RP ) then
@@ -1694,11 +1694,11 @@ contains
             + 5.285e-8_RP*tc**6._RP
       endif
       st      = st * 1.E-3_RP                    ![J/m2]
-    
+
     !-- Kelvin effect
     !          [J m-2]  [kg mol-1]       [m3 kg-1] [mol K J-1] [K-1]
       aa  = 2._RP * st * mwwat * 1.E-3_RP / (dnwat * rgas * temp_k ) ![m] Eq.5 in AR98
-    
+
       do ic = 1, n_ctg
       do ik = 1, n_kap(ic)
       do is0 = 1, n_siz(ic)
@@ -1711,7 +1711,7 @@ contains
         am  = dgt * 0.5_RP  !geometric dry mean radius [m]
         bb  = c_kappa
         if (bb > 0._RP .AND. am > 0._RP ) then
-          scrit_am = 2._RP/sqrt(bb)*(aa/(3._RP*am))**1.5_RP !AR00 Eq.9 
+          scrit_am = 2._RP/sqrt(bb)*(aa/(3._RP*am))**1.5_RP !AR00 Eq.9
         else
           scrit_am = 0._RP
         endif
@@ -1733,7 +1733,7 @@ contains
       enddo !is(1:n_siz(ic))
       enddo !ik(1:n_kap(ic))
       enddo !ic(1:n_ctg)
-    
+
       return
   end subroutine aerosol_activation
   !-----------------------------------------------------------------------------
@@ -1753,7 +1753,7 @@ contains
     real(DP), parameter :: tiny=1.E-50_DP
 
     dm2=0._RP
-  
+
     if (m0 <= tiny .OR. m2 <= tiny .OR. m3 <= tiny) then
       m0=0._RP
       m2=0._RP
@@ -1762,17 +1762,17 @@ contains
       sg=-1._RP
       return
     endif
-  
+
     m2_old = m2
     m3_bar = m3/m0
     m2_bar = m2/m0
     dg     = m2_bar**rk1_hat*m3_bar**rk2_hat
-  
+
     if (m2_bar/m3_bar**ratio < 1._RP) then !stdev > 1.
       sg     = exp(sqrt(2._RP/(rk1*(rk1-rk2))  &
              * log(m2_bar/m3_bar**ratio) ))
     endif
-  
+
     if (sg > sgmax) then
   !    print *,'sg=',sg
       sg = sgmax
@@ -1780,17 +1780,17 @@ contains
                    m2,dg     ) !o
   !   print *,'warning! modified as sg exceeded sgmax (diag_ds)'
     endif
-  
+
     if (m2_bar/m3_bar**ratio >= 1._RP) then !stdev < 1.
       sg = 1._RP
       call diag_d2(m0,m3,sg, & !i
                    m2,dg     ) !o
   !   print *,'warning! modified as sg < 1. (diag_ds)'
     endif
-  
+
     m2_new = m2
     dm2    = m2_old - m2_new !m2_pres - m2_diag
-  
+
     return
   end subroutine diag_ds
   !----------------------------------------------------------------------------------------
@@ -1804,7 +1804,7 @@ contains
     aaa = m0               * exp( 4.5_RP * (log(sg)**2._RP) )
     dg  =(m3/aaa)**one3
     m2  = m0 * dg ** 2._RP * exp( 2.0_RP * (log(sg)**2._RP) )
-  
+
     return
   end subroutine diag_d2
   !----------------------------------------------------------------------------------------
@@ -1814,10 +1814,10 @@ contains
                           dm0,dm3,dm6,    & !output
                           dg, sg, lambda, & !input
                           rknc,rkfm,dt)     !input
-  
-  !---intra-modal coagulation for spheres 
+
+  !---intra-modal coagulation for spheres
     implicit none
-  
+
   !=== Input
     real(RP), intent(in)   :: m0         ![/m3]
     real(RP), intent(in)   :: m3         ![m2/m3]
@@ -1830,25 +1830,25 @@ contains
     real(RP), intent(in)   :: lambda     ! mean free path of air molecules [cm]
     real(RP), intent(in)   :: rknc, rkfm ! constants for both regimes
     real(DP), intent(in)   :: dt         ! dt
-  
+
   !=== Intermidiate quantities
     real(RP) :: mm2,mm1,m1,m4,m2,mm1p5,mm0p5,m0p5,m3p5,m1p5,m5,m2p5
     real(RP) :: dm0dt,dm6dt,dm0dt_nc,dm6dt_nc,dm0dt_fm,dm6dt_fm,bbb
-  
+
   !=== Moment formulation for M0, M3 & M6 to extract Dg and Sg
     real(RP), parameter :: rk1=3._RP
     real(RP), parameter :: rk2=6._RP
     real(RP), parameter :: ratio=rk1/rk2
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
-  
+
   !--- initialization
     dm0   = 0._RP
     dm3   = 0._RP
     dm6   = 0._RP
     dm0dt = 0._RP
     dm6dt = 0._RP
-  
+
   !--- near continuum regime---------------------------------------------------------
   ! M(k)  = M(0) * dmean **   k  * exp( k**2.*0.5 *(dlog(stdev)**2.))
     mm2  =m0*dg**(-2._RP) *exp(2.0_RP *(log(sg)**2._RP)) !M-2 (dM0/dt)
@@ -1857,10 +1857,10 @@ contains
     m2   =m0*dg**  2._RP  *exp(2.0_RP *(log(sg)**2._RP)) !M2
     m4   =m0*dg**  4._RP  *exp(8.0_RP *(log(sg)**2._RP)) !M4  (dM6/dt)
   ! m6   =m0*dg**  6._RP  *exp(18._RP *(log(sg)**2._RP)) !M6
-  
+
     dm0dt_nc=-1._RP*rknc*(m0*m0+m1*mm1+2.492e-2_RP*lambda*(m0*mm1+m1*mm2))
     dm6dt_nc= 2._RP*rknc*(m3*m3+m4*m2 +2.492e-2_RP*lambda*(m3*m2 +m4*m1 ))
-  
+
   !--- free molecule regime----------------------------------------------------------
   ! M(k)  = M(0 * dmean **   k  * exp( k**2.*0.5 *(dlog(stdev)**2.) )
     mm1p5=m0*dg**(-1.5_RP)*exp(1.125_RP*(log(sg)**2._RP))!M-1.5(dM0/dt)
@@ -1870,20 +1870,20 @@ contains
     m1p5 =m0*dg**( 1.5_RP)*exp(1.125_RP*(log(sg)**2._RP))!M1.5 (dM6/dt)
     m5   =m0*dg**  5._RP  *exp(12.50_RP*(log(sg)**2._RP))!M5   (dM6/dt)
     m2p5 =m0*dg**  2.5_RP *exp(3.125_RP*(log(sg)**2._RP))!M2.5 (dM6/dt)
-  
+
     bbb     =1._RP+1.2_RP *exp(-2._RP*sg)-0.646_RP*exp(-0.35_RP*sg**2._RP) ! Eq.9 in Park et al. (1999) JAS
-  
+
     dm0dt_fm= -1._RP*bbb*rkfm*(m0*m0p5+m2*mm1p5+2._RP*m1*mm0p5)
     dm6dt_fm=  2._RP*bbb*rkfm*(m3p5*m3+m1p5*m5 +2._RP*m2p5*m4 )
-  
+
   !--- harmonic mean approach
     if (dm0dt_fm+dm0dt_nc /= 0._RP) dm0dt = dm0dt_fm*dm0dt_nc/(dm0dt_fm+dm0dt_nc)
     if (dm6dt_fm+dm6dt_nc /= 0._RP) dm6dt = dm6dt_fm*dm6dt_nc/(dm6dt_fm+dm6dt_nc)
-  
+
     dm0    = dm0dt * dt
     dm3    = 0._RP
     dm6    = dm6dt * dt
-  
+
     return
   end subroutine aero_intra
   !----------------------------------------------------------------------------------------
@@ -1898,10 +1898,10 @@ contains
                         dgj ,sgj, rhoj,      & !input unchanged
                         rknc,  rkfm, lambda, & !input unchanged
                         dtrest               ) !input unchanged
-  
-  !---inter-modal coagulation for spheres 
+
+  !---inter-modal coagulation for spheres
     implicit none
-  
+
   !=== input/output variables
     real(RP), intent(in)  :: m0i,m0j                 ! [/m3]
     real(RP), intent(in)  :: m3i,m3j                 ! [m3/m3]
@@ -1915,7 +1915,7 @@ contains
     real(RP), intent(in)  :: rknc, rkfm              ! constants for both regimes
     real(RP), intent(in)  :: lambda     ! mean free path of air molecules [cm]
     real(DP)              :: dtrest     ! time[s]
-  
+
   !=== local variables
     real(RP) :: dm0dt_i,dm3dt_i,dm6dt_i
     real(RP) :: dm0dt_j,dm3dt_j,dm6dt_j
@@ -1931,7 +1931,7 @@ contains
     real(RP) :: dm6dt_fm_j,dm3dt_fm_j,dm0dt_fm_j
     real(RP) :: dm6dt_fm_k,dm3dt_fm_k,dm0dt_fm_k
     real(RP) :: bbb,gamma1,gamma2,alpha,beta
-  
+
   !=== initialization
     dm0dt_i = 0._RP
     dm3dt_i = 0._RP
@@ -1954,29 +1954,29 @@ contains
     dm3k    = 0._RP
     dm6k    = 0._RP
     dmsk    = 0._RP
-  
+
   !---near continuum regime----------------------------------------------------------------------
-  ! (mode i) 
-    mm2i=m0i*dgi**(-2._RP)*exp( 2.0_RP*(log(sgi)**2._RP))!M-2 
-    mm1i=m0i*dgi**(-1._RP)*exp( 0.5_RP*(log(sgi)**2._RP))!M-1 
-    m1i =m0i*dgi**  1._RP *exp( 0.5_RP*(log(sgi)**2._RP))!M1  
-    m2i =m0i*dgi**  2._RP *exp( 2.0_RP*(log(sgi)**2._RP))!M2  
+  ! (mode i)
+    mm2i=m0i*dgi**(-2._RP)*exp( 2.0_RP*(log(sgi)**2._RP))!M-2
+    mm1i=m0i*dgi**(-1._RP)*exp( 0.5_RP*(log(sgi)**2._RP))!M-1
+    m1i =m0i*dgi**  1._RP *exp( 0.5_RP*(log(sgi)**2._RP))!M1
+    m2i =m0i*dgi**  2._RP *exp( 2.0_RP*(log(sgi)**2._RP))!M2
   ! m3i =m3i
-    m4i =m0i*dgi**  4._RP *exp( 8.0_RP*(log(sgi)**2._RP))!M4  
-    m5i =m0i*dgi**  5._RP *exp(12.5_RP*(log(sgi)**2._RP))!M5  
+    m4i =m0i*dgi**  4._RP *exp( 8.0_RP*(log(sgi)**2._RP))!M4
+    m5i =m0i*dgi**  5._RP *exp(12.5_RP*(log(sgi)**2._RP))!M5
   ! m6i =m6i
     m7i =m0i*dgi**  7._RP *exp(24.5_RP*(log(sgi)**2._RP))!M7
   ! (mode j)
     mm2j=m0j*dgj**(-2._RP)*exp( 2.0_RP*(log(sgj)**2._RP))!M-2
     mm1j=m0j*dgj**(-1._RP)*exp( 0.5_RP*(log(sgj)**2._RP))!M-1
-    m1j =m0j*dgj**  1._RP *exp( 0.5_RP*(log(sgj)**2._RP))!M1 
-    m2j =m0j*dgj**  2._RP *exp( 2.0_RP*(log(sgj)**2._RP))!M2  
+    m1j =m0j*dgj**  1._RP *exp( 0.5_RP*(log(sgj)**2._RP))!M1
+    m2j =m0j*dgj**  2._RP *exp( 2.0_RP*(log(sgj)**2._RP))!M2
   ! m3j =m3j
-    m4j =m0j*dgj**  4._RP *exp( 8.0_RP*(log(sgj)**2._RP))!M4  
-    m5j =m0j*dgj**  5._RP *exp(12.5_RP*(log(sgj)**2._RP))!M5  
+    m4j =m0j*dgj**  4._RP *exp( 8.0_RP*(log(sgj)**2._RP))!M4
+    m5j =m0j*dgj**  5._RP *exp(12.5_RP*(log(sgj)**2._RP))!M5
   ! m6j =m6j
     m7j =m0j*dgj**  7._RP *exp(24.5_RP*(log(sgj)**2._RP))!M7
-  
+
     dm0dt_nc_i = -rknc*(2._RP*m0i*m0j+ mm1i*m1j             &
                                       + mm1j*m1i            &
                    +2.492e-2_RP*lambda*(m0i *mm1j+m1i*mm2j  &
@@ -2008,39 +2008,39 @@ contains
                                       + m2j *m4i            &
                    +2.492e-2_RP*lambda*(m3i *m2j +m4i*m1j   &
                                       + m3j *m2i +m4j*m1i)  )
-  
+
   !---free molecule regime-----------------------------------------------------------------------
-  ! (mode i) 
+  ! (mode i)
     mm1p5i=m0i*dgi**(-1.5_RP)*exp( 1.125_RP*(log(sgi)**2._RP) ) !M-1.5
     mm0p5i=m0i*dgi**(-0.5_RP)*exp( 0.125_RP*(log(sgi)**2._RP) ) !M-0.5
-    m0p5i =m0i*dgi**  0.5_RP *exp( 0.125_RP*(log(sgi)**2._RP) ) !M0.5 
-    m1p5i =m0i*dgi**  1.5_RP *exp( 1.125_RP*(log(sgi)**2._RP) ) !M1.5 
-    m2p5i =m0i*dgi**  2.5_RP *exp( 3.125_RP*(log(sgi)**2._RP) ) !M2.5 
-    m3p5i =m0i*dgi**  3.5_RP *exp( 6.125_RP*(log(sgi)**2._RP) ) !M3.5 
-    m4p5i =m0i*dgi**  4.5_RP *exp(10.125_RP*(log(sgi)**2._RP) ) !M4.5 
-    m5p5i =m0i*dgi**  5.5_RP *exp(15.125_RP*(log(sgi)**2._RP) ) !M5.5 
-    m6p5i =m0i*dgi**  6.5_RP *exp(21.125_RP*(log(sgi)**2._RP) ) !M6.5 
+    m0p5i =m0i*dgi**  0.5_RP *exp( 0.125_RP*(log(sgi)**2._RP) ) !M0.5
+    m1p5i =m0i*dgi**  1.5_RP *exp( 1.125_RP*(log(sgi)**2._RP) ) !M1.5
+    m2p5i =m0i*dgi**  2.5_RP *exp( 3.125_RP*(log(sgi)**2._RP) ) !M2.5
+    m3p5i =m0i*dgi**  3.5_RP *exp( 6.125_RP*(log(sgi)**2._RP) ) !M3.5
+    m4p5i =m0i*dgi**  4.5_RP *exp(10.125_RP*(log(sgi)**2._RP) ) !M4.5
+    m5p5i =m0i*dgi**  5.5_RP *exp(15.125_RP*(log(sgi)**2._RP) ) !M5.5
+    m6p5i =m0i*dgi**  6.5_RP *exp(21.125_RP*(log(sgi)**2._RP) ) !M6.5
     m8i   =m0i*dgi**   8._RP *exp(32.000_RP*(log(sgi)**2._RP) ) !M8
-  
+
   ! (mode j)
     mm1p5j=m0j*dgj**(-1.5_RP)*exp( 1.125_RP*(log(sgj)**2._RP) ) !M-1.5
     mm0p5j=m0j*dgj**(-0.5_RP)*exp( 0.125_RP*(log(sgj)**2._RP) ) !M-0.5
-    m0p5j =m0j*dgj**  0.5_RP *exp( 0.125_RP*(log(sgj)**2._RP) ) !M0.5 
-    m1p5j =m0j*dgj**  1.5_RP *exp( 1.125_RP*(log(sgj)**2._RP) ) !M1.5 
-    m2p5j =m0j*dgj**  2.5_RP *exp( 3.125_RP*(log(sgj)**2._RP) ) !M2.5 
-    m3p5j =m0j*dgj**  3.5_RP *exp( 6.125_RP*(log(sgj)**2._RP) ) !M3.5 
-    m4p5j =m0j*dgj**  4.5_RP *exp(10.125_RP*(log(sgj)**2._RP) ) !M4.5 
-    m5p5j =m0j*dgj**  5.5_RP *exp(15.125_RP*(log(sgj)**2._RP) ) !M5.5 
-    m6p5j =m0j*dgj**  6.5_RP *exp(21.125_RP*(log(sgj)**2._RP) ) !M6.5 
+    m0p5j =m0j*dgj**  0.5_RP *exp( 0.125_RP*(log(sgj)**2._RP) ) !M0.5
+    m1p5j =m0j*dgj**  1.5_RP *exp( 1.125_RP*(log(sgj)**2._RP) ) !M1.5
+    m2p5j =m0j*dgj**  2.5_RP *exp( 3.125_RP*(log(sgj)**2._RP) ) !M2.5
+    m3p5j =m0j*dgj**  3.5_RP *exp( 6.125_RP*(log(sgj)**2._RP) ) !M3.5
+    m4p5j =m0j*dgj**  4.5_RP *exp(10.125_RP*(log(sgj)**2._RP) ) !M4.5
+    m5p5j =m0j*dgj**  5.5_RP *exp(15.125_RP*(log(sgj)**2._RP) ) !M5.5
+    m6p5j =m0j*dgj**  6.5_RP *exp(21.125_RP*(log(sgj)**2._RP) ) !M6.5
     m8j   =m0j*dgj**   8._RP *exp(32.000_RP*(log(sgj)**2._RP) ) !M8
-  
+
   !---approximation function---------------------------------------------------------------------
     alpha   = dgj/dgi
     beta    =(1._RP-(sqrt(1._RP+alpha**3._RP)/(1._RP+sqrt(alpha**3._RP))))/(1._RP-1._RP/sqrt(2._RP))
     gamma1  =(sgi        +alpha*sgj       )/(1._RP+alpha)
     gamma2  =(sgi**2._RP +alpha*sgj**2._RP)/(1._RP+alpha)
     bbb     = 1._RP+1.2_RP*beta*dexp(real(-2._RP*gamma1,kind=DP))-0.646_RP*beta*dexp(real(-0.35_RP*gamma2,kind=DP))! Kajino (2011) JAS
-  
+
     dm0dt_fm_i=-bbb*rkfm*(                                 &
                 m0i *m0p5j +m2i *mm1p5j +2._RP*m1i *mm0p5j &
               + m0j *m0p5i +m2j *mm1p5i +2._RP*m1j *mm0p5i )
@@ -2063,7 +2063,7 @@ contains
         +2._RP * bbb*rkfm*(                                &
                 m3i *m3p5j +m5i *m1p5j  +2._RP*m4i *m2p5j  &
               + m3j *m3p5i +m5j *m1p5i  +2._RP*m4j *m2p5i  )
-  
+
   !---harmonic mean approach---------------------------------------------------------------------
     if (dm0dt_fm_i+dm0dt_nc_i/=0._RP) &
     dm0dt_i  = dm0dt_fm_i*dm0dt_nc_i/(dm0dt_fm_i+dm0dt_nc_i)
@@ -2083,7 +2083,7 @@ contains
   ! dm3dt_k  = dm3dt_fm_k*dm3dt_nc_k/(dm3dt_fm_k+dm3dt_nc_k)
     if (dm6dt_fm_k+dm6dt_nc_k/=0._RP) &
     dm6dt_k  = dm6dt_fm_k*dm6dt_nc_k/(dm6dt_fm_k+dm6dt_nc_k)
-  
+
     dm0i     = dm0dt_i * dtrest
     dm3i     = dm3dt_i * dtrest
     dm6i     = dm6dt_i * dtrest
@@ -2097,7 +2097,7 @@ contains
     dm6k     = dm6dt_k * dtrest
     dm3k     = -dm3i   -dm3j
     dmsk     = -dmsi   -dmsj
-  
+
     return
   end subroutine aero_inter
   !----------------------------------------------------------------------------------------
@@ -2114,7 +2114,7 @@ contains
     real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
     real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
     real(DP), parameter :: tiny=1.E-50_DP
-  
+
     dm2=0._RP
     if (m0 <= tiny .OR. m3 <= tiny .OR. m6 <= tiny) then
       m0=0._RP
@@ -2124,19 +2124,19 @@ contains
       sg=-1._RP
       return
     endif
-  
+
     m2_old = m2
     m3_bar = m3/m0
     m6_bar = m6/m0
     dg     = m3_bar**rk1_hat*m6_bar**rk2_hat
-  
+
     if (m3_bar/m6_bar**ratio < 1._RP) then !stdev > 1.
       sg     = exp(dsqrt(real(2._RP/(rk1*(rk1-rk2))  &
                   * log(m3_bar/m6_bar**ratio), kind=DP )))
       m2     = m0*dg**2._RP*exp(2._RP*(log(sg)**2._RP))
       m2_old = m2
     endif
-  
+
     if (sg > sgmax) then
  !     print *,'sg=',sg
       sg = sgmax
@@ -2144,7 +2144,7 @@ contains
                    m2,dg     ) !output
   !   print *,'warning! modified as sg exceeded sgmax (diag_ds6)'
     endif
-  
+
     if (m3_bar/m6_bar**ratio >= 1._RP) then !stdev < 1.
       sg = 1._RP
       call diag_d2(m0,m3,sg, & !input
@@ -2155,7 +2155,7 @@ contains
     m2_new = m2
     dm2    = m2_old - m2_new !m2_pres - m2_diag
 
-  
+
     return
   end subroutine diag_ds6
   !-----------------------------------------------------------------------------
@@ -2164,7 +2164,7 @@ contains
                     ic_out, ia_m0, ia_m2, ia_m3, ik_out, n_siz, &
 !                    rnum_out, nbins_out, dlog10d_out)
                     rnum_out, nbins_out)
-  
+
     implicit none
     !i/o variables
     integer, intent(in) :: n_ctg, n_kap_max, n_siz_max, n_atr
@@ -2187,17 +2187,17 @@ contains
     real(RP), parameter :: d_max = 1.E-5_RP
     real(RP), parameter :: d_min = 1.E-9_RP
     real(RP) :: d_lw(nbins_out), d_up(nbins_out)
-  
+
     rnum_out(:) = 0._RP
-!  
+!
 !    dlogd = (log(d_max) - log(d_min))/float(nbins_out)
 !    dlog10d_out = (log10(d_max)-log10(d_min))/float(nbins_out)
-!  
+!
 !    do is_out = 1, nbins_out  !size bin
 !      d_lw(is_out) = exp(log(d_min)+dlogd* float(is_out-1) )
 !      d_up(is_out) = exp(log(d_min)+dlogd* float(is_out)   )
 !    enddo !is_out
-!  
+!
     t_ccn = 0._RP
     t_cn  = 0._RP
     do is0 = 1, n_siz(ic_out)
@@ -2208,7 +2208,7 @@ contains
 !        call diag_ds(m0t,m2t,m3t,dgt,sgt,dm2)
 !        if (dgt <= 0._RP) dgt = d_ct(is0,ic_out)
 !        if (sgt <= 0._RP) sgt = 1.3_RP
-!  
+!
 !        do is_out = 1, nbins_out
 !          sgt   = max(sgt,1.0000001_RP) !to avoid floating divide by zero
 !          d_lw2 = log(d_lw(is_out))
@@ -2219,13 +2219,13 @@ contains
 !          fnum1 = m0t*0.5_RP*(1._RP+erf((d_up2-dg2)/(sqrt(2.0_RP)*sg2)))
 !          rnum_out(is_out) = rnum_out(is_out) + fnum1 - fnum0
 !        enddo
-!  
+!
 !      endif !number>0
-  
+
       t_ccn = t_ccn + aerosol_activ(ia_m0,is0,ik_out,ic_out)
       t_cn  = t_cn  + aerosol_procs(ia_m0,is0,ik_out,ic_out)
 
-    enddo 
+    enddo
 
   return
   end subroutine trans_ccn
@@ -2419,9 +2419,7 @@ contains
        m0t = cleannumber
        dgt = 0.1E-6_RP
        sgt = 1.3_RP
-       if ( IO_L ) then
-          write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
-       endif
+       if( IO_L ) write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
     endif
 
     m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M2 [m2/m3]

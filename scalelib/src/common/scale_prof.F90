@@ -246,11 +246,10 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
-                  PROF_grpid(id) == gid .AND. &
-                  IO_L ) then
-                write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
-                     '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
+             if (       PROF_raplevel(id) <= PROF_rap_level &
+                  .AND. PROF_grpid   (id) == gid            ) then
+                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
+                           '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -276,15 +275,15 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
-                  PROF_grpid(id) == gid .AND. &
-                  fid > 0 ) then
-                write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I9)') &
-                     '*** ID=',id,' : ',PROF_rapname(id), &
-                     ' T(avg)=',avgvar(id), &
-                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                     ', T(min)=',minvar(id),'[',minidx(id),']', &
-                     ' N=',PROF_rapnstr(id)
+             if (       PROF_raplevel(id) <= PROF_rap_level &
+                  .AND. PROF_grpid   (id) == gid            &
+                  .AND. fid > 0                             ) then
+                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
+                           '*** ID=',id,' : ',PROF_rapname(id), &
+                           ' T(avg)=',avgvar(id), &
+                           ', T(max)=',maxvar(id),'[',maxidx(id),']', &
+                           ', T(min)=',minvar(id),'[',minidx(id),']', &
+                           ' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo

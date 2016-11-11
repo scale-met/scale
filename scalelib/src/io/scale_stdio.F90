@@ -105,7 +105,7 @@ contains
        if ( present(fname_in) ) then
           fname = fname_in
        else
-          write(*,*) ' xxx Not imported name of config file! STOP.'
+          write(*,*) 'xxx Not imported name of config file! STOP.'
           stop 1
        endif
     else
@@ -124,7 +124,7 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
     if ( ierr > 0 ) then !--- fatal error
-       write(*,*) ' xxx Not appropriate names in namelist PARAM_IO . Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_IO . Check!'
        stop 1
     endif
 

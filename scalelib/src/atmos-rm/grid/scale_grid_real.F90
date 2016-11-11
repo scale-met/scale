@@ -253,9 +253,9 @@ contains
 
        if (      REAL_DLON(i,j) == 0.0_RP &
             .OR. REAL_DLAT(i,j) == 0.0_RP ) then
-          write(*,*) ' xxx Invalid grid distance in lat-lon! i,j=', i,j
-          write(*,*) ' xxx Lon(i-1),Lon(i),dlon=', REAL_LONX(i-1,j)/D2R,REAL_LONX(i,j)/D2R,REAL_DLON(i,j)/D2R
-          write(*,*) ' xxx Lat(j-1),Lat(j),dlat=', REAL_LATY(i,j-1)/D2R,REAL_LATY(i,j)/D2R,REAL_DLAT(i,j)/D2R
+          write(*,*) 'xxx Invalid grid distance in lat-lon! i,j=', i,j
+          write(*,*) 'xxx Lon(i-1),Lon(i),dlon=', REAL_LONX(i-1,j)/D2R,REAL_LONX(i,j)/D2R,REAL_DLON(i,j)/D2R
+          write(*,*) 'xxx Lat(j-1),Lat(j),dlat=', REAL_LATY(i,j-1)/D2R,REAL_LATY(i,j)/D2R,REAL_DLAT(i,j)/D2R
           call PRC_MPIstop
        endif
     enddo
@@ -297,7 +297,7 @@ contains
                 iostat = ierr                          )
 
           if ( ierr /= 0 ) then
-             if( IO_L ) write(*,*) 'xxx cannot create latlon-catalogue file!'
+             write(*,*) 'xxx [REAL_calc_latlon] cannot create latlon-catalogue file!'
              call PRC_MPIstop
           endif
 

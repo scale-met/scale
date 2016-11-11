@@ -150,7 +150,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : Beljaars (1991) and Wilson (2001)'
        BULKFLUX => BULKFLUX_B91W01
     case default
-       write(*,*) ' xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     end select
 

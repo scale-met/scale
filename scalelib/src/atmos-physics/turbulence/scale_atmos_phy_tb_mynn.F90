@@ -342,7 +342,7 @@ contains
     integer :: k, i, j, iq
     integer :: IIS, IIE, JJS, JJE
 
-    if ( IO_L ) write(IO_FID_LOG, *) "*** Physics step: Turbulence (MYNN)"
+    if( IO_L ) write(IO_FID_LOG, *) "*** Physics step: Turbulence (MYNN)"
 
 #ifdef DEBUG
     POTT(:,:,:) = UNDEF

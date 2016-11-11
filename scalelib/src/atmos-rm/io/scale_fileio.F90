@@ -669,7 +669,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
@@ -754,7 +754,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
@@ -827,7 +827,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer

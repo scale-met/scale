@@ -140,8 +140,8 @@ contains
        enddo
        enddo
        enddo
-
        if( IO_L ) write(IO_FID_LOG,*) 'xxx criteria: total negative hydrometeor < ', abs(limit_negative)
+
        call PRC_MPIstop
     endif
 

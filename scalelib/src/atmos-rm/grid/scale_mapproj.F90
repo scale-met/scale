@@ -183,7 +183,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MAPPROJ. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MAPPROJ)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MAPPROJ)
 
     if( MPRJ_PS_lat == UNDEF ) MPRJ_PS_lat = MPRJ_basepoint_lat
 
@@ -212,7 +212,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '=> Equidistant Cylindrical projection'
        call MPRJ_EquidistantCylindrical_setup
     case default
-       write(*,*) ' xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     endselect
 
@@ -248,7 +248,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_xy2lonlat( x, y, lon, lat )
     case default
-       write(*,*) ' xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     endselect
 
@@ -284,7 +284,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_lonlat2xy( lon, lat, x, y )
     case default
-       write(*,*) ' xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     endselect
 
@@ -318,7 +318,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_mapfactor( lat, m1, m2 )
     case default
-       write(*,*) ' xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     endselect
 
@@ -353,7 +353,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_rotcoef_0D( rotc )
     case default
-       write(*,*) ' xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     endselect
 
@@ -388,7 +388,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_rotcoef_2D( rotc )
     case default
-       write(*,*) ' xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     endselect
 
@@ -550,7 +550,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( MPRJ_LC_lat1 >= MPRJ_LC_lat2 ) then
-       write(*,*) ' xxx Please set MPRJ_LC_lat1 < MPRJ_LC_lat2 in degree. STOP'
+       write(*,*) 'xxx Please set MPRJ_LC_lat1 < MPRJ_LC_lat2 in degree. STOP'
        call PRC_MPIstop
     endif
 

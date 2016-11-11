@@ -96,7 +96,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_DNS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_DNS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_DNS)
 
     return
   end subroutine ATMOS_PHY_TB_dns_setup

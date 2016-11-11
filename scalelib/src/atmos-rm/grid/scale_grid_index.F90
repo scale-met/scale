@@ -179,7 +179,7 @@ contains
 
        if ( mod(IMAXG,PRC_NUM_X) > 0 ) then
           if( IO_L ) write(IO_FID_LOG,*) 'xxx number of IMAXG should be divisible by PRC_NUM_X'
-          if( IO_L ) write(*         ,*) 'xxx number of IMAXG should be divisible by PRC_NUM_X'
+          write(*,*)                     'xxx number of IMAXG should be divisible by PRC_NUM_X'
           call PRC_MPIstop
 !           if( IO_L ) write(IO_FID_LOG,*) '*** number of IMAXG should be divisible by PRC_NUM_X'
 !           if( IO_L ) write(IO_FID_LOG,*) '*** Small IMAX is used in ranks(X,*)=', PRC_NUM_X-1
@@ -191,7 +191,7 @@ contains
 
        if ( mod(JMAXG,PRC_NUM_Y) > 0 ) then
           if( IO_L ) write(IO_FID_LOG,*) 'xxx number of JMAXG should be divisible by PRC_NUM_Y'
-          if( IO_L ) write(*         ,*) 'xxx number of JMAXG should be divisible by PRC_NUM_Y'
+          write(*,*)                     'xxx number of JMAXG should be divisible by PRC_NUM_Y'
           call PRC_MPIstop
 !           if( IO_L ) write(IO_FID_LOG,*) '*** number of JMAXG should be divisible by PRC_NUM_Y'
 !           if( IO_L ) write(IO_FID_LOG,*) '*** Small JMAX is used in ranks(*,Y)=', PRC_NUM_Y-1

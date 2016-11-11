@@ -384,7 +384,7 @@ contains
     case('DAY')
        second = value * CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR
     case default
-       write(*,*) ' xxx Unsupported UNIT: ', trim(unit), ', ', value
+       write(*,*) 'xxx Unsupported UNIT: ', trim(unit), ', ', value
        call PRC_MPIstop
     endselect
 
