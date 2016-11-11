@@ -60,19 +60,19 @@ export OMP_NUM_THREADS=8
 #export fu08bf=1
 export XOS_MMM_L_ARENA_FREE=2
 
-ln -sv ${TOPDIR}/bin/${BINNAME} .
-ln -sv ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} .
-ln -sv ${TOPDIR}/scale-gm/test/data/grid/vgrid/${VGRID} .
+ln -svf ${TOPDIR}/bin/${BINNAME} .
+ln -svf ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} .
+ln -svf ${TOPDIR}/scale-gm/test/data/grid/vgrid/${VGRID} .
 EOF1
 
 for f in $( ls ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d} )
 do
-   echo "ln -sv ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d}/${f} ." >> run.sh
+   echo "ln -svf ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d}/${f} ." >> run.sh
 done
 
 for f in $( ls ${TOPDIR}/scale-gm/test/data/initial/HS_spinup_300day/${dir3d} )
 do
-   echo "ln -sv ${TOPDIR}/scale-gm/test/data/initial/HS_spinup_300day/${dir3d}/${f} ./${f/restart/init}" >> run.sh
+   echo "ln -svf ${TOPDIR}/scale-gm/test/data/initial/HS_spinup_300day/${dir3d}/${f} ./${f/restart/init}" >> run.sh
 done
 
 cat << EOF2 >> run.sh
@@ -108,14 +108,14 @@ export PARALLEL=8
 export OMP_NUM_THREADS=8
 #export fu08bf=1
 
-ln -sv ${TOPDIR}/bin/gm_fio_ico2ll .
-ln -sv ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} .
-ln -sv ${TOPDIR}/scale-gm/test/data/zaxis .
+ln -svf ${TOPDIR}/bin/gm_fio_ico2ll .
+ln -svf ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} .
+ln -svf ${TOPDIR}/scale-gm/test/data/zaxis .
 EOFICO2LL1
 
 for f in $( ls ${TOPDIR}/scale-gm/test/data/grid/llmap/gl${GL}/rl${RL}/ )
 do
-   echo "ln -sv ${TOPDIR}/scale-gm/test/data/grid/llmap/gl${GL}/rl${RL}/${f} ." >> ico2ll.sh
+   echo "ln -svf ${TOPDIR}/scale-gm/test/data/grid/llmap/gl${GL}/rl${RL}/${f} ." >> ico2ll.sh
 done
 
 cat << EOFICO2LL2 >> ico2ll.sh
