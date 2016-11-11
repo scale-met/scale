@@ -14,13 +14,13 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-glevel      = 5
-rlevel      = 0
-nmpi        = 10
+glevel      = 7
+rlevel      = 2
+nmpi        = 160
 zlayer      = none
 vgrid       = none
 
-BINNAME     = gm_mkllmap
+BINNAME     = gm_mkhgrid
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common

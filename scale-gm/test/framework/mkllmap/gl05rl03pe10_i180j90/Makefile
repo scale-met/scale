@@ -15,7 +15,7 @@ ORG_SRCS    =
 
 # parameters for run
 glevel      = 5
-rlevel      = 0
+rlevel      = 3
 nmpi        = 10
 zlayer      = none
 vgrid       = none

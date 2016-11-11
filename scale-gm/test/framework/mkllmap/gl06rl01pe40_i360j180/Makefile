@@ -14,9 +14,9 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-glevel      = 5
-rlevel      = 0
-nmpi        = 10
+glevel      = 6
+rlevel      = 1
+nmpi        = 40
 zlayer      = none
 vgrid       = none
 

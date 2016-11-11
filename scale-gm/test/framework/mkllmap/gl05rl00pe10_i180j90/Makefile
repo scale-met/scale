@@ -17,8 +17,8 @@ ORG_SRCS    =
 glevel      = 5
 rlevel      = 0
 nmpi        = 10
-zlayer      = 30
-vgrid       = vgrid30_400m_dcmip.dat
+zlayer      = none
+vgrid       = none
 
 BINNAME     = gm_mkllmap
 

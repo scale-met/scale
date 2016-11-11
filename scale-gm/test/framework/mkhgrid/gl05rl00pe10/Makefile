@@ -20,7 +20,7 @@ nmpi        = 10
 zlayer      = none
 vgrid       = none
 
-BINNAME     = gm_mkllmap
+BINNAME     = gm_mkhgrid
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
