@@ -449,7 +449,7 @@ contains
 
        call LAND_vars_total
     else
-       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for land.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for land.'
     endif
 
     return
@@ -635,9 +635,10 @@ contains
             status = 'old',                           &
             iostat = ierr                             )
 
-      if( ierr /= 0 ) then
-        if( IO_L ) write(IO_FID_LOG,*) 'Error: Failed to open land parameter file! :', trim(LAND_PROPERTY_IN_FILENAME)
-        call PRC_MPIstop
+      if ( ierr /= 0 ) then
+         write(*,*) 'xxx [LAND_param_read] Failed to open land parameter file! :', &
+                    trim(LAND_PROPERTY_IN_FILENAME)
+         call PRC_MPIstop
       else
         if( IO_L ) write(IO_FID_LOG,*)
         if( IO_L ) write(IO_FID_LOG,*) '*** Properties for each plant functional type (PFT)'

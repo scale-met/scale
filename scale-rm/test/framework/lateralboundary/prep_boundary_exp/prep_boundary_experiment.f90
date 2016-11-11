@@ -59,7 +59,7 @@ program init_boundary_experiment
   real(DP), parameter :: W0           = 0.00_DP             !< standard vertical wind speed [m]
   real(DP), parameter :: T0           = 300.00_DP           !< standard surface temperature [K]
   real(DP), parameter :: UNDEF        = -999.d15
-  
+
   integer :: IA    = 100
   integer :: JA    = 100
   integer :: KA    = 50
@@ -215,7 +215,7 @@ program init_boundary_experiment
      call advection_case
 
   case default
-     write(*,*) ' xxx Unsupported Test Case:', trim(testcase)
+     write(*,*) 'xxx Unsupported Test Case:', trim(testcase)
      stop
 
   endselect
@@ -643,7 +643,7 @@ contains
     implicit none
 
     real(DP), intent(out) :: pre_ptb(:,:,:)  !< pressure of perturbation
-    integer,  intent(in ) :: step    !< # of time step 
+    integer,  intent(in ) :: step    !< # of time step
 
     real(DP), parameter :: p00 = 10.0_SP       !< initial pressure factor
     integer, parameter :: scale_factor_x = 2  !< perturbation scale factor
@@ -690,7 +690,7 @@ contains
     implicit none
 
     real(SP), intent(out) :: trc(:,:,:)        !< pressure of perturbation
-    integer,  intent(in ) :: step              !< # of time step 
+    integer,  intent(in ) :: step              !< # of time step
 
     real(DP), parameter :: trc00 = 1.0E-5_SP    !< initial tracer size
     integer, parameter :: scale_factor_x = 30  !< perturbation scale factor
@@ -1256,7 +1256,7 @@ contains
     if (status .ne. nf90_noerr) call handle_err(status)
 
     return
-  end subroutine put_attributes 
+  end subroutine put_attributes
 
   !-----------------------------------------------------------------------------
   !> Data Writeout
@@ -1589,7 +1589,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Printing Error Message and STOP the NETCDF sequences.
   subroutine handle_err(status)
-    ! Printing Error Message and STOP sequences. 
+    ! Printing Error Message and STOP sequences.
 
     use netcdf       ! [external]
     implicit none

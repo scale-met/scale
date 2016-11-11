@@ -277,7 +277,7 @@ contains
        call STAT_total( total, ATMOS_PHY_TB_TKE(:,:,:), VAR_NAME(1) )
 !       call STAT_total( total, ATMOS_PHY_TB_NU (:,:,:), VAR_NAME(2) )
     else
-       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_TB.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_TB.'
     endif
 
     return

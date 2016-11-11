@@ -254,7 +254,7 @@ contains
 
        call STAT_total( total, ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1) )
     else
-       if ( IO_L ) write(IO_FID_LOG,*) '*** invlaid restart file ID for ATMOS_PHY_AE.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** invlaid restart file ID for ATMOS_PHY_AE.'
     endif
 
     return

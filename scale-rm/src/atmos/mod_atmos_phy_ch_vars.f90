@@ -245,7 +245,7 @@ contains
 
        call STAT_total( total, ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1) )
     else
-       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file for ATMOS_PHY_CH.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file for ATMOS_PHY_CH.'
     endif
 
     return

@@ -269,7 +269,7 @@ contains
           call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
        enddo
     else
-       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_DYN.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_DYN.'
     endif
 
     return

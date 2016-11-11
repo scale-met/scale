@@ -144,7 +144,7 @@ module mod_mkinit
 
   integer, public, parameter :: I_CAVITYFLOW       = 29
   integer, public, parameter :: I_BAROCWAVE        = 30
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -163,7 +163,7 @@ module mod_mkinit
   private :: MKINIT_cavityflow
   private :: MKINIT_mountainwave
   private :: MKINIT_barocwave
-  
+
   private :: MKINIT_warmbubble
   private :: MKINIT_supercell
   private :: MKINIT_squallline
@@ -341,7 +341,7 @@ contains
     case('BAROCWAVE')
        MKINIT_TYPE = I_BAROCWAVE
     case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
+       write(*,*) 'xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
     endselect
 
@@ -489,7 +489,7 @@ contains
       case(I_BAROCWAVE)
          call MKINIT_barocwave
       case default
-         write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
+         write(*,*) 'xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
       endselect
 
@@ -655,7 +655,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_RECT,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
+       write(*,*) 'xxx Not found namelist. Check!'
        call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RECT. Check!'
@@ -742,7 +742,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Default used!'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used!'
 !       call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_AERO. Check!'
@@ -804,7 +804,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_SBMAERO,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. default value used'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. default value used'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist SBMAERO. Check!'
        call PRC_MPIstop
@@ -1235,7 +1235,7 @@ contains
           iostat = ierr                        )
 
        if ( ierr /= 0 ) then
-          if( IO_L ) write(*,*) 'xxx Input file not found!'
+          write(*,*) 'xxx [mod_mkinit/read_sounding] Input file not found!'
        endif
 
        !--- read sounding file till end
@@ -2259,7 +2259,7 @@ contains
     real(RP) :: MACH_NUM     = 3.D-2
     real(RP) :: Ulid         = 1.D01
     real(RP) :: PRES0        = 1.D05
-    
+
     NAMELIST / PARAM_MKINIT_CAVITYFLOW / &
          Ulid        , &
          PRES0       , &
@@ -2439,10 +2439,10 @@ contains
   end subroutine MKINIT_mountainwave
 
   !-----------------------------------------------------------------------------
-  !> Make initial state 
-  !! 
+  !> Make initial state
+  !!
   !! The initial state for a baroclinic wave test described by Ullrich and Jablonowski(2012)
-  !! is generated. 
+  !! is generated.
   subroutine MKINIT_barocwave
     use scale_const, only: &
       OHM => CONST_OHM,        &
@@ -2454,12 +2454,12 @@ contains
          GRID_FYG
     use scale_atmos_hydrometeor, only: &
          I_QV
-    
+
     implicit none
 
     ! Parameters for global domain size
     real(RP) :: Ly                      ! The domain size in y-direction [m]
-    
+
     ! Parameters for inital stratification
     real(RP) :: REF_TEMP    = 288.E0_RP ! The reference temperature [K]
     real(RP) :: REF_PRES    = 1.E5_RP   ! The reference pressure [Pa]
@@ -2483,11 +2483,11 @@ contains
        REF_TEMP, REF_PRES, LAPSE_RATE, &
        phi0Deg,                        &
        U0, b,                          &
-       Up, Lp, Xc, Yc          
-       
+       Up, Lp, Xc, Yc
+
     real(RP) :: CORIOLI(KA,IA,JA)
     real(RP) :: f0, beta0
-    
+
     real(RP) :: geopot(KA,IA,JA)
     real(RP) :: eta(KA,IA,JA)
     real(RP) :: temp(KA,IA,JA)
@@ -2499,7 +2499,7 @@ contains
     real(RP) :: yphase_u
     real(RP) :: temp_vfunc
     real(RP) :: geopot_hvari
-    
+
     integer :: ierr
     integer :: k, i, j
 
@@ -2507,13 +2507,13 @@ contains
 
     integer, parameter :: ITRMAX = 1000
     real(RP), parameter :: CONV_EPS = 1E-15_RP
-    
+
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit BAROCWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
 
-    
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_BAROCWAVE,iostat=ierr)
@@ -2527,14 +2527,14 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BAROCWAVE)
 
     Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
-    
+
     ! Set coriolis parameters
     f0 = 2.0_RP*OHM*sin(phi0Deg*PI/180.0_RP)
     beta0 = (2.0_RP*OHM/RPlanet)*cos(phi0Deg*PI/180.0_RP)
-    
-    ! Calculate eta(=p/p_s) level corresponding to z level of each (y,z) grid point 
+
+    ! Calculate eta(=p/p_s) level corresponding to z level of each (y,z) grid point
     ! using Newton's iteration method
-    
+
     eta(:,:,:) = 1.0E-8_RP   ! Set first guess of eta
 
     do j = JS, JE
@@ -2544,13 +2544,13 @@ contains
        yphase  = 2.0_RP*PI*y/Ly
 
        ! Calc horizontal variation of geopotential height
-       geopot_hvari = 0.5_RP*U0*(                                                                          & 
-            (f0 - beta0*y0)*(y - 0.5_RP*Ly*(1.0_RP + sin(yphase)/PI))                                      & 
+       geopot_hvari = 0.5_RP*U0*(                                                                          &
+            (f0 - beta0*y0)*(y - 0.5_RP*Ly*(1.0_RP + sin(yphase)/PI))                                      &
             + 0.5_RP*beta0*( y**2 - Ly*y/PI*sin(yphase) - 0.5_RP*(Ly/PI)**2*(cos(yphase) + 1.0_RP)         &
-                             - Ly**2/3.0_RP                                                        )       & 
+                             - Ly**2/3.0_RP                                                        )       &
             )
 
-       ! Set surface pressure and temperature 
+       ! Set surface pressure and temperature
        pres_sfc(1,i,j) = REF_PRES
        pott_sfc(1,i,j) = REF_TEMP - geopot_hvari/Rdry
        ! Dry condition
@@ -2563,7 +2563,7 @@ contains
           del_eta = 1.0_RP
 
           !-- The loop for iteration
-          itr = 0          
+          itr = 0
           do while( abs(del_eta) > CONV_EPS )
              ln_eta = log(eta(k,i,j))
 
@@ -2588,11 +2588,11 @@ contains
                 call PRC_MPIstop
              end if
           enddo !- End of loop for iteration ----------------------------
-          
+
           PRES(k,i,j) = eta(k,i,j)*REF_PRES
           DENS(k,i,j) = PRES(k,i,j)/(Rdry*temp(k,i,j))
           pott(k,i,j) = temp(k,i,j)*eta(k,i,j)**(-Rdry/CPdry)
-          
+
        enddo
 
        ! Make density & pressure profile in dry condition using the profile of
@@ -2607,15 +2607,15 @@ contains
                                   pres_sfc(1,i,j), & ! [IN]
                                   pott_sfc(1,i,j), & ! [IN]
                                   qv_sfc  (1,i,j), & ! [IN]
-                                  qc_sfc  (1,i,j)  ) ! [IN]       
+                                  qc_sfc  (1,i,j)  ) ! [IN]
     enddo
     enddo
 
     !-----------------------------------------------------------------------------------
-    
+
     do j = JS, JE
     do k = KS, KE
-     
+
        eta(k,IS,j) = pres(k,IS,j)/REF_PRES
        ln_eta = log(eta(k,IS,j))
        yphase = 2.0_RP*PI*GRID_CY(j)/Ly
@@ -2640,10 +2640,10 @@ contains
            +  DENS(KS:KE,i,j)* Up*exp( - ((GRID_FX(i) - Xc)**2 + (GRID_CY(j) - Yc)**2)/Lp**2 )
     enddo
     enddo
- 
+
     return
   end subroutine MKINIT_barocwave
-  
+
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubble
@@ -4802,7 +4802,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAYZONE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 

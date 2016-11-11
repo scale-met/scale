@@ -155,7 +155,7 @@ contains
        CNVTOPO_UseGMTED2010 = .true.
        CNVTOPO_UseDEM50M    = .true.
     case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(CNVTOPO_name)
+       write(*,*) 'xxx Unsupported TYPE:', trim(CNVTOPO_name)
        call PRC_MPIstop
     endselect
 

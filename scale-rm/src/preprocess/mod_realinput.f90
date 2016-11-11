@@ -552,7 +552,7 @@ contains
     case ('limit' )
        SOILWATER_DS2VC_flag = .false.
     case default
-      write(*,*) ' xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
+      write(*,*) 'xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
       call PRC_MPIstop
     end select
 
@@ -841,7 +841,7 @@ contains
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype)
        call PRC_MPIstop
 
     endselect
@@ -1583,7 +1583,7 @@ contains
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype_land)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_land)
        call PRC_MPIstop
 
     endselect
@@ -1681,7 +1681,7 @@ contains
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype_ocean)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_ocean)
        call PRC_MPIstop
 
     endselect

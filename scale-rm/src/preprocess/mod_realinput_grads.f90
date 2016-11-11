@@ -202,7 +202,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_GrADS,iostat=ierr)
 
     if( ierr > 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_GrADS)
@@ -223,13 +223,13 @@ contains
          action = 'read',         &
          iostat = ierr            )
     if ( ierr /= 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Input file is not found! ', trim(basename)
+       write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(basename)
        call PRC_MPIstop
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
@@ -275,7 +275,7 @@ contains
        case('QV')
           if (.not. data_available(Ia_qv,1)) then
              if (.not.data_available(Ia_rh,1)) then
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : QV and RH'
+                write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : QV and RH'
                 call PRC_MPIstop
              else ! will read RH
                 cycle
@@ -285,24 +285,24 @@ contains
           if (.not. data_available(Ia_qv,1))then
              if(data_available(Ia_rh,1)) then
                 if ((.not. data_available(Ia_t,1)).or.(.not. data_available(Ia_p,1))) then
-                   if( IO_L ) write(IO_FID_LOG,*) 'xxx Temperature and pressure are required to convert from RH to QV ! '
+                   write(*,*) 'xxx [realinput_grads] Temperature and pressure are required to convert from RH to QV ! '
                    call PRC_MPIstop
                 else
                    cycle ! read RH and estimate QV
                 endif
              else
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : QV and RH'
+                write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : QV and RH'
                 call PRC_MPIstop
              endif
           endif
        case('MSLP','PSFC','U10','V10','T2')
           if (.not. data_available(ielem,1)) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
              cycle
           endif
        case('Q2')
           if ( .not. data_available(Ia_q2,1) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: Q2 is not found & will be estimated.'
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: Q2 is not found & will be estimated.'
              cycle
           endif
        case('RH2')
@@ -311,24 +311,24 @@ contains
           else
              if ( data_available(Ia_rh2,1) ) then
                 if ((.not. data_available(Ia_t2,1)).or.(.not. data_available(Ia_ps,1))) then
-                   if (IO_L) write(IO_FID_LOG,*) 'warning: T2 and PSFC are required to convert from RH2 to Q2 !'
-                   if (IO_L) write(IO_FID_LOG,*) '         Q2 will be copied from data at above level.'
+                   if( IO_L ) write(IO_FID_LOG,*) 'warning: T2 and PSFC are required to convert from RH2 to Q2 !'
+                   if( IO_L ) write(IO_FID_LOG,*) '         Q2 will be copied from data at above level.'
                    data_available(Ia_rh2,1) = .false.
                    cycle
                 endif
              else
-                if (IO_L) write(IO_FID_LOG,*) 'warning: Q2 and RH2 are not found, Q2 will be estimated.'
+                if( IO_L ) write(IO_FID_LOG,*) 'warning: Q2 and RH2 are not found, Q2 will be estimated.'
                 cycle
              endif
           endif
        case('TOPO')
           if ( .not. data_available(ielem,1) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
              cycle
           endif
        case default ! lon, lat, plev, U, V, T, HGT
           if ( .not. data_available(ielem,1) ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : ',trim(item_list_atom(ielem))
+             write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_atom(ielem))
              call PRC_MPIstop
           endif
        end select
@@ -908,13 +908,13 @@ contains
          action = 'read',         &
          iostat = ierr            )
     if ( ierr /= 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Input file is not found! ', trim(basename)
+       write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(basename)
        call PRC_MPIstop
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
@@ -965,7 +965,7 @@ contains
        select case(trim(item))
        case('TOPO','lsmask')
           if ( .not. data_available(ielem,2) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
              cycle
           endif
        case('lon', 'lat', 'lon_sfc', 'lat_sfc')
@@ -973,7 +973,7 @@ contains
        case('SMOISVC', 'SMOISDS')
           if ( use_file_landwater ) then
              if (.not. data_available(Il_smoisvc,2) .and. .not. data_available(Il_smoisds,2)) then
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : ',trim(item_list_land(ielem))
+                write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_land(ielem))
                 call PRC_MPIstop
              end if
              use_waterratio =  data_available(Il_smoisds,2)
@@ -982,7 +982,7 @@ contains
           end if
        case default ! llev, SKINT, STEMP
           if ( .not. data_available(ielem,2) ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : ',trim(item_list_land(ielem))
+             write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_land(ielem))
              call PRC_MPIstop
           endif
        end select
@@ -1342,13 +1342,13 @@ contains
          action = 'read',                        &
          iostat = ierr                           )
     if ( ierr /= 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Input file is not found! ', trim(grads_ctl)
+       write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(grads_ctl)
        call PRC_MPIstop
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in nml_grads_grid in ', trim(grads_ctl),'. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(grads_ctl),'. Check!'
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
@@ -1406,25 +1406,26 @@ contains
        select case(trim(item))
        case('lsmask')
           if ( .not. data_available(ielem,3) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
              cycle
           endif
        case('lon', 'lat', 'lon_sfc', 'lat_sfc', 'lon_sst', 'lat_sst')
           cycle
        case('SST')
           if (.not. data_available(Io_sst,3) .and. .not. data_available(Io_skint,3) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx SST and SKINT are found in grads namelist!'
+             write(*,*) 'xxx [realinput_grads] SST and SKINT are found in grads namelist!'
              call PRC_MPIstop
           endif
           if (.not. data_available(Io_sst,3)) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: SST is found in grads namelist. SKINT is used in place of SST.'
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: SST is found in grads namelist. SKINT is used in place of SST.'
              cycle
           endif
        case('SKINT')
           cycle
        case default !
           if ( .not. data_available(ielem,3) ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : ',trim(item_list_ocean(ielem))
+             write(*,*) 'xxx [realinput_grads/ParentOceanSetupGrADS] Not found in grads namelist! : ', &
+                        trim(item_list_ocean(ielem))
              call PRC_MPIstop
           endif
        end select
@@ -1756,7 +1757,8 @@ contains
        do n = 1, grads_vars_limit
           read(io_fid_grads_nml, nml=grdvar, iostat=ierr)
           if( ierr > 0 )then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in grdvar in ', trim(basename),'. Check!'
+             write(*,*) 'xxx [realinput_grads/read_namelist] Not appropriate names in grdvar in ', &
+                        trim(basename),'. Check!'
              call PRC_MPIstop
           else if( ierr < 0 )then
              exit
@@ -1764,16 +1766,15 @@ contains
           grads_vars_nmax = grads_vars_nmax + 1
        enddo
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx namelist file is not open! ', trim(basename)
+       write(*,*) 'xxx [realinput_grads/read_namelist] namelist file is not open! ', trim(basename)
        call PRC_MPIstop
     endif
 
     if ( grads_vars_nmax > grads_vars_limit ) then
-       if( IO_L ) write(IO_FID_LOG,*) &
-            'xxx The number of grads vars exceeds grads_vars_limit! ',grads_vars_nmax,' >', grads_vars_limit
+       write(*,*) 'xxx [realinput_grads/read_namelist] The number of grads vars exceeds grads_vars_limit! ', &
+                  grads_vars_nmax, ' > ', grads_vars_limit
        call PRC_MPIstop
     endif
-
 
     ! check data availability
     data_available(:) = .false.

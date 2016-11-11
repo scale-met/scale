@@ -101,7 +101,7 @@ contains
     case('SCHAER')
        MKTOPO_TYPE = I_SCHAER
     case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(MKTOPO_name)
+       write(*,*) 'xxx Unsupported TYPE:', trim(MKTOPO_name)
        call PRC_MPIstop
     endselect
 
@@ -134,7 +134,7 @@ contains
           call MKTOPO_schaer
 
        case default
-          write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
+          write(*,*) 'xxx Unsupported TYPE:', MKTOPO_TYPE
           call PRC_MPIstop
        endselect
 
