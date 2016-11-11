@@ -85,9 +85,8 @@ contains
     integer, intent(out) :: QS
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** SDM not supported.'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Please contact SCALE developers'
+    write(*,*) '*** SDM not supported.'
+    write(*,*) '*** Please contact SCALE developers'
     call PRC_MPIstop
 
     ! call ATMOS_HYDROMETEOR_regist()
@@ -108,9 +107,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** SDM not supported.'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Please contact SCALE developers'
+    write(*,*) '*** SDM not supported.'
+    write(*,*) '*** Please contact SCALE developers'
     call PRC_MPIstop
 
     ATMOS_PHY_MP_sdm_DENS(:) = UNDEF
@@ -153,9 +151,8 @@ contains
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** SDM not supported.'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Please contact SCALE developers'
+    write(*,*) '*** SDM not supported.'
+    write(*,*) '*** Please contact SCALE developers'
     call PRC_MPIstop
 
     EVAPORATE = UNDEF

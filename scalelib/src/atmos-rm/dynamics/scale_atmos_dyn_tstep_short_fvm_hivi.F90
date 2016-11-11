@@ -118,9 +118,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Setup'
 #ifdef HIVI_BICGSTAB
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
 #else
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
     write(*,*) 'xxx Not Implemented yet'
     call PRC_MPIstop
 #endif
@@ -139,7 +139,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_TSTEP_FVM_HIVI. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
 
     if ( RP == DP ) then
        mtype = MPI_DOUBLE_PRECISION
@@ -1607,11 +1607,11 @@ contains
        error = buf(1)
 
 #ifdef DEBUG
-       if (IO_L) write(*,*) iter, error/norm
+       if( IO_L ) write(*,*) iter, error/norm
 #endif
        if ( sqrt(error/norm) < epsilon .OR. error > error2 ) then
 #ifdef DEBUG
-         IF ( IO_L ) write(*,*) "Bi-CGSTAB converged:", iter
+         if( IO_L ) write(*,*) "Bi-CGSTAB converged:", iter
 #endif
           exit
        endif

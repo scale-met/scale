@@ -153,7 +153,7 @@ contains
           write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN. Check!'
           call PRC_MPIstop
        endif
-       if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
+       if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 

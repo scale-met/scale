@@ -198,11 +198,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** NUMFILTERPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=NUMFILTERPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=NUMFILTERPARAM)
 
     global_area = 4.0_RP * PI * RADIUS * RADIUS
     global_grid = 10.0_RP * 4.0_RP**ADM_GLEVEL
@@ -253,7 +252,7 @@ contains
     divdamp_deep_factor  (:) = 0.0_RP
 
     if ( deep_effect ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx this feature is tentatively suspended. stop.'
+       write(*,*) 'xxx [numfilter_setup] deep_effect feature is tentatively suspended. stop.'
        call PRC_MPIstop
        do k = 1, ADM_kall
           Kh_deep_factor       (k) = ( (GRD_gz (k)+RADIUS) / RADIUS )**(2*lap_order_hdiff)

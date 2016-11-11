@@ -265,7 +265,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
     U_minM = USER_SF_U_minM
     U_minH = USER_SF_U_minH
@@ -292,18 +292,16 @@ contains
     fdata_name_sst = trim(inbasedir)//'/'//trim(fdata_name_sst)
     open(fid_data, file=trim(fdata_name_sst), status='old',iostat=ierr)
     if(ierr /= 0) then
-      write(IO_FID_LOG,*) 'Msg : Sub[mod_user_setup]/Mod[uset_setup]'
-      write(IO_FID_LOG,*) 'Cannot open the data file for forcing.'
-      write(IO_FID_LOG,*) trim(fdata_name_sst)
-      write(IO_FID_LOG,*) 'STOP!!'
+      write(*,*) 'Msg : Sub[mod_user_setup]/Mod[uset_setup]'
+      write(*,*) 'Cannot open the data file for forcing. STOP!', trim(fdata_name_sst)
       call PRC_MPIstop
     endif
 
-    if(IO_L) write(io_fid_log,*) 'Reading external sst'
+    if( IO_L ) write(io_fid_log,*) 'Reading external sst'
     read(fid_data,*)
     do t=1, mstep_sst
       read(fid_data,*) time_sst_in(t), sst_in(t)
-      if(IO_L) write(io_fid_log,*) t,time_nowsec,time_sst_in(t),sst_in(t)
+      if( IO_L ) write(io_fid_log,*) t,time_nowsec,time_sst_in(t),sst_in(t)
     enddo
     close(fid_data)
 
@@ -312,10 +310,8 @@ contains
       fdata_name_sf=trim(inbasedir)//'/'//trim(fdata_name_sf)
       open(fid_data_sf, file=trim(fdata_name_sf), status='old',iostat=ierr)
       if(ierr /= 0) then
-        write(IO_FID_LOG,*) 'Msg : Sub[SF_GRAYZONE_setup]/Mod[sf_grayzone]'
-        write(IO_FID_LOG,*) 'Cannot open the data file for forcing.'
-        write(IO_FID_LOG,*) trim(fdata_name_sf)
-        write(IO_FID_LOG,*) 'STOP!!'
+        write(*,*) 'Msg : Sub[SF_GRAYZONE_setup]/Mod[sf_grayzone]'
+        write(*,*) 'Cannot open the data file for forcing. STOP!', trim(fdata_name_sf)
         call PRC_MPIstop
       endif
       read(fid_data_sf,*)
@@ -513,10 +509,8 @@ contains
       fdata_name_atm=trim(inbasedir)//'/'//trim(fdata_name_atm)
       open(fid_data, file=trim(fdata_name_atm), status='old',iostat=ierr)
       if(ierr /= 0) then
-        write(IO_FID_LOG,*) 'Msg : Sub[mod_user_setup]/Mod[user_setup]'
-        write(IO_FID_LOG,*) 'Cannot open the data file for forcing.'
-        write(IO_FID_LOG,*) trim(fdata_name_atm)
-        write(IO_FID_LOG,*) 'STOP!!'
+        write(*,*) 'Msg : Sub[mod_user_setup]/Mod[user_setup]'
+        write(*,*) 'Cannot open the data file for forcing. STOP!', trim(fdata_name_atm)
         call PRC_MPIstop
       endif
       !
@@ -534,15 +528,15 @@ contains
       enddo
       close(fid_data)
       !
-      if(IO_L)then
-        write(io_fid_log,*) 'w forcing height levels:'
-        write(io_fid_log,'(f9.2,4f11.2)') (z_in(k),k=1,kend)
-        write(io_fid_log,*) 'w forcing time levels:'
-        write(io_fid_log,'(f9.2,4f11.2)') (time_atm_in(k),k=1,mstep_atm)
-        write(io_fid_log,*) 'w forcing:'
-        do t=1, mstep_atm
-          write(io_fid_log,'(f9.4,3f11.4)')(wk(t,k),k=1,kend)
-        enddo
+      if ( IO_L ) then
+         write(IO_FID_LOG,*) 'w forcing height levels:'
+         write(IO_FID_LOG,'(f9.2,4f11.2)') (z_in(k),k=1,kend)
+         write(IO_FID_LOG,*) 'w forcing time levels:'
+         write(IO_FID_LOG,'(f9.2,4f11.2)') (time_atm_in(k),k=1,mstep_atm)
+         write(IO_FID_LOG,*) 'w forcing:'
+         do t = 1, mstep_atm
+            write(IO_FID_LOG,'(f9.4,3f11.4)')(wk(t,k),k=1,kend)
+         enddo
       endif
       !
       do k=ks, ke
@@ -556,9 +550,6 @@ contains
       enddo
 
     endif
-!return ! ok
-
-    if(IO_L) write(*,*)'chk',TIME_NOWSTEP
 
     if( USER_LS_FLG == 0 ) then  ! no large scale sinking
 
@@ -875,7 +866,7 @@ contains
       enddo
 
     else
-       write(IO_FID_LOG,*)'Not supported user_ls_flg'
+       write(*,*)'Not supported user_ls_flg'
        call PRC_MPIstop
     endif
     endif

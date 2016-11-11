@@ -228,7 +228,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CP_KF. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_CP_KF)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_CP_KF)
 
     call kf_lutab ! set kf look up table
 
@@ -471,8 +471,8 @@ contains
     RATE            = RATE_in
     ! TRIGGER must be 1 or 3
     if (TRIGGER_in /= 1 .and. TRIGGER_in /=3) then
-       if (IO_L) write(IO_FID_LOG,*) "TRIGGER must be 1 or 3 but now :",TRIGGER_in
-       if (IO_L) write(IO_FID_LOG,*) "CHAGNGE ",TRIGGER_in," to 3"
+       if( IO_L ) write(IO_FID_LOG,*) "TRIGGER must be 1 or 3 but now :",TRIGGER_in
+       if( IO_L ) write(IO_FID_LOG,*) "CHAGNGE ",TRIGGER_in," to 3"
        TRIGGER_in = 3
     end if
     TRIGGER         = TRIGGER_in
@@ -1178,14 +1178,14 @@ contains
        ! usl layer depth is nessesary 50mb or more
        if ( nk + 1 < KS ) then !< check k_lc -1 is not surface or bottom of ground
           if(KF_LOG) then
-             if(IO_L) write(IO_FID_LOG,*) 'would go off bottom: cu_kf',pres(KS),k_lc,nk+1,n_uslcheck !,nk i,j
+             if( IO_L ) write(IO_FID_LOG,*) 'would go off bottom: cu_kf',pres(KS),k_lc,nk+1,n_uslcheck !,nk i,j
           end if
        else
           do ! serach USL layer index. USL layer is nessesally more 50hPa
              nk = nk +1
              if ( nk > KE ) then !< check k_lc is not index of top layer
                 if(KF_LOG) then
-                   if(IO_L) write(IO_FID_LOG,*) 'would go off top: cu_kf'!,nk i,j
+                   if( IO_L ) write(IO_FID_LOG,*) 'would go off top: cu_kf'!,nk i,j
                 end if
                 exit
              end if

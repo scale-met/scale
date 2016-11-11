@@ -148,18 +148,19 @@ contains
        call FILEIO_read( tmp_CY(:), TOPO_IN_BASENAME, 'CY', 'CY', 1 )
 
        do i = 1, IA
-         if( abs(tmp_CX(i) - GRID_CX(i)) > epsilon ) then
-           write( IO_FID_LOG,'(A)')  '*** X position in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
-           write( IO_FID_LOG,* )  "I", i, tmp_CX(i), GRID_CX(i)
-           call PRC_MPIstop
-         endif
+          if ( abs(tmp_CX(i) - GRID_CX(i)) > epsilon ) then
+             write(*,*) 'xxx X position in TOPO_IN_BASENAME is different from GRID_IN_BASENAME '
+             write(*,*) "I=", i, tmp_CX(i), GRID_CX(i)
+             call PRC_MPIstop
+          endif
        enddo
+
        do j = 1, JA
-         if( abs(tmp_CY(j) - GRID_CY(j)) > epsilon ) then
-           write( IO_FID_LOG,'(A)')  '*** Y position in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
-           write( IO_FID_LOG,* )  "J", j, tmp_CY(j), GRID_CY(j)
-           call PRC_MPIstop
-         endif
+          if ( abs(tmp_CY(j) - GRID_CY(j)) > epsilon ) then
+             write(*,*) 'xxx Y position in TOPO_IN_BASENAME is different from GRID_IN_BASENAME '
+             write(*,*) "J=", j, tmp_CY(j), GRID_CY(j)
+             call PRC_MPIstop
+          endif
        enddo
 
     else

@@ -110,11 +110,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** SATURATIONPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist SATURATIONPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist SATURATIONPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist SATURATIONPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=SATURATIONPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=SATURATIONPARAM)
 
     RTEM00 = 1.0_RP / TEM00
 

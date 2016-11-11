@@ -177,7 +177,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_PROFILE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
     PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
@@ -226,7 +226,7 @@ contains
 
     inquire( file=trim(PROFILE_CIRA86_fname), exist=exist )
     if ( .NOT. exist ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** File not found. check!'
+       write(*,*) '*** [PROFILE_setup_CIRA86] File not found. check!'
        call PRC_MPIstop
     endif
 
@@ -445,7 +445,7 @@ contains
              iostat = ierr         )
 
           if ( ierr /= 0 ) then !--- missing
-             if( IO_L ) write(IO_FID_LOG,*) '*** File not found. check!'
+             write(*,*) '*** [PROFILE_setup_MIPAS2001] File not found. check!'
              call PRC_MPIstop
           endif
 
@@ -1293,7 +1293,7 @@ contains
           iostat = ierr                      )
 
        if ( ierr /= 0 ) then !--- missing
-          if( IO_L ) write(IO_FID_LOG,*) '*** File not found. check!'
+          write(*,*) '*** [PROFILE_read_user] File not found. check!'
           call PRC_MPIstop
        endif
 

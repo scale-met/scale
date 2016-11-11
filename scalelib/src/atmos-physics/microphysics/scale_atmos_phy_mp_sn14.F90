@@ -672,9 +672,9 @@ contains
     MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(MP_ntmax_sedimentation,kind=RP)
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
 
-    if ( IO_L ) write(IO_FID_LOG,*)
-    if ( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
-    if ( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
+    if( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
 
     !--- For kij
     allocate( gsgam2_d (KA,IA,JA) )
@@ -870,7 +870,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_init. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn14_init)
+    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_init)
 
     !
     ! default setting
@@ -969,7 +969,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_particles. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn14_particles)
+    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_particles)
 
     ! [Add] 10/08/03 T.Mitsui
     ! particles shapes are
@@ -2313,11 +2313,12 @@ contains
     if( flag_first )then
        rewind(IO_FID_CONF)
        read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
-100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_sn14_nucleation)
+100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_nucleation)
        flag_first=.false.
-       if( MP_couple_aerosol .AND. nucl_twomey ) then
-        write(IO_FID_LOG,*) "nucl_twomey should be false when MP_couple_aerosol is true, stop"
-        call PRC_MPIstop
+
+       if ( MP_couple_aerosol .AND. nucl_twomey ) then
+          write(*,*) "xxx [mp_sn14/nucleation] nucl_twomey should be false when MP_couple_aerosol is true, stop"
+          call PRC_MPIstop
        endif
     endif
     !
@@ -2865,7 +2866,7 @@ contains
     if( flag_first )then
        rewind( IO_FID_CONF )
        read( IO_FID_CONF, nml=nm_mp_sn14_collection, end=100 )
-100    if( IO_L ) write( IO_FID_LOG, nml=nm_mp_sn14_collection )
+100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_collection)
        flag_first = .false.
     end if
     !
@@ -3970,7 +3971,7 @@ contains
        flag_first = .false.
        rewind(IO_FID_CONF)
        read  (IO_FID_CONF,nml=nm_mp_sn14_condensation, end=100)
-100    if( IO_L ) write (IO_FID_LOG,nml=nm_mp_sn14_condensation)
+100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_condensation)
     end if
     !
 !    dt_dyn     = dt*ntmax

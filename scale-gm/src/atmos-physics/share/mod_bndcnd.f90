@@ -96,11 +96,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** BNDCNDPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist BNDCNDPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist BNDCNDPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist BNDCNDPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=BNDCNDPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=BNDCNDPARAM)
 
     if    ( BND_TYPE_T_TOP == 'TEM' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Boundary setting type (temperature, top   ) : equal to uppermost atmosphere'
@@ -109,7 +108,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Boundary setting type (temperature, top   ) : lagrange extrapolation'
        is_top_epl = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid BND_TYPE_T_TOP. STOP.'
+       write(*,*) 'xxx Invalid BND_TYPE_T_TOP. STOP.'
        call PRC_MPIstop
     endif
 
@@ -120,7 +119,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Boundary setting type (temperature, bottom) : lagrange extrapolation'
        is_btm_epl = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid BND_TYPE_T_BOTTOM. STOP.'
+       write(*,*) 'xxx Invalid BND_TYPE_T_BOTTOM. STOP.'
        call PRC_MPIstop
     endif
 
@@ -131,7 +130,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Boundary setting type (momentum,    top   ) : free'
        is_top_free  = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid BND_TYPE_M_TOP. STOP.'
+       write(*,*) 'xxx Invalid BND_TYPE_M_TOP. STOP.'
        call PRC_MPIstop
     endif
 
@@ -142,7 +141,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Boundary setting type (momentum,    bottom) : free'
        is_btm_free  = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid BND_TYPE_M_BOTTOM. STOP.'
+       write(*,*) 'xxx Invalid BND_TYPE_M_BOTTOM. STOP.'
        call PRC_MPIstop
     endif
 

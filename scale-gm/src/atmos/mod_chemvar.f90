@@ -65,11 +65,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** CHEMVARPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=CHEMVARPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=CHEMVARPARAM)
 
     allocate( CHEM_TRC_name(CHEM_TRC_vmax) )
     allocate( CHEM_TRC_desc(CHEM_TRC_vmax) )
@@ -107,7 +106,7 @@ contains
     enddo
 
     if ( chemvar_getid <= 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx INDEX does not exist =>', tname
+       write(*,*) 'xxx [chemvar_getid] INDEX does not exist =>', tname
        call PRC_MPIstop
     endif
 

@@ -1063,27 +1063,26 @@ contains
     call FileRead( tmp_CBFY(:),  bname, 'CBFY', 1, PRC_myrank )
 
     do i = 1, IA
-       if( abs(tmp_CBFX(i) - GRID_CBFX(i)) > EPS ) then
-           write( IO_FID_LOG,*)  &
-            '*** Buffer layer (X) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: i=', &
-            i, tmp_CBFX(i), GRID_CBFX(i)
-           call PRC_MPIstop
+       if ( abs(tmp_CBFX(i) - GRID_CBFX(i)) > EPS ) then
+          write(*,*) 'xxx Buffer layer (X) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME: ', &
+                     'i=', i, tmp_CBFX(i), GRID_CBFX(i)
+          call PRC_MPIstop
        endif
     enddo
+
     do j = 1, JA
-       if( abs(tmp_CBFY(j) - GRID_CBFY(j)) > EPS ) then
-           write( IO_FID_LOG,*)  &
-            '*** Buffer layer (Y) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: j=', &
-            j, tmp_CBFY(j), GRID_CBFY(j)
-           call PRC_MPIstop
+       if ( abs(tmp_CBFY(j) - GRID_CBFY(j)) > EPS ) then
+          write(*,*) 'xxx Buffer layer (Y) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME: ', &
+                     'j=', j, tmp_CBFY(j), GRID_CBFY(j)
+          call PRC_MPIstop
        endif
     enddo
+
     do k = 1, KA
-       if( abs(tmp_CBFZ(k) - GRID_CBFZ(k)) > EPS ) then
-           write( IO_FID_LOG,*)  &
-            '*** Buffer layer (Z) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: k=', &
-            k, tmp_CBFZ(k), GRID_CBFZ(k)
-           call PRC_MPIstop
+       if ( abs(tmp_CBFZ(k) - GRID_CBFZ(k)) > EPS ) then
+          write(*,*) 'xxx Buffer layer (Z) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME: ', &
+                     'k=', k, tmp_CBFZ(k), GRID_CBFZ(k)
+          call PRC_MPIstop
        endif
     enddo
 
@@ -1974,7 +1973,7 @@ contains
     integer :: fid, iq
     !---------------------------------------------------------------------------
 
-    if (IO_L) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
+    if( IO_L ) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
 
     call FILEIO_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
 
@@ -2019,7 +2018,7 @@ contains
     integer, parameter :: handle = 1
     !---------------------------------------------------------------------------
 
-    if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
+    if( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
 
     ! issue wait
     call NEST_COMM_recvwait_issue( handle, NESTQA )

@@ -320,7 +320,7 @@ contains
      call PRC_MPIstop
     end if
 
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_BIN)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_BIN)
 
     if( ICEFLG == 0 ) then
        nspc = 1
@@ -524,7 +524,7 @@ contains
      write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP, Check!'
      call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SUZUKI10,iostat=ierr)
@@ -535,7 +535,7 @@ contains
      write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10, Check!'
      call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
 
     if ( nspc /= 1 .AND. nspc /= 7 ) then
        write(*,*) 'xxx nspc should be set as 1(warm rain) or 7(mixed phase) check!'
@@ -627,7 +627,7 @@ contains
       !--- micpara.dat does not exist
       else
 
-        if ( IO_L ) write(IO_FID_LOG,*) 'micpara.dat is created'
+        if( IO_L ) write(IO_FID_LOG,*) 'micpara.dat is created'
         call mkpara
 
         fid_micpara = IO_get_available_fid()
@@ -727,7 +727,7 @@ contains
     enddo
 
     if ( flg_sf_aero ) then
-      write( *,* ) "flg_sf_aero=true is not supported stop!! "
+      write(*,*) "flg_sf_aero=true is not supported stop!! "
       call PRC_MPIstop
 !     if ( CZ(KS) >= 10.0_RP ) then
 !          R10M1 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
@@ -826,9 +826,9 @@ contains
     MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(MP_ntmax_sedimentation,kind=RP)
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
 
-    if ( IO_L ) write(IO_FID_LOG,*)
-    if ( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
-    if ( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
+    if( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
 
     return
 
@@ -4731,18 +4731,18 @@ contains
 
   integer :: myu, nyu, i, j
 
-  if ( IO_L ) write(IO_FID_LOG,*) 'Create micpara.dat'
+  if( IO_L ) write(IO_FID_LOG,*) 'Create micpara.dat'
   if( kphase == 0 ) then
-   if ( IO_L ) write(IO_FID_LOG,*) 'Hydro-dynamic kernel'
+   if( IO_L ) write(IO_FID_LOG,*) 'Hydro-dynamic kernel'
   else if( kphase == 1 ) then
-   if ( IO_L ) write(IO_FID_LOG,*) 'Long Kernel'
+   if( IO_L ) write(IO_FID_LOG,*) 'Long Kernel'
   else if( kphase == 2 ) then
-   if ( IO_L ) write(IO_FID_LOG,*) 'Golovin Kernel'
+   if( IO_L ) write(IO_FID_LOG,*) 'Golovin Kernel'
   endif
 
   do myu = 1, nspc_mk
   do nyu = 1, nspc_mk
-  if ( IO_L ) write(IO_FID_LOG,*) ' myu, nyu :', myu, nyu
+  if( IO_L ) write(IO_FID_LOG,*) ' myu, nyu :', myu, nyu
   do i = 1, nbin
   do j = 1, nbin
     ck_mk( myu,nyu,i,j ) = fckrn( myu,nyu,xctr_mk( i ),xctr_mk( j ) )

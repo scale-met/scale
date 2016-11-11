@@ -128,11 +128,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
 #ifdef HEVI_BICGSTAB
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
 #elif defined(HEVI_LAPACK)
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
 #else
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
 #endif
 
 #ifdef HIST_TEND

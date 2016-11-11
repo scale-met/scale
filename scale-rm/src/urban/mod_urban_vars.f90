@@ -525,7 +525,7 @@ contains
 
        call URBAN_vars_total
     else
-       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for urban.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for urban.'
     endif
 
     return

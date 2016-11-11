@@ -16,7 +16,7 @@ endif
 SYSDEP_DIR2 = $(TOPDIR)/scale-gm/test/sysdep
 
 
-BUILD_DIR := $(PWD)/.libs
+BUILD_DIR := $(TOPDIR)/.libs
 INDEX_DIR := $(PWD)
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)

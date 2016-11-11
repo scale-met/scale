@@ -373,7 +373,7 @@ contains
        call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11) )
        call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
     else
-       if ( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_RD.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_RD.'
     endif
 
     return

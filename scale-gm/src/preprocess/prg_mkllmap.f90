@@ -104,11 +104,10 @@ program mkllmap
   if ( ierr < 0 ) then
      if( IO_L ) write(IO_FID_LOG,*) '*** MKLLMAP_PARAM is not specified. use default.'
   elseif( ierr > 0 ) then
-     write(*         ,*) 'xxx Not appropriate names in namelist MKLLMAP_PARAM. STOP.'
-     if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist MKLLMAP_PARAM. STOP.'
+     write(*,*) 'xxx Not appropriate names in namelist MKLLMAP_PARAM. STOP.'
      call PRC_MPIstop
   endif
-  if( IO_L ) write(IO_FID_LOG,nml=MKLLMAP_PARAM)
+  if( IO_LNML ) write(IO_FID_LOG,nml=MKLLMAP_PARAM)
 
   call LATLON_ico_setup
 

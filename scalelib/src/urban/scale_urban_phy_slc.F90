@@ -869,12 +869,11 @@ contains
     AH_t  = AH  * tahdiurnal
     ALH_t = ALH * tahdiurnal
 
-    !--- limitter for surface temp change
+    !--- limiter for surface temp change
     DTS_MAX_onestep = DTS_MAX * dt
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
-                                      'Stop in subroutine urban - change ZDC and Z0C'
+       write(*,*) 'xxx [URBAN_PHY_SLC] ZDC + Z0C + 2m is larger than the 1st level! STOP.'
        call PRC_MPIstop
     endif
 
@@ -1012,7 +1011,7 @@ contains
 
      ! output for debug
      if ( iteration > 100 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TR was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_PHY_SLC/SLC_main] iteration for TR was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                          [K] :', resi1
        if( IO_L ) write(IO_FID_LOG,*)
@@ -1062,12 +1061,12 @@ contains
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TR is over limitter'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
+         write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TR exceeded a limit! STOP.'
+         write(*,*) 'xxx previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
          call PRC_MPIstop
        endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TR is over limitter'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
+       if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TR exceeded a limit'
+       if( IO_L ) write(IO_FID_LOG,*) '*** previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
      endif
 
     !--------------------------------------------------
@@ -1226,7 +1225,7 @@ contains
 
      ! output for debug
      if ( iteration > 200 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TB/TG was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_PHY_SLC/SLC_main] iteration for TB/TG was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
        if( IO_L ) write(IO_FID_LOG,*)
@@ -1307,25 +1306,24 @@ contains
      resi2 = TGL(1) - TG
      TG    = TGL(1)
 
-
      if ( abs(resi1) > DTS_MAX_onestep ) then
-       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TB is over limitter'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
-         call PRC_MPIstop
-       endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TB is over limitter'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
+        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
+           write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TB exceeded a limit! STOP.'
+           write(*,*) 'xxx previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
+           call PRC_MPIstop
+        endif
+        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TB exceeded a limit'
+        if( IO_L ) write(IO_FID_LOG,*) '*** previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
      endif
 
      if ( abs(resi2) > DTS_MAX_onestep ) then
-       if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TG is over limitter'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG,resi2
-         call PRC_MPIstop
-       endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TG is over limitter'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG
+        if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
+           write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TG exceeded a limit! STOP.'
+           write(*,*) 'xxx previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
+           call PRC_MPIstop
+        endif
+        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TG exceeded a limit'
+        if( IO_L ) write(IO_FID_LOG,*) '*** previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
      endif
 
     !-----------------------------------------------------------

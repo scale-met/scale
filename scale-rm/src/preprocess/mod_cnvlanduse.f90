@@ -112,7 +112,7 @@ contains
        CNVLANDUSE_UseLU100M = .true.
        CNVLANDUSE_UseJIBIS  = .true.
     case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(CNVLANDUSE_name)
+       write(*,*) 'xxx Unsupported TYPE:', trim(CNVLANDUSE_name)
        call PRC_MPIstop
     endselect
 

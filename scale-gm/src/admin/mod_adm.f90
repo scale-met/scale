@@ -233,25 +233,21 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=ADMPARAM,iostat=ierr)
     if ( ierr < 0 ) then
-       write(*         ,*) 'xxx Not found namelist! STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist! STOP.'
+       write(*,*) 'xxx Not found namelist ADMPARAM! STOP.'
        call PRC_MPIstop
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist ADMPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist ADMPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist ADMPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=ADMPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=ADMPARAM)
 
     ! Error if glevel & rlevel are not defined
     if ( glevel < 1 ) then
-       write(*         ,*) 'xxx glevel is not appropriate :', glevel
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx glevel is not appropriate :', glevel
+       write(*,*) 'xxx [ADM_setup] glevel is not appropriate :', glevel
        call PRC_MPIstop
     endif
     if ( rlevel < 0 ) then
-       write(*         ,*) 'xxx rlevel is not appropriate :', rlevel
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx rlevel is not appropriate :', rlevel
+       write(*,*) 'xxx [ADM_setup] rlevel is not appropriate :', rlevel
        call PRC_MPIstop
     endif
 
@@ -269,8 +265,7 @@ contains
     elseif( ADM_HGRID_SYSTEM == 'ICO-XTMS' ) then
        dmd        = 10
     else
-       write(*         ,*) 'xxx Not appropriate param for ADM_HGRID_SYSTEM. STOP.', trim(ADM_HGRID_SYSTEM)
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate param for ADM_HGRID_SYSTEM. STOP.', trim(ADM_HGRID_SYSTEM)
+       write(*,*) 'xxx [ADM_setup] Not appropriate param for ADM_HGRID_SYSTEM. STOP.', trim(ADM_HGRID_SYSTEM)
        call PRC_MPIstop
     endif
 #else
@@ -298,8 +293,7 @@ contains
        ADM_vlink  = 5
        dmd        = 10
     else
-       write(*         ,*) 'xxx Not appropriate param for ADM_HGRID_SYSTEM. STOP.', trim(ADM_HGRID_SYSTEM)
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate param for ADM_HGRID_SYSTEM. STOP.', trim(ADM_HGRID_SYSTEM)
+       write(*,*) 'xxx [ADM_setup] Not appropriate param for ADM_HGRID_SYSTEM. STOP.', trim(ADM_HGRID_SYSTEM)
        call PRC_MPIstop
     endif
 
@@ -309,23 +303,19 @@ contains
 
 #ifdef _FIXEDINDEX_
     if ( ADM_glevel /= glevel ) then
-       write(*,         *) 'xxx Fixed glevel is not match (fixed,requested): ', ADM_glevel, glevel
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Fixed glevel is not match (fixed,requested): ', ADM_glevel, glevel
+       write(*,*) 'xxx [ADM_setup] Fixed glevel is not match (fixed,requested): ', ADM_glevel, glevel
        call PRC_MPIstop
     endif
     if ( ADM_rlevel /= rlevel ) then
-       write(*         ,*) 'xxx Fixed rlevel is not match (fixed,requested): ', ADM_rlevel, rlevel
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Fixed rlevel is not match (fixed,requested): ', ADM_rlevel, rlevel
+       write(*,*) 'xxx [ADM_setup] Fixed rlevel is not match (fixed,requested): ', ADM_rlevel, rlevel
        call PRC_MPIstop
     endif
     if ( ADM_vlayer /= vlayer ) then
-       write(*         ,*) 'xxx Fixed vlayer is not match (fixed,requested): ', ADM_vlayer, vlayer
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Fixed vlayer is not match (fixed,requested): ', ADM_vlayer, vlayer
+       write(*,*) 'xxx [ADM_setup] Fixed vlayer is not match (fixed,requested): ', ADM_vlayer, vlayer
        call PRC_MPIstop
     endif
     if ( ADM_DMD /= dmd ) then
-       write(*         ,*) 'xxx Fixed dmd is not match (fixed,requested): ', ADM_DMD, dmd
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Fixed dmd is not match (fixed,requested): ', ADM_DMD, dmd
+       write(*,*) 'xxx [ADM_setup] Fixed dmd is not match (fixed,requested): ', ADM_DMD, dmd
        call PRC_MPIstop
     endif
 #else
@@ -453,15 +443,15 @@ contains
     !=> [add] H.Yashiro 20120611
     ! ERROR if filename are not defined
     if ( ierr /= 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx mnginfo file is not found! STOP. ', trim(fname)
+       write(*,*) 'xxx [input_mnginfo] mnginfo file is not found! STOP. ', trim(fname)
        call PRC_MPIstop
     endif
     !<= [add] H.Yashiro 20120611
 
     read(fid,nml=rgn_info)
     if ( num_of_rgn /= ADM_rgn_nmax ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx No match for region number! STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx ADM_rgn_nmax= ',ADM_rgn_nmax,' num_of_rgn=',num_of_rgn
+       write(*,*) 'xxx [input_mnginfo] No match for region number! STOP.'
+       write(*,*) 'xxx ADM_rgn_nmax= ',ADM_rgn_nmax,' num_of_rgn=',num_of_rgn
        call PRC_MPIstop
     endif
 
@@ -480,8 +470,8 @@ contains
 
     read(fid,nml=proc_info)
     if ( PRC_nprocs /= num_of_proc ) then
-       if( IO_L ) write(IO_FID_LOG,*) ' xxx No match for  process number! STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) ' xxx PRC_nprocs= ',PRC_nprocs,' num_of_proc=',num_of_proc
+       write(*,*) 'xxx [input_mnginfo] No match for process number! STOP.'
+       write(*,*) 'xxx PRC_nprocs= ',PRC_nprocs,' num_of_proc=',num_of_proc
        call PRC_MPIstop
     endif
 

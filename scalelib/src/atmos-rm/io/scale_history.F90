@@ -165,7 +165,7 @@ contains
              call PRC_MPIstop
           elseif ( HIST_PRES(k+1) >= HIST_PRES(k) ) then
              write(*,*) 'xxx The value of pressure coordinate must be descending order! ', &
-             '(k,value[k],value[k+1])=', k, HIST_PRES(k), HIST_PRES(k+1)
+                        '(k,value[k],value[k+1])=', k, HIST_PRES(k), HIST_PRES(k+1)
              call PRC_MPIstop
           endif
        enddo

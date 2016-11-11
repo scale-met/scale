@@ -272,7 +272,7 @@ contains
                          ATMOS_REFSTATE_IN_BASENAME, 'QV_ref3D',   'ZXY', step=1 ) ! [IN]
 
     else
-       if( IO_L ) write(*,*) 'xxx refstate file is not specified.'
+       write(*,*) 'xxx [ATMOS_REFSTATE_read] refstate file is not specified.'
        call PRC_MPIstop
     endif
 
@@ -938,8 +938,7 @@ contains
        enddo
 
        if ( iter == iter_max ) then
-          if (IO_L) write(IO_FID_LOG,*) "*** [refstate smoothing] iteration not converged!", phi
-!          call PRC_MPIstop
+          if( IO_L ) write(IO_FID_LOG,*) "*** [scale_atmos_refstate/smoothing] iteration not converged!", phi
        endif
     enddo
 

@@ -125,11 +125,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** RESTARTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=RESTARTPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=RESTARTPARAM)
 
     restart_input_basename  = input_basename
     restart_output_basename = output_basename
@@ -142,7 +141,7 @@ contains
     elseif( input_io_mode == 'IDEAL'        ) then
     elseif( input_io_mode == 'IDEAL_TRACER' ) then
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid input_io_mode. STOP.'
+       write(*,*) 'xxx [prgvar] Invalid input_io_mode. STOP.'
        call PRC_MPIstop
     endif
 
@@ -150,7 +149,7 @@ contains
     if    ( output_io_mode == 'POH5'        ) then
     elseif( output_io_mode == 'ADVANCED'    ) then
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid output_io_mode. STOP'
+       write(*,*) 'xxx [prgvar] Invalid output_io_mode. STOP'
        call PRC_MPIstop
     endif
 

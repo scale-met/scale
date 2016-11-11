@@ -237,19 +237,19 @@ contains
     call VECTR_dot  ( ip, o, cdab, o, a )
 
     p(:) = cdab(:) / sign(length,ip)
-!    write(IO_FID_LOG,*), "p:", p(:)
+!   if( IO_L ) write(IO_FID_LOG,*), "p:", p(:)
 
     call VECTR_angle( angle_aop, a, o, p )
     call VECTR_angle( angle_pob, p, o, b )
     call VECTR_angle( angle_aob, a, o, b )
-!    write(IO_FID_LOG,*), "angle a-p-b:", angle_aop, angle_pob, angle_aob
+!   if( IO_L )  write(IO_FID_LOG,*), "angle a-p-b:", angle_aop, angle_pob, angle_aob
 
     call VECTR_angle( angle_cop, c, o, p )
     call VECTR_angle( angle_pod, p, o, d )
     call VECTR_angle( angle_cod, c, o, d )
-!    write(IO_FID_LOG,*), "angle c-p-d:", angle_cop, angle_pod, angle_cod
+!   if( IO_L )  write(IO_FID_LOG,*), "angle c-p-d:", angle_cop, angle_pod, angle_cod
 
-!    write(IO_FID_LOG,*), "judge:", angle_aob-(angle_aop+angle_pob), angle_cod-(angle_cop+angle_pod)
+!   if( IO_L )  write(IO_FID_LOG,*), "judge:", angle_aob-(angle_aop+angle_pob), angle_cod-(angle_cop+angle_pod)
 
     ! --- judge intersection
     if (       abs(angle_aob-(angle_aop+angle_pob)) < EPS &
@@ -296,7 +296,7 @@ contains
        call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
 
        if ( ip < -EPS ) then ! right hand : exchange
-!          write(IO_FID_LOG,*) 'exchange by ip', i, '<->',j
+!         if( IO_L )  write(IO_FID_LOG,*) 'exchange by ip', i, '<->',j
           vertex(i,:) = v2(:)
           vertex(j,:) = v3(:)
        endif
@@ -312,11 +312,11 @@ contains
     call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
     call VECTR_angle( angle1, v1(:), o, v2(:) )
     call VECTR_angle( angle2, v1(:), o, v3(:) )
-!    write(IO_FID_LOG,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
+!   if( IO_L )  write(IO_FID_LOG,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
 
     if (       abs(ip)                 < EPS  &      ! on the same line
          .AND. abs(angle2)-abs(angle1) < 0.0_RP ) then ! which is far?
-!       write(IO_FID_LOG,*) 'exchange by angle', 2, '<->', 3
+!      if( IO_L )  write(IO_FID_LOG,*) 'exchange by angle', 2, '<->', 3
        vertex(2,:) = v3(:)
        vertex(3,:) = v2(:)
     endif
@@ -328,11 +328,11 @@ contains
     call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
     call VECTR_angle( angle1, v1(:), o, v2(:) )
     call VECTR_angle( angle2, v1(:), o, v3(:) )
-!    write(IO_FID_LOG,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
+!   if( IO_L )  write(IO_FID_LOG,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
 
     if (       abs(ip)                 < EPS  &      ! on the same line
          .AND. abs(angle2)-abs(angle1) < 0.0_RP ) then ! which is far?
-!       write(IO_FID_LOG,*) 'exchange by angle', nvert, '<->', nvert-1
+!      if( IO_L )  write(IO_FID_LOG,*) 'exchange by angle', nvert, '<->', nvert-1
        vertex(nvert,  :) = v3(:)
        vertex(nvert-1,:) = v2(:)
     endif
