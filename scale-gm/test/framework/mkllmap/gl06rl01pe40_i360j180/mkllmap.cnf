@@ -1,0 +1,27 @@
+################################################################################
+#
+# NICAM driver config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 6,
+    rlevel      = 1,
+    vlayer      = 1,
+    rgnmngfname = "rl01-prc40.info",
+/
+
+&GRDPARAM
+    hgrid_io_mode = "ADVANCED",
+    hgrid_fname   = "boundary_GL06RL01",
+    VGRID_fname   = "NONE",
+    topo_fname    = "NONE",
+/
+
+&LATLONPARAM
+    latlon_type = "EQUIDIST",
+    imax        = 360,
+    jmax        = 180,
+/
+
+################################################################################
