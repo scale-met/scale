@@ -1,0 +1,474 @@
+\section{Change Model Configurations}
+%###############################################################################
+ {\sf Terms}
+ \begin{itemize}
+   \item g-level (grid level): number of subdivision times of the grid from the original icosahedron.
+         the number starts from 1, we recommend to use the number larger than 4.
+   \item r-level (region level): number of subdivision times of the region(tile)
+         from the original icosahedron. When r-level = 0, we have ten regions(tiles).
+         At that time, the number of available maximum MPI processes is ten.
+ \end{itemize}
+
+\subsection{Change the Test Case}
+%-------------------------------------------------------------------------------
+
+ \noindent In this section, detail of the configurations of three experiments
+ in DCMIP2016 are described. Each configuration set in the directory of \verb|${TOP}/test/case|
+ is ready to go. At the first step, please use these sets as it is.
+
+\subsubsection{preparing directory}
+ Change to the directory of target case. If you want to run test case 162,
+ change to \verb|${TOP}/test/case/DCMIP2016-12/|. After that, make a directory.
+ The directory of gl05rl00z30pe40 already may exists, we assume create it newly.
+ \begin{verbatim}
+    > mkdir gl05rl00z30pe40
+    > cd    gl05rl00z30pe40
+ \end{verbatim}
+
+ \noindent Copy Makefile and configuration file from another directory
+ of DCMIP2016 to the new direcotory, for example DCMIP2016-11.
+ \begin{verbatim}
+    > cp ../../DCMIP2016-11/gl05rl00z30pe10/Makefile       ./
+    > cp ../../DCMIP2016-11/gl05rl00z30pe10/nhm_driver.cnf ./
+ \end{verbatim}
+
+\subsubsection{Edit configuration file: nhm\_driver.cnf}
+
+ %--------------------
+ \vspace{0.5cm}
+ \noindent {\large{\sf edit for test case 161: moist baroclinic wave}}
+
+ (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &RUNCONFPARAM
+       RUNNAME        = 'DCMIP2016-11',      <--
+       NDIFF_LOCATION = 'IN_LARGE_STEP2',
+       THUBURN_LIM    = .true.,
+       RAIN_TYPE      = "WARM",
+       AF_TYPE        = 'DCMIP',
+     /
+
+     * snip *
+
+     &DYCORETESTPARAM
+       init_type   = 'Jablonowski-Moist',    <--
+       test_case   = '1',                    <--
+       chemtracer  = .true.,                 <--
+       prs_rebuild = .false.,
+     /
+
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_11 = .true.,            <--
+     /
+
+     * snip *
+ \end{verbatim}
+
+ \noindent \textcolor{blue}{{\sf Note}}
+ \begin{itemize}
+   \item "RUNNAME" should be specified as "DCMIP2016-11".
+   \item "init\_type" should be specified as "Jablonowski-Moist".
+   \item "test\_case" can be choose from 1 ~ 6.\\
+          case 1: perturbation: exponential / with moisture \\
+          case 2: perturbation: stream function / with moisture \\
+          case 3: perturbation: exponential / without moisture \\
+          case 4: perturbation: stream function / without moisture \\
+          case 5: no perturbation / with moisture \\
+          case 6: no perturbation / without moisture
+   \item \verb|FORCING_DCMIP_PARAM| should be specified as "\verb|SET_DCMIP2016_11 = .true.|".
+   \item "step" in \verb|NMHISD| should be changed following required history output interval
+           as described in DCMIP2016 Test Case Document.
+   \item items of history output variables, which specified by "NMHIST", should be added
+         following the requirement in DCMIP2016 Test Case Document.
+   \item "small\_planet\_factor" in CNSTPARAM should be set as 1.
+ \end{itemize}
+
+ %--------------------
+ \vspace{0.5cm}
+ \noindent {\large {\sf edit for test case 162: ideal tropical cyclone}}
+
+ (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &RUNCONFPARAM
+       RUNNAME        = 'DCMIP2016-12',      <--
+       NDIFF_LOCATION = 'IN_LARGE_STEP2',
+       THUBURN_LIM    = .true.,
+       RAIN_TYPE      = "WARM",
+       AF_TYPE        = 'DCMIP',
+     /
+
+     * snip *
+
+     &DYCORETESTPARAM
+       init_type   = 'Tropical-Cyclone',     <--
+     /
+
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_12 = .true.,            <--
+     /
+
+     * snip *
+ \end{verbatim}
+
+ \noindent \textcolor{blue}{{\sf Note}}
+ \begin{itemize}
+   \item "RUNNAME" should be specified as "DCMIP2016-12".
+   \item "init\_type" should be specified as "Tropical-Cyclone".
+   \item \verb|FORCING_DCMIP_PARAM| should be specified as "\verb|SET_DCMIP2016_12 = .true.|".
+   \item "step" in \verb|NMHISD| should be changed following required history output interval
+           as described in DCMIP2016 Test Case Document.
+   \item items of history output variables, which specified by "NMHIST", should be added
+         following the requirement in DCMIP2016 Test Case Document.
+   \item "small\_planet\_factor" in CNSTPARAM should be set as 1.
+ \end{itemize}
+
+ %--------------------
+ \vspace{0.5cm}
+ \noindent {\large{\sf edit for test case 163: supercell}}
+
+ (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &RUNCONFPARAM
+       RUNNAME        = 'DCMIP2016-13',      <--
+       NDIFF_LOCATION = 'IN_LARGE_STEP2',
+       THUBURN_LIM    = .true.,
+       RAIN_TYPE      = "WARM",
+       AF_TYPE        = 'DCMIP',
+     /
+
+     * snip *
+
+     &DYCORETESTPARAM
+       init_type   = 'Supercell',            <--
+       test_case  = '1',                     <--
+     /
+
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_13 = .true.,            <--
+     /
+
+     * snip *
+ \end{verbatim}
+
+ \noindent \textcolor{blue}{{\sf Note}}
+ \begin{itemize}
+   \item "RUNNAME" should be specified as "DCMIP2016-13".
+   \item "init\_type" should be specified as "Supercell".
+   \item "test\_case" can be choose from 1 ~ 6.\\
+          case 1: with initial perturbation \\
+          case 2: without initial perturbation
+   \item \verb|FORCING_DCMIP_PARAM| should be specified as "\verb|SET_DCMIP2016_13 = .true.|".
+   \item "step" in \verb|NMHISD| should be changed following required history output interval
+           as described in DCMIP2016 Test Case Document.
+   \item items of history output variables, which specified by "NMHIST", should be added
+         following the requirement in DCMIP2016 Test Case Document.
+   \item \textcolor{red}{"small\_planet\_factor" in CNSTPARAM should be set as 120}.
+   \item \textcolor{red}{"earth\_angvel" in CNSTPARAM should be set as 0}.
+ \end{itemize}
+
+ \noindent After above edit, you can run the experiment
+ by the same manner in Section 1.4.
+ \begin{verbatim}
+    > make run
+    > sh run.sh
+ \end{verbatim}
+
+
+\subsection{Change Physics Schemes}
+%-------------------------------------------------------------------------------
+
+ \noindent Default settings for each test cases in DCMIP2016 is set
+ in the pre-existing configuration file. You can change these settings
+ as you like. Note that we have not yet checked all the combinations of
+ physics schemes for all test cases. \\
+
+
+ \noindent {\large{\sf use Large scale condensation instead of kessler}}
+
+ \noindent The default setting for cloud microphysics is Kessler scheme.
+ To use Large scale condensation (Reed and Jablonowski (2012) precip scheme),
+ add "\verb|SET_DCMIP2016_LSC|" with true sign. An example for test case 161
+ is shown below.
+
+ %--------------------
+ (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_11 = .true.,
+       SET_DCMIP2016_LSC = .true.,      <--
+      /
+
+     * snip *
+ \end{verbatim}
+
+
+ \noindent {\large{\sf no cloud physics}}
+
+ \noindent To run without any cloud physics, add "\verb|SET_DCMIP2016_DRY|" with true sign.
+ An example for test case 161 is shown below.
+
+ (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_11 = .true.,
+       SET_DCMIP2016_DRY = .true.,      <--
+      /
+
+     * snip *
+ \end{verbatim}
+
+ \noindent {\large{\sf use George Bryan PBL}}
+
+ \noindent The default setting for PBL scheme is Reed and Jablonowski (2012).
+ To use George Bryan PBL, add "\verb|SM_PBL_Bryan|" with true sign.
+ This option is available only for Tropical cyclone case (162).
+ An example is shown below.
+
+ (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_12 = .true.,
+       SM_PBL_Bryan     = .true.,      <--
+      /
+
+     * snip *
+ \end{verbatim}
+
+
+ \noindent {\large{\sf no physics}}
+
+ \noindent To run any physics scheme, specify "NONE" to the parameter
+ of AF\_TYPE in RUNCONFPARAM.
+ An example for test case 161 is shown below.
+
+ (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &RUNCONFPARAM
+       RUNNAME        = 'DCMIP2016-11',
+       NDIFF_LOCATION = 'IN_LARGE_STEP2',
+       THUBURN_LIM    = .true.,
+       RAIN_TYPE      = "WARM",
+       AF_TYPE        = 'NONE',       <--
+      /
+
+     * snip *
+ \end{verbatim}
+
+
+
+\subsection{Increase MPI processes}
+%------------------------------------------------------------------------------
+ \noindent To reduce elasped time of the model execution, we can increase
+ number of MPI processes. For example, edit to change to use 40 MPI processes
+ with g-level 5 in test case 161.
+
+ To increase MPI processes up to 40, r-level should be rised from 0 to 1
+ because the upper limit of processes in r-level 0 is 10 processes.
+
+\subsubsection{preparing directory}
+%------------------------------------------------------------------------------
+ We assume in \${TOP}/test/case/DCMIP2016-11/
+ \begin{verbatim}
+    > mkdir gl05rl01z30pe40    <-- r-level is 1
+    > cd gl05rl01z30pe40/
+ \end{verbatim}
+
+ \noindent Copy Makefile and configuration file to new direcotory.
+ \begin{verbatim}
+    > cp ../gl05rl00z30pe10/Makefile ./
+    > cp ../gl05rl00z30pe10/nhm_driver.cnf ./
+ \end{verbatim}
+
+\subsubsection{Edit Makefile}
+%------------------------------------------------------------------------------
+ (symbols "\verb|<--|" means changed parameters) \\
+ On the Lines from 17 to 21, edit parameters.
+ \begin{verbatim}
+    > vi Makefile
+     glevel = 5
+     rlevel = 1      <--
+     nmpi   = 40     <--
+     zlayer = 30
+     vgrid  = vgrid30_stretch_30km_dcmip2016.dat
+ \end{verbatim}
+
+\subsubsection{Edit configuration file: nhm\_driver.cnf}
+%------------------------------------------------------------------------------
+ (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+     &ADMPARAM
+       glevel      = 5,
+       rlevel      = 1,                     <--
+       vlayer      = 30,
+       rgnmngfname = "rl01-prc40.info",     <--
+      /
+
+     &GRDPARAM
+       hgrid_io_mode = "ADVANCED",
+       hgrid_fname   = "boundary_GL05RL01",  <--
+       VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat",
+       vgrid_scheme  = "LINEAR",
+       topo_fname    = "NONE",
+      /
+
+     * snip *
+
+     &RESTARTPARAM
+       input_io_mode     = 'IDEAL',
+       output_io_mode    = 'ADVANCED',
+       output_basename   = 'restart_all_GL05RL01z30', <--
+       restart_layername = 'ZSALL32_DCMIP16',
+      /
+ \end{verbatim}
+
+ \noindent After above edit, you can run the experiment
+ by the same manner in Section 1.4.
+ \begin{verbatim}
+    > make run
+    > sh run.sh
+ \end{verbatim}
+
+
+\subsection{Change grid spacing}
+%------------------------------------------------------------------------------
+ \noindent This is an example to change grid spacing of g-level 6
+ (approxi. 120 km) with 40 MPI processes in test case 161.
+ When horizontal grid space is changed, some additional settings
+ should be changed, for example, interval of time integration (DTL),
+ maximum number of time steps (LSTEP\_MAX), numerical filter parameters,
+ and output interval of history data.
+
+\subsubsection{preparing directory}
+%------------------------------------------------------------------------------
+ We assume in \${TOP}/test/case/DCMIP2016-11/
+ \begin{verbatim}
+    > mkdir gl06rl01z30pe40  <-- g-level is 6, and r-level is 1
+    > cd gl06rl01z30pe40/
+ \end{verbatim}
+
+ \noindent Copy Makefile and configuration file to new direcotory.
+ \begin{verbatim}
+    > cp ../gl05rl00z30pe10/Makefile ./
+    > cp ../gl05rl00z30pe10/nhm_driver.cnf ./
+ \end{verbatim}
+
+\subsubsection{Edit Makefile}
+%------------------------------------------------------------------------------
+ (symbols "\verb|<--|" means changed parameters) \\
+ On the Lines from 17 to 21, edit parameters.
+ \begin{verbatim}
+    > vi Makefile
+     glevel = 6      <--
+     rlevel = 1      <--
+     nmpi   = 40     <--
+     zlayer = 30
+     vgrid  = vgrid30_stretch_30km_dcmip2016.dat
+ \end{verbatim}
+
+\subsubsection{Edit configuration file: nhm\_driver.cnf}
+%------------------------------------------------------------------------------
+ \noindent A guideline of changing interval of time integration (DTL) is \\
+ {\sf take 1/2 of DTL by one up of g-level}.
+
+ \noindent A guideline of changing numerical filter parameters is \\
+ {\sf take 1/8 of coefficient value by one up of g-level}. \\
+
+ \noindent (symbols "\verb|<--|" means changed parameters)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+     &ADMPARAM
+       glevel      = 6,                     <--
+       rlevel      = 1,                     <--
+       vlayer      = 30,
+       rgnmngfname = "rl01-prc40.info",     <--
+      /
+
+     &GRDPARAM
+       hgrid_io_mode = "ADVANCED",
+       hgrid_fname   = "boundary_GL06RL01",  <--
+       VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat",
+       vgrid_scheme  = "LINEAR",
+       topo_fname    = "NONE",
+      /
+
+     &TIMEPARAM
+       DTL         = 300.D0,     <--
+       INTEG_TYPE  = "RK3",
+       LSTEP_MAX   = 4320,       <--
+       start_date  = 0000,1,1,0,0,0
+      /
+
+     * snip *
+
+     &RESTARTPARAM
+       input_io_mode     = 'IDEAL',
+       output_io_mode    = 'ADVANCED',
+       output_basename   = 'restart_all_GL06RL01z30', <--
+       restart_layername = 'ZSALL32_DCMIP16',
+      /
+
+     * snip *
+
+     &NUMFILTERPARAM
+       lap_order_hdiff   = 2,
+       hdiff_type        = 'NONLINEAR1',
+       Kh_coef_maxlim    = 1.500D+16,    <--
+       Kh_coef_minlim    = 1.500D+15,    <--
+       ZD_hdiff_nl       = 20000.D0,
+       divdamp_type      = 'DIRECT',
+       lap_order_divdamp = 2,
+       alpha_d           = 1.50D15,      <--
+       gamma_h_lap1      = 0.0D0,
+       ZD                = 40000.D0,
+       alpha_r           = 0.0D0,
+      /
+
+     * snip *
+
+     &NMHISD
+       output_io_mode   = 'ADVANCED' ,
+       histall_fname    = 'history'  ,
+       hist3D_layername = 'ZSDEF30_DCMIP16',
+       NO_VINTRPL       = .false.    ,
+       output_type      = 'SNAPSHOT' ,
+       step             = 288        ,    <--
+       doout_step0      = .true.     ,
+      /
+ \end{verbatim}
+
+ \noindent After above edit, you can run the experiment
+ by the same manner in Section 1.4.
+ \begin{verbatim}
+    > make run
+    > sh run.sh
+ \end{verbatim}

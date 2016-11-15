@@ -1,0 +1,16 @@
+----------------------------------------------
+         A USERS GUIDE FOR SCALE-GM
+       by Team SCALE UGC working group
+----------------------------------------------
+
+* make a PDF file
+ >$ make pdf
+
+ then you will get a pdf file "scale-gm_users_guide"
+ in the current directory.
+
+* texlive (more than 2009) is needed to  make
+  the PDF file.
+
+----------------------------------------------
+(last update: 20 Oct, 2016)

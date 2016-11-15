@@ -13,6 +13,7 @@
 *.blg
 *.fls
 *.out
+00_version.tex
 
 scale-gm/test/data/grid/boundary/gl05rl01*
 scale-gm/test/data/grid/boundary/gl06*
