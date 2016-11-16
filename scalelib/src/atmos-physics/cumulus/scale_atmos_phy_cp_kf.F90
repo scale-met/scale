@@ -658,7 +658,7 @@ contains
     !
     real(RP) :: cldfrac_KF(KA,2) ! cloud fraction
     !
-    real(RP) :: qd(KA) ! dry mixing ratio
+    real(RP) :: rhod(KA) ! dry density
     ! do loop variable
     integer  :: k, i, j, iq, iqa, ii
 
@@ -683,7 +683,6 @@ contains
 
        ! check convection
        if ( nca(i,j) .ge. 0.5_DP * dt ) cycle
-
 
        ! initialize variables
             I_convflag(i,j) = 0.0_RP
@@ -722,7 +721,6 @@ contains
             qr_nw     (:)   = 0.0_RP
             qs_nw     (:)   = 0.0_RP
             rhot_nw   (:)   = 0.0_RP
-            qd        (:)   = 0.0_RP
             pott_nw   (:)   = 0.0_RP
             totalprcp       = 0.0_RP
             umflcl          = 0.0_RP
@@ -795,7 +793,7 @@ contains
        zlcl       (i,j) = 0.0_RP
 
        do iq = 1, QA_MP-1
-          iqa = iq + QS_MP
+       iqa = iq + QS_MP
        do k  = KS, KE
           q_hyd(k,iq) = QTRC(k,i,j,iqa) / QDRY(k)
        enddo
@@ -850,6 +848,7 @@ contains
        !------------------------------------------------------------------------
        ! calc ems(box weight[kg])
        !------------------------------------------------------------------------
+
        if(I_convflag(i,j) /= 2) then
           ems(k_top+1:KE) = 0._RP
           emsd(k_top+1:KE) = 0._RP
@@ -988,20 +987,16 @@ contains
           q_hyd(KS:KE,I_QR-QS_MP) = qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-QS_MP)
           if ( I_QI>0 ) q_hyd(KS:KE,I_QI-QS_MP) = qi_nw(KS:KE) + q_hyd(KS:KE,I_QI-QS_MP)
           if ( I_QS>0 ) q_hyd(KS:KE,I_QS-QS_MP) = qs_nw(KS:KE) + q_hyd(KS:KE,I_QS-QS_MP)
-          qd(KS:KE) = 1.0_RP / ( 1.0_RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2)) ! new qdry
+          rhod(KS:KE) = DENS(KS:KE,i,j) * QDRY(KS:KE)
+          qdry(KS:KE) = 1.0_RP / ( 1.0_RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2)) ! new qdry
 
           ! new qtrc
-          qtrc_nw(KS:KE,I_QV) = qv_g(KS:KE)*qd(KS:kE)
+          qtrc_nw(KS:KE,I_QV) = qv_g(KS:KE) * qdry(KS:kE)
           do iq = 1, QA_MP-1
-             qtrc_nw(KS:KE,QS_MP+iq) = q_hyd(KS:KE,iq) * qd(KS:KE)
+             qtrc_nw(KS:KE,QS_MP+iq) = q_hyd(KS:KE,iq) * qdry(KS:KE)
           end do
           ! new density
-          dens_nw(KS:KE) = dens(KS:KE,i,j)
-          do ii = 1, QA_MP
-             iq = QS_MP + ii - 1
-             dens_nw(KS:KE) = dens_nw(KS:KE) + ( qtrc_nw(KS:KE,iq) - QTRC(KS:KE,i,j,iq) )*dens(KS:KE,i,j)
-          end do
-          ! dens_(n+1) = dens_(n) + tend_q*dens_(n)
+          dens_nw(KS:KE) = rhod(KS:KE) / qdry(KS:KE)
 
           ! calc new potential temperature
           call THERMODYN_pott(&
