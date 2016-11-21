@@ -86,9 +86,10 @@ module scale_atmos_phy_tb_smg
   real(RP), private, parameter :: twoOverThree = 2.0_RP / 3.0_RP
   real(RP), private, parameter :: FourOverThree = 4.0_RP / 3.0_RP
 
-  real(RP), private :: ATMOS_PHY_TB_SMG_NU_MAX = 10000.0_RP
-  logical, private  :: ATMOS_PHY_TB_SMG_implicit = .false.
-  logical, private  :: ATMOS_PHY_TB_SMG_bottom = .false.
+  real(RP), private :: ATMOS_PHY_TB_SMG_NU_MAX     = 10000.0_RP
+  logical,  private :: ATMOS_PHY_TB_SMG_implicit   = .false.
+  logical,  private :: ATMOS_PHY_TB_SMG_bottom     = .false.
+  logical,  private :: ATMOS_PHY_TB_SMG_horizontal = .false.
 
   real(RP), private :: tke_fact
 
@@ -120,6 +121,7 @@ contains
          ATMOS_PHY_TB_SMG_filter_fact, &
          ATMOS_PHY_TB_SMG_implicit, &
          ATMOS_PHY_TB_SMG_consistent_tke, &
+         ATMOS_PHY_TB_SMG_horizontal, &
          ATMOS_PHY_TB_SMG_bottom
 
     integer :: k, i, j
@@ -160,23 +162,37 @@ contains
 #ifdef DEBUG
     nu_fact (:,:,:) = UNDEF
 #endif
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS, KE
-       nu_fact(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k,i,j),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
+    if ( ATMOS_PHY_TB_SMG_horizontal ) then
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          nu_fact(k,i,j) = Cs**2 * ( CDX(i) * CDY(j) )
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
-    i = IUNDEF; j = IUNDEF; k = IUNDEF
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       ATMOS_PHY_TB_SMG_consistent_tke = .false.
+       ATMOS_PHY_TB_SMG_implicit       = .false. ! flux in the z-direction is not necessary
+    else
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          nu_fact(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k,i,j),ATMOS_PHY_TB_SMG_filter_fact) )**2
+       enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    end if
 
     if ( ATMOS_PHY_TB_SMG_consistent_tke ) then
        tke_fact = 1.0_RP
     else
        tke_fact = 0.0_RP
     end if
-
 
     return
   end subroutine ATMOS_PHY_TB_smg_setup
@@ -464,36 +480,40 @@ contains
 
        !##### momentum equation (z) #####
        ! (cell center)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS+1, KE-1
+       if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          qflx_sgs_momz(:,:,:,ZDIR) = 0.0_RP
+       else
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS+1, KE-1
 #ifdef DEBUG
-       call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, nu(k,i,j) )
-       call CHECK( __LINE__, S33_C(k,i,j) )
-       call CHECK( __LINE__, S11_C(k,i,j) )
-       call CHECK( __LINE__, S22_C(k,i,j) )
-       call CHECK( __LINE__, tke(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, nu(k,i,j) )
+             call CHECK( __LINE__, S33_C(k,i,j) )
+             call CHECK( __LINE__, S11_C(k,i,j) )
+             call CHECK( __LINE__, S22_C(k,i,j) )
+             call CHECK( __LINE__, tke(k,i,j) )
 #endif
-          qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
-               - 2.0_RP * nu(k,i,j) &
-               * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
-             + twoOverThree * tke(k,i,j) * tke_fact )
-       enddo
-       enddo
-       enddo
+             qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
+                  - 2.0_RP * nu(k,i,j) &
+                  * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+                  + twoOverThree * tke(k,i,j) * tke_fact )
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! just above bottom boundary
-          qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! just below top boundary
-       enddo
-       enddo
+          do j = JJS, JJE
+          do i = IIS, IIE
+             qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! just above bottom boundary
+             qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! just below top boundary
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       end if
        ! (y edge)
        do j = JJS,   JJE
        do i = IIS-1, IIE
@@ -546,6 +566,7 @@ contains
 #endif
 
        if ( ATMOS_PHY_TB_SMG_implicit ) then
+
           call calc_tend_MOMZ( TEND, & ! (out)
                                qflx_sgs_momz, & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
@@ -594,39 +615,43 @@ contains
 
        !##### momentum equation (x) #####
        ! (y edge)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
+       if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          qflx_sgs_momx(k,i,j,ZDIR) = 0.0_RP
+       else
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
 #ifdef DEBUG
-       call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, DENS(k,i+1,j) )
-       call CHECK( __LINE__, DENS(k+1,i,j) )
-       call CHECK( __LINE__, DENS(k+1,i+1,j) )
-       call CHECK( __LINE__, nu(k,i,j) )
-       call CHECK( __LINE__, nu(k,i+1,j) )
-       call CHECK( __LINE__, nu(k+1,i,j) )
-       call CHECK( __LINE__, nu(k+1,i+1,j) )
-       call CHECK( __LINE__, S31_Y(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i+1,j) )
+             call CHECK( __LINE__, DENS(k+1,i,j) )
+             call CHECK( __LINE__, DENS(k+1,i+1,j) )
+             call CHECK( __LINE__, nu(k,i,j) )
+             call CHECK( __LINE__, nu(k,i+1,j) )
+             call CHECK( __LINE__, nu(k+1,i,j) )
+             call CHECK( __LINE__, nu(k+1,i+1,j) )
+             call CHECK( __LINE__, S31_Y(k,i,j) )
 #endif
-          qflx_sgs_momx(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
-               * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
-               * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i+1,j)+nu  (k+1,i+1,j) ) &
-               * S31_Y(k,i,j)
-       enddo
-       enddo
-       enddo
+             qflx_sgs_momx(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
+                  * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
+                  * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i+1,j)+nu  (k+1,i+1,j) ) &
+                  * S31_Y(k,i,j)
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_momx(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_sgs_momx(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
-       enddo
-       enddo
+          do j = JJS, JJE
+          do i = IIS, IIE
+             qflx_sgs_momx(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+             qflx_sgs_momx(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       end if
        ! (cell center)
        do j = JJS, JJE
        do i = IIS, IIE+1
@@ -731,39 +756,43 @@ contains
 
        !##### momentum equation (y) #####
        ! (x edge)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
+       if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          qflx_sgs_momy(k,i,j,ZDIR) = 0.0_RP
+       else
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
 #ifdef DEBUG
-       call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, DENS(k,i,j+1) )
-       call CHECK( __LINE__, DENS(k+1,i,j) )
-       call CHECK( __LINE__, DENS(k+1,i,j+1) )
-       call CHECK( __LINE__, nu(k,i,j) )
-       call CHECK( __LINE__, nu(k,i,j+1) )
-       call CHECK( __LINE__, nu(k+1,i,j) )
-       call CHECK( __LINE__, nu(k+1,i,j+1) )
-       call CHECK( __LINE__, S23_X(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j+1) )
+             call CHECK( __LINE__, DENS(k+1,i,j) )
+             call CHECK( __LINE__, DENS(k+1,i,j+1) )
+             call CHECK( __LINE__, nu(k,i,j) )
+             call CHECK( __LINE__, nu(k,i,j+1) )
+             call CHECK( __LINE__, nu(k+1,i,j) )
+             call CHECK( __LINE__, nu(k+1,i,j+1) )
+             call CHECK( __LINE__, S23_X(k,i,j) )
 #endif
-          qflx_sgs_momy(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
-               * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
-               * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i,j+1)+nu  (k+1,i,j+1) ) &
-               * S23_X(k,i,j)
-       enddo
-       enddo
-       enddo
+             qflx_sgs_momy(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
+                  * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
+                  * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i,j+1)+nu  (k+1,i,j+1) ) &
+                  * S23_X(k,i,j)
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_sgs_momy(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
-       enddo
-       enddo
+          do j = JJS, JJE
+          do i = IIS, IIE
+             qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+             qflx_sgs_momy(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       end if
 
        ! (z edge)
        do j = JJS,   JJE
