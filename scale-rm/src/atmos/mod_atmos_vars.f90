@@ -240,6 +240,8 @@ module mod_atmos_vars
   integer, private            :: AD_PREP_sw (AD_nmax)
   integer, private            :: AD_MONIT_id(AD_nmax)
 
+  logical, private            :: ATMOS_RESTART_IN_CHECK_COORDINATES = .true.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -274,6 +276,7 @@ contains
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,           &
        ATMOS_RESTART_IN_POSTFIX_TIMELABEL,  &
+       ATMOS_RESTART_IN_CHECK_COORDINATES,   &
        ATMOS_RESTART_OUTPUT,                &
        ATMOS_RESTART_OUT_BASENAME,          &
        ATMOS_RESTART_OUT_POSTFIX_TIMELABEL, &
@@ -872,7 +875,8 @@ contains
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_open
+       FILEIO_open, &
+       FILEIO_check_coordinates
     use scale_time, only: &
        TIME_gettimelabel
     use scale_atmos_thermodyn, only: &
@@ -925,6 +929,11 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call FILEIO_open( restart_fid, basename )
+
+       if ( ATMOS_RESTART_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( restart_fid, atmos=.true. )
+       end if
+
     else
        write(*,*) '*** restart file for atmosphere is not specified. STOP!'
        call PRC_MPIstop

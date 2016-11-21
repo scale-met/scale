@@ -162,6 +162,8 @@ module mod_urban_vars
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the urban variables
   integer,                private            :: restart_fid = -1  ! file ID
 
+  logical,                private            :: URBAN_RESTART_IN_CHECK_COORDINATES = .true.
+
   data VAR_NAME / 'URBAN_TR' ,       &
                   'URBAN_TB' ,       &
                   'URBAN_TG' ,       &
@@ -248,6 +250,7 @@ contains
     NAMELIST / PARAM_URBAN_VARS /  &
        URBAN_RESTART_IN_BASENAME,           &
        URBAN_RESTART_IN_POSTFIX_TIMELABEL,  &
+       URBAN_RESTART_IN_CHECK_COORDINATES,  &
        URBAN_RESTART_OUTPUT,                &
        URBAN_RESTART_OUT_BASENAME,          &
        URBAN_RESTART_OUT_POSTFIX_TIMELABEL, &
@@ -422,7 +425,8 @@ contains
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_open
+       FILEIO_open, &
+       FILEIO_check_coordinates
     use mod_urban_admin, only: &
        URBAN_sw
     implicit none
@@ -447,6 +451,11 @@ contains
 
        call FILEIO_open( restart_fid, & ! [OUT]
                          basename     ) ! [IN]
+
+       if ( URBAN_RESTART_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( restart_fid, urban=.true. )
+       end if
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for urban is not specified.'
     endif
