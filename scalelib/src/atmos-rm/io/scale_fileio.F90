@@ -136,6 +136,8 @@ module scale_fileio
   integer,  private,      save :: centerTypeURBAN
 
 
+  logical,  private,      save :: set_coordinates = .false.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -234,6 +236,8 @@ contains
     AXIS_HZXY(:,:,:) = CZ(KS:KE,ISB:IEB,JSB:JEB)
     AXIS_HZXY(:,:,:) = FZ(KS:KE,ISB:IEB,JSB:JEB)
 
+    set_coordinates = .true.
+
     return
   end subroutine FILEIO_set_coordinates
 
@@ -305,12 +309,14 @@ contains
     call check_1d( GRID_CX(ISB:IEB), buffer_x(ISB:IEB), 'x' )
     call check_1d( GRID_CY(JSB:JEB), buffer_y(JSB:JEB), 'y' )
 
-    call FILEIO_read_var_2D( buffer_xy, fid, 'lon', 'XY', 1 )
-    call FILEIO_flush( fid )
-    call check_2d( AXIS_LON, buffer_xy(ISB:IEB,JSB:JEB), 'lon' )
-    call FILEIO_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
-    call FILEIO_flush( fid )
-    call check_2d( AXIS_LAT, buffer_xy(ISB:IEB,JSB:JEB), 'lat' )
+    if ( set_coordinates ) then
+       call FILEIO_read_var_2D( buffer_xy, fid, 'lon', 'XY', 1 )
+       call FILEIO_flush( fid )
+       call check_2d( AXIS_LON, buffer_xy(ISB:IEB,JSB:JEB), 'lon' )
+       call FILEIO_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
+       call FILEIO_flush( fid )
+       call check_2d( AXIS_LAT, buffer_xy(ISB:IEB,JSB:JEB), 'lat' )
+    end if
 
     if ( atmos_ ) then
        call FILEIO_read_var_1D( buffer_z, fid, 'z',  'Z', 1 )
@@ -622,6 +628,16 @@ contains
           count(1) = KMAX
           call FileRead( var(KS:KE), fid, varname, step, PRC_myrank, &
                          ntypes=KMAX, dtype=etype, start=start, count=count )
+       elseif ( axistype .EQ. 'LZ' ) then
+          start(1) = 1
+          count(1) = LKMAX
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=LKMAX, dtype=etype, start=start, count=count )
+       elseif ( axistype .EQ. 'UZ' ) then
+          start(1) = 1
+          count(1) = UKMAX
+          call FileRead( var, fid, varname, step, PRC_myrank, &
+                         ntypes=LKMAX, dtype=etype, start=start, count=count )
        elseif( axistype .EQ. 'X' .or. axistype .EQ. 'CX' ) then
           start(1) = IS_inG - IHALO
           count(1) = IA
@@ -633,13 +649,19 @@ contains
           call FileRead( var, fid, varname, step, PRC_myrank, &
                          ntypes=JA, dtype=etype, start=start, count=count )
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx unsupported axis type. Check!: ', trim(axistype), ' item:',trim(varname)
           call PRC_MPIstop
        endif
     else
        if ( axistype == 'Z' ) then
           dim1_S   = KS
           dim1_E   = KE
+       elseif( axistype == 'LZ' ) then
+          dim1_S   = 1
+          dim1_E   = LKMAX
+       elseif( axistype == 'UZ' ) then
+          dim1_S   = 1
+          dim1_E   = UKMAX
        elseif( axistype == 'X' ) then
           dim1_S   = ISB
           dim1_E   = IEB
@@ -653,7 +675,7 @@ contains
           dim1_S   = 1
           dim1_E   = JA
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx unsupported axis type. Check!: ', trim(axistype), ' item:',trim(varname)
           call PRC_MPIstop
        endif
 
@@ -2850,7 +2872,7 @@ contains
     do j=1, jmax
     do i=1, imax
        if ( expected(i,j) .ne. buffer(i,j) ) then
-          write(*,*) 'xxx value of coordinate (' // trim(name) // ') at ', i, ',', j, ' is different:', &
+          write(*,*) 'xxx value of coordinate (' // trim(name) // ') at (', i, ',', j, ') is different:', &
                      expected(i,j), buffer(i,j)
           call PRC_MPIstop
        end if
