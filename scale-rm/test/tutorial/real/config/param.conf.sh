@@ -136,7 +136,7 @@ cat << EOF > param.physics.conf
  ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
  ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
- ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.01,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
  ATMOS_DYN_enable_coriolis            = .true.,
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
@@ -154,6 +154,23 @@ cat << EOF > param.physics.conf
  ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "MIPAS",
 /
 
+EOF
+
+if [ ${ATMOS_PHY_TB_TYPE[$D]} = "HYBRID" ]; then
+  cat <<EOF >> param.physics.conf
+&PARAM_ATMOS_PHY_TB_HYBRID
+ ATMOS_PHY_TB_HYBRID_SGS_TYPE = "SMAGORINSKY",
+ ATMOS_PHY_TB_HYBRID_PBL_TYPE = "MYNN",
+/
+
+&PARAM_ATMOS_PHY_TB_SMG
+ ATMOS_PHY_TB_SMG_horizontal = .true.,
+/
+
+EOF
+fi
+
+cat <<EOF >> param.physics.conf
 #################################################
 #
 # model configuration: ocean
