@@ -95,48 +95,43 @@ module scale_fileio
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: AXIS_LON (:,:)  ! [deg]
-  real(RP), private, allocatable :: AXIS_LONX(:,:)  ! [deg]
-  real(RP), private, allocatable :: AXIS_LONY(:,:)  ! [deg]
-  real(RP), private, allocatable :: AXIS_LONXY(:,:) ! [deg]
-  real(RP), private, allocatable :: AXIS_LAT (:,:)  ! [deg]
-  real(RP), private, allocatable :: AXIS_LATX(:,:)  ! [deg]
-  real(RP), private, allocatable :: AXIS_LATY(:,:)  ! [deg]
-  real(RP), private, allocatable :: AXIS_LATXY(:,:) ! [deg]
-  real(RP), private, allocatable :: AXIS_HZXY(:,:,:)
-  real(RP), private, allocatable :: AXIS_HWXY(:,:,:)
+  real(RP), private, allocatable :: AXIS_LON  (:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LONX (:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LONY (:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LONXY(:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LAT  (:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LATX (:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LATY (:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LATXY(:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_HZXY (:,:,:)
+  real(RP), private, allocatable :: AXIS_HWXY (:,:,:)
 
-  integer,  private, parameter :: File_nfile_max = 512   ! number limit of file
-                                ! Keep consistency with "FILE_MAX" in gtool_netcdf.c
-  logical,  private,      save :: File_axes_written(0:File_nfile_max-1)
-                                ! whether axes have been written
-  !                             ! fid starts from zero so index should start from zero
-  logical,  private,      save :: File_closed(0:File_nfile_max-1)
-                                ! whether file has been closed
-  logical,  private,      save :: File_nozcoord(0:File_nfile_max-1)
-                                ! whether nozcoord is true or false
-
-  integer,  private,      save :: write_buf_amount = 0  ! sum of write buffer amounts
+  integer,  private, parameter   :: File_nfile_max = 512                  ! number limit of file
+                                                                          ! Keep consistency with "FILE_MAX" in gtool_netcdf.c
+  logical,  private              :: File_axes_written(0:File_nfile_max-1) ! whether axes have been written
+  !                                                                       ! fid starts from zero so index should start from zero
+  logical,  private              :: File_closed(0:File_nfile_max-1)       ! whether file has been closed
+  logical,  private              :: File_nozcoord(0:File_nfile_max-1)     ! whether nozcoord is true or false
+  integer,  private              :: write_buf_amount = 0                  ! sum of write buffer amounts
 
   ! global star and count
-  integer,  private,      save :: startXY(3),    countXY(3)
-  integer,  private,      save :: startZX(2),    countZX(2)
-  integer,  private,      save :: startZXY(4),   countZXY(4)
-  integer,  private,      save :: startLAND(3),  countLAND(3)
-  integer,  private,      save :: startURBAN(3), countURBAN(3)
+  integer,  private              :: startXY   (3), countXY   (3)
+  integer,  private              :: startZX   (2), countZX   (2)
+  integer,  private              :: startZXY  (4), countZXY  (4)
+  integer,  private              :: startLAND (3), countLAND (3)
+  integer,  private              :: startURBAN(3), countURBAN(3)
 
   ! MPI element datatype for restart variables
-  integer,  private,      save :: etype
+  integer,  private              :: etype
 
   ! MPI derived datatypes
-  integer,  private,      save :: centerTypeXY
-  integer,  private,      save :: centerTypeZX
-  integer,  private,      save :: centerTypeZXY
-  integer,  private,      save :: centerTypeLAND
-  integer,  private,      save :: centerTypeURBAN
+  integer,  private              :: centerTypeXY
+  integer,  private              :: centerTypeZX
+  integer,  private              :: centerTypeZXY
+  integer,  private              :: centerTypeLAND
+  integer,  private              :: centerTypeURBAN
 
-
-  logical,  private,      save :: set_coordinates = .false.
+  logical,  private              :: set_coordinates = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -154,18 +149,19 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Data source : ', trim(H_SOURCE)
     if( IO_L ) write(IO_FID_LOG,*) '*** Institute   : ', trim(H_INSTITUTE)
 
-    allocate( AXIS_LON (IMAXB,JMAXB) )
-    allocate( AXIS_LONX(IMAXB,JMAXB) )
-    allocate( AXIS_LONY(IMAXB,JMAXB) )
+    allocate( AXIS_LON  (IMAXB,JMAXB) )
+    allocate( AXIS_LONX (IMAXB,JMAXB) )
+    allocate( AXIS_LONY (IMAXB,JMAXB) )
     allocate( AXIS_LONXY(IMAXB,JMAXB) )
-    allocate( AXIS_LAT (IMAXB,JMAXB) )
-    allocate( AXIS_LATX(IMAXB,JMAXB) )
-    allocate( AXIS_LATY(IMAXB,JMAXB) )
+    allocate( AXIS_LAT  (IMAXB,JMAXB) )
+    allocate( AXIS_LATX (IMAXB,JMAXB) )
+    allocate( AXIS_LATY (IMAXB,JMAXB) )
     allocate( AXIS_LATXY(IMAXB,JMAXB) )
-    allocate( AXIS_HZXY(KMAX,IMAXB,JMAXB) )
-    allocate( AXIS_HWXY(KMAX,IMAXB,JMAXB) )
 
-    if ( IO_AGGREGATE ) call Construct_Derived_Datatype
+    allocate( AXIS_HZXY (KMAX,IMAXB,JMAXB) )
+    allocate( AXIS_HWXY (KMAX,IMAXB,JMAXB) )
+
+    if( IO_AGGREGATE ) call Construct_Derived_Datatype
 
     File_closed(:) = .true.
 
@@ -193,48 +189,49 @@ contains
 
     call closeall
 
+    return
   end subroutine FILEIO_cleanup
 
   !-----------------------------------------------------------------------------
   !> set latlon and z
   subroutine FILEIO_set_coordinates( &
-       LON,  &
-       LONX, &
-       LONY, &
+       LON,   &
+       LONX,  &
+       LONY,  &
        LONXY, &
-       LAT,  &
-       LATX, &
-       LATY, &
+       LAT,   &
+       LATX,  &
+       LATY,  &
        LATXY, &
-       CZ,   &
-       FZ    )
+       CZ,    &
+       FZ     )
     use scale_const, only: &
        D2R => CONST_D2R
     implicit none
 
-    real(RP), intent(in) :: LON (IA,JA)
-    real(RP), intent(in) :: LONX(IA,JA)
-    real(RP), intent(in) :: LONY(IA,JA)
+    real(RP), intent(in) :: LON  (IA,JA)
+    real(RP), intent(in) :: LONX (IA,JA)
+    real(RP), intent(in) :: LONY (IA,JA)
     real(RP), intent(in) :: LONXY(IA,JA)
-    real(RP), intent(in) :: LAT (IA,JA)
-    real(RP), intent(in) :: LATX(IA,JA)
-    real(RP), intent(in) :: LATY(IA,JA)
+    real(RP), intent(in) :: LAT  (IA,JA)
+    real(RP), intent(in) :: LATX (IA,JA)
+    real(RP), intent(in) :: LATY (IA,JA)
     real(RP), intent(in) :: LATXY(IA,JA)
-    real(RP), intent(in) :: CZ  (  KA,IA,JA)
-    real(RP), intent(in) :: FZ  (0:KA,IA,JA)
+    real(RP), intent(in) :: CZ   (  KA,IA,JA)
+    real(RP), intent(in) :: FZ   (0:KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    AXIS_LON (:,:) = LON (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONX(:,:) = LONX(ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONY(:,:) = LONY(ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONXY(:,:) = LONXY(ISB:IEB,JSB:JEB) / D2R
-    AXIS_LAT (:,:) = LAT (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATX(:,:) = LATX(ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATY(:,:) = LATY(ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATXY(:,:) = LATXY(ISB:IEB,JSB:JEB) / D2R
+    AXIS_LON  (:,:)   = LON  (ISB:IEB,JSB:JEB) / D2R
+    AXIS_LONX (:,:)   = LONX (ISB:IEB,JSB:JEB) / D2R
+    AXIS_LONY (:,:)   = LONY (ISB:IEB,JSB:JEB) / D2R
+    AXIS_LONXY(:,:)   = LONXY(ISB:IEB,JSB:JEB) / D2R
+    AXIS_LAT  (:,:)   = LAT  (ISB:IEB,JSB:JEB) / D2R
+    AXIS_LATX (:,:)   = LATX (ISB:IEB,JSB:JEB) / D2R
+    AXIS_LATY (:,:)   = LATY (ISB:IEB,JSB:JEB) / D2R
+    AXIS_LATXY(:,:)   = LATXY(ISB:IEB,JSB:JEB) / D2R
 
-    AXIS_HZXY(:,:,:) = CZ(KS:KE,ISB:IEB,JSB:JEB)
-    AXIS_HZXY(:,:,:) = FZ(KS:KE,ISB:IEB,JSB:JEB)
+    AXIS_HZXY (:,:,:) = CZ(KS:KE,ISB:IEB,JSB:JEB)
+    AXIS_HZXY (:,:,:) = FZ(KS:KE,ISB:IEB,JSB:JEB)
 
     set_coordinates = .true.
 
@@ -249,21 +246,24 @@ contains
        land,     &
        urban     )
     implicit none
-    character(len=*), intent(in)  :: basename   !< basename of the file
-    logical, intent(in), optional :: atmos      !< check atmospheric coordinates
-    logical, intent(in), optional :: land       !< check land coordinates
-    logical, intent(in), optional :: urban      !< check urban coordinates
+
+    character(len=*), intent(in) :: basename        !< basename of the file
+    logical,          intent(in), optional :: atmos !< check atmospheric coordinates
+    logical,          intent(in), optional :: land  !< check land coordinates
+    logical,          intent(in), optional :: urban !< check urban coordinates
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILEIO_open( fid, basename )
+    call FILEIO_open( fid,     & ! [OUT]
+                      basename ) ! [IN]
 
-    call FILEIO_check_coordinates_id( fid,               &
-                                      atmos, land, urban )
+    call FILEIO_check_coordinates_id( fid,               & ! [IN]
+                                      atmos, land, urban ) ! [IN]
 
     return
   end subroutine FILEIO_check_coordinates_name
+
   !-----------------------------------------------------------------------------
   !> check coordinates in the file
   subroutine FILEIO_check_coordinates_id( &
@@ -282,13 +282,13 @@ contains
     implicit none
 
     integer, intent(in) :: fid
-    logical, intent(in), optional :: atmos   !< check atmospheric coordinates
-    logical, intent(in), optional :: land    !< check land coordinates
-    logical, intent(in), optional :: urban   !< check urban coordinates
+    logical, intent(in), optional :: atmos !< check atmospheric coordinates
+    logical, intent(in), optional :: land  !< check land coordinates
+    logical, intent(in), optional :: urban !< check urban coordinates
 
-    logical :: atmos_ = .false.
-    logical :: land_  = .false.
-    logical :: urban_ = .false.
+    logical  :: atmos_ = .false.
+    logical  :: land_  = .false.
+    logical  :: urban_ = .false.
 
     real(RP) :: buffer_z  (KA)
     real(RP) :: buffer_x  (IA)
@@ -299,9 +299,9 @@ contains
     real(RP) :: buffer_u  (UKMAX)
     !---------------------------------------------------------------------------
 
-    if ( present(atmos)      ) atmos_  = atmos
-    if ( present(land )      ) land_   = land
-    if ( present(urban)      ) urban_  = urban
+    if( present(atmos) ) atmos_ = atmos
+    if( present(land ) ) land_  = land
+    if( present(urban) ) urban_ = urban
 
     call FILEIO_read_var_1D( buffer_x, fid, 'x',  'X', 1 )
     call FILEIO_read_var_1D( buffer_y, fid, 'y',  'Y', 1 )
@@ -313,13 +313,14 @@ contains
        call FILEIO_read_var_2D( buffer_xy, fid, 'lon', 'XY', 1 )
        call FILEIO_flush( fid )
        call check_2d( AXIS_LON, buffer_xy(ISB:IEB,JSB:JEB), 'lon' )
+
        call FILEIO_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
        call FILEIO_flush( fid )
        call check_2d( AXIS_LAT, buffer_xy(ISB:IEB,JSB:JEB), 'lat' )
     end if
 
     if ( atmos_ ) then
-       call FILEIO_read_var_1D( buffer_z, fid, 'z',  'Z', 1 )
+       call FILEIO_read_var_1D( buffer_z,   fid, 'z',      'Z',   1 )
        call FILEIO_read_var_3D( buffer_zxy, fid, 'height', 'ZXY', 1 )
        call FILEIO_flush( fid )
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
@@ -344,20 +345,20 @@ contains
   !-----------------------------------------------------------------------------
   !> construct MPI derived datatypes for read buffers
   subroutine Construct_Derived_Datatype
+    use mpi
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     use scale_rm_process, only: &
        PRC_2Drank, &
-       PRC_NUM_X, &
+       PRC_NUM_X,  &
        PRC_NUM_Y
-    use MPI
     implicit none
 
-    integer err, order
-    integer sizes(3), subsizes(3), sub_off(3)
+    integer :: err, order
+    integer :: sizes(3), subsizes(3), sub_off(3)
     !---------------------------------------------------------------------------
-    order = MPI_ORDER_FORTRAN
+
+    order           = MPI_ORDER_FORTRAN
 
     centerTypeXY    = MPI_DATATYPE_NULL
     centerTypeZX    = MPI_DATATYPE_NULL
@@ -365,30 +366,31 @@ contains
     centerTypeLAND  = MPI_DATATYPE_NULL
     centerTypeURBAN = MPI_DATATYPE_NULL
 
-    etype = MPI_FLOAT
-    if ( RP .EQ. 8 ) etype = MPI_DOUBLE_PRECISION
+    etype           = MPI_FLOAT
+
+    if( RP == 8 ) etype = MPI_DOUBLE_PRECISION
 
     ! for axistype == 'XY'
-    startXY(1) = IS_inG - IHALO
-    startXY(2) = JS_inG - JHALO
-    countXY(1) = IA
-    countXY(2) = JA
-
+    startXY(1)    = IS_inG - IHALO
+    startXY(2)    = JS_inG - JHALO
+    countXY(1)    = IA
+    countXY(2)    = JA
     ! for axistype == 'ZXY'
     startZXY(1)   = 1
     startZXY(2:3) = startXY(1:2)
     countZXY(1)   = KMAX
     countZXY(2:3) = countXY(1:2)
     ! construct MPI subarray data type
-    sizes(1)    = KA
-    sizes(2)    = IA
-    sizes(3)    = JA
-    subsizes(1) = KMAX
-    subsizes(2) = IA
-    subsizes(3) = JA
-    sub_off(1)  = KS - 1   ! MPI start index starts with 0
-    sub_off(2)  = 0
-    sub_off(3)  = 0
+    sizes(1)      = KA
+    sizes(2)      = IA
+    sizes(3)      = JA
+    subsizes(1)   = KMAX
+    subsizes(2)   = IA
+    subsizes(3)   = JA
+    sub_off(1)    = KS - 1 ! MPI start index starts with 0
+    sub_off(2)    = 0
+    sub_off(3)    = 0
+
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeZXY, err)
     call MPI_Type_commit(centerTypeZXY, err)
 
@@ -398,9 +400,10 @@ contains
     countLAND(1)   = LKMAX
     countLAND(2:3) = countXY(1:2)
     ! construct MPI subarray data type
-    sizes(1)    = LKMAX
-    subsizes(1) = LKMAX
-    sub_off(1)  = LKS - 1   ! MPI start index starts with 0
+    sizes(1)       = LKMAX
+    subsizes(1)    = LKMAX
+    sub_off(1)     = LKS - 1 ! MPI start index starts with 0
+
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeLAND, err)
     call MPI_Type_commit(centerTypeLAND, err)
 
@@ -410,44 +413,50 @@ contains
     countURBAN(1)   = UKMAX
     countURBAN(2:3) = countXY(1:2)
     ! construct MPI subarray data type
-    sizes(1)    = UKMAX
-    subsizes(1) = UKMAX
-    sub_off(1)  = UKS - 1   ! MPI start index starts with 0
+    sizes(1)        = UKMAX
+    subsizes(1)     = UKMAX
+    sub_off(1)      = UKS - 1 ! MPI start index starts with 0
+
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeURBAN, err)
     call MPI_Type_commit(centerTypeURBAN, err)
 
     ! for axistype == 'ZX'
-    sizes(1)    = KA
-    subsizes(1) = KMAX
     startZX(1)  = KHALO+1
-    countZX(1)  = KHALO
-    sub_off(1)  = KHALO   ! MPI start index starts with 0
-
     startZX(2)  = IS_inG - IHALO
+    countZX(1)  = KHALO
     countZX(2)  = IA
+    ! construct MPI subarray data type
+    sizes(1)    = KA
     sizes(2)    = IA
+    subsizes(1) = KMAX
     subsizes(2) = IMAXB
-    sub_off(2)  = ISB-1   ! MPI start index starts with 0
+    sub_off(1)  = KHALO   ! MPI start index starts with 0
+    sub_off(2)  = ISB - 1 ! MPI start index starts with 0
+
     call MPI_Type_create_subarray(2, sizes, subsizes, sub_off, order, etype, centerTypeZX, err)
     call MPI_Type_commit(centerTypeZX, err)
 
+    return
   end subroutine Construct_Derived_Datatype
 
   !-----------------------------------------------------------------------------
   !> free MPI derived datatypes
   subroutine Free_Derived_Datatype
-    use MPI
+    use mpi
     implicit none
-    integer err
 
-    if ( .NOT. IO_AGGREGATE ) return
+    integer :: err
+    !---------------------------------------------------------------------------
 
-    if ( centerTypeXY    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeXY,    err)
-    if ( centerTypeZX    .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZX,    err)
-    if ( centerTypeZXY   .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZXY,   err)
-    if ( centerTypeLAND  .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeLAND,  err)
-    if ( centerTypeURBAN .NE. MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeURBAN, err)
+    if( .NOT. IO_AGGREGATE ) return
 
+    if( centerTypeXY    /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeXY,    err)
+    if( centerTypeZX    /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZX,    err)
+    if( centerTypeZXY   /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZXY,   err)
+    if( centerTypeLAND  /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeLAND,  err)
+    if( centerTypeURBAN /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeURBAN, err)
+
+    return
   end subroutine Free_Derived_Datatype
 
   !-----------------------------------------------------------------------------
@@ -461,7 +470,6 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     implicit none
 
@@ -477,7 +485,8 @@ contains
     call FILEIO_open( fid,      & ! [OUT]
                       basename  ) ! [IN]
 
-    call FILEIO_read_var_1D( var, fid, varname, axistype, step )
+    call FILEIO_read_var_1D( var(:),                      & ! [OUT]
+                             fid, varname, axistype, step ) ! [IN]
 
     call FILEIO_close( fid )
 
@@ -495,7 +504,6 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     implicit none
 
@@ -511,7 +519,8 @@ contains
     call FILEIO_open( fid,      & ! [OUT]
                       basename  ) ! [IN]
 
-    call FILEIO_read_var_2D( var, fid, varname, axistype, step )
+    call FILEIO_read_var_2D( var(:,:),                    & ! [OUT]
+                             fid, varname, axistype, step ) ! [IN]
 
     call FILEIO_close( fid )
 
@@ -529,7 +538,6 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     implicit none
 
@@ -545,7 +553,8 @@ contains
     call FILEIO_open( fid,      & ! [OUT]
                       basename  ) ! [IN]
 
-    call FILEIO_read_var_3D( var, fid, varname, axistype, step )
+    call FILEIO_read_var_3D( var(:,:,:),                  & ! [OUT]
+                             fid, varname, axistype, step ) ! [IN]
 
     call FILEIO_close( fid )
 
@@ -563,7 +572,6 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     implicit none
 
@@ -579,7 +587,8 @@ contains
     call FILEIO_open( fid,      & ! [OUT]
                       basename  ) ! [IN]
 
-    call FILEIO_read_var_4D( var, fid, varname, axistype, step )
+    call FILEIO_read_var_4D( var(:,:,:,:),                & ! [OUT]
+                             fid, varname, axistype, step ) ! [IN]
 
     call FILEIO_close( fid )
 
@@ -603,7 +612,7 @@ contains
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
-    use MPI
+    use mpi
     implicit none
 
     real(RP),         intent(out) :: var(:)   !< value of the variable
@@ -623,37 +632,37 @@ contains
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
-       if ( axistype .EQ. 'Z' ) then
+       if    ( axistype == 'Z' ) then
           start(1) = 1
           count(1) = KMAX
-          call FileRead( var(KS:KE), fid, varname, step, PRC_myrank, &
+          call FileRead( var(KS:KE), fid, varname, step, PRC_myrank,        &
                          ntypes=KMAX, dtype=etype, start=start, count=count )
-       elseif ( axistype .EQ. 'LZ' ) then
+       elseif( axistype == 'LZ' ) then
           start(1) = 1
           count(1) = LKMAX
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+          call FileRead( var, fid, varname, step, PRC_myrank,                &
                          ntypes=LKMAX, dtype=etype, start=start, count=count )
-       elseif ( axistype .EQ. 'UZ' ) then
+       elseif( axistype == 'UZ' ) then
           start(1) = 1
           count(1) = UKMAX
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+          call FileRead( var, fid, varname, step, PRC_myrank,                &
                          ntypes=LKMAX, dtype=etype, start=start, count=count )
-       elseif( axistype .EQ. 'X' .or. axistype .EQ. 'CX' ) then
+       elseif( axistype == 'X' .OR. axistype == 'CX' ) then
           start(1) = IS_inG - IHALO
           count(1) = IA
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+          call FileRead( var, fid, varname, step, PRC_myrank,             &
                          ntypes=IA, dtype=etype, start=start, count=count )
-       elseif( axistype .EQ. 'Y' .or. axistype .EQ. 'CY' ) then
+       elseif( axistype == 'Y' .OR. axistype == 'CY' ) then
           start(1) = JS_inG - JHALO
           count(1) = JA
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+          call FileRead( var, fid, varname, step, PRC_myrank,             &
                          ntypes=JA, dtype=etype, start=start, count=count )
        else
           write(*,*) 'xxx unsupported axis type. Check!: ', trim(axistype), ' item:',trim(varname)
           call PRC_MPIstop
        endif
     else
-       if ( axistype == 'Z' ) then
+       if    ( axistype == 'Z' ) then
           dim1_S   = KS
           dim1_E   = KE
        elseif( axistype == 'LZ' ) then
@@ -705,7 +714,7 @@ contains
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
-    use MPI
+    use mpi
     implicit none
 
     real(RP),         intent(out) :: var(:,:) !< value of the variable
@@ -724,20 +733,20 @@ contains
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
-       if ( axistype .EQ. 'XY' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+       if    ( axistype == 'XY' ) then
+          call FileRead( var, fid, varname, step, PRC_myrank,                    &
                          ntypes=IA*JA, dtype=etype, start=startXY, count=countXY )
-       elseif( axistype .EQ. 'ZX' ) then
+       elseif( axistype == 'ZX' ) then
           ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
           ! derived datatype to describe the layout of local read buffer
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+          call FileRead( var, fid, varname, step, PRC_myrank,                       &
                          ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
        else
           write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
           call PRC_MPIstop
        endif
     else
-       if ( axistype == 'XY' ) then
+       if    ( axistype == 'XY' ) then
           dim1_S   = ISB
           dim1_E   = IEB
           dim2_S   = JSB
@@ -797,49 +806,49 @@ contains
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
-       ! Because KHALO is not saved in files, we use MPI derived datatypes to
+       ! Because KHALO is not saved in files, we use mpi derived datatypes to
        ! describe the layout of local read buffer
-       if ( axistype .EQ. 'ZXY' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+       if    ( axistype == 'ZXY' ) then
+          call FileRead( var, fid, varname, step, PRC_myrank,                          &
                          ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY )
-       else if ( axistype .EQ. 'XYT' ) then
+       elseif( axistype == 'XYT' ) then
           startXY(3) = 1
           countXY(3) = step
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+          call FileRead( var, fid, varname, step, PRC_myrank,                         &
                          ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY )
-       else if ( axistype .EQ. 'Land' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+       elseif( axistype == 'Land' ) then
+          call FileRead( var, fid, varname, step, PRC_myrank,                             &
                          ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND )
-       else if ( axistype .EQ. 'Urban' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+       elseif( axistype == 'Urban' ) then
+          call FileRead( var, fid, varname, step, PRC_myrank,                                &
                          ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
        else
           write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
           call PRC_MPIstop
        endif
     else
-       if ( axistype == 'ZXY' ) then
+       if    ( axistype == 'ZXY' ) then
           dim1_S   = KS
           dim1_E   = KE
           dim2_S   = ISB
           dim2_E   = IEB
           dim3_S   = JSB
           dim3_E   = JEB
-       else if ( axistype == 'XYT' ) then
+       elseif( axistype == 'XYT' ) then
           dim1_S   = ISB
           dim1_E   = IEB
           dim2_S   = JSB
           dim2_E   = JEB
           dim3_S   = 1
           dim3_E   = step
-       else if ( axistype == 'Land' ) then
+       elseif( axistype == 'Land' ) then
           dim1_S   = LKS
           dim1_E   = LKE
           dim2_S   = ISB
           dim2_E   = IEB
           dim3_S   = JSB
           dim3_E   = JEB
-       else if ( axistype == 'Urban' ) then
+       elseif( axistype == 'Urban' ) then
           dim1_S   = UKS
           dim1_E   = UKE
           dim2_S   = ISB
@@ -851,7 +860,8 @@ contains
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), fid, varname, step, PRC_myrank )
+       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                      fid, varname, step, PRC_myrank                  )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -897,10 +907,10 @@ contains
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
-       if ( axistype .EQ. 'ZXYT' ) then
+       if ( axistype == 'ZXYT' ) then
           startZXY(4) = 1
           countZXY(4) = step
-          call FileRead( var, fid, varname, step, PRC_myrank, &
+          call FileRead( var, fid, varname, step, PRC_myrank,                             &
                          ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY )
        else
           write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
@@ -921,7 +931,8 @@ contains
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), fid, varname, step, PRC_myrank )
+       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), &
+                      fid, varname, step, PRC_myrank                                )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -953,7 +964,6 @@ contains
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
-       PRC_myrank,     &
        PRC_MPIstop
     use scale_rm_process, only: &
        PRC_2Drank
@@ -963,24 +973,24 @@ contains
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
-    real(RP),         intent(in)  :: var(:)   !< value of the variable
-    character(len=*), intent(in)  :: basename !< basename of the file
-    character(len=*), intent(in)  :: title    !< title    of the file
-    character(len=*), intent(in)  :: varname  !< name        of the variable
-    character(len=*), intent(in)  :: desc     !< description of the variable
-    character(len=*), intent(in)  :: unit     !< unit        of the variable
-    character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
-    character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
+    real(RP),         intent(in) :: var(:)   !< value of the variable
+    character(len=*), intent(in) :: basename !< basename of the file
+    character(len=*), intent(in) :: title    !< title    of the file
+    character(len=*), intent(in) :: varname  !< name        of the variable
+    character(len=*), intent(in) :: desc     !< description of the variable
+    character(len=*), intent(in) :: unit     !< unit        of the variable
+    character(len=*), intent(in) :: axistype !< axis type (Z/X/Y)
+    character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
 
-    integer, optional, intent(in) :: date(6)    !< ymdhms of the time
-    real(DP),optional, intent(in) :: subsec     !< subsec of the time
-    logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
+    integer,          intent(in), optional :: date(6) !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec  !< subsec of the time
+    logical,          intent(in), optional :: append  !< switch whether append existing file or not (default=false)
 
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call FILEIO_create( fid, & ! [OUT]
-         basename, title, datatype, date, subsec, append )
+    call FILEIO_create( fid,                                            & ! [OUT]
+                        basename, title, datatype, date, subsec, append )
 
     call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype )
 
@@ -1019,7 +1029,6 @@ contains
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
-       PRC_myrank,     &
        PRC_MPIstop
     use scale_rm_process, only: &
        PRC_2Drank
@@ -1029,25 +1038,26 @@ contains
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
-    real(RP),         intent(in)  :: var(:,:) !< value of the variable
-    character(len=*), intent(in)  :: basename !< basename of the file
-    character(len=*), intent(in)  :: title    !< title    of the file
-    character(len=*), intent(in)  :: varname  !< name        of the variable
-    character(len=*), intent(in)  :: desc     !< description of the variable
-    character(len=*), intent(in)  :: unit     !< unit        of the variable
-    character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
-    character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
-    integer, optional, intent(in) :: date(6)  !< ymdhms of the time
-    real(DP),optional, intent(in) :: subsec   !< subsec of the time
-    logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
-    logical, optional, intent(in) :: nohalo   !< switch whether include halo data or not (default=false)
-    logical, optional, intent(in) :: nozcoord !< switch whether include zcoordinate or not (default=false)
+    real(RP),         intent(in) :: var(:,:) !< value of the variable
+    character(len=*), intent(in) :: basename !< basename of the file
+    character(len=*), intent(in) :: title    !< title    of the file
+    character(len=*), intent(in) :: varname  !< name        of the variable
+    character(len=*), intent(in) :: desc     !< description of the variable
+    character(len=*), intent(in) :: unit     !< unit        of the variable
+    character(len=*), intent(in) :: axistype !< axis type (Z/X/Y)
+    character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
+
+    integer,          intent(in), optional :: date(6)  !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec   !< subsec of the time
+    logical,          intent(in), optional :: append   !< switch whether append existing file or not (default=false)
+    logical,          intent(in), optional :: nohalo   !< switch whether include halo data or not (default=false)
+    logical,          intent(in), optional :: nozcoord !< switch whether include zcoordinate or not (default=false)
 
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call FILEIO_create( fid, & ! [OUT]
-         basename, title, datatype, date, subsec, append, nozcoord )
+    call FILEIO_create( fid,                                                      & ! [OUT]
+                        basename, title, datatype, date, subsec, append, nozcoord )
 
     call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype )
 
@@ -1085,7 +1095,6 @@ contains
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
-       PRC_myrank,     &
        PRC_MPIstop
     use scale_rm_process, only: &
        PRC_2Drank
@@ -1095,24 +1104,25 @@ contains
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
-    real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
-    character(len=*),  intent(in)  :: basename   !< basename of the file
-    character(len=*),  intent(in)  :: title      !< title    of the file
-    character(len=*),  intent(in)  :: varname    !< name        of the variable
-    character(len=*),  intent(in)  :: desc       !< description of the variable
-    character(len=*),  intent(in)  :: unit       !< unit        of the variable
-    character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
-    character(len=*),  intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
-    integer, optional, intent(in)  :: date(6)    !< ymdhms of the time
-    real(DP),optional, intent(in)  :: subsec     !< subsec of the time
-    logical, optional, intent(in)  :: append     !< append existing (closed) file?
-    logical, optional, intent(in)  :: nohalo     !< include halo data?
+    real(RP),         intent(in) :: var(:,:,:) !< value of the variable
+    character(len=*), intent(in) :: basename   !< basename of the file
+    character(len=*), intent(in) :: title      !< title    of the file
+    character(len=*), intent(in) :: varname    !< name        of the variable
+    character(len=*), intent(in) :: desc       !< description of the variable
+    character(len=*), intent(in) :: unit       !< unit        of the variable
+    character(len=*), intent(in) :: axistype   !< axis type (Z/X/Y)
+    character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
+
+    integer,          intent(in), optional :: date(6) !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec  !< subsec of the time
+    logical,          intent(in), optional :: append  !< append existing (closed) file?
+    logical,          intent(in), optional :: nohalo  !< include halo data?
 
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call FILEIO_create( fid, & ! [OUT]
-         basename, title, datatype, date, subsec, append )
+    call FILEIO_create( fid,                                            & ! [OUT]
+                        basename, title, datatype, date, subsec, append )
 
     call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype )
 
@@ -1151,34 +1161,34 @@ contains
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
-       PRC_myrank,     &
        PRC_MPIstop
     use scale_rm_process, only: &
        PRC_2Drank
     implicit none
 
-    real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
-    character(len=*),  intent(in)  :: basename     !< basename of the file
-    character(len=*),  intent(in)  :: title        !< title    of the file
-    character(len=*),  intent(in)  :: varname      !< name        of the variable
-    character(len=*),  intent(in)  :: desc         !< description of the variable
-    character(len=*),  intent(in)  :: unit         !< unit        of the variable
-    character(len=*),  intent(in)  :: axistype     !< axis type (X/Y/Time)
-    character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
-    real(RP),          intent(in)  :: timeintv     !< time interval [sec]
-    integer ,          intent(in)  :: tsince(6)    !< start time
-    logical, optional, intent(in)  :: append       !< append existing (closed) file?
-    integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
-    logical, optional, intent(in)  :: nohalo       !< include halo data?
+    real(RP),         intent(in) :: var(:,:,:) !< value of the variable
+    character(len=*), intent(in) :: basename   !< basename of the file
+    character(len=*), intent(in) :: title      !< title    of the file
+    character(len=*), intent(in) :: varname    !< name        of the variable
+    character(len=*), intent(in) :: desc       !< description of the variable
+    character(len=*), intent(in) :: unit       !< unit        of the variable
+    character(len=*), intent(in) :: axistype   !< axis type (X/Y/Time)
+    character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
+    real(RP),         intent(in) :: timeintv   !< time interval [sec]
+    integer ,         intent(in) :: tsince(6)  !< start time
 
-    integer :: fid, vid
-    integer :: nsteps
+    logical,          intent(in), optional :: append   !< append existing (closed) file?
+    integer,          intent(in), optional :: timetarg !< target timestep (optional)
+    logical,          intent(in), optional :: nohalo   !< include halo data?
+
+    integer  :: fid, vid
+    integer  :: nsteps
 
     intrinsic :: size
     !---------------------------------------------------------------------------
 
-    call FILEIO_create( fid, & ! [OUT]
-         basename, title, datatype, tsince, append=append )
+    call FILEIO_create( fid,                                             & ! [OUT]
+                        basename, title, datatype, tsince, append=append )
 
     if ( present(timetarg) ) then
        nsteps = 1
@@ -1222,34 +1232,34 @@ contains
        FileWrite
     use scale_process, only: &
        PRC_masterrank, &
-       PRC_myrank,     &
        PRC_MPIstop
     use scale_rm_process, only: &
        PRC_2Drank
     implicit none
 
-    real(RP),          intent(in)  :: var(:,:,:,:) !< value of the variable
-    character(len=*),  intent(in)  :: basename     !< basename of the file
-    character(len=*),  intent(in)  :: title        !< title    of the file
-    character(len=*),  intent(in)  :: varname      !< name        of the variable
-    character(len=*),  intent(in)  :: desc         !< description of the variable
-    character(len=*),  intent(in)  :: unit         !< unit        of the variable
-    character(len=*),  intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
-    character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
-    real(RP),          intent(in)  :: timeintv     !< time interval [sec]
-    integer ,          intent(in)  :: tsince(6)    !< start time
-    logical, optional, intent(in)  :: append       !< append existing (closed) file?
-    integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
-    logical, optional, intent(in)  :: nohalo       !< include halo data?
+    real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
+    character(len=*), intent(in) :: basename     !< basename of the file
+    character(len=*), intent(in) :: title        !< title    of the file
+    character(len=*), intent(in) :: varname      !< name        of the variable
+    character(len=*), intent(in) :: desc         !< description of the variable
+    character(len=*), intent(in) :: unit         !< unit        of the variable
+    character(len=*), intent(in) :: axistype     !< axis type (Z/X/Y/Time)
+    character(len=*), intent(in) :: datatype     !< data type (REAL8/REAL4/default)
+    real(RP),         intent(in) :: timeintv     !< time interval [sec]
+    integer,          intent(in) :: tsince(6)    !< start time
 
-    integer :: fid, vid
-    integer :: nsteps
+    logical,          intent(in), optional :: append   !< append existing (closed) file?
+    integer,          intent(in), optional :: timetarg !< target timestep (optional)
+    logical,          intent(in), optional :: nohalo   !< include halo data?
+
+    integer  :: fid, vid
+    integer  :: nsteps
 
     intrinsic :: size
     !---------------------------------------------------------------------------
 
-    call FILEIO_create( fid, & ! [OUT]
-         basename, title, datatype, tsince, append=append )
+    call FILEIO_create( fid,                                             & ! [OUT]
+                        basename, title, datatype, tsince, append=append )
 
     if ( present(timetarg) ) then
        nsteps = 1
@@ -1277,7 +1287,7 @@ contains
     use scale_process, only: &
        PRC_myrank, &
        PRC_LOCAL_COMM_WORLD
-    use MPI, only : MPI_COMM_NULL
+    use mpi, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent(out) :: fid      !< file ID
@@ -1318,6 +1328,8 @@ contains
        subsec,   &
        append,   &
        nozcoord  )
+    use mpi, only: &
+       MPI_COMM_NULL
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -1330,31 +1342,31 @@ contains
        PRC_MPIstop,    &
        PRC_LOCAL_COMM_WORLD
     use scale_rm_process, only: &
-       PRC_2Drank, &
+       PRC_2Drank,     &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
        NOWMS   => TIME_NOWMS,   &
        NOWSEC  => TIME_NOWDAYSEC
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
-    integer,           intent(out) :: fid      !< file ID
-    character(len=*),  intent(in)  :: basename !< basename of the file
-    character(len=*),  intent(in)  :: title    !< title    of the file
-    character(len=*),  intent(in)  :: datatype !< data type (REAL8/REAL4/default)
-    integer, optional, intent(in)  :: date(6)  !< ymdhms of the time
-    real(DP),optional, intent(in)  :: subsec   !< subsec of the time
-    logical, optional, intent(in)  :: append   !< switch whether append existing file or not (default=false)
-    logical, optional, intent(in)  :: nozcoord !< switch whether include zcoordinate or not (default=false)
+    integer,          intent(out) :: fid      !< file ID
+    character(len=*), intent(in)  :: basename !< basename of the file
+    character(len=*), intent(in)  :: title    !< title    of the file
+    character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
 
-    integer :: rankidx(2)
-    logical :: fileexisted
-    integer :: dtype
-    logical :: append_sw
-    integer :: comm
+    integer,          intent(in), optional :: date(6)  !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec   !< subsec of the time
+    logical,          intent(in), optional :: append   !< switch whether append existing file or not (default=false)
+    logical,          intent(in), optional :: nozcoord !< switch whether include zcoordinate or not (default=false)
+
+    integer           :: rankidx(2)
+    integer           :: dtype
+    logical           :: append_sw
     character(len=34) :: tunits
+    integer           :: comm
+    logical           :: fileexisted
     character(len=8)  :: logical_str
     !---------------------------------------------------------------------------
 
@@ -1364,14 +1376,14 @@ contains
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
     ! dtype is used to define the data type of axis variables in file
-    if ( datatype .EQ. 'REAL8' ) then
+    if    ( datatype == 'REAL8' ) then
        dtype = File_REAL8
-    elseif( datatype .EQ. 'REAL4' ) then
+    elseif( datatype == 'REAL4' ) then
        dtype = File_REAL4
     else
-       if ( RP .EQ. 8 ) then
+       if    ( RP == 8 ) then
           dtype = File_REAL8
-       elseif( RP .EQ. 4 ) then
+       elseif( RP == 4 ) then
           dtype = File_REAL4
        else
           write(*,*) 'xxx unsupported data type. Check!', trim(datatype)
@@ -1412,11 +1424,11 @@ contains
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
        call FILEIO_def_axes( fid, dtype, xy = nozcoord ) ! [IN]
-       File_axes_written(fid) = .FALSE.  ! indicating axes have not been written yet
+       File_axes_written(fid) = .false.  ! indicating axes have not been written yet
        if ( present( nozcoord ) ) then
           File_nozcoord(fid) = nozcoord
        else
-          File_nozcoord(fid) = .FALSE.
+          File_nozcoord(fid) = .false.
        endif
 
        if ( present( subsec ) ) then
@@ -1433,10 +1445,10 @@ contains
        call FileSetGlobalAttribute( fid, "IHALO",  (/IHALO/) )
        call FileSetGlobalAttribute( fid, "JHALO",  (/JHALO/) )
        logical_str = "false"
-       if (PRC_PERIODIC_X .AND. .NOT. IO_AGGREGATE) logical_str = "true"
+       if(PRC_PERIODIC_X .AND. .NOT. IO_AGGREGATE) logical_str = "true"
        call FileSetGlobalAttribute( fid, "PRC_PERIODIC_X",  trim(logical_str) )
        logical_str = "false"
-       if (PRC_PERIODIC_Y .AND. .NOT. IO_AGGREGATE) logical_str = "true"
+       if(PRC_PERIODIC_Y .AND. .NOT. IO_AGGREGATE) logical_str = "true"
        call FileSetGlobalAttribute( fid, "PRC_PERIODIC_Y",  trim(logical_str) )
 
        File_closed(fid) = .false.
@@ -1450,7 +1462,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Exit netCDF file define mode
   subroutine FILEIO_enddef( &
-       fid)
+       fid )
     use gtool_file, only: &
        FileEndDef, &
        FileFlush,  &
@@ -1458,7 +1470,6 @@ contains
     implicit none
 
     integer, intent(in) :: fid  !< file ID
-
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -1474,7 +1485,7 @@ contains
           ! aggregate write requests to be post in FILEIO_write_var
           call FileAttachBuffer( fid, write_buf_amount )
        end if
-       File_axes_written(fid) = .TRUE.
+       File_axes_written(fid) = .true.
     end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -1485,19 +1496,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Flush all pending requests to a netCDF file (PnetCDF only)
   subroutine FILEIO_flush( &
-       fid)
+       fid )
     use gtool_file, only: &
        FileFlush
     implicit none
 
     integer, intent(in) :: fid  !< file ID
-
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( IO_AGGREGATE ) then
-       call FileFlush( fid )        ! flush all pending read/write requests
+       call FileFlush( fid ) ! flush all pending read/write requests
     end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -1508,7 +1518,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Close a netCDF file
   subroutine FILEIO_close( &
-       fid)
+       fid )
     use gtool_file, only: &
        FileClose, &
        FileFlush, &
@@ -1521,11 +1531,11 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( .not. File_closed(fid) ) then
+    if ( .NOT. File_closed(fid) ) then
 
        if ( IO_AGGREGATE ) then
           call FileFlush( fid )        ! flush all pending read/write requests
-          if ( write_buf_amount .GT. 0 ) then
+          if ( write_buf_amount > 0 ) then
              call FileDetachBuffer( fid ) ! detach PnetCDF aggregation buffer
              write_buf_amount = 0         ! reset write request amount
           end if
@@ -1562,7 +1572,7 @@ contains
     logical, intent(in), optional :: xy
 
     character(len=2) :: AXIS_name(3)
-    logical :: xy_
+    logical          :: xy_
     !---------------------------------------------------------------------------
 
     if ( present(xy) ) then
@@ -1690,38 +1700,37 @@ contains
     ! associate coordinates
     AXIS_name(1:2) = (/'x ','y '/)
     call FileDefAssociatedCoordinates( fid, 'lon' , 'longitude',                   &
-                                       'degrees_east' , AXIS_name(1:2), dtype )
+                                       'degrees_east' , AXIS_name(1:2), dtype      )
     AXIS_name(1:2) = (/'xh','y '/)
     call FileDefAssociatedCoordinates( fid, 'lon_uy', 'longitude (half level uy)', &
-                                       'degrees_east' , AXIS_name(1:2), dtype )
+                                       'degrees_east' , AXIS_name(1:2), dtype      )
     AXIS_name(1:2) = (/'x ','yh'/)
     call FileDefAssociatedCoordinates( fid, 'lon_xv', 'longitude (half level xv)', &
-                                       'degrees_east' , AXIS_name(1:2), dtype )
+                                       'degrees_east' , AXIS_name(1:2), dtype      )
     AXIS_name(1:2) = (/'xh','yh'/)
     call FileDefAssociatedCoordinates( fid, 'lon_uv', 'longitude (half level uv)', &
-                                       'degrees_east' , AXIS_name(1:2), dtype )
+                                       'degrees_east' , AXIS_name(1:2), dtype      )
     AXIS_name(1:2) = (/'x ','y '/)
     call FileDefAssociatedCoordinates( fid, 'lat' , 'latitude',                    &
-                                       'degrees_north', AXIS_name(1:2), dtype )
+                                       'degrees_north', AXIS_name(1:2), dtype      )
     AXIS_name(1:2) = (/'xh','y '/)
     call FileDefAssociatedCoordinates( fid, 'lat_uy', 'latitude (half level uy)',  &
-                                       'degrees_north', AXIS_name(1:2), dtype )
+                                       'degrees_north', AXIS_name(1:2), dtype      )
     AXIS_name(1:2) = (/'x ','yh'/)
     call FileDefAssociatedCoordinates( fid, 'lat_xv', 'latitude (half level xv)',  &
-                                       'degrees_north', AXIS_name(1:2), dtype )
+                                       'degrees_north', AXIS_name(1:2), dtype      )
     AXIS_name(1:2) = (/'xh','yh'/)
     call FileDefAssociatedCoordinates( fid, 'lat_uv', 'latitude (half level uv)',  &
-                                       'degrees_north', AXIS_name(1:2), dtype )
+                                       'degrees_north', AXIS_name(1:2), dtype      )
 
     if ( .NOT. xy_ ) then
        AXIS_name = (/'z', 'x', 'y'/)
        call FileDefAssociatedCoordinates( fid, 'height',     'height above ground level', &
-                                          'm', AXIS_name(1:3), dtype )
+                                          'm', AXIS_name(1:3), dtype                      )
        AXIS_name = (/'zh', 'x ', 'y '/)
        call FileDefAssociatedCoordinates( fid, 'height_wxy', 'height above ground level (half level wxy)', &
-                                          'm', AXIS_name(1:3), dtype )
+                                          'm', AXIS_name(1:3), dtype                                       )
     end if
-
 
     ! attributes
     if ( .NOT. xy_ ) then
@@ -1816,14 +1825,14 @@ contains
 
        ! construct indices independent from PRC_PERIODIC_X/Y
        XSB = 1 + IHALO
-       if ( rankidx(1) .EQ. 0 ) XSB = 1
+       if( rankidx(1) == 0 ) XSB = 1
        XEB = IMAX + IHALO
-       if ( rankidx(1) .EQ. PRC_NUM_X-1 ) XEB = IA
+       if( rankidx(1) == PRC_NUM_X-1 ) XEB = IA
 
        YSB = 1 + JHALO
-       if ( rankidx(2) .EQ. 0 ) YSB = 1
+       if( rankidx(2) == 0 ) YSB = 1
        YEB = JMAX + JHALO
-       if ( rankidx(2) .EQ. PRC_NUM_Y-1 ) YEB = JA
+       if( rankidx(2) == PRC_NUM_Y-1 ) YEB = JA
        ! For parallel I/O, not all variables are written by all processes.
        ! 1. Let PRC_myrank 0 writes all z axes
        ! 2. Let processes (rankidx(2) == 0) write x axes  (south-most processes)
@@ -1835,7 +1844,7 @@ contains
        !        rankidx(1) == PRC_NUM_Y-1 writes north HALO
        !        others                    writes without HALO
 
-       put_z = ( .not. xy_ ) .and. ( PRC_myrank == 0 ) ! only master process output the vertical coordinates
+       put_z = ( .NOT. xy_ ) .AND. ( PRC_myrank == 0 ) ! only master process output the vertical coordinates
        put_x = ( rankidx(2) == 0 ) ! only south most row processes write x coordinates
        put_y = ( rankidx(1) == 0 ) ! only west most column processes write y coordinates
     else
@@ -1844,16 +1853,15 @@ contains
        YSB = JSB
        YEB = JEB
 
-       put_z = ( .not. xy_ )
+       put_z = ( .NOT. xy_ )
        put_x = .true.
        put_y = .true.
 
        start(:) = 1
     end if
 
-
     if ( put_z ) then
-       if ( IO_AGGREGATE ) start(1) = 1
+       if( IO_AGGREGATE ) start(1) = 1
        call FileWriteAxis( fid, 'z',   GRID_CZ(KS:KE),    start )
        call FileWriteAxis( fid, 'zh',  GRID_FZ(KS:KE),    start )
        call FileWriteAxis( fid, 'lz',  GRID_LCZ(LKS:LKE), start )
@@ -1862,19 +1870,18 @@ contains
        call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS:UKE), start )
     end if
     if ( put_x ) then
-       if ( IO_AGGREGATE ) start(1) = ISGA
-       call FileWriteAxis( fid, 'x',   GRID_CX(XSB:XEB), start )
-       call FileWriteAxis( fid, 'xh',  GRID_FX(XSB:XEB), start )
+       if( IO_AGGREGATE ) start(1) = ISGA
+       call FileWriteAxis( fid, 'x',   GRID_CX(XSB:XEB),  start )
+       call FileWriteAxis( fid, 'xh',  GRID_FX(XSB:XEB),  start )
     end if
     if ( put_y ) then
-       if ( IO_AGGREGATE ) start(1) = JSGA
-       call FileWriteAxis( fid, 'y',   GRID_CY(YSB:YEB), start )
-       call FileWriteAxis( fid, 'yh',  GRID_FY(YSB:YEB), start )
+       if( IO_AGGREGATE ) start(1) = JSGA
+       call FileWriteAxis( fid, 'y',   GRID_CY(YSB:YEB),  start )
+       call FileWriteAxis( fid, 'yh',  GRID_FY(YSB:YEB),  start )
     end if
 
-
     if ( put_z ) then
-       if ( IO_AGGREGATE ) start(1) = 1
+       if( IO_AGGREGATE ) start(1) = 1
        call FileWriteAxis( fid, 'CZ',   GRID_CZ,   start )
        call FileWriteAxis( fid, 'FZ',   GRID_FZ,   start )
        call FileWriteAxis( fid, 'CDZ',  GRID_CDZ,  start )
@@ -1895,25 +1902,25 @@ contains
     if ( IO_AGGREGATE ) then
        if ( PRC_myrank == 0 ) then
           start(1) = 1
-          call FileWriteAxis( fid, 'CX', GRID_CXG, start )
-          call FileWriteAxis( fid, 'CY', GRID_CYG, start )
-          call FileWriteAxis( fid, 'FX', GRID_FXG, start )
-          call FileWriteAxis( fid, 'FY', GRID_FYG, start )
+          call FileWriteAxis( fid, 'CX',    GRID_CXG,   start )
+          call FileWriteAxis( fid, 'CY',    GRID_CYG,   start )
+          call FileWriteAxis( fid, 'FX',    GRID_FXG,   start )
+          call FileWriteAxis( fid, 'FY',    GRID_FYG,   start )
 
-          call FileWriteAxis( fid, 'CDX', GRID_CDXG, start )
-          call FileWriteAxis( fid, 'CDY', GRID_CDYG, start )
-          call FileWriteAxis( fid, 'FDX', GRID_FDXG, start )
-          call FileWriteAxis( fid, 'FDY', GRID_FDYG, start )
+          call FileWriteAxis( fid, 'CDX',   GRID_CDXG,  start )
+          call FileWriteAxis( fid, 'CDY',   GRID_CDYG,  start )
+          call FileWriteAxis( fid, 'FDX',   GRID_FDXG,  start )
+          call FileWriteAxis( fid, 'FDY',   GRID_FDYG,  start )
 
-          call FileWriteAxis( fid, 'CBFX', GRID_CBFXG, start )
-          call FileWriteAxis( fid, 'CBFY', GRID_CBFYG, start )
-          call FileWriteAxis( fid, 'FBFX', GRID_FBFXG, start )
-          call FileWriteAxis( fid, 'FBFY', GRID_FBFYG, start )
+          call FileWriteAxis( fid, 'CBFX',  GRID_CBFXG, start )
+          call FileWriteAxis( fid, 'CBFY',  GRID_CBFYG, start )
+          call FileWriteAxis( fid, 'FBFX',  GRID_FBFXG, start )
+          call FileWriteAxis( fid, 'FBFY',  GRID_FBFYG, start )
 
-          call FileWriteAxis( fid, 'CXG', GRID_CXG, start )
-          call FileWriteAxis( fid, 'CYG', GRID_CYG, start )
-          call FileWriteAxis( fid, 'FXG', GRID_FXG, start )
-          call FileWriteAxis( fid, 'FYG', GRID_FYG, start )
+          call FileWriteAxis( fid, 'CXG',   GRID_CXG,   start )
+          call FileWriteAxis( fid, 'CYG',   GRID_CYG,   start )
+          call FileWriteAxis( fid, 'FXG',   GRID_FXG,   start )
+          call FileWriteAxis( fid, 'FYG',   GRID_FYG,   start )
 
           call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG, start )
           call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG, start )
@@ -1921,32 +1928,31 @@ contains
           call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG, start )
        end if
     else
-       call FileWriteAxis( fid, 'CX', GRID_CX )
-       call FileWriteAxis( fid, 'CY', GRID_CY )
-       call FileWriteAxis( fid, 'FX', GRID_FX )
-       call FileWriteAxis( fid, 'FY', GRID_FY )
+       call FileWriteAxis( fid, 'CX',    GRID_CX    )
+       call FileWriteAxis( fid, 'CY',    GRID_CY    )
+       call FileWriteAxis( fid, 'FX',    GRID_FX    )
+       call FileWriteAxis( fid, 'FY',    GRID_FY    )
 
-       call FileWriteAxis( fid, 'CDX', GRID_CDX )
-       call FileWriteAxis( fid, 'CDY', GRID_CDY )
-       call FileWriteAxis( fid, 'FDX', GRID_FDX )
-       call FileWriteAxis( fid, 'FDY', GRID_FDY )
+       call FileWriteAxis( fid, 'CDX',   GRID_CDX   )
+       call FileWriteAxis( fid, 'CDY',   GRID_CDY   )
+       call FileWriteAxis( fid, 'FDX',   GRID_FDX   )
+       call FileWriteAxis( fid, 'FDY',   GRID_FDY   )
 
-       call FileWriteAxis( fid, 'CBFX', GRID_CBFX )
-       call FileWriteAxis( fid, 'CBFY', GRID_CBFY )
-       call FileWriteAxis( fid, 'FBFX', GRID_FBFX )
-       call FileWriteAxis( fid, 'FBFY', GRID_FBFY )
+       call FileWriteAxis( fid, 'CBFX',  GRID_CBFX  )
+       call FileWriteAxis( fid, 'CBFY',  GRID_CBFY  )
+       call FileWriteAxis( fid, 'FBFX',  GRID_FBFX  )
+       call FileWriteAxis( fid, 'FBFY',  GRID_FBFY  )
 
-       call FileWriteAxis( fid, 'CXG', GRID_CXG )
-       call FileWriteAxis( fid, 'CYG', GRID_CYG )
-       call FileWriteAxis( fid, 'FXG', GRID_FXG )
-       call FileWriteAxis( fid, 'FYG', GRID_FYG )
+       call FileWriteAxis( fid, 'CXG',   GRID_CXG   )
+       call FileWriteAxis( fid, 'CYG',   GRID_CYG   )
+       call FileWriteAxis( fid, 'FXG',   GRID_FXG   )
+       call FileWriteAxis( fid, 'FYG',   GRID_FYG   )
 
        call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG )
        call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG )
        call FileWriteAxis( fid, 'FBFXG', GRID_FBFXG )
        call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG )
     end if
-
 
     ! associate coordinates
 
@@ -1963,7 +1969,7 @@ contains
     call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATY (:,:), start )
     call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATXY(:,:), start )
 
-    if ( .not. xy_ ) then
+    if ( .NOT. xy_ ) then
        if ( IO_AGGREGATE ) then
           start(1) = 1
           start(2) = ISGA
@@ -1997,34 +2003,35 @@ contains
        PRC_MPIstop
     implicit none
 
-    integer,            intent(in)  :: fid      !< file ID
-    integer,            intent(out) :: vid      !< variable ID
-    character(len=*),   intent(in)  :: varname  !< name        of the variable
-    character(len=*),   intent(in)  :: desc     !< description of the variable
-    character(len=*),   intent(in)  :: unit     !< unit        of the variable
-    character(len=*),   intent(in)  :: axistype !< axis type (Z/X/Y)
-    character(len=*),   intent(in)  :: datatype !< data type (REAL8/REAL4/default)
-    real(RP), optional, intent(in)  :: timeintv !< time interval [sec]
-    integer,  optional, intent(in)  :: nsteps   !< number of time steps
+    integer,          intent(in)  :: fid      !< file ID
+    integer,          intent(out) :: vid      !< variable ID
+    character(len=*), intent(in)  :: varname  !< name        of the variable
+    character(len=*), intent(in)  :: desc     !< description of the variable
+    character(len=*), intent(in)  :: unit     !< unit        of the variable
+    character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
+    character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
 
-    integer           :: dtype, ndims, elm_size
-    character(len=2)  :: dims(3)
-    real(DP)          :: time_interval
+    real(RP),         intent(in), optional :: timeintv !< time interval [sec]
+    integer,          intent(in), optional :: nsteps   !< number of time steps
+
+    integer          :: dtype, ndims, elm_size
+    character(len=2) :: dims(3)
+    real(DP)         :: time_interval
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( datatype .EQ. 'REAL8' ) then
+    if    ( datatype == 'REAL8' ) then
        dtype = File_REAL8
        elm_size = 4
-    elseif( datatype .EQ. 'REAL4' ) then
+    elseif( datatype == 'REAL4' ) then
        dtype = File_REAL4
        elm_size = 8
     else
-       if ( RP .EQ. 8 ) then
+       if    ( RP == 8 ) then
           dtype = File_REAL8
           elm_size = 8
-       elseif( RP .EQ. 4 ) then
+       elseif( RP == 4 ) then
           dtype = File_REAL4
           elm_size = 4
        else
@@ -2033,69 +2040,69 @@ contains
        endif
     endif
 
-    if ( axistype .EQ. 'Z' ) then        ! 1D variable
-       ndims = 1
+    if    ( axistype == 'Z' ) then        ! 1D variable
+       ndims   = 1
        dims(1) = 'z'
        write_buf_amount = write_buf_amount + KA * elm_size
-    elseif( axistype .EQ. 'X' ) then
-       ndims = 1
+    elseif( axistype == 'X' ) then
+       ndims   = 1
        dims(1) = 'x'
        write_buf_amount = write_buf_amount + IA * elm_size
-    elseif( axistype .EQ. 'Y' ) then
-       ndims = 1
+    elseif( axistype == 'Y' ) then
+       ndims   = 1
        dims(1) = 'y'
        write_buf_amount = write_buf_amount + JA * elm_size
-    elseif ( axistype .EQ. 'XY' ) then   ! 2D variable
-       ndims = 2
+    elseif( axistype == 'XY' ) then   ! 2D variable
+       ndims   = 2
        dims(1) = 'x'
        dims(2) = 'y'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-    elseif ( axistype .EQ. 'UY' ) then
-       ndims = 2
+    elseif( axistype == 'UY' ) then
+       ndims   = 2
        dims(1) = 'xh'
        dims(2) = 'y'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-    elseif ( axistype .EQ. 'XV' ) then
-       ndims = 2
+    elseif( axistype == 'XV' ) then
+       ndims   = 2
        dims(1) = 'x'
        dims(2) = 'yh'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-    elseif ( axistype .EQ. 'UV' ) then
-       ndims = 2
+    elseif( axistype == 'UV' ) then
+       ndims   = 2
        dims(1) = 'xh'
        dims(2) = 'yh'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-    elseif( axistype .EQ. 'ZX' ) then
-       ndims = 2
+    elseif( axistype == 'ZX' ) then
+       ndims   = 2
        dims(1) = 'z'
        dims(2) = 'x'
        write_buf_amount = write_buf_amount + KA * IA * elm_size
-    elseif ( axistype .EQ. 'ZXY' ) then  ! 3D variable
-       ndims = 3
-       dims = (/'z','x','y'/)
+    elseif( axistype == 'ZXY' ) then  ! 3D variable
+       ndims   = 3
+       dims    = (/'z','x','y'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-    elseif( axistype .EQ. 'ZHXY' ) then
-       ndims = 3
-       dims = (/'zh','x ','y '/)
+    elseif( axistype == 'ZHXY' ) then
+       ndims   = 3
+       dims    = (/'zh','x ','y '/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-    elseif( axistype .EQ. 'ZXHY' ) then
-       ndims = 3
-       dims = (/'z ','xh','y '/)
+    elseif( axistype == 'ZXHY' ) then
+       ndims   = 3
+       dims    = (/'z ','xh','y '/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-    elseif( axistype .EQ. 'ZXYH' ) then
-       ndims = 3
-       dims = (/'z ','x ','yh'/)
+    elseif( axistype == 'ZXYH' ) then
+       ndims   = 3
+       dims    = (/'z ','x ','yh'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-    elseif( axistype .EQ. 'Land' ) then
-       ndims = 3
-       dims = (/'lz','x ','y '/)
+    elseif( axistype == 'Land' ) then
+       ndims   = 3
+       dims    = (/'lz','x ','y '/)
        write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size
-    elseif( axistype .EQ. 'Urban' ) then
-       ndims = 3
-       dims = (/'uz','x ','y '/)
+    elseif( axistype == 'Urban' ) then
+       ndims   = 3
+       dims    = (/'uz','x ','y '/)
        write_buf_amount = write_buf_amount + UKMAX * IA * JA * elm_size
-    elseif ( axistype .EQ. 'XYT' ) then  ! 3D variable with time dimension
-       ndims = 2
+    elseif( axistype == 'XYT' ) then  ! 3D variable with time dimension
+       ndims   = 2
        dims(1) = 'x'
        dims(2) = 'y'
        if ( present(nsteps) ) then
@@ -2103,9 +2110,9 @@ contains
        else
           write_buf_amount = write_buf_amount + IA * JA * elm_size
        end if
-    elseif ( axistype .EQ. 'ZXYT' ) then ! 4D variable
-       ndims = 3
-       dims = (/'z','x','y'/)
+    elseif( axistype == 'ZXYT' ) then ! 4D variable
+       ndims   = 3
+       dims    = (/'z','x','y'/)
        if ( present(nsteps) ) then
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size * nsteps
        else
@@ -2119,7 +2126,7 @@ contains
     if ( present(timeintv) ) then  ! 3D/4D variable with time dimension
       time_interval = timeintv
       call FileDefineVariable( fid, vid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
-           tint=time_interval ) ! [IN]
+                               tint=time_interval                                 ) ! [IN]
     else
       call FileDefineVariable( fid, vid, varname, desc, unit, ndims, dims, dtype ) ! [IN]
     endif
@@ -2140,24 +2147,24 @@ contains
     use gtool_file, only: &
        FileWrite
     use scale_process, only: &
-       PRC_myrank,     &
+       PRC_myrank,  &
        PRC_MPIstop
     use scale_rm_process, only: &
        PRC_2Drank
     use scale_time, only: &
-       NOWSEC  => TIME_NOWDAYSEC
+       NOWSEC => TIME_NOWDAYSEC
     implicit none
 
-    integer,          intent(in)  :: fid      !< file ID
-    integer,          intent(in)  :: vid      !< netCDF variable ID
-    real(RP),         intent(in)  :: var(:)   !< value of the variable
-    character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
+    integer,          intent(in) :: fid      !< file ID
+    integer,          intent(in) :: vid      !< netCDF variable ID
+    real(RP),         intent(in) :: var(:)   !< value of the variable
+    character(len=*), intent(in) :: varname  !< name of the variable
+    character(len=*), intent(in) :: axistype !< axis type (Z/X/Y)
 
     integer :: dim1_S, dim1_E
     integer :: rankidx(2)
     integer :: start(1)         ! used only when IO_AGGREGATE is .true.
-    logical :: exec = .TRUE.
+    logical :: exec = .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2165,30 +2172,28 @@ contains
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
-    if ( axistype .EQ. 'Z' ) then
+    if    ( axistype == 'Z' ) then
        dim1_S   = KS
        dim1_E   = KE
        start(1) = 1
-       if ( IO_AGGREGATE .AND. PRC_myrank .GT. 0 ) &
-          exec = .FALSE.  ! only rank 0 writes
-    elseif( axistype .EQ. 'X' ) then
+       if( IO_AGGREGATE .AND. PRC_myrank > 0 ) exec = .false.  ! only rank 0 writes
+    elseif( axistype == 'X' ) then
        dim1_S   = ISB
        dim1_E   = IEB
        start(1) = ISGA
-       if ( IO_AGGREGATE .AND. rankidx(2) .GT. 0 ) &
-          exec = .FALSE.  ! only south most row processes write
-    elseif( axistype .EQ. 'Y' ) then
+       if( IO_AGGREGATE .AND. rankidx(2) > 0 ) exec = .false.  ! only south most row processes write
+    elseif( axistype == 'Y' ) then
        dim1_S   = JSB
        dim1_E   = JEB
        start(1) = JSGA
-       if ( IO_AGGREGATE .AND. rankidx(1) .GT. 0 ) &
-          exec = .FALSE.  ! only west most column processes write
+       if( IO_AGGREGATE .AND. rankidx(1) > 0 ) exec = .false.  ! only west most column processes write
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     endif
 
-    if ( exec ) call FileWrite( fid, vid, var(dim1_S:dim1_E), NOWSEC, NOWSEC, start ) ! [IN]
+    if( exec ) call FileWrite( fid, vid, var(dim1_S:dim1_E), &
+                               NOWSEC, NOWSEC, start         ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -2224,7 +2229,7 @@ contains
     real(RP),         intent(in)  :: var(:,:) !< value of the variable
     character(len=*), intent(in)  :: varname  !< name of the variable
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
-    logical, optional, intent(in) :: nohalo   !< switch whether include halo data or not (default=false)
+    logical,          intent(in), optional :: nohalo   !< switch whether include halo data or not (default=false)
 
     real(RP)              :: varhalo( size(var(:,1)), size(var(1,:)) )
 
@@ -2235,7 +2240,7 @@ contains
     logical :: nohalo_
     integer :: rankidx(2)
     integer :: start(2)         ! used only when IO_AGGREGATE is .true.
-    logical :: exec = .TRUE.
+    logical :: exec = .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2247,33 +2252,33 @@ contains
     start(2) = JSGA
 
     nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
+    if( present(nohalo) ) nohalo_ = nohalo
 
-    if ( axistype .EQ. 'XY' .OR. &
-         axistype .EQ. 'UY' .OR. &
-         axistype .EQ. 'XV' .OR. &
-         axistype .EQ. 'UV' ) then
+    if (      axistype == 'XY' &
+         .OR. axistype == 'UY' &
+         .OR. axistype == 'XV' &
+         .OR. axistype == 'UV' ) then
        dim1_S   = ISB
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
        if ( IO_AGGREGATE ) then
-          if ( rankidx(1) .EQ. 0             ) dim1_S = 1
-          if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim1_E = IA
-          if ( rankidx(2) .EQ. 0             ) dim2_S = 1
-          if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) dim2_E = JA
+          if( rankidx(1) == 0             ) dim1_S = 1
+          if( rankidx(1) == PRC_NUM_X - 1 ) dim1_E = IA
+          if( rankidx(2) == 0             ) dim2_S = 1
+          if( rankidx(2) == PRC_NUM_Y - 1 ) dim2_E = JA
        end if
-    elseif( axistype .EQ. 'ZX' ) then
+    elseif( axistype == 'ZX' ) then
        dim1_S   = KS
        dim1_E   = KE
        dim2_S   = ISB
        dim2_E   = IEB
        start(2) = start(1)
        start(1) = 1
-       if ( IO_AGGREGATE .AND. rankidx(2) .GT. 0 ) then
-          exec = .FALSE.  ! only south most row processes write
-          if ( rankidx(1) .EQ. 0             ) dim2_S = 1
-          if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim2_E = IA
+       if ( IO_AGGREGATE .AND. rankidx(2) > 0 ) then
+          exec = .false.  ! only south most row processes write
+          if( rankidx(1) == 0             ) dim2_S = 1
+          if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
        end if
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
@@ -2309,9 +2314,11 @@ contains
           end do
           end do
 
-          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), NOWSEC, NOWSEC, start ) ! [IN]
+          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
+                          NOWSEC, NOWSEC, start                           ) ! [IN]
        else
-          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E), NOWSEC, NOWSEC, start ) ! [IN]
+          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E), &
+                          NOWSEC, NOWSEC, start                       ) ! [IN]
        end if
 
     end if
@@ -2335,39 +2342,40 @@ contains
     use gtool_file, only: &
        FileWrite
     use scale_process, only: &
-       PRC_myrank,     &
+       PRC_myrank,  &
        PRC_MPIstop
     use scale_rm_process, only: &
        PRC_2Drank, &
-       PRC_NUM_X, &
+       PRC_NUM_X,  &
        PRC_NUM_Y
     use scale_time, only: &
        NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
-    integer,           intent(in)  :: fid        !< file ID
-    integer,           intent(in)  :: vid        !< netCDF variable ID
-    real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
-    character(len=*),  intent(in)  :: varname    !< name        of the variable
-    character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
-    logical, optional, intent(in)  :: nohalo     !< include halo data?
+    integer,          intent(in) :: fid        !< file ID
+    integer,          intent(in) :: vid        !< netCDF variable ID
+    real(RP),         intent(in) :: var(:,:,:) !< value of the variable
+    character(len=*), intent(in) :: varname    !< name        of the variable
+    character(len=*), intent(in) :: axistype   !< axis type (Z/X/Y)
 
-    real(RP)         :: varhalo( size(var(:,1,1)), size(var(1,:,1)), size(var(1,1,:)) )
+    logical,          intent(in), optional :: nohalo !< include halo data?
 
-    integer          :: dim1_S, dim1_E, dim1_max
-    integer          :: dim2_S, dim2_E
-    integer          :: dim3_S, dim3_E
+    real(RP) :: varhalo( size(var(:,1,1)), size(var(1,:,1)), size(var(1,1,:)) )
 
-    integer :: i, j, k
-    logical :: nohalo_
-    integer :: rankidx(2)
-    integer :: start(3)         ! used only when IO_AGGREGATE is .true.
+    integer  :: dim1_S, dim1_E, dim1_max
+    integer  :: dim2_S, dim2_E
+    integer  :: dim3_S, dim3_E
+
+    integer  :: i, j, k
+    logical  :: nohalo_
+    integer  :: rankidx(2)
+    integer  :: start(3) ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
+    if( present(nohalo) ) nohalo_ = nohalo
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -2381,24 +2389,24 @@ contains
     dim3_S   = JSB
     dim3_E   = JEB
     if ( IO_AGGREGATE ) then
-       if ( rankidx(1) .EQ. 0             ) dim2_S = 1
-       if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim2_E = IA
-       if ( rankidx(2) .EQ. 0             ) dim3_S = 1
-       if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) dim3_E = JA
+       if( rankidx(1) == 0             ) dim2_S = 1
+       if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
+       if( rankidx(2) == 0             ) dim3_S = 1
+       if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
     end if
 
-    if ( axistype .EQ. 'ZXY'  .OR. &
-         axistype .EQ. 'ZHXY' .OR. &
-         axistype .EQ. 'ZXHY' .OR. &
-         axistype .EQ. 'ZXYH' ) then
+    if (      axistype == 'ZXY'  &
+         .OR. axistype == 'ZHXY' &
+         .OR. axistype == 'ZXHY' &
+         .OR. axistype == 'ZXYH' ) then
        dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
-    elseif( axistype .EQ. 'Land' ) then
+    elseif( axistype == 'Land' ) then
        dim1_max = LKMAX
        dim1_S   = LKS
        dim1_E   = LKE
-    elseif( axistype .EQ. 'Urban' ) then
+    elseif( axistype == 'Urban' ) then
        dim1_max = UKMAX
        dim1_S   = UKS
        dim1_E   = UKE
@@ -2444,10 +2452,10 @@ contains
        end do
 
        call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                       NOWSEC, NOWSEC, start ) ! [IN]
+                       NOWSEC, NOWSEC, start                                         ) ! [IN]
     else
        call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                       NOWSEC, NOWSEC, start ) ! [IN]
+                       NOWSEC, NOWSEC, start                                     ) ! [IN]
     end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -2479,33 +2487,34 @@ contains
        PRC_NUM_Y
     implicit none
 
-    integer,           intent(in)  :: fid          !< file ID
-    integer,           intent(in)  :: vid          !< netCDF variable ID
-    real(RP),          intent(in)  :: var(:,:,:)   !< value of the variable
-    character(len=*),  intent(in)  :: varname      !< name of the variable
-    character(len=*),  intent(in)  :: axistype     !< axis type (X/Y/Time)
-    real(RP),          intent(in)  :: timeintv     !< time interval [sec]
-    integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
-    logical, optional, intent(in)  :: nohalo       !< include halo data?
+    integer,          intent(in) :: fid        !< file ID
+    integer,          intent(in) :: vid        !< netCDF variable ID
+    real(RP),         intent(in) :: var(:,:,:) !< value of the variable
+    character(len=*), intent(in) :: varname    !< name of the variable
+    character(len=*), intent(in) :: axistype   !< axis type (X/Y/Time)
+    real(RP),         intent(in) :: timeintv   !< time interval [sec]
 
-    real(RP)         :: varhalo( size(var(:,1,1)), size(var(1,:,1)) )
+    integer,          intent(in), optional :: timetarg !< target timestep (optional)
+    logical,          intent(in), optional :: nohalo   !< include halo data?
 
-    integer          :: dim1_S, dim1_E
-    integer          :: dim2_S, dim2_E
+    real(RP) :: varhalo( size(var(:,1,1)), size(var(1,:,1)) )
+
+    integer  :: dim1_S, dim1_E
+    integer  :: dim2_S, dim2_E
 
     real(DP) :: time_interval, nowtime
 
-    integer :: step
-    integer :: i, j, n
-    logical :: nohalo_
-    integer :: rankidx(2)
-    integer :: start(3)         ! used only when IO_AGGREGATE is .true.
+    integer  :: step
+    integer  :: i, j, n
+    logical  :: nohalo_
+    integer  :: rankidx(2)
+    integer  :: start(3) ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
+    if( present(nohalo) ) nohalo_ = nohalo
 
     time_interval = timeintv
     step = size(var(ISB,JSB,:))
@@ -2513,16 +2522,16 @@ contains
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
-    if ( axistype .EQ. 'XYT' ) then
+    if ( axistype == 'XYT' ) then
        dim1_S   = ISB
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
        if ( IO_AGGREGATE ) then
-          if ( rankidx(1) .EQ. 0             ) dim1_S = 1
-          if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim1_E = IA
-          if ( rankidx(2) .EQ. 0             ) dim2_S = 1
-          if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) dim2_E = JA
+          if( rankidx(1) == 0             ) dim1_S = 1
+          if( rankidx(1) == PRC_NUM_X - 1 ) dim1_E = IA
+          if( rankidx(2) == 0             ) dim2_S = 1
+          if( rankidx(2) == PRC_NUM_Y - 1 ) dim2_E = JA
        end if
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
@@ -2564,9 +2573,11 @@ contains
           end do
           end do
 
-          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), nowtime, nowtime, start ) ! [IN]
+          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
+                          nowtime, nowtime, start                         ) ! [IN]
        else
-          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), nowtime, nowtime, start ) ! [IN]
+          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), &
+                          nowtime, nowtime, start                              ) ! [IN]
        end if
     else
        nowtime = 0.0_DP
@@ -2599,9 +2610,11 @@ contains
              end do
              end do
 
-             call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), nowtime, nowtime, start ) ! [IN]
+             call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
+                             nowtime, nowtime, start                         ) ! [IN]
           else
-             call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), nowtime, nowtime, start ) ! [IN]
+             call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), &
+                             nowtime, nowtime, start                       ) ! [IN]
           end if
           nowtime = nowtime + time_interval
        enddo
@@ -2636,34 +2649,35 @@ contains
        PRC_NUM_Y
     implicit none
 
-    integer,           intent(in)  :: fid          !< file ID
-    integer,           intent(in)  :: vid          !< netCDF variable ID
-    real(RP),          intent(in)  :: var(:,:,:,:) !< value of the variable
-    character(len=*),  intent(in)  :: varname      !< name        of the variable
-    character(len=*),  intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
-    real(RP),          intent(in)  :: timeintv     !< time interval [sec]
-    integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
-    logical, optional, intent(in)  :: nohalo       !< include halo data?
+    integer,          intent(in) :: fid          !< file ID
+    integer,          intent(in) :: vid          !< netCDF variable ID
+    real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
+    character(len=*), intent(in) :: varname      !< name        of the variable
+    character(len=*), intent(in) :: axistype     !< axis type (Z/X/Y/Time)
+    real(RP),         intent(in) :: timeintv     !< time interval [sec]
 
-    real(RP)         :: varhalo( size(var(:,1,1,1)), size(var(1,:,1,1)), size(var(1,1,:,1)) )
+    integer,          intent(in), optional :: timetarg !< target timestep (optional)
+    logical,          intent(in), optional :: nohalo   !< include halo data?
 
-    integer          :: dim1_S, dim1_E, dim1_max
-    integer          :: dim2_S, dim2_E
-    integer          :: dim3_S, dim3_E
+    real(RP) :: varhalo( size(var(:,1,1,1)), size(var(1,:,1,1)), size(var(1,1,:,1)) )
+
+    integer  :: dim1_S, dim1_E, dim1_max
+    integer  :: dim2_S, dim2_E
+    integer  :: dim3_S, dim3_E
 
     real(DP) :: time_interval, nowtime
 
-    integer :: step
-    integer :: i, j, k, n
-    logical :: nohalo_
-    integer :: rankidx(2)
-    integer :: start(4)         ! used only when IO_AGGREGATE is .true.
+    integer  :: step
+    integer  :: i, j, k, n
+    logical  :: nohalo_
+    integer  :: rankidx(2)
+    integer  :: start(4) ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     nohalo_ = .false.
-    if ( present(nohalo) ) nohalo_ = nohalo
+    if( present(nohalo) ) nohalo_ = nohalo
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -2676,7 +2690,7 @@ contains
     time_interval = timeintv
     step = size(var,4)
 
-    if ( axistype .EQ. 'ZXYT' ) then
+    if ( axistype == 'ZXYT' ) then
        dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
@@ -2685,10 +2699,10 @@ contains
        dim3_S   = JSB
        dim3_E   = JEB
        if ( IO_AGGREGATE ) then
-          if ( rankidx(1) .EQ. 0             ) dim2_S = 1
-          if ( rankidx(1) .EQ. PRC_NUM_X - 1 ) dim2_E = IA
-          if ( rankidx(2) .EQ. 0             ) dim3_S = 1
-          if ( rankidx(2) .EQ. PRC_NUM_Y - 1 ) dim3_E = JA
+          if( rankidx(1) == 0             ) dim2_S = 1
+          if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
+          if( rankidx(2) == 0             ) dim3_S = 1
+          if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
        end if
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
@@ -2735,10 +2749,10 @@ contains
           end do
 
           call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                          nowtime, nowtime, start ) ! [IN]
+                          nowtime, nowtime, start                                       ) ! [IN]
        else
           call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg), &
-                          nowtime, nowtime, start ) ! [IN]
+                          nowtime, nowtime, start                                            ) ! [IN]
        end if
     else
        nowtime = 0.0_DP
@@ -2780,10 +2794,10 @@ contains
              end do
 
              call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                             nowtime, nowtime, start ) ! [IN]
+                             nowtime, nowtime, start                                       ) ! [IN]
           else
              call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
-                             nowtime, nowtime, start ) ! [IN]
+                             nowtime, nowtime, start                                     ) ! [IN]
           end if
           nowtime = nowtime + time_interval
        enddo
@@ -2795,11 +2809,11 @@ contains
   end subroutine FILEIO_write_var_4D
 
   !-----------------------------------------------------------------------------
-  ! private
-
   subroutine closeall
     implicit none
+
     integer :: fid
+    !---------------------------------------------------------------------------
 
     do fid = 0, File_nfile_max-1
        call FILEIO_close( fid )
@@ -2808,113 +2822,134 @@ contains
     return
   end subroutine closeall
 
+  !-----------------------------------------------------------------------------
   subroutine getCFtunits(tunits, date)
+    implicit none
+
     character(len=34), intent(out) :: tunits
     integer,           intent(in)  :: date(6)
+    !---------------------------------------------------------------------------
 
     write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
 
     return
   end subroutine getCFtunits
 
+  !-----------------------------------------------------------------------------
   subroutine check_1d( &
        expected, buffer, &
        name              )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     real(RP),         intent(in) :: expected(:)
     real(RP),         intent(in) :: buffer(:)
     character(len=*), intent(in) :: name
+
     integer :: nmax, n
+
     intrinsic :: size
+    !---------------------------------------------------------------------------
 
     nmax = size(expected)
-    if ( size(buffer) .ne. nmax ) then
-       write(*,*) 'xxx size of coordinate (' // trim(name) // ') is different:', nmax, size(buffer)
+    if ( size(buffer) /= nmax ) then
+       write(*,*) 'xxx size of coordinate ('//trim(name)//') is different:', nmax, size(buffer)
        call PRC_MPIstop
     end if
 
     do n=1, nmax
-       if ( expected(n) .ne. buffer(n) ) then
-          write(*,*) 'xxx value of coordinate (' // trim(name) // ') at ', n, ' is different:', &
+       if ( expected(n) /= buffer(n) ) then
+          write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', n, ' is different:', &
                      expected(n), buffer(n)
           call PRC_MPIstop
        end if
     end do
 
+    return
   end subroutine check_1d
 
+  !-----------------------------------------------------------------------------
   subroutine check_2d( &
        expected, buffer, &
        name              )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     real(RP),         intent(in) :: expected(:,:)
     real(RP),         intent(in) :: buffer(:,:)
     character(len=*), intent(in) :: name
+
     integer :: imax, jmax
     integer :: i, j
+
     intrinsic :: size
+    !---------------------------------------------------------------------------
 
     imax = size(expected,1)
     jmax = size(expected,2)
-    if ( size(buffer,1) .ne. imax ) then
-       write(*,*) 'xxx the first size of coordinate (' // trim(name) // ') is different:', imax, size(buffer,1)
+    if ( size(buffer,1) /= imax ) then
+       write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', imax, size(buffer,1)
        call PRC_MPIstop
     end if
-    if ( size(buffer,2) .ne. jmax ) then
-       write(*,*) 'xxx the second size of coordinate (' // trim(name) // ') is different:', jmax, size(buffer,2)
+    if ( size(buffer,2) /= jmax ) then
+       write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,2)
        call PRC_MPIstop
     end if
 
     do j=1, jmax
     do i=1, imax
-       if ( expected(i,j) .ne. buffer(i,j) ) then
-          write(*,*) 'xxx value of coordinate (' // trim(name) // ') at (', i, ',', j, ') is different:', &
+       if ( expected(i,j) /= buffer(i,j) ) then
+          write(*,*) 'xxx value of coordinate ('//trim(name)//') at (', i, ',', j, ') is different:', &
                      expected(i,j), buffer(i,j)
           call PRC_MPIstop
        end if
     end do
     end do
 
+    return
   end subroutine check_2d
 
+  !-----------------------------------------------------------------------------
   subroutine check_3d( &
        expected, buffer, &
        name              )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     real(RP),         intent(in) :: expected(:,:,:)
     real(RP),         intent(in) :: buffer(:,:,:)
     character(len=*), intent(in) :: name
+
     integer :: imax, jmax, kmax
     integer :: i, j, k
+
     intrinsic :: size
+    !---------------------------------------------------------------------------
 
     kmax = size(expected,1)
     imax = size(expected,2)
     jmax = size(expected,3)
-    if ( size(buffer,1) .ne. kmax ) then
-       write(*,*) 'xxx the first size of coordinate (' // trim(name) // ') is different:', kmax, size(buffer,1)
+    if ( size(buffer,1) /= kmax ) then
+       write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', kmax, size(buffer,1)
        call PRC_MPIstop
     end if
-    if ( size(buffer,2) .ne. imax ) then
-       write(*,*) 'xxx the second size of coordinate (' // trim(name) // ') is different:', imax, size(buffer,2)
+    if ( size(buffer,2) /= imax ) then
+       write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', imax, size(buffer,2)
        call PRC_MPIstop
     end if
-    if ( size(buffer,3) .ne. jmax ) then
-       write(*,*) 'xxx the second size of coordinate (' // trim(name) // ') is different:', jmax, size(buffer,3)
+    if ( size(buffer,3) /= jmax ) then
+       write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,3)
        call PRC_MPIstop
     end if
 
     do j=1, jmax
     do i=1, imax
     do k=1, kmax
-       if ( expected(k,i,j) .ne. buffer(k,i,j) ) then
-          write(*,*) 'xxx value of coordinate (' // trim(name) // ') at ', k, ',', i, ',', j, ' is different:', &
+       if ( expected(k,i,j) /= buffer(k,i,j) ) then
+          write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
                      expected(k,i,j), buffer(k,i,j)
           call PRC_MPIstop
        end if
@@ -2922,6 +2957,7 @@ contains
     end do
     end do
 
+    return
   end subroutine check_3d
 
 end module scale_fileio
