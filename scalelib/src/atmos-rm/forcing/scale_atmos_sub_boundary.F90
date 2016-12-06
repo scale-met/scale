@@ -383,6 +383,10 @@ contains
 
        ATMOS_BOUNDARY_UPDATE_FLAG = .true.
 
+    elseif ( ATMOS_BOUNDARY_TYPE == 'NONE' ) then
+
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
+
     elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
 
        call ATMOS_BOUNDARY_generate
@@ -814,14 +818,22 @@ contains
 
 
        if ( l_bnd ) then
-          if ( ONLINE_USE_VELZ ) then
+          if ( do_daughter_process ) then ! online
+             if ( ONLINE_USE_VELZ ) then
+                if( ATMOS_BOUNDARY_USE_VELZ ) then
+                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
+                else
+                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
+                endif
+             else
+                if ( ATMOS_BOUNDARY_USE_VELZ ) then
+                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = alpha_z2 * ATMOS_BOUNDARY_ALPHAFACT_VELZ
+                end if
+             end if
+          else ! offline
              if ( ATMOS_BOUNDARY_USE_VELZ ) then
                 ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
-             else
-                ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
              endif
-          else
-             ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = alpha_z2 * ATMOS_BOUNDARY_ALPHAFACT_VELZ
           end if
           if ( ATMOS_BOUNDARY_USE_DENS ) then
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_DENS

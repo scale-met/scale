@@ -185,6 +185,7 @@ contains
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
+       wdamp_coef,                                           &
        divdmp_coef,                                          &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
@@ -321,6 +322,7 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
 
+    real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
 
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
@@ -510,9 +512,9 @@ contains
        enddo
 #ifdef HIST_TEND
        call HIST_in(RHOQ_tp(:,:,:,iq), trim(AQ_NAME(iq))//'_t_phys', &
-                    'tendency of '//trim(AQ_NAME(iq))//' due to physics',          'kg/kg/s' )
+                    'tendency of '//trim(AQ_NAME(iq))//' due to physics', 'kg/kg/s' )
        call HIST_in(damp_t,            trim(AQ_NAME(iq))//'_t_damp', &
-                    'tendency of '//trim(AQ_NAME(iq))//' due to rayleigh damping', 'kg/kg/s' )
+                    'tendency of '//trim(AQ_NAME(iq))//' due to damping', 'kg/kg/s' )
 #endif
 !OCL XFILL
        do j = JS, JE
@@ -623,8 +625,8 @@ contains
        enddo
        call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
 #ifdef HIST_TEND
-       call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics',          'kg/m3/s' )
-       call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s' )
+       call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics', 'kg/m3/s' )
+       call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to damping', 'kg/m3/s' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -645,6 +647,7 @@ contains
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
                         + damp
 #ifdef HIST_TEND
@@ -662,8 +665,8 @@ contains
        enddo
        call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',          'kg/m2/s2', zdim='half' )
-       call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', zdim='half' )
+       call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',  'kg/m2/s2', zdim='half' )
+       call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to damping', 'kg/m2/s2', zdim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -700,8 +703,8 @@ contains
        enddo
        call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics',          'kg/m2/s2', xdim='half' )
-       call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', xdim='half' )
+       call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics', 'kg/m2/s2', xdim='half' )
+       call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to damping', 'kg/m2/s2', xdim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -738,8 +741,8 @@ contains
        enddo
        call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics',          'kg/m2/s2', ydim='half' )
-       call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', ydim='half' )
+       call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics', 'kg/m2/s2', ydim='half' )
+       call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to damping', 'kg/m2/s2', ydim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -776,8 +779,8 @@ contains
        enddo
        call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
 #ifdef HIST_TEND
-       call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics',          'K kg/m3/s' )
-       call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', 'K kg/m3/s' )
+       call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics', 'K kg/m3/s' )
+       call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to damping', 'K kg/m3/s' )
 #endif
 
        call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
@@ -829,7 +832,7 @@ contains
                                     mflx_hi, tflx_hi,                         & ! (inout)
                                     DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
                                     DPRES0, RT2P, CORIOLI,                    & ! (in)
-                                    num_diff, divdmp_coef, DDIV,              & ! (in)
+                                    num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
                                     FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
                                     FLAG_FCT_ALONG_STREAM,                    & ! (in)
                                     CDZ, FDZ, FDX, FDY,                       & ! (in)
