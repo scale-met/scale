@@ -46,6 +46,7 @@ module scale_topography
   !++ Private parameters & variables
   !
   character(len=H_LONG), private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
+  logical,               private :: TOPO_IN_CHECK_COORDINATES = .false.        !> switch for check of coordinates
   character(len=H_LONG), private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
   character(len=H_MID),  private :: TOPO_OUT_TITLE    = 'SCALE-RM TOPOGRAPHY'  !< title    of the output file
   character(len=H_MID),  private :: TOPO_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
@@ -60,8 +61,9 @@ contains
     implicit none
 
     namelist / PARAM_TOPO / &
-       TOPO_IN_BASENAME,  &
-       TOPO_OUT_BASENAME, &
+       TOPO_IN_BASENAME,          &
+       TOPO_IN_CHECK_COORDINATES, &
+       TOPO_OUT_BASENAME,         &
        TOPO_OUT_DTYPE
 
     integer :: ierr
@@ -115,7 +117,11 @@ contains
   !> Read topography
   subroutine TOPO_read
     use scale_fileio, only: &
-       FILEIO_read
+       FILEIO_open, &
+       FILEIO_read, &
+       FILEIO_flush, &
+       FILEIO_check_coordinates, &
+       FILEIO_close
     use scale_process, only: &
        PRC_MPIstop, &
        PRC_myrank
@@ -125,43 +131,28 @@ contains
 
     implicit none
 
-    real(RP) :: tmp_CX(IA), tmp_CY(JA)
-    real(RP) :: epsilon
-    integer  :: i, j
+    integer :: fid
     !---------------------------------------------------------------------------
-
-    epsilon = 0.1_RP**(RP-1)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input topography file ***'
 
     if ( TOPO_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( TOPO_Zsfc(:,:),                        & ! [OUT]
-                         TOPO_IN_BASENAME, 'TOPO', 'XY', step=1 ) ! [IN]
+       call FILEIO_open( fid, TOPO_IN_BASENAME )
+       call FILEIO_read( TOPO_Zsfc(:,:),           & ! [OUT]
+                         fid, 'TOPO', 'XY', step=1 ) ! [IN]
+       call FILEIO_flush( fid )
+
+       if ( TOPO_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( fid )
+       end if
+
+       call FILEIO_close( fid )
 
        call TOPO_fillhalo
 
        TOPO_exist = .true.
-
-       call FILEIO_read( tmp_CX(:), TOPO_IN_BASENAME, 'CX', 'CX', 1 )
-       call FILEIO_read( tmp_CY(:), TOPO_IN_BASENAME, 'CY', 'CY', 1 )
-
-       do i = 1, IA
-          if ( abs(tmp_CX(i) - GRID_CX(i)) > epsilon ) then
-             write(*,*) 'xxx X position in TOPO_IN_BASENAME is different from GRID_IN_BASENAME '
-             write(*,*) "I=", i, tmp_CX(i), GRID_CX(i)
-             call PRC_MPIstop
-          endif
-       enddo
-
-       do j = 1, JA
-          if ( abs(tmp_CY(j) - GRID_CY(j)) > epsilon ) then
-             write(*,*) 'xxx Y position in TOPO_IN_BASENAME is different from GRID_IN_BASENAME '
-             write(*,*) "J=", j, tmp_CY(j), GRID_CY(j)
-             call PRC_MPIstop
-          endif
-       enddo
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** topography file is not specified.'

@@ -133,6 +133,8 @@ module mod_ocean_vars
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
 
+  logical,                private            :: OCEAN_RESTART_IN_CHECK_COORDINATES = .true.
+
   data VAR_NAME / 'OCEAN_TEMP',      &
                   'OCEAN_SFC_TEMP',  &
                   'OCEAN_ALB_LW',    &
@@ -190,6 +192,7 @@ contains
     NAMELIST / PARAM_OCEAN_VARS /  &
        OCEAN_RESTART_IN_BASENAME,           &
        OCEAN_RESTART_IN_POSTFIX_TIMELABEL,  &
+       OCEAN_RESTART_IN_CHECK_COORDINATES,  &
        OCEAN_RESTART_OUTPUT,                &
        OCEAN_RESTART_OUT_BASENAME,          &
        OCEAN_RESTART_OUT_POSTFIX_TIMELABEL, &
@@ -325,7 +328,8 @@ contains
   !> Open ocean restart file for read
   subroutine OCEAN_vars_restart_open
     use scale_fileio, only: &
-       FILEIO_open
+       FILEIO_open, &
+       FILEIO_check_coordinates
     use scale_time, only: &
        TIME_gettimelabel
     use mod_ocean_admin, only: &
@@ -352,6 +356,11 @@ contains
 
        call FILEIO_open( restart_fid, & ! [OUT]
                          basename     ) ! [IN]
+
+       if ( OCEAN_RESTART_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( restart_fid )
+       end if
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
     endif

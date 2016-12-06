@@ -127,6 +127,7 @@ module scale_atmos_boundary
   !
   character(len=H_LONG), private :: ATMOS_BOUNDARY_TYPE         = 'NONE'
   character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME  = ''
+  logical,               private :: ATMOS_BOUNDARY_IN_CHECK_COORDINATES = .true.
   character(len=H_LONG), private :: ATMOS_BOUNDARY_OUT_BASENAME = ''
   character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE    = 'SCALE-RM BOUNDARY CONDITION'  !< title of the output file
   character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_DTYPE    = 'DEFAULT'                      !< REAL4 or REAL8
@@ -986,8 +987,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Read boundary data
   subroutine ATMOS_BOUNDARY_read
-    use gtool_file, only: &
-       FileRead
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
@@ -997,20 +996,24 @@ contains
        GRID_CBFY
     use scale_const, only: &
        EPS => CONST_EPS
+    use scale_fileio, only: &
+       FILEIO_open, &
+       FILEIO_check_coordinates, &
+       FILEIO_read, &
+       FILEIO_close
     use scale_atmos_phy_mp, only: &
        AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
 
-    real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
-
-    character(len=H_LONG) :: bname
-
+    integer :: fid
     integer :: iq
-    real(RP) :: tmp_CBFZ(KA), tmp_CBFX(IA), tmp_CBFY(JA)
-    integer  :: i, j, k
     !---------------------------------------------------------------------------
 
-    bname = ATMOS_BOUNDARY_IN_BASENAME
+    call FILEIO_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
+
+    if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
+       call FILEIO_check_coordinates( fid, atmos=.true. )
+    end if
 
     if (      ATMOS_BOUNDARY_USE_DENS &
          .OR. ATMOS_BOUNDARY_USE_VELZ &
@@ -1018,85 +1021,46 @@ contains
          .OR. ATMOS_BOUNDARY_USE_VELY &
          .OR. ATMOS_BOUNDARY_USE_POTT &
          ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
-       ATMOS_BOUNDARY_DENS(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_DENS(:,:,:), fid, 'DENS', 'ZXY', 1 )
     end if
     if ( ATMOS_BOUNDARY_USE_DENS ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_DENS', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_DENS(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_DENS(:,:,:), fid, 'ALPHA_DENS', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELZ', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELZ(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELZ', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELZ(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_VELZ(:,:,:), fid, 'VELZ', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELZ(:,:,:), fid, 'ALPHA_VELZ', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELX', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELX(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELX', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELX(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_VELX(:,:,:), fid, 'VELX', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELX(:,:,:), fid, 'ALPHA_VELX', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELY', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELY(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELY', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELY(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_VELY(:,:,:), fid, 'VELY', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELY(:,:,:), fid, 'ALPHA_VELY', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'POTT', 1, PRC_myrank )
-       ATMOS_BOUNDARY_POTT(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_POTT', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_POTT(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_POTT(:,:,:), fid, 'POTT', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_POTT(:,:,:), fid, 'ALPHA_POTT', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV   ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'QV',   1, PRC_myrank )
-       ATMOS_BOUNDARY_QTRC(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_QV', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_QTRC(:,:,:,1), fid, 'QV', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1), fid, 'ALPHA_QV', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
-          call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), 1, PRC_myrank )
-          ATMOS_BOUNDARY_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq) = reference_atmos(:,:,:)
-          call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_'//trim(AQ_NAME(iq)), 1, PRC_myrank )
-          ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq) = reference_atmos(:,:,:)
+          call FILEIO_read( ATMOS_BOUNDARY_QTRC(:,:,:,iq), fid, AQ_NAME(iq), 'ZXY', 1 )
+          call FILEIO_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), fid, 'ALPHA_'//trim(AQ_NAME(iq)), 'ZXY', 1 )
        end do
     endif
 
-    call FileRead( tmp_CBFZ(:),  bname, 'CBFZ', 1, PRC_myrank )
-    call FileRead( tmp_CBFX(:),  bname, 'CBFX', 1, PRC_myrank )
-    call FileRead( tmp_CBFY(:),  bname, 'CBFY', 1, PRC_myrank )
+    call FILEIO_close( fid )
 
-    do i = 1, IA
-       if ( abs(tmp_CBFX(i) - GRID_CBFX(i)) > EPS ) then
-          write(*,*) 'xxx Buffer layer (X) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME: ', &
-                     'i=', i, tmp_CBFX(i), GRID_CBFX(i)
-          call PRC_MPIstop
-       endif
-    enddo
-
-    do j = 1, JA
-       if ( abs(tmp_CBFY(j) - GRID_CBFY(j)) > EPS ) then
-          write(*,*) 'xxx Buffer layer (Y) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME: ', &
-                     'j=', j, tmp_CBFY(j), GRID_CBFY(j)
-          call PRC_MPIstop
-       endif
-    enddo
-
-    do k = 1, KA
-       if ( abs(tmp_CBFZ(k) - GRID_CBFZ(k)) > EPS ) then
-          write(*,*) 'xxx Buffer layer (Z) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME: ', &
-                     'k=', k, tmp_CBFZ(k), GRID_CBFZ(k)
-          call PRC_MPIstop
-       endif
-    enddo
 
     call ATMOS_BOUNDARY_var_fillhalo
     call ATMOS_BOUNDARY_alpha_fillhalo
@@ -1971,6 +1935,7 @@ contains
        PRC_myrank
     use scale_fileio, only: &
        FILEIO_open, &
+       FILEIO_check_coordinates, &
        FILEIO_read, &
        FILEIO_close
     use scale_atmos_phy_mp, only: &
@@ -1988,6 +1953,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
 
     call FILEIO_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
+
+    if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
+       call FILEIO_check_coordinates( fid, atmos=.true. )
+    end if
 
     call FILEIO_read( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), fid, 'DENS', 'ZXY', boundary_timestep )
     call FILEIO_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXY', boundary_timestep )

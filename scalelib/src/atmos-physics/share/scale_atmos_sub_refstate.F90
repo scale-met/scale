@@ -62,6 +62,7 @@ module scale_atmos_refstate
   !++ Private parameters & variables
   !
   character(len=H_LONG),  private :: ATMOS_REFSTATE_IN_BASENAME  = ''                   !< basename of the input  file
+  logical,                private :: ATMOS_REFSTATE_IN_CHECK_COORDINATES = .true.
   character(len=H_LONG),  private :: ATMOS_REFSTATE_OUT_BASENAME = ''                   !< basename of the output file
   character(len=H_MID) ,  private :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE-RM RefState'  !< title    of the output file
   character(len=H_MID) ,  private :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'            !< REAL4 or REAL8
@@ -236,10 +237,15 @@ contains
   !> Read reference state profile
   subroutine ATMOS_REFSTATE_read
     use scale_fileio, only: &
-       FILEIO_read
+       FILEIO_open, &
+       FILEIO_check_coordinates, &
+       FILEIO_read, &
+       FILEIO_close
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
+    integer :: fid
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -247,29 +253,25 @@ contains
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
+       call FILEIO_open( fid, ATMOS_REFSTATE_IN_BASENAME )
+
+       if ( ATMOS_REFSTATE_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( fid, atmos=.true. )
+       end if
+
        ! 1D
-       call FILEIO_read( ATMOS_REFSTATE1D_pres(:),                           & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE1D_temp(:),                           & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'TEMP_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE1D_dens(:),                           & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE1D_pott(:),                           & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE1D_qv(:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'QV_ref',   'Z', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE1D_pres(:), fid, 'PRES_ref', 'Z', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE1D_temp(:), fid, 'TEMP_ref', 'Z', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE1D_dens(:), fid, 'DENS_ref', 'Z', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE1D_pott(:), fid, 'POTT_ref', 'Z', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE1D_qv(:),   fid, 'QV_ref',   'Z', step=1 )
 
        ! 3D
-       call FILEIO_read( ATMOS_REFSTATE_pres(:,:,:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref3D', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_temp(:,:,:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'TEMP_ref3D', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_dens(:,:,:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref3D', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_pott(:,:,:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref3D', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_qv(:,:,:),                               & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'QV_ref3D',   'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_pres(:,:,:), fid, 'PRES_ref3D', 'ZXY', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE_temp(:,:,:), fid, 'TEMP_ref3D', 'ZXY', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE_dens(:,:,:), fid, 'DENS_ref3D', 'ZXY', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE_pott(:,:,:), fid, 'POTT_ref3D', 'ZXY', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE_qv(:,:,:),   fid, 'QV_ref3D',   'ZXY', step=1 )
 
     else
        write(*,*) 'xxx [ATMOS_REFSTATE_read] refstate file is not specified.'

@@ -192,6 +192,8 @@ module mod_land_vars
   integer,  private              :: LAND_QA_comm
   real(RP), private, allocatable :: work_comm(:,:,:) ! for communication
 
+  logical,  private              :: LAND_RESTART_IN_CHECK_COORDINATES = .true.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -212,6 +214,7 @@ contains
     NAMELIST / PARAM_LAND_VARS /  &
        LAND_RESTART_IN_BASENAME,           &
        LAND_RESTART_IN_POSTFIX_TIMELABEL,  &
+       LAND_RESTART_IN_CHECK_COORDINATES,  &
        LAND_RESTART_OUTPUT,                &
        LAND_RESTART_OUT_BASENAME,          &
        LAND_RESTART_OUT_POSTFIX_TIMELABEL, &
@@ -372,7 +375,8 @@ contains
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_open
+       FILEIO_open, &
+       FILEIO_check_coordinates
     use mod_land_admin, only: &
        LAND_sw
     implicit none
@@ -397,6 +401,11 @@ contains
 
        call FILEIO_open( restart_fid, & ! [OUT]
                          basename     ) ! [IN]
+
+       if ( LAND_RESTART_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( restart_fid, land=.true. )
+       end if
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
     endif

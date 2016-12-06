@@ -57,6 +57,7 @@ module scale_landuse
   !++ Private parameters & variables
   !
   character(len=H_LONG), private :: LANDUSE_IN_BASENAME  = ''                  !< basename of the input  file
+  logical,               private :: LANDUSE_IN_CHECK_COORDINATES = .true.      !< switch for check of coordinates
   character(len=H_LONG), private :: LANDUSE_OUT_BASENAME = ''                  !< basename of the output file
   character(len=H_MID),  private :: LANDUSE_OUT_TITLE    = 'SCALE-RM LANDUSE'  !< title    of the output file
   character(len=H_MID),  private :: LANDUSE_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
@@ -75,14 +76,15 @@ contains
     implicit none
 
     namelist / PARAM_LANDUSE / &
-       LANDUSE_IN_BASENAME,  &
-       LANDUSE_OUT_BASENAME, &
-       LANDUSE_OUT_DTYPE,    &
-       LANDUSE_PFT_mosaic,   &
-       LANDUSE_PFT_nmax,     &
-       LANDUSE_AllOcean,     &
-       LANDUSE_AllLand,      &
-       LANDUSE_AllUrban,     &
+       LANDUSE_IN_BASENAME,          &
+       LANDUSE_IN_CHECK_COORDINATES, &
+       LANDUSE_OUT_BASENAME,         &
+       LANDUSE_OUT_DTYPE,            &
+       LANDUSE_PFT_mosaic,           &
+       LANDUSE_PFT_nmax,             &
+       LANDUSE_AllOcean,             &
+       LANDUSE_AllLand,              &
+       LANDUSE_AllUrban,             &
        LANDUSE_MosaicWorld
 
     integer :: ierr
@@ -175,6 +177,7 @@ contains
        FILEIO_open, &
        FILEIO_read, &
        FILEIO_flush, &
+       FILEIO_check_coordinates, &
        FILEIO_close
     use scale_comm, only: &
        COMM_vars8, &
@@ -210,6 +213,10 @@ contains
                          fid, 'FRAC_URBAN_abs', 'XY', step=1 ) ! [IN]
 
        call FILEIO_flush( fid )
+
+       if ( LANDUSE_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( fid )
+       end if
 
        call COMM_vars8( LANDUSE_frac_land (:,:), 1 )
        call COMM_vars8( LANDUSE_frac_lake (:,:), 2 )
