@@ -1,0 +1,232 @@
+\subsection{\SubsecOnlineNesting} \label{subsec:nest_online}
+%----------------------------------------------------------
+
+オンライン・ネスティング実行時の制約として、
+親領域と子領域の積分時間は一致している必要があり、
+かつ、親領域の時間ステップは子領域の時間ステップの倍数でなければならない。
+一方、親領域と子領域の間で鉛直層数、鉛直レベル、地図投影法、物理スキームは一致している必要はない。
+
+オンライン・ネスティング実験では全ての領域の計算を同時に実行する。
+現在は、親領域から子領域に対してデータの受け渡しを行う一方向ネスティングのみをサポートしている。
+また、サポートするネスティングの段数は、最大で10段までである。
+
+\scalerm のオンライン・ネスティング実験は、
+複数の領域を逐次的に時間積分計算を進めるのではなく、並列的に時間積分計算を行う。
+図\ref{fig_mpisplit}に示すイメージ図のように、
+与えられたMPIプロセスを分割してそれぞれの領域に分配し、
+各々の領域が独立したモデルのように計算を進める。
+後ほど説明するが、複数の領域を立ち上げるために実行時には\verb|launch.conf|という
+起動用の設定ファイルが別途必要になる。
+
+オンライン・ネスティングに必要な設定は複数ある他、設定の不具合があると計算が正常に行われない。
+設定の詳細は以下の説明を参照することとし、実際の設定ファイル(\verb|**.conf|)は
+第\ref{sec:basic_makeconf}節で説明する実験セット作成サポートツールで作成すること。
+
+
+\begin{figure}[ht]
+\begin{center}
+  \includegraphics[width=0.8\hsize]{./figure/mpisplit_nesting.eps}\\
+  \caption{オンライン・ネスティング実験のMPIプロセス配分イメージ. 全部で13のプロセスを立ち上げ、これを適切に分配することで、
+           Domain 1は$2 \times 2$の4-MPI並列、Domain 2は$3 \times 3$の9-MPI並列計算を行う。Domain 1からDomain 2へMPI通信
+           によってデータを受け渡ししながら時間積分計算を進める。}
+  \label{fig_mpisplit}
+\end{center}
+\end{figure}
+
+
+
+
+以下では、最も単純な2段ネスティングの例を示しながら、
+オンライン・ネスティング実験のための設定について説明する。
+%
+ここで説明するオンライン・ネスティング実験の設定を記述した設定ファイルは、サンプル設定ファイル
+\verb|${Tutorial_dir}/real/sample/USER.online-nesting.sh|を
+USER.shに置き換えて、実験セット準備ツールを実行した場合に作成される。
+説明を読み進める上で参考にしてもらいたい。
+また、すでに、親領域、子領域ともに地形/土地利用データの作成、
+及び初期値/境界値データの作成を終えているものとして説明を進める。
+それぞれの領域の地形データの作成手順は、第\ref{subsec:nest_topo}節に示したとおりであり、
+初期値/境界値データの作成は、通常計算（シングル領域計算）の場合と同じである。
+
+
+\subsubsection{設定ファイルの編集}
+まず、親領域と子領域のそれぞれの設定ファイル(\verb|run.***.conf|)において、
+オンライン・ネスティングのための設定を追加する。
+\namelist{PARAM_NEST}は、ネスティング実験のための設定項目である。\\
+
+\noindent {\gt \verb|run.d01.conf|の編集内容}\\
+{\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_NEST|                          & \\
+\verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
+\verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
+\verb| ONLINE_DOMAIN_NUM        = 1,      | & 領域の番号。外側から1番。\\
+\verb| ONLINE_IAM_PARENT        = .true., | & \\
+\verb| ONLINE_IAM_DAUGHTER      = .false.,| & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+\vspace{0.5cm}
+
+\noindent {\gt \verb|run.d02.conf|の編集内容}\\
+{\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_NEST| & \\
+\verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
+\verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
+\verb| ONLINE_DOMAIN_NUM        = 2,      | & 領域の番号。外側から1番。\\
+\verb| ONLINE_IAM_PARENT        = .false.,| & \\
+\verb| ONLINE_IAM_DAUGHTER      = .true., | & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+\noindent
+\nmitem{USE_NESTING = .true., OFFLINE = .false.}によって、
+オンライン・ネスティング実験であることが決定される。
+\nmitem{ONLINE_**}で始まる設定変数はオンライン・ネスティング実験
+専用の設定変数である。
+\nmitem{ONLINE_DOMAIN_NUM}は、
+領域のID番号であり、外側領域から内側領域へ順番に番号を振っていく。
+ここでは、親領域は1番、子領域は2番と設定する。
+\nmitem{ONLINE_IAM_PARENT}と\nmitem{ONLINE_IAM_DAUGHTER}は、各領域が複数のネスティング領域の中でどこに位置するかを示している。
+namelistの名前から明らかなように、
+\verb|ONLINE_IAM_PARENT=.true.|であれば、子領域にデータを受け渡し、
+\verb|ONLINE_IAM_DAUGHTER=.true.|であれば、境界値データは親領域から受け取るようになる。
+N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}に示す。
+
+\begin{table}[htb]
+\begin{center}
+\caption{N段ネスティング実験の設定例}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} 領域 & \verb|ONLINE_DOMAIN_NUM| & \verb|ONLINE_IAM_PARENT| & \verb|ONLINE_IAM_CHILD|\\ \hline
+ 最外領域 & 1               & .true.  & .false. \\ \hline
+ 中間領域 & 2\verb|〜|(N-1) & .true.  & .true. \\ \hline
+ 最内領域 & N               & .false. & .true. \\ \hline
+\end{tabularx}
+\label{tab:triple_nested}
+\end{center}
+\end{table}
+
+\noindent 最外領域は親領域としてのみ働き、最内領域は子領域としてのみ働く。
+一方、中間領域は最外領域に対しては子領域、
+最内領域に対しては親領域として働くため両方共\verb|.true.|となる。\\
+\nmitem{ONLINE_BOUNDARY_USE_QHYD}は、
+「側面境界条件として親領域の凝結物の値を使うかどうか」を指定する。
+外部入力データから側面境界条件を作成するときには通常使わないが、
+ネスティングの場合、領域間の物理スキームの違いがなかったり、解像度もそれほど大きく離れていないため、
+親領域で計算した凝結物を子領域の境界条件として与えることが可能である。
+流入境界付近での雲や降水の生成の遅れの影響を小さくすることが期待される。
+
+
+
+\subsubsection{launchファイルの編集}
+\label{subsubsec:launch}
+オンライン・ネスティング実験の実行には、
+\verb|run.***.conf|の他に、起動用設定ファイル\verb|launch.conf|が必要である。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_LAUNCHER|      & \\
+\verb| NUM_DOMAIN  = 2,|    & 領域の数\\
+\verb| PRC_DOMAINS = 4, 16,| & それぞれの領域で使用するMPIプロセス数 (領域の数だけ必要)\\
+\verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & それぞれの領域の設定ファイル (領域の数だけ必要)\\
+\verb|/|& \\
+\end{tabularx}
+}}}\\
+
+\noindent
+\nmitem{PRC_DOMAINS}と\nmitem{CONF_FILES}の記載順は対応している必要がある。
+上記の例の場合、親領域は4-MPI並列、子領域は16-MPI並列で実行するように指定されている。
+ここで指定するMPIプロセス数は、各々の領域の設定ファイル (\verb|run.***.conf|) で指定されている
+総MPIプロセス数(\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)と一致させなければならない。
+
+実行時には、シングル領域計算とは異なり、\verb|launch.conf|を引数に指定し、計算全体で使用するMPIプロセス数を指定して実行する。例えば、上記の例だとプロセス数は20となる。
+\begin{verbatim}
+ $ mpirun  -n  [プロセス数]  ./scale-rm  launch.conf
+\end{verbatim}
+
+実行にあたって注意することは、複数の領域の計算を同時に実行するため、
+出力ファイル(\verb|historyファイル, LOGファイル, restartファイル|など) の書き出し先が重複しないように設定する必要がある。
+例えば、\verb|historyファイル|は\verb|history_d01.pe***.nc, history_d02.pe***.nc|といったように
+領域毎にファイル名を変えることで、どの領域の出力データであるか判別がつくように指定する。
+出力ファイルのほか、入力ファイルである\verb|topoファイル, landuseファイル, boundaryファイル, initファイル|
+の名前も注意が必要である。
+
+実行時に次のようなエラーメッセージが出力されて計算が異常終了することがある。
+これは、子領域で設定された計算領域が親領域の計算領域よりも大きいことを意味するエラーメッセージである。
+``SW search''のエラーが出る場合は子領域の西側か南側が親領域の外側に出ており、``NE search''のエラーが出る場合は
+子領域の東側か北側が親領域の外側に出ていることを意味している。再度設定を確認し、地形・土地利用データ、および
+初期値/境界値作成からやり直すこと。\\
+
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{150mm}{l}
+\verb|xxx region of daughter domain is larger than that of parent: SW search| \\
+\end{tabularx}
+}}}\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{150mm}{l}
+\verb|xxx region of daughter domain is larger than that of parent: NE search| \\
+\end{tabularx}
+}}}\\
+
+
+
+\subsubsection{MPIプロセスの分配ガイドライン}
+%-------------------------------------------------------------------------
+オンライン・ネスティング実験は、図\ref{fig_mpisplit}に示した通り、複数の領域間でMPIプロセスを共有しない。
+つまり、それぞれのMPIプロセスは、どれか１つのネスティング領域の一部を担当することになる。
+このため、ユーザは、使用可能なMPIプロセス数のうち、各領域の計算にいくつのMPIプロセスを割り当てるかを
+決める必要がある。割り当て配分のバランスが悪いと、待ち時間が発生し、計算時間が余計にかかってしまう。
+これを避けるためには、領域毎に、時間積分にかかる1プロセスあたりの計算量（ここでは格子数と
+タイムステップ数の積として定義）を揃えればよい
+\footnote{正確を期すなら演算量を見積もる必要がある。}。
+具体的な見積もり方法は下記の通りである。
+
+ここではN個の領域(N段ネスティング)を考える。
+n番目の領域の{\XDIR}、{\YDIR}、{\ZDIR}の格子数をそれぞれ\verb|IMAX_n|、\verb|JMAX_n|、\verb|KMAX_n|
+と表し、時間積分のタイムステップ\nmitem{TIME_DT}を\verb|DT_n|と表すことにする。
+この時、一番外側領域(n=1)の時間積分のタイムステップ\verb|DT_1|を基準とし、この時間を積分するのに
+必要なn番目の領域の計算ステップ数は、
+\begin{eqnarray}
+ \verb|TSTEP_n| = \verb|DT_1| / \verb|DT_n|  \nonumber
+\end{eqnarray}
+と表される。領域全体での計算量は、領域が持つ格子数を掛けて
+\begin{eqnarray}
+ \verb|OPR_n| = \verb|IMAX_n| \times \verb|JMAX_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
+\end{eqnarray}
+と見積もられる。n番目の領域に配分するMPIプロセス数の目安は、全MPIプロセス数を \verb|MPI_total|として
+\begin{eqnarray}
+ \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} }
+\end{eqnarray}
+と見積もることができる。
+
+
+{\XDIR} と{\YDIR}に分配するプロセス数\nmitem{PRC_NUM_X, PRC_NUM_Y}には任意性が残るが、
+\verb|IMAX|と\verb|JMAX|の違いが小さくなるように設定する方がHALO領域を少なくすることが出来るため、
+計算機の演算性能を引き出しやすいと考えられる\footnote{ただし、京の場合のようにスレッド並列も併用するハイブリッド並列の場合には{\YDIR}の格子点数をある程度大きくしてスレッド間の演算量のインバランスを小さくする必要性も出てくる。}。
+
+
+以上の説明では、格子点数と積分時間のタイムステップだけを考慮して演算量比率を考えたが、
+実際の計算では、物理過程の計算時間間隔も領域毎に異なる可能性があり、
+領域内通信や領域間通信のMPI通信にかかる時間の違いも計算時間に影響を及ぼす。
+オンライン・ネスティングの設定では、
+最も計算負荷が高い領域(通常は最内領域)でMPI通信のための待ち時間が最小となるように
+プロセスを分配するのが効率的であることが多い。
+大規模計算や長期積分、繰り返し行うような実験の場合には、
+上記の方法で効率的な配分を見積もり、いくらかの微調整を行うことを勧める。
+
+
+
