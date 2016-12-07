@@ -44,6 +44,7 @@ module scale_atmos_phy_tb_mynn
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_TB_mynn_config
   public :: ATMOS_PHY_TB_mynn_setup
   public :: ATMOS_PHY_TB_mynn
 
@@ -59,57 +60,82 @@ module scale_atmos_phy_tb_mynn
   !
   !++ Private parameters & variables
   !
-  real(RP), parameter :: OneOverThree = 1.0_RP / 3.0_RP
-  real(RP), parameter :: TKE_min = 1.0E-10_RP
-  real(RP), parameter :: LT_min = 1.0E-6_RP
-  real(RP), parameter :: Us_min = 1.0E-6_RP
+  real(RP), private, parameter :: OneOverThree = 1.0_RP / 3.0_RP
+  real(RP), private, parameter :: TKE_min = 1.0E-10_RP
+  real(RP), private, parameter :: LT_min = 1.0E-6_RP
+  real(RP), private, parameter :: Us_min = 1.0E-6_RP
 
-  real(RP)              :: A1
-  real(RP)              :: A2
-  real(RP), parameter   :: B1 = 24.0_RP
-  real(RP), parameter   :: B2 = 15.0_RP
-  real(RP)              :: C1
-  real(RP), parameter   :: C2 = 0.75_RP
-  real(RP), parameter   :: C3 = 0.352_RP
-  real(RP), parameter   :: C5 = 0.2_RP
-  real(RP), parameter   :: G1 = 0.235_RP
-  real(RP)              :: G2
-  real(RP)              :: F1
-  real(RP)              :: F2
-  real(RP)              :: Rf1
-  real(RP)              :: Rf2
-  real(RP)              :: Rfc
-  real(RP)              :: AF12 !< A1 F1 / A2 F2
-  real(RP), parameter   :: PrN = 0.74_RP
+  real(RP), private              :: A1
+  real(RP), private              :: A2
+  real(RP), private, parameter   :: B1 = 24.0_RP
+  real(RP), private, parameter   :: B2 = 15.0_RP
+  real(RP), private              :: C1
+  real(RP), private, parameter   :: C2 = 0.75_RP
+  real(RP), private, parameter   :: C3 = 0.352_RP
+  real(RP), private, parameter   :: C5 = 0.2_RP
+  real(RP), private, parameter   :: G1 = 0.235_RP
+  real(RP), private              :: G2
+  real(RP), private              :: F1
+  real(RP), private              :: F2
+  real(RP), private              :: Rf1
+  real(RP), private              :: Rf2
+  real(RP), private              :: Rfc
+  real(RP), private              :: AF12 !< A1 F1 / A2 F2
+  real(RP), private, parameter   :: PrN = 0.74_RP
 
-  real(RP)              :: SQRT_2PI
-  real(RP)              :: RSQRT_2PI
-  real(RP)              :: RSQRT_2
+  real(RP), private              :: SQRT_2PI
+  real(RP), private              :: RSQRT_2PI
+  real(RP), private              :: RSQRT_2
 
-  integer :: KE_PBL
-  logical :: ATMOS_PHY_TB_MYNN_TKE_INIT = .false. !< set tke with that of level 2 at the first time if .true.
-  real(RP) :: ATMOS_PHY_TB_MYNN_N2_MAX = 1.E3_RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_NU_MIN = 1.E-6_RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000._RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_KH_MIN = 1.E-6_RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_KH_MAX = 10000._RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_Lt_MAX = 700._RP ! ~ 0.23 * 3 km
+
+  integer,  private :: I_TKE
+
+  integer,  private :: KE_PBL
+  logical,  private :: ATMOS_PHY_TB_MYNN_TKE_INIT = .false. !< set tke with that of level 2 at the first time if .true.
+  real(RP), private :: ATMOS_PHY_TB_MYNN_N2_MAX = 1.E3_RP
+  real(RP), private :: ATMOS_PHY_TB_MYNN_NU_MIN = 1.E-6_RP
+  real(RP), private :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000._RP
+  real(RP), private :: ATMOS_PHY_TB_MYNN_KH_MIN = 1.E-6_RP
+  real(RP), private :: ATMOS_PHY_TB_MYNN_KH_MAX = 10000._RP
+  real(RP), private :: ATMOS_PHY_TB_MYNN_Lt_MAX = 700._RP ! ~ 0.23 * 3 km
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_TB_mynn_config( &
+       TYPE_TB,  &
+       I_TKE_out )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_tracer, only: &
+       TRACER_regist
+    implicit none
+    character(len=*), intent(in)  :: TYPE_TB
+    integer,          intent(out) :: I_TKE_out
+
+    if ( TYPE_TB /= 'MYNN' ) then
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not MYNN. Check!'
+       call PRC_MPIstop
+    endif
+
+    call TRACER_regist( I_TKE, &
+         1, (/ 'TKE_MYNN' /), (/ 'turbulent kinetic energy (MYNN)' /), (/ 'm2/s2' /) )
+
+    I_TKE_out = I_TKE
+
+    return
+  end subroutine ATMOS_PHY_TB_mynn_config
+
+  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_TB_mynn_setup( &
-       TYPE_TB,       &
-       CDZ, CDX, CDY, &
-       CZ             )
+       CDZ, CDX, CDY, CZ )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
        PI => CONST_PI
     implicit none
-
-    character(len=*), intent(in) :: TYPE_TB
-
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
@@ -134,11 +160,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Mellor-Yamada Nakanishi-Niino Model'
-
-    if ( TYPE_TB /= 'MYNN' ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not MYNN. Check!'
-       call PRC_MPIstop
-    endif
 
 
     !--- read namelist
@@ -186,8 +207,7 @@ contains
   subroutine ATMOS_PHY_TB_mynn( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       tke,                                         & ! (inout)
-       tke_t, Nu, Ri, Pr, N2,                       & ! (out) diagnostic variables
+       RHOQ_t, Nu, Ri, Pr, N2,                      & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -218,7 +238,6 @@ contains
        I_UY, &
        I_XV
     use scale_comm, only: &
-       COMM_vars8, &
        COMM_vars, &
        COMM_wait
     use scale_atmos_phy_tb_common, only: &
@@ -246,8 +265,8 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
-    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency of TKE
+    real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QA) ! tendency of rho * QTRC
+
     real(RP), intent(out) :: Nu(KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Ri(KA,IA,JA) ! Richardson number
     real(RP), intent(out) :: Pr(KA,IA,JA) ! Plandtle number
@@ -295,6 +314,7 @@ contains
     real(RP) :: d(KA,IA,JA)
     real(RP) :: ap
     real(RP) :: tke_N(KA,IA,JA)
+    real(RP) :: tke
 
     real(RP) :: POTT(KA,IA,JA) !< potential temperature
     real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature
@@ -328,14 +348,7 @@ contains
     real(RP) :: bb
     real(RP) :: cc
 
-    real(RP) :: flux_z(KA,IA,JA)
-    real(RP) :: flux_x(KA,IA,JA)
-    real(RP) :: flux_y(KA,IA,JA)
-    real(RP) :: mflx
-    real(RP) :: advc
-
 #ifdef MORE_HIST
-    real(RP) :: adv(KA,IA,JA)
     real(RP) :: gen(KA,IA,JA)
 #endif
 
@@ -441,16 +454,6 @@ contains
     do i = IS, IE
     do k = KS-1, KE+1
        qflx_sgs_momz(k,i,j,ZDIR) = 0.0_RP
-    end do
-    end do
-    end do
-!OCL XFILL
-    do iq = I_QV+1, QA
-    do j = JS-1, JE
-    do i = IS  , IE
-    do k = KS-1, KE+1
-       qflx_sgs_rhoq(k,i,j,ZDIR,iq) = 0.0_RP
-    end do
     end do
     end do
     end do
@@ -565,7 +568,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE_PBL
-          q(k,i,j) = sqrt( max(tke(k,i,j), TKE_MIN)*2.0_RP )
+          q(k,i,j) = sqrt( max(QTRC(k,i,j,I_TKE), TKE_MIN)*2.0_RP )
        end do
        end do
        end do
@@ -588,21 +591,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE_PBL
-          tke(k,i,j) = max(q2_2(k,i,j) * 0.5_RP, TKE_MIN)
-          q(k,i,j) = sqrt( tke(k,i,j) * 2.0_RP )
+          tke = max(q2_2(k,i,j) * 0.5_RP, TKE_MIN)
+          q(k,i,j) = sqrt( tke * 2.0_RP )
        end do
        end do
        end do
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-       do k = KE_PBL+1, KE
-          tke(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
-       call COMM_vars8(tke, 1)
-       call COMM_wait (tke, 1)
 
        ATMOS_PHY_TB_MYNN_TKE_INIT = .false.
     end if
@@ -863,103 +856,74 @@ contains
        end do
 
 
-       ! integration QV
-       iq = I_QV
+       ! TRACER
+       do iq = 1, QA
+
+          if ( iq == I_TKE ) then
+             qflx_sgs_rhoq(:,:,:,ZDIR,iq) = 0.0_RP
+             cycle
+          end if
+
+          if ( .not. TRACER_ADVC(iq) ) cycle
+
 !OCL INDEPENDENT
-       do j = JJS, JJE
-       do i = IIS, IIE
-          d(KS,i,j) = Qw(KS,i,j) + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
-          do k = KS+1, KE_PBL
-             d(k,i,j) = Qw(k,i,j)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             if ( iq == I_QV ) then
+                d(KS,i,j) = QTRC(KS,i,j,iq) &
+                          + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+             else
+                d(KS,i,j) = QTRC(KS,i,j,iq)
+             end if
+             do k = KS+1, KE_PBL
+                d(k,i,j) = QTRC(k,i,j,iq)
+             end do
+             call diffusion_solver( &
+                  phiN(:,i,j),                            & ! (out)
+                  a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
+                  KE_PBL                                  ) ! (in)
           end do
-          call diffusion_solver( &
-               phiN(:,i,j),                     & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
-               KE_PBL                           ) ! (in)
-       end do
-       end do
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
-          do k = KS, KE_PBL-1
-             qflx_sgs_rhoq(k,i,j,ZDIR,iq) = - 0.5_RP & ! 1/2
-                  * ( RHOKh(k,i,j) + RHOKh(k+1,i,j) ) &
-                  * J33G * ( phiN(k+1,i,j) - phiN(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XYW)
           end do
-          do k = KE_PBL, KE
-             qflx_sgs_rhoq(k,i,j,ZDIR,iq) = 0.0_RP
+
+          do j = JJS, JJE
+          do i = IIS, IIE
+             qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
+             do k = KS, KE_PBL-1
+                qflx_sgs_rhoq(k,i,j,ZDIR,iq) = - 0.5_RP & ! 1/2
+                     * ( RHOKh(k,i,j) + RHOKh(k+1,i,j) ) &
+                     * J33G * ( phiN(k+1,i,j) - phiN(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XYW)
+             end do
+             do k = KE_PBL, KE
+                qflx_sgs_rhoq(k,i,j,ZDIR,iq) = 0.0_RP
+             end do
           end do
+          end do
+
        end do
-       end do
 
 
-       ! time integration tke
-
+       ! TKE
        do j = JJS, JJE
        do i = IIS, IIE
-       do k = KS , KE_PBL-1
-          mflx = J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) ) &
-               + J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j)+MOMX(k+1,i-1,j)+MOMX(k+1,i,j) ) / MAPF(i,j,2,I_XY) &
-               + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j)+MOMY(k+1,i,j-1)+MOMY(k+1,i,j) ) / MAPF(i,j,1,I_XY)
-          flux_z(k,i,j) = 0.5_RP * (    mflx  * ( tke(k+1,i,j)+tke(k,i,j) ) &
-                                   -abs(mflx) * ( tke(k+1,i,j)-tke(k,i,j) ) )
-       end do
-       end do
-       end do
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS   , KE_PBL
-          mflx = MOMX(k,i,j) * GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY)
-          flux_x(k,i,j) = 0.5_RP * (    mflx  * ( tke(k,i+1,j)+tke(k,i,j) ) &
-                                   -abs(mflx) * ( tke(k,i+1,j)-tke(k,i,j) ) )
-       end do
-       end do
-       end do
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS   , KE_PBL
-          mflx = MOMY(k,i,j) * GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV)
-          flux_y(k,i,j) = 0.5_RP * (    mflx  * ( tke(k,i,j+1)+tke(k,i,j) ) &
-                                   -abs(mflx) * ( tke(k,i,j+1)-tke(k,i,j) ) )
-       end do
-       end do
-       end do
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-          advc = ( ( flux_z(KS,i,j)                    ) * RCDZ(KS) &
-                 + ( flux_x(KS,i,j) - flux_x(KS,i-1,j) ) * RCDX(i) &
-                 + ( flux_y(KS,i,j) - flux_y(KS,i,j-1) ) * RCDY(j) ) &
-                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / ( GSQRT(KS,i,j,I_XYZ) * DENS(KS,i,j) )
-          d(KS,i,j) = tke(KS,i,j) + dt * ( Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j)) &
-                                     - advc )
+          tke = q(KS,i,j)**2 * 0.5
+          d(KS,i,j) = tke &
+                    + dt * Nu(KS,i,j) * ( dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j) )
 #ifdef MORE_HIST
-          adv(KS,i,j) = advc
-          gen(KS,i,j) = Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j))
+          gen(KS,i,j) = Nu(KS,i,j) * ( dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j) )
 #endif
           do k = KS+1, KE_PBL-1
-             advc = ( ( flux_z(k,i,j) - flux_z(k-1,i,j) ) * RCDZ(k) &
-                    + ( flux_x(k,i,j) - flux_x(k,i-1,j) ) * RCDX(i) &
-                    + ( flux_y(k,i,j) - flux_y(k,i,j-1) ) * RCDY(j) ) &
-                    * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / ( GSQRT(k,i,j,I_XYZ) * DENS(k,i,j) )
-             d(k,i,j) = tke(k,i,j) &
-                  + dt * ( Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j)) &
-                         - advc )
+             tke = q(k,i,j)**2 * 0.5
+             d(k,i,j) = tke &
+                      + dt * Nu(k,i,j) * ( dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j) )
 #ifdef MORE_HIST
-             adv(k,i,j) = advc
-             gen(k,i,j) = Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
+             gen(k,i,j) = Nu(k,i,j) * ( dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j) )
 #endif
           end do
-          advc = ( (                    - flux_z(KE_PBL-1,i,j) ) * RCDZ(KE_PBL) &
-                 + ( flux_x(KE_PBL,i,j) - flux_x(KE_PBL,i-1,j) ) * RCDX(i) &
-                 + ( flux_y(KE_PBL,i,j) - flux_y(KE_PBL,i,j-1) ) * RCDY(j) ) &
-                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / ( GSQRT(KE_PBL,i,j,I_XYZ) * DENS(KE_PBL,i,j) )
-          d(KE_PBL,i,j) = tke(KE_PBL,i,j) + dt * ( Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j)) &
-                                             - advc )
+          tke = q(KE_PBL,i,j)**2 * 0.5
+          d(KE_PBL,i,j) = tke &
+               + dt * Nu(KE_PBL,i,j) * ( dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j) )
 #ifdef MORE_HIST
-          adv(KE_PBL,i,j) = advc
-          gen(KE_PBL,i,j) = Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j))
+          gen(KE_PBL,i,j) = Nu(KE_PBL,i,j) * ( dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j) )
 #endif
        end do
        end do
@@ -989,57 +953,26 @@ contains
                tke_N(:,i,j),     & ! (out)
                a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
                KE_PBL                           ) ! (in)
-#ifdef DEBUG
-          do k = KS+1, KE_PBL-1
-             tke(1,i,j) = d(k,i,j) &
-               + ( ( (tke_N(k+1,i,j)-tke_N(k,i,j)) * RFDZ(k) / GSQRT(k,i,j,I_XYW) &
-                   * (NU(k+1,i,j)*DENS(k+1,i,j)+NU(k,i,j)*DENS(k,i,j))*1.5_RP &
-                   - (tke_N(k,i,j)-tke_N(k-1,i,j)) * RFDZ(k-1) / GSQRT(k-1,i,j,I_XYW) &
-                   * (NU(k,i,j)*DENS(k,i,j)+NU(k-1,i,j)*DENS(k-1,i,j))*1.5_RP ) &
-                 * RCDZ(k) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) &
-                 - 2.0_RP*tke_N(k,i,j) * q(k,i,j) / (B1 * l(k,i,j)) ) &
-                 * dt
-             if ( tke_N(k,i,j) > 0.1_RP .AND. abs(tke(1,i,j) - tke_N(k,i,j))/tke_N(k,i,j) > 1e-10_RP ) then
-                advc = ( tke(k,i,j) - d(k,i,j) ) / dt + Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
-                write(*,*)k,i,j,tke(1,i,j),tke_N(k,i,j), tke(k,i,j),nu(k,i,j),dudz2(k,i,j),n2(k,i,j),pr(k,i,j),advc
-                open(90, file="mynn.dat")
-                write(90,*)KE_PBL-KS+1
-                write(90,*)dt, B1
-                write(90,*)tke(KS:KE_PBL,i,j)
-                write(90,*)q(KS:KE_PBL,i,j)
-                write(90,*)l(KS:KE_PBL,i,j)
-                write(90,*)rcdz(KS:KE_PBL)
-                write(90,*)rfdz(KS:KE_PBL)
-                write(90,*)nu(KS:KE_PBL,i,j)
-                write(90,*)dens(KS:KE_PBL,i,j)
-                write(90,*)dudz2(KS:KE_PBL,i,j)
-                write(90,*)n2(KS:KE_PBL,i,j)
-                write(90,*)pr(KS:KE_PBL,i,j)
-                close(90)
-                call abort
-             end if
-          end do
-#endif
           do k = KS, KE_PBL
-             tke_t(k,i,j) = ( max(tke_N(k,i,j), TKE_min) - tke(k,i,j) ) / dt
+             RHOQ_t(k,i,j,I_TKE) = ( max(tke_N(k,i,j), TKE_min) - QTRC(k,i,j,I_TKE) ) * DENS(k,i,j) / dt
           end do
           do k = KE_PBL+1, KE
-             tke_t(k,i,j) = 0.0_RP
+             RHOQ_t(k,i,j,I_TKE) = 0.0_RP
           end do
 
        end do
        end do
+
+
     end do
     end do
 
 #ifdef MORE_HIST
-    adv(KE_PBL+1:KE,:,:) = 0.0_RP
     gen(KE_PBL+1:KE,:,:) = 0.0_RP
     dudz2(KE_PBL+1:KE,:,:) = 0.0_RP
     l(KE_PBL+1:KE,:,:) = 0.0_RP
     POTV(KE_PBL+1:KE,:,:) = 0.0_RP
     POTL(KE_PBL+1:KE,:,:) = 0.0_RP
-    call HIST_in(adv, 'TKE_advc', 'advection of TKE', 'm2/s3', nohalo=.true.)
     call HIST_in(gen, 'TKE_gen', 'generation of TKE', 'm2/s3', nohalo=.true.)
     call HIST_in(dudz2, 'dUdZ2', 'dudz2', 'm2/s2', nohalo=.true.)
     call HIST_in(l, 'L_mix', 'minxing length', 'm', nohalo=.true.)

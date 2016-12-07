@@ -36,6 +36,7 @@ module scale_atmos_phy_tb_dns
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_TB_dns_config
   public :: ATMOS_PHY_TB_dns_setup
   public :: ATMOS_PHY_TB_dns
 
@@ -58,15 +59,33 @@ module scale_atmos_phy_tb_dns
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_TB_dns_config( &
+       TYPE_TB,  &
+       I_TKE_out )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_tracer, only: &
+       TRACER_regist
+    implicit none
+    character(len=*), intent(in)  :: TYPE_TB
+    integer,          intent(out) :: I_TKE_out
+
+    if ( TYPE_TB /= 'DNS' ) then
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
+       call PRC_MPIstop
+    endif
+
+    I_TKE_out = -1
+
+    return
+  end subroutine ATMOS_PHY_TB_dns_config
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_dns_setup( &
-       TYPE_TB,       &
-       CDZ, CDX, CDY, &
-       CZ             )
+       CDZ, CDX, CDY, CZ )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-
-    character(len=*), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
@@ -81,11 +100,6 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Eddy Viscocity Model for DNS'
-
-    if ( TYPE_TB /= 'DNS' ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
-       call PRC_MPIstop
-    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -105,7 +119,7 @@ contains
   subroutine ATMOS_PHY_TB_dns( &
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       tke, tke_t, nu, Ri, Pr, N2,                  &
+       RHOQ_t, nu, Ri, Pr, N2,                      &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
@@ -133,12 +147,12 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
-    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency TKE
-    real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
-    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
-    real(RP), intent(out) :: N2 (KA,IA,JA) ! squared Brunt-Vaisala frequency
+    real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QA) ! tendency of rho * QTRC
+
+    real(RP), intent(out) :: nu(KA,IA,JA) ! eddy viscosity (center)
+    real(RP), intent(out) :: Ri(KA,IA,JA) ! Richardson number
+    real(RP), intent(out) :: Pr(KA,IA,JA) ! Prantle number
+    real(RP), intent(out) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -178,8 +192,6 @@ contains
     POTT(:,:,:) = UNDEF
 #endif
 
-    tke_t(:,:,:) = 0.0_RP
-    tke(:,:,:) = 0.0_RP
     nu (:,:,:) = 0.0_RP
     Ri (:,:,:) = 0.0_RP
     Pr (:,:,:) = 1.0_RP
@@ -350,6 +362,8 @@ contains
 
     !##### Tracers #####
     do iq = 1, QA
+
+    if ( .not. TRACER_ADVC(iq) ) cycle
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1

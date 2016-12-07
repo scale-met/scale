@@ -28,6 +28,7 @@ module mod_atmos_phy_tb_driver
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_TB_driver_config
   public :: ATMOS_PHY_TB_driver_setup
   public :: ATMOS_PHY_TB_driver_resume
   public :: ATMOS_PHY_TB_driver
@@ -47,8 +48,26 @@ module mod_atmos_phy_tb_driver
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_TB_driver_config
+    use scale_atmos_phy_tb, only: &
+       ATMOS_PHY_TB_config
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_sw_phy_tb
+
+    if ( ATMOS_sw_phy_tb ) then
+       call ATMOS_PHY_TB_config( ATMOS_PHY_TB_TYPE )
+    end if
+
+    return
+  end subroutine ATMOS_PHY_TB_driver_config
+
+  !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_TB_driver_setup
+    use scale_const, only: &
+       EPS => CONST_EPS
     use scale_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
@@ -57,38 +76,54 @@ contains
        CZ  => REAL_CZ
     use scale_process, only: &
        PRC_MPIstop
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_TB_TYPE, &
-       ATMOS_sw_phy_tb
     use scale_atmos_phy_tb, only: &
-       ATMOS_PHY_TB_setup
+       ATMOS_PHY_TB_setup, &
+       I_TKE
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_tb
+    use mod_atmos_vars, only: &
+       QTRC
     use mod_atmos_phy_tb_vars, only: &
-       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     implicit none
 
-!    NAMELIST / PARAM_ATMOS_PHY_TB / &
+    real(RP) :: ATMOS_PHY_TB_TKE_INIT
+
+    NAMELIST / PARAM_ATMOS_PHY_TB / &
+         ATMOS_PHY_TB_TKE_INIT
 
     integer :: k, i, j
-!    integer :: ierr
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
 
-!    !--- read namelist
-!    rewind(IO_FID_CONF)
-!    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB,iostat=ierr)
-!    if( ierr < 0 ) then !--- missing
-!       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-!    elseif( ierr > 0 ) then !--- fatal error
-!       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB. Check!'
-!       call PRC_MPIstop
-!    endif
-!    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB)
+    ATMOS_PHY_TB_TKE_INIT = EPS
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB)
 
 
     ! initialize
+    if ( I_TKE > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, IE
+          QTRC(k,i,j,I_TKE) = ATMOS_PHY_TB_TKE_INIT
+       enddo
+       enddo
+       enddo
+    end if
+
     do j = JS, JE
     do i = IS, IE
        MOMZ_t_TB(KS-1,i,j) = 0.0_RP
@@ -96,19 +131,9 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TKE_t_TB(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
     if ( ATMOS_sw_phy_tb ) then
-
        ! setup library component
-       call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE, & ! [IN]
-                                CDZ, CDX, CDY, CZ  ) ! [IN]
+       call ATMOS_PHY_TB_setup( CDZ, CDX, CDY, CZ ) ! [IN]
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
@@ -155,7 +180,8 @@ contains
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
     use scale_atmos_phy_tb, only: &
-       ATMOS_PHY_TB
+       ATMOS_PHY_TB, &
+       I_TKE
     use scale_atmos_phy_tb_common, only: &
        calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
        calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
@@ -180,10 +206,7 @@ contains
        MOMX_t_TB => ATMOS_PHY_TB_MOMX_t, &
        MOMY_t_TB => ATMOS_PHY_TB_MOMY_t, &
        RHOT_t_TB => ATMOS_PHY_TB_RHOT_t, &
-       RHOQ_t_TB => ATMOS_PHY_TB_RHOQ_t, &
-       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
-       TKE       => ATMOS_PHY_TB_TKE,    &
-       NU        => ATMOS_PHY_TB_NU
+       RHOQ_t_TB => ATMOS_PHY_TB_RHOQ_t
     use mod_atmos_phy_sf_vars, only: &
        SFLX_MW => ATMOS_PHY_SF_SFLX_MW, &
        SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
@@ -201,6 +224,7 @@ contains
     real(RP) :: QFLX_RHOT(KA,IA,JA,3)
     real(RP) :: QFLX_RHOQ(KA,IA,JA,3,QA)
 
+    real(RP) :: Nu(KA,IA,JA) ! eddy viscosity
     real(RP) :: Ri(KA,IA,JA) ! Richardson number
     real(RP) :: Pr(KA,IA,JA) ! Prandtl number
     real(RP) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
@@ -208,6 +232,7 @@ contains
     integer :: JJS, JJE
     integer :: IIS, IIE
 
+    real(RP) :: tend(KA,IA,JA)
     real(RP) :: total ! dummy
 
     integer :: k, i, j, iq
@@ -215,52 +240,17 @@ contains
 
     if ( update_flag ) then
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          TKE(k,i,j) = max( TKE(k,i,j) + TKE_t_TB(k,i,j) * dt_TB, 0.0_RP )
-       end do
-       end do
-       end do
+       RHOQ_t_TB = 0.0_RP
 
-       do j = JS, JE
-       do i = IS, IE
-          TKE(1:KS-1,i,j) = TKE(KS,i,j)
-          TKE(KE+1:KA,i,j) = TKE(KE,i,j)
-       end do
-       end do
-
-       call COMM_vars8( TKE(:,:,:), 1 )
-       call COMM_wait ( TKE(:,:,:), 1 )
-
-       call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
-                          QFLX_MOMX, & ! [OUT]
-                          QFLX_MOMY, & ! [OUT]
-                          QFLX_RHOT, & ! [OUT]
-                          QFLX_RHOQ, & ! [OUT]
-                          TKE,       & ! [INOUT]
-                          TKE_t_TB,  & ! [OUT]
-                          NU,        & ! [OUT]
-                          Ri,        & ! [OUT]
-                          Pr,        & ! [OUT]
-                          N2,        & ! [OUT]
-                          MOMZ,      & ! [IN]
-                          MOMX,      & ! [IN]
-                          MOMY,      & ! [IN]
-                          RHOT,      & ! [IN]
-                          DENS,      & ! [IN]
-                          QTRC,      & ! [IN]
-                          SFLX_MW,   & ! [IN]
-                          SFLX_MU,   & ! [IN]
-                          SFLX_MV,   & ! [IN]
-                          SFLX_SH,   & ! [IN]
-                          SFLX_Q(:,:,I_QV), & ! [IN]
-                          GSQRT,     & ! [IN]
-                          J13G,      & ! [IN]
-                          J23G,      & ! [IN]
-                          J33G,      & ! [IN]
-                          MAPF,      & ! [IN]
-                          dt_TB      ) ! [IN]
+       call ATMOS_PHY_TB( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,    & ! [OUT]
+                          QFLX_RHOT, QFLX_RHOQ,               & ! [OUT]
+                          RHOQ_t_TB,                          & ! [INOUT]
+                          Nu, Ri, Pr, N2,                     & ! [OUT]
+                          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, & ! [IN]
+                          SFLX_MW, SFLX_MU, SFLX_MV,          & ! [IN]
+                          SFLX_SH, SFLX_Q(:,:,I_QV),          & ! [IN]
+                          GSQRT, J13G, J23G, J33G, MAPF,      & ! [IN]
+                          dt_TB                               ) ! [IN]
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -307,19 +297,21 @@ contains
        end do
 
        do iq = 1, QA
+          if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
+
           do JJS = JS, JE, JBLOCK
           JJE = JJS+JBLOCK-1
           do IIS = IS, IE, IBLOCK
           IIE = IIS+IBLOCK-1
-             call calc_tend_phi ( RHOQ_t_TB(:,:,:,iq),    & ! (out)
-                                  QFLX_RHOQ(:,:,:,:,iq),  & ! (in)
-                                  GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
-                                  IIS, IIE, JJS, JJE ) ! (in)
+             call calc_tend_phi( tend(:,:,:), & ! (out)
+                                 QFLX_RHOQ(:,:,:,:,iq),  & ! (in)
+                                 GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                                 IIS, IIE, JJS, JJE ) ! (in)
+             RHOQ_t_TB(:,:,:,iq) = RHOQ_t_TB(:,:,:,iq) + tend(:,:,:)
           end do
           end do
        end do
 
-       call HIST_in( TKE(:,:,:), 'TKE', 'turburent kinetic energy', 'm2/s2', nohalo=.true. )
        call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , nohalo=.true. )
        call HIST_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , nohalo=.true. )
        call HIST_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL'  , nohalo=.true. )
@@ -331,6 +323,7 @@ contains
        call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K.kg/m3/s', nohalo=.true. )
 
        do iq = 1, QA
+          if ( .not. TRACER_ADVC(iq) ) cycle
           call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB',                      &
                         'RHO*'//trim(TRACER_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
        enddo
@@ -381,7 +374,6 @@ contains
           call STAT_total( total, MOMX_t_TB(:,:,:), 'MOMX_t_TB' )
           call STAT_total( total, MOMY_t_TB(:,:,:), 'MOMY_t_TB' )
           call STAT_total( total, RHOT_t_TB(:,:,:), 'RHOT_t_TB' )
-          call STAT_total( total, TKE(:,:,:), 'TKE' )
           call STAT_total( total, Nu(:,:,:), 'Nu' )
           call STAT_total( total, Ri(:,:,:), 'Ri' )
           call STAT_total( total, Pr(:,:,:), 'Pr' )

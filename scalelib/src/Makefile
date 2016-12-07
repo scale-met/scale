@@ -91,8 +91,7 @@ else
 endif
 
 ifeq ($(TB),)
-  OBJS_TB = scale_atmos_phy_tb_dummy.o	\
-            scale_atmos_phy_tb_smg.o	\
+  OBJS_TB = scale_atmos_phy_tb_smg.o	\
             scale_atmos_phy_tb_d1980.o	\
             scale_atmos_phy_tb_dns.o	\
             scale_atmos_phy_tb_mynn.o	\

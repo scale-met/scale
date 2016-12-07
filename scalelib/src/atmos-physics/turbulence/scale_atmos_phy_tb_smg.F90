@@ -55,6 +55,7 @@ module scale_atmos_phy_tb_smg
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_TB_smg_config
   public :: ATMOS_PHY_TB_smg_setup
   public :: ATMOS_PHY_TB_smg
 
@@ -86,6 +87,8 @@ module scale_atmos_phy_tb_smg
   real(RP), private, parameter :: twoOverThree = 2.0_RP / 3.0_RP
   real(RP), private, parameter :: FourOverThree = 4.0_RP / 3.0_RP
 
+  integer,  private :: I_TKE = -1
+
   real(RP), private :: ATMOS_PHY_TB_SMG_NU_MAX     = 10000.0_RP
   logical,  private :: ATMOS_PHY_TB_SMG_implicit   = .false.
   logical,  private :: ATMOS_PHY_TB_SMG_bottom     = .false.
@@ -96,15 +99,39 @@ module scale_atmos_phy_tb_smg
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_TB_smg_config( &
+       TYPE_TB,  &
+       I_TKE_out )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_tracer, only: &
+       TRACER_regist
+    implicit none
+    character(len=*), intent(in)  :: TYPE_TB
+    integer,          intent(out) :: I_TKE_out
+
+    if ( TYPE_TB /= 'SMAGORINSKY' ) then
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
+       call PRC_MPIstop
+    endif
+
+    call TRACER_regist( I_TKE, &
+         1, (/ 'TKE_SMG' /), (/ 'turbulent kinetic energy (Smagorinsky)' /), (/ 'm2/s2' /), &
+         advc = (/ .false. /) )
+
+    I_TKE_out = I_TKE
+
+    return
+  end subroutine ATMOS_PHY_TB_smg_config
+
+  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_TB_smg_setup( &
-       TYPE_TB,       &
-       CDZ, CDX, CDY, &
-       CZ             )
+       CDZ, CDX, CDY, CZ )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-
-    character(len=*), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
@@ -132,11 +159,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
-
-    if ( TYPE_TB /= 'SMAGORINSKY' ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
-       call PRC_MPIstop
-    endif
 
     ATMOS_PHY_TB_SMG_Cs = Cs
 
@@ -201,7 +223,7 @@ contains
   subroutine ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       tke, tke_t, nu, Ri, Pr, N2,                  &
+       RHOQ_t, nu, Ri, Pr, N2,                      &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
@@ -249,12 +271,12 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
-    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency TKE
-    real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
-    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
-    real(RP), intent(out) :: N2 (KA,IA,JA) ! squared Brunt-Vaisala frequency
+    real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QA) ! tendency of rho * QTRC
+
+    real(RP), intent(out) :: nu(KA,IA,JA)  ! eddy viscosity (center)
+    real(RP), intent(out) :: Ri(KA,IA,JA)  ! Richardson number
+    real(RP), intent(out) :: Pr(KA,IA,JA)  ! Prantle number
+    real(RP), intent(out) :: N2(KA,IA,JA)  ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -277,7 +299,8 @@ contains
     real(DP), intent(in)  :: dt
 
     ! diagnostic variables
-    real(RP) :: POTT   (KA,IA,JA)
+    real(RP) :: TKE (KA,IA,JA)
+    real(RP) :: POTT(KA,IA,JA)
 
     ! deformation rate tensor
     real(RP) :: S33_C (KA,IA,JA) ! (cell center)
@@ -314,8 +337,6 @@ contains
     qflx_sgs_momy(:,:,:,:)   = UNDEF
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
     qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
-
-    tke_t(:,:,:) = UNDEF
 
     nu (:,:,:) = UNDEF
     tke(:,:,:) = UNDEF
@@ -467,10 +488,10 @@ contains
        do i = IIS, IIE+1
        do k = KS, KE
 #ifdef DEBUG
-       call CHECK( __LINE__, nu(k,i,j) )
-       call CHECK( __LINE__, nu_fact(k,i,j) )
+          call CHECK( __LINE__, nu(k,i,j) )
+          call CHECK( __LINE__, nu_fact(k,i,j) )
 #endif
-          tke(k,i,j) = ( nu(k,i,j) * Cs / Ck )**2 / nu_fact(k,i,j)
+          TKE(k,i,j) = ( nu(k,i,j) * Cs / Ck )**2 / nu_fact(k,i,j)
        enddo
        enddo
        enddo
@@ -662,12 +683,12 @@ contains
        call CHECK( __LINE__, S11_C(k,i,j) )
        call CHECK( __LINE__, S22_C(k,i,j) )
        call CHECK( __LINE__, S33_C(k,i,j) )
-       call CHECK( __LINE__, tke(k,i,j) )
+       call CHECK( __LINE__, TKE(k,i,j) )
 #endif
           qflx_sgs_momx(k,i,j,XDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
                * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
-             + twoOverThree * tke(k,i,j) * tke_fact )
+             + twoOverThree * TKE(k,i,j) * tke_fact )
        enddo
        enddo
        enddo
@@ -830,12 +851,12 @@ contains
        call CHECK( __LINE__, S11_C(k,i,j) )
        call CHECK( __LINE__, S22_C(k,i,j) )
        call CHECK( __LINE__, S33_C(k,i,j) )
-       call CHECK( __LINE__, tke(k,i,j) )
+       call CHECK( __LINE__, TKE(k,i,j) )
 #endif
           qflx_sgs_momy(k,i,j,YDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
                * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
-             + twoOverThree * tke(k,i,j) * tke_fact)
+             + twoOverThree * TKE(k,i,j) * tke_fact)
        enddo
        enddo
        enddo
@@ -942,10 +963,7 @@ contains
     !##### Tracers #####
     do iq = 1, QA
 
-       if ( .not. TRACER_ADVC(iq) ) then
-          qflx_sgs_rhoq(:,:,:,:,iq) = 0.0_RP
-          cycle
-       end if
+       if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -972,7 +990,13 @@ contains
     iq = IUNDEF
 #endif
 
-       tke_t = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOQ_t(k,i,j,I_TKE) = ( TKE(k,i,j) - QTRC(k,i,j,I_TKE) ) * DENS(k,i,j) / dt
+    end do
+    end do
+    end do
 
     return
   end subroutine ATMOS_PHY_TB_smg

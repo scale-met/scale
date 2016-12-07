@@ -944,36 +944,50 @@ contains
     do iq = 1, QA
 #endif
 
-       call PROF_rapstart("DYN_Large_Numfilter", 2)
+       if ( TRACER_ADVC(iq) ) then
 
-       if ( ND_COEF_Q == 0.0_RP ) then
+          call PROF_rapstart("DYN_Large_Numfilter", 2)
+
+          if ( ND_COEF_Q == 0.0_RP ) then
 !OCL XFILL
-          num_diff_q(:,:,:,:) = 0.0_RP
+             num_diff_q(:,:,:,:) = 0.0_RP
+          else
+             call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
+                                              DENS00, QTRC(:,:,:,iq),                 & ! [IN]
+                                              CDZ, CDX, CDY, dtl,                     & ! [IN]
+                                              REF_qv, iq,                             & ! [IN]
+                                              ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
+          endif
+
+          call PROF_rapend  ("DYN_Large_Numfilter", 2)
+
+          call PROF_rapstart("DYN_Tracer_Tinteg", 2)
+
+          call ATMOS_DYN_tinteg_tracer( &
+               QTRC(:,:,:,iq), & ! (inout)
+               QTRC0(:,:,:,iq), RHOQ_t(:,:,:,iq), &! (in)
+               DENS00, DENS, & ! (in)
+               mflx_hi, num_diff_q, & ! (in)
+               GSQRT, MAPF(:,:,:,I_XY), & ! (in)
+               CDZ, RCDZ, RCDX, RCDY,             & ! (in)
+               dtl, & ! (in)
+               Llast .AND. FLAG_FCT_TRACER, & ! (in)
+               FLAG_FCT_ALONG_STREAM         ) ! (in)
+
+          call PROF_rapend  ("DYN_Tracer_Tinteg", 2)
+
        else
-          call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
-                                           DENS00, QTRC(:,:,:,iq),                 & ! [IN]
-                                           CDZ, CDX, CDY, dtl,                     & ! [IN]
-                                           REF_qv, iq,                             & ! [IN]
-                                           ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
-       endif
 
-       call PROF_rapend  ("DYN_Large_Numfilter", 2)
+          do j = JS, JE
+          do i = IS, JE
+          do k = KS, KE
+             QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS00(k,i,j) &
+                              + RHOQ_t(k,i,j,iq)                ) / DENS(k,i,j)
+          end do
+          end do
+          end do
 
-       call PROF_rapstart("DYN_Tracer_Tinteg", 2)
-
-       call ATMOS_DYN_tinteg_tracer( &
-            QTRC(:,:,:,iq), & ! (inout)
-            QTRC0(:,:,:,iq), RHOQ_t(:,:,:,iq), &! (in)
-            DENS00, DENS, & ! (in)
-            mflx_hi, num_diff_q, & ! (in)
-            GSQRT, MAPF(:,:,:,I_XY), & ! (in)
-            CDZ, RCDZ, RCDX, RCDY,             & ! (in)
-            dtl, & ! (in)
-            Llast .AND. FLAG_FCT_TRACER, & ! (in)
-            FLAG_FCT_ALONG_STREAM         ) ! (in)
-
-
-       call PROF_rapend  ("DYN_Tracer_Tinteg", 2)
+       end if
 
        if ( USE_AVERAGE ) then
           QTRC_av(:,:,:,iq) = QTRC(:,:,:,iq)
