@@ -15,7 +15,8 @@ BIBTEX   = bibtex
 DVIPDF   = dvipdfmx -p a4
 HTMLBIN  = pandoc --to=html
 
-VERSION  = $(shell cat ../../../src/VERSION)
+#VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
+VERSION  = $(shell cat ./VERSION)
 
 SRCS = $(wildcard *.tex)
 
