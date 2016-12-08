@@ -219,6 +219,7 @@ module scale_atmos_phy_mp_tomita08
   ! Explicit ice generation
   logical,  private              :: only_liquid  = .false.
   real(RP), private              :: sw_useicegen = 0.0_RP
+  real(RP), private, parameter   :: Nc_ihtr      = 300.0_RP  !< cloud number concentration for heterogeneous ice nucleation [1/cc]
   real(RP), private, parameter   :: Di_max       = 500.E-6_RP
   real(RP), private, parameter   :: Di_a         = 11.9_RP
 
@@ -1642,7 +1643,7 @@ contains
           sw = ( 0.5_RP + sign(0.5_RP, temc + 40.0_RP ) ) &
              * ( 0.5_RP + sign(0.5_RP, 0.0_RP -  temc ) ) ! if -40C < T < 0C, sw=1
 
-          dq = sw * ( dens / DWATR * QTRC0(k,i,j,I_QC)**2 / (Nc(k,i,j)*1.E+6) ) &
+          dq = sw * ( dens / DWATR * QTRC0(k,i,j,I_QC)**2 / (Nc_ihtr*1.E+6) ) &
                   * B_frz * ( exp(-A_frz*temc) - 1.0_RP ) * dt
           qtmp = QTRC0(k,i,j,I_QC) - dq
           qtmp = max( qtmp, 0.0_RP )
