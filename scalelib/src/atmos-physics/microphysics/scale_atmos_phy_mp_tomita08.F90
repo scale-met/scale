@@ -186,7 +186,7 @@ module scale_atmos_phy_mp_tomita08
 
   real(RP), private              :: beta_saut  =  6.E-3_RP   !< auto-conversion factor beta  for ice
   real(RP), private              :: gamma_saut = 60.E-3_RP   !< auto-conversion factor gamma for ice
-  real(RP), private              :: beta_gaut  =  1.E-3_RP   !< auto-conversion factor beta  for snow
+  real(RP), private              :: beta_gaut  =  0.0_RP     !< auto-conversion factor beta  for snow
   real(RP), private              :: gamma_gaut = 90.E-3_RP   !< auto-conversion factor gamma for snow
   real(RP), private              :: qicrt_saut =  0.0_RP     !< mixing ratio threshold for Psaut [kg/kg]
   real(RP), private              :: qscrt_gaut =  6.E-4_RP   !< mixing ratio threshold for Pgaut [kg/kg]
