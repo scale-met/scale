@@ -208,17 +208,23 @@ contains
              enddo
 
              do k = KS, Ktop
-                RHOT(k,i,j)      = RHOT(k,i,j)      +      dt*DTSEC * DENS(k,i,j)
-                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + max( dq*DTSEC, -QTRC(k,i,j,I_QV) )
+                RHOT(k,i,j)      = RHOT(k,i,j)      + dt * DTSEC * DENS(k,i,j)
+
+                dq = max( dq, -QTRC(k,i,j,I_QV)/DTSEC )
+                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + dq * DTSEC
+                DENS(k,i,j)      = DENS(k,i,j)      + dq * DTSEC * DENS(k,i,j)
              enddo
 
           enddo
           enddo
 
-          call COMM_vars8( RHOT(:,:,:),      1)
-          call COMM_vars8( QTRC(:,:,:,I_QV), 2)
-          call COMM_wait ( RHOT(:,:,:),      1)
-          call COMM_wait ( QTRC(:,:,:,I_QV), 2)
+          call COMM_vars8( DENS(:,:,:),      1)
+          call COMM_vars8( RHOT(:,:,:),      2)
+          call COMM_vars8( QTRC(:,:,:,I_QV), 3)
+
+          call COMM_wait ( DENS(:,:,:),      1)
+          call COMM_wait ( RHOT(:,:,:),      2)
+          call COMM_wait ( QTRC(:,:,:,I_QV), 3)
        endif
 
     endif
