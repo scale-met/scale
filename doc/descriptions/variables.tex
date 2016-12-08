@@ -1,0 +1,48 @@
+\chapter{Variables in the source code}
+
+
+\begin{table}[htbp]
+  \caption{Variables in atmos/mod\_atmos\_dyn\_fent\_fct.f90.}
+  \begin{tabular}{ll}\hline
+    DENS(k,i,j) & $\rho_{i,j,k}$ \\
+    MOMZ(k,i,j) & $(\rho w)_{i,j,k+\frac{1}{2}}$ \\
+    MOMX(k,i,j) & $(\rho u)_{i+\frac{1}{2},j,k}$ \\
+    MOMY(k,i,j) & $(\rho v)_{i,j+\frac{1}{2},k}$ \\
+    RHOT(k,i,j) & $(\rho\theta)_{i,j,k}$ \\
+    QTRC(k,i,j,iq) & $q_{i,j,k}$ \\
+    PRES(k,i,j) & $p_{i,j,k}$ \\
+    VELZ(k,i,j) & $\bar{w}_{i,j,k+\frac{1}{2}}$ \\
+    VELX(k,i,j) & $\bar{u}_{i+\frac{1}{2},j,k}$ \\
+    VELY(k,i,j) & $\bar{v}_{i,j+\frac{1}{2},k}$ \\
+    POTT(k,i,j) & $\theta_{i,j,k}$ \\
+    QDRY(k,i,j) & $q_d$ \\
+    Rtot(k,i,j) & $R^*$ \\
+    num\_diff(k,i,j) & $F_{i+\frac{1}{2}}$ \\
+    qflx\_hi(k,i,j) & $\bar{q}^{high}$ \\
+    qflx\_lo(k,i,j) & $\bar{q}^{low}$ \\
+    qjpls(k,i,j) & $Q^+_{i,j,k}$ \\
+    qjmns(k,i,j) & $Q^-_{i,j,k}$ \\
+    pjpls(k,i,j) & $P^+_{i,j,k}$ \\
+    pjmns(k,i,j) & $P^-_{i,j,k}$ \\
+    rjpls(k,i,j) & $R^+_{i,j,k}$ \\
+    rjmns(k,i,j) & $R^-_{i,j,k}$ \\
+  \hline\end{tabular}
+\end{table}
+
+
+\begin{table}[htbp]
+  \caption{Variables in atmos/mod\_atmos\_phy\_tb\_smg.f90.}
+  \begin{tabular}{ll}\hline
+    tke(k,i,j) & $TKE$ \\
+    nu(k,i,j), nu\_*(k,i,j) & $\nu_{SGS}$ \\
+    Ri(k,i,j) & $Ri$ \\
+    Pr(k,i,j) & $Pr$ \\
+    S33\_*(k,i,j) & $S_{33}$ \\
+    S11\_*(k,i,j) & $S_{11}$ \\
+    S22\_*(k,i,j) & $S_{22}$ \\
+    S31\_*(k,i,j) & $S_{31}$ \\
+    S12\_*(k,i,j) & $S_{12}$ \\
+    S23\_*(k,i,j) & $S_{23}$ \\
+    qflx\_sgs(k,i,j) & $\bar{\rho}\tau_{ij}$, $\bar{\rho}\tau^*_{ij}$ \\
+  \hline\end{tabular}
+\end{table}

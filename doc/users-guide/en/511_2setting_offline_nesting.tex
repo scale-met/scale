@@ -1,0 +1,186 @@
+\subsection{\SubsecOflineNesting} \label{subsec:nest_offline}
+%------------------------------------------------------
+
+オフラインネスティング実験を行う上での実験設定の制限事項は、以下の2点である。
+\begin{itemize}
+ \item 子領域の計算範囲は、親領域の計算範囲の内側に位置している必要がある。
+ \item 子領域の積分期間は、親領域の積分期間と同じもしくはそれより短い必要がある。
+\end{itemize}
+
+~\\
+また、オフライン・ネスティング実験の実行過程は次のようになる。
+\begin{enumerate}
+ \item 親領域の時間積分計算を行う。
+ \item 親領域のhistory出力ファイルを用いて子領域の初期値/境界値を作成する。
+ \item 作成した初期値/境界値を用いて子領域の時間積分計算を行う。
+\end{enumerate}
+
+
+以下、この流れに沿って説明を進める。
+親領域と子領域それぞれについて、\verb|pp.***.conf|、\verb|init.***.conf|、
+そして\verb|run.***.conf|ファイルを事前に作成し、
+親領域、子領域ともに地形・土地利用データの作成 (\verb|scale-rm_pp|) が、
+親領域については、初期値/境界値データの作成 (\verb|scale-rm_init|) が終わっていることを想定して説明を進める。
+ここで説明するオフライン・ネスティング実験の設定を記述した設定ファイルは、
+サンプル設定ファイル
+\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-parent.sh|および
+\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-child.sh|
+をそれぞれUSER.shに置き換えて、実験セット一式準備ツールを実行すると作成される。
+説明を読み進める上で参考にしてもらいたい。
+
+\subsubsection{親領域の時間積分計算を行う}
+基本的には通常のシングルドメインの場合と同じ方法で実行すればよいが、
+\verb|run.***.conf|の設定で次の5点に注意する必要がある。
+
+\begin{itemize}
+ \item 子領域の計算に必要な変数全てを、親領域の計算時にhistory出力する。
+ \item 親領域のhistory出力間隔を適度に細かくとること。
+ \item 親領域のhistory出力データは、モデル面のデータを出力すること。
+ \item 親領域の計算領域を子領域へ伝える「カタログファイル」(以下参照のこと)を出力する。
+ \item (子領域の計算開始時刻が親領域と同じ場合) 親領域のhistory出力データにt=0の値を含めること。
+\end{itemize}
+
+
+この設定を\verb|run.d01.conf|に適用すると下記のようになる。
+\textcolor{blue}{青文字}で示した部分が、上記の注意点・変更点に対応する部分である。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_DOMAIN_CATALOGUE| & \\
+\verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue_d01.txt",| & カタログファイルのファイル名\\
+\textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & カタログファイルを出力。\\
+\verb|/| &\\
+ & \\
+\verb|&PARAM_HISTORY| &\\
+\verb| HISTORY_DEFAULT_BASENAME  = "history",| & \\
+\textcolor{blue}{\verb| HISTORY_DEFAULT_TINTERVAL = 900.D0,|} & historyデータの出力時間間隔。\\
+\verb| HISTORY_DEFAULT_TUNIT     = "SEC",|   & \verb|HISTORY_DEFAULT_TINTERVAL|の単位。\\
+\verb| HISTORY_DEFAULT_TAVERAGE  = .false.,| & \\
+\verb| HISTORY_DEFAULT_DATATYPE  = "REAL4",| & \\
+\textcolor{blue}{\verb| HISTORY_DEFAULT_ZCOORD   = "model",|}  & モデル面データを出力。\\
+\textcolor{blue}{\verb| HISTORY_OUTPUT_STEP0      = .true.,|}  & t=0の値を出力に含める。 \\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+カタログファイルの出力設定を\verb|.true.|にすると、\verb|latlon_domain_catalogue_d01.txt|というカタログファイルが出力される。
+実験セット準備ツールを使用した場合、同ファイルがppディレクトリに出力されているので、そちらを参照すること。
+この中には、親領域の計算で各MPIプロセスが担当する計算領域の四隅の緯度・経度が記述されている。
+\nmitem{HISTORY_DEFAULT_TINTERVAL}はhistoryデータの出力間隔を示し、
+子領域の側面境界条件を更新したい時間間隔に設定する。
+短い時間間隔でデータを出力する場合には、ディスクの空き容量にも注意が必要である。
+その他、\namelist{PARAM_HISTORY}の各項目の詳細は、第\ref{sec:output}節を参照のこと。
+
+また、子領域の初期値/境界値データ作成に必要な変数全てを
+\verb|run.d01.conf|ファイルの\namelist{HISTITEM}に追加しておく必要がある。
+オフライン・ネスティングに必要な変数は、下記の通りである。
+設定が完了したら、\verb|scale-rm|を実行して親領域の時間積分計算を行う。
+
+\begin{alltt}
+  T2, Q2, MSLP, DENS, MOMZ, MOMX, MOMY, RHOT
+  LAND_SFC_TEMP, URBAN_SFC_TEMP, OCEAN_SFC_TEMP
+  OCEAN_ALB_LW, OCEAN_ALB_SW, LAND_ALB_LW, LAND_ALB_SW
+  OCEAN_TEMP, OCEAN_SFC_Z0M, LAND_TEMP, LAND_WATER
+(親の雲微物理モデルに合わせて出力; 例えばTomita08なら全て)
+  QV, QC, QR, QI, QS, QG
+(親の雲微物理モデルに合わせて出力; 例えばTomita08なら不要)
+  NC, NR, NI, NS, NG
+\end{alltt}
+
+
+
+%-------------------------------------------------------------
+\subsubsection{親領域の出力ファイルを用いて子領域の初期値/境界値を作成する}
+次に、計算が終わった親領域のhistoryデータを用いて、子領域の初期値/境界値を作成する。
+実行するプログラムは、通常の初期値/境界値作成と同じ \verb|scale-rm_init| だが、
+\verb|init.d02.conf|を下記のように設定する。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\textcolor{blue}{\verb|&PARAM_NEST|} & \\
+\textcolor{blue}{\verb| USE_NESTING               = .true.,|} & \\
+\textcolor{blue}{\verb| OFFLINE                   = .true.,|} & \\
+\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_KMAX       = 36,|} & \verb|run.d01.conf|の\verb|KMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_IMAX       = 45,|} & \verb|run.d01.conf|の\verb|IMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_JMAX       = 45,|} & \verb|run.d01.conf|の\verb|JMAX|\\
+\textcolor{blue}{\verb| OFFLINE_PARENT_LKMAX      = 5,|}  & \verb|run.d01.conf|の\verb|LKMAX|\\
+\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue_d01.txt",|} & 親領域を実行した時に作成したカタログファイル\\
+\textcolor{blue}{\verb|/|} &\\
+ & \\
+\verb|&PARAM_MKINIT_REAL_ATMOS| &\\
+\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
+\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
+\verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
+\verb| BASENAME_BOUNDARY   = "boundary_d01",| &\\
+\textcolor{blue}{\verb| BOUNDARY_UPDATE_DT  = 900.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
+\verb|/| &\\
+ & \\
+\verb|&PARAM_MKINIT_REAL_OCEAN| &\\
+\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
+\verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
+\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
+\verb|/| &\\
+ & \\
+\verb|&PARAM_MKINIT_REAL_LAND| &\\
+\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
+\verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
+\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
+\verb|/| &\\
+\end{tabularx}
+}}}\\
+
+
+\scalerm の出力データから初期値境界値を作成する場合は、
+\nmitem{FILETYPE_ORG}に\verb|"SCALE-RM"|を指定する。
+\nmitem{BOUNDARY_UPDATE_DT}は、基本的に、親領域の設定ファイル(\verb|run.d01.conf|)の\\
+\nmitem{HISTORY_DEFAULT_TINTERVAL}と同じ設定を記述する。
+%
+\namelist{PARAM_NEST}の項目は、ネスティング実験のための設定項目である。
+オフライン・ネスティングでは、\nmitem{USE_NESTNG=.true., OFFLINE=.true.}と設定する。
+\nmitem{OFFLINE_PARENT_***} で始まる6つの設定変数は親領域の設定を記述する変数である。
+親領域の設定ファイル(\verb|run.d01.conf|) を参照して正しく設定すること。\\
+
+
+設定の編集が完了したら、\verb|scale-rm_init|を実行し、子領域の初期値/境界値を作成する。
+実行時に下記のようなメッセージが表示されて計算が止まる場合は、
+子領域の計算領域が親領域の計算領域の外側に取られている部分がある。
+この場合は、各領域の大きさや領域中心の設定を見直す必要がある。\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{150mm}{l}
+\verb|xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD| \\
+\verb|xxx -- LONGITUDINAL direction over the limit| \\
+\end{tabularx}
+}}}\\
+
+
+
+\subsubsection{作成した初期値/境界値を用いて子領域の時間積分計算を行う}
+初期値/境界値作成が終わったら、子領域の計算 (\verb|scale-rm|) を実行する。
+子領域の実行は、通常の現実大気実験と同じである。
+1点だけ注意すべき点として、
+\verb|run.d02.conf|の\namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_UPDATE_DT}が
+初期値/境界値作成で使用した親領域のhistoryデータ出力間隔に合っているか確認すること。
+現在のところ、この設定に親領域と子領域間で不整合あっても警告やエラーメッセージが発せられないまま、
+計算が進み、場合によっては正常終了してしまうため注意が必要である。
+
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{l}
+\verb|&PARAM_ATMOS_BOUNDARY| \\
+\verb|　 　 　〜　中略　〜|\\
+\textcolor{blue}{\verb| ATMOS_BOUNDARY_UPDATE_DT  = 900.D0,|} \\
+\verb|/| \\
+\end{tabularx}
+}}}\\
+
+\noindent
+多段のオフライン・ネスティング実験を行いたい場合は、以上の過程を繰り返せばよい。
+つまり、子領域として時間積分計算した結果を再度、親領域と見立てて、
+さらに内側の孫領域の初期値/境界値作成を行なえばよい。

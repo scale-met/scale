@@ -1,0 +1,216 @@
+\chapter{The detal numerics}
+\section{4th order central differnce}
+{
+\footnotesize
+The 4th order central difference is given by
+\begin{eqnarray}
+&& \frac{\partial \phi}{\partial x}
+=\frac{-\phi_{i+2}+8\phi_{i+1}-8\phi_{i-1}+\phi_{i+2}}{12\Delta x} = 0
+\end{eqnarray}
+where
+\begin{eqnarray}
+&& \phi_{i+2} = \phi_{i}
++ 2 \Delta x \left(\frac{\partial \phi}{\partial x}\right)_{i}
++ 2 \Delta x^2 \left(\frac{\partial^2 \phi}{\partial x^2}\right)_{i}
++ \frac{4 \Delta x^3}{3} \left(\frac{\partial^3 \phi}{\partial x^3}\right)_{i}
++ \frac{2 \Delta x^4}{3} \left(\frac{\partial^3 \phi}{\partial x^4}\right)_{i}
++ O(\Delta x^5)\\
+&& \phi_{i+1} = \phi_{i}
++ \Delta x \left(\frac{\partial \phi}{\partial x}\right)_{i}
++ \frac{\Delta x^2}{2} \left(\frac{\partial^2 \phi}{\partial x^2}\right)_{i}
++ \frac{\Delta x^3}{6} \left(\frac{\partial^3 \phi}{\partial x^3}\right)_{i}
++ \frac{\Delta x^4}{24} \left(\frac{\partial^3 \phi}{\partial x^4}\right)_{i}
++ O(\Delta x^5)\\
+&& \phi_i = \phi_i\\
+&& \phi_{i-1} = \phi_{i}
+- \Delta x \left(\frac{\partial \phi}{\partial x}\right)_{i}
++ \frac{\Delta x^2}{2} \left(\frac{\partial^2 \phi}{\partial x^2}\right)_{i}
+- \frac{\Delta x^3}{6} \left(\frac{\partial^3 \phi}{\partial x^3}\right)_{i}
++ \frac{\Delta x^4}{24} \left(\frac{\partial^3 \phi}{\partial x^4}\right)_{i}
++ O(\Delta x^5)\\
+&& \phi_{i+2} = \phi_{i}
+- 2 \Delta x \left(\frac{\partial \phi}{\partial x}\right)_{i}
++ 2 \Delta x^2 \left(\frac{\partial^2 \phi}{\partial x^2}\right)_{i}
+- \frac{4 \Delta x^3}{3} \left(\frac{\partial^3 \phi}{\partial x^3}\right)_{i}
++ \frac{2 \Delta x^4}{3} \left(\frac{\partial^3 \phi}{\partial x^4}\right)_{i}
++ O(\Delta x^5)
+\end{eqnarray}
+Therefore,
+\begin{eqnarray}
+&&
+\frac{-\phi_{i+2}+8\phi_{i+1}-8\phi_{i-1}+\phi_{i+2}}{12\Delta x}
+= \left(\frac{\partial \phi}{\partial x}\right)_{i}+ O(\Delta x^4)\\
+&&
+\frac{(-\phi_{i+2}+7\phi_{i+1}+7\phi_{i}-\phi_{i-1})-
+(-\phi_{i+1}+7\phi_{i}+7\phi_{i-1}-\phi_{i-2})}{12\Delta x}
+= \left(\frac{\partial \phi}{\partial x}\right)_{i}+ O(\Delta x^4)
+\end{eqnarray}
+
+
+\section{Flux Corrected Transport scheme}
+Equation (\ref{eq:tracer_int}) can be written as
+\begin{eqnarray}
+%%
+\left(\rho q\right)^{n+1}_{i,j,k} 
+&=& \left(\rho q\right)^{n}_{i,j,k}
+- \frac{1}{\Delta x \Delta y \Delta z}
+\big[ \nonumber\\
+&+&
+\left[ C_{i+\frac{1}{2},j,k} F_{i+\frac{1}{2},j,k}^{high}
++ \left( 1 - C_{i+\frac{1}{2},j,k}\right) F_{i+\frac{1}{2},j,k}^{low}\right]\nonumber\\
+&-&
+\left[ C_{i-\frac{1}{2},j,k} F_{i-\frac{1}{2},j,k}^{high}
++ \left( 1 - C_{i-\frac{1}{2},j,k}\right) F_{i-\frac{1}{2},j,k}^{low}\right]\nonumber\\
+&+&
+\left[ C_{i,j+\frac{1}{2},k} F_{i,j+\frac{1}{2},k}^{high}
++ \left( 1 - C_{i,j+\frac{1}{2},k}\right) F_{i,j+\frac{1}{2},k}^{low}\right]\nonumber\\
+&-&
+\left[ C_{i,j-\frac{1}{2},k} F_{i,j-\frac{1}{2},k}^{high}
++ \left( 1 - C_{i,j-\frac{1}{2},k}\right) F_{i,j-\frac{1}{2},k}^{low}\right]\nonumber\\
+&+&
+\left[ C_{i,j,k+\frac{1}{2}} F_{i,j,k+\frac{1}{2}}^{high}
++ \left( 1 - C_{i,j,k+\frac{1}{2}}\right) F_{i,j,k+\frac{1}{2}}^{low}\right]\nonumber\\
+&-&
+\left[ C_{i,j,k-\frac{1}{2}} F_{i,j,k-\frac{1}{2}}^{high}
++ \left( 1 - C_{i,j,k-\frac{1}{2}}\right) F_{i,j,k-\frac{1}{2}}^{low}\right]\nonumber\\
+\big]
+\label{eq:1step_integ_tracer}
+\end{eqnarray}
+where
+\begin{eqnarray}
+  F_{i+\frac{1}{2},j,k}^{high,low} &=& \Delta t \Delta y \Delta z (\rho u)_{i+\frac{1}{2},j,k} q_{i+\frac{1}{2},j,k}^{high,low}\\
+  F_{i,j+\frac{1}{2},k}^{high,low} &=& \Delta t \Delta z \Delta x (\rho u)_{i,j+\frac{1}{2},k} q_{i,j+\frac{1}{2},k}^{high,low}\\
+  F_{i,j,k+\frac{1}{2}}^{high,low} &=& \Delta t \Delta x \Delta y (\rho u)_{i,j,k+\frac{1}{2}} q_{i,j,k+\frac{1}{2}}^{high,low}
+\end{eqnarray}
+The anti-diffusive flux are defined as
+\begin{eqnarray}
+  A_{i+\frac{1}{2},j,k} &=& F_{i+\frac{1}{2},j,k}^{high}-F_{i+\frac{1}{2},j,k}^{low}\\
+  A_{i,j+\frac{1}{2},k} &=& F_{i,j+\frac{1}{2},k}^{high}-F_{i,j+\frac{1}{2},k}^{low}\\
+  A_{i,j,k+\frac{1}{2}} &=& F_{i,j,k+\frac{1}{2}}^{high}-F_{i,j,k+\frac{1}{2}}^{low}
+\end{eqnarray}
+
+Equation (\ref{eq:1step_integ_tracer}) can be rewritten as
+\begin{eqnarray}
+%%
+\left(\rho q\right)^{n+1}_{i,j,k} 
+&=& \left(\rho q\right)^{n}_{i,j,k}
+- \frac{1}{\Delta x \Delta y \Delta z}
+\big[ \nonumber\\
+&+&
+\left[ F_{i+\frac{1}{2},j,k}^{low}
++ C_{i+\frac{1}{2},j,k}  A_{i+\frac{1}{2},j,k}\right]\nonumber\\
+&-&
+\left[ F_{i-\frac{1}{2},j,k}^{low}
++ C_{i-\frac{1}{2},j,k}  A_{i-\frac{1}{2},j,k}\right]\nonumber\\
+&+&
+\left[ F_{i,j+\frac{1}{2},k}^{low}
++ C_{i,j+\frac{1}{2},k}  A_{i,j+\frac{1}{2},k}\right]\nonumber\\
+&-&
+\left[ F_{i,j-\frac{1}{2},k}^{low}
++ C_{i,j-\frac{1}{2},k}  A_{i,j-\frac{1}{2},k}\right]\nonumber\\
+&+&
+\left[ F_{i,j,k+\frac{1}{2}}^{low}
++ C_{i,j,k+\frac{1}{2}}  A_{i,j,k+\frac{1}{2}}\right]\nonumber\\
+&-&
+\left[ F_{i,j,k-\frac{1}{2}}^{low}
++ C_{i,j,k-\frac{1}{2}}  A_{i,j,k-\frac{1}{2}}\right]\nonumber\\
+\big]
+\label{eq:1step_integ_tracer2}
+\end{eqnarray}
+In practice, we calculate Eq.(\ref{eq:1step_integ_tracer2}) by the 
+following steps:
+\begin{enumerate}
+%
+\item The tentative values are calculated by using the low order flux:
+\begin{eqnarray}
+\left(\rho q\right)^{\dagger}_{i,j,k} 
+&=& \left(\rho q\right)^{n}_{i,j,k}\nonumber\\
+&-& \frac{1}{\Delta x \Delta y \Delta z}
+\left[
++ F_{i+\frac{1}{2},j,k}^{low}-F_{i-\frac{1}{2},j,k}^{low}
++ F_{i,j+\frac{1}{2},k}^{low}-F_{i,j-\frac{1}{2},k}^{low}
++ F_{i,j,k+\frac{1}{2}}^{low}-F_{i,j,k-\frac{1}{2}}^{low}
+\right]
+\end{eqnarray}
+%
+\item Allowable maximum and minimum values are calculated:
+\begin{eqnarray}
+\left(\rho q\right)^{\max}_{i,j,k}
+&=& \max [\nonumber\\
+&&\max( \left(\rho q\right)^{\dagger}_{i,j,k},\left(\rho q\right)^{n}_{i,j,k} ),\nonumber\\
+&&\max( \left(\rho q\right)^{\dagger}_{i-1,j,k},\left(\rho q\right)^{n}_{i-1,j,k} ),\nonumber\\
+&&\max( \left(\rho q\right)^{\dagger}_{i+1,j,k},\left(\rho q\right)^{n}_{i+1,j,k} ),\nonumber\\
+&&\max( \left(\rho q\right)^{\dagger}_{i,j-1,k},\left(\rho q\right)^{n}_{i,j-1,k} ),\nonumber\\
+&&\max( \left(\rho q\right)^{\dagger}_{i,j+1,k},\left(\rho q\right)^{n}_{i,j+1,k} ),\nonumber\\
+&&\max( \left(\rho q\right)^{\dagger}_{i,j,k-1},\left(\rho q\right)^{n}_{i,j,k-1} ),\nonumber\\
+&&\max( \left(\rho q\right)^{\dagger}_{i,j,k+1},\left(\rho q\right)^{n}_{i,j,k+1} ) \nonumber\\
+&&]\\
+\left(\rho q\right)^{\min}_{i,j,k}
+&=& \min [\nonumber\\
+&&\min( \left(\rho q\right)^{\dagger}_{i,j,k},\left(\rho q\right)^{n}_{i,j,k} ),\nonumber\\
+&&\min( \left(\rho q\right)^{\dagger}_{i-1,j,k},\left(\rho q\right)^{n}_{i-1,j,k} ),\nonumber\\
+&&\min( \left(\rho q\right)^{\dagger}_{i+1,j,k},\left(\rho q\right)^{n}_{i+1,j,k} ),\nonumber\\
+&&\min( \left(\rho q\right)^{\dagger}_{i,j-1,k},\left(\rho q\right)^{n}_{i,j-1,k} ),\nonumber\\
+&&\min( \left(\rho q\right)^{\dagger}_{i,j+1,k},\left(\rho q\right)^{n}_{i,j+1,k} ),\nonumber\\
+&&\min( \left(\rho q\right)^{\dagger}_{i,j,k-1},\left(\rho q\right)^{n}_{i,j,k-1} ),\nonumber\\
+&&\min( \left(\rho q\right)^{\dagger}_{i,j,k+1},\left(\rho q\right)^{n}_{i,j,k+1} ) \nonumber\\
+&&]
+\end{eqnarray}
+\item Several values for the flux limiter are calculated:
+\begin{eqnarray}
+P_{i,j,k}^{+} &=& 
+-\min ( 0, A_{i+\frac{1}{2},j,k} ) + \max( 0, A_{i-\frac{1}{2},j,k} )\nonumber\\
+&&
+-\min ( 0, A_{i,j+\frac{1}{2},k} ) + \max( 0, A_{i,j-\frac{1}{2},k} )\nonumber\\
+&&
+-\min ( 0, A_{i,j,k+\frac{1}{2}} ) + \max( 0, A_{i,j,k-\frac{1}{2}} )\\
+P_{i,j,k}^{-} &=& 
+-\max ( 0, A_{i+\frac{1}{2},j,k} ) + \min( 0, A_{i-\frac{1}{2},j,k} )\nonumber\\
+&&
+-\max ( 0, A_{i,j+\frac{1}{2},k} ) + \min( 0, A_{i,j-\frac{1}{2},k} )\nonumber\\
+&&
+-\max ( 0, A_{i,j,k+\frac{1}{2}} ) + \min( 0, A_{i,j,k-\frac{1}{2}} )\\
+\end{eqnarray}
+\begin{eqnarray}
+Q_{i,j,k}^{+} &=& 
+\left[\left(\rho q\right)^{\max}_{i,j,k} - \left(\rho q\right)^{\dagger}_{i,j,k} \right]
+\Delta x \Delta y \Delta z\\
+Q_{i,j,k}^{-} &=& 
+\left[\left(\rho q\right)^{\dagger}_{i,j,k}-\left(\rho q\right)^{\min}_{i,j,k} \right]
+\Delta x \Delta y \Delta z
+\end{eqnarray}
+\begin{eqnarray}
+R_{i,j,k}^{+} &=& 
+\begin{cases}
+        \min( 1, Q_{i,j,k}^{+}/P_{i,j,k}^{+} ) & {\rm if~} P_{i,j,k}^{+}>0\\
+        0 & {\rm if~} P_{i,j,k}^{+}=0\\
+\end{cases}
+\\
+R_{i,j,k}^{-} &=& 
+\begin{cases}
+        \min( 1, Q_{i,j,k}^{-}/P_{i,j,k}^{-} ) & {\rm if~} P_{i,j,k}^{-}>0\\
+        0 & {\rm if~} P_{i,j,k}^{-}=0\\
+\end{cases}
+\end{eqnarray}
+\item The flux limters at the cell wall are calculated:
+\begin{eqnarray}
+C_{i+\frac{1}{2},j,k} &=& 
+\begin{cases}
+        \min( R_{i+1,j,k}^{+}, R_{i,j,k}^{-} ) & {\rm if~} A_{i+\frac{1}{2},j,k}^{-}\geq 0\\
+        \min( R_{i,j,k}^{+}, R_{i+1,j,k}^{-} ) & {\rm if~} A_{i+\frac{1}{2},j,k}^{-}<0\\
+\end{cases}
+\\
+C_{i,j+\frac{1}{2},k} &=& 
+\begin{cases}
+        \min( R_{i,j+1,k}^{+}, R_{i,j,k}^{-} ) & {\rm if~} A_{i,j+\frac{1}{2},k}^{-}\geq 0\\
+        \min( R_{i,j,k}^{+}, R_{i,j+1,k}^{-} ) & {\rm if~} A_{i,j+\frac{1}{2},k}^{-}<0\\
+\end{cases}
+\\
+C_{i,j,k+\frac{1}{2}} &=& 
+\begin{cases}
+        \min( R_{i,j,k+1}^{+}, R_{i,j,k}^{-} ) & {\rm if~} A_{i,j,k+\frac{1}{2}}^{-}\geq 0\\
+        \min( R_{i,j,k}^{+}, R_{i,j,k+1}^{-} ) & {\rm if~} A_{i,j,k+\frac{1}{2}}^{-}<0\\
+\end{cases}
+\end{eqnarray}
+\end{enumerate}
+

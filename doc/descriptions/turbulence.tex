@@ -1,0 +1,490 @@
+%\documentclass{article}
+%\usepackage{amsmath}
+%\begin{document}
+
+\section{Turbulence}
+{\bf \Large
+\begin{tabular}{ccc}
+\hline
+  Correnspoinding author & : & Seiya Nishizawa\\
+\hline
+\end{tabular}
+}
+
+\def\half{\frac{1}{2}}
+
+\subsection{Spatial filter}
+
+The governing euqations are the followings:
+\begin{align}
+  \frac{\partial\rho}{\partial t} + \frac{\partial u_i \rho}{\partial x_i}
+  &= 0 \\
+  \frac{\partial\rho u_i}{\partial t}
+  + \frac{\partial u_j \rho u_i}{\partial x_j}
+  &= -\frac{\partial p}{\partial x_i} + g \rho \delta_{i3} \\
+  \frac{\partial\rho \theta}{\partial t}
+  + \frac{\partial u_i \rho \theta}{\partial x_i}
+  &= Q
+\end{align}
+
+Spatial filtering the continuity equation yields
+\begin{equation}
+  \frac{\partial \overline{\rho}}{\partial t} + \frac{\partial \overline{u_i \rho}}{\partial x_i} = 0, \label{eq: spatial filtered rho}
+\end{equation}
+where $\overline{\phi}$ means the spatial filtered quantity of an arbitrary variable $\phi$.
+The Favre filtering \citep{Favre_1983} defined by
+\begin{equation}
+  \widetilde{\phi} = \frac{\overline{\rho \phi}}{\overline{\rho}}
+\end{equation}
+makes the equation (\ref{eq: spatial filtered rho})
+\begin{equation}
+  \frac{\partial \overline{\rho}}{\partial t} + \frac{\partial \widetilde{u_i}\overline{\rho}}{\partial x_i} = 0.
+\end{equation}
+
+
+The momentam equations become
+\begin{align}
+  \frac{\partial \overline{\rho u_i}}{\partial t} + \frac{\partial \overline{u_j\rho u_i}}{\partial x_j} &= -\frac{\partial \overline{p}}{\partial x_i} + \overline{\rho} g\delta_{i3} \\
+  \frac{\partial \overline{\rho}\widetilde{u_i}}{\partial t} + \frac{\partial \widetilde{u_j}\:\overline{\rho}\widetilde{u_i}}{\partial x_j} &= -\frac{\partial \overline{p}}{\partial x_i} + g\overline{\rho} \delta_{i3}
+    -\frac{\partial}{\partial x_j}\left(\overline{u_i \rho u_j} - \widetilde{u_j}\overline{\rho}\widetilde{u_i}\right) \\
+  \frac{\partial \overline{\rho}\widetilde{u_i}}{\partial t} + \frac{\partial \widetilde{u_j}\:\overline{\rho}\widetilde{u_i}}{\partial x_j} &= -\frac{\partial \overline{p}}{\partial x_i} + g\overline{\rho} \delta_{i3}
+    -\frac{\partial}{\partial x_j}\overline{\rho}\left(\widetilde{u_i u_j} - \widetilde{u_j}\widetilde{u_i}\right).
+\end{align}
+
+
+As the same matter, the thermal equation becomes
+\begin{equation}
+  \frac{\partial \overline{\rho}\widetilde{\theta}}{\partial t}
+  + \frac{\partial \widetilde{u_i}\overline{\rho}\widetilde{\theta}}{\partial x_i}
+  = Q -\frac{\partial}{\partial x_i}\overline{\rho}\left(\widetilde{u_i\theta}-\widetilde{u_i}\widetilde{\theta}\right).
+\end{equation}
+
+Then, the govering equations for the prognositic variables
+($\overline{\rho}, \overline{\rho}\widetilde{u_i}, $ and $\overline{\rho}\widetilde{\theta}$) are
+\begin{align}
+  \frac{\partial \overline{\rho}}{\partial t}
+  + \frac{\partial \widetilde{u_i}\overline{\rho}}{\partial x_i} &= 0, \\
+  \frac{\partial \overline{\rho}\widetilde{u_i}}{\partial t}
+  + \frac{\partial \widetilde{u_j}\overline{\rho}\widetilde{u_i}}{\partial x_j}
+  &= -\frac{\partial \overline{p}}{\partial x_i} + g\overline{\rho}\delta_{i3}
+  -\frac{\partial \overline{\rho}\tau_{ij}}{\partial x_j}, \\
+  \frac{\partial \overline{\rho}\widetilde{\theta}}{\partial t}
+  + \frac{\partial \widetilde{u_i}\overline{\rho}\widetilde{\theta}}{\partial x_i}
+  &= Q -\frac{\partial \overline{\rho}\tau^D_{i}}{\partial x_i},
+\end{align}
+where
+\begin{align}
+  \tau_{ij} &= \widetilde{u_iu_j}-\widetilde{u_i}\widetilde{u_j}, \\
+  \tau^D_{i} &= \widetilde{u_i\theta}-\widetilde{u_i}\widetilde{\theta}.
+\end{align}
+
+Hereafter, we omite overline and tilde representing spatial and the Favre filters.
+
+\subsection{SGS model}
+\subsubsection{Smagorinsky-Lilly model}
+The eddy momentum flux is
+\begin{equation}
+  \tau_{ij} - \frac{1}{3}\tau_{kk}\delta_{ij} = -2\nu_{SGS}\left(S_{ij}-\frac{1}{3}S_{kk}\delta_{ij}\right),
+\end{equation}
+where $S_{ij}$ is the strain tensor,
+\begin{equation}
+  S_{ij} = \frac{1}{2}\left(\frac{\partial u_i}{\partial x_j} + \frac{\partial u_j}{\partial x_i}\right),
+  \label{eq:strain tensor}
+\end{equation}
+and
+\begin{equation}
+  \nu_{SGS} = \left(C_s\lambda\right)^2 \left|S\right|.
+\end{equation}
+$C_s$ is the Smagorinsky constant,
+$\lambda$ is a characteristic SGS length scale,
+and $\left|S\right|$ is scale of the tensor $S$,
+\begin{equation}
+  \left|S\right| = \sqrt{2S_{ij}S_{ij}}.
+  \label{eq:|S|}
+\end{equation}
+
+Then the eddy momentum flux is
+\begin{equation}
+  \tau_{ij} = -2\nu_{SGS}\left(S_{ij}-\frac{1}{3}S_{kk}\delta_{ij}\right)
+             + \frac{2}{3} TKE\delta_{ij},
+  \label{eq:tau}
+\end{equation}
+where
+\begin{equation}
+  TKE = \frac{1}{2}\tau_{ii}
+   = \left(\frac{\nu_{SGS}}{C_k\lambda}\right)^2,
+   \label{eq:tke}
+\end{equation}
+where $C_k$ is a SGS constant and assumed to be 0.1 by following \citet{Deardorff_1980} and \citet{Moeng_Wynggard_1988}.
+
+
+The eddy heat flux is
+\begin{equation}
+  \tau^D_i = -D_{SGS} \frac{\partial \theta}{\partial x_i},
+  \label{eq:tau*}
+\end{equation}
+where
+\begin{equation}
+  D_{SGS} = \frac{1}{Pr}\nu_{SGS}.
+\end{equation}
+$Pr$ is the turbulent Prandtl number.
+For the other scalar constants such as water vaper,
+$D_{SGS}$ is also used as their diffusivity.
+
+To include buoyancy effects,
+the extension of the basic Smagorinsky developed by \citet{Brown_etal_1994}
+is used.
+\begin{equation}
+  \nu_{SGS} = (C_s\lambda)^2 |S| \sqrt{1-Rf},
+\end{equation}
+where $Rf$ is the flux Richardson number ($Rf = Ri/Pr$).
+$Ri$ is the local (pointwise) gradient Richardson number,
+\begin{equation}
+  Ri = \frac{N^2}{|S|^2},
+  \label{eq:Ri}
+\end{equation}
+and $N^2$ is the Brunt-Visala frequency,
+\begin{equation}
+  N^2 = \frac{g}{\theta}\frac{\partial\theta}{\partial z}.
+  \label{eq:N^2}
+\end{equation}
+The Prandtl number is an unknow parameter,
+and it depends on the Richardson number,
+while it is offten assumed a constant value.
+For the unstable conditions ($Ri < 0$),
+\begin{align}
+  \nu_{SGS} &= \left(C_s\lambda\right)^2 |S| \sqrt{1 - c Ri}, \label{eq:nu unstable} \\
+  D_{SGS} &= \frac{1}{Pr_N} \left(C_s\lambda\right)^2 |S| \sqrt{1 - b Ri} \label{eq:nu^* unstable},
+\end{align}
+where $Pr_N$ is the Prandtl number in neutral condtions.
+The values of $c, b, Pr_N$ are set 16, 40, and 0.7, respectively.
+Then the Prandtl number is
+\begin{equation}
+  Pr = Pr_N \sqrt{\frac{1-c Ri}{1-b Ri}}.
+\end{equation}
+For the stable condtions,
+when the Richardson number is smaller than the critical Richardson number, $Ri_c (=0.25)$,
+\begin{align}
+  \nu_{SGS} &= \left(C_s\lambda\right)^2 |S| \left(1-\frac{Ri}{Ri_c}\right)^4, \label{eq:nu stable} \\
+  D_{SGS} &= \frac{1}{Pr_N}\left(C_s\lambda\right)^2 |S| \left(1-\frac{Ri}{Ri_c}\right)^4\left(1-g Ri\right). \label{eq:nu^* stable}
+\end{align}
+The constant $g$ is determined as the Prandtl number becomes 1
+in the limit of $Ri \to Ri_C$ and then is $(1-Pr_N)/Ri_c$.
+The Prandtl number is
+\begin{equation}
+  Pr = Pr_N \left\{1-(1-Pr_N)\frac{Ri}{Ri_c}\right\}^{-1}.
+\end{equation}
+For the strongly stable condistions ($Ri > Ri_c$),
+the eddy viscosity and the diffusivity for scalars are 0;
+\begin{align}
+  \nu_{SGS} &= 0, \label{eq:nu strong stable} \\
+  D_{SGS} &= 0. \label{eq:nu^* strong stable}
+\end{align}
+The Prandtl number is $Pr = 1$.
+
+
+\citet{Scotti_1993} suggested that the length scale should depend on the grid aspect ratio.
+In the equilibrium condition with the universal Kolmogorov spectrum, energy cascaded to the SGS turbulence, which equals to SGS dissipation, must not depend on grid aspect ratio.
+The energy flux or dissipation can be written as function of $S_{ij}$ and the length scale, $\lambda$.
+The $S_{ij}$ depends on the grid aspect ratio, so the length scale should have dependency on the aspect ratio which cancels the dependency of the $S_{ij}$.
+With some approximations, they obtained an approximate function of the length scale
+\footnote{They considered two grid aspect ratios, while we here think only one, i.e. $\Delta x = \Delta y$.}
+:
+\begin{equation}
+\lambda = f(a) \Delta,
+\end{equation}
+%\begin{equation}
+%  \frac{1}{\lambda^2} = \frac{1}{\lambda_0^2} + \frac{1}{(kz)^2},
+%\end{equation}
+%where $k$ is the Karman constant ($k=0.4$), and $\lambda_0 = f(a) \Delta$.
+where $f(a)$ is a function of grid aspect ratio, $a$, and
+\begin{align}
+  f(a) &= 1.736 a^{1/3} \{ \nonumber\\
+  & 4P_1(b_1)a^{1/3} + 0.222P_2(b_1)a^{-5/3} + 0.077P_3(b_1)a^{-11/3} \nonumber\\
+  & - 3b_1 + 4P_1(b_2) + 0.222P_2(b_2) + 0.077P_3(b_2)- 3b_2 \nonumber\\
+  & \}^{-3/4}. \label{eq: f}
+\end{align}
+Here $b_1 = \arctan(1/a), b_2 = \arctan(a) = \pi/2 - b_1$, and
+\begin{align}
+  P_1(z) &= 2.5P_2(z) - 1.5 (\cos(z))^{2/3} \sin(z), \\
+  P_2(z) &= 0.98z + 0.073z^2 -0.418z^3 + 0.120z^4, \\
+  P_3(z) &= 0.976z + 0.188z^2 + 1.169z^3 + 0.755z^4 - 0.151z^5.
+\end{align}
+For instance, $f(2) = 1.036, f(5) = 1.231, f(10) = 1.469$, and $f(20) = 1.790$.
+%For instance, $f(2) = 1.036, f(5) = 1.231, f(10) = 1.469, f(20) = 1.790$, and $f(50) = 2.368$.
+$\Delta$ is the filter length, and is defined to be proportional to $(\Delta x \Delta y \Delta z)^{1/3}$ here.
+In this model, we introduce a numerical filter to reduce two-grid noise discussed above.
+This filter reduces two-grid scale physical variability as well.
+This means that two-grid scale would be preferred for the filter length in this model rather than grid spacing itself, that is,
+\begin{equation}
+  \Delta = 2 (\Delta x \Delta y \Delta z)^{1/3}. \label{eq: delta}
+\end{equation}
+
+
+\subsubsection{Terrain-following coordinate}
+Tendencies representing effect of the sub-grid scale turbulence with the terrain-following coordinate are following
+\footnote{Equations which are not changed in the terrain-following coordinate are ommited.};
+\begin{align}
+  \frac{\partial G^{\frac{1}{2}}\rho u}{\partial t}
+  &=
+  - \frac{\partial G^{\frac{1}{2}}\rho\tau_{11}}{\partial x^*}
+  - \frac{\partial G^{\frac{1}{2}}\rho\tau_{12}}{\partial y^*}
+  - \frac{\partial J_{13}G^{\frac{1}{2}}\rho\tau_{11} + J_{23}G^{\frac{1}{2}}\rho\tau_{12} + J_{33}G^{\frac{1}{2}}\rho\tau_{13}}{\partial \xi}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho v}{\partial t}
+  &=
+  - \frac{\partial G^{\frac{1}{2}}\rho\tau_{21}}{\partial x^*}
+  - \frac{\partial G^{\frac{1}{2}}\rho\tau_{22}}{\partial y^*}
+  - \frac{\partial J_{13}G^{\frac{1}{2}}\rho\tau_{21} + J_{23}G^{\frac{1}{2}}\rho\tau_{22} + J_{33}G^{\frac{1}{2}}\rho\tau_{23}}{\partial \xi}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho w}{\partial t}
+  &=
+  - \frac{\partial G^{\frac{1}{2}}\rho\tau_{31}}{\partial x^*}
+  - \frac{\partial G^{\frac{1}{2}}\rho\tau_{32}}{\partial y^*}
+  - \frac{\partial J_{13}G^{\frac{1}{2}}\rho\tau_{31} + J_{23}G^{\frac{1}{2}}\rho\tau_{32} + J_{33}G^{\frac{1}{2}}\rho\tau_{33}}{\partial \xi}, \\
+  \frac{\partial G^{\frac{1}{2}} \rho \theta}{\partial t}
+  &=
+  - \frac{\partial G^{\frac{1}{2}}\rho\tau^D_1}{\partial x^*}
+  - \frac{\partial G^{\frac{1}{2}}\rho\tau^D_2}{\partial y^*}
+  - \frac{\partial J_{13}G^{\frac{1}{2}}\rho\tau^D_1 + J_{23}G^{\frac{1}{2}}\rho\tau^D_2 + J_{33}G^{\frac{1}{2}}\rho\tau^D_3}{\partial \xi}
+\end{align}
+\begin{align}
+  G^{\frac{1}{2}}S_{11} &= \frac{\partial G^{\frac{1}{2}}u}{\partial x^*} + \frac{\partial J_{13}G^{\frac{1}{2}}u}{\partial \xi}, \\
+  G^{\frac{1}{2}}S_{22} &= \frac{\partial G^{\frac{1}{2}}v}{\partial y^*} + \frac{\partial J_{23}G^{\frac{1}{2}}v}{\partial \xi}, \\
+  G^{\frac{1}{2}}S_{33} &= \frac{\partial J_{33}G^{\frac{1}{2}}w}{\partial \xi}, \\
+  G^{\frac{1}{2}}S_{12} &= \frac{1}{2}\left(\frac{\partial G^{\frac{1}{2}}u}{\partial y^*} + \frac{\partial G^{\frac{1}{2}}v}{\partial x^*} + \frac{\partial J_{23}G^{\frac{1}{2}}u + J_{13}G^{\frac{1}{2}}v}{\partial \xi}\right), \\
+  G^{\frac{1}{2}}S_{23} &= \frac{1}{2}\left(\frac{\partial G^{\frac{1}{2}}w}{\partial y^*} + \frac{\partial J_{33}G^{\frac{1}{2}}v + J_{23}G^{\frac{1}{2}}w}{\partial \xi}\right), \\
+  G^{\frac{1}{2}}S_{31} &= \frac{1}{2}\left(\frac{\partial G^{\frac{1}{2}}w}{\partial x^*} + \frac{\partial J_{13}G^{\frac{1}{2}}w + J_{33}G^{\frac{1}{2}}u}{\partial \xi}\right), \\
+  G^{\frac{1}{2}}\tau^D_1 &= -D_{SGS}\left(
+   \frac{\partial G^{\frac{1}{2}}\theta}{\partial x^*}
+  +\frac{\partial J_{13}G^{\frac{1}{2}}\theta}{\partial \xi} \right), \\
+  G^{\frac{1}{2}}\tau^D_2 &= -D_{SGS}\left(
+   \frac{\partial G^{\frac{1}{2}}\theta}{\partial y^*}
+  +\frac{\partial J_{23}G^{\frac{1}{2}}\theta}{\partial \xi} \right), \\
+  G^{\frac{1}{2}}\tau^D_3 &= -D_{SGS}
+  \frac{\partial J_{33}G^{\frac{1}{2}}\theta}{\partial \xi}, \\
+  G^{\frac{1}{2}} N^2 &= \frac{g}{\theta}\frac{\partial J_{33}G^{\frac{1}{2}}\theta}{\partial \xi}.
+\end{align}
+
+
+
+\subsection{descretization}
+
+\subsubsection{Spatial descretization}
+We use the 4th order differnce scheme for the advection term as mentioned
+in the chapter \ref{chap:descretization dynamics}.
+The $\tau_{ij}$ and $\tau^D_{i}$ are propotional to
+the square of the grid spacing ($\Delta^2$).
+Due to the consistency with the advection term
+in terms of order for spatial difference,
+the second order central difference scheme
+is used for terms of the sub-grid scale turburence.
+In the following part in this sub-section,
+overline, and $i,j,k$ mean
+as they are in the chapter \ref{chap:descretization dynamics}.
+
+\paragraph{Momentam equation}
+The tendencies in the momentam equation related to the sub-grid scale mode are
+\begin{align}
+  \frac{\partial G^{\frac{1}{2}}\rho u}{\partial t}_{i+\half,j,k} =
+  &-\frac{(G^{\frac{1}{2}}\rho\tau_{11})_{i+1,j,k}-(G^{\frac{1}{2}}\rho\tau_{11})_{i,j,k}}{\Delta x} \nonumber \\
+  &- \frac{(G^{\frac{1}{2}}\overline{\rho}\tau_{12})_{i+\half,j+\half,k}-(G^{\frac{1}{2}}\overline{\rho}\tau_{12})_{i+\half,j-\half,k}}{\Delta y} \nonumber \\
+  &- \frac{\{G^{\frac{1}{2}}\overline{\rho}(J_{13}\tau_{11}+J_{23}\tau_{12}+J_{33}\tau_{13})\}_{i+\half,j,k+\half}
+          -\{G^{\frac{1}{2}}\overline{\rho}(J_{13}\tau_{11}+J_{23}\tau_{12}+J_{33}\tau_{13})\}_{i+\half,j,k-\half}}{\Delta z}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho v}{\partial t}_{i,j+\half,k} =
+  &- \frac{(G^{\frac{1}{2}}\overline{\rho}\tau_{21})_{i+\half,j+\half,k}-(G^{\frac{1}{2}}\overline{\rho}\tau_{21})_{i-\half,j+\half,k}}{\Delta x} \nonumber \\
+  &- \frac{(G^{\frac{1}{2}}\rho\tau_{22})_{i,j+1,k}-(G^{\frac{1}{2}}\rho\tau_{22})_{i,j,k}}{\Delta y} \nonumber \\
+  &- \frac{\{G^{\frac{1}{2}}\overline{\rho}(J_{13}\tau_{21}+J_{23}\tau_{22}+J_{33}\tau_{23})\}_{i,j+\half,k+\half}
+          -\{G^{\frac{1}{2}}\overline{\rho}(J_{13}\tau_{21}+J_{23}\tau_{22}+J_{33}\tau_{23})\}_{i,j+\half,k-\half}}{\Delta z}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho w}{\partial t}_{i,j,k+\half} =
+  &- \frac{(G^{\frac{1}{2}}\overline{\rho}\tau_{31})_{i+\half,j,k+\half}-(G^{\frac{1}{2}}\overline{\rho}\tau_{31})_{i-\half,j,k+\half}}{\Delta x} \nonumber \\
+  &- \frac{(G^{\frac{1}{2}}\overline{\rho}\tau_{32})_{i,j+\half,k+\half}-(G^{\frac{1}{2}}\overline{\rho}\tau_{32})_{i,j-\half,k+\half}}{\Delta y} \nonumber \\
+  &- \frac{\{(G^{\frac{1}{2}}\rho(J_{13}\tau_{31}+J_{23}\tau_{32}+J_{33}\tau_{33})\}_{i,j,k+1}
+          -\{(G^{\frac{1}{2}}\rho(J_{13}\tau_{31}+J_{23}\tau_{32}+J_{33}\tau_{33})\}_{i,j,k}}{\Delta z}.
+\end{align}
+The $\overline{\rho}$ is
+\begin{align}
+  \overline{\rho}_{i,j+\half,k+\half} &=
+  \frac{\rho_{i,j+1,k+1} + \rho_{i,j+1,k} + \rho_{i,j,k+1} + \rho_{i,j,k}}{4}, \\
+  \overline{\rho}_{i+\half,j,k+\half} &=
+  \frac{\rho_{i+1,j,k+1} + \rho_{i+1,j,k} + \rho_{i,j,k+1} + \rho_{i,j,k}}{4}, \\
+  \overline{\rho}_{i+\half,j+\half,k} &=
+  \frac{\rho_{i+1,j+1,k} + \rho_{i+1,j,k} + \rho_{i,j+1,k} + \rho_{i,j,k}}{4}.
+\end{align}
+
+\paragraph{Thermal equation}
+The tendency in the thermal equation related to the sub-grid scale model is
+\begin{align}
+  \frac{\partial G^{\frac{1}{2}}\rho \theta}{\partial t}_{i,j,k} =
+  &- \frac{(G^{\frac{1}{2}}\overline{\rho}\tau^D_1)_{i+\half,j,k}-(G^{\frac{1}{2}}\overline{\rho}\tau^D_1)_{i-\half,j,k}}{\Delta x} \nonumber \\
+  &- \frac{(G^{\frac{1}{2}}\overline{\rho}\tau^D_2)_{i,j+\half,k}-(G^{\frac{1}{2}}\overline{\rho}\tau^D_2)_{i,j-\half,k}}{\Delta y} \nonumber \\
+  &- \frac{\{G^{\frac{1}{2}}\overline{\rho}(J_{13}\tau^D_1+J_{23}\tau^D_2+J_{33}\tau^D_3)\}_{i,j,k+\half}
+          -\{G^{\frac{1}{2}}\overline{\rho}(J_{13}\tau^D_1+J_{23}\tau^D_2+J_{33}\tau^D_3)\}_{i,j,k-\half}}{\Delta z}.
+\end{align}
+The $\overline{\rho}$ at half-level is eq.(\ref{eq:rho half i})-(\ref{eq:rho half k}).
+
+The eddy diffution flux, $\tau^D$, at half-level
+is
+\begin{align}
+  (G^{\frac{1}{2}}\tau^D_1)_{i+\half,j,k} &= -D_{SGS,i+\half,j,k} \left\{
+  \frac{(G^{\frac{1}{2}}\theta)_{i+1,j,k}-(G^{\frac{1}{2}}\theta)_{i,j,k}}{\Delta x}
+  + \frac{(J_{13}G^{\frac{1}{2}}\overline{\theta})_{i+\half,j,k+\half}-(J_{13}G^{\frac{1}{2}}\overline{\theta})_{i+\half,j,k-\half}}{\Delta z} \right\}, \\
+  (G^{\frac{1}{2}}\tau^D_2)_{i,j+\half,k} &= -D_{SGS,i,j+\half,k} \left\{
+  \frac{(G^{\frac{1}{2}}\theta)_{i,j+1,k}-(G^{\frac{1}{2}}\theta)_{i,j,k}}{\Delta y}
+  + \frac{(J_{23}G^{\frac{1}{2}}\overline{\theta})_{i,j+\half,k+\half}-(J_{23}G^{\frac{1}{2}}\overline{\theta})_{i,j+\half,k-\half}}{\Delta z} \right\}, \\
+  (G^{\frac{1}{2}}\tau^D_3)_{i,j,k+\half} &= -D_{SGS,i,j,k+\half} \frac{J_{33}G^{\frac{1}{2}}\theta_{i,j,k+1}-J_{33}G^{\frac{1}{2}}\theta_{i,j,k}}{\Delta z}.
+\end{align}
+
+
+
+\paragraph{Strain tensor}
+All the strain tensor, eq.(\ref{eq:strain tensor}), have to be calculated
+at full-level (grid cell center),
+and some of them are at cell edges.
+
+\begin{itemize}
+  \item cell center ($i,j,k$)
+    \begin{align}
+      (G^{\frac{1}{2}}S_{11})_{i,j,k} &=
+      \frac{(G^{\frac{1}{2}}\overline{u})_{i+\half,j,k}-(G^{\frac{1}{2}}\overline{u})_{i-\half,j,k}}{\Delta x}
+     +\frac{(J_{13}G^{\frac{1}{2}}\overline{u})_{i+\half,j,k+\half}-(J_{13}G^{\frac{1}{2}}\overline{u})_{i+\half,j,k-\half}}{\Delta z}, \\
+     (G^{\frac{1}{2}}S_{22})_{i,j,k} &=
+      \frac{(G^{\frac{1}{2}}\overline{v})_{i,j+\half,k}-(G^{\frac{1}{2}}\overline{v})_{i,j-\half,k}}{\Delta y}
+     +\frac{(J_{23}G^{\frac{1}{2}}\overline{v})_{i,j+\half,k+\half}-(J_{23}G^{\frac{1}{2}}\overline{v})_{i,j+\half,k-\half}}{\Delta z}, \\
+     (G^{\frac{1}{2}}S_{33})_{i,j,k} &=
+      \frac{J_{33}G^{\frac{1}{2}}\overline{w}_{i,j,k+\frac{1}{2}}-J_{33}G^{\frac{1}{2}}\overline{w}_{i,j,k-\frac{1}{2}}}{\Delta z}, \\
+      (G^{\frac{1}{2}}S_{12})_{i,j,k} &= \frac{1}{2}\left\{
+      \frac{(G^{\frac{1}{2}}\overline{u})_{i,j+\frac{1}{2},k}-(G^{\frac{1}{2}}\overline{u})_{i,j-\frac{1}{2},k}}{\Delta y}
+     +\frac{(G^{\frac{1}{2}}\overline{v})_{i+\frac{1}{2},j,k}-(G^{\frac{1}{2}}\overline{v})_{i-\frac{1}{2},j,k}}{\Delta x}  \right.\nonumber \\ &\left.
+     +\frac{(J_{23}G^{\frac{1}{2}}\overline{u})_{i,j,k+\half}-(J_{23}G^{\frac{1}{2}}\overline{u})_{i,j,k-\half} + (J_{13}G^{\frac{1}{2}}\overline{v})_{i,j,k+\half}-(J_{13}G^{\frac{1}{2}}\overline{v})_{i,j,k-\half}}{\Delta z}
+      \right\}, \\
+      (G^{\frac{1}{2}}S_{23})_{i,j,k} &= \frac{1}{2}\left\{
+      \frac{(G^{\frac{1}{2}}\overline{w})_{i,j+\frac{1}{2},k}-(G^{\frac{1}{2}}\overline{w})_{i,j-\frac{1}{2},k}}{\Delta y} \right. \nonumber \\ & \left.
+      + \frac{J_{33}G^{\frac{1}{2}}\overline{v}_{i,j,k+\frac{1}{2}}-J_{33}G^{\frac{1}{2}}\overline{v}_{i,j,k-\frac{1}{2}} + (J_{23}G^{\frac{1}{2}}\overline{w})_{i,j,k+\half}-(J_{23}G^{\frac{1}{2}}\overline{w})_{i,j,k-\half}}{\Delta z}
+      \right\}, \\
+      (G^{\frac{1}{2}}S_{31})_{i,j,k} &= \frac{1}{2}\left\{
+      \frac{(G^{\frac{1}{2}}\overline{w})_{i+\frac{1}{2},j,k}-(G^{\frac{1}{2}}\overline{w})_{i-\frac{1}{2},j,k}}{\Delta x} \right. \nonumber \\ & \left.
+     +\frac{J_{33}G^{\frac{1}{2}}\overline{u}_{i,j,k+\frac{1}{2}}-J_{33}G^{\frac{1}{2}}\overline{u}_{i,j,k-\frac{1}{2}} + (J_{13}G^{\frac{1}{2}}\overline{w})_{i,j,k+\half}-(J_{13}G^{\frac{1}{2}}\overline{w})_{i,j,k-\half}}{\Delta z}
+      \right\}.
+    \end{align}
+
+  \item $z$ edge ($i+\half,j+\half,k$)
+    \begin{align}
+      (G^{\frac{1}{2}}S_{12})_{i+\half,j+\half,k} &= \frac{1}{2}\left\{
+      \frac{(G^{\frac{1}{2}}\overline{u})_{i+\half,j+1,k}-(G^{\frac{1}{2}}\overline{u})_{i+\half,j,k}}{\Delta y}
+     +\frac{(G^{\frac{1}{2}}\overline{v})_{i+1,j+\half,k}-(G^{\frac{1}{2}}\overline{v})_{i,j+\half,k}}{\Delta x}  \right.\nonumber \\ &\left.
+     +\frac{(J_{23}G^{\frac{1}{2}}\overline{u})_{i+\half,j+\half,k+\half}-(J_{23}G^{\frac{1}{2}}\overline{u})_{i+\half,j+\half,k-\half} + (J_{13}G^{\frac{1}{2}}\overline{v})_{i+\half,j+\half,k+\half}-(J_{13}G^{\frac{1}{2}}\overline{v})_{i+\half,j+\half,k-\half}}{\Delta z}.
+      \right\}
+    \end{align}
+
+  \item $x$ edge ($i,j+\half,k+\half$)
+    \begin{align}
+      (G^{\frac{1}{2}}S_{23})_{i,j+\half,k+\half} &= \frac{1}{2}\left\{
+      \frac{(G^{\frac{1}{2}}\overline{w})_{i,j+1,k+\half}-(G^{\frac{1}{2}}\overline{w})_{i,j,k+\half}}{\Delta y} \right. \nonumber \\ & \left.
+      + \frac{J_{33}G^{\frac{1}{2}}\overline{v}_{i,j+\half,k+1}-J_{33}G^{\frac{1}{2}}\overline{v}_{i,j+\half,k} + (J_{23}G^{\frac{1}{2}}\overline{w})_{i,j+\half,k+1}-(J_{23}G^{\frac{1}{2}}\overline{w})_{i,j+\half,k}}{\Delta z}.
+      \right\}
+    \end{align}
+
+  \item $y$ edge ($i+\half,j,k+\half$)
+    \begin{align}
+      (G^{\frac{1}{2}}S_{31})_{i+\half,j,k+\half} &= \frac{1}{2}\left\{
+      \frac{(G^{\frac{1}{2}}\overline{w})_{i+1,j,k+\half}-(G^{\frac{1}{2}}\overline{w})_{i,j,k+\half}}{\Delta x} \right. \nonumber \\ & \left.
+     +\frac{J_{33}G^{\frac{1}{2}}\overline{u}_{i+\half,j,k+1}-J_{33}G^{\frac{1}{2}}\overline{u}_{i+\half,j,k} + (J_{13}G^{\frac{1}{2}}\overline{w})_{i+\half,j,k+1}-(J_{13}G^{\frac{1}{2}}\overline{w})_{i+\half,j,k}}{\Delta z}.
+      \right\}.
+    \end{align}
+
+\end{itemize}
+
+
+\paragraph{velocity}
+Calculattion of the strain tensor
+requires value of velocity
+at cell center, plane center, edge center, and vertex.
+The velocities at cell center (full-level) are eq.(\ref{eq:u full}-\ref{eq:w full}).
+
+\begin{itemize}
+  \item $x$-$y$ plane center ($i,j,k+\frac{1}{2}$)
+    \begin{align}
+      \overline{u}_{i,j,k+\frac{1}{2}} &=
+      \frac{\overline{u}_{i,j,k+1}+\overline{u}_{i,j,k}}{2}, \\
+      \overline{v}_{i,j,k+\frac{1}{2}} &=
+      \frac{\overline{v}_{i,j,k+1}+\overline{v}_{i,j,k}}{2}, \\
+      \overline{w}_{i,j,k+\frac{1}{2}} &=
+      \frac{(\rho w)_{i,j,k+\frac{1}{2}}}{\overline{\rho}_{i,j,k+\frac{1}{2}}}.
+    \end{align}
+
+  \item $y$-$z$ plane center ($i+\frac{1}{2},j,k$)
+    \begin{align}
+      \overline{u}_{i+\frac{1}{2},j,k} &=
+      \frac{(\rho u)_{i+\frac{1}{2},j,k}}{\overline{\rho}_{i+\frac{1}{2},j,k}}, \\
+      \overline{v}_{i+\frac{1}{2},j,k} &=
+      \frac{\overline{v}_{i+1,j,k}+\overline{v}_{i,j,k}}{2}, \\
+      \overline{w}_{i+\frac{1}{2},j,k} &=
+      \frac{\overline{w}_{i+1,j,k}+\overline{w}_{i,j,k}}{2}.
+    \end{align}
+
+  \item $z$-$x$ plane center ($i,j+\frac{1}{2},k$)
+    \begin{align}
+      \overline{u}_{i,j+\frac{1}{2},k} &=
+      \frac{\overline{u}_{i,j+1,k}+\overline{u}_{i,j,k}}{2}, \\
+      \overline{v}_{i,j+\frac{1}{2},k} &=
+      \frac{(\rho v)_{i,j+\frac{1}{2},k}}{\overline{\rho}_{i,j+\frac{1}{2},k}}, \\
+      \overline{w}_{i,j+\frac{1}{2},k} &=
+      \frac{\overline{w}_{i,j+1,k}+\overline{w}_{i,j,k}}{2}.
+    \end{align}
+
+  \item $x$ edge center ($i,j+\frac{1}{2},k+\half$)
+    \begin{align}
+      \overline{u}_{i,j+\half,k+\half} &=
+      \frac{\overline{u}_{i,j+1,k+1}+\overline{u}_{i,j+1,k}+\overline{u}_{i,j,k+1}+\overline{u}_{i,j,k}}{4}, \\
+      \overline{v}_{i,j+\half,k+\half} &=
+      \frac{\overline{v}_{i,j+\half,k+1}+\overline{v}_{i,j+\half,k}}{2}, \\
+      \overline{w}_{i,j+\half,k+\half} &=
+      \frac{\overline{w}_{i,j+1,k+\half}+\overline{w}_{i,j,k+\half}}{2}.
+    \end{align}
+
+  \item $y$ edge center ($i+\half,j,k+\half$)
+    \begin{align}
+      \overline{u}_{i+\half,j,k+\half} &=
+      \frac{\overline{u}_{i+\half,j,k+1}+\overline{u}_{i+\half,j,k}}{2}, \\
+      \overline{v}_{i+\half,j,k+\half} &=
+      \frac{\overline{v}_{i+1,j,k+1}+\overline{v}_{i+1,j,k}+\overline{v}_{i,j,k+1}+\overline{v}_{i,j,k}}{4}, \\
+      \overline{w}_{i+\half,j,k+\half} &=
+      \frac{\overline{w}_{i+1,j,k+\half}+\overline{w}_{i,j,k+\half}}{2}.
+    \end{align}
+
+  \item $z$ edge center ($i+\half,j+\half,k$)
+    \begin{align}
+      \overline{u}_{i+\half,j+\half,k} &=
+      \frac{\overline{u}_{i+\half,j+1,k}+\overline{u}_{i+\half,j,k}}{2}, \\
+      \overline{v}_{i+\half,j+\half,k} &=
+      \frac{\overline{v}_{i+1,j+\half,k}+\overline{v}_{i,j+\half,k}}{2}, \\
+      \overline{w}_{i+\half,j+\half,k} &=
+      \frac{\overline{w}_{i+1,j+1,k}+\overline{w}_{i+1,j,k}+\overline{w}_{i,j+1,k}+\overline{w}_{i,j,k}}{4}.
+    \end{align}
+
+  \item vertex ($i+\half,j+\half,k+\half$)
+    \begin{align}
+      \overline{u}_{i+\half,j+\half,k+\half} &=
+      \frac{\overline{u}_{i+\half,j+1,k+1}+\overline{u}_{i+\half,j+1,k}+\overline{u}_{i+\half,j,k+1}+\overline{u}_{i+\half,j,k}}{4}, \\
+      \overline{v}_{i+\half,j+\half,k+\half} &=
+      \frac{\overline{v}_{i+1,j+\half,k+1}+\overline{v}_{i+1,j+\half,k}+\overline{v}_{i,j+\half,k+1}+\overline{v}_{i,j+\half,k}}{4}, \\
+      \overline{w}_{i+\half,j+\half,k+\half} &=
+      \frac{\overline{w}_{i+1,j+1,k+\half}+\overline{w}_{i+1,j,k+\half}+\overline{w}_{i,j+1,k+\half}+\overline{w}_{i,j,k+\half}}{4}.
+    \end{align}
+\end{itemize}
+
+\paragraph{Eddy viscosity/diffusion coefficient}
+The eddy viscosity/diffusion coefficient, $\nu_{SGS}$ / $D_{SGS}$, is calculated at full-level with $S$ and $Ri$ at full-level and it at half level is interporated one at full-level.
+
+
+\paragraph{Brunt-Visala frequency}
+The Brunt-Visala frequency, $N^2$ is required to calculate the Richardson number
+at full-level.
+
+\begin{equation}
+  (G^{\half}N^2)_{i,j,k} = \frac{g}{\theta_{i,j,k}}
+  \frac{J_{33}G^{\half}\theta_{i,j,k+1}-J_{33}G^{\half}\theta_{i,j,k-1}}{2\Delta z}.
+\end{equation}
+
+
+
+%\end{document}

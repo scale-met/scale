@@ -1,0 +1,301 @@
+{\bf \Large
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Seiya Nishizawa\\
+\hline
+\end{tabular}
+}
+
+\section{Temporal integration scheme}
+
+\subsection{Runge-Kutta schemes}
+
+For the time integration of Eqs.(\ref{eq:rhotot_d2})-(\ref{eq:etot_d2}),
+we adopt the full explicit scheme with
+the $p$ step Runge-Kutta scheme.
+\begin{eqnarray}
+&& \phi^{*}_{0} = \phi^{t}\\
+&& k_1 = f(\phi^t) \\
+&& k_2 = f(\phi^t + k_1 \Delta t \alpha_1) \\
+&&  \cdot \cdot \cdot\nonumber\\
+&& k_p = f(\phi^t + k_{p-1} \Delta t \alpha_{p-1}) \\
+&& \phi^{t+\Delta t} = \phi^t + \Delta t\sum_p \beta_p k_p.
+\end{eqnarray}
+The 3 and 4 step Runge-Kutta scheme are implemented.
+
+
+\subsubsection{The Heun's three step scheme}
+
+\begin{align}
+  k_1 &= f(\phi^n), \\
+  k_2 &= f\left(\phi^n + \frac{1}{3}\Delta t k_1\right), \\
+  k_3 &= f\left(\phi^n + \frac{2}{3}\Delta t k_2\right), \\
+  \phi^{n+1} &= \phi^n + \frac{1}{4}\Delta t (k_1 + 3k_3).
+\end{align}
+
+
+\subsubsection{The Kutta's three step scheme}
+
+\begin{align}
+  k_1 &= f(\phi^n), \\
+  k_2 &= f\left(\phi^n + \frac{1}{2}\Delta t k_1\right), \\
+  k_3 &= f\left(\phi^n - \Delta t k_1  + 2 \Delta t k_2\right), \\
+  \phi^{n+1} &= \phi^n + \frac{1}{6}\Delta t (k_1 + 4k_2 + k_3).
+\end{align}
+
+
+\subsubsection{The \citet{Wicker_2002}'s three step scheme}
+
+\begin{align}
+  k_1 &= f(\phi^n), \\
+  k_2 &= f\left(\phi^n + \frac{1}{3}\Delta t k_1\right), \\
+  k_3 &= f\left(\phi^n + \frac{1}{2}\Delta t k_2\right), \\
+  \phi^{n+1} &= \phi^n + \Delta t k_3.
+\end{align}
+
+
+\subsubsection{The four step scheme}
+
+\begin{align}
+  k_1 &= f(\phi^n), \\
+  k_2 &= f\left(\phi^n + \frac{1}{2}\Delta t k_1\right), \\
+  k_3 &= f\left(\phi^n + \frac{1}{2}\Delta t k_2\right), \\
+  k_4 &= f\left(\phi^n + \Delta t k_3\right), \\
+  \phi^{n+1} &= \phi^n + \frac{1}{6}\Delta t (k_1 + 2k_2 + 2k_3 + k_4).
+\end{align}
+
+
+\subsubsection{The forward-backward scheme}
+In the short time step, the momentums are updated first and then density is updated with the updated momentums.
+\begin{align}
+  \rho u^{n+1}_i &= \rho u^n_i + \Delta t f_{\rho u_i}(\rho^n), \\
+  \rho^{n+1}     &= \rho^n + \Delta t f_{\rho}(\rho u^{n+1}_i).
+\end{align}
+
+\subsection{Numerical stability}
+
+A fully compressive equations of a acoustic mode is considered.
+The continuous and momentum equations is the followings:
+\begin{align}
+  \frac{\partial \rho}{\partial t} &=
+  - \frac{\partial \rho u_i}{\partial x_i} \\
+  \frac{\partial \rho u_i}{\partial t} &=
+  - \frac{\partial p}{\partial x_i} \\
+  p &= p_0 \left( \frac{R \rho \theta}{p_0} \right)^{c_p/c_v},
+\end{align}
+here the potential temperature $\theta$ is assumed to be constant.
+
+In order to analize the numerical stability of equation, the equation of the state is linearized.
+\begin{equation}
+  p \approx \bar{p} + c^2 \rho',
+\end{equation}
+where $c$ is the sound speed: $c^2=\frac{c_p\bar{p}}{c_v\bar{\rho}}$.
+
+
+We descritize the governing equation with the 2th order central difference.
+\begin{align}
+  \left. \frac{\partial \rho}{\partial t}\right|_{i,j,k} &=
+  -\frac{U_{i+1/2}-U_{i-1/2}}{\Delta x}
+  -\frac{V_{j+1/2}-V_{j-1/2}}{\Delta y}
+  -\frac{W_{k+1/2}-W_{k-1/2}}{\Delta z} \\
+  \left. \frac{\partial U}{\partial t}\right|_{i+1/2} &=
+  -c^2\frac{\rho_{i+1}-\rho_i}{\Delta x} \\
+  \left. \frac{\partial V}{\partial t}\right|_{j+1/2} &=
+  -c^2\frac{\rho_{j+1}-\rho_j}{\Delta y} \\
+  \left. \frac{\partial W}{\partial t}\right|_{i+1/2} &=
+  -c^2\frac{\rho_{k+1}-\rho_k}{\Delta z},
+\end{align}
+where $U, V$, and $W$ is the momentum at the stagared grid point in $x, y$, and $z$ direction, respectively.
+
+The error of the spatial differenece of a wavenumber $k$ component $\hat{\phi}_k$ is $\left\{\exp(ik\Delta x)-1\right\}\hat{\phi}$, and the error of 2-grid mode is the largest: $\exp(i\pi)-1 = -2$.
+
+The temporal differential of the 2-grid mode is
+\begin{align}
+  \frac{\partial \rho}{\partial t} &=
+  -\frac{1-\exp(-i\pi)}{\Delta x}U
+  -\frac{1-\exp(-i\pi)}{\Delta y}V
+  -\frac{1-\exp(-i\pi)}{\Delta z}W \\
+  \frac{\partial U}{\partial t} &=
+  -c^2\frac{\exp(i\pi)-1}{\Delta x}\rho \\
+  \frac{\partial V}{\partial t} &=
+  -c^2\frac{\exp(i\pi)-1}{\Delta y}\rho \\
+  \frac{\partial W}{\partial t} &=
+  -c^2\frac{\exp(i\pi)-1}{\Delta z}\rho.
+\end{align}
+The mode of which the $U, V$ and $W$ has the same phase is the most unstable:
+\begin{align}
+  \frac{\partial \rho}{\partial t} &=
+  -3\frac{1-\exp(-i\pi)}{\Delta x}U \\
+  \frac{\partial U}{\partial t} &=
+  -c^2\frac{\exp(i\pi)-1}{\Delta x}\rho
+\end{align}
+
+Writing matrix form,
+\begin{equation}
+  \begin{pmatrix}
+    \frac{\partial \rho}{\partial t} \\
+    \frac{\partial U}{\partial t}
+  \end{pmatrix}
+  = D
+  \begin{pmatrix}
+    \rho \\
+    U
+  \end{pmatrix},
+\end{equation}
+where
+\begin{equation}
+  D =
+  \begin{pmatrix}
+    0 & -\frac{6}{\Delta x} \\
+    \frac{2c^2}{\Delta x} & 0
+  \end{pmatrix}.
+\end{equation}
+
+\subsubsection{The Euler scheme}
+With the Euler scheme,
+\begin{equation}
+  \phi^{n+1} = \phi^n + \Delta t f(\phi^n)
+\end{equation}
+The $A$ is the matrix representing the time step, then
+\begin{align}
+  A &= I + dt D, \\
+    &= \begin{pmatrix}
+    1 & -6\frac{\Delta t}{\Delta x} \\
+    \frac{2c^2\Delta t}{\Delta x} & 1
+    \end{pmatrix}.
+\end{align}
+The eigen value of $A$ is larger than 1, and the Euler scheme is instable for any $\Delta t$.
+
+
+\subsubsection{The second step Runge-Kutta scheme}
+The Heun's second step Runge-Kutta scheme is
+\begin{align}
+  k_1 &= f(\phi^n), \\
+  k_2 &= f(\phi^n + \Delta t k_1), \\
+  \phi^{n+1} &= \phi^n + \frac{\Delta t}{2}(k_1 + k_2).
+\end{align}
+
+\begin{align}
+  A &= I + \frac{\Delta t}{2}(K_1 + K_2), \\
+  K_1 &= D, \\
+  K_2 &= D (I + \Delta t K_1).
+\end{align}
+After all,
+\begin{equation}
+  A = \begin{pmatrix}
+    1-6\nu^2 & -\frac{6\Delta t}{\Delta x} \\
+    \frac{2c^2\Delta t}{\Delta x} & 1-6\nu^2
+    \end{pmatrix},
+\end{equation}
+where $\nu$ is the Courant number for the sound speed: $\frac{c\Delta t}{\Delta x}$.
+The eigen value of $A$ is larger than 1, and the Euler scheme is instable for any $\Delta t$.
+
+
+
+\subsubsection{The third step Runge-Kutta scheme}
+With the Heun's third step Runge-Kutta scheme, the matrix $A$ is written by
+\begin{align}
+  A &= I + \frac{\Delta t}{4}(K_1 + 4K_3), \\
+  &= \begin{pmatrix}
+    1-6\nu^2 & -\frac{6\Delta t}{\Delta x}(1-2\nu^2) \\
+    \frac{2c^2\Delta t}{\Delta x}(1-2\nu^2) & 1-6\nu^2
+  \end{pmatrix}, \label{eq: A two}
+\end{align}
+where
+\begin{align}
+  K_1 &= D, \\
+  K_2 &= D (I + \frac{\Delta t}{3}K_1), \\
+  K_3 &= D (I + \frac{2\Delta t}{3}K_2).
+\end{align}
+
+The condition that all the eigen values are less than or equal to 1 is
+\begin{equation}
+  \nu \leq \frac{1}{2}. \label{eq: cond nu two}
+\end{equation}
+
+In the Kutta's three step Runge-Kutta scheme, the matrix $A$ is
+\begin{equation}
+  A = I + \frac{\Delta t}{6}(K_1 + 4K_2 + K_3),
+\end{equation}
+where
+\begin{align}
+  K_1 &= D, \\
+  K_2 &= D \left(I + \frac{\Delta t}{2}K_1\right), \\
+  K_3 &= D \left(I - \Delta t K_1 + 2\Delta t K_2\right).
+\end{align}
+It is the idential as that in the Heun's scheme (eq. \ref{eq: A two}).
+Thus, the stable condition is the same (eq. \ref{eq: cond nu two}).
+
+The \citet{Wicker_2002}'s Runge-Kutta scheme is described as
+\begin{align}
+  A &= I + \Delta t K_3, \\
+  K_1 &= D, \\
+  K_2 &= D \left(I + \frac{\Delta t}{3}K_1\right), \\
+  K_3 &= D \left(I + \frac{\Delta t}{2}K_2\right).
+\end{align}
+The $A$ and the consequent stable condition are the identical as the above two schemes.
+
+
+\subsubsection{The four step Runge-Kutta scheme}
+The matrix $A$ is
+\begin{align}
+  A &= I + \frac{\Delta t}{6}(K_1 + 2K_2 + 2K_3 + K_4), \\
+  &= \begin{pmatrix}
+    1-6\nu^2+6\nu^4 & -\frac{6\Delta t}{\Delta x}(1-2\nu^2) \\
+    \frac{2c^2\Delta t}{\Delta x}(1-2\nu^2) & 1-6\nu^2+6^4
+  \end{pmatrix},
+\end{align}
+where
+\begin{align}
+  K_1 &= D, \\
+  K_2 &= D \left(I + \frac{\Delta t}{2}K_1\right), \\
+  K_3 &= D \left(I + \frac{\Delta t}{2}K_2\right), \\
+  K_4 &= D (I + \Delta t K_3).
+\end{align}
+
+The condition for stability is
+\begin{equation}
+  \nu \le \frac{\sqrt{6}}{3}.
+\end{equation}
+
+The number of floating opint operations with the four step Runge-Kutta scheme is about $4/3$ times larger than that with the three step scheme.
+Howere, the time step can be $2\sqrt{6}/3$ larger than that in the three step scheme.
+Since $2\sqrt{6}/3 > 4/3$, the four step Runge-Kutta scheme is more cost effective than the three step scheme in terms of numerical stability.
+
+
+\subsubsection{The forward-backward scheme}
+The stabitlity condition is
+\begin{equation}
+  \nu \le \frac{1}{\sqrt{3}}.
+\end{equation}
+
+The forward-backward scheme can be used in each step in the Runge-Kutta schemes.
+The stability conditions are the followings:
+\begin{description}
+ \item[The second step RK scheme]
+ \begin{equation}
+   \nu \le \frac{1}{\sqrt{3}}.
+ \end{equation}
+
+ \item[The Heun's three step RK scheme]
+ \begin{equation}
+   \nu \le \frac{1}{2}.
+ \end{equation}
+
+ \item[The Kutta's three step RK scheme]
+ \begin{equation}
+   \nu \le \frac{1}{2}.
+ \end{equation}
+
+ \item[The\citet{Wicker_2002}'s three step RK scheme]
+ \begin{equation}
+   \nu \le \frac{\sqrt{6}}{4}.
+ \end{equation}
+
+ \item[The four step RK scheme]
+ \begin{equation}
+   \nu \le 0.66
+ \end{equation}
+
+
+\end{description}
