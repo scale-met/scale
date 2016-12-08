@@ -112,10 +112,8 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private            :: MP_limit_negative    = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
 
   logical,  private            :: MP_doexpricit_icegen = .false. ! apply explicit ice generation?
-  logical,  private            :: only_liquid          = .false.
-  real(RP), private            :: sw_useicegen         = 0.0_RP
 
-  real(RP), private            :: dens00 = 1.28_RP !< standard density [kg/m3]
+  real(RP), private, parameter :: dens00 = 1.28_RP !< standard density [kg/m3]
 
   ! Parameter for Marshall-Palmer distribution
   real(RP), private            :: N0r = 8.E6_RP !< intercept parameter for rain    [1/m4]
@@ -157,65 +155,72 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private            :: GAM_5dg_h
 
   !---< Khairoutdinov and Kogan (2000) >---
-  real(RP), private            :: sw_kk2000  = 0.0_RP !< switch for k-k scheme
+  real(RP), private            :: sw_KK2000  = 0.0_RP !< switch for k-k scheme
 
   !---< Roh and Satoh (2014) >---
-  real(RP), private            :: sw_roh2014 = 0.0_RP !< switch for Roh scheme
+  real(RP), private            :: sw_RS2014 = 0.0_RP !< switch for Roh scheme
   real(RP), private, parameter :: coef_a(10) = (/ 5.065339_RP, -0.062659_RP, -3.032362_RP, 0.029469_RP, -0.000285_RP, &
                                                   0.31255_RP,   0.000204_RP,  0.003199_RP, 0.0_RP,      -0.015952_RP  /)
   real(RP), private, parameter :: coef_b(10) = (/ 0.476221_RP, -0.015896_RP,  0.165977_RP, 0.007468_RP, -0.000141_RP, &
                                                   0.060366_RP,  0.000079_RP,  0.000594_RP, 0.0_RP,      -0.003577_RP  /)
 
   ! Accretion parameter
-  real(RP), private            :: Eiw = 1.0_RP  !< collection efficiency of cloud ice for cloud water
-  real(RP), private            :: Erw = 1.0_RP  !< collection efficiency of rain    for cloud water
-  real(RP), private            :: Esw = 1.0_RP  !< collection efficiency of snow    for cloud water
-  real(RP), private            :: Egw = 1.0_RP  !< collection efficiency of graupel for cloud water
-  real(RP), private            :: Eri = 1.0_RP  !< collection efficiency of rain    for cloud ice
-  real(RP), private            :: Esi = 1.0_RP  !< collection efficiency of snow    for cloud ice
-  real(RP), private            :: Egi = 0.1_RP  !< collection efficiency of graupel for cloud ice
-  real(RP), private            :: Esr = 1.0_RP  !< collection efficiency of snow    for rain
-  real(RP), private            :: Egr = 1.0_RP  !< collection efficiency of graupel for rain
-  real(RP), private            :: Egs = 1.0_RP  !< collection efficiency of graupel for snow
-  real(RP), private            :: gamma_sacr = 25.E-3_RP !< effect of low temperature for Esi
-  real(RP), private            :: gamma_gacs = 90.E-3_RP !< effect of low temperature for Egs
+  real(RP), private              :: Eiw        = 1.0_RP      !< collection efficiency of cloud ice for cloud water
+  real(RP), private              :: Erw        = 1.0_RP      !< collection efficiency of rain    for cloud water
+  real(RP), private              :: Esw        = 1.0_RP      !< collection efficiency of snow    for cloud water
+  real(RP), private              :: Egw        = 1.0_RP      !< collection efficiency of graupel for cloud water
+  real(RP), private              :: Eri        = 1.0_RP      !< collection efficiency of rain    for cloud ice
+  real(RP), private              :: Esi        = 1.0_RP      !< collection efficiency of snow    for cloud ice
+  real(RP), private              :: Egi        = 0.1_RP      !< collection efficiency of graupel for cloud ice
+  real(RP), private              :: Esr        = 1.0_RP      !< collection efficiency of snow    for rain
+  real(RP), private              :: Egr        = 1.0_RP      !< collection efficiency of graupel for rain
+  real(RP), private              :: Egs        = 1.0_RP      !< collection efficiency of graupel for snow
+  real(RP), private              :: gamma_sacr = 25.E-3_RP   !< effect of low temperature for Esi
+  real(RP), private              :: gamma_gacs = 90.E-3_RP   !< effect of low temperature for Egs
+  real(RP), private              :: mi         = 4.19E-13_RP !< mass of one cloud ice crystal [kg]
 
   ! Auto-conversion parameter
-  real(RP), private, parameter   :: Nc_lnd = 2000.0_RP !< number concentration of cloud water (land)  [1/cc]
-  real(RP), private, parameter   :: Nc_ocn =   50.0_RP !< number concentration of cloud water (ocean) [1/cc]
-  real(RP), private, allocatable :: Nc_def(:,:)        !< number concentration of cloud water         [1/cc]
+  real(RP), private, parameter   :: Nc_lnd     = 2000.0_RP   !< number concentration of cloud water (land)  [1/cc]
+  real(RP), private, parameter   :: Nc_ocn     =   50.0_RP   !< number concentration of cloud water (ocean) [1/cc]
+  real(RP), private, allocatable :: Nc_def(:,:)              !< number concentration of cloud water         [1/cc]
 
-  real(RP), private            :: beta_saut  =  6.E-3_RP  !< auto-conversion factor beta  for ice
-  real(RP), private            :: gamma_saut = 60.E-3_RP  !< auto-conversion factor gamma for ice
-  real(RP), private            :: beta_gaut  =  1.E-3_RP  !< auto-conversion factor beta  for snow
-  real(RP), private            :: gamma_gaut = 90.E-3_RP  !< auto-conversion factor gamma for snow
-  real(RP), private            :: qicrt_saut =  0.0_RP    !< mixing ratio threshold for Psaut [kg/kg]
-  real(RP), private            :: qscrt_gaut =  6.E-4_RP  !< mixing ratio threshold for Pgaut [kg/kg]
+  real(RP), private              :: beta_saut  =  6.E-3_RP   !< auto-conversion factor beta  for ice
+  real(RP), private              :: gamma_saut = 60.E-3_RP   !< auto-conversion factor gamma for ice
+  real(RP), private              :: beta_gaut  =  1.E-3_RP   !< auto-conversion factor beta  for snow
+  real(RP), private              :: gamma_gaut = 90.E-3_RP   !< auto-conversion factor gamma for snow
+  real(RP), private              :: qicrt_saut =  0.0_RP     !< mixing ratio threshold for Psaut [kg/kg]
+  real(RP), private              :: qscrt_gaut =  6.E-4_RP   !< mixing ratio threshold for Pgaut [kg/kg]
 
   ! Evaporation, Sublimation parameter
-  real(RP), private, parameter :: Da0    = 2.428E-2_RP !< thermal diffusion coefficient of air at 0C,1atm [J/m/s/K]
-  real(RP), private, parameter :: dDa_dT =  7.47E-5_RP !< Coefficient of Da depending on temperature      [J/m/s/K/K]
-  real(RP), private, parameter :: Dw0    = 2.222E-5_RP !< diffusion coefficient of water vapor in the air at 0C,1atm [m2/s]
-  real(RP), private, parameter :: dDw_dT =  1.37E-7_RP !< Coefficient of Dw depending on temperature                 [m2/s/K]
-  real(RP), private, parameter :: mu0    = 1.718E-5_RP !< kinematic viscosity of air at 0C,1atm      [m2/s*kg/m3]
-  real(RP), private, parameter :: dmu_dT =  5.28E-8_RP !< Coefficient of mu depending on temperature [m2/s/K*kg/m3]
+  real(RP), private, parameter   :: Da0        = 2.428E-2_RP !< thermal diffusion coefficient of air at 0C,1atm [J/m/s/K]
+  real(RP), private, parameter   :: dDa_dT     =  7.47E-5_RP !< Coefficient of Da depending on temperature      [J/m/s/K/K]
+  real(RP), private, parameter   :: Dw0        = 2.222E-5_RP !< diffusion coefficient of water vapor in the air at 0C,1atm [m2/s]
+  real(RP), private, parameter   :: dDw_dT     =  1.37E-7_RP !< Coefficient of Dw depending on temperature                 [m2/s/K]
+  real(RP), private, parameter   :: mu0        = 1.718E-5_RP !< kinematic viscosity of air at 0C,1atm      [m2/s*kg/m3]
+  real(RP), private, parameter   :: dmu_dT     =  5.28E-8_RP !< Coefficient of mu depending on temperature [m2/s/K*kg/m3]
 
-  real(RP), private            :: f1r = 0.78_RP  !< ventilation factor 1 for rain
-  real(RP), private            :: f2r = 0.27_RP  !< ventilation factor 2 for rain
-  real(RP), private            :: f1s = 0.65_RP  !< ventilation factor 1 for snow
-  real(RP), private            :: f2s = 0.39_RP  !< ventilation factor 2 for snow
-  real(RP), private            :: f1g = 0.78_RP  !< ventilation factor 1 for graupel
-  real(RP), private            :: f2g = 0.27_RP  !< ventilation factor 2 for graupel
+  real(RP), private, parameter   :: f1r        = 0.78_RP     !< ventilation factor 1 for rain
+  real(RP), private, parameter   :: f2r        = 0.27_RP     !< ventilation factor 2 for rain
+  real(RP), private, parameter   :: f1s        = 0.65_RP     !< ventilation factor 1 for snow
+  real(RP), private, parameter   :: f2s        = 0.39_RP     !< ventilation factor 2 for snow
+  real(RP), private, parameter   :: f1g        = 0.78_RP     !< ventilation factor 1 for graupel
+  real(RP), private, parameter   :: f2g        = 0.27_RP     !< ventilation factor 2 for graupel
 
   ! Freezing parameter
-  real(RP), private            :: A_frz = 0.66_RP  !< freezing factor [/K]
-  real(RP), private            :: B_frz = 100.0_RP !< freezing factor [/m3/s]
+  real(RP), private, parameter   :: A_frz      =  0.66_RP    !< freezing factor [/K]
+  real(RP), private, parameter   :: B_frz      = 100.0_RP    !< freezing factor [/m3/s]
 
   ! Bergeron process parameter
-  real(RP), private            :: mi40  = 2.46E-10_RP !< mass              of a 40 micron ice crystal [kg]
-  real(RP), private            :: mi50  = 4.80E-10_RP !< mass              of a 50 micron ice crystal [kg]
-  real(RP), private            :: vti50 = 1.0_RP      !< terminal velocity of a 50 micron ice crystal [m/s]
-  real(RP), private            :: Ri50  = 5.E-5_RP    !< radius            of a 50 micron ice crystal [m]
+  real(RP), private, parameter   :: mi40       = 2.46E-10_RP !< mass              of a 40 micron ice crystal [kg]
+  real(RP), private, parameter   :: mi50       = 4.80E-10_RP !< mass              of a 50 micron ice crystal [kg]
+  real(RP), private, parameter   :: vti50      = 1.0_RP      !< terminal velocity of a 50 micron ice crystal [m/s]
+  real(RP), private, parameter   :: Ri50       = 5.E-5_RP    !< radius            of a 50 micron ice crystal [m]
+
+  ! Explicit ice generation
+  logical,  private              :: only_liquid  = .false.
+  real(RP), private              :: sw_useicegen = 0.0_RP
+  real(RP), private, parameter   :: Di_max       = 500.E-6_RP
+  real(RP), private, parameter   :: Di_a         = 11.9_RP
 
   integer,  private, parameter :: w_nmax = 42
   integer,  private, parameter :: I_dqv_dt  =  1 !
@@ -345,7 +350,7 @@ contains
                                    ATMOS_PHY_MP_tomita08_DESC, & ! (in)
                                    ATMOS_PHY_MP_tomita08_UNIT  ) ! (in)
 
-    QA = QA_MP
+    QA    = QA_MP
     QS_MP = QS
     QE_MP = QS + QA - 1
 
@@ -378,9 +383,9 @@ contains
        CDZ => GRID_CDZ
     implicit none
 
-    real(RP) :: autoconv_nc    = Nc_ocn  !< number concentration of cloud water [1/cc]
-    logical  :: enable_kk2000  = .false. !< use scheme by Khairoutdinov and Kogan (2000)
-    logical  :: enable_roh2014 = .false. !< use scheme by Roh and Satoh (2014)
+    real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
+    logical  :: enable_KK2000   = .false. !< use scheme by Khairoutdinov and Kogan (2000)
+    logical  :: enable_RS2014   = .false. !< use scheme by Roh and Satoh (2014)
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation,     &
@@ -391,21 +396,35 @@ contains
        MP_couple_aerosol
 
     NAMELIST / PARAM_ATMOS_PHY_MP_TOMITA08 / &
-       autoconv_nc,    &
-       enable_kk2000,  &
-       enable_roh2014, &
-       dens_s,         &
-       dens_g,         &
-       re_qc,          &
-       re_qi,          &
-       Cr,             &
-       Cs,             &
-       drag_g,         &
-       beta_saut,      &
-       gamma_saut,     &
-       gamma_sacr,     &
-       N0s,            &
-       N0g,            &
+       autoconv_nc,     &
+       enable_KK2000,   &
+       enable_RS2014,   &
+       dens_s,          &
+       dens_g,          &
+       re_qc,           &
+       re_qi,           &
+       drag_g,          &
+       Cr,              &
+       Cs,              &
+       Eiw,             &
+       Erw,             &
+       Esw,             &
+       Egw,             &
+       Eri,             &
+       Esi,             &
+       Egi,             &
+       Esr,             &
+       Egr,             &
+       Egs,             &
+       gamma_sacr,      &
+       gamma_gacs,      &
+       mi,              &
+       beta_saut,       &
+       gamma_saut,      &
+       qicrt_saut,      &
+       beta_gaut,       &
+       gamma_gaut,      &
+       qscrt_gaut,      &
        debug
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
@@ -466,8 +485,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** density of the snow    [kg/m3] : ', dens_s
     if( IO_L ) write(IO_FID_LOG,*) '*** density of the graupel [kg/m3] : ', dens_g
     if( IO_L ) write(IO_FID_LOG,*) '*** Nc for auto-conversion [num/m3]: ', autoconv_nc
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use k-k scheme?                : ', enable_kk2000
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use Roh scheme?                : ', enable_roh2014
+    if( IO_L ) write(IO_FID_LOG,*) '*** Use k-k  scheme?               : ', enable_KK2000
+    if( IO_L ) write(IO_FID_LOG,*) '*** Use Roh  scheme?               : ', enable_RS2014
     if( IO_L ) write(IO_FID_LOG,*)
 
     ATMOS_PHY_MP_tomita08_DENS(:)    = UNDEF
@@ -476,6 +495,12 @@ contains
     ATMOS_PHY_MP_tomita08_DENS(I_HI) = dens_i
     ATMOS_PHY_MP_tomita08_DENS(I_HS) = dens_s
     ATMOS_PHY_MP_tomita08_DENS(I_HG) = dens_g
+
+    do j = JS, JE
+    do i = IS, IE
+       Nc_def(i,j) = autoconv_nc
+    enddo
+    enddo
 
     !--- empirical coefficients A, B, C, D
     Ar = PI * dens_w / 6.0_RP
@@ -492,12 +517,30 @@ contains
     Ds = 0.25_RP
     Dg = 0.50_RP
 
-    if ( enable_roh2014 ) then ! overwrite parameters
-       sw_roh2014 = 1.0_RP
-       N0g        = 4.E8_RP
-       As         = 0.069_RP
-       Bs         = 2.0_RP
-       Esi        = 0.25_RP
+    if ( enable_RS2014 ) then ! overwrite parameters
+       MP_doexpricit_icegen = .true.
+
+       sw_RS2014 = 1.0_RP
+       N0g       = 4.E+8_RP
+       As        = 0.069_RP
+       Bs        = 2.0_RP
+       Esi       = 0.25_RP
+       Egi       = 0.0_RP
+       Egs       = 0.0_RP
+    endif
+
+    if ( MP_doexpricit_icegen ) then
+       only_liquid  = .true.
+       sw_useicegen = 1.0_RP
+    else
+       only_liquid  = .false.
+       sw_useicegen = 0.0_RP
+    endif
+
+    if ( enable_KK2000 ) then
+       sw_KK2000 = 1.0_RP
+    else
+       sw_KK2000 = 0.0_RP
     endif
 
     GAM       = 1.0_RP ! =0!
@@ -523,26 +566,6 @@ contains
     GAM_3dg   = SF_gamma( 3.0_RP + Dg )
     GAM_1bgdg = SF_gamma( 1.0_RP + Bg + Dg)
     GAM_5dg_h = SF_gamma( 0.5_RP * (5.0_RP+Dg) )
-
-    do j = JS, JE
-    do i = IS, IE
-       Nc_def(i,j) = autoconv_nc
-    enddo
-    enddo
-
-    if ( MP_doexpricit_icegen ) then
-       only_liquid  = .true.
-       sw_useicegen = 1.0_RP
-    else
-       only_liquid  = .false.
-       sw_useicegen = 0.0_RP
-    endif
-
-    if ( enable_kk2000 ) then
-       sw_kk2000 = 1.0_RP
-    else
-       sw_kk2000 = 0.0_RP
-    endif
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_setup
@@ -767,8 +790,8 @@ contains
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_tracer, only: &
-       QA, &
-       TRACER_R, &
+       QA,        &
+       TRACER_R,  &
        TRACER_CV, &
        TRACER_MASS
     use scale_history, only: &
@@ -791,24 +814,21 @@ contains
     real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
 
     ! working
-    real(RP) :: rdt
-
     real(RP) :: TEMP0(KA,IA,JA) ! temperature [K]
     real(RP) :: PRES0(KA,IA,JA) ! pressure    [Pa]
     real(RP) :: QSATL(KA,IA,JA) ! saturated water vapor for liquid water [kg/kg]
     real(RP) :: QSATI(KA,IA,JA) ! saturated water vapor for ice water    [kg/kg]
 
-    real(RP) :: dens
-    real(RP) :: rhoe
-    real(RP) :: temp
-    real(RP) :: pres
+    real(RP) :: dens            ! density
+    real(RP) :: temp            ! T [K]
     real(RP) :: q(QS_MP:QE_MP)
-    real(RP) :: Sliq  ! saturated ratio S for liquid water [0-1]
-    real(RP) :: Sice  ! saturated ratio S for ice water    [0-1]
+    real(RP) :: Sliq            ! saturated ratio S for liquid water [0-1]
+    real(RP) :: Sice            ! saturated ratio S for ice water    [0-1]
 
-    real(RP) :: Rdens
-    real(RP) :: rho_fact ! density factor
-    real(RP) :: temc     ! T - T0 [K]
+    real(RP) :: Rdens           ! 1 / density
+    real(RP) :: rho_fact        ! density factor
+    real(RP) :: temc            ! T - T0 [K]
+
 
     real(RP) :: RLMDr, RLMDr_2, RLMDr_3
     real(RP) :: RLMDs, RLMDs_2, RLMDs_3
@@ -822,7 +842,7 @@ contains
     real(RP) :: RLMDr_6dr
 
     !---< Roh and Satoh (2014) >---
-    real(RP) :: tems, rhoqs, Xs2
+    real(RP) :: tems, Xs2
     real(RP) :: MOMs_0, MOMs_1, MOMs_2
     real(RP) :: MOMs_0bs, MOMs_1bs, MOMs_2bs
     real(RP) :: MOMs_2ds, MOMs_5ds_h, RMOMs_Vt
@@ -842,6 +862,10 @@ contains
     real(RP) :: Nu                  !< kinematic viscosity of air
     real(RP) :: Glv, Giv, Gil       !< thermodynamic function
     real(RP) :: ventr, vents, ventg !< ventilation factor
+    real(RP) :: net, fac, fac_sw, fac_warm, fac_ice
+    real(RP) :: zerosw, tmp
+
+    !---< Bergeron process >---
     real(RP) :: Bergeron_sw         !< if 0C<T<30C, sw=1
     real(RP) :: a1 (KA,IA,JA)       !<
     real(RP) :: a2 (KA,IA,JA)       !<
@@ -849,29 +873,20 @@ contains
     real(RP) :: dt1                 !< time during which the an ice particle of 40um grows to 50um
     real(RP) :: Ni50                !< number concentration of ice particle of 50um
 
-    ! for explicit ice generation
-    real(RP), parameter :: Di_max = 500.E-6_RP
-    real(RP), parameter :: Di_a   = 11.9_RP
-    real(RP) :: sw, rhoqi, XNi, XMi, Di, Ni0, Qi0, dq, qtmp
-    real(RP) :: Pidep, Pigen
+    !---< Explicit ice generation >---
+    real(RP) :: sw, rhoqi, XNi, XMi, Di, Ni0, Qi0
+    real(RP) :: Pidep, Pigen, dq, qtmp
 
     real(RP) :: ice
 
-    real(RP) :: net, fac, fac_sw, fac_warm, fac_ice
     real(RP) :: w(w_nmax)
 
     real(RP) :: tend(QS_MP:QE_MP)
-
-    real(RP) :: zerosw
-    real(RP) :: tmp
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
-
-!     RHOE_t(:,:,:)   = 0.0_RP
-!     QTRC_t(:,:,:,:) = 0.0_RP
 
     if ( MP_couple_aerosol ) then
        do j = JS, JE
@@ -890,8 +905,6 @@ contains
        enddo
        enddo
     endif
-
-    rdt = 1.0_RP / dt
 
     call THERMODYN_temp_pres_E( TEMP0(:,:,:),   & ! [OUT]
                                 PRES0(:,:,:),   & ! [OUT]
@@ -935,16 +948,14 @@ contains
 
        ! store to work
        dens = DENS0(k,i,j)
-       rhoe = RHOE0(k,i,j)
        temp = TEMP0(k,i,j)
-       pres = PRES0(k,i,j)
        do iq = QS_MP, QE_MP
           q(iq) = QTRC0(k,i,j,iq)
        enddo
 
        ! saturation ratio S
-       Sliq = q(I_QV) / max( QSATL(k,i,j), EPS )
-       Sice = q(I_QV) / max( QSATI(k,i,j), EPS )
+       Sliq     = q(I_QV) / max( QSATL(k,i,j), EPS )
+       Sice     = q(I_QV) / max( QSATI(k,i,j), EPS )
 
        Rdens    = 1.0_RP / dens
        rho_fact = sqrt( dens00 * Rdens )
@@ -957,12 +968,12 @@ contains
 
        w(I_delta3) = 0.5_RP + sign(0.5_RP, Sice - 1.0_RP )
 
-       w(I_dqv_dt) = q(I_QV) * rdt
-       w(I_dqc_dt) = q(I_QC) * rdt
-       w(I_dqr_dt) = q(I_QR) * rdt
-       w(I_dqi_dt) = q(I_QI) * rdt
-       w(I_dqs_dt) = q(I_QS) * rdt
-       w(I_dqg_dt) = q(I_QG) * rdt
+       w(I_dqv_dt) = q(I_QV) / dt
+       w(I_dqc_dt) = q(I_QC) / dt
+       w(I_dqr_dt) = q(I_QR) / dt
+       w(I_dqi_dt) = q(I_QI) / dt
+       w(I_dqs_dt) = q(I_QS) / dt
+       w(I_dqg_dt) = q(I_QG) / dt
 
        Bergeron_sw = ( 0.5_RP + sign(0.5_RP, temc + 30.0_RP ) ) &
                    * ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc  ) ) &
@@ -1008,9 +1019,8 @@ contains
 
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       rhoqs  = dens * q(I_QS)
-       zerosw = 0.5_RP - sign(0.5_RP, rhoqs - 1.E-12_RP )
-       Xs2    = rhoqs / As * ( 1.0_RP - zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, dens * q(I_QS) - 1.E-12_RP )
+       Xs2    = dens * q(I_QS) / As * ( 1.0_RP - zerosw )
 
        tems       = min( -0.1_RP, temc )
        coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
@@ -1024,53 +1034,55 @@ contains
        ! 0th moment
        loga_  = coef_at(1)
        b_     = coef_bt(1)
-       MOMs_0 = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ &
-              + ( 1.0_RP-sw_roh2014 ) * MOMs_0
+       MOMs_0 = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ &
+              + ( 1.0_RP-sw_RS2014 ) * MOMs_0
        ! 1st moment
        nm = 1.0_RP
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-       MOMs_1 = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ &
-              + ( 1.0_RP-sw_roh2014 ) * MOMs_1
+       MOMs_1 = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ &
+              + ( 1.0_RP-sw_RS2014 ) * MOMs_1
        ! 2nd moment
-       MOMs_2 = (        sw_roh2014 ) * Xs2 &
-              + ( 1.0_RP-sw_roh2014 ) * MOMs_2
+       MOMs_2 = (        sw_RS2014 ) * Xs2 &
+              + ( 1.0_RP-sw_RS2014 ) * MOMs_2
        ! 0 + Bs(=2) moment
        nm = 2.0_RP
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-       MOMs_0bs = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ &
-                + ( 1.0_RP-sw_roh2014 ) * MOMs_0bs
+       MOMs_0bs = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ &
+                + ( 1.0_RP-sw_RS2014 ) * MOMs_0bs
        ! 1 + Bs(=2) moment
        nm = 3.0_RP
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-       MOMs_1bs = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ &
-                + ( 1.0_RP-sw_roh2014 ) * MOMs_1bs
+       MOMs_1bs = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ &
+                + ( 1.0_RP-sw_RS2014 ) * MOMs_1bs
        ! 2 + Bs(=2) moment
        nm = 4.0_RP
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-       MOMs_2bs = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ &
-                + ( 1.0_RP-sw_roh2014 ) * MOMs_2bs
+       MOMs_2bs = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ &
+                + ( 1.0_RP-sw_RS2014 ) * MOMs_2bs
        ! 2 + Ds(=0.25) moment
        nm = 2.25_RP
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-       MOMs_2ds = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ &
-                + ( 1.0_RP-sw_roh2014 ) * MOMs_2ds
+       MOMs_2ds = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ &
+                + ( 1.0_RP-sw_RS2014 ) * MOMs_2ds
        ! ( 3 + Ds(=0.25) ) / 2  moment
        nm = 1.625_RP
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-       MOMs_5ds_h = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ &
-                  + ( 1.0_RP-sw_roh2014 ) * MOMs_5ds_h
+       MOMs_5ds_h = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ &
+                  + ( 1.0_RP-sw_RS2014 ) * MOMs_5ds_h
        ! Bs(=2) + Ds(=0.25) moment
        nm = 2.25_RP
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-       RMOMs_Vt = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ / ( MOMs_0bs + zerosw ) &
-                + ( 1.0_RP-sw_roh2014 ) * RMOMs_Vt
+
+       zerosw = 0.5_RP - sign(0.5_RP, abs(MOMs_0bs) - 1.E-12_RP )
+       RMOMs_Vt = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ / ( MOMs_0bs + zerosw ) &
+                + ( 1.0_RP-sw_RS2014 ) * RMOMs_Vt
 
        ! slope parameter lambda (Graupel)
        zerosw = 0.5_RP - sign(0.5_RP, q(I_QG) - 1.E-12_RP )
@@ -1103,8 +1115,8 @@ contains
        Pracw_kk   = 67.0_RP * ( q(I_QC) * q(I_QR) )**1.15_RP ! eq.(33) in KK(2000)
 
        ! switch orig / k-k scheme
-       w(I_Pracw) = ( 1.0_RP - sw_kk2000 ) * Pracw_orig &
-                  + (          sw_kk2000 ) * Pracw_kk
+       w(I_Pracw) = ( 1.0_RP - sw_KK2000 ) * Pracw_orig &
+                  + (          sw_KK2000 ) * Pracw_kk
 
        ! [Psacw] accretion rate of cloud water by snow
        w(I_Psacw) = q(I_QC) * 0.25_RP * PI * Esw       * Cs * MOMs_2ds            * rho_fact
@@ -1119,10 +1131,10 @@ contains
        w(I_Psaci) = q(I_QI) * 0.25_RP * PI * Esi_mod   * Cs * MOMs_2ds            * rho_fact
 
        ! [Pgaci] accretion rate of cloud ice by grupel
-       w(I_Pgaci) = q(I_QI) * 0.25_RP * PI * Egi * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact * ( 1.0_RP-sw_roh2014 )
+       w(I_Pgaci) = q(I_QI) * 0.25_RP * PI * Egi * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact
 
        ! [Piacr] accretion rate of rain by cloud ice
-       w(I_Piacr) = q(I_QI) * Ar / 4.19E-13_RP * 0.25_RP * PI * Eri * N0r * Cr * GAM_6dr * RLMDr_6dr * rho_fact
+       w(I_Piacr) = q(I_QI) * Ar / mi * 0.25_RP * PI * Eri * N0r * Cr * GAM_6dr * RLMDr_6dr * rho_fact
 
        ! [Psacr] accretion rate of rain by snow
        w(I_Psacr) = Ar * 0.25_RP * PI * Rdens * Esr * N0r       * abs(Vtr-Vts) &
@@ -1143,7 +1155,7 @@ contains
                     +          MOMs_2bs            * GAM   * RLMDr   )
 
        ! [Pgacs] accretion rate of snow by graupel
-       w(I_Pgacs) = As * 0.25_RP * PI * Rdens * Egs_mod   * N0g * abs(Vtg-Vts) * ( 1.0_RP-sw_roh2014 ) &
+       w(I_Pgacs) = As * 0.25_RP * PI * Rdens * Egs_mod   * N0g * abs(Vtg-Vts) &
                   * (          MOMs_0bs            * GAM_3 * RLMDg_3 &
                     + 2.0_RP * MOMs_1bs            * GAM_2 * RLMDg_2 &
                     +          MOMs_2bs            * GAM   * RLMDg   )
@@ -1157,8 +1169,8 @@ contains
        Praut_kk    = 1350.0_RP * q(I_QC)**2.47_RP * Nc(k,i,j)**(-1.79_RP) ! eq.(29) in KK(2000)
 
        ! switch berry / k-k scheme
-       w(I_Praut) = ( 1.0_RP - sw_kk2000 ) * Praut_berry &
-                  + (          sw_kk2000 ) * Praut_kk
+       w(I_Praut) = ( 1.0_RP - sw_KK2000 ) * Praut_berry &
+                  + (          sw_KK2000 ) * Praut_kk
 
        ! [Psaut] auto-conversion rate from cloud ice to snow
        betai = min( beta_saut, beta_saut * exp( gamma_saut * temc ) )
@@ -1169,13 +1181,13 @@ contains
        w(I_Pgaut) = max( betas*(q(I_QS)-qscrt_gaut), 0.0_RP )
 
        !---< Evaporation, Sublimation >---
-       Da = ( Da0 + dDa_dT * temc )
-       Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
-       NU = ( mu0 + dmu_dT * temc ) * Rdens
+       Da  = ( Da0 + dDa_dT * temc )
+       Kd  = ( Dw0 + dDw_dT * temc ) * PRE00 / PRES0(k,i,j)
+       NU  = ( mu0 + dmu_dT * temc ) * Rdens
 
-       Glv  = 1.0_RP / ( LHV0/(Da*temp) * ( LHV0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
-       Giv  = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
-       Gil  = 1.0_RP / LHF0 * (Da*temc)
+       Glv = 1.0_RP / ( LHV0/(Da*temp) * ( LHV0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
+       Giv = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
+       Gil = 1.0_RP / LHF0 * (Da*temc)
 
        ! [Prevp] evaporation rate of rain
        ventr = f1r * GAM_2 * RLMDr_2 + f2r * sqrt( Cr * rho_fact / NU * RLMDr_5dr ) * GAM_5dr_h
@@ -1193,6 +1205,7 @@ contains
        ! [Psmlt] melting rate of snow
        w(I_Psmlt) = 2.0_RP * PI * Rdens *       Gil * vents &
                   + CL * temc / LHF0 * ( w(I_Psacw) + w(I_Psacr) )
+       w(I_Psmlt) = max( w(I_Psmlt), 0.0_RP      )
 
        ! [Pgdep/pgsub] deposition/sublimation rate for graupel
        ventg = f1g * GAM_2 * RLMDg_2 + f2g * sqrt( Cg * rho_fact / NU * RLMDg_5dg ) * GAM_5dg_h
@@ -1205,6 +1218,7 @@ contains
        ! [Pgmlt] melting rate of graupel
        w(I_Pgmlt) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
                   + CL * temc / LHF0 * ( w(I_Pgacw) + w(I_Pgacr) )
+       w(I_Pgmlt) = max( w(I_Pgmlt), 0.0_RP      )
 
        ! [Pgfrz] freezing rate of graupel
        w(I_Pgfrz) = 2.0_RP * PI * Rdens * N0r * 60.0_RP * B_frz * Ar * ( exp(-A_frz*temc) - 1.0_RP ) * RLMDr_7
@@ -1213,10 +1227,11 @@ contains
        dt1  = ( mi50**ma2(k,i,j) - mi40**ma2(k,i,j) ) / ( a1(k,i,j) * ma2(k,i,j) )
        Ni50 = q(I_QI) * dt / ( mi50 * dt1 )
 
-       w(I_Psfw) = Bergeron_sw * Ni50 * ( a1(k,i,j) * mi50**a2(k,i,j)                   &
-                                        + PI * Eiw * dens * q(I_QC) * Ri50*Ri50 * vti50 )
-       w(I_Psfi) = Bergeron_sw * q(I_QI) / dt1
+       w(I_Psfw ) = Bergeron_sw * Ni50 * ( a1(k,i,j) * mi50**a2(k,i,j) &
+                                + PI * Eiw * dens * q(I_QC) * Ri50*Ri50 * vti50 )
+       w(I_Psfi ) = Bergeron_sw * q(I_QI) / dt1
 
+       !---< limiter >---
        w(I_Psdep) = min( w(I_Psdep), w(I_dqv_dt) )
        w(I_Pgdep) = min( w(I_Pgdep), w(I_dqv_dt) )
 
@@ -1241,11 +1256,9 @@ contains
        w(I_Pgaut) = min( w(I_Pgaut), w(I_dqs_dt) )
        w(I_Pracs) = min( w(I_Pracs), w(I_dqs_dt) )
        w(I_Pgacs) = min( w(I_Pgacs), w(I_dqs_dt) )
-       w(I_Psmlt) = max( w(I_Psmlt), 0.0_RP      )
        w(I_Psmlt) = min( w(I_Psmlt), w(I_dqs_dt) )
        w(I_Pssub) = min( w(I_Pssub), w(I_dqs_dt) )
 
-       w(I_Pgmlt) = max( w(I_Pgmlt), 0.0_RP        )
        w(I_Pgmlt) = min( w(I_Pgmlt), w(I_dqg_dt) )
        w(I_Pgsub) = min( w(I_Pgsub), w(I_dqg_dt) )
 
@@ -1257,7 +1270,7 @@ contains
        w(I_Psacr_g) = ( 1.0_RP - w(I_delta2) ) * w(I_Psacr)
        w(I_Pracs  ) = ( 1.0_RP - w(I_delta2) ) * w(I_Pracs)
 
-       ice = 0.5_RP - sign( 0.5_RP, TEMP0(k,i,j)-TEM00 ) ! 0: warm, 1: ice
+       ice = 0.5_RP - sign( 0.5_RP, temc ) ! 0: warm, 1: ice
 
        ! [QC]
        net = &
@@ -1563,7 +1576,6 @@ contains
           ! store to work
           dens = DENS0(k,i,j)
           temp = TEMP0(k,i,j)
-          pres = PRES0(k,i,j)
 
           ! saturation ratio S
           Sice = QTRC0(k,i,j,I_QV) / max( QSATI(k,i,j), EPS )
@@ -1573,7 +1585,7 @@ contains
           rhoqi = dens * QTRC0(k,i,j,I_QI)
 
           Da = ( Da0 + dDa_dT * temc )
-          Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
+          Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / PRES0(k,i,j)
 
           Giv  = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
 
@@ -1583,7 +1595,7 @@ contains
 
           rhoqi = max(rhoqi,EPS)
 
-          XNi = min( max( 5.38E7_RP * rhoqi**0.75_RP, 1.E3_RP ), 1.E6_RP )
+          XNi = min( max( 5.38E+7_RP * rhoqi**0.75_RP, 1.E+3_RP ), 1.E+6_RP )
           XMi = rhoqi / XNi
           Di  = min( Di_a * sqrt(XMi), Di_max )
 
@@ -1721,7 +1733,7 @@ contains
     real(RP) :: RLMDr_dr, RLMDs_ds, RLMDg_dg
 
     !---< Roh and Satoh (2014) >---
-    real(RP) :: tems, rhoqs, Xs2
+    real(RP) :: tems, Xs2
     real(RP) :: MOMs_0bs, RMOMs_Vt
     real(RP) :: coef_at(4), coef_bt(4)
     real(RP) :: loga_, b_, nm
@@ -1757,9 +1769,8 @@ contains
 
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       rhoqs  = dens * q(I_QS)
-       zerosw = 0.5_RP - sign(0.5_RP, rhoqs - 1.E-12_RP )
-       Xs2    = rhoqs / As * ( 1.0_RP - zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, dens * q(I_QS) - 1.E-12_RP )
+       Xs2    = dens * q(I_QS) / As * ( 1.0_RP - zerosw )
 
        tems       = min( -0.1_RP, temc )
        coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
@@ -1779,8 +1790,8 @@ contains
        nm = 2.25_RP
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-       RMOMs_Vt = (        sw_roh2014 ) * 10.0_RP**loga_ * Xs2**b_ / ( MOMs_0bs + zerosw ) &
-                + ( 1.0_RP-sw_roh2014 ) * RMOMs_Vt
+       RMOMs_Vt = (        sw_RS2014 ) * 10.0_RP**loga_ * Xs2**b_ / ( MOMs_0bs + zerosw ) &
+                + ( 1.0_RP-sw_RS2014 ) * RMOMs_Vt
 
        ! slope parameter lambda (Graupel)
        zerosw = 0.5_RP - sign(0.5_RP, q(I_QG) - 1.E-12_RP )
@@ -1935,7 +1946,7 @@ contains
     real(RP), parameter :: um2cm = 100.0_RP
 
     !---< Roh and Satoh (2014) >---
-    real(RP) :: tems, rhoqs, Xs2
+    real(RP) :: tems, Xs2
     real(RP) :: MOMs_2, MOMs_1bs
     real(RP) :: coef_at(4), coef_bt(4)
     real(RP) :: loga_, b_, nm
@@ -1965,9 +1976,8 @@ contains
        RLMDs = sqrt(sqrt( dens * QTRC0(k,i,j,I_QS) / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP - zerosw )
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       rhoqs  = dens * QTRC0(k,i,j,I_QS)
-       zerosw = 0.5_RP - sign(0.5_RP, rhoqs - 1.E-12_RP )
-       Xs2    = rhoqs / As * ( 1.0_RP - zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, dens * QTRC0(k,i,j,I_QS) - 1.E-12_RP )
+       Xs2    = dens * QTRC0(k,i,j,I_QS) / As * ( 1.0_RP - zerosw )
        tems       = min( -0.1_RP, temc )
        coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
        coef_at(2) = coef_a( 3) + tems * ( coef_a( 4) + tems *   coef_a( 7) )
@@ -1984,8 +1994,8 @@ contains
        loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
        MOMs_1bs = 10.0_RP**loga_ * Xs2**b_
-       Re(k,i,j,I_HS) = (        sw_roh2014 ) * 0.5_RP * MOMs_1bs / ( MOMs_2 + zerosw ) * um2cm &
-                      + ( 1.0_RP-sw_roh2014 ) * 1.5_RP * RLMDs * um2cm
+       Re(k,i,j,I_HS) = (        sw_RS2014 ) * 0.5_RP * MOMs_1bs / ( MOMs_2 + zerosw ) * um2cm &
+                      + ( 1.0_RP-sw_RS2014 ) * 1.5_RP * RLMDs * um2cm
 
        zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QG) - 1.E-12_RP )
        RLMDg = sqrt(sqrt( dens * QTRC0(k,i,j,I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP - zerosw )
