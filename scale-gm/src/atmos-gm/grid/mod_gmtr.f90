@@ -891,7 +891,7 @@ contains
           do v = ADM_gmin_pl, ADM_gmax_pl
              ij   = v
              ijm1 = v-1
-             if ( ijm1 == ADM_gmin_pl-1 ) ijp1 = ADM_gmax_pl
+             if ( ijm1 == ADM_gmin_pl-1 ) ijm1 = ADM_gmax_pl
 
              do d = 1, ADM_nxyz
                 wk_pl(d,1) = GRD_xt_pl(ijm1,k0,l,d)
