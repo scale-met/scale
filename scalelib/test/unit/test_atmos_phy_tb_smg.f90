@@ -4,8 +4,6 @@ module test_atmos_phy_tb_smg
   use scale_precision
   use scale_grid_index
   use scale_tracer
-  use scale_atmos_phy_tb, only: &
-     ATMOS_PHY_TB
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
@@ -85,6 +83,8 @@ contains
   !
   !=============================================================================
   character(len=H_SHORT) :: TB_TYPE
+  real(RP) :: CZ3D(KA,IA,JA)
+  integer :: i, j
 
   ! allocate
   allocate( qflx_sgs_momz(KA,IA,JA,3) )
@@ -122,12 +122,18 @@ contains
   allocate( ZERO(KA,IA,JA,3) )
 
 
+  do j = JS, JE
+  do i = IS, IE
+     CZ3D(:,i,j) = CZ(:)
+  end do
+  end do
+
   !########## Initial setup ##########
   TB_TYPE = "SMAGORINSKY"
   call ATMOS_PHY_TB_setup( &
        TB_TYPE,       & ! (in)
        CDZ, CDX, CDY, & ! (in)
-       CZ             ) ! (in)
+       CZ3D           ) ! (in)
 
   ZERO(:,:,:,:) = 0.0_RP
 
@@ -162,6 +168,8 @@ end subroutine test_atmos_phy_tb_smg_run
 
 
 subroutine test_zero
+  use scale_atmos_phy_tb, only: &
+     ATMOS_PHY_TB
 
   write(*,*) "Test zero"
 
@@ -193,6 +201,8 @@ subroutine test_zero
 end subroutine test_zero
 !=============================================================================
 subroutine test_constant
+  use scale_atmos_phy_tb, only: &
+     ATMOS_PHY_TB
 
   write(*,*) "Test constant"
 
@@ -226,6 +236,8 @@ subroutine test_constant
 end subroutine test_constant
 !=============================================================================
 subroutine test_big
+  use scale_atmos_phy_tb, only: &
+     ATMOS_PHY_TB
 
   real(RP) :: BIG(KA,IA,JA,3)
 
@@ -276,6 +288,8 @@ subroutine test_big
 end subroutine test_big
 !=============================================================================
 subroutine test_double
+  use scale_atmos_phy_tb, only: &
+     ATMOS_PHY_TB
 
   real(RP) :: qflx_sgs_momz2(KA,IA,JA,3)
   real(RP) :: qflx_sgs_momx2(KA,IA,JA,3)

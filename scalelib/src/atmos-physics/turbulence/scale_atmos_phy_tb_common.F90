@@ -1219,7 +1219,7 @@ contains
        RFDY => GRID_RFDY
     implicit none
 
-    real(RP), intent(out) :: qflx_phi(KA,IA,JA,3)
+    real(RP), intent(inout) :: qflx_phi(KA,IA,JA,3)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: PHI(KA,IA,JA)
     real(RP), intent(in)  :: Kh(KA,IA,JA)
