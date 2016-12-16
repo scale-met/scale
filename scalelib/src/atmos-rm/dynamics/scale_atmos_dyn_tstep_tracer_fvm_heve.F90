@@ -101,7 +101,7 @@ contains
        ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
        ATMOS_DYN_FVM_fluxY_XYZ_ud1
     implicit none
-    real(RP), intent(out) :: QTRCo   (KA,IA,JA)
+    real(RP), intent(inout) :: QTRCo   (KA,IA,JA) ! could be identical to QTRC0
     real(RP), intent(in)  :: QTRC    (KA,IA,JA)
     real(RP), intent(in)  :: QTRC0   (KA,IA,JA)
     real(RP), intent(in)  :: RHOQ_t  (KA,IA,JA)

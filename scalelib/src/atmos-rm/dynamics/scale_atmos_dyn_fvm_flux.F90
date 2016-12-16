@@ -63,7 +63,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mflx    (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
@@ -81,7 +81,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -101,7 +101,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -122,7 +122,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -143,7 +143,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
