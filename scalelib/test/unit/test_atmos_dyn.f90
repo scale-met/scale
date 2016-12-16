@@ -642,6 +642,7 @@ subroutine test_cwc
   answer(:,:,:) = Q
   message = "iq = ??"
   do iq = 1, QA
+     if ( .not. TRACER_ADVC(iq) ) cycle
      write(message(6:7), "(i2)") iq
      call AssertEqual(message, answer(KS:KE,IS:IE,JS:JE), QTRC(KS:KE,IS:IE,JS:JE,iq), RP*2-2, -10)
   end do
@@ -726,6 +727,7 @@ subroutine test_fctminmax
 
   message = "iq = ??"
   do iq = 1, QA
+     if ( .not. TRACER_ADVC(iq) ) cycle
      write(message(6:7), "(i2)") iq
      write(message(9:11),"(a3)") "MAX"
      MINMAX(:,:,:) = Q_MAX * ( 1_RP + epsilon )

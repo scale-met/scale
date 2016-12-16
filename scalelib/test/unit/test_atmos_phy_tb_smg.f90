@@ -20,8 +20,6 @@ module test_atmos_phy_tb_smg
   real(RP), allocatable :: qflx_sgs_rhot(:,:,:,:)
   real(RP), allocatable :: qflx_sgs_rhoq(:,:,:,:,:)
 
-  real(RP), allocatable :: tke (:,:,:) ! TKE
-  real(RP), allocatable :: tke_t(:,:,:) ! tendency of TKE
   real(RP), allocatable :: nu_C(:,:,:) ! eddy viscosity (center)
   real(RP), allocatable :: Pr  (:,:,:) ! Prantle number
   real(RP), allocatable :: Ri  (:,:,:) ! Richardson number
@@ -33,6 +31,7 @@ module test_atmos_phy_tb_smg
   real(RP), allocatable :: RHOT(:,:,:)
   real(RP), allocatable :: DENS(:,:,:)
   real(RP), allocatable :: QTRC(:,:,:,:)
+  real(RP), allocatable :: RHOQ_t(:,:,:,:)
 
   real(RP), allocatable :: GSQRT(:,:,:,:)
   real(RP), allocatable :: J13G(:,:,:,:)
@@ -67,6 +66,7 @@ contains
   use scale_stdio, only: &
      H_SHORT
   use scale_atmos_phy_tb, only: &
+     ATMOS_PHY_TB_config, &
      ATMOS_PHY_TB_setup
   use scale_grid, only: &
      CDZ => GRID_CDZ, &
@@ -86,15 +86,16 @@ contains
   real(RP) :: CZ3D(KA,IA,JA)
   integer :: i, j
 
+  TB_TYPE = "SMAGORINSKY"
+  call ATMOS_PHY_TB_config( TB_TYPE )
+
   ! allocate
   allocate( qflx_sgs_momz(KA,IA,JA,3) )
   allocate( qflx_sgs_momx(KA,IA,JA,3) )
   allocate( qflx_sgs_momy(KA,IA,JA,3) )
   allocate( qflx_sgs_rhot(KA,IA,JA,3) )
-  allocate( qflx_sgs_rhoq(KA,IA,JA,QA,3) )
+  allocate( qflx_sgs_rhoq(KA,IA,JA,3,QA) )
 
-  allocate( tke (KA,IA,JA) )
-  allocate( tke_t(KA,IA,JA) )
   allocate( nu_C(KA,IA,JA) )
   allocate( Pr  (KA,IA,JA) )
   allocate( Ri  (KA,IA,JA) )
@@ -106,6 +107,7 @@ contains
   allocate( RHOT(KA,IA,JA) )
   allocate( DENS(KA,IA,JA) )
   allocate( QTRC(KA,IA,JA,QA) )
+  allocate( RHOQ_t(KA,IA,JA,QA) )
 
   allocate( GSQRT(KA,IA,JA,7) )
   allocate( J13G(KA,IA,JA,7) )
@@ -129,9 +131,7 @@ contains
   end do
 
   !########## Initial setup ##########
-  TB_TYPE = "SMAGORINSKY"
   call ATMOS_PHY_TB_setup( &
-       TB_TYPE,       & ! (in)
        CDZ, CDX, CDY, & ! (in)
        CZ3D           ) ! (in)
 
@@ -151,6 +151,8 @@ contains
   J33G          = 1.0_RP
 
   MAPF(:,:,:,:) = 1.0_RP
+
+  dt = 1.0_RP
 
   !########## test ##########
 
@@ -183,7 +185,8 @@ subroutine test_zero
   call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       tke, tke_t, nu_C, Ri, Pr, N2,                & ! (out)
+       RHOQ_t,                                      & ! (inout)
+       nu_C, Ri, Pr, N2,                            & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -218,7 +221,8 @@ subroutine test_constant
   call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       tke, tke_t, nu_C, Ri, Pr, N2,                & ! (out)
+       RHOQ_t,                                      & ! (inout)
+       nu_C, Ri, Pr, N2,                            & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -270,7 +274,8 @@ subroutine test_big
   call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       tke, tke_t, nu_C, Ri, Pr, N2,                & ! (out)
+       RHOQ_t,                                      & ! (inout)
+       nu_C, Ri, Pr, N2,                            & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -281,8 +286,9 @@ subroutine test_big
   call AssertLessThan("qflx_sgs_rhot", BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:)))
   message = "iq = ??"
   do iq = 1, QA
+     if ( .not. TRACER_ADVC(iq) ) cycle
      write(message(6:7), "(i2)") iq
-     call AssertLessThan(message, BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_rhoq(KS:KE,IS:IE,JS:JE,iq,:)))
+     call AssertLessThan(message, BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_rhoq(KS:KE,IS:IE,JS:JE,:,iq)))
   end do
 
 end subroutine test_big
@@ -295,7 +301,7 @@ subroutine test_double
   real(RP) :: qflx_sgs_momx2(KA,IA,JA,3)
   real(RP) :: qflx_sgs_momy2(KA,IA,JA,3)
   real(RP) :: qflx_sgs_rhot2(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_rhoq2(KA,IA,JA,QA,3)
+  real(RP) :: qflx_sgs_rhoq2(KA,IA,JA,3,QA)
 
   real(RP) :: work(KA,IA,JA,3)
   real(RP) :: FOUR(KA,IA,JA,3)
@@ -326,7 +332,8 @@ subroutine test_double
   call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       tke, tke_t, nu_C, Ri, Pr, N2,                & ! (out)
+       RHOQ_t,                                      & ! (inout)
+       nu_C, Ri, Pr, N2,                            & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -339,7 +346,8 @@ subroutine test_double
   call ATMOS_PHY_TB( &
        qflx_sgs_momz2, qflx_sgs_momx2, qflx_sgs_momy2, & ! (out)
        qflx_sgs_rhot2, qflx_sgs_rhoq2,              & ! (out)
-       tke, tke_t, nu_C, Ri, Pr, N2,                & ! (out)
+       RHOQ_t,                                      & ! (inout)
+       nu_C, Ri, Pr, N2,                            & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -355,8 +363,9 @@ subroutine test_double
   call AssertEqual("qflx_sgs_momy", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
   message = "iq = ??"
   do iq = 1, QA
-     where(qflx_sgs_rhoq(:,:,:,iq,:) /= 0.0_RP) work = qflx_sgs_rhoq2(:,:,:,iq,:) / qflx_sgs_rhoq(:,:,:,iq,:)
-     where(qflx_sgs_rhoq2(:,:,:,iq,:) == 0.0_RP) work = 4.0_RP
+     if ( .not. TRACER_ADVC(iq) ) cycle
+     where(qflx_sgs_rhoq(:,:,:,:,iq) /= 0.0_RP) work = qflx_sgs_rhoq2(:,:,:,:,iq) / qflx_sgs_rhoq(:,:,:,:,iq)
+     where(qflx_sgs_rhoq2(:,:,:,:,iq) == 0.0_RP) work = 4.0_RP
      write(message(6:7), "(i2)") iq
      call AssertEqual(message, FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
   end do

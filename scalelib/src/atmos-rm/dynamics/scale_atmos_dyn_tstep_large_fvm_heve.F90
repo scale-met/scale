@@ -979,7 +979,7 @@ contains
        else
 
           do j = JS, JE
-          do i = IS, JE
+          do i = IS, IE
           do k = KS, KE
              QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS00(k,i,j) &
                               + RHOQ_t(k,i,j,iq)                ) / DENS(k,i,j)
