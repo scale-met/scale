@@ -145,7 +145,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
@@ -207,7 +207,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
@@ -254,7 +254,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mflx    (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
@@ -304,7 +304,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -381,7 +381,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -429,7 +429,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -479,7 +479,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -547,7 +547,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -616,7 +616,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -685,7 +685,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -739,7 +739,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -794,7 +794,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -848,7 +848,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -902,7 +902,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -971,7 +971,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -1025,7 +1025,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -1080,7 +1080,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -1132,7 +1132,7 @@ contains
        IIS, IIE, JJS, JJE )
     implicit none
 
-    real(RP), intent(out) :: flux    (KA,IA,JA)
+    real(RP), intent(inout) :: flux    (KA,IA,JA)
     real(RP), intent(in)  :: mom     (KA,IA,JA)
     real(RP), intent(in)  :: val     (KA,IA,JA)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)

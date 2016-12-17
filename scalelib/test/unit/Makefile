@@ -4,6 +4,11 @@ BUILD_DIR := $(PWD)/.libs
 TOPDIR     = ../../..
 SYSDEP_DIR = ../../../sysdep
 
+DEBUG=T
+export DEBUG
+AGGRESSIVE=F
+export DEBUG
+
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
@@ -58,7 +63,7 @@ $(BUILD_DIR)/unit.o: unit.f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
 .SUFFIXES: .o .f90
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS_DEBUG) -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS_DEBUG) -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 %.o: %.mod
 

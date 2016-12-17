@@ -134,6 +134,8 @@ contains
      GRID_CBFZ
   use scale_const, only: &
      GRAV => CONST_GRAV
+  use scale_atmos_boundary, only: &
+     BND_QA
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -143,7 +145,6 @@ contains
   !
   !-----------------------------------------------------------------------------
   real(RP) :: lat(1,IA,JA)
-  integer :: VA
   character(len=H_SHORT) :: CSDUMMY(1)
   character(len=H_MID)   :: CMDUMMY(1)
   integer :: j
@@ -190,8 +191,8 @@ contains
 
   allocate( PHI(KA,IA,JA) )
   allocate( GSQRT(KA,IA,JA,7) )
-  allocate( J13G(KA,IA,JA,4) )
-  allocate( J23G(KA,IA,JA,4) )
+  allocate( J13G(KA,IA,JA,7) )
+  allocate( J23G(KA,IA,JA,7) )
 
   allocate( MAPF(IA,JA,2,4) )
 
@@ -203,6 +204,8 @@ contains
   allocate( ZERO(KA,IA,JA) )
 
   allocate( PROG(KA,IA,JA,1) )
+
+  BND_QA = 0
 
   ZERO(:,:,:) = 0.0_RP
 
