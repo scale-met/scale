@@ -714,21 +714,21 @@ contains
           ! at (x, y, layer)
           ! note than z-index is added by -1
           call ATMOS_DYN_FVM_fluxZ_XYW_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-               MOMZ, MOMZ, DENS, & ! (in)
+               MOMZ, MOMZ0, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), J33G, & ! (in)
                num_diff(:,:,:,I_MOMZ,ZDIR), & ! (in)
                CDZ, FDZ, dtrk, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxX_XYW_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
-               MOMX, MOMZ, DENS, & ! (in)
+               MOMX, MOMZ0, DENS, & ! (in)
                GSQRT(:,:,:,I_UYZ), MAPF(:,:,:,I_UY), & ! (in)
                num_diff(:,:,:,I_MOMZ,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_XYW_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
-               MOMY, MOMZ, DENS, & ! (in)
+               MOMY, MOMZ0, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), MAPF(:,:,:,I_XV), & ! (in)
                num_diff(:,:,:,I_MOMZ,YDIR), & ! (in)
                CDZ, & ! (in)
@@ -953,7 +953,7 @@ contains
        if ( FLAG_FCT_MOMENTUM ) then
 
           call ATMOS_DYN_FVM_fluxZ_UYZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-               MOMZ, MOMX, DENS, & ! (in)
+               MOMZ, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_UYW), J33G, & ! (in)
                num_diff(:,:,:,I_MOMX,ZDIR), & ! (in)
                CDZ, & ! (in)
@@ -961,14 +961,14 @@ contains
 
           ! note that x-index is added by -1
           call ATMOS_DYN_FVM_fluxX_UYZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
-               MOMX, MOMX, DENS, & ! (in)
+               MOMX, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_UY), & ! (in)
                num_diff(:,:,:,I_MOMX,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_UYZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
-               MOMY, MOMX, DENS, & ! (in)
+               MOMY, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_XV), & ! (in)
                num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
                CDZ, & ! (in)
@@ -1204,7 +1204,7 @@ contains
           ! monotonic flux
           ! at (x, v, interface)
           call ATMOS_DYN_FVM_fluxZ_XVZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-               MOMZ, MOMY, DENS, & ! (in)
+               MOMZ, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), J33G, & ! (in)
                num_diff(:,:,:,I_MOMY,ZDIR), & ! (in)
                CDZ, & ! (in)
@@ -1212,7 +1212,7 @@ contains
 
           ! at (u, v, layer)
           call ATMOS_DYN_FVM_fluxX_XVZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
-               MOMX, MOMY, DENS, & ! (in)
+               MOMX, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_XY), & ! (in)
                num_diff(:,:,:,I_MOMY,XDIR), & ! (in)
                CDZ, & ! (in)
@@ -1221,7 +1221,7 @@ contains
           ! at (x, y, layer)
           ! note that y-index is added by -1
           call ATMOS_DYN_FVM_fluxY_XVZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
-               MOMY, MOMY, DENS, & ! (in)
+               MOMY, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
                num_diff(:,:,:,I_MOMY,YDIR), & ! (in)
                CDZ, & ! (in)
@@ -1394,6 +1394,15 @@ contains
           call COMM_wait ( DENS_RK, 1, .false. )
        endif
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS, KE
+          POTT(k,i,j) = RHOT0(k,i,j) / DENS0(k,i,j)
+       enddo
+       enddo
+       enddo
+
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
@@ -1421,15 +1430,6 @@ contains
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
-       do k = KS, KE
-          POTT(k,i,j) = RHOT0(k,i,j) / DENS0(k,i,j)
-       enddo
        enddo
        enddo
 
