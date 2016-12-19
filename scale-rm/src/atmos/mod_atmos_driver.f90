@@ -60,10 +60,13 @@ contains
        ATMOS_PHY_MP_driver_config
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_config
+    use mod_atmos_phy_tb_driver, only: &
+       ATMOS_PHY_TB_driver_config
     implicit none
 
     call ATMOS_PHY_MP_driver_config
     call ATMOS_PHY_AE_driver_config
+    call ATMOS_PHY_TB_driver_config
 
     return
   end subroutine ATMOS_driver_config
@@ -89,12 +92,12 @@ contains
        ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_setup
-    use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_setup
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_setup
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
