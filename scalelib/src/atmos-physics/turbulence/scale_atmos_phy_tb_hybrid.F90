@@ -71,7 +71,7 @@ module scale_atmos_phy_tb_hybrid
        real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
        real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-       real(RP), intent(out)   :: RHOQ_t(KA,IA,JA,QA) ! tendency of rho * QTRC
+       real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QA) ! tendency of rho * QTRC
 
        real(RP), intent(out)   :: nu_C(KA,IA,JA) ! eddy viscosity (center)
        real(RP), intent(out)   :: Ri  (KA,IA,JA) ! Richardson number
