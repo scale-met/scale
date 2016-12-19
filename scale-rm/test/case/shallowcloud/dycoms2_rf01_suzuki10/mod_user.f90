@@ -492,6 +492,8 @@ contains
 
 
           do iq = 1, QA
+             if ( .not. TRACER_ADVC(iq) ) cycle
+
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE

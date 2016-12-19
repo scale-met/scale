@@ -323,7 +323,6 @@ contains
        call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K.kg/m3/s', nohalo=.true. )
 
        do iq = 1, QA
-          if ( .not. TRACER_ADVC(iq) ) cycle
           call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB',                      &
                         'RHO*'//trim(TRACER_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
        enddo
@@ -358,6 +357,8 @@ contains
 
 
        do iq = 1, QA
+          if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
+
           call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,iq), &
                'SGS_ZFLX_'//trim(TRACER_NAME(iq)), 'SGS Z FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
                zdim='half', nohalo=.true.)
