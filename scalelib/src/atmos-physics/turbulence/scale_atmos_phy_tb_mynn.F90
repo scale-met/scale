@@ -61,43 +61,42 @@ module scale_atmos_phy_tb_mynn
   !++ Private parameters & variables
   !
   real(RP), private, parameter :: OneOverThree = 1.0_RP / 3.0_RP
-  real(RP), private, parameter :: TKE_min = 1.0E-10_RP
-  real(RP), private, parameter :: LT_min = 1.0E-6_RP
-  real(RP), private, parameter :: Us_min = 1.0E-6_RP
+  real(RP), private, parameter :: TKE_min      = 1.E-10_RP
+  real(RP), private, parameter :: LT_min       = 1.E-6_RP
+  real(RP), private, parameter :: Us_min       = 1.E-6_RP
 
-  real(RP), private              :: A1
-  real(RP), private              :: A2
-  real(RP), private, parameter   :: B1 = 24.0_RP
-  real(RP), private, parameter   :: B2 = 15.0_RP
-  real(RP), private              :: C1
-  real(RP), private, parameter   :: C2 = 0.75_RP
-  real(RP), private, parameter   :: C3 = 0.352_RP
-  real(RP), private, parameter   :: C5 = 0.2_RP
-  real(RP), private, parameter   :: G1 = 0.235_RP
-  real(RP), private              :: G2
-  real(RP), private              :: F1
-  real(RP), private              :: F2
-  real(RP), private              :: Rf1
-  real(RP), private              :: Rf2
-  real(RP), private              :: Rfc
-  real(RP), private              :: AF12 !< A1 F1 / A2 F2
-  real(RP), private, parameter   :: PrN = 0.74_RP
+  real(RP), private            :: A1
+  real(RP), private            :: A2
+  real(RP), private, parameter :: B1 = 24.0_RP
+  real(RP), private, parameter :: B2 = 15.0_RP
+  real(RP), private            :: C1
+  real(RP), private, parameter :: C2 = 0.75_RP
+  real(RP), private, parameter :: C3 = 0.352_RP
+  real(RP), private, parameter :: C5 = 0.2_RP
+  real(RP), private, parameter :: G1 = 0.235_RP
+  real(RP), private            :: G2
+  real(RP), private            :: F1
+  real(RP), private            :: F2
+  real(RP), private            :: Rf1
+  real(RP), private            :: Rf2
+  real(RP), private            :: Rfc
+  real(RP), private            :: AF12 !< A1 F1 / A2 F2
+  real(RP), private, parameter :: PrN = 0.74_RP
 
-  real(RP), private              :: SQRT_2PI
-  real(RP), private              :: RSQRT_2PI
-  real(RP), private              :: RSQRT_2
+  real(RP), private            :: SQRT_2PI
+  real(RP), private            :: RSQRT_2PI
+  real(RP), private            :: RSQRT_2
 
+  integer,  private            :: I_TKE
 
-  integer,  private :: I_TKE
-
-  integer,  private :: KE_PBL
-  logical,  private :: ATMOS_PHY_TB_MYNN_TKE_INIT = .false. !< set tke with that of level 2 at the first time if .true.
-  real(RP), private :: ATMOS_PHY_TB_MYNN_N2_MAX = 1.E3_RP
-  real(RP), private :: ATMOS_PHY_TB_MYNN_NU_MIN = 1.E-6_RP
-  real(RP), private :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000._RP
-  real(RP), private :: ATMOS_PHY_TB_MYNN_KH_MIN = 1.E-6_RP
-  real(RP), private :: ATMOS_PHY_TB_MYNN_KH_MAX = 10000._RP
-  real(RP), private :: ATMOS_PHY_TB_MYNN_Lt_MAX = 700._RP ! ~ 0.23 * 3 km
+  integer,  private            :: KE_PBL
+  logical,  private            :: ATMOS_PHY_TB_MYNN_TKE_INIT = .false.    !< set tke with that of level 2 at the first time if .true.
+  real(RP), private            :: ATMOS_PHY_TB_MYNN_N2_MAX   =   1.E+3_RP
+  real(RP), private            :: ATMOS_PHY_TB_MYNN_NU_MIN   =   1.E-6_RP
+  real(RP), private            :: ATMOS_PHY_TB_MYNN_NU_MAX   = 10000.0_RP
+  real(RP), private            :: ATMOS_PHY_TB_MYNN_KH_MIN   =   1.E-6_RP
+  real(RP), private            :: ATMOS_PHY_TB_MYNN_KH_MAX   = 10000.0_RP
+  real(RP), private            :: ATMOS_PHY_TB_MYNN_Lt_MAX   =   700.0_RP ! ~ 0.23 * 3 km
 
   !-----------------------------------------------------------------------------
 contains
@@ -111,6 +110,7 @@ contains
     use scale_tracer, only: &
        TRACER_regist
     implicit none
+
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
 
@@ -119,8 +119,11 @@ contains
        call PRC_MPIstop
     endif
 
-    call TRACER_regist( I_TKE, &
-         1, (/ 'TKE_MYNN' /), (/ 'turbulent kinetic energy (MYNN)' /), (/ 'm2/s2' /) )
+    call TRACER_regist( I_TKE,                                   &
+                        1,                                       &
+                        (/ 'TKE_MYNN' /),                        &
+                        (/ 'turbulent kinetic energy (MYNN)' /), &
+                        (/ 'm2/s2' /)                            )
 
     I_TKE_out = I_TKE
 
@@ -136,31 +139,31 @@ contains
     use scale_const, only: &
        PI => CONST_PI
     implicit none
+
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
-    real(RP) :: ATMOS_PHY_TB_MYNN_PBL_MAX = 1e10_RP !< maximum height of the PBL
+    real(RP) :: ATMOS_PHY_TB_MYNN_PBL_MAX = 1.E+10_RP !< maximum height of the PBL
 
     NAMELIST / PARAM_ATMOS_PHY_TB_MYNN / &
-         ATMOS_PHY_TB_MYNN_TKE_INIT, &
-         ATMOS_PHY_TB_MYNN_PBL_MAX, &
-         ATMOS_PHY_TB_MYNN_N2_MAX, &
-         ATMOS_PHY_TB_MYNN_NU_MIN, &
-         ATMOS_PHY_TB_MYNN_NU_MAX, &
-         ATMOS_PHY_TB_MYNN_KH_MIN, &
-         ATMOS_PHY_TB_MYNN_KH_MAX, &
-         ATMOS_PHY_TB_MYNN_Lt_MAX
+       ATMOS_PHY_TB_MYNN_TKE_INIT, &
+       ATMOS_PHY_TB_MYNN_PBL_MAX,  &
+       ATMOS_PHY_TB_MYNN_N2_MAX,   &
+       ATMOS_PHY_TB_MYNN_NU_MIN,   &
+       ATMOS_PHY_TB_MYNN_NU_MAX,   &
+       ATMOS_PHY_TB_MYNN_KH_MIN,   &
+       ATMOS_PHY_TB_MYNN_KH_MAX,   &
+       ATMOS_PHY_TB_MYNN_Lt_MAX
 
-    integer :: k, i, j
     integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Mellor-Yamada Nakanishi-Niino Model'
-
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -183,42 +186,43 @@ contains
        end do
     end do
 
-    A1 = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
-    A2 = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )
-    C1 = G1 - 1.0_RP / ( 3.0_RP * A1 * B1**(1.0_RP/3.0_RP) )
-    G2 = ( 2.0_RP * A1 * (3.0_RP - 2.0_RP * C2) + B2 * (1.0_RP - C3) ) / B1
-    F1 = B1 * (G1 - C1) + 2.0_RP * A1 * (3.0_RP - 2.0_RP * C2) + 3.0_RP * A2 * (1.0_RP - C2) * (1.0_RP - C5)
-    F2 = B1 * (G1 + G2) - 3.0_RP * A1 * (1.0_RP - C2)
+    A1        = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
+    A2        = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )
+    C1        = G1 - 1.0_RP / ( 3.0_RP * A1 * B1**(1.0_RP/3.0_RP) )
+    G2        = ( 2.0_RP * A1 * (3.0_RP - 2.0_RP * C2) + B2 * (1.0_RP - C3) ) / B1
+    F1        = B1 * (G1 - C1) + 2.0_RP * A1 * (3.0_RP - 2.0_RP * C2) + 3.0_RP * A2 * (1.0_RP - C2) * (1.0_RP - C5)
+    F2        = B1 * (G1 + G2) - 3.0_RP * A1 * (1.0_RP - C2)
 
-    Rf1 = B1 * (G1 - C1) / F1
-    Rf2 = B1 * G1 / F2
-    Rfc = G1 / (G1 + G2)
+    Rf1       = B1 * (G1 - C1) / F1
+    Rf2       = B1 * G1 / F2
+    Rfc       = G1 / (G1 + G2)
 
-    AF12 = A1 * F1 / ( A2 * F2 )
+    AF12      = A1 * F1 / ( A2 * F2 )
 
-    SQRT_2PI = sqrt( 2.0_RP * PI )
+    SQRT_2PI  = sqrt( 2.0_RP * PI )
     RSQRT_2PI = 1.0_RP / SQRT_2PI
-    RSQRT_2 = 1.0_RP / sqrt( 2.0_RP )
+    RSQRT_2   = 1.0_RP / sqrt( 2.0_RP )
 
     return
   end subroutine ATMOS_PHY_TB_mynn_setup
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_mynn( &
-       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
-       qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       RHOQ_t, Nu, Ri, Pr, N2,                      & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
-       GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
+       qflx_sgs_rhot, qflx_sgs_rhoq,                &
+       RHOQ_t,                                      &
+       Nu, Ri, Pr, N2,                              &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       GRAV   => CONST_GRAV, &
-       R      => CONST_Rdry, &
-       Rvap   => CONST_Rvap, &
-       CP     => CONST_CPdry, &
+       GRAV    => CONST_GRAV,   &
+       R       => CONST_Rdry,   &
+       Rvap    => CONST_Rvap,   &
+       CP      => CONST_CPdry,  &
        EPSTvap => CONST_EPSTvap
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
@@ -259,54 +263,53 @@ contains
 #endif
     implicit none
 
-    real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
+    real(RP), intent(out)   :: qflx_sgs_momz(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momx(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momy(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhot(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QA) ! tendency of rho * QTRC
+    real(RP), intent(inout) :: RHOQ_t       (KA,IA,JA,QA) ! tendency of rho * QTRC
 
-    real(RP), intent(out) :: Nu(KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Ri(KA,IA,JA) ! Richardson number
-    real(RP), intent(out) :: Pr(KA,IA,JA) ! Plandtle number
-    real(RP), intent(out) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
+    real(RP), intent(out)   :: Nu           (KA,IA,JA)    ! eddy viscosity (center)
+    real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
+    real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Plandtle number
+    real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
-    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
-    real(RP), intent(in)  :: MOMX(KA,IA,JA)
-    real(RP), intent(in)  :: MOMY(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMX         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMY         (KA,IA,JA)
+    real(RP), intent(in)    :: RHOT         (KA,IA,JA)
+    real(RP), intent(in)    :: DENS         (KA,IA,JA)
+    real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
 
-    real(RP), intent(in)  :: SFLX_MW(IA,JA)
-    real(RP), intent(in)  :: SFLX_MU(IA,JA)
-    real(RP), intent(in)  :: SFLX_MV(IA,JA)
-    real(RP), intent(in)  :: SFLX_SH(IA,JA)
-    real(RP), intent(in)  :: SFLX_QV(IA,JA)
+    real(RP), intent(in)    :: SFLX_MW      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MU      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_SH      (IA,JA)
+    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
 
-    real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
-    real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
-    real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
-    real(DP), intent(in)  :: dt
+    real(RP), intent(in)    :: GSQRT        (KA,IA,JA,7)  !< vertical metrics {G}^1/2
+    real(RP), intent(in)    :: J13G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J23G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J33G                       !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)    :: MAPF         (IA,JA,2,4)   !< map factor
+    real(DP), intent(in)    :: dt
 
-    real(RP) :: U(KA,IA,JA)    !< velocity in x-direction (full level)
-    real(RP) :: V(KA,IA,JA)    !< velocity in y-direction (full level)
-    real(RP) :: phiN(KA,IA,JA)
+    real(RP) :: U    (KA,IA,JA) !< velocity in x-direction (full level)
+    real(RP) :: V    (KA,IA,JA) !< velocity in y-direction (full level)
+    real(RP) :: phiN (KA,IA,JA)
 
-
-    real(RP) :: sm(KA,IA,JA) !< stability function for velocity
-    real(RP) :: sh(KA,IA,JA) !< stability function for scalars
-    real(RP) :: l(KA,IA,JA) !< length scale L
-    real(RP) :: q(KA,IA,JA) !< q
+    real(RP) :: sm   (KA,IA,JA) !< stability function for velocity
+    real(RP) :: sh   (KA,IA,JA) !< stability function for scalars
+    real(RP) :: l    (KA,IA,JA) !< length scale L
+    real(RP) :: q    (KA,IA,JA) !< q
     real(RP) :: dudz2(KA,IA,JA) !< (dudz)^2 + (dvdz)^2
-    real(RP) :: q2_2(KA,IA,JA)  !< q^2 for level 2
+    real(RP) :: q2_2 (KA,IA,JA) !< q^2 for level 2
     real(RP) :: Kh              !< eddy diffusion coefficient
-    real(RP) :: RHOKh (KA,IA,JA)!< mass-weighted eddy diffusion coefficient
+    real(RP) :: RHOKh(KA,IA,JA) !< mass-weighted eddy diffusion coefficient
 
-    real(RP) :: SFLX_PT(IA,JA) ! surface potential temperature flux
+    real(RP) :: SFLX_PT(IA,JA)  ! surface potential temperature flux
 
     real(RP) :: a(KA,IA,JA)
     real(RP) :: b(KA,IA,JA)
@@ -316,25 +319,25 @@ contains
     real(RP) :: tke_N(KA,IA,JA)
     real(RP) :: tke
 
-    real(RP) :: POTT(KA,IA,JA) !< potential temperature
-    real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature
-    real(RP) :: POTL(KA,IA,JA) !< liquid water potential temperature
-    real(RP) :: TEML(KA,IA,JA) !< liquid water temperature
+    real(RP) :: POTT(KA,IA,JA)  !< potential temperature
+    real(RP) :: POTV(KA,IA,JA)  !< virtual potential temperature
+    real(RP) :: POTL(KA,IA,JA)  !< liquid water potential temperature
+    real(RP) :: TEML(KA,IA,JA)  !< liquid water temperature
 
-    real(RP) :: Qw(KA,IA,JA)   !< total water
-    real(RP) :: ql             !< liquid water
-    real(RP) :: qs             !< solid water
-    real(RP) :: qdry           !< dry air
+    real(RP) :: Qw(KA,IA,JA)    !< total water
+    real(RP) :: ql              !< liquid water
+    real(RP) :: qs              !< solid water
+    real(RP) :: qdry            !< dry air
 
-    real(RP) :: temp(KA,IA,JA) !< temperature
-    real(RP) :: pres(KA,IA,JA) !< pressure
+    real(RP) :: temp(KA,IA,JA)  !< temperature
+    real(RP) :: pres(KA,IA,JA)  !< pressure
 
     real(RP) :: LH   (KA,IA,JA)
     real(RP) :: alpha(KA,IA,JA)
     real(RP) :: LHV  (KA,IA,JA)
     real(RP) :: LHS  (KA,IA,JA)
 
-    real(RP) :: ac           !< \alpha_c
+    real(RP) :: ac              !< \alpha_c
 
     real(RP) :: Q1
     real(RP) :: Qsl(KA,IA,JA)
@@ -352,8 +355,11 @@ contains
     real(RP) :: gen(KA,IA,JA)
 #endif
 
+    integer :: IIS, IIE
+    integer :: JJS, JJE
+
     integer :: k, i, j, iq
-    integer :: IIS, IIE, JJS, JJE
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG, *) "*** Physics step: Turbulence (MYNN)"
 

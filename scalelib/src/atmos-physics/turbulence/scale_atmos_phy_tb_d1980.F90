@@ -58,12 +58,12 @@ module scale_atmos_phy_tb_d1980
   !
   !++ Private parameters & variables
   !
-  real(RP), private, parameter :: C1 = 0.19_RP
-  real(RP), private, parameter :: C2 = 0.51_RP
+  real(RP), private, parameter   :: C1 = 0.19_RP
+  real(RP), private, parameter   :: C2 = 0.51_RP
 
-  real(RP), private, parameter :: OneOverThree  = 1.0_RP / 3.0_RP
-  real(RP), private, parameter :: TwoOverThree  = 2.0_RP / 3.0_RP
-  real(RP), private, parameter :: FourOverThree = 4.0_RP / 3.0_RP
+  real(RP), private, parameter   :: OneOverThree  = 1.0_RP / 3.0_RP
+  real(RP), private, parameter   :: TwoOverThree  = 2.0_RP / 3.0_RP
+  real(RP), private, parameter   :: FourOverThree = 4.0_RP / 3.0_RP
 
   real(RP), private, allocatable :: delta(:,:,:) ! (dx*dy*dz)^(1/3)
 
@@ -84,6 +84,7 @@ contains
     use scale_tracer, only: &
        TRACER_regist
     implicit none
+
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
 
@@ -92,30 +93,36 @@ contains
        call PRC_MPIstop
     endif
 
-    call TRACER_regist( I_TKE, &
-         1, (/ 'TKE_D1980' /), (/ 'turbulent kinetic energy (D1980)' /), (/ 'm2/s2' /) )
+    call TRACER_regist( I_TKE,                                    &
+                        1,                                        &
+                        (/ 'TKE_D1980' /),                        &
+                        (/ 'turbulent kinetic energy (D1980)' /), &
+                        (/ 'm2/s2' /)                             )
 
     I_TKE_out = I_TKE
 
     return
   end subroutine ATMOS_PHY_TB_d1980_config
+
   !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_TB_d1980_setup( &
        CDZ, CDX, CDY, CZ )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
     NAMELIST / PARAM_ATMOS_PHY_TB_D1980 / &
-         ATMOS_PHY_TB_D1980_Km_MAX, &
-         ATMOS_PHY_TB_D1980_implicit
+       ATMOS_PHY_TB_D1980_Km_MAX,   &
+       ATMOS_PHY_TB_D1980_implicit
 
-    integer :: k, i, j
     integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -153,10 +160,12 @@ contains
   subroutine ATMOS_PHY_TB_d1980( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       RHOQ_t, Km, Ri, Pr, N2,                      &
+       RHOQ_t,                                      &
+       Km, Ri, Pr, N2,                              &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
+    use scale_precision
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
@@ -186,47 +195,47 @@ contains
        I_UV
     use scale_atmos_phy_tb_common, only: &
        calc_strain_tensor => ATMOS_PHY_TB_calc_strain_tensor, &
-       diffusion_solver => ATMOS_PHY_TB_diffusion_solver, &
-       calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
-       calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
-       calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
-       calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi, &
-       calc_flux_phi => ATMOS_PHY_TB_calc_flux_phi
+       diffusion_solver   => ATMOS_PHY_TB_diffusion_solver,   &
+       calc_tend_momz     => ATMOS_PHY_TB_calc_tend_momz,     &
+       calc_tend_momx     => ATMOS_PHY_TB_calc_tend_momx,     &
+       calc_tend_momy     => ATMOS_PHY_TB_calc_tend_momy,     &
+       calc_tend_phi      => ATMOS_PHY_TB_calc_tend_phi,      &
+       calc_flux_phi      => ATMOS_PHY_TB_calc_flux_phi
     implicit none
 
     ! SGS flux
-    real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
+    real(RP), intent(out)   :: qflx_sgs_momz(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momx(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momy(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhot(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QA) ! tendency of rho * QTRC
+    real(RP), intent(inout) :: RHOQ_t       (KA,IA,JA,QA) ! tendency of rho * QTRC
 
-    real(RP), intent(out) :: Km (KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
-    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
-    real(RP), intent(out) :: N2 (KA,IA,JA) ! squared Brunt-Vaisala frequency
+    real(RP), intent(out)   :: Km           (KA,IA,JA)    ! eddy viscosity (center)
+    real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
+    real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Prantle number
+    real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
-    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
-    real(RP), intent(in)  :: MOMX(KA,IA,JA)
-    real(RP), intent(in)  :: MOMY(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMX         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMY         (KA,IA,JA)
+    real(RP), intent(in)    :: RHOT         (KA,IA,JA)
+    real(RP), intent(in)    :: DENS         (KA,IA,JA)
+    real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
 
-    real(RP), intent(in)  :: SFLX_MW(IA,JA)
-    real(RP), intent(in)  :: SFLX_MU(IA,JA)
-    real(RP), intent(in)  :: SFLX_MV(IA,JA)
-    real(RP), intent(in)  :: SFLX_SH(IA,JA)
-    real(RP), intent(in)  :: SFLX_QV(IA,JA)
+    real(RP), intent(in)    :: SFLX_MW      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MU      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_SH      (IA,JA)
+    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
 
-    real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
-    real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
-    real(RP), intent(in)  :: MAPF(IA,JA,2,4)      !< map factor
-    real(DP), intent(in)  :: dt
+    real(RP), intent(in)    :: GSQRT        (KA,IA,JA,7)  !< vertical metrics {G}^1/2
+    real(RP), intent(in)    :: J13G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J23G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J33G                       !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)    :: MAPF         (IA,JA,2,4)   !< map factor
+    real(DP), intent(in)    :: dt
 
     ! diagnostic variables
     real(RP) :: POTT   (KA,IA,JA)
@@ -255,10 +264,10 @@ contains
     real(RP) :: d(KA)
     real(RP) :: ap
 
-    integer :: IIS, IIE
-    integer :: JJS, JJE
+    integer  :: IIS, IIE
+    integer  :: JJS, JJE
 
-    integer :: k, i, j, iq
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(D1980)'
