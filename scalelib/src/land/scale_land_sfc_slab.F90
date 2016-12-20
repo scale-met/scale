@@ -147,7 +147,7 @@ contains
         Z0M,        &
         Z0H,        &
         Z0E,        &
-        dt          )
+        dt_DP       )
     use scale_process, only: &
        PRC_myrank,  &
        PRC_MPIstop
@@ -209,7 +209,7 @@ contains
     real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
-    real(DP), intent(in) :: dt            ! delta time
+    real(DP), intent(in) :: dt_DP         ! delta time
 
     ! works
     real(RP) :: LST1(IA,JA)
@@ -226,9 +226,12 @@ contains
     real(RP) :: SQV, dSQV     ! saturation water vapor mixing ratio at surface [kg/kg]
 
     real(RP) :: LHV(IA,JA)    ! latent heat of vaporization [J/kg]
+    real(RP) :: dt
 
-    integer :: i, j, n
+    integer  :: i, j, n
     !---------------------------------------------------------------------------
+
+    dt = real(dt_DP,kind=RP)
 
     ! copy land surfce temperature for iteration
     do j = JS, JE

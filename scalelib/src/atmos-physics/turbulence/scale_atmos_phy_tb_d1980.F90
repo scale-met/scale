@@ -921,7 +921,7 @@ contains
                + ( Km(k,i,j) * S2(k,i,j) &
                  - Kh(k,i,j) * N2(k,i,j) &
                  - ( C1 + C2*l(k,i,j)/delta(k,i,j) ) * QTRC(k,i,j,I_TKE)**(1.5_RP) / l(k,i,j) ) * DENS(k,i,j), &
-                 - QTRC(k,i,j,I_TKE) * DENS(k,i,j) / dt )
+                 - QTRC(k,i,j,I_TKE) * DENS(k,i,j) / real(dt,kind=RP) )
        enddo
        enddo
        enddo

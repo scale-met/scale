@@ -1384,10 +1384,10 @@ contains
     RNB = SB + RB        ! Net radiation on building [W/m/m]
     RNG = SG + RG        ! Net radiation on ground [W/m/m]
 
-    !!--- calculate rain amount remaining on the surface
-    RAINR = max(0.0_RP, RAINR-(LHR/LHV)*dt)   ! [kg/m/m = mm]
-    RAINB = max(0.0_RP, RAINB-(LHB/LHV)*dt)   ! [kg/m/m = mm]
-    RAING = max(0.0_RP, RAING-(LHG/LHV)*dt)   ! [kg/m/m = mm]
+    ! calculate rain amount remaining on the surface
+    RAINR = max(0.0_RP, RAINR-(LHR/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
+    RAINB = max(0.0_RP, RAINB-(LHB/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
+    RAING = max(0.0_RP, RAING-(LHG/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
