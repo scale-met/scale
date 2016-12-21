@@ -1390,7 +1390,7 @@ contains
        SFLX_rain, &
        SFLX_snow  )
     use scale_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP
+       dt_DP => TIME_DTSEC_ATMOS_PHY_MP
     use scale_grid, only: &
        z    => GRID_CZ, &
        dz   => GRID_CDZ
@@ -1526,11 +1526,12 @@ contains
     real(RP) :: FLX_tot  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
-    integer :: step
+    integer  :: step
 
     real(RP) :: sw
+    real(RP) :: dt
 
-    integer :: k, i, j, iq
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     !============================================================================
@@ -1545,6 +1546,9 @@ contains
     !    0. calculation of optical moments
     !
     !============================================================================
+
+    dt = real(dt_DP,kind=RP)
+
     !----------------------------------------------------------------------------
     !
     ! 1.Nucleation of cloud water and cloud ice
@@ -2219,7 +2223,7 @@ contains
     real(RP), intent(in) ::  cpa(KA,IA,JA)      ! in  09/08/18 [Add] T.Mitsui
     real(RP), intent(in)  :: dTdt_rad(KA,IA,JA) ! 09/08/18 T.Mitsui
     real(RP), intent(in)  :: qke(KA,IA,JA)      ! 09/08/18 T.Mitsui
-    real(DP), intent(in)  :: dt
+    real(RP), intent(in)  :: dt
     real(RP), intent(in)  :: CCN(KA,IA,JA)
     !
     ! namelist variables
@@ -3556,7 +3560,7 @@ contains
     ! In this subroutine,
     ! We assumed surface temperature of droplets are same as environment.
 
-    real(DP), intent(in) :: dt
+    real(RP), intent(in) :: dt
     real(RP), intent(out):: PQ(PQ_MAX,KA,IA,JA)
     !
     real(RP), intent(in) :: tem(KA,IA,JA)
@@ -3837,7 +3841,7 @@ contains
     integer, intent(in)    :: ntdiv               ! [Add] 10/08/03
     integer, intent(in)    :: ntmax               ! [Add] 10/08/03
     !
-    real(DP), intent(in)    :: dt                 ! time step[s]
+    real(RP), intent(in)    :: dt                 ! time step[s]
     real(RP), intent(in)    :: gsgam2(KA,IA,JA)   ! metric
     real(RP), intent(in)    :: z(KA)              ! altitude [m]
     real(RP), intent(in)    :: dz(KA)             ! altitude [m]

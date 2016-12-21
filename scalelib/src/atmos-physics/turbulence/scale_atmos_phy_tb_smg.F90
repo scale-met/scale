@@ -71,30 +71,30 @@ module scale_atmos_phy_tb_smg
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: nu_fact (:,:,:) ! (Cs*Delta)^2
+  real(RP), private, parameter   :: OneOverThree  = 1.0_RP / 3.0_RP
+  real(RP), private, parameter   :: twoOverThree  = 2.0_RP / 3.0_RP
+  real(RP), private, parameter   :: FourOverThree = 4.0_RP / 3.0_RP
 
-  real(RP), private            :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
-  real(RP), private, parameter :: Ck  = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
-  real(RP), private, parameter :: PrN = 0.7_RP  ! Prandtl number in neutral conditions
-  real(RP), private, parameter :: RiC = 0.25_RP ! critical Richardson number
-  real(RP), private, parameter :: FmC = 16.0_RP ! fum = sqrt(1 - c*Ri)
-  real(RP), private, parameter :: FhB = 40.0_RP ! fuh = sqrt(1 - b*Ri)/PrN
-  real(RP), private            :: RPrN          ! 1 / PrN
-  real(RP), private            :: RRiC          ! 1 / RiC
-  real(RP), private            :: PrNovRiC      ! PrN / RiC
+  real(RP), private              :: Cs            = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
+  real(RP), private, parameter   :: Ck            = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
+  real(RP), private, parameter   :: PrN           = 0.7_RP  ! Prandtl number in neutral conditions
+  real(RP), private, parameter   :: RiC           = 0.25_RP ! critical Richardson number
+  real(RP), private, parameter   :: FmC           = 16.0_RP ! fum = sqrt(1 - c*Ri)
+  real(RP), private, parameter   :: FhB           = 40.0_RP ! fuh = sqrt(1 - b*Ri)/PrN
+  real(RP), private              :: RPrN                    ! 1 / PrN
+  real(RP), private              :: RRiC                    ! 1 / RiC
+  real(RP), private              :: PrNovRiC                ! PrN / RiC
 
-  real(RP), private, parameter :: OneOverThree = 1.0_RP / 3.0_RP
-  real(RP), private, parameter :: twoOverThree = 2.0_RP / 3.0_RP
-  real(RP), private, parameter :: FourOverThree = 4.0_RP / 3.0_RP
+  real(RP), private, allocatable :: nu_fact (:,:,:)         ! (Cs*Delta)^2
 
-  integer,  private :: I_TKE = -1
+  integer,  private              :: I_TKE = -1
 
-  real(RP), private :: ATMOS_PHY_TB_SMG_NU_MAX     = 10000.0_RP
-  logical,  private :: ATMOS_PHY_TB_SMG_implicit   = .false.
-  logical,  private :: ATMOS_PHY_TB_SMG_bottom     = .false.
-  logical,  private :: ATMOS_PHY_TB_SMG_horizontal = .false.
+  real(RP), private              :: ATMOS_PHY_TB_SMG_NU_MAX     = 10000.0_RP
+  logical,  private              :: ATMOS_PHY_TB_SMG_implicit   = .false.
+  logical,  private              :: ATMOS_PHY_TB_SMG_bottom     = .false.
+  logical,  private              :: ATMOS_PHY_TB_SMG_horizontal = .false.
 
-  real(RP), private :: tke_fact
+  real(RP), private              :: tke_fact
 
   !-----------------------------------------------------------------------------
 contains
@@ -108,6 +108,7 @@ contains
     use scale_tracer, only: &
        TRACER_regist
     implicit none
+
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
 
@@ -116,9 +117,12 @@ contains
        call PRC_MPIstop
     endif
 
-    call TRACER_regist( I_TKE, &
-         1, (/ 'TKE_SMG' /), (/ 'turbulent kinetic energy (Smagorinsky)' /), (/ 'm2/s2' /), &
-         advc = (/ .false. /) )
+    call TRACER_regist( I_TKE,                                          &
+                        1,                                              &
+                        (/ 'TKE_SMG' /),                                &
+                        (/ 'turbulent kinetic energy (Smagorinsky)' /), &
+                        (/ 'm2/s2' /),                                  &
+                        advc = (/ .false. /)                            )
 
     I_TKE_out = I_TKE
 
@@ -139,21 +143,20 @@ contains
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
-    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 2.0_RP
+    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact    = 2.0_RP
     logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .true.
 
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
-         ATMOS_PHY_TB_SMG_Cs, &
-         ATMOS_PHY_TB_SMG_NU_MAX, &
-         ATMOS_PHY_TB_SMG_filter_fact, &
-         ATMOS_PHY_TB_SMG_implicit, &
-         ATMOS_PHY_TB_SMG_consistent_tke, &
-         ATMOS_PHY_TB_SMG_horizontal, &
-         ATMOS_PHY_TB_SMG_bottom
-
-    integer :: k, i, j
+       ATMOS_PHY_TB_SMG_Cs,             &
+       ATMOS_PHY_TB_SMG_NU_MAX,         &
+       ATMOS_PHY_TB_SMG_filter_fact,    &
+       ATMOS_PHY_TB_SMG_implicit,       &
+       ATMOS_PHY_TB_SMG_consistent_tke, &
+       ATMOS_PHY_TB_SMG_horizontal,     &
+       ATMOS_PHY_TB_SMG_bottom
 
     integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -177,7 +180,7 @@ contains
 
     RPrN     = 1.0_RP / PrN
     RRiC     = 1.0_RP / RiC
-    PrNovRiC = (1- PrN) * RRiC
+    PrNovRiC = ( 1.0_RP - PrN ) * RRiC
 
     allocate( nu_fact(KA,IA,JA) )
 
@@ -223,10 +226,12 @@ contains
   subroutine ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       RHOQ_t, nu, Ri, Pr, N2,                      &
+       RHOQ_t,                                      &
+       Nu, Ri, Pr, N2,                              &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
+    use scale_precision
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
@@ -256,71 +261,71 @@ contains
        I_UV
     use scale_atmos_phy_tb_common, only: &
        calc_strain_tensor => ATMOS_PHY_TB_calc_strain_tensor, &
-       diffusion_solver => ATMOS_PHY_TB_diffusion_solver, &
-       calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
-       calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
-       calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
-       calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi, &
-       calc_flux_phi  => ATMOS_PHY_TB_calc_flux_phi
+       diffusion_solver   => ATMOS_PHY_TB_diffusion_solver,   &
+       calc_tend_momz     => ATMOS_PHY_TB_calc_tend_momz,     &
+       calc_tend_momx     => ATMOS_PHY_TB_calc_tend_momx,     &
+       calc_tend_momy     => ATMOS_PHY_TB_calc_tend_momy,     &
+       calc_tend_phi      => ATMOS_PHY_TB_calc_tend_phi,      &
+       calc_flux_phi      => ATMOS_PHY_TB_calc_flux_phi
     implicit none
 
     ! SGS flux
-    real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
+    real(RP), intent(out)   :: qflx_sgs_momz(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momx(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momy(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhot(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QA) ! tendency of rho * QTRC
+    real(RP), intent(inout) :: RHOQ_t       (KA,IA,JA,QA) ! tendency of rho * QTRC
 
-    real(RP), intent(out) :: nu(KA,IA,JA)  ! eddy viscosity (center)
-    real(RP), intent(out) :: Ri(KA,IA,JA)  ! Richardson number
-    real(RP), intent(out) :: Pr(KA,IA,JA)  ! Prantle number
-    real(RP), intent(out) :: N2(KA,IA,JA)  ! squared Brunt-Vaisala frequency
+    real(RP), intent(out)   :: nu           (KA,IA,JA)    ! eddy viscosity (center)
+    real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
+    real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Prantle number
+    real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
-    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
-    real(RP), intent(in)  :: MOMX(KA,IA,JA)
-    real(RP), intent(in)  :: MOMY(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMX         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMY         (KA,IA,JA)
+    real(RP), intent(in)    :: RHOT         (KA,IA,JA)
+    real(RP), intent(in)    :: DENS         (KA,IA,JA)
+    real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
 
-    real(RP), intent(in)  :: SFLX_MW(IA,JA)
-    real(RP), intent(in)  :: SFLX_MU(IA,JA)
-    real(RP), intent(in)  :: SFLX_MV(IA,JA)
-    real(RP), intent(in)  :: SFLX_SH(IA,JA)
-    real(RP), intent(in)  :: SFLX_QV(IA,JA)
+    real(RP), intent(in)    :: SFLX_MW      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MU      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_SH      (IA,JA)
+    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
 
-    real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
-    real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
-    real(RP), intent(in)  :: MAPF(IA,JA,2,4)      !< map factor
-    real(DP), intent(in)  :: dt
+    real(RP), intent(in)    :: GSQRT         (KA,IA,JA,7) !< vertical metrics {G}^1/2
+    real(RP), intent(in)    :: J13G          (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J23G          (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J33G                       !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)    :: MAPF(IA,JA,2,4)            !< map factor
+    real(DP), intent(in)    :: dt
 
     ! diagnostic variables
-    real(RP) :: TKE (KA,IA,JA)
-    real(RP) :: POTT(KA,IA,JA)
+    real(RP) :: TKE  (KA,IA,JA)
+    real(RP) :: POTT (KA,IA,JA)
 
     ! deformation rate tensor
-    real(RP) :: S33_C (KA,IA,JA) ! (cell center)
-    real(RP) :: S11_C (KA,IA,JA)
-    real(RP) :: S22_C (KA,IA,JA)
-    real(RP) :: S31_C (KA,IA,JA)
-    real(RP) :: S12_C (KA,IA,JA)
-    real(RP) :: S23_C (KA,IA,JA)
-    real(RP) :: S12_Z (KA,IA,JA) ! (z edge or x-y plane)
-    real(RP) :: S23_X (KA,IA,JA) ! (x edge or y-z plane)
-    real(RP) :: S31_Y (KA,IA,JA) ! (y edge or z-x plane)
-    real(RP) :: S2    (KA,IA,JA) ! |S|^2
+    real(RP) :: S33_C(KA,IA,JA) ! (cell center)
+    real(RP) :: S11_C(KA,IA,JA)
+    real(RP) :: S22_C(KA,IA,JA)
+    real(RP) :: S31_C(KA,IA,JA)
+    real(RP) :: S12_C(KA,IA,JA)
+    real(RP) :: S23_C(KA,IA,JA)
+    real(RP) :: S12_Z(KA,IA,JA) ! (z edge or x-y plane)
+    real(RP) :: S23_X(KA,IA,JA) ! (x edge or y-z plane)
+    real(RP) :: S31_Y(KA,IA,JA) ! (y edge or z-x plane)
+    real(RP) :: S2   (KA,IA,JA) ! |S|^2
 
-    real(RP) :: Kh    (KA,IA,JA) ! eddy diffusion
+    real(RP) :: Kh   (KA,IA,JA) ! eddy diffusion
 
-    real(RP) :: TEND(KA,IA,JA)
-    real(RP) :: a(KA,IA,JA)
-    real(RP) :: b(KA,IA,JA)
-    real(RP) :: c(KA,IA,JA)
-    real(RP) :: d(KA)
+    real(RP) :: TEND (KA,IA,JA)
+    real(RP) :: a    (KA,IA,JA)
+    real(RP) :: b    (KA,IA,JA)
+    real(RP) :: c    (KA,IA,JA)
+    real(RP) :: d    (KA)
     real(RP) :: ap
 
     integer :: IIS, IIE
