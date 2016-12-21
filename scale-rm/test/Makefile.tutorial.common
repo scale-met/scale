@@ -8,6 +8,37 @@ ifeq ($(origin SYSDEP_DIR), undefined)
    SYSDEP_DIR = $(TOPDIR)/sysdep
 endif
 
+msg1 = "\n"
+
+ifeq ($(ENABLE_FIXEDINDEX),T)
+   msg1       += "ENABLE_FIXEDINDEX is set.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(DEBUG),T)
+   msg1       += "DEBUG is set.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(SINGLE),T)
+   msg1       += "SINGLE is set.\n"
+   USELOCALBIN = T
+endif
+
+ifneq ($(ORG_SRCS),)
+   msg1       += "User-defined file is used.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(USELOCALBIN),T)
+   BUILD_DIR := $(PWD)/.libs
+   BINDIR     = $(PWD)
+   msg1      += "The location of executable files is changed to $(BINDIR)\n"
+else
+   BUILD_DIR := $(TOPDIR)/.libs
+   BINDIR     = $(TOPDIR)/bin
+endif
+
 ifeq ($(origin PPNAME), undefined)
    PPNAME = scale-rm_pp
 endif
@@ -40,9 +71,7 @@ ifeq ($(origin N2GCONF), undefined)
    N2GCONF = NONE
 endif
 
-BUILD_DIR := $(TOPDIR)/scale-rm/src/.libs
 INDEX_DIR := $(PWD)
-BINDIR     = $(TOPDIR)/bin
 UTILDIR    = ${TOPDIR}/scale-rm/util/netcdf2grads_h
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
@@ -53,6 +82,7 @@ $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	cp -f $< $@
 
 build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
+	@echo;echo $(msg1)
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
