@@ -336,8 +336,6 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
   real(DP), private :: MP_DTSEC_SEDIMENTATION
 
-  logical, private  :: debug
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -446,14 +444,13 @@ contains
        qicrt_saut,      &
        beta_gaut,       &
        gamma_gaut,      &
-       qscrt_gaut,      &
-       debug
+       qscrt_gaut
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
-    integer :: nstep_max
+    integer  :: nstep_max
 
-    integer :: ierr
-    integer :: i, j, ip
+    integer  :: ierr
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -898,7 +895,7 @@ contains
     real(RP) :: zerosw, tmp
 
     !---< Bergeron process >---
-    real(RP) :: Bergeron_sw           !< if 0C<T<30C, sw=1
+    real(RP) :: sw_bergeron           !< if 0C<T<30C, sw=1
     real(RP) :: a1 (KA,IA,JA)         !<
     real(RP) :: a2 (KA,IA,JA)         !<
     real(RP) :: ma2(KA,IA,JA)         !< 1-a2
@@ -907,13 +904,12 @@ contains
 
     !---< Explicit ice generation >---
     real(RP) :: sw, rhoqi, XNi, XMi, Di, Ni0, Qi0
-    real(RP) :: Pidep, Pigen, dq, qtmp
 
     real(RP) :: w(w_nmax)
 
     real(RP) :: tend(QS_MP:QE_MP)
 
-    integer  :: k, i, j, iq
+    integer  :: k, i, j, iq, ip
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
@@ -961,14 +957,14 @@ contains
     !$omp parallel do &
     !$omp private(tend,coef_bt,coef_at,q,w)                                                                           &
     !$omp private(dens,temp,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g)                                                &
-    !$omp private(Bergeron_sw,zerosw)                                                                                 &
+    !$omp private(sw_bergeron,zerosw)                                                                                 &
     !$omp private(RLMDr,RLMDr_dr,RLMDr_2,RLMDr_3,RLMDr_7,RLMDr_1br,RLMDr_2br,RLMDr_3br,RLMDr_3dr,RLMDr_5dr,RLMDr_6dr) &
     !$omp private(RLMDs,RLMDs_ds,RLMDs_2,RLMDs_3,        RLMDs_1bs,RLMDs_2bs,RLMDs_3bs,RLMDs_3ds,RLMDs_5ds)           &
     !$omp private(RLMDg,RLMDg_dg,RLMDg_2,RLMDg_3,                                      RLMDg_3dg,RLMDg_5dg)           &
     !$omp private(MOMs_0,MOMs_1,MOMs_2,MOMs_0bs,MOMs_1bs,MOMs_2bs,MOMs_2ds,MOMs_5ds_h,RMOMs_Vt)                       &
     !$omp private(rhoqc,Xs2,tems,loga_,b_,nm)                                                                         &
     !$omp private(Vti,Vtr,Vts,Vtg,Esi_mod,Egs_mod,Dc,Praut_berry,Praut_kk,betai,betas,Da,Kd,NU,Glv,Giv,Gil)           &
-    !$omp private(ventr,vents,ventg,tmp,dt1,Ni50,net,fac_sw,fac,fac_warm,fac_ice)                                     &
+    !$omp private(ventr,vents,ventg,tmp,dt1,Ni50,ice,net,fac_sw,fac)                                                  &
     !$omp collapse(3)
 !OCL TEMP_PRIVATE(tend,coef_bt,coef_at,q,w)
     do j = JS, JE
@@ -1006,7 +1002,7 @@ contains
        w(I_dqs_dt) = q(I_QS) / dt
        w(I_dqg_dt) = q(I_QG) / dt
 
-       Bergeron_sw = ( 0.5_RP + sign(0.5_RP, temc + 30.0_RP ) ) &
+       sw_bergeron = ( 0.5_RP + sign(0.5_RP, temc + 30.0_RP ) ) &
                    * ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc  ) ) &
                    * ( 1.0_RP - sw_expice                     )
 
@@ -1306,9 +1302,9 @@ contains
               - exp( log(mi40)*ma2(k,i,j) ) ) / ( a1(k,i,j) * ma2(k,i,j) )
        Ni50 = q(I_QI) * dt / ( mi50 * dt1 )
 
-       w(I_Psfw ) = Bergeron_sw * Ni50 * ( a1(k,i,j) * exp( log(mi50)*a2(k,i,j) )        &
-                                         + PI * Eiw * dens * q(I_QC) * Ri50*Ri50 * vti50 )
-       w(I_Psfi ) = Bergeron_sw * q(I_QI) / dt1
+       w(I_Psfw ) = Ni50 * ( a1(k,i,j) * exp( log(mi50)*a2(k,i,j) )        &
+                           + PI * Eiw * dens * q(I_QC) * Ri50*Ri50 * vti50 )
+       w(I_Psfi ) = q(I_QI) / dt1
 
        !---< limiter >---
        w(I_Pigen) = min( w(I_Pigen), w(I_dqv_dt) ) * (        w(I_iceflg) ) * sw_expice
@@ -1316,17 +1312,17 @@ contains
        w(I_Psdep) = min( w(I_Psdep), w(I_dqv_dt) ) * (        w(I_iceflg) )
        w(I_Pgdep) = min( w(I_Pgdep), w(I_dqv_dt) ) * (        w(I_iceflg) )
 
-       w(I_Pracw) = w(I_Pracw)                          &
-                  + w(I_Psacw) * ( 1.0_RP-w(I_iceflg) ) & ! c->r by s
-                  + w(I_Pgacw) * ( 1.0_RP-w(I_iceflg) )   ! c->r by g
-
        w(I_Praut) = min( w(I_Praut), w(I_dqc_dt) )
        w(I_Pracw) = min( w(I_Pracw), w(I_dqc_dt) )
        w(I_Pihom) = min( w(I_Pihom), w(I_dqc_dt) ) * (        w(I_iceflg) ) * sw_expice
        w(I_Pihtr) = min( w(I_Pihtr), w(I_dqc_dt) ) * (        w(I_iceflg) ) * sw_expice
        w(I_Psacw) = min( w(I_Psacw), w(I_dqc_dt) ) * (        w(I_iceflg) )
-       w(I_Psfw ) = min( w(I_Psfw ), w(I_dqc_dt) ) * (        w(I_iceflg) )
+       w(I_Psfw ) = min( w(I_Psfw ), w(I_dqc_dt) ) * (        w(I_iceflg) ) * sw_bergeron
        w(I_Pgacw) = min( w(I_Pgacw), w(I_dqc_dt) ) * (        w(I_iceflg) )
+
+       w(I_Pracw) = w(I_Pracw)                          &
+                  + w(I_Psacw) * ( 1.0_RP-w(I_iceflg) ) & ! c->r by s
+                  + w(I_Pgacw) * ( 1.0_RP-w(I_iceflg) )   ! c->r by g
 
        w(I_Prevp) = min( w(I_Prevp), w(I_dqr_dt) )
        w(I_Piacr) = min( w(I_Piacr), w(I_dqr_dt) ) * (        w(I_iceflg) )
@@ -1339,7 +1335,7 @@ contains
        w(I_Psaut) = min( w(I_Psaut), w(I_dqi_dt) ) * (        w(I_iceflg) )
        w(I_Praci) = min( w(I_Praci), w(I_dqi_dt) ) * (        w(I_iceflg) )
        w(I_Psaci) = min( w(I_Psaci), w(I_dqi_dt) ) * (        w(I_iceflg) )
-       w(I_Psfi ) = min( w(I_Psfi ), w(I_dqi_dt) ) * (        w(I_iceflg) )
+       w(I_Psfi ) = min( w(I_Psfi ), w(I_dqi_dt) ) * (        w(I_iceflg) ) * sw_bergeron
        w(I_Pgaci) = min( w(I_Pgaci), w(I_dqi_dt) ) * (        w(I_iceflg) )
 
        w(I_Pssub) = min( w(I_Pssub), w(I_dqs_dt) ) * (        w(I_iceflg) )
@@ -1633,7 +1629,9 @@ contains
        QTRC0(k,i,j,I_QS) = QTRC0(k,i,j,I_QS) + QTRC_t(k,i,j,I_QS) * dt
        QTRC0(k,i,j,I_QG) = QTRC0(k,i,j,I_QG) + QTRC_t(k,i,j,I_QG) * dt
 
-!       w3d(k,i,j,ip) = w(ip)
+       do ip = 1, w_nmax
+          w3d(k,i,j,ip) = w(ip)
+       enddo
     enddo
     enddo
     enddo
@@ -1651,9 +1649,9 @@ contains
     enddo
     enddo
 
-!    do ip = 1, w_nmax
-!       call HIST_in( w_name(ip), w3d(:,:,:,ip), 'individual tendency term in tomita08', 'kg/kg/s' )
-!    enddo
+    do ip = 1, w_nmax
+       call HIST_in( w3d(:,:,:,ip), w_name(ip), 'individual tendency term in tomita08', 'kg/kg/s' )
+    enddo
 
     call PROF_rapend  ('MP_tomita08', 3)
 
@@ -1916,7 +1914,7 @@ contains
     real(RP) :: loga_, b_, nm
 
     real(RP) :: zerosw
-    integer  :: k, i, j, iq
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     Re(:,:,:,I_HC) =  re_qc * um2cm
@@ -1930,7 +1928,7 @@ contains
        temc = TEMP0(k,i,j) - TEM00
 
        ! intercept parameter N0
-       N0r = ( 1.0_RP - sw_WDXZ2014 ) * N0r_def &                                                                   ! Marshall and Palmer (1948)
+       N0r = ( 1.0_RP - sw_WDXZ2014 ) * N0r_def &                                                                             ! Marshall and Palmer (1948)
            + (          sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*QTRC0(k,i,j,I_QR)*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
        N0s = ( 1.0_RP - sw_WDXZ2014 ) * N0s_def &                                                                             ! Gunn and Marshall (1958)
            + (          sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*QTRC0(k,i,j,I_QS)*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
@@ -1993,8 +1991,6 @@ contains
 
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
-
-    integer :: ihydro, iqa
     !---------------------------------------------------------------------------
 
     Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_QC)
