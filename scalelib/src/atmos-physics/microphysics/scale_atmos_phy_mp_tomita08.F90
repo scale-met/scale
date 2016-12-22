@@ -115,9 +115,9 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, parameter   :: dens00      = 1.28_RP !< standard density [kg/m3]
 
   ! Parameter for Marshall-Palmer distribution
-  real(RP), private              :: N0r         = 8.E6_RP !< intercept parameter for rain    [1/m4]
-  real(RP), private              :: N0s         = 3.E6_RP !< intercept parameter for snow    [1/m4]
-  real(RP), private              :: N0g         = 4.E6_RP !< intercept parameter for graupel [1/m4]
+  real(RP), private              :: N0r_def     = 8.E+6_RP !< intercept parameter for rain    [1/m4]
+  real(RP), private              :: N0s_def     = 3.E+6_RP !< intercept parameter for snow    [1/m4]
+  real(RP), private              :: N0g_def     = 4.E+6_RP !< intercept parameter for graupel [1/m4]
 
   real(RP), private              :: dens_s      = 100.0_RP !< density of snow    [kg/m3]
   real(RP), private              :: dens_g      = 400.0_RP !< density of graupel [kg/m3]
@@ -163,6 +163,8 @@ module scale_atmos_phy_mp_tomita08
                                                      0.31255_RP,   0.000204_RP,  0.003199_RP, 0.0_RP,      -0.015952_RP  /)
   real(RP), private, parameter   :: coef_b(10)  = (/ 0.476221_RP, -0.015896_RP,  0.165977_RP, 0.007468_RP, -0.000141_RP, &
                                                      0.060366_RP,  0.000079_RP,  0.000594_RP, 0.0_RP,      -0.003577_RP  /)
+  !---< Wainwright et al. (2014) >---
+  real(RP), private              :: sw_WDXZ2014 = 0.0_RP !< switch for WDXZ scheme
 
   ! Accretion parameter
   real(RP), private              :: Eiw         = 1.0_RP      !< collection efficiency of cloud ice for cloud water
@@ -401,6 +403,7 @@ contains
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
     logical  :: enable_KK2000   = .false. !< use scheme by Khairoutdinov and Kogan (2000)
     logical  :: enable_RS2014   = .false. !< use scheme by Roh and Satoh (2014)
+    logical  :: enable_WDXZ2014 = .false. !< use scheme by Wainwright et al. (2014)
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation,     &
@@ -414,6 +417,10 @@ contains
        autoconv_nc,     &
        enable_KK2000,   &
        enable_RS2014,   &
+       enable_WDXZ2014, &
+       N0r_def,         &
+       N0s_def,         &
+       N0g_def,         &
        dens_s,          &
        dens_g,          &
        re_qc,           &
@@ -502,6 +509,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Nc for auto-conversion [num/m3]: ', autoconv_nc
     if( IO_L ) write(IO_FID_LOG,*) '*** Use k-k  scheme?               : ', enable_KK2000
     if( IO_L ) write(IO_FID_LOG,*) '*** Use Roh  scheme?               : ', enable_RS2014
+    if( IO_L ) write(IO_FID_LOG,*) '*** Use WDXZ scheme?               : ', enable_WDXZ2014
     if( IO_L ) write(IO_FID_LOG,*)
 
     ATMOS_PHY_MP_tomita08_DENS(:)    = UNDEF
@@ -536,7 +544,7 @@ contains
        MP_doexpricit_icegen = .true.
 
        sw_RS2014 = 1.0_RP
-       N0g       = 4.E+8_RP
+       N0g_def   = 4.E+8_RP
        As        = 0.069_RP
        Bs        = 2.0_RP
        Esi       = 0.25_RP
@@ -556,6 +564,12 @@ contains
        sw_KK2000 = 1.0_RP
     else
        sw_KK2000 = 0.0_RP
+    endif
+
+    if ( enable_WDXZ2014 ) then
+       sw_WDXZ2014 = 1.0_RP
+    else
+       sw_WDXZ2014 = 0.0_RP
     endif
 
     GAM       = 1.0_RP ! =0!
@@ -846,6 +860,8 @@ contains
     real(RP) :: rho_fact        ! density factor
     real(RP) :: temc            ! T - T0 [K]
 
+    real(RP) :: N0r, N0s, N0g
+
     real(RP) :: RLMDr, RLMDr_2, RLMDr_3
     real(RP) :: RLMDs, RLMDs_2, RLMDs_3
     real(RP) :: RLMDg, RLMDg_2, RLMDg_3
@@ -944,7 +960,7 @@ contains
 
     !$omp parallel do &
     !$omp private(tend,coef_bt,coef_at,q,w)                                                                           &
-    !$omp private(dens,temp,Sliq,Sice,Rdens,rho_fact,temc)                                                            &
+    !$omp private(dens,temp,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g)                                                &
     !$omp private(Bergeron_sw,zerosw)                                                                                 &
     !$omp private(RLMDr,RLMDr_dr,RLMDr_2,RLMDr_3,RLMDr_7,RLMDr_1br,RLMDr_2br,RLMDr_3br,RLMDr_3dr,RLMDr_5dr,RLMDr_6dr) &
     !$omp private(RLMDs,RLMDs_ds,RLMDs_2,RLMDs_3,        RLMDs_1bs,RLMDs_2bs,RLMDs_3bs,RLMDs_3ds,RLMDs_5ds)           &
@@ -993,6 +1009,14 @@ contains
        Bergeron_sw = ( 0.5_RP + sign(0.5_RP, temc + 30.0_RP ) ) &
                    * ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc  ) ) &
                    * ( 1.0_RP - sw_expice                     )
+
+       ! intercept parameter N0
+       N0r = ( 1.0_RP - sw_WDXZ2014 ) * N0r_def &                                                                   ! Marshall and Palmer (1948)
+           + (          sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*q(I_QR)*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
+       N0s = ( 1.0_RP - sw_WDXZ2014 ) * N0s_def &                                                                   ! Gunn and Marshall (1958)
+           + (          sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*q(I_QS)*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
+       N0g = ( 1.0_RP - sw_WDXZ2014 ) * N0g_def &                                                                   !
+           + (          sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*q(I_QG)*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
 
        ! slope parameter lambda (Rain)
        zerosw = 0.5_RP - sign(0.5_RP, q(I_QR) - 1.E-12_RP )
@@ -1660,6 +1684,7 @@ contains
 
     real(RP) :: rho_fact ! density factor
 
+    real(RP) :: N0r, N0s, N0g
     real(RP) :: RLMDr, RLMDs, RLMDg
     real(RP) :: RLMDr_dr, RLMDs_ds, RLMDg_dg
 
@@ -1684,6 +1709,14 @@ contains
        enddo
 
        rho_fact = sqrt( dens00 / dens )
+
+       ! intercept parameter N0
+       N0r = ( 1.0_RP - sw_WDXZ2014 ) * N0r_def &                                                                   ! Marshall and Palmer (1948)
+           + (          sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*q(I_QR)*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
+       N0s = ( 1.0_RP - sw_WDXZ2014 ) * N0s_def &                                                                   ! Gunn and Marshall (1958)
+           + (          sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*q(I_QS)*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
+       N0g = ( 1.0_RP - sw_WDXZ2014 ) * N0g_def &                                                                   !
+           + (          sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*q(I_QG)*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
 
        ! slope parameter lambda (Rain)
        zerosw = 0.5_RP - sign(0.5_RP, q(I_QR) - 1.E-12_RP )
@@ -1872,6 +1905,7 @@ contains
 
     real(RP) :: dens
     real(RP) :: temc
+    real(RP) :: N0r, N0s, N0g
     real(RP) :: RLMDr, RLMDs, RLMDg
 
     real(RP), parameter :: um2cm = 100.0_RP
@@ -1894,6 +1928,14 @@ contains
     do k  = KS, KE
        dens = DENS0(k,i,j)
        temc = TEMP0(k,i,j) - TEM00
+
+       ! intercept parameter N0
+       N0r = ( 1.0_RP - sw_WDXZ2014 ) * N0r_def &                                                                   ! Marshall and Palmer (1948)
+           + (          sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*QTRC0(k,i,j,I_QR)*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
+       N0s = ( 1.0_RP - sw_WDXZ2014 ) * N0s_def &                                                                             ! Gunn and Marshall (1958)
+           + (          sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*QTRC0(k,i,j,I_QS)*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
+       N0g = ( 1.0_RP - sw_WDXZ2014 ) * N0g_def &                                                                             !
+           + (          sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*QTRC0(k,i,j,I_QG)*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
 
        ! slope parameter lambda
        zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QR) - 1.E-12_RP )
