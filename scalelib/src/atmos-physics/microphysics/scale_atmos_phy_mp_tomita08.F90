@@ -1312,6 +1312,10 @@ contains
        w(I_Psdep) = min( w(I_Psdep), w(I_dqv_dt) ) * (        w(I_iceflg) )
        w(I_Pgdep) = min( w(I_Pgdep), w(I_dqv_dt) ) * (        w(I_iceflg) )
 
+       w(I_Pracw) = w(I_Pracw)                          &
+                  + w(I_Psacw) * ( 1.0_RP-w(I_iceflg) ) & ! c->r by s
+                  + w(I_Pgacw) * ( 1.0_RP-w(I_iceflg) )   ! c->r by g
+
        w(I_Praut) = min( w(I_Praut), w(I_dqc_dt) )
        w(I_Pracw) = min( w(I_Pracw), w(I_dqc_dt) )
        w(I_Pihom) = min( w(I_Pihom), w(I_dqc_dt) ) * (        w(I_iceflg) ) * sw_expice
@@ -1319,10 +1323,6 @@ contains
        w(I_Psacw) = min( w(I_Psacw), w(I_dqc_dt) ) * (        w(I_iceflg) )
        w(I_Psfw ) = min( w(I_Psfw ), w(I_dqc_dt) ) * (        w(I_iceflg) ) * sw_bergeron
        w(I_Pgacw) = min( w(I_Pgacw), w(I_dqc_dt) ) * (        w(I_iceflg) )
-
-       w(I_Pracw) = w(I_Pracw)                          &
-                  + w(I_Psacw) * ( 1.0_RP-w(I_iceflg) ) & ! c->r by s
-                  + w(I_Pgacw) * ( 1.0_RP-w(I_iceflg) )   ! c->r by g
 
        w(I_Prevp) = min( w(I_Prevp), w(I_dqr_dt) )
        w(I_Piacr) = min( w(I_Piacr), w(I_dqr_dt) ) * (        w(I_iceflg) )
