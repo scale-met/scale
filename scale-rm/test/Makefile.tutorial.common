@@ -30,6 +30,10 @@ ifneq ($(ORG_SRCS),)
    USELOCALBIN = T
 endif
 
+ifeq ($(DISABLE_LOCALBIN),T)
+   USELOCALBIN = F
+endif
+
 ifeq ($(USELOCALBIN),T)
    BUILD_DIR := $(PWD)/.libs
    BINDIR     = $(PWD)
@@ -82,7 +86,7 @@ $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	cp -f $< $@
 
 build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
-	@echo;echo $(msg1)
+	@echo -e "$(msg1)"
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
