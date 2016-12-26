@@ -693,13 +693,14 @@ contains
        HistoryCheck
     use scale_time, only: &
        NOWSTEP => TIME_NOWSTEP
+    use scale_process, only: &
+       PRC_MPIstop,          &
+       PRC_myrank,           &
+       PRC_LOCAL_COMM_WORLD
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
-    use scale_process, only: &
-       PRC_myrank, &
-       PRC_LOCAL_COMM_WORLD
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -744,6 +745,11 @@ contains
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     ! Try to add new item
+
+    if ( len_trim(item) >= H_SHORT ) then
+       write(*,'(1x,A,I2,A,A)') 'xxx Length of history name should be <= ', H_SHORT-1 ,' chars. STOP', trim(item)
+       call PRC_MPIstop
+    endif
 
     atom = .true.
 
