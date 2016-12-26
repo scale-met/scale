@@ -84,6 +84,7 @@ endif
 ifeq ($(RD),)
   OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
             scale_atmos_phy_rd_mm5sw.o	\
+            scale_atmos_phy_rd_offline.o	\
             scale_atmos_phy_rd_profile.o
 else
   OBJS_RD = scale_atmos_phy_rd_$(RD).o

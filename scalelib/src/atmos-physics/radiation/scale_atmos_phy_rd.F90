@@ -96,6 +96,9 @@ contains
     use scale_atmos_phy_rd_mstrnx, only: &
        ATMOS_PHY_RD_mstrnx_setup, &
        ATMOS_PHY_RD_mstrnx
+    use scale_atmos_phy_rd_offline, only: &
+       ATMOS_PHY_RD_offline_setup, &
+       ATMOS_PHY_RD_offline
 #endif
     use scale_atmos_phy_rd_mm5sw, only: &
        swinit
@@ -108,6 +111,9 @@ contains
     case ( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
+    case ( 'OFFLINE' )
+       call ATMOS_PHY_RD_offline_setup( RD_TYPE )
+       ATMOS_PHY_RD => ATMOS_PHY_RD_offline
     case ( 'WRF' )
        call ATMOS_PHY_RD_mstrnx_setup( 'MSTRNX' )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
