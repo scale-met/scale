@@ -217,7 +217,7 @@ contains
           call PRC_MPIstop
        endif
 
-       do n=dim_rank+1, 3
+       do n = dim_rank+1, 3
           dim_size(n) = 1
        end do
 
@@ -237,7 +237,7 @@ contains
           EXTIN_item(nid)%flag_periodic = 0
        endif
 
-       allocate( EXTIN_item(nid)%value( dim_size(1),dim_size(2),dim_size(3),2) )
+       allocate( EXTIN_item(nid)%value(dim_size(1),dim_size(2),dim_size(3),2) )
        EXTIN_item(nid)%value(:,:,:,:) = defval
        EXTIN_item(nid)%offset         = offset
 
@@ -331,9 +331,14 @@ contains
        endif
 
        !--- read first data
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Initial read of external data : ', trim(EXTIN_item(nid)%varname)
+
        if (       dim_size(1) >= 1 &
             .AND. dim_size(2) == 1 &
             .AND. dim_size(3) == 1 ) then ! 1D
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') &
+                     '*** Read 1D var                   : ', trim(EXTIN_item(nid)%varname)
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,1,1,I_prev),  &
@@ -352,6 +357,9 @@ contains
                 .AND. dim_size(2) >  1 &
                 .AND. dim_size(3) == 1 ) then ! 2D
 
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') &
+                     '*** Read 2D var                   : ', trim(EXTIN_item(nid)%varname)
+
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,:,1,I_prev),  &
                          EXTIN_item(nid)%basename,             &
@@ -368,6 +376,9 @@ contains
        elseif (       dim_size(1) >= 1 &
                 .AND. dim_size(2) >  1 &
                 .AND. dim_size(3) >  1 ) then ! 3D
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') &
+                     '*** Read 3D var                   : ', trim(EXTIN_item(nid)%varname)
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,:,:,I_prev),  &
@@ -460,7 +471,7 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(EXTIN_item(nid)%varname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname)
 
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
@@ -560,7 +571,7 @@ contains
 
     if ( do_readfile ) then
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(EXTIN_item(nid)%varname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname)
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
@@ -680,7 +691,7 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(EXTIN_item(nid)%varname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname)
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
@@ -753,7 +764,7 @@ contains
 
           do_readfile = .true.
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update external input : ', trim(EXTIN_item(nid)%varname)
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Update external input : ', trim(EXTIN_item(nid)%varname)
 
           ! update step position
           EXTIN_item(nid)%data_steppos(I_prev) = EXTIN_item(nid)%data_steppos(I_prev) + 1

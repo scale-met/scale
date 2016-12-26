@@ -688,6 +688,8 @@ contains
        xdim,   &
        ydim,   &
        zdim    )
+    use MPI, only: &
+       MPI_COMM_NULL
     use gtool_history, only: &
        HistoryAddVariable, &
        HistoryCheck
@@ -701,7 +703,6 @@ contains
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent(out) :: itemid !< index number of the item
@@ -726,7 +727,6 @@ contains
     integer                :: rankidx(2)
     integer                :: start(4), count(4)
     integer                :: comm
-
     !---------------------------------------------------------------------------
 
     itemid = -1
