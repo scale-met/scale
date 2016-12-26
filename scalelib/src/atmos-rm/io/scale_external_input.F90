@@ -145,7 +145,6 @@ contains
     integer  :: dataday       !< absolute day
     real(DP) :: datasec       !< absolute second
     integer  :: offset_year   !< offset year
-    real(DP) :: cftime        !< time in the CF convention
 
     integer  :: count, nid, t, n
     integer  :: ierr
@@ -246,9 +245,7 @@ contains
        EXTIN_item(nid)%time(:) = 0.0_DP
 
        do t = 1, EXTIN_item(nid)%step_num
-          cftime = 0.5_DP * ( time_start(t) + time_end(t) )
-
-          EXTIN_item(nid)%time(t) = CALENDAR_CFunits2sec( cftime, time_units, TIME_OFFSET_year, TIME_STARTDAYSEC )
+          EXTIN_item(nid)%time(t) = CALENDAR_CFunits2sec( time_end(t), time_units, TIME_OFFSET_year, TIME_STARTDAYSEC )
        enddo
 
        if ( EXTIN_item(nid)%step_num == 1 ) then
@@ -632,36 +629,36 @@ contains
 
     if( nid == 0 ) return
 
-    if ( axistype == 'ZXY' ) then
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else if ( axistype == 'Land' ) then
-       dim1_max = LKMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = LKS
-       dim1_E   = LKE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else if ( axistype == 'Urban' ) then
-       dim1_max = UKMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = UKS
-       dim1_E   = UKE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
+    if    ( axistype == 'XYZ' ) then
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = KMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = KS
+       dim3_E   = KE
+    elseif( axistype == 'Land' ) then
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = LKMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = LKS
+       dim3_E   = LKE
+    elseif( axistype == 'Urban' ) then
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = UKMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = UKS
+       dim3_E   = UKE
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -695,7 +692,7 @@ contains
                       PRC_myrank                            ) ! [IN]
     endif
 
-    ! store data with weight
+    ! store data with weight (x,y,z)->(z,x,y)
     do n3 = 1, dim3_max
        nn3 = n3 + dim3_S - 1
     do n2 = 1, dim2_max
@@ -703,7 +700,7 @@ contains
     do n1 = 1, dim1_max
        nn1 = n1 + dim1_S - 1
 
-       var(nn1,nn2,nn3) = ( 1.0_RP-weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_prev) &
+       var(nn3,nn1,nn2) = ( 1.0_RP-weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_prev) &
                         + (        weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_next)
     enddo
     enddo
