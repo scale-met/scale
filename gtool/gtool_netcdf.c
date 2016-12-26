@@ -219,7 +219,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   int rank;
   int dimids[MAX_RANK], tdim, uldims[NC_MAX_DIMS];
   char name[File_HSHORT+1];
-  size_t size;
+  size_t size, l, len;
   int i, n;
 
   ERROR_SUPPRESS = suppress;
@@ -237,9 +237,15 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   strcpy(dinfo->varname, varname);
   if ( files[fid]->shared_mode ) {
     // description
+    CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "long_name", &l) )
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "long_name", dinfo->description) )
+    len = l > File_HMID ? File_HMID : l;
+    dinfo->description[len] = '\0';
     // units
+    CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", dinfo->units) )
+    len = l > File_HSHORT ? File_HSHORT : l;
+    dinfo->units[len] = '\0';
     // datatype
     CHECK_PNC_ERROR( ncmpi_inq_vartype(ncid, varid, &xtype) )
     NCTYPE2TYPE(xtype, dinfo->datatype);
@@ -255,9 +261,15 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   }
   else {
     // description
+    CHECK_ERROR( nc_inq_attlen  (ncid, varid, "long_name", &l) )
     CHECK_ERROR( nc_get_att_text(ncid, varid, "long_name", dinfo->description) )
+    len = l > File_HMID ? File_HMID : l;
+    dinfo->description[len] = '\0';
     // units
+    CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
     CHECK_ERROR( nc_get_att_text(ncid, varid, "units", dinfo->units) )
+    len = l > File_HSHORT ? File_HSHORT : l;
+    dinfo->units[len] = '\0';
     // datatype
     CHECK_ERROR( nc_inq_vartype(ncid, varid, &xtype) )
     NCTYPE2TYPE(xtype, dinfo->datatype);
@@ -313,7 +325,10 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       idx[1] = 0;
       CHECK_PNC_ERROR( ncmpi_get_var1_double_all(ncid, varid, idx, &(dinfo->time_start)) )
       // units
+      CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
       CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", dinfo->time_units) )
+      len = l > File_HMID ? File_HMID : l;
+      dinfo->time_units[len] = '\0';
     } else {
       size_t idx[2];
       // time_end
@@ -327,7 +342,10 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       idx[1] = 0;
       CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) )
       // units
+      CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
       CHECK_ERROR( nc_get_att_text(ncid, varid, "units", dinfo->time_units) )
+      len = l > File_HMID ? File_HMID : l;
+      dinfo->time_units[len] = '\0';
     }
   }
 

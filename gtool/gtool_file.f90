@@ -1729,7 +1729,6 @@ contains
 
     integer :: ndim
     integer :: istep, idim
-    logical :: flag_first = .true.
 
     integer :: error
     logical :: single_ = .false.
@@ -1770,22 +1769,18 @@ contains
           exit
        endif
 
-       if ( flag_first ) then
-          flag_first = .false.
+       description = dinfo%description
+       units       = dinfo%units
+       datatype    = dinfo%datatype
+       dim_rank    = dinfo%rank
 
-          description = dinfo%description
-          units       = dinfo%units
-          datatype    = dinfo%datatype
-          dim_rank    = dinfo%rank
+       ndim = min( dinfo%rank, dim_limit ) ! limit dimension rank
+       do idim = 1, ndim
+          dim_name(idim) = dinfo%dim_name(idim)
+          dim_size(idim) = dinfo%dim_size(idim)
+       enddo
 
-          ndim = min( dinfo%rank, dim_limit ) ! limit dimension rank
-          do idim = 1, ndim
-             dim_name(idim) = dinfo%dim_name(idim)
-             dim_size(idim) = dinfo%dim_size(idim)
-          enddo
-
-          time_units        = dinfo%time_units
-       endif
+       time_units        = dinfo%time_units
 
        time_start(istep) = dinfo%time_start
        time_end  (istep) = dinfo%time_end
