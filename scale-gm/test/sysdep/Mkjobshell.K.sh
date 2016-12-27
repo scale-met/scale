@@ -39,19 +39,16 @@ else
    rscgrp="small"
 fi
 
-PROF1="fipp -C -Srange -Ihwm,nocall -d prof"
-PROF2="fipp -C -Srange -Inohwm,call -d prof_call"
-
 cat << EOF1 > run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K computer
+# ------ For K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:30:00"
+#PJM --rsc-list "elapse=04:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
 #PJM --stgin  "rank=* ${TOPDIR}/bin/${BINNAME}           %r:./"
@@ -60,8 +57,6 @@ cat << EOF1 > run.sh
 #PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/grid/vgrid/${VGRID} %r:./"
 #PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d}/boundary_${res2d}.pe%06r %r:./"
 #PJM --stgout "rank=* %r:./*           ./"
-#PJM --stgout "rank=* %r:./prof/*      ./prof/"
-#PJM --stgout "rank=* %r:./prof_call/* ./prof_call/"
 #PJM -j
 #PJM -s
 #
@@ -72,14 +67,8 @@ export OMP_NUM_THREADS=8
 #export fu08bf=1
 export XOS_MMM_L_ARENA_FREE=2
 
-rm -rf ./prof
-rm -rf ./prof_call
-mkdir -p ./prof
-mkdir -p ./prof_call
-
 # run
-${PROF1} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
-${PROF2} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
+${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOF1
@@ -89,7 +78,7 @@ cat << EOFICO2LL1 > ico2ll.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K computer
+# ------ For K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
@@ -103,6 +92,7 @@ cat << EOFICO2LL1 > ico2ll.sh
 #PJM --stgin  "rank=* ./history.pe%06r                  %r:./"
 #PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/grid/llmap/gl${GL}/rl${RL}/llmap.* %r:./"
 #PJM --stgout "rank=* %r:./*           ./"
+#PJM --stgout "rank=0 ../*             ./"
 #PJM -j
 #PJM -s
 #
@@ -120,6 +110,7 @@ rlevel=${RLEV} \
 mnginfo="./${MNGINFO}" \
 layerfile_dir="./." \
 llmap_base="./llmap" \
+outfile_dir="../" \
 -lon_swap \
 -comm_smallchunk
 

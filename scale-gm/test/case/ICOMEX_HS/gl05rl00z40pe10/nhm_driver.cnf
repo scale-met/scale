@@ -36,14 +36,17 @@
 /
 
 &RESTARTPARAM
-    input_io_mode     = 'ADVANCED',
+    input_io_mode     = 'IDEAL',
     output_io_mode    = 'ADVANCED',
-    input_basename    = 'init_all_GL05RL00z40',
     output_basename   = 'restart_all_GL05RL00z40',
     restart_layername = 'ZSALL42',
 /
 
 ##### ICOMEX Test case: Held-Suarez test
+&DYCORETESTPARAM
+    init_type = 'Heldsuarez',
+/
+
 &CNSTPARAM
     earth_radius        = 6.37122D+6,
     earth_angvel        =   7.292D-5,

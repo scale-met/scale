@@ -41,7 +41,7 @@ cat << EOF1 > run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K computer
+# ------ For K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
@@ -57,7 +57,7 @@ if   [ -f ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} ]; then
    echo "mnginfo file is found in default database"
    echo "#PJM --stgin  \"rank=* ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} %r:./\"" >> run.sh
 elif [ -f ../../mkmnginfo/rl${RL}pe${NP}/${MNGINFO} ]; then
-q   echo "mnginfo file is found in test directory"
+   echo "mnginfo file is found in test directory"
    echo "#PJM --stgin  \"rank=* ../../mkmnginfo/rl${RL}pe${NP}/${MNGINFO} %r:./\"" >> run.sh
 else
    echo "mnginfo file is not found!"

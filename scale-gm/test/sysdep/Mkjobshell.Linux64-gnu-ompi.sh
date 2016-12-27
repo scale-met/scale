@@ -9,7 +9,7 @@ TOPDIR=${6}
 BINNAME=${7}
 
 # System specific
-MPIEXEC="mpiexec"
+MPIEXEC="mpirun -np ${TPROC}"
 
 GL=`printf %02d ${GLEV}`
 RL=`printf %02d ${RLEV}`
@@ -30,52 +30,30 @@ res3d=GL${GL}RL${RL}z${ZL}
 
 MNGINFO=rl${RL}-prc${NP}.info
 
-# for K(micro)
-if [ ${TPROC} -gt 1152 ]; then
-   rscgrp="invalid"
-else
-   rscgrp="micro"
-fi
-
-PROF1="scan -t -m L1_MISS:L1_I_MISS:L1_D_MISS:L2_MISS:TLB_MISS:TLB_I_MISS:TLB_D_MISS:FLOATING_POINT -e epik_trace"
-
 cat << EOF1 > run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K micro with scalasca
+# ------ For Linux64 & gnu fortran&C & openmpi
 #
 ################################################################################
-#PJM --rsc-list "rscgrp=${rscgrp}"
-#PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:29:00"
-#PJM -j
-#PJM -s
-#
-. /work/system/Env_base
-. /work/aics_apps/scalasca/Env_scalasca
-/opt/FJSVXosPA/bin/xospastop
-#
-export PARALLEL=8
-export OMP_NUM_THREADS=8
-export XOS_MMM_L_ARENA_FREE=2
-export SCAN_ANALYZE_OPTS="-i -s"
+export FORT_FMT_RECL=400
+export GFORTRAN_UNBUFFERED_ALL=Y
 
 ln -svf ${TOPDIR}/bin/${BINNAME} .
-ln -svf ${TOPDIR}/data/mnginfo/${MNGINFO} .
-ln -svf ${TOPDIR}/data/grid/vgrid/${VGRID} .
+ln -svf ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} .
+ln -svf ${TOPDIR}/scale-gm/test/data/grid/vgrid/${VGRID} .
 EOF1
 
-for f in $( ls ${TOPDIR}/data/grid/boundary/${dir2d} )
+for f in $( ls ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d} )
 do
-   echo "ln -svf ${TOPDIR}/data/grid/boundary/${dir2d}/${f} ." >> run.sh
+   echo "ln -svf ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d}/${f} ." >> run.sh
 done
 
 cat << EOF2 >> run.sh
-rm -rf ./epik_trace
 
 # run
-${PROF1} ${MPIEXEC} ./${BINNAME} || exit
+${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOF2
@@ -85,34 +63,26 @@ cat << EOFICO2LL1 > ico2ll.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K micro
+# ------ For Linux64 & gnu fortran&C & openmpi
 #
 ################################################################################
-#PJM --rsc-list "rscgrp=${rscgrp}"
-#PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:29:00"
-#PJM -j
-#PJM -s
-#
-. /work/system/Env_base
-#
-export PARALLEL=8
-export OMP_NUM_THREADS=8
+export FORT_FMT_RECL=400
 
-ln -svf ${TOPDIR}/bin/fio_ico2ll_mpi .
-ln -svf ${TOPDIR}/data/mnginfo/${MNGINFO} .
-ln -svf ${TOPDIR}/data/zaxis .
+
+ln -svf ${TOPDIR}/bin/gm_fio_ico2ll .
+ln -svf ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} .
+ln -svf ${TOPDIR}/scale-gm/test/data/zaxis .
 EOFICO2LL1
 
-for f in $( ls ${TOPDIR}/data/grid/llmap/gl${GL}/rl${RL}/ )
+for f in $( ls ${TOPDIR}/scale-gm/test/data/grid/llmap/gl${GL}/rl${RL}/ )
 do
-   echo "ln -svf ${TOPDIR}/data/grid/llmap/gl${GL}/rl${RL}/${f} ." >> ico2ll.sh
+   echo "ln -svf ${TOPDIR}/scale-gm/test/data/grid/llmap/gl${GL}/rl${RL}/${f} ." >> ico2ll.sh
 done
 
 cat << EOFICO2LL2 >> ico2ll.sh
 
 # run
-${MPIEXEC} ./fio_ico2ll_mpi \
+${MPIEXEC} ./gm_fio_ico2ll \
 history \
 glevel=${GLEV} \
 rlevel=${RLEV} \
