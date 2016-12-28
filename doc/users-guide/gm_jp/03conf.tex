@@ -1,0 +1,501 @@
+\section{実験設定とモデル設定の変更方法}
+%###############################################################################
+ここでは、実験設定やモデル設定を変更する際に必要なnamelistファイルの
+編集方法を説明する。ただし、各々の詳しい説明は控え、使い始めのユーザーに必要な
+項目のみに留める。
+
+\subsection{テストケースの変更方法}
+%-------------------------------------------------------------------------------
+
+ \noindent ここでは新しくディレクトリを作成し、実験セットを自分で用意する方法を、
+DCMIP2016で取り扱われた3つのテストケースの設定について説明する。
+それぞれのテストケースについて設定済みのコンフィグレーションファイルが\verb|${TOP}/test/case|
+の中に用意されている。まず第1歩としては、コンフィグレーションファイルを
+変更せずに実行することを勧める。以下の説明では、
+
+\subsubsection{ディレクトリの準備}
+まず、実行したいテストケースのディレクトリへ移動する。例えば、全球台風理想実験を行いたいのであれば、
+\verb|${TOP}/test/case/DCMIP2016-12/|へ移動する。その後、新たに実行したいg-levelやr-levelに
+合わせたディレクトリを作成する。
+ここでは、gl05rl00z30pe40のディレクトリを新しく作成することを想定して以下の説明を進める。
+ \begin{verbatim}
+    > mkdir gl05rl00z30pe40
+    > cd    gl05rl00z30pe40
+ \end{verbatim}
+
+ \noindent Makefileとコンフィグレーションファイルをテンプレートとして既存のディレクトリから
+新しいディレクトリへコピーする。例えば、DCMIP2016-11からコピーする。
+ \begin{verbatim}
+    > cp ../../DCMIP2016-11/gl05rl00z30pe10/Makefile       ./
+    > cp ../../DCMIP2016-11/gl05rl00z30pe10/nhm_driver.cnf ./
+ \end{verbatim}
+
+\subsubsection{コンフィグレーションファイルの編集: nhm\_driver.cnf}
+以下で、テストケース毎にnamelist中の設定しなければならない項目について説明する。
+
+ %--------------------
+ \vspace{0.5cm}
+ \noindent {\large{\sf ○ 湿潤傾圧波理想実験(DCMIP2016-11)の設定方法}}
+
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &RUNCONFPARAM
+       RUNNAME        = 'DCMIP2016-11',      <--
+       NDIFF_LOCATION = 'IN_LARGE_STEP2',
+       THUBURN_LIM    = .true.,
+       RAIN_TYPE      = "WARM",
+       AF_TYPE        = 'DCMIP',
+     /
+
+     * snip *
+
+     &DYCORETESTPARAM
+       init_type   = 'Jablonowski-Moist',    <--
+       test_case   = '1',                    <--
+       chemtracer  = .true.,                 <--
+       prs_rebuild = .false.,
+     /
+
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_11 = .true.,            <--
+     /
+
+     * snip *
+ \end{verbatim}
+
+ \noindent \textcolor{blue}{{\sf 注意}}
+ \begin{itemize}
+   \item 湿潤傾圧波理想実験を行うには、``RUNNAME'' を必ず``DCMIP2016-11''と指定すること。
+   \item 同様に``init\_type''は、必ず``Jablonowski-Moist''と指定すること。
+   \item ``test\_case''は初期擾乱に関する設定であり、以下の 1 ~ 6から選択できる。\\
+          case 1: 初期擾乱あり (指数関数型) / 湿潤実験 \\
+          case 2: 初期擾乱あり (流線関数型) / 湿潤実験 \\
+          case 3: 初期擾乱あり (指数関数型) / 乾燥実験 \\
+          case 4: 初期擾乱あり (流線関数型) / 乾燥実験 \\
+          case 5: 初期擾乱なし / 湿潤実験 \\
+          case 6: 初期擾乱なし / 乾燥実験
+   \item \verb|FORCING_DCMIP_PARAM| は、必ず``\verb|SET_DCMIP2016_11 = .true.|''と指定すること。
+   \item \verb|NMHISD|の項目にある``step''はヒストリーを出力する間隔を指定する。
+           任意の値を指定できるが、このテストケースでは、通常12時間間隔に相当するステップ数を指定する。
+   \item ``NMHIST''の項目の``item''は、ヒストリー出力する変数を指定している。任意の設定が可能である。
+   \item ``CNSTPARAM''の項目の``small\_planet\_factor''は必ず``1''と指定すること。
+ \end{itemize}
+
+ %--------------------
+ \vspace{0.5cm}
+ \noindent {\large {\sf ○ 全球台風理想実験(DCMIP2016-12)の設定方法}}
+
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &RUNCONFPARAM
+       RUNNAME        = 'DCMIP2016-12',      <--
+       NDIFF_LOCATION = 'IN_LARGE_STEP2',
+       THUBURN_LIM    = .true.,
+       RAIN_TYPE      = "WARM",
+       AF_TYPE        = 'DCMIP',
+     /
+
+     * snip *
+
+     &DYCORETESTPARAM
+       init_type   = 'Tropical-Cyclone',     <--
+     /
+
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_12 = .true.,            <--
+     /
+
+     * snip *
+ \end{verbatim}
+
+ \noindent \textcolor{blue}{{\sf 注意}}
+ \begin{itemize}
+   \item 全球台風理想実験を行うには、``RUNNAME'' を必ず``DCMIP2016-12''と指定すること。
+   \item 同様に``init\_type''は、必ず``Tropical-Cyclone''と指定すること。
+   \item \verb|FORCING_DCMIP_PARAM| は、必ず``\verb|SET_DCMIP2016_12 = .true.|''と指定すること。
+   \item \verb|NMHISD|の項目にある``step''はヒストリーを出力する間隔を指定する。
+           任意の値を指定できるが、このテストケースでは、通常1時間間隔に相当するステップ数を指定する。
+   \item ``NMHIST''の項目の``item''は、ヒストリー出力する変数を指定している。任意の設定が可能である。
+   \item ``CNSTPARAM''の項目の``small\_planet\_factor''は必ず``1''と指定すること。
+ \end{itemize}
+
+ %--------------------
+ \vspace{0.5cm}
+ \noindent {\large{\sf ○ 全球スーパーセル理想実験(DCMIP2016-13)の設定方法}}
+
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &RUNCONFPARAM
+       RUNNAME        = 'DCMIP2016-13',      <--
+       NDIFF_LOCATION = 'IN_LARGE_STEP2',
+       THUBURN_LIM    = .true.,
+       RAIN_TYPE      = "WARM",
+       AF_TYPE        = 'DCMIP',
+     /
+
+     * snip *
+
+     &DYCORETESTPARAM
+       init_type   = 'Supercell',            <--
+       test_case  = '1',                     <--
+     /
+
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_13 = .true.,            <--
+     /
+
+     * snip *
+ \end{verbatim}
+
+ \noindent \textcolor{blue}{{\sf 注意}}
+ \begin{itemize}
+   \item 全球スーパーセル理想実験を行うには、``RUNNAME'' を必ず``DCMIP2016-13''と指定すること。
+   \item 同様に``init\_type''は、必ず``Supercell''と指定すること。
+   \item ``test\_case''は初期擾乱に関する設定であり、以下の 1 ~ 2から選択できる。\\
+          case 1: 初期擾乱あり \\
+          case 2: 初期擾乱なし
+   \item \verb|FORCING_DCMIP_PARAM| は、必ず``\verb|SET_DCMIP2016_13 = .true.|''と指定すること。
+   \item \verb|NMHISD|の項目にある``step''はヒストリーを出力する間隔を指定する。
+           任意の値を指定できるが、このテストケースでは、通常2分間隔に相当するステップ数を指定する。
+   \item ``NMHIST''の項目の``item''は、ヒストリー出力する変数を指定している。任意の設定が可能である。
+   \item \textcolor{red}{``CNSTPARAM''の項目の``small\_planet\_factor''は必ず``120''と指定すること。}
+   \item \textcolor{red}{``CNSTPARAM''の項目の``earth\_angvel''は必ず``0''と指定すること。}
+ \end{itemize}
+
+ \noindent 上記の編集を行ったあとは、0.2.4節の説明に沿って計算の実行ができる。
+ \begin{verbatim}
+    > make jobshell
+    > make run
+ \end{verbatim}
+
+
+\subsection{物理スキームの変更方法}
+%-------------------------------------------------------------------------------
+
+ \noindent 各テストケースについて、パッケージに準備されているコンフィグレーションファイルは、
+DCMIP2016における標準仕様の物理スキームが設定されている。
+物理スキームの設定はユーザーが任意に変更することができる。ただし、物理スキームの全ての組み合わせが
+全てのテストケースにおいて正常に動作することは確かめられていないため、物理スキームを変更して実行する際
+は注意されたい。\\
+
+
+ \noindent {\large{\sf ○ kessler雲微物理スキームの代わりに大規模凝結スキームを使用する}}
+
+ \noindent DCMIP2016テストケースにおける標準仕様の雲微物理スキームはKesslerスキームである。
+この代わりに大規模凝結スキーム(Precipitation Scheme; Reed and Jablonowski 2012)を使用するには、
+namelistに``\verb|SET_DCMIP2016_LSC|''のパラメータをTrue設定で加える。
+下記に湿潤傾圧波理想実験の場合の例を示す。
+
+ %--------------------
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_11 = .true.,
+       SET_DCMIP2016_LSC = .true.,      <--
+      /
+
+     * snip *
+ \end{verbatim}
+
+
+ \noindent {\large{\sf ○ 雲微物理スキームを使用しない}}
+
+ \noindent どんな雲微物理に関する物理モデルも使用せずに実験を行うには、
+namelistに``\verb|SET_DCMIP2016_DRY|''のパラメータをTrue設定で加える。
+下記に湿潤傾圧波理想実験の場合の例を示す。
+
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_11 = .true.,
+       SET_DCMIP2016_DRY = .true.,      <--
+      /
+
+     * snip *
+ \end{verbatim}
+
+ \noindent {\large{\sf ○ George Bryanの大気境界層スキームを使用する}}
+
+ \noindent DCMIP2016テストケースにおける標準仕様の大気境界層スキームは、
+RJ12スキーム(Reed and Jablonowski 2012)である。
+この代わりにGeorge Bryanの大気境界層スキームを使用するには、
+namelistに``\verb|SM_PBL_Bryan|''のパラメータをTrue設定で加える。
+\textcolor{red}{この設定は、全球台風理想実験についてのみ有効である。}
+以下に設定例を示す。
+
+
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &FORCING_DCMIP_PARAM
+       SET_DCMIP2016_12 = .true.,
+       SM_PBL_Bryan     = .true.,      <--
+      /
+
+     * snip *
+ \end{verbatim}
+
+
+ \noindent {\large{\sf ○ 全ての物理モデルを使用しない}}
+
+ \noindent 全ての物理モデルを使用せずに実験を行うには、namelistの
+``\verb|RUNCONFPARAM|''の項目における``\verb|AF_TYPE|''の
+パラメータに``NONE''を指定する。
+下記に湿潤傾圧波理想実験の場合の例を示す。
+
+
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+
+     &RUNCONFPARAM
+       RUNNAME        = 'DCMIP2016-11',
+       NDIFF_LOCATION = 'IN_LARGE_STEP2',
+       THUBURN_LIM    = .true.,
+       RAIN_TYPE      = "WARM",
+       AF_TYPE        = 'NONE',       <--
+      /
+
+     * snip *
+ \end{verbatim}
+
+
+
+\subsection{MPIプロセスの変更方法}
+%------------------------------------------------------------------------------
+ \noindent 並列計算に用いるMPIプロセス数を増やすことで、数値モデルの計算実行に
+かかる所要時間を短縮することができる。
+以下では、湿潤傾圧波理想実験のg-level 5において、40プロセスを使用して
+実行するための変更を例にして説明する。
+
+10プロセスで実行していた設定を40プロセスに増加させるためには、r-level 0の並列数の
+上限が10プロセスなので、r-levelを0から1へ上げなければならない。
+
+\subsubsection{ディレクトリを準備する}
+%------------------------------------------------------------------------------
+ ここでは、\${TOP}/test/case/DCMIP2016-11/ のディレクトリにいることを想定している。
+ \begin{verbatim}
+    > mkdir gl05rl01z30pe40    <-- r-level is 1
+    > cd gl05rl01z30pe40/
+ \end{verbatim}
+
+ \noindent Makefileとコンフィグレーションファイルを既存のディレクトリから
+新規ディレクトリへコピーする。
+ \begin{verbatim}
+    > cp ../gl05rl00z30pe10/Makefile ./
+    > cp ../gl05rl00z30pe10/nhm_driver.cnf ./
+ \end{verbatim}
+
+\subsubsection{Makefileを編集する}
+%------------------------------------------------------------------------------
+ ("\verb|<--|" のマークは編集が必要な項目を意味する) \\
+ 17行目から21行目のパラメータを下記のように変更する。
+ \begin{verbatim}
+    > vi Makefile
+     glevel = 5
+     rlevel = 1      <--
+     nmpi   = 40     <--
+     zlayer = 30
+     vgrid  = vgrid30_stretch_30km_dcmip2016.dat
+ \end{verbatim}
+
+\subsubsection{コンフィグレーションファイルを編集する: nhm\_driver.cnf}
+%------------------------------------------------------------------------------
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+     &ADMPARAM
+       glevel      = 5,
+       rlevel      = 1,                     <--
+       vlayer      = 30,
+       rgnmngfname = "rl01-prc40.info",     <--
+      /
+
+     &GRDPARAM
+       hgrid_io_mode = "ADVANCED",
+       hgrid_fname   = "boundary_GL05RL01",  <--
+       VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat",
+       vgrid_scheme  = "LINEAR",
+       topo_fname    = "NONE",
+      /
+
+     * snip *
+
+     &RESTARTPARAM
+       input_io_mode     = 'IDEAL',
+       output_io_mode    = 'ADVANCED',
+       output_basename   = 'restart_all_GL05RL01z30', <--
+       restart_layername = 'ZSALL32_DCMIP16',
+      /
+ \end{verbatim}
+
+ \noindent 上記の編集を行ったあとは、0.2.4節の説明に沿って計算の実行ができる。
+ \begin{verbatim}
+    > make jobshell
+    > make run
+ \end{verbatim}
+
+ \noindent \textcolor{blue}{{\sf 注意}}
+ \begin{itemize}
+   \item MPIプロセス数を増やせば必ずしも計算の所要時間が短くなるわけではない。
+           使用する計算機に適したプロセス数を指定することが肝要である。
+   \item MPIプロセス数を変更したり、r-levelを上げたりした場合、その設定に対応する
+           水平グリッドファイル(boundaryファイルとllmapファイル)やリージョン管理ファイル(region manage file)
+           がdatabaseに存在するか必ず確認すること。これらがなければ、0.2.3節のデータベースの準備の説明に
+           したがってSCALEのWebページから
+           データベースをダウンロードするか、自分でツールを使って作成する必要がある。
+ \end{itemize}
+
+
+
+
+\subsection{水平格子間隔の変更方法}
+%------------------------------------------------------------------------------
+ \noindent ここではg-level 6 (約120 km格子間隔)、MPIプロセスは40プロセスを使用する
+設定に変更する場合を例にして説明する。テストケースは湿潤傾圧波理想実験を想定する。
+水平格子間隔を変更した場合は、格子に関する設定以外に、数値積分間隔 (DTL)、
+最大タイムステップ数 (LSTEP\_MAX)、数値粘性フィルターに関する各パラメータ、
+そしてヒストリー出力間隔といったパラメータの変更が追加で必要になる。
+
+\subsubsection{ディレクトリの準備}
+%------------------------------------------------------------------------------
+ ここでは、はじめに\${TOP}/test/case/DCMIP2016-11/のディレクトリにいることを想定する。
+当該ディレクトリに下記のコマンドで新たにディレクトリを作成し、移動する。
+ \begin{verbatim}
+    > mkdir gl06rl01z30pe40  <-- g-level is 6, and r-level is 1
+    > cd gl06rl01z30pe40/
+ \end{verbatim}
+
+ \noindent テンプレートとして利用するため、
+  Makefileとコンフィグレーションファイルを既存のディレクトリからコピーする。
+ \begin{verbatim}
+    > cp ../gl05rl00z30pe10/Makefile ./
+    > cp ../gl05rl00z30pe10/nhm_driver.cnf ./
+ \end{verbatim}
+
+\subsubsection{Makefileの編集}
+%------------------------------------------------------------------------------
+ ("\verb|<--|" のマークは編集が必要な項目を意味する) \\
+ Makefileの17行目から21行目を下記のように編集する。
+ \begin{verbatim}
+    > vi Makefile
+     glevel = 6      <--
+     rlevel = 1      <--
+     nmpi   = 40     <--
+     zlayer = 30
+     vgrid  = vgrid30_stretch_30km_dcmip2016.dat
+ \end{verbatim}
+
+\subsubsection{コンフィグレーションファイルの編集: nhm\_driver.cnf}
+%------------------------------------------------------------------------------
+ \noindent 数値積分間隔や数値粘性のパラメータ設定に関しては、実験が完走するように
+ 微調整が必要になる場合があるが、まずは以下に示すガイドラインにしたがって設定する。
+
+ \begin{itemize}
+   \item 数値積分間隔 (DTL) に対しては、 \\
+   {\sf g-levelを1上げるごとに、DTLを元の1/2に設定することを推奨する}。
+   \item 数値粘性フィルターに対しては、 \\
+   {\sf g-levelを1上げるごとに、各係数の値を元の1/8に設定することを推奨する}。 \\
+ \end{itemize}
+
+ \noindent このガイドラインにしたがって、設定を編集すると下記のようになる。
+
+ ("\verb|<--|" のマークは編集が必要な項目を意味する)
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     * snip *
+     &ADMPARAM
+       glevel      = 6,                     <--
+       rlevel      = 1,                     <--
+       vlayer      = 30,
+       rgnmngfname = "rl01-prc40.info",     <--
+      /
+
+     &GRDPARAM
+       hgrid_io_mode = "ADVANCED",
+       hgrid_fname   = "boundary_GL06RL01",  <--
+       VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat",
+       vgrid_scheme  = "LINEAR",
+       topo_fname    = "NONE",
+      /
+
+     &TIMEPARAM
+       DTL         = 300.D0,     <--
+       INTEG_TYPE  = "RK3",
+       LSTEP_MAX   = 4320,       <--
+       start_date  = 0000,1,1,0,0,0
+      /
+
+     * snip *
+
+     &RESTARTPARAM
+       input_io_mode     = 'IDEAL',
+       output_io_mode    = 'ADVANCED',
+       output_basename   = 'restart_all_GL06RL01z30', <--
+       restart_layername = 'ZSALL32_DCMIP16',
+      /
+
+     * snip *
+
+     &NUMFILTERPARAM
+       lap_order_hdiff   = 2,
+       hdiff_type        = 'NONLINEAR1',
+       Kh_coef_maxlim    = 1.500D+16,    <--
+       Kh_coef_minlim    = 1.500D+15,    <--
+       ZD_hdiff_nl       = 20000.D0,
+       divdamp_type      = 'DIRECT',
+       lap_order_divdamp = 2,
+       alpha_d           = 1.50D15,      <--
+       gamma_h_lap1      = 0.0D0,
+       ZD                = 40000.D0,
+       alpha_r           = 0.0D0,
+      /
+
+     * snip *
+
+     &NMHISD
+       output_io_mode   = 'ADVANCED' ,
+       histall_fname    = 'history'  ,
+       hist3D_layername = 'ZSDEF30_DCMIP16',
+       NO_VINTRPL       = .false.    ,
+       output_type      = 'SNAPSHOT' ,
+       step             = 288        ,    <--
+       doout_step0      = .true.     ,
+      /
+ \end{verbatim}
+
+ \noindent 上記の編集を行ったあとは、0.2.4節の説明に沿って計算の実行ができる。
+ \begin{verbatim}
+    > make jobshell
+    > make run
+ \end{verbatim}
+
+
+\textcolor{red}{要検討E：DCMIPでは鉛直層設定が取り決められており、
+変更の余地がなかったので記述していなかったが、モデルのユーザーズガイドとしては、
+鉛直層数の設定変更や鉛直層設定の作成方法についても記述があるべきだろうと思う。}
