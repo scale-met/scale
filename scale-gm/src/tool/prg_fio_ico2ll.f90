@@ -873,7 +873,7 @@ program fio_ico2ll
            call netcdf_open_for_write( nc,                                       & ! [OUT]
                                        ncfile      = trim(outbase)//'.nc',       & ! [IN]
                                        count       = (/  imax, jmax, kmax, 1 /), & ! [IN]
-                                       title       = 'NICAM data output',        & ! [IN]
+                                       title       = 'SCALE-GM data output',     & ! [IN]
                                        imax        = imax,                       & ! [IN]
                                        jmax        = jmax,                       & ! [IN]
                                        kmax        = kmax,                       & ! [IN]
@@ -1284,7 +1284,7 @@ contains
           write(fid,'(A)') 'DSET ^'//trim(outfile)//'.grd'
        endif
 
-       write(fid,'(A)')      'TITLE NICAM data output'
+       write(fid,'(A)')      'TITLE SCALE-GM data output'
        write(fid,'(A)')      'OPTIONS BIG_ENDIAN '
        write(fid,'(A,ES12.5)') 'UNDEF ', CONST_UNDEF4
 
@@ -1392,7 +1392,7 @@ contains
 
     gthead(:) = ' '
     write(gthead( 1),'(I16)'  ) 9010
-    write(gthead( 2),'(A16)'  ) 'NICAM'
+    write(gthead( 2),'(A16)'  ) 'SCALE-GM'
     write(gthead( 3),'(A16)'  ) hitem
     write(gthead(12),'(I16)'  ) 1
     write(gthead(13),'(I16)'  ) 1
@@ -1423,8 +1423,8 @@ contains
     write(gthead(48),'(I16)'  ) 0
     write(gthead(60),'(A16)'  ) kdate
     write(gthead(62),'(A16)'  ) kdate
-    write(gthead(61),'(A16)'  ) 'NICAM'
-    write(gthead(63),'(A16)'  ) 'NICAM'
+    write(gthead(61),'(A16)'  ) 'SCALE-GM'
+    write(gthead(63),'(A16)'  ) 'SCALE-GM'
     write(gthead(64),'(I16)'  ) imax*jmax*kmax
 
     !--- Generate axis file
@@ -1450,8 +1450,8 @@ contains
     write(axhead(48),'(I16)'  ) 0
     write(axhead(60),'(A16)'  ) kdate
     write(axhead(62),'(A16)'  ) kdate
-    write(axhead(61),'(A16)'  ) 'NICAM'
-    write(axhead(63),'(A16)'  ) 'NICAM'
+    write(axhead(61),'(A16)'  ) 'SCALE-GM'
+    write(axhead(63),'(A16)'  ) 'SCALE-GM'
 
     fid = IO_get_available_fid()
     open( unit   = fid,           &
