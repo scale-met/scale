@@ -35,10 +35,11 @@
 \nmitem{HISTORY_DEFAULT_ZCOORD}で絶対高度面座標(\verb|"z"|)を選択した場合は、
 出力データの鉛直層数はモデル面の鉛直層数と同じであり、
 各層の高度は標高ゼロ地点でのモデル面高度である。
-\nmitem{HISTORY_DEFAULT_ZCOORD}で気圧面での内挿(\verb|"pressure"|)を選択した場合、
+\nmitem{HISTORY_DEFAULT_ZCOORD}で気圧面座標(\verb|"pressure"|)を選択した場合、
 \namelist{PARAM_HIST}の\nmitem{HIST_PRES_nlayer}と\nmitem{HIST_PRES}の設定が必要である。
 %
-また、\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合、計算領域の外側のハロ領域のデータも出力される。ただし、周期境界条件の場合にはこの設定は無視される。
+また、\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合、
+計算領域の外側のハロ領域のデータも出力される。ただし、周期境界条件の場合にはこの設定は無視される。
 \nmitem{HIST_BND}の設定はすべての出力変数に対して適用される。\\
 
 
