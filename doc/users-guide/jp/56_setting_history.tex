@@ -12,9 +12,9 @@
 \verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & ; 出力ファイル名の頭。 \\
 \verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; 出力の時間間隔。 \\
 \verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; \verb|HISTORY_DEFAULT_TINTERVAL|の単位。 \\
-\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: 瞬間値、\verb|.true.|: 平均値。\\
-\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|       & ; 鉛直内挿の種別。\\
-                                                    & ~ \verb|"model"|: モデル面の値を出力(内挿しない)。\\
+\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: 瞬間値、\verb|.true.|: 時間平均値。\\
+\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|       & ; 出力データの鉛直座標の種別。\\
+                                                    & ~ \verb|"model"|: モデル面の値を出力。\\
                                                     & ~ \verb|"z"    |: 絶対高度面に内挿した値を出力。\\
                                                     & ~ \verb|"pressure"|: 気圧面に内挿した値を出力。\\
 \verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & ; 出力データの型。\verb|REAL4|, \verb|REAL8|など。\\
@@ -32,12 +32,13 @@
 \verb|HISTORY_DEFAULT_TAVERAGE = .true.|として、平均値での出力を設定した場合、
 出力するタイミング直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。\\
 
-\nmitem{HISTORY_DEFAULT_ZCOORD}で絶対高度面への内挿(\verb|"z"|)を選択した場合、
-標高がゼロの場合のモデル面高度に内挿した値が出力される。
+\nmitem{HISTORY_DEFAULT_ZCOORD}で絶対高度面座標(\verb|"z"|)を選択した場合は、
+出力データの鉛直層数はモデル面の鉛直層数と同じであり、
+各層の高度は標高ゼロ地点でのモデル面高度である。
 \nmitem{HISTORY_DEFAULT_ZCOORD}で気圧面での内挿(\verb|"pressure"|)を選択した場合、
 \namelist{PARAM_HIST}の\nmitem{HIST_PRES_nlayer}と\nmitem{HIST_PRES}の設定が必要である。
 %
-また、\namelist{PARAM_HIST}の\nmitem{HIST_BND}では、計算領域の外側のハロ領域の出力設定が可能である。
+また、\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合、計算領域の外側のハロ領域のデータも出力される。ただし、周期境界条件の場合にはこの設定は無視される。
 \nmitem{HIST_BND}の設定はすべての出力変数に対して適用される。\\
 
 
@@ -58,20 +59,20 @@
 
 次に、出力する変数の設定を\namelist{HISTITEM}で行う。
 \namelist{HISTITEM}は変数毎に設定するため、出力したい変数の数だけ追加することになる。
-また、それぞれの変数の出力形式は、基本的に \namelist{PARAM_HISTORY} の設定に準ずるが、
-変数毎に設定を変更することも可能である。\\
+また、それぞれの変数の出力形式は、基本的に \namelist{PARAM_HISTORY} の設定に従うが、
+変数毎に変更することも可能である。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&HISTITEM| &\\
-\verb| ITEM     = "RAIN",    | &  変数名。 出力可能な変数は付録\ref{achap:namelist}を参照 \\
-\verb| BASENAME = "rain_d01",| &  (オプション) \verb|HISTORY_DEFAULT_BASENAME|に同じ。\\
-\verb| TINTERVAL= 600.0,     | &  (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
-\verb| TUNIT    = "SEC",     | &  (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
-\verb| TAVERAGE = .true.,    | &  (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\
-\verb| ZCOORD   = "model",   | &  (オプション) \verb|HISTORY_DEFAULT_ZCOORD|に同じ。\\
-\verb| DATATYPE = "REAL4",   | &  (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
+\verb| ITEM     = "RAIN",    | &  ; 変数名。 出力可能な変数は付録\ref{achap:namelist}を参照 \\
+\verb| BASENAME = "rain_d01",| &  ; (オプション) \verb|HISTORY_DEFAULT_BASENAME|に同じ。\\
+\verb| TINTERVAL= 600.0,     | &  ; (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
+\verb| TUNIT    = "SEC",     | &  ; (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
+\verb| TAVERAGE = .true.,    | &  ; (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\
+\verb| ZCOORD   = "model",   | &  ; (オプション) \verb|HISTORY_DEFAULT_ZCOORD|に同じ。\\
+\verb| DATATYPE = "REAL4",   | &  ; (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
