@@ -222,7 +222,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   int dimids[MAX_RANK], tdim, uldims[NC_MAX_DIMS];
   char name[File_HSHORT+1];
   char *buf;
-  size_t size, l, len;
+  size_t size, len;
   int i, n;
 
   ERROR_SUPPRESS = suppress;
@@ -239,6 +239,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   // varname
   strcpy(dinfo->varname, varname);
   if ( files[fid]->shared_mode ) {
+    MPI_Offset l;
     // description
     CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "long_name", &l) )
     buf = (char*) malloc(l+1);
@@ -269,6 +270,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
 #endif
   }
   else {
+    size_t l;
     // description
     CHECK_ERROR( nc_inq_attlen  (ncid, varid, "long_name", &l) )
     buf = (char*) malloc(l+1);
@@ -329,6 +331,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   if ( tdim >= 0 ) {
     if ( files[fid]->shared_mode ) {
       MPI_Offset idx[2];
+      MPI_Offset l;
       // time_end
       CHECK_PNC_ERROR( ncmpi_inq_dimname(ncid, tdim, name) )
       CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, name, &varid) )
@@ -349,6 +352,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       free(buf);
     } else {
       size_t idx[2];
+      size_t l;
       // time_end
       CHECK_ERROR( nc_inq_dimname(ncid, tdim, name) )
       CHECK_ERROR( nc_inq_varid(ncid, name, &varid) )
