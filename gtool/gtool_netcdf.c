@@ -252,7 +252,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
     buf = (char*) malloc(l+1);
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", buf) )
-    for (i=0; i<MIN(File_HMID-1,l); i++)
+    for (i=0; i<MIN(File_HSHORT-1,l); i++)
       dinfo->units[i] = buf[i];
     dinfo->units[i+1] = '\0';
     free(buf);
@@ -283,7 +283,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
     buf = (char*) malloc(l+1);
     CHECK_ERROR( nc_get_att_text(ncid, varid, "units", buf) )
-    for (i=0; i<MIN(File_HMID-1,l); i++)
+    for (i=0; i<MIN(File_HSHORT-1,l); i++)
       dinfo->units[i] = buf[i];
     dinfo->units[i+1] = '\0';
     free(buf);
@@ -346,7 +346,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
       buf = (char*) malloc(l+1);
       CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", dinfo->time_units) )
-      for (i=0; i<MIN(File_HMID-1,l); i++)
+      for (i=0; i<MIN(File_HSHORT-1,l); i++)
         dinfo->units[i] = buf[i];
       dinfo->units[i+1] = '\0';
       free(buf);
@@ -367,13 +367,12 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
       buf = (char*) malloc(l+1);
       CHECK_ERROR( nc_get_att_text(ncid, varid, "units", dinfo->time_units) )
-      for (i=0; i<MIN(File_HMID-1,l); i++)
+      for (i=0; i<MIN(File_HSHORT-1,l); i++)
         dinfo->units[i] = buf[i];
       dinfo->units[i+1] = '\0';
       free(buf);
     }
   }
-
   ERROR_SUPPRESS = 0;
 
   return SUCCESS_CODE;
