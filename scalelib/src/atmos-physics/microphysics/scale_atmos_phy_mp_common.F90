@@ -529,7 +529,7 @@ contains
           dCVtot_dT = dqsatl_dT * TRACER_CV(I_QV) &
                     + dqc_dT    * TRACER_CV(I_QC)
 
-          dEmoist_dT = qsatl_new * dCVtot_dT + CVtot + dqsatl_dT * LHV
+          dEmoist_dT = temp * dCVtot_dT + CVtot + dqsatl_dT * LHV
 
           dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
           temp  = temp - dtemp
