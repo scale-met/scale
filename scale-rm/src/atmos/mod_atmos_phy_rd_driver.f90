@@ -249,6 +249,8 @@ contains
                                  TIME_OFFSET_YEAR ) ! [IN]
 
        if ( ATMOS_PHY_RD_TYPE == 'OFFLINE' ) then
+          ! [note] external data input is called here because EXTIN is RM-depend subroutine.
+          ! This part should be called in the RD_OFFLINE module in the future.
 
           error_sum = .false.
           call EXTIN_update( SFCFLX_LW_up(:,:),                'SFLX_LW_up',     'XY',  TIME_NOWDAYSEC, error )
