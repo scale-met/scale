@@ -1729,7 +1729,6 @@ contains
 
     integer :: ndim
     integer :: istep, idim
-    logical :: flag_first = .true.
 
     integer :: error
     logical :: single_ = .false.
@@ -1770,9 +1769,7 @@ contains
           exit
        endif
 
-       if ( flag_first ) then
-          flag_first = .false.
-
+       if ( istep == 1 ) then
           description = dinfo%description
           units       = dinfo%units
           datatype    = dinfo%datatype
@@ -1784,7 +1781,7 @@ contains
              dim_size(idim) = dinfo%dim_size(idim)
           enddo
 
-          time_units        = dinfo%time_units
+          time_units = dinfo%time_units
        endif
 
        time_start(istep) = dinfo%time_start

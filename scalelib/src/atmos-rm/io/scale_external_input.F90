@@ -145,7 +145,6 @@ contains
     integer  :: dataday       !< absolute day
     real(DP) :: datasec       !< absolute second
     integer  :: offset_year   !< offset year
-    real(DP) :: cftime        !< time in the CF convention
 
     integer  :: count, nid, t, n
     integer  :: ierr
@@ -218,7 +217,7 @@ contains
           call PRC_MPIstop
        endif
 
-       do n=dim_rank+1, 3
+       do n = dim_rank+1, 3
           dim_size(n) = 1
        end do
 
@@ -238,7 +237,7 @@ contains
           EXTIN_item(nid)%flag_periodic = 0
        endif
 
-       allocate( EXTIN_item(nid)%value( dim_size(1),dim_size(2),dim_size(3),2) )
+       allocate( EXTIN_item(nid)%value(dim_size(1),dim_size(2),dim_size(3),2) )
        EXTIN_item(nid)%value(:,:,:,:) = defval
        EXTIN_item(nid)%offset         = offset
 
@@ -246,9 +245,7 @@ contains
        EXTIN_item(nid)%time(:) = 0.0_DP
 
        do t = 1, EXTIN_item(nid)%step_num
-          cftime = 0.5_DP * ( time_start(t) + time_end(t) )
-
-          EXTIN_item(nid)%time(t) = CALENDAR_CFunits2sec( cftime, time_units, TIME_OFFSET_year, TIME_STARTDAYSEC )
+          EXTIN_item(nid)%time(t) = CALENDAR_CFunits2sec( time_end(t), time_units, TIME_OFFSET_year, TIME_STARTDAYSEC )
        enddo
 
        if ( EXTIN_item(nid)%step_num == 1 ) then
@@ -334,9 +331,14 @@ contains
        endif
 
        !--- read first data
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Initial read of external data : ', trim(EXTIN_item(nid)%varname)
+
        if (       dim_size(1) >= 1 &
             .AND. dim_size(2) == 1 &
             .AND. dim_size(3) == 1 ) then ! 1D
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') &
+                     '*** Read 1D var                   : ', trim(EXTIN_item(nid)%varname)
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,1,1,I_prev),  &
@@ -355,6 +357,9 @@ contains
                 .AND. dim_size(2) >  1 &
                 .AND. dim_size(3) == 1 ) then ! 2D
 
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') &
+                     '*** Read 2D var                   : ', trim(EXTIN_item(nid)%varname)
+
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,:,1,I_prev),  &
                          EXTIN_item(nid)%basename,             &
@@ -371,6 +376,9 @@ contains
        elseif (       dim_size(1) >= 1 &
                 .AND. dim_size(2) >  1 &
                 .AND. dim_size(3) >  1 ) then ! 3D
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') &
+                     '*** Read 3D var                   : ', trim(EXTIN_item(nid)%varname)
 
           ! read prev
           call FileRead( EXTIN_item(nid)%value(:,:,:,I_prev),  &
@@ -463,7 +471,7 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(EXTIN_item(nid)%varname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname)
 
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
@@ -563,7 +571,7 @@ contains
 
     if ( do_readfile ) then
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(EXTIN_item(nid)%varname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname)
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
@@ -632,36 +640,36 @@ contains
 
     if( nid == 0 ) return
 
-    if ( axistype == 'ZXY' ) then
-       dim1_max = KMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = KS
-       dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else if ( axistype == 'Land' ) then
-       dim1_max = LKMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = LKS
-       dim1_E   = LKE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-    else if ( axistype == 'Urban' ) then
-       dim1_max = UKMAX
-       dim2_max = IMAXB
-       dim3_max = JMAXB
-       dim1_S   = UKS
-       dim1_E   = UKE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
+    if    ( axistype == 'XYZ' ) then
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = KMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = KS
+       dim3_E   = KE
+    elseif( axistype == 'Land' ) then
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = LKMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = LKS
+       dim3_E   = LKE
+    elseif( axistype == 'Urban' ) then
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = UKMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = UKS
+       dim3_E   = UKE
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -683,7 +691,7 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(EXTIN_item(nid)%varname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname)
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
@@ -695,7 +703,7 @@ contains
                       PRC_myrank                            ) ! [IN]
     endif
 
-    ! store data with weight
+    ! store data with weight (x,y,z)->(z,x,y)
     do n3 = 1, dim3_max
        nn3 = n3 + dim3_S - 1
     do n2 = 1, dim2_max
@@ -703,7 +711,7 @@ contains
     do n1 = 1, dim1_max
        nn1 = n1 + dim1_S - 1
 
-       var(nn1,nn2,nn3) = ( 1.0_RP-weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_prev) &
+       var(nn3,nn1,nn2) = ( 1.0_RP-weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_prev) &
                         + (        weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_next)
     enddo
     enddo
@@ -756,7 +764,7 @@ contains
 
           do_readfile = .true.
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update external input : ', trim(EXTIN_item(nid)%varname)
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Update external input : ', trim(EXTIN_item(nid)%varname)
 
           ! update step position
           EXTIN_item(nid)%data_steppos(I_prev) = EXTIN_item(nid)%data_steppos(I_prev) + 1

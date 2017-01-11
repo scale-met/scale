@@ -125,6 +125,8 @@ contains
        REAL_FZ,            &
        REAL_LON,           &
        REAL_LAT
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_const, only: &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &
@@ -136,6 +138,7 @@ contains
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE,                     &
+       TIME_NOWDAYSEC,                   &
        TIME_OFFSET_YEAR
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
@@ -145,17 +148,17 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_RD_TYPE
     use scale_atmos_solarins, only: &
-       SOLARINS_insolation  => ATMOS_SOLARINS_insolation
+       SOLARINS_insolation => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD
     use scale_atmos_phy_rd_mm5sw, only: &
        SWRAD
     use scale_atmos_phy_rd_common, only: &
        RD_heating => ATMOS_PHY_RD_heating, &
-       I_SW, &
-       I_LW, &
-       I_dn, &
-       I_up, &
+       I_SW,     &
+       I_LW,     &
+       I_dn,     &
+       I_up,     &
        I_direct, &
        I_diffuse
     use scale_atmos_hydrometeor, only: &
@@ -188,11 +191,13 @@ contains
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall, &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
+    use scale_external_input, only: &
+       EXTIN_update
     implicit none
 
     logical, intent(in) :: update_flag
 
-    real(RP) :: TEMP_t         (KA,IA,JA,3)
+    real(RP) :: TEMP_t      (KA,IA,JA,3)
     real(RP) :: flux_rad    (KA,IA,JA,2,2,2)
     real(RP) :: flux_rad_top(   IA,JA,2,2,2)
 
@@ -229,8 +234,9 @@ contains
     real(RP) :: flux_rad_org(KA,IA,JA,2,2,2)
 
     real(RP) :: total ! dummy
+    logical  :: error, error_sum
 
-    integer :: k, i, j
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -242,17 +248,63 @@ contains
                                  TIME_NOWDATE(:), & ! [IN]
                                  TIME_OFFSET_YEAR ) ! [IN]
 
-       call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
-                          REAL_CZ, REAL_FZ,   & ! [IN]
-                          LANDUSE_fact_ocean, & ! [IN]
-                          LANDUSE_fact_land,  & ! [IN]
-                          LANDUSE_fact_urban, & ! [IN]
-                          SFC_TEMP,           & ! [IN]
-                          SFC_albedo,         & ! [IN]
-                          solins, cosSZA,     & ! [IN]
-                          flux_rad,           & ! [OUT]
-                          flux_rad_top,       & ! [OUT]
-                          SFLX_rad_dn         ) ! [OUT]
+       if ( ATMOS_PHY_RD_TYPE == 'OFFLINE' ) then
+          ! [note] external data input is called here because EXTIN is RM-depend subroutine.
+          ! This part should be called in the RD_OFFLINE module in the future.
+
+          error_sum = .false.
+          call EXTIN_update( SFCFLX_LW_up(:,:),                'SFLX_LW_up',     'XY',  TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( SFCFLX_SW_up(:,:),                'SFLX_SW_up',     'XY',  TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( SFLX_rad_dn (:,:,I_LW,I_direct ), 'SFLX_LW_dn_dir', 'XY',  TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( SFLX_rad_dn (:,:,I_LW,I_diffuse), 'SFLX_LW_dn_dif', 'XY',  TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( SFLX_rad_dn (:,:,I_SW,I_direct ), 'SFLX_SW_dn_dir', 'XY',  TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( SFLX_rad_dn (:,:,I_SW,I_diffuse), 'SFLX_SW_dn_dif', 'XY',  TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( flux_rad    (:,:,:,I_LW,I_up,2),  'RFLX_LW_up',     'XYZ', TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( flux_rad    (:,:,:,I_LW,I_dn,2),  'RFLX_LW_dn',     'XYZ', TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( flux_rad    (:,:,:,I_SW,I_up,2),  'RFLX_SW_up',     'XYZ', TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          call EXTIN_update( flux_rad    (:,:,:,I_SW,I_dn,2),  'RFLX_SW_dn',     'XYZ', TIME_NOWDAYSEC, error )
+          error_sum = ( error .OR. error_sum )
+          if ( error_sum ) then
+             write(*,*) 'xxx Requested data is not found!'
+             call PRC_MPIstop
+          endif
+
+          do j = JS, JE
+          do i = IS, IE
+             flux_rad(KS-1,i,j,I_LW,I_up,2) = SFCFLX_LW_up(i,j)
+             flux_rad(KS-1,i,j,I_LW,I_dn,2) = SFLX_rad_dn (i,j,I_LW,I_direct ) &
+                                            + SFLX_rad_dn (i,j,I_LW,I_diffuse)
+             flux_rad(KS-1,i,j,I_SW,I_up,2) = SFCFLX_SW_up(i,j)
+             flux_rad(KS-1,i,j,I_SW,I_dn,2) = SFLX_rad_dn (i,j,I_SW,I_direct ) &
+                                            + SFLX_rad_dn (i,j,I_SW,I_diffuse)
+          enddo
+          enddo
+
+          flux_rad    (:,:,:,:,:,1) = 0.0_RP
+          flux_rad_top(:,:,:,:,:)   = 0.0_RP
+
+       else
+          call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
+                             REAL_CZ, REAL_FZ,   & ! [IN]
+                             LANDUSE_fact_ocean, & ! [IN]
+                             LANDUSE_fact_land,  & ! [IN]
+                             LANDUSE_fact_urban, & ! [IN]
+                             SFC_TEMP,           & ! [IN]
+                             SFC_albedo,         & ! [IN]
+                             solins, cosSZA,     & ! [IN]
+                             flux_rad,           & ! [OUT]
+                             flux_rad_top,       & ! [OUT]
+                             SFLX_rad_dn         ) ! [OUT]
+       endif
 
        ! apply radiative flux convergence -> heating rate
        call RD_heating( flux_rad (:,:,:,:,:,2), & ! [IN]
@@ -269,18 +321,18 @@ contains
        do j = JS, JE
        do i = IS, IE
           ! for clear-sky
-          SFCFLX_LW_up_c(i,j)  = flux_rad(KS-1,i,j,I_LW,I_up,1)
-          SFCFLX_LW_dn_c(i,j)  = flux_rad(KS-1,i,j,I_LW,I_dn,1)
-          SFCFLX_SW_up_c(i,j)  = flux_rad(KS-1,i,j,I_SW,I_up,1)
-          SFCFLX_SW_dn_c(i,j)  = flux_rad(KS-1,i,j,I_SW,I_dn,1)
+          SFCFLX_LW_up_c(i,j)    = flux_rad(KS-1,i,j,I_LW,I_up,1)
+          SFCFLX_LW_dn_c(i,j)    = flux_rad(KS-1,i,j,I_LW,I_dn,1)
+          SFCFLX_SW_up_c(i,j)    = flux_rad(KS-1,i,j,I_SW,I_up,1)
+          SFCFLX_SW_dn_c(i,j)    = flux_rad(KS-1,i,j,I_SW,I_dn,1)
           ! for all-sky
-          SFCFLX_LW_up(i,j)    = flux_rad(KS-1,i,j,I_LW,I_up,2)
-          SFCFLX_LW_dn(i,j)    = flux_rad(KS-1,i,j,I_LW,I_dn,2)
-          SFCFLX_SW_up(i,j)    = flux_rad(KS-1,i,j,I_SW,I_up,2)
-          SFCFLX_SW_dn(i,j)    = flux_rad(KS-1,i,j,I_SW,I_dn,2)
+          SFCFLX_LW_up  (i,j)    = flux_rad(KS-1,i,j,I_LW,I_up,2)
+          SFCFLX_LW_dn  (i,j)    = flux_rad(KS-1,i,j,I_LW,I_dn,2)
+          SFCFLX_SW_up  (i,j)    = flux_rad(KS-1,i,j,I_SW,I_up,2)
+          SFCFLX_SW_dn  (i,j)    = flux_rad(KS-1,i,j,I_SW,I_dn,2)
 
-          flux_net_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up,2) - flux_rad(KS-1,i,j,I_LW,I_dn,2)
-          flux_net_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up,2) - flux_rad(KS-1,i,j,I_SW,I_dn,2)
+          flux_net_sfc(i,j,I_LW) = SFCFLX_LW_up(i,j) - SFCFLX_LW_dn(i,j)
+          flux_net_sfc(i,j,I_SW) = SFCFLX_SW_up(i,j) - SFCFLX_SW_dn(i,j)
        enddo
        enddo
 
@@ -293,13 +345,13 @@ contains
           TOAFLX_SW_up_c(i,j)    = flux_rad_top(i,j,I_SW,I_up,1)
           TOAFLX_SW_dn_c(i,j)    = flux_rad_top(i,j,I_SW,I_dn,1)
           ! for all-sky
-          TOAFLX_LW_up(i,j)      = flux_rad_top(i,j,I_LW,I_up,2)
-          TOAFLX_LW_dn(i,j)      = flux_rad_top(i,j,I_LW,I_dn,2)
-          TOAFLX_SW_up(i,j)      = flux_rad_top(i,j,I_SW,I_up,2)
-          TOAFLX_SW_dn(i,j)      = flux_rad_top(i,j,I_SW,I_dn,2)
+          TOAFLX_LW_up  (i,j)    = flux_rad_top(i,j,I_LW,I_up,2)
+          TOAFLX_LW_dn  (i,j)    = flux_rad_top(i,j,I_LW,I_dn,2)
+          TOAFLX_SW_up  (i,j)    = flux_rad_top(i,j,I_SW,I_up,2)
+          TOAFLX_SW_dn  (i,j)    = flux_rad_top(i,j,I_SW,I_dn,2)
 
-          flux_net_toa(i,j,I_LW) = flux_rad_top(i,j,I_LW,I_up,2) - flux_rad_top(i,j,I_LW,I_dn,2)
-          flux_net_toa(i,j,I_SW) = flux_rad_top(i,j,I_SW,I_up,2) - flux_rad_top(i,j,I_SW,I_dn,2)
+          flux_net_toa(i,j,I_LW) = TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j)
+          flux_net_toa(i,j,I_SW) = TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j)
        enddo
        enddo
 
@@ -307,15 +359,13 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          flux_net(k,i,j,I_LW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_LW,I_up,2) - flux_rad(k-1,i,j,I_LW,I_dn,2) ) &
-                                          + ( flux_rad(k  ,i,j,I_LW,I_up,2) - flux_rad(k  ,i,j,I_LW,I_dn,2) ) )
-          flux_net(k,i,j,I_SW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_SW,I_up,2) - flux_rad(k-1,i,j,I_SW,I_dn,2) ) &
-                                          + ( flux_rad(k  ,i,j,I_SW,I_up,2) - flux_rad(k  ,i,j,I_SW,I_dn,2) ) )
-
           flux_up (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_up,2) + flux_rad(k,i,j,I_LW,I_up,2) )
-          flux_up (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_up,2) + flux_rad(k,i,j,I_SW,I_up,2) )
           flux_dn (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_dn,2) + flux_rad(k,i,j,I_LW,I_dn,2) )
+          flux_up (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_up,2) + flux_rad(k,i,j,I_SW,I_up,2) )
           flux_dn (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_dn,2) + flux_rad(k,i,j,I_SW,I_dn,2) )
+
+          flux_net(k,i,j,I_LW) = flux_up(k,i,j,I_LW) - flux_dn(k,i,j,I_LW)
+          flux_net(k,i,j,I_SW) = flux_up(k,i,j,I_SW) - flux_dn(k,i,j,I_SW)
        enddo
        enddo
        enddo
@@ -454,40 +504,48 @@ contains
        call HIST_in( SFCFLX_SW_up_c(:,:), 'SFLX_SW_up_c',   'SFC upward   shortwave radiation flux (clr)', 'W/m2', nohalo=.true. )
        call HIST_in( SFCFLX_SW_dn_c(:,:), 'SFLX_SW_dn_c',   'SFC downward shortwave radiation flux (clr)', 'W/m2', nohalo=.true. )
 
+       call HIST_in( SFCFLX_LW_up  (:,:), 'SFLX_LW_up',     'SFC upward   longwave  radiation flux',       'W/m2', nohalo=.true. )
+       call HIST_in( SFCFLX_LW_dn  (:,:), 'SFLX_LW_dn',     'SFC downward longwave  radiation flux',       'W/m2', nohalo=.true. )
+       call HIST_in( SFCFLX_SW_up  (:,:), 'SFLX_SW_up',     'SFC upward   shortwave radiation flux',       'W/m2', nohalo=.true. )
+       call HIST_in( SFCFLX_SW_dn  (:,:), 'SFLX_SW_dn',     'SFC downward shortwave radiation flux',       'W/m2', nohalo=.true. )
+
        call HIST_in( TOAFLX_LW_up_c(:,:), 'TOAFLX_LW_up_c', 'TOA upward   longwave  radiation flux (clr)', 'W/m2', nohalo=.true. )
        call HIST_in( TOAFLX_LW_dn_c(:,:), 'TOAFLX_LW_dn_c', 'TOA downward longwave  radiation flux (clr)', 'W/m2', nohalo=.true. )
        call HIST_in( TOAFLX_SW_up_c(:,:), 'TOAFLX_SW_up_c', 'TOA upward   shortwave radiation flux (clr)', 'W/m2', nohalo=.true. )
        call HIST_in( TOAFLX_SW_dn_c(:,:), 'TOAFLX_SW_dn_c', 'TOA downward shortwave radiation flux (clr)', 'W/m2', nohalo=.true. )
 
-       call HIST_in( SFCFLX_LW_up(:,:), 'SFLX_LW_up',   'SFC upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( SFCFLX_SW_up(:,:), 'SFLX_SW_up',   'SFC upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( SFCFLX_SW_dn(:,:), 'SFLX_SW_dn',   'SFC downward shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( TOAFLX_LW_up  (:,:), 'TOAFLX_LW_up',   'TOA upward   longwave  radiation flux',       'W/m2', nohalo=.true. )
+       call HIST_in( TOAFLX_LW_dn  (:,:), 'TOAFLX_LW_dn',   'TOA downward longwave  radiation flux',       'W/m2', nohalo=.true. )
+       call HIST_in( TOAFLX_SW_up  (:,:), 'TOAFLX_SW_up',   'TOA upward   shortwave radiation flux',       'W/m2', nohalo=.true. )
+       call HIST_in( TOAFLX_SW_dn  (:,:), 'TOAFLX_SW_dn',   'TOA downward shortwave radiation flux',       'W/m2', nohalo=.true. )
 
-       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_direct), 'SFLX_SW_dn_dirct',   'SFC down. shortwave ratio direct',  'W/m2', nohalo=.true. )
-       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_diffuse),'SFLX_SW_dn_diffs',   'SFC down. shortwave ratio diffuse', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net_sfc(:,:,I_LW),   'SLR',          'SFC net longwave  radiation flux',  'W/m2', nohalo=.true. )
+       call HIST_in( flux_net_sfc(:,:,I_SW),   'SSR',          'SFC net shortwave radiation flux',  'W/m2', nohalo=.true. )
+       call HIST_in( flux_net_toa(:,:,I_LW),   'OLR',          'TOA net longwave  radiation flux',  'W/m2', nohalo=.true. )
+       call HIST_in( flux_net_toa(:,:,I_SW),   'OSR',          'TOA net shortwave radiation flux',  'W/m2', nohalo=.true. )
 
-       call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( TOAFLX_SW_up(:,:), 'TOAFLX_SW_up', 'TOA upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( TOAFLX_SW_dn(:,:), 'TOAFLX_SW_dn', 'TOA downward shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_up     (:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_dn     (:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net    (:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_up     (:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_dn     (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net    (:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', nohalo=.true. )
 
-       call HIST_in( flux_net_sfc(:,:,I_LW), 'SLR', 'SFC net longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( flux_net_sfc(:,:,I_SW), 'SSR', 'SFC net shortwave radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( flux_net_toa(:,:,I_LW), 'OLR', 'TOA net longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( flux_net_toa(:,:,I_SW), 'OSR', 'TOA net shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( SFLX_rad_dn(:,:,I_LW,I_direct ), 'SFLX_LW_dn_dir', 'SFC downward longwave  flux (direct )', 'W/m2', nohalo=.true. )
+       call HIST_in( SFLX_rad_dn(:,:,I_LW,I_diffuse), 'SFLX_LW_dn_dif', 'SFC downward longwave  flux (diffuse)', 'W/m2', nohalo=.true. )
+       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_direct ), 'SFLX_SW_dn_dir', 'SFC downward shortwave flux (direct )', 'W/m2', nohalo=.true. )
+       call HIST_in( SFLX_rad_dn(:,:,I_SW,I_diffuse), 'SFLX_SW_dn_dif', 'SFC downward shortwave flux (diffuse)', 'W/m2', nohalo=.true. )
 
-       call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', nohalo=.true. )
-       call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( TEMP_t   (:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day',     nohalo=.true. )
+       call HIST_in( TEMP_t   (:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day',     nohalo=.true. )
+       call HIST_in( TEMP_t   (:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day',     nohalo=.true. )
+       call HIST_in( RHOT_t_RD(:,:,:),      'RHOT_t_RD',    'tendency of RHOT in rd',     'K.kg/m3/s', nohalo=.true. )
 
-       call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', nohalo=.true. )
-       call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', nohalo=.true. )
-       call HIST_in( TEMP_t(:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', nohalo=.true. )
-       call HIST_in( RHOT_t_RD(:,:,:),   'RHOT_t_RD',    'tendency of RHOT in rd',     'K.kg/m3/s', nohalo=.true. )
+       ! output of raw data, for offline output
+       call HIST_in( flux_rad(:,:,:,I_LW,I_up,2), 'RFLX_LW_up', 'upward   longwave  radiation flux (cell face)', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_rad(:,:,:,I_LW,I_dn,2), 'RFLX_LW_dn', 'downward longwave  radiation flux (cell face)', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_rad(:,:,:,I_SW,I_up,2), 'RFLX_SW_up', 'upward   shortwave radiation flux (cell face)', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_rad(:,:,:,I_SW,I_dn,2), 'RFLX_SW_dn', 'downward shortwave radiation flux (cell face)', 'W/m2', nohalo=.true. )
 
        if ( ATMOS_PHY_RD_TYPE ==  'WRF' ) then
           ! revert all radiation flux from MM5 scheme to default

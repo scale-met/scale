@@ -1398,10 +1398,10 @@ contains
 
     ! create a netCDF file if not already existed. Otherwise, open it.
     if ( present(date) ) then
-      call getCFtunits(tunits, date)
+       call getCFtunits( tunits, date )
     else
-      tunits = 'seconds'
-    endif
+       tunits = 'seconds'
+    end if
 
     if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
        comm = PRC_LOCAL_COMM_WORLD

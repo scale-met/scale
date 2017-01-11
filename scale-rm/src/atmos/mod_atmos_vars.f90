@@ -493,32 +493,32 @@ contains
 
     !-----< monitor output setup >-----
 
-    call MONIT_reg( AD_MONIT_id(I_QDRY)        , 'QDRY',         'dry air mass',      'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_QTOT)        , 'QTOT',         'water mass',        'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_EVAP)        , 'EVAP',         'evaporation',       'kg', ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_PRCP)        , 'PRCP',         'precipitation',     'kg', ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_QDRY)        , 'QDRY',         'dry air mass',           'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_QTOT)        , 'QTOT',         'water mass',             'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_EVAP)        , 'EVAP',         'evaporation',            'kg', ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_PRCP)        , 'PRCP',         'precipitation',          'kg', ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGT)        , 'ENGT',         'total     energy',  'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGP)        , 'ENGP',         'potential energy',  'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGK)        , 'ENGK',         'kinetic   energy',  'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGI)        , 'ENGI',         'internal  energy',  'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGT)        , 'ENGT',         'total     energy',       'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGP)        , 'ENGP',         'potential energy',       'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGK)        , 'ENGK',         'kinetic   energy',       'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGI)        , 'ENGI',         'internal  energy',       'J',  ndim=3, isflux=.false. )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGFLXT)     , 'ENGFLXT',      'total energy flux', 'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGFLXT)     , 'ENGFLXT',      'total energy flux',      'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SH)   , 'ENGSFC_SH',    'total     energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LH)   , 'ENGSFC_LH',    'potential energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_RD)   , 'ENGSFC_RD',    'kinetic   energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_RD)   , 'ENGTOA_RD',    'internal  energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SH)   , 'ENGSFC_SH',    'SFC specific heat flux', 'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LH)   , 'ENGSFC_LH',    'SFC latent   heat flux', 'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_RD)   , 'ENGSFC_RD',    'SFC net radiation flux', 'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_RD)   , 'ENGTOA_RD',    'TOA net radiation flux', 'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_up), 'ENGSFC_LW_up', 'total     energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'potential energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_up), 'ENGSFC_SW_up', 'kinetic   energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'internal  energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_up), 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_up), 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_up), 'ENGTOA_LW_up', 'total     energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'potential energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_up), 'ENGTOA_SW_up', 'kinetic   energy',  'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'internal  energy',  'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_up), 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_up), 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J',  ndim=2, isflux=.true.  )
 
     if ( AD_HIST_id(I_W) > 0 ) then
        AD_PREP_sw(I_W) = 1
