@@ -1,13 +1,22 @@
+################################################################################
 #
-# ------ FOR Linux 64bit & intel fortran&C & intel mpi -----
+# ------ For Linux64 & intel fortran&C & intel mpi -----
 #
+################################################################################
 
-##### for computation
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+
+FC  = mpiifort
+SFC = ifort
+MODDIROPT = -module
 
 FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
                -assume byterecl -convert big_endian \
                -fp-model source                     \
                -mcmodel=medium -heap-arrays
+
+FFLAGS_DYN   = $(FFLAGS)
 
 FFLAGS_DEBUG = -fpp -m64 -O0                        \
                -assume byterecl -convert big_endian \
@@ -17,30 +26,55 @@ FFLAGS_DEBUG = -fpp -m64 -O0                        \
                -assume nobuffered_io                \
                -DDEBUG
 
-FC     = mpiifort
-FFLAGS = $(FFLAGS_FAST)
-#FFLAGS = $(FFLAGS_DEBUG)
 
-FFLAGS_DYN ?= $(FFLAGS)
 
-ifneq ($(DISABLE_VEC),)
-      FFLAGS += -no-vec
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+
+CC = mpiicc
+
+CFLAGS_FAST  = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
+CFLAGS_DEBUG = -O0
+
+
+
+##### Special setting
+
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -openmp
+
+ifeq ($(DISABLE_VEC),T)
+   NOVEC = -no-vec
 endif
 
-MODDIROPT ?= -module
+FFLAGS_SYSDEPEND = $(OMP) $(NOVEC)
+CFLAGS_SYSDEPEND = $(OMP)
 
-CC     = mpiicc
-CFLAGS = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
+FFLAGS_TENTATIVE = -no-ip -no-ipo
+
+##### Linker setting
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
-###### NetCDF library
-NETCDF_INCLUDE ?= -I$(NETCDF4)/include
-NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
 
-###### Lapack
-LAPACK_LIBS    ?= -mkl=sequential
+
+################################################################################
+
+###### NetCDF library
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/ap/netcdf4-fortran/4.4.2-intel/include -I/ap/HDF5/1.8.16-intel/include -I/ap/netcdf4/4.3.3.1-intel/include"
+# export NETCDF_LIBS="-L/ap/netcdf4-fortran/4.4.2-intel/lib -L/ap/HDF5/1.8.16-intel/lib -L/ap/netcdf4/4.3.3.1-intel/lib -lnetcdff -lnetcdf"
+
+###### Lapack library
+# Please set environment variable
+# example:
+# export LAPACK_LIBS="-mkl=sequential"
 
 ##### for frontend
 INSTALL = install

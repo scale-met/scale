@@ -34,7 +34,7 @@ cat << EOF1 > run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR MacOSX & gfortran4.9 & OpenMPI1.7 -----
+# ------ For MacOSX & gnu fortran&C & openmpi
 #
 ################################################################################
 export FORT_FMT_RECL=400
@@ -63,7 +63,7 @@ cat << EOFICO2LL1 > ico2ll.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR MacOSX & gfortran4.9 & OpenMPI1.7 -----
+# ------ For MacOSX & gnu fortran&C & openmpi
 #
 ################################################################################
 export FORT_FMT_RECL=400
@@ -91,16 +91,6 @@ layerfile_dir="./zaxis" \
 llmap_base="./llmap" \
 -lon_swap \
 -comm_smallchunk
-
-${MPIEXEC} ./gm_fio_ico2ll \
-history \
-glevel=${GLEV} \
-rlevel=${RLEV} \
-mnginfo="./${MNGINFO}" \
-layerfile_dir="./zaxis" \
-llmap_base="./llmap" \
--lon_swap \
--comm_smallchunk -output_gtool
 
 ################################################################################
 EOFICO2LL2

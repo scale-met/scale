@@ -30,26 +30,22 @@ res3d=GL${GL}RL${RL}z${ZL}
 
 MNGINFO=rl${RL}-prc${NP}.info
 
-# for K(micro)
 if [ ${TPROC} -gt 1152 ]; then
    rscgrp="invalid"
 else
    rscgrp="micro"
 fi
 
-PROF1="fipp -C -Srange -Ihwm,nocall -d prof"
-PROF2="fipp -C -Srange -Inohwm,call -d prof_call"
-
 cat << EOF1 > run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K micro
+# ------ For K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:29:00"
+#PJM --rsc-list "elapse=00:30:00"
 #PJM -j
 #PJM -s
 #
@@ -71,14 +67,9 @@ do
 done
 
 cat << EOF2 >> run.sh
-rm -rf ./prof
-rm -rf ./prof_call
-mkdir -p ./prof
-mkdir -p ./prof_call
 
 # run
-${PROF1} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
-${PROF2} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
+${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOF2
@@ -88,12 +79,12 @@ cat << EOFICO2LL1 > ico2ll.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for K micro
+# ------ For K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:29:00"
+#PJM --rsc-list "elapse=00:30:00"
 #PJM -j
 #PJM -s
 #

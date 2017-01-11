@@ -51,7 +51,7 @@ cat << EOF1 > run.sh
 #PBS -q ${rscgrp}
 #PBS -l nodes=${NNODE}:ppn=${NPROC}
 #PBS -N ${res3d}
-#PBS -l walltime=04:00:00
+#PBS -l walltime=00:30:00
 #PBS -o STDOUT
 #PBS -e STDERR
 export FORT_FMT_RECL=400
@@ -101,7 +101,7 @@ cat << EOFICO2LL1 > ico2ll.sh
 #PBS -q ${rscgrp}
 #PBS -l nodes=${NNODE}:ppn=${NPROC}
 #PBS -N ico2ll_${res3d}
-#PBS -l walltime=10:00:00
+#PBS -l walltime=00:30:00
 #PBS -o STDOUT
 #PBS -e STDERR
 export FORT_FMT_RECL=400

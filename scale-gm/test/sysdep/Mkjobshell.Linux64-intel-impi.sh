@@ -34,7 +34,7 @@ cat << EOF1 > run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR Linux64 & intel C&fortran & intel mpi -----
+# ------ For Linux64 & intel C&fortran & intel mpi
 #
 ################################################################################
 export FORT_FMT_RECL=400
@@ -63,7 +63,7 @@ cat << EOFICO2LL1 > ico2ll.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR Linux64 & intel C&fortran & intel mpi -----
+# ------ For Linux64 & intel C&fortran & intel mpi
 #
 ################################################################################
 export FORT_FMT_RECL=400

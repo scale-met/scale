@@ -1,6 +1,6 @@
 ################################################################################
 #
-# NICAM driver config
+# SCALE-GM driver config
 #
 ################################################################################
 
@@ -59,13 +59,13 @@
     QSI        = 4000.D0,
 /
 
-&CNSTPARAM
-    earth_radius        = 6.37122E+6,
-    earth_angvel        =      0.E0,
-    small_planet_factor =    500.E0,
-    earth_gravity       = 9.80616E0,
-    gas_cnst            =   287.0E0,
-    specific_heat_pre   =  1004.5E0,
+&PARAM_CONST
+    CONST_RADIUS        = 6.37122E+6,
+    CONST_OHM           =      0.E0,
+    CONST_SmallPlanetFactor =    500.E0,
+    CONST_GRAV          = 9.80616E0,
+    CONST_Rdry          =   287.0E0,
+    CONST_CPdry         =  1004.5E0,
 /
 
 &NUMFILTERPARAM

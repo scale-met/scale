@@ -1,30 +1,58 @@
+################################################################################
 #
-# ------ FOR K computer -----
+# ------ For K computer -----
 #
+################################################################################
 
-##### for computation
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
 
-FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=1 \
+FC  = mpifrtpx
+SFC = frtpx
+MODDIROPT = -M
+
+FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
                -x-                                                       \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
+# NOTE: -Kauto, -Kthreadsafe, -Kautoobjstack, -Ktemparraystack depends on the stacksize.
+#       If you find the segmentation fault error, please check.
 FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
                    -Kautoobjstack   \
                    -Ktemparraystack \
                    -Kinstance=8     \
                    -Kswp_strong
 
-# note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
-# If you find the segmentation fault error, please check.
-
 FFLAGS_DEBUG = -O0                                                       \
                -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
                -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global        \
                -DDEBUG
 
-# Performance monitor
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+
+CC = mpifccpx
+
+CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
+CFLAGS_DEBUG = -O0
+
+
+
+##### Special setting
+
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -Kopenmp
+# enable + disable parallel
+#OMP = -Kopenmp,noparallel
+
+### Performance monitor
 # disable
 #PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
 # fipp
@@ -40,32 +68,35 @@ RDMA = -U_USE_RDMA
 # enable
 #RDMA = -D_USE_RDMA
 
-# Single precision
-#FFLAGS += -DSINGLE
+FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) $(RDMA)
+CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) $(RDMA)
 
-FC     = mpifrtpx
 
-FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
-#FFLAGS_DYN ?= $(FFLAGS)
 
-MODDIROPT ?= -M
-
-CC     = mpifccpx
-CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
-CFLAGS_DEBUG = -O0
-
-CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
-#CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+##### Linker setting
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
+
+
+################################################################################
+
 ###### NetCDF library
+# Default settings
 NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
 NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"
+# export NETCDF_LIBS="-L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm"
 
-###### Lapack
-LAPACK_LIBS    ?= -SSL2
+###### Lapack library
+# Default settings
+LAPACK_LIBS    ?=
+# Or, please set environment variable
+# example:
+# export LAPACK_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install
