@@ -6,7 +6,9 @@ static void fstr2cstr( char   *cstr, // (out)
 {
   int i;
 
-  if ( cstr != fstr ) strncpy( cstr, fstr, len );
+  if ( cstr != fstr )
+    for ( i=0; i<len; i++ )
+      cstr[i] = fstr[i];
 
   for ( i=len-1; i>=0; i-- ) {
     if ( cstr[i] != ' ' ) {
@@ -23,7 +25,9 @@ static void cstr2fstr( char   *fstr, // (out)
 {
   int i;
 
-  if ( fstr != cstr ) strncpy( fstr, cstr, len );
+  if ( fstr != cstr )
+    for ( i=0; i<len; i++ )
+      cstr[i] = fstr[i];
 
   for ( i=0; i<len; i++ )
     if ( cstr[i] == '\0' ) break;
@@ -127,12 +131,12 @@ void file_read_data_par_( void       *var,       // (out)
   int i;
   MPI_Offset ntypes_, start_[4], count_[4];
 
-  fstr2cstr(dinfo->varname, dinfo->varname, File_HSHORT);
-  fstr2cstr(dinfo->description, dinfo->description, File_HMID);
-  fstr2cstr(dinfo->units, dinfo->units, File_HSHORT);
-  fstr2cstr(dinfo->time_units, dinfo->time_units, File_HMID);
+  fstr2cstr(dinfo->varname, dinfo->varname, File_HSHORT-1);
+  fstr2cstr(dinfo->description, dinfo->description, File_HMID-1);
+  fstr2cstr(dinfo->units, dinfo->units, File_HSHORT-1);
+  fstr2cstr(dinfo->time_units, dinfo->time_units, File_HMID-1);
   for ( i=0; i<MAX_RANK; i++ )
-    fstr2cstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
+    fstr2cstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT-1);
 
   for (i=0; i<*ndims; i++) {
       start_[i+1] = start[*ndims - i - 1] -  1;

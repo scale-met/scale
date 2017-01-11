@@ -4,6 +4,8 @@
 #define RMISS -9.9999e+30
 #define TEPS 1e-6
 
+#define MIN(a,b) ((a)<(b) ? (a) : (b))
+
 static int32_t ERROR_SUPPRESS = 0;
 
 #define CHECK_ERROR(func)					\
@@ -219,6 +221,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   int rank;
   int dimids[MAX_RANK], tdim, uldims[NC_MAX_DIMS];
   char name[File_HSHORT+1];
+  char *buf;
   size_t size, l, len;
   int i, n;
 
@@ -238,14 +241,20 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   if ( files[fid]->shared_mode ) {
     // description
     CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "long_name", &l) )
-    CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "long_name", dinfo->description) )
-    len = l > File_HMID ? File_HMID : l;
-    dinfo->description[len] = '\0';
+    buf = (char*) malloc(l+1);
+    CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "long_name", buf) )
+    for (i=0; i<MIN(File_HMID-1,l); i++)
+      dinfo->description[i] = buf[i];
+    dinfo->description[i+1] = '\0';
+    free(buf);
     // units
     CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
-    CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", dinfo->units) )
-    len = l > File_HSHORT ? File_HSHORT : l;
-    dinfo->units[len] = '\0';
+    buf = (char*) malloc(l+1);
+    CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", buf) )
+    for (i=0; i<MIN(File_HMID-1,l); i++)
+      dinfo->units[i] = buf[i];
+    dinfo->units[i+1] = '\0';
+    free(buf);
     // datatype
     CHECK_PNC_ERROR( ncmpi_inq_vartype(ncid, varid, &xtype) )
     NCTYPE2TYPE(xtype, dinfo->datatype);
@@ -262,14 +271,20 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   else {
     // description
     CHECK_ERROR( nc_inq_attlen  (ncid, varid, "long_name", &l) )
-    CHECK_ERROR( nc_get_att_text(ncid, varid, "long_name", dinfo->description) )
-    len = l > File_HMID ? File_HMID : l;
-    dinfo->description[len] = '\0';
+    buf = (char*) malloc(l+1);
+    CHECK_ERROR( nc_get_att_text(ncid, varid, "long_name", buf) )
+    for (i=0; i<MIN(File_HMID-1,l); i++)
+      dinfo->description[i] = buf[i];
+    dinfo->description[i+1] = '\0';
+    free(buf);
     // units
     CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
-    CHECK_ERROR( nc_get_att_text(ncid, varid, "units", dinfo->units) )
-    len = l > File_HSHORT ? File_HSHORT : l;
-    dinfo->units[len] = '\0';
+    buf = (char*) malloc(l+1);
+    CHECK_ERROR( nc_get_att_text(ncid, varid, "units", buf) )
+    for (i=0; i<MIN(File_HMID-1,l); i++)
+      dinfo->units[i] = buf[i];
+    dinfo->units[i+1] = '\0';
+    free(buf);
     // datatype
     CHECK_ERROR( nc_inq_vartype(ncid, varid, &xtype) )
     NCTYPE2TYPE(xtype, dinfo->datatype);
@@ -326,9 +341,12 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       CHECK_PNC_ERROR( ncmpi_get_var1_double_all(ncid, varid, idx, &(dinfo->time_start)) )
       // units
       CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
+      buf = (char*) malloc(l+1);
       CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", dinfo->time_units) )
-      len = l > File_HMID ? File_HMID : l;
-      dinfo->time_units[len] = '\0';
+      for (i=0; i<MIN(File_HMID-1,l); i++)
+        dinfo->units[i] = buf[i];
+      dinfo->units[i+1] = '\0';
+      free(buf);
     } else {
       size_t idx[2];
       // time_end
@@ -343,9 +361,12 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) )
       // units
       CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
+      buf = (char*) malloc(l+1);
       CHECK_ERROR( nc_get_att_text(ncid, varid, "units", dinfo->time_units) )
-      len = l > File_HMID ? File_HMID : l;
-      dinfo->time_units[len] = '\0';
+      for (i=0; i<MIN(File_HMID-1,l); i++)
+        dinfo->units[i] = buf[i];
+      dinfo->units[i+1] = '\0';
+      free(buf);
     }
   }
 
