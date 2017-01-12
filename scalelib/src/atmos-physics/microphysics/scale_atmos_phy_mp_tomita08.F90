@@ -849,7 +849,8 @@ contains
 
     real(RP) :: dens            ! density
     real(RP) :: temp            ! T [K]
-    real(RP) :: q(QS_MP:QE_MP)
+    real(RP) :: qv, qc, qr, qi, qs, qg
+    real(RP) :: qv_t, qc_t, qr_t, qi_t, qs_t, qg_t
     real(RP) :: Sliq            ! saturated ratio S for liquid water [0-1]
     real(RP) :: Sice            ! saturated ratio S for ice water    [0-1]
 
@@ -907,8 +908,6 @@ contains
 
     real(RP) :: w(w_nmax)
 
-    real(RP) :: tend(QS_MP:QE_MP)
-
     integer  :: k, i, j, iq, ip
     !---------------------------------------------------------------------------
 
@@ -955,7 +954,7 @@ contains
                                     ma2  (:,:,:)  ) ! [OUT]
 
     !$omp parallel do &
-    !$omp private(tend,coef_bt,coef_at,q,w)                                                                           &
+    !$omp private(coef_bt,coef_at,w,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t)                                  &
     !$omp private(dens,temp,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g)                                                &
     !$omp private(sw_bergeron,zerosw)                                                                                 &
     !$omp private(RLMDr,RLMDr_dr,RLMDr_2,RLMDr_3,RLMDr_7,RLMDr_1br,RLMDr_2br,RLMDr_3br,RLMDr_3dr,RLMDr_5dr,RLMDr_6dr) &
@@ -966,7 +965,7 @@ contains
     !$omp private(Vti,Vtr,Vts,Vtg,Esi_mod,Egs_mod,Dc,Praut_berry,Praut_kk,betai,betas,Da,Kd,NU,Glv,Giv,Gil)           &
     !$omp private(ventr,vents,ventg,tmp,dt1,Ni50,ice,net,fac_sw,fac)                                                  &
     !$omp collapse(3)
-!OCL TEMP_PRIVATE(tend,coef_bt,coef_at,q,w)
+!OCL TEMP_PRIVATE(coef_bt,coef_at,w)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -974,49 +973,52 @@ contains
        ! store to work
        dens = DENS0(k,i,j)
        temp = TEMP0(k,i,j)
-       do iq = QS_MP, QE_MP
-          q(iq) = QTRC0(k,i,j,iq)
-       enddo
+       qv   = QTRC0(k,i,j,I_QV)
+       qc   = QTRC0(k,i,j,I_QC)
+       qr   = QTRC0(k,i,j,I_QR)
+       qi   = QTRC0(k,i,j,I_QI)
+       qs   = QTRC0(k,i,j,I_QS)
+       qg   = QTRC0(k,i,j,I_QG)
 
        ! saturation ratio S
-       Sliq     = q(I_QV) / max( QSATL(k,i,j), EPS )
-       Sice     = q(I_QV) / max( QSATI(k,i,j), EPS )
+       Sliq     = qv / max( QSATL(k,i,j), EPS )
+       Sice     = qv / max( QSATI(k,i,j), EPS )
 
        Rdens    = 1.0_RP / dens
        rho_fact = sqrt( dens00 * Rdens )
        temc     = temp - TEM00
 
-       w(I_delta1) = ( 0.5_RP + sign(0.5_RP, q(I_QR) - 1.E-4_RP ) )
+       w(I_delta1) = ( 0.5_RP + sign(0.5_RP, qr - 1.E-4_RP ) )
 
-       w(I_delta2) = ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - q(I_QR) ) ) &
-                   * ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - q(I_QS) ) )
+       w(I_delta2) = ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - qr ) ) &
+                   * ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - qs ) )
 
        w(I_spsati) = 0.5_RP + sign(0.5_RP, Sice - 1.0_RP )
 
        w(I_iceflg) = 0.5_RP - sign( 0.5_RP, temc ) ! 0: warm, 1: ice
 
-       w(I_dqv_dt) = q(I_QV) / dt
-       w(I_dqc_dt) = q(I_QC) / dt
-       w(I_dqr_dt) = q(I_QR) / dt
-       w(I_dqi_dt) = q(I_QI) / dt
-       w(I_dqs_dt) = q(I_QS) / dt
-       w(I_dqg_dt) = q(I_QG) / dt
+       w(I_dqv_dt) = qv / dt
+       w(I_dqc_dt) = qc / dt
+       w(I_dqr_dt) = qr / dt
+       w(I_dqi_dt) = qi / dt
+       w(I_dqs_dt) = qs / dt
+       w(I_dqg_dt) = qg / dt
 
        sw_bergeron = ( 0.5_RP + sign(0.5_RP, temc + 30.0_RP ) ) &
                    * ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc  ) ) &
                    * ( 1.0_RP - sw_expice                     )
 
        ! intercept parameter N0
-       N0r = ( 1.0_RP - sw_WDXZ2014 ) * N0r_def &                                                                   ! Marshall and Palmer (1948)
-           + (          sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*q(I_QR)*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
-       N0s = ( 1.0_RP - sw_WDXZ2014 ) * N0s_def &                                                                   ! Gunn and Marshall (1958)
-           + (          sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*q(I_QS)*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
-       N0g = ( 1.0_RP - sw_WDXZ2014 ) * N0g_def &                                                                   !
-           + (          sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*q(I_QG)*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
+       N0r = ( 1.0_RP-sw_WDXZ2014 ) * N0r_def &                                                              ! Marshall and Palmer (1948)
+           + (        sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*qr*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
+       N0s = ( 1.0_RP-sw_WDXZ2014 ) * N0s_def &                                                              ! Gunn and Marshall (1958)
+           + (        sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*qs*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
+       N0g = ( 1.0_RP-sw_WDXZ2014 ) * N0g_def &                                                              !
+           + (        sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*qg*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
 
        ! slope parameter lambda (Rain)
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QR) - 1.E-12_RP )
-       RLMDr  = sqrt(sqrt( dens * q(I_QR) / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qr - 1.E-12_RP )
+       RLMDr  = sqrt(sqrt( dens * qr / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
 
        RLMDr_dr  = sqrt( RLMDr )       ! **Dr
        RLMDr_2   = RLMDr**2
@@ -1030,8 +1032,8 @@ contains
        RLMDr_6dr = RLMDr**6 * RLMDr_dr
 
        ! slope parameter lambda (Snow)
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QS) - 1.E-12_RP )
-       RLMDs  = sqrt(sqrt( dens * q(I_QS) / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qs - 1.E-12_RP )
+       RLMDs  = sqrt(sqrt( dens * qs / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
 
        RLMDs_ds  = sqrt( sqrt(RLMDs) ) ! **Ds
        RLMDs_2   = RLMDs**2
@@ -1054,8 +1056,8 @@ contains
 
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       zerosw = 0.5_RP - sign(0.5_RP, dens * q(I_QS) - 1.E-12_RP )
-       Xs2    = dens * q(I_QS) / As
+       zerosw = 0.5_RP - sign(0.5_RP, dens * qs - 1.E-12_RP )
+       Xs2    = dens * qs / As
 
        tems       = min( -0.1_RP, temc )
        coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
@@ -1119,8 +1121,8 @@ contains
                 + ( 1.0_RP-sw_RS2014 ) * RMOMs_Vt
 
        ! slope parameter lambda (Graupel)
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QG) - 1.E-12_RP )
-       RLMDg  = sqrt(sqrt( dens * q(I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qg - 1.E-12_RP )
+       RLMDg  = sqrt(sqrt( dens * qg / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
 
        RLMDg_dg  = sqrt( RLMDg )       ! **Dg
        RLMDg_2   = RLMDg**2
@@ -1133,8 +1135,8 @@ contains
        w(I_RLMDg) = RLMDg
 
        !---< terminal velocity >
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QI) - 1.E-8_RP )
-       Vti = -3.29_RP * exp( log( dens*q(I_QI)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qi - 1.E-8_RP )
+       Vti = -3.29_RP * exp( log( dens*qi+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
        Vtr = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
        Vts = -Cs * rho_fact * RMOMs_Vt
        Vtg = -Cg * rho_fact * GAM_1bgdg / GAM_1bg * RLMDg_dg
@@ -1144,39 +1146,39 @@ contains
        Ni0 = max( exp(-0.1_RP*temc), 1.0_RP ) * 1000.0_RP
        Qi0 = 4.92E-11_RP * exp(log(Ni0)*1.33_RP) * Rdens
 
-       w(I_Pigen) = max( min( Qi0-q(I_QI), q(I_QV)-QSATI(k,i,j) ), 0.0_RP ) / dt
+       w(I_Pigen) = max( min( Qi0-qi, qv-QSATI(k,i,j) ), 0.0_RP ) / dt
 
        !---< Accretion >---
        Esi_mod = min( Esi, Esi * exp( gamma_sacr * temc ) )
        Egs_mod = min( Egs, Egs * exp( gamma_gacs * temc ) )
 
        ! [Pracw] accretion rate of cloud water by rain
-       Pracw_orig = q(I_QC) * 0.25_RP * PI * Erw * N0r * Cr * GAM_3dr * RLMDr_3dr * rho_fact
+       Pracw_orig = qc * 0.25_RP * PI * Erw * N0r * Cr * GAM_3dr * RLMDr_3dr * rho_fact
 
-       zerosw     = 0.5_RP - sign(0.5_RP, q(I_QC)*q(I_QR) - 1.E-12_RP )
-       Pracw_kk   = 67.0_RP * exp( log( q(I_QC)*q(I_QR)+zerosw )*1.15_RP ) * ( 1.0_RP-zerosw ) ! eq.(33) in KK(2000)
+       zerosw     = 0.5_RP - sign(0.5_RP, qc*qr - 1.E-12_RP )
+       Pracw_kk   = 67.0_RP * exp( log( qc*qr+zerosw )*1.15_RP ) * ( 1.0_RP-zerosw ) ! eq.(33) in KK(2000)
 
        ! switch orig / k-k scheme
-       w(I_Pracw) = ( 1.0_RP - sw_KK2000 ) * Pracw_orig &
-                  + (          sw_KK2000 ) * Pracw_kk
+       w(I_Pracw) = ( 1.0_RP-sw_KK2000 ) * Pracw_orig &
+                  + (        sw_KK2000 ) * Pracw_kk
 
        ! [Psacw] accretion rate of cloud water by snow
-       w(I_Psacw) = q(I_QC) * 0.25_RP * PI * Esw       * Cs * MOMs_2ds            * rho_fact
+       w(I_Psacw) = qc * 0.25_RP * PI * Esw       * Cs * MOMs_2ds            * rho_fact
 
        ! [Pgacw] accretion rate of cloud water by graupel
-       w(I_Pgacw) = q(I_QC) * 0.25_RP * PI * Egw * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact
+       w(I_Pgacw) = qc * 0.25_RP * PI * Egw * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact
 
        ! [Praci] accretion rate of cloud ice by rain
-       w(I_Praci) = q(I_QI) * 0.25_RP * PI * Eri * N0r * Cr * GAM_3dr * RLMDr_3dr * rho_fact
+       w(I_Praci) = qi * 0.25_RP * PI * Eri * N0r * Cr * GAM_3dr * RLMDr_3dr * rho_fact
 
        ! [Psaci] accretion rate of cloud ice by snow
-       w(I_Psaci) = q(I_QI) * 0.25_RP * PI * Esi_mod   * Cs * MOMs_2ds            * rho_fact
+       w(I_Psaci) = qi * 0.25_RP * PI * Esi_mod   * Cs * MOMs_2ds            * rho_fact
 
        ! [Pgaci] accretion rate of cloud ice by grupel
-       w(I_Pgaci) = q(I_QI) * 0.25_RP * PI * Egi * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact
+       w(I_Pgaci) = qi * 0.25_RP * PI * Egi * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact
 
        ! [Piacr] accretion rate of rain by cloud ice
-       w(I_Piacr) = q(I_QI) * Ar / mi * 0.25_RP * PI * Eri * N0r * Cr * GAM_6dr * RLMDr_6dr * rho_fact
+       w(I_Piacr) = qi * Ar / mi * 0.25_RP * PI * Eri * N0r * Cr * GAM_6dr * RLMDr_6dr * rho_fact
 
        ! [Psacr] accretion rate of rain by snow
        w(I_Psacr) = Ar * 0.25_RP * PI * Rdens * Esr * N0r       * abs(Vtr-Vts) &
@@ -1204,26 +1206,26 @@ contains
 
        !---< Auto-conversion >---
        ! [Praut] auto-conversion rate from cloud water to rain
-       rhoqc = dens * q(I_QC) * 1000.0_RP ! [g/m3]
+       rhoqc = dens * qc * 1000.0_RP ! [g/m3]
        Dc    = 0.146_RP - 5.964E-2_RP * log( Nc(k,i,j) / 2000.0_RP )
        Praut_berry = Rdens * 1.67E-5_RP * rhoqc * rhoqc / ( 5.0_RP + 3.66E-2_RP * Nc(k,i,j) / ( Dc * rhoqc + EPS ) )
 
-       zerosw      = 0.5_RP - sign(0.5_RP, q(I_QC) - 1.E-12_RP )
-       Praut_kk    = 1350.0_RP                                                     &
-                   * exp( log( dens*q(I_QC)+zerosw )*2.47_RP ) * ( 1.0_RP-zerosw ) &
-                   * exp( log( dens*Nc(k,i,j)      )*(-1.79_RP) )
+       zerosw      = 0.5_RP - sign(0.5_RP, qc - 1.E-12_RP )
+       Praut_kk    = 1350.0_RP                                           &
+                   * exp( log( qc+zerosw )*2.47_RP ) * ( 1.0_RP-zerosw ) &
+                   * exp( log( Nc(k,i,j) )*(-1.79_RP) )                    ! eq.(29) in KK(2000)
 
        ! switch berry / k-k scheme
-       w(I_Praut) = ( 1.0_RP - sw_KK2000 ) * Praut_berry &
-                  + (          sw_KK2000 ) * Praut_kk
+       w(I_Praut) = ( 1.0_RP-sw_KK2000 ) * Praut_berry &
+                  + (        sw_KK2000 ) * Praut_kk
 
        ! [Psaut] auto-conversion rate from cloud ice to snow
        betai = min( beta_saut, beta_saut * exp( gamma_saut * temc ) )
-       w(I_Psaut) = max( betai*(q(I_QI)-qicrt_saut), 0.0_RP )
+       w(I_Psaut) = max( betai*(qi-qicrt_saut), 0.0_RP )
 
        ! [Pgaut] auto-conversion rate from snow to graupel
        betas = min( beta_gaut, beta_gaut * exp( gamma_gaut * temc ) )
-       w(I_Pgaut) = max( betas*(q(I_QS)-qscrt_gaut), 0.0_RP )
+       w(I_Pgaut) = max( betas*(qs-qscrt_gaut), 0.0_RP )
 
        !---< Evaporation, Sublimation, Melting, and Freezing >---
 
@@ -1241,7 +1243,7 @@ contains
        w(I_Prevp) = 2.0_RP * PI * Rdens * N0r * ( 1.0_RP-min(Sliq,1.0_RP) ) * Glv * ventr
 
        ! [Pidep,Pisub] deposition/sublimation rate for ice
-       rhoqi = max(dens*q(I_QI),EPS)
+       rhoqi = max(dens*qi,EPS)
        XNi   = min( max( 5.38E+7_RP * exp( log(rhoqi)*0.75_RP ), 1.E+3_RP ), 1.E+6_RP )
        XMi   = rhoqi / XNi
        Di    = min( Di_a * sqrt(XMi), Di_max )
@@ -1254,19 +1256,19 @@ contains
        ! [Pihom] homogenious freezing at T < -40C
        sw = ( 0.5_RP - sign(0.5_RP, temc + 40.0_RP ) ) ! if T < -40C, sw=1
 
-       w(I_Pihom) = sw * q(I_QC) / dt
+       w(I_Pihom) = sw * qc / dt
 
        ! [Pihtr] heteroginous freezing at -40C < T < 0C
        sw = ( 0.5_RP + sign(0.5_RP, temc + 40.0_RP ) ) &
           * ( 0.5_RP - sign(0.5_RP, temc           ) ) ! if -40C < T < 0C, sw=1
 
-       w(I_Pihtr) = sw * ( dens / DWATR * q(I_QC)**2 / ( Nc_ihtr * 1.E+6_RP ) ) &
+       w(I_Pihtr) = sw * ( dens / DWATR * qc**2 / ( Nc_ihtr * 1.E+6_RP ) ) &
                   * B_frz * ( exp(-A_frz*temc) - 1.0_RP )
 
        ! [Pimlt] ice melting at T > 0C
        sw = ( 0.5_RP + sign(0.5_RP, temc           ) ) ! if T > 0C, sw=1
 
-       w(I_Pimlt) = sw * q(I_QI) / dt
+       w(I_Pimlt) = sw * qi / dt
 
        ! [Psdep,Pssub] deposition/sublimation rate for snow
        vents = f1s * MOMs_1          + f2s * sqrt( Cs * rho_fact / NU             ) * MOMs_5ds_h
@@ -1279,7 +1281,7 @@ contains
        ! [Psmlt] melting rate of snow
        w(I_Psmlt) = 2.0_RP * PI * Rdens *       Gil * vents &
                   + CL * temc / LHF0 * ( w(I_Psacw) + w(I_Psacr) )
-       w(I_Psmlt) = max( w(I_Psmlt), 0.0_RP      )
+       w(I_Psmlt) = max( w(I_Psmlt), 0.0_RP )
 
        ! [Pgdep/pgsub] deposition/sublimation rate for graupel
        ventg = f1g * GAM_2 * RLMDg_2 + f2g * sqrt( Cg * rho_fact / NU * RLMDg_5dg ) * GAM_5dg_h
@@ -1292,7 +1294,7 @@ contains
        ! [Pgmlt] melting rate of graupel
        w(I_Pgmlt) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
                   + CL * temc / LHF0 * ( w(I_Pgacw) + w(I_Pgacr) )
-       w(I_Pgmlt) = max( w(I_Pgmlt), 0.0_RP      )
+       w(I_Pgmlt) = max( w(I_Pgmlt), 0.0_RP )
 
        ! [Pgfrz] freezing rate of graupel
        w(I_Pgfrz) = 2.0_RP * PI * Rdens * N0r * 60.0_RP * B_frz * Ar * ( exp(-A_frz*temc) - 1.0_RP ) * RLMDr_7
@@ -1300,11 +1302,11 @@ contains
        ! [Psfw,Psfi] ( Bergeron process ) growth rate of snow by Bergeron process from cloud water/ice
        dt1  = ( exp( log(mi50)*ma2(k,i,j) ) &
               - exp( log(mi40)*ma2(k,i,j) ) ) / ( a1(k,i,j) * ma2(k,i,j) )
-       Ni50 = q(I_QI) * dt / ( mi50 * dt1 )
+       Ni50 = qi * dt / ( mi50 * dt1 )
 
        w(I_Psfw ) = Ni50 * ( a1(k,i,j) * exp( log(mi50)*a2(k,i,j) )        &
-                           + PI * Eiw * dens * q(I_QC) * Ri50*Ri50 * vti50 )
-       w(I_Psfi ) = q(I_QI) / dt1
+                           + PI * Eiw * dens * qc * Ri50*Ri50 * vti50 )
+       w(I_Psfi ) = qi / dt1
 
        !---< limiter >---
        w(I_Pigen) = min( w(I_Pigen), w(I_dqv_dt) ) * (        w(I_iceflg) ) * sw_expice
@@ -1535,92 +1537,87 @@ contains
        w(I_Pgsub  ) = w(I_Pgsub  ) * fac
        w(I_Pgmlt  ) = w(I_Pgmlt  ) * fac
 
-       tend(I_QC) = &
-                  + w(I_Pimlt  ) & ! [prod] i->c
-                  - w(I_Praut  ) & ! [loss] c->r
-                  - w(I_Pracw  ) & ! [loss] c->r
-                  - w(I_Pihom  ) & ! [loss] c->i
-                  - w(I_Pihtr  ) & ! [loss] c->i
-                  - w(I_Psacw  ) & ! [loss] c->s
-                  - w(I_Psfw   ) & ! [loss] c->s
-                  - w(I_Pgacw  )   ! [loss] c->g
+       qc_t = + w(I_Pimlt  ) & ! [prod] i->c
+              - w(I_Praut  ) & ! [loss] c->r
+              - w(I_Pracw  ) & ! [loss] c->r
+              - w(I_Pihom  ) & ! [loss] c->i
+              - w(I_Pihtr  ) & ! [loss] c->i
+              - w(I_Psacw  ) & ! [loss] c->s
+              - w(I_Psfw   ) & ! [loss] c->s
+              - w(I_Pgacw  )   ! [loss] c->g
 
-       tend(I_QR) = &
-                  + w(I_Praut  ) & ! [prod] c->r
-                  + w(I_Pracw  ) & ! [prod] c->r
-                  + w(I_Psmlt  ) & ! [prod] s->r
-                  + w(I_Pgmlt  ) & ! [prod] g->r
-                  - w(I_Prevp  ) & ! [loss] r->v
-                  - w(I_Piacr_s) & ! [loss] r->s
-                  - w(I_Psacr_s) & ! [loss] r->s
-                  - w(I_Piacr_g) & ! [loss] r->g
-                  - w(I_Psacr_g) & ! [loss] r->g
-                  - w(I_Pgacr  ) & ! [loss] r->g
-                  - w(I_Pgfrz  )   ! [loss] r->g
+       qr_t = + w(I_Praut  ) & ! [prod] c->r
+              + w(I_Pracw  ) & ! [prod] c->r
+              + w(I_Psmlt  ) & ! [prod] s->r
+              + w(I_Pgmlt  ) & ! [prod] g->r
+              - w(I_Prevp  ) & ! [loss] r->v
+              - w(I_Piacr_s) & ! [loss] r->s
+              - w(I_Psacr_s) & ! [loss] r->s
+              - w(I_Piacr_g) & ! [loss] r->g
+              - w(I_Psacr_g) & ! [loss] r->g
+              - w(I_Pgacr  ) & ! [loss] r->g
+              - w(I_Pgfrz  )   ! [loss] r->g
 
-       tend(I_QI) = &
-                  + w(I_Pigen  ) & ! [prod] v->i
-                  + w(I_Pidep  ) & ! [prod] v->i
-                  + w(I_Pihom  ) & ! [prod] c->i
-                  + w(I_Pihtr  ) & ! [prod] c->i
-                  - w(I_Pisub  ) & ! [loss] i->v
-                  - w(I_Pimlt  ) & ! [loss] i->c
-                  - w(I_Psaut  ) & ! [loss] i->s
-                  - w(I_Praci_s) & ! [loss] i->s
-                  - w(I_Psaci  ) & ! [loss] i->s
-                  - w(I_Psfi   ) & ! [loss] i->s
-                  - w(I_Praci_g) & ! [loss] i->g
-                  - w(I_Pgaci  )   ! [loss] i->g
+       qi_t = + w(I_Pigen  ) & ! [prod] v->i
+              + w(I_Pidep  ) & ! [prod] v->i
+              + w(I_Pihom  ) & ! [prod] c->i
+              + w(I_Pihtr  ) & ! [prod] c->i
+              - w(I_Pisub  ) & ! [loss] i->v
+              - w(I_Pimlt  ) & ! [loss] i->c
+              - w(I_Psaut  ) & ! [loss] i->s
+              - w(I_Praci_s) & ! [loss] i->s
+              - w(I_Psaci  ) & ! [loss] i->s
+              - w(I_Psfi   ) & ! [loss] i->s
+              - w(I_Praci_g) & ! [loss] i->g
+              - w(I_Pgaci  )   ! [loss] i->g
 
-       tend(I_QS) = &
-                  + w(I_Psdep  ) & ! [prod] v->s
-                  + w(I_Psacw  ) & ! [prod] c->s
-                  + w(I_Psfw   ) & ! [prod] c->s
-                  + w(I_Piacr_s) & ! [prod] r->s
-                  + w(I_Psacr_s) & ! [prod] r->s
-                  + w(I_Psaut  ) & ! [prod] i->s
-                  + w(I_Praci_s) & ! [prod] i->s
-                  + w(I_Psaci  ) & ! [prod] i->s
-                  + w(I_Psfi   ) & ! [prod] i->s
-                  - w(I_Pssub  ) & ! [loss] s->v
-                  - w(I_Psmlt  ) & ! [loss] s->r
-                  - w(I_Pgaut  ) & ! [loss] s->g
-                  - w(I_Pracs  ) & ! [loss] s->g
-                  - w(I_Pgacs  )   ! [loss] s->g
+       qs_t = + w(I_Psdep  ) & ! [prod] v->s
+              + w(I_Psacw  ) & ! [prod] c->s
+              + w(I_Psfw   ) & ! [prod] c->s
+              + w(I_Piacr_s) & ! [prod] r->s
+              + w(I_Psacr_s) & ! [prod] r->s
+              + w(I_Psaut  ) & ! [prod] i->s
+              + w(I_Praci_s) & ! [prod] i->s
+              + w(I_Psaci  ) & ! [prod] i->s
+              + w(I_Psfi   ) & ! [prod] i->s
+              - w(I_Pssub  ) & ! [loss] s->v
+              - w(I_Psmlt  ) & ! [loss] s->r
+              - w(I_Pgaut  ) & ! [loss] s->g
+              - w(I_Pracs  ) & ! [loss] s->g
+              - w(I_Pgacs  )   ! [loss] s->g
 
-       tend(I_QG) = &
-                  + w(I_Pgdep  ) & ! [prod] v->g
-                  + w(I_Pgacw  ) & ! [prod] c->g
-                  + w(I_Piacr_g) & ! [prod] r->g
-                  + w(I_Psacr_g) & ! [prod] r->g
-                  + w(I_Pgacr  ) & ! [prod] r->g
-                  + w(I_Pgfrz  ) & ! [prod] r->g
-                  + w(I_Praci_g) & ! [prod] i->g
-                  + w(I_Pgaci  ) & ! [prod] i->g
-                  + w(I_Pgaut  ) & ! [prod] s->g
-                  + w(I_Pracs  ) & ! [prod] s->g
-                  + w(I_Pgacs  ) & ! [prod] s->g
-                  - w(I_Pgsub  ) & ! [loss] g->v
-                  - w(I_Pgmlt  )   ! [loss] g->r
+       qg_t = + w(I_Pgdep  ) & ! [prod] v->g
+              + w(I_Pgacw  ) & ! [prod] c->g
+              + w(I_Piacr_g) & ! [prod] r->g
+              + w(I_Psacr_g) & ! [prod] r->g
+              + w(I_Pgacr  ) & ! [prod] r->g
+              + w(I_Pgfrz  ) & ! [prod] r->g
+              + w(I_Praci_g) & ! [prod] i->g
+              + w(I_Pgaci  ) & ! [prod] i->g
+              + w(I_Pgaut  ) & ! [prod] s->g
+              + w(I_Pracs  ) & ! [prod] s->g
+              + w(I_Pgacs  ) & ! [prod] s->g
+              - w(I_Pgsub  ) & ! [loss] g->v
+              - w(I_Pgmlt  )   ! [loss] g->r
 
-       tend(I_QC) = max( tend(I_QC), -w(I_dqc_dt) )
-       tend(I_QR) = max( tend(I_QR), -w(I_dqr_dt) )
-       tend(I_QI) = max( tend(I_QI), -w(I_dqi_dt) )
-       tend(I_QS) = max( tend(I_QS), -w(I_dqs_dt) )
-       tend(I_QG) = max( tend(I_QG), -w(I_dqg_dt) )
+       qc_t = max( qc_t, -w(I_dqc_dt) )
+       qr_t = max( qr_t, -w(I_dqr_dt) )
+       qi_t = max( qi_t, -w(I_dqi_dt) )
+       qs_t = max( qs_t, -w(I_dqs_dt) )
+       qg_t = max( qg_t, -w(I_dqg_dt) )
 
-       tend(I_QV) = - ( tend(I_QC) &
-                      + tend(I_QR) &
-                      + tend(I_QI) &
-                      + tend(I_QS) &
-                      + tend(I_QG) )
+       qv_t = - ( qc_t &
+                + qr_t &
+                + qi_t &
+                + qs_t &
+                + qg_t )
 
-       QTRC_t(k,i,j,I_QV) = tend(I_QV)
-       QTRC_t(k,i,j,I_QC) = tend(I_QC)
-       QTRC_t(k,i,j,I_QR) = tend(I_QR)
-       QTRC_t(k,i,j,I_QI) = tend(I_QI)
-       QTRC_t(k,i,j,I_QS) = tend(I_QS)
-       QTRC_t(k,i,j,I_QG) = tend(I_QG)
+       QTRC_t(k,i,j,I_QV) = qv_t
+       QTRC_t(k,i,j,I_QC) = qc_t
+       QTRC_t(k,i,j,I_QR) = qr_t
+       QTRC_t(k,i,j,I_QI) = qi_t
+       QTRC_t(k,i,j,I_QS) = qs_t
+       QTRC_t(k,i,j,I_QG) = qg_t
 
        QTRC0(k,i,j,I_QV) = QTRC0(k,i,j,I_QV) + QTRC_t(k,i,j,I_QV) * dt
        QTRC0(k,i,j,I_QC) = QTRC0(k,i,j,I_QC) + QTRC_t(k,i,j,I_QC) * dt
@@ -1678,7 +1675,7 @@ contains
 
     real(RP) :: dens
     real(RP) :: temc
-    real(RP) :: q(QA)
+    real(RP) :: qv, qc, qr, qi, qs, qg
 
     real(RP) :: rho_fact ! density factor
 
@@ -1702,37 +1699,40 @@ contains
        ! store to work
        dens = DENS0(k,i,j)
        temc = TEMP0(k,i,j) - TEM00
-       do iq = QS_MP, QE_MP
-          q(iq) = QTRC0(k,i,j,iq)
-       enddo
+       qv   = QTRC0(k,i,j,I_QV)
+       qc   = QTRC0(k,i,j,I_QC)
+       qr   = QTRC0(k,i,j,I_QR)
+       qi   = QTRC0(k,i,j,I_QI)
+       qs   = QTRC0(k,i,j,I_QS)
+       qg   = QTRC0(k,i,j,I_QG)
 
        rho_fact = sqrt( dens00 / dens )
 
        ! intercept parameter N0
-       N0r = ( 1.0_RP - sw_WDXZ2014 ) * N0r_def &                                                                   ! Marshall and Palmer (1948)
-           + (          sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*q(I_QR)*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
-       N0s = ( 1.0_RP - sw_WDXZ2014 ) * N0s_def &                                                                   ! Gunn and Marshall (1958)
-           + (          sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*q(I_QS)*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
-       N0g = ( 1.0_RP - sw_WDXZ2014 ) * N0g_def &                                                                   !
-           + (          sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*q(I_QG)*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
+       N0r = ( 1.0_RP-sw_WDXZ2014 ) * N0r_def &                                                                   ! Marshall and Palmer (1948)
+           + (        sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*qr*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
+       N0s = ( 1.0_RP-sw_WDXZ2014 ) * N0s_def &                                                                   ! Gunn and Marshall (1958)
+           + (        sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*qs*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
+       N0g = ( 1.0_RP-sw_WDXZ2014 ) * N0g_def &                                                                   !
+           + (        sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*qg*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
 
        ! slope parameter lambda (Rain)
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QR) - 1.E-12_RP )
-       RLMDr  = sqrt(sqrt( dens * q(I_QR) / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qr - 1.E-12_RP )
+       RLMDr  = sqrt(sqrt( dens * qr / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
 
        RLMDr_dr = sqrt( RLMDr )       ! **Dr
 
        ! slope parameter lambda (Snow)
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QS) - 1.E-12_RP )
-       RLMDs  = sqrt(sqrt( dens * q(I_QS) / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qs - 1.E-12_RP )
+       RLMDs  = sqrt(sqrt( dens * qs / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
 
        RLMDs_ds = sqrt( sqrt(RLMDs) ) ! **Ds
        RMOMs_Vt = GAM_1bsds / GAM_1bs * RLMDs_ds
 
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       zerosw = 0.5_RP - sign(0.5_RP, dens * q(I_QS) - 1.E-12_RP )
-       Xs2    = dens * q(I_QS) / As
+       zerosw = 0.5_RP - sign(0.5_RP, dens * qs - 1.E-12_RP )
+       Xs2    = dens * qs / As
 
        tems       = min( -0.1_RP, temc )
        coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
@@ -1756,15 +1756,15 @@ contains
                 + ( 1.0_RP-sw_RS2014 ) * RMOMs_Vt
 
        ! slope parameter lambda (Graupel)
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QG) - 1.E-12_RP )
-       RLMDg  = sqrt(sqrt( dens * q(I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qg - 1.E-12_RP )
+       RLMDg  = sqrt(sqrt( dens * qg / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
 
        RLMDg_dg = sqrt( RLMDg )       ! **Dg
 
        !---< terminal velocity >
        vterm(k,i,j,I_mp_QC) = 0.0_RP
-       zerosw = 0.5_RP - sign(0.5_RP, q(I_QI) - 1.E-8_RP )
-       vterm(k,i,j,I_mp_QI) = -3.29_RP * exp( log( dens*q(I_QI)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qi - 1.E-8_RP )
+       vterm(k,i,j,I_mp_QI) = -3.29_RP * exp( log( dens*qi+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
        vterm(k,i,j,I_mp_QR) = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
        vterm(k,i,j,I_mp_QS) = -Cs * rho_fact * RMOMs_Vt
        vterm(k,i,j,I_mp_QG) = -Cg * rho_fact * GAM_1bgdg / GAM_1bg * RLMDg_dg
@@ -1903,6 +1903,7 @@ contains
 
     real(RP) :: dens
     real(RP) :: temc
+    real(RP) :: qr, qs, qg
     real(RP) :: N0r, N0s, N0g
     real(RP) :: RLMDr, RLMDs, RLMDg
 
@@ -1926,28 +1927,31 @@ contains
     do k  = KS, KE
        dens = DENS0(k,i,j)
        temc = TEMP0(k,i,j) - TEM00
+       qr   = QTRC0(k,i,j,I_QR)
+       qs   = QTRC0(k,i,j,I_QS)
+       qg   = QTRC0(k,i,j,I_QG)
 
        ! intercept parameter N0
-       N0r = ( 1.0_RP - sw_WDXZ2014 ) * N0r_def &                                                                             ! Marshall and Palmer (1948)
-           + (          sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*QTRC0(k,i,j,I_QR)*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
-       N0s = ( 1.0_RP - sw_WDXZ2014 ) * N0s_def &                                                                             ! Gunn and Marshall (1958)
-           + (          sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*QTRC0(k,i,j,I_QS)*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
-       N0g = ( 1.0_RP - sw_WDXZ2014 ) * N0g_def &                                                                             !
-           + (          sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*QTRC0(k,i,j,I_QG)*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
+       N0r = ( 1.0_RP-sw_WDXZ2014 ) * N0r_def &                                                                             ! Marshall and Palmer (1948)
+           + (        sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*qr*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
+       N0s = ( 1.0_RP-sw_WDXZ2014 ) * N0s_def &                                                                             ! Gunn and Marshall (1958)
+           + (        sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*qs*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
+       N0g = ( 1.0_RP-sw_WDXZ2014 ) * N0g_def &                                                                             !
+           + (        sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*qg*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
 
        ! slope parameter lambda
-       zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QR) - 1.E-12_RP )
-       RLMDr = sqrt(sqrt( dens * QTRC0(k,i,j,I_QR) / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qr - 1.E-12_RP )
+       RLMDr = sqrt(sqrt( dens * qr / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
        ! Effective radius is defined by r3m/r2m = 1.5/lambda
        Re(k,i,j,I_HR) = 1.5_RP * RLMDr * um2cm
 
 
-       zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QS) - 1.E-12_RP )
-       RLMDs = sqrt(sqrt( dens * QTRC0(k,i,j,I_QS) / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qs - 1.E-12_RP )
+       RLMDs = sqrt(sqrt( dens * qs / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       zerosw = 0.5_RP - sign(0.5_RP, dens * QTRC0(k,i,j,I_QS) - 1.E-12_RP )
-       Xs2    = dens * QTRC0(k,i,j,I_QS) / As
+       zerosw = 0.5_RP - sign(0.5_RP, dens * qs - 1.E-12_RP )
+       Xs2    = dens * qs / As
 
        tems       = min( -0.1_RP, temc )
        coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
@@ -1967,8 +1971,8 @@ contains
        Re(k,i,j,I_HS) = (        sw_RS2014 ) * 0.5_RP * exp(ln10*loga_) * exp(log(Xs2+zerosw)*b_) * ( 1.0_RP-zerosw ) / ( Xs2+zerosw ) * um2cm &
                       + ( 1.0_RP-sw_RS2014 ) * 1.5_RP * RLMDs * um2cm
 
-       zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QG) - 1.E-12_RP )
-       RLMDg = sqrt(sqrt( dens * QTRC0(k,i,j,I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qg - 1.E-12_RP )
+       RLMDg = sqrt(sqrt( dens * qg / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
        Re(k,i,j,I_HG) = 1.5_RP * RLMDg * um2cm
     enddo
     enddo
