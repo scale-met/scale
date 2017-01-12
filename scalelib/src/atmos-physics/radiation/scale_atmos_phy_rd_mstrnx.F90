@@ -1940,14 +1940,9 @@ contains
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
 !OCL NORECURRENCE(Tdir0,R0,T0,Em_LW,Ep_LW,Em_SW,Ep_SW)
-       !do j = JS, JE
-       !do i = IS, IE
-       !do k = 1, rd_kmax
-       !$acc loop independent gang vector(128)
-       do kij = 1, rd_kmax*IMAX*JMAX
-          k = 1  + mod(kij-1, rd_kmax)
-          i = IS + mod((kij-1)/rd_kmax, IMAX)
-          j = JS + (kij-1)/(rd_kmax*IMAX)
+       do j = JS, JE
+       do i = IS, IE
+       do k = 1, rd_kmax
 
           !---< two-stream truncation >---
           tau_new = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) ) * tau(k,i,j,icloud)
@@ -2037,10 +2032,9 @@ contains
                               + ( 1.0_RP-sw ) * Wmns_irgn * Spls * tau_new * sqrt( Tdir0(k,i,j,icloud) )
 
        enddo
+       enddo
+       enddo
        !$acc end kernels
-       !enddo
-       !enddo
-       !enddo
     enddo ! cloud loop
 
     !---< consider partial cloud layer: semi-random over-wrapping >---
