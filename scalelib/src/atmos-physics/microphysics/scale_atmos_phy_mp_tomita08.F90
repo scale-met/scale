@@ -1210,8 +1210,8 @@ contains
 
        zerosw      = 0.5_RP - sign(0.5_RP, q(I_QC) - 1.E-12_RP )
        Praut_kk    = 1350.0_RP                                                     &
-                   * exp( log( dens*q(I_QC)+zerosw )*2.47_RP ) * ( 1.0_RP-zerosw ) &
-                   * exp( log( dens*Nc(k,i,j)      )*(-1.79_RP) )
+                   * exp( log( q(I_QC)+zerosw )*2.47_RP ) * ( 1.0_RP-zerosw ) &
+                   * exp( log( Nc(k,i,j)      )*(-1.79_RP) )
 
        ! switch berry / k-k scheme
        w(I_Praut) = ( 1.0_RP - sw_KK2000 ) * Praut_berry &
