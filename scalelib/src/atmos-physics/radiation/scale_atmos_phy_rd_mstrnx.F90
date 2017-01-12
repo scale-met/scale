@@ -570,7 +570,9 @@ contains
     enddo
 
 !OCL XFILL
+!OCL SERIAL
     do v = 1,  MSTRN_ngas
+!OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KMAX
@@ -591,7 +593,9 @@ contains
     enddo
 
 !OCL XFILL
+!OCL SERIAL
     do v = 1,  MSTRN_ncfc
+!OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KMAX
@@ -616,7 +620,9 @@ contains
     enddo
 
 !OCL XFILL
+!OCL SERIAL
     do v = 1,  RD_naero
+!OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
     do RD_k = 1, RD_KADD
@@ -627,7 +633,9 @@ contains
     enddo
     enddo
 
+!OCL SERIAL
     do ihydro = 1, N_HYD
+!OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
     do RD_k = RD_KADD+1, RD_KMAX
@@ -641,6 +649,7 @@ contains
     enddo
     enddo
 
+!OCL SERIAL
     do iaero = 1, N_AE
 
 !!$       do j = JS, JE
@@ -655,6 +664,7 @@ contains
 !!$       enddo
 !!$       enddo
 
+!OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
        do RD_k = RD_KADD+1, RD_KMAX
@@ -701,7 +711,9 @@ contains
     call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
 
     ! return to grid coordinate of model domain
+!OCL SERIAL
     do ic = 1, 2
+!OCL PARALLEL
     do j  = JS, JE
     do i  = IS, IE
     do RD_k = RD_KADD+1, RD_KMAX+1
@@ -717,7 +729,9 @@ contains
     enddo
 
 !OCL XFILL
+!OCL SERIAL
     do ic = 1, 2
+!OCL PARALLEL
     do j  = JS, JE
     do i  = IS, IE
        flux_rad_top(i,j,I_LW,I_up,ic) = flux_rad_merge(1,i,j,I_LW,I_up,ic)
@@ -883,8 +897,9 @@ contains
     allocate( sfc     (MSTRN_nsfc,   MSTRN_nband) )
     allocate( rayleigh(              MSTRN_nband) )
 
-    allocate( qmol    (                             MSTRN_nmoment,MSTRN_nband) )
-    allocate( q       (MSTRN_nradius+1,MSTRN_nptype,MSTRN_nmoment,MSTRN_nband) )
+    allocate( qmol    (                                MSTRN_nmoment,MSTRN_nband) )
+    allocate( q       (-1:MSTRN_nradius+1,MSTRN_nptype,MSTRN_nmoment,MSTRN_nband) )
+    q(-1:0           ,:,:,:) = 0.D0 ! dummy for NaN
     q(MSTRN_nradius+1,:,:,:) = 0.D0 ! dummy for extrapolation
 
     open( fid,                                     &
@@ -1231,11 +1246,13 @@ contains
     !$acc end kernels
 
     !---< interpolation of mode radius & hygroscopic parameter (R-fitting) >---
+!OCL SERIAL
     do iaero = 1, naero
        iptype = aero2ptype(iaero)
 
        !$acc kernels pcopy(indexR, factR) pcopyin(aero2ptype, aerosol_radi, radmode)
        !$acc loop gang
+!OCL PARALLEL
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -1270,10 +1287,12 @@ contains
                    exit
                 endif
              enddo
-             if ( indexR(k,i,j,iaero) == -1 ) then
-                write(*,*) 'xxx invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
-                call PRC_MPIstop
-             end if
+             ! indexR == -1 if some variables have NaN value.
+!             write operation prevents optimization (auto parallelization)
+!             if ( indexR(k,i,j,iaero) == -1 ) then
+!                write(*,*) 'xxx invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
+!                call PRC_MPIstop
+!             end if
           endif
        enddo
        enddo
@@ -1295,9 +1314,11 @@ contains
 
        !---< interpolation of gas parameters (P-T fitting) >---
 !OCL XFILL
+!OCL SERIAL
        do ich = 1, chmax
           !$acc kernels pcopy(tauGAS) async(0)
           !$acc loop gang
+!OCL PARALLEL
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1311,12 +1332,14 @@ contains
        enddo
 
        !--- Gas line absorption
+!OCL SERIAL
        do igas = 1, ngasabs(iw)
           gasno = igasabs(igas,iw)
 
           !$acc kernels pcopy(tauGAS) &
           !$acc& pcopyin(indexP, AKD, factP, factT32, factT21, gas, dz_std, ngasabs, igasabs) async(0)
           !$acc loop gang
+!OCL PARALLEL
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1488,9 +1511,11 @@ contains
           !$acc end kernels
        enddo
 
+!OCL SERIAL
        do icloud = 1, MSTRN_ncloud
           !$acc kernels pcopy(tauPR, omgPR, g) pcopyin(optparam) async(0)
           !$acc loop gang
+!OCL PARALLEL
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1517,9 +1542,11 @@ contains
        ! [NOTE] mstrn has look-up table for albedo.
        !        Original scheme calculates albedo by using land-use index (and surface wetness).
        !        In the atmospheric model, albedo is calculated by surface model.
+!OCL SERIAL
        do icloud = 1, MSTRN_ncloud
 !           !$acc kernels pcopy(tau_column) pcopyin(tauPR) async(0)
 !           !$acc loop gang
+!!OCL PARALLEL
 !           do j = JS, JE
 !           !$acc loop gang private(valsum)
 !           do i = IS, IE
@@ -1540,6 +1567,7 @@ contains
 !          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
           !$acc kernels pcopy(albedo_sfc) pcopyin(albedo_land) async(0)
           !$acc loop gang vector(4)
+!OCL PARALLEL
           do j = JS, JE
           !$acc loop gang vector(32)
           do i = IS, IE
@@ -1556,9 +1584,11 @@ contains
        do ich = 1, chmax
 
           !--- total tau & omega
+!OCL SERIAL
           do icloud = 1, 2
              !$acc kernels pcopy(tau, omg) pcopyin(tauGAS, tauPR, omgPR) async(0)
              !$acc loop gang
+!OCL PARALLEL
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1583,9 +1613,11 @@ contains
           if ( irgn == I_SW ) then ! solar
 
 !OCL XFILL
+!OCL SERIAL
              do icloud = 1, 2
                 !$acc kernels pcopy(b) async(0)
                 !$acc loop gang
+!OCL PARALLEL
                 do j = JS, JE
                 !$acc loop gang vector(8)
                 do i = IS, IE
@@ -1655,9 +1687,11 @@ contains
              enddo
              !$acc end kernels
 
+!OCL SERIAL
              do icloud = 1, 2
                 !$acc kernels pcopy(b) pcopyin(tau, bbarh, bbar) async(0)
                 !$acc loop gang
+!OCL PARALLEL
                 do j = JS, JE
                 !$acc loop gang vector(8)
                 do i = IS, IE
@@ -1737,9 +1771,11 @@ contains
                                     flux_direct(:,:,:,:)    ) ! [OUT]
           call PROF_rapend  ('RD_MSTRN_twst', 3)
 
+!OCL SERIAL
           do icloud = 1, 2
              !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
              !$acc loop gang
+!OCL PARALLEL
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
