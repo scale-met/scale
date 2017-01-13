@@ -20,6 +20,7 @@ module scale_atmos_phy_cp
   use scale_prof
   use scale_grid_index
   use scale_tracer
+  use scale_atmos_phy_mp
   private
 
   abstract interface
@@ -49,6 +50,7 @@ module scale_atmos_phy_cp
        use scale_prof
        use scale_grid_index
        use scale_tracer
+       use scale_atmos_phy_mp
        real(RP), intent(in)    :: DENS(KA,IA,JA)
        real(RP), intent(in)    :: MOMX(KA,IA,JA)
        real(RP), intent(in)    :: MOMY(KA,IA,JA)
@@ -60,7 +62,7 @@ module scale_atmos_phy_cp
        real(RP), intent(inout) :: MOMX_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: MOMY_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: RHOT_t_CP(KA,IA,JA)
-       real(RP), intent(inout) :: RHOQ_t_CP(KA,IA,JA,QA)
+       real(RP), intent(inout) :: RHOQ_t_CP(KA,IA,JA,QA_MP)
        real(RP), intent(inout) :: MFLX_cloudbase(IA,JA)
        real(RP), intent(inout) :: SFLX_convrain(IA,JA)
        real(RP), intent(inout) :: cloudtop(IA,JA)

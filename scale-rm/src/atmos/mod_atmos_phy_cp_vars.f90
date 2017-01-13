@@ -119,7 +119,7 @@ module mod_atmos_phy_cp_vars
                   'm/s'      /
 
   ! tendency names
-  integer,                private              :: VMAX_t       !< number of the tendency variables dens+rhot+QA
+  integer,                private              :: VMAX_t       !< number of the tendency variables dens+rhot+QA_MP
   integer,                private              :: I_cp_dens_t = 1
   integer,                private              :: I_cp_rhot_t = 2
 
@@ -159,12 +159,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS PHY_CP] / Origin[SCALE-RM]'
 
-    allocate( ATMOS_PHY_CP_DENS_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_CP_MOMZ_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_CP_MOMX_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_CP_MOMY_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_CP_RHOT_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QA) )
+    allocate( ATMOS_PHY_CP_DENS_t(KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_MOMZ_t(KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_MOMX_t(KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_MOMY_t(KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_RHOT_t(KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QA_MP) )
     ATMOS_PHY_CP_DENS_t(:,:,:)   = 0.0_RP
     ATMOS_PHY_CP_MOMZ_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_MOMX_t(:,:,:)   = UNDEF
@@ -260,6 +260,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     integer :: i, j
@@ -278,7 +280,7 @@ contains
        ATMOS_PHY_CP_DENS_t    (KE+1:KA  ,i,j) = ATMOS_PHY_CP_DENS_t    (KE,i,j)
        ATMOS_PHY_CP_RHOT_t    (   1:KS-1,i,j) = ATMOS_PHY_CP_RHOT_t    (KS,i,j)
        ATMOS_PHY_CP_RHOT_t    (KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOT_t    (KE,i,j)
-       do iq = 1, QA
+       do iq = 1, QA_MP
           ATMOS_PHY_CP_RHOQ_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOQ_t(KS,i,j,iq)
           ATMOS_PHY_CP_RHOQ_t(KE+1:KA  ,i,j,iq) = ATMOS_PHY_CP_RHOQ_t(KE,i,j,iq)
        end do
@@ -298,7 +300,7 @@ contains
     call COMM_vars8( ATMOS_PHY_CP_DENS_t(:,:,:), VMAX+1 )
     call COMM_vars8( ATMOS_PHY_CP_RHOT_t(:,:,:), VMAX+2 )
 
-    do iq = 1, QA
+    do iq = 1, QA_MP
        call COMM_vars8( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VMAX+2+iq )
     enddo
 
@@ -314,7 +316,7 @@ contains
     call COMM_wait ( ATMOS_PHY_CP_DENS_t(:,:,:), VMAX+1 )
     call COMM_wait ( ATMOS_PHY_CP_RHOT_t(:,:,:), VMAX+2 )
 
-    do iq = 1, QA
+    do iq = 1, QA_MP
        call COMM_wait ( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VMAX+2+iq )
     enddo
 
@@ -367,6 +369,8 @@ contains
        FILEIO_flush
     use scale_rm_statistics, only: &
        STAT_total
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     real(RP) :: total
@@ -396,7 +400,7 @@ contains
                          restart_fid, VAR_t_NAME(1), 'ZXY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_CP_RHOT_t(:,:,:),                                    & ! [OUT]
                          restart_fid, VAR_t_NAME(2), 'ZXY', step=1 ) ! [IN]
-       do iq = 1, QA
+       do iq = 1, QA_MP
           call FILEIO_read( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq),                                    & ! [OUT]
                             restart_fid, VAR_t_NAME(2+iq), 'ZXY', step=1 ) ! [IN]
        enddo
@@ -419,7 +423,7 @@ contains
        ! tendency
        call STAT_total( total, ATMOS_PHY_CP_DENS_t        (:,:,:), VAR_t_NAME(1) )
        call STAT_total( total, ATMOS_PHY_CP_RHOT_t        (:,:,:), VAR_t_NAME(2) )
-       do iq = 1, QA
+       do iq = 1, QA_MP
           call STAT_total( total, ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VAR_t_NAME(2+iq) )
        enddo
 
@@ -499,6 +503,8 @@ contains
   subroutine ATMOS_PHY_CP_vars_restart_def_var
     use scale_fileio, only: &
        FILEIO_def_var
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     integer :: iq
@@ -528,7 +534,7 @@ contains
        call FILEIO_def_var( restart_fid, VAR_t_ID(2), VAR_t_NAME(2), VAR_t_DESC(2), &
                             VAR_t_UNIT(2), 'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE   ) ! [IN]
 
-       do iq = 1, QA
+       do iq = 1, QA_MP
           call FILEIO_def_var( restart_fid, VAR_t_ID(2+iq), VAR_t_NAME(2+iq), VAR_t_DESC(2+iq), &
                                VAR_t_UNIT(2+iq), 'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE         ) ! [IN]
        enddo
@@ -543,6 +549,8 @@ contains
   subroutine ATMOS_PHY_CP_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write => FILEIO_write_var
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     integer :: iq
@@ -572,7 +580,7 @@ contains
                           VAR_t_NAME(1), 'ZXY' ) ! [IN]
        call FILEIO_write( restart_fid, VAR_t_ID(2), ATMOS_PHY_CP_RHOT_t(:,:,:), & ! [IN]
                           VAR_t_NAME(2), 'ZXY' ) ! [IN]
-       do iq = 1, QA
+       do iq = 1, QA_MP
           call FILEIO_write( restart_fid, VAR_t_ID(2+iq), ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), & ! [IN]
                              VAR_t_NAME(2+iq), 'ZXY' ) ! [IN]
        enddo
