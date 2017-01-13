@@ -27,7 +27,7 @@ static void cstr2fstr( char   *fstr, // (out)
 
   if ( fstr != cstr )
     for ( i=0; i<len; i++ )
-      cstr[i] = fstr[i];
+      fstr[i] = cstr[i];
 
   for ( i=0; i<len; i++ )
     if ( cstr[i] == '\0' ) break;
