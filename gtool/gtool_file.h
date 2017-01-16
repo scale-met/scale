@@ -9,9 +9,9 @@
 #include <mpi.h>
 
 /* character length */
-#define File_HSHORT  16
-#define File_HMID    64
-#define File_HLONG  256
+#define File_HSHORT   32
+#define File_HMID    128
+#define File_HLONG  1024
 
 /* data type */
 #define File_REAL4     0
