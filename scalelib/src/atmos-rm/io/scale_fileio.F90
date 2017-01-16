@@ -2868,6 +2868,8 @@ contains
        name              )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
     real(RP),         intent(in) :: expected(:)
@@ -2887,10 +2889,10 @@ contains
     end if
 
     do n=1, nmax
-       if ( abs(expected(n)) > 0.0_RP ) then
-          check = abs(buffer(n)-expected(n)) / abs(expected(n))
+       if ( abs(expected(n)) > EPS ) then
+          check = abs(buffer(n)-expected(n)) / abs(buffer(n)+expected(n)) * 2.0_RP
        else
-          check = abs(buffer(n))
+          check = abs(buffer(n)-expected(n))
        end if
 
        if ( check > FILEIO_datacheck_criteria ) then
@@ -2909,6 +2911,8 @@ contains
        name              )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
     real(RP),         intent(in) :: expected(:,:)
@@ -2935,10 +2939,10 @@ contains
 
     do j=1, jmax
     do i=1, imax
-       if ( abs(expected(i,j)) > 0.0_RP ) then
-          check = abs(buffer(i,j)-expected(i,j)) / abs(expected(i,j))
+       if ( abs(expected(i,j)) > EPS ) then
+          check = abs(buffer(i,j)-expected(i,j)) / abs(buffer(i,j)+expected(i,j)) * 2.0_RP
        else
-          check = abs(buffer(i,j))
+          check = abs(buffer(i,j)-expected(i,j))
        end if
 
        if ( check > FILEIO_datacheck_criteria ) then
@@ -2958,6 +2962,8 @@ contains
        name              )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
     real(RP),         intent(in) :: expected(:,:,:)
@@ -2990,10 +2996,10 @@ contains
     do j=1, jmax
     do i=1, imax
     do k=1, kmax
-       if ( abs(expected(k,i,j)) > 0.0_RP ) then
-          check = abs(buffer(k,i,j)-expected(k,i,j)) / abs(expected(k,i,j))
+       if ( abs(expected(k,i,j)) > EPS ) then
+          check = abs(buffer(k,i,j)-expected(k,i,j)) / abs(buffer(k,i,j)+expected(k,i,j)) * 2.0_RP
        else
-          check = abs(buffer(k,i,j))
+          check = abs(buffer(k,i,j)-expected(k,i,j))
        end if
 
        if ( check > FILEIO_datacheck_criteria ) then
