@@ -80,7 +80,7 @@ contains
 
     integer,               intent(out) :: dims(6)
     integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
     integer :: dims_ncm(4)
@@ -129,7 +129,7 @@ contains
     real(RP), intent(out) :: lon_org(:,:)
     real(RP), intent(out) :: lat_org(:,:)
     real(RP), intent(out) :: cz_org(:,:,:)
-    character(len=H_LONG), intent(in) :: basename_num
+    character(len=*), intent(in)  :: basename_num
     integer,  intent(in)  :: dims(6)
 
     character(len=H_LONG) :: basename
@@ -345,7 +345,7 @@ contains
     implicit none
 
     integer,               intent(out) :: ldims(3)
-    character(len=H_LONG), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
     integer :: dims_ncm(4)
@@ -504,7 +504,7 @@ contains
 
     integer,               intent(out) :: odims(2)
     integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
     integer :: dims_ncm(4)
@@ -547,7 +547,7 @@ contains
     real(RP), intent(out) :: olon_org(:,:)
     real(RP), intent(out) :: olat_org(:,:)
     real(RP), intent(out) :: omask_org(:,:)
-    character(len=H_LONG), intent(in) :: basename_num
+    character(len=*), intent(in)  :: basename_num
     integer,  intent(in)  :: odims(2)
 
     character(len=H_LONG) :: basename

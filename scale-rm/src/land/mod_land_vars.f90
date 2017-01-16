@@ -56,7 +56,7 @@ module mod_land_vars
   character(len=H_LONG), public :: LAND_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
   logical,               public :: LAND_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
   character(len=H_MID),  public :: LAND_RESTART_OUT_TITLE             = 'LAND restart' !< Title    of the output file
-  character(len=H_MID),  public :: LAND_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
+  character(len=H_SHORT), public :: LAND_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
   real(RP), public, allocatable :: LAND_TEMP      (:,:,:) !< temperature of each soil layer [K]
@@ -381,7 +381,7 @@ contains
        LAND_sw
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
@@ -761,7 +761,7 @@ contains
        LAND_sw
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 

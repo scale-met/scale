@@ -60,7 +60,7 @@ module scale_landuse
   logical,               private :: LANDUSE_IN_CHECK_COORDINATES = .true.      !< switch for check of coordinates
   character(len=H_LONG), private :: LANDUSE_OUT_BASENAME = ''                  !< basename of the output file
   character(len=H_MID),  private :: LANDUSE_OUT_TITLE    = 'SCALE-RM LANDUSE'  !< title    of the output file
-  character(len=H_MID),  private :: LANDUSE_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
+  character(len=H_SHORT), private :: LANDUSE_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
   logical,               private :: LANDUSE_AllOcean     = .false.
   logical,               private :: LANDUSE_AllLand      = .false.
   logical,               private :: LANDUSE_AllUrban     = .false.

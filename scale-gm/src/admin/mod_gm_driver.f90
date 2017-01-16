@@ -191,7 +191,7 @@ contains
     integer,               intent(in) :: comm_world
     integer,               intent(in) :: intercomm_parent
     integer,               intent(in) :: intercomm_child
-    character(len=H_LONG), intent(in) :: cnf_fname
+    character(len=*), intent(in) :: cnf_fname
 
     integer :: myrank
     logical :: ismaster

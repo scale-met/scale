@@ -1372,7 +1372,7 @@ contains
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
-    character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    character(len=H_SHORT) :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     real(RP), allocatable :: buffer(:,:,:,:)
     integer :: nowdate(6)
 
@@ -2254,7 +2254,7 @@ contains
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
-    character(len=H_MID)  :: ocean_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    character(len=H_SHORT) :: ocean_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     integer :: nowdate(6)
     integer :: fid, vid(5)
     integer :: ts, te

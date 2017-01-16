@@ -93,9 +93,9 @@ contains
        IO_LOG_NML_SUPPRESS, &
        IO_AGGREGATE
 
-    character(len=H_MID),  intent(in) :: MODELNAME !< name of the model
+    character(len=*), intent(in) :: MODELNAME !< name of the model
     logical,               intent(in) :: call_from_launcher  !< flag to get command argument
-    character(len=H_LONG), intent(in), optional :: fname_in !< name of config file for each process
+    character(len=*), intent(in), optional :: fname_in !< name of config file for each process
 
     character(len=H_LONG) :: fname
     integer :: ierr
@@ -274,7 +274,7 @@ contains
        isrgn   )
     implicit none
 
-    character(len=*), intent(out) :: outstr !< generated string
+    character(len=H_LONG), intent(out) :: outstr !< generated string
     character(len=*), intent(in)  :: instr  !< strings
     character(len=*), intent(in)  :: ext    !< extention
     integer,          intent(in)  :: rank   !< number

@@ -338,11 +338,10 @@ contains
     integer, intent(in)  :: ORG_COMM
     integer, intent(in)  :: NUM_DOMAIN
     integer, intent(in)  :: PRC_DOMAINS(:)
-    character(len=H_LONG), intent(in) :: CONF_FILES(:)
+    character(len=*),      intent(in)  :: CONF_FILES(:)
     logical, intent(in)  :: LOG_SPLIT
     logical, intent(in)  :: bulk_split
     logical, intent(in)  :: color_reorder
-
     integer, intent(out) :: intra_comm
     integer, intent(out) :: inter_parent
     integer, intent(out) :: inter_child
@@ -531,7 +530,7 @@ contains
     integer, intent(in)  :: ORG_COMM
     integer, intent(in)  :: NUM_DOMAIN
     integer, intent(in)  :: PRC_DOMAINS(:)
-    character(len=H_LONG), intent(in) :: CONF_FILES(:)
+    character(len=*),      intent(in)  :: CONF_FILES(:)
     logical, intent(in)  :: color_reorder
     logical, intent(in)  :: LOG_SPLIT
     integer, intent(out) :: COLOR_LIST(:)             ! member list in each color

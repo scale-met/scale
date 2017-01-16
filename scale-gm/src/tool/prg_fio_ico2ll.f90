@@ -1244,7 +1244,7 @@ contains
       devide_template )
     implicit none
 
-    character(len=H_LONG), intent(in) :: outfile_dir
+    character(len=*),  intent(in) :: outfile_dir
     character(len=16),  intent(in) :: outfile_prefix
     character(len=16),  intent(in) :: varname
     integer,            intent(in) :: imax

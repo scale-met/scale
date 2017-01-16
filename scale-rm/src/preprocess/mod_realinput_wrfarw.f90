@@ -96,7 +96,7 @@ contains
 
     integer,               intent(out) :: dims(6)
     integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in) :: basename_org
+    character(len=*), intent(in)  :: basename_org
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
@@ -447,7 +447,7 @@ contains
     implicit none
 
     integer,               intent(out) :: ldims(3)
-    character(len=H_LONG), intent(in) :: basename_land
+    character(len=*), intent(in)  :: basename_land
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
@@ -652,7 +652,7 @@ contains
 
     integer,               intent(out) :: odims(2)
     integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in) :: basename_org
+    character(len=*), intent(in)  :: basename_org
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 

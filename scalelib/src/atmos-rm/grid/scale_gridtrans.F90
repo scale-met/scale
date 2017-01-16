@@ -79,9 +79,9 @@ module scale_gridtrans
   !
   character(len=H_LONG), private :: GTRANS_OUT_BASENAME  = ''                     !< basename of the output file
   character(len=H_MID),  private :: GTRANS_OUT_TITLE     = 'SCALE-RM GEOMETRICS'  !< title    of the output file
-  character(len=H_MID),  private :: GTRANS_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_SHORT), private :: GTRANS_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
 
-  character(len=H_MID),  private :: GTRANS_TOPO_TYPE     = 'TERRAINFOLLOWING'     !< topographical shceme
+  character(len=H_SHORT), private :: GTRANS_TOPO_TYPE     = 'TERRAINFOLLOWING'     !< topographical shceme
   integer,               private :: GTRANS_ThinWall_XDIV = 50                     !< number dividing quarter-cell (x)
   integer,               private :: GTRANS_ThinWall_YDIV = 50                     !< number dividing quarter-cell (y)
   logical,               private :: debug                = .false.
