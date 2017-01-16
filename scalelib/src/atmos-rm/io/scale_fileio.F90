@@ -95,6 +95,8 @@ module scale_fileio
   !
   !++ Private parameters & variables
   !
+  real(RP), private              :: FILEIO_datacheck_criteria
+
   real(RP), private, allocatable :: AXIS_LON  (:,:)   ! [deg]
   real(RP), private, allocatable :: AXIS_LONX (:,:)   ! [deg]
   real(RP), private, allocatable :: AXIS_LONY (:,:)   ! [deg]
@@ -138,16 +140,41 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine FILEIO_setup
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
+
+    NAMELIST / PARAM_FILEIO / &
+       FILEIO_datacheck_criteria
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FIELIO] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+
+    FILEIO_datacheck_criteria = EPS * 10.0_RP
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_FILEIO,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_FILEIO. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_FILEIO)
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** NetCDF header information ***'
     if( IO_L ) write(IO_FID_LOG,*) '*** Data source : ', trim(H_SOURCE)
     if( IO_L ) write(IO_FID_LOG,*) '*** Institute   : ', trim(H_INSTITUTE)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Data consistency criteria : ', &
+                                   '(file-internal)/internal = ', FILEIO_datacheck_criteria
 
     allocate( AXIS_LON  (IMAXB,JMAXB) )
     allocate( AXIS_LONX (IMAXB,JMAXB) )
@@ -2841,13 +2868,16 @@ contains
        name              )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
     real(RP),         intent(in) :: expected(:)
     real(RP),         intent(in) :: buffer(:)
     character(len=*), intent(in) :: name
 
-    integer :: nmax, n
+    real(RP) :: check
+    integer  :: nmax, n
 
     intrinsic :: size
     !---------------------------------------------------------------------------
@@ -2859,9 +2889,15 @@ contains
     end if
 
     do n=1, nmax
-       if ( expected(n) /= buffer(n) ) then
+       if ( abs(expected(n)) > EPS ) then
+          check = abs(buffer(n)-expected(n)) / abs(buffer(n)+expected(n)) * 2.0_RP
+       else
+          check = abs(buffer(n)-expected(n))
+       end if
+
+       if ( check > FILEIO_datacheck_criteria ) then
           write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', n, ' is different:', &
-                     expected(n), buffer(n)
+                     expected(n), buffer(n), check
           call PRC_MPIstop
        end if
     end do
@@ -2875,14 +2911,17 @@ contains
        name              )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
     real(RP),         intent(in) :: expected(:,:)
     real(RP),         intent(in) :: buffer(:,:)
     character(len=*), intent(in) :: name
 
-    integer :: imax, jmax
-    integer :: i, j
+    real(RP) :: check
+    integer  :: imax, jmax
+    integer  :: i, j
 
     intrinsic :: size
     !---------------------------------------------------------------------------
@@ -2900,9 +2939,15 @@ contains
 
     do j=1, jmax
     do i=1, imax
-       if ( expected(i,j) /= buffer(i,j) ) then
+       if ( abs(expected(i,j)) > EPS ) then
+          check = abs(buffer(i,j)-expected(i,j)) / abs(buffer(i,j)+expected(i,j)) * 2.0_RP
+       else
+          check = abs(buffer(i,j)-expected(i,j))
+       end if
+
+       if ( check > FILEIO_datacheck_criteria ) then
           write(*,*) 'xxx value of coordinate ('//trim(name)//') at (', i, ',', j, ') is different:', &
-                     expected(i,j), buffer(i,j)
+                     expected(i,j), buffer(i,j), check
           call PRC_MPIstop
        end if
     end do
@@ -2917,14 +2962,17 @@ contains
        name              )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
     real(RP),         intent(in) :: expected(:,:,:)
     real(RP),         intent(in) :: buffer(:,:,:)
     character(len=*), intent(in) :: name
 
-    integer :: imax, jmax, kmax
-    integer :: i, j, k
+    real(RP) :: check
+    integer  :: imax, jmax, kmax
+    integer  :: i, j, k
 
     intrinsic :: size
     !---------------------------------------------------------------------------
@@ -2941,16 +2989,22 @@ contains
        call PRC_MPIstop
     end if
     if ( size(buffer,3) /= jmax ) then
-       write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,3)
+       write(*,*) 'xxx the third size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,3)
        call PRC_MPIstop
     end if
 
     do j=1, jmax
     do i=1, imax
     do k=1, kmax
-       if ( expected(k,i,j) /= buffer(k,i,j) ) then
+       if ( abs(expected(k,i,j)) > EPS ) then
+          check = abs(buffer(k,i,j)-expected(k,i,j)) / abs(buffer(k,i,j)+expected(k,i,j)) * 2.0_RP
+       else
+          check = abs(buffer(k,i,j)-expected(k,i,j))
+       end if
+
+       if ( check > FILEIO_datacheck_criteria ) then
           write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
-                     expected(k,i,j), buffer(k,i,j)
+                     expected(k,i,j), buffer(k,i,j), check
           call PRC_MPIstop
        end if
     end do
