@@ -329,6 +329,8 @@ contains
     use scale_grid_index
     use scale_history, only: &
        HIST_in
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     real(RP), intent(in)    :: DENS          (KA,IA,JA)
@@ -342,7 +344,7 @@ contains
     real(RP), intent(inout) :: MOMX_t_CP     (KA,IA,JA)    ! not used
     real(RP), intent(inout) :: MOMY_t_CP     (KA,IA,JA)    ! not used
     real(RP), intent(inout) :: RHOT_t_CP     (KA,IA,JA)
-    real(RP), intent(inout) :: RHOQ_t_CP     (KA,IA,JA,QA)
+    real(RP), intent(inout) :: RHOQ_t_CP     (KA,IA,JA,QA_MP)
     real(RP), intent(inout) :: MFLX_cloudbase(IA,JA)       ! not used
     real(RP), intent(inout) :: SFLX_convrain (IA,JA)       ! convective rain rate [kg/m2/s]
     real(RP), intent(inout) :: cloudtop      (IA,JA)       ! cloud top height  [m]
@@ -567,17 +569,17 @@ contains
     real(RP),intent(in) :: QTRC(KA,IA,JA,QA)       ! raito of water elements
     real(RP),intent(in) :: w0avg(KA,IA,JA)         ! running mean vertical wind velocity [m/s]
     ! [INOUT]
-    real(RP),intent(inout) :: nca(IA,JA)           ! num of step convection active [step]
-    real(RP),intent(inout) :: DENS_t_CP(KA,IA,JA)  ! dens/dt
-    real(RP),intent(inout) :: DT_RHOT(KA,IA,JA)    ! dens*PT/dt
-    real(RP),intent(inout) :: DT_RHOQ(KA,IA,JA,QA) ! dens*q/dt
-    real(RP),intent(inout) :: rainrate_cp(IA,JA)   ! rain  PPTFLX(prcp_flux)/deltax**2*dt ! convective rain
-    real(RP),intent(inout) :: cldfrac_sh(KA,IA,JA) ! cloud fraction
-    real(RP),intent(inout) :: cldfrac_dp(KA,IA,JA) ! cloud fraction
-    real(RP),intent(inout) :: timecp(IA,JA)        ! timescale of cumulus parameterization
-    real(RP),intent(inout) :: cloudtop(IA,JA)      ! cloud top height
-    real(RP),intent(inout) :: zlcl(IA,JA)          ! hight of lcl cloud bottom height[m]
-    integer, intent(inout) :: I_convflag(IA,JA)    ! convection type
+    real(RP),intent(inout) :: nca(IA,JA)              ! num of step convection active [step]
+    real(RP),intent(inout) :: DENS_t_CP(KA,IA,JA)     ! dens/dt
+    real(RP),intent(inout) :: DT_RHOT(KA,IA,JA)       ! dens*PT/dt
+    real(RP),intent(inout) :: DT_RHOQ(KA,IA,JA,QA_MP) ! dens*q/dt
+    real(RP),intent(inout) :: rainrate_cp(IA,JA)      ! rain  PPTFLX(prcp_flux)/deltax**2*dt ! convective rain
+    real(RP),intent(inout) :: cldfrac_sh(KA,IA,JA)    ! cloud fraction
+    real(RP),intent(inout) :: cldfrac_dp(KA,IA,JA)    ! cloud fraction
+    real(RP),intent(inout) :: timecp(IA,JA)           ! timescale of cumulus parameterization
+    real(RP),intent(inout) :: cloudtop(IA,JA)         ! cloud top height
+    real(RP),intent(inout) :: zlcl(IA,JA)             ! hight of lcl cloud bottom height[m]
+    integer, intent(inout) :: I_convflag(IA,JA)       ! convection type
     !> I_convflag = 0  ==> deep convection
     !>            = 1  ==> shallow convection
     !>            = 2  ==> NONE !!
@@ -653,7 +655,7 @@ contains
     real(RP) :: qs_nw(KA)        ! new snow water mixing ratio  [kg/kg]
     ! new variable
     real(RP) :: rhot_nw(KA)      ! rho*PT
-    real(RP) :: qtrc_nw(KA,QA)   ! qv,qc,qr,qi,qs (qg not change)
+    real(RP) :: qtrc_nw(KA,QA_MP)   ! qv,qc,qr,qi,qs (qg not change)
     real(RP) :: pott_nw(KA)      ! new PT
     !
     real(RP) :: cldfrac_KF(KA,2) ! cloud fraction
@@ -771,7 +773,7 @@ contains
 
        DENS_t_CP(KS:KE,i,j) = 0.0_RP
        DT_RHOT  (KS:KE,i,j) = 0.0_RP
-       do iq = 1, QA
+       do iq = 1, QA_MP
           DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
        end do
        cldfrac_KF (KS:KE,:) = 0.0_RP
