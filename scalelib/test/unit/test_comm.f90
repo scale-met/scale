@@ -140,7 +140,7 @@ contains
 
     ! MPI PC
     data(:,:,:) = data_P
-    call COMM_vars_init( data, vid )
+    call COMM_vars_init( 'testdata', data, vid )
     call COMM_vars( data, vid )
     call COMM_wait( data, vid, .false. )
     call check_vars( data )
