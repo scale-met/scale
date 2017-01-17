@@ -232,15 +232,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_DYN_vars_restart_read
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
     real(RP) :: total
-    integer :: iv, i, j
+    integer  :: i, j, iv
     !---------------------------------------------------------------------------
 
     if ( restart_fid .NE. -1 ) then
@@ -269,9 +270,11 @@ contains
           call ATMOS_DYN_vars_fillhalo
        end if
 
-       do iv = 1, VA
-          call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
-       enddo
+       if ( STATISTICS_checktotal ) then
+          do iv = 1, VA
+             call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
+          enddo
+       endif
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_DYN.'
     endif
@@ -373,14 +376,26 @@ contains
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
   subroutine ATMOS_DYN_vars_restart_write
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
 
-    integer iv
+    real(RP) :: total
+    integer  :: iv
     !---------------------------------------------------------------------------
 
     if ( restart_fid .NE. -1 ) then
+
+       call ATMOS_DYN_vars_fillhalo
+
+       if ( STATISTICS_checktotal ) then
+          do iv = 1, VA
+             call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
+          enddo
+       endif
 
        do iv = 1, VA
           call FILEIO_write_var( restart_fid, VAR_ID(iv), PROG(:,:,:,iv), VAR_NAME(iv), 'ZXY' ) ! [IN]

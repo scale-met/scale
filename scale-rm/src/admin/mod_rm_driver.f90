@@ -185,9 +185,9 @@ contains
        USER_step
     implicit none
 
-    integer,               intent(in) :: comm_world
-    integer,               intent(in) :: intercomm_parent
-    integer,               intent(in) :: intercomm_child
+    integer,          intent(in) :: comm_world
+    integer,          intent(in) :: intercomm_parent
+    integer,          intent(in) :: intercomm_child
     character(len=*), intent(in) :: cnf_fname
 
     integer :: myrank
@@ -393,12 +393,12 @@ contains
     call MONIT_finalize
     call PROF_rapend  ('Monit', 2)
 
+    call PROF_rapstart('File', 2)
     ! clean up resource allocated for I/O
     call FILEIO_cleanup
 
     call COMM_cleanup
 
-    call PROF_rapstart('File', 2)
     call FileCloseAll
     call PROF_rapend  ('File', 2)
 

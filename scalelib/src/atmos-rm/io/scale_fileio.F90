@@ -279,14 +279,26 @@ contains
     logical,          intent(in), optional :: land  !< check land coordinates
     logical,          intent(in), optional :: urban !< check urban coordinates
 
+    logical  :: atmos_
+    logical  :: land_
+    logical  :: urban_
+
     integer :: fid
     !---------------------------------------------------------------------------
+
+    atmos_ = .false.
+    land_  = .false.
+    urban_ = .false.
+
+    if( present(atmos) ) atmos_ = atmos
+    if( present(land ) ) land_  = land
+    if( present(urban) ) urban_ = urban
 
     call FILEIO_open( fid,     & ! [OUT]
                       basename ) ! [IN]
 
     call FILEIO_check_coordinates_id( fid,               & ! [IN]
-                                      atmos, land, urban ) ! [IN]
+                                      atmos_, land_, urban_ ) ! [IN]
 
     return
   end subroutine FILEIO_check_coordinates_name
@@ -313,9 +325,9 @@ contains
     logical, intent(in), optional :: land  !< check land coordinates
     logical, intent(in), optional :: urban !< check urban coordinates
 
-    logical  :: atmos_ = .false.
-    logical  :: land_  = .false.
-    logical  :: urban_ = .false.
+    logical  :: atmos_
+    logical  :: land_
+    logical  :: urban_
 
     real(RP) :: buffer_z  (KA)
     real(RP) :: buffer_x  (IA)
@@ -328,6 +340,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Check consistency of axis ***'
+
+    atmos_ = .false.
+    land_  = .false.
+    urban_ = .false.
 
     if( present(atmos) ) atmos_ = atmos
     if( present(land ) ) land_  = land

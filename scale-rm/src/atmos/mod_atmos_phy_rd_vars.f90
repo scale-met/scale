@@ -317,11 +317,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_RD_vars_restart_read
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
     real(RP) :: total
@@ -363,18 +364,20 @@ contains
           call ATMOS_PHY_RD_vars_fillhalo
        end if
 
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10) )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11) )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4)  )
+          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5)  )
+          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6)  )
+          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7)  )
+          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10) )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11) )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
+       end if
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_RD.'
     endif
@@ -525,10 +528,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
   subroutine ATMOS_PHY_RD_vars_restart_write
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_write_var
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
     real(RP) :: total
@@ -538,18 +542,20 @@ contains
 
        call ATMOS_PHY_RD_vars_fillhalo
 
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7)  )
-       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9)  )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10) )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11) )
-       call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4)  )
+          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5)  )
+          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6)  )
+          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7)  )
+          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9)  )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10) )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11) )
+          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
+       endif
 
        call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_RD_SFLX_LW_up(:,:), &
                               VAR_NAME(1) , 'XY'  ) ! [IN]

@@ -211,15 +211,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_TB_vars_restart_read
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
-!    real(RP) :: total
-!    integer  :: i, j
+    real(RP) :: total
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
 !    if ( restart_fid .NE. -1 ) then
@@ -244,8 +245,10 @@ contains
 !       else
 !          call ATMOS_PHY_TB_vars_fillhalo
 !       end if
-
-!       call STAT_total( total, ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1) )
+!
+!       if ( STATISTICS_checktotal ) then
+!          call STAT_total( total, ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1) )
+!       endif
 !    else
 !       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_TB.'
 !    endif
@@ -341,22 +344,27 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_TB_vars_restart_write
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_write_var
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
     real(RP) :: total
     !---------------------------------------------------------------------------
 
-!    if ( restart_fid .NE. -1 ) then
-
-!       call STAT_total( total, ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1) )
-
+!    if ( restart_fid /= -1 ) then
+!
+!       call ATMOS_PHY_TB_vars_fillhalo
+!
+!       if ( STATISTICS_checktotal ) then
+!          call STAT_total( total, ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1) )
+!       endif
+!
 !       call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_TB_??(:,:,:), &
 !                              VAR_NAME(1), 'ZXY' ) ! [IN]
-
+!
 !    endif
 
     return

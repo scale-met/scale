@@ -94,10 +94,29 @@ contains
        FILEIO_set_coordinates
     implicit none
 
+    character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME  = 'latlon_domain_catalogue.txt' !< metadata files for lat-lon domain for all processes
+    logical               :: DOMAIN_CATALOGUE_OUTPUT = .false.
+
+    NAMELIST / PARAM_DOMAIN_CATALOGUE / &
+       DOMAIN_CATALOGUE_FNAME,  &
+       DOMAIN_CATALOGUE_OUTPUT
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_REAL] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_DOMAIN_CATALOGUE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_DOMAIN_CATALOGUE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_DOMAIN_CATALOGUE)
 
     allocate( REAL_LON  (IA,JA) )
     allocate( REAL_LAT  (IA,JA) )
@@ -124,7 +143,7 @@ contains
     call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
 
     ! calc longitude & latitude
-    call REAL_calc_latlon
+    call REAL_calc_latlon( DOMAIN_CATALOGUE_FNAME, DOMAIN_CATALOGUE_OUTPUT )
 
     ! calc real height
     call REAL_calc_Z
@@ -163,7 +182,13 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calc longitude & latitude
-  subroutine REAL_calc_latlon
+  subroutine REAL_calc_latlon( &
+       catalogue_fname, &
+       catalogue_output )
+    use scale_process, only: &
+       PRC_MPIstop, &
+       PRC_nprocs,  &
+       PRC_IsMaster
     use scale_const, only: &
        PI  => CONST_PI, &
        D2R => CONST_D2R
@@ -174,23 +199,17 @@ contains
        GRID_CY, &
        GRID_FX, &
        GRID_FY
+    use scale_comm, only: &
+       COMM_gather,  &
+       COMM_bcast
     use scale_mapproj, only: &
        MPRJ_basepoint_lon, &
        MPRJ_basepoint_lat, &
        MPRJ_xy2lonlat
-    use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_nprocs,  &
-       PRC_IsMaster
-    use scale_comm, only: &
-       COMM_gather,  &
-       COMM_bcast
     implicit none
 
-    real(RP), allocatable :: mine(:,:)    !< send buffer of lon-lat [deg]
-    real(RP), allocatable :: whole(:,:)   !< recieve buffer of lon-lat [deg]
-
-    real(RP) :: CX, CY, FX, FY
+    character(len=*), intent(in) :: catalogue_fname  !< metadata files for lat-lon domain for all processes
+    logical,          intent(in) :: catalogue_output
 
     integer, parameter :: I_LON  = 1
     integer, parameter :: I_LAT  = 2
@@ -199,27 +218,14 @@ contains
     integer, parameter :: I_SW   = 3
     integer, parameter :: I_SE   = 4
 
-    character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt' !< metadata files for lat-lon domain for all processes
-    logical               :: DOMAIN_CATALOGUE_OUTPUT = .false.
+    real(RP) :: mine (4,2)            !< send    buffer of lon-lat [deg]
+    real(RP) :: whole(4,2*PRC_nprocs) !< recieve buffer of lon-lat [deg]
 
-    NAMELIST / PARAM_DOMAIN_CATALOGUE / &
-       DOMAIN_CATALOGUE_FNAME,  &
-       DOMAIN_CATALOGUE_OUTPUT
+    real(RP) :: CX, CY, FX, FY
 
-    integer :: i, j
-    integer :: fid, ierr
+    integer  :: i, j
+    integer  :: fid, ierr
     !---------------------------------------------------------------------------
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_DOMAIN_CATALOGUE,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_DOMAIN_CATALOGUE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_DOMAIN_CATALOGUE)
 
     REAL_BASEPOINT_LON = MPRJ_basepoint_lon * D2R
     REAL_BASEPOINT_LAT = MPRJ_basepoint_lat * D2R
@@ -273,9 +279,6 @@ contains
                                 '*** SW(',REAL_LON(IS,JS)/D2R,',',REAL_LAT(IS,JS)/D2R,')', &
                                  ' - SE(',REAL_LON(IE,JS)/D2R,',',REAL_LAT(IE,JS)/D2R,')'
 
-    allocate( mine (4, 2           ) )
-    allocate( whole(4, 2*PRC_nprocs) )
-
     mine(I_NW,I_LON) = REAL_LONXY(IS-1,JE  )/D2R
     mine(I_NE,I_LON) = REAL_LONXY(IE  ,JE  )/D2R
     mine(I_SW,I_LON) = REAL_LONXY(IS-1,JS-1)/D2R
@@ -285,16 +288,17 @@ contains
     mine(I_SW,I_LAT) = REAL_LATXY(IS-1,JS-1)/D2R
     mine(I_SE,I_LAT) = REAL_LATXY(IE  ,JS-1)/D2R
 
-    call COMM_gather( whole, mine, 4, 2 ) ! everytime do for online nesting
+    call COMM_gather( whole(:,:), mine(:,:), 4, 2 ) ! everytime do for online nesting
 
-    if( PRC_IsMaster )then
-       if( DOMAIN_CATALOGUE_OUTPUT ) then
+    if ( PRC_IsMaster ) then
+       if ( catalogue_output ) then
+
           fid = IO_get_available_fid()
-          open( fid,                                    &
-                file   = trim(DOMAIN_CATALOGUE_FNAME), &
-                form   = 'formatted',                  &
-                status = 'replace',                    &
-                iostat = ierr                          )
+          open( fid,                            &
+                file   = trim(catalogue_fname), &
+                form   = 'formatted',           &
+                status = 'replace',             &
+                iostat = ierr                   )
 
           if ( ierr /= 0 ) then
              write(*,*) 'xxx [REAL_calc_latlon] cannot create latlon-catalogue file!'
@@ -323,7 +327,7 @@ contains
        enddo
     endif
 
-    call COMM_bcast( REAL_DOMAIN_CATALOGUE, PRC_nprocs, 4, 2 )
+    call COMM_bcast( REAL_DOMAIN_CATALOGUE(:,:,:), PRC_nprocs, 4, 2 )
 
     return
   end subroutine REAL_calc_latlon

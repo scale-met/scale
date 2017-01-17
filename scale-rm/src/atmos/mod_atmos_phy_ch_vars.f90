@@ -212,11 +212,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_CH_vars_restart_read
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
     real(RP) :: total
@@ -245,7 +246,9 @@ contains
           call ATMOS_PHY_CH_vars_fillhalo
        end if
 
-       call STAT_total( total, ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1) )
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1) )
+       end if
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file for ATMOS_PHY_CH.'
     endif
@@ -341,15 +344,27 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_CH_vars_restart_write
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
 
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( restart_fid .NE. -1 ) then
+
+       call ATMOS_PHY_CH_vars_fillhalo
+
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1) )
+       end if
+
        call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_CH_O3(:,:,:), &
-                          VAR_NAME(1), 'ZXY' ) ! [IN]
+                              VAR_NAME(1), 'ZXY' ) ! [IN]
+
     endif
 
     return
