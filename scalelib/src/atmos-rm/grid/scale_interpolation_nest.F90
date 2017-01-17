@@ -236,7 +236,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID INTERP]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERP NEST] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     divnum = interp_search_divnum
 
@@ -285,10 +285,9 @@ contains
        INTRPNEST_search_vert => INTRPNEST_search_vert_online
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ horizontal interpolation with ', &
-                                   NEST_INTERP_LEVEL, " points."
-    if( IO_L ) write(IO_FID_LOG,*) '+++ vertical interpolation for ', &
-                                   trim(select_type)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Horizontal interpolation with ', NEST_INTERP_LEVEL, " points."
+    if( IO_L ) write(IO_FID_LOG,*) '*** Vertical   interpolation : ', trim(select_type)
 
     return
   end subroutine INTRPNEST_setup

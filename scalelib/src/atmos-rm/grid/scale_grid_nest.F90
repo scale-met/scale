@@ -353,7 +353,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_NEST] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child
     if( inter_child  /= MPI_COMM_NULL ) flag_parent = .true. ! exist child, so work as a parent

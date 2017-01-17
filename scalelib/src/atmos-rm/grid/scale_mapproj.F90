@@ -160,7 +160,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[MAPPROJ]/Categ[GRID]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[MAPPROJ] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     PI     = real(PI_RP,     kind=DP)
     D2R    = real(D2R_RP,    kind=DP)
@@ -188,33 +188,30 @@ contains
     if( MPRJ_PS_lat == UNDEF ) MPRJ_PS_lat = MPRJ_basepoint_lat
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_lon:', MPRJ_basepoint_lon
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_lat:', MPRJ_basepoint_lat
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_x  :', MPRJ_basepoint_x
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_y  :', MPRJ_basepoint_y
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Projection type:', trim(MPRJ_type)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Map projection type : ', trim(MPRJ_type)
     select case(trim(MPRJ_type))
     case('NONE')
-       if( IO_L ) write(IO_FID_LOG,*) '=> NO map projection'
+       if( IO_L ) write(IO_FID_LOG,*) '*** => NO map projection'
        call MPRJ_None_setup
     case('LC')
-       if( IO_L ) write(IO_FID_LOG,*) '=> Lambert Conformal projection'
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Lambert Conformal projection'
        call MPRJ_LambertConformal_setup
     case('PS')
-       if( IO_L ) write(IO_FID_LOG,*) '=> Polar Stereographic projection'
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Polar Stereographic projection'
        call MPRJ_PolarStereographic_setup
     case('MER')
-       if( IO_L ) write(IO_FID_LOG,*) '=> Mercator projection'
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Mercator projection'
        call MPRJ_Mercator_setup
     case('EC')
-       if( IO_L ) write(IO_FID_LOG,*) '=> Equidistant Cylindrical projection'
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Equidistant Cylindrical projection'
        call MPRJ_EquidistantCylindrical_setup
     case default
-       write(*,*) 'xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
        call PRC_MPIstop
     endselect
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(x)    = ', MPRJ_basepoint_x
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(y)    = ', MPRJ_basepoint_y
 
     return
   end subroutine MPRJ_setup
@@ -248,7 +245,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_xy2lonlat( x, y, lon, lat )
     case default
-       write(*,*) 'xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
        call PRC_MPIstop
     endselect
 
@@ -284,7 +281,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_lonlat2xy( lon, lat, x, y )
     case default
-       write(*,*) 'xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
        call PRC_MPIstop
     endselect
 
@@ -318,7 +315,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_mapfactor( lat, m1, m2 )
     case default
-       write(*,*) 'xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
        call PRC_MPIstop
     endselect
 
@@ -353,7 +350,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_rotcoef_0D( rotc )
     case default
-       write(*,*) 'xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
        call PRC_MPIstop
     endselect
 
@@ -388,7 +385,7 @@ contains
     case('EC')
        call MPRJ_EquidistantCylindrical_rotcoef_2D( rotc )
     case default
-       write(*,*) 'xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
        call PRC_MPIstop
     endselect
 
@@ -402,7 +399,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_rotation:', MPRJ_rotation
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_rotation   = ', MPRJ_rotation
 
     return
   end subroutine MPRJ_None_setup
@@ -578,13 +575,13 @@ contains
     MPRJ_pole_y = MPRJ_basepoint_y + MPRJ_hemisphere * dist * cos(MPRJ_LC_c*dlon)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_LC_lat1   :', MPRJ_LC_lat1
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_LC_lat2   :', MPRJ_LC_lat2
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_hemisphere:', MPRJ_hemisphere
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_LC_c      :', MPRJ_LC_c
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_LC_fact   :', MPRJ_LC_fact
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_pole_x    :', MPRJ_pole_x
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_pole_y    :', MPRJ_pole_y
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_lat1    = ', MPRJ_LC_lat1
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_lat2    = ', MPRJ_LC_lat2
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_hemisphere = ', MPRJ_hemisphere
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_c       = ', MPRJ_LC_c
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_fact    = ', MPRJ_LC_fact
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_x     = ', MPRJ_pole_x
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_y     = ', MPRJ_pole_y
 
     return
   end subroutine MPRJ_LambertConformal_setup
@@ -766,11 +763,11 @@ contains
     MPRJ_pole_y = MPRJ_basepoint_y + MPRJ_hemisphere * dist * cos(dlon)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_PS_lat1   :', MPRJ_PS_lat
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_hemisphere:', MPRJ_hemisphere
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_PS_fact   :', MPRJ_PS_fact
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_pole_x    :', MPRJ_pole_x
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_pole_y    :', MPRJ_pole_y
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_PS_lat1    = ', MPRJ_PS_lat
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_hemisphere = ', MPRJ_hemisphere
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_PS_fact    = ', MPRJ_PS_fact
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_x     = ', MPRJ_pole_x
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_y     = ', MPRJ_pole_y
 
     return
   end subroutine MPRJ_PolarStereographic_setup
@@ -948,10 +945,10 @@ contains
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_M_fact * log(dist)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_M_lat :', MPRJ_M_lat
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_M_fact:', MPRJ_M_fact
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_eq_x  :', MPRJ_eq_x
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_eq_y  :', MPRJ_eq_y
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_M_lat      = ', MPRJ_M_lat
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_M_fact     = ', MPRJ_M_fact
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_x       = ', MPRJ_eq_x
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_y       = ', MPRJ_eq_y
 
     return
   end subroutine MPRJ_Mercator_setup
@@ -1088,10 +1085,10 @@ contains
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_basepoint_lat * D2R
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_EC_lat :', MPRJ_EC_lat
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_EC_fact:', MPRJ_EC_fact
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_eq_x   :', MPRJ_eq_x
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_eq_y   :', MPRJ_eq_y
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_EC_lat     = ', MPRJ_EC_lat
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_EC_fact    = ', MPRJ_EC_fact
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_x       = ', MPRJ_eq_x
+    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_y       = ', MPRJ_eq_y
 
     return
   end subroutine MPRJ_EquidistantCylindrical_setup

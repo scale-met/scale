@@ -97,7 +97,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REAL]/Categ[GRID]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_REAL] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     allocate( REAL_LON  (IA,JA) )
     allocate( REAL_LAT  (IA,JA) )
@@ -225,8 +225,8 @@ contains
     REAL_BASEPOINT_LAT = MPRJ_basepoint_lat * D2R
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Base position in the global domain'
-    if( IO_L ) write(IO_FID_LOG,*) '->(',REAL_BASEPOINT_LON/D2R,',',REAL_BASEPOINT_LAT/D2R,')'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Base position in the global domain (lat,lon)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** ->(',REAL_BASEPOINT_LON/D2R,',',REAL_BASEPOINT_LAT/D2R,')'
 
     do j = 1, JA
     do i = 1, IA
@@ -264,14 +264,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Position on the earth (Local)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
-                                'NW(',REAL_LON(IS,JE)/D2R,',',REAL_LAT(IS,JE)/D2R,')-', &
-                                'NE(',REAL_LON(IE,JE)/D2R,',',REAL_LAT(IE,JE)/D2R,')'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-                                '            |                       |'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
-                                'SW(',REAL_LON(IS,JS)/D2R,',',REAL_LAT(IS,JS)/D2R,')-', &
-                                'SE(',REAL_LON(IE,JS)/D2R,',',REAL_LAT(IE,JS)/D2R,')'
+                                '*** NW(',REAL_LON(IS,JE)/D2R,',',REAL_LAT(IS,JE)/D2R,')', &
+                                 ' - NE(',REAL_LON(IE,JE)/D2R,',',REAL_LAT(IE,JE)/D2R,')'
 
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+                                '***              |                          |'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
+                                '*** SW(',REAL_LON(IS,JS)/D2R,',',REAL_LAT(IS,JS)/D2R,')', &
+                                 ' - SE(',REAL_LON(IE,JS)/D2R,',',REAL_LAT(IE,JS)/D2R,')'
 
     allocate( mine (4, 2           ) )
     allocate( whole(4, 2*PRC_nprocs) )
@@ -302,7 +302,7 @@ contains
           endif
 
           do i = 1, PRC_nprocs ! for offline nesting
-             write(fid,'(i8,8f32.24)',iostat=ierr) i, whole(I_NW,I_LON+2*(i-1)), whole(I_NE,I_LON+2*(i-1)), & ! LON: NW, NE
+             write(fid,'(I8,8F32.24)',iostat=ierr) i, whole(I_NW,I_LON+2*(i-1)), whole(I_NE,I_LON+2*(i-1)), & ! LON: NW, NE
                                                       whole(I_SW,I_LON+2*(i-1)), whole(I_SE,I_LON+2*(i-1)), & ! LON: SW, SE
                                                       whole(I_NW,I_LAT+2*(i-1)), whole(I_NE,I_LAT+2*(i-1)), & ! LAT: NW, NE
                                                       whole(I_SW,I_LAT+2*(i-1)), whole(I_SE,I_LAT+2*(i-1))    ! LAT: SW, SE
@@ -384,7 +384,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Minimum & maximum aspect ratio'
-    if( IO_L ) write(IO_FID_LOG,*) '->(',REAL_ASPECT_MIN,',',REAL_ASPECT_MAX,')'
+    if( IO_L ) write(IO_FID_LOG,*) '*** ->(',REAL_ASPECT_MIN,',',REAL_ASPECT_MAX,')'
 
     return
   end subroutine REAL_calc_Z

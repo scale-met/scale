@@ -358,6 +358,7 @@ contains
        wdamp_coef(KE+1:KA  ) = wdamp_coef(KE)
 
        if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*)                          ' *** Setup Rayleigh damping coefficient ***'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|     k     zh[m]    coef[/s] |'
        do k = KA, KE+1, -1

@@ -335,8 +335,8 @@ contains
          call resume_state
 
          ! history&monitor file output
-         call HIST_write ! if needed
          call MONIT_write('MAIN')
+         call HIST_write ! if needed
       end if
 
 
@@ -353,8 +353,8 @@ contains
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
 
       ! history&monitor file output
-      call HIST_write
       call MONIT_write('MAIN')
+      call HIST_write
 
       ! restart output
       call ADMIN_restart_write

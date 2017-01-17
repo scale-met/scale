@@ -100,6 +100,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PROF)
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Rap output level              = ', PROF_rap_level
     if( IO_L ) write(IO_FID_LOG,*) '*** Add MPI_barrier in every rap? = ', PROF_mpi_barrier
 

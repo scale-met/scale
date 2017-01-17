@@ -382,7 +382,7 @@ contains
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos dynamics step'
 
     dt = real(DTSEC, kind=RP)
 

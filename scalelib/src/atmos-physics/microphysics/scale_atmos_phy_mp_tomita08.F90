@@ -354,6 +354,10 @@ contains
     integer, intent(out) :: QS
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Tomita (2008) 1-moment bulk 6 category'
+
     if ( MP_TYPE /= 'TOMITA08' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not TOMITA08. Check!'
        call PRC_MPIstop
@@ -455,7 +459,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** TOMITA08: 1-moment bulk 6 category'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tomita (2008) 1-moment bulk 6 category'
 
     allocate( w3d(KA,IA,JA,w_nmax) )
     w3d(:,:,:,:) = 0.0_RP
@@ -662,7 +666,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(tomita08)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(tomita08)'
 
     if ( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]

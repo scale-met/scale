@@ -318,10 +318,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (LAND) ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
+               '***       |', 'VARNAME                 ','|', &
+               'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
@@ -386,7 +387,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (LAND) ***'
 
     if ( LAND_sw .and. LAND_RESTART_IN_BASENAME /= '' ) then
 
@@ -427,6 +428,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( restart_fid .NE. -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (LAND) ***'
 
        call FILEIO_read( LAND_TEMP (:,:,:),                                 & ! [OUT]
                          restart_fid, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
@@ -651,18 +654,16 @@ contains
       else
         if( IO_L ) write(IO_FID_LOG,*)
         if( IO_L ) write(IO_FID_LOG,*) '*** Properties for each plant functional type (PFT)'
-        if( IO_L ) write(IO_FID_LOG,*) &
-        '--------------------------------------------------------------------------------------------------------'
-        if( IO_L ) write(IO_FID_LOG,'(1x,A,11(1x,A))') '***         ',  &
-                                                       ' description', &
-                                                       ' Max Stg.', &
-                                                       ' CRT Stg.', &
-                                                       ' T condu.', &
-                                                       ' H capac.', &
-                                                       ' DFC Wat.', &
-                                                       '    Z0(m)', &
-                                                       '    Z0(h)', &
-                                                       '    Z0(e)'
+        if( IO_L ) write(IO_FID_LOG,'(12(1x,A))') '***          ', &
+                                                  '                     description', &
+                                                  'Max Stg.', &
+                                                  'CRT Stg.', &
+                                                  'T condu.', &
+                                                  'H capac.', &
+                                                  'DFC Wat.', &
+                                                  '   Z0(m)', &
+                                                  '   Z0(h)', &
+                                                  '   Z0(e)'
 
         !--- read namelist
         rewind(IO_FID_LAND_PROPERTY)
@@ -696,8 +697,8 @@ contains
            LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
            LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
-           if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,ES9.1),4(1x,F9.2))') &
-                                         '*** IDX =', index, &
+           if( IO_L ) write(IO_FID_LOG,'(1x,A10,I3.3,1x,A32,3(1x,F8.2),(1x,ES8.1),4(1x,F8.2))') &
+                                         '*** IDX = ', index, &
                                          trim(description), &
                                          STRGMAX, &
                                          STRGCRT, &
@@ -712,9 +713,6 @@ contains
       end if
 
       close( IO_FID_LAND_PROPERTY )
-
-       if( IO_L ) write(IO_FID_LOG,*) &
-       '--------------------------------------------------------------------------------------------------------'
 
     endif
 
@@ -768,7 +766,7 @@ contains
     if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (LAND) ***'
 
        if ( LAND_RESTART_OUT_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
@@ -807,8 +805,12 @@ contains
     use scale_fileio, only: &
        FILEIO_close
     implicit none
+    !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (LAND) ***'
+
        call FILEIO_close( restart_fid ) ! [IN]
        restart_fid = -1
     endif

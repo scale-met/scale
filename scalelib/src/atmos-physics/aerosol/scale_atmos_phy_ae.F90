@@ -142,6 +142,8 @@ contains
     character(len=*), intent(in) :: AE_TYPE
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(AE_TYPE), ' is selected.'
+
     select case( AE_TYPE )
     case ( 'DUMMY', 'NONE' )
        call ATMOS_PHY_AE_dummy_config( &

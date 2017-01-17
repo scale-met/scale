@@ -125,6 +125,10 @@ contains
     integer,          intent(out) :: QS
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for KESSLER-type 1-moment bulk 3 category'
+
     if ( MP_TYPE /= 'KESSLER' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
        call PRC_MPIstop
@@ -279,7 +283,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(kessler)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(kessler)'
 
     if ( first ) then
        ! Calculate collection factor for terminal velocity of QR

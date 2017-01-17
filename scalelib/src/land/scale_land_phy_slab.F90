@@ -172,7 +172,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Slab'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land  physics step: Slab'
 
     ! Solve diffusion of soil moisture (tridiagonal matrix)
     do j = JS, JE

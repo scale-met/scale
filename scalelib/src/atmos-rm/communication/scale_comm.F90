@@ -276,8 +276,7 @@ contains
                                    RP*KA*(2*IA*JHALO+2*JMAX*IHALO)
     if( IO_L ) write(IO_FID_LOG,*) '*** Ratio of halo against the whole 3D grid     : ', &
                                    real(2*IA*JHALO+2*JMAX*IHALO) / real(IA*JA)
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** All side is periodic?: ', COMM_IsAllPeriodic
+    if( IO_L ) write(IO_FID_LOG,*) '*** All side is periodic?                       : ', COMM_IsAllPeriodic
 
     return
   end subroutine COMM_setup

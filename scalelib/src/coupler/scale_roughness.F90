@@ -134,18 +134,23 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ROUGHNESS)
 
-    select case( ROUGHNESS_TYPE )
-    case ('MILLER92')
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for ocean roughness length : ', trim(ROUGHNESS_type)
+    select case(ROUGHNESS_type)
+    case('MILLER92')
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Miller (1992)'
        ROUGHNESS => ROUGHNESS_miller92
        call ROUGHNESS_miller92_setup
-    case ('MOON07')
+    case('MOON07')
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Moon et al. (2007)'
        ROUGHNESS => ROUGHNESS_moon07
        call ROUGHNESS_moon07_setup
-    case ('CONST')
+    case('CONST')
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Constant.'
        ROUGHNESS => ROUGHNESS_const
        call ROUGHNESS_const_setup
     case default
-       write(*,*) 'xxx invalid sea roughness length scheme (', trim(ROUGHNESS_TYPE), '). CHECK!'
+       write(*,*) 'xxx Unsupported BULKFLUX_type. STOP'
        call PRC_MPIstop
     end select
 
@@ -173,8 +178,6 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for ocean roughness length : Miller (1992)'
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ROUGHNESS_MILLER92,iostat=ierr)
@@ -201,8 +204,6 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for ocean roughness length : Moon et al. (2007)'
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ROUGHNESS_MOON07,iostat=ierr)
@@ -221,8 +222,6 @@ contains
   subroutine ROUGHNESS_const_setup
     implicit none
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for ocean roughness length : constant'
 
     return
   end subroutine ROUGHNESS_const_setup

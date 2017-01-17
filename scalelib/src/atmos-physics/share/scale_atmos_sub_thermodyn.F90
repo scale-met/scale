@@ -124,6 +124,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[THERMODYN] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     return
   end subroutine ATMOS_THERMODYN_setup

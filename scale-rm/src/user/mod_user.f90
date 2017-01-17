@@ -89,7 +89,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[USER] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -103,6 +103,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** This module is dummy.'
 
     return

@@ -81,6 +81,8 @@ contains
     logical :: ADVC_(NQ)
     logical :: MASS_(NQ)
     integer :: n
+
+    character(len=24) :: NAME_trim
     !---------------------------------------------------------------------------
 
     if ( QA + NQ > QA_MAX ) then
@@ -118,17 +120,27 @@ contains
        MASS_(:) = .false.
     end if
 
+    if( IO_L ) write(IO_FID_LOG,*)
     do n = 1, NQ
-       if( IO_L ) write(IO_FID_LOG,'(a,i4,a,a,a,f6.1,a,f6.1,a,l1,a,l1)') &
-            'register tracer: ', &
-            QA+n, ', NAME=', trim(NAME(n)), ', CV=', CV_(n), ', CP=', CP_(n), ', ADVC=', ADVC_(n), ', MASS=', MASS_(n)
-       TRACER_NAME(QA+n) = NAME(n)
-       TRACER_DESC(QA+n) = DESC(n)
-       TRACER_UNIT(QA+n) = UNIT(n)
-       TRACER_CV(QA+n) = CV_(n)
-       TRACER_CP(QA+n) = CP_(n)
-       TRACER_R (QA+n) = R_(n)
+
+       NAME_trim = trim(NAME(n))
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A,A,F6.1,A,F6.1,A,L1,A,L1)') &
+                                      '] Register tracer : No.', QA+n,      &
+                                                    ', NAME = ', NAME_trim, &
+                                                      ', CV = ', CV_  (n),  &
+                                                      ', CP = ', CP_  (n),  &
+                                                    ', ADVC = ', ADVC_(n),  &
+                                                    ', MASS = ', MASS_(n)
+
+       TRACER_NAME(QA+n) = NAME (n)
+       TRACER_DESC(QA+n) = DESC (n)
+       TRACER_UNIT(QA+n) = UNIT (n)
+       TRACER_CV  (QA+n) = CV_  (n)
+       TRACER_CP  (QA+n) = CP_  (n)
+       TRACER_R   (QA+n) = R_   (n)
        TRACER_ADVC(QA+n) = ADVC_(n)
+
        if ( MASS_(n) ) then
           TRACER_MASS(QA+n) = 1.0_RP
        else

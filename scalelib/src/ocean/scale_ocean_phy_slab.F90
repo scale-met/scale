@@ -137,7 +137,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean step: Slab'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: Slab'
 
     if( OCEAN_PHY_SLAB_fixedSST )then
        do j = JS, JE

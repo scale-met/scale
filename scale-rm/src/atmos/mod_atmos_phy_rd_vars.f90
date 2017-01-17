@@ -203,10 +203,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_RD] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
+               '***       |', 'VARNAME                 ','|', &
+               'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
@@ -291,7 +292,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_RD) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (ATMOS_PHY_RD) ***'
 
     if ( ATMOS_PHY_RD_RESTART_IN_BASENAME /= '' ) then
 
@@ -326,7 +327,9 @@ contains
     real(RP) :: total
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_RD) ***'
 
        call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_up(:,:),           & ! [OUT]
                          restart_fid, VAR_NAME(1) , 'XY', step=1 ) ! [IN]
@@ -423,7 +426,7 @@ contains
     if ( ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_AE) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (ATMOS_PHY_AE) ***'
 
        if ( ATMOS_PHY_RD_RESTART_OUT_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
@@ -462,8 +465,12 @@ contains
     use scale_fileio, only: &
        FILEIO_close
     implicit none
+    !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_PHY_RD) ***'
+
        call FILEIO_close( restart_fid ) ! [IN]
        restart_fid = -1
     endif

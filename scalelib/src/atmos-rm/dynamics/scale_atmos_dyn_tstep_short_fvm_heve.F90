@@ -83,8 +83,6 @@ contains
     character(len=H_SHORT), intent(out) :: VAR_UNIT(:)    !< unit   of the variables
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** HEVE Register'
-
     if ( ATMOS_DYN_TYPE /= 'FVM-HEVE' .AND. ATMOS_DYN_TYPE /= 'HEVE' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVE. Check!'
        call PRC_MPIstop
@@ -94,6 +92,12 @@ contains
     VAR_NAME(:) = ""
     VAR_DESC(:) = ""
     VAR_UNIT(:) = ""
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Register additional prognostic variables (HEVE)'
+    if ( VA_out < 1 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** => nothing.'
+    endif
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_heve_regist

@@ -158,8 +158,8 @@ contains
     criteria = sqrt( CONST_EPS )
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
-    if( IO_L ) write(IO_FID_LOG,*) '*** buildrho conversion criteria : ', criteria
+    if( IO_L ) write(IO_FID_LOG,*) '*** Use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
+    if( IO_L ) write(IO_FID_LOG,*) '*** Buildrho conversion criteria                          : ', criteria
 
     if ( I_QV > 0 ) then
        CV_qv = TRACER_CV(I_QV)

@@ -301,6 +301,10 @@ contains
     integer :: m, n, ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Suzuki (2010) Spectral BIN model'
+
     if ( MP_TYPE /= 'SUZUKI10' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not SUZUKI10. Check!'
        call PRC_MPIstop
@@ -471,6 +475,10 @@ contains
     integer :: myu, nyu, i, j, k, n, ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Suzuki (2010) Spectral BIN model'
+
     !--- allocation
     allocate( xctr( nbin ) )
     allocate( xbnd( nbin+1 ) )
@@ -497,10 +505,6 @@ contains
 
     mbin = nbin/2
     mspc = nspc_mk*nspc_mk
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (warm cloud)'
 
     RHO_AERO = rhoa
     S10_EMAER = emaer
@@ -920,9 +924,9 @@ contains
     !---------------------------------------------------------------------------
 
     if    ( nspc == 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Liquid water only)'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Liquid water only)'
     elseif( nspc >  1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Mixed phase)'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Mixed phase)'
     endif
 
     if ( MP_donegative_fixer ) then

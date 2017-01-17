@@ -107,8 +107,12 @@ contains
     character(len=*), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( RD_TYPE )
-    case ( 'MSTRNX' )
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(RD_TYPE), ' is selected.'
+
+    select case( RD_TYPE )
+    case('OFF')
+       ! do nothing
+    case( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
     case ( 'OFFLINE' )

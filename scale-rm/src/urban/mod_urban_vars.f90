@@ -393,10 +393,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (URBAN) ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
+               '***       |', 'VARNAME                 ','|', &
+               'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
@@ -436,7 +437,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (URBAN) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (URBAN) ***'
 
     if ( URBAN_sw .and. URBAN_RESTART_IN_BASENAME /= '' ) then
 
@@ -477,6 +478,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( restart_fid .NE. -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (URBAN) ***'
 
        call FILEIO_read( URBAN_TR(:,:),                            & ! [OUT]
                          restart_fid, VAR_NAME(I_TR), 'XY', step=1 ) ! [IN]
@@ -740,7 +743,7 @@ contains
     if ( URBAN_sw .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (URBAN) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (URBAN) ***'
 
        if ( URBAN_RESTART_OUT_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
@@ -779,8 +782,12 @@ contains
     use scale_fileio, only: &
        FILEIO_close
     implicit none
+    !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (URBAN) ***'
+
        call FILEIO_close( restart_fid ) ! [IN]
        restart_fid = -1
     endif

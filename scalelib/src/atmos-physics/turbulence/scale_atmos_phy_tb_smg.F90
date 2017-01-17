@@ -111,6 +111,11 @@ contains
 
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Smagorinsky-type Eddy Viscocity Model'
 
     if ( TYPE_TB /= 'SMAGORINSKY' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
@@ -160,8 +165,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Smagorinsky-type Eddy Viscocity Model'
 
     ATMOS_PHY_TB_SMG_Cs = Cs
 
@@ -334,7 +339,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(smagorinsky)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Turbulence(smagorinsky)'
 
 #ifdef DEBUG
     qflx_sgs_momz(:,:,:,:)   = UNDEF

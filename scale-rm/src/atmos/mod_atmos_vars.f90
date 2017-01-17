@@ -355,14 +355,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (ATMOS) ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
+               '***       |', 'VARNAME                 ','|', &
+               'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',iv,'|',VAR_NAME(iv),'|', VAR_DESC(iv),'[', VAR_UNIT(iv),']'
     enddo
     do iq = 1, QA
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',5+iq,'|',TRACER_NAME(iq),'|', TRACER_DESC(iq),'[', TRACER_UNIT(iq),']'
     enddo
 
@@ -915,7 +916,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (ATMOS) ***'
 
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
 
@@ -1005,6 +1006,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( restart_fid .NE. -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS) ***'
 
        call FILEIO_read( DENS(:,:,:),                            & ! [OUT]
                          restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
@@ -2331,8 +2334,6 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Calc diagnostics'
-
     call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
                               PRES(:,:,:),   & ! [OUT]
                               DENS(:,:,:),   & ! [IN]
@@ -2500,8 +2501,6 @@ contains
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** Monitor'
 
     call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.false. )
     call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.false. )
@@ -2764,7 +2763,7 @@ contains
     if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (ATMOS) ***'
 
        if ( ATMOS_RESTART_OUT_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
@@ -2900,6 +2899,8 @@ contains
 #endif
 
     if ( restart_fid .NE. -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS) ***'
        call FILEIO_close( restart_fid ) ! [IN]
        restart_fid = -1
 

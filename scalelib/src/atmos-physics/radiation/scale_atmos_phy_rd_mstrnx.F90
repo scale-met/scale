@@ -270,7 +270,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MstrnX radiation process'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Sekiguchi and Nakajima (2008) mstrnX radiation process'
 
     if ( RD_TYPE /= 'MSTRNX' ) then
        write(*,*) 'xxx RD_TYPE is not MSTRNX. Check!'
@@ -458,7 +458,7 @@ contains
     integer :: RD_k, k, i, j, v, ic
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Radiation(mstrnX)'
 
     call PROF_rapstart('RD_Profile', 3)
 

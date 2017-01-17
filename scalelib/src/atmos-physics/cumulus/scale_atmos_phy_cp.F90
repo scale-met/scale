@@ -101,6 +101,8 @@ contains
     character(len=*), intent(in) :: CP_TYPE
     !------------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(CP_TYPE), ' is selected.'
+
 #ifdef CP
     call NAME(ATMOS_PHY_CP_, CP, _setup)( CP_TYPE )
     ATMOS_PHY_CP => NAME(ATMOS_PHY_CP_, CP,)

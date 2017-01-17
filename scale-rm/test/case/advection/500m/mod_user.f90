@@ -60,9 +60,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
-
     call TRACER_REGIST( I_NC, &
          1, (/'NC'/), (/'Passive tracer'/), (/'1'/) )
 

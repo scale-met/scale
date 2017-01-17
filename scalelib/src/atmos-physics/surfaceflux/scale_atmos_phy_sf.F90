@@ -123,6 +123,8 @@ contains
     character(len=*), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(SF_TYPE), ' is selected.'
+
     select case( SF_TYPE )
     case('CONST')
        call ATMOS_PHY_SF_const_setup( SF_TYPE )
@@ -133,7 +135,7 @@ contains
     case('OFF', 'COUPLE')
        ! do nothing
     case default
-       write(*,*) 'xxx ATMPS_PHY_SF_TYPE is invalid'
+       write(*,*) 'xxx invalid Surface flux type(', trim(SF_TYPE), '). CHECK!'
        call PRC_MPIstop
     end select
 

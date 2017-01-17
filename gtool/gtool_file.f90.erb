@@ -719,10 +719,7 @@ contains
 
     if ( vid < 0 ) then ! variable registration
        !--- register new variable
-       write(message,*) '*** [File] Var registration'
-       call Log("I", message)
-       write(message,*) '*** variable name: ', trim(varname)
-       call Log("I", message)
+       write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
 
        tint8 = real(tint,DP)
 
@@ -1415,12 +1412,17 @@ contains
        write(message,*) 'xxx in FileEndDef invalid fid' , fid
        call Log('E', message)
     end if
-    call file_enddef( fid , & ! (in)
-         error              ) ! (out)
-    if ( error .EQ. SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File enddef : NO.', n
-       call Log('I', message)
-       call Log('I', '*** enddef filename: ' // trim(File_fname_list(n)))
+
+    call file_enddef( fid, error )
+
+    if ( error == SUCCESS_CODE ) then
+
+       call Log("I",'')
+       write(message,'(A,I3.3,2A)') '###### File end define mode : No.', File_fid_list(n), &
+                                                  ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
+       call Log("I",'')
+
     else
        call Log('E', 'xxx failed to exit define mode')
     end if
@@ -1450,13 +1452,16 @@ contains
        write(message,*) 'xxx in FileAttachBuffer invalid fid' , fid
        call Log('E', message)
     end if
-    call file_attach_buffer( fid, buf_amount, & ! (in)
-         error                                ) ! (out)
-    if ( error .EQ. SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File Attach Buffer : NO.', n
-       call Log('I', message)
-       write(message, '(1x,A,I10)') '*** attach buffer for filename: ' // trim(File_fname_list(n)) // ', size=', buf_amount
-       call Log('I', message)
+
+    call file_attach_buffer( fid, buf_amount, error )
+
+    if ( error == SUCCESS_CODE ) then
+
+       write(message,'(A,I3.3,3A,I10)') '###### File attach buffer : No.', File_fid_list(n),  &
+                                                       ', name = ', trim(File_fname_list(n)), &
+                                                       ', size = ', buf_amount
+       call Log("I",message)
+
     else
        call Log('E', 'xxx failed to attach buffer in PnetCDF')
     end if
@@ -1486,12 +1491,15 @@ contains
        write(message,*) 'xxx in FileDetachBuffer invalid fid' , fid
        call Log('E', message)
     end if
-    call file_detach_buffer( fid, & ! (in)
-         error                    ) ! (out)
-    if ( error .EQ. SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File Detach Buffer : NO.', n
-       call Log('I', message)
-       call Log('I', '*** detach buffer for filename: ' // trim(File_fname_list(n)))
+
+    call file_detach_buffer( fid, error )
+
+    if ( error == SUCCESS_CODE ) then
+
+       write(message,'(A,I3.3,2A)') '###### File detach buffer : No.', File_fid_list(n), &
+                                                   ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
+
     else
        call Log('E', 'xxx failed to detach buffer in PnetCDF')
     end if
@@ -1523,12 +1531,17 @@ contains
        write(message,*) 'xxx in FileFlush invalid fid' , fid
        call Log('E', message)
     end if
-    call file_flush( fid,  & ! (in)
-         error             ) ! (out)
+
+    call file_flush( fid, error )
+
     if ( error .EQ. SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File flush : NO.', n
-       call Log('I', message)
-       call Log('I', '*** FileFlush filename: ' // trim(File_fname_list(n)))
+
+       call Log("I",'')
+       write(message,'(A,I3.3,2A)') '###### File flush : No.', File_fid_list(n), &
+                                                  ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
+       call Log("I",'')
+
     else
        call Log('E', 'xxx failed to flush PnetCDF pending requests')
     end if
@@ -1560,13 +1573,18 @@ contains
        write(message,*) 'xxx in FileClose invalid fid ', fid
        call Log('E', message)
     end if
-    call file_close( fid , & ! (in)
-         error             ) ! (out)
+
+    call file_close( fid, error )
+
     if ( error == SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File Close : NO.', n
-       call Log('I', message)
-       call Log('I', '*** closed filename: ' // trim(File_fname_list(n)))
-    else if ( error /= ALREADY_CLOSED_CODE ) then
+
+       call Log("I",'')
+       write(message,'(A,I3.3,2A)') '###### File close : No.', File_fid_list(n), &
+                                                  ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
+       call Log("I",'')
+
+    elseif( error /= ALREADY_CLOSED_CODE ) then
        call Log('E', 'xxx failed to close file')
     end if
 
@@ -1682,10 +1700,11 @@ contains
        call Log('E', 'xxx failed to open file :'//trim(fname)//'.nc')
     end if
 
-    write(message,*) '*** [File] File registration : ',trim(rwname(mode)),' -', fid
-    call Log("I", message)
-    write(message,*) '*** filename: ', trim(fname)
-    call Log("I", message)
+    call Log("I",'')
+    write(message,'(3A,I3.3,2A)') '###### File registration (', &
+                                  trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
+    call Log("I",message)
+    call Log("I",'')
 
     File_fname_list(File_fid_count) = trim(fname)
     File_fid_list  (File_fid_count) = fid

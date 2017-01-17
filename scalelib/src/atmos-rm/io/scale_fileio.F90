@@ -326,6 +326,9 @@ contains
     real(RP) :: buffer_u  (UKMAX)
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Check consistency of axis ***'
+
     if( present(atmos) ) atmos_ = atmos
     if( present(land ) ) land_  = land
     if( present(urban) ) urban_ = urban
@@ -655,7 +658,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (1D), name : ', trim(varname)
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
@@ -756,7 +759,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (2D), name : ', trim(varname)
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
@@ -829,7 +832,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (3D), name : ', trim(varname)
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
@@ -930,7 +933,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 4D var: ', trim(varname)
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (4D), name : ', trim(varname)
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
@@ -1016,6 +1019,8 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (1D), name : ', trim(varname)
+
     call FILEIO_create( fid,                                            & ! [OUT]
                         basename, title, datatype, date, subsec, append )
 
@@ -1083,6 +1088,8 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (2D), name : ', trim(varname)
+
     call FILEIO_create( fid,                                                      & ! [OUT]
                         basename, title, datatype, date, subsec, append, nozcoord )
 
@@ -1147,6 +1154,8 @@ contains
 
     integer :: fid, vid
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (3D), name : ', trim(varname)
 
     call FILEIO_create( fid,                                            & ! [OUT]
                         basename, title, datatype, date, subsec, append )
@@ -1213,6 +1222,8 @@ contains
 
     intrinsic :: size
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,3A)') '*** Write to file (3D), name : ', trim(varname), 'with time dimension'
 
     call FILEIO_create( fid,                                             & ! [OUT]
                         basename, title, datatype, tsince, append=append )
@@ -1284,6 +1295,8 @@ contains
 
     intrinsic :: size
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (4D), name : ', trim(varname)
 
     call FILEIO_create( fid,                                             & ! [OUT]
                         basename, title, datatype, tsince, append=append )

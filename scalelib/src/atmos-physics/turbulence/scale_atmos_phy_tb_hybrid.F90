@@ -164,6 +164,10 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for SGS-parameterization hybrid Model'
+
     if ( TB_TYPE /= 'HYBRID' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not HYBRID. Check!'
        call PRC_MPIstop
@@ -226,8 +230,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ SGS-parameterization hybrid Model'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** SGS-parameterization hybrid Model'
 
     call SGS_TB_setup( CDZ, CDX, CDY, CZ )
     call PBL_TB_setup( CDZ, CDX, CDY, CZ )

@@ -167,7 +167,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ADMIN] / Categ[RESTART] / Origin[SCALE-RM]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RESTART] / Categ[ADMIN] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)

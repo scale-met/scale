@@ -89,9 +89,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Caluculate statistics?                     : ', STATISTICS_checktotal
     if( IO_L ) write(IO_FID_LOG,*) '*** Allow global communication for statistics? : ', STATISTICS_use_globalcomm
     if ( STATISTICS_use_globalcomm ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Global total is calculated using MPI_ALLreduce.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Global total is calculated using MPI_ALLreduce.'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Local total is calculated in each process.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Local total is calculated in each process.'
     endif
 
     return
@@ -113,7 +113,7 @@ contains
     real(RP),         intent(in)  :: var(IA,JA) !< 3D value
     character(len=*), intent(in)  :: varname    !< name of item
 
-    character(len=H_SHORT) :: varname_trim
+    character(len=24) :: varname_trim
     real(RP) :: statval
 
     integer :: ierr
@@ -151,7 +151,7 @@ contains
        ! statistics over the all node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,ES24.17)') &
-                     '[', varname_trim, '] SUM(global) =', allstatval
+                     '[', varname_trim, '] SUM(global) = ', allstatval
        endif
     else
        allstatval = statval
@@ -159,7 +159,7 @@ contains
        ! statistics on each node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,ES24.17)') &
-                     '[', varname_trim, '] SUM(local)  =', statval
+                     '[', varname_trim, '] SUM(local)  = ', statval
        endif
     endif
 
@@ -182,7 +182,7 @@ contains
     real(RP),         intent(in)  :: var(KA,IA,JA) !< 3D value
     character(len=*), intent(in)  :: varname       !< name of item
 
-    character(len=H_SHORT) :: varname_trim
+    character(len=24) :: varname_trim
     real(RP) :: statval
 
     integer :: ierr
@@ -222,7 +222,7 @@ contains
        ! statistics over the all node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,ES24.17)') &
-                     '[', varname_trim, '] SUM(global) =', allstatval
+                     '[', varname_trim, '] SUM(global) = ', allstatval
        endif
     else
        allstatval = statval
@@ -230,7 +230,7 @@ contains
        ! statistics on each node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,ES24.17)') &
-                     '[', varname_trim, '] SUM(local)  =', statval
+                     '[', varname_trim, '] SUM(local)  = ', statval
        endif
     endif
 

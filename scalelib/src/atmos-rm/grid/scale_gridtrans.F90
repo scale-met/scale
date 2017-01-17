@@ -146,19 +146,21 @@ contains
     call GTRANS_rotcoef
 
     ! calc metrics for terrain-following,step-mountain,thin-wall coordinate
-    select case(GTRANS_TOPO_TYPE)
-    case ('TERRAINFOLLOWING')
-      if( IO_L ) write(IO_FID_LOG,*) '=> Use terrain-following coordinate'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Terrain coordinate type : ', trim(GTRANS_TOPO_type)
+    select case(GTRANS_TOPO_type)
+    case('TERRAINFOLLOWING')
+      if( IO_L ) write(IO_FID_LOG,*) '*** => Terrain-following method'
       call GTRANS_terrainfollowing
-    case ('STEPMOUNTAIN')
-      if( IO_L ) write(IO_FID_LOG,*) '=> Use step mountain method'
+    case('STEPMOUNTAIN')
+      if( IO_L ) write(IO_FID_LOG,*) '*** => Step-mountain method'
       call GTRANS_thin_wall
       call GTRANS_step_mountain
-    case ('THINWALL')
-      if( IO_L ) write(IO_FID_LOG,*) '=> Use thin-wall approximation'
+    case('THINWALL')
+      if( IO_L ) write(IO_FID_LOG,*) '*** => Thin-wall approximation method'
       call GTRANS_thin_wall
     case default
-       write(*,*) 'xxx Not appropriate name for GTRANS_TOPO_TYPE : ', trim(GTRANS_TOPO_TYPE)
+       write(*,*) 'xxx Unsupported GTRANS_TOPO_type. STOP'
        call PRC_MPIstop
     end select
 

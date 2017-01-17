@@ -55,6 +55,11 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS PHY_MP] / Origin[SCALE-RM]'
 
     if ( ATMOS_sw_phy_mp ) then
        call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )

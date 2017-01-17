@@ -184,6 +184,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean surface step: Slab'
+
     ! update surface temperature
     do j = JS, JE
     do i = IS, IE

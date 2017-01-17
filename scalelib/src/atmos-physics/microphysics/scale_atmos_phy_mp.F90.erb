@@ -169,6 +169,8 @@ contains
     character(len=*), intent(in) :: MP_TYPE
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(MP_TYPE), ' is selected.'
+
 #ifdef MP
     call NAME(ATMOS_PHY_MP_, MP, _config)( &
          MP_TYPE,     & ! (in)

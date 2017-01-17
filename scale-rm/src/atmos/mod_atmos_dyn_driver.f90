@@ -181,6 +181,7 @@ contains
        end if
 
        if ( ATMOS_sw_dyn ) then
+          if( IO_L ) write(IO_FID_LOG,*)
           if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Large time step  : ', trim(ATMOS_DYN_TINTEG_LARGE_TYPE)
           if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Short time step  : ', trim(ATMOS_DYN_TINTEG_SHORT_TYPE)
           if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for Tracer advection : ', trim(ATMOS_DYN_TINTEG_TRACER_TYPE)

@@ -154,6 +154,8 @@ contains
     character(len=*), intent(in) :: TB_TYPE
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(TB_TYPE), ' is selected.'
+
 #ifdef TB
     call NAME(ATMOS_PHY_TB_, TB, _config)( TB_TYPE, & ! [IN]
                                            I_TKE    ) ! [OUT]

@@ -55,6 +55,11 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_AE_TYPE!, &
 !       ATMOS_sw_phy_ae
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS PHY_AE] / Origin[SCALE-RM]'
 
     ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
 !    if ( ATMOS_sw_phy_ae ) then

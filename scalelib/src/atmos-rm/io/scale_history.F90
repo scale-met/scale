@@ -170,6 +170,7 @@ contains
           endif
        enddo
     else
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** HIST_PRES_nlayer is not set.'
        if( IO_L ) write(IO_FID_LOG,*) '*** Output with pressure coordinate is disabled'
     endif
