@@ -86,8 +86,8 @@ contains
     allocate( QTRC_RK1(KA,IA,JA) )
     allocate( QTRC_RK2(KA,IA,JA) )
 
-    call COMM_vars8_init( QTRC_RK1, I_COMM_RK1 )
-    call COMM_vars8_init( QTRC_RK2, I_COMM_RK2 )
+    call COMM_vars8_init( 'QTRC_RK1', QTRC_RK1, I_COMM_RK1 )
+    call COMM_vars8_init( 'QTRC_RK2', QTRC_RK2, I_COMM_RK2 )
 
     return
   end subroutine ATMOS_DYN_Tinteg_tracer_rk3_setup
