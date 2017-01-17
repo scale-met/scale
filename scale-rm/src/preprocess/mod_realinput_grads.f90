@@ -183,7 +183,7 @@ contains
     implicit none
 
     integer,          intent(out) :: dims(6)
-    character(len=H_LONG), intent(in) :: basename
+    character(len=*), intent(in)  :: basename
 
 
     NAMELIST / PARAM_MKINIT_REAL_GrADS / &
@@ -1727,7 +1727,7 @@ contains
     character(len=H_SHORT), intent(out) :: grads_fendian (:)
     real(SP),               intent(out) :: grads_missval (:)
     logical,                intent(out) :: data_available(:)
-    character(len=H_SHORT), intent(in)  :: item_list     (:)
+    character(len=*),       intent(in)  :: item_list     (:)
     integer,                intent(in)  :: num_item_list
     character(len=*),       intent(in)  :: basename
     integer,                intent(in)  :: io_fid_grads_nml

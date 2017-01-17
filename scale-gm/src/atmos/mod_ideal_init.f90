@@ -62,7 +62,7 @@ module mod_ideal_init
   !
   !++ Public parameters & variables
   !
-  character(len=H_MID),   public :: DCTEST_type = ''
+  character(len=H_SHORT), public :: DCTEST_type = ''
   character(len=H_SHORT), public :: DCTEST_case = ''
 
   !-----------------------------------------------------------------------------
@@ -128,7 +128,7 @@ contains
 
     real(RP), intent(out) :: DIAG_var(ADM_gall,ADM_kall,ADM_lall,6+TRC_VMAX)
 
-    character(len=H_MID)   :: init_type   = ''
+    character(len=H_SHORT) :: init_type   = ''
     character(len=H_SHORT) :: test_case   = ''
     real(RP)               :: eps_geo2prs = 1.E-2_RP
     logical                :: nicamcore   = .true.

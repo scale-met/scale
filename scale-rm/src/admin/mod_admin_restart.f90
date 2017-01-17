@@ -46,7 +46,7 @@ module mod_admin_restart
   character(len=H_LONG), public :: RESTART_OUT_BASENAME          = ''        !< Basename of the output file
   logical,               public :: RESTART_OUT_POSTFIX_TIMELABEL = .true.    !< Add timelabel to the basename of output file?
   character(len=H_MID),  public :: RESTART_OUT_TITLE             = ''        !< Title    of the output file
-  character(len=H_MID),  public :: RESTART_OUT_DTYPE             = 'DEFAULT' !< REAL4 or REAL8
+  character(len=H_SHORT), public :: RESTART_OUT_DTYPE             = 'DEFAULT' !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains

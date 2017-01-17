@@ -109,12 +109,12 @@ void file_read_data_( void       *var,       // (out)
 {
   int i;
 
-  fstr2cstr(dinfo->varname, dinfo->varname, File_HSHORT);
-  fstr2cstr(dinfo->description, dinfo->description, File_HMID);
-  fstr2cstr(dinfo->units, dinfo->units, File_HSHORT);
-  fstr2cstr(dinfo->time_units, dinfo->time_units, File_HMID);
+  fstr2cstr(dinfo->varname, dinfo->varname, File_HSHORT-1);
+  fstr2cstr(dinfo->description, dinfo->description, File_HMID-1);
+  fstr2cstr(dinfo->units, dinfo->units, File_HSHORT-1);
+  fstr2cstr(dinfo->time_units, dinfo->time_units, File_HMID-1);
   for ( i=0; i<MAX_RANK; i++ )
-    fstr2cstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
+    fstr2cstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT-1);
 
   *error = file_read_data( var, dinfo, *precision );
 }

@@ -1394,7 +1394,7 @@ contains
     character(len=34) :: tunits
     integer           :: comm
     logical           :: fileexisted
-    character(len=8)  :: logical_str
+    character(len=H_SHORT) :: logical_str
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)

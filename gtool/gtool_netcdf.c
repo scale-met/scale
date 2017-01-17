@@ -220,7 +220,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   nc_type xtype;
   int rank;
   int dimids[MAX_RANK], tdim, uldims[NC_MAX_DIMS];
-  char name[File_HSHORT+1];
+  char name[NC_MAX_NAME+1];
   char *buf;
   size_t size, len;
   int i, n;
@@ -323,6 +323,10 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     }
     else
       CHECK_ERROR( nc_inq_dim(ncid, dimids[rank-i-1], name, &size) )
+    if ( strlen(name) > File_HSHORT-1 ) {
+      fprintf(stderr, "Length of the dimension name (%s) is too long (should be < %d).\n", name, File_HSHORT);
+      return ERROR_CODE;
+    }
     strncpy(dinfo->dim_name+i*File_HSHORT, name, File_HSHORT);
     dinfo->dim_size[i] = size;
   }

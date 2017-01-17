@@ -385,7 +385,7 @@ contains
        NOWSTEP => TIME_NOWSTEP
     implicit none
 
-    character(len=4), intent(in) :: memo !< note
+    character(len=*), intent(in) :: memo !< note
 
     logical, save :: firsttime = .true.
 
@@ -404,7 +404,7 @@ contains
     if ( MONIT_FID > 0 ) then
 
        if ( mod(NOWSTEP-1,MONITOR_STEP_INTERVAL) == 0 ) then
-          write(MONIT_FID,'(A,i7,A,A,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
+          write(MONIT_FID,'(A,i7,A,A4,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
           do n = 1, MONIT_id_count
              write(MONIT_FID,'(A,ES15.8)',advance='no') ' ',MONIT_var(n)
           enddo
@@ -473,7 +473,7 @@ contains
 
        write(MONIT_FID,'(A)',advance='no') '                   '
        do n = 1, MONIT_id_count
-          write(MONIT_FID,'(A,A16)',advance='no') MONIT_item(n)
+          write(MONIT_FID,'(A16)',advance='no') MONIT_item(n)
        enddo
        write(MONIT_FID,*)
 

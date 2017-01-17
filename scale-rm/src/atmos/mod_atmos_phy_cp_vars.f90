@@ -50,7 +50,7 @@ module mod_atmos_phy_cp_vars
   character(len=H_LONG), public :: ATMOS_PHY_CP_RESTART_OUT_BASENAME          = ''                     !< Basename of the output file
   logical,               public :: ATMOS_PHY_CP_RESTART_OUT_POSTFIX_TIMELABEL = .true.                 !< Add timelabel to the basename of output file?
   character(len=H_MID),  public :: ATMOS_PHY_CP_RESTART_OUT_TITLE             = 'ATMOS_PHY_CP restart' !< title    of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_CP_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_SHORT), public :: ATMOS_PHY_CP_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
   real(RP), public, allocatable :: ATMOS_PHY_CP_DENS_t(:,:,:)    ! tendency DENS [kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_MOMZ_t(:,:,:)    ! tendency MOMZ [kg/m2/s2]
@@ -334,7 +334,7 @@ contains
        TIME_gettimelabel
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
@@ -443,7 +443,7 @@ contains
        FILEIO_create
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 

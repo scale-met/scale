@@ -80,7 +80,8 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-    character(len=H_SHORT), intent(in) :: MP_TYPE
+
+    character(len=*), intent(in)  :: MP_TYPE
     integer, intent(out) :: QA
     integer, intent(out) :: QS
     !---------------------------------------------------------------------------

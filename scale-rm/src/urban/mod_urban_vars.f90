@@ -54,7 +54,7 @@ module mod_urban_vars
   character(len=H_LONG), public :: URBAN_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
   logical,               public :: URBAN_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
   character(len=H_MID),  public :: URBAN_RESTART_OUT_TITLE             = 'URBAN restart' !< Title    of the output file
-  character(len=H_MID),  public :: URBAN_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
+  character(len=H_SHORT), public :: URBAN_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
   real(RP), public, allocatable :: URBAN_TR   (:,:)   ! urban surface temperature of roof [K]
@@ -431,7 +431,7 @@ contains
        URBAN_sw
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
@@ -733,7 +733,7 @@ contains
        URBAN_sw
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 

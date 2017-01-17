@@ -656,7 +656,7 @@ contains
        ADM_vlayer
     implicit none
 
-    character(len=H_LONG), intent(in) :: fname ! vertical grid file name
+    character(len=*), intent(in) :: fname ! vertical grid file name
 
     integer               :: num_of_layer
     real(DP), allocatable :: gz (:)

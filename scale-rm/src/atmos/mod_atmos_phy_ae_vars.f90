@@ -50,7 +50,7 @@ module mod_atmos_phy_ae_vars
   character(len=H_LONG), public :: ATMOS_PHY_AE_RESTART_OUT_BASENAME          = ''                     !< Basename of the output file
   logical,               public :: ATMOS_PHY_AE_RESTART_OUT_POSTFIX_TIMELABEL = .true.                 !< Add timelabel to the basename of output file?
   character(len=H_MID),  public :: ATMOS_PHY_AE_RESTART_OUT_TITLE             = 'ATMOS_PHY_AE restart' !< title    of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_AE_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_SHORT), public :: ATMOS_PHY_AE_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
   real(RP), public, allocatable :: ATMOS_PHY_AE_RHOQ_t(:,:,:,:)                               ! tendency rho*QTRC [kg/kg/s]
 
@@ -193,7 +193,7 @@ contains
        FILEIO_open
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
@@ -269,7 +269,7 @@ contains
        FILEIO_create
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 

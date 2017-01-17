@@ -146,10 +146,10 @@ module mod_user
 
   real(RP), private, save :: CNST_SST=276.2_RP
 
-  character(100), private, save :: inbasedir = './'
-  character(100), private, save :: fdata_name_atm = 'large_scale_w_force.txt'
-  character(100), private, save :: fdata_name_sst = 'sst_force.txt'
-  character(100), private, save :: fdata_name_sf = 'srf_flux_force.txt'
+  character(len=H_LONG), private, save :: inbasedir      = './'
+  character(len=H_LONG), private, save :: fdata_name_atm = 'large_scale_w_force.txt'
+  character(len=H_LONG), private, save :: fdata_name_sst = 'sst_force.txt'
+  character(len=H_LONG), private, save :: fdata_name_sf  = 'srf_flux_force.txt'
   integer, private, save :: fid_data
   integer, private, save :: fid_data_sf
   logical, private, save :: first_in   =.true.

@@ -117,8 +117,8 @@ contains
     real(RP)         :: n0_sdf(4)
     real(RP)         :: rho_sdf(4)
     character(LEN=11),parameter :: fname_micpara="micpara.dat"
-    character(LEN=16) :: MP_TYPE_OUTER = "NONE"
-    character(LEN=16) :: MP_TYPE_INNER = "NONE"
+    character(len=H_SHORT)       :: MP_TYPE_OUTER = "NONE"
+    character(len=H_SHORT)       :: MP_TYPE_INNER = "NONE"
     integer :: COMM_world
 
     NAMELIST / PARAM_ATMOS_PHY_MP_BIN2BULK / &
