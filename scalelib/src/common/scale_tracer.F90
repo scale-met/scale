@@ -35,11 +35,12 @@ module scale_tracer
   integer, public :: QA = 0
 
   integer, private, parameter :: QA_MAX = 1024
-  real(RP), public :: TRACER_CP(QA_MAX)
-  real(RP), public :: TRACER_CV(QA_MAX)
-  real(RP), public :: TRACER_R(QA_MAX)
-  real(RP), public :: TRACER_MASS(QA_MAX)
-  logical,  public :: TRACER_ADVC(QA_MAX)
+
+  real(RP),               public :: TRACER_CP  (QA_MAX)
+  real(RP),               public :: TRACER_CV  (QA_MAX)
+  real(RP),               public :: TRACER_R   (QA_MAX)
+  real(RP),               public :: TRACER_MASS(QA_MAX)
+  logical,                public :: TRACER_ADVC(QA_MAX)
   character(len=H_SHORT), public :: TRACER_NAME(QA_MAX)
   character(len=H_MID),   public :: TRACER_DESC(QA_MAX)
   character(len=H_SHORT), public :: TRACER_UNIT(QA_MAX)
@@ -64,25 +65,26 @@ contains
       PRC_MPIstop
     implicit none
 
-    integer,  intent(out) :: QS
-    integer,  intent(in)  :: NQ
-    character(len=*), intent(in) :: NAME(NQ)
-    character(len=*), intent(in) :: DESC(NQ)
-    character(len=*), intent(in) :: UNIT(NQ)
-    real(RP), intent(in), optional :: CV(NQ)
-    real(RP), intent(in), optional :: CP(NQ)
-    real(RP), intent(in), optional :: R(NQ)
-    logical,  intent(in), optional :: ADVC(NQ) !< if .true., the tracer is advected in the dynamical process. (default is .true.)
-    logical,  intent(in), optional :: MASS(NQ) !< if .true., the tracer has mass. (default is .false.)
+    integer,          intent(out)          :: QS
+    integer,          intent(in)           :: NQ
+    character(len=*), intent(in)           :: NAME(NQ)
+    character(len=*), intent(in)           :: DESC(NQ)
+    character(len=*), intent(in)           :: UNIT(NQ)
+    real(RP),         intent(in), optional :: CV  (NQ)
+    real(RP),         intent(in), optional :: CP  (NQ)
+    real(RP),         intent(in), optional :: R   (NQ)
+    logical,          intent(in), optional :: ADVC(NQ) !< if .true., the tracer is advected in the dynamical process. (default is .true.)
+    logical,          intent(in), optional :: MASS(NQ) !< if .true., the tracer has mass. (default is .false.)
 
-    real(RP) :: CV_(NQ)
-    real(RP) :: CP_(NQ)
-    real(RP) :: R_(NQ)
-    logical :: ADVC_(NQ)
-    logical :: MASS_(NQ)
-    integer :: n
+    real(RP) :: CV_  (NQ)
+    real(RP) :: CP_  (NQ)
+    real(RP) :: R_   (NQ)
+    logical  :: ADVC_(NQ)
+    logical  :: MASS_(NQ)
 
     character(len=24) :: NAME_trim
+
+    integer  :: n
     !---------------------------------------------------------------------------
 
     if ( QA + NQ > QA_MAX ) then
@@ -150,7 +152,6 @@ contains
 
     QS = QA + 1
     QA = QA + NQ
-
 
     return
   end subroutine TRACER_regist

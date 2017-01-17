@@ -220,10 +220,10 @@ module scale_interpolation_nest
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine INTRPNEST_setup ( &
-      interp_search_divnum,  &
-      NEST_INTERP_LEVEL,     &
-      OFFLINE     )
+  subroutine INTRPNEST_setup( &
+      interp_search_divnum, &
+      NEST_INTERP_LEVEL,    &
+      OFFLINE               )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -232,7 +232,7 @@ contains
     integer, intent(in) :: NEST_INTERP_LEVEL
     logical, intent(in) :: OFFLINE
 
-    character(7) :: select_type
+    character(len=7) :: select_type
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -240,32 +240,32 @@ contains
 
     divnum = interp_search_divnum
 
-    select case ( NEST_INTERP_LEVEL )
-    case ( 1 )
+    select case( NEST_INTERP_LEVEL )
+    case( 1 )
        INTRPNEST_search_horiz => INTRPNEST_search_horiz_1points
        INTRPNEST_interp_2d    => INTRPNEST_interp_2d_1points
        INTRPNEST_interp_3d    => INTRPNEST_interp_3d_1points
        itp_nh = 1
 
-    case ( 3 )
+    case( 3 )
        INTRPNEST_search_horiz => INTRPNEST_search_horiz_3points
        INTRPNEST_interp_2d    => INTRPNEST_interp_2d_3points
        INTRPNEST_interp_3d    => INTRPNEST_interp_3d_3points
        itp_nh = 3
 
-    case ( 4 )
+    case( 4 )
        INTRPNEST_search_horiz => INTRPNEST_search_horiz_4points
        INTRPNEST_interp_2d    => INTRPNEST_interp_2d_4points
        INTRPNEST_interp_3d    => INTRPNEST_interp_3d_4points
        itp_nh = 4
 
-    case ( 8 )
+    case( 8 )
        INTRPNEST_search_horiz => INTRPNEST_search_horiz_8points
        INTRPNEST_interp_2d    => INTRPNEST_interp_2d_8points
        INTRPNEST_interp_3d    => INTRPNEST_interp_3d_8points
        itp_nh = 8
 
-    case ( 12 )
+    case( 12 )
        INTRPNEST_search_horiz => INTRPNEST_search_horiz_12points
        INTRPNEST_interp_2d    => INTRPNEST_interp_2d_12points
        INTRPNEST_interp_3d    => INTRPNEST_interp_3d_12points

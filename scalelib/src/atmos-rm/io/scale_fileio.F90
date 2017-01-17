@@ -283,7 +283,7 @@ contains
     logical  :: land_
     logical  :: urban_
 
-    integer :: fid
+    integer  :: fid
     !---------------------------------------------------------------------------
 
     atmos_ = .false.
@@ -297,7 +297,7 @@ contains
     call FILEIO_open( fid,     & ! [OUT]
                       basename ) ! [IN]
 
-    call FILEIO_check_coordinates_id( fid,               & ! [IN]
+    call FILEIO_check_coordinates_id( fid,                  & ! [IN]
                                       atmos_, land_, urban_ ) ! [IN]
 
     return
@@ -1417,12 +1417,12 @@ contains
     logical,          intent(in), optional :: append   !< switch whether append existing file or not (default=false)
     logical,          intent(in), optional :: nozcoord !< switch whether include zcoordinate or not (default=false)
 
-    integer           :: rankidx(2)
-    integer           :: dtype
-    logical           :: append_sw
-    character(len=34) :: tunits
-    integer           :: comm
-    logical           :: fileexisted
+    integer                :: rankidx(2)
+    integer                :: dtype
+    logical                :: append_sw
+    character(len=34)      :: tunits
+    integer                :: comm
+    logical                :: fileexisted
     character(len=H_SHORT) :: logical_str
     !---------------------------------------------------------------------------
 

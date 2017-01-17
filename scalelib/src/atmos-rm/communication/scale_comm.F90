@@ -291,7 +291,7 @@ contains
 
     character(len=*), intent(in)    :: varname    !< variable name
     real(RP),         intent(inout) :: var(:,:,:) !< variable array for register
-    integer,  intent(inout) :: vid        !< variable ID
+    integer,          intent(inout) :: vid        !< variable ID
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
@@ -337,7 +337,7 @@ contains
 
     character(len=*), intent(in)    :: varname    !< variable name
     real(RP),         intent(inout) :: var(:,:,:) !< variable array for register
-    integer,  intent(inout) :: vid        !< variable ID
+    integer,          intent(inout) :: vid        !< variable ID
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then

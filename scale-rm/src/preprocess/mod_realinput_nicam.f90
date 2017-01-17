@@ -78,8 +78,8 @@ contains
          FileGetShape
     implicit none
 
-    integer,               intent(out) :: dims(6)
-    integer,               intent(out) :: timelen
+    integer,          intent(out) :: dims(6)
+    integer,          intent(out) :: timelen
     character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
@@ -126,11 +126,11 @@ contains
          ExternalFileRead
     implicit none
 
-    real(RP), intent(out) :: lon_org(:,:)
-    real(RP), intent(out) :: lat_org(:,:)
-    real(RP), intent(out) :: cz_org(:,:,:)
+    real(RP),         intent(out) :: lon_org(:,:)
+    real(RP),         intent(out) :: lat_org(:,:)
+    real(RP),         intent(out) :: cz_org(:,:,:)
     character(len=*), intent(in)  :: basename_num
-    integer,  intent(in)  :: dims(6)
+    integer,          intent(in)  :: dims(6)
 
     character(len=H_LONG) :: basename
 
@@ -344,7 +344,7 @@ contains
          FileGetShape
     implicit none
 
-    integer,               intent(out) :: ldims(3)
+    integer,          intent(out) :: ldims(3)
     character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
@@ -502,8 +502,8 @@ contains
          FileGetShape
     implicit none
 
-    integer,               intent(out) :: odims(2)
-    integer,               intent(out) :: timelen
+    integer,          intent(out) :: odims(2)
+    integer,          intent(out) :: timelen
     character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
@@ -544,11 +544,11 @@ contains
          ExternalFileRead
     implicit none
 
-    real(RP), intent(out) :: olon_org(:,:)
-    real(RP), intent(out) :: olat_org(:,:)
-    real(RP), intent(out) :: omask_org(:,:)
+    real(RP),         intent(out) :: olon_org(:,:)
+    real(RP),         intent(out) :: olat_org(:,:)
+    real(RP),         intent(out) :: omask_org(:,:)
     character(len=*), intent(in)  :: basename_num
-    integer,  intent(in)  :: odims(2)
+    integer,          intent(in)  :: odims(2)
 
     character(len=H_LONG) :: basename
 

@@ -312,7 +312,9 @@ contains
                                                       whole(I_SW,I_LAT+2*(i-1)), whole(I_SE,I_LAT+2*(i-1))    ! LAT: SW, SE
              if ( ierr /= 0 ) exit
           enddo
+
           close(fid)
+
        endif
 
        do i = 1, PRC_nprocs ! for online nesting

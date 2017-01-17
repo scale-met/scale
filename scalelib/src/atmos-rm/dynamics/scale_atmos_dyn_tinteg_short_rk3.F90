@@ -104,8 +104,8 @@ contains
     integer :: iv
     !---------------------------------------------------------------------------
 
-    select case ( tinteg_type )
-    case ( 'RK3' )
+    select case( tinteg_type )
+    case( 'RK3' )
        if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Heun's method is used"
        ! Heun's method
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
@@ -117,7 +117,7 @@ contains
        FLAG_WS2002 = .false.
        fact_dt1 = 1.0_RP / 3.0_RP
        fact_dt2 = 2.0_RP / 3.0_RP
-    case ( 'RK3WS2002' )
+    case( 'RK3WS2002' )
        if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Wichere and Skamarock (2002) is used"
        ! Wicher and Skamarock (2002) RK3 scheme
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3

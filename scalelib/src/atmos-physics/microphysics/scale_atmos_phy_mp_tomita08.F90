@@ -363,11 +363,11 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_HYDROMETEOR_regist( QS,                         & ! (out)
-                                   1, 2, 3,                    & ! (in)
-                                   ATMOS_PHY_MP_tomita08_NAME, & ! (in)
-                                   ATMOS_PHY_MP_tomita08_DESC, & ! (in)
-                                   ATMOS_PHY_MP_tomita08_UNIT  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS,                         & ! [OUT]
+                                   1, 2, 3,                    & ! [IN]
+                                   ATMOS_PHY_MP_tomita08_NAME, & ! [IN]
+                                   ATMOS_PHY_MP_tomita08_DESC, & ! [IN]
+                                   ATMOS_PHY_MP_tomita08_UNIT  ) ! [IN]
 
     QA    = QA_MP
     QS_MP = QS

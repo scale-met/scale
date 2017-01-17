@@ -578,17 +578,17 @@ contains
        call PRC_MPIstop
     end if
 
-    call ATMOS_HYDROMETEOR_regist( QS_MP,                       & ! (out)
-                                   1, 2, 3,                     & ! (in)
-                                   ATMOS_PHY_MP_sn14_NAME(1:6), & ! (in)
-                                   ATMOS_PHY_MP_sn14_DESC(1:6), & ! (in)
-                                   ATMOS_PHY_MP_sn14_UNIT(1:6)  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS_MP,                       & ! [OUT]
+                                   1, 2, 3,                     & ! [IN]
+                                   ATMOS_PHY_MP_sn14_NAME(1:6), & ! [IN]
+                                   ATMOS_PHY_MP_sn14_DESC(1:6), & ! [IN]
+                                   ATMOS_PHY_MP_sn14_UNIT(1:6)  ) ! [IN]
 
-    call TRACER_regist( QS2, & ! (out)
-                        5,   & ! (in)
-                        ATMOS_PHY_MP_sn14_NAME(7:11), & ! (in)
-                        ATMOS_PHY_MP_sn14_DESC(7:11), & ! (in)
-                        ATMOS_PHY_MP_sn14_UNIT(7:11)  ) ! (in)
+    call TRACER_regist( QS2,                          & ! [OUT]
+                        5,                            & ! [IN]
+                        ATMOS_PHY_MP_sn14_NAME(7:11), & ! [IN]
+                        ATMOS_PHY_MP_sn14_DESC(7:11), & ! [IN]
+                        ATMOS_PHY_MP_sn14_UNIT(7:11)  ) ! [IN]
 
     QA = QA_MP
     QS = QS_MP

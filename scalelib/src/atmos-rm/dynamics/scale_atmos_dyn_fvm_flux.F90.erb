@@ -231,9 +231,9 @@ contains
     character(len=*), intent(in) :: scheme
     character(len=*), intent(in) :: scheme_tracer
 
-    select case ( scheme )
+    select case( scheme )
 <%   order.each do |o, nh| %>
-    case ( "<%= o.upcase %>" )
+    case( "<%= o.upcase %>" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation'
 <% funcs[o].each do |func| %>
       <%= func.sub(/_[^_]+\Z/,"") %> => <%= func %>
@@ -255,9 +255,9 @@ contains
        call PRC_MPIstop
     end select
 
-    select case ( scheme_tracer )
+    select case( scheme_tracer )
 <%   order.each do |o, nh| %>
-    case ( "<%= o.upcase %>" )
+    case( "<%= o.upcase %>" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation of tracer'
 <% funcs[o].each do |func|
      unless /value/ =~ func %>

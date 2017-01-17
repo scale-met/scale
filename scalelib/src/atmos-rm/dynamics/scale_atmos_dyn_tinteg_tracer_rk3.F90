@@ -67,8 +67,6 @@ contains
        tinteg_type )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_vars8_init
     implicit none
@@ -157,7 +155,7 @@ contains
 
     call COMM_vars8( QTRC_RK1(:,:,:), I_COMM_RK1 )
     call COMM_wait ( QTRC_RK1(:,:,:), I_COMM_RK1, .false. )
-    
+
 
     do j = JS-1, JE+1
     do i = IS-1, IE+1

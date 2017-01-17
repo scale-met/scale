@@ -198,7 +198,7 @@ contains
     integer               :: glevel      = -1 !> grid division level
     integer               :: rlevel      = -1 !> region division level
     integer               :: vlayer      =  1 !> number of inner vertical layer
-    character(LEN=H_LONG) :: rgnmngfname = '' !> region management file name
+    character(len=H_LONG) :: rgnmngfname = '' !> region management file name
 
     namelist / ADMPARAM / &
         glevel,           &

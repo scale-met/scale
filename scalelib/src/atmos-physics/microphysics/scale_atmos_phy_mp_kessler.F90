@@ -114,8 +114,6 @@ contains
        QA, QS   )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_tracer, only: &
-       TRACER_regist
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_regist
     implicit none
@@ -134,11 +132,12 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_HYDROMETEOR_regist( QS_MP,                     & ! (out)
-                                   1, 2, 0,                   & ! (in)
-                                   ATMOS_PHY_MP_kessler_NAME, & ! (in)
-                                   ATMOS_PHY_MP_kessler_DESC, & ! (in)
-                                   ATMOS_PHY_MP_kessler_UNIT  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS_MP,                     & ! [OUT]
+                                   1, 2, 0,                   & ! [IN]
+                                   ATMOS_PHY_MP_kessler_NAME, & ! [IN]
+                                   ATMOS_PHY_MP_kessler_DESC, & ! [IN]
+                                   ATMOS_PHY_MP_kessler_UNIT  ) ! [IN]
+
     QA = QA_MP
     QS = QS_MP
     QE_MP = QS_MP + QA_MP - 1

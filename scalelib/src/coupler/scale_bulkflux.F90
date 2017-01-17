@@ -90,7 +90,7 @@ module scale_bulkflux
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: BULKFLUX_TYPE = 'B91W01'
+  character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01'
 
   integer,  private :: BULKFLUX_itr_max = 100 ! maximum iteration number
 
@@ -115,7 +115,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_BULKFLUX / &
-       BULKFLUX_TYPE,      &
+       BULKFLUX_type,      &
        BULKFLUX_itr_max,   &
        BULKFLUX_res_min,   &
        BULKFLUX_err_min,   &

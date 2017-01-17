@@ -98,11 +98,11 @@ contains
        call PRC_MPIstop
     endif
 
-    call TRACER_regist( I_TKE,                                    &
-                        1,                                        &
-                        (/ 'TKE_D1980' /),                        &
-                        (/ 'turbulent kinetic energy (D1980)' /), &
-                        (/ 'm2/s2' /)                             )
+    call TRACER_regist( I_TKE,                                    & ! [OUT]
+                        1,                                        & ! [IN]
+                        (/ 'TKE_D1980' /),                        & ! [IN]
+                        (/ 'turbulent kinetic energy (D1980)' /), & ! [IN]
+                        (/ 'm2/s2' /)                             ) ! [IN]
 
     I_TKE_out = I_TKE
 

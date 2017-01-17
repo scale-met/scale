@@ -115,10 +115,10 @@ contains
     case( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
-    case ( 'OFFLINE' )
+    case( 'OFFLINE' )
        call ATMOS_PHY_RD_offline_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_offline
-    case ( 'WRF' )
+    case( 'WRF' )
        call ATMOS_PHY_RD_mstrnx_setup( 'MSTRNX' )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
        call swinit

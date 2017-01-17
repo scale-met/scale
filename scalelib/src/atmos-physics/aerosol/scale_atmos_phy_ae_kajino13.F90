@@ -187,7 +187,10 @@ contains
        QA, QS )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_tracer, only: &
+       TRACER_regist
     implicit none
+
     character(len=*), intent(in)  :: AE_TYPE
     integer,          intent(out) :: QA
     integer,          intent(out) :: QS
@@ -356,17 +359,15 @@ contains
 
     deallocate(aero_idx)
 
+    call TRACER_regist( QS,                         & ! [OUT]
+                        QA_AE,                      & ! [IN]
+                        ATMOS_PHY_AE_kajino13_NAME, & ! [IN]
+                        ATMOS_PHY_AE_kajino13_DESC, & ! [IN]
+                        ATMOS_PHY_AE_kajino13_UNIT  ) ! [IN]
 
-    call TRACER_regist( QS,    & ! (out)
-                        QA_AE, & ! (in)
-                        ATMOS_PHY_AE_kajino13_NAME, & ! (in)
-                        ATMOS_PHY_AE_kajino13_DESC, & ! (in)
-                        ATMOS_PHY_AE_kajino13_UNIT  ) ! (in)
-
-    QA = QA_AE
+    QA   = QA_AE
     QAES = QS
     QAEE = QS + QA_AE - 1
-
 
     return
   end subroutine ATMOS_PHY_AE_kajino13_config

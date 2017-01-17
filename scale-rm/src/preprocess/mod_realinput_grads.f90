@@ -189,10 +189,10 @@ contains
     NAMELIST / PARAM_MKINIT_REAL_GrADS / &
         upper_qv_type
 
-    integer             :: ielem
-    integer             :: k, n
+    integer :: ielem
 
-    integer             :: ierr
+    integer :: k, n
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: GrADS format'
@@ -428,7 +428,7 @@ contains
           knum = dims(1)
        endif
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,1)
           dd      = grads_dd      (ielem,1)
@@ -471,7 +471,7 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lon")
           if ( trim(dtype) == "linear" ) then
              do j = 1, dims(3)
@@ -599,8 +599,8 @@ contains
              enddo
              enddo
              if( dims(1)>knum ) then
-                select case ( upper_qv_type )
-                case ("COPY")
+                select case( upper_qv_type )
+                case("COPY")
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
@@ -608,7 +608,7 @@ contains
                    enddo
                    enddo
                    enddo
-                case ("ZERO")
+                case("ZERO")
                    ! do nothing
                 case default
                    write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
@@ -633,8 +633,8 @@ contains
              enddo
              enddo
              if( dims(3)>knum ) then
-                select case ( upper_qv_type )
-                case ("COPY")
+                select case( upper_qv_type )
+                case("COPY")
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
@@ -647,7 +647,7 @@ contains
                    enddo
                    enddo
                    enddo
-                case ("ZERO")
+                case("ZERO")
                    ! do nothing
                 case default
                    write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
@@ -1065,7 +1065,7 @@ contains
           knum = ldims(1)
        endif
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,2)
           dd      = grads_dd      (ielem,2)
@@ -1108,7 +1108,7 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lsmask")
           if ( data_available(Il_lsmask,2) ) then
              if ( trim(dtype) == "map" ) then
@@ -1502,7 +1502,7 @@ contains
        lnum     = grads_lnum    (ielem,3)
        missval  = grads_missval (ielem,3)
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,3)
           dd      = grads_dd      (ielem,3)
@@ -1536,7 +1536,7 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lsmask")
           if ( data_available(Io_lsmask,3) ) then
              if ( trim(dtype) == "map" ) then
@@ -1840,9 +1840,11 @@ contains
   !-----------------------------------------------------------------------------
   subroutine open_grads_file(io_fid,filename,irecl)
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: filename
-    integer,intent(in)      :: irecl
+
+    integer,          intent(in) :: io_fid
+    character(len=*), intent(in) :: filename
+    integer,          intent(in) :: irecl
+
     integer  :: ierr
 
     open(io_fid,                   &
@@ -1856,6 +1858,7 @@ contains
        write(*,*) 'xxx grads file does not found! ', trim(filename)
        call PRC_MPIstop
     endif
+
     return
   end subroutine open_grads_file
 
@@ -1870,14 +1873,15 @@ contains
        yrev,                      &
        gdata                      )
     implicit none
-    integer,     intent(in)  :: io_fid
-    character(*),intent(in)  :: gfile
-    integer,     intent(in)  :: nx,ny,nz,it
-    character(*),intent(in)  :: item
-    integer,     intent(in)  :: startrec
-    integer,     intent(in)  :: totalrec
-    character(*),intent(in)  :: yrev
-    real(SP),    intent(out) :: gdata(nx,ny)
+
+    integer,          intent(in)  :: io_fid
+    character(len=*), intent(in)  :: gfile
+    integer,          intent(in)  :: nx,ny,nz,it
+    character(len=*), intent(in)  :: item
+    integer,          intent(in)  :: startrec
+    integer,          intent(in)  :: totalrec
+    character(len=*), intent(in)  :: yrev
+    real(SP),         intent(out) :: gdata(nx,ny)
 
     real(SP) :: work(nx,ny)
 
@@ -1920,14 +1924,15 @@ contains
        yrev,                      &
        gdata                      )
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: gfile
-    integer,     intent(in) :: nx,ny,nz,it
-    character(*),intent(in) :: item
-    integer,     intent(in) :: startrec
-    integer,     intent(in) :: totalrec
-    character(*),intent(in) :: yrev
-    real(SP),intent(out)    :: gdata(nx,ny,nz)
+
+    integer,          intent(in)  :: io_fid
+    character(len=*), intent(in)  :: gfile
+    integer,          intent(in)  :: nx,ny,nz,it
+    character(len=*), intent(in)  :: item
+    integer,          intent(in)  :: startrec
+    integer,          intent(in)  :: totalrec
+    character(len=*), intent(in)  :: yrev
+    real(SP),         intent(out) :: gdata(nx,ny,nz)
 
     real(SP) :: work(nx,ny,nz)
 
@@ -1965,9 +1970,10 @@ contains
   !-----------------------------------------------------------------------------
   subroutine close_grads_file(io_fid,filename)
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: filename
-    integer                 :: ierr
+
+    integer,          intent(in) :: io_fid
+    character(len=*), intent(in) :: filename
+    integer                      :: ierr
 
     close(io_fid, iostat=ierr)
     if ( ierr /= 0 ) then

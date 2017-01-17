@@ -215,8 +215,8 @@ contains
 
     !---------------------------------------------------------------------------
 
-    select case ( Tstep_large_type )
-    case ( 'FVM-HEVE' )
+    select case( Tstep_large_type )
+    case( 'FVM-HEVE' )
        call ATMOS_DYN_Tstep_large_fvm_heve_setup( &
             DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
             mflx_hi )

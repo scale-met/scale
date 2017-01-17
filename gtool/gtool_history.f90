@@ -203,7 +203,7 @@ module gtool_history
 
   integer,                    private              :: laststep_write = -1
   logical,                    private              :: firsttime      = .true.
-  character(LEN=LOG_LMSG),    private              :: message        = ''
+  character(len=LOG_LMSG),    private              :: message        = ''
   logical,                    private              :: debug          = .false.
 
   integer,                    private              :: io_buffer_size                    !>  internal buffer for PnetCDF
@@ -321,7 +321,7 @@ contains
     character(len=File_HSHORT) :: item1, item2
 
     integer  :: fid, ierr
-    integer  :: n, k, id
+    integer  :: n, id
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -618,9 +618,9 @@ contains
     integer                  :: ndim
 
     logical                  :: shared_file_io
-    integer                  :: nmax, reqid
+    integer                  :: reqid
     integer                  :: id, fid
-    integer                  :: n, m, dim_size
+    integer                  :: m, dim_size
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -1020,7 +1020,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1096,7 +1095,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1172,7 +1170,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1248,7 +1245,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1324,7 +1320,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1400,7 +1395,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1476,7 +1470,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1552,7 +1545,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -2122,8 +2114,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryWriteAxes
-    use dc_log, only: &
-       LOG_fid
     use gtool_file, only: &
        FileEndDef,    &
        FileFlush,     &

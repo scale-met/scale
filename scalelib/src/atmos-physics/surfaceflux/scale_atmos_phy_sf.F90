@@ -132,8 +132,10 @@ contains
     case('BULK')
        call ATMOS_PHY_SF_bulk_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_bulk
-    case('OFF', 'COUPLE')
+    case('OFF')
        ! do nothing
+    case('COUPLE')
+       if( IO_L ) write(IO_FID_LOG,*) '*** do nothing here'
     case default
        write(*,*) 'xxx invalid Surface flux type(', trim(SF_TYPE), '). CHECK!'
        call PRC_MPIstop

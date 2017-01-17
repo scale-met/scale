@@ -224,7 +224,7 @@ module scale_atmos_phy_mp_suzuki10
 !  real(RP), private            :: R10H1, R10H2        ! scaling factor for 10m value (heat)
 !  real(RP), private            :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
 
-  character(11),parameter :: fname_micpara="micpara.dat" !--- file name
+  character(len=11), parameter :: fname_micpara="micpara.dat" !--- file name
   integer(4) :: fid_micpara
 
   !--- Use for stochastic method
@@ -380,18 +380,18 @@ contains
     NL = nbin            ! number of liquid water
     NI = nbin * (nspc-1) ! number of ice water
 
-    call ATMOS_HYDROMETEOR_regist( QS,                                    & ! (out)
-                                   1, NL, NI,                             & ! (in)
-                                   ATMOS_PHY_MP_suzuki10_NAME(1:NL+NI+1), & ! (in)
-                                   ATMOS_PHY_MP_suzuki10_DESC(1:NL+NI+1), & ! (in)
-                                   ATMOS_PHY_MP_suzuki10_UNIT(1:NL+NI+1)  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS,                                    & ! [OUT]
+                                   1, NL, NI,                             & ! [IN]
+                                   ATMOS_PHY_MP_suzuki10_NAME(1:NL+NI+1), & ! [IN]
+                                   ATMOS_PHY_MP_suzuki10_DESC(1:NL+NI+1), & ! [IN]
+                                   ATMOS_PHY_MP_suzuki10_UNIT(1:NL+NI+1)  ) ! [IN]
 
     if ( nccn > 0 ) then
-       call TRACER_regist( QS2,  & ! (out)
-                           nccn, & ! (in)
-                           ATMOS_PHY_MP_suzuki10_NAME(NL+NI+2:), & ! (in)
-                           ATMOS_PHY_MP_suzuki10_DESC(NL+NI+2:), & ! (in)
-                           ATMOS_PHY_MP_suzuki10_UNIT(NL+NI+2:)  ) ! (in)
+       call TRACER_regist( QS2,                                  & ! [OUT]
+                           nccn,                                 & ! [IN]
+                           ATMOS_PHY_MP_suzuki10_NAME(NL+NI+2:), & ! [IN]
+                           ATMOS_PHY_MP_suzuki10_DESC(NL+NI+2:), & ! [IN]
+                           ATMOS_PHY_MP_suzuki10_UNIT(NL+NI+2:)  ) ! [IN]
     end if
 
     I_QV = QS

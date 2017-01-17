@@ -38,14 +38,14 @@ module mod_admin_restart
   !
   !++ Private parameters & variables
   !
-  logical,               public :: RESTART_RUN                   = .false.   !< Is this run restart?
-  logical,               public :: RESTART_OUTPUT                = .false.   !< Output restart file?
+  logical,                public :: RESTART_RUN                   = .false.   !< Is this run restart?
+  logical,                public :: RESTART_OUTPUT                = .false.   !< Output restart file?
 
-  character(len=H_LONG), public :: RESTART_IN_BASENAME           = ''        !< Basename of the input  file
-  logical,               public :: RESTART_IN_POSTFIX_TIMELABEL  = .false.   !< Add timelabel to the basename of input  file?
-  character(len=H_LONG), public :: RESTART_OUT_BASENAME          = ''        !< Basename of the output file
-  logical,               public :: RESTART_OUT_POSTFIX_TIMELABEL = .true.    !< Add timelabel to the basename of output file?
-  character(len=H_MID),  public :: RESTART_OUT_TITLE             = ''        !< Title    of the output file
+  character(len=H_LONG),  public :: RESTART_IN_BASENAME           = ''        !< Basename of the input  file
+  logical,                public :: RESTART_IN_POSTFIX_TIMELABEL  = .false.   !< Add timelabel to the basename of input  file?
+  character(len=H_LONG),  public :: RESTART_OUT_BASENAME          = ''        !< Basename of the output file
+  logical,                public :: RESTART_OUT_POSTFIX_TIMELABEL = .true.    !< Add timelabel to the basename of output file?
+  character(len=H_MID),   public :: RESTART_OUT_TITLE             = ''        !< Title    of the output file
   character(len=H_SHORT), public :: RESTART_OUT_DTYPE             = 'DEFAULT' !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------

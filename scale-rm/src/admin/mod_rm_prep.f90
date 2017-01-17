@@ -155,9 +155,9 @@ contains
        USER_config
     implicit none
 
-    integer,               intent(in) :: comm_world
-    integer,               intent(in) :: intercomm_parent
-    integer,               intent(in) :: intercomm_child
+    integer,          intent(in) :: comm_world
+    integer,          intent(in) :: intercomm_parent
+    integer,          intent(in) :: intercomm_child
     character(len=*), intent(in) :: cnf_fname
 
     integer :: myrank

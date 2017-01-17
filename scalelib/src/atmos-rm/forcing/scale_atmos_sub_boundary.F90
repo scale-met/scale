@@ -126,10 +126,10 @@ module scale_atmos_boundary
   !++ Private parameters & variables
   !
   character(len=H_SHORT), private :: ATMOS_BOUNDARY_TYPE         = 'NONE'
-  character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME  = ''
-  logical,               private :: ATMOS_BOUNDARY_IN_CHECK_COORDINATES = .true.
-  character(len=H_LONG), private :: ATMOS_BOUNDARY_OUT_BASENAME = ''
-  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE    = 'SCALE-RM BOUNDARY CONDITION'  !< title of the output file
+  character(len=H_LONG),  private :: ATMOS_BOUNDARY_IN_BASENAME  = ''
+  logical,                private :: ATMOS_BOUNDARY_IN_CHECK_COORDINATES = .true.
+  character(len=H_LONG),  private :: ATMOS_BOUNDARY_OUT_BASENAME = ''
+  character(len=H_MID),   private :: ATMOS_BOUNDARY_OUT_TITLE    = 'SCALE-RM BOUNDARY CONDITION'  !< title of the output file
   character(len=H_SHORT), private :: ATMOS_BOUNDARY_OUT_DTYPE    = 'DEFAULT'                      !< REAL4 or REAL8
 
   logical,               private :: ATMOS_BOUNDARY_USE_DENS     = .false. ! read from file?
@@ -340,13 +340,13 @@ contains
     if ( l_bnd ) then
 
        select case(ATMOS_BOUNDARY_interp_TYPE)
-       case ('same_parent')
+       case('same_parent')
           get_boundary => get_boundary_same_parent
-       case ('nearest_neighbor')
+       case('nearest_neighbor')
           get_boundary => get_boundary_nearest_neighbor
-       case ('lerp_initpoint')
+       case('lerp_initpoint')
           get_boundary => get_boundary_lerp_initpoint
-       case ('lerp_midpoint')
+       case('lerp_midpoint')
           get_boundary => get_boundary_lerp_midpoint
        case default
           write(*,*) 'xxx Wrong parameter in ATMOS_BOUNDARY_interp_TYPE. Check!'
@@ -1213,12 +1213,11 @@ contains
        TIME_NOWDATE
     implicit none
 
-    integer  :: boundary_time_startday
-    real(DP) :: boundary_time_startsec
-    real(DP) :: boundary_time_startms
-    integer  :: boundary_time_offset_year
-
-    character(len=27)     :: boundary_chardate
+    integer           :: boundary_time_startday
+    real(DP)          :: boundary_time_startsec
+    real(DP)          :: boundary_time_startms
+    integer           :: boundary_time_offset_year
+    character(len=27) :: boundary_chardate
 
     if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
        ATMOS_BOUNDARY_START_DATE = TIME_NOWDATE

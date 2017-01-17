@@ -51,11 +51,11 @@ module mod_land_vars
   !
   logical,               public :: LAND_RESTART_OUTPUT                = .false.         !< Output restart file?
 
-  character(len=H_LONG), public :: LAND_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
-  logical,               public :: LAND_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
-  character(len=H_LONG), public :: LAND_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
-  logical,               public :: LAND_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
-  character(len=H_MID),  public :: LAND_RESTART_OUT_TITLE             = 'LAND restart' !< Title    of the output file
+  character(len=H_LONG),  public :: LAND_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
+  logical,                public :: LAND_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
+  character(len=H_LONG),  public :: LAND_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
+  logical,                public :: LAND_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
+  character(len=H_MID),   public :: LAND_RESTART_OUT_TITLE             = 'LAND restart' !< Title    of the output file
   character(len=H_SHORT), public :: LAND_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
@@ -417,17 +417,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Read land restart
   subroutine LAND_vars_restart_read
-    use scale_time, only: &
-       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use mod_land_admin, only: &
-       LAND_sw
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (LAND) ***'
 
@@ -456,8 +452,7 @@ contains
        call FILEIO_read( LAND_SFLX_evap(:,:),                               & ! [OUT]
                          restart_fid, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
 
-       if ( IO_AGGREGATE ) &
-          call FILEIO_flush( restart_fid )
+       if( IO_AGGREGATE ) call FILEIO_flush( restart_fid ) ! commit all pending read requests
 
        call LAND_vars_total
     else
@@ -595,16 +590,16 @@ contains
        LANDUSE_PFT_nmax
     implicit none
 
-    integer                :: index
-    character(len=H_LONG)  :: description
-    real(RP)               :: STRGMAX
-    real(RP)               :: STRGCRT
-    real(RP)               :: TCS
-    real(RP)               :: HCS
-    real(RP)               :: DFW
-    real(RP)               :: Z0M
-    real(RP)               :: Z0H
-    real(RP)               :: Z0E
+    integer              :: index
+    character(len=H_MID) :: description
+    real(RP)             :: STRGMAX
+    real(RP)             :: STRGCRT
+    real(RP)             :: TCS
+    real(RP)             :: HCS
+    real(RP)             :: DFW
+    real(RP)             :: Z0M
+    real(RP)             :: Z0H
+    real(RP)             :: Z0E
 
     NAMELIST / PARAM_LAND_PROPERTY /  &
        LAND_PROPERTY_IN_FILENAME
@@ -792,7 +787,7 @@ contains
        FILEIO_enddef
     implicit none
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
        call FILEIO_enddef( restart_fid ) ! [IN]
     endif
 
@@ -812,6 +807,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (LAND) ***'
 
        call FILEIO_close( restart_fid ) ! [IN]
+
        restart_fid = -1
     endif
 
@@ -824,10 +820,9 @@ contains
     use scale_fileio, only: &
        FILEIO_def_var
     implicit none
-
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call FILEIO_def_var( restart_fid, VAR_ID(I_TEMP),      VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      &
                             VAR_UNIT(I_TEMP),      'Land', LAND_RESTART_OUT_DTYPE)
@@ -865,10 +860,9 @@ contains
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
-
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call LAND_vars_total
 

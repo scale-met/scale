@@ -235,8 +235,8 @@ contains
     ATMOS_PHY_MP_UNIT            => NAME(ATMOS_PHY_MP_, MP, _UNIT)
     ATMOS_PHY_MP_DENS            => NAME(ATMOS_PHY_MP_, MP, _DENS)
 #else
-    select case ( MP_TYPE )
-    case ( 'DRY' )
+    select case( MP_TYPE )
+    case( 'DRY' )
        call ATMOS_PHY_MP_dry_config( &
             MP_TYPE,     & ! (in)
             QA_MP, QS_MP ) ! (out)
@@ -249,7 +249,7 @@ contains
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_dry_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_dry_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_dry_DENS
-    case ( 'KESSLER' )
+    case( 'KESSLER' )
        call ATMOS_PHY_MP_kessler_config( &
             MP_TYPE,     & ! (in)
             QA_MP, QS_MP ) ! (out)
@@ -262,7 +262,7 @@ contains
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_kessler_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_kessler_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_kessler_DENS
-    case ( 'TOMITA08' )
+    case( 'TOMITA08' )
        call ATMOS_PHY_MP_tomita08_config( &
             MP_TYPE,     & ! (in)
             QA_MP, QS_MP ) ! (out)
@@ -275,7 +275,7 @@ contains
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_tomita08_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_tomita08_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_tomita08_DENS
-    case ( 'SN14' )
+    case( 'SN14' )
        call ATMOS_PHY_MP_sn14_config( &
             MP_TYPE,     & ! (in)
             QA_MP, QS_MP ) ! (out)
@@ -288,7 +288,7 @@ contains
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_sn14_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_sn14_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_sn14_DENS
-    case ( 'SUZUKI10' )
+    case( 'SUZUKI10' )
        call ATMOS_PHY_MP_suzuki10_config( &
             MP_TYPE,     & ! (in)
             QA_MP, QS_MP ) ! (out)
@@ -301,7 +301,7 @@ contains
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_suzuki10_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_suzuki10_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_suzuki10_DENS
-    case ( 'SDM' )
+    case( 'SDM' )
        call ATMOS_PHY_MP_sdm_config( &
             MP_TYPE,     & ! (in)
             QA_MP, QS_MP ) ! (out)

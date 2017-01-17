@@ -164,7 +164,7 @@ contains
     ATMOS_PHY_TB_setup  => NAME(ATMOS_PHY_TB_, TB, _setup)
 #else
     select case( TB_TYPE )
-    case ( 'SMAGORINSKY' )
+    case( 'SMAGORINSKY' )
 
        call ATMOS_PHY_TB_smg_config( TB_TYPE, & ! [IN]
                                      I_TKE    ) ! [OUT]
@@ -172,7 +172,7 @@ contains
        ATMOS_PHY_TB       => ATMOS_PHY_TB_smg
        ATMOS_PHY_TB_setup => ATMOS_PHY_TB_smg_setup
 
-    case ( 'D1980' )
+    case( 'D1980' )
 
        call ATMOS_PHY_TB_d1980_config( TB_TYPE, & ! [IN]
                                        I_TKE    ) ! [OUT]
@@ -180,7 +180,7 @@ contains
        ATMOS_PHY_TB       => ATMOS_PHY_TB_d1980
        ATMOS_PHY_TB_setup => ATMOS_PHY_TB_d1980_setup
 
-    case ( 'DNS' )
+    case( 'DNS' )
 
        call ATMOS_PHY_TB_dns_config( TB_TYPE, & ! [IN]
                                      I_TKE    ) ! [OUT]
@@ -188,7 +188,7 @@ contains
        ATMOS_PHY_TB       => ATMOS_PHY_TB_dns
        ATMOS_PHY_TB_setup => ATMOS_PHY_TB_dns_setup
 
-    case ( 'MYNN' )
+    case( 'MYNN' )
 
        call ATMOS_PHY_TB_mynn_config( TB_TYPE, & ! [IN]
                                       I_TKE    ) ! [OUT]
@@ -196,7 +196,7 @@ contains
        ATMOS_PHY_TB       => ATMOS_PHY_TB_mynn
        ATMOS_PHY_TB_setup => ATMOS_PHY_TB_mynn_setup
 
-    case ('HYBRID')
+    case('HYBRID')
 
        call ATMOS_PHY_TB_hybrid_config( TB_TYPE, & ! [IN]
                                         I_TKE    ) ! [OUT]
@@ -204,7 +204,7 @@ contains
        ATMOS_PHY_TB       => ATMOS_PHY_TB_hybrid
        ATMOS_PHY_TB_setup => ATMOS_PHY_TB_hybrid_setup
 
-    case ('OFF')
+    case('OFF')
 
        ! do nothing
 

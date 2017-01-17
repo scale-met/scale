@@ -60,8 +60,11 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call TRACER_REGIST( I_NC, &
-         1, (/'NC'/), (/'Passive tracer'/), (/'1'/) )
+    call TRACER_REGIST( I_NC,                 & ! [OUT]
+                        1,                    & ! [IN]
+                        (/'NC'/),             & ! [IN]
+                        (/'Passive tracer'/), & ! [IN]
+                        (/'1'/)               ) ! [IN]
 
     return
   end subroutine USER_config

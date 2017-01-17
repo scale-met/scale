@@ -46,11 +46,11 @@ module mod_atmos_dyn_vars
   !
   logical,               public :: ATMOS_DYN_RESTART_OUTPUT                = .false.             !< output restart file?
 
-  character(len=H_LONG), public :: ATMOS_DYN_RESTART_IN_BASENAME           = ''                  !< Basename of the input  file
-  logical,               public :: ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL  = .false.             !< Add timelabel to the basename of input  file?
-  character(len=H_LONG), public :: ATMOS_DYN_RESTART_OUT_BASENAME          = ''                  !< Basename of the output file
-  logical,               public :: ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL = .true.              !< Add timelabel to the basename of output file?
-  character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_TITLE             = 'ATMOS_DYN restart' !< title    of the output file
+  character(len=H_LONG),  public :: ATMOS_DYN_RESTART_IN_BASENAME           = ''                  !< Basename of the input  file
+  logical,                public :: ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL  = .false.             !< Add timelabel to the basename of input  file?
+  character(len=H_LONG),  public :: ATMOS_DYN_RESTART_OUT_BASENAME          = ''                  !< Basename of the output file
+  logical,                public :: ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL = .true.              !< Add timelabel to the basename of output file?
+  character(len=H_MID),   public :: ATMOS_DYN_RESTART_OUT_TITLE             = 'ATMOS_DYN restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_DYN_RESTART_OUT_DTYPE             = 'DEFAULT'           !< REAL4 or REAL8
 
   ! prognostic variables
@@ -244,7 +244,7 @@ contains
     integer  :: i, j, iv
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_DYN) ***'
 
@@ -325,7 +325,7 @@ contains
        FILEIO_enddef
     implicit none
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
        call FILEIO_enddef( restart_fid ) ! [IN]
     endif
 
@@ -345,6 +345,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_DYN) ***'
 
        call FILEIO_close( restart_fid ) ! [IN]
+
        restart_fid = -1
     endif
 
@@ -361,7 +362,7 @@ contains
     integer iv
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        do iv = 1, VA
           call FILEIO_def_var( restart_fid, VAR_ID(iv), VAR_NAME(iv), VAR_DESC(iv), &
@@ -387,7 +388,7 @@ contains
     integer  :: iv
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call ATMOS_DYN_vars_fillhalo
 

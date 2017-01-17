@@ -122,12 +122,12 @@ contains
        call PRC_MPIstop
     endif
 
-    call TRACER_regist( I_TKE,                                          &
-                        1,                                              &
-                        (/ 'TKE_SMG' /),                                &
-                        (/ 'turbulent kinetic energy (Smagorinsky)' /), &
-                        (/ 'm2/s2' /),                                  &
-                        advc = (/ .false. /)                            )
+    call TRACER_regist( I_TKE,                                          & ! [OUT]
+                        1,                                              & ! [IN]
+                        (/ 'TKE_SMG' /),                                & ! [IN]
+                        (/ 'turbulent kinetic energy (Smagorinsky)' /), & ! [IN]
+                        (/ 'm2/s2' /),                                  & ! [IN]
+                        advc = (/ .false. /)                            ) ! [IN], optional
 
     I_TKE_out = I_TKE
 

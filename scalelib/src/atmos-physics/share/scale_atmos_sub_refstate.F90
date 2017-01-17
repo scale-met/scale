@@ -64,7 +64,7 @@ module scale_atmos_refstate
   character(len=H_LONG),  private :: ATMOS_REFSTATE_IN_BASENAME  = ''                   !< basename of the input  file
   logical,                private :: ATMOS_REFSTATE_IN_CHECK_COORDINATES = .true.
   character(len=H_LONG),  private :: ATMOS_REFSTATE_OUT_BASENAME = ''                   !< basename of the output file
-  character(len=H_MID) ,  private :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE-RM RefState'  !< title    of the output file
+  character(len=H_MID),   private :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE-RM RefState'  !< title    of the output file
   character(len=H_SHORT), private :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'            !< REAL4 or REAL8
 
   character(len=H_SHORT), private :: ATMOS_REFSTATE_TYPE         = 'UNIFORM'            !< profile type

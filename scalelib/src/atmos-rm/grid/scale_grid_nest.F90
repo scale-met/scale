@@ -324,7 +324,7 @@ contains
     integer :: ims, ime
     integer :: jms, jme
 
-    character(2) :: dom_num
+    character(len=2) :: dom_num
 
     logical :: flag_parent = .false.
     logical :: flag_child  = .false.

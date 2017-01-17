@@ -195,7 +195,7 @@ contains
     !---------------------------------------------------------------------------
 
     select case( URBAN_TYPE )
-    case ( 'SLC' )
+    case( 'SLC' )
        call URBAN_PHY_SLC_setup( URBAN_TYPE,   & ! (in)
                                  Z0M, Z0H, Z0E ) ! (out)
        URBAN_PHY      => URBAN_PHY_SLC

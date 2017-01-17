@@ -65,9 +65,8 @@ contains
        I_TKE_out )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_tracer, only: &
-       TRACER_regist
     implicit none
+
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
     !---------------------------------------------------------------------------

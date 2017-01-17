@@ -69,18 +69,18 @@ module scale_roughness
   !
   !++ Private procedure
   !
-  private :: ROUGHNESS_const_setup
-  private :: ROUGHNESS_const
   private :: ROUGHNESS_miller92_setup
   private :: ROUGHNESS_moon07_setup
+  private :: ROUGHNESS_const_setup
   private :: ROUGHNESS_miller92
   private :: ROUGHNESS_moon07
+  private :: ROUGHNESS_const
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: ROUGHNESS_TYPE = 'MOON07' ! surface roughness length scheme
+  character(len=H_SHORT), private :: ROUGHNESS_type = 'MOON07' ! surface roughness length scheme
 
   real(RP), private :: ROUGHNESS_visck          = 1.5E-5_RP ! kinematic viscosity
   real(RP), private :: ROUGHNESS_Ustar_min      = 1.0E-3_RP ! minimum fiction velocity
@@ -110,7 +110,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_ROUGHNESS / &
-       ROUGHNESS_TYPE,      &
+       ROUGHNESS_type,      &
        ROUGHNESS_visck,     &
        ROUGHNESS_Ustar_min, &
        ROUGHNESS_Z0M_min,   &
