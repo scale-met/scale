@@ -107,10 +107,15 @@ contains
     call NAME(ATMOS_PHY_CP_, CP, _setup)( CP_TYPE )
     ATMOS_PHY_CP => NAME(ATMOS_PHY_CP_, CP,)
 #else
-    select case ( CP_TYPE )
-    case( 'KF' )
+    select case( CP_TYPE )
+    case('OFF')
+       ! do nothing
+    case('KF')
        call ATMOS_PHY_CP_kf_setup( CP_TYPE )
        ATMOS_PHY_CP => ATMOS_PHY_CP_kf
+    case default
+       write(*,*) 'xxx invalid Cumulus parameterization type(', trim(CP_TYPE), '). CHECK!'
+       call PRC_MPIstop
     end select
 #endif
 
