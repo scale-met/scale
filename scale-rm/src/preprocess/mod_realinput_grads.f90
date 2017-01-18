@@ -399,6 +399,7 @@ contains
 
     integer  :: QA_outer = 1
     real(RP) :: p_sat, qm, rhsfc
+    real(RP) :: lp2, lp3
 
     integer  :: i, j, k, ielem
 
@@ -816,10 +817,17 @@ contains
        ! guess surface height (elevation)
        do j = 1, dims(3)
        do i = 1, dims(2)
-          cz_org(2,i,j) = max( 0.0_RP, &
-                               cz_org(3,i,j) &
-                               * ( log(pres_org(2,i,j)/pres_org(1,i,j)) ) &
-                               / ( log(pres_org(3,i,j)/pres_org(1,i,j)) ) )
+          if ( pres_org(2,i,j) < pres_org(1,i,j) ) then
+             lp2 = log( pres_org(2,i,j) / pres_org(1,i,j) )
+          else
+             lp2 = 1.0_RP
+          end if
+          if ( pres_org(3,i,j) < pres_org(1,i,j) ) then
+             lp3 = log( pres_org(3,i,j) / pres_org(1,i,j) )
+          else
+             lp3 = 1.0_RP
+          end if
+          cz_org(2,i,j) = max( 0.0_RP, cz_org(3,i,j) * lp2 / lp3 )
        end do
        end do
     end if
