@@ -1300,6 +1300,7 @@ contains
     if ( vid < 0 ) then ! variable registration
        !--- register new variable
        write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
+       call Log("I",message)
 
        tint8 = real(tint,DP)
 
@@ -1369,6 +1370,7 @@ contains
     if ( vid < 0 ) then ! variable registration
        !--- register new variable
        write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
+       call Log("I",message)
 
        tint8 = real(tint,DP)
 
