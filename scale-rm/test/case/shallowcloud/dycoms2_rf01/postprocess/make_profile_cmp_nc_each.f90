@@ -311,7 +311,7 @@ program convine
       stop
      end if
 
-     status = nf_inq_varid( ncid,'TKE',id01 )
+     status = nf_inq_varid( ncid,'TKE_SMG',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid sgstke"
      stop
