@@ -245,8 +245,8 @@ contains
        end do
        end do
 
-       call HIST_in( SFLX_rain(:,:),   'RAIN',      'surface rain rate by MP',          'kg/m2/s',  nohalo=.true. )
-       call HIST_in( SFLX_snow(:,:),   'SNOW',      'surface snow rate by MP',          'kg/m2/s',  nohalo=.true. )
+       call HIST_in( SFLX_rain(:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  nohalo=.true. )
+       call HIST_in( SFLX_snow(:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  nohalo=.true. )
        call HIST_in( precip   (:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  nohalo=.true. )
        call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', nohalo=.true. )
 

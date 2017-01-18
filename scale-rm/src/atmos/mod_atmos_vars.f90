@@ -1328,7 +1328,9 @@ contains
     real(RP) :: MSE      (KA,IA,JA) ! MSE        [m2/s2]
     real(RP) :: LHV_local(KA,IA,JA) ! latent heat for vaporization [m2/s2]
 
-    real(RP) :: PREC  (IA,JA)    ! surface precipitation rate CP+MP [kg/m2/s]
+    real(RP) :: PREC  (IA,JA)    ! surface precipitation rate CP+MP(rain+snow) [kg/m2/s]
+    real(RP) :: RAIN  (IA,JA)    ! surface rain rate CP+MP [kg/m2/s]
+    real(RP) :: SNOW  (IA,JA)    ! surface snow rate CP+MP [kg/m2/s]
 
     real(RP) :: DENS_PRIM(KA,IA,JA) ! horiz. deviation of density    [kg/m3]
     real(RP) :: W_PRIM   (KA,IA,JA) ! horiz. deviation of w          [m/s]
@@ -2185,9 +2187,14 @@ contains
     do i = IS, IE
        PREC(i,j) = SFLX_rain_CP(i,j)                     &
                  + SFLX_rain_MP(i,j) + SFLX_snow_MP(i,j)
+       RAIN(i,j) = SFLX_rain_CP(i,j)                     &
+                 + SFLX_rain_MP(i,j)
+       SNOW(i,j) = SFLX_snow_MP(i,j)
     enddo
     enddo
     call HIST_in( PREC(:,:), 'PREC', 'surface precipitation rate (total)', 'kg/m2/s' )
+    call HIST_in( RAIN(:,:), 'RAIN', 'surface rain rate (total)', 'kg/m2/s' )
+    call HIST_in( SNOW(:,:), 'SNOW', 'surface snow rate (total)', 'kg/m2/s' )
 
     return
   end subroutine ATMOS_vars_history
