@@ -17,15 +17,21 @@ DATDISTS=(`echo ${11} | tr -s ',' ' '`)
 MPIEXEC="mpiexec"
 
 if [ ! ${PPCONF} = "NONE" ]; then
+  SIN1_PP="#PJM --stgin  \"rank=* ${BINDIR}/${PPNAME}   %r:./\""
+  SIN2_PP="#PJM --stgin  \"rank=*         ./${PPCONF}   %r:./\""
   RUN_PP="${MPIEXEC} ./${PPNAME} ${PPCONF} || exit"
 fi
 
 if [ ! ${INITCONF} = "NONE" ]; then
+  SIN1_INIT="#PJM --stgin  \"rank=* ${BINDIR}/${INITNAME} %r:./\""
+  SIN2_INIT="#PJM --stgin  \"rank=*         ./${INITCONF} %r:./\""
   RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
-  RUN_BIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+  SIN1_MAIN="#PJM --stgin  \"rank=* ${BINDIR}/${BINNAME}  %r:./\""
+  SIN2_MAIN="#PJM --stgin  \"rank=*         ./${RUNCONF}  %r:./\""
+  RUN_MAIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
 fi
 
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
@@ -57,12 +63,12 @@ cat << EOF1 > ./run.sh
 #PJM --rsc-list "elapse=02:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
-#PJM --stgin  "rank=* ${BINDIR}/${PPNAME}   %r:./"
-#PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
-#PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
-#PJM --stgin  "rank=*         ./${PPCONF}   %r:./"
-#PJM --stgin  "rank=*         ./${INITCONF} %r:./"
-#PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+${SIN1_PP}
+${SIN1_INIT}
+${SIN1_MAIN}
+${SIN2_PP}
+${SIN2_INIT}
+${SIN2_MAIN}
 EOF1
 
 if [ ! ${DATPARAM[0]} = "" ]; then
@@ -104,7 +110,7 @@ export OMP_NUM_THREADS=8
 # run
 ${RUN_PP}
 ${RUN_INIT}
-${RUN_BIN}
+${RUN_MAIN}
 
 ################################################################################
 EOF2
