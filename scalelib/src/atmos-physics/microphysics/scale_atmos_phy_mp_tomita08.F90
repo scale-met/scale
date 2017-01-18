@@ -110,7 +110,7 @@ module scale_atmos_phy_mp_tomita08
   logical,  private              :: MP_doprecipitation   = .true.  ! apply sedimentation (precipitation)?
   logical,  private              :: MP_couple_aerosol    = .false. ! apply CCN effect?
   real(RP), private              :: MP_limit_negative    = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
-  logical,  private              :: MP_doexpricit_icegen = .false. ! apply explicit ice generation?
+  logical,  private              :: MP_doexplicit_icegen = .false. ! apply explicit ice generation?
 
   real(RP), private, parameter   :: dens00      = 1.28_RP !< standard density [kg/m3]
 
@@ -407,7 +407,7 @@ contains
        MP_doprecipitation,     &
        MP_donegative_fixer,    &
        MP_limit_negative,      &
-       MP_doexpricit_icegen,   &
+       MP_doexplicit_icegen,   &
        MP_ntmax_sedimentation, &
        MP_couple_aerosol
 
@@ -477,7 +477,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                    : ', MP_donegative_fixer
     if( IO_L ) write(IO_FID_LOG,*) '*** Value limit of negative fixer (abs)       : ', abs(MP_limit_negative)
     if( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)?     : ', MP_doprecipitation
-    if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?           : ', MP_doexpricit_icegen
+    if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?           : ', MP_doexplicit_icegen
 
     nstep_max = ceiling( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ(:) ) )
     MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
@@ -538,7 +538,7 @@ contains
     Dg = 0.50_RP
 
     if ( enable_RS2014 ) then ! overwrite parameters
-       MP_doexpricit_icegen = .true.
+       MP_doexplicit_icegen = .true.
 
        sw_RS2014 = 1.0_RP
        N0g_def   = 4.E+8_RP
@@ -549,7 +549,7 @@ contains
        Egs       = 0.0_RP
     endif
 
-    if ( MP_doexpricit_icegen ) then
+    if ( MP_doexplicit_icegen ) then
        only_liquid = .true.
        sw_expice   = 1.0_RP
     else
