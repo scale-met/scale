@@ -203,7 +203,7 @@ module gtool_history
 
   integer,                    private              :: laststep_write = -1
   logical,                    private              :: firsttime      = .true.
-  character(LEN=LOG_LMSG),    private              :: message        = ''
+  character(len=LOG_LMSG),    private              :: message        = ''
   logical,                    private              :: debug          = .false.
 
   integer,                    private              :: io_buffer_size                    !>  internal buffer for PnetCDF
@@ -321,13 +321,13 @@ contains
     character(len=File_HSHORT) :: item1, item2
 
     integer  :: fid, ierr
-    integer  :: n, k, id
+    integer  :: n, id
 
     intrinsic size
     !---------------------------------------------------------------------------
 
     call Log('I','')
-    call Log('I','+++ Module[HISTORY]/Categ[GTOOL]')
+    call Log('I','###### Module[HISTORY] / Origin[gtoollib]')
 
     ! setup
     allocate( History_rankidx(size(rankidx)) )
@@ -488,18 +488,19 @@ contains
        endif
     enddo
 
-    write(message,*) '*** Number of requested history item             : ', History_req_count
+    call Log('I','')
+    write(message,'(A,I4)') '*** Number of requested history item             : ', History_req_count
     call Log('I',message)
-    write(message,*) '*** Output default data type                     : ', History_DEFAULT_DATATYPE
+    write(message,'(A,A)')  '*** Output default data type                     : ', History_DEFAULT_DATATYPE
     call Log('I',message)
-    write(message,*) '*** Memory usage for history data buffer [Mbyte] : ', memsize / 1024 / 1024
+    write(message,'(A,I8)') '*** Memory usage for history data buffer [Mbyte] : ', memsize / 1024 / 1024
     call Log('I',message)
-    write(message,*) '*** Output value at the initial step?            : ', History_OUTPUT_STEP0
+    write(message,'(A,L4)') '*** Output value at the initial step?            : ', History_OUTPUT_STEP0
     call Log('I',message)
-    write(message,*) '*** Check if requested item is not registered?   : ', History_ERROR_PUTMISS
+    write(message,'(A,L4)') '*** Check if requested item is not registered?   : ', History_ERROR_PUTMISS
     call Log('I',message)
     if ( History_OUTPUT_WAIT > 0.0_DP ) then
-       write(message,*) '*** Time to suppress output [sec]                : ', History_OUTPUT_WAIT
+       write(message,'(A,F10.3)') '*** Time to suppress output [sec]                : ', History_OUTPUT_WAIT
        call Log('I',message)
     endif
 
@@ -617,9 +618,9 @@ contains
     integer                  :: ndim
 
     logical                  :: shared_file_io
-    integer                  :: nmax, reqid
+    integer                  :: reqid
     integer                  :: id, fid
-    integer                  :: n, m, dim_size
+    integer                  :: m, dim_size
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -1019,7 +1020,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1095,7 +1095,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1171,7 +1170,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1247,7 +1245,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1323,7 +1320,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1399,7 +1395,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1475,7 +1470,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -1551,7 +1545,6 @@ contains
     integer :: dtype
     integer :: dim_size
     integer :: id
-    integer :: type
 
     intrinsic size, shape, reshape
     !---------------------------------------------------------------------------
@@ -2121,8 +2114,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryWriteAxes
-    use dc_log, only: &
-       LOG_fid
     use gtool_file, only: &
        FileEndDef,    &
        FileFlush,     &
@@ -2528,29 +2519,32 @@ contains
     !---------------------------------------------------------------------------
 
     call Log('I','')
-    write(message,*) '*** [HIST] Output item list '
+    write(message,'(A)') '*** [HIST] Output item list '
     call Log('I',message)
-    write(message,*) '*** Number of history item :', History_req_count
+    write(message,'(A,I4)') '*** Number of history item :', History_req_count
     call Log('I',message)
-    write(message,*) 'ITEM            :OUTNAME         :size    :interval[sec]:  [step]:timeavg?:zcoord'
+    write(message,'(2A)') 'ITEM                    :OUTNAME                 ', &
+                          ':    size:interval[sec]:    step:timeavg?:zcoord'
     call Log('I',message)
-    write(message,*) '=================================================================================='
+    write(message,'(2A)') '=================================================', &
+                          '================================================'
     call Log('I',message)
 
     do id = 1, History_id_count
        dtsec = real(History_vars(id)%dstep,kind=DP) * History_DTSEC
 
-       write(message,'(1x,A,1x,A,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A6)') History_vars(id)%item,     &
-                                                                     History_vars(id)%outname,  &
-                                                                     History_vars(id)%size,     &
-                                                                     dtsec,                     &
-                                                                     History_vars(id)%dstep,    &
-                                                                     History_vars(id)%taverage, &
-                                                                     History_vars(id)%zcoord
+       write(message,'(A24,1x,A24,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A6)') History_vars(id)%item,     &
+                                                                      History_vars(id)%outname,  &
+                                                                      History_vars(id)%size,     &
+                                                                      dtsec,                     &
+                                                                      History_vars(id)%dstep,    &
+                                                                      History_vars(id)%taverage, &
+                                                                      History_vars(id)%zcoord
        call Log('I',message)
     enddo
 
-    write(message,*) '=================================================================================='
+    write(message,'(2A)') '=================================================', &
+                          '================================================'
     call Log('I',message)
     call Log('I','')
 

@@ -94,8 +94,8 @@ contains
          ExternalFileGetShape
     implicit none
 
-    integer,               intent(out) :: dims(6)
-    integer,               intent(out) :: timelen
+    integer,          intent(out) :: dims(6)
+    integer,          intent(out) :: timelen
     character(len=*), intent(in)  :: basename_org
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
@@ -446,7 +446,7 @@ contains
          ExternalFileGetShape
     implicit none
 
-    integer,               intent(out) :: ldims(3)
+    integer,          intent(out) :: ldims(3)
     character(len=*), intent(in)  :: basename_land
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
@@ -650,8 +650,8 @@ contains
          ExternalFileGetShape
     implicit none
 
-    integer,               intent(out) :: odims(2)
-    integer,               intent(out) :: timelen
+    integer,          intent(out) :: odims(2)
+    integer,          intent(out) :: timelen
     character(len=*), intent(in)  :: basename_org
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst

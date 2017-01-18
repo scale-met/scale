@@ -208,16 +208,16 @@ contains
             ATMOS_DYN_Tinteg_large_TYPE )
     ATMOS_DYN_Tinteg_large => NAME(ATMOS_DYN_Tingeg_large_, TINTEG_LARGE,)
 #else
-    select case ( ATMOS_DYN_Tinteg_large_TYPE )
-    case ( 'EULER' )
+    select case( ATMOS_DYN_Tinteg_large_TYPE )
+    case( 'EULER' )
        call ATMOS_DYN_Tinteg_large_euler_setup( &
             ATMOS_DYN_Tinteg_large_TYPE )
        ATMOS_DYN_Tinteg_large => ATMOS_DYN_Tinteg_large_euler
-    case ( 'RK3' )
+    case( 'RK3' )
        call ATMOS_DYN_Tinteg_large_rk3_setup( &
             ATMOS_DYN_Tinteg_large_TYPE )
        ATMOS_DYN_Tinteg_large => ATMOS_DYN_Tinteg_large_rk3
-    case ( 'OFF', 'NONE' )
+    case( 'OFF', 'NONE' )
        ! do nothing
     case default
        write(*,*) 'xxx ATMOS_DYN_TINTEG_LARGE_TYPE is invalid: ', ATMOS_DYN_Tinteg_large_TYPE

@@ -159,16 +159,16 @@ contains
             ATMOS_DYN_Tinteg_short_TYPE )
     ATMOS_DYN_Tinteg_short => NAME(ATMOS_DYN_Tingeg_short_, TINTEG_SHORT,)
 #else
-    select case ( ATMOS_DYN_Tinteg_short_TYPE )
-    case ( 'RK3', 'RK3WS2002' )
+    select case( ATMOS_DYN_Tinteg_short_TYPE )
+    case( 'RK3', 'RK3WS2002' )
        call ATMOS_DYN_Tinteg_short_rk3_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk3
-    case ( 'RK4' )
+    case( 'RK4' )
        call ATMOS_DYN_Tinteg_short_rk4_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk4
-    case ( 'OFF', 'NONE' )
+    case( 'OFF', 'NONE' )
        ! do nothing
     case default
        write(*,*) 'xxx ATMOS_DYN_TINTEG_SHORT_TYPE is invalid: ', ATMOS_DYN_Tinteg_short_TYPE

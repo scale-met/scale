@@ -104,8 +104,10 @@ contains
     endif
 
     if ( LKE == LKS ) then
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Single layer. LDZ = ', LDZ(1)
     else
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
        '|====== Vertical Coordinate ======|'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &

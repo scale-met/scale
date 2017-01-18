@@ -102,16 +102,16 @@ contains
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_tracer_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( ATMOS_DYN_Tinteg_tracer_TYPE )
-    case ( 'EULER' )
+    select case( ATMOS_DYN_Tinteg_tracer_TYPE )
+    case( 'EULER' )
        call ATMOS_DYN_Tinteg_tracer_euler_setup( &
             ATMOS_DYN_Tinteg_tracer_TYPE )
        ATMOS_DYN_Tinteg_tracer => ATMOS_DYN_Tinteg_tracer_euler
-    case ( 'RK3WS2002' )
+    case( 'RK3WS2002' )
        call ATMOS_DYN_Tinteg_tracer_rk3_setup( &
             ATMOS_DYN_Tinteg_tracer_TYPE )
        ATMOS_DYN_Tinteg_tracer => ATMOS_DYN_Tinteg_tracer_rk3
-    case ( 'OFF', 'NONE' )
+    case( 'OFF', 'NONE' )
        ! do nothing
     case default
        write(*,*) 'xxx ATMOS_DYN_TINTEG_TRACER_TYPE is invalid: ', ATMOS_DYN_Tinteg_tracer_TYPE

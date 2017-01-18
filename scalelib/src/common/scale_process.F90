@@ -335,16 +335,16 @@ contains
       fname_local       ) ! [out]
     implicit none
 
-    integer, intent(in)  :: ORG_COMM
-    integer, intent(in)  :: NUM_DOMAIN
-    integer, intent(in)  :: PRC_DOMAINS(:)
+    integer,               intent(in)  :: ORG_COMM
+    integer,               intent(in)  :: NUM_DOMAIN
+    integer,               intent(in)  :: PRC_DOMAINS(:)
     character(len=*),      intent(in)  :: CONF_FILES(:)
-    logical, intent(in)  :: LOG_SPLIT
-    logical, intent(in)  :: bulk_split
-    logical, intent(in)  :: color_reorder
-    integer, intent(out) :: intra_comm
-    integer, intent(out) :: inter_parent
-    integer, intent(out) :: inter_child
+    logical,               intent(in)  :: LOG_SPLIT
+    logical,               intent(in)  :: bulk_split
+    logical,               intent(in)  :: color_reorder
+    integer,               intent(out) :: intra_comm
+    integer,               intent(out) :: inter_parent
+    integer,               intent(out) :: inter_child
     character(len=H_LONG), intent(out) :: fname_local
 
     integer :: PARENT_COL(PRC_DOMAIN_nlim)        ! parent color number
@@ -527,17 +527,17 @@ contains
       COL_FILE         ) ! [out]
     implicit none
 
-    integer, intent(in)  :: ORG_COMM
-    integer, intent(in)  :: NUM_DOMAIN
-    integer, intent(in)  :: PRC_DOMAINS(:)
+    integer,               intent(in)  :: ORG_COMM
+    integer,               intent(in)  :: NUM_DOMAIN
+    integer,               intent(in)  :: PRC_DOMAINS(:)
     character(len=*),      intent(in)  :: CONF_FILES(:)
-    logical, intent(in)  :: color_reorder
-    logical, intent(in)  :: LOG_SPLIT
-    integer, intent(out) :: COLOR_LIST(:)             ! member list in each color
-    integer, intent(out) :: PRC_ROOT(0:PRC_DOMAIN_nlim)     ! root process in each color
-    integer, intent(out) :: KEY_LIST(:)               ! local process number in each color
-    integer, intent(out) :: PARENT_COL(:)             ! parent color number
-    integer, intent(out) :: CHILD_COL(:)              ! child  color number
+    logical,               intent(in)  :: color_reorder
+    logical,               intent(in)  :: LOG_SPLIT
+    integer,               intent(out) :: COLOR_LIST(:)             ! member list in each color
+    integer,               intent(out) :: PRC_ROOT(0:PRC_DOMAIN_nlim)     ! root process in each color
+    integer,               intent(out) :: KEY_LIST(:)               ! local process number in each color
+    integer,               intent(out) :: PARENT_COL(:)             ! parent color number
+    integer,               intent(out) :: CHILD_COL(:)              ! child  color number
     character(len=H_LONG), intent(out) :: COL_FILE(0:PRC_DOMAIN_nlim) ! conf file in each color
 
     integer :: touch(PRC_DOMAIN_nlim)

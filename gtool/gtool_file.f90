@@ -152,16 +152,16 @@ module gtool_file
   integer,                   private, parameter :: File_nvar_max  = 40960 ! number limit of variables
                                                  ! Keep consistency with "VAR_MAX" in gtool_netcdf.c
 
-  character(LEN=File_HLONG), private,      save :: File_fname_list(File_nfile_max)
+  character(len=File_HLONG), private,      save :: File_fname_list(File_nfile_max)
   integer,                   private,      save :: File_fid_list  (File_nfile_max)
   integer,                   private,      save :: File_fid_count = 1
-  character(LEN=File_HLONG), private,      save :: File_vname_list  (File_nvar_max)
+  character(len=File_HLONG), private,      save :: File_vname_list  (File_nvar_max)
   integer,                   private,      save :: File_vid_fid_list(File_nvar_max)
   integer,                   private,      save :: File_vid_list    (File_nvar_max)
   integer,                   private,      save :: File_vid_count = 1
   integer,                   private,      save :: mpi_myrank
 
-  character(LEN=LOG_LMSG),   private            :: message
+  character(len=LOG_LMSG),   private            :: message
 
 contains
   !-----------------------------------------------------------------------------
@@ -184,14 +184,14 @@ contains
 
     integer,          intent(out)           :: fid
     logical,          intent(out)           :: existed
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: title
-    character(LEN=*), intent( in)           :: source
-    character(LEN=*), intent( in)           :: institution
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: title
+    character(len=*), intent( in)           :: source
+    character(len=*), intent( in)           :: institution
     integer,          intent( in)           :: master
     integer,          intent( in)           :: myrank
     integer,          intent( in)           :: rankidx(:)
-    character(LEN=*), intent( in), optional :: time_units
+    character(len=*), intent( in), optional :: time_units
     logical,          intent( in), optional :: single
     logical,          intent( in), optional :: append
     integer,          intent( in), optional :: comm ! MPI communicator
@@ -242,7 +242,7 @@ contains
     call FileSetGlobalAttribute( fid, & ! (in)
          "institution", institution   ) ! (in)
 
-    if ( .NOT. present(comm) .OR. comm .EQ. MPI_COMM_NULL ) then
+    if ( .NOT. present(comm) .OR. comm == MPI_COMM_NULL ) then
        ! for shared-file parallel I/O, skip attributes related to MPI processes
        call FileSetGlobalAttribute( fid, & ! (in)
             "myrank", (/myrank/)         ) ! (in)
@@ -267,8 +267,8 @@ contains
        val       & ! (out)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: key
-    character(LEN=*), intent(out) :: val
+    character(len=*), intent(in) :: key
+    character(len=*), intent(out) :: val
 
     integer error
 
@@ -291,7 +291,7 @@ contains
        val       & ! (out)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: key
+    character(len=*), intent(in) :: key
     integer,          intent(out) :: val(:)
 
     integer error
@@ -315,7 +315,7 @@ contains
        val       & ! (out)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: key
+    character(len=*), intent(in) :: key
     real(SP),    intent(out) :: val(:)
 
     integer error
@@ -339,7 +339,7 @@ contains
        val       & ! (out)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: key
+    character(len=*), intent(in) :: key
     real(DP),    intent(out) :: val(:)
 
     integer error
@@ -364,8 +364,8 @@ contains
        val       & ! (in)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: key
-    character(LEN=*), intent(in) :: val
+    character(len=*), intent(in) :: key
+    character(len=*), intent(in) :: val
 
     integer error
 
@@ -386,7 +386,7 @@ contains
        val       & ! (in)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: key
+    character(len=*), intent(in) :: key
     integer,          intent(in) :: val(:)
 
     integer error
@@ -410,7 +410,7 @@ contains
        val       & ! (in)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: key
+    character(len=*), intent(in) :: key
     real(SP),    intent(in) :: val(:)
 
     integer error
@@ -434,7 +434,7 @@ contains
        val       & ! (in)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: key
+    character(len=*), intent(in) :: key
     real(DP),    intent(in) :: val(:)
 
     integer error
@@ -459,9 +459,9 @@ contains
        val       & ! (in)
        )
     integer,          intent(in) :: fid
-    character(LEN=*), intent(in) :: filetype
-    character(LEN=*), intent(in) :: key
-    character(LEN=*), intent(in) :: val
+    character(len=*), intent(in) :: filetype
+    character(len=*), intent(in) :: key
+    character(len=*), intent(in) :: val
 
     integer error
 
@@ -486,7 +486,7 @@ contains
     implicit none
 
     integer,          intent(out) :: fid
-    character(LEN=*), intent( in) :: basename
+    character(len=*), intent( in) :: basename
     integer,          intent( in) :: mode
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: comm
@@ -1299,10 +1299,8 @@ contains
 
     if ( vid < 0 ) then ! variable registration
        !--- register new variable
-       write(message,*) '*** [File] Var registration'
-       call Log("I", message)
-       write(message,*) '*** variable name: ', trim(varname)
-       call Log("I", message)
+       write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
+       call Log("I",message)
 
        tint8 = real(tint,DP)
 
@@ -1371,10 +1369,8 @@ contains
 
     if ( vid < 0 ) then ! variable registration
        !--- register new variable
-       write(message,*) '*** [File] Var registration'
-       call Log("I", message)
-       write(message,*) '*** variable name: ', trim(varname)
-       call Log("I", message)
+       write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
+       call Log("I",message)
 
        tint8 = real(tint,DP)
 
@@ -1524,8 +1520,8 @@ contains
     implicit none
 
     integer,          intent(out)           :: dims(:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: single
 
@@ -1806,8 +1802,8 @@ contains
     implicit none
 
     real(SP),    intent(out)           :: var(:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -1887,8 +1883,8 @@ contains
     implicit none
 
     real(DP),    intent(out)           :: var(:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -1968,8 +1964,8 @@ contains
     implicit none
 
     real(SP),    intent(out)           :: var(:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2049,8 +2045,8 @@ contains
     implicit none
 
     real(DP),    intent(out)           :: var(:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2130,8 +2126,8 @@ contains
     implicit none
 
     real(SP),    intent(out)           :: var(:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2211,8 +2207,8 @@ contains
     implicit none
 
     real(DP),    intent(out)           :: var(:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2292,8 +2288,8 @@ contains
     implicit none
 
     real(SP),    intent(out)           :: var(:,:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2373,8 +2369,8 @@ contains
     implicit none
 
     real(DP),    intent(out)           :: var(:,:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2461,7 +2457,7 @@ contains
 
     real(SP),    intent(out)           :: var(:)
     integer,          intent( in)           :: fid
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2539,7 +2535,7 @@ contains
 
     real(DP),    intent(out)           :: var(:)
     integer,          intent( in)           :: fid
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2617,7 +2613,7 @@ contains
 
     real(SP),    intent(out)           :: var(:,:)
     integer,          intent( in)           :: fid
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2695,7 +2691,7 @@ contains
 
     real(DP),    intent(out)           :: var(:,:)
     integer,          intent( in)           :: fid
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2773,7 +2769,7 @@ contains
 
     real(SP),    intent(out)           :: var(:,:,:)
     integer,          intent( in)           :: fid
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2851,7 +2847,7 @@ contains
 
     real(DP),    intent(out)           :: var(:,:,:)
     integer,          intent( in)           :: fid
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -2929,7 +2925,7 @@ contains
 
     real(SP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in)           :: fid
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -3007,7 +3003,7 @@ contains
 
     real(DP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in)           :: fid
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
@@ -3661,14 +3657,21 @@ contains
        write(message,*) 'xxx in FileEndDef invalid fid' , fid
        call Log('E', message)
     end if
-    call file_enddef( fid , & ! (in)
-         error              ) ! (out)
-    if ( error .EQ. SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File enddef : NO.', n
-       call Log('I', message)
-       call Log('I', '*** enddef filename: ' // trim(File_fname_list(n)))
+
+    call file_enddef( fid, error )
+
+    if ( error == SUCCESS_CODE ) then
+
+       call Log("I",'')
+       write(message,'(A,I3.3,2A)') '###### File end define mode : No.', File_fid_list(n), &
+                                                  ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
+       call Log("I",'')
+
     else
+
        call Log('E', 'xxx failed to exit define mode')
+
     end if
 
     return
@@ -3696,15 +3699,20 @@ contains
        write(message,*) 'xxx in FileAttachBuffer invalid fid' , fid
        call Log('E', message)
     end if
-    call file_attach_buffer( fid, buf_amount, & ! (in)
-         error                                ) ! (out)
-    if ( error .EQ. SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File Attach Buffer : NO.', n
-       call Log('I', message)
-       write(message, '(1x,A,I10)') '*** attach buffer for filename: ' // trim(File_fname_list(n)) // ', size=', buf_amount
-       call Log('I', message)
+
+    call file_attach_buffer( fid, buf_amount, error )
+
+    if ( error == SUCCESS_CODE ) then
+
+       write(message,'(A,I3.3,3A,I10)') '###### File attach buffer : No.', File_fid_list(n),  &
+                                                       ', name = ', trim(File_fname_list(n)), &
+                                                       ', size = ', buf_amount
+       call Log("I",message)
+
     else
+
        call Log('E', 'xxx failed to attach buffer in PnetCDF')
+
     end if
 
     return
@@ -3726,20 +3734,25 @@ contains
     do n = 1, File_fid_count-1
        if ( File_fid_list(n) == fid ) exit
     end do
-    if ( n .EQ. File_fid_count ) return  ! already closed
+    if ( n == File_fid_count ) return  ! already closed
 
     if ( fid .NE. File_fid_list(n) ) then
        write(message,*) 'xxx in FileDetachBuffer invalid fid' , fid
        call Log('E', message)
     end if
-    call file_detach_buffer( fid, & ! (in)
-         error                    ) ! (out)
-    if ( error .EQ. SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File Detach Buffer : NO.', n
-       call Log('I', message)
-       call Log('I', '*** detach buffer for filename: ' // trim(File_fname_list(n)))
+
+    call file_detach_buffer( fid, error )
+
+    if ( error == SUCCESS_CODE ) then
+
+       write(message,'(A,I3.3,2A)') '###### File detach buffer : No.', File_fid_list(n), &
+                                                   ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
+
     else
+
        call Log('E', 'xxx failed to detach buffer in PnetCDF')
+
     end if
 
     return
@@ -3763,20 +3776,27 @@ contains
     do n = 1, File_fid_count-1
        if ( File_fid_list(n) == fid ) exit
     end do
-    if ( n .EQ. File_fid_count ) return  ! already closed
+    if ( n == File_fid_count ) return  ! already closed
 
     if ( fid .NE. File_fid_list(n) ) then
        write(message,*) 'xxx in FileFlush invalid fid' , fid
        call Log('E', message)
     end if
-    call file_flush( fid,  & ! (in)
-         error             ) ! (out)
-    if ( error .EQ. SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File flush : NO.', n
-       call Log('I', message)
-       call Log('I', '*** FileFlush filename: ' // trim(File_fname_list(n)))
+
+    call file_flush( fid, error )
+
+    if ( error == SUCCESS_CODE ) then
+
+       call Log("I",'')
+       write(message,'(A,I3.3,2A)') '###### File flush : No.', File_fid_list(n), &
+                                                  ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
+       call Log("I",'')
+
     else
+
        call Log('E', 'xxx failed to flush PnetCDF pending requests')
+
     end if
 
     return
@@ -3790,7 +3810,7 @@ contains
 
     integer, intent(in) :: fid
 
-    character(LEN=File_HLONG) :: fname
+    character(len=File_HLONG) :: fname
     integer                   :: error
     integer                   :: n
     !---------------------------------------------------------------------------
@@ -3800,20 +3820,27 @@ contains
     do n = 1, File_fid_count-1
        if ( File_fid_list(n) == fid ) exit
     end do
-    if ( n .EQ. File_fid_count ) return  ! already closed
+    if ( n == File_fid_count ) return  ! already closed
 
     if ( fid /= File_fid_list(n) ) then
        write(message,*) 'xxx in FileClose invalid fid ', fid
        call Log('E', message)
     end if
-    call file_close( fid , & ! (in)
-         error             ) ! (out)
+
+    call file_close( fid, error )
+
     if ( error == SUCCESS_CODE ) then
-       write(message, '(1x,A,i3)') '*** [File] File Close : NO.', n
-       call Log('I', message)
-       call Log('I', '*** closed filename: ' // trim(File_fname_list(n)))
-    else if ( error /= ALREADY_CLOSED_CODE ) then
+
+       call Log("I",'')
+       write(message,'(A,I3.3,2A)') '###### File close : No.', File_fid_list(n), &
+                                                  ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
+       call Log("I",'')
+
+    elseif( error /= ALREADY_CLOSED_CODE ) then
+
        call Log('E', 'xxx failed to close file')
+
     end if
 
     do n = 1, File_fid_count-1
@@ -3881,15 +3908,15 @@ contains
 
     integer,          intent(out) :: fid
     logical,          intent(out) :: existed
-    character(LEN=*), intent( in) :: basename
+    character(len=*), intent( in) :: basename
     integer,          intent( in) :: mode
     logical,          intent( in) :: single
     integer,          intent( in), optional :: comm
 
-    character(LEN=File_HSHORT) :: rwname(0:2)
+    character(len=File_HSHORT) :: rwname(0:2)
     data rwname / 'READ','WRITE','APPEND' /
 
-    character(LEN=File_HLONG) :: fname
+    character(len=File_HLONG) :: fname
     integer                   :: n
 
     integer :: error
@@ -3928,10 +3955,11 @@ contains
        call Log('E', 'xxx failed to open file :'//trim(fname)//'.nc')
     end if
 
-    write(message,*) '*** [File] File registration : ',trim(rwname(mode)),' -', fid
-    call Log("I", message)
-    write(message,*) '*** filename: ', trim(fname)
-    call Log("I", message)
+    call Log("I",'')
+    write(message,'(3A,I3.3,2A)') '###### File registration (', &
+                                  trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
+    call Log("I",message)
+    call Log("I",'')
 
     File_fname_list(File_fid_count) = trim(fname)
     File_fid_list  (File_fid_count) = fid

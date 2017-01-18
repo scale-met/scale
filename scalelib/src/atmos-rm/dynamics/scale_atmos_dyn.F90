@@ -236,20 +236,20 @@ contains
 
     else
 
-       call COMM_vars8_init( DENS, I_COMM_DENS )
-       call COMM_vars8_init( MOMZ, I_COMM_MOMZ )
-       call COMM_vars8_init( MOMX, I_COMM_MOMX )
-       call COMM_vars8_init( MOMY, I_COMM_MOMY )
-       call COMM_vars8_init( RHOT, I_COMM_RHOT )
+       call COMM_vars8_init( 'DENS', DENS, I_COMM_DENS )
+       call COMM_vars8_init( 'MOMZ', MOMZ, I_COMM_MOMZ )
+       call COMM_vars8_init( 'MOMX', MOMX, I_COMM_MOMX )
+       call COMM_vars8_init( 'MOMY', MOMY, I_COMM_MOMY )
+       call COMM_vars8_init( 'RHOT', RHOT, I_COMM_RHOT )
 
        do iv = 1, VA
           I_COMM_PROG(iv) = 5 + iv
-          call COMM_vars8_init( PROG(:,:,:,iv), I_COMM_PROG(iv) )
+          call COMM_vars8_init( 'PROG', PROG(:,:,:,iv), I_COMM_PROG(iv) )
        enddo
 
        do iq = 1, QA
           I_COMM_QTRC(iq) = 5 + VA + iq
-          call COMM_vars8_init( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
+          call COMM_vars8_init( 'QTRC', QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
        enddo
 
     endif
@@ -382,7 +382,7 @@ contains
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos dynamics step'
 
     dt = real(DTSEC, kind=RP)
 

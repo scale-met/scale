@@ -164,6 +164,10 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for SGS-parameterization hybrid Model'
+
     if ( TB_TYPE /= 'HYBRID' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not HYBRID. Check!'
        call PRC_MPIstop
@@ -180,8 +184,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_HYBRID)
 
-    select case ( ATMOS_PHY_TB_HYBRID_SGS_TYPE )
-    case ('SMAGORINSKY')
+    select case( ATMOS_PHY_TB_HYBRID_SGS_TYPE )
+    case('SMAGORINSKY')
        call ATMOS_PHY_TB_SMG_config( &
             ATMOS_PHY_TB_HYBRID_SGS_TYPE, &
             I_TKE_SGS )
@@ -192,8 +196,8 @@ contains
        call PRC_MPIstop
     end select
 
-    select case ( ATMOS_PHY_TB_HYBRID_PBL_TYPE )
-    case ('MYNN')
+    select case( ATMOS_PHY_TB_HYBRID_PBL_TYPE )
+    case('MYNN')
        call ATMOS_PHY_TB_mynn_config( &
             ATMOS_PHY_TB_HYBRID_PBL_TYPE, &
             I_TKE_PBL )
@@ -226,8 +230,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ SGS-parameterization hybrid Model'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** SGS-parameterization hybrid Model'
 
     call SGS_TB_setup( CDZ, CDX, CDY, CZ )
     call PBL_TB_setup( CDZ, CDX, CDY, CZ )

@@ -75,7 +75,7 @@ module mod_user
   logical,  private, save :: USER_do = .false. !< do user step?
 
   real(RP), parameter :: &
-       WaveNumCOS = 2d0,         &         
+       WaveNumCOS = 2d0,         &
        RCOSBELL = 1.5e3_RP,      &
        RRECT    = 1.5e3_RP,      &
        XIni     = 10.0e3_RP,     &
@@ -83,10 +83,10 @@ module mod_user
        ENV_U    = 40.0e0_RP,     &
        ENV_V    = 40.0e0_RP
 
-  character(len=H_SHORT), private, save :: InitShape  
+  character(len=H_SHORT), private, save :: InitShape
   real(RP),               private, save :: Lx
   real(RP),               private, save :: Ly
-  
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -94,9 +94,16 @@ contains
   subroutine USER_config
     use scale_tracer, only: &
          TRACER_regist
+    use scale_atmos_hydrometeor, only: &
+       I_NC
+    implicit none
+    !---------------------------------------------------------------------------
 
-    call TRACER_REGIST( I_NC, &
-         1, (/'NC'/), (/'Passive tracer'/), (/'1'/) )
+    call TRACER_REGIST( I_NC,                 & ! [OUT]
+                        1,                    & ! [IN]
+                        (/'NC'/),             & ! [IN]
+                        (/'Passive tracer'/), & ! [IN]
+                        (/'1'/)               ) ! [IN]
 
     return
   end subroutine USER_config
@@ -113,7 +120,7 @@ contains
 
     integer :: ierr
     logical :: USER_FLAG_FCT = .false.
-    
+
     namelist / PARAM_USER / &
        USER_do,             &
        InitShape
@@ -134,7 +141,7 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
-    
+
     Lx = GRID_FXG(IAG-IHALO) - GRID_FXG(IHALO)
     Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
 
@@ -159,7 +166,7 @@ contains
     real(RP) :: x_
     real(RP) :: y_
     integer :: k, i, j
-    
+
     !---------------------------------------------------------------------------
 
     if ( NOWTSEC == 0.0_RP ) then
@@ -172,13 +179,13 @@ contains
              y_ = CY(j)
              QTRC(k,i,j,I_NC) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )  &
                               * cos( WaveNumCOS * 2.0_RP * PI / Lx *  y_ )
-             
+
           enddo
           enddo
           enddo
        end select
     end if
-    
+
     ! calculate diagnostic value and input to history buffer
     call USER_step
 
@@ -192,15 +199,15 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        GRAV  => CONST_GRAV
-    
+
     use scale_time, only: &
          DTSEC => TIME_DTSEC, &
          NOWTSEC => TIME_NOWSEC
-    
+
     use mod_atmos_vars, only: &
        DENS, &
        RHOT, QTRC
-    
+
     use scale_history, only: &
        HIST_in
 
@@ -214,7 +221,7 @@ contains
     real(RP) :: l2_error
     real(RP) :: linf_error
     integer :: k, i, j
-    
+
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
@@ -231,7 +238,7 @@ contains
           else if(x_ > Lx) then
              x_ = mod(x_,Lx)
           end if
-          
+
           y_ = CY(j) - yshift
           if(y_ < 0.0_RP) then
              y_ = Ly - mod(abs(y_),Ly)
@@ -270,14 +277,14 @@ contains
 
        return
     end if
-    
+
   end subroutine USER_step
 
   !--------------------------------------------------------------------------------------
 
-  
+
   function calc_l2error(NumSol, ExactSol) result(l2error)
-    
+
     real(RP), intent(in) :: NumSol(KA,IA,JA)
     real(RP), intent(in) :: ExactSol(KA,IA,JA)
     real(RP) :: l2error
@@ -290,7 +297,7 @@ contains
 
     l2_error_lctmp1 = 0d0
     l2_error_lctmp2 = 0d0
-    
+
     do j = JS, JE
        do i = IS, IE
           l2_error_lctmp1 = l2_error_lctmp1 + &
@@ -298,7 +305,7 @@ contains
           l2_error_lctmp2 = l2_error_lctmp2 + &
                & ExactSol(KS,i,j)**2 * CDX(i) * CDY(j)
        end do
-    end do    
+    end do
 
     call MPI_Allreduce( l2_error_lctmp1, l2_error_gltmp1, 1, &
          COMM_datatype, MPI_SUM, COMM_world, ierr )
@@ -307,11 +314,11 @@ contains
          COMM_datatype, MPI_SUM, COMM_world, ierr )
 
     l2error = sqrt(l2_error_gltmp1 / l2_error_gltmp2)
-    
+
   end function calc_l2error
 
   function calc_linferror(NumSol, ExactSol) result(linf_error)
-    
+
     real(RP), intent(in) :: NumSol(KA,IA,JA)
     real(RP), intent(in) :: ExactSol(KA,IA,JA)
     real(RP) :: linf_error
@@ -330,16 +337,16 @@ contains
          COMM_datatype, MPI_MAX, COMM_world, ierr )
 
     linf_error = linf_error_gltmp1 / linf_error_gltmp2
-    
+
   end function calc_linferror
-  
+
 !!$  subroutine ConvCheck()
 !!$
 !!$    use mod_atmos_dyn_vars, only: &
 !!$         & PROG
 !!$    use mod_atmos_vars, only: &
 !!$         & DENS, QTRC
-!!$    
+!!$
 !!$    integer :: IIS, IIE, JJS, JJE, i, j
 !!$    real(RP), dimension(KA,IA,JA,3) :: mflx_hi
 !!$    real(RP), dimension(KA,IA,JA) :: one, zero, VARTMP, exactRHS, RHS
@@ -347,12 +354,12 @@ contains
 !!$    integer :: FlxEvalTypeID
 !!$    integer, parameter :: WaveNum = 2
 !!$    real(RP), parameter :: PI = acos(-1.0_RP)
-!!$    
+!!$
 !!$    Lx = FX(IE) - FX(IS-1)
 !!$    mflx_hi = 0.0_RP
-!!$    
+!!$
 !!$    call ATMOS_NUMERIC_FDM_setup(1, 1)
-!!$    
+!!$
 !!$    do j = 1, JA
 !!$    do i = 1, IA
 !!$      mflx_hi(:,i,j,XDIR) = 1.0_RP
@@ -365,7 +372,7 @@ contains
 !!$    write(*,*) FX(1:IA)
 !!$    PROG(:,:,:,I_Qadv) = DENS(:,:,:) * VARTMP(:,:,:)
 !!$    return
-!!$    
+!!$
 !!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_UD1, "UD1")
 !!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_CD2, "CD2")
 !!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_UD3, "UD3")
@@ -373,14 +380,14 @@ contains
 !!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_UD5, "UD5")
 !!$    call eval_RHS(VARTMP, mflx_hi, exactRHS, FLXEVALTYPE_CD6, "CD6")
 !!$    stop
-!!$    
+!!$
 !!$  end subroutine ConvCheck
 !!$
 !!$  subroutine eval_RHS(var, mflx_hi, exactRHS, lblFluxScheme)
 !!$
 !!$    use scale_grid, only : &
 !!$         CDZ => GRID_CDZ
-!!$    
+!!$
 !!$    real(RP), intent(in) :: var(KA,IA,JA)
 !!$    real(RP), intent(in) :: mflx_hi(KA,IA,JA,3), exactRHS(KA,IA,JA)
 !!$    character(*), intent(in) :: lblFluxScheme
@@ -395,10 +402,10 @@ contains
 !!$
 !!$
 !!$    call ATMOS_DYN_FVM_flux_setup(lblFluxScheme)
-!!$    
+!!$
 !!$    num_diff = 0.0_RP
 !!$    GSQRT = 1.0_RP
-!!$    
+!!$
 !!$    do JJS = JS, JE, JBLOCK
 !!$    JJE = JJS+JBLOCK-1
 !!$    do IIS = IS, IE, IBLOCK
@@ -416,7 +423,7 @@ contains
 !!$    do IIS = IS, IE, IBLOCK
 !!$    IIE = IIS+IBLOCK-1
 !!$      do j = JJS, JJE
-!!$      do i = IIS, IIE 
+!!$      do i = IIS, IIE
 !!$         RHS(:,i,j) = (qflx_hi(:,i,j,XDIR) - qflx_hi(:,i-1,j,XDIR)) * RCDX(i)
 !!$      enddo
 !!$      enddo
@@ -426,14 +433,14 @@ contains
 !!$    l2_error = calc_l2error(RHS, exactRHS)
 !!$    linf_error = calc_linferror(RHS, exactRHS)
 !!$    write(*,*) "FluxScheme=", trim(lblFluxScheme), ", l2error=", l2_error, " linf=", linf_error
-!!$    
+!!$
 !!$  end subroutine eval_RHS
-!!$  
+!!$
 !!$  function num_int(fx, xa, xb) result(intval)
 !!$    real(RP), intent(in) :: fx(IS:IE)
 !!$    real(RP), intent(in) :: xa, xb
 !!$    real(RP) :: intval
-!!$    
+!!$
 !!$    real(RP) :: dh
 !!$    integer :: n, i
 !!$
@@ -452,5 +459,5 @@ contains
 !!$    intval = dh * intval / 3.0_RP
 !!$!    intval = intval + 0.5_RP * dh * (fx(IS) + fx(IE))
 !!$  end function num_int
-  
+
 end module mod_user

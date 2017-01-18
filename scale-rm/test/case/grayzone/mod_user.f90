@@ -875,7 +875,7 @@ contains
 
     if( do_phy_sf ) then
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface paramaterization of GRAYZONE'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface paramaterization of GRAYZONE'
 !       do t=1, mstep_sst-1
 !write(*,*)'chksstuser0',t,time_nowsec,time_sst_in(t),sst_in(t)
 !        if( time_nowsec>=time_sst_in(t) )then

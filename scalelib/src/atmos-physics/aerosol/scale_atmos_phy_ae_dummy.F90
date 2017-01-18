@@ -70,9 +70,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AEROSOL] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Aerosol Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No tracers for dummy process'
 
     if ( AE_TYPE /= 'DUMMY' .AND. AE_TYPE /= 'NONE' ) then
        write(*,*) 'xxx ATMOS_PHY_AE_TYPE is not DUMMY. Check!'
@@ -89,6 +88,10 @@ contains
   !> Setup
   subroutine ATMOS_PHY_AE_dummy_setup
     implicit none
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Aerosol] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** dummy process'
 
     return
   end subroutine ATMOS_PHY_AE_dummy_setup
@@ -124,7 +127,7 @@ contains
     real(RP), intent(out)   :: CCN(KA,IA,JA)
     real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(dummy)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Aerosol(dummy)'
 
     CN(:,:,:) = 0.0_RP
     CCN(:,:,:) = 0.0_RP

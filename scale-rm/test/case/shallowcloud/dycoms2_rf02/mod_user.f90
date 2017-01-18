@@ -521,7 +521,7 @@ contains
 
     if( do_phy_rd ) then
 
-      if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation (DYCOMS-II)'
+      if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Parametarized Radiation (DYCOMS-II)'
 
       flux_rad    (:,:,:) = 0.0_RP
 

@@ -196,7 +196,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CUMULUS] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Kain-Fritsch scheme'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Kain-Fritsch scheme'
 
     if ( CP_TYPE /= 'KF' ) then
        write(*,*) 'xxx ATMOS_PHY_CP_TYPE is not KF. Check!'
@@ -358,7 +358,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cumulus Parameterization(KF)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cumulus Parameterization(KF)'
 
     call KF_wmean( w0avg(:,:,:), & ! [OUT]
                    DENS (:,:,:), & ! [IN]

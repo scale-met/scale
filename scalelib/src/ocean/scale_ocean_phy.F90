@@ -77,14 +77,14 @@ contains
     character(len=*), intent(in) :: OCEAN_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( OCEAN_TYPE )
-    case ( 'CONST' )
+    select case( OCEAN_TYPE )
+    case( 'CONST' )
        call OCEAN_PHY_SLAB_setup( OCEAN_TYPE )
        OCEAN_PHY => OCEAN_PHY_SLAB
-    case ( 'SLAB' )
+    case( 'SLAB' )
        call OCEAN_PHY_SLAB_setup( OCEAN_TYPE )
        OCEAN_PHY => OCEAN_PHY_SLAB
-    case ( 'FILE' )
+    case( 'FILE' )
        call OCEAN_PHY_FILE_setup( OCEAN_TYPE )
        OCEAN_PHY => OCEAN_PHY_FILE
     case default

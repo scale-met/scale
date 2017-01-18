@@ -35,11 +35,12 @@ module scale_tracer
   integer, public :: QA = 0
 
   integer, private, parameter :: QA_MAX = 1024
-  real(RP), public :: TRACER_CP(QA_MAX)
-  real(RP), public :: TRACER_CV(QA_MAX)
-  real(RP), public :: TRACER_R(QA_MAX)
-  real(RP), public :: TRACER_MASS(QA_MAX)
-  logical,  public :: TRACER_ADVC(QA_MAX)
+
+  real(RP),               public :: TRACER_CP  (QA_MAX)
+  real(RP),               public :: TRACER_CV  (QA_MAX)
+  real(RP),               public :: TRACER_R   (QA_MAX)
+  real(RP),               public :: TRACER_MASS(QA_MAX)
+  logical,                public :: TRACER_ADVC(QA_MAX)
   character(len=H_SHORT), public :: TRACER_NAME(QA_MAX)
   character(len=H_MID),   public :: TRACER_DESC(QA_MAX)
   character(len=H_SHORT), public :: TRACER_UNIT(QA_MAX)
@@ -64,23 +65,26 @@ contains
       PRC_MPIstop
     implicit none
 
-    integer,  intent(out) :: QS
-    integer,  intent(in)  :: NQ
-    character(len=*), intent(in) :: NAME(NQ)
-    character(len=*), intent(in) :: DESC(NQ)
-    character(len=*), intent(in) :: UNIT(NQ)
-    real(RP), intent(in), optional :: CV(NQ)
-    real(RP), intent(in), optional :: CP(NQ)
-    real(RP), intent(in), optional :: R(NQ)
-    logical,  intent(in), optional :: ADVC(NQ) !< if .true., the tracer is advected in the dynamical process. (default is .true.)
-    logical,  intent(in), optional :: MASS(NQ) !< if .true., the tracer has mass. (default is .false.)
+    integer,          intent(out)          :: QS
+    integer,          intent(in)           :: NQ
+    character(len=*), intent(in)           :: NAME(NQ)
+    character(len=*), intent(in)           :: DESC(NQ)
+    character(len=*), intent(in)           :: UNIT(NQ)
+    real(RP),         intent(in), optional :: CV  (NQ)
+    real(RP),         intent(in), optional :: CP  (NQ)
+    real(RP),         intent(in), optional :: R   (NQ)
+    logical,          intent(in), optional :: ADVC(NQ) !< if .true., the tracer is advected in the dynamical process. (default is .true.)
+    logical,          intent(in), optional :: MASS(NQ) !< if .true., the tracer has mass. (default is .false.)
 
-    real(RP) :: CV_(NQ)
-    real(RP) :: CP_(NQ)
-    real(RP) :: R_(NQ)
-    logical :: ADVC_(NQ)
-    logical :: MASS_(NQ)
-    integer :: n
+    real(RP) :: CV_  (NQ)
+    real(RP) :: CP_  (NQ)
+    real(RP) :: R_   (NQ)
+    logical  :: ADVC_(NQ)
+    logical  :: MASS_(NQ)
+
+    character(len=24) :: NAME_trim
+
+    integer  :: n
     !---------------------------------------------------------------------------
 
     if ( QA + NQ > QA_MAX ) then
@@ -118,17 +122,27 @@ contains
        MASS_(:) = .false.
     end if
 
+    if( IO_L ) write(IO_FID_LOG,*)
     do n = 1, NQ
-       if( IO_L ) write(IO_FID_LOG,'(a,i4,a,a,a,f6.1,a,f6.1,a,l1,a,l1)') &
-            'register tracer: ', &
-            QA+n, ', NAME=', trim(NAME(n)), ', CV=', CV_(n), ', CP=', CP_(n), ', ADVC=', ADVC_(n), ', MASS=', MASS_(n)
-       TRACER_NAME(QA+n) = NAME(n)
-       TRACER_DESC(QA+n) = DESC(n)
-       TRACER_UNIT(QA+n) = UNIT(n)
-       TRACER_CV(QA+n) = CV_(n)
-       TRACER_CP(QA+n) = CP_(n)
-       TRACER_R (QA+n) = R_(n)
+
+       NAME_trim = trim(NAME(n))
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A,A,F6.1,A,F6.1,A,L1,A,L1)') &
+                                      '] Register tracer : No.', QA+n,      &
+                                                    ', NAME = ', NAME_trim, &
+                                                      ', CV = ', CV_  (n),  &
+                                                      ', CP = ', CP_  (n),  &
+                                                    ', ADVC = ', ADVC_(n),  &
+                                                    ', MASS = ', MASS_(n)
+
+       TRACER_NAME(QA+n) = NAME (n)
+       TRACER_DESC(QA+n) = DESC (n)
+       TRACER_UNIT(QA+n) = UNIT (n)
+       TRACER_CV  (QA+n) = CV_  (n)
+       TRACER_CP  (QA+n) = CP_  (n)
+       TRACER_R   (QA+n) = R_   (n)
        TRACER_ADVC(QA+n) = ADVC_(n)
+
        if ( MASS_(n) ) then
           TRACER_MASS(QA+n) = 1.0_RP
        else
@@ -138,7 +152,6 @@ contains
 
     QS = QA + 1
     QA = QA + NQ
-
 
     return
   end subroutine TRACER_regist

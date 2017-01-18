@@ -46,11 +46,11 @@ module mod_atmos_dyn_vars
   !
   logical,               public :: ATMOS_DYN_RESTART_OUTPUT                = .false.             !< output restart file?
 
-  character(len=H_LONG), public :: ATMOS_DYN_RESTART_IN_BASENAME           = ''                  !< Basename of the input  file
-  logical,               public :: ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL  = .false.             !< Add timelabel to the basename of input  file?
-  character(len=H_LONG), public :: ATMOS_DYN_RESTART_OUT_BASENAME          = ''                  !< Basename of the output file
-  logical,               public :: ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL = .true.              !< Add timelabel to the basename of output file?
-  character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_TITLE             = 'ATMOS_DYN restart' !< title    of the output file
+  character(len=H_LONG),  public :: ATMOS_DYN_RESTART_IN_BASENAME           = ''                  !< Basename of the input  file
+  logical,                public :: ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL  = .false.             !< Add timelabel to the basename of input  file?
+  character(len=H_LONG),  public :: ATMOS_DYN_RESTART_OUT_BASENAME          = ''                  !< Basename of the output file
+  logical,                public :: ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL = .true.              !< Add timelabel to the basename of output file?
+  character(len=H_MID),   public :: ATMOS_DYN_RESTART_OUT_TITLE             = 'ATMOS_DYN restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_DYN_RESTART_OUT_DTYPE             = 'DEFAULT'           !< REAL4 or REAL8
 
   ! prognostic variables
@@ -130,10 +130,11 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_DYN] prognostic/diagnostic variables'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-                  '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
+                  '***       |', 'VARNAME                 ','|', &
+                  'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
        do iv = 1, VA
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                      '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
        enddo
 
@@ -207,7 +208,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_DYN) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (ATMOS_DYN) ***'
 
     if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
 
@@ -231,18 +232,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_DYN_vars_restart_read
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
     real(RP) :: total
-    integer :: iv, i, j
+    integer  :: i, j, iv
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_DYN) ***'
+
        do iv = 1, VA
           call FILEIO_read( PROG(:,:,:,iv),                          & ! [OUT]
                             restart_fid, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
@@ -265,9 +270,11 @@ contains
           call ATMOS_DYN_vars_fillhalo
        end if
 
-       do iv = 1, VA
-          call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
-       enddo
+       if ( STATISTICS_checktotal ) then
+          do iv = 1, VA
+             call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
+          enddo
+       endif
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_DYN.'
     endif
@@ -292,7 +299,7 @@ contains
     if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (ATMOS_DYN) ***'
 
        if ( ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
@@ -318,7 +325,7 @@ contains
        FILEIO_enddef
     implicit none
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
        call FILEIO_enddef( restart_fid ) ! [IN]
     endif
 
@@ -331,9 +338,14 @@ contains
     use scale_fileio, only: &
        FILEIO_close
     implicit none
+    !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_DYN) ***'
+
        call FILEIO_close( restart_fid ) ! [IN]
+
        restart_fid = -1
     endif
 
@@ -350,7 +362,7 @@ contains
     integer iv
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        do iv = 1, VA
           call FILEIO_def_var( restart_fid, VAR_ID(iv), VAR_NAME(iv), VAR_DESC(iv), &
@@ -365,14 +377,26 @@ contains
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
   subroutine ATMOS_DYN_vars_restart_write
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
 
-    integer iv
+    real(RP) :: total
+    integer  :: iv
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+
+       call ATMOS_DYN_vars_fillhalo
+
+       if ( STATISTICS_checktotal ) then
+          do iv = 1, VA
+             call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
+          enddo
+       endif
 
        do iv = 1, VA
           call FILEIO_write_var( restart_fid, VAR_ID(iv), PROG(:,:,:,iv), VAR_NAME(iv), 'ZXY' ) ! [IN]

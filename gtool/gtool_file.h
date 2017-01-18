@@ -52,7 +52,7 @@ typedef struct{
   real64_t time_end;
   char     time_units[File_HMID];
   int32_t  fid;
-} datainfo_t; 
+} datainfo_t;
 
 
 extern int32_t file_open( int32_t  *fid,   // (out)
@@ -81,7 +81,7 @@ extern int32_t file_read_data_par( void         *var,       // (out)
 			           MPI_Datatype  dtype,     // (in)
 			           MPI_Offset   *start,     // (in)
 			           MPI_Offset   *count);    // (in)
-                                   
+
 
 extern int32_t file_get_global_attribute_text( int32_t  fid,   // (in)
 					       char    *key,   // (in)

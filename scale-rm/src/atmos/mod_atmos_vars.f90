@@ -57,11 +57,11 @@ module mod_atmos_vars
   !
   logical,               public :: ATMOS_RESTART_OUTPUT                = .false.         !< Output restart file?
 
-  character(len=H_LONG), public :: ATMOS_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
-  logical,               public :: ATMOS_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
-  character(len=H_LONG), public :: ATMOS_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
-  logical,               public :: ATMOS_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
-  character(len=H_MID),  public :: ATMOS_RESTART_OUT_TITLE             = 'ATMOS restart' !< Title    of the output file
+  character(len=H_LONG),  public :: ATMOS_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
+  logical,                public :: ATMOS_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
+  character(len=H_LONG),  public :: ATMOS_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
+  logical,                public :: ATMOS_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
+  character(len=H_MID),   public :: ATMOS_RESTART_OUT_TITLE             = 'ATMOS restart' !< Title    of the output file
   character(len=H_SHORT), public :: ATMOS_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
   logical,               public :: ATMOS_RESTART_CHECK                 = .false.         !< Check value consistency?
@@ -355,14 +355,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (ATMOS) ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
+               '***       |', 'VARNAME                 ','|', &
+               'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',iv,'|',VAR_NAME(iv),'|', VAR_DESC(iv),'[', VAR_UNIT(iv),']'
     enddo
     do iq = 1, QA
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',5+iq,'|',TRACER_NAME(iq),'|', TRACER_DESC(iq),'[', TRACER_UNIT(iq),']'
     enddo
 
@@ -877,8 +878,6 @@ contains
     use scale_fileio, only: &
        FILEIO_open, &
        FILEIO_check_coordinates
-    use scale_time, only: &
-       TIME_gettimelabel
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
@@ -915,7 +914,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (ATMOS) ***'
 
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
 
@@ -965,8 +964,6 @@ contains
   subroutine ATMOS_vars_restart_read
     use scale_process, only: &
        PRC_MPIstop
-    use scale_time, only: &
-       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
@@ -1004,7 +1001,9 @@ contains
     integer  :: i, j, iq
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS) ***'
 
        call FILEIO_read( DENS(:,:,:),                            & ! [OUT]
                          restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
@@ -1023,8 +1022,7 @@ contains
        enddo
 
        if ( IO_AGGREGATE ) then
-          call FILEIO_flush( restart_fid )
-          ! X/Y halos have been read from file
+          call FILEIO_flush( restart_fid ) ! X/Y halos have been read from file
 
           ! fill k halos
           do j  = 1, JA
@@ -1107,8 +1105,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Check and compare between last data and sample data
   subroutine ATMOS_vars_restart_check
-    use scale_time, only: &
-       TIME_gettimelabel
     use scale_process, only: &
        PRC_myrank
     use scale_fileio, only: &
@@ -1126,7 +1122,6 @@ contains
     real(RP) :: QTRC_check(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
 
     character(len=H_LONG) :: basename
-    character(len=20)     :: timelabel
 
     logical :: datacheck
     integer :: k, i, j, iq
@@ -2237,7 +2232,7 @@ contains
     real(RP) :: RHOQ(KA,IA,JA)
 
     real(RP) :: total ! dummy
-    integer :: i, j, k, iq
+    integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
@@ -2330,8 +2325,6 @@ contains
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** Calc diagnostics'
 
     call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
                               PRES(:,:,:),   & ! [OUT]
@@ -2500,8 +2493,6 @@ contains
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** Monitor'
 
     call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.false. )
     call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.false. )
@@ -2764,7 +2755,7 @@ contains
     if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (ATMOS) ***'
 
        if ( ATMOS_RESTART_OUT_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
@@ -2838,7 +2829,7 @@ contains
     endif
 #endif
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
        call FILEIO_enddef( restart_fid ) ! [IN]
     endif
 
@@ -2890,7 +2881,6 @@ contains
        ATMOS_PHY_MP_sdm_restart_close
 #endif
     implicit none
-
     !---------------------------------------------------------------------------
 
 #ifdef _SDM
@@ -2899,8 +2889,12 @@ contains
     endif
 #endif
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS) ***'
+
        call FILEIO_close( restart_fid ) ! [IN]
+
        restart_fid = -1
 
        if ( allocated(VAR_ID) ) deallocate( VAR_ID )
@@ -2964,7 +2958,7 @@ contains
     endif
 #endif
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call FILEIO_def_var( restart_fid, VAR_ID(I_DENS), VAR_NAME(I_DENS), VAR_DESC(I_DENS), & ! [IN]
                             VAR_UNIT(I_DENS), 'ZXY',  ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
@@ -3042,7 +3036,7 @@ contains
     endif
 #endif
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call ATMOS_vars_fillhalo
 

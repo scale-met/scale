@@ -87,17 +87,22 @@ contains
 
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Deardorff (1980) 1.5th TKE Model'
 
     if ( TYPE_TB /= 'D1980' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not D1980. Check!'
        call PRC_MPIstop
     endif
 
-    call TRACER_regist( I_TKE,                                    &
-                        1,                                        &
-                        (/ 'TKE_D1980' /),                        &
-                        (/ 'turbulent kinetic energy (D1980)' /), &
-                        (/ 'm2/s2' /)                             )
+    call TRACER_regist( I_TKE,                                    & ! [OUT]
+                        1,                                        & ! [IN]
+                        (/ 'TKE_D1980' /),                        & ! [IN]
+                        (/ 'turbulent kinetic energy (D1980)' /), & ! [IN]
+                        (/ 'm2/s2' /)                             ) ! [IN]
 
     I_TKE_out = I_TKE
 
@@ -126,8 +131,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ 1.5th TKE Model'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Deardorff (1980) 1.5th TKE Model'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -270,7 +275,7 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(D1980)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Turbulence(D1980)'
 
 #ifdef DEBUG
     qflx_sgs_momz(:,:,:,:)   = UNDEF

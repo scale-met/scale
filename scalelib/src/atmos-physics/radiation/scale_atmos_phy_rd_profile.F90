@@ -160,8 +160,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD PROFILE]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ climatological profile'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION PROFILE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
 
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir
@@ -182,6 +181,9 @@ contains
     PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     PROFILE_USER_fname      = ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Climatological profile for radiation'
 
     if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
@@ -221,8 +223,8 @@ contains
     integer  :: n, m, t
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** read CIRA86 climatology'
-    if( IO_L ) write(IO_FID_LOG,*) '*** FILENAME:', trim(PROFILE_CIRA86_fname)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Read CIRA86 climatology, filename : ', trim(PROFILE_CIRA86_fname)
 
     inquire( file=trim(PROFILE_CIRA86_fname), exist=exist )
     if ( .NOT. exist ) then !--- missing
@@ -412,7 +414,8 @@ contains
     integer  :: t, l, rgn
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** read MIPAS2001 gas profile'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Read MIPAS2001 climatology ***'
 
     MIPAS_date(:, 0) = (/ 2000, 12, 22, 12, 0, 0 /)
     MIPAS_date(:, 1) = (/ 2001,  6, 21, 12, 0, 0 /)
@@ -435,7 +438,7 @@ contains
 
     do rgn = I_tropic, I_polarwin
        fname = trim(PROFILE_MIPAS2001_dir)//'/'//MIPAS_fname(rgn)
-       if( IO_L ) write(IO_FID_LOG,*) '*** FILENAME:', trim(fname)
+       if( IO_L ) write(IO_FID_LOG,*) '*** filename : ', trim(fname)
 
        fid = IO_get_available_fid()
        open( unit   = fid,         &
@@ -742,7 +745,7 @@ contains
     real(RP), intent(out) :: cfc  (kmax,ncfc) !< CFCs          volume mixing ratio [ppmv]
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [RD_PROFILE] generate climatological profile'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Update climatological profile for radiation'
 
     call PROFILE_read_CIRA86( kmax,        & ! [IN]
                               lat,         & ! [IN]

@@ -59,8 +59,8 @@ contains
 
     ! if you want to add tracers, call the TRACER_regist subroutine.
     ! e.g.,
-!    integer, parameter :: NQ = 1
-!    integer :: QS
+!    integer, parameter     :: NQ = 1
+!    integer                :: QS
 !    character(len=H_SHORT) :: NAME(NQ)
 !    character(len=H_MID)   :: DESC(NQ)
 !    character(len=H_SHORT) :: UNIT(NQ)
@@ -68,9 +68,13 @@ contains
 !    data NAME (/ 'name' /)
 !    data DESC (/ 'tracer name' /)
 !    data UNIT (/ 'kg/kg' /)
-!
-!    call TRACER_regist( QS,   & ! (out)
-!         NQ, NAME, DESC, UNIT ) ! (in)
+    !---------------------------------------------------------------------------
+
+!    call TRACER_regist( QS,   & ! [OUT]
+!                        NQ,   & ! [IN]
+!                        NAME, & ! [IN]
+!                        DESC, & ! [IN]
+!                        UNIT  ) ! [IN]
 
     return
   end subroutine USER_config
@@ -89,7 +93,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[USER] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -103,6 +107,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** This module is dummy.'
 
     return

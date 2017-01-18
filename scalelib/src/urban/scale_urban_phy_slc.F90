@@ -403,8 +403,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Urban step: Single Layer Canopy'
-
+    if( IO_L ) write(IO_FID_LOG,*) '*** Urban surface physics step: Single Layer Canopy'
 
     do j = JS, JE
     do i = IS, IE

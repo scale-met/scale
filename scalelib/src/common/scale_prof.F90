@@ -47,22 +47,22 @@ module scale_prof
   !
   !++ Private parameters & variables
   !
-  integer,                  private, parameter :: PROF_rapnlimit = 300
-  character(len=H_SHORT),   private            :: PROF_prefix    = ''
-  integer,                  private            :: PROF_rapnmax   = 0
+  integer,                private, parameter :: PROF_rapnlimit = 300
+  character(len=H_SHORT), private            :: PROF_prefix    = ''
+  integer,                private            :: PROF_rapnmax   = 0
   character(len=H_SHORT), private            :: PROF_rapname(PROF_rapnlimit)
-  integer,                  private            :: PROF_grpnmax   = 0
-  character(len=H_SHORT),   private            :: PROF_grpname(PROF_rapnlimit)
-  integer,                  private            :: PROF_grpid  (PROF_rapnlimit)
-  real(DP),                 private            :: PROF_raptstr(PROF_rapnlimit)
-  real(DP),                 private            :: PROF_rapttot(PROF_rapnlimit)
-  integer,                  private            :: PROF_rapnstr(PROF_rapnlimit)
-  integer,                  private            :: PROF_rapnend(PROF_rapnlimit)
-  integer,                  private            :: PROF_raplevel(PROF_rapnlimit)
+  integer,                private            :: PROF_grpnmax   = 0
+  character(len=H_SHORT), private            :: PROF_grpname(PROF_rapnlimit)
+  integer,                private            :: PROF_grpid  (PROF_rapnlimit)
+  real(DP),               private            :: PROF_raptstr(PROF_rapnlimit)
+  real(DP),               private            :: PROF_rapttot(PROF_rapnlimit)
+  integer,                private            :: PROF_rapnstr(PROF_rapnlimit)
+  integer,                private            :: PROF_rapnend(PROF_rapnlimit)
+  integer,                private            :: PROF_raplevel(PROF_rapnlimit)
 
-  integer,                  private, parameter :: PROF_default_rap_level = 2
-  integer,                  private            :: PROF_rap_level         = 2
-  logical,                  private            :: PROF_mpi_barrier       = .false.
+  integer,                private, parameter :: PROF_default_rap_level = 2
+  integer,                private            :: PROF_rap_level         = 2
+  logical,                private            :: PROF_mpi_barrier       = .false.
 
 #ifdef _PAPI_
   integer(DP),private :: PROF_PAPI_flops     = 0   !> total floating point operations since the first call
@@ -100,6 +100,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PROF)
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Rap output level              = ', PROF_rap_level
     if( IO_L ) write(IO_FID_LOG,*) '*** Add MPI_barrier in every rap? = ', PROF_mpi_barrier
 
@@ -134,8 +135,8 @@ contains
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in) :: rapname_base !< name of item
-    integer, intent(in), optional :: level  !< level of item (default is 2)
+    character(len=*), intent(in)           :: rapname_base !< name  of item
+    integer,          intent(in), optional :: level        !< level of item
 
     character(len=H_SHORT) :: rapname !< name of item with prefix
 
@@ -160,7 +161,9 @@ contains
     PROF_raptstr(id) = PRC_MPItime()
     PROF_rapnstr(id) = PROF_rapnstr(id) + 1
 
-    !if( IO_L ) write(IO_FID_LOG,*) rapname, PROF_rapnstr(id)
+#ifdef DEBUG
+    !if( IO_L ) write(IO_FID_LOG,*) '<DEBUG> [PROF] ', rapname, PROF_rapnstr(id)
+#endif
 
 #ifdef _FAPP_
     call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
@@ -180,8 +183,8 @@ contains
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in) :: rapname_base !< name of item
-    integer, intent(in), optional :: level  !< level of item
+    character(len=*), intent(in)           :: rapname_base !< name  of item
+    integer,          intent(in), optional :: level        !< level of item
 
     character(len=H_SHORT) :: rapname !< name of item with prefix
 
@@ -450,9 +453,10 @@ contains
 
     character(len=*), intent(in)    :: rapname !< name of item
 
+    character(len=H_SHORT) :: grpname
+
     integer :: gid
     integer :: idx
-    character(len=H_SHORT) :: grpname
     !---------------------------------------------------------------------------
 
     idx = index(rapname," ")

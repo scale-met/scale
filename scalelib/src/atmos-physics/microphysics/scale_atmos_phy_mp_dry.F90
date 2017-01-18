@@ -78,6 +78,10 @@ contains
 
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No tracers for dummy process (dry Atmosphere)'
+
     if ( MP_TYPE /= 'DRY' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'
        call PRC_MPIstop
@@ -133,7 +137,7 @@ contains
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(dummy)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(dummy)'
 
     ATMOS_PHY_MP_dry_DENS(:) = UNDEF
 

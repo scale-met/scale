@@ -187,6 +187,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[CPL] / Origin[SCALE-RM]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     ! Check consistency of OCEAN_sw and LANDUSE_fact_ocean
     checkfact = maxval( LANDUSE_fact_ocean(:,:) )

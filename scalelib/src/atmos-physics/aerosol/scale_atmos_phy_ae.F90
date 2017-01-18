@@ -142,8 +142,10 @@ contains
     character(len=*), intent(in) :: AE_TYPE
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(AE_TYPE), ' is selected.'
+
     select case( AE_TYPE )
-    case ( 'DUMMY', 'NONE' )
+    case('DUMMY','NONE')
        call ATMOS_PHY_AE_dummy_config( &
             AE_TYPE, &
             QA_AE, QS_AE ) ! (out)
@@ -154,7 +156,7 @@ contains
        ATMOS_PHY_AE_DESC            => ATMOS_PHY_AE_dummy_DESC
        ATMOS_PHY_AE_UNIT            => ATMOS_PHY_AE_dummy_UNIT
        ATMOS_PHY_AE_DENS            => ATMOS_PHY_AE_dummy_DENS
-    case ( 'KAJINO13' )
+    case('KAJINO13')
        call ATMOS_PHY_AE_kajino13_config( &
             AE_TYPE, &
             QA_AE, QS_AE ) ! (out)

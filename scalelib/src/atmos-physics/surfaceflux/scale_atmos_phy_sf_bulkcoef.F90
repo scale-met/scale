@@ -126,9 +126,9 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_BULKCOEF)
 
     select case( ATMOS_PHY_SF_BULKCOEF_TYPE )
-    case ('U95')
+    case('U95')
        ATMOS_PHY_SF_bulkcoef => ATMOS_PHY_SF_bulkcoef_uno
-    case ('BH91')
+    case('BH91')
        ATMOS_PHY_SF_bulkcoef => ATMOS_PHY_SF_bulkcoef_beljaars
     case default
        write(*,*) 'xxx invalid bulk scheme (', trim(ATMOS_PHY_SF_BULKCOEF_TYPE), '). CHECK!'

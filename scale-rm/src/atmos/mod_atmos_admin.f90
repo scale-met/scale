@@ -206,22 +206,22 @@ contains
     character(len=H_SHORT), intent(out) :: scheme_name
     !---------------------------------------------------------------------------
 
-    select case (component_name)
-    case ("DYN")
+    select case(component_name)
+    case("DYN")
        scheme_name = ATMOS_DYN_TYPE
-    case ("PHY_MP")
+    case("PHY_MP")
        scheme_name = ATMOS_PHY_MP_TYPE
-    case ("PHY_AE")
+    case("PHY_AE")
        scheme_name = ATMOS_PHY_AE_TYPE
-    case ("PHY_CH")
+    case("PHY_CH")
        scheme_name = ATMOS_PHY_CH_TYPE
-    case ("PHY_RD")
+    case("PHY_RD")
        scheme_name = ATMOS_PHY_RD_TYPE
-    case ("PHY_SF")
+    case("PHY_SF")
        scheme_name = ATMOS_PHY_SF_TYPE
-    case ("PHY_TB")
+    case("PHY_TB")
        scheme_name = ATMOS_PHY_TB_TYPE
-    case ("PHY_CP")
+    case("PHY_CP")
        scheme_name = ATMOS_PHY_CP_TYPE
     case default
        write(*,*) 'xxx Unsupported component_name. Check!', trim(component_name)

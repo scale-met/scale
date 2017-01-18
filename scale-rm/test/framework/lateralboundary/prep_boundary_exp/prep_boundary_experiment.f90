@@ -801,7 +801,7 @@ contains
 
     integer :: ncid, nid, timestep
     integer :: status, ierr
-    character(5) :: num, nmax
+    character(len=5) :: num, nmax
     !---------------------------------------------------------------------------
 
     write(num,'(I5.5)') step-1

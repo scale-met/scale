@@ -130,33 +130,33 @@ contains
     allocate( I_COMM_QTRC(QA) )
     allocate( I_COMM_RHOQ_t(QA) )
 
-    call COMM_vars8_init( DENS, I_COMM_DENS )
-    call COMM_vars8_init( MOMZ, I_COMM_MOMZ )
-    call COMM_vars8_init( MOMX, I_COMM_MOMX )
-    call COMM_vars8_init( MOMY, I_COMM_MOMY )
-    call COMM_vars8_init( RHOT, I_COMM_RHOT )
+    call COMM_vars8_init( 'DENS', DENS, I_COMM_DENS )
+    call COMM_vars8_init( 'MOMZ', MOMZ, I_COMM_MOMZ )
+    call COMM_vars8_init( 'MOMX', MOMX, I_COMM_MOMX )
+    call COMM_vars8_init( 'MOMY', MOMY, I_COMM_MOMY )
+    call COMM_vars8_init( 'RHOT', RHOT, I_COMM_RHOT )
     do iv = 1, VA
        I_COMM_PROG(iv) = 5 + iv
-       call COMM_vars8_init( PROG(:,:,:,iv), I_COMM_PROG(iv) )
+       call COMM_vars8_init( 'PROG', PROG(:,:,:,iv), I_COMM_PROG(iv) )
     end do
 
-    call COMM_vars8_init( DENS_t, I_COMM_DENS_t )
-    call COMM_vars8_init( MOMZ_t, I_COMM_MOMZ_t )
-    call COMM_vars8_init( MOMX_t, I_COMM_MOMX_t )
-    call COMM_vars8_init( MOMY_t, I_COMM_MOMY_t )
-    call COMM_vars8_init( RHOT_t, I_COMM_RHOT_t )
+    call COMM_vars8_init( 'DENS_t', DENS_t, I_COMM_DENS_t )
+    call COMM_vars8_init( 'MOMZ_t', MOMZ_t, I_COMM_MOMZ_t )
+    call COMM_vars8_init( 'MOMX_t', MOMX_t, I_COMM_MOMX_t )
+    call COMM_vars8_init( 'MOMY_t', MOMY_t, I_COMM_MOMY_t )
+    call COMM_vars8_init( 'RHOT_t', RHOT_t, I_COMM_RHOT_t )
 
     do iq = 1, QA
        I_COMM_RHOQ_t(iq) = 5 + VA + iq
        I_COMM_QTRC(iq) = 5 + VA + iq
 
-       call COMM_vars8_init( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
-       call COMM_vars8_init( QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
+       call COMM_vars8_init( 'RHOQ_t', RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
+       call COMM_vars8_init( 'QTRC',   QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
     end do
 
-    call COMM_vars8_init( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
-    call COMM_vars8_init( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
-    call COMM_vars8_init( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
+    call COMM_vars8_init( 'mflx_Z', mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
+    call COMM_vars8_init( 'mflx_X', mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
+    call COMM_vars8_init( 'mflx_Y', mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
 
     mflx_hi(:,:,:,:) = UNDEF
 

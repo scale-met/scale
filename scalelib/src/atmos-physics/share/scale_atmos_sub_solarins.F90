@@ -602,29 +602,29 @@ contains
 
     !----- report data -----
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)')       '*** insolation parameters'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** reference year      : ', year_ref
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** current   year      : ', iyear
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** difference from ref.: ', int(dyear)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)')       '*** Solar insolation parameters ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Reference year                        : ', year_ref
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Current   year                        : ', iyear
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Difference from ref.                  : ', int(dyear)
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** solar constant                 [W/m2]: ', ATMOS_SOLARINS_constant
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** obliquity                       [deg]: ', obliquity / CONST_D2R
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** eccentricity                         : ', E
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** longitude of perihelion         [deg]: ', omega     / CONST_D2R
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** longitude at the vernal equinox [deg]: ', lambda_m0 / CONST_D2R
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Solar constant                 [W/m2] : ', ATMOS_SOLARINS_constant
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Obliquity                       [deg] : ', obliquity / CONST_D2R
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Eccentricity                          : ', E
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Longitude of perihelion         [deg] : ', omega     / CONST_D2R
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Longitude at the vernal equinox [deg] : ', lambda_m0 / CONST_D2R
     if( IO_L ) write(IO_FID_LOG,*)
 
-    if( IO_L ) write(IO_FID_LOG,*)              '*** Latitude/Longitude is fixed?         : ', ATMOS_SOLARINS_fixedlatlon
+    if( IO_L ) write(IO_FID_LOG,*)              '*** Latitude/Longitude is fixed?          : ', ATMOS_SOLARINS_fixedlatlon
     if ( ATMOS_SOLARINS_fixedlatlon ) then
-       if( IO_L ) write(IO_FID_LOG,*)           '*** Longitude                       [deg]: ', ATMOS_SOLARINS_lon
-       if( IO_L ) write(IO_FID_LOG,*)           '*** Latitude                        [deg]: ', ATMOS_SOLARINS_lat
+       if( IO_L ) write(IO_FID_LOG,*)           '*** Longitude                       [deg] : ', ATMOS_SOLARINS_lon
+       if( IO_L ) write(IO_FID_LOG,*)           '*** Latitude                        [deg] : ', ATMOS_SOLARINS_lat
        ATMOS_SOLARINS_lon = ATMOS_SOLARINS_lon * CONST_D2R
        ATMOS_SOLARINS_lat = ATMOS_SOLARINS_lat * CONST_D2R
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)              '*** Date is fixed?                       : ', ATMOS_SOLARINS_fixeddate
+    if( IO_L ) write(IO_FID_LOG,*)              '*** Date is fixed?                        : ', ATMOS_SOLARINS_fixeddate
     if ( ATMOS_SOLARINS_fixeddate ) then
-       if( IO_L ) write(IO_FID_LOG,*)           '*** Date                                 : ', ATMOS_SOLARINS_date
+       if( IO_L ) write(IO_FID_LOG,*)           '*** Date                                  : ', ATMOS_SOLARINS_date
     endif
 
     return

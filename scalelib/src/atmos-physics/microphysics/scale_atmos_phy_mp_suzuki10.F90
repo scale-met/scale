@@ -224,7 +224,7 @@ module scale_atmos_phy_mp_suzuki10
 !  real(RP), private            :: R10H1, R10H2        ! scaling factor for 10m value (heat)
 !  real(RP), private            :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
 
-  character(11),parameter :: fname_micpara="micpara.dat" !--- file name
+  character(len=11), parameter :: fname_micpara="micpara.dat" !--- file name
   integer(4) :: fid_micpara
 
   !--- Use for stochastic method
@@ -301,6 +301,10 @@ contains
     integer :: m, n, ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Suzuki (2010) Spectral BIN model'
+
     if ( MP_TYPE /= 'SUZUKI10' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not SUZUKI10. Check!'
        call PRC_MPIstop
@@ -376,18 +380,18 @@ contains
     NL = nbin            ! number of liquid water
     NI = nbin * (nspc-1) ! number of ice water
 
-    call ATMOS_HYDROMETEOR_regist( QS,                                    & ! (out)
-                                   1, NL, NI,                             & ! (in)
-                                   ATMOS_PHY_MP_suzuki10_NAME(1:NL+NI+1), & ! (in)
-                                   ATMOS_PHY_MP_suzuki10_DESC(1:NL+NI+1), & ! (in)
-                                   ATMOS_PHY_MP_suzuki10_UNIT(1:NL+NI+1)  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS,                                    & ! [OUT]
+                                   1, NL, NI,                             & ! [IN]
+                                   ATMOS_PHY_MP_suzuki10_NAME(1:NL+NI+1), & ! [IN]
+                                   ATMOS_PHY_MP_suzuki10_DESC(1:NL+NI+1), & ! [IN]
+                                   ATMOS_PHY_MP_suzuki10_UNIT(1:NL+NI+1)  ) ! [IN]
 
     if ( nccn > 0 ) then
-       call TRACER_regist( QS2,  & ! (out)
-                           nccn, & ! (in)
-                           ATMOS_PHY_MP_suzuki10_NAME(NL+NI+2:), & ! (in)
-                           ATMOS_PHY_MP_suzuki10_DESC(NL+NI+2:), & ! (in)
-                           ATMOS_PHY_MP_suzuki10_UNIT(NL+NI+2:)  ) ! (in)
+       call TRACER_regist( QS2,                                  & ! [OUT]
+                           nccn,                                 & ! [IN]
+                           ATMOS_PHY_MP_suzuki10_NAME(NL+NI+2:), & ! [IN]
+                           ATMOS_PHY_MP_suzuki10_DESC(NL+NI+2:), & ! [IN]
+                           ATMOS_PHY_MP_suzuki10_UNIT(NL+NI+2:)  ) ! [IN]
     end if
 
     I_QV = QS
@@ -471,6 +475,10 @@ contains
     integer :: myu, nyu, i, j, k, n, ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Suzuki (2010) Spectral BIN model'
+
     !--- allocation
     allocate( xctr( nbin ) )
     allocate( xbnd( nbin+1 ) )
@@ -497,10 +505,6 @@ contains
 
     mbin = nbin/2
     mspc = nspc_mk*nspc_mk
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (warm cloud)'
 
     RHO_AERO = rhoa
     S10_EMAER = emaer
@@ -920,9 +924,9 @@ contains
     !---------------------------------------------------------------------------
 
     if    ( nspc == 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Liquid water only)'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Liquid water only)'
     elseif( nspc >  1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Mixed phase)'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Mixed phase)'
     endif
 
     if ( MP_donegative_fixer ) then

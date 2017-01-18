@@ -529,7 +529,7 @@ contains
     enddo
 
     ! radiative flux
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation of RICO'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Parametarized Radiation of RICO'
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -573,7 +573,7 @@ contains
 
     if( do_phy_sf ) then
 
-      if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux of RICO'
+      if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux of RICO'
 
       do j = JS-1, JE
       do i = IS-1, IE
