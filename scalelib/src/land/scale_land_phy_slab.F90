@@ -166,11 +166,10 @@ contains
 
 !    real(RP) :: RUNOFF(IA,JA)
 
-    real(RP) :: U   (LKMAX,IA,JA)
-    real(RP) :: M   (LKMAX,IA,JA)
-    real(RP) :: L   (LKMAX,IA,JA)
-    real(RP) :: Vin (LKMAX,IA,JA)
-    real(RP) :: Vout(LKMAX,IA,JA)
+    real(RP) :: U(LKMAX,IA,JA)
+    real(RP) :: M(LKMAX,IA,JA)
+    real(RP) :: L(LKMAX,IA,JA)
+    real(RP) :: V(LKMAX,IA,JA)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -213,30 +212,26 @@ contains
     ! input from atmosphere
     do j = JS, JE
     do i = IS, IE
-      Vin(LKS,i,j) = WATER(LKS,i,j) + ( SFLX_prec(i,j) - SFLX_evap(i,j) ) / ( CDZ(LKS) * DWATR ) * dt
-
-      do k = LKS+1, LKE
-         Vin(k,i,j) = WATER(k,i,j)
-      end do
+      V(LKS,i,j) = WATER(LKS,i,j) + ( SFLX_prec(i,j) - SFLX_evap(i,j) ) / ( CDZ(LKS) * DWATR ) * dt
     end do
     end do
-
-    call MATRIX_SOLVER_tridiagonal( LKMAX,       & ! [IN]
-                                    IA, IS, IE,  & ! [IN]
-                                    JA, JS, JE,  & ! [IN]
-                                    U   (:,:,:), & ! [IN]
-                                    M   (:,:,:), & ! [IN]
-                                    L   (:,:,:), & ! [IN]
-                                    Vin (:,:,:), & ! [IN]
-                                    Vout(:,:,:)  ) ! [OUT]
 
     do j = JS, JE
     do i = IS, IE
-    do k = LKS, LKE
-       WATER1(k,i,j) = Vout(k,i,j)
+    do k = LKS+1, LKE
+      V(k,i,j) = WATER(k,i,j)
     end do
     end do
     end do
+
+    call MATRIX_SOLVER_tridiagonal( LKMAX,         & ! [IN]
+                                    IA, IS, IE,    & ! [IN]
+                                    JA, JS, JE,    & ! [IN]
+                                    U     (:,:,:), & ! [IN]
+                                    M     (:,:,:), & ! [IN]
+                                    L     (:,:,:), & ! [IN]
+                                    V     (:,:,:), & ! [IN]
+                                    WATER1(:,:,:)  ) ! [OUT]
 
     ! lowest layer treatment
     if ( .not. LAND_PHY_UPDATE_BOTTOM_WATER ) then
@@ -283,30 +278,26 @@ contains
     ! input from atmosphere
     do j = JS, JE
     do i = IS, IE
-      Vin(LKS,i,j) = TEMP(LKS,i,j) - SFLX_GH(i,j) / ( LAND_DENSCS(LKS,i,j) * CDZ(LKS) ) * dt
-
-      do k = LKS+1, LKE
-        Vin(k,i,j) = TEMP(k,i,j)
-      end do
+      V(LKS,i,j) = TEMP(LKS,i,j) - SFLX_GH(i,j) / ( LAND_DENSCS(LKS,i,j) * CDZ(LKS) ) * dt
     end do
     end do
-
-    call MATRIX_SOLVER_tridiagonal( LKMAX,       & ! [IN]
-                                    IA, IS, IE,  & ! [IN]
-                                    JA, JS, JE,  & ! [IN]
-                                    U   (:,:,:), & ! [IN]
-                                    M   (:,:,:), & ! [IN]
-                                    L   (:,:,:), & ! [IN]
-                                    Vin (:,:,:), & ! [IN]
-                                    Vout(:,:,:)  ) ! [OUT]
 
     do j = JS, JE
     do i = IS, IE
-    do k = LKS, LKE
-      TEMP1(k,i,j) = Vout(k,i,j)
+    do k = LKS+1, LKE
+      V(k,i,j) = TEMP(k,i,j)
     end do
     end do
     end do
+
+    call MATRIX_SOLVER_tridiagonal( LKMAX,        & ! [IN]
+                                    IA, IS, IE,   & ! [IN]
+                                    JA, JS, JE,   & ! [IN]
+                                    U    (:,:,:), & ! [IN]
+                                    M    (:,:,:), & ! [IN]
+                                    L    (:,:,:), & ! [IN]
+                                    V    (:,:,:), & ! [IN]
+                                    TEMP1(:,:,:)  ) ! [OUT]
 
     ! lowest layer treatment
     if ( .not. LAND_PHY_UPDATE_BOTTOM_TEMP ) then
