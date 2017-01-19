@@ -2381,11 +2381,9 @@ contains
        sigma_w(KS-1,i,j) = sigma_w(KS,i,j)
        sigma_w(KE+1,i,j) = sigma_w(KE,i,j)
        ! effective vertical velocity
-       do k=KS, KE-1
-          weff(k,i,j) = 0.5_RP*(velz(k,i,j) + velz(k+1,i,j)) - cpa(k,i,j)*r_gravity*dTdt_rad(k,i,j)
+       do k=KS, KE
+          weff(k,i,j) = 0.5_RP*(velz(k-1,i,j) + velz(k,i,j)) - cpa(k,i,j)*r_gravity*dTdt_rad(k,i,j)
        end do
-       weff(KS-1,i,j) = weff(KS,i,j)
-       weff(KE,i,j)   = weff(KE-1,i,j)
 
     end do
     end do
@@ -4021,7 +4019,7 @@ contains
     do i = IS, IE
     do k = KS, KE
        if( z(k) <= 25000.0_RP )then
-          w = 0.5_RP*(velz(k,i,j) + velz(k+1,i,j))
+          w = 0.5_RP*(velz(k-1,i,j) + velz(k,i,j))
        else
           w = 0.0_RP
        end if
