@@ -61,6 +61,8 @@ module mod_admin_time
   logical,  public :: TIME_DOresume             !< resume in this step?
   logical,  public :: TIME_DOend                !< finish program in this step?
 
+  logical,  public :: TIME_END_RESTART_OUT = .true. !< always output restart file at the end?
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -255,7 +257,8 @@ contains
        TIME_DT_RESUME,               &
        TIME_DT_RESUME_UNIT,          &
        TIME_WALLCLOCK_LIMIT,         &
-       TIME_WALLCLOCK_SAFE
+       TIME_WALLCLOCK_SAFE,          &
+       TIME_END_RESTART_OUT
 
     integer              :: dateday
     real(DP)             :: datesec
@@ -968,28 +971,28 @@ contains
     if ( TIME_RES_ATMOS_RESTART == TIME_DSTEP_ATMOS_RESTART ) then
        TIME_DOATMOS_restart   = .true.
        TIME_RES_ATMOS_RESTART = 0
-    elseif( TIME_DOend ) then
+    elseif( TIME_DOend .and. TIME_END_RESTART_OUT ) then
        TIME_DOATMOS_restart   = .true.
     endif
 
     if ( TIME_RES_OCEAN_RESTART == TIME_DSTEP_OCEAN_RESTART ) then
        TIME_DOOCEAN_restart   = .true.
        TIME_RES_OCEAN_RESTART = 0
-    elseif( TIME_DOend ) then
+    elseif( TIME_DOend .and. TIME_END_RESTART_OUT ) then
        TIME_DOOCEAN_restart   = .true.
     endif
 
     if ( TIME_RES_LAND_RESTART  == TIME_DSTEP_LAND_RESTART  ) then
        TIME_DOLAND_restart    = .true.
        TIME_RES_LAND_RESTART  = 0
-    elseif( TIME_DOend ) then
+    elseif( TIME_DOend .and. TIME_END_RESTART_OUT ) then
        TIME_DOLAND_restart    = .true.
     endif
 
     if ( TIME_RES_URBAN_RESTART == TIME_DSTEP_URBAN_RESTART ) then
        TIME_DOURBAN_restart   = .true.
        TIME_RES_URBAN_RESTART = 0
-    elseif( TIME_DOend ) then
+    elseif( TIME_DOend .and. TIME_END_RESTART_OUT ) then
        TIME_DOURBAN_restart   = .true.
     endif
 
