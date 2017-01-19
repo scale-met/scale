@@ -47,7 +47,7 @@ module scale_land_phy_slab
 
   real(RP), private :: WATER_DENSCS !< Heat Capacity (rho*CS) for soil moisture [J/K/m3]
 
-  logical, allocatable, private :: is_LND(:,:)
+  real(RP), allocatable, private :: is_LND(:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -108,9 +108,9 @@ contains
     do j = JS, JE
     do i = IS, IE
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
-        is_LND(i,j) = .true.
+        is_LND(i,j) = 1.0_RP
       else
-        is_LND(i,j) = .false.
+        is_LND(i,j) = 0.0_RP
       end if
     end do
     end do
@@ -180,8 +180,8 @@ contains
        L(LKS,i,j) = 0.0_RP
        U(LKS,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
        M(LKS,i,j) = 1.0_RP - L(LKS,i,j) - U(LKS,i,j)
-    enddo
-    enddo
+    end do
+    end do
 
     do j = JS, JE
     do i = IS, IE
@@ -189,9 +189,9 @@ contains
        L(k,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
        U(k,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
        M(k,i,j) = 1.0_RP - L(k,i,j) - U(k,i,j)
-    enddo
-    enddo
-    enddo
+    end do
+    end do
+    end do
 
     do j = JS, JE
     do i = IS, IE
@@ -200,12 +200,12 @@ contains
 
        do k = LKS+1, LKE-2
           Vin(k,i,j) = WATER(k,i,j)
-       enddo
+       end do
 
        Vin(LKE-1,i,j) = WATER(LKE-1,i,j) &
                       - U(LKE-1,i,j) * WATER(LKE,i,j)
-    enddo
-    enddo
+    end do
+    end do
 
     call MATRIX_SOLVER_tridiagonal( LKMAX-1,     & ! [IN]
                                     IA, IS, IE,  & ! [IN]
@@ -220,23 +220,23 @@ contains
     do i = IS, IE
     do k = LKS, LKE-1
        WATER1(k,i,j) = Vout(k,i,j)
-    enddo
-    enddo
-    enddo
+    end do
+    end do
+    end do
 
     ! lowest layer treatment
     if ( LAND_PHY_UPDATE_BOTTOM_WATER ) then
        do j = JS, JE
        do i = IS, IE
           WATER1(LKE,i,j) = Vout(LKE-1,i,j)
-       enddo
-       enddo
+       end do
+       end do
     else
        do j = JS, JE
        do i = IS, IE
           WATER1(LKE,i,j) = WATER(LKE,i,j)
-       enddo
-       enddo
+       end do
+       end do
     endif
 
 
@@ -250,9 +250,9 @@ contains
 !                             + max( WATER1(k,i,j) - WaterLimit(i,j), 0.0_RP ) * CDZ(k) * DWATR
 
           WATER1(k,i,j) = min( WATER1(k,i,j), WaterLimit(i,j) )
-       enddo
-    enddo
-    enddo
+       end do
+    end do
+    end do
 
 
 
@@ -260,8 +260,8 @@ contains
     do j = JS, JE
     do i = IS, IE
        SOIL_DENSCS(i,j) = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j)
-    enddo
-    enddo
+    end do
+    end do
 
     do j = JS, JE
     do i = IS, IE
@@ -269,8 +269,8 @@ contains
        U(LKS,i,j) = -2.0_RP * ThermalCond(i,j) / ( SOIL_DENSCS(i,j) + WATER(LKS,i,j)*WATER_DENSCS ) &
                     / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
        M(LKS,i,j) = 1.0_RP - L(LKS,i,j) - U(LKS,i,j)
-    enddo
-    enddo
+    end do
+    end do
 
     do j = JS, JE
     do i = IS, IE
@@ -280,9 +280,9 @@ contains
        U(k,i,j) = -2.0_RP * ThermalCond(i,j) / ( SOIL_DENSCS(i,j) + WATER(k,i,j)*WATER_DENSCS ) &
                   / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
        M(k,i,j) = 1.0_RP - L(k,i,j) - U(k,i,j)
-    enddo
-    enddo
-    enddo
+    end do
+    end do
+    end do
 
     do j = JS, JE
     do i = IS, IE
@@ -291,12 +291,12 @@ contains
 
        do k = LKS+1, LKE-2
           Vin(k,i,j) = TEMP(k,i,j)
-       enddo
+       end do
 
        Vin(LKE-1,i,j) = TEMP(LKE-1,i,j) &
                       - U(LKE-1,i,j) * TEMP(LKE,i,j)
-    enddo
-    enddo
+    end do
+    end do
 
     call MATRIX_SOLVER_tridiagonal( LKMAX-1,     & ! [IN]
                                     IA, IS, IE,  & ! [IN]
@@ -311,52 +311,45 @@ contains
     do i = IS, IE
     do k = LKS, LKE-1
        TEMP1(k,i,j) = Vout(k,i,j)
-    enddo
-    enddo
-    enddo
+    end do
+    end do
+    end do
 
     ! lowest layer treatment
     if ( LAND_PHY_UPDATE_BOTTOM_TEMP ) then
        do j = JS, JE
        do i = IS, IE
           TEMP1(LKE,i,j) = Vout(LKE-1,i,j)
-       enddo
-       enddo
+       end do
+       end do
     else
        do j = JS, JE
        do i = IS, IE
           TEMP1(LKE,i,j) = TEMP(LKE,i,j)
-       enddo
-       enddo
+       end do
+       end do
     endif
 
-
     ! calculate tendency
+    do j = JS, JE
+    do i = IS, IE
+    do k = LKS, LKE
+      TEMP_t (k,i,j) = is_LND(i,j) * ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / dt
+      WATER_t(k,i,j) = is_LND(i,j) * ( WATER1(k,i,j) - WATER(k,i,j) ) / dt
+    end do
+    end do
+    end do
+
+    ! constant land physics
     if( LAND_PHY_SLAB_const ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = LKS, LKE
-          TEMP_t (k,i,j) = 0.0_RP
-          WATER_t(k,i,j) = 0.0_RP
-       enddo
-       enddo
-       enddo
-    else
-       do j = JS, JE
-       do i = IS, IE
-          if( is_LND(i,j) ) then
-             do k = LKS, LKE
-                TEMP_t (k,i,j) = ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / dt
-                WATER_t(k,i,j) = ( WATER1(k,i,j) - WATER(k,i,j) ) / dt
-             enddo
-          else
-             do k = LKS, LKE
-                TEMP_t (k,i,j) = 0.0_RP
-                WATER_t(k,i,j) = 0.0_RP
-             enddo
-          endif
-       enddo
-       enddo
+      do j = JS, JE
+      do i = IS, IE
+      do k = LKS, LKE
+         TEMP_t (k,i,j) = 0.0_RP
+         WATER_t(k,i,j) = 0.0_RP
+      end do
+      end do
+      end do
     endif
 
     return
