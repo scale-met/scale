@@ -285,7 +285,7 @@ contains
     do i = IS, IE
       Vin(LKS,i,j) = TEMP(LKS,i,j) - SFLX_GH(i,j) / ( LAND_DENSCS(LKS,i,j) * CDZ(LKS) ) * dt
 
-      do k = LKS+1, LKE-1
+      do k = LKS+1, LKE
         Vin(k,i,j) = TEMP(k,i,j)
       end do
     end do
