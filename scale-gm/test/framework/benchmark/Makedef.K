@@ -25,6 +25,8 @@ FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
                    -Kinstance=8     \
                    -Kswp_strong
 
+FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Nquickdbg -NRtrap
+
 FFLAGS_DEBUG = -O0                                                       \
                -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
                -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global        \

@@ -25,6 +25,8 @@ FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
                    -Kinstance=8     \
                    -Kswp_strong
 
+FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Nquickdbg -NRtrap
+
 FFLAGS_DYN   = $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
 
 FFLAGS_DEBUG = -O0                                                       \

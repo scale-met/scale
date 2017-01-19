@@ -16,6 +16,8 @@ FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
                -fp-model source                     \
                -mcmodel=medium -heap-arrays
 
+FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -traceback -fpe0 -CB -CU
+
 FFLAGS_DYN   = $(FFLAGS)
 
 FFLAGS_DEBUG = -fpp -m64 -O0                        \

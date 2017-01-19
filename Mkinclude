@@ -41,8 +41,13 @@ else
       FFLAGS_DYN = $(FFLAGS)
       CFLAGS     = $(CFLAGS_DEBUG) $(CFLAGS_SYSDEPEND)
    else
-      FFLAGS     = $(FFLAGS_FAST)  $(FFLAGS_SYSDEPEND)
-      CFLAGS     = $(CFLAGS_FAST)  $(CFLAGS_SYSDEPEND)
+      ifeq ($(QUICKDEBUG),T)
+         FFLAGS = $(FFLAGS_QUICKDEBUG) $(FFLAGS_SYSDEPEND)
+         CFLAGS = $(CFLAGS_FAST)       $(CFLAGS_SYSDEPEND)
+      else
+         FFLAGS = $(FFLAGS_FAST)       $(FFLAGS_SYSDEPEND)
+         CFLAGS = $(CFLAGS_FAST)       $(CFLAGS_SYSDEPEND)
+      endif
    endif
 endif
 
