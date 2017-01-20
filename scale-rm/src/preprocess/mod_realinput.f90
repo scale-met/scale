@@ -546,10 +546,10 @@ contains
        BASENAME_OCEAN = trim(BASENAME_ORG)
     end if
 
-    select case ( SOILWATER_DS2VC )
-    case ( 'critical' )
+    select case( SOILWATER_DS2VC )
+    case( 'critical' )
        SOILWATER_DS2VC_flag = .true.
-    case ('limit' )
+    case('limit' )
        SOILWATER_DS2VC_flag = .false.
     case default
       write(*,*) 'xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
@@ -966,16 +966,16 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Input]'
 
-    select case (ATMOS_PHY_MP_TYPE)
-    case ("DRY", "NONE")
+    select case(ATMOS_PHY_MP_TYPE)
+    case("DRY", "NONE")
        mptype_run = 'dry'
-    case ("KESSLER")
+    case("KESSLER")
        mptype_run = 'single'
-    case ("TOMITA08")
+    case("TOMITA08")
        mptype_run = 'single'
-    case ("SN14")
+    case("SN14")
        mptype_run = 'double'
-    case ("SUZUKI10")
+    case("SUZUKI10")
        mptype_run = 'single-bin'
     case default
        write(*,*) 'xxx Unsupported ATMOS_PHY_MP_TYPE (', trim(ATMOS_PHY_MP_TYPE), '). Check!'
@@ -985,26 +985,26 @@ contains
 
     if ( do_read_atom ) then
 
-       select case ( mdlid )
-       case ( iSCALE ) ! TYPE: SCALE-RM
+       select case( mdlid )
+       case( iSCALE ) ! TYPE: SCALE-RM
 
           call ParentAtomOpenSCALE( lon_org, lat_org, & ! (out)
                                     cz_org,           & ! (out)
                                     basename_org,     & ! (in)
                                     dims              ) ! (in)
 
-       case ( iWRFARW ) ! TYPE: WRF-ARW
+       case( iWRFARW ) ! TYPE: WRF-ARW
 
           call ParentAtomOpenWRFARW
 
-       case ( iNICAM ) ! TYPE: NICAM-NETCDF
+       case( iNICAM ) ! TYPE: NICAM-NETCDF
 
           call ParentAtomOpenNICAM( lon_org, lat_org, & ! (out)
                                     cz_org,           & ! (out)
                                     basename_org,     & ! (in)
                                     dims              ) ! (in)
 
-       case ( iGrADS ) ! TYPE: GrADS format
+       case( iGrADS ) ! TYPE: GrADS format
 
           call ParentAtomOpenGrADS
 
@@ -1017,8 +1017,8 @@ contains
 
        if ( do_read_atom ) then
 
-          select case ( mdlid )
-          case ( iSCALE ) ! TYPE: SCALE-RM
+          select case( mdlid )
+          case( iSCALE ) ! TYPE: SCALE-RM
 
              call ParentAtomInputSCALE( velz_org, velx_org, vely_org, & ! (out)
                                         pres_org, dens_org, pott_org, & ! (out)
@@ -1027,7 +1027,7 @@ contains
                                         basename_org, mptype_parent,  & ! (in)
                                         dims, n         ) ! (in)
 
-          case ( iWRFARW ) ! TYPE: WRF-ARW
+          case( iWRFARW ) ! TYPE: WRF-ARW
 
              call ParentAtomInputWRFARW( velz_org, velx_org, vely_org, & ! (out)
                                          pres_org, temp_org, qtrc_org, & ! (out)
@@ -1035,13 +1035,13 @@ contains
                                          basename_org, mptype_parent,  & ! (in)
                                          dims, n                       ) ! (in)
 
-          case ( iNICAM ) ! TYPE: NICAM-NETCDF
+          case( iNICAM ) ! TYPE: NICAM-NETCDF
 
              call ParentAtomInputNICAM( velz_org, velx_org, vely_org, & ! (out)
                                         pres_org, temp_org, qtrc_org, & ! (out)
                                         basename_org, dims, n         ) ! (in)
 
-          case ( iGrADS ) ! TYPE: GrADS format
+          case( iGrADS ) ! TYPE: GrADS format
 
              call ParentAtomInputGrADS( velz_org, velx_org, vely_org, & ! (out)
                                         pres_org, temp_org, qtrc_org, & ! (out)
@@ -1594,42 +1594,42 @@ contains
     endif
 
 
-    select case ( INTRP_LAND_TEMP )
-    case ( 'off' )
+    select case( INTRP_LAND_TEMP )
+    case( 'off' )
        i_intrp_land_temp = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_land_temp = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_land_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_TEMP is invalid. ', INTRP_LAND_TEMP
        call PRC_MPIstop
     end select
-    select case ( INTRP_LAND_SFC_TEMP )
-    case ( 'off' )
+    select case( INTRP_LAND_SFC_TEMP )
+    case( 'off' )
        i_intrp_land_sfc_temp = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_land_sfc_temp = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_land_sfc_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid. ', INTRP_LAND_SFC_TEMP
        call PRC_MPIstop
     end select
-    select case ( INTRP_LAND_WATER )
-    case ( 'off' )
+    select case( INTRP_LAND_WATER )
+    case( 'off' )
        i_intrp_land_water = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_land_water = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_land_water = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_WATER is invalid. ', INTRP_LAND_WATER
        call PRC_MPIstop
     end select
 
-    select case ( lmdlid )
-    case ( iSCALE, iWRFARW, iNICAM )
+    select case( lmdlid )
+    case( iSCALE, iWRFARW, iNICAM )
        i_intrp_land_temp      = i_intrp_mask
        i_intrp_land_sfc_temp  = i_intrp_mask
        i_intrp_land_water     = i_intrp_mask
@@ -1692,31 +1692,31 @@ contains
     endif
 
 
-    select case ( INTRP_OCEAN_TEMP )
-    case ( 'off' )
+    select case( INTRP_OCEAN_TEMP )
+    case( 'off' )
        i_intrp_ocean_temp = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_ocean_temp = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_ocean_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_OCEAN_TEMP is invalid. ', INTRP_OCEAN_TEMP
        call PRC_MPIstop
     end select
-    select case ( INTRP_OCEAN_SFC_TEMP )
-    case ( 'off' )
+    select case( INTRP_OCEAN_SFC_TEMP )
+    case( 'off' )
        i_intrp_ocean_sfc_temp = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_ocean_sfc_temp = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_ocean_sfc_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_OCEAN_SFC_TEMP is invalid. ', INTRP_OCEAN_SFC_TEMP
        call PRC_MPIstop
     end select
 
-    select case ( omdlid )
-    case ( iSCALE, iWRFARW, iNICAM )
+    select case( omdlid )
+    case( iSCALE, iWRFARW, iNICAM )
        i_intrp_ocean_temp     = i_intrp_mask
        i_intrp_ocean_sfc_temp = i_intrp_mask
     end select
@@ -1886,8 +1886,8 @@ contains
 
        if ( do_read_land ) then
 
-          select case ( mdlid_land )
-          case ( iSCALE ) ! TYPE: SCALE-RM
+          select case( mdlid_land )
+          case( iSCALE ) ! TYPE: SCALE-RM
 
              call ParentLandInputSCALE( &
                   tg_org, strg_org,           & ! (out)
@@ -1897,7 +1897,7 @@ contains
                   basename_land, ldims,       & ! (in)
                   use_file_landwater, lit     ) ! (in)
 
-          case ( iWRFARW ) ! TYPE: WRF-ARW
+          case( iWRFARW ) ! TYPE: WRF-ARW
 
              call ParentLandInputWRFARW( &
                   tg_org, smds_org,           & ! (out)
@@ -1907,7 +1907,7 @@ contains
                   basename_land, ldims,       & ! (in)
                   use_file_landwater, lit     ) ! (in)
 
-          case ( iNICAM ) ! TYPE: NICAM-NETCDF
+          case( iNICAM ) ! TYPE: NICAM-NETCDF
 
              call ParentLandInputNICAM( &
                   tg_org, strg_org,           & ! (out)
@@ -1919,7 +1919,7 @@ contains
              ust_org = UNDEF
              albg_org = UNDEF
 
-          case ( iGrADS ) ! TYPE: GrADS format
+          case( iGrADS ) ! TYPE: GrADS format
 
              call ParentLandInputGrADS( &
                   tg_org, strg_org, smds_org, & ! (out)
@@ -2003,26 +2003,26 @@ contains
 
     if ( do_read_ocean ) then
 
-       select case ( mdlid_ocean )
-       case ( iSCALE ) ! TYPE: SCALE-RM
+       select case( mdlid_ocean )
+       case( iSCALE ) ! TYPE: SCALE-RM
 
           call ParentOceanOpenSCALE( olon_org, olat_org, & ! (out)
                                      omask_org,          & ! (out)
                                      basename_ocean,     & ! (in)
                                      odims               ) ! (in)
 
-       case ( iWRFARW ) ! TYPE: WRF-ARW
+       case( iWRFARW ) ! TYPE: WRF-ARW
 
           call ParentOceanOpenWRFARW
 
-       case ( iNICAM ) ! TYPE: NICAM-NETCDF
+       case( iNICAM ) ! TYPE: NICAM-NETCDF
 
           call ParentOceanOpenNICAM( olon_org, olat_org, & ! (out)
                                      omask_org,          & ! (out)
                                      basename_ocean,     & ! (in)
                                      odims               ) ! (in)
 
-       case ( iGrADS ) ! TYPE: GrADS format
+       case( iGrADS ) ! TYPE: GrADS format
 
           call ParentOceanOpenGrADS
 
@@ -2036,8 +2036,8 @@ contains
 
        if ( do_read_ocean ) then
 
-          select case ( mdlid_ocean )
-          case ( iSCALE ) ! TYPE: SCALE-RM
+          select case( mdlid_ocean )
+          case( iSCALE ) ! TYPE: SCALE-RM
 
              call ParentOceanInputSCALE( &
                   tw_org, sst_org,       & ! (out)
@@ -2046,7 +2046,7 @@ contains
                   basename_ocean, odims, & ! (in)
                   n                      ) ! (in)
 
-          case ( iWRFARW ) ! TYPE: WRF-ARW
+          case( iWRFARW ) ! TYPE: WRF-ARW
 
              call ParentOceanInputWRFARW( &
                   tw_org, sst_org,       & ! (out)
@@ -2056,7 +2056,7 @@ contains
                   basename_ocean, odims, & ! (in)
                   n                      ) ! (in)
 
-          case ( iNICAM ) ! TYPE: NICAM-NETCDF
+          case( iNICAM ) ! TYPE: NICAM-NETCDF
 
              call ParentOceanInputNICAM( &
                   tw_org, sst_org,       & ! (out)
@@ -2066,7 +2066,7 @@ contains
              albw_org = UNDEF
              z0w_org = UNDEF
 
-          case ( iGrADS ) ! TYPE: GrADS format
+          case( iGrADS ) ! TYPE: GrADS format
 
              call ParentOceanInputGrADS( &
                   tw_org, sst_org,       & ! (out)
@@ -2116,10 +2116,10 @@ contains
 
        ! Ocean temp: interpolate over the land
        if ( i_INTRP_OCEAN_TEMP .ne. i_intrp_off ) then
-          select case ( i_INTRP_OCEAN_TEMP )
-          case ( i_intrp_mask )
+          select case( i_INTRP_OCEAN_TEMP )
+          case( i_intrp_mask )
              omask = omask_org
-          case ( i_intrp_fill )
+          case( i_intrp_fill )
              call make_mask( omask, tw_org, odims(1), odims(2), landdata=.false.)
           end select
           call interp_OceanLand_data(tw_org, omask, odims(1), odims(2), .false., intrp_iter_max)
@@ -2127,10 +2127,10 @@ contains
 
        ! SST: interpolate over the land
        if ( i_INTRP_OCEAN_SFC_TEMP .ne. i_intrp_off ) then
-          select case ( i_INTRP_OCEAN_SFC_TEMP )
-          case ( i_intrp_mask )
+          select case( i_INTRP_OCEAN_SFC_TEMP )
+          case( i_intrp_mask )
              omask = omask_org
-          case ( i_intrp_fill )
+          case( i_intrp_fill )
              call make_mask( omask, sst_org, odims(1), odims(2), landdata=.false.)
           end select
           call interp_OceanLand_data(sst_org, omask, odims(1), odims(2), .false., intrp_iter_max)
@@ -2408,10 +2408,10 @@ contains
 
     ! Surface skin temp: interpolate over the ocean
     if ( i_INTRP_LAND_SFC_TEMP .ne. i_intrp_off ) then
-       select case ( i_INTRP_LAND_SFC_TEMP )
-       case ( i_intrp_mask )
+       select case( i_INTRP_LAND_SFC_TEMP )
+       case( i_intrp_mask )
           lmask = lmask_org
-       case ( i_intrp_fill )
+       case( i_intrp_fill )
           call make_mask( lmask, lst_org, ldims(2), ldims(3), landdata=.true.)
        case default
           write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid.'
@@ -2422,10 +2422,10 @@ contains
 
     ! Urban surface temp: interpolate over the ocean
     ! if ( i_INTRP_URB_SFC_TEMP .ne. i_intrp_off ) then
-    !   select case ( i_INTRP_URB_SFC_TEMP )
-    !   case ( i_intrp_mask )
+    !   select case( i_INTRP_URB_SFC_TEMP )
+    !   case( i_intrp_mask )
     !      lmask = lmask_org
-    !   case ( i_intrp_fill )
+    !   case( i_intrp_fill )
     !      call make_mask( lmask, ust_org, ldims(2), ldims(3), landdata=.true.)
     !   case default
     !      write(*,*) 'xxx INTRP_URB_SFC_TEMP is invalid.'
@@ -2464,10 +2464,10 @@ contains
     if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
        do k = 1, ldims(1)
           work(:,:) = tg_org(k,:,:)
-          select case ( i_INTRP_LAND_TEMP )
-          case ( i_intrp_mask )
+          select case( i_INTRP_LAND_TEMP )
+          case( i_intrp_mask )
              lmask = lmask_org
-          case ( i_intrp_fill )
+          case( i_intrp_fill )
              call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
           end select
           call interp_OceanLand_data( work, lmask, ldims(2), ldims(3), .true., intrp_iter_max )
@@ -2569,10 +2569,10 @@ contains
           if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
              do k = 1, ldims(1)
                 work(:,:) = smds_org(k,:,:)
-                select case ( i_INTRP_LAND_WATER )
-                case ( i_intrp_mask )
+                select case( i_INTRP_LAND_WATER )
+                case( i_intrp_mask )
                    lmask = lmask_org
-                case ( i_intrp_fill )
+                case( i_intrp_fill )
                    call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
                 end select
                 call interp_OceanLand_data(work, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
@@ -2600,10 +2600,10 @@ contains
           if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
              do k = 1, ldims(1)
                 work(:,:) = strg_org(k,:,:)
-                select case ( i_INTRP_LAND_WATER )
-                case ( i_intrp_mask )
+                select case( i_INTRP_LAND_WATER )
+                case( i_intrp_mask )
                    lmask = lmask_org
-                case ( i_intrp_fill )
+                case( i_intrp_fill )
                    call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
                 end select
                 call interp_OceanLand_data(work, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
@@ -2830,11 +2830,13 @@ contains
        EPS => CONST_EPS, &
        UNDEF => CONST_UNDEF
     implicit none
-    real(RP),     intent(inout) :: data(:,:)
-    real(RP),     intent(in)    :: maskval(:,:)
-    integer,      intent(in)    :: nx, ny
-    character(*), intent(in)    :: elem
-    integer                     :: i, j
+
+    real(RP),         intent(inout) :: data(:,:)
+    real(RP),         intent(in)    :: maskval(:,:)
+    integer,          intent(in)    :: nx, ny
+    character(len=*), intent(in)    :: elem
+
+    integer :: i, j
 
     do j = 1, ny
     do i = 1, nx

@@ -217,12 +217,12 @@ contains
 
 !----------------------------------------------------------
   subroutine read_rad_inputdata(filename,var)
-
     implicit none
-    character(*),intent(in)  :: filename
-    real(RP),intent(out)     :: var (KA,IA,JA)
-    real(SP)                 :: work(IMAX,JMAX,KMAX)
-    integer                  :: k, i, j, irecl
+
+    character(len=*), intent(in)  :: filename
+    real(RP),         intent(out) :: var (KA,IA,JA)
+    real(SP)                      :: work(IMAX,JMAX,KMAX)
+    integer                       :: k, i, j, irecl
 
      irecl=(IE-IS+1)*(JE-JS+1)*(KE-KS+1)*4
      open(50,file=trim(filename),status='old',access='direct', &
@@ -275,12 +275,12 @@ contains
   end subroutine read_rad_inputdata
 !----------------------------------------------------------
   subroutine read_rad_inputdata_2d(filename,var)
-
     implicit none
-    character(*),intent(in)  :: filename
-    real(RP),intent(out)     :: var (IA,JA)
-    real(SP)                 :: work(IMAX,JMAX)
-    integer                  :: i, j, irecl
+
+    character(len=*), intent(in)  :: filename
+    real(RP),         intent(out) :: var (IA,JA)
+    real(SP)                      :: work(IMAX,JMAX)
+    integer                       :: i, j, irecl
 
      irecl=(IE-IS+1)*(JE-JS+1)*4
      open(50,file=trim(filename),status='old',access='direct', &

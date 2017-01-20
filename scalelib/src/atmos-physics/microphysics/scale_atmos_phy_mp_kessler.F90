@@ -114,8 +114,6 @@ contains
        QA, QS   )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_tracer, only: &
-       TRACER_regist
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_regist
     implicit none
@@ -125,16 +123,21 @@ contains
     integer,          intent(out) :: QS
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for KESSLER-type 1-moment bulk 3 category'
+
     if ( MP_TYPE /= 'KESSLER' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
        call PRC_MPIstop
     endif
 
-    call ATMOS_HYDROMETEOR_regist( QS_MP,                     & ! (out)
-                                   1, 2, 0,                   & ! (in)
-                                   ATMOS_PHY_MP_kessler_NAME, & ! (in)
-                                   ATMOS_PHY_MP_kessler_DESC, & ! (in)
-                                   ATMOS_PHY_MP_kessler_UNIT  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS_MP,                     & ! [OUT]
+                                   1, 2, 0,                   & ! [IN]
+                                   ATMOS_PHY_MP_kessler_NAME, & ! [IN]
+                                   ATMOS_PHY_MP_kessler_DESC, & ! [IN]
+                                   ATMOS_PHY_MP_kessler_UNIT  ) ! [IN]
+
     QA = QA_MP
     QS = QS_MP
     QE_MP = QS_MP + QA_MP - 1
@@ -279,7 +282,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(kessler)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(kessler)'
 
     if ( first ) then
        ! Calculate collection factor for terminal velocity of QR

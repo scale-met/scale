@@ -55,7 +55,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Offline radiation process'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Offline radiation process'
 
     if ( RD_TYPE /= 'OFFLINE' ) then
        write(*,*) 'xxx RD_TYPE is not OFFLINE. Check!'
@@ -103,7 +103,7 @@ contains
 !    real(RP), intent(out) :: Jval        (KA,IA,JA,CH_QA_photo)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(offline)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Radiation(offline)'
     write(*,*) 'xxx This subroutine is never called. STOP.'
     call PRC_MPIstop
 

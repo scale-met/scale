@@ -63,9 +63,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN SFC] / Origin[SCALElib]'
 
     select case( OCEAN_TYPE )
-    case ( 'CONST' )
+    case( 'CONST' )
        SST_UPDATE = .false.
-    case ( 'SLAB', 'FILE' )
+    case( 'SLAB', 'FILE' )
        SST_UPDATE = .true.
     case default
        write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
@@ -183,6 +183,8 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean surface step: Slab'
 
     ! update surface temperature
     do j = JS, JE

@@ -45,10 +45,10 @@ module scale_topography
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG), private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
-  logical,               private :: TOPO_IN_CHECK_COORDINATES = .false.        !> switch for check of coordinates
-  character(len=H_LONG), private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),  private :: TOPO_OUT_TITLE    = 'SCALE-RM TOPOGRAPHY'  !< title    of the output file
+  character(len=H_LONG),  private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
+  logical,                private :: TOPO_IN_CHECK_COORDINATES = .false.        !> switch for check of coordinates
+  character(len=H_LONG),  private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),   private :: TOPO_OUT_TITLE    = 'SCALE-RM TOPOGRAPHY'  !< title    of the output file
   character(len=H_SHORT), private :: TOPO_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------

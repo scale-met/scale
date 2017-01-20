@@ -93,7 +93,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SURFACE FLUX] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Constant flux'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux'
 
     if ( ATMOS_PHY_SF_TYPE /= 'CONST' ) then
        write(*,*) 'xxx ATMOS_PHY_SF_TYPE is not CONST. Check!'
@@ -179,7 +179,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux(const)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(const)'
 
     do j = JS, JE
     do i = IS, IE

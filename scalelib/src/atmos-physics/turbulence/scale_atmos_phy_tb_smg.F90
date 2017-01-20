@@ -111,18 +111,23 @@ contains
 
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Smagorinsky-type Eddy Viscocity Model'
 
     if ( TYPE_TB /= 'SMAGORINSKY' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
        call PRC_MPIstop
     endif
 
-    call TRACER_regist( I_TKE,                                          &
-                        1,                                              &
-                        (/ 'TKE_SMG' /),                                &
-                        (/ 'turbulent kinetic energy (Smagorinsky)' /), &
-                        (/ 'm2/s2' /),                                  &
-                        advc = (/ .false. /)                            )
+    call TRACER_regist( I_TKE,                                          & ! [OUT]
+                        1,                                              & ! [IN]
+                        (/ 'TKE_SMG' /),                                & ! [IN]
+                        (/ 'turbulent kinetic energy (Smagorinsky)' /), & ! [IN]
+                        (/ 'm2/s2' /),                                  & ! [IN]
+                        advc = (/ .false. /)                            ) ! [IN], optional
 
     I_TKE_out = I_TKE
 
@@ -160,8 +165,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Smagorinsky-type Eddy Viscocity Model'
 
     ATMOS_PHY_TB_SMG_Cs = Cs
 
@@ -334,7 +339,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(smagorinsky)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Turbulence(smagorinsky)'
 
 #ifdef DEBUG
     qflx_sgs_momz(:,:,:,:)   = UNDEF

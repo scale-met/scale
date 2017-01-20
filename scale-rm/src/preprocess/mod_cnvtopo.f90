@@ -1155,8 +1155,8 @@ contains
        varname(1) = "DZsfc_DY"
        call STAT_detail( DZsfc_DY(:,:,:,:), varname(:) )
 
-       select case ( CNVTOPO_smooth_type )
-       case ( 'GAUSSIAN' )
+       select case( CNVTOPO_smooth_type )
+       case( 'GAUSSIAN' )
 
           ! 3 by 3 gaussian filter
           do j = JS, JE
@@ -1173,7 +1173,7 @@ contains
           enddo
           enddo
 
-       case ( 'LAPLACIAN' )
+       case( 'LAPLACIAN' )
 
           do j = JS  , JE
           do i = IS-1, IE

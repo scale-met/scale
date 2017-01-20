@@ -94,10 +94,11 @@ contains
        IO_AGGREGATE
 
     character(len=*), intent(in) :: MODELNAME !< name of the model
-    logical,               intent(in) :: call_from_launcher  !< flag to get command argument
+    logical,          intent(in) :: call_from_launcher  !< flag to get command argument
     character(len=*), intent(in), optional :: fname_in !< name of config file for each process
 
     character(len=H_LONG) :: fname
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -275,10 +276,10 @@ contains
     implicit none
 
     character(len=H_LONG), intent(out) :: outstr !< generated string
-    character(len=*), intent(in)  :: instr  !< strings
-    character(len=*), intent(in)  :: ext    !< extention
-    integer,          intent(in)  :: rank   !< number
-    logical,          intent(in), optional :: isrgn !< for region? (8 digits)
+    character(len=*),      intent(in)  :: instr  !< strings
+    character(len=*),      intent(in)  :: ext    !< extention
+    integer,               intent(in)  :: rank   !< number
+    logical,               intent(in), optional :: isrgn !< for region? (8 digits)
 
     character(len=H_SHORT) :: srank
     !---------------------------------------------------------------------------
@@ -301,6 +302,7 @@ contains
     implicit none
 
     logical, intent(in)   :: is_master !< master process?
+
     character(len=H_LONG) :: fname     !< filename
     !---------------------------------------------------------------------------
 

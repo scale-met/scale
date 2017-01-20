@@ -1245,19 +1245,19 @@ contains
     implicit none
 
     character(len=*),  intent(in) :: outfile_dir
-    character(len=16),  intent(in) :: outfile_prefix
-    character(len=16),  intent(in) :: varname
-    integer,            intent(in) :: imax
-    integer,            intent(in) :: jmax
-    integer,            intent(in) :: kmax
-    real(8),            intent(in) :: lon(imax)
-    real(8),            intent(in) :: lat(jmax)
-    real(8),            intent(in) :: alt(kmax)
-    integer,            intent(in) :: nstep
-    integer(8),         intent(in) :: time_str
-    integer(8),         intent(in) :: dt
-    logical,            intent(in) :: lon_swap
-    logical,            intent(in) :: devide_template
+    character(len=16), intent(in) :: outfile_prefix
+    character(len=16), intent(in) :: varname
+    integer,           intent(in) :: imax
+    integer,           intent(in) :: jmax
+    integer,           intent(in) :: kmax
+    real(8),           intent(in) :: lon(imax)
+    real(8),           intent(in) :: lat(jmax)
+    real(8),           intent(in) :: alt(kmax)
+    integer,           intent(in) :: nstep
+    integer(8),        intent(in) :: time_str
+    integer(8),        intent(in) :: dt
+    logical,           intent(in) :: lon_swap
+    logical,           intent(in) :: devide_template
 
     real(8) :: pi
     real(8) :: temp(imax)
@@ -1611,10 +1611,10 @@ contains
   function timeincrement(isec) result(template)
     implicit none
 
-    integer       :: isec
-    character(20) :: template
+    integer           :: isec
+    character(len=20) :: template
 
-    character(18):: tmp
+    character(len=18) :: tmp
     !---------------------------------------------------------------------------
 
     write(tmp,*) max(isec/60, 1)
@@ -1781,131 +1781,131 @@ contains
     !---------------------------------------------------------------------------
 
     select case( trim(var_name) )
-    case ( 'U', 'u' )
+    case( 'U', 'u' )
        var_name_nc = "U"
        var_desc_nc = "Zonal wind"
        var_unit_nc = "m/s"
-    case ( 'V', 'v' )
+    case( 'V', 'v' )
        var_name_nc = "V"
        var_desc_nc = "Meridional wind"
        var_unit_nc = "m/s"
-    case ( 'W', 'w' )
+    case( 'W', 'w' )
        var_name_nc = "W"
        var_desc_nc = "Vertical velocity"
        var_unit_nc = "m/s"
-    case ( 'PRS', 'prs' )
+    case( 'PRS', 'prs' )
        var_name_nc = "P"
        var_desc_nc = "Pressure"
        var_unit_nc = "Pa"
-    case ( 'T', 't' )
+    case( 'T', 't' )
        var_name_nc = "T"
        var_desc_nc = "Temperature"
        var_unit_nc = "K"
-    case ( 'PS', 'ps' )
+    case( 'PS', 'ps' )
        var_name_nc = "PS"
        var_desc_nc = "Surface pressure"
        var_unit_nc = "Pa"
-    case ( 'U500', 'u500' )
+    case( 'U500', 'u500' )
        var_name_nc = "U500"
        var_desc_nc = "Zonal wind at 500 hPa"
        var_unit_nc = "m/s"
-    case ( 'U850', 'u850' )
+    case( 'U850', 'u850' )
        var_name_nc = "U850"
        var_desc_nc = "Zonal wind at 850 hPa"
        var_unit_nc = "m/s"
-    case ( 'V500', 'v500' )
+    case( 'V500', 'v500' )
        var_name_nc = "V500"
        var_desc_nc = "Meridional wind at 500 hPa"
        var_unit_nc = "m/s"
-    case ( 'V850', 'v850' )
+    case( 'V850', 'v850' )
        var_name_nc = "V850"
        var_desc_nc = "Meridional wind at 850 hPa"
        var_unit_nc = "m/s"
-    case ( 'W500', 'w500' )
+    case( 'W500', 'w500' )
        var_name_nc = "W500"
        var_desc_nc = "Vertical velocity at 500 hPa"
        var_unit_nc = "m/s"
-    case ( 'W850', 'w850' )
+    case( 'W850', 'w850' )
        var_name_nc = "W850"
        var_desc_nc = "Vertical velocity at 850 hPa"
        var_unit_nc = "m/s"
-    case ( 'T500', 't500' )
+    case( 'T500', 't500' )
        var_name_nc = "T500"
        var_desc_nc = "Temperature at 500 hPa"
        var_unit_nc = "K"
-    case ( 'T850', 't850' )
+    case( 'T850', 't850' )
        var_name_nc = "T850"
        var_desc_nc = "Temperature at 850 hPa"
        var_unit_nc = "K"
-    case ( 'QV', 'qv' )
+    case( 'QV', 'qv' )
        var_name_nc = "Q"
        var_desc_nc = "Specific humidity"
        var_unit_nc = "kg/kg"
-    case ( 'QC', 'qc' )
+    case( 'QC', 'qc' )
        var_name_nc = "Qc"
        var_desc_nc = "Cloud water mixing ratio"
        var_unit_nc = "kg/kg"
-    case ( 'QR', 'qr' )
+    case( 'QR', 'qr' )
        var_name_nc = "Qr"
        var_desc_nc = "Rain water mixing ratio"
        var_unit_nc = "kg/kg"
-    case ( 'PASV1', 'pasv1' )
+    case( 'PASV1', 'pasv1' )
        var_name_nc = "Q1"
        var_desc_nc = "Singlet chlorine mixing ratio"
        var_unit_nc = "kg/kg"
-    case ( 'PASV2', 'pasv2' )
+    case( 'PASV2', 'pasv2' )
        var_name_nc = "Q2"
        var_desc_nc = "Chlorine gas mixing ratio"
        var_unit_nc = "kg/kg"
-    case ( 'PRCP', 'prcp' )
+    case( 'PRCP', 'prcp' )
        var_name_nc = "PRECL"
        var_desc_nc = "Large-scale precipitation rate"
        var_unit_nc = "m/s"
-    case ( 'CL_COLUMN', 'cl_column' )
+    case( 'CL_COLUMN', 'cl_column' )
        var_name_nc = "Q1c"
        var_desc_nc = "Singlet chlorine mixing ratio (column)"
        var_unit_nc = "kg/kg"
-    case ( 'CL2_COLUMN', 'cl2_column' )
+    case( 'CL2_COLUMN', 'cl2_column' )
        var_name_nc = "Q2c"
        var_desc_nc = "Chlorine gas mixing ratio (column)"
        var_unit_nc = "kg/kg"
-    case ( 'CLY_COLUMN', 'cly_column' )
+    case( 'CLY_COLUMN', 'cly_column' )
        var_name_nc = "Cly"
        var_desc_nc = "Cl and Cl2 the weighted sum (column)"
        var_unit_nc = "kg/kg"
-    case ( 'FORCING_VX', 'forcing_vx' )
+    case( 'FORCING_VX', 'forcing_vx' )
        var_name_nc = "Fvx"
        var_desc_nc = "Forcing term of horizontal velocity: vx"
        var_unit_nc = "m/s-2"
-    case ( 'FORCING_VY', 'forcing_vy' )
+    case( 'FORCING_VY', 'forcing_vy' )
        var_name_nc = "Fvy"
        var_desc_nc = "Forcing term of horizontal velocity: vx"
        var_unit_nc = "m/s-2"
-    case ( 'FORCING_VZ', 'forcing_vz' )
+    case( 'FORCING_VZ', 'forcing_vz' )
        var_name_nc = "Fvz"
        var_desc_nc = "Forcing term of horizontal velocity: vx"
        var_unit_nc = "m/s-2"
-    case ( 'FORCING_E', 'forcing_e' )
+    case( 'FORCING_E', 'forcing_e' )
        var_name_nc = "Fe"
        var_desc_nc = "Forcing term of moist internal energy"
        var_unit_nc = "J/kg/s"
-    case ( 'FORCING_QV', 'forcing_qv' )
+    case( 'FORCING_QV', 'forcing_qv' )
        var_name_nc = "Fqv"
        var_desc_nc = "Forcing term of specific humidity"
        var_unit_nc = "kg/kg/s"
-    case ( 'FORCING_QC', 'forcing_qc' )
+    case( 'FORCING_QC', 'forcing_qc' )
        var_name_nc = "Fqc"
        var_desc_nc = "Forcing term of cloud water mixing ratio"
        var_unit_nc = "mkg/kg/s"
-    case ( 'FORCING_QR', 'forcing_qr' )
+    case( 'FORCING_QR', 'forcing_qr' )
        var_name_nc = "Fqr"
        var_desc_nc = "Forcing term of cloud water mixing ratio"
        var_unit_nc = "kg/kg/s"
-    case ( 'FORCING_CL', 'forcing_cl' )
+    case( 'FORCING_CL', 'forcing_cl' )
        var_name_nc = "Fcl"
        var_desc_nc = "Forcing term of Singlet chlorine mixing ratio"
        var_unit_nc = "kg/kg/s"
-    case ( 'FORCING_CL2', 'forcing_cl2' )
+    case( 'FORCING_CL2', 'forcing_cl2' )
        var_name_nc = "Fcl2"
        var_desc_nc = "Forcing term of Chlorine gas mixing ratio"
        var_unit_nc = "kg/kg/s"

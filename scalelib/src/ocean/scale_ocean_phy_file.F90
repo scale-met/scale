@@ -115,7 +115,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean step: File'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: File'
 
     call EXTIN_update( &
          OCEAN_TEMP_new, & ! (out)

@@ -1,0 +1,107 @@
+%\section{Land Physics}
+{\bf \Large 
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Tsuyoshi Yamaura\\
+\hline
+\end{tabular}
+}
+
+
+\subsection{Land physics: slab model}
+
+The land slab model estimates the tendency of soil temperature and soil moisture with multi-layered bucket model.
+The tendency equiation of soil temperature is estimated from the 1-D vertical diffusion equation.
+That is,
+\begin{align}
+  \frac{\partial T}{\partial t} = \frac{1}{\rho_{L}C_{L}} \left\{ \frac{\partial}{\partial z} \left( \kappa \frac{\partial T}{\partial z} \right) + Q \right\},
+  \label{eq:Tdt}
+\end{align}
+where $T$ is soil temperature ($K$), $\rho_{L}$ is land density ($kg/m^3$), $C_{L}$ is land heat capacity ($J/K/kg$), $\kappa$ is thermal conductivity ($J/K/m/s$), and $Q$ is heat source from the outside ($J/m^3/s$).
+The eq. (\ref{eq:Tdt}) is discretized as follows:
+\begin{align}
+  \frac{\Delta T_{k}}{\Delta t} &= \frac{\nu_{k}}{\Delta z_{k}} \left( \frac{T_{k+1}-T_{k}}{\Delta z_{k+\frac{1}{2}}} - \frac{T_{k}-T_{k-1}}{\Delta z_{k-\frac{1}{2}}} \right) + \frac{Q_{k}}{(\rho_{L}C_{L})_{k}}, \\
+                                &= \frac{ 2\nu_{k} }{ \Delta z_{k} (\Delta z_{k+1}+\Delta z_{k}) }(T_{k+1}-T_{k}) - \frac{ 2\nu_{k} }{ \Delta z_{k} (\Delta z_{k}+\Delta z_{k-1}) }(T_{k}-T_{k-1}) +\frac{Q_{k}}{(\rho_{L}C_{L})_{k}},
+\end{align}
+where
+\begin{align}
+  \nu_{k} &= \frac{\kappa}{(\rho_{L}C_{L})_{k}}, \\
+  (\rho_{L}C_{L})_{k} &= ( 1 - S_{max} ) C_{S} + S_{k} \rho_{W}C_{W},
+\end{align}
+and $S$ is moisture content at $k$-layer ($m^3/m^3$), $S_{max}$ is maximum moisture content, $C_{S}$ and $C_{W}$ are heat capaticity of soil and water ($J/K/kg$), and $\rho_{W}$ is water density ($kg/m^3$).
+The range of $k$ is 1 to $m$.
+In this case, $m$ is the number of the lowermost layer.
+The tendency equations of soil temperature are implemented as follows:
+\begin{align}
+  \frac{\Delta T_{1}}{\Delta t} &= - \frac{G_{0}}{(\rho_{L}C_{L})_{1}\Delta z_{1}} + \frac{2\nu_{1}}{\Delta z_{1}(\Delta z_{2}+\Delta z_{1})} (T_{2}-T_{1}), \\
+  \frac{\Delta T_{k}}{\Delta t} &= - \frac{2\nu_{k}}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k-1})} (T_{k}-T_{k-1}) + \frac{2\nu_{k}}{\Delta z_{k}(\Delta z_{k+1}+\Delta z_{k})} (T_{k+1}-T_{k}), \\
+  \frac{\Delta T_{m}}{\Delta t} &= - \frac{2\nu_{m}}{\Delta z_{m}(\Delta z_{m}+\Delta z_{m-1})} (T_{m}-T_{m-1}),
+\end{align}
+where $G_{0}$ is upward groud heat flux from atmospheric surface ($J/m^2/s$).
+We assume that the ground heat flux under the lowermost layer is zero.
+
+We use implicit scheme for the time integration of the land slab model.
+The cofficients in the tendency equation are summarized as follows:
+\begin{align}
+  a_{1} &= 0, \\
+  a_{k} &= - \frac{2\nu_{k}\Delta t}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k-1})}, \\
+  b_{k} &= - \frac{2\nu_{k}\Delta t}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k+1})}, \\
+  b_{m} &= 0.
+\end{align}
+Then, the tendency equations of soil temperature are reqritten as follows:
+\begin{align}
+  T_{1}^{t} &= T_{1}^{t-1} - \frac{G_{0}\Delta t}{\rho_{L}C_{L}\Delta z_{1}} + b_{1} (T_{1}^{t}-T_{2}^{t}), \\
+  T_{k}^{t} &= T_{k}^{t-1} + a_{k} (T_{k}^{t}-T_{k-1}^{t}) + b_{k} (T_{k}^{t}-T_{k+1}^{t}), \\
+  T_{m}^{t} &= T_{m}^{t-1} + a_{m} (T_{m}^{t}-T_{m-1}^{t}).
+\end{align}
+This simultaneous equation can be written by using matrix. That is,
+\begin{equation}
+\begin{pmatrix}
+  c_{1}  & b_{1}  &        &        &         &         &         \\
+  a_{2}  & c_{2}  & b_{2}  &        &         &         &         \\
+         & \ddots & \ddots & \ddots &         &         &         \\
+         &        & a_{k}  & c_{k}  & b_{k}   &         &         \\
+         &        &        & \ddots & \ddots  & \ddots  &         \\
+         &        &        &        & a_{m-1} & c_{m-1} & b_{m-1} \\
+         &        &        &        &         & a_{m}   & c_{m}   \\
+\end{pmatrix}
+\begin{pmatrix}
+  T_{1}^{t}   \\
+  T_{2}^{t}   \\
+  \vdots      \\
+  T_{k}^{t}   \\
+  \vdots      \\
+  T_{m-1}^{t} \\
+  T_{m}^{t}   \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+  T_{1}^{t-1} - \frac{G_{0}\Delta t}{\rho_{L}C_{L}\Delta z_{1}} \\
+  T_{2}^{t-1}   \\
+  \vdots        \\
+  T_{k}^{t-1}   \\
+  \vdots        \\
+  T_{m-1}^{t-1} \\
+  T_{m}^{t-1}   \\
+\end{pmatrix}
+,
+\end{equation}
+where $c_{k} = 1 - a_{k} - b_{k}$.
+This matrix can be solved by the Thomas algorithm (tridiagonal matrix algorithm).
+
+Soil moisture is estimated by the similar method.
+The tendency equations of soil moisture is defined as the 1-D vertical diffusion euqation.
+That is,
+\begin{align}
+  \frac{\partial W}{\partial t} = \frac{\partial}{\partial z} \left( \nu \frac{\partial W}{\partial z} \right),
+  \label{eq:Wdt}
+\end{align}
+where $W$ is soil moisture ($m^3/m^3$) and $\nu$ is constant water diffusivity for $k$ ($m^2/s$).
+The eq. (\ref{eq:Wdt}) is discretized as follows:
+\begin{align}
+  \frac{\Delta W_{1}}{\Delta t} &= \frac{P - E}{\rho_{W}\Delta z_{1}} + \frac{2\nu}{\Delta z_{1}(\Delta z_{2}+\Delta z_{1})} (W_{2}-W_{1}), \\
+  \frac{\Delta W_{k}}{\Delta t} &= - \frac{2\nu}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k-1})} (W_{k}-W_{k-1}) + \frac{2\nu}{\Delta z_{k}(\Delta z_{k+1}+\Delta z_{k})} (W_{k+1}-W_{k}), \\
+  \frac{\Delta W_{m}}{\Delta t} &= - \frac{2\nu}{\Delta z_{m}(\Delta z_{m}+\Delta z_{m-1})} (W_{m}-W_{m-1}),
+\end{align}
+where $P$ is precipitation rate ($kg/m^2/s$) and $E$ is evaporation rate ($kg/m^2/s$).
+Same as soil temperature, the tendency equations can be solved by the Thomas algorithm.

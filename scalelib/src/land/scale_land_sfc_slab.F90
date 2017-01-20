@@ -231,6 +231,8 @@ contains
     integer  :: i, j, n
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land  surface step: Slab'
+
     dt = real(dt_DP,kind=RP)
 
     ! copy land surfce temperature for iteration

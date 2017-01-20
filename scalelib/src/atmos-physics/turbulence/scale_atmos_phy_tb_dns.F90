@@ -65,11 +65,15 @@ contains
        I_TKE_out )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_tracer, only: &
-       TRACER_regist
     implicit none
+
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Deardorff (1980) 1.5th TKE Model'
 
     if ( TYPE_TB /= 'DNS' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
@@ -99,7 +103,9 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Eddy Viscocity Model for DNS'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Eddy Viscocity Model for DNS'
 
     !--- read namelist
     rewind(IO_FID_CONF)

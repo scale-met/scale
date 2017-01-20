@@ -431,9 +431,9 @@ contains
     character(len=*), intent(in) :: scheme
     character(len=*), intent(in) :: scheme_tracer
 
-    select case ( scheme )
+    select case( scheme )
 
-    case ( "UD1" )
+    case( "UD1" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud1 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud1
@@ -486,7 +486,7 @@ contains
       end if
 
 
-    case ( "CD2" )
+    case( "CD2" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd2 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd2
@@ -539,7 +539,7 @@ contains
       end if
 
 
-    case ( "UD3" )
+    case( "UD3" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud3 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud3
@@ -592,7 +592,7 @@ contains
       end if
 
 
-    case ( "UD3KOREN1993" )
+    case( "UD3KOREN1993" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud3Koren1993 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud3Koren1993
@@ -645,7 +645,7 @@ contains
       end if
 
 
-    case ( "CD4" )
+    case( "CD4" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd4 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd4
@@ -698,7 +698,7 @@ contains
       end if
 
 
-    case ( "UD5" )
+    case( "UD5" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud5 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud5
@@ -751,7 +751,7 @@ contains
       end if
 
 
-    case ( "CD6" )
+    case( "CD6" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd6 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd6
@@ -809,9 +809,9 @@ contains
        call PRC_MPIstop
     end select
 
-    select case ( scheme_tracer )
+    select case( scheme_tracer )
 
-    case ( "UD1" )
+    case( "UD1" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud1 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud1
@@ -862,7 +862,7 @@ contains
       end if
 
 
-    case ( "CD2" )
+    case( "CD2" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd2 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_cd2
@@ -913,7 +913,7 @@ contains
       end if
 
 
-    case ( "UD3" )
+    case( "UD3" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud3 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud3
@@ -964,7 +964,7 @@ contains
       end if
 
 
-    case ( "UD3KOREN1993" )
+    case( "UD3KOREN1993" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud3Koren1993 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud3Koren1993
@@ -1015,7 +1015,7 @@ contains
       end if
 
 
-    case ( "CD4" )
+    case( "CD4" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd4 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_cd4
@@ -1066,7 +1066,7 @@ contains
       end if
 
 
-    case ( "UD5" )
+    case( "UD5" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the ud5 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud5
@@ -1117,7 +1117,7 @@ contains
       end if
 
 
-    case ( "CD6" )
+    case( "CD6" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd6 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_cd6

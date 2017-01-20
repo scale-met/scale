@@ -569,22 +569,26 @@ contains
     integer :: QS2
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Seiki and Nakajima (2014) 2-moment bulk 6 category'
+
     if ( MP_TYPE /= 'SN14' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not SN14. Check!'
        call PRC_MPIstop
     end if
 
-    call ATMOS_HYDROMETEOR_regist( QS_MP,                       & ! (out)
-                                   1, 2, 3,                     & ! (in)
-                                   ATMOS_PHY_MP_sn14_NAME(1:6), & ! (in)
-                                   ATMOS_PHY_MP_sn14_DESC(1:6), & ! (in)
-                                   ATMOS_PHY_MP_sn14_UNIT(1:6)  ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( QS_MP,                       & ! [OUT]
+                                   1, 2, 3,                     & ! [IN]
+                                   ATMOS_PHY_MP_sn14_NAME(1:6), & ! [IN]
+                                   ATMOS_PHY_MP_sn14_DESC(1:6), & ! [IN]
+                                   ATMOS_PHY_MP_sn14_UNIT(1:6)  ) ! [IN]
 
-    call TRACER_regist( QS2, & ! (out)
-                        5,   & ! (in)
-                        ATMOS_PHY_MP_sn14_NAME(7:11), & ! (in)
-                        ATMOS_PHY_MP_sn14_DESC(7:11), & ! (in)
-                        ATMOS_PHY_MP_sn14_UNIT(7:11)  ) ! (in)
+    call TRACER_regist( QS2,                          & ! [OUT]
+                        5,                            & ! [IN]
+                        ATMOS_PHY_MP_sn14_NAME(7:11), & ! [IN]
+                        ATMOS_PHY_MP_sn14_DESC(7:11), & ! [IN]
+                        ATMOS_PHY_MP_sn14_UNIT(7:11)  ) ! [IN]
 
     QA = QA_MP
     QS = QS_MP
@@ -633,8 +637,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SN14'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Seiki and Nakajima (2014) 2-moment bulk 6 category'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -673,8 +677,8 @@ contains
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
-    if( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step(s)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation [s]                   : ', MP_DTSEC_SEDIMENTATION
 
     !--- For kij
     allocate( gsgam2_d (KA,IA,JA) )
@@ -726,7 +730,7 @@ contains
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SN14)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SN14)'
 
 #ifdef PROFILE_FIPP
     call fipp_start()
@@ -855,10 +859,6 @@ contains
     bh_vent(:,:)   = UNDEF8
     bh_vent0(:,:)  = UNDEF8
     bh_vent1(:,:)  = UNDEF8
-    !
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SN14]/Categ[ATMOS]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1760,11 +1760,11 @@ contains
 
     call freezing_water_kij( &
          dt,             & ! in
-         PQ,             & ! out
+         PQ,             & ! inout
          rhoq2, xq, temp ) ! in
 
     call dep_vapor_melt_ice_kij( &
-         PQ,                 & ! out
+         PQ,                 & ! inout
          DENS, wtemp, pres, qdry, & ! in
          rhoq2,               & ! in
          esw, esi,           & ! in
@@ -1853,7 +1853,7 @@ contains
     ! [Mod] T.Seiki
     if ( MP_doautoconversion ) then
        call aut_acc_slc_brk_kij(  &
-            PQ, &
+            PQ, & ! inout
             rhoq2, xq, dq_xa, &
             DENS               )
     else
@@ -1875,13 +1875,13 @@ contains
 
     call mixed_phase_collection_kij( &
          ! collection process
-         Pac, PQ,                    & ! out
+         Pac, PQ,                    & ! inout
          temp, rhoq2,                & ! in
          xq, dq_xa, vt_xa            ) ! in
 !         DENS(:,:,:),                ) ! in
 
     call ice_multiplication_kij( &
-         PQ,                     & ! out
+         PQ,                     & ! inout
          Pac,                    & ! in
          temp, rhoq2, xq         ) ! in
 
@@ -2381,11 +2381,9 @@ contains
        sigma_w(KS-1,i,j) = sigma_w(KS,i,j)
        sigma_w(KE+1,i,j) = sigma_w(KE,i,j)
        ! effective vertical velocity
-       do k=KS, KE-1
-          weff(k,i,j) = 0.5_RP*(velz(k,i,j) + velz(k+1,i,j)) - cpa(k,i,j)*r_gravity*dTdt_rad(k,i,j)
+       do k=KS, KE
+          weff(k,i,j) = 0.5_RP*(velz(k-1,i,j) + velz(k,i,j)) - cpa(k,i,j)*r_gravity*dTdt_rad(k,i,j)
        end do
-       weff(KS-1,i,j) = weff(KS,i,j)
-       weff(KE,i,j)   = weff(KE-1,i,j)
 
     end do
     end do
@@ -2595,7 +2593,7 @@ contains
     use scale_tracer, only: &
        QA
     implicit none
-    real(RP), intent(out):: PQ(PQ_MAX,KA,IA,JA)
+    real(RP), intent(inout):: PQ(PQ_MAX,KA,IA,JA)
     !
     real(RP), intent(in) :: Pac(Pac_MAX,KA,IA,JA)
     real(RP), intent(in) :: tem(KA,IA,JA)
@@ -2736,7 +2734,7 @@ contains
     !
     real(RP), intent(out):: Pac(Pac_MAX,KA,IA,JA)
     !--- partial conversion
-    real(RP), intent(out):: PQ(PQ_MAX,KA,IA,JA)
+    real(RP), intent(inout):: PQ(PQ_MAX,KA,IA,JA)
     !
     real(RP), intent(in) :: wtem(KA,IA,JA)
     !--- mass/number concentration[kg/m3]
@@ -3218,7 +3216,7 @@ contains
        QA
     implicit none
 
-    real(RP), intent(out) :: PQ(PQ_MAX,KA,IA,JA)
+    real(RP), intent(inout) :: PQ(PQ_MAX,KA,IA,JA)
     !
     real(RP), intent(in)  :: rhoq(I_QV:I_NG,KA,IA,JA)
     real(RP), intent(in)  :: xq(HYDRO_MAX,KA,IA,JA)
@@ -3321,7 +3319,7 @@ contains
     implicit none
 
     ! Diffusion growth or Evaporation, Sublimation
-    real(RP), intent(out) :: PQ(PQ_MAX,KA,IA,JA)  ! mass change   for cloud, [Add]  09/08/18 T.Mitsui
+    real(RP), intent(inout) :: PQ(PQ_MAX,KA,IA,JA)  ! mass change   for cloud, [Add]  09/08/18 T.Mitsui
 
     real(RP), intent(in)  :: rho(KA,IA,JA)     ! air density
     real(RP), intent(in)  :: tem(KA,IA,JA)     ! air temperature
@@ -3561,7 +3559,7 @@ contains
     ! We assumed surface temperature of droplets are same as environment.
 
     real(RP), intent(in) :: dt
-    real(RP), intent(out):: PQ(PQ_MAX,KA,IA,JA)
+    real(RP), intent(inout):: PQ(PQ_MAX,KA,IA,JA)
     !
     real(RP), intent(in) :: tem(KA,IA,JA)
     !
@@ -4021,7 +4019,7 @@ contains
     do i = IS, IE
     do k = KS, KE
        if( z(k) <= 25000.0_RP )then
-          w = 0.5_RP*(velz(k,i,j) + velz(k+1,i,j))
+          w = 0.5_RP*(velz(k-1,i,j) + velz(k,i,j))
        else
           w = 0.0_RP
        end if

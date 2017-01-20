@@ -52,16 +52,16 @@ module mod_realinput_grads
   integer,  parameter    :: grads_vars_limit = 1000 !> limit of number of values
   integer,  parameter    :: num_item_list = 17
   integer,  parameter    :: num_item_list_atom  = 17
-  integer,  parameter    :: num_item_list_land  = 11
-  integer,  parameter    :: num_item_list_ocean = 9
+  integer,  parameter    :: num_item_list_land  = 12
+  integer,  parameter    :: num_item_list_ocean = 10
   logical                :: data_available(num_item_list_atom,3) ! 1:atom, 2:land, 3:ocean
   character(len=H_SHORT) :: item_list_atom (num_item_list_atom)
   character(len=H_SHORT) :: item_list_land (num_item_list_land)
   character(len=H_SHORT) :: item_list_ocean(num_item_list_ocean)
   data item_list_atom  /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO' /
   data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','llev', &
-                        'STEMP','SMOISVC','SMOISDS','SKINT','TOPO' /
-  data item_list_ocean /'lsmask','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
+                        'STEMP','SMOISVC','SMOISDS','SKINT','TOPO','TOPO_sfc' /
+  data item_list_ocean /'lsmask','lsmask_sst','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
 
   integer,  parameter   :: Ia_lon    = 1
   integer,  parameter   :: Ia_lat    = 2
@@ -92,16 +92,18 @@ module mod_realinput_grads
   integer,  parameter   :: Il_smoisds = 9  ! soil moisture (degree of saturation)
   integer,  parameter   :: Il_skint   = 10
   integer,  parameter   :: Il_topo    = 11
+  integer,  parameter   :: Il_topo_sfc= 12
 
-  integer,  parameter   :: Io_lsmask  = 1
-  integer,  parameter   :: Io_lon     = 2
-  integer,  parameter   :: Io_lat     = 3
-  integer,  parameter   :: Io_lon_sfc = 4
-  integer,  parameter   :: Io_lat_sfc = 5
-  integer,  parameter   :: Io_lon_sst = 6
-  integer,  parameter   :: Io_lat_sst = 7
-  integer,  parameter   :: Io_skint   = 8
-  integer,  parameter   :: Io_sst     = 9
+  integer,  parameter   :: Io_lsmask     = 1
+  integer,  parameter   :: Io_lsmask_sst = 2
+  integer,  parameter   :: Io_lon        = 3
+  integer,  parameter   :: Io_lat        = 4
+  integer,  parameter   :: Io_lon_sfc    = 5
+  integer,  parameter   :: Io_lat_sfc    = 6
+  integer,  parameter   :: Io_lon_sst    = 7
+  integer,  parameter   :: Io_lat_sst    = 8
+  integer,  parameter   :: Io_skint      = 9
+  integer,  parameter   :: Io_sst        = 10
 
 
   integer,  parameter   :: lvars_limit = 1000 ! limit of values for levels data
@@ -189,10 +191,10 @@ contains
     NAMELIST / PARAM_MKINIT_REAL_GrADS / &
         upper_qv_type
 
-    integer             :: ielem
-    integer             :: k, n
+    integer :: ielem
 
-    integer             :: ierr
+    integer :: k, n
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: GrADS format'
@@ -209,8 +211,7 @@ contains
 
 
     if ( len_trim(basename) == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) &
-            'xxx "BASENAME_ORG" is not specified in "PARAM_MKINIT_REAL_ATMOS"!',trim(basename)
+       write(*,*) 'xxx [realinput_grads] "BASENAME_ORG" is not specified in "PARAM_MKINIT_REAL_ATMOS"!', trim(basename)
        call PRC_MPIstop
     endif
 
@@ -428,7 +429,7 @@ contains
           knum = dims(1)
        endif
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,1)
           dd      = grads_dd      (ielem,1)
@@ -471,7 +472,7 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lon")
           if ( trim(dtype) == "linear" ) then
              do j = 1, dims(3)
@@ -599,8 +600,8 @@ contains
              enddo
              enddo
              if( dims(1)>knum ) then
-                select case ( upper_qv_type )
-                case ("COPY")
+                select case( upper_qv_type )
+                case("COPY")
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
@@ -608,7 +609,7 @@ contains
                    enddo
                    enddo
                    enddo
-                case ("ZERO")
+                case("ZERO")
                    ! do nothing
                 case default
                    write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
@@ -633,8 +634,8 @@ contains
              enddo
              enddo
              if( dims(3)>knum ) then
-                select case ( upper_qv_type )
-                case ("COPY")
+                select case( upper_qv_type )
+                case("COPY")
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
@@ -647,7 +648,7 @@ contains
                    enddo
                    enddo
                    enddo
-                case ("ZERO")
+                case("ZERO")
                    ! do nothing
                 case default
                    write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
@@ -902,8 +903,7 @@ contains
     use_waterratio = .false.
 
     if ( len_trim(basename) == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) &
-            'xxx "BASEMAAME" is not specified in "PARAM_MKINIT_REAL_ATOMS"!',trim(basename)
+       write(*,*) 'xxx [realinput_grads] "BASEMAAME" is not specified in "PARAM_MKINIT_REAL_ATOMS"!', trim(basename)
        call PRC_MPIstop
     endif
 
@@ -971,7 +971,7 @@ contains
        item  = item_list_land(ielem)
        !--- check data
        select case(trim(item))
-       case('TOPO','lsmask')
+       case('TOPO','TOPO_sfc', 'lsmask')
           if ( .not. data_available(ielem,2) ) then
              if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
              cycle
@@ -1065,7 +1065,7 @@ contains
           knum = ldims(1)
        endif
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,2)
           dd      = grads_dd      (ielem,2)
@@ -1108,7 +1108,7 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lsmask")
           if ( data_available(Il_lsmask,2) ) then
              if ( trim(dtype) == "map" ) then
@@ -1278,7 +1278,26 @@ contains
              enddo
           endif
        case('TOPO')
-          if ( data_available(Il_topo,2) ) then
+          if ( .not. data_available(Il_topo_sfc,2) ) then
+             if ( ldims(2)==outer_nx .or. ldims(3)==outer_ny ) then
+                if ( trim(dtype) == "map" ) then
+                   call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
+                   do j = 1, ldims(3)
+                   do i = 1, ldims(2)
+                      if ( abs(gland2D(i,j)-missval) < EPS ) then
+                         topo_org(i,j) = UNDEF
+                      else
+                         topo_org(i,j) = real(gland2D(i,j), kind=RP)
+                      end if
+                   enddo
+                   enddo
+                end if
+             else
+                topo_org = UNDEF
+             endif
+          end if
+       case('TOPO_sfc')
+          if ( data_available(Il_topo_sfc,2) ) then
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
                 do j = 1, ldims(3)
@@ -1291,7 +1310,7 @@ contains
                 enddo
                 enddo
              endif
-          else
+          else if ( .not. data_available(Il_topo,2) ) then
              topo_org = UNDEF
           endif
        end select
@@ -1412,8 +1431,8 @@ contains
        item  = item_list_ocean(ielem)
        !--- check data
        select case(trim(item))
-       case('lsmask')
-          if ( .not. data_available(ielem,3) ) then
+       case('lsmask','lsmask_sst')
+          if ( .not. data_available(Io_lsmask,3) .and. .not. data_available(Io_lsmask_sst,3) ) then
              if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
              cycle
           endif
@@ -1502,7 +1521,7 @@ contains
        lnum     = grads_lnum    (ielem,3)
        missval  = grads_missval (ielem,3)
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,3)
           dd      = grads_dd      (ielem,3)
@@ -1536,14 +1555,25 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lsmask")
-          if ( data_available(Io_lsmask,3) ) then
+          if ( .not. data_available(Io_lsmask_sst,3) .and. data_available(Io_lsmask,3) ) then
+             if ( odims(1)==outer_nx_sfc .and. odims(2)==outer_ny_sfc ) then
+                if ( trim(dtype) == "map" ) then
+                   call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
+                   omask_org(:,:) = real(gsst2D(:,:), kind=RP)
+                endif
+             else
+                omask_org = UNDEF
+             end if
+          end if
+       case("lsmask_sst")
+          if ( data_available(Io_lsmask_sst,3) ) then
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
                 omask_org(:,:) = real(gsst2D(:,:), kind=RP)
              endif
-          else
+          else if ( .not. data_available(Io_lsmask,3) ) then
              omask_org = UNDEF
           end if
        case("lon")
@@ -1840,9 +1870,11 @@ contains
   !-----------------------------------------------------------------------------
   subroutine open_grads_file(io_fid,filename,irecl)
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: filename
-    integer,intent(in)      :: irecl
+
+    integer,          intent(in) :: io_fid
+    character(len=*), intent(in) :: filename
+    integer,          intent(in) :: irecl
+
     integer  :: ierr
 
     open(io_fid,                   &
@@ -1856,6 +1888,7 @@ contains
        write(*,*) 'xxx grads file does not found! ', trim(filename)
        call PRC_MPIstop
     endif
+
     return
   end subroutine open_grads_file
 
@@ -1870,14 +1903,15 @@ contains
        yrev,                      &
        gdata                      )
     implicit none
-    integer,     intent(in)  :: io_fid
-    character(*),intent(in)  :: gfile
-    integer,     intent(in)  :: nx,ny,nz,it
-    character(*),intent(in)  :: item
-    integer,     intent(in)  :: startrec
-    integer,     intent(in)  :: totalrec
-    character(*),intent(in)  :: yrev
-    real(SP),    intent(out) :: gdata(nx,ny)
+
+    integer,          intent(in)  :: io_fid
+    character(len=*), intent(in)  :: gfile
+    integer,          intent(in)  :: nx,ny,nz,it
+    character(len=*), intent(in)  :: item
+    integer,          intent(in)  :: startrec
+    integer,          intent(in)  :: totalrec
+    character(len=*), intent(in)  :: yrev
+    real(SP),         intent(out) :: gdata(nx,ny)
 
     real(SP) :: work(nx,ny)
 
@@ -1920,14 +1954,15 @@ contains
        yrev,                      &
        gdata                      )
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: gfile
-    integer,     intent(in) :: nx,ny,nz,it
-    character(*),intent(in) :: item
-    integer,     intent(in) :: startrec
-    integer,     intent(in) :: totalrec
-    character(*),intent(in) :: yrev
-    real(SP),intent(out)    :: gdata(nx,ny,nz)
+
+    integer,          intent(in)  :: io_fid
+    character(len=*), intent(in)  :: gfile
+    integer,          intent(in)  :: nx,ny,nz,it
+    character(len=*), intent(in)  :: item
+    integer,          intent(in)  :: startrec
+    integer,          intent(in)  :: totalrec
+    character(len=*), intent(in)  :: yrev
+    real(SP),         intent(out) :: gdata(nx,ny,nz)
 
     real(SP) :: work(nx,ny,nz)
 
@@ -1965,9 +2000,10 @@ contains
   !-----------------------------------------------------------------------------
   subroutine close_grads_file(io_fid,filename)
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: filename
-    integer                 :: ierr
+
+    integer,          intent(in) :: io_fid
+    character(len=*), intent(in) :: filename
+    integer                      :: ierr
 
     close(io_fid, iostat=ierr)
     if ( ierr /= 0 ) then

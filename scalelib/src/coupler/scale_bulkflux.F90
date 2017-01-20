@@ -90,7 +90,7 @@ module scale_bulkflux
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: BULKFLUX_TYPE = 'B91W01'
+  character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01'
 
   integer,  private :: BULKFLUX_itr_max = 100 ! maximum iteration number
 
@@ -115,7 +115,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_BULKFLUX / &
-       BULKFLUX_TYPE,      &
+       BULKFLUX_type,      &
        BULKFLUX_itr_max,   &
        BULKFLUX_res_min,   &
        BULKFLUX_err_min,   &
@@ -142,15 +142,17 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_BULKFLUX)
 
-    select case( BULKFLUX_TYPE )
-    case ( 'U95' )
-       if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : Uno et al.(1995)'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : ', trim(BULKFLUX_type)
+    select case(BULKFLUX_type)
+    case('U95')
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Uno et al.(1995)'
        BULKFLUX => BULKFLUX_U95
-    case ( 'B91W01' )
-       if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : Beljaars (1991) and Wilson (2001)'
+    case('B91W01')
+       if( IO_L ) write(IO_FID_LOG,*) '*** => Beljaars (1991) and Wilson (2001)'
        BULKFLUX => BULKFLUX_B91W01
     case default
-       write(*,*) 'xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported BULKFLUX_type. STOP'
        call PRC_MPIstop
     end select
 

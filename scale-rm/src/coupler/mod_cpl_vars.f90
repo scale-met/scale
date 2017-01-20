@@ -174,6 +174,8 @@ contains
        LANDUSE_fact_ocean, &
        LANDUSE_fact_land,  &
        LANDUSE_fact_urban
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use mod_ocean_admin, only: &
        OCEAN_sw
     use mod_land_admin, only: &
@@ -187,6 +189,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[CPL] / Origin[SCALE-RM]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     ! Check consistency of OCEAN_sw and LANDUSE_fact_ocean
     checkfact = maxval( LANDUSE_fact_ocean(:,:) )
@@ -400,6 +403,12 @@ contains
     CNT_putOCN     = 0.0_RP
     CNT_putLND     = 0.0_RP
     CNT_putURB     = 0.0_RP
+
+    if ( I_QV < 0 ) then
+       OCN_ATM_QV = 0.0_RP
+       LND_ATM_QV = 0.0_RP
+       URB_ATM_QV = 0.0_RP
+    end if
 
     return
   end subroutine CPL_vars_setup

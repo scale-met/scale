@@ -143,34 +143,34 @@ contains
     allocate( I_COMM_PROG_RK2(max(VA,1)) )
     allocate( I_COMM_PROG_RK3(max(VA,1)) )
 
-    call COMM_vars8_init( DENS_RK1, I_COMM_DENS_RK1 )
-    call COMM_vars8_init( MOMZ_RK1, I_COMM_MOMZ_RK1 )
-    call COMM_vars8_init( MOMX_RK1, I_COMM_MOMX_RK1 )
-    call COMM_vars8_init( MOMY_RK1, I_COMM_MOMY_RK1 )
-    call COMM_vars8_init( RHOT_RK1, I_COMM_RHOT_RK1 )
+    call COMM_vars8_init( 'DENS_RK1', DENS_RK1, I_COMM_DENS_RK1 )
+    call COMM_vars8_init( 'MOMZ_RK1', MOMZ_RK1, I_COMM_MOMZ_RK1 )
+    call COMM_vars8_init( 'MOMX_RK1', MOMX_RK1, I_COMM_MOMX_RK1 )
+    call COMM_vars8_init( 'MOMY_RK1', MOMY_RK1, I_COMM_MOMY_RK1 )
+    call COMM_vars8_init( 'RHOT_RK1', RHOT_RK1, I_COMM_RHOT_RK1 )
     do iv = 1, VA
        I_COMM_PROG_RK1(iv) = 5 + iv
-       call COMM_vars8_init( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
+       call COMM_vars8_init( 'PROG_RK1', PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
     enddo
 
-    call COMM_vars8_init( DENS_RK2, I_COMM_DENS_RK2 )
-    call COMM_vars8_init( MOMZ_RK2, I_COMM_MOMZ_RK2 )
-    call COMM_vars8_init( MOMX_RK2, I_COMM_MOMX_RK2 )
-    call COMM_vars8_init( MOMY_RK2, I_COMM_MOMY_RK2 )
-    call COMM_vars8_init( RHOT_RK2, I_COMM_RHOT_RK2 )
+    call COMM_vars8_init( 'DENS_RK2', DENS_RK2, I_COMM_DENS_RK2 )
+    call COMM_vars8_init( 'MOMZ_RK2', MOMZ_RK2, I_COMM_MOMZ_RK2 )
+    call COMM_vars8_init( 'MOMX_RK2', MOMX_RK2, I_COMM_MOMX_RK2 )
+    call COMM_vars8_init( 'MOMY_RK2', MOMY_RK2, I_COMM_MOMY_RK2 )
+    call COMM_vars8_init( 'RHOT_RK2', RHOT_RK2, I_COMM_RHOT_RK2 )
     do iv = 1, VA
        I_COMM_PROG_RK2(iv) = 5 + iv
-       call COMM_vars8_init( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
+       call COMM_vars8_init( 'PROG_RK2', PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
     enddo
 
-    call COMM_vars8_init( DENS_RK3, I_COMM_DENS_RK3 )
-    call COMM_vars8_init( MOMZ_RK3, I_COMM_MOMZ_RK3 )
-    call COMM_vars8_init( MOMX_RK3, I_COMM_MOMX_RK3 )
-    call COMM_vars8_init( MOMY_RK3, I_COMM_MOMY_RK3 )
-    call COMM_vars8_init( RHOT_RK3, I_COMM_RHOT_RK3 )
+    call COMM_vars8_init( 'DENS_RK3', DENS_RK3, I_COMM_DENS_RK3 )
+    call COMM_vars8_init( 'MOMZ_RK3', MOMZ_RK3, I_COMM_MOMZ_RK3 )
+    call COMM_vars8_init( 'MOMX_RK3', MOMX_RK3, I_COMM_MOMX_RK3 )
+    call COMM_vars8_init( 'MOMY_RK3', MOMY_RK3, I_COMM_MOMY_RK3 )
+    call COMM_vars8_init( 'RHOT_RK3', RHOT_RK3, I_COMM_RHOT_RK3 )
     do iv = 1, VA
        I_COMM_PROG_RK3(iv) = 5 + iv
-       call COMM_vars8_init( PROG_RK3(:,:,:,iv), I_COMM_PROG_RK3(iv) )
+       call COMM_vars8_init( 'PROG_RK3', PROG_RK3(:,:,:,iv), I_COMM_PROG_RK3(iv) )
     enddo
 
     DENS_RK1(:,:,:) = UNDEF

@@ -112,7 +112,7 @@ contains
     real(DP), intent(in)  :: dt
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Matsiro'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land  physics step: Matsiro'
 
     LAND_TEMP_t (:,:,:) = 0.0_RP
     LAND_WATER_t(:,:,:) = 0.0_RP

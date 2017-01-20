@@ -276,19 +276,22 @@ contains
                                    RP*KA*(2*IA*JHALO+2*JMAX*IHALO)
     if( IO_L ) write(IO_FID_LOG,*) '*** Ratio of halo against the whole 3D grid     : ', &
                                    real(2*IA*JHALO+2*JMAX*IHALO) / real(IA*JA)
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** All side is periodic?: ', COMM_IsAllPeriodic
+    if( IO_L ) write(IO_FID_LOG,*) '*** All side is periodic?                       : ', COMM_IsAllPeriodic
 
     return
   end subroutine COMM_setup
 
   !-----------------------------------------------------------------------------
   !> Register variables
-  subroutine COMM_vars_init(var, vid)
+  subroutine COMM_vars_init( &
+       varname, &
+       var,     &
+       vid      )
     implicit none
 
-    real(RP), intent(inout) :: var(:,:,:) !< variable for register
-    integer,  intent(inout) :: vid        !< variable ID
+    character(len=*), intent(in)    :: varname    !< variable name
+    real(RP),         intent(inout) :: var(:,:,:) !< variable array for register
+    integer,          intent(inout) :: vid        !< variable ID
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
@@ -315,7 +318,9 @@ contains
 #endif
 
        vid = COMM_vars_id + COMM_vsize_max
-       if( IO_L ) write(IO_FID_LOG,*) '*** COMM: set variable ID:', vid
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,2A)') '*** [Pers.COMM] Initialize variable : ID = ', vid, &
+                                                                                       ', name = ', trim(varname)
 
     end if
 
@@ -324,11 +329,15 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Register variables
-  subroutine COMM_vars8_init(var, vid)
+  subroutine COMM_vars8_init( &
+       varname, &
+       var,     &
+       vid      )
     implicit none
 
-    real(RP), intent(inout) :: var(:,:,:) !< variable for register
-    integer,  intent(inout) :: vid        !< variable ID
+    character(len=*), intent(in)    :: varname    !< variable name
+    real(RP),         intent(inout) :: var(:,:,:) !< variable array for register
+    integer,          intent(inout) :: vid        !< variable ID
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
@@ -355,7 +364,9 @@ contains
 #endif
 
        vid = COMM_vars_id + COMM_vsize_max
-       if( IO_L ) write(IO_FID_LOG,*) '*** COMM: set variable ID:', vid
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,2A)') '*** [Pers.COMM] Initialize variable : ID = ', vid, &
+                                                                                       ', name = ', trim(varname)
 
     end if
 

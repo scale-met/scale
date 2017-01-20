@@ -55,6 +55,11 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_TB_TYPE, &
        ATMOS_sw_phy_tb
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
 
     if ( ATMOS_sw_phy_tb ) then
        call ATMOS_PHY_TB_config( ATMOS_PHY_TB_TYPE )
@@ -307,7 +312,15 @@ contains
                                  QFLX_RHOQ(:,:,:,:,iq),  & ! (in)
                                  GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                  IIS, IIE, JJS, JJE ) ! (in)
-             RHOQ_t_TB(:,:,:,iq) = RHOQ_t_TB(:,:,:,iq) + tend(:,:,:)
+
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE
+                RHOQ_t_TB(k,i,j,iq) = RHOQ_t_TB(k,i,j,iq) + tend(k,i,j)
+             end do
+             end do
+             end do
+
           end do
           end do
        end do

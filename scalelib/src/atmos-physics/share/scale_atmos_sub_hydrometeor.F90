@@ -213,10 +213,10 @@ contains
 
     logical,          intent(in), optional :: ADVC(NV+NL+NI)
 
-    real(RP) :: CV(NV+NL+NI)
-    real(RP) :: CP(NV+NL+NI)
-    real(RP) :: R(NV+NL+NI)
-    logical  :: MASS(NV+NL+NI)
+    real(RP) :: CV   (NV+NL+NI)
+    real(RP) :: CP   (NV+NL+NI)
+    real(RP) :: R    (NV+NL+NI)
+    logical  :: MASS (NV+NL+NI)
     logical  :: ADVC_(NV+NL+NI)
 
     integer  :: NQ
@@ -268,9 +268,13 @@ contains
        MASS(n) = .true.
     end do
 
-    call TRACER_regist( Q0,                    & ! (out)
-                        NQ, NAME, DESC, UNIT,  & ! (in)
-                        CV, CP, R, ADVC_, MASS ) ! (in)
+    call TRACER_regist( Q0,         & ! [OUT]
+                        NQ,         & ! [IN]
+                        NAME,       & ! [IN]
+                        DESC,       & ! [IN]
+                        UNIT,       & ! [IN]
+                        CV, CP, R,  & ! [IN], optional
+                        ADVC_, MASS ) ! [IN], optional
 
     I_QV = Q0
 

@@ -55,6 +55,11 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS PHY_MP] / Origin[SCALE-RM]'
 
     if ( ATMOS_sw_phy_mp ) then
        call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
@@ -245,8 +250,8 @@ contains
        end do
        end do
 
-       call HIST_in( SFLX_rain(:,:),   'RAIN',      'surface rain rate by MP',          'kg/m2/s',  nohalo=.true. )
-       call HIST_in( SFLX_snow(:,:),   'SNOW',      'surface snow rate by MP',          'kg/m2/s',  nohalo=.true. )
+       call HIST_in( SFLX_rain(:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  nohalo=.true. )
+       call HIST_in( SFLX_snow(:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  nohalo=.true. )
        call HIST_in( precip   (:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  nohalo=.true. )
        call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', nohalo=.true. )
 

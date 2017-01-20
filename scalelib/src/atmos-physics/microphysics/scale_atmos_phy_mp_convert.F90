@@ -106,7 +106,7 @@ contains
     integer,          intent(in) :: it
     integer,          intent(in) :: rank
     integer,          intent(in) :: handle
-    character(LEN=*), intent(in) :: basename_org
+    character(len=*), intent(in) :: basename_org
     real(RP),         intent(in) :: dens_org(:,:,:)
     real(RP),         intent(inout) :: qtrc_org(:,:,:,:)
 !    real(RP),         intent(in) :: dens_org(dims(1)+2,dims(2),dims(3))
@@ -116,7 +116,7 @@ contains
     real(RP)         :: r0_sdf(4)
     real(RP)         :: n0_sdf(4)
     real(RP)         :: rho_sdf(4)
-    character(LEN=11),parameter :: fname_micpara="micpara.dat"
+    character(len=11), parameter :: fname_micpara="micpara.dat"
     character(len=H_SHORT)       :: MP_TYPE_OUTER = "NONE"
     character(len=H_SHORT)       :: MP_TYPE_INNER = "NONE"
     integer :: COMM_world

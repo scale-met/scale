@@ -81,7 +81,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SURFACE FLUX] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Bulk scheme'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Bulk scheme'
 
     if ( ATMOS_PHY_SF_TYPE /= 'BULK' ) then
        write(*,*) 'xxx ATMOS_PHY_SF_TYPE is not BULK. Check!'
@@ -181,7 +181,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux(bulk)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(bulk)'
 
     call ROUGHNESS( SFC_Z0M_t(:,:), & ! [OUT]
                     SFC_Z0H_t(:,:), & ! [OUT]

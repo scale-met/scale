@@ -93,14 +93,14 @@ contains
     character(len=*), intent(in) :: LAND_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( LAND_TYPE )
-    case ( 'CONST' )
+    select case( LAND_TYPE )
+    case( 'CONST' )
        call LAND_PHY_SLAB_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_SLAB
-    case ( 'SLAB' )
+    case( 'SLAB' )
        call LAND_PHY_SLAB_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_SLAB
-    case ( 'MATSIRO' )
+    case( 'MATSIRO' )
        call LAND_PHY_MATSIRO_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_MATSIRO
     case default

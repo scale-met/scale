@@ -82,15 +82,14 @@ contains
     implicit none
 
     character(len=*), intent(in)  :: MP_TYPE
-    integer, intent(out) :: QA
-    integer, intent(out) :: QS
+    integer,          intent(out) :: QA
+    integer,          intent(out) :: QS
     !---------------------------------------------------------------------------
 
     write(*,*) '*** SDM not supported.'
     write(*,*) '*** Please contact SCALE developers'
     call PRC_MPIstop
 
-    ! call ATMOS_HYDROMETEOR_regist()
     QA = 0
     QS = 0
 

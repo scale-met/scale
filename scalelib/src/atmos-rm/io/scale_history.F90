@@ -170,6 +170,7 @@ contains
           endif
        enddo
     else
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** HIST_PRES_nlayer is not set.'
        if( IO_L ) write(IO_FID_LOG,*) '*** Output with pressure coordinate is disabled'
     endif
@@ -1260,8 +1261,8 @@ contains
     if( present(nohalo) ) nohalo_ = nohalo
 
     ! select dimension
-    select case ( xd )
-      case ('half')
+    select case( xd )
+      case('half')
         isize  = im
         istart = ims
       case default
@@ -1269,8 +1270,8 @@ contains
         istart = ims
     end select
 
-    select case ( yd )
-      case ('half')
+    select case( yd )
+      case('half')
         jsize  = jm
         jstart = jms
       case default
@@ -1278,20 +1279,20 @@ contains
         jstart = jms
     end select
 
-    select case ( zd )
-      case ('land')
+    select case( zd )
+      case('land')
         ksize  = LKMAX
         kstart = LKS
-      case ('landhalf')
+      case('landhalf')
         ksize  = LKMAX
         kstart = LKS
-      case ('urban')
+      case('urban')
         ksize  = UKMAX
         kstart = UKS
-      case ('urbanhalf')
+      case('urbanhalf')
         ksize  = UKMAX
         kstart = UKS
-      case ('half')
+      case('half')
         ksize  = KMAX
         kstart = KS
       case default

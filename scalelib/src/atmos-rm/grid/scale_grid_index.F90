@@ -339,7 +339,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere grid index information ***'
 
     ! global
-    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,3(A,I6))') '*** No. of Computational Grid (global)  :', &
                                                 KMAX,' x ',IMAXG,' x ',JMAXG
     if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))') '*** Global index of local grid (X)      :', &

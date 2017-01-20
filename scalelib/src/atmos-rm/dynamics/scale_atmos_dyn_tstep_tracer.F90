@@ -101,8 +101,8 @@ contains
     character(len=*),       intent(in)  :: ATMOS_DYN_TSTEP_TRACER_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( ATMOS_DYN_TSTEP_TRACER_TYPE )
-    case ( 'FVM-HEVE', 'HEVE' )
+    select case( ATMOS_DYN_TSTEP_TRACER_TYPE )
+    case( 'FVM-HEVE', 'HEVE' )
        call ATMOS_DYN_Tstep_tracer_fvm_heve_setup( &
             ATMOS_DYN_TSTEP_TRACER_TYPE )
        ATMOS_DYN_Tstep_tracer => ATMOS_DYN_Tstep_tracer_fvm_heve       

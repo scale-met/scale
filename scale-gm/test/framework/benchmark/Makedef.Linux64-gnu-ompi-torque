@@ -19,11 +19,14 @@ FFLAGS_FAST  = -O3 $(FFLAGS_CORE) \
                -funroll-loops -finline-functions -fprefetch-loop-arrays \
                -mcmodel=medium
 
+FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -ffpe-trap=invalid,zero,overflow -fbacktrace -fbounds-check -finit-real=nan
+
 FFLAGS_DYN   = $(FFLAGS)
 
 FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) \
                -ffpe-trap=invalid,zero,overflow -finit-integer=-32768 -finit-real=nan -finit-logical=false -finit-character=9 \
-               -Wall -Wextra -Wcharacter-truncation -Wunderflow -fbounds-check \
+               -Wall -Wextra -Wcharacter-truncation -Wunderflow -Warray-temporaries -Wuninitialized \
+               -fbounds-check \
                -g -fbacktrace \
                -DDEBUG
 

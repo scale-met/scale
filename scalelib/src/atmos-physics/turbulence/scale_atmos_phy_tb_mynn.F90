@@ -113,17 +113,22 @@ contains
 
     character(len=*), intent(in)  :: TYPE_TB
     integer,          intent(out) :: I_TKE_out
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Mellor-Yamada Nakanishi-Niino scheme'
 
     if ( TYPE_TB /= 'MYNN' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not MYNN. Check!'
        call PRC_MPIstop
     endif
 
-    call TRACER_regist( I_TKE,                                   &
-                        1,                                       &
-                        (/ 'TKE_MYNN' /),                        &
-                        (/ 'turbulent kinetic energy (MYNN)' /), &
-                        (/ 'm2/s2' /)                            )
+    call TRACER_regist( I_TKE,                                   & ! [OUT]
+                        1,                                       & ! [IN]
+                        (/ 'TKE_MYNN' /),                        & ! [IN]
+                        (/ 'turbulent kinetic energy (MYNN)' /), & ! [IN]
+                        (/ 'm2/s2' /)                            ) ! [IN]
 
     I_TKE_out = I_TKE
 
@@ -162,8 +167,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Mellor-Yamada Nakanishi-Niino Model'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Mellor-Yamada Nakanishi-Niino scheme'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -361,7 +366,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG, *) "*** Physics step: Turbulence (MYNN)"
+    if( IO_L ) write(IO_FID_LOG, *) "*** Atmos physics  step: Turbulence (MYNN)"
 
 #ifdef DEBUG
     POTT(:,:,:) = UNDEF

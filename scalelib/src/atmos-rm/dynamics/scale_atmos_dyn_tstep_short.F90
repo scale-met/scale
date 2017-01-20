@@ -198,8 +198,8 @@ contains
     ATMOS_DYN_Tstep_short_ => NAME(ATMOS_DYN_Tstep_short_, DYNAMICS,)
     ATMOS_DYN_Tstep_short_setup => NAME(ATMOS_DYN_Tstep_short_, DYNAMICS, _setup)
 #else
-    select case ( ATMOS_DYN_TYPE )
-    case ( 'FVM-HEVE', 'HEVE' )
+    select case( ATMOS_DYN_TYPE )
+    case( 'FVM-HEVE', 'HEVE' )
 
        call ATMOS_DYN_Tstep_short_fvm_heve_regist( ATMOS_DYN_TYPE,              & ! [IN]
                                                    VA_out,                      & ! [OUT]
@@ -208,7 +208,7 @@ contains
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_heve_setup
        ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_heve
 
-    case ( 'FVM-HEVI', 'HEVI' )
+    case( 'FVM-HEVI', 'HEVI' )
 
        call ATMOS_DYN_Tstep_short_fvm_hevi_regist( ATMOS_DYN_TYPE,              & ! [IN]
                                                    VA_out,                      & ! [OUT]
@@ -217,7 +217,7 @@ contains
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_hevi_setup
        ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_hevi
 
-    case ( 'FVM-HIVI', 'HIVI' )
+    case( 'FVM-HIVI', 'HIVI' )
 
        write(*,*) 'xxx HIVI is tentatively disabled'
        call PRC_MPIstop
@@ -229,7 +229,7 @@ contains
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_hivi_setup
        ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_hivi
 
-    case ( 'OFF', 'NONE' )
+    case( 'OFF', 'NONE' )
 
        VA_out      = 0
        VAR_NAME(:) = ""
