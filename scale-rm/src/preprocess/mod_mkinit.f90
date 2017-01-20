@@ -4673,15 +4673,35 @@ contains
     use scale_landuse, only: &
        LANDUSE_calc_fact, &
        LANDUSE_frac_land
+    use scale_grid, only: &
+       GRID_DOMAIN_CENTER_X
     implicit none
 
-    real(RP) :: dist
+    real(RP) :: LAND_SIZE
 
-    integer  :: i, j
+    NAMELIST / PARAM_MKINIT_SEABREEZE / &
+       LAND_SIZE
+
+    integer :: ierr
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit SEABREEZE] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    LAND_SIZE = 0.0_RP
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_SEABREEZE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SEABREEZE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SEABREEZE)
 
     call flux_setup
 
@@ -4689,14 +4709,10 @@ contains
 
     call ocean_setup
 
-    ! quartor size of domain
-    dist = ( GRID_CXG(IMAX*PRC_NUM_X) - GRID_CXG(1) ) / 8.0_RP
-
     ! make landuse conditions
     do j = JS, JE
     do i = IS, IE
-       if (       GRID_CX(i) >= dist * 3.0_RP &
-            .AND. GRID_CX(i) <= dist * 5.0_RP ) then
+       if ( abs( GRID_CX(i) - GRID_DOMAIN_CENTER_X ) < LAND_SIZE ) then
           LANDUSE_frac_land(i,j) = 1.0_RP
        else
           LANDUSE_frac_land(i,j) = 0.0_RP
