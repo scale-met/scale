@@ -161,8 +161,8 @@ contains
     real(RP) :: TEMP1 (LKMAX,IA,JA)
     real(RP) :: WATER1(LKMAX,IA,JA)
 
-    real(RP) :: LAND_DENSCS(0:LKMAX,IA,JA)
-    real(RP) :: ThermalDiff(0:LKMAX,IA,JA)
+    real(RP) :: LAND_DENSCS(LKMAX,IA,JA)
+    real(RP) :: ThermalDiff(LKMAX,IA,JA)
 
 !    real(RP) :: RUNOFF(IA,JA)
 
@@ -245,17 +245,8 @@ contains
     ! estimate thermal diffusivity
     do j = JS, JE
     do i = IS, IE
-      LAND_DENSCS(0,i,j) = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j) &
-                         + WATER_DENSCS * WATER1(LKS,i,j)
-      ThermalDiff(0,i,j) = ThermalCond(i,j) / LAND_DENSCS(0,i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = LKS, LKE-1
-      LAND_DENSCS(k,i,j) = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j) &
-                         + WATER_DENSCS * ( WATER1(k,i,j) + WATER1(k+1,i,j) )
+    do k = LKS, LKE
+      LAND_DENSCS(k,i,j) = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j) + WATER_DENSCS * WATER1(k,i,j)
       ThermalDiff(k,i,j) = ThermalCond(i,j) / LAND_DENSCS(k,i,j)
     end do
     end do
@@ -265,8 +256,8 @@ contains
     do j = JS, JE
     do i = IS, IE
       L(LKS,i,j) = 0.0_RP
-      U(LKS,i,j) = - ThermalDiff(LKS  ,i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
-      L(LKE,i,j) = - ThermalDiff(LKE-1,i,j) / ( CDZ(LKE) * ( CDZ(LKE) + CDZ(LKE-1) ) ) * dt
+      U(LKS,i,j) = -2.0_RP * ThermalDiff(LKS,i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
+      L(LKE,i,j) = -2.0_RP * ThermalDiff(LKE,i,j) / ( CDZ(LKE) * ( CDZ(LKE) + CDZ(LKE-1) ) ) * dt
       U(LKE,i,j) = 0.0_RP
 
       M(LKS,i,j) = 1.0_RP - L(LKS,i,j) - U(LKS,i,j)
@@ -277,8 +268,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = LKS+1, LKE-1
-      L(k,i,j) = - ThermalDiff(k,i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
-      U(k,i,j) = - ThermalDiff(k,i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
+      L(k,i,j) = -2.0_RP * ThermalDiff(k,i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
+      U(k,i,j) = -2.0_RP * ThermalDiff(k,i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
       M(k,i,j) = 1.0_RP - L(k,i,j) - U(k,i,j)
     end do
     end do
@@ -287,7 +278,7 @@ contains
     ! input from atmosphere
     do j = JS, JE
     do i = IS, IE
-      V(LKS,i,j) = TEMP(LKS,i,j) - SFLX_GH(i,j) / ( LAND_DENSCS(0,i,j) * CDZ(LKS) ) * dt
+      V(LKS,i,j) = TEMP(LKS,i,j) - SFLX_GH(i,j) / ( LAND_DENSCS(LKS,i,j) * CDZ(LKS) ) * dt
     end do
     end do
 
