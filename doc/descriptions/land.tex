@@ -14,10 +14,10 @@ The land slab model estimates the tendency of soil temperature and soil moisture
 The tendency equiation of soil temperature is estimated from the 1-D vertical diffusion equation.
 That is,
 \begin{align}
-  \frac{\partial T}{\partial t} = \frac{1}{\rho C} \left\{ \frac{\partial}{\partial z} \left( \kappa \frac{\partial T}{\partial z} \right) + Q \right\},
+  \frac{\partial T}{\partial t} = \frac{1}{\rho_{L}C_{L}} \left\{ \frac{\partial}{\partial z} \left( \kappa \frac{\partial T}{\partial z} \right) + Q \right\},
   \label{eq:Tdt}
 \end{align}
-where $T$ is soil temperature ($K$), $\rho C$ is soil heat capacity ($J/K/m^3$), $\kappa$ is thermal conductivity ($J/K/m/s$), and $Q$ is heat source from the outside ($J/m^3/s$).
+where $T$ is soil temperature ($K$), $\rho_{L}$ is land density ($kg/m^3$), $C_{L}$ is land heat capacity ($J/K/kg$), $\kappa$ is thermal conductivity ($J/K/m/s$), and $Q$ is heat source from the outside ($J/m^3/s$).
 The eq. (\ref{eq:Tdt}) is discretized as follows:
 \begin{align}
   \frac{\Delta T_{k}}{\Delta t} &= \frac{\nu_{k}}{\Delta z_{k}} \left( \frac{T_{k+1}-T_{k}}{\Delta z_{k+\frac{1}{2}}} - \frac{T_{k}-T_{k-1}}{\Delta z_{k-\frac{1}{2}}} \right) + \frac{Q_{k}}{(\rho_{L}C_{L})_{k}}, \\
@@ -26,9 +26,9 @@ The eq. (\ref{eq:Tdt}) is discretized as follows:
 where
 \begin{align}
   \nu_{k} &= \frac{\kappa}{(\rho_{L}C_{L})_{k}}, \\
-  (\rho_{L}C_{L})_{k} &= ( 1 - S_{max} ) C_{A} + S_{k} \rho_{W}C_{W},
+  (\rho_{L}C_{L})_{k} &= ( 1 - S_{max} ) C_{S} + S_{k} \rho_{W}C_{W},
 \end{align}
-and $S$ is moisture content at $k$-layer ($m^3/m^3$), $S_{max}$ is maximum moisture content, $C_{A}$ and $C_{W}$ is heat capaticity of air and water ($J/K/m^3$), and $\rho_{W}$ is water density ($kg/m^3$).
+and $S$ is moisture content at $k$-layer ($m^3/m^3$), $S_{max}$ is maximum moisture content, $C_{S}$ and $C_{W}$ are heat capaticity of soil and water ($J/K/kg$), and $\rho_{W}$ is water density ($kg/m^3$).
 The range of $k$ is 1 to $m$.
 In this case, $m$ is the number of the lowermost layer.
 The tendency equations of soil temperature are implemented as follows:
