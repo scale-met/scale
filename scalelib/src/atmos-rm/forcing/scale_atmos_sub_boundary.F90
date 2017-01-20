@@ -125,11 +125,12 @@ module scale_atmos_boundary
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG), private :: ATMOS_BOUNDARY_TYPE         = 'NONE'
+  character(len=H_SHORT), private :: ATMOS_BOUNDARY_TYPE         = 'NONE'
   character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME  = ''
+  logical,               private :: ATMOS_BOUNDARY_IN_CHECK_COORDINATES = .true.
   character(len=H_LONG), private :: ATMOS_BOUNDARY_OUT_BASENAME = ''
   character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE    = 'SCALE-RM BOUNDARY CONDITION'  !< title of the output file
-  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_DTYPE    = 'DEFAULT'                      !< REAL4 or REAL8
+  character(len=H_SHORT), private :: ATMOS_BOUNDARY_OUT_DTYPE    = 'DEFAULT'                      !< REAL4 or REAL8
 
   logical,               private :: ATMOS_BOUNDARY_USE_DENS     = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_VELZ     = .false. ! read from file?
@@ -209,6 +210,8 @@ contains
        OFFLINE,             &
        ONLINE_IAM_PARENT,   &
        ONLINE_IAM_DAUGHTER
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
@@ -295,9 +298,11 @@ contains
     endif
 
     if( ATMOS_BOUNDARY_USE_QHYD ) then
-       BND_QA = QA
+       BND_QA = QA_MP
+    else if ( QA_MP > 0 ) then
+       BND_QA = 1
     else
-       BND_QA = I_QV
+       BND_QA = 0
     end if
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
@@ -378,6 +383,10 @@ contains
        call ATMOS_BOUNDARY_setalpha
 
        ATMOS_BOUNDARY_UPDATE_FLAG = .true.
+
+    elseif ( ATMOS_BOUNDARY_TYPE == 'NONE' ) then
+
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
 
     elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
 
@@ -810,14 +819,22 @@ contains
 
 
        if ( l_bnd ) then
-          if ( ONLINE_USE_VELZ ) then
+          if ( do_daughter_process ) then ! online
+             if ( ONLINE_USE_VELZ ) then
+                if( ATMOS_BOUNDARY_USE_VELZ ) then
+                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
+                else
+                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
+                endif
+             else
+                if ( ATMOS_BOUNDARY_USE_VELZ ) then
+                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = alpha_z2 * ATMOS_BOUNDARY_ALPHAFACT_VELZ
+                end if
+             end if
+          else ! offline
              if ( ATMOS_BOUNDARY_USE_VELZ ) then
                 ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
-             else
-                ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
              endif
-          else
-             ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = alpha_z2 * ATMOS_BOUNDARY_ALPHAFACT_VELZ
           end if
           if ( ATMOS_BOUNDARY_USE_DENS ) then
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_DENS
@@ -889,7 +906,7 @@ contains
           ATMOS_BOUNDARY_alpha_POTT(:,:,:) = 0.0_RP
        end if
        if ( .NOT. ATMOS_BOUNDARY_USE_QV   ) then
-          ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1) = 0.0_RP
+          if ( BND_QA > 0 ) ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1) = 0.0_RP
        end if
        if ( .NOT. ATMOS_BOUNDARY_USE_QHYD ) then
           do iq = 2, BND_QA
@@ -908,6 +925,8 @@ contains
   !> Read boundary data
   subroutine ATMOS_BOUNDARY_setinitval( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    use scale_atmos_phy_mp, only: &
+       QS_MP
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -917,7 +936,7 @@ contains
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
-    integer :: i, j, k, iq
+    integer :: i, j, k, iq, iqa
     !---------------------------------------------------------------------------
 
     do j = 1, JA
@@ -927,7 +946,8 @@ contains
        ATMOS_BOUNDARY_VELZ(k,i,j) = MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(k+1,i,  j  ) ) * 2.0_RP
        ATMOS_BOUNDARY_POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
        do iq = 1, BND_QA
-          ATMOS_BOUNDARY_QTRC(k,i,j,iq) = QTRC(k,i,j,iq)
+          iqa = iq + QS_MP - 1
+          ATMOS_BOUNDARY_QTRC(k,i,j,iq) = QTRC(k,i,j,iqa)
        end do
     enddo
     enddo
@@ -967,8 +987,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Read boundary data
   subroutine ATMOS_BOUNDARY_read
-    use gtool_file, only: &
-       FileRead
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
@@ -978,18 +996,24 @@ contains
        GRID_CBFY
     use scale_const, only: &
        EPS => CONST_EPS
+    use scale_fileio, only: &
+       FILEIO_open, &
+       FILEIO_check_coordinates, &
+       FILEIO_read, &
+       FILEIO_close
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
 
-    real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
-
-    character(len=H_LONG) :: bname
-
+    integer :: fid
     integer :: iq
-    real(RP) :: tmp_CBFZ(KA), tmp_CBFX(IA), tmp_CBFY(JA)
-    integer  :: i, j, k
     !---------------------------------------------------------------------------
 
-    bname = ATMOS_BOUNDARY_IN_BASENAME
+    call FILEIO_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
+
+    if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
+       call FILEIO_check_coordinates( fid, atmos=.true. )
+    end if
 
     if (      ATMOS_BOUNDARY_USE_DENS &
          .OR. ATMOS_BOUNDARY_USE_VELZ &
@@ -997,86 +1021,46 @@ contains
          .OR. ATMOS_BOUNDARY_USE_VELY &
          .OR. ATMOS_BOUNDARY_USE_POTT &
          ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
-       ATMOS_BOUNDARY_DENS(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_DENS(:,:,:), fid, 'DENS', 'ZXY', 1 )
     end if
     if ( ATMOS_BOUNDARY_USE_DENS ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_DENS', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_DENS(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_DENS(:,:,:), fid, 'ALPHA_DENS', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELZ', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELZ(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELZ', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELZ(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_VELZ(:,:,:), fid, 'VELZ', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELZ(:,:,:), fid, 'ALPHA_VELZ', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELX', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELX(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELX', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELX(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_VELX(:,:,:), fid, 'VELX', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELX(:,:,:), fid, 'ALPHA_VELX', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELY', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELY(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELY', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELY(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_VELY(:,:,:), fid, 'VELY', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELY(:,:,:), fid, 'ALPHA_VELY', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'POTT', 1, PRC_myrank )
-       ATMOS_BOUNDARY_POTT(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_POTT', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_POTT(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_POTT(:,:,:), fid, 'POTT', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_POTT(:,:,:), fid, 'ALPHA_POTT', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV   ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'QV',   1, PRC_myrank )
-       ATMOS_BOUNDARY_QTRC(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
-       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_QV', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_QTRC(:,:,:,1), fid, 'QV', 'ZXY', 1 )
+       call FILEIO_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1), fid, 'ALPHA_QV', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
-          call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), 1, PRC_myrank )
-          ATMOS_BOUNDARY_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq) = reference_atmos(:,:,:)
-          call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_'//trim(AQ_NAME(iq)), 1, PRC_myrank )
-          ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq) = reference_atmos(:,:,:)
+          call FILEIO_read( ATMOS_BOUNDARY_QTRC(:,:,:,iq), fid, AQ_NAME(iq), 'ZXY', 1 )
+          call FILEIO_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), fid, 'ALPHA_'//trim(AQ_NAME(iq)), 'ZXY', 1 )
        end do
     endif
 
-    call FileRead( tmp_CBFZ(:),  bname, 'CBFZ', 1, PRC_myrank )
-    call FileRead( tmp_CBFX(:),  bname, 'CBFX', 1, PRC_myrank )
-    call FileRead( tmp_CBFY(:),  bname, 'CBFY', 1, PRC_myrank )
+    call FILEIO_close( fid )
 
-    do i = 1, IA
-       if( abs(tmp_CBFX(i) - GRID_CBFX(i)) > EPS ) then
-           write( IO_FID_LOG,*)  &
-            '*** Buffer layer (X) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: i=', &
-            i, tmp_CBFX(i), GRID_CBFX(i)
-           call PRC_MPIstop
-       endif
-    enddo
-    do j = 1, JA
-       if( abs(tmp_CBFY(j) - GRID_CBFY(j)) > EPS ) then
-           write( IO_FID_LOG,*)  &
-            '*** Buffer layer (Y) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: j=', &
-            j, tmp_CBFY(j), GRID_CBFY(j)
-           call PRC_MPIstop
-       endif
-    enddo
-    do k = 1, KA
-       if( abs(tmp_CBFZ(k) - GRID_CBFZ(k)) > EPS ) then
-           write( IO_FID_LOG,*)  &
-            '*** Buffer layer (Z) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: k=', &
-            k, tmp_CBFZ(k), GRID_CBFZ(k)
-           call PRC_MPIstop
-       endif
-    enddo
 
     call ATMOS_BOUNDARY_var_fillhalo
     call ATMOS_BOUNDARY_alpha_fillhalo
@@ -1091,6 +1075,9 @@ contains
        FILEIO_write
     use scale_grid_nest, only: &
        ONLINE_USE_VELZ
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME, &
+       AQ_UNIT => ATMOS_PHY_MP_UNIT
     implicit none
 
     integer :: iq
@@ -1586,6 +1573,8 @@ contains
        PRC_HAS_E,   &
        PRC_HAS_S,   &
        PRC_HAS_N
+    use scale_atmos_phy_mp, only: &
+       QS_MP
     use scale_grid_nest, only: &
        ONLINE_USE_VELZ,       &
        NEST_COMM_test
@@ -1606,7 +1595,7 @@ contains
     real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC [0-1]
 
     integer :: handle
-    integer :: i, j, k, iq
+    integer :: i, j, k, iq, iqa
     !---------------------------------------------------------------------------
 
     if ( do_parent_process ) then !online [parent]
@@ -1676,11 +1665,14 @@ contains
                   * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
              do iq = 1, BND_QA
-                QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+                iqa = iq + QS_MP - 1
+                QTRC(k,i,j,iqa) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
              end do
-             do iq = BND_QA+1, QA
-                QTRC(k,i,j,iq) = QTRC(k,IS,j,iq) &
+             do iq = 1, QA
+                if ( iq < QS_MP .or. iq >= BND_QA + QS_MP ) then
+                   QTRC(k,i,j,iq) = QTRC(k,IS,j,iq) &
                                * ( 0.5_RP - sign(0.5_RP, ATMOS_BOUNDARY_VELX(k,IS-1,j)) )
+                end if
              end do
           end do
           end do
@@ -1727,11 +1719,14 @@ contains
              DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
              do iq = 1, BND_QA
-                QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+                iqa = iq + QS_MP - 1
+                QTRC(k,i,j,iqa) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
              end do
-             do iq = BND_QA+1, QA
-                QTRC(k,i,j,iq) = QTRC(k,IE,j,iq) &
+             do iq = 1, QA
+                if ( iq < QS_MP .or. iq >= BND_QA + QS_MP ) then
+                   QTRC(k,i,j,iq) = QTRC(k,IE,j,iq) &
                                * ( 0.5_RP + sign(0.5_RP, ATMOS_BOUNDARY_VELX(k,IE,j)) )
+                end if
              end do
           end do
           end do
@@ -1793,11 +1788,14 @@ contains
                   * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
              do iq = 1, BND_QA
-                QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+                iqa = iq + QS_MP - 1
+                QTRC(k,i,j,iqa) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
              end do
-             do iq = BND_QA+1, QA
-                QTRC(k,i,j,iq) = QTRC(k,i,JS,iq) &
+             do iq = 1, QA
+                if ( iq < QS_MP .or. iq >= BND_QA + QS_MP ) then
+                   QTRC(k,i,j,iq) = QTRC(k,i,JS,iq) &
                                * ( 0.5_RP - sign(0.5_RP, ATMOS_BOUNDARY_VELY(k,i,JS-1)) )
+                end if
              end do
           end do
           end do
@@ -1844,11 +1842,14 @@ contains
              DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
              do iq = 1, BND_QA
-                QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+                iqa = iq + QS_MP - 1
+                QTRC(k,i,j,iqa) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
              end do
              do iq = BND_QA+1, QA
-                QTRC(k,i,j,iq) = QTRC(k,i,JE,iq) &
+                if ( iq < QS_MP .or. iq >= BND_QA + QS_MP ) then
+                   QTRC(k,i,j,iq) = QTRC(k,i,JE,iq) &
                                * ( 0.5_RP + sign(0.5_RP, ATMOS_BOUNDARY_VELY(k,i,JE)) )
+                end if
              end do
           end do
           end do
@@ -1930,10 +1931,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference boundary from file
   subroutine ATMOS_BOUNDARY_update_file( ref )
-    use gtool_file, only: &
-       FileRead
     use scale_process, only: &
        PRC_myrank
+    use scale_fileio, only: &
+       FILEIO_open, &
+       FILEIO_check_coordinates, &
+       FILEIO_read, &
+       FILEIO_close
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
 
     integer, intent(in) :: ref
@@ -1941,25 +1947,26 @@ contains
 
     character(len=H_LONG) :: bname
 
-    integer :: iq
+    integer :: fid, iq
     !---------------------------------------------------------------------------
 
-    if (IO_L) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
+    if( IO_L ) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
 
-    bname = ATMOS_BOUNDARY_IN_BASENAME
+    call FILEIO_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
 
-    call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,ref) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELX(KS:KE,ISB:IEB,JSB:JEB,ref) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELY(KS:KE,ISB:IEB,JSB:JEB,ref) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_POTT(KS:KE,ISB:IEB,JSB:JEB,ref) = reference_atmos(:,:,:)
+    if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
+       call FILEIO_check_coordinates( fid, atmos=.true. )
+    end if
+
+    call FILEIO_read( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), fid, 'DENS', 'ZXY', boundary_timestep )
+    call FILEIO_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXY', boundary_timestep )
+    call FILEIO_read( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), fid, 'VELY', 'ZXY', boundary_timestep )
+    call FILEIO_read( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), fid, 'POTT', 'ZXY', boundary_timestep )
     do iq = 1, BND_QA
-       call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), boundary_timestep, PRC_myrank )
-       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,ref) = reference_atmos(:,:,:)
+       call FILEIO_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, AQ_NAME(iq), 'ZXY', boundary_timestep )
     end do
+
+    call FILEIO_close( fid )
 
     ! fill HALO in reference
     call ATMOS_BOUNDARY_ref_fillhalo( ref )
@@ -1992,7 +1999,7 @@ contains
     integer, parameter :: handle = 1
     !---------------------------------------------------------------------------
 
-    if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
+    if( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
 
     ! issue wait
     call NEST_COMM_recvwait_issue( handle, NESTQA )
@@ -2036,6 +2043,8 @@ contains
   !> Send boundary value
   subroutine ATMOS_BOUNDARY_send( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    use scale_atmos_phy_mp, only: &
+       QS_MP
     use scale_grid_nest, only: &
        NEST_COMM_nestdown,    &
        DAUGHTER_KA,           &
@@ -2069,7 +2078,7 @@ contains
                              MOMX(:,:,:),            &  !(KA,IA,JA)
                              MOMY(:,:,:),            &  !(KA,IA,JA)
                              RHOT(:,:,:),            &  !(KA,IA,JA)
-                             QTRC(:,:,:,1:NESTQA),   &  !(KA,IA,JA,QA)
+                             QTRC(:,:,:,QS_MP:QS_MP+NESTQA-1), &  !(KA,IA,JA,QA)
                              dummy_d(:,:,:,1),       &  !(KA,IA,JA)
                              dummy_d(:,:,:,1),       &  !(KA,IA,JA)
                              dummy_d(:,:,:,1),       &  !(KA,IA,JA)
@@ -2454,6 +2463,8 @@ contains
        ATMOS_BOUNDARY_VELY, &
        ATMOS_BOUNDARY_POTT, &
        ATMOS_BOUNDARY_QTRC )
+    use scale_atmos_phy_mp, only: &
+       AQ_NAME => ATMOS_PHY_MP_NAME
     use scale_history, only: &
        HIST_in
     implicit none

@@ -28,6 +28,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -109,6 +110,13 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine USER_config
+
+    return
+  end subroutine USER_config
+
+  !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
     use scale_process, only: &
@@ -160,7 +168,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
     !--- equivalent time step for the current dt
     if( start_step == -999 ) start_step = int(start_hr/TIME_DTSEC)+1
@@ -191,7 +199,7 @@ contains
     fdata_name=trim(inbasedir)//'/'//trim(fdata_name)
     open(fid_data, file=trim(fdata_name), status='old',iostat=ierr)
     if ( ierr /= 0 ) then
-       write(IO_FID_LOG,*) 'Cannot open the data file for forcing. STOP! ', trim(fdata_name)
+       write(*,*) 'Cannot open the data file for forcing. STOP! ', trim(fdata_name)
        call PRC_MPIstop
     endif
 
@@ -529,7 +537,7 @@ contains
        enddo
 
     else
-       write(IO_FID_LOG,*)'Not supported user_ls_flg'
+       write(*,*)'Not supported user_ls_flg'
        call PRC_MPIstop
     endif
 

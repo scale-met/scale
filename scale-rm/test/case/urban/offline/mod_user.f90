@@ -25,6 +25,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -46,6 +47,13 @@ module mod_user
 
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine USER_config
+
+    return
+  end subroutine USER_config
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -127,7 +135,6 @@ contains
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        PRE00 => CONST_PRE00, &
-       LHV   => CONST_LHV,   &    ! ELL : latent heat of vaporization [J/kg]
        Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
        CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
     use scale_grid_real, only: &

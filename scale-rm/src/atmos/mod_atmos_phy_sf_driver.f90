@@ -164,7 +164,10 @@ contains
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd, &
-       THERMODYN_cp => ATMOS_THERMODYN_cp
+       THERMODYN_cp => ATMOS_THERMODYN_cp, &
+       THERMODYN_r  => ATMOS_THERMODYN_r
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
@@ -331,24 +334,24 @@ contains
        do j = JS, JE
        do i = IS, IE
           q(:) = QTRC(KS,i,j,:)
-          call THERMODYN_qd( qdry, q )
-          call THERMODYN_cp( CPtot, q, qdry )
-          Rtot  = Rdry * qdry + Rvap * q(I_QV)
+          call THERMODYN_qd( qdry,  q, TRACER_MASS )
+          call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
+          call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
           RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) ) &
                          * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
        enddo
        enddo
 
        DENS_t_SF(:,:) = 0.0_RP
-       do iq = I_QV, I_QV
-       do j  = JS, JE
-       do i  = IS, IE
-          work = SFLX_QTRC(i,j,iq) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-          DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work
-          RHOQ_t_SF(i,j,iq) = work
-       enddo
-       enddo
-       enddo
+       if ( I_QV > 0 ) then
+          do j  = JS, JE
+          do i  = IS, IE
+             work = SFLX_QTRC(i,j,I_QV) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+             DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work
+             RHOQ_t_SF(i,j,I_QV) = work
+          enddo
+          enddo
+       end if
 
        do j  = JS, JE
        do i  = IS, IE
@@ -368,13 +371,13 @@ contains
     enddo
     enddo
 
-    do iq = I_QV, I_QV
-    do j  = JS, JE
-    do i  = IS, IE
-       RHOQ_t(KS,i,j,iq) = RHOQ_t(KS,i,j,iq) + RHOQ_t_SF(i,j,iq)
-    enddo
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+          RHOQ_t(KS,i,j,I_QV) = RHOQ_t(KS,i,j,I_QV) + RHOQ_t_SF(i,j,I_QV)
+       enddo
+       enddo
+    end if
 
     if ( STATISTICS_checktotal ) then
        call STAT_total( total, DENS_t_SF(:,:), 'DENS_t_SF' )
@@ -383,9 +386,9 @@ contains
        call STAT_total( total, MOMY_t_SF(:,:), 'MOMY_t_SF' )
        call STAT_total( total, RHOT_t_SF(:,:), 'RHOT_t_SF' )
 
-       do iq = I_QV, I_QV
-          call STAT_total( total, RHOQ_t_SF(:,:,iq), trim(AQ_NAME(iq))//'_t_SF' )
-       enddo
+       if ( I_QV > 0 ) then
+          call STAT_total( total, RHOQ_t_SF(:,:,I_QV), trim(TRACER_NAME(I_QV))//'_t_SF' )
+       end if
     endif
 
     return

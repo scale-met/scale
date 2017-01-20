@@ -40,11 +40,17 @@ CFLAGS_DEBUG = -O0 -m64 -g
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -fopenmp
+
 SSE_FLAGS = -mtune=native
 #SSE_FLAGS = -mtune=native -mavx
 
-FFLAGS_SYSDEPEND = $(SSE_FLAGS)
-CFLAGS_SYSDEPEND = $(SSE_FLAGS)
+FFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
+CFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
 
 
 
@@ -58,12 +64,16 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
-NETCDF_INCLUDE ?= -I/opt/local/include
-NETCDF_LIBS    ?= -L/opt/local/lib -lnetcdff -lnetcdf
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/opt/local/include"
+# export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -lnetcdf"
 
-###### Lapack
-LAPACK_LIBS    ?=
-# example: -L/opt/local/lib -llapack -lcblas -lf77blas -latlas
+###### Lapack library
+# Please set environment variable
+# example:
+# export LAPACK_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"
 
 ##### for frontend
 INSTALL = install

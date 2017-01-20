@@ -29,6 +29,7 @@ module scale_process
   !++ Public procedure
   !
   public :: PRC_MPIstart
+  public :: PRC_LOCAL_MPIstart
   public :: PRC_UNIVERSAL_setup
   public :: PRC_GLOBAL_setup
   public :: PRC_LOCAL_setup
@@ -122,6 +123,38 @@ contains
 
     return
   end subroutine PRC_MPIstart
+
+  !-----------------------------------------------------------------------------
+  !> Start MPI, without nesting, bulk job
+  subroutine PRC_LOCAL_MPIstart( &
+       myrank,  &
+       ismaster )
+    implicit none
+
+    integer, intent(out) :: myrank   ! myrank         in this communicator
+    logical, intent(out) :: ismaster ! master process in this communicator?
+
+    integer :: comm               ! communicator
+    integer :: nprocs             ! number of procs in this communicator
+    logical :: abortall = .false. ! abort all jobs?
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call MPI_Init(ierr)
+
+    PRC_mpi_alive = .true.
+    PRC_UNIVERSAL_handler = MPI_ERRHANDLER_NULL
+    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
+
+    comm = MPI_COMM_WORLD
+
+    call PRC_UNIVERSAL_setup( comm, nprocs, ismaster )
+    call PRC_GLOBAL_setup   ( abortall, comm )
+    call PRC_LOCAL_setup    ( comm, myrank, ismaster )
+
+    return
+  end subroutine PRC_LOCAL_MPIstart
 
   !-----------------------------------------------------------------------------
   !> setup MPI in universal communicator
@@ -267,7 +300,7 @@ contains
        endif
 
        ! free splitted communicator
-       if ( PRC_LOCAL_COMM_WORLD /= PRC_GLOBAL_COMM_WORLD ) then
+       if ( PRC_LOCAL_COMM_WORLD  /= PRC_GLOBAL_COMM_WORLD ) then
           call MPI_Comm_free(PRC_LOCAL_COMM_WORLD,ierr)
        endif
 
@@ -305,11 +338,10 @@ contains
     integer, intent(in)  :: ORG_COMM
     integer, intent(in)  :: NUM_DOMAIN
     integer, intent(in)  :: PRC_DOMAINS(:)
-    character(len=H_LONG), intent(in) :: CONF_FILES(:)
+    character(len=*),      intent(in)  :: CONF_FILES(:)
     logical, intent(in)  :: LOG_SPLIT
     logical, intent(in)  :: bulk_split
     logical, intent(in)  :: color_reorder
-
     integer, intent(out) :: intra_comm
     integer, intent(out) :: inter_parent
     integer, intent(out) :: inter_child
@@ -498,7 +530,7 @@ contains
     integer, intent(in)  :: ORG_COMM
     integer, intent(in)  :: NUM_DOMAIN
     integer, intent(in)  :: PRC_DOMAINS(:)
-    character(len=H_LONG), intent(in) :: CONF_FILES(:)
+    character(len=*),      intent(in)  :: CONF_FILES(:)
     logical, intent(in)  :: color_reorder
     logical, intent(in)  :: LOG_SPLIT
     integer, intent(out) :: COLOR_LIST(:)             ! member list in each color

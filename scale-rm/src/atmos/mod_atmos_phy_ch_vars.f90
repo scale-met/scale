@@ -34,21 +34,23 @@ module mod_atmos_phy_ch_vars
   public :: ATMOS_PHY_CH_vars_restart_write
 
   public :: ATMOS_PHY_CH_vars_restart_create
+  public :: ATMOS_PHY_CH_vars_restart_open
   public :: ATMOS_PHY_CH_vars_restart_def_var
   public :: ATMOS_PHY_CH_vars_restart_enddef
-  public :: ATMOS_PHY_CH_vars_restart_write_var
   public :: ATMOS_PHY_CH_vars_restart_close
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_PHY_CH_RESTART_OUTPUT       = .false.                !< output restart file?
+  logical,               public :: ATMOS_PHY_CH_RESTART_OUTPUT                = .false.                !< output restart file?
 
-  character(len=H_LONG), public :: ATMOS_PHY_CH_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG), public :: ATMOS_PHY_CH_RESTART_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_CH_RESTART_OUT_TITLE    = 'ATMOS_PHY_CH restart' !< title    of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_CH_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG), public :: ATMOS_PHY_CH_RESTART_IN_BASENAME           = ''                     !< Basename of the input  file
+  logical,               public :: ATMOS_PHY_CH_RESTART_IN_POSTFIX_TIMELABEL  = .false.                !< Add timelabel to the basename of input  file?
+  character(len=H_LONG), public :: ATMOS_PHY_CH_RESTART_OUT_BASENAME          = ''                     !< Basename of the output file
+  logical,               public :: ATMOS_PHY_CH_RESTART_OUT_POSTFIX_TIMELABEL = .true.                 !< Add timelabel to the basename of output file?
+  character(len=H_MID),  public :: ATMOS_PHY_CH_RESTART_OUT_TITLE             = 'ATMOS_PHY_CH restart' !< title    of the output file
+  character(len=H_SHORT), public :: ATMOS_PHY_CH_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
   real(RP), public, allocatable :: ATMOS_PHY_CH_RHOQ_t(:,:,:,:) ! tendency QTRC [kg/kg/s]
 
@@ -87,10 +89,12 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_CH_VARS / &
-       ATMOS_PHY_CH_RESTART_IN_BASENAME,  &
-       ATMOS_PHY_CH_RESTART_OUTPUT,       &
-       ATMOS_PHY_CH_RESTART_OUT_BASENAME, &
-       ATMOS_PHY_CH_RESTART_OUT_TITLE,    &
+       ATMOS_PHY_CH_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_CH_RESTART_IN_POSTFIX_TIMELABEL,  &
+       ATMOS_PHY_CH_RESTART_OUTPUT,                &
+       ATMOS_PHY_CH_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_CH_RESTART_OUT_POSTFIX_TIMELABEL, &
+       ATMOS_PHY_CH_RESTART_OUT_TITLE,             &
        ATMOS_PHY_CH_RESTART_OUT_DTYPE
 
     integer :: ierr
@@ -128,13 +132,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_PHY_CH_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_PHY_CH_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(ATMOS_PHY_CH_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_PHY_CH_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       ATMOS_PHY_CH_RESTART_OUTPUT             &
          .AND. ATMOS_PHY_CH_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_CH_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(ATMOS_PHY_CH_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_PHY_CH_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_CH_RESTART_OUTPUT = .false.
@@ -168,65 +174,82 @@ contains
   end subroutine ATMOS_PHY_CH_vars_fillhalo
 
   !-----------------------------------------------------------------------------
-  !> Read restart
-  subroutine ATMOS_PHY_CH_vars_restart_read
+  !> Open restart file for read
+  subroutine ATMOS_PHY_CH_vars_restart_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_read
-    use scale_rm_statistics, only: &
-       STAT_total
+       FILEIO_open
     implicit none
 
-    real(RP) :: total
+    character(len=19)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_CH) ***'
 
     if ( ATMOS_PHY_CH_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_CH_RESTART_IN_BASENAME)
 
-       call FILEIO_read( ATMOS_PHY_CH_O3(:,:,:),                                      & ! [OUT]
-                         ATMOS_PHY_CH_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
+       if ( ATMOS_PHY_CH_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_CH_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_CH_RESTART_IN_BASENAME)
+       endif
 
-       call ATMOS_PHY_CH_vars_fillhalo
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call STAT_total( total, ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1) )
+       call FILEIO_open( restart_fid, basename )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_CH is not specified.'
     endif
 
     return
-  end subroutine ATMOS_PHY_CH_vars_restart_read
+  end subroutine ATMOS_PHY_CH_vars_restart_open
 
   !-----------------------------------------------------------------------------
-  !> Write restart
-  subroutine ATMOS_PHY_CH_vars_restart_write
-    use scale_time, only: &
-       TIME_gettimelabel
+  !> Read restart
+  subroutine ATMOS_PHY_CH_vars_restart_read
     use scale_fileio, only: &
-       FILEIO_write
+       FILEIO_read, &
+       FILEIO_flush
+    use scale_rm_statistics, only: &
+       STAT_total
     implicit none
 
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
+    real(RP) :: total
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if ( ATMOS_PHY_CH_RESTART_OUT_BASENAME /= '' ) then
+    if ( restart_fid .NE. -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_CH_RESTART_IN_BASENAME)
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_CH_RESTART_OUT_BASENAME), '_', trim(timelabel)
+       call FILEIO_read( ATMOS_PHY_CH_O3(:,:,:),                 & ! [OUT]
+                         restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_CH) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+       if ( IO_AGGREGATE ) then
+          call FILEIO_flush( restart_fid )
+          ! X/Y halos have been read from file
 
-       call FILEIO_write( ATMOS_PHY_CH_O3(:,:,:), basename,             ATMOS_PHY_CH_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_CH_RESTART_OUT_DTYPE  ) ! [IN]
+          ! fill K halos
+          do j  = 1, JA
+          do i  = 1, IA
+             ATMOS_PHY_CH_O3(   1:KS-1,i,j) = ATMOS_PHY_CH_O3(KS,i,j)
+             ATMOS_PHY_CH_O3(KE+1:KA,  i,j) = ATMOS_PHY_CH_O3(KE,i,j)
+          enddo
+          enddo
+       else
+          call ATMOS_PHY_CH_vars_fillhalo
+       end if
 
+       call STAT_total( total, ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1) )
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file for ATMOS_PHY_CH.'
     endif
 
     return
-  end subroutine ATMOS_PHY_CH_vars_restart_write
+  end subroutine ATMOS_PHY_CH_vars_restart_read
 
   !-----------------------------------------------------------------------------
   !> Create restart file
@@ -237,21 +260,26 @@ contains
        FILEIO_create
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_CH_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_CH_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_CH) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_AE) ***'
+
+       if ( ATMOS_PHY_CH_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_CH_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_CH_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, ATMOS_PHY_CH_RESTART_OUT_TITLE, &
-                          ATMOS_PHY_CH_RESTART_OUT_DTYPE )
+       call FILEIO_create( restart_fid,                                                             & ! [OUT]
+                           basename, ATMOS_PHY_CH_RESTART_OUT_TITLE, ATMOS_PHY_CH_RESTART_OUT_DTYPE ) ! [IN]
 
     endif
 
@@ -306,7 +334,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write restart
-  subroutine ATMOS_PHY_CH_vars_restart_write_var
+  subroutine ATMOS_PHY_CH_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
@@ -319,6 +347,6 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_CH_vars_restart_write_var
+  end subroutine ATMOS_PHY_CH_vars_restart_write
 
 end module mod_atmos_phy_ch_vars

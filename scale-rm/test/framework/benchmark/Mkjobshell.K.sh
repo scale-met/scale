@@ -2,24 +2,36 @@
 
 # Arguments
 BINDIR=${1}
-INITNAME=${2}
-BINNAME=${3}
-INITCONF=${4}
-RUNCONF=${5}
-TPROC=${6}
-DATDIR=${7}
-DATPARAM=(`echo ${8} | tr -s ',' ' '`)
-DATDISTS=(`echo ${9} | tr -s ',' ' '`)
+PPNAME=${2}
+INITNAME=${3}
+BINNAME=${4}
+PPCONF=${5}
+INITCONF=${6}
+RUNCONF=${7}
+TPROC=${8}
+DATDIR=${9}
+DATPARAM=(`echo ${10} | tr -s ',' ' '`)
+DATDISTS=(`echo ${11} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpiexec"
 
-if [ ! ${INITNAME} = "NONE" ]; then
+if [ ! ${PPCONF} = "NONE" ]; then
+  SIN1_PP="#PJM --stgin  \"rank=* ${BINDIR}/${PPNAME}   %r:./\""
+  SIN2_PP="#PJM --stgin  \"rank=*         ./${PPCONF}   %r:./\""
+  RUN_PP="${MPIEXEC} ./${PPNAME} ${PPCONF} || exit"
+fi
+
+if [ ! ${INITCONF} = "NONE" ]; then
+  SIN1_INIT="#PJM --stgin  \"rank=* ${BINDIR}/${INITNAME} %r:./\""
+  SIN2_INIT="#PJM --stgin  \"rank=*         ./${INITCONF} %r:./\""
   RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
 fi
 
-if [ ! ${BINNAME} = "NONE" ]; then
-  RUN_BIN="fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+if [ ! ${RUNCONF} = "NONE" ]; then
+  SIN1_MAIN="#PJM --stgin  \"rank=* ${BINDIR}/${BINNAME}  %r:./\""
+  SIN2_MAIN="#PJM --stgin  \"rank=*         ./${RUNCONF}  %r:./\""
+  RUN_MAIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
 fi
 
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
@@ -51,17 +63,21 @@ cat << EOF1 > ./run.sh
 #PJM --rsc-list "elapse=02:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
-#PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
-#PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
-#PJM --stgin  "rank=*         ./${INITCONF} %r:./"
-#PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+${SIN1_PP}
+${SIN1_INIT}
+${SIN1_MAIN}
+${SIN2_PP}
+${SIN2_INIT}
+${SIN2_MAIN}
 EOF1
 
 if [ ! ${DATPARAM[0]} = "" ]; then
    for f in ${DATPARAM[@]}
    do
          if [ -f ${DATDIR}/${f} ]; then
-            echo "#PJM --stgin  'rank=* ${DATDIR}/${f} %r:./'" >> ./run.sh
+            echo "#PJM --stgin  'rank=* ${DATDIR}/${f}   %r:./'"       >> ./run.sh
+         elif [ -d ${DATDIR}/${f} ]; then
+            echo "#PJM --stgin  'rank=* ${DATDIR}/${f}/* %r:./input/'" >> ./run.sh
          else
             echo "datafile does not found! : ${DATDIR}/${f}"
             exit 1
@@ -95,8 +111,9 @@ export OMP_NUM_THREADS=8
 rm -rf ./prof
 
 # run
+${RUN_PP}
 ${RUN_INIT}
-${RUN_BIN}
+${RUN_MAIN}
 
 ################################################################################
 EOF2

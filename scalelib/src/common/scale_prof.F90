@@ -50,7 +50,7 @@ module scale_prof
   integer,                  private, parameter :: PROF_rapnlimit = 300
   character(len=H_SHORT),   private            :: PROF_prefix    = ''
   integer,                  private            :: PROF_rapnmax   = 0
-  character(len=H_SHORT*2), private            :: PROF_rapname(PROF_rapnlimit)
+  character(len=H_SHORT), private            :: PROF_rapname(PROF_rapnlimit)
   integer,                  private            :: PROF_grpnmax   = 0
   character(len=H_SHORT),   private            :: PROF_grpname(PROF_rapnlimit)
   integer,                  private            :: PROF_grpid  (PROF_rapnlimit)
@@ -137,7 +137,7 @@ contains
     character(len=*), intent(in) :: rapname_base !< name of item
     integer, intent(in), optional :: level  !< level of item (default is 2)
 
-    character(len=H_SHORT*2) :: rapname !< name of item with prefix
+    character(len=H_SHORT) :: rapname !< name of item with prefix
 
     integer :: id
     integer :: level_
@@ -183,7 +183,7 @@ contains
     character(len=*), intent(in) :: rapname_base !< name of item
     integer, intent(in), optional :: level  !< level of item
 
-    character(len=H_SHORT*2) :: rapname !< name of item with prefix
+    character(len=H_SHORT) :: rapname !< name of item with prefix
 
     integer :: id
     integer :: level_
@@ -246,11 +246,10 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
-                  PROF_grpid(id) == gid .AND. &
-                  IO_L ) then
-                write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
-                     '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
+             if (       PROF_raplevel(id) <= PROF_rap_level &
+                  .AND. PROF_grpid   (id) == gid            ) then
+                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
+                           '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -276,15 +275,15 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
-                  PROF_grpid(id) == gid .AND. &
-                  fid > 0 ) then
-                write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I9)') &
-                     '*** ID=',id,' : ',PROF_rapname(id), &
-                     ' T(avg)=',avgvar(id), &
-                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                     ', T(min)=',minvar(id),'[',minidx(id),']', &
-                     ' N=',PROF_rapnstr(id)
+             if (       PROF_raplevel(id) <= PROF_rap_level &
+                  .AND. PROF_grpid   (id) == gid            &
+                  .AND. fid > 0                             ) then
+                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
+                           '*** ID=',id,' : ',PROF_rapname(id), &
+                           ' T(avg)=',avgvar(id), &
+                           ', T(max)=',maxvar(id),'[',maxidx(id),']', &
+                           ', T(min)=',minvar(id),'[',minidx(id),']', &
+                           ' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -416,13 +415,12 @@ contains
     character(len=*), intent(in)    :: rapname !< name of item
     integer,          intent(inout) :: level   !< level of item
 
+    character (len=H_SHORT) :: trapname
+
     integer :: id
-    character (len=H_SHORT*2) :: trapname
-    character (len=H_SHORT)   :: trapname2
     !---------------------------------------------------------------------------
 
     trapname  = trim(rapname)
-    trapname2 = trim(rapname)
 
     do id = 1, PROF_rapnmax
        if ( trapname == PROF_rapname(id) ) then
@@ -439,7 +437,7 @@ contains
     PROF_rapnend(id) = 0
     PROF_rapttot(id) = 0.0_DP
 
-    PROF_grpid   (id) = get_grpid(trapname2)
+    PROF_grpid   (id) = get_grpid(trapname)
     PROF_raplevel(id) = level
 
     return

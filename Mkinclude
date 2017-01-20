@@ -50,8 +50,20 @@ ifeq ($(SINGLE),T)
    FFLAGS += -DSINGLE
 endif
 
-ifeq ($(ENABLE_OPENMP),T)
-   FFLAGS += -openmp -openmp-report
+# NetCDF setting
+# These settings are inquired in order of:
+# The environment variable->Makedef.XXX->here
+NETCDF_INCLUDE ?= $(shell nf-config --fflags) $(shell nc-config --cflags)
+NETCDF_LIBS    ?= $(shell nf-config --flibs)  $(shell nc-config --libs)
+
+ifeq ($(ENABLE_PNETCDF),T)
+   NETCDF_INCLUDE += -DPNETCDF
+else
+  ifeq ($(ENABLE_PNETCDF),)
+    ifeq ($(shell nc-config --has-pnetcdf),yes)
+      NETCDF_INCLUDE += -DPNETCDF
+    endif
+  endif
 endif
 
 ifeq ($(ENABLE_PAPI),T)
@@ -62,6 +74,10 @@ endif
 
 ifeq ($(USE_NETCDF3),T)
    CFLAGS += -DNETCDF3
+endif
+
+ifeq ($(ENABLE_MATHLIB),T)
+   FFLAGS += -D_MATHLIB
 endif
 
 ifeq ($(CHECK_MASS),T)
@@ -82,9 +98,4 @@ else
    SDMDIR          =
    CONTRIB_LIBS    =
    CONTRIB_INCLUDE =
-endif
-
-# DYN2
-ifeq ($(ENABLE_DYN2),T)
-   FFLAGS += -DDYN2
 endif

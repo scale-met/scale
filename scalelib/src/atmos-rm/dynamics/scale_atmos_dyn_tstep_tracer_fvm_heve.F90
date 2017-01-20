@@ -101,7 +101,7 @@ contains
        ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
        ATMOS_DYN_FVM_fluxY_XYZ_ud1
     implicit none
-    real(RP), intent(out) :: QTRCo   (KA,IA,JA)
+    real(RP), intent(inout) :: QTRCo   (KA,IA,JA) ! could be identical to QTRC0
     real(RP), intent(in)  :: QTRC    (KA,IA,JA)
     real(RP), intent(in)  :: QTRC0   (KA,IA,JA)
     real(RP), intent(in)  :: RHOQ_t  (KA,IA,JA)
@@ -164,17 +164,20 @@ contains
        if ( FLAG_FCT_TRACER ) then
 
           call ATMOS_DYN_FVM_fluxZ_XYZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-               mflx_hi(:,:,:,ZDIR), QTRC, GSQRT(:,:,:,I_XYW), & ! (in)
+               mflx_hi(:,:,:,ZDIR), QTRC0, GSQRT(:,:,:,I_XYW), & ! (in)
+               num_diff(:,:,:,ZDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxX_XYZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
-               mflx_hi(:,:,:,XDIR), QTRC, GSQRT(:,:,:,I_UYZ), & ! (in)
+               mflx_hi(:,:,:,XDIR), QTRC0, GSQRT(:,:,:,I_UYZ), & ! (in)
+               num_diff(:,:,:,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_XYZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
-               mflx_hi(:,:,:,YDIR), QTRC, GSQRT(:,:,:,I_XVZ), & ! (in)
+               mflx_hi(:,:,:,YDIR), QTRC0, GSQRT(:,:,:,I_XVZ), & ! (in)
+               num_diff(:,:,:,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
        end if

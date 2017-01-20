@@ -1,0 +1,138 @@
+################################################################################
+#
+# Common Makefile for each test (Please include this file)
+#
+################################################################################
+
+ifeq ($(origin SYSDEP_DIR), undefined)
+   SYSDEP_DIR = $(TOPDIR)/sysdep
+endif
+
+msg1 = "\n"
+
+ifeq ($(ENABLE_FIXEDINDEX),T)
+   msg1       += "ENABLE_FIXEDINDEX is set.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(DEBUG),T)
+   msg1       += "DEBUG is set.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(SINGLE),T)
+   msg1       += "SINGLE is set.\n"
+   USELOCALBIN = T
+endif
+
+ifneq ($(ORG_SRCS),)
+   msg1       += "User-defined file is used.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(DISABLE_LOCALBIN),T)
+   USELOCALBIN = F
+endif
+
+ifeq ($(USELOCALBIN),T)
+   BUILD_DIR := $(PWD)/.libs
+   BINDIR     = $(PWD)
+   msg1      += "The location of executable files is changed to $(BINDIR)\n"
+else
+   BUILD_DIR := $(TOPDIR)/.libs
+   BINDIR     = $(TOPDIR)/bin
+endif
+
+ifeq ($(origin PPNAME), undefined)
+   PPNAME = scale-rm_pp
+endif
+
+ifeq ($(origin INITNAME), undefined)
+   INITNAME = scale-rm_init
+endif
+
+ifeq ($(origin BINNAME), undefined)
+   BINNAME = scale-rm
+endif
+
+ifeq ($(origin N2GNAME), undefined)
+   N2GNAME = net2g
+endif
+
+ifeq ($(origin PPCONF), undefined)
+   PPCONF = NONE
+endif
+
+ifeq ($(origin INITCONF), undefined)
+   INITCONF = NONE
+endif
+
+ifeq ($(origin RUNCONF), undefined)
+   RUNCONF = NONE
+endif
+
+ifeq ($(origin N2GCONF), undefined)
+   N2GCONF = NONE
+endif
+
+INDEX_DIR := $(PWD)
+UTILDIR    = ${TOPDIR}/scale-rm/util/netcdf2grads_h
+
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
+
+$(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
+	mkdir -p $(BUILD_DIR)
+	cp -f $< $@
+
+build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
+	@echo -e "$(msg1)"
+	mkdir -p $(BUILD_DIR)
+	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
+                                BUILD_DIR=$(BUILD_DIR)   \
+                                INDEX_DIR=$(INDEX_DIR)   \
+                                BINDIR=$(BINDIR)         \
+                                dynamics=$(dynamics)     \
+                                sfcflx=$(sfcflx)         \
+                                turbulence=$(turbulence) \
+                                radiation=$(radiation)   \
+                                postfix=$(postfix)
+
+run: jobshell
+	$(JOBSUB) run.sh
+
+jobshell:
+	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
+		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
+		                                 $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
+		                                 $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
+		                                 $(TPROC)                                    \
+		                                 $(DATDIR) $(DATPARAM) $(DATDISTS);          \
+	else \
+		sh $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
+		                                                $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
+		                                                $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
+		                                                $(TPROC)                                    \
+		                                                $(DATDIR) $(DATPARAM) $(DATDISTS);          \
+	fi
+
+
+
+.PHONY: allclean distclean clean
+
+allclean: distclean clean
+	$(MAKE) -C $(SCALERMDIR)/src allclean BINDIR=$(BINDIR)         \
+                                         BUILD_DIR=$(BUILD_DIR)   \
+                                         SYSDEP_DIR=$(SYSDEP_DIR)
+
+distclean: clean
+	$(MAKE) -C $(SCALERMDIR)/src distclean BINDIR=$(BINDIR)         \
+                                          BUILD_DIR=$(BUILD_DIR)   \
+                                          SYSDEP_DIR=$(SYSDEP_DIR)
+	rm -f *.nc *LOG.pe* monitor.pe* latlon* run.sh
+
+clean:
+	$(MAKE) -C $(SCALERMDIR)/src clean BINDIR=$(BINDIR)         \
+                                      BUILD_DIR=$(BUILD_DIR)   \
+                                      SYSDEP_DIR=$(SYSDEP_DIR)
+

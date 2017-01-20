@@ -61,6 +61,7 @@ module scale_stdio
   logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
   logical,               public            :: IO_LOG_NML_SUPPRESS = .false. !< suppress all of log output?
+  logical,               public            :: IO_AGGREGATE          = .false. !< do parallel I/O through PnetCDF
 
   !-----------------------------------------------------------------------------
   !
@@ -89,11 +90,12 @@ contains
        IO_LOG_BASENAME,     &
        IO_LOG_SUPPRESS,     &
        IO_LOG_ALLNODE,      &
-       IO_LOG_NML_SUPPRESS
+       IO_LOG_NML_SUPPRESS, &
+       IO_AGGREGATE
 
-    character(len=H_MID),  intent(in) :: MODELNAME !< name of the model
+    character(len=*), intent(in) :: MODELNAME !< name of the model
     logical,               intent(in) :: call_from_launcher  !< flag to get command argument
-    character(len=H_LONG), intent(in), optional :: fname_in !< name of config file for each process
+    character(len=*), intent(in), optional :: fname_in !< name of config file for each process
 
     character(len=H_LONG) :: fname
     integer :: ierr
@@ -103,7 +105,7 @@ contains
        if ( present(fname_in) ) then
           fname = fname_in
        else
-          write(*,*) ' xxx Not imported name of config file! STOP.'
+          write(*,*) 'xxx Not imported name of config file! STOP.'
           stop 1
        endif
     else
@@ -122,7 +124,7 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
     if ( ierr > 0 ) then !--- fatal error
-       write(*,*) ' xxx Not appropriate names in namelist PARAM_IO . Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_IO . Check!'
        stop 1
     endif
 
@@ -272,7 +274,7 @@ contains
        isrgn   )
     implicit none
 
-    character(len=*), intent(out) :: outstr !< generated string
+    character(len=H_LONG), intent(out) :: outstr !< generated string
     character(len=*), intent(in)  :: instr  !< strings
     character(len=*), intent(in)  :: ext    !< extention
     integer,          intent(in)  :: rank   !< number

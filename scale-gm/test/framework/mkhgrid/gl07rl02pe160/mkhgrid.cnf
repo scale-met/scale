@@ -1,0 +1,23 @@
+################################################################################
+#
+# SCALE-GM mkhgrid config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 7,
+    rlevel      = 2,
+    vlayer      = 1,
+    rgnmngfname = "rl02-prc160.info",
+/
+
+&PARAM_MKGRD
+    MKGRD_DOPREROTATE      = .false.,
+    MKGRD_DOSTRETCH        = .false.,
+    MKGRD_DOSHRINK         = .false.,
+    MKGRD_DOROTATE         = .false.,
+    MKGRD_IN_BASENAME      = "rawgrid_GL07RL02",
+    MKGRD_OUT_BASENAME     = "boundary_GL07RL02",
+/
+
+################################################################################

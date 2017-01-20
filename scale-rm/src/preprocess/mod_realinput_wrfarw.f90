@@ -96,7 +96,7 @@ contains
 
     integer,               intent(out) :: dims(6)
     integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in) :: basename_org
+    character(len=*), intent(in)  :: basename_org
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
@@ -176,8 +176,21 @@ contains
     use scale_external_io, only: &
          ExternalFileRead
     use scale_atmos_thermodyn, only: &
-         THERMODYN_pott => ATMOS_THERMODYN_pott
+       THERMODYN_pott => ATMOS_THERMODYN_pott
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG, &
+       I_NC, &
+       I_NR, &
+       I_NI, &
+       I_NS, &
+       I_NG
     implicit none
+
     real(RP),         intent(out) :: velz_org(:,:,:)
     real(RP),         intent(out) :: llvelx_org(:,:,:)
     real(RP),         intent(out) :: llvely_org(:,:,:)
@@ -434,7 +447,7 @@ contains
     implicit none
 
     integer,               intent(out) :: ldims(3)
-    character(len=H_LONG), intent(in) :: basename_land
+    character(len=*), intent(in)  :: basename_land
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
@@ -639,7 +652,7 @@ contains
 
     integer,               intent(out) :: odims(2)
     integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in) :: basename_org
+    character(len=*), intent(in)  :: basename_org
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 

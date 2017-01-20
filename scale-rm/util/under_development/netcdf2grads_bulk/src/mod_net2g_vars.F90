@@ -64,7 +64,7 @@ module mod_net2g_vars
   real(DP),        public :: HISTORY_DEFAULT_TINTERVAL
   character(CMID), public :: HISTORY_DEFAULT_BASENAME
   character(5),    public :: HISTORY_DEFAULT_TUNIT
-  logical,         public :: HISTORY_DEFAULT_ZINTERP = .true.
+  character(CSHT), public :: HISTORY_DEFAULT_ZDIM = 'native'
   logical,         public :: HIST_BND = .true.
 
   integer,         public :: FID_LOG        = 22

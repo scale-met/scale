@@ -114,7 +114,7 @@ contains
        DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
        PROG0, PROG,                                 &
        DPRES0, RT2P, CORIOLI,                       &
-       num_diff, divdmp_coef, DDIV,                 &
+       num_diff, wdamp_coef, divdmp_coef, DDIV,     &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
        FLAG_FCT_ALONG_STREAM,                       &
        CDZ, FDZ, FDX, FDY,                          &
@@ -216,6 +216,7 @@ contains
     real(RP), intent(in)         :: RT2P    (KA,IA,JA)
     real(RP), intent(in)         :: CORIOLI (1, IA,JA)
     real(RP), intent(in)         :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in)         :: wdamp_coef(KA)
     real(RP), intent(in)         :: divdmp_coef
     real(RP), intent(in)         :: DDIV    (KA,IA,JA)
 
@@ -276,10 +277,12 @@ contains
 #endif
     real(RP) :: advch ! horizontal advection
     real(RP) :: advcv ! vertical advection
-    real(RP) :: div  ! divergence damping
+    real(RP) :: wdamp ! rayleight damping for W
+    real(RP) :: div   ! divergence damping
 #ifdef HIST_TEND
     real(RP) :: advch_t(KA,IA,JA,5)
     real(RP) :: advcv_t(KA,IA,JA,5)
+    real(RP) :: wdmp_t(KA,IA,JA)
     real(RP) :: ddiv_t(KA,IA,JA,3)
     real(RP) :: pg_t(KA,IA,JA,3)
     real(RP) :: cf_t(KA,IA,JA,2)
@@ -315,6 +318,7 @@ contains
 #ifdef HIST_TEND
     advch_t = 0.0_RP
     advcv_t = 0.0_RP
+    wdmp_t = 0.0_RP
     ddiv_t = 0.0_RP
     pg_t = 0.0_RP
     cf_t = 0.0_RP
@@ -634,7 +638,7 @@ contains
        enddo
 
        !-----< update momentum (z) -----
-
+       
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -657,12 +661,14 @@ contains
                     + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k,i-1,j,XDIR) ) * RCDX(i) &
                     + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k,i,j-1,YDIR) ) * RCDY(j) ) &
                   * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+          wdamp = - wdamp_coef(k) * MOMZ0(k,i,j)
           div = divdmp_coef / dtrk * FDZ(k) * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) ! divergence damping
           MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                          + dtrk * ( ( advcv + advch        &
                                     - pgf (k,i,j)          & ! pressure gradient force
                                     - buoy(k,i,j)          & ! buoyancy force
                                     ) / GSQRT(k,i,j,I_XYW) &
+                                  + wdamp                  & ! Rayleigh damping
                                   + div                    &
                                   + MOMZ_t(k,i,j) )        ! physics tendency
 #ifdef HIST_TEND
@@ -670,6 +676,7 @@ contains
              advcv_t(k,i,j,I_MOMZ) = advcv / GSQRT(k,i,j,I_XYW)
              advch_t(k,i,j,I_MOMZ) = advch / GSQRT(k,i,j,I_XYW)
              pg_t(k,i,j,1) = ( - pgf(k,i,j) - buoy(k,i,j) ) / GSQRT(k,i,j,I_XYW)
+             wdmp_t(k,i,j) = wdamp
              ddiv_t(k,i,j,1) = div
           endif
 #endif
@@ -690,6 +697,7 @@ contains
              advcv_t(KE,i,j,I_MOMZ) = 0.0_RP
              advch_t(KE,i,j,I_MOMZ) = 0.0_RP
              pg_t(KE,i,j,1) = 0.0_RP
+             wdmp_t(KE,i,j) = 0.0_RP
              ddiv_t(KE,i,j,1) = 0.0_RP
           endif
 #endif
@@ -706,20 +714,23 @@ contains
           ! at (x, y, layer)
           ! note than z-index is added by -1
           call ATMOS_DYN_FVM_fluxZ_XYW_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-               MOMZ, MOMZ, DENS, & ! (in)
+               MOMZ, MOMZ0, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), J33G, & ! (in)
+               num_diff(:,:,:,I_MOMZ,ZDIR), & ! (in)
                CDZ, FDZ, dtrk, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxX_XYW_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
-               MOMX, MOMZ, DENS, & ! (in)
+               MOMX, MOMZ0, DENS, & ! (in)
                GSQRT(:,:,:,I_UYZ), MAPF(:,:,:,I_UY), & ! (in)
+               num_diff(:,:,:,I_MOMZ,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_XYW_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
-               MOMY, MOMZ, DENS, & ! (in)
+               MOMY, MOMZ0, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), MAPF(:,:,:,I_XV), & ! (in)
+               num_diff(:,:,:,I_MOMZ,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -942,21 +953,24 @@ contains
        if ( FLAG_FCT_MOMENTUM ) then
 
           call ATMOS_DYN_FVM_fluxZ_UYZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-               MOMZ, MOMX, DENS, & ! (in)
+               MOMZ, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_UYW), J33G, & ! (in)
+               num_diff(:,:,:,I_MOMX,ZDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! note that x-index is added by -1
           call ATMOS_DYN_FVM_fluxX_UYZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
-               MOMX, MOMX, DENS, & ! (in)
+               MOMX, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_UY), & ! (in)
+               num_diff(:,:,:,I_MOMX,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_UYZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
-               MOMY, MOMX, DENS, & ! (in)
+               MOMY, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_XV), & ! (in)
+               num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -1190,23 +1204,26 @@ contains
           ! monotonic flux
           ! at (x, v, interface)
           call ATMOS_DYN_FVM_fluxZ_XVZ_ud1( qflx_lo(:,:,:,ZDIR), & ! (out)
-               MOMZ, MOMY, DENS, & ! (in)
+               MOMZ, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), J33G, & ! (in)
+               num_diff(:,:,:,I_MOMY,ZDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (u, v, layer)
           call ATMOS_DYN_FVM_fluxX_XVZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
-               MOMX, MOMY, DENS, & ! (in)
+               MOMX, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_XY), & ! (in)
+               num_diff(:,:,:,I_MOMY,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (x, y, layer)
           ! note that y-index is added by -1
           call ATMOS_DYN_FVM_fluxY_XVZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
-               MOMY, MOMY, DENS, & ! (in)
+               MOMY, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
+               num_diff(:,:,:,I_MOMY,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
@@ -1377,6 +1394,15 @@ contains
           call COMM_wait ( DENS_RK, 1, .false. )
        endif
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS, KE
+          POTT(k,i,j) = RHOT0(k,i,j) / DENS0(k,i,j)
+       enddo
+       enddo
+       enddo
+
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
@@ -1386,30 +1412,24 @@ contains
           ! at (x, y, interface)
           call ATMOS_DYN_FVM_fluxZ_XYZ_ud1( tflx_lo(:,:,:,ZDIR), & ! (out)
                mflx_hi(:,:,:,ZDIR), POTT, GSQRT(:,:,:,I_XYZ), & ! (in)
+               num_diff(:,:,:,I_RHOT,ZDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (u, y, layer)
           call ATMOS_DYN_FVM_fluxX_XYZ_ud1( tflx_lo(:,:,:,XDIR), & ! (out)
                mflx_hi(:,:,:,XDIR), POTT, GSQRT(:,:,:,I_UYZ), & ! (in)
+               num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (x, v, layer)
           call ATMOS_DYN_FVM_fluxY_XYZ_ud1( tflx_lo(:,:,:,YDIR), & ! (out)
                mflx_hi(:,:,:,YDIR), POTT, GSQRT(:,:,:,I_XVZ), & ! (in)
+               num_diff(:,:,:,I_RHOT,YDIR), & ! (in)
                CDZ, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
-       do k = KS, KE
-          POTT(k,i,j) = RHOT0(k,i,j) / DENS0(k,i,j)
-       enddo
        enddo
        enddo
 
@@ -1475,6 +1495,8 @@ contains
        call HIST_in(pg_t   (:,:,:,1),      'MOMZ_t_pg',    'tendency of momentum z (pressure gradient)',  'kg/m2/s2', zdim='half')
        call HIST_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient)',  'kg/m2/s2', xdim='half')
        call HIST_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient)',  'kg/m2/s2', ydim='half')
+
+       call HIST_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Raileight damping)', 'kg/m2/s2',  zdim='half')
 
        call HIST_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping)', 'kg/m2/s2', zdim='half')
        call HIST_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping)', 'kg/m2/s2', xdim='half')

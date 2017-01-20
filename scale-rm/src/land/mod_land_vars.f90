@@ -38,9 +38,9 @@ module mod_land_vars
   public :: LAND_vars_external_in
 
   public :: LAND_vars_restart_create
+  public :: LAND_vars_restart_open
   public :: LAND_vars_restart_def_var
   public :: LAND_vars_restart_enddef
-  public :: LAND_vars_restart_write_var
   public :: LAND_vars_restart_close
 
   public :: convert_WS2VWC
@@ -49,12 +49,14 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: LAND_RESTART_OUTPUT       = .false.        !< output restart file?
+  logical,               public :: LAND_RESTART_OUTPUT                = .false.         !< Output restart file?
 
-  character(len=H_LONG), public :: LAND_RESTART_IN_BASENAME  = ''             !< basename of the restart file
-  character(len=H_LONG), public :: LAND_RESTART_OUT_BASENAME = ''             !< basename of the output file
-  character(len=H_MID),  public :: LAND_RESTART_OUT_TITLE    = 'LAND restart' !< title    of the output file
-  character(len=H_MID),  public :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'      !< REAL4 or REAL8
+  character(len=H_LONG), public :: LAND_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
+  logical,               public :: LAND_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
+  character(len=H_LONG), public :: LAND_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
+  logical,               public :: LAND_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
+  character(len=H_MID),  public :: LAND_RESTART_OUT_TITLE             = 'LAND restart' !< Title    of the output file
+  character(len=H_SHORT), public :: LAND_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
   real(RP), public, allocatable :: LAND_TEMP      (:,:,:) !< temperature of each soil layer [K]
@@ -190,6 +192,8 @@ module mod_land_vars
   integer,  private              :: LAND_QA_comm
   real(RP), private, allocatable :: work_comm(:,:,:) ! for communication
 
+  logical,  private              :: LAND_RESTART_IN_CHECK_COORDINATES = .true.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -208,11 +212,14 @@ contains
     implicit none
 
     NAMELIST / PARAM_LAND_VARS /  &
-       LAND_RESTART_IN_BASENAME,  &
-       LAND_RESTART_OUTPUT,       &
-       LAND_RESTART_OUT_BASENAME, &
-       LAND_RESTART_OUT_TITLE,    &
-       LAND_RESTART_OUT_DTYPE,    &
+       LAND_RESTART_IN_BASENAME,           &
+       LAND_RESTART_IN_POSTFIX_TIMELABEL,  &
+       LAND_RESTART_IN_CHECK_COORDINATES,  &
+       LAND_RESTART_OUTPUT,                &
+       LAND_RESTART_OUT_BASENAME,          &
+       LAND_RESTART_OUT_POSTFIX_TIMELABEL, &
+       LAND_RESTART_OUT_TITLE,             &
+       LAND_RESTART_OUT_DTYPE,             &
        LAND_VARS_CHECKRANGE
 
     integer :: ierr
@@ -320,13 +327,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(LAND_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(LAND_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', LAND_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       LAND_RESTART_OUTPUT             &
          .AND. LAND_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(LAND_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(LAND_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', LAND_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        LAND_RESTART_OUTPUT = .false.
@@ -361,121 +370,99 @@ contains
   end subroutine LAND_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> Read land restart
-  subroutine LAND_vars_restart_read
+  !> Open land restart file for read
+  subroutine LAND_vars_restart_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_read
+       FILEIO_open, &
+       FILEIO_check_coordinates
     use mod_land_admin, only: &
        LAND_sw
     implicit none
+
+    character(len=19)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) ***'
 
     if ( LAND_sw .and. LAND_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(LAND_RESTART_IN_BASENAME)
 
-       call FILEIO_read( LAND_TEMP (:,:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
-       call FILEIO_read( LAND_WATER(:,:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_WATER),     'Land', step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_TEMP(:,:),                                             & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_albedo(:,:,I_LW),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MW(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MU(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_MV(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_SH(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_LH(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_GH(:,:),                                              & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
-       call FILEIO_read( LAND_SFLX_evap(:,:),                                            & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
+       if ( LAND_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(LAND_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(LAND_RESTART_IN_BASENAME)
+       endif
 
-       call LAND_vars_total
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call FILEIO_open( restart_fid, & ! [OUT]
+                         basename     ) ! [IN]
+
+       if ( LAND_RESTART_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( restart_fid, land=.true. )
+       end if
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
     endif
 
     return
-  end subroutine LAND_vars_restart_read
+  end subroutine LAND_vars_restart_open
 
   !-----------------------------------------------------------------------------
-  !> Write land restart
-  subroutine LAND_vars_restart_write
+  !> Read land restart
+  subroutine LAND_vars_restart_read
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_write
+       FILEIO_read, &
+       FILEIO_flush
     use mod_land_admin, only: &
        LAND_sw
     implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
+    if ( restart_fid .NE. -1 ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(timelabel)
+       call FILEIO_read( LAND_TEMP (:,:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
+       call FILEIO_read( LAND_WATER(:,:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_WATER),     'Land', step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_TEMP(:,:),                                & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_albedo(:,:,I_LW),                         & ! [OUT]
+                         restart_fid, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                         & ! [OUT]
+                         restart_fid, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MW(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MU(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MV(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_SH(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_LH(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_GH(:,:),                                 & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_evap(:,:),                               & ! [OUT]
+                         restart_fid, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+       if ( IO_AGGREGATE ) &
+          call FILEIO_flush( restart_fid )
 
        call LAND_vars_total
-
-       call FILEIO_write( LAND_TEMP    (:,:,:),      basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TEMP),          VAR_DESC(I_TEMP),       VAR_UNIT(I_TEMP),       & ! [IN]
-                          'Land',                    LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_WATER   (:,:,:),      basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_WATER),         VAR_DESC(I_WATER),      VAR_UNIT(I_WATER),      & ! [IN]
-                          'Land',                    LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFC_TEMP(:,:),        basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFC_TEMP),      VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP),   & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFC_albedo(:,:,I_LW), basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_ALB_LW),        VAR_DESC(I_ALB_LW),     VAR_UNIT(I_ALB_LW),     & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFC_albedo(:,:,I_SW), basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_ALB_SW),        VAR_DESC(I_ALB_SW),     VAR_UNIT(I_ALB_SW),     & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFLX_MW(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_MW),       VAR_DESC(I_SFLX_MW),    VAR_UNIT(I_SFLX_MW),    & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFLX_MU(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_MU),       VAR_DESC(I_SFLX_MU),    VAR_UNIT(I_SFLX_MU),    & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFLX_MV(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_MV),       VAR_DESC(I_SFLX_MV),    VAR_UNIT(I_SFLX_MV),    & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFLX_SH(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_SH),       VAR_DESC(I_SFLX_SH),    VAR_UNIT(I_SFLX_SH),    & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFLX_LH(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_LH),       VAR_DESC(I_SFLX_LH),    VAR_UNIT(I_SFLX_LH),    & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFLX_GH(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_GH),       VAR_DESC(I_SFLX_GH),    VAR_UNIT(I_SFLX_GH),    & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-       call FILEIO_write( LAND_SFLX_evap(:,:),       basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_SFLX_evap),     VAR_DESC(I_SFLX_evap),  VAR_UNIT(I_SFLX_evap),  & ! [IN]
-                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
-
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for land.'
     endif
 
     return
-  end subroutine LAND_vars_restart_write
+  end subroutine LAND_vars_restart_read
 
   !-----------------------------------------------------------------------------
   !> History output set for land variables
@@ -657,9 +644,10 @@ contains
             status = 'old',                           &
             iostat = ierr                             )
 
-      if( ierr /= 0 ) then
-        if( IO_L ) write(IO_FID_LOG,*) 'Error: Failed to open land parameter file! :', trim(LAND_PROPERTY_IN_FILENAME)
-        call PRC_MPIstop
+      if ( ierr /= 0 ) then
+         write(*,*) 'xxx [LAND_param_read] Failed to open land parameter file! :', &
+                    trim(LAND_PROPERTY_IN_FILENAME)
+         call PRC_MPIstop
       else
         if( IO_L ) write(IO_FID_LOG,*)
         if( IO_L ) write(IO_FID_LOG,*) '*** Properties for each plant functional type (PFT)'
@@ -773,20 +761,27 @@ contains
        LAND_sw
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
+
+       if ( LAND_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(LAND_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(LAND_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE)
+       call FILEIO_create( restart_fid,                                             & ! [OUT]
+                           basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE ) ! [IN]
+
     endif
 
     return
@@ -864,7 +859,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write land variables to restart file
-  subroutine LAND_vars_restart_write_var
+  subroutine LAND_vars_restart_write
     use scale_fileio, only: &
        FILEIO_write_var
     implicit none
@@ -903,6 +898,6 @@ contains
     endif
 
     return
-  end subroutine LAND_vars_restart_write_var
+  end subroutine LAND_vars_restart_write
 
 end module mod_land_vars

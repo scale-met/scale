@@ -1,3 +1,0 @@
-#!/bin/sh
-export CUDA_VISIBLE_DEVICES=${OMPI_COMM_WORLD_LOCAL_RANK}
-nvprof --output-profile log.nvprof.${OMPI_COMM_WORLD_RANK} $@

@@ -1219,25 +1219,25 @@ contains
        RFDY => GRID_RFDY
     implicit none
 
-    real(RP), intent(out) :: qflx_phi(KA,IA,JA,3)
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: PHI(KA,IA,JA)
-    real(RP), intent(in)  :: Kh(KA,IA,JA)
-    real(RP), intent(in)  :: FACT
-    real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
-    real(RP), intent(in)  :: J13G(KA,IA,JA,7)
-    real(RP), intent(in)  :: J23G(KA,IA,JA,7)
-    real(RP), intent(in)  :: J33G
-    real(RP), intent(in)  :: MAPF(IA,JA,2,4)
-    real(RP), intent(in)  :: a(KA,IA,JA)
-    real(RP), intent(in)  :: b(KA,IA,JA)
-    real(RP), intent(in)  :: c(KA,IA,JA)
-    real(DP), intent(in)  :: dt
-    logical,  intent(in)  :: implicit
-    integer,  intent(in)  :: IIS
-    integer,  intent(in)  :: IIE
-    integer,  intent(in)  :: JJS
-    integer,  intent(in)  :: JJE
+    real(RP), intent(inout) :: qflx_phi(KA,IA,JA,3)
+    real(RP), intent(in)    :: DENS    (KA,IA,JA)
+    real(RP), intent(in)    :: PHI     (KA,IA,JA)
+    real(RP), intent(in)    :: Kh      (KA,IA,JA)
+    real(RP), intent(in)    :: FACT
+    real(RP), intent(in)    :: GSQRT   (KA,IA,JA,7)
+    real(RP), intent(in)    :: J13G    (KA,IA,JA,7)
+    real(RP), intent(in)    :: J23G    (KA,IA,JA,7)
+    real(RP), intent(in)    :: J33G
+    real(RP), intent(in)    :: MAPF    (IA,JA,2,4)
+    real(RP), intent(in)    :: a       (KA,IA,JA)
+    real(RP), intent(in)    :: b       (KA,IA,JA)
+    real(RP), intent(in)    :: c       (KA,IA,JA)
+    real(DP), intent(in)    :: dt
+    logical,  intent(in)    :: implicit
+    integer,  intent(in)    :: IIS
+    integer,  intent(in)    :: IIE
+    integer,  intent(in)    :: JJS
+    integer,  intent(in)    :: JJE
 
     real(RP) :: TEND(KA,IA,JA)
     real(RP) :: d(KA)

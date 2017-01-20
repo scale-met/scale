@@ -31,6 +31,11 @@ module scale_atmos_phy_rd_mstrnx
      I_LW, &
      I_dn, &
      I_up
+
+  use scale_atmos_hydrometeor, only: &
+     N_HYD
+  use scale_atmos_aerosol, only: &
+     N_AE
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -63,13 +68,13 @@ module scale_atmos_phy_rd_mstrnx
 
   real(RP), private :: RD_TOA  = 100.0_RP !< top of atmosphere [km]
   integer,  private :: RD_KADD = 10       !< RD_KMAX = KMAX + RD_KADD
+  integer,  private, parameter :: RD_naero      = N_HYD + N_AE ! # of cloud/aerosol species
+  integer,  private, parameter :: RD_hydro_str  = 1            ! start index for cloud
+  integer,  private, parameter :: RD_hydro_end  = N_HYD        ! end   index for cloud
+  integer,  private, parameter :: RD_aero_str   = N_HYD + 1    ! start index for aerosol
+  integer,  private, parameter :: RD_aero_end   = N_HYD + N_AE ! end   index for aerosol
 
   integer,  private :: RD_KMAX      ! # of computational cells: z for radiation scheme
-  integer,  private :: RD_naero     ! # of cloud/aerosol species
-  integer,  private :: RD_hydro_str ! start index for cloud
-  integer,  private :: RD_hydro_end ! end   index for cloud
-  integer,  private :: RD_aero_str  ! start index for aerosol
-  integer,  private :: RD_aero_end  ! end   index for aerosol
 
   real(RP), private, allocatable :: RD_zh          (:)   ! altitude    at the interface [km]
   real(RP), private, allocatable :: RD_z           (:)   ! altitude    at the center    [km]
@@ -84,7 +89,9 @@ module scale_atmos_phy_rd_mstrnx
   real(RP), private, allocatable :: RD_aerosol_radi(:,:) ! cloud/aerosol effective radius    [cm]
   real(RP), private, allocatable :: RD_cldfrac     (:)   ! cloud fraction    [0-1]
 
-  integer,  private, allocatable :: I_MPAE2RD      (:)   ! look-up table between input aerosol category and MSTRN particle type
+  integer,  private :: I_MPAE2RD      (RD_naero)   ! look-up table between input aerosol category and MSTRN particle type
+  data I_MPAE2RD(1      :N_HYD     ) / 1, 1, 2, 2, 2, 2 /
+  data I_MPAE2RD(N_HYD+1:N_HYD+N_AE) / 1, 2, 3, 4, 5, 6, 7, 8, 9 /
 
   character(len=H_LONG), private :: MSTRN_GASPARA_INPUTFILE   = 'PARAG.29'     !< input file (gas parameter)
   character(len=H_LONG), private :: MSTRN_AEROPARA_INPUTFILE  = 'PARAPC.29'    !< input file (particle parameter)
@@ -228,6 +235,10 @@ contains
        RD_PROFILE_setup       => ATMOS_PHY_RD_PROFILE_setup,       &
        RD_PROFILE_setup_zgrid => ATMOS_PHY_RD_PROFILE_setup_zgrid, &
        RD_PROFILE_read        => ATMOS_PHY_RD_PROFILE_read
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
+    use scale_atmos_aerosol, only: &
+       N_AE
     implicit none
 
     character(len=*), intent(in) :: RD_TYPE
@@ -303,11 +314,6 @@ contains
     call RD_PROFILE_setup
 
     RD_KMAX      = KMAX + RD_KADD
-    RD_naero     = MP_QA + AE_QA
-    RD_hydro_str = 1
-    RD_hydro_end = MP_QA
-    RD_aero_str  = MP_QA + 1
-    RD_aero_end  = MP_QA + AE_QA
 
     !--- allocate arrays
     ! input
@@ -325,17 +331,6 @@ contains
     allocate( RD_aerosol_conc(RD_KMAX,RD_naero) )
     allocate( RD_aerosol_radi(RD_KMAX,RD_naero) )
     allocate( RD_cldfrac     (RD_KMAX         ) )
-
-    allocate( I_MPAE2RD(RD_naero) )
-
-    ! make look-up table between hydrometeor tracer and mstrn particle type
-    do ihydro = 1, MP_QA
-       I_MPAE2RD(ihydro) = I_MP2RD(ihydro)
-    enddo
-    ! make look-up table between aerosol     tracer and mstrn particle type
-    do iaero = 1, AE_QA
-       I_MPAE2RD(MP_QA+iaero) = I_AE2RD(iaero)
-    enddo
 
     !--- setup vartical grid for radiation (larger TOA than Model domain)
     call RD_PROFILE_setup_zgrid( RD_TOA, RD_KMAX, RD_KADD, & ! [IN]
@@ -400,7 +395,16 @@ contains
        MP_DENS            => ATMOS_PHY_MP_DENS
     use scale_atmos_phy_ae, only: &
        AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
-       AE_DENS
+       AE_DENS            => ATMOS_PHY_AE_DENS, &
+       QA_AE, &
+       QS_AE
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_QV, &
+       I_HC, &
+       I_HI
+    use scale_atmos_aerosol, only: &
+       N_AE
     use scale_atmos_phy_rd_profile, only: &
        RD_PROFILE_read            => ATMOS_PHY_RD_PROFILE_read, &
        RD_PROFILE_use_climatology => ATMOS_PHY_RD_PROFILE_use_climatology
@@ -428,9 +432,9 @@ contains
     real(RP) :: qsat   (KA,IA,JA)
     real(RP) :: rh     (KA,IA,JA)
     real(RP) :: cldfrac(KA,IA,JA)
-    real(RP) :: MP_Re  (KA,IA,JA,MP_QA)
-    real(RP) :: MP_Qe  (KA,IA,JA,MP_QA)
-    real(RP) :: AE_Re  (KA,IA,JA,AE_QA)
+    real(RP) :: MP_Re  (KA,IA,JA,N_HYD)
+    real(RP) :: MP_Qe  (KA,IA,JA,N_HYD)
+    real(RP) :: AE_Re  (KA,IA,JA,N_AE)
 
     real(RP), parameter :: min_cldfrac = 1.E-8_RP
 
@@ -458,11 +462,14 @@ contains
 
     call PROF_rapstart('RD_Profile', 3)
 
-    call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
-                              pres(:,:,:),  & ! [OUT]
-                              DENS(:,:,:),  & ! [IN]
-                              RHOT(:,:,:),  & ! [IN]
-                              QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_temp_pres( temp(:,:,:),   & ! [OUT]
+                              pres(:,:,:),   & ! [OUT]
+                              DENS(:,:,:),   & ! [IN]
+                              RHOT(:,:,:),   & ! [IN]
+                              QTRC(:,:,:,:), & ! [IN]
+                              TRACER_CV(:),  & ! [IN]
+                              TRACER_R(:),   & ! [IN]
+                              TRACER_MASS(:) ) ! [IN]
 
     call SATURATION_dens2qsat_liq( qsat(:,:,:), & ! [OUT]
                                    TEMP(:,:,:), & ! [IN]
@@ -492,11 +499,12 @@ contains
     call MP_Mixingratio( MP_Qe(:,:,:,:), & ! [OUT]
                          QTRC (:,:,:,:)  ) ! [IN]
 
+!    call AE_Mixingratio( AE_Qe(:,:,:,:), & ! [OUT]
+!                         QTRC (:,:,:,:)  ) ! [IN]
+
     if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI ) then
-       do ihydro = 1, MP_QA
-          iq = I_MP2ALL(ihydro)
-          if ( iq /= I_QC .AND. iq /= I_QI ) then
-!OCL XFILL
+       do ihydro = 1, N_HYD
+          if ( ihydro /= I_HC .and. ihydro /= I_HI ) then
              MP_Qe(:,:,:,ihydro) = 0.0_RP
           end if
        end do
@@ -562,7 +570,9 @@ contains
     enddo
 
 !OCL XFILL
+!OCL SERIAL
     do v = 1,  MSTRN_ngas
+!OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KMAX
@@ -583,7 +593,9 @@ contains
     enddo
 
 !OCL XFILL
+!OCL SERIAL
     do v = 1,  MSTRN_ncfc
+!OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KMAX
@@ -608,7 +620,9 @@ contains
     enddo
 
 !OCL XFILL
+!OCL SERIAL
     do v = 1,  RD_naero
+!OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
     do RD_k = 1, RD_KADD
@@ -619,7 +633,9 @@ contains
     enddo
     enddo
 
-    do ihydro = 1, MP_QA
+!OCL SERIAL
+    do ihydro = 1, N_HYD
+!OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
     do RD_k = RD_KADD+1, RD_KMAX
@@ -633,30 +649,31 @@ contains
     enddo
     enddo
 
-    do iaero = 1, AE_QA
-       if ( I_AE2ALL(iaero) > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
-          do RD_k = RD_KADD+1, RD_KMAX
-             k = KS + RD_KMAX - RD_k ! reverse axis
+!OCL SERIAL
+    do iaero = 1, N_AE
 
-             aerosol_conc_merge(RD_k,i,j,MP_QA+iaero) = max( QTRC(k,i,j,I_AE2ALL(iaero)), 0.0_RP ) &
-                                                      / AE_DENS(iaero) * RHO_std / PPM ! [PPM to standard air]
-             aerosol_radi_merge(RD_k,i,j,MP_QA+iaero) = AE_Re(k,i,j,iaero)
-          enddo
-          enddo
-          enddo
-       else
-!OCL XFILL
-          do j = JS, JE
-          do i = IS, IE
-          do RD_k = RD_KADD+1, RD_KMAX
-             aerosol_conc_merge(RD_k,i,j,MP_QA+iaero) = RD_aerosol_conc(RD_k,MP_QA+iaero)
-             aerosol_radi_merge(RD_k,i,j,MP_QA+iaero) = RD_aerosol_radi(RD_k,MP_QA+iaero)
-          enddo
-          enddo
-          enddo
-       endif
+!!$       do j = JS, JE
+!!$       do i = IS, IE
+!!$       do RD_k = RD_KADD+1, RD_KMAX
+!!$          k = KS + RD_KMAX - RD_k ! reverse axis
+!!$
+!!$          aerosol_conc_merge(RD_k,i,j,N_HYD+iaero) = max( AE_Qe(k,i,j,iaero), 0.0_RP ) &
+!!$                                                   / AE_DENS(iaero) * RHO_std / PPM ! [PPM to standard air]
+!!$          aerosol_radi_merge(RD_k,i,j,N_HYD+iaero) = AE_Re(k,i,j,iaero)
+!!$       enddo
+!!$       enddo
+!!$       enddo
+
+!OCL PARALLEL
+       do j = JS, JE
+       do i = IS, IE
+       do RD_k = RD_KADD+1, RD_KMAX
+          aerosol_conc_merge(RD_k,i,j,N_HYD+iaero) = RD_aerosol_conc(RD_k,N_HYD+iaero)
+          aerosol_radi_merge(RD_k,i,j,N_HYD+iaero) = RD_aerosol_radi(RD_k,N_HYD+iaero)
+       enddo
+       enddo
+       enddo
+
     enddo
 
     call PROF_rapend  ('RD_Profile', 3)
@@ -694,7 +711,9 @@ contains
     call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
 
     ! return to grid coordinate of model domain
+!OCL SERIAL
     do ic = 1, 2
+!OCL PARALLEL
     do j  = JS, JE
     do i  = IS, IE
     do RD_k = RD_KADD+1, RD_KMAX+1
@@ -710,7 +729,9 @@ contains
     enddo
 
 !OCL XFILL
+!OCL SERIAL
     do ic = 1, 2
+!OCL PARALLEL
     do j  = JS, JE
     do i  = IS, IE
        flux_rad_top(i,j,I_LW,I_up,ic) = flux_rad_merge(1,i,j,I_LW,I_up,ic)
@@ -876,8 +897,9 @@ contains
     allocate( sfc     (MSTRN_nsfc,   MSTRN_nband) )
     allocate( rayleigh(              MSTRN_nband) )
 
-    allocate( qmol    (                             MSTRN_nmoment,MSTRN_nband) )
-    allocate( q       (MSTRN_nradius+1,MSTRN_nptype,MSTRN_nmoment,MSTRN_nband) )
+    allocate( qmol    (                                MSTRN_nmoment,MSTRN_nband) )
+    allocate( q       (-1:MSTRN_nradius+1,MSTRN_nptype,MSTRN_nmoment,MSTRN_nband) )
+    q(-1:0           ,:,:,:) = 0.D0 ! dummy for NaN
     q(MSTRN_nradius+1,:,:,:) = 0.D0 ! dummy for extrapolation
 
     open( fid,                                     &
@@ -1224,11 +1246,13 @@ contains
     !$acc end kernels
 
     !---< interpolation of mode radius & hygroscopic parameter (R-fitting) >---
+!OCL SERIAL
     do iaero = 1, naero
        iptype = aero2ptype(iaero)
 
        !$acc kernels pcopy(indexR, factR) pcopyin(aero2ptype, aerosol_radi, radmode)
        !$acc loop gang
+!OCL PARALLEL
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -1263,10 +1287,12 @@ contains
                    exit
                 endif
              enddo
-             if ( indexR(k,i,j,iaero) == -1 ) then
-                write(*,*) 'xxx invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
-                call PRC_MPIstop
-             end if
+             ! indexR == -1 if some variables have NaN value.
+!             write operation prevents optimization (auto parallelization)
+!             if ( indexR(k,i,j,iaero) == -1 ) then
+!                write(*,*) 'xxx invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
+!                call PRC_MPIstop
+!             end if
           endif
        enddo
        enddo
@@ -1288,9 +1314,11 @@ contains
 
        !---< interpolation of gas parameters (P-T fitting) >---
 !OCL XFILL
+!OCL SERIAL
        do ich = 1, chmax
           !$acc kernels pcopy(tauGAS) async(0)
           !$acc loop gang
+!OCL PARALLEL
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1304,12 +1332,14 @@ contains
        enddo
 
        !--- Gas line absorption
+!OCL SERIAL
        do igas = 1, ngasabs(iw)
           gasno = igasabs(igas,iw)
 
           !$acc kernels pcopy(tauGAS) &
           !$acc& pcopyin(indexP, AKD, factP, factT32, factT21, gas, dz_std, ngasabs, igasabs) async(0)
           !$acc loop gang
+!OCL PARALLEL
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1481,9 +1511,11 @@ contains
           !$acc end kernels
        enddo
 
+!OCL SERIAL
        do icloud = 1, MSTRN_ncloud
           !$acc kernels pcopy(tauPR, omgPR, g) pcopyin(optparam) async(0)
           !$acc loop gang
+!OCL PARALLEL
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1510,9 +1542,11 @@ contains
        ! [NOTE] mstrn has look-up table for albedo.
        !        Original scheme calculates albedo by using land-use index (and surface wetness).
        !        In the atmospheric model, albedo is calculated by surface model.
+!OCL SERIAL
        do icloud = 1, MSTRN_ncloud
 !           !$acc kernels pcopy(tau_column) pcopyin(tauPR) async(0)
 !           !$acc loop gang
+!!OCL PARALLEL
 !           do j = JS, JE
 !           !$acc loop gang private(valsum)
 !           do i = IS, IE
@@ -1533,6 +1567,7 @@ contains
 !          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
           !$acc kernels pcopy(albedo_sfc) pcopyin(albedo_land) async(0)
           !$acc loop gang vector(4)
+!OCL PARALLEL
           do j = JS, JE
           !$acc loop gang vector(32)
           do i = IS, IE
@@ -1549,9 +1584,11 @@ contains
        do ich = 1, chmax
 
           !--- total tau & omega
+!OCL SERIAL
           do icloud = 1, 2
              !$acc kernels pcopy(tau, omg) pcopyin(tauGAS, tauPR, omgPR) async(0)
              !$acc loop gang
+!OCL PARALLEL
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1576,9 +1613,11 @@ contains
           if ( irgn == I_SW ) then ! solar
 
 !OCL XFILL
+!OCL SERIAL
              do icloud = 1, 2
                 !$acc kernels pcopy(b) async(0)
                 !$acc loop gang
+!OCL PARALLEL
                 do j = JS, JE
                 !$acc loop gang vector(8)
                 do i = IS, IE
@@ -1648,9 +1687,11 @@ contains
              enddo
              !$acc end kernels
 
+!OCL SERIAL
              do icloud = 1, 2
                 !$acc kernels pcopy(b) pcopyin(tau, bbarh, bbar) async(0)
                 !$acc loop gang
+!OCL PARALLEL
                 do j = JS, JE
                 !$acc loop gang vector(8)
                 do i = IS, IE
@@ -1730,9 +1771,11 @@ contains
                                     flux_direct(:,:,:,:)    ) ! [OUT]
           call PROF_rapend  ('RD_MSTRN_twst', 3)
 
+!OCL SERIAL
           do icloud = 1, 2
              !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
              !$acc loop gang
+!OCL PARALLEL
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1897,14 +1940,9 @@ contains
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
 !OCL NORECURRENCE(Tdir0,R0,T0,Em_LW,Ep_LW,Em_SW,Ep_SW)
-       !do j = JS, JE
-       !do i = IS, IE
-       !do k = 1, rd_kmax
-       !$acc loop independent gang vector(128)
-       do kij = 1, rd_kmax*IMAX*JMAX
-          k = 1  + mod(kij-1, rd_kmax)
-          i = IS + mod((kij-1)/rd_kmax, IMAX)
-          j = JS + (kij-1)/(rd_kmax*IMAX)
+       do j = JS, JE
+       do i = IS, IE
+       do k = 1, rd_kmax
 
           !---< two-stream truncation >---
           tau_new = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) ) * tau(k,i,j,icloud)
@@ -1994,10 +2032,9 @@ contains
                               + ( 1.0_RP-sw ) * Wmns_irgn * Spls * tau_new * sqrt( Tdir0(k,i,j,icloud) )
 
        enddo
+       enddo
+       enddo
        !$acc end kernels
-       !enddo
-       !enddo
-       !enddo
     enddo ! cloud loop
 
     !---< consider partial cloud layer: semi-random over-wrapping >---
@@ -2008,7 +2045,13 @@ contains
        if ( icloud == 1 ) then
           cf(:,:,:) = 0.0_RP
        else
-          cf(:,:,:) = cldfrac(:,:,:)
+          do j = JS, JE
+          do i = IS, IE
+          do k = 1, rd_kmax
+             cf(k,i,j) = cldfrac(k,i,j)
+          enddo
+          enddo
+          enddo
        endif
 
        !$acc loop gang

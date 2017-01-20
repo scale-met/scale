@@ -82,11 +82,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** FORCING_PARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist FORCING_PARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist FORCING_PARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist FORCING_PARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=FORCING_PARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=FORCING_PARAM)
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Artificial forcing type: ', trim(AF_TYPE)
     select case(AF_TYPE)
@@ -97,7 +96,7 @@ contains
     case('DCMIP')
        call AF_dcmip_init
     case default
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx unsupported forcing type! STOP.'
+       write(*,*) 'xxx unsupported forcing type! STOP.'
        call PRC_MPIstop
     end select
 

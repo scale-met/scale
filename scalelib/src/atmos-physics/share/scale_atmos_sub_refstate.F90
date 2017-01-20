@@ -62,9 +62,10 @@ module scale_atmos_refstate
   !++ Private parameters & variables
   !
   character(len=H_LONG),  private :: ATMOS_REFSTATE_IN_BASENAME  = ''                   !< basename of the input  file
+  logical,                private :: ATMOS_REFSTATE_IN_CHECK_COORDINATES = .true.
   character(len=H_LONG),  private :: ATMOS_REFSTATE_OUT_BASENAME = ''                   !< basename of the output file
   character(len=H_MID) ,  private :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE-RM RefState'  !< title    of the output file
-  character(len=H_MID) ,  private :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'            !< REAL4 or REAL8
+  character(len=H_SHORT), private :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'            !< REAL4 or REAL8
 
   character(len=H_SHORT), private :: ATMOS_REFSTATE_TYPE         = 'UNIFORM'            !< profile type
   real(RP),               private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP             !< surface temperature           [K]
@@ -236,10 +237,15 @@ contains
   !> Read reference state profile
   subroutine ATMOS_REFSTATE_read
     use scale_fileio, only: &
-       FILEIO_read
+       FILEIO_open, &
+       FILEIO_check_coordinates, &
+       FILEIO_read, &
+       FILEIO_close
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
+    integer :: fid
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -247,32 +253,28 @@ contains
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
+       call FILEIO_open( fid, ATMOS_REFSTATE_IN_BASENAME )
+
+       if ( ATMOS_REFSTATE_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( fid, atmos=.true. )
+       end if
+
        ! 1D
-       call FILEIO_read( ATMOS_REFSTATE1D_pres(:),                           & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE1D_temp(:),                           & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'TEMP_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE1D_dens(:),                           & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE1D_pott(:),                           & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE1D_qv(:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'QV_ref',   'Z', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE1D_pres(:), fid, 'PRES_ref', 'Z', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE1D_temp(:), fid, 'TEMP_ref', 'Z', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE1D_dens(:), fid, 'DENS_ref', 'Z', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE1D_pott(:), fid, 'POTT_ref', 'Z', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE1D_qv(:),   fid, 'QV_ref',   'Z', step=1 )
 
        ! 3D
-       call FILEIO_read( ATMOS_REFSTATE_pres(:,:,:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref3D', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_temp(:,:,:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'TEMP_ref3D', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_dens(:,:,:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref3D', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_pott(:,:,:),                             & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref3D', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_qv(:,:,:),                               & ! [OUT]
-                         ATMOS_REFSTATE_IN_BASENAME, 'QV_ref3D',   'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_pres(:,:,:), fid, 'PRES_ref3D', 'ZXY', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE_temp(:,:,:), fid, 'TEMP_ref3D', 'ZXY', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE_dens(:,:,:), fid, 'DENS_ref3D', 'ZXY', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE_pott(:,:,:), fid, 'POTT_ref3D', 'ZXY', step=1 )
+       call FILEIO_read( ATMOS_REFSTATE_qv(:,:,:),   fid, 'QV_ref3D',   'ZXY', step=1 )
 
     else
-       if( IO_L ) write(*,*) 'xxx refstate file is not specified.'
+       write(*,*) 'xxx [ATMOS_REFSTATE_read] refstate file is not specified.'
        call PRC_MPIstop
     endif
 
@@ -572,6 +574,8 @@ contains
        INTERP_vertical_xi2z
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
@@ -589,11 +593,14 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** [REFSTATE] update reference state'
 
-       call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
-                                 pres(:,:,:),  & ! [OUT]
-                                 DENS(:,:,:),  & ! [IN]
-                                 RHOT(:,:,:),  & ! [IN]
-                                 QTRC(:,:,:,:) ) ! [IN]
+       call THERMODYN_temp_pres( temp,       & ! [OUT]
+                                 pres,       & ! [OUT]
+                                 DENS,       & ! [IN]
+                                 RHOT,       & ! [IN]
+                                 QTRC,       & ! [IN]
+                                 TRACER_CV,  & ! [IN]
+                                 TRACER_CP,  & ! [IN]
+                                 TRACER_MASS ) ! [IN]
 
        do j = 1, JA
        do i = 1, IA
@@ -623,10 +630,14 @@ contains
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), work(:,:,:) )
 
-       call INTERP_vertical_xi2z( QTRC(:,:,:,I_QV), & ! [IN]
-                                  work(:,:,:)       ) ! [OUT]
+       if ( I_QV > 0 ) then
+          call INTERP_vertical_xi2z( QTRC(:,:,:,I_QV), & ! [IN]
+                                     work(:,:,:)       ) ! [OUT]
 
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv  (:), work(:,:,:) )
+          call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv(:), work(:,:,:) )
+       else
+          ATMOS_REFSTATE1D_qv(:) = 0.0_RP
+       endif
 
        do k = KE-1, KS, -1 ! fill undefined value
           if( ATMOS_REFSTATE1D_dens(k) <= 0.0_RP ) ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)
@@ -636,7 +647,7 @@ contains
           if( ATMOS_REFSTATE1D_qv  (k) <= 0.0_RP ) ATMOS_REFSTATE1D_qv  (k) = ATMOS_REFSTATE1D_qv  (k+1)
        enddo
        call smoothing( ATMOS_REFSTATE1D_pott(:) )
-       call smoothing( ATMOS_REFSTATE1D_qv  (:) )
+       if ( I_QV > 0 ) call smoothing( ATMOS_REFSTATE1D_qv(:) )
 
        call ATMOS_REFSTATE_calc3D
 
@@ -929,8 +940,7 @@ contains
        enddo
 
        if ( iter == iter_max ) then
-          if (IO_L) write(IO_FID_LOG,*) "*** [refstate smoothing] iteration not converged!", phi
-!          call PRC_MPIstop
+          if( IO_L ) write(IO_FID_LOG,*) "*** [scale_atmos_refstate/smoothing] iteration not converged!", phi
        endif
     enddo
 

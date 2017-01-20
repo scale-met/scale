@@ -86,11 +86,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** EMBUDGETPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=EMBUDGETPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=EMBUDGETPARAM)
 
     if(.not.MNT_ON) return
 
@@ -142,9 +141,10 @@ contains
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
-       CVdry  => CONST_CVdry,  &
-       LHV    => CONST_LHV,    &
-       LHF    => CONST_LHF
+       CVdry  => CONST_CVdry
+    use scale_atmos_hydrometeor, only: &
+       LHV, &
+       LHF
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &

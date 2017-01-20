@@ -53,13 +53,9 @@ endif
 OBJS =	\
 	fio.o                \
 	fiof.o               \
-	hio.o                \
-	hiof.o               \
-	poh5.o                \
 	mod_io_param.o       \
 	mod_adm.o            \
 	mod_fio.o            \
-	mod_hio.o            \
 	mod_comm.o           \
 	mod_ideal_topo.o     \
 	mod_grd.o            \
@@ -175,13 +171,27 @@ allclean: distclean
 	$(MAKE) -C $(GTOOLDIR)        allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
-	rm -f $(BINDIR)/$(INITNAME)
-	rm -f $(BINDIR)/$(PPNAME)
+	rm -f $(BINDIR)/$(PPNAME1)
+	rm -f $(BINDIR)/$(PPNAME2)
+	rm -f $(BINDIR)/$(PPNAME3)
+	rm -f $(BINDIR)/$(PPNAME4)
+	rm -f $(BINDIR)/$(PPNAME5)
+	rm -f $(BINDIR)/$(PPNAME6)
+	rm -f $(BINDIR)/$(PPNAME7)
+	rm -f $(BINDIR)/$(PPNAME8)
+	rm -f $(BINDIR)/$(PPNAME9)
 
 distclean: clean
 	rm -f $(BUILD_DIR)/$(BINNAME)
-	rm -f $(BUILD_DIR)/$(INITNAME)
-	rm -f $(BUILD_DIR)/$(PPNAME)
+	rm -f $(BUILD_DIR)/$(PPNAME1)
+	rm -f $(BUILD_DIR)/$(PPNAME2)
+	rm -f $(BUILD_DIR)/$(PPNAME3)
+	rm -f $(BUILD_DIR)/$(PPNAME4)
+	rm -f $(BUILD_DIR)/$(PPNAME5)
+	rm -f $(BUILD_DIR)/$(PPNAME6)
+	rm -f $(BUILD_DIR)/$(PPNAME7)
+	rm -f $(BUILD_DIR)/$(PPNAME8)
+	rm -f $(BUILD_DIR)/$(PPNAME9)
 
 clean:
 	rm -f $(BUILD_DIR)/*.*
@@ -203,7 +213,7 @@ $(BUILD_DIR)/mod_oprt.o :
 	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
-	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<
 
 .PHONY : clean distclean allclean dcutils gtool scalelib depend dependency
 

@@ -125,11 +125,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** RESTARTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=RESTARTPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=RESTARTPARAM)
 
     restart_input_basename  = input_basename
     restart_output_basename = output_basename
@@ -142,7 +141,7 @@ contains
     elseif( input_io_mode == 'IDEAL'        ) then
     elseif( input_io_mode == 'IDEAL_TRACER' ) then
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid input_io_mode. STOP.'
+       write(*,*) 'xxx [prgvar] Invalid input_io_mode. STOP.'
        call PRC_MPIstop
     endif
 
@@ -150,7 +149,7 @@ contains
     if    ( output_io_mode == 'POH5'        ) then
     elseif( output_io_mode == 'ADVANCED'    ) then
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid output_io_mode. STOP'
+       write(*,*) 'xxx [prgvar] Invalid output_io_mode. STOP'
        call PRC_MPIstop
     endif
 
@@ -769,8 +768,6 @@ contains
        ADM_kmin
     use mod_fio, only: &
        FIO_input
-    use mod_hio, only: &
-       HIO_input
     use mod_comm, only: &
        COMM_var
     use mod_gm_statistics, only: &
@@ -800,20 +797,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** read restart/initial data'
 
-    if ( input_io_mode == 'POH5' ) then
-
-       do nq = 1, DIAG_vmax0
-          call HIO_input( DIAG_var(:,:,:,nq),basename,DIAG_name(nq), &
-                          layername,1,ADM_kall,1                     )
-       enddo
-
-       do nq = 1, TRC_vmax_input
-          call HIO_input( DIAG_var(:,:,:,DIAG_vmax0+nq),basename,TRC_name(nq), &
-                          layername,1,ADM_kall,1,                              &
-                          allow_missingq=allow_missingq                        )
-       enddo
-
-    elseif( input_io_mode == 'ADVANCED' ) then
+    if ( input_io_mode == 'ADVANCED' ) then
 
        do nq = 1, DIAG_vmax0
           call FIO_input( DIAG_var(:,:,:,nq),basename,DIAG_name(nq), &
@@ -915,8 +899,6 @@ contains
        IO_REAL8
     use mod_fio, only: &
        FIO_output
-    use mod_hio, only: &
-       HIO_output
     use mod_time, only : &
        TIME_CTIME
     use mod_gm_statistics, only: &
@@ -993,19 +975,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
     enddo
 
-    if ( output_io_mode == 'POH5' ) then
-
-       do nq = 1, DIAG_vmax0
-          call HIO_output( DIAG_var(:,:,:,nq), basename, desc, '', DIAG_name(nq), DLABEL(nq), '', DUNIT(nq), & ! [IN]
-                           IO_REAL8, layername, 1, ADM_kall, 1, TIME_CTIME, TIME_CTIME                       ) ! [IN]
-       enddo
-
-       do nq = 1, TRC_vmax
-          call HIO_output( DIAG_var(:,:,:,DIAG_vmax0+nq), basename, desc, '', TRC_name(nq), WLABEL(nq), '', WUNIT, & ! [IN]
-                           IO_REAL8, layername, 1, ADM_kall, 1, TIME_CTIME, TIME_CTIME                             ) ! [IN]
-       enddo
-
-    elseif( output_io_mode == 'ADVANCED' ) then
+    if ( output_io_mode == 'ADVANCED' ) then
 
        do nq = 1, DIAG_vmax0
           call FIO_output( DIAG_var(:,:,:,nq), basename, desc, '', DIAG_name(nq), DLABEL(nq), '', DUNIT(nq), & ! [IN]

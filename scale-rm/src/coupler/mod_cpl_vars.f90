@@ -168,11 +168,50 @@ contains
   subroutine CPL_vars_setup
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean, &
+       LANDUSE_fact_land,  &
+       LANDUSE_fact_urban
+    use mod_ocean_admin, only: &
+       OCEAN_sw
+    use mod_land_admin, only: &
+       LAND_sw
+    use mod_urban_admin, only: &
+       URBAN_sw
     implicit none
+
+    real(RP) :: checkfact
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[CPL] / Origin[SCALE-RM]'
+
+    ! Check consistency of OCEAN_sw and LANDUSE_fact_ocean
+    checkfact = maxval( LANDUSE_fact_ocean(:,:) )
+    if ( .NOT. OCEAN_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       write(*,*)                     'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check consistency of LAND_sw and LANDUSE_fact_land
+    checkfact = maxval( LANDUSE_fact_land(:,:) )
+    if ( .NOT. LAND_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
+       write(*,*)                     'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
+    ! Check consistency of URBAN_sw and LANDUSE_fact_urban
+    checkfact = maxval( LANDUSE_fact_urban(:,:) )
+    if ( .NOT. URBAN_sw .AND. checkfact > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
+       write(*,*)                     'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
+       call PRC_MPIstop
+    endif
+
 
     allocate( OCN_SFC_TEMP  (IA,JA)   )
     allocate( OCN_SFC_albedo(IA,JA,2) )
@@ -295,7 +334,7 @@ contains
     OCN_ATM_QV         (:,:)     = UNDEF
     OCN_ATM_PBL        (:,:)     = UNDEF
     OCN_ATM_SFC_PRES   (:,:)     = UNDEF
-    OCN_ATM_SFLX_rad_dn(:,:,2,2) = UNDEF
+    OCN_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     OCN_ATM_cosSZA     (:,:)     = UNDEF
     OCN_ATM_SFLX_rain  (:,:)     = UNDEF
     OCN_ATM_SFLX_snow  (:,:)     = UNDEF
@@ -322,7 +361,7 @@ contains
     LND_ATM_QV         (:,:)     = UNDEF
     LND_ATM_PBL        (:,:)     = UNDEF
     LND_ATM_SFC_PRES   (:,:)     = UNDEF
-    LND_ATM_SFLX_rad_dn(:,:,2,2) = UNDEF
+    LND_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     LND_ATM_cosSZA     (:,:)     = UNDEF
     LND_ATM_SFLX_rain  (:,:)     = UNDEF
     LND_ATM_SFLX_snow  (:,:)     = UNDEF
@@ -349,7 +388,7 @@ contains
     URB_ATM_QV         (:,:)     = UNDEF
     URB_ATM_PBL        (:,:)     = UNDEF
     URB_ATM_SFC_PRES   (:,:)     = UNDEF
-    URB_ATM_SFLX_rad_dn(:,:,2,2) = UNDEF
+    URB_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     URB_ATM_cosSZA     (:,:)     = UNDEF
     URB_ATM_SFLX_rain  (:,:)     = UNDEF
     URB_ATM_SFLX_snow  (:,:)     = UNDEF
@@ -381,6 +420,8 @@ contains
        SFLX_rain,   &
        SFLX_snow,   &
        countup      )
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     ! arguments
@@ -413,6 +454,7 @@ contains
        OCN_ATM_U          (i,j)     = OCN_ATM_U          (i,j)     * CNT_putATM_OCN + U          (i,j)
        OCN_ATM_V          (i,j)     = OCN_ATM_V          (i,j)     * CNT_putATM_OCN + V          (i,j)
        OCN_ATM_DENS       (i,j)     = OCN_ATM_DENS       (i,j)     * CNT_putATM_OCN + DENS       (i,j)
+       if ( I_QV > 0 ) &
        OCN_ATM_QV         (i,j)     = OCN_ATM_QV         (i,j)     * CNT_putATM_OCN + QTRC       (i,j,I_QV)
        OCN_ATM_PBL        (i,j)     = OCN_ATM_PBL        (i,j)     * CNT_putATM_OCN + PBL        (i,j)
        OCN_ATM_SFC_PRES   (i,j)     = OCN_ATM_SFC_PRES   (i,j)     * CNT_putATM_OCN + SFC_PRES   (i,j)
@@ -427,6 +469,7 @@ contains
        LND_ATM_U          (i,j)     = LND_ATM_U          (i,j)     * CNT_putATM_LND + U          (i,j)
        LND_ATM_V          (i,j)     = LND_ATM_V          (i,j)     * CNT_putATM_LND + V          (i,j)
        LND_ATM_DENS       (i,j)     = LND_ATM_DENS       (i,j)     * CNT_putATM_LND + DENS       (i,j)
+       if ( I_QV > 0 ) &
        LND_ATM_QV         (i,j)     = LND_ATM_QV         (i,j)     * CNT_putATM_LND + QTRC       (i,j,I_QV)
        LND_ATM_PBL        (i,j)     = LND_ATM_PBL        (i,j)     * CNT_putATM_LND + PBL        (i,j)
        LND_ATM_SFC_PRES   (i,j)     = LND_ATM_SFC_PRES   (i,j)     * CNT_putATM_LND + SFC_PRES   (i,j)
@@ -441,6 +484,7 @@ contains
        URB_ATM_U          (i,j)     = URB_ATM_U          (i,j)     * CNT_putATM_URB + U          (i,j)
        URB_ATM_V          (i,j)     = URB_ATM_V          (i,j)     * CNT_putATM_URB + V          (i,j)
        URB_ATM_DENS       (i,j)     = URB_ATM_DENS       (i,j)     * CNT_putATM_URB + DENS       (i,j)
+       if ( I_QV > 0 ) &
        URB_ATM_QV         (i,j)     = URB_ATM_QV         (i,j)     * CNT_putATM_URB + QTRC       (i,j,I_QV)
        URB_ATM_PBL        (i,j)     = URB_ATM_PBL        (i,j)     * CNT_putATM_URB + PBL        (i,j)
        URB_ATM_SFC_PRES   (i,j)     = URB_ATM_SFC_PRES   (i,j)     * CNT_putATM_URB + SFC_PRES   (i,j)
@@ -813,6 +857,8 @@ contains
        V10,        &
        T2,         &
        Q2          )
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use scale_landuse, only: &
        fact_ocean => LANDUSE_fact_ocean, &
        fact_land  => LANDUSE_fact_land,  &
@@ -893,9 +939,11 @@ contains
                             + fact_land (i,j) * LND_SFLX_GH   (i,j) &
                             + fact_urban(i,j) * URB_SFLX_GH   (i,j)
 
+       if ( I_QV > 0 ) then
        SFLX_QTRC (i,j,I_QV) = fact_ocean(i,j) * OCN_SFLX_evap (i,j) &
                             + fact_land (i,j) * LND_SFLX_evap (i,j) &
                             + fact_urban(i,j) * URB_SFLX_evap (i,j)
+       end if
 
        U10       (i,j)      = fact_ocean(i,j) * OCN_U10       (i,j) &
                             + fact_land (i,j) * LND_U10       (i,j) &

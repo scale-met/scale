@@ -34,10 +34,10 @@ module gtool_file_h
   !
   !++ Public parameters & variables
   !
-  !--- character length 
-  integer, public, parameter :: File_HSHORT =  16
-  integer, public, parameter :: File_HMID   =  64
-  integer, public, parameter :: File_HLONG  = 256
+  !--- character length
+  integer, public, parameter :: File_HSHORT =   32
+  integer, public, parameter :: File_HMID   =  128
+  integer, public, parameter :: File_HLONG  = 1024
 
   !--- data type 
   integer, public, parameter :: File_REAL4    = 0

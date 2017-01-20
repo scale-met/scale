@@ -21,8 +21,8 @@ module scale_atmos_phy_mp_sdm
   use scale_stdio
   use scale_prof
   use scale_grid_index
-
-  use scale_tracer_sdm
+  use scale_atmos_hydrometeor, only: &
+     N_HYD
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,6 +30,7 @@ module scale_atmos_phy_mp_sdm
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_MP_sdm_config
   public :: ATMOS_PHY_MP_sdm_setup
   public :: ATMOS_PHY_MP_sdm
 
@@ -41,7 +42,22 @@ module scale_atmos_phy_mp_sdm
   !
   !++ Public parameters & variables
   !
-  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  integer, parameter :: QA_MP  = 3
+
+  character(len=H_SHORT), public, target :: ATMOS_PHY_MP_sdm_NAME(QA_MP)
+  character(len=H_MID),   public, target :: ATMOS_PHY_MP_sdm_DESC(QA_MP)
+  character(len=H_SHORT), public, target :: ATMOS_PHY_MP_sdm_UNIT(QA_MP)
+
+  real(RP), public, target :: ATMOS_PHY_MP_sdm_DENS(N_HYD) ! hydrometeor density [kg/m3]=[g/L]
+
+  data ATMOS_PHY_MP_sdm_NAME / 'QV', 'QC', 'QR' /
+
+  data ATMOS_PHY_MP_sdm_DESC / &
+       'Ratio of Water Vapor mass to total mass (Specific humidity)',   &
+       'cloud water mixing ratio', &
+       'rain water mixing ratio'  /
+
+  data ATMOS_PHY_MP_sdm_UNIT / 'kg/kg', 'kg/kg', 'kg/kg' /
 
   !-----------------------------------------------------------------------------
   !
@@ -51,22 +67,52 @@ module scale_atmos_phy_mp_sdm
   !
   !++ Private parameters & variables
   !
+  integer, private, parameter :: I_mp_QC =  1
+  integer, private, parameter :: I_mp_QR =  2
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup Cloud Microphysics
+  !> Confif
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_sdm_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_sdm_config( &
+       MP_TYPE, &
+       QA, QS   )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-    character(len=H_SHORT), intent(in) :: MP_TYPE
+
+    character(len=*), intent(in)  :: MP_TYPE
+    integer, intent(out) :: QA
+    integer, intent(out) :: QS
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** SDM not supported.'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Please contact SCALE developers'
+    write(*,*) '*** SDM not supported.'
+    write(*,*) '*** Please contact SCALE developers'
     call PRC_MPIstop
+
+    ! call ATMOS_HYDROMETEOR_regist()
+    QA = 0
+    QS = 0
+
+    return
+  end subroutine ATMOS_PHY_MP_sdm_config
+
+  !-----------------------------------------------------------------------------
+  !> Setup Cloud Microphysics
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_MP_sdm_setup
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+    !---------------------------------------------------------------------------
+
+    write(*,*) '*** SDM not supported.'
+    write(*,*) '*** Please contact SCALE developers'
+    call PRC_MPIstop
+
+    ATMOS_PHY_MP_sdm_DENS(:) = UNDEF
 
     return
   end subroutine ATMOS_PHY_MP_sdm_setup
@@ -86,8 +132,10 @@ contains
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_tracer, only: &
-       QAD => QA
+       QA
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -97,17 +145,20 @@ contains
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)    :: CCN (KA,IA,JA)
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !---- evaporated cloud number concentration [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** SDM not supported.'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Please contact SCALE developers'
+    write(*,*) '*** SDM not supported.'
+    write(*,*) '*** Please contact SCALE developers'
     call PRC_MPIstop
+
+    EVAPORATE = UNDEF
+    SFLX_rain = UNDEF
+    SFLX_snow = UNDEF
 
     return
   end subroutine ATMOS_PHY_MP_sdm
@@ -119,11 +170,11 @@ contains
        QTRC     )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA
+       QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
     !---------------------------------------------------------------------------
 
     cldfrac(:,:,:) = 0.0_RP ! dummy
@@ -140,14 +191,15 @@ contains
        TEMP0  )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! Density [kg/m3]
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! Temperatuer [K]
+    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! Density [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! Temperatuer [K]
     !---------------------------------------------------------------------------
 
     Re(:,:,:,:) = 8.E-6_RP ! dummy
@@ -157,28 +209,26 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_sdm_Mixingratio( &
-       Qe,    &
-       QTRC0  )
+       Qe,   &
+       QTRC0 )
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
 
     integer  :: ihydro
     !---------------------------------------------------------------------------
 
-    do ihydro = 1, MP_QA
-       Qe(:,:,:,ihydro) = 8.E-6_RP ! dummy
-    enddo
+    Qe(:,:,:,:) = 8.E-6_RP ! dummy
 
     return
-
   end subroutine ATMOS_PHY_MP_sdm_Mixingratio
 
 end module scale_atmos_phy_mp_sdm

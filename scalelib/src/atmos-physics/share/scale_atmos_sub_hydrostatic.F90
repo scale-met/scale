@@ -24,6 +24,8 @@ module scale_atmos_hydrostatic
      Rvap    => CONST_Rvap,    &
      CVdry   => CONST_CVdry,   &
      CVvap   => CONST_CVvap,   &
+     CPdry   => CONST_CPdry,   &
+     CPvap   => CONST_CPvap,   &
      CL      => CONST_CL,      &
      LAPS    => CONST_LAPS,    &
      LAPSdry => CONST_LAPSdry, &
@@ -110,9 +112,10 @@ module scale_atmos_hydrostatic
   logical,  private              :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
   integer,  private              :: HYDROSTATIC_buildrho_real_kref = 1
 
-
   real(RP), private :: CV_qv
+  real(RP), private :: CP_qv
   real(RP), private :: CV_qc
+  real(RP), private :: CP_qc
 
   !-----------------------------------------------------------------------------
 contains
@@ -123,6 +126,12 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_EPS
+    use scale_tracer, only: &
+       TRACER_CV, &
+       TRACER_CP
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC
     implicit none
 
     NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
@@ -152,13 +161,18 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
     if( IO_L ) write(IO_FID_LOG,*) '*** buildrho conversion criteria : ', criteria
 
-    if ( THERMODYN_TYPE == 'EXACT' ) then
-       CV_qv = CVvap
-       CV_qc = CL
-    elseif( THERMODYN_TYPE == 'SIMPLE' ) then
-       CV_qv = CVdry
-       CV_qc = CVdry
-    endif
+    if ( I_QV > 0 ) then
+       CV_qv = TRACER_CV(I_QV)
+       CP_qv = TRACER_CP(I_QV)
+    else
+       CV_qv = 0.0_RP
+       CP_qv = 0.0_RP
+    end if
+    if ( I_QC > 0 ) then
+       CV_qc = TRACER_CP(I_QC)
+    else
+       CV_qc = 0.0_RP
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_setup
@@ -201,6 +215,7 @@ contains
     real(RP) :: CPovCV_sfc
     real(RP) :: Rtot
     real(RP) :: CVtot
+    real(RP) :: CPtot
     real(RP) :: CPovCV
 
     real(RP) :: CVovCP_sfc, CPovR, CVovCP, RovCV
@@ -223,7 +238,10 @@ contains
     CVtot  = CVdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
            + CV_qv * qv(KS)                       &
            + CV_qc * qc(KS)
-    CPovCV = ( CVtot + Rtot ) / CVtot
+    CPtot  = CPdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
+           + CP_qv * qv(KS)                       &
+           + CV_qc * qc(KS)
+    CPovCV = CPtot / CVtot
 
     ! density at surface
     CVovCP_sfc = 1.0_RP / CPovCV_sfc
@@ -233,7 +251,7 @@ contains
     ! make density at lowermost cell center
     if ( HYDROSTATIC_uselapserate ) then
 
-       CPovR  = ( CVtot + Rtot ) / Rtot
+       CPovR  = CPtot / Rtot
        CVovCP = 1.0_RP / CPovCV
 
        temp(KS) = pott_sfc - LAPSdry * GRID_CZ(KS) ! use dry lapse rate
@@ -331,9 +349,11 @@ contains
 
     real(RP) :: Rtot_sfc  (IA,JA)
     real(RP) :: CVtot_sfc (IA,JA)
+    real(RP) :: CPtot_sfc (IA,JA)
     real(RP) :: CPovCV_sfc(IA,JA)
     real(RP) :: Rtot      (IA,JA)
     real(RP) :: CVtot     (IA,JA)
+    real(RP) :: CPtot     (IA,JA)
     real(RP) :: CPovCV    (IA,JA)
 
     real(RP) :: CVovCP_sfc, CPovR, CVovCP
@@ -369,7 +389,10 @@ contains
        CVtot_sfc (i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                        + CV_qv * qv_sfc(1,i,j)                              &
                        + CV_qc * qc_sfc(1,i,j)
-       CPovCV_sfc(i,j) = ( CVtot_sfc(i,j) + Rtot_sfc(i,j) ) / CVtot_sfc(i,j)
+       CPtot_sfc (i,j) = CPdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
+                       + CP_qv * qv_sfc(1,i,j)                              &
+                       + CV_qc * qc_sfc(1,i,j)
+       CPovCV_sfc(i,j) = CPtot_sfc(i,j) / CVtot_sfc(i,j)
     enddo
     enddo
 
@@ -380,7 +403,10 @@ contains
        CVtot (i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                    + CV_qv * qv(KS,i,j)                           &
                    + CV_qc * qc(KS,i,j)
-       CPovCV(i,j) = ( CVtot(i,j) + Rtot(i,j) ) / CVtot(i,j)
+       CPtot (i,j) = CPdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
+                   + CP_qv * qv(KS,i,j)                           &
+                   + CV_qc * qc(KS,i,j)
+       CPovCV(i,j) = CPtot(i,j) / CVtot(i,j)
     enddo
     enddo
 
@@ -398,7 +424,7 @@ contains
 
        do j = JSB, JEB
        do i = ISB, IEB
-          CPovR  = ( CVtot(i,j) + Rtot(i,j) ) / Rtot(i,j)
+          CPovR  = CPtot(i,j) / Rtot(i,j)
           CVovCP = 1.0_RP / CPovCV(i,j)
 
           temp(KS,i,j) = pott_sfc(1,i,j) - LAPSdry * ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ) ! use dry lapse rate
@@ -510,6 +536,7 @@ contains
 
     real(RP) :: Rtot
     real(RP) :: CVtot
+    real(RP) :: CPtot
     real(RP) :: CVovCP
 
     integer  :: kref
@@ -546,7 +573,10 @@ contains
        CVtot = CVdry * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
              + CV_qv * qv(kref,i,j)                           &
              + CV_qc * qc(kref,i,j)
-       CVovCP = CVtot / ( CVtot + Rtot )
+       CPtot = CPdry * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
+             + CP_qv * qv(kref,i,j)                           &
+             + CP_qc * qc(kref,i,j)
+       CVovCP = CVtot / CPtot
        dens(kref,i,j) = P00 / ( Rtot * pott(kref,i,j) ) * ( pres(kref,i,j)/P00 )**CVovCP
     enddo
     enddo
@@ -623,6 +653,7 @@ contains
 
     real(RP) :: Rtot_L1  , Rtot_L2
     real(RP) :: CVtot_L1 , CVtot_L2
+    real(RP) :: CPtot_L1 , CPtot_L2
     real(RP) :: CPovCV_L1, CPovCV_L2
 
     real(RP) :: RovCV
@@ -636,14 +667,20 @@ contains
     CVtot_L1  = CVdry * ( 1.0_RP - qv_L1 - qc_L1 ) &
               + CV_qv * qv_L1                      &
               + CV_qc * qc_L1
-    CPovCV_L1 = ( CVtot_L1 + Rtot_L1 ) / CVtot_L1
+    CPtot_L1  = CPdry * ( 1.0_RP - qv_L1 - qc_L1 ) &
+              + CP_qv * qv_L1                      &
+              + CV_qc * qc_L1
+    CPovCV_L1 = CPtot_L1 / CVtot_L1
 
     Rtot_L2   = Rdry  * ( 1.0_RP - qv_L2 - qc_L2 ) &
               + Rvap  * qv_L2
     CVtot_L2  = CVdry * ( 1.0_RP - qv_L2 - qc_L2 ) &
               + CV_qv * qv_L2                      &
               + CV_qc * qc_L2
-    CPovCV_L2 = ( CVtot_L2 + Rtot_L2 ) / CVtot_L2
+    CPtot_L2  = CPdry * ( 1.0_RP - qv_L2 - qc_L2 ) &
+              + CP_qv * qv_L2                      &
+              + CP_qc * qc_L2
+    CPovCV_L2 = CPtot_L2 / CVtot_L2
 
     RovCV = Rtot_L2 / CVtot_L2
 
@@ -706,6 +743,7 @@ contains
 
     real(RP) :: Rtot  (KA)
     real(RP) :: CVtot (KA)
+    real(RP) :: CPtot (KA)
     real(RP) :: CPovCV(KA)
 
     real(RP) :: RovCV
@@ -722,7 +760,10 @@ contains
        CVtot (k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
                  + CV_qv * qv(k)                      &
                  + CV_qc * qc(k)
-       CPovCV(k) = ( CVtot(k) + Rtot(k) ) / CVtot(k)
+       CPtot (k) = CPdry * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + CP_qv * qv(k)                      &
+                 + CV_qc * qc(k)
+       CPovCV(k) = CPtot(k) / CVtot(k)
     enddo
 
     do k = KS+1, KE
@@ -809,6 +850,7 @@ contains
 
     real(RP) :: Rtot_L1  (IA,JA), Rtot_L2  (IA,JA)
     real(RP) :: CVtot_L1 (IA,JA), CVtot_L2 (IA,JA)
+    real(RP) :: CPtot_L1 (IA,JA), CPtot_L2 (IA,JA)
     real(RP) :: CPovCV_L1(IA,JA), CPovCV_L2(IA,JA)
 
     real(RP) :: RovCV
@@ -826,14 +868,20 @@ contains
        CVtot_L1 (i,j) = CVdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
                       + CV_qv * qv_L1(i,j)                           &
                       + CV_qc * qc_L1(i,j)
-       CPovCV_L1(i,j) = ( CVtot_L1(i,j) + Rtot_L1(i,j) ) / CVtot_L1(i,j)
+       CPtot_L1 (i,j) = CPdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
+                      + CP_qv * qv_L1(i,j)                           &
+                      + CV_qc * qc_L1(i,j)
+       CPovCV_L1(i,j) = CPtot_L1(i,j) / CVtot_L1(i,j)
 
        Rtot_L2  (i,j) = Rdry  * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
                       + Rvap  * qv_L2(i,j)
        CVtot_L2 (i,j) = CVdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
                       + CV_qv * qv_L2(i,j)                           &
                       + CV_qc * qc_L2(i,j)
-       CPovCV_L2(i,j) = ( CVtot_L2(i,j) + Rtot_L2(i,j) ) / CVtot_L2(i,j)
+       CPtot_L2 (i,j) = CPdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
+                      + CP_qv * qv_L2(i,j)                           &
+                      + CV_qc * qc_L2(i,j)
+       CPovCV_L2(i,j) = CPtot_L2(i,j) / CVtot_L2(i,j)
     enddo
     enddo
 
@@ -910,6 +958,7 @@ contains
 
     real(RP) :: Rtot  (KA,IA,JA)
     real(RP) :: CVtot (KA,IA,JA)
+    real(RP) :: CPtot (KA,IA,JA)
     real(RP) :: CPovCV(KA,IA,JA)
 
     real(RP) :: RovCV
@@ -935,7 +984,10 @@ contains
        CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + CV_qv * qv(k,i,j)                          &
                      + CV_qc * qc(k,i,j)
-       CPovCV(k,i,j) = ( CVtot(k,i,j) + Rtot(k,i,j) ) / CVtot(k,i,j)
+       CPtot (k,i,j) = CPdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+                     + CP_qv * qv(k,i,j)                          &
+                     + CV_qc * qc(k,i,j)
+       CPovCV(k,i,j) = CPtot(k,i,j) / CVtot(k,i,j)
     enddo
     enddo
     enddo
@@ -1025,6 +1077,7 @@ contains
 
     real(RP) :: Rtot_L1  (IA,JA), Rtot_L2  (IA,JA)
     real(RP) :: CVtot_L1 (IA,JA), CVtot_L2 (IA,JA)
+    real(RP) :: CPtot_L1 (IA,JA), CPtot_L2 (IA,JA)
     real(RP) :: CPovCV_L1(IA,JA), CPovCV_L2(IA,JA)
 
     real(RP) :: RovCV
@@ -1042,14 +1095,20 @@ contains
        CVtot_L1 (i,j) = CVdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
                       + CV_qv * qv_L1(i,j)                           &
                       + CV_qc * qc_L1(i,j)
-       CPovCV_L1(i,j) = ( CVtot_L1(i,j) + Rtot_L1(i,j) ) / CVtot_L1(i,j)
+       CPtot_L1 (i,j) = CPdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
+                      + CP_qv * qv_L1(i,j)                           &
+                      + CV_qc * qc_L1(i,j)
+       CPovCV_L1(i,j) = CPtot_L1(i,j) / CVtot_L1(i,j)
 
        Rtot_L2  (i,j) = Rdry  * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
                       + Rvap  * qv_L2(i,j)
        CVtot_L2 (i,j) = CVdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
                       + CV_qv * qv_L2(i,j)                           &
                       + CV_qc * qc_L2(i,j)
-       CPovCV_L2(i,j) = ( CVtot_L2(i,j) + Rtot_L2(i,j) ) / CVtot_L2(i,j)
+       CPtot_L2 (i,j) = CPdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
+                      + CP_qv * qv_L2(i,j)                           &
+                      + CV_qc * qc_L2(i,j)
+       CPovCV_L2(i,j) = CPtot_L2(i,j) / CVtot_L2(i,j)
     enddo
     enddo
 
@@ -1126,6 +1185,7 @@ contains
 
     real(RP) :: Rtot  (KA,IA,JA)
     real(RP) :: CVtot (KA,IA,JA)
+    real(RP) :: CPtot (KA,IA,JA)
     real(RP) :: CPovCV(KA,IA,JA)
 
     real(RP) :: RovCV
@@ -1151,7 +1211,10 @@ contains
        CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + CV_qv * qv(k,i,j)                          &
                      + CV_qc * qc(k,i,j)
-       CPovCV(k,i,j) = ( CVtot(k,i,j) + Rtot(k,i,j) ) / CVtot(k,i,j)
+       CPtot (k,i,j) = CPdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+                     + CP_qv * qv(k,i,j)                          &
+                     + CV_qc * qc(k,i,j)
+       CPovCV(k,i,j) = CPtot(k,i,j) / CVtot(k,i,j)
     enddo
     enddo
     enddo
@@ -1242,8 +1305,10 @@ contains
 
     real(RP) :: Rtot_sfc
     real(RP) :: CVtot_sfc
+    real(RP) :: CPtot_sfc
     real(RP) :: Rtot
     real(RP) :: CVtot
+    real(RP) :: CPtot
 
     real(RP) :: RovCP_sfc
     real(RP) :: dens_s, dhyd, dgrd
@@ -1258,15 +1323,21 @@ contains
     CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
                + CV_qv * qv_sfc                       &
                + CV_qc * qc_sfc
+    CPtot_sfc  = CPdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + CP_qv * qv_sfc                       &
+               + CV_qc * qc_sfc
 
     Rtot   = Rdry  * ( 1.0_RP - qv(KS) - qc(KS) ) &
            + Rvap  * qv(KS)
     CVtot  = CVdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
            + CV_qv * qv(KS)                       &
            + CV_qc * qc(KS)
+    CPtot  = CPdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
+           + CP_qv * qv(KS)                       &
+           + CV_qc * qc(KS)
 
     ! density at surface
-    RovCP_sfc = Rtot_sfc / ( CVtot_sfc + Rtot_sfc )
+    RovCP_sfc = Rtot_sfc / CPtot_sfc
     dens_sfc  = pres_sfc / ( Rtot_sfc * temp_sfc )
     pott_sfc  = temp_sfc * ( P00/pres_sfc )**RovCP_sfc
 
@@ -1347,8 +1418,10 @@ contains
 
     real(RP) :: Rtot_sfc  (IA,JA)
     real(RP) :: CVtot_sfc (IA,JA)
+    real(RP) :: CPtot_sfc (IA,JA)
     real(RP) :: Rtot      (IA,JA)
     real(RP) :: CVtot     (IA,JA)
+    real(RP) :: CPtot     (IA,JA)
 
     real(RP) :: RovCP_sfc
     real(RP) :: DZ
@@ -1368,6 +1441,9 @@ contains
        CVtot_sfc(i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                       + CV_qv * qv_sfc(1,i,j)                              &
                       + CV_qc * qc_sfc(1,i,j)
+       CPtot_sfc(i,j) = CPdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
+                      + CP_qv * qv_sfc(1,i,j)                              &
+                      + CV_qc * qc_sfc(1,i,j)
     enddo
     enddo
 
@@ -1378,13 +1454,16 @@ contains
        CVtot(i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                   + CV_qv * qv(KS,i,j)                           &
                   + CV_qc * qc(KS,i,j)
+       CPtot(i,j) = CPdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
+                  + CP_qv * qv(KS,i,j)                           &
+                  + CV_qc * qc(KS,i,j)
     enddo
     enddo
 
     ! density at surface
     do j = JSB, JEB
     do i = ISB, IEB
-       RovCP_sfc       = Rtot_sfc(i,j) / ( CVtot_sfc(i,j) + Rtot_sfc(i,j) )
+       RovCP_sfc       = Rtot_sfc(i,j) / CPtot_sfc(i,j)
        dens_sfc(1,i,j) = pres_sfc(1,i,j) / ( Rtot_sfc(i,j) * temp_sfc(1,i,j) )
        pott_sfc(1,i,j) = temp_sfc(1,i,j) / ( P00/pres_sfc(1,i,j) )**RovCP_sfc
     enddo
@@ -1460,6 +1539,7 @@ contains
 
     real(RP) :: Rtot  (KA)
     real(RP) :: CVtot (KA)
+    real(RP) :: CPtot (KA)
 
     real(RP) :: RovCP
     real(RP) :: dens_s, dhyd, dgrd
@@ -1474,6 +1554,9 @@ contains
                 + Rvap  * qv(k)
        CVtot(k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
                 + CV_qv * qv(k)                      &
+                + CV_qc * qc(k)
+       CPtot(k) = CPdry * ( 1.0_RP - qv(k) - qc(k) ) &
+                + CP_qv * qv(k)                      &
                 + CV_qc * qc(k)
     enddo
 
@@ -1511,7 +1594,7 @@ contains
     enddo
 
     do k = KS, KE
-       RovCP   = Rtot(k) / ( CVtot(k) + Rtot(k) )
+       RovCP   = Rtot(k) / CPtot(k)
        pres(k) = dens(k) * Rtot(k) * temp(k)
        pott(k) = temp(k) * ( P00 / pres(k) )**RovCP
     enddo
@@ -1541,6 +1624,7 @@ contains
 
     real(RP) :: Rtot  (KA,IA,JA)
     real(RP) :: CVtot (KA,IA,JA)
+    real(RP) :: CPtot (KA,IA,JA)
 
     real(RP) :: RovCP
     real(RP) :: DZ
@@ -1558,6 +1642,9 @@ contains
                     + Rvap  * qv(k,i,j)
        CVtot(k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                     + CV_qv * qv(k,i,j)                          &
+                    + CV_qc * qc(k,i,j)
+       CPtot(k,i,j) = CPdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+                    + CP_qv * qv(k,i,j)                          &
                     + CV_qc * qc(k,i,j)
     enddo
     enddo
@@ -1604,7 +1691,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       RovCP   = Rtot(k,i,j) / ( CVtot(k,i,j) + Rtot(k,i,j) )
+       RovCP   = Rtot(k,i,j) / CPtot(k,i,j)
        pres(k,i,j) = dens(k,i,j) * Rtot(k,i,j) * temp(k,i,j)
        pott(k,i,j) = temp(k,i,j) * ( P00 / pres(k,i,j) )**RovCP
     enddo

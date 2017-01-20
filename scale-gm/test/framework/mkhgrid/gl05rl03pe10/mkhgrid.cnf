@@ -1,0 +1,23 @@
+################################################################################
+#
+# SCALE-GM mkhgrid config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 5,
+    rlevel      = 3,
+    vlayer      = 1,
+    rgnmngfname = "rl03-prc10.info",
+/
+
+&PARAM_MKGRD
+    MKGRD_DOPREROTATE      = .false.,
+    MKGRD_DOSTRETCH        = .false.,
+    MKGRD_DOSHRINK         = .false.,
+    MKGRD_DOROTATE         = .false.,
+    MKGRD_IN_BASENAME      = "rawgrid_GL05RL03",
+    MKGRD_OUT_BASENAME     = "boundary_GL05RL03",
+/
+
+################################################################################

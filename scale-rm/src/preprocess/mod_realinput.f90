@@ -65,7 +65,6 @@ module mod_realinput
   private :: ParentSurfaceInput
   private :: ParentOceanBoundary
   private :: interp_OceanLand_data
-  private :: diagnose_number_concentration
 
   !-----------------------------------------------------------------------------
   !
@@ -155,7 +154,6 @@ module mod_realinput
   logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
   ! only for SCALE boundary
   logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -168,6 +166,8 @@ contains
          MOMY, &
          RHOT, &
          QTRC
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
     logical, intent(in)  :: flg_intrp ! flag for interpolation of SBM(S10) from outer bulk-MP model
@@ -225,7 +225,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_ATMOS)
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        flg_bin = .true.
     else
        flg_bin = .false.
@@ -552,7 +552,7 @@ contains
     case ('limit' )
        SOILWATER_DS2VC_flag = .false.
     case default
-      write(*,*) ' xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
+      write(*,*) 'xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
       call PRC_MPIstop
     end select
 
@@ -841,7 +841,7 @@ contains
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype)
        call PRC_MPIstop
 
     endselect
@@ -903,12 +903,20 @@ contains
          rotc => GTRANS_ROTC
     use scale_atmos_thermodyn, only: &
          THERMODYN_pott => ATMOS_THERMODYN_pott
+    use scale_atmos_hydrometeor, only: &
+         HYDROMETEOR_diagnose_number_concentration => ATMOS_HYDROMETEOR_diagnose_number_concentration, &
+         I_QV, &
+         I_QC, &
+         QLS, &
+         QLE
     use scale_atmos_hydrostatic, only: &
          HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_interpolation_nest, only: &
          INTRPNEST_domain_compatibility, &
          INTRPNEST_interp_fact_llz, &
          INTRPNEST_interp_3d
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     use mod_realinput_scale, only: &
          ParentAtomOpenSCALE, &
          ParentAtomInputSCALE
@@ -958,8 +966,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Input]'
 
-    select case (TRACER_TYPE)
-    case ("DRY")
+    select case (ATMOS_PHY_MP_TYPE)
+    case ("DRY", "NONE")
        mptype_run = 'dry'
     case ("KESSLER")
        mptype_run = 'single'
@@ -970,7 +978,7 @@ contains
     case ("SUZUKI10")
        mptype_run = 'single-bin'
     case default
-       write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
+       write(*,*) 'xxx Unsupported ATMOS_PHY_MP_TYPE (', trim(ATMOS_PHY_MP_TYPE), '). Check!'
        call PRC_MPIstop
     end select
 
@@ -1046,10 +1054,13 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)+2
-                call THERMODYN_pott( pott_org(k,i,j),  & ! [OUT]
-                                     temp_org(k,i,j),  & ! [IN]
-                                     pres_org(k,i,j),  & ! [IN]
-                                     qtrc_org(k,i,j,:) ) ! [IN]
+                call THERMODYN_pott( pott_org(k,i,j),   & ! [OUT]
+                                     temp_org(k,i,j),   & ! [IN]
+                                     pres_org(k,i,j),   & ! [IN]
+                                     qtrc_org(k,i,j,:), & ! [IN]
+                                     TRACER_CV(:),      & ! [IN]
+                                     TRACER_R(:),       & ! [IN]
+                                     TRACER_MASS(:)     ) ! [IN]
              end do
              end do
              end do
@@ -1183,7 +1194,7 @@ contains
 
        if( trim(mptype_run)=='double' .and. mptype_parent <= 6 )then
           if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
-          call diagnose_number_concentration( qtrc_org(:,:,:,:) ) ! [inout]
+          call HYDROMETEOR_diagnose_number_concentration( qtrc_org(:,:,:,:) ) ! [inout]
        endif
 
        do j = 1, dims(3)
@@ -1242,12 +1253,10 @@ contains
                                     IA, JA, KS, KE,      &
                                     logwegt=.true.       )
 
-#ifdef DRY
           qc = 0.0_RP
-#else
-          qc = 0.0_RP
+#ifndef DRY
           if ( I_QC > 0 ) then
-             do iq = QWS, QWE
+             do iq = QLS, QLE
                qc(:,:,:) = qc(:,:,:) + QTRC(:,:,:,iq,nn)
              enddo
           end if
@@ -1340,9 +1349,16 @@ contains
        COMM_vars, &
        COMM_wait
     use scale_fileio, only: &
-       FILEIO_write
+       FILEIO_create, &
+       FILEIO_def_var, &
+       FILEIO_enddef, &
+       FILEIO_write_var
     use scale_time, only: &
        TIME_NOWDATE
+    use scale_atmos_phy_mp, only: &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     implicit none
 
     real(RP),         intent(in)   :: dens(:,:,:,:)
@@ -1356,10 +1372,11 @@ contains
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
-    character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    character(len=H_SHORT) :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     real(RP), allocatable :: buffer(:,:,:,:)
     integer :: nowdate(6)
 
+    integer :: fid, vid(5+QA_MP)
     integer :: k, i, j, n, iq
     integer :: ts, te
     !---------------------------------------------------------------------------
@@ -1375,10 +1392,26 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Boundary]'
 
-    call FILEIO_write( DENS(:,:,:,ts:te), basename, title,           &
-                       'DENS', 'Reference Density', 'kg/m3', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate  )
+    call FILEIO_create( fid, basename, title, atmos_boundary_out_dtype, nowdate )
 
+    call FILEIO_def_var( fid, vid(1), 'DENS', 'Reference Density', 'kg/m3', 'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(2), 'VELZ', 'Reference VELZ',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(3), 'VELX', 'Reference VELX',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(4), 'VELY', 'Reference VELY',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(5), 'POTT', 'Reference PT',      'K',     'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    do iq = QS_MP, QE_MP
+       call FILEIO_def_var( fid, vid(6+iq-QS_MP), TRACER_NAME(iq), 'Reference '//TRACER_NAME(iq), 'kg/kg', 'ZXYT', &
+            atmos_boundary_out_dtype, update_dt, numsteps )
+    end do
+
+    call FILEIO_enddef( fid )
+
+    call FILEIO_write_var( fid, vid(1), DENS(:,:,:,ts:te), 'DENS', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA
@@ -1388,10 +1421,7 @@ contains
     end do
     end do
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELZ', 'Reference VELZ', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(2), buffer,            'VELZ', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA-1
@@ -1404,10 +1434,7 @@ contains
     do n = ts, te
        buffer(:,IA,:,n-ts+1) = buffer(:,IA-1,:,n-ts+1)
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELX', 'Reference VELX', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(3), buffer,            'VELX', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA-1
     do i = 1, IA
@@ -1420,10 +1447,7 @@ contains
     do n = ts, te
        buffer(:,:,JA,n-ts+1) = buffer(:,:,JA-1,n-ts+1)
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELY', 'Reference VELY', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(4), buffer,            'VELY', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA
@@ -1433,11 +1457,9 @@ contains
     end do
     end do
     end do
-    call FILEIO_write( buffer, basename, title,                     &
-                       'POTT', 'Reference PT', 'K', 'ZXYT',         &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_write_var( fid, vid(5), buffer,            'POTT', 'ZXYT', update_dt )
 
-    do iq = 1, QA
+    do iq = QS_MP, QE_MP
        do n = ts, te
        do j = 1, JA
        do i = 1, IA
@@ -1447,9 +1469,7 @@ contains
        end do
        end do
        end do
-       call FILEIO_write( buffer, basename, title,                                           &
-                          AQ_NAME(iq), 'Reference '//trim(AQ_NAME(iq)), AQ_UNIT(iq), 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt, nowdate                       )
+       call FILEIO_write_var( fid, vid(6+iq-QS_MP), buffer, TRACER_NAME(iq), 'ZXYT', update_dt )
     end do
 
     deallocate( buffer )
@@ -1563,7 +1583,7 @@ contains
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype_land)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_land)
        call PRC_MPIstop
 
     endselect
@@ -1661,7 +1681,7 @@ contains
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype_ocean)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_ocean)
        call PRC_MPIstop
 
     endselect
@@ -1766,6 +1786,8 @@ contains
          LCZ  => GRID_LCZ
     use scale_atmos_thermodyn, only: &
          THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_hydrometeor, only: &
+         I_QV
     use scale_landuse, only: &
          lsmask_nest => LANDUSE_frac_land
     use mod_realinput_scale, only: &
@@ -1935,11 +1957,14 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-          call THERMODYN_temp_pres( temp,          & ! [OUT]
-                                    pres,          & ! [OUT] not used
-                                    dens(KS,i,j),  & ! [IN]
-                                    rhot(KS,i,j),  & ! [IN]
-                                    qtrc(KS,i,j,:) ) ! [IN]
+          call THERMODYN_temp_pres( temp,           & ! [OUT]
+                                    pres,           & ! [OUT] not used
+                                    dens(KS,i,j),   & ! [IN]
+                                    rhot(KS,i,j),   & ! [IN]
+                                    qtrc(KS,i,j,:), & ! [IN]
+                                    TRACER_CV(:),   & ! [IN]
+                                    TRACER_R(:),    & ! [IN]
+                                    TRACER_MASS(:)  ) ! [IN]
 
           tc_urb(i,j) = temp
 #ifdef DRY
@@ -2212,7 +2237,10 @@ contains
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
     use scale_fileio, only: &
-         FILEIO_write
+         FILEIO_create, &
+         FILEIO_def_var, &
+         FILEIO_enddef, &
+         FILEIO_write_var
     use scale_time, only: &
          TIME_NOWDATE
     implicit none
@@ -2226,8 +2254,9 @@ contains
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
-    character(len=H_MID)  :: ocean_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    character(len=H_SHORT) :: ocean_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     integer :: nowdate(6)
+    integer :: fid, vid(5)
     integer :: ts, te
     !---------------------------------------------------------------------------
 
@@ -2240,25 +2269,31 @@ contains
     nowdate = TIME_NOWDATE
     nowdate(1) = nowdate(1)
 
-    call FILEIO_write( tw(:,:,ts:te), basename, title,              &
-                       'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_create( fid, basename, title, ocean_boundary_out_dtype, nowdate )
 
-    call FILEIO_write( sst(:,:,ts:te), basename, title,             &
-                       'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature', 'K', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_def_var( fid, vid(1), &
+         'OCEAN_TEMP',     'Reference Ocean Temperature',            'K', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(2), &
+         'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature',    'K', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(3), &
+         'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(4), &
+         'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(5), &
+         'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
 
-    call FILEIO_write( albw(:,:,I_LW,ts:te), basename, title,       &
-                       'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_enddef( fid )
 
-    call FILEIO_write( albw(:,:,I_SW,ts:te), basename, title,       &
-                       'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
-
-    call FILEIO_write( z0(:,:,ts:te), basename, title,           &
-                       'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+       call FILEIO_write_var( fid, vid(1), tw(:,:,ts:te),         'OCEAN_TEMP',    'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(2), sst(:,:,ts:te),       'OCEAN_SFC_TEMP', 'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(3), albw(:,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(4), albw(:,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(5), z0(:,:,ts:te),        'OCEAN_SFC_Z0',   'XYT', update_dt )
 
     return
   end subroutine ParentOceanBoundary
@@ -2815,40 +2850,5 @@ contains
     enddo
 
   end subroutine replace_misval_map
-
-  !-----------------------------------------------------------------------------
-  subroutine diagnose_number_concentration( &
-      qvars      & ! (inout)
-      )
-    use scale_const, only: &
-         PI => CONST_PI
-    implicit none
-    real(RP), intent(inout) :: qvars(:,:,:,:)
-
-    real(RP), parameter :: Dc   =  20.D-6  ! typical particle diameter for cloud  [m]
-    real(RP), parameter :: Dr   = 200.D-6  ! typical particle diameter for rain   [m]
-    real(RP), parameter :: Di   =  80.D-6  ! typical particle diameter for ice    [m]
-    real(RP), parameter :: Ds   =  80.D-6  ! typical particle diameter for snow   [m]
-    real(RP), parameter :: Dg   = 200.D-6  ! typical particle diameter for grapel [m]
-    real(RP), parameter :: RHOw = 1000.D0  ! typical density for warm particles   [kg/m3]
-    real(RP), parameter :: RHOf =  100.D0  ! typical density for frozen particles [kg/m3]
-    real(RP), parameter :: RHOg =  400.D0  ! typical density for grapel particles [kg/m3]
-    real(RP), parameter :: b    =  3.D0    ! assume spherical form
-
-    real(RP) :: piov6
-    !---------------------------------------------------------------------------
-
-#ifndef DRY
-    piov6 = pi / 6.0_RP
-
-    qvars(:,:,:,I_NC) = qvars(:,:,:,I_QC) / ( (piov6*RHOw) * Dc**b )
-    qvars(:,:,:,I_NR) = qvars(:,:,:,I_QR) / ( (piov6*RHOw) * Dr**b )
-    qvars(:,:,:,I_NI) = qvars(:,:,:,I_QI) / ( (piov6*RHOf) * Di**b )
-    qvars(:,:,:,I_NS) = qvars(:,:,:,I_QS) / ( (piov6*RHOf) * Ds**b )
-    qvars(:,:,:,I_NG) = qvars(:,:,:,I_QG) / ( (piov6*RHOg) * Dg**b )
-#endif
-
-    return
-  end subroutine diagnose_number_concentration
 
 end module mod_realinput

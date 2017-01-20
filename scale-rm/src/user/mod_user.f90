@@ -28,6 +28,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -76,6 +77,31 @@ module mod_user
 
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config before setup of other components
+  subroutine USER_config
+    use scale_tracer, only: &
+       TRACER_regist
+    implicit none
+
+    ! if you want to add tracers, call the TRACER_regist subroutine.
+    ! e.g.,
+!    integer, parameter :: NQ = 1
+!    integer :: QS
+!    character(len=H_SHORT) :: NAME(NQ)
+!    character(len=H_MID)   :: DESC(NQ)
+!    character(len=H_SHORT) :: UNIT(NQ)
+!
+!    data NAME (/ 'name' /)
+!    data DESC (/ 'tracer name' /)
+!    data UNIT (/ 'kg/kg' /)
+!
+!    call TRACER_regist( QS,   & ! (out)
+!         NQ, NAME, DESC, UNIT ) ! (in)
+
+    return
+  end subroutine USER_config
+
   !-----------------------------------------------------------------------------
   !> Setup before setup of other components
   subroutine USER_setup

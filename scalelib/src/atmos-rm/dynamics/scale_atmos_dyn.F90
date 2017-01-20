@@ -65,6 +65,8 @@ module scale_atmos_dyn
   !
   !++ Public parameters & variables
   !
+  real(RP), public, allocatable :: CORIOLI   (:,:)       ! coriolis term
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -87,11 +89,11 @@ module scale_atmos_dyn
   logical,  private              :: BND_S
   logical,  private              :: BND_N
 
-  real(RP), private, allocatable :: CORIOLI   (:,:)       ! coriolis term
   real(RP), private, allocatable :: mflx_hi   (:,:,:,:)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
 
   real(RP), private, allocatable :: num_diff  (:,:,:,:,:)
   real(RP), private, allocatable :: num_diff_q(:,:,:,:)
+  real(RP), private, allocatable :: wdamp_coef(:)         ! coefficient for Rayleigh damping of w
 
   logical,  private              :: DYN_NONE = .false.
 
@@ -111,6 +113,9 @@ contains
        QTRC, PROG,                   &
        CDZ, CDX, CDY,                &
        FDZ, FDX, FDY,                &
+       wdamp_tau,                    &
+       wdamp_height,                 &
+       FZ,                           &
        enable_coriolis,              &
        lat,                          &
        none                          )
@@ -127,7 +132,8 @@ contains
     use scale_comm, only: &
        COMM_vars8_init
     use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_filter_setup
+       ATMOS_DYN_filter_setup, &
+       ATMOS_DYN_wdamp_setup
     use scale_atmos_dyn_tinteg_short, only: &
        ATMOS_DYN_tinteg_short_setup
     use scale_atmos_dyn_tinteg_tracer, only: &
@@ -164,6 +170,9 @@ contains
     real(RP),          intent(in)    :: FDZ(KA-1)
     real(RP),          intent(in)    :: FDX(IA-1)
     real(RP),          intent(in)    :: FDY(JA-1)
+    real(RP),          intent(in)    :: wdamp_tau
+    real(RP),          intent(in)    :: wdamp_height
+    real(RP),          intent(in)    :: FZ(0:KA)
     logical,           intent(in)    :: enable_coriolis
     real(RP),          intent(in)    :: lat(IA,JA)
     logical, optional, intent(in)    :: none
@@ -184,10 +193,11 @@ contains
        BND_S = .NOT. PRC_HAS_S
        BND_N = .NOT. PRC_HAS_N
 
-       allocate( CORIOLI    (IA,JA)        )
-       allocate( mflx_hi    (KA,IA,JA,3)   )
-       allocate( num_diff   (KA,IA,JA,5,3) )
-       allocate( num_diff_q (KA,IA,JA,3)   )
+       allocate( CORIOLI   (IA,JA)        )
+       allocate( mflx_hi   (KA,IA,JA,3)   )
+       allocate( num_diff  (KA,IA,JA,5,3) )
+       allocate( num_diff_q(KA,IA,JA,3)   )
+       allocate( wdamp_coef(KA)           )
        mflx_hi(:,:,:,:) = UNDEF
 
        call ATMOS_DYN_FVM_flux_setup     ( DYN_FVM_FLUX_TYPE,            & ! [IN]
@@ -211,6 +221,11 @@ contains
        ! numerical diffusion
        call ATMOS_DYN_filter_setup( num_diff, num_diff_q,        & ! [INOUT]
                                     CDZ, CDX, CDY, FDZ, FDX, FDY ) ! [IN]
+
+       ! numerical diffusion
+       call ATMOS_DYN_wdamp_setup( wdamp_coef(:),           & ! [INOUT]
+                                   wdamp_tau, wdamp_height, & ! [IN]
+                                   FZ(:)                    ) ! [IN]
 
        ! coriolis parameter
        if ( enable_coriolis ) then
@@ -253,7 +268,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
        PHI, GSQRT,                                           &
        J13G, J23G, J33G, MAPF,                               &
-       AQ_CV,                                                &
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
        DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
@@ -316,7 +331,10 @@ contains
     real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
     real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factor
 
-    real(RP), intent(in)    :: AQ_CV(QQA)
+    real(RP), intent(in)    :: AQ_R   (QA)
+    real(RP), intent(in)    :: AQ_CV  (QA)
+    real(RP), intent(in)    :: AQ_CP  (QA)
+    real(RP), intent(in)    :: AQ_MASS(QA)
 
     real(RP), intent(in)    :: REF_dens(KA,IA,JA)
     real(RP), intent(in)    :: REF_pott(KA,IA,JA)
@@ -471,7 +489,7 @@ contains
                                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! [IN]
                                  PHI, GSQRT,                                           & ! [IN]
                                  J13G, J23G, J33G, MAPF,                               & ! [IN]
-                                 AQ_CV,                                                & ! [IN]
+                                 AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          & ! [IN]
                                  REF_dens, REF_pott, REF_qv, REF_pres,                 & ! [IN]
                                  BND_W, BND_E, BND_S, BND_N,                           & ! [IN]
                                  ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, & ! [IN]
@@ -479,6 +497,7 @@ contains
                                  DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          & ! [IN]
                                  DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    & ! [IN]
                                  DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    & ! [IN]
+                                 wdamp_coef,                                           & ! [IN]
                                  divdmp_coef,                                          & ! [IN]
                                  FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! [IN]
                                  FLAG_FCT_ALONG_STREAM,                                & ! [IN]

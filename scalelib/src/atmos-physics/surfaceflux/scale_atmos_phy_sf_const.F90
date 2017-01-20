@@ -132,8 +132,9 @@ contains
     use scale_tracer
     use scale_const, only: &
        PI    => CONST_PI
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_templhv
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       I_QV
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
@@ -231,14 +232,16 @@ contains
     enddo
 
     !-----< mass flux >-----
-   call ATMOS_THERMODYN_templhv( LHV, ATM_TEMP )
+   call HYDROMETEOR_LHV( LHV(:,:), ATM_TEMP(:,:) )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
+       enddo
+       enddo
+    end if
 
     !-----< U10, T2, q2 >-----
 
@@ -254,9 +257,22 @@ contains
     do j = JS, JE
     do i = IS, IE
        T2(i,j) = ATM_TEMP(i,j)
-       Q2(i,j) = ATM_QTRC(i,j,I_QV)
     enddo
     enddo
+
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          Q2(i,j) = ATM_QTRC(i,j,I_QV)
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+          Q2(i,j) = 0.0_RP
+       enddo
+       enddo
+    end if
 
     return
   end subroutine ATMOS_PHY_SF_const

@@ -73,8 +73,6 @@ contains
        ADM_setup
     use mod_fio, only: &
        FIO_setup
-    use mod_hio, only: &
-       HIO_setup
     use mod_comm, only: &
        COMM_setup
     use mod_grd, only: &
@@ -193,7 +191,7 @@ contains
     integer,               intent(in) :: comm_world
     integer,               intent(in) :: intercomm_parent
     integer,               intent(in) :: intercomm_child
-    character(len=H_LONG), intent(in) :: cnf_fname
+    character(len=*), intent(in) :: cnf_fname
 
     integer :: myrank
     logical :: ismaster
@@ -238,7 +236,6 @@ contains
 
     !---< I/O module setup >---
     call FIO_setup
-    call HIO_setup
 
     !---< comm module setup >---
     call COMM_setup

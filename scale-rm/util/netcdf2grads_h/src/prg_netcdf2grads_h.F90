@@ -190,7 +190,7 @@ program netcdf2grads_h
     HISTORY_DEFAULT_BASENAME,  &
     HISTORY_DEFAULT_TINTERVAL, &
     HISTORY_DEFAULT_TUNIT,     &
-    HISTORY_DEFAULT_ZINTERP,   &
+    HISTORY_DEFAULT_ZDIM,      &
     HISTORY_TITLE,             & ! not required
     HISTORY_SOURCE,            & ! not required
     HISTORY_INSTITUTION,       & ! not required

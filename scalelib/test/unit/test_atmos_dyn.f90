@@ -82,7 +82,10 @@ module test_atmos_dyn
   real(RP) :: J33G
   real(RP), allocatable :: MAPF(:,:,:,:)
 
+  real(RP), allocatable :: AQ_R(:)
   real(RP), allocatable :: AQ_CV(:)
+  real(RP), allocatable :: AQ_CP(:)
+  real(RP), allocatable :: AQ_MASS(:)
 
   integer  :: nd_order
   real(RP) :: nd_coef
@@ -109,6 +112,8 @@ module test_atmos_dyn
   character(len=H_SHORT) :: DYN_Tstep_Large_TYPE
   character(len=H_SHORT) :: DYN_FVM_FLUX_TYPE
   character(len=H_SHORT) :: DYN_FVM_FLUX_TYPE_TRACER
+  real(RP)               :: wdamp_tau
+  real(RP)               :: wdamp_height
 
   integer :: k, i, j, iq
   character(len=11) :: message
@@ -129,6 +134,8 @@ contains
      GRID_CBFZ
   use scale_const, only: &
      GRAV => CONST_GRAV
+  use scale_atmos_boundary, only: &
+     BND_QA
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -138,7 +145,6 @@ contains
   !
   !-----------------------------------------------------------------------------
   real(RP) :: lat(1,IA,JA)
-  integer :: VA
   character(len=H_SHORT) :: CSDUMMY(1)
   character(len=H_MID)   :: CMDUMMY(1)
   integer :: j
@@ -185,16 +191,21 @@ contains
 
   allocate( PHI(KA,IA,JA) )
   allocate( GSQRT(KA,IA,JA,7) )
-  allocate( J13G(KA,IA,JA,4) )
-  allocate( J23G(KA,IA,JA,4) )
+  allocate( J13G(KA,IA,JA,7) )
+  allocate( J23G(KA,IA,JA,7) )
 
   allocate( MAPF(IA,JA,2,4) )
 
+  allocate( AQ_R(QA) )
   allocate( AQ_CV(QA) )
+  allocate( AQ_CP(QA) )
+  allocate( AQ_MASS(QA) )
 
   allocate( ZERO(KA,IA,JA) )
 
   allocate( PROG(KA,IA,JA,1) )
+
+  BND_QA = 0
 
   ZERO(:,:,:) = 0.0_RP
 
@@ -217,6 +228,8 @@ contains
   DYN_Tstep_Large_TYPE = "FVM-HEVE"
   DYN_FVM_FLUX_TYPE = "CD4"
   DYN_FVM_FLUX_TYPE_TRACER = "UD3KOREN1993"
+  wdamp_tau = 10.0_RP
+  wdamp_height = 0.0_RP
 
   call ATMOS_DYN_setup( &
        DYN_Tinteg_Short_TYPE,              & ! (in)
@@ -229,6 +242,7 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
        PROG,                               & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
+       wdamp_tau, wdamp_height, FZ,        & ! (in)
        .false., lat                        ) ! (in)
 
   do k = KS+1, KE
@@ -240,7 +254,10 @@ contains
 
   MOMZ(KE,:,:) = 0.0_RP
 
+  AQ_R(:) = 1.0_RP
   AQ_CV(:) = 1.0_RP
+  AQ_CP(:) = 1.0_RP
+  AQ_MASS(:) = 1.0_RP
 
   do j = 1, JA
   do i = 1, IA
@@ -325,7 +342,7 @@ subroutine test_undef
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-          AQ_CV,                                       & ! (in)
+          AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
           DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -379,7 +396,7 @@ subroutine test_const
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-       AQ_CV,                                       & ! (in)
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -479,7 +496,7 @@ subroutine test_conserve
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-         AQ_CV,                                       & ! (in)
+         AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
          DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -607,7 +624,7 @@ subroutine test_cwc
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-       AQ_CV,                                       & ! (in)
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -625,6 +642,7 @@ subroutine test_cwc
   answer(:,:,:) = Q
   message = "iq = ??"
   do iq = 1, QA
+     if ( .not. TRACER_ADVC(iq) ) cycle
      write(message(6:7), "(i2)") iq
      call AssertEqual(message, answer(KS:KE,IS:IE,JS:JE), QTRC(KS:KE,IS:IE,JS:JE,iq), RP*2-2, -10)
   end do
@@ -695,7 +713,7 @@ subroutine test_fctminmax
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
-       AQ_CV,                                       & ! (in)
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        0.0_RP, 0.0_RP, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
@@ -709,6 +727,7 @@ subroutine test_fctminmax
 
   message = "iq = ??"
   do iq = 1, QA
+     if ( .not. TRACER_ADVC(iq) ) cycle
      write(message(6:7), "(i2)") iq
      write(message(9:11),"(a3)") "MAX"
      MINMAX(:,:,:) = Q_MAX * ( 1_RP + epsilon )

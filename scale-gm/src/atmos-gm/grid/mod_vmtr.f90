@@ -237,11 +237,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** VMTRPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist VMTRPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist VMTRPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist VMTRPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=VMTRPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=VMTRPARAM)
 
 #ifndef _FIXEDINDEX_
     allocate( VMTR_GAM2H       (ADM_iall,ADM_jall,ADM_kall,ADM_lall   ) )

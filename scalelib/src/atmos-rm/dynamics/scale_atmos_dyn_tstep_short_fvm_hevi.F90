@@ -77,13 +77,6 @@ module scale_atmos_dyn_tstep_short_fvm_hevi
   integer                      :: IFS_OFF
   integer                      :: JFS_OFF
 
-#ifdef HIST_TEND
-  real(RP), private, allocatable :: advch_t(:,:,:,:)
-  real(RP), private, allocatable :: advcv_t(:,:,:,:)
-  real(RP), private, allocatable :: ddiv_t (:,:,:,:)
-  real(RP), private, allocatable :: pg_t   (:,:,:,:)
-  real(RP), private, allocatable :: cf_t   (:,:,:,:)
-#endif
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -128,25 +121,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
 #ifdef HEVI_BICGSTAB
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
 #elif defined(HEVI_LAPACK)
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
 #else
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
-#endif
-
-#ifdef HIST_TEND
-    allocate( advch_t(KA,IA,JA,5) )
-    allocate( advcv_t(KA,IA,JA,5) )
-    allocate( ddiv_t (KA,IA,JA,3) )
-    allocate( pg_t   (KA,IA,JA,3) )
-    allocate( cf_t   (KA,IA,JA,2) )
-
-    advch_t = 0.0_RP
-    advcv_t = 0.0_RP
-    ddiv_t  = 0.0_RP
-    pg_t    = 0.0_RP
-    cf_t    = 0.0_RP
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
 #endif
 
     return
@@ -162,7 +141,7 @@ contains
        DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
        PROG0, PROG,                                 &
        DPRES0, RT2P, CORIOLI,                       &
-       num_diff, divdmp_coef, DDIV,                 &
+       num_diff, wdamp_coef, divdmp_coef, DDIV,     &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
        FLAG_FCT_ALONG_STREAM,                       &
        CDZ, FDZ, FDX, FDY,                          &
@@ -256,6 +235,7 @@ contains
     real(RP), intent(in) :: RT2P(KA,IA,JA)
     real(RP), intent(in) :: CORIOLI(1,IA,JA)
     real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in) :: wdamp_coef(KA)
     real(RP), intent(in) :: divdmp_coef
     real(RP), intent(in) :: DDIV(KA,IA,JA)
 
@@ -302,12 +282,14 @@ contains
 
     real(RP) :: advch ! horizontal advection
     real(RP) :: advcv ! vertical advection
-    real(RP) :: div  ! divergence damping
-    real(RP) :: pg   ! pressure gradient force
-    real(RP) :: cf   ! colioris force
+    real(RP) :: wdmp  ! Raileight damping
+    real(RP) :: div   ! divergence damping
+    real(RP) :: pg    ! pressure gradient force
+    real(RP) :: cf    ! colioris force
 #ifdef HIST_TEND
     real(RP) :: advch_t(KA,IA,JA,5)
     real(RP) :: advcv_t(KA,IA,JA,5)
+    real(RP) :: wdmp_t(KA,IA,JA)
     real(RP) :: ddiv_t(KA,IA,JA,3)
     real(RP) :: pg_t(KA,IA,JA,3)
     real(RP) :: cf_t(KA,IA,JA,2)
@@ -535,7 +517,7 @@ contains
 
        !--- update momentum(z)
        PROFILE_START("hevi_sw")
-       !$omp parallel do private(i,j,k,advcv,advch,cf,div) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch,cf,wdmp,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -561,13 +543,15 @@ contains
                     + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k,i-1,j  ,XDIR) ) * RCDX(i) &
                     + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k,i  ,j-1,YDIR) ) * RCDY(j) ) &
                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+          wdmp = - wdamp_coef(k) * MOMZ0(k,i,j)
           div = divdmp_coef / dtrk * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) ! divergence damping
           Sw(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYW) &
-                    + div + MOMZ_t(k,i,j)
+                    + wdmp + div + MOMZ_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
              advcv_t(k,i,j,I_MOMZ) = advcv / GSQRT(k,i,j,I_XYW)
              advch_t(k,i,j,I_MOMZ) = advch / GSQRT(k,i,j,I_XYW)
+             wdmp_t(k,i,j) = wdmp
              ddiv_t(k,i,j,1) = div
           endif
 #endif
@@ -1035,6 +1019,8 @@ contains
        call HIST_in(pg_t   (:,:,:,1),      'MOMZ_t_pg',    'tendency of momentum z (pressure gradient)',  'kg/m2/s2', zdim='half')
        call HIST_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient)',  'kg/m2/s2', xdim='half')
        call HIST_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient)',  'kg/m2/s2', ydim='half')
+
+       call HIST_in(wdmp_t (:,:,:),        'MOMZ_t_dwamp', 'tendency of momentum z (Rayleigh damping)',   'kg/m2/s2', zdim='half')
 
        call HIST_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping)', 'kg/m2/s2', zdim='half')
        call HIST_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping)', 'kg/m2/s2', xdim='half')

@@ -39,7 +39,7 @@ module scale_atmos_dyn_tinteg_short
           mflx_hi, tflx_hi,                         & ! (inout)
           DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
           Rtot, CVtot, CORIOLI,                     & ! (in)
-          num_diff, divdmp_coef, DDIV,              & ! (in)
+          num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
           FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
           FLAG_FCT_ALONG_STREAM,                    & ! (in)
           CDZ, FDZ, FDX, FDY,                       & ! (in)
@@ -72,6 +72,7 @@ module scale_atmos_dyn_tinteg_short
        real(RP), intent(in)    :: CORIOLI(IA,JA)
 
        real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
+       real(RP), intent(in)    :: wdamp_coef(KA)
        real(RP), intent(in)    :: divdmp_coef
        real(RP), intent(in)    :: DDIV(KA,IA,JA)
 

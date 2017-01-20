@@ -150,7 +150,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : Beljaars (1991) and Wilson (2001)'
        BULKFLUX => BULKFLUX_B91W01
     case default
-       write(*,*) ' xxx Unsupported TYPE. STOP'
+       write(*,*) 'xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     end select
 
@@ -379,7 +379,7 @@ contains
     ! initial bulk Richardson number
     RiB0 = GRAV * DP_Z1 * ( TH1 - TH0 ) / ( TH1 * UabsC**2 )
     if( abs( RiB0 ) < BULKFLUX_RiB_min ) then
-      RiB0 = sign( BULKFLUX_RiB_min, RiB0 )
+      RiB0 = sign( real(BULKFLUX_RiB_min,kind=DP), RiB0 )
     end if
 
     ! initial Obukhov length assumed by neutral condition
@@ -391,7 +391,7 @@ contains
 
     do n = 1, BULKFLUX_itr_max
       ! unstable condition
-      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
+      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real(BULKFLUX_Uabs_min,kind=DP) )
       UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,L) + fm_unstable(DP_Z0M,L) ) * UabsUS
       TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,L) + fh_unstable(DP_Z0H,L) ) / Pt * ( TH1 - TH0 )
       QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,L) + fh_unstable(DP_Z0E,L) ) / Pt * ( Q1  - Q0  )
@@ -422,7 +422,7 @@ contains
       res = L - UstarC**2 * T1 / ( KARMAN * GRAV * TstarC )
 
       ! unstable condition
-      dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
+      dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), real(BULKFLUX_Uabs_min,kind=DP) )
       dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,L+dL) + fm_unstable(DP_Z0M,L+dL) ) * dUabsUS
       dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,L+dL) + fh_unstable(DP_Z0H,L+dL) ) / Pt * ( TH1 - TH0 )
       dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,L+dL) + fh_unstable(DP_Z0E,L+dL) ) / Pt * ( Q1  - Q0  )

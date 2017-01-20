@@ -15,9 +15,9 @@
 /* These parameters are also defined in mod_fio */
 
 /* character length */
-#define FIO_HSHORT  16
-#define FIO_HMID    64
-#define FIO_HLONG  256
+#define FIO_HSHORT   32
+#define FIO_HMID    128
+#define FIO_HLONG  1024
 
 /* data type */
 #define FIO_REAL4     0

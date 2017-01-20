@@ -40,14 +40,20 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -openmp
+
 ifeq ($(DISABLE_VEC),T)
    NOVEC = -no-vec
 endif
 
-FFLAGS_SYSDEPEND = $(NOVEC)
-CFLAGS_SYSDEPEND =
+FFLAGS_SYSDEPEND = $(OMP) $(NOVEC)
+CFLAGS_SYSDEPEND = $(OMP)
 
-
+FFLAGS_TENTATIVE = -no-ip -no-ipo
 
 ##### Linker setting
 
@@ -59,12 +65,16 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
-NETCDF_INCLUDE ?= -I$(NETCDF4)/include
-NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib64 -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/ap/netcdf4-fortran/4.4.2-intel/include -I/ap/HDF5/1.8.16-intel/include -I/ap/netcdf4/4.3.3.1-intel/include"
+# export NETCDF_LIBS="-L/ap/netcdf4-fortran/4.4.2-intel/lib -L/ap/HDF5/1.8.16-intel/lib -L/ap/netcdf4/4.3.3.1-intel/lib -lnetcdff -lnetcdf"
 
-###### Lapack
-LAPACK_LIBS    ?=
-example: -mkl=sequential
+###### Lapack library
+# Please set environment variable
+# example:
+# export LAPACK_LIBS="-mkl=sequential"
 
 ##### for frontend
 INSTALL = install

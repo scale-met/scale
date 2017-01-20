@@ -145,11 +145,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** OPRTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist OPRTPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist OPRTPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist OPRTPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=OPRTPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=OPRTPARAM)
 
 #ifndef _FIXEDINDEX_
 !    allocate( OPRT_coef_div    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   ) )
@@ -2514,8 +2513,6 @@ contains
        COMM_data_transfer
     use mod_fio, only: &
        FIO_output
-    use mod_hio, only: &
-       HIO_output
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -2765,13 +2762,7 @@ contains
 
     call COMM_data_transfer( tmp, tmp_pl )
 
-    if ( OPRT_io_mode == 'POH5' ) then
-
-       call HIO_output( tmp(:,:,:,1), basename, desc, "",               & ! [IN]
-                        "oprtcoef", "oprt coef", "",                    & ! [IN]
-                        "", dtype, "LAYERNM", 1, 106, 1, 0.0_DP, 0.0_DP ) ! [IN]
-
-    elseif( OPRT_io_mode == 'ADVANCED' ) then
+    if ( OPRT_io_mode == 'ADVANCED' ) then
 
        call FIO_output( tmp(:,:,:,1), basename, desc, "",               & ! [IN]
                         "oprtcoef", "oprt coef", "",                    & ! [IN]

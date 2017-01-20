@@ -255,18 +255,18 @@ contains
              return
           endif
        else
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] data not found! : ', &
+          write(*,*) 'xxx [INPUT]/[FIO] data not found! : ', &
                                'varname= ',trim(varname),', step=',step
           call PRC_MPIstop
        endif
     endif
 
     if ( dinfo%layername /= layername ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
+       write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
                             '[',trim(dinfo%layername),':',trim(layername),']'
        call PRC_MPIstop
     elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch! ', &
+       write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch! ', &
                             dinfo%num_of_layer,k_end-k_start+1
        call PRC_MPIstop
     endif
@@ -346,18 +346,18 @@ contains
              return
           endif
        else
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] data not found! : ', &
+          write(*,*) 'xxx [INPUT]/[FIO] data not found! : ', &
                                'varname= ',trim(varname),', step=',step
           call PRC_MPIstop
        endif
     endif
 
     if ( dinfo%layername /= layername ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
+       write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
                             '[',trim(dinfo%layername),':',trim(layername),']'
        call PRC_MPIstop
     elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch! ', &
+       write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch! ', &
                             dinfo%num_of_layer,k_end-k_start+1
        call PRC_MPIstop
     endif
@@ -444,11 +444,11 @@ contains
 
        !--- verify
        if ( dinfo%layername /= layername ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
+          write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
                                '[',trim(dinfo%layername),':',trim(layername),']'
           call PRC_MPIstop
        elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch!', &
+          write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch!', &
                                dinfo%num_of_layer,k_end-k_start+1
           call PRC_MPIstop
        endif
@@ -576,7 +576,7 @@ contains
        call fio_put_write_datainfo_data(did,fid,dinfo,var8(:,:,:))
 
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
+       write(*,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
        call PRC_MPIstop
     endif
 
@@ -669,7 +669,7 @@ contains
        call fio_put_write_datainfo_data(did,fid,dinfo,var8(:,:,:))
 
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
+       write(*,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
        call PRC_MPIstop
     endif
 

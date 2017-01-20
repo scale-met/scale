@@ -16,7 +16,19 @@
 !! This file was originally copied from WRF.
 !! The original file was published with the following notice.
 !!
-!! WRF was developed at the National Center for Atmospheric Research (NCAR) which is operated by the University Corporation for Atmospheric Research (UCAR). NCAR and UCAR make no proprietary claims, either statutory or otherwise, to this version and release of WRF and consider WRF to be in the public domain for use by any person or entity for any purpose without any fee or charge. UCAR requests that any WRF user include this notice on any partial or full copies of WRF. WRF is provided on an "AS IS" basis and any warranties, either express or implied, including but not limited to implied warranties of non-infringement, originality, merchantability and fitness for a particular purpose, are disclaimed. In no event shall UCAR be liable for any damages, whatsoever, whether direct, indirect, consequential or special, that arise out of or in connection with the access, use or performance of WRF, including infringement actions.
+!! WRF was developed at the National Center for Atmospheric Research (NCAR)
+!! which is operated by the University Corporation for Atmospheric Research (UCAR).
+!! NCAR and UCAR make no proprietary claims, either statutory or otherwise,
+!! to this version and release of WRF and consider WRF to be in the public domain
+!! for use by any person or entity for any purpose without any fee or charge.
+!! UCAR requests that any WRF user include this notice on any partial or full
+!! copies of WRF. WRF is provided on an "AS IS" basis and any warranties,
+!! either express or implied, including but not limited to implied warranties
+!! of non-infringement, originality, merchantability and fitness for a particular
+!! purpose, are disclaimed. In no event shall UCAR be liable for any damages,
+!! whatsoever, whether direct, indirect, consequential or special, that arise
+!! out of or in connection with the access, use or performance of WRF, including
+!! infringement actions.
 !!
 !! WRF® is a registered trademark of the University Corporation for Atmospheric Research (UCAR).
 !!
@@ -48,7 +60,7 @@ module scale_atmos_phy_cp_kf
 
   !-----------------------------------------------------------------------------
   !++ Public pparameters & variabeles
-  real(RP), public,  save       :: KF_DT           = 5._RP    ! kf time scale [min!!!!!]
+  real(DP), public,  save       :: KF_DTSEC = 300._RP    ! kf time scale [sec]
 
   !-----------------------------------------------------------------------------
   !
@@ -100,9 +112,9 @@ module scale_atmos_phy_cp_kf
   logical ,private, save       :: FLAG_QI         = .true.   ! FLAG_QI:  qi is allowe or not
   real(RP),private, save       :: DELCAPE         = 0.1_RP   ! cape decleace rate
   real(RP),private, save       :: DEEPLIFETIME    = 1800._RP ! minimum lifetimescale of deep convection
-  real(RP),private, save       :: SHALLOWLIFETIME = 2400._RP ! shallow convection liftime 
+  real(RP),private, save       :: SHALLOWLIFETIME = 2400._RP ! shallow convection liftime
   real(RP),private, save       :: DEPTH_USL       = 300._RP  ! depth of updraft source layer  [hPa]!!
-  logical ,private, save       :: WARMRAIN        = .false.  ! QA<=3 then ??
+  logical ,private, save       :: WARMRAIN        = .false.  ! I_QI<1
   logical ,private, save       :: KF_LOG          = .false.  ! KF infomation output to log file(not ERROR messeage)
   real(RP),private, save       :: kf_threshold    = 1.e-3_RP ! kessler type autoconversion rate
   integer ,private, save       :: stepkf                     !! triger select will be modifid
@@ -141,6 +153,12 @@ contains
     use scale_grid,only: &
        DX => DX, &
        DY => DY
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS
     implicit none
 
     character(len=*), intent(in) :: CP_TYPE
@@ -148,8 +166,6 @@ contains
     ! tunning parameters, original parameter set is from KF2004 and NO2007
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_rate      =   0.03_RP ! ratio of cloud water and precipitation (Ogura and Cho 1973)
     integer  :: PARAM_ATMOS_PHY_CP_kf_trigger   = 1         ! trigger function type 1:KF2004 3:NO2007
-    logical  :: PARAM_ATMOS_PHY_CP_kf_qs        = .true.    ! qs is allowed?
-    logical  :: PARAM_ATMOS_PHY_CP_kf_qi        = .true.    ! qi is allowed?
     real(DP) :: PARAM_ATMOS_PHY_CP_kf_dt        =    5.0_DP ! KF convection check time interval [min]
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_dlcape    =    0.1_RP ! cape decleace rate
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800.0_RP ! minimum lifetime scale of deep convection [sec]
@@ -157,14 +173,11 @@ contains
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300.0_RP ! depth of updraft source layer [hPa]
     integer  :: PARAM_ATMOS_PHY_CP_kf_prec      = 1         ! precipitation type 1:Ogura-Cho(1973) 2:Kessler
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3_RP  ! autoconversion rate for Kessler
-    logical  :: PARAM_ATMOS_PHY_CP_kf_warmrain  = .false.   ! QQA is less equal to 3?
     logical  :: PARAM_ATMOS_PHY_CP_kf_LOG       = .false.   ! output log?
 
     NAMELIST / PARAM_ATMOS_PHY_CP_KF / &
        PARAM_ATMOS_PHY_CP_kf_rate,      &
        PARAM_ATMOS_PHY_CP_kf_trigger,   &
-       PARAM_ATMOS_PHY_CP_kf_qs,        &
-       PARAM_ATMOS_PHY_CP_kf_qi,        &
        PARAM_ATMOS_PHY_CP_kf_dt,        &
        PARAM_ATMOS_PHY_CP_kf_dlcape,    &
        PARAM_ATMOS_PHY_CP_kf_dlifetime, &
@@ -172,12 +185,12 @@ contains
        PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, &
        PARAM_ATMOS_PHY_CP_kf_prec,      &
        PARAM_ATMOS_PHY_CP_kf_thres,     &
-       PARAM_ATMOS_PHY_CP_kf_warmrain,  &
        PARAM_ATMOS_PHY_CP_kf_LOG,       &
        PARAM_ATMOS_PHY_CP_kf_wadapt, &
        PARAM_ATMOS_PHY_CP_kf_w_time
 
     integer :: k, i, j
+    integer :: QS
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -188,6 +201,29 @@ contains
     if ( CP_TYPE /= 'KF' ) then
        write(*,*) 'xxx ATMOS_PHY_CP_TYPE is not KF. Check!'
        call PRC_MPIstop
+    endif
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+    if ( I_QC < 1 ) then
+       write(*,*) 'xxx QC is not registered'
+       call PRC_MPIstop
+    end if
+    if ( I_QR < 1 ) then
+       write(*,*) 'xxx QR is not registered'
+       call PRC_MPIstop
+    end if
+
+    if ( I_QI < 1 ) then
+       WARMRAIN = .true.
+    else
+       WARMRAIN = .false.
+       if ( I_QS < 1 ) then
+          write(*,*) 'xxx QI is registerd, but QS is not registered'
+          call PRC_MPIstop
+       end if
     endif
 
     if ( abs(TIME_DTSEC_ATMOS_PHY_CP-TIME_DTSEC) > 0.0_DP ) then
@@ -204,7 +240,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CP_KF. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_CP_KF)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_CP_KF)
 
     call kf_lutab ! set kf look up table
 
@@ -216,8 +252,6 @@ contains
 
     call CP_kf_param( PARAM_ATMOS_PHY_CP_kf_rate,      &
                       PARAM_ATMOS_PHY_CP_kf_trigger,   &
-                      PARAM_ATMOS_PHY_CP_kf_qs,        &
-                      PARAM_ATMOS_PHY_CP_kf_qi,        &
                       PARAM_ATMOS_PHY_CP_kf_dt,        &
                       PARAM_ATMOS_PHY_CP_kf_dlcape,    &
                       PARAM_ATMOS_PHY_CP_kf_dlifetime, &
@@ -225,7 +259,6 @@ contains
                       PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, &
                       PARAM_ATMOS_PHY_CP_kf_prec,      &
                       PARAM_ATMOS_PHY_CP_kf_thres,     &
-                      PARAM_ATMOS_PHY_CP_kf_warmrain,  &
                       PARAM_ATMOS_PHY_CP_kf_LOG ,      &
                       TIME_DSTEP_KF                    )
 
@@ -234,15 +267,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) "*** Interval for check [step]                       : ", TIME_DSTEP_KF
     if( IO_L ) write(IO_FID_LOG,*) "*** Ogura-Cho condense material convert rate        : ", PARAM_ATMOS_PHY_CP_kf_rate
     if( IO_L ) write(IO_FID_LOG,*) "*** Trigger function type, 1:KF2004 3:NO2007        : ", PARAM_ATMOS_PHY_CP_kf_trigger
-    if( IO_L ) write(IO_FID_LOG,*) "*** Exist qi?                                       : ", PARAM_ATMOS_PHY_CP_kf_qi
-    if( IO_L ) write(IO_FID_LOG,*) "*** Exist qs?                                       : ", PARAM_ATMOS_PHY_CP_kf_qs
     if( IO_L ) write(IO_FID_LOG,*) "*** CAPE decrease rate                              : ", PARAM_ATMOS_PHY_CP_kf_dlcape
     if( IO_L ) write(IO_FID_LOG,*) "*** Minimum lifetime scale of deep convection [sec] : ", PARAM_ATMOS_PHY_CP_kf_dlifetime
     if( IO_L ) write(IO_FID_LOG,*) "*** Lifetime of shallow convection            [sec] : ", PARAM_ATMOS_PHY_CP_kf_slifetime
     if( IO_L ) write(IO_FID_LOG,*) "*** Updraft souce layer depth                 [hPa] : ", PARAM_ATMOS_PHY_CP_kf_DEPTH_USL
     if( IO_L ) write(IO_FID_LOG,*) "*** Precipitation type 1:Ogura-Cho(1973) 2:Kessler  : ", PARAM_ATMOS_PHY_CP_kf_prec
     if( IO_L ) write(IO_FID_LOG,*) "*** Kessler type precipitation's threshold          : ", PARAM_ATMOS_PHY_CP_kf_thres
-    if( IO_L ) write(IO_FID_LOG,*) "*** Warm rain?                                      : ", PARAM_ATMOS_PHY_CP_kf_warmrain
+    if( IO_L ) write(IO_FID_LOG,*) "*** Warm rain?                                      : ", WARMRAIN
     if( IO_L ) write(IO_FID_LOG,*) "*** Use running mean of w in adaptive timestep?     : ", PARAM_ATMOS_PHY_CP_kf_wadapt
     if( IO_L ) write(IO_FID_LOG,*) "*** Fixed time scale for running mean of w          : ", PARAM_ATMOS_PHY_CP_kf_w_time
     if( IO_L ) write(IO_FID_LOG,*) "*** Output log?                                     : ", PARAM_ATMOS_PHY_CP_kf_LOG
@@ -296,10 +327,10 @@ contains
        nca,            &
        w0avg           )
     use scale_grid_index
-    use scale_tracer, only: &
-       MP_QA
     use scale_history, only: &
        HIST_in
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     real(RP), intent(in)    :: DENS          (KA,IA,JA)
@@ -313,7 +344,7 @@ contains
     real(RP), intent(inout) :: MOMX_t_CP     (KA,IA,JA)    ! not used
     real(RP), intent(inout) :: MOMY_t_CP     (KA,IA,JA)    ! not used
     real(RP), intent(inout) :: RHOT_t_CP     (KA,IA,JA)
-    real(RP), intent(inout) :: RHOQ_t_CP     (KA,IA,JA,QA)
+    real(RP), intent(inout) :: RHOQ_t_CP     (KA,IA,JA,QA_MP)
     real(RP), intent(inout) :: MFLX_cloudbase(IA,JA)       ! not used
     real(RP), intent(inout) :: SFLX_convrain (IA,JA)       ! convective rain rate [kg/m2/s]
     real(RP), intent(inout) :: cloudtop      (IA,JA)       ! cloud top height  [m]
@@ -354,16 +385,16 @@ contains
                         QTRC         (:,:,:,:), & ! [IN]
                         w0avg        (:,:,:),   & ! [IN]
                         nca          (:,:),     & ! [INOUT]
-                        DENS_t_CP    (:,:,:),   & ! [OUT]
-                        RHOT_t_CP    (:,:,:),   & ! [OUT]
-                        RHOQ_t_CP    (:,:,:,:), & ! [OUT]
-                        SFLX_convrain(:,:),     & ! [OUT]
-                        cldfrac_sh   (:,:,:),   & ! [OUT]
-                        cldfrac_dp   (:,:,:),   & ! [OUT]
-                        lifetime     (:,:),     & ! [OUT]
-                        cloudtop     (:,:),     & ! [OUT]
-                        cloudbase    (:,:),     & ! [OUT]
-                        I_convflag   (:,:)      ) ! [OUT]
+                        DENS_t_CP    (:,:,:),   & ! [INOUT]
+                        RHOT_t_CP    (:,:,:),   & ! [INOUT]
+                        RHOQ_t_CP    (:,:,:,:), & ! [INOUT]
+                        SFLX_convrain(:,:),     & ! [INOUT]
+                        cldfrac_sh   (:,:,:),   & ! [INOUT]
+                        cldfrac_dp   (:,:,:),   & ! [INOUT]
+                        lifetime     (:,:),     & ! [INOUT]
+                        cloudtop     (:,:),     & ! [INOUT]
+                        cloudbase    (:,:),     & ! [INOUT]
+                        I_convflag   (:,:)      ) ! [INOUT]
 
        call PROF_rapend('CP_kf', 3)
     endif
@@ -401,7 +432,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( PARAM_ATMOS_PHY_CP_kf_wadapt ) then
-       fact_W0_avg = 2.0_RP * max(KF_DT,TIME_DTSEC) - TIME_DTSEC
+       fact_W0_avg = 2.0_RP * max(KF_DTSEC,TIME_DTSEC) - TIME_DTSEC
        fact_W0     = TIME_DTSEC
     else ! w_time is tuning parameter
        fact_W0_avg = real(PARAM_ATMOS_PHY_CP_kf_w_time,RP)
@@ -427,8 +458,6 @@ contains
        ![IN]
        RATE_in,            &
        TRIGGER_in,         & ! INOUT
-       FLAG_QS_in,         &
-       FLAG_QI_in,         &
        KF_DT_in,           &
        DELCAPE_in ,        &
        DEEPLIFETIME_in,    &
@@ -436,7 +465,6 @@ contains
        DEPTH_USL_in,       &
        KF_prec_in,         &
        KF_threshold_in,    &
-       WARMRAIN_in,        &
        KF_LOG_in,          &
        stepkf_in     )
     use scale_process, only: &
@@ -444,34 +472,29 @@ contains
     implicit none
     real(RP),intent(in) :: RATE_in
     integer, intent(inout) :: TRIGGER_in
-    logical, intent(in) :: FLAG_QS_in,FLAG_QI_in
-    real(RP),intent(in) :: KF_DT_in
+    real(DP),intent(in) :: KF_DT_in
     real(RP),intent(in) :: DELCAPE_in
     real(RP),intent(in) :: DEEPLIFETIME_in
     real(RP),intent(in) :: SHALLOWLIFETIME_in
     real(RP),intent(in) :: DEPTH_USL_in
     integer, intent(in) :: KF_prec_in
     real(RP),intent(in) :: KF_threshold_in
-    logical, intent(in) :: WARMRAIN_in
     logical, intent(in) :: KF_LOG_in
     integer, intent(in) :: stepkf_in
     !
     RATE            = RATE_in
     ! TRIGGER must be 1 or 3
     if (TRIGGER_in /= 1 .and. TRIGGER_in /=3) then
-       if (IO_L) write(IO_FID_LOG,*) "TRIGGER must be 1 or 3 but now :",TRIGGER_in
-       if (IO_L) write(IO_FID_LOG,*) "CHAGNGE ",TRIGGER_in," to 3"
+       if( IO_L ) write(IO_FID_LOG,*) "TRIGGER must be 1 or 3 but now :",TRIGGER_in
+       if( IO_L ) write(IO_FID_LOG,*) "CHAGNGE ",TRIGGER_in," to 3"
        TRIGGER_in = 3
     end if
     TRIGGER         = TRIGGER_in
-    FLAG_QS         = FLAG_QS_in
-    FLAG_QI         = FLAG_QI_in
-    KF_DT           = KF_DT_in
+    KF_DTSEC        = KF_DT_in * 60.0_DP ! convert from min to sec
     DELCAPE         = DELCAPE_in
     DEEPLIFETIME    = DEEPLIFETIME_in
     SHALLOWLIFETIME = SHALLOWLIFETIME_in
     DEPTH_USL       = DEPTH_USL_in
-    WARMRAIN        = WARMRAIN_in
     KF_prec         = KF_prec_in
     KF_threshold    = KF_threshold_in
     KF_LOG          = KF_LOG_in
@@ -488,7 +511,7 @@ contains
     return
   end subroutine CP_kf_param
 
-  subroutine CP_kf_main ( & ! main loop 
+  subroutine CP_kf_main ( & ! main loop
        ![IN]
        dens,        &
        MOMZ,        &
@@ -499,7 +522,6 @@ contains
        w0avg,       &
        ! [INOUT]
        nca,         &
-       ! [OUT]
        DENS_t_CP,   &
        DT_RHOT,     &
        DT_RHOQ,     &
@@ -516,6 +538,15 @@ contains
     use scale_const, only: &
        GRAV => CONST_GRAV, &
        R    => CONST_Rdry
+    use scale_atmos_phy_mp, only: &
+       QA_MP, &
+       QS_MP
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS
     use scale_time , only :&
        dt => TIME_DTSEC_ATMOS_PHY_CP
     use scale_grid_real, only: &
@@ -538,17 +569,17 @@ contains
     real(RP),intent(in) :: QTRC(KA,IA,JA,QA)       ! raito of water elements
     real(RP),intent(in) :: w0avg(KA,IA,JA)         ! running mean vertical wind velocity [m/s]
     ! [INOUT]
-    real(RP),intent(inout) :: nca(IA,JA)           ! num of step convection active [step]
-    real(RP),intent(out)   :: DENS_t_CP(KA,IA,JA)  ! dens/dt
-    real(RP),intent(out)   :: DT_RHOT(KA,IA,JA)    ! dens*PT/dt
-    real(RP),intent(out)   :: DT_RHOQ(KA,IA,JA,QA) ! dens*q/dt
-    real(RP),intent(out)   :: rainrate_cp(IA,JA)   ! rain  PPTFLX(prcp_flux)/deltax**2*dt ! convective rain
-    real(RP),intent(out)   :: cldfrac_sh(KA,IA,JA) ! cloud fraction
-    real(RP),intent(out)   :: cldfrac_dp(KA,IA,JA) ! cloud fraction
-    real(RP),intent(out)   :: timecp(IA,JA)        ! timescale of cumulus parameterization
-    real(RP),intent(out)   :: cloudtop(IA,JA)      ! cloud top height
-    real(RP),intent(out)   :: zlcl(IA,JA)          ! hight of lcl cloud bottom height[m]
-    integer, intent(out)   :: I_convflag(IA,JA)    ! convection type
+    real(RP),intent(inout) :: nca(IA,JA)              ! num of step convection active [step]
+    real(RP),intent(inout) :: DENS_t_CP(KA,IA,JA)     ! dens/dt
+    real(RP),intent(inout) :: DT_RHOT(KA,IA,JA)       ! dens*PT/dt
+    real(RP),intent(inout) :: DT_RHOQ(KA,IA,JA,QA_MP) ! dens*q/dt
+    real(RP),intent(inout) :: rainrate_cp(IA,JA)      ! rain  PPTFLX(prcp_flux)/deltax**2*dt ! convective rain
+    real(RP),intent(inout) :: cldfrac_sh(KA,IA,JA)    ! cloud fraction
+    real(RP),intent(inout) :: cldfrac_dp(KA,IA,JA)    ! cloud fraction
+    real(RP),intent(inout) :: timecp(IA,JA)           ! timescale of cumulus parameterization
+    real(RP),intent(inout) :: cloudtop(IA,JA)         ! cloud top height
+    real(RP),intent(inout) :: zlcl(IA,JA)             ! hight of lcl cloud bottom height[m]
+    integer, intent(inout) :: I_convflag(IA,JA)       ! convection type
     !> I_convflag = 0  ==> deep convection
     !>            = 1  ==> shallow convection
     !>            = 2  ==> NONE !!
@@ -560,13 +591,13 @@ contains
     real(RP) :: pres  (KA)       ! pressure [Pa]
     real(RP) :: qv    (KA)       ! water vapor mixing ratio[kg/kg]
     real(RP) :: QDRY  (KA)       ! ratio of dry air
-    real(RP) :: qes   (KA)       ! saturate vapor [kg/kg]
+    !real(RP) :: qes   (KA)       ! saturate vapor [kg/kg]
     real(RP) :: PSAT  (KA)       ! saturation vaper pressure
     real(RP) :: QSAT  (KA)       ! saturate water vaper mixing ratio [kg/kg]
     real(RP) :: rh    (KA)       ! saturate vapor [%]
     real(RP) :: deltap(KA)       ! delta Pressure [Pa]
 
-    real(RP) :: q_hyd(KA,MP_QA)  ! water mixing ratio [kg/kg]
+    real(RP) :: q_hyd(KA,QA_MP-1)  ! water mixing ratio [kg/kg]
     real(RP) :: dens_nw(KA)      ! density [kg/m**3]
     integer  :: nic
     real(RP) :: time_advec       ! advection timescale
@@ -624,15 +655,16 @@ contains
     real(RP) :: qs_nw(KA)        ! new snow water mixing ratio  [kg/kg]
     ! new variable
     real(RP) :: rhot_nw(KA)      ! rho*PT
-    real(RP) :: qtrc_nw(KA,QA)   ! qv,qc,qr,qi,qs (qg not change)
+    real(RP) :: qtrc_nw(KA,QA_MP)   ! qv,qc,qr,qi,qs (qg not change)
     real(RP) :: pott_nw(KA)      ! new PT
     !
     real(RP) :: cldfrac_KF(KA,2) ! cloud fraction
     !
-    real(RP) :: qd(KA) ! dry mixing ratio
+    real(RP) :: rhod(KA) ! dry density
     ! do loop variable
-    integer  :: k, i, j, iq
+    integer  :: k, i, j, iq, iqa, ii
 
+    I_convflag (:,:) = 2
 
     do j = JS, JE
     do i = IS, IE
@@ -641,6 +673,63 @@ contains
 
        ! check convection
        if ( nca(i,j) .ge. 0.5_DP * dt ) cycle
+
+       ! initialize variables
+       I_convflag(i,j) = 0.0_RP
+       cloudtop  (i,j) = 0.0_RP
+       zlcl      (i,j) = 0.0_RP
+       rainrate_cp(i,j)= 0.0_RP
+       timecp    (i,j) = 0.0_RP
+       cldfrac_KF(:,:) = 0.0_RP
+       qtrc_nw   (:,:) = 0.0_RP
+       temp_u    (:)   = 0.0_RP
+       tempv     (:)   = 0.0_RP
+       qv_u      (:)   = 0.0_RP
+       qv_d      (:)   = 0.0_RP
+       qc        (:)   = 0.0_RP
+       qi        (:)   = 0.0_RP
+       qvdet     (:)   = 0.0_RP
+       qcdet     (:)   = 0.0_RP
+       qidet     (:)   = 0.0_RP
+       flux_qr   (:)   = 0.0_RP
+       flux_qs   (:)   = 0.0_RP
+       theta_eu  (:)   = 0.0_RP
+       theta_ee  (:)   = 0.0_RP
+       theta_d   (:)   = 0.0_RP
+       umf       (:)   = 0.0_RP
+       upent     (:)   = 0.0_RP
+       updet     (:)   = 0.0_RP
+       umfnewdold(:)   = 0.0_RP
+       wspd      (:)   = 0.0_RP
+       dmf       (:)   = 0.0_RP
+       downent   (:)   = 0.0_RP
+       downdet   (:)   = 0.0_RP
+       temp_g    (:)   = 0.0_RP
+       qv_g      (:)   = 0.0_RP
+       qc_nw     (:)   = 0.0_RP
+       qi_nw     (:)   = 0.0_RP
+       qr_nw     (:)   = 0.0_RP
+       qs_nw     (:)   = 0.0_RP
+       rhot_nw   (:)   = 0.0_RP
+       pott_nw   (:)   = 0.0_RP
+       totalprcp       = 0.0_RP
+       umflcl          = 0.0_RP
+       cape            = 0.0_RP
+       presmix         = 0.0_RP
+       dpthmx          = 0.0_RP
+       zmix            = 0.0_RP
+       prcp_flux       = 0.0_RP
+       CPR             = 0.0_RP
+       tder            = 0.0_RP
+       time_advec      = 0.0_RP
+       k_lcl           = 0
+       k_lc            = 0
+       k_lfs           = 0
+       k_pbl           = 0
+       k_top           = 0
+       k_let           = 0
+       k_ml            = 0
+       nic             = 0
 
 
        ! convert variables
@@ -652,18 +741,24 @@ contains
        enddo
 
        do k = KS, KE
-          call THERMODYN_temp_pres( TEMP(k),      & ! [OUT]
-                                    PRES(k),      & ! [OUT]
-                                    DENS(k,i,j),  & ! [IN]
-                                    RHOT(k,i,j),  & ! [IN]
-                                    QTRC(k,i,j,:) ) ! [IN]
+          call THERMODYN_temp_pres( TEMP(k),       & ! [OUT]
+                                    PRES(k),       & ! [OUT]
+                                    DENS(k,i,j),   & ! [IN]
+                                    RHOT(k,i,j),   & ! [IN]
+                                    QTRC(k,i,j,:), & ! [IN]
+                                    TRACER_CV(:),  & ! [IN]
+                                    TRACER_R(:),   & ! [IN]
+                                    TRACER_MASS(:) ) ! [IN]
 
           ! calculate water vaper and relative humidity
-          call THERMODYN_qd( QDRY(k), QTRC(k,i,j,:) )
+          call THERMODYN_qd( QDRY(k), QTRC(k,i,j,:), TRACER_MASS(:) )
 
-          call SATURATION_psat_liq( PSAT(k), TEMP(k) )
+          ! temporary: WRF TYPE equations are used to maintain consistency with kf_main
+          !call SATURATION_psat_liq( PSAT(k), TEMP(k) )
+          !QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
+          PSAT(k) = ALIQ*EXP((BLIQ*TEMP(K)-CLIQ)/(TEMP(K)-DLIQ))
+          QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(K) - PSAT(k) )
 
-          QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
           QV  (k) = QTRC(k,i,j,I_QV) / QDRY(k)
           QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
           rh  (k) = QV(k) / QSAT(k)
@@ -678,7 +773,7 @@ contains
 
        DENS_t_CP(KS:KE,i,j) = 0.0_RP
        DT_RHOT  (KS:KE,i,j) = 0.0_RP
-       do iq = 1, QQS
+       do iq = 1, QA_MP
           DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
        end do
        cldfrac_KF (KS:KE,:) = 0.0_RP
@@ -687,18 +782,18 @@ contains
        cloudtop   (i,j) = 0.0_RP
        zlcl       (i,j) = 0.0_RP
 
-       do iq = 1, MP_QA
+       do iq = 1, QA_MP-1
+       iqa = iq + QS_MP
        do k  = KS, KE
-          q_hyd(k,iq) = QTRC(k,i,j,I_MP2ALL(iq)) / QDRY(k)
+          q_hyd(k,iq) = QTRC(k,i,j,iqa) / QDRY(k)
        enddo
        enddo
-
 
        call CP_kf_trigger ( &
             ! [IN]
             deltaz(:,i,j), Z(:,i,j), & ! deltaz and height[m]
             qv    (:),       & ! water vapor mixing ratio [kg/kg]
-            qes   (:),       & ! saturation water vapor mixing ratio
+            QSAT  (:),       & ! saturation water vapor mixing ratio
             pres  (:),       & ! pressure [Pa]
             deltap(:),       & ! interval of pressure [Pa]
             temp  (:),       & ! temperature [K]
@@ -743,6 +838,7 @@ contains
        !------------------------------------------------------------------------
        ! calc ems(box weight[kg])
        !------------------------------------------------------------------------
+
        if(I_convflag(i,j) /= 2) then
           ems(k_top+1:KE) = 0._RP
           emsd(k_top+1:KE) = 0._RP
@@ -771,9 +867,9 @@ contains
             flux_qs(:)       ,& ! snow flux
             tempv(:)         ,& ! vertual temperature [K]
             I_convflag(i,j)       ,& ! convection type
-            ! layer index 
+            ! layer index
             k_lcl            ,& ! index of LCL layer
-            k_ml             ,& ! index of melt layer 
+            k_ml             ,& ! index of melt layer
             k_top            ,& ! index of cloud top
             k_pbl            ,& ! index of USL layer top
             k_let            ,& ! index of below detrain layer
@@ -794,7 +890,7 @@ contains
             ![IN]
             deltaz(:,i,j),Z(:,i,j) ,& ! deltaz and height [m]
             pres(:),          & ! pressure [Pa]
-            deltap(:),        & ! deltap [Pa] 
+            deltap(:),        & ! deltap [Pa]
             temp(:),          & ! temperature [K]
             qv(:),            & ! water vapor mixing ratio
             ! form kf_trigger
@@ -820,7 +916,7 @@ contains
             ! from kf_downdraft
             wspd(:),          & ! wind speed 1. 2 is used
             dmf(:),           & ! downward  mass flux (downdraft)
-            downent(:),       & ! downdraft entrainment 
+            downent(:),       & ! downdraft entrainment
             downdet(:),       & ! downdraft detrainment
             qv_d(:),          & ! downdraft detrainment qv
             theta_d(:),       & ! potential temperature @downdraft
@@ -828,10 +924,10 @@ contains
             tder,             & ! evapolation
             cpr,              & ! all precipitation  before consider cloud bottom evaporation
             I_convflag(i,j),  & ! intent inout convective flag
-            ! layer index 
+            ! layer index
             ! from kf_triger
             k_top,            & ! index of cloud top hight
-            k_lcl,            & ! index of LCL layer 
+            k_lcl,            & ! index of LCL layer
             k_lc ,            & ! index of LCL layer botoom
             k_pbl,            & ! index of USL layer top
             k_ml,             & ! index of melt layer (temp < tem00)
@@ -849,7 +945,7 @@ contains
             cldfrac_KF,       & ! cloud fraction
             timecp(i,j),      & ! timescale of cumulus parameterization
             time_advec) ! advection timescale
-       
+
        !------------------------------------------------------------------------
        ! compute tendencys
        !------------------------------------------------------------------------
@@ -860,6 +956,7 @@ contains
           timecp(i,j)         = 0.0_RP
           cloudtop(i,j)       = 0.0_RP
           zlcl(i,j)           = 0.0_RP
+          nca(i,j)            = -100.0_RP
        else ! convection allowed I_convflag=0 or 1
           ! chek
           !
@@ -873,56 +970,43 @@ contains
              nca(i,j) = real(nic,RP)*dt ! convection feed back act this time span
           elseif (I_convflag(i,j) == 1) then ! shallow
              timecp(i,j) = SHALLOWLIFETIME
-             nca   (i,j) = KF_DT*60._RP ! convection feed back act this time span
+             nca   (i,j) = KF_DTSEC ! convection feed back act this time span
           end if
           ! update qd
-          if (QA > 3) then ! assume TOMITA08
-             q_hyd(KS:KE,I_QC-1) = ( qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-1) )
-             q_hyd(KS:KE,I_QR-1) = ( qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-1) )
-             q_hyd(KS:KE,I_QI-1) = ( qi_nw(KS:KE) + q_hyd(KS:KE,I_QI-1) )
-             q_hyd(KS:KE,I_QS-1) = ( qs_nw(KS:KE) + q_hyd(KS:KE,I_QS-1) )
-             qd(KS:KE) = 1._RP / ( 1._RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2)) ! new qdry
-             qtrc_nw(KS:KE,I_QV) = qv_g(KS:KE)*qd(KS:kE)
-             ! new qtrc
-             do iq = 1,MP_QA
-                qtrc_nw(KS:KE,I_MP2ALL(iq)) = ( q_hyd(KS:KE,iq) )*qd(KS:kE)
-             end do
-             ! new density
-             dens_nw(KS:KE) = dens(KS:KE,i,j)
-             do iq = QQS,QQE
-                dens_nw(KS:KE) = dens_nw(KS:KE) + ( qtrc_nw(KS:KE,iq) - QTRC(KS:KE,i,j,iq) )*dens(KS:KE,i,j)
-             end do
-             ! dens_(n+1) = dens_(n) + tend_q*dens_(n)
-          else ! kessular
-             q_hyd(KS:KE,I_QC-1) = ( qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-1) )
-             q_hyd(KS:KE,I_QR-1) = ( qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-1) )
-             !
-             qd(KS:KE) = 1._RP / ( 1._RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2))
-             ! new qtrc
-             do iq = 1,MP_QA
-                qtrc_nw(KS:KE,I_MP2ALL(iq)) = ( q_hyd(KS:KE,iq) )*qd(KS:kE)
-             end do
-             ! new density
-             dens_nw(KS:KE) = dens(KS:KE,i,j)
-             do iq = QQS,QQE
-                dens_nw(KS:KE) = dens_nw(KS:KE) + ( qtrc_nw(KS:KE,iq) - QTRC(KS:KE,i,j,iq) )*dens(KS:KE,i,j)
-             end do
-             ! dens_(n+1) = dens_(n) + tend_q*dens_(n)
-          end if
+          q_hyd(KS:KE,I_QC-QS_MP) = qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-QS_MP)
+          q_hyd(KS:KE,I_QR-QS_MP) = qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-QS_MP)
+          if ( I_QI>0 ) q_hyd(KS:KE,I_QI-QS_MP) = qi_nw(KS:KE) + q_hyd(KS:KE,I_QI-QS_MP)
+          if ( I_QS>0 ) q_hyd(KS:KE,I_QS-QS_MP) = qs_nw(KS:KE) + q_hyd(KS:KE,I_QS-QS_MP)
+          rhod(KS:KE) = DENS(KS:KE,i,j) * QDRY(KS:KE)
+          qdry(KS:KE) = 1.0_RP / ( 1.0_RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2)) ! new qdry
+
+          ! new qtrc
+          qtrc_nw(KS:KE,I_QV) = qv_g(KS:KE) * qdry(KS:kE)
+          do iq = 1, QA_MP-1
+             qtrc_nw(KS:KE,QS_MP+iq) = q_hyd(KS:KE,iq) * qdry(KS:KE)
+          end do
+          ! new density
+          dens_nw(KS:KE) = rhod(KS:KE) / qdry(KS:KE)
+
           ! calc new potential temperature
           call THERMODYN_pott(&
                pott_nw(:), &
-               temp_g(:),pres(:),qtrc_nw(:,:))
+               temp_g(:), pres(:), qtrc_nw(:,:), &
+               TRACER_CV(:), TRACER_R(:), TRACER_MASS(:) )
           ! update rhot
           rhot_nw(KS:KE) = dens_nw(KS:KE)*pott_nw(KS:KE)
           ! calc tendency
           DENS_t_CP(KS:KE,i,j) = (dens_nw(KS:KE) - dens(KS:KE,i,j))/timecp(i,j)
           DT_RHOT(KS:KE,i,j)   = (rhot_nw(KS:KE) - RHOT(KS:KE,i,j))/timecp(i,j)
-          do iq = QQS,QQE
-             DT_RHOQ(KS:KE,i,j,iq) = (dens_nw(KS:KE)*qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j)*QTRC(KS:KE,i,j,iq))/timecp(i,j)
+          do ii = 1, QA_MP
+             iq = QS_MP + ii - 1
+             DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j) * QTRC(KS:KE,i,j,iq) ) &
+                  /timecp(i,j)
           end do
           ! if noconvection then nca is same value before call. nca only modifyed convectioned
        end if
+
+
 
        cldfrac_sh(KS:KE,i,j) = cldfrac_KF(KS:KE,1)
        cldfrac_dp(KS:KE,i,j) = cldfrac_KF(KS:KE,2)
@@ -934,7 +1018,7 @@ contains
   end subroutine CP_kf_main
   !------------------------------------------------------------------------------
   ! calc trigger function and upward mass flux
-  !------------------------------------------------------------------------------  
+  !------------------------------------------------------------------------------
   subroutine CP_kf_trigger ( & !> 1d model ! triger function
        ! [IN]
        dz_kf,z_kf ,& ! deltaz and height [m]
@@ -1001,48 +1085,48 @@ contains
     real(RP), intent(in)      :: w0avg(KA)          ! running mean w
     ! [OUT]
     ! mass flux
-    real(RP), intent(out)     :: umf(KA)            ! upward mass flux
-    real(RP), intent(out)     :: umflcl             ! upward mass flux @lcl
-    real(RP), intent(out)     :: upent(KA)          ! upward mass flux entrainment
-    real(RP), intent(out)     :: updet(KA)          ! upward mass flux detrainment
+    real(RP), intent(inout)     :: umf(KA)            ! upward mass flux
+    real(RP), intent(inout)     :: umflcl             ! upward mass flux @lcl
+    real(RP), intent(inout)     :: upent(KA)          ! upward mass flux entrainment
+    real(RP), intent(inout)     :: updet(KA)          ! upward mass flux detrainment
     ! updraft variable
-    real(RP), intent(out)     :: temp_u(KA)         ! updraft temperature
-    real(RP), intent(out)     :: tempv(KA)          ! vertual temperature 
+    real(RP), intent(inout)     :: temp_u(KA)         ! updraft temperature
+    real(RP), intent(inout)     :: tempv(KA)          ! vertual temperature
     !    real(RP)             :: tempvq_u(KA)
-    real(RP), intent(out)     :: qv_u(KA)           ! updraft qv
-    real(RP), intent(out)     :: totalprcp          ! total prcpitation (rain+snow)
-    real(RP), intent(out)     :: cape               ! CAPE
-    real(RP), intent(out)     :: cloudtop           ! cloud top height
+    real(RP), intent(inout)     :: qv_u(KA)           ! updraft qv
+    real(RP), intent(inout)     :: totalprcp          ! total prcpitation (rain+snow)
+    real(RP), intent(inout)     :: cape               ! CAPE
+    real(RP), intent(inout)     :: cloudtop           ! cloud top height
     real(RP)                  :: cloudhight         ! cloud depth (cloud top - cloud base)
     ! water
-    real(RP), intent(out)     :: qc(KA)             ! cloud water mixing ratio
-    real(RP), intent(out)     :: qi(KA)             ! cloud ice   mixing ratio
+    real(RP), intent(inout)     :: qc(KA)             ! cloud water mixing ratio
+    real(RP), intent(inout)     :: qi(KA)             ! cloud ice   mixing ratio
     real(RP)                  :: qrout(KA)          ! rain
     real(RP)                  :: qsout(KA)          ! snow
-    real(RP), intent(out)     :: qvdet(KA)          ! detrainment water vapor
-    real(RP), intent(out)     :: qcdet(KA)          ! detrainment cloud water
-    real(RP), intent(out)     :: qidet(KA)          ! detrainment cloud ice
-    real(RP), intent(out)     :: flux_qr(KA)        !
-    real(RP), intent(out)     :: flux_qs(KA)        !
+    real(RP), intent(inout)     :: qvdet(KA)          ! detrainment water vapor
+    real(RP), intent(inout)     :: qcdet(KA)          ! detrainment cloud water
+    real(RP), intent(inout)     :: qidet(KA)          ! detrainment cloud ice
+    real(RP), intent(inout)     :: flux_qr(KA)        !
+    real(RP), intent(inout)     :: flux_qs(KA)        !
     ! upward theta
-    real(RP), intent(out)     :: theta_eu(KA)
-    real(RP), intent(out)     :: theta_ee(KA)
+    real(RP), intent(inout)     :: theta_eu(KA)
+    real(RP), intent(inout)     :: theta_ee(KA)
     ! convection type
-    integer,  intent(out)     :: I_convflag
+    integer,  intent(inout)     :: I_convflag
     !> I_convflag = 0  ==> deep convection
     !>              = 1 ==> shallow convection
     !>              = 2  ==> NONE !!
     ! index valuables
-    integer,  intent(out)     :: k_lcl             ! index of LCL layer
-    integer,  intent(out)     :: k_top             ! index of cloud top hight
-    integer,  intent(out)     :: k_ml               ! index of melt layer (temp < tem00)
-    real(RP), intent(out)     :: zlcl               ! hight of lcl
-    integer,  intent(out)     :: k_lc,k_let,k_pbl  ! indexs
-    real(RP), intent(out)      :: zmix              ! usl layer depth [m]
-    real(RP), intent(out)      :: presmix           ! usl layer depth [Pa]
-    real(RP), intent(out)      :: umfnewdold(KA)    !! umfnew/umfold
+    integer,  intent(inout)     :: k_lcl             ! index of LCL layer
+    integer,  intent(inout)     :: k_top             ! index of cloud top hight
+    integer,  intent(inout)     :: k_ml               ! index of melt layer (temp < tem00)
+    real(RP), intent(inout)     :: zlcl               ! hight of lcl
+    integer,  intent(inout)     :: k_lc,k_let,k_pbl  ! indexs
+    real(RP), intent(inout)      :: zmix              ! usl layer depth [m]
+    real(RP), intent(inout)      :: presmix           ! usl layer depth [Pa]
+    real(RP), intent(inout)      :: umfnewdold(KA)    !! umfnew/umfold
     real(RP)                   :: fbfrc             !< precipitation to be feed back ( 0.0-> deep, or 1.0 ->shallow )
-    real(RP), intent(out)      :: dpthmx            !< max depth of pressure
+    real(RP), intent(inout)      :: dpthmx            !< max depth of pressure
     !---------------------------------------------------------------------------
 
     integer, parameter :: itr_max = 10000
@@ -1075,9 +1159,9 @@ contains
     real(RP) :: tempv_lcl     ! vertal temperature @lcl
     real(RP) :: pres_lcl      ! pressure @ lcl
     real(RP) :: dtvv          ! delta Tvv Kain(2004)
-    real(RP) :: dtrh          ! trigger rh 
-    real(RP) :: radius        ! cloud radius 
-    real(RP) :: dptt          ! pressure thickness 
+    real(RP) :: dtrh          ! trigger rh
+    real(RP) :: radius        ! cloud radius
+    real(RP) :: dptt          ! pressure thickness
     real(RP) :: dumfdp        ! temp var
     real(RP) :: d_min         !< minimum cloud  hight
     ! calc in subroutin kf_updraft
@@ -1088,7 +1172,7 @@ contains
     integer  :: n_check       ! num of check
     integer  :: n_layers      ! num of USL layer
     integer  :: nchm          ! used shallow convection layer index
-    integer  :: nuchm         ! (used shallow convection check) 
+    integer  :: nuchm         ! (used shallow convection check)
     real(RP) :: CHMAX         ! max cloud height used in shallow convection
     integer  :: NNN           ! internal work
     real(RP) :: CLDHGT(KA)    ! used for shallow convection
@@ -1104,7 +1188,10 @@ contains
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     pres300 = pres(KS) - DEPTH_USL*100._RP ! pressure @ surface - 300 mb. maybe 700mb or so default depth_usl is 300hPa
-    tempv(:)   = temp(:)*(1._RP + 0.608_RP*qv(:)) ! vertual temperature
+    do kk = KS, KE
+       tempv(kk)   = temp(kk)*(1._RP + 0.608_RP*qv(kk)) ! vertual temperature
+    end do
+
     ! search above 300 hPa index  to "k_llfc"
     do kk = KS, KE
        if (pres(kk) >= pres300)  k_llfc = kk
@@ -1124,7 +1211,7 @@ contains
     end do
     ! main routine
     ! set initial
-    fbfrc      = 0._RP    ! set inital 0 
+    fbfrc      = 0._RP    ! set inital 0
     dpthmin    = 50.e2_RP ! set initialy USL layer depth (50 hPa)
     I_convflag = 2        ! no convection set initialy
     NUCHM      = KS-1     ! initialize (used shallow convection check) !like "0"
@@ -1145,7 +1232,7 @@ contains
                 if (CLDHGT(NNN) > chmax) then ! get max cloud height in shallow convection
                    NCHM  = NNN
                    NUCHM = kk
-                   CHMAX = CLDHGT(NNN) 
+                   CHMAX = CLDHGT(NNN)
                 end if
              end do
              n_uslcheck = nuchm - 1
@@ -1156,7 +1243,7 @@ contains
              return
           end if ! end if schallow convection then
        end if ! end if over potentially usl layer
-       k_lc     = k_check(n_uslcheck) !< condithin of Updraft Source Layer 
+       k_lc     = k_check(n_uslcheck) !< condithin of Updraft Source Layer
        n_layers = 0                   ! number of USL layer contain discretization layers
        dpthmx   = 0._RP               ! depth of USL (pressure [Pa])
        !       nk       = k_lc - KS  !< check k_lc -KS is not surface or bottom of ground
@@ -1165,20 +1252,20 @@ contains
        ! usl layer depth is nessesary 50mb or more
        if ( nk + 1 < KS ) then !< check k_lc -1 is not surface or bottom of ground
           if(KF_LOG) then
-             if(IO_L) write(IO_FID_LOG,*) 'would go off bottom: cu_kf',pres(KS),k_lc,nk+1,n_uslcheck !,nk i,j
+             if( IO_L ) write(IO_FID_LOG,*) 'would go off bottom: cu_kf',pres(KS),k_lc,nk+1,n_uslcheck !,nk i,j
           end if
        else
           do ! serach USL layer index. USL layer is nessesally more 50hPa
              nk = nk +1
              if ( nk > KE ) then !< check k_lc is not index of top layer
                 if(KF_LOG) then
-                   if(IO_L) write(IO_FID_LOG,*) 'would go off top: cu_kf'!,nk i,j
+                   if( IO_L ) write(IO_FID_LOG,*) 'would go off top: cu_kf'!,nk i,j
                 end if
                 exit
              end if
              dpthmx   = dpthmx + deltap(nk) ! depth of pressure
              n_layers = n_layers + 1
-             if (dpthmx  > dpthmin) then 
+             if (dpthmx  > dpthmin) then
                 exit
              end if
           end do
@@ -1188,7 +1275,7 @@ contains
           return ! chenge at 3d version
        end if
        k_pbl = k_lc + n_layers -1 !< pbl is index  of top of "possible" USL (until determined USL )
-       ! initialize 
+       ! initialize
        theta_mix = 0._RP; temp_mix = 0._RP; qv_mix = 0._RP; zmix = 0._RP;presmix = 0._RP
        ! clc mix variable (USL layer average valuable)
        do kk = k_lc, k_pbl
@@ -1201,7 +1288,7 @@ contains
        temp_mix = temp_mix/dpthmx
        qv_mix   = qv_mix/dpthmx
        presmix  = presmix/dpthmx
-       zmix     = zmix/dpthmx 
+       zmix     = zmix/dpthmx
        emix     = qv_mix*presmix/(0.622_RP + qv_mix) ! water vapor pressure
        ! calculate dewpoint and LCL temperature not use look up table
        ! LCL is Lifted condensation level
@@ -1209,7 +1296,7 @@ contains
        templog  = log(emix/ALIQ)
        temp_dew  = (CLIQ - DLIQ*templog)/(BLIQ - templog) ! dew point temperature
        ! temperature @ lcl setting need dewpoit
-       ! this algolizm proposed by Davies-Jones (1983)       
+       ! this algolizm proposed by Davies-Jones (1983)
        temp_lcl = temp_dew - (0.212_RP + 1.571E-3_RP*(temp_dew - TEM00) &
             - 4.36E-4_RP*(temp_mix - TEM00))*(temp_mix - temp_dew) ! LCL temperature
        temp_lcl  = min(temp_lcl,temp_mix)
@@ -1217,14 +1304,14 @@ contains
        zlcl      = zmix + (temp_lcl - temp_mix)/GdCP ! height of LCL
        ! index of z@lcl
        ! z(k_lclm1) < zlcl < z(k_lcl)
-       do kk = k_lc, KE 
+       do kk = k_lc, KE
           k_lcl = kk
-          if( zlcl <= z_kf(kk) )  exit 
+          if( zlcl <= z_kf(kk) )  exit
        end do
        k_lclm1   = k_lcl - 1
        if (zlcl > z_kf(KE)) then   !< if not found lcl layer
           I_convflag = 2 ! no convection
-          return 
+          return
        end if
        !! interpolate environment temperature and vapor at LCL
        deltaz    = ( zlcl - z_kf(k_lclm1) )/( z_kf(k_lcl)- z_kf(k_lclm1 ) )
@@ -1232,9 +1319,9 @@ contains
        qvenv     = qv(k_lclm1) + ( qv(k_lcl) - qv(k_lclm1) )*deltaz
        tempv_env = temp_env*( 1._RP + 0.608_RP*qvenv )
        ! w_cz set review Kain(2004) eq.2
-       ! w_g set 
+       ! w_g set
        ! dtlcl setting
-       ! wg is 
+       ! wg is
        if (zlcl < 2.e3_RP) then ! Kain 2004 eq.2
 !          w_cz = 0.02_RP*zlcl/2.e3_RP!
           w_cz = 1.e-5_RP*zlcl !
@@ -1322,7 +1409,7 @@ contains
                totalprcp        ,& ! total amount of precipitation and snow
                cloudtop         ,& ! cloud top hight
                qv_u(:)          ,& ! updraft qv
-               qc(:)            ,& ! cloud water 
+               qc(:)            ,& ! cloud water
                qi(:)            ,& ! cloud ice
                qrout(:)         ,& ! rain
                qsout(:)         ,& ! snow
@@ -1332,7 +1419,7 @@ contains
                cape             ,& ! cape !
                flux_qr(:)       ,& ! flux of qr
                flux_qs(:)       ,& ! flux of qi
-               k_top            ,& ! index of cloud top 
+               k_top            ,& ! index of cloud top
                k_let            ,& ! index of below detrain layer
                ! [IN]
                dz_kf(:),z_kf(:) ,&
@@ -1370,7 +1457,7 @@ contains
           end if
 
           !! convection type check
-          if ( k_top   <= k_lcl  .or. &  
+          if ( k_top   <= k_lcl  .or. &
                k_top   <= k_pbl  .or. &
                k_let+1 <= k_pbl ) then ! no convection allowd
              cloudhight = 0._RP
@@ -1393,7 +1480,7 @@ contains
              !! detern shallow convection is after checked all potentialy USL layer
              !! when no deep convection is found (this is deterned first if block in do loop)
              I_convflag = 1
-             if(n_uslcheck == NUCHM) then ! 
+             if(n_uslcheck == NUCHM) then !
                 exit ! exit usl loop
              else
                 do kk = k_lclm1,k_top
@@ -1405,8 +1492,8 @@ contains
                    flux_qr(kk) = 0._RP
                    flux_qs(kk) = 0._RP
                 end do
-             end if ! if(n_uslcheck == NUCHM) then 
-          end if ! convection type 
+             end if ! if(n_uslcheck == NUCHM) then
+          end if ! convection type
        end if ! triggeer
     end do ! usl
     if ( itr .ge. itr_max ) then
@@ -1442,8 +1529,8 @@ contains
        !!
        !!...entrainment is allowed at every level except for K_TOP, so disallow
        !!...entrainment at k_TOP and adjust entrainment rates between k_LET and k_TOP
-       !!...so the the dilution factor due to entrainment is not changed but 
-       !!...the actual entrainment rate will change due due forced total 
+       !!...so the the dilution factor due to entrainment is not changed but
+       !!...the actual entrainment rate will change due due forced total
        !!...detrainment in this layer...
        do kk = k_let+1,k_top
           if(kk == k_top) then
@@ -1480,8 +1567,8 @@ contains
        !!
        if(kk >= k_lc) then
           !
-          if (kk == k_lc) then ! if bototm of USL(pbl) 
-             upent(kk) = umflcl*deltap(kk)/dpthmx 
+          if (kk == k_lc) then ! if bototm of USL(pbl)
+             upent(kk) = umflcl*deltap(kk)/dpthmx
              umf(kk)   = umflcl*deltap(kk)/dpthmx
           elseif (kk <= k_pbl) then ! if in USL(pbl)
              upent(kk) = umflcl*deltap(kk)/dpthmx
@@ -1492,7 +1579,7 @@ contains
           end if
           !
           temp_u(kk) = temp_mix + (z_kf(kk) - zmix)*GdCP ! layner assumption of temp_u
-          qv_u(kk)   = qv_mix 
+          qv_u(kk)   = qv_mix
           !             wu(kk) = w_lcl no use @wrf
        else ! below USL layer no updraft
           temp_u(kk) = 0._RP
@@ -1556,7 +1643,7 @@ contains
        totalprcp     ,& ! total amount of precipitation and snow
        cloudtop      ,& ! cloud top hight [m]
        qv_u          ,& ! updraft qv
-       qc            ,& ! cloud water 
+       qc            ,& ! cloud water
        qi            ,& ! cloud ice
        qrout         ,& ! rain
        qsout         ,& ! snow
@@ -1594,7 +1681,7 @@ contains
          R     => CONST_Rdry
     implicit none
     ![OUT]
-    real(RP),intent(out)    :: umf(KA)        ! upward mass flux 
+    real(RP),intent(out)    :: umf(KA)        ! upward mass flux
     real(RP),intent(out)    :: umflcl         ! upward mass flux @lcl
     real(RP),intent(out)    :: upent(KA)      ! updraft entrainment
     real(RP),intent(out)    :: updet(KA)      ! updraft detrainment
@@ -1603,11 +1690,11 @@ contains
     real(RP),intent(out)    :: temp_u(KA)     ! updraft temperature internal work
     real(RP),intent(out)    :: theta_ee(KA)   !< environment theta_E
     real(RP),intent(inout)  :: theta_eu(KA)   !< updraft theta_E
-    real(RP),intent(out)    :: cloudhight     ! cloud depth 
+    real(RP),intent(out)    :: cloudhight     ! cloud depth
     real(RP),intent(out)    :: totalprcp      ! precipitation
     real(RP),intent(out)    :: cloudtop       ! cloud top height
     real(RP),intent(out)    :: qv_u(KA)       ! updraft water vape mixing ratio
-    real(RP),intent(out)    :: qc(KA)         ! liquit  QLIQ in WRF 
+    real(RP),intent(out)    :: qc(KA)         ! liquit  QLIQ in WRF
     real(RP),intent(out)    :: qi(KA)         ! QICE in WRF
     real(RP),intent(out)    :: qrout(KA)      ! QLQOUT in WRF
     real(RP),intent(out)    :: qsout(KA)      ! QICOUT in WRF
@@ -1622,11 +1709,11 @@ contains
     ! [IN]
     real(RP),intent(in)     :: dz_kf(KA),z_kf(KA)
     ! lcl layer valiable
-    real(RP),intent(in)     :: w_lcl 
+    real(RP),intent(in)     :: w_lcl
     real(RP),intent(in)     :: temp_lcl
     real(RP),intent(in)     :: tempv_lcl
     real(RP),intent(in)     :: pres_lcl
-    real(RP),intent(in)     :: qv_mix 
+    real(RP),intent(in)     :: qv_mix
     real(RP),intent(in)     :: qv(KA)
     real(RP),intent(in)     :: temp(KA)
     real(RP),intent(in)     :: tempv_env ! environment vertual temperature
@@ -1645,7 +1732,7 @@ contains
     real(RP) :: denslcl                         ! density @LCL
     real(RP) :: ee1,ud1, ee2,ud2                ! entrainment and detrainment calc valiables
     real(RP) :: f_eq(KA)                        ! prof5 variable
-    real(RP) :: f_mix1,f_mix2                   ! factor of mixed fraction 
+    real(RP) :: f_mix1,f_mix2                   ! factor of mixed fraction
     real(RP) :: REI,DILBE                       ! REI KF(1990) Eq.1 , DILBE is tempvar for calc cape
     real(RP) :: qcnew,qinew                     ! qcnew is qc new var , qinew is qi newver
     real(RP) :: qfrz                            !< all frozn water
@@ -1667,12 +1754,14 @@ contains
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    tempv = temp*(1._RP + 0.608_RP*qv)
+    do kk = KS, KE
+       tempv(kk)   = temp(kk)*(1._RP + 0.608_RP*qv(kk)) ! vertual temperature
+    end do
     ! initial updraft mass flux
     umfnewdold(:)    = 1._RP
     k_lclm1          = k_lcl - 1
     wtw              = w_lcl*w_lcl
-    denslcl          = pres_lcl/(R*tempv_lcl) 
+    denslcl          = pres_lcl/(R*tempv_lcl)
     umf(k_lclm1)     = denslcl*1.e-2_RP*deltax*deltax ! (A0)
     umflcl           = umf(k_lclm1)
     umfold           = umflcl
@@ -1695,7 +1784,7 @@ contains
     flux_qs          = 0._RP
     totalprcp        = 0._RP !< total rain and snow
     !
-    ee1              = 1._RP 
+    ee1              = 1._RP
     ud1              = 0._RP
     rei              = 0._RP
     dilbe            = 0._RP
@@ -1705,7 +1794,7 @@ contains
     !! is specified to begin. within the glaciation
     !! interval, it is set equal to the updraft temp at the
     !! previous model level...
-    temptmp_ice = temp_frzT 
+    temptmp_ice = temp_frzT
     !< updraft main loop
     !< lcl-1 to z coodinate top-1
     !< if w<0 is cloud top -> exit
@@ -1714,7 +1803,7 @@ contains
        ! temporaly use below layer valuables
        f_frozen1      = 0._RP ! frozen rate initialize this variable 0 (water)to 1(ice)
        temp_u(kkp1)   = temp(kkp1)   ! up parcel temperature assumed env temperature
-       theta_eu(kkp1) = theta_eu(kk) ! up parcel theta_E 
+       theta_eu(kkp1) = theta_eu(kk) ! up parcel theta_E
        qv_u(kkp1)     = qv_u(kk)     ! up parcel vapor
        qc(kkp1)       = qc(kk)       ! up parcel water
        qi(kkp1)       = qi(kk)       ! up parcel ice
@@ -1776,7 +1865,7 @@ contains
        !!# calc tehta_e in environment to entrain into updraft
        call envirtht(pres(kkp1),temp(kkp1),qv(kkp1),theta_ee(kkp1))
        ! rei is the rate of environment inflow
-       rei = umflcl*deltap(kkp1)*0.03_RP/radius !!# Kain 1990 eq.1 ;Kain 2004 eq.5 
+       rei = umflcl*deltap(kkp1)*0.03_RP/radius !!# Kain 1990 eq.1 ;Kain 2004 eq.5
        !!--------------------------------------------------
        !! calc cape
        !!--------------------------------------------------
@@ -1802,7 +1891,7 @@ contains
           k_let = kkp1
           temptmp   = tempvq_u(kkp1)
           !! determine teh critical mixed fraction of updraft and environmental air ...
-          !! if few mix moisture air 
+          !! if few mix moisture air
           f_mix1    = 0.95_RP
           f_mix2    = 1._RP - f_mix1
           theta_tmp = f_mix1*theta_ee(kkp1) + f_mix2*theta_eu(kkp1)
@@ -1833,7 +1922,7 @@ contains
                 ee2        = 1._RP ! all entrain
                 ud2        = 0._RP
                 f_eq(kkp1) = 1._RP
-             else 
+             else
                 f_eq(kkp1) = (tempv(kkp1) - tempvq_u(kkp1))*f_mix1 &
                      &    /(temp_u10 - tempvq_u(kkp1))
                 f_eq(kkp1) = max(0._RP,f_eq(kkp1) )
@@ -1863,7 +1952,7 @@ contains
           !! if the calculated detrained mass flux is greater than totla upd mass
           !! flux, impose total detrainment of updraft mass at the previous model level..
           !! first, correct cape calculation if neede
-          if (dilbe > 0._RP) then !< colect cape 
+          if (dilbe > 0._RP) then !< colect cape
              cape = cape - dilbe*GRAV
           end if
           k_let = kk ! then k_let = k_top
@@ -1899,6 +1988,7 @@ contains
     ! cloud height
     cloudhight = z_kf(k_top) - zlcl
     cloudtop   = z_kf(k_top)
+
     return
   end subroutine CP_kf_updraft
   !!------------------------------------------------------------------------------
@@ -1906,15 +1996,15 @@ contains
   !!------------------------------------------------------------------------------
   subroutine CP_kf_downdraft ( &
        ![IN]
-       dz_kf,z_kf ,& ! 
+       dz_kf,z_kf ,& !
        u          ,& ! x-direction wind
        v          ,& ! meridional wind
        zlcl       ,& ! lcl_hight [m]
-       rh         ,& ! relative humidity initial make kf_init 
+       rh         ,& ! relative humidity initial make kf_init
        deltap     ,& ! delta P
        pres       ,& ! pressure [Pa]
        qv         ,& ! watervapor
-       ems        ,& ! 
+       ems        ,& !
        emsd       ,& !
        theta_ee   ,& ! environment equivalent theta
        umf        ,& ! upward mass flux
@@ -1956,9 +2046,9 @@ contains
     ! [IN]
     ! from init
     real(RP),intent(in) :: dz_kf(KA),z_kf(KA)
-    real(RP),intent(in) :: u(KA)      ! x velocity 
+    real(RP),intent(in) :: u(KA)      ! x velocity
     real(RP),intent(in) :: v(KA)      ! y velocity
-    real(RP),intent(in) :: rh(KA)     ! ! initial make kf_init 
+    real(RP),intent(in) :: rh(KA)     ! ! initial make kf_init
     real(RP),intent(in) :: deltap(KA) ! delta pressure
     real(RP),intent(in) :: pres(KA)   ! pressure
     real(RP),intent(in) :: qv(KA)     ! watervapor
@@ -1977,9 +2067,9 @@ contains
     integer,intent(in)  :: k_lcl      ! index of lcl layer
     integer,intent(in)  :: k_top      ! index of cloud top layer
     integer,intent(in)  :: k_pbl      ! index of USL layer top
-    integer,intent(in)  :: k_let      ! index of updraft only detrainment 
+    integer,intent(in)  :: k_let      ! index of updraft only detrainment
     integer,intent(in)  :: k_lc       !  index of USL layer bottom
-    integer,intent(in)  :: k_ml       ! index of melt layer 
+    integer,intent(in)  :: k_ml       ! index of melt layer
     ! [OUT]
     real(RP),intent(out) :: wspd(3)     ! wind speed 1 k_lcl, 2 k_z5,3 k_top
     real(RP),intent(out) :: dmf(KA)     ! downdraft massflux
@@ -2013,7 +2103,7 @@ contains
     !! ^^^^^^^^^^^^^
     real(RP) :: dpthtmp      ! temporaly depth of downdraft source layer
     real(RP) :: dpthdet      ! downdraft detrainment  depth (Pa)
-    real(RP) :: temp_d(KA)   ! downdraft temperature 
+    real(RP) :: temp_d(KA)   ! downdraft temperature
     real(RP) :: tempv_d(KA)  ! downdraft virtual temperature
     real(RP) :: theta_ed(KA) ! downdraft equivalent theta
     real(RP) :: qvsd(KA)     ! saturate watervapor in downdraft
@@ -2032,9 +2122,10 @@ contains
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    ! if no convection 
+    ! if no convection
     if (I_convflag == 2) return ! if 3d, may be change
-    ! detremin 
+
+    ! detremin
     do kk = KS, KE
        if (pres(kk) >= pres(KS)*0.5_RP)   k_z5 = kk
     end do
@@ -2099,7 +2190,7 @@ contains
        !... if LFS in not at least 50 mb above cloud base (implying that the
        !... level of equil temp, let ,is just above cloud base) do not allow downdraft
        ! dondraft layer
-       ! downdraft is saturated 
+       ! downdraft is saturated
        if(pres(k_dstart) - pres(k_lfs) > 50.e2_RP) then   ! LFS > 50mb(minimum of downdraft source layer)
           theta_ed(k_lfs) = theta_ee(k_lfs)
           qv_d(k_lfs)     = qv(k_lfs)
@@ -2149,8 +2240,12 @@ contains
           end if
           call tpmix2dd(pres(k_dstart),theta_ed(k_dstart),temp_d(k_dstart),qvs_tmp)
           temp_d(k_dstart) = temp_d(k_dstart) - dtempmlt
+
           !! use check theis subroutine is this
-          call ATMOS_SATURATION_psat_liq(es,temp_d(k_dstart)) !saturation vapar pressure
+          !temporary: WRF TYPE equations are used to maintain consistency
+          !call ATMOS_SATURATION_psat_liq(es,temp_d(k_dstart)) !saturation vapar pressure
+          es = ALIQ*EXP((BLIQ*temp_d(k_dstart)-CLIQ)/(temp_d(k_dstart)-DLIQ))
+
           qvs_tmp = 0.622_RP*es/(pres(k_dstart) - es )
           !! Bolton 1980 pseudoequivalent potential temperature
           theta_ed(k_dstart) = temp_d(k_dstart)*(PRE00/pres(k_dstart))**(0.2854_RP*(1._RP - 0.28_RP*qvs_tmp))*   &
@@ -2176,7 +2271,11 @@ contains
                 RL    = XLV0 - XLV1*temp_d(kk)
                 dtmp  = RL*qvs_tmp*(1._RP - rhh )/(CP + RL*rhh*qvs_tmp*dssdt )
                 T1rh  = temp_d(kk) + dtmp
-                call ATMOS_SATURATION_psat_liq(es,T1rh) !saturation vapar pressure
+
+                !temporary: WRF TYPE equations are used to maintain consistency
+                !call ATMOS_SATURATION_psat_liq(es,T1rh) !saturation vapar pressure
+                es = ALIQ*EXP((BLIQ*T1rh-CLIQ)/(T1rh-DLIQ))
+
                 es = RHH*es
                 qsrh = 0.622_RP*es/(pres(kk) - es)
                 if(qsrh < qv_d(kk) ) then
@@ -2198,7 +2297,7 @@ contains
              !!
           end do ! end calc downdraft detrain layer index
           if((pres(k_ldb)-pres(k_lfs)) > 50.e2_RP ) then ! minimum downdraft depth !
-             do kk = k_ldt,k_ldb,-1 
+             do kk = k_ldt,k_ldb,-1
                 kkp1        = kk + 1
                 downdet(kk) = -dmf(k_dstart)*deltap(kk)/dpthdet
                 downent(kk) = 0._RP
@@ -2216,11 +2315,11 @@ contains
     !!...humidity, no downdraft is allowed ..
     !!and shallow convection does not have downdraft
     if (tder < 1._RP) then ! dmf modify
-       prcp_flux = totalprcp  
+       prcp_flux = totalprcp
        cpr       = totalprcp
        tder      = 0._RP
        k_ldb     = k_lfs
-       do kk = KS, k_top 
+       do kk = KS, k_top
           dmf(kk)     = 0._Rp
           downdet(kk) = 0._Rp
           downent(kk) = 0._Rp
@@ -2246,7 +2345,7 @@ contains
        !...ADJUST UPDRAFT MASS FLUX, MASS DETRAINMENT RATE, AND LIQUID WATER AN
        !   DETRAINMENT RATES TO BE CONSISTENT WITH THE TRANSFER OF THE ESTIMATE
        !   FROM THE UPDRAFT TO THE DOWNDRAFT AT THE LFS...
-       !     
+       !
        !         DO NK=LC,LFS
        !           UMF(NK)=UMF(NK)*UPDINC
        !           UDR(NK)=UDR(NK)*UPDINC
@@ -2256,7 +2355,7 @@ contains
        !           DETLQ(NK)=DETLQ(NK)*UPDINC
        !           DETIC(NK)=DETIC(NK)*UPDINC
        !         ENDDO
-       !     
+       !
        !...ZERO OUT THE ARRAYS FOR DOWNDRAFT DATA AT LEVELS ABOVE AND BELOW THE
        !...DOWNDRAFT...
        !
@@ -2302,7 +2401,7 @@ contains
        deltap      ,& ! deltap
        temp_bf     ,& ! temperature
        qv          ,& ! water vapor
-       ems         ,& 
+       ems         ,&
        emsd        ,&
        !! trigger
        presmix     ,& ! usl layer pressure depth
@@ -2325,14 +2424,14 @@ contains
        !!downdraft
        wspd        ,& ! wind speed 1. 2 is used
        dmf         ,& ! DMF
-       downent     ,& ! downdraft entrainment 
+       downent     ,& ! downdraft entrainment
        downdet     ,& ! downdraft detrainment
        qv_d        ,& ! downdraft detrainment qv
        theta_d     ,& ! potential temperature @downdraft
        prcp_flux   ,& ! precipitation
        tder        ,& ! evapolation
        cpr         ,& ! all precipitation  before consider cloud bottom evaporation
-       ! 
+       !
        I_convflag  ,& ! intent inout convective flag
        !triger
        k_top       ,&
@@ -2351,7 +2450,7 @@ contains
        qs_nw       ,&
        rainrate_cp ,&
        nic         ,&
-       cldfrac_KF  ,& 
+       cldfrac_KF  ,&
        timecp      ,&
        time_advec)
     use scale_precision
@@ -2395,10 +2494,10 @@ contains
     real(RP),intent(in)    :: flux_qr(KA)
     real(RP),intent(in)    :: flux_qs(KA)
     real(RP),intent(in)    :: umfnewdold(KA)     ! umfnew/umfold ratio
-    ! from dwndraft 
+    ! from dwndraft
     real(RP),intent(in)    :: wspd(3)            ! wind speed 1. 2 is used
     real(RP),intent(inout) :: dmf(KA)            ! DMF
-    real(RP),intent(inout) :: downent(KA)        ! downdraft entrainment 
+    real(RP),intent(inout) :: downent(KA)        ! downdraft entrainment
     real(RP),intent(inout) :: downdet(KA)        ! downdraft detrainment
     real(RP),intent(in)    :: qv_d(KA)           ! downdraft detrainment qv
     real(RP),intent(in)    :: theta_d(KA)
@@ -2414,7 +2513,7 @@ contains
     integer,intent(in)     :: k_ml
     integer,intent(in)     :: k_lfs
     ! out
-    real(RP),intent(out)   :: temp_g(KA)         ! temporarly temperature -> after iteration then new variable 
+    real(RP),intent(out)   :: temp_g(KA)         ! temporarly temperature -> after iteration then new variable
     real(RP),intent(out)   :: qv_g(KA)
     real(RP),intent(out)   :: qc_nw(KA)
     real(RP),intent(out)   :: qi_nw(KA)
@@ -2428,37 +2527,37 @@ contains
     real(RP),intent(out)   :: time_advec         ! advection timescale
     ![INTERNAL WORK]
     ! iteratevar
-    real(RP) :: umf2(KA)     ! UMF
-    real(RP) :: upent2(KA)   ! updraft entrainment
+    real(RP) :: umf2(KA)    ! UMF
+    real(RP) :: upent2(KA)  ! updraft entrainment
     real(RP) :: updet2(KA)   ! updraft detrainment
-    real(RP) :: qcdet2(KA)   ! updraft detrainment qc
-    real(RP) :: qidet2(KA)   ! updraft detrainment qi
-    real(RP) :: dmf2(KA)     ! DMF
-    real(RP) :: downent2(KA) ! downdraft entrainment 
-    real(RP) :: downdet2(KA) ! downdraft detrainment
+    real(RP) :: qcdet2(KA)  ! updraft detrainment qc
+    real(RP) :: qidet2(KA)  ! updraft detrainment qi
+    real(RP) :: dmf2(KA)   ! DMF
+    real(RP) :: downent2(KA)  ! downdraft entrainment
+    real(RP) :: downdet2(KA)  ! downdraft detrainment
     real(RP) :: prcp_flux2   ! precpitation flux
     real(RP) :: tder2        ! evaporation
     !
     real(RP) :: tkemax       !tkemax tuning prameter
-    real(RP) :: z_lcl        ! lcl layer hight
-    real(RP) :: theta(KA)    ! theta is not same as SCALE theta. This theta is only assume qv
+    real(RP) :: z_lcl       ! lcl layer hight
+    real(RP) :: theta(KA)   ! theta is not same as SCALE theta. This theta is only assume qv
     real(RP) :: theta_u(KA)  ! theta in updraft
     real(RP) :: theta_eu(KA) ! equivalent PT updraft
     real(RP) :: theta_eg(KA) ! equivalent PT environment
-    real(RP) :: exn(KA)      ! exner function
-    real(RP) :: qv_env       ! environment qv
-    real(RP) :: qv_mix       ! USL layer mean  qv
+    real(RP) :: exn(KA)     ! exner function
+    real(RP) :: qv_env      ! environment qv
+    real(RP) :: qv_mix      ! USL layer mean  qv
     real(RP) :: qv_gu(KA)    ! updraft qv (used calc CAPE)
-    real(RP) :: temp_env     ! temporarly environment temperature lcl layer
+    real(RP) :: temp_env    ! temporarly environment temperature lcl layer
     real(RP) :: tempv_env    ! temporarly environment virtual temperature lcl layer
-    real(RP) :: temp_lcl     ! LCL temperature used calcurate CAPE
+    real(RP) :: temp_lcl    ! LCL temperature used calcurate CAPE
     real(RP) :: tempv_lcl    ! temporarly environment virtual temperature lcl layer
-    real(RP) :: temp_mix     ! temporarly environment temperature USL layer mean
+    real(RP) :: temp_mix      ! temporarly environment temperature USL layer mean
     real(RP) :: temp_gu(KA)  ! temporarly updraft temperature
     real(RP) :: tempv_g(KA)  ! temporaly virtual
-    real(RP) :: tempvq_u(KA) ! temporaly virtual
-    real(RP) :: es           ! saturate vapor pressure
-    real(RP) :: qvss         ! saturate vapor pressure mixingratio
+    real(RP) :: tempvq_u(KA)  ! temporaly virtual
+    real(RP) :: es         ! saturate vapor pressure
+    real(RP) :: qvss        ! saturate vapor pressure mixingratio
     ! calc dew point temperature etc.
     real(RP) :: DQ,TDPT,DSSDT,emix,RL,TLOG
     !
@@ -2472,8 +2571,8 @@ contains
     real(RP) :: theta_nw(KA)      ! new PT (used iteration
     real(RP) :: theta_g(KA)       ! new PT
     real(RP) :: qv_nw(KA)         ! tempolaly new qv, becouse itaration
-    real(RP) :: dpth              ! pressure depth of cloud used check 
-    real(RP) :: cape_g            ! new cape clculate after timestep 
+    real(RP) :: dpth              ! pressure depth of cloud used check
+    real(RP) :: cape_g            ! new cape clculate after timestep
     real(RP) :: dcape             ! deltacape compared 10% of original
     real(RP) :: fxm(KA)           ! flux factor
     real(RP) :: f_cape ,f_capeold ! cape ratio new/old
@@ -2484,7 +2583,7 @@ contains
     integer :: istop              !  effor flag 1 mass blance check
     integer :: ncount             ! countor for iteration
     integer :: ntimecount         ! timecount do loop index
-    integer :: nstep              ! max step of ntimecount 
+    integer :: nstep              ! max step of ntimecount
     integer :: noiter             ! iteration flag
     ! temporaly
     integer :: kk,kkp1                       ! index of do loop
@@ -2502,27 +2601,27 @@ contains
     real(RP) :: absomgtc,absomg
     real(RP) :: f_dp
     ! fluxs
-    real(RP) :: theta_fxin(KA)  ! cmpensational subsidence flux form
+    real(RP) :: theta_fxin(KA) ! cmpensational subsidence flux form
     real(RP) :: theta_fxout(KA) ! cmpensational subsidence flux form
     real(RP) :: qv_fxin(KA)     ! cmpensational subsidence flux form
     real(RP) :: qv_fxout(KA)    ! cmpensational subsidence flux form
-    real(RP) :: qc_fxin(KA)     ! cmpensational subsidence flux form
-    real(RP) :: qc_fxout(KA)    ! cmpensational subsidence flux form
-    real(RP) :: qi_fxin(KA)     ! cmpensational subsidence flux form
+    real(RP) :: qc_fxin(KA)      ! cmpensational subsidence flux form
+    real(RP) :: qc_fxout(KA)     ! cmpensational subsidence flux form
+    real(RP) :: qi_fxin(KA)      ! cmpensational subsidence flux form
     real(RP) :: qi_fxout(KA)    ! cmpensational subsidence flux form
     real(RP) :: qr_fxin(KA)     ! cmpensational subsidence flux form
     real(RP) :: qr_fxout(KA)    ! cmpensational subsidence flux form
     real(RP) :: qs_fxin(KA)     ! cmpensational subsidence flux form
     real(RP) :: qs_fxout(KA)    ! cmpensational subsidence flux form
     real(RP) :: rainfb(KA)      ! rain fall
-    real(RP) :: snowfb(KA)      ! snow fall
+    real(RP) :: snowfb(KA)       ! snow fall
     ! evariable moisture budeget
     real(RP) :: err      ! error (tmp var)
     real(RP) :: qinit    ! init water condensation (only qv)
     real(RP) :: qfinl    ! fineal water condensation (producted by cumulus parameterization)
     ! warm rain
     real(RP) :: cpm      ! tempolaly variable
-    real(RP) :: UMF_tmp  ! tempolaly variable 
+    real(RP) :: UMF_tmp  ! tempolaly variable
     real(RP) :: xcldfrac ! tempolaly variable
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     !! start cood
@@ -2535,7 +2634,7 @@ contains
     fbfrc = 0._RP
     if(I_convflag == 1) fbfrc = 1._RP
     !! set timecp(TIMEC)
-    ! time scale of adjustment 
+    ! time scale of adjustment
     vconv = 0.5_RP*(wspd(1) + wspd(2)) ! k_lcl + k_z5
     timecp = deltax/vconv
     time_advec = timecp ! advection time sclale
@@ -2599,12 +2698,13 @@ contains
     do kk = KS,k_top
        call calcexn(pres(kk),qv(kk),exn(kk))
        theta(kk) = temp_bf(kk)*exn(kk)
-       call calcexn(pres(kk),qvdet(kk),exn(kk)) 
-       theta_u(kk) = temp_u(kk)*exn(kk) 
+       call calcexn(pres(kk),qvdet(kk),exn(kk))
+       theta_u(kk) = temp_u(kk)*exn(kk)
     end do
     temp_g(k_top+1:KE) = temp_bf(k_top+1:KE)
     qv_g(k_top+1:KE)   = qv(k_top+1:KE)
     omg(:) = 0._RP ! initialize
+    fxm(:) = 0._RP ! initialize
     !!
     !!@@@  start main loop @@@
     do ncount = 1,10 ! itaration
@@ -2623,15 +2723,15 @@ contains
           end if
        end do
        !! theta_nw and qv_nw has valus only in 1 to k_top
-       do kk = KS, k_top 
+       do kk = KS, k_top
           theta_nw(kk) = theta(kk)
           qv_nw(kk)    = qv(kk)
           fxm(kk)      = omg(kk)*deltax*deltax/GRAV ! fluxmass
        end do
-       nstep  = nint(timecp/dtt + 1) ! how many time step forwad 
+       nstep  = nint(timecp/dtt + 1) ! how many time step forwad
        deltat = timecp/real(nstep,RP) ! deltat*nstep = timecp
        do ntimecount = 1, nstep
-          ! tempolaly time forward start iteration 
+          ! tempolaly time forward start iteration
           !!... assign theta and q variables at the top and bottom of each layer based
           !!... on sign of omega
           do kk = KS, k_top   ! initialize
@@ -2641,13 +2741,13 @@ contains
              qv_fxout(kk)    = 0._RP
           end do
           do kk = KS+1,k_top ! calc flux variable
-             if(omg(kk) <= 0._RP) then 
+             if(omg(kk) <= 0._RP) then
                 theta_fxin(kk)      = -fxm(kk)*theta_nw(kk-1)
                 qv_fxin(kk)         = -fxm(kk)*qv_nw(kk-1)
                 theta_fxout(kk - 1) = theta_fxout(kk-1) + theta_fxin(kk)
                 qv_fxout(kk - 1)    = qv_fxout(kk-1)    + qv_fxin(kk)
              else
-                theta_fxout(kk)    = fxm(kk)*theta_nw(kk) 
+                theta_fxout(kk)    = fxm(kk)*theta_nw(kk)
                 qv_fxout(kk)       = fxm(kk)*qv_nw(kk)
                 theta_fxin(kk - 1) = theta_fxin(kk-1) + theta_fxout(kk)
                 qv_fxin(kk - 1)    = qv_fxin(kk-1)    + qv_fxout(kk)
@@ -2725,8 +2825,12 @@ contains
        end do
        temp_mix = temp_mix/dpthmx
        qv_mix   = qv_mix/dpthmx
+
        ! calc saturate water vapor pressure
-       call ATMOS_SATURATION_psat_liq(es,temp_mix)
+       ! temporary: WRF TYPE equations are used to maintain consistency
+       !call ATMOS_SATURATION_psat_liq(es,temp_mix)
+       es = ALIQ*EXP((BLIQ*temp_mix-CLIQ)/(temp_mix-DLIQ))
+
        qvss = 0.622_RP*es/(presmix -es) ! saturate watervapor
        !!
        !!... Remove supersaturation for diagnostic purposes, if necessary..
@@ -2752,7 +2856,7 @@ contains
        z_lcl     = zmix + (temp_lcl - temp_mix)/GdCP
        do kk = k_lc, KE
           k_lcl = kk
-          if( z_lcl <= z_kf(kk) )  exit 
+          if( z_lcl <= z_kf(kk) )  exit
        end do
        ! estimate environmental tempeature and mixing ratio
        ! interpolate environment temperature and vapor at LCL
@@ -2767,7 +2871,7 @@ contains
        !!
        !!...COMPUTE ADJUSTED ABE(ABEG).(CAPE)
        !!
-       cape_g = 0._RP !  cape "_g" add because 
+       cape_g = 0._RP !  cape "_g" add because
        do kk=k_lclm1,k_top-1 ! LTOPM1
           kkp1=kk+1
           theta_eu(kkp1) = theta_eu(kk)
@@ -2797,7 +2901,7 @@ contains
           return
        end if
        if(ncount /= 1) then
-          if(abs(ainc - aincold) < 1.e-4_RP) then !  IN cycle not change facter then exit iter next loop 
+          if(abs(ainc - aincold) < 1.e-4_RP) then !  IN cycle not change facter then exit iter next loop
              noiter = 1 ! exit this loop in nex step
              ainc   = aincold
              cycle ! iter
@@ -2823,7 +2927,7 @@ contains
        !! 2. ncount = 10
        if( (f_cape <=  1.05-stab .and. f_cape >= 0.95-stab) .or. ncount == 10) then
           exit
-       else ! no exit 
+       else ! no exit
           if(ncount > 10) exit ! sayfty ??  ncount musn't over 10...
           if(f_cape == 0._RP) then ! f_cape is 0 -> new cape is 0 : too reducted
              ainc = ainc*0.5_RP
@@ -2838,8 +2942,8 @@ contains
           end if
           ainc = min(aincmx,ainc) ! ainc must be less than aincmx
           !!  if ainc becomes very small, effects of convection will be minimal so just ignore it
-          if (ainc < 0.05) then !! noconvection 
-             I_convflag = 2 
+          if (ainc < 0.05) then !! noconvection
+             I_convflag = 2
              return
           end if
           !!update valuables use factar ainc
@@ -2882,7 +2986,7 @@ contains
     !! ...frc2 is the fraction of total condensate
     !!... generated that goes into precipitation
     !!
-    !! Redistribute hydrometerors according to the final mass-flux variables
+    !! Redistribute hydrometeors according to the final mass-flux variables
     !! dtheta/dt and dqv/dt is
     if (cpr > 0._RP) then
        frc2 = prcp_flux/(cpr*ainc)
@@ -2946,7 +3050,7 @@ contains
     !! cumulus parameterization rain (rainrate_cp)and rain rate (rainratecp) is detern
     rainrate_cp =  prcp_flux*(1._RP - fbfrc)/(deltax*deltax) ! if shallow convection then fbfrc = 1. -> noprcpitation
     !! evaluate moisuture budget
-    qinit      = 0._RP ! initial qv 
+    qinit      = 0._RP ! initial qv
     qfinl      = 0._RP ! final water subsidence qv,qi,qr,qs...
     dpth       = 0._RP  !
     do kk = KS,k_top
@@ -2969,12 +3073,12 @@ contains
     !! timec, allow feed back to occur only during time_advec
     !! calc tendency of Theta_,qv, qc, qi, qr, qs
     !! temp_g ,qv_g, qc_nw,qi_nw,qr_nw,qs_nw
-    !! calc new theta (SCALE theta) 
+    !! calc new theta (SCALE theta)
     !! then return tendency
     !! warm rain
-    if (WARMRAIN) then ! assume Kessuler scheem?
+    if (WARMRAIN) then
        !!
-       !...IF ICE PHASE IS NOT ALLOWED, MELT ALL FROZEN HYDROMETEORS...         
+       !...IF ICE PHASE IS NOT ALLOWED, MELT ALL FROZEN HYDROMETEORS...
        !!
        do kk = KS,KE
           cpm        = CP*(1._RP + 0.887_RP*qv_g(kk))
@@ -2984,49 +3088,47 @@ contains
           qi_nw(kk)  = 0._RP
           qs_nw(kk)  = 0._RP
        end do
+
        return
-    elseif(.not. FLAG_QS ) then
+!    elseif( ???? ) then
        !!
-       !!...IF ICE PHASE IS ALLOWED, BUT MIXED PHASE IS NOT, MELT FROZEN HYDROME   
-       !!...BELOW THE MELTING LEVEL, FREEZE LIQUID WATER ABOVE THE MELTING LEVEL  
+       !!...IF ICE PHASE IS ALLOWED, BUT MIXED PHASE IS NOT, MELT FROZEN HYDROME
+       !!...BELOW THE MELTING LEVEL, FREEZE LIQUID WATER ABOVE THE MELTING LEVEL
        !!
-       do kk = KS,KE
-          cpm = cp*(1._RP + 0.887*qv_g(kk))
-          if(kk < k_ml) then
-             temp_g(kk) = temp_g(kk) - (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
-          elseif(kk > k_ml) then! kk == k_ml no melt
-             temp_g(kk) = temp_g(kk) + (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
-          end if
-          qc_nw(kk) = qc_nw(kk) + qi_nw(kk)
-          qr_nw(kk) = qr_nw(kk) + qs_nw(kk)
-          qi_nw(kk) = 0._RP
-          qs_nw(kk) = 0._RP
-       end do
-       return
+!!$       do kk = KS,KE
+!!$          cpm = cp*(1._RP + 0.887*qv_g(kk))
+!!$          if(kk < k_ml) then
+!!$             temp_g(kk) = temp_g(kk) - (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
+!!$          elseif(kk > k_ml) then! kk == k_ml no melt
+!!$             temp_g(kk) = temp_g(kk) + (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
+!!$          end if
+!!$          qc_nw(kk) = qc_nw(kk) + qi_nw(kk)
+!!$          qr_nw(kk) = qr_nw(kk) + qs_nw(kk)
+!!$          qi_nw(kk) = 0._RP
+!!$          qs_nw(kk) = 0._RP
+!!$       end do
+!!$       return
        !!
        !!...IF MIXED PHASE HYDROMETEORS ARE ALLOWED, FEED BACK CONVECTIVE TENDENCIES
-       !!...OF HYDROMETEORS DIRECTLY...    
+       !!...OF HYDROMETEORS DIRECTLY...
        !!
-    elseif( FLAG_QS ) then
-       if(.not.FLAG_QI) then
-          do kk = KS, KE
-             qs_nw(kk) =  qs_nw(kk) + qi_nw(kk)
-          end do
-       end if
+    else
+!!$       if( I_QI < 1 ) then
+!!$          do kk = KS, KE
+!!$             qs_nw(kk) =  qs_nw(kk) + qi_nw(kk)
+!!$          end do
+!!$       end if
        return
-    else ! not allow
-       write(*,*) "xxx ERROR@KF,NOTallow namelist"
-       write(*,*) "!!!!!Moiture setting error in KF check namelist"
-       call PRC_MPIstop
     end if
     return
   end subroutine CP_kf_compensational
+
   !! calc exner  function for potential temperature(contain water vapor)
   subroutine calcexn( pres,qv,exn) ! emanuel 1994 111pp ! check potential temperature definition
     use scale_const,only :&
          CP_dry => CONST_CPdry , &
          PRE00 => CONST_PRE00  , &
-         R_dry => CONST_Rdry   
+         R_dry => CONST_Rdry
     implicit none
     real(RP),intent(in) :: pres
     real(RP),intent(in) :: qv
@@ -3036,7 +3138,7 @@ contains
     !    exn = (PRE00/pres)**(( R_dry + qv*R_vap)/(Cp_dry + qv*Cp_vap))
     return
   end subroutine calcexn
-!@!------------------------------------------------------------------------------  
+!@!------------------------------------------------------------------------------
 !@! kf subroutine from WRF cood
 !@!------------------------------------------------------------------------------
   subroutine precipitation_OC1973( &
@@ -3060,8 +3162,8 @@ contains
     QTOT=QLIQ+QICE
     QNEW=QNEWLQ+QNEWIC
     !
-    !  ESTIMATE THE VERTICAL VELOCITY SO THAT AN AVERAGE VERTICAL VELOCITY 
-    !  BE CALCULATED TO ESTIMATE THE TIME REQUIRED FOR ASCENT BETWEEN MODEL 
+    !  ESTIMATE THE VERTICAL VELOCITY SO THAT AN AVERAGE VERTICAL VELOCITY
+    !  BE CALCULATED TO ESTIMATE THE TIME REQUIRED FOR ASCENT BETWEEN MODEL
     !  LEVELS...
     !
     QEST=0.5_RP*(QTOT+QNEW)
@@ -3074,7 +3176,7 @@ contains
     !  RATIO3 IS THE FRACTION OF LIQUID WATER IN FRESH CONDENSATE, RATIO4 IS
     !  THE FRACTION OF LIQUID WATER IN THE TOTAL AMOUNT OF CONDENSATE INVOLV
     !  IN THE PRECIPITATION PROCESS - NOTE THAT ONLY 60% OF THE FRESH CONDEN
-    !  SATE IS IS ALLOWED TO PARTICIPATE IN THE CONVERSION PROCESS...       
+    !  SATE IS IS ALLOWED TO PARTICIPATE IN THE CONVERSION PROCESS...
     !
     RATIO3=QNEWLQ/(QNEW+1.E-8_RP)
     !     OLDQ=QTOT
@@ -3083,7 +3185,7 @@ contains
     RATIO4=(0.6_RP*QNEWLQ+QLIQ)/(QTOT+1.E-8_RP)
     QTOT=QTOT*EXP(-CONV)            ! KF90  Eq. 9
     !
-    !  DETERMINE THE AMOUNT OF PRECIPITATION THAT FALLS OUT OF THE UPDRAFT  
+    !  DETERMINE THE AMOUNT OF PRECIPITATION THAT FALLS OUT OF THE UPDRAFT
     !  PARCEL AT THIS LEVEL...
     !
     DQ=OLDQ-QTOT
@@ -3173,8 +3275,8 @@ contains
     !      parameter(kfnt=250,kfnp=220)
     !c
     !      COMMON/KFLUT/ ttab(kfnt,kfnp),qstab(kfnt,kfnp),the0k(kfnp),
-    !     *              alu(200),rdpr,rdthk,plutop 
-    !C*************************************************************** 
+    !     *              alu(200),rdpr,rdthk,plutop
+    !C***************************************************************
     !c
     !c***********************************************************************
     !c     scaling pressure and tt table index
@@ -3223,11 +3325,11 @@ contains
     IF(DQ.LE.0._RP)THEN
        QNEW=QU-QS
        QU=QS
-    ELSE 
+    ELSE
        !
        !   IF THE PARCEL IS SUBSATURATED, TEMPERATURE AND MIXING RATIO MUST BE
        !   ADJUSTED...IF LIQUID WATER IS PRESENT, IT IS ALLOWED TO EVAPORATE
-       ! 
+       !
        QNEW=0._RP
        QTOT=QLIQ+QICE
        !
@@ -3239,7 +3341,7 @@ contains
        !
        !...subsaturated values only occur in calculations involving various mixtures of
        !...updraft and environmental air for estimation of entrainment and detrainment.
-       !...For these purposes, assume that reasonable estimates can be given using 
+       !...For these purposes, assume that reasonable estimates can be given using
        !...liquid water saturation calculations only - i.e., ignore the effect of the
        !...ice phase in this process only...will not affect conservative properties...
        !
@@ -3286,8 +3388,8 @@ contains
     real(RP) :: RLC,RLS,RLF,CPP,A,DTFRZ,ES,QS,DQEVAP,PII
     !-----------------------------------------------------------------------
     !
-    !...ALLOW THE FREEZING OF LIQUID WATER IN THE UPDRAFT TO PROCEED AS AN 
-    !...APPROXIMATELY LINEAR FUNCTION OF TEMPERATURE IN THE TEMPERATURE RANGE 
+    !...ALLOW THE FREEZING OF LIQUID WATER IN THE UPDRAFT TO PROCEED AS AN
+    !...APPROXIMATELY LINEAR FUNCTION OF TEMPERATURE IN THE TEMPERATURE RANGE
     !...TTFRZ TO TBFRZ...
     !...FOR COLDER TEMPERATURES, FREEZE ALL LIQUID WATER...
     !...THERMODYNAMIC PROPERTIES ARE STILL CALCULATED WITH RESPECT TO LIQUID WATER
@@ -3307,12 +3409,13 @@ contains
     A=(CLIQ-BLIQ*DLIQ)/((TU-DLIQ)*(TU-DLIQ))
     DTFRZ = RLF*QFRZ/(CPP+RLS*QU*A)
     TU = TU+DTFRZ
+    ! temporary: WRF TYPE equations are used to maintain consistency
     !      call ATMOS_SATURATION_psat_liq(ES,TU) !saturation vapar pressure
 
     ES = ALIQ*EXP((BLIQ*TU-CLIQ)/(TU-DLIQ))
     QS = ES*0.622_RP/(P-ES)
     !
-    !...FREEZING WARMS THE AIR AND IT BECOMES UNSATURATED...ASSUME THAT SOME OF THE 
+    !...FREEZING WARMS THE AIR AND IT BECOMES UNSATURATED...ASSUME THAT SOME OF THE
     !...LIQUID WATER THAT IS AVAILABLE FOR FREEZING EVAPORATES TO MAINTAIN SATURA-
     !...TION...SINCE THIS WATER HAS ALREADY BEEN TRANSFERRED TO THE ICE CATEGORY,
     !...SUBTRACT IT FROM ICE CONCENTRATION, THEN SET UPDRAFT MIXING RATIO AT THE NEW
@@ -3333,7 +3436,7 @@ contains
     !***********************************************************************
     !*****    GAUSSIAN TYPE MIXING PROFILE....******************************
     !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-    !  THIS SUBROUTINE INTEGRATES THE AREA UNDER THE CURVE IN THE GAUSSIAN  
+    !  THIS SUBROUTINE INTEGRATES THE AREA UNDER THE CURVE IN THE GAUSSIAN
     !  DISTRIBUTION...THE NUMERICAL APPROXIMATION TO THE INTEGRAL IS TAKEN FROM
     !  "HANDBOOK OF MATHEMATICAL FUNCTIONS WITH FORMULAS, GRAPHS AND MATHEMATICS TABLES"
     !  ED. BY ABRAMOWITZ AND STEGUN, NATL BUREAU OF STANDARDS APPLIED
@@ -3450,7 +3553,7 @@ contains
     !!         C1  ->
     implicit none
     !-----------------------------------------------------------------------
-    real(RP), intent(in)  :: P1,T1,Q1!,ALIQ,BLIQ,CLIQ,DLIQ module variables 
+    real(RP), intent(in)  :: P1,T1,Q1!,ALIQ,BLIQ,CLIQ,DLIQ module variables
     real(RP), intent(out) :: THT1
 
     real(RP) :: EE,TLOG,ASTRT,AINC,A1,TP,VALUE,AINTRP,TDPT,TSAT,THT
@@ -3482,7 +3585,7 @@ contains
     tlog = log(EE/ALIQ)
     !! Bolton(1980) Dew point temperature[K]
     TDPT=(CLIQ-DLIQ*TLOG)/(BLIQ-TLOG)
-    !! Bolton(1980) 
+    !! Bolton(1980)
     TSAT=TDPT - (0.212_RP+1.571E-3_RP*(TDPT-TEM00)-4.36E-4_RP*(T1-TEM00))*(T1-TDPT)
     !      TSAT = 2840._RP/(3.5_RP - log(ee) -4.805_RP) +55
     !! Bolton(1980) emanuel 132p (4.7.9)
@@ -3495,7 +3598,7 @@ contains
   subroutine kf_lutab!(SVP1,SVP2,SVP3,SVPT0)
     !
     !  This subroutine is a lookup table.
-    !  Given a series of series of saturation equivalent potential 
+    !  Given a series of series of saturation equivalent potential
     !  temperatures, the temperature is calculated.
     !
     !--------------------------------------------------------------------
@@ -3520,15 +3623,15 @@ contains
          TEMP,P,ES,QS,PI,THES,TGUES,THGUES,F0,T1,T0,THGS,F1,DT, &
          ASTRT,AINC,A1,THTGS
     !    REAL    :: ALIQ,BLIQ,CLIQ,DLIQ,SVP1,SVP2,SVP3,SVPT0
-    !! to module variables      
+    !! to module variables
     !    real(RP)    :: ALIQ,BLIQ,CLIQ,DLIQ
     !!    real(RP), INTENT(IN)    :: SVP1,SVP2,SVP3,SVPT0
     !
     ! equivalent potential temperature increment
     !    data dth/1._RP/
-    ! minimum starting temp 
+    ! minimum starting temp
     !    data tmin/150._RP/
-    ! tolerance for accuracy of temperature 
+    ! tolerance for accuracy of temperature
     !    data toler/0.001_RP/
     ! top pressure (pascals)
     plutop=5000.0_RP
@@ -3556,7 +3659,7 @@ contains
     !
     ! calculate the starting sat. equiv. theta
     !
-    temp=tmin 
+    temp=tmin
     p=plutop-dpr
     do kp=1,kfnp
        p=p+dpr
@@ -3629,5 +3732,5 @@ contains
     GdCP = - GRAV/CP ! inital set
     return
   end subroutine kf_lutab
-  !
+
 end module scale_atmos_phy_cp_kf

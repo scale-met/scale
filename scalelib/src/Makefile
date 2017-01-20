@@ -84,6 +84,7 @@ endif
 ifeq ($(RD),)
   OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
             scale_atmos_phy_rd_mm5sw.o	\
+            scale_atmos_phy_rd_offline.o	\
             scale_atmos_phy_rd_profile.o
 else
   OBJS_RD = scale_atmos_phy_rd_$(RD).o
@@ -91,8 +92,7 @@ else
 endif
 
 ifeq ($(TB),)
-  OBJS_TB = scale_atmos_phy_tb_dummy.o	\
-            scale_atmos_phy_tb_smg.o	\
+  OBJS_TB = scale_atmos_phy_tb_smg.o	\
             scale_atmos_phy_tb_d1980.o	\
             scale_atmos_phy_tb_dns.o	\
             scale_atmos_phy_tb_mynn.o	\
@@ -100,25 +100,6 @@ ifeq ($(TB),)
 else
   OBJS_TB = scale_atmos_phy_tb_$(TB).o
   FFLAGS += -DTB=$(TB)
-endif
-
-ifeq ($(TRACER),)
-  OBJS_TRACER = scale_tracer_dry.o	\
-                scale_tracer_kessler.o	\
-                scale_tracer_sdm.o	\
-                scale_tracer_sn14.o	\
-                scale_tracer_suzuki10.o	\
-                scale_tracer_tomita08.o
-else
-  OBJS_TRACER = scale_tracer_$(TRACER).o
-  FFLAGS += -DTRACER=$(TRACER)
-endif
-
-ifeq ($(AETRACER),)
-  OBJS_AETRACER = scale_aetracer_none.o	\
-                  scale_aetracer_kajino13.o
-else
-  OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
 
 OBJS_DYN = scale_atmos_dyn_tinteg_short.o	\
@@ -134,7 +115,7 @@ OBJS_DYN = scale_atmos_dyn_tinteg_short.o	\
            scale_atmos_dyn_tstep_tracer.o	\
            scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
            scale_atmos_dyn_fvm_flux.o	\
-           scale_atmos_dyn_fvm_flux_ud1.o	\
+	   scale_atmos_dyn_fvm_flux_ud1.o	\
            scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_fvm_flux_ud3.o	\
            scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
@@ -188,6 +169,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_sub_saturation.o	\
 	scale_atmos_sub_solarins.o	\
 	scale_atmos_sub_thermodyn.o	\
+	scale_atmos_sub_hydrometeor.o	\
 	scale_atmos_sub_adiabat.o	\
 	scale_bulkflux.o	\
 	scale_calendar.o	\
@@ -204,7 +186,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_index.o		\
 	scale_gridtrans.o	\
 	scale_history.o	\
-	scale_intepolation.o	\
+	scale_interpolation.o	\
 	scale_interpolation_nest.o	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\
@@ -234,8 +216,6 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_time.o	\
 	scale_topography.o	\
 	scale_tracer.o	\
-	$(OBJS_TRACER)	\
-	$(OBJS_AETRACER)	\
 	scale_urban_grid.o	\
 	scale_urban_grid_index.o	\
 	scale_urban_phy.o	\

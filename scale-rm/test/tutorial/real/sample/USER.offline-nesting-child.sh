@@ -107,7 +107,7 @@ ATMOS_DYN_TYPE=(    "HEVI"     ) # required parameters for each domain
 ATMOS_PHY_MP_TYPE=( "TOMITA08" ) # required parameters for each domain
 ATMOS_PHY_RD_TYPE=( "MSTRNX"   ) # required parameters for each domain
 ATMOS_PHY_SF_TYPE=( "COUPLE"   ) # required parameters for each domain
-ATMOS_PHY_TB_TYPE=( "MYNN"     ) # required parameters for each domain
+ATMOS_PHY_TB_TYPE=( "HYBRID"   ) # required parameters for each domain
 
 OCEAN_TYPE=( "CONST" ) # required parameters for each domain
 LAND_TYPE=(  "SLAB"  ) # required parameters for each domain

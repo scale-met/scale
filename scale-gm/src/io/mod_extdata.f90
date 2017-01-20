@@ -86,8 +86,6 @@ contains
        ADM_lall_pl
     use mod_fio, only: &
        FIO_seek
-    use mod_hio, only: &
-       HIO_seek
     use mod_time, only: &
        ctime => TIME_CTIME
     implicit none
@@ -200,8 +198,7 @@ contains
        elseif( trim(layer_type) == 'NUM' ) then
           info(np)%kall = nlayer
        else
-          if( IO_L ) write(IO_FID_LOG,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx invlalid type of layer_type.', trim(layer_type)
+          write(*,*) 'xxx [extdata] invlalid type of layer_type.', trim(layer_type)
           call PRC_MPIstop
        endif
 
@@ -214,22 +211,7 @@ contains
        !  info(np)%num_of_data
        !  info(np)%data_date
        !  info(np)%data_rec(1)
-       if ( input_io_mode == 'POH5' ) then
-
-          call HIO_seek( info(np)%data_rec(1), & ! [OUT]
-                         num_of_data,          & ! [INOUT]
-                         data_date,            & ! [INOUT]
-                         input_size,           & ! [INOUT]
-                         fname,                & ! [IN]
-                         dataname,             & ! [IN]
-                         layername,            & ! [IN]
-                         1,                    & ! [IN]
-                         info(np)%kall,        & ! [IN]
-                         ctime,                & ! [IN]
-                         cdate,                & ! [IN]
-                         opt_periodic_year     ) ! [IN]
-
-       elseif( input_io_mode == 'ADVANCED' ) then
+       if ( input_io_mode == 'ADVANCED' ) then
 
           call FIO_seek( info(np)%data_rec(1), & ! [OUT]
                          num_of_data,          & ! [INOUT]
@@ -245,7 +227,7 @@ contains
                          opt_periodic_year     ) ! [IN]
 
        else
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid input_io_mode!', trim(input_io_mode)
+          write(*,*) 'xxx [extdata] Invalid input_io_mode!', trim(input_io_mode)
           call PRC_MPIstop
        endif
 
@@ -319,8 +301,8 @@ contains
        else !--- default
 
           if ( info(np)%data_rec(1) == 1 ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx data time is not consistent with the simulation time! : ', &
-                                 trim(info(np)%dataname )
+             write(*,*) 'xxx [extdata] data time is not consistent with the simulation time! : ', &
+                        trim(info(np)%dataname )
              call PRC_MPIstop
           else !--- default
              info(np)%data_rec(2) = info(np)%data_rec(1)-1
@@ -470,7 +452,7 @@ contains
              if (       ( info(np)%data_rec(1) > info(np)%num_of_data ) &
                   .AND. ( .not. info(np)%opt_periodic_year )            ) then
 
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx This run is over the land surface data range.'
+                write(*,*) 'xxx [extdata] Current time exceeded the time range of the input data.'
                 call PRC_MPIstop
 
              elseif( ( info(np)%data_rec(1) > info(np)%num_of_data ) .and. &
@@ -554,8 +536,6 @@ contains
        COMM_var
     use mod_fio, only: &
        FIO_input
-    use mod_hio, only: &
-       HIO_input
     implicit none
 
     integer, intent(in) :: np
@@ -567,16 +547,7 @@ contains
     info(np)%v_pl(:,:,:,:) = info(np)%defval
 
     do n = 1, 2 !--- forward & backward
-       if ( info(np)%input_io_mode == 'POH5' ) then
-
-          call HIO_input( info(np)%v(:,:,:,n), & ! [OUT]
-                          info(np)%fname,      & ! [IN]
-                          info(np)%dataname,   & ! [IN]
-                          info(np)%layername,  & ! [IN]
-                          1,info(np)%kall,     & ! [IN]
-                          info(np)%data_rec(n) ) ! [IN]
-
-       elseif( info(np)%input_io_mode == 'ADVANCED' ) then
+       if ( info(np)%input_io_mode == 'ADVANCED' ) then
 
           call FIO_input( info(np)%v(:,:,:,n), & ! [OUT]
                           info(np)%fname,      & ! [IN]

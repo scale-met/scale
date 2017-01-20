@@ -129,8 +129,8 @@ contains
       STB   => CONST_STB
     use scale_bulkflux, only: &
       BULKFLUX
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_templhv
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
@@ -179,7 +179,7 @@ contains
     real(RP) :: Uabs         ! modified absolute velocity [m/s]
 
     real(RP) :: SQV          ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: LHV(IA,JA)   ! latent heat for vaporization depending on temperature [J/kg]
+    real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -191,7 +191,7 @@ contains
     end do
     end do
 
-    call ATMOS_THERMODYN_templhv( LHV, TMPA )
+    call HYDROMETEOR_LHV( LHV, TMPA )
 
     do j = JS, JE
     do i = IS, IE

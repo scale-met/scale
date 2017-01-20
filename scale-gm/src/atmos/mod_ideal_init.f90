@@ -62,7 +62,7 @@ module mod_ideal_init
   !
   !++ Public parameters & variables
   !
-  character(len=H_MID),   public :: DCTEST_type = ''
+  character(len=H_SHORT), public :: DCTEST_type = ''
   character(len=H_SHORT), public :: DCTEST_case = ''
 
   !-----------------------------------------------------------------------------
@@ -128,7 +128,7 @@ contains
 
     real(RP), intent(out) :: DIAG_var(ADM_gall,ADM_kall,ADM_lall,6+TRC_VMAX)
 
-    character(len=H_MID)   :: init_type   = ''
+    character(len=H_SHORT) :: init_type   = ''
     character(len=H_SHORT) :: test_case   = ''
     real(RP)               :: eps_geo2prs = 1.E-2_RP
     logical                :: nicamcore   = .true.
@@ -158,11 +158,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** DYCORETESTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist DYCORETESTPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist DYCORETESTPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist DYCORETESTPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=DYCORETESTPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=DYCORETESTPARAM)
 
     DCTEST_type = init_type
     DCTEST_case = test_case
@@ -224,7 +223,7 @@ contains
 
     case default
 
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid init_type. STOP.'
+       write(*,*) 'xxx [dycore_input] Invalid init_type. STOP.'
        call PRC_MPIstop
 
     end select
@@ -383,8 +382,8 @@ contains
        enddo
 
        if ( itr > itrmax ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, pre_save-pre(k), pre(k), pre_sfc, tem(k), tem_sfc
-          write(*         ,*) 'xxx iteration not converged!', k, pre_save-pre(k), pre(k), pre_sfc, tem(k), tem_sfc
+          write(*,*) 'xxx [dycore_input/hs_init] iteration not converged!', &
+                     k, pre_save-pre(k), pre(k), pre_sfc, tem(k), tem_sfc
           stop
        endif
 
@@ -414,8 +413,8 @@ contains
           enddo
 
           if ( itr > itrmax ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, pre_save-pre(k), pre(k), pre(k-1), tem(k), tem(k-1)
-             write(*         ,*) 'xxx iteration not converged!', k, pre_save-pre(k), pre(k), pre(k-1), tem(k), tem(k-1)
+             write(*,*) 'xxx [dycore_input/hs_init] iteration not converged!', &
+                        k, pre_save-pre(k), pre(k), pre(k-1), tem(k), tem(k-1)
              stop
           endif
        enddo
@@ -571,13 +570,13 @@ contains
 
     if (pertb) call perturbation( ijdim, kdim, lall, 5, DIAG_var(:,:,:,1:5) )
 
-    write (IO_FID_LOG,*) " |            Vertical Coordinate used in JBW initialization              |"
-    write (IO_FID_LOG,*) " |------------------------------------------------------------------------|"
+    if( IO_L ) write(IO_FID_LOG,*) " |            Vertical Coordinate used in JBW initialization              |"
+    if( IO_L ) write(IO_FID_LOG,*) " |------------------------------------------------------------------------|"
     do k = 1, kdim
-       write (IO_FID_LOG,'(3X,"(k=",I3,") HGT:",F8.2," [m]",2X,"PRS: ",F9.2," [Pa]",2X,"GH: ",F8.2," [m]",2X,"ETA: ",F9.5)') &
+       if( IO_L ) write(IO_FID_LOG,'(3X,"(k=",I3,") HGT:",F8.2," [m]",2X,"PRS: ",F9.2," [Pa]",2X,"GH: ",F8.2," [m]",2X,"ETA: ",F9.5)') &
        k, z_local(k), prs(k), geo(k)/g, eta(k,1)
     enddo
-    write (IO_FID_LOG,*) " |------------------------------------------------------------------------|"
+    if( IO_L ) write(IO_FID_LOG,*) " |------------------------------------------------------------------------|"
 
     return
   end subroutine jbw_init
@@ -1864,13 +1863,13 @@ contains
     enddo
     enddo
 
-    write (IO_FID_LOG,*) " |            Vertical Coordinate used in JBW initialization              |"
-    write (IO_FID_LOG,*) " |------------------------------------------------------------------------|"
+    if( IO_L ) write(IO_FID_LOG,*) " |            Vertical Coordinate used in JBW initialization              |"
+    if( IO_L ) write(IO_FID_LOG,*) " |------------------------------------------------------------------------|"
     do k = 1, kdim
-       write (IO_FID_LOG,'(3X,"(k=",I3,") HGT:",F8.2," [m]",2X,"PRS: ",F9.2," [Pa]")') &
+       if( IO_L ) write(IO_FID_LOG,'(3X,"(k=",I3,") HGT:",F8.2," [m]",2X,"PRS: ",F9.2," [Pa]")') &
        k, z_local(k), prs(k)
     enddo
-    write (IO_FID_LOG,*) " |------------------------------------------------------------------------|"
+    if( IO_L ) write(IO_FID_LOG,*) " |------------------------------------------------------------------------|"
 
     return
   end subroutine tomita_init
@@ -2054,12 +2053,12 @@ contains
                    +  5.0_RP*(etaT**3.0_RP)*(eta(k,1)**2.0_RP) - (10.0_RP/3.0_RP)*(etaT**2.0_RP)*(eta(k,1)**3.0_RP) &
                    + (5.0_RP/4.0_RP)*etaT*(eta(k,1)**4.0_RP) - (1.0_RP/5.0_RP)*(eta(k,1)**5.0_RP)                   )
        else
-          write (IO_FID_LOG,'(A)') "|-- ETA BOUNDARY ERROR: [steady state calc.]"
-          write (IO_FID_LOG,'("|-- (",I3,")  eta: ",F10.4)') k, eta(k,1)
+          if( IO_L ) write(IO_FID_LOG,'(A)') "|-- ETA BOUNDARY ERROR: [steady state calc.]"
+          if( IO_L ) write(IO_FID_LOG,'("|-- (",I3,")  eta: ",F10.4)') k, eta(k,1)
           stop
        endif
        !else
-       !   write (IO_FID_LOG,'(A)') "|-- OVER 1.0 for eta: [steady state calc.]"
+       !   if( IO_L ) write(IO_FID_LOG,'(A)') "|-- OVER 1.0 for eta: [steady state calc.]"
        !   stop
        !endif
        !

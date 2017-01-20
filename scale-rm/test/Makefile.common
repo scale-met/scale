@@ -8,17 +8,66 @@ ifeq ($(origin SYSDEP_DIR), undefined)
    SYSDEP_DIR = $(TOPDIR)/sysdep
 endif
 
-ifeq ($(origin BINNAME), undefined)
-   BINNAME = scale-rm
+msg1 = "\n"
+
+ifeq ($(ENABLE_FIXEDINDEX),T)
+   msg1       += "ENABLE_FIXEDINDEX is set.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(DEBUG),T)
+   msg1       += "DEBUG is set.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(SINGLE),T)
+   msg1       += "SINGLE is set.\n"
+   USELOCALBIN = T
+endif
+
+ifneq ($(ORG_SRCS),)
+   msg1       += "User-defined file is used.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(DISABLE_LOCALBIN),T)
+   USELOCALBIN = F
+endif
+
+ifeq ($(USELOCALBIN),T)
+   BUILD_DIR := $(PWD)/.libs
+   BINDIR     = $(PWD)
+   msg1      += "The location of executable files is changed to $(BINDIR)\n"
+else
+   BUILD_DIR := $(TOPDIR)/.libs
+   BINDIR     = $(TOPDIR)/bin
+endif
+
+ifeq ($(origin PPNAME), undefined)
+   PPNAME = scale-rm_pp
 endif
 
 ifeq ($(origin INITNAME), undefined)
    INITNAME = scale-rm_init
 endif
 
-BUILD_DIR := $(PWD)/.libs
+ifeq ($(origin BINNAME), undefined)
+   BINNAME = scale-rm
+endif
+
+ifeq ($(origin PPCONF), undefined)
+   PPCONF = NONE
+endif
+
+ifeq ($(origin INITCONF), undefined)
+   INITCONF = NONE
+endif
+
+ifeq ($(origin RUNCONF), undefined)
+   RUNCONF = NONE
+endif
+
 INDEX_DIR := $(PWD)
-BINDIR     = $(PWD)
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -28,6 +77,7 @@ $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	cp -f $< $@
 
 build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
+	@echo -e $(msg1)
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
@@ -44,10 +94,16 @@ run: jobshell
 
 jobshell:
 	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC) \
+		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
+		                                 $(PPNAME) $(INITNAME) $(BINNAME)   \
+		                                 $(PPCONF) $(INITCONF) $(RUNCONF)   \
+		                                 $(TPROC)                           \
 		                                 $(DATDIR) $(DATPARAM) $(DATDISTS); \
 	else \
-		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC) \
+		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
+		                                            $(PPNAME) $(INITNAME) $(BINNAME)   \
+		                                            $(PPCONF) $(INITCONF) $(RUNCONF)   \
+		                                            $(TPROC)                           \
 		                                            $(DATDIR) $(DATPARAM) $(DATDISTS); \
 	fi
 

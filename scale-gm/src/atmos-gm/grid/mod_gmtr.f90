@@ -160,11 +160,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** GMTRPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist GMTRPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist GMTRPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist GMTRPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=GMTRPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=GMTRPARAM)
 
 
 
@@ -892,7 +891,7 @@ contains
           do v = ADM_gmin_pl, ADM_gmax_pl
              ij   = v
              ijm1 = v-1
-             if ( ijm1 == ADM_gmin_pl-1 ) ijp1 = ADM_gmax_pl
+             if ( ijm1 == ADM_gmin_pl-1 ) ijm1 = ADM_gmax_pl
 
              do d = 1, ADM_nxyz
                 wk_pl(d,1) = GRD_xt_pl(ijm1,k0,l,d)
@@ -1001,8 +1000,6 @@ contains
        COMM_data_transfer
     use mod_fio, only: &
        FIO_output
-    use mod_hio, only: &
-       HIO_output
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1076,17 +1073,7 @@ contains
 
     call COMM_data_transfer( tmp2, tmp2_pl )
 
-    if ( GMTR_io_mode == 'POH5' ) then
-       call HIO_output( tmp(:,:,:,I_rgn),  basename, desc, "",          & ! [IN]
-                        "rgn", "region number", "",                     & ! [IN]
-                        "NIL", dtype, "ZSSFC1", 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-       call HIO_output( tmp(:,:,:,I_grid), basename, desc, "",          & ! [IN]
-                        "grid", "grid number", "",                      & ! [IN]
-                        "NIL", dtype, "ZSSFC1", 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-       call HIO_output( tmp2(:,:,:,1),     basename, desc, "",          & ! [IN]
-                        "gmtrmetrics", "gmtr metrics", "",              & ! [IN]
-                        "", dtype, "LAYERNM", 1, 54, 1, 0.0_DP, 0.0_DP  ) ! [IN]
-    elseif( GMTR_io_mode == 'ADVANCED' ) then
+    if ( GMTR_io_mode == 'ADVANCED' ) then
        call FIO_output( tmp(:,:,:,I_rgn),  basename, desc, "",          & ! [IN]
                         "rgn", "region number", "",                     & ! [IN]
                         "NIL", dtype, "ZSSFC1", 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]

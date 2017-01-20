@@ -46,6 +46,14 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -Kopenmp
+# enable + disable parallel
+#OMP = -Kopenmp,noparallel
+
 ### Performance monitor
 # disable
 PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
@@ -56,8 +64,8 @@ PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
 # fine PA
 #PERF_MONIT = -Ntl_trt -U_FIPP_ -U_FAPP_ -D_FINEPA_
 
-FFLAGS_SYSDEPEND = $(PERF_MONIT)
-CFLAGS_SYSDEPEND = $(PERF_MONIT)
+FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT)
+CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT)
 
 
 
@@ -71,12 +79,20 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
+# Default settings
 NETCDF_INCLUDE ?=
-NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
+NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
+# export NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
 
-###### Lapack
+###### Lapack library
+# Default settings
 LAPACK_LIBS    ?=
-# example: -SSL2
+# Or, please set environment variable
+# example:
+# export LAPACK_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

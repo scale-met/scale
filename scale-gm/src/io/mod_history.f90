@@ -236,11 +236,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** NMHISD is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist NMHISD. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist NMHISD. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist NMHISD. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=NMHISD)
+    if( IO_LNML ) write(IO_FID_LOG,nml=NMHISD)
 
     ! nonsence restore
     step_def        = step
@@ -253,11 +252,10 @@ contains
 
     HIST_output_step0 = doout_step0
 
-    if (      output_io_mode == 'HIO'      &
-         .OR. output_io_mode == 'ADVANCED' ) then
+    if ( output_io_mode == 'ADVANCED' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** History output type:', trim(output_io_mode)
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Invalid output_io_mode!', trim(output_io_mode)
+       write(*,*) 'xxx Invalid output_io_mode!', trim(output_io_mode)
        call PRC_MPIstop
     endif
     HIST_io_fname = trim(output_path)//trim(histall_fname)
@@ -280,8 +278,7 @@ contains
        if ( ierr < 0 ) then
           exit
        elseif( ierr > 0 ) then
-          write(*         ,*) 'xxx Not appropriate names in namelist NMHIST. STOP.'
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist NMHIST. STOP.'
+          write(*,*) 'xxx Not appropriate names in namelist NMHIST. STOP.'
           call PRC_MPIstop
       endif
     enddo
@@ -380,7 +377,7 @@ contains
        if( ierr /= 0 ) exit
 
        if ( item == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist NMHIST. STOP.'
+          write(*,*) 'xxx Not appropriate names in namelist NMHIST. STOP.'
           call PRC_MPIstop
        endif
 
@@ -557,11 +554,10 @@ contains
 
     if (       ijdim_input /= ADM_gall_in &
          .AND. ijdim_input /= ADM_gall    ) then
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Module[history]/Category[nhm share]'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid dimension, item=', hitem, &
-                           ', ijdim_input=', ijdim_input, &
-                           ', ADM_gall_in=', ADM_gall_in, &
-                           ', ADM_gall=',    ADM_gall
+       write(*,*) 'xxx [history/history_in] invalid dimension, item=',        hitem,       &
+                                                            ', ijdim_input=', ijdim_input, &
+                                                            ', ADM_gall_in=', ADM_gall_in, &
+                                                            ', ADM_gall=',    ADM_gall
        call PRC_MPIstop
     endif
 
@@ -751,8 +747,6 @@ contains
        COMM_var
     use mod_fio, only: &
        FIO_output
-    use mod_hio, only: &
-       HIO_output
     use mod_time, only: &
        TIME_CSTEP, &
        TIME_CTIME
@@ -886,7 +880,7 @@ contains
              enddo
 
              if ( opt_wgrid_save(n) ) then
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx opt_wgrid is disabled! stop.', file_save(n)
+                write(*,*) 'xxx opt_wgrid is disabled! stop.', file_save(n)
                 call PRC_MPIstop
              endif
 
@@ -900,29 +894,7 @@ contains
 
           if( IO_L ) write(IO_FID_LOG,'(A,A16,A,1PE24.17,A,E24.17)') ' [', item(1:16), '] max=', val_max, ', min=', val_min
 
-          if ( output_io_mode == 'POH5' ) then
-
-             if ( output_type_save(n) == 'SNAPSHOT' ) then
-
-                call HIO_output( v_save(:,:,:,1),                             & ! [IN]
-                                 HIST_io_fname,    HIST_io_desc    , '',      & ! [IN]
-                                 file_save(n),     desc_save(n), '',          & ! [IN]
-                                 unit_save(n),     HIST_dtype,                & ! [IN]
-                                 lname_save(n),    ksumstr(n),   ksumend(n),  & ! [IN]
-                                 tmax_save(n),     tend_save(n), tend_save(n) ) ! [IN]
-
-             elseif( output_type_save(n) == 'AVERAGE' ) then
-
-                call HIO_output( v_save(:,:,:,1),                             & ! [IN]
-                                 HIST_io_fname,    HIST_io_desc    , '',      & ! [IN]
-                                 file_save(n),     desc_save(n), '',          & ! [IN]
-                                 unit_save(n),     HIST_dtype,                & ! [IN]
-                                 lname_save(n),    ksumstr(n),   ksumend(n),  & ! [IN]
-                                 tmax_save(n),     tstr_save(n), tend_save(n) ) ! [IN]
-
-             endif
-
-          elseif( output_io_mode == 'ADVANCED' ) then
+          if ( output_io_mode == 'ADVANCED' ) then
 
              if ( output_type_save(n) == 'SNAPSHOT' ) then
 
@@ -1003,7 +975,8 @@ contains
        if ( .NOT. flag_save(n) ) then ! not stored yet or never
           if( IO_L ) write(IO_FID_LOG,*) '+++ this variable is requested but not stored yet. check!'
           if ( check_flag ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx history check_flag is on. stop!'
+             write(*,*) '+++ this variable is requested but not stored yet. check!', trim(item_save(n))
+             write(*,*) 'xxx history check_flag is on. stop!'
              call PRC_MPIstop
           endif
        endif

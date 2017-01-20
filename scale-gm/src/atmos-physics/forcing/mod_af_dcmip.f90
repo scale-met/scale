@@ -94,11 +94,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** FORCING_DCMIP_PARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist FORCING_DCMIP_PARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist FORCING_DCMIP_PARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist FORCING_DCMIP_PARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=FORCING_DCMIP_PARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=FORCING_DCMIP_PARAM)
 
     ! overwrite setting
     if ( SET_RJ2012 ) then
@@ -218,13 +217,11 @@ contains
     if ( USE_ToyChemistry ) then
        if ( CHEM_TYPE == 'PASSIVE' ) then
           if ( NCHEM_MAX /= 2 ) then
-             write(*         ,*) 'xxx Not appropriate number of passive tracer. STOP.', NCHEM_MAX
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate number of passive tracer. STOP.', NCHEM_MAX
+             write(*,*) 'xxx Not appropriate number of passive tracer. STOP.', NCHEM_MAX
              call PRC_MPIstop
           endif
        else
-          write(*         ,*) 'xxx CHEM_TYPE must be set to PASSIVE. STOP.', trim(CHEM_TYPE)
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx CHEM_TYPE must be set to PASSIVE. STOP.', trim(CHEM_TYPE)
+          write(*,*) 'xxx CHEM_TYPE must be set to PASSIVE. STOP.', trim(CHEM_TYPE)
           call PRC_MPIstop
        endif
     endif

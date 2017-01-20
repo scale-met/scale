@@ -55,6 +55,7 @@ module scale_atmos_phy_tb_smg
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_TB_smg_config
   public :: ATMOS_PHY_TB_smg_setup
   public :: ATMOS_PHY_TB_smg
 
@@ -70,40 +71,71 @@ module scale_atmos_phy_tb_smg
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: nu_fact (:,:,:) ! (Cs*Delta)^2
+  real(RP), private, parameter   :: OneOverThree  = 1.0_RP / 3.0_RP
+  real(RP), private, parameter   :: twoOverThree  = 2.0_RP / 3.0_RP
+  real(RP), private, parameter   :: FourOverThree = 4.0_RP / 3.0_RP
 
-  real(RP), private            :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
-  real(RP), private, parameter :: Ck  = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
-  real(RP), private, parameter :: PrN = 0.7_RP  ! Prandtl number in neutral conditions
-  real(RP), private, parameter :: RiC = 0.25_RP ! critical Richardson number
-  real(RP), private, parameter :: FmC = 16.0_RP ! fum = sqrt(1 - c*Ri)
-  real(RP), private, parameter :: FhB = 40.0_RP ! fuh = sqrt(1 - b*Ri)/PrN
-  real(RP), private            :: RPrN          ! 1 / PrN
-  real(RP), private            :: RRiC          ! 1 / RiC
-  real(RP), private            :: PrNovRiC      ! PrN / RiC
+  real(RP), private              :: Cs            = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
+  real(RP), private, parameter   :: Ck            = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
+  real(RP), private, parameter   :: PrN           = 0.7_RP  ! Prandtl number in neutral conditions
+  real(RP), private, parameter   :: RiC           = 0.25_RP ! critical Richardson number
+  real(RP), private, parameter   :: FmC           = 16.0_RP ! fum = sqrt(1 - c*Ri)
+  real(RP), private, parameter   :: FhB           = 40.0_RP ! fuh = sqrt(1 - b*Ri)/PrN
+  real(RP), private              :: RPrN                    ! 1 / PrN
+  real(RP), private              :: RRiC                    ! 1 / RiC
+  real(RP), private              :: PrNovRiC                ! PrN / RiC
 
-  real(RP), private, parameter :: OneOverThree = 1.0_RP / 3.0_RP
-  real(RP), private, parameter :: twoOverThree = 2.0_RP / 3.0_RP
-  real(RP), private, parameter :: FourOverThree = 4.0_RP / 3.0_RP
+  real(RP), private, allocatable :: nu_fact (:,:,:)         ! (Cs*Delta)^2
 
-  real(RP), private :: ATMOS_PHY_TB_SMG_NU_MAX = 10000.0_RP
-  logical, private  :: ATMOS_PHY_TB_SMG_implicit = .false.
-  logical, private  :: ATMOS_PHY_TB_SMG_bottom = .false.
+  integer,  private              :: I_TKE = -1
 
-  real(RP), private :: tke_fact
+  real(RP), private              :: ATMOS_PHY_TB_SMG_NU_MAX     = 10000.0_RP
+  logical,  private              :: ATMOS_PHY_TB_SMG_implicit   = .false.
+  logical,  private              :: ATMOS_PHY_TB_SMG_bottom     = .false.
+  logical,  private              :: ATMOS_PHY_TB_SMG_horizontal = .false.
+
+  real(RP), private              :: tke_fact
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_TB_smg_config( &
+       TYPE_TB,  &
+       I_TKE_out )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_tracer, only: &
+       TRACER_regist
+    implicit none
+
+    character(len=*), intent(in)  :: TYPE_TB
+    integer,          intent(out) :: I_TKE_out
+
+    if ( TYPE_TB /= 'SMAGORINSKY' ) then
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
+       call PRC_MPIstop
+    endif
+
+    call TRACER_regist( I_TKE,                                          &
+                        1,                                              &
+                        (/ 'TKE_SMG' /),                                &
+                        (/ 'turbulent kinetic energy (Smagorinsky)' /), &
+                        (/ 'm2/s2' /),                                  &
+                        advc = (/ .false. /)                            )
+
+    I_TKE_out = I_TKE
+
+    return
+  end subroutine ATMOS_PHY_TB_smg_config
+
+  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_TB_smg_setup( &
-       TYPE_TB,       &
-       CDZ, CDX, CDY, &
-       CZ             )
+       CDZ, CDX, CDY, CZ )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-
-    character(len=*), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
@@ -111,30 +143,25 @@ contains
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
-    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 2.0_RP
+    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact    = 2.0_RP
     logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .true.
 
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
-         ATMOS_PHY_TB_SMG_Cs, &
-         ATMOS_PHY_TB_SMG_NU_MAX, &
-         ATMOS_PHY_TB_SMG_filter_fact, &
-         ATMOS_PHY_TB_SMG_implicit, &
-         ATMOS_PHY_TB_SMG_consistent_tke, &
-         ATMOS_PHY_TB_SMG_bottom
-
-    integer :: k, i, j
+       ATMOS_PHY_TB_SMG_Cs,             &
+       ATMOS_PHY_TB_SMG_NU_MAX,         &
+       ATMOS_PHY_TB_SMG_filter_fact,    &
+       ATMOS_PHY_TB_SMG_implicit,       &
+       ATMOS_PHY_TB_SMG_consistent_tke, &
+       ATMOS_PHY_TB_SMG_horizontal,     &
+       ATMOS_PHY_TB_SMG_bottom
 
     integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
-
-    if ( TYPE_TB /= 'SMAGORINSKY' ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
-       call PRC_MPIstop
-    endif
 
     ATMOS_PHY_TB_SMG_Cs = Cs
 
@@ -153,30 +180,44 @@ contains
 
     RPrN     = 1.0_RP / PrN
     RRiC     = 1.0_RP / RiC
-    PrNovRiC = (1- PrN) * RRiC
+    PrNovRiC = ( 1.0_RP - PrN ) * RRiC
 
     allocate( nu_fact(KA,IA,JA) )
 
 #ifdef DEBUG
     nu_fact (:,:,:) = UNDEF
 #endif
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS, KE
-       nu_fact(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k,i,j),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
+    if ( ATMOS_PHY_TB_SMG_horizontal ) then
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          nu_fact(k,i,j) = Cs**2 * ( CDX(i) * CDY(j) )
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
-    i = IUNDEF; j = IUNDEF; k = IUNDEF
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       ATMOS_PHY_TB_SMG_consistent_tke = .false.
+       ATMOS_PHY_TB_SMG_implicit       = .false. ! flux in the z-direction is not necessary
+    else
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          nu_fact(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k,i,j),ATMOS_PHY_TB_SMG_filter_fact) )**2
+       enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    end if
 
     if ( ATMOS_PHY_TB_SMG_consistent_tke ) then
        tke_fact = 1.0_RP
     else
        tke_fact = 0.0_RP
     end if
-
 
     return
   end subroutine ATMOS_PHY_TB_smg_setup
@@ -185,10 +226,12 @@ contains
   subroutine ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       tke, tke_t, nu, Ri, Pr, N2,                  &
+       RHOQ_t,                                      &
+       Nu, Ri, Pr, N2,                              &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
+    use scale_precision
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
@@ -218,70 +261,71 @@ contains
        I_UV
     use scale_atmos_phy_tb_common, only: &
        calc_strain_tensor => ATMOS_PHY_TB_calc_strain_tensor, &
-       diffusion_solver => ATMOS_PHY_TB_diffusion_solver, &
-       calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
-       calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
-       calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
-       calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi, &
-       calc_flux_phi  => ATMOS_PHY_TB_calc_flux_phi
+       diffusion_solver   => ATMOS_PHY_TB_diffusion_solver,   &
+       calc_tend_momz     => ATMOS_PHY_TB_calc_tend_momz,     &
+       calc_tend_momx     => ATMOS_PHY_TB_calc_tend_momx,     &
+       calc_tend_momy     => ATMOS_PHY_TB_calc_tend_momy,     &
+       calc_tend_phi      => ATMOS_PHY_TB_calc_tend_phi,      &
+       calc_flux_phi      => ATMOS_PHY_TB_calc_flux_phi
     implicit none
 
     ! SGS flux
-    real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
+    real(RP), intent(out)   :: qflx_sgs_momz(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momx(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momy(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhot(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
-    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency TKE
-    real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
-    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
-    real(RP), intent(out) :: N2 (KA,IA,JA) ! squared Brunt-Vaisala frequency
+    real(RP), intent(inout) :: RHOQ_t       (KA,IA,JA,QA) ! tendency of rho * QTRC
 
-    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
-    real(RP), intent(in)  :: MOMX(KA,IA,JA)
-    real(RP), intent(in)  :: MOMY(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(out)   :: nu           (KA,IA,JA)    ! eddy viscosity (center)
+    real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
+    real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Prantle number
+    real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
-    real(RP), intent(in)  :: SFLX_MW(IA,JA)
-    real(RP), intent(in)  :: SFLX_MU(IA,JA)
-    real(RP), intent(in)  :: SFLX_MV(IA,JA)
-    real(RP), intent(in)  :: SFLX_SH(IA,JA)
-    real(RP), intent(in)  :: SFLX_QV(IA,JA)
+    real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMX         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMY         (KA,IA,JA)
+    real(RP), intent(in)    :: RHOT         (KA,IA,JA)
+    real(RP), intent(in)    :: DENS         (KA,IA,JA)
+    real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
 
-    real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
-    real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
-    real(RP), intent(in)  :: MAPF(IA,JA,2,4)      !< map factor
-    real(DP), intent(in)  :: dt
+    real(RP), intent(in)    :: SFLX_MW      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MU      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_SH      (IA,JA)
+    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
+
+    real(RP), intent(in)    :: GSQRT         (KA,IA,JA,7) !< vertical metrics {G}^1/2
+    real(RP), intent(in)    :: J13G          (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J23G          (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J33G                       !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)    :: MAPF(IA,JA,2,4)            !< map factor
+    real(DP), intent(in)    :: dt
 
     ! diagnostic variables
-    real(RP) :: POTT   (KA,IA,JA)
+    real(RP) :: TKE  (KA,IA,JA)
+    real(RP) :: POTT (KA,IA,JA)
 
     ! deformation rate tensor
-    real(RP) :: S33_C (KA,IA,JA) ! (cell center)
-    real(RP) :: S11_C (KA,IA,JA)
-    real(RP) :: S22_C (KA,IA,JA)
-    real(RP) :: S31_C (KA,IA,JA)
-    real(RP) :: S12_C (KA,IA,JA)
-    real(RP) :: S23_C (KA,IA,JA)
-    real(RP) :: S12_Z (KA,IA,JA) ! (z edge or x-y plane)
-    real(RP) :: S23_X (KA,IA,JA) ! (x edge or y-z plane)
-    real(RP) :: S31_Y (KA,IA,JA) ! (y edge or z-x plane)
-    real(RP) :: S2    (KA,IA,JA) ! |S|^2
+    real(RP) :: S33_C(KA,IA,JA) ! (cell center)
+    real(RP) :: S11_C(KA,IA,JA)
+    real(RP) :: S22_C(KA,IA,JA)
+    real(RP) :: S31_C(KA,IA,JA)
+    real(RP) :: S12_C(KA,IA,JA)
+    real(RP) :: S23_C(KA,IA,JA)
+    real(RP) :: S12_Z(KA,IA,JA) ! (z edge or x-y plane)
+    real(RP) :: S23_X(KA,IA,JA) ! (x edge or y-z plane)
+    real(RP) :: S31_Y(KA,IA,JA) ! (y edge or z-x plane)
+    real(RP) :: S2   (KA,IA,JA) ! |S|^2
 
-    real(RP) :: Kh    (KA,IA,JA) ! eddy diffusion
+    real(RP) :: Kh   (KA,IA,JA) ! eddy diffusion
 
-    real(RP) :: TEND(KA,IA,JA)
-    real(RP) :: a(KA,IA,JA)
-    real(RP) :: b(KA,IA,JA)
-    real(RP) :: c(KA,IA,JA)
-    real(RP) :: d(KA)
+    real(RP) :: TEND (KA,IA,JA)
+    real(RP) :: a    (KA,IA,JA)
+    real(RP) :: b    (KA,IA,JA)
+    real(RP) :: c    (KA,IA,JA)
+    real(RP) :: d    (KA)
     real(RP) :: ap
 
     integer :: IIS, IIE
@@ -298,8 +342,6 @@ contains
     qflx_sgs_momy(:,:,:,:)   = UNDEF
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
     qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
-
-    tke_t(:,:,:) = UNDEF
 
     nu (:,:,:) = UNDEF
     tke(:,:,:) = UNDEF
@@ -451,10 +493,10 @@ contains
        do i = IIS, IIE+1
        do k = KS, KE
 #ifdef DEBUG
-       call CHECK( __LINE__, nu(k,i,j) )
-       call CHECK( __LINE__, nu_fact(k,i,j) )
+          call CHECK( __LINE__, nu(k,i,j) )
+          call CHECK( __LINE__, nu_fact(k,i,j) )
 #endif
-          tke(k,i,j) = ( nu(k,i,j) * Cs / Ck )**2 / nu_fact(k,i,j)
+          TKE(k,i,j) = ( nu(k,i,j) * Cs / Ck )**2 / nu_fact(k,i,j)
        enddo
        enddo
        enddo
@@ -464,36 +506,40 @@ contains
 
        !##### momentum equation (z) #####
        ! (cell center)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS+1, KE-1
+       if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          qflx_sgs_momz(:,:,:,ZDIR) = 0.0_RP
+       else
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS+1, KE-1
 #ifdef DEBUG
-       call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, nu(k,i,j) )
-       call CHECK( __LINE__, S33_C(k,i,j) )
-       call CHECK( __LINE__, S11_C(k,i,j) )
-       call CHECK( __LINE__, S22_C(k,i,j) )
-       call CHECK( __LINE__, tke(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, nu(k,i,j) )
+             call CHECK( __LINE__, S33_C(k,i,j) )
+             call CHECK( __LINE__, S11_C(k,i,j) )
+             call CHECK( __LINE__, S22_C(k,i,j) )
+             call CHECK( __LINE__, tke(k,i,j) )
 #endif
-          qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
-               - 2.0_RP * nu(k,i,j) &
-               * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
-             + twoOverThree * tke(k,i,j) * tke_fact )
-       enddo
-       enddo
-       enddo
+             qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
+                  - 2.0_RP * nu(k,i,j) &
+                  * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+                  + twoOverThree * tke(k,i,j) * tke_fact )
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! just above bottom boundary
-          qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! just below top boundary
-       enddo
-       enddo
+          do j = JJS, JJE
+          do i = IIS, IIE
+             qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! just above bottom boundary
+             qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! just below top boundary
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       end if
        ! (y edge)
        do j = JJS,   JJE
        do i = IIS-1, IIE
@@ -546,6 +592,7 @@ contains
 #endif
 
        if ( ATMOS_PHY_TB_SMG_implicit ) then
+
           call calc_tend_MOMZ( TEND, & ! (out)
                                qflx_sgs_momz, & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
@@ -594,39 +641,43 @@ contains
 
        !##### momentum equation (x) #####
        ! (y edge)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
+       if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          qflx_sgs_momx(k,i,j,ZDIR) = 0.0_RP
+       else
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
 #ifdef DEBUG
-       call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, DENS(k,i+1,j) )
-       call CHECK( __LINE__, DENS(k+1,i,j) )
-       call CHECK( __LINE__, DENS(k+1,i+1,j) )
-       call CHECK( __LINE__, nu(k,i,j) )
-       call CHECK( __LINE__, nu(k,i+1,j) )
-       call CHECK( __LINE__, nu(k+1,i,j) )
-       call CHECK( __LINE__, nu(k+1,i+1,j) )
-       call CHECK( __LINE__, S31_Y(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i+1,j) )
+             call CHECK( __LINE__, DENS(k+1,i,j) )
+             call CHECK( __LINE__, DENS(k+1,i+1,j) )
+             call CHECK( __LINE__, nu(k,i,j) )
+             call CHECK( __LINE__, nu(k,i+1,j) )
+             call CHECK( __LINE__, nu(k+1,i,j) )
+             call CHECK( __LINE__, nu(k+1,i+1,j) )
+             call CHECK( __LINE__, S31_Y(k,i,j) )
 #endif
-          qflx_sgs_momx(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
-               * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
-               * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i+1,j)+nu  (k+1,i+1,j) ) &
-               * S31_Y(k,i,j)
-       enddo
-       enddo
-       enddo
+             qflx_sgs_momx(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
+                  * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
+                  * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i+1,j)+nu  (k+1,i+1,j) ) &
+                  * S31_Y(k,i,j)
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_momx(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_sgs_momx(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
-       enddo
-       enddo
+          do j = JJS, JJE
+          do i = IIS, IIE
+             qflx_sgs_momx(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+             qflx_sgs_momx(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       end if
        ! (cell center)
        do j = JJS, JJE
        do i = IIS, IIE+1
@@ -637,12 +688,12 @@ contains
        call CHECK( __LINE__, S11_C(k,i,j) )
        call CHECK( __LINE__, S22_C(k,i,j) )
        call CHECK( __LINE__, S33_C(k,i,j) )
-       call CHECK( __LINE__, tke(k,i,j) )
+       call CHECK( __LINE__, TKE(k,i,j) )
 #endif
           qflx_sgs_momx(k,i,j,XDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
                * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
-             + twoOverThree * tke(k,i,j) * tke_fact )
+             + twoOverThree * TKE(k,i,j) * tke_fact )
        enddo
        enddo
        enddo
@@ -731,39 +782,43 @@ contains
 
        !##### momentum equation (y) #####
        ! (x edge)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
+       if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          qflx_sgs_momy(k,i,j,ZDIR) = 0.0_RP
+       else
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
 #ifdef DEBUG
-       call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, DENS(k,i,j+1) )
-       call CHECK( __LINE__, DENS(k+1,i,j) )
-       call CHECK( __LINE__, DENS(k+1,i,j+1) )
-       call CHECK( __LINE__, nu(k,i,j) )
-       call CHECK( __LINE__, nu(k,i,j+1) )
-       call CHECK( __LINE__, nu(k+1,i,j) )
-       call CHECK( __LINE__, nu(k+1,i,j+1) )
-       call CHECK( __LINE__, S23_X(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j+1) )
+             call CHECK( __LINE__, DENS(k+1,i,j) )
+             call CHECK( __LINE__, DENS(k+1,i,j+1) )
+             call CHECK( __LINE__, nu(k,i,j) )
+             call CHECK( __LINE__, nu(k,i,j+1) )
+             call CHECK( __LINE__, nu(k+1,i,j) )
+             call CHECK( __LINE__, nu(k+1,i,j+1) )
+             call CHECK( __LINE__, S23_X(k,i,j) )
 #endif
-          qflx_sgs_momy(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
-               * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
-               * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i,j+1)+nu  (k+1,i,j+1) ) &
-               * S23_X(k,i,j)
-       enddo
-       enddo
-       enddo
+             qflx_sgs_momy(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
+                  * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
+                  * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i,j+1)+nu  (k+1,i,j+1) ) &
+                  * S23_X(k,i,j)
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_sgs_momy(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
-       enddo
-       enddo
+          do j = JJS, JJE
+          do i = IIS, IIE
+             qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+             qflx_sgs_momy(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
+          enddo
+          enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+          i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       end if
 
        ! (z edge)
        do j = JJS,   JJE
@@ -801,12 +856,12 @@ contains
        call CHECK( __LINE__, S11_C(k,i,j) )
        call CHECK( __LINE__, S22_C(k,i,j) )
        call CHECK( __LINE__, S33_C(k,i,j) )
-       call CHECK( __LINE__, tke(k,i,j) )
+       call CHECK( __LINE__, TKE(k,i,j) )
 #endif
           qflx_sgs_momy(k,i,j,YDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
                * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
-             + twoOverThree * tke(k,i,j) * tke_fact)
+             + twoOverThree * TKE(k,i,j) * tke_fact)
        enddo
        enddo
        enddo
@@ -913,6 +968,8 @@ contains
     !##### Tracers #####
     do iq = 1, QA
 
+       if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
+
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
@@ -938,7 +995,13 @@ contains
     iq = IUNDEF
 #endif
 
-       tke_t = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOQ_t(k,i,j,I_TKE) = ( TKE(k,i,j) - QTRC(k,i,j,I_TKE) ) * DENS(k,i,j) / dt
+    end do
+    end do
+    end do
 
     return
   end subroutine ATMOS_PHY_TB_smg

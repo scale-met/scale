@@ -102,12 +102,13 @@ contains
        num_of_iteration_lstep    = 0
 
        if ( TRC_ADV_TYPE == 'DEFAULT' ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx unsupported advection scheme for TRCADV test! STOP.'
+          write(*,*) 'xxx [dynamics_setup] unsupported advection scheme for TRCADV test! STOP.', &
+                     trim(TRC_ADV_TYPE)
           call PRC_MPIstop
        endif
 
     case default
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx unsupported integration type! STOP.'
+       write(*,*) 'xxx [dynamics_setup] unsupported integration type! STOP.', trim(TIME_INTEG_TYPE)
        call PRC_MPIstop
     endselect
 

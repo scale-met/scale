@@ -32,7 +32,7 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) \
 ##### C setting
 #CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
 
-CC  = gcc
+CC  = mpicc
 
 CFLAGS_FAST  = -O3 -m64
 CFLAGS_DEBUG = -O0 -m64 -g
@@ -41,11 +41,17 @@ CFLAGS_DEBUG = -O0 -m64 -g
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -fopenmp
+
 SSE_FLAGS = -mtune=native
 #SSE_FLAGS = -mtune=native -mavx
 
-FFLAGS_SYSDEPEND = $(SSE_FLAGS)
-CFLAGS_SYSDEPEND = $(SSE_FLAGS)
+FFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
+CFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
 
 
 
@@ -59,12 +65,16 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
-NETCDF_INCLUDE ?= -I$(NETCDF4)/include
-NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/ap/netcdf4-fortran/4.4.2/include -I/ap/HDF5/1.8.16/include -I/ap/netcdf4/4.3.3.1/include"
+# export NETCDF_LIBS="-L/ap/netcdf4-fortran/4.4.2/lib -L/ap/HDF5/1.8.16/lib -L/ap/netcdf4/4.3.3.1/lib -lnetcdff -lnetcdf"
 
-###### Lapack
-LAPACK_LIBS    ?=
-# example: -llapack
+###### Lapack library
+# Please set environment variable
+# example:
+# export LAPACK_LIBS="-L/ap/lapack/3.6.0/lib/ -llapack"
 
 ##### for frontend
 INSTALL = install

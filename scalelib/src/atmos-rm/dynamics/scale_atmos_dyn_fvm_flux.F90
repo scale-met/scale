@@ -63,7 +63,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mflx    (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
@@ -81,7 +81,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -101,7 +101,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -122,7 +122,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -143,7 +143,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -272,13 +272,34 @@ module scale_atmos_dyn_fvm_flux
   !
   !-----------------------------------------------------------------------------
 contains
-
+  
   !-----------------------------------------------------------------------------
   !> setup
   subroutine ATMOS_DYN_FVM_flux_setup( &
        scheme, scheme_tracer )
     use scale_process, only: &
          PRC_MPIstop
+
+   use scale_atmos_dyn_fvm_flux_ud1, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud1, &
+      ATMOS_DYN_FVM_fluxZ_XYZ_ud1, &
+      ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
+      ATMOS_DYN_FVM_fluxY_XYZ_ud1, &
+      ATMOS_DYN_FVM_fluxZ_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxX_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxY_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxJ13_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxJ23_XYW_ud1, &
+      ATMOS_DYN_FVM_fluxZ_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxX_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxY_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxJ13_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxJ23_UYZ_ud1, &
+      ATMOS_DYN_FVM_fluxZ_XVZ_ud1, &
+      ATMOS_DYN_FVM_fluxX_XVZ_ud1, &
+      ATMOS_DYN_FVM_fluxY_XVZ_ud1, &
+      ATMOS_DYN_FVM_fluxJ13_XVZ_ud1, &
+      ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
 
    use scale_atmos_dyn_fvm_flux_cd2, only: &
       ATMOS_DYN_FVM_flux_valueW_Z_cd2, &
@@ -412,6 +433,59 @@ contains
 
     select case ( scheme )
 
+    case ( "UD1" )
+      if( IO_L ) write(IO_FID_LOG,*) '*** the ud1 scheme is used for flux calculation'
+
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud1
+
+      ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud1
+
+      ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_ud1
+
+      ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_ud1
+
+      ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxX_XYW => ATMOS_DYN_FVM_fluxX_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxY_XYW => ATMOS_DYN_FVM_fluxY_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxJ13_XYW => ATMOS_DYN_FVM_fluxJ13_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxY_UYZ => ATMOS_DYN_FVM_fluxY_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_ud1
+
+      ATMOS_DYN_FVM_fluxX_XVZ => ATMOS_DYN_FVM_fluxX_XVZ_ud1
+
+      ATMOS_DYN_FVM_fluxY_XVZ => ATMOS_DYN_FVM_fluxY_XVZ_ud1
+
+      ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_ud1
+
+      ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
+
+
+
+      if ( IHALO < 1 ) then
+         write(*,*) 'xxx IHALO must be >= ', 1
+         call PRC_MPIstop
+      end if
+      if ( JHALO < 1 ) then
+         write(*,*) 'xxx JHALO must be >= ', 1
+         call PRC_MPIstop
+      end if
+
+
     case ( "CD2" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd2 scheme is used for flux calculation'
 
@@ -455,12 +529,12 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
+      if ( IHALO < 1 ) then
+         write(*,*) 'xxx IHALO must be >= ', 1
          call PRC_MPIstop
       end if
-      if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
+      if ( JHALO < 1 ) then
+         write(*,*) 'xxx JHALO must be >= ', 1
          call PRC_MPIstop
       end if
 
@@ -737,6 +811,57 @@ contains
 
     select case ( scheme_tracer )
 
+    case ( "UD1" )
+      if( IO_L ) write(IO_FID_LOG,*) '*** the ud1 scheme is used for flux calculation of tracer'
+
+      ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud1
+
+      ATMOS_DYN_FVM_fluxX_XYZ_tracer => ATMOS_DYN_FVM_fluxX_XYZ_ud1
+
+      ATMOS_DYN_FVM_fluxY_XYZ_tracer => ATMOS_DYN_FVM_fluxY_XYZ_ud1
+
+      ATMOS_DYN_FVM_fluxZ_XYW_tracer => ATMOS_DYN_FVM_fluxZ_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxX_XYW_tracer => ATMOS_DYN_FVM_fluxX_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxY_XYW_tracer => ATMOS_DYN_FVM_fluxY_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxJ13_XYW_tracer => ATMOS_DYN_FVM_fluxJ13_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxJ23_XYW_tracer => ATMOS_DYN_FVM_fluxJ23_XYW_ud1
+
+      ATMOS_DYN_FVM_fluxZ_UYZ_tracer => ATMOS_DYN_FVM_fluxZ_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxX_UYZ_tracer => ATMOS_DYN_FVM_fluxX_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxY_UYZ_tracer => ATMOS_DYN_FVM_fluxY_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxJ13_UYZ_tracer => ATMOS_DYN_FVM_fluxJ13_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxJ23_UYZ_tracer => ATMOS_DYN_FVM_fluxJ23_UYZ_ud1
+
+      ATMOS_DYN_FVM_fluxZ_XVZ_tracer => ATMOS_DYN_FVM_fluxZ_XVZ_ud1
+
+      ATMOS_DYN_FVM_fluxX_XVZ_tracer => ATMOS_DYN_FVM_fluxX_XVZ_ud1
+
+      ATMOS_DYN_FVM_fluxY_XVZ_tracer => ATMOS_DYN_FVM_fluxY_XVZ_ud1
+
+      ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_ud1
+
+      ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
+
+
+
+      if ( IHALO < 1 ) then
+         write(*,*) 'xxx IHALO must be >= ', 1
+         call PRC_MPIstop
+      end if
+      if ( JHALO < 1 ) then
+         write(*,*) 'xxx JHALO must be >= ', 1
+         call PRC_MPIstop
+      end if
+
+
     case ( "CD2" )
       if( IO_L ) write(IO_FID_LOG,*) '*** the cd2 scheme is used for flux calculation of tracer'
 
@@ -778,12 +903,12 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
+      if ( IHALO < 1 ) then
+         write(*,*) 'xxx IHALO must be >= ', 1
          call PRC_MPIstop
       end if
-      if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
+      if ( JHALO < 1 ) then
+         write(*,*) 'xxx JHALO must be >= ', 1
          call PRC_MPIstop
       end if
 
@@ -1049,7 +1174,6 @@ contains
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup
-
 
 end module scale_atmos_dyn_fvm_flux
 

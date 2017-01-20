@@ -96,7 +96,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
        PHI, GSQRT,                                           &
        J13G, J23G, J33G, MAPF,                               &
-       AQ_CV,                                                &
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        BND_W, BND_E, BND_S, BND_N,                           &
        ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
@@ -104,6 +104,7 @@ contains
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
+       wdamp_coef,                                           &
        divdmp_coef,                                          &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
@@ -141,11 +142,10 @@ contains
     use scale_atmos_boundary, only: &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
-    use scale_history, only: &
 #ifdef HIST_TEND
-       HIST_in, &
+    use scale_history, only: &
+       HIST_in
 #endif
-       HIST_switch
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -199,7 +199,10 @@ contains
     real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
     real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factor
 
-    real(RP), intent(in)    :: AQ_CV(QQA)
+    real(RP), intent(in)    :: AQ_R   (QA)
+    real(RP), intent(in)    :: AQ_CV  (QA)
+    real(RP), intent(in)    :: AQ_CP  (QA)
+    real(RP), intent(in)    :: AQ_MASS(QA)
 
     real(RP), intent(in)    :: REF_dens(KA,IA,JA)
     real(RP), intent(in)    :: REF_pott(KA,IA,JA)
@@ -231,6 +234,7 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
 
+    real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
 
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
@@ -315,7 +319,7 @@ contains
                RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                          & ! (in)
                PHI, GSQRT,                                                  & ! (in)
                J13G, J23G, J33G, MAPF,                                      & ! (in)
-               AQ_CV,                                                       & ! (in)
+               AQ_R, AQ_CV, AQ_CP, AQ_MASS,                                 & ! (in)
                REF_dens, REF_pott, REF_qv, REF_pres,                        & ! (in)
                BND_W, BND_E, BND_S, BND_N,                                  & ! (in)
                ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS,        & ! (in)
@@ -323,6 +327,7 @@ contains
                DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,                 & ! (in)
                DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,           & ! (in)
                DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,           & ! (in)
+               wdamp_coef,                                                  & ! (in)
                divdmp_coef,                                                 & ! (in)
                FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,              & ! (in)
                FLAG_FCT_ALONG_STREAM,                                       & ! (in)

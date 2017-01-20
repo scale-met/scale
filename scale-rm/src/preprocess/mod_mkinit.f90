@@ -47,7 +47,6 @@ module mod_mkinit
      Pstd  => CONST_Pstd,  &
      Rdry  => CONST_Rdry,  &
      CPdry => CONST_CPdry, &
-     LHV   => CONST_LHV,   &
      P00   => CONST_PRE00, &
      I_SW  => CONST_I_SW,  &
      I_LW  => CONST_I_LW
@@ -63,12 +62,16 @@ module mod_mkinit
      GRID_FZ,  &
      GRID_FX,  &
      GRID_FY,  &
-     GRID_CXG
+     GRID_CXG, &
+     GRID_FXG, &
+     GRID_FYG
   use scale_grid_real, only: &
      REAL_CZ, &
      REAL_FZ
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
+  use scale_atmos_hydrometeor, only: &
+     HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
   use scale_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,       &
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
@@ -140,6 +143,7 @@ module mod_mkinit
   integer, public, parameter :: I_WARMBUBBLEAERO   = 28
 
   integer, public, parameter :: I_CAVITYFLOW       = 29
+  integer, public, parameter :: I_BAROCWAVE        = 30
 
   !-----------------------------------------------------------------------------
   !
@@ -158,6 +162,7 @@ module mod_mkinit
   private :: MKINIT_turbulence
   private :: MKINIT_cavityflow
   private :: MKINIT_mountainwave
+  private :: MKINIT_barocwave
 
   private :: MKINIT_warmbubble
   private :: MKINIT_supercell
@@ -333,8 +338,10 @@ contains
        call BUBBLE_setup
     case('CAVITYFLOW')
        MKINIT_TYPE = I_CAVITYFLOW
+    case('BAROCWAVE')
+       MKINIT_TYPE = I_BAROCWAVE
     case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
+       write(*,*) 'xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
     endselect
 
@@ -348,28 +355,18 @@ contains
        CONST_UNDEF8
     use scale_landuse, only: &
        LANDUSE_write
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
     use mod_atmos_driver, only: &
        ATMOS_SURFACE_GET
-    use mod_atmos_vars, only: &
-       ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
-       ATMOS_vars_restart_write
     use mod_ocean_driver, only: &
        OCEAN_SURFACE_SET
-    use mod_ocean_vars, only: &
-       OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
-       OCEAN_vars_restart_write
     use mod_land_driver, only: &
        LAND_SURFACE_SET
-    use mod_land_vars, only: &
-       LAND_sw_restart => LAND_RESTART_OUTPUT, &
-       LAND_vars_restart_write
     use mod_urban_driver, only: &
        URBAN_SURFACE_SET
-    use mod_urban_vars, only: &
-       URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
-       URBAN_vars_restart_write
     use mod_admin_restart, only: &
-       ADMIN_restart
+       ADMIN_restart_write
     use mod_admin_time, only: &
        TIME_DOATMOS_restart,  &
        TIME_DOLAND_restart,   &
@@ -412,7 +409,7 @@ contains
       qv_sfc  (:,:,:) = CONST_UNDEF8
       qc_sfc  (:,:,:) = CONST_UNDEF8
 
-      if ( TRACER_TYPE == 'SUZUKI10' ) then
+      if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
          if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
          call SBMAERO_setup
       endif
@@ -489,8 +486,10 @@ contains
          call MKINIT_warmbubbleaero
       case(I_CAVITYFLOW)
          call MKINIT_cavityflow
+      case(I_BAROCWAVE)
+         call MKINIT_barocwave
       case default
-         write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
+         write(*,*) 'xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
       endselect
 
@@ -506,15 +505,11 @@ contains
       call LANDUSE_write
 
       ! output restart file
-      ! if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
-      ! if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
-      ! if( LAND_sw_restart  ) call LAND_vars_restart_write
-      ! if( URBAN_sw_restart ) call URBAN_vars_restart_write
       TIME_DOOCEAN_restart = .TRUE.
       TIME_DOLAND_restart  = .TRUE.
       TIME_DOURBAN_restart = .TRUE.
       TIME_DOATMOS_restart = .TRUE.
-      call ADMIN_restart
+      call ADMIN_restart_write
 
     endif
 
@@ -549,7 +544,9 @@ contains
     real(RP) :: CZ_offset
     real(RP) :: CX_offset
     real(RP) :: CY_offset
-    real(RP) :: dist
+    real(RP) :: distx, disty, distz
+
+    real(RP) :: Domain_RX, Domain_RY
 
     integer  :: ierr
     integer  :: k, i, j
@@ -581,22 +578,32 @@ contains
           CZ_offset = GRID_CZ(KS)
           CX_offset = GRID_CX(IS)
           CY_offset = GRID_CY(JS)
+          Domain_RX = GRID_FX(IE) - GRID_FX(IS-1)
+          Domain_RY = GRID_FY(JE) - GRID_FY(JS-1)
        else
           CZ_offset = 0.0_RP
           CX_offset = 0.0_RP
           CY_offset = 0.0_RP
+          Domain_RX = GRID_FXG(IAG-IHALO) - GRID_FXG(IHALO)
+          Domain_RY = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
        endif
 
+       ! make bubble coefficient
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
 
-          ! make tracer bubble
-          dist = ( (GRID_CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2 &
-               + ( (GRID_CX(i)-CX_offset-BBL_CX)/BBL_RX )**2 &
-               + ( (GRID_CY(j)-CY_offset-BBL_CY)/BBL_RY )**2
+          distz = ( (GRID_CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2
 
-          bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(dist,1.0_RP) ) )**2
+          distx = min( ( (GRID_CX(i)-CX_offset-BBL_CX          )/BBL_RX )**2, &
+                       ( (GRID_CX(i)-CX_offset-BBL_CX-Domain_RX)/BBL_RX )**2, &
+                       ( (GRID_CX(i)-CX_offset-BBL_CX+Domain_RX)/BBL_RX )**2  )
+
+          disty = min( ( (GRID_CY(j)-CY_offset-BBL_CY          )/BBL_RY )**2, &
+                       ( (GRID_CY(j)-CY_offset-BBL_CY-Domain_RY)/BBL_RY )**2, &
+                       ( (GRID_CY(j)-CY_offset-BBL_CY+Domain_RY)/BBL_RY )**2  )
+
+          bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(distz+distx+disty,1.0_RP) ) )**2
 
        enddo
        enddo
@@ -648,7 +655,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_RECT,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
+       write(*,*) 'xxx Not found namelist. Check!'
        call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RECT. Check!'
@@ -693,36 +700,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Kajino 2013 scheme
   subroutine AEROSOL_setup
-
-    use scale_tracer
-    use scale_const, only: &
-       PI => CONST_PI, &
-       CONST_CVdry, &
-       CONST_Rdry, &
-       CONST_Rvap, &
-       CONST_PRE00
-    use scale_atmos_thermodyn, only: &
-       AQ_CV
+    use scale_atmos_phy_ae_kajino13, only: &
+       ATMOS_PHY_AE_kajino13_mkinit
     implicit none
-
-    integer, parameter ::  ia_m0  = 1             !1. number conc        [#/m3]
-    integer, parameter ::  ia_m2  = 2             !2. 2nd mom conc       [m2/m3]
-    integer, parameter ::  ia_m3  = 3             !3. 3rd mom conc       [m3/m3]
-    integer, parameter ::  ia_ms  = 4             !4. mass conc          [ug/m3]
-    integer, parameter ::  ia_kp  = 5
-    integer, parameter ::  ik_out  = 1
-
-    real(RP) :: m0_init = 0.0_RP    ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
-    real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]
-    real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]
 
     real(RP), parameter :: d_min_def = 1.e-9_RP ! default lower bound of 1st size bin
     real(RP), parameter :: d_max_def = 1.e-5_RP ! upper bound of last size bin
     integer,  parameter :: n_kap_def = 1        ! number of kappa bins
     real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
-    real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]
-    real(RP), parameter :: cleannumber = 1.e-3_RP
+
+    real(RP) :: m0_init = 0.0_RP    ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
+    real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]
+    real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]
 
     real(RP) :: d_min_inp(3) = d_min_def
     real(RP) :: d_max_inp(3) = d_max_def
@@ -740,406 +730,46 @@ contains
        k_max_inp, &
        n_kap_inp
 
-    ! local variables
-    real(RP), parameter  :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
-    real(RP), parameter  :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
 
-    integer :: ia0, ik, is0, ic, k, i, j, it, iq
-    integer :: ierr, n_trans
-    real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
-    real(RP),allocatable :: aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP),allocatable :: aerosol_activ(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP),allocatable :: emis_procs(:,:,:,:)    !(n_atr,n_siz_max,n_kap_max,n_ctg)
-    !--- gas
-    real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
-    integer :: n_siz_max, n_kap_max, n_ctg
-!   integer, allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
-!   integer, allocatable :: ia_trans2procs(:) !trans to procs conversion
-!   integer, allocatable :: is_trans2procs(:) !trans to procs conversion
-!   integer, allocatable :: ik_trans2procs(:) !trans to procs conversion
-!   integer, allocatable :: ic_trans2procs(:)
-    !--- bin settings (lower bound, center, upper bound)
-    real(RP),allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
-    real(RP),allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
-    real(RP) :: dlogd, dk                                    !delta log(D), delta K
-    real(RP),allocatable :: d_min(:)              !lower bound of 1st size bin   (n_ctg)
-    real(RP),allocatable :: d_max(:)              !upper bound of last size bin  (n_ctg)
-    integer, allocatable :: n_kap(:)              !number of kappa bins          (n_ctg)
-    real(RP),allocatable :: k_min(:)              !lower bound of 1st kappa bin  (n_ctg)
-    real(RP),allocatable :: k_max(:)
+    integer :: ierr
 
-    real(RP) :: pott, qdry, pres
-    real(RP) :: temp, cpa, cva, qsat_tmp, ssliq, Rmoist
-    real(RP) :: pi6
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
-
-    pi6   = pi / 6._RP
-    n_ctg = AE_CTG
-
-    allocate( d_min(n_ctg) )
-    allocate( d_max(n_ctg) )
-    allocate( n_kap(n_ctg) )
-    allocate( k_min(n_ctg) )
-    allocate( k_max(n_ctg) )
-
-    d_min(1:n_ctg) = d_min_def ! lower bound of 1st size bin
-    d_max(1:n_ctg) = d_max_def ! upper bound of last size bin
-    n_kap(1:n_ctg) = n_kap_def ! number of kappa bins
-    k_min(1:n_ctg) = k_min_def ! lower bound of 1st kappa bin
-    k_max(1:n_ctg) = k_max_def
-    d_min_inp(1:n_ctg) = d_min(1:n_ctg) !def value used if not defined in namelist
-    d_max_inp(1:n_ctg) = d_max(1:n_ctg) !def value used if not defined in namelist
-    n_kap_inp(1:n_ctg) = n_kap(1:n_ctg) !def value used if not defined in namelist
-    k_min_inp(1:n_ctg) = k_min(1:n_ctg) !def value used if not defined in namelist
-    k_max_inp(1:n_ctg) = k_max(1:n_ctg) !def value used if not defined in namelist
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Default used!'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used!'
 !       call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_AERO. Check!'
        call PRC_MPIstop
-    else
-       d_min(1:n_ctg) = d_min_inp(1:n_ctg)  ! lower bound of 1st size bin
-       d_max(1:n_ctg) = d_max_inp(1:n_ctg)  ! upper bound of last size bin
-       n_kap(1:n_ctg) = n_kap_inp(1:n_ctg)  ! number of kappa bins
-       k_min(1:n_ctg) = k_min_inp(1:n_ctg)  ! lower bound of 1st kappa bin
-       k_max(1:n_ctg) = k_max_inp(1:n_ctg)  ! upper bound of last kappa bin
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_AERO)
 
-    !--- diagnose parameters (n_trans, n_siz_max, n_kap_max)
-    n_trans   = 0
-    n_siz_max = 0
-    n_kap_max = 0
-    do ic = 1, n_ctg
-      n_trans   = n_trans + NSIZ(ic) * NKAP(ic) * N_ATR
-      n_siz_max = max(n_siz_max, NSIZ(ic))
-      n_kap_max = max(n_kap_max, NKAP(ic))
-    enddo
-
-    allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    aerosol_procs(:,:,:,:) = 0._RP
-    aerosol_activ(:,:,:,:) = 0._RP
-    emis_procs   (:,:,:,:) = 0._RP
-
-!   allocate( it_procs2trans(N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-!   allocate( ia_trans2procs(n_trans) )
-!   allocate( is_trans2procs(n_trans) )
-!   allocate( ik_trans2procs(n_trans) )
-!   allocate( ic_trans2procs(n_trans) )
-
-    !bin setting
-    allocate(d_lw(n_siz_max,n_ctg))
-    allocate(d_ct(n_siz_max,n_ctg))
-    allocate(d_up(n_siz_max,n_ctg))
-    allocate(k_lw(n_kap_max,n_ctg))
-    allocate(k_ct(n_kap_max,n_ctg))
-    allocate(k_up(n_kap_max,n_ctg))
-    d_lw(:,:) = 0._RP
-    d_ct(:,:) = 0._RP
-    d_up(:,:) = 0._RP
-    k_lw(:,:) = 0._RP
-    k_ct(:,:) = 0._RP
-    k_up(:,:) = 0._RP
-
-    do ic = 1, n_ctg
-
-      dlogd = (log(d_max(ic)) - log(d_min(ic)))/real(NSIZ(ic),kind=RP)
-
-      do is0 = 1, NSIZ(ic)  !size bin
-        d_lw(is0,ic) = exp(log(d_min(ic))+dlogd* real(is0-1,kind=RP)        )
-        d_ct(is0,ic) = exp(log(d_min(ic))+dlogd*(real(is0  ,kind=RP)-0.5_RP))
-        d_up(is0,ic) = exp(log(d_min(ic))+dlogd* real(is0  ,kind=RP)        )
-      enddo !is (1:n_siz(ic))
-      dk    = (k_max(ic) - k_min(ic))/real(n_kap(ic),kind=RP)
-      do ik = 1, n_kap(ic)  !size bin
-        k_lw(ik,ic) = k_min(ic) + dk  * real(ik-1,kind=RP)
-        k_ct(ik,ic) = k_min(ic) + dk  *(real(ik  ,kind=RP)-0.5_RP)
-        k_up(ik,ic) = k_min(ic) + dk  * real(ik  ,kind=RP)
-      enddo !ik (1:n_kap(ic))
-
-    enddo !ic (1:n_ctg)
-!    ik  = 1       !only one kappa bin
-
-    m0t = m0_init !total M0 [#/m3]
-    dgt = dg_init ![m]
-    sgt = sg_init ![-]
-
-    if ( m0t <= cleannumber ) then
-       m0t = cleannumber
-       dgt = 0.1E-6_RP
-       sgt = 1.3_RP
-       if ( IO_L ) then
-          write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
-       endif
-    endif
-
-    m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M2 [m2/m3]
-    m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M3 [m3/m3]
-    mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
-
-    do ic = 1, n_ctg
-    !aerosol_procs initial condition
-    do ik = 1, n_kap(ic)   !kappa bin
-    do is0 = 1, NSIZ(ic)
-       if (dgt >= d_lw(is0,ic) .and. dgt < d_up(is0,ic)) then
-         aerosol_procs(ia_m0,is0,ik,ic) = aerosol_procs(ia_m0,is0,ik,ic) + m0t          ![#/m3]
-         aerosol_procs(ia_m2,is0,ik,ic) = aerosol_procs(ia_m2,is0,ik,ic) + m2t          ![m2/m3]
-         aerosol_procs(ia_m3,is0,ik,ic) = aerosol_procs(ia_m3,is0,ik,ic) + m3t          ![m3/m3]
-         aerosol_procs(ia_ms,is0,ik,ic) = aerosol_procs(ia_ms,is0,ik,ic) + mst*1.E-9_RP ![kg/m3]
-       elseif (dgt < d_lw(1,ic)) then
-         aerosol_procs(ia_m0,1 ,ik,ic) = aerosol_procs(ia_m0,1 ,ik,ic) + m0t          ![#/m3]
-         aerosol_procs(ia_m2,1 ,ik,ic) = aerosol_procs(ia_m2,1 ,ik,ic) + m2t          ![m2/m3]
-         aerosol_procs(ia_m3,1 ,ik,ic) = aerosol_procs(ia_m3,1 ,ik,ic) + m3t          ![m3/m3]
-         aerosol_procs(ia_ms,1 ,ik,ic) = aerosol_procs(ia_ms,1 ,ik,ic) + mst*1.E-9_RP ![kg/m3]
-       elseif (dgt >= d_up(NSIZ(ic),ic)) then
-         aerosol_procs(ia_m0,NSIZ(ic),ik,ic) = aerosol_procs(ia_m0,NSIZ(ic),ik,ic) + m0t          ![#/m3]
-         aerosol_procs(ia_m2,NSIZ(ic),ik,ic) = aerosol_procs(ia_m2,NSIZ(ic),ik,ic) + m2t          ![m2/m3]
-         aerosol_procs(ia_m3,NSIZ(ic),ik,ic) = aerosol_procs(ia_m3,NSIZ(ic),ik,ic) + m3t          ![m3/m3]
-         aerosol_procs(ia_ms,NSIZ(ic),ik,ic) = aerosol_procs(ia_ms,NSIZ(ic),ik,ic) + mst*1.E-9_RP ![kg/m3]
-       endif
-    enddo
-    enddo
-    enddo
-
-    CCN(:,:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-
-       do k = KS, KE
-          pott = RHOT(k,i,j) / DENS(k,i,j)
-          qdry = 1.0_RP
-          do iq = QQS, QQE
-             qdry = qdry - QTRC(k,i,j,iq)
-          enddo
-          cva = qdry * CONST_CVdry
-          do iq = QQS, QQE
-             cva = cva + QTRC(k,i,j,iq) * AQ_CV(iq)
-          enddo
-          Rmoist = CONST_Rdry * qdry + CONST_Rvap * QTRC(k,i,j,I_QV)
-          cpa = cva + Rmoist
-          pres = CONST_PRE00 &
-                * ( DENS(k,i,j)*Rmoist*pott/CONST_PRE00 )**( cpa/(cpa-Rmoist) )
-          temp = pres / ( DENS(k,i,j) * Rmoist )
-          !--- calculate super saturation of water
-          call SATURATION_pres2qsat_liq( qsat_tmp,temp,pres )
-          ssliq = QTRC(k,i,j,I_QV)/qsat_tmp - 1.0_RP
-          call aerosol_activation_kajino13 &
-                                 (c_kappa, ssliq, temp, ia_m0, ia_m2, ia_m3, &
-                                  N_ATR,n_siz_max,n_kap_max,n_ctg,NSIZ,n_kap, &
-                                  d_ct,aerosol_procs, aerosol_activ)
-
-         do is0 = 1, NSIZ(ic_mix)
-           CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
-         enddo
-
-       enddo
-
-    enddo
-    enddo
-
-    conc_gas(:) = 0.0_RP
-    do k = KS, KE
-    do i = IS, IE
-    do j = JS, JE
-     it = 0
-     do ic = 1, n_ctg       !category
-     do ik = 1, NKAP(ic)   !kappa bin
-     do is0 = 1, NSIZ(ic)   !size bin
-     do ia0 = 1, N_ATR       !attributes
-        it = it + 1
-        QTRC(k,i,j,QAES-1+it) = aerosol_procs(ia0,is0,ik,ic)/DENS(k,i,j) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
-     enddo !ia0 (1:N_ATR )
-     enddo !is (1:n_siz(ic)  )
-     enddo !ik (1:n_kap(ic)  )
-     enddo !ic (1:n_ctg      )
-     QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) = conc_gas(1:GAS_CTG)/DENS(k,i,j)*1.E-9_RP !mixing ratio [kg/kg]
-    enddo
-    enddo
-    enddo
+    call ATMOS_PHY_AE_kajino13_mkinit( &
+         QTRC, CCN,                 & ! (out)
+         DENS, RHOT,                & ! (in)
+         m0_init, dg_init, sg_init, & ! (in)
+         d_min_inp, d_max_inp,      & ! (in)
+         k_min_inp, k_max_inp,      & ! (in)
+         n_kap_inp                  ) ! (in)
 
     return
-
   end subroutine AEROSOL_setup
-  !----------------------------------------------------------------------------------------
-  ! subroutine 4. aerosol_activation
-  !   Abdul-Razzak et al.,   JGR, 1998 [AR98]
-  !   Abdul-Razzak and Ghan, JGR, 2000 [AR00]
-  !----------------------------------------------------------------------------------------
-  subroutine aerosol_activation_kajino13(c_kappa, super, temp_k, &
-                                ia_m0, ia_m2, ia_m3, &
-                                n_atr,n_siz_max,n_kap_max,n_ctg,n_siz,n_kap, &
-                                d_ct, aerosol_procs, aerosol_activ)
-  use scale_const, only: &
-      CONST_Mvap, &            ! mean molecular weight for water vapor [g/mol]
-      CONST_DWATR, &           ! water density   [kg/m3]
-      CONST_R, &               ! universal gas constant             [J/mol/K]
-      CONST_TEM00
-  implicit none
-    !i/o variables
-      real(RP),intent(in) :: super      ! supersaturation                                 [-]
-      real(RP),intent(in) :: c_kappa    ! hygroscopicity of condensable mass              [-]
-      real(RP),intent(in) :: temp_k     ! temperature
-      integer, intent(in) :: ia_m0, ia_m2, ia_m3
-      integer, intent(in) :: n_atr
-      integer, intent(in) :: n_siz_max
-      integer, intent(in) :: n_kap_max
-      integer, intent(in) :: n_ctg
-      real(RP),intent(in) :: d_ct(n_siz_max,n_ctg)
-      real(RP) :: aerosol_procs(n_atr,n_siz_max,n_kap_max,n_ctg)
-      real(RP) :: aerosol_activ(n_atr,n_siz_max,n_kap_max,n_ctg)
-      integer, intent(in) :: n_siz(n_ctg), n_kap(n_ctg)
-    !local variables
-      real(RP),parameter :: two3 = 2._RP/3._RP
-      real(RP),parameter :: rt2  = sqrt(2._RP)
-      real(RP),parameter :: twort2  = rt2       ! 2/sqrt(2) = sqrt(2)
-      real(RP),parameter :: thrrt2  = 3._RP/rt2 ! 3/sqrt(2)
-      real(RP) :: smax_inv                ! inverse
-      real(RP) :: am,scrit_am,aa,tc,st,bb,ac
-      real(RP) :: m0t,m2t,m3t,dgt,sgt,dm2
-      real(RP) :: d_crit                  ! critical diameter
-      real(RP) :: tmp1, tmp2, tmp3        !
-      real(RP) :: ccn_frc,cca_frc,ccv_frc ! activated number,area,volume
-      integer  :: is0, ik, ic
 
-      aerosol_activ(:,:,:,:) = 0._RP
-
-      if (super.le.0._RP) return
-
-      smax_inv = 1._RP / super
-
-    !--- surface tension of water
-      tc = temp_k - CONST_TEM00
-      if (tc >= 0._RP ) then
-        st  = 75.94_RP-0.1365_RP*tc-0.3827e-3_RP*tc**2._RP !Gittens, JCIS, 69, Table 4.
-      else !t[deg C].lt.0.
-        st  = 75.93_RP                +0.115_RP*tc        &  !Eq.5-12, pp.130, PK97
-            + 6.818e-2_RP*tc**2._RP+6.511e-3_RP*tc**3._RP &
-            + 2.933e-4_RP*tc**4._RP+6.283e-6_RP*tc**5._RP &
-            + 5.285e-8_RP*tc**6._RP
-      endif
-      st      = st * 1.E-3_RP                    ![J/m2]
-
-    !-- Kelvin effect
-    !          [J m-2]  [kg mol-1]       [m3 kg-1] [mol K J-1] [K-1]
-      aa  = 2._RP * st * CONST_Mvap * 1.E-3_RP / (CONST_DWATR * CONST_R * temp_k ) ![m] Eq.5 in AR98
-
-      do ic = 1, n_ctg
-      do ik = 1, n_kap(ic)
-      do is0 = 1, n_siz(ic)
-        m0t = aerosol_procs(ia_m0,is0,ik,ic)
-        m2t = aerosol_procs(ia_m2,is0,ik,ic)
-        m3t = aerosol_procs(ia_m3,is0,ik,ic)
-        call diag_ds(m0t,m2t,m3t,dgt,sgt,dm2)
-        if (dgt <= 0._RP) dgt = d_ct(is0,ic)
-        if (sgt <= 0._RP) sgt = 1.3_RP
-        am  = dgt * 0.5_RP  !geometric dry mean radius [m]
-        bb  = c_kappa
-        if (bb > 0._RP .and. am > 0._RP ) then
-          scrit_am = 2._RP/sqrt(bb)*(aa/(3._RP*am))**1.5_RP !AR00 Eq.9
-        else
-          scrit_am = 0._RP
-        endif
-        ac     = am * (scrit_am * smax_inv)**two3      !AR00 Eq.12
-        d_crit = ac * 2._RP
-        tmp1   = log(d_crit) - log(dgt)
-        tmp2   = 1._RP/(rt2*log(sgt))
-        tmp3   = log(sgt)
-        ccn_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2))
-        cca_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2-twort2*tmp3))
-        ccv_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2-thrrt2*tmp3))
-        aerosol_activ(ia_m0,is0,ik,ic) = ccn_frc * aerosol_procs(ia_m0,is0,ik,ic)
-        aerosol_activ(ia_m2,is0,ik,ic) = cca_frc * aerosol_procs(ia_m2,is0,ik,ic)
-        aerosol_activ(ia_m3,is0,ik,ic) = ccv_frc * aerosol_procs(ia_m3,is0,ik,ic)
-      enddo !is(1:n_siz(ic))
-      enddo !ik(1:n_kap(ic))
-      enddo !ic(1:n_ctg)
-
-      return
-  end subroutine aerosol_activation_kajino13
-  !----------------------------------------------------------------------------------------
-  subroutine diag_ds(m0,m2,m3,  & !i
-                     dg,sg,dm2)   !o
-    implicit none
-    real(RP)            :: m0,m2,m3,dg,sg,m3_bar,m2_bar
-    real(RP)            :: m2_new,m2_old,dm2
-    real(RP), parameter :: sgmax=2.5_RP
-    real(RP), parameter :: rk1=2._RP
-    real(RP), parameter :: rk2=3._RP
-    real(RP), parameter :: ratio  =rk1/rk2
-    real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
-    real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
-
-    dm2=0._RP
-
-    if (m0 <= 0._RP .or. m2 <= 0._RP .or. m3 <= 0._RP) then
-      m0=0._RP
-      m2=0._RP
-      m3=0._RP
-      dg=-1._RP
-      sg=-1._RP
-      return
-    endif
-
-    m2_old = m2
-    m3_bar = m3/m0
-    m2_bar = m2/m0
-    dg     = m2_bar**rk1_hat*m3_bar**rk2_hat
-
-    if (m2_bar/m3_bar**ratio < 1._RP) then !stdev > 1.
-      sg     = exp(sqrt(2._RP/(rk1*(rk1-rk2))  &
-             * log(m2_bar/m3_bar**ratio) ))
-    endif
-
-    if (sg > sgmax) then
-      print *,'sg=',sg
-      sg = sgmax
-      call diag_d2(m0,m3,sg, & !i
-                   m2,dg     ) !o
-  !   print *,'warning! modified as sg exceeded sgmax (diag_ds)'
-    endif
-
-    if (m2_bar/m3_bar**ratio >= 1._RP) then !stdev < 1.
-      sg = 1._RP
-      call diag_d2(m0,m3,sg, & !i
-                   m2,dg     ) !o
-  !   print *,'warning! modified as sg < 1. (diag_ds)'
-    endif
-
-    m2_new = m2
-    dm2    = m2_old - m2_new !m2_pres - m2_diag
-
-    return
-  end subroutine diag_ds
-  !----------------------------------------------------------------------------------------
-  ! subroutine 6. diag_d2
-  !----------------------------------------------------------------------------------------
-  subroutine diag_d2(m0,m3,sg, & !i
-                       m2,dg     ) !o
-    implicit none
-    real(RP)            :: dg,sg,m0,m2,m3,aaa
-    real(RP), parameter :: one3=1._RP/3._RP
-    aaa = m0               * exp( 4.5_RP * (log(sg)**2._RP) )
-    dg  =(m3/aaa)**one3
-    m2  = m0 * dg ** 2._RP * exp( 2.0_RP * (log(sg)**2._RP) )
-
-    return
-  end subroutine diag_d2
   !--------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
     use scale_const, only: &
        PI => CONST_PI
-    use scale_tracer_suzuki10, only: &
+    use scale_atmos_hydrometeor, only: &
+       QHS, &
+       QHE
+    use scale_atmos_phy_mp_suzuki10, only: &
        nccn, nbin
     implicit none
 
@@ -1174,7 +804,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_SBMAERO,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. default value used'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. default value used'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist SBMAERO. Check!'
        call PRC_MPIstop
@@ -1201,7 +831,7 @@ contains
     endif
 
     !--- Hydrometeor is zero at initial time for Bin method
-    do iq = 2,  QQA
+    do iq = QHS,  QHE
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -1213,11 +843,11 @@ contains
 
     !-- Aerosol distribution
     if( nccn /= 0 ) then
-     do iq = QQA+1, QA
+     do iq = 1, nccn
      do j  = JS, JE
      do i  = IS, IE
      do k  = KS, KE
-       QTRC(k,i,j,iq) = gan(iq-QQA) !/ DENS(k,i,j)
+       QTRC(k,i,j,QHE+iq) = gan(iq) !/ DENS(k,i,j)
      enddo
      enddo
      enddo
@@ -1266,6 +896,7 @@ contains
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall
     implicit none
+
     ! Flux from Atmosphere
     real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
     real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
@@ -1327,6 +958,7 @@ contains
        LAND_SFC_TEMP,   &
        LAND_SFC_albedo
     implicit none
+
     ! Land state
     real(RP) :: LND_TEMP                ! soil temperature           [K]
     real(RP) :: LND_WATER     = 0.15_RP ! soil moisture              [m3/m3]
@@ -1382,6 +1014,7 @@ contains
        OCEAN_SFC_Z0H,    &
        OCEAN_SFC_Z0E
     implicit none
+
     ! Ocean state
     real(RP) :: OCN_TEMP                  ! ocean temperature           [K]
     real(RP) :: SFC_TEMP                  ! ocean skin temperature      [K]
@@ -1453,6 +1086,7 @@ contains
        URBAN_SFC_TEMP,   &
        URBAN_SFC_albedo
     implicit none
+
     ! urban state
     real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
     real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
@@ -1542,7 +1176,10 @@ contains
   !> Read sounding data from file
   subroutine read_sounding( &
        DENS, VELX, VELY, POTT, QV )
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
+
     real(RP), intent(out) :: DENS(KA)
     real(RP), intent(out) :: VELX(KA)
     real(RP), intent(out) :: VELY(KA)
@@ -1598,7 +1235,7 @@ contains
           iostat = ierr                        )
 
        if ( ierr /= 0 ) then
-          if( IO_L ) write(*,*) 'xxx Input file not found!'
+          write(*,*) 'xxx [mod_mkinit/read_sounding] Input file not found!'
        endif
 
        !--- read sounding file till end
@@ -1635,7 +1272,11 @@ contains
     ! calc in dry condition
     pres_sfc = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
     pott_sfc = SFC_THETA
-    qv_sfc   = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
+    if ( I_QV > 0 ) then
+       qv_sfc   = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
+    else
+       qv_sfc   = 0.0_RP
+    end if
     qc_sfc   = 0.0_RP
 
     !--- linear interpolate to model grid
@@ -1660,6 +1301,7 @@ contains
           endif
        enddo
     enddo
+    if ( I_QV < 1 ) qv = 0.0_RP
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( DENS(:),         & ! [OUT]
@@ -1680,6 +1322,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform + random disturbance )
   subroutine MKINIT_planestate
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     ! Surface state
@@ -1785,20 +1429,22 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-    ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
-    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+    if ( I_QV > 0 ) then
+       ! calc QV from RH
+       call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+       call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
-    call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
-       qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,i,j)
+       call RANDOM_get(rndm) ! make random
+       do j = JS, JE
+       do i = IS, IE
+          qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,i,j)
 
-       do k = KS, KE
-          qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
+          do k = KS, KE
+             qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
+          enddo
        enddo
-    enddo
-    enddo
+       enddo
+    end if
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -1852,11 +1498,19 @@ contains
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
 
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
 
     call flux_setup
 
@@ -1868,6 +1522,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for tracer bubble experiment
   subroutine MKINIT_tracerbubble
+    use scale_atmos_hydrometeor, only: &
+       I_NC
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
 #ifndef DRY
@@ -1984,7 +1642,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on tracerbubble. Check!'
        call PRC_MPIstop
     endif
@@ -2004,6 +1662,8 @@ contains
   !!  BBL_RX   =   4.0E3_RP ! bubble radius   [m]: x
   !!  BBL_RY   =   1.0E3_RP ! bubble radius   [m]: y
   subroutine MKINIT_coldbubble
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
     ! Surface state
@@ -2091,7 +1751,7 @@ contains
     enddo
     enddo
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on coldbubble. Check!'
        call PRC_MPIstop
     endif
@@ -2102,6 +1762,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for cold bubble experiment
   subroutine MKINIT_lambwave
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
     ! Surface state
@@ -2165,7 +1827,7 @@ contains
     enddo
     enddo
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on lambwave. Check!'
        call PRC_MPIstop
     endif
@@ -2177,6 +1839,8 @@ contains
   !> Make initial state for gravity wave experiment
   !! Default values are following by Skamarock and Klemp (1994)
   subroutine MKINIT_gravitywave
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
     ! Surface state
@@ -2262,7 +1926,7 @@ contains
     enddo
     enddo
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on gravitywave. Check!'
        call PRC_MPIstop
     endif
@@ -2273,6 +1937,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for Kelvin-Helmholtz wave experiment
   subroutine MKINIT_khwave
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
     ! Surface state
@@ -2353,10 +2019,6 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
-
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2387,7 +2049,7 @@ contains
     enddo
     enddo
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on khwave. Check!'
        call PRC_MPIstop
     endif
@@ -2398,6 +2060,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for turbulence experiment
   subroutine MKINIT_turbulence
+    use scale_atmos_hydrometeor, only: &
+       I_QV
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
     ! Surface state
@@ -2456,13 +2122,13 @@ contains
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
     pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
+    qv_sfc  (1,:,:) = 0.0_RP
+    qc_sfc  (1,:,:) = 0.0_RP
 
     do k = KS, KE
        pott(k,1,1) = ENV_THETA + ENV_TLAPS * GRID_CZ(k)
-       qv  (k,1,1) = 0.0_RP
-       qc  (k,1,1) = 0.0_RP
+       qv  (k,:,:) = 0.0_RP
+       qc  (k,:,:) = 0.0_RP
     enddo
 
     ! make density & pressure profile in dry condition
@@ -2478,22 +2144,22 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    if ( I_QV > 0 ) then
+       ! calc QV from RH
+       call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+       call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
 
-    call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
-       qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1,1)
-       qc_sfc(1,i,j) = 0.0_RP
+       call RANDOM_get(rndm) ! make random
+       do j = JS, JE
+       do i = IS, IE
+          qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1,1)
 
-       do k = KS, KE
-          qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
-          qc(k,i,j) = 0.0_RP
+          do k = KS, KE
+             qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
+          enddo
        enddo
-    enddo
-    enddo
+       enddo
+    end if
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -2548,15 +2214,23 @@ contains
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
 
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( I_QV > 0.0_RP ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
 
 #ifndef DRY
-    if ( QA >= 2 ) then
-       do iq = 2, QA
+    do iq = 1, QA
+       if ( iq == I_QV ) cycle
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2564,11 +2238,10 @@ contains
        enddo
        enddo
        enddo
-       enddo
-    endif
+    enddo
 #endif
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        write(*,*) 'xxx SBM cannot be used on turbulence. Check!'
        call PRC_MPIstop
     endif
@@ -2582,21 +2255,21 @@ contains
     implicit none
 
     ! Nondimenstional numbers for a cavity flow problem
-    real(RP) :: REYNOLDS_NUM = 4.D02
+    real(RP) :: REYNOLDS_NUM = 1.D03
     real(RP) :: MACH_NUM     = 3.D-2
-    real(RP) :: TEMP0        = 300.D0
+    real(RP) :: Ulid         = 1.D01
+    real(RP) :: PRES0        = 1.D05
 
     NAMELIST / PARAM_MKINIT_CAVITYFLOW / &
+         Ulid        , &
+         PRES0       , &
          REYNOLDS_NUM, &
-         MACH_NUM,     &
-         TEMP0
+         MACH_NUM
 
     real(RP) :: DENS0
     real(RP) :: TEMP
-    real(RP) :: Gam, Cs2
-
-    real(RP), parameter :: PRES0 = 1000.E+2_RP
-    real(RP), parameter :: Ulid  = 10.0_RP
+    real(RP) :: Gam
+    real(RP) :: Cs2
 
     integer :: k, i, j
     integer :: ierr
@@ -2650,6 +2323,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform )
   subroutine MKINIT_mountainwave
+    use scale_atmos_hydrometeor, only: &
+       I_NC
     implicit none
 
     ! Surface state
@@ -2764,8 +2439,216 @@ contains
   end subroutine MKINIT_mountainwave
 
   !-----------------------------------------------------------------------------
+  !> Make initial state
+  !!
+  !! The initial state for a baroclinic wave test described by Ullrich and Jablonowski(2012)
+  !! is generated.
+  subroutine MKINIT_barocwave
+    use scale_const, only: &
+      OHM => CONST_OHM,        &
+      RPlanet => CONST_RADIUS, &
+      GRAV    => CONST_GRAV
+    use scale_process
+    use scale_grid, only: &
+         y0 => GRID_DOMAIN_CENTER_Y, &
+         GRID_FYG
+    use scale_atmos_hydrometeor, only: &
+         I_QV
+
+    implicit none
+
+    ! Parameters for global domain size
+    real(RP) :: Ly                      ! The domain size in y-direction [m]
+
+    ! Parameters for inital stratification
+    real(RP) :: REF_TEMP    = 288.E0_RP ! The reference temperature [K]
+    real(RP) :: REF_PRES    = 1.E5_RP   ! The reference pressure [Pa]
+    real(RP) :: LAPSE_RATE  = 5.E-3_RP  ! The lapse rate [K/m]
+
+    ! Parameters associated with coriolis parameter on a beta-plane
+    real(RP) :: Phi0Deg     = 45.E0_RP  ! The central latitude [degree_north]
+
+    ! Parameters for background zonal jet
+    real(RP) :: U0 = 35.E0_RP          ! The parameter associated with zonal jet maximum amplitude  [m/s]
+    real(RP) :: b  = 2.E0_RP           ! The vertical half-width [1]
+
+    ! Parameters for inital perturbation of zonal wind with a Gaussian profile
+    !
+    real(RP) :: Up  = 1.E0_RP         ! The maximum amplitude of zonal wind perturbation [m/s]
+    real(RP) :: Lp  = 600.E3_RP       ! The width of Gaussian profile
+    real(RP) :: Xc  = 2000.E3_RP      ! The center point (x) of inital perturbation
+    real(RP) :: Yc  = 2500.E3_RP      ! The center point (y) of inital perturbation
+
+    NAMELIST / PARAM_MKINIT_BAROCWAVE / &
+       REF_TEMP, REF_PRES, LAPSE_RATE, &
+       phi0Deg,                        &
+       U0, b,                          &
+       Up, Lp, Xc, Yc
+
+    real(RP) :: CORIOLI(KA,IA,JA)
+    real(RP) :: f0, beta0
+
+    real(RP) :: geopot(KA,IA,JA)
+    real(RP) :: eta(KA,IA,JA)
+    real(RP) :: temp(KA,IA,JA)
+
+    real(RP) :: y
+    real(RP) :: ln_eta
+    real(RP) :: del_eta
+    real(RP) :: yphase
+    real(RP) :: yphase_u
+    real(RP) :: temp_vfunc
+    real(RP) :: geopot_hvari
+
+    integer :: ierr
+    integer :: k, i, j
+
+    integer :: itr
+
+    integer, parameter :: ITRMAX = 1000
+    real(RP), parameter :: CONV_EPS = 1E-15_RP
+
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit BAROCWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
+
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_BAROCWAVE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BAROCWAVE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BAROCWAVE)
+
+    Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
+
+    ! Set coriolis parameters
+    f0 = 2.0_RP*OHM*sin(phi0Deg*PI/180.0_RP)
+    beta0 = (2.0_RP*OHM/RPlanet)*cos(phi0Deg*PI/180.0_RP)
+
+    ! Calculate eta(=p/p_s) level corresponding to z level of each (y,z) grid point
+    ! using Newton's iteration method
+
+    eta(:,:,:) = 1.0E-8_RP   ! Set first guess of eta
+
+    do j = JS, JE
+    do i = IS, IS            ! Note that initial fields are zonaly symmetric
+
+       y = GRID_CY(j)
+       yphase  = 2.0_RP*PI*y/Ly
+
+       ! Calc horizontal variation of geopotential height
+       geopot_hvari = 0.5_RP*U0*(                                                                          &
+            (f0 - beta0*y0)*(y - 0.5_RP*Ly*(1.0_RP + sin(yphase)/PI))                                      &
+            + 0.5_RP*beta0*( y**2 - Ly*y/PI*sin(yphase) - 0.5_RP*(Ly/PI)**2*(cos(yphase) + 1.0_RP)         &
+                             - Ly**2/3.0_RP                                                        )       &
+            )
+
+       ! Set surface pressure and temperature
+       pres_sfc(1,i,j) = REF_PRES
+       pott_sfc(1,i,j) = REF_TEMP - geopot_hvari/Rdry
+       ! Dry condition
+       qv      (:,i,j) = 0.0_RP
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc      (:,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          del_eta = 1.0_RP
+
+          !-- The loop for iteration
+          itr = 0
+          do while( abs(del_eta) > CONV_EPS )
+             ln_eta = log(eta(k,i,j))
+
+             temp_vfunc = eta(k,i,j)**(Rdry*LAPSE_RATE/Grav)
+             temp(k,i,j) = &
+                  REF_TEMP*temp_vfunc &
+                  + geopot_hvari/Rdry*(2.0_RP*(ln_eta/b)**2 - 1.0_RP)*exp(-(ln_eta/b)**2)
+             geopot(k,i,j) = &
+                  REF_TEMP*GRAV/LAPSE_RATE*(1.0_RP - temp_vfunc)  &
+                  + geopot_hvari*ln_eta*exp(-(ln_eta/b)**2)
+
+             del_eta = -  ( - Grav*GRID_CZ(k) + geopot(k,i,j) )   & ! <- F
+                  &      *( - eta(k,i,j)/(Rdry*temp(k,i,j))   )     ! <- (dF/deta)^-1
+
+             eta(k,i,j) = eta(k,i,j) + del_eta
+             itr = itr + 1
+
+             if ( itr > ITRMAX ) then
+                write(*,*) "* (X,Y,Z)=", GRID_CX(i), GRID_CY(j), GRID_CZ(k)
+                write(*,*) "Fail the convergence of iteration. Check!"
+                write(*,*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
+                call PRC_MPIstop
+             end if
+          enddo !- End of loop for iteration ----------------------------
+
+          PRES(k,i,j) = eta(k,i,j)*REF_PRES
+          DENS(k,i,j) = PRES(k,i,j)/(Rdry*temp(k,i,j))
+          pott(k,i,j) = temp(k,i,j)*eta(k,i,j)**(-Rdry/CPdry)
+
+       enddo
+
+       ! Make density & pressure profile in dry condition using the profile of
+       ! potential temperature calculated above.
+       call HYDROSTATIC_buildrho( DENS    (:,i,j), & ! [OUT]
+                                  temp    (:,i,j), & ! [OUT]
+                                  pres    (:,i,j), & ! [OUT]
+                                  pott    (:,i,j), & ! [IN]
+                                  qv      (:,i,j), & ! [IN]
+                                  qc      (:,i,j), & ! [IN]
+                                  temp_sfc(1,i,j), & ! [OUT]
+                                  pres_sfc(1,i,j), & ! [IN]
+                                  pott_sfc(1,i,j), & ! [IN]
+                                  qv_sfc  (1,i,j), & ! [IN]
+                                  qc_sfc  (1,i,j)  ) ! [IN]
+    enddo
+    enddo
+
+    !-----------------------------------------------------------------------------------
+
+    do j = JS, JE
+    do k = KS, KE
+
+       eta(k,IS,j) = pres(k,IS,j)/REF_PRES
+       ln_eta = log(eta(k,IS,j))
+       yphase = 2.0_RP*PI*GRID_CY(j)/Ly
+!!$       PRES(k,IS:IE,j) = eta(k,IS,j)*REF_PRES
+!!$       DENS(k,IS:IE,j) = PRES(k,IS,j)/(Rdry*temp(k,IS,j))
+       DENS(k,IS:IE,j) = DENS(k,IS,j)
+       PRES(k,IS:IE,j) = PRES(k,IS,j)
+       MOMX(k,IS-1:IE,j) = DENS(k,IS,j)*(-U0*sin(0.5_RP*yphase)**2*ln_eta*exp(-(ln_eta/b)**2))
+       RHOT(k,IS:IE,j) = DENS(k,IS,j)*pott(k,IS,j) !temp(k,IS,j)*eta(k,IS,j)**(-Rdry/CPdry)
+       if ( I_QV > 0 ) QTRC(k,IS:IE,j,I_QV) = 0.0_RP
+    enddo
+    enddo
+    MOMY(:,:,:) = 0.0_RP
+    MOMZ(:,:,:) = 0.0_RP
+
+    !---------------------------------------------------------------------------------------
+
+    ! Add the inital perturbation for zonal velocity
+    do j = JS, JE
+    do i = IS-1, IE
+       MOMX(KS:kE,i,j) = MOMX(KS:KE,i,j) &
+           +  DENS(KS:KE,i,j)* Up*exp( - ((GRID_FX(i) - Xc)**2 + (GRID_CY(j) - Yc)**2)/Lp**2 )
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_barocwave
+
+  !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubble
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     ! Surface state
@@ -2802,6 +2685,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit WARMBUBBLE] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
 
@@ -2820,8 +2708,8 @@ contains
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
     pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
+    qv_sfc  (1,:,:) = 0.0_RP
+    qc_sfc  (1,:,:) = 0.0_RP
 
     do k = KS, KE
        if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
@@ -2900,6 +2788,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for supercell experiment
   subroutine MKINIT_supercell
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -2920,6 +2810,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit SUPERCELL] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -2959,6 +2854,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -2982,6 +2879,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit SQUALLLINE] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -3022,6 +2924,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state by Weisman and Klemp (1982)
   subroutine MKINIT_wk1982
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     ! Surface state
@@ -3055,6 +2959,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit WK1982] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
 
     SFC_PRES  = Pstd
 
@@ -3143,9 +3052,9 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-do k = KS, KE
-   if( IO_L ) write(IO_FID_LOG,*) k, REAL_CZ(k,IS,JS), pres(k,IS,JS), pott(k,IS,JS), rh(k,IS,JS), qv(k,IS,JS)*1000
-enddo
+    do k = KS, KE
+       if( IO_L ) write(IO_FID_LOG,*) k, REAL_CZ(k,IS,JS), pres(k,IS,JS), pott(k,IS,JS), rh(k,IS,JS), qv(k,IS,JS)*1000
+    enddo
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
@@ -3196,6 +3105,16 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF01
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
+    use scale_atmos_phy_mp_suzuki10, only: &
+         nccn
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE, &
+         ATMOS_PHY_AE_TYPE
     implicit none
 
 #ifndef DRY
@@ -3213,6 +3132,7 @@ enddo
        USE_LWSET
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3230,6 +3150,12 @@ enddo
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF01] / Categ[preprocess] / Origin[SCALE-RM]'
 
     rewind(IO_FID_CONF)
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF01,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
@@ -3301,7 +3227,7 @@ enddo
           elseif( GRID_CZ(k) <=  860.0_RP ) then ! boundary
              sint = sin( pi2 * ( GRID_CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
              qall = 9.0E-3_RP * (0.5_RP-sint) &
-                         + 1.5E-3_RP * (0.5_RP+sint)
+                  + 1.5E-3_RP * (0.5_RP+sint)
           elseif( GRID_CZ(k) <= 5000.0_RP ) then
              qall = 1.5E-3_RP
           else
@@ -3327,10 +3253,12 @@ enddo
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -3414,12 +3342,12 @@ enddo
     enddo
     enddo
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j) !--- Super saturated air at initial
-          do iq = QQA+1, QA
+          do iq = QHE+1, QHE+nccn
             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j)
           enddo
        enddo
@@ -3449,7 +3377,7 @@ enddo
     endif
 
 #endif
-    if ( AETRACER_TYPE == 'KAJINO13' ) then
+    if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
       call AEROSOL_setup
     endif
     return
@@ -3458,6 +3386,16 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
+    use scale_atmos_phy_mp_suzuki10, only: &
+         nccn
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE, &
+         ATMOS_PHY_AE_TYPE
     implicit none
 
 #ifndef DRY
@@ -3473,6 +3411,7 @@ enddo
        RANDOM_FLAG
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3486,6 +3425,11 @@ enddo
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF02] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02,iostat=ierr)
@@ -3553,7 +3497,7 @@ enddo
           else if ( GRID_CZ(k) <= 815.0_RP ) then
              sint = sin( pi2 * (GRID_CZ(k) - 795.0_RP)/20.0_RP )
              qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
-                   ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
+                  ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
           else
              qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ! [kg/kg]
           endif
@@ -3576,10 +3520,12 @@ enddo
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -3663,13 +3609,13 @@ enddo
     enddo
     enddo
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           !--- Super saturated air at initial
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
-          do iq = QQA+1, QA
+          do iq = QHE+1, QHE+nccn
             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j)
           enddo
        enddo
@@ -3699,7 +3645,7 @@ enddo
     endif
 
 #endif
-    if ( AETRACER_TYPE == 'KAJINO13' ) then
+    if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
       call AEROSOL_setup
     endif
     return
@@ -3708,6 +3654,15 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02_DNS
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_NC, &
+       QHE
+    use scale_atmos_phy_mp_suzuki10, only: &
+         nccn
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
 #ifndef DRY
@@ -3729,6 +3684,7 @@ enddo
        RANDOM_FLAG
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3743,6 +3699,11 @@ enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit DYCOMS2RF02_DNS] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02_DNS,iostat=ierr)
@@ -3819,17 +3780,17 @@ enddo
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-!write(*,*)'chk4.1'
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     RovCP = Rdry / CPdry
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       pott(k,i,j) = potl(k,i,j) + LHV / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+       pott(k,i,j) = potl(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
     enddo
     enddo
     enddo
 
-!write(*,*)'chk5'
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
                                temp    (:,:,:), & ! [OUT]
@@ -3853,7 +3814,6 @@ enddo
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-!write(*,*)'chk7'
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
@@ -3925,7 +3885,7 @@ enddo
     enddo
 
 !write(*,*)'chk12'
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3933,8 +3893,8 @@ enddo
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
 
           !--- for aerosol
-          do iq = QQA+1, QA
-             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
+          do iq = 1, nccn
+             QTRC(k,i,j,QHE+iq) = gan(iq) / DENS(k,i,j)
           enddo
        enddo
        enddo
@@ -3969,6 +3929,16 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state for RICO inter comparison
   subroutine MKINIT_RICO
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+         I_QC, &
+         I_NC, &
+         QHE
+    use scale_atmos_phy_mp_suzuki10, only: &
+         nccn
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE, &
+         ATMOS_PHY_AE_TYPE
     implicit none
 
 #ifndef DRY
@@ -3979,6 +3949,7 @@ enddo
        PERTURB_AMP_PT, &
        PERTURB_AMP_QV
 
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
@@ -3989,6 +3960,11 @@ enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit RICO] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RICO,iostat=ierr)
@@ -4077,10 +4053,12 @@ enddo
     enddo
     enddo
 
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -4144,14 +4122,16 @@ enddo
 
     call RANDOM_get(rndm) ! make random
 
-    if ( TRACER_TYPE == 'SUZUKI10' ) then
+    PERTURB_AMP_QV = 0.0_RP
+
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           !--- Super saturated air at initial
           QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV &
                            + qc(k,i,j)
-          do iq = QQA+1, QA
+          do iq = QHE+1, QHE+nccn
             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j)
           enddo
        enddo
@@ -4181,7 +4161,7 @@ enddo
     endif
 
 #endif
-    if ( AETRACER_TYPE == 'KAJINO13' ) then
+    if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
       call AEROSOL_setup
     endif
     return
@@ -4192,6 +4172,9 @@ enddo
     use gtool_file, only: &
        FileGetShape, &
        FileRead
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC
     implicit none
 
     real(RP) :: dz(KA,IA,JA)
@@ -4305,7 +4288,7 @@ enddo
                    BASENAME_ORG, "RHOT", 1, 1, single=.true. )
     do iq = 1, QA
        call FileRead( qtrc_org(:,:,:,iq),                            &
-                      BASENAME_ORG, AQ_NAME(iq), 1, 1, single=.true. )
+                      BASENAME_ORG, TRACER_NAME(iq), 1, 1, single=.true. )
     end do
 
     call FileRead( cz_org(:),                              &
@@ -4776,6 +4759,8 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state for grayzone experiment
   subroutine MKINIT_grayzone
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP) :: RHO(KA)
@@ -4802,6 +4787,11 @@ enddo
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit GRAYZONE] / Categ[preprocess] / Origin[SCALE-RM]'
 
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_GRAYZONE,iostat=ierr)
@@ -4812,7 +4802,7 @@ enddo
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAYZONE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
@@ -4901,7 +4891,10 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state of Box model experiment for zerochemical module
   subroutine MKINIT_boxaero
-
+    use scale_atmos_hydrometeor, only: &
+       I_QV
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_AE_TYPE
     implicit none
 
     real(RP) :: init_dens  = 1.12_RP   ![kg/m3]
@@ -4918,11 +4911,16 @@ enddo
     real(RP) :: qsat
     integer :: i, j, k, ierr
 
-    if ( AETRACER_TYPE /= 'KAJINO13' ) then
+    if ( ATMOS_PHY_AE_TYPE /= 'KAJINO13' ) then
        if( IO_L ) write(IO_FID_LOG,*) '+++ For [Box model of aerosol],'
-       if( IO_L ) write(IO_FID_LOG,*) '+++ AETRACER_TYPE should be KAJINO13. Stop!'
+       if( IO_L ) write(IO_FID_LOG,*) '+++ ATMOS_PHY_AE_TYPE should be KAJINO13. Stop!'
        call PRC_MPIstop
     endif
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit Box model of aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
@@ -4954,7 +4952,7 @@ enddo
     enddo
     enddo
 
-    if( AETRACER_TYPE == 'KAJINO13' ) then
+    if( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
       call AEROSOL_setup
     endif
 
@@ -4962,6 +4960,10 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubbleaero
+    use scale_atmos_hydrometeor, only: &
+       I_QV
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_AE_TYPE
     implicit none
 
     ! Surface state
@@ -4997,6 +4999,12 @@ enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit WARMBUBBLEAERO] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registerd'
+       call PRC_MPIstop
+    end if
+
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -5090,7 +5098,7 @@ enddo
 
     call flux_setup
 
-    if( AETRACER_TYPE == 'KAJINO13' ) then
+    if( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
       call AEROSOL_setup
     endif
 

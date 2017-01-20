@@ -21,8 +21,8 @@ module scale_atmos_phy_mp_dry
   use scale_stdio
   use scale_prof
   use scale_grid_index
-
-  use scale_tracer_dry
+  use scale_atmos_hydrometeor, only: &
+     N_HYD
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,6 +30,7 @@ module scale_atmos_phy_mp_dry
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_MP_dry_config
   public :: ATMOS_PHY_MP_dry_setup
   public :: ATMOS_PHY_MP_dry
 
@@ -41,7 +42,13 @@ module scale_atmos_phy_mp_dry
   !
   !++ Public parameters & variables
   !
-  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  integer, public, parameter :: QA_MP  = 0
+
+  character(len=H_SHORT), public, target :: ATMOS_PHY_MP_dry_NAME(QA_MP)
+  character(len=H_MID)  , public, target :: ATMOS_PHY_MP_dry_DESC(QA_MP)
+  character(len=H_SHORT), public, target :: ATMOS_PHY_MP_dry_UNIT(QA_MP)
+
+  real(RP), public, target :: ATMOS_PHY_MP_dry_DENS(N_HYD)
 
   !-----------------------------------------------------------------------------
   !
@@ -54,25 +61,42 @@ module scale_atmos_phy_mp_dry
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup
-  subroutine ATMOS_PHY_MP_dry_setup( MP_TYPE )
+  !> Configure
+  subroutine ATMOS_PHY_MP_dry_config( &
+       MP_TYPE, &
+       QA, QS   )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       CPdry => CONST_CPdry, &
+       CVdry => CONST_CVdry
     implicit none
 
     character(len=*), intent(in) :: MP_TYPE
-    !---------------------------------------------------------------------------
+    integer, intent(out) :: QA
+    integer, intent(out) :: QS
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** dummy process (dry Atmosphere)'
+    !---------------------------------------------------------------------------
 
     if ( MP_TYPE /= 'DRY' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'
        call PRC_MPIstop
     endif
 
-    ATMOS_PHY_MP_DENS(:) = 0.0_RP
+    QS = -1
+    QA = QA_MP
+
+    return
+  end subroutine ATMOS_PHY_MP_dry_config
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_PHY_MP_dry_setup
+    implicit none
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** dummy process (dry Atmosphere)'
 
     return
   end subroutine ATMOS_PHY_MP_dry_setup
@@ -92,7 +116,9 @@ contains
        SFLX_snow  )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA
+       QA
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -100,7 +126,7 @@ contains
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
@@ -108,6 +134,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(dummy)'
+
+    ATMOS_PHY_MP_dry_DENS(:) = UNDEF
 
     EVAPORATE(:,:,:) = 0.0_RP
     SFLX_rain(:,:) = 0.0_RP
@@ -123,11 +151,11 @@ contains
        QTRC     )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA
+       QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
     !---------------------------------------------------------------------------
 
     cldfrac(:,:,:) = 0.0_RP ! dummy
@@ -144,45 +172,42 @@ contains
        TEMP0  )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
-
-    real(RP), parameter :: um2cm = 100.0_RP
+    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
     !---------------------------------------------------------------------------
 
-    Re(:,:,:,:) = 8.E-6_RP * um2cm ! dummy
+    Re = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_MP_dry_EffectiveRadius
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_dry_Mixingratio( &
-       Qe,    &
-       QTRC0  )
+       Qe,   &
+       QTRC0 )
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
 
     integer  :: ihydro
     !---------------------------------------------------------------------------
 
-    do ihydro = 1, MP_QA
-       Qe(:,:,:,ihydro) = 8.E-6_RP ! dummy
-    enddo
+    Qe = 0.0_RP
 
     return
-
   end subroutine ATMOS_PHY_MP_dry_Mixingratio
 
 end module scale_atmos_phy_mp_dry

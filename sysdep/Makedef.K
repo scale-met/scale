@@ -46,6 +46,14 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
+# OpenMP
+# disable
+OMP =
+# enable
+#OMP = -Kopenmp
+# enable + disable parallel
+#OMP = -Kopenmp,noparallel
+
 ### Performance monitor
 # disable
 #PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
@@ -63,8 +71,8 @@ RDMA = -U_USE_RDMA
 # enable
 #RDMA = -D_USE_RDMA
 
-FFLAGS_SYSDEPEND = $(PERF_MONIT) $(RDMA)
-CFLAGS_SYSDEPEND = $(PERF_MONIT) $(RDMA)
+FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) $(RDMA)
+CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) $(RDMA)
 
 
 
@@ -78,12 +86,20 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
+# Default settings
 NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
 NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+# Or, please set environment variable
+# example:
+# export NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"
+# export NETCDF_LIBS="-L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm"
 
-###### Lapack
+###### Lapack library
+# Default settings
 LAPACK_LIBS    ?=
-# example: -SSL2
+# Or, please set environment variable
+# example:
+# export LAPACK_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

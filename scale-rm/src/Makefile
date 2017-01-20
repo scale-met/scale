@@ -39,7 +39,7 @@ else
   VERSION := $(VERSION)
 endif
 
-OBJS =	\
+SUB_OBJS =	\
 	mod_admin_time.o          \
 	mod_atmos_admin.o         \
 	mod_ocean_admin.o         \
@@ -78,7 +78,6 @@ OBJS =	\
 	mod_urban_phy_driver.o    \
 	mod_urban_driver.o        \
 	mod_cpl_driver.o          \
-	mod_rm_driver.o           \
 	\
 	mod_copytopo.o            \
 	mod_cnvtopo.o             \
@@ -91,8 +90,15 @@ OBJS =	\
 	mod_realinput_grads.o     \
 	mod_realinput_scale.o     \
 	mod_realinput.o           \
-	mod_mkinit.o              \
+	mod_mkinit.o
+
+MAIN_OBJS =	\
+	mod_rm_driver.o           \
 	mod_rm_prep.o
+
+OBJS = 	\
+	$(SUB_OBJS)	\
+	$(MAIN_OBJS)
 
 all:
 	$(MAKE) makedir
@@ -130,7 +136,7 @@ $(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(LIBS) $(patsubst %,$(BUILD_DIR)/%
 $(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
 $(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
 
-$(BUILD_DIR)/mod_user.o : mod_user.f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/mod_user.o : mod_user.f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
 
 
 

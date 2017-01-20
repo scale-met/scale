@@ -1,0 +1,99 @@
+\section{\SecBasicOutputSetting} \label{sec:output}
+%====================================================================================
+
+計算結果の出力ファイルと出力形式の設定、及び、出力する変数の追加は、
+\namelist{PARAM_HISTORY}と\namelist{HISTITEM}で行う。
+まず、出力ファイルとデフォルトの出力形式の設定を、\verb|run.conf|の\namelist{PARAM_HISTORY} で行う。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_HISTORY| & \\
+\verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & ; 出力ファイル名の頭。 \\
+\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; 出力の時間間隔。 \\
+\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; \verb|HISTORY_DEFAULT_TINTERVAL|の単位。 \\
+\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: 瞬間値、\verb|.true.|: 時間平均値。\\
+\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|       & ; 出力データの鉛直座標の種別。\\
+                                                    & ~ \verb|"model"|: モデル面の値を出力。\\
+                                                    & ~ \verb|"z"    |: 絶対高度面に内挿した値を出力。\\
+                                                    & ~ \verb|"pressure"|: 気圧面に内挿した値を出力。\\
+\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & ; 出力データの型。\verb|REAL4|, \verb|REAL8|など。\\
+\verb|  HISTORY_OUTPUT_STEP0      = .true.,|        & ; 初期時刻(t=0)の値を出力するかどうか。\\
+                                                    & ~ \verb|.true.|: 出力、\verb|.false.|: 出力しない。\\
+\verb|/| & \\
+\end{tabularx}
+}}}\\
+
+
+\nmitem{HISTORY_DEFAULT_TUNIT}の単位は、\\
+\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|
+より選択可能である。
+%
+\verb|HISTORY_DEFAULT_TAVERAGE = .true.|として、平均値での出力を設定した場合、
+出力するタイミング直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。\\
+
+\nmitem{HISTORY_DEFAULT_ZCOORD}で絶対高度面座標(\verb|"z"|)を選択した場合は、
+出力データの鉛直層数はモデル面の鉛直層数と同じであり、
+各層の高度は標高ゼロ地点でのモデル面高度である。
+\nmitem{HISTORY_DEFAULT_ZCOORD}で気圧面座標(\verb|"pressure"|)を選択した場合、
+\namelist{PARAM_HIST}の\nmitem{HIST_PRES_nlayer}と\nmitem{HIST_PRES}の設定が必要である。
+%
+また、\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合、
+計算領域の外側のハロ領域のデータも出力される。ただし、周期境界条件の場合にはこの設定は無視される。
+\nmitem{HIST_BND}の設定はすべての出力変数に対して適用される。\\
+
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_HIST| & \\
+\verb|  HIST_PRES_nlayer   = -1,|        & ; 気圧面内挿を用いる場合の層数。\\
+\verb|  HIST_PRES          = 0.0,|       & ; 気圧面内挿に用いる各層の気圧の値。下層から順にhPaで指定する。\\
+\verb|  HIST_BND           = .false.|    & ; 計算領域の外側のハロ領域の値を出力するかどうか。\\
+                                         & ~ \verb|.true.|: 出力する, \verb|.false.|: 出力しない.\\
+\verb|/| & \\
+\end{tabularx}
+}}}\\
+
+
+
+
+次に、出力する変数の設定を\namelist{HISTITEM}で行う。
+\namelist{HISTITEM}は変数毎に設定するため、出力したい変数の数だけ追加することになる。
+また、それぞれの変数の出力形式は、基本的に \namelist{PARAM_HISTORY} の設定に従うが、
+変数毎に変更することも可能である。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&HISTITEM| &\\
+\verb| ITEM     = "RAIN",    | &  ; 変数名。 出力可能な変数は付録\ref{achap:namelist}を参照 \\
+\verb| BASENAME = "rain_d01",| &  ; (オプション) \verb|HISTORY_DEFAULT_BASENAME|に同じ。\\
+\verb| TINTERVAL= 600.0,     | &  ; (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
+\verb| TUNIT    = "SEC",     | &  ; (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
+\verb| TAVERAGE = .true.,    | &  ; (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\
+\verb| ZCOORD   = "model",   | &  ; (オプション) \verb|HISTORY_DEFAULT_ZCOORD|に同じ。\\
+\verb| DATATYPE = "REAL4",   | &  ; (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
+\verb|/| & \\
+\end{tabularx}
+}}}\\
+
+(オプション)の項目は、変数\nmitem{ITEM}にのみ適用される。
+上記では、明示的にすべての設定を書いているが、
+\nmitem{HISTORY_DEFAULT_***} と同じ設定であれば
+それらが適用されるので明記する必要はない。
+例えば、上記の\namelist{PARAM_HISTORY}の設定に、下記の\namelist{HISTITEM}の設定を組み合わせた場合には、
+\verb|history_d01.xxxxxx.nc|に4バイト実数で、3600秒毎に \verb|T, U, V| の瞬間値が出力される。
+また、\verb|RAIN|が、600秒の出力間隔で、前600秒間の平均値が出力される。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{l}
+\verb|&HISTITEM  ITEM = "T" /|\\
+\verb|&HISTITEM  ITEM = "U" /|\\
+\verb|&HISTITEM  ITEM = "V" /|\\
+\verb|&HISTITEM  ITEM = "RAIN",  TINTERVAL = 600.0, TAVERAGE = .true. /|\\
+\end{tabularx}
+}}}\\
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

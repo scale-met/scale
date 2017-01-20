@@ -1,7 +1,7 @@
 % # -*- f90 -*-
 % # vi: set sw=4 ts=8:
 <%
- order = [ ["cd2",2], ["ud3",2], ["ud3Koren1993",2], ["cd4",2], ["ud5",3], ["cd6",3] ]
+ order = [ ["ud1",1], ["cd2",1], ["ud3",2], ["ud3Koren1993",2], ["cd4",2], ["ud5",3], ["cd6",3] ]
 %>
 !-------------------------------------------------------------------------------
 !> module scale_atmos_dyn_fvm_flux
@@ -67,7 +67,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mflx    (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: GSQRT   (KA,IA,JA)
@@ -85,7 +85,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -105,7 +105,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -126,7 +126,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -147,7 +147,7 @@ module scale_atmos_dyn_fvm_flux
        use scale_precision
        use scale_grid_index
        implicit none
-       real(RP), intent(out) :: flux    (KA,IA,JA)
+       real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
        real(RP), intent(in)  :: val     (KA,IA,JA)
        real(RP), intent(in)  :: DENS    (KA,IA,JA)
@@ -202,7 +202,7 @@ module scale_atmos_dyn_fvm_flux
   !
   !-----------------------------------------------------------------------------
 contains
-
+  
   !-----------------------------------------------------------------------------
   !> setup
   subroutine ATMOS_DYN_FVM_flux_setup( &
@@ -282,7 +282,6 @@ contains
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup
-
 
 end module scale_atmos_dyn_fvm_flux
 

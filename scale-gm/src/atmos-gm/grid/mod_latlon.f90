@@ -213,11 +213,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** LATLONPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist LATLONPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist LATLONPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist LATLONPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=LATLONPARAM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=LATLONPARAM)
 
     latmax = latmax_deg * D2R
     latmin = latmin_deg * D2R
@@ -797,8 +796,6 @@ contains
        COMM_data_transfer
     use mod_fio, only: &
        FIO_output
-    use mod_hio, only: &
-       HIO_output
     implicit none
 
     real(RP) :: SAMPLE   ( ADM_gall,   ADM_KNONE,ADM_lall,   4)
@@ -843,22 +840,7 @@ contains
 
     call COMM_data_transfer( SAMPLE, SAMPLE_pl )
 
-    if ( SAMPLE_io_mode == 'POH5' ) then
-
-       call HIO_output( SAMPLE(:,:,:,1), SAMPLE_OUT_BASENAME, "", "", & ! [IN]
-                       "sample1", "sample data(prc)", "", "NIL",      & ! [IN]
-                       IO_REAL8, "ZSSFC1", k, k, 1, 0.0_DP, 0.0_DP    ) ! [IN]
-       call HIO_output( SAMPLE(:,:,:,2), SAMPLE_OUT_BASENAME, "", "", & ! [IN]
-                       "sample2", "sample data(rgn)", "", "NIL",      & ! [IN]
-                       IO_REAL8, "ZSSFC1", k, k, 1, 0.0_DP, 0.0_DP    ) ! [IN]
-       call HIO_output( SAMPLE(:,:,:,3), SAMPLE_OUT_BASENAME, "", "", & ! [IN]
-                       "sample3", "sample data(i)", "", "NIL",        & ! [IN]
-                       IO_REAL8, "ZSSFC1", k, k, 1, 0.0_DP, 0.0_DP    ) ! [IN]
-       call HIO_output( SAMPLE(:,:,:,4), SAMPLE_OUT_BASENAME, "", "", & ! [IN]
-                       "sample4", "sample data(j)", "", "NIL",        & ! [IN]
-                       IO_REAL8, "ZSSFC1", k, k, 1, 0.0_DP, 0.0_DP    ) ! [IN]
-
-    elseif( sample_io_mode == 'ADVANCED' ) then
+    if ( sample_io_mode == 'ADVANCED' ) then
 
        call FIO_output( SAMPLE(:,:,:,1), SAMPLE_OUT_BASENAME, "", "", & ! [IN]
                        "sample1", "sample data(prc)", "", "NIL",      & ! [IN]

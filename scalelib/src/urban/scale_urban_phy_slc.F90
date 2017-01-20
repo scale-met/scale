@@ -118,6 +118,8 @@ contains
        Z0E  )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_landuse, only: &
        LANDUSE_fact_urban
     implicit none
@@ -126,7 +128,6 @@ contains
     real(RP)        , intent(out) :: Z0M(IA,JA)
     real(RP)        , intent(out) :: Z0H(IA,JA)
     real(RP)        , intent(out) :: Z0E(IA,JA)
-    integer                      :: i, j
 
     NAMELIST / PARAM_URBAN_PHY_SLC / &
        DTS_MAX,    &
@@ -162,18 +163,12 @@ contains
        TGLEND,     &
        BOUND
 
+    integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLC] / Categ[URBAN PHY] / Origin[SCALElib]'
-
-    allocate( DZR(UKS:UKE) )
-    allocate( DZB(UKS:UKE) )
-    allocate( DZG(UKS:UKE) )
-    DZR(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
-    DZB(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
-    DZG(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -185,6 +180,13 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN_PHY_SLC)
+
+    allocate( DZR(UKS:UKE) )
+    allocate( DZB(UKS:UKE) )
+    allocate( DZG(UKS:UKE) )
+    DZR(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    DZB(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    DZG(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
 
     ahdiurnal(:) = (/ 0.356, 0.274, 0.232, 0.251, 0.375, 0.647, 0.919, 1.135, 1.249, 1.328, &
                       1.365, 1.363, 1.375, 1.404, 1.457, 1.526, 1.557, 1.521, 1.372, 1.206, &
@@ -198,25 +200,26 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-      if( LANDUSE_fact_urban(i,j) > 0.0_RP )then
-        is_URB(i,j) = .true.
-      else
-        is_URB(i,j) = .false.
-      endif
+       if ( LANDUSE_fact_urban(i,j) > 0.0_RP ) then
+          is_URB(i,j) = .true.
+       else
+          is_URB(i,j) = .false.
+       endif
     enddo
     enddo
 
+    Z0M(:,:) = UNDEF
+    Z0H(:,:) = UNDEF
+    Z0E(:,:) = UNDEF
     do j = JS, JE
     do i = IS, IE
-
-       if( is_URB(i,j) ) then
+       if ( is_URB(i,j) ) then
           Z0M(i,j) = Z0C
           Z0H(i,j) = Z0HC
           Z0E(i,j) = Z0HC
        endif
-
-    end do
-    end do
+    enddo
+    enddo
 
     return
   end subroutine URBAN_PHY_SLC_setup
@@ -670,10 +673,10 @@ contains
        STB    => CONST_STB,     &    ! stefan-Boltzman constant [MKS unit]
        TEM00  => CONST_TEM00,   &    ! temperature reference (0 degree C) [K]
        PRE00  => CONST_PRE00         ! pressure reference [Pa]
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_templhv
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
-       qsat   => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     !-- configuration variables
@@ -815,7 +818,7 @@ contains
     real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
-    real(RP) :: LHV
+    real(RP) :: LHV                              ! latent heat of vaporization [J/kg]
     real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
 
@@ -825,7 +828,7 @@ contains
     ! Set parameters
     !-----------------------------------------------------------
 
-    call ATMOS_THERMODYN_templhv( LHV, TA )
+    call HYDROMETEOR_LHV( LHV, TA )
 
     RovCP = Rdry / CPdry
     THA   = TA * ( PRE00 / PRSA )**RovCP
@@ -866,12 +869,11 @@ contains
     AH_t  = AH  * tahdiurnal
     ALH_t = ALH * tahdiurnal
 
-    !--- limitter for surface temp change
+    !--- limiter for surface temp change
     DTS_MAX_onestep = DTS_MAX * dt
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
-                                      'Stop in subroutine urban - change ZDC and Z0C'
+       write(*,*) 'xxx [URBAN_PHY_SLC] ZDC + Z0C + 2m is larger than the 1st level! STOP.'
        call PRC_MPIstop
     endif
 
@@ -1009,7 +1011,7 @@ contains
 
      ! output for debug
      if ( iteration > 100 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TR was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_PHY_SLC/SLC_main] iteration for TR was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                          [K] :', resi1
        if( IO_L ) write(IO_FID_LOG,*)
@@ -1059,12 +1061,12 @@ contains
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TR is over limitter'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
+         write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TR exceeded a limit! STOP.'
+         write(*,*) 'xxx previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
          call PRC_MPIstop
        endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TR is over limitter'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
+       if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TR exceeded a limit'
+       if( IO_L ) write(IO_FID_LOG,*) '*** previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
      endif
 
     !--------------------------------------------------
@@ -1223,7 +1225,7 @@ contains
 
      ! output for debug
      if ( iteration > 200 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TB/TG was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_PHY_SLC/SLC_main] iteration for TB/TG was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
        if( IO_L ) write(IO_FID_LOG,*)
@@ -1304,25 +1306,24 @@ contains
      resi2 = TGL(1) - TG
      TG    = TGL(1)
 
-
      if ( abs(resi1) > DTS_MAX_onestep ) then
-       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TB is over limitter'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
-         call PRC_MPIstop
-       endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TB is over limitter'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
+        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
+           write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TB exceeded a limit! STOP.'
+           write(*,*) 'xxx previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
+           call PRC_MPIstop
+        endif
+        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TB exceeded a limit'
+        if( IO_L ) write(IO_FID_LOG,*) '*** previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
      endif
 
      if ( abs(resi2) > DTS_MAX_onestep ) then
-       if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TG is over limitter'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG,resi2
-         call PRC_MPIstop
-       endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TG is over limitter'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG
+        if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
+           write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TG exceeded a limit! STOP.'
+           write(*,*) 'xxx previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
+           call PRC_MPIstop
+        endif
+        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TG exceeded a limit'
+        if( IO_L ) write(IO_FID_LOG,*) '*** previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
      endif
 
     !-----------------------------------------------------------
@@ -1383,10 +1384,10 @@ contains
     RNB = SB + RB        ! Net radiation on building [W/m/m]
     RNG = SG + RG        ! Net radiation on ground [W/m/m]
 
-    !!--- calculate rain amount remaining on the surface
-    RAINR = max(0.0_RP, RAINR-(LHR/LHV)*dt)   ! [kg/m/m = mm]
-    RAINB = max(0.0_RP, RAINB-(LHB/LHV)*dt)   ! [kg/m/m = mm]
-    RAING = max(0.0_RP, RAING-(LHG/LHV)*dt)   ! [kg/m/m = mm]
+    ! calculate rain amount remaining on the surface
+    RAINR = max(0.0_RP, RAINR-(LHR/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
+    RAINB = max(0.0_RP, RAINB-(LHB/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
+    RAING = max(0.0_RP, RAING-(LHG/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave

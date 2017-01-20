@@ -14,10 +14,6 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = NONE
-INITNAME    = scale-rm_init
-BINNAME     = scale-rm
-PPCONF      = NONE
 INITCONF    = init.conf
 RUNCONF     = run.conf
 TPROC       = 24
