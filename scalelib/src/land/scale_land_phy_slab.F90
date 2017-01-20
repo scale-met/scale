@@ -176,6 +176,22 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land  physics step: Slab'
 
+    ! constant land physics
+    if( LAND_PHY_SLAB_const ) then
+
+      do j = JS, JE
+      do i = IS, IE
+      do k = LKS, LKE
+         TEMP_t (k,i,j) = 0.0_RP
+         WATER_t(k,i,j) = 0.0_RP
+      end do
+      end do
+      end do
+
+      return
+    endif
+
+
     ! Solve diffusion of soil moisture (tridiagonal matrix)
     do j = JS, JE
     do i = IS, IE
@@ -316,18 +332,6 @@ contains
     end do
     end do
     end do
-
-    ! constant land physics
-    if( LAND_PHY_SLAB_const ) then
-      do j = JS, JE
-      do i = IS, IE
-      do k = LKS, LKE
-         TEMP_t (k,i,j) = 0.0_RP
-         WATER_t(k,i,j) = 0.0_RP
-      end do
-      end do
-      end do
-    endif
 
     return
   end subroutine LAND_PHY_SLAB
