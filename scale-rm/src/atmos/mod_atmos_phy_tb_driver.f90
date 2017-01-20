@@ -312,7 +312,15 @@ contains
                                  QFLX_RHOQ(:,:,:,:,iq),  & ! (in)
                                  GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                  IIS, IIE, JJS, JJE ) ! (in)
-             RHOQ_t_TB(:,:,:,iq) = RHOQ_t_TB(:,:,:,iq) + tend(:,:,:)
+
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE
+                RHOQ_t_TB(k,i,j,iq) = RHOQ_t_TB(k,i,j,iq) + tend(k,i,j)
+             end do
+             end do
+             end do
+
           end do
           end do
        end do
