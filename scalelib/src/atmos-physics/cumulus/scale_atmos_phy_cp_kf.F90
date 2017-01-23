@@ -96,11 +96,11 @@ module scale_atmos_phy_cp_kf
   !^^^^
   real(RP), private,SAVE         :: GdCP ! GRAV/CP_dry
   !
-  ! ALIQ saturrate watervape
-  ! BLIQ is WRF SVP2
-  ! DLIQ is WRF SVP3
+  ! ALIQ saturrate watervapor (SVP1*1000; SVP1=0.6112)
+  ! BLIQ is WRF SVP2 = 17.67
+  ! DLIQ is WRF SVP3 = 29.65
   real(RP),private,parameter     :: ALIQ=6.112e2_RP ! Saturate pressure of water vapor [Pa]
-  real(RP),private,parameter     :: BLIQ=17.68_RP   ! emanuel 1994 (4.6.2) 17.67
+  real(RP),private,parameter     :: BLIQ=17.67_RP   ! emanuel 1994 (4.6.2) 17.67
   real(RP),private,parameter     :: CLIQ=BLIQ*TEM00 ! convert degree to kelvin @ dew point temperature
   real(RP),private,parameter     :: DLIQ=29.65_RP   ! 273.15 - 243.5
   real(RP),private,parameter     :: XLV1=2370._RP,XLV0=3.15e6_RP
