@@ -109,7 +109,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_CONST. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_CONST)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_CONST)
 
     return
   end subroutine ATMOS_PHY_SF_const_setup

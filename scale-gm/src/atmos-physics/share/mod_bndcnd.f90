@@ -99,7 +99,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist BNDCNDPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=BNDCNDPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=BNDCNDPARAM)
 
     if    ( BND_TYPE_T_TOP == 'TEM' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Boundary setting type (temperature, top   ) : equal to uppermost atmosphere'

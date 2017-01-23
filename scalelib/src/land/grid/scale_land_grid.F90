@@ -86,7 +86,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_GRID. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_GRID)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_GRID)
 
     allocate( GRID_LCZ (LKS  :LKE) )
     allocate( GRID_LFZ (LKS-1:LKE) )

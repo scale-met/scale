@@ -314,7 +314,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_VARS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (LAND) ***'
@@ -631,7 +631,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PROPERTY. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_PROPERTY)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PROPERTY)
 
     if( LAND_PROPERTY_IN_FILENAME /= '' ) then
       !--- Open land parameter file

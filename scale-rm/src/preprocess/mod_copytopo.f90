@@ -123,7 +123,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_COPYTOPO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_COPYTOPO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_COPYTOPO)
 
     if ( COPYTOPO_TRANSITION_DX < 0.0_RP ) then
        COPYTOPO_TRANSITION_DX = BUFFER_DX

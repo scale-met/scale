@@ -324,7 +324,7 @@ contains
      call PRC_MPIstop
     end if
 
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_BIN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BIN)
 
     if( ICEFLG == 0 ) then
        nspc = 1
@@ -528,7 +528,7 @@ contains
      write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP, Check!'
      call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SUZUKI10,iostat=ierr)
@@ -539,7 +539,7 @@ contains
      write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10, Check!'
      call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
 
     if ( nspc /= 1 .AND. nspc /= 7 ) then
        write(*,*) 'xxx nspc should be set as 1(warm rain) or 7(mixed phase) check!'

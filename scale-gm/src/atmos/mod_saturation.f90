@@ -113,7 +113,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist SATURATIONPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=SATURATIONPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=SATURATIONPARAM)
 
     RTEM00 = 1.0_RP / TEM00
 

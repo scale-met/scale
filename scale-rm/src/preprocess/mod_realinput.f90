@@ -223,7 +223,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_ATMOS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_ATMOS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_ATMOS)
 
     if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        flg_bin = .true.
@@ -501,7 +501,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_LAND. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_LAND)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_LAND)
 
     FILETYPE_LAND = FILETYPE_ORG
 
@@ -536,7 +536,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_OCEAN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_OCEAN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_OCEAN)
 
     FILETYPE_OCEAN = FILETYPE_ORG
 

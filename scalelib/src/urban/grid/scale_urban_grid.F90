@@ -85,7 +85,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_GRID. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN_GRID)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_GRID)
 
     allocate( GRID_UCZ (UKS  :UKE) )
     allocate( GRID_UFZ (UKS-1:UKE) )

@@ -157,7 +157,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_GRID. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_GRID)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_GRID)
 
     if ( BUFFFACT_X < 0.0_RP ) BUFFFACT_X = BUFFFACT
     if ( BUFFFACT_Y < 0.0_RP ) BUFFFACT_Y = BUFFFACT

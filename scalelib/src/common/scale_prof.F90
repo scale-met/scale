@@ -98,7 +98,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_PROF. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PROF)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_PROF)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Rap output level              = ', PROF_rap_level

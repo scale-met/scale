@@ -89,7 +89,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=EMBUDGETPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=EMBUDGETPARAM)
 
     if(.not.MNT_ON) return
 

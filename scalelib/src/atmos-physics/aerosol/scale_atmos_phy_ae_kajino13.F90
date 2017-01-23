@@ -233,7 +233,7 @@ contains
        call PRC_MPIstop
     end if
 
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TRACER_KAJINO13)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TRACER_KAJINO13)
 
     if( AE_CTG > ncat_max ) then
        write(*,*) 'xxx AE_CTG should be smaller than', ncat_max+1, 'stop'
@@ -469,7 +469,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_AE_KAJINO13. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_AE_KAJINO13)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_AE_KAJINO13)
 
     !--- now only the default setting is supported
 !    n_siz(1:n_ctg) = NSIZ(1:n_ctg)       ! number of size bins

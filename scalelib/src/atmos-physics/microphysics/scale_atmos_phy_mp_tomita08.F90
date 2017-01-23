@@ -475,7 +475,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                    : ', MP_donegative_fixer
@@ -502,7 +502,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_TOMITA08. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** density of the snow    [kg/m3] : ', dens_s

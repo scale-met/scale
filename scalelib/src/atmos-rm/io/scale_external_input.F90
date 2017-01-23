@@ -195,6 +195,8 @@ contains
        ! read namelist
        read(IO_FID_CONF,nml=EXTITEM)
 
+       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=EXTITEM)
+
        ! read from file
        call FileGetAllDatainfo( step_limit,               & ! [IN]
                                 EXTIN_dim_limit,          & ! [IN]

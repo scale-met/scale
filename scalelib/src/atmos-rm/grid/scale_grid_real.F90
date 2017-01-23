@@ -116,7 +116,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_DOMAIN_CATALOGUE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_DOMAIN_CATALOGUE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_DOMAIN_CATALOGUE)
 
     allocate( REAL_LON  (IA,JA) )
     allocate( REAL_LAT  (IA,JA) )

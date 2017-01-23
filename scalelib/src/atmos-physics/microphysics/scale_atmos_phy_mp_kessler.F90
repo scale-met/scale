@@ -190,7 +190,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
 
     if( MP_couple_aerosol ) then
        write(*,*) 'xxx MP_aerosol_couple should be .false. for KESSLER type MP!'

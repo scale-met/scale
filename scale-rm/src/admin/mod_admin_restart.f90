@@ -178,7 +178,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RESTART. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_RESTART)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RESTART)
 
     !--- set default output switch
     ATMOS_RESTART_OUTPUT        = RESTART_OUTPUT

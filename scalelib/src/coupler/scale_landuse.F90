@@ -102,7 +102,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LANDUSE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LANDUSE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LANDUSE)
 
     allocate( LANDUSE_frac_land (IA,JA) )
     allocate( LANDUSE_frac_lake (IA,JA) )

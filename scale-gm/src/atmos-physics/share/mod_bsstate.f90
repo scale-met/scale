@@ -101,7 +101,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist BSSTATEPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=BSSTATEPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=BSSTATEPARAM)
 
     !--- allocation of reference variables
     allocate( rho_bs   (ADM_gall   ,ADM_kall,ADM_lall   ) )

@@ -239,7 +239,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist ADMPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=ADMPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=ADMPARAM)
 
     ! Error if glevel & rlevel are not defined
     if ( glevel < 1 ) then

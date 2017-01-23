@@ -191,6 +191,8 @@ contains
        !--- read namelist
        read(IO_FID_CONF, nml=nm_extdata, iostat=ierr)
 
+       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=nm_extdata)
+
        if ( trim(layer_type) == 'ATM' ) then
           info(np)%kall = ADM_kall
        elseif( trim(layer_type) == 'SFC' ) then

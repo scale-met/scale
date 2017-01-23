@@ -174,7 +174,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist TIMEPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=TIMEPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=TIMEPARAM)
 
     !--- rewrite
     TIME_integ_type = integ_type

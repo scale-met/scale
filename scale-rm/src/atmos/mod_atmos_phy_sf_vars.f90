@@ -227,7 +227,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_VARS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_VARS)
 
     ! [add] 2014/08/28 A.Noda
     ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
