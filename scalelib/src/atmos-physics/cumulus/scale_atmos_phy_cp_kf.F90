@@ -589,7 +589,7 @@ contains
     real(RP) :: v     (KA)       ! y-direction wind velocity [m/s]
     real(RP) :: temp  (KA)       ! temperature [K]
     real(RP) :: pres  (KA)       ! pressure [Pa]
-    real(RP) :: qv    (KA)       ! water vapor mixing ratio[kg/kg]
+    real(RP) :: qv    (KA)       ! water vapor mixing ratio[kg/kg] original in KF scheme
     real(RP) :: QDRY  (KA)       ! ratio of dry air
     !real(RP) :: qes   (KA)       ! saturate vapor [kg/kg]
     real(RP) :: PSAT  (KA)       ! saturation vaper pressure
@@ -994,7 +994,7 @@ contains
           ! treatment for not evaluated layers
           do k=k_top+1, KE
              qtrc_nw(k,I_QV) = QTRC(k,i,j,I_QV)
-             qv_g(k)         = qv_0(k)
+             qv_g(k)         = QV(k)
              do iq = 1, QA_MP-1
                 qtrc_nw(k,QS_MP+iq) = QTRC(k,i,j,QS_MP+iq)
              end do
@@ -1011,7 +1011,11 @@ contains
           ! calc tendency
           DENS_t_CP(KS:KE,i,j) = (dens_nw(KS:KE) - dens(KS:KE,i,j))/timecp(i,j)
           DT_RHOT(KS:KE,i,j)   = (rhot_nw(KS:KE) - RHOT(KS:KE,i,j))/timecp(i,j)
-          do ii = 1, QA_MP
+
+          ! to keep conservation
+          DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qdry(KS:KE) * (qv_g(KS:KE) - qv_0(KS:KE)) &
+                  /timecp(i,j)
+          do ii = 2, QA_MP
              iq = QS_MP + ii - 1
              DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j) * QTRC(KS:KE,i,j,iq) ) &
                   /timecp(i,j)
