@@ -980,10 +980,10 @@ contains
              if ( I_QI>0 ) q_hyd(k,I_QI-QS_MP) = qi_nw(k) + q_hyd(k,I_QI-QS_MP)
              if ( I_QS>0 ) q_hyd(k,I_QS-QS_MP) = qs_nw(k) + q_hyd(k,I_QS-QS_MP)
              rhod(k) = DENS(k,i,j) * QDRY(k)
-             qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + sum(q_hyd(k,:),2)) ! new qdry
+             qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + sum(q_hyd(k,:),1)) ! new qdry
 
              ! new qtrc
-             qtrc_nw(k,I_QV) = qv_g(k) * qdry(KS:kE)
+             qtrc_nw(k,I_QV) = qv_g(k) * qdry(k)
              do iq = 1, QA_MP-1
                 qtrc_nw(k,QS_MP+iq) = q_hyd(k,iq) * qdry(k)
              end do
@@ -1013,7 +1013,7 @@ contains
           DT_RHOT(KS:KE,i,j)   = (rhot_nw(KS:KE) - RHOT(KS:KE,i,j))/timecp(i,j)
 
           ! to keep conservation
-          DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qdry(KS:KE) * (qv_g(KS:KE) - qv_0(KS:KE)) &
+          DT_RHOQ(KS:KE,i,j,I_QV) = ( dens_nw(KS:KE) * qdry(KS:KE) * (qv_g(KS:KE) - QV(KS:KE)) ) &
                   /timecp(i,j)
           do ii = 2, QA_MP
              iq = QS_MP + ii - 1
