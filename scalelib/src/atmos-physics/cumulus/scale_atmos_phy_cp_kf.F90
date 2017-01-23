@@ -104,6 +104,7 @@ module scale_atmos_phy_cp_kf
   real(RP),private,parameter     :: CLIQ=BLIQ*TEM00 ! convert degree to kelvin @ dew point temperature
   real(RP),private,parameter     :: DLIQ=29.65_RP   ! 273.15 - 243.5
   real(RP),private,parameter     :: XLV1=2370._RP,XLV0=3.15e6_RP
+  real(RP),private,parameter     :: KF_EPS=1.E-12_RP
   ! Naming list tuning parameters
   ! RATE is used subroutine precipitation_OC1973
   real(RP),private, save       :: RATE            = 0.03_RP  ! ratio of cloud water and precipitation (Ogura and Cho 1973)
@@ -759,7 +760,8 @@ contains
           QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(K) - PSAT(k) )
 
           QV  (k) = QTRC(k,i,j,I_QV) / QDRY(k)
-          QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
+!          QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
+          QV  (k) = max( KF_EPS, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
           rh  (k) = QV(k) / QSAT(k)
        enddo
 
@@ -1370,7 +1372,7 @@ contains
             rh_lcl = qvenv/qs_lcl
             DQSSDT = qv_mix*(CLIQ-BLIQ*DLIQ)/((temp_lcl-DLIQ)*(temp_lcl-DLIQ))
             if(rh_lcl >= 0.75_RP .and. rh_lcl <=0.95_RP)then
-              dtrh = 0.25*(rh_lcl-0.75)*qv_mix/DQSSDT
+              dtrh = 0.25_RP*(rh_lcl-0.75_RP)*qv_mix/DQSSDT
             elseif(rh_lcl > 0.95_RP) then
                dtrh = (1._RP/rh_lcl-1._RP)*qv_mix/DQSSDT
             else
@@ -1400,7 +1402,7 @@ contains
           pres_lcl = pres(k_lclm1) + (pres(k_lcl) - pres(k_lclm1))*deltaz
           !          denslcl = pres_lcl/(R*tempv_lcl)
           ! temp_lcl is already caliculated
-          if (w_g < 0 ) then !< Kain(2004) eq.6
+          if (w_g < 0._RP ) then !< Kain(2004) eq.6
              radius = 1000._RP
           elseif (w_g > 0.1_RP) then
              radius = 2000._RP
@@ -1960,8 +1962,8 @@ contains
        ee2 = max(ee2,0.5_RP)
        ud2 = 1.5_RP*ud2
        !
-       upent(kkp1) = 0.5*rei*(ee1 + ee2)
-       updet(kkp1) = 0.5*rei*(ud1 + ud2)
+       upent(kkp1) = 0.5_RP*rei*(ee1 + ee2)
+       updet(kkp1) = 0.5_RP*rei*(ud1 + ud2)
        !! if the calculated updraft detrainment rate is greater then the total
        !! updraft mass flux(umf), all cloud mass detrains
        if (umf(kk) - updet(kkp1) < 10._RP) then ! why 10.???
@@ -2731,7 +2733,7 @@ contains
              omg(kk) = omg(kk-1) - deltap(kk-1)*domg_dp(kk-1)
              absomg = abs(omg(kk))
              absomgtc  = absomg*timecp
-             f_dp = 0.75*deltap(kk-1)
+             f_dp = 0.75_RP*deltap(kk-1)
              if(absomgtc > f_dp)THEN
                 dtt_tmp = f_dp/abs(omg(kk))
                 dtt=min(dtt,dtt_tmp) ! it is use determin nstep
@@ -2802,12 +2804,14 @@ contains
              end if
              tma        = qv_g(kkp1)*ems(kkp1)
              tmb        = qv_g(kk-1)*ems(kk-1)
-             tmm        = (qv_g(kk) - 1.e-9_RP )*ems(kk)
+!             tmm        = (qv_g(kk) - 1.e-9_RP )*ems(kk)
+             tmm        = (qv_g(kk) - KF_EPS )*ems(kk)
              bcoeff     = -tmm/((tma*tma)/tmb + tmb)
              acoeff     = bcoeff*tma/tmb
              tmb        = tmb*(1._RP - bcoeff)
              tma        = tma*(1._RP - acoeff)
-             qv_g(kk)   = 1.e-9_RP
+!             qv_g(kk)   = 1.e-9_RP
+             qv_g(kk)   = KF_EPS
              qv_g(kkp1) = tma*emsd(kkp1)
              qv_g(kk-1) = tmb*emsd(kk-1)
           end if
@@ -2861,11 +2865,11 @@ contains
           temp_lcl = temp_mix
        else !same as detern trigger
           qv_mix   = max(qv_mix,0._RP)
-          emix     = qv_mix*presmix/(0.6222_RP + qv_mix)
+          emix     = qv_mix*presmix/(0.622_RP + qv_mix)
           TLOG     = log(emix/ALIQ)
           ! dew point temperature Bolton(1980)
           TDPT     = (CLIQ - DLIQ*TLOG)/(BLIQ - TLOG)
-          temp_lcl = TDPT - (0.212_RP + 1.57e-3_RP*(TDPT - TEM00) - 4.36e-4_RP*(temp_mix - TEM00))*(temp_mix - TDPT)
+          temp_lcl = TDPT - (0.212_RP + 1.571e-3_RP*(TDPT - TEM00) - 4.36e-4_RP*(temp_mix - TEM00))*(temp_mix - TDPT)
           temp_lcl = min(temp_lcl,temp_mix)
        end if
        tempv_lcl = temp_lcl*(1._RP + 0.608_RP*qv_mix)
@@ -2935,13 +2939,13 @@ contains
        !! aincmx is upper limit of massflux factor
        !! if massflux factor 'ainc' is near "aincmax" then exit
        !! but need   CAPE is less than 90% of original
-       if (ainc/aincmx > 0.999 .and. f_cape > 1.05-stab ) then
+       if (ainc/aincmx > 0.999_RP .and. f_cape > 1.05_RP-stab ) then
           exit
        end if
        !! loop exit 1. or 2.
        !! 1. NEW cape is less than 10% of oliginal cape
        !! 2. ncount = 10
-       if( (f_cape <=  1.05-stab .and. f_cape >= 0.95-stab) .or. ncount == 10) then
+       if( (f_cape <=  1.05_RP-stab .and. f_cape >= 0.95_RP-stab) .or. ncount == 10) then
           exit
        else ! no exit
           if(ncount > 10) exit ! sayfty ??  ncount musn't over 10...
@@ -2958,7 +2962,7 @@ contains
           end if
           ainc = min(aincmx,ainc) ! ainc must be less than aincmx
           !!  if ainc becomes very small, effects of convection will be minimal so just ignore it
-          if (ainc < 0.05) then !! noconvection
+          if (ainc < 0.05_RP) then !! noconvection
              I_convflag = 2
              return
           end if
@@ -2984,14 +2988,14 @@ contains
     if (I_convflag == 1) then
        do kk = k_lcl-1, k_top
           umf_tmp = umf(kk)/(deltax*deltax)
-          xcldfrac = 0.07*log(1._RP+(500._RP*UMF_tmp))
+          xcldfrac = 0.07_RP*log(1._RP+(500._RP*UMF_tmp))
           xcldfrac = max(1.e-2_RP,xcldfrac)
           cldfrac_KF(kk,1) = min(2.e-2_RP,xcldfrac) ! shallow
        end do
     else
        do kk = k_lcl-1, k_top
           umf_tmp = umf(kk)/(deltax*deltax)
-          xcldfrac = 0.14*log(1._RP+(500._RP*UMF_tmp))
+          xcldfrac = 0.14_RP*log(1._RP+(500._RP*UMF_tmp))
           xcldfrac = max(1.e-2_RP,xcldfrac)
           cldfrac_KF(kk,2) = min(6.e-1_RP,xcldfrac) ! deep
        end do
@@ -3186,7 +3190,7 @@ contains
     G1=WTW+BOTERM-ENTERM-2._RP*G*DZ*QEST/1.5_RP
     IF(G1.LT.0.0)G1=0._RP
     WAVG=0.5_RP*(SQRT(WTW)+SQRT(G1))
-    CONV=RATE*DZ/WAVG               ! KF90  Eq. 9
+    CONV=RATE*DZ/max(WAVG,KF_EPS) ! KF90 Eq. 9 !wig, 12-Sep-2006: added div by 0 check
 
     !
     !  RATIO3 IS THE FRACTION OF LIQUID WATER IN FRESH CONDENSATE, RATIO4 IS
