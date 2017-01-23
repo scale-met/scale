@@ -675,7 +675,6 @@ contains
        if ( nca(i,j) .ge. 0.5_DP * dt ) cycle
 
        ! initialize variables
-       I_convflag(i,j) = 0.0_RP
        cloudtop  (i,j) = 0.0_RP
        zlcl      (i,j) = 0.0_RP
        rainrate_cp(i,j)= 0.0_RP
