@@ -972,21 +972,34 @@ contains
              timecp(i,j) = SHALLOWLIFETIME
              nca   (i,j) = KF_DTSEC ! convection feed back act this time span
           end if
-          ! update qd
-          q_hyd(KS:KE,I_QC-QS_MP) = qc_nw(KS:KE) + q_hyd(KS:KE,I_QC-QS_MP)
-          q_hyd(KS:KE,I_QR-QS_MP) = qr_nw(KS:KE) + q_hyd(KS:KE,I_QR-QS_MP)
-          if ( I_QI>0 ) q_hyd(KS:KE,I_QI-QS_MP) = qi_nw(KS:KE) + q_hyd(KS:KE,I_QI-QS_MP)
-          if ( I_QS>0 ) q_hyd(KS:KE,I_QS-QS_MP) = qs_nw(KS:KE) + q_hyd(KS:KE,I_QS-QS_MP)
-          rhod(KS:KE) = DENS(KS:KE,i,j) * QDRY(KS:KE)
-          qdry(KS:KE) = 1.0_RP / ( 1.0_RP + qv_g(KS:KE) + sum(q_hyd(KS:KE,:),2)) ! new qdry
 
-          ! new qtrc
-          qtrc_nw(KS:KE,I_QV) = qv_g(KS:KE) * qdry(KS:kE)
-          do iq = 1, QA_MP-1
-             qtrc_nw(KS:KE,QS_MP+iq) = q_hyd(KS:KE,iq) * qdry(KS:KE)
-          end do
-          ! new density
-          dens_nw(KS:KE) = rhod(KS:KE) / qdry(KS:KE)
+          do k=KS, k_top
+             ! update qd
+             q_hyd(k,I_QC-QS_MP) = qc_nw(k) + q_hyd(k,I_QC-QS_MP)
+             q_hyd(k,I_QR-QS_MP) = qr_nw(k) + q_hyd(k,I_QR-QS_MP)
+             if ( I_QI>0 ) q_hyd(k,I_QI-QS_MP) = qi_nw(k) + q_hyd(k,I_QI-QS_MP)
+             if ( I_QS>0 ) q_hyd(k,I_QS-QS_MP) = qs_nw(k) + q_hyd(k,I_QS-QS_MP)
+             rhod(k) = DENS(k,i,j) * QDRY(k)
+             qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + sum(q_hyd(k,:),2)) ! new qdry
+
+             ! new qtrc
+             qtrc_nw(k,I_QV) = qv_g(k) * qdry(KS:kE)
+             do iq = 1, QA_MP-1
+                qtrc_nw(k,QS_MP+iq) = q_hyd(k,iq) * qdry(k)
+             end do
+             ! new density
+             dens_nw(k) = rhod(k) / qdry(k)
+          enddo
+
+          ! treatment for not evaluated layers
+          do k=k_top+1, KE
+             qtrc_nw(k,I_QV) = QTRC(k,i,j,I_QV)
+             qv_g(k)         = qv_0(k)
+             do iq = 1, QA_MP-1
+                qtrc_nw(k,QS_MP+iq) = QTRC(k,i,j,QS_MP+iq)
+             end do
+             dens_nw(k) = DENS(k,i,j)
+          enddo
 
           ! calc new potential temperature
           call THERMODYN_pott(&
