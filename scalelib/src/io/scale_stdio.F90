@@ -57,12 +57,11 @@ module scale_stdio
   integer,               public            :: IO_FID_NML    = 9             !< Log file ID (only for output namelist)
 
   character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'       !< basename of logfile
-  character(len=H_LONG), public            :: IO_NML_FILENAME     = 'used.conf' !< filename of logfile (only for output namelist)
+  character(len=H_LONG), public            :: IO_NML_FILENAME     = ''          !< filename of logfile (only for output namelist)
   logical,               public            :: IO_L                = .false.     !< output log or not? (this process)
   logical,               public            :: IO_NML              = .false.     !< output log or not? (for namelist, this process)
   logical,               public            :: IO_LOG_SUPPRESS     = .false.     !< suppress all of log output?
   logical,               public            :: IO_LOG_NML_SUPPRESS = .false.     !< suppress all of log output? (for namelist)
-  logical,               public            :: IO_LOG_NML_SAVEUSED = .false.     !< output namelist to other
   logical,               public            :: IO_LOG_ALLNODE      = .false.     !< output log for each node?
   logical,               public            :: IO_AGGREGATE        = .false.     !< do parallel I/O through PnetCDF
 
@@ -94,7 +93,6 @@ contains
        IO_NML_FILENAME,     &
        IO_LOG_SUPPRESS,     &
        IO_LOG_NML_SUPPRESS, &
-       IO_LOG_NML_SAVEUSED, &
        IO_LOG_ALLNODE,      &
        IO_AGGREGATE
 
@@ -154,7 +152,6 @@ contains
        IO_NML_FILENAME,     &
        IO_LOG_SUPPRESS,     &
        IO_LOG_NML_SUPPRESS, &
-       IO_LOG_NML_SAVEUSED, &
        IO_LOG_ALLNODE,      &
        IO_AGGREGATE
 
@@ -264,7 +261,7 @@ contains
        if( is_master ) write(*,*) '*** Log report is suppressed.'
     endif
 
-    if ( IO_LOG_NML_SAVEUSED ) then
+    if ( IO_NML_FILENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*)         '*** The used config is output to the file.'
        if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** filename of used config file   = ', trim(IO_NML_FILENAME)
 
