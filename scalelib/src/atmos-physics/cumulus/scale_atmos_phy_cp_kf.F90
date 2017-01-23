@@ -2162,7 +2162,7 @@ contains
        rcbh = 0.96729352_RP + CBH*(-0.70034167_RP + CBH*(0.162179896_RP + CBH*(-            &
             1.2569798E-2_RP + CBH*(4.2772E-4_RP - CBH*5.44E-6_RP))))
     end if
-    if(cbh > 0.25) rcbh = 2.4_RP
+    if(cbh > 25.0_RP) rcbh = 2.4_RP
     pef_cloud = 1._RP/(1._RP + rcbh)
     pef_cloud = min(pef_cloud,0.9_RP)
     ! pef is mean of wind shear type and  cloud base heigt type
