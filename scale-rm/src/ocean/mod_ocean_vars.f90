@@ -293,7 +293,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_VARS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (OCEAN) ***'

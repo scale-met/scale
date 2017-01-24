@@ -116,7 +116,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
     call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_org, myrank, single=.true. )
     dims(1:6) = dims_wrf(1:6)
@@ -468,7 +468,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
 
     call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_land, myrank, single=.true. )
@@ -672,7 +672,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
 
     call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_org, myrank, single=.true. )

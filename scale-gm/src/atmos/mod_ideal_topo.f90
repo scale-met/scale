@@ -77,7 +77,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=IDEALTOPOPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=IDEALTOPOPARAM)
 
     if    ( topo_type == 'Schar_Moderate' ) then
 
@@ -158,7 +158,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Moderate. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=IDEALTOPOPARAM_Schar_Moderate)
+    if( IO_NML ) write(IO_FID_NML,nml=IDEALTOPOPARAM_Schar_Moderate)
 
     K0 = ADM_KNONE
 
@@ -244,7 +244,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Steep. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=IDEALTOPOPARAM_Schar_Steep)
+    if( IO_NML ) write(IO_FID_NML,nml=IDEALTOPOPARAM_Schar_Steep)
 
     K0 = ADM_KNONE
 

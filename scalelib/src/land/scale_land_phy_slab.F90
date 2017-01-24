@@ -85,7 +85,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PHY_SLAB. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_PHY_SLAB)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PHY_SLAB)
 
     if( LAND_TYPE == 'CONST' ) then
        LAND_PHY_SLAB_const = .true.

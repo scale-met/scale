@@ -128,7 +128,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=RESTARTPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=RESTARTPARAM)
 
     restart_input_basename  = input_basename
     restart_output_basename = output_basename

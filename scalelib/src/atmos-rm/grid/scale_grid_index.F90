@@ -159,7 +159,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_INDEX. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_INDEX)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_INDEX)
 
     if ( IMAXG * JMAXG < 0 ) then
        write(*,*) 'xxx Both IMAXG and JMAXG must set! ', IMAXG, JMAXG

@@ -81,7 +81,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_PHY_SLAB. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_PHY_SLAB)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_PHY_SLAB)
 
     if( OCEAN_TYPE == 'CONST' ) then
        OCEAN_PHY_SLAB_fixedSST = .true.

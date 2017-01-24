@@ -20,10 +20,10 @@ module gtool_history
   !++ Used modules
   !
   use dc_log, only: &
-     Log, &
-#if defined(__PGI) || defined(__ES2)
-     LOG_fid, &
-#endif
+     Log,         &
+     Log_nml,     &
+     LOG_fid,     &
+     LOG_fid_nml, &
      LOG_LMSG
   use dc_types, only: &
      SP, &
@@ -374,11 +374,12 @@ contains
     elseif( ierr > 0 ) then !--- fatal error
        call Log('E','xxx Not appropriate names in namelist PARAM_HISTORY. Check!')
     endif
+
 #if defined(__PGI) || defined(__ES2)
-    write(LOG_fid,nml=PARAM_HISTORY)
+    if ( LOG_master_nml ) write(LOG_fid_nml,nml=PARAM_HISTORY)
 #else
     write(message,nml=PARAM_HISTORY)
-    call Log('I',message)
+    call Log_nml('I',message)
 #endif
 
     if ( History_OUTPUT_WAIT < 0.0_DP ) then
@@ -440,6 +441,13 @@ contains
        read(fid,nml=HISTITEM,iostat=ierr)
        if( ierr /= 0 ) exit
        if( BASENAME == '' .OR. ITEM == '' .OR. OUTNAME == '' ) cycle ! invalid HISTITEM
+
+#if defined(__PGI) || defined(__ES2)
+    if ( LOG_master_nml .AND. LOG_fid_nml /= LOG_fid ) write(LOG_fid_nml,nml=HISTITEM)
+#else
+    write(message,nml=HISTITEM)
+    if ( LOG_fid_nml /= LOG_fid ) call Log_nml('I',message)
+#endif
 
        ! check duplicated request
        if ( OUTNAME == 'undefined' ) OUTNAME = ITEM ! set default name

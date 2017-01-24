@@ -393,7 +393,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist COMMPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=COMMPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=COMMPARAM)
 
     if ( RP == DP ) then
        COMM_datatype = MPI_DOUBLE_PRECISION

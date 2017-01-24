@@ -1442,10 +1442,8 @@ contains
 
     if ( vid < 0 ) then ! variable registration
        !--- register new variable
-       write(message,*) '*** [File] Var registration'
-       call Log("I", message)
-       write(message,*) '*** variable name: ', trim(varname)
-       call Log("I", message)
+       write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
+       call Log("I",message)
 
        if ( present(tint) ) then
           tint_ = tint
@@ -3787,7 +3785,6 @@ contains
 
     if ( error == SUCCESS_CODE ) then
 
-       call Log("I",'')
        write(message,'(A,I3.3,2A)') '###### File flush : No.', File_fid_list(n), &
                                                   ', name = ', trim(File_fname_list(n))
        call Log("I",message)
@@ -3831,7 +3828,6 @@ contains
 
     if ( error == SUCCESS_CODE ) then
 
-       call Log("I",'')
        write(message,'(A,I3.3,2A)') '###### File close : No.', File_fid_list(n), &
                                                   ', name = ', trim(File_fname_list(n))
        call Log("I",message)
@@ -3959,7 +3955,6 @@ contains
     write(message,'(3A,I3.3,2A)') '###### File registration (', &
                                   trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
     call Log("I",message)
-    call Log("I",'')
 
     File_fname_list(File_fid_count) = trim(fname)
     File_fid_list  (File_fid_count) = fid

@@ -75,7 +75,9 @@ program mkhgrid
   ! setup standard I/O
   call IO_setup( MODELNAME, .false. )
   call IO_LOG_setup( myrank, ismaster )
-  call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+  call LogInit( IO_FID_CONF,       &
+                IO_FID_LOG, IO_L,  &
+                IO_FID_NML, IO_NML )
 
   !---< admin module setup >---
   call ADM_setup

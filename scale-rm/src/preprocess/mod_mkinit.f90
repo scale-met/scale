@@ -246,7 +246,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT)
 
     allocate( pres(KA,IA,JA) )
     allocate( temp(KA,IA,JA) )
@@ -565,7 +565,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_BUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_BUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BUBBLE)
 
     if ( abs(BBL_RZ*BBL_RX*BBL_RY) <= 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** no bubble'
@@ -661,7 +661,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RECT. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_RECT)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RECT)
 
     rect(:,:,:) = CONST_UNDEF8
 
@@ -748,7 +748,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_AERO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_AERO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_AERO)
 
     call ATMOS_PHY_AE_kajino13_mkinit( &
          QTRC, CCN,                 & ! (out)
@@ -809,7 +809,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist SBMAERO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_SBMAERO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_SBMAERO)
 
     if( nccn /= 0 ) then
       allocate( gan( nccn ) )
@@ -922,7 +922,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_FLUX. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_FLUX)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_FLUX)
 
     do j = JS, JE
     do i = IS, IE
@@ -988,7 +988,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LAND. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LAND)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_LAND)
 
     do j = JS, JE
     do i = IS, IE
@@ -1048,7 +1048,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_OCEAN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEAN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_OCEAN)
 
 
     do j = JS, JE
@@ -1145,7 +1145,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_URBAN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBAN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_URBAN)
 
 
     do j = JS, JE
@@ -1223,7 +1223,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SOUNDING. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SOUNDING)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SOUNDING)
 
     !--- prepare sounding profile
     if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
@@ -1377,7 +1377,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_PLANESTATE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_PLANESTATE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_PLANESTATE)
 
     ! calc in dry condition
     do j = JS, JE
@@ -1572,7 +1572,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TRACERBUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_TRACERBUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TRACERBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -1703,7 +1703,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_COLDBUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_COLDBUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_COLDBUBBLE)
 
     RovCP = Rdry / CPdry
 
@@ -1803,7 +1803,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LAMBWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LAMBWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_LAMBWAVE)
 
     RovCP = Rdry / CPdry
 
@@ -1881,7 +1881,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAVITYWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAVITYWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAVITYWAVE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -1987,7 +1987,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_KHWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_KHWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_KHWAVE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -2117,7 +2117,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TURBULENCE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_TURBULENCE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TURBULENCE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -2288,7 +2288,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_CAVITYFLOW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_CAVITYFLOW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_CAVITYFLOW)
 
     Gam   = CPdry / ( CPdry - Rdry )
     Cs2   = ( Ulid / MACH_NUM )**2
@@ -2367,7 +2367,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_MOUNTAINWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_MOUNTAINWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_MOUNTAINWAVE)
 
     ! calc in dry condition
     do j = JS, JE
@@ -2524,7 +2524,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BAROCWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BAROCWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BAROCWAVE)
 
     Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
 
@@ -2703,7 +2703,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_WARMBUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -2826,7 +2826,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SUPERCELL. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SUPERCELL)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SUPERCELL)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
@@ -2895,7 +2895,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SQUALLLINE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SQUALLLINE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SQUALLLINE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
@@ -2975,7 +2975,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WK1982. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_WK1982)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WK1982)
 
     ! calc in dry condition
     do j = JS, JE
@@ -3163,7 +3163,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF01. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF01)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF01)
 
     if ( USE_LWSET ) then
        GEOP_sw = 1.0_RP
@@ -3439,7 +3439,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF02)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF02)
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
@@ -3713,7 +3713,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02_DNS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF02_DNS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF02_DNS)
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
@@ -3974,7 +3974,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RICO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_RICO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RICO)
 
     ! calc in moist condition
     do j = JS, JE
@@ -4252,7 +4252,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_INTERPORATION. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_INTERPORATION)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_INTERPORATION)
 
     call FileGetShape( dims(:),                               &
                        BASENAME_ORG, "DENS", 1, single=.true. )
@@ -4701,7 +4701,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SEABREEZE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SEABREEZE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SEABREEZE)
 
     call flux_setup
 
@@ -4818,7 +4818,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAYZONE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAYZONE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
@@ -4950,7 +4950,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BOXAERO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BOXAERO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOXAERO)
 
     QTRC(:,:,:,:) = 0.0_RP
     do k = KS, KE
@@ -5035,7 +5035,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_WARMBUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES

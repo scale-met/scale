@@ -97,7 +97,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist FORCING_DCMIP_PARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=FORCING_DCMIP_PARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=FORCING_DCMIP_PARAM)
 
     ! overwrite setting
     if ( SET_RJ2012 ) then

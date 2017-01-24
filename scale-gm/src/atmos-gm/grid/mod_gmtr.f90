@@ -163,7 +163,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist GMTRPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=GMTRPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=GMTRPARAM)
 
 
 

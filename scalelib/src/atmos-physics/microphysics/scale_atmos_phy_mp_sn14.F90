@@ -649,7 +649,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
 
     ATMOS_PHY_MP_sn14_DENS(:) = CONST_UNDEF
     ATMOS_PHY_MP_sn14_DENS(I_HC) = CONST_DWATR
@@ -870,7 +870,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_init. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_init)
+    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_init)
 
     !
     ! default setting
@@ -969,7 +969,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_particles. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_particles)
+    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_particles)
 
     ! [Add] 10/08/03 T.Mitsui
     ! particles shapes are
@@ -2317,7 +2317,7 @@ contains
     if( flag_first )then
        rewind(IO_FID_CONF)
        read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
-100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_nucleation)
+100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_nucleation)
        flag_first=.false.
 
        if ( MP_couple_aerosol .AND. nucl_twomey ) then
@@ -2868,7 +2868,7 @@ contains
     if( flag_first )then
        rewind( IO_FID_CONF )
        read( IO_FID_CONF, nml=nm_mp_sn14_collection, end=100 )
-100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_collection)
+100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_collection)
        flag_first = .false.
     end if
     !
@@ -3973,7 +3973,7 @@ contains
        flag_first = .false.
        rewind(IO_FID_CONF)
        read  (IO_FID_CONF,nml=nm_mp_sn14_condensation, end=100)
-100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_condensation)
+100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_condensation)
     end if
     !
 !    dt_dyn     = dt*ntmax

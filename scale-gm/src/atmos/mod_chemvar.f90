@@ -68,7 +68,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=CHEMVARPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=CHEMVARPARAM)
 
     allocate( CHEM_TRC_name(CHEM_TRC_vmax) )
     allocate( CHEM_TRC_desc(CHEM_TRC_vmax) )

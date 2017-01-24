@@ -72,7 +72,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RANDOM. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_RANDOM)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RANDOM)
 
     call random_seed
     call random_seed(size=nseeds)

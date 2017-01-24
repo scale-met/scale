@@ -116,7 +116,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MONITOR. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MONITOR)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MONITOR)
 
     ! listup monitor request
     rewind(IO_FID_CONF)
@@ -155,6 +155,8 @@ contains
 
        read(IO_FID_CONF,nml=MONITITEM,iostat=ierr)
        if( ierr /= 0 ) exit
+
+       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=MONITITEM)
 
        MONIT_req_item(n) = ITEM
     enddo

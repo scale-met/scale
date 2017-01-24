@@ -207,7 +207,7 @@ contains
        write(*,*) 'xxx [realinput_grads] Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_GrADS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_GrADS)
 
 
     if ( len_trim(basename) == 0 ) then
@@ -233,7 +233,7 @@ contains
        write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
+    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
     ! full level
     dims(1) = outer_nz ! bottom_top
@@ -925,7 +925,7 @@ contains
        write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
+    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
     ! land
     ldims(1) = outer_nl ! soil_layers_stag
@@ -1378,7 +1378,7 @@ contains
        write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(grads_ctl),'. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
+    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
     timelen = 0        ! will be replaced later
 

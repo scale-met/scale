@@ -132,7 +132,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ROUGHNESS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ROUGHNESS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ROUGHNESS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for ocean roughness length : ', trim(ROUGHNESS_type)
@@ -187,7 +187,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ROUGHNESS_MILLER92. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ROUGHNESS_MILLER92)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ROUGHNESS_MILLER92)
 
     return
   end subroutine ROUGHNESS_miller92_setup
@@ -213,7 +213,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ROUGHNESS_MOON07. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ROUGHNESS_MOON07)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ROUGHNESS_MOON07)
 
     return
   end subroutine ROUGHNESS_moon07_setup

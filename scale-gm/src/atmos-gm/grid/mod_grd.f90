@@ -261,7 +261,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist GRDPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=GRDPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=GRDPARAM)
 
 
 

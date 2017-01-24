@@ -161,7 +161,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist DYCORETESTPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=DYCORETESTPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=DYCORETESTPARAM)
 
     DCTEST_type = init_type
     DCTEST_case = test_case

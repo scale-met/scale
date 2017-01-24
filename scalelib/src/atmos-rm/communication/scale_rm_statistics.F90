@@ -83,7 +83,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_STATISTICS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_STATISTICS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_STATISTICS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Caluculate statistics?                     : ', STATISTICS_checktotal

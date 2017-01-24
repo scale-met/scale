@@ -206,7 +206,9 @@ contains
 
     ! setup Log
     call IO_LOG_setup( myrank, ismaster )
-    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+    call LogInit( IO_FID_CONF,       &
+                  IO_FID_LOG, IO_L,  &
+                  IO_FID_NML, IO_NML )
 
     ! setup process
     call PRC_setup

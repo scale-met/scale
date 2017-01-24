@@ -168,7 +168,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     !--- equivalent time step for the current dt
     if( start_step == -999 ) start_step = int(start_hr/TIME_DTSEC)+1

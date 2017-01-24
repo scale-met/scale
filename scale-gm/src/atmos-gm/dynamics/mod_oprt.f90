@@ -148,7 +148,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist OPRTPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=OPRTPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=OPRTPARAM)
 
 #ifndef _FIXEDINDEX_
 !    allocate( OPRT_coef_div    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   ) )
