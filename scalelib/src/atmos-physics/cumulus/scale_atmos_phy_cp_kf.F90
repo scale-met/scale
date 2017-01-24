@@ -661,7 +661,8 @@ contains
     !
     real(RP) :: cldfrac_KF(KA,2) ! cloud fraction
     !
-    real(RP) :: rhod(KA) ! dry density
+    real(RP) :: rhod(KA)         ! dry density
+    real(RP) :: QV_resd(KA)      ! residual vapor
     ! do loop variable
     integer  :: k, i, j, iq, iqa, ii
 
@@ -712,6 +713,7 @@ contains
        qs_nw     (:)   = 0.0_RP
        rhot_nw   (:)   = 0.0_RP
        pott_nw   (:)   = 0.0_RP
+       QV_resd   (:)   = 0.0_RP
        totalprcp       = 0.0_RP
        umflcl          = 0.0_RP
        cape            = 0.0_RP
@@ -762,6 +764,7 @@ contains
           QV  (k) = QTRC(k,i,j,I_QV) / QDRY(k)
 !          QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
           QV  (k) = max( KF_EPS, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
+          QV_resd(k) = (QTRC(k,i,j,I_QV) / QDRY(k)) - QV(k)
           rh  (k) = QV(k) / QSAT(k)
        enddo
 
@@ -984,9 +987,9 @@ contains
              qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + sum(q_hyd(k,:),1)) ! new qdry
 
              ! new qtrc
-             qtrc_nw(k,I_QV) = qv_g(k) * qdry(k)
+             qtrc_nw(k,I_QV) = qv_g(k) * qdry(k) + QV_resd(k)
              do iq = 1, QA_MP-1
-                qtrc_nw(k,QS_MP+iq) = q_hyd(k,iq) * qdry(k)
+                qtrc_nw(k,QS_MP+iq) = q_hyd(k,iq) * qdry(k) + QTRC(k,i,j,QS_MP+iq)
              end do
              ! new density
              dens_nw(k) = rhod(k) / qdry(k)
@@ -1014,11 +1017,12 @@ contains
           DT_RHOT(KS:KE,i,j)   = (rhot_nw(KS:KE) - RHOT(KS:KE,i,j))/timecp(i,j)
 
           ! to keep conservation
-          DT_RHOQ(KS:KE,i,j,I_QV) = ( dens_nw(KS:KE) * qdry(KS:KE) * (qv_g(KS:KE) - QV(KS:KE)) ) &
+          DT_RHOQ(KS:KE,i,j,I_QV) = ( rhod(KS:KE) * (qv_g(KS:KE) - QV(KS:KE)) ) &
                   /timecp(i,j)
           do ii = 2, QA_MP
              iq = QS_MP + ii - 1
-             DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j) * QTRC(KS:KE,i,j,iq) ) &
+             ! assuming the initial q_hyd in KF is zero.
+             DT_RHOQ(KS:KE,i,j,iq) = ( rhod(KS:KE) * q_hyd(KS:KE,ii-1) ) &
                   /timecp(i,j)
           end do
           ! if noconvection then nca is same value before call. nca only modifyed convectioned
