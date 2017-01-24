@@ -1021,8 +1021,7 @@ contains
                   /timecp(i,j)
           do ii = 2, QA_MP
              iq = QS_MP + ii - 1
-             ! assuming the initial q_hyd in KF is zero.
-             DT_RHOQ(KS:KE,i,j,iq) = ( rhod(KS:KE) * q_hyd(KS:KE,ii-1) ) &
+             DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j) * QTRC(KS:KE,i,j,iq) ) &
                   /timecp(i,j)
           end do
           ! if noconvection then nca is same value before call. nca only modifyed convectioned
