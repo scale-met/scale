@@ -647,7 +647,7 @@ contains
        !##### momentum equation (x) #####
        ! (y edge)
        if ( ATMOS_PHY_TB_SMG_horizontal ) then
-          qflx_sgs_momx(k,i,j,ZDIR) = 0.0_RP
+          qflx_sgs_momx(:,:,:,ZDIR) = 0.0_RP
        else
           do j = JJS, JJE
           do i = IIS, IIE
@@ -788,7 +788,7 @@ contains
        !##### momentum equation (y) #####
        ! (x edge)
        if ( ATMOS_PHY_TB_SMG_horizontal ) then
-          qflx_sgs_momy(k,i,j,ZDIR) = 0.0_RP
+          qflx_sgs_momy(:,:,:,ZDIR) = 0.0_RP
        else
           do j = JJS, JJE
           do i = IIS, IIE
