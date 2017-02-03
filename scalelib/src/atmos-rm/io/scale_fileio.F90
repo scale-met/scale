@@ -714,27 +714,27 @@ contains
        if    ( axistype == 'Z' ) then
           start(1) = 1
           count(1) = KMAX
-          call FileRead( var(KS:KE), fid, varname, step, PRC_myrank,        &
+          call FileRead( var(KS:KE), fid, varname, step,                    &
                          ntypes=KMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'LZ' ) then
           start(1) = 1
           count(1) = LKMAX
-          call FileRead( var, fid, varname, step, PRC_myrank,                &
+          call FileRead( var, fid, varname, step,                            &
                          ntypes=LKMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'UZ' ) then
           start(1) = 1
           count(1) = UKMAX
-          call FileRead( var, fid, varname, step, PRC_myrank,                &
+          call FileRead( var, fid, varname, step,                            &
                          ntypes=LKMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'X' .OR. axistype == 'CX' ) then
           start(1) = IS_inG - IHALO
           count(1) = IA
-          call FileRead( var, fid, varname, step, PRC_myrank,             &
+          call FileRead( var, fid, varname, step,                         &
                          ntypes=IA, dtype=etype, start=start, count=count )
        elseif( axistype == 'Y' .OR. axistype == 'CY' ) then
           start(1) = JS_inG - JHALO
           count(1) = JA
-          call FileRead( var, fid, varname, step, PRC_myrank,             &
+          call FileRead( var, fid, varname, step,                         &
                          ntypes=JA, dtype=etype, start=start, count=count )
        else
           write(*,*) 'xxx unsupported axis type. Check!: ', trim(axistype), ' item:',trim(varname)
@@ -767,7 +767,7 @@ contains
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E), fid, varname, step, PRC_myrank )
+       call FileRead( var(dim1_S:dim1_E), fid, varname, step )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -813,12 +813,12 @@ contains
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
        if    ( axistype == 'XY' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank,                    &
+          call FileRead( var, fid, varname, step,                                &
                          ntypes=IA*JA, dtype=etype, start=startXY, count=countXY )
        elseif( axistype == 'ZX' ) then
           ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
           ! derived datatype to describe the layout of local read buffer
-          call FileRead( var, fid, varname, step, PRC_myrank,                       &
+          call FileRead( var, fid, varname, step,                                   &
                          ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
        else
           write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
@@ -840,7 +840,7 @@ contains
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step, PRC_myrank )
+       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -888,18 +888,18 @@ contains
        ! Because KHALO is not saved in files, we use mpi derived datatypes to
        ! describe the layout of local read buffer
        if    ( axistype == 'ZXY' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank,                          &
+          call FileRead( var, fid, varname, step,                                      &
                          ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY )
        elseif( axistype == 'XYT' ) then
           startXY(3) = 1
           countXY(3) = step
-          call FileRead( var, fid, varname, step, PRC_myrank,                         &
+          call FileRead( var, fid, varname, step,                                     &
                          ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY )
        elseif( axistype == 'Land' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank,                             &
+          call FileRead( var, fid, varname, step,                                         &
                          ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND )
        elseif( axistype == 'Urban' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank,                                &
+          call FileRead( var, fid, varname, step,                                            &
                          ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
        else
           write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
@@ -940,7 +940,7 @@ contains
        endif
 
        call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                      fid, varname, step, PRC_myrank                  )
+                      fid, varname, step                              )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -989,7 +989,7 @@ contains
        if ( axistype == 'ZXYT' ) then
           startZXY(4) = 1
           countZXY(4) = step
-          call FileRead( var, fid, varname, step, PRC_myrank,                             &
+          call FileRead( var, fid, varname, step,                                         &
                          ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY )
        else
           write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
@@ -1011,7 +1011,7 @@ contains
        endif
 
        call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), &
-                      fid, varname, step, PRC_myrank                                )
+                      fid, varname, step                                            )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
