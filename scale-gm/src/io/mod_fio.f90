@@ -188,7 +188,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I3)') '*** [FIO] File registration (ADVANCED) : ', &
                             trim(rwname(rwtype)),' - ', FIO_fid_count
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A)') '*** fid= ', fid, ', name: ', trim(fname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A)') '*** fid= ', fid, ', name: ', trim(fname(1:IO_HLONG))
 
        FIO_fname_list(FIO_fid_count) = trim(basename)
        FIO_fid_list  (FIO_fid_count) = fid
