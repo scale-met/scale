@@ -864,8 +864,8 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       myrank,        & ! (in)
-      single         & ! (in) optional
-      )
+      single,        & ! (in) optional
+      error          ) ! (out) optional
     implicit none
 
     integer,          intent(out)           :: dims(:)
@@ -873,13 +873,15 @@ contains
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: single
+    logical,          intent(out), optional :: error
 
     integer :: fid
     type(datainfo) :: dinfo
-    integer :: error
+    integer :: ierror
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
+    logical :: suppress
 
     intrinsic size
     intrinsic shape
@@ -887,20 +889,36 @@ contains
 
     mpi_myrank = myrank
 
-    if ( present(single) ) single_ = single
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    end if
+
+    if ( present(error) ) then
+       suppress = .false.
+!       suppress = .true.
+    else
+       suppress = .false.
+    end if
 
     !--- search/register file
     call FileOpen( fid,                & ! (out)
          basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo( dinfo, & ! (out)
-         fid, varname, 1, .false., & ! (in)
-         error                     ) ! (out)
+    call file_get_datainfo( dinfo,  & ! (out)
+         fid, varname, 1, suppress, & ! (in)
+         ierror                     ) ! (out)
 
     !--- verify
-    if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data information :'//trim(varname))
+    if ( ierror /= SUCCESS_CODE ) then
+       if ( present(error) ) then
+          error = .true.
+          return
+       else
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
+       end if
     end if
 
     if ( dinfo%rank /= size(dims) ) then
@@ -910,6 +928,8 @@ contains
     do n = 1, size(dims)
        dims(n) = dinfo%dim_size(n)
     end do
+
+    if ( present(error) ) error = .false.
 
     return
   end subroutine FileGetShape
