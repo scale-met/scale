@@ -46,32 +46,32 @@ module mod_fio
   !
   !> struct for package infomation
   type, public :: headerinfo
-     character(len=H_LONG)  :: fname         !< file name
-     character(len=H_MID)   :: description   !< file description
-     character(len=H_LONG)  :: note          !< longer note of file
-     integer                :: num_of_data   !< number of data
-     integer                :: fmode         !< file mode(0,1,2)
-     integer                :: endiantype    !< endian type(0,1,2)
-     integer                :: grid_topology !< grid topology(0,1,2)
-     integer                :: glevel        !< glevel
-     integer                :: rlevel        !< rlevel
-     integer                :: num_of_rgn    !< number of region
-     integer, pointer       :: rgnid(:)      !< array of region id
+     character(len=IO_HLONG)  :: fname         !< file name
+     character(len=IO_HMID)   :: description   !< file description
+     character(len=IO_HLONG)  :: note          !< longer note of file
+     integer                  :: num_of_data   !< number of data
+     integer                  :: fmode         !< file mode(0,1,2)
+     integer                  :: endiantype    !< endian type(0,1,2)
+     integer                  :: grid_topology !< grid topology(0,1,2)
+     integer                  :: glevel        !< glevel
+     integer                  :: rlevel        !< rlevel
+     integer                  :: num_of_rgn    !< number of region
+     integer, pointer         :: rgnid(:)      !< array of region id
   endtype headerinfo
 
   !> struct for data infomation
   type, public :: datainfo
-     character(len=H_SHORT) :: varname      !< variable name
-     character(len=H_MID)   :: description  !< variable description
-     character(len=H_SHORT) :: unit         !< unit of variable
-     character(len=H_SHORT) :: layername    !< layer name
-     character(len=H_LONG)  :: note         !< longer note of variable
-     integer(DP)            :: datasize     !< data size
-     integer                :: datatype     !< data type(0,1,2,3)
-     integer                :: num_of_layer !< number of layer
-     integer                :: step
-     integer(DP)            :: time_start
-     integer(DP)            :: time_end
+     character(len=IO_HSHORT) :: varname      !< variable name
+     character(len=IO_HMID)   :: description  !< variable description
+     character(len=IO_HSHORT) :: unit         !< unit of variable
+     character(len=IO_HSHORT) :: layername    !< layer name
+     character(len=IO_HLONG)  :: note         !< longer note of variable
+     integer(DP)              :: datasize     !< data size
+     integer                  :: datatype     !< data type(0,1,2,3)
+     integer                  :: num_of_layer !< number of layer
+     integer                  :: step
+     integer(DP)              :: time_start
+     integer(DP)              :: time_end
   endtype datainfo
 
   !-----------------------------------------------------------------------------
@@ -548,11 +548,11 @@ contains
     call FIO_getfid( fid, basename, IO_FWRITE, pkg_desc, pkg_note )
 
     !--- append data to the file
-    dinfo%varname      = varname
-    dinfo%description  = data_desc
-    dinfo%unit         = unit
-    dinfo%layername    = layername
-    dinfo%note         = data_note
+    dinfo%varname      = trim(varname)
+    dinfo%description  = trim(data_desc)
+    dinfo%unit         = trim(unit)
+    dinfo%layername    = trim(layername)
+    dinfo%note         = trim(data_note)
     dinfo%datasize     = int( ADM_gall * ADM_lall * (k_end-k_start+1) * preclist(dtype), kind=DP )
     dinfo%datatype     = dtype
     dinfo%num_of_layer = k_end-k_start+1
@@ -641,11 +641,11 @@ contains
     call FIO_getfid( fid, basename, IO_FWRITE, pkg_desc, pkg_note )
 
     !--- append data to the file
-    dinfo%varname      = varname
-    dinfo%description  = data_desc
-    dinfo%unit         = unit
-    dinfo%layername    = layername
-    dinfo%note         = data_note
+    dinfo%varname      = trim(varname)
+    dinfo%description  = trim(data_desc)
+    dinfo%unit         = trim(unit)
+    dinfo%layername    = trim(layername)
+    dinfo%note         = trim(data_note)
     dinfo%datasize     = int( ADM_gall * ADM_lall * (k_end-k_start+1) * preclist(dtype), kind=DP )
     dinfo%datatype     = dtype
     dinfo%num_of_layer = k_end-k_start+1
