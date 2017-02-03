@@ -304,34 +304,40 @@ contains
        basename, &
        atmos,    &
        land,     &
-       urban     )
+       urban,    &
+       transpose )
     implicit none
 
     character(len=*), intent(in) :: basename        !< basename of the file
     logical,          intent(in), optional :: atmos !< check atmospheric coordinates
     logical,          intent(in), optional :: land  !< check land coordinates
     logical,          intent(in), optional :: urban !< check urban coordinates
+    logical,          intent(in), optional :: transpose
 
-    logical  :: atmos_
-    logical  :: land_
-    logical  :: urban_
+    logical :: atmos_
+    logical :: land_
+    logical :: urban_
+    logical :: transpose_
 
-    integer  :: fid
+    integer :: fid
     !---------------------------------------------------------------------------
 
     atmos_ = .false.
     land_  = .false.
     urban_ = .false.
+    transpose_ = .false.
 
     if( present(atmos) ) atmos_ = atmos
     if( present(land ) ) land_  = land
     if( present(urban) ) urban_ = urban
+    if( present(transpose) ) transpose_ = transpose
 
     call FILEIO_open( fid,     & ! [OUT]
                       basename ) ! [IN]
 
-    call FILEIO_check_coordinates_id( fid,                  & ! [IN]
-                                      atmos_, land_, urban_ ) ! [IN]
+    call FILEIO_check_coordinates_id( fid,                   & ! [IN]
+                                      atmos_, land_, urban_, & ! [IN]
+                                      transpose_             )
 
     return
   end subroutine FILEIO_check_coordinates_name
@@ -342,7 +348,8 @@ contains
        fid,   &
        atmos, &
        land,  &
-       urban  )
+       urban, &
+       transpose )
     use scale_grid, only: &
        GRID_CZ, &
        GRID_CX, &
@@ -357,10 +364,12 @@ contains
     logical, intent(in), optional :: atmos !< check atmospheric coordinates
     logical, intent(in), optional :: land  !< check land coordinates
     logical, intent(in), optional :: urban !< check urban coordinates
+    logical, intent(in), optional :: transpose
 
-    logical  :: atmos_
-    logical  :: land_
-    logical  :: urban_
+    logical :: atmos_
+    logical :: land_
+    logical :: urban_
+    logical :: transpose_
 
     real(RP) :: buffer_z  (KA)
     real(RP) :: buffer_x  (IA)
@@ -377,10 +386,12 @@ contains
     atmos_ = .false.
     land_  = .false.
     urban_ = .false.
+    transpose_ = .false.
 
     if( present(atmos) ) atmos_ = atmos
     if( present(land ) ) land_  = land
     if( present(urban) ) urban_ = urban
+    if( present(transpose) ) transpose_ = transpose
 
     call FILEIO_read_var_1D( buffer_x, fid, 'x',  'X', 1 )
     call FILEIO_read_var_1D( buffer_y, fid, 'y',  'Y', 1 )
@@ -400,10 +411,14 @@ contains
 
     if ( atmos_ ) then
        call FILEIO_read_var_1D( buffer_z,   fid, 'z',      'Z',   1 )
-       call FILEIO_read_var_3D( buffer_zxy, fid, 'height', 'ZXY', 1 )
+       if ( .not. transpose_ ) then
+          call FILEIO_read_var_3D( buffer_zxy, fid, 'height', 'ZXY', 1 )
+       end if
        call FILEIO_flush( fid )
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
-       call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height' )
+       if ( .not. transpose_ ) then
+          call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height', transpose_ )
+       end if
     end if
 
     if ( land_ ) then
@@ -3005,7 +3020,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine check_3d( &
        expected, buffer, &
-       name              )
+       name,             &
+       transpose         )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -3015,6 +3031,7 @@ contains
     real(RP),         intent(in) :: expected(:,:,:)
     real(RP),         intent(in) :: buffer(:,:,:)
     character(len=*), intent(in) :: name
+    logical,          intent(in) :: transpose
 
     real(RP) :: check
     integer  :: imax, jmax, kmax
@@ -3023,9 +3040,15 @@ contains
     intrinsic :: size
     !---------------------------------------------------------------------------
 
-    kmax = size(expected,1)
-    imax = size(expected,2)
-    jmax = size(expected,3)
+    if ( transpose ) then
+       kmax = size(expected,3)
+       imax = size(expected,1)
+       jmax = size(expected,2)
+    else
+       kmax = size(expected,1)
+       imax = size(expected,2)
+       jmax = size(expected,3)
+    end if
     if ( size(buffer,1) /= kmax ) then
        write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', kmax, size(buffer,1)
        call PRC_MPIstop
@@ -3039,23 +3062,44 @@ contains
        call PRC_MPIstop
     end if
 
-    do j=1, jmax
-    do i=1, imax
-    do k=1, kmax
-       if ( abs(expected(k,i,j)) > EPS ) then
-          check = abs(buffer(k,i,j)-expected(k,i,j)) / abs(buffer(k,i,j)+expected(k,i,j)) * 2.0_RP
-       else
-          check = abs(buffer(k,i,j)-expected(k,i,j))
-       end if
+    if ( transpose ) then
+       ! buffer(i,j,k), expected(k,i,j)
+       do k=1, kmax
+       do j=1, jmax
+       do i=1, imax
+          if ( abs(expected(k,i,j)) > EPS ) then
+             check = abs(buffer(i,j,k)-expected(k,i,j)) / abs(buffer(i,j,k)+expected(k,i,j)) * 2.0_RP
+          else
+             check = abs(buffer(i,j,k)-expected(k,i,j))
+          end if
 
-       if ( check > FILEIO_datacheck_criteria ) then
-          write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
-                     expected(k,i,j), buffer(k,i,j), check
-          call PRC_MPIstop
-       end if
-    end do
-    end do
-    end do
+          if ( check > FILEIO_datacheck_criteria ) then
+             write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', i, ',', j, ',', k, ' is different:', &
+                        expected(k,i,j), buffer(i,j,k), check
+             call PRC_MPIstop
+          end if
+       end do
+       end do
+       end do
+    else
+       do j=1, jmax
+       do i=1, imax
+       do k=1, kmax
+          if ( abs(expected(k,i,j)) > EPS ) then
+             check = abs(buffer(k,i,j)-expected(k,i,j)) / abs(buffer(k,i,j)+expected(k,i,j)) * 2.0_RP
+          else
+             check = abs(buffer(k,i,j)-expected(k,i,j))
+          end if
+
+          if ( check > FILEIO_datacheck_criteria ) then
+             write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
+                        expected(k,i,j), buffer(k,i,j), check
+             call PRC_MPIstop
+          end if
+       end do
+       end do
+       end do
+    end if
 
     return
   end subroutine check_3d

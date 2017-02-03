@@ -75,6 +75,7 @@ module scale_external_input
      real(RP)               :: offset                    !< offset value (default is set to 0)
      integer                :: data_steppos(2)           !< current step position to read (1:previous,2:next)
      real(RP), allocatable  :: value(:,:,:,:)            !< data value                    (1:previous,2:next)
+     logical                :: transpose                 !< true: xyz, false: zxy
   end type EXTIN_itemcontainer
 
 
@@ -101,6 +102,7 @@ contains
     logical                :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
     real(RP)               :: offset
     real(RP)               :: defval
+    logical                :: transpose
     logical                :: check_coordinates
 
     namelist /EXTITEM/ &
@@ -113,6 +115,7 @@ contains
        enable_periodic_day,   &
        offset,                &
        defval,                &
+       transpose,             &
        check_coordinates
 
     integer  :: count
@@ -136,6 +139,7 @@ contains
        enable_periodic_day   = .false.
        offset                = 0.0_RP
        defval                = UNDEF
+       transpose             = .true.
        check_coordinates     = .false.
 
        ! read namelist
@@ -159,6 +163,7 @@ contains
             step_fixed,            &
             offset,                &
             defval,                &
+            transpose,             &
             check_coordinates,     &
             step_limit             )
 
@@ -178,6 +183,7 @@ contains
        step_fixed,            &
        offset,                &
        defval,                &
+       transpose,             &
        check_coordinates,     &
        step_limit             )
     use gtool_file_h, only: &
@@ -206,14 +212,15 @@ contains
        TIME_OFFSET_year
     implicit none
 
-    character(len=*), intent(in) :: basename
-    character(len=*), intent(in) :: varname
-    integer         , intent(in) :: step_fixed            ! fixed step position to read
-    logical         , intent(in) :: enable_periodic_year  ! treat as yearly               periodic data?
-    logical         , intent(in) :: enable_periodic_month ! treat as yearly,monthly       periodic data?
-    logical         , intent(in) :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
-    real(RP)        , intent(in) :: offset
-    real(RP)        , intent(in) :: defval
+    character(len=*) , intent(in) :: basename
+    character(len=*) , intent(in) :: varname
+    integer          , intent(in) :: step_fixed            ! fixed step position to read
+    logical          , intent(in) :: enable_periodic_year  ! treat as yearly               periodic data?
+    logical          , intent(in) :: enable_periodic_month ! treat as yearly,monthly       periodic data?
+    logical          , intent(in) :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
+    real(RP)         , intent(in) :: offset
+    real(RP)         , intent(in) :: defval
+    logical          , intent(in) :: transpose
     logical, optional, intent(in) :: check_coordinates
     integer, optional, intent(in) :: step_limit            ! limit number for reading data
 
@@ -240,6 +247,16 @@ contains
 
     integer :: nid, n
 
+    if ( present(step_limit) ) then
+       if ( step_limit > 0 ) then
+          step_limit_ = step_limit
+       else
+          step_limit_ = EXTIN_step_limit
+       end if
+    else
+       step_limit_ = EXTIN_step_limit
+    end if
+
     do nid = 1, EXTIN_item_count
        if ( EXTIN_item(nid)%varname  == varname ) then
           write(*,*) 'xxx Data is already registered! basename,varname = ', trim(basename), ', ', trim(varname)
@@ -248,18 +265,17 @@ contains
     end do
 
     EXTIN_item_count = EXTIN_item_count + 1
-    nid = EXTIN_item_count
 
-    if ( present(step_limit) ) then
-       step_limit_ = step_limit
-    else
-       step_limit_ = EXTIN_step_limit
+    if ( EXTIN_item_count > EXTIN_item_limit ) then
+       write(*,*) 'xxx Number of EXT data exceedes the limit', EXTIN_item_count, EXTIN_item_limit
+       call PRC_MPIstop
     end if
+
 
     call FileOpen( fid, basename, File_FREAD, myrank=PRC_myrank )
 
     if ( present(check_coordinates) ) then
-       if ( check_coordinates ) call FILEIO_check_coordinates( fid, atmos=.true. )
+       if ( check_coordinates ) call FILEIO_check_coordinates( fid, atmos=.true., transpose=transpose )
     end if
 
     ! read from file
@@ -287,11 +303,14 @@ contains
        dim_size(n) = 1
     end do
 
+    nid = EXTIN_item_count
+
     ! setup item
     EXTIN_item(nid)%fid         = fid
     EXTIN_item(nid)%varname     = varname
     EXTIN_item(nid)%dim_size(:) = dim_size(:)
     EXTIN_item(nid)%step_num    = step_nmax
+    EXTIN_item(nid)%transpose   = transpose
 
     if ( enable_periodic_day ) then
        EXTIN_item(nid)%flag_periodic = I_periodic_day
@@ -684,6 +703,9 @@ contains
     integer  :: dim2_max, dim2_S, dim2_E, n2, nn2
     integer  :: dim3_max, dim3_S, dim3_E, n3, nn3
     integer  :: n
+
+    logical :: transpose
+    integer :: tmp
     !---------------------------------------------------------------------------
 
     error = .true.
@@ -696,40 +718,55 @@ contains
 
     if( nid == 0 ) return
 
-    if    ( axistype == 'XYZ' ) then
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim3_max = KMAX
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-       dim3_S   = KS
-       dim3_E   = KE
+    if    ( axistype == 'ZYZ' .or. axistype == 'XYZ' ) then
+       dim1_max = KMAX
+       dim2_max = IMAXB
+       dim3_max = JMAXB
+       dim1_S   = KS
+       dim1_E   = KE
+       dim2_S   = ISB
+       dim2_E   = IEB
+       dim3_S   = JSB
+       dim3_E   = JEB
     elseif( axistype == 'Land' ) then
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim3_max = LKMAX
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-       dim3_S   = LKS
-       dim3_E   = LKE
+       dim1_max = LKMAX
+       dim2_max = IMAXB
+       dim3_max = JMAXB
+       dim1_S   = LKS
+       dim1_E   = LKE
+       dim2_S   = ISB
+       dim2_E   = IEB
+       dim3_S   = JSB
+       dim3_E   = JEB
     elseif( axistype == 'Urban' ) then
-       dim1_max = IMAXB
-       dim2_max = JMAXB
-       dim3_max = UKMAX
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
-       dim3_S   = UKS
-       dim3_E   = UKE
+       dim1_max = UKMAX
+       dim2_max = IMAXB
+       dim3_max = JMAXB
+       dim1_S   = UKS
+       dim1_E   = UKE
+       dim2_S   = ISB
+       dim2_E   = IEB
+       dim3_S   = JSB
+       dim3_E   = JEB
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     endif
+
+    if ( EXTIN_item(nid)%transpose ) then
+       tmp = dim1_max
+       dim1_max = dim2_max
+       dim2_max = dim3_max
+       dim3_max = tmp
+       tmp = dim1_S
+       dim1_S = dim2_S
+       dim2_S = dim3_S
+       dim3_S = tmp
+       tmp = dim1_E
+       dim1_E = dim2_E
+       dim2_E = dim3_E
+       dim3_E = tmp
+    end if
 
     if (      dim1_max /= EXTIN_item(nid)%dim_size(1) &
          .OR. dim2_max /= EXTIN_item(nid)%dim_size(2) &
@@ -758,19 +795,35 @@ contains
                       EXTIN_item(nid)%data_steppos(I_next) ) ! [IN]
     endif
 
-    ! store data with weight (x,y,z)->(z,x,y)
-    do n3 = 1, dim3_max
-       nn3 = n3 + dim3_S - 1
-    do n2 = 1, dim2_max
+    if ( EXTIN_item(nid)%transpose ) then
+       ! store data with weight (x,y,z)->(z,x,y)
+       do n2 = 1, dim2_max
        nn2 = n2 + dim2_S - 1
-    do n1 = 1, dim1_max
+       do n1 = 1, dim1_max
+       nn1 = n1 + dim1_S - 1
+       do n3 = 1, dim3_max
+       nn3 = n3 + dim3_S - 1
+
+          var(nn3,nn1,nn2) = ( 1.0_RP-weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_prev) &
+                           + (        weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_next)
+       enddo
+       enddo
+       enddo
+    else
+       ! store data with weight (z,x,y)->(z,x,y)
+       do n3 = 1, dim3_max
+       nn3 = n3 + dim3_S - 1
+       do n2 = 1, dim2_max
+       nn2 = n2 + dim2_S - 1
+       do n1 = 1, dim1_max
        nn1 = n1 + dim1_S - 1
 
-       var(nn3,nn1,nn2) = ( 1.0_RP-weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_prev) &
-                        + (        weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_next)
-    enddo
-    enddo
-    enddo
+          var(nn1,nn2,nn3) = ( 1.0_RP-weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_prev) &
+                           + (        weight ) * EXTIN_item(nid)%value(n1,n2,n3,I_next)
+       enddo
+       enddo
+       enddo
+    end if
 
     error = .false.
 
