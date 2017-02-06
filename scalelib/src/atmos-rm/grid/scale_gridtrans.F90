@@ -369,8 +369,8 @@ contains
        GTRANS_J23G(k,i,j,I_XYW) = -( REAL_FZ_V (k,i,j  ) - REAL_FZ_V (k,i,j-1) ) * GRID_RCDY(j)
        GTRANS_J23G(k,i,j,I_XVW) = -( REAL_FZ   (k,i,j+1) - REAL_FZ   (k,i,j  ) ) * GRID_RFDY(j)
        GTRANS_J23G(k,i,j,I_UYW) = -( REAL_FZ_UV(k,i,j  ) - REAL_FZ_UV(k,i,j-1) ) * GRID_RCDY(j)
-       GTRANS_J23G(k,i,j,I_XVZ) = -( REAL_CZ   (k,i,j+1) - REAL_CZ   (k,i,j  ) ) * GRID_RCDY(j)
-       GTRANS_J23G(k,i,j,I_UYZ) = -( REAL_CZ_UV(k,i,j  ) - REAL_CZ_UV(k,i,j-1) ) * GRID_RFDY(j)
+       GTRANS_J23G(k,i,j,I_XVZ) = -( REAL_CZ   (k,i,j+1) - REAL_CZ   (k,i,j  ) ) * GRID_RFDY(j)
+       GTRANS_J23G(k,i,j,I_UYZ) = -( REAL_CZ_UV(k,i,j  ) - REAL_CZ_UV(k,i,j-1) ) * GRID_RCDY(j)
        GTRANS_J23G(k,i,j,I_UVZ) = -( REAL_CZ_U (k,i,j+1) - REAL_CZ_U (k,i,j  ) ) * GRID_RFDY(j)
     enddo
     enddo
