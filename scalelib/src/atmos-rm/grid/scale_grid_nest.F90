@@ -392,10 +392,10 @@ contains
        OFFLINE = .true.
 
        if ( PRC_IsMaster ) then
-          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "x", 0 )
-          OFFLINE_PARENT_IMAX = dims(1)
-          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "y", 0 )
-          OFFLINE_PARENT_JMAX = dims(1)
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CX", 0 )
+          OFFLINE_PARENT_IMAX = dims(1)-4
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CY", 0 )
+          OFFLINE_PARENT_JMAX = dims(1)-4
           call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "z", 0, error=error )
           if ( error ) then
              OFFLINE_PARENT_KMAX = 0
