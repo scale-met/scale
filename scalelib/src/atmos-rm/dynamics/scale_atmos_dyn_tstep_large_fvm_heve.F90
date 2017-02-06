@@ -511,10 +511,10 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(RHOQ_tp(:,:,:,iq), trim(AQ_NAME(iq))//'_t_phys', &
-                    'tendency of '//trim(AQ_NAME(iq))//' due to physics', 'kg/kg/s' )
-       call HIST_in(damp_t,            trim(AQ_NAME(iq))//'_t_damp', &
-                    'tendency of '//trim(AQ_NAME(iq))//' due to damping', 'kg/kg/s' )
+       call HIST_in(RHOQ_tp(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_phys', &
+                    'tendency of '//trim(TRACER_NAME(iq))//' due to physics', 'kg/kg/s' )
+       call HIST_in(damp_t,            trim(TRACER_NAME(iq))//'_t_damp', &
+                    'tendency of '//trim(TRACER_NAME(iq))//' due to damping', 'kg/kg/s' )
 #endif
 !OCL XFILL
        do j = JS, JE
