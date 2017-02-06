@@ -337,7 +337,6 @@ contains
     logical :: error
 
     namelist / PARAM_NEST /      &
-       USE_NESTING,              &
        LATLON_CATALOGUE_FNAME,   &
        OFFLINE_PARENT_BASENAME,  &
        OFFLINE_PARENT_PRC_NUM_X, &
@@ -390,12 +389,13 @@ contains
     if ( OFFLINE_PARENT_BASENAME /= "" ) then
 
        OFFLINE = .true.
-
+       USE_NESTING = .true.
+       
        if ( PRC_IsMaster ) then
-          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "x", 0 )
-          OFFLINE_PARENT_IMAX = dims(1)
-          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "y", 0 )
-          OFFLINE_PARENT_JMAX = dims(1)
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CX", 0 )
+          OFFLINE_PARENT_IMAX = dims(1)-4
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CY", 0 )
+          OFFLINE_PARENT_JMAX = dims(1)-4
           call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "z", 0, error=error )
           if ( error ) then
              OFFLINE_PARENT_KMAX = 0
@@ -415,7 +415,19 @@ contains
        call COMM_Bcast( OFFLINE_PARENT_LKMAX )
     end if
 
-    call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
+    if ( ONLINE_IAM_DAUGHTER .or. ONLINE_IAM_PARENT ) then
+
+       if ( OFFLINE ) then
+          write(*,*) 'xxx OFFLINE and ONLINE cannot be use at the same time'
+          call PRC_MPIstop
+       end if
+
+       USE_NESTING = .true.
+       call INTRPNEST_setup( interp_search_divnum, NEST_INTERP_LEVEL, .false. )
+    else
+       call INTRPNEST_setup( interp_search_divnum, NEST_INTERP_LEVEL, .true. )
+    end if
+
     itp_nh = int( NEST_INTERP_LEVEL )
     itp_nv = 2
 
