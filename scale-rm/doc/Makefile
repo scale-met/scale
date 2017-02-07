@@ -1,26 +1,12 @@
-################################################################################
-#
-# Makefile for main program
-#
-################################################################################
-
 TOPDIR      = $(abspath ../..)
-
 include $(TOPDIR)/Mkinclude
 
-all: dox doxygen
+all: dox
 
 dox:
-	$(MAKE) -C $(TOPDIR)/scalelib/doc dox
 	ruby $(TOPDIR)/utils/mkdoc.rb .
 
-doxygen:
-	doxygen scale-rm.cfg
-
 clean:
-	rm -rf dox html latex
+	rm -rf dox
 
-allclean: clean
-	$(MAKE) -C $(TOPDIR)/scalelib/doc clean
-
-.PHONY: dox doxygen clean
+.PHONY: dox clean

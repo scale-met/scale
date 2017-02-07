@@ -13,7 +13,7 @@ module dc_types
   !
   !== Overview
   !
-  ! ���̷��ѥ�᥿���󶡤��ޤ���
+  ! 種別型パラメタを提供します。
   !
   !
   implicit none
@@ -25,43 +25,43 @@ module dc_types
   public :: NF_KIND_INT2
 
   integer, parameter:: DP  = kind(0.0d0) ! Double Precision.
-                                         ! �����ټ¿����ѿ��μ��̷��ѥ�᥿
-                                         ! �Ȥ����Ѥ��ޤ���
+                                         ! 倍精度実数型変数の種別型パラメタ
+                                         ! として用います。
   integer, parameter:: SP  = kind(0.0e0) ! Single Precision.
 
   integer, parameter:: TOKEN  = 32       ! Token.
-                                         ! ñ��䥭����ɤ��ݻ�����
-                                         ! ʸ�����ѿ��μ��̷��ѥ�᥿
-                                         ! �Ȥ����Ѥ��ޤ���
+                                         ! 単語やキーワードを保持する
+                                         ! 文字型変数の種別型パラメタ
+                                         ! として用います。
 
   integer, parameter:: STRING = 256      ! String.
-                                         ! ʸ������ݻ�����
-                                         ! ʸ�����ѿ��μ��̷��ѥ�᥿
-                                         ! �Ȥ����Ѥ��ޤ���
+                                         ! 文字列を保持する
+                                         ! 文字型変数の種別型パラメタ
+                                         ! として用います。
                                          !
                                          !--
-                                         !��ȯ�Ը�������
+                                         !開発者向け情報
                                          !
-                                         ! 256 �Ȥ����ͤ˿�����ͳ�Ϥ���ޤ���.
-                                         ! ɬ�פʤ�Ф���礭���ͤ�����
-                                         ! ���Ƥ⹽���ޤ���.
-                                         ! ������ 8 �Х��ȶ����Ȥʤ�褦,
-                                         ! 8 ���ܿ��ȤʤäƤ��뤳�Ȥ�
-                                         ! �侩���ޤ�.
+                                         ! 256 という値に深い理由はありません.
+                                         ! 必要ならばより大きな値を設定
+                                         ! しても構いません.
+                                         ! ただし 8 バイト境界となるよう,
+                                         ! 8 の倍数となっていることを
+                                         ! 推奨します.
                                          !
-                                         ! SR11000 �κ�Ŭ��
-                                         ! FORTRAN90 ����Ѥ������
-                                         ! �Ϥ������� 255 �ʲ���
-                                         ! ���ꤹ��ɬ�פ�����ޤ�.
+                                         ! SR11000 の最適化
+                                         ! FORTRAN90 を使用する場合に
+                                         ! はだいたい 255 以下に
+                                         ! 指定する必要があります.
                                          !
                                          !++
 
-  integer, parameter:: STDIN  = 5        ! ɸ�����Ϥ������ֹ�
-  integer, parameter:: STDOUT = 6        ! ɸ����Ϥ������ֹ�
-  integer, parameter:: STDERR = 0        ! ɸ�२�顼���Ϥ������ֹ�
+  integer, parameter:: STDIN  = 5        ! 標準入力の装置番号
+  integer, parameter:: STDOUT = 6        ! 標準出力の装置番号
+  integer, parameter:: STDERR = 0        ! 標準エラー出力の装置番号
 
-  ! netCDF Fortran ���󥿡��ե������η��ѥ�᥿
-  ! (netcdf.inc �ˤ�¸�ߤ��ʤ�)
+  ! netCDF Fortran インターフェイスの型パラメタ
+  ! (netcdf.inc には存在しない)
   !
   integer, parameter:: NF_KIND_INT1 = selected_int_kind(2)
   integer, parameter:: NF_KIND_INT2 = selected_int_kind(4)
