@@ -116,6 +116,8 @@ module scale_fileio
   logical,  private              :: File_nozcoord(0:File_nfile_max-1)     ! whether nozcoord is true or false
   integer,  private              :: write_buf_amount = 0                  ! sum of write buffer amounts
 
+  ! local start and end
+  integer,  private              :: XSB, XEB, YSB, YEB
   ! global star and count
   integer,  private              :: startXY   (3), countXY   (3)
   integer,  private              :: startZX   (2), countZX   (2)
@@ -141,13 +143,21 @@ contains
   !> Setup
   subroutine FILEIO_setup
     use scale_process, only: &
+       PRC_myrank, &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
 
     NAMELIST / PARAM_FILEIO / &
        FILEIO_datacheck_criteria
+
+    integer :: rankidx(2)
+    integer :: IM, JM
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -176,17 +186,40 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Data consistency criteria : ', &
                                    '(file-internal)/internal = ', FILEIO_datacheck_criteria
 
-    allocate( AXIS_LON  (IMAXB,JMAXB) )
-    allocate( AXIS_LONX (IMAXB,JMAXB) )
-    allocate( AXIS_LONY (IMAXB,JMAXB) )
-    allocate( AXIS_LONXY(IMAXB,JMAXB) )
-    allocate( AXIS_LAT  (IMAXB,JMAXB) )
-    allocate( AXIS_LATX (IMAXB,JMAXB) )
-    allocate( AXIS_LATY (IMAXB,JMAXB) )
-    allocate( AXIS_LATXY(IMAXB,JMAXB) )
+    if ( IO_AGGREGATE ) then
+       rankidx(1) = PRC_2Drank(PRC_myrank,1)
+       rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
-    allocate( AXIS_HZXY (KMAX,IMAXB,JMAXB) )
-    allocate( AXIS_HWXY (KMAX,IMAXB,JMAXB) )
+       ! construct indices independent from PRC_PERIODIC_X/Y
+       XSB = 1 + IHALO
+       if( rankidx(1) == 0 ) XSB = 1
+       XEB = IMAX + IHALO
+       if( rankidx(1) == PRC_NUM_X-1 ) XEB = IA
+
+       YSB = 1 + JHALO
+       if( rankidx(2) == 0 ) YSB = 1
+       YEB = JMAX + JHALO
+       if( rankidx(2) == PRC_NUM_Y-1 ) YEB = JA
+    else
+       XSB = ISB
+       XEB = IEB
+       YSB = JSB
+       YEB = JEB
+    end if
+
+    IM = XEB - XSB + 1
+    JM = YEB - YSB + 1
+    allocate( AXIS_LON  (IM,JM) )
+    allocate( AXIS_LONX (IM,JM) )
+    allocate( AXIS_LONY (IM,JM) )
+    allocate( AXIS_LONXY(IM,JM) )
+    allocate( AXIS_LAT  (IM,JM) )
+    allocate( AXIS_LATX (IM,JM) )
+    allocate( AXIS_LATY (IM,JM) )
+    allocate( AXIS_LATXY(IM,JM) )
+
+    allocate( AXIS_HZXY (KMAX,IM,JM) )
+    allocate( AXIS_HWXY (KMAX,IM,JM) )
 
     if( IO_AGGREGATE ) call Construct_Derived_Datatype
 
@@ -248,17 +281,17 @@ contains
     real(RP), intent(in) :: FZ   (0:KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    AXIS_LON  (:,:)   = LON  (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONX (:,:)   = LONX (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONY (:,:)   = LONY (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONXY(:,:)   = LONXY(ISB:IEB,JSB:JEB) / D2R
-    AXIS_LAT  (:,:)   = LAT  (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATX (:,:)   = LATX (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATY (:,:)   = LATY (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATXY(:,:)   = LATXY(ISB:IEB,JSB:JEB) / D2R
+    AXIS_LON  (:,:)   = LON  (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONX (:,:)   = LONX (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONY (:,:)   = LONY (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONXY(:,:)   = LONXY(XSB:XEB,YSB:YEB) / D2R
+    AXIS_LAT  (:,:)   = LAT  (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATX (:,:)   = LATX (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATY (:,:)   = LATY (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATXY(:,:)   = LATXY(XSB:XEB,YSB:YEB) / D2R
 
-    AXIS_HZXY (:,:,:) = CZ(KS:KE,ISB:IEB,JSB:JEB)
-    AXIS_HZXY (:,:,:) = FZ(KS:KE,ISB:IEB,JSB:JEB)
+    AXIS_HZXY (:,:,:) = CZ(KS:KE,XSB:XEB,YSB:YEB)
+    AXIS_HZXY (:,:,:) = FZ(KS:KE,XSB:XEB,YSB:YEB)
 
     set_coordinates = .true.
 
@@ -358,11 +391,11 @@ contains
     if ( set_coordinates ) then
        call FILEIO_read_var_2D( buffer_xy, fid, 'lon', 'XY', 1 )
        call FILEIO_flush( fid )
-       call check_2d( AXIS_LON, buffer_xy(ISB:IEB,JSB:JEB), 'lon' )
+       call check_2d( AXIS_LON, buffer_xy(XSB:XEB,YSB:YEB), 'lon' )
 
        call FILEIO_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
        call FILEIO_flush( fid )
-       call check_2d( AXIS_LAT, buffer_xy(ISB:IEB,JSB:JEB), 'lat' )
+       call check_2d( AXIS_LAT, buffer_xy(XSB:XEB,YSB:YEB), 'lat' )
     end if
 
     if ( atmos_ ) then
@@ -370,7 +403,7 @@ contains
        call FILEIO_read_var_3D( buffer_zxy, fid, 'height', 'ZXY', 1 )
        call FILEIO_flush( fid )
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
-       call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,ISB:IEB,JSB:JEB), 'height' )
+       call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height' )
     end if
 
     if ( land_ ) then
@@ -1866,7 +1899,6 @@ contains
 
     integer :: rankidx(2)
     integer :: start(3)
-    integer :: XSB, XEB, YSB, YEB
     !---------------------------------------------------------------------------
 
     if ( present(xy) ) then
@@ -1879,16 +1911,6 @@ contains
        rankidx(1) = PRC_2Drank(PRC_myrank,1)
        rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
-       ! construct indices independent from PRC_PERIODIC_X/Y
-       XSB = 1 + IHALO
-       if( rankidx(1) == 0 ) XSB = 1
-       XEB = IMAX + IHALO
-       if( rankidx(1) == PRC_NUM_X-1 ) XEB = IA
-
-       YSB = 1 + JHALO
-       if( rankidx(2) == 0 ) YSB = 1
-       YEB = JMAX + JHALO
-       if( rankidx(2) == PRC_NUM_Y-1 ) YEB = JA
        ! For parallel I/O, not all variables are written by all processes.
        ! 1. Let PRC_myrank 0 writes all z axes
        ! 2. Let processes (rankidx(2) == 0) write x axes  (south-most processes)
@@ -1904,11 +1926,6 @@ contains
        put_x = ( rankidx(2) == 0 ) ! only south most row processes write x coordinates
        put_y = ( rankidx(1) == 0 ) ! only west most column processes write y coordinates
     else
-       XSB = ISB
-       XEB = IEB
-       YSB = JSB
-       YEB = JEB
-
        put_z = ( .NOT. xy_ )
        put_x = .true.
        put_y = .true.
