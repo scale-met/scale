@@ -1,6 +1,6 @@
 ################################################################################
 #
-# Makefile for main program
+# Makefile for the reference manual
 #
 ################################################################################
 
@@ -8,7 +8,7 @@ TOPDIR      = $(abspath ../..)
 
 include $(TOPDIR)/Mkinclude
 
-all: dox doxygen
+all: dox doxygen tex
 
 dox:
 	$(MAKE) -C $(TOPDIR)/scalelib/doc dox
@@ -16,6 +16,11 @@ dox:
 
 doxygen:
 	doxygen scale-rm.cfg
+
+tex: latex/refman.pdf
+
+latex/refman.pdf: latex/refman.tex
+	$(MAKE) -C latex
 
 clean:
 	rm -rf html latex
