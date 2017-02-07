@@ -41,14 +41,14 @@ module scale_stdio
   !
   !++ Public parameters & variables
   !
-  integer,               public, parameter :: H_SHORT     = File_HSHORT  !< Character length (short=16)
-  integer,               public, parameter :: H_MID       = File_HMID    !< Character length (short=64)
-  integer,               public, parameter :: H_LONG      = File_HLONG   !< Character length (short=256)
+  integer,               public, parameter :: H_SHORT     = File_HSHORT     !< Character length (short=16)
+  integer,               public, parameter :: H_MID       = File_HMID       !< Character length (short=64)
+  integer,               public, parameter :: H_LONG      = File_HLONG      !< Character length (short=256)
 
-  character(len=H_MID),  public            :: H_MODELNAME                !< name and version of the model
-  character(len=H_MID),  public            :: H_LIBNAME                  !< name and version of the library
-  character(len=H_MID),  public            :: H_SOURCE                   !< for file header
-  character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN' !< for file header
+  character(len=H_MID),  public            :: H_MODELNAME                   !< name and version of the model
+  character(len=H_MID),  public            :: H_LIBNAME                     !< name and version of the library
+  character(len=H_MID),  public            :: H_SOURCE                      !< for file header
+  character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN'    !< for file header
 
   character(len=6),      public, parameter :: IO_STDOUT     = "STDOUT"
   integer,               public, parameter :: IO_FID_STDOUT = 6
@@ -56,14 +56,15 @@ module scale_stdio
   integer,               public            :: IO_FID_LOG    = 8             !< Log file ID
   integer,               public            :: IO_FID_NML    = 9             !< Log file ID (only for output namelist)
 
-  character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'       !< basename of logfile
-  character(len=H_LONG), public            :: IO_NML_FILENAME     = ''          !< filename of logfile (only for output namelist)
-  logical,               public            :: IO_L                = .false.     !< output log or not? (this process)
-  logical,               public            :: IO_NML              = .false.     !< output log or not? (for namelist, this process)
-  logical,               public            :: IO_LOG_SUPPRESS     = .false.     !< suppress all of log output?
-  logical,               public            :: IO_LOG_NML_SUPPRESS = .false.     !< suppress all of log output? (for namelist)
-  logical,               public            :: IO_LOG_ALLNODE      = .false.     !< output log for each node?
-  logical,               public            :: IO_AGGREGATE        = .false.     !< do parallel I/O through PnetCDF
+  character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'   !< basename of logfile
+  character(len=H_LONG), public            :: IO_NML_FILENAME     = ''      !< filename of logfile (only for output namelist)
+  logical,               public            :: IO_L                = .false. !< output log or not? (this process)
+  logical,               public            :: IO_NML              = .false. !< output log or not? (for namelist, this process)
+  logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
+  logical,               public            :: IO_LOG_NML_SUPPRESS = .false. !< suppress all of log output? (for namelist)
+  logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
+  logical,               public            :: IO_AGGREGATE        = .false. !< do parallel I/O through PnetCDF
+  integer,               public            :: IO_STEP_TO_STDOUT   = -1      !< interval for output current step to STDOUT (negative is off)
 
   !-----------------------------------------------------------------------------
   !
@@ -94,6 +95,7 @@ contains
        IO_LOG_SUPPRESS,     &
        IO_LOG_NML_SUPPRESS, &
        IO_LOG_ALLNODE,      &
+       IO_STEP_TO_STDOUT,   &
        IO_AGGREGATE
 
     character(len=*), intent(in) :: MODELNAME          !< name of the model
@@ -332,10 +334,10 @@ contains
     implicit none
 
     character(len=H_LONG), intent(out) :: outstr !< generated string
-    character(len=*), intent(in)  :: instr  !< strings
-    character(len=*), intent(in)  :: ext    !< extention
-    integer,          intent(in)  :: rank   !< number
-    logical,          intent(in), optional :: isrgn !< for region? (8 digits)
+    character(len=*),      intent(in)  :: instr  !< strings
+    character(len=*),      intent(in)  :: ext    !< extention
+    integer,               intent(in)  :: rank   !< number
+    logical,               intent(in), optional :: isrgn !< for region? (8 digits)
 
     character(len=H_SHORT) :: srank
     !---------------------------------------------------------------------------
