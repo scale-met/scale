@@ -357,9 +357,9 @@ contains
        GTRANS_J13G(k,i,j,I_XYW) = -( REAL_FZ_U (k,i  ,j) - REAL_FZ_U (k,i-1,j) ) * GRID_RCDX(i)
        GTRANS_J13G(k,i,j,I_UYW) = -( REAL_FZ   (k,i+1,j) - REAL_FZ   (k,i  ,j) ) * GRID_RFDX(i)
        GTRANS_J13G(k,i,j,I_XVW) = -( REAL_FZ_UV(k,i  ,j) - REAL_FZ_UV(k,i-1,j) ) * GRID_RCDX(i)
-       GTRANS_J13G(k,i,j,I_UYZ) = -( REAL_CZ   (k,i  ,j) - REAL_CZ   (k,i-1,j) ) * GRID_RFDX(i)
+       GTRANS_J13G(k,i,j,I_UYZ) = -( REAL_CZ   (k,i+1,j) - REAL_CZ   (k,i  ,j) ) * GRID_RFDX(i)
        GTRANS_J13G(k,i,j,I_XVZ) = -( REAL_CZ_UV(k,i  ,j) - REAL_CZ_UV(k,i-1,j) ) * GRID_RCDX(i)
-       GTRANS_J13G(k,i,j,I_UVZ) = -( REAL_CZ_V (k,i  ,j) - REAL_CZ_V (k,i-1,j) ) * GRID_RFDX(i)
+       GTRANS_J13G(k,i,j,I_UVZ) = -( REAL_CZ_V (k,i+1,j) - REAL_CZ_V (k,i  ,j) ) * GRID_RFDX(i)
     enddo
     enddo
     enddo
@@ -369,11 +369,11 @@ contains
     do k = 1,  KA
        GTRANS_J23G(k,i,j,I_XYZ) = -( REAL_CZ_V (k,i,j  ) - REAL_CZ_V (k,i,j-1) ) * GRID_RCDY(j)
        GTRANS_J23G(k,i,j,I_XYW) = -( REAL_FZ_V (k,i,j  ) - REAL_FZ_V (k,i,j-1) ) * GRID_RCDY(j)
-       GTRANS_J23G(k,i,j,I_UYW) = -( REAL_FZ   (k,i,j+1) - REAL_FZ   (k,i,j  ) ) * GRID_RFDY(j)
-       GTRANS_J23G(k,i,j,I_XVW) = -( REAL_FZ_UV(k,i,j  ) - REAL_FZ_UV(k,i,j-1) ) * GRID_RCDY(j)
+       GTRANS_J23G(k,i,j,I_XVW) = -( REAL_FZ   (k,i,j+1) - REAL_FZ   (k,i,j  ) ) * GRID_RFDY(j)
+       GTRANS_J23G(k,i,j,I_UYW) = -( REAL_FZ_UV(k,i,j  ) - REAL_FZ_UV(k,i,j-1) ) * GRID_RCDY(j)
+       GTRANS_J23G(k,i,j,I_XVZ) = -( REAL_CZ   (k,i,j+1) - REAL_CZ   (k,i,j  ) ) * GRID_RFDY(j)
        GTRANS_J23G(k,i,j,I_UYZ) = -( REAL_CZ_UV(k,i,j  ) - REAL_CZ_UV(k,i,j-1) ) * GRID_RCDY(j)
-       GTRANS_J23G(k,i,j,I_XVZ) = -( REAL_CZ   (k,i,j  ) - REAL_CZ   (k,i,j-1) ) * GRID_RFDY(j)
-       GTRANS_J23G(k,i,j,I_UVZ) = -( REAL_CZ_U (k,i,j  ) - REAL_CZ_U (k,i,j-1) ) * GRID_RFDY(j)
+       GTRANS_J23G(k,i,j,I_UVZ) = -( REAL_CZ_U (k,i,j+1) - REAL_CZ_U (k,i,j  ) ) * GRID_RFDY(j)
     enddo
     enddo
     enddo

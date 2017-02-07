@@ -265,12 +265,14 @@ contains
     real(RP) :: SCHAER_RX       =   5.E3_RP ! bubble radius   [m]: x
     real(RP) :: SCHAER_LAMBDA   =   4.E3_RP ! wavelength of wavelike perturbation [m]: x
     real(RP) :: SCHAER_HEIGHT   =  250.0_RP ! height of mountain [m]
+    logical  :: SCHAER_SWAPXY   =  .false.
 
     NAMELIST / PARAM_MKTOPO_SCHAER / &
        SCHAER_CX,     &
        SCHAER_RX,     &
        SCHAER_LAMBDA, &
-       SCHAER_HEIGHT
+       SCHAER_HEIGHT, &
+       SCHAER_SWAPXY
 
     real(RP) :: dist
 
@@ -293,15 +295,27 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_SCHAER)
 
     ! make bell-shaped mountain
-    do j = 1, JA
-    do i = 1, IA
+    if ( .NOT. SCHAER_SWAPXY ) then
+       do j = 1, JA
+       do i = 1, IA
 
-       dist = exp( -( (CX(i)-SCHAER_CX)/SCHAER_RX )**2 )
+          dist = exp( -( (CX(i)-SCHAER_CX)/SCHAER_RX )**2 )
 
-       TOPO_Zsfc(i,j) = SCHAER_HEIGHT * dist * ( cos( PI*(CX(i)-SCHAER_CX)/SCHAER_LAMBDA ) )**2
+          TOPO_Zsfc(i,j) = SCHAER_HEIGHT * dist * ( cos( PI*(CX(i)-SCHAER_CX)/SCHAER_LAMBDA ) )**2
 
-    enddo
-    enddo
+       enddo
+       enddo
+    else
+       do j = 1, JA
+       do i = 1, IA
+
+          dist = exp( -( (CY(j)-SCHAER_CX)/SCHAER_RX )**2 )
+
+          TOPO_Zsfc(i,j) = SCHAER_HEIGHT * dist * ( cos( PI*(CY(j)-SCHAER_CX)/SCHAER_LAMBDA ) )**2
+
+       enddo
+       enddo
+    endif
 
     return
   end subroutine MKTOPO_schaer
