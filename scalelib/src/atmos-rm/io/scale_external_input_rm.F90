@@ -83,15 +83,15 @@ contains
   end subroutine EXTIN_RM_get_dims_1D
 
   subroutine EXTIN_RM_get_dims_2D( &
-       dim1_max, &
-       dim1_S,   &
-       dim1_E,   &
-       dim2_max, &
-       dim2_S,   &
-       dim2_E,   &
-       varname,  &
-       axistype, &
-       transpose )
+       dim1_max,  &
+       dim1_S,    &
+       dim1_E,    &
+       dim2_max,  &
+       dim2_S,    &
+       dim2_E,    &
+       transpose, &
+       varname,   &
+       axistype   )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -101,11 +101,9 @@ contains
     integer,          intent(out) :: dim2_max
     integer,          intent(out) :: dim2_S
     integer,          intent(out) :: dim2_E
+    logical,          intent(out) :: transpose
     character(len=*), intent(in)  :: varname
     character(len=*), intent(in)  :: axistype     ! axis type (XY/XZ/ZX)
-    logical,          intent(in)  :: transpose
-
-    integer :: tmp
 
     select case ( axistype )
     case ( 'XY' )
@@ -115,46 +113,44 @@ contains
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
-    case ( 'ZX', 'XZ' )
+       transpose = .false.
+    case ( 'ZX' )
        dim1_max = KMAX
        dim2_max = IMAXB
        dim1_S   = KS
        dim1_E   = KE
        dim2_S   = ISB
        dim2_E   = IEB
+       transpose = .false.
+    case ( 'XZ' )
+       dim1_max = IMAXB
+       dim2_max = KMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = KS
+       dim2_E   = KE
+       transpose = .true.
     case default
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     end select
 
-    if ( transpose ) then
-       tmp = dim1_max
-       dim1_max = dim2_max
-       dim2_max = tmp
-       tmp = dim1_S
-       dim1_S = dim2_S
-       dim2_S = tmp
-       tmp = dim1_E
-       dim1_E = dim2_E
-       dim2_E = tmp
-    end if
-
     return
   end subroutine EXTIN_RM_get_dims_2D
 
   subroutine EXTIN_RM_get_dims_3D( &
-       dim1_max, &
-       dim1_S,   &
-       dim1_E,   &
-       dim2_max, &
-       dim2_S,   &
-       dim2_E,   &
-       dim3_max, &
-       dim3_S,   &
-       dim3_E,   &
-       varname,  &
-       axistype, &
-       transpose )
+       dim1_max,  &
+       dim1_S,    &
+       dim1_E,    &
+       dim2_max,  &
+       dim2_S,    &
+       dim2_E,    &
+       dim3_max,  &
+       dim3_S,    &
+       dim3_E,    &
+       transpose, &
+       varname,   &
+       axistype   )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -167,14 +163,12 @@ contains
     integer,          intent(out) :: dim3_max
     integer,          intent(out) :: dim3_S
     integer,          intent(out) :: dim3_E
+    logical,          intent(out) :: transpose
     character(len=*), intent(in)  :: varname
-    character(len=*), intent(in)  :: axistype     ! axis type (ZXY/XYZ/Land/Urban)
-    logical,          intent(in)  :: transpose
-
-    integer :: tmp
+    character(len=*), intent(in)  :: axistype     ! axis type (ZXY/XYZ/LXY/XYL/UXY/XYU)
 
     select case ( axistype )
-    case ( 'ZXY', 'XYZ' )
+    case ( 'ZXY' )
        dim1_max = KMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -184,7 +178,19 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
-    case ( 'Land' )
+       transpose = .false.
+    case ( 'XYZ' )
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = KMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = KS
+       dim3_E   = KE
+       transpose = .true.
+    case ( 'LXY' ) ! LAND
        dim1_max = LKMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -194,7 +200,19 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
-    case ( 'Urban' )
+       transpose = .false.
+    case ( 'XYL' ) ! LAND
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = LKMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = LKS
+       dim3_E   = LKE
+       transpose = .true.
+    case ( 'UXY' )
        dim1_max = UKMAX
        dim2_max = IMAXB
        dim3_max = JMAXB
@@ -204,25 +222,22 @@ contains
        dim2_E   = IEB
        dim3_S   = JSB
        dim3_E   = JEB
+       transpose = .false.
+    case ( 'XYU' )
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = UKMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = UKS
+       dim3_E   = UKE
+       transpose = .true.
     case default
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     end select
-
-    if ( transpose ) then
-       tmp = dim1_max
-       dim1_max = dim2_max
-       dim2_max = dim3_max
-       dim3_max = tmp
-       tmp = dim1_S
-       dim1_S = dim2_S
-       dim2_S = dim3_S
-       dim3_S = tmp
-       tmp = dim1_E
-       dim1_E = dim2_E
-       dim2_E = dim3_E
-       dim3_E = tmp
-    end if
 
     return
   end subroutine EXTIN_RM_get_dims_3D

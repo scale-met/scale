@@ -1554,8 +1554,7 @@ contains
     end if
 
     if ( present(error) ) then
-       suppress = .false.
-!       suppress = .true.
+       suppress = .true.
     else
        suppress = .false.
     end if

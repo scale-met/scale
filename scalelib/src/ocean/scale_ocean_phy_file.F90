@@ -113,13 +113,13 @@ contains
     call EXTIN_regist( &
          OCEAN_PHY_FILE_basename,              &
          'OCEAN_TEMP',                         &
+         'XY',                                 &
          OCEAN_PHY_FILE_enable_periodic_year,  &
          OCEAN_PHY_FILE_enable_periodic_month, &
          OCEAN_PHY_FILE_enable_periodic_day,   &
          OCEAN_PHY_FILE_step_fixed,            &
          OCEAN_PHY_FILE_offset,                &
          OCEAN_PHY_FILE_defval,                &
-         .false.,                              & ! transpose
          OCEAN_PHY_FILE_check_coordinates,     &
          OCEAN_PHY_FILE_step_limit             )
 
@@ -176,7 +176,6 @@ contains
     call EXTIN_update( &
          OCEAN_TEMP_new, & ! (out)
          'OCEAN_TEMP',   & ! (in)
-         'XY',           & ! (in)
          NOWDAYSEC,      & ! (in)
          error           ) ! (out)
     if ( error ) then
