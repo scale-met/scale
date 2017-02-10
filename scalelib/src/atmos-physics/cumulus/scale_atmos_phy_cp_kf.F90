@@ -519,7 +519,7 @@ contains
        MOMX,        &
        MOMY,        &
        RHOT,        &
-       QTRC,        &
+       QTRC_in,        &
        w0avg,       &
        ! [INOUT]
        nca,         &
@@ -567,7 +567,7 @@ contains
     real(RP),intent(in) :: MOMX(KA,IA,JA)          ! momentum
     real(RP),intent(in) :: MOMY(KA,IA,JA)          ! momentum
     real(RP),intent(in) :: RHOT(KA,IA,JA)          ! density*PT
-    real(RP),intent(in) :: QTRC(KA,IA,JA,QA)       ! raito of water elements
+    real(RP),intent(in) :: QTRC_in(KA,IA,JA,QA)       ! raito of water elements
     real(RP),intent(in) :: w0avg(KA,IA,JA)         ! running mean vertical wind velocity [m/s]
     ! [INOUT]
     real(RP),intent(inout) :: nca(IA,JA)              ! num of step convection active [step]
@@ -598,6 +598,7 @@ contains
     real(RP) :: rh    (KA)       ! saturate vapor [%]
     real(RP) :: deltap(KA)       ! delta Pressure [Pa]
 
+    real(RP) :: QTRC(KA,IA,JA,QA)  ! input QTRC in KF scheme
     real(RP) :: q_hyd(KA,QA_MP-1)  ! water mixing ratio [kg/kg]
     real(RP) :: dens_nw(KA)      ! density [kg/m**3]
     integer  :: nic
@@ -667,6 +668,19 @@ contains
     integer  :: k, i, j, iq, iqa, ii
 
     I_convflag (:,:) = 2
+
+    ! initial hydrometeor is zero,
+    ! to fit assumption in KF scheme
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+          QTRC(k,i,j,I_QV) = QTRC_in(k,i,j,I_QV)
+       do iq = 2, QA_MP
+          QTRC(k,i,j,iq)   = 0.0_RP
+       end do
+    enddo
+    enddo
+    enddo
 
     do j = JS, JE
     do i = IS, IE
@@ -985,7 +999,7 @@ contains
              q_hyd(k,I_QR-QS_MP) = qr_nw(k) + q_hyd(k,I_QR-QS_MP)
              if ( I_QI>0 ) q_hyd(k,I_QI-QS_MP) = qi_nw(k) + q_hyd(k,I_QI-QS_MP)
              if ( I_QS>0 ) q_hyd(k,I_QS-QS_MP) = qs_nw(k) + q_hyd(k,I_QS-QS_MP)
-             qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + sum(q_hyd(k,:),1)) ! update qdry
+             qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + QV_resd(k) + sum(q_hyd(k,:),1)) ! update qdry
 
              ! new qtrc
              qtrc_nw(k,I_QV) = (qv_g(k) + QV_resd(k)) * qdry(k)
@@ -1022,7 +1036,9 @@ contains
                   /timecp(i,j)
           do ii = 2, QA_MP
              iq = QS_MP + ii - 1
-             DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j) * QTRC(KS:KE,i,j,iq) ) &
+!             DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j) * QTRC(KS:KE,i,j,iq) ) &
+!                  /timecp(i,j)
+             DT_RHOQ(KS:KE,i,j,iq) = ( RHOD(KS:KE) * q_hyd(KS:KE,iq-1) ) &
                   /timecp(i,j)
           end do
           ! if noconvection then nca is same value before call. nca only modifyed convectioned
@@ -3095,6 +3111,13 @@ contains
        ! moisture budget error
        istop = 1
        write(*,*) "XXXX ERROR@KF,MOISTURE"
+       write (*,*) "--------------------------------------"
+       write (*,'(" *** vert accum rho*qhyd : ",F20.12)') qhydr
+       write (*,'(" *** vert accum rho*qv   : ",F20.12)') qvfnl-qinit
+       write (*,'(" *** precipitation rate  : ",F20.12)') qpfnl
+       write (*,'(" *** conserv qhyd + qv   : ",F20.12)') qhydr + qpfnl
+       write (*,'(" *** conserv total       : ",F20.12)') qfinl-qinit
+       write (*,*) "--------------------------------------"
        call PRC_MPIstop
     end if
     !! feed back to resolvable scale tendencies
