@@ -283,7 +283,7 @@ contains
     ! setup monitor I/O
     call MONIT_setup
     ! setup external in
-    call EXTIN_setup
+    call EXTIN_setup( 'RM' )
 
     ! setup nesting grid
     call NEST_setup ( intercomm_parent, intercomm_child )

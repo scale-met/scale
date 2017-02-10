@@ -60,6 +60,15 @@ module gtool_file
   public :: FileAttachBuffer
   public :: FileDetachBuffer
 
+  interface FileGetDatainfo
+     module procedure FileGetDatainfoFId
+     module procedure FileGetDatainfoFName
+  end interface FileGetDatainfo
+  interface FileGetAllDatainfo
+     module procedure FileGetAllDatainfoFId
+     module procedure FileGetAllDatainfoFName
+  end interface FileGetAllDatainfo
+
   interface FilePutAxis
      module procedure FilePutAxisRealSP
      module procedure FilePutAxisRealDP
@@ -1545,8 +1554,7 @@ contains
     end if
 
     if ( present(error) ) then
-       suppress = .false.
-!       suppress = .true.
+       suppress = .true.
     else
        suppress = .false.
     end if
@@ -1586,7 +1594,7 @@ contains
   !-----------------------------------------------------------------------------
   ! FileGetData
   !-----------------------------------------------------------------------------
-  subroutine FileGetDatainfo( &
+  subroutine FileGetDatainfoFName( &
       basename,    &
       varname,     &
       myrank,      &
@@ -1618,27 +1626,76 @@ contains
     real(DP),                   intent(out), optional :: time_end
     character(len=File_HMID),   intent(out), optional :: time_units
 
-    integer        :: fid
-    type(datainfo) :: dinfo
+    logical :: single_
+    integer :: fid
 
-    integer :: ndim, idim
-    real(DP):: time(1)
-
-    integer :: error
-    logical :: single_ = .false.
-
-    intrinsic size
-    !---------------------------------------------------------------------------
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    end if
 
     mpi_myrank = myrank
-
-    if ( present(single) ) single_ = single
 
     !--- search/register file
     call FileOpen( fid,        & ! [OUT]
                    basename,   & ! [IN]
                    File_FREAD, & ! [IN]
                    single_     ) ! [IN]
+
+    call FileGetDatainfoFId( &
+         fid,         &
+         varname,     &
+         istep,       &
+         description, &
+         units,       &
+         datatype,    &
+         dim_rank,    &
+         dim_name,    &
+         dim_size,    &
+         time_start,  &
+         time_end,    &
+         time_units   )
+
+    return
+  end subroutine FileGetDatainfoFName
+  subroutine FileGetDatainfoFId( &
+      fid,         &
+      varname,     &
+      istep,       &
+      description, &
+      units,       &
+      datatype,    &
+      dim_rank,    &
+      dim_name,    &
+      dim_size,    &
+      time_start,  &
+      time_end,    &
+      time_units   )
+    implicit none
+    integer,                    intent(in)  :: fid
+    character(len=*),           intent(in)  :: varname
+    integer,                    intent(in)  :: istep
+
+    character(len=File_HMID),   intent(out), optional :: description
+    character(len=File_HSHORT), intent(out), optional :: units
+    integer,                    intent(out), optional :: datatype
+    integer,                    intent(out), optional :: dim_rank
+    character(len=File_HSHORT), intent(out), optional :: dim_name(:)
+    integer,                    intent(out), optional :: dim_size(:)
+    real(DP),                   intent(out), optional :: time_start
+    real(DP),                   intent(out), optional :: time_end
+    character(len=File_HMID),   intent(out), optional :: time_units
+
+    type(datainfo) :: dinfo
+
+    integer :: ndim, idim
+    real(DP):: time(1)
+
+    integer :: error
+
+    intrinsic size
+    !---------------------------------------------------------------------------
 
     !--- get data information
     call file_get_datainfo( dinfo,   & ! [OUT]
@@ -1650,7 +1707,7 @@ contains
 
     !--- verify and exit
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx data info not found in '//trim(basename))
+       call Log('E', 'xxx data info not found')
     endif
 
     if ( present(description) ) description = dinfo%description
@@ -1696,12 +1753,12 @@ contains
     end if
 
     return
-  end subroutine FileGetDatainfo
+  end subroutine FileGetDatainfoFId
 
   !-----------------------------------------------------------------------------
   ! FileGetData
   !-----------------------------------------------------------------------------
-  subroutine FileGetAllDatainfo( &
+  subroutine FileGetAllDatainfoFName( &
       step_limit,  &
       dim_limit,   &
       basename,    &
@@ -1738,25 +1795,81 @@ contains
 
     logical,                    intent(in), optional :: single
 
-    integer        :: fid
-    type(datainfo) :: dinfo
 
-    integer :: ndim
-    integer :: istep, idim
-
-    integer :: error
-    logical :: single_ = .false.
-    !---------------------------------------------------------------------------
+    integer :: fid
+    logical :: single_
 
     mpi_myrank = myrank
 
-    if ( present(single) ) single_ = single
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    end if
 
     !--- search/register file
     call FileOpen( fid,        & ! [OUT]
                    basename,   & ! [IN]
                    File_FREAD, & ! [IN]
                    single_     ) ! [IN]
+
+    call FileGetAllDatainfoFId( &
+      step_limit,  &
+      dim_limit,   &
+      fid,         &
+      varname,     &
+      step_nmax,   &
+      description, &
+      units,       &
+      datatype,    &
+      dim_rank,    &
+      dim_name,    &
+      dim_size,    &
+      time_start,  &
+      time_end,    &
+      time_units   )
+
+    return
+  end subroutine FileGetAllDatainfoFName
+  subroutine FileGetAllDatainfoFId( &
+      step_limit,  &
+      dim_limit,   &
+      fid,         &
+      varname,     &
+      step_nmax,   &
+      description, &
+      units,       &
+      datatype,    &
+      dim_rank,    &
+      dim_name,    &
+      dim_size,    &
+      time_start,  &
+      time_end,    &
+      time_units   )
+    implicit none
+
+    integer,                    intent(in)  :: step_limit
+    integer,                    intent(in)  :: dim_limit
+    integer,                    intent(in)  :: fid
+    character(len=*),           intent(in)  :: varname
+    integer,                    intent(out) :: step_nmax
+    character(len=File_HMID),   intent(out) :: description
+    character(len=File_HSHORT), intent(out) :: units
+    integer,                    intent(out) :: datatype
+    integer,                    intent(out) :: dim_rank
+    character(len=File_HSHORT), intent(out) :: dim_name  (dim_limit)
+    integer,                    intent(out) :: dim_size  (dim_limit)
+    real(DP),                   intent(out) :: time_start(step_limit)
+    real(DP),                   intent(out) :: time_end  (step_limit)
+    character(len=File_HMID),   intent(out) :: time_units
+
+    type(datainfo) :: dinfo
+
+    integer :: ndim
+    integer :: istep, idim
+
+    integer :: error
+    !---------------------------------------------------------------------------
 
     ! initialize
     description   = ""
@@ -1803,7 +1916,7 @@ contains
     enddo
 
     return
-  end subroutine FileGetAllDatainfo
+  end subroutine FileGetAllDatainfoFId
 
   !-----------------------------------------------------------------------------
   ! interface File_read
@@ -2462,7 +2575,6 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single,        & ! (in) optional
       ntypes,        & ! (in)
@@ -2477,7 +2589,6 @@ contains
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
@@ -2490,8 +2601,6 @@ contains
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
-
-    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2540,7 +2649,6 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single,        & ! (in) optional
       ntypes,        & ! (in)
@@ -2555,7 +2663,6 @@ contains
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
@@ -2568,8 +2675,6 @@ contains
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
-
-    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2618,7 +2723,6 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single,        & ! (in) optional
       ntypes,        & ! (in)
@@ -2633,7 +2737,6 @@ contains
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
@@ -2646,8 +2749,6 @@ contains
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
-
-    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2696,7 +2797,6 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single,        & ! (in) optional
       ntypes,        & ! (in)
@@ -2711,7 +2811,6 @@ contains
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
@@ -2724,8 +2823,6 @@ contains
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
-
-    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2774,7 +2871,6 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single,        & ! (in) optional
       ntypes,        & ! (in)
@@ -2789,7 +2885,6 @@ contains
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
@@ -2802,8 +2897,6 @@ contains
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
-
-    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2852,7 +2945,6 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single,        & ! (in) optional
       ntypes,        & ! (in)
@@ -2867,7 +2959,6 @@ contains
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
@@ -2880,8 +2971,6 @@ contains
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
-
-    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -2930,7 +3019,6 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single,        & ! (in) optional
       ntypes,        & ! (in)
@@ -2945,7 +3033,6 @@ contains
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
@@ -2958,8 +3045,6 @@ contains
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
-
-    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
@@ -3008,7 +3093,6 @@ contains
       fid,           & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single,        & ! (in) optional
       ntypes,        & ! (in)
@@ -3023,7 +3107,6 @@ contains
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
@@ -3036,8 +3119,6 @@ contains
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
-
-    mpi_myrank = myrank
 
     !--- get data information
     call file_get_datainfo( dinfo,    & ! (out)
