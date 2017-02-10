@@ -661,7 +661,7 @@ contains
     !
     real(RP) :: cldfrac_KF(KA,2) ! cloud fraction
     !
-    real(RP) :: rhod(KA)         ! dry density
+    real(RP) :: RHOD(KA)         ! dry density
     real(RP) :: QV_resd(KA)      ! residual vapor
     ! do loop variable
     integer  :: k, i, j, iq, iqa, ii
@@ -713,6 +713,7 @@ contains
        qs_nw     (:)   = 0.0_RP
        rhot_nw   (:)   = 0.0_RP
        pott_nw   (:)   = 0.0_RP
+       RHOD      (:)   = 0.0_RP
        QV_resd   (:)   = 0.0_RP
        totalprcp       = 0.0_RP
        umflcl          = 0.0_RP
@@ -754,6 +755,7 @@ contains
 
           ! calculate water vaper and relative humidity
           call THERMODYN_qd( QDRY(k), QTRC(k,i,j,:), TRACER_MASS(:) )
+          RHOD(k) = DENS(k,i,j) * QDRY(k)
 
           ! temporary: WRF TYPE equations are used to maintain consistency with kf_main
           !call SATURATION_psat_liq( PSAT(k), TEMP(k) )
@@ -771,7 +773,7 @@ contains
        ! calculate delta P by hydrostatic balance
        ! deltap is the pressure interval between half levels(face levels) @ SCALE
        do k = KS, KE
-          deltap(k) = DENS(k,i,j) * GRAV * ( FZ(k+1,i,j) - FZ(k,i,j) ) ! rho*g*dz
+          deltap(k) = RHOD(k) * GRAV * ( FZ(k+1,i,j) - FZ(k,i,j) ) ! rho*g*dz
        enddo
 
 
@@ -983,11 +985,10 @@ contains
              q_hyd(k,I_QR-QS_MP) = qr_nw(k) + q_hyd(k,I_QR-QS_MP)
              if ( I_QI>0 ) q_hyd(k,I_QI-QS_MP) = qi_nw(k) + q_hyd(k,I_QI-QS_MP)
              if ( I_QS>0 ) q_hyd(k,I_QS-QS_MP) = qs_nw(k) + q_hyd(k,I_QS-QS_MP)
-             rhod(k) = DENS(k,i,j) * QDRY(k)
-             qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + sum(q_hyd(k,:),1)) ! new qdry
+             qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + sum(q_hyd(k,:),1)) ! update qdry
 
              ! new qtrc
-             qtrc_nw(k,I_QV) = qv_g(k) * qdry(k) + QV_resd(k)
+             qtrc_nw(k,I_QV) = (qv_g(k) + QV_resd(k)) * qdry(k)
              do iq = 1, QA_MP-1
                 qtrc_nw(k,QS_MP+iq) = q_hyd(k,iq) * qdry(k) + QTRC(k,i,j,QS_MP+iq)
              end do
@@ -1017,7 +1018,7 @@ contains
           DT_RHOT(KS:KE,i,j)   = (rhot_nw(KS:KE) - RHOT(KS:KE,i,j))/timecp(i,j)
 
           ! to keep conservation
-          DT_RHOQ(KS:KE,i,j,I_QV) = ( rhod(KS:KE) * (qv_g(KS:KE) - QV(KS:KE)) ) &
+          DT_RHOQ(KS:KE,i,j,I_QV) = ( RHOD(KS:KE) * (qv_g(KS:KE) - QV(KS:KE)) ) &
                   /timecp(i,j)
           do ii = 2, QA_MP
              iq = QS_MP + ii - 1
@@ -1026,8 +1027,6 @@ contains
           end do
           ! if noconvection then nca is same value before call. nca only modifyed convectioned
        end if
-
-
 
        cldfrac_sh(KS:KE,i,j) = cldfrac_KF(KS:KE,1)
        cldfrac_dp(KS:KE,i,j) = cldfrac_KF(KS:KE,2)
@@ -2639,7 +2638,10 @@ contains
     ! evariable moisture budeget
     real(RP) :: err      ! error (tmp var)
     real(RP) :: qinit    ! init water condensation (only qv)
-    real(RP) :: qfinl    ! fineal water condensation (producted by cumulus parameterization)
+    real(RP) :: qvfnl    ! final qv (producted by cumulus parameterization)
+    real(RP) :: qhydr    ! final hydrometers (producted by cumulus parameterization)
+    real(RP) :: qpfnl    ! final precipitation (producted by cumulus parameterization)
+    real(RP) :: qfinl    ! final water condensation (producted by cumulus parameterization)
     ! warm rain
     real(RP) :: cpm      ! tempolaly variable
     real(RP) :: UMF_tmp  ! tempolaly variable
@@ -3074,15 +3076,19 @@ contains
     rainrate_cp =  prcp_flux*(1._RP - fbfrc)/(deltax*deltax) ! if shallow convection then fbfrc = 1. -> noprcpitation
     !! evaluate moisuture budget
     qinit      = 0._RP ! initial qv
+    qvfnl      = 0._RP ! final qv
+    qhydr      = 0._RP ! final hydrometeor
     qfinl      = 0._RP ! final water subsidence qv,qi,qr,qs...
     dpth       = 0._RP  !
     do kk = KS,k_top
        dpth  = dpth + deltap(kk)
        qinit = qinit + qv(kk)*ems(kk)
-       qfinl = qfinl + qv_g(kk)*ems(kk) ! qv
-       qfinl = qfinl + (qc_nw(kk) + qi_nw(kk) + qr_nw(kk) + qs_nw(kk))*ems(kk)
+       qvfnl = qvfnl + qv_g(kk)*ems(kk) ! qv
+       qhydr = qhydr + (qc_nw(kk) + qi_nw(kk) + qr_nw(kk) + qs_nw(kk))*ems(kk)
     end do
-    qfinl = qfinl + prcp_flux*timecp*(1._RP - fbfrc)
+    qfinl = qvfnl + qhydr
+    qpfnl = prcp_flux*timecp*(1._RP - fbfrc)
+    qfinl = qfinl + qpfnl
     err   = (qfinl - qinit )*100._RP/qinit
     if (abs(err) > 0.05_RP .and. istop == 0) then
        ! write error message
