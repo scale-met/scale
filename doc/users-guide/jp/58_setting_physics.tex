@@ -152,15 +152,33 @@ micpara.datに記載されているnbinが異なれば、\\
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
       \verb|OFF|          & 乱流の計算を行わない &  \\
-      \verb|SMAGORINSKY|  & Smagorinsky 型のサブグリッドモデル    & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
-      \verb|D1980|        & Deardorff(1980)サブグリッドモデル &\citet{Deardorff_1980} \\
-      \verb|MYNN|         & MYNN Level 2.5 乱流モデル & \citet{my_1982,nakanishi_2004} \\
+      \verb|SMAGORINSKY|  & Smagorinsky 型のサブグリッドスケール乱流モデル & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
+      \verb|D1980|        & Deardorff(1980)サブグリッドスケール乱流モデル & \citet{Deardorff_1980} \\
+      \verb|MYNN|         & MYNN Level 2.5 境界層乱流パラメタリゼーション & \citet{my_1982,nakanishi_2004} \\
+      \verb|HYBRID|       & 境界層乱流パラメタリゼーションとサブグリッドスケール乱流モデル併用 & \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
+SMAGORINSKY および D1980 は、ラージエディーシミュレーション(LES)用のサブグリッドスケール乱流モデルである。
+MYNN は、レイノルズ平均ナビエストークス方程式(RANS)計算用の境界層乱流パラメタリゼーションである。
+HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり、以下の2通りの用途に用いられる。
+\begin{enumerate}
+\item LES と RANS の中間的な解像度 (グレーゾーン) での計算\\
+  LES用乱流モデルとRANS用乱流パラメタリゼーションで得られた時間変化率を、実験解像度に応じた割合で線形的に足し合せる
+\item RANS計算における水平渦粘性\\
+  RANS計算における境界層乱流パラメタリゼーションは、鉛直にのみ混合を行い、水平方向には混合しない。HYBRID を指定することで、水平方向に渦粘性を導入することができる。この場合は、追加で以下の設定が必要である。
+\end{enumerate}
 
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{ll}
+\verb|&PARAM_ATMOS_PHY_TB_SMG  | \\
+\verb| ATMOS_PHY_TB_SMG_horizontal = .true., | \\
+\verb|/             | \\
+\end{tabularx}
+}}\\
 
 
 \subsection{\SubsecRadiationSetting} \label{subsec:basic_usel_radiation}
