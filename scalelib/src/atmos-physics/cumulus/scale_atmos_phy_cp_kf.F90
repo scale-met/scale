@@ -669,19 +669,6 @@ contains
 
     I_convflag (:,:) = 2
 
-    ! initial hydrometeor is zero,
-    ! to fit assumption in KF scheme
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-          QTRC(k,i,j,I_QV) = QTRC_in(k,i,j,I_QV)
-       do iq = 2, QA_MP
-          QTRC(k,i,j,iq)   = 0.0_RP
-       end do
-    enddo
-    enddo
-    enddo
-
     do j = JS, JE
     do i = IS, IE
 
@@ -689,6 +676,31 @@ contains
 
        ! check convection
        if ( nca(i,j) .ge. 0.5_DP * dt ) cycle
+
+       do k = KS, KE
+          ! preparing a NON Hydriometeor condition to fit assumption in KF scheme
+          call THERMODYN_temp_pres( TEMP(k),          & ! [OUT]
+                                    PRES(k),          & ! [OUT] !dummy
+                                    DENS(k,i,j),      & ! [IN]
+                                    RHOT(k,i,j),      & ! [IN]
+                                    QTRC_in(k,i,j,:), & ! [IN]
+                                    TRACER_CV(:),     & ! [IN]
+                                    TRACER_R(:),      & ! [IN]
+                                    TRACER_MASS(:)    ) ! [IN]
+
+          QDRY(k) = 1.0_RP - QTRC_in(k,i,j,I_QV)
+          RHOD(k) = DENS(k,i,j) * QDRY(k)
+          PRES(k) = RHOD(k) * R * TEMP(k)
+
+          QTRC(k,i,j,I_QV) = QTRC_in(k,i,j,I_QV)
+          do iq = 2, QA_MP
+             QTRC(k,i,j,iq)   = 0.0_RP
+          end do
+
+          ! calculate u(x-directin velocity ), v(y-direction velocity)
+          u(k) = 0.5_RP * ( MOMX(k,i,j) + MOMX(k,i-1,j) ) / DENS(k,i,j)
+          v(k) = 0.5_RP * ( MOMY(k,i,j) + MOMY(k,i,j-1) ) / DENS(k,i,j)
+       enddo
 
        ! initialize variables
        cloudtop  (i,j) = 0.0_RP
@@ -727,7 +739,6 @@ contains
        qs_nw     (:)   = 0.0_RP
        rhot_nw   (:)   = 0.0_RP
        pott_nw   (:)   = 0.0_RP
-       RHOD      (:)   = 0.0_RP
        QV_resd   (:)   = 0.0_RP
        totalprcp       = 0.0_RP
        umflcl          = 0.0_RP
@@ -748,35 +759,14 @@ contains
        k_ml            = 0
        nic             = 0
 
-
-       ! convert variables
-
-       ! calculate u(x-directin velocity ), v(y-direction velocity)
        do k = KS, KE
-          u(k) = 0.5_RP * ( MOMX(k,i,j) + MOMX(k,i-1,j) ) / DENS(k,i,j)
-          v(k) = 0.5_RP * ( MOMY(k,i,j) + MOMY(k,i,j-1) ) / DENS(k,i,j)
-       enddo
-
-       do k = KS, KE
-          call THERMODYN_temp_pres( TEMP(k),       & ! [OUT]
-                                    PRES(k),       & ! [OUT]
-                                    DENS(k,i,j),   & ! [IN]
-                                    RHOT(k,i,j),   & ! [IN]
-                                    QTRC(k,i,j,:), & ! [IN]
-                                    TRACER_CV(:),  & ! [IN]
-                                    TRACER_R(:),   & ! [IN]
-                                    TRACER_MASS(:) ) ! [IN]
-
-          ! calculate water vaper and relative humidity
-          call THERMODYN_qd( QDRY(k), QTRC(k,i,j,:), TRACER_MASS(:) )
-          RHOD(k) = DENS(k,i,j) * QDRY(k)
-
           ! temporary: WRF TYPE equations are used to maintain consistency with kf_main
           !call SATURATION_psat_liq( PSAT(k), TEMP(k) )
           !QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
           PSAT(k) = ALIQ*EXP((BLIQ*TEMP(K)-CLIQ)/(TEMP(K)-DLIQ))
           QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(K) - PSAT(k) )
 
+          ! calculate water vaper and relative humidity
           QV  (k) = QTRC(k,i,j,I_QV) / QDRY(k)
 !          QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
           QV  (k) = max( KF_EPS, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
@@ -789,7 +779,6 @@ contains
        do k = KS, KE
           deltap(k) = RHOD(k) * GRAV * ( FZ(k+1,i,j) - FZ(k,i,j) ) ! rho*g*dz
        enddo
-
 
        DENS_t_CP(KS:KE,i,j) = 0.0_RP
        DT_RHOT  (KS:KE,i,j) = 0.0_RP
