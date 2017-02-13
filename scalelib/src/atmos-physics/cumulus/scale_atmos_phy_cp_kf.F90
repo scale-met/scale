@@ -968,6 +968,7 @@ contains
              nca   (i,j) = KF_DTSEC ! convection feed back act this time span
           end if
 
+          DT_RHOQ(:,i,j,:) = 0.0_RP
           do k=KS, k_top
              DT_RHOQ(k,i,j,I_QV) = ( RHOD(k) * ( qv_nw(k) - QV(k) ) ) / timecp(i,j)
              DT_RHOQ(k,i,j,I_QC) = qc_nw(k) * RHOD(k) / timecp(i,j)
