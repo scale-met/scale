@@ -139,6 +139,8 @@ contains
        UNDEF => CONST_UNDEF
     use scale_atmos_phy_mp, only: &
        AQ_NAME => ATMOS_PHY_MP_NAME, &
+       QS_MP,                        &
+       QE_MP,                        &
        QA_MP
     implicit none
 
