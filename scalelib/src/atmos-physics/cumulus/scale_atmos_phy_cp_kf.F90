@@ -983,7 +983,7 @@ contains
                 DT_DENS(k,i,j) = DT_DENS(k,i,j) + DT_RHOQ(k,i,j,I_QS)
              end if
 
-             dens_nw(k) = dens(k,i,j) * DT_DENS(k,i,j) * timecp(i,j)
+             dens_nw(k) = dens(k,i,j) + DT_DENS(k,i,j) * timecp(i,j)
 
              do iq = QS_MP, QE_MP
                 qtrc_nw(k,iq) = ( qtrc_in(k,i,j,iq) * DENS(k,i,j) + DT_RHOQ(k,i,j,iq) * timecp(i,j) ) / dens_nw(k)
