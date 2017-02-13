@@ -164,7 +164,7 @@ contains
     allocate( ATMOS_PHY_CP_MOMX_t(KA,IA,JA)       )
     allocate( ATMOS_PHY_CP_MOMY_t(KA,IA,JA)       )
     allocate( ATMOS_PHY_CP_RHOT_t(KA,IA,JA)       )
-    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QA_MP) )
+    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QS_MP:QE_MP) )
     ATMOS_PHY_CP_DENS_t(:,:,:)   = 0.0_RP
     ATMOS_PHY_CP_MOMZ_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_MOMX_t(:,:,:)   = UNDEF

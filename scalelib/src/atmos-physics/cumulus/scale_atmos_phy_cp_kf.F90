@@ -519,11 +519,11 @@ contains
        MOMX,        &
        MOMY,        &
        RHOT,        &
-       QTRC_in,        &
+       QTRC_in,     &
        w0avg,       &
        ! [INOUT]
        nca,         &
-       DENS_t_CP,   &
+       DT_DENS,     &
        DT_RHOT,     &
        DT_RHOQ,     &
        rainrate_cp, &
@@ -541,7 +541,8 @@ contains
        R    => CONST_Rdry
     use scale_atmos_phy_mp, only: &
        QA_MP, &
-       QS_MP
+       QS_MP, &
+       QE_MP
     use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC, &
@@ -571,9 +572,9 @@ contains
     real(RP),intent(in) :: w0avg(KA,IA,JA)         ! running mean vertical wind velocity [m/s]
     ! [INOUT]
     real(RP),intent(inout) :: nca(IA,JA)              ! num of step convection active [step]
-    real(RP),intent(inout) :: DENS_t_CP(KA,IA,JA)     ! dens/dt
+    real(RP),intent(inout) :: DT_DENS(KA,IA,JA)       ! dens/dt
     real(RP),intent(inout) :: DT_RHOT(KA,IA,JA)       ! dens*PT/dt
-    real(RP),intent(inout) :: DT_RHOQ(KA,IA,JA,QA_MP) ! dens*q/dt
+    real(RP),intent(inout) :: DT_RHOQ(KA,IA,JA,QS_MP:QE_MP) ! dens*q/dt
     real(RP),intent(inout) :: rainrate_cp(IA,JA)      ! rain  PPTFLX(prcp_flux)/deltax**2*dt ! convective rain
     real(RP),intent(inout) :: cldfrac_sh(KA,IA,JA)    ! cloud fraction
     real(RP),intent(inout) :: cldfrac_dp(KA,IA,JA)    ! cloud fraction
@@ -589,7 +590,7 @@ contains
     real(RP) :: u     (KA)       ! x-direction wind velocity [m/s]
     real(RP) :: v     (KA)       ! y-direction wind velocity [m/s]
     real(RP) :: temp  (KA)       ! temperature [K]
-    real(RP) :: pres  (KA)       ! pressure [Pa]
+    real(RP) :: pres  (KA)       ! pressure of dry air [Pa]
     real(RP) :: qv    (KA)       ! water vapor mixing ratio[kg/kg] original in KF scheme
     real(RP) :: QDRY  (KA)       ! ratio of dry air
     !real(RP) :: qes   (KA)       ! saturate vapor [kg/kg]
@@ -598,7 +599,6 @@ contains
     real(RP) :: rh    (KA)       ! saturate vapor [%]
     real(RP) :: deltap(KA)       ! delta Pressure [Pa]
 
-    real(RP) :: QTRC(KA,IA,JA,QA)  ! input QTRC in KF scheme
     real(RP) :: q_hyd(KA,QA_MP-1)  ! water mixing ratio [kg/kg]
     real(RP) :: dens_nw(KA)      ! density [kg/m**3]
     integer  :: nic
@@ -650,20 +650,20 @@ contains
     integer  :: k_lfs            ! LFS layer index
     ![OUT] @ compensasional subsidence
     real(RP) :: temp_g(KA)       ! temporarly temperature -> after iteration then new variable
-    real(RP) :: qv_g(KA)         ! temporarly vapor -> after iteration then new variable
+    real(RP) :: qv_nw(KA)        ! new vapor mixing ratio       [kg/kg]
     real(RP) :: qc_nw(KA)        ! new cloud water mixing ratio [kg/kg]
     real(RP) :: qi_nw(KA)        ! new cloud ice  mixing ratio  [kg/kg]
     real(RP) :: qr_nw(KA)        ! new rain water mixing ratio  [kg/kg]
     real(RP) :: qs_nw(KA)        ! new snow water mixing ratio  [kg/kg]
     ! new variable
-    real(RP) :: rhot_nw(KA)      ! rho*PT
-    real(RP) :: qtrc_nw(KA,QA_MP)   ! qv,qc,qr,qi,qs (qg not change)
+    real(RP) :: qtrc_nw(KA,QA)   ! qv,qc,qr,qi,qs (qg not change)
     real(RP) :: pott_nw(KA)      ! new PT
     !
     real(RP) :: cldfrac_KF(KA,2) ! cloud fraction
     !
     real(RP) :: RHOD(KA)         ! dry density
     real(RP) :: QV_resd(KA)      ! residual vapor
+
     ! do loop variable
     integer  :: k, i, j, iq, iqa, ii
 
@@ -688,14 +688,10 @@ contains
                                     TRACER_R(:),      & ! [IN]
                                     TRACER_MASS(:)    ) ! [IN]
 
-          QDRY(k) = 1.0_RP - QTRC_in(k,i,j,I_QV)
+          call THERMODYN_qd( QDRY(k), QTRC_in(k,i,j,:), TRACER_MASS(:) )
+
           RHOD(k) = DENS(k,i,j) * QDRY(k)
           PRES(k) = RHOD(k) * R * TEMP(k)
-
-          QTRC(k,i,j,I_QV) = QTRC_in(k,i,j,I_QV)
-          do iq = 2, QA_MP
-             QTRC(k,i,j,iq)   = 0.0_RP
-          end do
 
           ! calculate u(x-directin velocity ), v(y-direction velocity)
           u(k) = 0.5_RP * ( MOMX(k,i,j) + MOMX(k,i-1,j) ) / DENS(k,i,j)
@@ -708,7 +704,6 @@ contains
        rainrate_cp(i,j)= 0.0_RP
        timecp    (i,j) = 0.0_RP
        cldfrac_KF(:,:) = 0.0_RP
-       qtrc_nw   (:,:) = 0.0_RP
        temp_u    (:)   = 0.0_RP
        tempv     (:)   = 0.0_RP
        qv_u      (:)   = 0.0_RP
@@ -732,14 +727,12 @@ contains
        downent   (:)   = 0.0_RP
        downdet   (:)   = 0.0_RP
        temp_g    (:)   = 0.0_RP
-       qv_g      (:)   = 0.0_RP
+       qv_nw     (:)   = 0.0_RP
        qc_nw     (:)   = 0.0_RP
        qi_nw     (:)   = 0.0_RP
        qr_nw     (:)   = 0.0_RP
        qs_nw     (:)   = 0.0_RP
-       rhot_nw   (:)   = 0.0_RP
        pott_nw   (:)   = 0.0_RP
-       QV_resd   (:)   = 0.0_RP
        totalprcp       = 0.0_RP
        umflcl          = 0.0_RP
        cape            = 0.0_RP
@@ -767,10 +760,8 @@ contains
           QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(K) - PSAT(k) )
 
           ! calculate water vaper and relative humidity
-          QV  (k) = QTRC(k,i,j,I_QV) / QDRY(k)
 !          QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
-          QV  (k) = max( KF_EPS, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
-          QV_resd(k) = (QTRC(k,i,j,I_QV) / QDRY(k)) - QV(k)
+          QV  (k) = max( KF_EPS, min( QSAT(k), QTRC_in(k,i,j,I_QV) / QDRY(k) ) ) ! conpare QSAT and QV, guess lower limit
           rh  (k) = QV(k) / QSAT(k)
        enddo
 
@@ -780,23 +771,11 @@ contains
           deltap(k) = RHOD(k) * GRAV * ( FZ(k+1,i,j) - FZ(k,i,j) ) ! rho*g*dz
        enddo
 
-       DENS_t_CP(KS:KE,i,j) = 0.0_RP
-       DT_RHOT  (KS:KE,i,j) = 0.0_RP
-       do iq = 1, QA_MP
-          DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
-       end do
        cldfrac_KF (KS:KE,:) = 0.0_RP
        rainrate_cp(i,j) = 0.0_RP
        timecp     (i,j) = 0.0_RP
        cloudtop   (i,j) = 0.0_RP
        zlcl       (i,j) = 0.0_RP
-
-       do iq = 1, QA_MP-1
-       iqa = iq + QS_MP
-       do k  = KS, KE
-          q_hyd(k,iq) = QTRC(k,i,j,iqa) / QDRY(k)
-       enddo
-       enddo
 
        call CP_kf_trigger ( &
             ! [IN]
@@ -944,7 +923,7 @@ contains
             k_lfs,            & ! index of LFS layer
             ![OUT] new valuavles after timestep
             temp_g(:),        & ! update temperature [K]
-            qv_g(:),          & ! update water vapor mixing ratio
+            qv_nw(:),         & ! update water vapor mixing ratio
             qc_nw(:),         & ! update cloud water mixing ratio
             qi_nw(:),         & ! update cloud ice   mixing ratio
             qr_nw(:),         & ! update rain  water mixing ratio
@@ -966,6 +945,13 @@ contains
           cloudtop(i,j)       = 0.0_RP
           zlcl(i,j)           = 0.0_RP
           nca(i,j)            = -100.0_RP
+
+          DT_DENS(KS:KE,i,j) = 0.0_RP
+          DT_RHOT(KS:KE,i,j) = 0.0_RP
+          do iq = QS_MP, QE_MP
+             DT_RHOQ(KS:KE,i,j,iq) = 0.0_RP
+          end do
+
        else ! convection allowed I_convflag=0 or 1
           ! chek
           !
@@ -983,28 +969,36 @@ contains
           end if
 
           do k=KS, k_top
-             ! update qd
-             q_hyd(k,I_QC-QS_MP) = qc_nw(k) + q_hyd(k,I_QC-QS_MP)
-             q_hyd(k,I_QR-QS_MP) = qr_nw(k) + q_hyd(k,I_QR-QS_MP)
-             if ( I_QI>0 ) q_hyd(k,I_QI-QS_MP) = qi_nw(k) + q_hyd(k,I_QI-QS_MP)
-             if ( I_QS>0 ) q_hyd(k,I_QS-QS_MP) = qs_nw(k) + q_hyd(k,I_QS-QS_MP)
-             qdry(k) = 1.0_RP / ( 1.0_RP + qv_g(k) + QV_resd(k) + sum(q_hyd(k,:),1)) ! update qdry
+             DT_RHOQ(k,i,j,I_QV) = ( RHOD(k) * ( qv_nw(k) - QV(k) ) ) / timecp(i,j)
+             DT_RHOQ(k,i,j,I_QC) = qc_nw(k) * RHOD(k) / timecp(i,j)
+             DT_RHOQ(k,i,j,I_QR) = qr_nw(k) * RHOD(k) / timecp(i,j)
+             DT_DENS(k,i,j) = DT_RHOQ(k,i,j,I_QV) + DT_RHOQ(k,i,j,I_QC) + DT_RHOQ(k,i,j,I_QR)
+             if ( I_QI>0 ) then
+                DT_RHOQ(k,i,j,I_QI) = qi_nw(k) * RHOD(k) / timecp(i,j)
+                DT_DENS(k,i,j) = DT_DENS(k,i,j) + DT_RHOQ(k,i,j,I_QI)
+             end if
+             if ( I_QS>0 ) then
+                DT_RHOQ(k,i,j,I_QS) = qs_nw(k) * RHOD(k) / timecp(i,j)
+                DT_DENS(k,i,j) = DT_DENS(k,i,j) + DT_RHOQ(k,i,j,I_QS)
+             end if
 
-             ! new qtrc
-             qtrc_nw(k,I_QV) = (qv_g(k) + QV_resd(k)) * qdry(k)
-             do iq = 1, QA_MP-1
-                qtrc_nw(k,QS_MP+iq) = q_hyd(k,iq) * qdry(k) + QTRC(k,i,j,QS_MP+iq)
+             dens_nw(k) = dens(k,i,j) * DT_DENS(k,i,j) * timecp(i,j)
+
+             do iq = QS_MP, QE_MP
+                qtrc_nw(k,iq) = ( qtrc_in(k,i,j,iq) * DENS(k,i,j) + DT_RHOQ(k,i,j,iq) * timecp(i,j) ) / dens_nw(k)
              end do
-             ! new density
-             dens_nw(k) = rhod(k) / qdry(k)
-          enddo
+             do iq = 1, QS_MP - 1
+                qtrc_nw(k,iq) = qtrc_in(k,i,j,iq) * DENS(k,i,j) / dens_nw(k)
+             end do
+             do iq = QE_MP + 1, QA
+                qtrc_nw(k,iq) = qtrc_in(k,i,j,iq) * DENS(k,i,j) / dens_nw(k)
+             end do
+          end do
 
           ! treatment for not evaluated layers
           do k=k_top+1, KE
-             qtrc_nw(k,I_QV) = QTRC(k,i,j,I_QV)
-             qv_g(k)         = QV(k)
-             do iq = 1, QA_MP-1
-                qtrc_nw(k,QS_MP+iq) = QTRC(k,i,j,QS_MP+iq)
+             do iq = 1, QA
+                qtrc_nw(k,iq) = QTRC_in(k,i,j,iq)
              end do
              dens_nw(k) = DENS(k,i,j)
           enddo
@@ -1015,21 +1009,19 @@ contains
                temp_g(:), pres(:), qtrc_nw(:,:), &
                TRACER_CV(:), TRACER_R(:), TRACER_MASS(:) )
           ! update rhot
-          rhot_nw(KS:KE) = dens_nw(KS:KE)*pott_nw(KS:KE)
-          ! calc tendency
-          DENS_t_CP(KS:KE,i,j) = (dens_nw(KS:KE) - dens(KS:KE,i,j))/timecp(i,j)
-          DT_RHOT(KS:KE,i,j)   = (rhot_nw(KS:KE) - RHOT(KS:KE,i,j))/timecp(i,j)
+          do k = KS, k_top
+             DT_RHOT(k,i,j) = ( dens_nw(k)*pott_nw(k) - RHOT(k,i,j) ) / timecp(i,j)
+          end do
+
+          do k=k_top+1, KE
+             DT_DENS(k,i,j) = 0.0_RP
+             DT_RHOT(k,i,j) = 0.0_RP
+             do iq = QS_MP, QE_MP
+                DT_RHOQ(k,i,j,iq) = 0.0_RP
+             end do
+          end do
 
           ! to keep conservation
-          DT_RHOQ(KS:KE,i,j,I_QV) = ( RHOD(KS:KE) * (qv_g(KS:KE) - QV(KS:KE)) ) &
-                  /timecp(i,j)
-          do ii = 2, QA_MP
-             iq = QS_MP + ii - 1
-!             DT_RHOQ(KS:KE,i,j,iq) = ( dens_nw(KS:KE) * qtrc_nw(KS:KE,iq) - DENS(KS:KE,i,j) * QTRC(KS:KE,i,j,iq) ) &
-!                  /timecp(i,j)
-             DT_RHOQ(KS:KE,i,j,iq) = ( RHOD(KS:KE) * q_hyd(KS:KE,iq-1) ) &
-                  /timecp(i,j)
-          end do
           ! if noconvection then nca is same value before call. nca only modifyed convectioned
        end if
 
