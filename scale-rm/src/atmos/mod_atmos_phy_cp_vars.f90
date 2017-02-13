@@ -139,6 +139,8 @@ contains
        UNDEF => CONST_UNDEF
     use scale_atmos_phy_mp, only: &
        AQ_NAME => ATMOS_PHY_MP_NAME, &
+       QS_MP,                        &
+       QE_MP,                        &
        QA_MP
     implicit none
 
@@ -164,7 +166,7 @@ contains
     allocate( ATMOS_PHY_CP_MOMX_t(KA,IA,JA)       )
     allocate( ATMOS_PHY_CP_MOMY_t(KA,IA,JA)       )
     allocate( ATMOS_PHY_CP_RHOT_t(KA,IA,JA)       )
-    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QA_MP) )
+    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QS_MP:QE_MP) )
     ATMOS_PHY_CP_DENS_t(:,:,:)   = 0.0_RP
     ATMOS_PHY_CP_MOMZ_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_MOMX_t(:,:,:)   = UNDEF
