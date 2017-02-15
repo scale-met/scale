@@ -105,6 +105,7 @@ module mod_atmos_vars
   real(RP), public, allocatable :: U   (:,:,:)   ! velocity u  [m/s]
   real(RP), public, allocatable :: V   (:,:,:)   ! velocity v  [m/s]
   real(RP), public, allocatable :: POTT(:,:,:)   ! potential temperature [K]
+  real(RP), public, allocatable :: N2  (:,:,:)   ! squared Brunt-Vaisala frequency [/s2]
 
   !-----------------------------------------------------------------------------
   !
@@ -145,7 +146,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 70        ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 71        ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W            =  1 ! velocity w at cell center
   integer, private, parameter :: I_U            =  2 ! velocity u at cell center
@@ -227,14 +228,16 @@ module mod_atmos_vars
 
   integer, private, parameter :: I_Uabs         = 63
 
-  integer, private, parameter :: I_CAPE         = 64
-  integer, private, parameter :: I_CIN          = 65
-  integer, private, parameter :: I_LCL          = 66
-  integer, private, parameter :: I_LFC          = 67
-  integer, private, parameter :: I_LNB          = 68
+  integer, private, parameter :: I_N2           = 64
 
-  integer, private, parameter :: I_PBLH         = 69
-  integer, private, parameter :: I_MSE          = 70
+  integer, private, parameter :: I_CAPE         = 65
+  integer, private, parameter :: I_CIN          = 66
+  integer, private, parameter :: I_LCL          = 67
+  integer, private, parameter :: I_LFC          = 68
+  integer, private, parameter :: I_LNB          = 69
+
+  integer, private, parameter :: I_PBLH         = 70
+  integer, private, parameter :: I_MSE          = 71
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -456,6 +459,8 @@ contains
     call HIST_reg( AD_HIST_id(I_DIV)      , 'DIV',       'divergence',                     '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_HDIV)     , 'HDIV',      'horizontal divergence',          '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_Uabs)     , 'Uabs',      'absolute velocity',              'm/s',    ndim=3 )
+
+    call HIST_reg( AD_HIST_id(I_N2)       , 'N2',        'squared Brunt-Vaisala frequency','1/s2',   ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_CAPE)     , 'CAPE',      'convection avail. pot. energy',  'm2/s2',  ndim=2 )
     call HIST_reg( AD_HIST_id(I_CIN)      , 'CIN',       'convection inhibition',          'm2/s2',  ndim=2 )
@@ -2078,6 +2083,8 @@ contains
     call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s'    )
     call HIST_in( Uabs (:,:,:), 'Uabs',  'absolute velocity',      'm/s'    )
 
+    call HIST_in( N2   (:,:,:), 'N2',    'squared Brunt-Vaisala frequency','1/s2' )
+
     call HIST_in( DENS_MEAN(:), 'DENS_MEAN', 'horiz. mean of density',    'kg/m3' )
     call HIST_in( W_MEAN   (:), 'W_MEAN',    'horiz. mean of w',          'm/s' )
     call HIST_in( U_MEAN   (:), 'U_MEAN',    'horiz. mean of u',          'm/s' )
@@ -2319,11 +2326,22 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_const, only: &
+       GRAV => CONST_GRAV
     use scale_atmos_thermodyn, only: &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd, &
+       THERMODYN_r         => ATMOS_THERMODYN_r,  &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_grid_real, only: &
+       CZ => REAL_CZ
     implicit none
 
-    integer  :: k, i, j
+    real(RP) :: q(KA)
+    real(RP) :: RPT(KA) ! Rtot * PT (= Rdry * virtual potential temperature)
+    real(RP) :: qdry, Rtot
+
+    integer :: k, i, j
+    integer :: iq
     !---------------------------------------------------------------------------
 
     call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
@@ -2339,20 +2357,20 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS+1, KE-1
-       W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+       W(k,i,j) = 0.5_RP * ( MOMZ_av(k-1,i,j)+MOMZ_av(k,i,j) ) / DENS_av(k,i,j)
     enddo
     enddo
     enddo
 !OCL XFILL
     do j = 1, JA
     do i = 1, IA
-       W(KS,i,j) = 0.5_RP * (               MOMZ(KS,i,j) ) / DENS(KS,i,j)
+       W(KS,i,j) = 0.5_RP * (                 MOMZ_av(KS,i,j) ) / DENS_av(KS,i,j)
     enddo
     enddo
 !OCL XFILL
     do j = 1, JA
     do i = 1, IA
-       W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j)             ) / DENS(KE,i,j)
+       W(KE,i,j) = 0.5_RP * ( MOMZ_av(KE-1,i,j)               ) / DENS_av(KE,i,j)
     enddo
     enddo
 
@@ -2360,14 +2378,14 @@ contains
     do j = 1, JA
     do i = 2, IA
     do k = KS, KE
-       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+       U(k,i,j) = 0.5_RP * ( MOMX_av(k,i-1,j)+MOMX_av(k,i,j) ) / DENS_av(k,i,j)
     enddo
     enddo
     enddo
 !OCL XFILL
     do j = 1, JA
     do k = KS, KE
-       U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
+       U(k,1,j) = MOMX_av(k,1,j) / DENS_av(k,1,j)
     enddo
     enddo
 
@@ -2375,14 +2393,14 @@ contains
     do j = 2, JA
     do i = 1, IA
     do k = KS, KE
-       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+       V(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j-1)+MOMY_av(k,i,j) ) / DENS_av(k,i,j)
     enddo
     enddo
     enddo
 !OCL XFILL
     do i = 1, IA
     do k = KS, KE
-       V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
+       V(k,i,1) = MOMY_av(k,i,1) / DENS_av(k,i,1)
     enddo
     enddo
 
@@ -2407,10 +2425,35 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+       POTT(k,i,j) = RHOT_av(k,i,j) / DENS_av(k,i,j)
     enddo
     enddo
     enddo
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp private(i,j,q,rpt,qdry,rtot)
+    do j = 1, JA
+    do i = 1, IA
+
+       do k = KS, KE
+          do iq = 1, QA
+             q(iq) = QTRC_av(k,i,j,iq)
+          end do
+          call THERMODYN_qd( qdry, q(:), TRACER_MASS(:) )
+          call THERMODYN_r( Rtot, q(:), TRACER_R(:), qdry )
+          RPT(k) = Rtot * POTT(k,i,j)
+       end do
+
+       N2(KS,i,j) = GRAV * ( RPT(KS+1) - RPT(KS) ) &
+                         / ( ( CZ(KS+1,i,j) - CZ(KS,i,j) ) * RPT(KS) )
+       do k = KS+1,KE-1
+          N2(k,i,j) = GRAV * ( RPT(k+1) - RPT(k-1) ) &
+                           / ( ( CZ(k+1,i,j) - CZ(k-1,i,j) ) * RPT(k) )
+       end do
+       N2(KE,i,j) = GRAV * ( RPT(KE) - RPT(KE-1) ) &
+                         / ( ( CZ(KE,i,j) - CZ(KE-1,i,j) ) * RPT(KE) )
+    end do
+    end do
 
     return
   end subroutine ATMOS_vars_diagnostics

@@ -465,7 +465,6 @@ contains
        ! calc diagnostics
        call ATMOS_vars_diagnostics
        call ATMOS_vars_history_setpres
-
     endif
 
     ! setup surface condition
