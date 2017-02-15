@@ -1,0 +1,27 @@
+################################################################################
+#
+# SCALE-GM driver config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 4,
+    rlevel      = 0,
+    vlayer      = 1,
+    rgnmngfname = "rl00-prc02.info",
+/
+
+&GRDPARAM
+    hgrid_io_mode = "ADVANCED",
+    hgrid_fname   = "boundary_GL04RL00",
+    VGRID_fname   = "NONE",
+    topo_fname    = "NONE",
+/
+
+&LATLONPARAM
+    latlon_type = "EQUIDIST",
+    imax        = 90,
+    jmax        = 45,
+/
+
+################################################################################

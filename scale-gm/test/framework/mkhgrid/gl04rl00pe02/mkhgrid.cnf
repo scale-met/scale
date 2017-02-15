@@ -1,0 +1,28 @@
+################################################################################
+#
+# SCALE-GM mkhgrid config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 4,
+    rlevel      = 0,
+    vlayer      = 1,
+    rgnmngfname = "rl00-prc02.info",
+/
+
+&PARAM_MKGRD
+    MKGRD_DOPREROTATE      = .false.,
+    MKGRD_DOSTRETCH        = .false.,
+    MKGRD_DOSHRINK         = .false.,
+    MKGRD_DOROTATE         = .false.,
+    MKGRD_IN_BASENAME      = "rawgrid_GL04RL00",
+    MKGRD_OUT_BASENAME     = "boundary_GL04RL00",
+/
+#!    MKGRD_prerotation_tilt =  90.D0,
+#!    MKGRD_stretch_alpha    =   4.D0,
+#!    MKGRD_shrink_level     =      1,
+#!    MKGRD_rotation_lon     = 140.D0,
+#!    MKGRD_rotation_lat     =  40.D0,
+
+################################################################################
