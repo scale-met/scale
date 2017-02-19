@@ -56,7 +56,11 @@ module dc_log
   integer, private :: LOG_ilevel = LOG_INFO
 
   logical, private :: LOG_master     = .true.
+#if defined(__PGI) || defined(__ES2)
+  logical, public :: LOG_master_nml
+#else
   logical, private :: LOG_master_nml
+#endif
   logical, private :: LOG_opened     = .false.
 
 contains

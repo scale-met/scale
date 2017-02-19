@@ -234,6 +234,10 @@ contains
        default_datatype,  &
        namelist_filename, &
        namelist_fid       )
+#if defined(__PGI) || defined(__ES2)
+    use dc_log, only: &
+       LOG_master_nml
+#endif
     use dc_calendar, only: &
        CalendarYmdhms2sec
     use gtool_file_h, only: &
