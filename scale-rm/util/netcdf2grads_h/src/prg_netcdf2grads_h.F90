@@ -344,6 +344,7 @@ program netcdf2grads_h
 
   irec_time = 1
   do it = nst, nen, INC_TSTEP !--- time loop
+     if( .not. T_MERGE_OUT ) irec_time = 1
 
      call set_calender( yy, mm, dd, hh, mn, sc, STIME, FTIME )
      if ( LOUT ) write( FID_LOG, '(1X,A)' ) ""
