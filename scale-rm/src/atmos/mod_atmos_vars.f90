@@ -336,12 +336,14 @@ contains
     allocate( RHOT_tp(KA,IA,JA)    )
     allocate( RHOQ_tp(KA,IA,JA,max(QA,1)) )
 
+    allocate( POTT(KA,IA,JA) )
     allocate( TEMP(KA,IA,JA) )
     allocate( PRES(KA,IA,JA) )
+    allocate( PHYD(KA,IA,JA) )
     allocate( W   (KA,IA,JA) )
     allocate( U   (KA,IA,JA) )
     allocate( V   (KA,IA,JA) )
-    allocate( POTT(KA,IA,JA) )
+    allocate( N2  (KA,IA,JA) )
 
     MOMZ(1:KS-1,:,:) = 0.0_RP
     MOMZ(KE:KA,:,:) = 0.0_RP

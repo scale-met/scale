@@ -112,7 +112,7 @@ contains
     do j = 1, JA
     do i = 1, IA
        ph(KE) = PRES(KE,i,j) - DENS(KE,i,j) * GRAV * ( FZ(KE,i,j) - CZ(KE,i,j) )
-       do k = KE, 1, -1
+       do k = KE, KS, -1
           ph(k-1) = ph(k) + DENS(k,i,j) * GRAV * ( FZ(k,i,j) - FZ(k-1,i,j) )
           PHYD(k,i,j) = ( ph(k) + ph(k-1) ) * 0.5_RP
        end do

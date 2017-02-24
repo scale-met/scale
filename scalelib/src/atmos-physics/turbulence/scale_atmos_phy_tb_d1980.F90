@@ -166,8 +166,8 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        RHOQ_t,                                      &
-       Km, Ri, Pr, N2,                              &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
+       Km, Ri, Pr,                                  &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
@@ -220,7 +220,6 @@ contains
     real(RP), intent(out)   :: Km           (KA,IA,JA)    ! eddy viscosity (center)
     real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
     real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Prantle number
-    real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
     real(RP), intent(in)    :: MOMX         (KA,IA,JA)
@@ -228,6 +227,7 @@ contains
     real(RP), intent(in)    :: RHOT         (KA,IA,JA)
     real(RP), intent(in)    :: DENS         (KA,IA,JA)
     real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
+    real(RP), intent(in)    :: N2           (KA,IA,JA)
 
     real(RP), intent(in)    :: SFLX_MW      (IA,JA)
     real(RP), intent(in)    :: SFLX_MU      (IA,JA)
@@ -288,7 +288,6 @@ contains
     Ri (:,:,:) = UNDEF
     Kh (:,:,:) = UNDEF
     Km (:,:,:) = UNDEF
-    N2 (:,:,:) = UNDEF
 
     POTT   (:,:,:) = UNDEF
 #endif
@@ -327,7 +326,7 @@ contains
        ! Ri = N^2 / |S|^2, N^2 = g / theta * dtheta/dz
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS+1, KE-1
+       do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, POTT(k+1,i,j) )
        call CHECK( __LINE__, POTT(k,i,j) )
@@ -336,44 +335,8 @@ contains
        call CHECK( __LINE__, FDZ(k-1) )
        call CHECK( __LINE__, S2(k,i,j) )
 #endif
-          N2(k,i,j) = GRAV * ( POTT(k+1,i,j) - POTT(k-1,i,j) ) * J33G &
-               / ( ( FDZ(k) + FDZ(k-1) ) * GSQRT(k,i,j,I_XYZ) * POTT(k,i,j) )
           Ri(k,i,j) = N2(k,i,j) / S2(k,i,j)
        enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KS+1,i,j) )
-       call CHECK( __LINE__, POTT(KS,i,j) )
-       call CHECK( __LINE__, RFDZ(KS) )
-       call CHECK( __LINE__, S2(KS,i,j) )
-#endif
-          N2(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G &
-               / ( FDZ(KS) * GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) )
-          Ri(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G * RFDZ(KS) &
-               / ( GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) * S2(KS,i,j) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KE,i,j) )
-       call CHECK( __LINE__, POTT(KE-1,i,j) )
-       call CHECK( __LINE__, RFDZ(KE-1) )
-       call CHECK( __LINE__, S2(KE,i,j) )
-#endif
-          N2(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G &
-               / ( FDZ(KE-1) * GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) )
-          Ri(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G * RFDZ(KE-1) &
-               / ( GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) * S2(KE,i,j) )
        enddo
        enddo
 #ifdef DEBUG

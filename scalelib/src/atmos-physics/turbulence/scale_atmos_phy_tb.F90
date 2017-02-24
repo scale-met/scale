@@ -34,8 +34,8 @@ module scale_atmos_phy_tb
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        RHOQ_t,                                      &
-       nu_C, Ri, Pr, N2,                            &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
+       nu_C, Ri, Pr,                                &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
        use scale_precision
@@ -54,7 +54,6 @@ module scale_atmos_phy_tb
        real(RP), intent(out)   :: nu_C         (KA,IA,JA)    ! eddy viscosity (center)
        real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
        real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Prantle number
-       real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
        real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
        real(RP), intent(in)    :: MOMX         (KA,IA,JA)
@@ -62,6 +61,7 @@ module scale_atmos_phy_tb
        real(RP), intent(in)    :: RHOT         (KA,IA,JA)
        real(RP), intent(in)    :: DENS         (KA,IA,JA)
        real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
+       real(RP), intent(in)    :: N2           (KA,IA,JA)
 
        real(RP), intent(in)    :: SFLX_MW      (IA,JA)
        real(RP), intent(in)    :: SFLX_MU      (IA,JA)

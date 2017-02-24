@@ -216,8 +216,8 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        RHOQ_t,                                      &
-       Nu, Ri, Pr, N2,                              &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
+       Nu, Ri, Pr,                                  &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2_in,   &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
@@ -279,7 +279,6 @@ contains
     real(RP), intent(out)   :: Nu           (KA,IA,JA)    ! eddy viscosity (center)
     real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
     real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Plandtle number
-    real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
     real(RP), intent(in)    :: MOMX         (KA,IA,JA)
@@ -287,6 +286,7 @@ contains
     real(RP), intent(in)    :: RHOT         (KA,IA,JA)
     real(RP), intent(in)    :: DENS         (KA,IA,JA)
     real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
+    real(RP), intent(in)    :: N2_in        (KA,IA,JA)
 
     real(RP), intent(in)    :: SFLX_MW      (IA,JA)
     real(RP), intent(in)    :: SFLX_MU      (IA,JA)
@@ -303,6 +303,7 @@ contains
 
     real(RP) :: U    (KA,IA,JA) !< velocity in x-direction (full level)
     real(RP) :: V    (KA,IA,JA) !< velocity in y-direction (full level)
+    real(RP) :: N2   (KA,IA,JA) ! squared Brunt-Vaisala frequency
     real(RP) :: phiN (KA,IA,JA)
 
     real(RP) :: sm   (KA,IA,JA) !< stability function for velocity
@@ -547,13 +548,8 @@ contains
        SFLX_PT(i,j) = SFLX_SH(i,j) / ( CP * DENS(KS,i,j) ) &
                     * POTT(KS,i,j) / TEMP(KS,i,j)
 
-       n2(KS,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
-                        GRAV * ( POTV(KS+1,i,j) - POTV(KS,i,j) ) &
-                             / ( ( CZ(KS+1,i,j)-CZ(KS,i,j) ) * POTV(KS,i,j) ) )
-       do k = KS+1, KE_PBL
-          n2(k,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
-                          GRAV * ( POTV(k+1,i,j) - POTV(k-1,i,j) ) &
-                               / ( ( CZ(k+1,i,j)-CZ(k-1,i,j) ) * POTV(k,i,j) ) )
+       do k = KS, KE_PBL
+          n2(k,i,j) = min( ATMOS_PHY_TB_MYNN_N2_MAX, N2_in(k,i,j) )
        end do
 
        dudz2(KS,i,j) = ( ( U(KS+1,i,j) - U(KS,i,j) )**2 + ( V(KS+1,i,j) - V(KS,i,j) )**2 ) &
@@ -620,6 +616,34 @@ contains
                    q, q2_2, & ! (in)
                    l, n2, dudz2 ) ! (in)
 
+#ifdef QUICK_DEBUG
+    do j = 1, JS-1
+    do i = 1, IA
+    do k = KS, KE
+       TEML(k,i,j) = 300.0_RP
+    end do
+    end do
+    end do
+    do j = JE+1, JA
+    do i = 1, IA
+    do k = KS, KE
+       TEML(k,i,j) = 300.0_RP
+    end do
+    end do
+    end do
+    do j = 1, JA
+       do i = 1, IS-1
+       do k = KS, KE
+          TEML(k,i,j) = 300.0_RP
+       end do
+       end do
+       do i = IE+1, IA
+       do k = KS, KE
+          TEML(k,i,j) = 300.0_RP
+       end do
+       end do
+    end do
+#endif
     call ATMOS_SATURATION_pres2qsat( Qsl(KS:KE_PBL,:,:), & ! (out)
                                      TEML(KS:KE_PBL,:,:), pres(KS:KE_PBL,:,:), & ! (in)
                                      KE_PBL-KS+1 ) ! (in)

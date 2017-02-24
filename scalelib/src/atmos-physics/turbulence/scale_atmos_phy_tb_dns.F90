@@ -125,8 +125,8 @@ contains
   subroutine ATMOS_PHY_TB_dns( &
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       RHOQ_t, nu, Ri, Pr, N2,                      &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
+       RHOQ_t, nu, Ri, Pr,                          &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_grid_index
@@ -158,7 +158,6 @@ contains
     real(RP), intent(out) :: nu(KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Ri(KA,IA,JA) ! Richardson number
     real(RP), intent(out) :: Pr(KA,IA,JA) ! Prantle number
-    real(RP), intent(out) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -166,6 +165,7 @@ contains
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)  :: N2(KA,IA,JA)
 
     real(RP), intent(in)  :: SFLX_MW(IA,JA)
     real(RP), intent(in)  :: SFLX_MU(IA,JA)
@@ -201,7 +201,6 @@ contains
     nu (:,:,:) = 0.0_RP
     Ri (:,:,:) = 0.0_RP
     Pr (:,:,:) = 1.0_RP
-    N2 (:,:,:) = 0.0_RP
 
     ! potential temperature
     do j = JS-1, JE+1
