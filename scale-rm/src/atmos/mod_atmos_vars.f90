@@ -99,12 +99,13 @@ module mod_atmos_vars
   real(RP), public, allocatable :: RHOQ_tp(:,:,:,:)
 
   ! diagnostic variables
-  real(RP), public, allocatable :: TEMP(:,:,:)   ! temperature [K]
-  real(RP), public, allocatable :: PRES(:,:,:)   ! pressure    [Pa=J/m3]
-  real(RP), public, allocatable :: W   (:,:,:)   ! velocity w  [m/s]
-  real(RP), public, allocatable :: U   (:,:,:)   ! velocity u  [m/s]
-  real(RP), public, allocatable :: V   (:,:,:)   ! velocity v  [m/s]
   real(RP), public, allocatable :: POTT(:,:,:)   ! potential temperature [K]
+  real(RP), public, allocatable :: TEMP(:,:,:)   ! temperature           [K]
+  real(RP), public, allocatable :: PRES(:,:,:)   ! pressure              [Pa=J/m3]
+  real(RP), public, allocatable :: PHYD(:,:,:)   ! hydrostatic pressure  [Pa=J/m3]
+  real(RP), public, allocatable :: W   (:,:,:)   ! velocity w            [m/s]
+  real(RP), public, allocatable :: U   (:,:,:)   ! velocity u            [m/s]
+  real(RP), public, allocatable :: V   (:,:,:)   ! velocity v            [m/s]
   real(RP), public, allocatable :: N2  (:,:,:)   ! squared Brunt-Vaisala frequency [/s2]
 
   !-----------------------------------------------------------------------------
@@ -2323,137 +2324,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc diagnostic variables
   subroutine ATMOS_vars_diagnostics
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    use scale_const, only: &
-       GRAV => CONST_GRAV
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd, &
-       THERMODYN_r         => ATMOS_THERMODYN_r,  &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_grid_real, only: &
-       CZ => REAL_CZ
+    use scale_atmos_diagnostic, only: &
+       ATMOS_DIAGNOSTIC_get
     implicit none
 
-    real(RP) :: q(KA)
-    real(RP) :: RPT(KA) ! Rtot * PT (= Rdry * virtual potential temperature)
-    real(RP) :: qdry, Rtot
-
-    integer :: k, i, j
-    integer :: iq
-    !---------------------------------------------------------------------------
-
-    call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
-                              PRES(:,:,:),   & ! [OUT]
-                              DENS(:,:,:),   & ! [IN]
-                              RHOT(:,:,:),   & ! [IN]
-                              QTRC(:,:,:,:), & ! [IN]
-                              TRACER_CV(:),  & ! [IN]
-                              TRACER_R(:),   & ! [IN]
-                              TRACER_MASS(:) ) ! [IN]
-
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS+1, KE-1
-       W(k,i,j) = 0.5_RP * ( MOMZ_av(k-1,i,j)+MOMZ_av(k,i,j) ) / DENS_av(k,i,j)
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-       W(KS,i,j) = 0.5_RP * (                 MOMZ_av(KS,i,j) ) / DENS_av(KS,i,j)
-    enddo
-    enddo
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-       W(KE,i,j) = 0.5_RP * ( MOMZ_av(KE-1,i,j)               ) / DENS_av(KE,i,j)
-    enddo
-    enddo
-
-!OCL XFILL
-    do j = 1, JA
-    do i = 2, IA
-    do k = KS, KE
-       U(k,i,j) = 0.5_RP * ( MOMX_av(k,i-1,j)+MOMX_av(k,i,j) ) / DENS_av(k,i,j)
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = 1, JA
-    do k = KS, KE
-       U(k,1,j) = MOMX_av(k,1,j) / DENS_av(k,1,j)
-    enddo
-    enddo
-
-!OCL XFILL
-    do j = 2, JA
-    do i = 1, IA
-    do k = KS, KE
-       V(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j-1)+MOMY_av(k,i,j) ) / DENS_av(k,i,j)
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do i = 1, IA
-    do k = KS, KE
-       V(k,i,1) = MOMY_av(k,i,1) / DENS_av(k,i,1)
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = 1, JA
-    do i  = 1, IA
-       W(   1:KS-1,i,j) = W(KS,i,j)
-       U(   1:KS-1,i,j) = U(KS,i,j)
-       V(   1:KS-1,i,j) = V(KS,i,j)
-       W(KE+1:KA,  i,j) = W(KE,i,j)
-       U(KE+1:KA,  i,j) = U(KE,i,j)
-       V(KE+1:KA,  i,j) = V(KE,i,j)
-    enddo
-    enddo
-
-    call COMM_vars8( U(:,:,:), 1 )
-    call COMM_vars8( V(:,:,:), 2 )
-    call COMM_wait ( U(:,:,:), 1, .false. )
-    call COMM_wait ( V(:,:,:), 2, .false. )
-
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS, KE
-       POTT(k,i,j) = RHOT_av(k,i,j) / DENS_av(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
-    !$omp private(i,j,q,rpt,qdry,rtot)
-    do j = 1, JA
-    do i = 1, IA
-
-       do k = KS, KE
-          do iq = 1, QA
-             q(iq) = QTRC_av(k,i,j,iq)
-          end do
-          call THERMODYN_qd( qdry, q(:), TRACER_MASS(:) )
-          call THERMODYN_r( Rtot, q(:), TRACER_R(:), qdry )
-          RPT(k) = Rtot * POTT(k,i,j)
-       end do
-
-       N2(KS,i,j) = GRAV * ( RPT(KS+1) - RPT(KS) ) &
-                         / ( ( CZ(KS+1,i,j) - CZ(KS,i,j) ) * RPT(KS) )
-       do k = KS+1,KE-1
-          N2(k,i,j) = GRAV * ( RPT(k+1) - RPT(k-1) ) &
-                           / ( ( CZ(k+1,i,j) - CZ(k-1,i,j) ) * RPT(k) )
-       end do
-       N2(KE,i,j) = GRAV * ( RPT(KE) - RPT(KE-1) ) &
-                         / ( ( CZ(KE,i,j) - CZ(KE-1,i,j) ) * RPT(KE) )
-    end do
-    end do
+    call ATMOS_DIAGNOSTIC_get( POTT, TEMP, PRES, PHYD, W, U, V, N2,                 & ! (out)
+                               DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av ) ! (in)
 
     return
   end subroutine ATMOS_vars_diagnostics
