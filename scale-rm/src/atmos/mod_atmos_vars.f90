@@ -529,19 +529,6 @@ contains
     call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_up), 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J',  ndim=2, isflux=.true.  )
     call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J',  ndim=2, isflux=.true.  )
 
-    if ( AD_HIST_id(I_W) > 0 ) then
-       AD_PREP_sw(I_W) = 1
-    endif
-    if ( AD_HIST_id(I_U) > 0 ) then
-       AD_PREP_sw(I_U) = 1
-    endif
-    if ( AD_HIST_id(I_V) > 0 ) then
-       AD_PREP_sw(I_V) = 1
-    endif
-    if ( AD_HIST_id(I_POTT) > 0 ) then
-       AD_PREP_sw(I_POTT) = 1
-    endif
-
     if (      AD_HIST_id(I_QDRY) > 0 &
          .OR. AD_MONIT_id(I_QDRY) > 0 ) then
        AD_PREP_sw(I_QDRY) = 1
@@ -581,27 +568,11 @@ contains
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_CPTOT) = 1
     endif
-    if ( AD_HIST_id(I_PRES) > 0 ) then
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_RTOT)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-    endif
-    if ( AD_HIST_id(I_TEMP) > 0 ) then
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_RTOT)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
-    endif
 
     if ( AD_HIST_id(I_POTL) > 0 ) then
-       AD_PREP_sw(I_POTT)  = 1
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_POTL)  = 1
     endif
     if (      AD_HIST_id(I_RHA) > 0 &
@@ -610,8 +581,6 @@ contains
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_QSAT)  = 1
     endif
 
@@ -625,8 +594,6 @@ contains
     endif
 
     if ( AD_HIST_id(I_Uabs) > 0 ) then
-       AD_PREP_sw(I_U)    = 1
-       AD_PREP_sw(I_V)    = 1
        AD_PREP_sw(I_Uabs) = 1
     endif
 
@@ -643,13 +610,11 @@ contains
     endif
 
     if ( AD_HIST_id(I_PBLH) > 0 ) then
-       AD_PREP_sw(I_POTT) = 1
        AD_PREP_sw(I_PBLH) = 1
     endif
 
     if ( AD_HIST_id(I_MSE) > 0 ) then
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_MSE)   = 1
     endif
 
@@ -659,28 +624,24 @@ contains
     endif
 
     if ( AD_HIST_id(I_W_PRIM) > 0 ) then
-       AD_PREP_sw(I_W)      = 1
        AD_PREP_sw(I_W_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
        AD_PREP_sw(I_W_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_U_PRIM) > 0 ) then
-       AD_PREP_sw(I_U)      = 1
        AD_PREP_sw(I_U_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
        AD_PREP_sw(I_U_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_V_PRIM) > 0 ) then
-       AD_PREP_sw(I_V)      = 1
        AD_PREP_sw(I_V_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
        AD_PREP_sw(I_V_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_POTT_PRIM) > 0 ) then
-       AD_PREP_sw(I_POTT)      = 1
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
        AD_PREP_sw(I_POTT_MEAN) = 1
@@ -730,7 +691,6 @@ contains
     end if
 
     if ( AD_HIST_id(I_W_PRIM2) > 0 ) then
-       AD_PREP_sw(I_W)       = 1
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM2) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
@@ -738,9 +698,7 @@ contains
     endif
 
     if ( AD_HIST_id(I_PT_W_PRIM) > 0 ) then
-       AD_PREP_sw(I_W)         = 1
        AD_PREP_sw(I_W_PRIM)    = 1
-       AD_PREP_sw(I_POTT)      = 1
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_PT_W_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
@@ -749,7 +707,6 @@ contains
     endif
 
     if ( AD_HIST_id(I_W_PRIM3) > 0 ) then
-       AD_PREP_sw(I_W)       = 1
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM3) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
@@ -757,9 +714,6 @@ contains
     endif
 
     if ( AD_HIST_id(I_TKE_RS) > 0 ) then
-       AD_PREP_sw(I_W)      = 1
-       AD_PREP_sw(I_U)      = 1
-       AD_PREP_sw(I_V)      = 1
        AD_PREP_sw(I_W_PRIM) = 1
        AD_PREP_sw(I_U_PRIM) = 1
        AD_PREP_sw(I_V_PRIM) = 1
@@ -776,9 +730,6 @@ contains
     endif
     if (      AD_HIST_id (I_ENGK) > 0 &
          .OR. AD_MONIT_id(I_ENGK) > 0 ) then
-       AD_PREP_sw(I_W) = 1
-       AD_PREP_sw(I_U) = 1
-       AD_PREP_sw(I_V) = 1
        AD_PREP_sw(I_ENGK) = 1
     endif
     if (      AD_HIST_id (I_ENGI) > 0 &
@@ -786,22 +737,15 @@ contains
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_ENGI)  = 1
     endif
     if (      AD_HIST_id (I_ENGT) > 0 &
          .OR. AD_MONIT_id(I_ENGT) > 0 ) then
        AD_PREP_sw(I_ENGP)  = 1
-       AD_PREP_sw(I_W)  = 1
-       AD_PREP_sw(I_U)  = 1
-       AD_PREP_sw(I_V)  = 1
        AD_PREP_sw(I_ENGK)  = 1
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_ENGI)  = 1
        AD_PREP_sw(I_ENGT)  = 1
     endif
@@ -1388,50 +1332,6 @@ contains
 
     ! prepare and history output of diagnostic variables
 
-!    if ( AD_PREP_sw(I_W) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-!
-!    if ( AD_PREP_sw(I_U) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-!
-!    if ( AD_PREP_sw(I_V) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-!
-!    if ( AD_PREP_sw(I_POTT) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-
     if ( AD_PREP_sw(I_QDRY) > 0 ) then
        call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
                           QTRC(:,:,:,:), & ! [IN]
@@ -1547,28 +1447,6 @@ contains
        enddo
        enddo
     endif
-
-!    if ( AD_PREP_sw(I_PRES) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-!
-!    if ( AD_PREP_sw(I_TEMP) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
-!       enddo
-!       enddo
-!       enddo
-!    endif
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
        call HYDROMETEOR_LHV( LHV_local(:,:,:), TEMP(:,:,:) )
