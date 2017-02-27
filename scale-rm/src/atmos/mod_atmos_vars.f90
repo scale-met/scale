@@ -1048,7 +1048,7 @@ contains
                           SFC_DENS (:,:),   & ! [OUT]
                           SFC_PRES (:,:)    ) ! [OUT]
 
-    call HIST_setpres( PRES    (:,:,:),  & ! [IN]
+    call HIST_setpres( PHYD    (:,:,:),  & ! [IN]
                        SFC_PRES(:,:)     ) ! [IN]
 
     return
