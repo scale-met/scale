@@ -165,14 +165,13 @@ contains
     real(RP), intent(out)   :: T2        (IA,JA)    ! temperature t     at  2m height
     real(RP), intent(out)   :: Q2        (IA,JA)    ! water vapor q     at  2m height
 
+    real(RP) :: ATM_QV   (IA,JA)
     real(RP) :: SFC_Z0M_t(IA,JA)
     real(RP) :: SFC_Z0H_t(IA,JA)
     real(RP) :: SFC_Z0E_t(IA,JA)
-
-    real(RP) :: SFC_QSAT(IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
-
-    real(RP) :: PBL(IA,JA)
-    real(RP) :: LHV(IA,JA)
+    real(RP) :: SFC_QSAT (IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
+    real(RP) :: LHV      (IA,JA)
+    real(RP) :: PBL      (IA,JA)
     real(RP) :: Ustar
     real(RP) :: Tstar
     real(RP) :: Qstar
@@ -182,6 +181,10 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(bulk)'
+
+    if ( I_QV > 0 ) then
+       ATM_QV(:,:) = ATM_QTRC(:,:,I_QV)
+    endif
 
     call ROUGHNESS( SFC_Z0M_t(:,:), & ! [OUT]
                     SFC_Z0H_t(:,:), & ! [OUT]
@@ -205,28 +208,27 @@ contains
     call HYDROMETEOR_LHV( LHV(:,:), ATM_TEMP(:,:) )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
-    PBL(:,:) = 100.0_RP ! tentative
+    PBL      (:,:)   = 100.0_RP ! tentative
     do j = JS, JE
     do i = IS, IE
 
-       call BULKFLUX( &
-            Ustar,              & ! [OUT]
-            Tstar,              & ! [OUT]
-            Qstar,              & ! [OUT]
-            Uabs,               & ! [OUT]
-            ATM_TEMP(i,j),      & ! [IN]
-            SFC_TEMP(i,j),      & ! [IN]
-            ATM_PRES(i,j),      & ! [IN]
-            SFC_PRES(i,j),      & ! [IN]
-            ATM_QTRC(i,j,I_QV), & ! [IN]
-            SFC_QSAT(i,j),      & ! [IN]
-            ATM_U   (i,j),      & ! [IN]
-            ATM_V   (i,j),      & ! [IN]
-            ATM_Z1  (i,j),      & ! [IN]
-            PBL     (i,j),      & ! [IN]
-            SFC_Z0M (i,j),      & ! [IN]
-            SFC_Z0H (i,j),      & ! [IN]
-            SFC_Z0E (i,j)       ) ! [IN]
+       call BULKFLUX( Ustar,         & ! [OUT]
+                      Tstar,         & ! [OUT]
+                      Qstar,         & ! [OUT]
+                      Uabs,          & ! [OUT]
+                      ATM_TEMP(i,j), & ! [IN]
+                      SFC_TEMP(i,j), & ! [IN]
+                      ATM_PRES(i,j), & ! [IN]
+                      SFC_PRES(i,j), & ! [IN]
+                      ATM_QV  (i,j), & ! [IN]
+                      SFC_QSAT(i,j), & ! [IN]
+                      ATM_U   (i,j), & ! [IN]
+                      ATM_V   (i,j), & ! [IN]
+                      ATM_Z1  (i,j), & ! [IN]
+                      PBL     (i,j), & ! [IN]
+                      SFC_Z0M (i,j), & ! [IN]
+                      SFC_Z0H (i,j), & ! [IN]
+                      SFC_Z0E (i,j)  ) ! [IN]
 
        !-----< momentum >-----
        SFLX_MW(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_W(i,j)
@@ -238,7 +240,9 @@ contains
        SFLX_LH(i,j) = -LHV(i,j) * ATM_DENS(i,j) * Ustar * Qstar * ATMOS_PHY_SF_beta
 
        !-----< mass flux >-----
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
+       if ( I_QV > 0 ) then
+          SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
+       endif
     enddo
     enddo
 
@@ -251,7 +255,7 @@ contains
        T2 (i,j) = SFC_TEMP(i,j) + ( ATM_TEMP(i,j) - SFC_TEMP(i,j) ) &
                 * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0H(i,j) ) ) &
                 / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0H(i,j) ) )
-       Q2 (i,j) = SFC_QSAT(i,j) + ( ATM_QTRC(i,j,I_QV) - SFC_QSAT(i,j) ) &
+       Q2 (i,j) = SFC_QSAT(i,j) + ( ATM_QV(i,j) - SFC_QSAT(i,j) ) &
                 * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0E(i,j) ) ) &
                 / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
     enddo

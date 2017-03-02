@@ -476,13 +476,23 @@ contains
                                    DENS(:,:,:)  ) ! [IN]
 
 !OCL XFILL
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
+       enddo
+       enddo
+       enddo
+    else
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          rh(k,i,j) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    endif
 
     call MP_CloudFraction( cldfrac(:,:,:), & ! [OUT]
                            QTRC(:,:,:,:)   ) ! [IN]
@@ -582,15 +592,17 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       do RD_k = RD_KADD+1, RD_KMAX
-          k = KS + RD_KMAX - RD_k ! reverse axis
-          zerosw = sign(0.5_RP, QTRC(k,i,j,I_QV)-EPS) + 0.5_RP
-          gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM * zerosw ! [PPM]
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          do RD_k = RD_KADD+1, RD_KMAX
+             k = KS + RD_KMAX - RD_k ! reverse axis
+             zerosw = sign(0.5_RP, QTRC(k,i,j,I_QV)-EPS) + 0.5_RP
+             gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM * zerosw ! [PPM]
+          enddo
        enddo
-    enddo
-    enddo
+       enddo
+    endif
 
 !OCL XFILL
 !OCL SERIAL

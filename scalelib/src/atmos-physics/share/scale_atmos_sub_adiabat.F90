@@ -58,11 +58,14 @@ contains
        LCL,  &
        LFC,  &
        LNB   )
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
-       I_QV
+       I_QV, &
+       I_QC
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     use scale_history, only: &
@@ -96,6 +99,11 @@ contains
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
+
+    if ( I_QV < 0 .OR. I_QC < 0 ) then
+       write(*,*) 'xxx Qv & Qc do not exist. CAPE calculation is invalid. STOP'
+       call PRC_MPIstop
+    endif
 
     ! entropy at start point
     call HYDROMETEOR_entr( ENTR_p(Kstr,:,:),   & ! [OUT]

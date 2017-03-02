@@ -330,6 +330,7 @@ contains
     real(RP) :: TEML(KA,IA,JA)  !< liquid water temperature
 
     real(RP) :: Qw(KA,IA,JA)    !< total water
+    real(RP) :: qv              !< water vapor
     real(RP) :: ql              !< liquid water
     real(RP) :: qs              !< solid water
     real(RP) :: qdry            !< dry air
@@ -511,6 +512,10 @@ contains
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE_PBL+1
+
+          qv = 0.0_RP
+          if ( I_QV > 0 ) ql = QTRC(k,i,j,I_QV)
+
           ql = 0.0_RP
           if ( I_QC > 0 ) ql = QTRC(k,i,j,I_QC)
 !          do iq = QWS, QWE
@@ -523,7 +528,7 @@ contains
 !          end do
           CALC_QDRY(qdry, QTRC, TRACER_MASS, k, i, j, iq)
 
-          Qw(k,i,j) = QTRC(k,i,j,I_QV) + ql + qs
+          Qw(k,i,j) = qv + ql + qs
 
           LH(k,i,j) = (        alpha(k,i,j) ) * LHV(k,i,j) &
                     + ( 1.0_RP-alpha(k,i,j) ) * LHS(k,i,j)
@@ -535,7 +540,7 @@ contains
 
           ! virtual potential temperature for derivertive
 !          POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
-          POTV(k,i,j) = ( qdry + (EPSTvap+1.0_RP) * QTRC(k,i,j,I_QV) ) * POTL(k,i,j)
+          POTV(k,i,j) = ( qdry + (EPSTvap+1.0_RP) * qv ) * POTL(k,i,j)
 
        end do
 
