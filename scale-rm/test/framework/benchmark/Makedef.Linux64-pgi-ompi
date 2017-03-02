@@ -11,16 +11,18 @@ FC  = mpif90
 SFC = pgfortran
 MODDIROPT = -module
 
-FFLAGS_FAST  = -Mpreprocess -m64 -O2 -fastsse -Mipa=fast,inline \
-               -Mbyteswapio -Mflushz -pc 64                     \
-               -mcmodel=medium -Msmartalloc=huge
+FFLAGS_FAST  = -Mpreprocess -m64 -fast                      \
+               -Mbyteswapio -Minfo                          \
+               -Mflushz -Mfprelaxed -Mfpapprox -Mvect=assoc -Kieee
+
+FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Ktrap=fp -Mbounds -gopt
 
 FFLAGS_DYN   = $(FFLAGS)
 
-FFLAGS_DEBUG = -Mpreprocess -m64 -O2                            \
-               -Mbyteswapio -Mflushz -pc 80                     \
-               -mcmodel=medium -Msmartalloc=huge                \
-               -pg                                              \
+FFLAGS_DEBUG = -Mpreprocess -m64 -O0             \
+               -Mbyteswapio -Minfo               \
+               -Mflushz -Ktrap=fp                \
+               -Mbounds -Mstandard -g -traceback \
                -DDEBUG
 
 
@@ -30,21 +32,27 @@ FFLAGS_DEBUG = -Mpreprocess -m64 -O2                            \
 
 CC  = mpicc
 
-CFLAGS_FAST  = -fastsse -mcmodel=medium
-CFLAGS_DEBUG = -mcmodel=medium
+CFLAGS_FAST  = -fast
+CFLAGS_DEBUG = -O0
 
 
 
 ##### Special setting
 
-# OpenMP
-# disable
-OMP =
-# enable
-#OMP = -mp
+ifeq ($(ENABLE_OPENMP),T)
+	OMP = -mp
+else
+	OMP =
+endif
 
-FFLAGS_SYSDEPEND = $(OMP) -D__PGI
-CFLAGS_SYSDEPEND = $(OMP) -D__PGI
+ifeq ($(ENABLE_OPENACC),T)
+	ACC = -acc -ta=tesla,cuda8.0,cc60 -Mcuda -Minfo=accel
+else
+	ACC =
+endif
+
+FFLAGS_SYSDEPEND = $(OMP) $(ACC) -D__PGI
+CFLAGS_SYSDEPEND = $(OMP) $(ACC) -D__PGI
 
 
 
