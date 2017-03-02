@@ -639,12 +639,12 @@ contains
                        1e-10_RP )
           Q1 = aa * ( Qw(k,i,j) - Qsl(k,i,j) ) * 0.5_RP / sigma_s
           RR = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
-          Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp(-0.5_RP*Q1**2) ), &
+          Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) ), &
                     0.0_RP ), &
                     Qw(k,i,j) * 0.5_RP )
           cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * lh(k,i,j) / CP &
                - (1.0_RP+EPSTvap) * POTT(k,i,j)
-          Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp(-Q1**2 * 0.5_RP), 0.0_RP ), 1.0_RP )
+          Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ), 0.0_RP ), 1.0_RP )
           betat = 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql - Rt * aa * bb * cc
           betaq = EPSTvap * POTT(k,i,j) + Rt * aa * cc
           n2(k,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
@@ -1186,10 +1186,12 @@ contains
     real(RP), intent(in) :: x
     real(RP) :: erf
 
-    real(RP) :: x2
+    real(RP) :: x2, tmp
 
-    x2 = x**2
-    erf = sign( sqrt( 1.0_RP - exp(-x2 * (fourpi+a*x2)/(1.0_RP+a*x2) ) ), x )
+    x2  = x*x
+    tmp = min( x2 * ( fourpi + a*x2 ) / ( 1.0_RP + a*x2 ), 1.E+3_RP )
+
+    erf = sign( sqrt( 1.0_RP-exp(-tmp) ), x )
 
     return
   end function erf

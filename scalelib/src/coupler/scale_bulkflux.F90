@@ -596,7 +596,7 @@ contains
     R = max( Z/L, 0.0_DP )
 
     ! Holtslag and DeBruin (1988)
-    fm_stable = - a*R - b*( R - c/d )*exp( -d*R ) - b*c/d
+    fm_stable = - a*R - b*( R - c/d )*exp( -min( d*R, 1.E+3_RP ) ) - b*c/d
 
     return
   end function fm_stable
@@ -626,7 +626,7 @@ contains
     R = max( Z/L, 0.0_DP )
 
     ! Beljaars and Holtslag (1991)
-    fh_stable = 1.0_DP - ( 1.0_DP + 2.0_DP/3.0_DP * a*R )**1.5_DP - b*( R - c/d )*exp( -d*R ) - b*c/d
+    fh_stable = 1.0_DP - ( 1.0_DP + 2.0_DP/3.0_DP * a*R )**1.5_DP - b*( R - c/d )*exp( -min( d*R, 1.E+3_RP ) ) - b*c/d
 
     return
   end function fh_stable
