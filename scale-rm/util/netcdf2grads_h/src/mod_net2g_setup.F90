@@ -626,6 +626,17 @@ contains
     character(4) :: cyy
     !---------------------------------------------------------------------------
 
+    if ( dd == 0 .and. mm == 0 ) then
+       write(*, *) "ERROR: day and month=0, Check INFO/TIME_STARTDATE"
+       call err_abort( 1, __LINE__, loc_setup )
+    elseif ( dd == 0 ) then
+       write(*, *) "ERROR: day=0, Check INFO/TIME_STARTDATE"
+       call err_abort( 1, __LINE__, loc_setup )
+    elseif ( mm == 0 ) then
+       write(*, *) "ERROR: month=0, Check INFO/TIME_STARTDATE"
+       call err_abort( 1, __LINE__, loc_setup )
+    endif
+
     write(csc, '(I2.2)') sc
     write(cmn, '(I2.2)') mn
     write(chh, '(I2.2)') hh

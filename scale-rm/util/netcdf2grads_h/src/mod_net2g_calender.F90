@@ -341,10 +341,8 @@ contains
              dd = 29
           endif
        endif
-    case ( 0 ) ! ideal test case
-       dd = 2147483647
     case default
-        call err_abort( 0, __LINE__, loc_cal )
+       call err_abort( 0, __LINE__, loc_cal )
     end select
 
     return

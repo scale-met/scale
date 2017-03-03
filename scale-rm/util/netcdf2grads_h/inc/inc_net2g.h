@@ -57,8 +57,8 @@
   integer,  parameter :: loc_setup  = 5
   integer,  parameter :: loc_vars   = 6
 
-  character(3) :: cmm(0:12)
-  data cmm / "IDE", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", &
+  character(3) :: cmm(12)
+  data cmm / "JAN", "FEB", "MAR", "APR", "MAY", "JUN", &
              "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" /
 
   integer,  parameter :: num_std_plev = 14
