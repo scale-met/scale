@@ -3622,16 +3622,20 @@ contains
           PQ(I_LChom,k,i,j) = 0.0_RP
           PQ(I_NChom,k,i,j) = 0.0_RP
           ! Heterogenous Freezing
-
-          tmp = min( xq(I_mp_QC,k,i,j)*(Jhet+Jhom)*dt, 1.E+3_RP)
-
+#if defined(__PGI) || defined(__ES2)
+          tmp = min( xq(I_mp_QC,k,i,j)*(Jhet+Jhom)*dt, 1.E+3_RP) ! apply exp limiter
           PQ(I_LChet,k,i,j) = -rdt*rhoq(I_QC,k,i,j)*( 1.0_RP - exp( -coef_m2_c*tmp ) )
           PQ(I_NChet,k,i,j) = -rdt*rhoq(I_NC,k,i,j)*( 1.0_RP - exp( -          tmp ) )
 
-          tmp = min( xq(I_mp_QR,k,i,j)*(Jhet+Jhom)*dt, 1.E+3_RP)
-
+          tmp = min( xq(I_mp_QR,k,i,j)*(Jhet+Jhom)*dt, 1.E+3_RP) ! apply exp limiter
           PQ(I_LRhet,k,i,j) = -rdt*rhoq(I_QR,k,i,j)*( 1.0_RP - exp( -coef_m2_r*tmp ) )
           PQ(I_NRhet,k,i,j) = -rdt*rhoq(I_NR,k,i,j)*( 1.0_RP - exp( -          tmp ) )
+#else
+          PQ(I_LChet,k,i,j) = -rdt*rhoq(I_QC,k,i,j)*( 1.0_RP - exp( -coef_m2_c*xq(I_mp_QC,k,i,j)*(Jhet+Jhom)*dt ) )
+          PQ(I_NChet,k,i,j) = -rdt*rhoq(I_NC,k,i,j)*( 1.0_RP - exp( -          xq(I_mp_QC,k,i,j)*(Jhet+Jhom)*dt ) )
+          PQ(I_LRhet,k,i,j) = -rdt*rhoq(I_QR,k,i,j)*( 1.0_RP - exp( -coef_m2_r*xq(I_mp_QR,k,i,j)*(Jhet+Jhom)*dt ) )
+          PQ(I_NRhet,k,i,j) = -rdt*rhoq(I_NR,k,i,j)*( 1.0_RP - exp( -          xq(I_mp_QR,k,i,j)*(Jhet+Jhom)*dt ) )
+#endif
        end do
     end do
     end do

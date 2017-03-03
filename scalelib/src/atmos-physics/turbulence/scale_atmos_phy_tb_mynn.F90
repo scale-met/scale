@@ -639,12 +639,20 @@ contains
                        1e-10_RP )
           Q1 = aa * ( Qw(k,i,j) - Qsl(k,i,j) ) * 0.5_RP / sigma_s
           RR = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
-          Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) ), &
+#if defined(__PGI) || defined(__ES2)
+          Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) ), & ! apply exp limiter
+#else
+          Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp(-0.5_RP*Q1**2) ), &
+#endif
                     0.0_RP ), &
                     Qw(k,i,j) * 0.5_RP )
           cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * lh(k,i,j) / CP &
                - (1.0_RP+EPSTvap) * POTT(k,i,j)
-          Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ), 0.0_RP ), 1.0_RP )
+#if defined(__PGI) || defined(__ES2)
+          Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ), 0.0_RP ), 1.0_RP ) ! apply exp limiter
+#else
+          Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp(-Q1**2 * 0.5_RP), 0.0_RP ), 1.0_RP )
+#endif
           betat = 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql - Rt * aa * bb * cc
           betaq = EPSTvap * POTT(k,i,j) + Rt * aa * cc
           n2(k,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
@@ -1189,9 +1197,13 @@ contains
     real(RP) :: x2, tmp
 
     x2  = x*x
-    tmp = min( x2 * ( fourpi + a*x2 ) / ( 1.0_RP + a*x2 ), 1.E+3_RP )
 
-    erf = sign( sqrt( 1.0_RP-exp(-tmp) ), x )
+#if defined(__PGI) || defined(__ES2)
+    tmp = min( x2 * ( fourpi + a*x2 ) / ( 1.0_RP + a*x2 ), 1.E+3_RP ) ! apply exp limiter
+    erf = sign( sqrt( 1.0_RP - exp(-tmp) ), x )
+#else
+    erf = sign( sqrt( 1.0_RP - exp(-x2 * (fourpi+a*x2)/(1.0_RP+a*x2) ) ), x )
+#endif
 
     return
   end function erf

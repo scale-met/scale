@@ -1964,7 +1964,11 @@ contains
 
           g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
 
-          Tdir0(k,i,j,icloud) = exp( -min( tau_new/cosSZA(i,j), 1.E+3_RP ) )
+#if defined(__PGI) || defined(__ES2)
+          Tdir0(k,i,j,icloud) = exp( -min( tau_new/cosSZA(i,j), 1.E+3_RP ) ) ! apply exp limiter
+#else
+          Tdir0(k,i,j,icloud) = exp(-tau_new/cosSZA(i,j))
+#endif
 
           factor   = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) )
           b_new0 = b(k,i,j,0,icloud)
@@ -1992,7 +1996,11 @@ contains
           !X     =  max( ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn, 1.E-30 )
           !Y     =  max( ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn, 1.E-30 )
           lamda = sqrt(X*Y)
-          E     = exp( -min( lamda*tau_new, 1.E+3_RP ) )
+#if defined(__PGI) || defined(__ES2)
+          E     = exp( -min( lamda*tau_new, 1.E+3_RP ) ) ! apply exp limiter
+#else
+          E     = exp(-lamda*tau_new)
+#endif
 
           !--- A+/A-, B+/B-
           Apls_mns = ( X * ( 1.0_RP+E ) - lamda * ( 1.0_RP-E ) ) &
