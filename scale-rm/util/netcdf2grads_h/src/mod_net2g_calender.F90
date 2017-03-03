@@ -81,6 +81,20 @@ contains
     mn = TIME_STARTDATE(5)
     sc = TIME_STARTDATE(6)
 
+    if ( dd == 0 .and. mm == 0 ) then
+       write(*, *) "ERROR: day and month=0 are not available."
+       write(*, *) "***** Check INFO/TIME_STARTDATE"
+       call err_abort( 1, __LINE__, loc_cal )
+    elseif ( dd == 0 ) then
+       write(*, *) "ERROR: day=0 is not available."
+       write(*, *) "***** Check INFO/TIME_STARTDATE"
+       call err_abort( 1, __LINE__, loc_cal )
+    elseif ( mm == 0 ) then
+       write(*, *) "ERROR: month=0 is not available."
+       write(*, *) "***** Check INFO/TIME_STARTDATE"
+       call err_abort( 1, __LINE__, loc_cal )
+    endif
+
     if ( START_TSTEP > 1 ) then
        do i=1, START_TSTEP-1
           call cal_increment( yy, mm, dd, hh, mn, sc )
