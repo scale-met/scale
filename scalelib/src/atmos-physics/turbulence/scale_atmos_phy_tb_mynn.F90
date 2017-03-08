@@ -330,6 +330,7 @@ contains
     real(RP) :: TEML(KA,IA,JA)  !< liquid water temperature
 
     real(RP) :: Qw(KA,IA,JA)    !< total water
+    real(RP) :: qv              !< water vapor
     real(RP) :: ql              !< liquid water
     real(RP) :: qs              !< solid water
     real(RP) :: qdry            !< dry air
@@ -511,6 +512,10 @@ contains
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE_PBL+1
+
+          qv = 0.0_RP
+          if ( I_QV > 0 ) ql = QTRC(k,i,j,I_QV)
+
           ql = 0.0_RP
           if ( I_QC > 0 ) ql = QTRC(k,i,j,I_QC)
 !          do iq = QWS, QWE
@@ -523,7 +528,7 @@ contains
 !          end do
           CALC_QDRY(qdry, QTRC, TRACER_MASS, k, i, j, iq)
 
-          Qw(k,i,j) = QTRC(k,i,j,I_QV) + ql + qs
+          Qw(k,i,j) = qv + ql + qs
 
           LH(k,i,j) = (        alpha(k,i,j) ) * LHV(k,i,j) &
                     + ( 1.0_RP-alpha(k,i,j) ) * LHS(k,i,j)
@@ -535,7 +540,7 @@ contains
 
           ! virtual potential temperature for derivertive
 !          POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
-          POTV(k,i,j) = ( qdry + (EPSTvap+1.0_RP) * QTRC(k,i,j,I_QV) ) * POTL(k,i,j)
+          POTV(k,i,j) = ( qdry + (EPSTvap+1.0_RP) * qv ) * POTL(k,i,j)
 
        end do
 
@@ -634,12 +639,20 @@ contains
                        1e-10_RP )
           Q1 = aa * ( Qw(k,i,j) - Qsl(k,i,j) ) * 0.5_RP / sigma_s
           RR = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
+#if defined(__PGI) || defined(__ES2)
+          Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) ), & ! apply exp limiter
+#else
           Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp(-0.5_RP*Q1**2) ), &
+#endif
                     0.0_RP ), &
                     Qw(k,i,j) * 0.5_RP )
           cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * lh(k,i,j) / CP &
                - (1.0_RP+EPSTvap) * POTT(k,i,j)
+#if defined(__PGI) || defined(__ES2)
+          Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ), 0.0_RP ), 1.0_RP ) ! apply exp limiter
+#else
           Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp(-Q1**2 * 0.5_RP), 0.0_RP ), 1.0_RP )
+#endif
           betat = 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql - Rt * aa * bb * cc
           betaq = EPSTvap * POTT(k,i,j) + Rt * aa * cc
           n2(k,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
@@ -1181,10 +1194,16 @@ contains
     real(RP), intent(in) :: x
     real(RP) :: erf
 
-    real(RP) :: x2
+    real(RP) :: x2, tmp
 
-    x2 = x**2
+    x2  = x*x
+
+#if defined(__PGI) || defined(__ES2)
+    tmp = min( x2 * ( fourpi + a*x2 ) / ( 1.0_RP + a*x2 ), 1.E+3_RP ) ! apply exp limiter
+    erf = sign( sqrt( 1.0_RP - exp(-tmp) ), x )
+#else
     erf = sign( sqrt( 1.0_RP - exp(-x2 * (fourpi+a*x2)/(1.0_RP+a*x2) ) ), x )
+#endif
 
     return
   end function erf

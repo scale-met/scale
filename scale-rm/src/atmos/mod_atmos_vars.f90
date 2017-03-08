@@ -2546,7 +2546,9 @@ contains
     call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
 
     ! total evapolation
-    call MONIT_put( AD_MONIT_id(I_EVAP), SFLX_QTRC(:,:,I_QV) )
+    if ( I_QV > 0 ) then
+       call MONIT_put( AD_MONIT_id(I_EVAP), SFLX_QTRC(:,:,I_QV) )
+    endif
 
     ! total precipitation
 !OCL XFILL

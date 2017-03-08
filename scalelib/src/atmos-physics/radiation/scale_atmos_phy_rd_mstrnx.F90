@@ -476,13 +476,23 @@ contains
                                    DENS(:,:,:)  ) ! [IN]
 
 !OCL XFILL
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
+       enddo
+       enddo
+       enddo
+    else
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          rh(k,i,j) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    endif
 
     call MP_CloudFraction( cldfrac(:,:,:), & ! [OUT]
                            QTRC(:,:,:,:)   ) ! [IN]
@@ -582,15 +592,17 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       do RD_k = RD_KADD+1, RD_KMAX
-          k = KS + RD_KMAX - RD_k ! reverse axis
-          zerosw = sign(0.5_RP, QTRC(k,i,j,I_QV)-EPS) + 0.5_RP
-          gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM * zerosw ! [PPM]
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          do RD_k = RD_KADD+1, RD_KMAX
+             k = KS + RD_KMAX - RD_k ! reverse axis
+             zerosw = sign(0.5_RP, QTRC(k,i,j,I_QV)-EPS) + 0.5_RP
+             gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM * zerosw ! [PPM]
+          enddo
        enddo
-    enddo
-    enddo
+       enddo
+    endif
 
 !OCL XFILL
 !OCL SERIAL
@@ -1952,7 +1964,11 @@ contains
 
           g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
 
+#if defined(__PGI) || defined(__ES2)
+          Tdir0(k,i,j,icloud) = exp( -min( tau_new/cosSZA(i,j), 1.E+3_RP ) ) ! apply exp limiter
+#else
           Tdir0(k,i,j,icloud) = exp(-tau_new/cosSZA(i,j))
+#endif
 
           factor   = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) )
           b_new0 = b(k,i,j,0,icloud)
@@ -1980,7 +1996,11 @@ contains
           !X     =  max( ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn, 1.E-30 )
           !Y     =  max( ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn, 1.E-30 )
           lamda = sqrt(X*Y)
+#if defined(__PGI) || defined(__ES2)
+          E     = exp( -min( lamda*tau_new, 1.E+3_RP ) ) ! apply exp limiter
+#else
           E     = exp(-lamda*tau_new)
+#endif
 
           !--- A+/A-, B+/B-
           Apls_mns = ( X * ( 1.0_RP+E ) - lamda * ( 1.0_RP-E ) ) &
