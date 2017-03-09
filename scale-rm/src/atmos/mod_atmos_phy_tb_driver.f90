@@ -117,7 +117,6 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB)
 
-
     ! initialize
     if ( I_TKE > 0 ) then
        do j = JS, JE

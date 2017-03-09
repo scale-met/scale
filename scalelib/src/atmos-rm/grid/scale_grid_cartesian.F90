@@ -317,6 +317,8 @@ contains
     integer :: kbuff, ibuff, jbuff
     integer :: kmain, imain, jmain
 
+    logical :: use_user_input
+
     integer :: k, i, j, ii, jj
     !---------------------------------------------------------------------------
 
@@ -344,7 +346,7 @@ contains
        call PRC_MPIstop
     endif
 
-    ! horizontal coordinate (global domaim)
+    ! horizontal coordinate (global domain)
     GRID_FXG(IHALO) = GRID_OFFSET_X
     do i = IHALO-1, 0, -1
        GRID_FXG(i) = GRID_FXG(i+1) - buffx(ibuff)
@@ -385,7 +387,7 @@ contains
        GRID_FDXG(i) = GRID_CXG(i+1)-GRID_CXG(i)
     end do
 
-    ! calc buffer factor (global domaim)
+    ! calc buffer factor (global domain)
     GRID_CBFXG(:) = 0.0_RP
     GRID_FBFXG(:) = 0.0_RP
     do i = 1, IHALO
@@ -432,7 +434,7 @@ contains
        call PRC_MPIstop
     endif
 
-    ! horizontal coordinate (global domaim)
+    ! horizontal coordinate (global domain)
     GRID_FYG(JHALO) = GRID_OFFSET_Y
     do j = JHALO-1, 0, -1
        GRID_FYG(j) = GRID_FYG(j+1) - buffy(jbuff)
@@ -473,7 +475,7 @@ contains
        GRID_FDYG(j) = GRID_CYG(j+1)-GRID_CYG(j)
     end do
 
-    ! calc buffer factor (global domaim)
+    ! calc buffer factor (global domain)
     GRID_CBFYG(:) = 0.0_RP
     GRID_FBFYG(:) = 0.0_RP
     do j = 1, JHALO
@@ -507,13 +509,29 @@ contains
 
     allocate( buffz(0:KA) )
 
-    if ( minval(FZ(1:KMAX)) > 0.0_RP ) then ! input from namelist
+    use_user_input = .false.
+    if ( maxval(FZ(1:KMAX_user_lim)) > 0.0_RP ) then ! try to use input from namelist
        if( IO_L ) write(IO_FID_LOG,*) '*** Z coordinate is given from NAMELIST.'
 
        if ( KMAX < 2 ) then
-          write(*,*) 'xxx If you use FZ, KMAX must be larger than 1. Check!', KMAX
+          write(*,*) 'xxx KMAX must be larger than 1. Check!', KMAX
           call PRC_MPIstop
        endif
+
+       if ( KMAX > KMAX_user_lim ) then
+          write(*,*) 'xxx KMAX must be smaller than ', KMAX_user_lim, '. Check!', KMAX
+          call PRC_MPIstop
+       endif
+
+       if ( minval(FZ(1:KMAX)) <= 0.0_RP ) then
+          write(*,*) 'xxx FZ must be positive. Check! minval(FZ(1:KMAX))=', minval(FZ(1:KMAX))
+          call PRC_MPIstop
+       endif
+
+       use_user_input = .true.
+    endif
+
+    if ( use_user_input ) then ! input from namelist
 
        ! Z-direction
        ! calculate buffer grid size
@@ -532,7 +550,7 @@ contains
           call PRC_MPIstop
        endif
 
-       ! vartical coordinate (local=global domaim)
+       ! vartical coordinate (local=global domain)
        GRID_FZ(KS-1) = 0.0_RP
 
        DZ = FZ(1)
@@ -574,7 +592,7 @@ contains
           call PRC_MPIstop
        endif
 
-       ! vartical coordinate (local=global domaim)
+       ! vartical coordinate (local=global domain)
        GRID_FZ(KS-1) = 0.0_RP
        do k = KS-2, 0, -1
           GRID_FZ(k) = GRID_FZ(k+1) - DZ
@@ -603,7 +621,7 @@ contains
 
     endif
 
-    ! calc buffer factor (global domaim)
+    ! calc buffer factor (global domain)
     GRID_CBFZ(:) = 0.0_RP
     GRID_FBFZ(:) = 0.0_RP
     if ( kbuff > 0 ) then
@@ -622,7 +640,7 @@ contains
 
     deallocate( buffz )
 
-    ! vartical coordinate (local domaim)
+    ! vartical coordinate (local domain)
     do k = 1, KA
        GRID_CDZ (k) = GRID_FZ(k) - GRID_FZ(k-1)
        GRID_RCDZ(k) = 1.0_RP / GRID_CDZ(k)
@@ -634,7 +652,7 @@ contains
     enddo
 
     ! X-direction
-    ! horizontal coordinate (local domaim)
+    ! horizontal coordinate (local domain)
     do i = 0, IA
        ii = i + PRC_2Drank(PRC_myrank,1) * IMAX
 
@@ -658,7 +676,7 @@ contains
     enddo
 
     ! Y-direction
-    ! horizontal coordinate (local domaim)
+    ! horizontal coordinate (local domain)
     do j = 0, JA
        jj = j + PRC_2Drank(PRC_myrank,2) * JMAX
 
@@ -766,8 +784,8 @@ contains
        enddo
 
        k = 0
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I5,A)') &
+       '|              ',GRID_FZ(k),'                  ',k,' |'
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
        '|===============================================|'
