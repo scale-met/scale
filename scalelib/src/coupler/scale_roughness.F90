@@ -150,7 +150,7 @@ contains
        ROUGHNESS => ROUGHNESS_const
        call ROUGHNESS_const_setup
     case default
-       write(*,*) 'xxx Unsupported BULKFLUX_type. STOP'
+       write(*,*) 'xxx Unsupported ROUGHNESS_type. STOP'
        call PRC_MPIstop
     end select
 
