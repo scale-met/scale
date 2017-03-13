@@ -178,7 +178,7 @@ contains
     real(RP) :: Qstar        ! friction mixing rate [kg/kg]
     real(RP) :: Uabs         ! modified absolute velocity [m/s]
 
-    real(RP) :: SQV          ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
 
     integer :: i, j
@@ -201,7 +201,7 @@ contains
       if( is_OCN(i,j) ) then
 
         ! saturation at the surface
-        call qsat( SQV,       & ! [OUT]
+        call qsat( QVsat,     & ! [OUT]
                    SST1(i,j), & ! [IN]
                    PRSS(i,j)  ) ! [IN]
 
@@ -215,7 +215,7 @@ contains
             PRSA(i,j), & ! [IN]
             PRSS(i,j), & ! [IN]
             QVA (i,j), & ! [IN]
-            SQV,       & ! [IN]
+            QVsat,     & ! [IN]
             UA  (i,j), & ! [IN]
             VA  (i,j), & ! [IN]
             Z1  (i,j), & ! [IN]
@@ -241,7 +241,7 @@ contains
         V10(i,j) = VA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
         T2 (i,j) = SST1(i,j) + ( TMPA(i,j) - SST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
                                                          / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-        Q2 (i,j) = SQV       + (  QVA(i,j) - SQV       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+        Q2 (i,j) = QVsat     + (  QVA(i,j) - QVsat     ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
                                                          / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
 
       else

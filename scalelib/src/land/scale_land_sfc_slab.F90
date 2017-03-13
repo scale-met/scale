@@ -223,7 +223,8 @@ contains
     real(RP) :: Tstar, dTstar ! friction potential temperature [K]
     real(RP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
     real(RP) :: Uabs, dUabs   ! modified absolute velocity [m/s]
-    real(RP) :: SQV, dSQV     ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVsat, dQVsat ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVS, dQVS     ! water vapor mixing ratio at surface [kg/kg]
 
     real(RP) :: LHV(IA,JA)    ! latent heat of vaporization [J/kg]
     real(RP) :: dt
@@ -258,12 +259,15 @@ contains
           ! modified Newton-Raphson method (Tomita 2009)
           do n = 1, LAND_SFC_SLAB_itr_max
 
-            call qsat( SQV,       & ! [OUT]
+            call qsat( QVsat,     & ! [OUT]
                        LST1(i,j), & ! [IN]
                        PRSS(i,j)  ) ! [IN]
-            call qsat( dSQV,           & ! [OUT]
+            call qsat( dQVsat,         & ! [OUT]
                        LST1(i,j)+dTS0, & ! [IN]
                        PRSS(i,j)       ) ! [IN]
+
+            QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
+            dQVS = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * dQVsat
 
             call BULKFLUX( &
                 Ustar,     & ! [OUT]
@@ -275,7 +279,7 @@ contains
                 PRSA(i,j), & ! [IN]
                 PRSS(i,j), & ! [IN]
                 QVA (i,j), & ! [IN]
-                SQV,       & ! [IN]
+                QVS,       & ! [IN]
                 UA  (i,j), & ! [IN]
                 VA  (i,j), & ! [IN]
                 Z1  (i,j), & ! [IN]
@@ -294,7 +298,7 @@ contains
                 PRSA(i,j),      & ! [IN]
                 PRSS(i,j),      & ! [IN]
                 QVA (i,j),      & ! [IN]
-                dSQV,           & ! [IN]
+                dQVS,           & ! [IN]
                 UA  (i,j),      & ! [IN]
                 VA  (i,j),      & ! [IN]
                 Z1  (i,j),      & ! [IN]
@@ -307,13 +311,13 @@ contains
             res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
                 + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
                 + CPdry    * RHOA(i,j) * Ustar * Tstar &
-                + LHV(i,j) * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
+                + LHV(i,j) * RHOA(i,j) * Ustar * Qstar &
                 - 2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 
             ! calculation for d(residual)/dLST
             dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
                  + CPdry    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
-                 + LHV(i,j) * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
+                 + LHV(i,j) * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) &
                  - 2.0_RP * TCS(i,j) / DZG(i,j)
 
             ! convergence test with residual and error levels
@@ -473,9 +477,11 @@ contains
 
       if( is_LND(i,j) ) then
 
-        call qsat( SQV,       & ! [OUT]
+        call qsat( QVsat,     & ! [OUT]
                    LST1(i,j), & ! [IN]
                    PRSS(i,j)  ) ! [IN]
+
+        QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
         call BULKFLUX( &
             Ustar,     & ! [OUT]
@@ -487,7 +493,7 @@ contains
             PRSA(i,j), & ! [IN]
             PRSS(i,j), & ! [IN]
             QVA (i,j), & ! [IN]
-            SQV,       & ! [IN]
+            QVS,       & ! [IN]
             UA  (i,j), & ! [IN]
             VA  (i,j), & ! [IN]
             Z1  (i,j), & ! [IN]
@@ -500,7 +506,7 @@ contains
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
         SHFLX(i,j) = -CPdry    * RHOA(i,j) * Ustar * Tstar
-        LHFLX(i,j) = -LHV(i,j) * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
+        LHFLX(i,j) = -LHV(i,j) * RHOA(i,j) * Ustar * Qstar
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 
         ! calculation for residual
@@ -516,7 +522,7 @@ contains
         V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
         T2 (i,j) = LST1(i,j) + ( TMPA(i,j) - LST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
                                                          / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-        Q2 (i,j) = SQV       + (  QVA(i,j) - SQV       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+        Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
                                                          / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
       else
 

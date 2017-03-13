@@ -170,6 +170,7 @@ contains
     real(RP) :: SFC_Z0H_t(IA,JA)
     real(RP) :: SFC_Z0E_t(IA,JA)
     real(RP) :: SFC_QSAT (IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
+    real(RP) :: SFC_QV   (IA,JA) ! water vapor mixing ratio [kg/kg]
     real(RP) :: LHV      (IA,JA)
     real(RP) :: PBL      (IA,JA)
     real(RP) :: Ustar
@@ -207,6 +208,8 @@ contains
 
     call HYDROMETEOR_LHV( LHV(:,:), ATM_TEMP(:,:) )
 
+    SFC_QV(:,:) = ( 1.0_RP - ATMOS_PHY_SF_beta ) * ATM_QV(:,:) + ATMOS_PHY_SF_beta * SFC_QSAT(:,:)
+
     SFLX_QTRC(:,:,:) = 0.0_RP
     PBL      (:,:)   = 100.0_RP ! tentative
     do j = JS, JE
@@ -221,7 +224,7 @@ contains
                       ATM_PRES(i,j), & ! [IN]
                       SFC_PRES(i,j), & ! [IN]
                       ATM_QV  (i,j), & ! [IN]
-                      SFC_QSAT(i,j), & ! [IN]
+                      SFC_QV  (i,j), & ! [IN]
                       ATM_U   (i,j), & ! [IN]
                       ATM_V   (i,j), & ! [IN]
                       ATM_Z1  (i,j), & ! [IN]
@@ -237,7 +240,7 @@ contains
 
        !-----< heat flux >-----
        SFLX_SH(i,j) = -CPdry    * ATM_DENS(i,j) * Ustar * Tstar
-       SFLX_LH(i,j) = -LHV(i,j) * ATM_DENS(i,j) * Ustar * Qstar * ATMOS_PHY_SF_beta
+       SFLX_LH(i,j) = -LHV(i,j) * ATM_DENS(i,j) * Ustar * Qstar
 
        !-----< mass flux >-----
        if ( I_QV > 0 ) then
@@ -255,7 +258,7 @@ contains
        T2 (i,j) = SFC_TEMP(i,j) + ( ATM_TEMP(i,j) - SFC_TEMP(i,j) ) &
                 * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0H(i,j) ) ) &
                 / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0H(i,j) ) )
-       Q2 (i,j) = SFC_QSAT(i,j) + ( ATM_QV(i,j) - SFC_QSAT(i,j) ) &
+       Q2 (i,j) = SFC_QV(i,j) + ( ATM_QV(i,j) - SFC_QV(i,j) ) &
                 * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0E(i,j) ) ) &
                 / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
     enddo
