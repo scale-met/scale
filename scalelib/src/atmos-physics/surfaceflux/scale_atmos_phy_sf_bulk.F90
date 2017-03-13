@@ -173,10 +173,12 @@ contains
     real(RP) :: SFC_QV   (IA,JA) ! water vapor mixing ratio [kg/kg]
     real(RP) :: LHV      (IA,JA)
     real(RP) :: PBL      (IA,JA)
-    real(RP) :: Ustar
-    real(RP) :: Tstar
-    real(RP) :: Qstar
-    real(RP) :: Uabs
+
+    real(RP) :: Ustar, Ustar10, Ustar2 ! friction velocity [m]
+    real(RP) :: Tstar, Tstar10, Tstar2 ! friction temperature [K]
+    real(RP) :: Qstar, Qstar10, Qstar2 ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs,  Uabs10,  Uabs2  ! modified absolute velocity [m/s]
+    real(RP) :: CVTH
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -233,6 +235,44 @@ contains
                       SFC_Z0H (i,j), & ! [IN]
                       SFC_Z0E (i,j)  ) ! [IN]
 
+       ! for 10m wind
+       call BULKFLUX( Ustar10,       & ! [OUT]
+                      Tstar10,       & ! [OUT]
+                      Qstar10,       & ! [OUT]
+                      Uabs10,        & ! [OUT]
+                      ATM_TEMP(i,j), & ! [IN]
+                      SFC_TEMP(i,j), & ! [IN]
+                      ATM_PRES(i,j), & ! [IN]
+                      SFC_PRES(i,j), & ! [IN]
+                      ATM_QV  (i,j), & ! [IN]
+                      SFC_QV  (i,j), & ! [IN]
+                      ATM_U   (i,j), & ! [IN]
+                      ATM_V   (i,j), & ! [IN]
+                      10.0_RP,       & ! [IN]
+                      PBL     (i,j), & ! [IN]
+                      SFC_Z0M (i,j), & ! [IN]
+                      SFC_Z0H (i,j), & ! [IN]
+                      SFC_Z0E (i,j)  ) ! [IN]
+
+       ! for 2m temperature / mixing ratio
+       call BULKFLUX( Ustar2,        & ! [OUT]
+                      Tstar2,        & ! [OUT]
+                      Qstar2,        & ! [OUT]
+                      Uabs2,         & ! [OUT]
+                      ATM_TEMP(i,j), & ! [IN]
+                      SFC_TEMP(i,j), & ! [IN]
+                      ATM_PRES(i,j), & ! [IN]
+                      SFC_PRES(i,j), & ! [IN]
+                      ATM_QV  (i,j), & ! [IN]
+                      SFC_QV  (i,j), & ! [IN]
+                      ATM_U   (i,j), & ! [IN]
+                      ATM_V   (i,j), & ! [IN]
+                      2.0_RP,        & ! [IN]
+                      PBL     (i,j), & ! [IN]
+                      SFC_Z0M (i,j), & ! [IN]
+                      SFC_Z0H (i,j), & ! [IN]
+                      SFC_Z0E (i,j)  ) ! [IN]
+
        !-----< momentum >-----
        SFLX_MW(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_W(i,j)
        SFLX_MU(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_U(i,j)
@@ -246,21 +286,14 @@ contains
        if ( I_QV > 0 ) then
           SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
        endif
-    enddo
-    enddo
 
-    !-----< U10, T2, q2 >-----
+       CVTH = ( SFC_PRES(i,j) / ATM_PRES(i,j) ) ** ( Rdry / Cpdry )
 
-    do j = JS, JE
-    do i = IS, IE
-       U10(i,j) = ATM_U(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
-       V10(i,j) = ATM_V(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
-       T2 (i,j) = SFC_TEMP(i,j) + ( ATM_TEMP(i,j) - SFC_TEMP(i,j) ) &
-                * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0H(i,j) ) ) &
-                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0H(i,j) ) )
-       Q2 (i,j) = SFC_QV(i,j) + ( ATM_QV(i,j) - SFC_QV(i,j) ) &
-                * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0E(i,j) ) ) &
-                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
+       !-----< U10, T2, q2 >-----
+       U10(i,j) = ATM_U(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
+       V10(i,j) = ATM_V(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
+       T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SFC_TEMP(i,j) + Tstar / Tstar2 * ATM_TEMP(i,j) * CVTH
+       Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * SFC_QV  (i,j) + Qstar / Qstar2 * ATM_QV  (i,j)
     enddo
     enddo
 

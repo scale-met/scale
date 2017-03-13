@@ -152,7 +152,6 @@ contains
        PRC_myrank,  &
        PRC_MPIstop
     use scale_const, only: &
-      EPS   => CONST_EPS,   &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB
@@ -219,14 +218,15 @@ contains
     real(RP) :: oldres ! residual in previous step
     real(RP) :: redf   ! reduced factor
 
-    real(RP) :: Ustar, dUstar ! friction velocity [m]
-    real(RP) :: Tstar, dTstar ! friction potential temperature [K]
-    real(RP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
-    real(RP) :: Uabs, dUabs   ! modified absolute velocity [m/s]
+    real(RP) :: Ustar, Ustar10, Ustar2, dUstar ! friction velocity [m]
+    real(RP) :: Tstar, Tstar10, Tstar2, dTstar ! friction potential temperature [K]
+    real(RP) :: Qstar, Qstar10, Qstar2, dQstar ! friction water vapor mass ratio [kg/kg]
+    real(RP) :: Uabs,  Uabs10,  Uabs2,  dUabs  ! modified absolute velocity [m/s]
     real(RP) :: QVsat, dQVsat ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: QVS, dQVS     ! water vapor mixing ratio at surface [kg/kg]
 
     real(RP) :: LHV(IA,JA)    ! latent heat of vaporization [J/kg]
+    real(RP) :: CVTH
     real(RP) :: dt
 
     integer  :: i, j, n
@@ -502,6 +502,46 @@ contains
             Z0H (i,j), & ! [IN]
             Z0E (i,j)  ) ! [IN]
 
+        ! for 10m wind
+        call BULKFLUX( &
+            Ustar10,   & ! [OUT]
+            Tstar10,   & ! [OUT]
+            Qstar10,   & ! [OUT]
+            Uabs10,    & ! [OUT]
+            TMPA(i,j), & ! [IN]
+            LST1(i,j), & ! [IN]
+            PRSA(i,j), & ! [IN]
+            PRSS(i,j), & ! [IN]
+            QVA (i,j), & ! [IN]
+            QVS,       & ! [IN]
+            UA  (i,j), & ! [IN]
+            VA  (i,j), & ! [IN]
+            10.0_RP,   & ! [IN]
+            PBL (i,j), & ! [IN]
+            Z0M (i,j), & ! [IN]
+            Z0H (i,j), & ! [IN]
+            Z0E (i,j)  ) ! [IN]
+
+        ! for 2m temperature / mixing ratio
+        call BULKFLUX( &
+            Ustar2,    & ! [OUT]
+            Tstar2,    & ! [OUT]
+            Qstar2,    & ! [OUT]
+            Uabs2,     & ! [OUT]
+            TMPA(i,j), & ! [IN]
+            LST1(i,j), & ! [IN]
+            PRSA(i,j), & ! [IN]
+            PRSS(i,j), & ! [IN]
+            QVA (i,j), & ! [IN]
+            QVS,       & ! [IN]
+            UA  (i,j), & ! [IN]
+            VA  (i,j), & ! [IN]
+            2.0_RP,    & ! [IN]
+            PBL (i,j), & ! [IN]
+            Z0M (i,j), & ! [IN]
+            Z0H (i,j), & ! [IN]
+            Z0E (i,j)  ) ! [IN]
+
         ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
@@ -518,12 +558,13 @@ contains
         GHFLX(i,j) = GHFLX(i,j) - res
 
         ! diagnostic variables
-        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        T2 (i,j) = LST1(i,j) + ( TMPA(i,j) - LST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-        Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
+        CVTH = ( PRSS(i,j) / PRSA(i,j) ) ** ( Rdry / Cpdry )
+
+        U10(i,j) = UA(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
+        V10(i,j) = VA(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
+        T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * LST1(i,j) + Tstar / Tstar2 * TMPA(i,j) * CVTH
+        Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVS       + Qstar / Qstar2 * QVA (i,j)
+
       else
 
         ! not calculate surface flux
