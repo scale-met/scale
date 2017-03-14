@@ -194,10 +194,13 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\
 	scale_land_phy.o	\
+	scale_land_phy_const.o	\
 	scale_land_phy_slab.o	\
 	scale_land_phy_matsiro.o	\
 	scale_land_sfc.o	\
-	scale_land_sfc_slab.o	\
+	scale_land_sfc_const.o	\
+	scale_land_sfc_thin-slab.o	\
+	scale_land_sfc_thick-slab.o	\
 	scale_landuse.o	\
 	scale_rm_process.o	\
 	scale_rm_statistics.o	\
@@ -205,9 +208,11 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_matrix.o	\
 	scale_monitor.o	\
 	scale_ocean_phy.o	\
+	scale_ocean_phy_const.o	\
 	scale_ocean_phy_slab.o	\
 	scale_ocean_phy_file.o	\
 	scale_ocean_sfc.o	\
+	scale_ocean_sfc_const.o	\
 	scale_ocean_sfc_slab.o	\
 	scale_precision.o	\
 	scale_process.o	\

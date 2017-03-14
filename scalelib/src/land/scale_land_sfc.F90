@@ -124,9 +124,15 @@ contains
   subroutine LAND_SFC_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_land_sfc_slab, only: &
-       LAND_SFC_SLAB_setup, &
-       LAND_SFC_SLAB
+    use scale_land_sfc_const, only: &
+       LAND_SFC_CONST_setup, &
+       LAND_SFC_CONST
+    use scale_land_sfc_thin_slab, only: &
+       LAND_SFC_THIN_SLAB_setup, &
+       LAND_SFC_THIN_SLAB
+    use scale_land_sfc_thick_slab, only: &
+       LAND_SFC_THICK_SLAB_setup, &
+       LAND_SFC_THICK_SLAB
     implicit none
 
     character(len=*), intent(in) :: LAND_TYPE
@@ -134,11 +140,14 @@ contains
 
     select case( LAND_TYPE )
     case( 'CONST' )
-       call LAND_SFC_SLAB_setup( LAND_TYPE )
-       LAND_SFC => LAND_SFC_SLAB
-    case( 'SLAB' )
-       call LAND_SFC_SLAB_setup( LAND_TYPE )
-       LAND_SFC => LAND_SFC_SLAB
+       call LAND_SFC_CONST_setup( LAND_TYPE )
+       LAND_SFC => LAND_SFC_CONST
+    case( 'THIN-SLAB' )
+       call LAND_SFC_THIN_SLAB_setup( LAND_TYPE )
+       LAND_SFC => LAND_SFC_THIN_SLAB
+    case( 'THICK-SLAB' )
+       call LAND_SFC_THICK_SLAB_setup( LAND_TYPE )
+       LAND_SFC => LAND_SFC_THICK_SLAB
     end select
 
     return

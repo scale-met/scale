@@ -40,8 +40,6 @@ module scale_land_phy_slab
   !
   !++ Private parameters & variables
   !
-  logical, private :: LAND_PHY_SLAB_const = .false. ! constant condition?
-
   logical, private :: LAND_PHY_UPDATE_BOTTOM_TEMP  = .false. ! Is LAND_TEMP  updated in the lowest level?
   logical, private :: LAND_PHY_UPDATE_BOTTOM_WATER = .false. ! Is LAND_WATER updated in the lowest level?
 
@@ -82,15 +80,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PHY_SLAB)
-
-    if( LAND_TYPE == 'CONST' ) then
-       LAND_PHY_SLAB_const = .true.
-    else if( LAND_TYPE == 'SLAB' ) then
-       LAND_PHY_SLAB_const = .false.
-    else
-       write(*,*) 'xxx wrong LAND_TYPE. Check!'
-       call PRC_MPIstop
-    end if
 
     WATER_DENSCS = DWATR * CL
 
@@ -159,21 +148,6 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land physics step: Slab'
-
-    ! constant land physics
-    if( LAND_PHY_SLAB_const ) then
-
-      do j = JS, JE
-      do i = IS, IE
-      do k = LKS, LKE
-         TEMP_t (k,i,j) = 0.0_RP
-         WATER_t(k,i,j) = 0.0_RP
-      end do
-      end do
-      end do
-
-      return
-    endif
 
     ! Solve diffusion of soil moisture (tridiagonal matrix)
     do j = JS, JE

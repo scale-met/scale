@@ -117,9 +117,9 @@ ATMOS_PHY_RD_TYPE=( "MSTRNX"   "MSTRNX"   ) # required parameters for each domai
 ATMOS_PHY_SF_TYPE=( "COUPLE"   "COUPLE"   ) # required parameters for each domain
 ATMOS_PHY_TB_TYPE=( "HYBRID"   "HYBRID"   ) # required parameters for each domain
 
-OCEAN_TYPE=( "CONST" "CONST" ) # required parameters for each domain
-LAND_TYPE=(  "SLAB"  "SLAB"  ) # required parameters for each domain
-URBAN_TYPE=( "SLC"   "SLC"   ) # required parameters for each domain
+OCEAN_TYPE=( "CONST"     "CONST"     ) # required parameters for each domain
+LAND_TYPE=(  "THIN-SLAB" "THIN-SLAB" ) # required parameters for each domain
+URBAN_TYPE=( "SLC"       "SLC"       ) # required parameters for each domain
 
 #################################################
 #
