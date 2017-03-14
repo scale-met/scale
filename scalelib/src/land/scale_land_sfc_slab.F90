@@ -48,16 +48,12 @@ module scale_land_sfc_slab
   real(RP), private :: LAND_SFC_SLAB_err_min = 1.0E-2_RP ! minimum value of error
   real(RP), private :: LAND_SFC_SLAB_dreslim = 1.0E+2_RP ! limiter of d(residual)
 
-  logical, allocatable, private :: is_LND(:,:)
-
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_SFC_SLAB_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_landuse, only: &
-       LANDUSE_fact_land
     implicit none
 
     character(len=*), intent(in) :: LAND_TYPE
@@ -95,19 +91,6 @@ contains
        write(*,*) 'xxx wrong LAND_TYPE. Check!'
        call PRC_MPIstop
     end if
-
-    ! judge to run slab land model
-    allocate( is_LND(IA,JA) )
-
-    do j = JS, JE
-    do i = IS, IE
-      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
-        is_LND(i,j) = .true.
-      else
-        is_LND(i,j) = .false.
-      end if
-    end do
-    end do
 
     return
   end subroutine LAND_SFC_SLAB_setup
@@ -155,7 +138,8 @@ contains
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB
-    use scale_grid_index
+    use scale_landuse, only: &
+       LANDUSE_fact_land
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
@@ -226,13 +210,12 @@ contains
     real(RP) :: QVS, dQVS     ! water vapor mixing ratio at surface [kg/kg]
 
     real(RP) :: LHV(IA,JA)    ! latent heat of vaporization [J/kg]
-    real(RP) :: CVTH
     real(RP) :: dt
 
     integer  :: i, j, n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land  surface step: Slab'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Slab'
 
     dt = real(dt_DP,kind=RP)
 
@@ -251,7 +234,7 @@ contains
       do j = JS, JE
       do i = IS, IE
 
-        if( is_LND(i,j) ) then
+        if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
 
           redf   = 1.0_RP
           oldres = huge(0.0_RP)
@@ -470,12 +453,11 @@ contains
 
     end if
 
-
     ! calculate surface flux
     do j = JS, JE
     do i = IS, IE
 
-      if( is_LND(i,j) ) then
+      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
 
         call qsat( QVsat,     & ! [OUT]
                    LST1(i,j), & ! [IN]
@@ -558,11 +540,9 @@ contains
         GHFLX(i,j) = GHFLX(i,j) - res
 
         ! diagnostic variables
-        CVTH = ( PRSS(i,j) / PRSA(i,j) ) ** ( Rdry / Cpdry )
-
-        U10(i,j) = UA(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
-        V10(i,j) = VA(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
-        T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * LST1(i,j) + Tstar / Tstar2 * TMPA(i,j) * CVTH
+        U10(i,j) = Ustar / Ustar10 * UA(i,j)
+        V10(i,j) = Ustar / Ustar10 * VA(i,j)
+        T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * LST1(i,j) + Tstar / Tstar2 * TMPA(i,j)
         Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVS       + Qstar / Qstar2 * QVA (i,j)
 
       else

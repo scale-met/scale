@@ -178,7 +178,6 @@ contains
     real(RP) :: Tstar, Tstar10, Tstar2 ! friction temperature [K]
     real(RP) :: Qstar, Qstar10, Qstar2 ! friction mixing rate [kg/kg]
     real(RP) :: Uabs,  Uabs10,  Uabs2  ! modified absolute velocity [m/s]
-    real(RP) :: CVTH
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -287,12 +286,10 @@ contains
           SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
        endif
 
-       CVTH = ( SFC_PRES(i,j) / ATM_PRES(i,j) ) ** ( Rdry / Cpdry )
-
        !-----< U10, T2, q2 >-----
-       U10(i,j) = ATM_U(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
-       V10(i,j) = ATM_V(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
-       T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SFC_TEMP(i,j) + Tstar / Tstar2 * ATM_TEMP(i,j) * CVTH
+       U10(i,j) = Ustar / Ustar10 * ATM_U(i,j)
+       V10(i,j) = Ustar / Ustar10 * ATM_V(i,j)
+       T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SFC_TEMP(i,j) + Tstar / Tstar2 * ATM_TEMP(i,j)
        Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * SFC_QV  (i,j) + Qstar / Qstar2 * ATM_QV  (i,j)
     enddo
     enddo

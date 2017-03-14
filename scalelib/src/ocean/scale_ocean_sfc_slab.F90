@@ -42,16 +42,12 @@ module scale_ocean_sfc_slab
   !-----------------------------------------------------------------------------
   logical, private :: SST_UPDATE
 
-  logical, allocatable, private :: is_OCN(:,:)
-
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_landuse, only: &
-       LANDUSE_fact_ocean
     implicit none
 
     character(len=*), intent(in) :: OCEAN_TYPE
@@ -71,19 +67,6 @@ contains
        write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
        call PRC_MPIstop
     end select
-
-    ! judge to run slab ocean model
-    allocate( is_OCN(IA,JA) )
-
-    do j = JS, JE
-    do i = IS, IE
-      if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
-        is_OCN(i,j) = .true.
-      else
-        is_OCN(i,j) = .false.
-      end if
-    end do
-    end do
 
     return
   end subroutine OCEAN_SFC_SLAB_setup
@@ -128,6 +111,8 @@ contains
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean
     use scale_bulkflux, only: &
       BULKFLUX
     use scale_atmos_hydrometeor, only: &
@@ -181,7 +166,6 @@ contains
 
     real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
-    real(RP) :: CVTH
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -200,7 +184,7 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-      if( is_OCN(i,j) ) then
+      if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
 
         ! saturation at the surface
         call qsat( QVsat,     & ! [OUT]
@@ -279,11 +263,9 @@ contains
                    + SHFLX(i,j) + LHFLX(i,j)
 
         ! diagnositc variables
-        CVTH = ( PRSS(i,j) / PRSA(i,j) ) ** ( Rdry / Cpdry )
-
-        U10(i,j) = UA(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
-        V10(i,j) = VA(i,j) * Ustar / Ustar10 * Uabs10 / Uabs
-        T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SST1(i,j) + Tstar / Tstar2 * TMPA(i,j) * CVTH
+        U10(i,j) = Ustar / Ustar10 * UA(i,j)
+        V10(i,j) = Ustar / Ustar10 * VA(i,j)
+        T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SST1(i,j) + Tstar / Tstar2 * TMPA(i,j)
         Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVsat     + Qstar / Qstar2 * QVA (i,j)
 
       else
