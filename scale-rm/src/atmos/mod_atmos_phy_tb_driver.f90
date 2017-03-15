@@ -71,63 +71,27 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_TB_driver_setup
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY
     use scale_grid_real, only: &
        CZ  => REAL_CZ
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_atmos_phy_tb, only: &
-       ATMOS_PHY_TB_setup, &
-       I_TKE
+       ATMOS_PHY_TB_setup
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_tb
-    use mod_atmos_vars, only: &
-       QTRC
     use mod_atmos_phy_tb_vars, only: &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     implicit none
 
-    real(RP) :: ATMOS_PHY_TB_TKE_INIT
-
-    NAMELIST / PARAM_ATMOS_PHY_TB / &
-         ATMOS_PHY_TB_TKE_INIT
-
-    integer :: k, i, j
-    integer :: ierr
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
 
-    ATMOS_PHY_TB_TKE_INIT = EPS
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB)
-
     ! initialize
-    if ( I_TKE > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          QTRC(k,i,j,I_TKE) = ATMOS_PHY_TB_TKE_INIT
-       enddo
-       enddo
-       enddo
-    end if
-
     do j = JS, JE
     do i = IS, IE
        MOMZ_t_TB(KS-1,i,j) = 0.0_RP
