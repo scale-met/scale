@@ -240,18 +240,17 @@ contains
 
        if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=EXTITEM)
 
-       call EXTIN_regist(          &
-            basename,              &
-            varname,               &
-            axistype,              &
-            enable_periodic_year,  &
-            enable_periodic_month, &
-            enable_periodic_day,   &
-            step_fixed,            &
-            offset,                &
-            defval,                &
-            check_coordinates,     &
-            step_limit             )
+       call EXTIN_regist( basename,              & ! [IN]
+                          varname,               & ! [IN]
+                          axistype,              & ! [IN]
+                          enable_periodic_year,  & ! [IN]
+                          enable_periodic_month, & ! [IN]
+                          enable_periodic_day,   & ! [IN]
+                          step_fixed,            & ! [IN]
+                          offset,                & ! [IN]
+                          defval,                & ! [IN]
+                          check_coordinates,     & ! [IN]
+                          step_limit             ) ! [IN]
 
     enddo
 
