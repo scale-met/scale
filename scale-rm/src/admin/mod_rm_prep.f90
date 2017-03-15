@@ -186,6 +186,12 @@ contains
     ! setup PROF
     call PROF_setup
 
+
+    ! profiler start
+    call PROF_setprefx('INIT')
+    call PROF_rapstart('Initialize', 0)
+
+
     ! setup constants
     call CONST_setup
 
@@ -194,11 +200,6 @@ contains
 
     ! setup random number
     call RANDOM_setup
-
-    ! setup time
-    call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
-
-    call PROF_rapstart('Initialize')
 
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
     call GRID_INDEX_setup
@@ -217,7 +218,7 @@ contains
     call URBAN_admin_setup
     call CPL_admin_setup
 
-    ! setup tracer
+    ! setup tracer index
     call ATMOS_HYDROMETEOR_setup
     call ATMOS_driver_config
     call USER_config
@@ -242,6 +243,8 @@ contains
 
     ! setup restart
     call ADMIN_restart_setup
+    ! setup time
+    call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
     ! setup statistics
     call STAT_setup
     ! setup history I/O

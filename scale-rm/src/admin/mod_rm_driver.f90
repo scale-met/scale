@@ -241,7 +241,6 @@ contains
     call URBAN_GRID_INDEX_setup
     call URBAN_GRID_setup
 
-
     ! setup submodel administrator
     call ATMOS_admin_setup
     call OCEAN_admin_setup
