@@ -122,7 +122,7 @@ contains
     if ( I_TKE > 0 ) then
        do j = JS, JE
        do i = IS, IE
-       do k = KS, IE
+       do k = KS, KE
           QTRC(k,i,j,I_TKE) = ATMOS_PHY_TB_TKE_INIT
        enddo
        enddo
@@ -201,6 +201,7 @@ contains
        MOMY => MOMY_av,   &
        RHOT => RHOT_av,   &
        QTRC => QTRC_av,   &
+       N2   => N2,        &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
@@ -232,7 +233,6 @@ contains
     real(RP) :: Nu(KA,IA,JA) ! eddy viscosity
     real(RP) :: Ri(KA,IA,JA) ! Richardson number
     real(RP) :: Pr(KA,IA,JA) ! Prandtl number
-    real(RP) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     integer :: JJS, JJE
     integer :: IIS, IIE
@@ -247,15 +247,15 @@ contains
 
        RHOQ_t_TB = 0.0_RP
 
-       call ATMOS_PHY_TB( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,    & ! [OUT]
-                          QFLX_RHOT, QFLX_RHOQ,               & ! [OUT]
-                          RHOQ_t_TB,                          & ! [INOUT]
-                          Nu, Ri, Pr, N2,                     & ! [OUT]
-                          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, & ! [IN]
-                          SFLX_MW, SFLX_MU, SFLX_MV,          & ! [IN]
-                          SFLX_SH, SFLX_Q(:,:,I_QV),          & ! [IN]
-                          GSQRT, J13G, J23G, J33G, MAPF,      & ! [IN]
-                          dt_TB                               ) ! [IN]
+       call ATMOS_PHY_TB( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
+                          QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
+                          RHOQ_t_TB,                              & ! [INOUT]
+                          Nu, Ri, Pr,                             & ! [OUT]
+                          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2, & ! [IN]
+                          SFLX_MW, SFLX_MU, SFLX_MV,              & ! [IN]
+                          SFLX_SH, SFLX_Q(:,:,I_QV),              & ! [IN]
+                          GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
+                          dt_TB                                   ) ! [IN]
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -328,7 +328,6 @@ contains
        call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , nohalo=.true. )
        call HIST_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , nohalo=.true. )
        call HIST_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL'  , nohalo=.true. )
-       call HIST_in( N2 (:,:,:), 'N2',  'squared Brunt-Vaisala frequency', '1/s2', nohalo=.true. )
 
        call HIST_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
        call HIST_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
