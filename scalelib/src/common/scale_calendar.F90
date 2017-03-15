@@ -423,7 +423,9 @@ contains
 
        l = index(buf,"-")
        if ( l /= 5 ) then
-          write(*,*) 'xxx units for time is invalid (year) : ', trim(cfunits), ' ', trim(buf)
+          write(*,*) 'xxx units for time is invalid (year)'
+          write(*,*) 'xxx ', trim(cfunits)
+          write(*,*) 'xxx ', trim(buf)
           call PRC_MPIstop
        end if
        read(buf(1:4),*) date(1) ! year
@@ -431,7 +433,9 @@ contains
 
        l = index(buf,"-")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (month): ', trim(cfunits), ' ', trim(buf)
+          write(*,*) 'xxx units for time is invalid (month)'
+          write(*,*) 'xxx ', trim(cfunits)
+          write(*,*) 'xxx ', trim(buf)
           call PRC_MPIstop
        end if
        read(buf(1:2),*) date(2) ! month
@@ -439,7 +443,9 @@ contains
 
        l = index(buf," ")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (day)  : ', trim(cfunits), ' ', trim(buf)
+          write(*,*) 'xxx units for time is invalid (day)'
+          write(*,*) 'xxx ', trim(cfunits)
+          write(*,*) 'xxx ', trim(buf)
           call PRC_MPIstop
        end if
        read(buf(1:2),*) date(3) ! day
@@ -447,7 +453,9 @@ contains
 
        l = index(buf,":")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (hour) : ', trim(cfunits), ' ', trim(buf)
+          write(*,*) 'xxx units for time is invalid (hour)'
+          write(*,*) 'xxx ', trim(cfunits)
+          write(*,*) 'xxx ', trim(buf)
           call PRC_MPIstop
        end if
        read(buf(1:2),*) date(4) ! hour
@@ -455,14 +463,19 @@ contains
 
        l = index(buf,":")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (min)  : ', trim(cfunits), ' ', trim(buf)
+          write(*,*) 'xxx units for time is invalid (min)'
+          write(*,*) 'xxx ', trim(cfunits)
+          write(*,*) 'xxx ', trim(buf)
           call PRC_MPIstop
        end if
        read(buf(1:2),*) date(5) ! min
        buf = buf(4:)
 
        if ( len_trim(buf) /= 2 ) then
-          write(*,*) 'xxx units for time is invalid (sec)  : ', trim(cfunits), ' ', trim(buf), len_trim(buf)
+          write(*,*) 'xxx units for time is invalid (sec)'
+          write(*,*) 'xxx ', trim(cfunits)
+          write(*,*) 'xxx ', trim(buf)
+          write(*,*) 'xxx ', len_trim(buf)
           call PRC_MPIstop
        end if
        read(buf(1:2),*) date(6) ! sec

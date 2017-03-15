@@ -752,7 +752,7 @@ contains
           call FileRead( var, fid, varname, step,                         &
                          ntypes=JA, dtype=etype, start=start, count=count )
        else
-          write(*,*) 'xxx unsupported axis type. Check!: ', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
     else
@@ -778,7 +778,7 @@ contains
           dim1_S   = 1
           dim1_E   = JA
        else
-          write(*,*) 'xxx unsupported axis type. Check!: ', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
 
@@ -836,7 +836,7 @@ contains
           call FileRead( var, fid, varname, step,                                   &
                          ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
     else
@@ -851,7 +851,7 @@ contains
           dim2_S   = ISB
           dim2_E   = IEB
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
 
@@ -917,7 +917,7 @@ contains
           call FileRead( var, fid, varname, step,                                            &
                          ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
     else
@@ -950,7 +950,7 @@ contains
           dim3_S   = JSB
           dim3_E   = JEB
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
 
@@ -1007,7 +1007,7 @@ contains
           call FileRead( var, fid, varname, step,                                         &
                          ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY )
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
     else
@@ -1021,7 +1021,7 @@ contains
           dim4_S   = 1
           dim4_E   = step
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
 
@@ -2207,7 +2207,7 @@ contains
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
        end if
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_def_var] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2276,7 +2276,7 @@ contains
        start(1) = JSGA
        if( IO_AGGREGATE .AND. rankidx(1) > 0 ) exec = .false.  ! only west most column processes write
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2369,7 +2369,7 @@ contains
           if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
        end if
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2499,7 +2499,7 @@ contains
        dim1_S   = UKS
        dim1_E   = UKE
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2622,7 +2622,7 @@ contains
           if( rankidx(2) == PRC_NUM_Y - 1 ) dim2_E = JA
        end if
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_3D_t] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2793,7 +2793,7 @@ contains
           if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
        end if
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 

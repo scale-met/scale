@@ -75,7 +75,7 @@ contains
        dim1_S   = JSB
        dim1_E   = JEB
     case default
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [EXTIN_RM_get_dims_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     end select
 
@@ -131,7 +131,7 @@ contains
        dim2_E   = KE
        transpose = .true.
     case default
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [EXTIN_RM_get_dims_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     end select
 
@@ -235,7 +235,7 @@ contains
        dim3_E   = UKE
        transpose = .true.
     case default
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [EXTIN_RM_get_dims_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     end select
 
