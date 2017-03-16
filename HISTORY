@@ -1,5 +1,9 @@
 = Release History
 
+== 2017-02-07 (5.1.2)
+* Bug fix:
+  * Fix wrong metric for the terrain-following coordinate
+
 == 2016-11-08 (5.1.1)
 * Bug fixs:
   * Fix wrong tendency of the density
