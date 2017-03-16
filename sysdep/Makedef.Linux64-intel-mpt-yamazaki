@@ -46,10 +46,12 @@ LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
-#NETCDF_INCLUDE ?= -I$(NETCDF4)/include
-NETCDF_INCLUDE ?= -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include
-#NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
-NETCDF_LIBS    ?= -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+#NETCDF_INCLUDE ?= -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include
+#NETCDF_LIBS    ?= -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+
+###### NetCDF library with PnetCDF
+NETCDF_INCLUDE ?= -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include -I/data/opt/parallel-netcdf/1.8.1_intel/include
+NETCDF_LIBS    ?= -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz -L/data/opt/parallel-netcdf/1.8.1_intel/lib -lpnetcdf
 
 ###### Lapack
 LAPACK_LIBS    ?= -mkl=sequential
