@@ -333,7 +333,9 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-          q(:) = QTRC(KS,i,j,:)
+          do iq = 1, QA
+             q(iq) = QTRC(KS,i,j,iq)
+          enddo
           call THERMODYN_qd( qdry,  q, TRACER_MASS )
           call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
           call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
@@ -347,7 +349,7 @@ contains
           do j  = JS, JE
           do i  = IS, IE
              work = SFLX_QTRC(i,j,I_QV) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-             DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work
+             DENS_t_SF(i,j)      = DENS_t_SF(i,j) + work
              RHOQ_t_SF(i,j,I_QV) = work
           enddo
           enddo

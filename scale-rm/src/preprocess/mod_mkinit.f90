@@ -493,6 +493,8 @@ contains
          call PRC_MPIstop
       endselect
 
+      call tke_setup
+
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
 
       ! setup surface condition
@@ -558,7 +560,6 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_BUBBLE,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -653,7 +654,6 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_RECT,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        write(*,*) 'xxx Not found namelist. Check!'
        call PRC_MPIstop
@@ -730,9 +730,8 @@ contains
        k_max_inp, &
        n_kap_inp
 
-
-    integer :: ierr
-
+    integer  :: ierr
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
@@ -740,28 +739,25 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used!'
-!       call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_AERO. Check!'
        call PRC_MPIstop
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_AERO)
 
-    call ATMOS_PHY_AE_kajino13_mkinit( &
-         QTRC, CCN,                 & ! (out)
-         DENS, RHOT,                & ! (in)
-         m0_init, dg_init, sg_init, & ! (in)
-         d_min_inp, d_max_inp,      & ! (in)
-         k_min_inp, k_max_inp,      & ! (in)
-         n_kap_inp                  ) ! (in)
+    call ATMOS_PHY_AE_kajino13_mkinit( QTRC, CCN,                 & ! (out)
+                                       DENS, RHOT,                & ! (in)
+                                       m0_init, dg_init, sg_init, & ! (in)
+                                       d_min_inp, d_max_inp,      & ! (in)
+                                       k_min_inp, k_max_inp,      & ! (in)
+                                       n_kap_inp                  ) ! (in)
 
     return
   end subroutine AEROSOL_setup
 
-  !--------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
     use scale_const, only: &
@@ -1171,6 +1167,50 @@ contains
 
     return
   end subroutine urban_setup
+
+  !-----------------------------------------------------------------------------
+  !> TKE setup
+  subroutine tke_setup
+    use scale_const, only: &
+       EPS => CONST_EPS
+    use scale_atmos_phy_tb, only: &
+       I_TKE
+    implicit none
+
+    real(RP) :: TKE_CONST
+
+    NAMELIST / PARAM_MKINIT_TKE / &
+       TKE_CONST
+
+    integer :: k, i, j
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    TKE_CONST = EPS
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_TKE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TKE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TKE)
+
+    if ( I_TKE > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          QTRC(k,i,j,I_TKE) = TKE_CONST
+       enddo
+       enddo
+       enddo
+    end if
+
+    return
+  end subroutine tke_setup
 
   !-----------------------------------------------------------------------------
   !> Read sounding data from file

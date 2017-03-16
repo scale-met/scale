@@ -89,7 +89,7 @@ LDFLAGS = $(FFLAGS)
 ###### NetCDF library
 # Default settings
 NETCDF_INCLUDE ?= -I/opt/aics/scale/include -I/opt/aics/netcdf/k-serial-noszip/include
-NETCDF_LIBS    ?= -I/opt/aics/scale/lib -L/opt/aics/netcdf/k-serial-noszip/lib-static -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+NETCDF_LIBS    ?= -L/opt/aics/scale/lib -L/opt/aics/netcdf/k-serial-noszip/lib-static -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 ENABLE_PNETCDF ?= T
 # Or, please set environment variable
 # example:

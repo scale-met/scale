@@ -59,26 +59,26 @@ contains
 
     character(len=*), intent(in) :: OCEAN_TYPE
 
-    character(len=H_LONG) :: OCEAN_PHY_FILE_basename = ''
-    logical               :: OCEAN_PHY_FILE_enable_periodic_year = .false.
+    character(len=H_LONG) :: OCEAN_PHY_FILE_basename              = ''
+    logical               :: OCEAN_PHY_FILE_enable_periodic_year  = .false.
     logical               :: OCEAN_PHY_FILE_enable_periodic_month = .false.
-    logical               :: OCEAN_PHY_FILE_enable_periodic_day = .false.
-    integer               :: OCEAN_PHY_FILE_step_fixed = 0
-    real(RP)              :: OCEAN_PHY_FILE_offset = 0.0_RP
-    real(RP)              :: OCEAN_PHY_FILE_defval  ! = UNDEF
-    logical               :: OCEAN_PHY_FILE_check_coordinates = .true.
-    integer               :: OCEAN_PHY_FILE_step_limit = 0
+    logical               :: OCEAN_PHY_FILE_enable_periodic_day   = .false.
+    integer               :: OCEAN_PHY_FILE_step_fixed            = 0
+    real(RP)              :: OCEAN_PHY_FILE_offset                = 0.0_RP
+    real(RP)              :: OCEAN_PHY_FILE_defval              ! = UNDEF
+    logical               :: OCEAN_PHY_FILE_check_coordinates     = .true.
+    integer               :: OCEAN_PHY_FILE_step_limit            = 0
 
     NAMELIST / PARAM_OCEAN_PHY_FILE / &
-            OCEAN_PHY_FILE_basename,              &
-            OCEAN_PHY_FILE_enable_periodic_year,  &
-            OCEAN_PHY_FILE_enable_periodic_month, &
-            OCEAN_PHY_FILE_enable_periodic_day,   &
-            OCEAN_PHY_FILE_step_fixed,            &
-            OCEAN_PHY_FILE_offset,                &
-            OCEAN_PHY_FILE_defval,                &
-            OCEAN_PHY_FILE_check_coordinates,     &
-            OCEAN_PHY_FILE_step_limit
+       OCEAN_PHY_FILE_basename,              &
+       OCEAN_PHY_FILE_enable_periodic_year,  &
+       OCEAN_PHY_FILE_enable_periodic_month, &
+       OCEAN_PHY_FILE_enable_periodic_day,   &
+       OCEAN_PHY_FILE_step_fixed,            &
+       OCEAN_PHY_FILE_offset,                &
+       OCEAN_PHY_FILE_defval,                &
+       OCEAN_PHY_FILE_check_coordinates,     &
+       OCEAN_PHY_FILE_step_limit
 
     integer :: i, j
     integer :: ierr
@@ -87,7 +87,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FILE] / Categ[OCEAN PHY] / Origin[SCALElib]'
 
-    if( OCEAN_TYPE /= 'FILE' ) then
+    if ( OCEAN_TYPE /= 'FILE' ) then
        write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
        call PRC_MPIstop
     end if
@@ -110,25 +110,24 @@ contains
        call PRC_MPIstop
     end if
 
-    call EXTIN_regist( &
-         OCEAN_PHY_FILE_basename,              &
-         'OCEAN_TEMP',                         &
-         'XY',                                 &
-         OCEAN_PHY_FILE_enable_periodic_year,  &
-         OCEAN_PHY_FILE_enable_periodic_month, &
-         OCEAN_PHY_FILE_enable_periodic_day,   &
-         OCEAN_PHY_FILE_step_fixed,            &
-         OCEAN_PHY_FILE_offset,                &
-         OCEAN_PHY_FILE_defval,                &
-         OCEAN_PHY_FILE_check_coordinates,     &
-         OCEAN_PHY_FILE_step_limit             )
+    call EXTIN_regist( OCEAN_PHY_FILE_basename,              & ! [IN]
+                       'OCEAN_TEMP',                         & ! [IN]
+                       'XY',                                 & ! [IN]
+                       OCEAN_PHY_FILE_enable_periodic_year,  & ! [IN]
+                       OCEAN_PHY_FILE_enable_periodic_month, & ! [IN]
+                       OCEAN_PHY_FILE_enable_periodic_day,   & ! [IN]
+                       OCEAN_PHY_FILE_step_fixed,            & ! [IN]
+                       OCEAN_PHY_FILE_offset,                & ! [IN]
+                       OCEAN_PHY_FILE_defval,                & ! [IN]
+                       OCEAN_PHY_FILE_check_coordinates,     & ! [IN]
+                       OCEAN_PHY_FILE_step_limit             ) ! [IN]
 
     ! judge to run slab ocean model
     allocate( is_OCN(IA,JA) )
 
     do j = JS, JE
     do i = IS, IE
-       if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
+       if ( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
           is_OCN(i,j) = .true.
        else
           is_OCN(i,j) = .false.

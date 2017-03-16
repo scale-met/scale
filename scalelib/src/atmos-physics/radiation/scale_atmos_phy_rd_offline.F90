@@ -119,32 +119,31 @@ contains
     end if
 
     do n = 1, num_vars_2d
-       call EXTIN_regist( &
-            ATMOS_PHY_RD_offline_basename,              &
-            vars_2d(n),                                 &
-            'XY',                                       &
-            ATMOS_PHY_RD_offline_enable_periodic_year,  &
-            ATMOS_PHY_RD_offline_enable_periodic_month, &
-            ATMOS_PHY_RD_offline_enable_periodic_day,   &
-            ATMOS_PHY_RD_offline_step_fixed,            &
-            ATMOS_PHY_RD_offline_offset,                &
-            ATMOS_PHY_RD_offline_defval,                &
-            ATMOS_PHY_RD_offline_check_coordinates,     &
-            ATMOS_PHY_RD_offline_step_limit             )
+       call EXTIN_regist( ATMOS_PHY_RD_offline_basename,              & ! [IN]
+                          vars_2d(n),                                 & ! [IN]
+                          'XY',                                       & ! [IN]
+                          ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
+                          ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
+                          ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
+                          ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
+                          ATMOS_PHY_RD_offline_offset,                & ! [IN]
+                          ATMOS_PHY_RD_offline_defval,                & ! [IN]
+                          ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
+                          ATMOS_PHY_RD_offline_step_limit             ) ! [IN]
     end do
+
     do n = 1, num_vars_3d
-       call EXTIN_regist( &
-            ATMOS_PHY_RD_offline_basename,              &
-            vars_3d(n),                                 &
-            ATMOS_PHY_RD_offline_axistype,              &
-            ATMOS_PHY_RD_offline_enable_periodic_year,  &
-            ATMOS_PHY_RD_offline_enable_periodic_month, &
-            ATMOS_PHY_RD_offline_enable_periodic_day,   &
-            ATMOS_PHY_RD_offline_step_fixed,            &
-            ATMOS_PHY_RD_offline_offset,                &
-            ATMOS_PHY_RD_offline_defval,                &
-            ATMOS_PHY_RD_offline_check_coordinates,     &
-            ATMOS_PHY_RD_offline_step_limit             )
+       call EXTIN_regist( ATMOS_PHY_RD_offline_basename,              & ! [IN]
+                          vars_3d(n),                                 & ! [IN]
+                          ATMOS_PHY_RD_offline_axistype,              & ! [IN]
+                          ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
+                          ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
+                          ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
+                          ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
+                          ATMOS_PHY_RD_offline_offset,                & ! [IN]
+                          ATMOS_PHY_RD_offline_defval,                & ! [IN]
+                          ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
+                          ATMOS_PHY_RD_offline_step_limit             ) ! [IN]
     end do
 
     return
