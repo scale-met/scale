@@ -1,73 +1,53 @@
-\section{\SecBasicOutputSetting} \label{sec:output}
+\section{Setting the history file and output variable} \label{sec:output}
 %====================================================================================
 
-計算結果の出力ファイルと出力形式の設定、及び、出力する変数の追加は、
-\namelist{PARAM_HISTORY}と\namelist{HISTITEM}で行う。
-まず、出力ファイルとデフォルトの出力形式の設定を、\verb|run.conf|の\namelist{PARAM_HISTORY} で行う。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+A history file and output variables are configured at \namelist{PARAM_HISTORY} and \namelist{HISTITEM} in \verb|run.conf|.
+The default format of the history file is configured at \namelist{PARAM_HISTORY}.
+\editboxtwo{
 \verb|&PARAM_HISTORY| & \\
-\verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & ; 出力ファイル名の頭。 \\
-\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; 出力の時間間隔。 \\
-\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; \verb|HISTORY_DEFAULT_TINTERVAL|の単位。 \\
-\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: 瞬間値、\verb|.true.|: 平均値。\\
-\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|      & ; 鉛直内挿の種別。\\
-                                                    & ~ native,AGL,MDL: モデル面の値を出力(内挿しない)。\\
-                                                    & ~ z,Z,HGT: 絶対高度面に内挿した値を出力。\\
-                                                    & ~ pz,P,PRES: 気圧面に内挿した値を出力。\\
-\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & ; 出力データの型。\verb|REAL4|, \verb|REAL8|など。\\
-\verb|  HISTORY_OUTPUT_STEP0      = .true.,|        & ; 初期時刻(t=0)の値を出力するかどうか。\\
-                                                    & ~ \verb|.true.|: 出力、\verb|.false.|: 出力しない。\\
-\verb|  History_PRES_VALUE        = -1,|            & ; 気圧面内挿を用いる場合の層数。\\
-\verb|  History_PRES_NLAYER       = 0.0*100,|       & ; 気圧面内挿に用いる各層の気圧の値。下層から順にhPaで指定する。\\
+\verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & ; Header name  of files\\
+\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; Output interval of history data \\
+\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; Unit of \verb|HISTORY_DEFAULT_TINTERVAL| \\
+\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: snapshot value, \verb|.true.|: Average value \\
+\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|       & ; Types of vertical interpolation.\\
+                                                    & ~ native, AGL, MDL: model level (not interpolated)\\
+                                                    & ~ z, Z, HGT: Interpolated value at absolute height\\
+                                                    & ~ pz, P, PRES: Interpolated value at pressure level\\
+\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & ; Output data type: \verb|REAL4|, \verb|REAL8|\\
+\verb|  HISTORY_OUTPUT_STEP0      = .true.,|        & ; Whether or not data are output at initial time (t=0).\\
+                                                    & ~ \verb|.true.|: output, \verb|.false.|: Not output.\\
+\verb|  History_PRES_VALUE        = -1,|            & ; Number of levels\\
+                                                    & ~ (OPTION for interpolation at pressure level)\\
+\verb|  History_PRES_NLAYER       = 0.0*100,|       & ; Pressure levels in order from lower to upper level. The unit is hPa.\\
+                                                    & ~ (OPTION for interpolation at pressure level)\\
 \verb|/| & \\
-\end{tabularx}
-}}}\\
+}
 
-\nmitem{HISTORY_DEFAULT_TUNIT}の単位は、\\
-\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|
-より選択可能である。\\
-\verb|HISTORY_DEFAULT_TAVERAGE = .true.|として、平均値での出力を設定した場合、
-出力するタイミング直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。
+The unit for \nmitem{HISTORY_DEFAULT_TUNIT} can be selected from \\
+\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|.\\
+When the average value output is selected as \verb|HISTORY_DEFAULT_TAVERAGE = .true.|, the history data averaged over the last period, given as \verb|HISTORY_DEFAULT_TINTERVAL|, is output.
 
-次に、出力する変数の設定を\namelist{HISTITEM}で行う。
-\namelist{HISTITEM}は変数毎に設定するため、出力したい変数の数だけ追加することになる。
-また、それぞれの変数の出力形式は、基本的に \namelist{PARAM_HISTORY} の設定に準ずるが、
-変数毎に設定を変更することも可能である。\\
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+The output variables are set by adding \namelist{HISTITEM}. The output format follows the default setting specified at \namelist{PARAM_HISTORY}. By adding namelists with ``(OPTION),'' the format for a specific variable can be changed from the default setting.
+
+
+\editboxtwo{
 \verb|&HISTITEM| &\\
-\verb| ITEM     = "RAIN",    | &  変数名。 出力可能な変数は付録\ref{achap:namelist}を参照 \\
-\verb| BASENAME = "rain_d01",| &  (オプション) \verb|HISTORY_DEFAULT_BASENAME|に同じ。\\
-\verb| TINTERVAL= 600.0,     | &  (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
-\verb| TUNIT    = "SEC",     | &  (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
-\verb| TAVERAGE = .true.,    | &  (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\
-\verb| ZCOORD   = "model",   | &  (オプション) \verb|HISTORY_DEFAULT_ZCOORD|に同じ。\\
-\verb| DATATYPE = "REAL4",   | &  (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
+\verb| ITEM     = "RAIN",    | &  Variable name. List of variables is shown in Appendix \ref{achap:namelist}.\\
+\verb| BASENAME = "rain_d01",| &  (OPTION) same as \verb|HISTORY_DEFAULT_BASENAME|\\
+\verb| TINTERVAL= 600.0,     | &  (OPTION) same as \verb|HISTORY_DEFAULT_TINTERVAL|\\
+\verb| TUNIT    = "SEC",     | &  (OPTION) same as \verb|HISTORY_DEFAULT_TINTERVAL|\\
+\verb| TAVERAGE = .true.,    | &  (OPTION) same as \verb|HISTORY_DEFAULT_TAVERAGE|\\
+\verb| ZCOORD   = "model",   | &  (OPTION) same as \verb|HISTORY_DEFAULT_ZCOORD|\\
+\verb| DATATYPE = "REAL4",   | &  (OPTION) same as \verb|HISTORY_DEFAULT_DATATYPE|\\
 \verb|/| & \\
-\end{tabularx}
-}}}\\
+}
 
-(オプション)の項目は、変数\nmitem{ITEM}にのみ適用される。
-上記では、明示的にすべての設定を書いているが、
-\nmitem{HISTORY_DEFAULT_***} と同じ設定であれば
-それらが適用されるので明記する必要はない。
-例えば、上記の\namelist{PARAM_HISTORY}の設定に、下記の\namelist{HISTITEM}の設定を組み合わせた場合には、
-\verb|history_d01.xxxxxx.nc|に4バイト実数で、3600秒毎に \verb|T, U, V| の瞬間値が出力される。
-また、\verb|RAIN|が、600秒の出力間隔で、前600秒間の平均値が出力される。\\
+Namelists with ``(OPTION)'' are applied only to the variable \nmitem{ITEM}. If the default setting is used for the variable, the namelist with ``(OPTION)'' can be omitted. For example, let the below setting for \namelist{HISTITEM} be added, maintaining the above setting of \namelist{PARAM_HISTORY}. The snapshot values of \verb|T, U, V| are stored as four-byte real values at an interval of 3600 s in the file \verb|history_d01.xxxxxx.nc|, whereas the value of \verb|RAIN| averaged over the last 600 seconds is stored each time in the file. 
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\editbox{
 \verb|&HISTITEM  ITEM = "T" /|\\
 \verb|&HISTITEM  ITEM = "U" /|\\
 \verb|&HISTITEM  ITEM = "V" /|\\
 \verb|&HISTITEM  ITEM = "RAIN",  TINTERVAL = 600.0, TAVERAGE = .true. /|\\
-\end{tabularx}
-}}}\\
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+}

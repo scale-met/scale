@@ -1,39 +1,35 @@
 %\chapter{Q \& A}
 
 \clearpage
-\section*{回答}
+\section*{Answer}
 \begin{enumerate}
-\item {\bf 計算領域は変えず、MPI並列数を変更したい}\\
-変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX, JMAX}、\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}である。下記3つの式を満たしていれば正解である。
+\item {\bf How is the number of MPIs parallel changed while maintaining the computational domain?}\\
+\nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX} and \nmitem{PRC_NUM_X, PRC_NUM_Y} in  \namelist{PARAM_PRC}
+are changed. If the below conditions are satisfied, your answer is correct:
 \begin{eqnarray}
-&& MPI並列数 = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
-&& X方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
-&& Y方向の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 90 \nonumber
+&& Number of MPIs parallel = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
+&& Number of grid cells along the X direction = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
+&& Number of grid cells along the X direction = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 90 \nonumber
 \end{eqnarray}
 
 
-\item {\bf MPI並列数は変えず、計算領域を変更したい}\\
-MPIプロセスあたりの格子数を$n$倍にすれば、
-領域全体の格子数も$n$倍となる。
-変更箇所は、\namelist{PARAM_INDEX}内の\nmitem{IMAX, JMAX}のみである。
-赤文字の部分がデフォルトからの変更点を意味する。\\
-
-\noindent {\small {\gt
+\item {\bf How is the computational domain altered while maintaining the number of MPIs parallel?}\\
+If the number of grid cells per MPI process increases n times, the total number of grid cells also increases n times. Thus, only \nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX} are changed. The red parts indicate the answer below:\\
+\noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_INDEX| & \\
 \verb| KMAX = 36,|  & \\
-\textcolor{red}{\verb| IMAX = 60,|}  & (オリジナル設定は \verb|IMAX = 45|)\\
-\textcolor{red}{\verb| JMAX = 30,|}  & (オリジナル設定は \verb|JMAX = 45|)\\
+\textcolor{red}{\verb| IMAX = 60,|}  & (\verb|IMAX = 45| in the original settings)\\
+\textcolor{red}{\verb| JMAX = 30,|}  & (\verb|JMAX = 45| in the original settings)\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
-\item {\bf 計算領域は変えず、水平格子間隔を変更したい}\\
-MPI並列数を変えない場合、変更箇所は\namelist{PARAM_GRID}の\nmitem{DX, DY}と
-\namelist{PARAM_INDEX}内の\nmitem{IMAX,JMAX}である。
+\item {\bf How is horizontal grid interval changed while maintaining the computational domain?}\\
+When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PARAM_GRID} and  \nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX} should be changed.
 
-\noindent {\small {\gt
+\noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_PRC|  & \\
@@ -42,52 +38,46 @@ MPI並列数を変えない場合、変更箇所は\namelist{PARAM_GRID}の\nmit
 \\
 \verb|&PARAM_INDEX| & \\
 \verb| KMAX = 36,|  & \\
-\textcolor{red}{\verb| IMAX = 180,|} &  (オリジナル設定は \verb|IMAX = 45|)\\
-\textcolor{red}{\verb| JMAX = 180,|} &  (オリジナル設定は \verb|JMAX = 45|)\\
+\textcolor{red}{\verb| IMAX = 180,|} &  (\verb|IMAX = 45| in the original settings)\\
+\textcolor{red}{\verb| JMAX = 180,|} &  (\verb|JMAX = 45| in the original settings)\\
 \verb|/| &\\
  \\
 \verb|&PARAM_GRID| & \\
-\textcolor{red}{\verb| DX = 5000.D0,|} & (オリジナル設定は \verb|DX = 20000.D0|)\\
-\textcolor{red}{\verb| DY = 5000.D0,|} & (オリジナル設定は \verb|DY = 20000.D0|)\\
+\textcolor{red}{\verb| DX = 5000.D0,|} & (\verb|DX = 20000.D0| in the original settings)\\
+\textcolor{red}{\verb| DY = 5000.D0,|} & (\verb|DY = 20000.D0| in the original settings)\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
-MPI並列数も変更している場合には、下記の関係を満たしていれば正解である。
+In case the number of MPIs parallel are also changed, if the below conditions are satisfied in addition to \verb|&PARAM_GRID|, your answer is correct:
 \begin{eqnarray}
-&& {\XDIR} の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
-&& {\YDIR}の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
+&& Number of grids along the X direction = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
+&& Number of grids along the Y direction = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
 \end{eqnarray}
 
-これに加えて、力学変数の時間積分のためのタイムステップ\\
-\nmitem{TIME_DT_ATMOS_DYN} と\nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} の調整も必要である
-（第\ref{sec:timeintiv}節参照）。
+Moreover, it is necessary to suitably change the time interval for the dynamics, i.e., \nmitem{TIME_DT_ATMOS_DYN} and \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} (refer to Section \ref{sec:timeintiv}). The width of the buffer region should be set between 20 and 40 times of the grid spacing. Below is an example of the answer, indicating the case where the buffer region was set to 20 times the grid spacing.
 
-緩和領域も、格子間隔の20倍から40倍となるよう変更する。
-
-\noindent {\small {\gt
+\noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_PRC|  & \\
-\verb| BUFFER_DX = 100000.D0, | & (オリジナル設定は\verb|BUFFER_DX = 400000.D0,|) \\
-\verb| BUFFER_DY = 100000.D0, | & (オリジナル設定は\verb|BUFFER_DY = 400000.D0,|) \\
+\verb| BUFFER_DX = 100000.D0, | & (\verb|BUFFER_DX = 400000.D0,| in the original settings) \\
+\verb| BUFFER_DY = 100000.D0, | & (\verb|BUFFER_DY = 400000.D0,| in the original settings) \\
 \verb|/| &\\
 \end{tabularx}
 }}}\\
 
 
-\item {\bf 計算領域の位置を変更したい}\\
+\item {\bf How is the location of the computational domain changed?}\\
 
-計算領域の中心位置の座標を下記の通り、変更すれば良い。
-ここで、単位を度で設定する必要があることに注意すること。
-例えば、139度45.4分 = 139 + 45.5/60 度。
+The coordinates of the center of the computational domain are changed as follows. Note that the unit is degrees. For example, 139 degrees 45.4 min = 139 + 45.4/60 degrees.
 
-\noindent {\small {\gt
+\noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_MAPPROJ                      | & \\
-\textcolor{red}{\verb| MPRJ_basepoint_lon = 139.7567D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lon = 135.220404D0,|)\\
-\textcolor{red}{\verb| MPRJ_basepoint_lat =  35.6883D0,|} & (オリジナル設定は\verb| MPRJ_basepoint_lat =  34.653396D0,|)\\
+\textcolor{red}{\verb| MPRJ_basepoint_lon = 139.7567D0,|} & (\verb| MPRJ_basepoint_lon = 135.220404D0,| in the original settings)\\
+\textcolor{red}{\verb| MPRJ_basepoint_lat =  35.6883D0,|} & (\verb| MPRJ_basepoint_lat =  34.653396D0,| in the original settings)\\
 \verb| MPRJ_type          = 'LC',         | & \\
 \verb| MPRJ_LC_lat1       =  30.00D0,     | & \\
 \verb| MPRJ_LC_lat2       =  40.00D0,     | & \\
@@ -96,62 +86,58 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 }}}\\
 
 
-\item {\bf 積分時間の変更したい}\\
+\item {\bf How is the integration time changed?}\\
 
-\noindent {\small {\gt
+\noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_TIME| & \\
 \verb| TIME_STARTDATE             = 2007, 7, 14, 18, 0, 0, | & \\
 \verb| TIME_STARTMS               = 0.D0,                  | & \\
 \textcolor{red}{\verb| TIME_DURATION = 12.0D0,             |}
-                                                     &  (オリジナル設定は\verb| 6.0D0,|) \\
+                                                     &  (\verb| 6.0D0,| in the original settings) \\
 \verb| TIME_DURATION_UNIT         = "HOUR",              | & \\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
-また、\verb|scale-rm_init|の境界値を12時間以上用意している必要がある。
-第\ref{sec:adv_datainput}節を参照し、\nmitem{NUMBER_OF_FILES}の数を3に変更する。
+
+Furthermore, it is necessary to prepare a boundary condition of more than 12 hours by \verb|scale-rm_init|. Referring to Section \ref{sec:adv_datainput}, \nmitem{NUMBER_OF_FILES} must be set greater than 3.
 
 
-\item {\bf 出力変数の追加と出力時間間隔の変更したい}\\
+\item {\bf How are output variables added and their output interval changed?}\\
 
-例えば、出力時間間隔を30分に変更したい時には、\namelist{PARAM_HISTORY}の中の
-\nmitem{HISTORY_DEFAULT_TINTERVAL}を下記のように変更する。
-また、出力変数を追加したい時には、\namelist{HISTITEM}の中の\nmitem{ITEM}に追加したい変数を指定する。
-変数名に関しては、\ref{achap:namelist}章を参照のこと。
-以下では、地表面での上向き、下向き短波フラックスを追加した例である。\\
+The output interval is set to \nmitem{HISTORY_DEFAULT_TINTERVAL} in \namelist{PARAM_HISTORY} as below. The output variables are specified at \nmitem{ITEM} in \namelist{HISTITEM}. Refer to Appendix \ref{achap:namelist} for variable names.\\
 
-\noindent {\small {\gt
+\noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_HISTORY | & \\
 \verb| HISTORY_DEFAULT_BASENAME  = "history_d01", | & \\
-\textcolor{red}{\verb| HISTORY_DEFAULT_TINTERVAL = 1800.D0,|} & (オリジナル設定は\verb|3600.D0,|) \\
+\textcolor{red}{\verb| HISTORY_DEFAULT_TINTERVAL = 1800.D0,|} & (\verb|3600.D0,| in the original settings) \\
 \verb| HISTORY_DEFAULT_TUNIT     = "SEC",| & \\
 \verb|/| & \\
 \\
-\textcolor{red}{\verb|&HISTITEM item="SFLX_SW_up" /|} & \textcolor{red}{追加}\\
-\textcolor{red}{\verb|&HISTITEM item="SFLX_SW_dn" /|} & \textcolor{red}{追加}\\
+\textcolor{red}{\verb|&HISTITEM item="SFLX_SW_up" /|} & \textcolor{red}{added}\\
+\textcolor{red}{\verb|&HISTITEM item="SFLX_SW_dn" /|} & \textcolor{red}{added}\\
 \\
 \end{tabularx}
 }}}\\
 
 
 
-\item {\bf リスタート計算をしたい}\\
+\item {\bf How does the model restart?}\\
 
+The first integration for three hours is configured in \verb|run.conf| as below.
+Once the three hours for integration have elapsed, the restart file is created.\\
 
-最初の３時間分の計算設定は下記の通りである。３時間目にリスタートファイルを出力する。\\
-
-\noindent {\small {\gt
+\noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_TIME| & \\
 \verb| TIME_STARTDATE             = 2007, 7, 14, 18, 0, 0, | & \\
 \verb| TIME_STARTMS               = 0.D0, | & \\
-\textcolor{red}{\verb| TIME_DURATION              = 3.0D0, |} ~~~~~~~~~3時間以上であれば良い。& \\
+\textcolor{red}{\verb| TIME_DURATION              = 3.0D0, |} ~~~~~~~~~necessary for more than 3 hours & \\
 \verb| TIME_DURATION_UNIT         = "HOUR", | & \\
 \verb| ....(省略)....| & \\
 \textcolor{red}{\verb| TIME_DT_ATMOS_RESTART      = 10800.D0, |} & \\
@@ -165,59 +151,54 @@ MPI並列数も変更している場合には、下記の関係を満たして�
 \verb|/| & \\
 \\
 \verb|&PARAM_RESTART | & \\
-\verb| RESTART_RUN          = .false.,               | ~~~~~~~~~~~~~~~追加。なくても良い。& \\
-\textcolor{red}{\verb| RESTART_OUTPUT      = .true.,|} ~~~~~~~~~~~~(オリジナル設定は\verb|.false.,|)& \\
+\verb| RESTART_RUN          = .false.,               | ~~~~~~~~~~~~~~~(added, but it is not necessary.) & \\
+\textcolor{red}{\verb| RESTART_OUTPUT      = .true.,|} ~~~~~~~~~~~~(\verb|.false.,| in the original setting) & \\
 \verb| RESTART_IN_BASENAME = "../init/init_d01_20070714-180000.000",| &  \\
-\textcolor{red}{\verb| RESTART_OUT_BASENAME = "restart_d01",|} ~~~~~~~~~~~~~~~追加 & \\
+\textcolor{red}{\verb| RESTART_OUT_BASENAME = "restart_d01",|} ~~~~~~~~~~~~~~~(added)& \\
 \verb|/| & \\
 \\
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & \\
-\textcolor{red}{\verb| ATMOS_BOUNDARY_START_DATE     = 2010, 7, 14, 18, 0, 0,|} ~~~~~~~~~~~~~~追加。なくてもよい。 &\\
+\textcolor{red}{\verb| ATMOS_BOUNDARY_START_DATE     = 2010, 7, 14, 18, 0, 0,|} ~~~~~~~~~~~~~~(added, but is not necessary.)&\\
 \verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.D0,                          | & \\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
 
-\nmitem{TIME_DURATION}が3時間に設定されている場合には、リスタートファイルは積分終了時に出力されるため、
-\nmitem{TIME_DT_ATMOS_RESTART}、\nmitem{TIME_DT_OCEAN_RESTART}、\\
-\nmitem{TIME_DT_LAND_RESTART}、\nmitem{TIME_DT_URBAN_RESTART}の設定は必要ない。
-また、\nmitem{TIME_DURATION}が3時間以上に設定されている場合には、
-\nmitem{TIME_DT_ATMOS_RESTART}、\nmitem{TIME_DT_OCEAN_RESTART}、\\
-\nmitem{TIME_DT_LAND_RESTART}、\nmitem{TIME_DT_URBAN_RESTART}に３時間、もしくは10800 (sec) の約数かつ\nmitem{TIME_DT}の倍数を指定している必要がある。
+When \nmitem{TIME_DURATION} is set to three hours and \nmitem{RESTART_OUTPUT} is \verb|.true.|, the restart file is created at the end of the integration. Therefore, \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \nmitem{TIME_DT_URBAN_RESTART} are not necessary.\\
+When \nmitem{TIME_DURATION} is set to more than three hours, it is necessary to specify \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \nmitem{TIME_DT_URBAN_RESTART}.
+The values for \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \nmitem{TIME_DT_URBAN_RESTART} must be a divisor of three hours (10800 s) and a multiple of \nmitem{TIME_DT}.
 
 
+The configuration for the restart calculation from three to six hours in integration time is as follows:\\
 
-3時間目から６時間目までのリスタート計算のための設定は下記の通りである。\\
-
-\noindent {\small {\gt
+\noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_TIME| & \\
 \textcolor{red}{\verb| TIME_STARTDATE             = 2007, 7, 14, 21, 0, 0, |} & \\
 \verb| TIME_STARTMS               = 0.D0, | & \\
-\textcolor{red}{\verb| TIME_DURATION              = 3.0D0, |}    & 3時間以上であれば良い。\\
+\textcolor{red}{\verb| TIME_DURATION              = 3.0D0, |}    & set for longer than 3 hours\\
 \verb| TIME_DURATION_UNIT         = "HOUR", | & \\
 \verb|/| & \\
 \\
 \verb|&PARAM_RESTART | & \\
-\textcolor{red}{\verb| RESTART_RUN          = .true.,               |} & \textcolor{red}{必須}\\
-\verb| RESTART_OUTPUT      = .true.,                |                  & あってもなくてもよい。\\
-\textcolor{red}{\verb| RESTART_IN_BASENAME = "restart_d01_20070714-210000.000",|} & \textcolor{red}{必須}\\
-\verb| RESTART_OUT_BASENAME = "restart2_d01",| & あってもなくてもよい。\\
+\textcolor{red}{\verb| RESTART_RUN          = .true.,               |} & (\textcolor{red}{necessary})\\
+\verb| RESTART_OUTPUT      = .true.,                |                  & (not always necessary)\\
+\textcolor{red}{\verb| RESTART_IN_BASENAME = "restart_d01_20070714-210000.000",|} & (\textcolor{red}{necessary})\\
+\verb| RESTART_OUT_BASENAME = "restart2_d01",| & (not alway necessary)\\
 \verb|/| & \\
 \\
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & \\
-\textcolor{red}{\verb| ATMOS_BOUNDARY_START_DATE     = 2010, 7, 14, 18, 0, 0,   |} & \textcolor{red}{必須}\\
+\textcolor{red}{\verb| ATMOS_BOUNDARY_START_DATE     = 2010, 7, 14, 18, 0, 0,   |} & (\textcolor{red}{necessary})\\
 \verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.D0,                          | & \\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
-
 
 
 

@@ -1,61 +1,40 @@
-\section{\SecMapprojectionSetting} \label{subsec:adv_mapproj}
+\section{Setting the map projection} \label{subsec:adv_mapproj}
 %------------------------------------------------------
-\scalerm では、まず実距離に基づいた格子点が配置され、その格子点位置と緯度経度基準点の情報を元に、
-それぞれの投影法を用いた際の各格子点での緯度・経度座標が計算される。
-緯度・経度情報は、すべてのSCALEのNetCDF形式の出力ファイルに含まれる。\\
-計算領域の位置と投影法は、設定ファイルの\nmitem{PARAM_MAPPROJ}の項目を編集することで設定できる。
-この設定も、\textcolor{red}{基本的に\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない。}
-まずはじめに、下記の例をもとに説明する。\\
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
-\verb|&PARAM_MAPPROJ| \\
-\verb| MPRJ_basepoint_lon = 138.727778D0,| \\
-\verb| MPRJ_basepoint_lat = 35.360556D0,| \\
-\verb| MPRJ_type          = 'MER',| \\
-\verb|/| \\
-\end{tabularx}
-}}}\\
+In \scalerm, grids are allocated based on actual distance. The latitude and longitude for all grids are calculated by using the latitude and longitude of a certain reference point using a map projection. All information pertaining to the latitude and longitude of the grids are output to all output files in \netcdf format. The locations of the domain and the map projection can be configured in \nmitem{PARAM_MAPPROJ}. \textcolor{blue}{This configuration must be shared among the configuration files \texttt{pp.conf}, \texttt{init.conf}, and \texttt{run.conf}.} An example is as follows:
+\editboxtwo{
+\verb|&PARAM_MAPPROJ| & \\
+\verb| MPRJ_basepoint_lon = 138.727778D0,| & \\
+\verb| MPRJ_basepoint_lat = 35.360556D0,|  & \\
+\verb| MPRJ_type          = 'MER',|        & ; Choose from Table \ref{tab:map_proj}.\\
+\verb|/| & \\
+}
 
-\begin{table}[b]
+\begin{table}[tb]
 \begin{center}
-\caption{SCALEで選択できる地図投影法}
+\caption{Map projections selectable in \scalerm}
 \begin{tabularx}{150mm}{|l|X|} \hline
- \rowcolor[gray]{0.9} \verb|MPRJ_type| & 地図投影法 \\ \hline
- \verb|NONE| & 地図投影なし（理想実験用）、デフォルト \\ \hline
- \verb|LC|   & ランベルト正角円錐図法              \\ \hline
- \verb|PS|   & ポーラーステレオ図法                \\ \hline
- \verb|MER|  & メルカトル図法                     \\ \hline
- \verb|EC|   & 正距円筒図法                       \\ \hline
+ \rowcolor[gray]{0.9} \verb|MPRJ_type| & Map projection\\ \hline
+ \verb|NONE| & No map projection for ideal experiment ( default ) \\ \hline
+ \verb|LC|   & Lambert conformal conic projection   \\ \hline
+ \verb|PS|   & Polar stereo projection           \\ \hline
+ \verb|MER|  & Mercator projection               \\ \hline
+ \verb|EC|   & Equi-rectangular projection        \\ \hline
 \end{tabularx}
 \label{tab:map_proj}
 \end{center}
 \end{table}
 
-\noindent
-\nmitem{MPRJ_basepoint_lat, MPRJ_basepoint_lon}は、
-それぞれ基準点の緯度・経度を表す。
-デフォルトでは基準点は計算領域の中心である。
-SCALE-RMでは、北緯を正、南緯を負の値として表現し、
-経度は0度を起点に東経を正、西経を負の値で表現する。
-東経・西経共に180度以上の値を設定することも可能である。
-この設定例では計算領域の
-中心が北緯35.360556度、東経138.727778度に位置することになる。
-この場所を中心に指定された大きさで、計算領域が設定される。\\
-\nmitem{MPRJ_type}は、地図投影法の種類を表しており、\verb|MER|はメルカトル図法を意味する。
-\scalerm で現在選択できる地図投影法とその指定文字列は表\ref{tab:map_proj}のとおりである。
-メルカトル図法を用いた場合、投射する円筒に接する基準緯線は\nmitem{MPRJ_M_lat}で設定する。
-値の単位は[degree]である。
-通常、基準緯線は赤道にとることが多いが、基準緯線に近いほど歪みが少なく正確に記述できるので、
-\nmitem{MPRJ_M_lat}を指定しない場合は\nmitem{MPRJ_basepoint_lat}が基準緯線として用いられる。
+\nmitem{MPRJ_basepoint_lat, MPRJ_basepoint_lon} are the latitude and longitude at a reference point. This reference point is the center of the calculation domain by the default setting.
+In \scalerm, the north and south latitudes are expressed by positive and negative values, respectively. The east and west longitudes are also expressed by positive and negative values, respectively\footnote{It is possible to alternatively express either east longitude or west longitude as at an angle greater than $180^{\circ}$.}.
+In above setting, the center of the domain is configured at $35.360556^{\circ}$N and $138.727778^{\circ}$E, where N and E denote the north latitude and east longitude, respectively. The entire calculation domain is placed at the center with a specified size.
 
-投影法の中でも利用頻度が高いランベルト正角円錐図法の設定について以下に説明する。
-ここでは、現実大気実験チュートリアルで使用した\verb|run.d01.conf|ファイルを例に挙げる。\\
+\nmitem{MPRJ_type} provides the kind of map projection and \verb|MER| the Mercator projection.
+Table \ref{tab:map_proj} shows the selectable map projections in the current version of \scalerm. In the case of the Mercator projection, the standard latitude, to which a cylinder is tangent, is specified as \nmitem{MPRJ_M_lat} in units of degrees. In general, the standard latitude is set to the Equator.
+In \scalerm, \nmitem{MPRJ_basepoint_lat} is used as standard latitude, unless \nmitem{MPRJ_M_lat} is explicitly specified. This is because this method is more precise with less distortion than the usual Mercator projection.
 
-{\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+The text below explains the Lambert conformal conic projection, the usage frequency of which is highest. The example is the same as that in the file used in the tutorial for the real atmospheric experiment.
+\editbox{
 \verb|&PARAM_MAPPROJ| \\
 \verb| MPRJ_basepoint_lon = 135.220404,| \\
 \verb| MPRJ_basepoint_lat = 34.653396,| \\
@@ -63,22 +42,16 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \verb| MPRJ_LC_lat1       =  30.0,| \\
 \verb| MPRJ_LC_lat2       =  40.0,| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
+}
+In \scalerm, two standard parallels are used for this projection.
+The north and south of them are specified in \nmitem{MPRJ_LC_lat1, MPRJ_LC_lat2} 
+in units of degrees.
+In the region between the latitudes, the ratio of the latitudinal to longitudinal length is adjusted to be close to the Earth’s ellipsoid face.
 
-\noindent
-\scalerm では、2標準緯線型の投影方法を採用している。
-両標準緯線に挟まれた領域では、
-緯線・経線の長さの比が地球楕円体面上における長さの比と近くなるように調節される。
-南側、北側の標準緯線をそれぞれ\nmitem{MPRJ_LC_lat1, MPRJ_LC_lat2}で設定する。
-値の単位は[degree]である。
 
-さらに下記のように\nmitem{MPRJ_basepoint_x, MPRJ_basepoint_y}という変数を用いることで、
-地図投影中心と計算領域中心をずらすことができる。\\~\\
+Furthermore, it is possible for the reference point (\nmitem{MPRJ_basepoint_lon}, \nmitem{MPRJ_basepoint_lat}) to be displaced from the default setting, i.e., domain center as follows:
 
-{\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\editbox{
 \verb|&PARAM_MAPPROJ| \\
 \verb| MPRJ_basepoint_lon = 135.220404,| \\
 \verb| MPRJ_basepoint_lat = 34.653396,| \\
@@ -88,24 +61,19 @@ SCALE-RMでは、北緯を正、南緯を負の値として表現し、
 \verb| MPRJ_LC_lat1       = 30.0,| \\
 \verb| MPRJ_LC_lat2       = 40.0,| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\~\\
+}
 
-\noindent
-\nmitem{MPRJ_basepoint_x, MPRJ_basepoint_y}は、地図投影中心の位置を、
-計算領域の南西端（左下角）からの距離で指定するパラメータで、値の単位は[m]である。
-これらを指定しない場合、地図投影中心は計算領域中心に設定される。
-地図投影中心を指定しない場合とした場合を比較したものを図\ref{fig:map_lc}に示す。
-図\ref{fig:map_lc}(a)は、デフォルト設定で地図投影中心と計算領域中心が一致している場合、
-図\ref{fig:map_lc}(b)は、地図投影中心をずらすよう指定した場合の関係を表している。
-図\ref{fig:map_lc}(b)では計算領域の南西端から
-\nmitem{MPRJ_basepoint_x, MPRJ_basepoint_y}で指定した距離だけ離れた位置に投影中心が設定される。
+The location of the reference point is specified as the distance from the south-west corner (bottom-left corner).;
+\nmitem{MPRJ_basepoint_x} and \nmitem{MPRJ_basepoint_y} are the distances in units of meters between the south-west corner and the reference point in \XDIR and in \YDIR, respectively.
+If they are not specified, the center of projection corresponds to that of the domain.
+Figure \ref{fig:map_lc} shows both cases.
 
 \begin{figure}[t]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./figure/LC_latlon_xy.eps}\\
-  \caption{投影中心と計算領域の関係：(a)はデフォルト設定の場合、(b)は投影中心の位置を計算領域中心からずらした場合。
-  赤線の矩形が計算領域を表す。}
+  \caption{The relationship between projection center and calculation domain.; (a) Default setting and (b) the case where the center of projection is displaced at the center of the domain.
+    The red line indicates the boundary of the calculation domain.}
   \label{fig:map_lc}
 \end{center}
 \end{figure}
+

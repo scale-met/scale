@@ -1,176 +1,99 @@
-%\section{対象計算領域の設定} \label{sec:domain}
-\section{\SecBasicDomainSetting} \label{sec:domain}
+\section{Setting the target domain} \label{sec:domain}
 %=======================================================================
 
-まず、\scalerm での対象計算領域の格子点数とMPIプロセスの関係を整理しておく。
-計算領域は、水平格子間隔と格子点数およびMPIプロセス数を指定することで決定されるようになっている。
-図\ref{fig:domain}は、
-計算領域、水平格子間隔、格子数、及びMPIプロセス数の関係を示している。
-水平方向に2次元の領域分割を行うことで並列化がなされている。
+This section explains the number of grids, and the target domain and its relationship with the MPI process. The calculation domain is determined by the horizontal grid spacing, the number of grid points, and the number of MPI processes. Figure \ref{fig:domain} gives an example of this relationship. The parallelization is implemented by a 2D domain decomposition in the horizontal direction.
 
-格子点数およびMPIプロセス数は、
-\namelist{PARAM_INDEX}内の\nmitem{IMAX, JMAX}、\\
-\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}で設定する。
-%水平格子間隔については、\namelist{PARAM_GRID}内の\nmitem{DX, DY}で設定する。
+The numbers of grids and of MPI processes are specified in \nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX}, and in \nmitem{PRC_NUM_X, PRC_NUM_Y} in \namelist{PARAM_PRC}, respectively. As shown in Fig. \ref{fig:domain},  the entire domain is divided into \nmitem{PRC_NUM_X} along the X direction and \nmitem{PRC_NUM_Y} in the Y direction. Each sub-domain is managed by an MPI process, each of which takes charge of a grid block of IMAX $\times$ JMAX $\times$ KMAX. Care is taken to ensure that this number of grids is taken charge of by one process: its value is not identical to the total number of grids in the domain. In other words, the entire domain depends on the number of MPI processes, the horizontal grid spacing, and the number of grids.
 
-
-図\ref{fig:domain}に示すように、
-計算領域全体が、\XDIR に\nmitem{PRC_NUM_X}個、\YDIR に\nmitem{PRC_NUM_Y}個に分割され、それぞれが1つのMPIプロセスによって担当される。
-
-それぞれのMPIプロセスは、\nmitem{IMAX, JMAX, KMAX}個の格子を受け持つ。
-ここで、注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であり、
-計算領域全体の格子点数ではないことである。
-すなわち、計算領域は、水平格子間隔、格子点数とともにMPIプロセス数にも依存する。
-
-
-以上の関係から、計算領域全体のそれぞれの方向の格子点数および総格子点数は、
+Thus, the number of grids along each horizontal direction and that in the entire domain are derived as follows:
 \begin{eqnarray}
-&& 領域内{\XDIR} の格子数 = \verb|IMAX| \times \verb|PRC_NUM_X|
+&& \verb|Number of grids in the X direction| = \verb|IMAX| \times \verb|PRC_NUM_X|
    \label{eq:xgridnum}\\
-&& 領域内{\YDIR}の格子数 = \verb|JMAX| \times \verb|PRC_NUM_Y|
+&& \verb|Number of grids in the Y direction| = \verb|JMAX| \times \verb|PRC_NUM_Y|
    \label{eq:ygridnum}\\
-&& 領域内の総格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
+&& \verb|Total number of grids in the domain| \nonumber\\
+&& = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
-   \times (\verb|KMAX| )  \nonumber
+   \times (\verb|KMAX| ), 
 \end{eqnarray}
-となる。
-ここで、\nmitem{KMAX}は、鉛直方向の格子点数であり、
-\namelist{PARAM_INDEX}内の項目で指定される。
+where \nmitem{KMAX} is the number of grids along the vertical direction, which is specified in \namelist{PARAM_INDEX}.
 
-また、領域全体の大きさは、式(\ref{eq:xgridnum}、\ref{eq:ygridnum})を使って、
+By using Eqs. (\ref{eq:xgridnum} and \ref{eq:ygridnum}),  the size of the entire domain is determined as follows:
 \begin{eqnarray}
-&& {\XDIR}の領域の長さ = {\XDIR}の格子点数 \times \verb|DX| \nonumber\\
-&& {\YDIR}の領域の長さ = {\YDIR}の格子点数 \times \verb|DY| \nonumber
+&& \verb|Domain length in the X direction| = \verb|number of grids in the X direction| \times \verb|DX|\\
+&& \verb|Domain length in the Y direction| = \verb|number of grids in the Y direction| \times \verb|DY|,
 \end{eqnarray}
-となる。ここで、\nmitem{DX, DY}は、後述するように
-\namelist{PRAM_GRID}で指定されるものである。
-解像度と領域の大きさが決まっている場合、MPIプロセス数が決まると、
-逆算してMPIプロセスあたりの格子点数が決まる。
+where \nmitem{DX, DY} is grid spacings specified  in \namelist{PRAM_GRID} as described in subsection \ref{subsec:gridinterv}.
+If the horizontal resolution and domain size are set and the available number of MPI processes is given, the number of grids that are controlled by one MPI process can be determined as in the above relationship. 
 
-次節以降では、MPIプロセス数、格子数、格子間隔、
-それぞれの設定方法について詳しく説明する。
-また、本節内の設定は、
-\textcolor{red}{基本的に\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない}
-ことに注意が必要である。
-
+In the next subsections, the configuration of the MPI processes, the number of grids, and the grid interval are described in more detail.  \textcolor{blue}{Note that it is necessary that these settings  be identical among the configuration files \texttt{pp.conf},  \texttt{init.conf}, and \texttt{run.conf}}.
 
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./figure/domain_decomposition.eps}\\
-  \caption{計算領域に対する、水平格子間隔(\texttt{DX}, \texttt{DY})、MPIプロセスあたりの格子数(\texttt{IMAX}, \texttt{JMAX})、MPIプロセス数(\texttt{PRC\_NUM\_X}, \texttt{PRC\_NUM\_Y})の関係。水色領域は、ある1つのMPIプロセスが担当する領域。}
+  \caption{Relation between horizontal grid interval (\texttt{DX}, \texttt{DY}), number of grids (\texttt{IMAX}, \texttt{JMAX}) 
+    per MPI process, and the number of MPI processes (\texttt{PRC\_NUM\_X}, \texttt{PRC\_NUM\_Y})     in the entire domain. The light-blue part corresponds to a region managed by an MPI process.}
   \label{fig:domain}
 \end{center}
 \end{figure}
 
 
 
-\subsection{\SubsecMPIProcess} \label{subsec:relation_dom_reso2}
+\subsection{Setting the number of MPI processes} \label{subsec:relation_dom_reso2}
 
-MPIプロセス数は、設定ファイルの\namelist{PARAM_PRC}で指定する。
-\scalerm の入出力ファイルは、MPIプロセス毎に分割されているため、
-MPIプロセス数を変更すると分割ファイル数も必ず変わることになる。
-従って、例えば、2-MPI並列用に作成した初期値ファイルは、
-4-MPI並列のモデル実行には使用できない。
-MPIプロセス数を変更するには、
-\verb|pp.conf|、\verb|init.conf|、\verb|run.conf| の
-すべてを編集・変更し、\verb|pp|、\verb|init| から行う必要がある。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+The number of MPI processes is specified in \namelist{PARAM_PRC} in the configuration file. Since the input and output files of \scalerm are divided process by process according to the MPI, the total number of files is changed according to the number of MPI processes. For example, the initial condition file made by a two-MPI parallel combination cannot be used for model execution by a four-MPI parallel.
+It is necessary to edit \namelist{PARAM_PRC} in \verb|pp.conf|, \verb|init.conf|, and \verb|run.conf| if the number of MPI processes is changed,
+and to conduct once again the processes of \verb|pp| and \verb|init|.
+\editboxtwo{
 \verb|&PARAM_PRC| & \\
-\verb| PRC_NUM_X       = 2,| & ; {\XDIR}（東西方向）のMPI並列分割数 \\
-\verb| PRC_NUM_Y       = 1,| & ; {\YDIR}（南北方向）のMPI並列分割数 \\
+\verb| PRC_NUM_X       = 2,| & ; number of divisions by MPI parallelization in the {\XDIR}（zonal direction）\\
+\verb| PRC_NUM_Y       = 1,| & ; number of divisions by MPI parallelization in the {\YDIR}（meridional direction）\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
-
-
-総MPIプロセス数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  となり、
-上記の例では、\XDIR に2分割、\YDIR に1分割（分割なし）の 2-MPI並列ということになる。
-
-実行時にMPIコマンドに指定するMPIプロセス数は、総MPIプロセス数を指定しなければならない。
-この条件を満たさない場合は、下記のメッセージが
-標準出力に出力されて計算は行われず、直ちに終了する。
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+}
+The total number of MPI processes is given by \verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|.
+The above example expresses a two-MPI parallel by dividing the domain into two sub-domains along the X direction, but not dividing along the Y direction. The total number of processes must be given as the number of MPI processes in the MPI command at submitting job. If this condition is not satisfied,  the program is terminated immediately without calculation and the following message is output to the standard output.
+\msgbox{
 \verb|xxx total number of node does not match that requested. Check!| \\
-\end{tabularx}
-}}}\\
+}
 
-
-
-
-
-\subsection{\SubsecGridNumSettng} \label{subsec:relation_dom_reso3}
+\subsection{Setting the number of horizontal and vertical grids} \label{subsec:relation_dom_reso3}
 %-----------------------------------------------------------------------
 
-格子数の設定は、設定ファイル(\verb|***.conf|)の\namelist{PARAM_INDEX}で行う。
-以下で設定する水平格子数の値は、１つのMPIプロセス当たりの値であることに注意が必要である。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+The number of grids is specified in \namelist{PARAM_INDEX} in the configuration files \verb|***.conf|. It should be noted that the specified horizontal grids are values controlled by one MPI process.
+\editboxtwo{
 \verb|&PARAM_INDEX| & \\
-\verb| KMAX = 97,|  & ; 鉛直層数 \\
-\verb| IMAX = 20,|  & ; プロセスあたりの{\XDIR}の格子点数 \\
-\verb| JMAX = 25,|  & ; プロセスあたりの{\YDIR}の格子点数 \\
+\verb| KMAX = 97,|  & ; number of vertical layers \\
+\verb| IMAX = 20,|  & ; number of grids along the X direction by an MPI process\\
+\verb| JMAX = 25,|  & ; number of grids along the Y direction by an MPI process\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
 
-
-
-\subsection{\SubsecGridIntvSettng} \label{subsec:gridinterv}
+\subsection{Setting grid intervals along the horizontal and vertical directions} \label{subsec:gridinterv}
 %-----------------------------------------------------------------------
-\scalerm では、第\ref{subsec:buffer}節で述べる緩和領域を除き、
-水平格子間隔は等間隔でのみ設定可能である。
-鉛直格子間隔については、任意に定義することが可能である。
-すべての方向について等間隔で設定する場合には、以下のように
-設定ファイルの\namelist{PARAM_GRID}の\nmitem{DX, DY, DZ}に
-それぞれ、東西、南北、鉛直方向の格子間隔を指定する。
-単位は[m]である。\\
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+Excluding the buffer region explained in Section \ref{subsec:buffer}, the horizontal grid intervals are configured only equidistantly, whereas the 
+ vertical grid intervals are configured freely. When the grid intervals are  configured uniformly along all directions, specify the zonal, meridional, and vertical grid intervals  at \nmitem{DX, DY, DZ} in \namelist{PARAM_GRID}, respectively. The unit is [m].
+\editboxtwo{
 \verb|&PARAM_GRID  | & \\
-\verb| DX = 500.D0,| & ; {\XDIR}（東西方向）の格子間隔\\
-\verb| DY = 500.D0,| & ; {\YDIR}（南北方向）の格子間隔\\
-\verb| DZ = 500.D0,| & ; {\ZDIR}（鉛直方向）の格子間隔\\
+\verb| DX = 500.D0,| & ; grid interval along the zonal (X) direction\\
+\verb| DY = 500.D0,| & ; grid interval along the meridional（Y）direction\\
+\verb| DZ = 500.D0,| & ; grid interval along the vertical (Z) direction\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
 
-
-以下に、鉛直方向での任意の格子点位置を指定する場合の設定を示す。
-鉛直方向は、ローレンツ格子を採用しており、
-速度成分定義格子点とスカラー定義格子点が半格子分ずれた食い違い格子になっている。
-ここでは、スカラー量を定義している格子点をセンターポイントと呼び、
-半格子ズレた格子点をフェイスポイントと呼ぶ。
-
-直接格子点の位置を指定する場合は、フェイスポイントの位置を
-\namelist{PARAM_GRID}の中の\nmitem{FZ(:)}で配列として与えればよい
-\footnote{指定の際には、シミュレーションの計算精度
-(モデルのコンパイル時に指定した浮動小数点の精度。デフォルトでは倍精度)を用いることが望ましい。}
-（図\ref{fig:scale_grid}参照)。
-また、\nmitem{FZ(:)}で指定する値の数は、鉛直層数
-（\namelist{PARAM_INDEX}の\nmitem{KMAX})と一致している必要がある。
-例として理想実験のチュートリアルの設定ファイルの例を下記に示す。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+The box below shows the method to set how to specify a non-uniform grid system.
+Since the model employs the Lorenz grid system, the points of definition for the velocity vector and other scalars are staggered, deviating by a half grid.
+In this document, the scalar location is called the center point and the half-grid-deviated location the face point.
+When the vertical grid locations are directly specified, provide them in \nmitem{FZ(:)} in \namelist{PARAM_GRID} as an array.\footnote{In this case, the same precision as used in the simulation is recommended to be specified. By default, the model is compiled as a double-precision floating point model.} Refer to Figure \ref{fig:scale_grid} for the details. Note that the number of elements specified in \nmitem{FZ(:)} should correspond to the number of vertical layers (\nmitem{KMAX} in \namelist{PARAM_INDEX}). The following file for the ideal experiment is shown as an example: 
+\editboxtwo{
 \verb|&PARAM_GRID|     & \\
-\verb| DX = 500.D0,|   & {\XDIR} の格子間隔(等間隔)[m]\\
-\verb| DY = 500.D0,|   & {\YDIR}の格子間隔(等間隔)[m]\\
-\verb| FZ(:) = |       & {\ZDIR}のフェイスポイントの位置[m] \\
+\verb| DX = 500.D0,|   & grid interval along the X direction (equidistant) [m]\\
+\verb| DY = 500.D0,|   & grid interval along the Y direction (equidistant) [m]\\
+\verb| FZ(:) = |       & location at face point along the Z direction [m] \\
 \verb| 　  80.000000000000000      ,| & \\
 \verb| 　  168.00000190734863      ,| & \\
 \verb| 　  264.80000610351567      ,| & \\
-\verb|　 　 　〜　中略　〜|           & \\
+\verb|　 　 　........ |           & \\
 \verb| 　  14910.428862936289      ,| & \\
 \verb| 　  15517.262523292475      ,| & \\
 \verb| 　  16215.121232702089      ,| & \\
@@ -178,142 +101,91 @@ MPIプロセス数を変更するには、
 \verb| 　  17940.576891717363      ,| & \\
 \verb| 　  19001.932756390710      ,| & \\
 \verb| 　  20222.492000765058      ,| & \\
-\verb| BUFFER_DZ = 5000.D0,|          & 第\ref{subsec:buffer}節参照\\
-\verb| BUFFFACT  =   1.0D0,|          & 第\ref{subsec:buffer}節参照\\
+\verb| BUFFER_DZ = 5000.D0,|          & Refer to Section \ref{subsec:buffer}\\
+\verb| BUFFFACT  =   1.0D0,|          & Refer to Section \ref{subsec:buffer}\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
-
+}
 
 \begin{figure}[tb]
 \begin{center}
   \includegraphics[width=0.4\hsize]{./figure/verticalface.eps}\\
-  \caption{\scalerm の鉛直格子のフェイスポイントの定義点。\namelist{PARAM_GRID}で\nmitem{FZ}を指定する時は、地表面を除いた計算領域下端第1層目上端の位置から$k=1$として与える。}
+  \caption{The point of definition of the face point in \scalerm. If \nmitem{FZ} is given in \namelist{PARAM_GRID}, the top height at the first layer is given for the value at $k=1$. Note that $k=1$ is not the ground surface height.}
   \label{fig:scale_grid}
 \end{center}
 \end{figure}
 
-なお、指定された鉛直高度は
-標高が0 mの場所（海上）での鉛直格子点位置として設定され、標高がある場所では地形に沿った座標系によって適切に処理される。
+The above setting is processed at a topographical height of 0 m.
+The location of the vertical grids at the non-zero topography is appropriately treated by the terrain-following coordinate.
+
+The locations of the vertical grids are configured freely.
+However, an unusual configuration sometimes leads to numerical instability. To avoid it, the tool for the generation of vertical grids is supported as a FORTRAN program \verb|make_vgrid.f90| in the directory\\ \texttt{scale-\version/scale-rm/util/makevgrid/} with several samples of the namelist. If needed, use them as references. The tool generates the values of \nmitem{FZ(:)} directly. Copy and paste them in the configuration file.
 
 
-格子点位置は任意に設定できるが、設定によっては計算不安定につながる。
-鉛直層の設定については、作成をサポートするツールが、\texttt{scale-\version/scale-rm/util/makevgrid/}
-ディレクトリの中に \verb|make_vgrid.f90|というFortranプログラムと
-いくつかのサンプルネームリストが用意されているので、参考にされたい。
-ツールをコンパイルして実行すれば直ちに設定ファイルに貼り付けて使用できる
-\nmitem{FZ(:)}の値が作成される。
-
-
-\subsection{\SubsecBasicBufferSetting} \label{subsec:buffer}
+\subsection{Setting the buffer region and nudging method} \label{subsec:buffer}
 %-----------------------------------------------------------------------
-モデル最上層では音波や重力波の非物理的な反射が起こる。
-また、側面境界では現実大気実験を行う際に境界条件として与えられる入力データと
-対象領域の計算結果の間に値の不一致が起こる。
-これを回避するため、「緩和領域」を設ける。
 
-\scalerm では計算領域の境界のすぐ内側に緩和領域を設定することができる
-(図\ref{fig:buff_xz})。
-緩和領域の格子では、計算された値を
-指定された値（境界値データ、親領域のデータなど）に対して
-ある時定数で近づける。以下これをナッジングと呼ぶ(上層における緩和はレイリーダンピングと呼ばれることが多い)。
-緩和領域の幅は、設定ファイルの\namelist{PARAM_GRID}の中で設定する。
-以下に例を示す。
-設定はすべての設定ファイルにおいて共通していなければならない。
+In general,
+nonphysical reflections of sound and gravity waves often occur at the top of the model boundary.
+Moreover, disagreement in values between input data as boundary condition and actual calculation output occurs at the lateral boundaries. They generate several problems, such as nonphysical mode, in calculation.
+To avoid these problems, the ``buffer region'' is placed in the domain.
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+As shown in Fig. \ref{fig:buff_xz}, \scalerm places the buffer region just inside the calculation domain. In the buffer region, prognostic variables are updated to be close to the specified values of boundary data and/or the parent model data with a certain relaxation time. Hereinafter, this relaxation is called nudging. Note that nudging at the upper layers is often called Rayleigh damping. The width of the buffer region is specified in \namelist{PARAM_GRID} in the configuration file. An example is as below. Note again that the configuration in all procedures must be identical.
+\editboxtwo{
 \verb|&PARAM_GRID  |            & \\
- \verb|BUFFER_DZ = 5000.D0,   | & ; {\ZDIR}（モデルトップから下向き方向）の緩和領域の幅(参考値) [m]\\
- \verb|BUFFER_DX = 300000.D0, | & ; {\XDIR}（東西方向）の緩和領域の幅(参考値) [m]\\
- \verb|BUFFER_DY = 300000.D0, | & ; {\YDIR}（南北方向）の緩和領域の幅(参考値) [m]\\
- \verb|BUFFFACT  = 1.D0,      | & ; 緩和領域内の格子間隔に対するストレッチ係数(デフォルトは1.0)\\
+ \verb|BUFFER_DZ = 5000.D0,   | & ; The width of the buffer region along the Z direction from the top of the model (a reference) [m]\\
+ \verb|BUFFER_DX = 300000.D0, | & ; The width of the buffer region along the X (zonal) direction ( a reference ) [m]\\
+ \verb|BUFFER_DY = 300000.D0, | & ; The width of the buffer region along the Y (meridional) direction ( a reference ) [m]\\
+ \verb|BUFFFACT  = 1.D0,      | & ; Stretched factor for grid intervals in the buffer region( default : 1.0 )\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
 
 
-%
-水平方向には東西南北の四方境界に緩和領域が設定されるが、
-鉛直方向には計算領域の上端にのみ緩和領域が設定され、下端には設定されない。
-緩和領域は、計算領域内に設定されるため、
-ナッジングの影響を受けない領域(緩和領域を除いた範囲)は
-計算領域よりも狭くなることに注意が必要である。
+The buffer regions along the horizontal directions are placed at the four domain boundaries, whereas those along the vertical direction are placed just at the top of the domain, and nothing is affected in the lower region. Note that the actual target region (the region excluding the buffer regions) narrows due to this setting because the buffer region is placed in the calculation domain.
 
-緩和領域の格子数 \verb|ibuff|は、
-\[
-\sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
-\]
-の関係を満たす最小の整数で自動的に計算される。
-従って、緩和領域の大きさ $\verb|BUFFER|_{\verb|X|}$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$)
-は必ずしも \nmitem{BUFFER_DX} と一致するわけではないことに注意が必要である。
-結局、緩和領域を除いた計算領域の大きさは、
-\[
-\nmitemeq{DX} \times ( \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X} - 2 \times \verb|ibuff| )
-\]
-となる。
+The number of grids \verb|ibuff| in the buffer region is automatically calculated as the minimum integer satisfying the following condition:
+ \begin{eqnarray}
+&&\sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
+\end{eqnarray}
+Thus, it should be noted that the width of the buffer region $\verb|BUFFER|_{\verb|X|}$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$)  does not always correspond to \nmitem{BUFFER_DX}. At the end, the actual target region excluded by the buffer region is expressed as
+\begin{eqnarray}
+&& \nmitemeq{DX} \times ( \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X} - 2 \times \verb|ibuff| ).
+\end{eqnarray}
 
-ここでは、{\XDIR}の説明をしたが、{\YDIR}、{\ZDIR}も同様である。
-ただし、{\ZDIR} については下端には緩和領域が取られないため、緩和領域を除いた計算領域の大きさは、モデル上端の緩和領域の格子数を\verb|kbuff|として
-\[
-\nmitemeq{DZ} \times ( \nmitemeq{KMAX} - \verb|kbuff| )
-\]
-となる。
-
+The above explanation is for the X direction. Although the situations along the Y and Z directions are similar to this, note that the actual target region along the Z direction is expressed as
+\begin{eqnarray}
+&& \nmitemeq{DZ} \times ( \nmitemeq{KMAX} - \verb|kbuff| ),
+\end{eqnarray}
+using the number of grids \verb|kbuff| in the upper buffer region.
 
 \begin{figure}[t]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./figure/buffer_xz.eps}\\
-  \caption{計算領域における緩和領域の配置：斜線部分が緩和領域を意味する。
-  図はXZ断面だが、Y方向にも同一の配置である。}
+  \caption{Location of the buffer region in the entire calculation domain: the shaded area indicates the buffer region. This figure shows the XZ cross-section. It is the same as the YZ cross-section.}
   \label{fig:buff_xz}
 \end{center}
 \end{figure}
 
 
-一般に、緩和領域の大きさや緩和格子点の数のとり方については、
-解く問題に依存するため明確な指標はない。
-\scalerm では、鉛直方向（計算領域トップ）の緩和格子点は5点以上、
-水平方向（側面境界付近）の緩和格子点は20〜40点程度を推奨している。
-実験設定や事例によっては、さらに緩和格子点を増やしたり、
-後述のストレッチ係数を用いて緩和領域を広げたり、
-緩和の時定数を調整したりする必要があるだろう。
-時定数とは、目標値との差が$1/e$になるまでの時間である。
-緩和の時定数は、
-\namelist{PARAM_ATMOS_BOUNDARY}の中の
-\nmitem{ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy, ATMOS_BOUNDARY_tauz}によって秒単位で設定する。
-デフォルトの値は $10 \Delta t$ であり、これは、10タイムステップで$1/e$になることに相当する。
-タイムステップについては、第\ref{sec:timeintiv}節を参照のこと。
+In general, there is no clear criterion for setting the buffer region width and locating grids in the region.
+This depends on a problem to be solved. In \scalerm, the following are recommended: the number of grids in the vertical buffer region at the top of the model is greater than 5, whereas that in the lateral boundaries is approximately 20$\sim$40. Depending on the experiment, it may be necessary to increase the number of grids in the buffer region to increase the buffer region itself by using the appropriate stretch factor, tune relaxation time, and so on.
+The relaxation time is defined as the time
+where the difference between the simulated value and the target value becomes $1/e$.
+This relaxation time is given in \nmitem{ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy, ATMOS_BOUNDARY_tauz}  in \namelist{PARAM_ATMOS_BOUNDARY} in units of seconds.
 
-\subsubsection{緩和領域の格子間隔をストレッチさせる}
 
-緩和領域の格子間隔は、基本的に
-\namelist{PARAM_GRID}の中の\nmitem{DX, DY, DZ}で指定した通りであるが、
-\nmitem{BUFFFACT}に1以上の値を設定することで、ストレッチさせることも可能である。
-ただし、格子間隔を等間隔で指定した場合、
-この\nmitem{BUFFFACT}の設定は、X、Y、{\ZDIR}すべてに適用される。
-それぞれの方向に別々に設定したい場合は、\nmitem{BUFFFACT_X, BUFFFACT_Y, BUFFFACT_Z}を指定する。
-{\ZDIR}の層レベルを任意の格子点位置に指定する場合、
-すなわち、\nmitem{FZ(:)}を与える場合(第\ref{subsec:gridinterv}節参照のこと)にはストレッチの設定は{\ZDIR}には適用されない。
+\subsubsection{Method for stretching grid intervals in buffer region}
 
-緩和領域内の格子間隔 (\verb|BDX|) は次の通り決定される。
+The grid intervals in the buffer region are the same as \nmitem{DX, DY, DZ} in \namelist{PARAM_GRID} by default.
+But, it is possible for them to be stretched by configuring \nmitem{BUFFFACT}. This specification of \nmitem{BUFFFACT} is applied in all directions if the grid intervals are uniformly specified. When the stretched factor is configured separately in every direction, specify \nmitem{BUFFFACT_X, BUFFFACT_Y, BUFFFACT_Z}. Note that in case of the configuration of vertical levels by giving \nmitem{FZ(:)} (refer to \ref{subsec:gridinterv}), the above stretched settings have no effect along the vertical direction.
+
+The grid interval \verb|BDX| in the buffer region is determined as follows:
 \begin{eqnarray}
- \verb|BDX(|n\verb|)| &=& \verb|DX| \times \verb|BUFFFACT|^n \nonumber
+ \verb|BDX(|n\verb|)| &=& \verb|DX| \times \verb|BUFFFACT|^n, \nonumber
 \end{eqnarray}
-ここで、$n$は緩和領域内の格子点番号を表し、計算領域の内側から外側へ向う番号である。
-緩和領域の格子間隔は、
-\nmitem{BUFFFACT=1.0}ならば内部領域と同じであり、
-\nmitem{BUFFFACT=1.2}ならば内側から外側(境界)に向かって1.2倍の割合で広がっていく。
-\nmitem{BUFFFACT}はいくつに設定しても良いが、計算の安定性を考慮すると 1.0から1.2 が推奨される。
+where $n$ denotes the index of grids in the buffer region, directed from the inner to the outer region in the domain. The grid interval is the same as the inner domain at \nmitem{BUFFFACT=1.0}, whereas it increases from the inner to the outer region by a factor of 1.2 at \nmitem{BUFFFACT=1.2}.  Although any value of \nmitem{BUFFFACT} can be configured, the value from 1.0 to 1.2 is recommended to avoid numerical instability.
 
-
-緩和領域の大きさ$\verb|BUFFER|_{\verb|X|}$は、
-\[
+Finally, the width of the buffer region $\verb|BUFFER|_{\verb|X|}$ is as follows:
+\begin{eqnarray}
   \verb|BUFFER|_{\verb|X|} = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}}-1}{ \nmitemeq{BUFFFACT}-1 }
-\]
-となる。
-%
-緩和領域の幅\nmitem{BUFFER_DX}が同じでも、
-\nmitem{BUFFFACT}の値を大きくすると緩和領域の格子数は少なくなる。
-
+\end{eqnarray}
+Even if the same width of buffer region \nmitem{BUFFER_DX} is specified, the number of grids in the buffer region decreases with increasing \nmitem{BUFFFACT}.

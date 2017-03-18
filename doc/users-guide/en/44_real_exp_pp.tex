@@ -1,39 +1,29 @@
 %-------------------------------------------------------%
-\section{地形データの作成：pp} \label{sec:tutrial_real_pp}
+\section{Creating topographical data: pp} \label{sec:tutrial_real_pp}
 %-------------------------------------------------------%
 
-ppディレクトリへ移動し、現実実験のための地形データを作成する。
+Move to the directory \verb|pp| and create topographical data for the experiment as follows:
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/pp/
  $ ls
     pp.d01.conf
     scale-rm_pp
 \end{verbatim}
-ppディレクトリの中には、\verb|pp.d01.conf|という名前の
-設定ファイルが準備されている。
-ドメインの位置や格子点数など、実験設定に合わせて、
-適宜\verb|pp.d01.conf|を編集する必要があるが、
-チュートリアルではすでに表\ref{tab:grids}の設定に
-従って編集済みの\verb|pp.d01.conf|が用意されているため、
-そのまま利用する。
+In the directory \verb|pp|, there exists configuration file \verb|pp.d01.conf|.
+It is necessary to edit \verb|pp.d01.conf| according to the experiment settings,
+such as the position of the domain and the number of grids.
+Since \verb|pp.d01.conf| has already been edited for this tutorial, it can be used without any change.
+The setting of this experiment is shown in Table \ref{tab:grids}.
 
-\verb|pp.d01.conf|のネームリストのうち、領域に関係する設定は
-\namelist{PARAM_PRC}、\namelist{PARAM_INDEX}、\namelist{PARAM_GRID}
-で行っている。
-{\XDIR} 、{\YDIR}ともに2分割されており、
-総計として4つのMPIプロセスを使用する設定となっている。
-1つのMPIプロセスあたりの格子点数については、
-\nmitem{IMAX = 45}、\nmitem{JMAX = 45}と指定されているため、
-{\XDIR} 、{\YDIR}の総格子点数は、ともに$2 \times 45$ で90である。
-計算ドメインの大きさは、
-\namelist{PARAM_GRID}の\nmitem{DX, DY}はともに20000 m（20 km）
-と指定されており、
-一辺の長さが90 $\times$ 20 km より、1800 km $\times$ 1800 km の正方形の計算領域
-が設定されている。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+In Namelists in \verb|pp.d01.conf|, the parameters related to the domain are configured in \namelist{PARAM_PRC},
+\namelist{PARAM_INDEX}, and \namelist{PARAM_GRID}.
+The domain is decomposed along each of the X and Y directions into two domains.
+Thus, four MPI processes are used.
+The number of grids per MPI process is \nmitem{IMAX = 45} and \nmitem{JMAX = 45}.
+Thus, the total number of grids is 90 ($= 2 \times 45$) along the X and Y directions.
+The grid spacings in each direction \nmitem{DX, DY} in \namelist{PARAM_GRID} is 20,000 m (20 km).
+This means that the domain of calculation is an area of 1,800 km $\times$ 1,800 km because one side has length 90 $\times$ 20 km.
+\editbox{
 \verb|&PARAM_PRC| \\
 \verb| PRC_NUM_X      = 2,| \\
 \verb| PRC_NUM_Y      = 2,| \\
@@ -60,35 +50,22 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 \verb| BUFFER_DX = 400000.0, |\\
 \verb| BUFFER_DY = 400000.0, |\\
 \verb|/| \\
-\end{tabularx}
-}}}\\
+}
 
-
-
-さらに、\verb|scale-rm_pp|専用の設定として
-\namelist{PARAM_CONVERT}の項目がある。
-\nmitem{CONVERT_TOPO}と\nmitem{CONVERT_LANDUSE}に\verb|.true.|を設定すると、
-標高データと土地利用区分データのそれぞれの処理が行われる。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\verb|scale-rm_pp| has a particular namelist of \namelist{PARAM_CONVERT}.
+If \nmitem{CONVERT_TOPO=.true.}, the altitudes are processed.
+If \nmitem{CONVERT_LANDUSE=.true.}, land-use classification data are processed.
+\editbox{
 \verb|&PARAM_CONVERT| \\
 \verb|  CONVERT_TOPO    = .true.,| \\
 \verb|  CONVERT_LANDUSE = .true.,| \\
 \verb|/| \\
-\end{tabularx}
-}}\\
+}
 
-また、
-\namelist{PARAM_CNVTOPO_GTOPO30}の中の\nmitem{GTOPO30_IN_DIR}と
-\namelist{PARAM_CNVLANDUSE_GLCCv2}の中の\nmitem{GLCCv2_IN_DIR}は、
-標高データと土地利用区分データの場所を示しており、
-環境変数\verb|${SCALE_DB}|で設定されたデータベースが指定されている。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\nmitem{GTOPO30_IN_DIR} in \namelist{PARAM_CNVTOPO_GTOPO30}
+and \nmitem{GLCCv2_IN_DIR} in\\ \namelist{PARAM_CNVLANDUSE_GLCCv2} specify the locations of altitude data and land-use classification data, respectively.
+%They are the same as the path given by \verb|${SCALE_DB}|.
+\editbox{
 \verb|&PARAM_CNVTOPO_GTOPO30| \\
 \verb| GTOPO30_IN_CATALOGUE = "GTOPO30_catalogue.txt",|\\
 \verb| GTOPO30_IN_DIR       = "./topo/GTOPO30/Products",|\\
@@ -99,43 +76,34 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の
 \verb| GLCCv2_IN_DIR        = "./landuse/GLCCv2/Products",|\\
 \verb| limit_urban_fraction = 0.3D0,|\\
 \verb|/|\\
-\end{tabularx}
-}}\\
+}
 
-
-今回は、表\ref{tab:grids}に示すとおり、4つのMPIプロセスを使用する設定であるので
-次のように実行し、地形データを作成する。
+After preparation of the configure file,
+execute \verb|scale-rm_pp| to create topographical data by the following command:
 \begin{verbatim}
  $ mpirun  -n  4  ./scale-rm_pp  pp.d01.conf
 \end{verbatim}
-%本節使用した環境において、実行にはおおよそ15秒を要する。
-ジョブが正常に終了している場合は、
-ログファイル(\verb|pp_LOG_d01.pe000000|)の最後に\\
-
-\noindent {\small {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+In the case of this tutorial, the number of MPI processes is four as in Table \ref{tab:grids}.
+When the job is finished normally, 
+the following message is output at the end of the log file: \verb|pp_LOG_d01.pe000000|.
+\msgbox{
  ++++++ Finalize MPI...\\
  ++++++ MPI is peacefully finalized\\
-\end{tabularx}
-}}}\\
+}
+Furthermore, the files \verb|topo_d01.pe######.nc| (file size of approximately 180 KB)  and\\
+\verb|landuse_d01.pe######.nc| (file size of approximately 220 KB)  are generated,
+dividing four files according to the MPI processes used.
+\verb|######| represents the MPI process number.
+The information concerning altitude, the ocean and land ratio, the lake ratio, urban covering and vegetation rates, and the classification of land use are stored at every grid point in these files. 
 
-\noindent
-と出力される。
-また、\verb|topo_d01.pe######.nc|（約180KBのファイルサイズ）と\\
-\verb|landuse_d01.pe######.nc|（約220KBのファイルサイズ）というファイルが
-MPIプロセス数だけ、つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）。
-それぞれ、各格子点における標高、海陸比率、湖比率、都市被覆率、植生比率、土地(植生)利用区分の情報が入っている。
-
-
-%% サポート外、だけど、quickviewは必要なので、optionとして使用します。
- \vspace{1cm}
- \noindent {\Large\em OPTION} \hrulefill \\
- gpviewがインストールされている場合、次のコマンドによって、
- 作成された地形データが正しく作成されているかどうか
- 確認することが出来る。正しく作成されていれば、図 \ref{fig:tutrial_real_domain}と同様の図ができる。
+\vspace{1cm}
+\noindent {\Large\em OPTION} \hrulefill \\
+When ``gpview'' is installed, you can confirm whether topographical data 
+has been correctly generated by the following command:
  \begin{verbatim}
    $ gpview topo_d01.pe00000*@TOPO --aspect=1 --nocont
    $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1 --nocont
  \end{verbatim}
+The same figure as Fig. \ref{fig:tutrial_real_domain} is generated
+if the results are correct.
 

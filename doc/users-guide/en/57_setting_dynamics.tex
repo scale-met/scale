@@ -1,105 +1,78 @@
-\section{\SecBasicDynamicsSetting} \label{sec:atmos_dyn}
+\section{Setting the dynamical core} \label{sec:atmos_dyn}
 %------------------------------------------------------
 
-
-\subsection{\SubsecDynsolverSetting}  \label{subsec:atmos_dyn_sover}
+\subsubsection{Setting the numerical method}  %\label{subsec:atmos_dyn_sover}
 %------------------------------------------------------
-時間方向の数値解法選択は、
-設定ファイルの\namelist{PARAM_ATMOS}の\nmitem{ATMOS_DYN_TYPE}で行う。\\
-
-\noindent {\gt\small
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+The numerical method for time integration in the dynamical process is specified in \nmitem{ATMOS_DYN_TYPE} in \namelist{PARAM_ATMOS} in the configuration file.
+\editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_DYN_TYPE    = "HEVI", | & ; 表\ref{tab:nml_dyn}より選択。\\
+\verb| ATMOS_DYN_TYPE    = "HEVI", | & ; Choose from Table \ref{tab:nml_dyn}.\\
 \verb|/             | & \\
-\end{tabularx}
-}}\\
+}
 
-\begin{table}[h]
+\begin{table}[bth]
 \begin{center}
-  \caption{数値解法の選択肢}
+  \caption{Options of methods for time integration in dynamical process}
   \label{tab:nml_dyn}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 備考\\ \hline
-      \verb|HEVE|  & 水平陽解法-鉛直陽解法 & \\
-      \verb|HEVI|  & 水平陽解法-鉛直陰解法 & 実大気実験ではこちらを推奨\\
+    \rowcolor[gray]{0.9}  Scheme name & Description of scheme & Note\\ \hline
+      \verb|HEVE|  & Fully explicit method & \\
+      \verb|HEVI|  & Horizontally explicit and vertically implicit methods & Recommended for real experiment\\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
 
-\subsection{\SubsecDynSchemeSetting} \label{subsec:atmos_dyn_scheme}
+\subsubsection{Setting the temporal and spatial difference schemes} %\label{subsec:atmos_dyn_scheme}
 %------------------------------------------------------
-時間・空間差分スキームの設定は、設定ファイルの\namelist{PARAM_ATMOS_DYN}で設定する。
-また、空間スキームによってはハロの数の設定も必要である。
-下記の設定は推奨設定である。
-その他、スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。
-また、時間スキームや空間差分スキーム変更時には、数値安定性が変わるため、
-タイムステップも考慮する必要がある。
-タイムステップついては、第\ref{sec:timeintiv}節を参照のこと。\\
 
-\noindent {\gt\small
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+The temporal integration and spatial difference schemes are configured in \namelist{PARAM_ATMOS_DYN}. According to the spatial integration scheme, the specification of the number of halos is required. The following are recommended along with the other options listed in Table \ref{tab:nml_atm_dyn}. For numerical stability, the time step is changed according to the schemes used. Methods to determine the time step are described in Section \ref{sec:timeintiv}.
+
+\editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
- \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|       & ; 時間スキームより選択\\
- \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,| & ; 時間スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = CD4,|       & ; 空間スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
- \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|   & ; FCTスキームを利用するかどうか\\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2, |    & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |     & \\
- \verb|ATMOS_DYN_enable_coriolis            = .true.,|    & \\
+ \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; Choose from temporal integration schemes in Table \ref{tab:nml_atm_dyn}\\
+ \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; Choose from temporal integration schemes\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = CD4,|          & ; Choose from temporal spatial difference schemes\\
+ \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; Choose from temporal spatial difference schemes\\
+ \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|      & ; Use FCT scheme (.true.) or not (.false.)\\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2, |       & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
+ \verb|ATMOS_DYN_enable_coriolis            = .true.,|       & \\
 \verb|/             | & \\
-\end{tabularx}
-}}\\
+}
 
-
-\begin{table}[h]
+\begin{table}[bth]
 \begin{center}
-  \caption{力学スキームの設定}
+  \caption{Setting time integration and spatial difference schemes}
   \label{tab:nml_atm_dyn}
   \begin{tabularx}{150mm}{llXX} \hline
-    \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
-    \multicolumn{3}{l}{時間スキーム} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{3次3段ルンゲクッタスキーム(Heun)} \\
-    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) 3段ルンゲクッタスキーム} \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4次4段ルンゲクッタスキーム} \\
+    \rowcolor[gray]{0.9} & \multicolumn{1}{l}{Scheme name} & \multicolumn{1}{l}{Description of scheme} & \\ \hline
+    \multicolumn{3}{l}{Temporal integration} &  \\ \hline
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{Heun-type 3rd-order Runge--Kutta scheme} \\
+    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{\citet{Wicker_2002}'s 3-step Runge--Kutta scheme} \\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4th-order Runge--Kutta scheme} \\
     \hline
-    \multicolumn{3}{l}{空間スキーム} & 最小のハロ格子数\\ \hline
-    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次中央差分} & \multicolumn{1}{l}{1}\\
-    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4次中央差分} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6次中央差分} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3次風上差分} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5次風上差分} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3次風上差分 + Koren(1993)フィルター} & \multicolumn{1}{l}{2}\\
+    \multicolumn{3}{l}{Spatial difference} & Minimum number of halos\\ \hline
+    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2nd-order central difference} & \multicolumn{1}{l}{1}\\
+    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4th-order central difference} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6th-order central difference} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3rd-order upwind difference} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5th-order upwind difference} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3rd-order upwind scheme + \citet{Koren_1993}'s filter} & \multicolumn{1}{l}{2}\\
 \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。
-\nmitem{UD3KOREN1993}は非負保証スキームであるが、
-それ以外は非負が保証されない。
-つまり \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}として \nmitem{UD3KOREN1993}以外を選択した場合は、
-\nmitem{ATMOS_DYN_FLAG_FCT_TRACER} を \verb|.true.| としてFCTを利用するのがよい。
+For tracer advection, the use of a scheme for guaranteeing a non-negative value is recommended. The \nmitem{UD3KOREN1993} scheme guarantees a non-negative value, whereas other schemes do not. When schemes other than \nmitem{UD3KOREN1993} are used by being specified in \\
+\nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}, the FCT filter is recommended as \nmitem{ATMOS_DYN_FLAG_FCT_TRACER=}$=$\verb|.true.|.
 
-ハロの格子数はデフォルトで2となっている。
-従って、空間スキームがCD4、UD3以外の場合、上記の表に記したハロの数の設定が必要である。
-設定は、\namelist{PARAM_INDEX}の中の\nmitem{IHALO, JHALO}で行う。
+By default, the number of halos is 2. The configuration of the halo is required according to the number shown in Table \ref{tab:nml_atm_dyn}, except for the spatial difference schemes of CD4 and UD3. For example, the configuration of the halo for the fifth-order upwind difference scheme is as follows:
 
-例えば、空間スキームとして5次風上差分を設定した場合、\\
-
-\noindent {\gt\small
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
  \verb|&PARAM_INDEX | &  \\
  \verb| IHALO = 3,|   &\\
  \verb| JHALO = 3,|   &\\
  \verb|/ | & \\
-\end{tabularx}
-}}\\
-
-のように設定する。
+}
