@@ -1,56 +1,45 @@
 %-------------------------------------------------------%
-\section{概要} \label{sec:tutrial_real_intro}
+\section{Overview} \label{sec:tutrial_real_intro}
 %-------------------------------------------------------%
-本章では、チュートリアルとして準備した現実大気実験の基本的な実行手順を習得する。
-現実大気実験は、次の流れ(図\ref{fig:howto}) に従って実行する。
+In this chapter, the basic execution procedure of the real atmospheric experiment is described using a simple case according to the workflow in Fig. \ref{fig:howto}.
 \begin{enumerate}
-\item  入力データの準備 (基本各自で準備。チュートリアルでは \verb|tools/| で行う。)
-\item  \texttt{pp}      : 地形データの作成
-\item  \texttt{init}    : 初期値・境界値データの作成
-\item  \texttt{run}     : シミュレーションの実行
-\item  \texttt{net2g}   : 出力データの\netcdf から\grads 形式への変換（オプション）
+\item Preparations for input data. The input data must be prepared by users themselves.
+\item \texttt{pp}:   Making topographical data
+\item \texttt{init}: Making initial and boundary data
+\item \texttt{run}:  Executing the simulation
+\item \texttt{net2g}: Converting {\netcdf} output data to {\grads} format ( optional )
 \end{enumerate}
+Hereinafter, the absolute path \texttt{scale-{\version}/scale-rm/test/tutorial/} is denoted by\\
+\verb|${Tutorial_DIR}|.
 
-\begin{figure}[b]
+\begin{figure}[tb]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/real_procedure.eps}\\
-  \caption{\scalerm モデルの実行過程}
+  \caption{\scalerm procedure of model execution}
   \label{fig:howto}
 \end{center}
 \end{figure}
 
+The settings for the calculation domain used in this tutorial are given in Table \ref{tab:grids}.
+Figure \ref{fig:tutrial_real_domain} shows the target domain.
+Since this tutorial focuses on learning how to conduct 
+real atmospheric experiments using \scalerm quickly,
+the experiment is designed to be completed in a short time.
+Note that this setting may not be appropriate as a physically valid experiment;
+e.g., there is no cumulus parameterization in this simulation, even though the horizontal resolution is 20 km.
 
-これ以降の説明では、\texttt{scale-{\version}/scale-rm/test/tutorial/}の絶対パスを
-\verb|${Tutorial_DIR}|と示すこととする。
-
-
-チュートリアルの現実大気実験の計算領域（ドメイン）の設定は表\ref{tab:grids}のようになっている。
-図 \ref{fig:tutrial_real_domain}に対象領域を示す。
-このチュートリアルは、\scalerm の使い方を学ぶことが目的であり、
-短い時間で実行可能な設定にしている。
-領域モデルの実験設定として必ずしも適切な設定を選択しているとは限らないので
-ご留意頂きたい
-(例えば、20kmの水平解像度で積雲パラメタリゼーションなし)。
-%本章のチュートリアルを比較的短時間で実行するには、下記の条件を満たす計算機環境が推奨される。
-%\begin{itemize}
-%\item CPU: 2コア以上の演算コアを持つCPU（4コア以上を推奨）
-%\item Memory容量: 4GB以上をプログラムに割当可能（8GB以上を搭載した計算機を推奨）
-%\item HDD空き容量: 7GB以上の空き容量
-%\end{itemize}
-
-
-\begin{table}[h]
+\begin{table}[tb]
 \begin{center}
-  \caption{実験設定の概略}
+  \caption{Overview of experimental settings}
   \label{tab:grids}
   \begin{tabularx}{150mm}{|l|X|} \hline
-    \rowcolor[gray]{0.9} 項目 & 設定 \\ \hline
-    MPIプロセス分割 (東西 x 南北) & 2 x 2 (合計4プロセス) \\ \hline
-    水平格子数 (東西 x 南北) & 90格子点 x 90格子点 \\ \hline
-    鉛直層数                 & 36層                  \\ \hline
-    水平格子間隔             & dx = dy = 20km       \\ \hline
-    積分期間 & 2007年7月14日 18UTC～15日00UTC (6時間積分) \\ \hline
-    時間ステップ間隔 & 90 sec (240 steps) \\ \hline
+    \rowcolor[gray]{0.9} Item & Configuration \\ \hline
+    MPI process decomposition (east-west $\times$ north-south) & 2 $\times$ 2 (total: 4 processes) \\ \hline
+    Number of horizontal grids (east-west $\times$ north-south) & 90 $\times$ 90  \\ \hline
+    Number of vertical layers   & 36                   \\ \hline
+    Horizontal grid intervals   & $\Delta x  = \Delta y = $ 20km       \\ \hline
+    Integration period & July 14, 2007, 18UTC - July 15 00UTC (6 hour integration) \\ \hline
+    Time step & 90 s/step (total:240 steps) \\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
@@ -58,7 +47,7 @@
 \begin{figure}[tb]
 \begin{center}
   \includegraphics[width=1.0\hsize]{./figure/real_domain.eps}\\
-  \caption{計算領域の地形と海陸分布。}
+  \caption{Topographical and land-ocean distribution in the domain}
   \label{fig:tutrial_real_domain}
 \end{center}
 \end{figure}

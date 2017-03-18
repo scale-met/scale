@@ -1,188 +1,181 @@
-\section{はじめに} \label{sec:introduction}
+\section{Introduction} \label{sec:introduction}
 %==============================================================%
+This user's manual is intended for first-time users
+of the regional climate/weather forecasting model \scalerm.
+The manual is based on
+the meteorology/climate library {\scalelib} version \version.
+The current version of \scalelib contains a regional model \scalerm
+and a global model \scalegm.
+Only a dynamical core is provided for the latter.
+This version of the user's manual explains how to use \scalerm in detail.
+A description of \scalegm is planned for the next release.
 
-本書は初めて領域気象気候モデル({\scalerm})
-を利用する人に向けた解説書です。
-気象気候ライブラリー{\scalelib}  version \version に対応した説明を記載します。
-現在、\scalelib を利用するため、領域モデル\scalerm と全球モデル\scalegm が
-用意されていますが、後者は、力学コアの整備のみされています。
-そのため、本版では、\scalerm の使い方についてのみ詳しく述べています。
-\scalegm については、次版で詳しく記載される予定です。
-%\scalerm の使い方を通して、\scalelib を他のモデルからの呼び出す方法を
-%習得することも可能です。
+The structure of this document is as follows:
+Chapter \ref{chap:overview} provides an overview of \scalelib,
+Chapter \ref{chap:install} describes how to install \scalerm
+along with the system requirements. Using simple examples,
+Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real} use examples and explain the basic use of \scalerm in an ideal experiment and the method
+to conduct an atmospheric experiment, respectively. Since these chapters are constructed as a series of tutorials, it is recommended that beginning users of \scalerm read these chapters meticulously.
+Chapter \ref{chap:basic_usel} describes how to change the model configuration, and explains various functions and tools.
 
-第\ref{chap:overview}章で\scalelib の概要について、
-第\ref{chap:install}章で必要な環境、およびインストール方法について説明します。
-続いて、第\ref{chap:tutorial_ideal}章で基本的な操作方法、
-第\ref{chap:tutorial_real}章で現実大気実験の実行方法について
-簡単な例を示しながら説明します。
-第\ref{chap:install}章から第\ref{chap:tutorial_real}章までは
-ひと繋がりのチュートリアルとなっており、
-\scalerm を初めて使うユーザは一通り通読することをお勧めます。
-第\ref{chap:basic_usel}章以降は、設定の変更、機能やツールの説明が記載されています。
-
-%%%
-本書中の不明点やお気づきの点がございましたら、SCALE user's メーリングリスト\\
- \verb|scale-user@riken.jp|までご連絡ください。
+If you have any questions or comments, please contact us through the users’ mailing list\\ $\langle \verb|scale-users@ml.riken.jp|\rangle$.
 
 
-
-\subsection{\scalelib の特徴} \label{subsec:scale_feature}
+\subsection{What is \scalelib?} \label{subsec:scale_feature}
 %--------------------------------------------------------------%
 
-{\scalelib} (Scalable Computing for Advanced Library and Environment)は
-計算機を用いて気象・気候科学計算を行う上で、
-研究を進めやすいようにプレ処理から数値シミュレーション、ポスト処理、
-解析に至るまですべての過程を網羅する気象・気候数値計算ライブラリを
-目指したソフトウェアである。下記に挙げるような特徴を持つ。
+Scalable Computing for Advanced Library and Environment, called {\scalelib}, is a software library that helps conduct research on climate and weather forecasting on any computer with ease. 
+This library covers all processes related to such research: 
+pre-processing, simulation, post-processing, and analysis. 
+It has the following advantages:
 \begin{itemize}
-\item \scalelib は、「BSD-2ライセンス」のもとオープンソースソフトウェア
-として提供されており、商用、非商用に関わらず自由な利用・改変・再配布が可能である。
-\item \scalelib には、\scalerm (SCALE-Regional Model)、
-%SCALE-GM(SCALE-Global Model)
-といった組み上げ済みの数値モデルが含まれている。
-\item \scalelib には、次節で説明する様々なコンポーネントが導入されており、
-行いたい実験に合わせて選択利用することが可能である。
-\item \scalelib で提供されている物理過程は、他の数値モデルへ組み込んで
-使用することも可能である。
+\item 
+\scalelib is provided as an open-source software under the `` BSD-2 license.''. It is free for use, modification, and redistribution, regardless of whether the user is a business or other enterprise.
+\item 
+\scalelib contains a regional model called the \scalerm ( SCALE-Regional Model ).
+\item 
+\scalelib prepares various schemes in a component, as outlined in the next section. They can be appropriately chosen according to the desired experiments of users.
+\item 
+\scalelib provides a framework for physical processes that can be called not only by \scalerm, but also by other numerical models.
 \end{itemize}
+For the details of the license, the interested reader can refer to the file \texttt{scale-\version/LICENSE} under the main directory. This explanation of its use is also provided on the SCALE webpage (http://scale.aics.riken.jp/). 
 
-ライセンスの詳細は、トップディレクトリ直下の\texttt{scale-\version/LICENSE}のファイルに記述されている。
-\scalelib の使用前に一読しておくこと。またSCALEのWebページにもソフトウェアの説明が記載されているので必要に応じて
-参照すること（\url{http://scale.aics.riken.jp/}）。
+In this section, the concept of \scalelib and its relations to actual models are explained. It can be skipped, as it is not related directly to its practical use.
 
-本節の以下では\scalelib の思想とモデルの関係について説明するが、
-\scalerm の実行とは直接関係ないため、必要なければ読み飛ばしても構わない。
-
-\Item{\scalelib のライブラリとモデルの関係について}
+\Item{Relations between \scalelib library and models}
 
 \begin{figure}[htb]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/library.eps}\\
-  \caption{\scalelib のねらい}
+  \caption{Aims of \scalelib}
   \label{fig:scale}
 \end{center}
 \end{figure}
 
-\scalelib は、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に
-開発が進められている気象・気候科学計算向けのライブラリである。
-図 \ref{fig:scale}に\scalelib の思想の概念図を示す。
-この図に示されるような諸問題に対応することを目指している。
-\scalelib は次世代のスーパーコンピュータから小型PCクラスターに至るまで
-広く用いられる事を念頭において開発されており、
-気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が
-共同で開発を行っている。
-そのため、スーパーコンピュータ「京」や富士通FX10等の
-スーパーコンピュータに加え、インテル機のような汎用計算機でも
-計算効率がでることを目指して設計されている。
+\scalelib was developed in RIKEN/AICS with several outside contributors,
+and its improvement and extension continue.
+Figure \ref{fig:scale} shows the schematic concept of \scalelib.
+As shown in this figure, SCALE aims to resolve various problems.
+The development of \scalelib is considered in the context of its wide use
+by devices ranging from small PC clusters to next-generation supercomputers.
+For this purpose, scientists in meteorology/climate science
+and computer science are cooperating.
+This has led to high computational performance of SCALE not only in supercomputers,
+such as the K Computer and the Fujitsu FX10,
+but also for general-purpose commercial computers,
+such as Intel processor-based machines.
 
-\scalelib を利用した数値モデルとして、\scalerm が含まれている(図 \ref{fig:scale-rm})。
-並列プロセスの管理、ファイル入出力、プロセス間通信や格子情報の設定は\scalelib が提供する。
-大気流体の支配方程式を解く部分（流体力学コア、力学過程）と
-雲微物理や大気放射のような諸物理過程を解く部分も\scalelib が提供する。
-\scalerm は入力された大気状態のデータ（予報変数）を保持し、\scalelib が提供する機能を組み合わせ、
-各コンポーネントを適切に呼び出すことで時間発展計算を行っている。
-ユーザは必要に応じて利用するコンポーネントを選択し、組み合わせてシミュレーションを行うことが出来る。
+\scalerm is a numerical model that fully uses \scalelib.
+This model is contained in the \scalelib package,
+as shown in Fig. \ref{fig:scale-rm}.
+\scalelib manages the parallel processes,
+file I/O, and inner-communication.
+\scalelib also provides the solver for atmospheric flow ( dynamical core )
+and physical processes such as micro-physics and radiation processes.
+On the other hand,
+\scalerm is constructed by combining functions provided by \scalelib.
+\scalerm itself reads the input data of atmospheric status as prognostic variable,
+and conducts time-integration.
+Users can select a scheme in every component according to simulations they want.
 
 \begin{figure}[hbt]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/scale.eps}\\
-  \caption{SCALEとSCALE-RMの関係}
+  \caption{Relationship between the library \scalelib and the model \scalerm}
   \label{fig:scale-rm}
 \end{center}
 \end{figure}
 
 
-
-\subsection{\scalerm の構成}  \label{subsec:sturcture_scale_rm}
+\subsection{Structure of \scalerm}  \label{subsec:sturcture_scale_rm}
 %--------------------------------------------------------------%
-現在、\scalerm には下記のコンポーネントが実装されている。
-\scalerm ではすべてのコンポーネントが利用可能である。
-詳細なモデル構成や差分化手法については、
-\citet{scale_2015}、\citet{satoy_2015b}、
-および\citet{nishizawa_2015}を参照されたい。\\
+All schemes in all components of \scalelib are available in \scalerm.
+The components are categorized into three parts:
+framework, dynamical core, and physical processes.
+Components with various schemes already implemented
+in the current version of \scalerm are listed below\footnote{Refer to \citet{scale_2015},\citet{satoy_2015b}, and \citet{nishizawa_2015} for the details of the model structure and the descretization method.}.
 
-{\bf フレームワーク}
+\subsubsection{Framework}
 \begin{itemize}
- \item 距離座標に基づいた三次元カーテシアン格子系
- \item MPI通信を用いた二次元領域分割
- \item 各種地図投影法
- \item ネスティングシステム（1 way：親領域$\to$子領域）
+ \item The three-dimensional (3D) Cartesian grid system based on actual distance
+ \item 2D domain decomposition by Message Passing Interface (MPI) communication
+ \item Several map projections commonly used
+ \item Domain nesting system ( one-way, i.e., data transfer from parent domain to child domain. )
    \begin{itemize}
-    \item オンライン実行(複数ドメインの計算を同時に実行)
-    \item オフライン実行(外側ドメインの計算終了後に、その結果を用いて内側ドメインの計算を行う)
+    \item  On-line nesting: concurrent execution of multiple domains).
+    \item  Offline nesting: execution of computation in an inner domain after that in an outer domain.
    \end{itemize}
- \item 複数事例一括実行 システム（バルクジョブシステム）
- \item CF 規約\footnote{\url{http://cfconventions.org/}}に基づく \netcdf ファイル I/O
+ \item Collective execution system of multiple cases, i.e., bulk job system
+ \item \netcdf file I/O based on CF (Climate and Forecast) convention\footnote{\url{http://cfconventions.org/}}
    \begin{itemize}
-   \item {\netcdf}3 または {\netcdf}4 形式
+   \item Selection of {\netcdf}3 and {\netcdf}4 formats
    \end{itemize}
- \item 理想実験のための初期値データ生成
- \item 外部データ読み込みによる標高・土地利用区分データの変換作成
- \item 外部データ読み込みによる初期値・境界値データ変換作成
+ \item Generation of initial data for an ideal experiment
+ \item Generation of topographical and land-use data, converted from external data
+ \item Generation of initial and boundary data from external data
    \begin{itemize}
     \item 
-      WRF-ARW\footnote{\url{http://www.wrf-model.org/}}、
-%      NICAM\footnote{\url{http://nicam.jp/}}、
-      \grads \footnote{\url{http://cola.gmu.edu/grads/}}フォーマットでの入力に対応
+      Supporting inputs from the WRF-ARW\footnote{\url{http://www.wrf-model.org/}} and
+      \grads \footnote{\url{http://cola.gmu.edu/grads/}} formats.
    \end{itemize}
 \end{itemize}
 
-{\bf 力学コア関係}
+\subsubsection{Dynamical core}
 \begin{itemize}
- \item 方程式系: 3次元完全圧縮非静力学方程式系
- \item 数値解法: 陽解法と陰解法の両方を実装
-   \begin{itemize}
-    \item 水平陽解法-鉛直陽解法
-    \item 水平陽解法-鉛直陰解法
-%    \item HI-VI(陰解法)
-   \end{itemize}
- \item 空間差分: フラックス形式
+ \item Governing equations: 3D fully compressible non-hydrostatic equations
+ \item Spatial descretization: finite volume method
     \begin{itemize}
-      \item 2次中央差分
-      \item 4次中央差分
-      \item 6次中央差分
-      \item 3次風上差分
-      \item 5次風上差分
+      \item 2nd-, 4th-, and 6th-order central differences
+      \item 3rd- and 5th-order upwind differences
     \end{itemize}
- \item 時間差分:(詳細は、\citet{scale_2015}を参照のこと)
+ \item Time integration: selection from the ``fully explicit method'' 
+   or the ``horizontally explicit and vertically implicit methods''
     \begin{itemize}
-      \item Heun型3次ルンゲクッタスキーム
-      \item \citet{Wicker_2002}の3段ルンゲクッタスキーム
-      \item 4次ルンゲクッタスキーム
+      \item Heun-type 3rd-order Runge--Kutta scheme
+      \item \citet{Wicker_2002}'s 3-step Runge--Kutta scheme
+      \item 4th-order Runge--Kutta scheme
     \end{itemize}
- \item 非負保証:
+ \item Guarantee of non-negative value:
     \begin{itemize}
-      \item フラックス修正法 \citep[Flux Corrected Transport, FCT; ][]{zalesak_1979}
-      \item \citet{Koren_1993}フィルター  (3次風上差分スキーム使用時のみ)
+      \item Flux corrected transport method \citep{zalesak_1979}
+      \item \citet{Koren_1993}'s filter: available only with the use of the 3rd-order upwind scheme
     \end{itemize}
- \item 数値フィルター: 4次超粘性・拡散
- \item 地形: 地形に沿った座標系
+ \item Numerical filter: 4th-order hyper-viscosity and diffusion
+ \item Topography: expressed using terrain-following coordinates
 \end{itemize}
 
-{\bf 物理過程}
+
+\subsubsection{Physical processes}
 \begin{itemize}
- \item 乱流過程: 複数から選択可能
-   \begin{itemize}
-    \item \citet{smagorinsky_1963} \& \citet{lilly_1962}型のサブグリッドモデル (\citet{Brown_etal_1994}と\citet{Scotti_1993}による補正)
-    \item \citet{Deardorff_1980} サブグリッドモデル
-    \item \citet{my_1982,nakanishi_2004}によるMYNN2.5境界層モデル
-   \end{itemize}
- \item 雲微物理: 複数から選択可能
-   \begin{itemize}
-    \item \citet{kessler_1969}による3-class 1モーメントバルクモデル
-    \item \citet{tomita_2008}による6-class 1モーメントバルクモデル
-    \item \citet{sn_2014}による6-class 2モーメントバルクモデル
-    \item \citet{suzuki_etal_2010}によるビン法モデル
-   \end{itemize}
- \item 放射過程: \citet{sekiguchi_2008}による相関k分布法ブロードバンド大気放射伝達モデル
- \item 地表面モデル
+\item Turbulence process: selectable from among the following
   \begin{itemize}
-   \item 陸面モデル: 熱拡散・バケツモデル
-   \item 海洋モデル: 初期値固定・外部データ入力・スラブモデル
-   \item 都市モデル: \citet{kusaka_2001}による単層キャノピーモデル
-   \item バルク交換係数(陸面および海面): \citet{beljaars_1991,wilson_2001}による普遍関数によるバルク法
-     もしくは \citet{uno_1995}によるLouis 型バルク法
+  \item \citet{smagorinsky_1963} \& \citet{lilly_1962}-type sub-grid model
+    corrected by \citet{Brown_etal_1994} and \citet{Scotti_1993}
+  \item \citet{Deardorff_1980} sub-grid model
+  \item MYNN level 2.5 boundary scheme ( \citet{my_1982,nakanishi_2004} )
+  \end{itemize}
+\item Cloud microphysics: selectable from among the following
+  \begin{itemize}
+  \item 3-class 1 moment bulk scheme \citep{kessler_1969}
+  \item 6-class 1 moment bulk scheme \citep{tomita_2008}
+  \item 6-class 2 moment bulk scheme \citep{sn_2014}
+  \item spectral bin scheme \citep{suzuki_etal_2010}
+  \end{itemize}
+\item Radiation process: a k-distribution-based broadband radiation transfer model ( \citet{sekiguchi_2008} )
+\item Surface models
+  \begin{itemize}
+  \item Land model: heat diffusion/bucket model
+  \item Ocean model: selectable from among the following
+    \begin{itemize}
+    \item fixed to initial condition
+    \item input from external data
+    \item slab model
+    \end{itemize}
+  \item Urban model: a single-layer canopy model \citep{kusaka_2001}
+  \item Heat transfer coefficient at land and in ocean: selectable from among the following
+    \begin{itemize}
+    \item The bulk method using the universal function \citep{beljaars_1991,wilson_2001}
+    \item Louis-type bulk method \citep{uno_1995}
+    \end{itemize}
   \end{itemize}
 \end{itemize}
-

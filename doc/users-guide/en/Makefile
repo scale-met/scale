@@ -5,7 +5,7 @@
 ###########################################################
 
 # target file name
-TEXNAME  = scale_users_guide
+TEXNAME  = scale_users_guide_En
 VERFNAME = 00_version.tex
 VERTEMPL = 00_version_template.tex
 
@@ -15,8 +15,7 @@ BIBTEX   = bibtex
 DVIPDF   = dvipdfmx -p a4
 HTMLBIN  = pandoc --to=html
 
-#VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
-VERSION  = $(shell cat ./VERSION)
+VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
 
 SRCS = $(wildcard *.tex)
 

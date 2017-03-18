@@ -1,67 +1,60 @@
-\section{\SecMakeconfTool} \label{sec:basic_makeconf}
+\section{Supporting tool for preparation of configuration files} \label{sec:basic_makeconf}
 %------------------------------------------------------
 
-現在、実験のための設定ファイル\verb|***.conf|は\verb|pp, init, run|用に
-それぞれ用意することになっているが、本章で説明した通り、
-3つの設定ファイルで共通するネームリストが、不一致である場合モデルが動かない。
-設定ミスを防ぎ、簡易に設定ファイルを用意するためのサポートツールが
-下記に用意されている。
-\begin{alltt}
+In the current version, the configuration files \verb|***.conf| for the experiment are individually prepared for \verb|pp, init, run|. Some items are required to be the same among these configure files. If there is an inconsistency among them, the model does not run properly. To avoid such mistakes, a convenient supporting tool for the preparation of configuration files is provided as follows:
+\begin{verbatim}
  $ cd ${Tutorial_DIR}/real/
  $ ls
-    Makefile : 実験セット一式作成のためのMakeファイル
-    README   : 実験セット一式作成ツールに関するREADME
-    USER.sh  : 実験設定の指定
-    config/  : 実験セット一式作成つーつのためのファイル(ユーザは基本書き換えない)
-    sample   : USER.sh のサンプルスクリプト
-\end{alltt}
-これは、初期設定として現実大気実験のチュートリアルに合わせた設定となっているが、
-ユーザが任意の設定に変更することが可能な仕組みとなっている。
-本章で説明した箇所の多くを\verb|USER.sh|で設定できるようになっている。
+    Makefile 
+      : Makefile for generation of necessary files for experiment
+    README
+      : README file
+    USER.sh
+      : Shell script for specifying the settings
+    config/  
+      : Configuration files for each setting (not necessary for user to rewrite it)
+    sample
+      : Sample script of USER.sh
+\end{verbatim}
+Although this tool is intended for the tutorial experiment of real atmosphere as initial setting, users can change the settings in \verb|USER.sh|.
 
-また、\verb|sample/| 以下に、いくつかの実験設定を想定した
-サンプルスクリプトが用意されている。
-必要に応じて、\verb|USER.sh|にコピーの上、使用していただきたい。
-\begin{alltt}
- $ ls sample/
-   USER.default.sh                 : USER.shと同じ。チュートリアル実大気実験用。(シングルドメイン用)
-   USER.offline-nesting-child.sh   : オフラインネスティングの子領域用。
-   USER.offline-nesting-parent.sh  : オフラインネスティングの親領域用。
-   USER.online-nesting.sh          : オンラインネスティング用。
-\end{alltt}
-
-
-\subsubsection{ツールの使い方}
-
-使い方はREADMEに書かれているように、以下の通りである。
-\begin{enumerate}
-  \item ユーザが希望する任意の実験設定に従って、\verb|USER.sh|を編集する。
-  \item \verb|make|コマンドを実行する。
-  \item 実験に必要な設定ファイル一式が\verb|experiment|ディレクトリ以下に作成される。
-\end{enumerate}
-
-現在は、\verb|tutorial|の設定になっているので、
-実際には以下のようにチュートリアル設定を残しておくことを勧める。
+Under the directory \verb|sample/|,   several sample scripts are provided for the typical configuration. Use them as necessary by copying them to \verb|USER.sh|.
 \begin{verbatim}
- $ mv experiment/ tutorial/    : (すでにexperimentディレクトリがある場合)
- $ cp USER.sh USER_tutorial.sh
- ... USER.shを編集 ...
- $ make
- $ cp -rL experiment 任意の場所/ : SCALEのソースがあるディレクトリ以外の場所も可
+ $ ls sample/
+   USER.default.sh                 
+      : USER.sh same as for the tutorial experiment of real atmosphere
+       ( single domain )
+   USER.offline-nesting-child.sh   
+      : for the child domain for off-line nesting experiment
+   USER.offline-nesting-parent.sh  
+      : for the parent domain for off-line nesting experiment
+   USER.online-nesting.sh          : for the on-line nesting experiment
 \end{verbatim}
 
 
-\subsubsection{\texttt{USER.sh}の編集}
+\subsubsection{How to use the tool}
 
-まず、サンプルプログラムの中、最も想定する実験設定に近いスクリプトを
-\verb|USER.sh| に上書きコピーする。
-スクリプトの中を見ると、まず、ドメインの数を指定する\verb|NUM_DOMAIN|がある。
-その下には、設定ファイルのネームリストで設定する項目が並んでいるので、
-それぞれの項目の設定を書き込んでいけば良い。
-\verb|"# required parameters for each domain"| というコメントがあるところには
-ドメインの数だけ設定変数をスペースで区切って用意する。
-この時、\verb|NUM_DOMAIN|で設定したネスティングドメインの数と変数の数が不一致だと
-メッセージが出力され、実験セットが作成されずに終了してしまうので必ず一致させること。
-\verb|USER.sh|にない項目については、デフォルトの設定で出力されるので
-\verb|experiment|ディレクトリ以下に作成された設定ファイルを直接変更すればよい。
+The use of this tool is described as follows (or refer to README):
+\begin{enumerate}
+  \item Edit \verb|USER.sh| according to experimental settings intended by the users.
+  \item Execute \verb|make| command.
+\end{enumerate}
+ All the necessary files for the experiment are generated under the directory \verb|experiment|.
 
+Since the configuration in \verb|USER.sh| is that for \verb|tutorial| of real atmosphere,
+it is recommended to leave the tutrial setting as a different file as follows: 
+\begin{verbatim}
+ $ mv experiment/ tutorial/    
+        : (In the case of already existing experiment directory)
+ $ cp USER.sh USER_tutorial.sh
+ ... edit USER.sh ...
+ $ make
+ $ cp -rL experiment/ arbitrary_directory/
+        : ``arbitrary_place'' means  directory name of arbitrary place
+\end{verbatim}
+
+
+\subsubsection{Editing \texttt{USER.sh}}
+
+%Copy the script in the sample programs closest to the intended experiment to \verb|USER.sh|.
+\verb|NUMB_DOMAIN| specifies the number of domains appearing in the script. Change the items below appropriately; as many items following \verb|"# require  parameters for each domain"|  are described as the number of domains. Note that if the number of nesting domains according to \verb|NUM_DOMAIN| and the number of variables are different, the set of files for the experiment cannot be generated. When items do not appear in \verb|USER.sh|, edit directly the configuration file generated under the directory \verb|experiment|.

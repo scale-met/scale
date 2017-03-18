@@ -1,53 +1,38 @@
-\section{\SecBasicTopoSetting} \label{subsec:basic_usel_topo}
+\section{Setting the topography} \label{subsec:basic_usel_topo}
 %-----------------------------------------------------------------------
 
-\scalerm では地形に沿った座標系を採用している。この座標系はモデル下端の格子面を
-与えられた標高に対して沿うように与える。
-許容される最大の地形傾斜角度$\theta_{\max}$[radian]は次の式で計算される。
-\[
-  \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} )
-\]
-ここで、$\mathrm{DZ}$、$\mathrm{DX}$ は、それぞれ鉛直と水平の格子間隔である。
-上記の計算式から分かるように、許容される最大傾斜角度は空間解像度に応じて変わる。
+\scalerm employs the terrain-following coordinates to represent topography.
+In these coordinates, the bottom face of the lowest grid is given such that it can follow the surface altitude. The allowable maximum angle of inclination, $\theta_{\max}$[radian] is calculated as follows: 
+\begin{eqnarray}
+  && \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} )\nonumber,
+\end{eqnarray}
+where $\mathrm{DZ}$ and $\mathrm{DX}$ are the horizontal and vertical grid intervals, respectively.  As shown in the above equation, $\theta_{\max}$ depends on spatial resolution. 
+In \scalerm, the default value of $\mathrm{RATIO}$ is 1.0.
+If $\mathrm{RATIO}$ is greater than unity, the fine topography is expressed, and vice versa. Note that at $\mathrm{RATIO} >1$, the risk of numerical instability increases.
 
-\scalerm では$\mathrm{RATIO}$のデフォルト値を1.0に設定している。
-$\mathrm{RATIO}$の設定を、1.0よりも大きくすれば地形がより細かく、1.0よりも小さくすれば地形がより粗く表現される。
-ただし$\mathrm{RATIO}$を1.0よりも大きくした場合、計算が途中で破綻する危険性が高くなる。
-
-外部入力する標高データを実験設定に合わせて変換する作業は、\verb|scale-rm_pp|プログラムで行ない、
-詳細は実行時に使用する設定ファイル(\verb|pp.conf|)の\namelist{PARAM_CNVTOPO}の中で設定する。
-以下に例を示す。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+The program \verb|scale-rm_pp| converts external topography data into \scalelib format.  The detailed configurations are specified in \namelist{PARAM_CNVTOPO} in configuration file \verb|pp.conf|. An example is as follows:
+\editboxtwo{
 \verb|&PARAM_CNVTOPO  |                  & \\
- \verb|CNVTOPO_name                  = "GTOPO30", | & ; 使用する地形データ名\\
- \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; 許容する傾斜の$\mathrm{DZ}$/$\mathrm{DX}$に対する倍率 \\
- \verb|CNVTOPO_smooth_local          = .true.,    | & ; 最大傾斜角度を超えた格子のみ平滑化を行うかどうか \\
- \verb|CNVTOPO_copyparent            = .false.,   | & ; 緩和領域に親ドメインの地形をコピーするかどうか \\
+ \verb|CNVTOPO_name                  = "GTOPO30", | & ; Data name used\\
+ \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; Allowable maximum ratio of inclination to $\mathrm{DZ}$/$\mathrm{DX}$ \\
+ \verb|CNVTOPO_smooth_local          = .true.,    | & ; 
+Whether smoothened or not, only grids whose angles of inclination exceed the maximum value \\
+ \verb|CNVTOPO_copyparent            = .false.,   | & ; Whether the topography in the buffer region is copied \\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
+\scalerm supports GTOPO30 and DEM50M provided by the Geospatial Information Authority of Japan as external input topography data.
 
-\scalerm では変換に使用する外部入力標高データベースとして、GTOPO30、
-または国土地理院による高精度地形データ(DEM50M)をサポートしている。
+The topographical data is formulated as the area-weighting mean of grid spacing.
+This conversion calculates the difference in altitude between them using their neighboring grids and inclinations.
+In case $\theta_{\max}$ exceeds the allowable maximum angle of inclination, \\
+i.e., \nmitem{CNVTOPO_smooth_maxslope_ratio}, the topography is smoothened by a Laplacian filter with several iterations until the angle is below the allowable maximum angle.
+Smoothing is selectively applied either only to grids whose angles of inclination exceed the maximum value, or to the entire domain.
+Since the former saves the sharp structure of the topography within the allowable maximum angle, it is selected if the representation of fine structures is desired.
+The Gaussian filter is also selected as a smoothing filter. In this case, the topography is smoother than when the Laplacian filter is used.
 
-
-標高データは設定した水平格子に合わせて面積重み付け平均される。この変換された標高データの時点で、
-隣り合う格子との標高差を傾斜角として計算する。最大傾斜角度を超える傾斜角があった場合、
-それを最大傾斜角度以下になるように、反復計算を用いてラプラシアンフィルターでの平滑化を実行する。\\
-このとき、最大傾斜角度を超えた格子のみ平滑化を行うか、計算領域全体で行うかを選択することができる。
-前者は、最大傾斜角度以内のシャープな地形構造を残すことができるので、細かな地形表現を望む場合に選択する。
-平滑化フィルターは、ガウシアンフィルターを選択することも出来る。こちらを用いた場合はラプラシアンフィルタより平滑化された地形になる。
-
-
-\nmitem{CNVTOPO_copyparent}は、ネスティング計算のための設定項目である。
-一般的に、多段ネスティング計算を行う場合、
-子ドメインのほうが空間解像度が細かいため、地形もシャープに表現される。
-このとき、親ドメインと子ドメインの地形表現が異なるために、
-子ドメインの緩和領域で用いられる親ドメインの大気データと不整合を起こすことがある。
-これを回避するために、
-\nmitem{CNVTOPO_copyparent}を\verb|.true.|とすることで、親ドメインの地形を子ドメインの緩和領域にコピーすることができる。
-親ドメインが存在しない場合は\nmitem{CNVTOPO_copyparent}を必ず\verb|.false.|に設定しなければならない。
-\nmitem{CNVTOPO_copyparent}を利用する場合の設定については、第\ref{subsec:nest_topo}節で詳しく説明する。
+\nmitem{CNVTOPO_copyparent} is the item used for the nesting computation.
+In general, the topography in the child domain is finer than in the parent domain due to higher spatial resolution.
+At this time, problems often occers due to 
+an inconsistency between 
+the atmospheric data in the buffer region of the child domain and that in the parent domain.
+To avoid this problem, the topography of the parent domain can be copied to the buffer region of the child domain by specifying \nmitem{CNVTOPO_copyparent}$=$\verb|.true.| If there is no parent domain, \nmitem{CNVTOPO_copyparent} must be \verb|.false.|. Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copyparent}.

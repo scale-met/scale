@@ -2,9 +2,9 @@
 \newcommand{\nmitem}[1]{{\color{magenta}\texttt{(\detokenize{#1})}}}
 %数式モード
 \newcommand{\nmitemeq}[1]{{\texttt{\detokenize{#1}}}}
-\newcommand{\XDIR}{X方向}
-\newcommand{\YDIR}{Y方向}
-\newcommand{\ZDIR}{Z方向}
+\newcommand{\XDIR}{X direction}
+\newcommand{\YDIR}{Y direction}
+\newcommand{\ZDIR}{Z direction}
 
 %%%%
 %%%% for chapter 5
@@ -42,13 +42,49 @@
 \newcommand{\proofcomment}[1]{{\color{red} \Large 校正コメント: #1}}
 \newcommand{\replycomment}[1]{{\color{blue} \Large 回答: #1}}
 
-\newcommand{\netcdf}{{netCDF}}
-\newcommand{\grads}{{GrADS}}
-\newcommand{\gphys}{{GPhys}}
+\newcommand{\netcdf}{{netCDF }}
+\newcommand{\grads}{{GrADS }}
+\newcommand{\gphys}{{GPhys }}
 
-\newcommand{\scalerm}{{SCALE-RM}}
-\newcommand{\scalegm}{{SCALE-GM}}
-\newcommand{\scalelib}{{SCALE}}
+\newcommand{\scalerm}{{SCALE-RM }}
+\newcommand{\scalegm}{{SCALE-GM }}
+\newcommand{\scalelib}{{SCALE }}
 
 \newcommand{\Item}[1]{~\\\noindent{\bf \large \underline{#1}}\\}
 
+\newcommand{\msgbox}[1]{
+~\\~\\\noindent{\small {\rm
+\fbox{
+\begin{tabularx}{147mm}{l}
+#1
+\end{tabularx}
+}}}\\~\\
+}
+
+\newcommand{\editbox}[1]{
+~\\~\\\noindent{\small {\rm
+\ovalbox{
+\begin{tabularx}{147mm}{l}
+#1
+\end{tabularx}
+}}}\\~\\
+}
+
+\newcommand{\editboxtwo}[1]{
+~\\~\\\noindent{\small {\rm
+\ovalbox{
+\begin{tabularx}{147mm}{lX}
+#1
+\end{tabularx}
+}}}\\~\\
+}
+
+
+\newcommand{\msgboxtwo}[1]{
+~\\~\\\noindent{\small {\rm
+\fbox{
+\begin{tabularx}{147mm}{lX}
+#1
+\end{tabularx}
+}}}\\~\\
+}
