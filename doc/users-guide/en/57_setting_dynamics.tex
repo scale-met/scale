@@ -66,7 +66,8 @@ The temporal integration and spatial difference schemes are configured in \namel
 \end{table}
 
 For tracer advection, the use of a scheme for guaranteeing a non-negative value is recommended. The \nmitem{UD3KOREN1993} scheme guarantees a non-negative value, whereas other schemes do not. When schemes other than \nmitem{UD3KOREN1993} are used by being specified in \\
-\nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}, the FCT filter is recommended as \nmitem{ATMOS_DYN_FLAG_FCT_TRACER=}$=$\verb|.true.|.
+\nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}, the FCT filter is recommended as \\
+\nmitem{ATMOS_DYN_FLAG_FCT_TRACER=}$=$\verb|.true.|
 
 By default, the number of halos is 2. The configuration of the halo is required according to the number shown in Table \ref{tab:nml_atm_dyn}, except for the spatial difference schemes of CD4 and UD3. For example, the configuration of the halo for the fifth-order upwind difference scheme is as follows:
 
