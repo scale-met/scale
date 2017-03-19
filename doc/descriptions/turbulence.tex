@@ -6,7 +6,7 @@
 {\bf \Large
 \begin{tabular}{ccc}
 \hline
-  Correnspoinding author & : & Seiya Nishizawa\\
+  Corresponding author & : & Seiya Nishizawa\\
 \hline
 \end{tabular}
 }
@@ -15,7 +15,7 @@
 
 \subsection{Spatial filter}
 
-The governing euqations are the followings:
+The governing equations are the following:
 \begin{align}
   \frac{\partial\rho}{\partial t} + \frac{\partial u_i \rho}{\partial x_i}
   &= 0 \\
@@ -27,22 +27,22 @@ The governing euqations are the followings:
   &= Q
 \end{align}
 
-Spatial filtering the continuity equation yields
+Spatially filtering the continuity equation yields:
 \begin{equation}
   \frac{\partial \overline{\rho}}{\partial t} + \frac{\partial \overline{u_i \rho}}{\partial x_i} = 0, \label{eq: spatial filtered rho}
 \end{equation}
-where $\overline{\phi}$ means the spatial filtered quantity of an arbitrary variable $\phi$.
-The Favre filtering \citep{Favre_1983} defined by
+where $\overline{\phi}$ indicates the spatially filtered quantity of an arbitrary variable $\phi$.
+Favre filtering \citep{Favre_1983}, defined by:
 \begin{equation}
   \widetilde{\phi} = \frac{\overline{\rho \phi}}{\overline{\rho}}
 \end{equation}
-makes the equation (\ref{eq: spatial filtered rho})
+renders the equation (\ref{eq: spatial filtered rho}):
 \begin{equation}
   \frac{\partial \overline{\rho}}{\partial t} + \frac{\partial \widetilde{u_i}\overline{\rho}}{\partial x_i} = 0.
 \end{equation}
 
 
-The momentam equations become
+The momentum equations become:
 \begin{align}
   \frac{\partial \overline{\rho u_i}}{\partial t} + \frac{\partial \overline{u_j\rho u_i}}{\partial x_j} &= -\frac{\partial \overline{p}}{\partial x_i} + \overline{\rho} g\delta_{i3} \\
   \frac{\partial \overline{\rho}\widetilde{u_i}}{\partial t} + \frac{\partial \widetilde{u_j}\:\overline{\rho}\widetilde{u_i}}{\partial x_j} &= -\frac{\partial \overline{p}}{\partial x_i} + g\overline{\rho} \delta_{i3}
@@ -52,15 +52,15 @@ The momentam equations become
 \end{align}
 
 
-As the same matter, the thermal equation becomes
+As the same matter, the thermal equation becomes:
 \begin{equation}
   \frac{\partial \overline{\rho}\widetilde{\theta}}{\partial t}
   + \frac{\partial \widetilde{u_i}\overline{\rho}\widetilde{\theta}}{\partial x_i}
   = Q -\frac{\partial}{\partial x_i}\overline{\rho}\left(\widetilde{u_i\theta}-\widetilde{u_i}\widetilde{\theta}\right).
 \end{equation}
 
-Then, the govering equations for the prognositic variables
-($\overline{\rho}, \overline{\rho}\widetilde{u_i}, $ and $\overline{\rho}\widetilde{\theta}$) are
+The govering equations for the prognostic variables 
+($\overline{\rho}, \overline{\rho}\widetilde{u_i}, $ and $\overline{\rho}\widetilde{\theta}$) are:
 \begin{align}
   \frac{\partial \overline{\rho}}{\partial t}
   + \frac{\partial \widetilde{u_i}\overline{\rho}}{\partial x_i} &= 0, \\
@@ -72,26 +72,26 @@ Then, the govering equations for the prognositic variables
   + \frac{\partial \widetilde{u_i}\overline{\rho}\widetilde{\theta}}{\partial x_i}
   &= Q -\frac{\partial \overline{\rho}\tau^D_{i}}{\partial x_i},
 \end{align}
-where
+where:
 \begin{align}
   \tau_{ij} &= \widetilde{u_iu_j}-\widetilde{u_i}\widetilde{u_j}, \\
   \tau^D_{i} &= \widetilde{u_i\theta}-\widetilde{u_i}\widetilde{\theta}.
 \end{align}
 
-Hereafter, we omite overline and tilde representing spatial and the Favre filters.
+Hereafter, we omit the overline and tilde representing the spatial and Favre filters.
 
 \subsection{SGS model}
 \subsubsection{Smagorinsky-Lilly model}
-The eddy momentum flux is
+The eddy momentum flux is:
 \begin{equation}
   \tau_{ij} - \frac{1}{3}\tau_{kk}\delta_{ij} = -2\nu_{SGS}\left(S_{ij}-\frac{1}{3}S_{kk}\delta_{ij}\right),
 \end{equation}
-where $S_{ij}$ is the strain tensor,
+where $S_{ij}$ is the strain tensor:
 \begin{equation}
   S_{ij} = \frac{1}{2}\left(\frac{\partial u_i}{\partial x_j} + \frac{\partial u_j}{\partial x_i}\right),
   \label{eq:strain tensor}
 \end{equation}
-and
+and:
 \begin{equation}
   \nu_{SGS} = \left(C_s\lambda\right)^2 \left|S\right|.
 \end{equation}
@@ -103,36 +103,35 @@ and $\left|S\right|$ is scale of the tensor $S$,
   \label{eq:|S|}
 \end{equation}
 
-Then the eddy momentum flux is
+The eddy momentum flux is then:
 \begin{equation}
   \tau_{ij} = -2\nu_{SGS}\left(S_{ij}-\frac{1}{3}S_{kk}\delta_{ij}\right)
              + \frac{2}{3} TKE\delta_{ij},
   \label{eq:tau}
 \end{equation}
-where
+where:
 \begin{equation}
   TKE = \frac{1}{2}\tau_{ii}
    = \left(\frac{\nu_{SGS}}{C_k\lambda}\right)^2,
    \label{eq:tke}
 \end{equation}
-where $C_k$ is a SGS constant and assumed to be 0.1 by following \citet{Deardorff_1980} and \citet{Moeng_Wynggard_1988}.
+where $C_k$ is a SGS constant and assumed to be 0.1, following \citet{Deardorff_1980} and \citet{Moeng_Wynggard_1988}.
 
 
-The eddy heat flux is
+The eddy heat flux is:
 \begin{equation}
   \tau^D_i = -D_{SGS} \frac{\partial \theta}{\partial x_i},
   \label{eq:tau*}
 \end{equation}
-where
+where:
 \begin{equation}
   D_{SGS} = \frac{1}{Pr}\nu_{SGS}.
 \end{equation}
 $Pr$ is the turbulent Prandtl number.
-For the other scalar constants such as water vaper,
+For other scalar constants such as water vapor,
 $D_{SGS}$ is also used as their diffusivity.
 
-To include buoyancy effects,
-the extension of the basic Smagorinsky developed by \citet{Brown_etal_1994}
+To include buoyancy effects, the extension of the basic Smagorinsky constant developed by \citet{Brown_etal_1994}
 is used.
 \begin{equation}
   \nu_{SGS} = (C_s\lambda)^2 |S| \sqrt{1-Rf},
@@ -148,34 +147,31 @@ and $N^2$ is the Brunt-Visala frequency,
   N^2 = \frac{g}{\theta}\frac{\partial\theta}{\partial z}.
   \label{eq:N^2}
 \end{equation}
-The Prandtl number is an unknow parameter,
-and it depends on the Richardson number,
-while it is offten assumed a constant value.
-For the unstable conditions ($Ri < 0$),
+The Prandtl number is an unknown parameter that depends on the Richardson number,
+even if it is often assumed to have a constant value.
+For  unstable conditions ($Ri < 0$),
 \begin{align}
   \nu_{SGS} &= \left(C_s\lambda\right)^2 |S| \sqrt{1 - c Ri}, \label{eq:nu unstable} \\
   D_{SGS} &= \frac{1}{Pr_N} \left(C_s\lambda\right)^2 |S| \sqrt{1 - b Ri} \label{eq:nu^* unstable},
 \end{align}
-where $Pr_N$ is the Prandtl number in neutral condtions.
-The values of $c, b, Pr_N$ are set 16, 40, and 0.7, respectively.
-Then the Prandtl number is
+where $Pr_N$ is the Prandtl number for neutral condtions.
+The values of $c, b, Pr_N$ are set to 16, 40, and 0.7, respectively.
+The Prandtl number is then:
 \begin{equation}
   Pr = Pr_N \sqrt{\frac{1-c Ri}{1-b Ri}}.
 \end{equation}
-For the stable condtions,
-when the Richardson number is smaller than the critical Richardson number, $Ri_c (=0.25)$,
+For stable conditions, when the Richardson number is smaller than the critical Richardson number, $Ri_c (=0.25)$,
 \begin{align}
   \nu_{SGS} &= \left(C_s\lambda\right)^2 |S| \left(1-\frac{Ri}{Ri_c}\right)^4, \label{eq:nu stable} \\
   D_{SGS} &= \frac{1}{Pr_N}\left(C_s\lambda\right)^2 |S| \left(1-\frac{Ri}{Ri_c}\right)^4\left(1-g Ri\right). \label{eq:nu^* stable}
 \end{align}
 The constant $g$ is determined as the Prandtl number becomes 1
-in the limit of $Ri \to Ri_C$ and then is $(1-Pr_N)/Ri_c$.
+in the limit of $Ri \to Ri_C$ and is then $(1-Pr_N)/Ri_c$.
 The Prandtl number is
 \begin{equation}
   Pr = Pr_N \left\{1-(1-Pr_N)\frac{Ri}{Ri_c}\right\}^{-1}.
 \end{equation}
-For the strongly stable condistions ($Ri > Ri_c$),
-the eddy viscosity and the diffusivity for scalars are 0;
+For  strongly stable conditions ($Ri > Ri_c$), eddy viscosity and diffusivity for scalars are 0;
 \begin{align}
   \nu_{SGS} &= 0, \label{eq:nu strong stable} \\
   D_{SGS} &= 0. \label{eq:nu^* strong stable}
@@ -184,11 +180,11 @@ The Prandtl number is $Pr = 1$.
 
 
 \citet{Scotti_1993} suggested that the length scale should depend on the grid aspect ratio.
-In the equilibrium condition with the universal Kolmogorov spectrum, energy cascaded to the SGS turbulence, which equals to SGS dissipation, must not depend on grid aspect ratio.
+Under equilibrium conditions with the universal Kolmogorov spectrum, energy cascaded to the SGS turbulence, which is equal to SGS dissipation, must not depend on the grid aspect ratio.
 The energy flux or dissipation can be written as function of $S_{ij}$ and the length scale, $\lambda$.
-The $S_{ij}$ depends on the grid aspect ratio, so the length scale should have dependency on the aspect ratio which cancels the dependency of the $S_{ij}$.
-With some approximations, they obtained an approximate function of the length scale
-\footnote{They considered two grid aspect ratios, while we here think only one, i.e. $\Delta x = \Delta y$.}
+The $S_{ij}$ depends on the grid aspect ratio, so the length scale should have dependency on the aspect ratio, cancelling the dependency of $S_{ij}$.
+With some approximations, the authors obtained an approximate function of the length scale
+\footnote{They considered two grid aspect ratios, while we consider only one, i.e. $\Delta x = \Delta y$.}
 :
 \begin{equation}
 \lambda = f(a) \Delta,
@@ -212,18 +208,17 @@ Here $b_1 = \arctan(1/a), b_2 = \arctan(a) = \pi/2 - b_1$, and
 \end{align}
 For instance, $f(2) = 1.036, f(5) = 1.231, f(10) = 1.469$, and $f(20) = 1.790$.
 %For instance, $f(2) = 1.036, f(5) = 1.231, f(10) = 1.469, f(20) = 1.790$, and $f(50) = 2.368$.
-$\Delta$ is the filter length, and is defined to be proportional to $(\Delta x \Delta y \Delta z)^{1/3}$ here.
+$\Delta$ is the filter length, and is here defined to be proportional to $(\Delta x \Delta y \Delta z)^{1/3}$.
 In this model, we introduce a numerical filter to reduce two-grid noise discussed above.
-This filter reduces two-grid scale physical variability as well.
-This means that two-grid scale would be preferred for the filter length in this model rather than grid spacing itself, that is,
+This filter also reduces two-grid scale physical variability. This means that two-grid scale would be preferred for the filter length in this model rather than grid spacing itself; that is:
 \begin{equation}
   \Delta = 2 (\Delta x \Delta y \Delta z)^{1/3}. \label{eq: delta}
 \end{equation}
 
 
-\subsubsection{Terrain-following coordinate}
-Tendencies representing effect of the sub-grid scale turbulence with the terrain-following coordinate are following
-\footnote{Equations which are not changed in the terrain-following coordinate are ommited.};
+\subsubsection{Terrain-following coordinates}
+Tendencies representing effect of sub-grid scale turbulence with terrain-following coordinates are as follows:
+\footnote{Equationsthat are not changed in the terrain-following coordinates are ommited.};
 \begin{align}
   \frac{\partial G^{\frac{1}{2}}\rho u}{\partial t}
   &=
@@ -266,23 +261,23 @@ Tendencies representing effect of the sub-grid scale turbulence with the terrain
 
 
 
-\subsection{descretization}
+\subsection{Discretization}
 
-\subsubsection{Spatial descretization}
-We use the 4th order differnce scheme for the advection term as mentioned
-in the chapter \ref{chap:descretization dynamics}.
-The $\tau_{ij}$ and $\tau^D_{i}$ are propotional to
+\subsubsection{Spatial discretization}
+We use the 4th order difference scheme for the advection term, as mentioned
+in the chapter \ref{chap:discretization dynamics}.
+The $\tau_{ij}$ and $\tau^D_{i}$ are proportional to
 the square of the grid spacing ($\Delta^2$).
-Due to the consistency with the advection term
+Due to consistency with the advection term
 in terms of order for spatial difference,
 the second order central difference scheme
-is used for terms of the sub-grid scale turburence.
-In the following part in this sub-section,
-overline, and $i,j,k$ mean
-as they are in the chapter \ref{chap:descretization dynamics}.
+is used for terms of sub-grid scale turbulence.
+In the following part of this sub-section,
+overline, and $i,j,k$ have the same meaning 
+as in the chapter \ref{chap:discretization dynamics}.
 
-\paragraph{Momentam equation}
-The tendencies in the momentam equation related to the sub-grid scale mode are
+\paragraph{Momentum equation}
+The tendencies in the momentum equation related to the sub-grid scale mode are:
 \begin{align}
   \frac{\partial G^{\frac{1}{2}}\rho u}{\partial t}_{i+\half,j,k} =
   &-\frac{(G^{\frac{1}{2}}\rho\tau_{11})_{i+1,j,k}-(G^{\frac{1}{2}}\rho\tau_{11})_{i,j,k}}{\Delta x} \nonumber \\
@@ -300,7 +295,7 @@ The tendencies in the momentam equation related to the sub-grid scale mode are
   &- \frac{\{(G^{\frac{1}{2}}\rho(J_{13}\tau_{31}+J_{23}\tau_{32}+J_{33}\tau_{33})\}_{i,j,k+1}
           -\{(G^{\frac{1}{2}}\rho(J_{13}\tau_{31}+J_{23}\tau_{32}+J_{33}\tau_{33})\}_{i,j,k}}{\Delta z}.
 \end{align}
-The $\overline{\rho}$ is
+The $\overline{\rho}$ is:
 \begin{align}
   \overline{\rho}_{i,j+\half,k+\half} &=
   \frac{\rho_{i,j+1,k+1} + \rho_{i,j+1,k} + \rho_{i,j,k+1} + \rho_{i,j,k}}{4}, \\
@@ -311,7 +306,7 @@ The $\overline{\rho}$ is
 \end{align}
 
 \paragraph{Thermal equation}
-The tendency in the thermal equation related to the sub-grid scale model is
+The tendency in the thermal equation related to the sub-grid scale model is:
 \begin{align}
   \frac{\partial G^{\frac{1}{2}}\rho \theta}{\partial t}_{i,j,k} =
   &- \frac{(G^{\frac{1}{2}}\overline{\rho}\tau^D_1)_{i+\half,j,k}-(G^{\frac{1}{2}}\overline{\rho}\tau^D_1)_{i-\half,j,k}}{\Delta x} \nonumber \\
@@ -321,8 +316,7 @@ The tendency in the thermal equation related to the sub-grid scale model is
 \end{align}
 The $\overline{\rho}$ at half-level is eq.(\ref{eq:rho half i})-(\ref{eq:rho half k}).
 
-The eddy diffution flux, $\tau^D$, at half-level
-is
+The eddy diffusion flux, $\tau^D$, at half-level is:
 \begin{align}
   (G^{\frac{1}{2}}\tau^D_1)_{i+\half,j,k} &= -D_{SGS,i+\half,j,k} \left\{
   \frac{(G^{\frac{1}{2}}\theta)_{i+1,j,k}-(G^{\frac{1}{2}}\theta)_{i,j,k}}{\Delta x}
@@ -336,9 +330,7 @@ is
 
 
 \paragraph{Strain tensor}
-All the strain tensor, eq.(\ref{eq:strain tensor}), have to be calculated
-at full-level (grid cell center),
-and some of them are at cell edges.
+All the strain tensors, eq.(\ref{eq:strain tensor}), have to be calculated at full-level (grid cell center), and some are at cell edges.
 
 \begin{itemize}
   \item cell center ($i,j,k$)
@@ -395,10 +387,7 @@ and some of them are at cell edges.
 
 
 \paragraph{velocity}
-Calculattion of the strain tensor
-requires value of velocity
-at cell center, plane center, edge center, and vertex.
-The velocities at cell center (full-level) are eq.(\ref{eq:u full}-\ref{eq:w full}).
+Calculation of the strain tensor requires velocity value at cell center, plane center, edge center, and vertex. The velocities at cell center (full-level) are eq.(\ref{eq:u full}-\ref{eq:w full}):
 
 \begin{itemize}
   \item $x$-$y$ plane center ($i,j,k+\frac{1}{2}$)
@@ -473,7 +462,7 @@ The velocities at cell center (full-level) are eq.(\ref{eq:u full}-\ref{eq:w ful
 \end{itemize}
 
 \paragraph{Eddy viscosity/diffusion coefficient}
-The eddy viscosity/diffusion coefficient, $\nu_{SGS}$ / $D_{SGS}$, is calculated at full-level with $S$ and $Ri$ at full-level and it at half level is interporated one at full-level.
+The eddy viscosity/diffusion coefficient, $\nu_{SGS}$ / $D_{SGS}$, is calculated at full-level with $S$ and $Ri$ at full-level; at half-level, it is interpolated to full-level.
 
 
 \paragraph{Brunt-Visala frequency}
