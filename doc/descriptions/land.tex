@@ -36,7 +36,7 @@ Soil temperature tendency equations are implemented as follows:
   \frac{\Delta T_{k}}{\Delta t} &= - \frac{2\nu_{k}}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k-1})} (T_{k}-T_{k-1}) + \frac{2\nu_{k}}{\Delta z_{k}(\Delta z_{k+1}+\Delta z_{k})} (T_{k+1}-T_{k}), \\
   \frac{\Delta T_{m}}{\Delta t} &= - \frac{2\nu_{m}}{\Delta z_{m}(\Delta z_{m}+\Delta z_{m-1})} (T_{m}-T_{m-1}),
 \end{align}
-where $G_{0}$ is upward ground heat flux from the atmospheric surface ($J/m^2/s$).
+where $G_{0}$ is upward ground heat flux between the Earth's surface and subsurface ($J/m^2/s$).
 We assume that the ground heat flux under the lowermost layer is zero.
 
 We use an implicit scheme for time integration of the land slab model.
