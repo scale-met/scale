@@ -36,7 +36,7 @@ module scale_atmos_dyn_tstep_short_fvm_hevi
   use scale_grid_index
   use scale_index
   use scale_tracer
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -326,6 +326,21 @@ contains
     qflx_hi (:,:,:,:) = UNDEF
     qflx_J13(:,:,:)   = UNDEF
     qflx_J23(:,:,:)   = UNDEF
+#endif
+
+#ifdef QUICKDEBUG
+    DENS_RK(   1:KS-1,:,:)   = UNDEF
+    DENS_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMZ_RK(   1:KS-1,:,:)   = UNDEF
+    MOMZ_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMX_RK(   1:KS-1,:,:)   = UNDEF
+    MOMX_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMY_RK(   1:KS-1,:,:)   = UNDEF
+    MOMY_RK(KE+1:KA  ,:,:)   = UNDEF
+    RHOT_RK(   1:KS-1,:,:)   = UNDEF
+    RHOT_RK(KE+1:KA  ,:,:)   = UNDEF
+    PROG_RK(   1:KS-1,:,:,:) = UNDEF
+    PROG_RK(KE+1:KA  ,:,:,:) = UNDEF
 #endif
 
 #ifdef HIST_TEND

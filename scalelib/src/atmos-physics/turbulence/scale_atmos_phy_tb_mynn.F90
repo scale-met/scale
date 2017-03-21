@@ -30,7 +30,7 @@ module scale_atmos_phy_tb_mynn
 
 #include "macro_thermodyn.h"
 
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -376,6 +376,21 @@ contains
     temp(:,:,:) = UNDEF
 #endif
 
+#ifdef QUICKDEBUG
+    qflx_sgs_momz(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+#endif
+
 !OCL XFILL
     do j = JS  , JE
     do i = IS-1, IE
@@ -616,7 +631,7 @@ contains
                    q, q2_2, & ! (in)
                    l, n2, dudz2 ) ! (in)
 
-#ifdef QUICK_DEBUG
+#ifdef QUICKDEBUG
     do j = 1, JS-1
     do i = 1, IA
     do k = KS, KE
@@ -644,6 +659,7 @@ contains
        end do
     end do
 #endif
+
     call ATMOS_SATURATION_pres2qsat( Qsl(KS:KE_PBL,:,:), & ! (out)
                                      TEML(KS:KE_PBL,:,:), pres(KS:KE_PBL,:,:), & ! (in)
                                      KE_PBL-KS+1 ) ! (in)

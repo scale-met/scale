@@ -41,7 +41,7 @@ module scale_atmos_phy_tb_smg
   use scale_grid_index
   use scale_tracer
 
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -348,13 +348,28 @@ contains
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
     qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
-    nu (:,:,:) = UNDEF
-    tke(:,:,:) = UNDEF
-    Pr (:,:,:) = UNDEF
-    Ri (:,:,:) = UNDEF
-    Kh (:,:,:) = UNDEF
+    nu           (:,:,:)     = UNDEF
+    tke          (:,:,:)     = UNDEF
+    Pr           (:,:,:)     = UNDEF
+    Ri           (:,:,:)     = UNDEF
+    Kh           (:,:,:)     = UNDEF
 
-    POTT   (:,:,:) = UNDEF
+    POTT         (:,:,:)     = UNDEF
+#endif
+
+#ifdef QUICKDEBUG
+    qflx_sgs_momz(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
 #endif
 
     ! potential temperature
