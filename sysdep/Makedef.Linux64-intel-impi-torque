@@ -25,8 +25,7 @@ FFLAGS_DEBUG = -fpp -m64 -O0                        \
                -fpe0 -fp-model source               \
                -check all -warn all -g -traceback   \
                -mcmodel=medium -heap-arrays         \
-               -assume nobuffered_io                \
-               -DDEBUG
+               -assume nobuffered_io               
 
 
 

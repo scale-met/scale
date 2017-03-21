@@ -27,8 +27,7 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) \
                -ffpe-trap=invalid,zero,overflow -finit-integer=-32768 -finit-real=nan -finit-logical=false -finit-character=9 \
                -Wall -Wextra -Wcharacter-truncation -Wunderflow -Warray-temporaries -Wuninitialized \
                -fbounds-check \
-               -g -fbacktrace \
-               -DDEBUG
+               -g -fbacktrace
 
 
 
