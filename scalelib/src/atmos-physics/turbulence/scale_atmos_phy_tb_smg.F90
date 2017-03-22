@@ -393,11 +393,6 @@ contains
        do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
-       call CHECK( __LINE__, POTT(k+1,i,j) )
-       call CHECK( __LINE__, POTT(k,i,j) )
-       call CHECK( __LINE__, POTT(k-1,i,j) )
-       call CHECK( __LINE__, FDZ(k) )
-       call CHECK( __LINE__, FDZ(k-1) )
        call CHECK( __LINE__, S2(k,i,j) )
        call CHECK( __LINE__, N2(k,i,j) )
 #endif
