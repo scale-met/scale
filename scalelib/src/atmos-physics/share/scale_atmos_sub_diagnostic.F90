@@ -89,9 +89,8 @@ contains
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
 
     real(RP) :: ph(KA)  !> hydrostatic pressure at the half level
-    real(RP) :: q(KA)
     real(RP) :: RPT(KA) !> Rtot * PT (= Rdry * virtual potential temperature)
-
+    real(RP) :: q(QA)
     real(RP) :: qdry, Rtot
 
     integer :: k, i, j
