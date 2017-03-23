@@ -234,7 +234,7 @@ contains
        RHOQ_t,                                      &
        Nu, Ri, Pr,                                  &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
     use scale_grid_index
@@ -299,7 +299,7 @@ contains
     real(RP), intent(in)    :: SFLX_MU      (IA,JA)
     real(RP), intent(in)    :: SFLX_MV      (IA,JA)
     real(RP), intent(in)    :: SFLX_SH      (IA,JA)
-    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_Q       (IA,JA,QA)
 
     real(RP), intent(in)    :: GSQRT         (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)    :: J13G          (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
