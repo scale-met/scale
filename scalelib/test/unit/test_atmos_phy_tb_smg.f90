@@ -182,12 +182,14 @@ subroutine test_zero
   DENS(:,:,:) = 1.0_RP
   QTRC(:,:,:,:) = 0.0_RP
 
+  N2(:,:,:) = 0.0_RP
+
   call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        RHOQ_t,                                      & ! (inout)
-       nu_C, Ri, Pr, N2,                            & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
+       nu_C, Ri, Pr,                                & ! (out)
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
@@ -216,14 +218,16 @@ subroutine test_constant
   DENS(:,:,:) = 1.0_RP
   QTRC(:,:,:,:) = 1.0_RP
 
+  N2(:,:,:) = 0.0_RP
+
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
   call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        RHOQ_t,                                      & ! (inout)
-       nu_C, Ri, Pr, N2,                            & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
+       nu_C, Ri, Pr,                                & ! (out)
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
@@ -240,6 +244,10 @@ subroutine test_constant
 end subroutine test_constant
 !=============================================================================
 subroutine test_big
+  use scale_const, only: &
+     GRAV => CONST_GRAV
+  use scale_grid, only: &
+     RCDZ => GRID_RCDZ
   use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB
 
@@ -269,14 +277,22 @@ subroutine test_big
   end do
   end do
 
+  do j = 1, JA
+  do i = 1, IA
+  do k = KS, KE
+     N2(k,i,j) = GRAV * ( RHOT(k+1,i,j) - RHOT(k-1,i,j) ) / RHOT(k,i,j) * RCDZ(k)
+  end do
+  end do
+  end do
+
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
   call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        RHOQ_t,                                      & ! (inout)
-       nu_C, Ri, Pr, N2,                            & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
+       nu_C, Ri, Pr,                                & ! (out)
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
@@ -326,6 +342,7 @@ subroutine test_double
   end do
   DENS(:,:,:) = 1.0_RP
   RHOT(:,:,:) = 1.0_RP ! Ri = 0
+  N2(:,:,:) = 0.0_RP
 
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
@@ -333,8 +350,8 @@ subroutine test_double
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        RHOQ_t,                                      & ! (inout)
-       nu_C, Ri, Pr, N2,                            & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
+       nu_C, Ri, Pr,                                & ! (out)
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
@@ -347,8 +364,8 @@ subroutine test_double
        qflx_sgs_momz2, qflx_sgs_momx2, qflx_sgs_momy2, & ! (out)
        qflx_sgs_rhot2, qflx_sgs_rhoq2,              & ! (out)
        RHOQ_t,                                      & ! (inout)
-       nu_C, Ri, Pr, N2,                            & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
+       nu_C, Ri, Pr,                                & ! (out)
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
