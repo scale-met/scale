@@ -246,7 +246,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "long_name", buf) )
     for (i=0; i<MIN(File_HMID-1,l); i++)
       dinfo->description[i] = buf[i];
-    dinfo->description[i+1] = '\0';
+    dinfo->description[i] = '\0';
     free(buf);
     // units
     CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
@@ -254,7 +254,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", buf) )
     for (i=0; i<MIN(File_HSHORT-1,l); i++)
       dinfo->units[i] = buf[i];
-    dinfo->units[i+1] = '\0';
+    dinfo->units[i] = '\0';
     free(buf);
     // datatype
     CHECK_PNC_ERROR( ncmpi_inq_vartype(ncid, varid, &xtype) )
@@ -277,7 +277,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_ERROR( nc_get_att_text(ncid, varid, "long_name", buf) )
     for (i=0; i<MIN(File_HMID-1,l); i++)
       dinfo->description[i] = buf[i];
-    dinfo->description[i+1] = '\0';
+    dinfo->description[i] = '\0';
     free(buf);
     // units
     CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
@@ -285,7 +285,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_ERROR( nc_get_att_text(ncid, varid, "units", buf) )
     for (i=0; i<MIN(File_HSHORT-1,l); i++)
       dinfo->units[i] = buf[i];
-    dinfo->units[i+1] = '\0';
+    dinfo->units[i] = '\0';
     free(buf);
     // datatype
     CHECK_ERROR( nc_inq_vartype(ncid, varid, &xtype) )
@@ -352,7 +352,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", buf) )
       for (i=0; i<MIN(File_HMID-1,l); i++)
         dinfo->time_units[i] = buf[i];
-      dinfo->time_units[i+1] = '\0';
+      dinfo->time_units[i] = '\0';
       free(buf);
     } else {
       size_t idx[2];
@@ -373,7 +373,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       CHECK_ERROR( nc_get_att_text(ncid, varid, "units", buf) )
       for (i=0; i<MIN(File_HMID-1,l); i++)
         dinfo->time_units[i] = buf[i];
-      dinfo->time_units[i+1] = '\0';
+      dinfo->time_units[i] = '\0';
       free(buf);
     }
   }
