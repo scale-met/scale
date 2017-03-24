@@ -455,7 +455,7 @@ The discussion concerning the reduction term of number concentration is the same
 &=&\frac{1}{\bar{x}_{js}}\frac{4\pi}{c_{js}}G_{sv}S_{i}N_{js}D_{js}(\bar{x}_{js})\bar{F}_{vf,1}(\bar{x}_{js})(js=s,g)\label{sn80}
 \end{eqnarray}
 
-This formulation corresponds to $\gamma_{evp} = 1$ in the reduction term for rain droplets. This means that sublimation occurs so as not to change the mean mass of DSD ($\bar{x}_{js}$). Number concentration of ice never reduces in sublimation unless the mean mass of ice ($\bar{x}_{i}$) falls below the lower limit. The formulations of the reduction rate for the number concentration of ice particles are somewhat temporary and will be improved based on insights drawn from the results of microphysics bin schemes and future observations.
+This formulation corresponds to $\gamma_{evp} = 1$ in the reduction term for rain droplets. This means that sublimation occurs so as not to change the mean mass of DSD ($\bar{x}_{js}$). Number concentration of ice never reduces in sublimation unless the mean mass of ice ($\bar{x}_{i}$) falls below the lower limit. The formulations of the reduction rate for the number concentration of ice particles are somewhat temporary and will be improved based on insights drawn from the results of microphysics bin schemes and observations in future.
 
 \subsubsection{Accurate integration method to solve condensation/evaporation and deposition/sublimation}
 The condensation/evaporation process for cloud droplets usually requires a smaller time step than rain droplets or other particles because of its timescale. When we apply time integration with the first-ordered Euler method, the accuracies of condensation/evaporation and deposition/sublimation processes are poor unless we resolve their timescale. We initially estimate the timescale with the exact thermodynamic definition in NICAM and then formulate an accurate method to apply the condensation and evaporation processes for cloud droplets, similar to Khvorostyanov and Sassen (1998) and Morrison et al., (2005). Since the supersaturated condition is achieved by updraft of air mass, we consider a Lagrangian parcel model with constant updraft velocity and no mixing with external air mass. Basic formulation is based on the Lagrangian change rate of supersaturation ($\delta_{sw} = q_{v} - q_{sw}$), as follows:
@@ -489,7 +489,7 @@ Assuming an air parcel with only cooling/heating by latent heat release, eq. \re
 \frac{d\delta_{sw}}{dt}=\frac{dq_{v}}{dt}-\bigl(\frac{\partial q_{sw}}{\partial T}\bigr)\frac{dT}{dt}\label{sn85}
 \end{eqnarray}
 
-The tendency of temperature is caused by latent heat release with condensation/evaporation and deposition/sublimation -  %eq.\ref{sn58}, eq.\ref{sn59} %, and Table \ref{table_sn14-2-11}:
+The tendency of temperature is caused by latent heat release with condensation/evaporation and deposition/sublimation:  %eq.\ref{sn58}, eq.\ref{sn59} %, and Table \ref{table_sn14-2-11}:
 
 \begin{eqnarray}
 \frac{dT}{dt}&=&\frac{L_{v,00}+(c_{vv}-c_{l})T}{\bar{c}_{va}}\frac{dq_{liq}}{dt}+\frac{L_{v,00}+L_{f,00}+(c_{v}-c_{i})T}{\bar{c}_{va}}\frac{dq_{sol}}{dt}\nonumber\\
