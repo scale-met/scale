@@ -98,6 +98,8 @@ OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
            scale_atmos_dyn_tstep_tracer.o
 
+OBJS_CH = scale_atmos_phy_ch_rn222.o
+
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
@@ -112,6 +114,8 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_phy_mp_common.o	\
 	$(OBJS_MP)	\
 	scale_atmos_phy_mp_convert.o	\
+	scale_atmos_phy_ch.o	\
+	$(OBJS_CH)	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\

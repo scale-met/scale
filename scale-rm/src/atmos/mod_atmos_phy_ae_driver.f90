@@ -64,7 +64,6 @@ contains
     ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
 !    if ( ATMOS_sw_phy_ae ) then
        call ATMOS_PHY_AE_config( ATMOS_PHY_AE_TYPE )
-
 !    else
 !       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
 !    endif

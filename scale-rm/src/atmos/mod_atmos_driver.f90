@@ -60,12 +60,19 @@ contains
        ATMOS_PHY_MP_driver_config
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_config
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_config
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_config
     implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS] / Origin[SCALE-RM]'
 
     call ATMOS_PHY_MP_driver_config
     call ATMOS_PHY_AE_driver_config
+    call ATMOS_PHY_CH_driver_config
     call ATMOS_PHY_TB_driver_config
 
     return
