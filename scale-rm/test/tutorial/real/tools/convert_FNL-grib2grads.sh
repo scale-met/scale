@@ -7,8 +7,8 @@
 #
 #  The program reads original data in ${RDIR} and then output to ${WDIR}.
 #
-#  GRIB1 structure: RDIR/grib1/${YEAR}/fnl_${YYYY}${MM}${DD}_${HH}_00.grib1
-#  GRIB2 structure: RDIR/grib2/${YEAR}/fnl_${YYYY}${MM}${DD}_${HH}_00.grib2
+#  GRIB1 structure: ${RDIR}/grib1/${YEAR}/fnl_${YYYY}${MM}${DD}_${HH}_00.grib1
+#  GRIB2 structure: ${RDIR}/grib2/${YEAR}/fnl_${YYYY}${MM}${DD}_${HH}_00.grib2
 #
 #-------------------------------------------------------------------------------
 
