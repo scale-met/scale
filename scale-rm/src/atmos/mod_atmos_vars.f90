@@ -1639,13 +1639,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           W_PRIM(k,i,j) = W(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( W_MEAN(:), W_PRIM(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1653,7 +1653,7 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           W_PRIM(k,i,j) = W(k,i,j) - W_MEAN(k)
        enddo
        enddo
@@ -1664,13 +1664,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           U_PRIM(k,i,j) = U(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( U_MEAN(:), U_PRIM(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1678,7 +1678,7 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           U_PRIM(k,i,j) = U(k,i,j) - U_MEAN(k)
        enddo
        enddo
@@ -1689,13 +1689,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           V_PRIM(k,i,j) = V(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( V_MEAN(:), V_PRIM(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1703,7 +1703,7 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           V_PRIM(k,i,j) = V(k,i,j) - V_MEAN(k)
        enddo
        enddo
@@ -1714,20 +1714,20 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           POTT_PRIM(k,i,j) = TEMP(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( T_MEAN(:), POTT_PRIM(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
 
     if ( AD_PREP_sw(I_POTT_MEAN) > 0 ) then
        call COMM_horizontal_mean( PT_MEAN(:), RHOT(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1735,7 +1735,7 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           POTT_PRIM(k,i,j) = POTT(k,i,j) - PT_MEAN(k)
        enddo
        enddo
@@ -1746,13 +1746,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           RHOQ(k,i,j) = QTRC(k,i,j,I_QV) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( QV_MEAN(:), RHOQ(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1761,13 +1761,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           RHOQ(k,i,j) = QHYD(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( QHYD_MEAN(:), RHOQ(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1776,13 +1776,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           RHOQ(k,i,j) = QLIQ(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( QLIQ_MEAN(:), RHOQ(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1791,13 +1791,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           RHOQ(k,i,j) = QICE(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( QICE_MEAN(:), RHOQ(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
        enddo
     end if

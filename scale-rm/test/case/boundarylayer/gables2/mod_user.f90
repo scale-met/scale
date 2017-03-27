@@ -297,6 +297,9 @@ contains
 
     end do
 
+    d_out(   1:KS-1) = d_out(KS)
+    d_out(KE+1:KA  ) = d_out(KE)
+
     return
   end subroutine interporate
 
