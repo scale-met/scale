@@ -267,54 +267,62 @@ contains
     return
   end subroutine USER_step
 
+  !-----------------------------------------------------------------------------
   subroutine interporate( d_out, d_in )
     use scale_grid, only: &
-         CZ   => GRID_CZ
+       CZ => GRID_CZ
     implicit none
+
     real(RP), intent(out) :: d_out(KA)
     real(RP), intent(in ) :: d_in(K_ini)
+
     integer :: k, kk
+    !---------------------------------------------------------------------------
 
     do k = KS, KE
+
        if ( CZ(k) >= z_ini(K_ini) ) then
           d_out(k) = d_in(K_ini)
-       else if ( CZ(k) < z_ini(1) ) then
+       elseif( CZ(k) < z_ini(1) ) then
           d_out(k) = d_in(1)
        else
           do kk = 1, K_ini-1
-             if ( z_ini(kk) <= CZ(k) .and. CZ(k) < z_ini(kk+1) ) then
-                d_out(k) = d_in(kk) &
-                     + ( d_in(kk+1)-d_in(kk) ) * ( CZ(k)-z_ini(kk) ) / ( z_ini(kk+1)-z_ini(kk) )
+             if (       z_ini(kk)   <= CZ(k) &
+                  .AND. z_ini(kk+1) >  CZ(k) ) then
+                d_out(k) = d_in(kk) + ( d_in(kk+1)-d_in(kk) ) * ( CZ(k)-z_ini(kk) ) / ( z_ini(kk+1)-z_ini(kk) )
                 exit
              end if
           end do
        end if
+
     end do
 
     return
   end subroutine interporate
 
+  !-----------------------------------------------------------------------------
   subroutine set_tg( tsec )
-!    use mod_atmos_phy_sf_vars, only: &
-!       T_sf => ATMOS_PHY_SF_SFC_TEMP
     use mod_land_vars, only: &
        T_sf => LAND_SFC_TEMP
     implicit none
+
     real(RP), intent(in)  :: tsec
+
     real(RP) :: time
     real(RP) :: Tg
+    !---------------------------------------------------------------------------
 
     time = tsec / 3600.0_RP + 16.0_RP
 
-    if (time <= 17.4_RP) then
+    if    ( time <= 17.4_RP ) then
        Tg = -10.0_RP - 25.0_RP * cos(time*0.22_RP + 0.2_RP)
-    else if (time <= 30.0_RP) then
+    elseif( time <= 30.0_RP ) then
        Tg = -0.54_RP * time + 15.2_RP
-    else if (time <= 41.9_RP) then
+    elseif( time <= 41.9_RP ) then
        Tg = -7.0_RP - 25.0_RP * cos(time*0.21_RP + 1.8_RP)
-    else if (time <= 53.3_RP) then
+    elseif( time <= 53.3_RP ) then
        Tg = -0.37_RP * time + 18.0_RP
-    else if (time <= 65.6_RP) then
+    elseif( time <= 65.6_RP ) then
        Tg = -4.0_RP - 25.0_RP * cos(time * 0.22_RP + 2.5_RP)
     else
        Tg = 4.4_RP
