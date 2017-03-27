@@ -4,10 +4,8 @@
 \subsection{\SubsecMicrophysicsSetting} \label{subsec:basic_usel_microphys}
 %------------------------------------------------------
 雲微物理スキームの選択は、\verb|init.conf|と\verb|run.conf|のうち、
-\namelist{PARAM_TRACER}の\nmitem{TRACER_TYPE}、
-及び、\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。\\
-このとき{\color{red}{\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}は普通は同じものを設定し}}
-、かつ、\textcolor{red}{\texttt{init.conf}、\texttt{run.conf}で同一の設定}とする必要がある。
+\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。\\
+このとき\nmitem{ATMOS_PHY_MP_TYPE}は\textcolor{red}{\texttt{init.conf}、\texttt{run.conf}で同一の設定}とする必要がある。
 ただし、\nmitem{ATMOS_PHY_MP_TYPE}を\verb|OFF|とするときは、
 \nmitem{TRACER_TYPE}は何を設定してもよいが、乾燥大気の計算をする場合は\verb|TRACER_TYPE = "DRY"|とするのがよい。
 雲微物理スキームを呼び出すタイミングは、
@@ -20,10 +18,6 @@
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_PHY_MP_TYPE = "TOMITA08", | & ; 表\ref{tab:nml_atm_mp}より選択。\\
-\verb|/             | & \\
-\\
-\verb|&PARAM_TRACER | & \\
-\verb| TRACER_TYPE = "TOMITA08", | & \verb|ATMOS_PHY_MP_TYPE|と同じ名前。\\
 \verb|/             | & \\
 \end{tabularx}
 }}\\
