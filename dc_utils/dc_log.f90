@@ -46,8 +46,8 @@ module dc_log
   !++ Public parameters & variables
   !
   integer, public, parameter :: LOG_LMSG    = 4096
-  integer, public            :: LOG_fid     = STDOUT
-  integer, public            :: LOG_fid_nml = STDOUT
+  integer, public            :: LOG_fid
+  integer, public            :: LOG_fid_nml
 
   !-----------------------------------------------------------------------------
   !
@@ -55,7 +55,7 @@ module dc_log
   !
   integer, private :: LOG_ilevel = LOG_INFO
 
-  logical, private :: LOG_master     = .true.
+  logical, private :: LOG_master
 #if defined(__PGI) || defined(__ES2)
   logical, public :: LOG_master_nml
 #else
@@ -90,6 +90,10 @@ contains
 
     character(len=LOG_LMSG) :: message
   !-----------------------------------------------------------------------------
+
+    LOG_fid = STDOUT
+    LOG_fid_nml = STDOUT
+    LOG_master = .true.
 
     if ( present(master)     ) LOG_master     = master
     LOG_master_nml = LOG_master

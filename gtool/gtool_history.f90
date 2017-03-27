@@ -169,13 +169,13 @@ module gtool_history
 
   real(DP),                   private              :: History_STARTDAYSEC               !> Start date [second]
   real(DP),                   private              :: History_DTSEC                     !> Delta t    [second]
-  character(len=File_HMID),   private              :: History_TIME_SINCE    = ''        !> Offset time
+  character(len=File_HMID),   private              :: History_TIME_SINCE                !> Offset time
 
   ! From NAMELIST or upstream side of the library
   character(len=File_HMID),   private              :: History_TITLE                     !> Header information of the output file: title
   character(len=File_HMID),   private              :: History_SOURCE                    !> Header information of the output file: model name
   character(len=File_HMID),   private              :: History_INSTITUTION               !> Header information of the output file: institution
-  character(len=File_HMID),   private              :: History_TIME_UNITS    = 'seconds' !> Unit for time axis
+  character(len=File_HMID),   private              :: History_TIME_UNITS                !> Unit for time axis
 
   logical,                    private              :: History_OUTPUT_STEP0  = .false.   !> Output value at step=0?
   real(DP),                   private              :: History_OUTPUT_WAIT   = 0.0_DP    !> Time length to suppress output [sec]
@@ -270,14 +270,14 @@ contains
     character(len=*), intent(in), optional :: namelist_filename
     integer         , intent(in), optional :: namelist_fid
 
-    character(len=File_HLONG)  :: History_DEFAULT_BASENAME  = ''       !> base name of the file
-    real(DP)                   :: History_DEFAULT_TINTERVAL = -1.0_DP  !> time interval
-    character(len=File_HSHORT) :: History_DEFAULT_TUNIT     = 'sec'    !> time unit
-    logical                    :: History_DEFAULT_TAVERAGE  = .false.  !> apply time average?
-    character(len=File_HSHORT) :: History_DEFAULT_ZCOORD    = ''       !> default z-coordinate
-    character(len=File_HSHORT) :: History_DEFAULT_DATATYPE  = 'REAL4'  !> data type
-                                                                       !> REAL4 : single precision
-                                                                       !> REAL8 : double precision
+    character(len=File_HLONG)  :: History_DEFAULT_BASENAME  !> base name of the file
+    real(DP)                   :: History_DEFAULT_TINTERVAL !> time interval
+    character(len=File_HSHORT) :: History_DEFAULT_TUNIT     !> time unit
+    logical                    :: History_DEFAULT_TAVERAGE  !> apply time average?
+    character(len=File_HSHORT) :: History_DEFAULT_ZCOORD    !> default z-coordinate
+    character(len=File_HSHORT) :: History_DEFAULT_DATATYPE  !> data type
+                                                            !> REAL4 : single precision
+                                                            !> REAL8 : double precision
 
     NAMELIST / PARAM_HISTORY / &
        History_TITLE,             &
@@ -329,6 +329,15 @@ contains
 
     intrinsic size
     !---------------------------------------------------------------------------
+
+    History_TIME_UNITS        = 'seconds' !> Unit for time axis
+    History_DEFAULT_BASENAME  = ''        !> base name of the file
+    History_DEFAULT_TINTERVAL = -1.0_DP   !> time interval
+    History_DEFAULT_TUNIT     = 'sec'     !> time unit
+    History_DEFAULT_TAVERAGE  = .false.   !> apply time average?
+    History_DEFAULT_ZCOORD    = ''        !> default z-coordinate
+    History_DEFAULT_DATATYPE  = 'REAL4'   !> data type
+    History_TIME_SINCE        = ''        !> Offset time
 
     call Log('I','')
     call Log('I','###### Module[HISTORY] / Origin[gtoollib]')
@@ -2289,9 +2298,12 @@ contains
     logical,          intent(in), optional :: allow_missing
     logical,          intent(in), optional :: single
 
-    logical :: allow_missing_ = .false.
-    logical :: single_        = .false.
+    logical :: allow_missing_
+    logical :: single_
     !---------------------------------------------------------------------------
+
+    allow_missing_ = .false.
+    single_        = .false.
 
     if ( present(allow_missing) ) then
        allow_missing_ = allow_missing

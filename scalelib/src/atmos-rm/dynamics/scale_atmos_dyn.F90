@@ -95,7 +95,7 @@ module scale_atmos_dyn
   real(RP), private, allocatable :: num_diff_q(:,:,:,:)
   real(RP), private, allocatable :: wdamp_coef(:)         ! coefficient for Rayleigh damping of w
 
-  logical,  private              :: DYN_NONE = .false.
+  logical,  private              :: DYN_NONE
 
   !-----------------------------------------------------------------------------
 contains
@@ -179,6 +179,8 @@ contains
 
     integer :: iv, iq
     !---------------------------------------------------------------------------
+
+    DYN_NONE = .false.
 
     if ( present(none) ) then
        DYN_NONE = none

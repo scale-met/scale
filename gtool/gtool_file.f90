@@ -502,7 +502,9 @@ contains
     integer,          intent( in), optional :: myrank
 
     logical :: existed
-    logical :: single_ = .false.
+    logical :: single_
+
+    single_ = .false.
 
     if ( present(single) ) single_ = single
     if ( present(myrank) ) mpi_myrank = myrank
@@ -1946,10 +1948,12 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
 
     mpi_myrank = myrank
 
@@ -2027,10 +2031,12 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
 
     mpi_myrank = myrank
 
@@ -2108,10 +2114,12 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
 
     mpi_myrank = myrank
 
@@ -2189,10 +2197,12 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
 
     mpi_myrank = myrank
 
@@ -2270,10 +2280,12 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
 
     mpi_myrank = myrank
 
@@ -2351,10 +2363,12 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
 
     mpi_myrank = myrank
 
@@ -2432,10 +2446,12 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
 
     mpi_myrank = myrank
 
@@ -2513,10 +2529,12 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_ = .false.
+    logical :: single_
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
 
     mpi_myrank = myrank
 
