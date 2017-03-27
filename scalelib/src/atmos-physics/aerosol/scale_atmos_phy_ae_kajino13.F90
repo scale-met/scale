@@ -2283,7 +2283,7 @@ contains
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
 
-    real(RP), intent(out)   :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(out)   :: CCN (KA,IA,JA)
     real(RP), intent(in)    :: DENS(KA,IA,JA)
     real(RP), intent(in)    :: RHOT(KA,IA,JA)
@@ -2452,9 +2452,9 @@ contains
     enddo
 
     conc_gas(:) = 0.0_RP
-    do k = KS, KE
-    do i = IS, IE
-    do j = JS, JE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        it = 0
        do ic  = 1, n_ctg    ! category
        do ik  = 1, NKAP(ic) ! kappa bin
