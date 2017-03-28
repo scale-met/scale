@@ -98,7 +98,6 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -119,6 +118,12 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    ! If you need, calculate first step and put diagnostic value to history buffer.
+    ! USER_resume0 calls before setup of Atmos/Ocean/Land/Urban submodels.
+    ! All variables are set before surface coupling.
+
+    !call USER_step
+
     return
   end subroutine USER_resume0
 
@@ -127,6 +132,12 @@ contains
   subroutine USER_resume
     implicit none
     !---------------------------------------------------------------------------
+
+    ! If you need, calculate first step and put diagnostic value to history buffer.
+    ! USER_resume calls after setup of Atmos/Ocean/Land/Urban submodels.
+    ! All variables are set after surface coupling.
+
+    !call USER_step
 
     return
   end subroutine USER_resume

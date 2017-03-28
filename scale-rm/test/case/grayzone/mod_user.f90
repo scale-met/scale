@@ -18,18 +18,13 @@ module mod_user
   !
   !++ used modules
   !
-  use scale_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
   use scale_precision
   use scale_stdio
   use scale_prof
-
-  use scale_tracer
   use scale_grid_index
+  use scale_land_grid_index
   use scale_index
-  use scale_stdio, only: &
-       IO_get_available_fid
+
   use scale_grid, only: &
        CX => GRID_CX, &
        CY => GRID_CY, &
@@ -38,13 +33,9 @@ module mod_user
        TIME_NOWSTEP,&
        TIME_NOWSEC,&
        TIME_DTSEC
-! use mod_cpl_vars, only: &
-!      SST
-!2014/6/13noda
   use mod_atmos_phy_sf_vars, only: &
      SFC_albedo      => ATMOS_PHY_SF_SFC_albedo,&
      SFC_TEMP        => ATMOS_PHY_SF_SFC_TEMP
-
   !-----------------------------------------------------------------------------
   implicit none
   private
