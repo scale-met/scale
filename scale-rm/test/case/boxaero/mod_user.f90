@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2012-12-26 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -20,7 +17,6 @@ module mod_user
   use scale_stdio
   use scale_prof
   use scale_grid_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,7 +42,16 @@ module mod_user
   !
   !++ Private parameters & variables
   !
-  logical, private :: USER_do = .false. !< do user step?
+  integer,                private, parameter :: QA = 1
+  character(len=H_SHORT), private            :: QNAME(QA)
+  character(len=H_MID),   private            :: QDESC(QA)
+  character(len=H_SHORT), private            :: QUNIT(QA)
+
+  data QNAME / 'QV' /
+
+  data QDESC / 'Ratio of Water Vapor mass to total mass (Specific humidity)' /
+
+  data QUNIT / 'kg/kg' /
 
   !-----------------------------------------------------------------------------
 contains
@@ -54,22 +59,14 @@ contains
   !> Config before setup of other components
   subroutine USER_config
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_regist
+       ATMOS_HYDROMETEOR_regist, &
+       I_QV
     implicit none
+    !---------------------------------------------------------------------------
 
-    integer, parameter :: NQ = 1
-    integer :: QS
-    character(len=H_SHORT) :: NAME(NQ)
-    character(len=H_MID)   :: DESC(NQ)
-    character(len=H_SHORT) :: UNIT(NQ)
-
-    data NAME / 'QV' /
-    data DESC / 'Specific humidity' /
-    data UNIT / 'kg/kg' /
-
-    call ATMOS_HYDROMETEOR_regist( QS,              & ! (out)
-                                   1, 0, 0,         & ! (in)
-                                   NAME, DESC, UNIT ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( I_QV,               & ! (out)
+                                   1, 0, 0,            & ! (in)
+                                   QNAME, QDESC, QUNIT ) ! (in)
 
     return
   end subroutine USER_config
@@ -77,9 +74,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup before setup of other components
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
+    !---------------------------------------------------------------------------
 
     return
   end subroutine USER_setup

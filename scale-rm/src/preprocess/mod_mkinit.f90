@@ -4995,19 +4995,19 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOXAERO)
 
     QTRC(:,:,:,:) = 0.0_RP
-    do k = KS, KE
-    do i = IS, IE
-    do j = JS, JE
-      DENS(k,i,j) = init_dens
-      MOMX(k,i,j) = 0.0_RP
-      MOMY(k,i,j) = 0.0_RP
-      MOMZ(k,i,j) = 0.0_RP
-      pott(k,i,j) = init_temp * ( P00/init_pres )**(Rdry/CPdry)
-      RHOT(k,i,j) = init_dens * pott(k,i,j)
+    call SATURATION_pres2qsat_all( qsat, init_temp, init_pres )
 
-      call SATURATION_pres2qsat_all( qsat, init_temp, init_pres )
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS(k,i,j) = init_dens
+       MOMX(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
+       MOMZ(k,i,j) = 0.0_RP
+       pott(k,i,j) = init_temp * ( P00/init_pres )**(Rdry/CPdry)
+       RHOT(k,i,j) = init_dens * pott(k,i,j)
 
-      QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP )*qsat
+       QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP ) * qsat
     enddo
     enddo
     enddo
