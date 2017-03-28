@@ -1121,7 +1121,7 @@ contains
                + ( (1.0_RP - 100.0_RP*zeta)*(1.0_RP-sw) )**0.2_RP )
 
           ! LB
-          sw  = sign(0.5_RP, n2(k,i,j)) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz < 0
+          sw  = sign(0.5_RP, n2(k,i,j)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
           rn2sr = 1.0_RP / ( sqrt(n2(k,i,j)*sw) + 1.0_RP-sw)
           lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q(k,i,j) * rn2sr * sw & ! qc=0 when SFLX_PT < 0
              +  999.E10_RP * (1.0_RP-sw)
