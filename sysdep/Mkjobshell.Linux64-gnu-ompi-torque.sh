@@ -52,7 +52,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PBS -q ${rscgrp}
 #PBS -l nodes=${NNODE}:ppn=${NPROC}
-#PBS -l walltime=2:00:00
+#PBS -l walltime=4:00:00
 #PBS -N SCALE
 #PBS -o OUT.log
 #PBS -e ERR.log
