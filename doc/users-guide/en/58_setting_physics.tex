@@ -3,15 +3,13 @@
 
 \subsection{Cloud micro-physics} \label{subsec:basic_usel_microphys}
 %------------------------------------------------------
-The cloud micro-physics scheme is configured in \nmitem{TRACER_TYPE} in \namelist{PARAM_TRACER} and  \\ \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively. {\color{blue} Note that it is necessary to specify the same scheme for {\nmitem{TRACER_TYPE} and \nmitem{ATMOS_PHY_MP_TYPE}}} in both {\texttt{init.conf} and \texttt{run.conf}}. Although \nmitem{TRACER_TYPE} can be specified in all options at \nmitem{ATMOS_PHY_MP_TYPE} $=$ \verb|OFF|, the specification of \nmitem{TRACER_TYPE}$=$\verb|"DRY"| is recommended  in dry atmospheric calculation. The update interval for the cloud micro-physics scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing. The following example shows the configuration for cases involving a six-class one-moment bulk scheme that contains ice phase clouds:
+The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively. 
+{\color{blue} Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in both \texttt{init.conf} and \texttt{run.conf}}. 
+The update interval for the cloud micro-physics scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing. The following example shows the configuration for cases involving a six-class one-moment bulk scheme that contains ice phase clouds:
 
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_PHY_MP_TYPE = "TOMITA08", | & ; Choose from Table \ref{tab:nml_atm_mp}.\\
-\verb|/             | & \\
-\\
-\verb|&PARAM_TRACER | & \\
-\verb| TRACER_TYPE = "TOMITA08", | & Same as the type of \verb|ATMOS_PHY_MP_TYPE|.\\
 \verb|/             | & \\
 }
 
@@ -45,7 +43,7 @@ This scheme explicitly expresses particle size distribution by discretizing it u
 \end{enumerate}
 The degrees of sophistication increases from 1 to 4, as does computational cost.
 
-If \verb|SUZUKI10| is selected, in addition to the specifications of \nmitem{TRACER_TYPE} and \nmitem{ATMOS_PHY_MP_TYPE}, the following configuration needs to be added to both files of \verb|init.conf| and \verb|run.conf|:
+If \verb|SUZUKI10| is selected, in addition to the specification of \nmitem{ATMOS_PHY_MP_TYPE}, the following configuration needs to be added to both files of \verb|init.conf| and \verb|run.conf|:
 \editboxtwo{
 \verb|&PARAM_BIN|   &  \\
 \verb| nbin   = 33, & : The number of bins| \\
