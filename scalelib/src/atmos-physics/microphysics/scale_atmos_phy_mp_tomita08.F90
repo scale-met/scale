@@ -1036,7 +1036,7 @@ contains
        RLMDr_6dr = RLMDr**6 * RLMDr_dr
 
        ! slope parameter lambda (Snow)
-       zerosw = 0.5_RP - sign(0.5_RP, qs - 1.E-12_RP )
+       zerosw = 0.5_RP - sign(0.5_RP, dens * qs - 1.E-12_RP )
        RLMDs  = sqrt(sqrt( dens * qs / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
 
        RLMDs_ds  = sqrt( sqrt(RLMDs) ) ! **Ds
@@ -1060,7 +1060,6 @@ contains
 
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       zerosw = 0.5_RP - sign(0.5_RP, dens * qs - 1.E-12_RP )
        Xs2    = dens * qs / As
 
        tems       = min( -0.1_RP, temc )
