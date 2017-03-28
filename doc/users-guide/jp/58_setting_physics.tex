@@ -6,8 +6,6 @@
 雲微物理スキームの選択は、\verb|init.conf|と\verb|run.conf|のうち、
 \namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。\\
 このとき\nmitem{ATMOS_PHY_MP_TYPE}は\textcolor{red}{\texttt{init.conf}、\texttt{run.conf}で同一の設定}とする必要がある。
-ただし、\nmitem{ATMOS_PHY_MP_TYPE}を\verb|OFF|とするときは、
-\nmitem{TRACER_TYPE}は何を設定してもよいが、乾燥大気の計算をする場合は\verb|TRACER_TYPE = "DRY"|とするのがよい。
 雲微物理スキームを呼び出すタイミングは、
 \namelist{PARAM_TIME}で設定するが、これについては
 第\ref{sec:timeintiv}節を参照のこと。
@@ -81,7 +79,7 @@
 
 
 \verb|SUZUKI10|以外を選択する場合は、
-\verb|init.conf|、\verb|run.conf|の\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}を
+\verb|init.conf|、\verb|run.conf|の\nmitem{ATMOS_PHY_MP_TYPE}を
 変更するだけで実行可能であるが、
 {\color{red}\texttt{SUZUKI10}を選択する場合}は、以下のように
 \verb|init.conf|、\verb|run.conf|の双方に
