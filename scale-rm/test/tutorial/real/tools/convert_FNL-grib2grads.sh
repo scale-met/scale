@@ -131,7 +131,12 @@ do
         WFILE_SFC=${WDIR}/${YYYY}${MM}/FNL_SFC_${YYYY}${MM}${DD}${HH}.grd
         WFILE_LND=${WDIR}/${YYYY}${MM}/FNL_LND_${YYYY}${MM}${DD}${HH}.grd
 
-        echo "reading ... $RFILE"
+        if [ -f $RFILE ]; then
+          echo "Reading ... $RFILE"
+        else
+          echo "ERROR: File not found ... $RFILE"
+          exit 1
+        fi
 
         if [ $UNIX_NOW -le $UNIX_CHECK1 ]; then
           # 3D
@@ -175,9 +180,25 @@ do
           wgrib2 ${RFILE} -match ":SOILW:"  -match "below ground:" -order "we:ns" -no_header -ieee SOILW.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
         fi
 
-        rm -f ${WFILE_ATM}
-        rm -f ${WFILE_SFC}
-        rm -f ${WFILE_LND}
+        # check file size
+        if [ ! -s HGTprs.${YYYY}${MM}${DD}${HH}.grd   ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: HGTprs.${YYYY}${MM}${DD}${HH}.grd  "; exit 1; fi
+        if [ ! -s UGRDprs.${YYYY}${MM}${DD}${HH}.grd  ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: UGRDprs.${YYYY}${MM}${DD}${HH}.grd "; exit 1; fi
+        if [ ! -s VGRDprs.${YYYY}${MM}${DD}${HH}.grd  ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: VGRDprs.${YYYY}${MM}${DD}${HH}.grd "; exit 1; fi
+        if [ ! -s TMPprs.${YYYY}${MM}${DD}${HH}.grd   ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: TMPprs.${YYYY}${MM}${DD}${HH}.grd  "; exit 1; fi
+        if [ ! -s RHprs.${YYYY}${MM}${DD}${HH}.grd    ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: RHprs.${YYYY}${MM}${DD}${HH}.grd   "; exit 1; fi
+        if [ ! -s PRMSLmsl.${YYYY}${MM}${DD}${HH}.grd ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: PRMSLmsl.${YYYY}${MM}${DD}${HH}.grd"; exit 1; fi
+        if [ ! -s PRESsfc.${YYYY}${MM}${DD}${HH}.grd  ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: PRESsfc.${YYYY}${MM}${DD}${HH}.grd "; exit 1; fi
+        if [ ! -s HGTsfc.${YYYY}${MM}${DD}${HH}.grd   ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: HGTsfc.${YYYY}${MM}${DD}${HH}.grd  "; exit 1; fi
+        if [ ! -s TMPsfc.${YYYY}${MM}${DD}${HH}.grd   ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: TMPsfc.${YYYY}${MM}${DD}${HH}.grd  "; exit 1; fi
+        if [ ! -s LANDsfc.${YYYY}${MM}${DD}${HH}.grd  ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: LANDsfc.${YYYY}${MM}${DD}${HH}.grd "; exit 1; fi
+        if [ ! -s UGRD10m.${YYYY}${MM}${DD}${HH}.grd  ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: UGRD10m.${YYYY}${MM}${DD}${HH}.grd "; exit 1; fi
+        if [ ! -s VGRD10m.${YYYY}${MM}${DD}${HH}.grd  ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: VGRD10m.${YYYY}${MM}${DD}${HH}.grd "; exit 1; fi
+        if [ ! -s TMP2m.${YYYY}${MM}${DD}${HH}.grd    ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: TMP2m.${YYYY}${MM}${DD}${HH}.grd   "; exit 1; fi
+        if [ ! -s RH2m.${YYYY}${MM}${DD}${HH}.grd     ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: RH2m.${YYYY}${MM}${DD}${HH}.grd    "; exit 1; fi
+        if [ ! -s TSOIL.${YYYY}${MM}${DD}${HH}.grd    ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: TSOIL.${YYYY}${MM}${DD}${HH}.grd   "; exit 1; fi
+        if [ ! -s SOILW.${YYYY}${MM}${DD}${HH}.grd    ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: SOILW.${YYYY}${MM}${DD}${HH}.grd   "; exit 1; fi
+
+        rm -f ${WFILE_ATM} ${WFILE_SFC} ${WFILE_LND}
 
         cat HGTprs.${YYYY}${MM}${DD}${HH}.grd  \
             UGRDprs.${YYYY}${MM}${DD}${HH}.grd \
