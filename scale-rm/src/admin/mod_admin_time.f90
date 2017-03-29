@@ -932,11 +932,11 @@ contains
                                                            ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim
        endif
     else
-       if( IO_L ) write(IO_FID_LOG,'(1x,2A,2(A,I7),A,F10.1))') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
-                                                               ' WCLOCK:', WALLCLOCK_elapse
+       if( IO_L ) write(IO_FID_LOG,'(1x,2A,2(A,I7),A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                              ' WCLOCK:', WALLCLOCK_elapse
        if ( PRC_UNIVERSAL_IsMaster .AND. TO_STDOUT ) then ! universal master node
-          if( IO_L ) write(*,'(1x,2A,2(A,I7),A,F10.1))') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
-                                                         ' WCLOCK:', WALLCLOCK_elapse
+          if( IO_L ) write(*,'(1x,2A,2(A,I7),A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                        ' WCLOCK:', WALLCLOCK_elapse
        endif
     endif
 
