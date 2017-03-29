@@ -394,8 +394,8 @@ contains
                            ATMOS_PHY_MP_suzuki10_UNIT(NL+NI+2:)  ) ! [IN]
     end if
 
-    I_QV = QS
-    QA = QA_MP
+    I_QV  = QS
+    QA    = QA_MP
     QS_MP = QS
     QE_MP = QS + QA_MP - 1
 
@@ -918,7 +918,8 @@ contains
     real(RP) :: FLX_snow  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
-    real(RP) :: QHYD_out(KA,IA,JA,6)
+    real(RP) :: QHYD_out  (KA,IA,JA,6)
+
     integer  :: step
     integer  :: k, i, j, m, n, iq
     !---------------------------------------------------------------------------
@@ -1319,73 +1320,89 @@ contains
     endif
 
     QHYD_out(:,:,:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       do n = 1, nbnd
-         QHYD_out(k,i,j,1) = QHYD_out(k,i,j,1) + QTRC(k,i,j,QS_MP+(il-1)*nbin+n)
+
+    do n = 1, nbnd
+       iq = QS_MP + n
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QHYD_out(k,i,j,1) = QHYD_out(k,i,j,1) + QTRC(k,i,j,iq)
        enddo
-       do n = nbnd+1, nbin
-         QHYD_out(k,i,j,2) = QHYD_out(k,i,j,2) + QTRC(k,i,j,QS_MP+(il-1)*nbin+n)
+       enddo
        enddo
     enddo
+
+    do n = nbnd+1, nbin
+       iq = QS_MP + n
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QHYD_out(k,i,j,2) = QHYD_out(k,i,j,2) + QTRC(k,i,j,iq)
+       enddo
+       enddo
+       enddo
     enddo
-    enddo
-    if( nspc > 1 ) then
-      do j = JS, JE
-      do i = IS, IE
-      do k = KS, KE
-         do m = ic, id
-          do n = 1, nbin
-           QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
-          enddo
-         enddo
-         do n = 1, nbin
-           QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + Ghyd_ijk(n,iss,ijk) / DENS(k,i,j) * dxmic
-         enddo
-         do n = 1, nbin
-           QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + Ghyd_ijk(n,ig,ijk) / DENS(k,i,j) * dxmic
-         enddo
-         do n = 1, nbin
-           QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + Ghyd_ijk(n,ih,ijk) / DENS(k,i,j) * dxmic
-         enddo
-      enddo
-      enddo
-      enddo
-    endif
-
-    if( nspc > 1 ) then
-
-      do j = JS, JE
-      do i = IS, IE
-      do k = KS, KE
-         do m = ic, id
-          do n = 1, nbin
-           QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + QTRC(k,i,j,QS_MP+(m-1)*nbin+n)
-          enddo
-         enddo
-         do n = 1, nbin
-           QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + QTRC(k,i,j,QS_MP+(iss-1)*nbin+n)
-         enddo
-         do n = 1, nbin
-           QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + QTRC(k,i,j,QS_MP+(ig-1)*nbin+n)
-         enddo
-         do n = 1, nbin
-            QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + QTRC(k,i,j,QS_MP+(ih-1)*nbin+n)
-         enddo
-      enddo
-      enddo
-      enddo
-
-    endif
 
     call HIST_in( QHYD_out(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
     call HIST_in( QHYD_out(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
-    if( nspc > 1 ) then
-      call HIST_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
-      call HIST_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
-      call HIST_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
-      call HIST_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
+
+    if ( nspc > 1 ) then
+       do m = ic, id ! columnar,plate,dendrite = ice
+       do n = 1, nbin
+          iq = QS_MP + (m-1)*nbin + n
+
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + QTRC(k,i,j,iq)
+          enddo
+          enddo
+          enddo
+       enddo
+       enddo
+
+       do n = 1, nbin
+          iq = QS_MP + (iss-1)*nbin + n
+
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + QTRC(k,i,j,iq)
+          enddo
+          enddo
+          enddo
+       enddo
+
+       do n = 1, nbin
+          iq = QS_MP + (ig-1)*nbin + n
+
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + QTRC(k,i,j,iq)
+          enddo
+          enddo
+          enddo
+       enddo
+
+       do n = 1, nbin
+          iq = QS_MP + (ih-1)*nbin + n
+
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + QTRC(k,i,j,iq)
+          enddo
+          enddo
+          enddo
+       enddo
+
+       call HIST_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
+       call HIST_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
+       call HIST_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
+       call HIST_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
     endif
 
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
