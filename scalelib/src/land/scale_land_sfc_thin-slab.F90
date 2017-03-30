@@ -512,11 +512,19 @@ contains
         ! put residual in ground heat flux
         GHFLX(i,j) = GHFLX(i,j) - res
 
-        ! diagnostic variables
-        U10(i,j) = Ustar / Ustar10 * UA(i,j)
-        V10(i,j) = Ustar / Ustar10 * VA(i,j)
-        T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * LST1(i,j) + Tstar / Tstar2 * TMPA(i,j)
-        Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVS       + Qstar / Qstar2 * QVA (i,j)
+        ! diagnostic variables considering unstable/stable state
+        !U10(i,j) = Ustar / Ustar10 * UA(i,j)
+        !V10(i,j) = Ustar / Ustar10 * VA(i,j)
+        !T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * LST1(i,j) + Tstar / Tstar2 * TMPA(i,j)
+        !Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVS       + Qstar / Qstar2 * QVA (i,j)
+
+        ! diagnostic variables for neutral state
+        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = LST1(i,j) + ( TMPA(i,j) - LST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
+                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
+        Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
 
       else
 

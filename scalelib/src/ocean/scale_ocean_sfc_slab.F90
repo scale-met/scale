@@ -245,11 +245,19 @@ contains
                    - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST1(i,j)**4 ) &
                    + SHFLX(i,j) + LHFLX(i,j)
 
-        ! diagnositc variables
-        U10(i,j) = Ustar / Ustar10 * UA(i,j)
-        V10(i,j) = Ustar / Ustar10 * VA(i,j)
-        T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SST1(i,j) + Tstar / Tstar2 * TMPA(i,j)
-        Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVsat     + Qstar / Qstar2 * QVA (i,j)
+        ! diagnostic variables considering unstable/stable state
+        !U10(i,j) = Ustar / Ustar10 * UA(i,j)
+        !V10(i,j) = Ustar / Ustar10 * VA(i,j)
+        !T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SST1(i,j) + Tstar / Tstar2 * TMPA(i,j)
+        !Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVsat     + Qstar / Qstar2 * QVA (i,j)
+
+        ! diagnostic variables for neutral state
+        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = SST1(i,j) + ( TMPA(i,j) - SST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
+                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
+        Q2 (i,j) = QVsat     + (  QVA(i,j) - QVsat     ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
 
       else
 

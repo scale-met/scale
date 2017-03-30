@@ -287,10 +287,18 @@ contains
        endif
 
        !-----< U10, T2, q2 >-----
-       U10(i,j) = Ustar / Ustar10 * ATM_U(i,j)
-       V10(i,j) = Ustar / Ustar10 * ATM_V(i,j)
-       T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SFC_TEMP(i,j) + Tstar / Tstar2 * ATM_TEMP(i,j)
-       Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * SFC_QV  (i,j) + Qstar / Qstar2 * ATM_QV  (i,j)
+       !U10(i,j) = Ustar / Ustar10 * ATM_U(i,j)
+       !V10(i,j) = Ustar / Ustar10 * ATM_V(i,j)
+       !T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SFC_TEMP(i,j) + Tstar / Tstar2 * ATM_TEMP(i,j)
+       !Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * SFC_QV  (i,j) + Qstar / Qstar2 * ATM_QV  (i,j)
+       U10(i,j) = ATM_U(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
+       V10(i,j) = ATM_V(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
+       T2 (i,j) = SFC_TEMP(i,j) + ( ATM_TEMP(i,j) - SFC_TEMP(i,j) ) &
+                                * ( log(      2.0_RP / SFC_Z0M(i,j) ) * log(      2.0_RP / SFC_Z0H(i,j) ) ) &
+                                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0H(i,j) ) )
+       Q2 (i,j) = SFC_QV  (i,j) + ( ATM_QV  (i,j) - SFC_QV  (i,j) ) &
+                                * ( log(      2.0_RP / SFC_Z0M(i,j) ) * log(      2.0_RP / SFC_Z0E(i,j) ) ) &
+                                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
     enddo
     enddo
 
