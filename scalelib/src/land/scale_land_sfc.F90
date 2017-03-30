@@ -142,7 +142,7 @@ contains
     case( 'CONST' )
        call LAND_SFC_CONST_setup( LAND_TYPE )
        LAND_SFC => LAND_SFC_CONST
-    case( 'THIN-SLAB' )
+    case( 'SLAB', 'THIN-SLAB' )
        call LAND_SFC_THIN_SLAB_setup( LAND_TYPE )
        LAND_SFC => LAND_SFC_THIN_SLAB
     case( 'THICK-SLAB' )

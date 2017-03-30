@@ -100,7 +100,7 @@ contains
     case( 'CONST' )
        call LAND_PHY_CONST_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_CONST
-    case( 'THIN-SLAB', 'THICK-SLAB' )
+    case( 'SLAB', 'THIN-SLAB', 'THICK-SLAB' )
        call LAND_PHY_SLAB_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_SLAB
     case( 'MATSIRO' )
