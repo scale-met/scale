@@ -277,6 +277,8 @@ contains
   ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
   ! you should fix the stability functions (fm_unstable, fh_unstable, fm_stable, and fh_stable).
   !
+  ! Iteration method: refs. JMA-NHM Description Note II, Mar 2008
+  !
   !-----------------------------------------------------------------------------
   subroutine BULKFLUX_B91W01( &
        Ustar,   & ! (out)
