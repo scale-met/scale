@@ -400,6 +400,10 @@ contains
 
     real(RP) :: QVsat ! saturation water vapor mixing ratio at surface [kg/kg]
 
+    real(RP) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -511,6 +515,9 @@ contains
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
                       Uabs,          & ! [OUT]
+                      FracU10,       & ! [OUT]
+                      FracT2,        & ! [OUT]
+                      FracQ2,        & ! [OUT]
                       TMPA    (i,j), & ! [IN]
                       SFC_TEMP(i,j), & ! [IN]
                       PRSA    (i,j), & ! [IN]

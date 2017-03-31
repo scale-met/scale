@@ -173,12 +173,16 @@ contains
     real(RP) :: oldres ! residual in previous step
     real(RP) :: redf   ! reduced factor
 
-    real(RP) :: Ustar, Ustar10, Ustar2, dUstar ! friction velocity [m]
-    real(RP) :: Tstar, Tstar10, Tstar2, dTstar ! friction potential temperature [K]
-    real(RP) :: Qstar, Qstar10, Qstar2, dQstar ! friction water vapor mass ratio [kg/kg]
-    real(RP) :: Uabs,  Uabs10,  Uabs2,  dUabs  ! modified absolute velocity [m/s]
+    real(RP) :: Ustar, dUstar ! friction velocity [m]
+    real(RP) :: Tstar, dTstar ! friction potential temperature [K]
+    real(RP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
+    real(RP) :: Uabs,  dUabs  ! modified absolute velocity [m/s]
     real(RP) :: QVsat, dQVsat ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: QVS, dQVS     ! water vapor mixing ratio at surface [kg/kg]
+
+    real(RP) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
     real(RP) :: LHV(IA,JA)    ! latent heat of vaporization [J/kg]
 
@@ -214,6 +218,9 @@ contains
             Tstar,     & ! [OUT]
             Qstar,     & ! [OUT]
             Uabs,      & ! [OUT]
+            FracU10,   & ! [OUT]
+            FracT2,    & ! [OUT]
+            FracQ2,    & ! [OUT]
             TMPA(i,j), & ! [IN]
             LST1(i,j), & ! [IN]
             PRSA(i,j), & ! [IN]
@@ -223,46 +230,6 @@ contains
             UA  (i,j), & ! [IN]
             VA  (i,j), & ! [IN]
             Z1  (i,j), & ! [IN]
-            PBL (i,j), & ! [IN]
-            Z0M (i,j), & ! [IN]
-            Z0H (i,j), & ! [IN]
-            Z0E (i,j)  ) ! [IN]
-
-        ! for 10m wind
-        call BULKFLUX( &
-            Ustar10,   & ! [OUT]
-            Tstar10,   & ! [OUT]
-            Qstar10,   & ! [OUT]
-            Uabs10,    & ! [OUT]
-            TMPA(i,j), & ! [IN]
-            LST1(i,j), & ! [IN]
-            PRSA(i,j), & ! [IN]
-            PRSS(i,j), & ! [IN]
-            QVA (i,j), & ! [IN]
-            QVS,       & ! [IN]
-            UA  (i,j), & ! [IN]
-            VA  (i,j), & ! [IN]
-            10.0_RP,   & ! [IN]
-            PBL (i,j), & ! [IN]
-            Z0M (i,j), & ! [IN]
-            Z0H (i,j), & ! [IN]
-            Z0E (i,j)  ) ! [IN]
-
-        ! for 2m temperature / mixing ratio
-        call BULKFLUX( &
-            Ustar2,    & ! [OUT]
-            Tstar2,    & ! [OUT]
-            Qstar2,    & ! [OUT]
-            Uabs2,     & ! [OUT]
-            TMPA(i,j), & ! [IN]
-            LST1(i,j), & ! [IN]
-            PRSA(i,j), & ! [IN]
-            PRSS(i,j), & ! [IN]
-            QVA (i,j), & ! [IN]
-            QVS,       & ! [IN]
-            UA  (i,j), & ! [IN]
-            VA  (i,j), & ! [IN]
-            2.0_RP,    & ! [IN]
             PBL (i,j), & ! [IN]
             Z0M (i,j), & ! [IN]
             Z0H (i,j), & ! [IN]
@@ -284,10 +251,10 @@ contains
         GHFLX(i,j) = GHFLX(i,j) - res
 
         ! diagnostic variables considering unstable/stable state
-        !U10(i,j) = Ustar / Ustar10 * UA(i,j)
-        !V10(i,j) = Ustar / Ustar10 * VA(i,j)
-        !T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * LST1(i,j) + Tstar / Tstar2 * TMPA(i,j)
-        !Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVS       + Qstar / Qstar2 * QVA (i,j)
+        !U10(i,j) = FracU10 * UA(i,j)
+        !V10(i,j) = FracU10 * VA(i,j)
+        !T2 (i,j) = ( 1.0_RP - FracT2 ) * LST1(i,j) + FracT2 * TMPA(i,j)
+        !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVS       + FracQ2 * QVA (i,j)
 
         ! diagnostic variables for neutral state
         U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )

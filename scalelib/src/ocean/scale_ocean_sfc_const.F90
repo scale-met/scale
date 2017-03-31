@@ -141,13 +141,17 @@ contains
     real(DP), intent(in) :: dt            ! delta time
 
     ! works
-    real(RP) :: Ustar, Ustar10, Ustar2 ! friction velocity [m]
-    real(RP) :: Tstar, Tstar10, Tstar2 ! friction temperature [K]
-    real(RP) :: Qstar, Qstar10, Qstar2 ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs,  Uabs10,  Uabs2  ! modified absolute velocity [m/s]
+    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Tstar ! friction temperature [K]
+    real(RP) :: Qstar ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs  ! modified absolute velocity [m/s]
 
     real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
+
+    real(RP) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -179,6 +183,9 @@ contains
             Tstar,     & ! [OUT]
             Qstar,     & ! [OUT]
             Uabs,      & ! [OUT]
+            FracU10,   & ! [OUT]
+            FracT2,    & ! [OUT]
+            FracQ2,    & ! [OUT]
             TMPA(i,j), & ! [IN]
             SST (i,j), & ! [IN]
             PRSA(i,j), & ! [IN]
@@ -188,46 +195,6 @@ contains
             UA  (i,j), & ! [IN]
             VA  (i,j), & ! [IN]
             Z1  (i,j), & ! [IN]
-            PBL (i,j), & ! [IN]
-            Z0M (i,j), & ! [IN]
-            Z0H (i,j), & ! [IN]
-            Z0E (i,j)  ) ! [IN]
-
-        ! for 10m wind
-        call BULKFLUX( &
-            Ustar10,   & ! [OUT]
-            Tstar10,   & ! [OUT]
-            Qstar10,   & ! [OUT]
-            Uabs10,    & ! [OUT]
-            TMPA(i,j), & ! [IN]
-            SST (i,j), & ! [IN]
-            PRSA(i,j), & ! [IN]
-            PRSS(i,j), & ! [IN]
-            QVA (i,j), & ! [IN]
-            QVsat,     & ! [IN]
-            UA  (i,j), & ! [IN]
-            VA  (i,j), & ! [IN]
-            10.0_RP,   & ! [IN]
-            PBL (i,j), & ! [IN]
-            Z0M (i,j), & ! [IN]
-            Z0H (i,j), & ! [IN]
-            Z0E (i,j)  ) ! [IN]
-
-        ! for 2m temperature / mixing ratio
-        call BULKFLUX( &
-            Ustar2,    & ! [OUT]
-            Tstar2,    & ! [OUT]
-            Qstar2,    & ! [OUT]
-            Uabs2,     & ! [OUT]
-            TMPA(i,j), & ! [IN]
-            SST (i,j), & ! [IN]
-            PRSA(i,j), & ! [IN]
-            PRSS(i,j), & ! [IN]
-            QVA (i,j), & ! [IN]
-            QVsat,     & ! [IN]
-            UA  (i,j), & ! [IN]
-            VA  (i,j), & ! [IN]
-            2.0_RP,    & ! [IN]
             PBL (i,j), & ! [IN]
             Z0M (i,j), & ! [IN]
             Z0H (i,j), & ! [IN]
@@ -244,11 +211,19 @@ contains
                    - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST(i,j)**4 ) &
                    + SHFLX(i,j) + LHFLX(i,j)
 
-        ! diagnositc variables
-        U10(i,j) = Ustar / Ustar10 * UA(i,j)
-        V10(i,j) = Ustar / Ustar10 * VA(i,j)
-        T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SST(i,j) + Tstar / Tstar2 * TMPA(i,j)
-        Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * QVsat    + Qstar / Qstar2 * QVA (i,j)
+        ! diagnostic variables considering unstable/stable state
+        !U10(i,j) = FracU10 * UA(i,j)
+        !V10(i,j) = FracU10 * VA(i,j)
+        !T2 (i,j) = ( 1.0_RP - FracT2 ) * SST(i,j) + FracT2 * TMPA(i,j)
+        !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVsat    + FracQ2 * QVA (i,j)
+
+        ! diagnostic variables for neutral state
+        U10(i,j) = UA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = SST(i,j) + ( TMPA(i,j) - SST(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
+        Q2 (i,j) = QVsat    + (  QVA(i,j) - QVsat    ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
 
       else
 

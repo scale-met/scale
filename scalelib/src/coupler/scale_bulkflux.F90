@@ -31,6 +31,9 @@ module scale_bulkflux
           Tstar,   & ! (out)
           Qstar,   & ! (out)
           Uabs,    & ! (out)
+          FracU10, & ! (out)
+          FracT2,  & ! (out)
+          FracQ2,  & ! (out)
           T1,      & ! (in)
           T0,      & ! (in)
           P1,      & ! (in)
@@ -47,10 +50,13 @@ module scale_bulkflux
        use scale_precision
        implicit none
 
-       real(RP), intent(out) :: Ustar ! friction velocity [m/s]
-       real(RP), intent(out) :: Tstar ! friction temperature [K]
-       real(RP), intent(out) :: Qstar ! friction mixing rate [kg/kg]
-       real(RP), intent(out) :: Uabs  ! modified absolute velocity [m/s]
+       real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
+       real(RP), intent(out) :: Tstar   ! friction temperature [K]
+       real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
+       real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+       real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
+       real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
+       real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
 
        real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
        real(RP), intent(in) :: T0  ! skin temperature [K]
@@ -165,6 +171,9 @@ contains
       Tstar,   & ! (out)
       Qstar,   & ! (out)
       Uabs,    & ! (out)
+      FracU10, & ! (out)
+      FracT2,  & ! (out)
+      FracQ2,  & ! (out)
       T1,      & ! (in)
       T0,      & ! (in)
       P1,      & ! (in)
@@ -194,10 +203,13 @@ contains
     real(RP), parameter :: LFdh = 5.3_RP     ! Louis factor d for heat (Louis 1979)
 
     ! argument
-    real(RP), intent(out) :: Ustar ! friction velocity [m/s]
-    real(RP), intent(out) :: Tstar ! friction temperature [K]
-    real(RP), intent(out) :: Qstar ! friction mixing rate [kg/kg]
-    real(RP), intent(out) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
+    real(RP), intent(out) :: Tstar   ! friction temperature [K]
+    real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
+    real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
 
     real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: T0  ! skin temperature [K]
@@ -214,16 +226,21 @@ contains
     real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
 
     ! work
-    real(RP) :: RiB0, RiB ! bulk Richardson number [no unit]
-    real(RP) :: C0 ! initial drag coefficient [no unit]
-    real(RP) :: fm, fh, t0th, q0qe
+    real(RP) :: RiB0, RiB ! bulk Richardson number [-]
+    real(RP) :: C0Z1, C010, C002 ! initial drag coefficient [-]
+    real(RP) :: CmZ1, ChZ1, CqZ1, fmZ1, fhZ1, t0thZ1, q0qeZ1
+    real(RP) :: Cm10, Ch10, Cq10, fm10, fh10, t0th10, q0qe10
+    real(RP) :: Cm02, Ch02, Cq02, fm02, fh02, t0th02, q0qe02
     real(RP) :: TH1, TH0
-    real(RP) :: logZ1Z0M
+    real(RP) :: logZ1Z0M, log10Z0m, log02Z0m
     real(RP) :: logZ0MZ0E
     real(RP) :: logZ0MZ0H
     !---------------------------------------------------------------------------
 
-    logZ1Z0m = log( Z1/Z0M )
+    logZ1Z0m = log( Z1      / Z0M )
+    log10Z0m = log( 10.0_RP / Z0M )
+    log02Z0m = log( 2.0_RP  / Z0M )
+
     logZ0MZ0E = max( log( Z0M/Z0E ), 1.0_RP )
     logZ0MZ0H = max( log( Z0M/Z0H ), 1.0_RP )
 
@@ -231,41 +248,84 @@ contains
     TH1  = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
     TH0  = T0 * ( PRE00 / P0 )**( Rdry / CPdry )
 
+    ! bulk Richardson number
     RiB0 = GRAV * Z1 * ( TH1 - TH0 ) / ( TH1 * Uabs**2 )
 
-    C0  = ( KARMAN / logZ1Z0M )**2
+    C0Z1 = ( KARMAN / logZ1Z0M )**2
+    C010 = ( KARMAN / log10Z0M )**2
+    C002 = ( KARMAN / log02Z0M )**2
+
     RiB = RiB0
 
     if( RiB0 > 0.0_RP ) then
       ! stable condition
-      fm = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
-      fh = fm
+      fmZ1 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fhZ1 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fm10 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh10 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fm02 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh02 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
     else
       ! unstable condition
-      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
-      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
+      fmZ1 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0Z1 * sqrt( Z1      / Z0M ) * sqrt( abs( RiB ) ) )
+      fhZ1 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0Z1 * sqrt( Z1      / Z0M ) * sqrt( abs( RiB ) ) )
+      fm10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C010 * sqrt( 10.0_RP / Z0M ) * sqrt( abs( RiB ) ) )
+      fh10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C010 * sqrt( 10.0_RP / Z0M ) * sqrt( abs( RiB ) ) )
+      fm02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C002 * sqrt( 2.0_RP  / Z0M ) * sqrt( abs( RiB ) ) )
+      fh02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C002 * sqrt( 2.0_RP  / Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
-    t0th = 1.0_RP / ( 1.0_RP + logZ0MZ0H / logZ1Z0M / sqrt( fm ) * fh )
-    q0qe = 1.0_RP / ( 1.0_RP + logZ0MZ0E / logZ1Z0M / sqrt( fm ) * fh )
-    RiB  = RiB * t0th
+    t0thZ1 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / logZ1Z0M / sqrt( fmZ1 ) * fhZ1 )
+    q0qeZ1 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / logZ1Z0M / sqrt( fmZ1 ) * fhZ1 )
+    t0th10 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / log10Z0M / sqrt( fm10 ) * fh10 )
+    q0qe10 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / log10Z0M / sqrt( fm10 ) * fh10 )
+    t0th02 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / log02Z0M / sqrt( fm02 ) * fh02 )
+    q0qe02 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / log02Z0M / sqrt( fm02 ) * fh02 )
+
+    RiB = RiB * t0thZ1
 
     if( RiB0 > 0.0_RP ) then
       ! stable condition
-      fm = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
-      fh = fm
+      fmZ1 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fhZ1 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fm10 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh10 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fm02 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh02 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
     else
       ! unstable condition
-      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
-      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
+      fmZ1 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0Z1 * sqrt( Z1      / Z0M ) * sqrt( abs( RiB ) ) )
+      fhZ1 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0Z1 * sqrt( Z1      / Z0M ) * sqrt( abs( RiB ) ) )
+      fm10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C010 * sqrt( 10.0_RP / Z0M ) * sqrt( abs( RiB ) ) )
+      fh10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C010 * sqrt( 10.0_RP / Z0M ) * sqrt( abs( RiB ) ) )
+      fm02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C002 * sqrt( 2.0_RP  / Z0M ) * sqrt( abs( RiB ) ) )
+      fh02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C002 * sqrt( 2.0_RP  / Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
-    t0th = 1.0_RP / ( 1.0_RP + logZ0MZ0H / logZ1Z0M / sqrt( fm ) * fh )
-    q0qe = 1.0_RP / ( 1.0_RP + logZ0MZ0E / logZ1Z0M / sqrt( fm ) * fh )
+    t0thZ1 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / logZ1Z0M / sqrt( fmZ1 ) * fhZ1 )
+    q0qeZ1 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / logZ1Z0M / sqrt( fmZ1 ) * fhZ1 )
+    t0th10 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / log10Z0M / sqrt( fm10 ) * fh10 )
+    q0qe10 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / log10Z0M / sqrt( fm10 ) * fh10 )
+    t0th02 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / log02Z0M / sqrt( fm02 ) * fh02 )
+    q0qe02 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / log02Z0M / sqrt( fm02 ) * fh02 )
 
-    Ustar = sqrt( C0 * fm ) * Uabs
-    Tstar = C0 * fh * t0th / tPrn * Uabs / Ustar * ( TH1 - TH0 )
-    Qstar = C0 * fh * q0qe / tPrn * Uabs / Ustar * ( Q1  - Q0  )
+    CmZ1 = C0Z1 * fmZ1
+    ChZ1 = C0Z1 * fhZ1 * t0thZ1 / tPrn
+    CqZ1 = C0Z1 * fhZ1 * q0qeZ1 / tPrn
+    Cm10 = C010 * fm10
+    Ch10 = C010 * fh10 * t0th10 / tPrn
+    Cq10 = C010 * fh10 * q0qe10 / tPrn
+    Cm02 = C002 * fm02
+    Ch02 = C002 * fh02 * t0th02 / tPrn
+    Cq02 = C002 * fh02 * q0qe02 / tPrn
+
+    Ustar = sqrt( CmZ1 ) * Uabs
+    Tstar = ChZ1 * Uabs / Ustar * ( TH1 - TH0 )
+    Qstar = CqZ1 * Uabs / Ustar * ( Q1  - Q0  )
+
+    FracU10 = sqrt( CmZ1 / Cm10 )
+    FracT2  = ChZ1 / Ch02 * sqrt( Cm02 / CmZ1 )
+    FracQ2  = CqZ1 / Cq02 * sqrt( Cm02 / CmZ1 )
 
     return
   end subroutine BULKFLUX_U95
@@ -281,31 +341,34 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine BULKFLUX_B91W01( &
-       Ustar,   & ! (out)
-       Tstar,   & ! (out)
-       Qstar,   & ! (out)
-       Uabs,    & ! (out)
-       T1,      & ! (in)
-       T0,      & ! (in)
-       P1,      & ! (in)
-       P0,      & ! (in)
-       Q1,      & ! (in)
-       Q0,      & ! (in)
-       U1,      & ! (in)
-       V1,      & ! (in)
-       Z1,      & ! (in)
-       PBL,     & ! (in)
-       Z0M,     & ! (in)
-       Z0H,     & ! (in)
-       Z0E      ) ! (in)
+      Ustar,   & ! (out)
+      Tstar,   & ! (out)
+      Qstar,   & ! (out)
+      Uabs,    & ! (out)
+      FracU10, & ! (out)
+      FracT2,  & ! (out)
+      FracQ2,  & ! (out)
+      T1,      & ! (in)
+      T0,      & ! (in)
+      P1,      & ! (in)
+      P0,      & ! (in)
+      Q1,      & ! (in)
+      Q0,      & ! (in)
+      U1,      & ! (in)
+      V1,      & ! (in)
+      Z1,      & ! (in)
+      PBL,     & ! (in)
+      Z0M,     & ! (in)
+      Z0H,     & ! (in)
+      Z0E      ) ! (in)
     use scale_const, only: &
-       GRAV    => CONST_GRAV,    &
-       KARMAN  => CONST_KARMAN,  &
-       Rdry    => CONST_Rdry,    &
-       CPdry   => CONST_CPdry,   &
-       EPSTvap => CONST_EPSTvap, &
-       EPS     => CONST_EPS,     &
-       PRE00   => CONST_PRE00
+      GRAV    => CONST_GRAV,    &
+      KARMAN  => CONST_KARMAN,  &
+      Rdry    => CONST_Rdry,    &
+      CPdry   => CONST_CPdry,   &
+      EPSTvap => CONST_EPSTvap, &
+      EPS     => CONST_EPS,     &
+      PRE00   => CONST_PRE00
     implicit none
 
     ! parameter
@@ -314,10 +377,13 @@ contains
     real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
 
     ! argument
-    real(RP), intent(out) :: Ustar ! friction velocity [m/s]
-    real(RP), intent(out) :: Tstar ! friction temperature [K]
-    real(RP), intent(out) :: Qstar ! friction mixing rate [kg/kg]
-    real(RP), intent(out) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
+    real(RP), intent(out) :: Tstar   ! friction temperature [K]
+    real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
+    real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
 
     real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: T0  ! skin temperature [K]
@@ -354,6 +420,10 @@ contains
     real(DP) :: dTstarUS, dTstarS, dTstarC
     real(DP) :: dQstarUS, dQstarS, dQstarC
 
+    real(DP) :: FracU10US, FracU10S, FracU10C
+    real(DP) :: FracT2US,  FracT2S,  FracT2C
+    real(DP) :: FracQ2US,  FracQ2S,  FracQ2C
+
     real(DP) :: TH1, TH0, THM
     real(DP) :: TV1, TV0, TVM
     real(DP) :: QM
@@ -363,6 +433,7 @@ contains
 
     real(DP) :: DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E
     real(DP) :: log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E
+    real(DP) :: log_10ovZ0M, log_02ovZ0H, log_02ovZ0E
     !---------------------------------------------------------------------------
 
     ! convert to DP
@@ -385,6 +456,10 @@ contains
     log_Z1ovZ0M = log( DP_Z1 / DP_Z0M )
     log_Z1ovZ0H = log( DP_Z1 / DP_Z0H )
     log_Z1ovZ0E = log( DP_Z1 / DP_Z0E )
+
+    log_10ovZ0M = log( 10.0_DP / DP_Z0M )
+    log_02ovZ0H = log(  2.0_DP / DP_Z0H )
+    log_02ovZ0E = log(  2.0_DP / DP_Z0E )
 
     ! bulk Richardson number at initial step
     RiB0 = GRAV * DP_Z1 * ( TV1 - TV0 ) / ( TVM * UabsC**2 )
@@ -565,24 +640,44 @@ contains
     TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
     QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
 
+    FracU10US = ( log_10ovZ0M - fm_unstable(10.0_DP,IL) + fm_unstable(DP_Z0M,IL) ) &
+              / ( log_Z1ovZ0M - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0M,IL) )
+    FracT2US  = ( log_02ovZ0H - fm_unstable( 2.0_DP,IL) + fm_unstable(DP_Z0H,IL) ) &
+              / ( log_Z1ovZ0H - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0H,IL) )
+    FracQ2US  = ( log_02ovZ0E - fm_unstable( 2.0_DP,IL) + fm_unstable(DP_Z0E,IL) ) &
+              / ( log_Z1ovZ0E - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0E,IL) )
+
     ! stable condition
     UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
     UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
     TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
     QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
 
+    FracU10S = ( log_10ovZ0M - fm_stable(10.0_DP,IL) + fm_stable(DP_Z0M,IL) ) &
+             / ( log_Z1ovZ0M - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0M,IL) )
+    FracT2S  = ( log_02ovZ0H - fm_stable( 2.0_DP,IL) + fm_stable(DP_Z0H,IL) ) &
+             / ( log_Z1ovZ0H - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0H,IL) )
+    FracQ2S  = ( log_02ovZ0E - fm_stable( 2.0_DP,IL) + fm_stable(DP_Z0E,IL) ) &
+             / ( log_Z1ovZ0E - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0E,IL) )
+
     sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
 
-    UabsC  = ( sw ) * UabsUS  + ( 1.0_DP-sw ) * UabsS
-    UstarC = ( sw ) * UstarUS + ( 1.0_DP-sw ) * UstarS
-    TstarC = ( sw ) * TstarUS + ( 1.0_DP-sw ) * TstarS
-    QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
+    UstarC   = ( sw ) * UstarUS   + ( 1.0_DP-sw ) * UstarS
+    TstarC   = ( sw ) * TstarUS   + ( 1.0_DP-sw ) * TstarS
+    QstarC   = ( sw ) * QstarUS   + ( 1.0_DP-sw ) * QstarS
+    UabsC    = ( sw ) * UabsUS    + ( 1.0_DP-sw ) * UabsS
+    FracU10C = ( sw ) * FracU10US + ( 1.0_DP-sw ) * FracU10S
+    FracT2C  = ( sw ) * FracT2US  + ( 1.0_DP-sw ) * FracT2S
+    FracQ2C  = ( sw ) * FracQ2US  + ( 1.0_DP-sw ) * FracQ2S
 
     ! revert to RP
-    Uabs  = real( UabsC,  kind=RP )
-    Ustar = real( UstarC, kind=RP )
-    Tstar = real( TstarC, kind=RP )
-    Qstar = real( QstarC, kind=RP )
+    Ustar   = real( UstarC,   kind=RP )
+    Tstar   = real( TstarC,   kind=RP )
+    Qstar   = real( QstarC,   kind=RP )
+    Uabs    = real( UabsC,    kind=RP )
+    FracU10 = real( FracU10C, kind=RP )
+    FracT2  = real( FracT2C,  kind=RP )
+    FracQ2  = real( FracQ2C,  kind=RP )
 
     return
   end subroutine BULKFLUX_B91W01

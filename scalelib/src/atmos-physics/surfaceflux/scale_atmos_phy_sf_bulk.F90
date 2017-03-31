@@ -174,10 +174,13 @@ contains
     real(RP) :: LHV      (IA,JA)
     real(RP) :: PBL      (IA,JA)
 
-    real(RP) :: Ustar, Ustar10, Ustar2 ! friction velocity [m]
-    real(RP) :: Tstar, Tstar10, Tstar2 ! friction temperature [K]
-    real(RP) :: Qstar, Qstar10, Qstar2 ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs,  Uabs10,  Uabs2  ! modified absolute velocity [m/s]
+    real(RP) :: Ustar   ! friction velocity [m]
+    real(RP) :: Tstar   ! friction temperature [K]
+    real(RP) :: Qstar   ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -215,11 +218,13 @@ contains
     PBL      (:,:)   = 100.0_RP ! tentative
     do j = JS, JE
     do i = IS, IE
-
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
                       Uabs,          & ! [OUT]
+                      FracU10,       & ! [OUT]
+                      FracT2,        & ! [OUT]
+                      FracQ2,        & ! [OUT]
                       ATM_TEMP(i,j), & ! [IN]
                       SFC_TEMP(i,j), & ! [IN]
                       ATM_PRES(i,j), & ! [IN]
@@ -229,44 +234,6 @@ contains
                       ATM_U   (i,j), & ! [IN]
                       ATM_V   (i,j), & ! [IN]
                       ATM_Z1  (i,j), & ! [IN]
-                      PBL     (i,j), & ! [IN]
-                      SFC_Z0M (i,j), & ! [IN]
-                      SFC_Z0H (i,j), & ! [IN]
-                      SFC_Z0E (i,j)  ) ! [IN]
-
-       ! for 10m wind
-       call BULKFLUX( Ustar10,       & ! [OUT]
-                      Tstar10,       & ! [OUT]
-                      Qstar10,       & ! [OUT]
-                      Uabs10,        & ! [OUT]
-                      ATM_TEMP(i,j), & ! [IN]
-                      SFC_TEMP(i,j), & ! [IN]
-                      ATM_PRES(i,j), & ! [IN]
-                      SFC_PRES(i,j), & ! [IN]
-                      ATM_QV  (i,j), & ! [IN]
-                      SFC_QV  (i,j), & ! [IN]
-                      ATM_U   (i,j), & ! [IN]
-                      ATM_V   (i,j), & ! [IN]
-                      10.0_RP,       & ! [IN]
-                      PBL     (i,j), & ! [IN]
-                      SFC_Z0M (i,j), & ! [IN]
-                      SFC_Z0H (i,j), & ! [IN]
-                      SFC_Z0E (i,j)  ) ! [IN]
-
-       ! for 2m temperature / mixing ratio
-       call BULKFLUX( Ustar2,        & ! [OUT]
-                      Tstar2,        & ! [OUT]
-                      Qstar2,        & ! [OUT]
-                      Uabs2,         & ! [OUT]
-                      ATM_TEMP(i,j), & ! [IN]
-                      SFC_TEMP(i,j), & ! [IN]
-                      ATM_PRES(i,j), & ! [IN]
-                      SFC_PRES(i,j), & ! [IN]
-                      ATM_QV  (i,j), & ! [IN]
-                      SFC_QV  (i,j), & ! [IN]
-                      ATM_U   (i,j), & ! [IN]
-                      ATM_V   (i,j), & ! [IN]
-                      2.0_RP,        & ! [IN]
                       PBL     (i,j), & ! [IN]
                       SFC_Z0M (i,j), & ! [IN]
                       SFC_Z0H (i,j), & ! [IN]
@@ -287,10 +254,11 @@ contains
        endif
 
        !-----< U10, T2, q2 >-----
-       !U10(i,j) = Ustar / Ustar10 * ATM_U(i,j)
-       !V10(i,j) = Ustar / Ustar10 * ATM_V(i,j)
-       !T2 (i,j) = ( 1.0_RP - Tstar / Tstar2 ) * SFC_TEMP(i,j) + Tstar / Tstar2 * ATM_TEMP(i,j)
-       !Q2 (i,j) = ( 1.0_RP - Qstar / Qstar2 ) * SFC_QV  (i,j) + Qstar / Qstar2 * ATM_QV  (i,j)
+       !U10(i,j) = FracU10 * ATM_U(i,j)
+       !V10(i,j) = FracU10 * ATM_V(i,j)
+       !T2 (i,j) = ( 1.0_RP - FracT2 ) * SFC_TEMP(i,j) + FracT2 * ATM_TEMP(i,j)
+       !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * SFC_QV  (i,j) + FracQ2 * ATM_QV  (i,j)
+
        U10(i,j) = ATM_U(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
        V10(i,j) = ATM_V(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
        T2 (i,j) = SFC_TEMP(i,j) + ( ATM_TEMP(i,j) - SFC_TEMP(i,j) ) &
