@@ -60,7 +60,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=02:00:00"
+#PJM --rsc-list "elapse=04:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
 ${SIN1_PP}

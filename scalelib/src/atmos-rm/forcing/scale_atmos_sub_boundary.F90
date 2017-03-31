@@ -57,12 +57,12 @@ module scale_atmos_boundary
   real(RP), public, allocatable :: ATMOS_BOUNDARY_POTT(:,:,:)   !> reference POTT (with HALO)
   real(RP), public, allocatable :: ATMOS_BOUNDARY_QTRC(:,:,:,:) !> reference QTRC (with HALO)
 
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_DENS(:,:,:)   !> damping coefficient for DENS [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELZ(:,:,:)   !> damping coefficient for VELZ [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELX(:,:,:)   !> damping coefficient for VELX [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELY(:,:,:)   !> damping coefficient for VELY [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_POTT(:,:,:)   !> damping coefficient for POTT [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_QTRC(:,:,:,:) !> damping coefficient for QTRC [0-1]
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_DENS(:,:,:)   !> damping coefficient for DENS (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELZ(:,:,:)   !> damping coefficient for VELZ (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELX(:,:,:)   !> damping coefficient for VELX (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELY(:,:,:)   !> damping coefficient for VELY (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_POTT(:,:,:)   !> damping coefficient for POTT (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_QTRC(:,:,:,:) !> damping coefficient for QTRC (0-1)
 
 
   real(RP), public              :: ATMOS_BOUNDARY_SMOOTHER_FACT  =  0.2_RP ! fact for smoother to damping
@@ -153,9 +153,9 @@ module scale_atmos_boundary
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_POTT = 1.0_RP ! alpha factor again default
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_QTRC = 1.0_RP ! alpha factor again default
 
-  real(RP),              private :: ATMOS_BOUNDARY_FRACZ        =   1.0_RP ! fraction of boundary region for dumping (z) [0-1]
-  real(RP),              private :: ATMOS_BOUNDARY_FRACX        =   1.0_RP ! fraction of boundary region for dumping (x) [0-1]
-  real(RP),              private :: ATMOS_BOUNDARY_FRACY        =   1.0_RP ! fraction of boundary region for dumping (y) [0-1]
+  real(RP),              private :: ATMOS_BOUNDARY_FRACZ        =   1.0_RP ! fraction of boundary region for dumping (z) (0-1)
+  real(RP),              private :: ATMOS_BOUNDARY_FRACX        =   1.0_RP ! fraction of boundary region for dumping (x) (0-1)
+  real(RP),              private :: ATMOS_BOUNDARY_FRACY        =   1.0_RP ! fraction of boundary region for dumping (y) (0-1)
   real(RP),              private :: ATMOS_BOUNDARY_tauz                    ! maximum value for damping tau (z) [s]
   real(RP),              private :: ATMOS_BOUNDARY_taux                    ! maximum value for damping tau (x) [s]
   real(RP),              private :: ATMOS_BOUNDARY_tauy                    ! maximum value for damping tau (y) [s]
@@ -1258,12 +1258,12 @@ contains
        CALENDAR_combine_daysec
     implicit none
 
-    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS [0-1]
-    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ [0-1]
-    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX [0-1]
-    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY [0-1]
-    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT [0-1]
-    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC [0-1]
+    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS (0-1)
+    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ (0-1)
+    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX (0-1)
+    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY (0-1)
+    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT (0-1)
+    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC (0-1)
 
     integer  :: run_time_startdate(6)
     integer  :: run_time_startday
@@ -1586,12 +1586,12 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
-    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS [0-1]
-    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ [0-1]
-    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX [0-1]
-    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY [0-1]
-    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT [0-1]
-    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC [0-1]
+    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS (0-1)
+    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ (0-1)
+    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX (0-1)
+    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY (0-1)
+    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT (0-1)
+    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC (0-1)
 
     integer :: handle
     integer :: i, j, k, iq, iqa

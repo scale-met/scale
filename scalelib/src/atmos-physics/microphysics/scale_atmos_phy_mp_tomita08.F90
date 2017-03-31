@@ -855,8 +855,8 @@ contains
     real(RP) :: temp            ! T [K]
     real(RP) :: qv, qc, qr, qi, qs, qg
     real(RP) :: qv_t, qc_t, qr_t, qi_t, qs_t, qg_t
-    real(RP) :: Sliq            ! saturated ratio S for liquid water [0-1]
-    real(RP) :: Sice            ! saturated ratio S for ice water    [0-1]
+    real(RP) :: Sliq            ! saturated ratio S for liquid water (0-1)
+    real(RP) :: Sice            ! saturated ratio S for ice water    (0-1)
 
     real(RP) :: Rdens           ! 1 / density
     real(RP) :: rho_fact        ! density factor

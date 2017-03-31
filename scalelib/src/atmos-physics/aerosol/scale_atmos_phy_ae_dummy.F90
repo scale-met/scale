@@ -150,7 +150,7 @@ contains
     implicit none
     real(RP), intent(out) :: Re  (KA,IA,JA,N_AE) ! effective radius
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)   ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: RH  (KA,IA,JA)      ! relative humidity         [0-1]
+    real(RP), intent(in)  :: RH  (KA,IA,JA)      ! relative humidity         (0-1)
     integer :: iq
     !---------------------------------------------------------------------------
 

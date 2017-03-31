@@ -73,12 +73,12 @@ module scale_grid
   real(RP), public, allocatable :: GRID_RFDX(:)  !< reciprocal of face-dx
   real(RP), public, allocatable :: GRID_RFDY(:)  !< reciprocal of face-dy
 
-  real(RP), public, allocatable :: GRID_CBFZ(:)  !< center buffer factor [0-1]: z
-  real(RP), public, allocatable :: GRID_CBFX(:)  !< center buffer factor [0-1]: x
-  real(RP), public, allocatable :: GRID_CBFY(:)  !< center buffer factor [0-1]: y
-  real(RP), public, allocatable :: GRID_FBFZ(:)  !< face   buffer factor [0-1]: z
-  real(RP), public, allocatable :: GRID_FBFX(:)  !< face   buffer factor [0-1]: x
-  real(RP), public, allocatable :: GRID_FBFY(:)  !< face   buffer factor [0-1]: y
+  real(RP), public, allocatable :: GRID_CBFZ(:)  !< center buffer factor (0-1): z
+  real(RP), public, allocatable :: GRID_CBFX(:)  !< center buffer factor (0-1): x
+  real(RP), public, allocatable :: GRID_CBFY(:)  !< center buffer factor (0-1): y
+  real(RP), public, allocatable :: GRID_FBFZ(:)  !< face   buffer factor (0-1): z
+  real(RP), public, allocatable :: GRID_FBFX(:)  !< face   buffer factor (0-1): x
+  real(RP), public, allocatable :: GRID_FBFY(:)  !< face   buffer factor (0-1): y
 
   real(RP), public, allocatable :: GRID_FXG  (:) !< face   coordinate [m]: x, global
   real(RP), public, allocatable :: GRID_FYG  (:) !< face   coordinate [m]: y, global
@@ -88,10 +88,10 @@ module scale_grid
   real(RP), public, allocatable :: GRID_FDYG (:) !< center coordinate [m]: y, global
   real(RP), public, allocatable :: GRID_CDXG (:) !< center coordinate [m]: x, global
   real(RP), public, allocatable :: GRID_CDYG (:) !< center coordinate [m]: y, global
-  real(RP), public, allocatable :: GRID_FBFXG(:) !< face   buffer factor [0-1]: x, global
-  real(RP), public, allocatable :: GRID_FBFYG(:) !< face   buffer factor [0-1]: y, global
-  real(RP), public, allocatable :: GRID_CBFXG(:) !< center buffer factor [0-1]: x, global
-  real(RP), public, allocatable :: GRID_CBFYG(:) !< center buffer factor [0-1]: y, global
+  real(RP), public, allocatable :: GRID_FBFXG(:) !< face   buffer factor (0-1): x, global
+  real(RP), public, allocatable :: GRID_FBFYG(:) !< face   buffer factor (0-1): y, global
+  real(RP), public, allocatable :: GRID_CBFXG(:) !< center buffer factor (0-1): x, global
+  real(RP), public, allocatable :: GRID_CBFYG(:) !< center buffer factor (0-1): y, global
 
   !-----------------------------------------------------------------------------
   !

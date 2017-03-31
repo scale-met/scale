@@ -131,8 +131,8 @@ contains
 
     real(RP), intent(in) :: TW    (IA,JA) ! water temperature [K]
     real(RP), intent(in) :: SST   (IA,JA) ! sea surface temperature [K]
-    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
-    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
+    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
     real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]

@@ -173,9 +173,9 @@ contains
 
     real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
     real(RP), intent(in) :: LST   (IA,JA) ! land surface temperature [K]
-    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation [0-1]
-    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
-    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation (0-1)
+    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
+    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
     real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
     real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
     real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
@@ -359,9 +359,9 @@ contains
           if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- soil temperature                   [K]       :', TG    (i,j)
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- land surface temperature           [K]       :', LST   (i,j)
-          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- efficiency of evaporation          [0-1]     :', QVEF  (i,j)
-          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface albedo for LW              [0-1]     :', ALB_LW(i,j)
-          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface albedo for SW              [0-1]     :', ALB_SW(i,j)
+          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- efficiency of evaporation          [1]       :', QVEF  (i,j)
+          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface albedo for LW              [1]       :', ALB_LW(i,j)
+          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface albedo for SW              [1]       :', ALB_SW(i,j)
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- soil depth                         [m]       :', DZG   (i,j)
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- thermal conductivity for soil      [J/m/K/s] :', TCS   (i,j)
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- roughness length for momemtum      [m]       :', Z0M   (i,j)
@@ -404,9 +404,9 @@ contains
              write(*,*) ''
              write(*,*) 'DEBUG --- soil temperature                   [K]       :', TG    (i,j)
              write(*,*) 'DEBUG --- land surface temperature           [K]       :', LST   (i,j)
-             write(*,*) 'DEBUG --- efficiency of evaporation          [0-1]     :', QVEF  (i,j)
-             write(*,*) 'DEBUG --- surface albedo for LW              [0-1]     :', ALB_LW(i,j)
-             write(*,*) 'DEBUG --- surface albedo for SW              [0-1]     :', ALB_SW(i,j)
+             write(*,*) 'DEBUG --- efficiency of evaporation          [1]       :', QVEF  (i,j)
+             write(*,*) 'DEBUG --- surface albedo for LW              [1]       :', ALB_LW(i,j)
+             write(*,*) 'DEBUG --- surface albedo for SW              [1]       :', ALB_SW(i,j)
              write(*,*) 'DEBUG --- soil depth                         [m]       :', DZG   (i,j)
              write(*,*) 'DEBUG --- thermal conductivity for soil      [J/m/K/s] :', TCS   (i,j)
              write(*,*) 'DEBUG --- roughness length for momemtum      [m]       :', Z0M   (i,j)

@@ -229,7 +229,7 @@ contains
        temp   )
     implicit none
 
-    real(RP), intent(out) :: alpha !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha !< liquid/ice separation factor (0-1)
     real(RP), intent(in)  :: temp  !< temperature [K]
     !---------------------------------------------------------------------------
 
@@ -248,7 +248,7 @@ contains
        temp   )
     implicit none
 
-    real(RP), intent(out) :: alpha(KA) !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha(KA) !< liquid/ice separation factor (0-1)
     real(RP), intent(in)  :: temp (KA) !< temperature [K]
 
     integer :: k
@@ -272,7 +272,7 @@ contains
        temp   )
     implicit none
 
-    real(RP), intent(out) :: alpha(KA,IA,JA) !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha(KA,IA,JA) !< liquid/ice separation factor (0-1)
     real(RP), intent(in)  :: temp (KA,IA,JA) !< temperature [K]
 
     integer :: k, i, j
