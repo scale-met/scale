@@ -21,8 +21,9 @@ module mod_user
   use scale_prof
   use scale_grid
   use scale_grid_index
-  use scale_tracer
   use scale_index
+  use scale_tracer
+
   use scale_time, only: &
      TIME_DTSEC
   use scale_atmos_boundary, only: &

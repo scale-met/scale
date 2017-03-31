@@ -30,7 +30,7 @@ module scale_atmos_phy_tb_mynn
 
 #include "macro_thermodyn.h"
 
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -218,7 +218,7 @@ contains
        RHOQ_t,                                      &
        Nu, Ri, Pr,                                  &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2_in,   &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
     use scale_grid_index
@@ -292,7 +292,7 @@ contains
     real(RP), intent(in)    :: SFLX_MU      (IA,JA)
     real(RP), intent(in)    :: SFLX_MV      (IA,JA)
     real(RP), intent(in)    :: SFLX_SH      (IA,JA)
-    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_Q       (IA,JA,QA)
 
     real(RP), intent(in)    :: GSQRT        (KA,IA,JA,7)  !< vertical metrics {G}^1/2
     real(RP), intent(in)    :: J13G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
@@ -374,6 +374,21 @@ contains
     POTT(:,:,:) = UNDEF
     POTL(:,:,:) = UNDEF
     temp(:,:,:) = UNDEF
+#endif
+
+#ifdef QUICKDEBUG
+    qflx_sgs_momz(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
 #endif
 
 !OCL XFILL
@@ -616,7 +631,7 @@ contains
                    q, q2_2, & ! (in)
                    l, n2, dudz2 ) ! (in)
 
-#ifdef QUICK_DEBUG
+#ifdef QUICKDEBUG
     do j = 1, JS-1
     do i = 1, IA
     do k = KS, KE
@@ -644,6 +659,7 @@ contains
        end do
     end do
 #endif
+
     call ATMOS_SATURATION_pres2qsat( Qsl(KS:KE_PBL,:,:), & ! (out)
                                      TEML(KS:KE_PBL,:,:), pres(KS:KE_PBL,:,:), & ! (in)
                                      KE_PBL-KS+1 ) ! (in)
@@ -912,20 +928,18 @@ contains
              cycle
           end if
 
-          if ( .not. TRACER_ADVC(iq) ) cycle
+          if( .NOT. TRACER_ADVC(iq) ) cycle
 
 !OCL INDEPENDENT
           do j = JJS, JJE
           do i = IIS, IIE
-             if ( iq == I_QV ) then
-                d(KS,i,j) = QTRC(KS,i,j,iq) &
-                          + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
-             else
-                d(KS,i,j) = QTRC(KS,i,j,iq)
-             end if
+             d(KS,i,j) = QTRC(KS,i,j,iq) &
+                       + dt * SFLX_Q(i,j,iq) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+
              do k = KS+1, KE_PBL
                 d(k,i,j) = QTRC(k,i,j,iq)
              end do
+
              call diffusion_solver( &
                   phiN(:,i,j),                            & ! (out)
                   a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
@@ -1107,7 +1121,7 @@ contains
                + ( (1.0_RP - 100.0_RP*zeta)*(1.0_RP-sw) )**0.2_RP )
 
           ! LB
-          sw  = sign(0.5_RP, n2(k,i,j)) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz < 0
+          sw  = sign(0.5_RP, n2(k,i,j)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
           rn2sr = 1.0_RP / ( sqrt(n2(k,i,j)*sw) + 1.0_RP-sw)
           lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q(k,i,j) * rn2sr * sw & ! qc=0 when SFLX_PT < 0
              +  999.E10_RP * (1.0_RP-sw)

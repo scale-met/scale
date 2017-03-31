@@ -22,8 +22,7 @@ FFLAGS_DYN   = $(FFLAGS)
 FFLAGS_DEBUG = -Mpreprocess -m64 -O0             \
                -Mbyteswapio -Minfo               \
                -Mflushz -Ktrap=fp                \
-               -Mbounds -Mstandard -g -traceback \
-               -DDEBUG
+               -Mbounds -Mstandard -g -traceback
 
 
 

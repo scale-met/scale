@@ -26,8 +26,7 @@ FFLAGS_DEBUG = -cpp -O0 -m64 \
                -ffpe-trap=invalid,zero,overflow -finit-integer=-32768 -finit-real=snan -finit-logical=false -finit-character=9 \
                -Wall -Wextra -Wcharacter-truncation -Wunderflow -Warray-temporaries -Wuninitialized -Wconversion-extra \
                -fcheck=bounds,do,mem,pointer \
-               -g -fbacktrace \
-               -DDEBUG
+               -g -fbacktrace
 
 
 

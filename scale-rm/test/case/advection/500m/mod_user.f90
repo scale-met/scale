@@ -46,8 +46,6 @@ module mod_user
   !
   !++ Private parameters & variables
   !
-  logical, private :: USER_do = .false. !< do user step?
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -73,6 +71,7 @@ contains
   !> Setup before setup of other components
   subroutine USER_setup
     implicit none
+    !---------------------------------------------------------------------------
 
     return
   end subroutine USER_setup
@@ -98,14 +97,8 @@ contains
   !-----------------------------------------------------------------------------
   !> User step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
     !---------------------------------------------------------------------------
-
-    if ( USER_do ) then
-       call PRC_MPIstop
-    endif
 
     return
   end subroutine USER_step

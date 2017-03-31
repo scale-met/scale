@@ -197,13 +197,13 @@ contains
     real(RP) :: Ri(KA,IA,JA) ! Richardson number
     real(RP) :: Pr(KA,IA,JA) ! Prandtl number
 
-    integer :: JJS, JJE
-    integer :: IIS, IIE
-
     real(RP) :: tend(KA,IA,JA)
     real(RP) :: total ! dummy
 
-    integer :: k, i, j, iq
+    integer  :: JJS, JJE
+    integer  :: IIS, IIE
+
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -216,7 +216,7 @@ contains
                           Nu, Ri, Pr,                             & ! [OUT]
                           MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2, & ! [IN]
                           SFLX_MW, SFLX_MU, SFLX_MV,              & ! [IN]
-                          SFLX_SH, SFLX_Q(:,:,I_QV),              & ! [IN]
+                          SFLX_SH, SFLX_Q,                        & ! [IN]
                           GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
                           dt_TB                                   ) ! [IN]
 

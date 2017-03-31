@@ -44,7 +44,7 @@ module scale_atmos_diagnostic
   !
   !-----------------------------------------------------------------------------
 contains
-
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_DIAGNOSTIC_get( &
        POTT, &
        TEMP, &
@@ -73,6 +73,7 @@ contains
        CZ => REAL_CZ, &
        FZ => REAL_FZ
     implicit none
+
     real(RP), intent(out) :: POTT(KA,IA,JA)
     real(RP), intent(out) :: TEMP(KA,IA,JA)
     real(RP), intent(out) :: PRES(KA,IA,JA)
@@ -93,19 +94,18 @@ contains
     real(RP) :: q(QA)
     real(RP) :: qdry, Rtot
 
-    integer :: k, i, j
-    integer :: iq
+    integer  :: k, i, j
+    integer  :: iq
     !---------------------------------------------------------------------------
 
-    call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
-                              PRES(:,:,:),   & ! [OUT]
-                              DENS(:,:,:),   & ! [IN]
-                              RHOT(:,:,:),   & ! [IN]
-                              QTRC(:,:,:,:), & ! [IN]
-                              TRACER_CV(:),  & ! [IN]
-                              TRACER_R(:),   & ! [IN]
-                              TRACER_MASS(:) ) ! [IN]
-
+    call THERMODYN_temp_pres( TEMP       (:,:,:),   & ! [OUT]
+                              PRES       (:,:,:),   & ! [OUT]
+                              DENS       (:,:,:),   & ! [IN]
+                              RHOT       (:,:,:),   & ! [IN]
+                              QTRC       (:,:,:,:), & ! [IN]
+                              TRACER_CV  (:),       & ! [IN]
+                              TRACER_R   (:),       & ! [IN]
+                              TRACER_MASS(:)        ) ! [IN]
 
     !$omp parallel do private(i,j,k,ph) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
@@ -132,14 +132,14 @@ contains
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
-       W(KS,i,j) = 0.5_RP * (                 MOMZ(KS,i,j) ) / DENS(KS,i,j)
+       W(KS,i,j) = 0.5_RP * ( MOMZ(KS,i,j) ) / DENS(KS,i,j)
     enddo
     enddo
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
-       W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j)               ) / DENS(KE,i,j)
+       W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j) ) / DENS(KE,i,j)
     enddo
     enddo
 
@@ -208,7 +208,6 @@ contains
     !$omp private(i,j,q,rpt,qdry,rtot)
     do j = 1, JA
     do i = 1, IA
-
        do k = KS, KE
           do iq = 1, QA
              q(iq) = QTRC(k,i,j,iq)
@@ -218,14 +217,11 @@ contains
           RPT(k) = Rtot * POTT(k,i,j)
        end do
 
-       N2(KS,i,j) = GRAV * ( RPT(KS+1) - RPT(KS) ) &
-                         / ( ( CZ(KS+1,i,j) - CZ(KS,i,j) ) * RPT(KS) )
+       N2(KS,i,j) = GRAV * ( RPT(KS+1) - RPT(KS) ) / ( ( CZ(KS+1,i,j) - CZ(KS,i,j) ) * RPT(KS) )
        do k = KS+1,KE-1
-          N2(k,i,j) = GRAV * ( RPT(k+1) - RPT(k-1) ) &
-                           / ( ( CZ(k+1,i,j) - CZ(k-1,i,j) ) * RPT(k) )
+          N2(k,i,j) = GRAV * ( RPT(k+1) - RPT(k-1) ) / ( ( CZ(k+1,i,j) - CZ(k-1,i,j) ) * RPT(k) )
        end do
-       N2(KE,i,j) = GRAV * ( RPT(KE) - RPT(KE-1) ) &
-                         / ( ( CZ(KE,i,j) - CZ(KE-1,i,j) ) * RPT(KE) )
+       N2(KE,i,j) = GRAV * ( RPT(KE) - RPT(KE-1) ) / ( ( CZ(KE,i,j) - CZ(KE-1,i,j) ) * RPT(KE) )
     end do
     end do
 

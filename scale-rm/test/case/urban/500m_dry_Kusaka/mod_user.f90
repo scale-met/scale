@@ -50,6 +50,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine USER_config
+    implicit none
+    !---------------------------------------------------------------------------
 
     return
   end subroutine USER_config
@@ -141,6 +143,11 @@ contains
        CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
     use scale_grid_real, only: &
        REAL_lon
+    use scale_time, only:   &
+       NOWSEC => TIME_NOWSEC,      & !< subday part  of current time [sec]
+       dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
+    use scale_history, only: &
+       HIST_in
     use mod_cpl_vars, only: &
        TMPA  => URB_ATM_TEMP,        &
        PRSA  => URB_ATM_PRES,        &
@@ -154,25 +161,7 @@ contains
        RWD   => URB_ATM_SFLX_rad_dn, &
        RAIN  => URB_ATM_SFLX_rain,   &
        SNOW  => URB_ATM_SFLX_snow
-    use scale_time, only:   &
-       NOWSEC => TIME_NOWSEC,      & !< subday part  of current time [sec]
-       dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
-    use mod_admin_time, only: &
-       TIME_DOURBAN_step             !< execute urban component in this step?
-    use scale_history, only: &
-       HIST_in
     implicit none
-
-    real(RP) :: WORK(IA,JA)
-    real(RP) :: LON, LAT
-    real(RP) :: dsec
-    integer  :: tloc
-
-    real(RP) :: LWD(IA,JA)
-    real(RP) :: SWD(IA,JA)
-
-    real(RP), parameter :: SRATIO = 0.75_RP ! ratio between direct/total solar [-]
-    real(RP)            :: SWtot
 
     real(RP) :: SW  (0:24)
     real(RP) :: PT  (0:24)
@@ -256,9 +245,20 @@ contains
                  2.75_RP, & ! 23LST
                  2.75_RP  / ! 24LST
 
-    real(RP) :: THETA
+    real(RP), parameter :: SRATIO = 0.75_RP ! ratio between direct/total solar [-]
+
+    real(RP) :: PTA (IA,JA)
+    real(RP) :: LWD (IA,JA)
+    real(RP) :: SWD (IA,JA)
+    real(RP) :: WORK(IA,JA)
     real(RP) :: RovCP
-    integer  :: k, i, j
+
+    real(RP) :: SWtot
+    real(RP) :: LON
+    real(RP) :: dsec
+    integer  :: tloc
+
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     RovCP = Rdry / CPdry
@@ -292,9 +292,9 @@ contains
           RWD (i,j,I_SW,1) = (        SRATIO ) * SWtot ! direct
           RWD (i,j,I_SW,2) = ( 1.0_RP-SRATIO ) * SWtot ! diffuse
 
-          THETA     = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
+          PTA (i,j) = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
                       + (        dsec ) * PT(tloc+1) ) + TEM00
-          TMPA(i,j) = THETA * ( PRSA(i,j) / PRE00 )**RovCP   ! air temp, but now PRSA = 100000Pa
+          TMPA(i,j) = PTA(i,j) * ( PRSA(i,j) / PRE00 )**RovCP   ! air temp, but now PRSA = 100000Pa
 
           UA  (i,j) = ( ( 1.0_RP-dsec ) * Wind(tloc  ) &
                       + (        dsec ) * Wind(tloc+1) )
@@ -305,14 +305,13 @@ contains
        enddo
        enddo
 
-       call HIST_in( WORK (:,:), 'PT_urb',   'Potential air temperature',    'K'     )
-       call HIST_in( QVA  (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
-       call HIST_in( UA   (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
-       call HIST_in( SWD  (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
-       call HIST_in( LWD  (:,:), 'LWD_urb',  'Downward longwave radiation',  'W/m2'  )
-
+       call HIST_in( PTA (:,:), 'PT_urb',   'Potential air temperature',    'K'     )
+       call HIST_in( QVA (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
+       call HIST_in( UA  (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
+       call HIST_in( SWD (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
+       call HIST_in( LWD (:,:), 'LWD_urb',  'Downward longwave  radiation', 'W/m2'  )
        WORK(:,:) = ( RAIN(:,:) + SNOW(:,:) ) * dt_URB
-       call HIST_in( WORK (:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
+       call HIST_in( WORK(:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
 
     endif
 

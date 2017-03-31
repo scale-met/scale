@@ -22,8 +22,7 @@ FFLAGS_DEBUG = -C vsafe                      \
                -Ep -f2003 -dW                \
                -Wf"-L fmtlist transform"     \
                -Wf"-pvctl fullmsg"           \
-               -Wf"-init heap=nan stack=nan" \
-               -DDEBUG
+               -Wf"-init heap=nan stack=nan"
 
 
 

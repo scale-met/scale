@@ -46,16 +46,18 @@ module mod_user
   !
   !++ Private parameters & variables
   !
-  logical,  private, save :: USER_do = .false. !< do user step?
+  logical,  private :: USER_do   = .false. !< do user step?
 
-  real(RP), private, save :: SFC_THETA = 300.0_RP ! surface potential temperature [K]
-  real(RP), private, save :: ENV_BVF   =  0.01_RP ! Brunt Vaisala frequencies of environment [1/s]
+  real(RP), private :: SFC_THETA = 300.0_RP ! surface potential temperature [K]
+  real(RP), private :: ENV_BVF   =  0.01_RP ! Brunt Vaisala frequencies of environment [1/s]
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine USER_config
+    implicit none
+    !---------------------------------------------------------------------------
 
     return
   end subroutine USER_config
@@ -81,7 +83,6 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -108,7 +109,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! calculate diagnostic value and input to history buffer
     call USER_step
 
     return
@@ -117,14 +117,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_grid, only : &
        CZ => GRID_CZ
-    use scale_time, only: &
-       DTSEC => TIME_DTSEC
     use mod_atmos_vars, only: &
        DENS, &
        RHOT
@@ -134,7 +130,7 @@ contains
 
     real(RP) :: PT_diff(KA,IA,JA)
 
-    integer :: k, i, j
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then

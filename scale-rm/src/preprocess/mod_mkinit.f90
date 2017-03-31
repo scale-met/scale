@@ -721,9 +721,9 @@ contains
     integer  :: n_kap_inp(3) = n_kap_def
 
     NAMELIST / PARAM_AERO / &
-       m0_init, &
-       dg_init, &
-       sg_init, &
+       m0_init,   &
+       dg_init,   &
+       sg_init,   &
        d_min_inp, &
        d_max_inp, &
        k_min_inp, &
@@ -4944,13 +4944,14 @@ contains
 
     return
   end subroutine MKINIT_grayzone
+
   !-----------------------------------------------------------------------------
   !> Make initial state of Box model experiment for zerochemical module
   subroutine MKINIT_boxaero
     use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_atmos_admin, only: &
-         ATMOS_PHY_AE_TYPE
+       ATMOS_PHY_AE_TYPE
     implicit none
 
     real(RP) :: init_dens  = 1.12_RP   ![kg/m3]
@@ -4959,13 +4960,14 @@ contains
     real(RP) :: init_ssliq = 0.01_RP   ![%]
 
     NAMELIST / PARAM_MKINIT_BOXAERO / &
-         init_dens, &
-         init_temp, &
-         init_pres, &
-         init_ssliq
+       init_dens, &
+       init_temp, &
+       init_pres, &
+       init_ssliq
 
     real(RP) :: qsat
-    integer :: i, j, k, ierr
+    integer  :: i, j, k, ierr
+    !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_AE_TYPE /= 'KAJINO13' ) then
        if( IO_L ) write(IO_FID_LOG,*) '+++ For [Box model of aerosol],'
@@ -4993,26 +4995,30 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOXAERO)
 
     QTRC(:,:,:,:) = 0.0_RP
-    do k = KS, KE
-    do i = IS, IE
-    do j = JS, JE
-      DENS(k,i,j) = init_dens
-      MOMX(k,i,j) = 0.0_RP
-      MOMY(k,i,j) = 0.0_RP
-      MOMZ(k,i,j) = 0.0_RP
-      pott(k,i,j) = init_temp * ( P00/init_pres )**( Rdry/CPdry )
-      RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
-      call SATURATION_pres2qsat_all( qsat,init_temp,init_pres )
-      QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP )*qsat
+    call SATURATION_pres2qsat_all( qsat, init_temp, init_pres )
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS(k,i,j) = init_dens
+       MOMX(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
+       MOMZ(k,i,j) = 0.0_RP
+       pott(k,i,j) = init_temp * ( P00/init_pres )**(Rdry/CPdry)
+       RHOT(k,i,j) = init_dens * pott(k,i,j)
+
+       QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP ) * qsat
     enddo
     enddo
     enddo
 
-    if( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
-      call AEROSOL_setup
+    if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
+       call AEROSOL_setup
     endif
 
+    return
   end subroutine MKINIT_boxaero
+
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubbleaero
