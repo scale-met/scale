@@ -662,8 +662,8 @@ contains
 
     AXIS(1:im,1:jm,1) = LANDUSE_frac_land(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask', &
-                                          '0-1', AXIS_name(1:2), AXIS(:,:,1), start=start )
+    call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask',       &
+                                          '1', AXIS_name(1:2), AXIS(:,:,1), start=start )
 
     return
   end subroutine HIST_put_axes

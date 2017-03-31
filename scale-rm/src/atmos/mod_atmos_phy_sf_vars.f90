@@ -124,12 +124,12 @@ module mod_atmos_phy_sf_vars
                   'surface roughness length (heat)',     &
                   'surface roughness length (vapor)'     /
 
-  data VAR_UNIT / 'K',   &
-                  '0-1', &
-                  '0-1', &
-                  'm',   &
-                  'm',   &
-                  'm'    /
+  data VAR_UNIT / 'K', &
+                  '1', &
+                  '1', &
+                  'm', &
+                  'm', &
+                  'm'  /
 
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP   = 300.0_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo = 0.4_RP

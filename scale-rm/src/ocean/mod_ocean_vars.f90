@@ -165,8 +165,8 @@ module mod_ocean_vars
                   'ocean surface water vapor flux'              /
   data VAR_UNIT / 'K',       &
                   'K',       &
-                  '0-1',     &
-                  '0-1',     &
+                  '1',       &
+                  '1',       &
                   'm',       &
                   'm',       &
                   'm',       &

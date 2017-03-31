@@ -175,10 +175,10 @@ module mod_land_vars
                   'land surface water vapor flux'    /
   data VAR_UNIT / 'K',       &
                   'm3/m3',   &
-                  '0-1',     &
+                  '1',       &
                   'K',       &
-                  '0-1',     &
-                  '0-1',     &
+                  '1',       &
+                  '1',       &
                   'kg/m2/s', &
                   'kg/m2/s', &
                   'kg/m2/s', &

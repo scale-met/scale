@@ -234,13 +234,13 @@ contains
                        OCEAN_SFLX_evap(:,:), & ! [IN]
                        dt                    ) ! [IN]
 
-       call HIST_in( OCEAN_TEMP_t      (:,:),      'OCEAN_TEMP_t',     'tendency of OCEAN_TEMP',     'K'   )
-       call HIST_in( OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t', 'tendency of OCEAN_SFC_TEMP', 'K'   )
-       call HIST_in( OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t',   'tendency of OCEAN_ALB_LW',   '0-1' )
-       call HIST_in( OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t',   'tendency of OCEAN_ALB_SW',   '0-1' )
-       call HIST_in( OCEAN_SFC_Z0M_t   (:,:),      'OCEAN_SFC_Z0M_t',  'tendency of OCEAN_SFC_Z0M',  'm'   )
-       call HIST_in( OCEAN_SFC_Z0H_t   (:,:),      'OCEAN_SFC_Z0H_t',  'tendency of OCEAN_SFC_Z0H',  'm'   )
-       call HIST_in( OCEAN_SFC_Z0E_t   (:,:),      'OCEAN_SFC_Z0E_t',  'tendency of OCEAN_SFC_Z0E',  'm'   )
+       call HIST_in( OCEAN_TEMP_t      (:,:),      'OCEAN_TEMP_t',     'tendency of OCEAN_TEMP',     'K' )
+       call HIST_in( OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t', 'tendency of OCEAN_SFC_TEMP', 'K' )
+       call HIST_in( OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t',   'tendency of OCEAN_ALB_LW',   '1' )
+       call HIST_in( OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t',   'tendency of OCEAN_ALB_SW',   '1' )
+       call HIST_in( OCEAN_SFC_Z0M_t   (:,:),      'OCEAN_SFC_Z0M_t',  'tendency of OCEAN_SFC_Z0M',  'm' )
+       call HIST_in( OCEAN_SFC_Z0H_t   (:,:),      'OCEAN_SFC_Z0H_t',  'tendency of OCEAN_SFC_Z0H',  'm' )
+       call HIST_in( OCEAN_SFC_Z0E_t   (:,:),      'OCEAN_SFC_Z0E_t',  'tendency of OCEAN_SFC_Z0E',  'm' )
 
     end if
 

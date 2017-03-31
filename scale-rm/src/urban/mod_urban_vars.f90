@@ -226,8 +226,8 @@ module mod_urban_vars
                   'kg/m2',   &
                   'kg/m2',   &
                   'K',       &
-                  '0-1',     &
-                  '0-1',     &
+                  '1',       &
+                  '1',       &
                   'kg/m2/s', &
                   'kg/m2/s', &
                   'kg/m2/s', &
