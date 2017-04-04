@@ -40,14 +40,10 @@ module scale_land_phy_slab
   !
   !++ Private parameters & variables
   !
-  logical, private :: LAND_PHY_SLAB_const = .false. ! constant condition?
-
   logical, private :: LAND_PHY_UPDATE_BOTTOM_TEMP  = .false. ! Is LAND_TEMP  updated in the lowest level?
   logical, private :: LAND_PHY_UPDATE_BOTTOM_WATER = .false. ! Is LAND_WATER updated in the lowest level?
 
   real(RP), private :: WATER_DENSCS !< Heat Capacity (rho*CS) for soil moisture [J/K/m3]
-
-  real(RP), allocatable, private :: is_LND(:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -59,8 +55,6 @@ contains
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        CL    => CONST_CL
-    use scale_landuse, only: &
-       LANDUSE_fact_land
     implicit none
 
     character(len=*), intent(in) :: LAND_TYPE
@@ -87,33 +81,11 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PHY_SLAB)
 
-    if( LAND_TYPE == 'CONST' ) then
-       LAND_PHY_SLAB_const = .true.
-    else if( LAND_TYPE == 'SLAB' ) then
-       LAND_PHY_SLAB_const = .false.
-    else
-       write(*,*) 'xxx wrong LAND_TYPE. Check!'
-       call PRC_MPIstop
-    end if
-
     WATER_DENSCS = DWATR * CL
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Update soil temperature of bottom layer? : ', LAND_PHY_UPDATE_BOTTOM_TEMP
     if( IO_L ) write(IO_FID_LOG,*) '*** Update soil moisture    of bottom layer? : ', LAND_PHY_UPDATE_BOTTOM_WATER
-
-    ! judge to run slab land model
-    allocate( is_LND(IA,JA) )
-
-    do j = JS, JE
-    do i = IS, IE
-      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
-        is_LND(i,j) = 1.0_RP
-      else
-        is_LND(i,j) = 0.0_RP
-      end if
-    end do
-    end do
 
     return
   end subroutine LAND_PHY_SLAB_setup
@@ -134,9 +106,10 @@ contains
        SFLX_evap,    &
        CDZ,          &
        dt            )
-    use scale_grid_index
     use scale_const, only: &
        DWATR => CONST_DWATR
+    use scale_landuse, only: &
+       LANDUSE_fact_land
     use scale_matrix, only: &
        MATRIX_SOLVER_tridiagonal
     implicit none
@@ -174,23 +147,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land  physics step: Slab'
-
-    ! constant land physics
-    if( LAND_PHY_SLAB_const ) then
-
-      do j = JS, JE
-      do i = IS, IE
-      do k = LKS, LKE
-         TEMP_t (k,i,j) = 0.0_RP
-         WATER_t(k,i,j) = 0.0_RP
-      end do
-      end do
-      end do
-
-      return
-    endif
-
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land physics step: Slab'
 
     ! Solve diffusion of soil moisture (tridiagonal matrix)
     do j = JS, JE
@@ -327,8 +284,13 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = LKS, LKE
-      TEMP_t (k,i,j) = is_LND(i,j) * ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / dt
-      WATER_t(k,i,j) = is_LND(i,j) * ( WATER1(k,i,j) - WATER(k,i,j) ) / dt
+      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
+        TEMP_t (k,i,j) = ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / dt
+        WATER_t(k,i,j) = ( WATER1(k,i,j) - WATER(k,i,j) ) / dt
+      else
+        TEMP_t (k,i,j) = 0.0_RP
+        WATER_t(k,i,j) = 0.0_RP
+      end if
     end do
     end do
     end do

@@ -1,14 +1,14 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN / Surface flux with slab ocean model
+!> module OCEAN / Surface flux with constant ocean model
 !!
 !! @par Description
-!!          Surface flux with slab ocean model
+!!          Surface flux with constant ocean model
 !!
 !! @author Team SCALE
 !!
 !<
 !-------------------------------------------------------------------------------
-module scale_ocean_sfc_slab
+module scale_ocean_sfc_const
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -23,8 +23,8 @@ module scale_ocean_sfc_slab
   !
   !++ Public procedure
   !
-  public :: OCEAN_SFC_SLAB_setup
-  public :: OCEAN_SFC_SLAB
+  public :: OCEAN_SFC_CONST_setup
+  public :: OCEAN_SFC_CONST
 
   !-----------------------------------------------------------------------------
   !
@@ -42,7 +42,7 @@ module scale_ocean_sfc_slab
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
+  subroutine OCEAN_SFC_CONST_setup( OCEAN_TYPE )
     implicit none
 
     character(len=*), intent(in) :: OCEAN_TYPE
@@ -51,13 +51,13 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN SFC] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONST] / Categ[OCEAN SFC] / Origin[SCALElib]'
 
     return
-  end subroutine OCEAN_SFC_SLAB_setup
+  end subroutine OCEAN_SFC_CONST_setup
 
   !-----------------------------------------------------------------------------
-  subroutine OCEAN_SFC_SLAB( &
+  subroutine OCEAN_SFC_CONST( &
         SST_t,  & ! [OUT]
         ZMFLX,  & ! [OUT]
         XMFLX,  & ! [OUT]
@@ -89,6 +89,8 @@ contains
         Z0H,    & ! [IN]
         Z0E,    & ! [IN]
         dt      ) ! [IN]
+    use scale_process, only: &
+      PRC_MPIstop
     use scale_const, only: &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
@@ -139,12 +141,10 @@ contains
     real(DP), intent(in) :: dt            ! delta time
 
     ! works
-    real(RP) :: SST1(IA,JA)
-
-    real(RP) :: Ustar, Ustar10, Ustar2 ! friction velocity [m]
-    real(RP) :: Tstar, Tstar10, Tstar2 ! friction temperature [K]
-    real(RP) :: Qstar, Qstar10, Qstar2 ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs,  Uabs10,  Uabs2  ! modified absolute velocity [m/s]
+    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Tstar ! friction temperature [K]
+    real(RP) :: Qstar ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs  ! modified absolute velocity [m/s]
 
     real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
@@ -156,17 +156,16 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean surface step: Slab'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean surface step: Const'
 
     call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
 
-    ! update surface temperature
+    ! calculate tendency
     do j = JS, JE
     do i = IS, IE
-      SST1 (i,j) = TW(i,j) ! assumed well-mixed condition
-      SST_t(i,j) = ( SST1(i,j) - SST(i,j) ) / dt
-    end do
-    end do
+      SST_t(i,j) = 0.0_RP
+    enddo
+    enddo
 
     ! calculate surface flux
     do j = JS, JE
@@ -176,7 +175,7 @@ contains
 
         ! saturation at the surface
         call qsat( QVsat,     & ! [OUT]
-                   SST1(i,j), & ! [IN]
+                   SST (i,j), & ! [IN]
                    PRSS(i,j)  ) ! [IN]
 
         call BULKFLUX( &
@@ -188,7 +187,7 @@ contains
             FracT2,    & ! [OUT]
             FracQ2,    & ! [OUT]
             TMPA(i,j), & ! [IN]
-            SST1(i,j), & ! [IN]
+            SST (i,j), & ! [IN]
             PRSA(i,j), & ! [IN]
             PRSS(i,j), & ! [IN]
             QVA (i,j), & ! [IN]
@@ -209,22 +208,22 @@ contains
 
         ! calculation for residual
         WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &
-                   - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST1(i,j)**4 ) &
+                   - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST(i,j)**4 ) &
                    + SHFLX(i,j) + LHFLX(i,j)
 
         ! diagnostic variables considering unstable/stable state
         !U10(i,j) = FracU10 * UA(i,j)
         !V10(i,j) = FracU10 * VA(i,j)
-        !T2 (i,j) = ( 1.0_RP - FracT2 ) * SST1(i,j) + FracT2 * TMPA(i,j)
-        !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVsat     + FracQ2 * QVA (i,j)
+        !T2 (i,j) = ( 1.0_RP - FracT2 ) * SST(i,j) + FracT2 * TMPA(i,j)
+        !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVsat    + FracQ2 * QVA (i,j)
 
         ! diagnostic variables for neutral state
-        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        T2 (i,j) = SST1(i,j) + ( TMPA(i,j) - SST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-        Q2 (i,j) = QVsat     + (  QVA(i,j) - QVsat     ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
+        U10(i,j) = UA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = SST(i,j) + ( TMPA(i,j) - SST(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
+        Q2 (i,j) = QVsat    + (  QVA(i,j) - QVsat    ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
 
       else
 
@@ -246,6 +245,6 @@ contains
     enddo
 
     return
-  end subroutine OCEAN_SFC_SLAB
+  end subroutine OCEAN_SFC_CONST
 
-end module scale_ocean_sfc_slab
+end module scale_ocean_sfc_const

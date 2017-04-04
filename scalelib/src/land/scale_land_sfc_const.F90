@@ -1,14 +1,14 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN / Surface flux with slab ocean model
+!> module LAND / Surface fluxes with constant land model
 !!
 !! @par Description
-!!          Surface flux with slab ocean model
+!!          Surface flux with constant land model
 !!
 !! @author Team SCALE
 !!
 !<
 !-------------------------------------------------------------------------------
-module scale_ocean_sfc_slab
+module scale_land_sfc_const
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -23,8 +23,8 @@ module scale_ocean_sfc_slab
   !
   !++ Public procedure
   !
-  public :: OCEAN_SFC_SLAB_setup
-  public :: OCEAN_SFC_SLAB
+  public :: LAND_SFC_CONST_setup
+  public :: LAND_SFC_CONST
 
   !-----------------------------------------------------------------------------
   !
@@ -42,75 +42,79 @@ module scale_ocean_sfc_slab
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
+  subroutine LAND_SFC_CONST_setup( LAND_TYPE )
     implicit none
 
-    character(len=*), intent(in) :: OCEAN_TYPE
-
-    integer :: i, j
+    character(len=*), intent(in) :: LAND_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN SFC] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONST] / Categ[LAND SFC] / Origin[SCALElib]'
 
     return
-  end subroutine OCEAN_SFC_SLAB_setup
+  end subroutine LAND_SFC_CONST_setup
 
   !-----------------------------------------------------------------------------
-  subroutine OCEAN_SFC_SLAB( &
-        SST_t,  & ! [OUT]
-        ZMFLX,  & ! [OUT]
-        XMFLX,  & ! [OUT]
-        YMFLX,  & ! [OUT]
-        SHFLX,  & ! [OUT]
-        LHFLX,  & ! [OUT]
-        WHFLX,  & ! [OUT]
-        U10,    & ! [OUT]
-        V10,    & ! [OUT]
-        T2,     & ! [OUT]
-        Q2,     & ! [OUT]
-        TMPA,   & ! [IN]
-        PRSA,   & ! [IN]
-        WA,     & ! [IN]
-        UA,     & ! [IN]
-        VA,     & ! [IN]
-        RHOA,   & ! [IN]
-        QVA,    & ! [IN]
-        Z1,     & ! [IN]
-        PBL,    & ! [IN]
-        PRSS,   & ! [IN]
-        LWD,    & ! [IN]
-        SWD,    & ! [IN]
-        TW,     & ! [IN]
-        SST,    & ! [IN]
-        ALB_LW, & ! [IN]
-        ALB_SW, & ! [IN]
-        Z0M,    & ! [IN]
-        Z0H,    & ! [IN]
-        Z0E,    & ! [IN]
-        dt      ) ! [IN]
+  subroutine LAND_SFC_CONST( &
+        LST_t,      &
+        ZMFLX,      &
+        XMFLX,      &
+        YMFLX,      &
+        SHFLX,      &
+        LHFLX,      &
+        GHFLX,      &
+        U10,        &
+        V10,        &
+        T2,         &
+        Q2,         &
+        TMPA,       &
+        PRSA,       &
+        WA,         &
+        UA,         &
+        VA,         &
+        RHOA,       &
+        QVA,        &
+        Z1,         &
+        PBL,        &
+        PRSS,       &
+        LWD,        &
+        SWD,        &
+        TG,         &
+        LST,        &
+        QVEF,       &
+        ALB_LW,     &
+        ALB_SW,     &
+        DZG,        &
+        TCS,        &
+        Z0M,        &
+        Z0H,        &
+        Z0E,        &
+        dt_DP       )
+    use scale_process, only: &
+      PRC_myrank,  &
+      PRC_MPIstop
     use scale_const, only: &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB
     use scale_landuse, only: &
-      LANDUSE_fact_ocean
-    use scale_bulkflux, only: &
-      BULKFLUX
+      LANDUSE_fact_land
     use scale_atmos_hydrometeor, only: &
       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_bulkflux, only: &
+      BULKFLUX
     implicit none
 
     ! arguments
-    real(RP), intent(out) :: SST_t(IA,JA) ! tendency of sea surface temperature
+    real(RP), intent(out) :: LST_t(IA,JA) ! tendency of LST
     real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP), intent(out) :: WHFLX(IA,JA) ! water heat flux at the surface [W/m2]
+    real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [J/m2/s]
+    real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [J/m2/s]
+    real(RP), intent(out) :: GHFLX(IA,JA) ! ground heat flux at the surface [J/m2/s]
     real(RP), intent(out) :: U10  (IA,JA) ! velocity u at 10m [m/s]
     real(RP), intent(out) :: V10  (IA,JA) ! velocity v at 10m [m/s]
     real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
@@ -126,45 +130,49 @@ contains
     real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
     real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [W/m2]
-    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [W/m2]
+    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [J/m2/s]
+    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [J/m2/s]
 
-    real(RP), intent(in) :: TW    (IA,JA) ! water temperature [K]
-    real(RP), intent(in) :: SST   (IA,JA) ! sea surface temperature [K]
+    real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
+    real(RP), intent(in) :: LST   (IA,JA) ! land surface temperature [K]
+    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation [0-1]
     real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
     real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
-    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
+    real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
+    real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
+    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
-    real(DP), intent(in) :: dt            ! delta time
+    real(DP), intent(in) :: dt_DP         ! delta time
 
     ! works
-    real(RP) :: SST1(IA,JA)
+    real(RP) :: res ! residual
 
-    real(RP) :: Ustar, Ustar10, Ustar2 ! friction velocity [m]
-    real(RP) :: Tstar, Tstar10, Tstar2 ! friction temperature [K]
-    real(RP) :: Qstar, Qstar10, Qstar2 ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs,  Uabs10,  Uabs2  ! modified absolute velocity [m/s]
+    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Tstar ! friction potential temperature [K]
+    real(RP) :: Qstar ! friction water vapor mass ratio [kg/kg]
+    real(RP) :: Uabs  ! modified absolute velocity [m/s]
 
-    real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
+    real(RP) :: QVsat ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVS   ! water vapor mixing ratio at surface [kg/kg]
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
-    integer :: i, j
+    real(RP) :: LHV(IA,JA) ! latent heat of vaporization [J/kg]
+
+    integer  :: i, j, n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean surface step: Slab'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Const'
 
     call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
 
-    ! update surface temperature
+    ! not update temperature
     do j = JS, JE
     do i = IS, IE
-      SST1 (i,j) = TW(i,j) ! assumed well-mixed condition
-      SST_t(i,j) = ( SST1(i,j) - SST(i,j) ) / dt
+      LST_t(i,j) = 0.0_RP
     end do
     end do
 
@@ -172,12 +180,13 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-      if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
+      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
 
-        ! saturation at the surface
         call qsat( QVsat,     & ! [OUT]
-                   SST1(i,j), & ! [IN]
+                   LST(i,j),  & ! [IN]
                    PRSS(i,j)  ) ! [IN]
+
+        QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
         call BULKFLUX( &
             Ustar,     & ! [OUT]
@@ -188,11 +197,11 @@ contains
             FracT2,    & ! [OUT]
             FracQ2,    & ! [OUT]
             TMPA(i,j), & ! [IN]
-            SST1(i,j), & ! [IN]
+            LST (i,j), & ! [IN]
             PRSA(i,j), & ! [IN]
             PRSS(i,j), & ! [IN]
             QVA (i,j), & ! [IN]
-            QVsat,     & ! [IN]
+            QVS,       & ! [IN]
             UA  (i,j), & ! [IN]
             VA  (i,j), & ! [IN]
             Z1  (i,j), & ! [IN]
@@ -206,25 +215,30 @@ contains
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
         SHFLX(i,j) = -CPdry    * RHOA(i,j) * Ustar * Tstar
         LHFLX(i,j) = -LHV(i,j) * RHOA(i,j) * Ustar * Qstar
+        GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j) ) / DZG(i,j)
 
         ! calculation for residual
-        WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &
-                   - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST1(i,j)**4 ) &
-                   + SHFLX(i,j) + LHFLX(i,j)
+        res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
+            + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST(i,j)**4 ) &
+            - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
+
+        ! put residual in ground heat flux
+        GHFLX(i,j) = GHFLX(i,j) - res
 
         ! diagnostic variables considering unstable/stable state
         !U10(i,j) = FracU10 * UA(i,j)
         !V10(i,j) = FracU10 * VA(i,j)
-        !T2 (i,j) = ( 1.0_RP - FracT2 ) * SST1(i,j) + FracT2 * TMPA(i,j)
-        !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVsat     + FracQ2 * QVA (i,j)
+        !T2 (i,j) = ( 1.0_RP - FracT2 ) * LST(i,j) + FracT2 * TMPA(i,j)
+        !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVS      + FracQ2 * QVA (i,j)
 
         ! diagnostic variables for neutral state
-        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        T2 (i,j) = SST1(i,j) + ( TMPA(i,j) - SST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-        Q2 (i,j) = QVsat     + (  QVA(i,j) - QVsat     ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
+        U10(i,j) = UA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = LST(i,j) + ( TMPA(i,j) - LST(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
+        Q2 (i,j) = QVS      + (  QVA(i,j) - QVS      ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
+
 
       else
 
@@ -234,7 +248,7 @@ contains
         YMFLX(i,j) = 0.0_RP
         SHFLX(i,j) = 0.0_RP
         LHFLX(i,j) = 0.0_RP
-        WHFLX(i,j) = 0.0_RP
+        GHFLX(i,j) = 0.0_RP
         U10  (i,j) = 0.0_RP
         V10  (i,j) = 0.0_RP
         T2   (i,j) = 0.0_RP
@@ -242,10 +256,10 @@ contains
 
       end if
 
-    enddo
-    enddo
+    end do
+    end do
 
     return
-  end subroutine OCEAN_SFC_SLAB
+  end subroutine LAND_SFC_CONST
 
-end module scale_ocean_sfc_slab
+end module scale_land_sfc_const
