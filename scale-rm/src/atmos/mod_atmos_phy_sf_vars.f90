@@ -62,7 +62,7 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOQ_t(:,:,:) ! tendency rho*QTRC [    kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_TEMP  (:,:)   ! surface skin temperature             [K]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo(:,:,:) ! surface albedo                       [0-1]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo(:,:,:) ! surface albedo                       (0-1)
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0M   (:,:)   ! surface roughness length, ocean only [m]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0H   (:,:)   ! surface roughness length, ocean only [m]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0E   (:,:)   ! surface roughness length, ocean only [m]
@@ -124,12 +124,12 @@ module mod_atmos_phy_sf_vars
                   'surface roughness length (heat)',     &
                   'surface roughness length (vapor)'     /
 
-  data VAR_UNIT / 'K',   &
-                  '0-1', &
-                  '0-1', &
-                  'm',   &
-                  'm',   &
-                  'm'    /
+  data VAR_UNIT / 'K', &
+                  '1', &
+                  '1', &
+                  'm', &
+                  'm', &
+                  'm'  /
 
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP   = 300.0_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo = 0.4_RP

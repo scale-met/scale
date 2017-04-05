@@ -88,7 +88,7 @@ module mod_urban_vars
 
   ! for restart
   real(RP), public, allocatable :: URBAN_SFC_TEMP  (:,:)   ! urban grid average of surface temperature [K]
-  real(RP), public, allocatable :: URBAN_SFC_albedo(:,:,:) ! urban grid average of albedo [0-1]
+  real(RP), public, allocatable :: URBAN_SFC_albedo(:,:,:) ! urban grid average of albedo (0-1)
   real(RP), public, allocatable :: URBAN_SFLX_MW   (:,:)   ! urban grid average of w-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_MU   (:,:)   ! urban grid average of u-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)   ! urban grid average of v-momentum flux [kg/m2/s]
@@ -226,8 +226,8 @@ module mod_urban_vars
                   'kg/m2',   &
                   'kg/m2',   &
                   'K',       &
-                  '0-1',     &
-                  '0-1',     &
+                  '1',       &
+                  '1',       &
                   'kg/m2/s', &
                   'kg/m2/s', &
                   'kg/m2/s', &

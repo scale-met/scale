@@ -63,8 +63,8 @@ module mod_atmos_phy_cp_vars
   real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_rain     (:,:)   ! convective rain [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cloudtop      (:,:)   ! cloud top  height [m]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cloudbase     (:,:)   ! cloud base height [m]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_dp    (:,:,:) ! cloud fraction (deep    convection) [0-1]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_sh    (:,:,:) ! cloud fraction (shallow convection) [0-1]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_dp    (:,:,:) ! cloud fraction (deep    convection) (0-1)
+  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_sh    (:,:,:) ! cloud fraction (shallow convection) (0-1)
   ! only for K-F scheme
   real(RP), public, allocatable :: ATMOS_PHY_CP_kf_nca        (:,:)   ! advection/cumulus convection timescale/dt for KF[step]
   real(RP), public, allocatable :: ATMOS_PHY_CP_kf_w0avg      (:,:,:) ! running mean vertical wind velocity for KF[m/s]
@@ -113,8 +113,8 @@ module mod_atmos_phy_cp_vars
                   'kg/m2/s', &
                   'm',       &
                   'm',       &
-                  '0-1',     &
-                  '0-1',     &
+                  '1',       &
+                  '1',       &
                   'step',    &
                   'm/s'      /
 

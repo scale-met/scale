@@ -2587,7 +2587,7 @@ contains
     real(RP), intent(in)  :: z(kdim)       ! height [m]
     real(RP), intent(in)  :: z_top         ! height top [m]
     real(RP), intent(in)  :: z_bottomlimit ! bottom limit of the factor [m]
-    real(RP), intent(out) :: factor(kdim)  ! height-dependent factor [0-1]
+    real(RP), intent(out) :: factor(kdim)  ! height-dependent factor (0-1)
 
     real(RP) :: sw
 

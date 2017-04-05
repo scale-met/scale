@@ -87,7 +87,7 @@ module scale_atmos_phy_rd_mstrnx
   real(RP), private, allocatable :: RD_cfc         (:,:) ! CFCs          volume mixing ratio [ppmv]
   real(RP), private, allocatable :: RD_aerosol_conc(:,:) ! cloud/aerosol volume mixing ratio [ppmv]
   real(RP), private, allocatable :: RD_aerosol_radi(:,:) ! cloud/aerosol effective radius    [cm]
-  real(RP), private, allocatable :: RD_cldfrac     (:)   ! cloud fraction    [0-1]
+  real(RP), private, allocatable :: RD_cldfrac     (:)   ! cloud fraction    (0-1)
 
   integer,  private :: I_MPAE2RD      (RD_naero)   ! look-up table between input aerosol category and MSTRN particle type
   data I_MPAE2RD(1      :N_HYD     ) / 1, 1, 2, 2, 2, 2 /

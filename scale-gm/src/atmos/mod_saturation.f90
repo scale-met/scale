@@ -158,7 +158,7 @@ contains
     implicit none
 
     real(RP), intent(in)  :: temp  !< temperature [K]
-    real(RP), intent(out) :: alpha !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha !< liquid/ice separation factor (0-1)
     !---------------------------------------------------------------------------
 
     alpha = ( temp                   - SATURATION_LLIMIT_TEMP ) &
@@ -182,7 +182,7 @@ contains
     integer,  intent(in)  :: kdim
     integer,  intent(in)  :: ldim
     real(RP), intent(in)  :: temp (ijdim,kdim,ldim) !< temperature [K]
-    real(RP), intent(out) :: alpha(ijdim,kdim,ldim) !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha(ijdim,kdim,ldim) !< liquid/ice separation factor (0-1)
 
     integer :: ij, k, l
     !---------------------------------------------------------------------------

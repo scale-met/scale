@@ -355,7 +355,7 @@ vars_air = [
 vars_land = [
     ["long_sfc", 1, "longitude [degree]"],
     ["lati_sfc", 1, "latitude [degree]"],
-    ["lsmask", 1, "land mask [0-1]"],
+    ["lsmask", 1, "land mask [1]"],
     ["SKINT", 1, "skin Temperature [K]"],
     ["SST", 1, "sea surface Temperature [K]"],
     ["STEMP", nl, "soil Temperature [K]"]

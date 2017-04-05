@@ -58,7 +58,7 @@ module mod_ocean_vars
   ! prognostic variables
   real(RP), public, allocatable :: OCEAN_TEMP      (:,:)   !< temperature at uppermost ocean layer [K]
   real(RP), public, allocatable :: OCEAN_SFC_TEMP  (:,:)   !< ocean surface skin temperature [K]
-  real(RP), public, allocatable :: OCEAN_SFC_albedo(:,:,:) !< ocean surface albedo [0-1]
+  real(RP), public, allocatable :: OCEAN_SFC_albedo(:,:,:) !< ocean surface albedo (0-1)
   real(RP), public, allocatable :: OCEAN_SFC_Z0M   (:,:)   !< ocean surface roughness length for momentum [m]
   real(RP), public, allocatable :: OCEAN_SFC_Z0H   (:,:)   !< ocean surface roughness length for heat [m]
   real(RP), public, allocatable :: OCEAN_SFC_Z0E   (:,:)   !< ocean surface roughness length for vapor [m]
@@ -165,8 +165,8 @@ module mod_ocean_vars
                   'ocean surface water vapor flux'              /
   data VAR_UNIT / 'K',       &
                   'K',       &
-                  '0-1',     &
-                  '0-1',     &
+                  '1',       &
+                  '1',       &
                   'm',       &
                   'm',       &
                   'm',       &

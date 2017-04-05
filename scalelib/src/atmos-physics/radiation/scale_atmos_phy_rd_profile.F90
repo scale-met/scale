@@ -581,7 +581,7 @@ contains
     real(RP), intent(out) :: cfc         (kmax,ncfc)  !< CFCs          volume mixing ratio [ppmv]
     real(RP), intent(out) :: aerosol_conc(kmax,naero) !< cloud/aerosol volume mixing ratio [ppmv]
     real(RP), intent(out) :: aerosol_radi(kmax,naero) !< cloud/aerosol effective radius    [cm]
-    real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    [0-1]
+    real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    (0-1)
 
     real(RP) :: lat     !< used lat
     integer  :: date(6) !< used date

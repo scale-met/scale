@@ -130,8 +130,8 @@ contains
        SFLX_rain      => ATMOS_PHY_CP_SFLX_rain,      &  ! convective rain [kg/m2/s]
        cloudtop       => ATMOS_PHY_CP_cloudtop,       &  ! cloud top height [m]
        cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
-       cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) [0-1]
-       cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) [0-1]
+       cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) (0-1)
+       cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) (0-1)
        kf_nca         => ATMOS_PHY_CP_kf_nca,         &  ! advection/cumulus convection timescale/dt for KF [step]
        kf_w0avg       => ATMOS_PHY_CP_kf_w0avg           ! rannning mean vertical wind velocity      for KF [m/s]
     implicit none
@@ -190,8 +190,8 @@ contains
        call HIST_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', nohalo=.true. )
        call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       nohalo=.true. )
        call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
-       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '0-1',     nohalo=.true. )
-       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '0-1',     nohalo=.true. )
+       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       nohalo=.true. )
+       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       nohalo=.true. )
 
        call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
        call HIST_in( kf_w0avg      (:,:,:), 'kf_w0avg',  'rannning mean vertical wind velocity for KF',      'kg/m2/s', nohalo=.true. )

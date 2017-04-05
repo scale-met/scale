@@ -2443,7 +2443,7 @@ contains
 #endif
        end if
 
-       !--- incoming flux limitation factor [0-1]
+       !--- incoming flux limitation factor (0-1)
        !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -2462,7 +2462,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !--- outgoing flux limitation factor [0-1]
+       !--- outgoing flux limitation factor (0-1)
        !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE

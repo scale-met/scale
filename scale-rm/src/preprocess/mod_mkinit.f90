@@ -959,8 +959,8 @@ contains
     real(RP) :: LND_TEMP                ! soil temperature           [K]
     real(RP) :: LND_WATER     = 0.15_RP ! soil moisture              [m3/m3]
     real(RP) :: SFC_TEMP                ! land skin temperature      [K]
-    real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW [0-1]
-    real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW [0-1]
+    real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW (0-1)
+    real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW (0-1)
 
     integer :: i, j
     integer :: ierr
@@ -1014,8 +1014,8 @@ contains
     ! Ocean state
     real(RP) :: OCN_TEMP                  ! ocean temperature           [K]
     real(RP) :: SFC_TEMP                  ! ocean skin temperature      [K]
-    real(RP) :: SFC_albedo_LW = 0.04_RP   ! ocean surface albedo for LW [0-1]
-    real(RP) :: SFC_albedo_SW = 0.05_RP   ! ocean surface albedo for SW [0-1]
+    real(RP) :: SFC_albedo_LW = 0.04_RP   ! ocean surface albedo for LW (0-1)
+    real(RP) :: SFC_albedo_SW = 0.05_RP   ! ocean surface albedo for SW (0-1)
     real(RP) :: SFC_Z0M       = 1.0e-4_RP ! ocean surface roughness length (momentum) [m]
     real(RP) :: SFC_Z0H       = 1.0e-4_RP ! ocean surface roughness length (heat) [m]
     real(RP) :: SFC_Z0E       = 1.0e-4_RP ! ocean surface roughness length (vapor) [m]
@@ -1098,8 +1098,8 @@ contains
     real(RP) :: URB_GRND_RAIN = 0.0_RP ! temperature in layer of ground [K]
     real(RP) :: URB_RUNOFF    = 0.0_RP ! temperature in layer of ground [K]
     real(RP) :: URB_SFC_TEMP           ! Grid average of surface temperature [K]
-    real(RP) :: URB_ALB_LW    = 0.0_RP ! Grid average of surface albedo for LW [0-1]
-    real(RP) :: URB_ALB_SW    = 0.0_RP ! Grid average of surface albedo for SW [0-1]
+    real(RP) :: URB_ALB_LW    = 0.0_RP ! Grid average of surface albedo for LW (0-1)
+    real(RP) :: URB_ALB_SW    = 0.0_RP ! Grid average of surface albedo for SW (0-1)
 
     integer :: i, j
     integer :: ierr

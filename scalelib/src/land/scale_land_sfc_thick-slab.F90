@@ -155,9 +155,9 @@ contains
 
     real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
     real(RP), intent(in) :: LST   (IA,JA) ! land surface temperature [K]
-    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation [0-1]
-    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
-    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation (0-1)
+    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
+    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
     real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
     real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
     real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]

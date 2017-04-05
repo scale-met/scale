@@ -449,7 +449,7 @@ contains
        endif
 
        call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', nohalo=.true. )
-       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  nohalo=.true. )
+       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '1',    nohalo=.true. )
 
        call HIST_in( SFCFLX_LW_up_c(:,:), 'SFLX_LW_up_c',   'SFC upward   longwave  radiation flux (clr)', 'W/m2', nohalo=.true. )
        call HIST_in( SFCFLX_LW_dn_c(:,:), 'SFLX_LW_dn_c',   'SFC downward longwave  radiation flux (clr)', 'W/m2', nohalo=.true. )

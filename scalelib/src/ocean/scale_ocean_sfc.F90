@@ -89,8 +89,8 @@ module scale_ocean_sfc
 
        real(RP), intent(in) :: TW    (IA,JA) ! water temperature [K]
        real(RP), intent(in) :: SST   (IA,JA) ! sea surface temperature [K]
-       real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
-       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+       real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
+       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
        real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
        real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
        real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
@@ -157,9 +157,9 @@ contains
     implicit none
 
     ! arguments
-    real(RP), intent(out) :: SFC_albedo_t(IA,JA,2) ! tendency of sea surface albedo [0-1]
-    real(RP), intent(in)  :: SFC_albedo  (IA,JA,2) ! sea surface                    [0-1]
-    real(RP), intent(in)  :: cosSZA      (IA,JA)   ! cos(solar zenith angle)        [0-1]
+    real(RP), intent(out) :: SFC_albedo_t(IA,JA,2) ! tendency of sea surface albedo (0-1)
+    real(RP), intent(in)  :: SFC_albedo  (IA,JA,2) ! sea surface                    (0-1)
+    real(RP), intent(in)  :: cosSZA      (IA,JA)   ! cos(solar zenith angle)        (0-1)
     real(DP), intent(in)  :: dt                    ! delta time
 
     ! works

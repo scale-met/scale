@@ -62,7 +62,7 @@ module mod_land_vars
   real(RP), public, allocatable :: LAND_TEMP      (:,:,:) !< temperature of each soil layer [K]
   real(RP), public, allocatable :: LAND_WATER     (:,:,:) !< moisture of each soil layer    [m3/m3]
   real(RP), public, allocatable :: LAND_SFC_TEMP  (:,:)   !< land surface skin temperature  [K]
-  real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:) !< land surface albedo            [0-1]
+  real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:) !< land surface albedo            (0-1)
 
   ! tendency variables
   real(RP), public, allocatable :: LAND_TEMP_t      (:,:,:) !< tendency of LAND_TEMP
@@ -175,10 +175,10 @@ module mod_land_vars
                   'land surface water vapor flux'    /
   data VAR_UNIT / 'K',       &
                   'm3/m3',   &
-                  '0-1',     &
+                  '1',       &
                   'K',       &
-                  '0-1',     &
-                  '0-1',     &
+                  '1',       &
+                  '1',       &
                   'kg/m2/s', &
                   'kg/m2/s', &
                   'kg/m2/s', &

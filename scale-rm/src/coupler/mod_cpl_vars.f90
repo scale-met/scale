@@ -48,7 +48,7 @@ module mod_cpl_vars
 
   ! Input from ocean model
   real(RP), public, allocatable :: OCN_SFC_TEMP  (:,:)   ! ocean surface skin temperature [K]
-  real(RP), public, allocatable :: OCN_SFC_albedo(:,:,:) ! ocean surface albedo [0-1]
+  real(RP), public, allocatable :: OCN_SFC_albedo(:,:,:) ! ocean surface albedo (0-1)
   real(RP), public, allocatable :: OCN_SFC_Z0M   (:,:)   ! ocean surface roughness length for momemtum [m]
   real(RP), public, allocatable :: OCN_SFC_Z0H   (:,:)   ! ocean surface roughness length for heat [m]
   real(RP), public, allocatable :: OCN_SFC_Z0E   (:,:)   ! ocean surface roughness length for vapor [m]
@@ -66,7 +66,7 @@ module mod_cpl_vars
 
   ! Input from land model
   real(RP), public, allocatable :: LND_SFC_TEMP  (:,:)   ! land surface skin temperature [K]
-  real(RP), public, allocatable :: LND_SFC_albedo(:,:,:) ! land surface albedo [0-1]
+  real(RP), public, allocatable :: LND_SFC_albedo(:,:,:) ! land surface albedo (0-1)
   real(RP), public, allocatable :: LND_SFC_Z0M   (:,:)   ! land surface roughness length for momemtum [m]
   real(RP), public, allocatable :: LND_SFC_Z0H   (:,:)   ! land surface roughness length for heat [m]
   real(RP), public, allocatable :: LND_SFC_Z0E   (:,:)   ! land surface roughness length for vapor [m]
@@ -84,7 +84,7 @@ module mod_cpl_vars
 
   ! Input from urban model
   real(RP), public, allocatable :: URB_SFC_TEMP  (:,:)   ! urban surface skin temperature [K]
-  real(RP), public, allocatable :: URB_SFC_albedo(:,:,:) ! urban surface albedo [0-1]
+  real(RP), public, allocatable :: URB_SFC_albedo(:,:,:) ! urban surface albedo (0-1)
   real(RP), public, allocatable :: URB_SFC_Z0M   (:,:)   ! urban surface roughness length for momemtum [m]
   real(RP), public, allocatable :: URB_SFC_Z0H   (:,:)   ! urban surface roughness length for heat [m]
   real(RP), public, allocatable :: URB_SFC_Z0E   (:,:)   ! urban surface roughness length for vapor [m]
@@ -111,7 +111,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: OCN_ATM_PBL        (:,:)     ! the top of atmospheric mixing layer [m]
   real(RP), public, allocatable :: OCN_ATM_SFC_PRES   (:,:)     ! surface pressure [Pa]
   real(RP), public, allocatable :: OCN_ATM_SFLX_rad_dn(:,:,:,:) ! downward radiation flux (SW/LW,direct/diffuse) [J/m2/s]
-  real(RP), public, allocatable :: OCN_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) [0-1]
+  real(RP), public, allocatable :: OCN_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) (0-1)
   real(RP), public, allocatable :: OCN_ATM_SFLX_rain  (:,:)     ! liquid water flux [kg/m2/s]
   real(RP), public, allocatable :: OCN_ATM_SFLX_snow  (:,:)     ! ice    water flux [kg/m2/s]
 
@@ -126,7 +126,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: LND_ATM_PBL        (:,:)     ! the top of atmospheric mixing layer [m]
   real(RP), public, allocatable :: LND_ATM_SFC_PRES   (:,:)     ! surface pressure [Pa]
   real(RP), public, allocatable :: LND_ATM_SFLX_rad_dn(:,:,:,:) ! downward radiation flux (SW/LW,direct/diffuse) [J/m2/s]
-  real(RP), public, allocatable :: LND_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) [0-1]
+  real(RP), public, allocatable :: LND_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) (0-1)
   real(RP), public, allocatable :: LND_ATM_SFLX_rain  (:,:)     ! liquid water flux [kg/m2/s]
   real(RP), public, allocatable :: LND_ATM_SFLX_snow  (:,:)     ! ice    water flux [kg/m2/s]
 
@@ -141,7 +141,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: URB_ATM_PBL        (:,:)     ! the top of atmospheric mixing layer [m]
   real(RP), public, allocatable :: URB_ATM_SFC_PRES   (:,:)     ! surface pressure [Pa]
   real(RP), public, allocatable :: URB_ATM_SFLX_rad_dn(:,:,:,:) ! downward radiation flux (SW/LW,direct/diffuse) [J/m2/s]
-  real(RP), public, allocatable :: URB_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) [0-1]
+  real(RP), public, allocatable :: URB_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) (0-1)
   real(RP), public, allocatable :: URB_ATM_SFLX_rain  (:,:)     ! liquid water flux [kg/m2/s]
   real(RP), public, allocatable :: URB_ATM_SFLX_snow  (:,:)     ! ice    water flux [kg/m2/s]
 
