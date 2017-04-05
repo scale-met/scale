@@ -229,7 +229,7 @@ contains
     real(RP) :: RiB0, RiB ! bulk Richardson number [-]
     real(RP) :: C0Z1, C010, C002 ! initial drag coefficient [-]
     real(RP) :: CmZ1, ChZ1, CqZ1, fmZ1, fhZ1, t0thZ1, q0qeZ1
-    real(RP) :: Cm10, Ch10, Cq10, fm10, fh10, t0th10, q0qe10
+    real(RP) :: Cm10, Ch10, Cq10, fm10
     real(RP) :: Cm02, Ch02, Cq02, fm02, fh02, t0th02, q0qe02
     real(RP) :: TH1, TH0
     real(RP) :: logZ1Z0M, log10Z0m, log02Z0m
@@ -262,7 +262,6 @@ contains
       fmZ1 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
       fhZ1 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
       fm10 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
-      fh10 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
       fm02 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
       fh02 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
     else
@@ -270,15 +269,12 @@ contains
       fmZ1 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0Z1 * sqrt( Z1      / Z0M ) * sqrt( abs( RiB ) ) )
       fhZ1 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0Z1 * sqrt( Z1      / Z0M ) * sqrt( abs( RiB ) ) )
       fm10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C010 * sqrt( 10.0_RP / Z0M ) * sqrt( abs( RiB ) ) )
-      fh10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C010 * sqrt( 10.0_RP / Z0M ) * sqrt( abs( RiB ) ) )
       fm02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C002 * sqrt( 2.0_RP  / Z0M ) * sqrt( abs( RiB ) ) )
       fh02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C002 * sqrt( 2.0_RP  / Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
     t0thZ1 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / logZ1Z0M / sqrt( fmZ1 ) * fhZ1 )
     q0qeZ1 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / logZ1Z0M / sqrt( fmZ1 ) * fhZ1 )
-    t0th10 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / log10Z0M / sqrt( fm10 ) * fh10 )
-    q0qe10 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / log10Z0M / sqrt( fm10 ) * fh10 )
     t0th02 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / log02Z0M / sqrt( fm02 ) * fh02 )
     q0qe02 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / log02Z0M / sqrt( fm02 ) * fh02 )
 
@@ -289,7 +285,6 @@ contains
       fmZ1 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
       fhZ1 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
       fm10 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
-      fh10 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
       fm02 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
       fh02 = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
     else
@@ -297,15 +292,12 @@ contains
       fmZ1 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0Z1 * sqrt( Z1      / Z0M ) * sqrt( abs( RiB ) ) )
       fhZ1 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0Z1 * sqrt( Z1      / Z0M ) * sqrt( abs( RiB ) ) )
       fm10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C010 * sqrt( 10.0_RP / Z0M ) * sqrt( abs( RiB ) ) )
-      fh10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C010 * sqrt( 10.0_RP / Z0M ) * sqrt( abs( RiB ) ) )
       fm02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C002 * sqrt( 2.0_RP  / Z0M ) * sqrt( abs( RiB ) ) )
       fh02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C002 * sqrt( 2.0_RP  / Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
     t0thZ1 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / logZ1Z0M / sqrt( fmZ1 ) * fhZ1 )
     q0qeZ1 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / logZ1Z0M / sqrt( fmZ1 ) * fhZ1 )
-    t0th10 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / log10Z0M / sqrt( fm10 ) * fh10 )
-    q0qe10 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / log10Z0M / sqrt( fm10 ) * fh10 )
     t0th02 = 1.0_RP / ( 1.0_RP + logZ0MZ0H / log02Z0M / sqrt( fm02 ) * fh02 )
     q0qe02 = 1.0_RP / ( 1.0_RP + logZ0MZ0E / log02Z0M / sqrt( fm02 ) * fh02 )
 
@@ -313,8 +305,6 @@ contains
     ChZ1 = C0Z1 * fhZ1 * t0thZ1 / tPrn
     CqZ1 = C0Z1 * fhZ1 * q0qeZ1 / tPrn
     Cm10 = C010 * fm10
-    Ch10 = C010 * fh10 * t0th10 / tPrn
-    Cq10 = C010 * fh10 * q0qe10 / tPrn
     Cm02 = C002 * fm02
     Ch02 = C002 * fh02 * t0th02 / tPrn
     Cq02 = C002 * fh02 * q0qe02 / tPrn
@@ -474,7 +464,7 @@ contains
     ! Successive approximation
     do n = 1, BULKFLUX_itr_sa_max
       ! unstable condition
-      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
+      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
       TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
       QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
@@ -512,7 +502,7 @@ contains
     ! Newton-Raphson method
     do n = 1, BULKFLUX_itr_nr_max
       ! unstable condition
-      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
+      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
       TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
       QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
@@ -547,7 +537,7 @@ contains
       res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
 
       ! unstable condition
-      dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
+      dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL+dIL) + fm_unstable(DP_Z0M,IL+dIL) ) * dUabsUS
       dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL) ) / Pt * ( TH1 - TH0 )
       dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL) ) / Pt * ( Q1  - Q0  )
@@ -597,7 +587,7 @@ contains
     ! Successive approximation after Newton-Raphson method
     if( .NOT. abs( res/dres ) < BULKFLUX_err_min ) then
       ! unstable condition
-      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
+      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
       TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
       QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
@@ -635,7 +625,7 @@ contains
     ! calculate Ustar, Tstar, and Qstar based on IL
 
     ! unstable condition
-    UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
+    UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
     UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
     TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
     QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
