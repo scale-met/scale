@@ -329,8 +329,8 @@ contains
 
         ! update land surface temperature with limitation
         LST1(i,j) = min( max( LST1(i,j), &
-                              LST (i,j) - LAND_SFC_THIN_SLAB_dTS_max * dt ), &
-                              LST (i,j) + LAND_SFC_THIN_SLAB_dTS_max * dt )
+                              LST (i,j) - LAND_SFC_THIN_SLAB_dTS_max * real( dt, kind=RP ) ), &
+                              LST (i,j) + LAND_SFC_THIN_SLAB_dTS_max * real( dt, kind=RP ) )
 
         if( n > LAND_SFC_THIN_SLAB_itr_max ) then
           ! land surface temperature was not converged
