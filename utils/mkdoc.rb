@@ -8,6 +8,8 @@ Usage: ruby mkdoc.rb doc_dir
 =end
 require "pp"
 
+Encoding.default_external = Encoding::UTF_8
+
 def usage
   print "Usage: #$0 doc_dir\n"
   exit
