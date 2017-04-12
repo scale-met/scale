@@ -291,7 +291,7 @@ contains
     AXIS_LATXY(:,:)   = LATXY(XSB:XEB,YSB:YEB) / D2R
 
     AXIS_HZXY (:,:,:) = CZ(KS:KE,XSB:XEB,YSB:YEB)
-    AXIS_HZXY (:,:,:) = FZ(KS:KE,XSB:XEB,YSB:YEB)
+    AXIS_HWXY (:,:,:) = FZ(KS:KE,XSB:XEB,YSB:YEB)
 
     set_coordinates = .true.
 
