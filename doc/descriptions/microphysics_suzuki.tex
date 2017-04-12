@@ -1,5 +1,5 @@
-\subsection{Spectral Bin Model(SBM) \cite{suzuki_etal_2010}, \cite{suzuki_2006}}
-The Spectral Bin Model (SBM) was developed by Suzuki (2006)\cite{suzuki_2006} and Suzuki et al. (2010)\cite{suzuki_etal_2010}. The model forecasts the Size Distribution Function (SDF) of seven types of hydrometeors (liquid, plate-ice, columnar-ice, dendritic-ice, snow, graupel, and hail). \\
+\subsection{Spectral Bin Model(SBM)}
+The Spectral Bin Model (SBM) was developed by \cite{suzuki_2006} and \cite{suzuki_etal_2010}. The model forecasts the Size Distribution Function (SDF) of seven types of hydrometeors (liquid, plate-ice, columnar-ice, dendritic-ice, snow, graupel, and hail). \\
 The SBM calculates mass density of the seven types of hydrometeor and one type of aerosol as their SDFs. The SDF of aerosol can be changed by advection and activation (i.e., nucleation from aerosol to cloud) processes. The SDF of hydrometeors can be changed by several growth processes (i.e., activation from aerosol to cloud, condensation/evaporation, collision/coagulation, freezing/melting, ice nucleation, riming, aggregation, advection, and gravitational falling). \\
 The time evolution of SDF (number density) of aerosol ($f_{a}(m,t)$) and SDF (number density) of hydrometeor ($f_{c}(m,t)$) are shown as:
 
@@ -19,7 +19,7 @@ The time evolution of $f_{c}^{(\mu)}(m,t)$, and $f_{a}(m,t)$ are shown as:
 \end{eqnarray}
 
 where $\Bigl[\;\Bigr]_{***}$ show change of SDF by each cloud growth process. The detail of these processes will be provided later.\\
- The change of SDFs by advection and gravitational falling (i.e., first and second terms of eq. \ref{s10-1}, and \ref{s10-2}  ) are calculated by dynamical core of SCALE-RM shown in section 3.
+ The change of SDFs by advection and gravitational falling (i.e., first and second terms of eq.(\ref{s10-1}), and (\ref{s10-2}) ) are calculated by dynamical core of SCALE-RM shown in section 3.
 
 
 \subsubsection{Discretization of Size Distribution Function(SDF)}
@@ -27,7 +27,7 @@ The SDF of aerosol and cloud is predicted as mass density of each particle size 
 To cover a wide size range (i.e., $2\;\mu m$ $\sim$ $3\;mm$), a logarithmically uniform grid system ($log(m)\equiv \eta$, $log(m_{a})\equiv \eta_{a}$) is used. In this system, the relationship, $\frac{m_{i+1}}{m_{i}}=const.$ is satisfied.
 
 \subsubsection{Activation from aerosol to cloud particles (nucleation process)}
-The change of SDFs by activation from aerosol to cloud particles is calculated based on Kohler theory (Kohler 1936) \cite{kohler_1936}. Through this process, aerosols with radii larger than the aerosol critical radius ($r_{a,crit}$) are activated to clouds. The critical radius is given as:
+The change of SDFs by activation from aerosol to cloud particles is calculated based on Kohler theory \cite{kohler_1936}. Through this process, aerosols with radii larger than the aerosol critical radius ($r_{a,crit}$) are activated to clouds. The critical radius is given as:
 
 \begin{eqnarray}
 r_{a,crit}=\bigl( \frac{4}{27}\frac{A^{3}}{B}\frac{1}{S_{w}}\Bigr )^{1/3}, \:\:\:A=\frac{2\sigma}{R_{v}\rho_{L}T},\:\:\: B=i_{v}\frac{M_{v}}{M_{s}}\frac{\rho_{s}}{\rho_{L}}.\label{s10-3}
@@ -67,7 +67,7 @@ are transferred to cloud particles as:
 where $q_{v}$ and $\rho$ is the mixing ratio of water vapor and density.
 
 \subsubsection{Condensation/evaporation}
-Calculation of condensation and evaporation processes is based on an equation. The mass change by these two process is given by an equation (e.g., Rogers and Yau, 1989\cite{ry_1989}):
+Calculation of condensation and evaporation processes is based on an equation. The mass change by these two process is given by an equation (e.g., \cite{ry_1989}):
 
 \begin{eqnarray}
 \frac{dm}{dt}&=&C^{(\mu)}(m)G^{(\mu)}(T)S^{(\mu)}\\
@@ -102,14 +102,14 @@ Using this equation, time evolution of SDF ($f^{(\mu)}$) is given as
 \end{eqnarray}
 
 
-By using the $\eta(=\log(m))$, eq.\ref{s10-11} is transferred to the advection equation :
+By using the $\eta(=\log(m))$, eq.(\ref{s10-11}) is transferred to the advection equation:
 
 \begin{eqnarray}
 \frac{\partial f^{(\mu)}(\eta)}{\partial t}&=&-\frac{\partial}{\partial \eta}\bigl ( f^{(\mu)}(\eta)U^{(\mu)}(\eta)\bigr)\label{s10-12}\\
 U^{(\mu)}(\eta)&=&\frac{C^{(\mu)}(\eta)}{\exp (\eta)}G^{(\eta)}(T)S^{(\eta)}.\nonumber
 \end{eqnarray}
 
-To solve eq. \ref{s10-12}, a scheme developed by Bott (1989)\cite{bott_1989} is used. The number density of the i-th bin after $\Delta t$ ($f_{i}(t+\Delta t)$) is given as follows:
+To solve eq.(\ref{s10-12}), a scheme developed by \cite{bott_1989} is used. The number density of the i-th bin after $\Delta t$ ($f_{i}(t+\Delta t)$) is given as follows:
 
 \begin{eqnarray}
 f_{i}(t+\Delta t)&=&f_{i}(t)-\frac{\Delta t}{\Delta \eta}\bigl [F_{cond/evap,i+1/2}-F_{cond/evap,i-1/2}\Bigr ].\nonumber\\
@@ -170,17 +170,17 @@ S_{+}(t)&=&\frac{(\Lambda_{-}-a)S_{w}(t)-bS_{i}(t)}{b(\Lambda_{-}-\Lambda_{+})}\
 S_{+}(t)&=&\frac{(a-\Lambda_{+})S_{w}(t)+bS_{i}(t)}{b(\Lambda_{-}-\Lambda_{+})}\nonumber
 \end{eqnarray}
 
-The averaged super saturation ($\bar{S}_{w,i}(t)$) is used to solve the eq. \ref{s10-13}.
+The averaged super saturation ($\bar{S}_{w,i}(t)$) is used to solve the eq.(\ref{s10-13}).
 
 \subsubsection{Collision/coagulation/riming/aggregation}
-Collision/coagulation processes are calculated by solving stochastic collision equations (e.g., Pruppecher and Klett, 1997)\cite{pk_1997}:
+Collision/coagulation processes are calculated by solving stochastic collision equations (e.g., \cite{pk_1997}):
 
 \begin{eqnarray}
 \frac{\partial f(m)}{\partial t}&=&\int_0^{m/2}f(m')f(m-m')K(m',m-m')dm' \nonumber\\
 &-&f(m)\int_0^{\infty}f(m'')K(m,m'')dm''\label{s10-14}
 \end{eqnarray}
 
-where $K(m,m')$ is collection kernel function. Three types of kernel function, i.e., Long type kernel (Long, 1974\cite{long_1974}), Golovin type kernel (Golovin, 1963\cite{Golovin_1963}), and Hydro-dynamic dynamic kernel as shown in eq. \ref{s10-15}, are implemented into the SCALE-RM.
+where $K(m,m')$ is collection kernel function. Three types of kernel function, i.e., Long type kernel (\cite{long_1974}), Golovin type kernel (\cite{Golovin_1963}), and Hydro-dynamic dynamic kernel as shown in eq.(\ref{s10-15}), are implemented into the SCALE-RM.
 
 \begin{eqnarray}
 K(m,m')=\pi(r(m)-r(m'))\left| V(m)-V(m')\right |E_{col}(m,m')E_{coag}(m,m')\label{s10-15}
@@ -192,7 +192,7 @@ where $r(m)$ is radius of hydrometeors with mass $m$ and $V(m)$ is terminal velo
 \begin{center}
 \includegraphics[scale=0.9]{./figure/terminal-velocity.eps}
 \end{center}
-\caption{Terminal velocity of Water (Plus), plate-type ice (cross), columnar-type ice (asterisk), dendritic-type ice (open square), snow (closed square), graupel (open circle), and hail (closed circle). Cited from Figure A3 of Suzuki (2006)\cite{suzuki_2006} and rearranged.}
+\caption{Terminal velocity of Water (Plus), plate-type ice (cross), columnar-type ice (asterisk), dendritic-type ice (open square), snow (closed square), graupel (open circle), and hail (closed circle). Cited from Figure A3 of \cite{suzuki_2006} and rearranged.}
 \label{figs10-term}
 \end{figure}
 
@@ -224,8 +224,8 @@ H    & G/H & G/H & G/H & G/H & H   \\ \hline
 \end{table}
 
 
-To solve the stochastic collision equation, a scheme developed by Bott (1998)\cite{bott_1998} was implemented into SCALE-RM.\\
-The Bott (1998)\cite{bott_1998} scheme calculates evolution of mass density distribution ($g(\eta)=mf(\eta)$, $\eta=\log(m)$). The stochastic collision equation can be transferred to:
+To solve the stochastic collision equation, a scheme developed by \cite{bott_1998} was implemented into SCALE-RM.\\
+The \cite{bott_1998} scheme calculates evolution of mass density distribution ($g(\eta)=mf(\eta)$, $\eta=\log(m)$). The stochastic collision equation can be transferred to:
 
 \begin{eqnarray}
 \frac{\partial g(\eta)}{\partial t}&=&\int_{\eta_{0}}^{\eta_{1}}\frac{m^{2}}{(m-m')^{2} m'}g(\eta-\eta') K(\eta-\eta',\eta')g(\eta')d\eta' \nonumber\\
@@ -245,14 +245,14 @@ and
 \frac{\partial g_{j}^{(\mu)}}{\partial t}=-\Delta g^{(\nu)}_{j}K_{\mu\nu}(i,j)\frac{g_{i}^{(\mu)}}{m_{i}}\Delta \eta\label{s10-19}
 \end{eqnarray}
 
-respectively. The terms corresponds to the second term of the right-hand side of eq.\ref{s10-17}. Eqs. \ref{s10-18} and \ref{s10-19} can transfer to:
+respectively. The terms corresponds to the second term of the right-hand side of eq.(\ref{s10-17}). Eqs.(\ref{s10-18}) and (\ref{s10-19}) can transfer to:
 
 \begin{eqnarray}
 \Delta g_{i}^{(\mu)}=g_{i}^{(\mu)}\Bigl [1-\exp\bigl(-K_{\mu\nu}(i,j)\frac{g^{(\nu)}_{j}}{m_{j}}\Delta \eta\Delta t\bigr) \Bigl]\label{s10-20}\\
 \Delta g_{j}^{(\nu)}=g_{j}^{(\nu)}\Bigl [1-\exp\bigl(-K_{\mu\nu}(i,j)\frac{g^{(\mu)}_{i}}{m_{i}}\Delta \eta\Delta t\bigr) \Bigl].\label{s10-21}
 \end{eqnarray}
 
-The sum of $\Delta g_{i}^{(\mu)}$ and $\Delta g_{j}^{(\nu)}$ corresponds to newly generated mass by collision of hydrometeors with mass of $m_{i}$ and $m_{j}$. The newly generated mass ($g'=\Delta g_{i}^{(\mu)}+\Delta g_{j}^{(\nu)}$,  corresponds to the first term of the right-hand side of eq.\ref{s10-17}) added k-th bin ($m_{k}=m_{i}+m_{j}$). Since $m_{k}$ is not always bin center, newly generated mass is divided to the k-th and k+1-th bin, as follows.\\
+The sum of $\Delta g_{i}^{(\mu)}$ and $\Delta g_{j}^{(\nu)}$ corresponds to newly generated mass by collision of hydrometeors with mass of $m_{i}$ and $m_{j}$. The newly generated mass ($g'=\Delta g_{i}^{(\mu)}+\Delta g_{j}^{(\nu)}$,  corresponds to the first term of the right-hand side of eq.(\ref{s10-17})) added k-th bin ($m_{k}=m_{i}+m_{j}$). Since $m_{k}$ is not always bin center, newly generated mass is divided to the k-th and k+1-th bin, as follows.\\
 The production of k-th and k+1-th bin is represented as:
 
 \begin{eqnarray}
@@ -266,10 +266,10 @@ a_{k,2}&=&-\frac{1}{2}(g_{k+1}^{(\lambda)}-2g_{k}^{(\lambda)}+g_{k-1}^{(\lambda)
 \end{eqnarray}
 
 This procedure is applied for all bins of all types of hydrometeors.\\
-In addition, for more rapid calculation, Sato et al. (2009)\cite{sato_etal_2009}’s scheme is also implemented into SCALE-RM.
+In addition, for more rapid calculation, \cite{sato_etal_2009}’s scheme is also implemented into SCALE-RM.
 
 \subsubsection{Freezing}
-The calculation of the freezing process is based on a parameterization by Bigg (1953)\cite{bigg_1953}. The parameterization calculates number density of water ($f_{c}^{(w)}$) that can be frozen:
+The calculation of the freezing process is based on a parameterization by \cite{bigg_1953}. The parameterization calculates number density of water ($f_{c}^{(w)}$) that can be frozen:
 
 \begin{eqnarray}
 \frac{\partial}{\partial t}f^{(w)}(m)&=&-\frac{f^{(w)}(m)}{\tau_{fr}}\label{s10-24}\\
@@ -277,7 +277,7 @@ The calculation of the freezing process is based on a parameterization by Bigg (
 \end{eqnarray}
 
 where $a_{fr}=10^{-4}s^{-1}$, and $b_{fr}=0.66^{o}C^{-1}$ are empirical parameters, and $T_{0}$ is 273.15 $K$.\\
-Eq. \ref{s10-24} can transfer to:
+Eq.(\ref{s10-24}) can transfer to:
 
 \begin{eqnarray}
 \frac{\partial g^{(w)(m)}}{\partial t}&=&-\frac{g^{(w)}(m)}{\tau_{fr}(m)}\\
@@ -297,7 +297,7 @@ Frz_{i}=g_{i}^{(w)}(t)\Bigl [1-\exp\bigl (-\frac{\Delta t}{\tau_{fr,i}}\bigr )\b
 \end{eqnarray}
 
 
- As shown in eq. \ref{s10-26}, the mass of liquid is transferred to plate type ice ($r_{w}<200\mu m$) or hail ($r_{w}>200\mu m$).
+ As shown in eq.(\ref{s10-26}), the mass of liquid is transferred to plate type ice ($r_{w}<200\mu m$) or hail ($r_{w}>200\mu m$).
 
 \subsubsection{Melting}
 The calculation of the melting process is too simple, with all ice particles (i.e., plate, columnar, dendritic, snow, graupel and hail) melting immediately when the temperature is > $T_{0}=273.15$ $K$. This is too simplistic to represent ice phase processes, and we will modify this method in the near future.
