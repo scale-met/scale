@@ -1,6 +1,16 @@
-TARGET = scale_rm_description
+###########################################################
+#
+# Makefile for compiling tex document
+#
+###########################################################
 
-all: ${TARGET}.pdf
+# commands to compile documents
+LATEX    = platex
+BIBTEX   = bibtex
+DVIPDF   = dvipdfmx -p a4
+
+# target file name
+TARGET = scale_rm_description
 
 SRCS = ${TARGET}.tex \
        introduction.tex \
@@ -20,16 +30,18 @@ SRCS = ${TARGET}.tex \
        notation.tex \
        variables.tex
 
-${TARGET}.pdf: ${SRCS} ${TARGET}.aux ${TARGET}.bib
-	latex $<
-	dvipdfmx ${TARGET}
-
-${TARGET}.aux: ${SRCS}
-	latex ${TARGET}
-
-${TARGET}.bib: ${SRCS} ${TARGET}.aux
-	bibtex ${TARGET}
-
+all: ${TARGET}.pdf
 
 clean:
 	rm -f ${TARGET}.aux ${TARGET}.bbl ${TARGET}.blg ${TARGET}.dvi ${TARGET}.log ${TARGET}.out ${TARGET}.toc
+
+${TARGET}.pdf: ${TARGET}.dvi
+	$(DVIPDF) ${TARGET}
+
+${TARGET}.dvi: ${SRCS} reference.bib
+	$(LATEX)  ${TARGET}
+	$(BIBTEX) ${TARGET}
+	$(LATEX)  ${TARGET}
+	$(LATEX)  ${TARGET}
+
+
