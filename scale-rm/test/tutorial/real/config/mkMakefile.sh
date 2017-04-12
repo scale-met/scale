@@ -64,7 +64,7 @@ TPROC       = 4
 
 # required data (parameters,distributed files)
 DATDIR      = ../../data
-DATPARAM    = namelist.grads_boundary.FNL.grib1
+DATPARAM    = ${BASENAME_ORG}
 DATDISTS    =
 
 

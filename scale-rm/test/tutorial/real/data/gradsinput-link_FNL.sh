@@ -18,7 +18,7 @@ shour=18
 eyear=2007
 emonth=07
 eday=15
-ehour=12
+ehour=0
 #
 #---------------------------------------------------
 function uruu() {
@@ -88,11 +88,11 @@ while [ ${iyear} -le ${eyear} ] ; do
 
                fmtd_fn=`printf "%05d" $fn`
 #-----
-  for BND in FNLatm FNLland FNLsfc ; do
+  for BND in FNL_ATM FNL_LND FNL_SFC ; do
 
     dir="../../tools/FNL_output/${yyyy}${mm}"
     gpre=${BND}
-    opre=${BND}
+    opre=${BND#FNL_}
 
     #echo    ${dir}/${gpre}_${yyyy}${mm}${dd}${hh}.grd  ./${opre}_${fmtd_fn}.grd
     ln -svf ${dir}/${gpre}_${yyyy}${mm}${dd}${hh}.grd  ./${opre}_${fmtd_fn}.grd

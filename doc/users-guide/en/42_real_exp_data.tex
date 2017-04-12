@@ -79,37 +79,29 @@ to use NCEP FNL (Final) Operational Global Analysis data with grib1 format.
 
 \begin{enumerate}
 \item Downloading data
-Download one-day data from July 14, 2007 1800UTC from the NCAR website \url{http://rda.ucar.edu/datasets/ds083.2/}
+Download 12-hour data from July 14, 2007 1800UTC from the NCAR website \url{http://rda.ucar.edu/datasets/ds083.2/}
 and place them in the directory \\ 
-\verb|${Tutorial_DIR}/real/tools/|.
+\verb|${Tutorial_DIR}/real/tools/FNL_input/grib1/2007|.
 The following is the data list, formatted by grib1:
 \begin{verbatim}
   fnl_20070714_18_00.grib1
   fnl_20070715_00_00.grib1
-  fnl_20070715_06_00.grib1
-  fnl_20070715_12_00.grib1
 \end{verbatim}
 \item Conversion of data from grib to binary format\\
-Execute \verb|convert_grib2grads_FNLgrib1.sh| in the directory \verb|${Tutorial_DIR}/real/tools/|:
+Execute \verb|convert_FNL-grib2grads.sh| in the directory \verb|${Tutorial_DIR}/real/tools/|:
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/tools/
- $ sh convert_grib2grads_FNLgrib1.sh
+ $ sh convert_FNL-grib2grads.sh 2007071418 2007071500 FNL_input FNL_output
 \end{verbatim}
 The following files are found if it is successful:
 \begin{verbatim}
  $ ls FNL_output/*/*
-    FNL_output/200707/FNLatm_2007071418.grd
-    FNL_output/200707/FNLatm_2007071500.grd
-    FNL_output/200707/FNLatm_2007071506.grd
-    FNL_output/200707/FNLatm_2007071512.grd
-    FNL_output/200707/FNLland_2007071418.grd
-    FNL_output/200707/FNLland_2007071500.grd
-    FNL_output/200707/FNLland_2007071506.grd
-    FNL_output/200707/FNLland_2007071512.grd
-    FNL_output/200707/FNLsfc_2007071418.grd
-    FNL_output/200707/FNLsfc_2007071500.grd
-    FNL_output/200707/FNLsfc_2007071506.grd
-    FNL_output/200707/FNLsfc_2007071512.grd
+    FNL_output/200707/FNL_ATM_2007071418.grd
+    FNL_output/200707/FNL_ATM_2007071500.grd
+    FNL_output/200707/FNL_LND_2007071418.grd
+    FNL_output/200707/FNL_LND_2007071500.grd
+    FNL_output/200707/FNL_SFC_2007071418.grd
+    FNL_output/200707/FNL_SFC_2007071500.grd
 \end{verbatim}
 \end{enumerate}
 
