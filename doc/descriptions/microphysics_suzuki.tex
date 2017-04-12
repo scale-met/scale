@@ -1,5 +1,5 @@
-\subsection{Spectral Bin Model(SBM)\cite{suzuki_etal_2010}}
-The Spectral Bin Model (SBM) was developed by Suzuki et al. (2010)\cite{suzuki_etal_2010}. The model forecasts the Size Distribution Function (SDF) of seven types of hydrometeors (liquid, plate-ice, columnar-ice, dendritic-ice, snow, graupel, and hail). \\
+\subsection{Spectral Bin Model(SBM) \cite{suzuki_etal_2010}, \cite{suzuki_2006}}
+The Spectral Bin Model (SBM) was developed by Suzuki (2006)\cite{suzuki_2006} and Suzuki et al. (2010)\cite{suzuki_etal_2010}. The model forecasts the Size Distribution Function (SDF) of seven types of hydrometeors (liquid, plate-ice, columnar-ice, dendritic-ice, snow, graupel, and hail). \\
 The SBM calculates mass density of the seven types of hydrometeor and one type of aerosol as their SDFs. The SDF of aerosol can be changed by advection and activation (i.e., nucleation from aerosol to cloud) processes. The SDF of hydrometeors can be changed by several growth processes (i.e., activation from aerosol to cloud, condensation/evaporation, collision/coagulation, freezing/melting, ice nucleation, riming, aggregation, advection, and gravitational falling). \\
 The time evolution of SDF (number density) of aerosol ($f_{a}(m,t)$) and SDF (number density) of hydrometeor ($f_{c}(m,t)$) are shown as:
 
@@ -27,7 +27,7 @@ The SDF of aerosol and cloud is predicted as mass density of each particle size 
 To cover a wide size range (i.e., $2\;\mu m$ $\sim$ $3\;mm$), a logarithmically uniform grid system ($log(m)\equiv \eta$, $log(m_{a})\equiv \eta_{a}$) is used. In this system, the relationship, $\frac{m_{i+1}}{m_{i}}=const.$ is satisfied.
 
 \subsubsection{Activation from aerosol to cloud particles (nucleation process)}
-The change of SDFs by activation from aerosol to cloud particles is calculated based on Kohler theory (Kohler 1936). Through this process, aerosols with radii larger than the aerosol critical radius ($r_{a,crit}$) are activated to clouds. The critical radius is given as:
+The change of SDFs by activation from aerosol to cloud particles is calculated based on Kohler theory (Kohler 1936) \cite{kohler_1936}. Through this process, aerosols with radii larger than the aerosol critical radius ($r_{a,crit}$) are activated to clouds. The critical radius is given as:
 
 \begin{eqnarray}
 r_{a,crit}=\bigl( \frac{4}{27}\frac{A^{3}}{B}\frac{1}{S_{w}}\Bigr )^{1/3}, \:\:\:A=\frac{2\sigma}{R_{v}\rho_{L}T},\:\:\: B=i_{v}\frac{M_{v}}{M_{s}}\frac{\rho_{s}}{\rho_{L}}.\label{s10-3}
@@ -192,7 +192,7 @@ where $r(m)$ is radius of hydrometeors with mass $m$ and $V(m)$ is terminal velo
 \begin{center}
 \includegraphics[scale=0.9]{./figure/terminal-velocity.eps}
 \end{center}
-\caption{Terminal velocity of Water (Plus), plate-type ice (cross), columnar-type ice (asterisk), dendritic-type ice (open square), snow (closed square), graupel (open circle), and hail (closed circle)}
+\caption{Terminal velocity of Water (Plus), plate-type ice (cross), columnar-type ice (asterisk), dendritic-type ice (open square), snow (closed square), graupel (open circle), and hail (closed circle). Cited from Figure A3 of Suzuki (2006)\cite{suzuki_2006} and rearranged.}
 \label{figs10-term}
 \end{figure}
 
@@ -209,7 +209,7 @@ is applied (where $\mu$, $\nu$, $\lambda$, $\kappa$ represent species of hydrome
 
 \begin{table}[h]
 \begin{center}
-\caption{Catalog of interaction between seven species. W, I, S, G, and H show water, ice, snow, graupel, and hail, respectively. G/H shows graupel(hail) generated when T is lower(higher) than 270.15}
+\caption{Catalog of interaction between seven species. W, I, S, G, and H show water, ice, snow, graupel, and hail, respectively. G/H shows graupel(hail) generated when T is lower(higher) than 270.15 K}
 \label{table-s10-1}
 \begin{tabular}{cccccc}
 \hline
