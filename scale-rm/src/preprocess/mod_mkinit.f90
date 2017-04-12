@@ -144,6 +144,7 @@ module mod_mkinit
 
   integer, public, parameter :: I_CAVITYFLOW       = 29
   integer, public, parameter :: I_BAROCWAVE        = 30
+  integer, public, parameter :: I_BOMEX            = 31
 
   !-----------------------------------------------------------------------------
   !
@@ -171,6 +172,7 @@ module mod_mkinit
   private :: MKINIT_DYCOMS2_RF01
   private :: MKINIT_DYCOMS2_RF02
   private :: MKINIT_RICO
+  private :: MKINIT_BOMEX
 
   private :: MKINIT_interporation
 
@@ -308,6 +310,8 @@ contains
        MKINIT_TYPE = I_DYCOMS2_RF02
     case('RICO')
        MKINIT_TYPE = I_RICO
+    case('BOMEX')
+       MKINIT_TYPE = I_BOMEX
     case('INTERPORATION')
        MKINIT_TYPE = I_INTERPORATION
     case('LANDCOUPLE')
@@ -445,6 +449,8 @@ contains
          call MKINIT_DYCOMS2_RF02
       case(I_RICO)
          call MKINIT_RICO
+      case(I_BOMEX)
+         call MKINIT_BOMEX
       case(I_INTERPORATION)
          call MKINIT_INTERPORATION
       case(I_OCEANCOUPLE)
@@ -4162,8 +4168,6 @@ contains
 
     call RANDOM_get(rndm) ! make random
 
-    PERTURB_AMP_QV = 0.0_RP
-
     if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
@@ -4206,6 +4210,264 @@ contains
     endif
     return
   end subroutine MKINIT_RICO
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for BOMEX inter comparison
+  subroutine MKINIT_BOMEX
+    use scale_atmos_hydrometeor, only: &
+         I_QV, &
+         I_QC, &
+         I_NC, &
+         QHE
+    use scale_atmos_phy_mp_suzuki10, only: &
+         nccn
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE, &
+         ATMOS_PHY_AE_TYPE
+    implicit none
+
+#ifndef DRY
+    real(RP):: PERTURB_AMP_PT = 0.1_RP
+    real(RP):: PERTURB_AMP_QV = 2.5E-5_RP
+
+    NAMELIST / PARAM_MKINIT_BOMEX / &
+       PERTURB_AMP_PT, &
+       PERTURB_AMP_QV
+
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: qall ! QV+QC
+    real(RP) :: fact
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit BOMEX] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_BOMEX,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BOMEX. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOMEX)
+
+    ! calc in moist condition
+    do j = JS, JE
+    do i = IS, IE
+
+       pres_sfc(1,i,j) = 1015.E2_RP ! [Pa]
+       pott_sfc(1,i,j) = 299.1_RP
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          !--- potential temperature
+          if ( GRID_CZ(k) < 520.0_RP ) then ! below initial cloud top
+             potl(k,i,j) = 298.7_RP
+          elseif( GRID_CZ(k) < 1480.0_RP ) then
+             fact = ( GRID_CZ(k)-520.0_RP ) * ( 302.4_RP-298.7_RP ) / ( 1480.0_RP-520.0_RP )
+             potl(k,i,j) = 298.7_RP + fact
+          elseif( GRID_CZ(k) < 2000.0_RP ) then
+             fact = ( GRID_CZ(k)-1480.0_RP ) * ( 308.2_RP-302.4_RP ) / ( 2000.0_RP-1480.0_RP )
+             potl(k,i,j) = 302.4_RP + fact
+          else
+             fact = ( GRID_CZ(k)-2000.0_RP ) * 3.65E-3_RP
+             potl(k,i,j) = 308.2_RP + fact
+          endif
+
+          !--- horizontal wind velocity
+          if ( GRID_CZ(k) <= 700.0_RP ) then ! below initial cloud top
+             velx(k,i,j) =  -8.75_RP
+             vely(k,i,j) =   0.0_RP
+          else
+             fact = 1.8E-3_RP * ( GRID_CZ(k)-700.0_RP )
+             velx(k,i,j) =  -8.75_RP + fact
+             vely(k,i,j) =  0.0_RP
+          endif
+
+          qv(k,i,j) = 0.0_RP
+          qc(k,i,j) = 0.0_RP
+
+       enddo
+
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               potl    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc  (1,i,j) = 22.45E-3_RP   ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          !--- mixing ratio of vapor
+          if ( GRID_CZ(k) <= 520.0_RP ) then ! below initial cloud top
+             fact = ( GRID_CZ(k)-0.0_RP ) * ( 16.3E-3_RP-17.0E-3_RP ) / ( 520.0_RP-0.0_RP )
+             qall = 17.0E-3_RP + fact
+          elseif ( GRID_CZ(k) <= 1480.0_RP ) then ! boundary
+             fact = ( GRID_CZ(k)-520.0_RP ) * ( 10.7E-3_RP-16.3E-3_RP ) / ( 1480.0_RP-520.0_RP )
+             qall = 16.3E-3_RP + fact
+          elseif( GRID_CZ(k) <= 2000.0_RP ) then
+             fact = ( GRID_CZ(k)-1480.0_RP ) * ( 4.2E-3_RP-10.7E-3_RP ) / ( 2000.0_RP-1480.0_RP )
+             qall = 10.7E-3_RP + fact
+          else
+             fact = ( GRID_CZ(k)-2000.0_RP ) * ( -1.2E-6_RP )
+             qall = 4.2E-3_RP + fact
+          endif
+
+          qc(k,i,j) = 0.0_RP
+          qv(k,i,j) = qall - qc(k,i,j)
+       enddo
+
+    enddo
+    enddo
+
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
+                                      pott    (:,:,:), & ! [OUT]
+                                      pres    (:,:,:), & ! [OUT]
+                                      temp    (:,:,:), & ! [IN]
+                                      qv      (:,:,:), & ! [IN]
+                                      qc      (:,:,:), & ! [IN]
+                                      pott_sfc(:,:,:), & ! [OUT]
+                                      pres_sfc(:,:,:), & ! [IN]
+                                      temp_sfc(:,:,:), & ! [IN]
+                                      qv_sfc  (:,:,:), & ! [IN]
+                                      qc_sfc  (:,:,:)  ) ! [IN]
+
+
+    do j = JS, JE
+    do i = IS, IE
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       DENS(KE+1:KA  ,i,j) = DENS(KE,i,j)
+    enddo
+    enddo
+
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMZ(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+         RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
+       else
+         RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+       endif
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          !--- Super saturated air at initial
+          if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+             QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV &
+                              + qc(k,i,j)
+          else
+             QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
+          endif
+          do iq = QHE+1, QHE+nccn
+            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j)
+          enddo
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+            QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
+          else
+            QTRC(k,i,j,I_QV) = qv(k,i,j)
+          endif
+          QTRC(k,i,j,I_QC) = qc(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       if ( I_NC > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( qc(k,i,j) > 0.0_RP ) then
+                QTRC(k,i,j,I_NC) = 70.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
+             endif
+          enddo
+          enddo
+          enddo
+       endif
+    endif
+
+#endif
+    if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
+    return
+  end subroutine MKINIT_BOMEX
 
   !-----------------------------------------------------------------------------
   subroutine MKINIT_interporation
