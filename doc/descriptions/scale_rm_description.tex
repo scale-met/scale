@@ -3,17 +3,27 @@
 \author{Seiya Nishizawa, Hirofumi Tomita, and Team SCALE}
 \date{\today}
 
-
 \usepackage[dvipdfmx]{graphicx}
+\usepackage[dvipdfmx]{hyperref}
 \usepackage{amsmath}
 \usepackage[round]{natbib}
 \usepackage{bm}
-\usepackage[dvipdfmx]{hyperref}
+\usepackage{url}
+\usepackage{pxjahyper}
+\hypersetup{% options for hyperref
+ bookmarksopen=true,
+ bookmarksnumbered=true,
+ colorlinks=true,
+% linkcolor=red,
+ linkcolor=cyan,
+ citecolor=cyan,
+ urlcolor=cyan,
+}
+
 
 \begin{document}
 \maketitle
 \tableofcontents
-
 
 \input{introduction}
 
