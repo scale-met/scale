@@ -41,7 +41,7 @@ The integration period and time step are configured appropriately according to e
 \nmitem{TIME_DT_ATMOS_DYN} depends on the time integration scheme in relation to the stability of calculation. As criterion, the standard values of \nmitem{TIME_DT_ATMOS_DYN} are calculated by dividing the minimum grid interval by 420 m/s and 840 m/s, in the case \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE="RK4, RK3"}, respectively.
 Note that \nmitem{TIME_DT_ATMOS_DYN} needs to be a divisor of \nmitem{TIME_DT}.
 When the ratio of \nmitem{TIME_DT} to \nmitem{TIME_DT_ATMOS_DYN} is too large,
-the numerical instability sometimes occur.
+the numerical instability sometimes occurs.
 The ratio of \nmitem{TIME_DT}/\nmitem{TIME_DT_ATMOS_DYN} is recommended to be set two or three.
 
 
