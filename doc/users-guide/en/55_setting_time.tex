@@ -37,7 +37,13 @@ The integration period and time step are configured appropriately according to e
 \verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",    | & Unit for \verb|TIME_DT_URBAN_RESTART|\\
 \verb|/|\\
 }
-\nmitem{TIME_DT} is the time step for time integration, usually described as $\Delta t$. It is used as time step for tracer advection as well as the basic unit for all physical processes. To avoid numerical instability, \nmitem{TIME_DT} must satisfy the following condition: it is less than the value calculated by dividing grid size by a supposed maximum advection velocity. A shorter time step for dynamical process, i.e. \nmitem{TIME_DT_ATMOS_DYN}, should be given than $Delta t$ because the time integration of dynamic variables is constrained not by advection velocity, but by the speed of the acoustic wave. Note that \nmitem{TIME_DT_ATMOS_DYN} needs to be a divisor of \nmitem{TIME_DT}. \nmitem{TIME_DT_ATMOS_DYN} depends on the time integration scheme in relation to the stability of calculation. As criterion, the standard values of \nmitem{TIME_DT_ATMOS_DYN} are calculated by dividing the minimum grid interval by 420 m/s and 840 m/s, in the case \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE="RK4, RK3"}, respectively.
+\nmitem{TIME_DT} is the time step for time integration, usually described as $\Delta t$. It is used as time step for tracer advection as well as the basic unit for all physical processes. To avoid numerical instability, \nmitem{TIME_DT} must satisfy the following condition: it is less than the value calculated by dividing grid size by a supposed maximum advection velocity. A shorter time step for dynamical process, i.e. \nmitem{TIME_DT_ATMOS_DYN}, should be given than $Delta t$ because the time integration of dynamic variables is constrained not by advection velocity, but by the speed of the acoustic wave.
+\nmitem{TIME_DT_ATMOS_DYN} depends on the time integration scheme in relation to the stability of calculation. As criterion, the standard values of \nmitem{TIME_DT_ATMOS_DYN} are calculated by dividing the minimum grid interval by 420 m/s and 840 m/s, in the case \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE="RK4, RK3"}, respectively.
+Note that \nmitem{TIME_DT_ATMOS_DYN} needs to be a divisor of \nmitem{TIME_DT}.
+When the ratio of \nmitem{TIME_DT} to \nmitem{TIME_DT_ATMOS_DYN} is too large,
+the numerical instability sometimes occur.
+The ratio of \nmitem{TIME_DT}/\nmitem{TIME_DT_ATMOS_DYN} is recommended to be set two or three.
+
 
 A time step for the physical process represents the timing of the tendency to update given by the process. Once the model starts, each physical process is called during the setup of the model to obtain the initial tendency. Each tendency is updated at every time step specified process by process. All time steps for the physical process are better as multiples of \nmitem{TIME_DT}.
 
