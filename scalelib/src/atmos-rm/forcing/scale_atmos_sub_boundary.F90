@@ -174,6 +174,8 @@ module scale_atmos_boundary
 
   integer,               private :: ATMOS_BOUNDARY_START_DATE(6) = (/ -9999, 0, 0, 0, 0, 0 /) ! boundary initial date
 
+  integer,               private :: ATMOS_BOUNDARY_fid = -1
+
   integer,               private :: now_step
   integer,               private :: boundary_timestep = 0
   logical,               private :: ATMOS_BOUNDARY_LINEAR_V = .false.  ! linear or non-linear profile of relax region
@@ -1211,6 +1213,9 @@ contains
        CALENDAR_date2char
     use scale_time, only: &
        TIME_NOWDATE
+    use scale_fileio, only: &
+       FILEIO_open, &
+       FILEIO_check_coordinates
     implicit none
 
     integer           :: boundary_time_startday
@@ -1239,6 +1244,12 @@ contains
     boundary_time_initdaysec = CALENDAR_combine_daysec( boundary_time_startday, boundary_time_startsec )
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** BOUNDARY START Date     : ', boundary_chardate
+
+    call FILEIO_open( ATMOS_BOUNDARY_fid, ATMOS_BOUNDARY_IN_BASENAME )
+
+    if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
+       call FILEIO_check_coordinates( ATMOS_BOUNDARY_fid, atmos=.true. )
+    end if
 
     return
   end subroutine ATMOS_BOUNDARY_initialize_file
@@ -1276,12 +1287,8 @@ contains
     real(RP) :: boundary_inc_offset
     integer  :: fillgaps_steps
 
-    character(len=H_LONG) :: bname
-
     integer  :: i, j, k, iq, n
     !---------------------------------------------------------------------------
-
-    bname = ATMOS_BOUNDARY_IN_BASENAME
 
     if ( ATMOS_BOUNDARY_UPDATE_DT <= 0.0_DP ) then
        write(*,*) 'xxx You need specify ATMOS_BOUNDARY_UPDATE_DT as larger than 0.0'
@@ -1542,6 +1549,8 @@ contains
        NEST_COMM_recvwait_issue, &
        NEST_COMM_recv_cancel,    &
        NESTQA => NEST_BND_QA
+    use scale_fileio, only: &
+       FILEIO_close
     implicit none
 
     ! works
@@ -1557,6 +1566,11 @@ contains
        handle = 2
        call NEST_COMM_recv_cancel( handle )
     endif
+
+    if ( ATMOS_BOUNDARY_fid > 0 ) then
+       call FILEIO_close( ATMOS_BOUNDARY_fid )
+       ATMOS_BOUNDARY_fid = -1
+    end if
 
     return
   end subroutine ATMOS_BOUNDARY_finalize
@@ -1933,10 +1947,7 @@ contains
     use scale_process, only: &
        PRC_myrank
     use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_check_coordinates, &
-       FILEIO_read, &
-       FILEIO_close
+       FILEIO_read
     use scale_atmos_phy_mp, only: &
        AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
@@ -1944,18 +1955,12 @@ contains
     integer, intent(in) :: ref
     real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
 
-    character(len=H_LONG) :: bname
-
     integer :: fid, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
 
-    call FILEIO_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
-
-    if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
-       call FILEIO_check_coordinates( fid, atmos=.true. )
-    end if
+    fid = ATMOS_BOUNDARY_fid
 
     call FILEIO_read( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), fid, 'DENS', 'ZXY', boundary_timestep )
     call FILEIO_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXY', boundary_timestep )
@@ -1964,8 +1969,6 @@ contains
     do iq = 1, BND_QA
        call FILEIO_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, AQ_NAME(iq), 'ZXY', boundary_timestep )
     end do
-
-    call FILEIO_close( fid )
 
     ! fill HALO in reference
     call ATMOS_BOUNDARY_ref_fillhalo( ref )

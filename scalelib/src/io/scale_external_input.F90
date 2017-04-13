@@ -505,8 +505,6 @@ contains
          .AND. dim_size(2) == 1 &
          .AND. dim_size(3) == 1 ) then ! 1D
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var                   : ', trim(varname)
-
        call EXTIN_get_dims_1D( &
             dim1_max, dim1_S, dim1_E, & ! (out)
             varname, axistype         ) ! (in)
@@ -523,11 +521,17 @@ contains
        endif
 
        ! read prev
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_prev), ')'
        call FileRead( EXTIN_item(nid)%value(:,1,1,I_prev), &
                       EXTIN_item(nid)%fid,                 &
                       EXTIN_item(nid)%varname,             &
                       EXTIN_item(nid)%data_steppos(I_prev) )
        ! read next
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_next), ')'
        call FileRead( EXTIN_item(nid)%value(:,1,1,I_next), &
                       EXTIN_item(nid)%fid,                 &
                       EXTIN_item(nid)%varname,             &
@@ -536,8 +540,6 @@ contains
     elseif (       dim_size(1) >= 1 &
              .AND. dim_size(2) >  1 &
              .AND. dim_size(3) == 1 ) then ! 2D
-
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var                   : ', trim(varname)
 
        call EXTIN_get_dims_2D( &
             dim1_max, dim1_S, dim1_E,  & ! (out)
@@ -559,11 +561,17 @@ contains
        endif
 
        ! read prev
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_prev), ')'
        call FileRead( EXTIN_item(nid)%value(:,:,1,I_prev), &
                       EXTIN_item(nid)%fid,                 &
                       EXTIN_item(nid)%varname,             &
                       EXTIN_item(nid)%data_steppos(I_prev) )
        ! read next
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_next), ')'
        call FileRead( EXTIN_item(nid)%value(:,:,1,I_next), &
                       EXTIN_item(nid)%fid,                 &
                       EXTIN_item(nid)%varname,             &
@@ -572,8 +580,6 @@ contains
     elseif (       dim_size(1) >= 1 &
              .AND. dim_size(2) >  1 &
              .AND. dim_size(3) >  1 ) then ! 3D
-
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var                   : ', trim(varname)
 
        call EXTIN_get_dims_3D( &
             dim1_max, dim1_S, dim1_E,  & ! (out)
@@ -599,11 +605,18 @@ contains
        endif
 
        ! read prev
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_prev), ')'
        call FileRead( EXTIN_item(nid)%value(:,:,:,I_prev), &
                       EXTIN_item(nid)%fid,                 &
                       EXTIN_item(nid)%varname,             &
                       EXTIN_item(nid)%data_steppos(I_prev) )
+
        ! read next
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_next), ')'
        call FileRead( EXTIN_item(nid)%value(:,:,:,I_next), &
                       EXTIN_item(nid)%fid,                 &
                       EXTIN_item(nid)%varname,             &
@@ -675,7 +688,10 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname)
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_next), ')'
 
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
@@ -747,7 +763,10 @@ contains
 
     if ( do_readfile ) then
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_next), ')'
+
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
@@ -835,7 +854,11 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname)
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+            '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname), &
+            ' (step= ', EXTIN_item(nid)%data_steppos(I_next), ')'
+
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
