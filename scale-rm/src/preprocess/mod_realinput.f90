@@ -2105,13 +2105,6 @@ contains
                                              llat_org(:,:), llon_org(:,:), & ! [IN]
                                              ldims(2), ldims(3)            ) ! [IN]
 
-          call INTRPNEST_interp_fact_latlon( hfact_o(:,:,:),               & ! [OUT]
-                                             igrd_o(:,:,:), jgrd_o(:,:,:), & ! [OUT]
-                                             olat_org(:,:), olon_org(:,:), & ! [IN]
-                                             odims(1), odims(2),           & ! [IN]
-                                             llat_org(:,:), llon_org(:,:), & ! [IN]
-                                             ldims(2), ldims(3)            ) ! [IN]
-
        end if
 
        ! Ocean temp: interpolate over the land
