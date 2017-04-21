@@ -50,15 +50,16 @@ module mod_realinput_grads
   !++ Private parameters & variables
   !
   integer,  parameter    :: grads_vars_limit = 1000 !> limit of number of values
-  integer,  parameter    :: num_item_list = 17
-  integer,  parameter    :: num_item_list_atom  = 17
+  integer,  parameter    :: num_item_list = 22
+  integer,  parameter    :: num_item_list_atom  = 22
   integer,  parameter    :: num_item_list_land  = 12
   integer,  parameter    :: num_item_list_ocean = 10
   logical                :: data_available(num_item_list_atom,3) ! 1:atom, 2:land, 3:ocean
   character(len=H_SHORT) :: item_list_atom (num_item_list_atom)
   character(len=H_SHORT) :: item_list_land (num_item_list_land)
   character(len=H_SHORT) :: item_list_ocean(num_item_list_ocean)
-  data item_list_atom  /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO' /
+  data item_list_atom  /'lon','lat','plev','U','V','T','HGT','QV','QC','QR','QI','QS','QG','RH', &
+                        'MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO' /
   data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','llev', &
                         'STEMP','SMOISVC','SMOISDS','SKINT','TOPO','TOPO_sfc' /
   data item_list_ocean /'lsmask','lsmask_sst','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
@@ -71,15 +72,20 @@ module mod_realinput_grads
   integer,  parameter   :: Ia_t      = 6
   integer,  parameter   :: Ia_hgt    = 7  ! Geopotential height (m)
   integer,  parameter   :: Ia_qv     = 8
-  integer,  parameter   :: Ia_rh     = 9  ! Percentage (%)
-  integer,  parameter   :: Ia_slp    = 10 ! Sea level pressure (Pa)
-  integer,  parameter   :: Ia_ps     = 11 ! Surface pressure (Pa)
-  integer,  parameter   :: Ia_u10    = 12
-  integer,  parameter   :: Ia_v10    = 13
-  integer,  parameter   :: Ia_t2     = 14
-  integer,  parameter   :: Ia_q2     = 15
-  integer,  parameter   :: Ia_rh2    = 16 ! Percentage (%)
-  integer,  parameter   :: Ia_topo   = 17
+  integer,  parameter   :: Ia_qc     = 9 
+  integer,  parameter   :: Ia_qr     = 10
+  integer,  parameter   :: Ia_qi     = 11
+  integer,  parameter   :: Ia_qs     = 12
+  integer,  parameter   :: Ia_qg     = 13
+  integer,  parameter   :: Ia_rh     = 14 ! Percentage (%)
+  integer,  parameter   :: Ia_slp    = 15 ! Sea level pressure (Pa)
+  integer,  parameter   :: Ia_ps     = 16 ! Surface pressure (Pa)
+  integer,  parameter   :: Ia_u10    = 17
+  integer,  parameter   :: Ia_v10    = 18
+  integer,  parameter   :: Ia_t2     = 19
+  integer,  parameter   :: Ia_q2     = 20
+  integer,  parameter   :: Ia_rh2    = 21 ! Percentage (%)
+  integer,  parameter   :: Ia_topo   = 22
 
   integer,  parameter   :: Il_lsmask  = 1
   integer,  parameter   :: Il_lon     = 2
@@ -296,6 +302,11 @@ contains
                 call PRC_MPIstop
              endif
           endif
+       case('QC','QR','QI','QS','QG')
+          if (.not. data_available(ielem,1)) then
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
+             cycle
+          endif
        case('MSLP','PSFC','U10','V10','T2')
           if (.not. data_available(ielem,1)) then
              if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
@@ -363,17 +374,24 @@ contains
        dims, &
        nt )
     use scale_const, only: &
-         UNDEF => CONST_UNDEF, &
-         D2R => CONST_D2R,   &
-         EPS => CONST_EPS,   &
-         EPSvap => CONST_EPSvap, &
-         GRAV => CONST_GRAV, &
-         LAPS => CONST_LAPS, &
-         P00 => CONST_PRE00, &
-         Rdry => CONST_Rdry, &
-         CPdry => CONST_CPdry
+       UNDEF => CONST_UNDEF, &
+       D2R => CONST_D2R,   &
+       EPS => CONST_EPS,   &
+       EPSvap => CONST_EPSvap, &
+       GRAV => CONST_GRAV, &
+       LAPS => CONST_LAPS, &
+       P00 => CONST_PRE00, &
+       Rdry => CONST_Rdry, &
+       CPdry => CONST_CPdry
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG
     use scale_atmos_saturation, only: &
-         psat => ATMOS_SATURATION_psat_liq
+       psat => ATMOS_SATURATION_psat_liq
     implicit none
 
 
@@ -401,7 +419,6 @@ contains
     ! data
     character(len=H_LONG) :: gfile
 
-    integer  :: QA_outer = 1
     real(RP) :: p_sat, qm, rhsfc
     real(RP) :: lp2, lp3
 
@@ -411,7 +428,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputGrADS]'
 
-    qtrc_org = 0.0_RP
+    qtrc_org(:,:,:,:) = 0.0_RP
 
     !--- read grads data
     loop_InputAtomGrADS : do ielem = 1, num_item_list_atom
@@ -631,13 +648,13 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
-                   qtrc_org(k+2,i,j,QA_outer) = real(gdata3D(i,j,k), kind=RP)
+                   qtrc_org(k+2,i,j,I_QV) = real(gdata3D(i,j,k), kind=RP)
                    ! replace missval with UNDEF
-                   if( abs( qtrc_org(k+2,i,j,QA_outer) - missval ) < EPS ) then
-                      qtrc_org(k+2,i,j,QA_outer) = UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QV) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QV) = UNDEF
                    end if
                 enddo
-                qtrc_org(1:2,i,j,QA_outer) = qtrc_org(3,i,j,QA_outer)
+                qtrc_org(1:2,i,j,I_QV) = qtrc_org(3,i,j,I_QV)
              enddo
              enddo
              if( dims(1)>knum ) then
@@ -646,7 +663,7 @@ contains
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
-                      qtrc_org(k+2,i,j,QA_outer) = qtrc_org(knum+2,i,j,QA_outer)
+                      qtrc_org(k+2,i,j,I_QV) = qtrc_org(knum+2,i,j,I_QV)
                    enddo
                    enddo
                    enddo
@@ -658,6 +675,86 @@ contains
                 end select
              endif
           endif
+       case('QC')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QC) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QC) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QC) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QC) = qtrc_org(3,i,j,I_QC)
+             enddo
+             enddo
+          endif
+       case('QR')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QR) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QR) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QR) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QR) = qtrc_org(3,i,j,I_QR)
+             enddo
+             enddo
+          endif
+       case('QI')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QI) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QI) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QI) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QI) = qtrc_org(3,i,j,I_QI)
+             enddo
+             enddo
+          endif
+       case('QS')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QS) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QS) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QS) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QS) = qtrc_org(3,i,j,I_QS)
+             enddo
+             enddo
+          endif
+       case('QG')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QG) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QG) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QG) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QG) = qtrc_org(3,i,j,I_QG)
+             enddo
+             enddo
+          endif
        case('RH')
           if (data_available(Ia_qv,1)) cycle  ! use QV
           if ( trim(dtype) == "map" ) then
@@ -665,19 +762,19 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
-                   qtrc_org(k+2,i,j,QA_outer) = real(gdata3D(i,j,k), kind=RP)
+                   qtrc_org(k+2,i,j,I_QV) = real(gdata3D(i,j,k), kind=RP)
                    ! replace missval with UNDEF
-                   if( abs( qtrc_org(k+2,i,j,QA_outer) - missval ) < EPS ) then
-                      qtrc_org(k+2,i,j,QA_outer) = UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QV) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QV) = UNDEF
                    else
-                      rhprs_org(k+2,i,j) = qtrc_org(k+2,i,j,QA_outer) / 100.0_RP     ! relative humidity
-                      call psat( p_sat, temp_org(k+2,i,j) )                          ! satulation pressure
+                      rhprs_org(k+2,i,j) = qtrc_org(k+2,i,j,I_QV) / 100.0_RP   ! relative humidity
+                      call psat( p_sat, temp_org(k+2,i,j) )                    ! satulation pressure
                       qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
-                           / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )      ! mixing ratio
-                      qtrc_org(k+2,i,j,QA_outer) = qm / ( 1.0_RP + qm )              ! specific humidity
+                         / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )  ! mixing ratio
+                      qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )            ! specific humidity
                    end if
                 enddo
-                qtrc_org(1:2,i,j,QA_outer) = qtrc_org(3,i,j,QA_outer)
+                qtrc_org(1:2,i,j,I_QV) = qtrc_org(3,i,j,I_QV)
              enddo
              enddo
              if( dims(3)>knum ) then
@@ -690,8 +787,8 @@ contains
                       call psat( p_sat, temp_org(k+2,i,j) )                   ! satulated specific humidity
                       qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
                          / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat ) ! mixing ratio
-                      qtrc_org(k+2,i,j,QA_outer) = qm / ( 1.0_RP + qm )       ! specific humidity
-                      qtrc_org(k+2,i,j,QA_outer) = min(qtrc_org(k+2,i,j,QA_outer),qtrc_org(k+1,i,j,QA_outer))
+                      qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )           ! specific humidity
+                      qtrc_org(k+2,i,j,I_QV) = min(qtrc_org(k+2,i,j,I_QV),qtrc_org(k+1,i,j,I_QV))
                    enddo
                    enddo
                    enddo
@@ -773,10 +870,10 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                qtrc_org(2,i,j,QA_outer) = real(gdata2D(i,j), kind=RP)
+                qtrc_org(2,i,j,I_QV) = real(gdata2D(i,j), kind=RP)
                 ! replace missval with UNDEF
-                if( abs( qtrc_org(2,i,j,QA_outer) - missval ) < EPS ) then
-                   qtrc_org(2,i,j,QA_outer) = UNDEF
+                if( abs( qtrc_org(2,i,j,I_QV) - missval ) < EPS ) then
+                   qtrc_org(2,i,j,I_QV) = UNDEF
                 end if
              enddo
              enddo
@@ -787,16 +884,16 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                qtrc_org(2,i,j,QA_outer) = real(gdata2D(i,j), kind=RP)
+                qtrc_org(2,i,j,I_QV) = real(gdata2D(i,j), kind=RP)
                 ! replace missval with UNDEF
-                if( abs( qtrc_org(2,i,j,QA_outer) - missval ) < EPS ) then
-                   qtrc_org(2,i,j,QA_outer) = UNDEF
+                if( abs( qtrc_org(2,i,j,I_QV) - missval ) < EPS ) then
+                   qtrc_org(2,i,j,I_QV) = UNDEF
                 else
-                   rhsfc = qtrc_org(2,i,j,QA_outer) / 100.0_RP
-                   call psat( p_sat, temp_org(2,i,j) )             ! satulation pressure
+                   rhsfc = qtrc_org(2,i,j,I_QV) / 100.0_RP
+                   call psat( p_sat, temp_org(2,i,j) )         ! satulation pressure
                    qm = EPSvap * rhsfc * p_sat &
-                      / ( pres_org(2,i,j) - rhsfc * p_sat )        ! mixing ratio
-                   qtrc_org(2,i,j,QA_outer) = qm / ( 1.0_RP + qm ) ! specific humidity
+                      / ( pres_org(2,i,j) - rhsfc * p_sat )    ! mixing ratio
+                   qtrc_org(2,i,j,I_QV) = qm / ( 1.0_RP + qm ) ! specific humidity
                 end if
              enddo
              enddo
