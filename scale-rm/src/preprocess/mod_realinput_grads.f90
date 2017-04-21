@@ -363,6 +363,7 @@ contains
        dims, &
        nt )
     use scale_const, only: &
+         UNDEF => CONST_UNDEF, &
          D2R => CONST_D2R,   &
          EPS => CONST_EPS,   &
          EPSvap => CONST_EPSvap, &
@@ -395,6 +396,8 @@ contains
     real(RP) :: RovCP
     real(RP) :: CPovR
 
+    integer  :: lm_layer(dims(2),dims(3))
+
     ! data
     character(len=H_LONG) :: gfile
 
@@ -419,6 +422,7 @@ contains
        dtype    = grads_dtype   (ielem,1)
        fname    = grads_fname   (ielem,1)
        lnum     = grads_lnum    (ielem,1)
+       missval  = grads_missval (ielem,1)
 
        if ( dims(1) < grads_knum(ielem,1) ) then
           write(*,*) 'xxx "knum" must be less than or equal to outer_nz. knum:',knum,'> outer_nz:',dims(1),trim(item)
@@ -518,6 +522,10 @@ contains
              do i = 1, dims(2)
              do k = 1, dims(1)
                 pres_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( pres_org(k+2,i,j) - missval ) < EPS ) then
+                   pres_org(k+2,i,j) = UNDEF
+                end if
              enddo
              enddo
              enddo
@@ -530,6 +538,10 @@ contains
                 velx_org(1:2,i,j) = 0.0_RP
                 do k = 1, knum
                    velx_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( velx_org(k+2,i,j) - missval ) < EPS ) then
+                      velx_org(k+2,i,j) = UNDEF
+                   end if
                 enddo
                 if(dims(1)>knum)then
                    do k = knum+1, dims(1)
@@ -547,6 +559,10 @@ contains
                 vely_org(1:2,i,j) = 0.0_RP
                 do k = 1, knum
                    vely_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( vely_org(k+2,i,j) - missval ) < EPS ) then
+                      vely_org(k+2,i,j) = UNDEF
+                   end if
                 enddo
                 if(dims(1)>knum)then
                    do k = knum+1, dims(1)
@@ -563,6 +579,10 @@ contains
              do i = 1, dims(2)
                 do k = 1, knum
                    temp_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( temp_org(k+2,i,j) - missval ) < EPS ) then
+                      temp_org(k+2,i,j) = UNDEF
+                   end if
                 enddo
                 if(dims(1)>knum)then
                    do k = knum+1, dims(1)
@@ -577,12 +597,29 @@ contains
              write(*,*) 'xxx The number of levels for HGT must be same as plevs! knum:',knum,'> outer_nz:',dims(1)
              call PRC_MPIstop
           endif
-          if ( trim(dtype) == "map" ) then
+          if ( trim(dtype) == "levels" ) then
+             if(dims(1)/=lnum)then
+                write(*,*) 'xxx lnum must be same as the outer_nz for HGT! ',dims(1),lnum
+                call PRC_MPIstop
+             endif
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, dims(1)
+                   cz_org(k+2,i,j) = real(lvars(k), kind=RP)
+                enddo
+                cz_org(1,i,j) = 0.0_RP
+             enddo
+             enddo
+          else if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, dims(1)
                    cz_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( cz_org(k+2,i,j) - missval ) < EPS ) then
+                      cz_org(k+2,i,j) = UNDEF
+                   end if
                 enddo
                 cz_org(1,i,j) = 0.0_RP
              enddo
@@ -595,6 +632,10 @@ contains
              do i = 1, dims(2)
                 do k = 1, knum
                    qtrc_org(k+2,i,j,QA_outer) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,QA_outer) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,QA_outer) = UNDEF
+                   end if
                 enddo
                 qtrc_org(1:2,i,j,QA_outer) = qtrc_org(3,i,j,QA_outer)
              enddo
@@ -624,11 +665,17 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
-                   rhprs_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP) / 100.0_RP  ! relative humidity
-                   call psat( p_sat, temp_org(k+2,i,j) )                          ! satulation pressure
-                   qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
-                        / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )      ! mixing ratio
-                   qtrc_org(k+2,i,j,QA_outer) = qm / ( 1.0_RP + qm )              ! specific humidity
+                   qtrc_org(k+2,i,j,QA_outer) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,QA_outer) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,QA_outer) = UNDEF
+                   else
+                      rhprs_org(k+2,i,j) = qtrc_org(k+2,i,j,QA_outer) / 100.0_RP     ! relative humidity
+                      call psat( p_sat, temp_org(k+2,i,j) )                          ! satulation pressure
+                      qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
+                           / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )      ! mixing ratio
+                      qtrc_org(k+2,i,j,QA_outer) = qm / ( 1.0_RP + qm )              ! specific humidity
+                   end if
                 enddo
                 qtrc_org(1:2,i,j,QA_outer) = qtrc_org(3,i,j,QA_outer)
              enddo
@@ -662,6 +709,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 pres_org(1,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( pres_org(1,i,j) - missval ) < EPS ) then
+                   pres_org(1,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -671,6 +722,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 pres_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( pres_org(2,i,j) - missval ) < EPS ) then
+                   pres_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -680,6 +735,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 velx_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( velx_org(2,i,j) - missval ) < EPS ) then
+                   velx_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -689,6 +748,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 vely_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( vely_org(2,i,j) - missval ) < EPS ) then
+                   vely_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -698,6 +761,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 temp_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( temp_org(2,i,j) - missval ) < EPS ) then
+                   temp_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -707,6 +774,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 qtrc_org(2,i,j,QA_outer) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( qtrc_org(2,i,j,QA_outer) - missval ) < EPS ) then
+                   qtrc_org(2,i,j,QA_outer) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -716,11 +787,17 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                rhsfc = real(gdata2D(i,j), kind=RP) / 100.0_RP   ! relative humidity
-                call psat( p_sat, temp_org(2,i,j) )                         ! satulation pressure
-                qm = EPSvap * rhsfc * p_sat &
-                   / ( pres_org(2,i,j) - rhsfc * p_sat )           ! mixing ratio
-                qtrc_org(2,i,j,QA_outer) = qm / ( 1.0_RP + qm )             ! specific humidity
+                qtrc_org(2,i,j,QA_outer) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( qtrc_org(2,i,j,QA_outer) - missval ) < EPS ) then
+                   qtrc_org(2,i,j,QA_outer) = UNDEF
+                else
+                   rhsfc = qtrc_org(2,i,j,QA_outer) / 100.0_RP
+                   call psat( p_sat, temp_org(2,i,j) )             ! satulation pressure
+                   qm = EPSvap * rhsfc * p_sat &
+                      / ( pres_org(2,i,j) - rhsfc * p_sat )        ! mixing ratio
+                   qtrc_org(2,i,j,QA_outer) = qm / ( 1.0_RP + qm ) ! specific humidity
+                end if
              enddo
              enddo
           endif
@@ -730,12 +807,30 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 cz_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( cz_org(2,i,j) - missval ) < EPS ) then
+                   cz_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
        end select
     enddo loop_InputAtomGrADS
 
+    lm_layer(:,:) = 3
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 3, dims(1)+2
+      ! search the lowermost layer excluding UNDEF
+      if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) then
+        lm_layer(i,j) = k + 1
+      else
+        exit
+      end if
+    end do
+    end do
+    end do
 
     RovCP = Rdry / CPdry
     CPovR = CPdry / Rdry
@@ -749,7 +844,8 @@ contains
     else
        do j = 1, dims(3)
        do i = 1, dims(2)
-          pott(i,j) = temp_org(3,i,j) * (P00/pres_org(3,i,j))**RovCP
+          k = lm_layer(i,j)
+          pott(i,j) = temp_org(k,i,j) * (P00/pres_org(k,i,j))**RovCP
        end do
        end do
     end if
@@ -765,14 +861,16 @@ contains
           if ( data_available(Ia_topo,1) ) then
              do j = 1, dims(3)
              do i = 1, dims(2)
-                temp_org(2,i,j) = temp_org(3,i,j) &
-                                + LAPS * (cz_org(3,i,j)-cz_org(2,i,j))
+                k = lm_layer(i,j)
+                temp_org(2,i,j) = temp_org(k,i,j) &
+                                + LAPS * (cz_org(k,i,j)-cz_org(2,i,j))
              end do
              end do
           else
              do j = 1, dims(3)
              do i = 1, dims(2)
-                temp_org(2,i,j) = temp_org(3,i,j)
+                k = lm_layer(i,j)
+                temp_org(2,i,j) = temp_org(k,i,j)
              end do
              end do
           end if
@@ -803,7 +901,8 @@ contains
        else
           do j = 1, dims(3)
           do i = 1, dims(2)
-             temp_org(1,i,j) = temp_org(3,i,j) + LAPS * cz_org(3,i,j)
+             k = lm_layer(i,j)
+             temp_org(1,i,j) = temp_org(k,i,j) + LAPS * cz_org(k,i,j)
           end do
           end do
        end if
@@ -818,17 +917,18 @@ contains
        ! guess surface height (elevation)
        do j = 1, dims(3)
        do i = 1, dims(2)
+          k = lm_layer(i,j)
           if ( pres_org(2,i,j) < pres_org(1,i,j) ) then
              lp2 = log( pres_org(2,i,j) / pres_org(1,i,j) )
           else
              lp2 = 1.0_RP
           end if
-          if ( pres_org(3,i,j) < pres_org(1,i,j) ) then
-             lp3 = log( pres_org(3,i,j) / pres_org(1,i,j) )
+          if ( pres_org(k,i,j) < pres_org(1,i,j) ) then
+             lp3 = log( pres_org(k,i,j) / pres_org(1,i,j) )
           else
              lp3 = 1.0_RP
           end if
-          cz_org(2,i,j) = max( 0.0_RP, cz_org(3,i,j) * lp2 / lp3 )
+          cz_org(2,i,j) = max( 0.0_RP, cz_org(k,i,j) * lp2 / lp3 )
        end do
        end do
     end if
@@ -841,13 +941,12 @@ contains
     do i = 1, dims(2)
     do k = 3, dims(1)+2
 
-       if( pres_org(k,i,j)>pres_org(2,i,j) )then ! if Pressure is larger than Surface pressure
-          !velz_org(k,i,j)=velz_org(2,i,j)
-          velx_org(k,i,j)=velx_org(2,i,j)
-          vely_org(k,i,j)=vely_org(2,i,j)
-          temp_org(k,i,j)=temp_org(2,i,j)
-          qtrc_org(k,i,j,:)=qtrc_org(2,i,j,:)
-          cz_org(k,i,j)=cz_org(2,i,j)
+       if( pres_org(k,i,j) > pres_org(2,i,j) )then ! if Pressure is larger than Surface pressure
+          velx_org(k,i,j)   = velx_org(2,i,j)
+          vely_org(k,i,j)   = vely_org(2,i,j)
+          temp_org(k,i,j)   = temp_org(2,i,j)
+          qtrc_org(k,i,j,:) = qtrc_org(2,i,j,:)
+          cz_org  (k,i,j)   = cz_org  (2,i,j)
       end if
 
     enddo
