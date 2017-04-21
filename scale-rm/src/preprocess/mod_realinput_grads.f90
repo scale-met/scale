@@ -374,22 +374,15 @@ contains
        dims, &
        nt )
     use scale_const, only: &
-       UNDEF => CONST_UNDEF, &
-       D2R => CONST_D2R,   &
-       EPS => CONST_EPS,   &
-       EPSvap => CONST_EPSvap, &
-       GRAV => CONST_GRAV, &
-       LAPS => CONST_LAPS, &
-       P00 => CONST_PRE00, &
-       Rdry => CONST_Rdry, &
-       CPdry => CONST_CPdry
-    use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       I_QC, &
-       I_QR, &
-       I_QI, &
-       I_QS, &
-       I_QG
+         UNDEF => CONST_UNDEF, &
+         D2R => CONST_D2R,   &
+         EPS => CONST_EPS,   &
+         EPSvap => CONST_EPSvap, &
+         GRAV => CONST_GRAV, &
+         LAPS => CONST_LAPS, &
+         P00 => CONST_PRE00, &
+         Rdry => CONST_Rdry, &
+         CPdry => CONST_CPdry
     use scale_atmos_saturation, only: &
        psat => ATMOS_SATURATION_psat_liq
     implicit none
@@ -648,10 +641,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
-                   qtrc_org(k+2,i,j,I_QV) = real(gdata3D(i,j,k), kind=RP)
+                   qtrc_org(k+2,i,j,QA_outer) = real(gdata3D(i,j,k), kind=RP)
                    ! replace missval with UNDEF
-                   if( abs( qtrc_org(k+2,i,j,I_QV) - missval ) < EPS ) then
-                      qtrc_org(k+2,i,j,I_QV) = UNDEF
+                   if( abs( qtrc_org(k+2,i,j,QA_outer) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,QA_outer) = UNDEF
                    end if
                 enddo
                 qtrc_org(1:2,i,j,I_QV) = qtrc_org(3,i,j,I_QV)
@@ -762,16 +755,16 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
-                   qtrc_org(k+2,i,j,I_QV) = real(gdata3D(i,j,k), kind=RP)
+                   qtrc_org(k+2,i,j,QA_outer) = real(gdata3D(i,j,k), kind=RP)
                    ! replace missval with UNDEF
-                   if( abs( qtrc_org(k+2,i,j,I_QV) - missval ) < EPS ) then
-                      qtrc_org(k+2,i,j,I_QV) = UNDEF
+                   if( abs( qtrc_org(k+2,i,j,QA_outer) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,QA_outer) = UNDEF
                    else
-                      rhprs_org(k+2,i,j) = qtrc_org(k+2,i,j,I_QV) / 100.0_RP   ! relative humidity
-                      call psat( p_sat, temp_org(k+2,i,j) )                    ! satulation pressure
+                      rhprs_org(k+2,i,j) = qtrc_org(k+2,i,j,QA_outer) / 100.0_RP     ! relative humidity
+                      call psat( p_sat, temp_org(k+2,i,j) )                          ! satulation pressure
                       qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
-                         / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )  ! mixing ratio
-                      qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )            ! specific humidity
+                           / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )      ! mixing ratio
+                      qtrc_org(k+2,i,j,QA_outer) = qm / ( 1.0_RP + qm )              ! specific humidity
                    end if
                 enddo
                 qtrc_org(1:2,i,j,I_QV) = qtrc_org(3,i,j,I_QV)
@@ -870,10 +863,10 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                qtrc_org(2,i,j,I_QV) = real(gdata2D(i,j), kind=RP)
+                qtrc_org(2,i,j,QA_outer) = real(gdata2D(i,j), kind=RP)
                 ! replace missval with UNDEF
-                if( abs( qtrc_org(2,i,j,I_QV) - missval ) < EPS ) then
-                   qtrc_org(2,i,j,I_QV) = UNDEF
+                if( abs( qtrc_org(2,i,j,QA_outer) - missval ) < EPS ) then
+                   qtrc_org(2,i,j,QA_outer) = UNDEF
                 end if
              enddo
              enddo
@@ -884,16 +877,16 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                qtrc_org(2,i,j,I_QV) = real(gdata2D(i,j), kind=RP)
+                qtrc_org(2,i,j,QA_outer) = real(gdata2D(i,j), kind=RP)
                 ! replace missval with UNDEF
-                if( abs( qtrc_org(2,i,j,I_QV) - missval ) < EPS ) then
-                   qtrc_org(2,i,j,I_QV) = UNDEF
+                if( abs( qtrc_org(2,i,j,QA_outer) - missval ) < EPS ) then
+                   qtrc_org(2,i,j,QA_outer) = UNDEF
                 else
-                   rhsfc = qtrc_org(2,i,j,I_QV) / 100.0_RP
-                   call psat( p_sat, temp_org(2,i,j) )         ! satulation pressure
+                   rhsfc = qtrc_org(2,i,j,QA_outer) / 100.0_RP
+                   call psat( p_sat, temp_org(2,i,j) )             ! satulation pressure
                    qm = EPSvap * rhsfc * p_sat &
-                      / ( pres_org(2,i,j) - rhsfc * p_sat )    ! mixing ratio
-                   qtrc_org(2,i,j,I_QV) = qm / ( 1.0_RP + qm ) ! specific humidity
+                      / ( pres_org(2,i,j) - rhsfc * p_sat )        ! mixing ratio
+                   qtrc_org(2,i,j,QA_outer) = qm / ( 1.0_RP + qm ) ! specific humidity
                 end if
              enddo
              enddo
