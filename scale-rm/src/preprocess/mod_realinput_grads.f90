@@ -52,8 +52,8 @@ module mod_realinput_grads
   integer,  parameter    :: grads_vars_limit = 1000 !> limit of number of values
   integer,  parameter    :: num_item_list = 22
   integer,  parameter    :: num_item_list_atom  = 22
-  integer,  parameter    :: num_item_list_land  = 12
-  integer,  parameter    :: num_item_list_ocean = 10
+  integer,  parameter    :: num_item_list_land  = 11
+  integer,  parameter    :: num_item_list_ocean = 9
   logical                :: data_available(num_item_list_atom,3) ! 1:atom, 2:land, 3:ocean
   character(len=H_SHORT) :: item_list_atom (num_item_list_atom)
   character(len=H_SHORT) :: item_list_land (num_item_list_land)
@@ -383,13 +383,6 @@ contains
        P00 => CONST_PRE00, &
        Rdry => CONST_Rdry, &
        CPdry => CONST_CPdry
-    use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       I_QC, &
-       I_QR, &
-       I_QI, &
-       I_QS, &
-       I_QG
     use scale_atmos_saturation, only: &
        psat => ATMOS_SATURATION_psat_liq
     implicit none
