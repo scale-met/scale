@@ -3438,39 +3438,43 @@ contains
     !...THERMODYNAMIC PROPERTIES ARE STILL CALCULATED WITH RESPECT TO LIQUID WATER
     !...TO ALLOW THE USE OF LOOKUP TABLE TO EXTRACT TMP FROM THETAE...
     !
+    if ( QFRZ > 0.0_RP ) then ! [add] R.Yoshida (20170508) avoid to create
+                              ! negative Qice when there is no freezing ice.
 
-    RLC=2.5E6_RP-2369.276_RP*(TU-273.16_RP)
-    !      RLC=2.5E6_RP-2369.276_RP*(TU-273.15_RP)   ! 273.16 -> 273.15 ??
-    RLS=2833922._RP-259.532_RP*(TU-273.16_RP)
-    !      RLS=2833922._RP-259.532_RP*(TU-273.15_RP) ! 273.16 -> 273.15 ??
-    RLF=RLS-RLC
-    CPP=1004.5_RP*(1._RP+0.89_RP*QU)
-    !
-    !  A = D(es)/DT IS THAT CALCULATED FROM BUCK (1981) EMPERICAL FORMULAS
-    !  FOR SATURATION VAPOR PRESSURE...
-    !
-    A=(CLIQ-BLIQ*DLIQ)/((TU-DLIQ)*(TU-DLIQ))
-    DTFRZ = RLF*QFRZ/(CPP+RLS*QU*A)
-    TU = TU+DTFRZ
-    ! temporary: WRF TYPE equations are used to maintain consistency
-    !      call ATMOS_SATURATION_psat_liq(ES,TU) !saturation vapar pressure
+       RLC=2.5E6_RP-2369.276_RP*(TU-273.16_RP)
+       !      RLC=2.5E6_RP-2369.276_RP*(TU-273.15_RP)   ! 273.16 -> 273.15 ??
+       RLS=2833922._RP-259.532_RP*(TU-273.16_RP)
+       !      RLS=2833922._RP-259.532_RP*(TU-273.15_RP) ! 273.16 -> 273.15 ??
+       RLF=RLS-RLC
+       CPP=1004.5_RP*(1._RP+0.89_RP*QU)
+       !
+       !  A = D(es)/DT IS THAT CALCULATED FROM BUCK (1981) EMPERICAL FORMULAS
+       !  FOR SATURATION VAPOR PRESSURE...
+       !
+       A=(CLIQ-BLIQ*DLIQ)/((TU-DLIQ)*(TU-DLIQ))
+       DTFRZ = RLF*QFRZ/(CPP+RLS*QU*A)
+       TU = TU+DTFRZ
+       ! temporary: WRF TYPE equations are used to maintain consistency
+       !      call ATMOS_SATURATION_psat_liq(ES,TU) !saturation vapar pressure
 
-    ES = ALIQ*EXP((BLIQ*TU-CLIQ)/(TU-DLIQ))
-    QS = ES*0.622_RP/(P-ES)
-    !
-    !...FREEZING WARMS THE AIR AND IT BECOMES UNSATURATED...ASSUME THAT SOME OF THE
-    !...LIQUID WATER THAT IS AVAILABLE FOR FREEZING EVAPORATES TO MAINTAIN SATURA-
-    !...TION...SINCE THIS WATER HAS ALREADY BEEN TRANSFERRED TO THE ICE CATEGORY,
-    !...SUBTRACT IT FROM ICE CONCENTRATION, THEN SET UPDRAFT MIXING RATIO AT THE NEW
-    !...TEMPERATURE TO THE SATURATION VARIABLE...
-    !
-    DQEVAP = QS-QU
-    QICE = QICE-DQEVAP
-    QU = QU+DQEVAP
-    PII=(1.E5_RP/P)**(0.2854_RP*(1._RP-0.28_RP*QU))
-    ! Bolton 1980
-    ! Emanuel 1994 132p eq(4.7.9) pseudoequivalent PT
-    THTEU = TU*PII*EXP((3374.6525_RP/TU - 2.5403_RP)*QU*(1._RP + 0.81_RP*QU))
+       ES = ALIQ*EXP((BLIQ*TU-CLIQ)/(TU-DLIQ))
+       QS = ES*0.622_RP/(P-ES)
+       !
+       !...FREEZING WARMS THE AIR AND IT BECOMES UNSATURATED...ASSUME THAT SOME OF THE
+       !...LIQUID WATER THAT IS AVAILABLE FOR FREEZING EVAPORATES TO MAINTAIN SATURA-
+       !...TION...SINCE THIS WATER HAS ALREADY BEEN TRANSFERRED TO THE ICE CATEGORY,
+       !...SUBTRACT IT FROM ICE CONCENTRATION, THEN SET UPDRAFT MIXING RATIO AT THE NEW
+       !...TEMPERATURE TO THE SATURATION VARIABLE...
+       !
+       DQEVAP = QS-QU
+       QICE = QICE-DQEVAP
+       QU = QU+DQEVAP
+       PII=(1.E5_RP/P)**(0.2854_RP*(1._RP-0.28_RP*QU))
+       ! Bolton 1980
+       ! Emanuel 1994 132p eq(4.7.9) pseudoequivalent PT
+       THTEU = TU*PII*EXP((3374.6525_RP/TU - 2.5403_RP)*QU*(1._RP + 0.81_RP*QU))
+
+    endif
     !
   end subroutine DTFRZNEW
   ! --------------------------------------------------------------------------------
