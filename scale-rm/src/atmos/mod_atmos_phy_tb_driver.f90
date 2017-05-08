@@ -361,7 +361,8 @@ contains
 
     endif
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,MOMZ_t,MOMZ_t_TB,MOMX_t,MOMX_t_TB,MOMY_t,MOMY_t_TB,RHOT_t,RHOT_t_TB)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

@@ -84,7 +84,8 @@ contains
 
     call PROF_rapstart('MP_filter', 3)
 
-    !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iq,diffq) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,QHS,QHE,QTRC,DENS,RHOT,I_QV,diffq_check) 
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS,  KE
@@ -290,7 +291,8 @@ contains
     else ! cold rain
 
        ! Turn QC & QI into QV with consistency of moist internal energy
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,Emoist,TEMP0,CVtot,QTRC1,LHV,LHF,QSUM1,I_QV,I_QC,I_QI) 
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
@@ -381,7 +383,8 @@ contains
     end if
 
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE1,DENS0,TEMP1,CVtot,RHOE_t,RHOE0,rdt) 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -641,17 +644,18 @@ contains
                                    DENS0(:,:,:)  ) ! [IN]
 
     ijk_sat = 0
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !!$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !!$omp shared(JS,JE,IS,IE,KS,KE,QSUM1,QSAT,index_sat,ijk_sat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        if ( QSUM1(k,i,j) > QSAT(k,i,j) ) then
-          !$omp critical
+          !!$omp critical
           ijk_sat = ijk_sat + 1
           index_sat(ijk_sat,1) = k
           index_sat(ijk_sat,2) = i
           index_sat(ijk_sat,3) = j
-          !$omp end critical
+          !!$omp end critical
        endif
     enddo
     enddo
@@ -854,6 +858,15 @@ contains
        endif
        call COMM_wait( QTRC(:,:,:,iqa), QA_MP+iq )
 
+#if 0
+       !$omp parallel do default(none)                                                        &
+       !$omp shared(JS,JE,IS,IE,KS,KE,qflx,iq,vterm,DENS,QTRC,iqa,J33G,eflx,temp,CVq,RHOE,dt) &
+       !$omp shared(rcdz,GRAV,rfdz,MOMZ,MOMX,rcdz_u,MOMY,rcdz_v)                              &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+#else
+       !$omp parallel do default(shared)                                                      &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+#endif
        do j  = JS, JE
        do i  = IS, IE
           !--- mass flux for each mass tracer, upwind with vel < 0
@@ -979,6 +992,8 @@ contains
 
     !--- lowermost flux is saved for land process
     if ( QLS > 0 ) then
+       !$omp parallel do default(none) private(i,j,k,iqa,iq) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,QLS,QLE,QS_MP,flux_rain,qflx)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS-1, KE
@@ -991,6 +1006,9 @@ contains
        enddo
     endif
     if ( QIS > 0 ) then
+       !$omp parallel do default(none)                              &
+       !$omp shared(JS,JE,IS,IE,KS,KE,QIS,QIE,QS_MP,flux_snow,qflx) &
+       !$omp private(i,j,k,iqa,iq) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS-1, KE

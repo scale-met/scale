@@ -30,6 +30,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_tb_smg
   !-----------------------------------------------------------------------------
   !
@@ -373,6 +374,9 @@ contains
 #endif
 
     ! potential temperature
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOT,DENS,POTT) &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -469,6 +473,9 @@ contains
 
        ! tke = (nu/(Ck * Delta))^2 = ( nu * Cs / Ck )^2 / ( Cs * Delta )^2
        ! Sullivan et al. (1994)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,nu,nu_fact,Cs,TKE) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
@@ -546,6 +553,9 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (x edge)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,S23_X,nu,qflx_sgs_momz) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
@@ -659,6 +669,9 @@ contains
 #endif
        end if
        ! (cell center)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S11_C,S22_C,S33_C,TKE,tke_fact,qflx_sgs_momx) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
@@ -681,6 +694,9 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (z edge)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S12_Z,qflx_sgs_momx) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
@@ -801,6 +817,9 @@ contains
        end if
 
        ! (z edge)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S12_Z,qflx_sgs_momy) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -827,6 +846,9 @@ contains
 #endif
 
        ! (z-x plane)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S11_C,S22_C,S33_C,tke_fact,TKE,qflx_sgs_momy) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE
        do k = KS, KE

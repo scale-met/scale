@@ -12,6 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_tb_hybrid
   !-----------------------------------------------------------------------------
   !
@@ -334,6 +335,8 @@ contains
                  SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,             & ! [IN]
                  GSQRT, J13G, J23G, J33G, MAPF, dt                       ) ! [IN]
 
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KS,KE,qflx_sgs_momz,w_qflx_sgs_momz,frac_sgs,frac_pbl)
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -378,6 +381,10 @@ contains
     end do
     end do
 
+    !$omp parallel do default(none)                                                        &
+    !$omp shared(JA,IA,KS,KE,qflx_sgs_rhoq,w_qflx_sgs_rhoq,frac_sgs,frac_pbl,QA,I_TKE_SGS) &
+    !$omp shared(I_TKE_PBL,TRACER_ADVC)                                                    &
+    !$omp private(i,j,k,iq) OMP_SCHEDULE_
     do iq = 1, QA
 
        if ( iq == I_TKE_SGS .or. iq == I_TKE_PBL ) then

@@ -557,7 +557,7 @@ contains
 
        !-----< update density >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -657,8 +657,8 @@ contains
        enddo
 
        !-----< update momentum (z) -----
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       
+       !$omp parallel do private(i,j,k,advcv,advch,wdamp,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -922,7 +922,7 @@ contains
 
        !-----< update momentum (x) >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, min(IIE, IEH)
        do k = KS, KE
@@ -1170,7 +1170,7 @@ contains
 
        !-----< update momentum (y) >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, min(JJE, JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -1361,7 +1361,7 @@ contains
 
        !-----< update rho*theta >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE

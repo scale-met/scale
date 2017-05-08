@@ -12,6 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_rd_common
   !-----------------------------------------------------------------------------
   !
@@ -102,6 +103,9 @@ contains
                          TRACER_R(:),   & ! [IN]
                          TRACER_MASS(:) ) ! [IN]
 
+    !$omp parallel do default(none)                       &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE_t,flux_rad,FZ,dt,RHOE) &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

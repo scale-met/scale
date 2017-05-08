@@ -182,6 +182,9 @@ contains
     if ( update_flag ) then
 
 !OCL XFILL
+       !$omp parallel do default(none) &
+       !$omp shared(JA,IA,KA,DENS0,MOMZ0,MOMX0,MOMY0,RHOT0,DENS,MOMZ,MOMX,MOMY,RHOT) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = 1, JA
        do i  = 1, IA
        do k  = 1, KA
@@ -219,6 +222,9 @@ contains
                           SFLX_snow(:,:)      ) ! [OUT]
 
 !OCL XFILL
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DENS_t_MP,DENS0,DENS,MOMZ_t_MP,MOMZ0,MOMZ,MOMX_t_MP,MOMX0) &
+       !$omp shared(MOMX,MOMY_t_MP,MOMY0,MOMY,RHOT_t_MP,RHOT0,RHOT,dt_MP)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -233,6 +239,9 @@ contains
 
 !OCL XFILL
        do iq = QS_MP, QE_MP
+       !$omp parallel do default(none) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,RHOQ_t_MP,iq,QTRC0,QTRC,DENS0,DENS,dt_MP) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -268,7 +277,9 @@ contains
 
     endif
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,DENS_t,DENS_t_MP,MOMZ_t,MOMZ_t_MP,MOMX_t,MOMX_t_MP,MOMY_t) &
+    !$omp shared(MOMY_t_MP,RHOT_t,RHOT_t_MP)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -282,7 +293,8 @@ contains
     enddo
 
     do iq = QS_MP, QE_MP
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOQ_t,iq,RHOQ_t_MP)
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE

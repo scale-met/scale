@@ -17,6 +17,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_tb_mynn
   !-----------------------------------------------------------------------------
   !
@@ -525,6 +526,11 @@ contains
     call ATMOS_SATURATION_alpha( alpha(:,:,:), temp(:,:,:) )
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none)                                                         &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,I_QC,QTRC,I_QI,TRACER_MASS,iq,Qw,I_QV,LH,alpha) &
+    !$omp shared(LHV,LHS,POTT,RHOT,DENS,POTL,temp,CP,TEML,POTV,EPSTvap,SFLX_PT,SFLX_SH,n2)  &
+    !$omp shared(ATMOS_PHY_TB_MYNN_N2_MAX,GRAV,CZ,U,V,Ri,dudz2,QA)                          &
+    !$omp private(i,j,k,ql,qs,qdry) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE_PBL+1
@@ -665,6 +671,13 @@ contains
                                      KE_PBL-KS+1 ) ! (in)
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none) &
+    !$omp private(i,j,k,dQsl,aa,bb,ac,sigma_s,Q1,RR,Ql,cc,Rt,betat,betaq) &
+    !$omp OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,l,KE_PBL,Qsl,lh,POTL,CP,TEMP,POTT,q2_2,Qw,q) &
+    !$omp shared(CZ,rsqrt_2,rsqrt_2pi,sqrt_2pi,EPSTvap) &
+    !$omp shared(ATMOS_PHY_TB_MYNN_N2_MAX,GRAV,POTV,dudz2,Ri,n2) &
+    !$omp shared(sh,KE)
     do j = JS, JE
     do i = IS, IE
        do k = KS+1, KE_PBL
@@ -731,6 +744,9 @@ contains
          l, n2, dudz2 ) ! (in)
 
 
+    !$omp parallel do default(none) private(i,j,k,Kh) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,Nu,l,KE_PBL,q,sm,ATMOS_PHY_TB_MYNN_NU_MAX,ATMOS_PHY_TB_MYNN_NU_MIN) &
+    !$omp shared(KA,sh,ATMOS_PHY_TB_MYNN_KH_MAX,ATMOS_PHY_TB_MYNN_KH_MIN,RHOKh,DENS,Pr,KE,KS)
     do j = JS, JE
     do i = IS, IE
        do k = 1, KS-1
@@ -764,6 +780,10 @@ contains
 
     !  for velocities
 !OCL INDEPENDENT
+    !$omp parallel do default(none)                                                              &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,dt,DENS,Nu,RFDZ,GSQRT,I_XYW,a,c,b,d,RCDZ,I_XYZ,U,SFLX_MU) &
+    !$omp shared(phiN)                                                                           &
+    !$omp private(i,j,k,ap) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -833,6 +853,9 @@ contains
 
        ! integration V
 !OCL INDEPENDENT
+       !$omp parallel do default(none)                                                         &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE_PBL,V,dt,SFLX_MV,RCDZ,DENS,GSQRT,I_XYZ,phiN,a,b,c,d) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           d(KS,i,j) = V(KS,i,j) + dt * SFLX_MV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
@@ -905,6 +928,9 @@ contains
        end do
        end do
 
+       !$omp parallel do default(none)                                                           &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE_PBL,RHOKh,J33G,phiN,RFDZ,GSQRT,I_XYW,KE,qflx_sgs_rhot) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_rhot(KS-1,i,j,ZDIR) = 0.0_RP
@@ -931,6 +957,9 @@ contains
           if( .NOT. TRACER_ADVC(iq) ) cycle
 
 !OCL INDEPENDENT
+          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JJS,JJE,IIS,IIE,iq,I_QV,d,QTRC,KS,dt,SFLX_QV,RCDZ,DENS,GSQRT,I_XYZ,KE_PBL) &
+          !$omp shared(a,b,c,phiN)
           do j = JJS, JJE
           do i = IIS, IIE
              d(KS,i,j) = QTRC(KS,i,j,iq) &
@@ -947,6 +976,10 @@ contains
           end do
           end do
 
+          !$omp parallel do default(none)                                                &
+          !$omp shared(JJS,JJE,IIS,IIE,KS,KE_PBL,iq,RHOKh,J33G,phiN,RFDZ,GSQRT,KE,I_XYW) &
+          !$omp shared(qflx_sgs_rhoq)                                                    &
+          !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
@@ -965,6 +998,8 @@ contains
 
 
        ! TKE
+       !$omp parallel do default(none) private(i,j,k,tke) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,q,d,dt,Nu,dudz2,n2,Pr,KE_PBL)
        do j = JJS, JJE
        do i = IIS, IIE
           tke = q(KS,i,j)**2 * 0.5
@@ -991,6 +1026,10 @@ contains
        end do
 
 !OCL INDEPENDENT
+       !$omp parallel do default(none)                                                        &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE_PBL,dt,DENS,Nu,RFDZ,GSQRT,I_XYW,l,RCDZ,I_XYZ,I_TKE) &
+       !$omp shared(tke_N,QTRC,KE,d,q,a,c,b,RHOQ_t)                                           &
+       !$omp private(i,j,k,ap) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           ap = - dt * 1.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
@@ -1024,7 +1063,6 @@ contains
 
        end do
        end do
-
 
     end do
     end do
@@ -1089,6 +1127,11 @@ contains
     integer :: k, i, j
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none)                                                            &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,q,FZ,EPS,ATMOS_PHY_TB_MYNN_Lt_MAX,SFLX_MU,SFLX_MV,DENS) &
+    !$omp shared(SFLX_PT,PT0,n2,GRAV,l)                                                        &
+    !$omp private(i,j,k,qdz,lt,rlt,us,rlm,qc,z,zeta,sw,ls,rn2sr,lb,int_qz,int_q)               &
+    !$omp OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        int_qz = 0.0_RP
@@ -1153,6 +1196,9 @@ contains
     integer :: k, i, j
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,AF12,Ri,Rf1,Rf2,Rfc,A2,G2,l,dudz2,q2_2) &
+    !$omp private(i,j,k,rf,sh_2,sm_2,q2) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE_PBL
@@ -1198,6 +1244,9 @@ contains
     integer :: k, i, j
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none)                                      &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,q,q2_2,l,n2,A2,A1,dudz2,C1,sm,sh) &
+    !$omp private(i,j,k,ac,ac2,l2q2,gh,p1,p2,p3,p4,p5,rd25) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE_PBL
@@ -1221,7 +1270,6 @@ contains
     end do
     end do
     end do
-
     return
   end subroutine get_smsh
 

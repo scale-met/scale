@@ -13,6 +13,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_mp_tomita08
   !-----------------------------------------------------------------------------
   !
@@ -967,7 +968,8 @@ contains
     !$omp private(MOMs_0,MOMs_1,MOMs_2,MOMs_0bs,MOMs_1bs,MOMs_2bs,MOMs_2ds,MOMs_5ds_h,RMOMs_Vt)                       &
     !$omp private(rhoqc,Xs2,tems,loga_,b_,nm)                                                                         &
     !$omp private(Vti,Vtr,Vts,Vtg,Esi_mod,Egs_mod,Dc,Praut_berry,Praut_kk,betai,betas,Da,Kd,NU,Glv,Giv,Gil)           &
-    !$omp private(ventr,vents,ventg,tmp,dt1,Ni50,ice,net,fac_sw,fac)                                                  &
+    !$omp private(ventr,vents,ventg,tmp,dt1,Ni50,net,fac_sw,fac)                                                  &
+    !$omp private(Ni0,Qi0,Pracw_orig,Pracw_kk,rhoqi,XNi,XMi,Di,sw)                                                 &
     !$omp collapse(3)
 !OCL TEMP_PRIVATE(coef_bt,coef_at,w)
     do j = JS, JE
@@ -1636,6 +1638,8 @@ contains
     enddo
     enddo
 
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE_t,DENS0,LHV,QTRC_t,I_QV,LHF,I_QI,I_QS,I_QG,RHOE0,dt)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1696,6 +1700,22 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+#ifndef __GFORTRAN__
+    !$omp parallel do default(none) &
+    !$omp private(i,j,k,dens,temc,qv,qc,qr,qi,qs,qg,rho_fact,N0r,N0s,N0g,zerosw,RLMDr,RLMDr_dr) &
+    !$omp private(RLMDs,RLMDs_ds,RMOMs_Vt,Xs2,tems,nm,loga_,b_,RLMDg,RLMDg_dg) &
+    !$omp private(coef_at,coef_bt,MOMs_0bs) &
+    !$omp OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,DENS0,TEMP0,QTRC0,I_QV,I_QC,I_QR,I_QI,I_QS,I_QG) &
+    !$omp shared(sw_WDXZ2014,N0r_def,N0s_def,N0g_def,Ar,GAM_1br,As,GAM_1bs) &
+    !$omp shared(sw_RS2014,vterm,GAM_1brdr,Cs,Cg,GAM_1bg,GAM_1bgdg,Cr,Ag) &
+    !$omp shared(ln10,GAM_1bsds)
+#else
+    !$omp parallel do default(shared) &
+    !$omp private(i,j,k,dens,temc,qv,qc,qr,qi,qs,qg,rho_fact,N0r,N0s,N0g,zerosw,RLMDr,RLMDr_dr) &
+    !$omp private(RLMDs,RLMDs_ds,RMOMs_Vt,Xs2,tems,nm,loga_,b_,RLMDg,RLMDg_dg) &
+    !$omp private(coef_at,coef_bt,MOMs_0bs) OMP_SCHEDULE_ collapse(2)
+#endif
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1826,6 +1846,9 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do default(none)                              &
+    !$omp shared(JS,JE,IS,IE,KS,KE,temp,a1,a1_tab,a2,a2_tab,ma2) &
+    !$omp private(i,j,k,temc,itemc,fact) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1925,6 +1948,20 @@ contains
     Re(:,:,:,I_HI) =  re_qi * um2cm
     Re(:,:,:,I_HG+1:) = 0.0_RP
 
+#ifndef __GFORTRAN__
+    !$omp parallel do default(none)                                                          &
+    !$omp shared(JS,JE,IS,IE,KS,KE,DENS0,TEMP0,QTRC0,I_QR,I_QS,I_QG,sw_WDXZ2014,N0r_def)     &
+    !$omp shared(N0s_def,N0g_def,Ar,GAM_1br,Re,As,GAM_1bs)                                   &
+    !$omp shared(sw_RS2014,ln10,Ag,GAM_1bg)                                                  &
+    !$omp private(i,j,k,dens,temc,qr,qs,qg,N0r,N0s,N0g,zerosw,RLMDr,RLMDs,Xs2,nm,tems,loga_) &
+    !$omp private(b_,RLMDg,coef_at,coef_bt) &
+    !$omp OMP_SCHEDULE_ collapse(2)
+#else
+    !$omp parallel do default(shared)                                                        &
+    !$omp private(i,j,k,dens,temc,qr,qs,qg,N0r,N0s,N0g,zerosw,RLMDr,RLMDs,Xs2,nm,tems,loga_) &
+    !$omp private(b_,RLMDg,coef_at,coef_bt) &
+    !$omp OMP_SCHEDULE_ collapse(2)
+#endif
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE

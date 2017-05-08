@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_matrix
   !-----------------------------------------------------------------------------
   !
@@ -119,6 +120,9 @@ contains
     enddo
     enddo
 
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KA,ud,md,ld,iv,c,d) &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = 2,  KA

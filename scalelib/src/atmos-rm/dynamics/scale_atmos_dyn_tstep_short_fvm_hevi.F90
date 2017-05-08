@@ -363,7 +363,8 @@ contains
     IIE = IIS+IBLOCK-1
 
        PROFILE_START("hevi_pres")
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DPRES0,RT2P,RHOT,REF_rhot,DPRES,DENS,PHI)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
           do k = KS, KE
@@ -385,7 +386,8 @@ contains
 
        PROFILE_START("hevi_mflx_z")
        ! at (x, y, w)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,GSQRT,I_XYW,MOMX,MOMY,J13G,J23G,mflx_hi,MAPF,I_XY,num_diff) 
        do j = JJS, JJE
        do i = IIS-1, IIE
           mflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
@@ -420,7 +422,8 @@ contains
        iss = max(IIS-1,IS-IFS_OFF)
        iee = min(IIE,IEH)
        ! at (u, y, z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,iss,iee,KS,KE,GSQRT,I_UYZ,MOMX,num_diff,mflx_hi,MAPF,I_UY) 
        do j = JJS, JJE
        do i = iss, iee
        do k = KS, KE
@@ -440,7 +443,8 @@ contains
        PROFILE_STOP("hevi_mflx_x")
 
        ! at (x, v, z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JS,JFS_OFF,JJE,JEH,IIS,IIE,KS,KE,GSQRT,I_XVZ,MOMY,num_diff,mflx_hi,MAPF,I_XV) 
        do j = max(JJS-1,JS-JFS_OFF), min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -460,7 +464,9 @@ contains
 
        !--- update density
        PROFILE_START("hevi_sr")
-       !$omp parallel do private(i,j,k,advch) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k,advch) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS0,mflx_hi,DENS_t,RCDZ,RCDX,RCDY) &
+       !$omp shared(MAPF,I_XY,GSQRT,I_XYZ,Sr)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -536,7 +542,10 @@ contains
 
        !--- update momentum(z)
        PROFILE_START("hevi_sw")
-       !$omp parallel do private(i,j,k,advcv,advch,cf,wdmp,div) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k,advcv,advch,cf,wdmp,div) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,qflx_hi,qflx_J13,qflx_J23,DDIV,MOMZ0,MOMZ_t) &
+       !$omp shared(RFDZ,RCDX,RCDY,MAPF,I_XY,wdamp_coef,divdmp_coef,dtrk,FDZ,Sw) &
+       !$omp shared(GSQRT,I_XYW)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -585,7 +594,8 @@ contains
 
        !##### Thermodynamic Equation #####
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,JHALO,IHALO,RHOT,DENS,POTT)
        do j = JJS-JHALO, JJE+JHALO
        do i = IIS-IHALO, IIE+IHALO
        do k = KS, KE
@@ -624,7 +634,9 @@ contains
 
 
        PROFILE_START("hevi_st")
-       !$omp parallel do private(i,j,k,advch) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k,advch) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,tflx_hi,RHOT_t,RCDZ,RCDX,RCDY,MAPF,I_XY) &
+       !$omp shared(GSQRT,St,I_XYZ)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -661,7 +673,17 @@ contains
 
 !OCL INDEPENDENT
 !OCL PREFETCH_SEQUENTIAL(SOFT)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+#ifndef __GFORTRAN__
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(B,pg,advcv) &
+       !$omp shared(JJS,JJE,IIS,IIE,PT,MOMZ,POTT,GSQRT,I_XYZ,CDZ,KS,KE,A,dtrk,J33G,RCDZ,RT2P) &
+       !$omp shared(GRAV,F1,I_XYW,F2,F3,DPRES,St,REF_dens,Sr,C,Sw) &
+       !$omp shared(mflx_hi,MAPF,I_XY,MOMZ_RK,MOMZ0,RFDZ) &
+       !$omp shared(RHOT0,DENS_RK,RHOT_RK,DENS0,DENS,ATMOS_DYN_FVM_flux_valueW_Z)
+#else
+       !$omp parallel do default(shared) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(B,pg,advcv)
+#endif
        do j = JJS, JJE
        do i = IIS, IIE
 
@@ -833,7 +855,11 @@ contains
 
        !--- update momentum(x)
        iee = min(IIE,IEH)
-       !$omp parallel do private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,iee,KS,KE,qflx_hi,DPRES,CORIOLI,MOMY,DDIV,MOMX0) &
+       !$omp shared(MOMY0,RCDZ,qflx_J13,qflx_J23,RCDX,RFDY,MAPF,I_XV,GSQRT,I_XYZ,I_XVW,I_XVZ) &
+       !$omp shared(MOMX_t,I_UYZ,dtrk,MOMX_RK,FDX,I_UY,I_XY,divdmp_coef,DENS,I_UV,MOMX,CDZ) &
+       !$omp shared(I_UYW,J13G,RFDX,RCDY,RFDZ)
        do j = JJS, JJE
        do i = IIS, iee
        do k = KS, KE
@@ -942,7 +968,10 @@ contains
             IIS, IIE, JJS, JJE ) ! (in)
 
        !--- update momentum(y)
-       !$omp parallel do private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,JEH,IIS,IIE,KS,KE,qflx_hi,DPRES,CORIOLI,MOMX,DDIV,MOMY_t) &
+       !$omp shared(MOMY0,RCDZ,qflx_J13,qflx_J23,RCDX,RFDY,MAPF,I_XV,GSQRT,I_XYZ,I_XVW,I_XVZ) &
+       !$omp shared(dtrk,MOMY_RK,FDY,I_XY,divdmp_coef,DENS,I_UV,MOMY,CDZ,J23G)
        do j = JJS, min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE

@@ -228,7 +228,9 @@ contains
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
 
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JJS,JJE,IIS,IIE,KS,KE,QTRCo,QTRC0,DENS0,dtl,qflx_hi,RCDZ,RCDX,RCDY,MAPF) &
+          !$omp shared(GSQRT,RHOQ_t,DENS,I_XYZ) 
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE

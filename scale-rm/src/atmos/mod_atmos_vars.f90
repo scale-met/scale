@@ -1422,7 +1422,10 @@ contains
     endif
 
     if ( AD_PREP_sw(I_CPTOT) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(iq) &
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CPTOT,CPdry,QDRY,QA,CVTOT,CVdry,QTRC,TRACER_CP,TRACER_CV) &
+       !$omp shared(I_QV,LHV,QIS,QIE,LHF) 
 !OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
@@ -2370,7 +2373,10 @@ contains
                               TRACER_R(:),   & ! [IN]
                               TRACER_MASS(:) ) ! [IN]
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(iq) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,ENGP,DENS,GRAV,REAL_CZ,W,U,V,ENGI,ENGK,QDRY,TEMP,CVdry,QA) &
+    !$omp shared(TRACER_CV,QTRC,I_QV,LHV,QIS,QIE,LHF) 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
