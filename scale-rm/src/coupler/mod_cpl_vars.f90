@@ -455,7 +455,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp parallel do default(none) private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U) &
     !$omp shared(OCN_ATM_V,OCN_ATM_DENS,CNT_putATM_OCN,TEMP,PRES,W,U,V,DENS) &
     !$omp shared(I_QV,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn) &
@@ -537,7 +537,7 @@ contains
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV) &
     !$omp shared(URB_ATM_PBL,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &
     !$omp shared(URB_ATM_SFLX_snow,CNT_putATM_URB) &
-    !$omp private(i,j) OMP_SCHEDULE_ collapse(1)
+    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ collapse(1)
     do j = JS, JE
     do i = IS, IE
        ! for ocean
@@ -1090,7 +1090,7 @@ contains
     !$omp shared(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV) &
     !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
     !$omp shared(OCN_ATM_SFLX_snow) &
-    !$omp private(i,j) OMP_SCHEDULE_ 
+    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ 
     do j = JS, JE
     do i = IS, IE
        TEMP       (i,j)     = OCN_ATM_TEMP       (i,j)
@@ -1158,7 +1158,7 @@ contains
     !$omp shared(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV) &
     !$omp shared(LND_ATM_PBL,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_rain) &
     !$omp shared(LND_ATM_SFLX_snow) &
-    !$omp private(i,j) OMP_SCHEDULE_ 
+    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ 
     do j = JS, JE
     do i = IS, IE
        TEMP       (i,j)     = LND_ATM_TEMP       (i,j)
@@ -1226,7 +1226,7 @@ contains
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV) &
     !$omp shared(URB_ATM_PBL,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &
     !$omp shared(URB_ATM_SFLX_snow) &
-    !$omp private(i,j) OMP_SCHEDULE_ 
+    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ 
     do j = JS, JE
     do i = IS, IE
        TEMP       (i,j)     = URB_ATM_TEMP       (i,j)

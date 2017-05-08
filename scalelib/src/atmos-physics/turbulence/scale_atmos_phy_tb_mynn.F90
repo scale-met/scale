@@ -528,9 +528,9 @@ contains
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     !$omp parallel do default(none)                                                         &
     !$omp shared(JS,JE,IS,IE,KS,KE_PBL,I_QC,QTRC,I_QI,TRACER_MASS,iq,Qw,I_QV,LH,alpha) &
-    !$omp shared(LHV,LHS,POTT,RHOT,DENS,POTL,temp,CP,TEML,POTV,EPSTvap,SFLX_PT,SFLX_SH,n2)  &
+    !$omp shared(LHV,LHS,POTT,RHOT,DENS,POTL,temp,CP,TEML,POTV,EPSTvap,SFLX_PT,SFLX_SH,n2,N2_in)  &
     !$omp shared(ATMOS_PHY_TB_MYNN_N2_MAX,GRAV,CZ,U,V,Ri,dudz2,QA)                          &
-    !$omp private(i,j,k,ql,qs,qdry) OMP_SCHEDULE_ collapse(2)
+    !$omp private(i,j,k,qv,ql,qs,qdry) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE_PBL+1
@@ -958,7 +958,7 @@ contains
 
 !OCL INDEPENDENT
           !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JJS,JJE,IIS,IIE,iq,I_QV,d,QTRC,KS,dt,SFLX_QV,RCDZ,DENS,GSQRT,I_XYZ,KE_PBL) &
+          !$omp shared(JJS,JJE,IIS,IIE,iq,I_QV,d,QTRC,KS,dt,SFLX_Q,RCDZ,DENS,GSQRT,I_XYZ,KE_PBL) &
           !$omp shared(a,b,c,phiN)
           do j = JJS, JJE
           do i = IIS, IIE
