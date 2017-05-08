@@ -2363,7 +2363,11 @@ contains
        end do
        cpr       = totalprcp
        prcp_flux = totalprcp - tder ! precipitation - evapolate water
-       pef       = prcp_flux/totalprcp
+       if ( totalprcp < KF_EPS ) then ! to avoid FPE w/ Kessler Precip
+          pef = 0.0_RP
+       else
+          pef = prcp_flux/totalprcp
+       endif
        !
        !...ADJUST UPDRAFT MASS FLUX, MASS DETRAINMENT RATE, AND LIQUID WATER AN
        !   DETRAINMENT RATES TO BE CONSISTENT WITH THE TRANSFER OF THE ESTIMATE
