@@ -434,6 +434,9 @@ contains
     ! pres ~ P0 * ( R * rhot0 / P0 ) ** (CP/CV) + CV*R/CP * ( pres / P0 )**(R/CP) * rhot'
     !------------------------------------------------------------------------
 !OCL XFILL
+    !$omp parallel do default(none) &
+    !$omp shared(JA,IA,KS,KE,P0,Rdry,RHOT,AQ_R,AQ_CV,AQ_CP,QTRC,AQ_MASS,REF_rhot,REF_pres,CPdry,CVdry,QA,RT2P,DPRES0) &
+    !$omp private(i,j,k,iq,PRES,Rtot,CVtot,CPtot,QDRY) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
        do k = KS, KE
@@ -492,7 +495,10 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(damp) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_QTRC,iq,diff,BND_SMOOTHER_FACT,DENS00) &
+       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -598,7 +604,9 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(damp) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_DENS,diff,DENS_tq,DENS_t,DENS_tp,BND_SMOOTHER_FACT)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -638,7 +646,9 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(damp) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_VELZ,diff,BND_SMOOTHER_FACT,MOMZ_t,MOMZ_tp)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -679,6 +689,9 @@ contains
        enddo
        enddo
 !OCL XFILL
+       !$omp parallel do default(none) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_VELX,diff,BND_SMOOTHER_FACT,MOMX_tp,MOMX_t) &
+       !$omp private(i,j,k,damp) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -717,6 +730,9 @@ contains
        enddo
        enddo
 !OCL XFILL
+       !$omp parallel do default(none) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_VELY,diff,BND_SMOOTHER_FACT,MOMY_tp,MOMY_t) &
+       !$omp private(i,j,k,damp) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -755,6 +771,9 @@ contains
        enddo
        enddo
 !OCL XFILL
+       !$omp parallel do default(none) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_POTT,diff,BND_SMOOTHER_FACT,RHOT_t,RHOT_tp) &
+       !$omp private(i,j,k,damp) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -854,6 +873,8 @@ contains
             BND_W, BND_E, BND_S, BND_N )
 #endif
 
+       !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
        do j  = JS, JE
        do i  = IS, IE
           DENS(   1:KS-1,i,j) = DENS(KS,i,j)

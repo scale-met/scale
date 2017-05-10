@@ -1203,7 +1203,7 @@ contains
        !##### momentum equation (z) #####
 
        !--- update momentum(z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -1251,7 +1251,7 @@ contains
        !##### momentum equation (x) #####
 
        !--- update momentum(x)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -1282,7 +1282,7 @@ contains
        !##### momentum equation (y) #####
 
        !--- update momentum(y)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS, IIE
        do k = KS, KE

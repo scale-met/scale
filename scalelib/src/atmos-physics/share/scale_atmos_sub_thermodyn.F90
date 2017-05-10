@@ -169,7 +169,8 @@ contains
     integer :: k, i, j, iqw
     !-----------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,qdry,q,q_mass,QA)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -181,7 +182,6 @@ contains
     enddo
     enddo
     enddo
-
     return
   end subroutine ATMOS_THERMODYN_qd_3D
 
@@ -229,7 +229,8 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,cvtot,qdry,q,CVdry,CVq,QA)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -587,7 +588,8 @@ contains
     integer  :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CVdry,Rdry,QA,q,mass,CVq,Rq,rhoe,rhot,PRE00)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -692,7 +694,8 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CVdry,Rdry,QA,q,mass,CVq,Rq,rhoe,rhot,PRE00)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -720,7 +723,6 @@ contains
     enddo
     enddo
     enddo
-
     return
   end subroutine ATMOS_THERMODYN_rhot_3D
 
@@ -803,7 +805,8 @@ contains
     integer  :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CVdry,Rdry,QA,q,mass,CVq,Rq,temp,rhot,dens,pres,PRE00)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -829,7 +832,6 @@ contains
     enddo
     enddo
     enddo
-
     return
   end subroutine ATMOS_THERMODYN_temp_pres_3D
 
@@ -911,7 +913,8 @@ contains
     integer  :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CVdry,Rdry,QA,q,mass,CVq,Rq,temp,rhoe,dens,pres)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE

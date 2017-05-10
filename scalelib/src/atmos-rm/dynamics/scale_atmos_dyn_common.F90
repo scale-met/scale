@@ -909,6 +909,9 @@ contains
     enddo
     enddo
     enddo
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,KA,num_diff,work,DENS,iwork,nd_coef_cdz) &
+    !$omp private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
@@ -1270,7 +1273,9 @@ contains
     integer :: k, i, j, iv
 
     if ( BND_W ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,iv) &
+       !$omp shared(JA,IS,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
 !OCL XFILL
        do j = 1, JA
        do i = 1, IS-1
@@ -1288,7 +1293,9 @@ contains
        enddo
     end if
     if ( BND_E ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,iv) &
+       !$omp shared(JA,IE,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
 !OCL XFILL
        do j = 1, JA
        do i = IE+1, IA
@@ -1313,7 +1320,9 @@ contains
        enddo
     end if
     if ( BND_S ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,iv) &
+       !$omp shared(JS,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
 !OCL XFILL
        do j = 1, JS-1
        do i = 1, IA
@@ -1331,7 +1340,9 @@ contains
        enddo
     end if
     if ( BND_N ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,iv) &
+       !$omp shared(JA,JE,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
 !OCL XFILL
        do j = JE+1, JA
        do i = 1, IA
@@ -1541,7 +1552,8 @@ contains
 
     if ( KO == 0 ) then
 
-      !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,phi,diff,CNZ3)
        do j = JS, JE
        do i = IS, IE
        do k = KS+1, KE-2
@@ -1588,7 +1600,8 @@ contains
 
     else ! K0=1
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,phi,diff,CNZ3)
        do j = JS, JE
        do i = IS, IE
        do k = KS+2, KE-2
@@ -1641,7 +1654,8 @@ contains
     end if
 
     if ( IO == 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNX3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1659,7 +1673,8 @@ contains
        enddo
        enddo
     else
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNX3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1687,7 +1702,8 @@ contains
     enddo
 
     if ( JO == 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
+       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNY3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1705,7 +1721,8 @@ contains
        enddo
        enddo
     else
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
+       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNY3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE

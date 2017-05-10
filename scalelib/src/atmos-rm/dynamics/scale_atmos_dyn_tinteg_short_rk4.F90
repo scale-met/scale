@@ -560,6 +560,8 @@ contains
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
                           dtrk, dt                                          ) ! [IN]
 
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,DENS,DENS_RK1,DENS_RK2,DENS_RK3,DENS0)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -608,6 +610,9 @@ contains
     enddo
     enddo
 
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOT,RHOT_RK1,RHOT_RK2,RHOT_RK3,RHOT0) &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

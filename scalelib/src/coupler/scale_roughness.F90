@@ -349,6 +349,9 @@ contains
     enddo
 
     do ite = 1, ROUGHNESS_moon07_itelim
+       !$omp parallel do default(none) &
+       !$omp shared(JS,JE,IS,IE,Ustar,Z0M1,Uabs,Z1,ROUGHNESS_Ustar_min,GRAV,ROUGHNESS_Z0M_min) &
+       !$omp private(i,j,U10M) OMP_SCHEDULE_ 
        do j = JS, JE
        do i = IS, IE
           Ustar(i,j) = max( KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M1(i,j) ), ROUGHNESS_Ustar_min )

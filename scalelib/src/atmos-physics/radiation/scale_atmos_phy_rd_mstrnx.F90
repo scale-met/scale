@@ -15,6 +15,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_rd_mstrnx
   !-----------------------------------------------------------------------------
   !
@@ -544,6 +545,9 @@ contains
     endif
 
 !OCL XFILL
+    !$omp parallel do default(none)                                           &
+    !$omp shared(JS,JE,IS,IE,RD_KADD,temph_merge,RD_temph,KE,RD_KMAX,KS,temp) &
+    !$omp private(i,j,k,RD_k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -561,6 +565,9 @@ contains
     enddo
 
 !OCL XFILL
+    !$omp parallel do default(none) private(i,j,RD_k,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,RD_KADD,rhodz_merge,RD_rhodz,pres_merge,RD_pres,temp_merge) &
+    !$omp shared(RD_temp,RD_KMAX,KS,dens,FZ,pres,temp)
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -1239,6 +1246,9 @@ contains
     !$acc kernels pcopy(factP, factT32, factT21) &
     !$acc& pcopyin(indexP, logP, logfitP, logT, logfitT, temp, fitt)
     !$acc loop gang
+    !$omp parallel do default(none) private(i,j,k,ip) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,rd_kmax,indexP,factP,factT32,logP,logfitP,logT,logfitT,temp,fitT) &
+    !$omp shared(factT21)
     do j = JS, JE
     !$acc loop gang vector(8)
     do i = IS, IE
@@ -1265,6 +1275,9 @@ contains
        !$acc kernels pcopy(indexR, factR) pcopyin(aero2ptype, aerosol_radi, radmode)
        !$acc loop gang
 !OCL PARALLEL
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,ir) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,aerosol_radi,iaero,radmode,iptype,indexR,factR,MSTRN_nradius)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -1352,6 +1365,10 @@ contains
           !$acc& pcopyin(indexP, AKD, factP, factT32, factT21, gas, dz_std, ngasabs, igasabs) async(0)
           !$acc loop gang
 !OCL PARALLEL
+          !$omp parallel do default(none)                                                     &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,indexP,gas,igasabs,igas,iw,dz_std,chmax,AKD,gasno) &
+          !$omp shared(factP,factT32,factT21,tauGAS)                                          &
+          !$omp private(i,j,k,ip,length,A1,A2,A3,ich,factPT) OMP_SCHEDULE_ 
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1385,6 +1402,9 @@ contains
           !$acc kernels pcopy(tauGAS) &
           !$acc& pcopyin(indexP, SKD, factP, factT32, factT21, gas, dz_std) async(0)
           !$acc loop gang
+          !$omp parallel do default(none) private(i,j,k,ich,ip,qv,length,A1,A2,A3,factPT) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,indexP,gas,dz_std,chmax,SKD,factP,factT32) &
+          !$omp shared(factT21,tauGAS,iw)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1417,6 +1437,8 @@ contains
        if ( iflgb(I_CFC_continuum,iw) == 1 ) then
           !$acc kernels pcopy(tauGAS) pcopyin(acfc, cfc, dz_std, nch) async(0)
           !$acc loop gang
+          !$omp parallel do default(none) private(i,j,k,icfc,ich,valsum) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,ncfc,acfc,iw,cfc,dz_std,chmax,tauGAS)
           do j = JS, JE
           !$acc loop gang vector(4)
           do i = IS, IE
@@ -1448,6 +1470,9 @@ contains
        !--- Rayleigh scattering
        !$acc kernels pcopy(optparam) pcopyin(rhodz, rayleigh, qmol) async(0)
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,k,im,dp_P,length) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,rhodz,GRAV,Pstd,rayleigh,iw,optparam) &
+       !$omp shared(qmol)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -1472,6 +1497,9 @@ contains
 
           !$acc kernels pcopy(optparam) pcopyin(indexR, aero2ptype, q, factR, dz_std, aerosol_conc) async(0)
           !$acc loop gang
+          !$omp parallel do default(none) private(i,j,k,im,ir,length,q_fit) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,indexR,iaero,aerosol_conc,dz_std) &
+          !$omp shared(q,iptype,iw,factR,optparam)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1500,6 +1528,9 @@ contains
 
           !$acc kernels pcopy(optparam) pcopyin(indexR, aero2ptype, q, factR, dz_std, aerosol_conc) async(0)
           !$acc loop gang
+          !$omp parallel do default(none) private(i,j,k,im,ir,length,q_fit) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,indexR,iaero,aerosol_conc,dz_std) &
+          !$omp shared(iptype,iw,factR,optparam,q)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1528,6 +1559,9 @@ contains
           !$acc kernels pcopy(tauPR, omgPR, g) pcopyin(optparam) async(0)
           !$acc loop gang
 !OCL PARALLEL
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k,zerosw) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,tauPR,optparam,icloud,omgPR,g)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1601,6 +1635,9 @@ contains
              !$acc kernels pcopy(tau, omg) pcopyin(tauGAS, tauPR, omgPR) async(0)
              !$acc loop gang
 !OCL PARALLEL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k,zerosw) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,tau,icloud,tauGAS,ich,tauPR,omg,omgPR)
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1630,6 +1667,9 @@ contains
                 !$acc kernels pcopy(b) async(0)
                 !$acc loop gang
 !OCL PARALLEL
+                !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+                !$omp private(i,j,k) &
+                !$omp shared(JS,JE,IS,IE,rd_kmax,b,icloud)
                 do j = JS, JE
                 !$acc loop gang vector(8)
                 do i = IS, IE
@@ -1662,6 +1702,8 @@ contains
              ! from temp at cell center
              !$acc kernels pcopy(bbar) pcopyin(temp, fitPLK) async(0)
              !$acc loop gang
+             !$omp parallel do default(none) private(i,j,k,iplk,beta) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,wl,temp,fitPLK,iw,bbar)
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1682,6 +1724,9 @@ contains
              ! from temp at cell wall
              !$acc kernels pcopy(bbarh) pcopyin(temph, fitPLK) async(0)
              !$acc loop gang
+             !$omp parallel do default(none)                            &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,wl,temph,fitPLK,iw,bbarh) &
+             !$omp private(i,j,k,beta,iplk) OMP_SCHEDULE_ collapse(2)
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1704,6 +1749,9 @@ contains
                 !$acc kernels pcopy(b) pcopyin(tau, bbarh, bbar) async(0)
                 !$acc loop gang
 !OCL PARALLEL
+                !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+                !$omp private(i,j,k,zerosw) &
+                !$omp shared(JS,JE,IS,IE,rd_kmax,tau,icloud,b,bbarh,bbar)
                 do j = JS, JE
                 !$acc loop gang vector(8)
                 do i = IS, IE
@@ -1731,6 +1779,8 @@ contains
              ! from temp_sfc
              !$acc kernels pcopy(b_sfc) pcopyin(fitPLK, temp_sfc) async(0)
              !$acc loop gang vector(4)
+             !$omp parallel do default(none) private(i,j,iplk,beta) OMP_SCHEDULE_ &
+             !$omp shared(JS,JE,IS,IE,wl,temp_sfc,fitPLK,iw,b_sfc)
              do j = JS, JE
              !$acc loop gang vector(32)
              do i = IS, IE
@@ -1788,6 +1838,8 @@ contains
              !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
              !$acc loop gang
 !OCL PARALLEL
+             !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,rflux,irgn,icloud,wgtch,ich,iw,flux)
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1952,6 +2004,14 @@ contains
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
 !OCL NORECURRENCE(Tdir0,R0,T0,Em_LW,Ep_LW,Em_SW,Ep_SW)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k) &
+       !$omp private(tau_new,omg_new,g_new,factor,b_new0,b_new1,b_new2,c0,c1,c2,Pmns,Ppls,Smns) &
+       !$omp private(Spls,sw,X,Y,lamda,E,Apls_mns,Bpls_mns,Dmns0,Dpls0,Dmns1,Dpls1) &
+       !$omp private(Dmns2,Dpls2,V0mns,V0pls,V1mns,V1pls,SIGmns,SIGpls,tmp,zerosw) &
+       !$omp private(Qgamma) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,omg,icloud,g,tau,EPS1,Tdir0,cosSZA,b,Wmns_irgn,PI,M_irgn) &
+       !$omp shared(W_irgn,Em_LW,Ep_LW,R0,T0,Ep_SW,Em_SW,EPS)
        do j = JS, JE
        do i = IS, IE
        do k = 1, rd_kmax
@@ -2075,6 +2135,8 @@ contains
        endif
 
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,Tdir,cf,Tdir0,R,R0,T,T0)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -2093,6 +2155,8 @@ contains
        enddo
 
        !$acc loop gang vector(4)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,tau_bar_sol,fsol,rd_kmax,Tdir)
        do j = JS, JE
        !$acc loop gang vector(32)
        do i = IS, IE
@@ -2105,6 +2169,9 @@ contains
        enddo
 
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,Em,cf,Em_LW,Em_SW,tau_bar_sol,Ep) &
+       !$omp shared(Ep_LW,Ep_SW,flux_direct,cosSZA,icloud)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -2126,6 +2193,9 @@ contains
        enddo
 
        !$acc loop gang vector(4)
+       !$omp parallel do default(none) private(i,j,Em0) OMP_SCHEDULE_ &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,cf,albedo_sfc,T,flux_direct,cosSZA) &
+       !$omp shared(tau_bar_sol,Wpls_irgn,W_irgn,M_irgn,PI,b_sfc,Em,Ep,icloud,R)
        do j = JS, JE
        !$acc loop gang vector(32) private(Em0)
        do i = IS, IE
@@ -2170,6 +2240,8 @@ contains
              enddo
 
              !$acc loop gang vector(4)
+             !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,R12pls,E12mns,R,T,Ep,Em)
              do j = JS, JE
              !$acc loop gang vector(32)
              do i = IS, IE
@@ -2182,7 +2254,6 @@ contains
                 enddo
              enddo
              enddo
-
           else ! adding: TOA to surface
 
    !OCL LOOP_NOFUSION,XFILL
@@ -2196,6 +2267,8 @@ contains
              enddo
 
              !$acc loop gang vector(4)
+             !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,E12pls,R12mns,R,T,Ep,Em)
              do j = JS, JE
              !$acc loop gang vector(32)
              do i = IS, IE
@@ -2219,6 +2292,9 @@ contains
 
        !$acc kernels pcopy(flux) pcopyin(E12mns, E12pls, R12mns, R12pls, flux_direct, wscale) async(0)
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,k,Upls,Umns) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,E12pls,R12mns,E12mns,R12pls,flux,icloud,Wscale_irgn) &
+       !$omp shared(flux_direct)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE

@@ -10,6 +10,7 @@
 !! @li      2013-08-17 (H.Yashiro)  [new]
 !!
 !<
+#include "inc_openmp.h"
 module scale_interpolation
   !-----------------------------------------------------------------------------
   !
@@ -87,6 +88,8 @@ contains
     allocate( INTERP_z2xi_idx (KA,IA,JA,2) )
     allocate( INTERP_z2xi_coef(KA,IA,JA,3) )
 
+    !$omp parallel do default(none) private(i,j,k,kk,kp) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KS,KE,GRID_CZ,REAL_FZ,REAL_CZ,INTERP_xi2z_idx,INTERP_xi2z_coef)
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -197,6 +200,8 @@ contains
     enddo
     enddo
 
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,INTERP_xi2z_idx,INTERP_xi2z_coef,INTERP_z2xi_idx,INTERP_z2xi_coef,KS,KE,KA)
     do j = 1, JA
     do i = 1, IA
        INTERP_xi2z_idx ( 1:KS-1,i,j,1) = KS     ! dummmy

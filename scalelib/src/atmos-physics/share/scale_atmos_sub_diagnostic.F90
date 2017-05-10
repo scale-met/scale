@@ -11,6 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_diagnostic
   !-----------------------------------------------------------------------------
   !
@@ -204,7 +205,7 @@ contains
     enddo
     enddo
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,q,rpt,qdry,rtot)
     do j = 1, JA
     do i = 1, IA

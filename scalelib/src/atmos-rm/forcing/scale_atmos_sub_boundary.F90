@@ -16,6 +16,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_boundary
   !-----------------------------------------------------------------------------
   !
@@ -649,6 +650,10 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
+    !$omp parallel do default(none) private(i,j,iq) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,ATMOS_BOUNDARY_ref_DENS,ref_idx,ATMOS_BOUNDARY_ref_VELZ) &
+    !$omp shared(ATMOS_BOUNDARY_ref_VELX,ATMOS_BOUNDARY_ref_VELY,ATMOS_BOUNDARY_ref_POTT) &
+    !$omp shared(KA,KS,BND_QA,ATMOS_BOUNDARY_ref_QTRC,KE)
     do j = JSB, JEB
     do i = ISB, IEB
        ATMOS_BOUNDARY_ref_DENS(   1:KS-1,i,j,ref_idx) = ATMOS_BOUNDARY_ref_DENS(KS,i,j,ref_idx)
@@ -740,6 +745,18 @@ contains
        coef_y = 1.0_RP / ATMOS_BOUNDARY_tauy
     endif
 
+    !$omp parallel do default(none) &
+    !$omp shared(JA,IA,KA,CBFZ,ATMOS_BOUNDARY_FRACZ,FBFZ,ATMOS_BOUNDARY_LINEAR_V,coef_z,CBFX)            &
+    !$omp shared(ATMOS_BOUNDARY_FRACX,PI,FBFX,ATMOS_BOUNDARY_LINEAR_H,coef_x)     &
+    !$omp shared(ATMOS_BOUNDARY_EXP_H,CBFY,ATMOS_BOUNDARY_FRACY,FBFY,coef_y,l_bnd)     &
+    !$omp shared(do_daughter_process,ONLINE_USE_VELZ,ATMOS_BOUNDARY_USE_VELZ,ATMOS_BOUNDARY_alpha_VELZ)  &
+    !$omp shared(ATMOS_BOUNDARY_ALPHAFACT_VELZ,ATMOS_BOUNDARY_USE_DENS,ATMOS_BOUNDARY_alpha_DENS)        &
+    !$omp shared(ATMOS_BOUNDARY_ALPHAFACT_DENS,ATMOS_BOUNDARY_USE_VELX,ATMOS_BOUNDARY_alpha_VELX)        &
+    !$omp shared(ATMOS_BOUNDARY_USE_VELY,ATMOS_BOUNDARY_alpha_VELY,ATMOS_BOUNDARY_ALPHAFACT_VELY)        &
+    !$omp shared(ATMOS_BOUNDARY_USE_POTT,ATMOS_BOUNDARY_alpha_POTT,ATMOS_BOUNDARY_ALPHAFACT_POTT)        &
+    !$omp shared(ATMOS_BOUNDARY_USE_QV,ATMOS_BOUNDARY_alpha_QTRC,ATMOS_BOUNDARY_ALPHAFACT_QTRC)          &
+    !$omp shared(ATMOS_BOUNDARY_USE_QHYD,BND_QA,ATMOS_BOUNDARY_ALPHAFACT_VELX) &
+    !$omp private(i,j,k,ee1,ee2,alpha_z1,alpha_z2,alpha_x1,alpha_x2,alpha_y1,alpha_y2,iq) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -1329,6 +1346,9 @@ contains
     call ATMOS_BOUNDARY_update_file( ref_new )
 
     ! copy now to old
+    !$omp parallel do default(none) private(i,j,k,iq) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KA,ATMOS_BOUNDARY_ref_DENS,ref_old,ref_now,ATMOS_BOUNDARY_ref_VELX) &
+    !$omp shared(ATMOS_BOUNDARY_ref_VELY,ATMOS_BOUNDARY_ref_POTT,BND_QA,ATMOS_BOUNDARY_ref_QTRC)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -1670,6 +1690,10 @@ contains
 
        ! fill HALO in western region
        if ( .NOT. PRC_HAS_W ) then
+          !$omp parallel do default(none)                                               &
+          !$omp shared(JS,IS,KA,DENS,ATMOS_BOUNDARY_DENS,MOMX,ATMOS_BOUNDARY_VELX,RHOT) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA,JA)    &
+          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
           do i = 1, IS-1
           do k = 1, KA
@@ -1726,6 +1750,10 @@ contains
 
        ! fill HALO in eastern region
        if ( .NOT. PRC_HAS_E ) then
+          !$omp parallel do default(none)                                             &
+          !$omp shared(JA,IE,IA,KA,DENS,ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX,RHOT) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)  &
+          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
           do i = IE+1, IA
           do k = 1, KA
@@ -1793,6 +1821,10 @@ contains
 
        ! fill HALO in southern region
        if ( .NOT. PRC_HAS_S ) then
+          !$omp parallel do default(none)                                               &
+          !$omp shared(JS,IA,KA,DENS,ATMOS_BOUNDARY_DENS,MOMY,ATMOS_BOUNDARY_VELY,RHOT) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)    &
+          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
           do j = 1, JS-1
           do i = 1, IA
           do k = 1, KA
@@ -1849,6 +1881,10 @@ contains
 
        ! fill HALO in northern region
        if ( .NOT. PRC_HAS_N ) then
+          !$omp parallel do default(none)                                             &
+          !$omp shared(JE,JA,IA,KA,DENS,ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELY,RHOT) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)  &
+          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
           do j = JE+1, JA
           do i = 1, IA
           do k = 1, KA
@@ -2288,6 +2324,10 @@ contains
 
     fact = REAL(now_step, kind=RP) / update_step
 
+    !$omp parallel do default(none) private(i,j,k,iq) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KA,bnd_DENS,ATMOS_BOUNDARY_ref_DENS,ref_now,fact,ref_new,bnd_VELZ) &
+    !$omp shared(ATMOS_BOUNDARY_ref_VELZ,bnd_VELX,ATMOS_BOUNDARY_ref_VELX,bnd_VELY) &
+    !$omp shared(ATMOS_BOUNDARY_ref_VELY,bnd_POTT,ATMOS_BOUNDARY_ref_POTT,BND_QA,bnd_QTRC,ATMOS_BOUNDARY_ref_QTRC)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA

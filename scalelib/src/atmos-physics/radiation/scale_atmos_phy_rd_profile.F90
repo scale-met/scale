@@ -15,6 +15,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_rd_profile
   !-----------------------------------------------------------------------------
   !
@@ -1074,6 +1075,9 @@ contains
     integer  :: i1, i2
     !---------------------------------------------------------------------------
 
+    !$omp parallel do default(none)          &
+    !$omp shared(imax1,x2,x1,y2,y1,imax2) &
+    !$omp private(i1,fact,i2) OMP_SCHEDULE_
     do i2 = 1, imax2
 
        if ( x2(i2) > x1(1) ) then ! extrapolation
