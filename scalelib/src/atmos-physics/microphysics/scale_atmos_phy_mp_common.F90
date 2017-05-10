@@ -858,15 +858,10 @@ contains
        endif
        call COMM_wait( QTRC(:,:,:,iqa), QA_MP+iq )
 
-#if 1
        !$omp parallel do default(none)                                                        &
        !$omp shared(JS,JE,IS,IE,KS,KE,qflx,iq,vterm,DENS,QTRC,iqa,J33G,eflx,temp,CVq,RHOE,dt) &
        !$omp shared(rcdz,GRAV,rfdz,MOMZ,MOMX,rcdz_u,MOMY,rcdz_v)                              &
        !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
-#else
-       !$omp parallel do default(shared)                                                      &
-       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
-#endif
        do j  = JS, JE
        do i  = IS, IE
           !--- mass flux for each mass tracer, upwind with vel < 0
