@@ -536,7 +536,7 @@ contains
        do k = KS, KE_PBL+1
 
           qv = 0.0_RP
-          if ( I_QV > 0 ) ql = QTRC(k,i,j,I_QV)
+          if ( I_QV > 0 ) qv = QTRC(k,i,j,I_QV)
 
           ql = 0.0_RP
           if ( I_QC > 0 ) ql = QTRC(k,i,j,I_QC)
