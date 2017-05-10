@@ -858,7 +858,7 @@ contains
        endif
        call COMM_wait( QTRC(:,:,:,iqa), QA_MP+iq )
 
-#if 0
+#if 1
        !$omp parallel do default(none)                                                        &
        !$omp shared(JS,JE,IS,IE,KS,KE,qflx,iq,vterm,DENS,QTRC,iqa,J33G,eflx,temp,CVq,RHOE,dt) &
        !$omp shared(rcdz,GRAV,rfdz,MOMZ,MOMX,rcdz_u,MOMY,rcdz_v)                              &
