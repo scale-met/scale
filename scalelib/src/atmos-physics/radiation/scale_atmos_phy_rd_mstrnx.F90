@@ -2145,13 +2145,6 @@ contains
           Tdir(k,i,j) = (        cf(k,i,j) ) * Tdir0(k,i,j,I_Cloud   ) &
                       + ( 1.0_RP-cf(k,i,j) ) * Tdir0(k,i,j,I_ClearSky)
        enddo
-       do k = 1, rd_kmax
-          R   (k,i,j) = (        cf(k,i,j) ) * R0   (k,i,j,I_Cloud   ) &
-                      + ( 1.0_RP-cf(k,i,j) ) * R0   (k,i,j,I_ClearSky)
-
-          T   (k,i,j) = (        cf(k,i,j) ) * T0   (k,i,j,I_Cloud   ) &
-                      + ( 1.0_RP-cf(k,i,j) ) * T0   (k,i,j,I_ClearSky)
-       enddo
        enddo
        enddo
 
@@ -2248,6 +2241,11 @@ contains
              do i = IS, IE
                 !$acc loop seq
                 do k = rd_kmax, 1, -1
+                   R   (k,i,j) = (        cf(k,i,j) ) * R0   (k,i,j,I_Cloud   ) &
+                               + ( 1.0_RP-cf(k,i,j) ) * R0   (k,i,j,I_ClearSky)
+
+                   T   (k,i,j) = (        cf(k,i,j) ) * T0   (k,i,j,I_Cloud   ) &
+                               + ( 1.0_RP-cf(k,i,j) ) * T0   (k,i,j,I_ClearSky)
                    R12pls(k,i,j) = R (k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
                                                         * ( R12pls(k+1,i,j) * T (k,i,j)                   )
                    E12mns(k,i,j) = Em(k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
