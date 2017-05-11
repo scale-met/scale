@@ -357,7 +357,9 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=nh%>, KE<%=-(nh+1)%>
@@ -378,7 +380,9 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -436,7 +440,9 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
     do j = JJS<%=-j%>, JJE
     do i = IIS<%=-i%>, IIE
     do k = KS, KE
@@ -492,7 +498,9 @@ contains
 
     ! note than z-index is added by -1
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=[nh,1].max%>, KE<%=-[nh,1].max%>
@@ -515,7 +523,9 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do private(i,j,sw) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel,sw) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff,FDZ,dtrk)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -581,7 +591,9 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,<%=dir%>G,MAPF)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=[nh,1].max%>, KE<%=-[nh,1].max%>
@@ -593,7 +605,9 @@ contains
     enddo
     enddo
 
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,<%=dir%>G,MAPF)
     do j = JJS, JJE
     do i = IIS, IIE
        flux(KS-1,i,j) = 0.0_RP
@@ -645,7 +659,10 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff) &
+    !$omp shared(CDZ)
     do j = JJS<%=-j%>, JJE
     do i = IIS<%=-i%>, IIE
     do k = KS, KE-1
@@ -668,7 +685,9 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KE,flux)
     do j = JJS<%=-j%>, JJE
     do i = IIS<%=-i%>, IIE
        flux(KE,i,j) = 0.0_RP
@@ -712,7 +731,10 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
+    !$omp shared(CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=nh%>, KE<%=-nh-1%>
@@ -735,7 +757,9 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -795,7 +819,10 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,<%=dir%>G,MAPF) &
+    !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=nh%>, KE<%=-nh-1%>
@@ -807,7 +834,10 @@ contains
     enddo
     enddo
 
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,<%=dir%>G,MAPF) &
+    !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
        flux(KS-1,i,j) = 0.0_RP
@@ -880,7 +910,9 @@ contains
      dst = dst[1..1]=="Y" ? dst[0..0]+"V" : dst[0..0]+"Y"
    end
 %>
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff)
     do j = JJS<%=-jj+jo%>, JJE<%=jo%>
     do i = IIS<%=-ii+io%>, IIE<%=io%>
     do k = KS, KE
