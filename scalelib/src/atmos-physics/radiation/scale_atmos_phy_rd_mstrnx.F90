@@ -2004,6 +2004,7 @@ contains
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
 !OCL NORECURRENCE(Tdir0,R0,T0,Em_LW,Ep_LW,Em_SW,Ep_SW)
+!OCL MFUNC
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k) &
        !$omp private(tau_new,omg_new,g_new,factor,b_new0,b_new1,b_new2,c0,c1,c2,Pmns,Ppls,Smns) &
