@@ -2144,7 +2144,8 @@ contains
        do k = 1, rd_kmax
           Tdir(k,i,j) = (        cf(k,i,j) ) * Tdir0(k,i,j,I_Cloud   ) &
                       + ( 1.0_RP-cf(k,i,j) ) * Tdir0(k,i,j,I_ClearSky)
-
+       enddo
+       do k = 1, rd_kmax
           R   (k,i,j) = (        cf(k,i,j) ) * R0   (k,i,j,I_Cloud   ) &
                       + ( 1.0_RP-cf(k,i,j) ) * R0   (k,i,j,I_ClearSky)
 
@@ -2292,6 +2293,24 @@ contains
 
        !$acc kernels pcopy(flux) pcopyin(E12mns, E12pls, R12mns, R12pls, flux_direct, wscale) async(0)
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,Upls,Umns) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,E12pls,R12mns,E12mns,R12pls,flux,icloud,Wscale_irgn) &
+       !$omp shared(flux_direct)
+       do j = JS, JE
+       !$acc loop gang vector(8)
+       do i = IS, IE
+          ! TOA boundary
+          Upls = 0.0_RP
+          Umns = E12mns(1,i,j) + R12pls(1,i,j) * Upls
+
+          flux(1,i,j,I_up,icloud) = Wscale_irgn * Umns
+          flux(1,i,j,I_dn,icloud) = Wscale_irgn * Upls + flux_direct(1,i,j,icloud)
+       enddo
+       enddo
+       !$acc end kernels
+
+       !$acc kernels pcopy(flux) pcopyin(E12mns, E12pls, R12mns, R12pls, flux_direct, wscale) async(0)
+       !$acc loop gang
        !$omp parallel do default(none) private(i,j,k,Upls,Umns) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JS,JE,IS,IE,rd_kmax,E12pls,R12mns,E12mns,R12pls,flux,icloud,Wscale_irgn) &
        !$omp shared(flux_direct)
@@ -2299,12 +2318,8 @@ contains
        !$acc loop gang vector(8)
        do i = IS, IE
        !$acc loop gang vector(32)
-       do k = 1, rd_kmax+1
-          if ( k == 1 ) then ! TOA boundary
-             Upls = 0.0_RP
-          else
-             Upls = ( E12pls(k-1,i,j) + R12mns(k-1,i,j)*E12mns(k,i,j) ) / ( 1.0_RP - R12mns(k-1,i,j)*R12pls(k,i,j) )
-          endif
+       do k = 2, rd_kmax+1
+          Upls = ( E12pls(k-1,i,j) + R12mns(k-1,i,j)*E12mns(k,i,j) ) / ( 1.0_RP - R12mns(k-1,i,j)*R12pls(k,i,j) )
           Umns = E12mns(k,i,j) + R12pls(k,i,j) * Upls
 
           flux(k,i,j,I_up,icloud) = Wscale_irgn * Umns
