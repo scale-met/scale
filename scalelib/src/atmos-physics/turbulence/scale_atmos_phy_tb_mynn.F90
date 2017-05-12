@@ -257,11 +257,11 @@ contains
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS, &
+       LH => LHV, &
        I_QV, &
        I_QC, &
        I_QI
     use scale_atmos_saturation, only: &
-       ATMOS_SATURATION_alpha, &
        ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_all
 #ifdef MORE_HIST
     use scale_history, only: &
@@ -340,10 +340,8 @@ contains
     real(RP) :: temp(KA,IA,JA)  !< temperature
     real(RP) :: pres(KA,IA,JA)  !< pressure
 
-    real(RP) :: LH   (KA,IA,JA)
-    real(RP) :: alpha(KA,IA,JA)
-    real(RP) :: LHV  (KA,IA,JA)
-    real(RP) :: LHS  (KA,IA,JA)
+    real(RP) :: LHV (KA,IA,JA)
+    real(RP) :: LHS (KA,IA,JA)
 
     real(RP) :: ac              !< \alpha_c
 
@@ -523,8 +521,6 @@ contains
     call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
     call HYDROMETEOR_LHS( LHS(:,:,:), temp(:,:,:) )
 
-    call ATMOS_SATURATION_alpha( alpha(:,:,:), temp(:,:,:) )
-
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     !$omp parallel do default(none)                                                         &
     !$omp shared(JS,JE,IS,IE,KS,KE_PBL,I_QC,QTRC,I_QI,TRACER_MASS,iq,Qw,I_QV,LH,alpha) &
@@ -536,7 +532,7 @@ contains
        do k = KS, KE_PBL+1
 
           qv = 0.0_RP
-          if ( I_QV > 0 ) ql = QTRC(k,i,j,I_QV)
+          if ( I_QV > 0 ) qv = QTRC(k,i,j,I_QV)
 
           ql = 0.0_RP
           if ( I_QC > 0 ) ql = QTRC(k,i,j,I_QC)
@@ -551,9 +547,6 @@ contains
           CALC_QDRY(qdry, QTRC, TRACER_MASS, k, i, j, iq)
 
           Qw(k,i,j) = qv + ql + qs
-
-          LH(k,i,j) = (        alpha(k,i,j) ) * LHV(k,i,j) &
-                    + ( 1.0_RP-alpha(k,i,j) ) * LHS(k,i,j)
 
           POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           ! liquid water potential temperature
@@ -682,8 +675,8 @@ contains
     do i = IS, IE
        do k = KS+1, KE_PBL
 
-          dQsl = Qsl(k,i,j) * lh(k,i,j) / ( Rvap * POTL(k,i,j)**2 )
-          aa = 1.0_RP / ( 1.0_RP + lh(k,i,j)/CP * dQsl )
+          dQsl = Qsl(k,i,j) * LH / ( Rvap * TEML(k,i,j)**2 )
+          aa = 1.0_RP / ( 1.0_RP + LH/CP * dQsl )
           bb = TEMP(k,i,j) / POTT(k,i,j) * dQsl
           ac = min( q(k,i,j)/sqrt(q2_2(k,i,j)), 1.0_RP )
           sigma_s = max( sqrt( 0.25_RP * aa**2 * l(k,i,j)**2 * ac * B2 * sh(k,i,j) ) &
@@ -699,7 +692,7 @@ contains
 #endif
                     0.0_RP ), &
                     Qw(k,i,j) * 0.5_RP )
-          cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * lh(k,i,j) / CP &
+          cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * LH / CP &
                - (1.0_RP+EPSTvap) * POTT(k,i,j)
 #if defined(__PGI) || defined(__ES2)
           Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ), 0.0_RP ), 1.0_RP ) ! apply exp limiter
