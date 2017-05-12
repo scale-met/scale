@@ -415,8 +415,9 @@ contains
     real(RP) :: p_sat, qm, rhsfc
     real(RP) :: lp2, lp3
 
-    integer  :: i, j, k, ielem
+    integer  :: i, j, k, iq, ielem
 
+    logical  :: pressure_coordinates
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputGrADS]'
@@ -515,6 +516,7 @@ contains
              call PRC_MPIstop
           endif
           if ( trim(dtype) == "levels" ) then
+             pressure_coordinates = .true. ! use pressure coordinate in the input data
              if(dims(1)/=lnum)then
                 write(*,*) 'xxx lnum must be same as the outer_nz for plev! ',dims(1),lnum
                 call PRC_MPIstop
@@ -527,6 +529,7 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
+             pressure_coordinates = .false.
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
@@ -1027,21 +1030,35 @@ contains
 
 
     ! check verticaly extrapolated data in outer model
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 3, dims(1)+2
-
-       if( pres_org(k,i,j) > pres_org(2,i,j) )then ! if Pressure is larger than Surface pressure
+    if( pressure_coordinates ) then
+      do j = 1, dims(3)
+      do i = 1, dims(2)
+      do k = 3, dims(1)+2
+        if( pres_org(k,i,j) > pres_org(2,i,j) ) then ! if Pressure is larger than Surface pressure
           velx_org(k,i,j)   = velx_org(2,i,j)
           vely_org(k,i,j)   = vely_org(2,i,j)
           temp_org(k,i,j)   = temp_org(2,i,j)
           qtrc_org(k,i,j,:) = qtrc_org(2,i,j,:)
           cz_org  (k,i,j)   = cz_org  (2,i,j)
-      end if
-
-    enddo
-    enddo
-    enddo
+        end if
+      enddo
+      enddo
+      enddo
+    else
+      do j = 1, dims(3)
+      do i = 1, dims(2)
+      do k = 3, dims(1)+2
+        if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) pres_org(k,i,j) = pres_org(2,i,j)
+        if( abs( velx_org(k,i,j) - UNDEF ) < EPS ) velx_org(k,i,j) = velx_org(2,i,j)
+        if( abs( vely_org(k,i,j) - UNDEF ) < EPS ) vely_org(k,i,j) = vely_org(2,i,j)
+        if( abs( temp_org(k,i,j) - UNDEF ) < EPS ) temp_org(k,i,j) = temp_org(2,i,j)
+        do iq = 1, QA
+          if( abs( qtrc_org(k,i,j,iq) - UNDEF ) < EPS ) qtrc_org(k,i,j,iq) = 0.0_RP
+        end do
+      enddo
+      enddo
+      enddo
+    end if
 
 
     !do it = 1, nt
