@@ -1835,6 +1835,7 @@ contains
           else
              f_frozen1 = 1._RP ! all water is frozen
           endif
+          f_frozen1 = min(1._RP, max(0._RP, f_frozen1)) ! [add] 2017/05/19
           temptmp_ice = temp_u(kkp1)
           !!# calc how much ice is a layer ?
           qfrz     = (qc(kkp1) + qcnew)*f_frozen1  ! all ice
