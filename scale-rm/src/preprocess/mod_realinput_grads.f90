@@ -546,7 +546,6 @@ contains
                       dens_org(k+2,i,j) = UNDEF
                    end if
                 enddo
-                dens_org(1:2,i,j) = dens_org(3,i,j)
              enddo
              enddo
           endif
@@ -950,6 +949,14 @@ contains
         exit
       end if
     end do
+    end do
+    end do
+
+    ! fill surface density
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       k = lm_layer(i,j)
+       dens_org(1:2,i,j) = dens_org(k,i,j)
     end do
     end do
 
