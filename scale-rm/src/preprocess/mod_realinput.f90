@@ -843,7 +843,7 @@ contains
        if ( do_read_atom ) call ParentAtomSetupGrADS( dims,        & ! (out)
                                                       basename_org ) ! (in)
        update_coord = .true.
-       use_file_density = .false.
+       use_file_density = use_file_density_in
        use_temp = .true.
        rotate = .true.
        timelen = -1
@@ -1053,7 +1053,8 @@ contains
           case( iGrADS ) ! TYPE: GrADS format
 
              call ParentAtomInputGrADS( velz_org, velx_org, vely_org, & ! (out)
-                                        pres_org, temp_org, qtrc_org, & ! (out)
+                                        pres_org, dens_org, temp_org, & ! (out)
+                                        qtrc_org,                     & ! (out)
                                         lon_org, lat_org, cz_org,     & ! (out)
                                         basename_org, dims, n         ) ! (in)
 

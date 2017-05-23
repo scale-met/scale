@@ -50,15 +50,15 @@ module mod_realinput_grads
   !++ Private parameters & variables
   !
   integer,  parameter    :: grads_vars_limit = 1000 !> limit of number of values
-  integer,  parameter    :: num_item_list = 22
-  integer,  parameter    :: num_item_list_atom  = 22
-  integer,  parameter    :: num_item_list_land  = 11
-  integer,  parameter    :: num_item_list_ocean = 9
+  integer,  parameter    :: num_item_list = 24
+  integer,  parameter    :: num_item_list_atom  = 24
+  integer,  parameter    :: num_item_list_land  = 12
+  integer,  parameter    :: num_item_list_ocean = 10
   logical                :: data_available(num_item_list_atom,3) ! 1:atom, 2:land, 3:ocean
   character(len=H_SHORT) :: item_list_atom (num_item_list_atom)
   character(len=H_SHORT) :: item_list_land (num_item_list_land)
   character(len=H_SHORT) :: item_list_ocean(num_item_list_ocean)
-  data item_list_atom  /'lon','lat','plev','U','V','T','HGT','QV','QC','QR','QI','QS','QG','RH', &
+  data item_list_atom  /'lon','lat','plev','DENS','U','V','W','T','HGT','QV','QC','QR','QI','QS','QG','RH', &
                         'MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO' /
   data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','llev', &
                         'STEMP','SMOISVC','SMOISDS','SKINT','TOPO','TOPO_sfc' /
@@ -67,25 +67,27 @@ module mod_realinput_grads
   integer,  parameter   :: Ia_lon    = 1
   integer,  parameter   :: Ia_lat    = 2
   integer,  parameter   :: Ia_p      = 3  ! Pressure (Pa)
-  integer,  parameter   :: Ia_u      = 4
-  integer,  parameter   :: Ia_v      = 5
-  integer,  parameter   :: Ia_t      = 6
-  integer,  parameter   :: Ia_hgt    = 7  ! Geopotential height (m)
-  integer,  parameter   :: Ia_qv     = 8
-  integer,  parameter   :: Ia_qc     = 9 
-  integer,  parameter   :: Ia_qr     = 10
-  integer,  parameter   :: Ia_qi     = 11
-  integer,  parameter   :: Ia_qs     = 12
-  integer,  parameter   :: Ia_qg     = 13
-  integer,  parameter   :: Ia_rh     = 14 ! Percentage (%)
-  integer,  parameter   :: Ia_slp    = 15 ! Sea level pressure (Pa)
-  integer,  parameter   :: Ia_ps     = 16 ! Surface pressure (Pa)
-  integer,  parameter   :: Ia_u10    = 17
-  integer,  parameter   :: Ia_v10    = 18
-  integer,  parameter   :: Ia_t2     = 19
-  integer,  parameter   :: Ia_q2     = 20
-  integer,  parameter   :: Ia_rh2    = 21 ! Percentage (%)
-  integer,  parameter   :: Ia_topo   = 22
+  integer,  parameter   :: Ia_dens   = 4
+  integer,  parameter   :: Ia_u      = 5
+  integer,  parameter   :: Ia_v      = 6
+  integer,  parameter   :: Ia_w      = 7 
+  integer,  parameter   :: Ia_t      = 8 
+  integer,  parameter   :: Ia_hgt    = 9  ! Geopotential height (m)
+  integer,  parameter   :: Ia_qv     = 10
+  integer,  parameter   :: Ia_qc     = 11
+  integer,  parameter   :: Ia_qr     = 12
+  integer,  parameter   :: Ia_qi     = 13
+  integer,  parameter   :: Ia_qs     = 14
+  integer,  parameter   :: Ia_qg     = 15
+  integer,  parameter   :: Ia_rh     = 16 ! Percentage (%)
+  integer,  parameter   :: Ia_slp    = 17 ! Sea level pressure (Pa)
+  integer,  parameter   :: Ia_ps     = 18 ! Surface pressure (Pa)
+  integer,  parameter   :: Ia_u10    = 19
+  integer,  parameter   :: Ia_v10    = 20
+  integer,  parameter   :: Ia_t2     = 21
+  integer,  parameter   :: Ia_q2     = 22
+  integer,  parameter   :: Ia_rh2    = 23 ! Percentage (%)
+  integer,  parameter   :: Ia_topo   = 24
 
   integer,  parameter   :: Il_lsmask  = 1
   integer,  parameter   :: Il_lon     = 2
@@ -279,6 +281,11 @@ contains
        item  = item_list_atom(ielem)
        !--- check data
        select case(trim(item))
+       case('DENS','W','QC','QR','QI','QS','QG','MSLP','PSFC','U10','V10','T2','Q2','TOPO')
+          if (.not. data_available(ielem,1)) then
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
+             cycle
+          endif
        case('QV')
           if (.not. data_available(Ia_qv,1)) then
              if (.not.data_available(Ia_rh,1)) then
@@ -302,21 +309,6 @@ contains
                 call PRC_MPIstop
              endif
           endif
-       case('QC','QR','QI','QS','QG')
-          if (.not. data_available(ielem,1)) then
-             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
-             cycle
-          endif
-       case('MSLP','PSFC','U10','V10','T2')
-          if (.not. data_available(ielem,1)) then
-             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
-             cycle
-          endif
-       case('Q2')
-          if ( .not. data_available(Ia_q2,1) ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'warning: Q2 is not found & will be estimated.'
-             cycle
-          endif
        case('RH2')
           if ( data_available(Ia_q2,1) ) then
              cycle
@@ -332,11 +324,6 @@ contains
                 if( IO_L ) write(IO_FID_LOG,*) 'warning: Q2 and RH2 are not found, Q2 will be estimated.'
                 cycle
              endif
-          endif
-       case('TOPO')
-          if ( .not. data_available(ielem,1) ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
-             cycle
           endif
        case default ! lon, lat, plev, U, V, T, HGT
           if ( .not. data_available(ielem,1) ) then
@@ -365,6 +352,7 @@ contains
        velx_org, &
        vely_org, &
        pres_org, &
+       dens_org, &
        temp_org, &
        qtrc_org, &
        lon_org,  &
@@ -392,6 +380,7 @@ contains
     real(RP),         intent(out) :: velx_org(:,:,:)
     real(RP),         intent(out) :: vely_org(:,:,:)
     real(RP),         intent(out) :: pres_org(:,:,:)
+    real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: temp_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
     real(RP),         intent(out) :: lon_org(:,:)
@@ -422,6 +411,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputGrADS]'
 
+    dens_org(:,:,:)   = UNDEF ! read data or set data by build-rho-3D
+    velz_org(:,:,:)   = 0.0_RP
     qtrc_org(:,:,:,:) = 0.0_RP
 
     !--- read grads data
@@ -543,6 +534,22 @@ contains
              enddo
              enddo
           endif
+       case('DENS')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   dens_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( dens_org(k+2,i,j) - missval ) < EPS ) then
+                      dens_org(k+2,i,j) = UNDEF
+                   end if
+                enddo
+                dens_org(1:2,i,j) = dens_org(3,i,j)
+             enddo
+             enddo
+          endif
        case('U')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
@@ -580,6 +587,27 @@ contains
                 if(dims(1)>knum)then
                    do k = knum+1, dims(1)
                       vely_org(k+2,i,j) = vely_org(knum+2,i,j)
+                   enddo
+                endif
+             enddo
+             enddo
+          endif
+       case('W')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                velz_org(1:2,i,j) = 0.0_RP
+                do k = 1, knum
+                   velz_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( velz_org(k+2,i,j) - missval ) < EPS ) then
+                      velz_org(k+2,i,j) = UNDEF
+                   end if
+                enddo
+                if(dims(1)>knum)then
+                   do k = knum+1, dims(1)
+                      velz_org(k+2,i,j) = velz_org(knum+2,i,j)
                    enddo
                 endif
              enddo
@@ -1026,17 +1054,16 @@ contains
        end do
     end if
 
-    velz_org = 0.0_RP
-
-
     ! check verticaly extrapolated data in outer model
     if( pressure_coordinates ) then
       do j = 1, dims(3)
       do i = 1, dims(2)
       do k = 3, dims(1)+2
         if( pres_org(k,i,j) > pres_org(2,i,j) ) then ! if Pressure is larger than Surface pressure
+          velz_org(k,i,j)   = velz_org(2,i,j)
           velx_org(k,i,j)   = velx_org(2,i,j)
           vely_org(k,i,j)   = vely_org(2,i,j)
+          dens_org(k,i,j)   = dens_org(2,i,j)
           temp_org(k,i,j)   = temp_org(2,i,j)
           qtrc_org(k,i,j,:) = qtrc_org(2,i,j,:)
           cz_org  (k,i,j)   = cz_org  (2,i,j)
@@ -1048,9 +1075,11 @@ contains
       do j = 1, dims(3)
       do i = 1, dims(2)
       do k = 3, dims(1)+2
-        if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) pres_org(k,i,j) = pres_org(2,i,j)
+        if( abs( velz_org(k,i,j) - UNDEF ) < EPS ) velz_org(k,i,j) = velz_org(2,i,j)
         if( abs( velx_org(k,i,j) - UNDEF ) < EPS ) velx_org(k,i,j) = velx_org(2,i,j)
         if( abs( vely_org(k,i,j) - UNDEF ) < EPS ) vely_org(k,i,j) = vely_org(2,i,j)
+        if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) pres_org(k,i,j) = pres_org(2,i,j)
+        if( abs( dens_org(k,i,j) - UNDEF ) < EPS ) dens_org(k,i,j) = dens_org(2,i,j)
         if( abs( temp_org(k,i,j) - UNDEF ) < EPS ) temp_org(k,i,j) = temp_org(2,i,j)
         do iq = 1, QA
           if( abs( qtrc_org(k,i,j,iq) - UNDEF ) < EPS ) qtrc_org(k,i,j,iq) = 0.0_RP
@@ -1059,26 +1088,6 @@ contains
       enddo
       enddo
     end if
-
-
-    !do it = 1, nt
-    !   k=1 ; j=int(dims(3)/2) ; i=int(dims(2)/2) ; iq = 1
-    !   write(*,*) "read 3D grads data",i,j,k
-    !   write(*,*) "lon_org    ",lon_org   (i,j)/D2R
-    !   write(*,*) "lat_org    ",lat_org   (i,j)/D2R
-    !   write(*,*) "pres_org   ",pres_org  (k,i,j)
-    !   write(*,*) "usfc_org   ",usfc_org  (i,j)
-    !   write(*,*) "vsfc_org   ",vsfc_org  (i,j)
-    !   write(*,*) "tsfc_org   ",tsfc_org  (i,j)
-    !   write(*,*) "qsfc_org   ",qsfc_org  (i,j,iq)
-    !   write(*,*) "rhsfc_org  ",rhsfc_org (i,j)
-    !   write(*,*) "velx_org   ",velx_org  (k,i,j)
-    !   write(*,*) "vely_org   ",vely_org  (k,i,j)
-    !   write(*,*) "temp_org   ",temp_org  (k,i,j)
-    !   write(*,*) "hgt_org    ",hgt_org   (k,i,j)
-    !   write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
-    !   write(*,*) "rhprs_org  ",rhprs_org (k,i,j)
-    !enddo
 
     return
   end subroutine ParentAtomInputGrADS
