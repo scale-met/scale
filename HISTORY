@@ -1,5 +1,9 @@
 = Release History
 
+== 2017-05-31 (5.1.3)
+* Bug fix:
+  * Fix wrong gamma function
+
 == 2017-02-07 (5.1.2)
 * Bug fix:
   * Fix wrong metric for the terrain-following coordinate
