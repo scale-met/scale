@@ -2144,7 +2144,7 @@ contains
 
        !$acc loop gang
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,rd_kmax,Tdir,cf,Tdir0,R,R0,T,T0)
+       !$omp shared(JS,JE,IS,IE,rd_kmax,Tdir,cf,Tdir0)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -2243,7 +2243,7 @@ contains
 
              !$acc loop gang vector(4)
              !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-             !$omp shared(JS,JE,IS,IE,rd_kmax,R12pls,E12mns,R,T,Ep,Em)
+             !$omp shared(JS,JE,IS,IE,rd_kmax,R12pls,E12mns,R,R0,T,T0,cf,Ep,Em)
              do j = JS, JE
              !$acc loop gang vector(32)
              do i = IS, IE
