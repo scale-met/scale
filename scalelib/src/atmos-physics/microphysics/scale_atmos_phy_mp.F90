@@ -72,13 +72,15 @@ module scale_atmos_phy_mp
        real(RP), intent(out)   :: SFLX_snow(IA,JA)
      end subroutine mp
      subroutine cf( &
-          cldfrac, &
-          QTRC     )
+          cldfrac,       &
+          QTRC,          &
+          mask_criterion )
        use scale_precision
        use scale_grid_index
        use scale_tracer
        real(RP), intent(out) :: cldfrac(KA,IA,JA)
        real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+       real(RP), intent(in)  :: mask_criterion
      end subroutine cf
      subroutine er( &
           Re,    &
