@@ -398,11 +398,12 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** Use Roh scheme?                : ', enable_roh2014
     if ( IO_L ) write(IO_FID_LOG,*)
 
+    ! For the calculation of optically effective volume
     ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w
     ATMOS_PHY_MP_DENS(I_mp_QR) = dens_w
     ATMOS_PHY_MP_DENS(I_mp_QI) = dens_i
-    ATMOS_PHY_MP_DENS(I_mp_QS) = dens_s
-    ATMOS_PHY_MP_DENS(I_mp_QG) = dens_g
+    ATMOS_PHY_MP_DENS(I_mp_QS) = dens_i
+    ATMOS_PHY_MP_DENS(I_mp_QG) = dens_i
 
     !--- empirical coefficients A, B, C, D
     Ar = PI * dens_w / 6.0_RP
