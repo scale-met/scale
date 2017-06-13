@@ -496,7 +496,8 @@ contains
     endif
 
     call MP_CloudFraction( cldfrac(:,:,:), & ! [OUT]
-                           QTRC(:,:,:,:)   ) ! [IN]
+                           QTRC(:,:,:,:),  & ! [IN]
+                           EPS             ) ! [IN]
 
     call MP_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
                              QTRC (:,:,:,:), & ! [IN]
