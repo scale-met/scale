@@ -4336,17 +4336,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
   subroutine ATMOS_PHY_MP_sn14_CloudFraction( &
-       cldfrac, &
-       QTRC     )
+       cldfrac,       &
+       QTRC,          &
+       mask_criterion )
     use scale_grid_index
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_tracer, only: &
        QAD => QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
+    real(RP), intent(in)  :: mask_criterion
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq
@@ -4359,7 +4359,7 @@ contains
        do iq = 1, MP_QA
           qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
        enddo
-       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
     enddo
     enddo
     enddo

@@ -398,11 +398,12 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** Use Roh scheme?                : ', enable_roh2014
     if ( IO_L ) write(IO_FID_LOG,*)
 
+    ! For the calculation of optically effective volume
     ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w
     ATMOS_PHY_MP_DENS(I_mp_QR) = dens_w
     ATMOS_PHY_MP_DENS(I_mp_QI) = dens_i
-    ATMOS_PHY_MP_DENS(I_mp_QS) = dens_s
-    ATMOS_PHY_MP_DENS(I_mp_QG) = dens_g
+    ATMOS_PHY_MP_DENS(I_mp_QS) = dens_i
+    ATMOS_PHY_MP_DENS(I_mp_QG) = dens_i
 
     !--- empirical coefficients A, B, C, D
     Ar = PI * dens_w / 6.0_RP
@@ -1808,8 +1809,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
   subroutine ATMOS_PHY_MP_tomita08_CloudFraction( &
-       cldfrac, &
-       QTRC     )
+       cldfrac,       &
+       QTRC,          &
+       mask_criterion )
     use scale_grid_index
     use scale_tracer, only: &
        QAD => QA
@@ -1817,8 +1819,7 @@ contains
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
-
-    real(RP) :: qcriteria = 0.005E-3_RP ! 0.005g/kg, Tompkins & Craig
+    real(RP), intent(in)  :: mask_criterion
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq
@@ -1831,7 +1832,7 @@ contains
        do iq = 1, MP_QA
           qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
        enddo
-       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-qcriteria)
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
     enddo
     enddo
     enddo

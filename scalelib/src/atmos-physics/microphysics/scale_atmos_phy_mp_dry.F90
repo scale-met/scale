@@ -119,8 +119,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
   subroutine ATMOS_PHY_MP_dry_CloudFraction( &
-       cldfrac, &
-       QTRC     )
+       cldfrac,       &
+       QTRC,          &
+       mask_criterion )
     use scale_grid_index
     use scale_tracer, only: &
        QAD => QA
@@ -128,6 +129,7 @@ contains
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
+    real(RP), intent(in)  :: mask_criterion ! not used
     !---------------------------------------------------------------------------
 
     cldfrac(:,:,:) = 0.0_RP ! dummy
