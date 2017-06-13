@@ -59,8 +59,6 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_NEST|                          & \\
-\verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
-\verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
 \verb| ONLINE_DOMAIN_NUM        = 1,      | & 領域の番号。外側から1番。\\
 \verb| ONLINE_IAM_PARENT        = .true., | & \\
 \verb| ONLINE_IAM_DAUGHTER      = .false.,| & \\
@@ -77,8 +75,6 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_NEST| & \\
-\verb| USE_NESTING              = .true., | & オンラインネスティング時には、\verb|.true.|とする\\
-\verb| OFFLINE                  = .false.,| & オンラインネスティング時には、\verb|.false.|とする\\
 \verb| ONLINE_DOMAIN_NUM        = 2,      | & 領域の番号。外側から1番。\\
 \verb| ONLINE_IAM_PARENT        = .false.,| & \\
 \verb| ONLINE_IAM_DAUGHTER      = .true., | & \\
@@ -89,18 +85,13 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 }}}\\
 
 \noindent
-\nmitem{USE_NESTING = .true., OFFLINE = .false.}によって、
-オンライン・ネスティング実験であることが決定される。
-\nmitem{ONLINE_**}で始まる設定変数はオンライン・ネスティング実験
-専用の設定変数である。
 \nmitem{ONLINE_DOMAIN_NUM}は、
 領域のID番号であり、外側領域から内側領域へ順番に番号を振っていく。
-ここでは、親領域は1番、子領域は2番と設定する。
+上の例では、親領域は1番、子領域は2番と設定している。\\
 \nmitem{ONLINE_IAM_PARENT}と\nmitem{ONLINE_IAM_DAUGHTER}は、各領域が複数のネスティング領域の中でどこに位置するかを示している。
-namelistの名前から明らかなように、
-\verb|ONLINE_IAM_PARENT=.true.|であれば、子領域にデータを受け渡し、
-\verb|ONLINE_IAM_DAUGHTER=.true.|であれば、境界値データは親領域から受け取るようになる。
-N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}に示す。
+\nmitem{ONLINE_IAM_PARENT} が \verb|.true.|であれば、子領域にデータを受け渡し、
+\nmitem{ONLINE_IAM_DAUGHTER} が \verb|.true.|であれば、境界値データは親領域から受け取るようになる。
+
 
 \begin{table}[htb]
 \begin{center}
@@ -116,8 +107,10 @@ N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}�
 \end{table}
 
 \noindent 最外領域は親領域としてのみ働き、最内領域は子領域としてのみ働く。
-一方、中間領域は最外領域に対しては子領域、
-最内領域に対しては親領域として働くため両方共\verb|.true.|となる。\\
+一方、中間領域は親領域および子領域として働くため\nmitem{ONLINE_IAM_PARENT}と\nmitem{ONLINE_IAM_DAUGHTER}は両方共\verb|.true.|となる。
+N段ネスティング実験の場合の設定例を表\ref{tab:triple_nested}に示す。
+
+
 \nmitem{ONLINE_BOUNDARY_USE_QHYD}は、
 「側面境界条件として親領域の凝結物の値を使うかどうか」を指定する。
 外部入力データから側面境界条件を作成するときには通常使わないが、

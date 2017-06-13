@@ -100,14 +100,9 @@
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \textcolor{blue}{\verb|&PARAM_NEST|} & \\
-\textcolor{blue}{\verb| USE_NESTING               = .true.,|} & \\
-\textcolor{blue}{\verb| OFFLINE                   = .true.,|} & \\
+\textcolor{blue}{\verb| OFFLINE_PARENT_BASENAME   = "history_d01",|}  & 親領域データのファイル名 \\
 \textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
 \textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_KMAX       = 36,|} & \verb|run.d01.conf|の\verb|KMAX|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_IMAX       = 45,|} & \verb|run.d01.conf|の\verb|IMAX|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_JMAX       = 45,|} & \verb|run.d01.conf|の\verb|JMAX|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_LKMAX      = 5,|}  & \verb|run.d01.conf|の\verb|LKMAX|\\
 \textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue_d01.txt",|} & 親領域を実行した時に作成したカタログファイル\\
 \textcolor{blue}{\verb|/|} &\\
  & \\
@@ -140,8 +135,8 @@
 \nmitem{HISTORY_DEFAULT_TINTERVAL}と同じ設定を記述する。
 %
 \namelist{PARAM_NEST}の項目は、ネスティング実験のための設定項目である。
-オフライン・ネスティングでは、\nmitem{USE_NESTNG=.true., OFFLINE=.true.}と設定する。
-\nmitem{OFFLINE_PARENT_***} で始まる6つの設定変数は親領域の設定を記述する変数である。
+オフライン・ネスティングでは、\nmitem{OFFLINE_PARENT_BASENAME}に親領域データのファイル名を設定する。
+また、\nmitem{OFFLINE_PARENT_PRC_NUM_*} で親領域のプロセス数を設定する。
 親領域の設定ファイル(\verb|run.d01.conf|) を参照して正しく設定すること。\\
 
 
