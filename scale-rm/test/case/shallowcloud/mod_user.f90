@@ -53,6 +53,7 @@ module mod_user
                                                         ! 'DYCOMS2_RF01'
                                                         ! 'DYCOMS2_RF02'
                                                         ! 'RICO'
+                                                        ! 'BOMEX'
 
   real(RP), private, allocatable :: MOMZ_LS    (:,:)
   real(RP), private, allocatable :: MOMZ_LS_DZ (:,:)
@@ -86,6 +87,9 @@ module mod_user
   real(RP), private              :: FIXED_SST   =     299.8_RP ! fixed Temperature of surface [K]
   real(RP), private, parameter   :: pres_sfc    =  1015.4E2_RP ! fixed surface pressure
 
+  !--- for radiation flux (BOMEX)
+  real(RP), private, allocatable :: dQrad(:)
+  real(RP), private, parameter   :: USER_Ustar  = 0.28_RP      ! constant frection velocity [m/s]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -141,6 +145,7 @@ contains
     allocate( Q_rate    (KA,IA,JA,QA) )
     allocate( V_GEOS    (KA)          )
     allocate( U_GEOS    (KA)          )
+    allocate( dQrad     (KA)          )
 
     if ( USER_LS_TYPE == 'NONE' ) then  ! no large scale sinking
 
@@ -298,6 +303,72 @@ contains
        MOMZ_LS_FLG(I_RHOT) = .true.
        MOMZ_LS_FLG(I_QTRC) = .true.
        corioli             = 4.5E-5_RP
+
+    elseif( USER_LS_TYPE == 'BOMEX' ) then ! BOMEX
+
+       do k = KS, KE
+          if   ( CZ(k) < 0.0_RP ) then
+             MOMZ_LS   (k,1) =    0.0_RP
+             MOMZ_LS_DZ(k,1) =    0.0_RP
+          elseif( CZ(k) < 1500.0_RP ) then
+             MOMZ_LS   (k,1) = -6.5E-3_RP / 1500.0_RP * CZ(k)
+             MOMZ_LS_DZ(k,1) = -6.5E-3_RP / 1500.0_RP
+          elseif( CZ(k) < 2100.0_RP ) then
+             MOMZ_LS   (k,1) = - 6.5E-3_RP + 6.5E-3_RP / ( 2100.0_RP - 1500.0_RP ) * ( CZ(k) - 1500.0_RP )
+             MOMZ_LS_DZ(k,1) =   6.5E-3_RP / ( 2100.0_RP - 1500.0_RP )
+          else
+             MOMZ_LS   (k,1) = 0.0_RP
+             MOMZ_LS_DZ(k,1) = 0.0_RP
+          endif
+
+          if( CZ(k) < 300.0_RP ) then
+             QV_LS(k,1) = -1.2E-8_RP
+          elseif( CZ(k) < 500.0_RP ) then
+             QV_LS(k,1) = - 1.2E-8_RP + 1.2E-8_RP * ( CZ(k) - 300.0_RP ) / 200.0_RP  !--- [kg/kg/s]
+          else
+             QV_LS(k,1) = 0.0_RP !--- [kg/kg/s]
+          endif
+       end do
+
+       do k = KS-1, KE
+          if    ( FZ(k) < 0.0_RP ) then
+             MOMZ_LS   (k,2) =    0.0_RP
+             MOMZ_LS_DZ(k,2) =    0.0_RP
+          elseif( FZ(k) < 1500.0_RP ) then
+             MOMZ_LS   (k,2) = -6.5E-3_RP / 1500.0_RP * FZ(k)
+             MOMZ_LS_DZ(k,2) = -6.5E-3_RP / 1500.0_RP
+          elseif( FZ(k) < 2100.0_RP ) then
+             MOMZ_LS(k,2) = - 6.5E-3_RP + 6.5E-3_RP / ( 2100.0_RP - 1500.0_RP ) * ( FZ(k) - 1500.0_RP )
+             MOMZ_LS_DZ(k,1) = 6.5E-3_RP / ( 2100.0_RP - 1500.0_RP )
+          else
+             MOMZ_LS(k,2) = 0.0_RP
+             MOMZ_LS_DZ(k,2) = 0.0_RP
+          end if
+       end do
+
+       Q_rate(:,:,:,:) = 0.0_RP
+
+       do k = KS-1, KE
+          V_GEOS(k) = 0.0_RP
+          U_GEOS(k) = -10.0_RP + 1.8E-3_RP * CZ(k)
+       end do
+
+       MOMZ_LS_FLG(:)      = .false.
+       MOMZ_LS_FLG(I_MOMX) = .true.
+       MOMZ_LS_FLG(I_MOMY) = .true.
+       MOMZ_LS_FLG(I_RHOT) = .true.
+       MOMZ_LS_FLG(I_QTRC) = .true.
+       corioli             = 3.76E-5_RP
+
+       do k = KS, KE
+         if( CZ(k) < 1500.0_RP ) then
+           dQrad(k) = - 2.315E-5_RP
+         elseif( CZ(k) < 2500.0_RP ) then
+           dQrad(k) = - 2.315E-5_RP + 2.315E-5_RP / 1000.0_RP * ( CZ(k) - 1500.0_RP )
+         else
+           dQrad(k) = 0.0_RP
+         endif
+       enddo
 
     else
        write(*,*) 'xxx Not appropriate type for USER_LS_TYPE. STOP.', trim(USER_LS_TYPE)
@@ -550,7 +621,7 @@ contains
     if ( MOMZ_LS_FLG(I_QTRC) ) then
 
        !##### advection of scalar quantity #####
-       if ( USER_LS_TYPE == 'RICO' ) then ! RICO
+       if ( USER_LS_TYPE == 'RICO' .OR. USER_LS_TYPE == 'BOMEX' ) then ! RICO or BOMEX
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -700,6 +771,20 @@ contains
           enddo
           enddo
 
+       elseif( USER_LS_TYPE == 'BOMEX' ) then
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Parametarized Radiation (BOMEX)'
+
+          do j = JS, JE
+          do i = IS, IE
+
+             do k = KS, KE
+                  RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + dQrad(k) * DENS(k,i,j)
+             enddo
+
+          enddo
+          enddo
+
        endif
     endif
 
@@ -780,7 +865,76 @@ contains
           enddo
           enddo
 
+       elseif ( USER_LS_TYPE == 'BOMEX' ) then
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux (BOMEX)'
+
+          do j = JS-1, JE
+          do i = IS-1, IE
+
+             ! at cell center
+
+             !--- saturation at surface
+             qtot = 0.0_RP
+             do iq = 1, QA
+                q(iq) = QTRC(KS,i,j,iq)
+                qtot  = QTRC(KS,i,j,iq) * TRACER_MASS(iq)
+             enddo
+
+             call THERMODYN_qd( qdry,  q, TRACER_MASS )
+             call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
+             call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
+
+             CPovCV = CPtot / ( CPtot - Rtot )
+             pres   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+
+             call moist_pres2qsat_liq( qv_evap, FIXED_SST, pres_sfc )
+
+             ! flux
+             SFLX_MOMZ(i,j) = 0.0_RP
+             SFLX_POTT(i,j) = 8.0E-3_RP
+             SFLX_QV  (i,j) = 5.2E-5_RP
+
+             ! at (u, y, layer)
+             Uabs = sqrt( &
+                  + ( 2.0_RP *   MOMX(KS,i,j) )**2 &
+                  + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
+                  ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
+             Cm = min( max(USER_Ustar**2 / Uabs**2, Cm_min), Cm_max )
+             SFLX_MOMX(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMX(KS,i,j)
+
+             ! at (x, v, layer)
+             Uabs = sqrt( &
+                  + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
+                  + ( 2.0_RP *   MOMY(KS,i,j) )**2 &
+                ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
+             Cm = min( max(USER_Ustar**2 / Uabs**2, Cm_min), Cm_max )
+             SFLX_MOMY(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMY(KS,i,j)
+
+             SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
+             LHFLX(i,j) = SFLX_QV  (i,j) * LHV
+          enddo
+          enddo
+
+          call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
+          call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
+
+          !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do i = IS, IE
+             RHOT_tp(KS,i,j)      = RHOT_tp(KS,i,j) + ( SFLX_POTT(i,j) &
+                                                      + SFLX_QV(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
+                                                      ) * RCDZ(KS)
+             DENS_tp(KS,i,j)      = DENS_tp(KS,i,j)      + SFLX_QV  (i,j) * RCDZ(KS)
+             MOMZ_tp(KS,i,j)      = MOMZ_tp(KS,i,j)      + SFLX_MOMZ(i,j) * RFDZ(KS)
+             MOMX_tp(KS,i,j)      = MOMX_tp(KS,i,j)      + SFLX_MOMX(i,j) * RCDZ(KS)
+             MOMY_tp(KS,i,j)      = MOMY_tp(KS,i,j)      + SFLX_MOMY(i,j) * RCDZ(KS)
+             RHOQ_tp(KS,i,j,I_QV) = RHOQ_tp(KS,i,j,I_QV) + SFLX_QV  (i,j) * RCDZ(KS)
+          enddo
+          enddo
+
        endif
+
     endif
 
     return
