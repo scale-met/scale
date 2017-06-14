@@ -1,5 +1,9 @@
 = Release History
 
+== 2017-06-13 (5.1.4)
+* Bug fix:
+  * Fix wrong cloud fraction of the Tomita08 scheme
+
 == 2017-05-31 (5.1.3)
 * Bug fix:
   * Fix wrong gamma function
