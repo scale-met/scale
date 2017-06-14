@@ -689,9 +689,7 @@ contains
                                     TRACER_MASS(:)    ) ! [IN]
 
           call THERMODYN_qd( QDRY(k), QTRC_in(k,i,j,:), TRACER_MASS(:) )
-
           RHOD(k) = DENS(k,i,j) * QDRY(k)
-          PRES(k) = RHOD(k) * R * TEMP(k)
 
           ! calculate u(x-directin velocity ), v(y-direction velocity)
           u(k) = 0.5_RP * ( MOMX(k,i,j) + MOMX(k,i-1,j) ) / DENS(k,i,j)
@@ -704,28 +702,16 @@ contains
        rainrate_cp(i,j)= 0.0_RP
        timecp    (i,j) = 0.0_RP
        cldfrac_KF(:,:) = 0.0_RP
-       temp_u    (:)   = 0.0_RP
        tempv     (:)   = 0.0_RP
-       qv_u      (:)   = 0.0_RP
-       qv_d      (:)   = 0.0_RP
        qc        (:)   = 0.0_RP
        qi        (:)   = 0.0_RP
-       qvdet     (:)   = 0.0_RP
-       qcdet     (:)   = 0.0_RP
-       qidet     (:)   = 0.0_RP
        flux_qr   (:)   = 0.0_RP
        flux_qs   (:)   = 0.0_RP
        theta_eu  (:)   = 0.0_RP
        theta_ee  (:)   = 0.0_RP
        theta_d   (:)   = 0.0_RP
-       umf       (:)   = 0.0_RP
-       upent     (:)   = 0.0_RP
-       updet     (:)   = 0.0_RP
        umfnewdold(:)   = 0.0_RP
        wspd      (:)   = 0.0_RP
-       dmf       (:)   = 0.0_RP
-       downent   (:)   = 0.0_RP
-       downdet   (:)   = 0.0_RP
        temp_g    (:)   = 0.0_RP
        qv_nw     (:)   = 0.0_RP
        qc_nw     (:)   = 0.0_RP
@@ -1772,6 +1758,30 @@ contains
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    ! initialize
+    ! only qv exist other water variables is none
+    umf(:)     = 0._RP
+    f_eq(:)    = 0._RP
+    upent(:)   = 0._RP
+    updet(:)   = 0._RP
+    temp_u(:)  = 0._RP
+    qv_u(:)    = 0._RP
+    qc(:)      = 0._RP
+    qi(:)      = 0._RP
+    qrout(:)   = 0._RP
+    qsout(:)   = 0._RP
+    qvdet(:)   = 0._RP
+    qcdet(:)   = 0._RP
+    qidet(:)   = 0._RP
+    flux_qr(:) = 0._RP
+    flux_qs(:) = 0._RP
+    totalprcp  = 0._RP !< total rain and snow
+    !
+    ee1        = 1._RP
+    ud1        = 0._RP
+    rei        = 0._RP
+    dilbe      = 0._RP
+    cape       = 0._RP
     do kk = KS, KE
        tempv(kk)   = temp(kk)*(1._RP + 0.608_RP*qv(kk)) ! vertual temperature
     end do
@@ -1788,25 +1798,7 @@ contains
     temp_u(k_lclm1)  = temp_lcl
     tempv_u(k_lclm1) = tempv_lcl
     qv_u(k_lclm1)    = qv_mix
-    ! initialize
-    ! only qv exist other water variables is none
-    f_eq(k_lclm1)    = 0._RP
-    upent            = 0._RP
-    qc(k_lclm1)      = 0._RP
-    qi(k_lclm1)      = 0._RP
-    qrout(k_lclm1)   = 0._RP
-    qsout(k_lclm1)   = 0._RP
-    qcdet(k_lclm1)   = 0._RP
-    qidet(k_lclm1)   = 0._RP
-    flux_qr          = 0._RP
-    flux_qs          = 0._RP
-    totalprcp        = 0._RP !< total rain and snow
-    !
-    ee1              = 1._RP
-    ud1              = 0._RP
-    rei              = 0._RP
-    dilbe            = 0._RP
-    cape             = 0._RP
+
     !! temptmp is used during clculation of the linearglaciation
     !! process. it is initially set to the temperature at which freezing
     !! is specified to begin. within the glaciation
@@ -1843,6 +1835,7 @@ contains
           else
              f_frozen1 = 1._RP ! all water is frozen
           endif
+          f_frozen1 = min(1._RP, max(0._RP, f_frozen1)) ! [add] 2017/05/19
           temptmp_ice = temp_u(kkp1)
           !!# calc how much ice is a layer ?
           qfrz     = (qc(kkp1) + qcnew)*f_frozen1  ! all ice
@@ -2140,6 +2133,19 @@ contains
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+    ! initialize
+    wspd(:)    = 0._RP
+    dmf(:)     = 0._RP
+    downent(:) = 0._RP
+    downdet(:) = 0._RP
+    theta_d(:) = 0._RP
+    temp_d(:)  = 0._RP
+    qv_d(:)    = 0._RP
+    prcp_flux  = 0._RP
+    tder       = 0._RP
+    CPR        = 0._RP
+    k_lfs      = 0
+
     ! if no convection
     if (I_convflag == 2) return ! if 3d, may be change
 
@@ -2358,7 +2364,11 @@ contains
        end do
        cpr       = totalprcp
        prcp_flux = totalprcp - tder ! precipitation - evapolate water
-       pef       = prcp_flux/totalprcp
+       if ( totalprcp < KF_EPS ) then ! to avoid FPE w/ Kessler Precip
+          pef = 0.0_RP
+       else
+          pef = prcp_flux/totalprcp
+       endif
        !
        !...ADJUST UPDRAFT MASS FLUX, MASS DETRAINMENT RATE, AND LIQUID WATER AN
        !   DETRAINMENT RATES TO BE CONSISTENT WITH THE TRANSFER OF THE ESTIMATE
@@ -3429,7 +3439,6 @@ contains
     !...THERMODYNAMIC PROPERTIES ARE STILL CALCULATED WITH RESPECT TO LIQUID WATER
     !...TO ALLOW THE USE OF LOOKUP TABLE TO EXTRACT TMP FROM THETAE...
     !
-
     RLC=2.5E6_RP-2369.276_RP*(TU-273.16_RP)
     !      RLC=2.5E6_RP-2369.276_RP*(TU-273.15_RP)   ! 273.16 -> 273.15 ??
     RLS=2833922._RP-259.532_RP*(TU-273.16_RP)
@@ -3455,7 +3464,7 @@ contains
     !...SUBTRACT IT FROM ICE CONCENTRATION, THEN SET UPDRAFT MIXING RATIO AT THE NEW
     !...TEMPERATURE TO THE SATURATION VARIABLE...
     !
-    DQEVAP = QS-QU
+    DQEVAP = min(QS-QU, QICE) ! [add] R.Yoshida (20170519) avoid to be negative QICE
     QICE = QICE-DQEVAP
     QU = QU+DQEVAP
     PII=(1.E5_RP/P)**(0.2854_RP*(1._RP-0.28_RP*QU))
