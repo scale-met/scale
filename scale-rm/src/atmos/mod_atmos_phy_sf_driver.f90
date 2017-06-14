@@ -226,7 +226,6 @@ contains
     real(RP) :: q(QA)
     real(RP) :: qdry
     real(RP) :: Rtot
-    real(RP) :: CPtot
 
     real(RP) :: work
 
@@ -337,29 +336,30 @@ contains
              q(iq) = QTRC(KS,i,j,iq)
           enddo
           call THERMODYN_qd( qdry,  q, TRACER_MASS )
-          call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
           call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-          RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) ) &
+          RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPdry * GSQRT(KS,i,j,I_XYZ) ) ) &
                          * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
        enddo
        enddo
 
-       DENS_t_SF(:,:) = 0.0_RP
        if ( I_QV > 0 ) then
           do j  = JS, JE
           do i  = IS, IE
              work = SFLX_QTRC(i,j,I_QV) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-             DENS_t_SF(i,j)      = DENS_t_SF(i,j) + work
+             DENS_t_SF(i,j)      = work
              RHOQ_t_SF(i,j,I_QV) = work
           enddo
           enddo
-       end if
 
-       do j  = JS, JE
-       do i  = IS, IE
-          RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
-       enddo
-       enddo
+          do j  = JS, JE
+          do i  = IS, IE
+             RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
+          enddo
+          enddo
+
+       else
+          DENS_t_SF(:,:) = 0.0_RP
+       end if
 
     endif
 
