@@ -51,13 +51,10 @@
 'cbarn'
 'set clevs 5 10 15 20 25 30 35 40 45 50'
 'd u;skip(v.2,5)'
-'draw title Wind (m/s) @ 500hPa'
+'draw title Wind (m/s) @ 850hPa'
 'printim real_wind.png'
 'c'
 'close 2'
 'close 1'
 'quit'
-
-
-
 
