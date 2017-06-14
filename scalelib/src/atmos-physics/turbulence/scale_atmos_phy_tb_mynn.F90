@@ -225,10 +225,12 @@ contains
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       GRAV    => CONST_GRAV,   &
-       R       => CONST_Rdry,   &
-       Rvap    => CONST_Rvap,   &
-       CP      => CONST_CPdry,  &
+       GRAV    => CONST_GRAV,  &
+       R       => CONST_Rdry,  &
+       Rvap    => CONST_Rvap,  &
+       CPdry   => CONST_CPdry, &
+       CPvap   => CONST_CPvap, &
+       LHV0    => CONST_LHV0,  &
        EPSTvap => CONST_EPSTvap
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
@@ -257,12 +259,11 @@ contains
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS, &
-       LH => LHV, &
        I_QV, &
        I_QC, &
        I_QI
     use scale_atmos_saturation, only: &
-       ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_all
+       ATMOS_SATURATION_dens2qsat => ATMOS_SATURATION_dens2qsat_all
 #ifdef MORE_HIST
     use scale_history, only: &
        HIST_in
@@ -332,10 +333,10 @@ contains
     real(RP) :: TEML(KA,IA,JA)  !< liquid water temperature
 
     real(RP) :: Qw(KA,IA,JA)    !< total water
+    real(RP) :: qdry(KA,IA,JA)  !< dry air
     real(RP) :: qv              !< water vapor
     real(RP) :: ql              !< liquid water
     real(RP) :: qs              !< solid water
-    real(RP) :: qdry            !< dry air
 
     real(RP) :: temp(KA,IA,JA)  !< temperature
     real(RP) :: pres(KA,IA,JA)  !< pressure
@@ -343,10 +344,13 @@ contains
     real(RP) :: LHV (KA,IA,JA)
     real(RP) :: LHS (KA,IA,JA)
 
+    real(RP) :: CPtot
+
     real(RP) :: ac              !< \alpha_c
 
     real(RP) :: Q1
-    real(RP) :: Qsl(KA,IA,JA)
+    real(RP) :: Qsl(KA)
+    real(RP) :: LHVL(KA)
     real(RP) :: dQsl
     real(RP) :: sigma_s
     real(RP) :: RR
@@ -522,13 +526,16 @@ contains
     call HYDROMETEOR_LHS( LHS(:,:,:), temp(:,:,:) )
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
-    !$omp parallel do default(none)                                                         &
-    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,I_QC,QTRC,I_QI,TRACER_MASS,iq,Qw,I_QV,LH,alpha) &
-    !$omp shared(LHV,LHS,POTT,RHOT,DENS,POTL,temp,CP,TEML,POTV,EPSTvap,SFLX_PT,SFLX_SH,n2,N2_in)  &
-    !$omp shared(ATMOS_PHY_TB_MYNN_N2_MAX,GRAV,CZ,U,V,Ri,dudz2,QA)                          &
-    !$omp private(i,j,k,qv,ql,qs,qdry) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,QA,I_QV,I_QC,I_QI) &
+    !$omp shared(GRAV,CPdry,EPSTvap,ATMOS_PHY_TB_MYNN_N2_MAX,CZ) &
+    !$omp shared(QTRC,TRACER_MASS,RHOT,DENS,N2_in,SFLX_PT,SFLX_SH) &
+    !$omp shared(Qdry,Qw,LHV,LHS,POTT,POTL,temp,TEML,POTV,n2,U,V,Ri,dudz2) &
+    !$omp private(i,j,k,iq) &
+    !$omp private(qv,ql,qs,CPtot)
     do j = JS, JE
     do i = IS, IE
+
        do k = KS, KE_PBL+1
 
           qv = 0.0_RP
@@ -544,22 +551,24 @@ contains
 !          do iq = QIS, QIE
 !             qs = qs + QTRC(k,i,j,iq)
 !          end do
-          CALC_QDRY(qdry, QTRC, TRACER_MASS, k, i, j, iq)
+          CALC_QDRY(qdry(k,i,j), QTRC, TRACER_MASS, k, i, j, iq)
 
           Qw(k,i,j) = qv + ql + qs
 
+          CPtot = CPdry * qdry(k,i,j) + CPvap * qv
+
           POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           ! liquid water potential temperature
-          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (LHV(k,i,j) * ql + LHS(k,i,j) * qs) / ( temp(k,i,j) * CP ) )
+          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (LHV(k,i,j) * ql + LHS(k,i,j) * qs) / ( temp(k,i,j) * CPtot ) )
           TEML(k,i,j) = POTL(k,i,j) * temp(k,i,j) / POTT(k,i,j)
 
           ! virtual potential temperature for derivertive
 !          POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
-          POTV(k,i,j) = ( qdry + (EPSTvap+1.0_RP) * qv ) * POTL(k,i,j)
+          POTV(k,i,j) = ( qdry(k,i,j) + (EPSTvap+1.0_RP) * qv ) * POTT(k,i,j)
 
        end do
 
-       SFLX_PT(i,j) = SFLX_SH(i,j) / ( CP * DENS(KS,i,j) ) &
+       SFLX_PT(i,j) = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) &
                     * POTT(KS,i,j) / TEMP(KS,i,j)
 
        do k = KS, KE_PBL
@@ -659,31 +668,33 @@ contains
     end do
 #endif
 
-    call ATMOS_SATURATION_pres2qsat( Qsl(KS:KE_PBL,:,:), & ! (out)
-                                     TEML(KS:KE_PBL,:,:), pres(KS:KE_PBL,:,:), & ! (in)
-                                     KE_PBL-KS+1 ) ! (in)
-
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
-    !$omp parallel do default(none) &
-    !$omp private(i,j,k,dQsl,aa,bb,ac,sigma_s,Q1,RR,Ql,cc,Rt,betat,betaq) &
-    !$omp OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,l,KE_PBL,Qsl,lh,POTL,CP,TEMP,POTT,q2_2,Qw,q) &
-    !$omp shared(CZ,rsqrt_2,rsqrt_2pi,sqrt_2pi,EPSTvap) &
-    !$omp shared(ATMOS_PHY_TB_MYNN_N2_MAX,GRAV,POTV,dudz2,Ri,n2) &
-    !$omp shared(sh,KE)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k) &
+    !$omp private(CPtot,Qsl,dQsl,aa,bb,ac,sigma_s,Q1,RR,Ql,cc,Rt,betat,betaq,LHVL) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,KE_PBL) &
+    !$omp shared(CZ,rsqrt_2,rsqrt_2pi,sqrt_2pi,GRAV,CPdry,EPSTvap,ATMOS_PHY_TB_MYNN_N2_MAX) &
+    !$omp shared(DENS,l,Qdry,TEMP,TEML,POTT,POTL,POTV,q2_2,Qw,q,dudz2,Ri,n2,sh)
     do j = JS, JE
     do i = IS, IE
+
+       call ATMOS_SATURATION_dens2qsat( Qsl(:), & ! (out)
+                                        TEML(:,i,j), DENS(:,i,j) ) ! (in)
+
+       call HYDROMETEOR_LHV( LHVL(:), TEML(:,i,j) )
+
        do k = KS+1, KE_PBL
 
-          dQsl = Qsl(k,i,j) * LH / ( Rvap * TEML(k,i,j)**2 )
-          aa = 1.0_RP / ( 1.0_RP + LH/CP * dQsl )
+          dQsl = ( Qsl(k) * LHVL(k) / ( Rvap * TEML(k,i,j) ) - Qsl(k) ) / TEML(k,i,j)
+          CPtot = Qdry(k,i,j) * CPdry + Qsl(k) * CPvap
+          aa = 1.0_RP / ( 1.0_RP + LHVL(k)/CPtot * dQsl )
           bb = TEMP(k,i,j) / POTT(k,i,j) * dQsl
           ac = min( q(k,i,j)/sqrt(q2_2(k,i,j)), 1.0_RP )
           sigma_s = max( sqrt( 0.25_RP * aa**2 * l(k,i,j)**2 * ac * B2 * sh(k,i,j) ) &
                        * abs( Qw(k+1,i,j) - Qw(k-1,i,j) - bb * ( POTL(k+1,i,j)-POTL(k-1,i,j) ) ) &
                        / ( CZ(k+1,i,j) - CZ(k-1,i,j) ), &
                        1e-10_RP )
-          Q1 = aa * ( Qw(k,i,j) - Qsl(k,i,j) ) * 0.5_RP / sigma_s
+          Q1 = aa * ( Qw(k,i,j) - Qsl(k) ) * 0.5_RP / sigma_s
           RR = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
 #if defined(__PGI) || defined(__ES2)
           Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) ), & ! apply exp limiter
@@ -692,7 +703,7 @@ contains
 #endif
                     0.0_RP ), &
                     Qw(k,i,j) * 0.5_RP )
-          cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * LH / CP &
+          cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * LHVL(k) / CPtot &
                - (1.0_RP+EPSTvap) * POTT(k,i,j)
 #if defined(__PGI) || defined(__ES2)
           Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ), 0.0_RP ), 1.0_RP ) ! apply exp limiter
@@ -910,9 +921,9 @@ contains
           a(KE_PBL,i,j) = 0.0_RP
           c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / (DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
-          d(KS,i,j) = POTL(KS,i,j) + dt * SFLX_PT(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          d(KS,i,j) = POTT(KS,i,j) + dt * SFLX_PT(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
           do k = KS+1, KE_PBL
-             d(k,i,j) = POTL(k,i,j)
+             d(k,i,j) = POTT(k,i,j)
           end do
           call diffusion_solver( &
                phiN(:,i,j),                     & ! (out)
