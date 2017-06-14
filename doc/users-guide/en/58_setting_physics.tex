@@ -192,14 +192,14 @@ The file name and information of the data are specified in \namelist{PARAM_ATMOS
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
-\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "radiation", | & file name \\
-\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & dimensions of the data \\
-\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & whether annually cyclic data \\
-\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & whether monthly cyclic data \\
-\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & whether dayly cyclic data \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = -1,          | & step number when data at a cirtain time step is used \\
-\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & whether coordinate variables are to be checked \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 100,         | & maximum limit of steps \\
+\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "radiation", | & ; file name \\
+\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; dimensions of the data \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; whether annually cyclic data \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; whether monthly cyclic data \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; whether dayly cyclic data \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = -1,          | & ; step number when data at a cirtain time step is used \\
+\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & ; whether coordinate variables are to be checked \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 1800,        | & ; maximum limit of steps \\
 \verb|/|            & \\
 }
 
@@ -335,14 +335,14 @@ If the ocean category is included in land-use setup by \namelist{PARAM_LANDUSE},
 
 If \nmitem{OCEAN_TYPE} $=$ \verb|"FILE"|, it is necessary to specify an external input file name in files \verb|init.conf| and \verb|run.conf|. In this case, the sea surface temperature varies with time according to spatial distribution and the temporal history of the external file.
 \editboxtwo{
- \verb|&EXTITEM                                  | & \\
- \verb| basename   = "../init/output/ocean_d01", | & ; input file\\
- \verb| varname    = "OCEAN_TEMP",               | & \\
- \verb| step_limit = 1800,                       | & \\
- \verb| step_fixed =  -1,                        | & \\
- \verb| enable_periodic_year  = .false.,         | & \\
- \verb| enable_periodic_month = .false.,         | & \\
- \verb| enable_periodic_day   = .false.,         | & \\
+ \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
+ \verb| OCEAN_PHY_FILE_basename   = "../init/output/ocean_d01", | & ; input file \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_YEAR  = .false.,         | & ; whether annually cyclic data \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_MONTH = .false.,         | & ; whether monthly cyclic data \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_DAY   = .false.,         | & ; whether dayly cyclic data \\
+ \verb| OCEAN_PHY_FILE_STEP_FIXED            = -1,              | & ; step number when data at a cirtain time step is used \\
+ \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .false,          | & ; whether coordinate variables are to be checked \\
+ \verb| OCEAN_PHY_FILE_STEP_LIMIT            = 100,             | & ; maximum limit of steps \\
  \verb|/                                         | & \\
 }
 

@@ -345,14 +345,14 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
-\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "radiation", | & ファイル名 \\
-\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & データの次元名 \\
-\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & 年毎の繰返しデータかどうか \\
-\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & 月毎の繰返しデータかどうか \\
-\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & 日毎の繰返しデータかどうか \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = -1,          | & とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する \\
-\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & ファイル内軸変数の値の確認を行うかどうか \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 100,         | & 読み出すデータ数の上限 \\
+\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "radiation", | & ; ファイル名 \\
+\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; データの次元名 \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; 年毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; 月毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; 日毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = -1,          | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する \\
+\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & ; ファイル内軸変数の値の確認を行うかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 100,         | & ; 読み出すデータ数の上限 \\
 \verb|/|            & \\
 \end{tabularx}
 }}}\\
@@ -552,15 +552,15 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{150mm}{ll}
- \verb|&EXTITEM                                  | & \\
- \verb| basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
- \verb| varname    = "OCEAN_TEMP",               | & ; \verb|"OCEAN_TEMP"|と書く。\\
- \verb| step_limit = 1800,                       | & \\
- \verb| step_fixed =  -1,                        | & \\
- \verb| enable_periodic_year  = .false.,         | & \\
- \verb| enable_periodic_month = .false.,         | & \\
- \verb| enable_periodic_day   = .false.,         | & \\
+\begin{tabularx}{150mm}{lX}
+ \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
+ \verb| OCEAN_PHY_FILE_basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
+ \verb| OCEAN_PHY_FILE_enable_periodic_year  = .false.,         | & ; 年毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_enable_periodic_month = .false.,         | & ; 月毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_enable_periodic_day   = .false.,         | & ; 日毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_step_fixed =  -1,                        | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する \\
+ \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .false,          | & ; ファイル内軸変数の値の確認を行うかどうか \\
+ \verb| OCEAN_PHY_FILE_step_limit = 1800,                       | & ; 読み出すデータ数の上限 \\
  \verb|/                                         | & \\
 \end{tabularx}
 }}\\
