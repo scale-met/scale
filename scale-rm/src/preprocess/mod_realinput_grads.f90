@@ -371,6 +371,13 @@ contains
        P00 => CONST_PRE00, &
        Rdry => CONST_Rdry, &
        CPdry => CONST_CPdry
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG
     use scale_atmos_saturation, only: &
        psat => ATMOS_SATURATION_psat_liq
     implicit none
