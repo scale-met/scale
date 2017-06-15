@@ -142,18 +142,17 @@ module scale_atmos_phy_rd_mstrnx
                                                       !  25: N2O5
                                                       !  26: C2F6
                                                       !  27: HNO4
-  integer,  private, save :: MSTRN_nptype   = 11 !< # of particle species
+  integer,  private            :: MSTRN_nptype   =  9 !< # of particle species
                                                       !  1: water cloud
                                                       !  2: ice cloud
-                                                      !  3: dust-like
-                                                      !  4: soot
-                                                      !  5: volcanic-ash
-                                                      !  6: H2SO4
-                                                      !  7: rural
-                                                      !  8: sea salt
-                                                      !  9: urban
-                                                      ! 10: tropo.
-                                                      ! 11: yellow dust
+                                                      !  3: Soil dust
+                                                      !  4: Carbonacerous (BC/OC=0.3)
+                                                      !  5: Carbonacerous (BC/OC=0.15)
+                                                      !  6: Carbonacerous (BC/OC=0.)
+                                                      !  7: Black carbon
+                                                      !  8: Sulfate
+                                                      !  9: Sea salt
+
   integer,  private, parameter :: MSTRN_nsfc     =  7 !< # of surface types
                                                       !  1: ocean
                                                       !  2: wet land
@@ -165,7 +164,7 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: MSTRN_nfitPLK  =  5 !< # of fitting point for planck function
   integer,  private, parameter :: MSTRN_nplkord  =  3 !< # of orders for planck function
   integer,  private, parameter :: MSTRN_nmoment  =  6 !< absorption + # of moments for scattering phase function
-  integer,  private, save      :: MSTRN_nradius  =  6 !< # of radius mode for hygroscopic parameter
+  integer,  private            :: MSTRN_nradius  =  8 !< # of radius mode for hygroscopic parameter
   integer,  private, parameter :: MSTRN_ncloud   =  2 !< # of cloud types [ClearSky/Cloud]
 
   logical,  private, save :: ATMOS_PHY_RD_MSTRN_ONLY_QCI = .false.
