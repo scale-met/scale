@@ -594,6 +594,8 @@ contains
     if ( mdlid_land == iGrADS .and. ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) ) then
        write(NUM,'(I5.5)') lfn
        BASENAME_LAND = "_"//NUM
+    else
+       BASENAME_LAND = ""
     end if
 
     if ( mdlid_ocean == iGrADS ) then
