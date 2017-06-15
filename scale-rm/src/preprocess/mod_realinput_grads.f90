@@ -611,11 +611,6 @@ contains
                       velz_org(k+2,i,j) = UNDEF
                    end if
                 enddo
-                if(dims(1)>knum)then
-                   do k = knum+1, dims(1)
-                      velz_org(k+2,i,j) = velz_org(knum+2,i,j)
-                   enddo
-                endif
              enddo
              enddo
           endif
