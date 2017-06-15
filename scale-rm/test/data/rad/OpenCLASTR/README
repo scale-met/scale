@@ -1,0 +1,13 @@
+mstrnX parameter file
+from OpenCLASTR (http://157.82.240.167/~clastr/)
+
+- PARAG.29
+- PARAPC.29
+- VARDATA.RM29
+
+If you want to use these files, please set below parameters in the config file.
+
+&PARAM_ATMOS_PHY_RD_MSTRN
+ ATMOS_PHY_RD_MSTRN_nptype  = 11,
+ ATMOS_PHY_RD_MSTRN_nradius = 6,
+/
