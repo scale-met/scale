@@ -350,6 +350,9 @@ contains
     real(RP) :: CVtot ! total CV
     real(RP) :: CPtot ! total CP
     real(RP) :: PRES  ! pressure
+#ifdef DRY
+    real(RP) :: CPovCV
+#endif
 
     real(RP) :: DENS_tq(KA,IA,JA)
     real(RP) :: diff(KA,IA,JA)
@@ -421,6 +424,9 @@ contains
 
 #endif
 
+#ifdef DRY
+    CPovCV = CPdry / CVdry
+#endif
     !------------------------------------------------------------------------
     ! prepare thermodynamical data
     !   specific heat
@@ -434,9 +440,14 @@ contains
     ! pres ~ P0 * ( R * rhot0 / P0 ) ** (CP/CV) + CV*R/CP * ( pres / P0 )**(R/CP) * rhot'
     !------------------------------------------------------------------------
 !OCL XFILL
-    !$omp parallel do default(none) &
-    !$omp shared(JA,IA,KS,KE,P0,Rdry,RHOT,AQ_R,AQ_CV,AQ_CP,QTRC,AQ_MASS,REF_rhot,REF_pres,CPdry,CVdry,QA,RT2P,DPRES0) &
-    !$omp private(i,j,k,iq,PRES,Rtot,CVtot,CPtot,QDRY) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KS,KE) &
+    !$omp shared(P0,Rdry,RHOT,AQ_R,AQ_CV,AQ_CP,QTRC,AQ_MASS,REF_rhot,REF_pres,CPdry,CVdry,QA,RT2P,DPRES0) &
+#ifdef DRY
+    !$omp shared(CPovCV) &
+#endif
+    !$omp private(i,j,k,iq) &
+    !$omp private(PRES,Rtot,CVtot,CPtot,QDRY)
     do j = 1, JA
     do i = 1, IA
        do k = KS, KE

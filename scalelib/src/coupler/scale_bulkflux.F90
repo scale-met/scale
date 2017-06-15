@@ -675,6 +675,8 @@ contains
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
   function fm_unstable( Z, IL )
+    use scale_const, only: &
+      PI => CONST_PI
     implicit none
 
     ! argument
@@ -686,6 +688,7 @@ contains
 
     ! works
     real(DP) :: R
+    real(DP) :: r4R
     !---------------------------------------------------------------------------
 
     R = min( Z * IL, 0.0_DP )

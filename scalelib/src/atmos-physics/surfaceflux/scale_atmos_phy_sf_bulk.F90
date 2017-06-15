@@ -187,10 +187,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(bulk)'
 
-    if ( I_QV > 0 ) then
-       ATM_QV(:,:) = ATM_QTRC(:,:,I_QV)
-    endif
-
     call ROUGHNESS( SFC_Z0M_t(:,:), & ! [OUT]
                     SFC_Z0H_t(:,:), & ! [OUT]
                     SFC_Z0E_t(:,:), & ! [OUT]
@@ -206,13 +202,20 @@ contains
     SFC_Z0H(:,:) = SFC_Z0H(:,:) + SFC_Z0H_t(:,:) * dt
     SFC_Z0E(:,:) = SFC_Z0E(:,:) + SFC_Z0E_t(:,:) * dt
 
-    call SATURATION_pres2qsat_all( SFC_QSAT(:,:), & ! [OUT]
-                                   SFC_TEMP(:,:), & ! [IN]
-                                   SFC_PRES(:,:)  ) ! [IN]
-
     call HYDROMETEOR_LHV( LHV(:,:), ATM_TEMP(:,:) )
 
-    SFC_QV(:,:) = ( 1.0_RP - ATMOS_PHY_SF_beta ) * ATM_QV(:,:) + ATMOS_PHY_SF_beta * SFC_QSAT(:,:)
+    if ( I_QV > 0 ) then
+       ATM_QV(:,:) = ATM_QTRC(:,:,I_QV)
+
+       call SATURATION_pres2qsat_all( SFC_QSAT(:,:), & ! [OUT]
+                                      SFC_TEMP(:,:), & ! [IN]
+                                      SFC_PRES(:,:)  ) ! [IN]
+
+       SFC_QV(:,:) = ( 1.0_RP - ATMOS_PHY_SF_beta ) * ATM_QV(:,:) + ATMOS_PHY_SF_beta * SFC_QSAT(:,:)
+    else
+       ATM_QV(:,:) = 0.0_RP
+       SFC_QV(:,:) = 0.0_RP
+    end if
 
     SFLX_QTRC(:,:,:) = 0.0_RP
     PBL      (:,:)   = 100.0_RP ! tentative
