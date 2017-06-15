@@ -270,7 +270,8 @@ contains
        offset,                &
        defval,                &
        check_coordinates,     &
-       step_limit             )
+       step_limit,            &
+       exist                  )
     use gtool_file_h, only: &
        File_FREAD
     use gtool_file, only: &
@@ -308,6 +309,7 @@ contains
     real(RP)         , intent(in) :: defval
     logical, optional, intent(in) :: check_coordinates
     integer, optional, intent(in) :: step_limit            ! limit number for reading data
+    logical, optional, intent(out) :: exist
 
     integer                :: step_nmax
     character(len=H_LONG)  :: description
@@ -379,9 +381,15 @@ contains
                              time_units                 ) ! [OUT]
 
     if ( step_nmax == 0 ) then
+       if ( present(exist) ) then
+          exist = .false.
+          return
+       end if
        write(*,*) 'xxx Data not found! basename,varname = ', trim(basename), ', ', trim(varname)
        call PRC_MPIstop
     endif
+
+    if ( present(exist) ) exist = .true.
 
     do n = dim_rank+1, 3
        dim_size(n) = 1

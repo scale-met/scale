@@ -192,7 +192,7 @@ contains
            enddo
          enddo
        enddo
-     else if(RP==DP)then  ! single
+     else if(RP==DP)then  ! double
        do k=KS,KE
          do j=JS,JE
            do i=IS,IE
@@ -248,7 +248,7 @@ contains
         var(i,j) = work(i-IHALO,j-JHALO)
        enddo
        enddo
-     else if(RP==DP)then  ! single
+     else if(RP==DP)then  ! double
        do j=JS,JE
        do i=IS,IE
         var(i,j) = dble(work(i-IHALO,j-JHALO))
