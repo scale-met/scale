@@ -594,6 +594,8 @@ contains
     if ( mdlid_land == iGrADS .and. ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) ) then
        write(NUM,'(I5.5)') lfn
        BASENAME_LAND = "_"//NUM
+    else
+       BASENAME_LAND = ""
     end if
 
     if ( mdlid_ocean == iGrADS ) then
@@ -843,7 +845,7 @@ contains
        if ( do_read_atom ) call ParentAtomSetupGrADS( dims,        & ! (out)
                                                       basename_org ) ! (in)
        update_coord = .true.
-       use_file_density = .false.
+       use_file_density = use_file_density_in
        use_temp = .true.
        rotate = .true.
        timelen = -1
@@ -1053,7 +1055,8 @@ contains
           case( iGrADS ) ! TYPE: GrADS format
 
              call ParentAtomInputGrADS( velz_org, velx_org, vely_org, & ! (out)
-                                        pres_org, temp_org, qtrc_org, & ! (out)
+                                        pres_org, dens_org, temp_org, & ! (out)
+                                        qtrc_org,                     & ! (out)
                                         lon_org, lat_org, cz_org,     & ! (out)
                                         basename_org, dims, n         ) ! (in)
 
