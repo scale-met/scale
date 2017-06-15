@@ -401,8 +401,11 @@ contains
          fact_urban  => LANDUSE_fact_urban
     implicit none
 
-    logical                  :: USE_FILE_LANDWATER   = .true.  ! use land water data from files
-    real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP  ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false."
+    logical                  :: USE_FILE_LANDWATER   = .true.    ! use land water data from files
+    real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP    ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false."
+    real(RP)                 :: INIT_OCEAN_ALB_LW    = 0.04_RP   ! initial LW albedo on the ocean
+    real(RP)                 :: INIT_OCEAN_ALB_SW    = 0.10_RP   ! initial SW albedo on the ocean
+    real(RP)                 :: INIT_OCEAN_Z0W       = 1.0E-3_RP ! initial surface roughness on the ocean
     character(len=H_SHORT)   :: INTRP_LAND_TEMP      = 'off'
     character(len=H_SHORT)   :: INTRP_LAND_WATER     = 'off'
     character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP  = 'off'
@@ -440,6 +443,9 @@ contains
          BASENAME_BOUNDARY,      &
          BOUNDARY_TITLE,         &
          BOUNDARY_UPDATE_DT,     &
+         INIT_OCEAN_ALB_LW,      &
+         INIT_OCEAN_ALB_SW,      &
+         INIT_OCEAN_Z0W,         &
          INTRP_OCEAN_TEMP,       &
          INTRP_OCEAN_SFC_TEMP,   &
          INTRP_ITER_MAX,         &
@@ -645,6 +651,9 @@ contains
                                 ldims, odims,            &
                                 USE_FILE_LANDWATER,      &
                                 INIT_LANDWATER_RATIO,    &
+                                INIT_OCEAN_ALB_LW,       &
+                                INIT_OCEAN_ALB_SW,       &
+                                INIT_OCEAN_Z0W,          &
                                 INTRP_ITER_MAX,          &
                                 SOILWATER_DS2VC_flag,    &
                                 elevation_collection,    &
@@ -1764,6 +1773,9 @@ contains
        odims,             &
        use_file_landwater, &
        init_landwater_ratio, &
+       init_ocean_alb_lw, &
+       init_ocean_alb_sw, &
+       init_ocean_z0w, &
        intrp_iter_max, &
        soilwater_ds2vc_flag, &
        elevation_collection, &
@@ -1836,6 +1848,9 @@ contains
     logical,          intent(in)  :: use_file_landwater   ! use land water data from files
     real(RP),         intent(in)  :: init_landwater_ratio ! Ratio of land water to storage is constant,
                                                           ! if use_file_landwater is ".false."
+    real(RP),         intent(in)  :: init_ocean_alb_lw
+    real(RP),         intent(in)  :: init_ocean_alb_sw
+    real(RP),         intent(in)  :: init_ocean_z0w
     integer,          intent(in)  :: intrp_iter_max
     logical,          intent(in)  :: soilwater_ds2vc_flag
     logical,          intent(in)  :: elevation_collection
@@ -2166,9 +2181,9 @@ contains
 
        do j = 1, odims(2)
        do i = 1, odims(1)
-          if ( albw_org(i,j,I_LW) == UNDEF ) albw_org(i,j,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
-          if ( albw_org(i,j,I_SW) == UNDEF ) albw_org(i,j,I_SW) = 0.10_RP
-          if ( z0w_org(i,j) == UNDEF ) z0w_org(i,j) = 0.001_RP
+          if ( albw_org(i,j,I_LW) == UNDEF ) albw_org(i,j,I_LW) = init_ocean_alb_lw
+          if ( albw_org(i,j,I_SW) == UNDEF ) albw_org(i,j,I_SW) = init_ocean_alb_sw
+          if ( z0w_org(i,j) == UNDEF ) z0w_org(i,j) = init_ocean_z0w
        end do
        end do
 
