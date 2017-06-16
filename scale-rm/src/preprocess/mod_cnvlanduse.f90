@@ -262,7 +262,7 @@ contains
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
 
     ! tentative: LANDUSE_PFT_nmax is assumed to be 4
-    real(RP) :: categ_sum(IA,JA,-3:LANDUSE_PFT_nmax)
+    real(RP) :: categ_sum(IA,JA,-2:LANDUSE_PFT_nmax)
 
     integer  :: lookuptable(1:25)
     data lookuptable /  0, & !   1 Urban and Built-Up Land        ->  0 urban
@@ -289,7 +289,7 @@ contains
                         1, & !  22 Mixed Tundra                   ->  1 Bare Ground
                         1, & !  23 Bare Ground Tundra             ->  1 Bare Ground
                         1, & !  24 Snow or Ice                    ->  1 Bare Ground
-                       -3  / !  25 Missing Data                   -> -1 Sea Surface
+                       -1  / !  25+ Sea Surface                   -> -1 Sea Surface
 
     real(RP) :: categ_pftsum, allsum
     real(RP) :: PFT    (LANDUSE_PFT_nmax)
@@ -320,7 +320,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_GLCCv2)
 
-    do p = -3, LANDUSE_PFT_nmax
+    do p = -2, LANDUSE_PFT_nmax
     do j = 1, JA
     do i = 1, IA
        categ_sum(i,j,p) = 0.0_RP
@@ -667,10 +667,10 @@ contains
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
 
     ! tentative: LANDUSE_PFT_nmax is assumed to be 4
-    real(RP) :: categ_sum(IA,JA,-3:LANDUSE_PFT_nmax)
+    real(RP) :: categ_sum(IA,JA,-2:LANDUSE_PFT_nmax)
 
     integer  :: lookuptable(0:16)
-    data lookuptable / -3, & !  0 missing        -> -1 Sea Surface
+    data lookuptable / -1, & !  0 missing        -> -1 Sea Surface
                        10, & !  1 paddy          -> 10 Paddy
                         9, & !  2 cropland       ->  9 Mixed Cropland and Pasture
                         1, & !  3 UNDEF          ->  1 Bare Ground
@@ -718,7 +718,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_LU100M)
 
-    do p = -3, LANDUSE_PFT_nmax
+    do p = -2, LANDUSE_PFT_nmax
     do j = 1, JA
     do i = 1, IA
        categ_sum(i,j,p) = 0.0_RP
@@ -949,9 +949,12 @@ contains
 
        categ_pftsum = sum( PFT(:) )
 
+       ! overwrite existing map (GLCCv2) by LU100
+       allsum = categ_sum(i,j,-2) + categ_sum(i,j,0) + categ_pftsum
+       mask   = 0.5_RP + sign( 0.5_RP, allsum-EPS ) ! if any land data is found, overwrite
+
        ! land fraction : 1 - ocean / total
        allsum = categ_sum(i,j,-2) + categ_sum(i,j,-1) + categ_sum(i,j,0) + categ_pftsum
-       mask   = 0.5_RP + sign( 0.5_RP, allsum-EPS ) ! if any data is found, overwrite
        zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
        frac = ( 1.0_RP-zerosw ) - categ_sum(i,j,-1) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
        LANDUSE_frac_land (i,j) = (        mask ) * frac &                  ! overwrite
