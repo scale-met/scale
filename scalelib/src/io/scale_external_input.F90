@@ -298,17 +298,17 @@ contains
        TIME_OFFSET_year
     implicit none
 
-    character(len=*) , intent(in) :: basename
-    character(len=*) , intent(in) :: varname
-    character(len=*) , intent(in) :: axistype
-    integer          , intent(in) :: step_fixed            ! fixed step position to read
-    logical          , intent(in) :: enable_periodic_year  ! treat as yearly               periodic data?
-    logical          , intent(in) :: enable_periodic_month ! treat as yearly,monthly       periodic data?
-    logical          , intent(in) :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
-    real(RP)         , intent(in) :: offset
-    real(RP)         , intent(in) :: defval
-    logical, optional, intent(in) :: check_coordinates
-    integer, optional, intent(in) :: step_limit            ! limit number for reading data
+    character(len=*) , intent(in)  :: basename
+    character(len=*) , intent(in)  :: varname
+    character(len=*) , intent(in)  :: axistype
+    integer          , intent(in)  :: step_fixed            ! fixed step position to read
+    logical          , intent(in)  :: enable_periodic_year  ! treat as yearly               periodic data?
+    logical          , intent(in)  :: enable_periodic_month ! treat as yearly,monthly       periodic data?
+    logical          , intent(in)  :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
+    real(RP)         , intent(in)  :: offset
+    real(RP)         , intent(in)  :: defval
+    logical, optional, intent(in)  :: check_coordinates
+    integer, optional, intent(in)  :: step_limit            ! limit number for reading data
     logical, optional, intent(out) :: exist
 
     integer                :: step_nmax
@@ -336,6 +336,7 @@ contains
 
     integer  :: fid
     integer  :: nid, n
+    !---------------------------------------------------------------------------
 
     if ( present(step_limit) ) then
        if ( step_limit > 0 ) then
@@ -360,7 +361,6 @@ contains
        write(*,*) 'xxx Number of EXT data exceedes the limit', EXTIN_item_count, EXTIN_item_limit
        call PRC_MPIstop
     end if
-
 
     call FileOpen( fid, basename, File_FREAD, myrank=PRC_myrank )
 

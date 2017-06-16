@@ -73,29 +73,29 @@ contains
     data vars_2d    / 'SFLX_LW_up', 'SFLX_LW_dn', 'SFLX_SW_up', 'SFLX_SW_dn' /
     data vars_2d_op / 'SFLX_SW_dn_dir' /
 
-    character(len=H_LONG)  :: ATMOS_PHY_RD_offline_basename = ''
-    character(len=H_SHORT) :: ATMOS_PHY_RD_offline_axistype = 'XYZ'
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_year = .false.
+    character(len=H_LONG)  :: ATMOS_PHY_RD_offline_basename              = ''
+    character(len=H_SHORT) :: ATMOS_PHY_RD_offline_axistype              = 'XYZ'
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_year  = .false.
     logical                :: ATMOS_PHY_RD_offline_enable_periodic_month = .false.
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_day = .false.
-    integer                :: ATMOS_PHY_RD_offline_step_fixed = 0
-    real(RP)               :: ATMOS_PHY_RD_offline_offset = 0.0_RP
-    real(RP)               :: ATMOS_PHY_RD_offline_defval  !> = UNDEF
-    logical                :: ATMOS_PHY_RD_offline_check_coordinates = .true.
-    integer                :: ATMOS_PHY_RD_offline_step_limit = 0
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_day   = .false.
+    integer                :: ATMOS_PHY_RD_offline_step_fixed            = 0
+    real(RP)               :: ATMOS_PHY_RD_offline_offset                = 0.0_RP
+    real(RP)               :: ATMOS_PHY_RD_offline_defval                !> = UNDEF
+    logical                :: ATMOS_PHY_RD_offline_check_coordinates     = .true.
+    integer                :: ATMOS_PHY_RD_offline_step_limit            = 0
 
     NAMELIST / PARAM_ATMOS_PHY_RD_OFFLINE / &
-            ATMOS_PHY_RD_offline_basename,              &
-            ATMOS_PHY_RD_offline_axistype,              &
-            ATMOS_PHY_RD_offline_enable_periodic_year,  &
-            ATMOS_PHY_RD_offline_enable_periodic_month, &
-            ATMOS_PHY_RD_offline_enable_periodic_day,   &
-            ATMOS_PHY_RD_offline_step_fixed,            &
-            ATMOS_PHY_RD_offline_offset,                &
-            ATMOS_PHY_RD_offline_defval,                &
-            ATMOS_PHY_RD_offline_check_coordinates,     &
-            ATMOS_PHY_RD_offline_step_limit,            &
-            ATMOS_PHY_RD_offline_diffuse_rate
+       ATMOS_PHY_RD_offline_basename,              &
+       ATMOS_PHY_RD_offline_axistype,              &
+       ATMOS_PHY_RD_offline_enable_periodic_year,  &
+       ATMOS_PHY_RD_offline_enable_periodic_month, &
+       ATMOS_PHY_RD_offline_enable_periodic_day,   &
+       ATMOS_PHY_RD_offline_step_fixed,            &
+       ATMOS_PHY_RD_offline_offset,                &
+       ATMOS_PHY_RD_offline_defval,                &
+       ATMOS_PHY_RD_offline_check_coordinates,     &
+       ATMOS_PHY_RD_offline_step_limit,            &
+       ATMOS_PHY_RD_offline_diffuse_rate
 
     integer :: n, ierr
     !---------------------------------------------------------------------------
@@ -239,16 +239,16 @@ contains
     error_sum = .false.
 
     ! 3D
-    call EXTIN_update( flux_rad    (:,:,:,I_LW,I_up,2),  'RFLX_LW_up',     TIME_NOWDAYSEC, error )
+    call EXTIN_update( flux_rad(:,:,:,I_LW,I_up,2), 'RFLX_LW_up', TIME_NOWDAYSEC, error )
     error_sum = ( error .OR. error_sum )
 
-    call EXTIN_update( flux_rad    (:,:,:,I_LW,I_dn,2),  'RFLX_LW_dn',     TIME_NOWDAYSEC, error )
+    call EXTIN_update( flux_rad(:,:,:,I_LW,I_dn,2), 'RFLX_LW_dn', TIME_NOWDAYSEC, error )
     error_sum = ( error .OR. error_sum )
 
-    call EXTIN_update( flux_rad    (:,:,:,I_SW,I_up,2),  'RFLX_SW_up',     TIME_NOWDAYSEC, error )
+    call EXTIN_update( flux_rad(:,:,:,I_SW,I_up,2), 'RFLX_SW_up', TIME_NOWDAYSEC, error )
     error_sum = ( error .OR. error_sum )
 
-    call EXTIN_update( flux_rad    (:,:,:,I_SW,I_dn,2),  'RFLX_SW_dn',     TIME_NOWDAYSEC, error )
+    call EXTIN_update( flux_rad(:,:,:,I_SW,I_dn,2), 'RFLX_SW_dn', TIME_NOWDAYSEC, error )
     error_sum = ( error .OR. error_sum )
 
 
@@ -268,21 +268,6 @@ contains
        end do
     end if
 
-    call EXTIN_update( buffer(:,:), 'SFLX_SW_up', TIME_NOWDAYSEC, error )
-    if ( error ) then
-       error_sum = .true.
-    else
-       !$omp parallel do default(none) OMP_SCHEDULE_ &
-       !$omp private(i,j) &
-       !$omp shared(KS,IS,IE,JS,JE) &
-       !$omp shared(flux_rad,buffer)
-       do j = JS, JE
-       do i = IS, IE
-          flux_rad(KS-1,i,j,I_SW,I_up,2) = buffer(i,j)
-       end do
-       end do
-    end if
-
     call EXTIN_update( buffer(:,:), 'SFLX_LW_dn', TIME_NOWDAYSEC, error )
     if ( error ) then
        error_sum = .true.
@@ -294,6 +279,21 @@ contains
        do j = JS, JE
        do i = IS, IE
           flux_rad(KS-1,i,j,I_LW,I_dn,2) = buffer(i,j)
+       end do
+       end do
+    end if
+
+    call EXTIN_update( buffer(:,:), 'SFLX_SW_up', TIME_NOWDAYSEC, error )
+    if ( error ) then
+       error_sum = .true.
+    else
+       !$omp parallel do default(none) OMP_SCHEDULE_ &
+       !$omp private(i,j) &
+       !$omp shared(KS,IS,IE,JS,JE) &
+       !$omp shared(flux_rad,buffer)
+       do j = JS, JE
+       do i = IS, IE
+          flux_rad(KS-1,i,j,I_SW,I_up,2) = buffer(i,j)
        end do
        end do
     end if
@@ -337,19 +337,18 @@ contains
        !$omp shared(SFLX_rad_dn,flux_rad)
        do j = JS, JE
        do i = IS, IE
-          SFLX_rad_dn(i,j,I_SW,I_diffuse) = flux_rad(KS-1,i,j,I_SW,I_dn,2) * ATMOS_PHY_RD_offline_diffuse_rate
-          SFLX_rad_dn(i,j,I_SW,I_direct ) = flux_rad(KS-1,i,j,I_SW,I_dn,2) - SFLX_rad_dn(i,j,I_SW,I_diffuse)
+          SFLX_rad_dn(i,j,I_SW,I_diffuse) = (          ATMOS_PHY_RD_offline_diffuse_rate ) * flux_rad(KS-1,i,j,I_SW,I_dn,2)
+          SFLX_rad_dn(i,j,I_SW,I_direct ) = ( 1.0_RP - ATMOS_PHY_RD_offline_diffuse_rate ) * flux_rad(KS-1,i,j,I_SW,I_dn,2)
        end do
        end do
     end if
-
 
     if ( error_sum ) then
        write(*,*) 'xxx Requested data is not found!'
        call PRC_MPIstop
     endif
 
-
+    ! clearsky and TOA value are not defined
     flux_rad    (:,:,:,:,:,1) = 0.0_RP
     flux_rad_top(:,:,:,:,:)   = 0.0_RP
 
