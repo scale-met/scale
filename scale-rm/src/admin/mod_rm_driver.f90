@@ -74,7 +74,9 @@ contains
     use scale_grid_index, only: &
        GRID_INDEX_setup
     use scale_grid, only: &
-       GRID_setup
+       GRID_setup, &
+       DX, &
+       DY
     use scale_grid_nest, only: &
        NEST_setup
     use scale_land_grid_index, only: &
@@ -292,7 +294,7 @@ contains
     call ATMOS_THERMODYN_setup
     call ATMOS_SATURATION_setup
 
-    call BULKFLUX_setup
+    call BULKFLUX_setup( sqrt(DX**2+DY**2) )
     call ROUGHNESS_setup
 
     ! setup variable container

@@ -103,7 +103,7 @@ module scale_bulkflux
 
   real(RP), private :: BULKFLUX_err_min = 1.0E-3_RP ! minimum value of error
 
-  real(RP), private :: BULKFLUX_WSCF = 1.2_RP ! empirical scaling factor of Wstar (Beljaars 1994)
+  real(RP), private :: BULKFLUX_WSCF ! empirical scaling factor of Wstar (Beljaars 1994)
 
   ! limiter
   real(RP), private :: BULKFLUX_Uabs_min  = 1.0E-2_RP ! minimum of Uabs [m/s]
@@ -114,10 +114,11 @@ contains
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine BULKFLUX_setup
+  subroutine BULKFLUX_setup( dx )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+    real(RP), intent(in) :: dx
 
     NAMELIST / PARAM_BULKFLUX / &
        BULKFLUX_type,       &
@@ -133,6 +134,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[BULKFLUX] / Categ[COUPLER] / Origin[SCALElib]'
+
+    ! WSCF = 1.2 for dx > 1 km (Beljaars 1994)
+    ! lim_{dx->0} WSCF = 0  for LES (Fig. 6 Kitamura and Ito 2016 BLM)
+    BULKFLUX_WSCF = 1.2_RP * min(dx*1.e-3_RP, 1.0_RP)
+
 
     !--- read namelist
     rewind(IO_FID_CONF)
