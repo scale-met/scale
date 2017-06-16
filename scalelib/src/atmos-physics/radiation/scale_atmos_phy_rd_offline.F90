@@ -313,6 +313,16 @@ contains
        end do
     end if
 
+    !$omp parallel do default(none) OMP_SCHEDULE_ &
+    !$omp private(i,j) &
+    !$omp shared(KS,IS,IE,JS,JE,ATMOS_PHY_RD_offline_diffuse_rate) &
+    !$omp shared(SFLX_rad_dn,flux_rad)
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rad_dn(i,j,I_LW,I_diffuse) = flux_rad(KS-1,i,j,I_LW,I_dn,2)
+       SFLX_rad_dn(i,j,I_LW,I_direct ) = 0.0_RP
+    end do
+    end do
 
     ! 2D optional
     if ( vars_2d_exist(1) ) then
@@ -351,17 +361,6 @@ contains
     ! clearsky and TOA value are not defined
     flux_rad    (:,:,:,:,:,1) = 0.0_RP
     flux_rad_top(:,:,:,:,:)   = 0.0_RP
-
-    !$omp parallel do default(none) OMP_SCHEDULE_ &
-    !$omp private(i,j) &
-    !$omp shared(KS,IS,IE,JS,JE,ATMOS_PHY_RD_offline_diffuse_rate) &
-    !$omp shared(SFLX_rad_dn,flux_rad)
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rad_dn(i,j,I_LW,I_diffuse) = flux_rad(KS-1,i,j,I_LW,I_dn,2) * ATMOS_PHY_RD_offline_diffuse_rate
-       SFLX_rad_dn(i,j,I_LW,I_direct ) = flux_rad(KS-1,i,j,I_LW,I_dn,2) - SFLX_rad_dn(i,j,I_LW,I_diffuse)
-    end do
-    end do
 
     return
   end subroutine ATMOS_PHY_RD_offline
