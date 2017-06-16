@@ -165,30 +165,7 @@ The number of layers and their heights in this user-defined file can be given in
 
 
 When \nmitem{ATMOS_PHY_RD_TYPE} is \verb|OFFLINE| in \namelist{PARAM_ATMOS},
-variables in Table \ref{tab:var_list_atm_rd_offline} must be given.
-\begin{table}[h]
-\begin{center}
-  \caption{Radiative data as external file input}
-  \label{tab:var_list_atm_rd_offline}
-  \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  Variable name & Description & \# of dimensions \\ \hline
-      \verb|SFLX_LW_up|      & upward long-wave radiative flux at the surface & 2D \\
-      \verb|SFLX_LW_dn_dir|  & downward long-wave direct radiative flux at the surface & 2D \\
-      \verb|SFLX_LW_dn_diff| & downward long-wave diffuse radiative flux at the surface & 2D \\
-      \verb|SFLX_SW_up|      & upward short-wave radiative flux at the surface & 2D \\
-      \verb|SFLX_SW_dn_dir|  & downward short-wave direct radiative flux at the surface & 2D \\
-      \verb|SFLX_SW_dn_diff| & downward shot-wave diffuse radiative flux at the surface & 2D \\
-      \verb|RFLX_LW_up|      & upward long-wave radiative flux & 3D \\
-      \verb|RFLX_LW_dn|      & downward long-wave radiative flux & 3D \\
-      \verb|RFLX_SW_up|      & upward short-wave radiative flux & 3D \\
-      \verb|RFLX_SW_dn|      & downward short-wave radiative flux & 3D \\
-    \hline
-  \end{tabularx}
-\end{center}
-\end{table}
-
-
-The file name and information of the data are specified in \namelist{PARAM_ATMOS_PHY_RD_OFFLINE}.
+the file name and information of the data are specified in \namelist{PARAM_ATMOS_PHY_RD_OFFLINE}.
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
@@ -200,8 +177,31 @@ The file name and information of the data are specified in \namelist{PARAM_ATMOS
 \verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = -1,          | & ; step number when data at a cirtain time step is used \\
 \verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & ; whether coordinate variables are to be checked \\
 \verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 1800,        | & ; maximum limit of steps \\
+\verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; diffuse rate of short wave used when short-wave direct flux data is not given \\
 \verb|/|            & \\
 }
+
+\noindent
+Variables as the external data is shown in Table \ref{tab:var_list_atm_rd_offline}.
+\begin{table}[h]
+\begin{center}
+  \caption{Radiative data as external file input}
+  \label{tab:var_list_atm_rd_offline}
+  \begin{tabularx}{150mm}{lXll} \hline
+    \rowcolor[gray]{0.9}  Variable name & Description & \# of dimensions & \\ \hline
+      \verb|RFLX_LW_up|     & upward long-wave radiative flux & 3D \\
+      \verb|RFLX_LW_dn|     & downward long-wave radiative flux & 3D \\
+      \verb|RFLX_SW_up|     & upward short-wave radiative flux & 3D \\
+      \verb|RFLX_SW_dn|     & downward short-wave radiative flux & 3D \\
+      \verb|SFLX_LW_up|     & upward long-wave radiative flux at the surface & 2D \\
+      \verb|SFLX_LW_dn|     & downward long-wave radiative flux at the surface & 2D \\
+      \verb|SFLX_SW_up|     & upward short-wave radiative flux at the surface & 2D \\
+      \verb|SFLX_SW_dn|     & downward short-wave radiative flux at the surface & 2D \\
+      \verb|SFLX_SW_dn_dir| & downward short-wave direct radiative flux at the surface & 2D & optional \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
 
 
 

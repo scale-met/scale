@@ -316,28 +316,6 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 
 
 \namelist{PARAM_ATMOS} で \nmitem{ATMOS_PHY_RD_TYPE} を \verb|OFFLINE| とした場合、
-表\ref{tab:var_list_atm_rd_offline} にある変数を与える必要がある。
-\begin{table}[h]
-\begin{center}
-  \caption{外部ファイルとして与える放射データ}
-  \label{tab:var_list_atm_rd_offline}
-  \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  変数名 & 変数の説明 & 次元数 \\ \hline
-      \verb|SFLX_LW_up|      & 地表面上向き長波放射    & 2次元 \\
-      \verb|SFLX_LW_dn_dir|  & 地表面下向き直達長波放射 & 2次元 \\
-      \verb|SFLX_LW_dn_diff| & 地表面下向き散乱長波放射 & 2次元 \\
-      \verb|SFLX_SW_up|      & 地表面上向き短波放射    & 2次元 \\
-      \verb|SFLX_SW_dn_dir|  & 地表面下向き直達短波放射 & 2次元 \\
-      \verb|SFLX_SW_dn_diff| & 地表面下向き散乱短波放射 & 2次元 \\
-      \verb|RFLX_LW_up|      & 上向き長波放射フラックス & 3次元 \\
-      \verb|RFLX_LW_dn|      & 下向き長波放射フラックス & 3次元 \\
-      \verb|RFLX_SW_up|      & 上向き短波放射フラックス & 3次元 \\
-      \verb|RFLX_SW_dn|      & 下向き短波放射フラックス & 3次元 \\
-    \hline
-  \end{tabularx}
-\end{center}
-\end{table}
-
 外部データのファイル名やデータについての情報は
 \namelist{PARAM_ATMOS_PHY_RD_OFFLINE} で設定する。\\
 
@@ -353,11 +331,32 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 \verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = -1,          | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する \\
 \verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & ; ファイル内軸変数の値の確認を行うかどうか \\
 \verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 100,         | & ; 読み出すデータ数の上限 \\
+\verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; 下向き直達短波データを与えない場合に使われる散乱率 \\
 \verb|/|            & \\
 \end{tabularx}
 }}}\\
 
-
+\noindent
+外部データとして、表\ref{tab:var_list_atm_rd_offline} にある変数を与える。
+\begin{table}[h]
+\begin{center}
+  \caption{外部ファイルとして与える放射データ}
+  \label{tab:var_list_atm_rd_offline}
+  \begin{tabularx}{150mm}{lXll} \hline
+    \rowcolor[gray]{0.9}  変数名 & 変数の説明 & 次元数 & \\ \hline
+      \verb|RFLX_LW_up|     & 上向き長波放射フラックス & 3次元 \\
+      \verb|RFLX_LW_dn|     & 下向き長波放射フラックス & 3次元 \\
+      \verb|RFLX_SW_up|     & 上向き短波放射フラックス & 3次元 \\
+      \verb|RFLX_SW_dn|     & 下向き短波放射フラックス & 3次元 \\
+      \verb|SFLX_LW_up|     & 地表面上向き長波放射    & 2次元 \\
+      \verb|SFLX_LW_dn|     & 地表面下向き長波放射    & 2次元 \\
+      \verb|SFLX_SW_up|     & 地表面上向き短波放射    & 2次元 \\
+      \verb|SFLX_SW_dn|     & 地表面下向き短波放射    & 2次元 \\
+      \verb|SFLX_SW_dn_dir| & 地表面下向き直達短波放射 & 2次元 & オプション \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
 
 
 
