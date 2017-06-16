@@ -1,5 +1,9 @@
 = Release History
 
+== 2017-06-16 (5.1.5)
+* Bug fix:
+  * Fix wrong land fraction when GLCCv2 data is used
+
 == 2017-06-13 (5.1.4)
 * Bug fix:
   * Fix wrong cloud fraction of the Tomita08 scheme
