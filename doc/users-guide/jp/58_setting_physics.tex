@@ -323,14 +323,14 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
-\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "radiation", | & ; ファイル名 \\
-\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; データの次元名 \\
+\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "",          | & ; 外部データのファイル名の頭 \\
+\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; ファイルにおける3次元データの空間次元順。 'XYZ' or 'ZXY' \\
 \verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; 年毎の繰返しデータかどうか \\
 \verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; 月毎の繰返しデータかどうか \\
 \verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; 日毎の繰返しデータかどうか \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = -1,          | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する \\
-\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & ; ファイル内軸変数の値の確認を行うかどうか \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 100,         | & ; 読み出すデータ数の上限 \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = 0,           | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する。時間変化するデータを与える場合は 0 以下を指定する。\\
+\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & ; ファイル内座標変数の値の確認を行うかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 0,           | & ; 読み出すデータの時間ステップ数の上限。この数を越える時間ステップのデータは読まれない。0 を与えると上限無し。 \\
 \verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; 下向き直達短波データを与えない場合に使われる散乱率 \\
 \verb|/|            & \\
 \end{tabularx}
@@ -344,15 +344,15 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
   \label{tab:var_list_atm_rd_offline}
   \begin{tabularx}{150mm}{lXll} \hline
     \rowcolor[gray]{0.9}  変数名 & 変数の説明 & 次元数 & \\ \hline
-      \verb|RFLX_LW_up|     & 上向き長波放射フラックス & 3次元 \\
-      \verb|RFLX_LW_dn|     & 下向き長波放射フラックス & 3次元 \\
-      \verb|RFLX_SW_up|     & 上向き短波放射フラックス & 3次元 \\
-      \verb|RFLX_SW_dn|     & 下向き短波放射フラックス & 3次元 \\
-      \verb|SFLX_LW_up|     & 地表面上向き長波放射    & 2次元 \\
-      \verb|SFLX_LW_dn|     & 地表面下向き長波放射    & 2次元 \\
-      \verb|SFLX_SW_up|     & 地表面上向き短波放射    & 2次元 \\
-      \verb|SFLX_SW_dn|     & 地表面下向き短波放射    & 2次元 \\
-      \verb|SFLX_SW_dn_dir| & 地表面下向き直達短波放射 & 2次元 & オプション \\
+      \verb|RFLX_LW_up|     & 上向き長波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_LW_dn|     & 下向き長波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_SW_up|     & 上向き短波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_SW_dn|     & 下向き短波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|SFLX_LW_up|     & 地表面上向き長波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_LW_dn|     & 地表面下向き長波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_up|     & 地表面上向き短波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn|     & 地表面下向き短波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn_dir| & 地表面下向き直達短波放射 & 空間2次元+時間1次元 & オプション \\
     \hline
   \end{tabularx}
 \end{center}
@@ -553,13 +553,13 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
  \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
- \verb| OCEAN_PHY_FILE_basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
+ \verb| OCEAN_PHY_FILE_basename   = "",                         | & ; 入力ファイルの頭 \\
  \verb| OCEAN_PHY_FILE_enable_periodic_year  = .false.,         | & ; 年毎の繰返しデータかどうか \\
  \verb| OCEAN_PHY_FILE_enable_periodic_month = .false.,         | & ; 月毎の繰返しデータかどうか \\
  \verb| OCEAN_PHY_FILE_enable_periodic_day   = .false.,         | & ; 日毎の繰返しデータかどうか \\
- \verb| OCEAN_PHY_FILE_step_fixed =  -1,                        | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する \\
- \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .false,          | & ; ファイル内軸変数の値の確認を行うかどうか \\
- \verb| OCEAN_PHY_FILE_step_limit = 1800,                       | & ; 読み出すデータ数の上限 \\
+ \verb| OCEAN_PHY_FILE_step_fixed =  -1,                        | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する。時間変化するデータを与える場合は 0 以下を指定する。\\
+ \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .false,          | & ; ファイル内座標変数の値の確認を行うかどうか \\
+ \verb| OCEAN_PHY_FILE_step_limit = 0,                          | & ; 読み出すデータの時間ステップ数の上限。この数を越える時間ステップのデータは読まれない。0 を与えると上限無し。 \\
  \verb|/                                         | & \\
 \end{tabularx}
 }}\\

@@ -169,14 +169,14 @@ the file name and information of the data are specified in \namelist{PARAM_ATMOS
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
-\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "radiation", | & ; file name \\
-\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; dimensions of the data \\
+\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "",          | & ; base name of external data file \\
+\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; order of spatial dimensions of the data. 'XYZ' or 'ZXY' \\
 \verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; whether annually cyclic data \\
 \verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; whether monthly cyclic data \\
 \verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; whether dayly cyclic data \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = -1,          | & ; step number when data at a cirtain time step is used \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = 0,           | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
 \verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .false,      | & ; whether coordinate variables are to be checked \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 1800,        | & ; maximum limit of steps \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 0,           | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
 \verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; diffuse rate of short wave used when short-wave direct flux data is not given \\
 \verb|/|            & \\
 }
@@ -189,15 +189,15 @@ Variables as the external data is shown in Table \ref{tab:var_list_atm_rd_offlin
   \label{tab:var_list_atm_rd_offline}
   \begin{tabularx}{150mm}{lXll} \hline
     \rowcolor[gray]{0.9}  Variable name & Description & \# of dimensions & \\ \hline
-      \verb|RFLX_LW_up|     & upward long-wave radiative flux & 3D \\
-      \verb|RFLX_LW_dn|     & downward long-wave radiative flux & 3D \\
-      \verb|RFLX_SW_up|     & upward short-wave radiative flux & 3D \\
-      \verb|RFLX_SW_dn|     & downward short-wave radiative flux & 3D \\
-      \verb|SFLX_LW_up|     & upward long-wave radiative flux at the surface & 2D \\
-      \verb|SFLX_LW_dn|     & downward long-wave radiative flux at the surface & 2D \\
-      \verb|SFLX_SW_up|     & upward short-wave radiative flux at the surface & 2D \\
-      \verb|SFLX_SW_dn|     & downward short-wave radiative flux at the surface & 2D \\
-      \verb|SFLX_SW_dn_dir| & downward short-wave direct radiative flux at the surface & 2D & optional \\
+      \verb|RFLX_LW_up|     & upward long-wave radiative flux & 3D (spatial) + 1D (time) \\
+      \verb|RFLX_LW_dn|     & downward long-wave radiative flux & 3D (spatial) + 1D (time) \\
+      \verb|RFLX_SW_up|     & upward short-wave radiative flux & 3D (spatial) + 1D (time) \\
+      \verb|RFLX_SW_dn|     & downward short-wave radiative flux & 3D (spatial) + 1D (time) \\
+      \verb|SFLX_LW_up|     & upward long-wave radiative flux at the surface & 2D (spatial) + 1D (time) \\
+      \verb|SFLX_LW_dn|     & downward long-wave radiative flux at the surface & 2D (spatial) + 1D (time) \\
+      \verb|SFLX_SW_up|     & upward short-wave radiative flux at the surface & 2D (spatial) + 1D (time) \\
+      \verb|SFLX_SW_dn|     & downward short-wave radiative flux at the surface & 2D (spatial) + 1D (time) \\
+      \verb|SFLX_SW_dn_dir| & downward short-wave direct radiative flux at the surface & 2D (spatial) + 1D (time) & optional \\
     \hline
   \end{tabularx}
 \end{center}
@@ -336,13 +336,13 @@ If the ocean category is included in land-use setup by \namelist{PARAM_LANDUSE},
 If \nmitem{OCEAN_TYPE} $=$ \verb|"FILE"|, it is necessary to specify an external input file name in files \verb|init.conf| and \verb|run.conf|. In this case, the sea surface temperature varies with time according to spatial distribution and the temporal history of the external file.
 \editboxtwo{
  \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
- \verb| OCEAN_PHY_FILE_basename   = "../init/output/ocean_d01", | & ; input file \\
+ \verb| OCEAN_PHY_FILE_basename   = "",                         | & ; base name of input data \\
  \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_YEAR  = .false.,         | & ; whether annually cyclic data \\
  \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_MONTH = .false.,         | & ; whether monthly cyclic data \\
  \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_DAY   = .false.,         | & ; whether dayly cyclic data \\
- \verb| OCEAN_PHY_FILE_STEP_FIXED            = -1,              | & ; step number when data at a cirtain time step is used \\
- \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .false,          | & ; whether coordinate variables are to be checked \\
- \verb| OCEAN_PHY_FILE_STEP_LIMIT            = 100,             | & ; maximum limit of steps \\
+ \verb| OCEAN_PHY_FILE_STEP_FIXED            = 0,               | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
+ \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .true.,          | & ; whether coordinate variables are to be checked \\
+ \verb| OCEAN_PHY_FILE_STEP_LIMIT            = 0,               | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
  \verb|/                                         | & \\
 }
 
