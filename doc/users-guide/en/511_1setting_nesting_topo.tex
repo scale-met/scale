@@ -39,14 +39,9 @@ To use the parent topography for the topography-topo function, edit file \verb|p
 Here, the output data of topography in the parent domain is assumed to be saved as file \verb|topo_d01.pe***.nc|.
 \editboxtwo{
 \verb|&PARAM_NEST| & \\
-\verb| USE_NESTING               = .true.,| & \\
-\verb| OFFLINE                   = .true.,| & \\
-\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,     | & \verb|PRC_NUM_X| of the parent domain\\
-\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,     | & \verb|PRC_NUM_Y| of the parent domain\\
-\verb| OFFLINE_PARENT_KMAX       = 36,    | & \verb|KMAX| of the parent domain \\
-\verb| OFFLINE_PARENT_IMAX       = 45,    | & \verb|IMAX| of the parent domain \\
-\verb| OFFLINE_PARENT_JMAX       = 45,    | & \verb|JMAX| of the parent domain \\
-\verb| OFFLINE_PARENT_LKMAX      = 5,     | & \verb|LKMAX| of the parent domain    \\
+\verb| OFFLINE_PARENT_BASENAME   = "topo_d01", | & base name of the file of the parent domain \\
+\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,          | & \verb|PRC_NUM_X| of the parent domain\\
+\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,          | & \verb|PRC_NUM_Y| of the parent domain\\
 \verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.d01.txt",| & catalog file for the parent domain  \\
 \verb|/| &\\
  & \\
@@ -56,8 +51,8 @@ Here, the output data of topography in the parent domain is assumed to be saved 
 \verb|/| &\\
  & \\
 \verb|&PARAM_COPYTOPO| & \\
-\verb| COPYTOPO_IN_BASENAME   = "topo_d01",| & header name of parent topography data \\
-\verb| COPYTOPO_ENTIRE_REGION = .false.,|    & whether the parent’s topology is copied over the entire child domain\\
+\verb| COPYTOPO_IN_BASENAME   = "topo_d01",| & base name of the file of parent topography data \\
+\verb| COPYTOPO_ENTIRE_REGION = .false.,|    & whether the parent’s topography is copied over the entire child domain\\
 \verb| COPYTOPO_LINEAR_H      = .true.,|     & \\
 \verb|/| & \\
 }

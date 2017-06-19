@@ -196,12 +196,63 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
       \verb|OFFまたはNONE| & 放射スキームを使用しない & \\
+      \verb|OFFLINE|      & 放射データを外部ファイルから与える & \\
       \verb|MSTRNX|       & mstrnX & \citet{sekiguchi_2008} \\
-      \verb|WRF|          & mstrnX(長波)+Dudhia(短波) & \citet{dudhia_1989} \\
+%      \verb|WRF|          & mstrnX(長波)+Dudhia(短波) & \citet{dudhia_1989} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
+
+
+\subsubsection{\texttt{OFFLINE}の場合}
+
+\namelist{PARAM_ATMOS} で \nmitem{ATMOS_PHY_RD_TYPE} を \verb|OFFLINE| とした場合、
+外部データのファイル名やデータについての情報は
+\namelist{PARAM_ATMOS_PHY_RD_OFFLINE} で設定する。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
+\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "",          | & ; 外部データのファイル名の頭 \\
+\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; ファイルにおける3次元データの空間次元順。 'XYZ' or 'ZXY' \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; 年毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; 月毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; 日毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = 0,           | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する。時間変化するデータを与える場合は 0 以下を指定する。\\
+\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .true.,      | & ; ファイル内座標変数の値の確認を行うかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 0,           | & ; 読み出すデータの時間ステップ数の上限。この数を越える時間ステップのデータは読まれない。0 を与えると上限無し。 \\
+\verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; 下向き直達短波データを与えない場合に使われる散乱率(散乱日射/全天日射) \\
+\verb|/|            & \\
+\end{tabularx}
+}}}\\
+
+\noindent
+外部データファイルのフォーマットは、初期値境界値と同じ軸情報を持つ{\netcdf}形式のファイルである。
+外部データとして、表\ref{tab:var_list_atm_rd_offline} にある変数を与える。
+\begin{table}[h]
+\begin{center}
+  \caption{外部ファイルとして与える放射データ}
+  \label{tab:var_list_atm_rd_offline}
+  \begin{tabularx}{150mm}{lXll} \hline
+    \rowcolor[gray]{0.9}  変数名 & 変数の説明 & 次元数 & \\ \hline
+      \verb|RFLX_LW_up|     & 上向き長波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_LW_dn|     & 下向き長波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_SW_up|     & 上向き短波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_SW_dn|     & 下向き短波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|SFLX_LW_up|     & 地表面上向き長波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_LW_dn|     & 地表面下向き長波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_up|     & 地表面上向き短波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn|     & 地表面下向き短波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn_dir| & 地表面下向き直達短波放射 & 空間2次元+時間1次元 & オプション \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+\subsubsection{\texttt{MSTRNX}の場合}
 
 放射計算のための太陽放射量は、
 モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
@@ -312,6 +363,7 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 
 気候値・ユーザ指定プロファイルのいずれもモデルの高度・層数の設定とは独立に高度・層数が指定され、実行時にはモデル各層の値に内挿される。
 ただし、想定する最高高度（放射計算で考慮する大気最上層(TOA)の高さ）がプロファイルよりも高い場合、外挿となるので注意されたい。\\
+
 
 
 
@@ -500,24 +552,27 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \end{center}
 \end{table}
 
+\vspace{\baselineskip}
 \verb|OCEAN_TYPE = "FILE"|を選択した場合は、init.confとrun.confで外部入力ファイルの設定が必要である。
 この場合、与えられた外部ファイルの空間分布と時系列に応じて、海面温度は変化する。\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{150mm}{ll}
- \verb|&EXTITEM                                  | & \\
- \verb| basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
- \verb| varname    = "OCEAN_TEMP",               | & ; \verb|"OCEAN_TEMP"|と書く。\\
- \verb| step_limit = 1800,                       | & \\
- \verb| step_fixed =  -1,                        | & \\
- \verb| enable_periodic_year  = .false.,         | & \\
- \verb| enable_periodic_month = .false.,         | & \\
- \verb| enable_periodic_day   = .false.,         | & \\
+\begin{tabularx}{150mm}{lX}
+ \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
+ \verb| OCEAN_PHY_FILE_basename   = "",                         | & ; 入力ファイルの頭 \\
+ \verb| OCEAN_PHY_FILE_enable_periodic_year  = .false.,         | & ; 年毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_enable_periodic_month = .false.,         | & ; 月毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_enable_periodic_day   = .false.,         | & ; 日毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_step_fixed =  0,                        | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する。時間変化するデータを与える場合は 0 以下を指定する。\\
+ \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .true.,          | & ; ファイル内座標変数の値の確認を行うかどうか \\
+ \verb| OCEAN_PHY_FILE_step_limit = 0,                          | & ; 読み出すデータの時間ステップ数の上限。この数を越える時間ステップのデータは読まれない。0 を与えると上限無し。 \\
  \verb|/                                         | & \\
 \end{tabularx}
 }}\\
 
+
+\vspace{\baselineskip}
 \verb|OCEAN_TYPE = "SLAB"|を選択した場合は、init.confとrun.confでスラブ混合層の深さを設定することができる。
 この場合、大気-海面間の熱フラックスの移動に応じて、スラブ混合層の温度は時間発展する。\\
 
@@ -592,7 +647,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \end{center}
 \end{table}
 
-
+\vspace{\baselineskip}
 \nmitem{LAND_TYPE = "SLAB"}または\nmitem{LAND_TYPE = "CONST"}を選択した場合は、
 土地利用区分に応じたアルベド、粗度長等のパラメータテーブルと、土地利用区分分布の入力が必要である。
 パラメータテーブルは、

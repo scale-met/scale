@@ -32,8 +32,6 @@ In the configuration files \verb|run.***.conf| for the parent and child domains,
 \noindent {\rm --- Configuration in \verb|run.d01.conf| ---}\\
 \editboxtwo{
 \verb|&PARAM_NEST|                          & \\
-\verb| USE_NESTING              = .true., | & \verb|.true.| at the online nesting\\
-\verb| OFFLINE                  = .false.,| &\verb|.false.| at the online nesting\\
 \verb| ONLINE_DOMAIN_NUM        = 1,      | & The domain ID, which is enumerated from the outermost one as 1.\\
 \verb| ONLINE_IAM_PARENT        = .true., | & \\
 \verb| ONLINE_IAM_DAUGHTER      = .false.,| & \\
@@ -45,8 +43,6 @@ In the configuration files \verb|run.***.conf| for the parent and child domains,
 \noindent {\rm --- Configuration in \verb|run.d02.conf| ---}\\
 \editboxtwo{
 \verb|&PARAM_NEST| & \\
-\verb| USE_NESTING              = .true., | & \verb|.true.| at online nesting\\
-\verb| OFFLINE                  = .false.,| &\verb|.false.| at online nesting\\
 \verb| ONLINE_DOMAIN_NUM        = 2,      | & The domain ID, which is enumerated from the outermost one as 1.\\
 \verb| ONLINE_IAM_PARENT        = .false.,| & \\
 \verb| ONLINE_IAM_DAUGHTER      = .true., | & \\
@@ -55,21 +51,23 @@ In the configuration files \verb|run.***.conf| for the parent and child domains,
 \verb|/| \\
 }
 
-The experiment is identified as online nesting by \nmitem{USE_NESTING} $=$ \verb|.true.| and \nmitem{OFFLINE} $=$ \verb|.false.| The configuration items staring from \nmitem{ONLINE_**}  are particular to the online nesting experiment. \nmitem{ONLINE_DOMAIN_NUM} is the ID number of the domain, which is enumerated from the outermost domain to the innermost.
-In above example, the ID numbers of the parent and child domains are 1 and 2, respectively.
-
+\nmitem{ONLINE_DOMAIN_NUM} is the ID number of the domain, which is enumerated from the outermost domain to the innermost.
+In above example, the ID numbers of the parent and child domains are 1 and 2, respectively.\\
 \nmitem{ONLINE_IAM_PARENT} and \nmitem{ONLINE_IAM_DAUGHTER} specify whether each domain has its parent domain and child domain or not.
-If \nmitem{ONLINE_IAM_PARENT} $=$ \verb|.true.| in the Nth domain, the calculation data in the Nth domain is transferred to the child domain with the domain number of N+1. If \nmitem{ONLINE_IAM_DAUGHTER} $=$ \verb|.true.|, then boundary data in the Nth domain is received from the parent with the domain number of N-1. Table \ref{tab:triple_nested} gives the configuration for an N-domain nesting experiment.
-The outermost domain plays a role only in the parent domain, whereas the innermost domain is involved only in the child domain. Since the intermediate domains are involved in both the parent and child domains, both items are \verb|.true.|.
+If \nmitem{ONLINE_IAM_PARENT} $=$ \verb|.true.| in the Nth domain, the calculation data in the Nth domain is transferred to the child domain with the domain number of N+1.
+If \nmitem{ONLINE_IAM_DAUGHTER} $=$ \verb|.true.|, then boundary data in the Nth domain is received from the parent with the domain number of N-1.
+The outermost domain plays a role only in the parent domain, whereas the innermost domain is involved only in the child domain.
+Since the intermediate domains are involved in both the parent and child domains, both \nmitem{ONLINE_IAM_PARENT} and \nmitem{ONLINE_IAM_DAUGHTER} are \verb|.true.|.
+Table \ref{tab:triple_nested} gives the configuration for an N-domain nesting experiment.
 
 \begin{table}[htb]
 \begin{center}
 \caption{A configuration for N-domain nesting}
 \begin{tabularx}{150mm}{|l|l|l|X|} \hline
  \rowcolor[gray]{0.9} domain & \verb|ONLINE_DOMAIN_NUM| & \verb|ONLINE_IAM_PARENT| & \verb|ONLINE_IAM_CHILD|\\ \hline
- the outermost domain & 1               & .true.  & .false. \\ \hline
- intermediate domains & 2\verb|~|(N-1) & .true.  & .true. \\ \hline
- the innermost domain & N               & .false. & .true. \\ \hline
+ the outermost domain & 1          & .true.  & .false. \\ \hline
+ intermediate domains & 2 -- (N-1) & .true.  & .true. \\ \hline
+ the innermost domain & N          & .false. & .true. \\ \hline
 \end{tabularx}
 \label{tab:triple_nested}
 \end{center}
