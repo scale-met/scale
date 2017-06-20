@@ -74,6 +74,7 @@ program netcdf2grads_h
   integer :: ndim
   integer :: idom
   integer :: ierr
+  logical :: lstat
 
 #ifndef MPIUSE
   integer :: irank = 0
@@ -592,10 +593,16 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    inquire (file=trim(fconf), exist=lstat)
+    if ( .not. lstat ) then
+       write (*, *) "ERROR: Not found the configuration file :", trim(fconf)
+       call err_abort( 1, __LINE__, loc_main )
+    endif
+
     open ( FID_CONF, file=trim(fconf), status='old', &
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
-       write (*, *) "ERROR: fail to open configuration file"
+       write (*, *) "ERROR: Fail to open the configuration file :", trim(fconf)
        call err_abort( 1, __LINE__, loc_main )
     endif
 
@@ -615,10 +622,16 @@ contains
     !---------------------------------------------------------------------------
 
     !--- read namelist file
+    inquire (file=trim(fconf), exist=lstat)
+    if ( .not. lstat ) then
+       write (*, *) "ERROR: Not found the configuration file :", trim(fconf)
+       call err_abort( 1, __LINE__, loc_main )
+    endif
+
     open ( FID_CONF, file=trim(fconf), status='old', &
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
-       write (*, *) "ERROR: fail to open net2g.conf file"
+       write (*, *) "ERROR: Fail to open the configuration file :", trim(fconf)
        call err_abort( 1, __LINE__, loc_main )
     endif
 
@@ -731,10 +744,16 @@ contains
 
 
     !--- read run.conf file
+    inquire (file=trim(CONFFILE), exist=lstat)
+    if ( .not. lstat ) then
+       write (*, *) "ERROR: Not found the configuration file :", trim(CONFFILE)
+       call err_abort( 1, __LINE__, loc_main )
+    endif
+
     open ( FID_RCNF, file=trim(CONFFILE), status='old', &
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
-       write (*, *) "ERROR: fail to open running *.conf file"
+       write (*, *) "ERROR: Fail to open the configuration file :", trim(CONFFILE)
        call err_abort( 1, __LINE__, loc_main )
     endif
 
