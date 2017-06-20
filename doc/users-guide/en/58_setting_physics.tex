@@ -77,7 +77,7 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
       \verb|SMAGORINSKY|  & Smagorinsky—Lily-type sub-grid model & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
       \verb|D1980|        & Deardorff-type sub-grid model & \citet{Deardorff_1980} \\
       \verb|MYNN|         & MYNN Level 2.5 boundary scheme & \citet{my_1982,nakanishi_2004} \\
-      \verb|HYBRID|       & Hybrid use of the boundary layer parameterization ans sub-grid scale turbulence model \\
+      \verb|HYBRID|       & Hybrid use of the boundary layer parameterization ans sub-grid scale turbulence model. Only the hybrid of \verb|SMAGORINSKY| and \verb|MYNN| is currently available.\\
     \hline
   \end{tabularx}
 \end{center}
@@ -87,11 +87,12 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
 \verb|MYNN| is a boundary layer parameterization for Reynolds-Averaged Navier-Stokes equations (RANS).
 \verb|HYBRID| is used for the following two purposes.
 \begin{enumerate}
-\item Simulations with inter-mediate resolution for LES and RANS (gray zone) \\
-  The temporal tendencies is a linear combination of those calculated by the LES turbulence model and RANS turbulence parameterization
+\item Simulations with inter-mediate resolution between LES and RANS (gray zone) \\
+  The temporal tendencies is calculated by a linear combination of those calculated by the LES turbulence model and RANS turbulence parameterization
 \item Horizontal eddy viscosity for RANS simulations \\
-  The RANS turbulence parameterization is only for vertical mixing and not for horizontal mixing.
-  The LES turbulence model is used for the horizontal mixing.
+  The RANS turbulence parameterization is a scheme only for vertical mixing and not for horizontal mixing.
+  The horizontal eddy viscosity in RANS simulations can be considered by using the \verb|HYBRID| scheme.
+  The horizontal mixing in RAMS simulations is calculate by the LES turbulence model.
 \end{enumerate}
 
 In order to use the \verb|HYBRID| scheme for the horizontal eddy viscosity in RANS simulations, \nmitem{ATMOS_PHY_TB_SMG_horizontal} should be \verb|.true.| as follows:
