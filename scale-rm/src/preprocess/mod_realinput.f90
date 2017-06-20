@@ -2149,27 +2149,27 @@ contains
 
        if ( first ) then ! interporate land data only once
 
-          call land_interporation( &
-               tg, strg, & ! (out)
-               lst, albg, & ! (out)
-               ust, albu, & ! (out)
+          call land_interporation(         &
+               tg, strg,                   & ! (out)
+               lst, albg,                  & ! (out)
+               ust, albu,                  & ! (out)
                tg_org, strg_org, smds_org, & ! (inout)
-               lst_org, albg_org, & ! (inout)
-               ust_org, & ! (inout)
-               sst_org, & ! (in)
-               lmask_org, & ! (in)
-               lsmask_nest, & ! (in)
-               topo_org, & ! (in)
+               lst_org, albg_org,          & ! (inout)
+               ust_org,                    & ! (inout)
+               sst_org,                    & ! (in)
+               lmask_org,                  & ! (in)
+               lsmask_nest,                & ! (in)
+               topo_org,                   & ! (in)
                lz_org, llon_org, llat_org, & ! (in)
-               LCZ, LON, LAT, & ! (in)
-               ldims, odims, & ! (in)
-               maskval_tg, maskval_strg, & ! (in)
-               init_landwater_ratio, & ! (in)
-               use_file_landwater, & ! (in)
-               use_waterratio, & ! (in)
-               soilwater_ds2vc_flag, & ! (in)
-               elevation_collection, & ! (in)
-               intrp_iter_max ) ! (in)
+               LCZ, LON, LAT,              & ! (in)
+               ldims, odims,               & ! (in)
+               maskval_tg, maskval_strg,   & ! (in)
+               init_landwater_ratio,       & ! (in)
+               use_file_landwater,         & ! (in)
+               use_waterratio,             & ! (in)
+               soilwater_ds2vc_flag,       & ! (in)
+               elevation_collection,       & ! (in)
+               intrp_iter_max              ) ! (in)
 
        end if ! first
 
@@ -2793,7 +2793,7 @@ contains
              end do
 
              if( count >= 3 )then  ! coast grid : interpolate
-                newdata(i,j) = nd / count
+                newdata(i,j) = nd / real(count, kind=RP)
                 imaskr(i,j) = untarget_mask
              else
                 newdata(i,j) = data(i,j)
@@ -2853,7 +2853,8 @@ contains
     do i = 1, nx
        if( abs(data(i,j) - UNDEF) < sqrt(EPS) )then
           if( abs(maskval(i,j) - UNDEF) < sqrt(EPS) )then
-             write(*,*) "Data for mask has missing value. ",trim(elem),i,j
+             write(*,*) "xxx data for mask of "//trim(elem)//"(",i,",",j,") includes missing value."
+             write(*,*) "xxx Please check input data of SKINTEMP or SST. "
              call PRC_MPIstop
           else
              data(i,j) = maskval(i,j)
