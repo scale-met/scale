@@ -161,7 +161,20 @@ The example below shows a configuration in the case where 2D variables are conve
 
 \subsubsection{Example of configuration file change: Conversion of irregular data in time}
 %------------------------------------------------------
-The description below is an example of configuration change. The other item settings are the same as in the case of 2D or 3D variables.
+
+As described in Section \ref{sec:output},
+although the output interval is basically defined by \\ \nmitem{HISTORY_DEFAULT_TINTERVAL},
+it is possible to change the output interval of particular variables
+by giving a value different from \nmitem{HISTORY_DEFAULT_TINTERVAL}  to \nmitem{TINTERVAL} in \namelist{HISTITEM}.
+\verb|net2g| supports the data conversion of these variables with different output interval by setting \namelist{EXTRA}.
+The below example shows the namelists, which should be added or modified
+for the case described in the last paragraph of Section \ref{sec:output}
+(only 2D data \verb|"RAIN"| are output at a time interval of 600 s).
+
+The history file can handle data with multiple different time intervals. 
+Since \verb|net2g| does not support the simultaneous conversion of variables with different output intervals, 
+it is required to execute \verb|net2g| separately for these variables. 
+
 \editbox{
 \verb|&EXTRA| \\
 \verb| EXTRA_TINTERVAL = 600.0,| \\
@@ -172,12 +185,7 @@ The description below is an example of configuration change. The other item sett
 \verb| VNAME = "RAIN",| \\
 \verb|/| \\
 }
-In the case where 
-\nmitem{TINTERVAL} in \namelist{HISTITEM} and the output of several variables does not
-obey \nmitem{HISTORY_DEFAULT_TINTERVAL} upon the execution of \scalerm 
-in the configuration of output item (refer to Section \ref{sec:output} ),
-\verb|net2g| supports such situations by setting \namelist{EXTRA}.
-This example shows the case where only 2D data \verb|"RAIN"| are output at a time interval of 600 s, according to the configuration described in the last paragraph of Section \ref{sec:output}. The history file that contains data with multiple time intervals is handled. Since \verb|net2g| does not support the simultaneous treatment of different output intervals, it is necessary for \verb|net2g| to be run separately.
+
 
 \subsubsection{Note for execution on supercomputer}
 When a simulation is conducted on a supercomputer such as the K Computer, many output files are generated, where the size of each file is large. In such cases, the local disk space is often not large enough to store them,  and post-processing may take a long time. In this case, both a simulation by \scalerm and its post-processing on the same supercomputer are recommended. On the K Computer, \verb|net2g| can be compiled by the ``make'' command  if the environmental variable is appropriately set as described in Section \ref{subsec:evniromnet}.
