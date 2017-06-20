@@ -82,6 +82,9 @@ contains
   subroutine LAND_PHY_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_land_phy_const, only: &
+       LAND_PHY_CONST_setup, &
+       LAND_PHY_CONST
     use scale_land_phy_slab, only: &
        LAND_PHY_SLAB_setup, &
        LAND_PHY_SLAB
@@ -95,9 +98,9 @@ contains
 
     select case( LAND_TYPE )
     case( 'CONST' )
-       call LAND_PHY_SLAB_setup( LAND_TYPE )
-       LAND_PHY => LAND_PHY_SLAB
-    case( 'SLAB' )
+       call LAND_PHY_CONST_setup( LAND_TYPE )
+       LAND_PHY => LAND_PHY_CONST
+    case( 'SLAB', 'THIN-SLAB', 'THICK-SLAB' )
        call LAND_PHY_SLAB_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_SLAB
     case( 'MATSIRO' )

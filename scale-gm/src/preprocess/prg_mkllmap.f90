@@ -67,7 +67,9 @@ program mkllmap
   ! setup standard I/O
   call IO_setup( MODELNAME, .false. )
   call IO_LOG_setup( myrank, ismaster )
-  call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+  call LogInit( IO_FID_CONF,       &
+                IO_FID_LOG, IO_L,  &
+                IO_FID_NML, IO_NML )
 
   ! setup PROF
   call PROF_setup
@@ -107,7 +109,7 @@ program mkllmap
      write(*,*) 'xxx Not appropriate names in namelist MKLLMAP_PARAM. STOP.'
      call PRC_MPIstop
   endif
-  if( IO_LNML ) write(IO_FID_LOG,nml=MKLLMAP_PARAM)
+  if( IO_NML ) write(IO_FID_NML,nml=MKLLMAP_PARAM)
 
   call LATLON_ico_setup
 

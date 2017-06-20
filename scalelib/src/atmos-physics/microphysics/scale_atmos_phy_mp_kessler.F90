@@ -190,7 +190,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
 
     if( MP_couple_aerosol ) then
        write(*,*) 'xxx MP_aerosol_couple should be .false. for KESSLER type MP!'
@@ -608,8 +608,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
   subroutine ATMOS_PHY_MP_kessler_CloudFraction( &
-       cldfrac, &
-       QTRC     )
+       cldfrac,       &
+       QTRC,          &
+       mask_criterion )
     use scale_grid_index
     use scale_tracer, only: &
        QA
@@ -619,6 +620,7 @@ contains
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(in)  :: mask_criterion
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq
@@ -631,7 +633,7 @@ contains
        do iq = QS_MP+1, QE_MP
           qhydro = qhydro + QTRC(k,i,j,iq)
        enddo
-       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
     enddo
     enddo
     enddo

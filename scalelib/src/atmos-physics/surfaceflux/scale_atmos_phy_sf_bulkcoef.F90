@@ -123,7 +123,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULKCOEF. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_BULKCOEF)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_BULKCOEF)
 
     select case( ATMOS_PHY_SF_BULKCOEF_TYPE )
     case('U95')

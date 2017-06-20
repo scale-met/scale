@@ -12,6 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_tb_hybrid
   !-----------------------------------------------------------------------------
   !
@@ -53,9 +54,9 @@ module scale_atmos_phy_tb_hybrid
      subroutine tb( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       RHOQ_t, nu_C, Ri, Pr, N2,                    &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       RHOQ_t, nu_C, Ri, Pr,                        &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
        use scale_precision
        use scale_grid_index
@@ -73,7 +74,6 @@ module scale_atmos_phy_tb_hybrid
        real(RP), intent(out)   :: nu_C         (KA,IA,JA)    ! eddy viscosity (center)
        real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
        real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Prantle number
-       real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
        real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
        real(RP), intent(in)    :: MOMX         (KA,IA,JA)
@@ -81,12 +81,13 @@ module scale_atmos_phy_tb_hybrid
        real(RP), intent(in)    :: RHOT         (KA,IA,JA)
        real(RP), intent(in)    :: DENS         (KA,IA,JA)
        real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
+       real(RP), intent(in)    :: N2           (KA,IA,JA)
 
        real(RP), intent(in)    :: SFLX_MW      (IA,JA)
        real(RP), intent(in)    :: SFLX_MU      (IA,JA)
        real(RP), intent(in)    :: SFLX_MV      (IA,JA)
        real(RP), intent(in)    :: SFLX_SH      (IA,JA)
-       real(RP), intent(in)    :: SFLX_QV      (IA,JA)
+       real(RP), intent(in)    :: SFLX_Q       (IA,JA,QA)
 
        real(RP), intent(in)    :: GSQRT        (KA,IA,JA,7)  !< vertical metrics {G}^1/2
        real(RP), intent(in)    :: J13G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
@@ -182,7 +183,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_HYBRID. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_HYBRID)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_HYBRID)
 
     select case( ATMOS_PHY_TB_HYBRID_SGS_TYPE )
     case('SMAGORINSKY')
@@ -259,9 +260,9 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        RHOQ_t,                                      &
-       Nu, Ri, Pr, N2,                              &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       Nu, Ri, Pr,                                  &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
     use scale_grid_index
@@ -281,7 +282,6 @@ contains
     real(RP), intent(out)   :: Nu           (KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out)   :: Pr           (KA,IA,JA) ! Plandtle number
     real(RP), intent(out)   :: Ri           (KA,IA,JA) ! Richardson number
-    real(RP), intent(out)   :: N2           (KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
     real(RP), intent(in)    :: MOMX         (KA,IA,JA)
@@ -289,12 +289,13 @@ contains
     real(RP), intent(in)    :: RHOT         (KA,IA,JA)
     real(RP), intent(in)    :: DENS         (KA,IA,JA)
     real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
+    real(RP), intent(in)    :: N2           (KA,IA,JA)
 
     real(RP), intent(in)    :: SFLX_MW      (IA,JA)
     real(RP), intent(in)    :: SFLX_MU      (IA,JA)
     real(RP), intent(in)    :: SFLX_MV      (IA,JA)
     real(RP), intent(in)    :: SFLX_SH      (IA,JA)
-    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_Q       (IA,JA,QA)
 
     real(RP), intent(in)    :: GSQRT        (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)    :: J13G         (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -312,29 +313,30 @@ contains
     real(RP) :: w_Nu           (KA,IA,JA,2)
     real(RP) :: w_Ri           (KA,IA,JA,2)
     real(RP) :: w_Pr           (KA,IA,JA,2)
-    real(RP) :: w_N2           (KA,IA,JA,2)
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call SGS_TB( w_qflx_sgs_momz(:,:,:,:,1), w_qflx_sgs_momx(:,:,:,:,1),     & ! [OUT]
-                 w_qflx_sgs_momy(:,:,:,:,1), w_qflx_sgs_rhot(:,:,:,:,1),     & ! [OUT]
-                 w_qflx_sgs_rhoq(:,:,:,:,:,1),                               & ! [OUT]
-                 RHOQ_t,                                                     & ! [INOUT]
-                 w_Nu(:,:,:,1), w_Ri(:,:,:,1), w_Pr(:,:,:,1), w_N2(:,:,:,1), & ! [OUT]
-                 MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,                         & ! [IN]
-                 SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV,                & ! [IN]
-                 GSQRT, J13G, J23G, J33G, MAPF, dt                           ) ! [IN]
+    call SGS_TB( w_qflx_sgs_momz(:,:,:,:,1), w_qflx_sgs_momx(:,:,:,:,1), & ! [OUT]
+                 w_qflx_sgs_momy(:,:,:,:,1), w_qflx_sgs_rhot(:,:,:,:,1), & ! [OUT]
+                 w_qflx_sgs_rhoq(:,:,:,:,:,1),                           & ! [OUT]
+                 RHOQ_t,                                                 & ! [INOUT]
+                 w_Nu(:,:,:,1), w_Ri(:,:,:,1), w_Pr(:,:,:,1),            & ! [OUT]
+                 MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,                 & ! [IN]
+                 SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,             & ! [IN]
+                 GSQRT, J13G, J23G, J33G, MAPF, dt                       ) ! [IN]
 
-    call PBL_TB( w_qflx_sgs_momz(:,:,:,:,2), w_qflx_sgs_momx(:,:,:,:,2),     & ! [OUT]
-                 w_qflx_sgs_momy(:,:,:,:,2), w_qflx_sgs_rhot(:,:,:,:,2),     & ! [OUT]
-                 w_qflx_sgs_rhoq(:,:,:,:,:,2),                               & ! [OUT]
-                 RHOQ_t,                                                     & ! [INOUT]
-                 w_Nu(:,:,:,2), w_Ri(:,:,:,2), w_Pr(:,:,:,2), w_N2(:,:,:,2), & ! [OUT]
-                 MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,                         & ! [IN]
-                 SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV,                & ! [IN]
-                 GSQRT, J13G, J23G, J33G, MAPF, dt                           ) ! [IN]
+    call PBL_TB( w_qflx_sgs_momz(:,:,:,:,2), w_qflx_sgs_momx(:,:,:,:,2), & ! [OUT]
+                 w_qflx_sgs_momy(:,:,:,:,2), w_qflx_sgs_rhot(:,:,:,:,2), & ! [OUT]
+                 w_qflx_sgs_rhoq(:,:,:,:,:,2),                           & ! [OUT]
+                 RHOQ_t,                                                 & ! [INOUT]
+                 w_Nu(:,:,:,2), w_Ri(:,:,:,2), w_Pr(:,:,:,2),            & ! [OUT]
+                 MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,                 & ! [IN]
+                 SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,             & ! [IN]
+                 GSQRT, J13G, J23G, J33G, MAPF, dt                       ) ! [IN]
 
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KS,KE,qflx_sgs_momz,w_qflx_sgs_momz,frac_sgs,frac_pbl)
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -379,6 +381,10 @@ contains
     end do
     end do
 
+    !$omp parallel do default(none)                                                        &
+    !$omp shared(JA,IA,KS,KE,qflx_sgs_rhoq,w_qflx_sgs_rhoq,frac_sgs,frac_pbl,QA,I_TKE_SGS) &
+    !$omp shared(I_TKE_PBL,TRACER_ADVC)                                                    &
+    !$omp private(i,j,k,iq) OMP_SCHEDULE_
     do iq = 1, QA
 
        if ( iq == I_TKE_SGS .or. iq == I_TKE_PBL ) then
@@ -423,15 +429,6 @@ contains
     do k = KS, KE
        Pr(k,i,j) = w_Pr(k,i,j,1) * frac_sgs(i,j) &
                  + w_Pr(k,i,j,2) * frac_pbl(i,j)
-    end do
-    end do
-    end do
-
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS, KE
-       N2(k,i,j) = w_N2(k,i,j,1) * frac_sgs(i,j) &
-                 + w_N2(k,i,j,2) * frac_pbl(i,j)
     end do
     end do
     end do

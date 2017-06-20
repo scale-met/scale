@@ -132,8 +132,9 @@ contains
   !-----------------------------------------------------------------------------
   !> calc dry air mass (0D)
   subroutine ATMOS_THERMODYN_qd_0D( &
-       qdry, &
-       q, q_mass )
+       qdry,  &
+       q,     &
+       q_mass )
     implicit none
 
     real(RP), intent(out) :: qdry       !< dry mass concentration [kg/kg]
@@ -156,8 +157,9 @@ contains
   !-----------------------------------------------------------------------------
   !> calc dry air mass (3D)
   subroutine ATMOS_THERMODYN_qd_3D( &
-       qdry, &
-       q, q_mass )
+       qdry,  &
+       q,     &
+       q_mass )
     implicit none
 
     real(RP), intent(out) :: qdry  (KA,IA,JA)    !< dry mass concentration [kg/kg]
@@ -167,21 +169,19 @@ contains
     integer :: k, i, j, iqw
     !-----------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,qdry,q,q_mass,QA)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-
 !       qdry(k,i,j) = 1.0_RP
 !       do iqw = 1, QA
 !          qdry(k,i,j) = qdry(k,i,j) - q(k,i,j,iqw) * q_mass(iqw)
 !       enddo
        CALC_QDRY( qdry(k,i,j), q, q_mass, k, i, j, iqw )
-
     enddo
     enddo
     enddo
-
     return
   end subroutine ATMOS_THERMODYN_qd_3D
 
@@ -229,18 +229,16 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,cvtot,qdry,q,CVdry,CVq,QA)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-
 !       CVtot(k,i,j) = qdry(k,i,j) * CVdry
 !       do iqw = 1, QA
 !          CVtot(k,i,j) = CVtot(k,i,j) + q(k,i,j,iqw) * CVq(iqw)
 !       enddo
-
        CALC_CV(cvtot(k,i,j), qdry(k,i,j), q, k, i, j, iqw, CVdry, CVq)
-
     enddo
     enddo
     enddo
@@ -296,14 +294,11 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-
 !       CPtot(k,i,j) = qdry(k,i,j) * CPdry
 !       do iqw = 1, QA
 !          CPtot(k,i,j) = CPtot(k,i,j) + q(k,i,j,iqw) * CPq(k,i,j,iqw)
 !       enddo
-
        CALC_CP(cptot(k,i,j), qdry(k,i,j), q, k, i, j, iqw, CPdry, CPq)
-
     enddo
     enddo
     enddo
@@ -315,9 +310,9 @@ contains
   !> calc total gas constant (R,0D)
   subroutine ATMOS_THERMODYN_r_0D( &
        Rtot, &
-       q,     &
+       q,    &
        Rq,   &
-       qdry   )
+       qdry  )
     implicit none
 
     real(RP), intent(out) :: Rtot    !< total gas constant     [J/kg/K]
@@ -342,9 +337,9 @@ contains
   !> calc total gas constant (R,3D)
   subroutine ATMOS_THERMODYN_r_3D( &
        Rtot, &
-       q,     &
+       q,    &
        Rq,   &
-       qdry   )
+       qdry  )
     implicit none
 
     real(RP), intent(out) :: Rtot(KA,IA,JA)    !< total gas constant     [J/kg/K]
@@ -404,13 +399,12 @@ contains
     Rtot  = 0.0_RP
     do iqw = 1, QA
        qdry  = qdry  - q(iqw) * mass(iqw)
-       CVtot = CVtot + q(iqw) * CVq(iqw)
-       Rtot  = Rtot  + q(iqw) * Rq(iqw)
+       CVtot = CVtot + q(iqw) * CVq (iqw)
+       Rtot  = Rtot  + q(iqw) * Rq  (iqw)
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rtot
 #endif
-
     RovCP = Rtot / ( CVtot + Rtot )
 
     pott  = temp * ( PRE00 / pres )**RovCP
@@ -440,7 +434,7 @@ contains
     real(RP) :: qdry
     real(RP) :: Rtot, CVtot, RovCP
 
-    integer :: k, iqw
+    integer  :: k, iqw
     !---------------------------------------------------------------------------
 
     do k = KS, KE
@@ -453,13 +447,12 @@ contains
        Rtot  = 0.0_RP
        do iqw = 1, QA
           qdry  = qdry  - q(k,iqw) * mass(iqw)
-          CVtot = CVtot + q(k,iqw) * CVq(iqw)
-          Rtot  = Rtot  + q(k,iqw) * Rq(iqw)
+          CVtot = CVtot + q(k,iqw) * CVq (iqw)
+          Rtot  = Rtot  + q(k,iqw) * Rq  (iqw)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rtot
 #endif
-
        RovCP = Rtot / ( CVtot + Rtot )
 
        pott(k) = temp(k) * ( PRE00 / pres(k) )**RovCP
@@ -490,7 +483,7 @@ contains
     real(RP) :: qdry
     real(RP) :: Rtot, CVtot, RovCP
 
-    integer :: k, i, j, iqw
+    integer  :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
     do j = JSB, JEB
@@ -505,13 +498,12 @@ contains
        Rtot  = 0.0_RP
        do iqw = 1, QA
           qdry  = qdry  - q(k,i,j,iqw) * mass(iqw)
-          CVtot = CVtot + q(k,i,j,iqw) * CVq(iqw)
-          Rtot  = Rtot  + q(k,i,j,iqw) * Rq(iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * CVq (iqw)
+          Rtot  = Rtot  + q(k,i,j,iqw) * Rq  (iqw)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rtot
 #endif
-
        RovCP = Rtot / ( CVtot + Rtot )
 
        pott(k,i,j) = temp(k,i,j) * ( PRE00 / pres(k,i,j) )**RovCP
@@ -533,18 +525,18 @@ contains
        mass  )
     implicit none
 
-    real(RP), intent(out) :: rhoe    !< density * internal energy       [J/m3]
-    real(RP), intent(in)  :: rhot    !< density * potential temperature [kg/m3*K]
-    real(RP), intent(in)  :: q(QA)   !< mass concentration              [kg/kg]
-    real(RP), intent(in)  :: CVq(QA) !< specific heat                   [J/kg/K]
-    real(RP), intent(in)  :: Rq(QA)  !< gas constant                    [J/kg/K]
+    real(RP), intent(out) :: rhoe     !< density * internal energy       [J/m3]
+    real(RP), intent(in)  :: rhot     !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: q   (QA) !< mass concentration              [kg/kg]
+    real(RP), intent(in)  :: CVq (QA) !< specific heat                   [J/kg/K]
+    real(RP), intent(in)  :: Rq  (QA) !< gas constant                    [J/kg/K]
     real(RP), intent(in)  :: mass(QA)
 
     real(RP) :: qdry
     real(RP) :: pres
     real(RP) :: Rtot, CVtot, CPovCV
 
-    integer :: iqw
+    integer  :: iqw
     !---------------------------------------------------------------------------
 
 #ifdef DRY
@@ -556,13 +548,12 @@ contains
     Rtot  = 0.0_RP
     do iqw = 1, QA
        qdry  = qdry  - q(iqw) * mass(iqw)
-       CVtot = CVtot + q(iqw) * CVq(iqw)
-       Rtot  = Rtot  + q(iqw) * Rq(iqw)
+       CVtot = CVtot + q(iqw) * CVq (iqw)
+       Rtot  = Rtot  + q(iqw) * Rq  (iqw)
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rtot
 #endif
-
     CPovCV = ( CVtot + Rtot ) / CVtot
 
     pres = PRE00 * ( rhot * Rtot / PRE00 )**CPovCV
@@ -594,10 +585,11 @@ contains
     real(RP) :: pres
     real(RP) :: Rtot, CVtot, CPovCV
 
-    integer :: k, i, j, iqw
+    integer  :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CVdry,Rdry,QA,q,mass,CVq,Rq,rhoe,rhot,PRE00)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -610,14 +602,12 @@ contains
        Rtot  = 0.0_RP
        do iqw = 1, QA
           qdry  = qdry  - q(k,i,j,iqw) * mass(iqw)
-          CVtot = CVtot + q(k,i,j,iqw) * CVq(iqw)
-          Rtot  = Rtot  + q(k,i,j,iqw) * Rq(iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * CVq (iqw)
+          Rtot  = Rtot  + q(k,i,j,iqw) * Rq  (iqw)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rtot
 #endif
-
-
        CPovCV = ( CVtot + Rtot ) / CVtot
 
        pres = PRE00 * ( rhot(k,i,j) * Rtot / PRE00 )**CPovCV
@@ -641,18 +631,18 @@ contains
        mass  )
     implicit none
 
-    real(RP), intent(out) :: rhot    !< density * potential temperature [kg/m3*K]
-    real(RP), intent(in)  :: rhoe    !< density * internal energy       [J/m3]
-    real(RP), intent(in)  :: q(QA)   !< mass concentration              [kg/kg]
-    real(RP), intent(in)  :: CVq(QA) !< specific heat                   [J/kg/K]
-    real(RP), intent(in)  :: Rq(QA)  !< gas constant                    [J/kg/K]
+    real(RP), intent(out) :: rhot     !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: rhoe     !< density * internal energy       [J/m3]
+    real(RP), intent(in)  :: q   (QA) !< mass concentration              [kg/kg]
+    real(RP), intent(in)  :: CVq (QA) !< specific heat                   [J/kg/K]
+    real(RP), intent(in)  :: Rq  (QA) !< gas constant                    [J/kg/K]
     real(RP), intent(in)  :: mass(QA)
 
     real(RP) :: qdry
     real(RP) :: pres
     real(RP) :: Rtot, CVtot, RovCP
 
-    integer :: iqw
+    integer  :: iqw
     !---------------------------------------------------------------------------
 
 #ifdef DRY
@@ -664,13 +654,12 @@ contains
     Rtot  = 0.0_RP
     do iqw = 1, QA
        qdry  = qdry  - q(iqw) * mass(iqw)
-       CVtot = CVtot + q(iqw) * CVq(iqw)
-       Rtot  = Rtot  + q(iqw) * Rq(iqw)
+       CVtot = CVtot + q(iqw) * CVq (iqw)
+       Rtot  = Rtot  + q(iqw) * Rq  (iqw)
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rtot
 #endif
-
     RovCP = Rtot / ( CVtot + Rtot )
 
     pres = rhoe * Rtot / CVtot
@@ -705,7 +694,8 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CVdry,Rdry,QA,q,mass,CVq,Rq,rhoe,rhot,PRE00)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -719,13 +709,12 @@ contains
        Rtot  = 0.0_RP
        do iqw = 1, QA
           qdry  = qdry  - q(k,i,j,iqw) * mass(iqw)
-          CVtot = CVtot + q(k,i,j,iqw) * CVq(iqw)
-          Rtot  = Rtot  + q(k,i,j,iqw) * Rq(iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * CVq (iqw)
+          Rtot  = Rtot  + q(k,i,j,iqw) * Rq  (iqw)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rtot
 #endif
-
        RovCP = Rtot / ( CVtot + Rtot )
 
        pres = rhoe(k,i,j) * Rtot / CVtot
@@ -734,7 +723,6 @@ contains
     enddo
     enddo
     enddo
-
     return
   end subroutine ATMOS_THERMODYN_rhot_3D
 
@@ -751,19 +739,19 @@ contains
        mass  )
     implicit none
 
-    real(RP), intent(out) :: temp    !< temperature                     [K]
-    real(RP), intent(out) :: pres    !< pressure                        [Pa]
-    real(RP), intent(in)  :: dens    !< density                         [kg/m3]
-    real(RP), intent(in)  :: rhot    !< density * potential temperature [kg/m3*K]
-    real(RP), intent(in)  :: q(QA)   !< mass concentration              [kg/kg]
-    real(RP), intent(in)  :: CVq(QA) !< specific heat                   [J/kg/K]
-    real(RP), intent(in)  :: Rq(QA)  !< gas constant                    [J/kg/K]
+    real(RP), intent(out) :: temp     !< temperature                     [K]
+    real(RP), intent(out) :: pres     !< pressure                        [Pa]
+    real(RP), intent(in)  :: dens     !< density                         [kg/m3]
+    real(RP), intent(in)  :: rhot     !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: q   (QA) !< mass concentration              [kg/kg]
+    real(RP), intent(in)  :: CVq (QA) !< specific heat                   [J/kg/K]
+    real(RP), intent(in)  :: Rq  (QA) !< gas constant                    [J/kg/K]
     real(RP), intent(in)  :: mass(QA)
 
     real(RP) :: qdry
     real(RP) :: Rtot, CVtot, CPovCV
 
-    integer :: iqw
+    integer  :: iqw
     !---------------------------------------------------------------------------
 
 #ifdef DRY
@@ -781,7 +769,6 @@ contains
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rtot
 #endif
-
     CPovCV = ( CVtot + Rtot ) / CVtot
 
     pres = PRE00 * ( rhot * Rtot / PRE00 )**CPovCV
@@ -815,10 +802,11 @@ contains
     real(RP) :: qdry
     real(RP) :: Rtot, CVtot, CPovCV
 
-    integer :: k, i, j, iqw
+    integer  :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CVdry,Rdry,QA,q,mass,CVq,Rq,temp,rhot,dens,pres,PRE00)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -831,13 +819,12 @@ contains
        Rtot  = 0.0_RP
        do iqw = 1, QA
           qdry  = qdry  - q(k,i,j,iqw) * mass(iqw)
-          CVtot = CVtot + q(k,i,j,iqw) * CVq(iqw)
-          Rtot  = Rtot  + q(k,i,j,iqw) * Rq(iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * CVq (iqw)
+          Rtot  = Rtot  + q(k,i,j,iqw) * Rq  (iqw)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rtot
 #endif
-
        CPovCV = ( CVtot + Rtot ) / CVtot
 
        pres(k,i,j) = PRE00 * ( rhot(k,i,j) * Rtot / PRE00 )**CPovCV
@@ -845,7 +832,6 @@ contains
     enddo
     enddo
     enddo
-
     return
   end subroutine ATMOS_THERMODYN_temp_pres_3D
 
@@ -862,19 +848,19 @@ contains
        mass  )
     implicit none
 
-    real(RP), intent(out) :: temp    !< temperature               [K]
-    real(RP), intent(out) :: pres    !< pressure                  [Pa]
-    real(RP), intent(in)  :: dens    !< density                   [kg/m3]
-    real(RP), intent(in)  :: rhoe    !< density * internal energy [J/m3]
-    real(RP), intent(in)  :: q(QA)   !< mass concentration        [kg/kg]
-    real(RP), intent(in)  :: CVq(QA) !< specific heat             [J/kg/K]
-    real(RP), intent(in)  :: Rq(QA)  !< gas constant              [J/kg/K]
+    real(RP), intent(out) :: temp     !< temperature               [K]
+    real(RP), intent(out) :: pres     !< pressure                  [Pa]
+    real(RP), intent(in)  :: dens     !< density                   [kg/m3]
+    real(RP), intent(in)  :: rhoe     !< density * internal energy [J/m3]
+    real(RP), intent(in)  :: q   (QA) !< mass concentration        [kg/kg]
+    real(RP), intent(in)  :: CVq (QA) !< specific heat             [J/kg/K]
+    real(RP), intent(in)  :: Rq  (QA) !< gas constant              [J/kg/K]
     real(RP), intent(in)  :: mass(QA)
 
     real(RP) :: qdry
     real(RP) :: Rtot, CVtot
 
-    integer :: iqw
+    integer  :: iqw
     !---------------------------------------------------------------------------
 
 #ifdef DRY
@@ -886,8 +872,8 @@ contains
     Rtot  = 0.0_RP
     do iqw = 1, QA
        qdry  = qdry  - q(iqw) * mass(iqw)
-       CVtot = CVtot + q(iqw) * CVq(iqw)
-       Rtot  = Rtot  + q(iqw) * Rq(iqw)
+       CVtot = CVtot + q(iqw) * CVq (iqw)
+       Rtot  = Rtot  + q(iqw) * Rq  (iqw)
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rtot
@@ -924,10 +910,11 @@ contains
     real(RP) :: qdry
     real(RP) :: Rtot, CVtot
 
-    integer :: k, i, j, iqw
+    integer  :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CVdry,Rdry,QA,q,mass,CVq,Rq,temp,rhoe,dens,pres)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -940,8 +927,8 @@ contains
        Rtot  = 0.0_RP
        do iqw = 1, QA
           qdry  = qdry  - q(k,i,j,iqw) * mass(iqw)
-          CVtot = CVtot + q(k,i,j,iqw) * CVq(iqw)
-          Rtot  = Rtot  + q(k,i,j,iqw) * Rq(iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * CVq (iqw)
+          Rtot  = Rtot  + q(k,i,j,iqw) * Rq  (iqw)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rtot
@@ -974,24 +961,22 @@ contains
 
     real(RP) :: cv, Rmoist
 
-    integer :: i, j, k, iqw
+    integer  :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,cv,Rmoist) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-
        cv     = qdry(k,i,j) * CVdry
        Rmoist = qdry(k,i,j) * Rdry
        do iqw =1, QA
           cv     = cv     + q(k,i,j,iqw) * CVq(iqw)
-          Rmoist = Rmoist + q(k,i,j,iqw) * Rq(iqw)
+          Rmoist = Rmoist + q(k,i,j,iqw) * Rq (iqw)
        enddo
+
        temp(k,i,j) = Ein(k,i,j) / cv
-
        pres(k,i,j) = dens(k,i,j) * Rmoist * temp(k,i,j)
-
     enddo
     enddo
     enddo
@@ -1003,7 +988,7 @@ contains
   subroutine ATMOS_THERMODYN_tempre2( &
       temp, pres,          &
       dens, pott, qdry, q, &
-      CPq, Rq )
+      CPq, Rq              )
     implicit none
 
     real(RP), intent(out) :: temp(KA,IA,JA)    ! temperature
@@ -1017,14 +1002,13 @@ contains
 
     real(RP) :: Rmoist, cp
 
-    integer :: i, j, k, iqw
+    integer  :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,cp,Rmoist) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-
        cp     = qdry(k,i,j) * CPdry
        Rmoist = qdry(k,i,j) * Rdry
        do iqw = 1, QA
@@ -1034,7 +1018,6 @@ contains
        CALC_PRE(pres(k,i,j), dens(k,i,j), pott(k,i,j), Rmoist, cp, PRE00)
 
        temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rmoist )
-
     enddo
     enddo
     enddo

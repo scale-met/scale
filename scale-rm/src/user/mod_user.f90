@@ -156,14 +156,13 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
 
     if ( LAND_sw .and. LAND_RESTART_IN_BASENAME /= '' ) then
@@ -216,6 +215,12 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    ! If you need, calculate first step and put diagnostic value to history buffer.
+    ! USER_resume0 calls before setup of Atmos/Ocean/Land/Urban submodels.
+    ! All variables are set before surface coupling.
+
+    !call USER_step
+
     return
   end subroutine USER_resume0
 
@@ -255,6 +260,12 @@ contains
          OCEAN_SFLX_evap
     implicit none
     !---------------------------------------------------------------------------
+
+    ! If you need, calculate first step and put diagnostic value to history buffer.
+    ! USER_resume calls after setup of Atmos/Ocean/Land/Urban submodels.
+    ! All variables are set after surface coupling.
+
+    !call USER_step
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) in mod_user ***'

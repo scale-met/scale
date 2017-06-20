@@ -150,7 +150,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_HIST. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_HIST)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_HIST)
 
     ! check pressure coordinate
     if ( HIST_PRES_nlayer > 0 ) then
@@ -483,108 +483,134 @@ contains
 
     do k = 1, KMAX
     do j = 1, jm
-    do i = 1, im-1
+    do i = 1, min(im,IA-ims)
        AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i,jms+j-1) ) * 0.5_RP
     enddo
     enddo
     enddo
-    do k = 1, KMAX
-    do j = 1, jm
-       AXIS(im,j,k) = REAL_CZ(k+KS-1,ims+im-1,jms+j-1)
-    enddo
-    enddo
+    if ( im == IA-ims+1 ) then
+       do k = 1, KMAX
+       do j = 1, jm
+          AXIS(im,j,k) = REAL_CZ(k+KS-1,ims+im-1,jms+j-1)
+       enddo
+       enddo
+    end if
     AXIS_name(1:3) = (/'xh', 'y ', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_uyz', 'height above ground level (half level uyz)', &
                                           'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
 
     do k = 1, KMAX
-    do j = 1, jm-1
+    do j = 1, min(jm,JA-jms)
     do i = 1, im
        AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i-1,jms+j) ) * 0.5_RP
     enddo
     enddo
     enddo
-    do k = 1, KMAX
-    do i = 1, im
-       AXIS(i,jm,k) = REAL_CZ(k+KS-1,ims+i-1,jms+jm-1)
-    enddo
-    enddo
+    if ( jm == JA-jms+1 ) then
+       do k = 1, KMAX
+       do i = 1, im
+          AXIS(i,jm,k) = REAL_CZ(k+KS-1,ims+i-1,jms+jm-1)
+       enddo
+       enddo
+    end if
     AXIS_name(1:3) = (/'x ', 'yh', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_xvz', 'height above ground level (half level xvz)', &
                                           'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
 
     do k = 1, KMAX
-    do j = 1, jm-1
-    do i = 1, im-1
+    do j = 1, min(jm,JA-jms)
+    do i = 1, min(im,IA-ims)
        AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i  ,jms+j-1) &
                      + REAL_CZ(k+KS-1,ims+i-1,jms+j  ) + REAL_CZ(k+KS-1,ims+i  ,jms+j  ) ) * 0.25_RP
     enddo
     enddo
     enddo
-    do k = 1, KMAX
-    do i = 1, im
-       AXIS(i,jm,k) = REAL_CZ(k+KS-1,ims+i-1,jms+jm-1)
-    enddo
-    enddo
-    do k = 1, KMAX
-    do j = 1, jm
-       AXIS(im,j,k) = REAL_CZ(k+KS-1,ims+im-1,jms+j-1)
-    enddo
-    enddo
+    if ( jm == JA-jms+1 ) then
+       do k = 1, KMAX
+       do i = 1, min(im,IA-ims)
+          AXIS(i,jm,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+jm-1) + REAL_CZ(k+KS-1,ims+i,jms+jm-1) ) * 0.5_RP
+       enddo
+       enddo
+    end if
+    if ( im == IA-ims+1 ) then
+       do k = 1, KMAX
+       do j = 1, min(jm,JA-jms)
+          AXIS(im,j,k) = ( REAL_CZ(k+KS-1,ims+im-1,jms+j-1) + REAL_CZ(k+KS-1,ims+im-1,jms+j) ) * 0.5_RP
+       enddo
+       enddo
+    end if
+    if ( im == IA-ims+1 .and. jm == JA-jms+1 ) then
+       do k = 1, KMAX
+          AXIS(im,jm,k) = REAL_CZ(k+KS-1,ims+im-1,jms+jm-1)
+       enddo
+    end if
     AXIS_name(1:3) = (/'xh', 'yh', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_uvz', 'height above ground level (half level uvz)', &
                                           'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
 
     do k = 1, KMAX
     do j = 1, jm
-    do i = 1, im-1
+    do i = 1, min(im,IA-ims)
        AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i,jms+j-1) ) * 0.5_RP
     enddo
     enddo
     enddo
-    do k = 1, KMAX
-    do j = 1, jm
-       AXIS(im,j,k) = REAL_FZ(k+KS-1,ims+im-1,jms+j-1)
-    enddo
-    enddo
+    if ( im == IA-ims+1 ) then
+       do k = 1, KMAX
+       do j = 1, jm
+          AXIS(im,j,k) = REAL_FZ(k+KS-1,ims+im-1,jms+j-1)
+       enddo
+       enddo
+    end if
     AXIS_name(1:3) = (/'xh', 'y ', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_uyw', 'height above ground level (half level uyw)', &
                                           'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
 
     do k = 1, KMAX
-    do j = 1, jm-1
+    do j = 1, min(jm,JA-jms)
     do i = 1, im
        AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i-1,jms+j) ) * 0.5_RP
     enddo
     enddo
     enddo
-    do k = 1, KMAX
-    do i = 1, im
-       AXIS(i,jm,k) = REAL_FZ(k+KS-1,ims+i-1,jms+jm-1)
-    enddo
-    enddo
+    if ( jm == JA-jms+1 ) then
+       do k = 1, KMAX
+       do i = 1, im
+          AXIS(i,jm,k) = REAL_FZ(k+KS-1,ims+i-1,jms+jm-1)
+       enddo
+       enddo
+    end if
     AXIS_name(1:3) = (/'x ', 'yh', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_xvw', 'height above ground level (half level xvw)', &
                                           'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
 
     do k = 1, KMAX
-    do j = 1, jm-1
-    do i = 1, im-1
+    do j = 1, min(jm,JA-jms)
+    do i = 1, min(im,IA-ims)
        AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i  ,jms+j-1) &
                      + REAL_FZ(k+KS-1,ims+i-1,jms+j  ) + REAL_FZ(k+KS-1,ims+i  ,jms+j  ) ) * 0.25_RP
     enddo
     enddo
     enddo
-    do k = 1, KMAX
-    do i = 1, im
-       AXIS(i,jm,k) = REAL_FZ(k+KS-1,ims+i-1,jms+jm-1)
-    enddo
-    enddo
-    do k = 1, KMAX
-    do j = 1, jm
-       AXIS(im,j,k) = REAL_FZ(k+KS-1,ims+im-1,jms+j-1)
-    enddo
-    enddo
+    if ( jm == JA-jms+1 ) then
+       do k = 1, KMAX
+       do i = 1, min(im,IA-ims)
+          AXIS(i,jm,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+jm-1) + REAL_FZ(k+KS-1,ims+i,jms+jm-1) ) * 0.5_RP
+       enddo
+       enddo
+    end if
+    if ( im == IA-ims+1 ) then
+       do k = 1, KMAX
+       do j = 1, min(jm,JA-jms)
+          AXIS(im,j,k) = ( REAL_FZ(k+KS-1,ims+im-1,jms+j-1) + REAL_FZ(k+KS-1,ims+im-1,jms+j) ) * 0.5_RP
+       enddo
+       enddo
+    end if
+    if ( im == IA-ims+1 .and. jm == JA-jms+1 ) then
+       do k = 1, KMAX
+          AXIS(im,jm,k) = REAL_FZ(k+KS-1,ims+im-1,jms+jm-1)
+       enddo
+    end if
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_uvw', 'height above ground level (half level uvw)', &
                                           'm', AXIS_name(1:3), AXIS(:,:,:), start=start               )
@@ -636,8 +662,8 @@ contains
 
     AXIS(1:im,1:jm,1) = LANDUSE_frac_land(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask', &
-                                          '0-1', AXIS_name(1:2), AXIS(:,:,1), start=start )
+    call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask',       &
+                                          '1', AXIS_name(1:2), AXIS(:,:,1), start=start )
 
     return
   end subroutine HIST_put_axes

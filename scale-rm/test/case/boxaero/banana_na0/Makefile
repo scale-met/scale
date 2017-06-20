@@ -10,7 +10,7 @@ TESTDIR     = ../../..
 
 
 # user-defined source files
-CODE_DIR    = .
+CODE_DIR    = ..
 ORG_SRCS    = mod_user.f90
 
 # parameters for run

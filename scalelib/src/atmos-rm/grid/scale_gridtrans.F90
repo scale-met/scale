@@ -117,7 +117,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_GTRANS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_GTRANS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_GTRANS)
 
     allocate( GTRANS_MAPF (IA,JA,2,4) )
 

@@ -8,6 +8,8 @@ Usage: ruby mkdoc.rb doc_dir
 =end
 require "pp"
 
+Encoding.default_external = Encoding::UTF_8
+
 def usage
   print "Usage: #$0 doc_dir\n"
   exit
@@ -22,8 +24,10 @@ srcdir = File.join(topdir, "src")
 
 def parse_line(line)
   line_org = line.dup
-  line.sub!(/^\s*&/, "")
-  if /^([^!]*)!(.*)$/ =~ line
+  line.sub!(/^\s*&/, "") # ignore '&' at top of line
+
+  # get comment
+  if /["'][^"']*![^"']*["']/ !~ line && /^([^!]*)!(.*)$/ =~ line
     line = $1
     comment = $2
     comment.sub!(/^\s*</,"") if comment
@@ -32,16 +36,17 @@ def parse_line(line)
     comment = nil
   end
 
-  if /^(.+)&\s*$/ =~ line
+  if /^(.+)&\s*$/ =~ line # '&' at end of line indicates continuation line
     cont = true
     reg = $1
   else
     cont = false
     reg = line
-    if /&/ =~ line && /["'][^"']*&[^"']*["']/ !~ line
+    if /&/ =~ line && /["']([^"']*&[^"']*)+["']/ !~ line
+      # if '&' is found (except in strings), it indicates a parsing error.
       p line_org
       p line
-      raise "pearse error"
+      raise "parse error"
     end
   end
   reg.strip!

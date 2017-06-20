@@ -29,14 +29,14 @@ module mod_user
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY, &
        RFDZ => GRID_RFDZ
-  
+
   use mod_atmos_vars, only: &
        DENS, &
        MOMX, &
        MOMY, &
        MOMZ, &
        RHOT
-  
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -65,12 +65,12 @@ module mod_user
   logical,  private, save :: USER_do = .false.   !< do user step?
   real(RP), private, save :: Kdiff   = 75.E0_RP  !< Eddy diffusivity
 
-  integer,  private              :: I_COMM_DENS = 1  
+  integer,  private              :: I_COMM_DENS = 1
   integer,  private              :: I_COMM_MOMZ = 2
   integer,  private              :: I_COMM_MOMX = 3
   integer,  private              :: I_COMM_MOMY = 4
   integer,  private              :: I_COMM_RHOT = 5
-  
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -85,26 +85,14 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
-
-    use scale_const, only: &
-       PI  => CONST_PI,    &
-       OHM => CONST_OHM,   &
-       RPlanet => CONST_RADIUS
-    
-        
     implicit none
 
     namelist / PARAM_USER / &
        USER_do, &
        Kdiff
-    
+
     integer :: ierr
     integer :: i, j
-
-    real(RP) :: f0
-    real(RP) :: beta0
-    real(RP) :: y0
-    
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -113,17 +101,13 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
-
-    ! Set coriolis parameter in f or beta plane approximation
-    
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     return
   end subroutine USER_setup
@@ -134,9 +118,9 @@ contains
 
     implicit none
     !---------------------------------------------------------------------------
-    integer :: j
 
-     call USER_step
+    call USER_step
+
     return
   end subroutine USER_resume0
 
@@ -159,9 +143,9 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        GRAV  => CONST_GRAV
-       
+
     use scale_gridtrans
-    
+
     use scale_history, only: &
        HIST_in
 
@@ -170,36 +154,36 @@ contains
          NOWTSEC => TIME_NOWSEC
 
     use scale_comm
-    
+
     implicit none
-    
+
     integer :: k, i, j
-    
+
     !---------------------------------------------------------------------------
 
     if ( .not. USER_do ) return
 
     call HIST_in( (RHOT/DENS - 300.0_RP), 'PT_diff', 'PT_diff', 'K' )
-    
+
     ! Consider eddy turbulent mixing with constant eddy viscosity and diffusivity
 
     if ( NOWTSEC > DTSEC ) then
 
-       call COMM_vars8( DENS(:,:,:), I_COMM_DENS )       
+       call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
        call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
        call COMM_vars8( MOMX(:,:,:), I_COMM_MOMX )
        call COMM_vars8( MOMY(:,:,:), I_COMM_MOMY )
        call COMM_vars8( RHOT(:,:,:), I_COMM_RHOT )
 
-       call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )       
+       call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )
        call COMM_wait ( MOMZ(:,:,:), I_COMM_MOMZ, .false. )
        call COMM_wait ( MOMX(:,:,:), I_COMM_MOMX, .false. )
        call COMM_wait ( MOMY(:,:,:), I_COMM_MOMY, .false. )
        call COMM_wait ( RHOT(:,:,:), I_COMM_RHOT, .false. )
-       
+
        call append_EddyDiff_zxy( RHOT,                   & ! (inout)
             DENS        )                                  ! (in)
-       
+
        call append_EddyDiff_zuy( MOMX,                   & ! (inout)
             DENS        )                                  ! (in)
 
@@ -209,36 +193,36 @@ contains
        call append_EddyDiff_wxy( MOMZ,                   & ! (inout)
             DENS        )                                  ! (in)
 
-       call COMM_vars8( DENS(:,:,:), I_COMM_DENS )       
+       call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
        call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
        call COMM_vars8( MOMX(:,:,:), I_COMM_MOMX )
        call COMM_vars8( MOMY(:,:,:), I_COMM_MOMY )
        call COMM_vars8( RHOT(:,:,:), I_COMM_RHOT )
 
-       call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )       
+       call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )
        call COMM_wait ( MOMZ(:,:,:), I_COMM_MOMZ, .false. )
        call COMM_wait ( MOMX(:,:,:), I_COMM_MOMX, .false. )
        call COMM_wait ( MOMY(:,:,:), I_COMM_MOMY, .false. )
        call COMM_wait ( RHOT(:,:,:), I_COMM_RHOT, .false. )
-       
+
     end if
 
     return
   end subroutine USER_step
 
   !---------------------------------------------------------------------
-  
+
   subroutine append_EddyDiff_zxy( RHOPHI,   & ! (inout)
        DENS                                 & ! (in)
        )
     use scale_process
-    
+
     use scale_time, only: &
        DTSEC => TIME_DTSEC
-    
+
     real(RP), intent(inout) :: RHOPHI(KA,IA,JA)
     real(RP), intent(in)    :: DENS(KA,IA,JA)
-    
+
     real(RP) :: DiffFlx(KA,IA,JA,3)
     real(RP) :: PHI(KA,IA,JA)
     integer :: i
@@ -260,7 +244,7 @@ contains
             (PHI(k+1,i,j) - PHI(k,i,j))*RFDZ(k)
     enddo
     DiffFlx(KS-1,i,j,ZDIR) = 0.0_RP
-    DiffFlx(KE,i,j,ZDIR)   = 0.0_RP    
+    DiffFlx(KE,i,j,ZDIR)   = 0.0_RP
     enddo
     enddo
 
@@ -293,7 +277,7 @@ contains
     enddo
     enddo
     enddo
-    
+
   end subroutine append_EddyDiff_zxy
 
   subroutine append_EddyDiff_zuy( RHOPHI,   & ! (inout)
@@ -303,10 +287,10 @@ contains
     use scale_process
     use scale_time, only: &
        DTSEC => TIME_DTSEC
-    
+
     real(RP), intent(inout) :: RHOPHI(KA,IA,JA)
     real(RP), intent(in)    :: DENS(KA,IA,JA)
-    
+
     real(RP) :: DiffFlx(KA,IA,JA,3)
     real(RP) :: PHI(KA,IA,JA)
     integer :: i
@@ -320,7 +304,7 @@ contains
     enddo
     enddo
     enddo
- 
+
 
     do j = JS, JE
     do i = IS, IE
@@ -329,7 +313,7 @@ contains
             (PHI(k+1,i,j) - PHI(k,i,j))*RFDZ(k)
     enddo
     DiffFlx(KS-1,i,j,ZDIR) = 0.0_RP
-    DiffFlx(KE,i,j,ZDIR)   = 0.0_RP    
+    DiffFlx(KE,i,j,ZDIR)   = 0.0_RP
     enddo
     enddo
 
@@ -362,20 +346,20 @@ contains
     enddo
     enddo
     enddo
-    
+
   end subroutine append_EddyDiff_zuy
 
   subroutine append_EddyDiff_zxv( RHOPHI,   & ! (inout)
        DENS                                 & ! (in)
        )
 
-    
+
     use scale_time, only: &
        DTSEC => TIME_DTSEC
-    
+
     real(RP), intent(inout) :: RHOPHI(KA,IA,JA)
     real(RP), intent(in)    :: DENS(KA,IA,JA)
-    
+
     real(RP) :: DiffFlx(KA,IA,JA,3)
     real(RP) :: PHI(KA,IA,JA)
     integer :: i
@@ -389,7 +373,7 @@ contains
     enddo
     enddo
     enddo
- 
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -397,7 +381,7 @@ contains
             (PHI(k+1,i,j) - PHI(k,i,j))*RFDZ(k)
     enddo
     DiffFlx(KS-1,i,j,ZDIR) = 0.0_RP
-    DiffFlx(KE,i,j,ZDIR)   = 0.0_RP    
+    DiffFlx(KE,i,j,ZDIR)   = 0.0_RP
     enddo
     enddo
 
@@ -430,20 +414,20 @@ contains
     enddo
     enddo
     enddo
-    
+
   end subroutine append_EddyDiff_zxv
 
   subroutine append_EddyDiff_wxy( RHOPHI,   & ! (inout)
        DENS                                 & ! (in)
        )
 
-    
+
     use scale_time, only: &
        DTSEC => TIME_DTSEC
-    
+
     real(RP), intent(inout) :: RHOPHI(KA,IA,JA)
     real(RP), intent(in)    :: DENS(KA,IA,JA)
-    
+
     real(RP) :: DiffFlx(KA,IA,JA,3)
     real(RP) :: PHI(KA,IA,JA)
     integer :: i
@@ -457,7 +441,7 @@ contains
     enddo
     enddo
     enddo
- 
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -465,7 +449,7 @@ contains
             (PHI(k,i,j) - PHI(k-1,i,j))*RCDZ(k)
     enddo
     DiffFlx(KS-1,i,j,ZDIR) = 0.0_RP
-    DiffFlx(KE,i,j,ZDIR)   = 0.0_RP    
+    DiffFlx(KE,i,j,ZDIR)   = 0.0_RP
     enddo
     enddo
 
@@ -498,7 +482,7 @@ contains
     enddo
     enddo
     enddo
-    
+
   end subroutine append_EddyDiff_wxy
-  
+
 end module mod_user

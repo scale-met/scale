@@ -1,77 +1,47 @@
-\section{\SecAdvancePostprosess} \label{sec:net2g}
+\section{Post-processing} \label{sec:net2g}
 %====================================================================================
 
-本節では、\scalerm の後処理ツールnet2gについて説明する。net2gは、\scalerm で出力された
-ノード毎に分割された{\netcdf}形式historyデータ（\verb|history.***.nc|）を結合し
-{\grads}で読み込めるバイナリ形式に変換するツールである。
-分割データを結合することで、{\grads}で描画できるだけでなく、
-Fortranプログラムなどで解析しやすいデータになる。
-net2gはMPI並列実行も可能であり、単一プロセス実行に比べて変換に要する時間を短縮できる。
-その他、net2gの機能として次のものが利用できる。
-
+In this section, the post-processing tool \verb|net2g| is described and its function explained. \verb|net2g| generates the binary format that is readable in \grads by combining history files \verb|history.***.nc| with the \netcdf format. The conversion of all files to one enable \grads to draw the result. Thus, formatted data can be easily analyzed, even by a FORTRAN serial program. Since \verb|net2g| can also be executed as an MPI parallel program, the elapsed time can be to a greater extent than in the case of serial processing. The following functions are also available
 \begin{itemize}
- \item モデル面から任意の鉛直高度座標、鉛直気圧座標への内挿
- \item 3次元変数に対する鉛直の積算値、平均値、最大値、最小値の出力
- \item 3次元変数を鉛直層ごとに分割したファイルとしての出力
- \item 時間ステップごとに分割したファイルとしての出力
+ \item Interpolate data from the surface of the model to arbitrary height coordinates or pressure coordinates.
+ \item Output the mean, maximum, and minimum values of the vertical integration of 3D variables.
+ \item Output multiple files for 3D variables, layer by layer.
+ \item Output multiple files, time-step by time-step.
 \end{itemize}
 
-特に大規模計算結果においては、鉛直層や時間ステップごとに分割することで
-扱いやすいサイズのデータを出力することができるため便利である。
-%さらに、大規模計算結果を解析するだけのケースを踏まえてポータビリティを重視した設計とし、
-%SCALEライブラリに対する依存性をなくしたため、
-%net2gだけを独立にコンパイル・実行できることも特徴である。
-net2gのインストール方法については、\ref{sec:source_net2g}節を参照すること。
-ただし、現行のnet2gにおいては下記の制約がある。
+
+It is convenient to divide files layer by layer or time-step by time-step because such data can be easily handled, particularly large-scale computational data. Refer to Section \ref{sec:source_net2g} for a guide to installing \verb|net2g|. Note that the current version of \verb|net2g| has the following limitations:
 \begin{itemize}
- \item net2gに使用するMPIプロセス数は、
-SCALE-RM実行時に使用したMPIプロセス数の約数でなければならない。
- \item SCALE-RM実行時のhistory出力形式は、\namelist{PARAM_HIST}の\nmitem{HIST_BND} が \verb| .false. | でなければならない。
- \item 2次元データと3次元データは同時に変換できない。
- \item 変換できるデータはhistoryデータのみである。
+\item The number of MPI processes in \verb|net2g| must be a divisor of the number of MPI processes at execution in \scalerm.
+\item The history output format at the execution of \scalerm must be output with   \nmitem{HIST_BND} $=$ \verb|.false. | in \namelist{PARAM_HIST}.
+\item Two- and three-dimensional data cannot be simultaneously converted.
+\item Only history data can be converted.
 \end{itemize}
-%これらの制約を無くすため、今後早急に対応を進める予定である。
+Beware that if too large a number of MPI processes is set, computational performance is affected. Since most instruction in \verb|net2g| are for the input/output of data, it is possible that the number of requests for storage access becomes too large. In particular, this situation should be attended to if the conversion of large-scale computation results is carried out on small-scale machines.
 
-実行時に注意すべき点は、net2g実行時のMPIプロセス数を大きくしすぎないことである。
-net2gは実行内容のほとんどがデータ入出力であるため、MPIプロセス数を増やしすぎると
-ストレージへの読み込み/書き込み要求が多くなり、
-結果として、効率が下がり実行速度が落ちることもある。
-特に大規模計算結果を手元のマシンで変換する際は注意が必要である。\\
-
-net2gの実行はMPI並列を用いて、
+If MPI parallel is used, \verb|net2g| is executed as follows:
 \begin{verbatim}
- $ mpirun  -n  [プロセス数]  ./net2g  net2g.conf
+ $ mpirun  -n  [number of process]  ./net2g  net2g.conf
 \end{verbatim}
-とする。最後の\verb|net2g.conf|はnet2gの実行設定が
-記述された設定ファイルである。
-一方、シングルプロセス版としてコンパイルした場合はMPIコマンドを使わずに、
+The last argument \verb|net2g.conf| is the configuration file for \verb|net2g|.
+On the contrary, if \verb|net2g| is compiled as a single process version,
 \begin{verbatim}
  $ ./net2g  net2g.conf
 \end{verbatim}
-とする。
-エラーメッセージがなく、次のメッセージだけが標準出力へ表示されて終了すれば変換完了である。\\
 
-\noindent {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+If only the following message without error can be found, the execution is concluded normally:
+\msgbox{
 \verb|+++ MPI COMM: Corrective Finalize| \\
-\end{tabularx}
-}}\\
+}
 
-次に、3次元変数と2次元変数を変換する場合における設定ファイルの記述方法について説明する。
-それぞれ、\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/} にあるサンプル設定ファイル
-``\verb|net2g.3d.conf|''と``\verb|net2g.2d.conf|''に基づいて説明する。
-本節では主要な設定項目だけを取り上げる。
-ここで触れなかったオプションについては、``\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/}''
-サンプル設定ファイル``\verb|net2g.all.conf|''を参照してもらいたい。
+The following explains how to describe the configuration files in the case of 2D or 3D variables by using sample files \verb|net2g.3d.conf| and \verb|net2g.2d.conf| in the directory\\
+\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/}. In this section, only the major issues pertaining to its use are treated. Refer to the sample files \verb|net2g.all.conf| in \\
+\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/} for the other options.
 
-
-\subsubsection{設定ファイルサンプル：3次元変数の変換}
+\subsubsection{The sample configuration file: Conversion of 3D variables}
 %------------------------------------------------------
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\editbox{
 \verb|&LOGOUT| \\
 \verb| LOG_BASENAME   = "LOG_d01_3d",| \\
 \verb| LOG_ALL_OUTPUT = .false.,| \\
@@ -92,52 +62,52 @@ net2gの実行はMPI並列を用いて、
 \verb| VNAME       = "PT","U","V","W","QHYD",| \\
 \verb| TARGET_ZLEV = 850,500,200,| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
-
-\noindent 上記はあるdomainの3次元変数を、気圧高度面へ内挿して出力する場合の
-例を示している。各々の設定項目は次のとおりである。
+}
+The above example shows a configuration in the case where 3D variables in a domain are converted into pressure and/or height coordinates. The setting items are as follows:
 \begin{itemize}
- \item \namelist{LOGOUT}（このネームリストは必須ではない）
+ \item \namelist{LOGOUT} (The following items are not required.)
  \begin{itemize}
-  \item \nmitem{LOG_BASENAME}：デフォルトのLOGファイル名``LOG''を変更したいときに指定する。
-  \item \nmitem{LOG_ALL_OUTPUT}：プロセス番号0番以外もLOGファイルを出力させたい場合に``true''にする。
-        デフォルト値は``false''である。
+  \item \nmitem{LOG_BASENAME}：If the default LOG file name \verb|LOG| is changed, this item is specified.
+  \item \nmitem{LOG_ALL_OUTPUT}：If processes other than the 0th process are output in the LOG files,
+\verb|".true."| is assigned to this item.  The default value is \verb|."false".|
  \end{itemize}
  \item \namelist{INFO}
  \begin{itemize}
-  \item \nmitem{TIME_STARTDATE}：変換するNetCDFデータの最初の日時
-  \item \nmitem{START_TSTEP}：変換するNetCDFデータの最初のTime Stepを指定する。最初のいくつかの
-        ステップを飛ばして変換したい場合に任意の値を指定する。デフォルト値は1である。
-  \item \nmitem{END_TSTEP}：変換するNetCDFデータの最後のTime Stepを指定する。必ず指定すること。
-  \item \nmitem{DOMAIN_NUM}：ドメイン番号を指定する。デフォルト値は1である。
-  \item \nmitem{CONFFILE}：SCALE-RM本体を実行したときの\verb|run.***.conf|ファイルのPATHを指定する
-        （ファイル名を含む）。
-  \item \nmitem{IDIR}：SCALE-RM本体のhistory出力ファイルのPATHを指定する。
-  \item \nmitem{Z_LEV_TYPE}：鉛直方向のデータ変換の種類を指定する。``original''はモデル面、
-        ``plev''は気圧面に内挿、そして``zlev''は高度面に内挿して出力する。
-        ``anal''を指定すると別途指定の簡易解析を行なって出力する（次項で説明）。デフォルト値は``plev''である。
-  \item \nmitem{MAPPROJ_ctl}：\verb|pdef|を使った投影図法に対応したctlファイルを出力するかどうか。
+  \item \nmitem{TIME_STARTDATE} : The start date and time of converted \netcdf data are specified.
+  \item \nmitem{START_TSTEP} : The start time step of converted \netcdf data is specified.
+    If several first steps are skipped, the appropriate values are assigned to this item.
+    The default value is 1.
+  \item \nmitem{END_TSTEP}：The end of the time step of converted \netcdf data is specified.
+    It is required in all cases.
+  \item \nmitem{DOMAIN_NUM}：The domain number is specified. The default value is 1.
+  \item \nmitem{CONFFILE}：The path of \verb|run.***.conf| at the execution of \scalerm is specified, including the file name.
+  \item \nmitem{IDIR}：The path of history files is specified.
+  \item \nmitem{Z_LEV_TYPE}：The type of vertical data conversion is specified. \verb|"original"| represents the model surface, 
+    \verb|"plev"| the interpolation to the pressure surface, 
+    and \verb|"zlev"| that to the height surface.
+    If \verb|"anal"| is specified, the result with a simple analysis is output. The details for \verb|"anal"| is explained subsequently. 
+    The default value is \verb|"plev"|.
+  \item \nmitem{MAPPROJ_ctl}： It indicates whether the ``ctl'' file corresponding to the map projection using \verb|pdef| is output.
  \end{itemize}
  \item \namelist{VARI}
  \begin{itemize}
-  \item \nmitem{VNAME}：変換したい変数名を指定する。デフォルトでは、``PT''、``PRES''、``U''、``V''、
-        ``W''、``QHYD''が指定される。
-  \item \nmitem{TARGET_ZLEV}：\nmitem{Z_LEV_TYPE}に応じた変換高度を指定する。plevの場合は``hPa''、
-        zlevの場合は``m''、そしてoriginalの場合は格子点番号で指定する。デフォルトでは、
-        1000hPa、975hPa、950hPa、925hPa、900hPa、850hPa、800hPa、700hPa、600hPa、500hPa、400hPa、
-        300hPa、250hPa、200hPaの14層が指定される。
+  \item \nmitem{VNAME}：The variables converted are specified.
+    As default, \verb|"PT"|,\verb|"PRES"|,\verb|"U"|,\verb|"V"|, \verb|"W"|,\verb|"QHYD"| are given.
+  \item \nmitem{TARGET_ZLEV}： The heights corresponding to \nmitem{Z_LEV_TYPE} are specified.
+    In the case of \verb|"plev"|, the unit is [$hPa$], 
+    in the case of \verb|"zlev"|, the unit is [$m$], and 
+    in the case of \verb|"original"|, the grid numbers are specified.
+    As default, 14 layers (1000 hPa, 975 hPa, 950 hPa, 925 hPa, 900 hPa, 850 hPa, 800 hPa, 700 hPa, 600 hPa, 500 hPa, 400 hPa,
+        300 hPa, 250 hPa, and 200 hPa ) are given.
  \end{itemize}
 \end{itemize}
 
-\subsubsection{設定ファイル変更例：3次元変数の変換：鉛直積算値を出す}
+\subsubsection{Example of configuration file: Vertical integration of 3D variable data}
 %------------------------------------------------------
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+The description below presents an excerpt of a configuration file along with a simple analysis. The other item settings are the same as in the previous configuration.
+\editbox{
 \verb|&INFO| \\
-\verb|　 　 〜　中略　〜|\\
+\verb|　 　 〜　...　〜|\\
 \verb| Z_LEV_TYPE  = "anal",| \\
 \verb| ZCOUNT      = 1,| \\
 \verb|/| \\
@@ -149,32 +119,26 @@ net2gの実行はMPI並列を用いて、
 \verb|&VARI| \\
 \verb| VNAME       = "QC","QI","QG",| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
-
-上記は、簡易解析を利用する場合の設定ファイル変更例の抜粋である。
-他の設定項目については先の3次元変数の変換の場合と同じである。
-\nmitem{Z_LEV_TYPE}を``anal''と指定することで、3次元変数の鉛直次元に対する簡易解析が有効になり、
-\namelist{ANAL}を指定できるようになる。
-このとき変換後のデータは必ず水平2次元データとなるため、\namelist{VARI}の\nmitem{TARGET_ZLEV}は
-指定できない。
-また、2次元データ出力を指定するため、\textcolor{red}{\namelist{INFO}の\nmitem{ZCOUNT}を必ず``1''と指定する。}
-
+}
+If \nmitem{Z_LEV_TYPE}$=$\verb|"anal"|, simple analysis is applied to the 3D variable.
+This setting enables \namelist{ANAL}.
+The specification of \nmitem{TARGET_ZLEV} in \namelist{VARI} is disabled,
+and \textcolor{blue}{\nmitem{ZCOUNT} in \namelist{INFO} is necessarily given as "1"}
+because of the output of 2D data.
 \begin{itemize}
  \item \namelist{ANAL}
  \begin{itemize}
-  \item \nmitem{ANALYSIS}：鉛直次元のの簡易解析の種類を指定する。``max''を指定すると鉛直カラム中の最大値、
-        ``min''を指定するすると最小値、``sum''を指定すると鉛直カラム積算値、そして``ave''を指定すると
-        鉛直カラム平均値を算出する。デフォルト値は``ave''である。
+  \item \nmitem{ANALYSIS}：The type of vertical simple analysis is specified. \verb|"max"| and \verb|"min"| 
+    represent the maximum and minimum value outputs in the vertical column, respectively, whereas \verb|"sum"| and \verb|"ave"| represent
+    the vertical integration and the vertical average outputs, respectively. The default value is \verb|"ave"|.
  \end{itemize}
 \end{itemize}
 
-\subsubsection{設定ファイルサンプル：2次元変数の変換}
+\subsubsection{Example of configuration file: Conversion of 2D variables}
 %------------------------------------------------------
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+The example below shows a configuration in the case where 2D variables are converted. Because of the output of 2D data,
+\textcolor{blue}{\nmitem{ZCOUNT} in \namelist{INFO} is necessarily given as "1."}
+\editbox{
 \verb|&LOGOUT| \\
 \verb| LOG_BASENAME   = "LOG_d01_2d",| \\
 \verb|/| \\
@@ -193,21 +157,12 @@ net2gの実行はMPI並列を用いて、
 \verb|&VARI| \\
 \verb| VNAME       = "T2","MSLP","PREC"| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
+}
 
-\noindent 上記はあるdomainの2次元変数をデータ形式変換する場合の設定例である。
-\textcolor{red}{2次元変数の変換を指定するため、\namelist{INFO}の\nmitem{ZCOUNT}を必ず``1''と指定する。}
-また、2次元データなので\namelist{VARI}の
-\nmitem{TARGET_ZLEV}は指定できない。その他の設定項目は3次元変数変換の場合と変わりない。
-
-
-\subsubsection{設定ファイル変更例：特殊な時間軸を持つデータの変換}
+\subsubsection{Example of configuration file change: Conversion of irregular data in time}
 %------------------------------------------------------
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+The description below is an example of configuration change. The other item settings are the same as in the case of 2D or 3D variables.
+\editbox{
 \verb|&EXTRA| \\
 \verb| EXTRA_TINTERVAL = 600.0,| \\
 \verb| EXTRA_TUNIT     = "SEC",| \\
@@ -216,104 +171,13 @@ net2gの実行はMPI並列を用いて、
 \verb|&VARI| \\
 \verb| VNAME = "RAIN",| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
+}
+In the case where 
+\nmitem{TINTERVAL} in \namelist{HISTITEM} and the output of several variables does not
+obey \nmitem{HISTORY_DEFAULT_TINTERVAL} upon the execution of \scalerm 
+in the configuration of output item (refer to Section \ref{sec:output} ),
+\verb|net2g| supports such situations by setting \namelist{EXTRA}.
+This example shows the case where only 2D data \verb|"RAIN"| are output at a time interval of 600 s, according to the configuration described in the last paragraph of Section \ref{sec:output}. The history file that contains data with multiple time intervals is handled. Since \verb|net2g| does not support the simultaneous treatment of different output intervals, it is necessary for \verb|net2g| to be run separately.
 
-上記は設定ファイル変更例である。その他の項目は先の3次元や2次元変数の場合と同じである。
-SCALE-RM実行時に、\ref{sec:output}節の最後で説明した出力アイテム毎の設定で、\namelist{HISTITEM}の
-\nmitem{TINTERVAL}を設定し、一部の出力変数が\nmitem{HISTORY_DEFAULT_TINTERVAL}に
-従わない場合、net2gでは\namelist{EXTRA}を上記のように設定することで対応できる。
-この例では、\ref{sec:output}節の最後で説明した設定に合わせて、2次元データの``RAIN''だけが
-600秒間隔で出力された場合の例を示している。
-net2gでは、異なる出力時間間隔を同時に取り扱うことはできないため、
-複数の異なる出力間隔が存在するhistoryデータにおいては、
-それぞれに独立してnet2gを走らせる必要がある。
-
-\subsubsection{大型並列計算機での実行}
-スーパーコンピュータ「京」などの大型計算機で大規模並列計算を行った場合、出力ファイルの数が多く、
-それぞれのファイルのデータ容量も大きい。
-そのような場合には、手元のマシンへhistoryデータをコピーするだけのディスク容量がなかったり、
-後処理に膨大な時間がかかることがある。
-こういった場合には、
-\scalerm 本体の計算を行ったスーパーコンピュータ上で後処理も行なってしまうことを
-おすすめする。
-
-スーパーコンピュータ「京」では、
-\ref{subsec:evniromnet}節で説明されている環境変数の設定がされていれば、
-net2gはそのままmakeコマンドでコンパイルできる。
-ジョブの投入・実行方法については、
-スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
-net2gの実行方法や制約、注意点については通常のマシンで実行する場合と何ら変わりない。
-
-
-%% サポート外
-%%
-%% \noindent {\gt \verb|job.sh|の記述例} \\
-%% \noindent {\small {\gt
-%% \ovalbox{
-%% \begin{tabularx}{150mm}{l}
-%% \verb|#! /bin/bash -x| \\
-%% \verb|#PJM --rsc-list "rscgrp=micro"| \\
-%% \verb|#PJM --rsc-list "node=12"| \\
-%% \verb|#PJM --rsc-list "elapse=00:30:00"| \\
-%% \verb|#PJM -j| \\
-%% \verb|#PJM -s| \\
-%% \verb|#| \\
-%% \verb|. /work/system/Env_base| \\
-%% \verb|#| \\
-%% \verb|export PARALLEL=8| \\
-%% \verb|export OMP_NUM_THREADS=8| \\
-%% \verb|#| \\
-%% \verb|mpiexec -n 12 ./net2g  n2g_d01-3d.conf| \\
-%% \end{tabularx}
-%% }}}\\
-
-
-%% サポート外（今後、統合サポート予定）
-%%
-%% \subsection{バルクジョブ対応版の使用方法}
-%% %------------------------------------------------------
-
-%% \ref{sec:bulkjob}節で説明した「複数の実験を一括実行するバルクジョブ機能」を用いてSCALEを走らせた場合は、
-%% バルクジョブ対応版のnet2gを利用するのが便利である。コンパイルは、通常版のnet2gと同じである。
-%% ``scale/scale-rm/util/netcdf2grads\_bulk''の下で\ref{sec:source_net2g}節で説明したとおりの方法で
-%% コンパイルすれば、バルクジョブ対応版のnet2gが生成される。
-
-%% 基本的な使用方法や制限事項も通常版のnet2gと同じである。net2gに渡す設定ファイルなどの記述も通常版と
-%% 同じように記述すればよい。ただし、実行にあたっては``launch.conf''が必要になることと、\ref{sec:bulkjob}節で
-%% 説明したバルクジョブ実行時のディレクトリ構造を準備する必要がある。SCALE本体をバルクジョブ機能で実行した
-%% 場合にはディレクトリ構造はすでに準備されているため新たに用意する必要はない。net2gに渡す設定ファイルだけ、
-%% 各バルク番号のディレクトリ下に設置すればよい。以下に、launch.confファイルの記述例を挙げておく。\\
-
-%% \noindent {\small {\gt
-%% \ovalbox{
-%% \begin{tabularx}{150mm}{l}
-%% \verb|&PARAM_LAUNCHER| \\
-%% \verb| NUM_BULKJOB = 31,| \\
-%% \verb| NUM_DOMAIN  = 2,| \\
-%% \verb| PRC_DOMAINS = 12,36,| \\
-%% \verb| CONF_FILES  = net2g.3d.d01.conf,net2g.3d.d02.conf,| \\
-%% \verb|/| \\
-%% \end{tabularx}
-%% }}}\\
-
-%% \noindent この例の場合、一度に31個のジョブを実行している。また1つのジョブは2段オンライン・ネスティング実験
-%% となっており、net2gの実行にあたってはdomain 1は12-MPI並列、domain 2は36-MPI並列で実行される。ここで
-%% 指定するMPIプロセス数は、SCALE本体の実行時に使用したMPIプロセス数の約数でなければならない。
-
-%% それぞれのドメインについて実行するnet2gの設定ファイルは、
-%% それぞれ``net2g.3d.d01.conf''と``net2g.3d.d02.conf''と指定されている。
-%% この設定ファイルは31個のバルク番号ディレクトリの中に
-%% 収められてことを想定している。
-
-%% この例では、1つのジョブあたり、$12 + 36 = 48$プロセスを使用し、全体で31ジョブあるので総計で1488プロセスを
-%% 必要とする。下記のコマンドのように実行する。
-
-%% \begin{verbatim}
-%%  $ mpirun  -n  1488  ./net2g  launch.conf
-%% \end{verbatim}
-
-
-
-%####################################################################################
-
+\subsubsection{Note for execution on supercomputer}
+When a simulation is conducted on a supercomputer such as the K Computer, many output files are generated, where the size of each file is large. In such cases, the local disk space is often not large enough to store them,  and post-processing may take a long time. In this case, both a simulation by \scalerm and its post-processing on the same supercomputer are recommended. On the K Computer, \verb|net2g| can be compiled by the ``make'' command  if the environmental variable is appropriately set as described in Section \ref{subsec:evniromnet}.

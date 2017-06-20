@@ -4,12 +4,8 @@
 \subsection{\SubsecMicrophysicsSetting} \label{subsec:basic_usel_microphys}
 %------------------------------------------------------
 雲微物理スキームの選択は、\verb|init.conf|と\verb|run.conf|のうち、
-\namelist{PARAM_TRACER}の\nmitem{TRACER_TYPE}、
-及び、\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。\\
-このとき{\color{red}{\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}は普通は同じものを設定し}}
-、かつ、\textcolor{red}{\texttt{init.conf}、\texttt{run.conf}で同一の設定}とする必要がある。
-ただし、\nmitem{ATMOS_PHY_MP_TYPE}を\verb|OFF|とするときは、
-\nmitem{TRACER_TYPE}は何を設定してもよいが、乾燥大気の計算をする場合は\verb|TRACER_TYPE = "DRY"|とするのがよい。
+\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。\\
+このとき\nmitem{ATMOS_PHY_MP_TYPE}は\textcolor{red}{\texttt{init.conf}、\texttt{run.conf}で同一の設定}とする必要がある。
 雲微物理スキームを呼び出すタイミングは、
 \namelist{PARAM_TIME}で設定するが、これについては
 第\ref{sec:timeintiv}節を参照のこと。
@@ -20,10 +16,6 @@
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_PHY_MP_TYPE = "TOMITA08", | & ; 表\ref{tab:nml_atm_mp}より選択。\\
-\verb|/             | & \\
-\\
-\verb|&PARAM_TRACER | & \\
-\verb| TRACER_TYPE = "TOMITA08", | & \verb|ATMOS_PHY_MP_TYPE|と同じ名前。\\
 \verb|/             | & \\
 \end{tabularx}
 }}\\
@@ -87,7 +79,7 @@
 
 
 \verb|SUZUKI10|以外を選択する場合は、
-\verb|init.conf|、\verb|run.conf|の\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}を
+\verb|init.conf|、\verb|run.conf|の\nmitem{ATMOS_PHY_MP_TYPE}を
 変更するだけで実行可能であるが、
 {\color{red}\texttt{SUZUKI10}を選択する場合}は、以下のように
 \verb|init.conf|、\verb|run.conf|の双方に
@@ -152,15 +144,33 @@ micpara.datに記載されているnbinが異なれば、\\
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
       \verb|OFF|          & 乱流の計算を行わない &  \\
-      \verb|SMAGORINSKY|  & Smagorinsky 型のサブグリッドモデル    & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
-      \verb|D1980|        & Deardorff(1980)サブグリッドモデル &\citet{Deardorff_1980} \\
-      \verb|MYNN|         & MYNN Level 2.5 乱流モデル & \citet{my_1982,nakanishi_2004} \\
+      \verb|SMAGORINSKY|  & Smagorinsky 型のサブグリッドスケール乱流モデル & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
+      \verb|D1980|        & Deardorff(1980)サブグリッドスケール乱流モデル & \citet{Deardorff_1980} \\
+      \verb|MYNN|         & MYNN Level 2.5 境界層乱流パラメタリゼーション & \citet{my_1982,nakanishi_2004} \\
+      \verb|HYBRID|       & 境界層乱流パラメタリゼーションとサブグリッドスケール乱流モデル併用 & \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
+SMAGORINSKY および D1980 は、ラージエディーシミュレーション(LES)用のサブグリッドスケール乱流モデルである。
+MYNN は、レイノルズ平均ナビエストークス方程式(RANS)計算用の境界層乱流パラメタリゼーションである。
+HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり、以下の2通りの用途に用いられる。
+\begin{enumerate}
+\item LES と RANS の中間的な解像度 (グレーゾーン) での計算\\
+  LES用乱流モデルとRANS用乱流パラメタリゼーションで得られた時間変化率を、実験解像度に応じた割合で線形的に足し合せる
+\item RANS計算における水平渦粘性\\
+  RANS計算における境界層乱流パラメタリゼーションは、鉛直にのみ混合を行い、水平方向には混合しない。HYBRID を指定することで、水平方向に渦粘性を導入することができる。この場合は、追加で以下の設定が必要である。
+\end{enumerate}
 
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{ll}
+\verb|&PARAM_ATMOS_PHY_TB_SMG  | \\
+\verb| ATMOS_PHY_TB_SMG_horizontal = .true., | \\
+\verb|/             | \\
+\end{tabularx}
+}}\\
 
 
 \subsection{\SubsecRadiationSetting} \label{subsec:basic_usel_radiation}
@@ -186,12 +196,63 @@ micpara.datに記載されているnbinが異なれば、\\
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
       \verb|OFFまたはNONE| & 放射スキームを使用しない & \\
+      \verb|OFFLINE|      & 放射データを外部ファイルから与える & \\
       \verb|MSTRNX|       & mstrnX & \citet{sekiguchi_2008} \\
-      \verb|WRF|          & mstrnX(長波)+Dudhia(短波) & \citet{dudhia_1989} \\
+%      \verb|WRF|          & mstrnX(長波)+Dudhia(短波) & \citet{dudhia_1989} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
+
+
+\subsubsection{\texttt{OFFLINE}の場合}
+
+\namelist{PARAM_ATMOS} で \nmitem{ATMOS_PHY_RD_TYPE} を \verb|OFFLINE| とした場合、
+外部データのファイル名やデータについての情報は
+\namelist{PARAM_ATMOS_PHY_RD_OFFLINE} で設定する。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
+\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "",          | & ; 外部データのファイル名の頭 \\
+\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; ファイルにおける3次元データの空間次元順。 'XYZ' or 'ZXY' \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; 年毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; 月毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; 日毎の繰返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = 0,           | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する。時間変化するデータを与える場合は 0 以下を指定する。\\
+\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .true.,      | & ; ファイル内座標変数の値の確認を行うかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 0,           | & ; 読み出すデータの時間ステップ数の上限。この数を越える時間ステップのデータは読まれない。0 を与えると上限無し。 \\
+\verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; 下向き直達短波データを与えない場合に使われる散乱率(散乱日射/全天日射) \\
+\verb|/|            & \\
+\end{tabularx}
+}}}\\
+
+\noindent
+外部データファイルのフォーマットは、初期値境界値と同じ軸情報を持つ{\netcdf}形式のファイルである。
+外部データとして、表\ref{tab:var_list_atm_rd_offline} にある変数を与える。
+\begin{table}[h]
+\begin{center}
+  \caption{外部ファイルとして与える放射データ}
+  \label{tab:var_list_atm_rd_offline}
+  \begin{tabularx}{150mm}{lXll} \hline
+    \rowcolor[gray]{0.9}  変数名 & 変数の説明 & 次元数 & \\ \hline
+      \verb|RFLX_LW_up|     & 上向き長波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_LW_dn|     & 下向き長波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_SW_up|     & 上向き短波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_SW_dn|     & 下向き短波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|SFLX_LW_up|     & 地表面上向き長波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_LW_dn|     & 地表面下向き長波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_up|     & 地表面上向き短波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn|     & 地表面下向き短波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn_dir| & 地表面下向き直達短波放射 & 空間2次元+時間1次元 & オプション \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+\subsubsection{\texttt{MSTRNX}の場合}
 
 放射計算のための太陽放射量は、
 モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
@@ -302,6 +363,7 @@ micpara.datに記載されているnbinが異なれば、\\
 
 気候値・ユーザ指定プロファイルのいずれもモデルの高度・層数の設定とは独立に高度・層数が指定され、実行時にはモデル各層の値に内挿される。
 ただし、想定する最高高度（放射計算で考慮する大気最上層(TOA)の高さ）がプロファイルよりも高い場合、外挿となるので注意されたい。\\
+
 
 
 
@@ -490,24 +552,27 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \end{center}
 \end{table}
 
+\vspace{\baselineskip}
 \verb|OCEAN_TYPE = "FILE"|を選択した場合は、init.confとrun.confで外部入力ファイルの設定が必要である。
 この場合、与えられた外部ファイルの空間分布と時系列に応じて、海面温度は変化する。\\
 
 \noindent {\gt
 \ovalbox{
-\begin{tabularx}{150mm}{ll}
- \verb|&EXTITEM                                  | & \\
- \verb| basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
- \verb| varname    = "OCEAN_TEMP",               | & ; \verb|"OCEAN_TEMP"|と書く。\\
- \verb| step_limit = 1800,                       | & \\
- \verb| step_fixed =  -1,                        | & \\
- \verb| enable_periodic_year  = .false.,         | & \\
- \verb| enable_periodic_month = .false.,         | & \\
- \verb| enable_periodic_day   = .false.,         | & \\
+\begin{tabularx}{150mm}{lX}
+ \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
+ \verb| OCEAN_PHY_FILE_basename   = "",                         | & ; 入力ファイルの頭 \\
+ \verb| OCEAN_PHY_FILE_enable_periodic_year  = .false.,         | & ; 年毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_enable_periodic_month = .false.,         | & ; 月毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_enable_periodic_day   = .false.,         | & ; 日毎の繰返しデータかどうか \\
+ \verb| OCEAN_PHY_FILE_step_fixed =  0,                        | & ; とある決った時間ステップのデータのみを使う場合にそのステップ番号を指定する。時間変化するデータを与える場合は 0 以下を指定する。\\
+ \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .true.,          | & ; ファイル内座標変数の値の確認を行うかどうか \\
+ \verb| OCEAN_PHY_FILE_step_limit = 0,                          | & ; 読み出すデータの時間ステップ数の上限。この数を越える時間ステップのデータは読まれない。0 を与えると上限無し。 \\
  \verb|/                                         | & \\
 \end{tabularx}
 }}\\
 
+
+\vspace{\baselineskip}
 \verb|OCEAN_TYPE = "SLAB"|を選択した場合は、init.confとrun.confでスラブ混合層の深さを設定することができる。
 この場合、大気-海面間の熱フラックスの移動に応じて、スラブ混合層の温度は時間発展する。\\
 
@@ -582,7 +647,7 @@ LOGファイルなどに出力されて計算は行われず、直ちに終了�
 \end{center}
 \end{table}
 
-
+\vspace{\baselineskip}
 \nmitem{LAND_TYPE = "SLAB"}または\nmitem{LAND_TYPE = "CONST"}を選択した場合は、
 土地利用区分に応じたアルベド、粗度長等のパラメータテーブルと、土地利用区分分布の入力が必要である。
 パラメータテーブルは、

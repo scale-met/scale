@@ -126,7 +126,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKGRD)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKGRD)
 
 #ifndef _FIXEDINDEX_
     allocate( GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz) )

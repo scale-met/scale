@@ -96,10 +96,6 @@ def gen_init_conf( conf_name,
  TOPO_OUT_BASENAME = "topo",
 /
 
-&PARAM_TRACER
- TRACER_TYPE = 'DRY',
-/
-
 &PARAM_ATMOS_VARS
  ATMOS_RESTART_OUTPUT         = .true.,
  ATMOS_RESTART_OUT_BASENAME   = "init",
@@ -180,10 +176,6 @@ def gen_run_conf( conf_name,
 
 &PARAM_TOPO
  TOPO_IN_BASENAME = "topo",
-/
-
-&PARAM_TRACER
- TRACER_TYPE = 'DRY',
 /
 
 &PARAM_ATMOS

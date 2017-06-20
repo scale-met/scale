@@ -54,7 +54,7 @@ TIME_DT_URBAN=(        "450.0" "150.0" ) # required parameters for each domain -
 
 PRC_NUM_X=( 2 4 ) # required parameters for each domain
 PRC_NUM_Y=( 2 4 ) # required parameters for each domain
- 
+
 KMAX=( 36 60 ) # required parameters for each domain
 IMAX=( 45 32 ) # required parameters for each domain
 JMAX=( 45 32 ) # required parameters for each domain
@@ -68,7 +68,7 @@ UDZ=( "0.01" "0.01" "0.03" "0.05" "0.10" ) # required parameters for UKMAX
 DX=( "20000.0" "7000.0" ) # required parameters for each domain
 DY=( "20000.0" "7000.0" ) # required parameters for each domain
 
-DEF_Z=( 
+DEF_Z=(
 "FZ(:) =     80.8410,   248.8210,   429.8820,   625.0450,   835.4090,
            1062.1580,  1306.5650,  1570.0080,  1853.9690,  2160.0470,
            2489.9630,  2845.5750,  3228.8830,  3642.0440,  4087.3840,
@@ -104,7 +104,6 @@ MPRJ_LC_LAT2="40.0"
 
 #################################################
 #
-# &PARAM_TRACER  (run config)
 # &PARAM_ATMOS   (run config)
 # &PARAM_OCEAN   (run config)
 # &PARAM_LAND    (run config)

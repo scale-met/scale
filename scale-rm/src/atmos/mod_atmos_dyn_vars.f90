@@ -111,7 +111,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_VARS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN_VARS)
 
     call ATMOS_DYN_Tstep_short_regist( ATMOS_DYN_TYPE, & ! [IN]
                                        VA,             & ! [OUT]

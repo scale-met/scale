@@ -649,7 +649,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
 
     ATMOS_PHY_MP_sn14_DENS(:) = CONST_UNDEF
     ATMOS_PHY_MP_sn14_DENS(I_HC) = CONST_DWATR
@@ -870,7 +870,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_init. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_init)
+    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_init)
 
     !
     ! default setting
@@ -969,7 +969,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_particles. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_particles)
+    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_particles)
 
     ! [Add] 10/08/03 T.Mitsui
     ! particles shapes are
@@ -2317,7 +2317,7 @@ contains
     if( flag_first )then
        rewind(IO_FID_CONF)
        read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
-100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_nucleation)
+100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_nucleation)
        flag_first=.false.
 
        if ( MP_couple_aerosol .AND. nucl_twomey ) then
@@ -2868,7 +2868,7 @@ contains
     if( flag_first )then
        rewind( IO_FID_CONF )
        read( IO_FID_CONF, nml=nm_mp_sn14_collection, end=100 )
-100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_collection)
+100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_collection)
        flag_first = .false.
     end if
     !
@@ -3577,6 +3577,7 @@ contains
     ! temperature function of homegenous/heterogenous freezing
     real(RP) :: Jhom, Jhet
     real(RP) :: rdt
+    real(RP) :: tmp
     !
     integer :: i,j,k
     !
@@ -3621,10 +3622,20 @@ contains
           PQ(I_LChom,k,i,j) = 0.0_RP
           PQ(I_NChom,k,i,j) = 0.0_RP
           ! Heterogenous Freezing
+#if defined(__PGI) || defined(__ES2)
+          tmp = min( xq(I_mp_QC,k,i,j)*(Jhet+Jhom)*dt, 1.E+3_RP) ! apply exp limiter
+          PQ(I_LChet,k,i,j) = -rdt*rhoq(I_QC,k,i,j)*( 1.0_RP - exp( -coef_m2_c*tmp ) )
+          PQ(I_NChet,k,i,j) = -rdt*rhoq(I_NC,k,i,j)*( 1.0_RP - exp( -          tmp ) )
+
+          tmp = min( xq(I_mp_QR,k,i,j)*(Jhet+Jhom)*dt, 1.E+3_RP) ! apply exp limiter
+          PQ(I_LRhet,k,i,j) = -rdt*rhoq(I_QR,k,i,j)*( 1.0_RP - exp( -coef_m2_r*tmp ) )
+          PQ(I_NRhet,k,i,j) = -rdt*rhoq(I_NR,k,i,j)*( 1.0_RP - exp( -          tmp ) )
+#else
           PQ(I_LChet,k,i,j) = -rdt*rhoq(I_QC,k,i,j)*( 1.0_RP - exp( -coef_m2_c*xq(I_mp_QC,k,i,j)*(Jhet+Jhom)*dt ) )
           PQ(I_NChet,k,i,j) = -rdt*rhoq(I_NC,k,i,j)*( 1.0_RP - exp( -          xq(I_mp_QC,k,i,j)*(Jhet+Jhom)*dt ) )
           PQ(I_LRhet,k,i,j) = -rdt*rhoq(I_QR,k,i,j)*( 1.0_RP - exp( -coef_m2_r*xq(I_mp_QR,k,i,j)*(Jhet+Jhom)*dt ) )
           PQ(I_NRhet,k,i,j) = -rdt*rhoq(I_NR,k,i,j)*( 1.0_RP - exp( -          xq(I_mp_QR,k,i,j)*(Jhet+Jhom)*dt ) )
+#endif
        end do
     end do
     end do
@@ -3973,7 +3984,7 @@ contains
        flag_first = .false.
        rewind(IO_FID_CONF)
        read  (IO_FID_CONF,nml=nm_mp_sn14_condensation, end=100)
-100    if( IO_LNML ) write(IO_FID_LOG,nml=nm_mp_sn14_condensation)
+100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_condensation)
     end if
     !
 !    dt_dyn     = dt*ntmax
@@ -4447,17 +4458,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
   subroutine ATMOS_PHY_MP_sn14_CloudFraction( &
-       cldfrac, &
-       QTRC     )
+       cldfrac,       &
+       QTRC,          &
+       mask_criterion )
     use scale_grid_index
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_tracer, only: &
        QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(in)  :: mask_criterion
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq
@@ -4470,7 +4481,7 @@ contains
        do iq = I_QC, I_QG
           qhydro = qhydro + QTRC(k,i,j,iq)
        enddo
-       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
     enddo
     enddo
     enddo

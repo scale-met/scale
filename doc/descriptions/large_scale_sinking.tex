@@ -7,23 +7,21 @@
 }
 
 
-In the DYCOMS01 experiment, the large scale sinking is added
-to express large scale downward motion corresponding to the Haddley circulation.
-The motion converges virtually and results mass escape to out of the system.
+In the DYCOMS01 experiment, large scale sinking is added to express large scale downward motion corresponding to the Hadley circulation. There is virtual convergence of motion, resulting in mass escape out of the system.
 
 The density loss rate is constant $L$:
 \begin{equation}
   L = -\frac{\partial \rho w_L}{\partial z},
 \end{equation}
-where $w_l$ is vertical velocity corresponding to the large scale sinking.
-Then vertical momentum with the sinking is
+where $w_l$ is vertical velocity corresponding to large scale sinking.
+Vertical momentum with sinking is defined as follows:
 \begin{equation}
   \rho w_L = -Lz.
 \end{equation}
 
-Continuous equation is now
+The continuous equation is now:
 \begin{equation}
-  \frac{\partial \rho}{\partial z}
+  \frac{\partial \rho}{\partial t}
   + \frac{\partial \rho u}{\partial x}
   + \frac{\partial \rho v}{\partial y}
   + \frac{\partial \rho (w+w_L)}{\partial z}
@@ -31,7 +29,7 @@ Continuous equation is now
   \label{eq: lls rho}
 \end{equation}
 
-Lagrangian conservation equation for scalar quantities are
+The Lagrangian conservation equation for scalar quantities is:
 \begin{equation}
   \rho\frac{\partial \phi}{\partial t}
   + \rho u\frac{\partial \phi}{\partial x}
@@ -39,7 +37,7 @@ Lagrangian conservation equation for scalar quantities are
   + \rho (w+w_L)\frac{\partial \phi}{\partial z}
   = 0,
 \end{equation}
-and becomes with eq. (\ref{eq: lls rho})
+When combined with eq. (\ref{eq: lls rho}), this becomes:
 \begin{equation}
   \frac{\partial \rho\phi}{\partial t}
   + \frac{\partial \rho u \phi}{\partial x}
@@ -48,7 +46,7 @@ and becomes with eq. (\ref{eq: lls rho})
   = -L\phi.
 \end{equation}
 
-The equations for mixing ratio is
+The equation for the mixing ratio is:
 \begin{equation}
   \frac{\partial \rho Q}{\partial t}
   + \frac{\partial \rho Q u }{\partial x}
@@ -56,10 +54,10 @@ The equations for mixing ratio is
   + \frac{\partial \rho Q (w+w_L)}{\partial z}
   = -L Q.
 \end{equation}
-Note that this is identical to that of scalar quantities.
+Note that this is identical to that for scalar quantities.
 
-The $w_L$ at the top boundary is not zero while $w$ is zero.
-The vertical flux $\rho w_L \phi$ at the top layer interface could be determined as
-that convergence of the flux is canceled with $L\phi$.
+The $w_L$ at the top boundary is not zero, while $w$ is zero.
+The vertical flux $\rho w_L \phi$ at the top layer interface could be determined as that convergence of the flux canceled with $L\phi$.
+
 
 

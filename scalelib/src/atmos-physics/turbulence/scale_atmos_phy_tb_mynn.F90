@@ -17,6 +17,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_tb_mynn
   !-----------------------------------------------------------------------------
   !
@@ -30,7 +31,7 @@ module scale_atmos_phy_tb_mynn
 
 #include "macro_thermodyn.h"
 
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -179,7 +180,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_MYNN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_MYNN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_MYNN)
 
     do k = KS, KE-1
        do j = JS, JE
@@ -216,18 +217,20 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        RHOQ_t,                                      &
-       Nu, Ri, Pr, N2,                              &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       Nu, Ri, Pr,                                  &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2_in,   &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       GRAV    => CONST_GRAV,   &
-       R       => CONST_Rdry,   &
-       Rvap    => CONST_Rvap,   &
-       CP      => CONST_CPdry,  &
+       GRAV    => CONST_GRAV,  &
+       R       => CONST_Rdry,  &
+       Rvap    => CONST_Rvap,  &
+       CPdry   => CONST_CPdry, &
+       CPvap   => CONST_CPvap, &
+       LHV0    => CONST_LHV0,  &
        EPSTvap => CONST_EPSTvap
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
@@ -260,8 +263,7 @@ contains
        I_QC, &
        I_QI
     use scale_atmos_saturation, only: &
-       ATMOS_SATURATION_alpha, &
-       ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_all
+       ATMOS_SATURATION_dens2qsat => ATMOS_SATURATION_dens2qsat_all
 #ifdef MORE_HIST
     use scale_history, only: &
        HIST_in
@@ -279,7 +281,6 @@ contains
     real(RP), intent(out)   :: Nu           (KA,IA,JA)    ! eddy viscosity (center)
     real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
     real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Plandtle number
-    real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
     real(RP), intent(in)    :: MOMX         (KA,IA,JA)
@@ -287,12 +288,13 @@ contains
     real(RP), intent(in)    :: RHOT         (KA,IA,JA)
     real(RP), intent(in)    :: DENS         (KA,IA,JA)
     real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
+    real(RP), intent(in)    :: N2_in        (KA,IA,JA)
 
     real(RP), intent(in)    :: SFLX_MW      (IA,JA)
     real(RP), intent(in)    :: SFLX_MU      (IA,JA)
     real(RP), intent(in)    :: SFLX_MV      (IA,JA)
     real(RP), intent(in)    :: SFLX_SH      (IA,JA)
-    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_Q       (IA,JA,QA)
 
     real(RP), intent(in)    :: GSQRT        (KA,IA,JA,7)  !< vertical metrics {G}^1/2
     real(RP), intent(in)    :: J13G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
@@ -303,6 +305,7 @@ contains
 
     real(RP) :: U    (KA,IA,JA) !< velocity in x-direction (full level)
     real(RP) :: V    (KA,IA,JA) !< velocity in y-direction (full level)
+    real(RP) :: N2   (KA,IA,JA) ! squared Brunt-Vaisala frequency
     real(RP) :: phiN (KA,IA,JA)
 
     real(RP) :: sm   (KA,IA,JA) !< stability function for velocity
@@ -330,22 +333,24 @@ contains
     real(RP) :: TEML(KA,IA,JA)  !< liquid water temperature
 
     real(RP) :: Qw(KA,IA,JA)    !< total water
+    real(RP) :: qdry(KA,IA,JA)  !< dry air
+    real(RP) :: qv              !< water vapor
     real(RP) :: ql              !< liquid water
     real(RP) :: qs              !< solid water
-    real(RP) :: qdry            !< dry air
 
     real(RP) :: temp(KA,IA,JA)  !< temperature
     real(RP) :: pres(KA,IA,JA)  !< pressure
 
-    real(RP) :: LH   (KA,IA,JA)
-    real(RP) :: alpha(KA,IA,JA)
-    real(RP) :: LHV  (KA,IA,JA)
-    real(RP) :: LHS  (KA,IA,JA)
+    real(RP) :: LHV (KA,IA,JA)
+    real(RP) :: LHS (KA,IA,JA)
+
+    real(RP) :: CPtot
 
     real(RP) :: ac              !< \alpha_c
 
     real(RP) :: Q1
-    real(RP) :: Qsl(KA,IA,JA)
+    real(RP) :: Qsl(KA)
+    real(RP) :: LHVL(KA)
     real(RP) :: dQsl
     real(RP) :: sigma_s
     real(RP) :: RR
@@ -372,6 +377,21 @@ contains
     POTT(:,:,:) = UNDEF
     POTL(:,:,:) = UNDEF
     temp(:,:,:) = UNDEF
+#endif
+
+#ifdef QUICKDEBUG
+    qflx_sgs_momz(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
 #endif
 
 !OCL XFILL
@@ -505,12 +525,22 @@ contains
     call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
     call HYDROMETEOR_LHS( LHS(:,:,:), temp(:,:,:) )
 
-    call ATMOS_SATURATION_alpha( alpha(:,:,:), temp(:,:,:) )
-
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,QA,I_QV,I_QC,I_QI) &
+    !$omp shared(GRAV,CPdry,EPSTvap,ATMOS_PHY_TB_MYNN_N2_MAX,CZ) &
+    !$omp shared(QTRC,TRACER_MASS,RHOT,DENS,N2_in,SFLX_PT,SFLX_SH) &
+    !$omp shared(Qdry,Qw,LHV,LHS,POTT,POTL,temp,TEML,POTV,n2,U,V,Ri,dudz2) &
+    !$omp private(i,j,k,iq) &
+    !$omp private(qv,ql,qs,CPtot)
     do j = JS, JE
     do i = IS, IE
+
        do k = KS, KE_PBL+1
+
+          qv = 0.0_RP
+          if ( I_QV > 0 ) qv = QTRC(k,i,j,I_QV)
+
           ql = 0.0_RP
           if ( I_QC > 0 ) ql = QTRC(k,i,j,I_QC)
 !          do iq = QWS, QWE
@@ -521,34 +551,28 @@ contains
 !          do iq = QIS, QIE
 !             qs = qs + QTRC(k,i,j,iq)
 !          end do
-          CALC_QDRY(qdry, QTRC, TRACER_MASS, k, i, j, iq)
+          CALC_QDRY(qdry(k,i,j), QTRC, TRACER_MASS, k, i, j, iq)
 
-          Qw(k,i,j) = QTRC(k,i,j,I_QV) + ql + qs
+          Qw(k,i,j) = qv + ql + qs
 
-          LH(k,i,j) = (        alpha(k,i,j) ) * LHV(k,i,j) &
-                    + ( 1.0_RP-alpha(k,i,j) ) * LHS(k,i,j)
+          CPtot = CPdry * qdry(k,i,j) + CPvap * qv
 
           POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           ! liquid water potential temperature
-          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (LHV(k,i,j) * ql + LHS(k,i,j) * qs) / ( temp(k,i,j) * CP ) )
+          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (LHV(k,i,j) * ql + LHS(k,i,j) * qs) / ( temp(k,i,j) * CPtot ) )
           TEML(k,i,j) = POTL(k,i,j) * temp(k,i,j) / POTT(k,i,j)
 
           ! virtual potential temperature for derivertive
 !          POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
-          POTV(k,i,j) = ( qdry + (EPSTvap+1.0_RP) * QTRC(k,i,j,I_QV) ) * POTL(k,i,j)
+          POTV(k,i,j) = ( qdry(k,i,j) + (EPSTvap+1.0_RP) * qv ) * POTT(k,i,j)
 
        end do
 
-       SFLX_PT(i,j) = SFLX_SH(i,j) / ( CP * DENS(KS,i,j) ) &
+       SFLX_PT(i,j) = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) &
                     * POTT(KS,i,j) / TEMP(KS,i,j)
 
-       n2(KS,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
-                        GRAV * ( POTV(KS+1,i,j) - POTV(KS,i,j) ) &
-                             / ( ( CZ(KS+1,i,j)-CZ(KS,i,j) ) * POTV(KS,i,j) ) )
-       do k = KS+1, KE_PBL
-          n2(k,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
-                          GRAV * ( POTV(k+1,i,j) - POTV(k-1,i,j) ) &
-                               / ( ( CZ(k+1,i,j)-CZ(k-1,i,j) ) * POTV(k,i,j) ) )
+       do k = KS, KE_PBL
+          n2(k,i,j) = min( ATMOS_PHY_TB_MYNN_N2_MAX, N2_in(k,i,j) )
        end do
 
        dudz2(KS,i,j) = ( ( U(KS+1,i,j) - U(KS,i,j) )**2 + ( V(KS+1,i,j) - V(KS,i,j) )**2 ) &
@@ -615,31 +639,77 @@ contains
                    q, q2_2, & ! (in)
                    l, n2, dudz2 ) ! (in)
 
-    call ATMOS_SATURATION_pres2qsat( Qsl(KS:KE_PBL,:,:), & ! (out)
-                                     TEML(KS:KE_PBL,:,:), pres(KS:KE_PBL,:,:), & ! (in)
-                                     KE_PBL-KS+1 ) ! (in)
+#ifdef QUICKDEBUG
+    do j = 1, JS-1
+    do i = 1, IA
+    do k = KS, KE
+       TEML(k,i,j) = 300.0_RP
+    end do
+    end do
+    end do
+    do j = JE+1, JA
+    do i = 1, IA
+    do k = KS, KE
+       TEML(k,i,j) = 300.0_RP
+    end do
+    end do
+    end do
+    do j = 1, JA
+       do i = 1, IS-1
+       do k = KS, KE
+          TEML(k,i,j) = 300.0_RP
+       end do
+       end do
+       do i = IE+1, IA
+       do k = KS, KE
+          TEML(k,i,j) = 300.0_RP
+       end do
+       end do
+    end do
+#endif
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k) &
+    !$omp private(CPtot,Qsl,dQsl,aa,bb,ac,sigma_s,Q1,RR,Ql,cc,Rt,betat,betaq,LHVL) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,KE_PBL) &
+    !$omp shared(CZ,rsqrt_2,rsqrt_2pi,sqrt_2pi,GRAV,CPdry,EPSTvap,ATMOS_PHY_TB_MYNN_N2_MAX) &
+    !$omp shared(DENS,l,Qdry,TEMP,TEML,POTT,POTL,POTV,q2_2,Qw,q,dudz2,Ri,n2,sh)
     do j = JS, JE
     do i = IS, IE
+
+       call ATMOS_SATURATION_dens2qsat( Qsl(:), & ! (out)
+                                        TEML(:,i,j), DENS(:,i,j) ) ! (in)
+
+       call HYDROMETEOR_LHV( LHVL(:), TEML(:,i,j) )
+
        do k = KS+1, KE_PBL
 
-          dQsl = Qsl(k,i,j) * lh(k,i,j) / ( Rvap * POTL(k,i,j)**2 )
-          aa = 1.0_RP / ( 1.0_RP + lh(k,i,j)/CP * dQsl )
+          dQsl = ( Qsl(k) * LHVL(k) / ( Rvap * TEML(k,i,j) ) - Qsl(k) ) / TEML(k,i,j)
+          CPtot = Qdry(k,i,j) * CPdry + Qsl(k) * CPvap
+          aa = 1.0_RP / ( 1.0_RP + LHVL(k)/CPtot * dQsl )
           bb = TEMP(k,i,j) / POTT(k,i,j) * dQsl
           ac = min( q(k,i,j)/sqrt(q2_2(k,i,j)), 1.0_RP )
           sigma_s = max( sqrt( 0.25_RP * aa**2 * l(k,i,j)**2 * ac * B2 * sh(k,i,j) ) &
                        * abs( Qw(k+1,i,j) - Qw(k-1,i,j) - bb * ( POTL(k+1,i,j)-POTL(k-1,i,j) ) ) &
                        / ( CZ(k+1,i,j) - CZ(k-1,i,j) ), &
                        1e-10_RP )
-          Q1 = aa * ( Qw(k,i,j) - Qsl(k,i,j) ) * 0.5_RP / sigma_s
+          Q1 = aa * ( Qw(k,i,j) - Qsl(k) ) * 0.5_RP / sigma_s
           RR = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
+#if defined(__PGI) || defined(__ES2)
+          Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) ), & ! apply exp limiter
+#else
           Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp(-0.5_RP*Q1**2) ), &
+#endif
                     0.0_RP ), &
                     Qw(k,i,j) * 0.5_RP )
-          cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * lh(k,i,j) / CP &
+          cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * LHVL(k) / CPtot &
                - (1.0_RP+EPSTvap) * POTT(k,i,j)
+#if defined(__PGI) || defined(__ES2)
+          Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ), 0.0_RP ), 1.0_RP ) ! apply exp limiter
+#else
           Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp(-Q1**2 * 0.5_RP), 0.0_RP ), 1.0_RP )
+#endif
           betat = 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql - Rt * aa * bb * cc
           betaq = EPSTvap * POTT(k,i,j) + Rt * aa * cc
           n2(k,i,j) = min(ATMOS_PHY_TB_MYNN_N2_MAX, &
@@ -678,6 +748,9 @@ contains
          l, n2, dudz2 ) ! (in)
 
 
+    !$omp parallel do default(none) private(i,j,k,Kh) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,Nu,l,KE_PBL,q,sm,ATMOS_PHY_TB_MYNN_NU_MAX,ATMOS_PHY_TB_MYNN_NU_MIN) &
+    !$omp shared(KA,sh,ATMOS_PHY_TB_MYNN_KH_MAX,ATMOS_PHY_TB_MYNN_KH_MIN,RHOKh,DENS,Pr,KE,KS)
     do j = JS, JE
     do i = IS, IE
        do k = 1, KS-1
@@ -711,6 +784,10 @@ contains
 
     !  for velocities
 !OCL INDEPENDENT
+    !$omp parallel do default(none)                                                              &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,dt,DENS,Nu,RFDZ,GSQRT,I_XYW,a,c,b,d,RCDZ,I_XYZ,U,SFLX_MU) &
+    !$omp shared(phiN)                                                                           &
+    !$omp private(i,j,k,ap) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -780,6 +857,9 @@ contains
 
        ! integration V
 !OCL INDEPENDENT
+       !$omp parallel do default(none)                                                         &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE_PBL,V,dt,SFLX_MV,RCDZ,DENS,GSQRT,I_XYZ,phiN,a,b,c,d) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           d(KS,i,j) = V(KS,i,j) + dt * SFLX_MV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
@@ -841,9 +921,9 @@ contains
           a(KE_PBL,i,j) = 0.0_RP
           c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / (DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
-          d(KS,i,j) = POTL(KS,i,j) + dt * SFLX_PT(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          d(KS,i,j) = POTT(KS,i,j) + dt * SFLX_PT(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
           do k = KS+1, KE_PBL
-             d(k,i,j) = POTL(k,i,j)
+             d(k,i,j) = POTT(k,i,j)
           end do
           call diffusion_solver( &
                phiN(:,i,j),                     & ! (out)
@@ -852,6 +932,9 @@ contains
        end do
        end do
 
+       !$omp parallel do default(none)                                                           &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE_PBL,RHOKh,J33G,phiN,RFDZ,GSQRT,I_XYW,KE,qflx_sgs_rhot) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_rhot(KS-1,i,j,ZDIR) = 0.0_RP
@@ -875,20 +958,21 @@ contains
              cycle
           end if
 
-          if ( .not. TRACER_ADVC(iq) ) cycle
+          if( .NOT. TRACER_ADVC(iq) ) cycle
 
 !OCL INDEPENDENT
+          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JJS,JJE,IIS,IIE,iq,I_QV,d,QTRC,KS,dt,SFLX_Q,RCDZ,DENS,GSQRT,I_XYZ,KE_PBL) &
+          !$omp shared(a,b,c,phiN)
           do j = JJS, JJE
           do i = IIS, IIE
-             if ( iq == I_QV ) then
-                d(KS,i,j) = QTRC(KS,i,j,iq) &
-                          + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
-             else
-                d(KS,i,j) = QTRC(KS,i,j,iq)
-             end if
+             d(KS,i,j) = QTRC(KS,i,j,iq) &
+                       + dt * SFLX_Q(i,j,iq) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+
              do k = KS+1, KE_PBL
                 d(k,i,j) = QTRC(k,i,j,iq)
              end do
+
              call diffusion_solver( &
                   phiN(:,i,j),                            & ! (out)
                   a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
@@ -896,6 +980,10 @@ contains
           end do
           end do
 
+          !$omp parallel do default(none)                                                &
+          !$omp shared(JJS,JJE,IIS,IIE,KS,KE_PBL,iq,RHOKh,J33G,phiN,RFDZ,GSQRT,KE,I_XYW) &
+          !$omp shared(qflx_sgs_rhoq)                                                    &
+          !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
@@ -914,6 +1002,8 @@ contains
 
 
        ! TKE
+       !$omp parallel do default(none) private(i,j,k,tke) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,q,d,dt,Nu,dudz2,n2,Pr,KE_PBL)
        do j = JJS, JJE
        do i = IIS, IIE
           tke = q(KS,i,j)**2 * 0.5
@@ -940,6 +1030,10 @@ contains
        end do
 
 !OCL INDEPENDENT
+       !$omp parallel do default(none)                                                        &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE_PBL,dt,DENS,Nu,RFDZ,GSQRT,I_XYW,l,RCDZ,I_XYZ,I_TKE) &
+       !$omp shared(tke_N,QTRC,KE,d,q,a,c,b,RHOQ_t)                                           &
+       !$omp private(i,j,k,ap) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           ap = - dt * 1.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
@@ -973,7 +1067,6 @@ contains
 
        end do
        end do
-
 
     end do
     end do
@@ -1038,6 +1131,11 @@ contains
     integer :: k, i, j
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none)                                                            &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,q,FZ,EPS,ATMOS_PHY_TB_MYNN_Lt_MAX,SFLX_MU,SFLX_MV,DENS) &
+    !$omp shared(SFLX_PT,PT0,n2,GRAV,l)                                                        &
+    !$omp private(i,j,k,qdz,lt,rlt,us,rlm,qc,z,zeta,sw,ls,rn2sr,lb,int_qz,int_q)               &
+    !$omp OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        int_qz = 0.0_RP
@@ -1070,7 +1168,7 @@ contains
                + ( (1.0_RP - 100.0_RP*zeta)*(1.0_RP-sw) )**0.2_RP )
 
           ! LB
-          sw  = sign(0.5_RP, n2(k,i,j)) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz < 0
+          sw  = sign(0.5_RP, n2(k,i,j)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
           rn2sr = 1.0_RP / ( sqrt(n2(k,i,j)*sw) + 1.0_RP-sw)
           lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q(k,i,j) * rn2sr * sw & ! qc=0 when SFLX_PT < 0
              +  999.E10_RP * (1.0_RP-sw)
@@ -1102,6 +1200,9 @@ contains
     integer :: k, i, j
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,AF12,Ri,Rf1,Rf2,Rfc,A2,G2,l,dudz2,q2_2) &
+    !$omp private(i,j,k,rf,sh_2,sm_2,q2) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE_PBL
@@ -1147,6 +1248,9 @@ contains
     integer :: k, i, j
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    !$omp parallel do default(none)                                      &
+    !$omp shared(JS,JE,IS,IE,KS,KE_PBL,q,q2_2,l,n2,A2,A1,dudz2,C1,sm,sh) &
+    !$omp private(i,j,k,ac,ac2,l2q2,gh,p1,p2,p3,p4,p5,rd25) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE_PBL
@@ -1170,7 +1274,6 @@ contains
     end do
     end do
     end do
-
     return
   end subroutine get_smsh
 
@@ -1181,10 +1284,16 @@ contains
     real(RP), intent(in) :: x
     real(RP) :: erf
 
-    real(RP) :: x2
+    real(RP) :: x2, tmp
 
-    x2 = x**2
+    x2  = x*x
+
+#if defined(__PGI) || defined(__ES2)
+    tmp = min( x2 * ( fourpi + a*x2 ) / ( 1.0_RP + a*x2 ), 1.E+3_RP ) ! apply exp limiter
+    erf = sign( sqrt( 1.0_RP - exp(-tmp) ), x )
+#else
     erf = sign( sqrt( 1.0_RP - exp(-x2 * (fourpi+a*x2)/(1.0_RP+a*x2) ) ), x )
+#endif
 
     return
   end function erf

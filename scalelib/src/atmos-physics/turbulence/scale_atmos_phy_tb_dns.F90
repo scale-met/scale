@@ -116,7 +116,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_DNS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_DNS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_DNS)
 
     return
   end subroutine ATMOS_PHY_TB_dns_setup
@@ -125,9 +125,9 @@ contains
   subroutine ATMOS_PHY_TB_dns( &
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       RHOQ_t, nu, Ri, Pr, N2,                      &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       RHOQ_t, nu, Ri, Pr,                          &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_grid_index
     use scale_tracer
@@ -158,7 +158,6 @@ contains
     real(RP), intent(out) :: nu(KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Ri(KA,IA,JA) ! Richardson number
     real(RP), intent(out) :: Pr(KA,IA,JA) ! Prantle number
-    real(RP), intent(out) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -166,12 +165,13 @@ contains
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)  :: N2(KA,IA,JA)
 
     real(RP), intent(in)  :: SFLX_MW(IA,JA)
     real(RP), intent(in)  :: SFLX_MU(IA,JA)
     real(RP), intent(in)  :: SFLX_MV(IA,JA)
     real(RP), intent(in)  :: SFLX_SH(IA,JA)
-    real(RP), intent(in)  :: SFLX_QV(IA,JA)
+    real(RP), intent(in)  :: SFLX_Q (IA,JA,QA)
 
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -201,7 +201,6 @@ contains
     nu (:,:,:) = 0.0_RP
     Ri (:,:,:) = 0.0_RP
     Pr (:,:,:) = 1.0_RP
-    N2 (:,:,:) = 0.0_RP
 
     ! potential temperature
     do j = JS-1, JE+1

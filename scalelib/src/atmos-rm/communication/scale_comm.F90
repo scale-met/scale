@@ -193,7 +193,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_COMM. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_COMM)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM)
 
     nreq_NS  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_WE  = 2         !--- send x 1    , recv x 1
@@ -2968,7 +2968,8 @@ contains
        if ( PRC_HAS_W ) then
           !--- packing packets to West
 !OCL NORECURRENCE(sendpack_P2W)
-          !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IHALO,kd,var,sendpack_P2W,vid) 
           do j = JS, JE
           do i = IS, IS+IHALO-1
           do k = 1, kd
@@ -2983,7 +2984,8 @@ contains
        if ( PRC_HAS_E ) then
           !--- packing packets to East
 !OCL NORECURRENCE(sendpack_P2E)
-          !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IE,IHALO,kd,var,sendpack_P2E,vid) 
           do j = JS, JE
           do i = IE-IHALO+1, IE
           do k = 1, kd
@@ -3120,7 +3122,8 @@ contains
 
         if ( PRC_HAS_E ) then
            !--- unpacking packets from East
-           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+           !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
+           !$omp shared(JS,JE,IE,IHALO,kd,var,recvpack_E2P,vid) 
            do j = JS, JE
            do i = IE+1, IE+IHALO
            do k = 1, kd
@@ -3135,7 +3138,8 @@ contains
 
         if ( PRC_HAS_W ) then
            !--- unpacking packets from West
-           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+           !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
+           !$omp shared(JS,JE,IS,IHALO,kd,var,recvpack_W2P,vid) 
            do j = JS, JE
            do i = IS-IHALO, IS-1
            do k = 1, kd

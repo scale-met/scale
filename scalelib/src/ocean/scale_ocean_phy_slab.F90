@@ -40,11 +40,8 @@ module scale_ocean_phy_slab
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: OCEAN_PHY_SLAB_DEPTH    = 10.0_RP !< water depth of slab ocean [m]
-  logical,  private :: OCEAN_PHY_SLAB_fixedSST = .false. !< Prevent SST change?
-  real(RP), private :: OCEAN_PHY_SLAB_HeatCapacity       !< heat capacity of slab ocean [J/K/m2]
-
-  logical, allocatable, private :: is_OCN(:,:)
+  real(RP), private :: OCEAN_PHY_SLAB_DEPTH = 10.0_RP !< water depth of slab ocean [m]
+  real(RP), private :: OCEAN_PHY_SLAB_HeatCapacity    !< heat capacity of slab ocean [J/K/m2]
 
   !-----------------------------------------------------------------------------
 contains
@@ -56,8 +53,6 @@ contains
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        CL    => CONST_CL
-    use scale_landuse, only: &
-       LANDUSE_fact_ocean
     implicit none
 
     character(len=*), intent(in) :: OCEAN_TYPE
@@ -81,36 +76,13 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_PHY_SLAB. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_PHY_SLAB)
-
-    if( OCEAN_TYPE == 'CONST' ) then
-       OCEAN_PHY_SLAB_fixedSST = .true.
-    else if( OCEAN_TYPE == 'SLAB' ) then
-       OCEAN_PHY_SLAB_fixedSST = .false.
-    else
-       write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
-       call PRC_MPIstop
-    end if
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_PHY_SLAB)
 
     OCEAN_PHY_SLAB_HeatCapacity = DWATR * CL * OCEAN_PHY_SLAB_DEPTH
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Prevent SST change?          : ', OCEAN_PHY_SLAB_fixedSST
     if( IO_L ) write(IO_FID_LOG,*) '*** Slab ocean depth [m]         : ', OCEAN_PHY_SLAB_DEPTH
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean heat capacity [J/K/m2] : ', OCEAN_PHY_SLAB_HeatCapacity
-
-    ! judge to run slab ocean model
-    allocate( is_OCN(IA,JA) )
-
-    do j = JS, JE
-    do i = IS, IE
-      if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
-        is_OCN(i,j) = .true.
-      else
-        is_OCN(i,j) = .false.
-      end if
-    end do
-    end do
 
     return
   end subroutine OCEAN_PHY_SLAB_setup
@@ -124,7 +96,8 @@ contains
        OCEAN_SFLX_prec, &
        OCEAN_SFLX_evap, &
        dt               )
-    use scale_grid_index
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean
     implicit none
 
     real(RP), intent(out) :: OCEAN_TEMP_t   (IA,JA)
@@ -139,23 +112,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: Slab'
 
-    if( OCEAN_PHY_SLAB_fixedSST )then
-       do j = JS, JE
-       do i = IS, IE
-          OCEAN_TEMP_t(i,j) = 0.0_RP
-       enddo
-       enddo
-    else
-       do j = JS, JE
-       do i = IS, IE
-          if( is_OCN(i,j) ) then
-             OCEAN_TEMP_t(i,j) = - OCEAN_SFLX_WH(i,j) / OCEAN_PHY_SLAB_HeatCapacity
-          else
-             OCEAN_TEMP_t(i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-    end if
+    do j = JS, JE
+    do i = IS, IE
+      if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
+        OCEAN_TEMP_t(i,j) = - OCEAN_SFLX_WH(i,j) / OCEAN_PHY_SLAB_HeatCapacity
+      else
+        OCEAN_TEMP_t(i,j) = 0.0_RP
+      endif
+    enddo
+    enddo
 
     return
   end subroutine OCEAN_PHY_SLAB

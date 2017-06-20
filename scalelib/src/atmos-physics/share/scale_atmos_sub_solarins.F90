@@ -585,7 +585,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_SOLARINS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_SOLARINS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SOLARINS)
 
     arcsec2d = 1.0_RP / (60.0_RP*60.0_RP)
     arcsec2r = arcsec2d * CONST_D2R

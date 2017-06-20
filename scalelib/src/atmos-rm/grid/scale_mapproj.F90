@@ -183,7 +183,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MAPPROJ. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MAPPROJ)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MAPPROJ)
 
     if( MPRJ_PS_lat == UNDEF ) MPRJ_PS_lat = MPRJ_basepoint_lat
 

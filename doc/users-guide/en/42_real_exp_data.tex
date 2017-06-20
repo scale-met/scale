@@ -1,116 +1,108 @@
 %-------------------------------------------------------%
-\section{入力データ(境界データ)の準備} \label{sec:tutrial_real_data}
+\section{Preparations for input data (boundary data)} \label{sec:tutrial_real_data}
 %-------------------------------------------------------%
 
-現実大気実験のシミュレーションを行う場合、\scalerm 本体に与える
-境界値データが必要になる。境界値作成のための外部入力データとして
-表\ref{tab:real_bnd}のデータが必要である。
-{\color{blue}青字}は必須の変数、その他は任意である。
-
-\begin{table}[h]
+When a realistic atmospheric experiment is conducted, boundary data need to be provided to \scalerm. Table \ref{tab:real_bnd} shows the items for external input data to create boundary data. The variables denoted by {\color{blue}blue character} in this table  are always needed, whereas the others (black character) are optional. 
+\begin{table}[tb]
 \begin{center}
-  \caption{現実大気実験に必要な外部入力データ}
+  \caption{Items of external input data for real atmospheric experiments}
   \label{tab:real_bnd}
   \begin{tabularx}{150mm}{llX} \hline
-    \multicolumn{3}{l}{\scalerm の地形と土地利用を作成するための元データ}\\ \hline
-    & \multicolumn{2}{l}{\color{blue}{標高データ}}\\
-    & \multicolumn{2}{l}{\color{blue}{土地利用区分データ}}\\ \hline
-    \multicolumn{3}{l}{\scalerm の初期値境界値を作成するための外部入力データ(一般的にはGCMデータ)}\\ \hline
-    &  \multicolumn{2}{l}{\color{blue}{親モデルの緯度・経度情報}}\\
-    &  \multicolumn{2}{l}{(3次元大気データ)}\\
-    & &  \multicolumn{1}{l}{\color{blue}{東西風速、南北風速、気温、比湿(相対湿度)、気圧、ジオポテンシャル高度}} \\
-    &  \multicolumn{2}{l}{(2次元大気データ)}\\
-    & & 海面更正気圧、地上気圧、10m東西風速、10m南北風速、2m気温、2m比湿(相対湿度) \\
-    &  \multicolumn{2}{l}{(2次元陸面データ)}\\
-    & &  \multicolumn{1}{l}{親モデルの海陸マップ}\\
-    & &  \multicolumn{1}{l}{\color{blue}{地表面温度(Skin temp)}}\\
-    & &  \multicolumn{1}{l}{{\color{blue}{親モデル土壌データの深さ情報、土壌温度}}、土壌水分(体積含水率 or 飽和度)}\\
-    &  \multicolumn{2}{l}{(2次元海面データ)}\\
-　　& &  \multicolumn{1}{l}{\color{blue}{海面水温(Skin tempがある場合は省略可)}}\\ \hline
+    \rowcolor[gray]{0.9} 
+    \multicolumn{3}{l}{Data to create the topography and land-use data (in general, in-situ data)}\\ \hline
+    & \multicolumn{2}{l}{\color{blue}{Altitude data}}\\
+    & \multicolumn{2}{l}{\color{blue}{Land-use classification data}}\\ \hline
+    \rowcolor[gray]{0.9} 
+    \multicolumn{3}{l}{data to craete the initial and boundary data for \scalerm (in general, GCM data)}\\ \hline
+    &  \multicolumn{2}{l}{\color{blue}{Information for latitude and longitude of the parent model}}\\
+    &  \multicolumn{2}{l}{--- 3D atmospheric data ---}\\
+    &  & \multicolumn{1}{l}{\color{blue}{zonal and meridional winds, temperature, specific humidity (relative humidity),}} \\
+    &  & \multicolumn{1}{l}{\color{blue}{pressure, geopotential height}} \\
+    &  \multicolumn{2}{l}{--- 2D atmospheric data---}\\
+    &  & \multicolumn{1}{l}{sea-level pressure, surface pressure, zonal and meridional wind at 10m,} \\
+    &  &\multicolumn{1}{l}{temperature and specific humidity (relative humidity) at 2m} \\
+    &  \multicolumn{2}{l}{--- 2D land data ---}\\
+    & &  \multicolumn{1}{l}{land and sea map in the parent model}\\
+    & &  \multicolumn{1}{l}{\color{blue}{surface skin temperature}}\\
+    & &  \multicolumn{1}{l}{{\color{blue}{information of depth of soil data in the parent model, soil temperature,}}}\\
+    & &  \multicolumn{1}{l}{{{soil moisture(volume content or degree of saturation)}}}\\
+    &  \multicolumn{2}{l}{--- 2D ocean data at the surface ---}\\
+　　& &  \multicolumn{1}{l}{\color{blue}{sea surface temperature (omitted if skin temperature is also used for SST)}}\\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-\subsubsection{標高データと土地利用区分データ}
-標高データと土地利用区分データは実験設定に従って、
-\scalerm のそれぞれの格子点における標高、海陸比率、湖比率、都市被覆率、植生比率、土地(植生)利用区分を
-作成するために使用する。
-ユーザが全球の任意の地域を対象とした計算ができるよう、
-フォーマット変換済みの
-標高データ USGS(U.S. Geological Survey) のGTOPO30 と、
-土地利用区分データ GLCCv2 を提供している。
-%これらのデータベースを作成にするにあたり、施された前処理手順の詳細については、〇〇を参照すること（Todo）。
 
+\subsubsection{Topography and land-use classification data}
+
+The external topography and land-use classification data are used to obtain the altitude, the ocean to land ratio,
+the lake ratio, urban covering and vegetation rates, and the classification of land use at every grid point.
+In order to allow users to calculate at any areas over the globe,
+the altitude data GTOPO30 from the USGS (U.S. Geological Survey)
+and land-use classification data from the GLCCv2 are provided in \scalerm.
+These files have already been formatted. 
 \begin{enumerate}
-\item データのダウンロード\\
-\scalerm 用の標高・土地利用区分のデータを\\
- \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}\\
-より入手し、任意のディレクトリに展開しておく。
-展開したディレクトリには、標高データと土地利用区分データが格納されている。
-\begin{alltt}
+\item Downloading data\\
+Obtain the data for altitude and land-use classification formatted for \scalerm  from \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}, and extract them to any directory:
+\begin{verbatim}
   $ tar -zxvf scale_database.tar.gz
   $ ls
-    scale_database/topo/    <- 標高データ
-    scale_database/landuse/ <- 土地利用区分データ
-\end{alltt}
-
-\item パスの設定\\
-現実大気実験の実験に必要なファイル一式の準備には、
-makeを用いた「実験セット一式作成ツール」を用いる。
-このツールを利用するためには、
-標高・土地利用区分データの\verb|tar|ファイルの展開先ディレクトリを、
-\verb|SCALE_DB| という環境変数に設定しておくことが必須である (以後、\verb|${SCALE_DB}|と表記)。
+    scale_database/topo/    <- altitude data
+    scale_database/landuse/ <- land use classification data
+\end{verbatim}
+\item Setting of the path\\
+To prepare the files used in the realistic atmospheric experiment,
+the "making tool for the complete settings of the experiment" is available.
+To use the tool, set the directory name, where the above \verb|tar| file is extracted,
+to an environment variable \verb|SCALE_DB| (hereinafter, it denoted as \verb|SCALE_DB| ):
 \begin{verbatim}
   $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
 \end{verbatim}
-ここで、\verb|${path_to_directory_of_scale_database}|は、
-データベースがあるディレクトリである。
+where \verb|${path_to_directory_of_scale_database}| is the database directory. 
+
 \end{enumerate}
 
 
+\subsubsection{Data for atmosphere, land, and sea surface temperature}
 
-\subsubsection{大気・陸面・海面水温データ}
-初期値境界値データは4byteバイナリ(\grads 形式、以降``binary形式''と表記する)に変換すれば、
-任意のデータを読み込むことが可能である。
-基本的に、バイナリデータはユーザ自身が用意する。
-チュートリアルではNCEP FNL(Final) Operational Global Analysis data を使用する方法を示す。
-あらかじめ\verb|wgrib|をインストールしておく\footnote{\url{http://www.cpc.ncep.noaa.gov/products/wesley/wgrib.html}}。
+The initial and boundary data are readable
+when they are converted into four-byte binary (\grads form. Hereinafter, it is denoted by ``binary data.'').
+The users prepare the ``binary'' data by themselves as mentioned above.
+However, 
+the programs to prepare the ``binary'' data are provided in the directory \\
+\verb|${Tutorial_DIR}/real/tools/| for the execution of this tutorial.
+A procedure is explained below.
+Note that it is assumed that the installation
+of \verb|wgrib|\footnote{\url{http://www.cpc.ncep.noaa.gov/products/wesley/wgrib.html}} is complete
+to use NCEP FNL (Final) Operational Global Analysis data with grib1 format.
+
 
 \begin{enumerate}
-\item データのダウンロード\\
-NCARのサイト
-\url{http://rda.ucar.edu/datasets/ds083.2/}\\
-から、2007年7月14日18時から一日分のgrib1フォーマットのデータ
-\begin{alltt}
+\item Downloading data
+Download 12-hour data from July 14, 2007 1800UTC from the NCAR website \url{http://rda.ucar.edu/datasets/ds083.2/}
+and place them in the directory \\ 
+\verb|${Tutorial_DIR}/real/tools/FNL_input/grib1/2007|.
+The following is the data list, formatted by grib1:
+\begin{verbatim}
   fnl_20070714_18_00.grib1
   fnl_20070715_00_00.grib1
-  fnl_20070715_06_00.grib1
-  fnl_20070715_12_00.grib1
-\end{alltt}
-を\verb|${Tutorial_DIR}/real/tools/|の下にダウンロードする。
-
-\item データフォーマットをgrib形式からbinary形式に変換\\
- \verb|${Tutorial_DIR}/real/tools/| にある\verb|convert_grib2grads_FNLgrib1.sh|を実行。
-
+\end{verbatim}
+\item Conversion of data from grib to binary format\\
+Execute \verb|convert_FNL-grib2grads.sh| in the directory \verb|${Tutorial_DIR}/real/tools/|:
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/tools/
- $ sh convert_grib2grads_FNLgrib1.sh
+ $ sh convert_FNL-grib2grads.sh 2007071418 2007071500 FNL_input FNL_output
 \end{verbatim}
-成功すれば、下記のファイルが作成される。
-\begin{alltt}
+The following files are found if it is successful:
+\begin{verbatim}
  $ ls FNL_output/*/*
-    FNL_output/200707/FNLatm_2007071418.grd
-    FNL_output/200707/FNLatm_2007071500.grd
-    FNL_output/200707/FNLatm_2007071506.grd
-    FNL_output/200707/FNLatm_2007071512.grd
-    FNL_output/200707/FNLland_2007071418.grd
-    FNL_output/200707/FNLland_2007071500.grd
-    FNL_output/200707/FNLland_2007071506.grd
-    FNL_output/200707/FNLland_2007071512.grd
-    FNL_output/200707/FNLsfc_2007071418.grd
-    FNL_output/200707/FNLsfc_2007071500.grd
-    FNL_output/200707/FNLsfc_2007071506.grd
-    FNL_output/200707/FNLsfc_2007071512.grd
-\end{alltt}
+    FNL_output/200707/FNL_ATM_2007071418.grd
+    FNL_output/200707/FNL_ATM_2007071500.grd
+    FNL_output/200707/FNL_LND_2007071418.grd
+    FNL_output/200707/FNL_LND_2007071500.grd
+    FNL_output/200707/FNL_SFC_2007071418.grd
+    FNL_output/200707/FNL_SFC_2007071500.grd
+\end{verbatim}
+If the generation of the intended files is failed because of changing data format and variable names in NCEP-FNL data,
+\verb|convert_FNL-grib2grads.sh| should be fixed according to the used NCEP-FNL data.
 \end{enumerate}
-

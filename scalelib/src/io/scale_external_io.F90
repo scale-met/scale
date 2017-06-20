@@ -665,12 +665,15 @@ contains
 
     integer :: tcount
     character(len=H_LONG) :: fname = ''
-    logical :: single_ = .false.
-    logical :: option_ = .false.
+    logical :: single_
+    logical :: option_
 
     intrinsic size
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
+    option_ = .false.
 
     tcount = te - ts + 1
 
@@ -866,12 +869,15 @@ contains
 
     integer :: tcount
     character(len=H_LONG) :: fname = ''
-    logical :: single_ = .false.
-    logical :: option_ = .false.
+    logical :: single_
+    logical :: option_
 
     intrinsic size
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    single_ = .false.
+    option_ = .false.
 
     tcount = te - ts + 1
 

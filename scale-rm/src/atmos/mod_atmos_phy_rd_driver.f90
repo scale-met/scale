@@ -138,7 +138,6 @@ contains
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE,                     &
-       TIME_NOWDAYSEC,                   &
        TIME_OFFSET_YEAR
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
@@ -191,8 +190,6 @@ contains
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall, &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
-    use scale_external_input, only: &
-       EXTIN_update
     implicit none
 
     logical, intent(in) :: update_flag
@@ -234,7 +231,6 @@ contains
     real(RP) :: flux_rad_org(KA,IA,JA,2,2,2)
 
     real(RP) :: total ! dummy
-    logical  :: error, error_sum
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -248,63 +244,19 @@ contains
                                  TIME_NOWDATE(:), & ! [IN]
                                  TIME_OFFSET_YEAR ) ! [IN]
 
-       if ( ATMOS_PHY_RD_TYPE == 'OFFLINE' ) then
-          ! [note] external data input is called here because EXTIN is RM-depend subroutine.
-          ! This part should be called in the RD_OFFLINE module in the future.
 
-          error_sum = .false.
-          call EXTIN_update( SFCFLX_LW_up(:,:),                'SFLX_LW_up',     'XY',  TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( SFCFLX_SW_up(:,:),                'SFLX_SW_up',     'XY',  TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( SFLX_rad_dn (:,:,I_LW,I_direct ), 'SFLX_LW_dn_dir', 'XY',  TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( SFLX_rad_dn (:,:,I_LW,I_diffuse), 'SFLX_LW_dn_dif', 'XY',  TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( SFLX_rad_dn (:,:,I_SW,I_direct ), 'SFLX_SW_dn_dir', 'XY',  TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( SFLX_rad_dn (:,:,I_SW,I_diffuse), 'SFLX_SW_dn_dif', 'XY',  TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( flux_rad    (:,:,:,I_LW,I_up,2),  'RFLX_LW_up',     'XYZ', TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( flux_rad    (:,:,:,I_LW,I_dn,2),  'RFLX_LW_dn',     'XYZ', TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( flux_rad    (:,:,:,I_SW,I_up,2),  'RFLX_SW_up',     'XYZ', TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          call EXTIN_update( flux_rad    (:,:,:,I_SW,I_dn,2),  'RFLX_SW_dn',     'XYZ', TIME_NOWDAYSEC, error )
-          error_sum = ( error .OR. error_sum )
-          if ( error_sum ) then
-             write(*,*) 'xxx Requested data is not found!'
-             call PRC_MPIstop
-          endif
+       call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
+                          REAL_CZ, REAL_FZ,   & ! [IN]
+                          LANDUSE_fact_ocean, & ! [IN]
+                          LANDUSE_fact_land,  & ! [IN]
+                          LANDUSE_fact_urban, & ! [IN]
+                          SFC_TEMP,           & ! [IN]
+                          SFC_albedo,         & ! [IN]
+                          solins, cosSZA,     & ! [IN]
+                          flux_rad,           & ! [OUT]
+                          flux_rad_top,       & ! [OUT]
+                          SFLX_rad_dn         ) ! [OUT]
 
-          do j = JS, JE
-          do i = IS, IE
-             flux_rad(KS-1,i,j,I_LW,I_up,2) = SFCFLX_LW_up(i,j)
-             flux_rad(KS-1,i,j,I_LW,I_dn,2) = SFLX_rad_dn (i,j,I_LW,I_direct ) &
-                                            + SFLX_rad_dn (i,j,I_LW,I_diffuse)
-             flux_rad(KS-1,i,j,I_SW,I_up,2) = SFCFLX_SW_up(i,j)
-             flux_rad(KS-1,i,j,I_SW,I_dn,2) = SFLX_rad_dn (i,j,I_SW,I_direct ) &
-                                            + SFLX_rad_dn (i,j,I_SW,I_diffuse)
-          enddo
-          enddo
-
-          flux_rad    (:,:,:,:,:,1) = 0.0_RP
-          flux_rad_top(:,:,:,:,:)   = 0.0_RP
-
-       else
-          call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
-                             REAL_CZ, REAL_FZ,   & ! [IN]
-                             LANDUSE_fact_ocean, & ! [IN]
-                             LANDUSE_fact_land,  & ! [IN]
-                             LANDUSE_fact_urban, & ! [IN]
-                             SFC_TEMP,           & ! [IN]
-                             SFC_albedo,         & ! [IN]
-                             solins, cosSZA,     & ! [IN]
-                             flux_rad,           & ! [OUT]
-                             flux_rad_top,       & ! [OUT]
-                             SFLX_rad_dn         ) ! [OUT]
-       endif
 
        ! apply radiative flux convergence -> heating rate
        call RD_heating( flux_rad (:,:,:,:,:,2), & ! [IN]
@@ -497,7 +449,7 @@ contains
        endif
 
        call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', nohalo=.true. )
-       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  nohalo=.true. )
+       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '1',    nohalo=.true. )
 
        call HIST_in( SFCFLX_LW_up_c(:,:), 'SFLX_LW_up_c',   'SFC upward   longwave  radiation flux (clr)', 'W/m2', nohalo=.true. )
        call HIST_in( SFCFLX_LW_dn_c(:,:), 'SFLX_LW_dn_c',   'SFC downward longwave  radiation flux (clr)', 'W/m2', nohalo=.true. )

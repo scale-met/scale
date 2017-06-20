@@ -233,7 +233,7 @@ contains
        call PRC_MPIstop
     end if
 
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TRACER_KAJINO13)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TRACER_KAJINO13)
 
     if( AE_CTG > ncat_max ) then
        write(*,*) 'xxx AE_CTG should be smaller than', ncat_max+1, 'stop'
@@ -469,7 +469,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_AE_KAJINO13. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_AE_KAJINO13)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_AE_KAJINO13)
 
     !--- now only the default setting is supported
 !    n_siz(1:n_ctg) = NSIZ(1:n_ctg)       ! number of size bins
@@ -2249,7 +2249,7 @@ contains
     implicit none
     real(RP), intent(out) :: Re  (KA,IA,JA,N_AE) ! effective radius
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)   ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: RH  (KA,IA,JA)      ! relative humidity         [0-1]
+    real(RP), intent(in)  :: RH  (KA,IA,JA)      ! relative humidity         (0-1)
     !---------------------------------------------------------------------------
 
     Re(:,:,:,:) = 0.0_RP
@@ -2263,7 +2263,7 @@ contains
     return
   end subroutine ATMOS_PHY_AE_kajino13_EffectiveRadius
 
-
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_AE_kajino13_mkinit( &
        QTRC, CCN, &
        DENS, RHOT, &
@@ -2283,65 +2283,61 @@ contains
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
 
-    real(RP), intent(out) :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(out) :: CCN(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(out)   :: CCN (KA,IA,JA)
+    real(RP), intent(in)    :: DENS(KA,IA,JA)
+    real(RP), intent(in)    :: RHOT(KA,IA,JA)
+    real(RP), intent(in)    :: m0_init             ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
+    real(RP), intent(in)    :: dg_init             ! initial number equivalen diameters of modes     [m]
+    real(RP), intent(in)    :: sg_init             ! initial standard deviation                      [-]
+    real(RP), intent(in)    :: d_min_inp(3)
+    real(RP), intent(in)    :: d_max_inp(3)
+    real(RP), intent(in)    :: k_min_inp(3)
+    real(RP), intent(in)    :: k_max_inp(3)
+    integer,  intent(in)    :: n_kap_inp(3)
 
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: m0_init ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
-    real(RP), intent(in) :: dg_init ! initial number equivalen diameters of modes     [m]
-    real(RP), intent(in) :: sg_init ! initial standard deviation                      [-]
+    integer,  parameter :: ia_m0  = 1             ! 1. number conc        [#/m3]
+    integer,  parameter :: ia_m2  = 2             ! 2. 2nd mom conc       [m2/m3]
+    integer,  parameter :: ia_m3  = 3             ! 3. 3rd mom conc       [m3/m3]
+    integer,  parameter :: ia_ms  = 4             ! 4. mass conc          [ug/m3]
+    integer,  parameter :: ia_kp  = 5
+    integer,  parameter :: ik_out = 1
 
-    real(RP), intent(in) :: d_min_inp(3)
-    real(RP), intent(in) :: d_max_inp(3)
-    real(RP), intent(in) :: k_min_inp(3)
-    real(RP), intent(in) :: k_max_inp(3)
-    integer,  intent(in) :: n_kap_inp(3)
-
-
-
-    integer, parameter ::  ia_m0  = 1             !1. number conc        [#/m3]
-    integer, parameter ::  ia_m2  = 2             !2. 2nd mom conc       [m2/m3]
-    integer, parameter ::  ia_m3  = 3             !3. 3rd mom conc       [m3/m3]
-    integer, parameter ::  ia_ms  = 4             !4. mass conc          [ug/m3]
-    integer, parameter ::  ia_kp  = 5
-    integer, parameter ::  ik_out  = 1
-
-
-    real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]
+    real(RP)            :: c_kappa     = 0.3_RP     ! hygroscopicity of condensable mass [-]
     real(RP), parameter :: cleannumber = 1.e-3_RP
-
     ! local variables
-    real(RP), parameter  :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
-    real(RP), parameter  :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
+    real(RP), parameter :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
+    real(RP), parameter :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
 
-    integer :: ia0, ik, is0, ic, k, i, j, it, iq
-    integer :: n_trans
+    integer  :: n_trans
     real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
-    real(RP),allocatable :: aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP),allocatable :: aerosol_activ(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP),allocatable :: emis_procs(:,:,:,:)    !(n_atr,n_siz_max,n_kap_max,n_ctg)
+    real(RP), allocatable :: aerosol_procs(:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
+    real(RP), allocatable :: aerosol_activ(:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
+    real(RP), allocatable :: emis_procs   (:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
     !--- gas
     real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
-    integer :: n_siz_max, n_kap_max, n_ctg
-!   integer, allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
-!   integer, allocatable :: ia_trans2procs(:) !trans to procs conversion
-!   integer, allocatable :: is_trans2procs(:) !trans to procs conversion
-!   integer, allocatable :: ik_trans2procs(:) !trans to procs conversion
-!   integer, allocatable :: ic_trans2procs(:)
-    !--- bin settings (lower bound, center, upper bound)
-    real(RP),allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
-    real(RP),allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
-    real(RP) :: dlogd, dk                                    !delta log(D), delta K
-    real(RP),allocatable :: d_min(:)              !lower bound of 1st size bin   (n_ctg)
-    real(RP),allocatable :: d_max(:)              !upper bound of last size bin  (n_ctg)
-    integer, allocatable :: n_kap(:)              !number of kappa bins          (n_ctg)
-    real(RP),allocatable :: k_min(:)              !lower bound of 1st kappa bin  (n_ctg)
-    real(RP),allocatable :: k_max(:)
+    integer  :: n_siz_max, n_kap_max, n_ctg
+!   integer,  allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
+!   integer,  allocatable :: ia_trans2procs(:) !trans to procs conversion
+!   integer,  allocatable :: is_trans2procs(:) !trans to procs conversion
+!   integer,  allocatable :: ik_trans2procs(:) !trans to procs conversion
+!   integer,  allocatable :: ic_trans2procs(:)
+    !--- bin  settings (lower bound, center, upper bound)
+    real(RP), allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
+    real(RP), allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
+    real(RP)  :: dlogd, dk                                    !delta log(D), delta K
+    real(RP), allocatable :: d_min(:)              !lower bound of 1st size bin   (n_ctg)
+    real(RP), allocatable :: d_max(:)              !upper bound of last size bin  (n_ctg)
+    integer,  allocatable :: n_kap(:)              !number of kappa bins          (n_ctg)
+    real(RP), allocatable :: k_min(:)              !lower bound of 1st kappa bin  (n_ctg)
+    real(RP), allocatable :: k_max(:)
 
     real(RP) :: pott, qdry, pres
     real(RP) :: temp, cpa, cva, qsat_tmp, ssliq, Rmoist
     real(RP) :: pi6
+
+    integer  :: ia0, ik, is0, ic, k, i, j, it, iq
+    !---------------------------------------------------------------------------
 
 
     pi6   = pi / 6._RP
@@ -2455,62 +2451,63 @@ contains
     enddo
     enddo
 
-    CCN(:,:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-
-       do k = KS, KE
-          pott = RHOT(k,i,j) / DENS(k,i,j)
-          CALC_QDRY(qdry, QTRC, TRACER_MASS, k, i, j, iq)
-          CALC_R(Rmoist, qdry, QTRC, k, i, j, iq, CONST_Rdry, TRACER_R)
-          CALC_CV(cva, qdry, QTRC, k, i, j, iq, CONST_CVdry, TRACER_CV)
-          CALC_CP(cpa, qdry, QTRC, k, i, j, iq, CONST_CPdry, TRACER_CP)
-          pres = CONST_PRE00 &
-                * ( DENS(k,i,j)*Rmoist*pott/CONST_PRE00 )**( cpa/cva )
-          temp = pres / ( DENS(k,i,j) * Rmoist )
-          !--- calculate super saturation of water
-          if ( I_QV > 0 ) then
-             call SATURATION_pres2qsat_liq( qsat_tmp,temp,pres )
-             ssliq = QTRC(k,i,j,I_QV)/qsat_tmp - 1.0_RP
-          else
-             ssliq = - 1.0_RP
-          end if
-          call aerosol_activation( &
-               c_kappa, ssliq, temp, ia_m0, ia_m2, ia_m3, &
-               N_ATR,n_siz_max,n_kap_max,n_ctg,NSIZ,n_kap, &
-               d_ct,aerosol_procs, aerosol_activ)
-
-         do is0 = 1, NSIZ(ic_mix)
-           CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
-         enddo
-
-       enddo
-
-    enddo
-    enddo
-
     conc_gas(:) = 0.0_RP
-    do k = KS, KE
-    do i = IS, IE
-    do j = JS, JE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        it = 0
        do ic  = 1, n_ctg    ! category
        do ik  = 1, NKAP(ic) ! kappa bin
        do is0 = 1, NSIZ(ic) ! size bin
        do ia0 = 1, N_ATR    ! attributes
+          QTRC(k,i,j,QAES+it) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
           it = it + 1
-          QTRC(k,i,j,QAES-1+it) = aerosol_procs(ia0,is0,ik,ic)/DENS(k,i,j) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
        enddo !ia0 (1:N_ATR )
        enddo !is (1:n_siz(ic)  )
        enddo !ik (1:n_kap(ic)  )
        enddo !ic (1:n_ctg      )
-       QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) = conc_gas(1:GAS_CTG)/DENS(k,i,j)*1.E-9_RP !mixing ratio [kg/kg]
+
+       do ic  = 1, GAS_CTG ! GAS category
+          QTRC(k,i,j,QAES+it) = conc_gas(ic) / DENS(k,i,j) * 1.E-9_RP !mixing ratio [kg/kg]
+          it = it + 1
+       enddo
+    enddo
+    enddo
+    enddo
+
+    CCN(:,:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       !--- calculate super saturation of water
+       if ( I_QV > 0 ) then
+          CALC_QDRY(qdry, QTRC, TRACER_MASS, k, i, j, iq)
+          CALC_R   (Rmoist, qdry, QTRC, k, i, j, iq, CONST_Rdry,  TRACER_R )
+          CALC_CV  (cva,    qdry, QTRC, k, i, j, iq, CONST_CVdry, TRACER_CV)
+          CALC_CP  (cpa,    qdry, QTRC, k, i, j, iq, CONST_CPdry, TRACER_CP)
+
+          pres = CONST_PRE00 * ( RHOT(k,i,j) * Rmoist / CONST_PRE00 )**(cpa/cva)
+          temp = pres / ( DENS(k,i,j) * Rmoist )
+
+          call SATURATION_pres2qsat_liq( qsat_tmp, temp, pres )
+
+          ssliq = QTRC(k,i,j,I_QV) / qsat_tmp - 1.0_RP
+       else
+          ssliq = -1.0_RP
+       endif
+
+       call aerosol_activation( c_kappa, ssliq, temp, ia_m0, ia_m2, ia_m3,       &
+                                N_ATR, n_siz_max, n_kap_max, n_ctg, NSIZ, n_kap, &
+                                d_ct, aerosol_procs, aerosol_activ               )
+
+       do is0 = 1, NSIZ(ic_mix)
+          CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
+       enddo
     enddo
     enddo
     enddo
 
     return
-
   end subroutine ATMOS_PHY_AE_kajino13_mkinit
 
 end module scale_atmos_phy_ae_kajino13

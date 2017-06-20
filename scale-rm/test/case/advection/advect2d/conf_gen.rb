@@ -76,10 +76,6 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, shape
  ATMOS_RESTART_OUT_BASENAME   = "init",
 /
 
-&PARAM_TRACER
- TRACER_TYPE = 'SN14',
-/
-
 &PARAM_ATMOS_VARS
  ATMOS_RESTART_OUTPUT         = .true.,
  ATMOS_RESTART_OUT_BASENAME   = "init",
@@ -170,10 +166,6 @@ def gen_run_conf( conf_name,
 &PARAM_STATISTICS
  STATISTICS_checktotal     = .false.,
  STATISTICS_use_globalcomm = .true.,
-/
-
-&PARAM_TRACER
- TRACER_TYPE = 'SN14',
 /
 
 &PARAM_CONST

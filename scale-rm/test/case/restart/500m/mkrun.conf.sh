@@ -117,10 +117,6 @@ do
  STATISTICS_use_globalcomm = .true.,
 /
 
-&PARAM_TRACER
- TRACER_TYPE = "TOMITA08",
-/
-
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "HEVI",
  ATMOS_PHY_MP_TYPE = "TOMITA08",

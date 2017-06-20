@@ -15,6 +15,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_rd_profile
   !-----------------------------------------------------------------------------
   !
@@ -176,7 +177,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_PROFILE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
     PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
@@ -581,7 +582,7 @@ contains
     real(RP), intent(out) :: cfc         (kmax,ncfc)  !< CFCs          volume mixing ratio [ppmv]
     real(RP), intent(out) :: aerosol_conc(kmax,naero) !< cloud/aerosol volume mixing ratio [ppmv]
     real(RP), intent(out) :: aerosol_radi(kmax,naero) !< cloud/aerosol effective radius    [cm]
-    real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    [0-1]
+    real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    (0-1)
 
     real(RP) :: lat     !< used lat
     integer  :: date(6) !< used date
@@ -1074,6 +1075,9 @@ contains
     integer  :: i1, i2
     !---------------------------------------------------------------------------
 
+    !$omp parallel do default(none)          &
+    !$omp shared(imax1,x2,x1,y2,y1,imax2) &
+    !$omp private(i1,fact,i2) OMP_SCHEDULE_
     do i2 = 1, imax2
 
        if ( x2(i2) > x1(1) ) then ! extrapolation

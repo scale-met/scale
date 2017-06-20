@@ -1,36 +1,37 @@
 %-------------------------------------------------------%
-\section{実験セットの準備} \label{sec:tutrial_real_prep}
+\section{Preparation for experiment set} \label{sec:tutrial_real_prep}
 %-------------------------------------------------------%
 
-現実大気実験は、理想実験よりも実行手続きや必要なファイルが多く、
-プレ処理\verb|pp|、初期値作成\verb|init|、シミュレーション実行\verb|run|
-で使用する設定ファイル(\verb|***.conf|)内の実験設定を統一する必要がある。
-準備段階でのファイルの不足や設定の不一致はモデルが正常に動かない原因となる。
-これを回避するため、現実実験の実行に必要なファイル一式を用意するためのツール
-「実験セット一式作成ツール」が用意されている。
-まずはじめに、
-以下のディレクトリに移動し、
-次の手続きにより現実大気実験チュートリアルのためのファイル一式を用意する。
-\begin{alltt}
+In the real atmospheric experiment,
+many execution procedures and a large number of files are needed in comparison with the ideal experiment.
+In addition, it is necessary to maintain consistency between settings in the configuration file (\verb|***.conf|)
+between pre-processing \verb|pp|, initial value making \verb|init|, and simulation execution \verb|run|.
+The inconsistency between these settings and the lack of files in the preparation step may cause an abnormal model run.
+To avoid such situations, the tool "the making tool for the complete settings of the experiment"
+is prepared for the generation of a set of necessary files.
+You first move to the following directory and prepare a series of files for the tutorial for the real atmospheric experiment using the next procedure:
+\begin{verbatim}
  $ cd ${Tutorial_DIR}/real/
  $ ls
-    Makefile : 実験セット一式作成のためのMakefile
-    README   : 実験セット一式作成ツールに関するREADME
-    USER.sh  : 実験設定の記述
-    config/  : 実験セット一式作成つーつのためのファイル(ユーザは基本書き換えない)
-    sample/  : サンプル USER.sh スクリプト
-    data/    : チュートリアルのためのツール類
-    tools/   : チュートリアル用の入力大気データ用意のためのツール（基本各自で準備）
+    Makefile : Makefile for generation of a set of necessary files.
+    README   : README related to use of the script
+    USER.sh  : Description of experimental setting.
+    config/  : Each of configurations for generation of a set of files
+               ( basically, unnecessary for users to be rewritten)
+    sample/  : sample script of USERS.sh
+    data/    : tools for the tutorial
+    tools/   : tools for initial condition used in the tutorial 
+               (basically, users do it themselves except for the tutorial case)
  $ make
- $ ls experiment/    : make により追加
+ $ ls experiment/    : directories added by the above make command
     init/
     net2g/
     pp/
     run/
-\end{alltt}
-\verb|make|を実行すると、\verb|USER.sh|に記述された設定に従って、
-\verb|experiment|ディレクトリの下に実験セットが作成される。
-実験セット一式準備ツールに関する詳しい説明については、第\ref{sec:basic_makeconf}節を参照いただきたい。
-なお、\verb|sample|ディレクトリにはネスティングの際に利用できるファイルが用意されており、
-必要に応じて参考にされたい。
+\end{verbatim}
+
+According to the settings described in \verb|USER.sh|,
+an experiment set is generated under the directory \verb|experiment| when the make command is executed.
+Refer to Section \ref{sec:basic_makeconf} for a detailed explanation of "the making tool for the complete settings of the experiment."
+%Further, in case of nesting, the available files are prepared for the directory \verb|sample|. Referred to them if needed.
 

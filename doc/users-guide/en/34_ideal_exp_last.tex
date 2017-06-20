@@ -1,17 +1,7 @@
-\section{この章の最後に} \label{sec:ideal_exp_last}
+\section{Guideline for further study} \label{sec:ideal_exp_last}
 
-本章では、スコールラインの理想実験を例に、SCALEの実行方法について説明した。
-次ステップとして、
-解像度や計算領域、MPIプロセス数の変更
-放射過程や乱流過程、雲微物理スキームといった物理過程の変更を
-試すことをお勧めする。
-これらの変更方法は、第\ref{chap:basic_usel}章に記載されている。
+In this chapter,
+the method for the execution of \scalerm was explained by using a simple ideal experiment. We recommend studying methods of changing the model resolution, the calculation domain, and the number of MPI processes for further study.  With regard to the ideal experiment, several files of other configurations,  e.g., to increase resolution, the number of domains, and the physical scheme, are prepared in the directory ``sample'' under the same directory as was used in this experiment.  These configuration files are useful to change such configurations.  Moreover, various ideal experimental settings  have been prepared in the directory ``\verb|scale-rm/test/case|.'' For some ideal experiments,  it may be necessary to carry out the ``make'' command again in the same directory as in the configuration file  because some test cases need special source codes according to their experimental settings. The procedures for the generation of the initial conditions and those for simulation execution are the same as in the tutorial in this chapter.
 
-このスコールラインの理想実験については、
-同じディレクトリ下の``sample''ディレクトリ内に、
-解像度設定、領域設定、使用する物理スキームについて変更を加えた設定ファイルのサンプルが用意されているので、
-これらも参考となる。
-また、SCALEには各種理想実験セットが``\verb|scale-rm/test/case|''以下に複数用意されている。
-実験設定によってはテストケースに特化したソースコードの入れ替えを行っている場合があるため、
-これらの理想実験セットでは設定ファイルのあるディレクトリでmakeコマンドを実行する必要がある。
-初期値作成と実行の手順は基本的に本章のチュートリアルと同じである。
+It is important to study the method for the configuration of physical processes, such as cloud microphysics, radiation, and turbulence schemes. Methods to alter them in detail are described in Chapter \ref{chap:basic_usel}.
+

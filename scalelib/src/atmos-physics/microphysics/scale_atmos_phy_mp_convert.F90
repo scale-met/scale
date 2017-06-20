@@ -183,7 +183,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_BIN2BULK. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_BIN2BULK)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_BIN2BULK)
 
     if( trim(MP_TYPE_INNER) /= "SUZUKI10" ) then
        write(*,*) 'xxx MP_TYPE_INNER should be SUZUKI10 Check!'

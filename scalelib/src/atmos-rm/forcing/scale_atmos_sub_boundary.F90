@@ -16,6 +16,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_boundary
   !-----------------------------------------------------------------------------
   !
@@ -57,12 +58,12 @@ module scale_atmos_boundary
   real(RP), public, allocatable :: ATMOS_BOUNDARY_POTT(:,:,:)   !> reference POTT (with HALO)
   real(RP), public, allocatable :: ATMOS_BOUNDARY_QTRC(:,:,:,:) !> reference QTRC (with HALO)
 
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_DENS(:,:,:)   !> damping coefficient for DENS [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELZ(:,:,:)   !> damping coefficient for VELZ [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELX(:,:,:)   !> damping coefficient for VELX [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELY(:,:,:)   !> damping coefficient for VELY [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_POTT(:,:,:)   !> damping coefficient for POTT [0-1]
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_QTRC(:,:,:,:) !> damping coefficient for QTRC [0-1]
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_DENS(:,:,:)   !> damping coefficient for DENS (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELZ(:,:,:)   !> damping coefficient for VELZ (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELX(:,:,:)   !> damping coefficient for VELX (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_VELY(:,:,:)   !> damping coefficient for VELY (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_POTT(:,:,:)   !> damping coefficient for POTT (0-1)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha_QTRC(:,:,:,:) !> damping coefficient for QTRC (0-1)
 
 
   real(RP), public              :: ATMOS_BOUNDARY_SMOOTHER_FACT  =  0.2_RP ! fact for smoother to damping
@@ -153,9 +154,9 @@ module scale_atmos_boundary
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_POTT = 1.0_RP ! alpha factor again default
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_QTRC = 1.0_RP ! alpha factor again default
 
-  real(RP),              private :: ATMOS_BOUNDARY_FRACZ        =   1.0_RP ! fraction of boundary region for dumping (z) [0-1]
-  real(RP),              private :: ATMOS_BOUNDARY_FRACX        =   1.0_RP ! fraction of boundary region for dumping (x) [0-1]
-  real(RP),              private :: ATMOS_BOUNDARY_FRACY        =   1.0_RP ! fraction of boundary region for dumping (y) [0-1]
+  real(RP),              private :: ATMOS_BOUNDARY_FRACZ        =   1.0_RP ! fraction of boundary region for dumping (z) (0-1)
+  real(RP),              private :: ATMOS_BOUNDARY_FRACX        =   1.0_RP ! fraction of boundary region for dumping (x) (0-1)
+  real(RP),              private :: ATMOS_BOUNDARY_FRACY        =   1.0_RP ! fraction of boundary region for dumping (y) (0-1)
   real(RP),              private :: ATMOS_BOUNDARY_tauz                    ! maximum value for damping tau (z) [s]
   real(RP),              private :: ATMOS_BOUNDARY_taux                    ! maximum value for damping tau (x) [s]
   real(RP),              private :: ATMOS_BOUNDARY_tauy                    ! maximum value for damping tau (y) [s]
@@ -173,6 +174,8 @@ module scale_atmos_boundary
   character(len=H_LONG), private :: ATMOS_BOUNDARY_interp_TYPE = 'lerp_initpoint' ! type of boundary interporation
 
   integer,               private :: ATMOS_BOUNDARY_START_DATE(6) = (/ -9999, 0, 0, 0, 0, 0 /) ! boundary initial date
+
+  integer,               private :: ATMOS_BOUNDARY_fid = -1
 
   integer,               private :: now_step
   integer,               private :: boundary_timestep = 0
@@ -270,7 +273,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_BOUNDARY. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_BOUNDARY)
 
     ! setting switches
     if( .NOT. USE_NESTING ) then
@@ -647,6 +650,10 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
+    !$omp parallel do default(none) private(i,j,iq) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,ATMOS_BOUNDARY_ref_DENS,ref_idx,ATMOS_BOUNDARY_ref_VELZ) &
+    !$omp shared(ATMOS_BOUNDARY_ref_VELX,ATMOS_BOUNDARY_ref_VELY,ATMOS_BOUNDARY_ref_POTT) &
+    !$omp shared(KA,KS,BND_QA,ATMOS_BOUNDARY_ref_QTRC,KE)
     do j = JSB, JEB
     do i = ISB, IEB
        ATMOS_BOUNDARY_ref_DENS(   1:KS-1,i,j,ref_idx) = ATMOS_BOUNDARY_ref_DENS(KS,i,j,ref_idx)
@@ -738,6 +745,18 @@ contains
        coef_y = 1.0_RP / ATMOS_BOUNDARY_tauy
     endif
 
+    !$omp parallel do default(none) &
+    !$omp shared(JA,IA,KA,CBFZ,ATMOS_BOUNDARY_FRACZ,FBFZ,ATMOS_BOUNDARY_LINEAR_V,coef_z,CBFX)            &
+    !$omp shared(ATMOS_BOUNDARY_FRACX,PI,FBFX,ATMOS_BOUNDARY_LINEAR_H,coef_x)     &
+    !$omp shared(ATMOS_BOUNDARY_EXP_H,CBFY,ATMOS_BOUNDARY_FRACY,FBFY,coef_y,l_bnd)     &
+    !$omp shared(do_daughter_process,ONLINE_USE_VELZ,ATMOS_BOUNDARY_USE_VELZ,ATMOS_BOUNDARY_alpha_VELZ)  &
+    !$omp shared(ATMOS_BOUNDARY_ALPHAFACT_VELZ,ATMOS_BOUNDARY_USE_DENS,ATMOS_BOUNDARY_alpha_DENS)        &
+    !$omp shared(ATMOS_BOUNDARY_ALPHAFACT_DENS,ATMOS_BOUNDARY_USE_VELX,ATMOS_BOUNDARY_alpha_VELX)        &
+    !$omp shared(ATMOS_BOUNDARY_USE_VELY,ATMOS_BOUNDARY_alpha_VELY,ATMOS_BOUNDARY_ALPHAFACT_VELY)        &
+    !$omp shared(ATMOS_BOUNDARY_USE_POTT,ATMOS_BOUNDARY_alpha_POTT,ATMOS_BOUNDARY_ALPHAFACT_POTT)        &
+    !$omp shared(ATMOS_BOUNDARY_USE_QV,ATMOS_BOUNDARY_alpha_QTRC,ATMOS_BOUNDARY_ALPHAFACT_QTRC)          &
+    !$omp shared(ATMOS_BOUNDARY_USE_QHYD,BND_QA,ATMOS_BOUNDARY_ALPHAFACT_VELX) &
+    !$omp private(i,j,k,ee1,ee2,alpha_z1,alpha_z2,alpha_x1,alpha_x2,alpha_y1,alpha_y2,iq) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -1211,6 +1230,9 @@ contains
        CALENDAR_date2char
     use scale_time, only: &
        TIME_NOWDATE
+    use scale_fileio, only: &
+       FILEIO_open, &
+       FILEIO_check_coordinates
     implicit none
 
     integer           :: boundary_time_startday
@@ -1240,6 +1262,12 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** BOUNDARY START Date     : ', boundary_chardate
 
+    call FILEIO_open( ATMOS_BOUNDARY_fid, ATMOS_BOUNDARY_IN_BASENAME )
+
+    if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
+       call FILEIO_check_coordinates( ATMOS_BOUNDARY_fid, atmos=.true. )
+    end if
+
     return
   end subroutine ATMOS_BOUNDARY_initialize_file
 
@@ -1258,12 +1286,12 @@ contains
        CALENDAR_combine_daysec
     implicit none
 
-    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS [0-1]
-    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ [0-1]
-    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX [0-1]
-    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY [0-1]
-    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT [0-1]
-    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC [0-1]
+    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS (0-1)
+    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ (0-1)
+    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX (0-1)
+    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY (0-1)
+    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT (0-1)
+    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC (0-1)
 
     integer  :: run_time_startdate(6)
     integer  :: run_time_startday
@@ -1276,12 +1304,8 @@ contains
     real(RP) :: boundary_inc_offset
     integer  :: fillgaps_steps
 
-    character(len=H_LONG) :: bname
-
     integer  :: i, j, k, iq, n
     !---------------------------------------------------------------------------
-
-    bname = ATMOS_BOUNDARY_IN_BASENAME
 
     if ( ATMOS_BOUNDARY_UPDATE_DT <= 0.0_DP ) then
        write(*,*) 'xxx You need specify ATMOS_BOUNDARY_UPDATE_DT as larger than 0.0'
@@ -1322,6 +1346,9 @@ contains
     call ATMOS_BOUNDARY_update_file( ref_new )
 
     ! copy now to old
+    !$omp parallel do default(none) private(i,j,k,iq) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KA,ATMOS_BOUNDARY_ref_DENS,ref_old,ref_now,ATMOS_BOUNDARY_ref_VELX) &
+    !$omp shared(ATMOS_BOUNDARY_ref_VELY,ATMOS_BOUNDARY_ref_POTT,BND_QA,ATMOS_BOUNDARY_ref_QTRC)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -1542,6 +1569,8 @@ contains
        NEST_COMM_recvwait_issue, &
        NEST_COMM_recv_cancel,    &
        NESTQA => NEST_BND_QA
+    use scale_fileio, only: &
+       FILEIO_close
     implicit none
 
     ! works
@@ -1557,6 +1586,11 @@ contains
        handle = 2
        call NEST_COMM_recv_cancel( handle )
     endif
+
+    if ( ATMOS_BOUNDARY_fid > 0 ) then
+       call FILEIO_close( ATMOS_BOUNDARY_fid )
+       ATMOS_BOUNDARY_fid = -1
+    end if
 
     return
   end subroutine ATMOS_BOUNDARY_finalize
@@ -1586,12 +1620,12 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
-    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS [0-1]
-    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ [0-1]
-    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX [0-1]
-    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY [0-1]
-    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT [0-1]
-    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC [0-1]
+    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS (0-1)
+    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ (0-1)
+    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX (0-1)
+    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY (0-1)
+    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT (0-1)
+    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC (0-1)
 
     integer :: handle
     integer :: i, j, k, iq, iqa
@@ -1656,6 +1690,10 @@ contains
 
        ! fill HALO in western region
        if ( .NOT. PRC_HAS_W ) then
+          !$omp parallel do default(none)                                               &
+          !$omp shared(JS,IS,KA,DENS,ATMOS_BOUNDARY_DENS,MOMX,ATMOS_BOUNDARY_VELX,RHOT) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA,JA)    &
+          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
           do i = 1, IS-1
           do k = 1, KA
@@ -1712,6 +1750,10 @@ contains
 
        ! fill HALO in eastern region
        if ( .NOT. PRC_HAS_E ) then
+          !$omp parallel do default(none)                                             &
+          !$omp shared(JA,IE,IA,KA,DENS,ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX,RHOT) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)  &
+          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
           do i = IE+1, IA
           do k = 1, KA
@@ -1779,6 +1821,10 @@ contains
 
        ! fill HALO in southern region
        if ( .NOT. PRC_HAS_S ) then
+          !$omp parallel do default(none)                                               &
+          !$omp shared(JS,IA,KA,DENS,ATMOS_BOUNDARY_DENS,MOMY,ATMOS_BOUNDARY_VELY,RHOT) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)    &
+          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
           do j = 1, JS-1
           do i = 1, IA
           do k = 1, KA
@@ -1835,6 +1881,10 @@ contains
 
        ! fill HALO in northern region
        if ( .NOT. PRC_HAS_N ) then
+          !$omp parallel do default(none)                                             &
+          !$omp shared(JE,JA,IA,KA,DENS,ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELY,RHOT) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)  &
+          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
           do j = JE+1, JA
           do i = 1, IA
           do k = 1, KA
@@ -1933,10 +1983,7 @@ contains
     use scale_process, only: &
        PRC_myrank
     use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_check_coordinates, &
-       FILEIO_read, &
-       FILEIO_close
+       FILEIO_read
     use scale_atmos_phy_mp, only: &
        AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
@@ -1944,18 +1991,12 @@ contains
     integer, intent(in) :: ref
     real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
 
-    character(len=H_LONG) :: bname
-
     integer :: fid, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
 
-    call FILEIO_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
-
-    if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
-       call FILEIO_check_coordinates( fid, atmos=.true. )
-    end if
+    fid = ATMOS_BOUNDARY_fid
 
     call FILEIO_read( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), fid, 'DENS', 'ZXY', boundary_timestep )
     call FILEIO_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXY', boundary_timestep )
@@ -1964,8 +2005,6 @@ contains
     do iq = 1, BND_QA
        call FILEIO_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, AQ_NAME(iq), 'ZXY', boundary_timestep )
     end do
-
-    call FILEIO_close( fid )
 
     ! fill HALO in reference
     call ATMOS_BOUNDARY_ref_fillhalo( ref )
@@ -2285,6 +2324,10 @@ contains
 
     fact = REAL(now_step, kind=RP) / update_step
 
+    !$omp parallel do default(none) private(i,j,k,iq) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KA,bnd_DENS,ATMOS_BOUNDARY_ref_DENS,ref_now,fact,ref_new,bnd_VELZ) &
+    !$omp shared(ATMOS_BOUNDARY_ref_VELZ,bnd_VELX,ATMOS_BOUNDARY_ref_VELX,bnd_VELY) &
+    !$omp shared(ATMOS_BOUNDARY_ref_VELY,bnd_POTT,ATMOS_BOUNDARY_ref_POTT,BND_QA,bnd_QTRC,ATMOS_BOUNDARY_ref_QTRC)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA

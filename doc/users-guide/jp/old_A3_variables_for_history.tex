@@ -41,7 +41,7 @@
  \begin{tabularx}{150mm}{|l|X|c|} \hline
  \rowcolor[gray]{0.9} Item/Variable & Description  & Unit \\ \hline
   \verb|SOLINS| & solar insolation & $W/m2$ \\\hline
-  \verb|COSZ| & cos(solar zenith angle) & $0-1$ \\\hline
+  \verb|COSZ| & cos(solar zenith angle) & $1$ \\\hline
   \verb|SFLX_LW_up| & SFC upward longwave radiation flux    & $W/m2$ \\\hline
   \verb|SFLX_LW_dn| & SFC downward longwave radiation flux  & $W/m2$ \\\hline
   \verb|SFLX_SW_up| & SFC upward shortwave radiation flux   & $W/m2$ \\\hline
@@ -72,8 +72,8 @@
   \verb|SFC_DENS| & surface atmospheric density & $kg/m3$ \\\hline
   \verb|SFC_PRES| & surface atmospheric pressure & $Pa$ \\\hline
   \verb|SFC_TEMP| & surface skin temperature (merged) & $K$ \\\hline
-  \verb|SFC_ALB_LW| & surface albedo (longwave,merged) & $0-1$ \\\hline
-  \verb|SFC_ALB_SW| & surface albedo (shortwave,merged) & $0-1$ \\\hline
+  \verb|SFC_ALB_LW| & surface albedo (longwave,merged) & $1$ \\\hline
+  \verb|SFC_ALB_SW| & surface albedo (shortwave,merged) & $1$ \\\hline
   \verb|SFC_Z0M| & roughness length (momentum) & $m$ \\\hline
   \verb|SFC_Z0H| & roughness length (heat) & $m$ \\\hline
   \verb|SFC_Z0E| & roughness length (vapor) & $m$ \\\hline
@@ -212,8 +212,8 @@
   \verb|LAND_TEMP_t|      & tendency of LAND\_TEMP     & $K$ \\\hline
   \verb|LAND_WATER_t|     & tendency of LAND\_WATER    & $m3/m3$ \\\hline
   \verb|LAND_SFC_TEMP_t|  & tendency of LAND\_SFC\_TEMP & $K$  \\\hline
-  \verb|LAND_ALB_LW_t|    & tendency of LAND\_ALB\_LW   & $0-1$  \\\hline
-  \verb|LAND_ALB_SW_t|    & tendency of LAND\_ALB\_SW   & $0-1$  \\\hline
+  \verb|LAND_ALB_LW_t|    & tendency of LAND\_ALB\_LW   & $1$  \\\hline
+  \verb|LAND_ALB_SW_t|    & tendency of LAND\_ALB\_SW   & $1$  \\\hline
   \verb|LP_WaterLimit|    & LAND PROPERTY  maximum  soil moisture           & $m3/m3$  \\\hline
   \verb|LP_WaterCritical| & LAND PROPERTY  critical soil moisture           & $m3/m3$  \\\hline
   \verb|LP_ThermalCond|   & LAND PROPERTY  thermal conductivity for soil    & $W/K/m$  \\\hline
@@ -230,8 +230,8 @@
   \verb|LAND_TEMP|       & temperature at each soil layer   &  $K$      \\\hline
   \verb|LAND_WATER|      & moisture at each soil layer      &  $m3/m3$  \\\hline
   \verb|LAND_SFC_TEMP|   & land surface skin temperature    &  $K$      \\\hline
-  \verb|LAND_ALB_LW|     & land surface albedo (longwave)   &  $0-1$    \\\hline
-  \verb|LAND_ALB_SW|     & land surface albedo (shortwave)  &  $0-1$    \\\hline
+  \verb|LAND_ALB_LW|     & land surface albedo (longwave)   &  $1$    \\\hline
+  \verb|LAND_ALB_SW|     & land surface albedo (shortwave)  &  $1$    \\\hline
   \verb|LAND_SFLX_MW|    & land surface w-momentum flux     &  $kg/m2/s$ \\\hline
   \verb|LAND_SFLX_MU|    & land surface u-momentum flux     &  $kg/m2/s$ \\\hline
   \verb|LAND_SFLX_MV|    & land surface v-momentum flux     &  $kg/m2/s$ \\\hline
@@ -246,8 +246,8 @@
  \rowcolor[gray]{0.9} Item/Variable & Description  & Unit \\\hline
   \verb|OCEAN_TEMP_t|     & tendency of OCEAN\_TEMP     & $K$ \\\hline
   \verb|OCEAN_SFC_TEMP_t| & tendency of OCEAN\_SFC\_TEMP & $K$ \\\hline
-  \verb|OCEAN_ALB_LW_t|   & tendency of OCEAN\_ALB\_LW   & $0-1$ \\\hline
-  \verb|OCEAN_ALB_SW_t|   & tendency of OCEAN\_ALB\_SW   & $0-1$ \\\hline
+  \verb|OCEAN_ALB_LW_t|   & tendency of OCEAN\_ALB\_LW   & $1$ \\\hline
+  \verb|OCEAN_ALB_SW_t|   & tendency of OCEAN\_ALB\_SW   & $1$ \\\hline
   \verb|OCEAN_SFC_Z0M_t|  & tendency of OCEAN\_SFC\_Z0M  & $m$ \\\hline
   \verb|OCEAN_SFC_Z0H_t|  & tendency of OCEAN\_SFC\_Z0H  & $m$ \\\hline
   \verb|OCEAN_SFC_Z0E_t|  & tendency of OCEAN\_SFC\_Z0E  & $m$ \\\hline
@@ -258,8 +258,8 @@
  \rowcolor[gray]{0.9} Item/Variable & Description  & Unit \\\hline
   \verb|OCEAN_TEMP|      & temperature at uppermost ocean layer & $K$ \\\hline
   \verb|OCEAN_SFC_TEMP|  & ocean surface skin temperature       & $K$ \\\hline
-  \verb|OCEAN_ALB_LW|    & ocean surface albedo (longwave)      & $0-1$ \\\hline
-  \verb|OCEAN_ALB_SW|    & ocean surface albedo (shortwave)     & $0-1$ \\\hline
+  \verb|OCEAN_ALB_LW|    & ocean surface albedo (longwave)      & $1$ \\\hline
+  \verb|OCEAN_ALB_SW|    & ocean surface albedo (shortwave)     & $1$ \\\hline
   \verb|OCEAN_SFC_Z0M|   & ocean surface roughness length (momentum) & $m$ \\\hline
   \verb|OCEAN_SFC_Z0H|   & ocean surface roughness length (heat)     & $m$ \\\hline
   \verb|OCEAN_SFC_Z0E|   & ocean surface roughness length (vapor)    & $m$ \\\hline
@@ -307,8 +307,8 @@
   \verb|URBAN_RAING| & urban rain strage on road          & $kg/m2$ \\\hline
   \verb|URBAN_ROFF|  & urban runoff                       & $kg/m2$ \\\hline
   \verb|URBAN_SFC_TEMP| & urban grid average of temperature  & $K$ \\\hline
-  \verb|URBAN_ALB_LW|   & urban grid average of albedo LW    & $0-1$ \\\hline
-  \verb|URBAN_ALB_SW|   & urban grid average of albedo SW    & $0-1$ \\\hline
+  \verb|URBAN_ALB_LW|   & urban grid average of albedo LW    & $1$ \\\hline
+  \verb|URBAN_ALB_SW|   & urban grid average of albedo SW    & $1$ \\\hline
   \verb|URBAN_SFLX_MW|  & urban grid average of w-momentum flux    & $kg/m2/s$ \\\hline
   \verb|URBAN_SFLX_MU|  & urban grid average of u-momentum flux    & $kg/m2/s$ \\\hline
   \verb|URBAN_SFLX_MV|  & urban grid average of v-momentum flux    & $kg/m2/s$ \\\hline

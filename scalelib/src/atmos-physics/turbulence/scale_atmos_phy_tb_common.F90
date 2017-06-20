@@ -11,6 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_tb_common
   !-----------------------------------------------------------------------------
   !
@@ -245,7 +246,9 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-
+    !$omp parallel do default(none)                   &
+    !$omp shared(JS,JE,IS,IE,KS,KE,MOMY,DENS,VELY_ZX) &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-2, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -1160,6 +1163,9 @@ contains
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
 #endif
        ! (cell center)
+       !$omp parallel do default(none)                                            &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,S11_C,S22_C,S33_C,S31_C,S12_C,S23_C,S2) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -1245,6 +1251,9 @@ contains
     integer :: k, i, j
 
     ! (x-y plane; x,y,w)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,PHI,qflx_phi,GSQRT,I_XYW,RFDZ,J33G) &
+    !$omp shared(FDZ)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -1279,6 +1288,9 @@ contains
 #endif
 
     ! (y-z plane; u,y,z)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,PHI,qflx_phi,GSQRT,I_XYZ,RFDX,J13G,I_UYZ) &
+    !$omp shared(FDZ)
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS+1,  KE-1
@@ -1344,6 +1356,10 @@ contains
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     ! (z-x plane; x,v,z)
+    !$omp parallel do default(none)                                                          &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,Kh,PHI,RFDY,DENS,qflx_phi,GSQRT,I_XYZ,J23G,I_XVZ,FDZ) &
+    !$omp shared(MAPF,I_XV)                                                                  &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS-1, JJE
     do i = IIS,   IIE
     do k = KS+1,  KE-1
@@ -1520,6 +1536,10 @@ contains
 
     integer :: k, i, j
 
+    !$omp parallel do default(none)                                                          &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,MOMZ_t_TB,GSQRT,I_UYW,I_XVW,QFLX_MOMZ,RCDX,MAPF,I_XY) &
+    !$omp shared(RCDY,J13G,I_XYZ,J23G,CDZ,J33G,RFDZ,I_XYW)                                   &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
@@ -1609,6 +1629,10 @@ contains
 
     integer :: k, i, j
 
+    !$omp parallel do default(none)                                                          &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,MOMX_t_TB,GSQRT,I_UVZ,I_XYZ,QFLX_MOMX,RFDX,MAPF,I_UY) &
+    !$omp shared(RCDY,J13G,I_UYW,J23G,FDZ,J33G,RCDZ,I_UYZ)                                   &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
@@ -1697,6 +1721,10 @@ contains
 
     integer :: k, i, j
 
+    !$omp parallel do default(none)                                                          &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,MOMY_t_TB,GSQRT,I_UVZ,I_XYZ,QFLX_MOMY,RCDX,MAPF,I_XV) &
+    !$omp shared(RFDY,J13G,I_XVW,J23G,FDZ,J33G,RCDZ)                                         &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
@@ -1787,6 +1815,9 @@ contains
 
     integer :: k, i, j
 
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,phi_t_TB,GSQRT,I_UYZ,QFLX_phi,I_UVZ,RCDX,MAPF,I_XY) &
+    !$omp shared(I_XVZ,J13G,I_XYW,J23G,FDZ,J33G,RCDZ,I_XYZ,RCDY)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1

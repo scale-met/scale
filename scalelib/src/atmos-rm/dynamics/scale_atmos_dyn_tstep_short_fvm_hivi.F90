@@ -25,7 +25,7 @@ module scale_atmos_dyn_tstep_short_fvm_hivi
   use scale_grid_index
   use scale_index
   use scale_tracer
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -143,7 +143,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_TSTEP_FVM_HIVI. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
 
     if ( RP == DP ) then
        mtype = MPI_DOUBLE_PRECISION
@@ -350,6 +350,21 @@ contains
     B(:,:,:) = UNDEF
     r(:,:,:) = UNDEF
     p(:,:,:) = UNDEF
+#endif
+
+#ifdef QUICKDEBUG
+    DENS_RK(   1:KS-1,:,:)   = UNDEF
+    DENS_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMZ_RK(   1:KS-1,:,:)   = UNDEF
+    MOMZ_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMX_RK(   1:KS-1,:,:)   = UNDEF
+    MOMX_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMY_RK(   1:KS-1,:,:)   = UNDEF
+    MOMY_RK(KE+1:KA  ,:,:)   = UNDEF
+    RHOT_RK(   1:KS-1,:,:)   = UNDEF
+    RHOT_RK(KE+1:KA  ,:,:)   = UNDEF
+    PROG_RK(   1:KS-1,:,:,:) = UNDEF
+    PROG_RK(KE+1:KA  ,:,:,:) = UNDEF
 #endif
 
     rdt = 1.0_RP / dtrk
@@ -1188,7 +1203,7 @@ contains
        !##### momentum equation (z) #####
 
        !--- update momentum(z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -1236,7 +1251,7 @@ contains
        !##### momentum equation (x) #####
 
        !--- update momentum(x)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -1267,7 +1282,7 @@ contains
        !##### momentum equation (y) #####
 
        !--- update momentum(y)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS, IIE
        do k = KS, KE

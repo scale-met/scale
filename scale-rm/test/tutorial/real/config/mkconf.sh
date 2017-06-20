@@ -87,13 +87,6 @@ if [ ${NUM_DOMAIN} -ne ${#COPYTOPO[*]} ];    then echo "Error: Wrong array size 
 #
 #################################################
 
-# use nesting or not
-if [ ${NUM_DOMAIN} -eq 1 ]; then
-  RUN_USE_NESTING=".false."
-else
-  RUN_USE_NESTING=".true."
-fi
-
 # set formatted date
 YEAR=`printf '%1.f' ${RUN_DATE_YEAR}`
 MON=`printf '%1.f' ${RUN_DATE_MON}`
@@ -232,7 +225,6 @@ do
   NET2G_3D_IO_LOG_BASENAME="net2g_3D_LOG_d${FNUM}"
 
   # copy parameters
-  PP_USE_NESTING="${COPYTOPO[$D]}"
   ATMOS_BOUNDARY_START_DATE="${TIME_BND_STARTDATE}"
 
   # set nesting parameters
@@ -243,20 +235,15 @@ do
   fi
   if [ $DNUM -gt 1 ]; then
     IAM_DAUGHTER=".true."
+    PARENT_BASENAME=${COPYTOPO_IN_BASENAME}
     PARENT_PRC_NUM_X=${PRC_NUM_X[$PD]}
     PARENT_PRC_NUM_Y=${PRC_NUM_Y[$PD]}
-    PARENT_KMAX=${KMAX[$PD]}
-    PARENT_IMAX=${IMAX[$PD]}
-    PARENT_JMAX=${JMAX[$PD]}
   else
     IAM_DAUGHTER=".false."
+    PARENT_BASENAME=""
     PARENT_PRC_NUM_X=0
     PARENT_PRC_NUM_Y=0
-    PARENT_KMAX=0
-    PARENT_IMAX=0
-    PARENT_JMAX=0
   fi
-  PARENT_LKMAX=${LKMAX}
 
   # set boundary parameters
   if [ $DNUM -gt 1 ]; then

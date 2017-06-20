@@ -29,8 +29,7 @@ FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Nquickdbg -NRtrap
 
 FFLAGS_DEBUG = -O0                                                       \
                -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
-               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global        \
-               -DDEBUG
+               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global
 
 
 
@@ -86,8 +85,9 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 # Default settings
-NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
-NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+NETCDF_INCLUDE ?= -I/opt/aics/scale/include -I/opt/aics/netcdf/k-serial-noszip/include
+NETCDF_LIBS    ?= -L/opt/aics/scale/lib -L/opt/aics/netcdf/k-serial-noszip/lib-static -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+ENABLE_PNETCDF ?= T
 # Or, please set environment variable
 # example:
 # export NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"

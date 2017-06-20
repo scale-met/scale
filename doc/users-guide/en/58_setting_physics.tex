@@ -1,647 +1,442 @@
-\section{\SecBasicPhysicsSetting} \label{sec:basic_usel_physics}
+\section{Setting the physical process} \label{sec:basic_usel_physics}
 %------------------------------------------------------
 
-\subsection{\SubsecMicrophysicsSetting} \label{subsec:basic_usel_microphys}
+\subsection{Cloud micro-physics} \label{subsec:basic_usel_microphys}
 %------------------------------------------------------
-雲微物理スキームの選択は、\verb|init.conf|と\verb|run.conf|のうち、
-\namelist{PARAM_TRACER}の\nmitem{TRACER_TYPE}、
-及び、\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。\\
-このとき{\color{red}{\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}は普通は同じものを設定し}}
-、かつ、\textcolor{red}{\texttt{init.conf}、\texttt{run.conf}で同一の設定}とする必要がある。
-ただし、\nmitem{ATMOS_PHY_MP_TYPE}を\verb|OFF|とするときは、
-\nmitem{TRACER_TYPE}は何を設定してもよいが、乾燥大気の計算をする場合は\verb|TRACER_TYPE = "DRY"|とするのがよい。
-雲微物理スキームを呼び出すタイミングは、
-\namelist{PARAM_TIME}で設定するが、これについては
-第\ref{sec:timeintiv}節を参照のこと。
-以下に、氷雲を含む1モーメントバルク法を用いるときの設定を示す。\\
+The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively. 
+{\color{blue} Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in both \texttt{init.conf} and \texttt{run.conf}}. 
+The update interval for the cloud micro-physics scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing. The following example shows the configuration for cases involving a six-class one-moment bulk scheme that contains ice phase clouds:
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_MP_TYPE = "TOMITA08", | & ; 表\ref{tab:nml_atm_mp}より選択。\\
+\verb| ATMOS_PHY_MP_TYPE = "TOMITA08", | & ; Choose from Table \ref{tab:nml_atm_mp}.\\
 \verb|/             | & \\
-\\
-\verb|&PARAM_TRACER | & \\
-\verb| TRACER_TYPE = "TOMITA08", | & \verb|ATMOS_PHY_MP_TYPE|と同じ名前。\\
-\verb|/             | & \\
-\end{tabularx}
-}}\\
+}
 
-\begin{table}[h]
+\begin{table}[tbh]
 \begin{center}
-  \caption{雲微物理スキームの設定}
+  \caption{Choices of cloud micro-physics scheme}
   \label{tab:nml_atm_mp}
   \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-     \verb|OFF|      & 雲微物理による相変化を計算しない &  \\
-     \verb|KESSLER|  & 水雲のみの1モーメントバルク法 & \citet{kessler_1969} \\
-     \verb|TOMITA08| & 氷雲を含む1モーメントバルク法 & \citet{tomita_2008} \\
-     \verb|SN14|     & 氷雲を含む2モーメントバルク法 & \citet{sn_2014} \\
-     \verb|SUZUKI10| & 1モーメントビン法(氷雲を含むか否かはオプションで選択) & \citet{suzuki_etal_2010} \\
-%    \verb|XX|       & 超水滴法                   & \citer{Shima_etal_2009} \\
+    \rowcolor[gray]{0.9}  Scheme name & Description of scheme & Reference\\ \hline
+     \verb|OFF|      & Do not calculate phase change of water by cloud micro-physics. &  \\
+     \verb|KESSLER|  & Three-class one-moment bulk scheme & \citet{kessler_1969} \\
+     \verb|TOMITA08| & Six-class one-moment bulk scheme & \citet{tomita_2008} \\
+     \verb|SN14|     & Six-class two-moment bulk scheme & \citet{sn_2014} \\
+     \verb|SUZUKI10| & Spectral bin scheme (consideration of ice cloud can be specified as option) & \citet{suzuki_etal_2010} \\
+%    \verb|XX|       & Super droplet scheme              & \citer{Shima_etal_2009} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
+Four typical schemes are prepared:
 \begin{enumerate}
-\item {\bf 氷を含まない1モーメントバルク法\cite{kessler_1969}}\\
-1モーメントバルク法は粒径分布関数を３次のモーメント（質量）のみで表現する。
-このスキームでは雲粒と雨粒のカテゴリを考慮し、
-全質量に対する雲粒の質量比（QC[kg/kg]）と雨粒の質量比（QR[kg/kg]）を予報する。\\
-粒径分布はデルタ関数、すなわち雲粒のサイズは全て同じと仮定することでで表現する。
-雲粒と雨粒の半径はそれぞれ8µm、100µmと与えられている。\\
-考慮する雲粒の成長過程は、雲粒生成（飽和調整）、凝結・蒸発、衝突併合、落下である。
+\item {\bf One-moment bulk scheme without ice \cite{kessler_1969}}\\ This scheme assumes that the particle size distribution function is expressed only by mass concentration. Considering two categories of water in cloud and rain, the ratios of the densities of cloud and rain to total air density are prognostically predicted.
+\item {\bf One-moment bulk scheme with ice \cite{tomita_2008}}\\
+This scheme makes the same assumption as that in \cite{kessler_1969} for the particle size distribution function, but with five categories of water: cloud, rain, ice, snow, and graupel.
+\item {\bf Two-moment bulk scheme with ice \cite{sn_2014}}\\
+In this scheme, the particle size distribution is expressed by the numerical concentration of particles and their mass concentration. 
+\item {\bf One-moment bin scheme \cite{suzuki_etal_2010}}\\
+This scheme explicitly expresses particle size distribution by discretizing it using an appropriate number of degrees of freedom for each category. There are six categories: cloud, rain, ice, snow, graupel, and hail. The accuracy of expressing the size distribution depends on the degrees of freedom.
 
-\item {\bf 氷を含む1モーメントバルク法\cite{tomita_2008}}\\
-このスキームでは\cite{kessler_1969}と同じく、粒径分布関数を３次のモーメント（質量）のみで表現する。
-雲粒、雨粒、氷粒、雪片、あられの５カテゴリを考慮し、
-それぞれの質量比（QC、QR、QI、QS、QG[kg/kg]）を予報する。\\
-粒径分布については雲粒と氷粒をデルタ分布（それぞれ半径8µm、40µm）、
-その他はMarshall-Palmer分布を仮定して表現する。\\
-考慮する成長過程は雲粒生成（飽和調整）、凝結・蒸発、衝突併合、落下である。
-
-\item {\bf 氷を含む2モーメントバルク法\cite{sn_2014}}\\
-氷を含む2モーメントバルク法は粒径分布関数を質量に加えて、０次のモーメント（個数）で表現する。
-雲粒、雨粒、氷粒、雪片、あられの５カテゴリを考慮し、
-それぞれの質量比（QC、QR、QI、QS、QG）と数密度（NC、NR、NI、NS、NG）を予報する。\\
-粒径分布は一般ガンマ関数で近似して表現する。\\
-考慮する成長過程は雲粒生成、凝結・蒸発、衝突併合、分裂、落下である。
-
-\item {\bf 1モーメントビン法\cite{suzuki_etal_2010}}\\
-1モーメントビン法は粒径分布関数を差分化して陽に表現する。
-差分化された各粒径分布関数をビンと呼ぶためビン法と呼ばれる。
-雲粒、雨粒、氷粒、雪片、あられ、ひょうの６カテゴリを考慮し、
-各粒径ビンの質量比を予報する。\\
-粒径分布は陽に与えられ、ビン数のとりかたによって分布の表現精度が異なる。\\
-考慮する成長過程は雲粒生成、凝結・蒸発、衝突併合、落下である。
-
-%\item{\bf 超水滴法}
-%また超水滴法に関しては著作権の関係から公開されていない。
-%使用したい場合はSCALEの開発者に連絡をされたい。
 \end{enumerate}
+The degrees of sophistication increases from 1 to 4, as does computational cost.
 
-上記の４種類の雲微物理は１から４の順に高精度になるが、
-その分計算コストも高くなる。\\
-
-
-\verb|SUZUKI10|以外を選択する場合は、
-\verb|init.conf|、\verb|run.conf|の\nmitem{TRACER_TYPE}と\nmitem{ATMOS_PHY_MP_TYPE}を
-変更するだけで実行可能であるが、
-{\color{red}\texttt{SUZUKI10}を選択する場合}は、以下のように
-\verb|init.conf|、\verb|run.conf|の双方に
-下記を追加する必要がある。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+If \verb|SUZUKI10| is selected, in addition to the specification of \nmitem{ATMOS_PHY_MP_TYPE}, the following configuration needs to be added to both files of \verb|init.conf| and \verb|run.conf|:
+\editboxtwo{
 \verb|&PARAM_BIN|   &  \\
-\verb| nbin   = 33, & (ビンの数)| \\
-\verb| ICEFLG =  1, & (氷雲を考慮するか否か，0->水雲のみ，1->氷雲も含む)| \\
+\verb| nbin   = 33, & : The number of bins| \\
+\verb| ICEFLG =  1, & : Option for consideration of ice cloud: 0(not considered), 1(considered)| \\
 \verb|/|            & \\
-\end{tabularx}
-}}\\
-
-この場合も、
-{\color{red}{\texttt{init.conf}、\texttt{run.conf}に記載される\verb|PARAM_BIN|は同一にする必要がある}}。
-\verb|SUZUKI10|を選択した時には、micpara.datという
-雲微物理の計算に必要なファイルが自動生成される。
-micpara.datがすでに存在する場合はあるものを利用するが、
-nbinが変わると新たに作成しなければならない。
-micpara.datの１行目にnbinの情報が記載されているが、
-もし\verb|run.conf|に記載されるnbinと
-micpara.datに記載されているnbinが異なれば、\\
-
-\noindent {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+}
+In this case, {\color{blue}{\namelist{PARAM_BIN} in \texttt{init.conf} must also be same as in \texttt{run.conf}}}. A necessary file \verb|micpara.dat| is automatically generated. If file \verb|micpara.dat| already exists, it is used for the calculation. When changing \verb|nbin| as described in the first line, this file is regenerated. If \verb|nbin| in file \verb|run.conf| is different from that in file \verb|micpara.dat|, the following error message is output and the simulation program is terminated instantaneously without calculation:
+\msgbox{
 \verb|xxx nbin in inc_tracer and nbin in micpara.dat is different check!| \\
-\end{tabularx}
-}}\\
-
-\noindent というエラーメッセージを標準出力に出力して計算を行わず終了するようになっている。
-そのため、nbinを変更した際は、micpara.datを消去して
-新たに作り直す必要がある
-(micpara.datを消して再度\scalerm を\verb|SUZUKI10|を用いて実行すれば自動的に新しいmicpara.datが生成される)。
+}
+To avoid this error, it is necessary to delete the old \verb|micpara.dat| beforehand and regenerate it. The regeneration is automatically done at the execution of \scalerm with \verb|SUZUKI10|.
 
 
-
-\subsection{\SubsecTurbulenceSetting} \label{subsec:basic_usel_turbulence}
+\subsection{Turbulence scheme} \label{subsec:basic_usel_turbulence}
 %------------------------------------------------------
 
-乱流スキームの選択は，init.confとrun.conf中の
-\namelist{PARAM_ATMOS}の中の\nmitem{ATMOS_PHY_TB_TYPE}で以下のように設定する。
-乱流スキームをが呼び出されるタイミングは、
-\namelist{PARAM_TIME}で設定するが、これについては
-第\ref{sec:timeintiv}節を参照のこと。\\
+The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the turbulence scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_TB_TYPE = "MYNN", | & ; 表\ref{tab:nml_atm_tb}より選択。\\
+\verb| ATMOS_PHY_TB_TYPE = "MYNN", | & ; Select the scheme shown in Table \ref{tab:nml_atm_tb}\\
 \verb|/             | & \\
-\end{tabularx}
-}}\\
-
+}
 \begin{table}[h]
 \begin{center}
-  \caption{乱流スキームの設定}
+  \caption{Choices of turbulent scheme}
   \label{tab:nml_atm_tb}
   \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-      \verb|OFF|          & 乱流の計算を行わない &  \\
-      \verb|SMAGORINSKY|  & Smagorinsky 型のサブグリッドモデル    & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
-      \verb|D1980|        & Deardorff(1980)サブグリッドモデル &\citet{Deardorff_1980} \\
-      \verb|MYNN|         & MYNN Level 2.5 乱流モデル & \citet{my_1982,nakanishi_2004} \\
+    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
+      \verb|OFF|          & Do not calculate the turbulence process &  \\
+      \verb|SMAGORINSKY|  & Smagorinsky—Lily-type sub-grid model & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
+      \verb|D1980|        &  Deardorff-type sub-grid model & \citet{Deardorff_1980} \\
+      \verb|MYNN|         &  MYNN Level 2.5 boundary scheme & \citet{my_1982,nakanishi_2004} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-
-
-
-\subsection{\SubsecRadiationSetting} \label{subsec:basic_usel_radiation}
+\subsection{Radiation scheme} \label{subsec:basic_usel_radiation}
 %-------------------------------------------------------------------------------
-放射スキームの選択は、init.confとrun.conf中の
-\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_RD_TYPE}で設定する。
-放射スキームが呼び出されるタイミングは、\namelist{PARAM_TIME}で設定するが、
-これについては第\ref{sec:timeintiv}節を参照のこと。\\
+The radiation scheme is specified in \nmitem{ATMOS_PHY_RD_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the radiation scheme is specified in \namelist{PARAM_TIME}.  Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_RD_TYPE = "MSTRNX", | & ; 表\ref{tab:nml_atm_rd}より選択。\\
+\verb| ATMOS_PHY_RD_TYPE = "MSTRNX", | & ; Select the radiation scheme shown in Table \ref{tab:nml_atm_rd}\\
 \verb|/             | & \\
-\end{tabularx}
-}}\\
-
+}
 \begin{table}[h]
 \begin{center}
-  \caption{放射スキームの選択肢}
+  \caption{Choices of radiation scheme}
   \label{tab:nml_atm_rd}
   \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
-      \verb|OFFまたはNONE| & 放射スキームを使用しない & \\
-      \verb|MSTRNX|       & mstrnX & \citet{sekiguchi_2008} \\
-      \verb|WRF|          & mstrnX(長波)+Dudhia(短波) & \citet{dudhia_1989} \\
+    \rowcolor[gray]{0.9}  Value & Explanation of scheme & Reference\\ \hline
+      \verb|OFF| or \verb|NONE| & Do not calculate the radiation scheme & \\
+      \verb|OFFLINE|      & use prescrived radiative data given from a file & \\
+      \verb|MSTRNX|       & mstrnX (A k-distribution-based broadband radiation transfer model) & \citet{sekiguchi_2008} \\
+%      \verb|WRF|          & mstrnX(Long wave) + Dudhia (shortwave) & \citet{dudhia_1989} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-放射計算のための太陽放射量は、
-モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
-理想実験のために、緯度経度や時刻を固定することも出来る。
-また太陽定数も変更できる。
-これらは\namelist{PARAM_ATMOS_SOLARINS}で設定する。\\
+\subsubsection{Configuration for \texttt{OFFLINE}}
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
-\verb|&PARAM_ATMOS_SOLARINS        | & \\
-\verb| ATMOS_SOLARINS_constant    = 1360.250117   | & 太陽定数 [W/m2] \\
-\verb| ATMOS_SOLARINS_fixedlatlon = .false.       | & 放射計算の緯度経度を固定するかどうか\\
-\verb| ATMOS_SOLARINS_fixeddate   = .false.       | & 放射計算の日時を固定するかどうか\\
-\verb| ATMOS_SOLARINS_lon         = 135.221       | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の経度 [deg.] \\
-\verb| ATMOS_SOLARINS_lat         =  34.653       | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の緯度 [deg.]\\
-\verb| ATMOS_SOLARINS_date = -1,-1,-1,-1,-1,-1,   | & \verb|ATMOS_SOLARINS_fixeddate=.true.|の場合の年月日時刻 [Y,M,D,H,M,S]\\
+When \nmitem{ATMOS_PHY_RD_TYPE} is \verb|OFFLINE| in \namelist{PARAM_ATMOS},
+the file name and information of the data are specified in \namelist{PARAM_ATMOS_PHY_RD_OFFLINE}.
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
+\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "",          | & ; base name of external data file \\
+\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; order of spatial dimensions of the data. 'XYZ' or 'ZXY' \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; whether annually cyclic data \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; whether monthly cyclic data \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; whether dayly cyclic data \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = 0,           | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
+\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .true.,      | & ; whether coordinate variables are to be checked \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 0,           | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
+\verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; diffuse rate (diffuse solar radiation/global solar radiation) of short wave used when short-wave direct flux data is not given \\
 \verb|/|            & \\
-\end{tabularx}
-}}}\\
+}
 
-\namelist{PARAM_MAPPROJ}の\nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat}が設定されている場合には、
-\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat}には、\\
-\nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}がそれぞれ与えられる。
-\namelist{PARAM_MAPPROJ}の説明は、第\ref{subsec:adv_mapproj}節参照。\\
-
-
-実験設定によっては、モデルトップの高度が10-20 kmと低いことがしばしばある。
-そのため放射計算ではモデルトップとは別の最上層高度を設定し、
-モデルトップより上空を何層で表現するか設定するようになっている。
-放射用最上層を何kmにとるかは放射スキーム・パラメータファイル依存であるが、
-例えば\verb|MSTRNX|ではデフォルトの
-パラメータテーブルが想定する放射用最上層は100kmである。
-追加される高度はデフォルトの場合10層で表現する。
-すなわち、モデルトップが22kmであれば、放射スキーム内では
-7.8km$\times$10層が追加されて計算される。
-これらは\verb|MSTRNX|なら\namelist{PARAM_ATMOS_PHY_RD_MSTRN}で設定する。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
-\verb|&PARAM_ATMOS_PHY_RD_MSTRN | & \\
-\verb| ATMOS_PHY_RD_MSTRN_KADD                  = 10             | & モデルトップからTOAまでの間の大気層数\\
-\verb| ATMOS_PHY_RD_MSTRN_TOA                   = 100.0          | & 放射計算で考慮する大気最上層(TOA)の高さ [km](パラメータファイルに依存)\\
-\verb| ATMOS_PHY_RD_MSTRN_nband                 = 29             | & 波長帯ビンの数(パラメータファイルに依存)\\
-\verb| ATMOS_PHY_RD_MSTRN_nptype                = 11             | & エアロゾルの種類の数(パラメータファイルに依存)\\
-\verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              | & エアロゾル粒径ビンの数(パラメータファイルに依存)\\
-\verb| ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = "PARAG.29"     | & 気体吸収パラメータの入力ファイル\\
-\verb| ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "PARAPC.29"    | & エアロゾル吸収・散乱パラメータの入力ファイル\\
-\verb| ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = "VARDATA.RM29" | & エアロゾル粒径パラメータの入力ファイル\\
-\verb| ATMOS_PHY_RD_MSTRN_ONLY_QCI              = .false.        | & 雨・雪・あられを放射計算で考慮するかどうか\\
-\verb|/| & \\
-\end{tabularx}
-}}}\\
-
-\verb|MSTRNX|を実行するには、放射計算のためのパラメータテーブルが必要である。
-デフォルトでは太陽放射から赤外放射までを29バンド111チャンネルに分割し、
-雲・エアロゾル粒子は11種類、粒径を6ビンで表した時のテーブルを用いている。
-パラメータファイル（3種類）は、
-\begin{verbatim}
-  scale-rm/test/data/rad/
-\end{verbatim}
-に用意されている。
-\namelist{PARAM_ATMOS_PHY_RD_MSTRN}でファイルのディレクトリと名前を指定する。\\
-
-放射計算のために追加された層の気温・気圧プロファイルは外部から与える必要がある。
-また二酸化炭素やオゾン等の気体濃度プロファイルも必要である。
-プロファイルは気候値またはユーザが準備したASCII形式の入力データを用いることが出来る。\\
-気候値の場合、\scalerm では気温・気圧についてはCIRA86
-\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006}、
-気体種についてはMIPAS2001\citep{Remedios_2007}をデータベースとして用意している。
-気候値プロファイルについても、
-モデル実行の日付および時刻設定とモデルの計算領域の緯度経度に従って計算され、
-日射量計算のために固定した緯度経度や時刻を用いた場合は、それに従う。
-読み込むファイルは、
-\begin{verbatim}
-  scale-rm/test/data/rad/
-\end{verbatim}
-に用意されており、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}でファイルのディレクトリと名前を指定する。\\
-
-ユーザが準備するプロファイルの場合は、任意の層数の高度 [m]、気圧 [Pa]、気温 [K]、水蒸気量 [kg/kg]、オゾン濃度 [kg/kg]
-をASCIIファイルで記述して指定する。それ以外の気体濃度はすべて0として扱われ、時間変化も考慮しない。
-このユーザ指定ファイルの例は、
-\begin{verbatim}
-  scale-rm/test/data/rad/
-\end{verbatim}
-に用意されており、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}で\nmitem{ATMOS_PHY_RD_PROFILE_use_climatology = .false.}と設定し、
-ファイルのディレクトリと名前を指定する。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
-\verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
-\verb| ATMOS_PHY_RD_PROFILE_use_climatology       = .true.    | & CIRA86とMIPAS2001の気候値を利用するかどうか\\
-\verb| ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc" | & \verb|CIRA86 (NetCDF format)|ファイル\\
-\verb| ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "."       | & \verb|MIPAS2001 (ASCII format)|のディレクトリ\\
-\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = ""        | & 気候値を利用しない場合に用いるユーザ指定ファイル (ASCII format)\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_CO2               = .true.    | & falseの場合、強制的にCO2濃度を常に0に設定する\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_O3                = .true.    | & falseの場合、強制的にO3濃度を常に0に設定する\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_N2O               = .true.    | & falseの場合、強制的にN2O濃度を常に0に設定する\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_CO                = .true.    | & falseの場合、強制的にCO濃度を常に0に設定する\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_CH4               = .true.    | & falseの場合、強制的にCH4濃度を常に0に設定する\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_O2                = .true.    | & falseの場合、強制的にO2濃度を常に0に設定する\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_CFC               = .true.    | & falseの場合、強制的にすべてのCFC濃度を常に0に設定する\\
-\verb|/| & \\
-\end{tabularx}
-}}}\\
-
-気候値・ユーザ指定プロファイルのいずれもモデルの高度・層数の設定とは独立に高度・層数が指定され、実行時にはモデル各層の値に内挿される。
-ただし、想定する最高高度（放射計算で考慮する大気最上層(TOA)の高さ）がプロファイルよりも高い場合、外挿となるので注意されたい。\\
-
-
-
-\subsection{\SubsecSurfaceSetting} \label{subsec:basic_usel_surface}
-%------------------------------------------------------
-大気下端境界のフラックス計算スキームの選択は、init.confとrun.conf中の
-\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_SF_TYPE}で以下のように設定する。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
-\verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & ; 表\ref{tab:nml_atm_sf}より選択。\\
-\verb|/             | & \\
-\end{tabularx}
-}}\\
-
-
-海面・陸面・都市モデルを用いない場合の大気下端境界は、
-理想実験のための仮想的な地表面であることを想定している。
-この大気下端境界のフラックス計算を行うスキームが呼び出されるタイミングは、
-\namelist{PARAM_TIME}で設定する。
-時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
-
-海面・陸面・都市モデルを用いる場合には、\nmitem{ATMOS_PHY_SF_TYPE}はCOUPLEに設定する。
-%NONEが設定されている場合は自動的にCOUPLEに変更される。
-%それ以外のスキームを海面・陸面・都市モデルの実行と同時に選択することは出来ない。
-%大気は状態量・フラックスを海面・陸面・都市モデルから毎ステップ受け取るが、毎ステップ更新されているとは限らない。
-%海面・陸面・都市モデルがそれらの値を更新する間隔はそれぞれのモデルの物理過程が呼び出されるタイミングに従う。
-%大気下端境界のフラックススキームが呼び出されるタイミングは、
-%受け取った状態量・フラックスを出力する間隔として用いられる。\\
-
-
+\noindent
+The file format of external data file is \netcdf format 
+with the same corrdinate variables as that of initial/boundary data files.
+Variables as the external data is shown in Table \ref{tab:var_list_atm_rd_offline}.
 \begin{table}[h]
 \begin{center}
-  \caption{大気下端境界の選択肢}
+  \caption{Radiative data as external file input}
+  \label{tab:var_list_atm_rd_offline}
+  \begin{tabularx}{150mm}{lXll} \hline
+    \rowcolor[gray]{0.9}  Variable name & Description & \# of dimensions & \\ \hline
+      \verb|RFLX_LW_up|     & upward long-wave radiative flux & 3D (spatial) + 1D (time) \\
+      \verb|RFLX_LW_dn|     & downward long-wave radiative flux & 3D (spatial) + 1D (time) \\
+      \verb|RFLX_SW_up|     & upward short-wave radiative flux & 3D (spatial) + 1D (time) \\
+      \verb|RFLX_SW_dn|     & downward short-wave radiative flux & 3D (spatial) + 1D (time) \\
+      \verb|SFLX_LW_up|     & upward long-wave radiative flux at the surface & 2D (spatial) + 1D (time) \\
+      \verb|SFLX_LW_dn|     & downward long-wave radiative flux at the surface & 2D (spatial) + 1D (time) \\
+      \verb|SFLX_SW_up|     & upward short-wave radiative flux at the surface & 2D (spatial) + 1D (time) \\
+      \verb|SFLX_SW_dn|     & downward short-wave radiative flux at the surface & 2D (spatial) + 1D (time) \\
+      \verb|SFLX_SW_dn_dir| & downward short-wave direct radiative flux at the surface & 2D (spatial) + 1D (time) & optional \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+
+\subsubsection{Configuration for \texttt{MSTRNX}}
+
+
+The solar radiation is calculated by using date and time, and latitude and longitude, in the model domain. For the ideal experiment, they can be arbitrarily given as fixed values of time and location over the domain. The solar constant can also be changed. These are configured in \namelist{PARAM_ATMOS_SOLARINS} as follows:
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_SOLARINS        | & \\
+\verb| ATMOS_SOLARINS_constant    = 1360.250117   | & Solar constant [W/m2] \\
+\verb| ATMOS_SOLARINS_fixedlatlon = .false.       | & Whether values are fixed for latitude and longitude at radiation calculation\\
+\verb| ATMOS_SOLARINS_fixeddate   = .false.       | & Whether values are fixed for date and time at radiation calculation\\
+\verb| ATMOS_SOLARINS_lon         = 135.221       | & Longitude in case that \verb|ATMOS_SOLARINS_fixedlatlon=.true.| [deg.] \\
+\verb| ATMOS_SOLARINS_lat         =  34.653       | & Latitude in case that \verb|ATMOS_SOLARINS_fixedlatlon=.true.| [deg.]\\
+\verb| ATMOS_SOLARINS_date = -1,-1,-1,-1,-1,-1,   | & Year, month, day, and time in the case that \verb|ATMOS_SOLARINS_fixeddate=.true.|[Y,M,D,H,M,S]\\
+\verb|/|            & \\
+}
+If \nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat} in \namelist{PARAM_MAPPROJ} are given, \\
+\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat} are set identical to the values of 
+\nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}.
+Refer to Section \ref{subsec:adv_mapproj} for the explanation of \namelist{PARAM_MAPPROJ}.
+
+
+Depending on experimental design, the top of the model is often too low, such as 10$\sim$ 20km, compared to the height of atmosphere. To remedy this situation, another top height used only for radiation calculation is set. The number of layers to be placed at levels higher than the top of the model can be configured. The top for radiation depends on the parameter file of the radiation scheme. For example, when \verb|MSTRNX| is used, the default parameter table in \verb|MSTRNX| assumes that it is 100 km. The additional layers added are 10 by default; if the top of the model is 22 km, 10 additional layers with a grid spacing of 7.8 km are added for radiation calculation. These are configured in \namelist{PARAM_ATMOS_PHY_RD_MSTRN} as follows:
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_MSTRN | & \\
+\verb| ATMOS_PHY_RD_MSTRN_KADD                  = 10             | & Number of layers between model top and TOA for radiation\\
+\verb| ATMOS_PHY_RD_MSTRN_TOA                   = 100.0          | & Height of TOA for radiation [km]( depending on parameter file used)\\
+\verb| ATMOS_PHY_RD_MSTRN_nband                 = 29             | & Number of bins for wavelength (depending on parameter file used)\\
+\verb| ATMOS_PHY_RD_MSTRN_nptype                = 11             | & Number of aerosol species (depending on parameter file used)\\
+\verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              | & Number of particle bins for aerosol (depending on parameter file used)\\
+\verb| ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = "PARAG.29"     | & Input file for absorption parameter by gas\\
+\verb| ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "PARAPC.29"    | & Input file for absorption and scattering parameter by aerosol\\
+\verb| ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = "VARDATA.RM29" | & Input file for aerosol particle parameter\\
+\verb| ATMOS_PHY_RD_MSTRN_ONLY_QCI              = .false.        | & Whether rain, snow, and graupel are considered\\
+\verb|/| & \\
+}
+
+\verb|MSTRNX| requires a parameter table for radiation calculation. By default, the wavelength from solar radiation to infrared radiation is divided into 29 bands/111 channels; 11 types of cloud and aerosol particles with six particle bins are prepared in the table. Three kinds of parameter files are prepared in the directory \verb|scale-rm/test/data/rad/|. The file and directory are specified in \namelist{PARAM_ATMOS_PHY_RD_MSTRN}.
+
+It is necessary to provide vertical profiles in additional layers for temperature, pressure, and gas concentration, such as CO2 and ozone. There are two methods for this. The profiles are input as climatologies or prepared by users in ASCII format. In the case of providing climatologies, \scalerm provides the database for CIRA86\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006} for temperature and pressure, and MIPAS2001\citep{Remedios_2007} for gas species. The climatology profiles are calculated according to date and time, and latitude and longitude are calculated in the model domain. These input files are also provided in the directory \verb|scale-rm/test/data/rad/|. The file and directory names are specified in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
+
+In case of using user-defined profiles, users must prepare height [m], pressure [Pa], temperature [K], water vapor [kg/kg], and ozone concentration [kg/kg] in ASCII format. The concentrations of the other gases are set to zero and temporal variation is not considered. An example of user-defined files is given for the directory \verb|scale-rm/test/data/rad/|. Given as \nmitem{ATMOS_PHY_RD_PROFILE_use_climatology} $=$ \verb|.false.| in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}, the file and directory names are required to be specified. 
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
+\verb| ATMOS_PHY_RD_PROFILE_use_climatology       = .true.    | & Whether climatologies of CIRA86 and MIPAS2001 are used \\
+\verb| ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc" | & File name of \verb|CIRA86 (NetCDF format)|\\
+\verb| ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "."       | & Directory name of \verb|MIPAS2001 (ASCII format)|\\
+\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = ""        | & User-defined file in the case of not using climatorogies (ASCII format)\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CO2               = .true.    | & When false, CO2 concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_O3                = .true.    | & When false, O3 concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_N2O               = .true.    | & When false, N2O concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CO                = .true.    | & When false, CO concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CH4               = .true.    | & When false, CH4 concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_O2                = .true.    | & When false, O2 concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CFC               = .true.    | & When false, CFC concentration is zero.\\
+\verb|/| & \\
+}
+The number of layers and their heights in this user-defined file can be given independently of the default model configuration. During execution, the values in the model layers are interpolated from the given profiles. Note that if the top height considered TOA in the radiation calculation is higher than in the input profile, an extrapolation is adopted there.
+
+
+
+
+\subsection{Surface flux at the bottom of atmospheric boundary } \label{subsec:basic_usel_surface}
+%------------------------------------------------------
+The flux scheme at the bottom atmospheric boundary is configured in \nmitem{ATMOS_PHY_SF_TYPE} in \namelist{PARAM_ATMOS} as follows: 
+
+\editboxtwo{
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | &  ; Select the surface flux scheme shown in Table \ref{tab:nml_atm_sf}\\
+\verb|/             | & \\
+}
+If ocean, land, and urban models are not used, the bottom atmospheric boundary is assumed to be a virtual surface used in an ideal experiment. The timing of the calling of the surface flux scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing. If ocean, land, and urban models are used, ``COUPLE'' is given to \nmitem{ATMOS_PHY_SF_TYPE}:
+
+\begin{table}[htb]
+\begin{center}
+  \caption{Choices for the atmospheric bottom boundary }
   \label{tab:nml_atm_sf}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明\\ \hline
-      \verb|NONE|         & 地表面フラックスを計算しない(海面・陸面・都市モデルの実行設定に応じてCOUPLEに変更される) \\
-      \verb|OFF|          & 地表面フラックスを計算しない \\
-      \verb|CONST|   　　　& 地表面フラックスを任意の値に固定 \\
-      \verb|BULK|    　　　& 地表面フラックスをバルクモデルで計算 \\
-      \verb|COUPLE|  　　　& 海面・陸面・都市モデルそれぞれが計算するフラックスを受け取る \\
+    \rowcolor[gray]{0.9}  Value & Description of scheme\\ \hline
+      \verb|NONE|         & Do not calculate surface flux, but \verb|"NONE"| is replaced to \verb|"COUPLE"| according to settings of ocean, land, and urban models) \\
+      \verb|OFF|          & Do not calculate surface flux\\
+      \verb|CONST|   　　　& Fix the constant value of surface flux \\
+      \verb|BULK|    　　　& Calculate the surface flux in bulk mode \\
+      \verb|COUPLE|  　　　& Receive surface flux from ocean, land, and urban models \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
 %-------------------------------------------------------------------------------
-\subsubsection{一定値設定の場合}
+\subsubsection{Configuration of constant}
 
-\nmitem{ATMOS_PHY_SF_TYPE = "CONST"}を選択した場合は、run.confで
-下記を設定することにより、
-任意の値に固定することが可能である。下記の値はデフォルトの設定を示す。\\
+If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"CONST"|, the surface flux can be kept to a value specified in file \verb|run.conf| as follows. The values below are the default ones.
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
- \\
+\editboxtwo{
  \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
- \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: バルク係数を一定にする \\
-                                                  & 1: 摩擦速度を一定にする   \\
- \verb| ATMOS_PHY_SF_U_minM         =    0.0E0  | & 絶対速度の下限値 [m/s] \\
- \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011E0  | & 運動量に対する一定バルク係数値 \\
-                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0| のとき有効) \\
- \verb| ATMOS_PHY_SF_CM_min         =    1.0E-5 | & 運動量に対するバルク係数の下限値 \\
-                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
- \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25E0  | & 一定摩擦係数値 [m/s] \\
-                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
- \verb| ATMOS_PHY_SF_Const_SH       =    15.E0  | & 一定地表面顕熱フラックス値 [W/m2] \\
- \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =   .false. | & 顕熱フラックスに日変化をつけるか否か [logical]\\
- \verb| ATMOS_PHY_SF_Const_FREQ     =    24.E0  | & 顕熱フラックスに日変化を付けるときのサイクル [hour]\\
- \verb| ATMOS_PHY_SF_Const_LH       =   115.E0  | & 一定地表面潜熱フラックス値 [W/m2] \\
+ \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: Bulk coefficient is constant \\
+                                                  & 1: Frictional velocity is constant  \\
+ \verb| ATMOS_PHY_SF_U_minM         =    0.0E0  | & Lower limit of absolute velocity  [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011E0  | & Constant bulk coefficient for momentum \\
+                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0|) \\
+ \verb| ATMOS_PHY_SF_CM_min         =    1.0E-5 | & Lower limit of bulk coefficient for momentum \\
+                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1|) \\
+ \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25E0  | & Constant fictional velocity [m/s] \\
+                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1|) \\
+ \verb| ATMOS_PHY_SF_Const_SH       =    15.E0  | & Constant sensible heat flux at the surface [W/m2] \\
+ \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =   .false. | & Whether diurnal variation is enabled for sensible heat flux [logical]\\
+ \verb| ATMOS_PHY_SF_Const_FREQ     =    24.E0  | & Daily cycle if diurnal variation is enabled [hour]\\
+ \verb| ATMOS_PHY_SF_Const_LH       =   115.E0  | & Constant latent heat flux at the surface [W/m2] \\
  \verb|/|            & \\
- \\
-\end{tabularx}
-}}}\\
+}
 
-\subsubsection{バルク設定の場合}
+\subsubsection{Bulk configuration}
 %-------------------------------------------------------------------------------
-\nmitem{ATMOS_PHY_SF_TYPE = "BULK"}を選択した場合は、
-任意の地表面温度に対応したフラックスをバルクモデルに従って計算する。
-このとき、粗度は海面粗度の計算スキームを利用しているが、
-後述するように海面粗度は定数を与えることができ、
-また蒸発効率を決める係数も任意の値を設定出来るため、
-海面に限定せず、陸面を想定した理想実験も行うことが出来る。\\
+If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"BULK"|, the surface flux is calculated by the bulk model using the surface temperature. The roughness is calculated by the scheme for ocean roughness as default. On the contrary, ocean roughness can be given as a constant value, and evaporation efficiency can be given arbitrarily. This flexibility enables the ideal experiment not only for ocean surfaces but also for land. The scheme for ocean roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in the file \verb|run.conf| as follows:
 
-海面粗度を計算するスキームは、
-run.conf中の\namelist{PARAM_ROUGHNESS}の\nmitem{ROUGHNESS_TYPE}で以下のように設定する。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_ROUGHNESS  | & \\
-\verb| ROUGHNESS_TYPE = "MOON07", | & ; 表\ref{tab:nml_roughness}より選択。\\
+\verb| ROUGHNESS_TYPE = "MOON07", | & ; Select the radiation scheme shown in Table \ref{tab:nml_roughness}\\
 \verb|/             | & \\
-\end{tabularx}
-}}\\
-
-\begin{table}[h]
+}
+\begin{table}[hbt]
 \begin{center}
-  \caption{海面粗度スキームの選択肢}
+  \caption{Choices of ocean roughness}
   \label{tab:nml_roughness}
-  \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献 \\ \hline
-      \verb|MOON07|   & 経験式に基づく値（時間発展あり）、デフォルト　& \citet{moon_2007} \\
-      \verb|MILLER92| & 経験式に基づく値（時間発展なし）　　　　　　　& \citet{miller_1992} \\
-      \verb|CONST|    & 定数を与える & \\
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference \\ \hline
+      \verb|MOON07|   & Based on empirical formula with time development as default　& \citet{moon_2007} \\
+      \verb|MILLER92| & Based on empirical formula without time development          & \citet{miller_1992} \\
+      \verb|CONST|    & Constant value & \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-~\\
-また、フラックス計算に使用するバルク交換係数の計算スキームは
-run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のように設定する。\\
+The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in the file \verb|run.conf| as follows:
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_BULKFLUX  | & \\
-\verb| BULKFLUX_TYPE = "B91W01", | & ; 表\ref{tab:nml_bulk}より選択。\\
-\verb|/             | & \\
-\end{tabularx}
-}}\\
-
+\verb| BULKFLUX_TYPE = "B91W01", | & ; Select the radiation scheme shown in Table \ref{tab:nml_bulk}\\
+\verb|/                | & \\
+}
 \begin{table}[h]
 \begin{center}
-  \caption{バルク交換係数スキームの選択肢}
+  \caption{Choices of bulk coefficient scheme}
   \label{tab:nml_bulk}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献 \\ \hline
-      \verb|B91W01| & 経験式に基づく値、デフォルト & \citet{beljaars_1991,wilson_2001} \\
-      \verb|U95|    & 経験式に基づく値、(\citet{louis_1979}の改良版) & \citet{uno_1995} \\
+    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
+      \verb|B91W01| & Bulk method by the universal function (Default) & \citet{beljaars_1991,wilson_2001} \\
+      \verb|U95|    & Louis-type bulk method  (improved version of Louis (1979) & \citet{uno_1995} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-
-
-\subsection{\SubsecOceanSetting} \label{subsecp:basic_usel_ocean}
+\subsection{Ocean model} \label{subsecp:basic_usel_ocean}
 %-------------------------------------------------------------------------------
-海面過程は海面の状態量の更新と大気ー海面間のフラックス計算の２つに大別される。
-これらの過程を計算するタイミングはどちらも\namelist{PARAM_TIME}で設定する。
-時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
+The ocean process consists of two main parts, i.e., update of sea surface state and flux calculation at the interface of atmosphere and ocean. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
-
-\subsubsection{海面スキーム}
+\subsubsection{Sea surface scheme}
 %-------------------------------------------------------------------------------
-海面の状態量（主に海面温度）の更新を担う海面スキームの選択は、init.confとrun.conf中の
-\namelist{PARAM_OCEAN}の\nmitem{OCEAN_TYPE}で設定する。
-\namelist{PARAM LANDUSE}で入力・設定された土地利用分布に海面が含まれている場合、
-\nmitem{OCEAN_TYPE = NONEまたはOFF}を選択することは出来ない。この条件を満たさない場合は、下記のメッセージが
-LOGファイルなどに出力されて計算は行われず、直ちに終了する。
+The manner of updating sea surface state, such as sea surface temperature, is configured in \nmitem{OCEAN_TYPE} in \namelist{PARAM_OCEAN} in the files \verb|init.conf| and \verb|run.conf|:
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
-\verb|xxx Ocean fraction exists, but ocean components never called. STOP.| \\
-\end{tabularx}
-}}}\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_OCEAN           | & \\
-\verb| OCEAN_TYPE = "CONST", | & ; 表\ref{tab:nml_ocean}より選択。\\
+\verb| OCEAN_TYPE = "CONST", | & ; Select the sea surface type shown in Table \ref{tab:nml_ocean}\\
 \verb|/                      | & \\
-\end{tabularx}
-}}\\
-
+}
 \begin{table}[h]
 \begin{center}
-  \caption{海面スキームの選択肢}
+  \caption{Choices of sea surface schemes}
   \label{tab:nml_ocean}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 \\ \hline
-      \verb|NONEまたはOFF| & 海面モデルを利用しない              \\
-      \verb|CONST|        & 初期値のまま固定                   \\
-      \verb|FILE|         & 外部ファイルから与える (時間変化可能) \\
-      \verb|SLAB|         & スラブ海面モデル                   \\
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|NONE or OFF| & Not using the sea surface model         \\
+      \verb|CONST|        & Fixed as initial condition           \\
+      \verb|FILE|         & Input from external data (temporal variation is available) \\
+      \verb|SLAB|         & Slab ocean model                   \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-\verb|OCEAN_TYPE = "FILE"|を選択した場合は、init.confとrun.confで外部入力ファイルの設定が必要である。
-この場合、与えられた外部ファイルの空間分布と時系列に応じて、海面温度は変化する。\\
+If the ocean category is included in land-use setup by \namelist{PARAM_LANDUSE}, neither \verb|"NONE"| nor \verb|"OFF"| can be given to \nmitem{OCEAN_TYPE}. If this condition is not satisfied, the program immediately stops without the computation, and outputs the following message to LOG file:
+\msgbox{
+\verb|xxx Ocean fraction exists, but ocean components never called. STOP.| \\
+}
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
- \verb|&EXTITEM                                  | & \\
- \verb| basename   = "../init/output/ocean_d01", | & ; 入力ファイル\\
- \verb| varname    = "OCEAN_TEMP",               | & ; \verb|"OCEAN_TEMP"|と書く。\\
- \verb| step_limit = 1800,                       | & \\
- \verb| step_fixed =  -1,                        | & \\
- \verb| enable_periodic_year  = .false.,         | & \\
- \verb| enable_periodic_month = .false.,         | & \\
- \verb| enable_periodic_day   = .false.,         | & \\
+If \nmitem{OCEAN_TYPE} $=$ \verb|"FILE"|, it is necessary to specify an external input file name in files \verb|init.conf| and \verb|run.conf|. In this case, the sea surface temperature varies with time according to spatial distribution and the temporal history of the external file.
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
+ \verb| OCEAN_PHY_FILE_basename   = "",                         | & ; base name of input data \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_YEAR  = .false.,         | & ; whether annually cyclic data \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_MONTH = .false.,         | & ; whether monthly cyclic data \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_DAY   = .false.,         | & ; whether dayly cyclic data \\
+ \verb| OCEAN_PHY_FILE_STEP_FIXED            = 0,               | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
+ \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .true.,          | & ; whether coordinate variables are to be checked \\
+ \verb| OCEAN_PHY_FILE_STEP_LIMIT            = 0,               | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
  \verb|/                                         | & \\
-\end{tabularx}
-}}\\
+}
 
-\verb|OCEAN_TYPE = "SLAB"|を選択した場合は、init.confとrun.confでスラブ混合層の深さを設定することができる。
-この場合、大気-海面間の熱フラックスの移動に応じて、スラブ混合層の温度は時間発展する。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+If \nmitem{OCEAN_TYPE} $=$ \verb|"SLAB"|, the depth of the mixed slab layer can be specified in files \verb|init.conf| and \verb|run.conf|. In this case, the temperature in the mixed slab layer develops over time through heat flux exchange between the atmosphere and the ocean:
+\editboxtwo{
  \verb|&PARAM_OCEAN_PHY_SLAB           | & \\
- \verb| OCEAN_PHY_SLAB_DEPTH = 10.0D0, | & ; デフォルト設定[m] \\
+ \verb| OCEAN_PHY_SLAB_DEPTH = 10.0D0, | & ; Default [m] \\
  \verb|/                               | & \\
-\end{tabularx}
-}}\\
+}
+The albedo on the sea surface does not depend on the scheme selected, and
+is calculated by using only the solar zenith angle.
 
-海面のアルベドは、どの海面スキームを選択しても同じ計算スキームが適用され、
-太陽天頂角に応じたアルベドが計算される。\\
-
-
-\subsubsection{大気-海面フラックス}
+\subsubsection{Flux in atmosphere and ocean}
 %-------------------------------------------------------------------------------
-海面スキームが設定されると、大気ー海面間で必要な状態量やフラックスが交換されることになる。\\
-大気ー海面間フラックスは、複数あるバルクスキームのいずれかを用いて計算される。
-また、バルクスキーム内で利用される海面粗度長計算についても、複数のスキームが選択できる。
-海面粗度を計算するスキームは、
-run.conf中の\namelist{PARAM_ROUGHNESS}の\nmitem{ROUGHNESS_TYPE}で設定する。
-フラックス計算に使用するバルク交換係数の計算スキームは
-run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する。
-これらの詳細については、第\ref{subsec:basic_usel_surface}節参照のこと。\\
+Once a sea surface scheme except for \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of atmosphere and ocean. The fluxes between the atmosphere and the ocean are calculated by some kind of bulk schemes contained in \scalerm. The scheme for the length of the roughness on the sea surface is also selected from several schemes prepared. The scheme of roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in file \verb|run.conf|. The scheme for the bulk transfer coefficient is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{subsec:basic_usel_surface} for more details.
 
 
-
-\subsection{\SubsecLandSetting} \label{subsec:basic_usel_land}
+\subsection{Land model} \label{subsec:basic_usel_land}
 %-------------------------------------------------------------------------------
-陸面過程についても、海面過程と同じく陸面の状態量の更新と大気ー陸面間のフラックス計算の２つに大別される。
-これらの過程が呼び出されるタイミングはどちらも\namelist{PARAM_TIME}で設定する。
-時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
+Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of flux at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
-
-\subsubsection{陸面スキーム}
+\subsubsection{Land surface scheme}
 %-------------------------------------------------------------------------------
-陸面の状態量（主に陸面温度と土壌温度、土壌水分量）の更新を担う陸面スキームの選択は、
-init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_TYPE}で以下のように設定する。
-\namelist{PARAM LANDUSE}で入力・設定された土地利用分布に陸面が含まれている場合、
-\nmitem{LAND_TYPE = NONEまたはOFF}を選択することは出来ない。この条件を満たさない場合は、下記のメッセージが
-LOGファイルなどに出力されて計算は行われず、直ちに終了する。
+The land model scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured as in \nmitem{LAND_TYPE} in \namelist{PARAM_LAND} in files \verb|init.conf| and \verb|run.conf|:
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
-\verb|xxx Land  fraction exists, but land  components never called. STOP.| \\
-\end{tabularx}
-}}}\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_LAND  | & \\
-\verb| LAND_TYPE = "SLAB", | & ; 表\ref{tab:nml_land}より選択。\\
+\verb| LAND_TYPE = "SLAB", | & ; Select the land type shown in Table \ref{tab:nml_land}\\
 \verb|/             | & \\
-\end{tabularx}
-}}\\
-
-\begin{table}[h]
+}
+\begin{table}[hbt]
 \begin{center}
-  \caption{陸面スキームの選択肢}
+  \caption{Choices of land surface scheme}
   \label{tab:nml_land}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 \\ \hline
-      \verb|NONEまたはOFF| & 陸面モデルを利用しない                       \\
-      \verb|SLAB|          & 熱拡散モデル＋バケツモデル                    \\
-      \verb|CONST|         & SLABで土壌温度、土壌水分量、陸面温度を更新しない \\
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|NONE or OFF| & Do not use land surface model              \\
+      \verb|SLAB|          & Heat diffusion/bucket model                   \\
+      \verb|CONST|         & Do not update soil temperature, soil moister, and land surface temperature in \verb|SLAB| \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
+If the land surface type is included in the land use setup by \namelist{PARAM_LANDUSE}, neither NONE nor OFF can be given to \nmitem{LAND_TYPE}. If this condition is not satisfied, the program immediately terminates without computation, outputting the following message to the LOG file:
+\msgbox{
+\verb|xxx Land  fraction exists, but land  components never called. STOP.| \\
+}
 
-\nmitem{LAND_TYPE = "SLAB"}または\nmitem{LAND_TYPE = "CONST"}を選択した場合は、
-土地利用区分に応じたアルベド、粗度長等のパラメータテーブルと、土地利用区分分布の入力が必要である。
-パラメータテーブルは、
-\begin{verbatim}
-  scale-rm/test/data/land/param.bucket.conf
-\end{verbatim}
-に用意されている。\\
+If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|,
+it is necessary to prepare parameter tables for the length of roughness and the input to the land-use distribution.
+A parameter table is provided 
+in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
 
 
-\subsubsection{大気-陸面フラックス}
+\subsubsection{Flux in atmosphere and on land}
 %-------------------------------------------------------------------------------
-陸面スキームが設定されると、大気ー陸面間で必要な状態量やフラックスが交換されることになる。
-大気ー陸面間フラックスの計算スキームは、陸面スキームに対応して選択される。
-\nmitem{LAND_TYPE = "SLAB"}または\nmitem{LAND_TYPE = "CONST"}を選択した場合は、
-海面または理想実験用の地表面で用いられるバルクスキームと同じものが利用され、
-run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で設定する。
-これらの詳細については、第\ref{subsec:basic_usel_surface}節参照のこと。\\
+Once any land surface scheme except \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of the atmosphere and land. The flux between atmosphere and land is calculated by some kind of land scheme contained in \scalerm. If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|, the bulk scheme is the same as that for ocean or ideal land surface. This is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{subsec:basic_usel_surface} for details.
 
-
-
-\subsection{\SubsecUrbanSetting} \label{subsec:basic_usel_urban}
+\subsection{Urban model} \label{subsec:basic_usel_urban}
 %------------------------------------------------------
-都市過程は都市の状態量の更新と大気ー都市面間のフラックス計算の２つに大別される。
-これらの過程を計算するタイミングはどちらも\namelist{PARAM_TIME}で設定する。
-時間設定の詳細については第\ref{sec:timeintiv}節を参照のこと。\\
+The urban process consists of two main parts, i.e., updating the urban state and flux calculation at the interface of the atmosphere and the urban environment. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
-\subsubsection{都市スキームおよび大気-都市面間フラックス}
+\subsubsection{Flux in atmosphere and urban area}
 %-------------------------------------------------------------------------------
-都市面の状態量（主に都市表面温度と水分量）の更新、また大気-都市面間フラックスの計算を担う都市スキームの選択は、
-init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_TYPE}で以下のように設定する。
-\namelist{PARAM LANDUSE}で入力・設定された土地利用分布に都市が含まれている場合、
-\nmitem{URBAN_TYPE = NONEまたはOFF}を選択することは出来ない。この条件を満たさない場合は、下記のメッセージが
-LOGファイルなどに出力されて計算は行われず、直ちに終了する。
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
-\verb|xxx Urban fraction exists, but urban components never called. STOP.| \\
-\end{tabularx}
-}}}\\
+The urban scheme that updates the urban surface state, e.g., urban surface temperature and moisture, and calculates flux at the interface of atmosphere and the urban environment is configured in \nmitem{URBAN_TYPE} in \namelist{PARAM_URBAN} in \verb|init.conf| and \verb|run.conf|, as follows:
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_URBAN         | & \\
-\verb| URBAN_TYPE = "SLC", | & ; 表\ref{tab:nml_urban}より選択。\\
+\verb| URBAN_TYPE = "SLC", | & ; Select the urban type shown in Table \ref{tab:nml_urban}\\
 \verb|/                    | & \\
-\end{tabularx}
-}}\\
-
-\begin{table}[h]
+}
+\begin{table}[hbt]
 \begin{center}
-  \caption{都市スキームの選択肢}
+  \caption{Choices of urban scheme}
   \label{tab:nml_urban}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献 \\ \hline
-      \verb|NONEまたはOFF| & 都市モデルを利用しない                      \\
-      \verb|SLC|          & 単層キャノピーモデル  & \citet{kusaka_2001} \\
+    \rowcolor[gray]{0.9}  Value  & Description of scheme & reference \\ \hline
+      \verb|NONE or OFF|  & Do not use the urban scheme            \\
+      \verb|SLC|          & Single-layer canopy model  & \citet{kusaka_2001} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
+
+If the type of urban area is included in the land-use setup by \namelist{PARAM LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{URBAN_TYPE}. If this condition is not satisfied, the program immediately stops without computation, outputting the following message to LOG file:
+\msgbox{
+\verb|xxx Urban fraction exists, but urban components never called. STOP.| \\
+}

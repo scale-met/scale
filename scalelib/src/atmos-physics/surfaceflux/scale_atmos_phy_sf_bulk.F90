@@ -48,7 +48,7 @@ module scale_atmos_phy_sf_bulk
   !
   !++ Private parameters & variables
   !
-  real(RP), private            :: ATMOS_PHY_SF_beta   =   1.0_RP ! evaporation efficiency [0-1]
+  real(RP), private            :: ATMOS_PHY_SF_beta   =   1.0_RP ! evaporation efficiency (0-1)
 
   real(RP), private, parameter :: ATMOS_PHY_SF_U_maxM = 100.0_RP ! maximum limit of absolute velocity for momentum [m/s]
   real(RP), private, parameter :: ATMOS_PHY_SF_U_maxH = 100.0_RP ! maximum limit of absolute velocity for heat     [m/s]
@@ -97,7 +97,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULK. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_BULK)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_BULK)
 
     call SF_bulkcoef_setup
 
@@ -150,7 +150,7 @@ contains
     real(RP), intent(in)    :: SFLX_LW_dn(IA,JA)    ! downward longwave  radiation flux at the surface [J/m2/s]
     real(RP), intent(in)    :: SFLX_SW_dn(IA,JA)    ! downward shortwave radiation flux at the surface [J/m2/s]
     real(RP), intent(in)    :: SFC_TEMP  (IA,JA)    ! temperature at the surface skin [K]
-    real(RP), intent(in)    :: SFC_albedo(IA,JA,2)  ! surface albedo (LW/SW) [0-1]
+    real(RP), intent(in)    :: SFC_albedo(IA,JA,2)  ! surface albedo (LW/SW) (0-1)
     real(RP), intent(inout) :: SFC_Z0M   (IA,JA)    ! surface roughness length (momentum) [m]
     real(RP), intent(inout) :: SFC_Z0H   (IA,JA)    ! surface roughness length (heat) [m]
     real(RP), intent(inout) :: SFC_Z0E   (IA,JA)    ! surface roughness length (vapor) [m]
@@ -165,18 +165,22 @@ contains
     real(RP), intent(out)   :: T2        (IA,JA)    ! temperature t     at  2m height
     real(RP), intent(out)   :: Q2        (IA,JA)    ! water vapor q     at  2m height
 
+    real(RP) :: ATM_QV   (IA,JA)
     real(RP) :: SFC_Z0M_t(IA,JA)
     real(RP) :: SFC_Z0H_t(IA,JA)
     real(RP) :: SFC_Z0E_t(IA,JA)
+    real(RP) :: SFC_QSAT (IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
+    real(RP) :: SFC_QV   (IA,JA) ! water vapor mixing ratio [kg/kg]
+    real(RP) :: LHV      (IA,JA)
+    real(RP) :: PBL      (IA,JA)
 
-    real(RP) :: SFC_QSAT(IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
-
-    real(RP) :: PBL(IA,JA)
-    real(RP) :: LHV(IA,JA)
-    real(RP) :: Ustar
-    real(RP) :: Tstar
-    real(RP) :: Qstar
-    real(RP) :: Uabs
+    real(RP) :: Ustar   ! friction velocity [m]
+    real(RP) :: Tstar   ! friction temperature [K]
+    real(RP) :: Qstar   ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -198,35 +202,45 @@ contains
     SFC_Z0H(:,:) = SFC_Z0H(:,:) + SFC_Z0H_t(:,:) * dt
     SFC_Z0E(:,:) = SFC_Z0E(:,:) + SFC_Z0E_t(:,:) * dt
 
-    call SATURATION_pres2qsat_all( SFC_QSAT(:,:), & ! [OUT]
-                                   SFC_TEMP(:,:), & ! [IN]
-                                   SFC_PRES(:,:)  ) ! [IN]
-
     call HYDROMETEOR_LHV( LHV(:,:), ATM_TEMP(:,:) )
 
+    if ( I_QV > 0 ) then
+       ATM_QV(:,:) = ATM_QTRC(:,:,I_QV)
+
+       call SATURATION_pres2qsat_all( SFC_QSAT(:,:), & ! [OUT]
+                                      SFC_TEMP(:,:), & ! [IN]
+                                      SFC_PRES(:,:)  ) ! [IN]
+
+       SFC_QV(:,:) = ( 1.0_RP - ATMOS_PHY_SF_beta ) * ATM_QV(:,:) + ATMOS_PHY_SF_beta * SFC_QSAT(:,:)
+    else
+       ATM_QV(:,:) = 0.0_RP
+       SFC_QV(:,:) = 0.0_RP
+    end if
+
     SFLX_QTRC(:,:,:) = 0.0_RP
-    PBL(:,:) = 100.0_RP ! tentative
+    PBL      (:,:)   = 100.0_RP ! tentative
     do j = JS, JE
     do i = IS, IE
-
-       call BULKFLUX( &
-            Ustar,              & ! [OUT]
-            Tstar,              & ! [OUT]
-            Qstar,              & ! [OUT]
-            Uabs,               & ! [OUT]
-            ATM_TEMP(i,j),      & ! [IN]
-            SFC_TEMP(i,j),      & ! [IN]
-            ATM_PRES(i,j),      & ! [IN]
-            SFC_PRES(i,j),      & ! [IN]
-            ATM_QTRC(i,j,I_QV), & ! [IN]
-            SFC_QSAT(i,j),      & ! [IN]
-            ATM_U   (i,j),      & ! [IN]
-            ATM_V   (i,j),      & ! [IN]
-            ATM_Z1  (i,j),      & ! [IN]
-            PBL     (i,j),      & ! [IN]
-            SFC_Z0M (i,j),      & ! [IN]
-            SFC_Z0H (i,j),      & ! [IN]
-            SFC_Z0E (i,j)       ) ! [IN]
+       call BULKFLUX( Ustar,         & ! [OUT]
+                      Tstar,         & ! [OUT]
+                      Qstar,         & ! [OUT]
+                      Uabs,          & ! [OUT]
+                      FracU10,       & ! [OUT]
+                      FracT2,        & ! [OUT]
+                      FracQ2,        & ! [OUT]
+                      ATM_TEMP(i,j), & ! [IN]
+                      SFC_TEMP(i,j), & ! [IN]
+                      ATM_PRES(i,j), & ! [IN]
+                      SFC_PRES(i,j), & ! [IN]
+                      ATM_QV  (i,j), & ! [IN]
+                      SFC_QV  (i,j), & ! [IN]
+                      ATM_U   (i,j), & ! [IN]
+                      ATM_V   (i,j), & ! [IN]
+                      ATM_Z1  (i,j), & ! [IN]
+                      PBL     (i,j), & ! [IN]
+                      SFC_Z0M (i,j), & ! [IN]
+                      SFC_Z0H (i,j), & ! [IN]
+                      SFC_Z0E (i,j)  ) ! [IN]
 
        !-----< momentum >-----
        SFLX_MW(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_W(i,j)
@@ -235,25 +249,27 @@ contains
 
        !-----< heat flux >-----
        SFLX_SH(i,j) = -CPdry    * ATM_DENS(i,j) * Ustar * Tstar
-       SFLX_LH(i,j) = -LHV(i,j) * ATM_DENS(i,j) * Ustar * Qstar * ATMOS_PHY_SF_beta
+       SFLX_LH(i,j) = -LHV(i,j) * ATM_DENS(i,j) * Ustar * Qstar
 
        !-----< mass flux >-----
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
-    enddo
-    enddo
+       if ( I_QV > 0 ) then
+          SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
+       endif
 
-    !-----< U10, T2, q2 >-----
+       !-----< U10, T2, q2 >-----
+       !U10(i,j) = FracU10 * ATM_U(i,j)
+       !V10(i,j) = FracU10 * ATM_V(i,j)
+       !T2 (i,j) = ( 1.0_RP - FracT2 ) * SFC_TEMP(i,j) + FracT2 * ATM_TEMP(i,j)
+       !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * SFC_QV  (i,j) + FracQ2 * ATM_QV  (i,j)
 
-    do j = JS, JE
-    do i = IS, IE
        U10(i,j) = ATM_U(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
        V10(i,j) = ATM_V(i,j) * log( 10.0_RP / SFC_Z0M(i,j) ) / log( ATM_Z1(i,j) / SFC_Z0M(i,j) )
        T2 (i,j) = SFC_TEMP(i,j) + ( ATM_TEMP(i,j) - SFC_TEMP(i,j) ) &
-                * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0H(i,j) ) ) &
-                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0H(i,j) ) )
-       Q2 (i,j) = SFC_QSAT(i,j) + ( ATM_QTRC(i,j,I_QV) - SFC_QSAT(i,j) ) &
-                * ( log(  2.0_RP / SFC_Z0M(i,j) ) * log(  2.0_RP / SFC_Z0E(i,j) ) ) &
-                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
+                                * ( log(      2.0_RP / SFC_Z0M(i,j) ) * log(      2.0_RP / SFC_Z0H(i,j) ) ) &
+                                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0H(i,j) ) )
+       Q2 (i,j) = SFC_QV  (i,j) + ( ATM_QV  (i,j) - SFC_QV  (i,j) ) &
+                                * ( log(      2.0_RP / SFC_Z0M(i,j) ) * log(      2.0_RP / SFC_Z0E(i,j) ) ) &
+                                / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
     enddo
     enddo
 

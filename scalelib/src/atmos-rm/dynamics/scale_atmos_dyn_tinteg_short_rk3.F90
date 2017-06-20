@@ -24,7 +24,7 @@ module scale_atmos_dyn_tinteg_short_rk3
   use scale_grid_index
   use scale_index
   use scale_tracer
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -304,6 +304,11 @@ contains
 
     mflx_hi_RK(:,:,:,:,:) = UNDEF
     tflx_hi_RK(:,:,:,:,:) = UNDEF
+#endif
+
+#ifdef QUICKDEBUG
+    mflx_hi(   1:KS-1,:,:,:) = UNDEF
+    mflx_hi(KE+1:KA  ,:,:,:) = UNDEF
 #endif
 
 !OCL XFILL

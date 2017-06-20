@@ -1,24 +1,13 @@
-\section{結果を描画する：net2g} \label{sec:quicklook}
+\section{Quick look at simulation result: net2g} \label{sec:quicklook}
 %####################################################################################
 
-ここでは、
-プロセス毎に分割された{\netcdf}形式の出力ファイル(\verb|history.**.nc|
-\footnote{gpviewがインストールされている場合、gpviewを使って作図することも出来る
-gpviewならばhistoryデータを変換することなく直接作図することができるため、クイックチェックに適している。}
-)を
-{\grads}で読み込めるように１つのバイナリファイルにまとめる
-\verb|netcdf2grads (略して、net2g)|の使い方と、変換した{\grads}バイナリデータを使って
-結果の確認を行う。
+In this section, we explain how to use netcdf2grads. The program netcdf2grads (for short, net2g) merges the \netcdf files (\verb|history.**.nc|)\footnote{If ``gpview'' is installed, it can also be used for drawing. This tool is more suitable for quick check  because it is available without the conversion of history data.},  which are divided process by process, into a binary file in \grads format. The simulation results are also validated using the converted \grads binary data.
 
-
-\subsubsection{{\grads}バイナリに変換}
+\subsubsection{Conversion to \grads binary}
 %-----------------------------------------------------------------------------------
-プロセスごとに分割された{\netcdf}形式のhistoryファイルから
-{\grads}バイナリ変換するには、\verb|net2g|を使用する。
-詳細な使用方法は \ref{sec:net2g}節を参照頂くこととし、
-ここでは最低限の手続きのみ説明する。\\
+Use \verb|net2g| to convert \grads binary from the history file of \netcdf having divided every process.  Only a minimum of the procedures is explained here.  Refer to Section \ref{sec:net2g} for their detailed use.
 
-まず、\verb|net2g|ディレクトリへ移動する。
+First, move to the directory \verb|net2g|:
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/net2g
  $ ls
@@ -26,37 +15,19 @@ gpviewならばhistoryデータを変換することなく直接作図するこ�
     net2g.2D.d01.conf
     net2g.3D.d01.conf
 \end{verbatim}
-中には設定ファイルとバイナリファイルがあり、
-バイナリファイルは\ref{sec:source_net2g}節のコンパイルにより作成された
-実行ファイルにリンクが貼られている。\\
-
-ここでは例として、2次元変数のMSLP、PRECの変換と、
-3次元変数のU、Vを850hPa、500hPa、200hPa面で抽出して変換する手順について説明する。
-2次元変数のための設定ファイルは \verb|net2g.2D.d01.conf| に、
-3次元変数のための設定ファイルは \verb|net2g.3D.d01.conf| に用意している。
-
-\verb|netcdf2grads_h|実行時のプロセス数は、
-計算実行時に使用したプロセス数の約数である必要がある。
-ここでは、計算に用いた時と同じ4プロセスを使用する。
-net2gでは2次元変数と3次元変数を同時に変換することはできないため、
-別々に実行する。
+There are some configuration files and a binary file in this directory.  The binary file is linked to the executable file compiled in Section \ref{sec:source_net2g}. As an example,  a procedure to convert the 2D variables MSLP and PREC to \grads format is explained here. We also explain how to extract the 3D variables U and V at 850 hPa, 500 hPa, and 200 hPa, and convert them into \grads format.  The configuration files for 2D and 3D variables  are prepared as files \verb|net2g.3D.d01.conf| and \verb|net2g.2D.d01.conf|, respectively. 
+ 
+When \verb|net2g| is executed, the number of processes needs to be a divisor of the number of the processes used for the simulation. 
+The number of processes is four here. Since \verb|net2g| cannot simultaneously convert 2D and 3D variables , they must be converted separately as follows:
 \begin{verbatim}
  $ mpirun -n 4 ./net2g net2g.2D.d01.conf
  $ mpirun -n 4 ./net2g net2g.3D.d01.conf
 \end{verbatim}
-エラーメッセージがなく、下記のメッセージだけが標準出力へ表示されていれば正常に変換完了である。\\
-
-\noindent {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+The conversion succeeds only if the following messages are found  in the standard output without an error message:
+\msgbox{
 \verb|+++ MPI COMM: Corrective Finalize| \\
-\end{tabularx}
-}}\\
-
-成功すれば、下記のファイルが作成される。
-\verb|**.ctl|は {\scalerm} のXY格子座標のctlファイル、
-\verb|**lccr.ctl|は緯度経度座標で作図するためのctlファイルである。
-
+}
+The following files are also found. \verb|**.ctl| represents the ``ctl'' file for the XY grid system of \scalerm, \verb|**lccr.ctl| a ctl file for the drawing results on the latitude-longitude coordinates:
 \begin{verbatim}
   MSLP_d01z-2d.ctl
   MSLP_d01z-2d.grd
@@ -76,51 +47,35 @@ net2gでは2次元変数と3次元変数を同時に変換することはでき�
 \end{verbatim}
 
 
-
-
-\subsubsection{計算結果の確認}
+\subsubsection{Validation of simulation result}
 %-----------------------------------------------------------------------------------
-
-%\verb|${Tutorial_DIR}/real/data|ディレクトリに用意してあるので、
-%サンプルとして利用してほしい。\footnote{今後、緯度経度座標で描画するためのctlファイルを出力できるようにする予定。}
-%\begin{verbatim}
-% $ cp ../../data/*_lcc.ctl ./
-% $ ls
-%    MSLP_d01z-2d_lcc.ctl
-%    PREC_d01z-2d_lcc.ctl
-%    U_d01z-3d_lcc.ctl
-%    V_d01z-3d_lcc.ctl
-%\end{verbatim}
-
-計算結果確認用の図を作成するための\grads スクリプト\verb|checkfig_real.gs|を使って作図する。
+Confirm the calculation results using a \grads script \verb|checkfig_real.gs|: 
 \begin{verbatim}
  $ cp ../../data/checkfig_real.gs ./
  $ grads -blc checkfig_real.gs
 \end{verbatim}
-成功すると、下記の図が作成される。
-なお、\grads のバージョンによって文法が異なるので、Warningが出る場合は、適宜変更する。
+The following files are generated when the conversion is successfully finished. Note that the script changes accordingly when a warning appears. This is because the syntax is different according to the version of \grads.
 \begin{verbatim}
   real_mslp.png
   real_prec.png
   real_wind.png
 \end{verbatim}
-計算と変換が成功していれば、下記と同じ図が描画される。
+If the calculation are successful, the same figures as Figs. \ref{fig:real_mslp}, \ref{fig:real_prec}, and \ref{fig:real_wind}  are obtained.
 
-
-\begin{figure}[h]
+\begin{figure}[tbh]
 \begin{center}
   \includegraphics[width=0.55\hsize]{./figure/real_mslp.eps}\\
-  \caption{計算開始から6時間後の海面更正気圧}
+  \caption{Sea-level pressure after 6 hours}
   \label{fig:real_mslp}
 \end{center}
 \begin{center}
   \includegraphics[width=0.55\hsize]{./figure/real_prec.eps}\\
-  \caption{計算開始から6時間後の降水フラックス}
+  \caption{Precipitation flux after 6 hours}
   \label{fig:real_prec}
 \end{center}
 \begin{center}
   \includegraphics[width=0.55\hsize]{./figure/real_wind.eps}\\
-  \caption{計算開始から6時間後の500hPaの風速と風ベクトル}
+  \caption{Wind velocity after 6 hours}
   \label{fig:real_wind}
 \end{center}
 \end{figure}

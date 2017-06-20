@@ -50,6 +50,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine USER_config
+    implicit none
+    !---------------------------------------------------------------------------
 
     return
   end subroutine USER_config
@@ -89,7 +91,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     if( IO_L ) write(IO_FID_LOG,*)
 
@@ -113,7 +115,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! replace urban variables and input to history buffer
     call USER_step
 
     return
@@ -132,26 +133,28 @@ contains
   !> Step
   subroutine USER_step
     use scale_const, only: &
-       D2R   => CONST_D2R,   &
-       TEM00 => CONST_TEM00, &
+       I_LW  => CONST_I_LW,  &
+       I_SW  => CONST_I_SW,  &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
        CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
-    use scale_grid_real, only: &
-       REAL_lon
+    use scale_time, only:   &
+       dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
+    use scale_history, only: &
+       HIST_in
     use mod_cpl_vars, only: &
-       TMPA  => URB_ATM_TEMP,      &  ! air temperature
-       PRSA  => URB_ATM_PRES,      &
-       WA    => URB_ATM_W,         &
-       UA    => URB_ATM_U,         &
-       VA    => URB_ATM_V,         &
-       RHOA  => URB_ATM_DENS,      &
-       QVA   => URB_ATM_QV,        &
-       PBL   => URB_ATM_PBL,       &
-       PRSS  => URB_ATM_SFC_PRES,  &
-       LWD   => URB_ATM_SFLX_LW,   &
-       SWD   => URB_ATM_SFLX_SW,   &
-       PREC  => URB_ATM_SFLX_prec
+       TMPA  => URB_ATM_TEMP,        &
+       PRSA  => URB_ATM_PRES,        &
+       WA    => URB_ATM_W,           &
+       UA    => URB_ATM_U,           &
+       VA    => URB_ATM_V,           &
+       RHOA  => URB_ATM_DENS,        &
+       QVA   => URB_ATM_QV,          &
+       PBL   => URB_ATM_PBL,         &
+       PRSS  => URB_ATM_SFC_PRES,    &
+       RWD   => URB_ATM_SFLX_rad_dn, &
+       RAIN  => URB_ATM_SFLX_rain,   &
+       SNOW  => URB_ATM_SFLX_snow
     use mod_urban_vars, only: &
        URBAN_TR,         &
        URBAN_TB,         &
@@ -163,68 +166,61 @@ contains
        URBAN_TBL,        &
        URBAN_TGL,        &
        URBAN_ROFF
-    use scale_time, only:   &
-       NOWSEC => TIME_NOWSEC,      & !< absolute sec
-       dt_URB => TIME_DTSEC_URBAN, & !< time interval of urban step [sec]
-       TIME_DOURBAN_step
     use scale_history, only: &
        HIST_in
     implicit none
 
+    real(RP), parameter :: SRATIO = 0.75_RP ! ratio between direct/total solar [-]
+
+    real(RP) :: SX, SB, SG
+    real(RP) :: VFGS, VFWS, VFGW, VFWG
+
+    real(RP) :: PTA (IA,JA)
+    real(RP) :: LWD (IA,JA)
+    real(RP) :: SWD (IA,JA)
     real(RP) :: WORK(IA,JA)
-    real(RP) :: LON, LAT
-    real(RP) :: dsec
-    integer  :: tloc
-
-    real(RP) :: SW
-    real(RP) :: PT
-    real(RP) :: Wind
-    real(RP) :: Rain
-    real(RP) :: Qvapor ! mixing ratio [kg/kg]
-    real(RP) :: ES
-
-    real(RP) :: THETA
-
-    real(RP) :: SX,SB,SG
-    real(RP) :: VFGS,VFWS,VFGW,VFWG
-
     real(RP) :: RovCP
-    integer :: k, i, j
+
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     RovCP = Rdry / CPdry
 
     if ( USER_do ) then
 
-       UA  (:,:) = 18.95165494678601_RP
-       VA  (:,:)  = 0.0_RP
-       WA  (:,:)  = 0.0_RP
-       RHOA(:,:)  = 1.193221659609323_RP
-       PBL (:,:)  = 100.0_RP
-       LWD (:,:)  = 434.6034964144717_RP
-       PRSA(:,:)  = 100000.0_RP
-       PRSS(:,:)  = 102400.6750905938_RP
-       QVA (:,:)  = 1.612903266525567E-02_RP
-       PREC(:,:)  = 5.0_RP / 3600.0_RP
+       UA  (:,:)        = 18.95165494678601_RP
+       VA  (:,:)        =               0.0_RP
+       WA  (:,:)        =               0.0_RP
+       RHOA(:,:)        = 1.193221659609323_RP
+       PBL (:,:)        =             100.0_RP
+       RWD (:,:,I_LW,1) =               0.0_RP ! direct
+       RWD (:,:,I_LW,2) = 434.6034964144717_RP ! diffuse
+       PRSA(:,:)        =          100000.0_RP
+       PRSS(:,:)        = 102400.6750905938_RP
+       QVA (:,:)        = 1.612903266525567E-02_RP
+       RAIN(:,:)        =   5.0_RP / 3600.0_RP
+       SNOW(:,:)        =               0.0_RP
 
-       URBAN_ROFF(:,:) = 0.0_RP
-       !URBAN_TR(:,:) = 300.0_RP
-       URBAN_TB(:,:) = 298.4421947975652_RP
-       URBAN_TG(:,:) = 298.6575894549702_RP
-       URBAN_TC(:,:) = 297.7168673290382_RP
-       URBAN_QC(:,:) = 1.830501916072291E-02_RP
-       URBAN_UC(:,:) = 7.978626675770874_RP
-       !
-       URBAN_TBL(1,:,:) = 298.4421947975652_RP
-       URBAN_TBL(2,:,:) = 298.9831365435758_RP
-       URBAN_TBL(3,:,:) = 299.6502356623731_RP
-       URBAN_TBL(4,:,:) = 299.6819173427097_RP
-       URBAN_TBL(5,:,:) = 299.0036771970256_RP
-       URBAN_TGL(1,:,:) = 298.6575894549702_RP
-       URBAN_TGL(2,:,:) = 299.2942430001926_RP
-       URBAN_TGL(3,:,:) = 300.0760515131021_RP
-       URBAN_TGL(4,:,:) = 300.0731793271447_RP
-       URBAN_TGL(5,:,:) = 299.1892611738443_RP
+       URBAN_ROFF(:,:)   = 0.0_RP
+
+       URBAN_TB  (:,:)   = 298.4421947975652_RP
+       URBAN_TG  (:,:)   = 298.6575894549702_RP
+
+       URBAN_TC  (:,:)   = 297.7168673290382_RP
+       URBAN_QC  (:,:)   = 1.830501916072291E-02_RP
+       URBAN_UC  (:,:)   = 7.978626675770874_RP
+
+       URBAN_TBL (1,:,:) = 298.4421947975652_RP
+       URBAN_TBL (2,:,:) = 298.9831365435758_RP
+       URBAN_TBL (3,:,:) = 299.6502356623731_RP
+       URBAN_TBL (4,:,:) = 299.6819173427097_RP
+       URBAN_TBL (5,:,:) = 299.0036771970256_RP
+
+       URBAN_TGL (1,:,:) = 298.6575894549702_RP
+       URBAN_TGL (2,:,:) = 299.2942430001926_RP
+       URBAN_TGL (3,:,:) = 300.0760515131021_RP
+       URBAN_TGL (4,:,:) = 300.0731793271447_RP
+       URBAN_TGL (5,:,:) = 299.1892611738443_RP
 
        SB   = 1.429919681745362_RP
        SG   = 2.090724511380252_RP
@@ -234,35 +230,24 @@ contains
        VFWG = 0.3498742126391030_RP
 
        SX = SG / ( VFGS * 0.8_RP +  VFWS * 0.8_RP * 0.2_RP / 0.8_RP * VFGW * 0.8_RP  )
-       print *,"SX1",SX
        SX = SB / ( VFWS * 0.8_RP +  VFGS * 0.8_RP * 0.2_RP / 0.8_RP * VFWG * 0.8_RP  )
-       print *,"SX2",SX
-       SWD (:,:) = SX
 
-       do j = 1, JA
-       do i = 1, IA
+       RWD(:,:,I_SW,1) = (        SRATIO ) * SX ! direct
+       RWD(:,:,I_SW,2) = ( 1.0_RP-SRATIO ) * SX ! diffuse
 
-       !   LON = REAL_lon(i,j) / D2R
-       !
-       !   tloc = mod(int(NOWSEC/3600.0_RP)+int(LON/15.0_RP),24)
-       !
-       !   dsec = mod(NOWSEC,3600.0_RP) / 3600.0_RP
-       !
-           THETA = 293.7453140572144_RP
-           WORK(i,j) = THETA
-           TMPA(i,j) = THETA / ( PRE00 / PRSA(i,j) )**RovCP
+       PTA (:,:) = 293.7453140572144_RP
+       TMPA(:,:) = PTA(:,:) * ( PRSA(:,:) / PRE00 )**RovCP   ! air temp, but now PRSA = 100000Pa
 
-       enddo
-       enddo
+       LWD (:,:) = RWD(:,:,I_LW,1) + RWD(:,:,I_LW,2)
+       SWD (:,:) = RWD(:,:,I_SW,1) + RWD(:,:,I_SW,2)
 
-       call HIST_in( WORK (:,:), 'PT_urb',   'Potential air temperature',    'K'     )
-       call HIST_in( QVA  (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
-       call HIST_in( UA   (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
-       call HIST_in( SWD  (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
-       call HIST_in( LWD  (:,:), 'LWD_urb',  'Downward longwave radiation',  'W/m2'  )
-
-       WORK(:,:) = PREC(:,:) * dt_URB
-       call HIST_in( WORK (:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
+       call HIST_in( PTA (:,:), 'PT_urb',   'Potential air temperature',    'K'     )
+       call HIST_in( QVA (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
+       call HIST_in( UA  (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
+       call HIST_in( SWD (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
+       call HIST_in( LWD (:,:), 'LWD_urb',  'Downward longwave  radiation', 'W/m2'  )
+       WORK(:,:) = ( RAIN(:,:) + SNOW(:,:) ) * dt_URB
+       call HIST_in( WORK(:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
 
     endif
 

@@ -21,8 +21,9 @@ module mod_user
   use scale_prof
   use scale_grid
   use scale_grid_index
-  use scale_tracer
   use scale_index
+  use scale_tracer
+
   use scale_time, only: &
      TIME_DTSEC
   use scale_atmos_boundary, only: &
@@ -103,7 +104,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** This module is accelerate zonal-wind.'
 

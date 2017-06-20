@@ -144,6 +144,7 @@ module mod_mkinit
 
   integer, public, parameter :: I_CAVITYFLOW       = 29
   integer, public, parameter :: I_BAROCWAVE        = 30
+  integer, public, parameter :: I_BOMEX            = 31
 
   !-----------------------------------------------------------------------------
   !
@@ -171,6 +172,7 @@ module mod_mkinit
   private :: MKINIT_DYCOMS2_RF01
   private :: MKINIT_DYCOMS2_RF02
   private :: MKINIT_RICO
+  private :: MKINIT_BOMEX
 
   private :: MKINIT_interporation
 
@@ -246,7 +248,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT)
 
     allocate( pres(KA,IA,JA) )
     allocate( temp(KA,IA,JA) )
@@ -308,6 +310,8 @@ contains
        MKINIT_TYPE = I_DYCOMS2_RF02
     case('RICO')
        MKINIT_TYPE = I_RICO
+    case('BOMEX')
+       MKINIT_TYPE = I_BOMEX
     case('INTERPORATION')
        MKINIT_TYPE = I_INTERPORATION
     case('LANDCOUPLE')
@@ -445,6 +449,8 @@ contains
          call MKINIT_DYCOMS2_RF02
       case(I_RICO)
          call MKINIT_RICO
+      case(I_BOMEX)
+         call MKINIT_BOMEX
       case(I_INTERPORATION)
          call MKINIT_INTERPORATION
       case(I_OCEANCOUPLE)
@@ -492,6 +498,8 @@ contains
          write(*,*) 'xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
       endselect
+
+      call tke_setup
 
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
 
@@ -558,14 +566,13 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_BUBBLE,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_BUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_BUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BUBBLE)
 
     if ( abs(BBL_RZ*BBL_RX*BBL_RY) <= 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** no bubble'
@@ -653,7 +660,6 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_RECT,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        write(*,*) 'xxx Not found namelist. Check!'
        call PRC_MPIstop
@@ -661,7 +667,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RECT. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_RECT)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RECT)
 
     rect(:,:,:) = CONST_UNDEF8
 
@@ -721,18 +727,17 @@ contains
     integer  :: n_kap_inp(3) = n_kap_def
 
     NAMELIST / PARAM_AERO / &
-       m0_init, &
-       dg_init, &
-       sg_init, &
+       m0_init,   &
+       dg_init,   &
+       sg_init,   &
        d_min_inp, &
        d_max_inp, &
        k_min_inp, &
        k_max_inp, &
        n_kap_inp
 
-
-    integer :: ierr
-
+    integer  :: ierr
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
@@ -740,28 +745,25 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used!'
-!       call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_AERO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_AERO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_AERO)
 
-    call ATMOS_PHY_AE_kajino13_mkinit( &
-         QTRC, CCN,                 & ! (out)
-         DENS, RHOT,                & ! (in)
-         m0_init, dg_init, sg_init, & ! (in)
-         d_min_inp, d_max_inp,      & ! (in)
-         k_min_inp, k_max_inp,      & ! (in)
-         n_kap_inp                  ) ! (in)
+    call ATMOS_PHY_AE_kajino13_mkinit( QTRC, CCN,                 & ! (out)
+                                       DENS, RHOT,                & ! (in)
+                                       m0_init, dg_init, sg_init, & ! (in)
+                                       d_min_inp, d_max_inp,      & ! (in)
+                                       k_min_inp, k_max_inp,      & ! (in)
+                                       n_kap_inp                  ) ! (in)
 
     return
   end subroutine AEROSOL_setup
 
-  !--------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
     use scale_const, only: &
@@ -809,7 +811,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist SBMAERO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_SBMAERO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_SBMAERO)
 
     if( nccn /= 0 ) then
       allocate( gan( nccn ) )
@@ -922,7 +924,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_FLUX. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_FLUX)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_FLUX)
 
     do j = JS, JE
     do i = IS, IE
@@ -963,8 +965,8 @@ contains
     real(RP) :: LND_TEMP                ! soil temperature           [K]
     real(RP) :: LND_WATER     = 0.15_RP ! soil moisture              [m3/m3]
     real(RP) :: SFC_TEMP                ! land skin temperature      [K]
-    real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW [0-1]
-    real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW [0-1]
+    real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW (0-1)
+    real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW (0-1)
 
     integer :: i, j
     integer :: ierr
@@ -988,7 +990,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LAND. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LAND)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_LAND)
 
     do j = JS, JE
     do i = IS, IE
@@ -1018,8 +1020,8 @@ contains
     ! Ocean state
     real(RP) :: OCN_TEMP                  ! ocean temperature           [K]
     real(RP) :: SFC_TEMP                  ! ocean skin temperature      [K]
-    real(RP) :: SFC_albedo_LW = 0.04_RP   ! ocean surface albedo for LW [0-1]
-    real(RP) :: SFC_albedo_SW = 0.05_RP   ! ocean surface albedo for SW [0-1]
+    real(RP) :: SFC_albedo_LW = 0.04_RP   ! ocean surface albedo for LW (0-1)
+    real(RP) :: SFC_albedo_SW = 0.05_RP   ! ocean surface albedo for SW (0-1)
     real(RP) :: SFC_Z0M       = 1.0e-4_RP ! ocean surface roughness length (momentum) [m]
     real(RP) :: SFC_Z0H       = 1.0e-4_RP ! ocean surface roughness length (heat) [m]
     real(RP) :: SFC_Z0E       = 1.0e-4_RP ! ocean surface roughness length (vapor) [m]
@@ -1048,7 +1050,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_OCEAN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEAN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_OCEAN)
 
 
     do j = JS, JE
@@ -1102,8 +1104,8 @@ contains
     real(RP) :: URB_GRND_RAIN = 0.0_RP ! temperature in layer of ground [K]
     real(RP) :: URB_RUNOFF    = 0.0_RP ! temperature in layer of ground [K]
     real(RP) :: URB_SFC_TEMP           ! Grid average of surface temperature [K]
-    real(RP) :: URB_ALB_LW    = 0.0_RP ! Grid average of surface albedo for LW [0-1]
-    real(RP) :: URB_ALB_SW    = 0.0_RP ! Grid average of surface albedo for SW [0-1]
+    real(RP) :: URB_ALB_LW    = 0.0_RP ! Grid average of surface albedo for LW (0-1)
+    real(RP) :: URB_ALB_SW    = 0.0_RP ! Grid average of surface albedo for SW (0-1)
 
     integer :: i, j
     integer :: ierr
@@ -1145,7 +1147,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_URBAN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBAN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_URBAN)
 
 
     do j = JS, JE
@@ -1171,6 +1173,50 @@ contains
 
     return
   end subroutine urban_setup
+
+  !-----------------------------------------------------------------------------
+  !> TKE setup
+  subroutine tke_setup
+    use scale_const, only: &
+       EPS => CONST_EPS
+    use scale_atmos_phy_tb, only: &
+       I_TKE
+    implicit none
+
+    real(RP) :: TKE_CONST
+
+    NAMELIST / PARAM_MKINIT_TKE / &
+       TKE_CONST
+
+    integer :: k, i, j
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    TKE_CONST = EPS
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_TKE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TKE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TKE)
+
+    if ( I_TKE > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          QTRC(k,i,j,I_TKE) = TKE_CONST
+       enddo
+       enddo
+       enddo
+    end if
+
+    return
+  end subroutine tke_setup
 
   !-----------------------------------------------------------------------------
   !> Read sounding data from file
@@ -1223,7 +1269,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SOUNDING. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SOUNDING)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SOUNDING)
 
     !--- prepare sounding profile
     if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
@@ -1377,7 +1423,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_PLANESTATE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_PLANESTATE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_PLANESTATE)
 
     ! calc in dry condition
     do j = JS, JE
@@ -1572,7 +1618,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TRACERBUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_TRACERBUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TRACERBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -1703,7 +1749,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_COLDBUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_COLDBUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_COLDBUBBLE)
 
     RovCP = Rdry / CPdry
 
@@ -1803,7 +1849,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LAMBWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LAMBWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_LAMBWAVE)
 
     RovCP = Rdry / CPdry
 
@@ -1881,7 +1927,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAVITYWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAVITYWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAVITYWAVE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -1987,7 +2033,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_KHWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_KHWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_KHWAVE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -2117,7 +2163,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TURBULENCE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_TURBULENCE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TURBULENCE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -2288,7 +2334,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_CAVITYFLOW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_CAVITYFLOW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_CAVITYFLOW)
 
     Gam   = CPdry / ( CPdry - Rdry )
     Cs2   = ( Ulid / MACH_NUM )**2
@@ -2367,7 +2413,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_MOUNTAINWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_MOUNTAINWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_MOUNTAINWAVE)
 
     ! calc in dry condition
     do j = JS, JE
@@ -2524,7 +2570,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BAROCWAVE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BAROCWAVE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BAROCWAVE)
 
     Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
 
@@ -2703,7 +2749,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_WARMBUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -2826,7 +2872,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SUPERCELL. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SUPERCELL)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SUPERCELL)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
@@ -2895,7 +2941,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SQUALLLINE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SQUALLLINE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SQUALLLINE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
@@ -2975,7 +3021,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WK1982. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_WK1982)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WK1982)
 
     ! calc in dry condition
     do j = JS, JE
@@ -3163,7 +3209,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF01. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF01)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF01)
 
     if ( USE_LWSET ) then
        GEOP_sw = 1.0_RP
@@ -3439,7 +3485,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF02)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF02)
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
@@ -3713,7 +3759,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02_DNS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF02_DNS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF02_DNS)
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
@@ -3974,7 +4020,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RICO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_RICO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RICO)
 
     ! calc in moist condition
     do j = JS, JE
@@ -4122,8 +4168,6 @@ contains
 
     call RANDOM_get(rndm) ! make random
 
-    PERTURB_AMP_QV = 0.0_RP
-
     if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        do j = JS, JE
        do i = IS, IE
@@ -4166,6 +4210,264 @@ contains
     endif
     return
   end subroutine MKINIT_RICO
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for BOMEX inter comparison
+  subroutine MKINIT_BOMEX
+    use scale_atmos_hydrometeor, only: &
+         I_QV, &
+         I_QC, &
+         I_NC, &
+         QHE
+    use scale_atmos_phy_mp_suzuki10, only: &
+         nccn
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE, &
+         ATMOS_PHY_AE_TYPE
+    implicit none
+
+#ifndef DRY
+    real(RP):: PERTURB_AMP_PT = 0.1_RP
+    real(RP):: PERTURB_AMP_QV = 2.5E-5_RP
+
+    NAMELIST / PARAM_MKINIT_BOMEX / &
+       PERTURB_AMP_PT, &
+       PERTURB_AMP_QV
+
+    real(RP) :: LHV (KA,IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: qall ! QV+QC
+    real(RP) :: fact
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit BOMEX] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    if ( I_QV < 1 ) then
+       write(*,*) 'xxx QV is not registered'
+       call PRC_MPIstop
+    end if
+
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_BOMEX,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BOMEX. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOMEX)
+
+    ! calc in moist condition
+    do j = JS, JE
+    do i = IS, IE
+
+       pres_sfc(1,i,j) = 1015.E2_RP ! [Pa]
+       pott_sfc(1,i,j) = 299.1_RP
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          !--- potential temperature
+          if ( GRID_CZ(k) < 520.0_RP ) then ! below initial cloud top
+             potl(k,i,j) = 298.7_RP
+          elseif( GRID_CZ(k) < 1480.0_RP ) then
+             fact = ( GRID_CZ(k)-520.0_RP ) * ( 302.4_RP-298.7_RP ) / ( 1480.0_RP-520.0_RP )
+             potl(k,i,j) = 298.7_RP + fact
+          elseif( GRID_CZ(k) < 2000.0_RP ) then
+             fact = ( GRID_CZ(k)-1480.0_RP ) * ( 308.2_RP-302.4_RP ) / ( 2000.0_RP-1480.0_RP )
+             potl(k,i,j) = 302.4_RP + fact
+          else
+             fact = ( GRID_CZ(k)-2000.0_RP ) * 3.65E-3_RP
+             potl(k,i,j) = 308.2_RP + fact
+          endif
+
+          !--- horizontal wind velocity
+          if ( GRID_CZ(k) <= 700.0_RP ) then ! below initial cloud top
+             velx(k,i,j) =  -8.75_RP
+             vely(k,i,j) =   0.0_RP
+          else
+             fact = 1.8E-3_RP * ( GRID_CZ(k)-700.0_RP )
+             velx(k,i,j) =  -8.75_RP + fact
+             vely(k,i,j) =  0.0_RP
+          endif
+
+          qv(k,i,j) = 0.0_RP
+          qc(k,i,j) = 0.0_RP
+
+       enddo
+
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               potl    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc  (1,i,j) = 22.45E-3_RP   ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          !--- mixing ratio of vapor
+          if ( GRID_CZ(k) <= 520.0_RP ) then ! below initial cloud top
+             fact = ( GRID_CZ(k)-0.0_RP ) * ( 16.3E-3_RP-17.0E-3_RP ) / ( 520.0_RP-0.0_RP )
+             qall = 17.0E-3_RP + fact
+          elseif ( GRID_CZ(k) <= 1480.0_RP ) then ! boundary
+             fact = ( GRID_CZ(k)-520.0_RP ) * ( 10.7E-3_RP-16.3E-3_RP ) / ( 1480.0_RP-520.0_RP )
+             qall = 16.3E-3_RP + fact
+          elseif( GRID_CZ(k) <= 2000.0_RP ) then
+             fact = ( GRID_CZ(k)-1480.0_RP ) * ( 4.2E-3_RP-10.7E-3_RP ) / ( 2000.0_RP-1480.0_RP )
+             qall = 10.7E-3_RP + fact
+          else
+             fact = ( GRID_CZ(k)-2000.0_RP ) * ( -1.2E-6_RP )
+             qall = 4.2E-3_RP + fact
+          endif
+
+          qc(k,i,j) = 0.0_RP
+          qv(k,i,j) = qall - qc(k,i,j)
+       enddo
+
+    enddo
+    enddo
+
+    call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
+                                      pott    (:,:,:), & ! [OUT]
+                                      pres    (:,:,:), & ! [OUT]
+                                      temp    (:,:,:), & ! [IN]
+                                      qv      (:,:,:), & ! [IN]
+                                      qc      (:,:,:), & ! [IN]
+                                      pott_sfc(:,:,:), & ! [OUT]
+                                      pres_sfc(:,:,:), & ! [IN]
+                                      temp_sfc(:,:,:), & ! [IN]
+                                      qv_sfc  (:,:,:), & ! [IN]
+                                      qc_sfc  (:,:,:)  ) ! [IN]
+
+
+    do j = JS, JE
+    do i = IS, IE
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       DENS(KE+1:KA  ,i,j) = DENS(KE,i,j)
+    enddo
+    enddo
+
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMZ(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+         RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
+       else
+         RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+       endif
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          !--- Super saturated air at initial
+          if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+             QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV &
+                              + qc(k,i,j)
+          else
+             QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
+          endif
+          do iq = QHE+1, QHE+nccn
+            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j)
+          enddo
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+            QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
+          else
+            QTRC(k,i,j,I_QV) = qv(k,i,j)
+          endif
+          QTRC(k,i,j,I_QC) = qc(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       if ( I_NC > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( qc(k,i,j) > 0.0_RP ) then
+                QTRC(k,i,j,I_NC) = 70.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
+             endif
+          enddo
+          enddo
+          enddo
+       endif
+    endif
+
+#endif
+    if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
+      call AEROSOL_setup
+    endif
+    return
+  end subroutine MKINIT_BOMEX
 
   !-----------------------------------------------------------------------------
   subroutine MKINIT_interporation
@@ -4252,7 +4554,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_INTERPORATION. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_INTERPORATION)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_INTERPORATION)
 
     call FileGetShape( dims(:),                               &
                        BASENAME_ORG, "DENS", 1, single=.true. )
@@ -4701,7 +5003,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SEABREEZE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SEABREEZE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SEABREEZE)
 
     call flux_setup
 
@@ -4818,7 +5120,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAYZONE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAYZONE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
@@ -4904,13 +5206,14 @@ contains
 
     return
   end subroutine MKINIT_grayzone
+
   !-----------------------------------------------------------------------------
   !> Make initial state of Box model experiment for zerochemical module
   subroutine MKINIT_boxaero
     use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_atmos_admin, only: &
-         ATMOS_PHY_AE_TYPE
+       ATMOS_PHY_AE_TYPE
     implicit none
 
     real(RP) :: init_dens  = 1.12_RP   ![kg/m3]
@@ -4919,13 +5222,14 @@ contains
     real(RP) :: init_ssliq = 0.01_RP   ![%]
 
     NAMELIST / PARAM_MKINIT_BOXAERO / &
-         init_dens, &
-         init_temp, &
-         init_pres, &
-         init_ssliq
+       init_dens, &
+       init_temp, &
+       init_pres, &
+       init_ssliq
 
     real(RP) :: qsat
-    integer :: i, j, k, ierr
+    integer  :: i, j, k, ierr
+    !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_AE_TYPE /= 'KAJINO13' ) then
        if( IO_L ) write(IO_FID_LOG,*) '+++ For [Box model of aerosol],'
@@ -4950,29 +5254,33 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BOXAERO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BOXAERO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOXAERO)
 
     QTRC(:,:,:,:) = 0.0_RP
-    do k = KS, KE
-    do i = IS, IE
-    do j = JS, JE
-      DENS(k,i,j) = init_dens
-      MOMX(k,i,j) = 0.0_RP
-      MOMY(k,i,j) = 0.0_RP
-      MOMZ(k,i,j) = 0.0_RP
-      pott(k,i,j) = init_temp * ( P00/init_pres )**( Rdry/CPdry )
-      RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
-      call SATURATION_pres2qsat_all( qsat,init_temp,init_pres )
-      QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP )*qsat
+    call SATURATION_pres2qsat_all( qsat, init_temp, init_pres )
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS(k,i,j) = init_dens
+       MOMX(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
+       MOMZ(k,i,j) = 0.0_RP
+       pott(k,i,j) = init_temp * ( P00/init_pres )**(Rdry/CPdry)
+       RHOT(k,i,j) = init_dens * pott(k,i,j)
+
+       QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP ) * qsat
     enddo
     enddo
     enddo
 
-    if( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
-      call AEROSOL_setup
+    if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
+       call AEROSOL_setup
     endif
 
+    return
   end subroutine MKINIT_boxaero
+
   !-----------------------------------------------------------------------------
   !> Make initial state for warm bubble experiment
   subroutine MKINIT_warmbubbleaero
@@ -5035,7 +5343,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_WARMBUBBLE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES

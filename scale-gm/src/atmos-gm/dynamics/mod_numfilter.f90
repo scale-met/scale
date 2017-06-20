@@ -201,7 +201,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=NUMFILTERPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=NUMFILTERPARAM)
 
     global_area = 4.0_RP * PI * RADIUS * RADIUS
     global_grid = 10.0_RP * 4.0_RP**ADM_GLEVEL
@@ -2587,7 +2587,7 @@ contains
     real(RP), intent(in)  :: z(kdim)       ! height [m]
     real(RP), intent(in)  :: z_top         ! height top [m]
     real(RP), intent(in)  :: z_bottomlimit ! bottom limit of the factor [m]
-    real(RP), intent(out) :: factor(kdim)  ! height-dependent factor [0-1]
+    real(RP), intent(out) :: factor(kdim)  ! height-dependent factor (0-1)
 
     real(RP) :: sw
 

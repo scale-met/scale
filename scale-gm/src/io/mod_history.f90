@@ -239,7 +239,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist NMHISD. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=NMHISD)
+    if( IO_NML ) write(IO_FID_NML,nml=NMHISD)
 
     ! nonsence restore
     step_def        = step
@@ -380,6 +380,8 @@ contains
           write(*,*) 'xxx Not appropriate names in namelist NMHIST. STOP.'
           call PRC_MPIstop
        endif
+
+       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=NMHIST)
 
        if( file == '' ) file = item
 

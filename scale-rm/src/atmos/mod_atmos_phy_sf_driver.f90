@@ -226,7 +226,6 @@ contains
     real(RP) :: q(QA)
     real(RP) :: qdry
     real(RP) :: Rtot
-    real(RP) :: CPtot
 
     real(RP) :: work
 
@@ -287,14 +286,14 @@ contains
        call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
        call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
        call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
-       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '0-1'     , nohalo=.true. )
-       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1'     , nohalo=.true. )
+       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '1'       , nohalo=.true. )
+       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '1'       , nohalo=.true. )
        call HIST_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       , nohalo=.true. )
        call HIST_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       , nohalo=.true. )
        call HIST_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       , nohalo=.true. )
-       call HIST_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m2/s' )
-       call HIST_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m2/s' )
-       call HIST_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m2/s' )
+       call HIST_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m/s2' )
+       call HIST_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m/s2' )
+       call HIST_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m/s2' )
        call HIST_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    , nohalo=.true. )
        call HIST_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    , nohalo=.true. )
        call HIST_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    , nohalo=.true. )
@@ -333,31 +332,34 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-          q(:) = QTRC(KS,i,j,:)
+          do iq = 1, QA
+             q(iq) = QTRC(KS,i,j,iq)
+          enddo
           call THERMODYN_qd( qdry,  q, TRACER_MASS )
-          call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
           call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-          RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) ) &
+          RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPdry * GSQRT(KS,i,j,I_XYZ) ) ) &
                          * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
        enddo
        enddo
 
-       DENS_t_SF(:,:) = 0.0_RP
        if ( I_QV > 0 ) then
           do j  = JS, JE
           do i  = IS, IE
              work = SFLX_QTRC(i,j,I_QV) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-             DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work
+             DENS_t_SF(i,j)      = work
              RHOQ_t_SF(i,j,I_QV) = work
           enddo
           enddo
-       end if
 
-       do j  = JS, JE
-       do i  = IS, IE
-          RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
-       enddo
-       enddo
+          do j  = JS, JE
+          do i  = IS, IE
+             RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
+          enddo
+          enddo
+
+       else
+          DENS_t_SF(:,:) = 0.0_RP
+       end if
 
     endif
 

@@ -186,7 +186,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_SATURATION. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_SATURATION)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SATURATION)
 
     RTEM00 = 1.0_RP / TEM00
 
@@ -229,7 +229,7 @@ contains
        temp   )
     implicit none
 
-    real(RP), intent(out) :: alpha !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha !< liquid/ice separation factor (0-1)
     real(RP), intent(in)  :: temp  !< temperature [K]
     !---------------------------------------------------------------------------
 
@@ -248,7 +248,7 @@ contains
        temp   )
     implicit none
 
-    real(RP), intent(out) :: alpha(KA) !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha(KA) !< liquid/ice separation factor (0-1)
     real(RP), intent(in)  :: temp (KA) !< temperature [K]
 
     integer :: k
@@ -272,13 +272,14 @@ contains
        temp   )
     implicit none
 
-    real(RP), intent(out) :: alpha(KA,IA,JA) !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha(KA,IA,JA) !< liquid/ice separation factor (0-1)
     real(RP), intent(in)  :: temp (KA,IA,JA) !< temperature [K]
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,alpha,temp,ATMOS_SATURATION_LLIMIT_TEMP,ATMOS_SATURATION_ULIMIT_TEMP)  
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -892,7 +893,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,ATMOS_SATURATION_LLIMIT_TEMP,RTEM00,CPovR_liq,LovR_liq,qsat,dens,LovR_ice,CPovR_ice,ATMOS_SATURATION_ULIMIT_TEMP) 
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -915,7 +917,6 @@ contains
     enddo
     enddo
     enddo
-
     return
   end subroutine ATMOS_SATURATION_dens2qsat_all_3D
 
@@ -984,7 +985,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,psat) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,RTEM00,CPovR_liq,LovR_liq,qsat,dens)  
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1064,7 +1066,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k,psat) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,RTEM00,CPovR_ice,LovR_ice,qsat,dens) 
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE

@@ -42,9 +42,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \verb| ATMOS_BOUNDARY_START_DATE     = 2007, 7, 14, 18, 0, 0, |\\
 \verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.0,               |\\
 \verb| ATMOS_BOUNDARY_USE_DENS       = .true.,     |\\
-\verb| ATMOS_BOUNDARY_USE_VELZ       = .true.,     |\\
 \verb| ATMOS_BOUNDARY_USE_QHYD       = .false.,    |\\
-\verb| ATMOS_BOUNDARY_VALUE_VELZ     = 0.0,        |\\
 \verb| ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,        |\\
 \verb| ATMOS_BOUNDARY_LINEAR_H       = .false.,    |\\
 \verb| ATMOS_BOUNDARY_EXP_H          = 2.0,        |\\
@@ -133,7 +131,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 力学過程の設定は、
 \namelist{&PARAM_ATMOS_DYN}
 物理過程の設定は、
-\namelist{PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}に
+\namelist{PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}に
 記述されている。
 詳細な内容については、第\ref{sec:atmos_dyn}節、\ref{sec:basic_usel_physics}節を参照されたい。
 

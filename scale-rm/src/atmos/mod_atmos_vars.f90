@@ -99,12 +99,14 @@ module mod_atmos_vars
   real(RP), public, allocatable :: RHOQ_tp(:,:,:,:)
 
   ! diagnostic variables
-  real(RP), public, allocatable :: TEMP(:,:,:)   ! temperature [K]
-  real(RP), public, allocatable :: PRES(:,:,:)   ! pressure    [Pa=J/m3]
-  real(RP), public, allocatable :: W   (:,:,:)   ! velocity w  [m/s]
-  real(RP), public, allocatable :: U   (:,:,:)   ! velocity u  [m/s]
-  real(RP), public, allocatable :: V   (:,:,:)   ! velocity v  [m/s]
   real(RP), public, allocatable :: POTT(:,:,:)   ! potential temperature [K]
+  real(RP), public, allocatable :: TEMP(:,:,:)   ! temperature           [K]
+  real(RP), public, allocatable :: PRES(:,:,:)   ! pressure              [Pa=J/m3]
+  real(RP), public, allocatable :: PHYD(:,:,:)   ! hydrostatic pressure  [Pa=J/m3]
+  real(RP), public, allocatable :: W   (:,:,:)   ! velocity w            [m/s]
+  real(RP), public, allocatable :: U   (:,:,:)   ! velocity u            [m/s]
+  real(RP), public, allocatable :: V   (:,:,:)   ! velocity v            [m/s]
+  real(RP), public, allocatable :: N2  (:,:,:)   ! squared Brunt-Vaisala frequency [/s2]
 
   !-----------------------------------------------------------------------------
   !
@@ -145,7 +147,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 70        ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 71        ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W            =  1 ! velocity w at cell center
   integer, private, parameter :: I_U            =  2 ! velocity u at cell center
@@ -227,14 +229,16 @@ module mod_atmos_vars
 
   integer, private, parameter :: I_Uabs         = 63
 
-  integer, private, parameter :: I_CAPE         = 64
-  integer, private, parameter :: I_CIN          = 65
-  integer, private, parameter :: I_LCL          = 66
-  integer, private, parameter :: I_LFC          = 67
-  integer, private, parameter :: I_LNB          = 68
+  integer, private, parameter :: I_N2           = 64
 
-  integer, private, parameter :: I_PBLH         = 69
-  integer, private, parameter :: I_MSE          = 70
+  integer, private, parameter :: I_CAPE         = 65
+  integer, private, parameter :: I_CIN          = 66
+  integer, private, parameter :: I_LCL          = 67
+  integer, private, parameter :: I_LFC          = 68
+  integer, private, parameter :: I_LNB          = 69
+
+  integer, private, parameter :: I_PBLH         = 70
+  integer, private, parameter :: I_MSE          = 71
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -332,12 +336,14 @@ contains
     allocate( RHOT_tp(KA,IA,JA)    )
     allocate( RHOQ_tp(KA,IA,JA,max(QA,1)) )
 
+    allocate( POTT(KA,IA,JA) )
     allocate( TEMP(KA,IA,JA) )
     allocate( PRES(KA,IA,JA) )
+    allocate( PHYD(KA,IA,JA) )
     allocate( W   (KA,IA,JA) )
     allocate( U   (KA,IA,JA) )
     allocate( V   (KA,IA,JA) )
-    allocate( POTT(KA,IA,JA) )
+    allocate( N2  (KA,IA,JA) )
 
     MOMZ(1:KS-1,:,:) = 0.0_RP
     MOMZ(KE:KA,:,:) = 0.0_RP
@@ -351,7 +357,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_VARS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (ATMOS) ***'
@@ -457,6 +463,8 @@ contains
     call HIST_reg( AD_HIST_id(I_HDIV)     , 'HDIV',      'horizontal divergence',          '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_Uabs)     , 'Uabs',      'absolute velocity',              'm/s',    ndim=3 )
 
+    call HIST_reg( AD_HIST_id(I_N2)       , 'N2',        'squared Brunt-Vaisala frequency','1/s2',   ndim=3 )
+
     call HIST_reg( AD_HIST_id(I_CAPE)     , 'CAPE',      'convection avail. pot. energy',  'm2/s2',  ndim=2 )
     call HIST_reg( AD_HIST_id(I_CIN)      , 'CIN',       'convection inhibition',          'm2/s2',  ndim=2 )
     call HIST_reg( AD_HIST_id(I_LCL)      , 'LCL',       'lifted condensation level',      'm',      ndim=2 )
@@ -521,19 +529,6 @@ contains
     call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_up), 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J',  ndim=2, isflux=.true.  )
     call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J',  ndim=2, isflux=.true.  )
 
-    if ( AD_HIST_id(I_W) > 0 ) then
-       AD_PREP_sw(I_W) = 1
-    endif
-    if ( AD_HIST_id(I_U) > 0 ) then
-       AD_PREP_sw(I_U) = 1
-    endif
-    if ( AD_HIST_id(I_V) > 0 ) then
-       AD_PREP_sw(I_V) = 1
-    endif
-    if ( AD_HIST_id(I_POTT) > 0 ) then
-       AD_PREP_sw(I_POTT) = 1
-    endif
-
     if (      AD_HIST_id(I_QDRY) > 0 &
          .OR. AD_MONIT_id(I_QDRY) > 0 ) then
        AD_PREP_sw(I_QDRY) = 1
@@ -573,27 +568,11 @@ contains
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_CPTOT) = 1
     endif
-    if ( AD_HIST_id(I_PRES) > 0 ) then
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_RTOT)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-    endif
-    if ( AD_HIST_id(I_TEMP) > 0 ) then
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_RTOT)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
-    endif
 
     if ( AD_HIST_id(I_POTL) > 0 ) then
-       AD_PREP_sw(I_POTT)  = 1
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_POTL)  = 1
     endif
     if (      AD_HIST_id(I_RHA) > 0 &
@@ -602,8 +581,6 @@ contains
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_QSAT)  = 1
     endif
 
@@ -617,8 +594,6 @@ contains
     endif
 
     if ( AD_HIST_id(I_Uabs) > 0 ) then
-       AD_PREP_sw(I_U)    = 1
-       AD_PREP_sw(I_V)    = 1
        AD_PREP_sw(I_Uabs) = 1
     endif
 
@@ -635,13 +610,11 @@ contains
     endif
 
     if ( AD_HIST_id(I_PBLH) > 0 ) then
-       AD_PREP_sw(I_POTT) = 1
        AD_PREP_sw(I_PBLH) = 1
     endif
 
     if ( AD_HIST_id(I_MSE) > 0 ) then
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_MSE)   = 1
     endif
 
@@ -651,28 +624,24 @@ contains
     endif
 
     if ( AD_HIST_id(I_W_PRIM) > 0 ) then
-       AD_PREP_sw(I_W)      = 1
        AD_PREP_sw(I_W_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
        AD_PREP_sw(I_W_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_U_PRIM) > 0 ) then
-       AD_PREP_sw(I_U)      = 1
        AD_PREP_sw(I_U_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
        AD_PREP_sw(I_U_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_V_PRIM) > 0 ) then
-       AD_PREP_sw(I_V)      = 1
        AD_PREP_sw(I_V_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
        AD_PREP_sw(I_V_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_POTT_PRIM) > 0 ) then
-       AD_PREP_sw(I_POTT)      = 1
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
        AD_PREP_sw(I_POTT_MEAN) = 1
@@ -722,7 +691,6 @@ contains
     end if
 
     if ( AD_HIST_id(I_W_PRIM2) > 0 ) then
-       AD_PREP_sw(I_W)       = 1
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM2) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
@@ -730,9 +698,7 @@ contains
     endif
 
     if ( AD_HIST_id(I_PT_W_PRIM) > 0 ) then
-       AD_PREP_sw(I_W)         = 1
        AD_PREP_sw(I_W_PRIM)    = 1
-       AD_PREP_sw(I_POTT)      = 1
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_PT_W_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
@@ -741,7 +707,6 @@ contains
     endif
 
     if ( AD_HIST_id(I_W_PRIM3) > 0 ) then
-       AD_PREP_sw(I_W)       = 1
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM3) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
@@ -749,9 +714,6 @@ contains
     endif
 
     if ( AD_HIST_id(I_TKE_RS) > 0 ) then
-       AD_PREP_sw(I_W)      = 1
-       AD_PREP_sw(I_U)      = 1
-       AD_PREP_sw(I_V)      = 1
        AD_PREP_sw(I_W_PRIM) = 1
        AD_PREP_sw(I_U_PRIM) = 1
        AD_PREP_sw(I_V_PRIM) = 1
@@ -768,9 +730,6 @@ contains
     endif
     if (      AD_HIST_id (I_ENGK) > 0 &
          .OR. AD_MONIT_id(I_ENGK) > 0 ) then
-       AD_PREP_sw(I_W) = 1
-       AD_PREP_sw(I_U) = 1
-       AD_PREP_sw(I_V) = 1
        AD_PREP_sw(I_ENGK) = 1
     endif
     if (      AD_HIST_id (I_ENGI) > 0 &
@@ -778,22 +737,15 @@ contains
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_ENGI)  = 1
     endif
     if (      AD_HIST_id (I_ENGT) > 0 &
          .OR. AD_MONIT_id(I_ENGT) > 0 ) then
        AD_PREP_sw(I_ENGP)  = 1
-       AD_PREP_sw(I_W)  = 1
-       AD_PREP_sw(I_U)  = 1
-       AD_PREP_sw(I_V)  = 1
        AD_PREP_sw(I_ENGK)  = 1
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
        AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_PRES)  = 1
-       AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_ENGI)  = 1
        AD_PREP_sw(I_ENGT)  = 1
     endif
@@ -1096,7 +1048,7 @@ contains
                           SFC_DENS (:,:),   & ! [OUT]
                           SFC_PRES (:,:)    ) ! [OUT]
 
-    call HIST_setpres( PRES    (:,:,:),  & ! [IN]
+    call HIST_setpres( PHYD    (:,:,:),  & ! [IN]
                        SFC_PRES(:,:)     ) ! [IN]
 
     return
@@ -1380,50 +1332,6 @@ contains
 
     ! prepare and history output of diagnostic variables
 
-!    if ( AD_PREP_sw(I_W) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-!
-!    if ( AD_PREP_sw(I_U) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-!
-!    if ( AD_PREP_sw(I_V) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-!
-!    if ( AD_PREP_sw(I_POTT) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-
     if ( AD_PREP_sw(I_QDRY) > 0 ) then
        call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
                           QTRC(:,:,:,:), & ! [IN]
@@ -1514,7 +1422,10 @@ contains
     endif
 
     if ( AD_PREP_sw(I_CPTOT) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(iq) &
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CPTOT,CPdry,QDRY,QA,CVTOT,CVdry,QTRC,TRACER_CP,TRACER_CV) &
+       !$omp shared(I_QV,LHV,QIS,QIE,LHF) 
 !OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
@@ -1539,28 +1450,6 @@ contains
        enddo
        enddo
     endif
-
-!    if ( AD_PREP_sw(I_PRES) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-!       enddo
-!       enddo
-!       enddo
-!    endif
-!
-!    if ( AD_PREP_sw(I_TEMP) > 0 ) then
-!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
-!       enddo
-!       enddo
-!       enddo
-!    endif
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
        call HYDROMETEOR_LHV( LHV_local(:,:,:), TEMP(:,:,:) )
@@ -1753,13 +1642,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           W_PRIM(k,i,j) = W(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( W_MEAN(:), W_PRIM(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1767,7 +1656,7 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           W_PRIM(k,i,j) = W(k,i,j) - W_MEAN(k)
        enddo
        enddo
@@ -1778,13 +1667,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           U_PRIM(k,i,j) = U(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( U_MEAN(:), U_PRIM(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1792,7 +1681,7 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           U_PRIM(k,i,j) = U(k,i,j) - U_MEAN(k)
        enddo
        enddo
@@ -1803,13 +1692,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           V_PRIM(k,i,j) = V(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( V_MEAN(:), V_PRIM(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1817,7 +1706,7 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           V_PRIM(k,i,j) = V(k,i,j) - V_MEAN(k)
        enddo
        enddo
@@ -1828,20 +1717,20 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           POTT_PRIM(k,i,j) = TEMP(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( T_MEAN(:), POTT_PRIM(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
 
     if ( AD_PREP_sw(I_POTT_MEAN) > 0 ) then
        call COMM_horizontal_mean( PT_MEAN(:), RHOT(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1849,7 +1738,7 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           POTT_PRIM(k,i,j) = POTT(k,i,j) - PT_MEAN(k)
        enddo
        enddo
@@ -1860,13 +1749,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           RHOQ(k,i,j) = QTRC(k,i,j,I_QV) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( QV_MEAN(:), RHOQ(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1875,13 +1764,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           RHOQ(k,i,j) = QHYD(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( QHYD_MEAN(:), RHOQ(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1890,13 +1779,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           RHOQ(k,i,j) = QLIQ(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( QLIQ_MEAN(:), RHOQ(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -1905,13 +1794,13 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = 1, KA
           RHOQ(k,i,j) = QICE(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        call COMM_horizontal_mean( QICE_MEAN(:), RHOQ(:,:,:) )
-       do k = KS, KE
+       do k = 1, KA
           QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
        enddo
     end if
@@ -2077,6 +1966,8 @@ contains
     call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s'    )
     call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s'    )
     call HIST_in( Uabs (:,:,:), 'Uabs',  'absolute velocity',      'm/s'    )
+
+    call HIST_in( N2   (:,:,:), 'N2',    'squared Brunt-Vaisala frequency','1/s2' )
 
     call HIST_in( DENS_MEAN(:), 'DENS_MEAN', 'horiz. mean of density',    'kg/m3' )
     call HIST_in( W_MEAN   (:), 'W_MEAN',    'horiz. mean of w',          'm/s' )
@@ -2316,101 +2207,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc diagnostic variables
   subroutine ATMOS_vars_diagnostics
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_diagnostic, only: &
+       ATMOS_DIAGNOSTIC_get
     implicit none
 
-    integer  :: k, i, j
-    !---------------------------------------------------------------------------
-
-    call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
-                              PRES(:,:,:),   & ! [OUT]
-                              DENS(:,:,:),   & ! [IN]
-                              RHOT(:,:,:),   & ! [IN]
-                              QTRC(:,:,:,:), & ! [IN]
-                              TRACER_CV(:),  & ! [IN]
-                              TRACER_R(:),   & ! [IN]
-                              TRACER_MASS(:) ) ! [IN]
-
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS+1, KE-1
-       W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-       W(KS,i,j) = 0.5_RP * (               MOMZ(KS,i,j) ) / DENS(KS,i,j)
-    enddo
-    enddo
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-       W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j)             ) / DENS(KE,i,j)
-    enddo
-    enddo
-
-!OCL XFILL
-    do j = 1, JA
-    do i = 2, IA
-    do k = KS, KE
-       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = 1, JA
-    do k = KS, KE
-       U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
-    enddo
-    enddo
-
-!OCL XFILL
-    do j = 2, JA
-    do i = 1, IA
-    do k = KS, KE
-       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do i = 1, IA
-    do k = KS, KE
-       V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = 1, JA
-    do i  = 1, IA
-       W(   1:KS-1,i,j) = W(KS,i,j)
-       U(   1:KS-1,i,j) = U(KS,i,j)
-       V(   1:KS-1,i,j) = V(KS,i,j)
-       W(KE+1:KA,  i,j) = W(KE,i,j)
-       U(KE+1:KA,  i,j) = U(KE,i,j)
-       V(KE+1:KA,  i,j) = V(KE,i,j)
-    enddo
-    enddo
-
-    call COMM_vars8( U(:,:,:), 1 )
-    call COMM_vars8( V(:,:,:), 2 )
-    call COMM_wait ( U(:,:,:), 1, .false. )
-    call COMM_wait ( V(:,:,:), 2, .false. )
-
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS, KE
-       POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
+    call ATMOS_DIAGNOSTIC_get( POTT, TEMP, PRES, PHYD, W, U, V, N2,                 & ! (out)
+                               DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av ) ! (in)
 
     return
   end subroutine ATMOS_vars_diagnostics
@@ -2546,7 +2348,9 @@ contains
     call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
 
     ! total evapolation
-    call MONIT_put( AD_MONIT_id(I_EVAP), SFLX_QTRC(:,:,I_QV) )
+    if ( I_QV > 0 ) then
+       call MONIT_put( AD_MONIT_id(I_EVAP), SFLX_QTRC(:,:,I_QV) )
+    endif
 
     ! total precipitation
 !OCL XFILL
@@ -2569,7 +2373,10 @@ contains
                               TRACER_R(:),   & ! [IN]
                               TRACER_MASS(:) ) ! [IN]
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(iq) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,ENGP,DENS,GRAV,REAL_CZ,W,U,V,ENGI,ENGK,QDRY,TEMP,CVdry,QA) &
+    !$omp shared(TRACER_CV,QTRC,I_QV,LHV,QIS,QIE,LHF) 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

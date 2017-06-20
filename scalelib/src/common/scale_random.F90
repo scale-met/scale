@@ -72,7 +72,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RANDOM. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_RANDOM)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RANDOM)
 
     call random_seed
     call random_seed(size=nseeds)
@@ -95,32 +95,35 @@ contains
        PRC_myrank
     implicit none
 
-    integer :: time1(8)
-    real(RP) :: time2
+    integer  :: time1(8) ! date and time information
+    real(RP) :: time2    ! CPU time
     !---------------------------------------------------------------------------
 
     if ( RANDOM_FIX ) then
-       time1(1) = 2011
-       time1(2) = 12
-       time1(3) = 5
-       time1(4) = 10
-       time1(5) = 20
-       time1(6) = 41 ! birthday of SCALE
+       ! birthday of SCALE
+       time1(1) = 2011 ! The year
+       time1(2) = 12   ! The month
+       time1(3) = 5    ! The day of the month
+       time1(4) = 9    ! Time difference with UTC in minutes
+       time1(5) = 10   ! The hour of the day
+       time1(6) = 20   ! The minutes of the hour
+       time1(7) = 41   ! The seconds of the minute
+       time1(8) = 0    ! The milliseconds of the second
        time2    = 0.0_RP
     else
        call date_and_time(values=time1)
        call cpu_time(time2)
     endif
 
-    RANDOM_seedvar(:) = &
-         + ( time1(1) - 1970 ) * 32140800 &
-         + time1(2) * 2678400 &
-         + time1(3) * 86400 &
-         + time1(4) * 60 &
-         + time1(5) * 3600 &
-         + time1(6) * 60 &
-         + time1(7) &
-         + int(time2*1.E6_RP) + PRC_myrank
+    RANDOM_seedvar(:) = PRC_myrank                     &
+                      + ( time1(1) - 1970 ) * 32140800 &
+                      + time1(2) * 2678400             &
+                      + time1(3) * 86400               &
+                      + time1(5) * 60                  &
+                      + time1(6) * 3600                &
+                      + time1(7) * 60                  &
+                      + time1(8)                       &
+                      + int(time2*1.E6_RP)
 
     call random_seed(put=RANDOM_seedvar)
 

@@ -21,9 +21,10 @@ module mod_user
   use scale_stdio
   use scale_prof
   use scale_grid_index
-  use scale_gridtrans
   use scale_index
   use scale_tracer
+
+  use scale_gridtrans
   use scale_const, only: &
        PI => CONST_PI
   use scale_grid, only: &
@@ -135,7 +136,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     Lx = FXG(IAG-IHALO) - FXG(IHALO)
 

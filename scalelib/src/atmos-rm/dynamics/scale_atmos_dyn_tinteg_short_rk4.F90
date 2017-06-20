@@ -24,7 +24,7 @@ module scale_atmos_dyn_tinteg_short_rk4
   use scale_grid_index
   use scale_index
   use scale_tracer
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -324,6 +324,11 @@ contains
     tflx_hi_RK(:,:,:,:,:) = UNDEF
 #endif
 
+#ifdef QUICKDEBUG
+    mflx_hi(   1:KS-1,:,:,:) = UNDEF
+    mflx_hi(KE+1:KA  ,:,:,:) = UNDEF
+#endif
+
 !OCL XFILL
     DENS0 = DENS
 !OCL XFILL
@@ -381,7 +386,6 @@ contains
     call ATMOS_DYN_tstep( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [OUT]
                           PROG_RK1,                                         & ! [OUT]
                           mflx_hi_RK(:,:,:,:,1), tflx_hi_RK(:,:,:,:,1),     & ! [INOUT]
-
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -556,6 +560,8 @@ contains
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
                           dtrk, dt                                          ) ! [IN]
 
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,DENS,DENS_RK1,DENS_RK2,DENS_RK3,DENS0)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -604,6 +610,9 @@ contains
     enddo
     enddo
 
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOT,RHOT_RK1,RHOT_RK2,RHOT_RK3,RHOT0) &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

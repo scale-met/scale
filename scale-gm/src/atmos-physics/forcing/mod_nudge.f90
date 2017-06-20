@@ -155,7 +155,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist NUDGEPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=NUDGEPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=NUDGEPARAM)
 
     NDG_VMAX = 0
 
@@ -313,7 +313,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** vertical weight'
-    if( IO_L ) write(IO_FID_LOG,*) '   k       z   weight[0-1]'
+    if( IO_L ) write(IO_FID_LOG,*) '   k       z   weight(0-1)'
     do k = 1, ADM_kall
        if( IO_L ) write(IO_FID_LOG,'(1x,I3,1x,F7.1,1x,E14.6)') k, GRD_gz(k), wgt_vertical(k)
     enddo
@@ -325,8 +325,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** center point(lon) [deg]                      : ', NDG_hwgt_center_lon
        if( IO_L ) write(IO_FID_LOG,*) '*** distance to inner boundary of sponge zone [m]: ', NDG_hwgt_halo1_dist
        if( IO_L ) write(IO_FID_LOG,*) '*** distance to outer boundary of sponge zone [m]: ', NDG_hwgt_halo2_dist
-       if( IO_L ) write(IO_FID_LOG,*) '*** weight at inner boundary [0-1]               : ', NDG_hwgt_halo1_coef
-       if( IO_L ) write(IO_FID_LOG,*) '*** weight at outer boundary [0-1]               : ', NDG_hwgt_halo2_coef
+       if( IO_L ) write(IO_FID_LOG,*) '*** weight at inner boundary [1]                 : ', NDG_hwgt_halo1_coef
+       if( IO_L ) write(IO_FID_LOG,*) '*** weight at outer boundary [1]                 : ', NDG_hwgt_halo2_coef
     endif
 
     return

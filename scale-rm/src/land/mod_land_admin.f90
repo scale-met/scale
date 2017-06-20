@@ -72,7 +72,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND)
 
     !-----< module component check >-----
 

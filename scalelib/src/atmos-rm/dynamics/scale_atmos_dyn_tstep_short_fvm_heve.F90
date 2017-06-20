@@ -24,7 +24,7 @@ module scale_atmos_dyn_tstep_short_fvm_heve
   use scale_index
   use scale_tracer
   use scale_process
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -319,6 +319,21 @@ contains
 #endif
 #endif
 
+#ifdef QUICKDEBUG
+    DENS_RK(   1:KS-1,:,:)   = UNDEF
+    DENS_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMZ_RK(   1:KS-1,:,:)   = UNDEF
+    MOMZ_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMX_RK(   1:KS-1,:,:)   = UNDEF
+    MOMX_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMY_RK(   1:KS-1,:,:)   = UNDEF
+    MOMY_RK(KE+1:KA  ,:,:)   = UNDEF
+    RHOT_RK(   1:KS-1,:,:)   = UNDEF
+    RHOT_RK(KE+1:KA  ,:,:)   = UNDEF
+    PROG_RK(   1:KS-1,:,:,:) = UNDEF
+    PROG_RK(KE+1:KA  ,:,:,:) = UNDEF
+#endif
+
 #ifdef HIST_TEND
     advch_t = 0.0_RP
     advcv_t = 0.0_RP
@@ -542,7 +557,7 @@ contains
 
        !-----< update density >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -642,8 +657,8 @@ contains
        enddo
 
        !-----< update momentum (z) -----
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       
+       !$omp parallel do private(i,j,k,advcv,advch,wdamp,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -907,7 +922,7 @@ contains
 
        !-----< update momentum (x) >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, min(IIE, IEH)
        do k = KS, KE
@@ -1155,7 +1170,7 @@ contains
 
        !-----< update momentum (y) >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, min(JJE, JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -1346,7 +1361,7 @@ contains
 
        !-----< update rho*theta >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE

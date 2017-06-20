@@ -216,7 +216,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist LATLONPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=LATLONPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=LATLONPARAM)
 
     latmax = latmax_deg * D2R
     latmin = latmin_deg * D2R

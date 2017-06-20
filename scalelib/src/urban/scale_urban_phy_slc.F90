@@ -179,7 +179,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_PHY_SLC. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN_PHY_SLC)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_PHY_SLC)
 
     allocate( DZR(UKS:UKE) )
     allocate( DZB(UKS:UKE) )
@@ -398,7 +398,11 @@ contains
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
 
-    real(RP) :: QVS   ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVsat ! saturation water vapor mixing ratio at surface [kg/kg]
+
+    real(RP) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -505,18 +509,21 @@ contains
        ROFF_URB_t (i,j) = ( ROFF  - ROFF_URB (i,j) ) / dt
 
        ! saturation at the surface
-       call qsat( QVS, SFC_TEMP(i,j), PRSS(i,j) )
+       call qsat( QVsat, SFC_TEMP(i,j), PRSS(i,j) )
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
                       Uabs,          & ! [OUT]
+                      FracU10,       & ! [OUT]
+                      FracT2,        & ! [OUT]
+                      FracQ2,        & ! [OUT]
                       TMPA    (i,j), & ! [IN]
                       SFC_TEMP(i,j), & ! [IN]
                       PRSA    (i,j), & ! [IN]
                       PRSS    (i,j), & ! [IN]
                       QA      (i,j), & ! [IN]
-                      QVS,           & ! [IN]
+                      QVsat,         & ! [IN]
                       U1      (i,j), & ! [IN]
                       V1      (i,j), & ! [IN]
                       Z1      (i,j), & ! [IN]

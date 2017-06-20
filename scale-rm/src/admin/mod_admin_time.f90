@@ -101,6 +101,7 @@ module mod_admin_time
   real(DP), private :: TIME_WALLCLOCK_START             ! Start time of wall clock             [sec]
   real(DP), private :: TIME_WALLCLOCK_LIMIT   = -1.0_DP ! Elapse time limit of wall clock time [sec]
   real(DP), private :: TIME_WALLCLOCK_SAFE    =  0.9_DP ! Safety coefficient for elapse time limit
+  real(DP), private :: TIME_WALLCLOCK_safelim           ! TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE
 
   real(DP), private, parameter :: eps = 1.E-6_DP !> epsilon for timesec
 
@@ -286,7 +287,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TIME. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TIME)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TIME)
 
     ! check time setting
     if ( setup_TimeIntegration ) then
@@ -755,6 +756,8 @@ contains
        TIME_DTSEC = 1.0_RP
     endif
 
+    TIME_WALLCLOCK_START = PRC_MPItime()
+
     ! WALLCLOCK TERMINATOR SETUP
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
        if( IO_L ) write(IO_FID_LOG,*)
@@ -786,12 +789,11 @@ contains
 
        TIME_DSTEP_WALLCLOCK_CHECK = int( TIME_DTSEC_WALLCLOCK_CHECK / TIME_DTSEC )
 
-       TIME_WALLCLOCK_SAFE  = max( min( TIME_WALLCLOCK_SAFE, 1.0_DP ), 0.0_DP )
-       TIME_WALLCLOCK_START = PRC_MPItime()
+       TIME_WALLCLOCK_SAFE    = max( min( TIME_WALLCLOCK_SAFE, 1.0_DP ), 0.0_DP )
+       TIME_WALLCLOCK_safelim = TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.1,A)')      '*** This job stops after ', &
-                                                          TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE, ' seconds.'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Step interval for check     : ', TIME_DTSEC_WALLCLOCK_CHECK, &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.1,A)')      '*** This job stops after ', TIME_WALLCLOCK_safelim, ' seconds.'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Time interval for check     : ', TIME_DTSEC_WALLCLOCK_CHECK, &
                                                           ' (step interval=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
     endif
 
@@ -802,6 +804,7 @@ contains
   !> Evaluate component execution
   subroutine ADMIN_TIME_checkstate
     use scale_process, only: &
+       PRC_UNIVERSAL_IsMaster, &
        PRC_MPItime
     use scale_calendar, only: &
        CALENDAR_date2char
@@ -825,6 +828,7 @@ contains
 
     real(DP)          :: WALLCLOCK_elapse
     character(len=27) :: nowchardate
+    logical           :: TO_STDOUT
     !---------------------------------------------------------------------------
 
     TIME_DOATMOS_step     = .false.
@@ -912,16 +916,31 @@ contains
        TIME_RES_RESUME       = 0
     endif
 
+    TO_STDOUT = .false.
+    if ( IO_STEP_TO_STDOUT > 0 ) then
+       if( mod(TIME_NOWSTEP-1,IO_STEP_TO_STDOUT) == 0 ) TO_STDOUT = .true.
+    endif
+
     call CALENDAR_date2char( nowchardate,     & ! [OUT]
                              TIME_NOWDATE(:), & ! [IN]
                              TIME_NOWMS       ) ! [IN]
 
+    WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
-       WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
-       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I7,A,I7,A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
-                                                              ' WCLOCK:', WALLCLOCK_elapse
+       if( IO_L ) write(IO_FID_LOG,'(1x,2A,2(A,I7),2(A,F10.1))') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                                 ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim
+       if ( PRC_UNIVERSAL_IsMaster .AND. TO_STDOUT ) then ! universal master node
+          if( IO_L ) write(*,'(1x,2A,2(A,I7),2(A,F10.1))') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                           ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim
+       endif
     else
-       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I7,A,I7)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
+       if( IO_L ) write(IO_FID_LOG,'(1x,2A,2(A,I7),A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                              ' WCLOCK:', WALLCLOCK_elapse
+       if ( PRC_UNIVERSAL_IsMaster .AND. TO_STDOUT ) then ! universal master node
+          if( IO_L ) write(*,'(1x,2A,2(A,I7),A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                        ' WCLOCK:', WALLCLOCK_elapse
+       endif
     endif
 
     return
@@ -979,8 +998,12 @@ contains
          .AND. mod(TIME_NOWSTEP-1,TIME_DSTEP_WALLCLOCK_CHECK) == 0 ) then
        WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
 
-       if ( WALLCLOCK_elapse > TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Elapse time limit is detected. Termination operation starts.'
+       if ( WALLCLOCK_elapse > TIME_WALLCLOCK_safelim ) then
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '********************************************************************'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Elapse time limit is detected. Termination operation starts. ***'
+          if( IO_L ) write(IO_FID_LOG,*) '********************************************************************'
+          if( IO_L ) write(IO_FID_LOG,*)
           TIME_DOend = .true.
        endif
     endif
@@ -990,7 +1013,11 @@ contains
        inquire(file='QUIT', exist=exists)
 
        if( exists ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** QUIT file is found. Termination operation starts.'
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '*********************************************************'
+          if( IO_L ) write(IO_FID_LOG,*) '*** QUIT file is found. Termination operation starts. ***'
+          if( IO_L ) write(IO_FID_LOG,*) '*********************************************************'
+          if( IO_L ) write(IO_FID_LOG,*)
           TIME_DOend = .true.
        endif
     endif

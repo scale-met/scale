@@ -92,9 +92,9 @@ module scale_land_sfc
 
        real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
        real(RP), intent(in) :: LST   (IA,JA) ! land surface temperature [K]
-       real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation [0-1]
-       real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
-       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+       real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation (0-1)
+       real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
+       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
        real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
        real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
        real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
@@ -124,9 +124,15 @@ contains
   subroutine LAND_SFC_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_land_sfc_slab, only: &
-       LAND_SFC_SLAB_setup, &
-       LAND_SFC_SLAB
+    use scale_land_sfc_const, only: &
+       LAND_SFC_CONST_setup, &
+       LAND_SFC_CONST
+    use scale_land_sfc_thin_slab, only: &
+       LAND_SFC_THIN_SLAB_setup, &
+       LAND_SFC_THIN_SLAB
+    use scale_land_sfc_thick_slab, only: &
+       LAND_SFC_THICK_SLAB_setup, &
+       LAND_SFC_THICK_SLAB
     implicit none
 
     character(len=*), intent(in) :: LAND_TYPE
@@ -134,11 +140,14 @@ contains
 
     select case( LAND_TYPE )
     case( 'CONST' )
-       call LAND_SFC_SLAB_setup( LAND_TYPE )
-       LAND_SFC => LAND_SFC_SLAB
-    case( 'SLAB' )
-       call LAND_SFC_SLAB_setup( LAND_TYPE )
-       LAND_SFC => LAND_SFC_SLAB
+       call LAND_SFC_CONST_setup( LAND_TYPE )
+       LAND_SFC => LAND_SFC_CONST
+    case( 'SLAB', 'THIN-SLAB' )
+       call LAND_SFC_THIN_SLAB_setup( LAND_TYPE )
+       LAND_SFC => LAND_SFC_THIN_SLAB
+    case( 'THICK-SLAB' )
+       call LAND_SFC_THICK_SLAB_setup( LAND_TYPE )
+       LAND_SFC => LAND_SFC_THICK_SLAB
     end select
 
     return

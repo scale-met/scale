@@ -41,27 +41,30 @@ module scale_stdio
   !
   !++ Public parameters & variables
   !
-  integer,               public, parameter :: H_SHORT     = File_HSHORT  !< Character length (short=16)
-  integer,               public, parameter :: H_MID       = File_HMID    !< Character length (short=64)
-  integer,               public, parameter :: H_LONG      = File_HLONG   !< Character length (short=256)
+  integer,               public, parameter :: H_SHORT     = File_HSHORT     !< Character length (short=16)
+  integer,               public, parameter :: H_MID       = File_HMID       !< Character length (short=64)
+  integer,               public, parameter :: H_LONG      = File_HLONG      !< Character length (short=256)
 
-  character(len=H_MID),  public            :: H_MODELNAME                !< name and version of the model
-  character(len=H_MID),  public            :: H_LIBNAME                  !< name and version of the library
-  character(len=H_MID),  public            :: H_SOURCE                   !< for file header
-  character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN' !< for file header
+  character(len=H_MID),  public            :: H_MODELNAME                   !< name and version of the model
+  character(len=H_MID),  public            :: H_LIBNAME                     !< name and version of the library
+  character(len=H_MID),  public            :: H_SOURCE                      !< for file header
+  character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN'    !< for file header
 
   character(len=6),      public, parameter :: IO_STDOUT     = "STDOUT"
   integer,               public, parameter :: IO_FID_STDOUT = 6
   integer,               public            :: IO_FID_CONF   = 7             !< Config file ID
   integer,               public            :: IO_FID_LOG    = 8             !< Log file ID
+  integer,               public            :: IO_FID_NML    = 9             !< Log file ID (only for output namelist)
 
   character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'   !< basename of logfile
+  character(len=H_LONG), public            :: IO_NML_FILENAME     = ''      !< filename of logfile (only for output namelist)
   logical,               public            :: IO_L                = .false. !< output log or not? (this process)
-  logical,               public            :: IO_LNML             = .false. !< output log or not? (for namelist, this process)
+  logical,               public            :: IO_NML              = .false. !< output log or not? (for namelist, this process)
   logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
+  logical,               public            :: IO_LOG_NML_SUPPRESS = .false. !< suppress all of log output? (for namelist)
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
-  logical,               public            :: IO_LOG_NML_SUPPRESS = .false. !< suppress all of log output?
-  logical,               public            :: IO_AGGREGATE          = .false. !< do parallel I/O through PnetCDF
+  logical,               public            :: IO_AGGREGATE        = .false. !< do parallel I/O through PnetCDF
+  integer,               public            :: IO_STEP_TO_STDOUT   = -1      !< interval for output current step to STDOUT (negative is off)
 
   !-----------------------------------------------------------------------------
   !
@@ -88,13 +91,15 @@ contains
        H_SOURCE,            &
        H_INSTITUTE,         &
        IO_LOG_BASENAME,     &
+       IO_NML_FILENAME,     &
        IO_LOG_SUPPRESS,     &
-       IO_LOG_ALLNODE,      &
        IO_LOG_NML_SUPPRESS, &
+       IO_LOG_ALLNODE,      &
+       IO_STEP_TO_STDOUT,   &
        IO_AGGREGATE
 
-    character(len=*), intent(in) :: MODELNAME !< name of the model
-    logical,          intent(in) :: call_from_launcher  !< flag to get command argument
+    character(len=*), intent(in) :: MODELNAME          !< name of the model
+    logical,          intent(in) :: call_from_launcher !< flag to get command argument
     character(len=*), intent(in), optional :: fname_in !< name of config file for each process
 
     character(len=H_LONG) :: fname
@@ -142,11 +147,24 @@ contains
     integer, intent(in) :: myrank    !< my rank ID
     logical, intent(in) :: is_master !< master process?
 
+    namelist / PARAM_IO / &
+       H_SOURCE,            &
+       H_INSTITUTE,         &
+       IO_LOG_BASENAME,     &
+       IO_NML_FILENAME,     &
+       IO_LOG_SUPPRESS,     &
+       IO_LOG_NML_SUPPRESS, &
+       IO_LOG_ALLNODE,      &
+       IO_AGGREGATE
+
     character(len=H_LONG) :: fname
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if ( .NOT. IO_LOG_SUPPRESS ) then
+    if ( IO_LOG_SUPPRESS ) then
+       IO_L = .false.
+    else
        if ( is_master ) then ! master node
           IO_L = .true.
        else
@@ -155,9 +173,9 @@ contains
     endif
 
     if ( IO_LOG_NML_SUPPRESS ) then
-       IO_LNML = .false.
+       IO_NML = .false.
     else
-       IO_LNML = IO_L
+       IO_NML = IO_L
     endif
 
     if ( IO_L ) then
@@ -236,13 +254,53 @@ contains
        write(IO_FID_LOG,*) ''
        write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
        write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '*** Open config file, FID = ', IO_FID_CONF
-       write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
-       write(IO_FID_LOG,*) '*** basename of log file  = ', trim(IO_LOG_BASENAME)
-       write(IO_FID_LOG,*) '*** detailed log output   = ', IO_LNML
+       write(IO_FID_LOG,'(1x,A,I3)') '*** Open config file, FID = ', IO_FID_CONF
+       write(IO_FID_LOG,'(1x,A,I3)') '*** Open log    file, FID = ', IO_FID_LOG
+       write(IO_FID_LOG,'(1x,2A)')   '*** basename of log file  = ', trim(IO_LOG_BASENAME)
+       write(IO_FID_LOG,*) ''
 
     else
        if( is_master ) write(*,*) '*** Log report is suppressed.'
+    endif
+
+    if ( IO_NML_FILENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*)         '*** The used config is output to the file.'
+       if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** filename of used config file   = ', trim(IO_NML_FILENAME)
+
+       if ( is_master ) then ! write from master node only
+          IO_NML     = .true. ! force on
+          IO_FID_NML = IO_get_available_fid()
+          open( unit   = IO_FID_NML,            &
+                file   = trim(IO_NML_FILENAME), &
+                form   = 'formatted',           &
+                iostat = ierr                   )
+          if ( ierr /= 0 ) then
+             write(*,*) 'xxx File open error! :', trim(IO_NML_FILENAME)
+             stop 1
+          endif
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3)') '*** Open file to output used config, FID = ', IO_FID_NML
+
+          write(IO_FID_NML,'(A)')  '################################################################################'
+          write(IO_FID_NML,'(A)')  '#! configulation'
+          write(IO_FID_NML,'(2A)') '#! ', trim(H_LIBNAME)
+          write(IO_FID_NML,'(2A)') '#! ', trim(H_MODELNAME)
+          write(IO_FID_NML,'(A)')  '################################################################################'
+          write(IO_FID_NML,nml=PARAM_IO)
+       else
+          IO_NML     = .false. ! force off
+          IO_FID_NML = -1
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** The file for used config is open by the master rank'
+       endif
+    else
+       if ( IO_NML ) then
+          IO_FID_NML = IO_FID_LOG
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** The used config is output to the log.'
+       else
+          if( IO_L ) write(IO_FID_LOG,*) '*** The used config is not output.'
+       endif
     endif
 
     return

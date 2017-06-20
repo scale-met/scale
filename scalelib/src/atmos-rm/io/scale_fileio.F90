@@ -116,6 +116,8 @@ module scale_fileio
   logical,  private              :: File_nozcoord(0:File_nfile_max-1)     ! whether nozcoord is true or false
   integer,  private              :: write_buf_amount = 0                  ! sum of write buffer amounts
 
+  ! local start and end
+  integer,  private              :: XSB, XEB, YSB, YEB
   ! global star and count
   integer,  private              :: startXY   (3), countXY   (3)
   integer,  private              :: startZX   (2), countZX   (2)
@@ -141,13 +143,21 @@ contains
   !> Setup
   subroutine FILEIO_setup
     use scale_process, only: &
+       PRC_myrank, &
        PRC_MPIstop
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
 
     NAMELIST / PARAM_FILEIO / &
        FILEIO_datacheck_criteria
+
+    integer :: rankidx(2)
+    integer :: IM, JM
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -166,7 +176,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_FILEIO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_FILEIO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILEIO)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** NetCDF header information ***'
@@ -176,17 +186,40 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Data consistency criteria : ', &
                                    '(file-internal)/internal = ', FILEIO_datacheck_criteria
 
-    allocate( AXIS_LON  (IMAXB,JMAXB) )
-    allocate( AXIS_LONX (IMAXB,JMAXB) )
-    allocate( AXIS_LONY (IMAXB,JMAXB) )
-    allocate( AXIS_LONXY(IMAXB,JMAXB) )
-    allocate( AXIS_LAT  (IMAXB,JMAXB) )
-    allocate( AXIS_LATX (IMAXB,JMAXB) )
-    allocate( AXIS_LATY (IMAXB,JMAXB) )
-    allocate( AXIS_LATXY(IMAXB,JMAXB) )
+    if ( IO_AGGREGATE ) then
+       rankidx(1) = PRC_2Drank(PRC_myrank,1)
+       rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
-    allocate( AXIS_HZXY (KMAX,IMAXB,JMAXB) )
-    allocate( AXIS_HWXY (KMAX,IMAXB,JMAXB) )
+       ! construct indices independent from PRC_PERIODIC_X/Y
+       XSB = 1 + IHALO
+       if( rankidx(1) == 0 ) XSB = 1
+       XEB = IMAX + IHALO
+       if( rankidx(1) == PRC_NUM_X-1 ) XEB = IA
+
+       YSB = 1 + JHALO
+       if( rankidx(2) == 0 ) YSB = 1
+       YEB = JMAX + JHALO
+       if( rankidx(2) == PRC_NUM_Y-1 ) YEB = JA
+    else
+       XSB = ISB
+       XEB = IEB
+       YSB = JSB
+       YEB = JEB
+    end if
+
+    IM = XEB - XSB + 1
+    JM = YEB - YSB + 1
+    allocate( AXIS_LON  (IM,JM) )
+    allocate( AXIS_LONX (IM,JM) )
+    allocate( AXIS_LONY (IM,JM) )
+    allocate( AXIS_LONXY(IM,JM) )
+    allocate( AXIS_LAT  (IM,JM) )
+    allocate( AXIS_LATX (IM,JM) )
+    allocate( AXIS_LATY (IM,JM) )
+    allocate( AXIS_LATXY(IM,JM) )
+
+    allocate( AXIS_HZXY (KMAX,IM,JM) )
+    allocate( AXIS_HWXY (KMAX,IM,JM) )
 
     if( IO_AGGREGATE ) call Construct_Derived_Datatype
 
@@ -248,17 +281,17 @@ contains
     real(RP), intent(in) :: FZ   (0:KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    AXIS_LON  (:,:)   = LON  (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONX (:,:)   = LONX (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONY (:,:)   = LONY (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LONXY(:,:)   = LONXY(ISB:IEB,JSB:JEB) / D2R
-    AXIS_LAT  (:,:)   = LAT  (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATX (:,:)   = LATX (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATY (:,:)   = LATY (ISB:IEB,JSB:JEB) / D2R
-    AXIS_LATXY(:,:)   = LATXY(ISB:IEB,JSB:JEB) / D2R
+    AXIS_LON  (:,:)   = LON  (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONX (:,:)   = LONX (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONY (:,:)   = LONY (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONXY(:,:)   = LONXY(XSB:XEB,YSB:YEB) / D2R
+    AXIS_LAT  (:,:)   = LAT  (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATX (:,:)   = LATX (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATY (:,:)   = LATY (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATXY(:,:)   = LATXY(XSB:XEB,YSB:YEB) / D2R
 
-    AXIS_HZXY (:,:,:) = CZ(KS:KE,ISB:IEB,JSB:JEB)
-    AXIS_HZXY (:,:,:) = FZ(KS:KE,ISB:IEB,JSB:JEB)
+    AXIS_HZXY (:,:,:) = CZ(KS:KE,XSB:XEB,YSB:YEB)
+    AXIS_HWXY (:,:,:) = FZ(KS:KE,XSB:XEB,YSB:YEB)
 
     set_coordinates = .true.
 
@@ -271,34 +304,40 @@ contains
        basename, &
        atmos,    &
        land,     &
-       urban     )
+       urban,    &
+       transpose )
     implicit none
 
     character(len=*), intent(in) :: basename        !< basename of the file
     logical,          intent(in), optional :: atmos !< check atmospheric coordinates
     logical,          intent(in), optional :: land  !< check land coordinates
     logical,          intent(in), optional :: urban !< check urban coordinates
+    logical,          intent(in), optional :: transpose
 
-    logical  :: atmos_
-    logical  :: land_
-    logical  :: urban_
+    logical :: atmos_
+    logical :: land_
+    logical :: urban_
+    logical :: transpose_
 
-    integer  :: fid
+    integer :: fid
     !---------------------------------------------------------------------------
 
     atmos_ = .false.
     land_  = .false.
     urban_ = .false.
+    transpose_ = .false.
 
     if( present(atmos) ) atmos_ = atmos
     if( present(land ) ) land_  = land
     if( present(urban) ) urban_ = urban
+    if( present(transpose) ) transpose_ = transpose
 
     call FILEIO_open( fid,     & ! [OUT]
                       basename ) ! [IN]
 
-    call FILEIO_check_coordinates_id( fid,                  & ! [IN]
-                                      atmos_, land_, urban_ ) ! [IN]
+    call FILEIO_check_coordinates_id( fid,                   & ! [IN]
+                                      atmos_, land_, urban_, & ! [IN]
+                                      transpose_             )
 
     return
   end subroutine FILEIO_check_coordinates_name
@@ -309,7 +348,8 @@ contains
        fid,   &
        atmos, &
        land,  &
-       urban  )
+       urban, &
+       transpose )
     use scale_grid, only: &
        GRID_CZ, &
        GRID_CX, &
@@ -324,10 +364,12 @@ contains
     logical, intent(in), optional :: atmos !< check atmospheric coordinates
     logical, intent(in), optional :: land  !< check land coordinates
     logical, intent(in), optional :: urban !< check urban coordinates
+    logical, intent(in), optional :: transpose
 
-    logical  :: atmos_
-    logical  :: land_
-    logical  :: urban_
+    logical :: atmos_
+    logical :: land_
+    logical :: urban_
+    logical :: transpose_
 
     real(RP) :: buffer_z  (KA)
     real(RP) :: buffer_x  (IA)
@@ -344,10 +386,12 @@ contains
     atmos_ = .false.
     land_  = .false.
     urban_ = .false.
+    transpose_ = .false.
 
     if( present(atmos) ) atmos_ = atmos
     if( present(land ) ) land_  = land
     if( present(urban) ) urban_ = urban
+    if( present(transpose) ) transpose_ = transpose
 
     call FILEIO_read_var_1D( buffer_x, fid, 'x',  'X', 1 )
     call FILEIO_read_var_1D( buffer_y, fid, 'y',  'Y', 1 )
@@ -358,19 +402,23 @@ contains
     if ( set_coordinates ) then
        call FILEIO_read_var_2D( buffer_xy, fid, 'lon', 'XY', 1 )
        call FILEIO_flush( fid )
-       call check_2d( AXIS_LON, buffer_xy(ISB:IEB,JSB:JEB), 'lon' )
+       call check_2d( AXIS_LON, buffer_xy(XSB:XEB,YSB:YEB), 'lon' )
 
        call FILEIO_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
        call FILEIO_flush( fid )
-       call check_2d( AXIS_LAT, buffer_xy(ISB:IEB,JSB:JEB), 'lat' )
+       call check_2d( AXIS_LAT, buffer_xy(XSB:XEB,YSB:YEB), 'lat' )
     end if
 
     if ( atmos_ ) then
        call FILEIO_read_var_1D( buffer_z,   fid, 'z',      'Z',   1 )
-       call FILEIO_read_var_3D( buffer_zxy, fid, 'height', 'ZXY', 1 )
+       if ( .not. transpose_ ) then
+          call FILEIO_read_var_3D( buffer_zxy, fid, 'height', 'ZXY', 1 )
+       end if
        call FILEIO_flush( fid )
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
-       call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,ISB:IEB,JSB:JEB), 'height' )
+       if ( .not. transpose_ ) then
+          call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height', transpose_ )
+       end if
     end if
 
     if ( land_ ) then
@@ -681,30 +729,30 @@ contains
        if    ( axistype == 'Z' ) then
           start(1) = 1
           count(1) = KMAX
-          call FileRead( var(KS:KE), fid, varname, step, PRC_myrank,        &
+          call FileRead( var(KS:KE), fid, varname, step,                    &
                          ntypes=KMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'LZ' ) then
           start(1) = 1
           count(1) = LKMAX
-          call FileRead( var, fid, varname, step, PRC_myrank,                &
+          call FileRead( var, fid, varname, step,                            &
                          ntypes=LKMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'UZ' ) then
           start(1) = 1
           count(1) = UKMAX
-          call FileRead( var, fid, varname, step, PRC_myrank,                &
+          call FileRead( var, fid, varname, step,                            &
                          ntypes=LKMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'X' .OR. axistype == 'CX' ) then
           start(1) = IS_inG - IHALO
           count(1) = IA
-          call FileRead( var, fid, varname, step, PRC_myrank,             &
+          call FileRead( var, fid, varname, step,                         &
                          ntypes=IA, dtype=etype, start=start, count=count )
        elseif( axistype == 'Y' .OR. axistype == 'CY' ) then
           start(1) = JS_inG - JHALO
           count(1) = JA
-          call FileRead( var, fid, varname, step, PRC_myrank,             &
+          call FileRead( var, fid, varname, step,                         &
                          ntypes=JA, dtype=etype, start=start, count=count )
        else
-          write(*,*) 'xxx unsupported axis type. Check!: ', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
     else
@@ -730,11 +778,11 @@ contains
           dim1_S   = 1
           dim1_E   = JA
        else
-          write(*,*) 'xxx unsupported axis type. Check!: ', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E), fid, varname, step, PRC_myrank )
+       call FileRead( var(dim1_S:dim1_E), fid, varname, step )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -780,15 +828,15 @@ contains
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
        if    ( axistype == 'XY' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank,                    &
+          call FileRead( var, fid, varname, step,                                &
                          ntypes=IA*JA, dtype=etype, start=startXY, count=countXY )
        elseif( axistype == 'ZX' ) then
           ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
           ! derived datatype to describe the layout of local read buffer
-          call FileRead( var, fid, varname, step, PRC_myrank,                       &
+          call FileRead( var, fid, varname, step,                                   &
                          ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
     else
@@ -803,11 +851,11 @@ contains
           dim2_S   = ISB
           dim2_E   = IEB
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step, PRC_myrank )
+       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -855,21 +903,21 @@ contains
        ! Because KHALO is not saved in files, we use mpi derived datatypes to
        ! describe the layout of local read buffer
        if    ( axistype == 'ZXY' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank,                          &
+          call FileRead( var, fid, varname, step,                                      &
                          ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY )
        elseif( axistype == 'XYT' ) then
           startXY(3) = 1
           countXY(3) = step
-          call FileRead( var, fid, varname, step, PRC_myrank,                         &
+          call FileRead( var, fid, varname, step,                                     &
                          ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY )
        elseif( axistype == 'Land' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank,                             &
+          call FileRead( var, fid, varname, step,                                         &
                          ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND )
        elseif( axistype == 'Urban' ) then
-          call FileRead( var, fid, varname, step, PRC_myrank,                                &
+          call FileRead( var, fid, varname, step,                                            &
                          ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
     else
@@ -902,12 +950,12 @@ contains
           dim3_S   = JSB
           dim3_E   = JEB
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
 
        call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                      fid, varname, step, PRC_myrank                  )
+                      fid, varname, step                              )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -956,10 +1004,10 @@ contains
        if ( axistype == 'ZXYT' ) then
           startZXY(4) = 1
           countZXY(4) = step
-          call FileRead( var, fid, varname, step, PRC_myrank,                             &
+          call FileRead( var, fid, varname, step,                                         &
                          ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY )
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
     else
@@ -973,12 +1021,12 @@ contains
           dim4_S   = 1
           dim4_E   = step
        else
-          write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+          write(*,*) 'xxx [FILEIO_read_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
        endif
 
        call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), &
-                      fid, varname, step, PRC_myrank                                )
+                      fid, varname, step                                            )
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -1866,7 +1914,6 @@ contains
 
     integer :: rankidx(2)
     integer :: start(3)
-    integer :: XSB, XEB, YSB, YEB
     !---------------------------------------------------------------------------
 
     if ( present(xy) ) then
@@ -1879,16 +1926,6 @@ contains
        rankidx(1) = PRC_2Drank(PRC_myrank,1)
        rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
-       ! construct indices independent from PRC_PERIODIC_X/Y
-       XSB = 1 + IHALO
-       if( rankidx(1) == 0 ) XSB = 1
-       XEB = IMAX + IHALO
-       if( rankidx(1) == PRC_NUM_X-1 ) XEB = IA
-
-       YSB = 1 + JHALO
-       if( rankidx(2) == 0 ) YSB = 1
-       YEB = JMAX + JHALO
-       if( rankidx(2) == PRC_NUM_Y-1 ) YEB = JA
        ! For parallel I/O, not all variables are written by all processes.
        ! 1. Let PRC_myrank 0 writes all z axes
        ! 2. Let processes (rankidx(2) == 0) write x axes  (south-most processes)
@@ -1904,11 +1941,6 @@ contains
        put_x = ( rankidx(2) == 0 ) ! only south most row processes write x coordinates
        put_y = ( rankidx(1) == 0 ) ! only west most column processes write y coordinates
     else
-       XSB = ISB
-       XEB = IEB
-       YSB = JSB
-       YEB = JEB
-
        put_z = ( .NOT. xy_ )
        put_x = .true.
        put_y = .true.
@@ -2175,7 +2207,7 @@ contains
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
        end if
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_def_var] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2244,7 +2276,7 @@ contains
        start(1) = JSGA
        if( IO_AGGREGATE .AND. rankidx(1) > 0 ) exec = .false.  ! only west most column processes write
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2337,7 +2369,7 @@ contains
           if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
        end if
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2467,7 +2499,7 @@ contains
        dim1_S   = UKS
        dim1_E   = UKE
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2590,7 +2622,7 @@ contains
           if( rankidx(2) == PRC_NUM_Y - 1 ) dim2_E = JA
        end if
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_3D_t] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2761,7 +2793,7 @@ contains
           if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
        end if
     else
-       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       write(*,*) 'xxx [FILEIO_write_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
     endif
 
@@ -2988,7 +3020,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine check_3d( &
        expected, buffer, &
-       name              )
+       name,             &
+       transpose         )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -2998,6 +3031,7 @@ contains
     real(RP),         intent(in) :: expected(:,:,:)
     real(RP),         intent(in) :: buffer(:,:,:)
     character(len=*), intent(in) :: name
+    logical,          intent(in) :: transpose
 
     real(RP) :: check
     integer  :: imax, jmax, kmax
@@ -3006,9 +3040,15 @@ contains
     intrinsic :: size
     !---------------------------------------------------------------------------
 
-    kmax = size(expected,1)
-    imax = size(expected,2)
-    jmax = size(expected,3)
+    if ( transpose ) then
+       kmax = size(expected,3)
+       imax = size(expected,1)
+       jmax = size(expected,2)
+    else
+       kmax = size(expected,1)
+       imax = size(expected,2)
+       jmax = size(expected,3)
+    end if
     if ( size(buffer,1) /= kmax ) then
        write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', kmax, size(buffer,1)
        call PRC_MPIstop
@@ -3022,23 +3062,44 @@ contains
        call PRC_MPIstop
     end if
 
-    do j=1, jmax
-    do i=1, imax
-    do k=1, kmax
-       if ( abs(expected(k,i,j)) > EPS ) then
-          check = abs(buffer(k,i,j)-expected(k,i,j)) / abs(buffer(k,i,j)+expected(k,i,j)) * 2.0_RP
-       else
-          check = abs(buffer(k,i,j)-expected(k,i,j))
-       end if
+    if ( transpose ) then
+       ! buffer(i,j,k), expected(k,i,j)
+       do k=1, kmax
+       do j=1, jmax
+       do i=1, imax
+          if ( abs(expected(k,i,j)) > EPS ) then
+             check = abs(buffer(i,j,k)-expected(k,i,j)) / abs(buffer(i,j,k)+expected(k,i,j)) * 2.0_RP
+          else
+             check = abs(buffer(i,j,k)-expected(k,i,j))
+          end if
 
-       if ( check > FILEIO_datacheck_criteria ) then
-          write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
-                     expected(k,i,j), buffer(k,i,j), check
-          call PRC_MPIstop
-       end if
-    end do
-    end do
-    end do
+          if ( check > FILEIO_datacheck_criteria ) then
+             write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', i, ',', j, ',', k, ' is different:', &
+                        expected(k,i,j), buffer(i,j,k), check
+             call PRC_MPIstop
+          end if
+       end do
+       end do
+       end do
+    else
+       do j=1, jmax
+       do i=1, imax
+       do k=1, kmax
+          if ( abs(expected(k,i,j)) > EPS ) then
+             check = abs(buffer(k,i,j)-expected(k,i,j)) / abs(buffer(k,i,j)+expected(k,i,j)) * 2.0_RP
+          else
+             check = abs(buffer(k,i,j)-expected(k,i,j))
+          end if
+
+          if ( check > FILEIO_datacheck_criteria ) then
+             write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
+                        expected(k,i,j), buffer(k,i,j), check
+             call PRC_MPIstop
+          end if
+       end do
+       end do
+       end do
+    end if
 
     return
   end subroutine check_3d

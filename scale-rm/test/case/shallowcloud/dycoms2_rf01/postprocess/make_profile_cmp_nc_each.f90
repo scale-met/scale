@@ -3,12 +3,15 @@ program convine
 
   include 'netcdf.inc'
 
-  integer(4), parameter :: xproc=2, yproc=3
+  integer(4), parameter :: xproc=8, yproc=4
+  integer(4), parameter :: nxp=3, nyp=4
+  integer(4), parameter :: nx=nxp*xproc, ny=nyp*yproc, nz=276
+
   integer(4), parameter :: nst=30, nen=60
   integer(4), parameter :: nt=nen-nst+1
-  integer(4), parameter :: nxp=8, nyp=8
+
   integer(4), parameter :: nzhalo=2
-  integer(4), parameter :: nx=nxp*xproc, ny=nyp*yproc, nz=200
+
   real(8), parameter :: cp=1015.D0, Lp=2.47d+6, dt=60.d0 !sec
   real(8), parameter :: rdry=287.04d0 , p00=101300.d0 , cpdry=1003.5d0
   real(8), parameter :: lh0=2.5008D+6, rovcp=rdry/cpdry, tint=1.d0*dt*0.d0

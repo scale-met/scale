@@ -113,7 +113,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist SATURATIONPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=SATURATIONPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=SATURATIONPARAM)
 
     RTEM00 = 1.0_RP / TEM00
 
@@ -158,7 +158,7 @@ contains
     implicit none
 
     real(RP), intent(in)  :: temp  !< temperature [K]
-    real(RP), intent(out) :: alpha !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha !< liquid/ice separation factor (0-1)
     !---------------------------------------------------------------------------
 
     alpha = ( temp                   - SATURATION_LLIMIT_TEMP ) &
@@ -182,7 +182,7 @@ contains
     integer,  intent(in)  :: kdim
     integer,  intent(in)  :: ldim
     real(RP), intent(in)  :: temp (ijdim,kdim,ldim) !< temperature [K]
-    real(RP), intent(out) :: alpha(ijdim,kdim,ldim) !< liquid/ice separation factor [0-1]
+    real(RP), intent(out) :: alpha(ijdim,kdim,ldim) !< liquid/ice separation factor (0-1)
 
     integer :: ij, k, l
     !---------------------------------------------------------------------------

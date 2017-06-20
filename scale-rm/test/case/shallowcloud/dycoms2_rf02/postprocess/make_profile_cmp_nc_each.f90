@@ -3,16 +3,19 @@ program convine
 
   include 'netcdf.inc'
 
-  integer(4), parameter :: xproc=2, yproc=3
-  integer(4), parameter :: nst=60, nen=90
-  integer(4), parameter :: nt=nen-nst+1
-  integer(4), parameter :: nxp=11, nyp=11
-  integer(4), parameter :: nzhalo=2
+  integer(4), parameter :: xproc=8, yproc=4
+  integer(4), parameter :: nxp=4, nyp=6
   integer(4), parameter :: nx=nxp*xproc, ny=nyp*yproc, nz=200
+
+  integer(4), parameter :: nst=30, nen=60
+  integer(4), parameter :: nt=nen-nst+1
+
+  integer(4), parameter :: nzhalo=2
+
   real(8), parameter :: cp=1015.D0, Lp=2.47d+6, dt=60.d0 !sec
   real(8), parameter :: rdry=287.04d0 , p00=101300.d0 , cpdry=1003.5d0
-  real(8), parameter :: lh0=2.5008D+6, rovcp=rdry/cpdry, tint=0.d0
-  integer(4), parameter :: nzs=100
+  real(8), parameter :: lh0=2.5008D+6, rovcp=rdry/cpdry, tint=1.d0*dt*0.d0
+  integer(4), parameter :: nzs=200
   real(8), parameter :: s_zmax=1.2d0
   real(8) :: s_hgt(nzs), hgt(nz), tmp2(nzs), rcount(nzs)
   real(8) :: s_qt(nzs), s_ql(nzs), s_tke(nzs), s_pl(nzs)
@@ -28,12 +31,12 @@ program convine
   data count2 /nxp,nyp,1/
   integer(4) :: ix, jy, kz, kz1, nrec, n
   integer(4) :: ncid, id01, status, iix, jjy
-  real(8) :: count1, count3
-  character*64 :: cfile
+  real(8) :: count1
+  character(len=256) :: cfile
   real(8),allocatable :: dens(:,:,:), qt(:,:,:), t(:,:,:), pres(:,:,:)
   real(8),allocatable :: pt(:,:,:), w(:,:,:), u(:,:,:), v(:,:,:)
   real(8),allocatable :: qc(:,:,:), qr(:,:,:), ql(:,:,:), qv(:,:,:)
-  real(8),allocatable :: lwptp(:,:,:), lwpt(:,:,:), lwp(:,:), vpt(:,:,:)
+  real(8),allocatable :: lwptp(:,:,:), lwpt(:,:,:), lwp(:,:)
   real(8),allocatable :: tke(:,:,:), tke2d(:,:), sgstke2d(:,:)
   real(8),allocatable :: sgsw(:,:,:), sgsu(:,:,:), sgsv(:,:,:)
   real(8),allocatable :: sgstke(:,:,:)
@@ -43,17 +46,16 @@ program convine
   real(8),allocatable :: ptp(:,:,:), wpt(:), wqt(:), wlwpt(:)
   real(8),allocatable :: sgswqt(:,:,:), sgswpt(:,:,:), sgsww(:,:,:)
   real(8),allocatable :: sgswqc(:,:,:), sgswqr(:,:,:), sgswqv(:,:,:)
-  real(8),allocatable :: zi(:,:), zb(:,:), dens_ap(:,:,:), pbli(:,:)
+  real(8),allocatable :: zi(:,:), zb(:,:), dens_ap(:,:,:)
 
-  real(8) :: aveqt(nz), avept(nz), avew(nz), aveql(nz), avelwpt(nz), avevpt(nz)
+  real(8) :: aveqt(nz), avept(nz), avew(nz), aveql(nz), avelwpt(nz)
   real(8) :: avetke(nz), aveww(nz), avewww(nz), avewpt(nz), avewqt(nz), avewlwpt(nz)
   real(8) :: avelwp(nen), avetke2d(nen), avezi(nen), avezb(nen), aveu(nz), avev(nz)
-  real(8) :: profileqt(nz), profileql(nz), outavetke(2,nz), avelh(nen), avesh(nen)
+  real(8) :: profileqt(nz), profileql(nz), outavetke(2,nz)
   real(8) :: ccover(nen), avesgstke(nz), avesgstke2d(nen), aveden_a(nz)
   real(8) :: avesgswpt(nz), avesgswqt(nz), totwpt(nz), totwqt(nz), profilept(nz)
-  real(8) :: aveuu(nz), avevv(nz), avesgsww(nz), avepbl(nen), delpt(nz)
+  real(8) :: aveuu(nz), avevv(nz), avesgsww(nz)
   real(8) :: cz(nz+2*nzhalo), cdz(nz+2*nzhalo)
-  real(8) :: ccore(nz), cfrac(nz), wcore(nz), wcld(nz), profilecore(2,nz), profilecld(2,nz)
 
   real(8),allocatable :: p_qt(:,:,:,:), p_t(:,:,:,:), p_qv(:,:,:,:)
   real(8),allocatable :: p_pt(:,:,:,:), p_u(:,:,:,:), p_v(:,:,:,:)
@@ -62,7 +64,7 @@ program convine
   real(8),allocatable :: p_qc(:,:,:,:), p_qr(:,:,:,:)
   real(8),allocatable :: p_sgs_wptflx(:,:,:,:), p_sgs_wqtflx(:,:,:,:)
   real(8),allocatable :: p_sgs_wwflx(:,:,:,:), p_sgs_vvflx(:,:,:,:), p_sgs_uuflx(:,:,:,:)
-  real(8),allocatable :: p_lhflx(:,:,:,:), p_shflx(:,:,:,:)
+  real(8),allocatable :: p_lhflx(:,:,:), p_shflx(:,:,:)
   real(8),allocatable :: p_sgs_wqcflx(:,:,:,:), p_sgs_wqrflx(:,:,:,:)
   !--------------
   allocate( lwp(nx,ny) )
@@ -75,7 +77,6 @@ program convine
   allocate( pt(nx,ny,nz) )
   allocate( pres(nx,ny,nz) )
   allocate( lwpt(nx,ny,nz) )
-  allocate( vpt(nx,ny,nz) )
   allocate( w(nx,ny,nz) )
   allocate( t(nx,ny,nz) )
   allocate( v(nx,ny,nz) )
@@ -101,7 +102,6 @@ program convine
   allocate( wqt(nz) )
   allocate( wlwpt(nz) )
   allocate( tke2d(nx,ny) )
-  allocate( pbli(nx,ny) )
   allocate( sgstke2d(nx,ny) )
   allocate( sgsw(nx,ny,nz) )
   allocate( sgsv(nx,ny,nz) )
@@ -133,12 +133,12 @@ program convine
   allocate( p_sgs_wwflx(nxp,nyp,nz,1) )
   allocate( p_sgs_uuflx(nxp,nyp,nz,1) )
   allocate( p_sgs_vvflx(nxp,nyp,nz,1) )
-  allocate( p_lhflx(nxp,nyp,nz,1) )
-  allocate( p_shflx(nxp,nyp,nz,1) )
+  allocate( p_lhflx(nxp,nyp,1) )
+  allocate( p_shflx(nxp,nyp,1) )
   !--------------
 
   open(50,file="comp_time_evolv.txt")
-  write(50,'(1x,a10,9(1x,a15))') "# time ", "LWP", "TKE(GR)", "TKE(SGS)", "Zi", "Zb", "PBL", "Cloud cover", "LHFLX", "SHFLX"
+  write(50,'(1x,a3,6(1x,a15))') "#  ", "LWP", "TKE(GR)", "TKE(SGS)", "Zi", "Zb", "FC"
 
   do kz = 1, nzs
    s_hgt(kz) = (kz-1)*s_zmax/real(nzs)
@@ -148,8 +148,6 @@ program convine
   profileqt(:) = 0.d0
   profileql(:) = 0.d0
   profilept(:) = 0.d0
-  profilecore(:,:) = 0.d0
-  profilecld(:,:) = 0.d0
   outavetke(:,:)=0.d0
 !  avetke(:)=0.d0
 !  avesgstke(:)=0.d0
@@ -168,11 +166,7 @@ program convine
   avezb(:) = 0.d0
   avetke2d(:) = 0.d0
   avesgstke2d(:) = 0.d0
-  avelh(:) = 0.d0
-  avesh(:) = 0.d0
-  avepbl(:) = 0.d0
   do n = 1, nen ! time loop
-!  do n = nst, nen ! time loop
    !--- open NetCDF file and read from NetCDF file
     start(1:4) = (/1,1,1,n/)
     nrec = -1
@@ -189,8 +183,9 @@ program convine
      elseif( nrec < 10000 ) then
       write(cfile,'(a,i4,a)') "./history.pe00",nrec,".nc"
      elseif( nrec < 100000 ) then
-     write(cfile,'(a,i5,a)') "./history.pe0",nrec,".nc"
-     endif
+      write(cfile,'(a,i5,a)') "./history.pe0",nrec,".nc"
+      endif
+
      status = nf_open(cfile,0,ncid)
      if( status /= nf_noerr ) then
       write(*,*) "Stop at nf open"
@@ -319,7 +314,7 @@ program convine
       stop
      end if
 
-     status = nf_inq_varid( ncid,'TKE',id01 )
+     status = nf_inq_varid( ncid,'TKE_SMG',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid sgstke"
      stop
@@ -459,8 +454,8 @@ program convine
       sgswqv(iix,jjy,1:nz) = real(p_sgs_wqtflx(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1:nz,1))
       sgswqc(iix,jjy,1:nz) = real(p_sgs_wqcflx(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1:nz,1))
       sgswqr(iix,jjy,1:nz) = real(p_sgs_wqrflx(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1:nz,1))
-      lhflx(iix,jjy) = real(p_lhflx(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1,1))
-      shflx(iix,jjy) = real(p_shflx(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1,1))
+      lhflx(iix,jjy) = real(p_lhflx(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1))
+      shflx(iix,jjy) = real(p_shflx(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1))
      enddo
      enddo
     enddo !--- xproc
@@ -502,13 +497,11 @@ program convine
     end do
     end do
 
-    !--- cloud top height
     zi(:,:) = 0.d0
     do ix = 1, nx
     do jy = 1, ny
      loopzi : do kz = nz, 1, -1
-!      if( qv(ix,jy,kz)+qc(ix,jy,kz)+qr(ix,jy,kz) > 8.d-3 ) then
-      if( qc(ix,jy,kz) > 1.d-5 ) then
+      if( qv(ix,jy,kz)+qc(ix,jy,kz)+qr(ix,jy,kz) > 8.d-3 ) then
        zi(ix,jy) = cz(kz+nzhalo)
        exit loopzi
       end if
@@ -516,12 +509,11 @@ program convine
     end do
     end do
 
-    !--- cloud base height
     zb(:,:) = 0.d0
     do ix = 1, nx
     do jy = 1, ny
      loopzb : do kz = 1, nz
-      if( qc(ix,jy,kz) > 1.d-5 .or. qr(ix,jy,kz) > 1.d-6 ) then
+      if( qc(ix,jy,kz)+qr(ix,jy,kz) > 1.d-5 ) then
        zb(ix,jy) = cz(kz+nzhalo)
        exit loopzb
       end if
@@ -529,22 +521,10 @@ program convine
     end do
     end do
 
-    !--- pbl height ( largest gradient of pt )
-    pbli(:,:) = 0.d0
-    do ix = 1, nx
-    do jy = 1, ny
-      delpt(:) = 0.d0
-      do kz = 2,nz-1
-       delpt(kz) = abs( pt(ix,jy,kz+1)-pt(ix,jy,kz) )
-      enddo
-      pbli(ix,jy) = cz(nzhalo+maxloc(delpt,1)-1)
-    enddo
-    enddo
 
    !  average
    aveql(:)=0.d0
    avelwpt(:)=0.d0
-   avevpt(:)=0.d0
    aveqt(:)=0.d0
    avept(:)=0.d0
    avew(:) = 0.d0
@@ -561,8 +541,6 @@ program convine
      lwpt(ix,jy,kz) = pt(ix,jy,kz) &
                     - ( lh0/cpdry*( qc(ix,jy,kz)+qr(ix,jy,kz) ) ) &
                     * ( p00/pres(ix,jy,kz) )**rovcp
-     vpt(ix,jy,kz) = pt(ix,jy,kz) * &
-                   ( 1.d0 + 0.61d0*qv(ix,jy,kz)-( qc(ix,jy,kz)+qr(ix,jy,kz) ) )
      aveql(kz) = aveql(kz)+(qc(ix,jy,kz)+qr(ix,jy,kz))*dens(ix,jy,kz)
      aveqt(kz) = aveqt(kz)+(qv(ix,jy,kz)+qc(ix,jy,kz)+qr(ix,jy,kz))*dens(ix,jy,kz)
      avept(kz) = avept(kz)+pt(ix,jy,kz)*dens(ix,jy,kz)
@@ -570,7 +548,6 @@ program convine
      avev(kz)  = avev(kz)+v(ix,jy,kz)*dens(ix,jy,kz)
      aveu(kz)  = aveu(kz)+u(ix,jy,kz)*dens(ix,jy,kz)
      avelwpt(kz) = avelwpt(kz)+lwpt(ix,jy,kz)*dens(ix,jy,kz)
-     avevpt(kz) = avevpt(kz)+vpt(ix,jy,kz)*dens(ix,jy,kz)
      if( kz /= 1 ) then
       avesgswpt(kz) = avesgswpt(kz)+sgswpt(ix,jy,kz)*cp
       avesgswqt(kz) = avesgswqt(kz)+sgswqt(ix,jy,kz)*Lp
@@ -588,7 +565,6 @@ program convine
     aveql(kz) = aveql(kz)/real(nx*ny)/aveden_a(kz)
     aveqt(kz) = aveqt(kz)/real(nx*ny)/aveden_a(kz)
     avelwpt(kz) = avelwpt(kz)/real(nx*ny)/aveden_a(kz)
-    avevpt(kz) = avevpt(kz)/real(nx*ny)/aveden_a(kz)
     avesgswpt(kz) = avesgswpt(kz)/real(nx*ny)/aveden_a(kz)
     avesgswqt(kz) = avesgswqt(kz)/real(nx*ny)/aveden_a(kz)
     avesgsww(kz) = avesgsww(kz)/real(nx*ny)/aveden_a(kz)
@@ -627,8 +603,8 @@ program convine
     do kz = 1, nz
      do ix = 1, nx
      do jy = 1, ny
-      uu(kz) = uu(kz)+u(ix,jy,kz)*dens(ix,jy,kz)
-      vv(kz) = vv(kz)+v(ix,jy,kz)*dens(ix,jy,kz)
+      uu(kz) = uu(kz)+up(ix,jy,kz)*up(ix,jy,kz)*dens(ix,jy,kz)
+      vv(kz) = vv(kz)+vp(ix,jy,kz)*vp(ix,jy,kz)*dens(ix,jy,kz)
       ww(kz) = ww(kz)+wp(ix,jy,kz)*wp(ix,jy,kz)*dens(ix,jy,kz)
       www(kz) = www(kz)+wp(ix,jy,kz)*wp(ix,jy,kz)*wp(ix,jy,kz)*dens(ix,jy,kz)
       wpt(kz) = wpt(kz)+wp(ix,jy,kz)*ptp(ix,jy,kz)*dens(ix,jy,kz)*cp*dens(ix,jy,kz)
@@ -663,50 +639,7 @@ program convine
      outavetke(1,kz) = outavetke(1,kz)+avetke(kz)
      outavetke(2,kz) = outavetke(2,kz)+avesgstke(kz)
     end do
-
-    !--- cloud fraction and cloud core
-    ccore(:) = 0.d0
-    cfrac(:) = 0.d0
-    wcore(:) = 0.d0
-    wcld(:) = 0.d0
-    do kz = 1, nz
-     count1 = 0.d0
-     count3 = 0.d0
-     do ix = 1, nx
-     do jy = 1, ny
-       if( qc(ix,jy,kz) > 1.d-05 ) then
-         count1 = count1 + 1.d0
-         cfrac(kz) = cfrac(kz)+1.d0
-         wcld(kz) = wcld(kz)+w(ix,jy,kz)
-!         if( wp(ix,jy,kz)*ptp(ix,jy,kz) > 0.d0 ) then
-         if( vpt(ix,jy,kz) > avevpt(kz) ) then
-          count3 = count3 + 1.d0
-          ccore(kz) = ccore(kz)+1.d0
-          wcore(kz) = wcore(kz)+w(ix,jy,kz)
-         endif
-        endif
-     enddo
-     enddo
-     cfrac(kz) = cfrac(kz)/real(nx*ny)
-     ccore(kz) = ccore(kz)/real(nx*ny)
-     if( count3 /= 0.d0 ) then
-      wcore(kz) = wcore(kz)/real(count3)
-     else
-      wcore(kz) = 0.d0
-     endif
-     if( count1 /= 0.d0 ) then
-      wcld(kz)  = wcld(kz)/real(count1)
-     else
-      wcld(kz) = 0.d0
-     endif
-     profilecore(1,kz) = profilecore(1,kz)+ccore(kz)
-     profilecore(2,kz) = profilecore(2,kz)+wcore(kz)
-     profilecld(1,kz) = profilecld(1,kz)+cfrac(kz)
-     profilecld(2,kz) = profilecld(2,kz)+wcld(kz)
-    enddo
-
    endif
-
 
    !--- 2D value
    lwp(:,:) = 0.d0
@@ -721,13 +654,10 @@ program convine
     sgstke2d(ix,jy) = sgstke2d(ix,jy)+ (sgstke(ix,jy,kz))*cdz(kz+nzhalo)
    end do
 
-    avelh(n) = avelh(n)+lhflx(ix,jy)
-    avesh(n) = avesh(n)+shflx(ix,jy)
     avelwp(n) = avelwp(n)+lwp(ix,jy)
     avetke2d(n) = avetke2d(n)+tke2d(ix,jy)
     avesgstke2d(n) = avesgstke2d(n)+sgstke2d(ix,jy)
     avezi(n) = avezi(n)+zi(ix,jy)
-    avepbl(n) = avepbl(n)+pbli(ix,jy)
     if( zb(ix,jy) /= 0.d0 ) then
      count1 = count1+1.d0
      avezb(n) = avezb(n)+zb(ix,jy)
@@ -740,15 +670,12 @@ program convine
    avetke2d(n) = avetke2d(n)/real(nx*ny)
    avesgstke2d(n) = avesgstke2d(n)/real(nx*ny)
    avezi(n) = avezi(n)/real(nx*ny)
-   avesh(n) = avesh(n)/real(nx*ny)
-   avelh(n) = avelh(n)/real(nx*ny)
-   avepbl(n) = avepbl(n)/real(nx*ny)
    if( count1 /= 0.d0 ) then
     avezb(n) = avezb(n)/count1
    else
     avezb(n) = 0.d0
    endif
-   write(50,'(1x,f10.3,9(1x,ES15.7))') tint+int(real(n)*dt), avelwp(n), avetke2d(n), avesgstke2d(n), avezi(n), avezb(n), avepbl(n), ccover(n), avelh(n), avesh(n)
+   write(50,'(1x,f10.3,7(1x,ES15.7))') tint+int(real(n)*dt), avelwp(n), avetke2d(n), avesgstke2d(n), avezi(n), avezb(n), ccover(n)
 
   enddo !--- time loop
 
@@ -765,10 +692,6 @@ program convine
   profileql(1:nz) = profileql(1:nz)/real(nt)
   profileqt(1:nz) = profileqt(1:nz)/real(nt)
   profilept(1:nz) = profilept(1:nz)/real(nt)
-  profilecore(1,1:nz) = profilecore(1,1:nz)/real(nt)
-  profilecore(2,1:nz) = profilecore(2,1:nz)/real(nt)
-  profilecld(1,1:nz) = profilecld(1,1:nz)/real(nt)
-  profilecld(2,1:nz) = profilecld(2,1:nz)/real(nt)
   outavetke(1,1:nz) = outavetke(1,1:nz)/real(nt)
   outavetke(2,1:nz) = outavetke(2,1:nz)/real(nt)
 !  avesgstke(1:nz) = avesgstke(1:nz)/real(nt)
@@ -839,14 +762,26 @@ program convine
   enddo
 
   !--- write
+  open(51,file="r_comp_profile.txt")
   open(52,file="comp_profile.txt")
 
-  write(52,'(1x,a10,17(1x,a15))') "# z", "QT",  "QL", "TKE-gr", "TKE-sg-diag", "WW", "WWW", "WPT(TOT)", "WQT(TOT)", "PT", "CCORE", "WCORE", "CFRAC", "WFRAC", "U", "V"
+  write(51,'(1x,a10,13(1x,a15))') "# z", "QT",  "QL", "TKE-gr", "TKE-sg-diag", "WW", "WWW", &
+                                  "WPT(GR)", "WQT(GR)", "WPT(SGS)", "WQT(SGS)", "PT", "UU", "VV"
+  do kz = 1, nzs
+   write(51,'(1x,f10.5,14(1x,ES15.7))') s_hgt(kz), s_qt(kz), s_ql(kz), s_tke(kz), s_sgstke(kz), s_ww(kz), &
+                                       s_www(kz), s_wpt(kz), s_wqt(kz), s_totwpt(kz), s_totwqt(kz), &
+                                       s_pl(kz), s_uu(kz), s_vv(kz)
+  end do
+  write(52,'(1x,a10,13(1x,a15))') "# z", "QT",  "QL", "TKE-gr", "TKE-sg-diag", "WW", "WWW", &
+                                  "WPT(GR)", "WQT(GR)", "WPT(SGS)", "WQT(SGS)", "PT", "UU", "VV"
   do kz = 1, nz
-   write(52,'(1x,f10.5,18(1x,ES15.7))') cz(kz+nzhalo), profileqt(kz), profileql(kz), outavetke(1,kz), outavetke(2,kz), aveww(kz), avewww(kz), avewlwpt(kz)+totwpt(kz), avewqt(kz)+totwqt(kz), profilept(kz), profilecore(1,kz), profilecore(2,kz), profilecld(1,kz), profilecld(2,kz), aveuu(kz), avevv(kz)
+   write(52,'(1x,f10.5,13(1x,ES15.7))') cz(kz+nzhalo), profileqt(kz), profileql(kz), outavetke(1,kz), &
+                                       outavetke(2,kz), aveww(kz), avewww(kz), avewlwpt(kz), avewqt(kz), &
+                                       totwpt(kz), totwqt(kz), profilept(kz), aveuu(kz), avevv(kz)
   end do
 
   close(50)
+  close(51)
   close(52)
   write(*,*) "CALCULATION FINISHED"
 

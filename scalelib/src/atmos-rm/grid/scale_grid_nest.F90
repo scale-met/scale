@@ -103,7 +103,7 @@ module scale_grid_nest
   integer,  public              :: NEST_INTERP_LEVEL = 4 !< horizontal interpolation level
 
   logical,  public              :: USE_NESTING          = .false.
-  logical,  public              :: OFFLINE              = .true.
+  logical,  public              :: OFFLINE              = .false.
   logical,  public              :: ONLINE_IAM_PARENT    = .false.   !< a flag to say "I am a parent"
   logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.   !< a flag to say "I am a daughter"
   integer,  public              :: ONLINE_DOMAIN_NUM    = 1
@@ -160,6 +160,7 @@ module scale_grid_nest
   integer, private, allocatable  :: NEST_TILE_LIST_YP(:)     !< yellow-page of daughter targets for parent
   integer, private               :: NUM_YP                   !< page number of yellow-page
 
+  character(len=H_LONG)          :: OFFLINE_PARENT_BASENAME  !< parent file base name
   integer, private               :: OFFLINE_PARENT_PRC_NUM_X !< MPI processes in x-direction in parent [for namelist]
   integer, private               :: OFFLINE_PARENT_PRC_NUM_Y !< MPI processes in y-direction in parent [for namelist]
   integer, private               :: OFFLINE_PARENT_KMAX      !< parent max number in z-direction [for namelist]
@@ -274,6 +275,8 @@ contains
       inter_child    )
 !      flag_parent,   &
 !      flag_child     )
+    use gtool_file, only: &
+       FileGetShape
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
@@ -299,7 +302,8 @@ contains
        MY_FZ   => REAL_FZ,   &
        p_latlon_catalog => REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
-       COMM_world
+       COMM_world, &
+       COMM_Bcast
     use scale_interpolation_nest, only: &
        INTRPNEST_setup,            &
        INTRPNEST_interp_fact_llz
@@ -329,16 +333,14 @@ contains
     logical :: flag_parent = .false.
     logical :: flag_child  = .false.
 
+    integer :: dims(1)
+    logical :: error
+
     namelist / PARAM_NEST /      &
-       USE_NESTING,              &
        LATLON_CATALOGUE_FNAME,   &
+       OFFLINE_PARENT_BASENAME,  &
        OFFLINE_PARENT_PRC_NUM_X, &
        OFFLINE_PARENT_PRC_NUM_Y, &
-       OFFLINE_PARENT_KMAX,      &
-       OFFLINE_PARENT_IMAX,      &
-       OFFLINE_PARENT_JMAX,      &
-       OFFLINE_PARENT_LKMAX,     &
-       OFFLINE,                  &
        ONLINE_DOMAIN_NUM,        &
        ONLINE_IAM_PARENT,        &
        ONLINE_IAM_DAUGHTER,      &
@@ -357,6 +359,8 @@ contains
 
     if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child
     if( inter_child  /= MPI_COMM_NULL ) flag_parent = .true. ! exist child, so work as a parent
+
+    OFFLINE_PARENT_BASENAME = ""
 
     nwait_p = 0
     nwait_d = 0
@@ -378,11 +382,52 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_NEST. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_NEST)
 
     PRC_GLOBAL_domainID = ONLINE_DOMAIN_NUM
 
-    call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
+    if ( OFFLINE_PARENT_BASENAME /= "" ) then
+
+       OFFLINE = .true.
+       USE_NESTING = .true.
+       
+       if ( PRC_IsMaster ) then
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CX", 0 )
+          OFFLINE_PARENT_IMAX = dims(1)-4
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CY", 0 )
+          OFFLINE_PARENT_JMAX = dims(1)-4
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "z", 0, error=error )
+          if ( error ) then
+             OFFLINE_PARENT_KMAX = 0
+          else
+             OFFLINE_PARENT_KMAX = dims(1)
+          end if
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "lz", 0, error=error )
+          if ( error ) then
+             OFFLINE_PARENT_LKMAX = 0
+          else
+             OFFLINE_PARENT_LKMAX = dims(1)
+          end if
+       end if
+       call COMM_Bcast( OFFLINE_PARENT_IMAX )
+       call COMM_Bcast( OFFLINE_PARENT_JMAX )
+       call COMM_Bcast( OFFLINE_PARENT_KMAX )
+       call COMM_Bcast( OFFLINE_PARENT_LKMAX )
+    end if
+
+    if ( ONLINE_IAM_DAUGHTER .or. ONLINE_IAM_PARENT ) then
+
+       if ( OFFLINE ) then
+          write(*,*) 'xxx OFFLINE and ONLINE cannot be use at the same time'
+          call PRC_MPIstop
+       end if
+
+       USE_NESTING = .true.
+       call INTRPNEST_setup( interp_search_divnum, NEST_INTERP_LEVEL, .false. )
+    else
+       call INTRPNEST_setup( interp_search_divnum, NEST_INTERP_LEVEL, .true. )
+    end if
+
     itp_nh = int( NEST_INTERP_LEVEL )
     itp_nv = 2
 

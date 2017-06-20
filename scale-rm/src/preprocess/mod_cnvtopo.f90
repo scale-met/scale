@@ -133,7 +133,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO)
 
     select case(CNVTOPO_name)
     case('NONE')
@@ -389,7 +389,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO_GTOPO30. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_GTOPO30)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_GTOPO30)
 
     do j = 1, JA
     do i = 1, IA
@@ -774,7 +774,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO_DEM50M. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_DEM50M)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_DEM50M)
 
     do j = 1, JA
     do i = 1, IA

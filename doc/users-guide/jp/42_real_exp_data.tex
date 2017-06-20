@@ -80,37 +80,30 @@ makeを用いた「実験セット一式作成ツール」を用いる。
 \item データのダウンロード\\
 NCARのサイト
 \url{http://rda.ucar.edu/datasets/ds083.2/}\\
-から、2007年7月14日18時から一日分のgrib1フォーマットのデータ
+から、2007年7月14日18時から12時間分のgrib1フォーマットのデータ
 \begin{alltt}
   fnl_20070714_18_00.grib1
   fnl_20070715_00_00.grib1
-  fnl_20070715_06_00.grib1
-  fnl_20070715_12_00.grib1
 \end{alltt}
-を\verb|${Tutorial_DIR}/real/tools/|の下にダウンロードする。
+を\verb|${Tutorial_DIR}/real/tools/FNL_input/grib1/2007|の下にダウンロードする。
 
 \item データフォーマットをgrib形式からbinary形式に変換\\
- \verb|${Tutorial_DIR}/real/tools/| にある\verb|convert_grib2grads_FNLgrib1.sh|を実行。
+ \verb|${Tutorial_DIR}/real/tools/| にある\verb|convert_FNL-grib2grads.sh|を実行。
 
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/tools/
- $ sh convert_grib2grads_FNLgrib1.sh
+ $ sh convert_FNL-grib2grads.sh 2007071418 2007071500 FNL_input FNL_output
 \end{verbatim}
 成功すれば、下記のファイルが作成される。
 \begin{alltt}
  $ ls FNL_output/*/*
-    FNL_output/200707/FNLatm_2007071418.grd
-    FNL_output/200707/FNLatm_2007071500.grd
-    FNL_output/200707/FNLatm_2007071506.grd
-    FNL_output/200707/FNLatm_2007071512.grd
-    FNL_output/200707/FNLland_2007071418.grd
-    FNL_output/200707/FNLland_2007071500.grd
-    FNL_output/200707/FNLland_2007071506.grd
-    FNL_output/200707/FNLland_2007071512.grd
-    FNL_output/200707/FNLsfc_2007071418.grd
-    FNL_output/200707/FNLsfc_2007071500.grd
-    FNL_output/200707/FNLsfc_2007071506.grd
-    FNL_output/200707/FNLsfc_2007071512.grd
+    FNL_output/200707/FNL_ATM_2007071418.grd
+    FNL_output/200707/FNL_ATM_2007071500.grd
+    FNL_output/200707/FNL_LND_2007071418.grd
+    FNL_output/200707/FNL_LND_2007071500.grd
+    FNL_output/200707/FNL_SFC_2007071418.grd
+    FNL_output/200707/FNL_SFC_2007071500.grd
 \end{alltt}
+NCEP-FNLのデータ構造や変数名が変更された場合、意図したファイルが生成されない。
+その場合は、使用するNCEP-FNLデータに応じて、\verb|convert_FNL-grib2grads.sh|を修正する必要がある。
 \end{enumerate}
-

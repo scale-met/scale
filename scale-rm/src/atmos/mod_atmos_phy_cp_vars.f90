@@ -63,8 +63,8 @@ module mod_atmos_phy_cp_vars
   real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_rain     (:,:)   ! convective rain [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cloudtop      (:,:)   ! cloud top  height [m]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cloudbase     (:,:)   ! cloud base height [m]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_dp    (:,:,:) ! cloud fraction (deep    convection) [0-1]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_sh    (:,:,:) ! cloud fraction (shallow convection) [0-1]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_dp    (:,:,:) ! cloud fraction (deep    convection) (0-1)
+  real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_sh    (:,:,:) ! cloud fraction (shallow convection) (0-1)
   ! only for K-F scheme
   real(RP), public, allocatable :: ATMOS_PHY_CP_kf_nca        (:,:)   ! advection/cumulus convection timescale/dt for KF[step]
   real(RP), public, allocatable :: ATMOS_PHY_CP_kf_w0avg      (:,:,:) ! running mean vertical wind velocity for KF[m/s]
@@ -113,8 +113,8 @@ module mod_atmos_phy_cp_vars
                   'kg/m2/s', &
                   'm',       &
                   'm',       &
-                  '0-1',     &
-                  '0-1',     &
+                  '1',       &
+                  '1',       &
                   'step',    &
                   'm/s'      /
 
@@ -139,6 +139,8 @@ contains
        UNDEF => CONST_UNDEF
     use scale_atmos_phy_mp, only: &
        AQ_NAME => ATMOS_PHY_MP_NAME, &
+       QS_MP,                        &
+       QE_MP,                        &
        QA_MP
     implicit none
 
@@ -164,7 +166,7 @@ contains
     allocate( ATMOS_PHY_CP_MOMX_t(KA,IA,JA)       )
     allocate( ATMOS_PHY_CP_MOMY_t(KA,IA,JA)       )
     allocate( ATMOS_PHY_CP_RHOT_t(KA,IA,JA)       )
-    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QA_MP) )
+    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QS_MP:QE_MP) )
     ATMOS_PHY_CP_DENS_t(:,:,:)   = 0.0_RP
     ATMOS_PHY_CP_MOMZ_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_MOMX_t(:,:,:)   = UNDEF
@@ -218,7 +220,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CP_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_CP_VARS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CP_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_CP] prognostic/diagnostic variables'

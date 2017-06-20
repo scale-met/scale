@@ -62,14 +62,9 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_NEST| & \\
-\verb| USE_NESTING               = .true.,| & \\
-\verb| OFFLINE                   = .true.,| & \\
-\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,     | & 親領域の\verb|PRC_NUM_X| \\
-\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,     | & 親領域の\verb|PRC_NUM_Y| \\
-\verb| OFFLINE_PARENT_KMAX       = 36,    | & 親領域の\verb|KMAX|      \\
-\verb| OFFLINE_PARENT_IMAX       = 45,    | & 親領域の\verb|IMAX|      \\
-\verb| OFFLINE_PARENT_JMAX       = 45,    | & 親領域の\verb|JMAX|      \\
-\verb| OFFLINE_PARENT_LKMAX      = 5,     | & 親領域の\verb|LKMAX|     \\
+\verb| OFFLINE_PARENT_BASENAME   = "topo_d01", | & 親領域データの頭 \\
+\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,          | & 親領域の\verb|PRC_NUM_X| \\
+\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,          | & 親領域の\verb|PRC_NUM_Y| \\
 \verb| LATLON_CATALOGUE_FNAME    = "latlon_domain_catalogue.d01.txt",| & 親領域のカタログファイル  \\
 \verb|/| &\\
  & \\
@@ -97,11 +92,6 @@ USER.shに置き換えて、実験セット準備ツールを実行した場合�
 %\nmitem{COPYTOPO_TRANSITION_DY}、
 %及び、\nmitem{COPYTOPO_TRANSFACT}により任意の幅に設定することができる。
 
-
-%地形コピー機能では、オフライン・ネスティング実験の
-%フレームワークを利用するため、\namelist{PARAM_NEST}の全ての項目を追記する必要がある。
-%設定変数の詳しい説明は、\ref{subsec:nest_offline}節の
-%オフライン・ネスティング実験の説明を参照してほしい。
 
 
 \subsubsection{地形の作成}

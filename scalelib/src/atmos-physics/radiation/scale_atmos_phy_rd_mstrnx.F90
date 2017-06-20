@@ -15,6 +15,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_rd_mstrnx
   !-----------------------------------------------------------------------------
   !
@@ -87,7 +88,7 @@ module scale_atmos_phy_rd_mstrnx
   real(RP), private, allocatable :: RD_cfc         (:,:) ! CFCs          volume mixing ratio [ppmv]
   real(RP), private, allocatable :: RD_aerosol_conc(:,:) ! cloud/aerosol volume mixing ratio [ppmv]
   real(RP), private, allocatable :: RD_aerosol_radi(:,:) ! cloud/aerosol effective radius    [cm]
-  real(RP), private, allocatable :: RD_cldfrac     (:)   ! cloud fraction    [0-1]
+  real(RP), private, allocatable :: RD_cldfrac     (:)   ! cloud fraction    (0-1)
 
   integer,  private :: I_MPAE2RD      (RD_naero)   ! look-up table between input aerosol category and MSTRN particle type
   data I_MPAE2RD(1      :N_HYD     ) / 1, 1, 2, 2, 2, 2 /
@@ -141,18 +142,17 @@ module scale_atmos_phy_rd_mstrnx
                                                       !  25: N2O5
                                                       !  26: C2F6
                                                       !  27: HNO4
-  integer,  private, save :: MSTRN_nptype   = 11 !< # of particle species
+  integer,  private            :: MSTRN_nptype   =  9 !< # of particle species
                                                       !  1: water cloud
                                                       !  2: ice cloud
-                                                      !  3: dust-like
-                                                      !  4: soot
-                                                      !  5: volcanic-ash
-                                                      !  6: H2SO4
-                                                      !  7: rural
-                                                      !  8: sea salt
-                                                      !  9: urban
-                                                      ! 10: tropo.
-                                                      ! 11: yellow dust
+                                                      !  3: Soil dust
+                                                      !  4: Carbonacerous (BC/OC=0.3)
+                                                      !  5: Carbonacerous (BC/OC=0.15)
+                                                      !  6: Carbonacerous (BC/OC=0.)
+                                                      !  7: Black carbon
+                                                      !  8: Sulfate
+                                                      !  9: Sea salt
+
   integer,  private, parameter :: MSTRN_nsfc     =  7 !< # of surface types
                                                       !  1: ocean
                                                       !  2: wet land
@@ -164,7 +164,7 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: MSTRN_nfitPLK  =  5 !< # of fitting point for planck function
   integer,  private, parameter :: MSTRN_nplkord  =  3 !< # of orders for planck function
   integer,  private, parameter :: MSTRN_nmoment  =  6 !< absorption + # of moments for scattering phase function
-  integer,  private, save      :: MSTRN_nradius  =  6 !< # of radius mode for hygroscopic parameter
+  integer,  private            :: MSTRN_nradius  =  8 !< # of radius mode for hygroscopic parameter
   integer,  private, parameter :: MSTRN_ncloud   =  2 !< # of cloud types [ClearSky/Cloud]
 
   logical,  private, save :: ATMOS_PHY_RD_MSTRN_ONLY_QCI = .false.
@@ -295,7 +295,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_MSTRN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_MSTRN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_MSTRN)
 
     RD_TOA                    = ATMOS_PHY_RD_MSTRN_TOA
     RD_KADD                   = ATMOS_PHY_RD_MSTRN_KADD
@@ -476,16 +476,27 @@ contains
                                    DENS(:,:,:)  ) ! [IN]
 
 !OCL XFILL
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
+       enddo
+       enddo
+       enddo
+    else
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          rh(k,i,j) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    endif
 
     call MP_CloudFraction( cldfrac(:,:,:), & ! [OUT]
-                           QTRC(:,:,:,:)   ) ! [IN]
+                           QTRC(:,:,:,:),  & ! [IN]
+                           EPS             ) ! [IN]
 
     call MP_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
                              QTRC (:,:,:,:), & ! [IN]
@@ -534,6 +545,9 @@ contains
     endif
 
 !OCL XFILL
+    !$omp parallel do default(none)                                           &
+    !$omp shared(JS,JE,IS,IE,RD_KADD,temph_merge,RD_temph,KE,RD_KMAX,KS,temp) &
+    !$omp private(i,j,k,RD_k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -551,6 +565,9 @@ contains
     enddo
 
 !OCL XFILL
+    !$omp parallel do default(none) private(i,j,RD_k,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,RD_KADD,rhodz_merge,RD_rhodz,pres_merge,RD_pres,temp_merge) &
+    !$omp shared(RD_temp,RD_KMAX,KS,dens,FZ,pres,temp)
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -582,15 +599,17 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       do RD_k = RD_KADD+1, RD_KMAX
-          k = KS + RD_KMAX - RD_k ! reverse axis
-          zerosw = sign(0.5_RP, QTRC(k,i,j,I_QV)-EPS) + 0.5_RP
-          gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM * zerosw ! [PPM]
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          do RD_k = RD_KADD+1, RD_KMAX
+             k = KS + RD_KMAX - RD_k ! reverse axis
+             zerosw = sign(0.5_RP, QTRC(k,i,j,I_QV)-EPS) + 0.5_RP
+             gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM * zerosw ! [PPM]
+          enddo
        enddo
-    enddo
-    enddo
+       enddo
+    endif
 
 !OCL XFILL
 !OCL SERIAL
@@ -1227,6 +1246,9 @@ contains
     !$acc kernels pcopy(factP, factT32, factT21) &
     !$acc& pcopyin(indexP, logP, logfitP, logT, logfitT, temp, fitt)
     !$acc loop gang
+    !$omp parallel do default(none) private(i,j,k,ip) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,rd_kmax,indexP,factP,factT32,logP,logfitP,logT,logfitT,temp,fitT) &
+    !$omp shared(factT21)
     do j = JS, JE
     !$acc loop gang vector(8)
     do i = IS, IE
@@ -1253,6 +1275,9 @@ contains
        !$acc kernels pcopy(indexR, factR) pcopyin(aero2ptype, aerosol_radi, radmode)
        !$acc loop gang
 !OCL PARALLEL
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,ir) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,aerosol_radi,iaero,radmode,iptype,indexR,factR,MSTRN_nradius)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -1340,6 +1365,10 @@ contains
           !$acc& pcopyin(indexP, AKD, factP, factT32, factT21, gas, dz_std, ngasabs, igasabs) async(0)
           !$acc loop gang
 !OCL PARALLEL
+          !$omp parallel do default(none)                                                     &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,indexP,gas,igasabs,igas,iw,dz_std,chmax,AKD,gasno) &
+          !$omp shared(factP,factT32,factT21,tauGAS)                                          &
+          !$omp private(i,j,k,ip,length,A1,A2,A3,ich,factPT) OMP_SCHEDULE_
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1373,6 +1402,9 @@ contains
           !$acc kernels pcopy(tauGAS) &
           !$acc& pcopyin(indexP, SKD, factP, factT32, factT21, gas, dz_std) async(0)
           !$acc loop gang
+          !$omp parallel do default(none) private(i,j,k,ich,ip,qv,length,A1,A2,A3,factPT) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,indexP,gas,dz_std,chmax,SKD,factP,factT32) &
+          !$omp shared(factT21,tauGAS,iw)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1405,6 +1437,8 @@ contains
        if ( iflgb(I_CFC_continuum,iw) == 1 ) then
           !$acc kernels pcopy(tauGAS) pcopyin(acfc, cfc, dz_std, nch) async(0)
           !$acc loop gang
+          !$omp parallel do default(none) private(i,j,k,icfc,ich,valsum) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,ncfc,acfc,iw,cfc,dz_std,chmax,tauGAS)
           do j = JS, JE
           !$acc loop gang vector(4)
           do i = IS, IE
@@ -1436,6 +1470,9 @@ contains
        !--- Rayleigh scattering
        !$acc kernels pcopy(optparam) pcopyin(rhodz, rayleigh, qmol) async(0)
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,k,im,dp_P,length) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,rhodz,GRAV,Pstd,rayleigh,iw,optparam) &
+       !$omp shared(qmol)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -1460,6 +1497,9 @@ contains
 
           !$acc kernels pcopy(optparam) pcopyin(indexR, aero2ptype, q, factR, dz_std, aerosol_conc) async(0)
           !$acc loop gang
+          !$omp parallel do default(none) private(i,j,k,im,ir,length,q_fit) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,indexR,iaero,aerosol_conc,dz_std) &
+          !$omp shared(q,iptype,iw,factR,optparam)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1488,6 +1528,9 @@ contains
 
           !$acc kernels pcopy(optparam) pcopyin(indexR, aero2ptype, q, factR, dz_std, aerosol_conc) async(0)
           !$acc loop gang
+          !$omp parallel do default(none) private(i,j,k,im,ir,length,q_fit) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,indexR,iaero,aerosol_conc,dz_std) &
+          !$omp shared(iptype,iw,factR,optparam,q)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1516,6 +1559,9 @@ contains
           !$acc kernels pcopy(tauPR, omgPR, g) pcopyin(optparam) async(0)
           !$acc loop gang
 !OCL PARALLEL
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k,zerosw) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,tauPR,optparam,icloud,omgPR,g)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1589,6 +1635,9 @@ contains
              !$acc kernels pcopy(tau, omg) pcopyin(tauGAS, tauPR, omgPR) async(0)
              !$acc loop gang
 !OCL PARALLEL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k,zerosw) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,tau,icloud,tauGAS,ich,tauPR,omg,omgPR)
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1618,6 +1667,9 @@ contains
                 !$acc kernels pcopy(b) async(0)
                 !$acc loop gang
 !OCL PARALLEL
+                !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+                !$omp private(i,j,k) &
+                !$omp shared(JS,JE,IS,IE,rd_kmax,b,icloud)
                 do j = JS, JE
                 !$acc loop gang vector(8)
                 do i = IS, IE
@@ -1650,6 +1702,8 @@ contains
              ! from temp at cell center
              !$acc kernels pcopy(bbar) pcopyin(temp, fitPLK) async(0)
              !$acc loop gang
+             !$omp parallel do default(none) private(i,j,k,iplk,beta) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,wl,temp,fitPLK,iw,bbar)
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1670,6 +1724,9 @@ contains
              ! from temp at cell wall
              !$acc kernels pcopy(bbarh) pcopyin(temph, fitPLK) async(0)
              !$acc loop gang
+             !$omp parallel do default(none)                            &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,wl,temph,fitPLK,iw,bbarh) &
+             !$omp private(i,j,k,beta,iplk) OMP_SCHEDULE_ collapse(2)
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1692,6 +1749,9 @@ contains
                 !$acc kernels pcopy(b) pcopyin(tau, bbarh, bbar) async(0)
                 !$acc loop gang
 !OCL PARALLEL
+                !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+                !$omp private(i,j,k,zerosw) &
+                !$omp shared(JS,JE,IS,IE,rd_kmax,tau,icloud,b,bbarh,bbar)
                 do j = JS, JE
                 !$acc loop gang vector(8)
                 do i = IS, IE
@@ -1719,6 +1779,8 @@ contains
              ! from temp_sfc
              !$acc kernels pcopy(b_sfc) pcopyin(fitPLK, temp_sfc) async(0)
              !$acc loop gang vector(4)
+             !$omp parallel do default(none) private(i,j,iplk,beta) OMP_SCHEDULE_ &
+             !$omp shared(JS,JE,IS,IE,wl,temp_sfc,fitPLK,iw,b_sfc)
              do j = JS, JE
              !$acc loop gang vector(32)
              do i = IS, IE
@@ -1776,6 +1838,8 @@ contains
              !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
              !$acc loop gang
 !OCL PARALLEL
+             !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,rflux,irgn,icloud,wgtch,ich,iw,flux)
              do j = JS, JE
              !$acc loop gang vector(8)
              do i = IS, IE
@@ -1936,10 +2000,17 @@ contains
 
 !OCL SERIAL
     do icloud = 1, 2
+!OCL PARALLEL,NORECURRENCE(Tdir0,R0,T0,Em_LW,Ep_LW,Em_SW,Ep_SW),MFUNC
        !$acc kernels pcopy(tdir0, r0, t0, em_lw, ep_lw, em_sw, ep_sw) &
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
-!OCL PARALLEL
-!OCL NORECURRENCE(Tdir0,R0,T0,Em_LW,Ep_LW,Em_SW,Ep_SW)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k) &
+       !$omp private(tau_new,omg_new,g_new,factor,b_new0,b_new1,b_new2,c0,c1,c2,Pmns,Ppls,Smns) &
+       !$omp private(Spls,sw,X,Y,lamda,E,Apls_mns,Bpls_mns,Dmns0,Dpls0,Dmns1,Dpls1) &
+       !$omp private(Dmns2,Dpls2,V0mns,V0pls,V1mns,V1pls,SIGmns,SIGpls,tmp,zerosw) &
+       !$omp private(Qgamma) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,omg,icloud,g,tau,EPS1,Tdir0,cosSZA,b,Wmns_irgn,PI,M_irgn) &
+       !$omp shared(W_irgn,Em_LW,Ep_LW,R0,T0,Ep_SW,Em_SW,EPS)
        do j = JS, JE
        do i = IS, IE
        do k = 1, rd_kmax
@@ -1952,7 +2023,11 @@ contains
 
           g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
 
+#if defined(__PGI) || defined(__ES2)
+          Tdir0(k,i,j,icloud) = exp( -min( tau_new/cosSZA(i,j), 1.E+3_RP ) ) ! apply exp limiter
+#else
           Tdir0(k,i,j,icloud) = exp(-tau_new/cosSZA(i,j))
+#endif
 
           factor   = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) )
           b_new0 = b(k,i,j,0,icloud)
@@ -1980,7 +2055,11 @@ contains
           !X     =  max( ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn, 1.E-30 )
           !Y     =  max( ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn, 1.E-30 )
           lamda = sqrt(X*Y)
+#if defined(__PGI) || defined(__ES2)
+          E     = exp( -min( lamda*tau_new, 1.E+3_RP ) ) ! apply exp limiter
+#else
           E     = exp(-lamda*tau_new)
+#endif
 
           !--- A+/A-, B+/B-
           Apls_mns = ( X * ( 1.0_RP+E ) - lamda * ( 1.0_RP-E ) ) &
@@ -2039,12 +2118,18 @@ contains
 
     !---< consider partial cloud layer: semi-random over-wrapping >---
 
-    !$acc kernels pcopy(Tdir, R, T, Em, Ep, flux_direct, tau_bar_sol) &
-    !$acc& pcopyin(cldfrac, Tdir0, R0, T0, Em_LW, Em_SW, Ep_LW, Ep_SW, fsol, cosSZA, albedo_sfc, b_sfc, wpls, w, m) async(0)
     do icloud = 1, 2
        if ( icloud == 1 ) then
-          cf(:,:,:) = 0.0_RP
+!OCL XFILL
+          do j = JS, JE
+          do i = IS, IE
+          do k = 1, rd_kmax
+             cf(k,i,j) = 0.0_RP
+          enddo
+          enddo
+          enddo
        else
+!OCL XFILL
           do j = JS, JE
           do i = IS, IE
           do k = 1, rd_kmax
@@ -2054,7 +2139,12 @@ contains
           enddo
        endif
 
+       !$acc kernels pcopy(Tdir, R, T, Em, Ep, flux_direct, tau_bar_sol) &
+       !$acc& pcopyin(cldfrac, Tdir0, R0, T0, Em_LW, Em_SW, Ep_LW, Ep_SW, fsol, cosSZA, albedo_sfc, b_sfc, wpls, w, m) async(0)
+
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,Tdir,cf,Tdir0)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -2062,17 +2152,13 @@ contains
        do k = 1, rd_kmax
           Tdir(k,i,j) = (        cf(k,i,j) ) * Tdir0(k,i,j,I_Cloud   ) &
                       + ( 1.0_RP-cf(k,i,j) ) * Tdir0(k,i,j,I_ClearSky)
-
-          R   (k,i,j) = (        cf(k,i,j) ) * R0   (k,i,j,I_Cloud   ) &
-                      + ( 1.0_RP-cf(k,i,j) ) * R0   (k,i,j,I_ClearSky)
-
-          T   (k,i,j) = (        cf(k,i,j) ) * T0   (k,i,j,I_Cloud   ) &
-                      + ( 1.0_RP-cf(k,i,j) ) * T0   (k,i,j,I_ClearSky)
        enddo
        enddo
        enddo
 
        !$acc loop gang vector(4)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,tau_bar_sol,fsol,rd_kmax,Tdir)
        do j = JS, JE
        !$acc loop gang vector(32)
        do i = IS, IE
@@ -2085,6 +2171,9 @@ contains
        enddo
 
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,Em,cf,Em_LW,Em_SW,tau_bar_sol,Ep) &
+       !$omp shared(Ep_LW,Ep_SW,flux_direct,cosSZA,icloud)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
@@ -2106,14 +2195,16 @@ contains
        enddo
 
        !$acc loop gang vector(4)
+       !$omp parallel do default(none) private(i,j,Em0) OMP_SCHEDULE_ &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,cf,albedo_sfc,T,flux_direct,cosSZA) &
+       !$omp shared(tau_bar_sol,Wpls_irgn,W_irgn,M_irgn,PI,b_sfc,Em,Ep,icloud,R)
        do j = JS, JE
        !$acc loop gang vector(32) private(Em0)
        do i = IS, IE
           ! at lambert surface
-          R (rd_kmax+1,i,j) = (        cf(rd_kmax,i,j) ) * albedo_sfc(i,j,I_Cloud   ) &
-                            + ( 1.0_RP-cf(rd_kmax,i,j) ) * albedo_sfc(i,j,I_ClearSky)
-
-          T (rd_kmax+1,i,j) = 0.0_RP
+          R(rd_kmax+1,i,j) = (        cf(rd_kmax,i,j) ) * albedo_sfc(i,j,I_Cloud   ) &
+                           + ( 1.0_RP-cf(rd_kmax,i,j) ) * albedo_sfc(i,j,I_ClearSky)
+          T(rd_kmax+1,i,j) = 0.0_RP
 
           flux_direct(rd_kmax+1,i,j,icloud) = cosSZA(i,j) * tau_bar_sol(rd_kmax+1,i,j)
 
@@ -2124,7 +2215,6 @@ contains
 
           Em(rd_kmax+1,i,j) = (        cf(rd_kmax,i,j) ) * Em0(I_Cloud   ) &
                             + ( 1.0_RP-cf(rd_kmax,i,j) ) * Em0(I_ClearSky)
-
           Ep(rd_kmax+1,i,j) = 0.0_RP
        enddo
        enddo
@@ -2133,13 +2223,15 @@ contains
 
        !---< Adding-Doubling method >---
        ! [note] TOA->Surface is positive direction. "pls" means upper to lower altitude.
+
        !$acc kernels pcopy(R12mns, R12pls, E12mns, E12pls) pcopyin(R, T, Em, Ep) async(0)
+
        !$acc loop gang independent
        do direction = I_SFC2TOA, I_TOA2SFC
 
           if ( direction == I_SFC2TOA ) then ! adding: surface to TOA
 
-   !OCL LOOP_NOFUSION,XFILL
+!OCL LOOP_NOFUSION,XFILL
              !$acc loop gang vector(4)
              do j = JS, JE
              !$acc loop gang vector(32)
@@ -2150,11 +2242,18 @@ contains
              enddo
 
              !$acc loop gang vector(4)
+             !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,R12pls,E12mns,R,R0,T,T0,cf,Ep,Em)
              do j = JS, JE
              !$acc loop gang vector(32)
              do i = IS, IE
                 !$acc loop seq
                 do k = rd_kmax, 1, -1
+                   R(k,i,j) = (        cf(k,i,j) ) * R0(k,i,j,I_Cloud   ) &
+                            + ( 1.0_RP-cf(k,i,j) ) * R0(k,i,j,I_ClearSky)
+                   T(k,i,j) = (        cf(k,i,j) ) * T0(k,i,j,I_Cloud   ) &
+                            + ( 1.0_RP-cf(k,i,j) ) * T0(k,i,j,I_ClearSky)
+
                    R12pls(k,i,j) = R (k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
                                                         * ( R12pls(k+1,i,j) * T (k,i,j)                   )
                    E12mns(k,i,j) = Em(k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
@@ -2162,10 +2261,9 @@ contains
                 enddo
              enddo
              enddo
-
           else ! adding: TOA to surface
 
-   !OCL LOOP_NOFUSION,XFILL
+!OCL LOOP_NOFUSION,XFILL
              !$acc loop gang vector(4)
              do j = JS, JE
              !$acc loop gang vector(32)
@@ -2176,6 +2274,8 @@ contains
              enddo
 
              !$acc loop gang vector(4)
+             !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(JS,JE,IS,IE,rd_kmax,E12pls,R12mns,R,T,Ep,Em)
              do j = JS, JE
              !$acc loop gang vector(32)
              do i = IS, IE
@@ -2192,23 +2292,42 @@ contains
           endif
 
        enddo
+
        !$acc end kernels
 
        !--- radiative flux at cell wall:
        ! [note] "d" means upper to lower altitude.
 
        !$acc kernels pcopy(flux) pcopyin(E12mns, E12pls, R12mns, R12pls, flux_direct, wscale) async(0)
+
        !$acc loop gang
+       !$omp parallel do default(none) private(i,j,Upls,Umns) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,E12pls,R12mns,E12mns,R12pls,flux,icloud,Wscale_irgn) &
+       !$omp shared(flux_direct)
+       do j = JS, JE
+       !$acc loop gang vector(8)
+       do i = IS, IE
+          ! TOA boundary
+          Upls = 0.0_RP
+          Umns = E12mns(1,i,j) + R12pls(1,i,j) * Upls
+
+          flux(1,i,j,I_up,icloud) = Wscale_irgn * Umns
+          flux(1,i,j,I_dn,icloud) = Wscale_irgn * Upls + flux_direct(1,i,j,icloud)
+       enddo
+       enddo
+       !$acc end kernels
+
+       !$acc kernels pcopy(flux) pcopyin(E12mns, E12pls, R12mns, R12pls, flux_direct, wscale) async(0)
+       !$acc loop gang
+       !$omp parallel do default(none) private(i,j,k,Upls,Umns) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,rd_kmax,E12pls,R12mns,E12mns,R12pls,flux,icloud,Wscale_irgn) &
+       !$omp shared(flux_direct)
        do j = JS, JE
        !$acc loop gang vector(8)
        do i = IS, IE
        !$acc loop gang vector(32)
-       do k = 1, rd_kmax+1
-          if ( k == 1 ) then ! TOA boundary
-             Upls = 0.0_RP
-          else
-             Upls = ( E12pls(k-1,i,j) + R12mns(k-1,i,j)*E12mns(k,i,j) ) / ( 1.0_RP - R12mns(k-1,i,j)*R12pls(k,i,j) )
-          endif
+       do k = 2, rd_kmax+1
+          Upls = ( E12pls(k-1,i,j) + R12mns(k-1,i,j)*E12mns(k,i,j) ) / ( 1.0_RP - R12mns(k-1,i,j)*R12pls(k,i,j) )
           Umns = E12mns(k,i,j) + R12pls(k,i,j) * Upls
 
           flux(k,i,j,I_up,icloud) = Wscale_irgn * Umns
@@ -2216,6 +2335,7 @@ contains
        enddo
        enddo
        enddo
+
        !$acc end kernels
 
     enddo ! cloud loop

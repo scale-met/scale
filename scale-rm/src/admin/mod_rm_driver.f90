@@ -74,7 +74,9 @@ contains
     use scale_grid_index, only: &
        GRID_INDEX_setup
     use scale_grid, only: &
-       GRID_setup
+       GRID_setup, &
+       DX, &
+       DY
     use scale_grid_nest, only: &
        NEST_setup
     use scale_land_grid_index, only: &
@@ -206,7 +208,9 @@ contains
 
     ! setup Log
     call IO_LOG_setup( myrank, ismaster )
-    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+    call LogInit( IO_FID_CONF,       &
+                  IO_FID_LOG, IO_L,  &
+                  IO_FID_NML, IO_NML )
 
     ! setup process
     call PRC_setup
@@ -238,7 +242,6 @@ contains
 
     call URBAN_GRID_INDEX_setup
     call URBAN_GRID_setup
-
 
     ! setup submodel administrator
     call ATMOS_admin_setup
@@ -281,7 +284,7 @@ contains
     ! setup monitor I/O
     call MONIT_setup
     ! setup external in
-    call EXTIN_setup
+    call EXTIN_setup( 'RM' )
 
     ! setup nesting grid
     call NEST_setup ( intercomm_parent, intercomm_child )
@@ -291,7 +294,7 @@ contains
     call ATMOS_THERMODYN_setup
     call ATMOS_SATURATION_setup
 
-    call BULKFLUX_setup
+    call BULKFLUX_setup( sqrt(DX**2+DY**2) )
     call ROUGHNESS_setup
 
     ! setup variable container
@@ -463,7 +466,6 @@ contains
        ! calc diagnostics
        call ATMOS_vars_diagnostics
        call ATMOS_vars_history_setpres
-
     endif
 
     ! setup surface condition

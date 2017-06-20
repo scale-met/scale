@@ -1,8 +1,8 @@
 %-------------------------------------------------------%
-\section{初期値・境界値データの作成：init} \label{sec:tutrial_real_init}
+\section{Creating the initial and boundary data: init} \label{sec:tutrial_real_init}
 %-------------------------------------------------------%
 
-initディレクトリでは、\scalerm 計算に必要な初期値・境界値データを作成する。
+Move to the directory \verb|init| and create the initial and boundary data for the \scalerm simulation as follows:
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/init
  $ ls
@@ -11,17 +11,12 @@ initディレクトリでは、\scalerm 計算に必要な初期値・境界値�
     param.bucket.conf
     scale-rm_init
 \end{verbatim}
-ディレクトリの中には、\verb|init.d01.conf|という名前の設定ファイルが準備されている。\\
-他に\verb|init.launch.conf|というファイルも作成されているが、ここでは使用しない。
-\verb|pp.d01.conf|と同様に、実験設定に合わせて、この\verb|init.d01.conf|を書き換える必要があるが、
-チュートリアル用の\verb|init.d01.conf|ファイルは表\ref{tab:grids}の設定に
-すでに合わせてある。
-初期値・境界値データの作成には前節で作成した地形データを利用する。
-これは、\verb|init.d01.conf|の中で、下記のように相対パスを用いて参照するように設定されている。\\
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+In the directory \verb|init|, there exists the configuration file \verb|init.d01.conf|.
+The file \verb|init.launch.conf| also exists but is not used here.
+It is necessary to edit the file \verb|init.d01.conf| according to such experimental settings as \verb|pp.d01.conf|. \verb|init.d01.conf| has been already edited for this tutorial experiment as shown in Table \ref{tab:grids}.  To create the initial and boundary data,  the topographical data generated in the previous section is used. This is set in \verb|init.d01.conf| to refer the relative path as follows:
+
+\editbox{
 \verb|&PARAM_TOPO| \\
 \verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
 \verb|/| \\
@@ -29,89 +24,62 @@ initディレクトリでは、\scalerm 計算に必要な初期値・境界値�
 \verb|&PARAM_LANDUSE| \\
 \verb|   LANDUSE_IN_BASENAME = "../pp/landuse_d01",| \\
 \verb|/| \\
-\end{tabularx}
-}}\\
-
-\noindent その他に\verb|init.d01.conf|の設定の中で特に確認してほしいのは、
-\namelist{PARAM_MKINIT_REAL_ATMOS}、
-\namelist{PARAM_MKINIT_REAL_OCEAN}、
-\namelist{PARAM_MKINIT_REAL_LAND}の内容である。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+}
+In particular,  the contents of \namelist{PARAM_MKINIT_REAL_ATMOS}, \namelist{PARAM_MKINIT_REAL_OCEAN} and \namelist{PARAM_MKINIT_REAL_LAND} are handled. It should be confirmed that the settings in \verb|init.d01.conf| are correct.
+\editboxtwo{
 \verb|&PARAM_MKINIT_REAL_ATMOS| & \\
-\verb| NUMBER_OF_FILES      = 2,|                                   & {\small ← 読み込むファイルの数} \\
-\verb| FILETYPE_ORG         = "GrADS",|                             & {\small ← 表\ref{tab:inputdata_format}に示す設定値を指定} \\
+\verb| NUMBER_OF_FILES      = 2,|                                   & {\small : number of files read } \\
+\verb| FILETYPE_ORG         = "GrADS",|                             & {\small : choose from Table \ref{tab:inputdata_format}} \\
 \verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",| & \\
-\verb| BASENAME_BOUNDARY    = "boundary_d01",|                      & {\small ← 境界値データの出力名} \\
-\verb| BOUNDARY_UPDATE_DT   = 21600.0,|                             & {\small ← 入力データの時間間隔} \\
+\verb| BASENAME_BOUNDARY    = "boundary_d01",|                      & {\small : output name of boundary data} \\
+\verb| BOUNDARY_UPDATE_DT   = 21600.0,|                             & {\small : time interval of input data} \\
 \verb| PARENT_MP_TYPE       = 3,|                                   & \\
-\verb| USE_FILE_DENSITY     = .false.,|                             & {\small ← 親モデルの大気密度データを使うか} \\
+\verb| USE_FILE_DENSITY     = .false.,|                             & {\small : use the atmospheric density in the parent model or not?} \\
 \verb|/| \\
 \\
 \verb|&PARAM_MKINIT_REAL_OCEAN| & \\
-\verb|   ..... 略 .....              |  & \\
-\verb| INTRP_OCEAN_SFC_TEMP = "mask",|                              & {\small ← SSTの欠測値処理方法} \\
-\verb| INTRP_OCEAN_TEMP     = "mask",|                              & {\small ← SSTの欠測値処理方法} \\
+\verb|   .........              |  & \\
+\verb| INTRP_OCEAN_SFC_TEMP = "mask",|                              & {\small : how to treat the missing value of SST} \\
+\verb| INTRP_OCEAN_TEMP     = "mask",|                              & {\small : how to treat the missing value of SST} \\
 \verb|/| \\
 \\
 \verb|&PARAM_MKINIT_REAL_LAND| & \\
-\verb|   ..... 略 .....              | & \\
-\verb| USE_FILE_LANDWATER   = .true.,|                              & {\small ← 親モデルの土壌水分データを使うか} \\
-\verb| INTRP_LAND_TEMP      = "mask",|                              & {\small ← 土壌温度の欠測値処理方法} \\
-\verb| INTRP_LAND_WATER     = "fill",|                              & {\small ← 土壌水分の欠測値処理方法} \\
-\verb| INTRP_LAND_SFC_TEMP  = "fill",|                              & {\small ← 地表面温度の欠測値処理方法} \\
+\verb|   ..........              | & \\
+\verb| USE_FILE_LANDWATER   = .true.,|                              & {\small : use soil moisture data in the parent model or not?} \\
+\verb| INTRP_LAND_TEMP      = "mask",|                              & {\small : how to treat the missing value of soil temperature} \\
+\verb| INTRP_LAND_WATER     = "fill",|                              & {\small : how to treat the missing value of soil moisture} \\
+\verb| INTRP_LAND_SFC_TEMP  = "fill",|                              & {\small : how to treat the missing value of surface temperate} \\
 \verb|/| \\
-\end{tabularx}
-}}\\
+}
 
-\noindent \nmitem{FILETYPE_ORG}は入力する気象場データのファイルフォーマットに
-関するパラメータを設定しており、ここでは
-{\grads}形式のデータを読み込むため``\verb|grads|''と指定している。
-詳細な設定ファイルの内容については、第\ref{sec:adv_datainput}節を参照されたい。
+The file format of the meteorological field data is specified in \nmitem{FILETYPE_ORG}. In this case, it is given as ``\grads'' to read data in \grads format. Refer to Section \ref{sec:adv_datainput} for the details of the input file.
 
 
-第\ref{sec:tutrial_real_data}節用意した、バイナリ形式に変換した入力データ(FNL)を
-作業ディレクトリにリンクを張る。リンクをはるためのスクリプトが、
-\verb|${Tutorial_DIR}/real/data|の\verb|"gradsinput-link_FNL.sh"|に用意されている。
+Link the input data (FNL) that are converted into binary form in Section \ref{sec:tutrial_real_data} to the current working directory. A shell script for this appropriate linkage is prepared as \verb|"gradsinput-link_FNL.sh"| in the directory \verb|${Tutorial_DIR}/real/data|:
 \begin{verbatim}
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh
 \end{verbatim}
-下記のリンクが作成されていれば成功である。\\
+If the following linkages are found, it is successfully concluded.
+\msgbox{
+\verb|ATM_00000.grd -> ../tools/FNL_output/200707/FNL_ATM_2007071418.grd| \\
+\verb|ATM_00001.grd -> ../tools/FNL_output/200707/FNL_ATM_2007071500.grd| \\
+\verb|LND_00000.grd -> ../tools/FNL_output/200707/FNL_LND_2007071418.grd| \\
+\verb|LND_00001.grd -> ../tools/FNL_output/200707/FNL_LND_2007071500.grd| \\
+\verb|SFC_00000.grd -> ../tools/FNL_output/200707/FNL_SFC_2007071418.grd| \\
+\verb|SFC_00001.grd -> ../tools/FNL_output/200707/FNL_SFC_2007071500.grd| \\
+}
 
-\noindent {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
-\verb|FNLatm_00000.grd -> ../tools/FNL_output/200707/FNLatm_2007071418.grd| \\
-\verb|FNLatm_00001.grd -> ../tools/FNL_output/200707/FNLatm_2007071500.grd| \\
-\verb|FNLatm_00002.grd -> ../tools/FNL_output/200707/FNLatm_2007071506.grd| \\
-\verb|FNLatm_00003.grd -> ../tools/FNL_output/200707/FNLatm_2007071512.grd| \\
-\verb|FNLland_00000.grd -> ../tools/FNL_output/200707/FNLland_2007071418.grd| \\
-\verb|FNLland_00001.grd -> ../tools/FNL_output/200707/FNLland_2007071500.grd| \\
-\verb|FNLland_00002.grd -> ../tools/FNL_output/200707/FNLland_2007071506.grd| \\
-\verb|FNLland_00003.grd -> ../tools/FNL_output/200707/FNLland_2007071512.grd| \\
-\verb|FNLsfc_00000.grd -> ../tools/FNL_output/200707/FNLsfc_2007071418.grd| \\
-\verb|FNLsfc_00001.grd -> ../tools/FNL_output/200707/FNLsfc_2007071500.grd| \\
-\verb|FNLsfc_00002.grd -> ../tools/FNL_output/200707/FNLsfc_2007071506.grd| \\
-\verb|FNLsfc_00003.grd -> ../tools/FNL_output/200707/FNLsfc_2007071512.grd| \\
-\end{tabularx}
-}}\\
-
-
-次に、{\grads}形式のバイナリデータをSCALEで読み込むためのnamelistファイルを
-initディレクトリへリンクする。
+Then, link a namelist file to the directory \verb|init| to read the binary (\grads) data format in SCALE.
 \begin{verbatim}
-  $ ln -s ../../data/namelist.grads_boundary.FNL.grib1 ./
+  $ ln -s ../../data/namelist.grads_boundary.FNL.2005053112-2016051106 ./
 \end{verbatim}
-%
-準備が整ったら、4つのMPIプロセスを使用してinitを実行する。
+After the above preparations, execute the \verb|scale-rm_init| using four MPI processes.
 \begin{verbatim}
  $ mpirun -n 4 ./scale-rm_init init.d01.conf
 \end{verbatim}
 
-正常にジョブが終了すると、
+If the job finishes normally, the following files are generated:
 \begin{verbatim}
  $ ls
     boundary_d01.pe000000.nc
@@ -124,44 +92,29 @@ initディレクトリへリンクする。
     init_d01_20070714-180000.000.pe000003.nc
     init_LOG_d01.pe000000
 \end{verbatim}
-が作成され、\verb|init_LOG_d01.pe000000|の最後に\\
-
-\noindent {\small {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+The file \verb|init_LOG_d01.pe000000| is a log file.  The following message is output at the end of the file \verb|init_LOG_d01.pe000000|:
+\msgbox{
  ++++++ Finalize MPI...\\
  ++++++ MPI is peacefully finalized\\
-\end{tabularx}
-}}}\\
+}
+The file sizes of the boundary and initial data, \verb|boundary_d01.pe######.nc| and \\
+\verb|init_d01_20070714-180000.000.pe######.nc|, are approximately 5.8 MB and 3.5 MB, respectively,  where \verb|######| represents the MPI process number.
 
-\noindent
-と出力される。
-\verb|boundary_d01.pe######.nc|は境界値データで約5.8MBのファイルサイズとなり、
-\verb|init_d01_20070714-180000.000.pe######.nc|は初期値データで約3.5MBのファイルサイズとなる。
-\verb|init_LOG_d01.pe000000|はログファイルである。
-\verb|######|はMPIプロセス番号を表している。
-
-
-%% サポート外
 \vspace{1cm}
 \noindent {\Large\em OPTION} \hrulefill \\
-gpviewがインストールされている場合，作成された初期値と境界値が
-正しく作成されているかどうかを確認することが出来る。
-正しく作成されていれば、図 \ref{fig:init}と同じように描かれる。
-
+When ``gpview'' is installed,  one can confirm whether the initial and boundary data have been created correctly  by the following command:
 \begin{verbatim}
  $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \
           --xintv=10 --yintv=10 --unit_vect init_d01_20070714-180000.000.pe00*@QV      \
           init_d01_20070714-180000.000.pe00*@MOMX init_d01_20070714-180000.000.pe00*@MOMY
 \end{verbatim}
-
+If the same figure as Fig. \ref{fig:init} is found, it is successfully concluded.
 
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/real_init_qv-momxy.eps}\\
-  \caption{チュートリアル実験の高さ1500mにおける初期場の様子。カラーシェードは比湿、
-           ベクトルは水平運動量フラックスを表している。}
+  \caption{Initial field at z=1500m for the tutorial experiment. 
+    The color indicates relative humidity and the vector horizontal momentum flux.}
   \label{fig:init}
 \end{center}
 \end{figure}
-

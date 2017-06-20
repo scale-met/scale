@@ -30,6 +30,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_tb_smg
   !-----------------------------------------------------------------------------
   !
@@ -41,7 +42,7 @@ module scale_atmos_phy_tb_smg
   use scale_grid_index
   use scale_tracer
 
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -179,7 +180,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_SMG. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_SMG)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_SMG)
 
     Cs = ATMOS_PHY_TB_SMG_Cs
 
@@ -232,9 +233,9 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        RHOQ_t,                                      &
-       Nu, Ri, Pr, N2,                              &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       Nu, Ri, Pr,                                  &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
     use scale_grid_index
@@ -286,7 +287,6 @@ contains
     real(RP), intent(out)   :: nu           (KA,IA,JA)    ! eddy viscosity (center)
     real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
     real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Prantle number
-    real(RP), intent(out)   :: N2           (KA,IA,JA)    ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
     real(RP), intent(in)    :: MOMX         (KA,IA,JA)
@@ -294,12 +294,13 @@ contains
     real(RP), intent(in)    :: RHOT         (KA,IA,JA)
     real(RP), intent(in)    :: DENS         (KA,IA,JA)
     real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
+    real(RP), intent(in)    :: N2           (KA,IA,JA)
 
     real(RP), intent(in)    :: SFLX_MW      (IA,JA)
     real(RP), intent(in)    :: SFLX_MU      (IA,JA)
     real(RP), intent(in)    :: SFLX_MV      (IA,JA)
     real(RP), intent(in)    :: SFLX_SH      (IA,JA)
-    real(RP), intent(in)    :: SFLX_QV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_Q       (IA,JA,QA)
 
     real(RP), intent(in)    :: GSQRT         (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)    :: J13G          (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -348,17 +349,34 @@ contains
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
     qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
-    nu (:,:,:) = UNDEF
-    tke(:,:,:) = UNDEF
-    Pr (:,:,:) = UNDEF
-    Ri (:,:,:) = UNDEF
-    Kh (:,:,:) = UNDEF
-    N2 (:,:,:) = UNDEF
+    nu           (:,:,:)     = UNDEF
+    tke          (:,:,:)     = UNDEF
+    Pr           (:,:,:)     = UNDEF
+    Ri           (:,:,:)     = UNDEF
+    Kh           (:,:,:)     = UNDEF
 
-    POTT   (:,:,:) = UNDEF
+    POTT         (:,:,:)     = UNDEF
+#endif
+
+#ifdef QUICKDEBUG
+    qflx_sgs_momz(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momz(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momx(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,   1:IS-1,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,   1:JS-1,:) = UNDEF
+    qflx_sgs_momy(KS:KE,    :    ,JE+1:JA  ,:) = UNDEF
 #endif
 
     ! potential temperature
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOT,DENS,POTT) &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -392,17 +410,11 @@ contains
        ! Ri = N^2 / |S|^2, N^2 = g / theta * dtheta/dz
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS+1, KE-1
+       do k = KS, KE
 #ifdef DEBUG
-       call CHECK( __LINE__, POTT(k+1,i,j) )
-       call CHECK( __LINE__, POTT(k,i,j) )
-       call CHECK( __LINE__, POTT(k-1,i,j) )
-       call CHECK( __LINE__, FDZ(k) )
-       call CHECK( __LINE__, FDZ(k-1) )
        call CHECK( __LINE__, S2(k,i,j) )
+       call CHECK( __LINE__, N2(k,i,j) )
 #endif
-          N2(k,i,j) = GRAV * ( POTT(k+1,i,j) - POTT(k-1,i,j) ) * J33G &
-               / ( ( FDZ(k) + FDZ(k-1) ) * GSQRT(k,i,j,I_XYZ) * POTT(k,i,j) )
           Ri(k,i,j) = N2(k,i,j) / S2(k,i,j)
        enddo
        enddo
@@ -410,40 +422,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KS+1,i,j) )
-       call CHECK( __LINE__, POTT(KS,i,j) )
-       call CHECK( __LINE__, RFDZ(KS) )
-       call CHECK( __LINE__, S2(KS,i,j) )
-#endif
-          N2(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G &
-               / ( FDZ(KS) * GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) )
-          Ri(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G * RFDZ(KS) &
-               / ( GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) * S2(KS,i,j) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KE,i,j) )
-       call CHECK( __LINE__, POTT(KE-1,i,j) )
-       call CHECK( __LINE__, RFDZ(KE-1) )
-       call CHECK( __LINE__, S2(KE,i,j) )
-#endif
-          N2(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G &
-               / ( FDZ(KE-1) * GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) )
-          Ri(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G * RFDZ(KE-1) &
-               / ( GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) * S2(KE,i,j) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
+
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -494,6 +473,9 @@ contains
 
        ! tke = (nu/(Ck * Delta))^2 = ( nu * Cs / Ck )^2 / ( Cs * Delta )^2
        ! Sullivan et al. (1994)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,nu,nu_fact,Cs,TKE) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
@@ -571,6 +553,9 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (x edge)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,S23_X,nu,qflx_sgs_momz) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
@@ -647,7 +632,7 @@ contains
        !##### momentum equation (x) #####
        ! (y edge)
        if ( ATMOS_PHY_TB_SMG_horizontal ) then
-          qflx_sgs_momx(k,i,j,ZDIR) = 0.0_RP
+          qflx_sgs_momx(:,:,:,ZDIR) = 0.0_RP
        else
           do j = JJS, JJE
           do i = IIS, IIE
@@ -684,6 +669,9 @@ contains
 #endif
        end if
        ! (cell center)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S11_C,S22_C,S33_C,TKE,tke_fact,qflx_sgs_momx) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
@@ -706,6 +694,9 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (z edge)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S12_Z,qflx_sgs_momx) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
@@ -788,7 +779,7 @@ contains
        !##### momentum equation (y) #####
        ! (x edge)
        if ( ATMOS_PHY_TB_SMG_horizontal ) then
-          qflx_sgs_momy(k,i,j,ZDIR) = 0.0_RP
+          qflx_sgs_momy(:,:,:,ZDIR) = 0.0_RP
        else
           do j = JJS, JJE
           do i = IIS, IIE
@@ -826,6 +817,9 @@ contains
        end if
 
        ! (z edge)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S12_Z,qflx_sgs_momy) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -852,6 +846,9 @@ contains
 #endif
 
        ! (z-x plane)
+       !$omp parallel do default(none) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S11_C,S22_C,S33_C,tke_fact,TKE,qflx_sgs_momy) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE
        do k = KS, KE
