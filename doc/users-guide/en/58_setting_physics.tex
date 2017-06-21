@@ -88,11 +88,12 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
 \verb|HYBRID| is used for the following two purposes.
 \begin{enumerate}
 \item Simulations with inter-mediate resolution between LES and RANS (gray zone) \\
-  The temporal tendencies is calculated by a linear combination of those calculated by the LES turbulence model and RANS turbulence parameterization
+  The temporal tendencies by vertical mixing is calculated by a linear combination of those calculated by the LES turbulence model and RANS turbulence parameterization. The horizontal mixing is calculate by the LES turbulence model.
 \item Horizontal eddy viscosity for RANS simulations \\
-  The RANS turbulence parameterization is a scheme only for vertical mixing and not for horizontal mixing.
-  The horizontal eddy viscosity in RANS simulations can be considered by using the \verb|HYBRID| scheme.
-  The horizontal mixing in RAMS simulations is calculate by the LES turbulence model.
+  The RANS turbulence parameterization is a scheme considering only vertical mixing.
+  If you want to consider the horizontal eddy viscosity in RANS simulations, 
+  that becomes possible by using the \verb|HYBRID| scheme.
+  The horizontal mixing is calculate by the LES turbulence model.
 \end{enumerate}
 
 In order to use the \verb|HYBRID| scheme for the horizontal eddy viscosity in RANS simulations, \nmitem{ATMOS_PHY_TB_SMG_horizontal} should be \verb|.true.| as follows:
