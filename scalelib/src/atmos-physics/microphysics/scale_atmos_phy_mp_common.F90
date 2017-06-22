@@ -85,7 +85,7 @@ contains
     call PROF_rapstart('MP_filter', 3)
 
     !$omp parallel do default(none) private(i,j,k,iq,diffq) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,QHS,QHE,QTRC,DENS,RHOT,I_QV,diffq_check) 
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,QHS,QHE,QTRC,DENS,RHOT,I_QV,diffq_check)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS,  KE
@@ -292,7 +292,7 @@ contains
 
        ! Turn QC & QI into QV with consistency of moist internal energy
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,Emoist,TEMP0,CVtot,QTRC1,LHV,LHF,QSUM1,I_QV,I_QC,I_QI) 
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,Emoist,TEMP0,CVtot,QTRC1,LHV,LHF,QSUM1,I_QV,I_QC,I_QI)
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
@@ -384,7 +384,7 @@ contains
 
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE1,DENS0,TEMP1,CVtot,RHOE_t,RHOE0,rdt) 
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE1,DENS0,TEMP1,CVtot,RHOE_t,RHOE0,rdt)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -745,23 +745,21 @@ contains
 
   !-----------------------------------------------------------------------------
   !> precipitation transport
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_precipitation( &
-       flux_rain, &
-       flux_snow, &
-       DENS,      &
-       MOMZ,      &
-       MOMX,      &
-       MOMY,      &
-       RHOE,      &
-       QTRC,      &
-       QA_MP,     &
-       QS_MP,     &
-       vterm,     &
-       temp,      &
-       CVq,       &
-       dt,        &
-       vt_fixed   )
+       QA_MP,   &
+       QS_MP,   &
+       qflx,    &
+       vterm,   &
+       DENS,    &
+       MOMZ,    &
+       MOMX,    &
+       MOMY,    &
+       RHOE,    &
+       QTRC,    &
+       temp,    &
+       CVq,     &
+       dt,      &
+       vt_fixed )
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_grid_real, only: &
@@ -779,34 +777,31 @@ contains
        QIE
     implicit none
 
-    real(RP), intent(out)   :: flux_rain(KA,IA,JA)
-    real(RP), intent(out)   :: flux_snow(KA,IA,JA)
-    real(RP), intent(inout) :: DENS     (KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ     (KA,IA,JA)
-    real(RP), intent(inout) :: MOMX     (KA,IA,JA)
-    real(RP), intent(inout) :: MOMY     (KA,IA,JA)
-    real(RP), intent(inout) :: RHOE     (KA,IA,JA)
-    real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA)
     integer,  intent(in)    :: QA_MP
     integer,  intent(in)    :: QS_MP
-    real(RP), intent(inout) :: vterm    (KA,IA,JA,QA_MP-1) ! terminal velocity of cloud mass
-    real(RP), intent(in)    :: temp     (KA,IA,JA)
-    real(RP), intent(in)    :: CVq      (QA)
+    real(RP), intent(out)   :: qflx (KA,IA,JA,QA_MP-1)
+    real(RP), intent(inout) :: vterm(KA,IA,JA,QA_MP-1) ! terminal velocity of cloud mass
+    real(RP), intent(inout) :: DENS (KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ (KA,IA,JA)
+    real(RP), intent(inout) :: MOMX (KA,IA,JA)
+    real(RP), intent(inout) :: MOMY (KA,IA,JA)
+    real(RP), intent(inout) :: RHOE (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC (KA,IA,JA,QA)
+    real(RP), intent(in)    :: temp (KA,IA,JA)
+    real(RP), intent(in)    :: CVq  (QA)
     real(DP), intent(in)    :: dt
     logical,  intent(in), optional :: vt_fixed
 
-    real(RP) :: rhoq(KA,IA,JA,QA) ! rho * q before precipitation
-    real(RP) :: qflx(KA,IA,JA,QA_MP-1)
-    real(RP) :: eflx(KA,IA,JA)
-
+    real(RP) :: rhoq  (KA,IA,JA,QA) ! rho * q before precipitation
+    real(RP) :: eflx  (KA,IA,JA)
+    real(RP) :: rfdz  (KA,IA,JA)
     real(RP) :: rcdz  (KA,IA,JA)
     real(RP) :: rcdz_u(KA,IA,JA)
     real(RP) :: rcdz_v(KA,IA,JA)
-    real(RP) :: rfdz  (KA,IA,JA)
 
-    integer :: k, i, j
-    integer :: iq, iqa
-    logical :: vt_fixed_
+    integer  :: k, i, j
+    integer  :: iq, iqa
+    logical  :: vt_fixed_
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_Precipitation', 2)
@@ -819,17 +814,13 @@ contains
 
     do iq = 1, QA_MP-1
        iqa = QS_MP + iq
-       if ( TRACER_MASS(iqa) == 0.0_RP ) cycle
 
-       if ( .not. vt_fixed_ ) call COMM_vars8( vterm(:,:,:,iq), iq )
+       if( TRACER_MASS(iqa) == 0.0_RP ) cycle
+
+       if( .NOT. vt_fixed_ ) call COMM_vars8( vterm(:,:,:,iq), iq )
 
        call COMM_vars8( QTRC(:,:,:,iqa), QA_MP+iq )
     enddo
-
-!OCL XFILL
-    flux_rain(:,:,:) = 0.0_RP
-!OCL XFILL
-    flux_snow(:,:,:) = 0.0_RP
 
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
@@ -839,12 +830,13 @@ contains
     do i = IS, IE
        rfdz(KS-1,i,j) = 1.0_RP / ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) )
        do k = KS, KE
-          rcdz  (k,i,j) = 1.0_RP / ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) )
+          rfdz  (k,i,j) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k  ,i,j) )
+          rcdz  (k,i,j) = 1.0_RP / ( REAL_FZ(k  ,i,j) - REAL_FZ(k-1,i,j) )
+
           rcdz_u(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i+1,j) - REAL_FZ(k-1,i+1,j) ) &
                                    + ( REAL_FZ(k,i  ,j) - REAL_FZ(k-1,i  ,j) ) )
           rcdz_v(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i,j+1) - REAL_FZ(k-1,i,j+1) ) &
                                    + ( REAL_FZ(k,i,j  ) - REAL_FZ(k-1,i,j  ) ) )
-          rfdz(k,i,j) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
        enddo
     enddo
     enddo
@@ -864,6 +856,7 @@ contains
        !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
+
           !--- mass flux for each mass tracer, upwind with vel < 0
           do k  = KS-1, KE-1
              qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iqa) * J33G
@@ -920,22 +913,22 @@ contains
              MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz_v(k,i,j)
           enddo
           MOMY(KE,i,j) = MOMY(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz_v(KE,i,j)
+
        enddo
        enddo
 
-    enddo ! mass tracer loop
+    enddo ! falling (water mass & number) tracer
 
-    ! save previous value
+    !--- save previous value
     do iqa = 1, QA
        do j = JS, JE
        do i = IS, IE
-          rhoq(KS-1,i,j,iqa) = DENS(KS,i,j) * QTRC(KS,i,j,iqa)
-          do k = KS, KE
-             rhoq(k,i,j,iqa) = DENS(k,i,j) * QTRC(k,i,j,iqa)
-          enddo
+       do k = KS, KE
+          rhoq(k,i,j,iqa) = QTRC(k,i,j,iqa) * DENS(k,i,j)
        enddo
        enddo
-    end do
+       enddo
+    enddo ! all tracer
 
     do iq = 1, QA_MP-1
        iqa = QS_MP + iq
@@ -951,6 +944,7 @@ contains
        enddo
 
        if ( TRACER_MASS(iqa) == 0.0_RP ) cycle
+
        !--- update total density
        do j  = JS, JE
        do i  = IS, IE
@@ -960,9 +954,9 @@ contains
        enddo
        enddo
 
-    enddo ! mass tracer loop
+    enddo ! falling (water mass & number) tracer
 
-    !--- update falling tracer mass
+    !--- update falling tracer
     do iq = 1, QA_MP-1
        iqa = QS_MP + iq
        do j  = JS, JE
@@ -972,50 +966,18 @@ contains
        enddo
        enddo
        enddo
-    enddo
+    enddo ! falling (water mass & number) tracer
 
     !--- update tracer ratio with updated total density)
     do iqa = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QTRC(k,i,j,iqa) = rhoq(k,i,j,iqa) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-    enddo
-
-    !--- lowermost flux is saved for land process
-    if ( QLS > 0 ) then
-       !$omp parallel do default(none) private(i,j,k,iqa,iq) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,QLS,QLE,QS_MP,flux_rain,qflx)
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS-1, KE
-       do iqa = QLS, QLE
-          iq = iqa - QS_MP
-          flux_rain(k,i,j) = flux_rain(k,i,j) - qflx(k,i,j,iq)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,iqa) = rhoq(k,i,j,iqa) / DENS(k,i,j)
        enddo
        enddo
        enddo
-       enddo
-    endif
-    if ( QIS > 0 ) then
-       !$omp parallel do default(none)                              &
-       !$omp shared(JS,JE,IS,IE,KS,KE,QIS,QIE,QS_MP,flux_snow,qflx) &
-       !$omp private(i,j,k,iqa,iq) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS-1, KE
-       do iqa = QIS, QIE
-          iq = iqa - QS_MP
-          flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-       enddo
-    endif
-
+    enddo ! all tracer
 
     call PROF_rapend  ('MP_Precipitation', 2)
 

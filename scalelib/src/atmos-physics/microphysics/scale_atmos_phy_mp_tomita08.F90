@@ -622,7 +622,7 @@ contains
        DWATR => CONST_DWATR, &
        PI    => CONST_PI
     use scale_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP
+       dt_MP => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
        HIST_in
     use scale_tracer, only: &
@@ -640,13 +640,13 @@ contains
        MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
     implicit none
 
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
-    real(RP), intent(inout) :: MOMX(KA,IA,JA)
-    real(RP), intent(inout) :: MOMY(KA,IA,JA)
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(inout) :: DENS     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMX     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMY     (KA,IA,JA)
+    real(RP), intent(inout) :: RHOT     (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA)
+    real(RP), intent(in)    :: CCN      (KA,IA,JA)
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
@@ -657,12 +657,11 @@ contains
     real(RP) :: temp      (KA,IA,JA)
     real(RP) :: pres      (KA,IA,JA)
 
-    real(RP) :: vterm     (KA,IA,JA,QA_MP-1) ! terminal velocity of each tracer [m/s]
-    real(RP) :: FLX_rain  (KA,IA,JA)
-    real(RP) :: FLX_snow  (KA,IA,JA)
-    real(RP) :: wflux_rain(KA,IA,JA)
-    real(RP) :: wflux_snow(KA,IA,JA)
-    real(RP) :: qc_before_satadj(KA,IA,JA)
+    real(RP) :: vterm    (KA,IA,JA,QA_MP-1) ! terminal velocity of each tracer  [m/s]
+    real(RP) :: pflux    (KA,IA,JA,QA_MP-1) ! precipitation flux of each tracer [kg/m2/s]
+    real(RP) :: FLX_hydro(KA,IA,JA,QA_MP-1)
+    real(RP) :: QC_t_sat (KA,IA,JA)
+    real(RP) :: QI_t_sat (KA,IA,JA)
 
     integer  :: step
     integer  :: k, i, j
@@ -678,12 +677,12 @@ contains
                                MP_limit_negative ) ! [IN]
     endif
 
-    call THERMODYN_rhoe( RHOE(:,:,:),   & ! [OUT]
-                         RHOT(:,:,:),   & ! [IN]
-                         QTRC(:,:,:,:), & ! [IN]
-                         TRACER_CV(:),  & ! [IN]
-                         TRACER_R(:),   & ! [IN]
-                         TRACER_MASS(:) ) ! [IN]
+    call THERMODYN_rhoe( RHOE       (:,:,:),   & ! [OUT]
+                         RHOT       (:,:,:),   & ! [IN]
+                         QTRC       (:,:,:,:), & ! [IN]
+                         TRACER_CV  (:),       & ! [IN]
+                         TRACER_R   (:),       & ! [IN]
+                         TRACER_MASS(:)        ) ! [IN]
 
     !##### MP Main #####
     call MP_tomita08( RHOE_t(:,:,:),   & ! [OUT]
@@ -693,58 +692,60 @@ contains
                       CCN   (:,:,:),   & ! [IN]
                       DENS  (:,:,:)    ) ! [IN]
 
-    FLX_rain(:,:,:) = 0.0_RP
-    FLX_snow(:,:,:) = 0.0_RP
-
-    vterm(:,:,:,:) = 0.0_RP
+    vterm    (:,:,:,:) = 0.0_RP
+    FLX_hydro(:,:,:,:) = 0.0_RP
 
     if ( MP_doprecipitation ) then
 
        do step = 1, MP_NSTEP_SEDIMENTATION
 
-          call THERMODYN_temp_pres_E( temp(:,:,:),   & ! [OUT]
-                                      pres(:,:,:),   & ! [OUT]
-                                      DENS(:,:,:),   & ! [IN]
-                                      RHOE(:,:,:),   & ! [IN]
-                                      QTRC(:,:,:,:), & ! [IN]
-                                      TRACER_CV(:),  & ! [IN]
-                                      TRACER_R(:),   & ! [IN]
-                                      TRACER_MASS(:) ) ! [IN]
+          call THERMODYN_temp_pres_E( temp       (:,:,:),   & ! [OUT]
+                                      pres       (:,:,:),   & ! [OUT]
+                                      DENS       (:,:,:),   & ! [IN]
+                                      RHOE       (:,:,:),   & ! [IN]
+                                      QTRC       (:,:,:,:), & ! [IN]
+                                      TRACER_CV  (:),       & ! [IN]
+                                      TRACER_R   (:),       & ! [IN]
+                                      TRACER_MASS(:)        ) ! [IN]
 
           call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
                                   DENS (:,:,:),   & ! [IN]
                                   temp (:,:,:),   & ! [IN]
                                   QTRC (:,:,:,:)  ) ! [IN]
 
-          call MP_precipitation( wflux_rain(:,:,:),     & ! [OUT]
-                                 wflux_snow(:,:,:),     & ! [OUT]
-                                 DENS    (:,:,:),       & ! [INOUT]
-                                 MOMZ    (:,:,:),       & ! [INOUT]
-                                 MOMX    (:,:,:),       & ! [INOUT]
-                                 MOMY    (:,:,:),       & ! [INOUT]
-                                 RHOE    (:,:,:),       & ! [INOUT]
-                                 QTRC    (:,:,:,:),     & ! [INOUT]
-                                 QA_MP,                 & ! [IN]
+          call MP_precipitation( QA_MP,                 & ! [IN]
                                  QS_MP,                 & ! [IN]
-                                 vterm   (:,:,:,:),     & ! [IN]
-                                 temp    (:,:,:),       & ! [IN]
+                                 pflux    (:,:,:,:),    & ! [OUT]
+                                 vterm    (:,:,:,:),    & ! [INOUT]
+                                 DENS     (:,:,:),      & ! [INOUT]
+                                 MOMZ     (:,:,:),      & ! [INOUT]
+                                 MOMX     (:,:,:),      & ! [INOUT]
+                                 MOMY     (:,:,:),      & ! [INOUT]
+                                 RHOE     (:,:,:),      & ! [INOUT]
+                                 QTRC     (:,:,:,:),    & ! [INOUT]
+                                 temp     (:,:,:),      & ! [IN]
                                  TRACER_CV(:),          & ! [IN]
                                  MP_DTSEC_SEDIMENTATION ) ! [IN]
 
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS-1, KE
-             FLX_rain(k,i,j) = FLX_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
-             FLX_snow(k,i,j) = FLX_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
+          do j  = JS, JE
+          do i  = IS, IE
+          do k  = KS-1, KE-1
+             FLX_hydro(k,i,j,I_mp_QR) = FLX_hydro(k,i,j,I_mp_QR) + pflux(k,i,j,I_mp_QR) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_QI) = FLX_hydro(k,i,j,I_mp_QI) + pflux(k,i,j,I_mp_QI) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_QS) = FLX_hydro(k,i,j,I_mp_QS) + pflux(k,i,j,I_mp_QS) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_QG) = FLX_hydro(k,i,j,I_mp_QG) + pflux(k,i,j,I_mp_QG) * MP_RNSTEP_SEDIMENTATION
           enddo
           enddo
           enddo
 
        enddo
 
-    else
-       vterm(:,:,:,:) = 0.0_RP
     endif
+
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QI), 'pflux_QI', 'precipitation flux of QI', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QS), 'pflux_QS', 'precipitation flux of QS', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QG), 'pflux_QG', 'precipitation flux of QG', 'kg/m2/s', nohalo=.true. )
 
     call HIST_in( vterm(:,:,:,I_mp_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
     call HIST_in( vterm(:,:,:,I_mp_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s' )
@@ -754,7 +755,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       qc_before_satadj(k,i,j) = QTRC(k,i,j,I_QC)
+       QC_t_sat(k,i,j) = QTRC(k,i,j,I_QC)
+       QI_t_sat(k,i,j) = QTRC(k,i,j,I_QI)
     enddo
     enddo
     enddo
@@ -772,7 +774,19 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       EVAPORATE(k,i,j) = max( qc_before_satadj(k,i,j) - QTRC(k,i,j,I_QC), 0.0_RP ) / dt     ! if negative, condensation
+       QC_t_sat(k,i,j) = ( QTRC(k,i,j,I_QC) - QC_t_sat(k,i,j) ) / dt_MP
+       QI_t_sat(k,i,j) = ( QTRC(k,i,j,I_QI) - QI_t_sat(k,i,j) ) / dt_MP
+    enddo
+    enddo
+    enddo
+
+    call HIST_in( QC_t_sat(:,:,:), 'Pcsat', 'QC production term by satadjust', 'kg/kg/s' )
+    call HIST_in( QI_t_sat(:,:,:), 'Pisat', 'QI production term by satadjust', 'kg/kg/s' )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       EVAPORATE(k,i,j) = max( -QC_t_sat(k,i,j), 0.0_RP ) ! if negative, condensation
        EVAPORATE(k,i,j) = EVAPORATE(k,i,j) * DENS(k,i,j) / (4.0_RP/3.0_RP*PI*DWATR*re_qc**3) ! mass -> number (assuming constant particle radius as re_qc)
     enddo
     enddo
@@ -795,8 +809,14 @@ contains
                                MP_limit_negative ) ! [IN]
     endif
 
-    SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
-    SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain(i,j) = - ( FLX_hydro(KS-1,i,j,I_mp_QR) )
+       SFLX_snow(i,j) = - ( FLX_hydro(KS-1,i,j,I_mp_QI) &
+                          + FLX_hydro(KS-1,i,j,I_mp_QS) &
+                          + FLX_hydro(KS-1,i,j,I_mp_QG) )
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_PHY_MP_tomita08
