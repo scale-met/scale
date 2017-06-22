@@ -73,6 +73,12 @@ contains
     use scale_grid_real, only: &
        CZ => REAL_CZ, &
        FZ => REAL_FZ
+    use scale_gridtrans, only: &
+       GSQRT => GTRANS_GSQRT, &
+       J13G  => GTRANS_J13G,  &
+       J23G  => GTRANS_J23G,  &
+       I_XYW, &
+       I_XYZ
     implicit none
 
     real(RP), intent(out) :: POTT(KA,IA,JA)
@@ -94,6 +100,7 @@ contains
     real(RP) :: RPT(KA) !> Rtot * PT (= Rdry * virtual potential temperature)
     real(RP) :: q(QA)
     real(RP) :: qdry, Rtot
+    real(RP) :: momws
 
     integer  :: k, i, j
     integer  :: iq
@@ -131,9 +138,21 @@ contains
     enddo
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-       W(KS,i,j) = 0.5_RP * ( MOMZ(KS,i,j) ) / DENS(KS,i,j)
+    do j = 2, JA
+    do i = 2, IA
+!       W(KS,i,j) = 0.5_RP * ( MOMZ(KS,i,j) ) / DENS(KS,i,j)
+
+       ! at KS+1/2
+       momws = MOMZ(KS,i,j) &
+             + ( J13G(KS,i,j,I_XYW) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) + MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j) ) &
+               + J23G(KS,i,j,I_XYW) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) + MOMY(KS+1,i,j) + MOMY(KS+1,i,j-1) ) ) &
+               * 0.25_RP / GSQRT(KS,i,j,I_XYW)
+       ! at KS
+       ! momws at the surface is assumed to be zero
+       W(KS,i,j) = momws * 0.5_RP &
+                 - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) ) &
+                   + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) ) &
+                   * 0.5_RP / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
     enddo
     enddo
 !OCL XFILL
@@ -190,10 +209,12 @@ contains
     enddo
     enddo
 
-    call COMM_vars8( U(:,:,:), 1 )
-    call COMM_vars8( V(:,:,:), 2 )
-    call COMM_wait ( U(:,:,:), 1, .false. )
-    call COMM_wait ( V(:,:,:), 2, .false. )
+    call COMM_vars8( W(:,:,:), 1 )
+    call COMM_vars8( U(:,:,:), 2 )
+    call COMM_vars8( V(:,:,:), 3 )
+    call COMM_wait ( W(:,:,:), 1, .false. )
+    call COMM_wait ( U(:,:,:), 2, .false. )
+    call COMM_wait ( V(:,:,:), 3, .false. )
 
 !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)

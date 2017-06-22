@@ -492,7 +492,6 @@ contains
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
-    real(RP) :: sw
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -503,7 +502,7 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS<%=[nh,1].max%>, KE<%=-[nh,1].max%>
+    do k = KS<%=nh+1%>, KE<%=-[nh,1].max%>
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k-1,i,j) )
        call CHECK( __LINE__, mom(k  ,i,j) )
@@ -524,29 +523,27 @@ contains
 #endif
 
     !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel,sw) &
+    !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff,FDZ,dtrk)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
-<% if nh >= 2 %>
+<% if nh >= 1 %>
        call CHECK( __LINE__, val(KS  ,i,j) )
        call CHECK( __LINE__, val(KS+1,i,j) )
+<% end %>
+<% if nh >= 2 %>
        call CHECK( __LINE__, val(KE-2,i,j) )
        call CHECK( __LINE__, val(KE-1,i,j) )
 <% end %>
 #endif
        flux(KS-1,i,j) = 0.0_RP ! k = KS
-<% if nh >= 2 %>
+<% nh.times do |k| %>
        vel = <%= interp("mom", "XYW", "XYZ", "KS+1") %> &
            / DENS(KS+1,i,j)
        flux(KS  ,i,j) = J33G * vel &
-                   * ( <%= flux("vel", [order-(nh-1)*2,2].max, 0, "KS") %> ) <%= num_diff("KS+1") %> ! k = KS+1
+                   * ( <%= flux("vel", [order-(k+1)*2,2].max, 0, "KS") %> ) <%= num_diff("KS+1") %> ! k = KS+1
 <% end %>
-       ! if w>0; min(f,w*dz/dt)
-       ! else  ; max(f,w*dz/dt) = -min(-f,-w*dz/dt)
-       sw = sign( 1.0_RP, mom(KS,i,j) )
-       flux(KS  ,i,j) = sw * min( sw*flux(KS,i,j), sw*val(KS,i,j)*GSQRT(KS,i,j)*FDZ(KS)/dtrk )
 
 <% if nh >= 2 %>
        vel = <%= interp("mom", "XYW", "XYZ", "KE-1") %> &

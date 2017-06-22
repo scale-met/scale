@@ -325,7 +325,6 @@ contains
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
-    real(RP) :: sw
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -358,19 +357,16 @@ contains
 #endif
 
     !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel,sw) &
+    !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff,FDZ,dtrk)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
 
+
 #endif
        flux(KS-1,i,j) = 0.0_RP ! k = KS
 
-       ! if w>0; min(f,w*dz/dt)
-       ! else  ; max(f,w*dz/dt) = -min(-f,-w*dz/dt)
-       sw = sign( 1.0_RP, mom(KS,i,j) )
-       flux(KS  ,i,j) = sw * min( sw*flux(KS,i,j), sw*val(KS,i,j)*GSQRT(KS,i,j)*FDZ(KS)/dtrk )
 
 
        flux(KE-1,i,j) = 0.0_RP ! k = KE

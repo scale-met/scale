@@ -1634,12 +1634,11 @@ contains
 #endif
           diff(KS+1,i,j,ZDIR) = ( + CNZ3(1,KS+1,2) * phi(KS+2,i,j) &
                                   - CNZ3(2,KS+1,2) * phi(KS+1,i,j) &
-                                  + CNZ3(3,KS+1,2) * phi(KS  ,i,j) )
-          diff(KS  ,i,j,ZDIR) = ( + CNZ3(1,KS  ,2) * phi(KS+1,i,j) &
-                                  - CNZ3(2,KS  ,2) * phi(KS  ,i,j) &
-                                  - CNZ3(1,KS-1,2) * phi(KS+1,i,j) )
-          diff(KS-1,i,j,ZDIR) = - diff(KS  ,i,j,ZDIR)
-          diff(KS-2,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
+                                  + CNZ3(3,KS+1,2) * phi(KS  ,i,j) &
+                                  - CNZ3(1,KS  ,2) * phi(KS+1,i,j) )
+          diff(KS  ,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
+          diff(KS-1,i,j,ZDIR) = - diff(KS+2,i,j,ZDIR)
+          diff(KS-2,i,j,ZDIR) = - diff(KS+3,i,j,ZDIR)
           diff(KE-1,i,j,ZDIR) = ( - CNZ3(2,KE-1,2) * phi(KE-1,i,j) &
                                   + CNZ3(3,KE-1,2) * phi(KE-2,i,j) &
                                   - CNZ3(1,KE-2,2) * phi(KE-3,i,j) )

@@ -369,7 +369,6 @@ contains
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
-    real(RP) :: sw
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -380,7 +379,7 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS+1, KE-1
+    do k = KS+2, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k-1,i,j) )
        call CHECK( __LINE__, mom(k  ,i,j) )
@@ -407,19 +406,26 @@ contains
 #endif
 
     !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel,sw) &
+    !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff,FDZ,dtrk)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
 
+       call CHECK( __LINE__, val(KS  ,i,j) )
+       call CHECK( __LINE__, val(KS+1,i,j) )
+
+
 #endif
        flux(KS-1,i,j) = 0.0_RP ! k = KS
 
-       ! if w>0; min(f,w*dz/dt)
-       ! else  ; max(f,w*dz/dt) = -min(-f,-w*dz/dt)
-       sw = sign( 1.0_RP, mom(KS,i,j) )
-       flux(KS  ,i,j) = sw * min( sw*flux(KS,i,j), sw*val(KS,i,j)*GSQRT(KS,i,j)*FDZ(KS)/dtrk )
+       vel = ( 0.5_RP * ( mom(KS,i,j) &
+                        + mom(KS+1,i,j) ) ) &
+           / DENS(KS+1,i,j)
+       flux(KS  ,i,j) = J33G * vel &
+                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
+                   + GSQRT(KS+1,i,j) * num_diff(KS+1,i,j) ! k = KS+1
+
 
 
        flux(KE-1,i,j) = 0.0_RP ! k = KE

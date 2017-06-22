@@ -674,10 +674,10 @@ contains
           call CHECK( __LINE__, MOMZ0(k,i,j) )
           call CHECK( __LINE__, MOMZ_t(k,i,j) )
 #endif
-          advcv = - ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RFDZ(k)
-          advch = - ( ( qflx_J13(k,i,j) - qflx_J13(k-1,i,j) &
-                      + qflx_J23(k,i,j) - qflx_J23(k-1,i,j) ) * RFDZ(k) &
-                    + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k,i-1,j,XDIR) ) * RCDX(i) &
+          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j) &
+                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RFDZ(k)
+          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k,i-1,j,XDIR) ) * RCDX(i) &
                     + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k,i,j-1,YDIR) ) * RCDY(j) ) &
                   * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
           wdamp = - wdamp_coef(k) * MOMZ0(k,i,j)
@@ -938,10 +938,10 @@ contains
           call CHECK( __LINE__, MOMX0(k,i,j) )
 #endif
           ! advection
-          advcv = - ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( ( qflx_J13(k,i,j) - qflx_J13(k-1,i,j)             ) * RCDZ(k) &
-                    + ( qflx_J23(k,i,j) - qflx_J23(k-1,i,j)             ) * RCDZ(k) &
-                    + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
+          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j)          &
+                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RCDZ(k)
+          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
                     + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                   * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
           div = divdmp_coef / dtrk * FDX(i) * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) ! divergence damping
@@ -1187,11 +1187,11 @@ contains
           call CHECK( __LINE__, MOMY0(k,i,j) )
 #endif
 
-          advcv = - ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( qflx_J13(k,i,j) - qflx_J13(k-1,i,j)             ) * RCDZ(k) &
-                  - ( qflx_J23(k,i,j) - qflx_J23(k-1,i,j)             ) * RCDZ(k) &
-                  - ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                  - ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RFDY(j) &
+          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j)          &
+                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RCDZ(k)
+          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                    + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) &
                 * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV)
           div = divdmp_coef / dtrk * FDY(j) * ( DDIV(k,i,j+1)-DDIV(k,i,j) )
           MOMY_RK(k,i,j) = MOMY0(k,i,j) &
