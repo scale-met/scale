@@ -154,6 +154,7 @@ contains
        CVdry  => CONST_CVdry, &
        CPdry  => CONST_CPdry, &
 #endif
+       EPS    => CONST_EPS,   &
        GRAV   => CONST_GRAV,  &
        P00    => CONST_PRE00
     use scale_atmos_dyn_common, only: &
@@ -305,6 +306,8 @@ contains
     real(RP) :: F1(KA,IA,JA)
     real(RP) :: F2(KA,IA,JA)
     real(RP) :: F3(KA,IA,JA)
+
+    real(RP) :: fz, swi
 
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
@@ -458,9 +461,9 @@ contains
        !--- update density
        PROFILE_START("hevi_sr")
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,k,advch) &
+       !$omp private(i,j,k,advcv,advch) &
 #ifdef HIST_TEND
-       !$omp shared(advch_t,lhist) &
+       !$omp shared(advcv_t,advch_t,lhist) &
 #endif
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
        !$omp shared(DENS0,Sr,mflx_hi,DENS_t) &
@@ -476,13 +479,16 @@ contains
           call CHECK( __LINE__, mflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, DENS_t(k,i,j) )
 #endif
-          advch = - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k) &
-                    + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+          advcv = -   ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k)
+          advch = - ( ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
                     + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
-                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
-          Sr(k,i,j) =  advch + DENS_t(k,i,j)
+                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+          Sr(k,i,j) =  ( advcv + advch ) / GSQRT(k,i,j,I_XYZ) + DENS_t(k,i,j)
 #ifdef HIST_TEND
-          if ( lhist ) advch_t(k,i,j,I_DENS) = advch
+          if ( lhist ) then
+             advcv_t(k,i,j,I_DENS) = advcv / GSQRT(k,i,j,I_XYZ)
+             advch_t(k,i,j,I_DENS) = advch / GSQRT(k,i,j,I_XYZ)
+          end if
 #endif
        enddo
        enddo
@@ -538,6 +544,19 @@ contains
             IIS, IIE, JJS, JJE ) ! (in)
        PROFILE_STOP("hevi_momz_qflxhi_y")
 
+       ! limiter at KS+1 (index is KS)
+       !$omp parallel do private(i,j,fz,swi) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          fz = qflx_hi(KS,i,j,ZDIR) + qflx_J13(KS,i,j) + qflx_J23(KS,i,j)
+          ! if MOMZ0 >= 0; min(fz,momz0*dz*G/dt)
+          ! else         ; max(fz,momz0*dz*G/dt) = - min(-fz,-momz0*dz*G/dt)
+          swi = sign( 1.0_RP, MOMZ0(KS,i,j) )
+          qflx_hi(KS,i,j,ZDIR) = swi*min( swi*fz, swi*MOMZ0(KS,i,j)*FDZ(KS)*GSQRT(KS,i,j,I_XYW)/dtrk ) &
+                               - qflx_J13(KS,i,j) - qflx_J23(KS,i,j)
+       end do
+       end do
+
        !--- update momentum(z)
        PROFILE_START("hevi_sw")
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -568,10 +587,10 @@ contains
           call CHECK( __LINE__, MOMZ0(k,i,j) )
           call CHECK( __LINE__, MOMZ_t(k,i,j) )
 #endif
-          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) ) * RFDZ(k)
-          advch = - ( ( qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )    ) * RFDZ(k) &
-                    + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k,i-1,j  ,XDIR) ) * RCDX(i) &
+          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  )      &
+                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RFDZ(k)
+          advch = - ( ( qflx_hi (k,i,j,XDIR) - qflx_hi (k,i-1,j  ,XDIR) ) * RCDX(i) &
                     + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k,i  ,j-1,YDIR) ) * RCDY(j) ) &
                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
           wdmp = - wdamp_coef(k) * MOMZ0(k,i,j)
@@ -638,9 +657,9 @@ contains
 
        PROFILE_START("hevi_st")
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,k,advch) &
+       !$omp private(i,j,k,advcv,advch) &
 #ifdef HIST_TEND
-       !$omp shared(lhist,advch_t) &
+       !$omp shared(lhist,advcv_t,advch_t) &
 #endif
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
        !$omp shared(tflx_hi,RHOT_t,St,RCDZ,RCDX,RCDY) &
@@ -657,14 +676,15 @@ contains
           call CHECK( __LINE__, tflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, RHOT_t(k,i,j) )
 #endif
-          advch = - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                    + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+          advcv = -   ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
+          advch = - ( ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                     + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
-          St(k,i,j) = advch + RHOT_t(k,i,j)
+                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+          St(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYZ) + RHOT_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
-             advch_t(k,i,j,I_RHOT) = advch
+             advcv_t(k,i,j,I_RHOT) = advcv / GSQRT(k,i,j,I_XYZ)
+             advch_t(k,i,j,I_RHOT) = advch / GSQRT(k,i,j,I_XYZ)
           endif
 #endif
        enddo
@@ -853,6 +873,16 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+       ! limiter at KS+1/2 (index is KS)
+       !$omp parallel do private(i,j,swi) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          ! qflx_J13(KS,i,j) and qflx_hi(KS,i,j,ZDIR) should be almost canceled
+          swi = 0.25_RP + sign( 0.25_RP, abs(J13G(KS,i,j,I_UYZ))-EPS )
+          qflx_J13(KS,i,j) = ( qflx_J13(KS,i,j) - qflx_hi(KS,i,j,ZDIR) ) * swi
+       end do
+       end do
+
        !--- update momentum(x)
        iee = min(IIE,IEH)
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -888,10 +918,10 @@ contains
           call CHECK( __LINE__, DDIV(k,i  ,j) )
           call CHECK( __LINE__, MOMX0(k,i,j) )
 #endif
-          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( ( qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RCDZ(k) &
-                    + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RFDX(i) &
+          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                      + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j       ) &
+                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j       ) ) * RCDZ(k)
+          advch = - ( ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RFDX(i) &
                     + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                 * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
           pg = ( ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) & ! [x,y,z]
@@ -973,6 +1003,16 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+       ! limiter at KS+1/2 (index is KS)
+       !$omp parallel do private(i,j,swi) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          ! qflx_J23(KS,i,j) and qflx_hi(KS,i,j,ZDIR) should be almost canceled
+          swi = 0.25_RP + sign( 0.25_RP, abs(J23G(KS,i,j,I_XVZ))-EPS )
+          qflx_J23(KS,i,j) = ( qflx_J23(KS,i,j) - qflx_hi(KS,i,j,ZDIR) ) * swi
+       end do
+       end do
+
        !--- update momentum(y)
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,advch,advcv,pg,cf,div) &
@@ -1008,10 +1048,10 @@ contains
           call CHECK( __LINE__, MOMY_t(k,i,j) )
           call CHECK( __LINE__, MOMY0(k,i,j) )
 #endif
-          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( ( qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RCDZ(k) &
-                    + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                      + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  )      &
+                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RCDZ(k)
+          advch = - ( ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                     + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RFDY(j) ) &
                   * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV)
           pg = ( ( GSQRT(k,i,j+1,I_XYZ) * DPRES(k,i,j+1) & ! [x,y,z]
