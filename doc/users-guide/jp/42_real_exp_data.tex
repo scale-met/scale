@@ -65,6 +65,12 @@ makeを用いた「実験セット一式作成ツール」を用いる。
 \end{verbatim}
 ここで、\verb|${path_to_directory_of_scale_database}|は、
 データベースがあるディレクトリである。
+つまり、\verb|${path_to_directory_of_scale_database}|の部分を適切に置換した上で上記コマンドを実行する必要がある。
+例えば、\verb|scale_database.tar.gz|を展開したディレクトリの絶対パスが
+\verb|/home/user/scale|であった場合は以下のコマンドを実行する。
+\begin{verbatim}
+  $ export SCALE_DB="/home/user/scale/scale_database"
+\end{verbatim}
 \end{enumerate}
 
 

@@ -59,6 +59,12 @@ to an environment variable \verb|SCALE_DB| (hereinafter, it denoted as \verb|SCA
   $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
 \end{verbatim}
 where \verb|${path_to_directory_of_scale_database}| is the database directory. 
+Thus, you should execute above command after substituting the portion of \verb|${path_to_directory_of_scale_database}|.
+For example, if the absolute path you expanded \verb|scale_database.tar.gz| was \verb|/home/user/scale|,
+you should execute the following command.
+\begin{verbatim}
+  $ export SCALE_DB="/home/user/scale/scale_database"
+\end{verbatim}
 
 \end{enumerate}
 
