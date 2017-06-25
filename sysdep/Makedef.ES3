@@ -38,11 +38,11 @@ CFLAGS_DEBUG = $(CFLAGS_FAST)
 
 ##### Special setting
 
-# OpenMP
-# disable
-OMP =
-# enable
-#OMP = -P openmp
+ifeq ($(SCALE_ENABLE_OPENMP),T)
+	OMP = -P openmp
+else
+	OMP =
+endif
 
 ### Performance monitor
 # disable

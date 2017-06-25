@@ -45,13 +45,13 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
-# OpenMP
-# disable
-OMP =
-# enable
-#OMP = -Kopenmp
+ifeq ($(SCALE_ENABLE_OPENMP),T)
+	OMP = -Kopenmp
 # enable + disable parallel
-#OMP = -Kopenmp,noparallel
+#  OMP = -Kopenmp,noparallel
+else
+	OMP =
+endif
 
 ### Performance monitor
 # disable

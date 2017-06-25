@@ -41,11 +41,11 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
-# OpenMP
-# disable
-OMP =
-# enable
-#OMP = -openmp
+ifeq ($(SCALE_ENABLE_OPENMP),T)
+	OMP = -openmp
+else
+	OMP =
+endif
 
 ifeq ($(SCALE_DISABLE_INTELVEC),T)
    NOVEC = -no-vec
