@@ -5,7 +5,7 @@
 ################################################################################
 
 ##### Fortran setting
-#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 FC  = mpifrtpx
 SFC = frtpx
@@ -36,7 +36,7 @@ FFLAGS_DEBUG = -O0                                                       \
 
 
 ##### C setting
-#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 CC = mpifccpx
 
@@ -81,19 +81,19 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 # Default settings
-NETCDF_INCLUDE ?=
-NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+SCALE_NETCDF_INCLUDE ?=
+SCALE_NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 # Or, please set environment variable
 # example:
-# export NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
-# export NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
+# export SCALE_NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
+# export SCALE_NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
 
-###### Lapack library
+###### Math library
 # Default settings
-LAPACK_LIBS    ?=
+SCALE_MATHLIB_LIBS ?=
 # Or, please set environment variable
 # example:
-# export LAPACK_LIBS="-SSL2"
+# export SCALE_MATHLIB_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

@@ -4,10 +4,10 @@ BUILD_DIR := $(PWD)/.libs
 TOPDIR     = ../../..
 SYSDEP_DIR = ../../../sysdep
 
-DEBUG=T
-export DEBUG
-AGGRESSIVE=F
-export DEBUG
+SCALE_DEBUG=T
+export SCALE_DEBUG
+SCALE_ENABLE_AGRESSIVEOPT=F
+export SCALE_ENABLE_AGRESSIVEOPT
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -51,7 +51,7 @@ run:
 	mpirun -n 4 $(BUILD_DIR)/$(PROJ_EXE) run.conf
 
 $(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(LD) $(LDFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(LAPACK_LIBS)
 
 $(BUILD_DIR)/test_comm.o: test_comm.f90
 

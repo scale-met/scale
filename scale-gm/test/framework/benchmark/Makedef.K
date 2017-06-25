@@ -5,7 +5,7 @@
 ################################################################################
 
 ##### Fortran setting
-#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 FC  = mpifrtpx
 SFC = frtpx
@@ -34,7 +34,7 @@ FFLAGS_DEBUG = -O0                                                       \
 
 
 ##### C setting
-#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 CC = mpifccpx
 
@@ -85,20 +85,20 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 # Default settings
-NETCDF_INCLUDE ?= -I/opt/aics/scale/include -I/opt/aics/netcdf/k-serial-noszip/include
-NETCDF_LIBS    ?= -L/opt/aics/scale/lib -L/opt/aics/netcdf/k-serial-noszip/lib-static -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
-ENABLE_PNETCDF ?= T
+SCALE_NETCDF_INCLUDE ?= -I/opt/aics/scale/include -I/opt/aics/netcdf/k-serial-noszip/include
+SCALE_NETCDF_LIBS    ?= -L/opt/aics/scale/lib -L/opt/aics/netcdf/k-serial-noszip/lib-static -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+SCALE_ENABLE_PNETCDF ?= T
 # Or, please set environment variable
 # example:
-# export NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"
-# export NETCDF_LIBS="-L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm"
+# export SCALE_NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"
+# export SCALE_NETCDF_LIBS="-L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm"
 
-###### Lapack library
+###### Math library
 # Default settings
-LAPACK_LIBS    ?=
+SCALE_MATHLIB_LIBS ?=
 # Or, please set environment variable
 # example:
-# export LAPACK_LIBS="-SSL2"
+# export SCALE_MATHLIB_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

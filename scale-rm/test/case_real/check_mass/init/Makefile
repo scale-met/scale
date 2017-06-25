@@ -32,7 +32,7 @@ DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/
 DATDISTS    = $(PREPDIR)/topo/topo.d01,$(PREPDIR)/topo/topo.d02,$(PREPDIR)/landuse/landuse.d01,$(PREPDIR)/landuse/landuse.d02
 
 
-export CHECK_MASS = T
+export SCALE_ENABLE_MASSCHECK = T
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common

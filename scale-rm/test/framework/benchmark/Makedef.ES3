@@ -5,7 +5,7 @@
 ################################################################################
 
 ##### Fortran setting
-#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 FC  = sxmpif90
 SFC = frtpx
@@ -27,7 +27,7 @@ FFLAGS_DEBUG = -C vsafe                      \
 
 
 ##### C setting
-#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 CC = sxmpic++
 
@@ -66,19 +66,19 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 # Default settings
-NETCDF_INCLUDE ?= -I/SX/usr/include
-NETCDF_LIBS    ?= -L/SX/usr/lib0 -lnetcdf
+SCALE_NETCDF_INCLUDE ?= -I/SX/usr/include
+SCALE_NETCDF_LIBS    ?= -L/SX/usr/lib0 -lnetcdf
 # Or, please set environment variable
 # example:
-# export NETCDF_INCLUDE="-I/SX/usr/include"
-# export NETCDF_LIBS="-L/SX/usr/lib0 -lnetcdf"
+# export SCALE_NETCDF_INCLUDE="-I/SX/usr/include"
+# export SCALE_NETCDF_LIBS="-L/SX/usr/lib0 -lnetcdf"
 
-###### Lapack library
+###### Math library
 # Default settings
-LAPACK_LIBS    ?=
+SCALE_MATHLIB_LIBS ?=
 # Or, please set environment variable
 # example:
-# export LAPACK_LIBS="-L/SX/opt/mathkeisan/inst/lib0 -llapack -lblas"
+# export SCALE_MATHLIB_LIBS="-L/SX/opt/mathkeisan/inst/lib0 -llapack -lblas"
 
 ##### for frontend
 INSTALL = install

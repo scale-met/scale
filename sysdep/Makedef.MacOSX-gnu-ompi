@@ -5,7 +5,7 @@
 ################################################################################
 
 ##### Fortran setting
-#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 FC  = mpif90
 SFC = gfortran
@@ -31,7 +31,7 @@ FFLAGS_DEBUG = -cpp -O0 -m64 \
 
 
 ##### C setting
-#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 CC  = mpicc
 
@@ -69,13 +69,13 @@ LDFLAGS = $(FFLAGS)
 # Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
 # Or, please set environment variable
 # example:
-# export NETCDF_INCLUDE="-I/opt/local/include"
-# export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -lnetcdf"
+# export SCALE_NETCDF_INCLUDE="-I/opt/local/include"
+# export SCALE_NETCDF_LIBS="-L/opt/local/lib -lnetcdff -lnetcdf"
 
-###### Lapack library
+###### Math library
 # Please set environment variable
 # example:
-# export LAPACK_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"
+# export SCALE_MATHLIB_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"
 
 ##### for frontend
 INSTALL = install

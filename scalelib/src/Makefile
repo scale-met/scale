@@ -260,7 +260,7 @@ all:
 	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
 	$(MAKE) -C $(DCUTILSDIR)
 	$(MAKE) -C $(GTOOLDIR)
-ifeq ($(ENABLE_SDM),T)
+ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) overridesdm
 	$(MAKE) makesdm
@@ -286,7 +286,7 @@ $(LIBDIR)/$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
-ifeq ($(IGNOREDEP),T)
+ifeq ($(SCALE_DISABLE_DEPENDENCY),T)
 modules:
 else
 modules: $(OBJS)
@@ -302,8 +302,8 @@ checksdm:
 ifneq ($(SDM_EXIST),$(SDMDIR))
 	@echo "SDM directory is missing!" $(SDM_EXIST)
 	@echo "********************************************************************************************* "
-	@echo "** SDM module, which is compiled with 'ENABLE_SDM=T', is not supported.                  **** "
-	@echo "** If you want to use SDM module, please contact Dr. S.Shima(s_shima@sim.u-hyogo.ac.jp)  **** "
+	@echo "** SDM module, which is compiled with 'SCALE_ENABLE_SDM=T', is not supported.              ** "
+	@echo "** If you want to use SDM module, please contact Dr. S.Shima(s_shima@sim.u-hyogo.ac.jp)    ** "
 	@echo "********************************************************************************************* "
 	exit 1
 endif
@@ -333,7 +333,7 @@ cleansdm:
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean
 	$(MAKE) -C $(GTOOLDIR)   allclean
-ifeq ($(ENABLE_SDM),T)
+ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) restoresdm
 	$(MAKE) allcleansdm
@@ -344,7 +344,7 @@ distclean: clean
 	rm -f $(LIBNAME)
 
 clean:
-ifeq ($(ENABLE_SDM),T)
+ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) restoresdm
 	$(MAKE) cleansdm
@@ -369,9 +369,9 @@ $(MODDIR)/%.mod : %.mod
 	install $< $@
 
 $(OBJ_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJS_FOR_DYN) :
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb $< > $@
@@ -384,8 +384,9 @@ $(OBJ_DIR)/scale_rdma.o : scale_rdma.c
 
 .PHONY : clean distclean allclean depend modules dependency
 
+include $(TOPDIR)/utils/Make_environments
 
-ifneq ($(IGNOREDEP),T)
+ifneq ($(SCALE_DISABLE_DEPENDENCY),T)
 -include depend
 endif
 # DO NOT DELETE

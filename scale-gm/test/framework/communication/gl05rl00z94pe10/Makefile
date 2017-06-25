@@ -35,7 +35,7 @@ include $(TOPDIR)/Mkinclude
 BINS = $(BINDIR)/$(BINNAME)
 LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-ifneq ($(IGNOREDEP),T)
+ifneq ($(SCALE_DISABLE_DEPENDENCY),T)
   DEPENDLIB = $(LIBS)
 endif
 
@@ -94,7 +94,7 @@ $(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a $(LIBDIR)/libgtool.a
 makebin: $(BINS)
 
 $(BINDIR)/$(BINNAME) : $(BUILD_DIR)/$(BINNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 
 $(BUILD_DIR)/$(BINNAME).o : $(BINNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
@@ -121,7 +121,7 @@ clean:
 	make $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<
@@ -129,6 +129,6 @@ $(BUILD_DIR)/%.o : %.c
 .PHONY : clean distclean allclean dcutils gtool scalelib
 
 
-ifneq ($(IGNOREDEP),T)
+ifneq ($(SCALE_DISABLE_DEPENDENCY),T)
 -include $(TOPDIR)/src/depend
 endif

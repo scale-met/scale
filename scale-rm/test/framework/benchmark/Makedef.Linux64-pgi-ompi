@@ -5,7 +5,7 @@
 ################################################################################
 
 ##### Fortran setting
-#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 FC  = mpif90
 SFC = pgfortran
@@ -27,7 +27,7 @@ FFLAGS_DEBUG = -Mpreprocess -m64 -O0             \
 
 
 ##### C setting
-#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 CC  = mpicc
 
@@ -38,13 +38,13 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
-ifeq ($(ENABLE_OPENMP),T)
+ifeq ($(SCALE_ENABLE_OPENMP),T)
 	OMP = -mp
 else
 	OMP =
 endif
 
-ifeq ($(ENABLE_OPENACC),T)
+ifeq ($(SCALE_ENABLE_OPENACC),T)
 	ACC = -acc -ta=tesla,cuda8.0,cc60 -Mcuda -Minfo=accel
 else
 	ACC =
@@ -68,13 +68,13 @@ LDFLAGS = $(FFLAGS)
 # Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
 # Or, please set environment variable
 # example:
-# export NETCDF_INCLUDE="-I/opt/netcdf4-pgi/netcdf4/include -DNDEBUG -DpgiFortran -fPIC /opt/netcdf4-pgi/netcdf4/include"
-# export NETCDF_LIBS="-L/opt/netcdf4-pgi/netcdf4/lib -lnetcdff -lnetcdf"
+# export SCALE_NETCDF_INCLUDE="-I/opt/netcdf4-pgi/netcdf4/include -DNDEBUG -DpgiFortran -fPIC /opt/netcdf4-pgi/netcdf4/include"
+# export SCALE_NETCDF_LIBS="-L/opt/netcdf4-pgi/netcdf4/lib -lnetcdff -lnetcdf"
 
-###### Lapack library
+###### Math library
 # Please set environment variable
 # example:
-# export LAPACK_LIBS="-lacml"
+# export SCALE_MATHLIB_LIBS="-lacml"
 
 ##### for frontend
 INSTALL = install

@@ -159,7 +159,7 @@ CONTAINS
 
 #ifndef _MATHLIB
     write(*,*) 'This subroutine requires a math library such as LAPACK.'
-    write(*,*) 'Please set environment variable ENABLE_MATHLIB=T to use this subroutine.'
+    write(*,*) 'Please set environment variable SCALE_ENABLE_MATHLIB=T to use this subroutine.'
     stop
 #endif
 
