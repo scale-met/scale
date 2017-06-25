@@ -250,23 +250,6 @@ contains
 
     COMM_world = PRC_LOCAL_COMM_WORLD
 
-#ifdef _USE_RDMA
-    call rdma_setup( COMM_vsize_max_pc, &
-                     IA,                &
-                     JA,                &
-                     KA,                &
-                     IHALO,             &
-                     JHALO,             &
-                     IS,                &
-                     IE,                &
-                     JS,                &
-                     JE,                &
-                     PRC_next(PRC_W),   &
-                     PRC_next(PRC_N),   &
-                     PRC_next(PRC_E),   &
-                     PRC_next(PRC_S)    )
-#endif
-
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Maximum number of vars for one communication: ', &
                                    COMM_vsize_max
@@ -307,15 +290,9 @@ contains
           call PRC_MPIstop
        end if
 
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM_init_RDMA', 2)
-       call set_rdma_variable(var, COMM_vars_id-1)
-       call PROF_rapend  ('COMM_init_RDMA', 2)
-#else
        call PROF_rapstart('COMM_init_pers', 2)
        call vars_init_mpi_pc(var, COMM_vars_id, vid)
        call PROF_rapend  ('COMM_init_pers', 2)
-#endif
 
        vid = COMM_vars_id + COMM_vsize_max
 
@@ -353,15 +330,9 @@ contains
           call PRC_MPIstop
        end if
 
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM_init_RDMA', 2)
-       call set_rdma_variable(var, COMM_vars_id-1)
-       call PROF_rapend  ('COMM_init_RDMA', 2)
-#else
        call PROF_rapstart('COMM_init_pers', 2)
        call vars8_init_mpi_pc(var, COMM_vars_id, vid)
        call PROF_rapend  ('COMM_init_pers', 2)
-#endif
 
        vid = COMM_vars_id + COMM_vsize_max
 
@@ -382,15 +353,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM_vars_RDMA', 2)
-       call rdma_put(vid-COMM_vsize_max-1, 1)
-       call PROF_rapend  ('COMM_vars_RDMA', 2)
-#else
        call PROF_rapstart('COMM_vars_pers', 2)
        call vars_3D_mpi_pc(var, vid-COMM_vsize_max)
        call PROF_rapend  ('COMM_vars_pers', 2)
-#endif
     else
        call PROF_rapstart('COMM_vars', 2)
        call vars_3D_mpi(var, vid)
@@ -409,15 +374,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM_vars_RDMA', 2)
-       call rdma_put8(vid-COMM_vsize_max-1,1)
-       call PROF_rapend  ('COMM_vars_RDMA', 2)
-#else
        call PROF_rapstart('COMM_vars_pers', 2)
        call vars_3D_mpi_pc(var, vid-COMM_vsize_max)
        call PROF_rapend  ('COMM_vars_pers', 2)
-#endif
     else
        call PROF_rapstart('COMM_vars', 2)
        call vars8_3D_mpi(var, vid)
@@ -442,13 +401,9 @@ contains
     if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
     if ( vid > COMM_vsize_max ) then
-#ifdef _USE_RDMA
-       ! do nothing
-#else
        call PROF_rapstart('COMM_wait_pers', 2)
        call wait_3D_mpi_pc(var, vid-COMM_vsize_max)
        call PROF_rapend  ('COMM_wait_pers', 2)
-#endif
     else
        call PROF_rapstart('COMM_wait', 2)
        call wait_3D_mpi(var, vid)

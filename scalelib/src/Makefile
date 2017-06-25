@@ -49,11 +49,6 @@ endif
 
 SDM_EXIST := $(shell find $(TOPDIR)/contrib -name SDM)
 
-ifeq ($(RDMA),-D_USE_RDMA)
-  scale_rdma := scale_rdma.o
-else
-  scale_rdma :=
-endif
 
 ifeq ($(MP),)
   OBJS_MP = scale_atmos_phy_mp_dry.o	\
@@ -379,8 +374,6 @@ scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
-
-$(OBJ_DIR)/scale_rdma.o : scale_rdma.c
 
 .PHONY : clean distclean allclean depend modules dependency
 
