@@ -34,5 +34,5 @@ envlog:
 	@echo " + Enable to use Super Droplet Model?                [SCALE_ENABLE_SDM]          :" $(SCALE_ENABLE_SDM)
 	@echo "[Special build]"
 	@echo " + Supress to make executables in local directory?   [SCALE_DISABLE_LOCALBIN]    :" $(SCALE_DISABLE_LOCALBIN)
-	@echo " + Ignore file dependency at the compilation?        [SCALE_DISABLE_DEPENDENCY]  :" $(SCALE_DISABLE_DEPENDENCY)
+	@echo " + Ignore source dependency at the compilation?      [SCALE_DISABLE_DEPENDENCY]  :" $(SCALE_DISABLE_DEPENDENCY)
 	@echo "********************************************************************************************* "

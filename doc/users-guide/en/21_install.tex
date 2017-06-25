@@ -30,11 +30,11 @@ and the minimum computational requirements for their execution.
   Although the necessary hardware depends on the experiment to be performed,
 the following are the specifications for conducting a tutorial as in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real}.
   \begin{itemize}
-    \item {\bf CPU} : 
+    \item {\bf CPU} :
     The system need to have more than two and more than four physical cores
-    for an ideal experiment and a real atmospheric experiment, respectively. 
-    \item {\bf Memory} : 
-    The system needs 512 MB and 2 GB memory 
+    for an ideal experiment and a real atmospheric experiment, respectively.
+    \item {\bf Memory} :
+    The system needs 512 MB and 2 GB memory
     for the ideal experiment and a real atmospheric experiment, respectively.
     Note that this applies to the case involving the use of double-precision floating points.
     \item {\bf HDD} : The system needs to have 3 GB of free disk space in a real atmospheric experiment.
@@ -46,9 +46,9 @@ the following are the specifications for conducting a tutorial as in Chapters \r
   \item {\bf Compiler} : C, Fortran\\
   The FORTRAN compiler should support FORTRAN 2003 syntax.
   Refer to Table \ref{tab:compatible_compiler} for compilers already confirmed as supported.
-  \item {\bf MPI library} : 
+  \item {\bf MPI library} :
   The MPI library should support the MPI 1.0/2.0 protocol.  Refer to Table \ref{tab:compatible_compiler} for MPI libraries already confirmed as supported.
-  \item {\bf File I/O library} : 
+  \item {\bf File I/O library} :
   The development libraries of gzip, HDF5, and {\netcdf}4 are required.\\
   In stead of the HDF5/{\netcdf}4, {\netcdf}3 is sufficient, but the size of the output file increases in this case.
   \end{itemize}
@@ -112,7 +112,7 @@ if they can be read in \netcdf format, which is the output format of \scalelib.
 \item GPhys / Ruby-DCL by GFD DENNOU Club
  \begin{itemize}
   \item URL： \url{http://ruby.gfd-dennou.org/products/gphys/}
-  \item Note: \scalelib outputs the split files 
+  \item Note: \scalelib outputs the split files
   in {\netcdf} format according to domain decomposition by the MPI process.
   "gpview" and/or "gpvect" in {\gphys} can directly draw the split file without post-processing.
   \item How to install：
@@ -152,7 +152,7 @@ The environment used in the explanation below is as follows:
 %-----------------------------------------------------------------------------------
 The source code for the latest release can be downloaded
 from \url{http://scale.aics.riken.jp/ja/download/index.html}.\\
-The directory \texttt{scale-{\version}/} can be seen when the tarball file of the source code is extracted. 
+The directory \texttt{scale-{\version}/} can be seen when the tarball file of the source code is extracted.
 \begin{alltt}
  $ tar -zxvf scale-{\version}.tar.gz
  $ ls ./
@@ -186,13 +186,10 @@ When Linux OS is used, a GNU compiler and openMPI in "Makedef.Linux64-gnu-ompi" 
 \end{verbatim}
 If the environment is always the same, it is convenient to explicitly describe the environmental variable in the environmental configuration file, such as \verb|.bashrc|.
 
-The setting of following path is necessary. You must set the environmental variables for HDF5 and {\netcdf}4 as follows: 
+The setting of following path is necessary. You must set the environmental variables for HDF5 and {\netcdf}4 as follows:
 \begin{verbatim}
- $ export HDF5="/opt/hdf5"
- $ export NETCDF4="/opt/netcdf"
- $ export NETCDF_INCLUDE="-I/opt/netcdf/include"
- $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 \
-      -lnetcdff -hdf5_hl -lhdf5 -lm -lz"
+ $ export SCALE_NETCDF_INCLUDE="-I/opt/netcdf/include"
+ $ export SCALE_NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -lnetcdf -hdf5_hl -lhdf5 -lm -lz"
 \end{verbatim}
 The above example shows that
 HDF5 is installed in the directory \verb|/opt/hdf5|
@@ -202,7 +199,7 @@ on an Intel compiler.
 \subsubsection{Compile} %\label{subsec:compile}
 %-----------------------------------------------------------------------------------
 
-Move to the \scalerm source directory 
+Move to the \scalerm source directory
 and compile it by executing the following command:
 \begin{verbatim}
  $ cd scale-{\version}/scale-rm/src
@@ -211,7 +208,7 @@ and compile it by executing the following command:
 The option \verb|"-j 4"| shows the parallel number;
 it is four-parallel in this example.
 Specify this number according to your environment.
-When a compilation is successful, 
+When a compilation is successful,
 the following three executable files are generated under the scale-{\version}/bin directory.
 \begin{verbatim}
  scale-rm  scale-rm_init  scale-rm_pp
@@ -225,15 +222,15 @@ Note that the library already compiled is not deleted in this command. If you wa
 \begin{verbatim}
  $ make allclean
 \end{verbatim}
-Moreover, if the files are recompiled by changing the compilation environment and options, 
+Moreover, if the files are recompiled by changing the compilation environment and options,
 execute ``make allclean.''
 
 {\bf Points to note}
 \begin{itemize}
-\item  In \scalelib, a compilation and an archive are conducted in directory scale-{\version}/scalelib/ just under the TOP directory scale. 
+\item  In \scalelib, a compilation and an archive are conducted in directory scale-{\version}/scalelib/ just under the TOP directory scale.
 Object files are placed in a hidden directory called \verb|".lib"| under this directory when you carry out a compilation.
-\item  When you want to compile it in debug mode, 
-compile it using \verb|"make -j 4 DEBUG=T"|.
+\item  When you want to compile it in debug mode,
+compile it using \verb|"make -j 4 SCALE_DEBUG=T"|.
 \item If you want to change the compilation options in detail, edit \verb|Makedef.***|.
 \end{itemize}
 
@@ -243,7 +240,7 @@ compile it using \verb|"make -j 4 DEBUG=T"|.
 
 The output file of \scalerm is divided and stored in every computational node.
 \scalelib provides a post-processing tool ``net2g''  to combine these output files
-(\verb|history.******.nc|) 
+(\verb|history.******.nc|)
 and convert them into a data format direct readable in \grads.
 Since it is used in the tutorial Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real}, the method for the compilation of ``net2g'' is explained here.
 
@@ -253,10 +250,10 @@ such as in the compilation of the main body of \scalelib. Then, move to director
  $ cd scale-{\version}/scale-rm/util/netcdf2grads_h
  $ make -j 2
 \end{verbatim}
-If there is no MPI library, 
+If there is no MPI library,
 give a compile command to generate the serial executable binary.
 \begin{verbatim}
- $ make -j 2 NOMPI=T
+ $ make -j 2 SCALE_DISABLE_MPI=T
 \end{verbatim}
 If executable file ``net2g'' is generated, the compilation is successful.
 When the executable binary is deleted, execute the following command:

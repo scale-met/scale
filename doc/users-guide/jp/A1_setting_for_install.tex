@@ -550,8 +550,8 @@ macportsでは複数のコンパイラとMPIライブラリをインストール
 \ovalbox{
 \begin{tabularx}{150mm}{l}
  \\
- \verb|export NETCDF_INCLUDE="-I/opt/local/include"|\\
- \verb|export NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,\ |\\
+ \verb|export SCALE_NETCDF_INCLUDE="-I/opt/local/include"|\\
+ \verb|export SCALE_NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,\ |\\
  \verb|-headerpad_max_install_names -lnetcdf"|\\
  \\
 \end{tabularx}
@@ -569,7 +569,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
 \ovalbox{
 \begin{tabularx}{150mm}{l}
  \\
- \verb|export LAPACK_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"|\\
+ \verb|export SCALE_MATHLIB_LIBS="-L/opt/local/lib -llapack -lcblas -lf77blas -latlas"|\\
  \\
 \end{tabularx}
 }}\\
