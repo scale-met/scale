@@ -32,7 +32,7 @@ FFLAGS_DEBUG = -fpp -m64 -O0                        \
 ##### C setting
 #CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
-CC  = mpiicc
+CC = mpiicc
 
 CFLAGS_FAST  = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
 CFLAGS_DEBUG = -O0

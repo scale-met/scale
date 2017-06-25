@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-TOPDIR      = $(abspath ../..)
-BUILD_DIR   = ./.libs
-SYSDEP_DIR  = ../../sysdep
+TOPDIR     = $(abspath ../..)
+BUILD_DIR  = ./.libs
+SYSDEP_DIR = ../../sysdep
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -15,7 +15,9 @@ BINNAME  = scale-rm
 INITNAME = scale-rm_init
 PPNAME   = scale-rm_pp
 
-BINS = $(BINDIR)/$(BINNAME) $(BINDIR)/$(INITNAME) $(BINDIR)/$(PPNAME)
+BINS = $(BINDIR)/$(BINNAME)  \
+       $(BINDIR)/$(INITNAME) \
+       $(BINDIR)/$(PPNAME)
 LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
 ifneq ($(SCALE_DISABLE_DEPENDENCY),T)

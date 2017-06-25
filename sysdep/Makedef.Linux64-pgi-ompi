@@ -11,18 +11,20 @@ FC  = mpif90
 SFC = pgfortran
 MODDIROPT = -module
 
-FFLAGS_FAST  = -Mpreprocess -m64 -fast                      \
-               -Mbyteswapio -Minfo                          \
-               -Mflushz -Mfprelaxed -Mfpapprox -Mvect=assoc -Kieee
+FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
+               -Mbyteswapio -Minfo                    \
+               -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
+               -Mvect=assoc
 
 FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Ktrap=fp -Mbounds -gopt
 
 FFLAGS_DYN   = $(FFLAGS)
 
-FFLAGS_DEBUG = -Mpreprocess -m64 -O0             \
-               -Mbyteswapio -Minfo               \
-               -Mflushz -Ktrap=fp                \
-               -Mbounds -Mstandard -g -traceback
+FFLAGS_DEBUG = -Mpreprocess -m64 -O0 \
+               -Mbyteswapio -Minfo   \
+               -Mflushz -Ktrap=fp    \
+               -Mbounds -Mstandard   \
+               -g -traceback
 
 
 

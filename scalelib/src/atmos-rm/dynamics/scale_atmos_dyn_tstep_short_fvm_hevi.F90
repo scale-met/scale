@@ -387,7 +387,7 @@ contains
        PROFILE_START("hevi_mflx_z")
        ! at (x, y, w)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,GSQRT,I_XYW,MOMX,MOMY,J13G,J23G,mflx_hi,MAPF,I_XY,num_diff) 
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,GSQRT,I_XYW,MOMX,MOMY,J13G,J23G,mflx_hi,MAPF,I_XY,num_diff)
        do j = JJS, JJE
        do i = IIS-1, IIE
           mflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
@@ -423,7 +423,7 @@ contains
        iee = min(IIE,IEH)
        ! at (u, y, z)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,iss,iee,KS,KE,GSQRT,I_UYZ,MOMX,num_diff,mflx_hi,MAPF,I_UY) 
+       !$omp shared(JJS,JJE,iss,iee,KS,KE,GSQRT,I_UYZ,MOMX,num_diff,mflx_hi,MAPF,I_UY)
        do j = JJS, JJE
        do i = iss, iee
        do k = KS, KE
@@ -444,7 +444,7 @@ contains
 
        ! at (x, v, z)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JS,JFS_OFF,JJE,JEH,IIS,IIE,KS,KE,GSQRT,I_XVZ,MOMY,num_diff,mflx_hi,MAPF,I_XV) 
+       !$omp shared(JJS,JS,JFS_OFF,JJE,JEH,IIS,IIE,KS,KE,GSQRT,I_XVZ,MOMY,num_diff,mflx_hi,MAPF,I_XV)
        do j = max(JJS-1,JS-JFS_OFF), min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE

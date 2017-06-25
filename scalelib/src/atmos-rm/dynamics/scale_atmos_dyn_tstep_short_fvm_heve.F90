@@ -657,7 +657,7 @@ contains
        enddo
 
        !-----< update momentum (z) -----
-       
+
        !$omp parallel do private(i,j,k,advcv,advch,wdamp,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE

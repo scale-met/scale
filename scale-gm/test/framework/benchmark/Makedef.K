@@ -27,6 +27,8 @@ FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
 
 FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Nquickdbg -NRtrap
 
+FFLAGS_DYN   = $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2 -x100
+
 FFLAGS_DEBUG = -O0                                                       \
                -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
                -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global

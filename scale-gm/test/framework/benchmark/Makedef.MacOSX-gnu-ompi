@@ -49,7 +49,6 @@ else
 endif
 
 SSE_FLAGS = -mtune=native
-#SSE_FLAGS = -mtune=native -mavx
 
 FFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
 CFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
