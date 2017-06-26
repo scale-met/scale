@@ -278,13 +278,8 @@ contains
        ATMOS_BOUNDARY_alpha_VELY, &
        ATMOS_BOUNDARY_alpha_POTT, &
        ATMOS_BOUNDARY_alpha_QTRC
-#ifndef DYN2
     use scale_atmos_dyn, only: &
        ATMOS_DYN
-#else
-    use scale_atmos_dyn2, only: &
-       ATMOS_DYN
-#endif
     implicit none
 
     logical, intent(in) :: do_flag

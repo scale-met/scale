@@ -2,7 +2,7 @@
 include $(TOPDIR)/utils/Make_compatibility
 
 ifeq ($(SCALE_USE_FIXEDINDEX),T)
-   FFLAGS   += -D_FIXEDINDEX_
+   FFLAGS   += -DFIXEDINDEX
    inc_index = $(INDEX_DIR)/inc_index.h
    OBJ_DIR   = $(BUILD_DIR)
    INST_DIR  = $(BUILD_DIR)
@@ -85,18 +85,18 @@ endif
 # Math library setting
 # library location are inquired in order of: environment variable->Makedef.XXX
 ifeq ($(SCALE_ENABLE_MATHLIB),T)
-   FFLAGS += -D_MATHLIB
+   FFLAGS += -DMATHLIB
 endif
 
 # PAPI library setting
 # library location are inquired in order of: environment variable->Makedef.XXX
 ifeq ($(SCALE_ENABLE_PAPI),T)
-   FFLAGS += -D_PAPI_
+   FFLAGS += -DPAPI
 endif
 
 # Super Droplet Method (SDM)
 ifeq ($(SCALE_ENABLE_SDM),T)
-   FFLAGS         += -D_SDM $(ADDITIONAL_FFLAGS_SDM)
+   FFLAGS         += -DSDM $(ADDITIONAL_FFLAGS_SDM)
    GAGETRYDIR      = $(TOPDIR)/contrib/Gadgetry
    MTDIR           = $(TOPDIR)/contrib/mt
    SDMDIR          = $(TOPDIR)/contrib/SDM

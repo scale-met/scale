@@ -57,13 +57,13 @@ endif
 
 ### Performance monitor
 # disable
-#PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
+#PERF_MONIT = -Ntl_notrt -UFIPP -UFAPP -UFINEPA
 # fipp
-#PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_ -U_FINEPA_
+#PERF_MONIT = -Ntl_trt -DFIPP -UFAPP -UFINEPA
 # fapp
-PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_ -U_FINEPA_
+PERF_MONIT = -Ntl_trt -UFIPP -DFAPP -UFINEPA
 # fine PA
-#PERF_MONIT = -Ntl_trt -U_FIPP_ -U_FAPP_ -D_FINEPA_
+#PERF_MONIT = -Ntl_trt -UFIPP -UFAPP -DFINEPA
 
 FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT)
 CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT)

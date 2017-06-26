@@ -229,7 +229,7 @@ contains
        default_datatype,  &
        namelist_filename, &
        namelist_fid       )
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
     use dc_log, only: &
        LOG_master_nml
 #endif
@@ -383,7 +383,7 @@ contains
        call Log('E','xxx Not appropriate names in namelist PARAM_HISTORY. Check!')
     endif
 
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
     if ( LOG_master_nml ) write(LOG_fid_nml,nml=PARAM_HISTORY)
 #else
     write(message,nml=PARAM_HISTORY)
@@ -450,7 +450,7 @@ contains
        if( ierr /= 0 ) exit
        if( BASENAME == '' .OR. ITEM == '' .OR. OUTNAME == '' ) cycle ! invalid HISTITEM
 
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
     if ( LOG_master_nml .AND. LOG_fid_nml /= LOG_fid ) write(LOG_fid_nml,nml=HISTITEM)
 #else
     write(message,nml=HISTITEM)

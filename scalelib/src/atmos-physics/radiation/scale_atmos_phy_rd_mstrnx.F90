@@ -2023,7 +2023,7 @@ contains
 
           g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
 
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
           Tdir0(k,i,j,icloud) = exp( -min( tau_new/cosSZA(i,j), 1.E+3_RP ) ) ! apply exp limiter
 #else
           Tdir0(k,i,j,icloud) = exp(-tau_new/cosSZA(i,j))
@@ -2055,7 +2055,7 @@ contains
           !X     =  max( ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn, 1.E-30 )
           !Y     =  max( ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn, 1.E-30 )
           lamda = sqrt(X*Y)
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
           E     = exp( -min( lamda*tau_new, 1.E+3_RP ) ) ! apply exp limiter
 #else
           E     = exp(-lamda*tau_new)

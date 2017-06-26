@@ -77,13 +77,8 @@ module mod_comm
   integer, public, allocatable :: recvlist_sgp(:,:,:)
   integer, public, allocatable :: sendlist_sgp(:,:,:)
 
-#ifdef _ACCCUDA
-  real(RP), public, allocatable, pinned :: sendbuf(:,:)
-  real(RP), public, allocatable, pinned :: recvbuf(:,:)
-#else
   real(RP), public, allocatable :: sendbuf(:,:)
   real(RP), public, allocatable :: recvbuf(:,:)
-#endif
 
   !-----------------------------------------------------------------------------
   !

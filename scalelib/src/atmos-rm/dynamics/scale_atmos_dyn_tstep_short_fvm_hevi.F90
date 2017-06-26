@@ -126,7 +126,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
 #ifdef HEVI_BICGSTAB
     if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
-#elif defined(HEVI_LAPACK)
+#elif defined(MATHLIB)
     if( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
 #else
     if( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
@@ -743,7 +743,7 @@ contains
           call solve_bicgstab( &
                C(:,i,j),         & ! (inout)
                F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
-#elif defined(HEVI_LAPACK)
+#elif defined(MATHLIB)
           call solve_lapack( &
                C(:,i,j),        & ! (inout)
 #ifdef DEBUG
@@ -1252,7 +1252,7 @@ contains
     return
   end subroutine mul_matrix
 
-#elif defined(HEVI_LAPACK)
+#elif defined(MATHLIB)
 !OCL SERIAL
   subroutine solve_lapack( &
        C,   & ! (inout)
