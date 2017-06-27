@@ -111,13 +111,13 @@ jobshell:
 		                                   $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
 		                                   $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
 		                                   $(TPROC)                                    \
-		                                   $(DATDIR) $(DATPARAM) $(DATDISTS);          \
+		                                   $(DATPARAM) $(DATDISTS);                    \
 	else \
 		bash $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
 		                                                  $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
 		                                                  $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
 		                                                  $(TPROC)                                    \
-		                                                  $(DATDIR) $(DATPARAM) $(DATDISTS);          \
+		                                                  $(DATPARAM) $(DATDISTS);                    \
 	fi
 
 

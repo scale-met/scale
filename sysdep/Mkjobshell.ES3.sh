@@ -9,9 +9,8 @@ PPCONF=${5}
 INITCONF=${6}
 RUNCONF=${7}
 TPROC=${8}
-DATDIR=${9}
-DATPARAM=(`echo ${10} | tr -s ',' ' '`)
-DATDISTS=(`echo ${11} | tr -s ',' ' '`)
+eval DATPARAM=(`echo ${9}  | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${10} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
 MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"

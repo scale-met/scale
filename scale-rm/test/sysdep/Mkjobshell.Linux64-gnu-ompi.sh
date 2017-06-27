@@ -12,9 +12,8 @@ INITCONF=${8}
 RUNCONF=${9}
 N2GCONF=${10}
 TPROC=${11}
-DATDIR=${12}
-DATPARAM=(`echo ${13} | tr -s ',' ' '`)
-DATDISTS=(`echo ${14} | tr -s ',' ' '`)
+eval DATPARAM=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${13} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
 MPIEXEC="mpirun -np ${TPROC}"
@@ -51,32 +50,56 @@ export GFORTRAN_UNBUFFERED_ALL=Y
 
 EOF1
 
-if [ ! ${DATPARAM[0]} = "" ]; then
-   for f in ${DATPARAM[@]}
+# link to file or directory
+ndata=${#DATPARAM[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
    do
-         if [ -f ${DATDIR}/${f} ]; then
-            echo "ln -svf ${DATDIR}/${f} ." >> ./run.sh
-         elif [ -d ${DATDIR}/${f} ]; then
-            echo "rm -f                  ./input" >> ./run.sh
-            echo "ln -svf ${DATDIR}/${f} ./input" >> ./run.sh
-         else
-            echo "datafile does not found! : ${DATDIR}/${f}"
-            exit 1
-         fi
+      let i="n - 1"
+
+      pair=(${DATPARAM[$i]})
+
+      src=${pair[0]}
+      dst=${pair[1]}
+      if [ "${dst}" = "" ]; then
+         dst=${pair[0]}
+      fi
+
+      if [ -f ${src} ]; then
+         echo "ln -svf ${src} ./${dst}" >> ./run.sh
+      elif [ -d ${src} ]; then
+         echo "rm -f          ./${dst}" >> ./run.sh
+         echo "ln -svf ${src} ./${dst}" >> ./run.sh
+      else
+         echo "datafile does not found! : ${src}"
+         exit 1
+      fi
    done
 fi
 
-if [ ! ${DATDISTS[0]} = "" ]; then
-   for prc in `seq 1 ${TPROC}`
+# link to distributed file
+ndata=${#DATDISTS[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
    do
-      let "prcm1 = ${prc} - 1"
-      PE=`printf %06d ${prcm1}`
-      for f in ${DATDISTS[@]}
+      let i="n - 1"
+
+      pair=(${DATDISTS[$i]})
+
+      for np in `seq 1 ${TPROC}`
       do
-         if [ -f ${f}.pe${PE}.nc ]; then
-            echo "ln -svf ${f}.pe${PE}.nc ." >> ./run.sh
+         let "ip = ${np} - 1"
+         PE=`printf %06d ${ip}`
+
+         src=${pair[0]}.pe${PE}.nc
+         dst=${pair[1]}.pe${PE}.nc
+
+         if [ -f ${src} ]; then
+            echo "ln -svf ${src} ./${dst}" >> ./run.sh
          else
-            echo "datafile does not found! : ${f}.pe${PE}.nc"
+            echo "datafile does not found! : ${src}"
             exit 1
          fi
       done
