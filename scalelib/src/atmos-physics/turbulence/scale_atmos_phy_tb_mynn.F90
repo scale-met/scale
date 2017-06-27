@@ -379,7 +379,7 @@ contains
     temp(:,:,:) = UNDEF
 #endif
 
-#ifdef QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
     qflx_sgs_momz(KS:KE,   1:IS-1,    :    ,:) = UNDEF
     qflx_sgs_momz(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
     qflx_sgs_momz(KS:KE,    :    ,   1:JS-1,:) = UNDEF
@@ -639,7 +639,7 @@ contains
                    q, q2_2, & ! (in)
                    l, n2, dudz2 ) ! (in)
 
-#ifdef QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
     do j = 1, JS-1
     do i = 1, IA
     do k = KS, KE

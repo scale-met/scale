@@ -352,7 +352,7 @@ contains
     p(:,:,:) = UNDEF
 #endif
 
-#ifdef QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
     DENS_RK(   1:KS-1,:,:)   = UNDEF
     DENS_RK(KE+1:KA  ,:,:)   = UNDEF
     MOMZ_RK(   1:KS-1,:,:)   = UNDEF
