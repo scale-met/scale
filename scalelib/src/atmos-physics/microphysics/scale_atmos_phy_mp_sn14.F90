@@ -718,14 +718,14 @@ contains
        QA
     implicit none
 
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
-    real(RP), intent(inout) :: MOMX(KA,IA,JA)
-    real(RP), intent(inout) :: MOMY(KA,IA,JA)
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)    :: CCN(KA,IA,JA)
-    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
+    real(RP), intent(inout) :: DENS     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMX     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMY     (KA,IA,JA)
+    real(RP), intent(inout) :: RHOT     (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA)
+    real(RP), intent(in)    :: CCN      (KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
@@ -1394,26 +1394,28 @@ contains
     use scale_grid, only: &
        z    => GRID_CZ, &
        dz   => GRID_CDZ
-    use scale_atmos_phy_mp_common, only: &
-         MP_precipitation => ATMOS_PHY_MP_precipitation
     use scale_tracer, only: &
-       QA, &
-       TRACER_R, &
-       TRACER_CV, &
+       QA,         &
+       TRACER_R,   &
+       TRACER_CV,  &
        TRACER_MASS
     use scale_atmos_saturation, only: &
        moist_psat_liq      => ATMOS_SATURATION_psat_liq,   &
        moist_psat_ice      => ATMOS_SATURATION_psat_ice
+    use scale_atmos_phy_mp_common, only: &
+       MP_precipitation => ATMOS_PHY_MP_precipitation
+    use scale_history, only: &
+       HIST_in
     implicit none
 
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
-    real(RP), intent(inout) :: MOMX(KA,IA,JA)
-    real(RP), intent(inout) :: MOMY(KA,IA,JA)
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)    :: CCN(KA,IA,JA)
-    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
+    real(RP), intent(inout) :: DENS     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMX     (KA,IA,JA)
+    real(RP), intent(inout) :: MOMY     (KA,IA,JA)
+    real(RP), intent(inout) :: RHOT     (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA)
+    real(RP), intent(in)    :: CCN      (KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -1520,12 +1522,9 @@ contains
 
     real(RP) :: Rmoist
 
-    real(RP) :: velw(KA,IA,JA,QA_MP-1)
-    real(RP) :: FLX_rain (KA,IA,JA)
-    real(RP) :: FLX_snow (KA,IA,JA)
-    real(RP) :: FLX_tot  (KA,IA,JA)
-    real(RP) :: wflux_rain(KA,IA,JA)
-    real(RP) :: wflux_snow(KA,IA,JA)
+    real(RP) :: vterm    (KA,IA,JA,QA_MP-1) ! terminal velocity of each tracer  [m/s]
+    real(RP) :: pflux    (KA,IA,JA,QA_MP-1) ! precipitation flux of each tracer [kg/m2/s]
+    real(RP) :: FLX_hydro(KA,IA,JA,QA_MP-1)
     integer  :: step
 
     real(RP) :: sw
@@ -2091,61 +2090,74 @@ contains
     !----------------------------------------------------------------------------
     call PROF_rapstart('MP_Sedimentation', 3)
 
+    vterm    (:,:,:,:) = 0.0_RP
+    FLX_hydro(:,:,:,:) = 0.0_RP
+
     if ( MP_doprecipitation ) then
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS-1, KE
-       FLX_rain(k,i,j) = 0.0_RP
-       FLX_snow(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
+       do step = 1, MP_NSTEP_SEDIMENTATION
 
-    velw(:,:,:,:) = 0.0_RP
+          call MP_terminal_velocity( vterm(:,:,:,:), & ! [OUT]
+                                     rhoq (:,:,:,:), & ! [IN]
+                                     DENS (:,:,:),   & ! [IN]
+                                     temp (:,:,:),   & ! [IN]
+                                     pres (:,:,:)    ) ! [IN]
 
-    do step = 1, MP_NSTEP_SEDIMENTATION
+          call MP_precipitation( QA_MP,                 & ! [IN]
+                                 QS_MP,                 & ! [IN]
+                                 pflux    (:,:,:,:),    & ! [OUT]
+                                 vterm    (:,:,:,:),    & ! [INOUT]
+                                 DENS     (:,:,:),      & ! [INOUT]
+                                 MOMZ     (:,:,:),      & ! [INOUT]
+                                 MOMX     (:,:,:),      & ! [INOUT]
+                                 MOMY     (:,:,:),      & ! [INOUT]
+                                 RHOE     (:,:,:),      & ! [INOUT]
+                                 QTRC     (:,:,:,:),    & ! [INOUT]
+                                 temp     (:,:,:),      & ! [IN]
+                                 TRACER_CV(:),          & ! [IN]
+                                 MP_DTSEC_SEDIMENTATION ) ! [IN]
 
-       call MP_terminal_velocity( velw(:,:,:,:), & ! [OUT]
-                                  rhoq(:,:,:,:), & ! [IN]
-                                  DENS(:,:,:),   & ! [IN]
-                                  temp(:,:,:),   & ! [IN]
-                                  pres(:,:,:)    ) ! [IN]
+          do j  = JS, JE
+          do i  = IS, IE
+          do k  = KS-1, KE-1
+             FLX_hydro(k,i,j,I_mp_QC) = FLX_hydro(k,i,j,I_mp_QC) + pflux(k,i,j,I_mp_QC) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_QR) = FLX_hydro(k,i,j,I_mp_QR) + pflux(k,i,j,I_mp_QR) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_QI) = FLX_hydro(k,i,j,I_mp_QI) + pflux(k,i,j,I_mp_QI) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_QS) = FLX_hydro(k,i,j,I_mp_QS) + pflux(k,i,j,I_mp_QS) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_QG) = FLX_hydro(k,i,j,I_mp_QG) + pflux(k,i,j,I_mp_QG) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_NC) = FLX_hydro(k,i,j,I_mp_NC) + pflux(k,i,j,I_mp_NC) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_NR) = FLX_hydro(k,i,j,I_mp_NR) + pflux(k,i,j,I_mp_NR) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_NI) = FLX_hydro(k,i,j,I_mp_NI) + pflux(k,i,j,I_mp_NI) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_NS) = FLX_hydro(k,i,j,I_mp_NS) + pflux(k,i,j,I_mp_NS) * MP_RNSTEP_SEDIMENTATION
+             FLX_hydro(k,i,j,I_mp_NG) = FLX_hydro(k,i,j,I_mp_NG) + pflux(k,i,j,I_mp_NG) * MP_RNSTEP_SEDIMENTATION
+          enddo
+          enddo
+          enddo
 
-       call MP_precipitation( wflux_rain(:,:,:),     & ! [OUT]
-                              wflux_snow(:,:,:),     & ! [OUT]
-                              DENS      (:,:,:),     & ! [INOUT]
-                              MOMZ      (:,:,:),     & ! [INOUT]
-                              MOMX      (:,:,:),     & ! [INOUT]
-                              MOMY      (:,:,:),     & ! [INOUT]
-                              rhoe      (:,:,:),     & ! [INOUT]
-                              QTRC      (:,:,:,:),   & ! [INOUT]
-                              QA_MP,                 & ! [IN]
-                              QS_MP,                 & ! [IN]
-                              velw      (:,:,:,:),   & ! [IN]
-                              temp      (:,:,:),     & ! [IN]
-                              TRACER_CV(:),          & ! [IN]
-                              MP_DTSEC_SEDIMENTATION ) ! [IN]
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS-1, KE
-          FLX_rain(k,i,j) = FLX_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
-          FLX_snow(k,i,j) = FLX_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
        enddo
-       enddo
-       enddo
-
-    enddo
 
     endif
 
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QC), 'pflux_QC', 'precipitation flux of QC', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QI), 'pflux_QI', 'precipitation flux of QI', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QS), 'pflux_QS', 'precipitation flux of QS', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_QG), 'pflux_QG', 'precipitation flux of QG', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_NC), 'pflux_QC', 'precipitation flux of NC', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_NR), 'pflux_QR', 'precipitation flux of NR', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_NI), 'pflux_QI', 'precipitation flux of NI', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_NS), 'pflux_QS', 'precipitation flux of NS', 'kg/m2/s', nohalo=.true. )
+    call HIST_in( FLX_hydro(:,:,:,I_mp_NG), 'pflux_QG', 'precipitation flux of NG', 'kg/m2/s', nohalo=.true. )
+
     do j = JS, JE
     do i = IS, IE
-       SFLX_rain(i,j) = FLX_rain(KS-1,i,j)
-       SFLX_snow(i,j) = FLX_snow(KS-1,i,j)
-    end do
-    end do
+       SFLX_rain(i,j) = - ( FLX_hydro(KS-1,i,j,I_mp_QC) &
+                          + FLX_hydro(KS-1,i,j,I_mp_QR) )
+       SFLX_snow(i,j) = - ( FLX_hydro(KS-1,i,j,I_mp_QI) &
+                          + FLX_hydro(KS-1,i,j,I_mp_QS) &
+                          + FLX_hydro(KS-1,i,j,I_mp_QG) )
+    enddo
+    enddo
 
     call PROF_rapend  ('MP_Sedimentation', 3)
 

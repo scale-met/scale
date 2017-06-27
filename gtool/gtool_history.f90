@@ -2343,9 +2343,12 @@ contains
     logical,          intent(in), optional :: allow_missing
     logical,          intent(in), optional :: single
 
-    logical :: allow_missing_ = .false.
-    logical :: single_        = .false.
+    logical :: allow_missing_
+    logical :: single_
     !---------------------------------------------------------------------------
+
+    allow_missing_ = .false.
+    single_        = .false.
 
     if ( present(allow_missing) ) then
        allow_missing_ = allow_missing
@@ -2385,9 +2388,12 @@ contains
     logical,          intent(in), optional :: allow_missing
     logical,          intent(in), optional :: single
 
-    logical :: allow_missing_ = .false.
-    logical :: single_        = .false.
+    logical :: allow_missing_
+    logical :: single_
     !---------------------------------------------------------------------------
+
+    allow_missing_ = .false.
+    single_        = .false.
 
     if ( present(allow_missing) ) then
        allow_missing_ = allow_missing
@@ -2427,9 +2433,12 @@ contains
     logical,          intent(in), optional :: allow_missing
     logical,          intent(in), optional :: single
 
-    logical :: allow_missing_ = .false.
-    logical :: single_        = .false.
+    logical :: allow_missing_
+    logical :: single_
     !---------------------------------------------------------------------------
+
+    allow_missing_ = .false.
+    single_        = .false.
 
     if ( present(allow_missing) ) then
        allow_missing_ = allow_missing
@@ -2469,9 +2478,12 @@ contains
     logical,          intent(in), optional :: allow_missing
     logical,          intent(in), optional :: single
 
-    logical :: allow_missing_ = .false.
-    logical :: single_        = .false.
+    logical :: allow_missing_
+    logical :: single_
     !---------------------------------------------------------------------------
+
+    allow_missing_ = .false.
+    single_        = .false.
 
     if ( present(allow_missing) ) then
        allow_missing_ = allow_missing
@@ -2511,9 +2523,12 @@ contains
     logical,          intent(in), optional :: allow_missing
     logical,          intent(in), optional :: single
 
-    logical :: allow_missing_ = .false.
-    logical :: single_        = .false.
+    logical :: allow_missing_
+    logical :: single_
     !---------------------------------------------------------------------------
+
+    allow_missing_ = .false.
+    single_        = .false.
 
     if ( present(allow_missing) ) then
        allow_missing_ = allow_missing

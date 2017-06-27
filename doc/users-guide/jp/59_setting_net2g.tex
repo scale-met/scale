@@ -117,7 +117,7 @@ net2gの実行はMPI並列を用いて、
   \item \nmitem{Z_LEV_TYPE}：鉛直方向のデータ変換の種類を指定する。``original''はモデル面、
         ``plev''は気圧面に内挿、そして``zlev''は高度面に内挿して出力する。
         ``anal''を指定すると別途指定の簡易解析を行なって出力する（次項で説明）。デフォルト値は``plev''である。
-  \item \nmitem{MAPPROJ_ctl}：\verb|pdef|を使った投影図法に対応したctlファイルを出力するかどうか。
+  \item \nmitem{MAPPROJ_ctl}：\verb|pdef|を使った投影図法に対応したctlファイルを出力するかどうか。ただし、現在はランベルト図法にのみ対応。
  \end{itemize}
  \item \namelist{VARI}
  \begin{itemize}
@@ -170,6 +170,7 @@ net2gの実行はMPI並列を用いて、
 \end{itemize}
 
 \subsubsection{設定ファイルサンプル：2次元変数の変換}
+\label{subsec:net2g_2d}
 %------------------------------------------------------
 
 \noindent {\small {\gt
@@ -205,6 +206,19 @@ net2gの実行はMPI並列を用いて、
 \subsubsection{設定ファイル変更例：特殊な時間軸を持つデータの変換}
 %------------------------------------------------------
 
+\ref{sec:output}節で説明した通り、
+出力変数の出力間隔は\nmitem{HISTORY_DEFAULT_TINTERVAL}で設定されるが、
+\namelist{HISTITEM}の\nmitem{TINTERVAL}に\nmitem{HISTORY_DEFAULT_TINTERVAL}とは異なる値を与えることで、
+特定の変数の出力間隔を変更することが可能である。
+\nmitem{HISTORY_DEFAULT_TINTERVAL}以外の出力間隔を持つ変数についてnet2gを行う場合には、
+net2g.confの\namelist{EXTRA}を追加する。
+下記の例では、\ref{sec:output}節の最後で説明した例
+（``RAIN''のみの出力間隔を600秒とした）について追加、修正すべきところを示している。
+
+net2gでは、異なる出力時間間隔を同時に取り扱うことはできないため、
+複数の異なる出力間隔が存在するhistoryデータにおいては、
+それぞれに独立してnet2gを走らせる必要がある。\\
+
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{l}
@@ -219,15 +233,7 @@ net2gの実行はMPI並列を用いて、
 \end{tabularx}
 }}}\\
 
-上記は設定ファイル変更例である。その他の項目は先の3次元や2次元変数の場合と同じである。
-SCALE-RM実行時に、\ref{sec:output}節の最後で説明した出力アイテム毎の設定で、\namelist{HISTITEM}の
-\nmitem{TINTERVAL}を設定し、一部の出力変数が\nmitem{HISTORY_DEFAULT_TINTERVAL}に
-従わない場合、net2gでは\namelist{EXTRA}を上記のように設定することで対応できる。
-この例では、\ref{sec:output}節の最後で説明した設定に合わせて、2次元データの``RAIN''だけが
-600秒間隔で出力された場合の例を示している。
-net2gでは、異なる出力時間間隔を同時に取り扱うことはできないため、
-複数の異なる出力間隔が存在するhistoryデータにおいては、
-それぞれに独立してnet2gを走らせる必要がある。
+
 
 \subsubsection{大型並列計算機での実行}
 スーパーコンピュータ「京」などの大型計算機で大規模並列計算を行った場合、出力ファイルの数が多く、

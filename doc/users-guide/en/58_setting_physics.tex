@@ -69,18 +69,40 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
 }
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of turbulent scheme}
+  \caption{Choices of turbulence scheme}
   \label{tab:nml_atm_tb}
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
       \verb|OFF|          & Do not calculate the turbulence process &  \\
       \verb|SMAGORINSKY|  & Smagorinsky—Lily-type sub-grid model & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
-      \verb|D1980|        &  Deardorff-type sub-grid model & \citet{Deardorff_1980} \\
-      \verb|MYNN|         &  MYNN Level 2.5 boundary scheme & \citet{my_1982,nakanishi_2004} \\
+      \verb|D1980|        & Deardorff-type sub-grid model & \citet{Deardorff_1980} \\
+      \verb|MYNN|         & MYNN Level 2.5 boundary scheme & \citet{my_1982,nakanishi_2004} \\
+      \verb|HYBRID|       & Hybrid use of the boundary layer parameterization ans sub-grid scale turbulence model. Only the hybrid of \verb|SMAGORINSKY| and \verb|MYNN| is currently available.\\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
+
+\verb|SMAGORINSKY| and \verb|D1980| are sub-grid scale turbulence models for Large-eddy simulations (LESs).
+\verb|MYNN| is a boundary layer parameterization for Reynolds-Averaged Navier-Stokes equations (RANS).
+\verb|HYBRID| is used for the following two purposes.
+\begin{enumerate}
+\item Simulations with inter-mediate resolution between LES and RANS (gray zone) \\
+  The temporal tendencies by vertical mixing is calculated by a linear combination of those calculated by the LES turbulence model and RANS turbulence parameterization. The horizontal mixing is calculate by the LES turbulence model.
+\item Horizontal eddy viscosity for RANS simulations \\
+  The RANS turbulence parameterization is a scheme considering only vertical mixing.
+  If you want to consider the horizontal eddy viscosity in RANS simulations, 
+  that becomes possible by using the \verb|HYBRID| scheme.
+  The horizontal mixing is calculate by the LES turbulence model.
+\end{enumerate}
+
+In order to use the \verb|HYBRID| scheme for the horizontal eddy viscosity in RANS simulations, \nmitem{ATMOS_PHY_TB_SMG_horizontal} should be \verb|.true.| as follows:
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_TB_SMG  | & \\
+\verb| ATMOS_PHY_TB_SMG_horizontal = .true., | & \\
+\verb|/             | & \\
+}
+
 
 \subsection{Radiation scheme} \label{subsec:basic_usel_radiation}
 %-------------------------------------------------------------------------------

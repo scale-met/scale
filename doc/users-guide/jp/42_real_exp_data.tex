@@ -35,14 +35,13 @@
 標高データと土地利用区分データは実験設定に従って、
 \scalerm のそれぞれの格子点における標高、海陸比率、湖比率、都市被覆率、植生比率、土地(植生)利用区分を
 作成するために使用する。
-ユーザが全球の任意の地域を対象とした計算ができるよう、
-フォーマット変換済みの
-標高データ USGS(U.S. Geological Survey) のGTOPO30 と、
+全球の任意の地域を対象とした計算ができるよう、
+フォーマット変換済みの標高データ USGS(U.S. Geological Survey) のGTOPO30 と、
 土地利用区分データ GLCCv2 を提供している。
 %これらのデータベースを作成にするにあたり、施された前処理手順の詳細については、〇〇を参照すること（Todo）。
 
 \begin{enumerate}
-\item データのダウンロード\\
+\item データベースのダウンロード\\
 \scalerm 用の標高・土地利用区分のデータを\\
  \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}\\
 より入手し、任意のディレクトリに展開しておく。
@@ -57,14 +56,19 @@
 \item パスの設定\\
 現実大気実験の実験に必要なファイル一式の準備には、
 makeを用いた「実験セット一式作成ツール」を用いる。
-このツールを利用するためには、
-標高・土地利用区分データの\verb|tar|ファイルの展開先ディレクトリを、
+このツールを利用するためには、上記のデータベースがあるディレクトリを
 \verb|SCALE_DB| という環境変数に設定しておくことが必須である (以後、\verb|${SCALE_DB}|と表記)。
 \begin{verbatim}
   $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
 \end{verbatim}
 ここで、\verb|${path_to_directory_of_scale_database}|は、
-データベースがあるディレクトリである。
+標高・土地利用区分データを含む\verb|tar|ファイルの展開先ディレクトリである。
+%つまり、\verb|${path_to_directory_of_scale_database}|の部分を適切に置換した上で上記コマンドを実行する必要がある。
+例えば、\verb|scale_database.tar.gz|を展開したディレクトリの絶対パスが
+\verb|/home/user/scale|であった場合は以下のように設定する。
+\begin{verbatim}
+  $ export SCALE_DB="/home/user/scale/scale_database"
+\end{verbatim}
 \end{enumerate}
 
 

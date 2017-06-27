@@ -35,14 +35,14 @@ When a realistic atmospheric experiment is conducted, boundary data need to be p
 
 \subsubsection{Topography and land-use classification data}
 
-The external topography and land-use classification data are used to obtain the altitude, the ocean to land ratio,
-the lake ratio, urban covering and vegetation rates, and the classification of land use at every grid point.
+The external topography and land-use classification data are used to obtain 
+the altitude, the ocean to land ratio, the lake ratio, urban covering and vegetation rates, and the classification of land use at every grid point.
 In order to allow users to calculate at any areas over the globe,
 the altitude data GTOPO30 from the USGS (U.S. Geological Survey)
 and land-use classification data from the GLCCv2 are provided in \scalerm.
-These files have already been formatted. 
+These files have already been formatted for \scalerm.
 \begin{enumerate}
-\item Downloading data\\
+\item Downloading database\\
 Obtain the data for altitude and land-use classification formatted for \scalerm  from \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}, and extract them to any directory:
 \begin{verbatim}
   $ tar -zxvf scale_database.tar.gz
@@ -52,13 +52,20 @@ Obtain the data for altitude and land-use classification formatted for \scalerm 
 \end{verbatim}
 \item Setting of the path\\
 To prepare the files used in the realistic atmospheric experiment,
-the "making tool for the complete settings of the experiment" is available.
-To use the tool, set the directory name, where the above \verb|tar| file is extracted,
-to an environment variable \verb|SCALE_DB| (hereinafter, it denoted as \verb|SCALE_DB| ):
+the ``making tool for the complete settings of the experiment" is available.
+To use the tool, set the directory name including above database 
+to an environment variable \verb|SCALE_DB| (hereinafter, it denoted as \verb|SCALE_DB|):
 \begin{verbatim}
   $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
 \end{verbatim}
-where \verb|${path_to_directory_of_scale_database}| is the database directory. 
+where \verb|${path_to_directory_of_scale_database}| is the directory name 
+which the \verb|tar| file including topography and land-use database is extracted in. 
+%Thus, you should execute above command after substituting the portion of \verb|${path_to_directory_of_scale_database}|.
+For example, if the absolute path where you expanded \verb|scale_database.tar.gz| 
+was \verb|/home/user/scale|, you need to set as follows.
+\begin{verbatim}
+  $ export SCALE_DB="/home/user/scale/scale_database"
+\end{verbatim}
 
 \end{enumerate}
 
