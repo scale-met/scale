@@ -126,7 +126,7 @@ contains
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
-       dtrk, dt                                     )
+       dtrk, last                                   )
     use scale_grid_index
     use scale_const, only: &
        GRAV   => CONST_GRAV,  &
@@ -254,7 +254,7 @@ contains
     logical,  intent(in)         :: BND_N
 
     real(RP), intent(in)         :: dtrk
-    real(RP), intent(in)         :: dt
+    logical,  intent(in)         :: last
 
     ! diagnostic variables
     real(RP) :: VELZ (KA,IA,JA) ! velocity w [m/s]
@@ -342,7 +342,7 @@ contains
     pg_t = 0.0_RP
     cf_t = 0.0_RP
 
-    lhist = dt .eq. dtrk
+    lhist = last
 #endif
 
     IFS_OFF = 1
@@ -912,9 +912,9 @@ contains
                       + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
                       * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) &
                       * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
-                        * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RCDX(i) &
+                        * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RFDX(i) &
                         - MOMX(k,i,j) &
-                        * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RFDY(j) ) &
+                        * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RCDY(j) ) &
                       * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
        enddo
        enddo

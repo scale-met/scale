@@ -54,7 +54,7 @@ module scale_atmos_dyn_tstep_short
                        PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                        REF_dens, REF_rhot,                               & ! (in)
                        BND_W, BND_E, BND_S, BND_N,                       & ! (in)
-                       dtrk, dt                                          ) ! (in)
+                       dtrk, last                                        ) ! (in)
        use scale_precision
        use scale_grid_index
        use scale_index
@@ -127,7 +127,7 @@ module scale_atmos_dyn_tstep_short
        logical,  intent(in)  :: BND_N
 
        real(RP), intent(in)  :: dtrk
-       real(RP), intent(in)  :: dt
+       logical,  intent(in)  :: last
      end subroutine short
 
   end interface

@@ -399,7 +399,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4",3)
     call PROF_rapstart("DYN_RK4_BND",3)
@@ -452,7 +452,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4",3)
     call PROF_rapstart("DYN_RK4_BND",3)
@@ -505,7 +505,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4",3)
     call PROF_rapstart("DYN_RK4_BND",3)
@@ -558,7 +558,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .true.                                      ) ! [IN]
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,KS,KE,DENS,DENS_RK1,DENS_RK2,DENS_RK3,DENS0)

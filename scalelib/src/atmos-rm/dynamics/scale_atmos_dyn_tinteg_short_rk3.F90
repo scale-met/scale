@@ -381,7 +381,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK3",3)
     call PROF_rapstart("DYN_RK3_BND",3)
@@ -434,7 +434,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK3",3)
     call PROF_rapstart("DYN_RK3_BND",3)
@@ -487,7 +487,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .true.                                      ) ! [IN]
 
     if ( .NOT. FLAG_WS2002 ) then
        do j = JS, JE
