@@ -109,15 +109,6 @@ contains
   subroutine ATMOS_PHY_AE_config( AE_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef AE
-    use NAME(scale_atmos_phy_ae_, AE,), only: &
-       NAME(ATMOS_PHY_AE_, AE, _config), &
-       NAME(ATMOS_PHY_AE_, AE, _setup), &
-       NAME(ATMOS_PHY_AE_, AE,)
-       NAME(ATMOS_PHY_AE_, AE, _EffectiveRadius)
-#else
     use scale_atmos_phy_ae_dummy, only: &
        ATMOS_PHY_AE_dummy_config, &
        ATMOS_PHY_AE_dummy_setup, &
@@ -136,7 +127,6 @@ contains
        ATMOS_PHY_AE_kajino13_UNIT, &
        ATMOS_PHY_AE_kajino13_DESC, &
        ATMOS_PHY_AE_kajino13_DENS
-#endif
     implicit none
 
     character(len=*), intent(in) :: AE_TYPE

@@ -136,29 +136,17 @@ contains
     use scale_index
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef TINTEG_SHORT
-    use NAME(scale_atmos_dyn_tinteg_short_, TINTEG_SHORT,), only: &
-       NAME(ATMOS_DYN_rk_tinteg_short_, TINTEG_SHORT, _setup), &
-       NAME(ATMOS_DYN_rk_tinteg_short_, TINTEG_SHORT,)
-#else
     use scale_atmos_dyn_tinteg_short_rk3, only: &
        ATMOS_DYN_Tinteg_short_rk3_setup, &
        ATMOS_DYN_Tinteg_short_rk3
     use scale_atmos_dyn_tinteg_short_rk4, only: &
        ATMOS_DYN_Tinteg_short_rk4_setup, &
        ATMOS_DYN_Tinteg_short_rk4
-#endif
     implicit none
+
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_short_TYPE
     !---------------------------------------------------------------------------
 
-#ifdef TINTEG_SHORT
-    NAME(ATMOS_DYN_Tinteg_short_, TINTEG_SHORT, _setup)( &
-            ATMOS_DYN_Tinteg_short_TYPE )
-    ATMOS_DYN_Tinteg_short => NAME(ATMOS_DYN_Tingeg_short_, TINTEG_SHORT,)
-#else
     select case( ATMOS_DYN_Tinteg_short_TYPE )
     case( 'RK3', 'RK3WS2002' )
        call ATMOS_DYN_Tinteg_short_rk3_setup( &
@@ -174,7 +162,6 @@ contains
        write(*,*) 'xxx ATMOS_DYN_TINTEG_SHORT_TYPE is invalid: ', ATMOS_DYN_Tinteg_short_TYPE
        call PRC_MPIstop
     end select
-#endif
 
     return
   end subroutine ATMOS_DYN_Tinteg_short_setup

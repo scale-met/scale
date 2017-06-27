@@ -86,20 +86,12 @@ contains
   subroutine ATMOS_PHY_RD_setup( RD_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef RD
-    use NAME(scale_atmos_phy_rd_, RD,), only: &
-       NAME(ATMOS_PHY_RD_, RD, _setup), &
-       NAME(ATMOS_PHY_RD_, RD,)
-#else
     use scale_atmos_phy_rd_mstrnx, only: &
        ATMOS_PHY_RD_mstrnx_setup, &
        ATMOS_PHY_RD_mstrnx
     use scale_atmos_phy_rd_offline, only: &
        ATMOS_PHY_RD_offline_setup, &
        ATMOS_PHY_RD_offline
-#endif
     use scale_atmos_phy_rd_mm5sw, only: &
        swinit
     implicit none

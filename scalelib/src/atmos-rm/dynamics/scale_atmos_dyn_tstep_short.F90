@@ -162,14 +162,6 @@ contains
     use scale_index
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef DYNAMICS
-    use NAME(scale_atmos_dyn_tstep_, DYNAMICS,), only: &
-       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS, _regist), &
-       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS, _setup), &
-       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS,)
-#else
     use scale_atmos_dyn_tstep_short_fvm_heve, only: &
        ATMOS_DYN_Tstep_short_fvm_heve_regist, &
        ATMOS_DYN_Tstep_short_fvm_heve_setup, &
@@ -182,7 +174,6 @@ contains
        ATMOS_DYN_Tstep_short_fvm_hivi_regist, &
        ATMOS_DYN_Tstep_short_fvm_hivi_setup, &
        ATMOS_DYN_Tstep_short_fvm_hivi
-#endif
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -192,12 +183,6 @@ contains
     character(len=H_SHORT), intent(out) :: VAR_UNIT(:)    !< unit  of the variables
     !---------------------------------------------------------------------------
 
-#ifdef DYNAMICS
-    NAME(ATMOS_DYN_Tstep_, DYNAMICS, _regist)( &
-            ATMOS_DYN_TYPE )
-    ATMOS_DYN_Tstep_short_ => NAME(ATMOS_DYN_Tstep_short_, DYNAMICS,)
-    ATMOS_DYN_Tstep_short_setup => NAME(ATMOS_DYN_Tstep_short_, DYNAMICS, _setup)
-#else
     select case( ATMOS_DYN_TYPE )
     case( 'FVM-HEVE', 'HEVE' )
 
@@ -240,7 +225,6 @@ contains
        write(*,*) 'xxx ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
        call PRC_MPIstop
     end select
-#endif
 
     return
   end subroutine ATMOS_DYN_Tstep_short_regist

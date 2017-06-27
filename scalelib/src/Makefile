@@ -49,88 +49,54 @@ endif
 
 SDM_EXIST := $(shell find $(TOPDIR)/contrib -name SDM 2> /dev/null )
 
+OBJS_MP = scale_atmos_phy_mp_dry.o	\
+          scale_atmos_phy_mp_kessler.o	\
+          scale_atmos_phy_mp_sn14.o	\
+          scale_atmos_phy_mp_sdm.o	\
+          scale_atmos_phy_mp_suzuki10.o	\
+          scale_atmos_phy_mp_tomita08.o
 
-ifeq ($(MP),)
-  OBJS_MP = scale_atmos_phy_mp_dry.o	\
-            scale_atmos_phy_mp_kessler.o	\
-            scale_atmos_phy_mp_sn14.o	\
-            scale_atmos_phy_mp_sdm.o	\
-            scale_atmos_phy_mp_suzuki10.o	\
-            scale_atmos_phy_mp_tomita08.o
-else
-  OBJS_MP = scale_atmos_phy_mp_$(MP).o
-  FFLAGS += -DMP=$(MP)
-endif
+OBJS_CP = scale_atmos_phy_cp_kf.o
 
-ifeq ($(CP),)
-  OBJS_CP = scale_atmos_phy_cp_kf.o
-else
-  OBJS_CP = scale_atmos_phy_cp_$(CP).o
-  FFLAGS += -DMP=$(CP)
-endif
+OBJS_AE = scale_atmos_phy_ae_dummy.o	\
+          scale_atmos_phy_ae_kajino13.o
 
-ifeq ($(AE),)
-  OBJS_AE = scale_atmos_phy_ae_dummy.o	\
-            scale_atmos_phy_ae_kajino13.o
-else
-  OBJS_AE = scale_atmos_phy_ae_$(AE).o
-endif
+OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
+          scale_atmos_phy_rd_mm5sw.o	\
+          scale_atmos_phy_rd_offline.o	\
+          scale_atmos_phy_rd_profile.o
 
-ifeq ($(RD),)
-  OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
-            scale_atmos_phy_rd_mm5sw.o	\
-            scale_atmos_phy_rd_offline.o	\
-            scale_atmos_phy_rd_profile.o
-else
-  OBJS_RD = scale_atmos_phy_rd_$(RD).o
-  FFLAGS += -DRD=$(RD)
-endif
+OBJS_TB = scale_atmos_phy_tb_smg.o	\
+          scale_atmos_phy_tb_d1980.o	\
+          scale_atmos_phy_tb_dns.o	\
+          scale_atmos_phy_tb_mynn.o	\
+          scale_atmos_phy_tb_hybrid.o
 
-ifeq ($(TB),)
-  OBJS_TB = scale_atmos_phy_tb_smg.o	\
-            scale_atmos_phy_tb_d1980.o	\
-            scale_atmos_phy_tb_dns.o	\
-            scale_atmos_phy_tb_mynn.o	\
-            scale_atmos_phy_tb_hybrid.o
-else
-  OBJS_TB = scale_atmos_phy_tb_$(TB).o
-  FFLAGS += -DTB=$(TB)
-endif
-
-OBJS_DYN = scale_atmos_dyn_tinteg_short.o	\
-           scale_atmos_dyn_tinteg_large.o	\
-           scale_atmos_dyn_tinteg_large_euler.o	\
-           scale_atmos_dyn_tinteg_large_rk3.o	\
-           scale_atmos_dyn_tinteg_tracer.o	\
-           scale_atmos_dyn_tinteg_tracer_euler.o	\
-           scale_atmos_dyn_tinteg_tracer_rk3.o	\
-           scale_atmos_dyn_tstep_short.o	\
-           scale_atmos_dyn_tstep_large.o	\
-           scale_atmos_dyn_tstep_large_fvm_heve.o	\
-           scale_atmos_dyn_tstep_tracer.o	\
-           scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
-           scale_atmos_dyn_fvm_flux.o	\
-	   scale_atmos_dyn_fvm_flux_ud1.o	\
-           scale_atmos_dyn_fvm_flux_cd2.o	\
+OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
+           scale_atmos_dyn_fvm_flux_cd4.o	\
+           scale_atmos_dyn_fvm_flux_cd6.o	\
+           scale_atmos_dyn_fvm_flux_ud1.o	\
            scale_atmos_dyn_fvm_flux_ud3.o	\
            scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
-           scale_atmos_dyn_fvm_flux_cd4.o	\
            scale_atmos_dyn_fvm_flux_ud5.o	\
-           scale_atmos_dyn_fvm_flux_cd6.o
-ifeq ($(DYNAMICS),)
-  OBJS_DYN += scale_atmos_dyn_tstep_short_fvm_heve.o	\
-              scale_atmos_dyn_tstep_short_fvm_hevi.o	\
-              scale_atmos_dyn_tstep_short_fvm_hivi.o
-else
-  OBJS_DYN += scale_atmos_dyn_tstep_short_$(DYNAMICS).o
-endif
-
-ifeq ($(TINTEG),)
-  OBJS_DYN += scale_atmos_dyn_tinteg_short_rk3.o	\
-              scale_atmos_dyn_tinteg_short_rk4.o
-else
-  OBJS_DYN += scale_atmos_dyn_tinteg_short_$(TINTEG).o
-endif
+           scale_atmos_dyn_fvm_flux.o	\
+           scale_atmos_dyn_tinteg_large_euler.o	\
+           scale_atmos_dyn_tinteg_large_rk3.o	\
+           scale_atmos_dyn_tinteg_large.o	\
+           scale_atmos_dyn_tinteg_short_rk3.o	\
+           scale_atmos_dyn_tinteg_short_rk4.o	\
+           scale_atmos_dyn_tinteg_short.o	\
+           scale_atmos_dyn_tinteg_tracer_euler.o	\
+           scale_atmos_dyn_tinteg_tracer_rk3.o	\
+           scale_atmos_dyn_tinteg_tracer.o	\
+           scale_atmos_dyn_tstep_large_fvm_heve.o	\
+           scale_atmos_dyn_tstep_large.o	\
+           scale_atmos_dyn_tstep_short_fvm_heve.o	\
+           scale_atmos_dyn_tstep_short_fvm_hevi.o	\
+           scale_atmos_dyn_tstep_short_fvm_hivi.o	\
+           scale_atmos_dyn_tstep_short.o	\
+           scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
+           scale_atmos_dyn_tstep_tracer.o
 
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
