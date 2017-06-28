@@ -1985,7 +1985,8 @@ contains
     use scale_process, only: &
        PRC_myrank
     use scale_fileio, only: &
-       FILEIO_read
+       FILEIO_read, &
+       FILEIO_flush
     use scale_atmos_phy_mp, only: &
        AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
@@ -2007,6 +2008,8 @@ contains
     do iq = 1, BND_QA
        call FILEIO_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, AQ_NAME(iq), 'ZXY', boundary_timestep )
     end do
+
+    call FILEIO_flush( fid )
 
     ! fill HALO in reference
     call ATMOS_BOUNDARY_ref_fillhalo( ref )
