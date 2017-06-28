@@ -88,8 +88,8 @@ contains
     case('RK3')
        if( IO_L ) write(IO_FID_LOG,*) '+++ 3-stage Runge-Kutta'
 
-       if (       mod(TIME_SSTEP_MAX,2) /= 0 &
-            .AND. mod(TIME_SSTEP_MAX,3) /= 0 ) then
+       if (      mod(TIME_SSTEP_MAX,2) /= 0 &
+            .OR. mod(TIME_SSTEP_MAX,3) /= 0 ) then
           write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*2*3! STOP.', &
                      TIME_SSTEP_MAX
           call PRC_MPIstop
@@ -103,9 +103,9 @@ contains
     case('RK4')
        if( IO_L ) write(IO_FID_LOG,*) '+++ 4-stage Runge-Kutta'
 
-       if (       mod(TIME_SSTEP_MAX,2) /= 0 &
-            .AND. mod(TIME_SSTEP_MAX,3) /= 0 &
-            .AND. mod(TIME_SSTEP_MAX,4) /= 0 ) then
+       if (      mod(TIME_SSTEP_MAX,2) /= 0 &
+            .OR. mod(TIME_SSTEP_MAX,3) /= 0 &
+            .OR. mod(TIME_SSTEP_MAX,4) /= 0 ) then
           write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*3*4! STOP.', &
                      TIME_SSTEP_MAX
           call PRC_MPIstop
