@@ -123,9 +123,9 @@ def interp(val, src, dst, k="k", i="i", j="j")
   when src[2..2] == "Z" # Z->W
     v0 = interpH(val, src[0..1], dst[0..1], k  , i, j)
     v1 = interpH(val, src[0..1], dst[0..1], k+1, i, j)
-    ret = "F2H(#{k},1,I_#{src}) &
+    ret = "F2H(#{k},1,I_#{dst[0..1]}Z) &
              * #{v1} &
-             + F2H(#{k},2,I_#{src}) &
+             + F2H(#{k},2,I_#{dst[0..1]}Z) &
              * #{v0}"
   else # W=>Z
     v0 = interpH(val, src[0..1], dst[0..1], k-1, i, j)
@@ -609,13 +609,13 @@ contains
     do i = IIS, IIE
        flux(KS-1,i,j) = 0.0_RP
 <%   (nh-1).times do |k| %>
-       vel = <%= interp("mom", uv, "XYZ", "KS"+k) %> &
+       vel = <%= interp("mom", uv, "XYZ", "KS"+(k+1)) %> &
            / DENS(KS<%=k%>,i,j)
-       flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
+       flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%k+1%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
                    * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KS"+k) %> )
-       vel = <%= interp("mom", uv, "XYZ", "KE"-k) %> &
-           / DENS(KE<%=-k%>,i,j)
-       flux(KE<%=-k-2%>,i,j) = <%=dir%>G(KE<%=-k%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
+       vel = <%= interp("mom", uv, "XYZ", "KE"-(k+1)) %> &
+           / DENS(KE<%=-k-1%>,i,j)
+       flux(KE<%=-k-2%>,i,j) = <%=dir%>G(KE<%=-k-1%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
                    * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KE"-(k+2)) %> )
 <%   end %>
        flux(KE-1,i,j) = 0.0_RP
