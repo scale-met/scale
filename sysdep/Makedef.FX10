@@ -57,9 +57,9 @@ endif
 
 ### Performance monitor
 # disable
-PERF_MONIT = -Ntl_notrt -UFIPP -UFAPP -UFINEPA
+#PERF_MONIT = -Ntl_notrt -UFIPP -UFAPP -UFINEPA
 # fipp
-#PERF_MONIT = -Ntl_trt -DFIPP -UFAPP -UFINEPA
+PERF_MONIT = -Ntl_trt -DFIPP -UFAPP -UFINEPA
 # fapp
 #PERF_MONIT = -Ntl_trt -UFIPP -DFAPP -UFINEPA
 # fine PA
