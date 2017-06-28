@@ -75,12 +75,25 @@ contains
     case('RK2')
        if( IO_L ) write(IO_FID_LOG,*) '+++ 2-stage Runge-Kutta'
 
+       if ( mod(TIME_SSTEP_MAX,2) /= 0 ) then
+          write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*2! STOP.', &
+                     TIME_SSTEP_MAX
+          call PRC_MPIstop
+       endif
+
        num_of_iteration_lstep    = 2
        num_of_iteration_sstep(1) = TIME_SSTEP_MAX / 2
        num_of_iteration_sstep(2) = TIME_SSTEP_MAX
 
     case('RK3')
        if( IO_L ) write(IO_FID_LOG,*) '+++ 3-stage Runge-Kutta'
+
+       if (       mod(TIME_SSTEP_MAX,2) /= 0 &
+            .AND. mod(TIME_SSTEP_MAX,3) /= 0 ) then
+          write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*2*3! STOP.', &
+                     TIME_SSTEP_MAX
+          call PRC_MPIstop
+       endif
 
        num_of_iteration_lstep    = 3
        num_of_iteration_sstep(1) = TIME_SSTEP_MAX / 3
@@ -89,6 +102,14 @@ contains
 
     case('RK4')
        if( IO_L ) write(IO_FID_LOG,*) '+++ 4-stage Runge-Kutta'
+
+       if (       mod(TIME_SSTEP_MAX,2) /= 0 &
+            .AND. mod(TIME_SSTEP_MAX,3) /= 0 &
+            .AND. mod(TIME_SSTEP_MAX,4) /= 0 ) then
+          write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*3*4! STOP.', &
+                     TIME_SSTEP_MAX
+          call PRC_MPIstop
+       endif
 
        num_of_iteration_lstep    = 4
        num_of_iteration_sstep(1) = TIME_SSTEP_MAX / 4
