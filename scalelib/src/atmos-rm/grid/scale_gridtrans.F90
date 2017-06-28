@@ -811,9 +811,6 @@ contains
        do j = 1, JA
        do i = 1, IA
           call MPRJ_lonlat2xy( REAL_LON(i,j), REAL_LAT(i,j), check_X_XY(i,j), check_Y_XY(i,j) )
-          !apply offset
-          check_X_XY(i,j) = check_X_XY(i,j) + GRID_DOMAIN_CENTER_X
-          check_Y_XY(i,j) = check_Y_XY(i,j) + GRID_DOMAIN_CENTER_Y
        enddo
        enddo
 
