@@ -46,10 +46,10 @@
  \verb|&PARAM_ATMOS_DYN  | & \\
  \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|       & ; 時間スキームより選択\\
  \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,| & ; 時間スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = CD4,|       & ; 空間スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|       & ; 空間スキームより選択\\
  \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
  \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|   & ; FCTスキームを利用するかどうか\\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2, |    & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |     & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |     & \\
  \verb|ATMOS_DYN_enable_coriolis            = .true.,|    & \\
  \verb|ATMOS_DYN_wdamp_height                = 15.D3,|    & \\
@@ -80,6 +80,11 @@
   \end{tabularx}
 \end{center}
 \end{table}
+
+力学変数の移流について、SCALEの内部コードにおけるデフォルト値は\nmitem{CD4}となっている。
+この時、地形がある場合にはその直上でグリッドスケールに近い鉛直流が発生することがしばしば確認される。
+これは\nmitem{UD3}を使用することで緩和される。そのため、実験設定としては\nmitem{UD3}を用いることが推奨される。
+\nmitem{UD3}を使う時は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}をゼロに設定する。
 
 トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。
 \nmitem{UD3KOREN1993}は非負保証スキームであるが、
