@@ -103,17 +103,17 @@ run: jobshell
 
 jobshell:
 	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
-		                                 $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
-		                                 $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
-		                                 $(TPROC)                                    \
-		                                 $(DATDIR) $(DATPARAM) $(DATDISTS);          \
+		bash ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
+		                                   $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
+		                                   $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
+		                                   $(TPROC)                                    \
+		                                   $(DATDIR) $(DATPARAM) $(DATDISTS);          \
 	else \
-		sh $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
-		                                                $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
-		                                                $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
-		                                                $(TPROC)                                    \
-		                                                $(DATDIR) $(DATPARAM) $(DATDISTS);          \
+		bash $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
+		                                                  $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
+		                                                  $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
+		                                                  $(TPROC)                                    \
+		                                                  $(DATDIR) $(DATPARAM) $(DATDISTS);          \
 	fi
 
 

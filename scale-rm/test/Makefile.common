@@ -94,17 +94,17 @@ run: jobshell
 
 jobshell:
 	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
-		                                 $(PPNAME) $(INITNAME) $(BINNAME)   \
-		                                 $(PPCONF) $(INITCONF) $(RUNCONF)   \
-		                                 $(TPROC)                           \
-		                                 $(DATDIR) $(DATPARAM) $(DATDISTS); \
+		bash ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
+		                                   $(PPNAME) $(INITNAME) $(BINNAME)   \
+		                                   $(PPCONF) $(INITCONF) $(RUNCONF)   \
+		                                   $(TPROC)                           \
+		                                   $(DATDIR) $(DATPARAM) $(DATDISTS); \
 	else \
-		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
-		                                            $(PPNAME) $(INITNAME) $(BINNAME)   \
-		                                            $(PPCONF) $(INITCONF) $(RUNCONF)   \
-		                                            $(TPROC)                           \
-		                                            $(DATDIR) $(DATPARAM) $(DATDISTS); \
+		bash $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
+		                                              $(PPNAME) $(INITNAME) $(BINNAME)   \
+		                                              $(PPCONF) $(INITCONF) $(RUNCONF)   \
+		                                              $(TPROC)                           \
+		                                              $(DATDIR) $(DATPARAM) $(DATDISTS); \
 	fi
 
 
