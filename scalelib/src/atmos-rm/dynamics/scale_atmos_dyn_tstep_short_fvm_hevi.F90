@@ -153,7 +153,7 @@ contains
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
-       dtrk, dt                                     )
+       dtrk, last                                   )
     use scale_grid_index
     use scale_const, only: &
 #ifdef DRY
@@ -273,7 +273,7 @@ contains
     logical,  intent(in)  :: BND_N
 
     real(RP), intent(in)  :: dtrk
-    real(RP), intent(in)  :: dt
+    logical,  intent(in)  :: last
 
 
     ! diagnostic variables (work space)
@@ -344,7 +344,7 @@ contains
 #endif
 
 #ifdef HIST_TEND
-    lhist = dt .eq. dtrk
+    lhist = last
 #endif
 
 #ifdef PROFILE_FIPP
@@ -464,9 +464,14 @@ contains
 
        !--- update density
        PROFILE_START("hevi_sr")
-       !$omp parallel do default(none) private(i,j,k,advch) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS0,mflx_hi,DENS_t,RCDZ,RCDX,RCDY) &
-       !$omp shared(MAPF,I_XY,GSQRT,I_XYZ,Sr)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advch) &
+#ifdef HIST_TEND
+       !$omp shared(advch_t,lhist) &
+#endif
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
+       !$omp shared(DENS0,Sr,mflx_hi,DENS_t) &
+       !$omp shared(RCDZ,RCDX,RCDY,MAPF,GSQRT,I_XY,I_XYZ)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -542,10 +547,15 @@ contains
 
        !--- update momentum(z)
        PROFILE_START("hevi_sw")
-       !$omp parallel do default(none) private(i,j,k,advcv,advch,cf,wdmp,div) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,qflx_hi,qflx_J13,qflx_J23,DDIV,MOMZ0,MOMZ_t) &
-       !$omp shared(RFDZ,RCDX,RCDY,MAPF,I_XY,wdamp_coef,divdmp_coef,dtrk,FDZ,Sw) &
-       !$omp shared(GSQRT,I_XYW)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advcv,advch,cf,wdmp,div) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,advcv_t,advch_t,wdmp_t,ddiv_t) &
+#endif
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
+       !$omp shared(qflx_hi,qflx_J13,qflx_J23,DDIV,MOMZ0,MOMZ_t,Sw) &
+       !$omp shared(RFDZ,RCDX,RCDY,FDZ,dtrk,wdamp_coef,divdmp_coef) &
+       !$omp shared(MAPF,GSQRT,I_XY,I_XYW)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -634,9 +644,14 @@ contains
 
 
        PROFILE_START("hevi_st")
-       !$omp parallel do default(none) private(i,j,k,advch) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,tflx_hi,RHOT_t,RCDZ,RCDX,RCDY,MAPF,I_XY) &
-       !$omp shared(GSQRT,St,I_XYZ)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advch) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,advch_t) &
+#endif
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
+       !$omp shared(tflx_hi,RHOT_t,St,RCDZ,RCDX,RCDY) &
+       !$omp shared(MAPF,GSQRT,I_XY,I_XYZ)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -674,12 +689,17 @@ contains
 !OCL INDEPENDENT
 !OCL PREFETCH_SEQUENTIAL(SOFT)
 #ifndef __GFORTRAN__
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(B,pg,advcv) &
-       !$omp shared(JJS,JJE,IIS,IIE,PT,MOMZ,POTT,GSQRT,I_XYZ,CDZ,KS,KE,A,dtrk,J33G,RCDZ,RT2P) &
-       !$omp shared(GRAV,F1,I_XYW,F2,F3,DPRES,St,REF_dens,Sr,C,Sw) &
-       !$omp shared(mflx_hi,MAPF,I_XY,MOMZ_RK,MOMZ0,RFDZ) &
-       !$omp shared(RHOT0,DENS_RK,RHOT_RK,DENS0,DENS,ATMOS_DYN_FVM_flux_valueW_Z)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,B,pg,advcv) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,pg_t,advcv_t) &
+#endif
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
+       !$omp shared(mflx_hi,MOMZ_RK,MOMZ0) &
+       !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,PT,POTT,DPRES) &
+       !$omp shared(GRAV,dtrk,A,C,F1,F2,F3,REF_dens,Sr,Sw,St,RT2P) &
+       !$omp shared(ATMOS_DYN_FVM_flux_valueW_Z) &
+       !$omp shared(MAPF,GSQRT,J33G,I_XY,I_XYZ,I_XYW,CDZ,RCDZ,RFDZ)
 #else
        !$omp parallel do default(shared) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(B,pg,advcv)
@@ -855,11 +875,17 @@ contains
 
        !--- update momentum(x)
        iee = min(IIE,IEH)
-       !$omp parallel do default(none) private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,iee,KS,KE,qflx_hi,DPRES,CORIOLI,MOMY,DDIV,MOMX0) &
-       !$omp shared(MOMY0,RCDZ,qflx_J13,qflx_J23,RCDX,RFDY,MAPF,I_XV,GSQRT,I_XYZ,I_XVW,I_XVZ) &
-       !$omp shared(MOMX_t,I_UYZ,dtrk,MOMX_RK,FDX,I_UY,I_XY,divdmp_coef,DENS,I_UV,MOMX,CDZ) &
-       !$omp shared(I_UYW,J13G,RFDX,RCDY,RFDZ)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advch,advcv,pg,cf,div) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,advch_t,advcv_t,pg_t,cf_t,ddiv_t) &
+#endif
+       !$omp shared(JJS,JJE,IIS,iee,KS,KE) &
+       !$omp shared(MOMX_RK,DPRES,DENS,MOMX,MOMY,DDIV,MOMX0,MOMX_t) &
+       !$omp shared(qflx_hi,qflx_J13,qflx_J23) &
+       !$omp shared(RCDZ,RCDY,RFDX,CDZ,FDX) &
+       !$omp shared(MAPF,GSQRT,J13G,I_XY,I_UY,I_UV,I_XYZ,I_UYW,I_UYZ) &
+       !$omp shared(dtrk,CORIOLI,divdmp_coef)
        do j = JJS, JJE
        do i = IIS, iee
        do k = KS, KE
@@ -884,7 +910,7 @@ contains
 #endif
           advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
           advch = - ( ( qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RFDZ(k) &
+                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RCDZ(k) &
                     + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RFDX(i) &
                     + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                 * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
@@ -905,9 +931,9 @@ contains
              + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
              * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) &
              * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
-                 * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RCDX(i) &
+                 * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RFDX(i) &
                    - MOMX(k,i,j) &
-                   * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RFDY(j) ) &
+                   * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RCDY(j) ) &
              * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
           div = divdmp_coef / dtrk * ( DDIV(k,i+1,j)/MAPF(i+1,j,2,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
               * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) * FDX(i) ! divergence damping
@@ -968,10 +994,17 @@ contains
             IIS, IIE, JJS, JJE ) ! (in)
 
        !--- update momentum(y)
-       !$omp parallel do default(none) private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,JEH,IIS,IIE,KS,KE,qflx_hi,DPRES,CORIOLI,MOMX,DDIV,MOMY_t) &
-       !$omp shared(MOMY0,RCDZ,qflx_J13,qflx_J23,RCDX,RFDY,MAPF,I_XV,GSQRT,I_XYZ,I_XVW,I_XVZ) &
-       !$omp shared(dtrk,MOMY_RK,FDY,I_XY,divdmp_coef,DENS,I_UV,MOMY,CDZ,J23G)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advch,advcv,pg,cf,div) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,advch_t,advcv_t,pg_t,cf_t,ddiv_t) &
+#endif
+       !$omp shared(JJS,JJE,JEH,IIS,IIE,KS,KE) &
+       !$omp shared(MOMY_RK,DPRES,DENS,MOMX,MOMY,DDIV,MOMY0,MOMY_t) &
+       !$omp shared(qflx_hi,qflx_J13,qflx_J23) &
+       !$omp shared(RCDZ,RCDX,RFDY,CDZ,FDY) &
+       !$omp shared(MAPF,GSQRT,J23G,I_XY,I_XV,I_UV,I_XYZ,I_XVW,I_XVZ) &
+       !$omp shared(dtrk,CORIOLI,divdmp_coef)
        do j = JJS, min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -1068,7 +1101,7 @@ contains
        call HIST_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient)',  'kg/m2/s2', xdim='half')
        call HIST_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient)',  'kg/m2/s2', ydim='half')
 
-       call HIST_in(wdmp_t (:,:,:),        'MOMZ_t_dwamp', 'tendency of momentum z (Rayleigh damping)',   'kg/m2/s2', zdim='half')
+       call HIST_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Rayleigh damping)',   'kg/m2/s2', zdim='half')
 
        call HIST_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping)', 'kg/m2/s2', zdim='half')
        call HIST_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping)', 'kg/m2/s2', xdim='half')

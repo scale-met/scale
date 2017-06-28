@@ -506,10 +506,13 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(damp) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_QTRC,iq,diff,BND_SMOOTHER_FACT,DENS00) &
-       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
+       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -615,9 +618,13 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(damp) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_DENS,diff,DENS_tq,DENS_t,DENS_tp,BND_SMOOTHER_FACT)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_DENS,diff,DENS_tq,DENS_t,DENS_tp,BND_SMOOTHER_FACT)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -657,9 +664,13 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(damp) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_VELZ,diff,BND_SMOOTHER_FACT,MOMZ_t,MOMZ_tp)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_VELZ,diff,BND_SMOOTHER_FACT,MOMZ_t,MOMZ_tp)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -700,9 +711,13 @@ contains
        enddo
        enddo
 !OCL XFILL
-       !$omp parallel do default(none) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_VELX,diff,BND_SMOOTHER_FACT,MOMX_tp,MOMX_t) &
-       !$omp private(i,j,k,damp) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_VELX,diff,BND_SMOOTHER_FACT,MOMX_tp,MOMX_t)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -741,9 +756,13 @@ contains
        enddo
        enddo
 !OCL XFILL
-       !$omp parallel do default(none) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_VELY,diff,BND_SMOOTHER_FACT,MOMY_tp,MOMY_t) &
-       !$omp private(i,j,k,damp) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_VELY,diff,BND_SMOOTHER_FACT,MOMY_tp,MOMY_t)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -782,9 +801,13 @@ contains
        enddo
        enddo
 !OCL XFILL
-       !$omp parallel do default(none) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,DAMP_alpha_POTT,diff,BND_SMOOTHER_FACT,RHOT_t,RHOT_tp) &
-       !$omp private(i,j,k,damp) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_POTT,diff,BND_SMOOTHER_FACT,RHOT_t,RHOT_tp)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
