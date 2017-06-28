@@ -34,7 +34,7 @@ BINS = $(BINDIR)/$(BINNAME) \
        $(BINDIR)/$(PPNAME9)
 LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-ifneq ($(SCALE_DISABLE_DEPENDENCY),T)
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
 endif
 
@@ -229,7 +229,7 @@ $(BUILD_DIR)/%.o : %.c
 
 include $(TOPDIR)/utils/Make_environments
 
-ifneq ($(SCALE_DISABLE_DEPENDENCY),T)
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend
 endif
 

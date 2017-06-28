@@ -44,23 +44,23 @@ You can enable options below by setting as environment variables, for example,
  % export OPTION_NAME=T
 Switch options will be activated only when the value is "T"
 
-* SCALE_DISABLE_MPI         : Disable to use MPI library (only for util tools)
-* SCALE_DEBUG               : Activate debug option
-* SCALE_QUICKDEBUG          : Activate quick debug option (fast optimization option + fp trap)
-* SCALE_ENABLE_MASSCHECK    : Enable to check mass in dynamics for debug
-* SCALE_USE_SINGLEFP        : Use single floating-point precision
-* SCALE_USE_FIXEDINDEX      : Use fixed size for spatial grid dimension
-* SCALE_ENABLE_OPENMP       : Enable to use OpenMP
-* SCALE_ENABLE_OPENACC      : Enable to use OpenACC
-* SCALE_ENABLE_AGRESSIVEOPT : Enable to use agressive optimization for K/FX
-* SCALE_DISABLE_INTELVEC    : Disable to use vectorization for intel compiler
-* SCALE_ENABLE_PNETCDF      : Enable to use parallel NetCDF
-* SCALE_COMPAT_NETCDF3      : Keep compatibility with NetCDF3
-* SCALE_ENABLE_MATHLIB      : Enable to use MATH library
-* SCALE_ENABLE_PAPI         : Enable to use PAPI library
-* SCALE_DISABLE_LOCALBIN    : Supress to make executables in local directory
-* SCALE_DISABLE_DEPENDENCY  : Ignore source dependency at the compilation
-* SCALE_ENABLE_SDM          : Enable to use Super Droplet Model
+* SCALE_DISABLE_MPI     : Disable to use MPI library (only for util tools)
+* SCALE_DEBUG           : Activate debug option
+* SCALE_QUICKDEBUG      : Activate quick debug option (fast optimization option + fp trap)
+* SCALE_USE_MASSCHECK   : Use check routine for mass in dynamics?
+* SCALE_USE_SINGLEFP    : Use single floating-point precision
+* SCALE_USE_FIXEDINDEX  : Use fixed size for spatial grid dimension
+* SCALE_ENABLE_OPENMP   : Enable to use OpenMP
+* SCALE_ENABLE_OPENACC  : Enable to use OpenACC
+* SCALE_USE_AGRESSIVEOPT: Use agressive options of optimization for K/FX
+* SCALE_DISABLE_INTELVEC: Disable to use vectorization for intel compiler
+* SCALE_ENABLE_PNETCDF  : Enable to use parallel NetCDF
+* SCALE_COMPAT_NETCDF3  : Keep compatibility with NetCDF3
+* SCALE_ENABLE_MATHLIB  : Enable to use MATH library
+* SCALE_ENABLE_PAPI     : Enable to use PAPI library
+* SCALE_DISABLE_LOCALBIN: Supress to make executables in local directory
+* SCALE_IGNORE_SRCDEP   : Ignore source dependency at the compilation
+* SCALE_ENABLE_SDM      : Enable to use Super Droplet Model
 
 If you want to use SCALE_USE_FIXEDINDEX, inc_index.h is required. (see scalelib/include/inc_index.h.sample）
 If you want to use SCALE_ENABLE_MATHLIB, please set SCALE_MATHLIB_LIBS for MATH library path.

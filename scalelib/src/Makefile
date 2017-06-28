@@ -247,7 +247,7 @@ $(LIBDIR)/$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
-ifeq ($(SCALE_DISABLE_DEPENDENCY),T)
+ifeq ($(SCALE_IGNORE_SRCDEP),T)
 modules:
 else
 modules: $(OBJS)
@@ -345,7 +345,7 @@ $(OBJ_DIR)/%.o : %.c
 
 include $(TOPDIR)/utils/Make_environments
 
-ifneq ($(SCALE_DISABLE_DEPENDENCY),T)
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend
 endif
 # DO NOT DELETE

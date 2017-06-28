@@ -34,7 +34,7 @@ ifeq ($(origin INDEX_DIR), undefined)
    INDEX_DIR = $(SCALELIBDIR)/include
 endif
 
-ifeq ($(SCALE_ENABLE_AGRESSIVEOPT),T)
+ifeq ($(SCALE_USE_AGRESSIVEOPT),T)
    FFLAGS = $(FFLAGS_AGGRESSIVE) $(FFLAGS_SYSDEPEND)
    CFLAGS = $(CFLAGS_FAST)       $(CFLAGS_SYSDEPEND)
 else
@@ -59,7 +59,7 @@ ifeq ($(SCALE_USE_SINGLEFP),T)
    FFLAGS += -DSINGLE
 endif
 
-ifeq ($(SCALE_ENABLE_MASSCHECK),T)
+ifeq ($(SCALE_USE_MASSCHECK),T)
    FFLAGS += -DCHECK_MASS
 endif
 

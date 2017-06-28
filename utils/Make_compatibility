@@ -17,7 +17,7 @@ ifneq ($(origin QUICKDEBUG),undefined)
 endif
 
 ifneq ($(origin CHECK_MASS),undefined)
-   SCALE_ENABLE_MASSCHECK ?= $(CHECK_MASS)
+   SCALE_USE_MASSCHECK ?= $(CHECK_MASS)
 endif
 
 ifneq ($(origin SINGLE),undefined)
@@ -37,7 +37,7 @@ ifneq ($(origin ENABLE_OPENACC),undefined)
 endif
 
 ifneq ($(origin AGGRESSIVE),undefined)
-   SCALE_ENABLE_AGRESSIVEOPT ?= $(AGGRESSIVE)
+   SCALE_USE_AGRESSIVEOPT ?= $(AGGRESSIVE)
 endif
 
 ifneq ($(origin DISABLE_VEC),undefined)
@@ -85,7 +85,7 @@ ifneq ($(origin DISABLE_LOCALBIN),undefined)
 endif
 
 ifneq ($(origin IGNOREDEP),undefined)
-   SCALE_DISABLE_DEPENDENCY ?= $(IGNOREDEP)
+   SCALE_IGNORE_SRCDEP ?= $(IGNOREDEP)
 endif
 
 ifneq ($(origin ENABLE_SDM),undefined)

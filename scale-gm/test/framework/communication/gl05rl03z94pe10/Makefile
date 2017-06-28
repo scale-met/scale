@@ -35,7 +35,7 @@ include $(TOPDIR)/Mkinclude
 BINS = $(BINDIR)/$(BINNAME)
 LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-ifneq ($(SCALE_DISABLE_DEPENDENCY),T)
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
 endif
 
@@ -129,6 +129,6 @@ $(BUILD_DIR)/%.o : %.c
 .PHONY : clean distclean allclean dcutils gtool scalelib
 
 
-ifneq ($(SCALE_DISABLE_DEPENDENCY),T)
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include $(TOPDIR)/src/depend
 endif
