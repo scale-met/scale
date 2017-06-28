@@ -12,14 +12,17 @@ do
 
       make run || continue
 
-      sh eval.sh || continue
+      bash eval.sh || continue
 
-      mv lat.png lat_${LAT}-${LON}.png
-      mv lon.png lon_${LAT}-${LON}.png
+      mv lat.png       lat_${LAT}-${LON}.png
+      mv lon.png       lon_${LAT}-${LON}.png
       mv MAPF_X_XY.png MAPF_X_XY_${LAT}-${LON}.png
       mv MAPF_Y_XY.png MAPF_Y_XY_${LAT}-${LON}.png
       mv ROTC_COS.png  ROTC_COS_${LAT}-${LON}.png
       mv ROTC_SIN.png  ROTC_SIN_${LAT}-${LON}.png
+      mv x_xy.png      x_xy_${LAT}-${LON}.png
+      mv y_xy.png      y_xy_${LAT}-${LON}.png
+      mv distance.png  distance_${LAT}-${LON}.png
    fi
 done
 done
