@@ -104,9 +104,12 @@ contains
   subroutine ATMOS_PHY_SF_setup( SF_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use NAME(scale_atmos_phy_, SF,), only: &
-       NAME(ATMOS_PHY_, SF, _setup), &
-       NAME(ATMOS_PHY_, SF,)
+    use scale_atmos_phy_sf_const, only: &
+       ATMOS_PHY_SF_const_setup, &
+       ATMOS_PHY_SF_const
+    use scale_atmos_phy_sf_bulk, only: &
+       ATMOS_PHY_SF_bulk_setup, &
+       ATMOS_PHY_SF_bulk
     implicit none
 
     character(len=*), intent(in) :: SF_TYPE
