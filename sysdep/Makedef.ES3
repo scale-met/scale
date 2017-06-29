@@ -38,11 +38,7 @@ CFLAGS_DEBUG = $(CFLAGS_FAST)
 
 ##### Special setting
 
-ifeq ($(SCALE_ENABLE_OPENMP),T)
-	OMP = -P openmp
-else
-	OMP =
-endif
+FFLAGS_OPENMP = -P openmp
 
 ### Performance monitor
 # disable
@@ -50,8 +46,8 @@ PERF_MONIT = -Nftrace
 # enable
 #PERF_MONIT = -ftrace
 
-FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) -DSX
-CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) -DSX
+FFLAGS_SYSDEPEND = $(PERF_MONIT) -DSX
+CFLAGS_SYSDEPEND = $(PERF_MONIT) -DSX
 
 
 

@@ -42,16 +42,12 @@ CFLAGS_DEBUG = -O0 -m64 -g
 
 ##### Special setting
 
-ifeq ($(SCALE_ENABLE_OPENMP),T)
-	OMP = -fopenmp
-else
-	OMP =
-endif
+FFLAGS_OPENMP = -fopenmp
 
 SSE_FLAGS = -mtune=native
 
-FFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
-CFLAGS_SYSDEPEND = $(OMP) $(SSE_FLAGS)
+FFLAGS_SYSDEPEND = $(SSE_FLAGS)
+CFLAGS_SYSDEPEND = $(SSE_FLAGS)
 
 
 

@@ -40,20 +40,12 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
-ifeq ($(SCALE_ENABLE_OPENMP),T)
-	OMP = -mp
-else
-	OMP =
-endif
+FFLAGS_OPENMP = -mp
 
-ifeq ($(SCALE_ENABLE_OPENACC),T)
-	ACC = -acc -ta=tesla,cuda8.0,cc60 -Mcuda -Minfo=accel
-else
-	ACC =
-endif
+FFLAGS_OPENACC = -acc -ta=tesla,cuda8.0,cc60 -Mcuda -Minfo=accel
 
-FFLAGS_SYSDEPEND = $(OMP) $(ACC) -DPGI
-CFLAGS_SYSDEPEND = $(OMP) $(ACC) -DPGI
+FFLAGS_SYSDEPEND = -DPGI
+CFLAGS_SYSDEPEND = -DPGI
 
 
 

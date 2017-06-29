@@ -47,13 +47,9 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
-ifeq ($(SCALE_ENABLE_OPENMP),T)
-	OMP = -Kopenmp
+FFLAGS_OPENMP = -Kopenmp
 # enable + disable parallel
-#  OMP = -Kopenmp,noparallel
-else
-	OMP =
-endif
+# FFLAGS_OPENMP = -Kopenmp,noparallel
 
 ### Performance monitor
 # disable
@@ -65,8 +61,8 @@ PERF_MONIT = -Ntl_trt -DFIPP -UFAPP -UFINEPA
 # fine PA
 #PERF_MONIT = -Ntl_trt -UFIPP -UFAPP -DFINEPA
 
-FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT)
-CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT)
+FFLAGS_SYSDEPEND = $(PERF_MONIT)
+CFLAGS_SYSDEPEND = $(PERF_MONIT)
 
 
 

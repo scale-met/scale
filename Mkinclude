@@ -63,6 +63,14 @@ ifeq ($(SCALE_USE_MASSCHECK),T)
    FFLAGS += -DCHECK_MASS
 endif
 
+ifeq ($(SCALE_ENABLE_OPENMP),T)
+   FFLAGS += $(FFLAGS_OPENMP)
+endif
+
+ifeq ($(SCALE_ENABLE_OPENACC),T)
+   FFLAGS += $(FFLAGS_OPENACC)
+endif
+
 # NetCDF library setting
 # library location are inquired in order of: environment variable->Makedef.XXX->here
 SCALE_NETCDF_INCLUDE ?= $(shell nf-config --fflags) $(shell nc-config --cflags)

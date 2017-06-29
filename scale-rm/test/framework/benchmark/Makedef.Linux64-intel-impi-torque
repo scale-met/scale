@@ -41,18 +41,14 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
-ifeq ($(SCALE_ENABLE_OPENMP),T)
-	OMP = -openmp
-else
-	OMP =
-endif
+FFLAGS_OPENMP = -openmp -no-heap-arrays
 
 ifeq ($(SCALE_DISABLE_INTELVEC),T)
    NOVEC = -no-vec
 endif
 
-FFLAGS_SYSDEPEND = $(OMP) $(NOVEC)
-CFLAGS_SYSDEPEND = $(OMP)
+FFLAGS_SYSDEPEND = $(NOVEC)
+CFLAGS_SYSDEPEND =
 
 FFLAGS_TENTATIVE = -no-ip -no-ipo
 
