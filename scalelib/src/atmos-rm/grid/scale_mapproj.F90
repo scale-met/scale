@@ -637,7 +637,7 @@ contains
     if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
     if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
-    latrot = 0.5_DP*PI - lat
+    latrot = 0.5_DP*PI - MPRJ_hemisphere * lat
 
     dist = MPRJ_LC_fact * RADIUS * tan(0.5_DP*latrot)**MPRJ_LC_c
 
@@ -820,7 +820,7 @@ contains
 
     dlon = lon - MPRJ_basepoint_lon * D2R
 
-    latrot = 0.5_DP*PI - lat
+    latrot = 0.5_DP*PI - MPRJ_hemisphere * lat
 
     dist = MPRJ_PS_fact * RADIUS * tan(0.5_DP*latrot)
 
