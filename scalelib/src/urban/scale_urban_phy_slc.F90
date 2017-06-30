@@ -827,6 +827,7 @@ contains
     real(RP) :: LHV                              ! latent heat of vaporization [J/kg]
     real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
+    real(RP) :: EXN  ! exner function at the surface
 
     integer  :: iteration
 
@@ -945,6 +946,9 @@ contains
 
     end if
 
+
+    EXN = ( PRSS / PRE00 )**RovCP ! exner function
+
     !-----------------------------------------------------------
     ! Energy balance on roof/wall/road surface
     !-----------------------------------------------------------
@@ -960,7 +964,7 @@ contains
      resi1p = 0.0_RP
      do iteration = 1, 100
 
-      THS   = TR * ( PRE00 / PRSS )**RovCP   ! potential temp
+      THS   = TR / EXN ! potential temp
 
       Z    = ZA - ZDC
       BHR  = LOG(Z0R/Z0HR) / 0.4_RP
@@ -971,7 +975,7 @@ contains
 
       RR    = EPSR * ( RX - STB * (TR**4)  )
       !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
-      HR    = RHOO * CPdry * CHR * UA * (THS-THA)
+      HR    = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
       ELER  = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
       G0R   = SR + RR - HR - ELER
 
@@ -1049,14 +1053,14 @@ contains
      endif
 
     !--- update only fluxes ----
-     THS   = TR * ( PRE00 / PRSS )**RovCP
+     THS   = TR / EXN
      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
      call qsat( QS0R, TR, PRSS )
 
      RR      = EPSR * ( RX - STB * (TR**4) )
-     HR      = RHOO * CPdry * CHR * UA * (THS-THA)
+     HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
      ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
 
@@ -1097,9 +1101,9 @@ contains
 
      do iteration = 1, 200
 
-      THS1   = TB * ( PRE00 / PRSS )**RovCP
-      THS2   = TG * ( PRE00 / PRSS )**RovCP
-      THC    = TC * ( PRE00 / PRSS )**RovCP
+      THS1   = TB / EXN
+      THS2   = TG / EXN
+      THC    = TC / EXN
 
       Z    = ZA - ZDC
       BHC  = LOG(Z0C/Z0HC) / 0.4_RP
@@ -1140,11 +1144,11 @@ contains
       RG    = RG1 + RG2
       RB    = RB1 + RB2
 
-      HB    = RHOO * CPdry * CHB * UC * (THS1-THC)
+      HB    = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
       ELEB  = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
       G0B   = SB + RB - HB - ELEB
 
-      HG    = RHOO * CPdry * CHG * UC * (THS2-THC)
+      HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
       ELEG  = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
       G0G   = SG + RG - HG - ELEG
 
@@ -1199,14 +1203,14 @@ contains
       call qsat( QS0B, TB, PRSS )
       call qsat( QS0G, TG, PRSS )
 
-      THS1   = TB * ( PRE00 / PRSS )**RovCP
-      THS2   = TG * ( PRE00 / PRSS )**RovCP
+      THS1   = TB / EXN
+      THS2   = TG / EXN
 
       TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       !TC2    =  RW*ALPHAC*THA + RW*ALPHAG*TG + W*ALPHAB*TB
       TC2    =  RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
       THC    =  TC2 / TC1
-      TC = THC * ( PRSS / PRE00 )**RovCP
+      TC = THC * EXN
 
       QC1    =  RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
       QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
@@ -1290,15 +1294,15 @@ contains
      RG       = RG1 + RG2
      RB       = RB1 + RB2
 
-     THS1   = TB * ( PRE00 / PRSS )**RovCP
-     THS2   = TG * ( PRE00 / PRSS )**RovCP
-     THC    = TC * ( PRE00 / PRSS )**RovCP
+     THS1   = TB / EXN
+     THS2   = TG / EXN
+     THC    = TC / EXN
 
-     HB   = RHOO * CPdry * CHB * UC * (THS1-THC)
+     HB   = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
      ELEB = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
      G0B  = SB + RB - HB - ELEB
 
-     HG   = RHOO * CPdry * CHG * UC * (THS2-THC)
+     HG   = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
      ELEG = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
 

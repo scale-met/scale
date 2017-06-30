@@ -117,6 +117,7 @@ contains
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
+       PRE00 => CONST_PRE00, &
        CPdry => CONST_CPdry, &
        Rdry  => CONST_Rdry
     use scale_atmos_hydrometeor, only: &
@@ -242,8 +243,9 @@ contains
        SFLX_MV(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_V(i,j)
 
        !-----< heat flux >-----
-       SFLX_SH(i,j) = -CPdry    * ATM_DENS(i,j) * Ustar * Tstar
-       SFLX_LH(i,j) = -LHV(i,j) * ATM_DENS(i,j) * Ustar * Qstar
+       SFLX_SH(i,j) = - ATM_DENS(i,j) * Ustar * Tstar &
+                    * CPdry * ( SFC_PRES(i,j) / PRE00 )**( Rdry/CPdry )
+       SFLX_LH(i,j) = - ATM_DENS(i,j) * Ustar * Qstar * LHV(i,j)
 
        !-----< mass flux >-----
        if ( I_QV > 0 ) then
