@@ -56,7 +56,7 @@ module mod_oprt
   !
   !++ Public parameters & variables
   !
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
 !  real(RP), public              :: OPRT_coef_div    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   )
 !  real(RP), public              :: OPRT_coef_div_pl (ADM_nxyz,         0:vlink,ADM_lall_pl)
 !  real(RP), public              :: OPRT_coef_rot    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   )
@@ -150,7 +150,7 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=OPRTPARAM)
 
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
 !    allocate( OPRT_coef_div    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   ) )
 !    allocate( OPRT_coef_div_pl (ADM_nxyz,         0:vlink,ADM_lall_pl) )
 !    allocate( OPRT_coef_rot    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   ) )

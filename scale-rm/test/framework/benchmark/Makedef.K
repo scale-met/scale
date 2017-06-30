@@ -5,7 +5,7 @@
 ################################################################################
 
 ##### Fortran setting
-#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 FC  = mpifrtpx
 SFC = frtpx
@@ -36,7 +36,7 @@ FFLAGS_DEBUG = -O0                                                       \
 
 
 ##### C setting
-#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 CC = mpifccpx
 
@@ -47,32 +47,22 @@ CFLAGS_DEBUG = -O0
 
 ##### Special setting
 
-# OpenMP
-# disable
-OMP =
-# enable
-#OMP = -Kopenmp
+FFLAGS_OPENMP = -Kopenmp
 # enable + disable parallel
-#OMP = -Kopenmp,noparallel
+# FFLAGS_OPENMP = -Kopenmp,noparallel
 
 ### Performance monitor
 # disable
-#PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
+#PERF_MONIT = -Ntl_notrt -UFIPP -UFAPP -UFINEPA
 # fipp
-PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_ -U_FINEPA_
+PERF_MONIT = -Ntl_trt -DFIPP -UFAPP -UFINEPA
 # fapp
-#PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_ -U_FINEPA_
+#PERF_MONIT = -Ntl_trt -UFIPP -DFAPP -UFINEPA
 # fine PA
-#PERF_MONIT = -Ntl_trt -U_FIPP_ -U_FAPP_ -D_FINEPA_
+#PERF_MONIT = -Ntl_trt -UFIPP -UFAPP -DFINEPA
 
-# RDMA
-# disable
-RDMA = -U_USE_RDMA
-# enable
-#RDMA = -D_USE_RDMA
-
-FFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) $(RDMA)
-CFLAGS_SYSDEPEND = $(OMP) $(PERF_MONIT) $(RDMA)
+FFLAGS_SYSDEPEND = $(PERF_MONIT)
+CFLAGS_SYSDEPEND = $(PERF_MONIT)
 
 
 
@@ -87,20 +77,20 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 # Default settings
-NETCDF_INCLUDE ?= -I/opt/aics/scale/include -I/opt/aics/netcdf/k-serial-noszip/include
-NETCDF_LIBS    ?= -L/opt/aics/scale/lib -L/opt/aics/netcdf/k-serial-noszip/lib-static -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
-ENABLE_PNETCDF ?= T
+SCALE_NETCDF_INCLUDE ?= -I/opt/aics/scale/include -I/opt/aics/netcdf/k-serial-noszip/include
+SCALE_NETCDF_LIBS    ?= -L/opt/aics/scale/lib -L/opt/aics/netcdf/k-serial-noszip/lib-static -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+SCALE_ENABLE_PNETCDF ?= T
 # Or, please set environment variable
 # example:
-# export NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"
-# export NETCDF_LIBS="-L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm"
+# export SCALE_NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"
+# export SCALE_NETCDF_LIBS="-L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm"
 
-###### Lapack library
+###### Math library
 # Default settings
-LAPACK_LIBS    ?=
+SCALE_MATHLIB_LIBS ?=
 # Or, please set environment variable
 # example:
-# export LAPACK_LIBS="-SSL2"
+# export SCALE_MATHLIB_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

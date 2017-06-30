@@ -179,17 +179,14 @@ Linux OS、GNUコンパイラ、openMPIを使用する場合には、
 各種ライブラリのインストールを
 付録\ref{achap:env_setting}章に従って行った場合を除き、
 下記のPATHの設定が必要となる。
-HDF5とnetCDF4については、下記のように環境変数を設定する。
+HDF5とNetCDF4については、下記のように環境変数を設定する。
 例えば、Intel コンパイラを利用して、
-HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
+HDF5を\verb"/opt/hdf5"、NetCDF4を\verb|/opt/netcdf|に
 それぞれインストールした場合の例を示す。
 適宜、各自の環境に応じて読み替えて設定すること。
 \begin{verbatim}
- $ export HDF5="/opt/hdf5"
- $ export NETCDF4="/opt/netcdf"
- $ export NETCDF_INCLUDE="-I/opt/netcdf/include"
- $ export NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 \
-      -lnetcdff -hdf5_hl -lhdf5 -lm -lz"
+ $ export SCALE_NETCDF_INCLUDE="-I/opt/netcdf/include"
+ $ export SCALE_NETCDF_LIBS="-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -lnetcdf -hdf5_hl -lhdf5 -lm -lz"
 \end{verbatim}
 
 
@@ -232,7 +229,7 @@ HDF5を\verb"/opt/hdf5"、netCDF4を\verb|/opt/netcdf|に
  \scalerm は、コンパイルを実行したディレクトリの下の
  \verb|".lib"|という名前の隠しディレクトリの中にコンパイルされたオブジェクトファイルが置かれる。
 % 実行バイナリファイルはカレントディレクトリにコピーされる。
-\item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 DEBUG=T"|としてコンパイルする。
+\item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 SCALE_DEBUG=T"|としてコンパイルする。
 \item 細かくコンパイルオプションを変更したい場合は、\verb|Makedef.***|のファイルを編集する。
 \end{itemize}
 
@@ -268,7 +265,7 @@ MPIライブラリを用いた並列実行を行うためのバイナリは、
 \end{alltt}
 MPIライブラリが無い場合など、逐次実行バイナリを生成するためには、
 \begin{alltt}
- $ make -j 2 NOMPI=T
+ $ make -j 2 SCALE_DISABLE_MPI=T
 \end{alltt}
 としてコンパイルを行う。
 \verb|net2g|という名前の実行ファイルが生成されていればコンパイルは成功である。\\

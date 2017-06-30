@@ -56,7 +56,7 @@ module dc_log
   integer, private :: LOG_ilevel = LOG_INFO
 
   logical, private :: LOG_master
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
   logical, public :: LOG_master_nml
 #else
   logical, private :: LOG_master_nml
@@ -128,7 +128,7 @@ contains
        LOG_fid_nml = fid_nml
     end if
 
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
     if ( LOG_master_nml ) write(LOG_fid_nml,nml=PARAM_DC_LOG)
 #else
     write(message,nml=PARAM_DC_LOG)

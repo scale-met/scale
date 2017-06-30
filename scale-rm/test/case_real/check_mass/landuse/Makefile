@@ -28,7 +28,7 @@ DATPARAM    =
 DATDISTS    =
 
 
-export CHECK_MASS = T
+export SCALE_USE_MASSCHECK = T
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common

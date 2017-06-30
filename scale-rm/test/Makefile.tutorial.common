@@ -10,18 +10,18 @@ endif
 
 msg1 = "\n"
 
-ifeq ($(ENABLE_FIXEDINDEX),T)
-   msg1       += "ENABLE_FIXEDINDEX is set.\n"
+ifeq ($(SCALE_DEBUG),T)
+   msg1       += "SCALE_DEBUG is set.\n"
    USELOCALBIN = T
 endif
 
-ifeq ($(DEBUG),T)
-   msg1       += "DEBUG is set.\n"
+ifeq ($(SCALE_USE_SINGLEFP),T)
+   msg1       += "SCALE_USE_SINGLEFP is set.\n"
    USELOCALBIN = T
 endif
 
-ifeq ($(SINGLE),T)
-   msg1       += "SINGLE is set.\n"
+ifeq ($(SCALE_USE_FIXEDINDEX),T)
+   msg1       += "SCALE_USE_FIXEDINDEX is set.\n"
    USELOCALBIN = T
 endif
 
@@ -30,7 +30,7 @@ ifneq ($(ORG_SRCS),)
    USELOCALBIN = T
 endif
 
-ifeq ($(DISABLE_LOCALBIN),T)
+ifeq ($(SCALE_DISABLE_LOCALBIN),T)
    USELOCALBIN = F
 endif
 
@@ -103,17 +103,17 @@ run: jobshell
 
 jobshell:
 	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
-		                                 $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
-		                                 $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
-		                                 $(TPROC)                                    \
-		                                 $(DATDIR) $(DATPARAM) $(DATDISTS);          \
+		bash ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
+		                                   $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
+		                                   $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
+		                                   $(TPROC)                                    \
+		                                   $(DATDIR) $(DATPARAM) $(DATDISTS);          \
 	else \
-		sh $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
-		                                                $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
-		                                                $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
-		                                                $(TPROC)                                    \
-		                                                $(DATDIR) $(DATPARAM) $(DATDISTS);          \
+		bash $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) ${UTILDIR}                        \
+		                                                  $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
+		                                                  $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
+		                                                  $(TPROC)                                    \
+		                                                  $(DATDIR) $(DATPARAM) $(DATDISTS);          \
 	fi
 
 

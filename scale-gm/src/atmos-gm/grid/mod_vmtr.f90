@@ -68,7 +68,7 @@ module mod_vmtr
   integer, public, parameter :: I_a_GZZH = 5
   integer, public, parameter :: I_b_GZZH = 6
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public              :: VMTR_GAM2H       (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
   real(RP), public              :: VMTR_GAM2H_pl    (ADM_gall_pl      ,ADM_kall,ADM_lall_pl)
   real(RP), public              :: VMTR_GSGAM2      (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
@@ -242,7 +242,7 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=VMTRPARAM)
 
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     allocate( VMTR_GAM2H       (ADM_iall,ADM_jall,ADM_kall,ADM_lall   ) )
     allocate( VMTR_GAM2H_pl    (ADM_gall_pl      ,ADM_kall,ADM_lall_pl) )
     allocate( VMTR_GSGAM2      (ADM_iall,ADM_jall,ADM_kall,ADM_lall   ) )

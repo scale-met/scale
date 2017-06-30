@@ -36,7 +36,7 @@ module scale_grid_index
   integer, public, parameter :: XDIR  = 2
   integer, public, parameter :: YDIR  = 3
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   include "inc_index.h"
   include "inc_index_common.h"
 #else
@@ -123,7 +123,7 @@ contains
        PRC_HAS_N
     implicit none
 
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     namelist / PARAM_INDEX / &
        IMAXG,  &
        JMAXG,  &
@@ -142,7 +142,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** fixed index mode'

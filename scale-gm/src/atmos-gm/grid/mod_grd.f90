@@ -83,7 +83,7 @@ module mod_grd
   !
   real(RP), public              :: GRD_rscale ! scaling factor for the radius of the sphere
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public              :: GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz)
   real(RP), public              :: GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
   real(RP), public              :: GRD_xt   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz)
@@ -114,7 +114,7 @@ module mod_grd
   !====== Topography ======
   integer,  public, parameter   :: GRD_ZSFC = 1
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public              :: GRD_zs   (ADM_gall   ,ADM_KNONE,ADM_lall   ,GRD_ZSFC)
   real(RP), public              :: GRD_zs_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,GRD_ZSFC)
 #else
@@ -144,7 +144,7 @@ module mod_grd
 
   real(RP), public              :: GRD_htop ! model top height [m]
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public              :: GRD_gz   (ADM_kall)
   real(RP), public              :: GRD_gzh  (ADM_kall)
   real(RP), public              :: GRD_dgz  (ADM_kall)
@@ -266,7 +266,7 @@ contains
 
 
     !---< horizontal grid >---
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     allocate( GRD_x    (ADM_gall   ,k0,ADM_lall   ,              ADM_nxyz) )
     allocate( GRD_x_pl (ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
     allocate( GRD_xt   (ADM_gall   ,k0,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )
@@ -314,7 +314,7 @@ contains
 
 
     !---< surface height >---
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     allocate( GRD_zs   (ADM_gall,   k0,ADM_lall,   GRD_ZSFC) )
     allocate( GRD_zs_pl(ADM_gall_pl,k0,ADM_lall_pl,GRD_ZSFC) )
 #endif
@@ -327,7 +327,7 @@ contains
 
     !---< vertical coordinate >---
     if ( ADM_kall /= ADM_KNONE ) then
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
        allocate( GRD_gz   (ADM_kall) )
        allocate( GRD_gzh  (ADM_kall) )
        allocate( GRD_dgz  (ADM_kall) )

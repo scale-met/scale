@@ -124,13 +124,6 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
-#ifdef HEVI_BICGSTAB
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
-#elif defined(HEVI_LAPACK)
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
-#else
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
-#endif
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi_setup
@@ -328,7 +321,7 @@ contains
     qflx_J23(:,:,:)   = UNDEF
 #endif
 
-#ifdef QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
     DENS_RK(   1:KS-1,:,:)   = UNDEF
     DENS_RK(KE+1:KA  ,:,:)   = UNDEF
     MOMZ_RK(   1:KS-1,:,:)   = UNDEF
@@ -387,7 +380,7 @@ contains
        PROFILE_START("hevi_mflx_z")
        ! at (x, y, w)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,GSQRT,I_XYW,MOMX,MOMY,J13G,J23G,mflx_hi,MAPF,I_XY,num_diff) 
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,GSQRT,I_XYW,MOMX,MOMY,J13G,J23G,mflx_hi,MAPF,I_XY,num_diff)
        do j = JJS, JJE
        do i = IIS-1, IIE
           mflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
@@ -423,7 +416,7 @@ contains
        iee = min(IIE,IEH)
        ! at (u, y, z)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,iss,iee,KS,KE,GSQRT,I_UYZ,MOMX,num_diff,mflx_hi,MAPF,I_UY) 
+       !$omp shared(JJS,JJE,iss,iee,KS,KE,GSQRT,I_UYZ,MOMX,num_diff,mflx_hi,MAPF,I_UY)
        do j = JJS, JJE
        do i = iss, iee
        do k = KS, KE
@@ -444,7 +437,7 @@ contains
 
        ! at (x, v, z)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JS,JFS_OFF,JJE,JEH,IIS,IIE,KS,KE,GSQRT,I_XVZ,MOMY,num_diff,mflx_hi,MAPF,I_XV) 
+       !$omp shared(JJS,JS,JFS_OFF,JJE,JEH,IIS,IIE,KS,KE,GSQRT,I_XVZ,MOMY,num_diff,mflx_hi,MAPF,I_XV)
        do j = max(JJS-1,JS-JFS_OFF), min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -739,22 +732,9 @@ contains
 #endif
           enddo
 
-#ifdef HEVI_BICGSTAB
-          call solve_bicgstab( &
-               C(:,i,j),         & ! (inout)
-               F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
-#elif defined(HEVI_LAPACK)
-          call solve_lapack( &
-               C(:,i,j),        & ! (inout)
-#ifdef DEBUG
-               i, j,      & ! (in)
-#endif
-               F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
-#else
           call solve_direct( &
                C(:,i,j),        & ! (inout)
                F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
-#endif
 
           do k = KS, KE-1
 #ifdef DEBUG_HEVI2HEVE
@@ -1114,232 +1094,6 @@ contains
 
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi
 
-#ifdef HEVI_BICGSTAB
-!OCL SERIAL
-  subroutine solve_bicgstab( &
-       C,        & ! (inout)
-       F1, F2, F3 ) ! (in)
-
-    use scale_process, only: &
-       PRC_MPIstop
-    implicit none
-    real(RP), intent(inout) :: C(KMAX-1)
-    real(RP), intent(in)    :: F1(KA)
-    real(RP), intent(in)    :: F2(KA)
-    real(RP), intent(in)    :: F3(KA)
-
-    real(RP) :: r0(KMAX-1)
-
-    real(RP) :: M(3,KMAX-1)
-    real(RP) :: p(KMAX-1)
-    real(RP) :: ap(KMAX-1)
-    real(RP) :: s(KMAX-1)
-    real(RP) :: as(KMAX-1)
-    real(RP) :: al, be, w
-
-    real(RP), pointer :: r(:)
-    real(RP), pointer :: rn(:)
-    real(RP), pointer :: swap(:)
-    real(RP), target :: v0(KMAX-1)
-    real(RP), target :: v1(KMAX-1)
-    real(RP) :: r0r
-    real(RP) :: norm, error, epsilon
-
-    integer :: k, iter
-
-    epsilon = 0.1_RP**(RP-1)
-
-    M(3,1) = F1(KS)
-    M(2,1) = F2(KS)
-    do k = KS+1, KE-2
-       M(3,k-KS+1) = F1(k)
-       M(2,k-KS+1) = F2(k)
-       M(1,k-KS+1) = F3(k)
-    enddo
-    M(2,KE-KS) = F2(KE-1)
-    M(1,KE-KS) = F3(KE-1)
-
-    norm = 0.0_RP
-    do k = 1, KMAX-1
-       norm = norm + C(k)**2
-    enddo
-
-    r  => v0
-    rn => v1
-
-    call mul_matrix( v1, M, C )
-
-    do k = 1, KMAX-1
-       r(k) = C(k) - v1(k)
-       r0(k) = r(k)
-       p(k) = r(k)
-    enddo
-
-    r0r = r0(1) * r(1)
-    do k = 2, KMAX-1
-       r0r = r0r + r0(k)*r(k)
-    enddo
-    do iter = 1, KMAX-1
-       error = 0.0_RP
-       do k = 1, KMAX-1
-          error = error + r(k)**2
-       enddo
-
-!       if ( error < epsilon .OR. error / norm < epsilon ) then
-       if ( error/norm < epsilon ) then
-#ifdef DEBUG
-!          write(*,*) "Bi-CGSTAB converged:", iter
-#endif
-          exit
-       endif
-
-       call mul_matrix( ap, M, p )
-       al = r0(1) * ap(1)
-       do k = 2, KMAX-1
-          al = al + r0(k)*ap(k)
-       enddo
-       al = r0r / al ! (r0,r) / (r0,Mp)
-       s(:) = r(:) - al*ap(:)
-       call mul_matrix( as, M, s )
-       be = as(1) * s(1)  ! be is used as just work variable here
-       w =  as(1) * as(1)
-       do k = 2, KMAX-1
-          be = be + as(k)*s(k)
-          w  = w  + as(k)*as(k)
-       enddo
-       w = be / w ! (as,s) / (as,as)
-
-       c(:) = c(:) + al*p(:) + w*s(:)
-       rn(:) = s(:) - w*as(:)
-       be = al/w / r0r
-       r0r = r0(1) * rn(1)
-       do k = 2, KMAX-1
-          r0r = r0r + r0(k)*rn(k)
-       enddo
-       be = be * r0r ! al/w * (r0,rn)/(r0,r)
-       p(:) = rn(:) + be * ( p(:) - w*ap(:) )
-
-       swap => rn
-       rn => r
-       r => swap
-    enddo
-
-    if ( iter >= KMAX-1 ) then
-       write(*,*) 'xxx [atmos_dyn_hevi] Bi-CGSTAB'
-       write(*,*) 'xxx not converged', error, norm
-       call PRC_MPIstop
-    endif
-
-    return
-  end subroutine solve_bicgstab
-
-  subroutine mul_matrix(V, M, C)
-    implicit none
-    real(RP), intent(out) :: V(KMAX-1)
-    real(RP), intent(in)  :: M(3, KMAX-1)
-    real(RP), intent(in)  :: C(KMAX-1)
-
-    integer :: k
-
-    ! k = 1
-    V(1) = M(3,1)*C(2) + M(2,1)*C(1)
-    do k = 2, KMAX-2
-       V(k) = M(3,k)*C(k+1) + M(2,k)*C(k) + M(1,k)*C(k-1)
-    enddo
-    ! k = KE-1
-    V(KMAX-1) = M(2,KMAX-1)*C(KMAX-1) + M(1,KMAX-1)*C(KMAX-2)
-
-    return
-  end subroutine mul_matrix
-
-#elif defined(HEVI_LAPACK)
-!OCL SERIAL
-  subroutine solve_lapack( &
-       C,   & ! (inout)
-#ifdef DEBUG
-       i, j, &
-#endif
-       F1, F2, F3 ) ! (in)
-    use scale_process, only: &
-         PRC_MPIstop
-    implicit none
-
-    real(RP), intent(inout) :: C(KMAX-1)
-    real(RP), intent(in)    :: F1(KA)
-    real(RP), intent(in)    :: F2(KA)
-    real(RP), intent(in)    :: F3(KA)
-#ifdef DEBUG
-    integer , intent(in)    :: i
-    integer , intent(in)    :: j
-#endif
-
-    real(RP) :: M(NB*3+1,KMAX-1)
-    integer  :: IPIV(KMAX-1)
-    integer  :: INFO
-
-    integer :: k
-
-#ifdef DEBUG
-    real(RP) :: M2(KMAX-1,KMAX-1)
-    real(RP) :: C2(KMAX-1)
-    real(RP) :: sum
-#endif
-
-
-    ! band matrix
-    do k = KS+1, KE-2
-       ! k-1, +1
-       M(NB+1,k-KS+1) = F1(k-1)
-       ! k, 0
-       M(NB+2,k-KS+1) = F2(k)
-       ! k+1, -1
-       M(NB+3,k-KS+1) = F3(k+1)
-    enddo
-    ! KS, 0
-    M(NB+2,1    ) = F2(KS)
-    ! KS+1, -1
-    M(NB+3,1    ) = F3(KS+1)
-    ! KE-2, +1
-    M(NB+1,KE-KS) = F1(KE-2)
-    ! KE-1, 0
-    M(NB+2,KE-KS) = F2(KE-1)
-
-#ifdef DEBUG
-          M2(:,:) = 0.0_RP
-          do k = 1, KMAX-1
-             if (k>1) M2(k-1,k) = M(NB+3,k-1)
-             M2(k,k) = M(NB+2,k)
-             if (k<kmax-1) M2(k+1,k) = M(NB+1,k+1)
-             c2(k) = c(k)
-          enddo
-#endif
-          if ( RP == DP ) then
-             call DGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
-          else
-             call SGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
-          endif
-          ! C is (\rho w)^{n+1}
-#ifdef DEBUG
-          if ( INFO /= 0 ) then
-             write(*,*) "DGBSV was failed", info
-             call PRC_MPIstop
-          endif
-
-          do k = 1, KMAX-1
-             sum = 0.0_RP
-             if (k>1) sum = sum + M2(k-1,k)*c(k-1)
-             sum = sum + M2(k,k)*c(k)
-             if (k<kmax-1) sum = sum + M2(k+1,k)*c(k+1)
-             if ( abs(sum-c2(k)) > 1E-10_RP ) then
-                write(*,*) "sum is different"
-                write(*,*) k+2, i, j, sum, c2(k)
-!                write(*,*) M2(k-1:k+1,k), c(k-1:k+1)
-                call PRC_MPIstop
-             endif
-          enddo
-#endif
-  end subroutine solve_lapack
-#else
 !OCL SERIAL
   subroutine solve_direct( &
        C,         & ! (inout)
@@ -1378,8 +1132,6 @@ contains
 
     return
   end subroutine solve_direct
-
-#endif
 
 #ifdef DEBUG
   subroutine check_equation( &

@@ -379,7 +379,7 @@ contains
     temp(:,:,:) = UNDEF
 #endif
 
-#ifdef QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
     qflx_sgs_momz(KS:KE,   1:IS-1,    :    ,:) = UNDEF
     qflx_sgs_momz(KS:KE,IE+1:IA  ,    :    ,:) = UNDEF
     qflx_sgs_momz(KS:KE,    :    ,   1:JS-1,:) = UNDEF
@@ -639,7 +639,7 @@ contains
                    q, q2_2, & ! (in)
                    l, n2, dudz2 ) ! (in)
 
-#ifdef QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
     do j = 1, JS-1
     do i = 1, IA
     do k = KS, KE
@@ -696,7 +696,7 @@ contains
                        1e-10_RP )
           Q1 = aa * ( Qw(k,i,j) - Qsl(k) ) * 0.5_RP / sigma_s
           RR = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
           Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) ), & ! apply exp limiter
 #else
           Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp(-0.5_RP*Q1**2) ), &
@@ -705,7 +705,7 @@ contains
                     Qw(k,i,j) * 0.5_RP )
           cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * LHVL(k) / CPtot &
                - (1.0_RP+EPSTvap) * POTT(k,i,j)
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
           Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ), 0.0_RP ), 1.0_RP ) ! apply exp limiter
 #else
           Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp(-Q1**2 * 0.5_RP), 0.0_RP ), 1.0_RP )
@@ -1288,7 +1288,7 @@ contains
 
     x2  = x*x
 
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
     tmp = min( x2 * ( fourpi + a*x2 ) / ( 1.0_RP + a*x2 ), 1.E+3_RP ) ! apply exp limiter
     erf = sign( sqrt( 1.0_RP - exp(-tmp) ), x )
 #else

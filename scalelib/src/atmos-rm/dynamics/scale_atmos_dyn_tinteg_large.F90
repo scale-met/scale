@@ -185,29 +185,17 @@ contains
     use scale_index
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef TINTEG_LARGE
-    use NAME(scale_atmos_dyn_tinteg_large_, TINTEG_LARGE,), only: &
-       NAME(ATMOS_DYN_rk_tinteg_large_, TINTEG_LARGE, _setup), &
-       NAME(ATMOS_DYN_rk_tinteg_large_, TINTEG_LARGE,)
-#else
     use scale_atmos_dyn_tinteg_large_euler, only: &
        ATMOS_DYN_Tinteg_large_euler_setup, &
        ATMOS_DYN_Tinteg_large_euler
     use scale_atmos_dyn_tinteg_large_rk3, only: &
        ATMOS_DYN_Tinteg_large_rk3_setup, &
        ATMOS_DYN_Tinteg_large_rk3
-#endif
     implicit none
+
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_large_TYPE
     !---------------------------------------------------------------------------
 
-#ifdef TINTEG_LARGE
-    NAME(ATMOS_DYN_Tinteg_large_, TINTEG_LARGE, _setup)( &
-            ATMOS_DYN_Tinteg_large_TYPE )
-    ATMOS_DYN_Tinteg_large => NAME(ATMOS_DYN_Tingeg_large_, TINTEG_LARGE,)
-#else
     select case( ATMOS_DYN_Tinteg_large_TYPE )
     case( 'EULER' )
        call ATMOS_DYN_Tinteg_large_euler_setup( &
@@ -223,7 +211,6 @@ contains
        write(*,*) 'xxx ATMOS_DYN_TINTEG_LARGE_TYPE is invalid: ', ATMOS_DYN_Tinteg_large_TYPE
        call PRC_MPIstop
     end select
-#endif
 
     return
   end subroutine ATMOS_DYN_Tinteg_large_setup
