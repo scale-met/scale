@@ -33,10 +33,10 @@ The temporal integration and spatial difference schemes are configured in \namel
  \verb|&PARAM_ATMOS_DYN  | & \\
  \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; Choose from temporal integration schemes in Table \ref{tab:nml_atm_dyn}\\
  \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; Choose from temporal integration schemes\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = CD4,|          & ; Choose from temporal spatial difference schemes\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; Choose from temporal spatial difference schemes\\
  \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; Choose from temporal spatial difference schemes\\
  \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|      & ; Use FCT scheme (.true.) or not (.false.)\\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2, |       & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |        & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
  \verb|ATMOS_DYN_enable_coriolis            = .true.,|       & \\
 \verb|/             | & \\
@@ -65,7 +65,16 @@ The temporal integration and spatial difference schemes are configured in \namel
 \end{center}
 \end{table}
 
-For tracer advection, the use of a scheme for guaranteeing a non-negative value is recommended. The \nmitem{UD3KOREN1993} scheme guarantees a non-negative value, whereas other schemes do not. When schemes other than \nmitem{UD3KOREN1993} are used by being specified in \\
+For advection of prognostic variables in dynamics (\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}), 
+default setting is the 4th-order central difference (\verb|CD4|) in the \scalerm.
+When using \verb|CD4| in an experiment with rough terrain,
+it is often confirmed that grid-scale vertical flow is occurred on the peak of mountains.
+This grid-scale vertical flow is moderated by using \verb|UD3|. 
+So, the use of \verb|UD3| is recommended for experiments with rough terrain.
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} can be set to zero when using \verb|UD3|.
+
+For tracer advection, the use of a scheme for guaranteeing a non-negative value is recommended. 
+The \verb|UD3KOREN1993| scheme guarantees a non-negative value, whereas other schemes do not. When schemes other than \verb|UD3KOREN1993| are used by being specified in \\
 \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}, the FCT filter is recommended as \\
 \nmitem{ATMOS_DYN_FLAG_FCT_TRACER=}$=$\verb|.true.|
 

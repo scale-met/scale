@@ -46,10 +46,10 @@
  \verb|&PARAM_ATMOS_DYN  | & \\
  \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|       & ; 時間スキームより選択\\
  \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,| & ; 時間スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = CD4,|       & ; 空間スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|       & ; 空間スキームより選択\\
  \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
  \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|   & ; FCTスキームを利用するかどうか\\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-2, |    & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |     & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |     & \\
  \verb|ATMOS_DYN_enable_coriolis            = .true.,|    & \\
  \verb|ATMOS_DYN_wdamp_height                = 15.D3,|    & \\
@@ -81,10 +81,17 @@
 \end{center}
 \end{table}
 
+力学変数の移流計算スキーム(\nmitem{ATMOS_DYN_FVM_FLUX_TYPE})のデフォルト設定は、
+4次中央差分（\verb|CD4|）となっている。
+\verb|CD4|では、地形起伏がある場合に、その直上でグリッドスケールに近い鉛直流が発生することが
+しばしば確認されており、これは\verb|UD3|を使用することで緩和される。
+{\scalerm}では、地形起伏があるような現実大気実験では、\verb|UD3|の使用を推奨する。
+\verb|UD3|を使う時は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}はゼロでもよい。
+
 トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。
-\nmitem{UD3KOREN1993}は非負保証スキームであるが、
+\verb|UD3KOREN1993|は非負保証スキームであるが、
 それ以外は非負が保証されない。
-つまり \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}として \nmitem{UD3KOREN1993}以外を選択した場合は、
+つまり \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}として \verb|UD3KOREN1993|以外を選択した場合は、
 \nmitem{ATMOS_DYN_FLAG_FCT_TRACER} を \verb|.true.| としてFCTを利用するのがよい。
 
 ハロの格子数はデフォルトで2となっている。
