@@ -13,7 +13,7 @@ ifneq ($(origin DEBUG),undefined)
 endif
 
 ifneq ($(origin QUICKDEBUG),undefined)
-   SCALE_QUICKDEBUG ?= $()QUICKDEBUG
+   SCALE_QUICKDEBUG ?= $(QUICKDEBUG)
 endif
 
 ifneq ($(origin CHECK_MASS),undefined)
