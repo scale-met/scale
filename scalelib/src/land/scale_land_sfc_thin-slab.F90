@@ -124,6 +124,7 @@ contains
       PRC_myrank,  &
       PRC_MPIstop
     use scale_const, only: &
+      PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB
@@ -147,9 +148,9 @@ contains
 
     ! arguments
     real(RP), intent(out) :: LST_t(IA,JA) ! tendency of LST
-    real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m/s2]
     real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [J/m2/s]
     real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [J/m2/s]
     real(RP), intent(out) :: GHFLX(IA,JA) ! ground heat flux at the surface [J/m2/s]
@@ -473,8 +474,11 @@ contains
         ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
-        SHFLX(i,j) = -CPdry    * RHOA(i,j) * Ustar * Tstar
-        LHFLX(i,j) = -LHV(i,j) * RHOA(i,j) * Ustar * Qstar
+
+        SHFLX(i,j) = - RHOA(i,j) * Ustar * Tstar &
+                   * CPdry * ( PRSS(i,j) / PRE00 )**( Rdry/CPdry )
+        LHFLX(i,j) = - RHOA(i,j) * Ustar * Qstar * LHV(i,j)
+
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 
         ! calculation for residual
