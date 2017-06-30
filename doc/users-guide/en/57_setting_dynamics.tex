@@ -65,12 +65,12 @@ The temporal integration and spatial difference schemes are configured in \namel
 \end{center}
 \end{table}
 
-For advection scheme of prognostic variables in dynamics (\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}), 
-the default setting is 4th-order central difference (\verb|CD4|) in the \scalerm.
-When using \verb|CD4| in an experiment with topography,
-it is often confirmed that grid-scale convection is occurred on the peak of mountains.
-This grid-scale convection is moderated by using \verb|UD3|. 
-So, the use of \verb|UD3| is recommended for experiments with topography.
+For advection of prognostic variables in dynamics (\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}), 
+default setting is the 4th-order central difference (\verb|CD4|) in the \scalerm.
+When using \verb|CD4| in an experiment with rough terrain,
+it is often confirmed that grid-scale vertical flow is occurred on the peak of mountains.
+This grid-scale vertical flow is moderated by using \verb|UD3|. 
+So, the use of \verb|UD3| is recommended for experiments with rough terrain.
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} can be set to zero when using \verb|UD3|.
 
 For tracer advection, the use of a scheme for guaranteeing a non-negative value is recommended. 
