@@ -120,6 +120,12 @@ jobshell:
 		                                                  $(DATPARAM) $(DATDISTS);                    \
 	fi
 
+vis:
+	bash ./visualize/visualize.sh
+
+eval:
+	bash ./evaluate/evaluate.sh
+
 
 
 .PHONY: allclean distclean clean

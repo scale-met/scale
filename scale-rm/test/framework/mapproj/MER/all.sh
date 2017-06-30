@@ -12,7 +12,7 @@ do
 
       make run || continue
 
-      bash eval.sh || continue
+      make vis || continue
 
       mv lat.png       lat_${LAT}-${LON}.png
       mv lon.png       lon_${LAT}-${LON}.png
