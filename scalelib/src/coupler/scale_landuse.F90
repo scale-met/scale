@@ -159,7 +159,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ calculate landuse factor'
 
-    ! tentative treatment for lake fraction
+    ! tentative treatment: The area of the lake is treated as the ocean
     LANDUSE_frac_land (:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
 
     ! make factors

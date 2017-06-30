@@ -1014,8 +1014,8 @@ contains
                 endif
 
                 if (       REAL_LONX_mod(i-1,j) >= REAL_LONX_mod(i  ,j  ) &
-                     .AND. TILE_LATH(jj-1)  >= REAL_LATY(i  ,j-1) &
-                     .AND. TILE_LATH(jj-1)  <  REAL_LATY(i  ,j  ) ) then ! across the IDL
+                     .AND. TILE_LATH    (jj-1)  >= REAL_LATY    (i  ,j-1) &
+                     .AND. TILE_LATH    (jj-1)  <  REAL_LATY    (i  ,j  ) ) then ! across the IDL
 
                    if    (       TILE_LONH(ii-1) >= REAL_LONX_mod(i-1,j) &
                            .AND. TILE_LONH(ii-1) <  PI                   ) then
