@@ -1900,7 +1900,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputOcean]/Categ[Input]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputSurface]/Categ[Input]'
 
     if ( first ) then ! read land data only once
 
@@ -2277,7 +2277,7 @@ contains
     te = numsteps
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputOcean]/Categ[Boundary]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputSurface]/Categ[Boundary]'
 
     nowdate = TIME_NOWDATE
     nowdate(1) = nowdate(1)
