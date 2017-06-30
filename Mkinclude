@@ -73,16 +73,13 @@ endif
 
 # NetCDF library setting
 # library location are inquired in order of: environment variable->Makedef.XXX->here
-SCALE_NETCDF_INCLUDE ?= $(shell nf-config --fflags) $(shell nc-config --cflags)
-SCALE_NETCDF_LIBS    ?= $(shell nf-config --flibs)  $(shell nc-config --libs)
+include $(TOPDIR)/utils/Make_checknetcdf
 
 ifeq ($(SCALE_ENABLE_PNETCDF),T)
    SCALE_NETCDF_INCLUDE += -DPNETCDF
-else
-   ifeq ($(SCALE_ENABLE_PNETCDF),)
-      ifeq ($(shell nc-config --has-pnetcdf),yes)
-         SCALE_NETCDF_INCLUDE += -DPNETCDF
-      endif
+   ifeq ($(shell pnetcdf-config --help > /dev/null 2>&1 && echo yes),yes)
+      SCALE_NETCDF_INCLUDE += $(shell pnetcdf-config --cppflags) -I$(shell pnetcdf-config --includedir)
+      SCALE_NETCDF_LIBS := -L$(shell pnetcdf-config --libdir) -lpnetcdf $(SCALE_NETCDF_LIBS)
    endif
 endif
 
