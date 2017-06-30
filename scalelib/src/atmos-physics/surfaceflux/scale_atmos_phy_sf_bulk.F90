@@ -64,8 +64,6 @@ contains
   subroutine ATMOS_PHY_SF_bulk_setup( ATMOS_PHY_SF_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_atmos_phy_sf_bulkcoef, only: &
-       SF_bulkcoef_setup => ATMOS_PHY_SF_bulkcoef_setup
     implicit none
 
     character(len=*), intent(in) :: ATMOS_PHY_SF_TYPE
@@ -99,8 +97,6 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_BULK)
 
-    call SF_bulkcoef_setup
-
     return
   end subroutine ATMOS_PHY_SF_bulk_setup
 
@@ -126,8 +122,6 @@ contains
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        I_QV
-    use scale_atmos_phy_sf_bulkcoef, only: &
-       SF_bulkcoef => ATMOS_PHY_SF_bulkcoef
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
     use scale_roughness, only: &
