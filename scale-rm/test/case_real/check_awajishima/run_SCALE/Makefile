@@ -9,27 +9,35 @@ TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
 ifndef PREPDIR
-PREPDIR     = ..
+   PREPDIR = ../prep
 endif
 
+ifndef INITDIR
+   INITDIR = ../init_SCALE
+endif
 
 # user-defined source files
 CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = NONE
-INITNAME    = NONE
-BINNAME     = scale-rm
-PPCONF      = NONE
-INITCONF    = NONE
 RUNCONF     = run.conf
 TPROC       = 16
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
-DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm,land/param.bucket.conf
-DATDISTS    = $(PREPDIR)/topo/topo,$(PREPDIR)/landuse/landuse,$(PREPDIR)/initial_SCALE/boundary,$(PREPDIR)/initial_SCALE/init_20071003-120000.000
+DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29           PARAG.29         ] \
+                [${TESTDIR}/data/rad/PARAPC.29          PARAPC.29        ] \
+                [${TESTDIR}/data/rad/VARDATA.RM29       VARDATA.RM29     ] \
+                [${TESTDIR}/data/rad/cira.nc            cira.nc          ] \
+                [${TESTDIR}/data/rad/MIPAS/day.atm      day.atm          ] \
+                [${TESTDIR}/data/rad/MIPAS/equ.atm      equ.atm          ] \
+                [${TESTDIR}/data/rad/MIPAS/sum.atm      sum.atm          ] \
+                [${TESTDIR}/data/rad/MIPAS/win.atm      win.atm          ] \
+                [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf] "
+DATDISTS    = " [$(PREPDIR)/topo     topo    ] \
+                [$(PREPDIR)/landuse  landuse ] \
+                [$(INITDIR)/boundary boundary] \
+                [$(INITDIR)/init_19990301-060000.000 init_19990301-060000.000] "
 
 
 
