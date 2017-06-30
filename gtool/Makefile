@@ -60,15 +60,11 @@ clean:
 
 
 .SUFFIXES:
-.SUFFIXES: .o .F90 .f90 .c .erb .mod
+.SUFFIXES: .o .f90 .c .erb .mod
 
-%.F90 : %.F90.erb
-	erb $< > $@
 %.f90 : %.f90.erb
 	erb $< > $@
 
-.F90.o:
-	$(FC) $(FFLAGS) -I$(DCUTILSDIR) -o $@ -c $<
 .f90.o:
 	$(FC) $(FFLAGS) -I$(DCUTILSDIR) -o $@ -c $<
 .c.o:
