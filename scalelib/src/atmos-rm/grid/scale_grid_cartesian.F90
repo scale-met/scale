@@ -108,6 +108,10 @@ module scale_grid
   real(RP),              private :: GRID_OFFSET_X     = 0.0_RP
   real(RP),              private :: GRID_OFFSET_Y     = 0.0_RP
 
+  integer,               private :: BUFFER_NZ = -1    !< thickness of buffer region by number of grids: z
+  integer,               private :: BUFFER_NX = -1    !< thickness of buffer region by number of grids: x
+  integer,               private :: BUFFER_NY = -1    !< thickness of buffer region by number of grids: y
+
   integer,  private, parameter :: KMAX_user_lim = 300 !< limit of index size for user defined z
   real(RP), private            :: FZ(KMAX_user_lim)   !< user defined center coordinate [m]: z, local=global
 
@@ -133,6 +137,9 @@ contains
        BUFFER_DZ,         &
        BUFFER_DX,         &
        BUFFER_DY,         &
+       BUFFER_NZ,         &
+       BUFFER_NX,         &
+       BUFFER_NY,         &
        BUFFFACT,          &
        BUFFFACT_X,        &
        BUFFFACT_Y,        &
@@ -332,12 +339,18 @@ contains
     buffx(0) = DX
     bufftotx = 0.0_RP
 
-    do i = 1, IAG
-       if( bufftotx >= BUFFER_DX ) exit
-
-       buffx(i) = buffx(i-1) * BUFFFACT_X
-       bufftotx = bufftotx + buffx(i)
-    enddo
+    if ( BUFFER_NX > 0 ) then
+       do i = 1, BUFFER_NX
+          buffx(i) = buffx(i-1) * BUFFFACT_X
+          bufftotx = bufftotx + buffx(i)
+       enddo
+    else
+       do i = 1, IAG
+          if( bufftotx >= BUFFER_DX ) exit
+          buffx(i) = buffx(i-1) * BUFFFACT_X
+          bufftotx = bufftotx + buffx(i)
+       enddo
+    endif
     ibuff = i - 1
     imain = IMAXG - 2*ibuff
 
@@ -420,14 +433,20 @@ contains
     buffy(0) = DY
     bufftoty = 0.0_RP
 
-    do j = 1, JAG
-       if( bufftoty >= BUFFER_DY ) exit
-
-       buffy(j) = buffy(j-1) * BUFFFACT_Y
-       bufftoty = bufftoty + buffy(j)
-    enddo
+    if ( BUFFER_NY > 0 ) then
+       do j = 1, BUFFER_NY
+          buffy(j) = buffy(j-1) * BUFFFACT_Y
+          bufftoty = bufftoty + buffy(j)
+       enddo
+    else
+       do j = 1, JAG
+          if( bufftoty >= BUFFER_DY ) exit
+          buffy(j) = buffy(j-1) * BUFFFACT_Y
+          bufftoty = bufftoty + buffy(j)
+       enddo
+    endif
     jbuff = j - 1
-    jmain = JAG - 2*jbuff - 2*JHALO
+    jmain = JMAXG - 2*jbuff
 
     if ( jmain < 0 ) then
        write(*,*) 'xxx Buffer size (', bufftoty*2.0_RP, ') must be smaller than global domain size (Y). Use smaller BUFFER_DY!'
@@ -537,11 +556,16 @@ contains
        ! calculate buffer grid size
        bufftotz = 0.0_RP
 
-       do k = KMAX, 2, -1
-          if( bufftotz >= BUFFER_DZ ) exit
-
-          bufftotz = bufftotz + ( FZ(k) - FZ(k-1) )
-       enddo
+       if ( BUFFER_NZ > 0 ) then
+          do k = KMAX, KMAX-BUFFER_NZ+1, -1
+             bufftotz = bufftotz + ( FZ(k) - FZ(k-1) )
+          enddo
+       else
+          do k = KMAX, 2, -1
+             if( bufftotz >= BUFFER_DZ ) exit
+             bufftotz = bufftotz + ( FZ(k) - FZ(k-1) )
+          enddo
+       endif
        kbuff = KMAX - k
        kmain = k
 
@@ -578,12 +602,18 @@ contains
        buffz(0) = DZ
        bufftotz = 0.0_RP
 
-       do k = 1, KA
-          if( bufftotz >= BUFFER_DZ ) exit
-
-          buffz(k) = buffz(k-1) * BUFFFACT_Z
-          bufftotz = bufftotz + buffz(k)
-       enddo
+       if ( BUFFER_NZ > 0 ) then
+          do k = 1, BUFFER_NZ
+             buffz(k) = buffz(k-1) * BUFFFACT_Z
+             bufftotz = bufftotz + buffz(k)
+          enddo
+       else
+          do k = 1, KA
+             if( bufftotz >= BUFFER_DZ ) exit
+             buffz(k) = buffz(k-1) * BUFFFACT_Z
+             bufftotz = bufftotz + buffz(k)
+          enddo
+       endif
        kbuff = k - 1
        kmain = KE - KS + 1 - kbuff
 
@@ -741,84 +771,84 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)')   '*** X: ', GRID_DOMAIN_CENTER_X
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)')   '*** Y: ', GRID_DOMAIN_CENTER_Y
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+    '|============= Vertical Coordinate =============|'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+    '|    k        z       zh       dz   buffer    k |'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+    '|           [m]      [m]      [m]   factor      |'
+
+    do k = KA, KE+1, -1
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+    '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+    '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
+    enddo
+
+    k = KE
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+    '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' | KE = TOA'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+    '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
+
+    do k = KE-1, KS, -1
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+    '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+    '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
+    enddo
+
+    k = KS-1
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+    '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' | KS-1 = surface'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+    '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
+
+    do k = KS-2, 1, -1
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+    '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+    '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
+    enddo
+
+    k = 0
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I5,A)') &
+    '|              ',GRID_FZ(k),'                  ',k,' |'
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+    '|===============================================|'
+
     if ( debug ) then
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|============= Vertical Coordinate =============|'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|    k        z       zh       dz   buffer    k |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|           [m]      [m]      [m]   factor      |'
-
-       do k = KA, KE+1, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
+       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FZ(0)
+       do k = 1, KA-1
+          if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k)
+          if( IO_L ) write(IO_FID_LOG,*) ' ', k, GRID_FZ(k), GRID_FBFZ(k), GRID_FDZ(k)
        enddo
+       k = KA
+       if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k)
+       if( IO_L ) write(IO_FID_LOG,*) ' ', k, GRID_FZ(k), GRID_FBFZ(k)
 
-       k = KE
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' | KE = TOA'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
-
-       do k = KE-1, KS, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FX(0)
+       do i = 1, IA-1
+          if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i)
+          if( IO_L ) write(IO_FID_LOG,*) ' ', i, GRID_FX(i), GRID_FBFX(i), GRID_FDX(i)
        enddo
+       i = IA
+       if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i)
+       if( IO_L ) write(IO_FID_LOG,*) ' ', i, GRID_FX(i), GRID_FBFX(i)
 
-       k = KS-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' | KS-1 = surface'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
-
-       do k = KS-2, 1, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FY(0)
+       do j = 1, JA-1
+          if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j)
+          if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j), GRID_FDY(j)
        enddo
-
-       k = 0
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I5,A)') &
-       '|              ',GRID_FZ(k),'                  ',k,' |'
-
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|===============================================|'
-
-!       if( IO_L ) write(IO_FID_LOG,*)
-!       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FZ(0)
-!       do k = 1, KA-1
-!          if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k)
-!          if( IO_L ) write(IO_FID_LOG,*) ' ', k, GRID_FZ(k), GRID_FBFZ(k), GRID_FDZ(k)
-!       enddo
-!       k = KA
-!       if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k)
-!       if( IO_L ) write(IO_FID_LOG,*) ' ', k, GRID_FZ(k), GRID_FBFZ(k)
-!
-!       if( IO_L ) write(IO_FID_LOG,*)
-!       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FX(0)
-!       do i = 1, IA-1
-!          if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i)
-!          if( IO_L ) write(IO_FID_LOG,*) ' ', i, GRID_FX(i), GRID_FBFX(i), GRID_FDX(i)
-!       enddo
-!       i = IA
-!       if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i)
-!       if( IO_L ) write(IO_FID_LOG,*) ' ', i, GRID_FX(i), GRID_FBFX(i)
-!
-!       if( IO_L ) write(IO_FID_LOG,*)
-!       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FY(0)
-!       do j = 1, JA-1
-!          if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j)
-!          if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j), GRID_FDY(j)
-!       enddo
-!       j = JA
-!       if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j)
-!       if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j)
+       j = JA
+       if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j)
+       if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j)
     endif
 
     return
