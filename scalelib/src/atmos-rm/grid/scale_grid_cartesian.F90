@@ -336,27 +336,38 @@ contains
 
     ! X-direction
     ! calculate buffer grid size
-    buffx(0) = DX
-    bufftotx = 0.0_RP
 
     if ( BUFFER_NX > 0 ) then
+       if ( 2*BUFFER_NX > IMAXG ) then
+          write(*,*) 'xxx Buffer grid size (', BUFFER_NX, &
+                     'x2) must be smaller than global domain size (X). Use smaller BUFFER_NX!'
+          call PRC_MPIstop
+       endif
+
+       buffx(0) = DX
+       bufftotx = 0.0_RP
        do i = 1, BUFFER_NX
           buffx(i) = buffx(i-1) * BUFFFACT_X
           bufftotx = bufftotx + buffx(i)
        enddo
+       ibuff = BUFFER_NX
+       imain = IMAXG - 2*BUFFER_NX
     else
+       buffx(0) = DX
+       bufftotx = 0.0_RP
        do i = 1, IAG
           if( bufftotx >= BUFFER_DX ) exit
           buffx(i) = buffx(i-1) * BUFFFACT_X
           bufftotx = bufftotx + buffx(i)
        enddo
-    endif
-    ibuff = i - 1
-    imain = IMAXG - 2*ibuff
+       ibuff = i - 1
+       imain = IMAXG - 2*ibuff
 
-    if ( imain < 0 ) then
-       write(*,*) 'xxx Buffer size (', bufftotx*2.0_RP, ') must be smaller than global domain size (X). Use smaller BUFFER_DX!'
-       call PRC_MPIstop
+       if ( imain < 0 ) then
+          write(*,*) 'xxx Buffer length (', bufftotx, &
+                     'x2[m]) must be smaller than global domain size (X). Use smaller BUFFER_DX!'
+          call PRC_MPIstop
+       endif
     endif
 
     ! horizontal coordinate (global domain)
@@ -430,27 +441,38 @@ contains
 
     ! Y-direction
     ! calculate buffer grid size
-    buffy(0) = DY
-    bufftoty = 0.0_RP
 
     if ( BUFFER_NY > 0 ) then
+       if ( 2*BUFFER_NY > JMAXG ) then
+          write(*,*) 'xxx Buffer grid size (', BUFFER_NY, &
+                     'x2) must be smaller than global domain size (Y). Use smaller BUFFER_NY!'
+          call PRC_MPIstop
+       endif
+
+       buffy(0) = DY
+       bufftoty = 0.0_RP
        do j = 1, BUFFER_NY
           buffy(j) = buffy(j-1) * BUFFFACT_Y
           bufftoty = bufftoty + buffy(j)
        enddo
+       jbuff = BUFFER_NY
+       jmain = JMAXG - 2*BUFFER_NY
     else
+       buffy(0) = DY
+       bufftoty = 0.0_RP
        do j = 1, JAG
           if( bufftoty >= BUFFER_DY ) exit
           buffy(j) = buffy(j-1) * BUFFFACT_Y
           bufftoty = bufftoty + buffy(j)
        enddo
-    endif
-    jbuff = j - 1
-    jmain = JMAXG - 2*jbuff
+       jbuff = j - 1
+       jmain = JMAXG - 2*jbuff
 
-    if ( jmain < 0 ) then
-       write(*,*) 'xxx Buffer size (', bufftoty*2.0_RP, ') must be smaller than global domain size (Y). Use smaller BUFFER_DY!'
-       call PRC_MPIstop
+       if ( jmain < 0 ) then
+          write(*,*) 'xxx Buffer length (', bufftoty, &
+                     'x2[m]) must be smaller than global domain size (Y). Use smaller BUFFER_DY!'
+          call PRC_MPIstop
+       endif
     endif
 
     ! horizontal coordinate (global domain)
@@ -554,27 +576,37 @@ contains
 
        ! Z-direction
        ! calculate buffer grid size
-       bufftotz = 0.0_RP
 
        if ( BUFFER_NZ > 0 ) then
+          if ( BUFFER_NZ > KMAX ) then
+             write(*,*) 'xxx Buffer grid size (', BUFFER_NZ, &
+                        ') must be smaller than global domain size (Z). Use smaller BUFFER_NZ!'
+             call PRC_MPIstop
+          endif
+
+          bufftotz = 0.0_RP
           do k = KMAX, KMAX-BUFFER_NZ+1, -1
              bufftotz = bufftotz + ( FZ(k) - FZ(k-1) )
           enddo
+          kbuff = BUFFER_NZ
+          kmain = KMAX - BUFFER_NZ
        else
+          if ( BUFFER_DZ > FZ(KMAX) ) then
+             write(*,*) 'xxx Buffer length (', BUFFER_DZ, &
+                        '[m]) must be smaller than global domain size (Z). Use smaller BUFFER_DZ!'
+             call PRC_MPIstop
+          endif
+
+          bufftotz = 0.0_RP
           do k = KMAX, 2, -1
              if( bufftotz >= BUFFER_DZ ) exit
              bufftotz = bufftotz + ( FZ(k) - FZ(k-1) )
           enddo
-       endif
-       kbuff = KMAX - k
-       kmain = k
-
-       if ( kmain < 0 ) then
-          write(*,*) 'xxx Buffer size (', bufftotz, ') must be smaller than domain size (z). Use smaller BUFFER_DZ!'
-          call PRC_MPIstop
+          kbuff = KMAX - k
+          kmain = k
        endif
 
-       ! vartical coordinate (local=global domain)
+       ! vertical coordinate (local=global domain)
        GRID_FZ(KS-1) = 0.0_RP
 
        DZ = FZ(1)
@@ -599,30 +631,41 @@ contains
 
        ! Z-direction
        ! calculate buffer grid size
-       buffz(0) = DZ
-       bufftotz = 0.0_RP
 
        if ( BUFFER_NZ > 0 ) then
+          if ( BUFFER_NZ > KMAX ) then
+             write(*,*) 'xxx Buffer grid size (', BUFFER_NZ, &
+                        ') must be smaller than global domain size (Z). Use smaller BUFFER_NZ!'
+             call PRC_MPIstop
+          endif
+
+          buffz(0) = DZ
+          bufftotz = 0.0_RP
           do k = 1, BUFFER_NZ
              buffz(k) = buffz(k-1) * BUFFFACT_Z
              bufftotz = bufftotz + buffz(k)
           enddo
+          kbuff = BUFFER_NZ
+          kmain = KMAX - BUFFER_NZ
        else
+          buffz(0) = DZ
+          bufftotz = 0.0_RP
           do k = 1, KA
              if( bufftotz >= BUFFER_DZ ) exit
              buffz(k) = buffz(k-1) * BUFFFACT_Z
              bufftotz = bufftotz + buffz(k)
           enddo
-       endif
-       kbuff = k - 1
-       kmain = KE - KS + 1 - kbuff
+          kbuff = k - 1
+          kmain = KMAX - kbuff
 
-       if ( kmain < 0 ) then
-          write(*,*) 'xxx Buffer size (', bufftotz, ') must be smaller than domain size (z). Use smaller BUFFER_DZ!'
-          call PRC_MPIstop
+          if ( kmain < 0 ) then
+             write(*,*) 'xxx Buffer length (', bufftotz, &
+                        '[m]) must be smaller than global domain size (Z). Use smaller BUFFER_DZ!'
+             call PRC_MPIstop
+          endif
        endif
 
-       ! vartical coordinate (local=global domain)
+       ! vertical coordinate (local=global domain)
        GRID_FZ(KS-1) = 0.0_RP
        do k = KS-2, 0, -1
           GRID_FZ(k) = GRID_FZ(k+1) - DZ
@@ -670,7 +713,7 @@ contains
 
     deallocate( buffz )
 
-    ! vartical coordinate (local domain)
+    ! vertical coordinate (local domain)
     do k = 1, KA
        GRID_CDZ (k) = GRID_FZ(k) - GRID_FZ(k-1)
        GRID_RCDZ(k) = 1.0_RP / GRID_CDZ(k)
@@ -820,16 +863,6 @@ contains
     '|===============================================|'
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FZ(0)
-       do k = 1, KA-1
-          if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k)
-          if( IO_L ) write(IO_FID_LOG,*) ' ', k, GRID_FZ(k), GRID_FBFZ(k), GRID_FDZ(k)
-       enddo
-       k = KA
-       if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k)
-       if( IO_L ) write(IO_FID_LOG,*) ' ', k, GRID_FZ(k), GRID_FBFZ(k)
-
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FX(0)
        do i = 1, IA-1
