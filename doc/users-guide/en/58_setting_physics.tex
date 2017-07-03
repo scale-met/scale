@@ -212,6 +212,18 @@ Depending on experimental design, the top of the model is often too low, such as
 
 \verb|MSTRNX| requires a parameter table for radiation calculation. By default, the wavelength from solar radiation to infrared radiation is divided into 29 bands/111 channels; 11 types of cloud and aerosol particles with six particle bins are prepared in the table. Three kinds of parameter files are prepared in the directory \verb|scale-rm/test/data/rad/|. The file and directory are specified in \namelist{PARAM_ATMOS_PHY_RD_MSTRN}.
 
+The parameter files were updated in version 5.2. We recccomend the source codes upper version 5.2 is used with the updated parameter files.
+If you want to use the old version of the parameter files in the new source codes, you should specify "nptype" and "nradius" as 11 and 6, respectively,
+in \namelist{PARAM_ATMOS_PHY_RD_MSTRN}.\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb| ATMOS_PHY_RD_MSTRN_nptype                = 11             |\\
+\verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              |\\
+\end{tabularx}
+}}}\\
+
 It is necessary to provide vertical profiles in additional layers for temperature, pressure, and gas concentration, such as CO2 and ozone. There are two methods for this. The profiles are input as climatologies or prepared by users in ASCII format. In the case of providing climatologies, \scalerm provides the database for CIRA86\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006} for temperature and pressure, and MIPAS2001\citep{Remedios_2007} for gas species. The climatology profiles are calculated according to date and time, and latitude and longitude are calculated in the model domain. These input files are also provided in the directory \verb|scale-rm/test/data/rad/|. The file and directory names are specified in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
 
 In case of using user-defined profiles, users must prepare height [m], pressure [Pa], temperature [K], water vapor [kg/kg], and ozone concentration [kg/kg] in ASCII format. The concentrations of the other gases are set to zero and temporal variation is not considered. An example of user-defined files is given for the directory \verb|scale-rm/test/data/rad/|. Given as \nmitem{ATMOS_PHY_RD_PROFILE_use_climatology} $=$ \verb|.false.| in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}, the file and directory names are required to be specified. 

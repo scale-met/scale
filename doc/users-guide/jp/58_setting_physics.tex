@@ -298,7 +298,7 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 \verb| ATMOS_PHY_RD_MSTRN_KADD                  = 10             | & モデルトップからTOAまでの間の大気層数\\
 \verb| ATMOS_PHY_RD_MSTRN_TOA                   = 100.0          | & 放射計算で考慮する大気最上層(TOA)の高さ [km](パラメータファイルに依存)\\
 \verb| ATMOS_PHY_RD_MSTRN_nband                 = 29             | & 波長帯ビンの数(パラメータファイルに依存)\\
-\verb| ATMOS_PHY_RD_MSTRN_nptype                = 11             | & エアロゾルの種類の数(パラメータファイルに依存)\\
+\verb| ATMOS_PHY_RD_MSTRN_nptype                = 9              | & エアロゾルの種類の数(パラメータファイルに依存)\\
 \verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              | & エアロゾル粒径ビンの数(パラメータファイルに依存)\\
 \verb| ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = "PARAG.29"     | & 気体吸収パラメータの入力ファイル\\
 \verb| ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "PARAPC.29"    | & エアロゾル吸収・散乱パラメータの入力ファイル\\
@@ -341,6 +341,18 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 \end{verbatim}
 に用意されており、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}で\nmitem{ATMOS_PHY_RD_PROFILE_use_climatology = .false.}と設定し、
 ファイルのディレクトリと名前を指定する。\\
+
+version 5.2で上記の"data/rad/"のデータベースが更新された。そのため、データベースもソースコードの更新と合わせて置き換えることを
+推奨する。旧版のデータベースをversion 5.2以降のソースコードで利用するためには\namelist{PARAM_ATMOS_PHY_RD_MSTRN}において
+下記のように"nptype"と"nradius"をそれぞれ11と6として旧版のパラメータファイルに合わせて指定する必要がある。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{lX}
+\verb| ATMOS_PHY_RD_MSTRN_nptype                = 11             |\\
+\verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              |\\
+\end{tabularx}
+}}}\\
 
 \noindent {\small {\gt
 \ovalbox{
