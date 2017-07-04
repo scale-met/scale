@@ -14,7 +14,7 @@ Thus, the number of grids along each horizontal direction and that in the entire
 && \verb|Total number of grids in the domain| \nonumber\\
 && = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
-   \times (\verb|KMAX| ), 
+   \times (\verb|KMAX| ),
 \end{eqnarray}
 where \nmitem{KMAX} is the number of grids along the vertical direction, which is specified in \namelist{PARAM_INDEX}.
 
@@ -24,22 +24,22 @@ By using Eqs. (\ref{eq:xgridnum} and \ref{eq:ygridnum}),  the size of the entire
 && \verb|Domain length in the Y direction| = \verb|number of grids in the Y direction| \times \verb|DY|,
 \end{eqnarray}
 where \nmitem{DX, DY} is grid spacings specified  in \namelist{PRAM_GRID} as described in subsection \ref{subsec:gridinterv}.
-If the horizontal resolution and domain size are set and the available number of MPI processes is given, the number of grids that are controlled by one MPI process can be determined as in the above relationship. 
+If the horizontal resolution and domain size are set and the available number of MPI processes is given, the number of grids that are controlled by one MPI process can be determined as in the above relationship.
 
 In the next subsections, the configuration of the MPI processes, the number of grids, and the grid interval are described in more detail.  \textcolor{blue}{Note that it is necessary that these settings  be identical among the configuration files \texttt{pp.conf},  \texttt{init.conf}, and \texttt{run.conf}}.
 
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./figure/domain_decomposition.eps}\\
-  \caption{Relation between horizontal grid interval (\texttt{DX}, \texttt{DY}), number of grids (\texttt{IMAX}, \texttt{JMAX}) 
+  \caption{Relation between horizontal grid interval (\texttt{DX}, \texttt{DY}), number of grids (\texttt{IMAX}, \texttt{JMAX})
     per MPI process, and the number of MPI processes (\texttt{PRC\_NUM\_X}, \texttt{PRC\_NUM\_Y})     in the entire domain. The light-blue part corresponds to a region managed by an MPI process.}
   \label{fig:domain}
 \end{center}
 \end{figure}
 
-
-
+%-----------------------------------------------------------------------
 \subsection{Setting the number of MPI processes} \label{subsec:relation_dom_reso2}
+%-----------------------------------------------------------------------
 
 The number of MPI processes is specified in \namelist{PARAM_PRC} in the configuration file. Since the input and output files of \scalerm are divided process by process according to the MPI, the total number of files is changed according to the number of MPI processes. For example, the initial condition file made by a two-MPI parallel combination cannot be used for model execution by a four-MPI parallel.
 It is necessary to edit \namelist{PARAM_PRC} in \verb|pp.conf|, \verb|init.conf|, and \verb|run.conf| if the number of MPI processes is changed,
@@ -56,6 +56,7 @@ The above example expresses a two-MPI parallel by dividing the domain into two s
 \verb|xxx total number of node does not match that requested. Check!| \\
 }
 
+%-----------------------------------------------------------------------
 \subsection{Setting the number of horizontal and vertical grids} \label{subsec:relation_dom_reso3}
 %-----------------------------------------------------------------------
 
@@ -68,10 +69,11 @@ The number of grids is specified in \namelist{PARAM_INDEX} in the configuration 
 \verb|/|\\
 }
 
+%-----------------------------------------------------------------------
 \subsection{Setting grid intervals along the horizontal and vertical directions} \label{subsec:gridinterv}
 %-----------------------------------------------------------------------
 
-Excluding the buffer region explained in Section \ref{subsec:buffer}, the horizontal grid intervals are configured only equidistantly, whereas the 
+Excluding the buffer region explained in Section \ref{subsec:buffer}, the horizontal grid intervals are configured only equidistantly, whereas the
  vertical grid intervals are configured freely. When the grid intervals are  configured uniformly along all directions, specify the zonal, meridional, and vertical grid intervals  at \nmitem{DX, DY, DZ} in \namelist{PARAM_GRID}, respectively. The unit is [m].
 \editboxtwo{
 \verb|&PARAM_GRID  | & \\
@@ -84,7 +86,7 @@ Excluding the buffer region explained in Section \ref{subsec:buffer}, the horizo
 The box below shows the method to set how to specify a non-uniform grid system.
 Since the model employs the Lorenz grid system, the points of definition for the velocity vector and other scalars are staggered, deviating by a half grid.
 In this document, the scalar location is called the center point and the half-grid-deviated location the face point.
-When the vertical grid locations are directly specified, provide them in \nmitem{FZ(:)} in \namelist{PARAM_GRID} as an array.\footnote{In this case, the same precision as used in the simulation is recommended to be specified. By default, the model is compiled as a double-precision floating point model.} Refer to Figure \ref{fig:scale_grid} for the details. Note that the number of elements specified in \nmitem{FZ(:)} should correspond to the number of vertical layers (\nmitem{KMAX} in \namelist{PARAM_INDEX}). The following file for the ideal experiment is shown as an example: 
+When the vertical grid locations are directly specified, provide them in \nmitem{FZ(:)} in \namelist{PARAM_GRID} as an array.\footnote{In this case, the same precision as used in the simulation is recommended to be specified. By default, the model is compiled as a double-precision floating point model.} Refer to Figure \ref{fig:scale_grid} for the details. Note that the number of elements specified in \nmitem{FZ(:)} should correspond to the number of vertical layers (\nmitem{KMAX} in \namelist{PARAM_INDEX}). The following file for the ideal experiment is shown as an example:
 \editboxtwo{
 \verb|&PARAM_GRID|     & \\
 \verb| DX = 500.D0,|   & grid interval along the X direction (equidistant) [m]\\
