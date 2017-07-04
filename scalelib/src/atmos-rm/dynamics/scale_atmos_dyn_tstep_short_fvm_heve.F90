@@ -129,6 +129,7 @@ contains
        dtrk, last                                   )
     use scale_grid_index
     use scale_const, only: &
+       EPS    => CONST_EPS,   &
        GRAV   => CONST_GRAV,  &
        P00    => CONST_PRE00
     use scale_comm, only: &
@@ -292,6 +293,8 @@ contains
     real(RP) :: cf_t(KA,IA,JA,2)
     logical  :: lhist
 #endif
+
+    real(RP) :: fz, sw
 
     integer  :: IIS, IIE
     integer  :: JJS, JJE
@@ -632,6 +635,19 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+       ! limiter at KS+1 (index is KS)
+       !$omp parallel do private(i,j,fz,sw) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          fz = qflx_hi(KS,i,j,ZDIR) + qflx_J13(KS,i,j) + qflx_J23(KS,i,j)
+          ! if MOMZ0 >= 0; min(fz,momz0*dz*G/dt)
+          ! else         ; max(fz,momz0*dz*G/dt) = - min(-fz,-momz0*dz*G/dt)
+          sw = sign( 1.0_RP, MOMZ0(KS,i,j) )
+          qflx_hi(KS,i,j,ZDIR) = sw*min( sw*fz, sw*MOMZ0(KS,i,j)*FDZ(KS)*GSQRT(KS,i,j,I_XYW)/dtrk ) &
+                               - qflx_J13(KS,i,j) - qflx_J23(KS,i,j)
+       end do
+       end do
+
        ! pressure gradient force at (x, y, w)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -674,10 +690,10 @@ contains
           call CHECK( __LINE__, MOMZ0(k,i,j) )
           call CHECK( __LINE__, MOMZ_t(k,i,j) )
 #endif
-          advcv = - ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RFDZ(k)
-          advch = - ( ( qflx_J13(k,i,j) - qflx_J13(k-1,i,j) &
-                      + qflx_J23(k,i,j) - qflx_J23(k-1,i,j) ) * RFDZ(k) &
-                    + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k,i-1,j,XDIR) ) * RCDX(i) &
+          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j) &
+                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RFDZ(k)
+          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k,i-1,j,XDIR) ) * RCDX(i) &
                     + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k,i,j-1,YDIR) ) * RCDY(j) ) &
                   * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
           wdamp = - wdamp_coef(k) * MOMZ0(k,i,j)
@@ -874,6 +890,16 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+       ! limiter at KS+1/2 (index is KS)
+       !$omp parallel do private(i,j,sw) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          ! qflx_J13(KS,i,j) and qflx_hi(KS,i,j,ZDIR) should be almost canceled
+          sw = 0.25_RP + sign( 0.25_RP, abs(J13G(KS,i,j,I_UYZ))-EPS )
+          qflx_J13(KS,i,j) = ( qflx_J13(KS,i,j) - qflx_hi(KS,i,j,ZDIR) ) * sw
+       end do
+       end do
+
        ! pressure gradient force at (u, y, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
@@ -938,10 +964,10 @@ contains
           call CHECK( __LINE__, MOMX0(k,i,j) )
 #endif
           ! advection
-          advcv = - ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( ( qflx_J13(k,i,j) - qflx_J13(k-1,i,j)             ) * RCDZ(k) &
-                    + ( qflx_J23(k,i,j) - qflx_J23(k-1,i,j)             ) * RCDZ(k) &
-                    + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
+          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j)          &
+                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RCDZ(k)
+          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
                     + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                   * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
           div = divdmp_coef / dtrk * FDX(i) * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) ! divergence damping
@@ -1121,6 +1147,16 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+       ! limiter at KS+1/2 (index is KS)
+       !$omp parallel do private(i,j,sw) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          ! qflx_J23(KS,i,j) and qflx_hi(KS,i,j,ZDIR) should be almost canceled
+          sw = 0.25_RP + sign( 0.25_RP, abs(J23G(KS,i,j,I_XVZ))-EPS )
+          qflx_J23(KS,i,j) = ( qflx_J23(KS,i,j) - qflx_hi(KS,i,j,ZDIR) ) * sw
+       end do
+       end do
+
        ! pressure gradient force at (x, v, z)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1187,11 +1223,11 @@ contains
           call CHECK( __LINE__, MOMY0(k,i,j) )
 #endif
 
-          advcv = - ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( qflx_J13(k,i,j) - qflx_J13(k-1,i,j)             ) * RCDZ(k) &
-                  - ( qflx_J23(k,i,j) - qflx_J23(k-1,i,j)             ) * RCDZ(k) &
-                  - ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                  - ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RFDY(j) &
+          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j)          &
+                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RCDZ(k)
+          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                    + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) &
                 * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV)
           div = divdmp_coef / dtrk * FDY(j) * ( DDIV(k,i,j+1)-DDIV(k,i,j) )
           MOMY_RK(k,i,j) = MOMY0(k,i,j) &
