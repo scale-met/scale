@@ -112,7 +112,8 @@ The radiation scheme is specified in \nmitem{ATMOS_PHY_RD_TYPE} in \namelist{PAR
 \verb|&PARAM_ATMOS  | & \\
 \verb| ATMOS_PHY_RD_TYPE = "MSTRNX", | & ; Select the radiation scheme shown in Table \ref{tab:nml_atm_rd}\\
 \verb|/             | & \\
-}
+}\\
+
 \begin{table}[h]
 \begin{center}
   \caption{Choices of radiation scheme}
@@ -150,7 +151,8 @@ the file name and information of the data are specified in \namelist{PARAM_ATMOS
 \noindent
 The file format of external data file is \netcdf format 
 with the same corrdinate variables as that of initial/boundary data files.
-Variables as the external data is shown in Table \ref{tab:var_list_atm_rd_offline}.
+Variables as the external data is shown in Table \ref{tab:var_list_atm_rd_offline}.\\
+
 \begin{table}[h]
 \begin{center}
   \caption{Radiative data as external file input}
@@ -175,26 +177,47 @@ Variables as the external data is shown in Table \ref{tab:var_list_atm_rd_offlin
 
 \subsubsection{Configuration for \texttt{MSTRNX}}
 
-
-The solar radiation is calculated by using date and time, and latitude and longitude, in the model domain. For the ideal experiment, they can be arbitrarily given as fixed values of time and location over the domain. The solar constant can also be changed. These are configured in \namelist{PARAM_ATMOS_SOLARINS} as follows:
+The solar radiation is calculated by using date, time, latitude, and longitude in the model domain.
+For the ideal experiment, they can be arbitrarily given as fixed values of time and location over the domain.
+The solar constant can also be changed. These are configured in \namelist{PARAM_ATMOS_SOLARINS} as follows:
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_SOLARINS        | & \\
 \verb| ATMOS_SOLARINS_constant    = 1360.250117   | & Solar constant [W/m2] \\
 \verb| ATMOS_SOLARINS_fixedlatlon = .false.       | & Whether values are fixed for latitude and longitude at radiation calculation\\
 \verb| ATMOS_SOLARINS_fixeddate   = .false.       | & Whether values are fixed for date and time at radiation calculation\\
-\verb| ATMOS_SOLARINS_lon         = 135.221       | & Longitude in case that \verb|ATMOS_SOLARINS_fixedlatlon=.true.| [deg.] \\
-\verb| ATMOS_SOLARINS_lat         =  34.653       | & Latitude in case that \verb|ATMOS_SOLARINS_fixedlatlon=.true.| [deg.]\\
+\verb| ATMOS_SOLARINS_lon         = 135.221       | & Longitude [deg.] in case that \\ \verb|ATMOS_SOLARINS_fixedlatlon=.true.|  \\
+\verb| ATMOS_SOLARINS_lat         =  34.653       | & Latitude [deg.] in case that \\ \verb|ATMOS_SOLARINS_fixedlatlon=.true.| \\
 \verb| ATMOS_SOLARINS_date = -1,-1,-1,-1,-1,-1,   | & Year, month, day, and time in the case that \verb|ATMOS_SOLARINS_fixeddate=.true.|[Y,M,D,H,M,S]\\
 \verb|/|            & \\
-}
-If \nmitem{MPRJ_basepoint_lon,MPRJ_basepoint_lat} in \namelist{PARAM_MAPPROJ} are given, \\
-\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat} are set identical to the values of 
+}\\
+
+If \nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat} in \namelist{PARAM_MAPPROJ} are given,\\
+\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat} are set identical to the values of \\
 \nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}.
-Refer to Section \ref{subsec:adv_mapproj} for the explanation of \namelist{PARAM_MAPPROJ}.
+Refer to Section \ref{subsec:adv_mapproj} for the explanation of \\
+\namelist{PARAM_MAPPROJ}.\\
 
+Depending on experimental design, the top of the model is often too low, such as 10$\sim$ 20 km, compared to the height of atmosphere.
+To remedy this situation, another top height used only for radiation calculation is set.
+The number of layers to be placed at levels higher than the top of the model can be configured.
+The top for radiation depends on the parameter file of the radiation scheme.
+For example, when \verb|MSTRNX| is used, the default parameter table in \verb|MSTRNX| assumes that it is 100 km.
+The additional layers added are 10 by default;
+if the top of the model is 22 km, 10 additional layers with a grid spacing of 7.8 km are added for radiation calculation.
+These are configured in \namelist{PARAM_ATMOS_PHY_RD_MSTRN}.\\
 
-Depending on experimental design, the top of the model is often too low, such as 10$\sim$ 20km, compared to the height of atmosphere. To remedy this situation, another top height used only for radiation calculation is set. The number of layers to be placed at levels higher than the top of the model can be configured. The top for radiation depends on the parameter file of the radiation scheme. For example, when \verb|MSTRNX| is used, the default parameter table in \verb|MSTRNX| assumes that it is 100 km. The additional layers added are 10 by default; if the top of the model is 22 km, 10 additional layers with a grid spacing of 7.8 km are added for radiation calculation. These are configured in \namelist{PARAM_ATMOS_PHY_RD_MSTRN} as follows:
+\verb|MSTRNX| requires a parameter table for radiation calculation.
+By default, the wavelength from solar radiation to infrared radiation is divided into 29 bands/111 channels;
+9 types of cloud and aerosol particles with eight particle bins are prepared in the table.
+Three kinds of parameter files are prepared in the directory \verb|scale-rm/test/data/rad/|.
+
+\begin{verbatim}
+  scale-rm/test/data/rad/PARAG.29     ; absorption parameter for gas
+  scale-rm/test/data/rad/PARAPC.29    ; absorption and scattering param. for particles
+  scale-rm/test/data/rad/VARDATA.RM29 ; particle parameter for cloud and aerosol
+\end{verbatim}
+These files are specified in \namelist{PARAM_ATMOS_PHY_RD_MSTRN} as follows:
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_MSTRN | & \\
@@ -204,47 +227,78 @@ Depending on experimental design, the top of the model is often too low, such as
 \verb| ATMOS_PHY_RD_MSTRN_nptype                = 9              | & Number of aerosol species (depending on parameter file used)\\
 \verb| ATMOS_PHY_RD_MSTRN_nradius               = 8              | & Number of particle bins for aerosol (depending on parameter file used)\\
 \verb| ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = "PARAG.29"     | & Input file for absorption parameter by gas\\
-\verb| ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "PARAPC.29"    | & Input file for absorption and scattering parameter by aerosol\\
-\verb| ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = "VARDATA.RM29" | & Input file for aerosol particle parameter\\
-\verb| ATMOS_PHY_RD_MSTRN_ONLY_QCI              = .false.        | & Whether rain, snow, and graupel are considered\\
+\verb| ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "PARAPC.29"    | & Input file for absorption and scattering parameter by cloud and aerosol\\
+\verb| ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = "VARDATA.RM29" | & Input file for particle parameter of cloud and aerosol\\
+\verb| ATMOS_PHY_RD_MSTRN_ONLY_QCI              = .false.        | & Whether only cloud water and ice are considered (rain, snow, graupel are ignored) \\
 \verb|/| & \\
-}
+}\\
 
-\verb|MSTRNX| requires a parameter table for radiation calculation. By default, the wavelength from solar radiation to infrared radiation is divided into 29 bands/111 channels; 11 types of cloud and aerosol particles with six particle bins are prepared in the table. Three kinds of parameter files are prepared in the directory \verb|scale-rm/test/data/rad/|. The file and directory are specified in \namelist{PARAM_ATMOS_PHY_RD_MSTRN}.
+The parameter files were updated in version 5.2.
+It is recommended to use new parameter files in the latest version of \scalerm.
+The previous parameter files are located in the directory \verb|scale-rm/test/data/rad/OpenCLASTR|.
+The number of particle type and the number of particle bins are different in the older parameter files.
+So if you want to use these files, \nmitem{ATMOS_PHY_RD_MSTRN_nptype, ATMOS_PHY_RD_MSTRN_nradius} should be specified in \\
+\namelist{PARAM_ATMOS_PHY_RD_MSTRN}.
 
-The parameter files were updated in version 5.2. We recccomend the source codes upper version 5.2 is used with the updated parameter files.
-If you want to use the old version of the parameter files in the new source codes, you should specify "nptype" and "nradius" as 11 and 6, respectively,
-in \namelist{PARAM_ATMOS_PHY_RD_MSTRN}.\\
+\editboxtwo{
+\verb| ATMOS_PHY_RD_MSTRN_nptype = 11 |\\
+\verb| ATMOS_PHY_RD_MSTRN_nradius = 6  |\\
+}\\
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
-\verb| ATMOS_PHY_RD_MSTRN_nptype                = 11             |\\
-\verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              |\\
-\end{tabularx}
-}}}\\
+It is necessary to provide vertical profiles in additional layers for temperature, pressure, and gas concentration, such as carbon dioxide and ozone.
+There are two methods for this. The profiles are input as climatologies or prepared by users in ASCII format. \\
 
-It is necessary to provide vertical profiles in additional layers for temperature, pressure, and gas concentration, such as CO2 and ozone. There are two methods for this. The profiles are input as climatologies or prepared by users in ASCII format. In the case of providing climatologies, \scalerm provides the database for CIRA86\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006} for temperature and pressure, and MIPAS2001\citep{Remedios_2007} for gas species. The climatology profiles are calculated according to date and time, and latitude and longitude are calculated in the model domain. These input files are also provided in the directory \verb|scale-rm/test/data/rad/|. The file and directory names are specified in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
-
-In case of using user-defined profiles, users must prepare height [m], pressure [Pa], temperature [K], water vapor [kg/kg], and ozone concentration [kg/kg] in ASCII format. The concentrations of the other gases are set to zero and temporal variation is not considered. An example of user-defined files is given for the directory \verb|scale-rm/test/data/rad/|. Given as \nmitem{ATMOS_PHY_RD_PROFILE_use_climatology} $=$ \verb|.false.| in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}, the file and directory names are required to be specified. 
+In the case of providing climatologies, \scalerm provides the database form CIRA86\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262} \citep{CSR_2006} for temperature and pressure,
+and MIPAS2001 \citep{Remedios_2007} for gas species.
+The climatology profiles are calculated from the databases according to date, time, latitude, and longitude.
+If the fixed date and location are specified in \namelist{PARAM_ATMOS_SOLARINS}, the calculation of profile follows those settings.
+The input files are also provided in the directory \verb|scale-rm/test/data/rad/|.
+\begin{verbatim}
+  scale-rm/test/data/rad/cira.nc       ; CIRA86 data (NetCDF format)
+  scale-rm/test/data/rad/MIPAS/day.atm ; MIPAS2011 data for mid-lat. (ASCII format)
+  scale-rm/test/data/rad/MIPAS/equ.atm ;   for tropics (ASCII format)
+  scale-rm/test/data/rad/MIPAS/sum.atm ;   for summer-side high-lat. (ASCII format)
+  scale-rm/test/data/rad/MIPAS/win.atm ;   for winter-side high-lat. (ASCII format)
+\end{verbatim}
+The file and directory names are specified in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
+The example of configuration of putting five files above to the current directory is as follows:
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
 \verb| ATMOS_PHY_RD_PROFILE_use_climatology       = .true.    | & Whether climatologies of CIRA86 and MIPAS2001 are used \\
-\verb| ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc" | & File name of \verb|CIRA86 (NetCDF format)|\\
-\verb| ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "."       | & Directory name of \verb|MIPAS2001 (ASCII format)|\\
-\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = ""        | & User-defined file in the case of not using climatorogies (ASCII format)\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_CO2               = .true.    | & When false, CO2 concentration is zero.\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_O3                = .true.    | & When false, O3 concentration is zero.\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_N2O               = .true.    | & When false, N2O concentration is zero.\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_CO                = .true.    | & When false, CO concentration is zero.\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_CH4               = .true.    | & When false, CH4 concentration is zero.\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_O2                = .true.    | & When false, O2 concentration is zero.\\
-\verb| ATMOS_PHY_RD_PROFILE_USE_CFC               = .true.    | & When false, CFC concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc" | & File name of \verb|CIRA86|\\
+\verb| ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "."       | & Directory name which contains \verb|MIPAS2001| files\\
 \verb|/| & \\
-}
-The number of layers and their heights in this user-defined file can be given independently of the default model configuration. During execution, the values in the model layers are interpolated from the given profiles. Note that if the top height considered TOA in the radiation calculation is higher than in the input profile, an extrapolation is adopted there.
+}\\
 
+Gases considered in radiation caluculation are carbon dioxide($CO_{2}$), ozone($O_{3}$), nitrus oxide($N_{2}O$), carbon monoxide($CO$), methane($CH_{4}$), oxigen($O_{2}$), and chlorofluorocarbons($CFCs$). These concentrations are able to be set to zero in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CO2 = .true. | & When false, CO2 concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_O3  = .true. | & When false, O3 concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_N2O = .true. | & When false, N2O concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CO  = .true. | & When false, CO concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CH4 = .true. | & When false, CH4 concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_O2  = .true. | & When false, O2 concentration is zero.\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CFC = .true. | & When false, CFC concentration is zero.\\
+\verb|/| & \\
+}\\
+
+In case of using user-defined profiles, users must prepare height [m], pressure [Pa], temperature [K], water vapor [kg/kg], and ozone concentration [kg/kg] in ASCII format. The concentrations of the other gases are set to zero and temporal variation is not considered. An example of user-defined files is given for the directory \verb|scale-rm/test/data/rad/|.
+\begin{verbatim}
+  scale-rm/test/data/rad/rad_o3_profs.txt
+\end{verbatim}
+Given as \nmitem{ATMOS_PHY_RD_PROFILE_use_climatology} $=$ \verb|.false.| in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}, the file and directory names are required to be specified.
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
+\verb| ATMOS_PHY_RD_PROFILE_use_climatology  = .false. | & Whether climatologies of CIRA86 and MIPAS2001 are used \\
+\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME = ""      | & User-defined file in the case of not using climatorogies (ASCII format)\\
+\verb|/| & \\
+}\\
+
+The number of layers and their heights in this user-defined file can be given independently of the default model configuration. During execution, the values in the model layers are interpolated from the given profiles. Note that if the top height considered TOA in the radiation calculation is higher than in the input profile, an extrapolation is adopted there.
 
 
 
