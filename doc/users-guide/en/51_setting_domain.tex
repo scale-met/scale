@@ -120,6 +120,23 @@ The location of the vertical grids at the non-zero topography is appropriately t
 The locations of the vertical grids are configured freely.
 However, an unusual configuration sometimes leads to numerical instability. To avoid it, the tool for the generation of vertical grids is supported as a FORTRAN program \verb|make_vgrid.f90| in the directory\\ \texttt{scale-\version/scale-rm/util/makevgrid/} with several samples of the namelist. If needed, use them as references. The tool generates the values of \nmitem{FZ(:)} directly. Copy and paste them in the configuration file.
 
+%-----------------------------------------------------------------------
+\subsection{Setting sponge layer} \label{subsec:raydamp}
+%-----------------------------------------------------------------------
+
+\scalerm adopts height coordinate system in vertical. The uppermost boundary condition is a rigid lid, and the sound and gravity waves often reflect at the model top. To reduce worse effects of these reflecting waves, the damping layer named ``sponge layer'' is placed in the upper part of the model domain. In the sponge layer, a vertical velocity is dumped by Rayleigh friction. The relaxation time scale (=inverse e-folding time scale) of damping is minimum at the model top and it increases with decreasing the height. Below the bottom boundary of sponge layer, the relaxation time scale is set to infinity.
+There are two methods to set the thickness of the sponge layer in \namelist{PARAM_ATMOS_DYN}.
+
+\begin{enumerate}
+\item specify number of layer of the sponge layer \\
+  The number of layer appointed in \nmitem{ATMOS_DYN_wdamp_layer} is set as the sponge layer. The number is counted from the model top.
+\item specify bottom boundary height [m] of the sponge layer \\
+  The layer that is higher than altitude appointed in \nmitem{ATMOS_DYN_wdamp_height} is set as the sponge layer.
+\end{enumerate}
+
+Both parameters above are not set by default, and the sponge layer is not applied. If both are set, \nmitem{ATMOS_DYN_wdamp_layer} is given priority.
+
+The relaxation time at the uppermost boundary is specified by \nmitem{ATMOS_DYN_wdamp_tau}. The unit is [second]. This parameter is not allowed to set the value smaller than \nmitem{TIME_DT_ATMOS_DYN}. When \nmitem{ATMOS_DYN_wdamp_tau} is not specified explicitly, the value ten times as large as \nmitem{TIME_DT_ATMOS_DYN} is automatically set. Please refer to \ref{sec:timeintiv}) for \nmitem{TIME_DT_ATMOS_DYN}.
 
 \subsection{Setting the buffer region and nudging method} \label{subsec:buffer}
 %-----------------------------------------------------------------------
