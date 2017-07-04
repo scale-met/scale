@@ -437,6 +437,9 @@ contains
 
 
 #endif
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
+       ! The flux at KS can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP ! k = KS
 
        vel = ( 0.5_RP * ( mom(KS,i,j) &
@@ -505,7 +508,10 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF)
     do j = JJS, JJE
     do i = IIS, IIE
-       flux(KS-1,i,j) = 0.0_RP
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
+       ! The flux at KS can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
+       flux(KS-1,i,j) = 0.0_RP ! k = KS
 
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -562,7 +568,10 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF)
     do j = JJS, JJE
     do i = IIS, IIE
-       flux(KS-1,i,j) = 0.0_RP
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
+       ! The flux at KS can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
+       flux(KS-1,i,j) = 0.0_RP ! k = KS
 
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -811,6 +820,9 @@ contains
        call CHECK( __LINE__, val(KS,i,j) )
 
 #endif
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( 0.5_RP * ( mom(KS,i,j)+mom(KS,i+1,j) ) ) &
@@ -896,6 +908,9 @@ contains
     !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( F2H(KS,1,I_UYZ) &
@@ -982,6 +997,9 @@ contains
     !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( F2H(KS,1,I_UYZ) &
@@ -1216,6 +1234,9 @@ contains
        call CHECK( __LINE__, val(KS,i,j) )
 
 #endif
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( 0.5_RP * ( mom(KS,i,j)+mom(KS,i,j+1) ) ) &
@@ -1301,6 +1322,9 @@ contains
     !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( F2H(KS,1,I_XVZ) &
@@ -1387,6 +1411,9 @@ contains
     !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( F2H(KS,1,I_XVZ) &
