@@ -496,17 +496,17 @@ contains
        vel = ( 0.5_RP * ( mom(KS,i,j) &
                         + mom(KS+1,i,j) ) ) &
            / DENS(KS+1,i,j)
-       flux(KS  ,i,j) = J33G * vel &
-                   * ( ( F31 * ( val(KS+2,i,j)+val(KS-1,i,j) ) + F32 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
-                     - ( F31 * ( val(KS+2,i,j)-val(KS-1,i,j) ) + F33 * ( val(KS+1,i,j)-val(KS,i,j) ) ) * sign(1.0_RP,vel) ) &
-                   + GSQRT(KS+1,i,j) * num_diff(KS+1,i,j) ! k = KS+1
-
-       vel = ( 0.5_RP * ( mom(KS,i,j) &
-                        + mom(KS+1,i,j) ) ) &
-           / DENS(KS+1,i,j)
-       flux(KS  ,i,j) = J33G * vel &
+       flux(KS,i,j) = J33G * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
                    + GSQRT(KS+1,i,j) * num_diff(KS+1,i,j) ! k = KS+1
+
+       vel = ( 0.5_RP * ( mom(KS+1,i,j) &
+                        + mom(KS+2,i,j) ) ) &
+           / DENS(KS+2,i,j)
+       flux(KS+1,i,j) = J33G * vel &
+                   * ( ( F31 * ( val(KS+3,i,j)+val(KS,i,j) ) + F32 * ( val(KS+2,i,j)+val(KS+1,i,j) ) ) &
+                     - ( F31 * ( val(KS+3,i,j)-val(KS,i,j) ) + F33 * ( val(KS+2,i,j)-val(KS+1,i,j) ) ) * sign(1.0_RP,vel) ) &
+                   + GSQRT(KS+2,i,j) * num_diff(KS+2,i,j) ! k = KS+2
 
 
 

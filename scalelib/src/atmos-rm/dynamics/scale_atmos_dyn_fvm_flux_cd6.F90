@@ -478,17 +478,17 @@ contains
        vel = ( 0.5_RP * ( mom(KS,i,j) &
                         + mom(KS+1,i,j) ) ) &
            / DENS(KS+1,i,j)
-       flux(KS  ,i,j) = J33G * vel &
-                   * ( F41 * ( val(KS+1,i,j)+val(KS,i,j) ) &
-                     + F42 * ( val(KS+2,i,j)+val(KS-1,i,j) ) ) &
-                   + GSQRT(KS+1,i,j) * num_diff(KS+1,i,j) ! k = KS+1
-
-       vel = ( 0.5_RP * ( mom(KS,i,j) &
-                        + mom(KS+1,i,j) ) ) &
-           / DENS(KS+1,i,j)
-       flux(KS  ,i,j) = J33G * vel &
+       flux(KS,i,j) = J33G * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
                    + GSQRT(KS+1,i,j) * num_diff(KS+1,i,j) ! k = KS+1
+
+       vel = ( 0.5_RP * ( mom(KS+1,i,j) &
+                        + mom(KS+2,i,j) ) ) &
+           / DENS(KS+2,i,j)
+       flux(KS+1,i,j) = J33G * vel &
+                   * ( F41 * ( val(KS+2,i,j)+val(KS+1,i,j) ) &
+                     + F42 * ( val(KS+3,i,j)+val(KS,i,j) ) ) &
+                   + GSQRT(KS+2,i,j) * num_diff(KS+2,i,j) ! k = KS+2
 
 
 

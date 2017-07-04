@@ -539,10 +539,10 @@ contains
 #endif
        flux(KS-1,i,j) = 0.0_RP ! k = KS
 <% nh.times do |k| %>
-       vel = <%= interp("mom", "XYW", "XYZ", "KS+1") %> &
-           / DENS(KS+1,i,j)
-       flux(KS  ,i,j) = J33G * vel &
-                   * ( <%= flux("vel", [order-(k+1)*2,2].max, 0, "KS") %> ) <%= num_diff("KS+1") %> ! k = KS+1
+       vel = <%= interp("mom", "XYW", "XYZ", "KS"+(k+1)) %> &
+           / DENS(KS<%=k+1%>,i,j)
+       flux(KS<%=k%>,i,j) = J33G * vel &
+                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KS"+k) %> ) <%= num_diff("KS"+(k+1)) %> ! k = KS<%=k+1%>
 <% end %>
 
 <% if nh >= 2 %>

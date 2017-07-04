@@ -421,7 +421,7 @@ contains
        vel = ( 0.5_RP * ( mom(KS,i,j) &
                         + mom(KS+1,i,j) ) ) &
            / DENS(KS+1,i,j)
-       flux(KS  ,i,j) = J33G * vel &
+       flux(KS,i,j) = J33G * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
                    + GSQRT(KS+1,i,j) * num_diff(KS+1,i,j) ! k = KS+1
 
