@@ -3,8 +3,8 @@
 
 \subsection{Cloud micro-physics} \label{subsec:basic_usel_microphys}
 %------------------------------------------------------
-The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively. 
-{\color{blue} Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in both \texttt{init.conf} and \texttt{run.conf}}. 
+The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively.
+{\color{blue} Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in both \texttt{init.conf} and \texttt{run.conf}}.
 The update interval for the cloud micro-physics scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing. The following example shows the configuration for cases involving a six-class one-moment bulk scheme that contains ice phase clouds:
 
 \editboxtwo{
@@ -36,7 +36,7 @@ Four typical schemes are prepared:
 \item {\bf One-moment bulk scheme with ice \cite{tomita_2008}}\\
 This scheme makes the same assumption as that in \cite{kessler_1969} for the particle size distribution function, but with five categories of water: cloud, rain, ice, snow, and graupel.
 \item {\bf Two-moment bulk scheme with ice \cite{sn_2014}}\\
-In this scheme, the particle size distribution is expressed by the numerical concentration of particles and their mass concentration. 
+In this scheme, the particle size distribution is expressed by the numerical concentration of particles and their mass concentration.
 \item {\bf One-moment bin scheme \cite{suzuki_etal_2010}}\\
 This scheme explicitly expresses particle size distribution by discretizing it using an appropriate number of degrees of freedom for each category. There are six categories: cloud, rain, ice, snow, graupel, and hail. The accuracy of expressing the size distribution depends on the degrees of freedom.
 
@@ -91,7 +91,7 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
   The temporal tendencies by vertical mixing is calculated by a linear combination of those calculated by the LES turbulence model and RANS turbulence parameterization. The horizontal mixing is calculate by the LES turbulence model.
 \item Horizontal eddy viscosity for RANS simulations \\
   The RANS turbulence parameterization is a scheme considering only vertical mixing.
-  If you want to consider the horizontal eddy viscosity in RANS simulations, 
+  If you want to consider the horizontal eddy viscosity in RANS simulations,
   that becomes possible by using the \verb|HYBRID| scheme.
   The horizontal mixing is calculate by the LES turbulence model.
 \end{enumerate}
@@ -140,8 +140,8 @@ the file name and information of the data are specified in \namelist{PARAM_ATMOS
 \verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; order of spatial dimensions of the data. 'XYZ' or 'ZXY' \\
 \verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; whether annually cyclic data \\
 \verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; whether monthly cyclic data \\
-\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; whether dayly cyclic data \\
-\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = 0,           | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; whether daily cyclic data \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = 0,           | & ; step number when data at a certain time step is used. Set the value less than 1 for temporal varied data. \\
 \verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .true.,      | & ; whether coordinate variables are to be checked \\
 \verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 0,           | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
 \verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; diffuse rate (diffuse solar radiation/global solar radiation) of short wave used when short-wave direct flux data is not given \\
@@ -149,7 +149,7 @@ the file name and information of the data are specified in \namelist{PARAM_ATMOS
 }
 
 \noindent
-The file format of external data file is \netcdf format 
+The file format of external data file is \netcdf format
 with the same corrdinate variables as that of initial/boundary data files.
 Variables as the external data is shown in Table \ref{tab:var_list_atm_rd_offline}.\\
 
@@ -172,8 +172,6 @@ Variables as the external data is shown in Table \ref{tab:var_list_atm_rd_offlin
   \end{tabularx}
 \end{center}
 \end{table}
-
-
 
 \subsubsection{Configuration for \texttt{MSTRNX}}
 
@@ -222,7 +220,7 @@ These files are specified in \namelist{PARAM_ATMOS_PHY_RD_MSTRN} as follows:
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_MSTRN | & \\
 \verb| ATMOS_PHY_RD_MSTRN_KADD                  = 10             | & Number of layers between model top and TOA for radiation\\
-\verb| ATMOS_PHY_RD_MSTRN_TOA                   = 100.0          | & Height of TOA for radiation [km]( depending on parameter file used)\\
+\verb| ATMOS_PHY_RD_MSTRN_TOA                   = 100.0          | & Height of TOA for radiation [km] (depending on parameter file used)\\
 \verb| ATMOS_PHY_RD_MSTRN_nband                 = 29             | & Number of bins for wavelength (depending on parameter file used)\\
 \verb| ATMOS_PHY_RD_MSTRN_nptype                = 9              | & Number of aerosol species (depending on parameter file used)\\
 \verb| ATMOS_PHY_RD_MSTRN_nradius               = 8              | & Number of particle bins for aerosol (depending on parameter file used)\\
@@ -304,7 +302,7 @@ The number of layers and their heights in this user-defined file can be given in
 
 \subsection{Surface flux at the bottom of atmospheric boundary } \label{subsec:basic_usel_surface}
 %------------------------------------------------------
-The flux scheme at the bottom atmospheric boundary is configured in \nmitem{ATMOS_PHY_SF_TYPE} in \namelist{PARAM_ATMOS} as follows: 
+The flux scheme at the bottom atmospheric boundary is configured in \nmitem{ATMOS_PHY_SF_TYPE} in \namelist{PARAM_ATMOS} as follows:
 
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
@@ -489,7 +487,7 @@ If the land surface type is included in the land use setup by \namelist{PARAM_LA
 
 If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|,
 it is necessary to prepare parameter tables for the length of roughness and the input to the land-use distribution.
-A parameter table is provided 
+A parameter table is provided
 in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
 
 
