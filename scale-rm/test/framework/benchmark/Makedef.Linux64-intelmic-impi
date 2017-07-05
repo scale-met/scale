@@ -41,7 +41,7 @@ CFLAGS_DEBUG = -O0 -xMIC-AVX512
 
 ##### Special setting
 
-FFLAGS_OPENMP = -openmp -no-heap-arrays
+FFLAGS_OPENMP = -qopenmp -no-heap-arrays
 
 ifeq ($(SCALE_DISABLE_INTELVEC),T)
    NOVEC = -no-vec
