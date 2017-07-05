@@ -22,6 +22,10 @@ INDEX_DIR := $(PWD)
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
+
+all: build
+
+
 $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	mkdir -p $(BUILD_DIR)
 	cp -f $< $@
