@@ -256,8 +256,7 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 
 放射計算のための太陽放射量は、
 モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
-理想実験のために、緯度経度や時刻を固定することも出来る。
-また太陽定数も変更できる。
+理想実験のために、計算領域全域で放射計算のための緯度経度や時刻を固定することも出来る。また太陽定数の変更も可能である。
 これらは\namelist{PARAM_ATMOS_SOLARINS}で設定する。\\
 
 \noindent {\small {\gt
@@ -275,7 +274,7 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 }}}\\
 
 \namelist{PARAM_MAPPROJ}の\nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}が設定されている場合、\\
-\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat}には、\\
+\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat}のデフォルト値には、\\
 \nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}がそれぞれ与えられる。
 \namelist{PARAM_MAPPROJ}の説明は、第\ref{subsec:adv_mapproj}節を参照されたい。\\
 
@@ -318,7 +317,7 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 \end{tabularx}
 }}}\\
 
-version 5.2で上記の\verb|MSTRNX|パラメータファイルが更新された。
+上記の\verb|MSTRNX|パラメータファイルはversion 5.2 リリース時に更新された。
 そのため、データベースもソースコードの更新と合わせて置き換えることを推奨する。
 version 5.1以前の\verb|MSTRNX|パラメータファイルは
 \begin{verbatim}
@@ -335,6 +334,7 @@ version 5.1以前の\verb|MSTRNX|パラメータファイルは
 \verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              |\\
 \end{tabularx}
 }}}\\
+
 
 放射計算のために追加された層の気温・気圧プロファイルは外部から与える必要がある。
 また二酸化炭素やオゾン等の気体濃度プロファイルも必要である。
