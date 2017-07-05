@@ -100,7 +100,7 @@ module scale_grid_nest
   integer,  public              :: TILEAL_JA(2)         !< cells of all tiles in y-direction
 
   integer,  public              :: NEST_BND_QA = 1      !< number of tracer treated in nesting system
-  integer,  public              :: NEST_INTERP_LEVEL = 4 !< horizontal interpolation level
+  integer,  public              :: NEST_INTERP_LEVEL = 5 !< horizontal interpolation level
 
   logical,  public              :: USE_NESTING          = .false.
   logical,  public              :: OFFLINE              = .false.

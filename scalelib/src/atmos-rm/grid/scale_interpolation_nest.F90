@@ -50,6 +50,7 @@ module scale_interpolation_nest
   private :: INTRPNEST_search_horiz_1points
   private :: INTRPNEST_search_horiz_3points
   private :: INTRPNEST_search_horiz_4points
+  private :: INTRPNEST_search_horiz_5points
   private :: INTRPNEST_search_horiz_8points
   private :: INTRPNEST_search_horiz_12points
   private :: INTRPNEST_search_vert_offline
@@ -60,6 +61,8 @@ module scale_interpolation_nest
   private :: INTRPNEST_interp_3d_3points
   private :: INTRPNEST_interp_2d_4points
   private :: INTRPNEST_interp_3d_4points
+  private :: INTRPNEST_interp_2d_5points
+  private :: INTRPNEST_interp_3d_5points
   private :: INTRPNEST_interp_2d_8points
   private :: INTRPNEST_interp_3d_8points
   private :: INTRPNEST_interp_2d_12points
@@ -258,6 +261,12 @@ contains
        INTRPNEST_interp_2d    => INTRPNEST_interp_2d_4points
        INTRPNEST_interp_3d    => INTRPNEST_interp_3d_4points
        itp_nh = 4
+
+    case( 5 )
+       INTRPNEST_search_horiz => INTRPNEST_search_horiz_5points
+       INTRPNEST_interp_2d    => INTRPNEST_interp_2d_5points
+       INTRPNEST_interp_3d    => INTRPNEST_interp_3d_5points
+       itp_nh = 5
 
     case( 8 )
        INTRPNEST_search_horiz => INTRPNEST_search_horiz_8points
@@ -633,6 +642,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
+       distance = distance * distance
        if ( distance <= dist(1) ) then
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
           dist(2) = dist(1);   igrd(2) = igrd(1);  jgrd(2) = jgrd(1)
@@ -709,6 +719,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
+       distance = distance * distance
        if ( distance <= dist(1) ) then
           dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
@@ -743,6 +754,100 @@ contains
 
     return
   end subroutine INTRPNEST_search_horiz_4points
+
+
+  !-----------------------------------------------------------------------------
+  ! horizontal search of interpolation points for five-points
+  subroutine INTRPNEST_search_horiz_5points( &
+      hfact,   & ! (out)
+      igrd,    & ! (out)
+      jgrd,    & ! (out)
+      mylat,   & ! (in)
+      mylon,   & ! (in)
+      inlat,   & ! (in)
+      inlon,   & ! (in)
+      is,      & ! (in)
+      ie,      & ! (in)
+      js,      & ! (in)
+      je       ) ! (in)
+    use scale_const, only: &
+       eps => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: hfact(:)       ! horizontal interp factor
+    integer,  intent(out) :: igrd (:)       ! grid points of interp target
+    integer,  intent(out) :: jgrd (:)       ! grid points of interp target
+
+    real(RP), intent(in)  :: mylat          ! latitude data of mine
+    real(RP), intent(in)  :: mylon          ! longitude data of mine
+    real(RP), intent(in)  :: inlat(:,:)     ! latitude  data of you (input)
+    real(RP), intent(in)  :: inlon(:,:)     ! longitude data of you (input)
+
+    integer,  intent(in)  :: is             ! start index for x-direction
+    integer,  intent(in)  :: ie             ! end   index for x-direction
+    integer,  intent(in)  :: js             ! start index for y-direction
+    integer,  intent(in)  :: je             ! end   index for y-direction
+
+    real(RP) :: distance
+    real(RP) :: denom
+    real(RP) :: dist(5)
+    integer :: ii, jj
+    !---------------------------------------------------------------------------
+
+    dist(1) = large_number_5
+    dist(2) = large_number_4
+    dist(3) = large_number_3
+    dist(4) = large_number_2
+    dist(5) = large_number_1
+    igrd(:) = -1
+    jgrd(:) = -1
+
+    do jj = js, je
+    do ii = is, ie
+       distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
+       distance = distance * distance
+       if ( distance <= dist(1) ) then
+          dist(5) = dist(4);   igrd(5) = igrd(4);  jgrd(5) = jgrd(4)
+          dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
+          dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
+          dist(2) = dist(1);   igrd(2) = igrd(1);  jgrd(2) = jgrd(1)
+          dist(1) = distance;  igrd(1) = ii;       jgrd(1) = jj
+       elseif ( dist(1) < distance .AND. distance <= dist(2) ) then
+          dist(5) = dist(4);   igrd(5) = igrd(4);  jgrd(5) = jgrd(4)
+          dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
+          dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
+          dist(2) = distance;  igrd(2) = ii;       jgrd(2) = jj
+       elseif ( dist(2) < distance .AND. distance <= dist(3) ) then
+          dist(5) = dist(4);   igrd(5) = igrd(4);  jgrd(5) = jgrd(4)
+          dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
+          dist(3) = distance;  igrd(3) = ii;       jgrd(3) = jj
+       elseif ( dist(3) < distance .AND. distance <= dist(4) ) then
+          dist(5) = dist(4);   igrd(5) = igrd(4);  jgrd(5) = jgrd(4)
+          dist(4) = distance;  igrd(4) = ii;       jgrd(4) = jj
+       elseif ( dist(4) < distance .AND. distance <= dist(5) ) then
+          dist(5) = distance;  igrd(5) = ii;       jgrd(5) = jj
+       endif
+    enddo
+    enddo
+
+    if ( abs(dist(1)) < eps ) then
+       hfact(1) = 1.0_RP
+       hfact(2) = 0.0_RP
+       hfact(3) = 0.0_RP
+       hfact(4) = 0.0_RP
+       hfact(5) = 0.0_RP
+    else
+       denom = 1.0_RP / (  (1.0_RP/dist(1)) + (1.0_RP/dist(2)) &
+                         + (1.0_RP/dist(3)) + (1.0_RP/dist(4)) + (1.0_RP/dist(5)) )
+       hfact(1) = ( 1.0_RP/dist(1) ) * denom
+       hfact(2) = ( 1.0_RP/dist(2) ) * denom
+       hfact(3) = ( 1.0_RP/dist(3) ) * denom
+       hfact(4) = ( 1.0_RP/dist(4) ) * denom
+       hfact(5) = ( 1.0_RP/dist(5) ) * denom
+    endif
+
+    return
+  end subroutine INTRPNEST_search_horiz_5points
 
 
   !-----------------------------------------------------------------------------
@@ -797,6 +902,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
+       distance = distance * distance
        if ( distance <= dist(1) ) then
           dist(8) = dist(7);   igrd(8) = igrd(7);  jgrd(8) = jgrd(7)
           dist(7) = dist(6);   igrd(7) = igrd(6);  jgrd(7) = jgrd(6)
@@ -923,6 +1029,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
+       distance = distance * distance
        if ( distance <= dist(1) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
@@ -1612,6 +1719,132 @@ contains
 
     return
   end subroutine INTRPNEST_interp_3d_4points
+
+
+  !-----------------------------------------------------------------------------
+  ! interpolation using five-points for 2D data
+  subroutine INTRPNEST_interp_2d_5points( &
+      intp,    & ! (out)
+      ref,     & ! (in)
+      hfact,   & ! (in)
+      igrd,    & ! (in)
+      jgrd,    & ! (in)
+      ia,      & ! (in)
+      ja       ) ! (in)
+    implicit none
+
+    real(RP), intent(out) :: intp(:,:)      ! interpolated data
+
+    real(RP), intent(in)  :: ref (:,:)      ! reference data
+    real(RP), intent(in)  :: hfact(:,:,:)   ! horizontal interp factor
+    integer,  intent(in)  :: igrd (:,:,:)   ! grid points of interp target
+    integer,  intent(in)  :: jgrd (:,:,:)   ! grid points of interp target
+    integer,  intent(in)  :: ia             ! grid number of mine
+    integer,  intent(in)  :: ja             ! grid number of mine
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+!OCL PREFETCH
+    do j = 1, ja
+    do i = 1, ia
+       intp(i,j) = ref(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1)  &
+                 + ref(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2)  &
+                 + ref(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)  &
+                 + ref(igrd(i,j,4),jgrd(i,j,4)) * hfact(i,j,4)  &
+                 + ref(igrd(i,j,5),jgrd(i,j,5)) * hfact(i,j,5)
+    end do
+    end do
+
+    return
+  end subroutine INTRPNEST_interp_2d_5points
+
+
+  !-----------------------------------------------------------------------------
+  ! interpolation using five-points for 3D data
+  subroutine INTRPNEST_interp_3d_5points( &
+      intp,    & ! (out)
+      ref,     & ! (in)
+      hfact,   & ! (in)
+      vfact,   & ! (in)
+      kgrd,    & ! (in)
+      igrd,    & ! (in)
+      jgrd,    & ! (in)
+      ia,      & ! (in)
+      ja,      & ! (in)
+      ks,      & ! (in)
+      ke,      & ! (in)
+      logwegt  ) ! (in)
+    implicit none
+
+    real(RP), intent(out) :: intp(:,:,:)       ! interpolated data
+
+    real(RP), intent(in)  :: ref (:,:,:)       ! reference data
+    real(RP), intent(in)  :: hfact(:,:,:)      ! horizontal interp factor
+    real(RP), intent(in)  :: vfact(:,:,:,:,:)  ! vertical interp factor
+    integer,  intent(in)  :: kgrd (:,:,:,:,:)  ! grid points of interp target
+    integer,  intent(in)  :: igrd (:,:,:)      ! grid points of interp target
+    integer,  intent(in)  :: jgrd (:,:,:)      ! grid points of interp target
+    integer,  intent(in)  :: ia                ! grid number of mine
+    integer,  intent(in)  :: ja                ! grid number of mine
+    integer,  intent(in)  :: ks                ! start grid number of mine
+    integer,  intent(in)  :: ke                ! end grid number of mine
+
+    logical,  intent(in), optional :: logwegt
+
+    integer :: i, j, k
+    logical :: logarithmic
+    !---------------------------------------------------------------------------
+
+    logarithmic = .false.
+    if ( present(logwegt) ) then
+    if ( logwegt ) then
+       logarithmic = .true.
+    endif
+    endif
+
+       ! linear interpolation
+!OCL PREFETCH
+       do j = 1, ja
+       do i = 1, ia
+       do k = ks, ke
+          intp(k,i,j) = ref(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) &
+                      * hfact(i,j,1) * vfact(k,i,j,1,1)              &
+                      + ref(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) &
+                      * hfact(i,j,2) * vfact(k,i,j,2,1)              &
+                      + ref(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) &
+                      * hfact(i,j,3) * vfact(k,i,j,3,1)              &
+                      + ref(kgrd(k,i,j,4,1),igrd(i,j,4),jgrd(i,j,4)) &
+                      * hfact(i,j,4) * vfact(k,i,j,4,1)              &
+                      + ref(kgrd(k,i,j,5,1),igrd(i,j,5),jgrd(i,j,5)) &
+                      * hfact(i,j,5) * vfact(k,i,j,5,1)              &
+                      + ref(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) &
+                      * hfact(i,j,1) * vfact(k,i,j,1,2)              &
+                      + ref(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) &
+                      * hfact(i,j,2) * vfact(k,i,j,2,2)              &
+                      + ref(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) &
+                      * hfact(i,j,3) * vfact(k,i,j,3,2)              &
+                      + ref(kgrd(k,i,j,4,2),igrd(i,j,4),jgrd(i,j,4)) &
+                      * hfact(i,j,4) * vfact(k,i,j,4,2)              &
+                      + ref(kgrd(k,i,j,5,2),igrd(i,j,5),jgrd(i,j,5)) &
+                      * hfact(i,j,5) * vfact(k,i,j,5,2)
+       end do
+       end do
+       end do
+
+    ! logarithmic weighting (for pres, dens)
+    if ( logarithmic ) then
+       do j = 1, ja
+       do i = 1, ia
+       do k = ks, ke
+          intp(k,i,j) = exp( intp(k,i,j) )
+       end do
+       end do
+       end do
+    endif
+
+    return
+  end subroutine INTRPNEST_interp_3d_5points
 
 
   !-----------------------------------------------------------------------------
