@@ -14,7 +14,7 @@ cat << EOF > base.init.conf
 /
 
 &PARAM_NEST
- NEST_INTERP_LEVEL = 4,
+ NEST_INTERP_LEVEL = 5,
 /
 
 &PARAM_RESTART
