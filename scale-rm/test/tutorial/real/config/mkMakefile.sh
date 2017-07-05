@@ -33,11 +33,11 @@ DATPARAM    =
 DATDISTS    =
 
 
-
-all: run
-
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include \$(TESTDIR)/Makefile.common
+
+
+all: run
 
 EOF
 
@@ -64,15 +64,15 @@ TPROC       = ${TPROC}
 
 # required data (parameters,distributed files)
 DATDIR      = ../../data
-DATPARAM    = ${BASENAME_ORG}
+DATPARAM    = ${DATPARAM}
 DATDISTS    =
 
 
-
-all: run
-
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include \$(TESTDIR)/Makefile.common
+
+
+all: run
 
 EOF
 
@@ -103,11 +103,11 @@ DATPARAM    =
 DATDISTS    =
 
 
-
-all: run
-
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include \$(TESTDIR)/Makefile.common
+
+
+all: run
 
 EOF
 

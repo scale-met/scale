@@ -119,9 +119,18 @@ case ${TIME_DURATION_UNIT} in
 esac
 INT_DURATION=`expr ${TIME_DURATION%%.*} \* ${TIME_DURATION_UNIT_SEC}`
 INT_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
-NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
-if [ ${NUMBER_OF_FILES} -le 1 ]; then
-  NUMBER_OF_FILES=2
+if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+  NUMBER_OF_FILES=1
+  NUMBER_OF_TSTEPS=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
+  if [ ${NUMBER_OF_TSTEPS} -le 1 ]; then
+    NUMBER_OF_TSTEPS=2
+  fi
+else
+  NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
+  if [ ${NUMBER_OF_FILES} -le 1 ]; then
+    NUMBER_OF_FILES=2
+  fi
+  NUMBER_OF_TSTEPS=1
 fi
 
 # set maximum number of steps
@@ -237,15 +246,18 @@ do
   fi
   if [ $DNUM -gt 1 ]; then
     IAM_DAUGHTER=".true."
-    PARENT_BASENAME=${COPYTOPO_IN_BASENAME}
-    PARENT_PRC_NUM_X=${PRC_NUM_X[$PD]}
-    PARENT_PRC_NUM_Y=${PRC_NUM_Y[$PD]}
   else
     IAM_DAUGHTER=".false."
+  fi
+  if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+    PARENT_BASENAME="${BASENAME_ORG}"
+  else
     PARENT_BASENAME=""
     PARENT_PRC_NUM_X=0
     PARENT_PRC_NUM_Y=0
   fi
+
+
 
   # set boundary parameters
   if [ $DNUM -gt 1 ]; then
@@ -300,6 +312,7 @@ do
   DNUM=`expr $DNUM + 1`
 done
 
+
 #################################################
 #
 # make launcher
@@ -330,6 +343,22 @@ if [ $DNUM -eq 1 ]; then
 else
   INIT_CONF_FILE=init.launch.conf
   RUN_CONF_FILE=run.launch.conf
+fi
+
+if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+  DATPARAM=${LATLON_CATALOGUE}
+  eval 'PNUM=`expr ${PARENT_PRC_NUM_X} + ${PARENT_PRC_NUM_Y}`'
+  if [ ${PNUM} -lt 1 ];    then echo "Error: Wrong PARENT_PRC_NUM_X or PARENT_PRC_NUM_Y.";     exit 1; fi
+  PN=0
+  while [ $PN -lt $PNUM ]
+  do
+    PFN=`printf "%06d" $PN`
+    DATPARAM=${DATPARAM}","${BASENAME_ORG}.pe${PFN}.nc
+    PN=`expr $PN + 1`
+  done
+  IFS="," eval 'DATPARAM="${DATPARAM[*]}"'
+else
+  DATPARAM=${BASENAME_ORG}
 fi
 
 source ${INPUT_CONFIGDIR}/mklink.sh
