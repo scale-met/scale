@@ -44,15 +44,16 @@
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
  \verb|&PARAM_ATMOS_DYN  | & \\
- \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|       & ; 時間スキームより選択\\
- \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,| & ; 時間スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|       & ; 空間スキームより選択\\
+ \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; 時間スキームより選択\\
+ \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; 時間スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; 空間スキームより選択\\
  \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
- \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|   & ; FCTスキームを利用するかどうか\\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |     & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |     & \\
- \verb|ATMOS_DYN_enable_coriolis            = .true.,|    & \\
- \verb|ATMOS_DYN_wdamp_height                = 15.D3,|    & \\
+ \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|      & ; FCTスキームを利用するかどうか\\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
+ \verb|ATMOS_DYN_enable_coriolis            = .true.,|       & \\
+ \verb|ATMOS_DYN_wdamp_height               = 15.D3,|        & ;レイリーダンピングを適用するスポンジ層の\\
+                                                             &  ~~下端高度\\
 \verb|/             | & \\
 \end{tabularx}
 }}\\

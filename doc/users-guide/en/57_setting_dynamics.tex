@@ -24,7 +24,7 @@ The numerical method for time integration in the dynamical process is specified 
 \end{table}
 
 
-\subsubsection{Setting the temporal and spatial difference schemes} %\label{subsec:atmos_dyn_scheme}
+\subsubsection{Setting the temporal and spatial difference schemes} \label{subsec:atmos_dyn_scheme}
 %------------------------------------------------------
 
 The temporal integration and spatial difference schemes are configured in \namelist{PARAM_ATMOS_DYN}. According to the spatial integration scheme, the specification of the number of halos is required. The following are recommended along with the other options listed in Table \ref{tab:nml_atm_dyn}. For numerical stability, the time step is changed according to the schemes used. Methods to determine the time step are described in Section \ref{sec:timeintiv}.
@@ -39,6 +39,7 @@ The temporal integration and spatial difference schemes are configured in \namel
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |        & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
  \verb|ATMOS_DYN_enable_coriolis            = .true.,|       & \\
+ \verb|ATMOS_DYN_wdamp_height               = 15.D3,|        & ; height [m] of the bottom of sponge layer (for Rayleigh damping)\\
 \verb|/             | & \\
 }
 
@@ -65,15 +66,15 @@ The temporal integration and spatial difference schemes are configured in \namel
 \end{center}
 \end{table}
 
-For advection of prognostic variables in dynamics (\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}), 
+For advection of prognostic variables in dynamics (\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}),
 default setting is the 4th-order central difference (\verb|CD4|) in the \scalerm.
 When using \verb|CD4| in an experiment with rough terrain,
 it is often confirmed that grid-scale vertical flow is occurred on the peak of mountains.
-This grid-scale vertical flow is moderated by using \verb|UD3|. 
+This grid-scale vertical flow is moderated by using \verb|UD3|.
 So, the use of \verb|UD3| is recommended for experiments with rough terrain.
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} can be set to zero when using \verb|UD3|.
 
-For tracer advection, the use of a scheme for guaranteeing a non-negative value is recommended. 
+For tracer advection, the use of a scheme for guaranteeing a non-negative value is recommended.
 The \verb|UD3KOREN1993| scheme guarantees a non-negative value, whereas other schemes do not. When schemes other than \verb|UD3KOREN1993| are used by being specified in \\
 \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}, the FCT filter is recommended as \\
 \nmitem{ATMOS_DYN_FLAG_FCT_TRACER=}$=$\verb|.true.|
