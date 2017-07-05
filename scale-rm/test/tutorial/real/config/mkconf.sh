@@ -174,6 +174,7 @@ IFS="," eval 'LIST_LDZ="${LDZ[*]}"'
 IFS="," eval 'LIST_UDZ="${UDZ[*]}"'
 
 DNUM=1
+TPROC=0
 while [ $DNUM -le $NUM_DOMAIN ]
 do
   D=`expr $DNUM - 1`
@@ -185,6 +186,7 @@ do
 
   # set numbers of domain process
   eval 'PRC_DOMAINS[$D]=`expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`'
+  eval 'TPROC=`expr ${TPROC} + ${PRC_DOMAINS[$D]}`'
 
   # set names of config files
   eval 'INIT_CONF_FILES[$D]="init.d${FNUM}.conf"'
@@ -321,6 +323,14 @@ mv -f base.run.launch.conf ${OUTPUT_CONFIGDIR}/run/run.launch.conf
 # set-up experimental environment
 #
 #################################################
+
+if [ $DNUM -eq 1 ]; then
+  INIT_CONF_FILE=init.d01.conf
+  RUN_CONF_FILE=run.d01.conf
+else
+  INIT_CONF_FILE=init.launch.conf
+  RUN_CONF_FILE=run.launch.conf
+fi
 
 source ${INPUT_CONFIGDIR}/mklink.sh
 

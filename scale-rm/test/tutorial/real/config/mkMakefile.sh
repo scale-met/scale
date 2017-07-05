@@ -23,9 +23,9 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-INITCONF    = pp.d${FNUM}.conf
+INITCONF    = pp.d01.conf
 
-TPROC       = `expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`
+TPROC       = `expr ${PRC_NUM_X[0]} \* ${PRC_NUM_Y[0]}`
 
 # required data (parameters,distributed files)
 DATDIR      =
@@ -58,9 +58,9 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-INITCONF    = init.d${FNUM}.conf
+INITCONF    = ${INIT_CONF_FILE}
 
-TPROC       = `expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`
+TPROC       = ${TPROC}
 
 # required data (parameters,distributed files)
 DATDIR      = ../../data
@@ -93,9 +93,9 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-RUNCONF     = run.d${FNUM}.conf
+RUNCONF     = ${RUN_CONF_FILE}
 
-TPROC       = `expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`
+TPROC       = ${TPROC}
 
 # required data (parameters,distributed files)
 DATDIR      =
