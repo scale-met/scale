@@ -126,7 +126,7 @@ However, an unusual configuration sometimes leads to numerical instability. To a
 \subsection{Setting sponge layer} \label{subsec:raydamp}
 %-----------------------------------------------------------------------
 
-\scalerm adopts height coordinate system in vertical. The uppermost boundary condition is a rigid lid, and the sound and gravity waves often reflect at the model top. To reduce worse effects of these reflecting waves, the damping layer named ``sponge layer'' is placed in the upper part of the model domain. In the sponge layer, a vertical velocity is dumped by Rayleigh friction. The relaxation time scale (=inverse e-folding time scale) of damping is minimum at the model top and it increases with decreasing the height. Below the bottom boundary of sponge layer, the relaxation time scale is set to infinity.
+\scalerm adopts height coordinate system in vertical. The uppermost boundary condition is a rigid lid, and the sound and gravity waves often reflect at the model top. To reduce worse effects of these reflecting waves, the damping layer named ``sponge layer'' is placed in the upper part of the model domain. In the sponge layer, a vertical velocity is dumped by Rayleigh friction. The relaxation time scale (= e-folding time) of damping is minimum at the model top and it increases with decreasing the height. Below the bottom boundary of sponge layer, the relaxation time scale is set to infinity.
 There are two methods to set the thickness of the sponge layer in \namelist{PARAM_ATMOS_DYN}.
 
 \begin{enumerate}
@@ -138,18 +138,20 @@ There are two methods to set the thickness of the sponge layer in \namelist{PARA
 
 Both parameters above are not set by default, and the sponge layer is not applied. If both are set, \nmitem{ATMOS_DYN_wdamp_layer} is given priority.
 
-The relaxation time at the uppermost boundary is specified by \nmitem{ATMOS_DYN_wdamp_tau}. The unit is [second]. This parameter is not allowed to set the value smaller than \nmitem{TIME_DT_ATMOS_DYN}. When \nmitem{ATMOS_DYN_wdamp_tau} is not specified explicitly, the value ten times as large as \nmitem{TIME_DT_ATMOS_DYN} is automatically set. Please refer to \ref{sec:timeintiv}) for \nmitem{TIME_DT_ATMOS_DYN}.
+The relaxation time at the uppermost boundary is specified by \nmitem{ATMOS_DYN_wdamp_tau}. The unit is [second]. This parameter is not allowed to set the value smaller than \nmitem{TIME_DT_ATMOS_DYN}. When \nmitem{ATMOS_DYN_wdamp_tau} is not specified explicitly, the value ten times as large as \\
+\nmitem{TIME_DT_ATMOS_DYN} is automatically set. Please refer to section \ref{sec:timeintiv} for \nmitem{TIME_DT_ATMOS_DYN}.
+The example of concrete setting is shown in section \ref{subsec:atmos_dyn_scheme}.
 
 %-----------------------------------------------------------------------
-\subsection{Setting the buffer region and nudging method} \label{subsec:buffer}
+\subsection{Setting the buffer region and boundary nudging method} \label{subsec:buffer}
 %-----------------------------------------------------------------------
 
 In general, disagreement in values between input data as boundary condition and actual calculation output occurs at the lateral boundaries. They generate several problems, such as nonphysical mode, in calculation.
 To avoid these problems, the ``buffer region'' is placed in the domain.
 
-As shown in Fig. \ref{fig:buff_xz}, \scalerm places the buffer region just inside the calculation domain. In the buffer region, prognostic variables are updated to be close to the specified values of boundary data and/or the parent model data with a certain relaxation time. Hereinafter, this relaxation is called nudging.
+As shown in Fig.\ref{fig:buff_xz}, \scalerm places the buffer region just inside the calculation domain. In the buffer region, prognostic variables are updated to be close to the specified values of boundary data and/or the parent model data with a certain relaxation time. Hereinafter, this relaxation is called nudging.
 %As described in \ref{subsec:raydamp}, Rayleigh damping is often applied at the upper layers. If nudging at the upper layers is required, the thickness of the sponge layer for Rayleigh damping should be set to zero.
-If the value \verb|REAL| is specified in \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY}, no nudging is applied in upper boundary by default.
+If \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY} is \verb|REAL|, no nudging is applied in upper boundary by default.
 The width of the buffer region is specified in \namelist{PARAM_GRID} in the configuration file. Note again that the configuration in all procedures must be identical. There are two methods to configure the width of the buffer region.
 
 \begin{enumerate}
@@ -157,6 +159,10 @@ The width of the buffer region is specified in \namelist{PARAM_GRID} in the conf
 \item specify width [m] of the buffer region with \nmitem{BUFFER_DX, BUFFER_DY, BUFFER_DZ} \\
 \end{enumerate}
 Both parameters above are not set by default, and no buffer regions are set. If both are set, \nmitem{BUFFER_NX, BUFFER_NY, BUFFER_NZ} is given priority.
+The buffer regions along the horizontal directions are placed at the four domain boundaries, 
+whereas those along the vertical direction are placed just at the top of the domain.
+Nothing is affected in the bottom region. 
+Note that the actual target region unaffected by the nudging (the region excluding the buffer regions) narrows compared to the calculation domain because the buffer region is placed on the inside of calculation domain.
 
 Two examples are as below.
 
@@ -167,7 +173,6 @@ Two examples are as below.
  \verb|BUFFFACT  = 1.D0, | & ; Stretched factor for grid intervals in the buffer region( default : 1.0 )\\
 \verb|/|\\
 }
-
 \editboxtwo{
 \verb|&PARAM_GRID | & \\
  \verb|BUFFER_DZ  = 5000.D0,   | & ; The width of the buffer region along the Z direction from the top of the model (a reference) [m]\\
@@ -179,28 +184,28 @@ Two examples are as below.
 \verb|/|\\
 }
 
-The buffer regions along the horizontal directions are placed at the four domain boundaries, whereas those along the vertical direction are placed just at the top of the domain, and nothing is affected in the lower region. Note that the actual target region (the region excluding the buffer regions) narrows due to this setting because the buffer region is placed in the calculation domain.
+
 
 The setting procedure of buffer region for the X direction is described as follows.
 The number of grids \verb|ibuff| in the buffer region is equal to \nmitemeq{BUFFER_NX}.
 If \nmitemeq{BUFFER_DX} is configured instead of \nmitemeq{BUFFER_NX}, \verb|ibuff| is automatically calculated as the minimum integer satisfying the following condition:
-
+%
 \begin{eqnarray}
-   && \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
+   && \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX}. \nonumber
 \end{eqnarray}
-
+%
 Thus, it should be noted that the width of the buffer region $\verb|BUFFER|_{\verb|X|}$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$) does not always correspond to \nmitem{BUFFER_DX}. At the end, the actual target region excluded by the buffer region is expressed as
-
+%
 \begin{eqnarray}
    && \nmitemeq{DX} \times ( \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X} - 2 \times \verb|ibuff| ).
 \end{eqnarray}
-
+%
 Although the situations along the Y and Z directions are similar to this, note that the actual target region along the Z direction is expressed as
-
+%
 \begin{eqnarray}
    && \nmitemeq{DZ} \times ( \nmitemeq{KMAX} - \verb|kbuff| ),
 \end{eqnarray}
-
+%
 using the number of grids \verb|kbuff| in the upper buffer region.
 
 \begin{figure}[t]
@@ -211,29 +216,33 @@ using the number of grids \verb|kbuff| in the upper buffer region.
 \end{center}
 \end{figure}
 
-In general, there is no clear criterion for setting the buffer region width and locating grids in the region.
-This depends on a problem to be solved. In \scalerm, the following are recommended: the number of grids in the vertical buffer region at the top of the model is greater than 5, whereas that in the lateral boundaries is approximately 20$\sim$40. Depending on the experiment, it may be necessary to increase the number of grids in the buffer region to increase the buffer region itself by using the appropriate stretch factor, tune relaxation time, and so on.
+In general, there is no clear criterion for setting the width and locating grids in the buffer region.
+This depends on a problem to be solved. In \scalerm, the followings are recommended: the number of grids in the vertical buffer region at the top of the model is greater than 5, whereas that in the lateral boundaries is approximately 20$\sim$40. Depending on the experiment, it may be necessary to increase the number of grids in the buffer region, to increase the buffer region itself by using the appropriate stretch factor, to tune relaxation time, and so on.
 The relaxation time is defined as the time
 where the difference between the simulated value and the target value becomes $1/e$.
 %This relaxation time is given in \nmitem{ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy, ATMOS_BOUNDARY_tauz}
 This relaxation time is given in \nmitem{ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy}
 in \namelist{PARAM_ATMOS_BOUNDARY} in units of seconds.
+The default value is ten times as large as \nmitem{TIME_DT}. 
+Please refer to section \ref{sec:timeintiv} for \nmitem{TIME_DT}.
+
 
 %-----------------------------------------------------------------------
 \subsubsection{Method for stretching grid intervals in buffer region}
 %-----------------------------------------------------------------------
 
 The grid intervals in the buffer region are the same as \nmitem{DX, DY, DZ} in \namelist{PARAM_GRID} by default.
-But, it is possible for them to be stretched by configuring \nmitem{BUFFFACT}. This specification of \nmitem{BUFFFACT} is applied in all directions if the grid intervals are uniformly specified. When the stretched factor is configured separately in every direction, specify \nmitem{BUFFFACT_X, BUFFFACT_Y, BUFFFACT_Z}. Note that in case of the configuration of vertical levels by giving \nmitem{FZ(:)} (refer to \ref{subsec:gridinterv}), the above stretched settings have no effect along the vertical direction.
+But, it is possible for them to be stretched by setting \nmitem{BUFFFACT} $>$ 1. This specification of \nmitem{BUFFFACT} is applied in all directions if the grid intervals are uniformly specified. When the stretched factor is configured separately in every direction, specify \nmitem{BUFFFACT_X, BUFFFACT_Y, BUFFFACT_Z}. Note that in case of the configuration of vertical levels by giving \nmitem{FZ(:)} (refer to \ref{subsec:gridinterv}), the above stretched settings have no effect along the vertical direction.
 
 The grid interval \verb|BDX| in the buffer region is determined as follows:
 \begin{eqnarray}
  \verb|BDX(|n\verb|)| &=& \verb|DX| \times \verb|BUFFFACT|^n, \nonumber
 \end{eqnarray}
-where $n$ denotes the index of grids in the buffer region, directed from the inner to the outer region in the domain. The grid interval is the same as the inner domain at \nmitem{BUFFFACT=1.0}, whereas it increases from the inner to the outer region by a factor of 1.2 at \nmitem{BUFFFACT=1.2}.  Although any value of \nmitem{BUFFFACT} can be configured, the value from 1.0 to 1.2 is recommended to avoid numerical instability.
+where $n$ denotes the index of grids in the buffer region, in the order directed from the inner to the outer region in the domain. The grid interval is the same as the inner domain at \nmitem{BUFFFACT=1.0}, whereas it increases from the inner to the outer region by a factor of 1.2 at \nmitem{BUFFFACT=1.2}.  Although any value of \nmitem{BUFFFACT} can be configured, the value from 1.0 to 1.2 is recommended to avoid numerical instability.
 
 Finally, the width of the buffer region $\verb|BUFFER|_{\verb|X|}$ is as follows:
 \begin{eqnarray}
   \verb|BUFFER|_{\verb|X|} = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}}-1}{ \nmitemeq{BUFFFACT}-1 }
 \end{eqnarray}
 Even if the same width of buffer region \nmitem{BUFFER_DX} is specified, the number of grids in the buffer region decreases with increasing \nmitem{BUFFFACT}.
+When given by \nmitem{BUFFER_NX}, only the width of buffer region is changed.

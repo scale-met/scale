@@ -226,6 +226,7 @@ MPIプロセス数を変更するには、
 \nmitem{TIME_DT_ATMOS_DYN}よりも小さい値を設定することはできない。
 時定数を陽に指定しない場合は、\nmitem{TIME_DT_ATMOS_DYN} の10倍の値が自動で設定される。
 \nmitem{TIME_DT_ATMOS_DYN}については、第\ref{sec:timeintiv}節を参照のこと。
+具体的な設定例は、第\ref{subsec:atmos_dyn_scheme}節を参照のこと。
 
 鉛直格子を一定間隔に設定する(第\ref{subsec:gridinterv}節参照)場合にも、スポンジ層の格子間隔は大きくとって鉛直格子数を節約したいという要望があるだろう。
 この場合は次の第\ref{subsec:buffer}節で説明するように、鉛直方向の緩和領域を設定し、緩和領域の格子間隔をストレッチする方法を用いる。
@@ -273,7 +274,7 @@ MPIプロセス数を変更するには、
 ナッジングの影響を受けない領域(緩和領域を除いた範囲)は
 計算領域よりも狭くなることに注意が必要である。
 
-以下に２種類の設定例を示す。
+以下に２種類の設定例を示す。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -341,11 +342,11 @@ MPIプロセス数を変更するには、
 \namelist{PARAM_ATMOS_BOUNDARY}の中の
 %\nmitem{ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy, ATMOS_BOUNDARY_tauz}によって秒単位で設定する。
 \nmitem{ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy}によって秒単位で設定する。
-デフォルトの値は $10 \Delta t$ であり、これは、10タイムステップで$1/e$になることに相当する。
+デフォルトの値は、\nmitem{TIME_DT}の10倍であり、これは、10タイムステップで$1/e$になることに相当する。
 タイムステップについては、第\ref{sec:timeintiv}節を参照のこと。
 
 %-----------------------------------------------------------------------
-%\subsubsection{\SubsubsecStretchBufferSetting}
+\subsubsection{緩和領域における格子間隔のストレッチ設定}
 %-----------------------------------------------------------------------
 
 緩和領域の格子間隔は、基本的に
@@ -376,4 +377,4 @@ MPIプロセス数を変更するには、
 %
 緩和領域の幅\nmitem{BUFFER_DX}が同じでも、
 \nmitem{BUFFFACT}の値を大きくすると緩和領域の格子数は少なくなる。
-
+\nmitem{BUFFER_NX}で与えた場合には、緩和領域の幅のみが変わる。
