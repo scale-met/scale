@@ -60,7 +60,7 @@ ORG_SRCS    =
 # parameters for run
 INITCONF    = init.d${FNUM}.conf
 
-TPROC       = 4
+TPROC       = `expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`
 
 # required data (parameters,distributed files)
 DATDIR      = ../../data

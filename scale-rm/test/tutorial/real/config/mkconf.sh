@@ -308,8 +308,8 @@ IFS="," eval 'LIST_PRC_DOMAINS="${PRC_DOMAINS[*]}"'
 IFS="," eval 'LIST_INIT_CONF_FILES="${INIT_CONF_FILES[*]}"'
 IFS="," eval 'LIST_RUN_CONF_FILES="${RUN_CONF_FILES[*]}"'
 
-LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/ /\",\"/g"`
-LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/ /\",\"/g"`
+LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/,/\",\"/g"`
+LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/,/\",\"/g"`
 
 source ${LAUNCH_CONF}
 
