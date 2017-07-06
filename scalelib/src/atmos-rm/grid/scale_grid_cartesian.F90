@@ -352,6 +352,8 @@ contains
        enddo
        ibuff = BUFFER_NX
        imain = IMAXG - 2*BUFFER_NX
+
+       BUFFER_DX = bufftotx
     else
        buffx(0) = DX
        bufftotx = 0.0_RP
@@ -457,6 +459,8 @@ contains
        enddo
        jbuff = BUFFER_NY
        jmain = JMAXG - 2*BUFFER_NY
+
+       BUFFER_DY = bufftoty
     else
        buffy(0) = DY
        bufftoty = 0.0_RP
@@ -590,6 +594,8 @@ contains
           enddo
           kbuff = BUFFER_NZ
           kmain = KMAX - BUFFER_NZ
+
+          BUFFER_DZ = bufftotz
        else
           if ( BUFFER_DZ > FZ(KMAX) ) then
              write(*,*) 'xxx Buffer length (', BUFFER_DZ, &
@@ -647,6 +653,8 @@ contains
           enddo
           kbuff = BUFFER_NZ
           kmain = KMAX - BUFFER_NZ
+
+          BUFFER_DZ = bufftotz
        else
           buffz(0) = DZ
           bufftotz = 0.0_RP
