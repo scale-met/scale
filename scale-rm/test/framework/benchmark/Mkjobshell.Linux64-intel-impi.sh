@@ -79,15 +79,15 @@ if [ ${ndata} -gt 0 ]; then
    do
       let i="n - 1"
 
-      pair=(${DATDISTS[$i]})
+      triple=(${DATDISTS[$i]})
 
-      for np in `seq 1 ${TPROC}`
+      for np in `seq 1 ${triple[0]}`
       do
          let "ip = ${np} - 1"
          PE=`printf %06d ${ip}`
 
-         src=${pair[0]}.pe${PE}.nc
-         dst=${pair[1]}.pe${PE}.nc
+         src=${triple[1]}.pe${PE}.nc
+         dst=${triple[2]}.pe${PE}.nc
 
          if [ -f ${src} ]; then
             echo "ln -svf ${src} ./${dst}" >> ./run.sh

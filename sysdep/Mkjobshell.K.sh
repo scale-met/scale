@@ -105,12 +105,12 @@ if [ ${ndata} -gt 0 ]; then
    do
       let i="n - 1"
 
-      pair=(${DATDISTS[$i]})
+      triple=(${DATDISTS[$i]})
 
-      if [ -f ${pair[0]}.pe000000.nc ]; then
-         echo "#PJM --stgin  'rank=* ${pair[0]}.pe%06r.nc %r:./${pair[1]}.pe%06r.nc'" >> ./run.sh
+      if [ -f ${triple[1]}.pe000000.nc ]; then
+         echo "#PJM --stgin  'rank=* ${triple[1]}.pe%06r.nc %r:./${triple[2]}.pe%06r.nc'" >> ./run.sh
       else
-         echo "datafile does not found! : ${pair[0]}.pe000000.nc"
+         echo "datafile does not found! : ${triple[1]}.pe000000.nc"
          exit 1
       fi
    done

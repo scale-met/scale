@@ -101,12 +101,12 @@ if [ ${ndata} -gt 0 ]; then
    do
       let i="n - 1"
 
-      pair=(${DATDISTS[$i]})
+      triple=(${DATDISTS[$i]})
 
-      if [ -f ${pair[0]}.pe000000.nc ]; then
-         echo "#PBS -I \"${pair[0]}.pe%06r.nc,ALL:./${pair[1]}.pe%06r.nc\"" >> ./run_L.sh
+      if [ -f ${triple[1]}.pe000000.nc ]; then
+         echo "#PBS -I \"${{triple[1]}.pe%06r.nc,ALL:./${triple[2]}.pe%06r.nc\"" >> ./run_L.sh
       else
-         echo "datafile does not found! : ${pair[0]}.pe000000.nc"
+         echo "datafile does not found! : ${{triple[1]}.pe000000.nc"
          exit 1
       fi
    done
@@ -198,15 +198,15 @@ if [ ${ndata} -gt 0 ]; then
    do
       let i="n - 1"
 
-      pair=(${DATDISTS[$i]})
+      triple=(${DATDISTS[$i]})
 
-      for np in `seq 1 ${TPROC}`
+      for np in `seq 1 ${triple[0]}`
       do
          let "ip = ${np} - 1"
          PE=`printf %06d ${ip}`
 
-         src=${pair[0]}.pe${PE}.nc
-         dst=${pair[1]}.pe${PE}.nc
+         src=${triple[1]}.pe${PE}.nc
+         dst=${triple[2]}.pe${PE}.nc
 
          if [ -f ${src} ]; then
             echo "ln -svf ${src} ./${dst}" >> ./run.sh
