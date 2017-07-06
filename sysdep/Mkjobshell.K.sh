@@ -8,29 +8,57 @@ BINNAME=${4}
 PPCONF=${5}
 INITCONF=${6}
 RUNCONF=${7}
-TPROC=${8}
+PROCS=${8}
 eval DATPARAM=(`echo ${9}  | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${10} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpiexec"
+MPIEXEC="mpiexec -np"
+
+PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
+TPROC=${PROCLIST[0]}
+for n in ${PROCLIST[@]}
+do
+   (( n > TPROC )) && TPROC=${n}
+done
 
 if [ ! ${PPCONF} = "NONE" ]; then
-  SIN1_PP="#PJM --stgin  \"rank=* ${BINDIR}/${PPNAME}   %r:./\""
-  SIN2_PP="#PJM --stgin  \"rank=*         ./${PPCONF}   %r:./\""
-  RUN_PP="${MPIEXEC} ./${PPNAME} ${PPCONF} || exit"
+   SIN1_PP="#PJM --stgin  \"rank=* ${BINDIR}/${PPNAME}   %r:./\""
+
+   CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_PP=`echo -e #PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\"`
+      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ./${PPNAME} ${CONFLIST[i]} || exit`
+   done
 fi
 
 if [ ! ${INITCONF} = "NONE" ]; then
-  SIN1_INIT="#PJM --stgin  \"rank=* ${BINDIR}/${INITNAME} %r:./\""
-  SIN2_INIT="#PJM --stgin  \"rank=*         ./${INITCONF} %r:./\""
-  RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
+   SIN1_INIT="#PJM --stgin  \"rank=* ${BINDIR}/${INITNAME} %r:./\""
+
+   CONFLIST=(`echo ${INITCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_INIT=`echo -e #PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\"`
+      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ./${INITNAME} ${CONFLIST[i]} || exit`
+   done
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
-  SIN1_MAIN="#PJM --stgin  \"rank=* ${BINDIR}/${BINNAME}  %r:./\""
-  SIN2_MAIN="#PJM --stgin  \"rank=*         ./${RUNCONF}  %r:./\""
-  RUN_MAIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+   SIN1_MAIN="#PJM --stgin  \"rank=* ${BINDIR}/${BINNAME}  %r:./\""
+
+   CONFLIST=(`echo ${RUNCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_MAIN=`echo -e #PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\"`
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ./${BINNAME} ${CONFLIST[i]} || exit`
+   done
 fi
 
 array=( `echo ${TPROC} | tr -s 'x' ' '`)

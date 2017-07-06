@@ -8,12 +8,19 @@ BINNAME=${4}
 PPCONF=${5}
 INITCONF=${6}
 RUNCONF=${7}
-TPROC=${8}
+PROCS=${8}
 eval DATPARAM=(`echo ${9}  | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${10} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"
+MPIEXEC="mpirun -nnp"
+
+PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
+TPROC=${PROCLIST[0]}
+for n in ${PROCLIST[@]}
+do
+   (( n > TPROC )) && TPROC=${n}
+done
 
 RUNDIR=`pwd`
 
@@ -128,15 +135,33 @@ EOF2
 
 
 if [ ! ${PPCONF} = "NONE" ]; then
-  RUN_PP="${MPIEXEC} ${BINDIR}/${PPNAME} ${PPCONF} || exit"
+   CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${PPNAME} ${CONFLIST[i]} || exit`
+   done
 fi
 
 if [ ! ${INITCONF} = "NONE" ]; then
-  RUN_INIT="${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit"
+   CONFLIST=(`echo ${INITCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${INITNAME} ${CONFLIST[i]} || exit`
+   done
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
-  RUN_MAIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+   CONFLIST=(`echo ${RUNCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} || exit`
+   done
 fi
 
 cat << EOF3 > ./run.sh
