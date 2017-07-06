@@ -246,15 +246,11 @@ do
   fi
   if [ $DNUM -gt 1 ]; then
     IAM_DAUGHTER=".true."
+    PARENT_BASENAME=${COPYTOPO_IN_BASENAME}
+    PARENT_PRC_NUM_X=${PRC_NUM_X[$PD]}
+    PARENT_PRC_NUM_Y=${PRC_NUM_Y[$PD]}
   else
     IAM_DAUGHTER=".false."
-  fi
-  if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
-    PARENT_BASENAME="${BASENAME_ORG}"
-  else
-    PARENT_BASENAME=""
-    PARENT_PRC_NUM_X=0
-    PARENT_PRC_NUM_Y=0
   fi
 
 
@@ -282,6 +278,13 @@ do
   mkdir -p ${OUTPUT_CONFIGDIR}/net2g
 
   source ${PP_CONF}
+
+  if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+    PARENT_BASENAME="${BASENAME_ORG}"
+  else
+    PARENT_BASENAME=""
+  fi
+
   source ${INIT_CONF}
   source ${RUN_CONF}
   source ${PARAM_CONF}
@@ -291,6 +294,7 @@ do
       param.region.conf \
       param.admin.conf \
   > ${OUTPUT_CONFIGDIR}/pp/pp.d${FNUM}.conf
+
 
   cat base.init.conf \
       param.region.conf \
@@ -346,19 +350,11 @@ else
 fi
 
 if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
-  DATPARAM=${LATLON_CATALOGUE}
-  eval 'PNUM=`expr ${PARENT_PRC_NUM_X} + ${PARENT_PRC_NUM_Y}`'
-  if [ ${PNUM} -lt 1 ];    then echo "Error: Wrong PARENT_PRC_NUM_X or PARENT_PRC_NUM_Y.";     exit 1; fi
-  PN=0
-  while [ $PN -lt $PNUM ]
-  do
-    PFN=`printf "%06d" $PN`
-    DATPARAM=${DATPARAM}","${BASENAME_ORG}.pe${PFN}.nc
-    PN=`expr $PN + 1`
-  done
-  IFS="," eval 'DATPARAM="${DATPARAM[*]}"'
+  eval 'NP=`expr ${PARENT_PRC_NUM_X} + ${PARENT_PRC_NUM_Y}`'
+  DATPARAM="\" [../../data/${LATLON_CATALOGUE} ${LATLON_CATALOGUE}] \""
+  DATDISTS="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG} ${NP}] \""
 else
-  DATPARAM=${BASENAME_ORG}
+  DATPARAM="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
 fi
 
 source ${INPUT_CONFIGDIR}/mklink.sh

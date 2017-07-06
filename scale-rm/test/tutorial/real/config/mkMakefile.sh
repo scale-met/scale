@@ -28,7 +28,6 @@ INITCONF    = pp.d01.conf
 TPROC       = `expr ${PRC_NUM_X[0]} \* ${PRC_NUM_Y[0]}`
 
 # required data (parameters,distributed files)
-DATDIR      =
 DATPARAM    =
 DATDISTS    =
 
@@ -63,9 +62,8 @@ INITCONF    = ${INIT_CONF_FILE}
 TPROC       = ${TPROC}
 
 # required data (parameters,distributed files)
-DATDIR      = ../../data
 DATPARAM    = ${DATPARAM}
-DATDISTS    =
+DATDISTS    = ${DATDISTS}
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
@@ -98,7 +96,6 @@ RUNCONF     = ${RUN_CONF_FILE}
 TPROC       = ${TPROC}
 
 # required data (parameters,distributed files)
-DATDIR      =
 DATPARAM    =
 DATDISTS    =
 
