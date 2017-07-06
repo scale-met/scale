@@ -216,6 +216,8 @@ module scale_interpolation_nest
   real(RP), private, parameter :: large_number_11 = 8.999E+15_RP
   real(RP), private, parameter :: large_number_12 = 8.888E+15_RP
 
+  integer,  private            :: weight_order
+
   integer,  private            :: divnum
   integer,  private            :: itp_nh
 
@@ -224,15 +226,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine INTRPNEST_setup( &
-      interp_search_divnum, &
-      NEST_INTERP_LEVEL,    &
-      OFFLINE               )
+      interp_search_divnum,     &
+      NEST_INTERP_LEVEL,        &
+      NEST_INTERP_WEIGHT_ORDER, &
+      OFFLINE                   )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
     integer, intent(in) :: interp_search_divnum
     integer, intent(in) :: NEST_INTERP_LEVEL
+    integer, intent(in) :: NEST_INTERP_WEIGHT_ORDER
     logical, intent(in) :: OFFLINE
 
     character(len=7) :: select_type
@@ -242,6 +246,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERP NEST] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     divnum = interp_search_divnum
+    weight_order = NEST_INTERP_WEIGHT_ORDER
 
     select case( NEST_INTERP_LEVEL )
     case( 1 )
@@ -642,7 +647,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
-       distance = distance * distance
+       distance = distance**weight_order
        if ( distance <= dist(1) ) then
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
           dist(2) = dist(1);   igrd(2) = igrd(1);  jgrd(2) = jgrd(1)
@@ -719,7 +724,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
-       distance = distance * distance
+       distance = distance**weight_order
        if ( distance <= dist(1) ) then
           dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
           dist(3) = dist(2);   igrd(3) = igrd(2);  jgrd(3) = jgrd(2)
@@ -805,7 +810,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
-       distance = distance * distance
+       distance = distance**weight_order
        if ( distance <= dist(1) ) then
           dist(5) = dist(4);   igrd(5) = igrd(4);  jgrd(5) = jgrd(4)
           dist(4) = dist(3);   igrd(4) = igrd(3);  jgrd(4) = jgrd(3)
@@ -902,7 +907,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
-       distance = distance * distance
+       distance = distance**weight_order
        if ( distance <= dist(1) ) then
           dist(8) = dist(7);   igrd(8) = igrd(7);  jgrd(8) = jgrd(7)
           dist(7) = dist(6);   igrd(7) = igrd(6);  jgrd(7) = jgrd(6)
@@ -1029,7 +1034,7 @@ contains
     do jj = js, je
     do ii = is, ie
        distance = INTRPNEST_haversine( mylat,mylon,inlat(ii,jj),inlon(ii,jj) )
-       distance = distance * distance
+       distance = distance**weight_order
        if ( distance <= dist(1) ) then
           dist(12) = dist(11);   igrd(12) = igrd(11);  jgrd(12) = jgrd(11)
           dist(11) = dist(10);   igrd(11) = igrd(10);  jgrd(11) = jgrd(10)
