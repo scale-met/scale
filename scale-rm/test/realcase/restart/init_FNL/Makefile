@@ -9,27 +9,25 @@ TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
 ifndef PREPDIR
-PREPDIR     = ..
+   PREPDIR = ../pp
 endif
-
 
 # user-defined source files
 CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = NONE
-INITNAME    = scale-rm_init
-BINNAME     = NONE
-PPCONF      = NONE
-INITCONF    = init.d01.conf
-RUNCONF     = NONE
-TPROC       = 4
+INITCONF    = init_launch.conf
+
+TPROC       = 8
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
-DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm,land/param.bucket.conf
-DATDISTS    = $(PREPDIR)/pp/topo_d01,$(PREPDIR)/pp/landuse_d01
+DATPARAM    = " [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf ] \
+                [${TESTDIR}/tutorial/real/data/namelist.grads_boundary.FNL.2005053112-2016051106 namelist.grads_boundary.FNL.2005053112-2016051106] "
+DATDISTS    = " [4 $(PREPDIR)/topo_d01    topo_d01   ] \
+                [4 $(PREPDIR)/topo_d02    topo_d02   ] \
+                [4 $(PREPDIR)/landuse_d01 landuse_d01] \
+                [4 $(PREPDIR)/landuse_d02 landuse_d02] "
 
 
 
@@ -38,5 +36,5 @@ include $(TESTDIR)/Makefile.common
 
 # special execute
 run: jobshell
-	$(JOBSUB) link.input.sh
+	bash link-input.sh
 	$(JOBSUB) run.sh

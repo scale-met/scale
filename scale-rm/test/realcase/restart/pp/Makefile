@@ -14,17 +14,13 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = scale-rm_pp
-INITNAME    = NONE
-BINNAME     = NONE
-PPCONF      = pp.d01.conf
-INITCONF    = NONE
-RUNCONF     = NONE
-TPROC       = 4
+PPCONF      = pp_d01.conf,pp_d02.conf
+
+TPROC       = 4,4
 
 # required data (parameters,distributed files)
-DATDIR      = $(SCALE_DB)
-DATPARAM    =
+DATPARAM    = " [$(SCALE_DB)/topo/GTOPO30/Products   input_topo   ] \
+                [$(SCALE_DB)/landuse/GLCCv2/Products input_landuse] "
 DATDISTS    =
 
 
