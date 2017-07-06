@@ -14,7 +14,7 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-INITCONF    = init.conf
+PPCONF      = pp.conf
 
 TPROC       = 16
 
