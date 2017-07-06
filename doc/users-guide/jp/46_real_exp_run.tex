@@ -141,13 +141,14 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 実行に必要なファイルとして、下記が用意されている。
 \begin{alltt}
  $ ls
-    MIPAS\ PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc
+    MIPAS  PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc
                                   : 放射スキーム用のパラメータファイル
     run.d01.conf      : 設定ファイル
     param.bucket.conf : 陸面スキーム用のパラメータファイル
     scale-rm          : \scalerm 実行バイナリ
     run.launch.conf   : ネスティング計算用のlaunchファイル
                        （チュートリアルでは使用しない）
+    Makefile          : make 用設定ファイル （チュートリアルでは使用しない）
 \end{alltt}
 %
 準備が整ったら、4-MPI並列により\scalerm を実行する。
