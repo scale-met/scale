@@ -5,12 +5,14 @@ BINDIR=${1}
 PPNAME=${2}
 INITNAME=${3}
 BINNAME=${4}
-PPCONF=${5}
-INITCONF=${6}
-RUNCONF=${7}
-PROCS=${8}
-eval DATPARAM=(`echo ${9}  | tr -s '[' '"' | tr -s ']' '"'`)
-eval DATDISTS=(`echo ${10} | tr -s '[' '"' | tr -s ']' '"'`)
+N2GNAME=${5}
+PPCONF=${6}
+INITCONF=${7}
+RUNCONF=${8}
+N2GCONF=${9}
+PROCS=${10}
+eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
 MPIEXEC="mpiexec -np"
@@ -61,6 +63,19 @@ if [ ! ${RUNCONF} = "NONE" ]; then
    done
 fi
 
+if [ ! ${N2GCONF} = "NONE" ]; then
+   SIN1_N2G="#PJM --stgin  \"rank=* ${BINDIR}/${N2GNAME}  %r:./\""
+
+   CONFLIST=(`echo ${N2GCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_N2G=`echo -e #PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\"`
+      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ./${N2GNAME} ${CONFLIST[i]} || exit`
+   done
+fi
+
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
 x=${array[0]}
 y=${array[1]:-1}
@@ -93,9 +108,11 @@ cat << EOF1 > ./run.sh
 ${SIN1_PP}
 ${SIN1_INIT}
 ${SIN1_MAIN}
+${SIN1_N2G}
 ${SIN2_PP}
 ${SIN2_INIT}
 ${SIN2_MAIN}
+${SIN2_N2G}
 EOF1
 
 # link to file or directory
@@ -161,6 +178,7 @@ rm -rf ./prof
 ${RUN_PP}
 ${RUN_INIT}
 ${RUN_MAIN}
+${RUN_N2G}
 
 ################################################################################
 EOF2
