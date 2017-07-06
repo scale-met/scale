@@ -15,8 +15,8 @@ ORG_SRCS    =
 
 # parameters for run
 INITCONF    = init.conf
-RUNCONF     = run.conf
-TPROC       = 1
+RUNCONF     = runA.conf,runB1.conf,runB2.conf
+TPROC       = 1,1,1
 
 # required data (parameters,distributed files)
 DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29           PARAG.29         ] \
