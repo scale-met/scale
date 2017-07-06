@@ -19,8 +19,8 @@ INITCONF    = init.conf
 TPROC       = 16
 
 # required data (parameters,distributed files)
-DATDIR      = $(SCALE_DB)
-DATPARAM    = topo
+DATPARAM    = " [$(SCALE_DB)/topo/GTOPO30/Products input_topo_lo] \
+                [$(SCALE_DB)/topo/DEM50M/Products  input_topo_hi] "
 DATDISTS    =
 
 

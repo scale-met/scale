@@ -12,9 +12,8 @@ INITCONF=${8}
 RUNCONF=${9}
 N2GCONF=${10}
 TPROC=${11}
-DATDIR=${12}
-DATPARAM=(`echo ${13} | tr -s ',' ' '`)
-DATDISTS=(`echo ${14} | tr -s ',' ' '`)
+eval DATPARAM=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${13} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
 MPIEXEC="mpiexec"
@@ -82,27 +81,47 @@ ${SIN2_MAIN}
 ${SIN2_N2G}
 EOF1
 
-if [ ! ${DATPARAM[0]} = "" ]; then
-   for f in ${DATPARAM[@]}
+# link to file or directory
+ndata=${#DATPARAM[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
    do
-         if [ -f ${DATDIR}/${f} ]; then
-            echo "#PJM --stgin  'rank=* ${DATDIR}/${f}   %r:./'"       >> ./run.sh
-         elif [ -d ${DATDIR}/${f} ]; then
-            echo "#PJM --stgin  'rank=* ${DATDIR}/${f}/* %r:./input/'" >> ./run.sh
-         else
-            echo "datafile does not found! : ${DATDIR}/${f}"
-            exit 1
-         fi
+      let i="n - 1"
+
+      pair=(${DATPARAM[$i]})
+
+      src=${pair[0]}
+      dst=${pair[1]}
+      if [ "${dst}" = "" ]; then
+         dst=${pair[0]}
+      fi
+
+      if [ -f ${src} ]; then
+         echo "#PJM --stgin  'rank=* ${src}   %r:./${dst} '" >> ./run.sh
+      elif [ -d ${src} ]; then
+         echo "#PJM --stgin  'rank=* ${src}/* %r:./${dst}/'" >> ./run.sh
+      else
+         echo "datafile does not found! : ${src}"
+         exit 1
+      fi
    done
 fi
 
-if [ ! ${DATDISTS[0]} = "" ]; then
-   for f in ${DATDISTS[@]}
+# link to distributed file
+ndata=${#DATDISTS[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
    do
-      if [ -f ${f}.pe000000.nc ]; then
-         echo "#PJM --stgin  'rank=* ${f}.pe%06r.nc %r:./'" >> ./run.sh
+      let i="n - 1"
+
+      pair=(${DATDISTS[$i]})
+
+      if [ -f ${pair[0]}.pe000000.nc ]; then
+         echo "#PJM --stgin  'rank=* ${pair[0]}.pe%06r.nc %r:./${pair[1]}.pe%06r.nc'" >> ./run.sh
       else
-         echo "datafile does not found! : ${f}.pe000000.nc"
+         echo "datafile does not found! : ${pair[0]}.pe000000.nc"
          exit 1
       fi
    done

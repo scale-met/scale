@@ -19,8 +19,7 @@ RUNCONF     = run.conf
 TPROC       = 9
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
-DATPARAM    = input_sounding/supercell.txt
+DATPARAM    = " [${TESTDIR}/data/input_sounding/supercell.txt supercell.txt] "
 DATDISTS    =
 
 

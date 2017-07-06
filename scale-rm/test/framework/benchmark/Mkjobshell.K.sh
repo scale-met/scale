@@ -9,9 +9,8 @@ PPCONF=${5}
 INITCONF=${6}
 RUNCONF=${7}
 TPROC=${8}
-DATDIR=${9}
-DATPARAM=(`echo ${10} | tr -s ',' ' '`)
-DATDISTS=(`echo ${11} | tr -s ',' ' '`)
+eval DATPARAM=(`echo ${9}  | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${10} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
 MPIEXEC="mpiexec"
@@ -60,7 +59,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=02:00:00"
+#PJM --rsc-list "elapse=04:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
 ${SIN1_PP}
@@ -71,34 +70,54 @@ ${SIN2_INIT}
 ${SIN2_MAIN}
 EOF1
 
-if [ ! ${DATPARAM[0]} = "" ]; then
-   for f in ${DATPARAM[@]}
+# link to file or directory
+ndata=${#DATPARAM[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
    do
-         if [ -f ${DATDIR}/${f} ]; then
-            echo "#PJM --stgin  'rank=* ${DATDIR}/${f}   %r:./'"       >> ./run.sh
-         elif [ -d ${DATDIR}/${f} ]; then
-            echo "#PJM --stgin  'rank=* ${DATDIR}/${f}/* %r:./input/'" >> ./run.sh
-         else
-            echo "datafile does not found! : ${DATDIR}/${f}"
-            exit 1
-         fi
+      let i="n - 1"
+
+      pair=(${DATPARAM[$i]})
+
+      src=${pair[0]}
+      dst=${pair[1]}
+      if [ "${dst}" = "" ]; then
+         dst=${pair[0]}
+      fi
+
+      if [ -f ${src} ]; then
+         echo "#PJM --stgin  'rank=* ${src}   %r:./${dst} '" >> ./run.sh
+      elif [ -d ${src} ]; then
+         echo "#PJM --stgin  'rank=* ${src}/* %r:./${dst}/'" >> ./run.sh
+      else
+         echo "datafile does not found! : ${src}"
+         exit 1
+      fi
    done
 fi
 
-if [ ! ${DATDISTS[0]} = "" ]; then
-   for f in ${DATDISTS[@]}
+# link to distributed file
+ndata=${#DATDISTS[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
    do
-      if [ -f ${f}.pe000000.nc ]; then
-         echo "#PJM --stgin  'rank=* ${f}.pe%06r.nc %r:./'" >> ./run.sh
+      let i="n - 1"
+
+      pair=(${DATDISTS[$i]})
+
+      if [ -f ${pair[0]}.pe000000.nc ]; then
+         echo "#PJM --stgin  'rank=* ${pair[0]}.pe%06r.nc %r:./${pair[1]}.pe%06r.nc'" >> ./run.sh
       else
-         echo "datafile does not found! : ${f}.pe000000.nc"
+         echo "datafile does not found! : ${pair[0]}.pe000000.nc"
          exit 1
       fi
    done
 fi
 
 cat << EOF2 >> ./run.sh
-#PJM --stgout "rank=* %r:./*      ./"
+#PJM --stgout "rank=* %r:./* ./"
 #PJM --stgout "rank=* %r:./prof/* ./prof/"
 #PJM -j
 #PJM -s

@@ -19,7 +19,6 @@ RUNCONF     = run.conf
 TPROC       = 8
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
 DATPARAM    =
 DATDISTS    =
 

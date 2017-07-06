@@ -9,32 +9,37 @@ PPCONF=${5}
 INITCONF=${6}
 RUNCONF=${7}
 TPROC=${8}
-DATDIR=${9}
-DATPARAM=(`echo ${10} | tr -s ',' ' '`)
-DATDISTS=(`echo ${11} | tr -s ',' ' '`)
+eval DATPARAM=(`echo ${9}  | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${10} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
 MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"
 
+RUNDIR=`pwd`
+
 if [ ! ${PPCONF} = "NONE" ]; then
+  SIN1_PP="#PBS -I \"${BINDIR}/${PPNAME},ALL:./\""
+  SIN2_PP="#PBS -I \"${RUNDIR}/${PPCONF},ALL:./\""
   RUN_PP="${MPIEXEC} ./${PPNAME} ${PPCONF} || exit"
 fi
 
 if [ ! ${INITCONF} = "NONE" ]; then
+  SIN1_INIT="#PBS -I \"${BINDIR}/${INITNAME},ALL:./\""
+  SIN2_INIT="#PBS -I \"${RUNDIR}/${INITCONF},ALL:./\""
   RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
-  RUN_BIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+  SIN1_MAIN="#PBS -I \"${BINDIR}/${BINNAME},ALL:./\""
+  SIN2_MAIN="#PBS -I \"${RUNDIR}/${RUNCONF},ALL:./\""
+  RUN_MAIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
 fi
 
-RUNDIR=`pwd`
 
 
 
 
-
-cat << EOF1 > ./run.sh
+cat << EOF1 > ./run_L.sh
 #!/bin/sh
 ################################################################################
 #
@@ -53,23 +58,70 @@ cat << EOF1 > ./run.sh
 #PBS -v MPIPROGINF=ALL_DETAIL
 #PBS -v F_SETBUF=102400
 #PBS -v MPISEPSELECT=3
+${SIN1_PP}
+${SIN1_INIT}
+${SIN1_MAIN}
+${SIN2_PP}
+${SIN2_INIT}
+${SIN2_MAIN}
+EOF1
 
-#PBS -I "${BINDIR}/${PPNAME},ALL:./"
-#PBS -I "${BINDIR}/${INITNAME},ALL:./"
-#PBS -I "${BINDIR}/${BINNAME},ALL:./"
-#PBS -I "${RUNDIR}/${PPCONF},ALL:./"
-#PBS -I "${RUNDIR}/${INITCONF},ALL:./"
-#PBS -I "${RUNDIR}/${RUNCONF},ALL:./"
+# link to file or directory
+ndata=${#DATPARAM[@]}
 
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+
+      pair=(${DATPARAM[$i]})
+
+      src=${pair[0]}
+      dst=${pair[1]}
+      if [ "${dst}" = "" ]; then
+         dst=${pair[0]}
+      fi
+
+      if [ -f ${src} ]; then
+         echo "#PBS -I \"${src},ALL:./\"" >> ./run_L.sh
+      elif [ -d ${src} ]; then
+         echo "#PBS -I \"${src}/*,ALL:./\"" >> ./run_L.sh
+      else
+         echo "datafile does not found! : ${src}"
+         exit 1
+      fi
+   done
+fi
+
+# link to distributed file
+ndata=${#DATDISTS[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+
+      pair=(${DATDISTS[$i]})
+
+      if [ -f ${pair[0]}.pe000000.nc ]; then
+         echo "#PBS -I \"${pair[0]}.pe%06r.nc,ALL:./${pair[1]}.pe%06r.nc\"" >> ./run_L.sh
+      else
+         echo "datafile does not found! : ${pair[0]}.pe000000.nc"
+         exit 1
+      fi
+   done
+fi
+
+cat << EOF2 >> ./run_L.sh
 #PBS -O "${RUNDIR}/,0:./"
 
 # run
 ${RUN_PP}
 ${RUN_INIT}
-${RUN_BIN}
+${RUN_MAIN}
 
 ################################################################################
-EOF1
+EOF2
 
 
 
@@ -84,10 +136,10 @@ if [ ! ${INITCONF} = "NONE" ]; then
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
-  RUN_BIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
+  RUN_MAIN="${MPIEXEC} ${BINDIR}/${BINNAME} ${RUNCONF} || exit"
 fi
 
-cat << EOF2 > ./run_S.sh
+cat << EOF3 > ./run.sh
 #!/bin/sh
 ################################################################################
 #
@@ -108,11 +160,70 @@ cat << EOF2 > ./run_S.sh
 #PBS -v F_SETBUF=102400
 
 cd ${RUNDIR}
+EOF3
+
+# link to file or directory
+ndata=${#DATPARAM[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+
+      pair=(${DATPARAM[$i]})
+
+      src=${pair[0]}
+      dst=${pair[1]}
+      if [ "${dst}" = "" ]; then
+         dst=${pair[0]}
+      fi
+
+      if [ -f ${src} ]; then
+         echo "ln -svf ${src} ./${dst}" >> ./run.sh
+      elif [ -d ${src} ]; then
+         echo "rm -f          ./${dst}" >> ./run.sh
+         echo "ln -svf ${src} ./${dst}" >> ./run.sh
+      else
+         echo "datafile does not found! : ${src}"
+         exit 1
+      fi
+   done
+fi
+
+# link to distributed file
+ndata=${#DATDISTS[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+
+      pair=(${DATDISTS[$i]})
+
+      for np in `seq 1 ${TPROC}`
+      do
+         let "ip = ${np} - 1"
+         PE=`printf %06d ${ip}`
+
+         src=${pair[0]}.pe${PE}.nc
+         dst=${pair[1]}.pe${PE}.nc
+
+         if [ -f ${src} ]; then
+            echo "ln -svf ${src} ./${dst}" >> ./run.sh
+         else
+            echo "datafile does not found! : ${src}"
+            exit 1
+         fi
+      done
+   done
+fi
+
+cat << EOF4 >> ./run.sh
 
 # run
 ${RUN_PP}
 ${RUN_INIT}
-${RUN_BIN}
+${RUN_MAIN}
 
 ################################################################################
-EOF2
+EOF4
