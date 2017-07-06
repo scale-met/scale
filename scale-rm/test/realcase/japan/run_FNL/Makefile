@@ -9,7 +9,7 @@ TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
 ifndef PREPDIR
-   PREPDIR = ../prep
+   PREPDIR = ../pp
 endif
 
 ifndef INITDIR
