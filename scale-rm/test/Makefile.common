@@ -116,11 +116,6 @@ jobshell:
 		                                              $(TPROC)                                    \
 		                                              $(DATPARAM) $(DATDISTS);                    \
 	else \
-		echo $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                                   \
-		                                              $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
-		                                              $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
-		                                              $(TPROC)                                    \
-		                                              $(DATPARAM) $(DATDISTS);                    \
 		bash $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                                   \
 		                                              $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
 		                                              $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
