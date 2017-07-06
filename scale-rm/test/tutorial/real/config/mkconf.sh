@@ -6,7 +6,13 @@
 #
 #################################################
 
-USERDEF_FILE="./USER.sh"
+if [ "${USERDEF_FILE}x" = "x" ]; then
+  USERDEF_FILE="./USER.sh"
+fi
+echo ${OUTPUT_CONFIGDIR}
+if [ "${OUTPUT_CONFIGDIR}x" = "x" ]; then
+  OUTPUT_CONFIGDIR="experiment"
+fi
 
 if [ ! -f "${USERDEF_FILE}" ]; then
   echo "Error: User defined file was not found: "${USERDEF_FILE}
@@ -147,7 +153,6 @@ else
 fi
 
 INPUT_CONFIGDIR="config"
-OUTPUT_CONFIGDIR="experiment"
 
 PPDIR="../pp"
 INITDIR="../init"
