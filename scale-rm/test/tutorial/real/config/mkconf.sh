@@ -6,7 +6,13 @@
 #
 #################################################
 
-USERDEF_FILE="./USER.sh"
+if [ "${USERDEF_FILE}x" = "x" ]; then
+  USERDEF_FILE="./USER.sh"
+fi
+echo ${OUTPUT_CONFIGDIR}
+if [ "${OUTPUT_CONFIGDIR}x" = "x" ]; then
+  OUTPUT_CONFIGDIR="experiment"
+fi
 
 if [ ! -f "${USERDEF_FILE}" ]; then
   echo "Error: User defined file was not found: "${USERDEF_FILE}
@@ -119,9 +125,18 @@ case ${TIME_DURATION_UNIT} in
 esac
 INT_DURATION=`expr ${TIME_DURATION%%.*} \* ${TIME_DURATION_UNIT_SEC}`
 INT_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
-NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
-if [ ${NUMBER_OF_FILES} -le 1 ]; then
-  NUMBER_OF_FILES=2
+if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+  NUMBER_OF_FILES=1
+  NUMBER_OF_TSTEPS=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
+  if [ ${NUMBER_OF_TSTEPS} -le 1 ]; then
+    NUMBER_OF_TSTEPS=2
+  fi
+else
+  NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
+  if [ ${NUMBER_OF_FILES} -le 1 ]; then
+    NUMBER_OF_FILES=2
+  fi
+  NUMBER_OF_TSTEPS=1
 fi
 
 # set maximum number of steps
@@ -138,7 +153,6 @@ else
 fi
 
 INPUT_CONFIGDIR="config"
-OUTPUT_CONFIGDIR="experiment"
 
 PPDIR="../pp"
 INITDIR="../init"
@@ -174,6 +188,7 @@ IFS="," eval 'LIST_LDZ="${LDZ[*]}"'
 IFS="," eval 'LIST_UDZ="${UDZ[*]}"'
 
 DNUM=1
+TPROC=0
 while [ $DNUM -le $NUM_DOMAIN ]
 do
   D=`expr $DNUM - 1`
@@ -185,10 +200,13 @@ do
 
   # set numbers of domain process
   eval 'PRC_DOMAINS[$D]=`expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`'
+  eval 'TPROC=`expr ${TPROC} + ${PRC_DOMAINS[$D]}`'
 
   # set names of config files
+  eval 'PP_CONF_FILES[$D]="pp.d${FNUM}.conf"'
   eval 'INIT_CONF_FILES[$D]="init.d${FNUM}.conf"'
   eval 'RUN_CONF_FILES[$D]="run.d${FNUM}.conf"'
+  eval 'N2G_CONF_FILES[$D]="net2g.2D.d${FNUM}.conf,net2g.3D.d${FNUM}.conf"'
 
   # set vertical axis
   LINE_Z="${DEF_Z[$D]}"
@@ -240,10 +258,9 @@ do
     PARENT_PRC_NUM_Y=${PRC_NUM_Y[$PD]}
   else
     IAM_DAUGHTER=".false."
-    PARENT_BASENAME=""
-    PARENT_PRC_NUM_X=0
-    PARENT_PRC_NUM_Y=0
   fi
+
+
 
   # set boundary parameters
   if [ $DNUM -gt 1 ]; then
@@ -268,6 +285,13 @@ do
   mkdir -p ${OUTPUT_CONFIGDIR}/net2g
 
   source ${PP_CONF}
+
+  if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+    PARENT_BASENAME="${BASENAME_ORG}"
+  else
+    PARENT_BASENAME=""
+  fi
+
   source ${INIT_CONF}
   source ${RUN_CONF}
   source ${PARAM_CONF}
@@ -277,6 +301,7 @@ do
       param.region.conf \
       param.admin.conf \
   > ${OUTPUT_CONFIGDIR}/pp/pp.d${FNUM}.conf
+
 
   cat base.init.conf \
       param.region.conf \
@@ -298,6 +323,7 @@ do
   DNUM=`expr $DNUM + 1`
 done
 
+
 #################################################
 #
 # make launcher
@@ -305,11 +331,13 @@ done
 #################################################
 
 IFS="," eval 'LIST_PRC_DOMAINS="${PRC_DOMAINS[*]}"'
+IFS="," eval 'LIST_PP_CONF_FILES="${PP_CONF_FILES[*]}"'
 IFS="," eval 'LIST_INIT_CONF_FILES="${INIT_CONF_FILES[*]}"'
 IFS="," eval 'LIST_RUN_CONF_FILES="${RUN_CONF_FILES[*]}"'
+IFS="," eval 'LIST_N2G_CONF_FILES="${N2G_CONF_FILES[*]}"'
 
-LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/ /\",\"/g"`
-LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/ /\",\"/g"`
+LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/,/\",\"/g"`
+LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/,/\",\"/g"`
 
 source ${LAUNCH_CONF}
 
@@ -321,6 +349,34 @@ mv -f base.run.launch.conf ${OUTPUT_CONFIGDIR}/run/run.launch.conf
 # set-up experimental environment
 #
 #################################################
+
+if [ $DNUM -eq 1 ]; then
+  INIT_CONF_FILE=init.d01.conf
+  RUN_CONF_FILE=run.d01.conf
+else
+  INIT_CONF_FILE=init.launch.conf
+  RUN_CONF_FILE=run.launch.conf
+fi
+
+if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+  eval 'NP=`expr ${PARENT_PRC_NUM_X} + ${PARENT_PRC_NUM_Y}`'
+  DATPARAM="\" [../../data/${LATLON_CATALOGUE} ${LATLON_CATALOGUE}] \""
+  DATDISTS="\" [${NP} ../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
+else
+  DATPARAM="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
+fi
+
+DNUM=1
+while [ $DNUM -le $NUM_DOMAIN ]
+do
+  D=`expr $DNUM - 1`
+  DD1=`expr $D \* 2`
+  DD2=`expr $DD1 + 1`
+  eval 'N2G_PRC_DOMAINS[${DD1}]=${PRC_DOMAINS[$D]}'
+  eval 'N2G_PRC_DOMAINS[${DD2}]=${PRC_DOMAINS[$D]}'
+  DNUM=`expr $DNUM + 1`
+done
+IFS="," eval 'LIST_N2G_PRC_DOMAINS="${N2G_PRC_DOMAINS[*]}"'
 
 source ${INPUT_CONFIGDIR}/mklink.sh
 
