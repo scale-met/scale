@@ -412,7 +412,7 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS+1, KE-1
+    do k = KS+2, KE-1
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i-1,j) ) ) &
            / DENS(k,i,j)
        flux(k-1,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
@@ -430,6 +430,15 @@ contains
        ! The flux at KS can be non-zero.
        ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP ! k = KS
+
+       ! physically incorrect but for numerical stability
+       vel = ( ( 0.5_RP * ( mom(KS+1,i,j)+mom(KS+1,i-1,j) ) ) / DENS(KS+1,i,j) &
+             + ( 0.5_RP * ( mom(KS,i,j)+mom(KS,i-1,j) ) ) / DENS(KS  ,i,j) ) * 0.5_RP
+!       vel = ( 0.5_RP * ( mom(KS+1,i,j)+mom(KS+1,i-1,j) ) ) &
+!           / DENS(KS+1,i,j)
+       flux(KS,i,j) = J13G(KS+1,i,j) / MAPF(i,j,+2) * vel &
+                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) ! k = KS+1
+
 
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -467,7 +476,7 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS+1, KE-1
+    do k = KS+2, KE-1
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j-1) ) ) &
            / DENS(k,i,j)
        flux(k-1,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
@@ -485,6 +494,15 @@ contains
        ! The flux at KS can be non-zero.
        ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP ! k = KS
+
+       ! physically incorrect but for numerical stability
+       vel = ( ( 0.5_RP * ( mom(KS+1,i,j)+mom(KS+1,i,j-1) ) ) / DENS(KS+1,i,j) &
+             + ( 0.5_RP * ( mom(KS,i,j)+mom(KS,i,j-1) ) ) / DENS(KS  ,i,j) ) * 0.5_RP
+!       vel = ( 0.5_RP * ( mom(KS+1,i,j)+mom(KS+1,i,j-1) ) ) &
+!           / DENS(KS+1,i,j)
+       flux(KS,i,j) = J23G(KS+1,i,j) / MAPF(i,j,+1) * vel &
+                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) ! k = KS+1
+
 
        flux(KE-1,i,j) = 0.0_RP
     enddo
