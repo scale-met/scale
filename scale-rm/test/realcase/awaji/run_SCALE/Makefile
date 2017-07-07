@@ -34,10 +34,10 @@ DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29           PARAG.29         ] \
                 [${TESTDIR}/data/rad/MIPAS/sum.atm      sum.atm          ] \
                 [${TESTDIR}/data/rad/MIPAS/win.atm      win.atm          ] \
                 [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf] "
-DATDISTS    = " [$(PREPDIR)/topo     topo    ] \
-                [$(PREPDIR)/landuse  landuse ] \
-                [$(INITDIR)/boundary boundary] \
-                [$(INITDIR)/init_19990301-060000.000 init_19990301-060000.000] "
+DATDISTS    = " [${TPROC} $(PREPDIR)/topo     topo    ] \
+                [${TPROC} $(PREPDIR)/landuse  landuse ] \
+                [${TPROC} $(INITDIR)/boundary boundary] \
+                [${TPROC} $(INITDIR)/init_19990301-060000.000 init_19990301-060000.000] "
 
 
 

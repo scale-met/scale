@@ -37,6 +37,7 @@ all: main
 main: prg_netcdf2grads_h.o
 	$(FC) $(FFLAGS) -o $(OBJECT) $(MODS) $(LIBS)
 	@mv *.mod inc/; mv *.o inc/;
+	$(INSTALL) $(OBJECT) $(BINDIR)/$(OBJECT)
 
 #f90.o:
 mod_net2g_vars.o: src/mod_net2g_vars.F90

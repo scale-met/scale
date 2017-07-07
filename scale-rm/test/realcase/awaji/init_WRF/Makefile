@@ -23,8 +23,8 @@ TPROC       = 16
 
 # required data (parameters,distributed files)
 DATPARAM    = " [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf] "
-DATDISTS    = " [$(PREPDIR)/topo    topo   ] \
-                [$(PREPDIR)/landuse landuse] "
+DATDISTS    = " [${TPROC} $(PREPDIR)/topo    topo   ] \
+                [${TPROC} $(PREPDIR)/landuse landuse] "
 
 
 
