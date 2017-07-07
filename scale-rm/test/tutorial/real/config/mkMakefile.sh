@@ -23,9 +23,9 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-INITCONF    = pp.d01.conf
+PPCONF      = ${LIST_PP_CONF_FILES}
 
-TPROC       = `expr ${PRC_NUM_X[0]} \* ${PRC_NUM_Y[0]}`
+TPROC       = ${LIST_PRC_DOMAINS}
 
 # required data (parameters,distributed files)
 DATPARAM    =
@@ -126,21 +126,21 @@ ORG_SRCS    =
 
 # parameters for run
 
+N2GCONF     = ${LIST_N2G_CONF_FILES}
 
-N2GCONF     = net2g.2D.d${FNUM}.conf #,net2g.3D.d${FNUM}.conf
-TPROC       = `expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`
+TPROC       = ${LIST_N2G_PRC_DOMAINS}
+
 
 # required data (parameters,distributed files)
 DATDIR      =
 DATPARAM    =
 DATDISTS    =
 
+# build, makedir, run, jobshell, allclean, clean is inside of common Makefile
+include \$(TESTDIR)/Makefile.common
 
 
 all: run
-
-# build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include \$(TESTDIR)/Makefile.common
 
 EOF
 

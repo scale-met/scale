@@ -203,8 +203,10 @@ do
   eval 'TPROC=`expr ${TPROC} + ${PRC_DOMAINS[$D]}`'
 
   # set names of config files
+  eval 'PP_CONF_FILES[$D]="pp.d${FNUM}.conf"'
   eval 'INIT_CONF_FILES[$D]="init.d${FNUM}.conf"'
   eval 'RUN_CONF_FILES[$D]="run.d${FNUM}.conf"'
+  eval 'N2G_CONF_FILES[$D]="net2g.2D.d${FNUM}.conf,net2g.3D.d${FNUM}.conf"'
 
   # set vertical axis
   LINE_Z="${DEF_Z[$D]}"
@@ -329,8 +331,10 @@ done
 #################################################
 
 IFS="," eval 'LIST_PRC_DOMAINS="${PRC_DOMAINS[*]}"'
+IFS="," eval 'LIST_PP_CONF_FILES="${PP_CONF_FILES[*]}"'
 IFS="," eval 'LIST_INIT_CONF_FILES="${INIT_CONF_FILES[*]}"'
 IFS="," eval 'LIST_RUN_CONF_FILES="${RUN_CONF_FILES[*]}"'
+IFS="," eval 'LIST_N2G_CONF_FILES="${N2G_CONF_FILES[*]}"'
 
 LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/,/\",\"/g"`
 LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/,/\",\"/g"`
@@ -357,10 +361,22 @@ fi
 if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
   eval 'NP=`expr ${PARENT_PRC_NUM_X} + ${PARENT_PRC_NUM_Y}`'
   DATPARAM="\" [../../data/${LATLON_CATALOGUE} ${LATLON_CATALOGUE}] \""
-  DATDISTS="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG} ${NP}] \""
+  DATDISTS="\" [${NP} ../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
 else
   DATPARAM="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
 fi
+
+DNUM=1
+while [ $DNUM -le $NUM_DOMAIN ]
+do
+  D=`expr $DNUM - 1`
+  DD1=`expr $D \* 2`
+  DD2=`expr $DD1 + 1`
+  eval 'N2G_PRC_DOMAINS[${DD1}]=${PRC_DOMAINS[$D]}'
+  eval 'N2G_PRC_DOMAINS[${DD2}]=${PRC_DOMAINS[$D]}'
+  DNUM=`expr $DNUM + 1`
+done
+IFS="," eval 'LIST_N2G_PRC_DOMAINS="${N2G_PRC_DOMAINS[*]}"'
 
 source ${INPUT_CONFIGDIR}/mklink.sh
 
