@@ -1871,7 +1871,7 @@ contains
           end if
        case("lat_sfc")
           if ( .not. data_available(Io_lat_sst,3) .and. data_available(Io_lat_sfc,3) ) then
-             if ( odims(1).ne.outer_nx .or. odims(1).ne.outer_ny ) then
+             if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_ny_sfc ) then
                 write(*,*) 'xxx namelist of "lat_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx_sfc and outer_nx_sst! ', outer_nx_sfc, odims(1)
                 write(*,*) '                          : outer_ny_sfc and outer_ny_sst! ', outer_ny_sfc, odims(2)
