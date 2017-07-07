@@ -64,7 +64,7 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_N2G=`echo -e "${N2G_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} || exit`
+      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} || exit`
    done
 fi
 
