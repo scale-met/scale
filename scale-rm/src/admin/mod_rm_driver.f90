@@ -316,10 +316,10 @@ contains
 
     !########## main ##########
 
-#ifdef _FIPP_
+#ifdef FIPP
     call fipp_start
 #endif
-#ifdef _PAPI_
+#ifdef PAPI
     call PROF_PAPI_rapstart
 #endif
 
@@ -380,10 +380,10 @@ contains
 
     if( ATMOS_do ) call ATMOS_driver_finalize
 
-#ifdef _FIPP_
+#ifdef FIPP
     call fipp_stop
 #endif
-#ifdef _PAPI_
+#ifdef PAPI
     call PROF_PAPI_rapstop
 #endif
 
@@ -408,7 +408,7 @@ contains
     call PROF_rapend  ('All', 1)
 
     call PROF_rapreport
-#ifdef _PAPI_
+#ifdef PAPI
     call PROF_PAPI_rapreport
 #endif
 

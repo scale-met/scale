@@ -49,11 +49,12 @@ module mod_cnvtopo
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: CNVTOPO_smooth_type         = 'LAPLACIAN'
-  logical,                private :: CNVTOPO_smooth_local        = .false.
-  integer,                private :: CNVTOPO_smooth_itelim       = 10000
+  character(len=H_SHORT), private :: CNVTOPO_smooth_type           = 'LAPLACIAN'
+  integer,                private :: CNVTOPO_smooth_hypdiff_niter  = 20
+  logical,                private :: CNVTOPO_smooth_local          = .true.
+  integer,                private :: CNVTOPO_smooth_itelim         = 10000
 
-  logical,                private :: CNVTOPO_copy_parent         = .false.
+  logical,                private :: CNVTOPO_copy_parent           = .false.
 
   real(RP),               private :: CNVTOPO_unittile_ddeg         =  0.0_RP ! dx for unit tile [deg]
   real(RP),               private :: CNVTOPO_oversampling_factor   =  2.0_RP ! factor of min. dx against the unit tile
@@ -94,6 +95,7 @@ contains
        CNVTOPO_UseDEM50M,             &
        CNVTOPO_unittile_ddeg,         &
        CNVTOPO_oversampling_factor,   &
+       CNVTOPO_smooth_hypdiff_niter,  &
        CNVTOPO_smooth_maxslope_ratio, &
        CNVTOPO_smooth_maxslope,       &
        CNVTOPO_smooth_local,          &
@@ -185,7 +187,7 @@ contains
     endif
 
     if ( CNVTOPO_DoNothing ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Do nothing for landuse index'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Do nothing for topography data'
     else
        drad(:,:) = min( REAL_DLAT(:,:), REAL_DLON(:,:) )
        call COMM_horizontal_min( drad_min, drad(:,:) )
@@ -1104,9 +1106,14 @@ contains
     real(RP) :: maxslope
     real(RP) :: flag
 
+    real(RP), pointer :: p1(:,:)
+    real(RP), pointer :: p2(:,:)
+    real(RP), target :: work1(IA,JA)
+    real(RP), target :: work2(IA,JA)
+
     character(len=H_SHORT) :: varname(1)
 
-    integer :: ite
+    integer :: ite, n
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -1122,6 +1129,36 @@ contains
        DXL(:) = GRID_FDX(:)
        DYL(:) = GRID_FDY(:)
     endif
+
+    ! reduce grid-scale variation
+    do ite = 1, CNVTOPO_smooth_hypdiff_niter
+       work2(:,:) = Zsfc(:,:)
+       p1 => work2
+       p2 => work1
+       do n = 1, 4 ! 8th derivative
+          do j = JS, JE
+          do i = IS, IE
+             p2(i,j) = ( - p1(i+1,j) + p1(i,j)*2.0_RP - p1(i-1,j) &
+                         - p1(i,j+1) + p1(i,j)*2.0_RP - p1(i,j-1) ) / 8.0_RP
+          end do
+          end do
+          call TOPO_fillhalo( p2 )
+          if ( mod(n,2) == 0 ) then
+             p1 => work2
+             p2 => work1
+          else
+             p1 => work1
+             p2 => work2
+          end if
+       end do
+       do j = JS, JE
+       do i = IS, IE
+          Zsfc(i,j) = max( Zsfc(i,j) - p1(i,j), 0.0_RP )
+       end do
+       end do
+       call TOPO_fillhalo( Zsfc )
+    end do
+
 
     ! digital filter
     do ite = 1, CNVTOPO_smooth_itelim+1

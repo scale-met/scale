@@ -234,7 +234,7 @@ contains
        default_datatype,  &
        namelist_filename, &
        namelist_fid       )
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
     use dc_log, only: &
        LOG_master_nml
 #endif
@@ -330,15 +330,6 @@ contains
     intrinsic size
     !---------------------------------------------------------------------------
 
-    History_TIME_UNITS        = 'seconds' !> Unit for time axis
-    History_DEFAULT_BASENAME  = ''        !> base name of the file
-    History_DEFAULT_TINTERVAL = -1.0_DP   !> time interval
-    History_DEFAULT_TUNIT     = 'sec'     !> time unit
-    History_DEFAULT_TAVERAGE  = .false.   !> apply time average?
-    History_DEFAULT_ZCOORD    = ''        !> default z-coordinate
-    History_DEFAULT_DATATYPE  = 'REAL4'   !> data type
-    History_TIME_SINCE        = ''        !> Offset time
-
     call Log('I','')
     call Log('I','###### Module[HISTORY] / Origin[gtoollib]')
 
@@ -351,6 +342,15 @@ contains
     History_STARTDAYSEC = time_start
     History_DTSEC       = time_interval
     if( present(time_since) ) History_TIME_SINCE = time_since
+
+    History_TIME_UNITS        = 'seconds' !> Unit for time axis
+    History_DEFAULT_BASENAME  = ''        !> base name of the file
+    History_DEFAULT_TINTERVAL = -1.0_DP   !> time interval
+    History_DEFAULT_TUNIT     = 'sec'     !> time unit
+    History_DEFAULT_TAVERAGE  = .false.   !> apply time average?
+    History_DEFAULT_ZCOORD    = ''        !> default z-coordinate
+    History_DEFAULT_DATATYPE  = 'REAL4'   !> data type
+    History_TIME_SINCE        = ''        !> Offset time
 
     !--- read namelist
     History_TITLE       = title
@@ -388,7 +388,7 @@ contains
        call Log('E','xxx Not appropriate names in namelist PARAM_HISTORY. Check!')
     endif
 
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
     if ( LOG_master_nml ) write(LOG_fid_nml,nml=PARAM_HISTORY)
 #else
     write(message,nml=PARAM_HISTORY)
@@ -455,12 +455,14 @@ contains
        if( ierr /= 0 ) exit
        if( BASENAME == '' .OR. ITEM == '' .OR. OUTNAME == '' ) cycle ! invalid HISTITEM
 
-#if defined(__PGI) || defined(__ES2)
-    if ( LOG_master_nml .AND. LOG_fid_nml /= LOG_fid ) write(LOG_fid_nml,nml=HISTITEM)
+       if ( LOG_fid_nml /= LOG_fid ) then
+#if defined(PGI) || defined(SX)
+          if ( LOG_master_nml ) write(LOG_fid_nml,nml=HISTITEM)
 #else
-    write(message,nml=HISTITEM)
-    if ( LOG_fid_nml /= LOG_fid ) call Log_nml('I',message)
+          write(message,nml=HISTITEM)
+          call Log_nml('I',message)
 #endif
+       endif
 
        ! check duplicated request
        if ( OUTNAME == 'undefined' ) OUTNAME = ITEM ! set default name

@@ -120,14 +120,6 @@ contains
   subroutine ATMOS_PHY_TB_config( TB_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef TB
-    use NAME(scale_atmos_phy_tb_, TB,), only: &
-       NAME(ATMOS_PHY_TB_, TB, _config), &
-       NAME(ATMOS_PHY_TB_, TB, _setup), &
-       NAME(ATMOS_PHY_TB_, TB,)
-#else
     use scale_atmos_phy_tb_smg, only: &
        ATMOS_PHY_TB_smg_config, &
        ATMOS_PHY_TB_smg_setup, &
@@ -148,7 +140,6 @@ contains
        ATMOS_PHY_TB_hybrid_config, &
        ATMOS_PHY_TB_hybrid_setup, &
        ATMOS_PHY_TB_hybrid
-#endif
     implicit none
 
     character(len=*), intent(in) :: TB_TYPE
@@ -156,13 +147,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(TB_TYPE), ' is selected.'
 
-#ifdef TB
-    call NAME(ATMOS_PHY_TB_, TB, _config)( TB_TYPE, & ! [IN]
-                                           I_TKE    ) ! [OUT]
-
-    ATMOS_PHY_TB        => NAME(ATMOS_PHY_TB_, TB, )
-    ATMOS_PHY_TB_setup  => NAME(ATMOS_PHY_TB_, TB, _setup)
-#else
     select case( TB_TYPE )
     case( 'SMAGORINSKY' )
 
@@ -214,7 +198,6 @@ contains
        call PRC_MPIstop
 
     end select
-#endif
 
     return
   end subroutine ATMOS_PHY_TB_config

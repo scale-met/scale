@@ -27,7 +27,7 @@ module scale_prof
   public :: PROF_rapend
   public :: PROF_rapreport
 
-#ifdef _PAPI_
+#ifdef PAPI
   public :: PROF_PAPI_rapstart
   public :: PROF_PAPI_rapstop
   public :: PROF_PAPI_rapreport
@@ -81,7 +81,7 @@ module scale_prof
   integer,                private            :: PROF_rap_level         = 2
   logical,                private            :: PROF_mpi_barrier       = .false.
 
-#ifdef _PAPI_
+#ifdef PAPI
   integer(DP),            private            :: PROF_PAPI_flops     = 0   !> total floating point operations since the first call
   real(SP),               private            :: PROF_PAPI_real_time = 0.0 !> total realtime since the first PROF_PAPI_flops() call
   real(SP),               private            :: PROF_PAPI_proc_time = 0.0 !> total process time since the first PROF_PAPI_flops() call
@@ -188,10 +188,10 @@ contains
     !if( IO_L ) write(IO_FID_LOG,*) '<DEBUG> [PROF] ', rapname, PROF_rapnstr(id)
 #endif
 
-#ifdef _FAPP_
+#ifdef FAPP
     call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
 #endif
-#ifdef _FINEPA_
+#ifdef FINEPA
     call START_COLLECTION( rapname )
 #endif
 
@@ -230,10 +230,10 @@ contains
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
 
-#ifdef _FINEPA_
+#ifdef FINEPA
     call STOP_COLLECTION( rapname )
 #endif
-#ifdef _FAPP_
+#ifdef FAPP
     call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level_ )
 #endif
 
@@ -319,7 +319,7 @@ contains
     return
   end subroutine PROF_rapreport
 
-#ifdef _PAPI_
+#ifdef PAPI
   !-----------------------------------------------------------------------------
   !> Start flop counter
   subroutine PROF_PAPI_rapstart

@@ -175,7 +175,7 @@ contains
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
-       dtrk, dt                                     )
+       dtrk, last                                   )
     use scale_grid_index
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
@@ -289,7 +289,7 @@ contains
     logical,  intent(in)  :: BND_N
 
     real(RP), intent(in)  :: dtrk
-    real(RP), intent(in)  :: dt
+    logical,  intent(in)  :: last
 
 
     ! diagnostic variables (work space)
@@ -352,7 +352,7 @@ contains
     p(:,:,:) = UNDEF
 #endif
 
-#ifdef QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
     DENS_RK(   1:KS-1,:,:)   = UNDEF
     DENS_RK(KE+1:KA  ,:,:)   = UNDEF
     MOMZ_RK(   1:KS-1,:,:)   = UNDEF

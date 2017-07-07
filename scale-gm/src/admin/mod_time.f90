@@ -189,7 +189,7 @@ contains
        case('RK3')
           TIME_sstep_max = 6
         case('RK4')
-          TIME_sstep_max = 8
+          TIME_sstep_max = 12
         case('TRCADV')
           TIME_sstep_max = 0
        case default

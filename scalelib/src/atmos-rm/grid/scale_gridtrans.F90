@@ -753,9 +753,29 @@ contains
   !-----------------------------------------------------------------------------
   !> Write metrics
   subroutine GTRANS_write
+    use scale_const, only: &
+       CONST_RADIUS
+    use scale_vector, only: &
+       VECTR_distance
     use scale_fileio, only: &
        FILEIO_write
+    use scale_grid, only: &
+       GRID_DOMAIN_CENTER_X, &
+       GRID_DOMAIN_CENTER_Y
+    use scale_grid_real, only: &
+       REAL_BASEPOINT_LON, &
+       REAL_BASEPOINT_LAT, &
+       REAL_LON,           &
+       REAL_LAT
+    use scale_mapproj, only: &
+       MPRJ_lonlat2xy
     implicit none
+
+    real(RP) :: check_X_XY(IA,JA)
+    real(RP) :: check_Y_XY(IA,JA)
+    real(RP) :: distance  (IA,JA)
+
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if ( GTRANS_OUT_BASENAME /= '' ) then
@@ -772,13 +792,13 @@ contains
        call FILEIO_write( GTRANS_MAPF(:,:,2,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_MAPF(:,:,1,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XV', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_MAPF(:,:,2,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XV', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_MAPF(:,:,1,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UV', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_MAPF(:,:,2,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UV', GTRANS_OUT_DTYPE  ) ! [IN]
 
        call FILEIO_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
@@ -787,6 +807,31 @@ contains
 
        call FILEIO_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+
+       do j = 1, JA
+       do i = 1, IA
+          call MPRJ_lonlat2xy( REAL_LON(i,j), REAL_LAT(i,j), check_X_XY(i,j), check_Y_XY(i,j) )
+       enddo
+       enddo
+
+       call FILEIO_write( check_X_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'X_XY', 'x at XY for check', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( check_Y_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'Y_XY', 'y at XY for check', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+
+       do j = 1, JA
+       do i = 1, IA
+          call VECTR_distance( CONST_RADIUS,       & ! [IN]
+                               REAL_BASEPOINT_LON, & ! [IN]
+                               REAL_BASEPOINT_LAT, & ! [IN]
+                               REAL_LON(i,j),      & ! [IN]
+                               REAL_LAT(i,j),      & ! [IN]
+                               distance(i,j)       ) ! [OUT]
+       enddo
+       enddo
+
+       call FILEIO_write( distance(:,:),               GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'distance', 'distance from basepoint', 'm', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
 
     endif
 

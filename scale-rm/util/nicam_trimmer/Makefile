@@ -10,8 +10,8 @@ DCUTILS     = ../../../dc_utils
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 #FC=ifort
-LIBS=$(NETCDF_LIBS) -L$(SCALELIB) -lscale  -L$(DCUTILS) -ldcutils -L$(GTOOLLIB) -lgtool
-INCLUDES=-I$(SCALELIB) -I$(DCUTILS) -I$(GTOOLLIB) $(NETCDF_INCLUDE)
+LIBS=$(SCALE_NETCDF_LIBS) -L$(SCALELIB) -lscale  -L$(DCUTILS) -ldcutils -L$(GTOOLLIB) -lgtool
+INCLUDES=-I$(SCALELIB) -I$(DCUTILS) -I$(GTOOLLIB) $(SCALE_NETCDF_INCLUDE)
 
 OBJECT1=nicam_trimmer
 OBJECT2=nicam_trimmer_jw06

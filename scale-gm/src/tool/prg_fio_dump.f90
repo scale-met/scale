@@ -31,7 +31,7 @@ program prg_fio_dump
   character(len=H_LONG) :: argstr
   integer :: n, narg
 
-#ifdef _NOF2003
+#ifdef NOF2003
   integer :: IARGC
 #else
   integer :: command_argument_count
@@ -42,7 +42,7 @@ program prg_fio_dump
 
   call MPI_Init(ierr)
 
-#ifdef _NOF2003
+#ifdef NOF2003
   narg = IARGC()
 #else
   narg = command_argument_count()
@@ -60,7 +60,7 @@ program prg_fio_dump
 
   do n = 1, narg
 
-#ifdef _NOF2003
+#ifdef NOF2003
      call GETARG(n,argstr)
 #else
      call get_command_argument(n,argstr)

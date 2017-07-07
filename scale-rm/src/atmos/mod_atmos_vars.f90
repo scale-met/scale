@@ -2537,7 +2537,7 @@ contains
        ATMOS_PHY_TB_vars_restart_create
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_create
-#ifdef _SDM
+#ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
        ATMOS_PHY_MP_sdm_restart_create
@@ -2552,7 +2552,7 @@ contains
     integer :: iq
     !---------------------------------------------------------------------------
 
-#ifdef _SDM
+#ifdef SDM
     if( sd_rest_flg_out ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***'
        call ATMOS_PHY_MP_sdm_restart_create(NOWSEC)
@@ -2621,7 +2621,7 @@ contains
        ATMOS_PHY_TB_vars_restart_enddef
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_enddef
-#ifdef _SDM
+#ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
        ATMOS_PHY_MP_sdm_restart_enddef
@@ -2630,7 +2630,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-#ifdef _SDM
+#ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_enddef
     endif
@@ -2682,7 +2682,7 @@ contains
        ATMOS_PHY_TB_vars_restart_close
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_close
-#ifdef _SDM
+#ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
        ATMOS_PHY_MP_sdm_restart_close
@@ -2690,7 +2690,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-#ifdef _SDM
+#ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_close
     endif
@@ -2749,7 +2749,7 @@ contains
        ATMOS_PHY_TB_vars_restart_def_var
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_def_var
-#ifdef _SDM
+#ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
        ATMOS_PHY_MP_sdm_restart_def_var
@@ -2759,7 +2759,7 @@ contains
     integer iq
     !---------------------------------------------------------------------------
 
-#ifdef _SDM
+#ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_def_var
     endif
@@ -2827,7 +2827,7 @@ contains
        ATMOS_PHY_TB_vars_restart_write
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_write
-#ifdef _SDM
+#ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
        ATMOS_PHY_MP_sdm_restart_write
@@ -2837,7 +2837,7 @@ contains
     integer iq
     !---------------------------------------------------------------------------
 
-#ifdef _SDM
+#ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_write
     endif

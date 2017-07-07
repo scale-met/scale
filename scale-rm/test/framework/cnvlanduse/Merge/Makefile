@@ -19,8 +19,8 @@ INITCONF    = init.conf
 TPROC       = 16
 
 # required data (parameters,distributed files)
-DATDIR      = $(SCALE_DB)
-DATPARAM    = landuse
+DATPARAM    = " [$(SCALE_DB)/landuse/GLCCv2/Products input_landuse_lo] \
+                [$(SCALE_DB)/landuse/LU100M/Products input_landuse_hi] "
 DATDISTS    =
 
 

@@ -368,7 +368,6 @@ contains
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
-    real(RP) :: sw
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -379,7 +378,7 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS+1, KE-1
+    do k = KS+2, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k-1,i,j) )
        call CHECK( __LINE__, mom(k  ,i,j) )
@@ -406,19 +405,29 @@ contains
 #endif
 
     !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel,sw) &
+    !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff,FDZ,dtrk)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
 
+       call CHECK( __LINE__, val(KS  ,i,j) )
+       call CHECK( __LINE__, val(KS+1,i,j) )
+
+
 #endif
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
+       ! The flux at KS can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP ! k = KS
 
-       ! if w>0; min(f,w*dz/dt)
-       ! else  ; max(f,w*dz/dt) = -min(-f,-w*dz/dt)
-       sw = sign( 1.0_RP, mom(KS,i,j) )
-       flux(KS  ,i,j) = sw * min( sw*flux(KS,i,j), sw*val(KS,i,j)*GSQRT(KS,i,j)*FDZ(KS)/dtrk )
+       vel = ( 0.5_RP * ( mom(KS,i,j) &
+                        + mom(KS+1,i,j) ) ) &
+           / DENS(KS+1,i,j)
+       flux(KS,i,j) = J33G * vel &
+                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
+                   + GSQRT(KS+1,i,j) * num_diff(KS+1,i,j) ! k = KS+1
+
 
 
        flux(KE-1,i,j) = 0.0_RP ! k = KE
@@ -474,7 +483,10 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF)
     do j = JJS, JJE
     do i = IIS, IIE
-       flux(KS-1,i,j) = 0.0_RP
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
+       ! The flux at KS can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
+       flux(KS-1,i,j) = 0.0_RP ! k = KS
 
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -527,7 +539,10 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF)
     do j = JJS, JJE
     do i = IIS, IIE
-       flux(KS-1,i,j) = 0.0_RP
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
+       ! The flux at KS can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
+       flux(KS-1,i,j) = 0.0_RP ! k = KS
 
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -584,9 +599,9 @@ contains
              * mom(k+1,i,j) &
              + F2H(k,2,I_UYZ) &
              * mom(k,i,j) ) &
-           / ( F2H(k,1,I_XYZ) &
+           / ( F2H(k,1,I_UYZ) &
              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-             + F2H(k,2,I_XYZ) &
+             + F2H(k,2,I_UYZ) &
              * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+2) * vel &
                    * ( F41 * ( val(k,i+1,j)+val(k,i,j) ) &
@@ -661,9 +676,9 @@ contains
              * mom(k+1,i,j) &
              + F2H(k,2,I_XVZ) &
              * mom(k,i,j) ) &
-           / ( F2H(k,1,I_XYZ) &
+           / ( F2H(k,1,I_XVZ) &
              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-             + F2H(k,2,I_XYZ) &
+             + F2H(k,2,I_XVZ) &
              * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+1) * vel &
                    * ( F41 * ( val(k,i,j+1)+val(k,i,j) ) &
@@ -736,9 +751,9 @@ contains
 
 #endif
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i+1,j) ) ) &
-           / ( F2H(k,1,I_XYZ) &
+           / ( F2H(k,1,I_UYZ) &
              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-             + F2H(k,2,I_XYZ) &
+             + F2H(k,2,I_UYZ) &
              * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J33G * vel &
                    * ( F41 * ( val(k+1,i,j)+val(k,i,j) ) &
@@ -764,20 +779,23 @@ contains
        call CHECK( __LINE__, val(KS,i,j) )
 
 #endif
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( 0.5_RP * ( mom(KS,i,j)+mom(KS,i+1,j) ) ) &
-           / ( F2H(KS,1,I_XYZ) &
+           / ( F2H(KS,1,I_UYZ) &
              * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS+1,i+1,j) ) &
-             + F2H(KS,2,I_XYZ) &
+             + F2H(KS,2,I_UYZ) &
              * 0.5_RP * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) )
        flux(KS,i,j) = J33G * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
                    + GSQRT(KS,i,j) * num_diff(KS,i,j)
        vel = ( 0.5_RP * ( mom(KE-1,i,j)+mom(KE-1,i+1,j) ) ) &
-           / ( F2H(KE-1,1,I_XYZ) &
+           / ( F2H(KE-1,1,I_UYZ) &
              * 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
-             + F2H(KE-1,2,I_XYZ) &
+             + F2H(KE-1,2,I_UYZ) &
              * 0.5_RP * ( DENS(KE-1,i,j)+DENS(KE-1,i+1,j) ) )
        flux(KE-1,i,j) = J33G * vel &
                    * ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) ) &
@@ -828,9 +846,9 @@ contains
              * mom(k+1,i,j) &
              + F2H(k,2,I_UYZ) &
              * mom(k,i,j) ) &
-           / ( F2H(k,1,I_XYZ) &
+           / ( F2H(k,1,I_UYZ) &
              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-             + F2H(k,2,I_XYZ) &
+             + F2H(k,2,I_UYZ) &
              * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
                    * ( F41 * ( val(k+1,i,j)+val(k,i,j) ) &
@@ -845,15 +863,18 @@ contains
     !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( F2H(KS,1,I_UYZ) &
              * mom(KS+1,i,j) &
              + F2H(KS,2,I_UYZ) &
              * mom(KS,i,j) ) &
-           / ( F2H(KS,1,I_XYZ) &
+           / ( F2H(KS,1,I_UYZ) &
              * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS+1,i+1,j) ) &
-             + F2H(KS,2,I_XYZ) &
+             + F2H(KS,2,I_UYZ) &
              * 0.5_RP * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) )
        flux(KS,i,j) = J13G(KS,i,j) / MAPF(i,j,+2) * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) )
@@ -861,9 +882,9 @@ contains
              * mom(KE,i,j) &
              + F2H(KE-1,2,I_UYZ) &
              * mom(KE-1,i,j) ) &
-           / ( F2H(KE-1,1,I_XYZ) &
+           / ( F2H(KE-1,1,I_UYZ) &
              * 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
-             + F2H(KE-1,2,I_XYZ) &
+             + F2H(KE-1,2,I_UYZ) &
              * 0.5_RP * ( DENS(KE-1,i,j)+DENS(KE-1,i+1,j) ) )
        flux(KE-1,i,j) = J13G(KE-1,i,j) / MAPF(i,j,+2) * vel &
                    * ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) )
@@ -906,13 +927,13 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
-       vel = ( F2H(k,1,I_XVZ) &
+       vel = ( F2H(k,1,I_UYZ) &
              * 0.25_RP * ( mom(k+1,i,j)+mom(k+1,i+1,j)+mom(k+1,i,j-1)+mom(k+1,i+1,j-1) ) &
-             + F2H(k,2,I_XVZ) &
+             + F2H(k,2,I_UYZ) &
              * 0.25_RP * ( mom(k,i,j)+mom(k,i+1,j)+mom(k,i,j-1)+mom(k,i+1,j-1) ) ) &
-           / ( F2H(k,1,I_XYZ) &
+           / ( F2H(k,1,I_UYZ) &
              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-             + F2H(k,2,I_XYZ) &
+             + F2H(k,2,I_UYZ) &
              * 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) )
        flux(k,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
                    * ( F41 * ( val(k+1,i,j)+val(k,i,j) ) &
@@ -927,25 +948,28 @@ contains
     !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
-       vel = ( F2H(KS,1,I_XVZ) &
+       vel = ( F2H(KS,1,I_UYZ) &
              * 0.25_RP * ( mom(KS+1,i,j)+mom(KS+1,i+1,j)+mom(KS+1,i,j-1)+mom(KS+1,i+1,j-1) ) &
-             + F2H(KS,2,I_XVZ) &
+             + F2H(KS,2,I_UYZ) &
              * 0.25_RP * ( mom(KS,i,j)+mom(KS,i+1,j)+mom(KS,i,j-1)+mom(KS,i+1,j-1) ) ) &
-           / ( F2H(KS,1,I_XYZ) &
+           / ( F2H(KS,1,I_UYZ) &
              * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS+1,i+1,j) ) &
-             + F2H(KS,2,I_XYZ) &
+             + F2H(KS,2,I_UYZ) &
              * 0.5_RP * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) )
        flux(KS,i,j) = J23G(KS,i,j) / MAPF(i,j,+1) * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) )
-       vel = ( F2H(KE-1,1,I_XVZ) &
+       vel = ( F2H(KE-1,1,I_UYZ) &
              * 0.25_RP * ( mom(KE,i,j)+mom(KE,i+1,j)+mom(KE,i,j-1)+mom(KE,i+1,j-1) ) &
-             + F2H(KE-1,2,I_XVZ) &
+             + F2H(KE-1,2,I_UYZ) &
              * 0.25_RP * ( mom(KE-1,i,j)+mom(KE-1,i+1,j)+mom(KE-1,i,j-1)+mom(KE-1,i+1,j-1) ) ) &
-           / ( F2H(KE-1,1,I_XYZ) &
+           / ( F2H(KE-1,1,I_UYZ) &
              * 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
-             + F2H(KE-1,2,I_XYZ) &
+             + F2H(KE-1,2,I_UYZ) &
              * 0.5_RP * ( DENS(KE-1,i,j)+DENS(KE-1,i+1,j) ) )
        flux(KE-1,i,j) = J23G(KE-1,i,j) / MAPF(i,j,+1) * vel &
                    * ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) )
@@ -1121,9 +1145,9 @@ contains
 
 #endif
        vel = ( 0.5_RP * ( mom(k,i,j)+mom(k,i,j+1) ) ) &
-           / ( F2H(k,1,I_XYZ) &
+           / ( F2H(k,1,I_XVZ) &
              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-             + F2H(k,2,I_XYZ) &
+             + F2H(k,2,I_XVZ) &
              * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J33G * vel &
                    * ( F41 * ( val(k+1,i,j)+val(k,i,j) ) &
@@ -1149,20 +1173,23 @@ contains
        call CHECK( __LINE__, val(KS,i,j) )
 
 #endif
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( 0.5_RP * ( mom(KS,i,j)+mom(KS,i,j+1) ) ) &
-           / ( F2H(KS,1,I_XYZ) &
+           / ( F2H(KS,1,I_XVZ) &
              * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS+1,i,j+1) ) &
-             + F2H(KS,2,I_XYZ) &
+             + F2H(KS,2,I_XVZ) &
              * 0.5_RP * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) )
        flux(KS,i,j) = J33G * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
                    + GSQRT(KS,i,j) * num_diff(KS,i,j)
        vel = ( 0.5_RP * ( mom(KE-1,i,j)+mom(KE-1,i,j+1) ) ) &
-           / ( F2H(KE-1,1,I_XYZ) &
+           / ( F2H(KE-1,1,I_XVZ) &
              * 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
-             + F2H(KE-1,2,I_XYZ) &
+             + F2H(KE-1,2,I_XVZ) &
              * 0.5_RP * ( DENS(KE-1,i,j)+DENS(KE-1,i,j+1) ) )
        flux(KE-1,i,j) = J33G * vel &
                    * ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) ) &
@@ -1209,13 +1236,13 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
-       vel = ( F2H(k,1,I_UYZ) &
+       vel = ( F2H(k,1,I_XVZ) &
              * 0.25_RP * ( mom(k+1,i,j)+mom(k+1,i-1,j)+mom(k+1,i,j+1)+mom(k+1,i-1,j+1) ) &
-             + F2H(k,2,I_UYZ) &
+             + F2H(k,2,I_XVZ) &
              * 0.25_RP * ( mom(k,i,j)+mom(k,i-1,j)+mom(k,i,j+1)+mom(k,i-1,j+1) ) ) &
-           / ( F2H(k,1,I_XYZ) &
+           / ( F2H(k,1,I_XVZ) &
              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-             + F2H(k,2,I_XYZ) &
+             + F2H(k,2,I_XVZ) &
              * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J13G(k,i,j) / MAPF(i,j,+2) * vel &
                    * ( F41 * ( val(k+1,i,j)+val(k,i,j) ) &
@@ -1230,25 +1257,28 @@ contains
     !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
-       vel = ( F2H(KS,1,I_UYZ) &
+       vel = ( F2H(KS,1,I_XVZ) &
              * 0.25_RP * ( mom(KS+1,i,j)+mom(KS+1,i-1,j)+mom(KS+1,i,j+1)+mom(KS+1,i-1,j+1) ) &
-             + F2H(KS,2,I_UYZ) &
+             + F2H(KS,2,I_XVZ) &
              * 0.25_RP * ( mom(KS,i,j)+mom(KS,i-1,j)+mom(KS,i,j+1)+mom(KS,i-1,j+1) ) ) &
-           / ( F2H(KS,1,I_XYZ) &
+           / ( F2H(KS,1,I_XVZ) &
              * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS+1,i,j+1) ) &
-             + F2H(KS,2,I_XYZ) &
+             + F2H(KS,2,I_XVZ) &
              * 0.5_RP * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) )
        flux(KS,i,j) = J13G(KS,i,j) / MAPF(i,j,+2) * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) )
-       vel = ( F2H(KE-1,1,I_UYZ) &
+       vel = ( F2H(KE-1,1,I_XVZ) &
              * 0.25_RP * ( mom(KE,i,j)+mom(KE,i-1,j)+mom(KE,i,j+1)+mom(KE,i-1,j+1) ) &
-             + F2H(KE-1,2,I_UYZ) &
+             + F2H(KE-1,2,I_XVZ) &
              * 0.25_RP * ( mom(KE-1,i,j)+mom(KE-1,i-1,j)+mom(KE-1,i,j+1)+mom(KE-1,i-1,j+1) ) ) &
-           / ( F2H(KE-1,1,I_XYZ) &
+           / ( F2H(KE-1,1,I_XVZ) &
              * 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
-             + F2H(KE-1,2,I_XYZ) &
+             + F2H(KE-1,2,I_XVZ) &
              * 0.5_RP * ( DENS(KE-1,i,j)+DENS(KE-1,i,j+1) ) )
        flux(KE-1,i,j) = J13G(KE-1,i,j) / MAPF(i,j,+2) * vel &
                    * ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) )
@@ -1295,9 +1325,9 @@ contains
              * mom(k+1,i,j) &
              + F2H(k,2,I_XVZ) &
              * mom(k,i,j) ) &
-           / ( F2H(k,1,I_XYZ) &
+           / ( F2H(k,1,I_XVZ) &
              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-             + F2H(k,2,I_XYZ) &
+             + F2H(k,2,I_XVZ) &
              * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
        flux(k,i,j) = J23G(k,i,j) / MAPF(i,j,+1) * vel &
                    * ( F41 * ( val(k+1,i,j)+val(k,i,j) ) &
@@ -1312,15 +1342,18 @@ contains
     !$omp shared(GSQRT,CDZ)
     do j = JJS, JJE
     do i = IIS, IIE
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
        flux(KS-1,i,j) = 0.0_RP
 
        vel = ( F2H(KS,1,I_XVZ) &
              * mom(KS+1,i,j) &
              + F2H(KS,2,I_XVZ) &
              * mom(KS,i,j) ) &
-           / ( F2H(KS,1,I_XYZ) &
+           / ( F2H(KS,1,I_XVZ) &
              * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS+1,i,j+1) ) &
-             + F2H(KS,2,I_XYZ) &
+             + F2H(KS,2,I_XVZ) &
              * 0.5_RP * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) )
        flux(KS,i,j) = J23G(KS,i,j) / MAPF(i,j,+1) * vel &
                    * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) )
@@ -1328,9 +1361,9 @@ contains
              * mom(KE,i,j) &
              + F2H(KE-1,2,I_XVZ) &
              * mom(KE-1,i,j) ) &
-           / ( F2H(KE-1,1,I_XYZ) &
+           / ( F2H(KE-1,1,I_XVZ) &
              * 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
-             + F2H(KE-1,2,I_XYZ) &
+             + F2H(KE-1,2,I_XVZ) &
              * 0.5_RP * ( DENS(KE-1,i,j)+DENS(KE-1,i,j+1) ) )
        flux(KE-1,i,j) = J23G(KE-1,i,j) / MAPF(i,j,+1) * vel &
                    * ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) )

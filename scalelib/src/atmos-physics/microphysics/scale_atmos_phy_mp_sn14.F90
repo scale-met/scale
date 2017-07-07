@@ -3634,7 +3634,7 @@ contains
           PQ(I_LChom,k,i,j) = 0.0_RP
           PQ(I_NChom,k,i,j) = 0.0_RP
           ! Heterogenous Freezing
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
           tmp = min( xq(I_mp_QC,k,i,j)*(Jhet+Jhom)*dt, 1.E+3_RP) ! apply exp limiter
           PQ(I_LChet,k,i,j) = -rdt*rhoq(I_QC,k,i,j)*( 1.0_RP - exp( -coef_m2_c*tmp ) )
           PQ(I_NChet,k,i,j) = -rdt*rhoq(I_NC,k,i,j)*( 1.0_RP - exp( -          tmp ) )

@@ -7,12 +7,12 @@ SYSDEP_DIR  = ../../../sysdep
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
-LIBS=$(NETCDF_LIBS)
-INCLUDES=$(NETCDF_INCLUDE) -Iinc
+LIBS=$(SCALE_NETCDF_LIBS)
+INCLUDES=$(SCALE_NETCDF_INCLUDE) -Iinc
 
 OBJECT=net2g
 
-ifeq ($(NOMPI),T)
+ifeq ($(SCALE_DISABLE_MPI),T)
   FC=$(SFC)
   FFLAGS += -UMPIUSE
 else
@@ -37,6 +37,7 @@ all: main
 main: prg_netcdf2grads_h.o
 	$(FC) $(FFLAGS) -o $(OBJECT) $(MODS) $(LIBS)
 	@mv *.mod inc/; mv *.o inc/;
+	$(INSTALL) $(OBJECT) $(BINDIR)/$(OBJECT)
 
 #f90.o:
 mod_net2g_vars.o: src/mod_net2g_vars.F90

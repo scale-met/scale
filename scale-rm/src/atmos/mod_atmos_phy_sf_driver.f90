@@ -129,11 +129,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_SF_driver( update_flag )
-    use scale_const, only: &
-       PRE00 => CONST_PRE00, &
-       Rdry  => CONST_Rdry, &
-       Rvap  => CONST_Rvap, &
-       CPdry => CONST_CPdry
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -226,6 +221,7 @@ contains
     real(RP) :: q(QA)
     real(RP) :: qdry
     real(RP) :: Rtot
+    real(RP) :: CPtot
 
     real(RP) :: work
 
@@ -337,7 +333,8 @@ contains
           enddo
           call THERMODYN_qd( qdry,  q, TRACER_MASS )
           call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-          RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPdry * GSQRT(KS,i,j,I_XYZ) ) ) &
+          call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
+          RHOT_t_SF(i,j) = SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) &
                          * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
        enddo
        enddo

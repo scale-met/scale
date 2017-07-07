@@ -3,6 +3,7 @@
 
 #define RMISS -9.9999e+30
 #define TEPS 1e-6
+#define NTMAX 102400
 
 #define MIN(a,b) ((a)<(b) ? (a) : (b))
 
@@ -100,6 +101,7 @@ typedef struct {
   int count;
   real64_t t;
   real64_t tint;
+  real64_t *tval;
   char name[File_HSHORT+1];
 } tdim_t;
 
@@ -1057,6 +1059,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
       tdims[nt]->ncid = ncid;
       tdims[nt]->count = -1;
       tdims[nt]->tint = tint;
+      tdims[nt]->tval = (double*) malloc(sizeof(double)*NTMAX);
       // generate name
       if ( nt == 0 )
         strcpy(tname, "time");
@@ -1340,6 +1343,11 @@ int32_t file_write_data( int32_t     fid,        // (in)
          t_end > vars[vid]->t->t + TEPS ) { // time goes next step
       vars[vid]->t->count += 1;
       vars[vid]->t->t = t_end;
+      if ( vars[vid]->t->count > NTMAX-1 ) {
+        fprintf(stderr, "time count exceeds the max limit (%d)\n", NTMAX);
+        return ERROR_CODE;
+      }
+      vars[vid]->t->tval[vars[vid]->t->count] = t_end;
       if ( files[fid]->shared_mode ) { // write a new value to variable time
         MPI_Offset index[2];
         index[0] = (MPI_Offset) vars[vid]->t->count;
@@ -1360,20 +1368,10 @@ int32_t file_write_data( int32_t     fid,        // (in)
       vars[vid]->start[0] = vars[vid]->t->count;
     } else {
       size_t nt = vars[vid]->t->count + 1;
-      double t[nt];
       int flag, n;
-      if ( files[fid]->shared_mode ) {
-        MPI_Offset c = (MPI_Offset) nt;
-        MPI_Offset s=0;
-        CHECK_PNC_ERROR( ncmpi_get_vara_double_all(ncid, vars[vid]->t->varid, &s, &c, t) )
-      } else {
-        size_t s[1];
-        s[0] = 0;
-        CHECK_ERROR( nc_get_vara_double(ncid, vars[vid]->t->varid, s, &nt, t) )
-      }
       flag = 1;
       for(n=nt-1;n>=0;n--) {
-        if ( fabs(t[n]-t_end) < TEPS ) {
+        if ( fabs(vars[vid]->t->tval[n]-t_end) < TEPS ) {
           vars[vid]->start[0] = n;
           flag = 0;
           break;
@@ -1383,7 +1381,7 @@ int32_t file_write_data( int32_t     fid,        // (in)
         fprintf(stderr, "cannot find time: %f\n", t_end);
         fprintf(stderr, "  time count is : %d, last time is: %f, diff is: %e\n", vars[vid]->t->count < 0, vars[vid]->t->t, vars[vid]->t->t-t_end);
         fprintf(stderr, "  time is: ");
-        for (n=0;n<nt;n++) fprintf(stderr, "%f, ", t[n]);
+        for (n=0;n<nt;n++) fprintf(stderr, "%f, ", vars[vid]->t->tval[n]);
         fprintf(stderr, "\n");
         return ERROR_CODE;
       }
@@ -1441,6 +1439,7 @@ int32_t file_close( int32_t fid ) // (in)
 
   for (i=0; i<nt; i++) {
     if ( tdims[i] != NULL && tdims[i]->ncid == ncid ) {
+      free( tdims[i]->tval );
       free( tdims[i] );
       tdims[i] = NULL;
     }

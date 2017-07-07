@@ -1,0 +1,38 @@
+################################################################################
+#
+# List of SCALE environments
+#
+################################################################################
+
+envlog:
+	@echo "********************************************************************************************* "
+	@echo "<SCALE environments> : if T then on, else off"
+	@echo "[General]"
+	@echo " + SYSTEM                                            [SCALE_SYS]             :" $(SCALE_SYS)
+	@echo " + Disable to use MPI library (only for util tools)? [SCALE_DISABLE_MPI]     :" $(SCALE_DISABLE_MPI)
+	@echo "[Debug]"
+	@echo " + Activate debug option?                            [SCALE_DEBUG]           :" $(SCALE_DEBUG)
+	@echo " + Activate quick debug option?                      [SCALE_QUICKDEBUG]      :" $(SCALE_QUICKDEBUG)
+	@echo " + Use check routine for mass in dynamics?           [SCALE_USE_MASSCHECK]   :" $(SCALE_USE_MASSCHECK)
+	@echo "[Perforamnce optimization]"
+	@echo " + Use single floating-point precision?              [SCALE_USE_SINGLEFP]    :" $(SCALE_USE_SINGLEFP)
+	@echo " + Use fixed size for spatial grid dimension?        [SCALE_USE_FIXEDINDEX]  :" $(SCALE_USE_FIXEDINDEX)
+	@echo " + Enable to use OpenMP?                             [SCALE_ENABLE_OPENMP]   :" $(SCALE_ENABLE_OPENMP)
+	@echo " + Enable to use OpenACC?                            [SCALE_ENABLE_OPENACC]  :" $(SCALE_ENABLE_OPENACC)
+	@echo " + Use agressive options of optimization for K/FX?   [SCALE_USE_AGRESSIVEOPT]:" $(SCALE_USE_AGRESSIVEOPT)
+	@echo " + Disable to use vectorization for intel compiler?  [SCALE_DISABLE_INTELVEC]:" $(SCALE_DISABLE_INTELVEC)
+	@echo "[Libraries]"
+	@echo " + NetCDF library include path                       [SCALE_NETCDF_INCLUDE]  :" $(SCALE_NETCDF_INCLUDE)
+	@echo " + NetCDF library path                               [SCALE_NETCDF_LIBS]     :" $(SCALE_NETCDF_LIBS)
+	@echo " + Enable to use parallel NetCDF?                    [SCALE_ENABLE_PNETCDF]  :" $(SCALE_ENABLE_PNETCDF)
+	@echo " + Keep compatibility with NetCDF3?                  [SCALE_COMPAT_NETCDF3]  :" $(SCALE_COMPAT_NETCDF3)
+	@echo " + Enable to use MATH library?                       [SCALE_ENABLE_MATHLIB]  :" $(SCALE_ENABLE_MATHLIB)
+	@echo " + MATH library path                                 [SCALE_MATHLIB_LIBS]    :" $(SCALE_MATHLIB_LIBS)
+	@echo " + Enable to use PAPI library?                       [SCALE_ENABLE_PAPI]     :" $(SCALE_ENABLE_PAPI)
+	@echo " + PAPI library include path                         [SCALE_PAPI_INCLUDE]    :" $(SCALE_PAPI_INCLUDE)
+	@echo " + PAPI library path                                 [SCALE_PAPI_LIBS]       :" $(SCALE_PAPI_LIBS)
+	@echo " + Enable to use Super Droplet Model?                [SCALE_ENABLE_SDM]      :" $(SCALE_ENABLE_SDM)
+	@echo "[Special build]"
+	@echo " + Supress to make executables in local directory?   [SCALE_DISABLE_LOCALBIN]:" $(SCALE_DISABLE_LOCALBIN)
+	@echo " + Ignore source dependency at the compilation?      [SCALE_IGNORE_SRCDEP]   :" $(SCALE_IGNORE_SRCDEP)
+	@echo "********************************************************************************************* "

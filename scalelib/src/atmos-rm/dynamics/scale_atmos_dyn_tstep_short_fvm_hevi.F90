@@ -124,13 +124,6 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
-#ifdef HEVI_BICGSTAB
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
-#elif defined(HEVI_LAPACK)
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
-#else
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
-#endif
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi_setup
@@ -153,7 +146,7 @@ contains
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
-       dtrk, dt                                     )
+       dtrk, last                                   )
     use scale_grid_index
     use scale_const, only: &
 #ifdef DRY
@@ -161,6 +154,7 @@ contains
        CVdry  => CONST_CVdry, &
        CPdry  => CONST_CPdry, &
 #endif
+       EPS    => CONST_EPS,   &
        GRAV   => CONST_GRAV,  &
        P00    => CONST_PRE00
     use scale_atmos_dyn_common, only: &
@@ -273,7 +267,7 @@ contains
     logical,  intent(in)  :: BND_N
 
     real(RP), intent(in)  :: dtrk
-    real(RP), intent(in)  :: dt
+    logical,  intent(in)  :: last
 
 
     ! diagnostic variables (work space)
@@ -313,6 +307,8 @@ contains
     real(RP) :: F2(KA,IA,JA)
     real(RP) :: F3(KA,IA,JA)
 
+    real(RP) :: fz, swi
+
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
     integer :: iss, iee
@@ -328,7 +324,7 @@ contains
     qflx_J23(:,:,:)   = UNDEF
 #endif
 
-#ifdef QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
     DENS_RK(   1:KS-1,:,:)   = UNDEF
     DENS_RK(KE+1:KA  ,:,:)   = UNDEF
     MOMZ_RK(   1:KS-1,:,:)   = UNDEF
@@ -344,7 +340,7 @@ contains
 #endif
 
 #ifdef HIST_TEND
-    lhist = dt .eq. dtrk
+    lhist = last
 #endif
 
 #ifdef PROFILE_FIPP
@@ -387,7 +383,7 @@ contains
        PROFILE_START("hevi_mflx_z")
        ! at (x, y, w)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,GSQRT,I_XYW,MOMX,MOMY,J13G,J23G,mflx_hi,MAPF,I_XY,num_diff) 
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,GSQRT,I_XYW,MOMX,MOMY,J13G,J23G,mflx_hi,MAPF,I_XY,num_diff)
        do j = JJS, JJE
        do i = IIS-1, IIE
           mflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
@@ -423,7 +419,7 @@ contains
        iee = min(IIE,IEH)
        ! at (u, y, z)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,iss,iee,KS,KE,GSQRT,I_UYZ,MOMX,num_diff,mflx_hi,MAPF,I_UY) 
+       !$omp shared(JJS,JJE,iss,iee,KS,KE,GSQRT,I_UYZ,MOMX,num_diff,mflx_hi,MAPF,I_UY)
        do j = JJS, JJE
        do i = iss, iee
        do k = KS, KE
@@ -444,7 +440,7 @@ contains
 
        ! at (x, v, z)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JS,JFS_OFF,JJE,JEH,IIS,IIE,KS,KE,GSQRT,I_XVZ,MOMY,num_diff,mflx_hi,MAPF,I_XV) 
+       !$omp shared(JJS,JS,JFS_OFF,JJE,JEH,IIS,IIE,KS,KE,GSQRT,I_XVZ,MOMY,num_diff,mflx_hi,MAPF,I_XV)
        do j = max(JJS-1,JS-JFS_OFF), min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -464,9 +460,14 @@ contains
 
        !--- update density
        PROFILE_START("hevi_sr")
-       !$omp parallel do default(none) private(i,j,k,advch) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS0,mflx_hi,DENS_t,RCDZ,RCDX,RCDY) &
-       !$omp shared(MAPF,I_XY,GSQRT,I_XYZ,Sr)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advcv,advch) &
+#ifdef HIST_TEND
+       !$omp shared(advcv_t,advch_t,lhist) &
+#endif
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
+       !$omp shared(DENS0,Sr,mflx_hi,DENS_t) &
+       !$omp shared(RCDZ,RCDX,RCDY,MAPF,GSQRT,I_XY,I_XYZ)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -478,13 +479,16 @@ contains
           call CHECK( __LINE__, mflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, DENS_t(k,i,j) )
 #endif
-          advch = - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k) &
-                    + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+          advcv = -   ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k)
+          advch = - ( ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
                     + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
-                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
-          Sr(k,i,j) =  advch + DENS_t(k,i,j)
+                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+          Sr(k,i,j) =  ( advcv + advch ) / GSQRT(k,i,j,I_XYZ) + DENS_t(k,i,j)
 #ifdef HIST_TEND
-          if ( lhist ) advch_t(k,i,j,I_DENS) = advch
+          if ( lhist ) then
+             advcv_t(k,i,j,I_DENS) = advcv / GSQRT(k,i,j,I_XYZ)
+             advch_t(k,i,j,I_DENS) = advch / GSQRT(k,i,j,I_XYZ)
+          end if
 #endif
        enddo
        enddo
@@ -540,12 +544,30 @@ contains
             IIS, IIE, JJS, JJE ) ! (in)
        PROFILE_STOP("hevi_momz_qflxhi_y")
 
+       ! limiter at KS+1 (index is KS)
+       !$omp parallel do private(i,j,fz,swi) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          fz = qflx_hi(KS,i,j,ZDIR) + qflx_J13(KS,i,j) + qflx_J23(KS,i,j)
+          ! if MOMZ0 >= 0; min(fz,momz0*dz*G/dt)
+          ! else         ; max(fz,momz0*dz*G/dt) = - min(-fz,-momz0*dz*G/dt)
+          swi = sign( 1.0_RP, MOMZ0(KS,i,j) )
+          qflx_hi(KS,i,j,ZDIR) = swi*min( swi*fz, swi*MOMZ0(KS,i,j)*FDZ(KS)*GSQRT(KS,i,j,I_XYW)/dtrk ) &
+                               - qflx_J13(KS,i,j) - qflx_J23(KS,i,j)
+       end do
+       end do
+
        !--- update momentum(z)
        PROFILE_START("hevi_sw")
-       !$omp parallel do default(none) private(i,j,k,advcv,advch,cf,wdmp,div) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,qflx_hi,qflx_J13,qflx_J23,DDIV,MOMZ0,MOMZ_t) &
-       !$omp shared(RFDZ,RCDX,RCDY,MAPF,I_XY,wdamp_coef,divdmp_coef,dtrk,FDZ,Sw) &
-       !$omp shared(GSQRT,I_XYW)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advcv,advch,cf,wdmp,div) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,advcv_t,advch_t,wdmp_t,ddiv_t) &
+#endif
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
+       !$omp shared(qflx_hi,qflx_J13,qflx_J23,DDIV,MOMZ0,MOMZ_t,Sw) &
+       !$omp shared(RFDZ,RCDX,RCDY,FDZ,dtrk,wdamp_coef,divdmp_coef) &
+       !$omp shared(MAPF,GSQRT,I_XY,I_XYW)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -565,10 +587,10 @@ contains
           call CHECK( __LINE__, MOMZ0(k,i,j) )
           call CHECK( __LINE__, MOMZ_t(k,i,j) )
 #endif
-          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) ) * RFDZ(k)
-          advch = - ( ( qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )    ) * RFDZ(k) &
-                    + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k,i-1,j  ,XDIR) ) * RCDX(i) &
+          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  )      &
+                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RFDZ(k)
+          advch = - ( ( qflx_hi (k,i,j,XDIR) - qflx_hi (k,i-1,j  ,XDIR) ) * RCDX(i) &
                     + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k,i  ,j-1,YDIR) ) * RCDY(j) ) &
                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
           wdmp = - wdamp_coef(k) * MOMZ0(k,i,j)
@@ -634,9 +656,14 @@ contains
 
 
        PROFILE_START("hevi_st")
-       !$omp parallel do default(none) private(i,j,k,advch) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,tflx_hi,RHOT_t,RCDZ,RCDX,RCDY,MAPF,I_XY) &
-       !$omp shared(GSQRT,St,I_XYZ)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advcv,advch) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,advcv_t,advch_t) &
+#endif
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
+       !$omp shared(tflx_hi,RHOT_t,St,RCDZ,RCDX,RCDY) &
+       !$omp shared(MAPF,GSQRT,I_XY,I_XYZ)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -649,14 +676,15 @@ contains
           call CHECK( __LINE__, tflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, RHOT_t(k,i,j) )
 #endif
-          advch = - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                    + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+          advcv = -   ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
+          advch = - ( ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                     + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
-          St(k,i,j) = advch + RHOT_t(k,i,j)
+                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+          St(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYZ) + RHOT_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
-             advch_t(k,i,j,I_RHOT) = advch
+             advcv_t(k,i,j,I_RHOT) = advcv / GSQRT(k,i,j,I_XYZ)
+             advch_t(k,i,j,I_RHOT) = advch / GSQRT(k,i,j,I_XYZ)
           endif
 #endif
        enddo
@@ -674,12 +702,17 @@ contains
 !OCL INDEPENDENT
 !OCL PREFETCH_SEQUENTIAL(SOFT)
 #ifndef __GFORTRAN__
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(B,pg,advcv) &
-       !$omp shared(JJS,JJE,IIS,IIE,PT,MOMZ,POTT,GSQRT,I_XYZ,CDZ,KS,KE,A,dtrk,J33G,RCDZ,RT2P) &
-       !$omp shared(GRAV,F1,I_XYW,F2,F3,DPRES,St,REF_dens,Sr,C,Sw) &
-       !$omp shared(mflx_hi,MAPF,I_XY,MOMZ_RK,MOMZ0,RFDZ) &
-       !$omp shared(RHOT0,DENS_RK,RHOT_RK,DENS0,DENS,ATMOS_DYN_FVM_flux_valueW_Z)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,B,pg,advcv) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,pg_t,advcv_t) &
+#endif
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
+       !$omp shared(mflx_hi,MOMZ_RK,MOMZ0) &
+       !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,PT,POTT,DPRES) &
+       !$omp shared(GRAV,dtrk,A,C,F1,F2,F3,REF_dens,Sr,Sw,St,RT2P) &
+       !$omp shared(ATMOS_DYN_FVM_flux_valueW_Z) &
+       !$omp shared(MAPF,GSQRT,J33G,I_XY,I_XYZ,I_XYW,CDZ,RCDZ,RFDZ)
 #else
        !$omp parallel do default(shared) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(B,pg,advcv)
@@ -719,22 +752,9 @@ contains
 #endif
           enddo
 
-#ifdef HEVI_BICGSTAB
-          call solve_bicgstab( &
-               C(:,i,j),         & ! (inout)
-               F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
-#elif defined(HEVI_LAPACK)
-          call solve_lapack( &
-               C(:,i,j),        & ! (inout)
-#ifdef DEBUG
-               i, j,      & ! (in)
-#endif
-               F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
-#else
           call solve_direct( &
                C(:,i,j),        & ! (inout)
                F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
-#endif
 
           do k = KS, KE-1
 #ifdef DEBUG_HEVI2HEVE
@@ -853,13 +873,29 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+       ! limiter at KS+1/2 (index is KS)
+       !$omp parallel do private(i,j,swi) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          ! qflx_J13(KS,i,j) and qflx_hi(KS,i,j,ZDIR) should be almost canceled
+          swi = 0.25_RP + sign( 0.25_RP, abs(J13G(KS,i,j,I_UYZ))-EPS )
+          qflx_J13(KS,i,j) = ( qflx_J13(KS,i,j) - qflx_hi(KS,i,j,ZDIR) ) * swi
+       end do
+       end do
+
        !--- update momentum(x)
        iee = min(IIE,IEH)
-       !$omp parallel do default(none) private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,iee,KS,KE,qflx_hi,DPRES,CORIOLI,MOMY,DDIV,MOMX0) &
-       !$omp shared(MOMY0,RCDZ,qflx_J13,qflx_J23,RCDX,RFDY,MAPF,I_XV,GSQRT,I_XYZ,I_XVW,I_XVZ) &
-       !$omp shared(MOMX_t,I_UYZ,dtrk,MOMX_RK,FDX,I_UY,I_XY,divdmp_coef,DENS,I_UV,MOMX,CDZ) &
-       !$omp shared(I_UYW,J13G,RFDX,RCDY,RFDZ)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advch,advcv,pg,cf,div) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,advch_t,advcv_t,pg_t,cf_t,ddiv_t) &
+#endif
+       !$omp shared(JJS,JJE,IIS,iee,KS,KE) &
+       !$omp shared(MOMX_RK,DPRES,DENS,MOMX,MOMY,DDIV,MOMX0,MOMX_t) &
+       !$omp shared(qflx_hi,qflx_J13,qflx_J23) &
+       !$omp shared(RCDZ,RCDY,RFDX,CDZ,FDX) &
+       !$omp shared(MAPF,GSQRT,J13G,I_XY,I_UY,I_UV,I_XYZ,I_UYW,I_UYZ) &
+       !$omp shared(dtrk,CORIOLI,divdmp_coef)
        do j = JJS, JJE
        do i = IIS, iee
        do k = KS, KE
@@ -882,10 +918,10 @@ contains
           call CHECK( __LINE__, DDIV(k,i  ,j) )
           call CHECK( __LINE__, MOMX0(k,i,j) )
 #endif
-          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( ( qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RFDZ(k) &
-                    + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RFDX(i) &
+          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                      + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j       ) &
+                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j       ) ) * RCDZ(k)
+          advch = - ( ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RFDX(i) &
                     + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                 * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
           pg = ( ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) & ! [x,y,z]
@@ -905,9 +941,9 @@ contains
              + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
              * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) &
              * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
-                 * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RCDX(i) &
+                 * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RFDX(i) &
                    - MOMX(k,i,j) &
-                   * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RFDY(j) ) &
+                   * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RCDY(j) ) &
              * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
           div = divdmp_coef / dtrk * ( DDIV(k,i+1,j)/MAPF(i+1,j,2,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
               * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) * FDX(i) ! divergence damping
@@ -967,11 +1003,28 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+       ! limiter at KS+1/2 (index is KS)
+       !$omp parallel do private(i,j,swi) OMP_SCHEDULE_
+       do j = JJS, JJE
+       do i = IIS, IIE
+          ! qflx_J23(KS,i,j) and qflx_hi(KS,i,j,ZDIR) should be almost canceled
+          swi = 0.25_RP + sign( 0.25_RP, abs(J23G(KS,i,j,I_XVZ))-EPS )
+          qflx_J23(KS,i,j) = ( qflx_J23(KS,i,j) - qflx_hi(KS,i,j,ZDIR) ) * swi
+       end do
+       end do
+
        !--- update momentum(y)
-       !$omp parallel do default(none) private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,JEH,IIS,IIE,KS,KE,qflx_hi,DPRES,CORIOLI,MOMX,DDIV,MOMY_t) &
-       !$omp shared(MOMY0,RCDZ,qflx_J13,qflx_J23,RCDX,RFDY,MAPF,I_XV,GSQRT,I_XYZ,I_XVW,I_XVZ) &
-       !$omp shared(dtrk,MOMY_RK,FDY,I_XY,divdmp_coef,DENS,I_UV,MOMY,CDZ,J23G)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,advch,advcv,pg,cf,div) &
+#ifdef HIST_TEND
+       !$omp shared(lhist,advch_t,advcv_t,pg_t,cf_t,ddiv_t) &
+#endif
+       !$omp shared(JJS,JJE,JEH,IIS,IIE,KS,KE) &
+       !$omp shared(MOMY_RK,DPRES,DENS,MOMX,MOMY,DDIV,MOMY0,MOMY_t) &
+       !$omp shared(qflx_hi,qflx_J13,qflx_J23) &
+       !$omp shared(RCDZ,RCDX,RFDY,CDZ,FDY) &
+       !$omp shared(MAPF,GSQRT,J23G,I_XY,I_XV,I_UV,I_XYZ,I_XVW,I_XVZ) &
+       !$omp shared(dtrk,CORIOLI,divdmp_coef)
        do j = JJS, min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -995,10 +1048,10 @@ contains
           call CHECK( __LINE__, MOMY_t(k,i,j) )
           call CHECK( __LINE__, MOMY0(k,i,j) )
 #endif
-          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( ( qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RCDZ(k) &
-                    + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+          advcv = -   ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                      + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  )      &
+                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RCDZ(k)
+          advch = - ( ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                     + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RFDY(j) ) &
                   * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV)
           pg = ( ( GSQRT(k,i,j+1,I_XYZ) * DPRES(k,i,j+1) & ! [x,y,z]
@@ -1068,7 +1121,7 @@ contains
        call HIST_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient)',  'kg/m2/s2', xdim='half')
        call HIST_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient)',  'kg/m2/s2', ydim='half')
 
-       call HIST_in(wdmp_t (:,:,:),        'MOMZ_t_dwamp', 'tendency of momentum z (Rayleigh damping)',   'kg/m2/s2', zdim='half')
+       call HIST_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Rayleigh damping)',   'kg/m2/s2', zdim='half')
 
        call HIST_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping)', 'kg/m2/s2', zdim='half')
        call HIST_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping)', 'kg/m2/s2', xdim='half')
@@ -1081,232 +1134,6 @@ contains
 
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi
 
-#ifdef HEVI_BICGSTAB
-!OCL SERIAL
-  subroutine solve_bicgstab( &
-       C,        & ! (inout)
-       F1, F2, F3 ) ! (in)
-
-    use scale_process, only: &
-       PRC_MPIstop
-    implicit none
-    real(RP), intent(inout) :: C(KMAX-1)
-    real(RP), intent(in)    :: F1(KA)
-    real(RP), intent(in)    :: F2(KA)
-    real(RP), intent(in)    :: F3(KA)
-
-    real(RP) :: r0(KMAX-1)
-
-    real(RP) :: M(3,KMAX-1)
-    real(RP) :: p(KMAX-1)
-    real(RP) :: ap(KMAX-1)
-    real(RP) :: s(KMAX-1)
-    real(RP) :: as(KMAX-1)
-    real(RP) :: al, be, w
-
-    real(RP), pointer :: r(:)
-    real(RP), pointer :: rn(:)
-    real(RP), pointer :: swap(:)
-    real(RP), target :: v0(KMAX-1)
-    real(RP), target :: v1(KMAX-1)
-    real(RP) :: r0r
-    real(RP) :: norm, error, epsilon
-
-    integer :: k, iter
-
-    epsilon = 0.1_RP**(RP-1)
-
-    M(3,1) = F1(KS)
-    M(2,1) = F2(KS)
-    do k = KS+1, KE-2
-       M(3,k-KS+1) = F1(k)
-       M(2,k-KS+1) = F2(k)
-       M(1,k-KS+1) = F3(k)
-    enddo
-    M(2,KE-KS) = F2(KE-1)
-    M(1,KE-KS) = F3(KE-1)
-
-    norm = 0.0_RP
-    do k = 1, KMAX-1
-       norm = norm + C(k)**2
-    enddo
-
-    r  => v0
-    rn => v1
-
-    call mul_matrix( v1, M, C )
-
-    do k = 1, KMAX-1
-       r(k) = C(k) - v1(k)
-       r0(k) = r(k)
-       p(k) = r(k)
-    enddo
-
-    r0r = r0(1) * r(1)
-    do k = 2, KMAX-1
-       r0r = r0r + r0(k)*r(k)
-    enddo
-    do iter = 1, KMAX-1
-       error = 0.0_RP
-       do k = 1, KMAX-1
-          error = error + r(k)**2
-       enddo
-
-!       if ( error < epsilon .OR. error / norm < epsilon ) then
-       if ( error/norm < epsilon ) then
-#ifdef DEBUG
-!          write(*,*) "Bi-CGSTAB converged:", iter
-#endif
-          exit
-       endif
-
-       call mul_matrix( ap, M, p )
-       al = r0(1) * ap(1)
-       do k = 2, KMAX-1
-          al = al + r0(k)*ap(k)
-       enddo
-       al = r0r / al ! (r0,r) / (r0,Mp)
-       s(:) = r(:) - al*ap(:)
-       call mul_matrix( as, M, s )
-       be = as(1) * s(1)  ! be is used as just work variable here
-       w =  as(1) * as(1)
-       do k = 2, KMAX-1
-          be = be + as(k)*s(k)
-          w  = w  + as(k)*as(k)
-       enddo
-       w = be / w ! (as,s) / (as,as)
-
-       c(:) = c(:) + al*p(:) + w*s(:)
-       rn(:) = s(:) - w*as(:)
-       be = al/w / r0r
-       r0r = r0(1) * rn(1)
-       do k = 2, KMAX-1
-          r0r = r0r + r0(k)*rn(k)
-       enddo
-       be = be * r0r ! al/w * (r0,rn)/(r0,r)
-       p(:) = rn(:) + be * ( p(:) - w*ap(:) )
-
-       swap => rn
-       rn => r
-       r => swap
-    enddo
-
-    if ( iter >= KMAX-1 ) then
-       write(*,*) 'xxx [atmos_dyn_hevi] Bi-CGSTAB'
-       write(*,*) 'xxx not converged', error, norm
-       call PRC_MPIstop
-    endif
-
-    return
-  end subroutine solve_bicgstab
-
-  subroutine mul_matrix(V, M, C)
-    implicit none
-    real(RP), intent(out) :: V(KMAX-1)
-    real(RP), intent(in)  :: M(3, KMAX-1)
-    real(RP), intent(in)  :: C(KMAX-1)
-
-    integer :: k
-
-    ! k = 1
-    V(1) = M(3,1)*C(2) + M(2,1)*C(1)
-    do k = 2, KMAX-2
-       V(k) = M(3,k)*C(k+1) + M(2,k)*C(k) + M(1,k)*C(k-1)
-    enddo
-    ! k = KE-1
-    V(KMAX-1) = M(2,KMAX-1)*C(KMAX-1) + M(1,KMAX-1)*C(KMAX-2)
-
-    return
-  end subroutine mul_matrix
-
-#elif defined(HEVI_LAPACK)
-!OCL SERIAL
-  subroutine solve_lapack( &
-       C,   & ! (inout)
-#ifdef DEBUG
-       i, j, &
-#endif
-       F1, F2, F3 ) ! (in)
-    use scale_process, only: &
-         PRC_MPIstop
-    implicit none
-
-    real(RP), intent(inout) :: C(KMAX-1)
-    real(RP), intent(in)    :: F1(KA)
-    real(RP), intent(in)    :: F2(KA)
-    real(RP), intent(in)    :: F3(KA)
-#ifdef DEBUG
-    integer , intent(in)    :: i
-    integer , intent(in)    :: j
-#endif
-
-    real(RP) :: M(NB*3+1,KMAX-1)
-    integer  :: IPIV(KMAX-1)
-    integer  :: INFO
-
-    integer :: k
-
-#ifdef DEBUG
-    real(RP) :: M2(KMAX-1,KMAX-1)
-    real(RP) :: C2(KMAX-1)
-    real(RP) :: sum
-#endif
-
-
-    ! band matrix
-    do k = KS+1, KE-2
-       ! k-1, +1
-       M(NB+1,k-KS+1) = F1(k-1)
-       ! k, 0
-       M(NB+2,k-KS+1) = F2(k)
-       ! k+1, -1
-       M(NB+3,k-KS+1) = F3(k+1)
-    enddo
-    ! KS, 0
-    M(NB+2,1    ) = F2(KS)
-    ! KS+1, -1
-    M(NB+3,1    ) = F3(KS+1)
-    ! KE-2, +1
-    M(NB+1,KE-KS) = F1(KE-2)
-    ! KE-1, 0
-    M(NB+2,KE-KS) = F2(KE-1)
-
-#ifdef DEBUG
-          M2(:,:) = 0.0_RP
-          do k = 1, KMAX-1
-             if (k>1) M2(k-1,k) = M(NB+3,k-1)
-             M2(k,k) = M(NB+2,k)
-             if (k<kmax-1) M2(k+1,k) = M(NB+1,k+1)
-             c2(k) = c(k)
-          enddo
-#endif
-          if ( RP == DP ) then
-             call DGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
-          else
-             call SGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
-          endif
-          ! C is (\rho w)^{n+1}
-#ifdef DEBUG
-          if ( INFO /= 0 ) then
-             write(*,*) "DGBSV was failed", info
-             call PRC_MPIstop
-          endif
-
-          do k = 1, KMAX-1
-             sum = 0.0_RP
-             if (k>1) sum = sum + M2(k-1,k)*c(k-1)
-             sum = sum + M2(k,k)*c(k)
-             if (k<kmax-1) sum = sum + M2(k+1,k)*c(k+1)
-             if ( abs(sum-c2(k)) > 1E-10_RP ) then
-                write(*,*) "sum is different"
-                write(*,*) k+2, i, j, sum, c2(k)
-!                write(*,*) M2(k-1:k+1,k), c(k-1:k+1)
-                call PRC_MPIstop
-             endif
-          enddo
-#endif
-  end subroutine solve_lapack
-#else
 !OCL SERIAL
   subroutine solve_direct( &
        C,         & ! (inout)
@@ -1345,8 +1172,6 @@ contains
 
     return
   end subroutine solve_direct
-
-#endif
 
 #ifdef DEBUG
   subroutine check_equation( &

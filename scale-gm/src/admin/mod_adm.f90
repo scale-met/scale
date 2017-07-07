@@ -64,7 +64,7 @@ module mod_adm
   ! dimension of the spacial vector
   integer,  public, parameter :: ADM_nxyz = 3
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   include "inc_index.h"
 #else
   !#############################################################################
@@ -206,7 +206,7 @@ contains
         vlayer,           &
         rgnmngfname,      &
         ADM_HGRID_SYSTEM, &
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
         ADM_vlink,        &
 #endif
         ADM_XTMS_MLCP_S,  &
@@ -220,7 +220,7 @@ contains
     ADM_prc_me = PRC_myrank + 1
     ADM_prc_pl = 1
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
     if ( ADM_prc_all /= PRC_nprocs ) then
        write(*,*) 'xxx Fixed prc_all is not match (fixed,requested): ', ADM_prc_all, PRC_nprocs
        stop
@@ -253,7 +253,7 @@ contains
 
     ADM_rgnmngfname = trim(rgnmngfname)
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
     if ( ADM_HGRID_SYSTEM == 'ICO' ) then
        dmd        = 10
     elseif( ADM_HGRID_SYSTEM == 'PERIODIC-1DMD' ) then ! T.Ohno 110721
@@ -301,7 +301,7 @@ contains
     ADM_gmax_pl = ADM_vlink + 1
 #endif
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
     if ( ADM_glevel /= glevel ) then
        write(*,*) 'xxx [ADM_setup] Fixed glevel is not match (fixed,requested): ', ADM_glevel, glevel
        call PRC_MPIstop

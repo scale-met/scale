@@ -234,57 +234,194 @@ contains
   end subroutine INTERP_setup
 
   !-----------------------------------------------------------------------------
-  !> Reset random seed
   subroutine INTERP_vertical_xi2z( &
        var,  &
        var_Z )
     use scale_const, only: &
        CONST_UNDEF
+    use scale_grid, only: &
+       GRID_CZ
+    use scale_grid_real, only: &
+       REAL_CZ
+    use scale_matrix, only: &
+       MATRIX_SOLVER_tridiagonal
     implicit none
 
     real(RP), intent(in)  :: var  (KA,IA,JA)
     real(RP), intent(out) :: var_Z(KA,IA,JA)
 
+    real(RP) :: FDZ(KA)
+    real(RP) :: MD(KA)
+    real(RP) :: U(KA)
+    real(RP) :: V(KA)
+    real(RP) :: c1, c2, c3
+    real(RP) :: d
+    integer  :: kk
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    do j = JSB, JEB
-    do i = ISB, IEB
-    do k = 1, KA
-       var_Z(k,i,j) = INTERP_xi2z_coef(k,i,j,1) * var(INTERP_xi2z_idx(k,i,j,1),i,j) &
-                    + INTERP_xi2z_coef(k,i,j,2) * var(INTERP_xi2z_idx(k,i,j,2),i,j) &
-                    + INTERP_xi2z_coef(k,i,j,3) * CONST_UNDEF
-    enddo
-    enddo
-    enddo
+    if ( KMAX == 2 ) then
+
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared(KA,ISB,IEB,JSB,JEB) &
+       !$omp shared(var,var_Z) &
+       !$omp shared(INTERP_xi2z_idx,INTERP_xi2z_coef,CONST_UNDEF)
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = 1, KA
+          var_Z(k,i,j) = INTERP_xi2z_coef(k,i,j,1) * var(INTERP_xi2z_idx(k,i,j,1),i,j) &
+                       + INTERP_xi2z_coef(k,i,j,2) * var(INTERP_xi2z_idx(k,i,j,2),i,j) &
+                       + INTERP_xi2z_coef(k,i,j,3) * CONST_UNDEF
+       enddo
+       enddo
+       enddo
+
+    else
+
+       ! cubic spline
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp private(FDZ,MD,U,V,kk,c1,c2,c3,d) &
+       !$omp shared(KA,KS,KE,KMAX,ISB,IEB,JSB,JEB) &
+       !$omp shared(var,var_Z) &
+       !$omp shared(INTERP_xi2z_idx,INTERP_xi2z_coef,GRID_CZ,REAL_CZ,CONST_UNDEF)
+       do j = JSB, JEB
+       do i = ISB, IEB
+       
+          do k = KS, KE-1
+             FDZ(k) = REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j)
+          end do
+
+          MD(KS+1) = 2.0 * ( FDZ(KS) + FDZ(KS+1) ) + FDZ(KS)
+          do k = KS+2, KE-2
+             MD(k) = 2.0 * ( FDZ(k-1) + FDZ(k) )
+          end do
+          MD(KE-1) = 2.0 * ( FDZ(KE-2) + FDZ(KE-1) ) + FDZ(KE-1)
+
+          do k = KS+1, KE-1
+             V(k) = ( var(k+1,i,j) - var(k  ,i,j) ) / FDZ(k) &
+                  - ( var(k  ,i,j) - var(k-1,i,j) ) / FDZ(k-1)
+          end do
+
+          call MATRIX_SOLVER_tridiagonal( &
+               KMAX-2, &
+               FDZ(KS+1:KE-1), MD(KS+1:KE-1), FDZ(KS+1:KE-1), V(KS+1:KE-1), & ! (in)
+               U(KS+1:KE-1) ) ! (out)
+          U(KS) = U(KS+1)
+          U(KE) = U(KE-1)
+
+          do k = 1, KA
+             kk = min(INTERP_xi2z_idx(k,i,j,1), KE-1)
+             c3 = ( U(kk+1) - U(kk) ) / FDZ(kk)
+             c2 = 3.0_RP * U(kk)
+             c1 = ( var(kk+1,i,j) - var(kk,i,j) ) / FDZ(kk) - ( U(kk) * 2.0_RP + U(kk+1) ) * FDZ(kk)
+             d = GRID_CZ(k) - REAL_CZ(kk,i,j)
+             var_Z(k,i,j) = INTERP_xi2z_coef(k,i,j,3) * CONST_UNDEF &
+                          + ( 1.0_RP - INTERP_xi2z_coef(k,i,j,3) ) &
+                          * ( ( ( c3 * d + c2 ) * d + c1 ) * d + var(kk,i,j) )
+          end do
+
+       end do
+       end do
+
+    end if
 
     return
   end subroutine INTERP_vertical_xi2z
 
   !-----------------------------------------------------------------------------
-  !> Reset random seed
   subroutine INTERP_vertical_z2xi( &
        var,   &
        var_Xi )
     use scale_const, only: &
        CONST_UNDEF
+    use scale_grid, only: &
+       GRID_CZ, &
+       FDZ => GRID_FDZ
+    use scale_matrix, only: &
+       MATRIX_SOLVER_tridiagonal
+    use scale_grid_real, only: &
+       REAL_CZ
     implicit none
 
     real(RP), intent(in)  :: var   (KA,IA,JA)
     real(RP), intent(out) :: var_Xi(KA,IA,JA)
 
+    real(RP) :: MD(KA)
+    real(RP) :: U(KA)
+    real(RP) :: V(KA)
+    real(RP) :: c1, c2, c3
+    real(RP) :: d
+    integer  :: kk
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    do j = JSB, JEB
-    do i = ISB, IEB
-    do k = 1, KA
-       var_Xi(k,i,j) = INTERP_z2xi_coef(k,i,j,1) * var(INTERP_z2xi_idx(k,i,j,1),i,j) &
-                     + INTERP_z2xi_coef(k,i,j,2) * var(INTERP_z2xi_idx(k,i,j,2),i,j) &
-                     + INTERP_z2xi_coef(k,i,j,3) * CONST_UNDEF
-    enddo
-    enddo
-    enddo
+    if ( KMAX == 2 ) then
+
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared(KA,ISB,IEB,JSB,JEB) &
+       !$omp shared(var,var_Xi) &
+       !$omp shared(INTERP_z2xi_idx,INTERP_z2xi_coef,CONST_UNDEF)
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = 1, KA
+          var_Xi(k,i,j) = INTERP_z2xi_coef(k,i,j,1) * var(INTERP_z2xi_idx(k,i,j,1),i,j) &
+                        + INTERP_z2xi_coef(k,i,j,2) * var(INTERP_z2xi_idx(k,i,j,2),i,j) &
+                        + INTERP_z2xi_coef(k,i,j,3) * CONST_UNDEF
+       enddo
+       enddo
+       enddo
+
+    else
+
+       ! cubic spline
+
+       MD(KS+1) = 2.0 * ( FDZ(KS) + FDZ(KS+1) ) + FDZ(KS)
+       do k = KS+2, KE-2
+          MD(k) = 2.0 * ( FDZ(k-1) + FDZ(k) )
+       end do
+       MD(KE-1) = 2.0 * ( FDZ(KE-2) + FDZ(KE-1) ) + FDZ(KE-1)
+
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp private(U,V,kk,c1,c2,c3,d) &
+       !$omp shared(KA,KS,KE,KMAX,ISB,IEB,JSB,JEB) &
+       !$omp shared(var,var_Xi,MD,FDZ) &
+       !$omp shared(INTERP_z2xi_idx,INTERP_z2xi_coef,GRID_CZ,REAL_CZ,CONST_UNDEF)
+       do j = JSB, JEB
+       do i = ISB, IEB
+
+          do k = KS+1, KE-1
+             V(k) = ( var(k+1,i,j) - var(k  ,i,j) ) / FDZ(k) &
+                  - ( var(k  ,i,j) - var(k-1,i,j) ) / FDZ(k-1)
+          end do
+
+          call MATRIX_SOLVER_tridiagonal( &
+               KMAX-2, &
+               FDZ(KS+1:KE-1), MD(KS+1:KE-1), FDZ(KS+1:KE-1), V(KS+1:KE-1), & ! (in)
+               U(KS+1:KE-1) ) ! (out)
+          U(KS) = U(KS+1)
+          U(KE) = U(KE-1)
+
+          do k = 1, KA
+             kk = min(INTERP_z2xi_idx(k,i,j,1), KE-1)
+             c3 = ( U(kk+1) - U(kk) ) / FDZ(kk)
+             c2 = 3.0_RP * U(kk)
+             c1 = ( var(kk+1,i,j) - var(kk,i,j) ) / FDZ(kk) - ( U(kk) * 2.0_RP + U(kk+1) ) * FDZ(kk)
+             d = REAL_CZ(k,i,j) - GRID_CZ(kk)
+             var_Xi(k,i,j) = INTERP_z2xi_coef(k,i,j,3) * CONST_UNDEF &
+                           + ( 1.0_RP - INTERP_z2xi_coef(k,i,j,3) ) &
+                           * ( ( ( c3 * d + c2 ) * d + c1 ) * d + var(kk,i,j) )
+          end do
+
+       end do
+       end do
+
+    end if
 
     return
   end subroutine INTERP_vertical_z2xi

@@ -31,9 +31,7 @@ The topographical data and the initial/boundary data previously generated  are u
 \verb| ATMOS_BOUNDARY_START_DATE     = 2007, 7, 14, 18, 0, 0, |\\
 \verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.0,               |\\
 \verb| ATMOS_BOUNDARY_USE_DENS       = .true.,     |\\
-\verb| ATMOS_BOUNDARY_USE_VELZ       = .true.,     |\\
 \verb| ATMOS_BOUNDARY_USE_QHYD       = .false.,    |\\
-\verb| ATMOS_BOUNDARY_VALUE_VELZ     = 0.0,        |\\
 \verb| ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,        |\\
 \verb| ATMOS_BOUNDARY_LINEAR_H       = .false.,    |\\
 \verb| ATMOS_BOUNDARY_EXP_H          = 2.0,        |\\
@@ -125,8 +123,8 @@ The following files are also generated:
   history_d01.pe000002.nc
   history_d01.pe000003.nc
 \end{verbatim}
-The size of each file is approximately 23 MB. 
-The output files (\verb|history_d01.pe######.nc|) are 
+The size of each file is approximately 23 MB.
+The output files (\verb|history_d01.pe######.nc|) are
 split according to number of MPI processes,
 where \verb|######| represents the MPI process number.
 In these files, the variables specified in \nmitem{HISTITEM} are output.

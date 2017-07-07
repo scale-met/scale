@@ -1193,7 +1193,7 @@ contains
     !$acc& pcopyin(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
     !$acc& pcopyin(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_land, fact_ocean, fact_land, fact_urban) &
     !$acc& create(dz_std, logP, logT, indexP, factP, factT32, factT21, indexR, factR) &
-    !$acc& create(tauGAS, tauPR, omgPR, optparam, albedo_sfc, albedo_ocean, tau_column) &
+    !$acc& create(tauGAS, tauPR, omgPR, optparam, albedo_sfc) &
     !$acc& create(bbar, bbarh, b_sfc) &
     !$acc& create(tau, omg, g, b, fsol_rgn, flux, flux_direct)
 
@@ -1299,8 +1299,8 @@ contains
              factR (k,i,j,iaero) = 1.0_RP
 
           else
-             !$acc loop seq
              indexR(k,i,j,iaero) = -1
+             !$acc loop seq
              do ir = 1, MSTRN_nradius-1
                 if (       aerosol_radi(k,i,j,iaero) <= radmode(iptype,ir+1) &
                      .AND. aerosol_radi(k,i,j,iaero) >  radmode(iptype,ir  ) ) then ! interpolation
@@ -1451,8 +1451,8 @@ contains
              enddo
              valsum = valsum * PPM * dz_std(k,i,j)
 
-             do ich = 1, chmax
              !$acc loop seq
+             do ich = 1, chmax
                 tauGAS(k,i,j,ich) = tauGAS(k,i,j,ich) + valsum
              enddo
           enddo
@@ -1992,7 +1992,7 @@ contains
     !$acc& pcopyin(cosSZA0, fsol, tau, omg, g, b, b_sfc, albedo_sfc, cldfrac) &
     !$acc& create(cosSZA, Tdir0, R0, T0, Em_LW, Em_SW, Ep_LW, Ep_SW) &
     !$acc& create(tau_bar_sol, R, T, Em, Ep, R12mns, R12pls, E12mns, E12pls) &
-    !$acc& create(Tdir, x_R, x_T, x_Em, x_Ep)
+    !$acc& create(Tdir)
 
     !$acc kernels pcopyin(cosSZA0) pcopy(cosSZA) async(0)
     cosSZA(IS:IE,JS:JE) = max( cosSZA0(IS:IE,JS:JE), RD_cosSZA_min )
@@ -2023,7 +2023,7 @@ contains
 
           g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
 
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
           Tdir0(k,i,j,icloud) = exp( -min( tau_new/cosSZA(i,j), 1.E+3_RP ) ) ! apply exp limiter
 #else
           Tdir0(k,i,j,icloud) = exp(-tau_new/cosSZA(i,j))
@@ -2055,7 +2055,7 @@ contains
           !X     =  max( ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn, 1.E-30 )
           !Y     =  max( ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn, 1.E-30 )
           lamda = sqrt(X*Y)
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
           E     = exp( -min( lamda*tau_new, 1.E+3_RP ) ) ! apply exp limiter
 #else
           E     = exp(-lamda*tau_new)

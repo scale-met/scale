@@ -19,7 +19,6 @@ RUNCONF     = run.conf
 TPROC       = 144
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
 DATPARAM    =
 DATDISTS    =
 
@@ -29,4 +28,4 @@ DATDISTS    =
 include $(TESTDIR)/Makefile.common
 
 analy:
-	$(FC) $(FFLAGS_FAST) -o .libs/profile_maker ./postprocess/make_profile_cmp_nc_each.f90 $(NETCDF_INCLUDE) $(NETCDF_LIBS)
+	$(FC) $(FFLAGS_FAST) -o .libs/profile_maker ./postprocess/make_profile_cmp_nc_each.f90 $(SCALE_NETCDF_INCLUDE) $(SCALE_NETCDF_LIBS)

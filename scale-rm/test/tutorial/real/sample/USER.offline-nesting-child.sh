@@ -59,8 +59,8 @@ KMAX=( 60 ) # required parameters for each domain
 IMAX=( 32 ) # required parameters for each domain
 JMAX=( 32 ) # required parameters for each domain
 
-LKMAX=5
-LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" ) # required parameters for LKMAX
+LKMAX=7
+LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" "2.00" "4.00" ) # required parameters for LKMAX
 
 UKMAX=5
 UDZ=( "0.01" "0.01" "0.03" "0.05" "0.10" ) # required parameters for UKMAX
@@ -165,9 +165,10 @@ USE_FILE_LANDWATER=".true."
 TOPODIR="${SCALE_DB}/topo"
 LANDUSEDIR="${SCALE_DB}/landuse"
 
-TOPOTYPE=(    "GTOPO30" ) # required parameters for each domain
-LANDUSETYPE=( "GLCCv2"  ) # required parameters for each domain
-COPYTOPO=(    ".false." ) # required parameters for each domain
+TOPOTYPE=(     "GTOPO30" ) # required parameters for each domain
+LANDUSETYPE=(  "GLCCv2"  ) # required parameters for each domain
+COPYTOPO=(     ".false." ) # required parameters for each domain
+SMOOTH_LOCAL=( ".true."  ) # required parameters for each domain
 
 MAXSLOPE_RATIO="1.0"
 LIMIT_URBAN_FRACTION="0.3"

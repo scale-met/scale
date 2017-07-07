@@ -10,18 +10,18 @@ endif
 
 msg1 = "\n"
 
-ifeq ($(ENABLE_FIXEDINDEX),T)
-   msg1       += "ENABLE_FIXEDINDEX is set.\n"
+ifeq ($(SCALE_DEBUG),T)
+   msg1       += "SCALE_DEBUG is set.\n"
    USELOCALBIN = T
 endif
 
-ifeq ($(DEBUG),T)
-   msg1       += "DEBUG is set.\n"
+ifeq ($(SCALE_USE_SINGLEFP),T)
+   msg1       += "SCALE_USE_SINGLEFP is set.\n"
    USELOCALBIN = T
 endif
 
-ifeq ($(SINGLE),T)
-   msg1       += "SINGLE is set.\n"
+ifeq ($(SCALE_USE_FIXEDINDEX),T)
+   msg1       += "SCALE_USE_FIXEDINDEX is set.\n"
    USELOCALBIN = T
 endif
 
@@ -30,7 +30,7 @@ ifneq ($(ORG_SRCS),)
    USELOCALBIN = T
 endif
 
-ifeq ($(DISABLE_LOCALBIN),T)
+ifeq ($(SCALE_DISABLE_LOCALBIN),T)
    USELOCALBIN = F
 endif
 
@@ -55,6 +55,10 @@ ifeq ($(origin BINNAME), undefined)
    BINNAME = scale-rm
 endif
 
+ifeq ($(origin N2GNAME), undefined)
+   N2GNAME = net2g
+endif
+
 ifeq ($(origin PPCONF), undefined)
    PPCONF = NONE
 endif
@@ -67,17 +71,26 @@ ifeq ($(origin RUNCONF), undefined)
    RUNCONF = NONE
 endif
 
+ifeq ($(origin N2GCONF), undefined)
+   N2GCONF = NONE
+endif
+
 INDEX_DIR := $(PWD)
+UTILDIR    = ${TOPDIR}/scale-rm/util/netcdf2grads_h
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
+
+
+all: build
+
 
 $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	mkdir -p $(BUILD_DIR)
 	cp -f $< $@
 
 build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
-	@echo -e $(msg1)
+	@echo -e "$(msg1)"
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
@@ -89,23 +102,32 @@ build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
                                 radiation=$(radiation)   \
                                 postfix=$(postfix)
 
+util:
+	$(MAKE) -C $(UTILDIR)
+
 run: jobshell
 	$(JOBSUB) run.sh
 
 jobshell:
 	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
-		                                 $(PPNAME) $(INITNAME) $(BINNAME)   \
-		                                 $(PPCONF) $(INITCONF) $(RUNCONF)   \
-		                                 $(TPROC)                           \
-		                                 $(DATDIR) $(DATPARAM) $(DATDISTS); \
+		bash ../Mkjobshell.$(SCALE_SYS).sh            $(BINDIR)                                   \
+		                                              $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
+		                                              $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
+		                                              $(TPROC)                                    \
+		                                              $(DATPARAM) $(DATDISTS);                    \
 	else \
-		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                          \
-		                                            $(PPNAME) $(INITNAME) $(BINNAME)   \
-		                                            $(PPCONF) $(INITCONF) $(RUNCONF)   \
-		                                            $(TPROC)                           \
-		                                            $(DATDIR) $(DATPARAM) $(DATDISTS); \
+		bash $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                                   \
+		                                              $(PPNAME) $(INITNAME) $(BINNAME) $(N2GNAME) \
+		                                              $(PPCONF) $(INITCONF) $(RUNCONF) $(N2GCONF) \
+		                                              $(TPROC)                                    \
+		                                              $(DATPARAM) $(DATDISTS);                    \
 	fi
+
+vis:
+	bash ./visualize/visualize.sh
+
+eval:
+	bash ./evaluate/evaluate.sh
 
 
 

@@ -100,7 +100,8 @@ module scale_grid_nest
   integer,  public              :: TILEAL_JA(2)         !< cells of all tiles in y-direction
 
   integer,  public              :: NEST_BND_QA = 1      !< number of tracer treated in nesting system
-  integer,  public              :: NEST_INTERP_LEVEL = 4 !< horizontal interpolation level
+  integer,  public              :: NEST_INTERP_LEVEL = 5 !< horizontal interpolation level
+  integer,  public              :: NEST_INTERP_WEIGHT_ORDER = 2 !< horizontal interpolation weight order
 
   logical,  public              :: USE_NESTING          = .false.
   logical,  public              :: OFFLINE              = .false.
@@ -350,7 +351,8 @@ contains
        ONLINE_AGGRESSIVE_COMM,   &
        ONLINE_WAIT_LIMIT,        &
        ONLINE_SPECIFIED_MAXRQ,   &
-       NEST_INTERP_LEVEL
+       NEST_INTERP_LEVEL,        &
+       NEST_INTERP_WEIGHT_ORDER
 
     !---------------------------------------------------------------------------
 
@@ -423,9 +425,15 @@ contains
        end if
 
        USE_NESTING = .true.
-       call INTRPNEST_setup( interp_search_divnum, NEST_INTERP_LEVEL, .false. )
+       call INTRPNEST_setup( interp_search_divnum, &
+                             NEST_INTERP_LEVEL, &
+                             NEST_INTERP_WEIGHT_ORDER, &
+                            .false. )
     else
-       call INTRPNEST_setup( interp_search_divnum, NEST_INTERP_LEVEL, .true. )
+       call INTRPNEST_setup( interp_search_divnum, &
+                             NEST_INTERP_LEVEL, &
+                             NEST_INTERP_WEIGHT_ORDER, &
+                            .true. )
     end if
 
     itp_nh = int( NEST_INTERP_LEVEL )

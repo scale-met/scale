@@ -134,21 +134,6 @@ contains
   subroutine ATMOS_PHY_MP_config( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef MP
-    use NAME(scale_atmos_phy_mp_, MP,), only: &
-       NAME(ATMOS_PHY_MP_, MP, _config), &
-       NAME(ATMOS_PHY_MP_, MP, _setup), &
-       NAME(ATMOS_PHY_MP_, MP,), &
-       NAME(ATMOS_PHY_MP_, MP, _CloudFraction), &
-       NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius), &
-       NAME(ATMOS_PHY_MP_, MP, _MixingRatio), &
-       NAME(ATMOS_PHY_MP_, MP, _NAME), &
-       NAME(ATMOS_PHY_MP_, MP, _DESC), &
-       NAME(ATMOS_PHY_MP_, MP, _UNIT), &
-       NAME(ATMOS_PHY_MP_, MP, _DENS)
-#else
     use scale_atmos_phy_mp_dry, only: &
        ATMOS_PHY_MP_dry_config, &
        ATMOS_PHY_MP_dry_setup, &
@@ -215,7 +200,6 @@ contains
        ATMOS_PHY_MP_sdm_DESC, &
        ATMOS_PHY_MP_sdm_UNIT, &
        ATMOS_PHY_MP_sdm_DENS
-#endif
     implicit none
 
     character(len=*), intent(in) :: MP_TYPE
@@ -223,20 +207,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(MP_TYPE), ' is selected.'
 
-#ifdef MP
-    call NAME(ATMOS_PHY_MP_, MP, _config)( &
-         MP_TYPE,     & ! (in)
-         QA_MP, QS_MP ) ! (out)
-    ATMOS_PHY_MP                 => NAME(ATMOS_PHY_MP_, MP,)
-    ATMOS_PHY_MP_setup           => NAME(ATMOS_PHY_MP_, MP, _setup)
-    ATMOS_PHY_MP_CloudFraction   => NAME(ATMOS_PHY_MP_, MP, _CloudFraction)
-    ATMOS_PHY_MP_EffectiveRadius => NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius)
-    ATMOS_PHY_MP_MixingRatio     => NAME(ATMOS_PHY_MP_, MP, _MixingRatio)
-    ATMOS_PHY_MP_NAME            => NAME(ATMOS_PHY_MP_, MP, _NAME)
-    ATMOS_PHY_MP_DESC            => NAME(ATMOS_PHY_MP_, MP, _DESC)
-    ATMOS_PHY_MP_UNIT            => NAME(ATMOS_PHY_MP_, MP, _UNIT)
-    ATMOS_PHY_MP_DENS            => NAME(ATMOS_PHY_MP_, MP, _DENS)
-#else
     select case( MP_TYPE )
     case( 'DRY' )
        call ATMOS_PHY_MP_dry_config( &
@@ -317,7 +287,6 @@ contains
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_sdm_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_sdm_DENS
     end select
-#endif
 
     QE_MP = QS_MP + QA_MP - 1
 

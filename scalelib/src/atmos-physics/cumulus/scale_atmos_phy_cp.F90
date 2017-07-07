@@ -85,17 +85,9 @@ contains
   subroutine ATMOS_PHY_CP_setup( CP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef CP
-    use NAME(scale_atmos_phy_mp_, CP,), only: &
-       NAME(ATMOS_PHY_CP_, CP, _setup), &
-       NAME(ATMOS_PHY_CP_, CP,), &
-#else
     use scale_atmos_phy_cp_kf, only: &
          ATMOS_PHY_CP_kf_setup, &
          ATMOS_PHY_CP_kf
-#endif
     implicit none
 
     character(len=*), intent(in) :: CP_TYPE
@@ -103,10 +95,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(CP_TYPE), ' is selected.'
 
-#ifdef CP
-    call NAME(ATMOS_PHY_CP_, CP, _setup)( CP_TYPE )
-    ATMOS_PHY_CP => NAME(ATMOS_PHY_CP_, CP,)
-#else
     select case( CP_TYPE )
     case('OFF')
        ! do nothing
@@ -117,7 +105,6 @@ contains
        write(*,*) 'xxx invalid Cumulus parameterization type(', trim(CP_TYPE), '). CHECK!'
        call PRC_MPIstop
     end select
-#endif
 
     return
   end subroutine ATMOS_PHY_CP_setup

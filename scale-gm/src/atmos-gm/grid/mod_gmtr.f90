@@ -81,7 +81,7 @@ module mod_gmtr
   integer,  public, parameter :: GMTR_a_TT2Y = 17
   integer,  public, parameter :: GMTR_a_TT2Z = 18
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public              :: GMTR_p   (ADM_gall   ,ADM_KNONE,ADM_lall   ,              GMTR_p_nmax   )
   real(RP), public              :: GMTR_p_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              GMTR_p_nmax   )
   real(RP), public              :: GMTR_t   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,GMTR_t_nmax   )
@@ -167,7 +167,7 @@ contains
 
 
 
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     allocate( GMTR_p   (ADM_gall   ,ADM_KNONE,ADM_lall   ,              GMTR_p_nmax   ) )
     allocate( GMTR_p_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              GMTR_p_nmax   ) )
     allocate( GMTR_t   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,GMTR_t_nmax   ) )

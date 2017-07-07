@@ -14,7 +14,7 @@ cat << EOF > base.init.conf
 /
 
 &PARAM_NEST
- NEST_INTERP_LEVEL = 4,
+ NEST_INTERP_LEVEL = 5,
 /
 
 &PARAM_RESTART
@@ -40,6 +40,7 @@ cat << EOF > base.init.conf
 
 &PARAM_MKINIT_REAL_ATMOS
  NUMBER_OF_FILES      = ${NUMBER_OF_FILES},
+ NUMBER_OF_TSTEPS     = 1,
  FILETYPE_ORG         = "${FILETYPE_ORG}",
  BASENAME_ORG         = "${BASENAME_ORG}",
  BASENAME_BOUNDARY    = "${BASENAME_BOUNDARY}",
@@ -50,6 +51,7 @@ cat << EOF > base.init.conf
 
 &PARAM_MKINIT_REAL_OCEAN
  NUMBER_OF_FILES      = ${NUMBER_OF_FILES},
+ NUMBER_OF_TSTEPS     = 1,
  FILETYPE_ORG         = "${FILETYPE_ORG}",
  BASENAME_ORG         = "${BASENAME_ORG}",
  INTRP_OCEAN_SFC_TEMP = "mask",
@@ -58,6 +60,7 @@ cat << EOF > base.init.conf
 
 &PARAM_MKINIT_REAL_LAND
  NUMBER_OF_FILES      = ${NUMBER_OF_FILES},
+ NUMBER_OF_TSTEPS     = 1,
  FILETYPE_ORG         = "${FILETYPE_ORG}",
  BASENAME_ORG         = "${BASENAME_ORG}",
  USE_FILE_LANDWATER   = ${USE_FILE_LANDWATER},

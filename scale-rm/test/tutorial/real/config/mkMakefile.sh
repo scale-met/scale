@@ -37,7 +37,7 @@ DATDISTS    =
 all: run
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include \$(TESTDIR)/Makefile.tutorial.common
+include \$(TESTDIR)/Makefile.common
 
 EOF
 
@@ -72,7 +72,7 @@ DATDISTS    =
 all: run
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include \$(TESTDIR)/Makefile.tutorial.common
+include \$(TESTDIR)/Makefile.common
 
 EOF
 
@@ -107,7 +107,7 @@ DATDISTS    =
 all: run
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include \$(TESTDIR)/Makefile.tutorial.common
+include \$(TESTDIR)/Makefile.common
 
 EOF
 
@@ -143,7 +143,7 @@ DATDISTS    =
 all: run
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include \$(TESTDIR)/Makefile.tutorial.common
+include \$(TESTDIR)/Makefile.common
 
 EOF
 

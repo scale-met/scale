@@ -157,9 +157,9 @@ CONTAINS
     ! Loop indices
     INTEGER(4) :: i, k, iter
 
-#ifndef _MATHLIB
+#ifndef MATHLIB
     write(*,*) 'This subroutine requires a math library such as LAPACK.'
-    write(*,*) 'Please set environment variable ENABLE_MATHLIB=T to use this subroutine.'
+    write(*,*) 'Please set environment variable SCALE_ENABLE_MATHLIB=T to use this subroutine.'
     stop
 #endif
 
@@ -195,7 +195,7 @@ CONTAINS
         nz, zcoord, ddz(:,k), zcoord(k))
     end do
 
-#ifdef _MATHLIB
+#ifdef MATHLIB
     ! Compute the int(dphi) operator via pseudoinverse
     lwork = 5*nphi
 

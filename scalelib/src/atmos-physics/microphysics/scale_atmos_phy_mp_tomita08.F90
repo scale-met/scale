@@ -113,6 +113,12 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private              :: MP_limit_negative    = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
   logical,  private              :: MP_doexplicit_icegen = .false. ! apply explicit ice generation?
 
+  logical,  private              :: fixed_re  = .false. ! use ice's effective radius for snow and graupel, and set rain transparent?
+  logical,  private              :: nofall_qr = .false. ! surpress sedimentation of rain?
+  logical,  private              :: nofall_qi = .false. ! surpress sedimentation of ice?
+  logical,  private              :: nofall_qs = .false. ! surpress sedimentation of snow?
+  logical,  private              :: nofall_qg = .false. ! surpress sedimentation of graupel?
+
   real(RP), private, parameter   :: dens00      = 1.28_RP !< standard density [kg/m3]
 
   ! Parameter for Marshall-Palmer distribution
@@ -449,7 +455,12 @@ contains
        qicrt_saut,      &
        beta_gaut,       &
        gamma_gaut,      &
-       qscrt_gaut
+       qscrt_gaut,      &
+       fixed_re,        &
+       nofall_qr,       &
+       nofall_qi,       &
+       nofall_qs,       &
+       nofall_qg
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
     integer  :: nstep_max
@@ -512,6 +523,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Use k-k  scheme?               : ', enable_KK2000
     if( IO_L ) write(IO_FID_LOG,*) '*** Use Roh  scheme?               : ', enable_RS2014
     if( IO_L ) write(IO_FID_LOG,*) '*** Use WDXZ scheme?               : ', enable_WDXZ2014
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Use effective radius of ice for snow and graupel,'
+    if( IO_L ) write(IO_FID_LOG,*) '    and set rain transparent?          : ', fixed_re
+    if( IO_L ) write(IO_FID_LOG,*) '*** Density of the ice is used for the calculation of '
+    if( IO_L ) write(IO_FID_LOG,*) '    optically effective volume of snow and graupel.'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of rain?    : ', nofall_qr
+    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of ice?     : ', nofall_qi
+    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of snow?    : ', nofall_qs
+    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of graupel? : ', nofall_qg
     if( IO_L ) write(IO_FID_LOG,*)
 
     ! For the calculation of optically effective volume
@@ -1816,6 +1836,46 @@ contains
     enddo
     enddo
 
+    if ( nofall_qr ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          vterm(k,i,j,I_mp_QR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( nofall_qi ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          vterm(k,i,j,I_mp_QI) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( nofall_qs ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          vterm(k,i,j,I_mp_QS) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( nofall_qg ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          vterm(k,i,j,I_mp_QG) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    endif
+
     do j = JS, JE
     do i = IS, IE
        vterm(    1:KS-1,i,j,:) = 0.0_RP
@@ -1969,75 +2029,85 @@ contains
     Re(:,:,:,I_HI) =  re_qi * um2cm
     Re(:,:,:,I_HG+1:) = 0.0_RP
 
+    if ( fixed_re ) then
+
+       Re(:,:,:,I_HR) =  10000.E-6_RP * um2cm
+       Re(:,:,:,I_HS) =  re_qi * um2cm
+       Re(:,:,:,I_HG) =  re_qi * um2cm
+
+    else
+
 #ifndef __GFORTRAN__
-    !$omp parallel do default(none)                                                          &
-    !$omp shared(JS,JE,IS,IE,KS,KE,DENS0,TEMP0,QTRC0,I_QR,I_QS,I_QG,sw_WDXZ2014,N0r_def)     &
-    !$omp shared(N0s_def,N0g_def,Ar,GAM_1br,Re,As,GAM_1bs)                                   &
-    !$omp shared(sw_RS2014,ln10,Ag,GAM_1bg)                                                  &
-    !$omp private(i,j,k,dens,temc,qr,qs,qg,N0r,N0s,N0g,zerosw,RLMDr,RLMDs,Xs2,nm,tems,loga_) &
-    !$omp private(b_,RLMDg,coef_at,coef_bt) &
-    !$omp OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none)                                                          &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DENS0,TEMP0,QTRC0,I_QR,I_QS,I_QG,sw_WDXZ2014,N0r_def)     &
+       !$omp shared(N0s_def,N0g_def,Ar,GAM_1br,Re,As,GAM_1bs)                                   &
+       !$omp shared(sw_RS2014,ln10,Ag,GAM_1bg)                                                  &
+       !$omp private(i,j,k,dens,temc,qr,qs,qg,N0r,N0s,N0g,zerosw,RLMDr,RLMDs,Xs2,nm,tems,loga_) &
+       !$omp private(b_,RLMDg,coef_at,coef_bt) &
+       !$omp OMP_SCHEDULE_ collapse(2)
 #else
-    !$omp parallel do default(shared)                                                        &
-    !$omp private(i,j,k,dens,temc,qr,qs,qg,N0r,N0s,N0g,zerosw,RLMDr,RLMDs,Xs2,nm,tems,loga_) &
-    !$omp private(b_,RLMDg,coef_at,coef_bt) &
-    !$omp OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(shared)                                                        &
+       !$omp private(i,j,k,dens,temc,qr,qs,qg,N0r,N0s,N0g,zerosw,RLMDr,RLMDs,Xs2,nm,tems,loga_) &
+       !$omp private(b_,RLMDg,coef_at,coef_bt) &
+       !$omp OMP_SCHEDULE_ collapse(2)
 #endif
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       dens = DENS0(k,i,j)
-       temc = TEMP0(k,i,j) - TEM00
-       qr   = QTRC0(k,i,j,I_QR)
-       qs   = QTRC0(k,i,j,I_QS)
-       qg   = QTRC0(k,i,j,I_QG)
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          dens = DENS0(k,i,j)
+          temc = TEMP0(k,i,j) - TEM00
+          qr   = QTRC0(k,i,j,I_QR)
+          qs   = QTRC0(k,i,j,I_QS)
+          qg   = QTRC0(k,i,j,I_QG)
 
-       ! intercept parameter N0
-       N0r = ( 1.0_RP-sw_WDXZ2014 ) * N0r_def &                                                                             ! Marshall and Palmer (1948)
-           + (        sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*qr*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
-       N0s = ( 1.0_RP-sw_WDXZ2014 ) * N0s_def &                                                                             ! Gunn and Marshall (1958)
-           + (        sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*qs*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
-       N0g = ( 1.0_RP-sw_WDXZ2014 ) * N0g_def &                                                                             !
-           + (        sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*qg*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
+          ! intercept parameter N0
+          N0r = ( 1.0_RP-sw_WDXZ2014 ) * N0r_def &                                                                             ! Marshall and Palmer (1948)
+              + (        sw_WDXZ2014 ) * 1.16E+5_RP * exp( log( max( dens*qr*1000.0_RP, 1.E-2_RP ) )*0.477_RP ) ! Wainwright et al. (2014)
+          N0s = ( 1.0_RP-sw_WDXZ2014 ) * N0s_def &                                                                             ! Gunn and Marshall (1958)
+              + (        sw_WDXZ2014 ) * 4.58E+9_RP * exp( log( max( dens*qs*1000.0_RP, 1.E-2_RP ) )*0.788_RP ) ! Wainwright et al. (2014)
+          N0g = ( 1.0_RP-sw_WDXZ2014 ) * N0g_def &                                                                             !
+              + (        sw_WDXZ2014 ) * 9.74E+8_RP * exp( log( max( dens*qg*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) ! Wainwright et al. (2014)
 
-       ! slope parameter lambda
-       zerosw = 0.5_RP - sign(0.5_RP, qr - 1.E-12_RP )
-       RLMDr = sqrt(sqrt( dens * qr / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
-       ! Effective radius is defined by r3m/r2m = 1.5/lambda
-       Re(k,i,j,I_HR) = 1.5_RP * RLMDr * um2cm
+          ! slope parameter lambda
+          zerosw = 0.5_RP - sign(0.5_RP, qr - 1.E-12_RP )
+          RLMDr = sqrt(sqrt( dens * qr / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
+          ! Effective radius is defined by r3m/r2m = 1.5/lambda
+          Re(k,i,j,I_HR) = 1.5_RP * RLMDr * um2cm
 
 
-       zerosw = 0.5_RP - sign(0.5_RP, qs - 1.E-12_RP )
-       RLMDs = sqrt(sqrt( dens * qs / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
-       !---< modification by Roh and Satoh (2014) >---
-       ! bimodal size distribution of snow
-       zerosw = 0.5_RP - sign(0.5_RP, dens * qs - 1.E-12_RP )
-       Xs2    = dens * qs / As
+          zerosw = 0.5_RP - sign(0.5_RP, qs - 1.E-12_RP )
+          RLMDs = sqrt(sqrt( dens * qs / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
+          !---< modification by Roh and Satoh (2014) >---
+          ! bimodal size distribution of snow
+          zerosw = 0.5_RP - sign(0.5_RP, dens * qs - 1.E-12_RP )
+          Xs2    = dens * qs / As
 
-       tems       = min( -0.1_RP, temc )
-       coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
-       coef_at(2) = coef_a( 3) + tems * ( coef_a( 4) + tems *   coef_a( 7) )
-       coef_at(3) = coef_a( 6) + tems *   coef_a( 8)
-       coef_at(4) = coef_a(10)
-       coef_bt(1) = coef_b( 1) + tems * ( coef_b( 2) + tems * ( coef_b( 5) + tems * coef_b( 9) ) )
-       coef_bt(2) = coef_b( 3) + tems * ( coef_b( 4) + tems *   coef_b( 7) )
-       coef_bt(3) = coef_b( 6) + tems *   coef_b( 8)
-       coef_bt(4) = coef_b(10)
+          tems       = min( -0.1_RP, temc )
+          coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
+          coef_at(2) = coef_a( 3) + tems * ( coef_a( 4) + tems *   coef_a( 7) )
+          coef_at(3) = coef_a( 6) + tems *   coef_a( 8)
+          coef_at(4) = coef_a(10)
+          coef_bt(1) = coef_b( 1) + tems * ( coef_b( 2) + tems * ( coef_b( 5) + tems * coef_b( 9) ) )
+          coef_bt(2) = coef_b( 3) + tems * ( coef_b( 4) + tems *   coef_b( 7) )
+          coef_bt(3) = coef_b( 6) + tems *   coef_b( 8)
+          coef_bt(4) = coef_b(10)
 
-       ! 1 + Bs(=2) moment
-       nm = 3.0_RP
-       loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
-          b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
+          ! 1 + Bs(=2) moment
+          nm = 3.0_RP
+          loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
+             b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
 
-       Re(k,i,j,I_HS) = (        sw_RS2014 ) * 0.5_RP * exp(ln10*loga_) * exp(log(Xs2+zerosw)*b_) * ( 1.0_RP-zerosw ) / ( Xs2+zerosw ) * um2cm &
-                      + ( 1.0_RP-sw_RS2014 ) * 1.5_RP * RLMDs * um2cm
+          Re(k,i,j,I_HS) = (        sw_RS2014 ) * 0.5_RP * exp(ln10*loga_) * exp(log(Xs2+zerosw)*b_) * ( 1.0_RP-zerosw ) / ( Xs2+zerosw ) * um2cm &
+                         + ( 1.0_RP-sw_RS2014 ) * 1.5_RP * RLMDs * um2cm
 
-       zerosw = 0.5_RP - sign(0.5_RP, qg - 1.E-12_RP )
-       RLMDg = sqrt(sqrt( dens * qg / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
-       Re(k,i,j,I_HG) = 1.5_RP * RLMDg * um2cm
-    enddo
-    enddo
-    enddo
+          zerosw = 0.5_RP - sign(0.5_RP, qg - 1.E-12_RP )
+          RLMDg = sqrt(sqrt( dens * qg / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
+          Re(k,i,j,I_HG) = 1.5_RP * RLMDg * um2cm
+       enddo
+       enddo
+       enddo
+
+    endif
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_EffectiveRadius

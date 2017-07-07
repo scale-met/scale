@@ -1,11 +1,17 @@
+################################################################################
+#
+# Makefile for the reference manual
+#
+################################################################################
+
 TOPDIR = ../..
+
 include $(TOPDIR)/Mkinclude
 
 all: dox
 
-
 dox:
-	ruby $(TOPDIR)/utils/mkdoc.rb .
+	ruby $(TOPDIR)/doc/reference/mkdoc.rb .
 
 clean:
 	rm -rf dox

@@ -63,9 +63,9 @@ module scale_ocean_sfc
        implicit none
 
        real(RP), intent(out) :: SST_t(IA,JA) ! tendency of sea surface temperature
-       real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+       real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m/s2]
+       real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m/s2]
+       real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m/s2]
        real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
        real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
        real(RP), intent(out) :: WHFLX(IA,JA) ! water heat flux at the surface [W/m2]
