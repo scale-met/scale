@@ -1106,14 +1106,9 @@ contains
     real(RP) :: maxslope
     real(RP) :: flag
 
-    real(RP), pointer :: p1(:,:)
-    real(RP), pointer :: p2(:,:)
-    real(RP), target :: work1(IA,JA)
-    real(RP), target :: work2(IA,JA)
-
     character(len=H_SHORT) :: varname(1)
 
-    integer :: ite, n
+    integer :: ite
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -1130,34 +1125,6 @@ contains
        DYL(:) = GRID_FDY(:)
     endif
 
-    ! reduce grid-scale variation
-    do ite = 1, CNVTOPO_smooth_hypdiff_niter
-       work2(:,:) = Zsfc(:,:)
-       p1 => work2
-       p2 => work1
-       do n = 1, 4 ! 8th derivative
-          do j = JS, JE
-          do i = IS, IE
-             p2(i,j) = ( - p1(i+1,j) + p1(i,j)*2.0_RP - p1(i-1,j) &
-                         - p1(i,j+1) + p1(i,j)*2.0_RP - p1(i,j-1) ) / 8.0_RP
-          end do
-          end do
-          call TOPO_fillhalo( p2 )
-          if ( mod(n,2) == 0 ) then
-             p1 => work2
-             p2 => work1
-          else
-             p1 => work1
-             p2 => work2
-          end if
-       end do
-       do j = JS, JE
-       do i = IS, IE
-          Zsfc(i,j) = max( Zsfc(i,j) - p1(i,j), 0.0_RP )
-       end do
-       end do
-       call TOPO_fillhalo( Zsfc )
-    end do
 
 
     ! digital filter
@@ -1297,6 +1264,37 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** smoothing complete.'
     endif
 
+
+
+    if ( CNVTOPO_smooth_hypdiff_niter > 0 ) then
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Apply hyperdiffusion.'
+
+       call CNVTOPO_hypdiff( Zsfc(:,:), CNVTOPO_smooth_hypdiff_niter )
+
+       do j = 1, JA
+       do i = 1, IA-1
+          DZsfc_DX(1,i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
+       enddo
+       enddo
+       DZsfc_DX(1,IA,:,1) = 0.0_RP
+       do j = 1, JA-1
+       do i = 1, IA
+          DZsfc_DY(1,i,j,1) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
+       enddo
+       enddo
+       DZsfc_DY(1,:,JA,1) = 0.0_RP
+
+       slope(:,:) = max( abs(DZsfc_DX(1,:,:,1)), abs(DZsfc_DY(1,:,:,1)) )
+       call COMM_horizontal_max( maxslope, slope(:,:) )
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** maximum slope [deg] : ', maxslope
+
+    end if
+
+    call TOPO_fillhalo( Zsfc )
+
     varname(1) = "DZsfc_DX"
     call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
     varname(1) = "DZsfc_DY"
@@ -1306,5 +1304,52 @@ contains
 
     return
   end subroutine CNVTOPO_smooth
+
+  subroutine CNVTOPO_hypdiff( Zsfc, nite )
+    use scale_topography, only: &
+       TOPO_fillhalo
+    real(RP), intent(inout) :: Zsfc(IA,JA)
+    integer,  intent(in)    :: nite
+
+    real(RP), pointer :: p1(:,:)
+    real(RP), pointer :: p2(:,:)
+    real(RP), target :: work1(IA,JA)
+    real(RP), target :: work2(IA,JA)
+
+    integer :: i, j
+    integer :: ite, n
+
+    ! reduce grid-scale variation
+    do ite = 1, nite
+       call TOPO_fillhalo( Zsfc )
+       work2(:,:) = Zsfc(:,:)
+       p1 => work2
+       p2 => work1
+       do n = 1, 4 ! 8th derivative
+!       do n = 1, 2 ! 4th derivative
+          do j = JS, JE
+          do i = IS, IE
+             p2(i,j) = ( - p1(i+1,j) + p1(i,j)*2.0_RP - p1(i-1,j) &
+                         - p1(i,j+1) + p1(i,j)*2.0_RP - p1(i,j-1) ) / 8.0_RP
+          end do
+          end do
+          call TOPO_fillhalo( p2 )
+          if ( mod(n,2) == 0 ) then
+             p1 => work2
+             p2 => work1
+          else
+             p1 => work1
+             p2 => work2
+          end if
+       end do
+       do j = JS, JE
+       do i = IS, IE
+          Zsfc(i,j) = max( Zsfc(i,j) - p1(i,j), 0.0_RP )
+       end do
+       end do
+    end do
+
+    return
+  end subroutine CNVTOPO_hypdiff
 
 end module mod_cnvtopo
