@@ -54,7 +54,7 @@
 
 力学変数の時間積分のためのタイムステップは移流速度ではなく音速で制約されるため、一般には上記のタイムステップよりも小さくとる必要がある。この時間間隔は、\nmitem{TIME_DT_ATMOS_DYN} で設定する。
 
-\nmitem{TIME_DT_ATMOS_DYN}の値は、計算安定性のため主に時間積分スキームに依存し、
+\nmitem{TIME_DT_ATMOS_DYN}の値は、計算安定性のため主に時間積分スキームに依存し、\\
 \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} が \verb|RK4| の場合には
 最少格子間隔(HE-VI利用時には水平の最少格子間隔)を 420 m/s で割った値が、
 \verb|RK3| の場合には 840 m/s で割った値が目安となる。
