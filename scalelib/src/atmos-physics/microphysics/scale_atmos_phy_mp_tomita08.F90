@@ -2034,7 +2034,7 @@ contains
     Re(:,:,:,I_HI) =  re_qi * um2cm
     Re(:,:,:,I_HG+1:) = 0.0_RP
 
-    if ( const_rec ) then
+    if ( const_rec .or. fixed_re ) then
 
        Re(:,:,:,I_HC) = re_qc * um2cm
 
@@ -2075,7 +2075,6 @@ contains
 
     if ( fixed_re ) then
 
-       Re(:,:,:,I_HC) =  re_qc * um2cm
        Re(:,:,:,I_HR) =  10000.E-6_RP * um2cm
        Re(:,:,:,I_HS) =  re_qi * um2cm
        Re(:,:,:,I_HG) =  re_qi * um2cm
