@@ -167,7 +167,9 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private            :: MSTRN_nradius  =  8 !< # of radius mode for hygroscopic parameter
   integer,  private, parameter :: MSTRN_ncloud   =  2 !< # of cloud types [ClearSky/Cloud]
 
-  logical,  private, save :: ATMOS_PHY_RD_MSTRN_ONLY_QCI = .false.
+  logical,  private            :: ATMOS_PHY_RD_MSTRN_ONLY_QCI        = .false.
+  logical,  private            :: ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD = .false.
+
 
 
   real(RP), private, allocatable :: waveh   (:)         ! wavenumbers at band boundary [1/cm]
@@ -258,10 +260,11 @@ contains
        ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME,   &
        ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME,  &
        ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME, &
-       ATMOS_PHY_RD_MSTRN_nband, &
-       ATMOS_PHY_RD_MSTRN_nptype, &
-       ATMOS_PHY_RD_MSTRN_nradius, &
-       ATMOS_PHY_RD_MSTRN_ONLY_QCI
+       ATMOS_PHY_RD_MSTRN_nband,                 &
+       ATMOS_PHY_RD_MSTRN_nptype,                &
+       ATMOS_PHY_RD_MSTRN_nradius,               &
+       ATMOS_PHY_RD_MSTRN_ONLY_QCI,              &
+       ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD
 
     integer :: ngas, ncfc
     integer :: ihydro, iaero
@@ -436,6 +439,9 @@ contains
     real(RP) :: MP_Qe  (KA,IA,JA,N_HYD)
     real(RP) :: AE_Re  (KA,IA,JA,N_AE)
 
+    integer  :: tropopause(IA,JA)
+    real(RP) :: gamma
+
     real(RP), parameter :: min_cldfrac = 1.E-8_RP
 
     real(RP) :: rhodz_merge       (RD_KMAX,IA,JA)
@@ -520,6 +526,34 @@ contains
           end if
        end do
     end if
+
+    if ( ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD ) then
+       do j  = JS, JE
+       do i  = IS, IE
+          tropopause(i,j) = KE+1
+          do k  = KE, KS, -1
+             if ( pres(k,i,j) >= 300.E+2_RP ) then
+                exit
+             elseif( pres(k,i,j) <  50.E+2_RP ) then
+                tropopause(i,j) = k
+             else
+                gamma = ( temp(k+1,i,j) - temp(k,i,j) ) / ( CZ(k+1,i,j) - CZ(k,i,j) )
+                if( gamma > 1.E-4 ) tropopause(i,j) = k
+             endif
+          enddo
+       enddo
+       enddo
+
+       do ihydro = 1, N_HYD
+       do j  = JS, JE
+       do i  = IS, IE
+          do k  = tropopause(i,j), KE
+             MP_Qe(k,i,j,ihydro) = 0.0_RP
+          enddo
+       enddo
+       enddo
+       enddo
+    endif
 
     ! marge basic profile and value in model domain
 
