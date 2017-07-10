@@ -7,12 +7,12 @@ In this section, we explain post-processing and the method of drawing the calcul
 
 The method of execution of \verb|net2g| is the same as that of \scalerm, i.e.,
 \begin{verbatim}
- $ mpirun -n [the number of the processes] ./net2g [the configuration file] 
+ $ mpirun -n [the number of the processes] ./net2g [the configuration file]
 \end{verbatim}
-The configuration file \verb|net2g.conf| is intended for special uses of \verb|net2g|.
+The configuration file \verb|net2g_R20kmDX500m.conf| is intended for special uses of \verb|net2g|.
 Give this configuration file to \verb|net2g| and execute it as follows:
 \begin{verbatim}
-  $ mpirun  -n  2  ./net2g  net2g.conf
+  $ mpirun  -n  2  ./net2g  net2g_R20kmDX500m.conf
 \end{verbatim}
 If there is no error message and the following message is displayed to the standard output,
 the conversion is completed without problem:
@@ -62,12 +62,12 @@ and post-processing is successfully concluded.
 \end{figure}
 
 To convert the result of the output into binary data for other variables,
-add them to \nmitem{VNAME} in \namelist{VARI} in the configuration file \verb|net2g.conf|:
+add them to \nmitem{VNAME} in \namelist{VARI} in the configuration file \verb|net2g_R20kmDX500m.conf|:
 \editbox{
 \verb|&VARI|\\
 \verb| VNAME       = "U","W","QHYD"|\\
 \verb|/|\\
 }
 To check the output variable in the history file, use \verb|ncdump| of {\netcdf}.
-Refer to Section \ref{sec:net2g} for the detailed use of net2g. 
+Refer to Section \ref{sec:net2g} for the detailed use of net2g.
 
