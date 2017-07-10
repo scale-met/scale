@@ -1971,10 +1971,10 @@ contains
     real(RP) :: lamda                ! eigenvalue of X-, X+
     real(RP) :: E
     real(RP) :: Apls_mns, Bpls_mns   ! A+/A-, B+/B-
-    real(RP) :: V0mns, V0pls         ! V0-, V0+
-    real(RP) :: V1mns, V1pls         ! V1-, V1+
-    real(RP) :: Dmns0, Dmns1, Dmns2  ! D0-, D1-, D2-
-    real(RP) :: Dpls0, Dpls1, Dpls2  ! D0+, D1+, D2+
+    real(DP) :: V0mns, V0pls         ! V0-, V0+
+    real(DP) :: V1mns, V1pls         ! V1-, V1+
+    real(DP) :: Dmns0, Dmns1, Dmns2  ! D0-, D1-, D2-
+    real(DP) :: Dpls0, Dpls1, Dpls2  ! D0+, D1+, D2+
     real(RP) :: SIGmns, SIGpls       ! sigma-, sigma+
     real(RP) :: Qgamma               ! Q * gamma
     real(RP) :: zerosw, tmp
@@ -2097,10 +2097,10 @@ contains
 #endif
 
           !--- A+/A-, B+/B-
-          Apls_mns = ( X * ( 1.0_RP+E ) - lamda * ( 1.0_RP-E ) ) &
-                   / ( X * ( 1.0_RP+E ) + lamda * ( 1.0_RP-E ) )
-          Bpls_mns = ( X * ( 1.0_RP-E ) - lamda * ( 1.0_RP+E ) ) &
-                   / ( X * ( 1.0_RP-E ) + lamda * ( 1.0_RP+E ) )
+          Apls_mns = ( X * ( 1.0_DP+E ) - lamda * ( 1.0_DP-E ) ) &
+                   / ( X * ( 1.0_DP+E ) + lamda * ( 1.0_DP-E ) )
+          Bpls_mns = ( X * ( 1.0_DP-E ) - lamda * ( 1.0_DP+E ) ) &
+                   / ( X * ( 1.0_DP-E ) + lamda * ( 1.0_DP+E ) )
 
           !--- R, T
           R0(k,i,j,icloud) = (        sw ) * 0.5_RP * ( Apls_mns + Bpls_mns ) &
