@@ -62,6 +62,7 @@ module scale_atmos_phy_rd_profile
   character(len=H_LONG), private :: PROFILE_CIRA86_fname         = "cira.nc" !< file (CIRA86,netCDF format)
   character(len=H_LONG), private :: PROFILE_MIPAS2001_dir        = "."       !< dir  (MIPAS2001,ASCII format)
   character(len=H_LONG), private :: PROFILE_USER_fname           = ""        !< file (user,ASCII format)
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_H2O = .true.
   logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO2 = .true.
   logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O3  = .true.
   logical,               private :: ATMOS_PHY_RD_PROFILE_USE_N2O = .true.
@@ -148,6 +149,7 @@ contains
        ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME,    &
        ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME, &
        ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME,      &
+       ATMOS_PHY_RD_PROFILE_USE_H2O,               &
        ATMOS_PHY_RD_PROFILE_USE_CO2,               &
        ATMOS_PHY_RD_PROFILE_USE_O3,                &
        ATMOS_PHY_RD_PROFILE_USE_N2O,               &
@@ -650,6 +652,7 @@ contains
     aerosol_radi(:,:) = 0.0_RP
     cldfrac     (:)   = 0.0_RP
 
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_H2O ) gas(:,1) = 0.0_RP
     if ( .NOT. ATMOS_PHY_RD_PROFILE_use_CO2 ) gas(:,2) = 0.0_RP
     if ( .NOT. ATMOS_PHY_RD_PROFILE_use_O3  ) gas(:,3) = 0.0_RP
     if ( .NOT. ATMOS_PHY_RD_PROFILE_use_N2O ) gas(:,4) = 0.0_RP
