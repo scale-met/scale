@@ -1,4 +1,8 @@
-#!/bin/sh
+#! /bin/bash -x
+
+### Visalization ###
+echo "+visualize by GrADS"
+grads -blc checkfig_ideal.gs
 
 echo "+visualize by gpview"
 rm -f dcl.pdf
