@@ -580,7 +580,7 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none)                                           &
-    !$omp shared(JS,JE,IS,IE,RD_KADD,temph_merge,RD_temph,KE,RD_KMAX,KS,temp) &
+    !$omp shared(JS,JE,IS,IE,RD_KADD,temph_merge,RD_temph,KE,RD_KMAX,KS,temp,CZ,FZ) &
     !$omp private(i,j,k,RD_k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -592,7 +592,8 @@ contains
        do RD_k = RD_KADD+1, RD_KMAX
           k = KS + RD_KMAX - RD_k ! reverse axis
 
-          temph_merge(RD_k,i,j) = 0.5_RP * ( temp(k,i,j) + temp(k+1,i,j) )
+          temph_merge(RD_k,i,j) = ( temp(k  ,i,j) * (CZ(k+1,i,j)-FZ(k,i,j)) / (CZ(k+1,i,j)-CZ(k,i,j)) &
+                                  + temp(k+1,i,j) * (FZ(k  ,i,j)-CZ(k,i,j)) / (CZ(k+1,i,j)-CZ(k,i,j)) )
        enddo
        temph_merge(RD_KMAX+1,i,j) = temp(KS,i,j)
     enddo
