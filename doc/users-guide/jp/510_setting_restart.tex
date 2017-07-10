@@ -24,10 +24,11 @@
 \multicolumn{2}{l}{\verb| RESTART_IN_BASENAME  = "restart1_d01_20070715-000000.000",|} \\
                                                                              & 入力する初期値ファイルの指定。\\
                                                                              & \\ 
+\verb| RESTART_IN_POSTFIX_TIMELABEL  = .false.                             | & \verb|RESTART_IN_BASENAME|の後に入力時の年月日時刻を追加するかどうか。\\
 \verb| RESTART_OUTPUT       = .true.,                                      | & リスタートファイルを出力するかどうか。\\
                                                                              & \verb|.true.|: 出力する、\verb|.false.|: 出力しない。\\
 \verb| RESTART_OUT_BASENAME = "restart2_d01",                              | & リスタートファイルのファイル名の頭。\\
-                                                                             & この後ろに、出力時の年月日時刻が追加される。\\
+\verb| RESTART_OUT_POSTFIX_TIMELABEL = .true.                              | &  \verb|RESTART_OUT_BASENAME|の後に出力時の年月日時刻が追加を追加するかどうか。\\
 \verb|/| & \\
 \\
 \verb|&PARAM_TIME| & \\
@@ -51,22 +52,32 @@
 
 上記の例では、\verb|restart1_***|という入力ファイルからリスタート計算を開始し、
 6時間(21600 sec)に1回、リスタートファイルを\verb|restart2_***|という名前で出力する設定となっている。\\
-\nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, \\
-\nmitem{TIME_DT_URBAN_RESTART}
-が指定されていない場合には、積分時刻の最終時刻\nmitem{TIME_DURATION}にファイルが作成される。
-\nmitem{RESTART_RUN}を\verb|.false.|として\nmitem{RESTART_IN_BASENAME}に\verb|scale-rm_init|で作成した初期値ファイル
-（\verb|init_***|）を指定すれば通常計算が実行され、
-\nmitem{RESTART_RUN}を\verb|.true.|として\nmitem{RESTART_IN_BASENAME}にリスタートファイルを指定すれば
-リスタート計算が実行される。
-なお、\scalerm は\nmitem{RESTART_IN_BASENAME}で指定されているファイル名でリスタート計算かどうかを判断しているわけではないので、ファイル名はなんでも良い。
-チュートリアル、および、本書解説では便宜上、\verb|scale-rm_init|で作成した初期値ファイルの名前を\verb|init_***.nc|とし、リスタートファイルのファイル名を\verb|restart_***.nc|としているが、これに限らない。
+リスタートファイルの出力間隔は、\nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \\
+ \nmitem{TIME_DT_LAND_RESTART}, \nmitem{TIME_DT_URBAN_RESTART} で指定する。
+それらが指定されていない場合には、積分時刻の最終時刻\nmitem{TIME_DURATION}にファイルが作成される。
+
+通常の計算は、\nmitem{RESTART_RUN}を\verb|.false.|として\nmitem{RESTART_IN_BASENAME}に
+\verb|scale-rm_init|で作成した初期値ファイル（\verb|init_***|）を指定する。
+それに対し、リスタート計算では、\nmitem{RESTART_RUN}を\verb|.true.|として
+\nmitem{RESTART_IN_BASENAME}にリスタートファイルを指定する。
+
+リスタートファイルのファイル名は、\nmitem{RESTART_IN_BASENAME}で指定する。
+チュートリアル、および、本書解説では便宜上、\verb|scale-rm_init|で作成した初期値ファイルの名前を\verb|init_***.nc|とし、
+リスタートファイルのファイル名を\verb|restart_***.nc|としているが、これに限らない。\\
+%
+\nmitem{RESTART_IN_POSTFIX_TIMELABEL, RESTART_OUT_POSTFIX_TIMELABEL}は、それぞれ、\\
+\nmitem{RESTART_IN_BASENAME, RESTART_OUT_BASENAME}の後に、入力時及び出力時の日時を自動的に追加するかどうかを指定する。
+デフォルト設定は、\nmitem{RESTART_IN_POSTFIX_TIMELABEL = .false.}, \nmitem{RESTART_OUT_POSTFIX_TIMELABEL=.true.}である。
+上記の例において、\nmitem{RESTART_IN_BASENAME} \verb|="restart1_d01_20070715-000000.000"| は、
+\nmitem{RESTART_IN_POSTFIX_TIMELABEL = .true.}として\nmitem{RESTART_IN_BASENAME} \verb|="restart1_d01"| とするのと同じである。
+
 
 計算開始時刻と積分時間は、リスタート計算の計算開始時刻と積分時間を設定する。
-つまり、リスタート計算のためのリスタートファイルを出力した実験とは独立した計算と考えれば良い。
+リスタート計算は、リスタートファイルを出力した実験とは独立した計算と考えれば良い。
 ただし、使用するスキームを変更する場合には、計算に必要な入力変数が足りないことがあるので、
 注意が必要である。
 
-さらに、現実大気実験の場合、初期値以外に\verb|scale-rm_init|で作成した境界値ファイルが必要である。\\
+現実大気実験の場合、初期値以外に\verb|scale-rm_init|で作成した境界値ファイルが必要である。\\
 \namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_START_DATE}に
 境界値ファイル\verb|boundary_***.nc|の初期時刻を設定しておくことで、リスタート計算時に
 適切な時刻のデータを読み込むことが可能である。
