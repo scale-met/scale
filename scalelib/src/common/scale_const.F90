@@ -44,16 +44,16 @@ module scale_const
 
   ! adopted constants
   real(RP), public            :: CONST_RADIUS  = 6.37122E+6_RP       !< radius of the planet [m]
-  real(RP), public            :: CONST_OHM     = 7.2920E-5_RP        !< angular velocity of the planet [1/s]
+  real(RP), public            :: CONST_OHM     = 7.27221E-5_RP        !< angular velocity of the planet [1/s]
   real(RP), public            :: CONST_GRAV    = 9.80665_RP          !< standard acceleration of gravity [m/s2]
 
   ! physical constants
   real(RP), public, parameter :: CONST_STB     = 5.670373E-8_RP      !< Stefan-Boltzman constant [W/m2/K4]
   real(RP), public, parameter :: CONST_KARMAN  = 0.4_RP              !< von Karman constant
-  real(RP), public, parameter :: CONST_R       = 8.3144621_RP        !< universal gas constant [J/mol/K]
+  real(RP), public, parameter :: CONST_R       = 8.31436_RP          !< universal gas constant [J/mol/K]
 
   ! dry air constants
-  real(RP), public            :: CONST_Mdry    =   28.97_RP          !< mass weight (dry air)                     [g/mol]
+  real(RP), public            :: CONST_Mdry    =  28.966_RP          !< mass weight (dry air)                     [g/mol]
   real(RP), public            :: CONST_Rdry    =  287.04_RP          !< specific gas constant (dry air)           [J/kg/K]
   real(RP), public            :: CONST_CPdry   = 1004.64_RP          !< specific heat (dry air,constant pressure) [J/kg/K]
   real(RP), public            :: CONST_CVdry                         !< specific heat (dry air,constant volume)   [J/kg/K]
@@ -61,12 +61,12 @@ module scale_const
   real(RP), public            :: CONST_LAPSdry                       !< dry adiabatic lapse rate                  [K/m]
 
   ! water constants
-  real(RP), public            :: CONST_Mvap    =  18.02_RP           !< mass weight (water vapor)                      [g/mol]
-  real(RP), public, parameter :: CONST_Rvap    = 461.46_RP           !< specific gas constant (water vapor)            [J/kg/K]
-  real(RP), public, parameter :: CONST_CPvap   = 1845.60_RP          !< specific heat (water vapor, constant pressure) [J/kg/K]
+  real(RP), public            :: CONST_Mvap    =  18.016_RP          !< mass weight (water vapor)                      [g/mol]
+  real(RP), public, parameter :: CONST_Rvap    =  461.50_RP          !< specific gas constant (water vapor)            [J/kg/K]
+  real(RP), public, parameter :: CONST_CPvap   = 1846.00_RP          !< specific heat (water vapor, constant pressure) [J/kg/K]
   real(RP), public            :: CONST_CVvap                         !< specific heat (water vapor, constant volume)   [J/kg/K]
   real(RP), public, parameter :: CONST_CL      = 4218.0_RP           !< specific heat (liquid water)                   [J/kg/K]
-  real(RP), public, parameter :: CONST_CI      = 2006.0_RP           !< specific heat (ice)                            [J/kg/K]
+  real(RP), public, parameter :: CONST_CI      = 2106.0_RP           !< specific heat (ice)                            [J/kg/K]
 
   real(RP), public            :: CONST_EPSvap                        !< Rdry / Rvap
   real(RP), public            :: CONST_EPSTvap                       !< 1 / epsilon - 1
@@ -74,13 +74,13 @@ module scale_const
   real(RP), public, parameter :: CONST_EMELT   = 3.4E5_RP
   real(RP), public, parameter :: CONST_TMELT   = 273.15_RP
 
-  real(RP), public, parameter :: CONST_LHV0    = 2.5008E6_RP         !< latent heat of vaporizaion at 0C [J/kg]
+  real(RP), public, parameter :: CONST_LHV0    = 2.501E+6_RP         !< latent heat of vaporizaion at 0C [J/kg]
   real(RP), public            :: CONST_LHV00                         !< latent heat of vaporizaion at 0K [J/kg]
-  real(RP), public, parameter :: CONST_LHS0    = 2.8342E6_RP         !< latent heat of sublimation at 0C [J/kg]
+  real(RP), public, parameter :: CONST_LHS0    = 2.834E+6_RP         !< latent heat of sublimation at 0C [J/kg]
   real(RP), public            :: CONST_LHS00                         !< latent heat of sublimation at 0K [J/kg]
   real(RP), public            :: CONST_LHF0                          !< latent heat of fusion      at 0C [J/kg]
   real(RP), public            :: CONST_LHF00                         !< latent heat of fusion      at 0K [J/kg]
-  real(RP), public, parameter :: CONST_PSAT0   =  610.7_RP           !< saturate pressure of water vapor at 0C [Pa]
+  real(RP), public, parameter :: CONST_PSAT0   =  610.78_RP          !< saturate pressure of water vapor at 0C [Pa]
   real(RP), public, parameter :: CONST_DWATR   = 1000.0_RP           !< density of water [kg/m3]
   real(RP), public, parameter :: CONST_DICE    =  916.8_RP           !< density of ice   [kg/m3]
 
@@ -155,7 +155,7 @@ contains
        call PRC_MPIstop
     endif
 
-    CONST_PI      = 4.E0_RP * atan( 1.0_RP )
+    CONST_PI      = 4.0_RP * atan( 1.0_RP )
     CONST_D2R     = CONST_PI / 180.0_RP
     CONST_EPS     =          epsilon(0.0_RP)
     CONST_EPS1    = 1.0_RP - epsilon(0.0_RP)
@@ -169,7 +169,7 @@ contains
 
     CONST_CVvap   = CONST_CPvap - CONST_Rvap
     CONST_EPSvap  = CONST_Rdry / CONST_Rvap
-    CONST_EPSTvap = 1.E0_RP / CONST_EPSvap - 1.E0_RP
+    CONST_EPSTvap = 1.0_RP / CONST_EPSvap - 1.0_RP
 
     CONST_LHF0    = CONST_LHS0 - CONST_LHV0
 
