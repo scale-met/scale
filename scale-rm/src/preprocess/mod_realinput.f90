@@ -1902,6 +1902,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputSurface]/Categ[Input]'
 
+    first = .true.
+
     if ( first ) then ! read land data only once
 
        if ( do_read_land ) then
