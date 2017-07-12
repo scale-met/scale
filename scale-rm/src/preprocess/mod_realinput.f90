@@ -411,7 +411,7 @@ contains
     character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP  = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_TEMP     = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP = 'off'
-    integer                  :: INTRP_ITER_MAX       = 20
+    integer                  :: INTRP_ITER_MAX       = 100
     character(len=H_SHORT)   :: SOILWATER_DS2VC      = 'limit'
     logical                  :: soilwater_DS2VC_flag           ! true: 'critical', false: 'limit'
     logical                  :: elevation_collection = .true.
@@ -2713,108 +2713,112 @@ contains
   end subroutine make_mask
   !-----------------------------------------------------------------------------
   subroutine interp_OceanLand_data( &
-      data,      & ! (inout)
-      lsmask,    & ! (in)
-      nx,        & ! (in)
-      ny,        & ! (in)
-      landdata,  & ! (in)
-      iter_max,  & ! (in)
-      maskval    & ! (out)
-      )
+      data,     &
+      lsmask,   &
+      nx,       &
+      ny,       &
+      landdata, &
+      iter_max  )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
-    real(RP), intent(inout)         :: data(:,:)
-    real(RP), intent(in)            :: lsmask(:,:)
-    integer,  intent(in)            :: nx
-    integer,  intent(in)            :: ny
-    logical,  intent(in)            :: landdata   ! .true. => land data , .false. => ocean data
-    integer,  intent(in)            :: iter_max
-    real(RP), intent(out), optional :: maskval
 
-    integer                 :: untarget_mask
-    integer, allocatable    :: imask(:,:),imaskr(:,:)
-    real(RP),allocatable    :: newdata(:,:)
-    real(RP)                :: nd
-    integer                 :: count
+    integer,  intent(in)    :: nx
+    integer,  intent(in)    :: ny
+    real(RP), intent(inout) :: data  (nx,ny)
+    real(RP), intent(in)    :: lsmask(nx,ny)
+    logical,  intent(in)    :: landdata   ! .true. => land data , .false. => ocean data
+    integer,  intent(in)    :: iter_max
 
-    integer :: i, j, ii, jj, kk
+    integer  :: mask     (nx,ny)
+    integer  :: mask_prev(nx,ny)
+    real(RP) :: data_prev(nx,ny)
+    real(RP) :: tmp, cnt, sw
+    integer  :: mask_target
 
+    integer  :: num_land, num_ocean, num_replaced
+    integer  :: istr, iend, jstr, jend
+    integer  :: i, j, ii, jj, ite
     !---------------------------------------------------------------------------
-    allocate( imask  (nx,ny) )
-    allocate( imaskr (nx,ny) )
-    allocate( newdata(nx,ny) )
-    newdata = 0.0_RP
-    if( present(maskval) ) maskval = 999.99_RP
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** [interp_OceanLand_data]/Categ[realinit]'
+
+    if ( landdata ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** target mask : LAND'
+       mask_target = 1 ! interpolation for land data
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** target mask : OCEAN'
+       mask_target = 0 ! interpolation for ocean data
+    endif
 
     ! search target cell for interpolation
-     do j = 1, ny
-     do i = 1, nx
-        if( abs(lsmask(i,j)-1.0_RP) < EPS )then
-           imask(i,j) = 1  ! land grid
-        else
-           imask(i,j) = 0  ! ocean grid
-        endif
-     enddo
-     enddo
-     if ( landdata ) then  ! interpolation for land data
-       untarget_mask = 1
-     else                  ! interpolation for ocean data
-       untarget_mask = 0
-     endif
+    num_land  = 0
+    num_ocean = 0
+    do j = 1, ny
+    do i = 1, nx
+       mask(i,j) = int( 0.5_RP - sign(0.5_RP,abs(lsmask(i,j)-1.0_RP)-EPS) ) ! 1 for land, 0 for ocean
+       num_land  = num_land  + (   mask(i,j) )
+       num_ocean = num_ocean + ( 1-mask(i,j) )
+    enddo
+    enddo
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,3I8,A,I8)') '*** ite = ', 0, &
+               ', (land,ocean,replaced) = ', num_land, num_ocean, 0, ' / ', nx*ny
 
     ! start interpolation
+    do ite = 1, iter_max
+       ! save previous state
+       mask_prev(:,:) = mask(:,:)
+       data_prev(:,:) = data(:,:)
+       num_replaced   = 0
 
-    imaskr = imask
-    do kk = 1, iter_max
        do j  = 1, ny
        do i  = 1, nx
-          if ( imask(i,j) == untarget_mask ) then  ! not missing value
-             newdata(i,j) = data(i,j)
-             cycle
-          else
 
-             if ( present(maskval) ) then
-             if ( abs(maskval-999.99_RP)<EPS ) then
-                if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j)
-             endif
-             endif
+          if( mask(i,j) == mask_target ) cycle ! already filled
 
-             !--------------------------------------
-             ! check data of neighbor grid
-             !---------------------------------------
-             count = 0
-             nd = 0.0_RP
-             do  jj = j-1, j+1
-                if ( jj < 1 .or. jj > ny ) cycle
-                do ii = i-1, i+1
-                   if ( ii < 1 .or. ii > nx .or. (jj == j .and. ii == i) ) cycle
-                   if ( imask(ii,jj) == untarget_mask ) then
-                      nd = nd + data(ii,jj)
-                      count = count + 1
-                   end if
-                end do
-             end do
+          ! collect neighbor grid
+          istr = max(i-1,1 )
+          iend = min(i+1,nx)
+          jstr = max(j-1,1 )
+          jend = min(j+1,ny)
 
-             if( count >= 3 )then  ! coast grid : interpolate
-                newdata(i,j) = nd / real(count, kind=RP)
-                imaskr(i,j) = untarget_mask
-             else
-                newdata(i,j) = data(i,j)
-             endif
+          tmp = 0.0_RP
+          cnt = 0.0_RP
+          do jj = jstr, jend
+          do ii = istr, iend
+             sw = 0.5_RP - sign(0.5_RP,real(abs(mask_prev(ii,jj)-mask_target),kind=RP)-EPS)
 
-          endif ! sea/land
+             tmp = tmp + sw * data_prev(ii,jj)
+             cnt = cnt + sw
+          enddo
+          enddo
+
+          if ( cnt >= 3.0_RP ) then ! replace by average of neighbor grid value
+             data(i,j) = tmp / cnt
+             mask(i,j) = mask_target
+
+             num_replaced = num_replaced + 1
+          endif
 
        enddo
        enddo
 
-       imask(:,:) = imaskr(:,:)
-       data(:,:)  = newdata(:,:)
-    enddo ! kk
+       if ( landdata ) then
+          num_land  = num_land  + num_replaced
+          num_ocean = num_ocean - num_replaced
+       else
+          num_land  = num_land  - num_replaced
+          num_ocean = num_ocean + num_replaced
+       endif
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,3I8,A,I8)') '*** ite = ', ite, &
+                  ', (land,ocean,replaced) = ', num_land, num_ocean, num_replaced, ' / ', nx*ny
 
-    deallocate( imask   )
-    deallocate( imaskr  )
-    deallocate( newdata )
+       if( num_replaced == 0 ) exit
+
+    enddo ! itelation
+
 
     return
   end subroutine interp_OceanLand_data
