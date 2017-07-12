@@ -717,7 +717,7 @@ contains
 
     integer :: dim1_S, dim1_E
     integer :: start(1)   ! start offset of globale variable
-    integer :: count(1)   ! request length to the globale variable
+    integer :: count(1)   ! request length to the global variable
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
@@ -740,7 +740,7 @@ contains
           start(1) = 1
           count(1) = UKMAX
           call FileRead( var, fid, varname, step,                            &
-                         ntypes=LKMAX, dtype=etype, start=start, count=count )
+                         ntypes=UKMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'X' .OR. axistype == 'CX' ) then
           start(1) = IS_inG - IHALO
           count(1) = IA
