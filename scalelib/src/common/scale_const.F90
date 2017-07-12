@@ -44,7 +44,7 @@ module scale_const
 
   ! adopted constants
   real(RP), public            :: CONST_RADIUS  = 6.37122E+6_RP       !< radius of the planet [m]
-  real(RP), public            :: CONST_OHM     = 7.27221E-5_RP        !< angular velocity of the planet [1/s]
+  real(RP), public            :: CONST_OHM     = 7.2920E-5_RP        !< angular velocity of the planet [1/s]
   real(RP), public            :: CONST_GRAV    = 9.80665_RP          !< standard acceleration of gravity [m/s2]
 
   ! physical constants
