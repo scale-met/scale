@@ -7,6 +7,8 @@ module test_atmos_phy_tb_smg
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
+  use scale_process, only: &
+     PRC_MPIbarrier
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -55,6 +57,7 @@ module test_atmos_phy_tb_smg
 
   integer :: k, i, j, iq
   character(len=7) :: message
+  character(len=4) :: rankname
   !-----------------------------------------------------------------------------
 contains
 
@@ -74,7 +77,8 @@ contains
      CDY => GRID_CDX, &
      CZ  => GRID_CZ, &
      GRID_CBFZ
-
+  use scale_process, only: &
+     PRC_myrank
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -85,6 +89,8 @@ contains
   character(len=H_SHORT) :: TB_TYPE
   real(RP) :: CZ3D(KA,IA,JA)
   integer :: i, j
+
+  write(rankname,'(A,I2.2,A)') "(", PRC_myrank, ")"
 
   TB_TYPE = "SMAGORINSKY"
   call ATMOS_PHY_TB_config( TB_TYPE )
@@ -173,7 +179,8 @@ subroutine test_zero
   use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB
 
-  write(*,*) "Test zero"
+  call PRC_MPIbarrier
+  write(*,*) rankname, "Test zero"
 
   MOMZ(:,:,:) = 0.0_RP
   MOMX(:,:,:) = 0.0_RP
@@ -209,7 +216,8 @@ subroutine test_constant
   use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB
 
-  write(*,*) "Test constant"
+  call PRC_MPIbarrier
+  write(*,*) rankname, "Test constant"
 
   MOMZ(:,:,:) = 1.0_RP
   MOMX(:,:,:) = 1.0_RP
@@ -259,7 +267,8 @@ subroutine test_big
 
   BIG(:,:,:,:) = 9.99E8_RP
 
-  write(*,*) "Test big"
+  call PRC_MPIbarrier
+  write(*,*) rankname, "Test big"
   ! check not to include BUG (UNDEF) value
 
   do j = 1, JA
@@ -326,7 +335,8 @@ subroutine test_double
   FOUR(:,:,:,:) = 4.0_RP
   PI2 = atan( 1.0_RP )*8.0_RP
 
-  write(*,*) "Test double"
+  call PRC_MPIbarrier
+  write(*,*) rankname, "Test double"
 
   do j = 1, JA
   do i = 1, IA
