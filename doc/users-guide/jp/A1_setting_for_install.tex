@@ -27,7 +27,7 @@ GNU compiler以外のIntel compilerなどを利用する場合は、各自でイ
 \item Linux CentOS 6.6 x86-64
 \item Linux CentOS 7.1 x86-64
 \item Linux openSUSE 13.2 x86-64
-\item Apple Mac OS X 10.10 Yosemite
+\item Apple Mac OS X 10.11 El Capitan
 \item スーパーコンピュータ「京」
 \end{itemize}
 他のOSディストリビューション（下記参照）でもSCALEを利用可能だが、
@@ -35,13 +35,12 @@ GNU compiler以外のIntel compilerなどを利用する場合は、各自でイ
 
 \noindent{\bf 動作確認済みの他のOSディストリビューション}
 \begin{itemize}
-\item Linux SUSE Enterprise Linux 11.1, 11.3 x86-64
-\item Linux Vine Linux 6.3 x86-64
-\item Linux Fedora 16 x86-64
+\item Linux SUSE Enterprise Linux 11.3, 12.1 x86-64
+\item Linux Fedora 24, 25, 26 x86-64
 \end{itemize}
 
 
-\section{インストール方法 (Linux - CentOS 6.6-6.8 編)} \label{chap:install_centos}
+\section{インストール方法 (Linux - CentOS 6.6-6.9 編)} \label{chap:install_centos}
 %==========================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -197,7 +196,7 @@ SCALEは陰解法計算の部分で、数値計算ライブラリ Lapack
 %\end{verbatim}
 
 
-\section{インストール方法 (Linux - CentOS 7.1-7.2 編)} \label{chap:install_centos71}
+\section{インストール方法 (Linux - CentOS 7.1-7.3 編)} \label{chap:install_centos71}
 %==========================================================================================
 
 以下の説明で使用した環境は次のとおりである。
@@ -552,7 +551,7 @@ macportsでは複数のコンパイラとMPIライブラリをインストール
  \\
  \verb|export SCALE_NETCDF_INCLUDE="-I/opt/local/include"|\\
  \verb|export SCALE_NETCDF_LIBS="-L/opt/local/lib -lnetcdff -L/opt/local/lib -Wl,\ |\\
- \verb|-headerpad_max_install_names -lnetcdf"|\\
+ \verb|-lnetcdf"|\\
  \\
 \end{tabularx}
 }}\\
@@ -619,7 +618,7 @@ Mac OS Xを用いて\scalerm プログラムを実行すると、実行時に
 以下の説明で使用した環境は次のとおりである。
 \begin{itemize}
 \item 計算機: スーパーコンピュータ「京」
-\item 言語環境: K-1.2.0-18
+\item 言語環境: K-1.2.0-22
 \end{itemize}
 
 \subsubsection{ライブラリについて}

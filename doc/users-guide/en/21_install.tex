@@ -13,12 +13,11 @@ and the minimum computational requirements for their execution.
 \caption{OSs already checked (the ones below are based on x86-64.)}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} Name of OS & Version & Note \\ \hline
- CentOS                & 6.5、6.6、6.8、7.0、7.1、7.2 &  \\ \hline
- openSUSE              & 13.2               &  \\ \hline
- SUSE Enterprise Linux & 11.1、11.3         & GNU compiler is not available in version 11.1. \\ \hline
- fedora                & 20                 &  \\ \hline
- Vine Linux            & 6.2、6.3           &  \\ \hline
- Mac OS X              & 10.10(Yosemite)    &  \\ \hline
+ CentOS                & 6.6、6.9、7.0、7.2、7.3 &  \\ \hline
+ openSUSE              & 13.2、42.1、42.2        &  \\ \hline
+ SUSE Enterprise Linux & 11.3、12.1         &  \\ \hline
+ fedora                & 24、25、26         &  \\ \hline
+ Mac OS X              & 10.11 (El Capitan) &  \\ \hline
 \end{tabularx}
 \label{tab:compatible_os}
 \end{center}
@@ -69,14 +68,15 @@ the following are the specifications for conducting a tutorial as in Chapters \r
 \begin{table}[tb]
 \begin{center}
 \caption{Compilers and MPI libraries already checked}
-\begin{tabularx}{150mm}{|l|l|X|} \hline
+\begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} Name of compiler & Version & Note \\ \hline
- GNU (gcc/gfortran)    & 4.4.x、4.9.x           & Version 4.3 or earlier are not supported. The series with version 4.4.x sometimes issues a warning. \\ \hline
- Intel (icc/ifort)     & 13.0.1、14.0.2、15.0.0  & Version of 2013 or later are recommended \\ \hline
+ GNU (gcc/gfortran)    & 4.4.7、4.7.4、4.8.5、4.9.4、6.1.1、6.3.1、7.1.1 & Version 4.3 or earlier are not supported. The series with version 4.4.x sometimes issues a warning. OpenMP is supported. \\ \hline
+ Intel (icc/ifort)     & 13.0.1、14.0.2、16.0.1、17.0.1、17.0.2  & Version of 2013 or later are recommended. OpenMP is supported. \\ \hline
+ PGI (gcc/pgfortran)   & 17.1                 & OpenACC is supported. \\ \hline
  \rowcolor[gray]{0.9} Name of MPI library &  &  \\ \hline
- openMPI   & 1.8.5、1.10.3            & \\ \hline
- Intel MPI & 4.0 Update 3、4.1.0、5.0 & The version released in 2013 or later is recommended.\\ \hline
- SGI MPT   & 2.05、2.09               & A combined use with the Intel compiler is available. \\ \hline
+ openMPI   & 1.7.2、1.8.1、1.10.2、1.10.3、1.10.5、1.10.7、2.0.2、2.1.0、2.1.1 & \\ \hline
+ Intel MPI & 4.1.0、5.1.2、2017.2 & The version released in 2013 or later is recommended.\\ \hline
+ SGI MPT   & 2.09、2.14               & A combined use with the Intel compiler is available. \\ \hline
 \end{tabularx}
 \label{tab:compatible_compiler}
 \end{center}
@@ -84,7 +84,7 @@ the following are the specifications for conducting a tutorial as in Chapters \r
 
 Since the source code of \scalelib is  written in FORTRAN 2003 standard syntax, the compiler must support it. For example, GNU gfortran version 4.3 or previous versions cannot be used for \scalelib compilation because they do not follow the FORTRAN 2003 standard.
 
-In addition to the above environment, it has been confirmed that \scalelib can be compiled and run on  machines with a SPARC-based instruction set, such as the K Computer and the Fujitsu PRIME-HPC FX10.
+In addition to the above environment, it has been confirmed that \scalelib can be compiled and run on  machines with a SPARC-based instruction set, such as the K Computer.
 
 
 \section{Installation of external libraries and drawing tools} \label{sec:inst_env}
