@@ -32,7 +32,12 @@ MODS=mod_net2g_vars.o     \
 ##----------------------------------------------------------
 ## make rules
 
-all: main
+all:
+	$(MAKE) makedir
+	$(MAKE) main
+
+makedir:
+	mkdir -p $(BINDIR)
 
 main: prg_netcdf2grads_h.o
 	$(FC) $(FFLAGS) -o $(OBJECT) $(MODS) $(LIBS)
