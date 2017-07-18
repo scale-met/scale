@@ -51,20 +51,20 @@ MODS=mod_vars.o mod_prof.o mod_comm.o mod_driver.o
 all: launcher
 
 launcher: launcher.o
-	$(FC) $(FFLAGS) $(INCLUDES) $(LIBS) -o $(OBJ) $(MODS) launcher.o
+	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) $(LIBS) -o $(OBJ) $(MODS) launcher.o
 
 ####----------------------------------------------------------------------------------
 
 mod_vars.o: mod_vars.f90
-	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
 mod_prof.o: mod_prof.f90 mod_vars.o
-	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
 mod_comm.o: mod_comm.f90 mod_vars.o
-	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
 mod_driver.o: mod_driver.f90 mod_vars.o mod_prof.o mod_comm.o
-	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
 launcher.o: launcher.f90 mod_vars.o mod_prof.o mod_comm.o mod_driver.o
-	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
 
 ####----------------------------------------------------------------------------------
 
