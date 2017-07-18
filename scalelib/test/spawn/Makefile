@@ -51,18 +51,18 @@ MODS=mod_vars.o mod_prof.o mod_comm.o
 all: driver
 
 driver: driver.o
-	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) $(LIBS) -o $(OBJ) $(MODS) driver.o
+	$(FC) $(FFLAGS) $(INCLUDES) $(LIBS) -o $(OBJ) $(MODS) driver.o
 
 ####----------------------------------------------------------------------------------
 
 mod_vars.o: mod_vars.f90
-	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
 mod_prof.o: mod_prof.f90 mod_vars.o
-	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
 mod_comm.o: mod_comm.f90 mod_vars.o
-	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
 driver.o: driver.f90 mod_vars.o mod_prof.o mod_comm.o
-	$(FC) $(FFLAGS) $(FFLAGS_COMMON) $(INCLUDES) -o $@ -c $<
+	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
 
 
 ####----------------------------------------------------------------------------------

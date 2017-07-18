@@ -68,7 +68,7 @@ clean:
 .f90.o:
 	$(FC) $(FFLAGS) -I$(DCUTILSDIR) -o $@ -c $<
 .c.o:
-	$(CC) $(CFLAGS) $(CFLAGS_COMMON) $(SCALE_NETCDF_INCLUDE) -o $@ -c $<
+	$(CC) $(CFLAGS) $(SCALE_NETCDF_INCLUDE) -o $@ -c $<
 
 %.o: %.mod
 

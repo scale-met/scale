@@ -37,46 +37,39 @@ ifeq ($(origin INDEX_DIR), undefined)
    INDEX_DIR = $(SCALELIBDIR)/include
 endif
 
-FFLAGS_COMMON  = $(FFLAGS_SYSDEPEND)
-CFLAGS_COMMON  = $(CFLAGS_SYSDEPEND)
-
 ifeq ($(SCALE_USE_AGRESSIVEOPT),T)
-   FFLAGS = $(FFLAGS_AGGRESSIVE)
-   CFLAGS = $(CFLAGS_FAST)
+   FFLAGS = $(FFLAGS_AGGRESSIVE) $(FFLAGS_SYSDEPEND)
+   CFLAGS = $(CFLAGS_FAST)       $(CFLAGS_SYSDEPEND)
 else
    ifeq ($(SCALE_DEBUG),T)
-      FFLAGS_COMMON += -DDEBUG
-      FFLAGS         = $(FFLAGS_DEBUG)
-      FFLAGS_DYN     = $(FFLAGS_DEBUG)
-      CFLAGS         = $(CFLAGS_DEBUG)
+      FFLAGS = $(FFLAGS_DEBUG) $(FFLAGS_SYSDEPEND) -DDEBUG
+      CFLAGS = $(CFLAGS_DEBUG) $(CFLAGS_SYSDEPEND)
       SCALE_QUICKDEBUG =
    else
       ifeq ($(SCALE_QUICKDEBUG),T)
-         FFLAGS_COMMON += -DQUICKDEBUG
-         FFLAGS         = $(FFLAGS_QUICKDEBUG)
-         FFLAGS_DYN     = $(FFLAGS_QUICKDEBUG)
-         CFLAGS         = $(CFLAGS_FAST)
+         FFLAGS = $(FFLAGS_QUICKDEBUG) $(FFLAGS_SYSDEPEND) -DQUICKDEBUG
+         CFLAGS = $(CFLAGS_FAST)       $(CFLAGS_SYSDEPEND)
       else
-         FFLAGS = $(FFLAGS_FAST)
-         CFLAGS = $(CFLAGS_FAST)
+         FFLAGS = $(FFLAGS_FAST)       $(FFLAGS_SYSDEPEND)
+         CFLAGS = $(CFLAGS_FAST)       $(CFLAGS_SYSDEPEND)
       endif
    endif
 endif
 
 ifeq ($(SCALE_USE_SINGLEFP),T)
-   FFLAGS_COMMON += -DSINGLE
+   FFLAGS += -DSINGLE
 endif
 
 ifeq ($(SCALE_USE_MASSCHECK),T)
-   FFLAGS_COMMON += -DCHECK_MASS
+   FFLAGS += -DCHECK_MASS
 endif
 
 ifeq ($(SCALE_ENABLE_OPENMP),T)
-   FFLAGS_COMMON += $(FFLAGS_OPENMP)
+   FFLAGS += $(FFLAGS_OPENMP)
 endif
 
 ifeq ($(SCALE_ENABLE_OPENACC),T)
-   FFLAGS_COMMON += $(FFLAGS_OPENACC)
+   FFLAGS += $(FFLAGS_OPENACC)
 endif
 
 # NetCDF library setting
@@ -92,24 +85,24 @@ ifeq ($(SCALE_ENABLE_PNETCDF),T)
 endif
 
 ifeq ($(SCALE_COMPAT_NETCDF3),T)
-   CFLAGS_COMMON += -DNETCDF3
+   CFLAGS += -DNETCDF3
 endif
 
 # Math library setting
 # library location are inquired in order of: environment variable->Makedef.XXX
 ifeq ($(SCALE_ENABLE_MATHLIB),T)
-   FFLAGS_COMMON += -DMATHLIB
+   FFLAGS += -DMATHLIB
 endif
 
 # PAPI library setting
 # library location are inquired in order of: environment variable->Makedef.XXX
 ifeq ($(SCALE_ENABLE_PAPI),T)
-   FFLAGS_COMMON += -DPAPI
+   FFLAGS += -DPAPI
 endif
 
 # Super Droplet Method (SDM)
 ifeq ($(SCALE_ENABLE_SDM),T)
-   FFLAGS_COMMON  += -DSDM $(ADDITIONAL_FFLAGS_SDM)
+   FFLAGS         += -DSDM $(ADDITIONAL_FFLAGS_SDM)
    GAGETRYDIR      = $(TOPDIR)/contrib/Gadgetry
    MTDIR           = $(TOPDIR)/contrib/mt
    SDMDIR          = $(TOPDIR)/contrib/SDM

@@ -329,16 +329,16 @@ $(MODDIR)/%.mod : %.mod
 	install $< $@
 
 $(OBJ_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(FFLAGS_COMMON) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJS_FOR_DYN) :
-	$(FC) $(FFLAGS_DYN) $(FFLAGS_COMMON) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb $< > $@
 #	erb fname=$@ $< > $@
 
 $(OBJ_DIR)/%.o : %.c
-	$(CC) $(CFLAGS) $(CFLAGS_COMMON) -I$(SCALELIBDIR)/include -o $@ -c $<
+	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
 
 .PHONY : clean distclean allclean depend modules dependency
 
