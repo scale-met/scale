@@ -792,8 +792,8 @@ contains
        ! ice
        if ( QIS > 0 ) then
           do iqw = QIS, QIE
-             entr(k,i,j) = entr(k,i,j) + qice * CP_ICE * logT_T0 &
-                                       - qice * LHF0 / TEM00
+             entr(k,i,j) = entr(k,i,j) + q(k,i,j,iqw) * CP_ICE * logT_T0 &
+                                       - q(k,i,j,iqw) * LHF0 / TEM00
           enddo
        endif
 
@@ -813,15 +813,15 @@ contains
 
     real(RP), intent(inout) :: QTRC(:,:,:,:)
 
-    real(RP), parameter :: Dc   =  20.D-6  ! typical particle diameter for cloud  [m]
-    real(RP), parameter :: Dr   = 200.D-6  ! typical particle diameter for rain   [m]
-    real(RP), parameter :: Di   =  80.D-6  ! typical particle diameter for ice    [m]
-    real(RP), parameter :: Ds   =  80.D-6  ! typical particle diameter for snow   [m]
-    real(RP), parameter :: Dg   = 200.D-6  ! typical particle diameter for grapel [m]
-    real(RP), parameter :: RHOw = 1000.D0  ! typical density for warm particles   [kg/m3]
-    real(RP), parameter :: RHOf =  100.D0  ! typical density for frozen particles [kg/m3]
-    real(RP), parameter :: RHOg =  400.D0  ! typical density for grapel particles [kg/m3]
-    real(RP), parameter :: b    =  3.D0    ! assume spherical form
+    real(RP), parameter :: Dc   =  20.E-6_RP ! typical particle diameter for cloud  [m]
+    real(RP), parameter :: Dr   = 200.E-6_RP ! typical particle diameter for rain   [m]
+    real(RP), parameter :: Di   =  80.E-6_RP ! typical particle diameter for ice    [m]
+    real(RP), parameter :: Ds   =  80.E-6_RP ! typical particle diameter for snow   [m]
+    real(RP), parameter :: Dg   = 200.E-6_RP ! typical particle diameter for grapel [m]
+    real(RP), parameter :: RHOw =  1000.0_RP ! typical density for warm particles   [kg/m3]
+    real(RP), parameter :: RHOf =   100.0_RP ! typical density for frozen particles [kg/m3]
+    real(RP), parameter :: RHOg =   400.0_RP ! typical density for grapel particles [kg/m3]
+    real(RP), parameter :: b    =     3.0_RP ! assume spherical form
 
     real(RP) :: piov6
     !---------------------------------------------------------------------------

@@ -575,7 +575,7 @@ contains
              + CV_qc * qc(kref,i,j)
        CPtot = CPdry * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
              + CP_qv * qv(kref,i,j)                           &
-             + CP_qc * qc(kref,i,j)
+             + CV_qc * qc(kref,i,j)
        CVovCP = CVtot / CPtot
        dens(kref,i,j) = P00 / ( Rtot * pott(kref,i,j) ) * ( pres(kref,i,j)/P00 )**CVovCP
     enddo
