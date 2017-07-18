@@ -30,7 +30,7 @@ if [ ! ${PPCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${PPNAME} ${CONFLIST[i]} || exit`
+      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${PPNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -40,7 +40,7 @@ if [ ! ${INITCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${INITNAME} ${CONFLIST[i]} || exit`
+      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${INITNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -50,7 +50,7 @@ if [ ! ${RUNCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_MAIN=`echo -e "${RUN_MAIN}\n"fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} || exit`
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -60,7 +60,7 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} || exit`
+      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
