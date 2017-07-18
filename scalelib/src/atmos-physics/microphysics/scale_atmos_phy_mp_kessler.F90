@@ -639,8 +639,6 @@ contains
     use scale_grid_index
     use scale_tracer, only: &
        QA
-    use scale_const, only: &
-       EPS => CONST_EPS
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)

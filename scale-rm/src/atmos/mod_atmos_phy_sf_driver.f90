@@ -73,8 +73,6 @@ contains
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
-
-    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

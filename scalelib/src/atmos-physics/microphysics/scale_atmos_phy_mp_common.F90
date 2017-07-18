@@ -770,11 +770,6 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_hydrometeor, only: &
-       QLS, &
-       QLE, &
-       QIS, &
-       QIE
     implicit none
 
     integer,  intent(in)    :: QA_MP

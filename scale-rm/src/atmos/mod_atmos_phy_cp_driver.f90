@@ -94,8 +94,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_CP_driver( update_flag )
-    use scale_time, only: &
-       dt_CP => TIME_DTSEC_ATMOS_PHY_CP
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total

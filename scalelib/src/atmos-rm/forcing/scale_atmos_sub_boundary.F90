@@ -1009,14 +1009,7 @@ contains
   !> Read boundary data
   subroutine ATMOS_BOUNDARY_read
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
-    use scale_grid, only: &
-       GRID_CBFZ, &
-       GRID_CBFX, &
-       GRID_CBFY
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_fileio, only: &
        FILEIO_open, &
        FILEIO_check_coordinates, &
@@ -1306,7 +1299,7 @@ contains
     real(RP) :: boundary_inc_offset
     integer  :: fillgaps_steps
 
-    integer  :: i, j, k, iq, n
+    integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     if ( ATMOS_BOUNDARY_UPDATE_DT <= 0.0_DP ) then
@@ -1982,8 +1975,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference boundary from file
   subroutine ATMOS_BOUNDARY_update_file( ref )
-    use scale_process, only: &
-       PRC_myrank
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
@@ -1992,7 +1983,6 @@ contains
     implicit none
 
     integer, intent(in) :: ref
-    real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
 
     integer :: fid, iq
     !---------------------------------------------------------------------------
@@ -2307,8 +2297,6 @@ contains
        bnd_QTRC, &
        now_step, &
        update_step )
-    use scale_time, only: &
-       TIME_DTSEC
     implicit none
 
     ! arguments

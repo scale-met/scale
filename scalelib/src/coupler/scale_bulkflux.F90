@@ -235,7 +235,7 @@ contains
     real(RP) :: RiB0, RiB ! bulk Richardson number [-]
     real(RP) :: C0Z1, C010, C002 ! initial drag coefficient [-]
     real(RP) :: CmZ1, ChZ1, CqZ1, fmZ1, fhZ1, t0thZ1, q0qeZ1
-    real(RP) :: Cm10, Ch10, Cq10, fm10
+    real(RP) :: Cm10, fm10
     real(RP) :: Cm02, Ch02, Cq02, fm02, fh02, t0th02, q0qe02
     real(RP) :: TH1, TH0
     real(RP) :: logZ1Z0M, log10Z0m, log02Z0m
@@ -681,8 +681,8 @@ contains
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
   function fm_unstable( Z, IL )
-    use scale_const, only: &
-      PI => CONST_PI
+    !use scale_const, only: &
+    !  PI => CONST_PI
     implicit none
 
     ! argument
@@ -694,7 +694,7 @@ contains
 
     ! works
     real(DP) :: R
-    real(DP) :: r4R
+    !real(DP) :: r4R
     !---------------------------------------------------------------------------
 
     R = min( Z * IL, 0.0_DP )

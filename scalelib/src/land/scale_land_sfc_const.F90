@@ -91,7 +91,6 @@ contains
         Z0E,        &
         dt_DP       )
     use scale_process, only: &
-      PRC_myrank,  &
       PRC_MPIstop
     use scale_const, only: &
       PRE00 => CONST_PRE00, &
@@ -163,7 +162,7 @@ contains
 
     real(RP) :: LHV(IA,JA) ! latent heat of vaporization [J/kg]
 
-    integer  :: i, j, n
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Const'

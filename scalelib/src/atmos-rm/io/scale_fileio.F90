@@ -443,7 +443,6 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_rm_process, only: &
-       PRC_2Drank, &
        PRC_NUM_X,  &
        PRC_NUM_Y
     implicit none
@@ -700,10 +699,8 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     use scale_rm_process, only: &
-       PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
     use mpi
@@ -801,11 +798,8 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank,  &
-       PRC_MPIstop, &
-       PRC_LOCAL_COMM_WORLD
+       PRC_MPIstop
     use scale_rm_process, only: &
-       PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
     use mpi
@@ -874,11 +868,8 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank, &
-       PRC_MPIstop, &
-       PRC_LOCAL_COMM_WORLD
+       PRC_MPIstop
     use scale_rm_process, only: &
-       PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
@@ -974,11 +965,8 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank, &
-       PRC_MPIstop, &
-       PRC_LOCAL_COMM_WORLD
+       PRC_MPIstop
     use scale_rm_process, only: &
-       PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
@@ -1048,23 +1036,13 @@ contains
        date,     &
        subsec,   &
        append    )
-    use gtool_file_h, only: &
-       File_REAL8, &
-       File_REAL4
     use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
        FileSetGlobalAttribute, &
        FileWrite
     use scale_process, only: &
-       PRC_masterrank, &
        PRC_MPIstop
-    use scale_rm_process, only: &
-       PRC_2Drank
-    use scale_time, only: &
-       NOWDATE => TIME_NOWDATE, &
-       NOWMS   => TIME_NOWMS,   &
-       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),         intent(in) :: var(:)   !< value of the variable
@@ -1114,24 +1092,12 @@ contains
        nohalo,   &
        nozcoord  )
     use gtool_file, only: &
-       RMISS
-    use gtool_file_h, only: &
-       File_REAL8, &
-       File_REAL4
-    use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
        FileSetGlobalAttribute, &
        FileWrite
     use scale_process, only: &
-       PRC_masterrank, &
        PRC_MPIstop
-    use scale_rm_process, only: &
-       PRC_2Drank
-    use scale_time, only: &
-       NOWDATE => TIME_NOWDATE, &
-       NOWMS   => TIME_NOWMS,   &
-       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),         intent(in) :: var(:,:) !< value of the variable
@@ -1183,9 +1149,6 @@ contains
        nohalo    )
     use gtool_file, only: &
        RMISS
-    use gtool_file_h, only: &
-       File_REAL8, &
-       File_REAL4
     use gtool_file, only: &
        FileCreate,      &
        FileAddVariable, &
@@ -1194,12 +1157,6 @@ contains
     use scale_process, only: &
        PRC_masterrank, &
        PRC_MPIstop
-    use scale_rm_process, only: &
-       PRC_2Drank
-    use scale_time, only: &
-       NOWDATE => TIME_NOWDATE, &
-       NOWMS   => TIME_NOWMS,   &
-       NOWSEC  => TIME_NOWDAYSEC
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value of the variable
@@ -1249,8 +1206,6 @@ contains
        append,   &
        timetarg, &
        nohalo    )
-    use gtool_file, only: &
-       RMISS
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -1262,8 +1217,6 @@ contains
     use scale_process, only: &
        PRC_masterrank, &
        PRC_MPIstop
-    use scale_rm_process, only: &
-       PRC_2Drank
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value of the variable
@@ -1324,19 +1277,13 @@ contains
        nohalo    )
     use gtool_file, only: &
        RMISS
-    use gtool_file_h, only: &
-       File_REAL8, &
-       File_REAL4
     use gtool_file, only: &
        FileCreate,      &
        FilePutAxis,     &
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_masterrank, &
        PRC_MPIstop
-    use scale_rm_process, only: &
-       PRC_2Drank
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
@@ -1451,8 +1398,7 @@ contains
        PRC_PERIODIC_Y
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
-       NOWMS   => TIME_NOWMS,   &
-       NOWSEC  => TIME_NOWDAYSEC
+       NOWMS   => TIME_NOWMS
     implicit none
 
     integer,          intent(out) :: fid      !< file ID

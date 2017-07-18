@@ -267,7 +267,6 @@ contains
        ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD
 
     integer :: ngas, ncfc
-    integer :: ihydro, iaero
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -316,7 +315,7 @@ contains
     !--- setup climatological profile
     call RD_PROFILE_setup
 
-    RD_KMAX      = KMAX + RD_KADD
+    RD_KMAX = KMAX + RD_KADD
 
     !--- allocate arrays
     ! input
@@ -460,7 +459,7 @@ contains
 
     real(RP) :: zerosw
 
-    integer :: ihydro, iaero, iq
+    integer :: ihydro, iaero
     integer :: RD_k, k, i, j, v, ic
     !---------------------------------------------------------------------------
 
@@ -1931,7 +1930,6 @@ contains
        flux_direct   )
     use scale_const, only: &
        PI   => CONST_PI,   &
-       HUGE => CONST_HUGE, &
        EPS  => CONST_EPS,  &
        EPS1 => CONST_EPS1
     implicit none
@@ -2014,7 +2012,6 @@ contains
 
     real(RP) :: sw
     integer  :: k, i, j, icloud
-    integer  :: kij
     !---------------------------------------------------------------------------
 
     M_irgn      = M(irgn)

@@ -63,7 +63,6 @@ contains
        LAND_PHY_UPDATE_BOTTOM_TEMP,   &
        LAND_PHY_UPDATE_BOTTOM_WATER
 
-    integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 

@@ -127,8 +127,6 @@ contains
   !> Setup
   subroutine ATMOS_HYDROMETEOR_setup
     use scale_const, only: &
-       CPdry          => CONST_CPdry,          &
-       CVdry          => CONST_CVdry,          &
        CPvap          => CONST_CPvap,          &
        CVvap          => CONST_CVvap,          &
        CL             => CONST_CL,             &
@@ -594,7 +592,7 @@ contains
     real(RP), intent(in)  :: q(QA)    !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq(QA)   !< gas constantt      [J/kg/K]
 
-    real(RP) :: qdry, qliq, qice, Rtot
+    real(RP) :: qdry, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
     integer  :: iqw
@@ -668,7 +666,7 @@ contains
     real(RP), intent(in)  :: q   (IA,JA,QA) !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq  (QA)       !< gas constant       [J/kg/K]
 
-    real(RP) :: qdry, qliq, qice, Rtot
+    real(RP) :: qdry, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
     integer  :: i, j, iqw
@@ -749,7 +747,7 @@ contains
     real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq  (QA)          !< gas constant       [J/kg/K]
 
-    real(RP) :: qdry, qliq, qice, Rtot
+    real(RP) :: qdry, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
     integer  :: k, i, j, iqw

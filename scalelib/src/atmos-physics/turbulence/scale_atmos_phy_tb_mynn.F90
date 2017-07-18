@@ -234,21 +234,14 @@ contains
        EPSTvap => CONST_EPSTvap
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY
+       RFDZ => GRID_RFDZ
     use scale_grid_real, only: &
        CZ => REAL_CZ
     use scale_gridtrans, only: &
        I_XYZ, &
        I_XYW, &
        I_XVW, &
-       I_UYW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY, &
-       I_UY, &
-       I_XV
+       I_UYW
     use scale_comm, only: &
        COMM_vars, &
        COMM_wait

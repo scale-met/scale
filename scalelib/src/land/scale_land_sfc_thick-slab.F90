@@ -111,7 +111,6 @@ contains
         Z0E,        &
         dt          )
     use scale_process, only: &
-      PRC_myrank,  &
       PRC_MPIstop
     use scale_const, only: &
       PRE00 => CONST_PRE00, &
@@ -170,16 +169,13 @@ contains
     real(RP) :: LST1(IA,JA)
 
     real(RP) :: res    ! residual
-    real(RP) :: dres   ! d(residual)/dLST
-    real(RP) :: oldres ! residual in previous step
-    real(RP) :: redf   ! reduced factor
 
-    real(RP) :: Ustar, dUstar ! friction velocity [m]
-    real(RP) :: Tstar, dTstar ! friction potential temperature [K]
-    real(RP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
-    real(RP) :: Uabs,  dUabs  ! modified absolute velocity [m/s]
-    real(RP) :: QVsat, dQVsat ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: QVS, dQVS     ! water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: Ustar  ! friction velocity [m]
+    real(RP) :: Tstar  ! friction potential temperature [K]
+    real(RP) :: Qstar  ! friction water vapor mass ratio [kg/kg]
+    real(RP) :: Uabs   ! modified absolute velocity [m/s]
+    real(RP) :: QVsat  ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVS    ! water vapor mixing ratio at surface [kg/kg]
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -187,7 +183,7 @@ contains
 
     real(RP) :: LHV(IA,JA)    ! latent heat of vaporization [J/kg]
 
-    integer  :: i, j, n
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Thick-Slab'

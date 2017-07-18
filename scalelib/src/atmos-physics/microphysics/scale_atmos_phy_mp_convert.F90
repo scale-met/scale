@@ -119,7 +119,6 @@ contains
     character(len=11), parameter :: fname_micpara="micpara.dat"
     character(len=H_SHORT)       :: MP_TYPE_OUTER = "NONE"
     character(len=H_SHORT)       :: MP_TYPE_INNER = "NONE"
-    integer :: COMM_world
 
     NAMELIST / PARAM_ATMOS_PHY_MP_BIN2BULK / &
        sigma_sdf, &
