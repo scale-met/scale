@@ -45,7 +45,7 @@ makelib:
 makebin: $(BINDIR)/$(BINNAME)
 
 run:
-	mpirun -n 4 $(BINNAME) run.conf
+	mpirun -n 4 ./$(BINNAME) run.conf
 
 $(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS)
