@@ -48,7 +48,7 @@ module test_atmos_phy_tb_smg
   real(RP), allocatable  :: SFLX_SH(:,:)
   real(RP), allocatable  :: SFLX_QV(:,:)
 
-  real(RP) :: dt
+  real(DP) :: dt
 
 
   real(RP), allocatable :: ZERO(:,:,:,:)

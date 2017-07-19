@@ -256,11 +256,6 @@ contains
   subroutine CNVTOPO
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       PI => CONST_PI
-    use scale_grid, only: &
-       CBFX => GRID_CBFX, &
-       CBFY => GRID_CBFY
     use scale_topography, only: &
        TOPO_fillhalo, &
        TOPO_Zsfc, &
@@ -268,8 +263,6 @@ contains
     use mod_copytopo, only: &
        COPYTOPO
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( CNVTOPO_DoNothing ) then
@@ -1100,7 +1093,6 @@ contains
 
     real(RP) :: FLX_X(IA,JA)
     real(RP) :: FLX_Y(IA,JA)
-    real(RP) :: FLX_TMP(IA,JA)
 
     real(RP) :: slope(IA,JA)
     real(RP) :: maxslope

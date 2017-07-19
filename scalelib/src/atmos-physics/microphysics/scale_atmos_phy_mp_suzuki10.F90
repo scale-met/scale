@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> Module Spectran Bin Microphysics
+!> module Spectran Bin Microphysics
 !!
 !! @par Description:
 !!      This module contains subroutines for the Spectral Bin Model

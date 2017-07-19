@@ -759,9 +759,6 @@ contains
        VECTR_distance
     use scale_fileio, only: &
        FILEIO_write
-    use scale_grid, only: &
-       GRID_DOMAIN_CENTER_X, &
-       GRID_DOMAIN_CENTER_Y
     use scale_grid_real, only: &
        REAL_BASEPOINT_LON, &
        REAL_BASEPOINT_LAT, &

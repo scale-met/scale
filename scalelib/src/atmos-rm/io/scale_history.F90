@@ -114,8 +114,7 @@ contains
        TIME_NOWDATE,     &
        TIME_NOWMS,       &
        TIME_DTSEC,       &
-       TIME_STARTDAYSEC, &
-       TIME_OFFSET_YEAR
+       TIME_STARTDAYSEC
     use scale_interpolation, only: &
        INTERP_setup_pres
     implicit none
@@ -1265,7 +1264,7 @@ contains
     integer  :: s(3)
 
     integer  :: n, v, id
-    integer  :: i, j, k, ijk
+    integer  :: i, j, k
 
     intrinsic shape
     !---------------------------------------------------------------------------

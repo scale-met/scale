@@ -133,7 +133,6 @@ contains
        HIST_in
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP, &
-       QA_MP, &
        QS_MP, &
        QE_MP
     use mod_atmos_vars, only: &

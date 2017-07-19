@@ -2531,7 +2531,6 @@ contains
        U0, b,                          &
        Up, Lp, Xc, Yc
 
-    real(RP) :: CORIOLI(KA,IA,JA)
     real(RP) :: f0, beta0
 
     real(RP) :: geopot(KA,IA,JA)
@@ -2542,7 +2541,6 @@ contains
     real(RP) :: ln_eta
     real(RP) :: del_eta
     real(RP) :: yphase
-    real(RP) :: yphase_u
     real(RP) :: temp_vfunc
     real(RP) :: geopot_hvari
 
@@ -2551,9 +2549,8 @@ contains
 
     integer :: itr
 
-    integer, parameter :: ITRMAX = 1000
+    integer,  parameter :: ITRMAX = 1000
     real(RP), parameter :: CONV_EPS = 1E-15_RP
-
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

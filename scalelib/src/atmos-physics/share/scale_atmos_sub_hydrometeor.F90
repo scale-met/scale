@@ -127,8 +127,6 @@ contains
   !> Setup
   subroutine ATMOS_HYDROMETEOR_setup
     use scale_const, only: &
-       CPdry          => CONST_CPdry,          &
-       CVdry          => CONST_CVdry,          &
        CPvap          => CONST_CPvap,          &
        CVvap          => CONST_CVvap,          &
        CL             => CONST_CL,             &
@@ -594,7 +592,7 @@ contains
     real(RP), intent(in)  :: q(QA)    !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq(QA)   !< gas constantt      [J/kg/K]
 
-    real(RP) :: qdry, qliq, qice, Rtot
+    real(RP) :: qdry, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
     integer  :: iqw
@@ -668,7 +666,7 @@ contains
     real(RP), intent(in)  :: q   (IA,JA,QA) !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq  (QA)       !< gas constant       [J/kg/K]
 
-    real(RP) :: qdry, qliq, qice, Rtot
+    real(RP) :: qdry, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
     integer  :: i, j, iqw
@@ -749,7 +747,7 @@ contains
     real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration [kg/kg]
     real(RP), intent(in)  :: Rq  (QA)          !< gas constant       [J/kg/K]
 
-    real(RP) :: qdry, qliq, qice, Rtot
+    real(RP) :: qdry, Rtot
     real(RP) :: logT_T0, pres_dry, pres_vap
 
     integer  :: k, i, j, iqw
@@ -792,8 +790,8 @@ contains
        ! ice
        if ( QIS > 0 ) then
           do iqw = QIS, QIE
-             entr(k,i,j) = entr(k,i,j) + qice * CP_ICE * logT_T0 &
-                                       - qice * LHF0 / TEM00
+             entr(k,i,j) = entr(k,i,j) + q(k,i,j,iqw) * CP_ICE * logT_T0 &
+                                       - q(k,i,j,iqw) * LHF0 / TEM00
           enddo
        endif
 
@@ -813,15 +811,15 @@ contains
 
     real(RP), intent(inout) :: QTRC(:,:,:,:)
 
-    real(RP), parameter :: Dc   =  20.D-6  ! typical particle diameter for cloud  [m]
-    real(RP), parameter :: Dr   = 200.D-6  ! typical particle diameter for rain   [m]
-    real(RP), parameter :: Di   =  80.D-6  ! typical particle diameter for ice    [m]
-    real(RP), parameter :: Ds   =  80.D-6  ! typical particle diameter for snow   [m]
-    real(RP), parameter :: Dg   = 200.D-6  ! typical particle diameter for grapel [m]
-    real(RP), parameter :: RHOw = 1000.D0  ! typical density for warm particles   [kg/m3]
-    real(RP), parameter :: RHOf =  100.D0  ! typical density for frozen particles [kg/m3]
-    real(RP), parameter :: RHOg =  400.D0  ! typical density for grapel particles [kg/m3]
-    real(RP), parameter :: b    =  3.D0    ! assume spherical form
+    real(RP), parameter :: Dc   =  20.E-6_RP ! typical particle diameter for cloud  [m]
+    real(RP), parameter :: Dr   = 200.E-6_RP ! typical particle diameter for rain   [m]
+    real(RP), parameter :: Di   =  80.E-6_RP ! typical particle diameter for ice    [m]
+    real(RP), parameter :: Ds   =  80.E-6_RP ! typical particle diameter for snow   [m]
+    real(RP), parameter :: Dg   = 200.E-6_RP ! typical particle diameter for grapel [m]
+    real(RP), parameter :: RHOw =  1000.0_RP ! typical density for warm particles   [kg/m3]
+    real(RP), parameter :: RHOf =   100.0_RP ! typical density for frozen particles [kg/m3]
+    real(RP), parameter :: RHOg =   400.0_RP ! typical density for grapel particles [kg/m3]
+    real(RP), parameter :: b    =     3.0_RP ! assume spherical form
 
     real(RP) :: piov6
     !---------------------------------------------------------------------------

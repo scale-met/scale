@@ -289,7 +289,7 @@ contains
        !$omp shared(INTERP_xi2z_idx,INTERP_xi2z_coef,GRID_CZ,REAL_CZ,CONST_UNDEF)
        do j = JSB, JEB
        do i = ISB, IEB
-       
+
           do k = KS, KE-1
              FDZ(k) = REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j)
           end do
@@ -430,8 +430,6 @@ contains
   !> Reset random seed
   subroutine INTERP_setup_pres( &
        Kpres )
-    use scale_const, only: &
-       CONST_UNDEF
     implicit none
 
     integer,  intent(in) :: Kpres

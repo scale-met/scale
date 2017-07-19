@@ -279,7 +279,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,alpha,temp,ATMOS_SATURATION_LLIMIT_TEMP,ATMOS_SATURATION_ULIMIT_TEMP)  
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,alpha,temp,ATMOS_SATURATION_LLIMIT_TEMP,ATMOS_SATURATION_ULIMIT_TEMP)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -894,7 +894,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,ATMOS_SATURATION_LLIMIT_TEMP,RTEM00,CPovR_liq,LovR_liq,qsat,dens,LovR_ice,CPovR_ice,ATMOS_SATURATION_ULIMIT_TEMP) 
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,ATMOS_SATURATION_LLIMIT_TEMP,RTEM00,CPovR_liq,LovR_liq, &
+    !$omp        qsat,dens,LovR_ice,CPovR_ice,ATMOS_SATURATION_ULIMIT_TEMP)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -986,7 +987,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j,k,psat) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,RTEM00,CPovR_liq,LovR_liq,qsat,dens)  
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,RTEM00,CPovR_liq,LovR_liq,qsat,dens)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1067,7 +1068,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j,k,psat) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,RTEM00,CPovR_ice,LovR_ice,qsat,dens) 
+    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,temp,RTEM00,CPovR_ice,LovR_ice,qsat,dens)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE

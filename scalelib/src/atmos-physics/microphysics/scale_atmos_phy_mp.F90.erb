@@ -114,9 +114,9 @@ module scale_atmos_phy_mp
   !
   !++ Public parameters & variables
   !
-  integer, public    :: QA_MP  ! number of cloud microphysical tracers
-  integer, public    :: QS_MP  ! start index in QTRC
-  integer, public    :: QE_MP  ! end   index in QTRC
+  integer, public    :: QA_MP =  0 ! number of cloud microphysical tracers
+  integer, public    :: QS_MP = -1 ! start index in QTRC
+  integer, public    :: QE_MP = -1 ! end   index in QTRC
 
   character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_NAME(:)
   character(len=H_MID),   pointer, public :: ATMOS_PHY_MP_DESC(:)

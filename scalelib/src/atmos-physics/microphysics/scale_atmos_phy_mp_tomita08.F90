@@ -956,7 +956,7 @@ contains
 
     real(RP) :: w(w_nmax)
 
-    integer  :: k, i, j, iq, ip
+    integer  :: k, i, j, ip
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
@@ -1740,7 +1740,7 @@ contains
     real(RP) :: loga_, b_, nm
 
     real(RP) :: zerosw
-    integer  :: k, i, j, iq
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
 #ifndef __GFORTRAN__

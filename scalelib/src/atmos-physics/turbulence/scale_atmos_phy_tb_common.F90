@@ -1204,22 +1204,12 @@ contains
     use scale_gridtrans, only: &
        I_XYZ, &
        I_XYW, &
-       I_UYW, &
-       I_XVW, &
        I_UYZ, &
        I_XVZ, &
-       I_UVZ, &
-       I_XY,  &
        I_UY,  &
-       I_XV,  &
-       I_UV
+       I_XV
     use scale_grid, only: &
        FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
@@ -1509,7 +1499,6 @@ contains
        GSQRT, J13G, J23G, J33G, MAPF, &
        IIS, IIE, JJS, JJE )
     use scale_grid, only: &
-       RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
        RFDZ => GRID_RFDZ, &
@@ -1699,7 +1688,6 @@ contains
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
-       RFDZ => GRID_RFDZ, &
        RFDY => GRID_RFDY, &
        FDZ  => GRID_FDZ
     use scale_gridtrans, only: &
@@ -1793,7 +1781,6 @@ contains
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
        FDZ  => GRID_FDZ
     use scale_gridtrans, only: &
        I_XYZ, &
