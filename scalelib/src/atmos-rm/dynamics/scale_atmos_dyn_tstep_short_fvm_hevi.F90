@@ -692,6 +692,9 @@ contains
 #ifdef HIST_TEND
        !$omp shared(lhist,pg_t,advcv_t) &
 #endif
+#ifdef DEBUG
+       !$omp shared(RHOT) &
+#endif
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
        !$omp shared(mflx_hi,MOMZ_RK,MOMZ0) &
        !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,PT,POTT,DPRES) &
