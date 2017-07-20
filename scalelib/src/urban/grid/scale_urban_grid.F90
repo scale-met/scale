@@ -85,7 +85,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_GRID. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN_GRID)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_GRID)
 
     allocate( GRID_UCZ (UKS  :UKE) )
     allocate( GRID_UFZ (UKS-1:UKE) )
@@ -103,8 +103,10 @@ contains
     endif
 
     if ( UKE == UKS ) then
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Single layer. LDZ = ', UDZ(1)
     else
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
        '|====== Vertical Coordinate ======|'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &

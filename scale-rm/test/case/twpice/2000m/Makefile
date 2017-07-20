@@ -19,8 +19,8 @@ RUNCONF     = run.conf
 TPROC       = 8
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
-DATPARAM    = input_sounding/twpice.txt,forcing/forcing_twpice.l120
+DATPARAM    = " [${TESTDIR}/data/input_sounding/twpice.txt   twpice.txt         ] \
+                [${TESTDIR}/data/forcing/forcing_twpice.l120 forcing_twpice.l120] "
 DATDISTS    =
 
 

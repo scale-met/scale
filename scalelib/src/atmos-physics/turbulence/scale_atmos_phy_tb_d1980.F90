@@ -42,6 +42,7 @@ module scale_atmos_phy_tb_d1980
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_TB_d1980_config
   public :: ATMOS_PHY_TB_d1980_setup
   public :: ATMOS_PHY_TB_d1980
 
@@ -57,14 +58,16 @@ module scale_atmos_phy_tb_d1980
   !
   !++ Private parameters & variables
   !
-  real(RP), private, parameter :: C1 = 0.19_RP
-  real(RP), private, parameter :: C2 = 0.51_RP
+  real(RP), private, parameter   :: C1 = 0.19_RP
+  real(RP), private, parameter   :: C2 = 0.51_RP
 
-  real(RP), private, parameter :: OneOverThree  = 1.0_RP / 3.0_RP
-  real(RP), private, parameter :: TwoOverThree  = 2.0_RP / 3.0_RP
-  real(RP), private, parameter :: FourOverThree = 4.0_RP / 3.0_RP
+  real(RP), private, parameter   :: OneOverThree  = 1.0_RP / 3.0_RP
+  real(RP), private, parameter   :: TwoOverThree  = 2.0_RP / 3.0_RP
+  real(RP), private, parameter   :: FourOverThree = 4.0_RP / 3.0_RP
 
   real(RP), private, allocatable :: delta(:,:,:) ! (dx*dy*dz)^(1/3)
+
+  integer,  private :: I_TKE
 
   real(RP), private :: ATMOS_PHY_TB_D1980_Km_MAX = 1000.0_RP
   logical,  private :: ATMOS_PHY_TB_D1980_implicit = .false.
@@ -72,15 +75,47 @@ module scale_atmos_phy_tb_d1980
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_TB_d1980_config( &
+       TYPE_TB,  &
+       I_TKE_out )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_tracer, only: &
+       TRACER_regist
+    implicit none
+
+    character(len=*), intent(in)  :: TYPE_TB
+    integer,          intent(out) :: I_TKE_out
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Deardorff (1980) 1.5th TKE Model'
+
+    if ( TYPE_TB /= 'D1980' ) then
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not D1980. Check!'
+       call PRC_MPIstop
+    endif
+
+    call TRACER_regist( I_TKE,                                    & ! [OUT]
+                        1,                                        & ! [IN]
+                        (/ 'TKE_D1980' /),                        & ! [IN]
+                        (/ 'turbulent kinetic energy (D1980)' /), & ! [IN]
+                        (/ 'm2/s2' /)                             ) ! [IN]
+
+    I_TKE_out = I_TKE
+
+    return
+  end subroutine ATMOS_PHY_TB_d1980_config
+
+  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_TB_d1980_setup( &
-       TYPE_TB,       &
-       CDZ, CDX, CDY, &
-       CZ             )
+       CDZ, CDX, CDY, CZ )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-
-    character(len=*), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
@@ -88,21 +123,16 @@ contains
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
     NAMELIST / PARAM_ATMOS_PHY_TB_D1980 / &
-         ATMOS_PHY_TB_D1980_Km_MAX, &
-         ATMOS_PHY_TB_D1980_implicit
-    integer :: k, i, j
+       ATMOS_PHY_TB_D1980_Km_MAX,   &
+       ATMOS_PHY_TB_D1980_implicit
 
     integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ 1.5th TKE Model'
-
-    if ( TYPE_TB /= 'D1980' ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not D1980. Check!'
-       call PRC_MPIstop
-    endif
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Deardorff (1980) 1.5th TKE Model'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -113,7 +143,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_D1980. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_D1980)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_D1980)
 
     allocate( delta(KA,IA,JA) )
 
@@ -135,19 +165,18 @@ contains
   subroutine ATMOS_PHY_TB_d1980( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       tke, tke_t, Km, Ri, Pr, N2,                  &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       RHOQ_t,                                      &
+       Km, Ri, Pr,                                  &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
+    use scale_precision
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       EPS  => CONST_EPS, &
        GRAV => CONST_GRAV
     use scale_grid, only: &
        FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
@@ -160,55 +189,50 @@ contains
        I_UYW, &
        I_XVW, &
        I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV,  &
-       I_UV
+       I_XVZ
     use scale_atmos_phy_tb_common, only: &
        calc_strain_tensor => ATMOS_PHY_TB_calc_strain_tensor, &
-       diffusion_solver => ATMOS_PHY_TB_diffusion_solver, &
-       calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
-       calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
-       calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
-       calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi, &
-       calc_flux_phi => ATMOS_PHY_TB_calc_flux_phi
+       diffusion_solver   => ATMOS_PHY_TB_diffusion_solver,   &
+       calc_tend_momz     => ATMOS_PHY_TB_calc_tend_momz,     &
+       calc_tend_momx     => ATMOS_PHY_TB_calc_tend_momx,     &
+       calc_tend_momy     => ATMOS_PHY_TB_calc_tend_momy,     &
+       calc_tend_phi      => ATMOS_PHY_TB_calc_tend_phi,      &
+       calc_flux_phi      => ATMOS_PHY_TB_calc_flux_phi
     implicit none
 
     ! SGS flux
-    real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
+    real(RP), intent(out)   :: qflx_sgs_momz(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momx(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_momy(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhot(KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
-    real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
-    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency TKE
-    real(RP), intent(out) :: Km (KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
-    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
-    real(RP), intent(out) :: N2 (KA,IA,JA) ! squared Brunt-Vaisala frequency
+    real(RP), intent(inout) :: RHOQ_t       (KA,IA,JA,QA) ! tendency of rho * QTRC
 
-    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
-    real(RP), intent(in)  :: MOMX(KA,IA,JA)
-    real(RP), intent(in)  :: MOMY(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(out)   :: Km           (KA,IA,JA)    ! eddy viscosity (center)
+    real(RP), intent(out)   :: Ri           (KA,IA,JA)    ! Richardson number
+    real(RP), intent(out)   :: Pr           (KA,IA,JA)    ! Prantle number
 
-    real(RP), intent(in)  :: SFLX_MW(IA,JA)
-    real(RP), intent(in)  :: SFLX_MU(IA,JA)
-    real(RP), intent(in)  :: SFLX_MV(IA,JA)
-    real(RP), intent(in)  :: SFLX_SH(IA,JA)
-    real(RP), intent(in)  :: SFLX_QV(IA,JA)
+    real(RP), intent(in)    :: MOMZ         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMX         (KA,IA,JA)
+    real(RP), intent(in)    :: MOMY         (KA,IA,JA)
+    real(RP), intent(in)    :: RHOT         (KA,IA,JA)
+    real(RP), intent(in)    :: DENS         (KA,IA,JA)
+    real(RP), intent(in)    :: QTRC         (KA,IA,JA,QA)
+    real(RP), intent(in)    :: N2           (KA,IA,JA)
 
-    real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
-    real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
-    real(RP), intent(in)  :: MAPF(IA,JA,2,4)      !< map factor
-    real(DP), intent(in)  :: dt
+    real(RP), intent(in)    :: SFLX_MW      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MU      (IA,JA)
+    real(RP), intent(in)    :: SFLX_MV      (IA,JA)
+    real(RP), intent(in)    :: SFLX_SH      (IA,JA)
+    real(RP), intent(in)    :: SFLX_Q       (IA,JA,QA)
+
+    real(RP), intent(in)    :: GSQRT        (KA,IA,JA,7)  !< vertical metrics {G}^1/2
+    real(RP), intent(in)    :: J13G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J23G         (KA,IA,JA,7)  !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J33G                       !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)    :: MAPF         (IA,JA,2,4)   !< map factor
+    real(DP), intent(in)    :: dt
 
     ! diagnostic variables
     real(RP) :: POTT   (KA,IA,JA)
@@ -237,13 +261,13 @@ contains
     real(RP) :: d(KA)
     real(RP) :: ap
 
-    integer :: IIS, IIE
-    integer :: JJS, JJE
+    integer  :: IIS, IIE
+    integer  :: JJS, JJE
 
-    integer :: k, i, j, iq
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(D1980)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Turbulence(D1980)'
 
 #ifdef DEBUG
     qflx_sgs_momz(:,:,:,:)   = UNDEF
@@ -252,13 +276,10 @@ contains
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
     qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
-    tke_t(:,:,:) = UNDEF
-
     Pr (:,:,:) = UNDEF
     Ri (:,:,:) = UNDEF
     Kh (:,:,:) = UNDEF
     Km (:,:,:) = UNDEF
-    N2 (:,:,:) = UNDEF
 
     POTT   (:,:,:) = UNDEF
 #endif
@@ -297,7 +318,7 @@ contains
        ! Ri = N^2 / |S|^2, N^2 = g / theta * dtheta/dz
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS+1, KE-1
+       do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, POTT(k+1,i,j) )
        call CHECK( __LINE__, POTT(k,i,j) )
@@ -306,44 +327,8 @@ contains
        call CHECK( __LINE__, FDZ(k-1) )
        call CHECK( __LINE__, S2(k,i,j) )
 #endif
-          N2(k,i,j) = GRAV * ( POTT(k+1,i,j) - POTT(k-1,i,j) ) * J33G &
-               / ( ( FDZ(k) + FDZ(k-1) ) * GSQRT(k,i,j,I_XYZ) * POTT(k,i,j) )
           Ri(k,i,j) = N2(k,i,j) / S2(k,i,j)
        enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KS+1,i,j) )
-       call CHECK( __LINE__, POTT(KS,i,j) )
-       call CHECK( __LINE__, RFDZ(KS) )
-       call CHECK( __LINE__, S2(KS,i,j) )
-#endif
-          N2(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G &
-               / ( FDZ(KS) * GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) )
-          Ri(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G * RFDZ(KS) &
-               / ( GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) * S2(KS,i,j) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KE,i,j) )
-       call CHECK( __LINE__, POTT(KE-1,i,j) )
-       call CHECK( __LINE__, RFDZ(KE-1) )
-       call CHECK( __LINE__, S2(KE,i,j) )
-#endif
-          N2(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G &
-               / ( FDZ(KE-1) * GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) )
-          Ri(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G * RFDZ(KE-1) &
-               / ( GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) * S2(KE,i,j) )
        enddo
        enddo
 #ifdef DEBUG
@@ -355,7 +340,7 @@ contains
        do i = IIS-1, IIE+1
        do k = KS, KE
           if ( N2(k,i,j) > 1e-10_RP ) then
-             l(k,i,j) = max( min( 0.76_RP * sqrt(TKE(k,i,j)/N2(k,i,j)), delta(k,i,j) ), 1e-10_RP )
+             l(k,i,j) = max( min( 0.76_RP * sqrt(QTRC(k,i,j,I_TKE)/N2(k,i,j)), delta(k,i,j) ), 1e-10_RP )
           else
              l(k,i,j) = delta(k,i,j)
           end if
@@ -369,7 +354,7 @@ contains
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
-          Km(k,i,j) = min( 0.10_RP * l(k,i,j) * sqrt(TKE(k,i,j)), ATMOS_PHY_TB_D1980_Km_MAX )
+          Km(k,i,j) = min( 0.10_RP * l(k,i,j) * sqrt(QTRC(k,i,j,I_TKE)), ATMOS_PHY_TB_D1980_Km_MAX )
           Pr(k,i,j) = 1.0_RP / ( 1.0_RP + 2.0_RP * l(k,i,j) / delta(k,i,j) )
           Kh(k,i,j) = Km(k,i,j) / Pr(k,i,j)
        enddo
@@ -812,6 +797,12 @@ contains
     !##### Tracers #####
     do iq = 1, QA
 
+       if ( iq == I_TKE ) then
+          qflx_sgs_rhoq(:,:,:,:,iq) = 0.0_RP
+          cycle
+       end if
+       if ( .not. TRACER_ADVC(iq) ) cycle
+
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
@@ -871,56 +862,26 @@ contains
        end if
 
        call calc_flux_phi( &
-            qflx_tke, &
-            DENS, TKE, Km, 2.0_RP, &
-            GSQRT, J13G, J23G, J33G, MAPF, &
-            a, b, c, dt, &
-            ATMOS_PHY_TB_D1980_implicit, &
-            IIS, IIE, JJS, JJE )
+            qflx_tke,                            & ! (out)
+            DENS, QTRC(:,:,:,I_TKE), Km, 2.0_RP, & ! (in)
+            GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
+            a, b, c, dt,                         & ! (in)
+            ATMOS_PHY_TB_D1980_implicit,         & ! (in)
+            IIS, IIE, JJS, JJE                   ) ! (in)
 
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-          qflx_tke(k,i,j,ZDIR) = qflx_tke(k,i,j,ZDIR) &
-                               + 0.5_RP * (     MOMZ(k,i,j)  * ( TKE(k+1,i,j)+TKE(k,i,j) ) &
-                                          - abs(MOMZ(k,i,j)) * ( TKE(k+1,i,j)-TKE(k,i,j) ) )
-       end do
-       end do
-       end do
-
-       do j = JJS, JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          qflx_tke(k,i,j,XDIR) = qflx_tke(k,i,j,XDIR) &
-                               + 0.5_RP * (     MOMX(k,i,j)  * ( TKE(k,i+1,j)+TKE(k,i,j) ) &
-                                          - abs(MOMX(k,i,j)) * ( TKE(k,i+1,j)-TKE(k,i,j) ) )
-       end do
-       end do
-       end do
-
-       do j = JJS-1, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          qflx_tke(k,i,j,YDIR) = qflx_tke(k,i,j,YDIR) &
-                               + 0.5_RP * (     MOMY(k,i,j)  * ( TKE(k,i,j+1)+TKE(k,i,j) ) &
-                                          - abs(MOMY(k,i,j)) * ( TKE(k,i,j+1)-TKE(k,i,j) ) )
-       end do
-       end do
-       end do
-
-       call calc_tend_phi( tke_t,    & ! (out)
-                           qflx_tke, & ! (in)
+       call calc_tend_phi( RHOQ_t(:,:,:,I_TKE),           & ! (out)
+                           qflx_tke,                      & ! (in)
                            GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
-                           IIS, IIE, JJS, JJE ) ! (in)
+                           IIS, IIE, JJS, JJE             ) ! (in)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          tke_t(k,i,j) = min( &
-                       tke_t(k,i,j) &
-                       + Km(k,i,j) * S2(k,i,j) &
-                       - Kh(k,i,j) * N2(k,i,j) &
-                       - ( C1 + C2*l(k,i,j)/delta(k,i,j) ) * tke(k,i,j)**(1.5_RP) / l(k,i,j), &
-                       tke(k,i,j)/dt )
+          RHOQ_t(k,i,j,I_TKE) = max( &
+                 RHOQ_t(k,i,j,I_TKE) &
+               + ( Km(k,i,j) * S2(k,i,j) &
+                 - Kh(k,i,j) * N2(k,i,j) &
+                 - ( C1 + C2*l(k,i,j)/delta(k,i,j) ) * QTRC(k,i,j,I_TKE)**(1.5_RP) / l(k,i,j) ) * DENS(k,i,j), &
+                 - QTRC(k,i,j,I_TKE) * DENS(k,i,j) / real(dt,kind=RP) )
        enddo
        enddo
        enddo

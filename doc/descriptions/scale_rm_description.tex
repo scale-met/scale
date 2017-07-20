@@ -1,0 +1,86 @@
+\documentclass[a4paper]{report}
+\title{{\LARGE Detailed formulation of SCALE-RM}}
+\author{Seiya Nishizawa, Hirofumi Tomita, and Team SCALE}
+\date{\today}
+
+\usepackage[dvipdfmx]{graphicx}
+\usepackage[dvipdfmx]{hyperref}
+\usepackage{amsmath}
+\usepackage[round]{natbib}
+\usepackage{bm}
+\usepackage{url}
+\usepackage{pxjahyper}
+\hypersetup{% options for hyperref
+ bookmarksopen=true,
+ bookmarksnumbered=true,
+ colorlinks=true,
+% linkcolor=red,
+ linkcolor=cyan,
+ citecolor=cyan,
+ urlcolor=cyan,
+}
+
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\input{introduction}
+
+\chapter{Governing equations}
+\input{governing_equation}
+
+\chapter{Discretization of dynamics}
+\label{chap:discretization dynamics}
+\input{temporal_integration}
+
+\input{dynamical_process}
+
+\input{dynamical_process_terrainfollowing}
+
+\input{dynamical_process_mapfactor}
+
+\input{dynamical_process_hevi}
+
+\input{dynamical_process_hivi}
+
+
+
+\chapter{Physical parameterization}
+\input{turbulence}
+\input{turbulence_mynn}
+
+\section{Microphysics}
+\input{microphysics}
+\input{microphysics_kessler}
+%\input{microphysics_seiki}
+\input{microphysics_suzuki}
+
+%\section{Radiation}
+%{\Huge TBD}
+
+\section{Surface flux}
+\input{surface_flux}
+
+\section{Land}
+\input{land}
+
+%\section{Aerosol}
+%\input{aerosol}
+
+\section{Large scale sinking}
+\input{large_scale_sinking}
+
+\bibliographystyle{plainnat}
+\bibliography{reference}
+
+\appendix
+\input{appendix}
+
+\input{notation}
+
+\input{variables}
+
+
+\end{document}
+

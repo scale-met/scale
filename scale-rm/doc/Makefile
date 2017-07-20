@@ -1,20 +1,19 @@
+################################################################################
+#
+# Makefile for the reference manual
+#
+################################################################################
+
 TOPDIR = ../..
+
 include $(TOPDIR)/Mkinclude
 
-all: dox doxygen
-
+all: dox
 
 dox:
-	$(MAKE) -C ../../scalelib/doc dox
-	ruby $(TOPDIR)/utils/mkdoc.rb .
-
-doxygen:
-	doxygen scale-rm.cfg
+	ruby $(TOPDIR)/doc/reference/mkdoc.rb .
 
 clean:
-	rm -rf dox html latex
+	rm -rf dox
 
-allclean: clean
-	$(MAKE) -C ../../scalelib/doc clean
-
-.PHONY: dox doxygen clean
+.PHONY: dox clean

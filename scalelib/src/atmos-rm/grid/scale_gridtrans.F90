@@ -77,14 +77,14 @@ module scale_gridtrans
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG), private :: GTRANS_OUT_BASENAME  = ''                     !< basename of the output file
-  character(len=H_MID),  private :: GTRANS_OUT_TITLE     = 'SCALE-RM GEOMETRICS'  !< title    of the output file
-  character(len=H_MID),  private :: GTRANS_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG),  private :: GTRANS_OUT_BASENAME  = ''                     !< basename of the output file
+  character(len=H_MID),   private :: GTRANS_OUT_TITLE     = 'SCALE-RM GEOMETRICS'  !< title    of the output file
+  character(len=H_SHORT), private :: GTRANS_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
 
-  character(len=H_MID),  private :: GTRANS_TOPO_TYPE     = 'TERRAINFOLLOWING'     !< topographical shceme
-  integer,               private :: GTRANS_ThinWall_XDIV = 50                     !< number dividing quarter-cell (x)
-  integer,               private :: GTRANS_ThinWall_YDIV = 50                     !< number dividing quarter-cell (y)
-  logical,               private :: debug                = .false.
+  character(len=H_SHORT), private :: GTRANS_TOPO_type     = 'TERRAINFOLLOWING'     !< topographical shceme
+  integer,                private :: GTRANS_ThinWall_XDIV = 50                     !< number dividing quarter-cell (x)
+  integer,                private :: GTRANS_ThinWall_YDIV = 50                     !< number dividing quarter-cell (y)
+  logical,                private :: debug                = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -97,7 +97,7 @@ contains
     namelist / PARAM_GTRANS / &
        GTRANS_OUT_BASENAME,  &
        GTRANS_OUT_DTYPE,     &
-       GTRANS_TOPO_TYPE,     &
+       GTRANS_TOPO_type,     &
        GTRANS_ThinWall_XDIV, &
        GTRANS_ThinWall_YDIV, &
        debug
@@ -117,7 +117,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_GTRANS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_GTRANS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_GTRANS)
 
     allocate( GTRANS_MAPF (IA,JA,2,4) )
 
@@ -146,19 +146,21 @@ contains
     call GTRANS_rotcoef
 
     ! calc metrics for terrain-following,step-mountain,thin-wall coordinate
-    select case(GTRANS_TOPO_TYPE)
-    case ('TERRAINFOLLOWING')
-      if( IO_L ) write(IO_FID_LOG,*) '=> Use terrain-following coordinate'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Terrain coordinate type : ', trim(GTRANS_TOPO_type)
+    select case(GTRANS_TOPO_type)
+    case('TERRAINFOLLOWING')
+      if( IO_L ) write(IO_FID_LOG,*) '*** => Terrain-following method'
       call GTRANS_terrainfollowing
-    case ('STEPMOUNTAIN')
-      if( IO_L ) write(IO_FID_LOG,*) '=> Use step mountain method'
+    case('STEPMOUNTAIN')
+      if( IO_L ) write(IO_FID_LOG,*) '*** => Step-mountain method'
       call GTRANS_thin_wall
       call GTRANS_step_mountain
-    case ('THINWALL')
-      if( IO_L ) write(IO_FID_LOG,*) '=> Use thin-wall approximation'
+    case('THINWALL')
+      if( IO_L ) write(IO_FID_LOG,*) '*** => Thin-wall approximation method'
       call GTRANS_thin_wall
     case default
-       write(*,*) 'xxx Not appropriate name for GTRANS_TOPO_TYPE : ', trim(GTRANS_TOPO_TYPE)
+       write(*,*) 'xxx Unsupported GTRANS_TOPO_type. STOP'
        call PRC_MPIstop
     end select
 
@@ -751,9 +753,26 @@ contains
   !-----------------------------------------------------------------------------
   !> Write metrics
   subroutine GTRANS_write
+    use scale_const, only: &
+       CONST_RADIUS
+    use scale_vector, only: &
+       VECTR_distance
     use scale_fileio, only: &
        FILEIO_write
+    use scale_grid_real, only: &
+       REAL_BASEPOINT_LON, &
+       REAL_BASEPOINT_LAT, &
+       REAL_LON,           &
+       REAL_LAT
+    use scale_mapproj, only: &
+       MPRJ_lonlat2xy
     implicit none
+
+    real(RP) :: check_X_XY(IA,JA)
+    real(RP) :: check_Y_XY(IA,JA)
+    real(RP) :: distance  (IA,JA)
+
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if ( GTRANS_OUT_BASENAME /= '' ) then
@@ -770,13 +789,13 @@ contains
        call FILEIO_write( GTRANS_MAPF(:,:,2,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_MAPF(:,:,1,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XV', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_MAPF(:,:,2,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XV', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_MAPF(:,:,1,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UV', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_MAPF(:,:,2,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UV', GTRANS_OUT_DTYPE  ) ! [IN]
 
        call FILEIO_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
@@ -785,6 +804,31 @@ contains
 
        call FILEIO_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+
+       do j = 1, JA
+       do i = 1, IA
+          call MPRJ_lonlat2xy( REAL_LON(i,j), REAL_LAT(i,j), check_X_XY(i,j), check_Y_XY(i,j) )
+       enddo
+       enddo
+
+       call FILEIO_write( check_X_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'X_XY', 'x at XY for check', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( check_Y_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'Y_XY', 'y at XY for check', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+
+       do j = 1, JA
+       do i = 1, IA
+          call VECTR_distance( CONST_RADIUS,       & ! [IN]
+                               REAL_BASEPOINT_LON, & ! [IN]
+                               REAL_BASEPOINT_LAT, & ! [IN]
+                               REAL_LON(i,j),      & ! [IN]
+                               REAL_LAT(i,j),      & ! [IN]
+                               distance(i,j)       ) ! [OUT]
+       enddo
+       enddo
+
+       call FILEIO_write( distance(:,:),               GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'distance', 'distance from basepoint', 'm', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
 
     endif
 

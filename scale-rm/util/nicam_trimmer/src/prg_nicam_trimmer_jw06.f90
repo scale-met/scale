@@ -95,7 +95,9 @@ program nicam_trimmer
   call IO_setup( MODELNAME, .false. )
 
   ! setup Log
-  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+  call LogInit( IO_FID_CONF,       &
+                IO_FID_LOG, IO_L,  &
+                IO_FID_NML, IO_NML )
 
   ! setup constants
   call CONST_setup
@@ -259,7 +261,7 @@ program nicam_trimmer
   trimmed(:,:,:,:) = 300.0_SP
   call nicamwrite_4D( lon_trm, lat_trm, slev, time, trimmed, "oa_sst", &
                      (/ dims(6), dims(7), 1, 1 /), outputdir, .true. )
-  
+
   deallocate( data_4d )
   deallocate( trimmed )
   allocate( data_4d( dims(1), dims(2), 1, dims(5) ) )
@@ -713,7 +715,7 @@ contains
     do i = 1,nx
        if(imask(i,j)==0)then  ! sea : not missing value
            newdata(i,j) = data(i,j)
-           cycle 
+           cycle
        else
 
         !-------------------
@@ -783,9 +785,9 @@ contains
            if(imask(i+1,j+1)==0) flag(8)=1
         endif
 
-        !if(maxval(flag(:))==1)then 
+        !if(maxval(flag(:))==1)then
         if(sum(flag(:))>=3)then  ! coast grid : interpolate
-           
+
            dd = 0.0_RP
            xdist(:) = 1.0_RP
            ydata(:) = -999.0_RP
@@ -830,7 +832,7 @@ contains
               + (1.0_RP/xdist(5))*real(flag(5)) &
               + (1.0_RP/xdist(6))*real(flag(6)) &
               + (1.0_RP/xdist(7))*real(flag(7)) &
-              + (1.0_RP/xdist(8))*real(flag(8)) 
+              + (1.0_RP/xdist(8))*real(flag(8))
 
            newdata(i,j) = (   &
                    ydata(1) * (1.0_RP/xdist(1))*real(flag(1)) &
@@ -844,7 +846,7 @@ contains
            imaskr(i,j) = 0
         else
           newdata(i,j) = data(i,j)
-        endif 
+        endif
 
        endif ! sea/land
 
@@ -864,7 +866,7 @@ contains
 
      imask(:,:) = imaskr(:,:)
      data(:,:)  = newdata(:,:)
-  
+
     enddo
 
     return

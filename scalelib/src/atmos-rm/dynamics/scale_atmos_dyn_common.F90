@@ -39,6 +39,7 @@ module scale_atmos_dyn_common
   !++ Public procedure
   !
   public :: ATMOS_DYN_filter_setup
+  public :: ATMOS_DYN_wdamp_setup
   public :: ATMOS_DYN_numfilter_coef
   public :: ATMOS_DYN_numfilter_coef_q
   public :: ATMOS_DYN_filter_tend
@@ -91,8 +92,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_filter_setup( &
-       num_diff, num_diff_q, &
-       CDZ, CDX, CDY, FDZ, FDX, FDY        )
+       num_diff, num_diff_q,        &
+       CDZ, CDX, CDY, FDZ, FDX, FDY )
     use scale_process, only: &
        PRC_MPIstop
     use scale_comm, only: &
@@ -100,12 +101,12 @@ contains
     implicit none
     real(RP), intent(inout) :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(inout) :: num_diff_q(KA,IA,JA,3)
-    real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(in)  :: CDX(IA)
-    real(RP), intent(in)  :: CDY(JA)
-    real(RP), intent(in)  :: FDZ(KA-1)
-    real(RP), intent(in)  :: FDX(IA-1)
-    real(RP), intent(in)  :: FDY(JA-1)
+    real(RP), intent(in)    :: CDZ(KA)
+    real(RP), intent(in)    :: CDX(IA)
+    real(RP), intent(in)    :: CDY(JA)
+    real(RP), intent(in)    :: FDZ(KA-1)
+    real(RP), intent(in)    :: FDX(IA-1)
+    real(RP), intent(in)    :: FDY(JA-1)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -114,7 +115,7 @@ contains
        write(*,*) 'xxx number of HALO must be at least 2 for numrical filter'
        call PRC_MPIstop
     end if
-    
+
     ! allocation
     allocate( CNZ3(3,KA,2) )
     allocate( CNX3(3,IA,2) )
@@ -124,25 +125,25 @@ contains
     allocate( CNY4(5,JA,2) )
 
 
-    call COMM_vars8_init( num_diff(:,:,:,I_DENS,ZDIR), I_COMM_DENS_Z )
-    call COMM_vars8_init( num_diff(:,:,:,I_DENS,XDIR), I_COMM_DENS_X )
-    call COMM_vars8_init( num_diff(:,:,:,I_DENS,YDIR), I_COMM_DENS_Y )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMZ,ZDIR), I_COMM_MOMZ_Z )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMX,ZDIR), I_COMM_MOMX_Z )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMY,ZDIR), I_COMM_MOMY_Z )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
-    call COMM_vars8_init( num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
-    call COMM_vars8_init( num_diff(:,:,:,I_RHOT,ZDIR), I_COMM_RHOT_Z )
-    call COMM_vars8_init( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
-    call COMM_vars8_init( num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
+    call COMM_vars8_init( 'num_diff_DENS_Z', num_diff(:,:,:,I_DENS,ZDIR), I_COMM_DENS_Z )
+    call COMM_vars8_init( 'num_diff_DENS_X', num_diff(:,:,:,I_DENS,XDIR), I_COMM_DENS_X )
+    call COMM_vars8_init( 'num_diff_DENS_Y', num_diff(:,:,:,I_DENS,YDIR), I_COMM_DENS_Y )
+    call COMM_vars8_init( 'num_diff_MOMZ_Z', num_diff(:,:,:,I_MOMZ,ZDIR), I_COMM_MOMZ_Z )
+    call COMM_vars8_init( 'num_diff_MOMZ_X', num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
+    call COMM_vars8_init( 'num_diff_MOMZ_Y', num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
+    call COMM_vars8_init( 'num_diff_MOMX_Z', num_diff(:,:,:,I_MOMX,ZDIR), I_COMM_MOMX_Z )
+    call COMM_vars8_init( 'num_diff_MOMX_X', num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
+    call COMM_vars8_init( 'num_diff_MOMX_Y', num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
+    call COMM_vars8_init( 'num_diff_MOMY_Z', num_diff(:,:,:,I_MOMY,ZDIR), I_COMM_MOMY_Z )
+    call COMM_vars8_init( 'num_diff_MOMY_X', num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
+    call COMM_vars8_init( 'num_diff_MOMY_Y', num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
+    call COMM_vars8_init( 'num_diff_RHOT_Z', num_diff(:,:,:,I_RHOT,ZDIR), I_COMM_RHOT_Z )
+    call COMM_vars8_init( 'num_diff_RHOT_X', num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
+    call COMM_vars8_init( 'num_diff_RHOT_Y', num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
 
-    call COMM_vars8_init( num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
-    call COMM_vars8_init( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
-    call COMM_vars8_init( num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
+    call COMM_vars8_init( 'num_diff_QTRC_Z', num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
+    call COMM_vars8_init( 'num_diff_QTRC_X', num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
+    call COMM_vars8_init( 'num_diff_QTRC_Y', num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
 #ifdef DEBUG
     CNZ3(:,:,:) = UNDEF
@@ -318,6 +319,68 @@ contains
 
     return
   end subroutine ATMOS_DYN_filter_setup
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_DYN_wdamp_setup( &
+       wdamp_coef,              &
+       wdamp_tau, wdamp_height, &
+       FZ                       )
+    use scale_const, only: &
+       PI  => CONST_PI, &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(inout) :: wdamp_coef(KA)
+    real(RP), intent(in)    :: wdamp_tau
+    real(RP), intent(in)    :: wdamp_height
+    real(RP), intent(in)    :: FZ(0:KA)
+
+    real(RP) :: alpha, sw
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    if ( wdamp_height < 0.0_RP ) then
+       wdamp_coef(:) = 0.0_RP
+    elseif( FZ(KE)-wdamp_height < EPS ) then
+       wdamp_coef(:) = 0.0_RP
+    else
+       alpha = 1.0_RP / wdamp_tau
+
+       do k = KS, KE
+          sw = 0.5_RP + sign( 0.5_RP, FZ(k)-wdamp_height )
+
+          wdamp_coef(k) = alpha * sw &
+                        * 0.5_RP * ( 1.0_RP - cos( PI * (FZ(k)-wdamp_height) / (FZ(KE)-wdamp_height)) )
+       enddo
+       wdamp_coef(   1:KS-1) = wdamp_coef(KS)
+       wdamp_coef(KE+1:KA  ) = wdamp_coef(KE)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*)                          ' *** Setup Rayleigh damping coefficient ***'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|     k     zh[m]    coef[/s] |'
+       do k = KA, KE+1, -1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       enddo
+       k = KE
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KE = TOA'
+       do k = KE-1, KS, -1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       enddo
+       k = KS-1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KS-1 = surface'
+       do k = KS-2, 1, -1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       enddo
+       k = 0
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,12x,A)')    '| ',k, FZ(k),               ' |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=============================|'
+    endif
+
+    return
+  end subroutine ATMOS_DYN_wdamp_setup
 
   !-----------------------------------------------------------------------------
   !> Calc coefficient of numerical filter
@@ -846,6 +909,9 @@ contains
     enddo
     enddo
     enddo
+    !$omp parallel do default(none) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,KA,num_diff,work,DENS,iwork,nd_coef_cdz) &
+    !$omp private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
@@ -931,6 +997,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP), intent(out) :: num_diff_q(KA,IA,JA,3)
@@ -1205,7 +1273,9 @@ contains
     integer :: k, i, j, iv
 
     if ( BND_W ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,iv) &
+       !$omp shared(JA,IS,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
 !OCL XFILL
        do j = 1, JA
        do i = 1, IS-1
@@ -1223,7 +1293,9 @@ contains
        enddo
     end if
     if ( BND_E ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,iv) &
+       !$omp shared(JA,IE,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
 !OCL XFILL
        do j = 1, JA
        do i = IE+1, IA
@@ -1248,7 +1320,9 @@ contains
        enddo
     end if
     if ( BND_S ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,iv) &
+       !$omp shared(JS,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
 !OCL XFILL
        do j = 1, JS-1
        do i = 1, IA
@@ -1266,7 +1340,9 @@ contains
        enddo
     end if
     if ( BND_N ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,iv) &
+       !$omp shared(JA,JE,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
 !OCL XFILL
        do j = JE+1, JA
        do i = 1, IA
@@ -1323,7 +1399,7 @@ contains
     real(RP), intent(in)  :: RCDY(JA)
     real(RP), intent(in)  :: RFDZ(KA-1)
     real(RP), intent(in)  :: FDZ(KA-1)
-    
+
     integer :: k, i, j
 
     call PROF_rapstart("DYN_divercence", 2)
@@ -1476,7 +1552,8 @@ contains
 
     if ( KO == 0 ) then
 
-      !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,phi,diff,CNZ3)
        do j = JS, JE
        do i = IS, IE
        do k = KS+1, KE-2
@@ -1523,7 +1600,8 @@ contains
 
     else ! K0=1
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,phi,diff,CNZ3)
        do j = JS, JE
        do i = IS, IE
        do k = KS+2, KE-2
@@ -1556,12 +1634,11 @@ contains
 #endif
           diff(KS+1,i,j,ZDIR) = ( + CNZ3(1,KS+1,2) * phi(KS+2,i,j) &
                                   - CNZ3(2,KS+1,2) * phi(KS+1,i,j) &
-                                  + CNZ3(3,KS+1,2) * phi(KS  ,i,j) )
-          diff(KS  ,i,j,ZDIR) = ( + CNZ3(1,KS  ,2) * phi(KS+1,i,j) &
-                                  - CNZ3(2,KS  ,2) * phi(KS  ,i,j) &
-                                  - CNZ3(1,KS-1,2) * phi(KS+1,i,j) )
-          diff(KS-1,i,j,ZDIR) = - diff(KS  ,i,j,ZDIR)
-          diff(KS-2,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
+                                  + CNZ3(3,KS+1,2) * phi(KS  ,i,j) &
+                                  - CNZ3(1,KS  ,2) * phi(KS+1,i,j) )
+          diff(KS  ,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
+          diff(KS-1,i,j,ZDIR) = - diff(KS+2,i,j,ZDIR)
+          diff(KS-2,i,j,ZDIR) = - diff(KS+3,i,j,ZDIR)
           diff(KE-1,i,j,ZDIR) = ( - CNZ3(2,KE-1,2) * phi(KE-1,i,j) &
                                   + CNZ3(3,KE-1,2) * phi(KE-2,i,j) &
                                   - CNZ3(1,KE-2,2) * phi(KE-3,i,j) )
@@ -1576,7 +1653,8 @@ contains
     end if
 
     if ( IO == 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNX3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1594,7 +1672,8 @@ contains
        enddo
        enddo
     else
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNX3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1622,7 +1701,8 @@ contains
     enddo
 
     if ( JO == 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
+       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNY3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1640,7 +1720,8 @@ contains
        enddo
        enddo
     else
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
+       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNY3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -2378,7 +2459,7 @@ contains
 #endif
        end if
 
-       !--- incoming flux limitation factor [0-1]
+       !--- incoming flux limitation factor (0-1)
        !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -2397,7 +2478,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !--- outgoing flux limitation factor [0-1]
+       !--- outgoing flux limitation factor (0-1)
        !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE

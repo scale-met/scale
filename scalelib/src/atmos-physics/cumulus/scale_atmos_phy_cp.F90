@@ -20,6 +20,7 @@ module scale_atmos_phy_cp
   use scale_prof
   use scale_grid_index
   use scale_tracer
+  use scale_atmos_phy_mp
   private
 
   abstract interface
@@ -49,6 +50,7 @@ module scale_atmos_phy_cp
        use scale_prof
        use scale_grid_index
        use scale_tracer
+       use scale_atmos_phy_mp
        real(RP), intent(in)    :: DENS(KA,IA,JA)
        real(RP), intent(in)    :: MOMX(KA,IA,JA)
        real(RP), intent(in)    :: MOMY(KA,IA,JA)
@@ -60,7 +62,7 @@ module scale_atmos_phy_cp
        real(RP), intent(inout) :: MOMX_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: MOMY_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: RHOT_t_CP(KA,IA,JA)
-       real(RP), intent(inout) :: RHOQ_t_CP(KA,IA,JA,QA)
+       real(RP), intent(inout) :: RHOQ_t_CP(KA,IA,JA,QA_MP)
        real(RP), intent(inout) :: MFLX_cloudbase(IA,JA)
        real(RP), intent(inout) :: SFLX_convrain(IA,JA)
        real(RP), intent(inout) :: cloudtop(IA,JA)
@@ -83,32 +85,26 @@ contains
   subroutine ATMOS_PHY_CP_setup( CP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef CP
-    use NAME(scale_atmos_phy_mp_, CP,), only: &
-       NAME(ATMOS_PHY_CP_, CP, _setup), &
-       NAME(ATMOS_PHY_CP_, CP,), &
-#else
     use scale_atmos_phy_cp_kf, only: &
          ATMOS_PHY_CP_kf_setup, &
          ATMOS_PHY_CP_kf
-#endif
     implicit none
 
     character(len=*), intent(in) :: CP_TYPE
     !------------------------------------------------------------------------------
 
-#ifdef CP
-    call NAME(ATMOS_PHY_CP_, CP, _setup)( CP_TYPE )
-    ATMOS_PHY_CP => NAME(ATMOS_PHY_CP_, CP,)
-#else
-    select case ( CP_TYPE )
-    case( 'KF' )
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(CP_TYPE), ' is selected.'
+
+    select case( CP_TYPE )
+    case('OFF')
+       ! do nothing
+    case('KF')
        call ATMOS_PHY_CP_kf_setup( CP_TYPE )
        ATMOS_PHY_CP => ATMOS_PHY_CP_kf
+    case default
+       write(*,*) 'xxx invalid Cumulus parameterization type(', trim(CP_TYPE), '). CHECK!'
+       call PRC_MPIstop
     end select
-#endif
 
     return
   end subroutine ATMOS_PHY_CP_setup

@@ -166,7 +166,7 @@ module mod_netcdf2grads_h
     HISTORY_DEFAULT_BASENAME,  &
     HISTORY_DEFAULT_TINTERVAL, &
     HISTORY_DEFAULT_TUNIT,     &
-    HISTORY_DEFAULT_ZINTERP
+    HISTORY_DEFAULT_ZDIM   
   namelist  /PARAM_HIST/       &
     HIST_BND
 

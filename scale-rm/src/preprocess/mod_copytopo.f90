@@ -61,8 +61,8 @@ module mod_copytopo
   real(RP), private :: COPYTOPO_TRANSITION_DX = -1.0_RP  !< thickness of transition region [m]: x
   real(RP), private :: COPYTOPO_TRANSITION_DY = -1.0_RP  !< thickness of transition region [m]: y
   real(RP), private :: COPYTOPO_TRANSFACT     = -1.0_RP  !< stretch factor of transition region
-  real(RP), private :: COPYTOPO_FRACX         =  1.0_RP  !< fraction of transition region (x) [0-1]
-  real(RP), private :: COPYTOPO_FRACY         =  1.0_RP  !< fraction of transition region (y) [0-1]
+  real(RP), private :: COPYTOPO_FRACX         =  1.0_RP  !< fraction of transition region (x) (0-1)
+  real(RP), private :: COPYTOPO_FRACY         =  1.0_RP  !< fraction of transition region (y) (0-1)
   real(RP), private :: COPYTOPO_taux          =  1.0_RP  !< maximum value for mixing tau (x) [s]
   real(RP), private :: COPYTOPO_tauy          =  1.0_RP  !< maximum value for mixing tau (y) [s]
 
@@ -70,9 +70,9 @@ module mod_copytopo
   logical,  private :: COPYTOPO_LINEAR_H      = .true.   !< linear or non-linear profile of relax region
   real(RP), private :: COPYTOPO_EXP_H         = 2.0_RP   !< factor of non-linear profile of relax region
 
-  real(RP), private, allocatable :: CTRX(:)              !< center buffer factor [0-1]: x
-  real(RP), private, allocatable :: CTRY(:)              !< center buffer factor [0-1]: y
-  real(RP), private, allocatable :: COPYTOPO_alpha(:,:)  !> damping coefficient  [0-1]
+  real(RP), private, allocatable :: CTRX(:)              !< center buffer factor (0-1): x
+  real(RP), private, allocatable :: CTRY(:)              !< center buffer factor (0-1): y
+  real(RP), private, allocatable :: COPYTOPO_alpha(:,:)  !> damping coefficient  (0-1)
   real(RP), private, allocatable :: topo_pd(:,:)         !> topography of parent domain
 
   !-----------------------------------------------------------------------------
@@ -123,7 +123,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_COPYTOPO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_COPYTOPO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_COPYTOPO)
 
     if ( COPYTOPO_TRANSITION_DX < 0.0_RP ) then
        COPYTOPO_TRANSITION_DX = BUFFER_DX
@@ -185,24 +185,20 @@ contains
        BUFFFACT
     implicit none
 
-    real(RP), allocatable :: CTRXG(:) !< center buffer factor [0-1]: x, global
-    real(RP), allocatable :: CTRYG(:) !< center buffer factor [0-1]: y, global
+    real(RP), allocatable :: CTRXG(:) !< center buffer factor (0-1): x, global
+    real(RP), allocatable :: CTRYG(:) !< center buffer factor (0-1): y, global
 
     real(RP), allocatable :: buffx(:),  buffy(:)
     real(RP)              :: bufftotx,  bufftoty
     real(RP), allocatable :: transx(:), transy(:)
     real(RP)              :: transtotx, transtoty
 
-    integer :: IAG, JAG
     integer :: imain, ibuff, itrans
     integer :: jmain, jbuff, jtrans
     integer :: copy_is, copy_ie, copy_js, copy_je
+
     integer :: i, j, ii, jj
     !---------------------------------------------------------------------------
-
-    ! array size (global domain)
-    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
-    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
     allocate( buffx (0:IAG) )
     allocate( buffy (0:JAG) )

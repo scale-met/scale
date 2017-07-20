@@ -14,20 +14,15 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = scale-rm_pp
-INITNAME    = NONE
-BINNAME     = NONE
-PPCONF      = pp.conf
-INITCONF    = NONE
-RUNCONF     = NONE
+INITCONF    = init.conf
+
 TPROC       = 16
 
 # required data (parameters,distributed files)
-DATDIR      = $(SCALE_DB)/topo/DEM50M/Products
-DATPARAM    =
+DATPARAM    = " [$(SCALE_DB)/topo/DEM50M/Products input_topo] "
 DATDISTS    =
 
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include ../../Makefile.pp.common
+include $(TESTDIR)/Makefile.common

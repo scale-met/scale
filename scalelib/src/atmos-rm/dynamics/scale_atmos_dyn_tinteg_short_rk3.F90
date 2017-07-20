@@ -24,7 +24,7 @@ module scale_atmos_dyn_tinteg_short_rk3
   use scale_grid_index
   use scale_index
   use scale_tracer
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -104,8 +104,8 @@ contains
     integer :: iv
     !---------------------------------------------------------------------------
 
-    select case ( tinteg_type )
-    case ( 'RK3' )
+    select case( tinteg_type )
+    case( 'RK3' )
        if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Heun's method is used"
        ! Heun's method
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
@@ -117,7 +117,7 @@ contains
        FLAG_WS2002 = .false.
        fact_dt1 = 1.0_RP / 3.0_RP
        fact_dt2 = 2.0_RP / 3.0_RP
-    case ( 'RK3WS2002' )
+    case( 'RK3WS2002' )
        if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Wichere and Skamarock (2002) is used"
        ! Wicher and Skamarock (2002) RK3 scheme
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
@@ -149,24 +149,24 @@ contains
     allocate( I_COMM_PROG_RK1(max(VA,1)) )
     allocate( I_COMM_PROG_RK2(max(VA,1)) )
 
-    call COMM_vars8_init( DENS_RK1, I_COMM_DENS_RK1 )
-    call COMM_vars8_init( MOMZ_RK1, I_COMM_MOMZ_RK1 )
-    call COMM_vars8_init( MOMX_RK1, I_COMM_MOMX_RK1 )
-    call COMM_vars8_init( MOMY_RK1, I_COMM_MOMY_RK1 )
-    call COMM_vars8_init( RHOT_RK1, I_COMM_RHOT_RK1 )
+    call COMM_vars8_init( 'DENS_RK1', DENS_RK1, I_COMM_DENS_RK1 )
+    call COMM_vars8_init( 'MOMZ_RK1', MOMZ_RK1, I_COMM_MOMZ_RK1 )
+    call COMM_vars8_init( 'MOMX_RK1', MOMX_RK1, I_COMM_MOMX_RK1 )
+    call COMM_vars8_init( 'MOMY_RK1', MOMY_RK1, I_COMM_MOMY_RK1 )
+    call COMM_vars8_init( 'RHOT_RK1', RHOT_RK1, I_COMM_RHOT_RK1 )
     do iv = 1, VA
        I_COMM_PROG_RK1(iv) = 5 + iv
-       call COMM_vars8_init( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
+       call COMM_vars8_init( 'PROG_RK1', PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
     enddo
 
-    call COMM_vars8_init( DENS_RK2, I_COMM_DENS_RK2 )
-    call COMM_vars8_init( MOMZ_RK2, I_COMM_MOMZ_RK2 )
-    call COMM_vars8_init( MOMX_RK2, I_COMM_MOMX_RK2 )
-    call COMM_vars8_init( MOMY_RK2, I_COMM_MOMY_RK2 )
-    call COMM_vars8_init( RHOT_RK2, I_COMM_RHOT_RK2 )
+    call COMM_vars8_init( 'DENS_RK2', DENS_RK2, I_COMM_DENS_RK2 )
+    call COMM_vars8_init( 'MOMZ_RK2', MOMZ_RK2, I_COMM_MOMZ_RK2 )
+    call COMM_vars8_init( 'MOMX_RK2', MOMX_RK2, I_COMM_MOMX_RK2 )
+    call COMM_vars8_init( 'MOMY_RK2', MOMY_RK2, I_COMM_MOMY_RK2 )
+    call COMM_vars8_init( 'RHOT_RK2', RHOT_RK2, I_COMM_RHOT_RK2 )
     do iv = 1, VA
        I_COMM_PROG_RK2(iv) = 5 + iv
-       call COMM_vars8_init( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
+       call COMM_vars8_init( 'PROG_RK2', PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
     enddo
 
     DENS_RK1(:,:,:) = UNDEF
@@ -189,19 +189,19 @@ contains
   !-----------------------------------------------------------------------------
   !> RK3
   subroutine ATMOS_DYN_tinteg_short_rk3( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, PROG,     &
-       mflx_hi,  tflx_hi,                      &
-       DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t, &
-       Rtot, CVtot, CORIOLI,                   &
-       num_diff, divdmp_coef, DDIV,            &
-       FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
-       FLAG_FCT_ALONG_STREAM,                  &
-       CDZ, FDZ, FDX, FDY,                     &
-       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,     &
-       PHI, GSQRT, J13G, J23G, J33G, MAPF,     &
-       REF_pres, REF_dens,                     &
-       BND_W, BND_E, BND_S, BND_N,             &
-       dt                                      )
+       DENS, MOMZ, MOMX, MOMY, RHOT, PROG,      &
+       mflx_hi,  tflx_hi,                       &
+       DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,  &
+       Rtot, CVtot, CORIOLI,                    &
+       num_diff, wdamp_coef, divdmp_coef, DDIV, &
+       FLAG_FCT_MOMENTUM, FLAG_FCT_T,           &
+       FLAG_FCT_ALONG_STREAM,                   &
+       CDZ, FDZ, FDX, FDY,                      &
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,      &
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,      &
+       REF_pres, REF_dens,                      &
+       BND_W, BND_E, BND_S, BND_N,              &
+       dt                                       )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -231,6 +231,7 @@ contains
     real(RP), intent(in)    :: CVtot(KA,IA,JA)
     real(RP), intent(in)    :: CORIOLI(IA,JA)
     real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
     real(RP), intent(in)    :: DDIV(KA,IA,JA)
 
@@ -305,6 +306,11 @@ contains
     tflx_hi_RK(:,:,:,:,:) = UNDEF
 #endif
 
+#ifdef QUICKDEBUG
+    mflx_hi(   1:KS-1,:,:,:) = UNDEF
+    mflx_hi(KE+1:KA  ,:,:,:) = UNDEF
+#endif
+
 !OCL XFILL
     DENS0 = DENS
 !OCL XFILL
@@ -367,7 +373,7 @@ contains
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG,                                      & ! [IN]
                           Rtot, CVtot, CORIOLI,                             & ! [IN]
-                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
                           CDZ, FDZ, FDX, FDY,                               & ! [IN]
@@ -375,7 +381,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK3",3)
     call PROF_rapstart("DYN_RK3_BND",3)
@@ -420,7 +426,7 @@ contains
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG_RK1,                                  & ! [IN]
                           Rtot, CVtot, CORIOLI,                             & ! [IN]
-                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
                           CDZ, FDZ, FDX, FDY,                               & ! [IN]
@@ -428,7 +434,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK3",3)
     call PROF_rapstart("DYN_RK3_BND",3)
@@ -473,7 +479,7 @@ contains
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG_RK2,                                  & ! [IN]
                           Rtot, CVtot, CORIOLI,                             & ! [IN]
-                          num_diff, divdmp_coef, DDIV,                      & ! [IN]
+                          num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
                           CDZ, FDZ, FDX, FDY,                               & ! [IN]
@@ -481,7 +487,7 @@ contains
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
                           BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
-                          dtrk, dt                                          ) ! [IN]
+                          dtrk, .true.                                      ) ! [IN]
 
     if ( .NOT. FLAG_WS2002 ) then
        do j = JS, JE

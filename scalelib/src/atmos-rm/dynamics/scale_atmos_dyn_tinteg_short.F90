@@ -39,7 +39,7 @@ module scale_atmos_dyn_tinteg_short
           mflx_hi, tflx_hi,                         & ! (inout)
           DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
           Rtot, CVtot, CORIOLI,                     & ! (in)
-          num_diff, divdmp_coef, DDIV,              & ! (in)
+          num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
           FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
           FLAG_FCT_ALONG_STREAM,                    & ! (in)
           CDZ, FDZ, FDX, FDY,                       & ! (in)
@@ -72,6 +72,7 @@ module scale_atmos_dyn_tinteg_short
        real(RP), intent(in)    :: CORIOLI(IA,JA)
 
        real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
+       real(RP), intent(in)    :: wdamp_coef(KA)
        real(RP), intent(in)    :: divdmp_coef
        real(RP), intent(in)    :: DDIV(KA,IA,JA)
 
@@ -135,45 +136,32 @@ contains
     use scale_index
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef TINTEG_SHORT
-    use NAME(scale_atmos_dyn_tinteg_short_, TINTEG_SHORT,), only: &
-       NAME(ATMOS_DYN_rk_tinteg_short_, TINTEG_SHORT, _setup), &
-       NAME(ATMOS_DYN_rk_tinteg_short_, TINTEG_SHORT,)
-#else
     use scale_atmos_dyn_tinteg_short_rk3, only: &
        ATMOS_DYN_Tinteg_short_rk3_setup, &
        ATMOS_DYN_Tinteg_short_rk3
     use scale_atmos_dyn_tinteg_short_rk4, only: &
        ATMOS_DYN_Tinteg_short_rk4_setup, &
        ATMOS_DYN_Tinteg_short_rk4
-#endif
     implicit none
+
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_short_TYPE
     !---------------------------------------------------------------------------
 
-#ifdef TINTEG_SHORT
-    NAME(ATMOS_DYN_Tinteg_short_, TINTEG_SHORT, _setup)( &
-            ATMOS_DYN_Tinteg_short_TYPE )
-    ATMOS_DYN_Tinteg_short => NAME(ATMOS_DYN_Tingeg_short_, TINTEG_SHORT,)
-#else
-    select case ( ATMOS_DYN_Tinteg_short_TYPE )
-    case ( 'RK3', 'RK3WS2002' )
+    select case( ATMOS_DYN_Tinteg_short_TYPE )
+    case( 'RK3', 'RK3WS2002' )
        call ATMOS_DYN_Tinteg_short_rk3_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk3
-    case ( 'RK4' )
+    case( 'RK4' )
        call ATMOS_DYN_Tinteg_short_rk4_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk4
-    case ( 'OFF', 'NONE' )
+    case( 'OFF', 'NONE' )
        ! do nothing
     case default
        write(*,*) 'xxx ATMOS_DYN_TINTEG_SHORT_TYPE is invalid: ', ATMOS_DYN_Tinteg_short_TYPE
        call PRC_MPIstop
     end select
-#endif
 
     return
   end subroutine ATMOS_DYN_Tinteg_short_setup

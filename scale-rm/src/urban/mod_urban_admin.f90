@@ -71,7 +71,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN)
 
     !-----< module component check >-----
 

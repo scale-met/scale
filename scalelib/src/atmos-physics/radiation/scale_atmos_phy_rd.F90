@@ -86,17 +86,12 @@ contains
   subroutine ATMOS_PHY_RD_setup( RD_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef RD
-    use NAME(scale_atmos_phy_rd_, RD,), only: &
-       NAME(ATMOS_PHY_RD_, RD, _setup), &
-       NAME(ATMOS_PHY_RD_, RD,)
-#else
     use scale_atmos_phy_rd_mstrnx, only: &
        ATMOS_PHY_RD_mstrnx_setup, &
        ATMOS_PHY_RD_mstrnx
-#endif
+    use scale_atmos_phy_rd_offline, only: &
+       ATMOS_PHY_RD_offline_setup, &
+       ATMOS_PHY_RD_offline
     use scale_atmos_phy_rd_mm5sw, only: &
        swinit
     implicit none
@@ -104,11 +99,18 @@ contains
     character(len=*), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( RD_TYPE )
-    case ( 'MSTRNX' )
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(RD_TYPE), ' is selected.'
+
+    select case( RD_TYPE )
+    case('OFF')
+       ! do nothing
+    case( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
-    case ( 'WRF' )
+    case( 'OFFLINE' )
+       call ATMOS_PHY_RD_offline_setup( RD_TYPE )
+       ATMOS_PHY_RD => ATMOS_PHY_RD_offline
+    case( 'WRF' )
        call ATMOS_PHY_RD_mstrnx_setup( 'MSTRNX' )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
        call swinit

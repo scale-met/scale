@@ -63,10 +63,6 @@ contains
        tinteg_type )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
-    use scale_comm, only: &
-       COMM_vars8_init
     implicit none
 
     character(len=*) :: tinteg_type

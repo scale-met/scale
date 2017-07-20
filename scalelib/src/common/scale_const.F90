@@ -50,10 +50,10 @@ module scale_const
   ! physical constants
   real(RP), public, parameter :: CONST_STB     = 5.670373E-8_RP      !< Stefan-Boltzman constant [W/m2/K4]
   real(RP), public, parameter :: CONST_KARMAN  = 0.4_RP              !< von Karman constant
-  real(RP), public, parameter :: CONST_R       = 8.3144621_RP        !< universal gas constant [J/mol/K]
+  real(RP), public, parameter :: CONST_R       = 8.31436_RP          !< universal gas constant [J/mol/K]
 
   ! dry air constants
-  real(RP), public            :: CONST_Mdry    =   28.97_RP          !< mass weight (dry air)                     [g/mol]
+  real(RP), public            :: CONST_Mdry    =  28.966_RP          !< mass weight (dry air)                     [g/mol]
   real(RP), public            :: CONST_Rdry    =  287.04_RP          !< specific gas constant (dry air)           [J/kg/K]
   real(RP), public            :: CONST_CPdry   = 1004.64_RP          !< specific heat (dry air,constant pressure) [J/kg/K]
   real(RP), public            :: CONST_CVdry                         !< specific heat (dry air,constant volume)   [J/kg/K]
@@ -61,12 +61,12 @@ module scale_const
   real(RP), public            :: CONST_LAPSdry                       !< dry adiabatic lapse rate                  [K/m]
 
   ! water constants
-  real(RP), public            :: CONST_Mvap    =  18.02_RP           !< mass weight (water vapor)                      [g/mol]
-  real(RP), public, parameter :: CONST_Rvap    = 461.46_RP           !< specific gas constant (water vapor)            [J/kg/K]
-  real(RP), public, parameter :: CONST_CPvap   = 1845.60_RP          !< specific heat (water vapor, constant pressure) [J/kg/K]
+  real(RP), public            :: CONST_Mvap    =  18.016_RP          !< mass weight (water vapor)                      [g/mol]
+  real(RP), public, parameter :: CONST_Rvap    =  461.50_RP          !< specific gas constant (water vapor)            [J/kg/K]
+  real(RP), public, parameter :: CONST_CPvap   = 1846.00_RP          !< specific heat (water vapor, constant pressure) [J/kg/K]
   real(RP), public            :: CONST_CVvap                         !< specific heat (water vapor, constant volume)   [J/kg/K]
   real(RP), public, parameter :: CONST_CL      = 4218.0_RP           !< specific heat (liquid water)                   [J/kg/K]
-  real(RP), public, parameter :: CONST_CI      = 2006.0_RP           !< specific heat (ice)                            [J/kg/K]
+  real(RP), public, parameter :: CONST_CI      = 2106.0_RP           !< specific heat (ice)                            [J/kg/K]
 
   real(RP), public            :: CONST_EPSvap                        !< Rdry / Rvap
   real(RP), public            :: CONST_EPSTvap                       !< 1 / epsilon - 1
@@ -74,16 +74,13 @@ module scale_const
   real(RP), public, parameter :: CONST_EMELT   = 3.4E5_RP
   real(RP), public, parameter :: CONST_TMELT   = 273.15_RP
 
-  real(RP), public            :: CONST_LHV                           !< latent heat of vaporizaion for use
-  real(RP), public            :: CONST_LHS                           !< latent heat of sublimation for use
-  real(RP), public            :: CONST_LHF                           !< latent heat of fusion      for use
-  real(RP), public, parameter :: CONST_LHV0    = 2.5008E6_RP         !< latent heat of vaporizaion at 0C [J/kg]
+  real(RP), public, parameter :: CONST_LHV0    = 2.501E+6_RP         !< latent heat of vaporizaion at 0C [J/kg]
   real(RP), public            :: CONST_LHV00                         !< latent heat of vaporizaion at 0K [J/kg]
-  real(RP), public, parameter :: CONST_LHS0    = 2.8342E6_RP         !< latent heat of sublimation at 0C [J/kg]
+  real(RP), public, parameter :: CONST_LHS0    = 2.834E+6_RP         !< latent heat of sublimation at 0C [J/kg]
   real(RP), public            :: CONST_LHS00                         !< latent heat of sublimation at 0K [J/kg]
   real(RP), public            :: CONST_LHF0                          !< latent heat of fusion      at 0C [J/kg]
   real(RP), public            :: CONST_LHF00                         !< latent heat of fusion      at 0K [J/kg]
-  real(RP), public, parameter :: CONST_PSAT0   =  610.7_RP           !< saturate pressure of water vapor at 0C [Pa]
+  real(RP), public, parameter :: CONST_PSAT0   =  610.78_RP          !< saturate pressure of water vapor at 0C [Pa]
   real(RP), public, parameter :: CONST_DWATR   = 1000.0_RP           !< density of water [kg/m3]
   real(RP), public, parameter :: CONST_DICE    =  916.8_RP           !< density of ice   [kg/m3]
 
@@ -147,7 +144,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CONST. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CONST)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CONST)
 
     if    ( RP == SP ) then
        CONST_UNDEF = real(CONST_UNDEF4,kind=RP)
@@ -158,7 +155,7 @@ contains
        call PRC_MPIstop
     endif
 
-    CONST_PI      = 4.E0_RP * atan( 1.0_RP )
+    CONST_PI      = 4.0_RP * atan( 1.0_RP )
     CONST_D2R     = CONST_PI / 180.0_RP
     CONST_EPS     =          epsilon(0.0_RP)
     CONST_EPS1    = 1.0_RP - epsilon(0.0_RP)
@@ -172,26 +169,13 @@ contains
 
     CONST_CVvap   = CONST_CPvap - CONST_Rvap
     CONST_EPSvap  = CONST_Rdry / CONST_Rvap
-    CONST_EPSTvap = 1.E0_RP / CONST_EPSvap - 1.E0_RP
+    CONST_EPSTvap = 1.0_RP / CONST_EPSvap - 1.0_RP
 
     CONST_LHF0    = CONST_LHS0 - CONST_LHV0
 
     CONST_LHV00   = CONST_LHV0 - ( CONST_CPvap - CONST_CL ) * CONST_TEM00
     CONST_LHS00   = CONST_LHS0 - ( CONST_CPvap - CONST_CI ) * CONST_TEM00
     CONST_LHF00   = CONST_LHF0 - ( CONST_CL    - CONST_CI ) * CONST_TEM00
-
-    if ( CONST_THERMODYN_TYPE == 'EXACT' ) then
-       CONST_LHV = CONST_LHV00
-       CONST_LHS = CONST_LHS00
-       CONST_LHF = CONST_LHF00
-    elseif( CONST_THERMODYN_TYPE == 'SIMPLE' ) then
-       CONST_LHV = CONST_LHV0
-       CONST_LHS = CONST_LHS0
-       CONST_LHF = CONST_LHF0
-    else
-       write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(CONST_THERMODYN_TYPE)
-       call PRC_MPIstop
-    endif
 
     CONST_SOUND = sqrt( CONST_CPdry * CONST_Rdry / ( CONST_CPdry - CONST_Rdry ) * CONST_TEM00 )
 
@@ -237,9 +221,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of sublimation at 0K           [J/kg] : LHS00   = ', CONST_LHS00
     if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of fusion      at 0K           [J/kg] : LHF00   = ', CONST_LHF00
     if( IO_L ) write(IO_FID_LOG,*) '*** Thermodynamics calculation type : ', trim(CONST_THERMODYN_TYPE)
-    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of vaporizaion (used)          [J/kg] : LHV     = ', CONST_LHV
-    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of sublimation (used)          [J/kg] : LHS     = ', CONST_LHS
-    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of fusion      (used)          [J/kg] : LHF     = ', CONST_LHF
     if( IO_L ) write(IO_FID_LOG,*) '*** saturate pressure of water vapor at 0C       [Pa] : PSAT0   = ', CONST_PSAT0
     if( IO_L ) write(IO_FID_LOG,*) '*** density of water                          [kg/m3] : DWATR   = ', CONST_DWATR
     if( IO_L ) write(IO_FID_LOG,*) '*** density of ice                            [kg/m3] : DICE    = ', CONST_DICE

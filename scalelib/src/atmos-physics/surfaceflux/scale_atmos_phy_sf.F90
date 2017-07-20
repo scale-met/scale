@@ -77,7 +77,7 @@ module scale_atmos_phy_sf
        real(RP), intent(in)    :: SFLX_LW_dn(IA,JA)    ! downward longwave  radiation flux at the surface [J/m2/s]
        real(RP), intent(in)    :: SFLX_SW_dn(IA,JA)    ! downward shortwave radiation flux at the surface [J/m2/s]
        real(RP), intent(in)    :: SFC_TEMP  (IA,JA)    ! temperature at the surface skin [K]
-       real(RP), intent(in)    :: SFC_albedo(IA,JA,2)  ! surface albedo (LW/SW) [0-1]
+       real(RP), intent(in)    :: SFC_albedo(IA,JA,2)  ! surface albedo (LW/SW) (0-1)
        real(RP), intent(inout) :: SFC_Z0M   (IA,JA)    ! surface roughness length (momentum) [m]
        real(RP), intent(inout) :: SFC_Z0H   (IA,JA)    ! surface roughness length (heat) [m]
        real(RP), intent(inout) :: SFC_Z0E   (IA,JA)    ! surface roughness length (vapor) [m]
@@ -104,24 +104,18 @@ contains
   subroutine ATMOS_PHY_SF_setup( SF_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef SF
-    use NAME(scale_atmos_phy_, SF,), only: &
-       NAME(ATMOS_PHY_, SF, _setup), &
-       NAME(ATMOS_PHY_, SF,)
-#else
     use scale_atmos_phy_sf_const, only: &
        ATMOS_PHY_SF_const_setup, &
        ATMOS_PHY_SF_const
     use scale_atmos_phy_sf_bulk, only: &
        ATMOS_PHY_SF_bulk_setup, &
        ATMOS_PHY_SF_bulk
-#endif
     implicit none
 
     character(len=*), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(SF_TYPE), ' is selected.'
 
     select case( SF_TYPE )
     case('CONST')
@@ -130,10 +124,12 @@ contains
     case('BULK')
        call ATMOS_PHY_SF_bulk_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_bulk
-    case('OFF', 'COUPLE')
+    case('OFF')
        ! do nothing
+    case('COUPLE')
+       if( IO_L ) write(IO_FID_LOG,*) '*** do nothing here'
     case default
-       write(*,*) 'xxx ATMPS_PHY_SF_TYPE is invalid'
+       write(*,*) 'xxx invalid Surface flux type(', trim(SF_TYPE), '). CHECK!'
        call PRC_MPIstop
     end select
 

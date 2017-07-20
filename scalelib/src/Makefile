@@ -47,114 +47,56 @@ else
   LIBVERSION := $(LIBVERSION)
 endif
 
-SDM_EXIST := $(shell find $(TOPDIR)/contrib -name SDM)
+SDM_EXIST := $(shell find $(TOPDIR)/contrib -name SDM 2> /dev/null )
 
-ifeq ($(RDMA),-D_USE_RDMA)
-  scale_rdma := scale_rdma.o
-else
-  scale_rdma :=
-endif
+OBJS_MP = scale_atmos_phy_mp_dry.o	\
+          scale_atmos_phy_mp_kessler.o	\
+          scale_atmos_phy_mp_sn14.o	\
+          scale_atmos_phy_mp_sdm.o	\
+          scale_atmos_phy_mp_suzuki10.o	\
+          scale_atmos_phy_mp_tomita08.o
 
-ifeq ($(MP),)
-  OBJS_MP = scale_atmos_phy_mp_dry.o	\
-            scale_atmos_phy_mp_kessler.o	\
-            scale_atmos_phy_mp_sn14.o	\
-            scale_atmos_phy_mp_sdm.o	\
-            scale_atmos_phy_mp_suzuki10.o	\
-            scale_atmos_phy_mp_tomita08.o
-else
-  OBJS_MP = scale_atmos_phy_mp_$(MP).o
-  FFLAGS += -DMP=$(MP)
-endif
+OBJS_CP = scale_atmos_phy_cp_kf.o
 
-ifeq ($(CP),)
-  OBJS_CP = scale_atmos_phy_cp_kf.o
-else
-  OBJS_CP = scale_atmos_phy_cp_$(CP).o
-  FFLAGS += -DMP=$(CP)
-endif
+OBJS_AE = scale_atmos_phy_ae_dummy.o	\
+          scale_atmos_phy_ae_kajino13.o
 
-ifeq ($(AE),)
-  OBJS_AE = scale_atmos_phy_ae_dummy.o	\
-            scale_atmos_phy_ae_kajino13.o
-else
-  OBJS_AE = scale_atmos_phy_ae_$(AE).o
-endif
+OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
+          scale_atmos_phy_rd_mm5sw.o	\
+          scale_atmos_phy_rd_offline.o	\
+          scale_atmos_phy_rd_profile.o
 
-ifeq ($(RD),)
-  OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
-            scale_atmos_phy_rd_mm5sw.o	\
-            scale_atmos_phy_rd_profile.o
-else
-  OBJS_RD = scale_atmos_phy_rd_$(RD).o
-  FFLAGS += -DRD=$(RD)
-endif
+OBJS_TB = scale_atmos_phy_tb_smg.o	\
+          scale_atmos_phy_tb_d1980.o	\
+          scale_atmos_phy_tb_dns.o	\
+          scale_atmos_phy_tb_mynn.o	\
+          scale_atmos_phy_tb_hybrid.o
 
-ifeq ($(TB),)
-  OBJS_TB = scale_atmos_phy_tb_dummy.o	\
-            scale_atmos_phy_tb_smg.o	\
-            scale_atmos_phy_tb_d1980.o	\
-            scale_atmos_phy_tb_dns.o	\
-            scale_atmos_phy_tb_mynn.o	\
-            scale_atmos_phy_tb_hybrid.o
-else
-  OBJS_TB = scale_atmos_phy_tb_$(TB).o
-  FFLAGS += -DTB=$(TB)
-endif
-
-ifeq ($(TRACER),)
-  OBJS_TRACER = scale_tracer_dry.o	\
-                scale_tracer_kessler.o	\
-                scale_tracer_sdm.o	\
-                scale_tracer_sn14.o	\
-                scale_tracer_suzuki10.o	\
-                scale_tracer_tomita08.o
-else
-  OBJS_TRACER = scale_tracer_$(TRACER).o
-  FFLAGS += -DTRACER=$(TRACER)
-endif
-
-ifeq ($(AETRACER),)
-  OBJS_AETRACER = scale_aetracer_none.o	\
-                  scale_aetracer_kajino13.o
-else
-  OBJS_AETRACER = scale_aetracer_$(AETRACER).o
-endif
-
-OBJS_DYN = scale_atmos_dyn_tinteg_short.o	\
-           scale_atmos_dyn_tinteg_large.o	\
-           scale_atmos_dyn_tinteg_large_euler.o	\
-           scale_atmos_dyn_tinteg_large_rk3.o	\
-           scale_atmos_dyn_tinteg_tracer.o	\
-           scale_atmos_dyn_tinteg_tracer_euler.o	\
-           scale_atmos_dyn_tinteg_tracer_rk3.o	\
-           scale_atmos_dyn_tstep_short.o	\
-           scale_atmos_dyn_tstep_large.o	\
-           scale_atmos_dyn_tstep_large_fvm_heve.o	\
-           scale_atmos_dyn_tstep_tracer.o	\
-           scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
-           scale_atmos_dyn_fvm_flux.o	\
+OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
+           scale_atmos_dyn_fvm_flux_cd4.o	\
+           scale_atmos_dyn_fvm_flux_cd6.o	\
            scale_atmos_dyn_fvm_flux_ud1.o	\
-           scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_fvm_flux_ud3.o	\
            scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
-           scale_atmos_dyn_fvm_flux_cd4.o	\
            scale_atmos_dyn_fvm_flux_ud5.o	\
-           scale_atmos_dyn_fvm_flux_cd6.o
-ifeq ($(DYNAMICS),)
-  OBJS_DYN += scale_atmos_dyn_tstep_short_fvm_heve.o	\
-              scale_atmos_dyn_tstep_short_fvm_hevi.o	\
-              scale_atmos_dyn_tstep_short_fvm_hivi.o
-else
-  OBJS_DYN += scale_atmos_dyn_tstep_short_$(DYNAMICS).o
-endif
-
-ifeq ($(TINTEG),)
-  OBJS_DYN += scale_atmos_dyn_tinteg_short_rk3.o	\
-              scale_atmos_dyn_tinteg_short_rk4.o
-else
-  OBJS_DYN += scale_atmos_dyn_tinteg_short_$(TINTEG).o
-endif
+           scale_atmos_dyn_fvm_flux.o	\
+           scale_atmos_dyn_tinteg_large_euler.o	\
+           scale_atmos_dyn_tinteg_large_rk3.o	\
+           scale_atmos_dyn_tinteg_large.o	\
+           scale_atmos_dyn_tinteg_short_rk3.o	\
+           scale_atmos_dyn_tinteg_short_rk4.o	\
+           scale_atmos_dyn_tinteg_short.o	\
+           scale_atmos_dyn_tinteg_tracer_euler.o	\
+           scale_atmos_dyn_tinteg_tracer_rk3.o	\
+           scale_atmos_dyn_tinteg_tracer.o	\
+           scale_atmos_dyn_tstep_large_fvm_heve.o	\
+           scale_atmos_dyn_tstep_large.o	\
+           scale_atmos_dyn_tstep_short_fvm_heve.o	\
+           scale_atmos_dyn_tstep_short_fvm_hevi.o	\
+           scale_atmos_dyn_tstep_short_fvm_hivi.o	\
+           scale_atmos_dyn_tstep_short.o	\
+           scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
+           scale_atmos_dyn_tstep_tracer.o
 
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
@@ -174,7 +116,6 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\
 	scale_atmos_phy_sf.o	\
-	scale_atmos_phy_sf_bulkcoef.o	\
 	scale_atmos_phy_sf_bulk.o	\
 	scale_atmos_phy_sf_const.o	\
 	scale_atmos_phy_tb.o	\
@@ -188,7 +129,10 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_sub_saturation.o	\
 	scale_atmos_sub_solarins.o	\
 	scale_atmos_sub_thermodyn.o	\
+	scale_atmos_sub_aerosol.o	\
+	scale_atmos_sub_hydrometeor.o	\
 	scale_atmos_sub_adiabat.o	\
+	scale_atmos_sub_diagnostic.o	\
 	scale_bulkflux.o	\
 	scale_calendar.o	\
 	scale_comm.o	\
@@ -196,6 +140,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_debug.o	\
 	scale_external_io.o	\
 	scale_external_input.o	\
+	scale_external_input_rm.o	\
 	scale_fileio.o	\
 	scale_grid_cartesian.o	\
 	scale_grid_index.o	\
@@ -204,15 +149,18 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_index.o		\
 	scale_gridtrans.o	\
 	scale_history.o	\
-	scale_intepolation.o	\
+	scale_interpolation.o	\
 	scale_interpolation_nest.o	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\
 	scale_land_phy.o	\
+	scale_land_phy_const.o	\
 	scale_land_phy_slab.o	\
 	scale_land_phy_matsiro.o	\
 	scale_land_sfc.o	\
-	scale_land_sfc_slab.o	\
+	scale_land_sfc_const.o	\
+	scale_land_sfc_thin-slab.o	\
+	scale_land_sfc_thick-slab.o	\
 	scale_landuse.o	\
 	scale_rm_process.o	\
 	scale_rm_statistics.o	\
@@ -220,9 +168,11 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_matrix.o	\
 	scale_monitor.o	\
 	scale_ocean_phy.o	\
+	scale_ocean_phy_const.o	\
 	scale_ocean_phy_slab.o	\
 	scale_ocean_phy_file.o	\
 	scale_ocean_sfc.o	\
+	scale_ocean_sfc_const.o	\
 	scale_ocean_sfc_slab.o	\
 	scale_precision.o	\
 	scale_process.o	\
@@ -234,15 +184,13 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_time.o	\
 	scale_topography.o	\
 	scale_tracer.o	\
-	$(OBJS_TRACER)	\
-	$(OBJS_AETRACER)	\
 	scale_urban_grid.o	\
 	scale_urban_grid_index.o	\
 	scale_urban_phy.o	\
 	scale_urban_phy_slc.o	\
 	scale_vector.o
 
-OBJS =  $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
+OBJS = $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 
 OBJS_FOR_DYN = $(OBJ_DIR)/scale_atmos_dyn.o	\
 	$(OBJ_DIR)/scale_atmos_dyn_common.o	\
@@ -272,7 +220,7 @@ all:
 	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
 	$(MAKE) -C $(DCUTILSDIR)
 	$(MAKE) -C $(GTOOLDIR)
-ifeq ($(ENABLE_SDM),T)
+ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) overridesdm
 	$(MAKE) makesdm
@@ -282,7 +230,7 @@ endif
 	@echo "Complete making scalelib."
 
 makedir:
-	@mkdir -p $(MODDIR)
+	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
 
 $(LIBDIR)/libdcutils.a:
@@ -298,7 +246,7 @@ $(LIBDIR)/$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
-ifeq ($(IGNOREDEP),T)
+ifeq ($(SCALE_IGNORE_SRCDEP),T)
 modules:
 else
 modules: $(OBJS)
@@ -314,8 +262,8 @@ checksdm:
 ifneq ($(SDM_EXIST),$(SDMDIR))
 	@echo "SDM directory is missing!" $(SDM_EXIST)
 	@echo "********************************************************************************************* "
-	@echo "** SDM module, which is compiled with 'ENABLE_SDM=T', is not supported.                  **** "
-	@echo "** If you want to use SDM module, please contact Dr. S.Shima(s_shima@sim.u-hyogo.ac.jp)  **** "
+	@echo "** SDM module, which is compiled with 'SCALE_ENABLE_SDM=T', is not supported.              ** "
+	@echo "** If you want to use SDM module, please contact Dr. S.Shima(s_shima@sim.u-hyogo.ac.jp)    ** "
 	@echo "********************************************************************************************* "
 	exit 1
 endif
@@ -345,7 +293,7 @@ cleansdm:
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean
 	$(MAKE) -C $(GTOOLDIR)   allclean
-ifeq ($(ENABLE_SDM),T)
+ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) restoresdm
 	$(MAKE) allcleansdm
@@ -356,7 +304,7 @@ distclean: clean
 	rm -f $(LIBNAME)
 
 clean:
-ifeq ($(ENABLE_SDM),T)
+ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) restoresdm
 	$(MAKE) cleansdm
@@ -381,9 +329,9 @@ $(MODDIR)/%.mod : %.mod
 	install $< $@
 
 $(OBJ_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJS_FOR_DYN) :
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb $< > $@
@@ -392,12 +340,11 @@ scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
 
-$(OBJ_DIR)/scale_rdma.o : scale_rdma.c
-
 .PHONY : clean distclean allclean depend modules dependency
 
+include $(TOPDIR)/utils/Make_environments
 
-ifneq ($(IGNOREDEP),T)
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend
 endif
 # DO NOT DELETE

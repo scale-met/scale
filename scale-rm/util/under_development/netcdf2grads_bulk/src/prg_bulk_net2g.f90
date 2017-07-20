@@ -15,8 +15,6 @@ program netcdf2grads_h_launcher
   !
   !++ used modules
   !
-  use dc_log, only: &
-     LogInit
   use gtool_file, only: &
      FileCloseAll
   use scale_precision

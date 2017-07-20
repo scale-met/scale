@@ -54,13 +54,13 @@ TIME_DT_URBAN=(         "75.0" ) # required parameters for each domain - unit: S
 
 PRC_NUM_X=( 4 ) # required parameters for each domain
 PRC_NUM_Y=( 4 ) # required parameters for each domain
- 
+
 KMAX=( 60 ) # required parameters for each domain
 IMAX=( 32 ) # required parameters for each domain
 JMAX=( 32 ) # required parameters for each domain
 
-LKMAX=5
-LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" ) # required parameters for LKMAX
+LKMAX=7
+LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" "2.00" "4.00" ) # required parameters for LKMAX
 
 UKMAX=5
 UDZ=( "0.01" "0.01" "0.03" "0.05" "0.10" ) # required parameters for UKMAX
@@ -68,7 +68,7 @@ UDZ=( "0.01" "0.01" "0.03" "0.05" "0.10" ) # required parameters for UKMAX
 DX=( "7000.0" ) # required parameters for each domain
 DY=( "7000.0" ) # required parameters for each domain
 
-DEF_Z=( 
+DEF_Z=(
 "FZ(:) =     40.0000,    80.0000,   120.0000,   160.0000,   200.0000,
             243.2800,   290.1089,   340.7779,   395.6016,   454.9209,
             519.1044,   588.5510,   663.6921,   744.9949,   832.9644,
@@ -95,7 +95,6 @@ MPRJ_LC_LAT2="40.0"
 
 #################################################
 #
-# &PARAM_TRACER  (run config)
 # &PARAM_ATMOS   (run config)
 # &PARAM_OCEAN   (run config)
 # &PARAM_LAND    (run config)
@@ -107,7 +106,7 @@ ATMOS_DYN_TYPE=(    "HEVI"     ) # required parameters for each domain
 ATMOS_PHY_MP_TYPE=( "TOMITA08" ) # required parameters for each domain
 ATMOS_PHY_RD_TYPE=( "MSTRNX"   ) # required parameters for each domain
 ATMOS_PHY_SF_TYPE=( "COUPLE"   ) # required parameters for each domain
-ATMOS_PHY_TB_TYPE=( "MYNN"     ) # required parameters for each domain
+ATMOS_PHY_TB_TYPE=( "HYBRID"   ) # required parameters for each domain
 
 OCEAN_TYPE=( "CONST" ) # required parameters for each domain
 LAND_TYPE=(  "SLAB"  ) # required parameters for each domain
@@ -149,7 +148,10 @@ INIT_BASENAME="init"
 
 BASENAME_ORG="history_d01"
 FILETYPE_ORG="SCALE-RM"
+PARENT_PRC_NUM_X=2
+PARENT_PRC_NUM_Y=2
 PARENT_MP_TYPE=3
+LATLON_CATALOGUE="latlon_domain_catalogue_d01.txt"
 USE_FILE_DENSITY=".false."
 USE_FILE_LANDWATER=".true."
 
@@ -166,9 +168,10 @@ USE_FILE_LANDWATER=".true."
 TOPODIR="${SCALE_DB}/topo"
 LANDUSEDIR="${SCALE_DB}/landuse"
 
-TOPOTYPE=(    "GTOPO30" ) # required parameters for each domain
-LANDUSETYPE=( "GLCCv2"  ) # required parameters for each domain
-COPYTOPO=(    ".false." ) # required parameters for each domain
+TOPOTYPE=(     "GTOPO30" ) # required parameters for each domain
+LANDUSETYPE=(  "GLCCv2"  ) # required parameters for each domain
+COPYTOPO=(     ".false." ) # required parameters for each domain
+SMOOTH_LOCAL=( ".true."  ) # required parameters for each domain
 
 MAXSLOPE_RATIO="1.0"
 LIMIT_URBAN_FRACTION="0.3"

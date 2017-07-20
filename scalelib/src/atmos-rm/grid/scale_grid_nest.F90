@@ -100,10 +100,11 @@ module scale_grid_nest
   integer,  public              :: TILEAL_JA(2)         !< cells of all tiles in y-direction
 
   integer,  public              :: NEST_BND_QA = 1      !< number of tracer treated in nesting system
-  integer,  public              :: NEST_INTERP_LEVEL = 4 !< horizontal interpolation level
+  integer,  public              :: NEST_INTERP_LEVEL = 5 !< horizontal interpolation level
+  integer,  public              :: NEST_INTERP_WEIGHT_ORDER = 2 !< horizontal interpolation weight order
 
   logical,  public              :: USE_NESTING          = .false.
-  logical,  public              :: OFFLINE              = .true.
+  logical,  public              :: OFFLINE              = .false.
   logical,  public              :: ONLINE_IAM_PARENT    = .false.   !< a flag to say "I am a parent"
   logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.   !< a flag to say "I am a daughter"
   integer,  public              :: ONLINE_DOMAIN_NUM    = 1
@@ -160,6 +161,7 @@ module scale_grid_nest
   integer, private, allocatable  :: NEST_TILE_LIST_YP(:)     !< yellow-page of daughter targets for parent
   integer, private               :: NUM_YP                   !< page number of yellow-page
 
+  character(len=H_LONG)          :: OFFLINE_PARENT_BASENAME  !< parent file base name
   integer, private               :: OFFLINE_PARENT_PRC_NUM_X !< MPI processes in x-direction in parent [for namelist]
   integer, private               :: OFFLINE_PARENT_PRC_NUM_Y !< MPI processes in y-direction in parent [for namelist]
   integer, private               :: OFFLINE_PARENT_KMAX      !< parent max number in z-direction [for namelist]
@@ -274,12 +276,13 @@ contains
       inter_child    )
 !      flag_parent,   &
 !      flag_child     )
+    use gtool_file, only: &
+       FileGetShape
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
        PRC_MPIstop,         &
        PRC_GLOBAL_domainID, &
-       PRC_nprocs,          &
        PRC_IsMaster
     use scale_rm_process, only: &
        PRC_HAS_W,         &
@@ -296,13 +299,16 @@ contains
        MY_LONY => REAL_LONY, &
        MY_LATY => REAL_LATY, &
        MY_CZ   => REAL_CZ,   &
-       MY_FZ   => REAL_FZ,   &
-       p_latlon_catalog => REAL_DOMAIN_CATALOGUE
+       MY_FZ   => REAL_FZ
     use scale_comm, only: &
-       COMM_world
+       COMM_Bcast
     use scale_interpolation_nest, only: &
        INTRPNEST_setup,            &
        INTRPNEST_interp_fact_llz
+    use scale_atmos_hydrometeor, only: &
+       I_QV
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     integer, intent(in), optional :: inter_parent
@@ -320,21 +326,19 @@ contains
     integer :: ims, ime
     integer :: jms, jme
 
-    character(2) :: dom_num
+    character(len=2) :: dom_num
 
     logical :: flag_parent = .false.
     logical :: flag_child  = .false.
 
+    integer :: dims(1)
+    logical :: error
+
     namelist / PARAM_NEST /      &
-       USE_NESTING,              &
        LATLON_CATALOGUE_FNAME,   &
+       OFFLINE_PARENT_BASENAME,  &
        OFFLINE_PARENT_PRC_NUM_X, &
        OFFLINE_PARENT_PRC_NUM_Y, &
-       OFFLINE_PARENT_KMAX,      &
-       OFFLINE_PARENT_IMAX,      &
-       OFFLINE_PARENT_JMAX,      &
-       OFFLINE_PARENT_LKMAX,     &
-       OFFLINE,                  &
        ONLINE_DOMAIN_NUM,        &
        ONLINE_IAM_PARENT,        &
        ONLINE_IAM_DAUGHTER,      &
@@ -344,15 +348,18 @@ contains
        ONLINE_AGGRESSIVE_COMM,   &
        ONLINE_WAIT_LIMIT,        &
        ONLINE_SPECIFIED_MAXRQ,   &
-       NEST_INTERP_LEVEL
+       NEST_INTERP_LEVEL,        &
+       NEST_INTERP_WEIGHT_ORDER
 
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_NEST] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child
     if( inter_child  /= MPI_COMM_NULL ) flag_parent = .true. ! exist child, so work as a parent
+
+    OFFLINE_PARENT_BASENAME = ""
 
     nwait_p = 0
     nwait_d = 0
@@ -374,11 +381,58 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_NEST. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_NEST)
 
     PRC_GLOBAL_domainID = ONLINE_DOMAIN_NUM
 
-    call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
+    if ( OFFLINE_PARENT_BASENAME /= "" ) then
+
+       OFFLINE = .true.
+       USE_NESTING = .true.
+
+       if ( PRC_IsMaster ) then
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CX", 0 )
+          OFFLINE_PARENT_IMAX = dims(1)-4
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CY", 0 )
+          OFFLINE_PARENT_JMAX = dims(1)-4
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "z", 0, error=error )
+          if ( error ) then
+             OFFLINE_PARENT_KMAX = 0
+          else
+             OFFLINE_PARENT_KMAX = dims(1)
+          end if
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "lz", 0, error=error )
+          if ( error ) then
+             OFFLINE_PARENT_LKMAX = 0
+          else
+             OFFLINE_PARENT_LKMAX = dims(1)
+          end if
+       end if
+       call COMM_Bcast( OFFLINE_PARENT_IMAX )
+       call COMM_Bcast( OFFLINE_PARENT_JMAX )
+       call COMM_Bcast( OFFLINE_PARENT_KMAX )
+       call COMM_Bcast( OFFLINE_PARENT_LKMAX )
+    end if
+
+    if ( ONLINE_IAM_DAUGHTER .or. ONLINE_IAM_PARENT ) then
+
+       if ( OFFLINE ) then
+          write(*,*) 'xxx OFFLINE and ONLINE cannot be use at the same time'
+          call PRC_MPIstop
+       end if
+
+       USE_NESTING = .true.
+       call INTRPNEST_setup( interp_search_divnum, &
+                             NEST_INTERP_LEVEL, &
+                             NEST_INTERP_WEIGHT_ORDER, &
+                            .false. )
+    else
+       call INTRPNEST_setup( interp_search_divnum, &
+                             NEST_INTERP_LEVEL, &
+                             NEST_INTERP_WEIGHT_ORDER, &
+                            .true. )
+    end if
+
     itp_nh = int( NEST_INTERP_LEVEL )
     itp_nv = 2
 
@@ -432,7 +486,7 @@ contains
                iostat = ierr                           )
 
          if ( ierr /= 0 ) then
-            write(*,*) 'xxx cannot open latlon-catalogue file!'
+            write(*,*) 'xxx [grd_nest/NEST_setup] cannot open latlon-catalogue file!'
             call PRC_MPIstop
          endif
 
@@ -443,7 +497,7 @@ contains
                                                  latlon_catalog(i,I_NW,I_LAT), latlon_catalog(i,I_NE,I_LAT), & ! LAT: NW, NE
                                                  latlon_catalog(i,I_SW,I_LAT), latlon_catalog(i,I_SE,I_LAT)    ! LAT: SW, SE
             if ( i /= parent_id ) then
-               if( IO_L ) write(*,*) 'xxx internal error: parent mpi id'
+               write(*,*) 'xxx [grd_nest/NEST_setup] internal error: parent mpi id'
                call PRC_MPIstop
             endif
             if ( ierr /= 0 ) exit
@@ -464,9 +518,11 @@ contains
 !         endif
 
          if( ONLINE_BOUNDARY_USE_QHYD ) then
-            NEST_BND_QA = QA
+            NEST_BND_QA = QA_MP
+         else if ( I_QV > 0 ) then
+            NEST_BND_QA = 1
          else
-            NEST_BND_QA = I_QV
+            NEST_BND_QA = 0
          endif
 
 if( IO_L ) write(IO_FID_LOG,*) "flag_parent", flag_parent, "flag_child", flag_child
@@ -475,8 +531,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
          if( flag_parent ) then ! must do first before daughter processes
          !-------------------------------------------------
             if ( .NOT. ONLINE_IAM_PARENT ) then
-               write(*,*) 'xxx Parent Flag from launcher is not consistent with namelist! [NEST/GRID]'
-               write(*,*) '    PARENT - domain: ', ONLINE_DOMAIN_NUM
+               write(*,*) 'xxx [grd_nest/NEST_setup] Parent Flag from launcher is not consistent with namelist!'
+               write(*,*) 'xxx PARENT - domain : ', ONLINE_DOMAIN_NUM
                call PRC_MPIstop
             endif
 
@@ -549,8 +605,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
          if( flag_child ) then
          !-------------------------------------------------
             if ( .NOT. ONLINE_IAM_DAUGHTER ) then
-               write(*,*) 'xxx Child Flag from launcher is not consistent with namelist! [NEST/GRID]'
-               write(*,*) '    DAUGHTER - domain: ', ONLINE_DOMAIN_NUM
+               write(*,*) 'xxx [grd_nest/NEST_setup] Child Flag from launcher is not consistent with namelist!'
+               write(*,*) 'xxx DAUGHTER - domain : ', ONLINE_DOMAIN_NUM
                call PRC_MPIstop
             endif
 
@@ -733,7 +789,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
          !if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
          !if ( HANDLING_NUM > 2 ) then
-         !   if( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
+         !   f( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
          !   call PRC_MPIstop
          !endif
 
@@ -748,8 +804,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   !> Solve relationship between ParentDomain & Daughter Domain
   subroutine NEST_domain_relate( &
       HANDLE  )
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_process, only: &
        PRC_myrank,   &
        PRC_MPIstop
@@ -800,8 +854,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        endif
     enddo
     if ( .NOT. hit ) then
-       write(*,*) 'xxx region of daughter domain is larger than that of parent: SW search'
-       write(*,*) '    at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
+       write(*,*) 'xxx [grd_nest/NEST_domain_relate] region of daughter domain is larger than that of parent: SW search'
+       write(*,*) '                                  at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx region of daughter domain is larger than that of parent: SW search'
        if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_SW,I_LON)
@@ -836,8 +890,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        endif
     enddo
     if ( .NOT. hit ) then
-       write(*,*) 'xxx region of daughter domain is larger than that of parent: NE search'
-       write(*,*) '    at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
+       write(*,*) 'xxx [grd_nest/NEST_domain_relate] region of daughter domain is larger than that of parent: NE search'
+       write(*,*) '                                  at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx region of daughter domain is larger than that of parent: NE search'
        if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_NE,I_LON)
@@ -1105,12 +1159,12 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        DAUGHTER_NSTEP(HANDLE)     = datapack(13)
        DAUGHTER_DTSEC(HANDLE)     = buffer
     else
-       write(*,*) 'xxx internal error [parentsize: nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_parentsize] internal error'
        call PRC_MPIstop
     endif
 
     if( QA_OTHERSIDE /= NEST_BND_QA ) then
-       write(*,*) 'xxx ERROR: NUMBER of QA are not matched! [parentsize: nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_parentsize] NUMBER of QA are not matched!'
        write(*,*) 'xxx check a flag of ONLINE_BOUNDARY_USE_QHYD.', QA_OTHERSIDE, NEST_BND_QA
        call PRC_MPIstop
     endif
@@ -1162,7 +1216,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        endif
        call COMM_bcast( latlon_catalog, PARENT_PRC_nprocs(HANDLE), 4, 2 )
     else
-       if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_catalogue] internal error'
        call PRC_MPIstop
     endif
 
@@ -1228,12 +1282,12 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        if ( pong /= INTERCOMM_ID(HANDLE) ) ping_error = .true.
 
     else
-       if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_ping] internal error'
        call PRC_MPIstop
     endif
 
     if ( ping_error ) then
-       if( IO_L ) write(*,*) 'xxx ping destination error [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_ping] ping destination error'
        call PRC_MPIstop
     endif
 
@@ -1248,8 +1302,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        PRC_MPIstop, &
        PRC_myrank,  &
        PRC_IsMaster
-    use scale_grid_real, only: &
-       REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
        COMM_world, &
        COMM_bcast
@@ -1322,7 +1374,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        call COMM_bcast(ONLINE_DAUGHTER_NO_ROTATE)
 
        if( ONLINE_NO_ROTATE .neqv. ONLINE_DAUGHTER_NO_ROTATE ) then
-          write(*,*) 'xxx Flag of NO_ROTATE is not consistent with the child domain'
+          write(*,*) 'xxx [grd_nest/NEST_COMM_setup_nestdown] Flag of NO_ROTATE is not consistent with the child domain'
           if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_NO_ROTATE = ', ONLINE_NO_ROTATE
           if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
           call PRC_MPIstop
@@ -1417,12 +1469,12 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        call MPI_BARRIER(INTERCOMM_PARENT, ierr)
     else
     !---------------------------------------------------
-       if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_setup_nestdown] internal error'
        call PRC_MPIstop
     endif
 
     if( NUM_YP * 16 > max_rq .OR. NEST_TILE_ALL * 16 > max_rq ) then ! 16 = dyn:5 + qtrc:11
-       write(*,*) 'xxx internal error (overflow number of ireq) [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_setup_nestdown] internal error (overflow number of ireq)'
        write(*,*) '    NUM_YP x 16        = ', NUM_YP * 16
        write(*,*) '    NEST_TILE_ALL x 16 = ', NEST_TILE_ALL * 16
        write(*,*) '    max_rq             = ', max_rq
@@ -1438,7 +1490,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
     use scale_grid_real, only: &
        REAL_LON,    &
@@ -1610,7 +1661,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        max_ref = maxval( buffer_ref_FZ(:,:,:) )
        max_loc = maxval( REAL_FZ(KS-1:KE,:,:) ) ! HALO + 1
        if ( max_ref < max_loc ) then
-          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
+          write(*,*) 'xxx [grd_nest/NEST_COMM_importgrid_nestdown] REQUESTED DOMAIN IS TOO MUCH BROAD'
           write(*,*) 'xxx -- VERTICAL direction over the limit'
           write(*,*) 'xxx -- reference max: ', max_ref
           write(*,*) 'xxx --     local max: ', max_loc
@@ -1619,7 +1670,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     else
     !---------------------------------------------------
-       write(*,*) 'xxx internal error [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_importgrid_nestdown] internal error'
        call PRC_MPIstop
     endif
 
@@ -1644,11 +1695,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       interped_ref_POTT,   & ! [inout]
       interped_ref_QTRC    ) ! [inout]
     use scale_process, only: &
-       PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
-    use scale_grid_real, only: &
-       REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -1698,11 +1745,11 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     end if
 
     if ( BND_QA > I_BNDQA ) then
-       if( IO_L ) write(*,*) 'xxx internal error: BND_QA is larger than I_BNDQA [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_nestdown] internal error: BND_QA is larger than I_BNDQA'
        call PRC_MPIstop
     endif
     if ( BND_QA > max_bndqa ) then
-       if( IO_L ) write(*,*) 'xxx internal error: BND_QA is larger than max_bndqa [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_nestdown] internal error: BND_QA is larger than max_bndqa'
        call PRC_MPIstop
     endif
 
@@ -1985,7 +2032,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
        call PROF_rapend  ('NEST_total_C', 2)
     else
-       write(*,*) 'xxx internal error [nestdown: nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_nestdown] internal error'
        call PRC_MPIstop
     endif
 
@@ -2015,7 +2062,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     end if
 
     if ( BND_QA > I_BNDQA ) then
-       write(*,*) 'xxx internal error: about BND_QA [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_recvwait_issue] internal error: about BND_QA'
        call PRC_MPIstop
     endif
 
@@ -2086,7 +2133,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
        call PROF_rapend('NEST_total_C', 2)
     else
-       write(*,*) 'xxx internal error [issue: nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_recvwait_issue] internal error'
        call PRC_MPIstop
     endif
 
@@ -2098,18 +2145,16 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   subroutine NEST_COMM_recv_cancel( &
       HANDLE     ) ! [in]
     use scale_process, only: &
-       PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
     implicit none
 
     integer, intent(in) :: HANDLE   !< id number of nesting relation in this process target
 
     integer :: ierr
+    !logical :: flag
     !integer :: istatus(MPI_STATUS_SIZE)
 
     integer :: rq
-    logical :: flag
     !---------------------------------------------------------------------------
 
     if( .not. USE_NESTING ) then
@@ -2128,13 +2173,13 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
              call MPI_CANCEL(ireq_d(rq), ierr)
              !call MPI_TEST_CANCELLED(istatus, flag, ierr)
              !if ( .NOT. flag ) then
-             !   write(IO_FID_LOG,*) 'XXX ERROR: receive actions do not cancelled, req = ', rq
+             !   write(*,*) 'xxx receive actions do not cancelled, req = ', rq
              !endif
           endif
        enddo
 
     else
-       write(*,*) 'xxx internal error [cancel: nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_recv_cancel] internal error'
        call PRC_MPIstop
     endif
 
@@ -2153,8 +2198,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       isu_tagf,  & ! [inout]
       flag_dens  ) ! [in ]: optional
     use scale_process, only: &
-       PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
@@ -2179,7 +2222,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer :: xs, xe
     integer :: ys, ye
 
-    integer :: i, j, k
+    integer :: k
     integer :: ig, rq, yp
     logical :: no_zstag    = .true.
     logical :: logarithmic = .false.
@@ -2278,7 +2321,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           endif
 
           if ( isu_tag > max_isu .OR. isu_tagf > max_isuf ) then
-             write(*,*) 'xxx Exceeded maximum issue [intercomm: nest/grid]'
+             write(*,*) 'xxx [grd_nest/NEST_COMM_intercomm_nestdown_3D] Exceeded maximum issue'
              write(*,*) 'xxx isu_tag  = ', isu_tag
              write(*,*) 'xxx isu_tagf = ', isu_tagf
              call PRC_MPIstop
@@ -2320,7 +2363,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        endif
     else
     !---------------------------------------------------
-       write(*,*) 'xxx internal error [nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_intercomm_nestdown_3D] internal error'
        call PRC_MPIstop
     endif
 
@@ -2338,7 +2381,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       flag_dens  ) ! [in ]: optional
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
@@ -2433,7 +2475,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        enddo ! YP Loop
 
        if ( isu_tag > max_isu .OR. isu_tagf > max_isuf ) then
-          write(*,*) 'xxx Exceeded maximum issue [receive: nest/grid]'
+          write(*,*) 'xxx [grd_nest/NEST_COMM_issuer_of_receive_3D] Exceeded maximum issue'
           write(*,*) 'xxx isu_tag  = ', isu_tag
           write(*,*) 'xxx isu_tagf = ', isu_tagf
           call PRC_MPIstop
@@ -2443,7 +2485,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     else
     !---------------------------------------------------
-       write(*,*) 'xxx internal error [receive: nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_issuer_of_receive_3D] internal error'
        call PRC_MPIstop
     endif
 
@@ -2475,7 +2517,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        ! nothing to do
     else
     !---------------------------------------------------
-       write(*,*) 'xxx internal error [wait: nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_issuer_of_wait_3D] internal error'
        call PRC_MPIstop
     endif
 
@@ -2565,7 +2607,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        call PROF_rapend('NEST_test_C', 2)
     else
     !---------------------------------------------------
-       write(*,*) 'xxx internal error [test: nest/grid]'
+       write(*,*) 'xxx [grd_nest/NEST_COMM_test] error'
        call PRC_MPIstop
     endif
 

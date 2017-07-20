@@ -46,7 +46,7 @@ contains
     character(len=256) :: argstr
     character(len=2)   :: snf
 
-#ifdef _NOF2003
+#ifdef NOF2003
   integer :: IARGC
 #else
   integer :: command_argument_count
@@ -55,7 +55,7 @@ contains
     integer :: n, narg, ls, eq
     !---------------------------------------------------------------------------
 
-#ifdef _NOF2003
+#ifdef NOF2003
     narg = IARGC()
 #else
     narg = command_argument_count()
@@ -67,7 +67,7 @@ contains
 
     do n = 1, narg
 
-#ifdef _NOF2003
+#ifdef NOF2003
        call GETARG(n,argstr)
 #else
        call get_command_argument(n,argstr)

@@ -28,6 +28,7 @@ module mod_atmos_phy_mp_driver
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_MP_driver_config
   public :: ATMOS_PHY_MP_driver_setup
   public :: ATMOS_PHY_MP_driver_resume
   public :: ATMOS_PHY_MP_driver
@@ -46,6 +47,27 @@ module mod_atmos_phy_mp_driver
   !
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_MP_driver_config
+    use scale_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_config
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_sw_phy_mp
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS PHY_MP] / Origin[SCALE-RM]'
+
+    if ( ATMOS_sw_phy_mp ) then
+       call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_driver_config
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_MP_driver_setup
@@ -66,7 +88,7 @@ contains
     if ( ATMOS_sw_phy_mp ) then
 
        ! setup library component
-       call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
+       call ATMOS_PHY_MP_setup
 
     else
 
@@ -110,7 +132,9 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP
+       ATMOS_PHY_MP, &
+       QS_MP, &
+       QE_MP
     use mod_atmos_vars, only: &
        DENS,              &
        MOMZ,              &
@@ -157,6 +181,9 @@ contains
     if ( update_flag ) then
 
 !OCL XFILL
+       !$omp parallel do default(none) &
+       !$omp shared(JA,IA,KA,DENS0,MOMZ0,MOMX0,MOMY0,RHOT0,DENS,MOMZ,MOMX,MOMY,RHOT) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = 1, JA
        do i  = 1, IA
        do k  = 1, KA
@@ -194,6 +221,9 @@ contains
                           SFLX_snow(:,:)      ) ! [OUT]
 
 !OCL XFILL
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DENS_t_MP,DENS0,DENS,MOMZ_t_MP,MOMZ0,MOMZ,MOMX_t_MP,MOMX0) &
+       !$omp shared(MOMX,MOMY_t_MP,MOMY0,MOMY,RHOT_t_MP,RHOT0,RHOT,dt_MP)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -207,7 +237,10 @@ contains
        enddo
 
 !OCL XFILL
-       do iq = 1, QA
+       do iq = QS_MP, QE_MP
+       !$omp parallel do default(none) &
+       !$omp shared(JS,JE,IS,IE,KS,KE,RHOQ_t_MP,iq,QTRC0,QTRC,DENS0,DENS,dt_MP) &
+       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -225,8 +258,8 @@ contains
        end do
        end do
 
-       call HIST_in( SFLX_rain(:,:),   'RAIN',      'surface rain rate by MP',          'kg/m2/s',  nohalo=.true. )
-       call HIST_in( SFLX_snow(:,:),   'SNOW',      'surface snow rate by MP',          'kg/m2/s',  nohalo=.true. )
+       call HIST_in( SFLX_rain(:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  nohalo=.true. )
+       call HIST_in( SFLX_snow(:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  nohalo=.true. )
        call HIST_in( precip   (:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  nohalo=.true. )
        call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', nohalo=.true. )
 
@@ -236,14 +269,16 @@ contains
        call HIST_in( MOMY_t_MP(:,:,:), 'MOMY_t_MP', 'tendency MOMY in MP', 'kg/m2/s2' , nohalo=.true. )
        call HIST_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP', 'K*kg/m3/s', nohalo=.true. )
 
-       do iq = 1, QA
-          call HIST_in( RHOQ_t_MP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_MP', &
-                        'tendency rho*'//trim(AQ_NAME(iq))//'in MP', 'kg/m3/s', nohalo=.true. )
+       do iq = QS_MP, QE_MP
+          call HIST_in( RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//'in MP', 'kg/m3/s', nohalo=.true. )
        enddo
 
     endif
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,DENS_t,DENS_t_MP,MOMZ_t,MOMZ_t_MP,MOMX_t,MOMX_t_MP,MOMY_t) &
+    !$omp shared(MOMY_t_MP,RHOT_t,RHOT_t_MP)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -256,8 +291,9 @@ contains
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do iq = 1,  QA
+    do iq = QS_MP, QE_MP
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOQ_t,iq,RHOQ_t_MP)
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -274,8 +310,8 @@ contains
        call STAT_total( total, MOMY_t_MP(:,:,:), 'MOMY_t_MP' )
        call STAT_total( total, RHOT_t_MP(:,:,:), 'RHOT_t_MP' )
 
-       do iq = 1, QA
-          call STAT_total( total, RHOQ_t_MP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_MP' )
+       do iq = QS_MP, QE_MP
+          call STAT_total( total, RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP' )
        enddo
     endif
 

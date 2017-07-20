@@ -319,8 +319,9 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CPdry => CONST_CPdry, &
-       Rvap  => CONST_Rvap,  &
-       LHV   => CONST_LHV
+       Rvap  => CONST_Rvap
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use mod_adm, only: &
        ADM_KNONE,   &
        ADM_have_pl, &
@@ -456,6 +457,7 @@ contains
     real(RP) :: VMTR_PHI         (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_PHI_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
+    real(RP) :: LHV
     real(RP) :: mxval, mnval
 
     integer  :: g, k, l, nq, K0
@@ -519,7 +521,7 @@ contains
          .OR. mnval >= 2000.E+2_RP .OR. mnval <= 0.0_RP ) then ! > 2000hPa or negative?
 
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Numerical instability occurs! STOP.', mxval, mnval
-       write(*,*)          'xxx Numerical instability occurs! STOP.', mxval, mnval
+       write(*,*)                     'xxx Numerical instability occurs! STOP.', mxval, mnval
        do l = 1, ADM_lall
        do k = 1, ADM_kall
        do g = 1, ADM_gall
@@ -693,9 +695,13 @@ contains
     if ( out_mse ) then
        do l = 1, ADM_lall
           do k = 1, ADM_kall
-             mse(:,k,l) = CPdry * tem(:,k,l)      &
-                        + GRAV  * ( GRD_vz(:,k,l,GRD_Z) - GRD_zs (:,K0,l,GRD_ZSFC) ) &
-                        + LHV   * q(:,k,l,I_QV)
+          do g = 1, ADM_gall
+             call HYDROMETEOR_LHV( LHV, tem(g,k,l) )
+
+             mse(g,k,l) = CPdry * tem(g,k,l)      &
+                        + GRAV  * ( GRD_vz(g,k,l,GRD_Z) - GRD_zs (g,K0,l,GRD_ZSFC) ) &
+                        + LHV   * q(g,k,l,I_QV)
+          enddo
           enddo
 
           call history_in( 'ml_mse',  mse(:,:,l) )
@@ -1017,8 +1023,8 @@ contains
           if( pre(ij,k) < plev ) exit
        enddo
        if ( k >= kdim ) then
-          write(*         ,*) 'xxx internal error! [sv_plev_uvwt/mod_history_vars] STOP.'
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx internal error! [sv_plev_uvwt/mod_history_vars] STOP.',kdim,k,plev,ij,pre(ij,:)
+          write(*,*) 'xxx internal error! [sv_plev_uvwt/mod_history_vars] STOP.', &
+                     kdim,k,plev,ij,pre(ij,:)
           call PRC_MPIstop
        endif
 

@@ -6,7 +6,13 @@
 #
 #################################################
 
-USERDEF_FILE="./USER.sh"
+if [ "${USERDEF_FILE}x" = "x" ]; then
+  USERDEF_FILE="./USER.sh"
+fi
+echo ${OUTPUT_CONFIGDIR}
+if [ "${OUTPUT_CONFIGDIR}x" = "x" ]; then
+  OUTPUT_CONFIGDIR="experiment"
+fi
 
 if [ ! -f "${USERDEF_FILE}" ]; then
   echo "Error: User defined file was not found: "${USERDEF_FILE}
@@ -56,7 +62,7 @@ if [ ${NUM_DOMAIN} -ne ${#PRC_NUM_Y[*]} ]; then echo "Error: Wrong array size (P
 if [ ${NUM_DOMAIN} -ne ${#KMAX[*]} ];      then echo "Error: Wrong array size (KMAX).";      exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#IMAX[*]} ];      then echo "Error: Wrong array size (IMAX).";      exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#JMAX[*]} ];      then echo "Error: Wrong array size (JMAX).";      exit 1; fi
- 
+
 if [ ${LKMAX} -ne ${#LDZ[*]} ]; then echo "Error: Wrong array size (LDZ)."; exit 1; fi
 if [ ${UKMAX} -ne ${#UDZ[*]} ]; then echo "Error: Wrong array size (UDZ)."; exit 1; fi
 
@@ -86,13 +92,6 @@ if [ ${NUM_DOMAIN} -ne ${#COPYTOPO[*]} ];    then echo "Error: Wrong array size 
 # set common parameters
 #
 #################################################
-
-# use nesting or not
-if [ ${NUM_DOMAIN} -eq 1 ]; then
-  RUN_USE_NESTING=".false."
-else
-  RUN_USE_NESTING=".true."
-fi
 
 # set formatted date
 YEAR=`printf '%1.f' ${RUN_DATE_YEAR}`
@@ -126,10 +125,19 @@ case ${TIME_DURATION_UNIT} in
 esac
 INT_DURATION=`expr ${TIME_DURATION%%.*} \* ${TIME_DURATION_UNIT_SEC}`
 INT_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
-NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
-if [ ${NUMBER_OF_FILES} -le 1 ]; then
-  NUMBER_OF_FILES=2
-fi 
+if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+  NUMBER_OF_FILES=1
+  NUMBER_OF_TSTEPS=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
+  if [ ${NUMBER_OF_TSTEPS} -le 1 ]; then
+    NUMBER_OF_TSTEPS=2
+  fi
+else
+  NUMBER_OF_FILES=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
+  if [ ${NUMBER_OF_FILES} -le 1 ]; then
+    NUMBER_OF_FILES=2
+  fi
+  NUMBER_OF_TSTEPS=1
+fi
 
 # set maximum number of steps
 HISTORY_2D_INTERVAL=`echo ${TIME_DT_HISTORY_2D%%.*}`
@@ -145,7 +153,6 @@ else
 fi
 
 INPUT_CONFIGDIR="config"
-OUTPUT_CONFIGDIR="experiment"
 
 PPDIR="../pp"
 INITDIR="../init"
@@ -181,6 +188,7 @@ IFS="," eval 'LIST_LDZ="${LDZ[*]}"'
 IFS="," eval 'LIST_UDZ="${UDZ[*]}"'
 
 DNUM=1
+TPROC=0
 while [ $DNUM -le $NUM_DOMAIN ]
 do
   D=`expr $DNUM - 1`
@@ -192,10 +200,13 @@ do
 
   # set numbers of domain process
   eval 'PRC_DOMAINS[$D]=`expr ${PRC_NUM_X[$D]} \* ${PRC_NUM_Y[$D]}`'
+  eval 'TPROC=`expr ${TPROC} + ${PRC_DOMAINS[$D]}`'
 
   # set names of config files
+  eval 'PP_CONF_FILES[$D]="pp.d${FNUM}.conf"'
   eval 'INIT_CONF_FILES[$D]="init.d${FNUM}.conf"'
   eval 'RUN_CONF_FILES[$D]="run.d${FNUM}.conf"'
+  eval 'N2G_CONF_FILES[$D]="net2g.2D.d${FNUM}.conf,net2g.3D.d${FNUM}.conf"'
 
   # set vertical axis
   LINE_Z="${DEF_Z[$D]}"
@@ -232,7 +243,6 @@ do
   NET2G_3D_IO_LOG_BASENAME="net2g_3D_LOG_d${FNUM}"
 
   # copy parameters
-  PP_USE_NESTING="${COPYTOPO[$D]}"
   ATMOS_BOUNDARY_START_DATE="${TIME_BND_STARTDATE}"
 
   # set nesting parameters
@@ -243,20 +253,14 @@ do
   fi
   if [ $DNUM -gt 1 ]; then
     IAM_DAUGHTER=".true."
+    PARENT_BASENAME=${COPYTOPO_IN_BASENAME}
     PARENT_PRC_NUM_X=${PRC_NUM_X[$PD]}
     PARENT_PRC_NUM_Y=${PRC_NUM_Y[$PD]}
-    PARENT_KMAX=${KMAX[$PD]}
-    PARENT_IMAX=${IMAX[$PD]}
-    PARENT_JMAX=${JMAX[$PD]}
   else
     IAM_DAUGHTER=".false."
-    PARENT_PRC_NUM_X=0
-    PARENT_PRC_NUM_Y=0
-    PARENT_KMAX=0
-    PARENT_IMAX=0
-    PARENT_JMAX=0
   fi
-  PARENT_LKMAX=${LKMAX}
+
+
 
   # set boundary parameters
   if [ $DNUM -gt 1 ]; then
@@ -281,6 +285,13 @@ do
   mkdir -p ${OUTPUT_CONFIGDIR}/net2g
 
   source ${PP_CONF}
+
+  if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+    PARENT_BASENAME="${BASENAME_ORG}"
+  else
+    PARENT_BASENAME=""
+  fi
+
   source ${INIT_CONF}
   source ${RUN_CONF}
   source ${PARAM_CONF}
@@ -290,6 +301,7 @@ do
       param.region.conf \
       param.admin.conf \
   > ${OUTPUT_CONFIGDIR}/pp/pp.d${FNUM}.conf
+
 
   cat base.init.conf \
       param.region.conf \
@@ -311,6 +323,7 @@ do
   DNUM=`expr $DNUM + 1`
 done
 
+
 #################################################
 #
 # make launcher
@@ -318,11 +331,13 @@ done
 #################################################
 
 IFS="," eval 'LIST_PRC_DOMAINS="${PRC_DOMAINS[*]}"'
+IFS="," eval 'LIST_PP_CONF_FILES="${PP_CONF_FILES[*]}"'
 IFS="," eval 'LIST_INIT_CONF_FILES="${INIT_CONF_FILES[*]}"'
 IFS="," eval 'LIST_RUN_CONF_FILES="${RUN_CONF_FILES[*]}"'
+IFS="," eval 'LIST_N2G_CONF_FILES="${N2G_CONF_FILES[*]}"'
 
-LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/ /\",\"/g"`
-LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/ /\",\"/g"`
+LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/,/\",\"/g"`
+LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/,/\",\"/g"`
 
 source ${LAUNCH_CONF}
 
@@ -335,4 +350,35 @@ mv -f base.run.launch.conf ${OUTPUT_CONFIGDIR}/run/run.launch.conf
 #
 #################################################
 
+if [ $DNUM -eq 1 ]; then
+  INIT_CONF_FILE=init.d01.conf
+  RUN_CONF_FILE=run.d01.conf
+else
+  INIT_CONF_FILE=init.launch.conf
+  RUN_CONF_FILE=run.launch.conf
+fi
+
+if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+  eval 'NP=`expr ${PARENT_PRC_NUM_X} + ${PARENT_PRC_NUM_Y}`'
+  DATPARAM="\" [../../data/${LATLON_CATALOGUE} ${LATLON_CATALOGUE}] \""
+  DATDISTS="\" [${NP} ../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
+else
+  DATPARAM="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
+fi
+
+DNUM=1
+while [ $DNUM -le $NUM_DOMAIN ]
+do
+  D=`expr $DNUM - 1`
+  DD1=`expr $D \* 2`
+  DD2=`expr $DD1 + 1`
+  eval 'N2G_PRC_DOMAINS[${DD1}]=${PRC_DOMAINS[$D]}'
+  eval 'N2G_PRC_DOMAINS[${DD2}]=${PRC_DOMAINS[$D]}'
+  DNUM=`expr $DNUM + 1`
+done
+IFS="," eval 'LIST_N2G_PRC_DOMAINS="${N2G_PRC_DOMAINS[*]}"'
+
 source ${INPUT_CONFIGDIR}/mklink.sh
+
+source ${INPUT_CONFIGDIR}/mkMakefile.sh
+

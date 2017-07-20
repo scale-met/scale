@@ -116,7 +116,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MONITOR. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MONITOR)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MONITOR)
 
     ! listup monitor request
     rewind(IO_FID_CONF)
@@ -155,6 +155,8 @@ contains
 
        read(IO_FID_CONF,nml=MONITITEM,iostat=ierr)
        if( ierr /= 0 ) exit
+
+       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=MONITITEM)
 
        MONIT_req_item(n) = ITEM
     enddo
@@ -385,7 +387,7 @@ contains
        NOWSTEP => TIME_NOWSTEP
     implicit none
 
-    character(len=4), intent(in) :: memo !< note
+    character(len=*), intent(in) :: memo !< note
 
     logical, save :: firsttime = .true.
 
@@ -404,7 +406,9 @@ contains
     if ( MONIT_FID > 0 ) then
 
        if ( mod(NOWSTEP-1,MONITOR_STEP_INTERVAL) == 0 ) then
-          write(MONIT_FID,'(A,i7,A,A,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Output Monitor'
+
+          write(MONIT_FID,'(A,i7,A,A4,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
           do n = 1, MONIT_id_count
              write(MONIT_FID,'(A,ES15.8)',advance='no') ' ',MONIT_var(n)
           enddo
@@ -437,16 +441,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [MONITOR] Output item list '
     if( IO_L ) write(IO_FID_LOG,*) '*** Number of monitor item :', MONIT_req_nmax
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') 'NAME           :description                                     ', &
-                                            '               :UNIT           :Layername'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '=====================================================', &
-                                            '====================================================='
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') 'NAME                   :description                                    ', &
+                                           ':UNIT           :Layername'
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '=======================================================================', &
+                                           '=========================='
     do n = 1, MONIT_id_count
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') MONIT_item(n), MONIT_desc(n), MONIT_unit(n), MONIT_ktype(n)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A24,A48,A16,A16)') MONIT_item(n), MONIT_desc(n), MONIT_unit(n), MONIT_ktype(n)
     enddo
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '=====================================================', &
-                                            '====================================================='
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '=======================================================================', &
+                                           '=========================='
 
     if ( PRC_IsMaster ) then ! master node
        MONIT_L = .true.
@@ -469,11 +472,11 @@ contains
        endif
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Write monitor. filename : ', fname
+       if( IO_L ) write(IO_FID_LOG,*) '*** Open ASCII file for monitor, name : ', trim(fname)
 
        write(MONIT_FID,'(A)',advance='no') '                   '
        do n = 1, MONIT_id_count
-          write(MONIT_FID,'(A,A16)',advance='no') MONIT_item(n)
+          write(MONIT_FID,'(A16)',advance='no') MONIT_item(n)
        enddo
        write(MONIT_FID,*)
 
@@ -493,11 +496,12 @@ contains
     !---------------------------------------------------------------------------
 
     if ( MONIT_FID > 0 ) then
-       close(MONIT_FID)
-
        call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
-       if( IO_L ) write(IO_FID_LOG,*) '*** [MONITOR] File Close'
-       if( IO_L ) write(IO_FID_LOG,*) '*** closed filename: ', fname
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close ASCII file for monitor, name : ', trim(fname)
+
+       close(MONIT_FID)
     endif
 
     return

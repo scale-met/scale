@@ -93,7 +93,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SURFACE FLUX] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Constant flux'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux'
 
     if ( ATMOS_PHY_SF_TYPE /= 'CONST' ) then
        write(*,*) 'xxx ATMOS_PHY_SF_TYPE is not CONST. Check!'
@@ -109,7 +109,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_CONST. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_CONST)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_CONST)
 
     return
   end subroutine ATMOS_PHY_SF_const_setup
@@ -132,8 +132,9 @@ contains
     use scale_tracer
     use scale_const, only: &
        PI    => CONST_PI
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_templhv
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       I_QV
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
@@ -152,7 +153,7 @@ contains
     real(RP), intent(in)    :: SFLX_LW_dn(IA,JA)    ! downward longwave  radiation flux at the surface [J/m2/s]
     real(RP), intent(in)    :: SFLX_SW_dn(IA,JA)    ! downward shortwave radiation flux at the surface [J/m2/s]
     real(RP), intent(in)    :: SFC_TEMP  (IA,JA)    ! temperature at the surface skin [K]
-    real(RP), intent(in)    :: SFC_albedo(IA,JA,2)  ! surface albedo (LW/SW) [0-1]
+    real(RP), intent(in)    :: SFC_albedo(IA,JA,2)  ! surface albedo (LW/SW) (0-1)
     real(RP), intent(inout) :: SFC_Z0M   (IA,JA)    ! surface roughness length (momentum) [m]
     real(RP), intent(inout) :: SFC_Z0H   (IA,JA)    ! surface roughness length (heat) [m]
     real(RP), intent(inout) :: SFC_Z0E   (IA,JA)    ! surface roughness length (vapor) [m]
@@ -178,7 +179,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux(const)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(const)'
 
     do j = JS, JE
     do i = IS, IE
@@ -231,14 +232,16 @@ contains
     enddo
 
     !-----< mass flux >-----
-   call ATMOS_THERMODYN_templhv( LHV, ATM_TEMP )
+   call HYDROMETEOR_LHV( LHV(:,:), ATM_TEMP(:,:) )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
-    enddo
-    enddo
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
+       enddo
+       enddo
+    end if
 
     !-----< U10, T2, q2 >-----
 
@@ -254,9 +257,22 @@ contains
     do j = JS, JE
     do i = IS, IE
        T2(i,j) = ATM_TEMP(i,j)
-       Q2(i,j) = ATM_QTRC(i,j,I_QV)
     enddo
     enddo
+
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+          Q2(i,j) = ATM_QTRC(i,j,I_QV)
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+          Q2(i,j) = 0.0_RP
+       enddo
+       enddo
+    end if
 
     return
   end subroutine ATMOS_PHY_SF_const

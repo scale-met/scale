@@ -1,0 +1,63 @@
+{\bf \Large 
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Seiya Nishizawa\\
+\hline
+\end{tabular}
+}
+
+
+In the DYCOMS01 experiment, large scale sinking is added to express large scale downward motion corresponding to the Hadley circulation. There is virtual convergence of motion, resulting in mass escape out of the system.
+
+The density loss rate is constant $L$:
+\begin{equation}
+  L = -\frac{\partial \rho w_L}{\partial z},
+\end{equation}
+where $w_l$ is vertical velocity corresponding to large scale sinking.
+Vertical momentum with sinking is defined as follows:
+\begin{equation}
+  \rho w_L = -Lz.
+\end{equation}
+
+The continuous equation is now:
+\begin{equation}
+  \frac{\partial \rho}{\partial t}
+  + \frac{\partial \rho u}{\partial x}
+  + \frac{\partial \rho v}{\partial y}
+  + \frac{\partial \rho (w+w_L)}{\partial z}
+  = -L.
+  \label{eq: lls rho}
+\end{equation}
+
+The Lagrangian conservation equation for scalar quantities is:
+\begin{equation}
+  \rho\frac{\partial \phi}{\partial t}
+  + \rho u\frac{\partial \phi}{\partial x}
+  + \rho v\frac{\partial \phi}{\partial y}
+  + \rho (w+w_L)\frac{\partial \phi}{\partial z}
+  = 0,
+\end{equation}
+When combined with eq. (\ref{eq: lls rho}), this becomes:
+\begin{equation}
+  \frac{\partial \rho\phi}{\partial t}
+  + \frac{\partial \rho u \phi}{\partial x}
+  + \frac{\partial \rho v \phi}{\partial y}
+  + \frac{\partial \rho (w+w_L) \phi}{\partial z}
+  = -L\phi.
+\end{equation}
+
+The equation for the mixing ratio is:
+\begin{equation}
+  \frac{\partial \rho Q}{\partial t}
+  + \frac{\partial \rho Q u }{\partial x}
+  + \frac{\partial \rho Q v}{\partial y}
+  + \frac{\partial \rho Q (w+w_L)}{\partial z}
+  = -L Q.
+\end{equation}
+Note that this is identical to that for scalar quantities.
+
+The $w_L$ at the top boundary is not zero, while $w$ is zero.
+The vertical flux $\rho w_L \phi$ at the top layer interface could be determined as that convergence of the flux canceled with $L\phi$.
+
+
+

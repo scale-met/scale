@@ -1,6 +1,6 @@
 ################################################################################
 #
-# NICAM driver config
+# SCALE-GM driver config
 #
 ################################################################################
 
@@ -61,13 +61,13 @@
     SM_PBL_Bryan     = .true.,
 /
 
-&CNSTPARAM
-    earth_radius        = 6.37122D+6,
-    earth_angvel        =   7.292D-5,
-    small_planet_factor =      1.D0,
-    earth_gravity       = 9.80616D0,
-    gas_cnst            =   287.0D0,
-    specific_heat_pre   =  1004.5D0,
+&PARAM_CONST
+    CONST_RADIUS        = 6.37122D+6,
+    CONST_OHM           =   7.292D-5,
+    CONST_SmallPlanetFactor =      1.D0,
+    CONST_GRAV          = 9.80616D0,
+    CONST_Rdry          =   287.0D0,
+    CONST_CPdry         =  1004.5D0,
 /
 
 &NUMFILTERPARAM

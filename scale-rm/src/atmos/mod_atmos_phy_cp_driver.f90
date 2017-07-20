@@ -94,8 +94,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_CP_driver( update_flag )
-    use scale_time, only: &
-       dt_CP => TIME_DTSEC_ATMOS_PHY_CP
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
@@ -103,6 +101,9 @@ contains
        HIST_in
     use scale_atmos_phy_cp, only: &
        ATMOS_PHY_CP
+    use scale_atmos_phy_mp, only: &
+       QS_MP, &
+       QE_MP
     use mod_atmos_vars, only: &
        DENS,              &
        MOMZ,              &
@@ -127,8 +128,8 @@ contains
        SFLX_rain      => ATMOS_PHY_CP_SFLX_rain,      &  ! convective rain [kg/m2/s]
        cloudtop       => ATMOS_PHY_CP_cloudtop,       &  ! cloud top height [m]
        cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
-       cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) [0-1]
-       cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) [0-1]
+       cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) (0-1)
+       cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) (0-1)
        kf_nca         => ATMOS_PHY_CP_kf_nca,         &  ! advection/cumulus convection timescale/dt for KF [step]
        kf_w0avg       => ATMOS_PHY_CP_kf_w0avg           ! rannning mean vertical wind velocity      for KF [m/s]
     implicit none
@@ -187,8 +188,8 @@ contains
        call HIST_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', nohalo=.true. )
        call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       nohalo=.true. )
        call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
-       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '0-1',     nohalo=.true. )
-       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '0-1',     nohalo=.true. )
+       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       nohalo=.true. )
+       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       nohalo=.true. )
 
        call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
        call HIST_in( kf_w0avg      (:,:,:), 'kf_w0avg',  'rannning mean vertical wind velocity for KF',      'kg/m2/s', nohalo=.true. )
@@ -199,9 +200,9 @@ contains
        call HIST_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , nohalo=.true. )
        call HIST_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', nohalo=.true. )
 
-       do iq = 1, QA
-          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_CP', &
-                        'tendency rho*'//trim(AQ_NAME(iq))//'in CP', 'kg/m3/s', nohalo=.true. )
+       do iq = QS_MP, QE_MP
+          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//'in CP', 'kg/m3/s', nohalo=.true. )
        enddo
 
     endif
@@ -219,8 +220,8 @@ contains
     enddo
     enddo
 
+    do iq = QS_MP,  QE_MP
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do iq = 1,  QA
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -237,8 +238,8 @@ contains
        call STAT_total( total, MOMY_t_CP(:,:,:), 'MOMY_t_CP' )
        call STAT_total( total, RHOT_t_CP(:,:,:), 'RHOT_t_CP' )
 
-       do iq = 1, QA
-          call STAT_total( total, RHOQ_t_CP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_CP' )
+       do iq = QS_MP, QE_MP
+          call STAT_total( total, RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP' )
        enddo
     endif
 

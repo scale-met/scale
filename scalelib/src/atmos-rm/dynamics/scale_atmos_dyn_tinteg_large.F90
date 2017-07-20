@@ -44,7 +44,7 @@ module scale_atmos_dyn_tinteg_large
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
           PHI, GSQRT,                                           &
           J13G, J23G, J33G, MAPF,                               &
-          AQ_CV,                                                &
+          AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
           REF_dens, REF_pott, REF_qv, REF_pres,                 &
           BND_W, BND_E, BND_S, BND_N,                           &
           ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
@@ -52,6 +52,7 @@ module scale_atmos_dyn_tinteg_large
           DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
           DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
           DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
+          wdamp_coef,                                           &
           divdmp_coef,                                          &
           FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
           FLAG_FCT_ALONG_STREAM,                                &
@@ -112,8 +113,11 @@ module scale_atmos_dyn_tinteg_large
        real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
        real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factor
 
+       real(RP), intent(in)    :: AQ_R   (QA)
+       real(RP), intent(in)    :: AQ_CV  (QA)
+       real(RP), intent(in)    :: AQ_CP  (QA)
+       real(RP), intent(in)    :: AQ_MASS(QA)
 
-       real(RP), intent(in)    :: AQ_CV(QQA)
        real(RP), intent(in)    :: REF_dens(KA,IA,JA)
        real(RP), intent(in)    :: REF_pott(KA,IA,JA)
        real(RP), intent(in)    :: REF_qv  (KA,IA,JA)
@@ -143,6 +147,7 @@ module scale_atmos_dyn_tinteg_large
        real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
        real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
 
+       real(RP), intent(in)    :: wdamp_coef(KA)
        real(RP), intent(in)    :: divdmp_coef
        logical,  intent(in)    :: FLAG_FCT_MOMENTUM
        logical,  intent(in)    :: FLAG_FCT_T
@@ -180,45 +185,32 @@ contains
     use scale_index
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef TINTEG_LARGE
-    use NAME(scale_atmos_dyn_tinteg_large_, TINTEG_LARGE,), only: &
-       NAME(ATMOS_DYN_rk_tinteg_large_, TINTEG_LARGE, _setup), &
-       NAME(ATMOS_DYN_rk_tinteg_large_, TINTEG_LARGE,)
-#else
     use scale_atmos_dyn_tinteg_large_euler, only: &
        ATMOS_DYN_Tinteg_large_euler_setup, &
        ATMOS_DYN_Tinteg_large_euler
     use scale_atmos_dyn_tinteg_large_rk3, only: &
        ATMOS_DYN_Tinteg_large_rk3_setup, &
        ATMOS_DYN_Tinteg_large_rk3
-#endif
     implicit none
+
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_large_TYPE
     !---------------------------------------------------------------------------
 
-#ifdef TINTEG_LARGE
-    NAME(ATMOS_DYN_Tinteg_large_, TINTEG_LARGE, _setup)( &
-            ATMOS_DYN_Tinteg_large_TYPE )
-    ATMOS_DYN_Tinteg_large => NAME(ATMOS_DYN_Tingeg_large_, TINTEG_LARGE,)
-#else
-    select case ( ATMOS_DYN_Tinteg_large_TYPE )
-    case ( 'EULER' )
+    select case( ATMOS_DYN_Tinteg_large_TYPE )
+    case( 'EULER' )
        call ATMOS_DYN_Tinteg_large_euler_setup( &
             ATMOS_DYN_Tinteg_large_TYPE )
        ATMOS_DYN_Tinteg_large => ATMOS_DYN_Tinteg_large_euler
-    case ( 'RK3' )
+    case( 'RK3' )
        call ATMOS_DYN_Tinteg_large_rk3_setup( &
             ATMOS_DYN_Tinteg_large_TYPE )
        ATMOS_DYN_Tinteg_large => ATMOS_DYN_Tinteg_large_rk3
-    case ( 'OFF', 'NONE' )
+    case( 'OFF', 'NONE' )
        ! do nothing
     case default
        write(*,*) 'xxx ATMOS_DYN_TINTEG_LARGE_TYPE is invalid: ', ATMOS_DYN_Tinteg_large_TYPE
        call PRC_MPIstop
     end select
-#endif
 
     return
   end subroutine ATMOS_DYN_Tinteg_large_setup

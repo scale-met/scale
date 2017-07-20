@@ -66,6 +66,9 @@ contains
   subroutine OCEAN_PHY_setup( OCEAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_ocean_phy_const, only: &
+       OCEAN_PHY_CONST_setup, &
+       OCEAN_PHY_CONST
     use scale_ocean_phy_slab, only: &
        OCEAN_PHY_SLAB_setup, &
        OCEAN_PHY_SLAB
@@ -77,14 +80,14 @@ contains
     character(len=*), intent(in) :: OCEAN_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( OCEAN_TYPE )
-    case ( 'CONST' )
+    select case( OCEAN_TYPE )
+    case( 'CONST' )
+       call OCEAN_PHY_CONST_setup( OCEAN_TYPE )
+       OCEAN_PHY => OCEAN_PHY_CONST
+    case( 'SLAB' )
        call OCEAN_PHY_SLAB_setup( OCEAN_TYPE )
        OCEAN_PHY => OCEAN_PHY_SLAB
-    case ( 'SLAB' )
-       call OCEAN_PHY_SLAB_setup( OCEAN_TYPE )
-       OCEAN_PHY => OCEAN_PHY_SLAB
-    case ( 'FILE' )
+    case( 'FILE' )
        call OCEAN_PHY_FILE_setup( OCEAN_TYPE )
        OCEAN_PHY => OCEAN_PHY_FILE
     case default

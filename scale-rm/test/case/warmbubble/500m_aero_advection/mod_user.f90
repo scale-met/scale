@@ -20,8 +20,8 @@ module mod_user
   use scale_stdio
   use scale_prof
   use scale_grid_index
-  use scale_tracer
   use scale_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -29,6 +29,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -73,6 +74,13 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine USER_config
+
+    return
+  end subroutine USER_config
+
+  !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
     use scale_process, only: &
@@ -113,7 +121,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     !--- Determine the emission point
     emit_indx(:) = 0

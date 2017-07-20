@@ -19,8 +19,10 @@ RUNCONF     = run.conf
 TPROC       = 6
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
-DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/rad_o3_profs.txt
+DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29         PARAG.29        ] \
+                [${TESTDIR}/data/rad/PARAPC.29        PARAPC.29       ] \
+                [${TESTDIR}/data/rad/VARDATA.RM29     VARDATA.RM29    ] \
+                [${TESTDIR}/data/rad/rad_o3_profs.txt rad_o3_profs.txt] "
 DATDISTS    =
 
 

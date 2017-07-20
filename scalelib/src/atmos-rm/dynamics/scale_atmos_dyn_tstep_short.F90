@@ -46,7 +46,7 @@ module scale_atmos_dyn_tstep_short
                        DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
                        PROG0, PROG,                                      & ! (in)
                        DPRES0, RT2P, CORIOLI,                            & ! (in)
-                       num_diff, divdmp_coef, DDIV,                      & ! (in)
+                       num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! (in)
                        FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! (in)
                        FLAG_FCT_ALONG_STREAM,                            & ! (in)
                        CDZ, FDZ, FDX, FDY,                               & ! (in)
@@ -54,7 +54,7 @@ module scale_atmos_dyn_tstep_short
                        PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                        REF_dens, REF_rhot,                               & ! (in)
                        BND_W, BND_E, BND_S, BND_N,                       & ! (in)
-                       dtrk, dt                                          ) ! (in)
+                       dtrk, last                                        ) ! (in)
        use scale_precision
        use scale_grid_index
        use scale_index
@@ -93,6 +93,7 @@ module scale_atmos_dyn_tstep_short
        real(RP), intent(in)  :: RT2P    (KA,IA,JA)
        real(RP), intent(in)  :: CORIOLI (1, IA,JA)
        real(RP), intent(in)  :: num_diff(KA,IA,JA,5,3)
+       real(RP), intent(in)  :: wdamp_coef(KA)
        real(RP), intent(in)  :: divdmp_coef
        real(RP), intent(in)  :: DDIV(KA,IA,JA)
 
@@ -126,7 +127,7 @@ module scale_atmos_dyn_tstep_short
        logical,  intent(in)  :: BND_N
 
        real(RP), intent(in)  :: dtrk
-       real(RP), intent(in)  :: dt
+       logical,  intent(in)  :: last
      end subroutine short
 
   end interface
@@ -161,14 +162,6 @@ contains
     use scale_index
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef DYNAMICS
-    use NAME(scale_atmos_dyn_tstep_, DYNAMICS,), only: &
-       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS, _regist), &
-       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS, _setup), &
-       NAME(ATMOS_DYN_rk_tstep_short_, DYNAMICS,)
-#else
     use scale_atmos_dyn_tstep_short_fvm_heve, only: &
        ATMOS_DYN_Tstep_short_fvm_heve_regist, &
        ATMOS_DYN_Tstep_short_fvm_heve_setup, &
@@ -181,7 +174,6 @@ contains
        ATMOS_DYN_Tstep_short_fvm_hivi_regist, &
        ATMOS_DYN_Tstep_short_fvm_hivi_setup, &
        ATMOS_DYN_Tstep_short_fvm_hivi
-#endif
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -191,14 +183,8 @@ contains
     character(len=H_SHORT), intent(out) :: VAR_UNIT(:)    !< unit  of the variables
     !---------------------------------------------------------------------------
 
-#ifdef DYNAMICS
-    NAME(ATMOS_DYN_Tstep_, DYNAMICS, _regist)( &
-            ATMOS_DYN_TYPE )
-    ATMOS_DYN_Tstep_short_ => NAME(ATMOS_DYN_Tstep_short_, DYNAMICS,)
-    ATMOS_DYN_Tstep_short_setup => NAME(ATMOS_DYN_Tstep_short_, DYNAMICS, _setup)
-#else
-    select case ( ATMOS_DYN_TYPE )
-    case ( 'FVM-HEVE', 'HEVE' )
+    select case( ATMOS_DYN_TYPE )
+    case( 'FVM-HEVE', 'HEVE' )
 
        call ATMOS_DYN_Tstep_short_fvm_heve_regist( ATMOS_DYN_TYPE,              & ! [IN]
                                                    VA_out,                      & ! [OUT]
@@ -207,7 +193,7 @@ contains
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_heve_setup
        ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_heve
 
-    case ( 'FVM-HEVI', 'HEVI' )
+    case( 'FVM-HEVI', 'HEVI' )
 
        call ATMOS_DYN_Tstep_short_fvm_hevi_regist( ATMOS_DYN_TYPE,              & ! [IN]
                                                    VA_out,                      & ! [OUT]
@@ -216,9 +202,9 @@ contains
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_hevi_setup
        ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_hevi
 
-    case ( 'FVM-HIVI', 'HIVI' )
+    case( 'FVM-HIVI', 'HIVI' )
 
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx HIVI is temtatively disabled'
+       write(*,*) 'xxx HIVI is tentatively disabled'
        call PRC_MPIstop
 
        call ATMOS_DYN_Tstep_short_fvm_hivi_regist( ATMOS_DYN_TYPE,              & ! [IN]
@@ -228,7 +214,7 @@ contains
        ATMOS_DYN_Tstep_short_setup => ATMOS_DYN_Tstep_short_fvm_hivi_setup
        ATMOS_DYN_Tstep_short       => ATMOS_DYN_Tstep_short_fvm_hivi
 
-    case ( 'OFF', 'NONE' )
+    case( 'OFF', 'NONE' )
 
        VA_out      = 0
        VAR_NAME(:) = ""
@@ -239,7 +225,6 @@ contains
        write(*,*) 'xxx ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
        call PRC_MPIstop
     end select
-#endif
 
     return
   end subroutine ATMOS_DYN_Tstep_short_regist

@@ -1,0 +1,73 @@
+\section{Setting the history file and output variable} \label{sec:output}
+%====================================================================================
+
+A history file and output variables are configured at \namelist{PARAM_HISTORY} and \namelist{HISTITEM} in \verb|run.conf|.
+The default format of the history file is configured at \namelist{PARAM_HISTORY}.
+\editboxtwo{
+\verb|&PARAM_HISTORY| & \\
+\verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & ; Header name  of files\\
+\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; Output interval of history data \\
+\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; Unit of \verb|HISTORY_DEFAULT_TINTERVAL| \\
+\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: Snapshot value, \verb|.true.|: Average value \\
+\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|       & ; Types of vertical interpolation.\\
+                                                    & ~ \verb|"model"|: model level (not interpolated)\\
+                                                    & ~ \verb|"z"    |: Interpolated value at absolute height\\
+                                                    & ~ \verb|"pressure"|: Interpolated value at pressure level\\
+\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & ; Output data type: \verb|REAL4|, \verb|REAL8|\\
+\verb|  HISTORY_OUTPUT_STEP0      = .true.,|        & ; Whether or not data are output at initial time (t=0).\\
+                                                    & ~ \verb|.true.|: Output, \verb|.false.|: Not output.\\
+\verb|/| & \\
+}
+
+The unit for \nmitem{HISTORY_DEFAULT_TUNIT} can be selected from \\
+\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|.\\
+When the average value output is selected as \verb|HISTORY_DEFAULT_TAVERAGE = .true.|,
+the history data averaged over the last period, given as \verb|HISTORY_DEFAULT_TINTERVAL|, is output.
+
+When the absolute height level is selected as \nmitem{HISTORY_DEFAULT_ZCOORD} \verb|= "z"|,
+the number of levels in output data is the same as that of the model level.
+The height at each level is the same as that of the model level in a grid cell with no topography.
+When the pressure level is selected as \nmitem{HISTORY_DEFAULT_ZCOORD} \verb|= "pressure"|,
+the configurations of \nmitem{HIST_PRES_nlayer} and \nmitem{HIST_PRES} in \namelist{PARAM_HIST} are required.
+
+When \nmitem{HIST_BND} in \namelist{PARAM_HIST} is \verb|.true.|,
+the data in halo, which is located outside of a target domain, is also output except in the case of periodic boundary condition.
+The setting of \nmitem{HIST_BND} is applied to all output variables.\\
+
+\editboxtwo{
+\verb|&PARAM_HIST| & \\
+\verb|  HIST_PRES_nlayer   = -1,         | & ; Number of levels\\
+                                           & ~ (OPTION for interpolation at pressure level)\\
+\verb|  HIST_PRES          = 0.0,        | & ; Pressure levels in order from lower to upper level. The unit is [hPa].\\
+                                           & ~ (OPTION for interpolation at pressure level)\\
+\verb|  HIST_BND           = .false.     | & ; Whether output data in halo or not.\\
+                                           & ~ \verb|.true.|: Output, \verb|.false.|: Not output.\\
+\verb|/| & \\
+}
+
+The output variables are set by adding \namelist{HISTITEM}.
+The output format follows the default setting specified at \namelist{PARAM_HISTORY}.
+By adding namelists with ``(OPTION),''
+the format for a specific variable can be changed from the default setting.
+
+
+\editboxtwo{
+\verb|&HISTITEM| &\\
+\verb| ITEM     = "RAIN",    | &  Variable name. List of variables is shown in Appendix \ref{achap:namelist}.\\
+\verb| BASENAME = "rain_d01",| &  (OPTION) same as \verb|HISTORY_DEFAULT_BASENAME|\\
+\verb| TINTERVAL= 600.0,     | &  (OPTION) same as \verb|HISTORY_DEFAULT_TINTERVAL|\\
+\verb| TUNIT    = "SEC",     | &  (OPTION) same as \verb|HISTORY_DEFAULT_TINTERVAL|\\
+\verb| TAVERAGE = .true.,    | &  (OPTION) same as \verb|HISTORY_DEFAULT_TAVERAGE|\\
+\verb| ZCOORD   = "model",   | &  (OPTION) same as \verb|HISTORY_DEFAULT_ZCOORD|\\
+\verb| DATATYPE = "REAL4",   | &  (OPTION) same as \verb|HISTORY_DEFAULT_DATATYPE|\\
+\verb|/| & \\
+}
+
+Namelists with ``(OPTION)'' are applied only to the variable \nmitem{ITEM}. If the default setting is used for the variable, the namelist with ``(OPTION)'' can be omitted. For example, let the below setting for \namelist{HISTITEM} be added, maintaining the above setting of \namelist{PARAM_HISTORY}. The snapshot values of \verb|T, U, V| are stored as four-byte real values at an interval of 3600 s in the file \verb|history_d01.xxxxxx.nc|, whereas the value of \verb|RAIN| averaged over the last 600 seconds is stored each time in the file. 
+
+\editbox{
+\verb|&HISTITEM  ITEM = "T" /|\\
+\verb|&HISTITEM  ITEM = "U" /|\\
+\verb|&HISTITEM  ITEM = "V" /|\\
+\verb|&HISTITEM  ITEM = "RAIN",  TINTERVAL = 600.0, TAVERAGE = .true. /|\\
+}

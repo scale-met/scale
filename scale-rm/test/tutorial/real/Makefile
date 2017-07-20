@@ -4,11 +4,5 @@
 #
 ################################################################################
 
-all: 
-	make clean
-	sh config/mkconf.sh
-
-.PHONY: clean
-
-clean:
-	rm -f base.*.conf param.*.conf
+all:
+	bash config/mkconf.sh

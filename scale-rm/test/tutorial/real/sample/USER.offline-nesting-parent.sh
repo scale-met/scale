@@ -54,13 +54,13 @@ TIME_DT_URBAN=(        "450.0" ) # required parameters for each domain - unit: S
 
 PRC_NUM_X=( 2 ) # required parameters for each domain
 PRC_NUM_Y=( 2 ) # required parameters for each domain
- 
+
 KMAX=( 36 ) # required parameters for each domain
 IMAX=( 45 ) # required parameters for each domain
 JMAX=( 45 ) # required parameters for each domain
 
-LKMAX=5
-LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" ) # required parameters for LKMAX
+LKMAX=7
+LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" "2.00" "4.00" ) # required parameters for LKMAX
 
 UKMAX=5
 UDZ=( "0.01" "0.01" "0.03" "0.05" "0.10" ) # required parameters for UKMAX
@@ -68,7 +68,7 @@ UDZ=( "0.01" "0.01" "0.03" "0.05" "0.10" ) # required parameters for UKMAX
 DX=( "20000.0" ) # required parameters for each domain
 DY=( "20000.0" ) # required parameters for each domain
 
-DEF_Z=( 
+DEF_Z=(
 "FZ(:) =     80.8410,   248.8210,   429.8820,   625.0450,   835.4090,
            1062.1580,  1306.5650,  1570.0080,  1853.9690,  2160.0470,
            2489.9630,  2845.5750,  3228.8830,  3642.0440,  4087.3840,
@@ -91,7 +91,6 @@ MPRJ_LC_LAT2="40.0"
 
 #################################################
 #
-# &PARAM_TRACER  (run config)
 # &PARAM_ATMOS   (run config)
 # &PARAM_OCEAN   (run config)
 # &PARAM_LAND    (run config)
@@ -103,7 +102,7 @@ ATMOS_DYN_TYPE=(    "HEVI"     ) # required parameters for each domain
 ATMOS_PHY_MP_TYPE=( "TOMITA08" ) # required parameters for each domain
 ATMOS_PHY_RD_TYPE=( "MSTRNX"   ) # required parameters for each domain
 ATMOS_PHY_SF_TYPE=( "COUPLE"   ) # required parameters for each domain
-ATMOS_PHY_TB_TYPE=( "MYNN"     ) # required parameters for each domain
+ATMOS_PHY_TB_TYPE=( "HYBRID"   ) # required parameters for each domain
 
 OCEAN_TYPE=( "CONST" ) # required parameters for each domain
 LAND_TYPE=(  "SLAB"  ) # required parameters for each domain
@@ -143,7 +142,7 @@ HIST_ITEMS_AVERAGE_3D=(
 
 INIT_BASENAME="init"
 
-BASENAME_ORG="namelist.grads_boundary.FNL.grib1"
+BASENAME_ORG="namelist.grads_boundary.FNL.2005053112-2016051106"
 FILETYPE_ORG="GrADS"
 PARENT_MP_TYPE=3
 USE_FILE_DENSITY=".false."
@@ -162,9 +161,10 @@ USE_FILE_LANDWATER=".true."
 TOPODIR="${SCALE_DB}/topo"
 LANDUSEDIR="${SCALE_DB}/landuse"
 
-TOPOTYPE=(    "GTOPO30" ) # required parameters for each domain
-LANDUSETYPE=( "GLCCv2"  ) # required parameters for each domain
-COPYTOPO=(    ".false." ) # required parameters for each domain
+TOPOTYPE=(     "GTOPO30" ) # required parameters for each domain
+LANDUSETYPE=(  "GLCCv2"  ) # required parameters for each domain
+COPYTOPO=(     ".false." ) # required parameters for each domain
+SMOOTH_LOCAL=( ".true."  ) # required parameters for each domain
 
 MAXSLOPE_RATIO="1.0"
 LIMIT_URBAN_FRACTION="0.3"

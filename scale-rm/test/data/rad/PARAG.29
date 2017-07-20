@@ -6334,7 +6334,7 @@
  -1.03798E+001 -1.13850E+001 -9.94442E+000 -1.03599E+001 -1.00242E+001
  -1.05798E+001 -1.15850E+001 -1.01444E+001 -1.05599E+001 -1.02242E+001
  optical property flag
-    1    1    0    1    1    3    0
+    1    1    0    1    1    0    0
  number of subinterval
     3
  weight of subintervals
@@ -6579,7 +6579,7 @@
  -1.11837E+001 -9.32924E+000 -1.40000E+001
  -1.13837E+001 -9.52924E+000 -1.40000E+001
  optical property flag
-    1    1    0    1    1    3    0
+    1    1    0    1    1    0    0
  number of subinterval
     3
  weight of subintervals
@@ -6903,7 +6903,7 @@
  -1.28690E+001 -1.22883E+001 -1.23813E+001
  -1.30690E+001 -1.24883E+001 -1.25813E+001
  optical property flag
-    1    1    0    1    1    3    0
+    1    1    0    1    1    0    0
  number of subinterval
     2
  weight of subintervals
@@ -7227,7 +7227,7 @@
  -1.05429E+001 -1.19091E+001
  -1.07429E+001 -1.21091E+001
  optical property flag
-    1    1    0    1    1    2    0
+    1    1    0    1    1    0    0
  number of subinterval
     1
  weight of subintervals
@@ -7551,7 +7551,7 @@
  -1.30361E+001
  -1.32055E+001
  optical property flag
-    0    1    0    1    0    2    0
+    0    1    0    1    0    0    0
  number of subinterval
     1
  weight of subintervals
@@ -7559,7 +7559,7 @@
  Line absorption
     0
  optical property flag
-    1    1    0    1    0    1    0
+    1    1    0    1    0    0    0
  number of subinterval
     2
  weight of subintervals
@@ -7646,7 +7646,7 @@
   8.71654E-001 -1.53449E-001
   8.71654E-001 -1.53449E-001
  optical property flag
-    1    1    0    1    0    1    0
+    1    1    0    1    0    0    0
  number of subinterval
     2
  weight of subintervals
@@ -7733,7 +7733,7 @@
   1.87434E+000  1.37316E+000
   1.87434E+000  1.37316E+000
  optical property flag
-    1    1    0    1    0    1    0
+    1    1    0    1    0    0    0
  number of subinterval
     2
  weight of subintervals
@@ -7899,7 +7899,7 @@
  -4.82498E+000 -6.39556E+000
  -4.82499E+000 -6.39556E+000
  optical property flag
-    1    1    0    1    0    1    0
+    1    1    0    1    0    0    0
  number of subinterval
     1
  weight of subintervals

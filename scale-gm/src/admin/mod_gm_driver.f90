@@ -73,8 +73,6 @@ contains
        ADM_setup
     use mod_fio, only: &
        FIO_setup
-    use mod_hio, only: &
-       HIO_setup
     use mod_comm, only: &
        COMM_setup
     use mod_grd, only: &
@@ -190,10 +188,10 @@ contains
     !##### OpenACC #####
     implicit none
 
-    integer,               intent(in) :: comm_world
-    integer,               intent(in) :: intercomm_parent
-    integer,               intent(in) :: intercomm_child
-    character(len=H_LONG), intent(in) :: cnf_fname
+    integer,          intent(in) :: comm_world
+    integer,          intent(in) :: intercomm_parent
+    integer,          intent(in) :: intercomm_child
+    character(len=*), intent(in) :: cnf_fname
 
     integer :: myrank
     logical :: ismaster
@@ -213,7 +211,9 @@ contains
 
     ! setup Log
     call IO_LOG_setup( myrank, ismaster )
-    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+    call LogInit( IO_FID_CONF,       &
+                  IO_FID_LOG, IO_L,  &
+                  IO_FID_NML, IO_NML )
 
     !---< admin module setup >---
     call ADM_setup
@@ -238,7 +238,6 @@ contains
 
     !---< I/O module setup >---
     call FIO_setup
-    call HIO_setup
 
     !---< comm module setup >---
     call COMM_setup
@@ -292,10 +291,10 @@ contains
 
     !########## main ##########
 
-#ifdef _FIPP_
+#ifdef FIPP
     call fipp_start
 #endif
-#ifdef _PAPI_
+#ifdef PAPI
     call PROF_PAPI_rapstart
 #endif
 
@@ -375,10 +374,10 @@ contains
 
     call PROF_rapstart('All', 1)
 
-#ifdef _FIPP_
+#ifdef FIPP
     call fipp_stop
 #endif
-#ifdef _PAPI_
+#ifdef PAPI
     call PROF_PAPI_rapstop
 #endif
 
@@ -391,7 +390,7 @@ contains
     call PROF_rapend  ('All', 1)
 
     call PROF_rapreport
-#ifdef _PAPI_
+#ifdef PAPI
     call PROF_PAPI_rapreport
 #endif
 

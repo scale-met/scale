@@ -71,7 +71,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_MATSIRO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_MATSIRO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_MATSIRO)
 
     return
   end subroutine LAND_PHY_MATSIRO_setup
@@ -112,7 +112,7 @@ contains
     real(DP), intent(in)  :: dt
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Matsiro'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land  physics step: Matsiro'
 
     LAND_TEMP_t (:,:,:) = 0.0_RP
     LAND_WATER_t(:,:,:) = 0.0_RP

@@ -16,30 +16,29 @@ $(BUILD_DIR)/mod_cnvvar.o: atmos/mod_cnvvar.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_ad
 $(BUILD_DIR)/mod_comm.o: atmos-gm/communication/mod_comm.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o
 $(BUILD_DIR)/mod_dynamics.o: atmos-gm/dynamics/mod_dynamics.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_bndcnd.o $(BUILD_DIR)/mod_bsstate.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_forcing_driver.o $(BUILD_DIR)/mod_nudge.o $(BUILD_DIR)/mod_numfilter.o $(BUILD_DIR)/mod_prgvar.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_src.o $(BUILD_DIR)/mod_src_tracer.o $(BUILD_DIR)/mod_thrmdyn.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vi.o $(BUILD_DIR)/mod_vmtr.o
 $(BUILD_DIR)/mod_embudget.o: io/mod_embudget.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_cnvvar.o $(BUILD_DIR)/mod_gm_statistics.o $(BUILD_DIR)/mod_prgvar.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_thrmdyn.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vmtr.o
-$(BUILD_DIR)/mod_extdata.o: io/mod_extdata.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_time.o
+$(BUILD_DIR)/mod_extdata.o: io/mod_extdata.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_time.o
 $(BUILD_DIR)/mod_fio.o: io/mod_fio.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_io_param.o
 $(BUILD_DIR)/mod_forcing_driver.o: atmos-physics/forcing/mod_forcing_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_af_dcmip.o $(BUILD_DIR)/mod_af_heldsuarez.o $(BUILD_DIR)/mod_af_trcadv.o $(BUILD_DIR)/mod_bndcnd.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_gtl.o $(BUILD_DIR)/mod_history.o $(BUILD_DIR)/mod_ideal_init.o $(BUILD_DIR)/mod_prgvar.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vmtr.o
-$(BUILD_DIR)/mod_gm_driver.o: admin/mod_gm_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_bsstate.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_dynamics.o $(BUILD_DIR)/mod_embudget.o $(BUILD_DIR)/mod_extdata.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_forcing_driver.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_history.o $(BUILD_DIR)/mod_history_vars.o $(BUILD_DIR)/mod_numfilter.o $(BUILD_DIR)/mod_oprt.o $(BUILD_DIR)/mod_prgvar.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_saturation.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vi.o $(BUILD_DIR)/mod_vmtr.o
+$(BUILD_DIR)/mod_gm_driver.o: admin/mod_gm_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_bsstate.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_dynamics.o $(BUILD_DIR)/mod_embudget.o $(BUILD_DIR)/mod_extdata.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_forcing_driver.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_history.o $(BUILD_DIR)/mod_history_vars.o $(BUILD_DIR)/mod_numfilter.o $(BUILD_DIR)/mod_oprt.o $(BUILD_DIR)/mod_prgvar.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_saturation.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vi.o $(BUILD_DIR)/mod_vmtr.o
 $(BUILD_DIR)/mod_gm_statistics.o: atmos-gm/communication/mod_gm_statistics.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_vmtr.o
-$(BUILD_DIR)/mod_gmtr.o: atmos-gm/grid/mod_gmtr.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_io_param.o
-$(BUILD_DIR)/mod_grd.o: atmos-gm/grid/mod_grd.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_ideal_topo.o $(BUILD_DIR)/mod_io_param.o
+$(BUILD_DIR)/mod_gmtr.o: atmos-gm/grid/mod_gmtr.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_io_param.o
+$(BUILD_DIR)/mod_grd.o: atmos-gm/grid/mod_grd.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_ideal_topo.o $(BUILD_DIR)/mod_io_param.o
 $(BUILD_DIR)/mod_gtl.o: atmos-physics/forcing/mod_gtl.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o
-$(BUILD_DIR)/mod_hio.o: io/mod_hio.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_io_param.o
-$(BUILD_DIR)/mod_history.o: io/mod_history.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gm_statistics.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_prgvar.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_thrmdyn.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vintrpl.o $(BUILD_DIR)/mod_vmtr.o
+$(BUILD_DIR)/mod_history.o: io/mod_history.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gm_statistics.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_prgvar.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_thrmdyn.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vintrpl.o $(BUILD_DIR)/mod_vmtr.o
 $(BUILD_DIR)/mod_history_vars.o: atmos/mod_history_vars.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_bndcnd.o $(BUILD_DIR)/mod_cnvvar.o $(BUILD_DIR)/mod_gm_statistics.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_history.o $(BUILD_DIR)/mod_prgvar.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_saturation.o $(BUILD_DIR)/mod_thrmdyn.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vmtr.o
 $(BUILD_DIR)/mod_ideal_init.o: atmos/mod_ideal_init.f90 $(DEPENDLIB) $(BUILD_DIR)/Terminator.o $(BUILD_DIR)/baroclinic_wave_test.o $(BUILD_DIR)/dcmip_initial_conditions_test_1_2_3_v5.o $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_bndcnd.o $(BUILD_DIR)/mod_chemvar.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_vmtr.o $(BUILD_DIR)/supercell_test.o $(BUILD_DIR)/tropical_cyclone_test.o
 $(BUILD_DIR)/mod_ideal_topo.o: atmos/mod_ideal_topo.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o
 $(BUILD_DIR)/mod_io_param.o: io/mod_io_param.f90 $(DEPENDLIB)
-$(BUILD_DIR)/mod_latlon.o: atmos-gm/grid/mod_latlon.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_io_param.o
+$(BUILD_DIR)/mod_latlon.o: atmos-gm/grid/mod_latlon.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_io_param.o
 $(BUILD_DIR)/mod_mkgrd.o: preprocess/mod_mkgrd.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_gm_statistics.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o
 $(BUILD_DIR)/mod_mnginfo_light.o: tool/mod_mnginfo_light.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_netcdf.o: tool/mod_netcdf.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_nudge.o: atmos-physics/forcing/mod_nudge.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_cnvvar.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_extdata.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_gtl.o $(BUILD_DIR)/mod_history.o $(BUILD_DIR)/mod_oprt.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_vmtr.o
 $(BUILD_DIR)/mod_numfilter.o: atmos-gm/dynamics/mod_numfilter.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_bsstate.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_gm_statistics.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_oprt.o $(BUILD_DIR)/mod_oprt3d.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_src.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vmtr.o
-$(BUILD_DIR)/mod_oprt.o: atmos-gm/dynamics/mod_oprt.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_io_param.o
+$(BUILD_DIR)/mod_oprt.o: atmos-gm/dynamics/mod_oprt.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_io_param.o
 $(BUILD_DIR)/mod_oprt3d.o: atmos-gm/dynamics/mod_oprt3d.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_grd.o
 $(BUILD_DIR)/mod_option.o: tool/mod_option.f90 $(DEPENDLIB)
-$(BUILD_DIR)/mod_prgvar.o: atmos/mod_prgvar.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_cnvvar.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gm_statistics.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_ideal_init.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vmtr.o
+$(BUILD_DIR)/mod_prgvar.o: atmos/mod_prgvar.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_cnvvar.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gm_statistics.o $(BUILD_DIR)/mod_ideal_init.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_vmtr.o
 $(BUILD_DIR)/mod_runconf.o: admin/mod_runconf.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_chemvar.o
 $(BUILD_DIR)/mod_saturation.o: atmos/mod_saturation.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_src.o: atmos-gm/dynamics/mod_src.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_oprt.o $(BUILD_DIR)/mod_runconf.o $(BUILD_DIR)/mod_vmtr.o
@@ -54,10 +53,10 @@ $(BUILD_DIR)/prg_fio_dump.o: tool/prg_fio_dump.f90 $(DEPENDLIB) $(BUILD_DIR)/mod
 $(BUILD_DIR)/prg_fio_ico2ll.o: tool/prg_fio_ico2ll.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_mnginfo_light.o $(BUILD_DIR)/mod_option.o
 $(BUILD_DIR)/prg_fio_sel.o: tool/prg_fio_sel.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_mnginfo_light.o $(BUILD_DIR)/mod_option.o
 $(BUILD_DIR)/prg_fio_sub.o: tool/prg_fio_sub.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_mnginfo_light.o $(BUILD_DIR)/mod_option.o
-$(BUILD_DIR)/prg_mkhgrid.o: preprocess/prg_mkhgrid.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_mkgrd.o
-$(BUILD_DIR)/prg_mkllmap.o: preprocess/prg_mkllmap.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_latlon.o
+$(BUILD_DIR)/prg_mkhgrid.o: preprocess/prg_mkhgrid.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_mkgrd.o
+$(BUILD_DIR)/prg_mkllmap.o: preprocess/prg_mkllmap.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_latlon.o
 $(BUILD_DIR)/prg_mkmnginfo.o: preprocess/prg_mkmnginfo.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o
-$(BUILD_DIR)/prg_mkrawgrid.o: preprocess/prg_mkrawgrid.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_hio.o $(BUILD_DIR)/mod_mkgrd.o
+$(BUILD_DIR)/prg_mkrawgrid.o: preprocess/prg_mkrawgrid.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_adm.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_mkgrd.o
 $(BUILD_DIR)/prg_mkvlayer.o: preprocess/prg_mkvlayer.f90 $(DEPENDLIB)
 $(BUILD_DIR)/simple_physics_v5_1.o: atmos/dcmip/simple_physics_v5_1.f90 $(DEPENDLIB)
 $(BUILD_DIR)/simple_physics_v6.o: atmos/dcmip/simple_physics_v6.f90 $(DEPENDLIB)
@@ -89,7 +88,6 @@ MODS =	\
 	mod_gmtr.mod	\
 	mod_grd.mod	\
 	mod_gtl.mod	\
-	mod_hio.mod	\
 	mod_history.mod	\
 	mod_history_vars.mod	\
 	mod_ideal_init.mod	\

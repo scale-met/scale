@@ -89,7 +89,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO)
 
     select case(MKTOPO_name)
     case('NONE')
@@ -101,7 +101,7 @@ contains
     case('SCHAER')
        MKTOPO_TYPE = I_SCHAER
     case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(MKTOPO_name)
+       write(*,*) 'xxx Unsupported TYPE:', trim(MKTOPO_name)
        call PRC_MPIstop
     endselect
 
@@ -134,7 +134,7 @@ contains
           call MKTOPO_schaer
 
        case default
-          write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
+          write(*,*) 'xxx Unsupported TYPE:', MKTOPO_TYPE
           call PRC_MPIstop
        endselect
 
@@ -174,7 +174,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_FLAT. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_FLAT)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_FLAT)
 
     do j = 1, JA
     do i = 1, IA
@@ -226,7 +226,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_BELLSHAPE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_BELLSHAPE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_BELLSHAPE)
 
     if ( BELL_eachnode ) then
        CX_offset = CX(IS)
@@ -292,7 +292,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_SCHAER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_SCHAER)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_SCHAER)
 
     ! make bell-shaped mountain
     if ( .NOT. SCHAER_SWAPXY ) then

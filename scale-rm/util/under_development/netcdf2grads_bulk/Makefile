@@ -11,8 +11,8 @@ DCUTILS     = ../../../dc_utils
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
-LIBS=$(NETCDF_LIBS) -L$(SCALELIB) -lscale -lgtool -ldcutils
-INCLUDES=$(NETCDF_INCLUDE) -Iinc -I$(SCALEINC) -I$(DCUTILS) -I$(GTOOLLIB)
+LIBS=$(SCALE_NETCDF_LIBS) -L$(SCALELIB) -lscale -lgtool -ldcutils
+INCLUDES=$(SCALE_NETCDF_INCLUDE) -Iinc -I$(SCALEINC) -I$(DCUTILS) -I$(GTOOLLIB)
 
 OBJECT=net2g
 MODS=mod_net2g_vars.o     \

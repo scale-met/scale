@@ -35,21 +35,23 @@ module mod_atmos_phy_mp_vars
   public :: ATMOS_PHY_MP_vars_restart_write
 
   public :: ATMOS_PHY_MP_vars_restart_create
+  public :: ATMOS_PHY_MP_vars_restart_open
   public :: ATMOS_PHY_MP_vars_restart_def_var
   public :: ATMOS_PHY_MP_vars_restart_enddef
-  public :: ATMOS_PHY_MP_vars_restart_write_var
   public :: ATMOS_PHY_MP_vars_restart_close
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_PHY_MP_RESTART_OUTPUT       = .false.                !< output restart file?
+  logical,               public :: ATMOS_PHY_MP_RESTART_OUTPUT                = .false.                !< output restart file?
 
-  character(len=H_LONG), public :: ATMOS_PHY_MP_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG), public :: ATMOS_PHY_MP_RESTART_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_MP_RESTART_OUT_TITLE    = 'ATMOS_PHY_MP restart' !< title    of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_MP_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG),  public :: ATMOS_PHY_MP_RESTART_IN_BASENAME           = ''                     !< Basename of the input  file
+  logical,                public :: ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL  = .false.                !< Add timelabel to the basename of input  file?
+  character(len=H_LONG),  public :: ATMOS_PHY_MP_RESTART_OUT_BASENAME          = ''                     !< Basename of the output file
+  logical,                public :: ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL = .true.                 !< Add timelabel to the basename of output file?
+  character(len=H_MID),   public :: ATMOS_PHY_MP_RESTART_OUT_TITLE             = 'ATMOS_PHY_MP restart' !< title    of the output file
+  character(len=H_SHORT), public :: ATMOS_PHY_MP_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
   real(RP), public, allocatable :: ATMOS_PHY_MP_DENS_t(:,:,:)    ! tendency DENS [kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_MOMZ_t(:,:,:)    ! tendency MOMZ [kg/m2/s2]
@@ -96,13 +98,18 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_atmos_phy_mp, only: &
+       QS_MP, &
+       QE_MP
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP_VARS / &
-       ATMOS_PHY_MP_RESTART_IN_BASENAME,  &
-       ATMOS_PHY_MP_RESTART_OUTPUT,       &
-       ATMOS_PHY_MP_RESTART_OUT_BASENAME, &
-       ATMOS_PHY_MP_RESTART_OUT_TITLE,    &
+       ATMOS_PHY_MP_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL,  &
+       ATMOS_PHY_MP_RESTART_OUTPUT,                &
+       ATMOS_PHY_MP_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL, &
+       ATMOS_PHY_MP_RESTART_OUT_TITLE,             &
        ATMOS_PHY_MP_RESTART_OUT_DTYPE
 
     integer :: ierr
@@ -117,7 +124,7 @@ contains
     allocate( ATMOS_PHY_MP_MOMX_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_MOMY_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_RHOT_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_RHOQ_t(KA,IA,JA,QA) )
+    allocate( ATMOS_PHY_MP_RHOQ_t(KA,IA,JA,QS_MP:QE_MP) )
     allocate( ATMOS_PHY_MP_EVAPORATE(KA,IA,JA)    )
     ! tentative approach
     ATMOS_PHY_MP_DENS_t(:,:,:)   = 0.0_RP
@@ -142,26 +149,29 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_VARS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_MP] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
+               '***       |', 'VARNAME                 ','|', &
+               'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_PHY_MP_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       ATMOS_PHY_MP_RESTART_OUTPUT             &
          .AND. ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_MP_RESTART_OUTPUT = .false.
@@ -188,79 +198,79 @@ contains
   end subroutine ATMOS_PHY_MP_vars_fillhalo
 
   !-----------------------------------------------------------------------------
-  !> Read restart
-  subroutine ATMOS_PHY_MP_vars_restart_read
+  !> Open restart file for read
+  subroutine ATMOS_PHY_MP_vars_restart_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_read
-    use scale_rm_statistics, only: &
-       STAT_total
+       FILEIO_open
     implicit none
 
-    real(RP) :: total
+    character(len=19)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_MP) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (ATMOS_PHY_MP) ***'
 
     if ( ATMOS_PHY_MP_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)
 
-       call FILEIO_read( ATMOS_PHY_MP_SFLX_rain(:,:),                                & ! [OUT]
-                         ATMOS_PHY_MP_RESTART_IN_BASENAME, VAR_NAME(1), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_MP_SFLX_snow(:,:),                                & ! [OUT]
-                         ATMOS_PHY_MP_RESTART_IN_BASENAME, VAR_NAME(2), 'XY', step=1 ) ! [IN]
+       if ( ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)
+       endif
 
-       call ATMOS_PHY_MP_vars_fillhalo
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
+       call FILEIO_open( restart_fid, basename )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_MP is not specified.'
     endif
 
     return
-  end subroutine ATMOS_PHY_MP_vars_restart_read
+  end subroutine ATMOS_PHY_MP_vars_restart_open
 
   !-----------------------------------------------------------------------------
-  !> Write restart
-  subroutine ATMOS_PHY_MP_vars_restart_write
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_write
+  !> Read restart
+  subroutine ATMOS_PHY_MP_vars_restart_read
     use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
+    use scale_fileio, only: &
+       FILEIO_read, &
+       FILEIO_flush
     implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
 
     real(RP) :: total
     !---------------------------------------------------------------------------
 
-    if ( ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
-
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
+    if ( restart_fid /= -1 ) then
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_MP) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_MP) ***'
 
-       call ATMOS_PHY_MP_vars_fillhalo
+       call FILEIO_read( ATMOS_PHY_MP_SFLX_rain(:,:),             & ! [OUT]
+                         restart_fid, VAR_NAME(1), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_MP_SFLX_snow(:,:),             & ! [OUT]
+                         restart_fid, VAR_NAME(2), 'XY', step=1 ) ! [IN]
 
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
+       if ( IO_AGGREGATE ) then
+          call FILEIO_flush( restart_fid ) ! X/Y halos have been read from file
+       else
+          call ATMOS_PHY_MP_vars_fillhalo
+       end if
 
-       call FILEIO_write( ATMOS_PHY_MP_SFLX_rain(:,:), basename,       ATMOS_PHY_MP_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_MP_SFLX_snow(:,:), basename,       ATMOS_PHY_MP_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
-
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
+          call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
+       endif
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_MP.'
     endif
 
     return
-  end subroutine ATMOS_PHY_MP_vars_restart_write
+  end subroutine ATMOS_PHY_MP_vars_restart_read
 
   !-----------------------------------------------------------------------------
   !> Create restart file
@@ -271,22 +281,26 @@ contains
        FILEIO_create
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
-
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_MP) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (ATMOS_PHY_AE) ***'
+
+       if ( ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, ATMOS_PHY_MP_RESTART_OUT_TITLE, &
-                          ATMOS_PHY_MP_RESTART_OUT_DTYPE)
+       call FILEIO_create( restart_fid,                                                             & ! [OUT]
+                           basename, ATMOS_PHY_MP_RESTART_OUT_TITLE, ATMOS_PHY_MP_RESTART_OUT_DTYPE ) ! [IN]
 
     endif
 
@@ -300,7 +314,7 @@ contains
        FILEIO_enddef
     implicit none
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
        call FILEIO_enddef( restart_fid ) ! [IN]
     endif
 
@@ -313,9 +327,14 @@ contains
     use scale_fileio, only: &
        FILEIO_close
     implicit none
+    !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_PHY_MP) ***'
+
        call FILEIO_close( restart_fid ) ! [IN]
+
        restart_fid = -1
     endif
 
@@ -328,10 +347,9 @@ contains
     use scale_fileio, only: &
        FILEIO_def_var
     implicit none
-
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
                             VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
@@ -345,31 +363,34 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write restart
-  subroutine ATMOS_PHY_MP_vars_restart_write_var
+  subroutine ATMOS_PHY_MP_vars_restart_write
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_write_var
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
     real(RP) :: total
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call ATMOS_PHY_MP_vars_fillhalo
 
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
+          call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
+       endif
 
        call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_MP_SFLX_rain(:,:), &
-                          VAR_NAME(1), 'XY' ) ! [IN]
+                              VAR_NAME(1), 'XY' ) ! [IN]
        call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_MP_SFLX_snow(:,:), &
-                          VAR_NAME(2), 'XY' ) ! [IN]
+                              VAR_NAME(2), 'XY' ) ! [IN]
 
     endif
 
     return
-  end subroutine ATMOS_PHY_MP_vars_restart_write_var
+  end subroutine ATMOS_PHY_MP_vars_restart_write
 
 end module mod_atmos_phy_mp_vars

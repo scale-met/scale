@@ -19,12 +19,10 @@ RUNCONF     = run.conf
 TPROC       = 1
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
-DATPARAM    = land/param.bucket.conf
+DATPARAM    = " [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf] "
 DATDISTS    =
 
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
-

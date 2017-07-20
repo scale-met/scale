@@ -25,7 +25,7 @@ module scale_atmos_dyn_tstep_short_fvm_hivi
   use scale_grid_index
   use scale_index
   use scale_tracer
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -87,8 +87,6 @@ contains
     character(len=H_SHORT), intent(out) :: VAR_UNIT(:)    !< unit   of the variables
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Register'
-
     if ( ATMOS_DYN_TYPE /= 'FVM-HIVI' .AND. ATMOS_DYN_TYPE /= 'HIVI' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HIVI. Check!'
        call PRC_MPIstop
@@ -98,6 +96,12 @@ contains
     VAR_NAME(:) = ""
     VAR_DESC(:) = ""
     VAR_UNIT(:) = ""
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Register additional prognostic variables (HIVI)'
+    if ( VA_out < 1 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** => nothing.'
+    endif
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hivi_regist
@@ -118,9 +122,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Setup'
 #ifdef HIVI_BICGSTAB
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
 #else
-    if ( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
+    if( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
     write(*,*) 'xxx Not Implemented yet'
     call PRC_MPIstop
 #endif
@@ -139,7 +143,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_TSTEP_FVM_HIVI. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
 
     if ( RP == DP ) then
        mtype = MPI_DOUBLE_PRECISION
@@ -163,7 +167,7 @@ contains
        DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
        PROG0, PROG,                                 &
        DPRES0, RT2P, CORIOLI,                       &
-       num_diff, divdmp_coef, DDIV,                 &
+       num_diff, wdamp_coef, divdmp_coef, DDIV,     &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
        FLAG_FCT_ALONG_STREAM,                       &
        CDZ, FDZ, FDX, FDY,                          &
@@ -171,7 +175,7 @@ contains
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
-       dtrk, dt                                     )
+       dtrk, last                                   )
     use scale_grid_index
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
@@ -251,6 +255,7 @@ contains
     real(RP), intent(in) :: RT2P(KA,IA,JA)
     real(RP), intent(in) :: CORIOLI(1,IA,JA)
     real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in) :: wdamp_coef(KA)
     real(RP), intent(in) :: divdmp_coef
     real(RP), intent(in) :: DDIV(KA,IA,JA)
 
@@ -284,7 +289,7 @@ contains
     logical,  intent(in)  :: BND_N
 
     real(RP), intent(in)  :: dtrk
-    real(RP), intent(in)  :: dt
+    logical,  intent(in)  :: last
 
 
     ! diagnostic variables (work space)
@@ -345,6 +350,21 @@ contains
     B(:,:,:) = UNDEF
     r(:,:,:) = UNDEF
     p(:,:,:) = UNDEF
+#endif
+
+#if defined DEBUG || defined QUICKDEBUG
+    DENS_RK(   1:KS-1,:,:)   = UNDEF
+    DENS_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMZ_RK(   1:KS-1,:,:)   = UNDEF
+    MOMZ_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMX_RK(   1:KS-1,:,:)   = UNDEF
+    MOMX_RK(KE+1:KA  ,:,:)   = UNDEF
+    MOMY_RK(   1:KS-1,:,:)   = UNDEF
+    MOMY_RK(KE+1:KA  ,:,:)   = UNDEF
+    RHOT_RK(   1:KS-1,:,:)   = UNDEF
+    RHOT_RK(KE+1:KA  ,:,:)   = UNDEF
+    PROG_RK(   1:KS-1,:,:,:) = UNDEF
+    PROG_RK(KE+1:KA  ,:,:,:) = UNDEF
 #endif
 
     rdt = 1.0_RP / dtrk
@@ -551,6 +571,7 @@ contains
                  + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                  + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) &
                  ) / GSQRT(k,i,j,I_XYW) &
+               - wdamp_coef(k) * MOMZ0(k,i,j) & ! Rayleigh damping
                + divdmp_coef * rdt  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
                + MOMZ_t(k,i,j)
        enddo
@@ -1182,7 +1203,7 @@ contains
        !##### momentum equation (z) #####
 
        !--- update momentum(z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -1230,7 +1251,7 @@ contains
        !##### momentum equation (x) #####
 
        !--- update momentum(x)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -1261,7 +1282,7 @@ contains
        !##### momentum equation (y) #####
 
        !--- update momentum(y)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1607,11 +1628,11 @@ contains
        error = buf(1)
 
 #ifdef DEBUG
-       if (IO_L) write(*,*) iter, error/norm
+       if( IO_L ) write(*,*) iter, error/norm
 #endif
        if ( sqrt(error/norm) < epsilon .OR. error > error2 ) then
 #ifdef DEBUG
-         IF ( IO_L ) write(*,*) "Bi-CGSTAB converged:", iter
+         if( IO_L ) write(*,*) "Bi-CGSTAB converged:", iter
 #endif
           exit
        endif

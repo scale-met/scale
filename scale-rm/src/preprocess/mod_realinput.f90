@@ -65,7 +65,6 @@ module mod_realinput
   private :: ParentSurfaceInput
   private :: ParentOceanBoundary
   private :: interp_OceanLand_data
-  private :: diagnose_number_concentration
 
   !-----------------------------------------------------------------------------
   !
@@ -155,7 +154,6 @@ module mod_realinput
   logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
   ! only for SCALE boundary
   logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -168,6 +166,8 @@ contains
          MOMY, &
          RHOT, &
          QTRC
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     implicit none
 
     logical, intent(in)  :: flg_intrp ! flag for interpolation of SBM(S10) from outer bulk-MP model
@@ -223,9 +223,9 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_ATMOS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_ATMOS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_ATMOS)
 
-    if( TRACER_TYPE == 'SUZUKI10' ) then
+    if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
        flg_bin = .true.
     else
        flg_bin = .false.
@@ -401,14 +401,17 @@ contains
          fact_urban  => LANDUSE_fact_urban
     implicit none
 
-    logical                  :: USE_FILE_LANDWATER   = .true.  ! use land water data from files
-    real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP  ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false."
+    logical                  :: USE_FILE_LANDWATER   = .true.    ! use land water data from files
+    real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP    ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false."
+    real(RP)                 :: INIT_OCEAN_ALB_LW    = 0.04_RP   ! initial LW albedo on the ocean
+    real(RP)                 :: INIT_OCEAN_ALB_SW    = 0.10_RP   ! initial SW albedo on the ocean
+    real(RP)                 :: INIT_OCEAN_Z0W       = 1.0E-3_RP ! initial surface roughness on the ocean
     character(len=H_SHORT)   :: INTRP_LAND_TEMP      = 'off'
     character(len=H_SHORT)   :: INTRP_LAND_WATER     = 'off'
     character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP  = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_TEMP     = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP = 'off'
-    integer                  :: INTRP_ITER_MAX       = 20
+    integer                  :: INTRP_ITER_MAX       = 100
     character(len=H_SHORT)   :: SOILWATER_DS2VC      = 'limit'
     logical                  :: soilwater_DS2VC_flag           ! true: 'critical', false: 'limit'
     logical                  :: elevation_collection = .true.
@@ -440,6 +443,9 @@ contains
          BASENAME_BOUNDARY,      &
          BOUNDARY_TITLE,         &
          BOUNDARY_UPDATE_DT,     &
+         INIT_OCEAN_ALB_LW,      &
+         INIT_OCEAN_ALB_SW,      &
+         INIT_OCEAN_Z0W,         &
          INTRP_OCEAN_TEMP,       &
          INTRP_OCEAN_SFC_TEMP,   &
          INTRP_ITER_MAX,         &
@@ -501,7 +507,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_LAND. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_LAND)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_LAND)
 
     FILETYPE_LAND = FILETYPE_ORG
 
@@ -536,7 +542,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_OCEAN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_OCEAN)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_OCEAN)
 
     FILETYPE_OCEAN = FILETYPE_ORG
 
@@ -546,13 +552,13 @@ contains
        BASENAME_OCEAN = trim(BASENAME_ORG)
     end if
 
-    select case ( SOILWATER_DS2VC )
-    case ( 'critical' )
+    select case( SOILWATER_DS2VC )
+    case( 'critical' )
        SOILWATER_DS2VC_flag = .true.
-    case ('limit' )
+    case('limit' )
        SOILWATER_DS2VC_flag = .false.
     case default
-      write(*,*) ' xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
+      write(*,*) 'xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
       call PRC_MPIstop
     end select
 
@@ -585,9 +591,13 @@ contains
     allocate( OCEAN_SFC_albedo_ORG(IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
     allocate( OCEAN_SFC_Z0_ORG    (IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
 
-    if ( mdlid_land == iGrADS .and. ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) ) then
-       write(NUM,'(I5.5)') lfn
-       BASENAME_LAND = "_"//NUM
+    if ( mdlid_land == iGrADS ) then
+       if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
+          write(NUM,'(I5.5)') lfn
+          BASENAME_LAND = "_"//NUM
+       else
+          BASENAME_LAND = ""
+       end if
     end if
 
     if ( mdlid_ocean == iGrADS ) then
@@ -645,6 +655,9 @@ contains
                                 ldims, odims,            &
                                 USE_FILE_LANDWATER,      &
                                 INIT_LANDWATER_RATIO,    &
+                                INIT_OCEAN_ALB_LW,       &
+                                INIT_OCEAN_ALB_SW,       &
+                                INIT_OCEAN_Z0W,          &
                                 INTRP_ITER_MAX,          &
                                 SOILWATER_DS2VC_flag,    &
                                 elevation_collection,    &
@@ -834,14 +847,14 @@ contains
        if ( do_read_atom ) call ParentAtomSetupGrADS( dims,        & ! (out)
                                                       basename_org ) ! (in)
        update_coord = .true.
-       use_file_density = .false.
+       use_file_density = use_file_density_in
        use_temp = .true.
        rotate = .true.
        timelen = -1
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype)
        call PRC_MPIstop
 
     endselect
@@ -903,12 +916,20 @@ contains
          rotc => GTRANS_ROTC
     use scale_atmos_thermodyn, only: &
          THERMODYN_pott => ATMOS_THERMODYN_pott
+    use scale_atmos_hydrometeor, only: &
+         HYDROMETEOR_diagnose_number_concentration => ATMOS_HYDROMETEOR_diagnose_number_concentration, &
+         I_QV, &
+         I_QC, &
+         QLS, &
+         QLE
     use scale_atmos_hydrostatic, only: &
          HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_interpolation_nest, only: &
          INTRPNEST_domain_compatibility, &
          INTRPNEST_interp_fact_llz, &
          INTRPNEST_interp_3d
+    use mod_atmos_admin, only: &
+         ATMOS_PHY_MP_TYPE
     use mod_realinput_scale, only: &
          ParentAtomOpenSCALE, &
          ParentAtomInputSCALE
@@ -958,45 +979,45 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Input]'
 
-    select case (TRACER_TYPE)
-    case ("DRY")
+    select case(ATMOS_PHY_MP_TYPE)
+    case("DRY", "NONE")
        mptype_run = 'dry'
-    case ("KESSLER")
+    case("KESSLER")
        mptype_run = 'single'
-    case ("TOMITA08")
+    case("TOMITA08")
        mptype_run = 'single'
-    case ("SN14")
+    case("SN14")
        mptype_run = 'double'
-    case ("SUZUKI10")
+    case("SUZUKI10")
        mptype_run = 'single-bin'
     case default
-       write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
+       write(*,*) 'xxx Unsupported ATMOS_PHY_MP_TYPE (', trim(ATMOS_PHY_MP_TYPE), '). Check!'
        call PRC_MPIstop
     end select
 
 
     if ( do_read_atom ) then
 
-       select case ( mdlid )
-       case ( iSCALE ) ! TYPE: SCALE-RM
+       select case( mdlid )
+       case( iSCALE ) ! TYPE: SCALE-RM
 
           call ParentAtomOpenSCALE( lon_org, lat_org, & ! (out)
                                     cz_org,           & ! (out)
                                     basename_org,     & ! (in)
                                     dims              ) ! (in)
 
-       case ( iWRFARW ) ! TYPE: WRF-ARW
+       case( iWRFARW ) ! TYPE: WRF-ARW
 
           call ParentAtomOpenWRFARW
 
-       case ( iNICAM ) ! TYPE: NICAM-NETCDF
+       case( iNICAM ) ! TYPE: NICAM-NETCDF
 
           call ParentAtomOpenNICAM( lon_org, lat_org, & ! (out)
                                     cz_org,           & ! (out)
                                     basename_org,     & ! (in)
                                     dims              ) ! (in)
 
-       case ( iGrADS ) ! TYPE: GrADS format
+       case( iGrADS ) ! TYPE: GrADS format
 
           call ParentAtomOpenGrADS
 
@@ -1009,8 +1030,8 @@ contains
 
        if ( do_read_atom ) then
 
-          select case ( mdlid )
-          case ( iSCALE ) ! TYPE: SCALE-RM
+          select case( mdlid )
+          case( iSCALE ) ! TYPE: SCALE-RM
 
              call ParentAtomInputSCALE( velz_org, velx_org, vely_org, & ! (out)
                                         pres_org, dens_org, pott_org, & ! (out)
@@ -1019,7 +1040,7 @@ contains
                                         basename_org, mptype_parent,  & ! (in)
                                         dims, n         ) ! (in)
 
-          case ( iWRFARW ) ! TYPE: WRF-ARW
+          case( iWRFARW ) ! TYPE: WRF-ARW
 
              call ParentAtomInputWRFARW( velz_org, velx_org, vely_org, & ! (out)
                                          pres_org, temp_org, qtrc_org, & ! (out)
@@ -1027,16 +1048,17 @@ contains
                                          basename_org, mptype_parent,  & ! (in)
                                          dims, n                       ) ! (in)
 
-          case ( iNICAM ) ! TYPE: NICAM-NETCDF
+          case( iNICAM ) ! TYPE: NICAM-NETCDF
 
              call ParentAtomInputNICAM( velz_org, velx_org, vely_org, & ! (out)
                                         pres_org, temp_org, qtrc_org, & ! (out)
                                         basename_org, dims, n         ) ! (in)
 
-          case ( iGrADS ) ! TYPE: GrADS format
+          case( iGrADS ) ! TYPE: GrADS format
 
              call ParentAtomInputGrADS( velz_org, velx_org, vely_org, & ! (out)
-                                        pres_org, temp_org, qtrc_org, & ! (out)
+                                        pres_org, dens_org, temp_org, & ! (out)
+                                        qtrc_org,                     & ! (out)
                                         lon_org, lat_org, cz_org,     & ! (out)
                                         basename_org, dims, n         ) ! (in)
 
@@ -1046,10 +1068,13 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)+2
-                call THERMODYN_pott( pott_org(k,i,j),  & ! [OUT]
-                                     temp_org(k,i,j),  & ! [IN]
-                                     pres_org(k,i,j),  & ! [IN]
-                                     qtrc_org(k,i,j,:) ) ! [IN]
+                call THERMODYN_pott( pott_org(k,i,j),   & ! [OUT]
+                                     temp_org(k,i,j),   & ! [IN]
+                                     pres_org(k,i,j),   & ! [IN]
+                                     qtrc_org(k,i,j,:), & ! [IN]
+                                     TRACER_CV(:),      & ! [IN]
+                                     TRACER_R(:),       & ! [IN]
+                                     TRACER_MASS(:)     ) ! [IN]
              end do
              end do
              end do
@@ -1183,7 +1208,7 @@ contains
 
        if( trim(mptype_run)=='double' .and. mptype_parent <= 6 )then
           if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
-          call diagnose_number_concentration( qtrc_org(:,:,:,:) ) ! [inout]
+          call HYDROMETEOR_diagnose_number_concentration( qtrc_org(:,:,:,:) ) ! [inout]
        endif
 
        do j = 1, dims(3)
@@ -1242,12 +1267,10 @@ contains
                                     IA, JA, KS, KE,      &
                                     logwegt=.true.       )
 
-#ifdef DRY
           qc = 0.0_RP
-#else
-          qc = 0.0_RP
+#ifndef DRY
           if ( I_QC > 0 ) then
-             do iq = QWS, QWE
+             do iq = QLS, QLE
                qc(:,:,:) = qc(:,:,:) + QTRC(:,:,:,iq,nn)
              enddo
           end if
@@ -1340,9 +1363,16 @@ contains
        COMM_vars, &
        COMM_wait
     use scale_fileio, only: &
-       FILEIO_write
+       FILEIO_create, &
+       FILEIO_def_var, &
+       FILEIO_enddef, &
+       FILEIO_write_var
     use scale_time, only: &
        TIME_NOWDATE
+    use scale_atmos_phy_mp, only: &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     implicit none
 
     real(RP),         intent(in)   :: dens(:,:,:,:)
@@ -1356,10 +1386,11 @@ contains
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
-    character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    character(len=H_SHORT) :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     real(RP), allocatable :: buffer(:,:,:,:)
     integer :: nowdate(6)
 
+    integer :: fid, vid(5+QA_MP)
     integer :: k, i, j, n, iq
     integer :: ts, te
     !---------------------------------------------------------------------------
@@ -1375,10 +1406,26 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputAtmos]/Categ[Boundary]'
 
-    call FILEIO_write( DENS(:,:,:,ts:te), basename, title,           &
-                       'DENS', 'Reference Density', 'kg/m3', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate  )
+    call FILEIO_create( fid, basename, title, atmos_boundary_out_dtype, nowdate )
 
+    call FILEIO_def_var( fid, vid(1), 'DENS', 'Reference Density', 'kg/m3', 'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(2), 'VELZ', 'Reference VELZ',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(3), 'VELX', 'Reference VELX',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(4), 'VELY', 'Reference VELY',    'm/s',   'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(5), 'POTT', 'Reference PT',      'K',     'ZXYT', &
+         atmos_boundary_out_dtype, update_dt, numsteps )
+    do iq = QS_MP, QE_MP
+       call FILEIO_def_var( fid, vid(6+iq-QS_MP), TRACER_NAME(iq), 'Reference '//TRACER_NAME(iq), 'kg/kg', 'ZXYT', &
+            atmos_boundary_out_dtype, update_dt, numsteps )
+    end do
+
+    call FILEIO_enddef( fid )
+
+    call FILEIO_write_var( fid, vid(1), DENS(:,:,:,ts:te), 'DENS', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA
@@ -1388,10 +1435,7 @@ contains
     end do
     end do
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELZ', 'Reference VELZ', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(2), buffer,            'VELZ', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA-1
@@ -1404,10 +1448,7 @@ contains
     do n = ts, te
        buffer(:,IA,:,n-ts+1) = buffer(:,IA-1,:,n-ts+1)
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELX', 'Reference VELX', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(3), buffer,            'VELX', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA-1
     do i = 1, IA
@@ -1420,10 +1461,7 @@ contains
     do n = ts, te
        buffer(:,:,JA,n-ts+1) = buffer(:,:,JA-1,n-ts+1)
     end do
-    call FILEIO_write( buffer, basename, title,                 &
-                       'VELY', 'Reference VELY', 'm/s', 'ZXYT', &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
-
+    call FILEIO_write_var( fid, vid(4), buffer,            'VELY', 'ZXYT', update_dt )
     do n = ts, te
     do j = 1, JA
     do i = 1, IA
@@ -1433,11 +1471,9 @@ contains
     end do
     end do
     end do
-    call FILEIO_write( buffer, basename, title,                     &
-                       'POTT', 'Reference PT', 'K', 'ZXYT',         &
-                       atmos_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_write_var( fid, vid(5), buffer,            'POTT', 'ZXYT', update_dt )
 
-    do iq = 1, QA
+    do iq = QS_MP, QE_MP
        do n = ts, te
        do j = 1, JA
        do i = 1, IA
@@ -1447,9 +1483,7 @@ contains
        end do
        end do
        end do
-       call FILEIO_write( buffer, basename, title,                                           &
-                          AQ_NAME(iq), 'Reference '//trim(AQ_NAME(iq)), AQ_UNIT(iq), 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt, nowdate                       )
+       call FILEIO_write_var( fid, vid(6+iq-QS_MP), buffer, TRACER_NAME(iq), 'ZXYT', update_dt )
     end do
 
     deallocate( buffer )
@@ -1563,7 +1597,7 @@ contains
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype_land)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_land)
        call PRC_MPIstop
 
     endselect
@@ -1574,42 +1608,42 @@ contains
     endif
 
 
-    select case ( INTRP_LAND_TEMP )
-    case ( 'off' )
+    select case( INTRP_LAND_TEMP )
+    case( 'off' )
        i_intrp_land_temp = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_land_temp = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_land_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_TEMP is invalid. ', INTRP_LAND_TEMP
        call PRC_MPIstop
     end select
-    select case ( INTRP_LAND_SFC_TEMP )
-    case ( 'off' )
+    select case( INTRP_LAND_SFC_TEMP )
+    case( 'off' )
        i_intrp_land_sfc_temp = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_land_sfc_temp = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_land_sfc_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid. ', INTRP_LAND_SFC_TEMP
        call PRC_MPIstop
     end select
-    select case ( INTRP_LAND_WATER )
-    case ( 'off' )
+    select case( INTRP_LAND_WATER )
+    case( 'off' )
        i_intrp_land_water = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_land_water = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_land_water = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_WATER is invalid. ', INTRP_LAND_WATER
        call PRC_MPIstop
     end select
 
-    select case ( lmdlid )
-    case ( iSCALE, iWRFARW, iNICAM )
+    select case( lmdlid )
+    case( iSCALE, iWRFARW, iNICAM )
        i_intrp_land_temp      = i_intrp_mask
        i_intrp_land_sfc_temp  = i_intrp_mask
        i_intrp_land_water     = i_intrp_mask
@@ -1661,7 +1695,7 @@ contains
 
     case default
 
-       write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype_ocean)
+       write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_ocean)
        call PRC_MPIstop
 
     endselect
@@ -1672,31 +1706,31 @@ contains
     endif
 
 
-    select case ( INTRP_OCEAN_TEMP )
-    case ( 'off' )
+    select case( INTRP_OCEAN_TEMP )
+    case( 'off' )
        i_intrp_ocean_temp = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_ocean_temp = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_ocean_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_OCEAN_TEMP is invalid. ', INTRP_OCEAN_TEMP
        call PRC_MPIstop
     end select
-    select case ( INTRP_OCEAN_SFC_TEMP )
-    case ( 'off' )
+    select case( INTRP_OCEAN_SFC_TEMP )
+    case( 'off' )
        i_intrp_ocean_sfc_temp = i_intrp_off
-    case ( 'mask' )
+    case( 'mask' )
        i_intrp_ocean_sfc_temp = i_intrp_mask
-    case ( 'fill' )
+    case( 'fill' )
        i_intrp_ocean_sfc_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_OCEAN_SFC_TEMP is invalid. ', INTRP_OCEAN_SFC_TEMP
        call PRC_MPIstop
     end select
 
-    select case ( omdlid )
-    case ( iSCALE, iWRFARW, iNICAM )
+    select case( omdlid )
+    case( iSCALE, iWRFARW, iNICAM )
        i_intrp_ocean_temp     = i_intrp_mask
        i_intrp_ocean_sfc_temp = i_intrp_mask
     end select
@@ -1744,6 +1778,9 @@ contains
        odims,             &
        use_file_landwater, &
        init_landwater_ratio, &
+       init_ocean_alb_lw, &
+       init_ocean_alb_sw, &
+       init_ocean_z0w, &
        intrp_iter_max, &
        soilwater_ds2vc_flag, &
        elevation_collection, &
@@ -1766,6 +1803,8 @@ contains
          LCZ  => GRID_LCZ
     use scale_atmos_thermodyn, only: &
          THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_hydrometeor, only: &
+         I_QV
     use scale_landuse, only: &
          lsmask_nest => LANDUSE_frac_land
     use mod_realinput_scale, only: &
@@ -1814,6 +1853,9 @@ contains
     logical,          intent(in)  :: use_file_landwater   ! use land water data from files
     real(RP),         intent(in)  :: init_landwater_ratio ! Ratio of land water to storage is constant,
                                                           ! if use_file_landwater is ".false."
+    real(RP),         intent(in)  :: init_ocean_alb_lw
+    real(RP),         intent(in)  :: init_ocean_alb_sw
+    real(RP),         intent(in)  :: init_ocean_z0w
     integer,          intent(in)  :: intrp_iter_max
     logical,          intent(in)  :: soilwater_ds2vc_flag
     logical,          intent(in)  :: elevation_collection
@@ -1858,14 +1900,16 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputOcean]/Categ[Input]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputSurface]/Categ[Input]'
+
+    first = .true.
 
     if ( first ) then ! read land data only once
 
        if ( do_read_land ) then
 
-          select case ( mdlid_land )
-          case ( iSCALE ) ! TYPE: SCALE-RM
+          select case( mdlid_land )
+          case( iSCALE ) ! TYPE: SCALE-RM
 
              call ParentLandInputSCALE( &
                   tg_org, strg_org,           & ! (out)
@@ -1875,7 +1919,7 @@ contains
                   basename_land, ldims,       & ! (in)
                   use_file_landwater, lit     ) ! (in)
 
-          case ( iWRFARW ) ! TYPE: WRF-ARW
+          case( iWRFARW ) ! TYPE: WRF-ARW
 
              call ParentLandInputWRFARW( &
                   tg_org, smds_org,           & ! (out)
@@ -1885,7 +1929,7 @@ contains
                   basename_land, ldims,       & ! (in)
                   use_file_landwater, lit     ) ! (in)
 
-          case ( iNICAM ) ! TYPE: NICAM-NETCDF
+          case( iNICAM ) ! TYPE: NICAM-NETCDF
 
              call ParentLandInputNICAM( &
                   tg_org, strg_org,           & ! (out)
@@ -1897,7 +1941,7 @@ contains
              ust_org = UNDEF
              albg_org = UNDEF
 
-          case ( iGrADS ) ! TYPE: GrADS format
+          case( iGrADS ) ! TYPE: GrADS format
 
              call ParentLandInputGrADS( &
                   tg_org, strg_org, smds_org, & ! (out)
@@ -1935,11 +1979,14 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-          call THERMODYN_temp_pres( temp,          & ! [OUT]
-                                    pres,          & ! [OUT] not used
-                                    dens(KS,i,j),  & ! [IN]
-                                    rhot(KS,i,j),  & ! [IN]
-                                    qtrc(KS,i,j,:) ) ! [IN]
+          call THERMODYN_temp_pres( temp,           & ! [OUT]
+                                    pres,           & ! [OUT] not used
+                                    dens(KS,i,j),   & ! [IN]
+                                    rhot(KS,i,j),   & ! [IN]
+                                    qtrc(KS,i,j,:), & ! [IN]
+                                    TRACER_CV(:),   & ! [IN]
+                                    TRACER_R(:),    & ! [IN]
+                                    TRACER_MASS(:)  ) ! [IN]
 
           tc_urb(i,j) = temp
 #ifdef DRY
@@ -1978,26 +2025,26 @@ contains
 
     if ( do_read_ocean ) then
 
-       select case ( mdlid_ocean )
-       case ( iSCALE ) ! TYPE: SCALE-RM
+       select case( mdlid_ocean )
+       case( iSCALE ) ! TYPE: SCALE-RM
 
           call ParentOceanOpenSCALE( olon_org, olat_org, & ! (out)
                                      omask_org,          & ! (out)
                                      basename_ocean,     & ! (in)
                                      odims               ) ! (in)
 
-       case ( iWRFARW ) ! TYPE: WRF-ARW
+       case( iWRFARW ) ! TYPE: WRF-ARW
 
           call ParentOceanOpenWRFARW
 
-       case ( iNICAM ) ! TYPE: NICAM-NETCDF
+       case( iNICAM ) ! TYPE: NICAM-NETCDF
 
           call ParentOceanOpenNICAM( olon_org, olat_org, & ! (out)
                                      omask_org,          & ! (out)
                                      basename_ocean,     & ! (in)
                                      odims               ) ! (in)
 
-       case ( iGrADS ) ! TYPE: GrADS format
+       case( iGrADS ) ! TYPE: GrADS format
 
           call ParentOceanOpenGrADS
 
@@ -2011,8 +2058,8 @@ contains
 
        if ( do_read_ocean ) then
 
-          select case ( mdlid_ocean )
-          case ( iSCALE ) ! TYPE: SCALE-RM
+          select case( mdlid_ocean )
+          case( iSCALE ) ! TYPE: SCALE-RM
 
              call ParentOceanInputSCALE( &
                   tw_org, sst_org,       & ! (out)
@@ -2021,7 +2068,7 @@ contains
                   basename_ocean, odims, & ! (in)
                   n                      ) ! (in)
 
-          case ( iWRFARW ) ! TYPE: WRF-ARW
+          case( iWRFARW ) ! TYPE: WRF-ARW
 
              call ParentOceanInputWRFARW( &
                   tw_org, sst_org,       & ! (out)
@@ -2031,7 +2078,7 @@ contains
                   basename_ocean, odims, & ! (in)
                   n                      ) ! (in)
 
-          case ( iNICAM ) ! TYPE: NICAM-NETCDF
+          case( iNICAM ) ! TYPE: NICAM-NETCDF
 
              call ParentOceanInputNICAM( &
                   tw_org, sst_org,       & ! (out)
@@ -2041,7 +2088,7 @@ contains
              albw_org = UNDEF
              z0w_org = UNDEF
 
-          case ( iGrADS ) ! TYPE: GrADS format
+          case( iGrADS ) ! TYPE: GrADS format
 
              call ParentOceanInputGrADS( &
                   tw_org, sst_org,       & ! (out)
@@ -2080,21 +2127,14 @@ contains
                                              llat_org(:,:), llon_org(:,:), & ! [IN]
                                              ldims(2), ldims(3)            ) ! [IN]
 
-          call INTRPNEST_interp_fact_latlon( hfact_o(:,:,:),               & ! [OUT]
-                                             igrd_o(:,:,:), jgrd_o(:,:,:), & ! [OUT]
-                                             olat_org(:,:), olon_org(:,:), & ! [IN]
-                                             odims(1), odims(2),           & ! [IN]
-                                             llat_org(:,:), llon_org(:,:), & ! [IN]
-                                             ldims(2), ldims(3)            ) ! [IN]
-
        end if
 
        ! Ocean temp: interpolate over the land
        if ( i_INTRP_OCEAN_TEMP .ne. i_intrp_off ) then
-          select case ( i_INTRP_OCEAN_TEMP )
-          case ( i_intrp_mask )
+          select case( i_INTRP_OCEAN_TEMP )
+          case( i_intrp_mask )
              omask = omask_org
-          case ( i_intrp_fill )
+          case( i_intrp_fill )
              call make_mask( omask, tw_org, odims(1), odims(2), landdata=.false.)
           end select
           call interp_OceanLand_data(tw_org, omask, odims(1), odims(2), .false., intrp_iter_max)
@@ -2102,10 +2142,10 @@ contains
 
        ! SST: interpolate over the land
        if ( i_INTRP_OCEAN_SFC_TEMP .ne. i_intrp_off ) then
-          select case ( i_INTRP_OCEAN_SFC_TEMP )
-          case ( i_intrp_mask )
+          select case( i_INTRP_OCEAN_SFC_TEMP )
+          case( i_intrp_mask )
              omask = omask_org
-          case ( i_intrp_fill )
+          case( i_intrp_fill )
              call make_mask( omask, sst_org, odims(1), odims(2), landdata=.false.)
           end select
           call interp_OceanLand_data(sst_org, omask, odims(1), odims(2), .false., intrp_iter_max)
@@ -2113,27 +2153,27 @@ contains
 
        if ( first ) then ! interporate land data only once
 
-          call land_interporation( &
-               tg, strg, & ! (out)
-               lst, albg, & ! (out)
-               ust, albu, & ! (out)
+          call land_interporation(         &
+               tg, strg,                   & ! (out)
+               lst, albg,                  & ! (out)
+               ust, albu,                  & ! (out)
                tg_org, strg_org, smds_org, & ! (inout)
-               lst_org, albg_org, & ! (inout)
-               ust_org, & ! (inout)
-               sst_org, & ! (in)
-               lmask_org, & ! (in)
-               lsmask_nest, & ! (in)
-               topo_org, & ! (in)
+               lst_org, albg_org,          & ! (inout)
+               ust_org,                    & ! (inout)
+               sst_org,                    & ! (in)
+               lmask_org,                  & ! (in)
+               lsmask_nest,                & ! (in)
+               topo_org,                   & ! (in)
                lz_org, llon_org, llat_org, & ! (in)
-               LCZ, LON, LAT, & ! (in)
-               ldims, odims, & ! (in)
-               maskval_tg, maskval_strg, & ! (in)
-               init_landwater_ratio, & ! (in)
-               use_file_landwater, & ! (in)
-               use_waterratio, & ! (in)
-               soilwater_ds2vc_flag, & ! (in)
-               elevation_collection, & ! (in)
-               intrp_iter_max ) ! (in)
+               LCZ, LON, LAT,              & ! (in)
+               ldims, odims,               & ! (in)
+               maskval_tg, maskval_strg,   & ! (in)
+               init_landwater_ratio,       & ! (in)
+               use_file_landwater,         & ! (in)
+               use_waterratio,             & ! (in)
+               soilwater_ds2vc_flag,       & ! (in)
+               elevation_collection,       & ! (in)
+               intrp_iter_max              ) ! (in)
 
        end if ! first
 
@@ -2148,9 +2188,9 @@ contains
 
        do j = 1, odims(2)
        do i = 1, odims(1)
-          if ( albw_org(i,j,I_LW) == UNDEF ) albw_org(i,j,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
-          if ( albw_org(i,j,I_SW) == UNDEF ) albw_org(i,j,I_SW) = 0.10_RP
-          if ( z0w_org(i,j) == UNDEF ) z0w_org(i,j) = 0.001_RP
+          if ( albw_org(i,j,I_LW) == UNDEF ) albw_org(i,j,I_LW) = init_ocean_alb_lw
+          if ( albw_org(i,j,I_SW) == UNDEF ) albw_org(i,j,I_SW) = init_ocean_alb_sw
+          if ( z0w_org(i,j) == UNDEF ) z0w_org(i,j) = init_ocean_z0w
        end do
        end do
 
@@ -2212,7 +2252,10 @@ contains
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
     use scale_fileio, only: &
-         FILEIO_write
+         FILEIO_create, &
+         FILEIO_def_var, &
+         FILEIO_enddef, &
+         FILEIO_write_var
     use scale_time, only: &
          TIME_NOWDATE
     implicit none
@@ -2226,8 +2269,9 @@ contains
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
-    character(len=H_MID)  :: ocean_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    character(len=H_SHORT) :: ocean_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     integer :: nowdate(6)
+    integer :: fid, vid(5)
     integer :: ts, te
     !---------------------------------------------------------------------------
 
@@ -2235,30 +2279,36 @@ contains
     te = numsteps
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputOcean]/Categ[Boundary]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[RealinputSurface]/Categ[Boundary]'
 
     nowdate = TIME_NOWDATE
     nowdate(1) = nowdate(1)
 
-    call FILEIO_write( tw(:,:,ts:te), basename, title,              &
-                       'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_create( fid, basename, title, ocean_boundary_out_dtype, nowdate )
 
-    call FILEIO_write( sst(:,:,ts:te), basename, title,             &
-                       'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature', 'K', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_def_var( fid, vid(1), &
+         'OCEAN_TEMP',     'Reference Ocean Temperature',            'K', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(2), &
+         'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature',    'K', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(3), &
+         'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(4), &
+         'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(5), &
+         'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', 'XYT', &
+         ocean_boundary_out_dtype, update_dt, numsteps )
 
-    call FILEIO_write( albw(:,:,I_LW,ts:te), basename, title,       &
-                       'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+    call FILEIO_enddef( fid )
 
-    call FILEIO_write( albw(:,:,I_SW,ts:te), basename, title,       &
-                       'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
-
-    call FILEIO_write( z0(:,:,ts:te), basename, title,           &
-                       'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', 'XYT', &
-                       ocean_boundary_out_dtype, update_dt, nowdate )
+       call FILEIO_write_var( fid, vid(1), tw(:,:,ts:te),         'OCEAN_TEMP',    'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(2), sst(:,:,ts:te),       'OCEAN_SFC_TEMP', 'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(3), albw(:,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(4), albw(:,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT', update_dt )
+       call FILEIO_write_var( fid, vid(5), z0(:,:,ts:te),        'OCEAN_SFC_Z0',   'XYT', update_dt )
 
     return
   end subroutine ParentOceanBoundary
@@ -2373,10 +2423,10 @@ contains
 
     ! Surface skin temp: interpolate over the ocean
     if ( i_INTRP_LAND_SFC_TEMP .ne. i_intrp_off ) then
-       select case ( i_INTRP_LAND_SFC_TEMP )
-       case ( i_intrp_mask )
+       select case( i_INTRP_LAND_SFC_TEMP )
+       case( i_intrp_mask )
           lmask = lmask_org
-       case ( i_intrp_fill )
+       case( i_intrp_fill )
           call make_mask( lmask, lst_org, ldims(2), ldims(3), landdata=.true.)
        case default
           write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid.'
@@ -2387,10 +2437,10 @@ contains
 
     ! Urban surface temp: interpolate over the ocean
     ! if ( i_INTRP_URB_SFC_TEMP .ne. i_intrp_off ) then
-    !   select case ( i_INTRP_URB_SFC_TEMP )
-    !   case ( i_intrp_mask )
+    !   select case( i_INTRP_URB_SFC_TEMP )
+    !   case( i_intrp_mask )
     !      lmask = lmask_org
-    !   case ( i_intrp_fill )
+    !   case( i_intrp_fill )
     !      call make_mask( lmask, ust_org, ldims(2), ldims(3), landdata=.true.)
     !   case default
     !      write(*,*) 'xxx INTRP_URB_SFC_TEMP is invalid.'
@@ -2429,10 +2479,10 @@ contains
     if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
        do k = 1, ldims(1)
           work(:,:) = tg_org(k,:,:)
-          select case ( i_INTRP_LAND_TEMP )
-          case ( i_intrp_mask )
+          select case( i_INTRP_LAND_TEMP )
+          case( i_intrp_mask )
              lmask = lmask_org
-          case ( i_intrp_fill )
+          case( i_intrp_fill )
              call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
           end select
           call interp_OceanLand_data( work, lmask, ldims(2), ldims(3), .true., intrp_iter_max )
@@ -2534,10 +2584,10 @@ contains
           if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
              do k = 1, ldims(1)
                 work(:,:) = smds_org(k,:,:)
-                select case ( i_INTRP_LAND_WATER )
-                case ( i_intrp_mask )
+                select case( i_INTRP_LAND_WATER )
+                case( i_intrp_mask )
                    lmask = lmask_org
-                case ( i_intrp_fill )
+                case( i_intrp_fill )
                    call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
                 end select
                 call interp_OceanLand_data(work, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
@@ -2565,10 +2615,10 @@ contains
           if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
              do k = 1, ldims(1)
                 work(:,:) = strg_org(k,:,:)
-                select case ( i_INTRP_LAND_WATER )
-                case ( i_intrp_mask )
+                select case( i_INTRP_LAND_WATER )
+                case( i_intrp_mask )
                    lmask = lmask_org
-                case ( i_intrp_fill )
+                case( i_intrp_fill )
                    call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
                 end select
                 call interp_OceanLand_data(work, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
@@ -2663,108 +2713,112 @@ contains
   end subroutine make_mask
   !-----------------------------------------------------------------------------
   subroutine interp_OceanLand_data( &
-      data,      & ! (inout)
-      lsmask,    & ! (in)
-      nx,        & ! (in)
-      ny,        & ! (in)
-      landdata,  & ! (in)
-      iter_max,  & ! (in)
-      maskval    & ! (out)
-      )
+      data,     &
+      lsmask,   &
+      nx,       &
+      ny,       &
+      landdata, &
+      iter_max  )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
-    real(RP), intent(inout)         :: data(:,:)
-    real(RP), intent(in)            :: lsmask(:,:)
-    integer,  intent(in)            :: nx
-    integer,  intent(in)            :: ny
-    logical,  intent(in)            :: landdata   ! .true. => land data , .false. => ocean data
-    integer,  intent(in)            :: iter_max
-    real(RP), intent(out), optional :: maskval
 
-    integer                 :: untarget_mask
-    integer, allocatable    :: imask(:,:),imaskr(:,:)
-    real(RP),allocatable    :: newdata(:,:)
-    real(RP)                :: nd
-    integer                 :: count
+    integer,  intent(in)    :: nx
+    integer,  intent(in)    :: ny
+    real(RP), intent(inout) :: data  (nx,ny)
+    real(RP), intent(in)    :: lsmask(nx,ny)
+    logical,  intent(in)    :: landdata   ! .true. => land data , .false. => ocean data
+    integer,  intent(in)    :: iter_max
 
-    integer :: i, j, ii, jj, kk
+    integer  :: mask     (nx,ny)
+    integer  :: mask_prev(nx,ny)
+    real(RP) :: data_prev(nx,ny)
+    real(RP) :: tmp, cnt, sw
+    integer  :: mask_target
 
+    integer  :: num_land, num_ocean, num_replaced
+    integer  :: istr, iend, jstr, jend
+    integer  :: i, j, ii, jj, ite
     !---------------------------------------------------------------------------
-    allocate( imask  (nx,ny) )
-    allocate( imaskr (nx,ny) )
-    allocate( newdata(nx,ny) )
-    newdata = 0.0_RP
-    if( present(maskval) ) maskval = 999.99_RP
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** [interp_OceanLand_data]/Categ[realinit]'
+
+    if ( landdata ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** target mask : LAND'
+       mask_target = 1 ! interpolation for land data
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** target mask : OCEAN'
+       mask_target = 0 ! interpolation for ocean data
+    endif
 
     ! search target cell for interpolation
-     do j = 1, ny
-     do i = 1, nx
-        if( abs(lsmask(i,j)-1.0_RP) < EPS )then
-           imask(i,j) = 1  ! land grid
-        else
-           imask(i,j) = 0  ! ocean grid
-        endif
-     enddo
-     enddo
-     if ( landdata ) then  ! interpolation for land data
-       untarget_mask = 1
-     else                  ! interpolation for ocean data
-       untarget_mask = 0
-     endif
+    num_land  = 0
+    num_ocean = 0
+    do j = 1, ny
+    do i = 1, nx
+       mask(i,j) = int( 0.5_RP - sign(0.5_RP,abs(lsmask(i,j)-1.0_RP)-EPS) ) ! 1 for land, 0 for ocean
+       num_land  = num_land  + (   mask(i,j) )
+       num_ocean = num_ocean + ( 1-mask(i,j) )
+    enddo
+    enddo
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,3I8,A,I8)') '*** ite = ', 0, &
+               ', (land,ocean,replaced) = ', num_land, num_ocean, 0, ' / ', nx*ny
 
     ! start interpolation
+    do ite = 1, iter_max
+       ! save previous state
+       mask_prev(:,:) = mask(:,:)
+       data_prev(:,:) = data(:,:)
+       num_replaced   = 0
 
-    imaskr = imask
-    do kk = 1, iter_max
        do j  = 1, ny
        do i  = 1, nx
-          if ( imask(i,j) == untarget_mask ) then  ! not missing value
-             newdata(i,j) = data(i,j)
-             cycle
-          else
 
-             if ( present(maskval) ) then
-             if ( abs(maskval-999.99_RP)<EPS ) then
-                if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j)
-             endif
-             endif
+          if( mask(i,j) == mask_target ) cycle ! already filled
 
-             !--------------------------------------
-             ! check data of neighbor grid
-             !---------------------------------------
-             count = 0
-             nd = 0.0_RP
-             do  jj = j-1, j+1
-                if ( jj < 1 .or. jj > ny ) cycle
-                do ii = i-1, i+1
-                   if ( ii < 1 .or. ii > nx .or. (jj == j .and. ii == i) ) cycle
-                   if ( imask(ii,jj) == untarget_mask ) then
-                      nd = nd + data(ii,jj)
-                      count = count + 1
-                   end if
-                end do
-             end do
+          ! collect neighbor grid
+          istr = max(i-1,1 )
+          iend = min(i+1,nx)
+          jstr = max(j-1,1 )
+          jend = min(j+1,ny)
 
-             if( count >= 3 )then  ! coast grid : interpolate
-                newdata(i,j) = nd / count
-                imaskr(i,j) = untarget_mask
-             else
-                newdata(i,j) = data(i,j)
-             endif
+          tmp = 0.0_RP
+          cnt = 0.0_RP
+          do jj = jstr, jend
+          do ii = istr, iend
+             sw = 0.5_RP - sign(0.5_RP,real(abs(mask_prev(ii,jj)-mask_target),kind=RP)-EPS)
 
-          endif ! sea/land
+             tmp = tmp + sw * data_prev(ii,jj)
+             cnt = cnt + sw
+          enddo
+          enddo
+
+          if ( cnt >= 3.0_RP ) then ! replace by average of neighbor grid value
+             data(i,j) = tmp / cnt
+             mask(i,j) = mask_target
+
+             num_replaced = num_replaced + 1
+          endif
 
        enddo
        enddo
 
-       imask(:,:) = imaskr(:,:)
-       data(:,:)  = newdata(:,:)
-    enddo ! kk
+       if ( landdata ) then
+          num_land  = num_land  + num_replaced
+          num_ocean = num_ocean - num_replaced
+       else
+          num_land  = num_land  - num_replaced
+          num_ocean = num_ocean + num_replaced
+       endif
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,3I8,A,I8)') '*** ite = ', ite, &
+                  ', (land,ocean,replaced) = ', num_land, num_ocean, num_replaced, ' / ', nx*ny
 
-    deallocate( imask   )
-    deallocate( imaskr  )
-    deallocate( newdata )
+       if( num_replaced == 0 ) exit
+
+    enddo ! itelation
+
 
     return
   end subroutine interp_OceanLand_data
@@ -2795,17 +2849,20 @@ contains
        EPS => CONST_EPS, &
        UNDEF => CONST_UNDEF
     implicit none
-    real(RP),     intent(inout) :: data(:,:)
-    real(RP),     intent(in)    :: maskval(:,:)
-    integer,      intent(in)    :: nx, ny
-    character(*), intent(in)    :: elem
-    integer                     :: i, j
+
+    real(RP),         intent(inout) :: data(:,:)
+    real(RP),         intent(in)    :: maskval(:,:)
+    integer,          intent(in)    :: nx, ny
+    character(len=*), intent(in)    :: elem
+
+    integer :: i, j
 
     do j = 1, ny
     do i = 1, nx
        if( abs(data(i,j) - UNDEF) < sqrt(EPS) )then
           if( abs(maskval(i,j) - UNDEF) < sqrt(EPS) )then
-             write(*,*) "Data for mask has missing value. ",trim(elem),i,j
+             write(*,*) "xxx data for mask of "//trim(elem)//"(",i,",",j,") includes missing value."
+             write(*,*) "xxx Please check input data of SKINTEMP or SST. "
              call PRC_MPIstop
           else
              data(i,j) = maskval(i,j)
@@ -2815,40 +2872,5 @@ contains
     enddo
 
   end subroutine replace_misval_map
-
-  !-----------------------------------------------------------------------------
-  subroutine diagnose_number_concentration( &
-      qvars      & ! (inout)
-      )
-    use scale_const, only: &
-         PI => CONST_PI
-    implicit none
-    real(RP), intent(inout) :: qvars(:,:,:,:)
-
-    real(RP), parameter :: Dc   =  20.D-6  ! typical particle diameter for cloud  [m]
-    real(RP), parameter :: Dr   = 200.D-6  ! typical particle diameter for rain   [m]
-    real(RP), parameter :: Di   =  80.D-6  ! typical particle diameter for ice    [m]
-    real(RP), parameter :: Ds   =  80.D-6  ! typical particle diameter for snow   [m]
-    real(RP), parameter :: Dg   = 200.D-6  ! typical particle diameter for grapel [m]
-    real(RP), parameter :: RHOw = 1000.D0  ! typical density for warm particles   [kg/m3]
-    real(RP), parameter :: RHOf =  100.D0  ! typical density for frozen particles [kg/m3]
-    real(RP), parameter :: RHOg =  400.D0  ! typical density for grapel particles [kg/m3]
-    real(RP), parameter :: b    =  3.D0    ! assume spherical form
-
-    real(RP) :: piov6
-    !---------------------------------------------------------------------------
-
-#ifndef DRY
-    piov6 = pi / 6.0_RP
-
-    qvars(:,:,:,I_NC) = qvars(:,:,:,I_QC) / ( (piov6*RHOw) * Dc**b )
-    qvars(:,:,:,I_NR) = qvars(:,:,:,I_QR) / ( (piov6*RHOw) * Dr**b )
-    qvars(:,:,:,I_NI) = qvars(:,:,:,I_QI) / ( (piov6*RHOf) * Di**b )
-    qvars(:,:,:,I_NS) = qvars(:,:,:,I_QS) / ( (piov6*RHOf) * Ds**b )
-    qvars(:,:,:,I_NG) = qvars(:,:,:,I_QG) / ( (piov6*RHOg) * Dg**b )
-#endif
-
-    return
-  end subroutine diagnose_number_concentration
 
 end module mod_realinput

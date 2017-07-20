@@ -123,13 +123,12 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** PARAM_MKGRD is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKGRD)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKGRD)
 
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     allocate( GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz) )
     allocate( GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz) )
     allocate( GRD_xt   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )

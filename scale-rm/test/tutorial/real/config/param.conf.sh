@@ -12,10 +12,6 @@ cat << EOF > param.admin.conf
  CONST_THERMODYN_TYPE = "SIMPLE",
 /
 
-&PARAM_TRACER
- TRACER_TYPE = "${ATMOS_PHY_MP_TYPE[$D]}",
-/
-
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "${ATMOS_DYN_TYPE[$D]}",
  ATMOS_PHY_MP_TYPE = "${ATMOS_PHY_MP_TYPE[$D]}",
@@ -122,9 +118,7 @@ cat << EOF > param.physics.conf
  ATMOS_BOUNDARY_START_DATE     = ${ATMOS_BOUNDARY_START_DATE},
  ATMOS_BOUNDARY_UPDATE_DT      = ${ATMOS_BOUNDARY_UPDATE_DT},
  ATMOS_BOUNDARY_USE_DENS       = .true.,
- ATMOS_BOUNDARY_USE_VELZ       = .true.,
  ATMOS_BOUNDARY_USE_QHYD       = ${ATMOS_BOUNDARY_USE_QHYD},
- ATMOS_BOUNDARY_VALUE_VELZ     = 0.0,
  ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,
  ATMOS_BOUNDARY_LINEAR_H       = .false.,
  ATMOS_BOUNDARY_EXP_H          = 2.0,
@@ -134,12 +128,13 @@ cat << EOF > param.physics.conf
  ATMOS_DYN_TINTEG_LARGE_TYPE          = "EULER",
  ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
  ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
- ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
+ ATMOS_DYN_FVM_FLUX_TYPE              = "UD3",
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
- ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.01,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.0,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
  ATMOS_DYN_enable_coriolis            = .true.,
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
+ ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN
@@ -154,6 +149,23 @@ cat << EOF > param.physics.conf
  ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "MIPAS",
 /
 
+EOF
+
+if [ ${ATMOS_PHY_TB_TYPE[$D]} = "HYBRID" ]; then
+  cat <<EOF >> param.physics.conf
+&PARAM_ATMOS_PHY_TB_HYBRID
+ ATMOS_PHY_TB_HYBRID_SGS_TYPE = "SMAGORINSKY",
+ ATMOS_PHY_TB_HYBRID_PBL_TYPE = "MYNN",
+/
+
+&PARAM_ATMOS_PHY_TB_SMG
+ ATMOS_PHY_TB_SMG_horizontal = .true.,
+/
+
+EOF
+fi
+
+cat <<EOF >> param.physics.conf
 #################################################
 #
 # model configuration: ocean
@@ -214,7 +226,7 @@ cat << EOF > param.history.conf
  HISTORY_DEFAULT_TUNIT     = "${TIME_DT_UNIT}",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
  HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZINTERP   = .false.,
+ HISTORY_DEFAULT_ZCOORD    = "model",
  HISTORY_OUTPUT_STEP0      = .true.,
 /
 

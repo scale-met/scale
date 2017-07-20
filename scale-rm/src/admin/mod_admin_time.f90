@@ -99,6 +99,7 @@ module mod_admin_time
   real(DP), private :: TIME_WALLCLOCK_START             ! Start time of wall clock             [sec]
   real(DP), private :: TIME_WALLCLOCK_LIMIT   = -1.0_DP ! Elapse time limit of wall clock time [sec]
   real(DP), private :: TIME_WALLCLOCK_SAFE    =  0.9_DP ! Safety coefficient for elapse time limit
+  real(DP), private :: TIME_WALLCLOCK_safelim           ! TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE
 
   real(DP), private, parameter :: eps = 1.E-6_DP !> epsilon for timesec
 
@@ -270,7 +271,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TIME] / Categ[COMMON] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TIME] / Categ[ADMIN] / Origin[SCALE-RM]'
 
     TIME_NSTEP_ATMOS_DYN = -1
 
@@ -283,154 +284,188 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TIME. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TIME)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TIME)
 
     ! check time setting
     if ( setup_TimeIntegration ) then
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Check time interval and unit for each component ***'
+
        if ( TIME_DT == UNDEF8 ) then
-          write(*,*) 'xxx Not found TIME_DT.'
+          write(*,*) 'xxx Not found TIME_DT. STOP.'
           call PRC_MPIstop
        endif
        if ( TIME_DURATION == UNDEF8 ) then
-          write(*,*) 'xxx Not found TIME_DURATION.'
+          write(*,*) 'xxx Not found TIME_DURATION. STOP.'
           call PRC_MPIstop
        endif
 
        ! DYN
        if ( TIME_DT_ATMOS_DYN == UNDEF8 ) then
           if ( TIME_NSTEP_ATMOS_DYN < 0 ) then
-             if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN. TIME_DT is used.'
+             if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_DYN.            ', &
+                                                    'TIME_DT is used.'
              TIME_DT_ATMOS_DYN = TIME_DT
           endif
        endif
        if ( TIME_DT_ATMOS_DYN_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_DYN_UNIT.       ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_DYN_UNIT = TIME_DT_UNIT
        endif
        ! PHY_CP
        if ( TIME_DT_ATMOS_PHY_CP == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_CP. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_CP.         ', &
+                                                 'TIME_DT is used.'
           TIME_DT_ATMOS_PHY_CP = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_CP_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_CP_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_CP_UNIT.    ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_CP_UNIT = TIME_DT_UNIT
        endif
        ! PHY_MP
        if ( TIME_DT_ATMOS_PHY_MP == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_MP.         ', &
+                                                 'TIME_DT is used.'
           TIME_DT_ATMOS_PHY_MP = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_MP_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_MP_UNIT.    ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_MP_UNIT = TIME_DT_UNIT
        endif
        ! PHY_RD
        if ( TIME_DT_ATMOS_PHY_RD == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_RD.         ', &
+                                                 'TIME_DT is used.'
           TIME_DT_ATMOS_PHY_RD = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_RD_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_RD_UNIT.    ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_RD_UNIT = TIME_DT_UNIT
        endif
        ! PHY_SF
        if ( TIME_DT_ATMOS_PHY_SF == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_SF.         ', &
+                                                 'TIME_DT is used.'
           TIME_DT_ATMOS_PHY_SF = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_SF_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_SF_UNIT.    ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_SF_UNIT = TIME_DT_UNIT
        endif
        ! PHY_TB
        if ( TIME_DT_ATMOS_PHY_TB == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_TB.         ', &
+                                                 'TIME_DT is used.'
           TIME_DT_ATMOS_PHY_TB = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_TB_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_TB_UNIT.    ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_TB_UNIT = TIME_DT_UNIT
        endif
        ! PHY_CH
        if ( TIME_DT_ATMOS_PHY_CH == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_CH. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_CH.         ', &
+                                                 'TIME_DT is used.'
           TIME_DT_ATMOS_PHY_CH = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_CH_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_CH_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_CH_UNIT.    ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_CH_UNIT = TIME_DT_UNIT
        endif
        ! PHY_AE
        if ( TIME_DT_ATMOS_PHY_AE == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_AE. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_AE.         ', &
+                                                 'TIME_DT is used.'
           TIME_DT_ATMOS_PHY_AE = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_AE_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_AE_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_AE_UNIT.    ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_AE_UNIT = TIME_DT_UNIT
        endif
        ! ATMOS RESTART
        if ( TIME_DT_ATMOS_RESTART == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART. TIME_DURATION is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_RESTART.        ', &
+                                                 'TIME_DURATION is used.'
           TIME_DT_ATMOS_RESTART = TIME_DURATION
        endif
        if ( TIME_DT_ATMOS_RESTART_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_RESTART_UNIT.   ', &
+                                                 'TIME_DURATION_UNIT is used.'
           TIME_DT_ATMOS_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! OCEAN
        if ( TIME_DT_OCEAN == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_OCEAN.                ', &
+                                                 'TIME_DT is used.'
           TIME_DT_OCEAN = TIME_DT
        endif
        if ( TIME_DT_OCEAN_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_OCEAN_UNIT.           ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_OCEAN_UNIT = TIME_DT_UNIT
        endif
        ! OCEAN RESTART
        if ( TIME_DT_OCEAN_RESTART == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART. TIME_DURATION is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_OCEAN_RESTART.        ', &
+                                                 'TIME_DURATION is used.'
           TIME_DT_OCEAN_RESTART = TIME_DURATION
        endif
        if ( TIME_DT_OCEAN_RESTART_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_OCEAN_RESTART_UNIT.   ', &
+                                                 'TIME_DURATION_UNIT is used.'
           TIME_DT_OCEAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! LAND
        if ( TIME_DT_LAND == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_LAND.                 ', &
+                                                 'TIME_DT is used.'
           TIME_DT_LAND = TIME_DT
        endif
        if ( TIME_DT_LAND_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_LAND_UNIT.            ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_LAND_UNIT = TIME_DT_UNIT
        endif
        ! LAND RESTART
        if ( TIME_DT_LAND_RESTART == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART. TIME_DURATION is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_LAND_RESTART.         ', &
+                                                 'TIME_DURATION is used.'
           TIME_DT_LAND_RESTART = TIME_DURATION
        endif
        if ( TIME_DT_LAND_RESTART_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_LAND_RESTART_UNIT.    ', &
+                                                 'TIME_DURATION_UNIT is used.'
           TIME_DT_LAND_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! URBAN
        if ( TIME_DT_URBAN == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN. TIME_DT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_URBAN.                ', &
+                                                 'TIME_DT is used.'
           TIME_DT_URBAN = TIME_DT
        endif
        if ( TIME_DT_URBAN_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN_UNIT. TIME_DT_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_URBAN_UNIT.           ', &
+                                                 'TIME_DT_UNIT is used.'
           TIME_DT_URBAN_UNIT = TIME_DT_UNIT
        endif
        ! URBAN RESTART
        if ( TIME_DT_URBAN_RESTART == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN_RESTART. TIME_DURATION is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_URBAN_RESTART.        ', &
+                                                 'TIME_DURATION is used.'
           TIME_DT_URBAN_RESTART = TIME_DURATION
        endif
        if ( TIME_DT_URBAN_RESTART_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_URBAN_RESTART_UNIT.   ', &
+                                                 'TIME_DURATION_UNIT is used.'
           TIME_DT_URBAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! Resume
@@ -438,7 +473,8 @@ contains
           TIME_DT_RESUME = TIME_DURATION
        endif
        if ( TIME_DT_RESUME_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_RESUME_UNIT. TIME_DURATION_UNIT is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_RESUME_UNIT.          ', &
+                                                 'TIME_DURATION_UNIT is used.'
           TIME_DT_RESUME_UNIT = TIME_DURATION_UNIT
        endif
     endif
@@ -513,7 +549,7 @@ contains
                              TIME_ENDMS       ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Date/time setting ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Global date / time setting ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** START Date     : ', startchardate
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** END   Date     : ', endchardate
 
@@ -676,7 +712,7 @@ contains
        endif
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*)                     '*** Time interval for each processes (sec.)'
+       if( IO_L ) write(IO_FID_LOG,*)                     '*** Time interval for each component (sec.)'
        if( IO_L ) write(IO_FID_LOG,*)                     '*** Atmosphere'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)')        '*** Dynamics (time)             : ', TIME_DTSEC_ATMOS_DYN
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I10,A,I8,A)')   '***          (step)             : ', TIME_NSTEP_ATMOS_DYN, &
@@ -705,11 +741,11 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)                     '*** Time interval for restart (sec.)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Atmospheric Variables       : ', TIME_DTSEC_ATMOS_RESTART, &
                                                           ' (step interval=', TIME_DSTEP_ATMOS_RESTART, ')'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Ocean Variables             : ', TIME_DTSEC_OCEAN_RESTART, &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Ocean       Variables       : ', TIME_DTSEC_OCEAN_RESTART, &
                                                           ' (step interval=', TIME_DSTEP_OCEAN_RESTART, ')'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Land Variables              : ', TIME_DTSEC_LAND_RESTART,  &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Land        Variables       : ', TIME_DTSEC_LAND_RESTART,  &
                                                           ' (step interval=', TIME_DSTEP_LAND_RESTART,  ')'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Urban Variables             : ', TIME_DTSEC_URBAN_RESTART, &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Urban       Variables       : ', TIME_DTSEC_URBAN_RESTART, &
                                                           ' (step interval=', TIME_DSTEP_URBAN_RESTART, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Resume                      : ', TIME_DTSEC_RESUME, &
                                                           ' (step interval=', TIME_DSTEP_RESUME,        ')'
@@ -717,13 +753,16 @@ contains
        TIME_DTSEC = 1.0_RP
     endif
 
+    TIME_WALLCLOCK_START = PRC_MPItime()
+
     ! WALLCLOCK TERMINATOR SETUP
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Wall clock time limit of execution is specified.'
 
        if ( TIME_DT_WALLCLOCK_CHECK == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_WALLCLOCK_CHECK. largest time step interval is used.'
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_WALLCLOCK_CHECK.      ', &
+                                                 ' largest time step interval is used.'
           TIME_DTSEC_WALLCLOCK_CHECK = max( TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN, &
                                             TIME_DTSEC_ATMOS_PHY_CP,                   &
                                             TIME_DTSEC_ATMOS_PHY_MP,                   &
@@ -737,7 +776,8 @@ contains
                                             TIME_DTSEC_URBAN                           )
        else
           if ( TIME_DT_WALLCLOCK_CHECK_UNIT == '' ) then
-             if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_WALLCLOCK_CHECK_UNIT. TIME_DURATION_UNIT is used.'
+             if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_WALLCLOCK_CHECK_UNIT. ', &
+                                                    'TIME_DURATION_UNIT is used.'
              TIME_DT_WALLCLOCK_CHECK_UNIT = TIME_DURATION_UNIT
           endif
           call CALENDAR_unit2sec( TIME_DTSEC_WALLCLOCK_CHECK, TIME_DT_WALLCLOCK_CHECK, TIME_DT_WALLCLOCK_CHECK_UNIT )
@@ -746,12 +786,11 @@ contains
 
        TIME_DSTEP_WALLCLOCK_CHECK = int( TIME_DTSEC_WALLCLOCK_CHECK / TIME_DTSEC )
 
-       TIME_WALLCLOCK_SAFE  = max( min( TIME_WALLCLOCK_SAFE, 1.0_DP ), 0.0_DP )
-       TIME_WALLCLOCK_START = PRC_MPItime()
+       TIME_WALLCLOCK_SAFE    = max( min( TIME_WALLCLOCK_SAFE, 1.0_DP ), 0.0_DP )
+       TIME_WALLCLOCK_safelim = TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.1,A)')      '*** This job stops after ', &
-                                                          TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE, ' seconds.'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Step interval for check     : ', TIME_DTSEC_WALLCLOCK_CHECK, &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.1,A)')      '*** This job stops after ', TIME_WALLCLOCK_safelim, ' seconds.'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Time interval for check     : ', TIME_DTSEC_WALLCLOCK_CHECK, &
                                                           ' (step interval=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
     endif
 
@@ -762,6 +801,7 @@ contains
   !> Evaluate component execution
   subroutine ADMIN_TIME_checkstate
     use scale_process, only: &
+       PRC_UNIVERSAL_IsMaster, &
        PRC_MPItime
     use scale_calendar, only: &
        CALENDAR_date2char
@@ -785,6 +825,7 @@ contains
 
     real(DP)          :: WALLCLOCK_elapse
     character(len=27) :: nowchardate
+    logical           :: TO_STDOUT
     !---------------------------------------------------------------------------
 
     TIME_DOATMOS_step     = .false.
@@ -872,16 +913,31 @@ contains
        TIME_RES_RESUME       = 0
     endif
 
+    TO_STDOUT = .false.
+    if ( IO_STEP_TO_STDOUT > 0 ) then
+       if( mod(TIME_NOWSTEP-1,IO_STEP_TO_STDOUT) == 0 ) TO_STDOUT = .true.
+    endif
+
     call CALENDAR_date2char( nowchardate,     & ! [OUT]
                              TIME_NOWDATE(:), & ! [IN]
                              TIME_NOWMS       ) ! [IN]
 
+    WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
-       WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
-       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I7,A,I7,A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
-                                                              ' WCLOCK:', WALLCLOCK_elapse
+       if( IO_L ) write(IO_FID_LOG,'(1x,2A,2(A,I7),2(A,F10.1))') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                                 ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim
+       if ( PRC_UNIVERSAL_IsMaster .AND. TO_STDOUT ) then ! universal master node
+          if( IO_L ) write(*,'(1x,2A,2(A,I7),2(A,F10.1))') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                           ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim
+       endif
     else
-       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I7,A,I7)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
+       if( IO_L ) write(IO_FID_LOG,'(1x,2A,2(A,I7),A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                              ' WCLOCK:', WALLCLOCK_elapse
+       if ( PRC_UNIVERSAL_IsMaster .AND. TO_STDOUT ) then ! universal master node
+          if( IO_L ) write(*,'(1x,2A,2(A,I7),A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                        ' WCLOCK:', WALLCLOCK_elapse
+       endif
     endif
 
     return
@@ -939,8 +995,12 @@ contains
          .AND. mod(TIME_NOWSTEP-1,TIME_DSTEP_WALLCLOCK_CHECK) == 0 ) then
        WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
 
-       if ( WALLCLOCK_elapse > TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Elapse time limit is detected. Termination operation starts.'
+       if ( WALLCLOCK_elapse > TIME_WALLCLOCK_safelim ) then
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '********************************************************************'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Elapse time limit is detected. Termination operation starts. ***'
+          if( IO_L ) write(IO_FID_LOG,*) '********************************************************************'
+          if( IO_L ) write(IO_FID_LOG,*)
           TIME_DOend = .true.
        endif
     endif
@@ -950,7 +1010,11 @@ contains
        inquire(file='QUIT', exist=exists)
 
        if( exists ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** QUIT file is found. Termination operation starts.'
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '*********************************************************'
+          if( IO_L ) write(IO_FID_LOG,*) '*** QUIT file is found. Termination operation starts. ***'
+          if( IO_L ) write(IO_FID_LOG,*) '*********************************************************'
+          if( IO_L ) write(IO_FID_LOG,*)
           TIME_DOend = .true.
        endif
     endif

@@ -15,6 +15,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_rd_profile
   !-----------------------------------------------------------------------------
   !
@@ -61,6 +62,7 @@ module scale_atmos_phy_rd_profile
   character(len=H_LONG), private :: PROFILE_CIRA86_fname         = "cira.nc" !< file (CIRA86,netCDF format)
   character(len=H_LONG), private :: PROFILE_MIPAS2001_dir        = "."       !< dir  (MIPAS2001,ASCII format)
   character(len=H_LONG), private :: PROFILE_USER_fname           = ""        !< file (user,ASCII format)
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_H2O = .true.
   logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO2 = .true.
   logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O3  = .true.
   logical,               private :: ATMOS_PHY_RD_PROFILE_USE_N2O = .true.
@@ -147,6 +149,7 @@ contains
        ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME,    &
        ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME, &
        ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME,      &
+       ATMOS_PHY_RD_PROFILE_USE_H2O,               &
        ATMOS_PHY_RD_PROFILE_USE_CO2,               &
        ATMOS_PHY_RD_PROFILE_USE_O3,                &
        ATMOS_PHY_RD_PROFILE_USE_N2O,               &
@@ -160,8 +163,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD PROFILE]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ climatological profile'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION PROFILE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
 
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir
@@ -177,11 +179,14 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_PROFILE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
     PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     PROFILE_USER_fname      = ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Climatological profile for radiation'
 
     if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
@@ -221,12 +226,12 @@ contains
     integer  :: n, m, t
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** read CIRA86 climatology'
-    if( IO_L ) write(IO_FID_LOG,*) '*** FILENAME:', trim(PROFILE_CIRA86_fname)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Read CIRA86 climatology, filename : ', trim(PROFILE_CIRA86_fname)
 
     inquire( file=trim(PROFILE_CIRA86_fname), exist=exist )
     if ( .NOT. exist ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** File not found. check!'
+       write(*,*) '*** [PROFILE_setup_CIRA86] File not found. check!'
        call PRC_MPIstop
     endif
 
@@ -412,7 +417,8 @@ contains
     integer  :: t, l, rgn
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** read MIPAS2001 gas profile'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Read MIPAS2001 climatology ***'
 
     MIPAS_date(:, 0) = (/ 2000, 12, 22, 12, 0, 0 /)
     MIPAS_date(:, 1) = (/ 2001,  6, 21, 12, 0, 0 /)
@@ -435,7 +441,7 @@ contains
 
     do rgn = I_tropic, I_polarwin
        fname = trim(PROFILE_MIPAS2001_dir)//'/'//MIPAS_fname(rgn)
-       if( IO_L ) write(IO_FID_LOG,*) '*** FILENAME:', trim(fname)
+       if( IO_L ) write(IO_FID_LOG,*) '*** filename : ', trim(fname)
 
        fid = IO_get_available_fid()
        open( unit   = fid,         &
@@ -445,7 +451,7 @@ contains
              iostat = ierr         )
 
           if ( ierr /= 0 ) then !--- missing
-             if( IO_L ) write(IO_FID_LOG,*) '*** File not found. check!'
+             write(*,*) '*** [PROFILE_setup_MIPAS2001] File not found. check!'
              call PRC_MPIstop
           endif
 
@@ -578,7 +584,7 @@ contains
     real(RP), intent(out) :: cfc         (kmax,ncfc)  !< CFCs          volume mixing ratio [ppmv]
     real(RP), intent(out) :: aerosol_conc(kmax,naero) !< cloud/aerosol volume mixing ratio [ppmv]
     real(RP), intent(out) :: aerosol_radi(kmax,naero) !< cloud/aerosol effective radius    [cm]
-    real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    [0-1]
+    real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    (0-1)
 
     real(RP) :: lat     !< used lat
     integer  :: date(6) !< used date
@@ -646,6 +652,7 @@ contains
     aerosol_radi(:,:) = 0.0_RP
     cldfrac     (:)   = 0.0_RP
 
+    if ( .NOT. ATMOS_PHY_RD_PROFILE_use_H2O ) gas(:,1) = 0.0_RP
     if ( .NOT. ATMOS_PHY_RD_PROFILE_use_CO2 ) gas(:,2) = 0.0_RP
     if ( .NOT. ATMOS_PHY_RD_PROFILE_use_O3  ) gas(:,3) = 0.0_RP
     if ( .NOT. ATMOS_PHY_RD_PROFILE_use_N2O ) gas(:,4) = 0.0_RP
@@ -742,7 +749,7 @@ contains
     real(RP), intent(out) :: cfc  (kmax,ncfc) !< CFCs          volume mixing ratio [ppmv]
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [RD_PROFILE] generate climatological profile'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Update climatological profile for radiation'
 
     call PROFILE_read_CIRA86( kmax,        & ! [IN]
                               lat,         & ! [IN]
@@ -1071,6 +1078,9 @@ contains
     integer  :: i1, i2
     !---------------------------------------------------------------------------
 
+    !$omp parallel do default(none)          &
+    !$omp shared(imax1,x2,x1,y2,y1,imax2) &
+    !$omp private(i1,fact,i2) OMP_SCHEDULE_
     do i2 = 1, imax2
 
        if ( x2(i2) > x1(1) ) then ! extrapolation
@@ -1293,7 +1303,7 @@ contains
           iostat = ierr                      )
 
        if ( ierr /= 0 ) then !--- missing
-          if( IO_L ) write(IO_FID_LOG,*) '*** File not found. check!'
+          write(*,*) '*** [PROFILE_read_user] File not found. check!'
           call PRC_MPIstop
        endif
 

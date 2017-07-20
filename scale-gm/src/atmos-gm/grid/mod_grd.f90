@@ -83,7 +83,7 @@ module mod_grd
   !
   real(RP), public              :: GRD_rscale ! scaling factor for the radius of the sphere
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public              :: GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz)
   real(RP), public              :: GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
   real(RP), public              :: GRD_xt   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz)
@@ -114,7 +114,7 @@ module mod_grd
   !====== Topography ======
   integer,  public, parameter   :: GRD_ZSFC = 1
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public              :: GRD_zs   (ADM_gall   ,ADM_KNONE,ADM_lall   ,GRD_ZSFC)
   real(RP), public              :: GRD_zs_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,GRD_ZSFC)
 #else
@@ -144,7 +144,7 @@ module mod_grd
 
   real(RP), public              :: GRD_htop ! model top height [m]
 
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public              :: GRD_gz   (ADM_kall)
   real(RP), public              :: GRD_gzh  (ADM_kall)
   real(RP), public              :: GRD_dgz  (ADM_kall)
@@ -258,16 +258,15 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** GRDPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist GRDPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist GRDPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist GRDPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=GRDPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=GRDPARAM)
 
 
 
     !---< horizontal grid >---
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     allocate( GRD_x    (ADM_gall   ,k0,ADM_lall   ,              ADM_nxyz) )
     allocate( GRD_x_pl (ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
     allocate( GRD_xt   (ADM_gall   ,k0,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )
@@ -315,7 +314,7 @@ contains
 
 
     !---< surface height >---
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     allocate( GRD_zs   (ADM_gall,   k0,ADM_lall,   GRD_ZSFC) )
     allocate( GRD_zs_pl(ADM_gall_pl,k0,ADM_lall_pl,GRD_ZSFC) )
 #endif
@@ -328,7 +327,7 @@ contains
 
     !---< vertical coordinate >---
     if ( ADM_kall /= ADM_KNONE ) then
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
        allocate( GRD_gz   (ADM_kall) )
        allocate( GRD_gzh  (ADM_kall) )
        allocate( GRD_dgz  (ADM_kall) )
@@ -546,8 +545,6 @@ contains
        PRC_MPIstop
     use mod_fio, only: &
        FIO_input
-    use mod_hio, only: &
-       HIO_input
     implicit none
 
     character(len=*), intent(in) :: basename     ! input basename
@@ -555,21 +552,7 @@ contains
     character(len=*), intent(in) :: io_mode      ! io_mode
     !---------------------------------------------------------------------------
 
-    if ( io_mode == 'POH5' ) then
-
-       call HIO_input( GRD_x(:,:,:,GRD_XDIR),basename,'grd_x_x','ZSSFC1',1,1,1 )
-       call HIO_input( GRD_x(:,:,:,GRD_YDIR),basename,'grd_x_y','ZSSFC1',1,1,1 )
-       call HIO_input( GRD_x(:,:,:,GRD_ZDIR),basename,'grd_x_z','ZSSFC1',1,1,1 )
-       if ( input_vertex ) then
-          call HIO_input( GRD_xt(:,:,:,ADM_TI,GRD_XDIR),basename,'grd_xt_ix','ZSSFC1',1,1,1 )
-          call HIO_input( GRD_xt(:,:,:,ADM_TJ,GRD_XDIR),basename,'grd_xt_jx','ZSSFC1',1,1,1 )
-          call HIO_input( GRD_xt(:,:,:,ADM_TI,GRD_YDIR),basename,'grd_xt_iy','ZSSFC1',1,1,1 )
-          call HIO_input( GRD_xt(:,:,:,ADM_TJ,GRD_YDIR),basename,'grd_xt_jy','ZSSFC1',1,1,1 )
-          call HIO_input( GRD_xt(:,:,:,ADM_TI,GRD_ZDIR),basename,'grd_xt_iz','ZSSFC1',1,1,1 )
-          call HIO_input( GRD_xt(:,:,:,ADM_TJ,GRD_ZDIR),basename,'grd_xt_jz','ZSSFC1',1,1,1 )
-       endif
-
-     elseif( io_mode == 'ADVANCED' ) then
+    if ( io_mode == 'ADVANCED' ) then
 
        call FIO_input( GRD_x(:,:,:,GRD_XDIR),basename,'grd_x_x','ZSSFC1',1,1,1 )
        call FIO_input( GRD_x(:,:,:,GRD_YDIR),basename,'grd_x_y','ZSSFC1',1,1,1 )
@@ -605,8 +588,6 @@ contains
        PRC_MPIstop
     use mod_fio, only: &
        FIO_output
-    use mod_hio, only: &
-       HIO_output
     implicit none
 
     character(len=*), intent(in) :: basename      ! output basename
@@ -616,49 +597,7 @@ contains
     character(len=H_MID) :: desc = 'HORIZONTAL GRID FILE'
     !---------------------------------------------------------------------------
 
-    if ( io_mode == 'POH5' ) then
-
-       call HIO_output( GRD_x(:,:,:,GRD_XDIR),                            & ! [IN]
-                        basename, desc, "",                               & ! [IN]
-                       "grd_x_x", "GRD_x (X_DIR)", "",                    & ! [IN]
-                       "NIL", IO_REAL8, "ZSSFC1", 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-       call HIO_output( GRD_x(:,:,:,GRD_YDIR),                            & ! [IN]
-                        basename, desc, '',                               & ! [IN]
-                       'grd_x_y', 'GRD_x (Y_DIR)', '',                    & ! [IN]
-                       'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-       call HIO_output( GRD_x(:,:,:,GRD_ZDIR),                            & ! [IN]
-                        basename, desc, '',                               & ! [IN]
-                       'grd_x_z', 'GRD_x (Z_DIR)', '',                    & ! [IN]
-                       'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-
-       if ( output_vertex ) then
-          call HIO_output( GRD_xt(:,:,:,ADM_TI,GRD_XDIR),                    & ! [IN]
-                           basename, desc, '',                               & ! [IN]
-                          'grd_xt_ix', 'GRD_xt (TI,X_DIR)', '',              & ! [IN]
-                          'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-          call HIO_output( GRD_xt(:,:,:,ADM_TJ,GRD_XDIR),                    & ! [IN]
-                           basename, desc, '',                               & ! [IN]
-                          'grd_xt_jx', 'GRD_xt (TJ,X_DIR)', '',              & ! [IN]
-                          'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-          call HIO_output( GRD_xt(:,:,:,ADM_TI,GRD_YDIR),                    & ! [IN]
-                           basename, desc, '',                               & ! [IN]
-                          'grd_xt_iy', 'GRD_xt (TI,Y_DIR)', '',              & ! [IN]
-                          'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-          call HIO_output( GRD_xt(:,:,:,ADM_TJ,GRD_YDIR),                    & ! [IN]
-                           basename, desc, '',                               & ! [IN]
-                          'grd_xt_jy', 'GRD_xt (TJ,Y_DIR)', '',              & ! [IN]
-                          'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-          call HIO_output( GRD_xt(:,:,:,ADM_TI,GRD_ZDIR),                    & ! [IN]
-                           basename, desc, '',                               & ! [IN]
-                          'grd_xt_iz', 'GRD_xt (TI,Z_DIR)', '',              & ! [IN]
-                          'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-          call HIO_output( GRD_xt(:,:,:,ADM_TJ,GRD_ZDIR),                    & ! [IN]
-                           basename, desc, '',                               & ! [IN]
-                          'grd_xt_jz', 'GRD_xt (TJ,Z_DIR)', '',              & ! [IN]
-                          'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-       endif
-
-    elseif( io_mode == 'ADVANCED' ) then
+    if ( io_mode == 'ADVANCED' ) then
 
        call FIO_output( GRD_x(:,:,:,GRD_XDIR),                            & ! [IN]
                         basename, desc, "",                               & ! [IN]
@@ -717,7 +656,7 @@ contains
        ADM_vlayer
     implicit none
 
-    character(len=H_LONG), intent(in) :: fname ! vertical grid file name
+    character(len=*), intent(in) :: fname ! vertical grid file name
 
     integer               :: num_of_layer
     real(DP), allocatable :: gz (:)
@@ -736,7 +675,7 @@ contains
           iostat = ierr           )
 
        if ( ierr /= 0 ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx No vertical grid file.'
+          write(*,*) 'xxx [GRD_input_vgrid] No vertical grid file.'
           call PRC_MPIstop
        endif
 
@@ -749,7 +688,7 @@ contains
        read(fid) gzh(:)
 
        if ( num_of_layer /= ADM_vlayer ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx inconsistency in number of vertical layers.'
+          write(*,*) 'xxx [GRD_input_vgrid] inconsistency in number of vertical layers.'
           call PRC_MPIstop
        endif
 
@@ -799,8 +738,6 @@ contains
        COMM_var
     use mod_fio, only: &
        FIO_input
-    use mod_hio, only: &
-       HIO_input
     use mod_ideal_topo, only: &
        IDEAL_topo
     implicit none
@@ -810,13 +747,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** topography data input'
 
-    if ( topo_io_mode == 'POH5' ) then
-
-       if ( basename /= 'NONE' ) then
-          call HIO_input(GRD_zs(:,:,:,GRD_ZSFC),basename,'topo','ZSSFC1',1,1,1)
-       endif
-
-    elseif( topo_io_mode == 'ADVANCED' ) then
+    if ( topo_io_mode == 'ADVANCED' ) then
 
        if ( basename /= 'NONE' ) then
           call FIO_input(GRD_zs(:,:,:,GRD_ZSFC),basename,'topo','ZSSFC1',1,1,1)

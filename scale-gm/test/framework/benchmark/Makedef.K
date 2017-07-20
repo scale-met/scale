@@ -1,71 +1,96 @@
+################################################################################
 #
-# ------ FOR K computer -----
+# ------ For K computer -----
 #
+################################################################################
 
-##### for computation
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
-FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=1 \
+FC  = mpifrtpx
+SFC = frtpx
+MODDIROPT = -M
+
+FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
                -x-                                                       \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
+# NOTE: -Kauto, -Kthreadsafe, -Kautoobjstack, -Ktemparraystack depends on the stacksize.
+#       If you find the segmentation fault error, please check.
 FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
                    -Kautoobjstack   \
                    -Ktemparraystack \
                    -Kinstance=8     \
                    -Kswp_strong
 
-# note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
-# If you find the segmentation fault error, please check.
+FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Nquickdbg -NRtrap
+
+FFLAGS_DYN   = $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2 -x100
 
 FFLAGS_DEBUG = -O0                                                       \
                -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
-               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global        \
-               -DDEBUG
+               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global
 
-# Performance monitor
-# disable
-#PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
-# fipp
-PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_ -U_FINEPA_
-# fapp
-#PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_ -U_FINEPA_
-# fine PA
-#PERF_MONIT = -Ntl_trt -U_FIPP_ -U_FAPP_ -D_FINEPA_
 
-# RDMA
-# disable
-RDMA = -U_USE_RDMA
-# enable
-#RDMA = -D_USE_RDMA
 
-# Single precision
-#FFLAGS += -DSINGLE
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
-FC     = mpifrtpx
+CC = mpifccpx
 
-FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
-#FFLAGS_DYN ?= $(FFLAGS)
-
-MODDIROPT ?= -M
-
-CC     = mpifccpx
 CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
 CFLAGS_DEBUG = -O0
 
-CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
-#CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+
+
+##### Special setting
+
+FFLAGS_OPENMP = -Kopenmp
+# enable + disable parallel
+# FFLAGS_OPENMP = -Kopenmp,noparallel
+
+### Performance monitor
+# disable
+#PERF_MONIT = -Ntl_notrt -UFIPP -UFAPP -UFINEPA
+# fipp
+PERF_MONIT = -Ntl_trt -DFIPP -UFAPP -UFINEPA
+# fapp
+#PERF_MONIT = -Ntl_trt -UFIPP -DFAPP -UFINEPA
+# fine PA
+#PERF_MONIT = -Ntl_trt -UFIPP -UFAPP -DFINEPA
+
+FFLAGS_SYSDEPEND = $(PERF_MONIT)
+CFLAGS_SYSDEPEND = $(PERF_MONIT)
+
+
+
+##### Linker setting
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
-###### NetCDF library
-NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
-NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 
-###### Lapack
-LAPACK_LIBS    ?= -SSL2
+
+################################################################################
+
+###### NetCDF library
+# Default settings
+SCALE_NETCDF_INCLUDE ?= -I/opt/aics/scale/include -I/opt/aics/netcdf/k-serial-noszip/include
+SCALE_NETCDF_LIBS    ?= -L/opt/aics/scale/lib -L/opt/aics/netcdf/k-serial-noszip/lib-static -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+SCALE_ENABLE_PNETCDF ?= T
+# Or, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/opt/aics/netcdf/k-serial-noszip/include"
+# export SCALE_NETCDF_LIBS="-L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm"
+
+###### Math library
+# Default settings
+SCALE_MATHLIB_LIBS ?=
+# Or, please set environment variable
+# example:
+# export SCALE_MATHLIB_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

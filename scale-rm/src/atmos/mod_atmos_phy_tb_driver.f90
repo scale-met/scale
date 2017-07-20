@@ -28,6 +28,7 @@ module mod_atmos_phy_tb_driver
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_TB_driver_config
   public :: ATMOS_PHY_TB_driver_setup
   public :: ATMOS_PHY_TB_driver_resume
   public :: ATMOS_PHY_TB_driver
@@ -47,6 +48,27 @@ module mod_atmos_phy_tb_driver
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config
+  subroutine ATMOS_PHY_TB_driver_config
+    use scale_atmos_phy_tb, only: &
+       ATMOS_PHY_TB_config
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_sw_phy_tb
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
+
+    if ( ATMOS_sw_phy_tb ) then
+       call ATMOS_PHY_TB_config( ATMOS_PHY_TB_TYPE )
+    end if
+
+    return
+  end subroutine ATMOS_PHY_TB_driver_config
+
+  !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_TB_driver_setup
     use scale_grid, only: &
@@ -55,38 +77,19 @@ contains
        CDY => GRID_CDY
     use scale_grid_real, only: &
        CZ  => REAL_CZ
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_TB_TYPE, &
-       ATMOS_sw_phy_tb
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_tb
     use mod_atmos_phy_tb_vars, only: &
-       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     implicit none
 
-!    NAMELIST / PARAM_ATMOS_PHY_TB / &
-
-    integer :: k, i, j
-!    integer :: ierr
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
-
-!    !--- read namelist
-!    rewind(IO_FID_CONF)
-!    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB,iostat=ierr)
-!    if( ierr < 0 ) then !--- missing
-!       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-!    elseif( ierr > 0 ) then !--- fatal error
-!       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB. Check!'
-!       call PRC_MPIstop
-!    endif
-!    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB)
-
 
     ! initialize
     do j = JS, JE
@@ -96,19 +99,9 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TKE_t_TB(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
     if ( ATMOS_sw_phy_tb ) then
-
        ! setup library component
-       call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE, & ! [IN]
-                                CDZ, CDX, CDY, CZ  ) ! [IN]
+       call ATMOS_PHY_TB_setup( CDZ, CDX, CDY, CZ ) ! [IN]
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
@@ -155,7 +148,8 @@ contains
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
     use scale_atmos_phy_tb, only: &
-       ATMOS_PHY_TB
+       ATMOS_PHY_TB, &
+       I_TKE
     use scale_atmos_phy_tb_common, only: &
        calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
        calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
@@ -168,6 +162,7 @@ contains
        MOMY => MOMY_av,   &
        RHOT => RHOT_av,   &
        QTRC => QTRC_av,   &
+       N2   => N2,        &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
@@ -178,10 +173,7 @@ contains
        MOMX_t_TB => ATMOS_PHY_TB_MOMX_t, &
        MOMY_t_TB => ATMOS_PHY_TB_MOMY_t, &
        RHOT_t_TB => ATMOS_PHY_TB_RHOT_t, &
-       RHOQ_t_TB => ATMOS_PHY_TB_RHOQ_t, &
-       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
-       TKE       => ATMOS_PHY_TB_TKE,    &
-       NU        => ATMOS_PHY_TB_NU
+       RHOQ_t_TB => ATMOS_PHY_TB_RHOQ_t
     use mod_atmos_phy_sf_vars, only: &
        SFLX_MW => ATMOS_PHY_SF_SFLX_MW, &
        SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
@@ -199,66 +191,32 @@ contains
     real(RP) :: QFLX_RHOT(KA,IA,JA,3)
     real(RP) :: QFLX_RHOQ(KA,IA,JA,3,QA)
 
+    real(RP) :: Nu(KA,IA,JA) ! eddy viscosity
     real(RP) :: Ri(KA,IA,JA) ! Richardson number
     real(RP) :: Pr(KA,IA,JA) ! Prandtl number
-    real(RP) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
-    integer :: JJS, JJE
-    integer :: IIS, IIE
-
+    real(RP) :: tend(KA,IA,JA)
     real(RP) :: total ! dummy
 
-    integer :: k, i, j, iq
+    integer  :: JJS, JJE
+    integer  :: IIS, IIE
+
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          TKE(k,i,j) = max( TKE(k,i,j) + TKE_t_TB(k,i,j) * dt_TB, 0.0_RP )
-       end do
-       end do
-       end do
+       RHOQ_t_TB = 0.0_RP
 
-       do j = JS, JE
-       do i = IS, IE
-          TKE(1:KS-1,i,j) = TKE(KS,i,j)
-          TKE(KE+1:KA,i,j) = TKE(KE,i,j)
-       end do
-       end do
-
-       call COMM_vars8( TKE(:,:,:), 1 )
-       call COMM_wait ( TKE(:,:,:), 1 )
-
-       call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
-                          QFLX_MOMX, & ! [OUT]
-                          QFLX_MOMY, & ! [OUT]
-                          QFLX_RHOT, & ! [OUT]
-                          QFLX_RHOQ, & ! [OUT]
-                          TKE,       & ! [INOUT]
-                          TKE_t_TB,  & ! [OUT]
-                          NU,        & ! [OUT]
-                          Ri,        & ! [OUT]
-                          Pr,        & ! [OUT]
-                          N2,        & ! [OUT]
-                          MOMZ,      & ! [IN]
-                          MOMX,      & ! [IN]
-                          MOMY,      & ! [IN]
-                          RHOT,      & ! [IN]
-                          DENS,      & ! [IN]
-                          QTRC,      & ! [IN]
-                          SFLX_MW,   & ! [IN]
-                          SFLX_MU,   & ! [IN]
-                          SFLX_MV,   & ! [IN]
-                          SFLX_SH,   & ! [IN]
-                          SFLX_Q(:,:,I_QV), & ! [IN]
-                          GSQRT,     & ! [IN]
-                          J13G,      & ! [IN]
-                          J23G,      & ! [IN]
-                          J33G,      & ! [IN]
-                          MAPF,      & ! [IN]
-                          dt_TB      ) ! [IN]
+       call ATMOS_PHY_TB( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
+                          QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
+                          RHOQ_t_TB,                              & ! [INOUT]
+                          Nu, Ri, Pr,                             & ! [OUT]
+                          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2, & ! [IN]
+                          SFLX_MW, SFLX_MU, SFLX_MV,              & ! [IN]
+                          SFLX_SH, SFLX_Q,                        & ! [IN]
+                          GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
+                          dt_TB                                   ) ! [IN]
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -305,23 +263,32 @@ contains
        end do
 
        do iq = 1, QA
+          if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
+
           do JJS = JS, JE, JBLOCK
           JJE = JJS+JBLOCK-1
           do IIS = IS, IE, IBLOCK
           IIE = IIS+IBLOCK-1
-             call calc_tend_phi ( RHOQ_t_TB(:,:,:,iq),    & ! (out)
-                                  QFLX_RHOQ(:,:,:,:,iq),  & ! (in)
-                                  GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
-                                  IIS, IIE, JJS, JJE ) ! (in)
+             call calc_tend_phi( tend(:,:,:), & ! (out)
+                                 QFLX_RHOQ(:,:,:,:,iq),  & ! (in)
+                                 GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                                 IIS, IIE, JJS, JJE ) ! (in)
+
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE
+                RHOQ_t_TB(k,i,j,iq) = RHOQ_t_TB(k,i,j,iq) + tend(k,i,j)
+             end do
+             end do
+             end do
+
           end do
           end do
        end do
 
-       call HIST_in( TKE(:,:,:), 'TKE', 'turburent kinetic energy', 'm2/s2', nohalo=.true. )
        call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , nohalo=.true. )
        call HIST_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , nohalo=.true. )
        call HIST_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL'  , nohalo=.true. )
-       call HIST_in( N2 (:,:,:), 'N2',  'squared Brunt-Vaisala frequency', '1/s2', nohalo=.true. )
 
        call HIST_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
        call HIST_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
@@ -329,8 +296,8 @@ contains
        call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K.kg/m3/s', nohalo=.true. )
 
        do iq = 1, QA
-          call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(AQ_NAME(iq))//'_t_TB',                      &
-                        'RHO*'//trim(AQ_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
+          call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB',                      &
+                        'RHO*'//trim(TRACER_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
        enddo
 
        call HIST_in( QFLX_MOMZ(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ', 'SGS Z FLUX of MOMZ', 'kg/m/s2', &
@@ -361,80 +328,39 @@ contains
        call HIST_in( QFLX_RHOT(:,:,:,YDIR), 'SGS_YFLX_RHOT', 'SGS Y FLUX of RHOT', 'K*kg/m2/s', &
                      ydim='half', nohalo=.true.)
 
-       if ( I_QV > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QV), 'SGS_ZFLX_QV', 'SGS Z FLUX of QV', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QV), 'SGS_XFLX_QV', 'SGS X FLUX of QV', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QV), 'SGS_YFLX_QV', 'SGS Y FLUX of QV', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
 
-#ifndef DRY
-       if ( I_QC > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QC), 'SGS_ZFLX_QC', 'SGS Z FLUX of QC', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QC), 'SGS_XFLX_QC', 'SGS X FLUX of QC', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QC), 'SGS_YFLX_QC', 'SGS Y FLUX of QC', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
+       do iq = 1, QA
+          if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
 
-       if ( I_QR > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QR), 'SGS_ZFLX_QR', 'SGS Z FLUX of QR', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QR), 'SGS_XFLX_QR', 'SGS X FLUX of QR', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QR), 'SGS_YFLX_QR', 'SGS Y FLUX of QR', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-
-       if ( I_QI > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QI), 'SGS_ZFLX_QI', 'SGS Z FLUX of QI', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QI), 'SGS_XFLX_QI', 'SGS X FLUX of QI', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QI), 'SGS_YFLX_QI', 'SGS Y FLUX of QI', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-
-       if ( I_QS > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QS), 'SGS_ZFLX_QS', 'SGS Z FLUX of QS', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QS), 'SGS_XFLX_QS', 'SGS X FLUX of QS', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QS), 'SGS_YFLX_QS', 'SGS Y FLUX of QS', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-
-       if ( I_QG > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QG), 'SGS_ZFLX_QG', 'SGS Z FLUX of QG', 'kg/m2/s', &
-                        zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QG), 'SGS_XFLX_QG', 'SGS X FLUX of QG', 'kg/m2/s', &
-                        xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QG), 'SGS_YFLX_QG', 'SGS Y FLUX of QG', 'kg/m2/s', &
-                        ydim='half', nohalo=.true.)
-       endif
-#endif
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,iq), &
+               'SGS_ZFLX_'//trim(TRACER_NAME(iq)), 'SGS Z FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
+               zdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,iq), &
+               'SGS_XFLX_'//trim(TRACER_NAME(iq)), 'SGS X FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
+               xdim='half', nohalo=.true.)
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,iq), &
+               'SGS_YFLX_'//trim(TRACER_NAME(iq)), 'SGS Y FLUX of '//trim(TRACER_NAME(ia)), 'kg/m2/s', &
+               ydim='half', nohalo=.true.)
+       end do
 
        if ( STATISTICS_checktotal ) then
           call STAT_total( total, MOMZ_t_TB(:,:,:), 'MOMZ_t_TB' )
           call STAT_total( total, MOMX_t_TB(:,:,:), 'MOMX_t_TB' )
           call STAT_total( total, MOMY_t_TB(:,:,:), 'MOMY_t_TB' )
           call STAT_total( total, RHOT_t_TB(:,:,:), 'RHOT_t_TB' )
-          call STAT_total( total, TKE(:,:,:), 'TKE' )
           call STAT_total( total, Nu(:,:,:), 'Nu' )
           call STAT_total( total, Ri(:,:,:), 'Ri' )
           call STAT_total( total, Pr(:,:,:), 'Pr' )
 
           do iq = 1, QA
-             call STAT_total( total, RHOQ_t_TB(:,:,:,iq), trim(AQ_NAME(iq))//'_t_TB' )
+             call STAT_total( total, RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB' )
           enddo
        endif
 
     endif
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,MOMZ_t,MOMZ_t_TB,MOMX_t,MOMX_t_TB,MOMY_t,MOMY_t_TB,RHOT_t,RHOT_t_TB)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

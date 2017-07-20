@@ -27,11 +27,28 @@ module scale_prof
   public :: PROF_rapend
   public :: PROF_rapreport
 
-#ifdef _PAPI_
+#ifdef PAPI
   public :: PROF_PAPI_rapstart
   public :: PROF_PAPI_rapstop
   public :: PROF_PAPI_rapreport
 #endif
+
+  public :: PROF_valcheck
+
+  interface PROF_valcheck
+     module procedure PROF_valcheck_SP_1D
+     module procedure PROF_valcheck_SP_2D
+     module procedure PROF_valcheck_SP_3D
+     module procedure PROF_valcheck_SP_4D
+     module procedure PROF_valcheck_SP_5D
+     module procedure PROF_valcheck_SP_6D
+     module procedure PROF_valcheck_DP_1D
+     module procedure PROF_valcheck_DP_2D
+     module procedure PROF_valcheck_DP_3D
+     module procedure PROF_valcheck_DP_4D
+     module procedure PROF_valcheck_DP_5D
+     module procedure PROF_valcheck_DP_6D
+  end interface PROF_valcheck
 
   !-----------------------------------------------------------------------------
   !
@@ -47,30 +64,36 @@ module scale_prof
   !
   !++ Private parameters & variables
   !
-  integer,                  private, parameter :: PROF_rapnlimit = 300
-  character(len=H_SHORT),   private            :: PROF_prefix    = ''
-  integer,                  private            :: PROF_rapnmax   = 0
-  character(len=H_SHORT*2), private            :: PROF_rapname(PROF_rapnlimit)
-  integer,                  private            :: PROF_grpnmax   = 0
-  character(len=H_SHORT),   private            :: PROF_grpname(PROF_rapnlimit)
-  integer,                  private            :: PROF_grpid  (PROF_rapnlimit)
-  real(DP),                 private            :: PROF_raptstr(PROF_rapnlimit)
-  real(DP),                 private            :: PROF_rapttot(PROF_rapnlimit)
-  integer,                  private            :: PROF_rapnstr(PROF_rapnlimit)
-  integer,                  private            :: PROF_rapnend(PROF_rapnlimit)
-  integer,                  private            :: PROF_raplevel(PROF_rapnlimit)
+  integer,                private, parameter :: PROF_rapnlimit = 300
+  character(len=H_SHORT), private            :: PROF_prefix    = ''
+  integer,                private            :: PROF_rapnmax   = 0
+  character(len=H_SHORT), private            :: PROF_rapname(PROF_rapnlimit)
+  integer,                private            :: PROF_grpnmax   = 0
+  character(len=H_SHORT), private            :: PROF_grpname(PROF_rapnlimit)
+  integer,                private            :: PROF_grpid  (PROF_rapnlimit)
+  real(DP),               private            :: PROF_raptstr(PROF_rapnlimit)
+  real(DP),               private            :: PROF_rapttot(PROF_rapnlimit)
+  integer,                private            :: PROF_rapnstr(PROF_rapnlimit)
+  integer,                private            :: PROF_rapnend(PROF_rapnlimit)
+  integer,                private            :: PROF_raplevel(PROF_rapnlimit)
 
-  integer,                  private, parameter :: PROF_default_rap_level = 2
-  integer,                  private            :: PROF_rap_level         = 2
-  logical,                  private            :: PROF_mpi_barrier       = .false.
+  integer,                private, parameter :: PROF_default_rap_level = 2
+  integer,                private            :: PROF_rap_level         = 2
+  logical,                private            :: PROF_mpi_barrier       = .false.
 
-#ifdef _PAPI_
-  integer(DP),private :: PROF_PAPI_flops     = 0   !> total floating point operations since the first call
-  real(SP),   private :: PROF_PAPI_real_time = 0.0 !> total realtime since the first PROF_PAPI_flops() call
-  real(SP),   private :: PROF_PAPI_proc_time = 0.0 !> total process time since the first PROF_PAPI_flops() call
-  real(SP),   private :: PROF_PAPI_mflops    = 0.0 !> Mflop/s achieved since the previous call
-  integer,    private :: PROF_PAPI_check
+#ifdef PAPI
+  integer(DP),            private            :: PROF_PAPI_flops     = 0   !> total floating point operations since the first call
+  real(SP),               private            :: PROF_PAPI_real_time = 0.0 !> total realtime since the first PROF_PAPI_flops() call
+  real(SP),               private            :: PROF_PAPI_proc_time = 0.0 !> total process time since the first PROF_PAPI_flops() call
+  real(SP),               private            :: PROF_PAPI_mflops    = 0.0 !> Mflop/s achieved since the previous call
+  integer,                private            :: PROF_PAPI_check
 #endif
+
+  character(len=7),       private            :: PROF_header
+  character(len=16),      private            :: PROF_item
+  real(DP),               private            :: PROF_max
+  real(DP),               private            :: PROF_min
+  real(DP),               private            :: PROF_sum
 
   !-----------------------------------------------------------------------------
 contains
@@ -98,8 +121,9 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_PROF. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PROF)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_PROF)
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Rap output level              = ', PROF_rap_level
     if( IO_L ) write(IO_FID_LOG,*) '*** Add MPI_barrier in every rap? = ', PROF_mpi_barrier
 
@@ -134,10 +158,10 @@ contains
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in) :: rapname_base !< name of item
-    integer, intent(in), optional :: level  !< level of item (default is 2)
+    character(len=*), intent(in)           :: rapname_base !< name  of item
+    integer,          intent(in), optional :: level        !< level of item
 
-    character(len=H_SHORT*2) :: rapname !< name of item with prefix
+    character(len=H_SHORT) :: rapname !< name of item with prefix
 
     integer :: id
     integer :: level_
@@ -160,12 +184,14 @@ contains
     PROF_raptstr(id) = PRC_MPItime()
     PROF_rapnstr(id) = PROF_rapnstr(id) + 1
 
-    !if( IO_L ) write(IO_FID_LOG,*) rapname, PROF_rapnstr(id)
+#ifdef DEBUG
+    !if( IO_L ) write(IO_FID_LOG,*) '<DEBUG> [PROF] ', rapname, PROF_rapnstr(id)
+#endif
 
-#ifdef _FAPP_
+#ifdef FAPP
     call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
 #endif
-#ifdef _FINEPA_
+#ifdef FINEPA
     call START_COLLECTION( rapname )
 #endif
 
@@ -180,10 +206,10 @@ contains
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in) :: rapname_base !< name of item
-    integer, intent(in), optional :: level  !< level of item
+    character(len=*), intent(in)           :: rapname_base !< name  of item
+    integer,          intent(in), optional :: level        !< level of item
 
-    character(len=H_SHORT*2) :: rapname !< name of item with prefix
+    character(len=H_SHORT) :: rapname !< name of item with prefix
 
     integer :: id
     integer :: level_
@@ -204,10 +230,10 @@ contains
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
 
-#ifdef _FINEPA_
+#ifdef FINEPA
     call STOP_COLLECTION( rapname )
 #endif
-#ifdef _FAPP_
+#ifdef FAPP
     call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level_ )
 #endif
 
@@ -246,11 +272,10 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
-                  PROF_grpid(id) == gid .AND. &
-                  IO_L ) then
-                write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
-                     '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
+             if (       PROF_raplevel(id) <= PROF_rap_level &
+                  .AND. PROF_grpid   (id) == gid            ) then
+                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
+                           '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -276,15 +301,15 @@ contains
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
-             if ( PROF_raplevel(id) <= PROF_rap_level .AND. &
-                  PROF_grpid(id) == gid .AND. &
-                  fid > 0 ) then
-                write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I9)') &
-                     '*** ID=',id,' : ',PROF_rapname(id), &
-                     ' T(avg)=',avgvar(id), &
-                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                     ', T(min)=',minvar(id),'[',minidx(id),']', &
-                     ' N=',PROF_rapnstr(id)
+             if (       PROF_raplevel(id) <= PROF_rap_level &
+                  .AND. PROF_grpid   (id) == gid            &
+                  .AND. fid > 0                             ) then
+                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
+                           '*** ID=',id,' : ',PROF_rapname(id), &
+                           ' T(avg)=',avgvar(id), &
+                           ', T(max)=',maxvar(id),'[',maxidx(id),']', &
+                           ', T(min)=',minvar(id),'[',minidx(id),']', &
+                           ' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -294,7 +319,7 @@ contains
     return
   end subroutine PROF_rapreport
 
-#ifdef _PAPI_
+#ifdef PAPI
   !-----------------------------------------------------------------------------
   !> Start flop counter
   subroutine PROF_PAPI_rapstart
@@ -416,13 +441,12 @@ contains
     character(len=*), intent(in)    :: rapname !< name of item
     integer,          intent(inout) :: level   !< level of item
 
+    character (len=H_SHORT) :: trapname
+
     integer :: id
-    character (len=H_SHORT*2) :: trapname
-    character (len=H_SHORT)   :: trapname2
     !---------------------------------------------------------------------------
 
     trapname  = trim(rapname)
-    trapname2 = trim(rapname)
 
     do id = 1, PROF_rapnmax
        if ( trapname == PROF_rapname(id) ) then
@@ -439,7 +463,7 @@ contains
     PROF_rapnend(id) = 0
     PROF_rapttot(id) = 0.0_DP
 
-    PROF_grpid   (id) = get_grpid(trapname2)
+    PROF_grpid   (id) = get_grpid(trapname)
     PROF_raplevel(id) = level
 
     return
@@ -452,9 +476,10 @@ contains
 
     character(len=*), intent(in)    :: rapname !< name of item
 
+    character(len=H_SHORT) :: grpname
+
     integer :: gid
     integer :: idx
-    character(len=H_SHORT) :: grpname
     !---------------------------------------------------------------------------
 
     idx = index(rapname," ")
@@ -474,5 +499,281 @@ contains
 
     return
   end function get_grpid
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_SP_1D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(SP),         intent(in) :: var(:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_SP_1D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_SP_2D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(SP),         intent(in) :: var(:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_SP_2D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_SP_3D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(SP),         intent(in) :: var(:,:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_SP_3D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_SP_4D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(SP),         intent(in) :: var(:,:,:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_SP_4D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_SP_5D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(SP),         intent(in) :: var(:,:,:,:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_SP_5D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_SP_6D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(SP),         intent(in) :: var(:,:,:,:,:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_SP_6D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_DP_1D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: var(:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_DP_1D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_DP_2D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: var(:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_DP_2D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_DP_3D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: var(:,:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_DP_3D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_DP_4D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: var(:,:,:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_DP_4D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_DP_5D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: var(:,:,:,:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_DP_5D
+
+  !-----------------------------------------------------------------------------
+  subroutine PROF_valcheck_DP_6D( &
+       header,  &
+       varname, &
+       var      )
+    implicit none
+
+    character(len=*), intent(in) :: header
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: var(:,:,:,:,:,:)
+    !---------------------------------------------------------------------------
+
+    PROF_header = trim(header)
+    PROF_item   = trim(varname)
+    PROF_max    = real(maxval(var),kind=DP)
+    PROF_min    = real(minval(var),kind=DP)
+    PROF_sum    = real(sum   (var),kind=DP)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
+
+    return
+  end subroutine PROF_valcheck_DP_6D
 
 end module scale_prof

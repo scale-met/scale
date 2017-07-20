@@ -48,7 +48,7 @@ module mod_vi
   !
   !++ Private parameters & variables
   !
-#ifdef _FIXEDINDEX_
+#ifdef FIXEDINDEX
   real(RP), public               :: Mc   (ADM_gall   ,ADM_kall,ADM_lall   )
   real(RP), private              :: Mc_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
   real(RP), public               :: Ml   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -71,7 +71,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-#ifndef _FIXEDINDEX_
+#ifndef FIXEDINDEX
     allocate( Mc   (ADM_gall   ,ADM_kall,ADM_lall   ) )
     allocate( Mc_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl) )
     allocate( Mu   (ADM_gall   ,ADM_kall,ADM_lall   ) )

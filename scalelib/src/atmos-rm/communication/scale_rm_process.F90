@@ -51,6 +51,9 @@ module scale_rm_process
   logical, public              :: PRC_HAS_E
   logical, public              :: PRC_HAS_S
 
+  logical, public              :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
+  logical, public              :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -83,8 +86,6 @@ contains
        PRC_IsMaster
     implicit none
 
-    logical :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
-    logical :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
     logical :: PRC_CART_REORDER = .false. !< flag for rank reordering over the cartesian map
 
     namelist / PARAM_PRC / &
@@ -112,8 +113,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
 
     if ( IO_L ) then
-       write(IO_FID_LOG,*)            ''
        write(IO_FID_LOG,*)            '++++++ Start MPI'
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*)            '*** Process information ***'
        write(IO_FID_LOG,'(1x,A,I12)') '*** UNIVERSAL_COMM_WORLD        : ', PRC_UNIVERSAL_COMM_WORLD
        write(IO_FID_LOG,'(1x,A,I12)') '*** total process [UNIVERSAL]   : ', PRC_UNIVERSAL_nprocs
        write(IO_FID_LOG,'(1x,A,I12)') '*** my process ID [UNIVERSAL]   : ', PRC_UNIVERSAL_myrank
@@ -139,10 +141,10 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_PRC. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PRC)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_PRC)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Process Allocation ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Process allocation ***'
     if( IO_L ) write(IO_FID_LOG,*) '*** No. of Node   :', PRC_NUM_X," x ",PRC_NUM_Y
 
     if ( PRC_NUM_X*PRC_NUM_Y /= PRC_nprocs ) then
@@ -228,12 +230,12 @@ contains
     '***  NW(',next(PRC_NW),',',PRC_2Drank(next(PRC_NW),1),',',PRC_2Drank(next(PRC_NW),2),')', &
       ' -  N(',next(PRC_N) ,',',PRC_2Drank(next(PRC_N) ,1),',',PRC_2Drank(next(PRC_N) ,2),')', &
       ' - NE(',next(PRC_NE),',',PRC_2Drank(next(PRC_NE),1),',',PRC_2Drank(next(PRC_NE),2),')'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '***                                  |'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '***               |                       |                       |'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
     '***   W(',next(PRC_W),',',PRC_2Drank(next(PRC_W),1),',',PRC_2Drank(next(PRC_W),2),')', &
       ' -  P(',PRC_myrank ,',',PRC_2Drank(PRC_myrank, 1),',',PRC_2Drank(PRC_myrank, 2),')', &
       ' -  E(',next(PRC_E),',',PRC_2Drank(next(PRC_E),1),',',PRC_2Drank(next(PRC_E),2),')'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '***                                  |'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '***               |                       |                       |'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
     '***  SW(',next(PRC_SW),',',PRC_2Drank(next(PRC_SW),1),',',PRC_2Drank(next(PRC_SW),2),')', &
       ' -  S(',next(PRC_S) ,',',PRC_2Drank(next(PRC_S) ,1),',',PRC_2Drank(next(PRC_S) ,2),')', &

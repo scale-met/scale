@@ -78,9 +78,9 @@ contains
          FileGetShape
     implicit none
 
-    integer,               intent(out) :: dims(6)
-    integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in)  :: basename_org
+    integer,          intent(out) :: dims(6)
+    integer,          intent(out) :: timelen
+    character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
     integer :: dims_ncm(4)
@@ -126,11 +126,11 @@ contains
          ExternalFileRead
     implicit none
 
-    real(RP), intent(out) :: lon_org(:,:)
-    real(RP), intent(out) :: lat_org(:,:)
-    real(RP), intent(out) :: cz_org(:,:,:)
-    character(len=H_LONG), intent(in) :: basename_num
-    integer,  intent(in)  :: dims(6)
+    real(RP),         intent(out) :: lon_org(:,:)
+    real(RP),         intent(out) :: lat_org(:,:)
+    real(RP),         intent(out) :: cz_org(:,:,:)
+    character(len=*), intent(in)  :: basename_num
+    integer,          intent(in)  :: dims(6)
 
     character(len=H_LONG) :: basename
 
@@ -195,6 +195,8 @@ contains
     use scale_external_io, only: &
          ExternalFileRead, &
          ExternalFileReadOffset
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP),         intent(out) :: velz_org(:,:,:)
@@ -342,8 +344,8 @@ contains
          FileGetShape
     implicit none
 
-    integer,               intent(out) :: ldims(3)
-    character(len=H_LONG), intent(in)  :: basename_org
+    integer,          intent(out) :: ldims(3)
+    character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
     integer :: dims_ncm(4)
@@ -500,9 +502,9 @@ contains
          FileGetShape
     implicit none
 
-    integer,               intent(out) :: odims(2)
-    integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in)  :: basename_org
+    integer,          intent(out) :: odims(2)
+    integer,          intent(out) :: timelen
+    character(len=*), intent(in)  :: basename_org
 
     character(len=H_LONG) :: basename
     integer :: dims_ncm(4)
@@ -542,11 +544,11 @@ contains
          ExternalFileRead
     implicit none
 
-    real(RP), intent(out) :: olon_org(:,:)
-    real(RP), intent(out) :: olat_org(:,:)
-    real(RP), intent(out) :: omask_org(:,:)
-    character(len=H_LONG), intent(in) :: basename_num
-    integer,  intent(in)  :: odims(2)
+    real(RP),         intent(out) :: olon_org(:,:)
+    real(RP),         intent(out) :: olat_org(:,:)
+    real(RP),         intent(out) :: omask_org(:,:)
+    character(len=*), intent(in)  :: basename_num
+    integer,          intent(in)  :: odims(2)
 
     character(len=H_LONG) :: basename
 

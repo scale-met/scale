@@ -130,33 +130,33 @@ contains
     allocate( I_COMM_QTRC(QA) )
     allocate( I_COMM_RHOQ_t(QA) )
 
-    call COMM_vars8_init( DENS, I_COMM_DENS )
-    call COMM_vars8_init( MOMZ, I_COMM_MOMZ )
-    call COMM_vars8_init( MOMX, I_COMM_MOMX )
-    call COMM_vars8_init( MOMY, I_COMM_MOMY )
-    call COMM_vars8_init( RHOT, I_COMM_RHOT )
+    call COMM_vars8_init( 'DENS', DENS, I_COMM_DENS )
+    call COMM_vars8_init( 'MOMZ', MOMZ, I_COMM_MOMZ )
+    call COMM_vars8_init( 'MOMX', MOMX, I_COMM_MOMX )
+    call COMM_vars8_init( 'MOMY', MOMY, I_COMM_MOMY )
+    call COMM_vars8_init( 'RHOT', RHOT, I_COMM_RHOT )
     do iv = 1, VA
        I_COMM_PROG(iv) = 5 + iv
-       call COMM_vars8_init( PROG(:,:,:,iv), I_COMM_PROG(iv) )
+       call COMM_vars8_init( 'PROG', PROG(:,:,:,iv), I_COMM_PROG(iv) )
     end do
 
-    call COMM_vars8_init( DENS_t, I_COMM_DENS_t )
-    call COMM_vars8_init( MOMZ_t, I_COMM_MOMZ_t )
-    call COMM_vars8_init( MOMX_t, I_COMM_MOMX_t )
-    call COMM_vars8_init( MOMY_t, I_COMM_MOMY_t )
-    call COMM_vars8_init( RHOT_t, I_COMM_RHOT_t )
+    call COMM_vars8_init( 'DENS_t', DENS_t, I_COMM_DENS_t )
+    call COMM_vars8_init( 'MOMZ_t', MOMZ_t, I_COMM_MOMZ_t )
+    call COMM_vars8_init( 'MOMX_t', MOMX_t, I_COMM_MOMX_t )
+    call COMM_vars8_init( 'MOMY_t', MOMY_t, I_COMM_MOMY_t )
+    call COMM_vars8_init( 'RHOT_t', RHOT_t, I_COMM_RHOT_t )
 
     do iq = 1, QA
        I_COMM_RHOQ_t(iq) = 5 + VA + iq
        I_COMM_QTRC(iq) = 5 + VA + iq
 
-       call COMM_vars8_init( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
-       call COMM_vars8_init( QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
+       call COMM_vars8_init( 'RHOQ_t', RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
+       call COMM_vars8_init( 'QTRC',   QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
     end do
 
-    call COMM_vars8_init( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
-    call COMM_vars8_init( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
-    call COMM_vars8_init( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
+    call COMM_vars8_init( 'mflx_Z', mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
+    call COMM_vars8_init( 'mflx_X', mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
+    call COMM_vars8_init( 'mflx_Y', mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
 
     mflx_hi(:,:,:,:) = UNDEF
 
@@ -177,7 +177,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
        PHI, GSQRT,                                           &
        J13G, J23G, J33G, MAPF,                               &
-       AQ_CV,                                                &
+       AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        BND_W, BND_E, BND_S, BND_N,                           &
        ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
@@ -185,6 +185,7 @@ contains
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
+       wdamp_coef,                                           &
        divdmp_coef,                                          &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
@@ -194,8 +195,8 @@ contains
        EPS    => CONST_EPS, &
        P0     => CONST_PRE00, &
        Rdry   => CONST_Rdry, &
-       Rvap   => CONST_Rvap, &
-       CVdry  => CONST_CVdry
+       CVdry  => CONST_CVdry, &
+       CPdry  => CONST_CPdry
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -286,7 +287,10 @@ contains
     real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
     real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factor
 
-    real(RP), intent(in)    :: AQ_CV(QQA)
+    real(RP), intent(in)    :: AQ_R   (QA)
+    real(RP), intent(in)    :: AQ_CV  (QA)
+    real(RP), intent(in)    :: AQ_CP  (QA)
+    real(RP), intent(in)    :: AQ_MASS(QA)
 
     real(RP), intent(in)    :: REF_dens(KA,IA,JA)
     real(RP), intent(in)    :: REF_pott(KA,IA,JA)
@@ -318,6 +322,7 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
 
+    real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
 
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
@@ -345,6 +350,9 @@ contains
     real(RP) :: CVtot ! total CV
     real(RP) :: CPtot ! total CP
     real(RP) :: PRES  ! pressure
+#ifdef DRY
+    real(RP) :: CPovCV
+#endif
 
     real(RP) :: DENS_tq(KA,IA,JA)
     real(RP) :: diff(KA,IA,JA)
@@ -416,6 +424,9 @@ contains
 
 #endif
 
+#ifdef DRY
+    CPovCV = CPdry / CVdry
+#endif
     !------------------------------------------------------------------------
     ! prepare thermodynamical data
     !   specific heat
@@ -429,6 +440,14 @@ contains
     ! pres ~ P0 * ( R * rhot0 / P0 ) ** (CP/CV) + CV*R/CP * ( pres / P0 )**(R/CP) * rhot'
     !------------------------------------------------------------------------
 !OCL XFILL
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JA,IA,KS,KE) &
+    !$omp shared(P0,Rdry,RHOT,AQ_R,AQ_CV,AQ_CP,QTRC,AQ_MASS,REF_rhot,REF_pres,CPdry,CVdry,QA,RT2P,DPRES0) &
+#ifdef DRY
+    !$omp shared(CPovCV) &
+#endif
+    !$omp private(i,j,k,iq) &
+    !$omp private(PRES,Rtot,CVtot,CPtot,QDRY)
     do j = 1, JA
     do i = 1, IA
        do k = KS, KE
@@ -436,15 +455,19 @@ contains
           PRES = P0 * ( Rdry * RHOT(k,i,j) / P0 )**CPovCV
           RT2P(k,i,j) = CPovCV * PRES / RHOT(k,i,j)
 #else
+          Rtot  = 0.0_RP
           CVtot = 0.0_RP
+          CPtot = 0.0_RP
           QDRY  = 1.0_RP
-          do iq = QQS, QQE
+          do iq = 1, QA
+             Rtot  = Rtot + AQ_R(iq) * QTRC(k,i,j,iq)
              CVtot = CVtot + AQ_CV(iq) * QTRC(k,i,j,iq)
-             QDRY  = QDRY  - QTRC(k,i,j,iq)
+             CPtot = CPtot + AQ_CP(iq) * QTRC(k,i,j,iq)
+             QDRY  = QDRY  - QTRC(k,i,j,iq) * AQ_MASS(iq)
           enddo
-          CVtot = CVdry * QDRY + CVtot
-          Rtot  = Rdry  * QDRY + Rvap * QTRC(k,i,j,I_QV)
-          CPtot = CVtot + Rtot
+          Rtot  = Rtot  + Rdry  * QDRY
+          CVtot = CVtot + CVdry * QDRY
+          CPtot = CPtot + CPdry * QDRY
           PRES = P0 * ( Rtot * RHOT(k,i,j) / P0 )**( CPtot / CVtot )
           RT2P(k,i,j) = CPtot / CVtot * PRES / RHOT(k,i,j)
 #endif
@@ -483,7 +506,13 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
+       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -502,10 +531,10 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(RHOQ_tp(:,:,:,iq), trim(AQ_NAME(iq))//'_t_phys', &
-                    'tendency of '//trim(AQ_NAME(iq))//' due to physics',          'kg/kg/s' )
-       call HIST_in(damp_t,            trim(AQ_NAME(iq))//'_t_damp', &
-                    'tendency of '//trim(AQ_NAME(iq))//' due to rayleigh damping', 'kg/kg/s' )
+       call HIST_in(RHOQ_tp(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_phys', &
+                    'tendency of '//trim(TRACER_NAME(iq))//' due to physics', 'kg/kg/s' )
+       call HIST_in(damp_t,            trim(TRACER_NAME(iq))//'_t_damp', &
+                    'tendency of '//trim(TRACER_NAME(iq))//' due to damping', 'kg/kg/s' )
 #endif
 !OCL XFILL
        do j = JS, JE
@@ -589,7 +618,13 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_DENS,diff,DENS_tq,DENS_t,DENS_tp,BND_SMOOTHER_FACT)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -616,8 +651,8 @@ contains
        enddo
        call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
 #ifdef HIST_TEND
-       call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics',          'kg/m3/s' )
-       call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s' )
+       call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics', 'kg/m3/s' )
+       call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to damping', 'kg/m3/s' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -629,7 +664,13 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_VELZ,diff,BND_SMOOTHER_FACT,MOMZ_t,MOMZ_tp)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -638,6 +679,7 @@ contains
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
                         + damp
 #ifdef HIST_TEND
@@ -655,8 +697,8 @@ contains
        enddo
        call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',          'kg/m2/s2', zdim='half' )
-       call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', zdim='half' )
+       call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',  'kg/m2/s2', zdim='half' )
+       call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to damping', 'kg/m2/s2', zdim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -669,6 +711,13 @@ contains
        enddo
        enddo
 !OCL XFILL
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_VELX,diff,BND_SMOOTHER_FACT,MOMX_tp,MOMX_t)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -693,8 +742,8 @@ contains
        enddo
        call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics',          'kg/m2/s2', xdim='half' )
-       call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', xdim='half' )
+       call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics', 'kg/m2/s2', xdim='half' )
+       call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to damping', 'kg/m2/s2', xdim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -707,6 +756,13 @@ contains
        enddo
        enddo
 !OCL XFILL
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_VELY,diff,BND_SMOOTHER_FACT,MOMY_tp,MOMY_t)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -731,8 +787,8 @@ contains
        enddo
        call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics',          'kg/m2/s2', ydim='half' )
-       call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', ydim='half' )
+       call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics', 'kg/m2/s2', ydim='half' )
+       call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to damping', 'kg/m2/s2', ydim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -745,6 +801,13 @@ contains
        enddo
        enddo
 !OCL XFILL
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k,damp) &
+#ifdef HIST_TEND
+       !$omp shared(damp_t) &
+#endif
+       !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DAMP_alpha_POTT,diff,BND_SMOOTHER_FACT,RHOT_t,RHOT_tp)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -769,8 +832,8 @@ contains
        enddo
        call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
 #ifdef HIST_TEND
-       call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics',          'K kg/m3/s' )
-       call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', 'K kg/m3/s' )
+       call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics', 'K kg/m3/s' )
+       call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to damping', 'K kg/m3/s' )
 #endif
 
        call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
@@ -822,7 +885,7 @@ contains
                                     mflx_hi, tflx_hi,                         & ! (inout)
                                     DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
                                     DPRES0, RT2P, CORIOLI,                    & ! (in)
-                                    num_diff, divdmp_coef, DDIV,              & ! (in)
+                                    num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
                                     FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
                                     FLAG_FCT_ALONG_STREAM,                    & ! (in)
                                     CDZ, FDZ, FDX, FDY,                       & ! (in)
@@ -844,6 +907,8 @@ contains
             BND_W, BND_E, BND_S, BND_N )
 #endif
 
+       !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
        do j  = JS, JE
        do i  = IS, IE
           DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -928,42 +993,56 @@ contains
     ! Update each tracer
     !------------------------------------------------------------------------
 
-#ifdef _SDM
+#ifdef SDM
     do iq = 1, I_QV
 #else
     do iq = 1, QA
 #endif
 
-       call PROF_rapstart("DYN_Large_Numfilter", 2)
+       if ( TRACER_ADVC(iq) ) then
 
-       if ( ND_COEF_Q == 0.0_RP ) then
+          call PROF_rapstart("DYN_Large_Numfilter", 2)
+
+          if ( ND_COEF_Q == 0.0_RP ) then
 !OCL XFILL
-          num_diff_q(:,:,:,:) = 0.0_RP
+             num_diff_q(:,:,:,:) = 0.0_RP
+          else
+             call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
+                                              DENS00, QTRC(:,:,:,iq),                 & ! [IN]
+                                              CDZ, CDX, CDY, dtl,                     & ! [IN]
+                                              REF_qv, iq,                             & ! [IN]
+                                              ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
+          endif
+
+          call PROF_rapend  ("DYN_Large_Numfilter", 2)
+
+          call PROF_rapstart("DYN_Tracer_Tinteg", 2)
+
+          call ATMOS_DYN_tinteg_tracer( &
+               QTRC(:,:,:,iq), & ! (inout)
+               QTRC0(:,:,:,iq), RHOQ_t(:,:,:,iq), &! (in)
+               DENS00, DENS, & ! (in)
+               mflx_hi, num_diff_q, & ! (in)
+               GSQRT, MAPF(:,:,:,I_XY), & ! (in)
+               CDZ, RCDZ, RCDX, RCDY,             & ! (in)
+               dtl, & ! (in)
+               Llast .AND. FLAG_FCT_TRACER, & ! (in)
+               FLAG_FCT_ALONG_STREAM         ) ! (in)
+
+          call PROF_rapend  ("DYN_Tracer_Tinteg", 2)
+
        else
-          call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
-                                           DENS00, QTRC(:,:,:,iq),                 & ! [IN]
-                                           CDZ, CDX, CDY, dtl,                     & ! [IN]
-                                           REF_qv, iq,                             & ! [IN]
-                                           ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
-       endif
 
-       call PROF_rapend  ("DYN_Large_Numfilter", 2)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             QTRC(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS00(k,i,j) &
+                              + RHOQ_t(k,i,j,iq) * dtl          ) / DENS(k,i,j)
+          end do
+          end do
+          end do
 
-       call PROF_rapstart("DYN_Tracer_Tinteg", 2)
-
-       call ATMOS_DYN_tinteg_tracer( &
-            QTRC(:,:,:,iq), & ! (inout)
-            QTRC0(:,:,:,iq), RHOQ_t(:,:,:,iq), &! (in)
-            DENS00, DENS, & ! (in)
-            mflx_hi, num_diff_q, & ! (in)
-            GSQRT, MAPF(:,:,:,I_XY), & ! (in)
-            CDZ, RCDZ, RCDX, RCDY,             & ! (in)
-            dtl, & ! (in)
-            Llast .AND. FLAG_FCT_TRACER, & ! (in)
-            FLAG_FCT_ALONG_STREAM         ) ! (in)
-
-
-       call PROF_rapend  ("DYN_Tracer_Tinteg", 2)
+       end if
 
        if ( USE_AVERAGE ) then
           QTRC_av(:,:,:,iq) = QTRC(:,:,:,iq)

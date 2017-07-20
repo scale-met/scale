@@ -1,0 +1,38 @@
+\section{Setting the topography} \label{subsec:basic_usel_topo}
+%-----------------------------------------------------------------------
+
+\scalerm employs the terrain-following coordinates to represent topography.
+In these coordinates, the bottom face of the lowest grid is given such that it can follow the surface altitude. The allowable maximum angle of inclination, $\theta_{\max}$[radian] is calculated as follows: 
+\begin{eqnarray}
+  && \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} )\nonumber,
+\end{eqnarray}
+where $\mathrm{DZ}$ and $\mathrm{DX}$ are the horizontal and vertical grid intervals, respectively.  As shown in the above equation, $\theta_{\max}$ depends on spatial resolution. 
+In \scalerm, the default value of $\mathrm{RATIO}$ is 1.0.
+If $\mathrm{RATIO}$ is greater than unity, the fine topography is expressed, and vice versa. Note that at $\mathrm{RATIO} >1$, the risk of numerical instability increases.
+
+The program \verb|scale-rm_pp| converts external topography data into \scalelib format.  The detailed configurations are specified in \namelist{PARAM_CNVTOPO} in configuration file \verb|pp.conf|. An example is as follows:
+\editboxtwo{
+\verb|&PARAM_CNVTOPO  |                  & \\
+ \verb|CNVTOPO_name                  = "GTOPO30", | & ; Data name used\\
+ \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; Allowable maximum ratio of inclination to $\mathrm{DZ}$/$\mathrm{DX}$ \\
+ \verb|CNVTOPO_smooth_local          = .true.,    | & ; 
+Whether smoothened or not, only grids whose angles of inclination exceed the maximum value \\
+ \verb|CNVTOPO_copyparent            = .false.,   | & ; Whether the topography in the buffer region is copied \\
+\verb|/|\\
+}
+\scalerm supports GTOPO30 and DEM50M provided by the Geospatial Information Authority of Japan as external input topography data.
+
+The topographical data is formulated as the area-weighting mean of grid spacing.
+This conversion calculates the difference in altitude between them using their neighboring grids and inclinations.
+In case $\theta_{\max}$ exceeds the allowable maximum angle of inclination, \\
+i.e., \nmitem{CNVTOPO_smooth_maxslope_ratio}, the topography is smoothened by a Laplacian filter with several iterations until the angle is below the allowable maximum angle.
+Smoothing is selectively applied either only to grids whose angles of inclination exceed the maximum value, or to the entire domain.
+Since the former saves the sharp structure of the topography within the allowable maximum angle, it is selected if the representation of fine structures is desired.
+The Gaussian filter is also selected as a smoothing filter. In this case, the topography is smoother than when the Laplacian filter is used.
+
+\nmitem{CNVTOPO_copyparent} is the item used for the nesting computation.
+In general, the topography in the child domain is finer than in the parent domain due to higher spatial resolution.
+At this time, problems often occers due to 
+an inconsistency between 
+the atmospheric data in the buffer region of the child domain and that in the parent domain.
+To avoid this problem, the topography of the parent domain can be copied to the buffer region of the child domain by specifying \nmitem{CNVTOPO_copyparent}$=$\verb|.true.| If there is no parent domain, \nmitem{CNVTOPO_copyparent} must be \verb|.false.|. Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copyparent}.

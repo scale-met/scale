@@ -171,11 +171,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** TIMEPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist TIMEPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist TIMEPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist TIMEPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=TIMEPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=TIMEPARAM)
 
     !--- rewrite
     TIME_integ_type = integ_type
@@ -190,7 +189,7 @@ contains
        case('RK3')
           TIME_sstep_max = 6
         case('RK4')
-          TIME_sstep_max = 8
+          TIME_sstep_max = 12
         case('TRCADV')
           TIME_sstep_max = 0
        case default

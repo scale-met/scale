@@ -12,6 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_phy_rd_common
   !-----------------------------------------------------------------------------
   !
@@ -66,6 +67,10 @@ contains
        dt,       &
        TEMP_t,   &
        RHOT_t    )
+    use scale_tracer, only: &
+       TRACER_R, &
+       TRACER_CV, &
+       TRACER_MASS
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd   => ATMOS_THERMODYN_qd,   &
        THERMODYN_cv   => ATMOS_THERMODYN_cv,   &
@@ -91,10 +96,16 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
-                         RHOT(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_rhoe( RHOE(:,:,:),   & ! [OUT]
+                         RHOT(:,:,:),   & ! [IN]
+                         QTRC(:,:,:,:), & ! [IN]
+                         TRACER_CV(:),  & ! [IN]
+                         TRACER_R(:),   & ! [IN]
+                         TRACER_MASS(:) ) ! [IN]
 
+    !$omp parallel do default(none)                       &
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE_t,flux_rad,FZ,dt,RHOE) &
+    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -113,9 +124,12 @@ contains
     enddo
     enddo
 
-    call THERMODYN_rhot( RHOT1(:,:,:), & ! [OUT]
-                         RHOE(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_rhot( RHOT1(:,:,:),  & ! [OUT]
+                         RHOE(:,:,:),   & ! [IN]
+                         QTRC(:,:,:,:), & ! [IN]
+                         TRACER_CV(:),  & ! [IN]
+                         TRACER_R(:),   & ! [IN]
+                         TRACER_MASS(:) ) ! [IN]
 
     ! update rhot
     do j = JS, JE
@@ -126,11 +140,13 @@ contains
     enddo
     enddo
 
-    call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                       QTRC(:,:,:,:) ) ! [IN]
+    call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
+                       QTRC(:,:,:,:), & ! [IN]
+                       TRACER_MASS(:) ) ! [IN]
 
     call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
                        QTRC (:,:,:,:), & ! [IN]
+                       TRACER_CV(:),   & ! [IN]
                        QDRY (:,:,:)    ) ! [IN]
 
     do j = JS, JE

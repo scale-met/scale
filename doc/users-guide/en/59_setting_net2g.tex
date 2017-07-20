@@ -1,0 +1,191 @@
+\section{Post-processing} \label{sec:net2g}
+%====================================================================================
+
+In this section, the post-processing tool \verb|net2g| is described and its function explained. \verb|net2g| generates the binary format that is readable in \grads by combining history files \verb|history.***.nc| with the \netcdf format. The conversion of all files to one enable \grads to draw the result. Thus, formatted data can be easily analyzed, even by a FORTRAN serial program. Since \verb|net2g| can also be executed as an MPI parallel program, the elapsed time can be to a greater extent than in the case of serial processing. The following functions are also available
+\begin{itemize}
+ \item Interpolate data from the surface of the model to arbitrary height coordinates or pressure coordinates.
+ \item Output the mean, maximum, and minimum values of the vertical integration of 3D variables.
+ \item Output multiple files for 3D variables, layer by layer.
+ \item Output multiple files, time-step by time-step.
+\end{itemize}
+
+
+It is convenient to divide files layer by layer or time-step by time-step because such data can be easily handled, particularly large-scale computational data. Refer to Section \ref{sec:source_net2g} for a guide to installing \verb|net2g|. Note that the current version of \verb|net2g| has the following limitations:
+\begin{itemize}
+\item The number of MPI processes in \verb|net2g| must be a divisor of the number of MPI processes at execution in \scalerm.
+\item The history output format at the execution of \scalerm must be output with   \nmitem{HIST_BND} $=$ \verb|.false. | in \namelist{PARAM_HIST}.
+\item Two- and three-dimensional data cannot be simultaneously converted.
+\item Only history data can be converted.
+\end{itemize}
+Beware that if too large a number of MPI processes is set, computational performance is affected. Since most instruction in \verb|net2g| are for the input/output of data, it is possible that the number of requests for storage access becomes too large. In particular, this situation should be attended to if the conversion of large-scale computation results is carried out on small-scale machines.
+
+If MPI parallel is used, \verb|net2g| is executed as follows:
+\begin{verbatim}
+ $ mpirun  -n  [number of process]  ./net2g  net2g.conf
+\end{verbatim}
+The last argument \verb|net2g.conf| is the configuration file for \verb|net2g|.
+On the contrary, if \verb|net2g| is compiled as a single process version,
+\begin{verbatim}
+ $ ./net2g  net2g.conf
+\end{verbatim}
+
+If only the following message without error can be found, the execution is concluded normally:
+\msgbox{
+\verb|+++ MPI COMM: Corrective Finalize| \\
+}
+
+The following explains how to describe the configuration files in the case of 2D or 3D variables by using sample files \verb|net2g.3d.conf| and \verb|net2g.2d.conf| in the directory\\
+\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/}. In this section, only the major issues pertaining to its use are treated. Refer to the sample files \verb|net2g.all.conf| in \\
+\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/} for the other options.
+
+\subsubsection{The sample configuration file: Conversion of 3D variables}
+%------------------------------------------------------
+
+\editbox{
+\verb|&LOGOUT| \\
+\verb| LOG_BASENAME   = "LOG_d01_3d",| \\
+\verb| LOG_ALL_OUTPUT = .false.,| \\
+\verb|/| \\
+ \\
+\verb|&INFO| \\
+\verb| TIME_STARTDATE = 2000, 1, 1, 0, 0, 0,| \\
+\verb| START_TSTEP    = 1,| \\
+\verb| END_TSTEP      = 25,| \\
+\verb| DOMAIN_NUM     = 1,| \\
+\verb| CONFFILE       = "../run/run.d01.conf",| \\
+\verb| IDIR           = "../run",| \\
+\verb| Z_LEV_TYPE     = "plev",| \\
+\verb| MAPPROJ_ctl    = .true. | \\
+\verb|/| \\
+ \\
+\verb|&VARI| \\
+\verb| VNAME       = "PT","U","V","W","QHYD",| \\
+\verb| TARGET_ZLEV = 850,500,200,| \\
+\verb|/| \\
+}
+The above example shows a configuration in the case where 3D variables in a domain are converted into pressure and/or height coordinates. The setting items are as follows:
+\begin{itemize}
+ \item \namelist{LOGOUT} (The following items are not required.)
+ \begin{itemize}
+  \item \nmitem{LOG_BASENAME}：If the default LOG file name \verb|LOG| is changed, this item is specified.
+  \item \nmitem{LOG_ALL_OUTPUT}：If processes other than the 0th process are output in the LOG files,
+\verb|".true."| is assigned to this item.  The default value is \verb|."false".|
+ \end{itemize}
+ \item \namelist{INFO}
+ \begin{itemize}
+  \item \nmitem{TIME_STARTDATE} : The start date and time of converted \netcdf data are specified.
+  \item \nmitem{START_TSTEP} : The start time step of converted \netcdf data is specified.
+    If several first steps are skipped, the appropriate values are assigned to this item.
+    The default value is 1.
+  \item \nmitem{END_TSTEP}：The end of the time step of converted \netcdf data is specified.
+    It is required in all cases.
+  \item \nmitem{DOMAIN_NUM}：The domain number is specified. The default value is 1.
+  \item \nmitem{CONFFILE}：The path of \verb|run.***.conf| at the execution of \scalerm is specified, including the file name.
+  \item \nmitem{IDIR}：The path of history files is specified.
+  \item \nmitem{Z_LEV_TYPE}：The type of vertical data conversion is specified. \verb|"original"| represents the model surface, 
+    \verb|"plev"| the interpolation to the pressure surface, 
+    and \verb|"zlev"| that to the height surface.
+    If \verb|"anal"| is specified, the result with a simple analysis is output. The details for \verb|"anal"| is explained subsequently. 
+    The default value is \verb|"plev"|.
+  \item \nmitem{MAPPROJ_ctl}： It indicates whether the ``ctl'' file corresponding to the map projection using \verb|pdef| is output. Currently, this option is available only for \verb|LC| coordinate.
+ \end{itemize}
+ \item \namelist{VARI}
+ \begin{itemize}
+  \item \nmitem{VNAME}：The variables converted are specified.
+    As default, \verb|"PT"|,\verb|"PRES"|,\verb|"U"|,\verb|"V"|, \verb|"W"|,\verb|"QHYD"| are given.
+  \item \nmitem{TARGET_ZLEV}： The heights corresponding to \nmitem{Z_LEV_TYPE} are specified.
+    In the case of \verb|"plev"|, the unit is [$hPa$], 
+    in the case of \verb|"zlev"|, the unit is [$m$], and 
+    in the case of \verb|"original"|, the grid numbers are specified.
+    As default, 14 layers (1000 hPa, 975 hPa, 950 hPa, 925 hPa, 900 hPa, 850 hPa, 800 hPa, 700 hPa, 600 hPa, 500 hPa, 400 hPa,
+        300 hPa, 250 hPa, and 200 hPa ) are given.
+ \end{itemize}
+\end{itemize}
+
+\subsubsection{Example of configuration file: Vertical integration of 3D variable data}
+%------------------------------------------------------
+The description below presents an excerpt of a configuration file along with a simple analysis. The other item settings are the same as in the previous configuration.
+\editbox{
+\verb|&INFO| \\
+\verb|　 　 〜　...　〜|\\
+\verb| Z_LEV_TYPE  = "anal",| \\
+\verb| ZCOUNT      = 1,| \\
+\verb|/| \\
+ \\
+\verb|&ANAL| \\
+\verb| ANALYSIS    = "sum",| \\
+\verb|/| \\
+ \\
+\verb|&VARI| \\
+\verb| VNAME       = "QC","QI","QG",| \\
+\verb|/| \\
+}
+If \nmitem{Z_LEV_TYPE}$=$\verb|"anal"|, simple analysis is applied to the 3D variable.
+This setting enables \namelist{ANAL}.
+The specification of \nmitem{TARGET_ZLEV} in \namelist{VARI} is disabled,
+and \textcolor{blue}{\nmitem{ZCOUNT} in \namelist{INFO} is necessarily given as "1"}
+because of the output of 2D data.
+\begin{itemize}
+ \item \namelist{ANAL}
+ \begin{itemize}
+  \item \nmitem{ANALYSIS}：The type of vertical simple analysis is specified. \verb|"max"| and \verb|"min"| 
+    represent the maximum and minimum value outputs in the vertical column, respectively, whereas \verb|"sum"| and \verb|"ave"| represent
+    the vertical integration and the vertical average outputs, respectively. The default value is \verb|"ave"|.
+ \end{itemize}
+\end{itemize}
+
+\subsubsection{Example of configuration file: Conversion of 2D variables}
+%------------------------------------------------------
+The example below shows a configuration in the case where 2D variables are converted. Because of the output of 2D data,
+\textcolor{blue}{\nmitem{ZCOUNT} in \namelist{INFO} is necessarily given as "1."}
+\editbox{
+\verb|&LOGOUT| \\
+\verb| LOG_BASENAME   = "LOG_d01_2d",| \\
+\verb|/| \\
+ \\
+\verb|&INFO| \\
+\verb| TIME_STARTDATE = 2000, 1, 1, 0, 0, 0,| \\
+\verb| START_TSTEP = 1,| \\
+\verb| END_TSTEP   = 25,| \\
+\verb| DOMAIN_NUM  = 1,| \\
+\verb| CONFFILE    = "../run/run.d01.conf",| \\
+\verb| IDIR        = "../run",| \\
+\verb| ZCOUNT      = 1,| \\
+\verb| MAPPROJ_ctl    = .true.|\\
+\verb|/| \\
+ \\
+\verb|&VARI| \\
+\verb| VNAME       = "T2","MSLP","PREC"| \\
+\verb|/| \\
+}
+
+\subsubsection{Example of configuration file change: Conversion of irregular data in time}
+%------------------------------------------------------
+
+As described in Section \ref{sec:output},
+although the output interval is basically defined by \\ \nmitem{HISTORY_DEFAULT_TINTERVAL},
+it is possible to change the output interval of particular variables
+by giving a value different from \nmitem{HISTORY_DEFAULT_TINTERVAL}  to \nmitem{TINTERVAL} in \namelist{HISTITEM}.
+\verb|net2g| supports the data conversion of these variables with different output interval by setting \namelist{EXTRA}.
+The below example shows the namelists, which should be added or modified
+for the case described in the last paragraph of Section \ref{sec:output}
+(only 2D data \verb|"RAIN"| are output at a time interval of 600 s).
+
+The history file can handle data with multiple different time intervals. 
+Since \verb|net2g| does not support the simultaneous conversion of variables with different output intervals, 
+it is required to execute \verb|net2g| separately for these variables. 
+
+\editbox{
+\verb|&EXTRA| \\
+\verb| EXTRA_TINTERVAL = 600.0,| \\
+\verb| EXTRA_TUNIT     = "SEC",| \\
+\verb|/| \\
+ \\
+\verb|&VARI| \\
+\verb| VNAME = "RAIN",| \\
+\verb|/| \\
+}
+
+
+\subsubsection{Note for execution on supercomputer}
+When a simulation is conducted on a supercomputer such as the K Computer, many output files are generated, where the size of each file is large. In such cases, the local disk space is often not large enough to store them,  and post-processing may take a long time. In this case, both a simulation by \scalerm and its post-processing on the same supercomputer are recommended. On the K Computer, \verb|net2g| can be compiled by the ``make'' command  if the environmental variable is appropriately set as described in Section \ref{subsec:evniromnet}.

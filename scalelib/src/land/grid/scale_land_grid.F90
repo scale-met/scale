@@ -86,7 +86,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_GRID. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_GRID)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_GRID)
 
     allocate( GRID_LCZ (LKS  :LKE) )
     allocate( GRID_LFZ (LKS-1:LKE) )
@@ -104,8 +104,10 @@ contains
     endif
 
     if ( LKE == LKS ) then
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Single layer. LDZ = ', LDZ(1)
     else
+       if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
        '|====== Vertical Coordinate ======|'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
@@ -162,26 +164,28 @@ contains
     call FileRead( GRID_LFZ(:),  bname, 'LFZ',  1, PRC_myrank )
 
     call FileRead( tmp_CBFZ(:),  bname, 'CBFZ', 1, PRC_myrank )
-    call FileRead( tmp_CBFY(:),  bname, 'CBFX', 1, PRC_myrank )
+    call FileRead( tmp_CBFX(:),  bname, 'CBFX', 1, PRC_myrank )
     call FileRead( tmp_CBFY(:),  bname, 'CBFY', 1, PRC_myrank )
-   
+
     do i = 1, IA
-     if( tmp_CBFX(i) /= GRID_CBFX(i) ) then
-       write( IO_FID_LOG,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
-       call PRC_MPIstop
-     endif
+       if( tmp_CBFX(i) /= GRID_CBFX(i) ) then
+          write(*,*) 'xxx Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME'
+          call PRC_MPIstop
+       endif
     enddo
+
     do j = 1, JA
-     if( tmp_CBFY(j) /= GRID_CBFY(j) ) then
-       write( IO_FID_LOG,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
-       call PRC_MPIstop
-     endif
+       if( tmp_CBFY(j) /= GRID_CBFY(j) ) then
+          write(*,*) 'xxx Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME'
+          call PRC_MPIstop
+       endif
     enddo
+
     do k = 1, KA
-     if( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
-       write( IO_FID_LOG,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
-       call PRC_MPIstop
-     endif
+       if ( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
+          write(*,*) 'xxx Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME'
+          call PRC_MPIstop
+       endif
     enddo
 
     return

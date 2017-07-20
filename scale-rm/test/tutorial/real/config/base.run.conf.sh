@@ -42,8 +42,6 @@ cat << EOF > base.run.conf
 /
 
 &PARAM_NEST
- USE_NESTING              = ${RUN_USE_NESTING},
- OFFLINE                  = .false.,
  ONLINE_DOMAIN_NUM        = ${DNUM},
  ONLINE_IAM_PARENT        = ${IAM_PARENT},
  ONLINE_IAM_DAUGHTER      = ${IAM_DAUGHTER},

@@ -77,13 +77,8 @@ module mod_comm
   integer, public, allocatable :: recvlist_sgp(:,:,:)
   integer, public, allocatable :: sendlist_sgp(:,:,:)
 
-#ifdef _ACCCUDA
-  real(RP), public, allocatable, pinned :: sendbuf(:,:)
-  real(RP), public, allocatable, pinned :: recvbuf(:,:)
-#else
   real(RP), public, allocatable :: sendbuf(:,:)
   real(RP), public, allocatable :: recvbuf(:,:)
-#endif
 
   !-----------------------------------------------------------------------------
   !
@@ -390,11 +385,10 @@ contains
     if ( ierr < 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** COMMPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
-       write(*         ,*) 'xxx Not appropriate names in namelist COMMPARAM. STOP.'
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist COMMPARAM. STOP.'
+       write(*,*) 'xxx Not appropriate names in namelist COMMPARAM. STOP.'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=COMMPARAM)
+    if( IO_NML ) write(IO_FID_NML,nml=COMMPARAM)
 
     if ( RP == DP ) then
        COMM_datatype = MPI_DOUBLE_PRECISION

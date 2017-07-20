@@ -38,7 +38,7 @@
 'printim ideal_qhyd.png'
 'c'
 **
-** QHYD
+** W
 **
 'set parea 1 9 1 7.5'
 'set grads off'

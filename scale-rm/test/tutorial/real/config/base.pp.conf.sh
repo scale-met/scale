@@ -9,14 +9,9 @@ cat << EOF > base.pp.conf
 #################################################
 
 &PARAM_NEST
- USE_NESTING               = ${PP_USE_NESTING},
- OFFLINE                   = .true.,
+ OFFLINE_PARENT_BASENAME   = "${PARENT_BASENAME}",
  OFFLINE_PARENT_PRC_NUM_X  = ${PARENT_PRC_NUM_X},
  OFFLINE_PARENT_PRC_NUM_Y  = ${PARENT_PRC_NUM_Y},
- OFFLINE_PARENT_KMAX       = ${PARENT_KMAX},
- OFFLINE_PARENT_IMAX       = ${PARENT_IMAX},
- OFFLINE_PARENT_JMAX       = ${PARENT_JMAX},
- OFFLINE_PARENT_LKMAX      = ${PARENT_LKMAX},
  LATLON_CATALOGUE_FNAME    = "${LATLON_CATALOGUE_FNAME}",
 /
 
@@ -35,7 +30,7 @@ cat << EOF > base.pp.conf
 
 &PARAM_CNVTOPO
  CNVTOPO_name                  = "${TOPOTYPE[$D]}",
- CNVTOPO_smooth_local          = .true.,
+ CNVTOPO_smooth_local          = ${SMOOTH_LOCAL[$D]},
  CNVTOPO_smooth_maxslope_ratio = ${MAXSLOPE_RATIO},
  CNVTOPO_copy_parent           = ${COPYTOPO[$D]},
 /

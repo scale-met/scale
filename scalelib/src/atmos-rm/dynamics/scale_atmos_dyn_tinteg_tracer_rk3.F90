@@ -67,8 +67,6 @@ contains
        tinteg_type )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_vars8_init
     implicit none
@@ -86,8 +84,8 @@ contains
     allocate( QTRC_RK1(KA,IA,JA) )
     allocate( QTRC_RK2(KA,IA,JA) )
 
-    call COMM_vars8_init( QTRC_RK1, I_COMM_RK1 )
-    call COMM_vars8_init( QTRC_RK2, I_COMM_RK2 )
+    call COMM_vars8_init( 'QTRC_RK1', QTRC_RK1, I_COMM_RK1 )
+    call COMM_vars8_init( 'QTRC_RK2', QTRC_RK2, I_COMM_RK2 )
 
     return
   end subroutine ATMOS_DYN_Tinteg_tracer_rk3_setup
@@ -157,7 +155,7 @@ contains
 
     call COMM_vars8( QTRC_RK1(:,:,:), I_COMM_RK1 )
     call COMM_wait ( QTRC_RK1(:,:,:), I_COMM_RK1, .false. )
-    
+
 
     do j = JS-1, JE+1
     do i = IS-1, IE+1

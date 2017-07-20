@@ -36,21 +36,23 @@ module mod_atmos_phy_sf_vars
   public :: ATMOS_PHY_SF_vars_external_in
 
   public :: ATMOS_PHY_SF_vars_restart_create
+  public :: ATMOS_PHY_SF_vars_restart_open
   public :: ATMOS_PHY_SF_vars_restart_def_var
   public :: ATMOS_PHY_SF_vars_restart_enddef
-  public :: ATMOS_PHY_SF_vars_restart_write_var
   public :: ATMOS_PHY_SF_vars_restart_close
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_PHY_SF_RESTART_OUTPUT       = .false.                !< output restart file?
+  logical,               public :: ATMOS_PHY_SF_RESTART_OUTPUT                = .false.                !< output restart file?
 
-  character(len=H_LONG), public :: ATMOS_PHY_SF_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG), public :: ATMOS_PHY_SF_RESTART_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_SF_RESTART_OUT_TITLE    = 'ATMOS_PHY_SF restart' !< title    of the output file
-  character(len=H_MID),  public :: ATMOS_PHY_SF_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG),  public :: ATMOS_PHY_SF_RESTART_IN_BASENAME           = ''                     !< Basename of the input  file
+  logical,                public :: ATMOS_PHY_SF_RESTART_IN_POSTFIX_TIMELABEL  = .false.                !< Add timelabel to the basename of input  file?
+  character(len=H_LONG),  public :: ATMOS_PHY_SF_RESTART_OUT_BASENAME          = ''                     !< Basename of the output file
+  logical,                public :: ATMOS_PHY_SF_RESTART_OUT_POSTFIX_TIMELABEL = .true.                 !< Add timelabel to the basename of output file?
+  character(len=H_MID),   public :: ATMOS_PHY_SF_RESTART_OUT_TITLE             = 'ATMOS_PHY_SF restart' !< title    of the output file
+  character(len=H_SHORT), public :: ATMOS_PHY_SF_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_DENS_t(:,:)   ! tendency DENS [    kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_MOMZ_t(:,:)   ! tendency MOMZ [m/s*kg/m3/s]
@@ -60,7 +62,7 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOQ_t(:,:,:) ! tendency rho*QTRC [    kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_TEMP  (:,:)   ! surface skin temperature             [K]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo(:,:,:) ! surface albedo                       [0-1]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo(:,:,:) ! surface albedo                       (0-1)
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0M   (:,:)   ! surface roughness length, ocean only [m]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0H   (:,:)   ! surface roughness length, ocean only [m]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0E   (:,:)   ! surface roughness length, ocean only [m]
@@ -122,12 +124,12 @@ module mod_atmos_phy_sf_vars
                   'surface roughness length (heat)',     &
                   'surface roughness length (vapor)'     /
 
-  data VAR_UNIT / 'K',   &
-                  '0-1', &
-                  '0-1', &
-                  'm',   &
-                  'm',   &
-                  'm'    /
+  data VAR_UNIT / 'K', &
+                  '1', &
+                  '1', &
+                  'm', &
+                  'm', &
+                  'm'  /
 
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP   = 300.0_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo = 0.4_RP
@@ -145,13 +147,15 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_SF_VARS / &
-       ATMOS_PHY_SF_RESTART_IN_BASENAME,  &
-       ATMOS_PHY_SF_RESTART_OUTPUT,       &
-       ATMOS_PHY_SF_RESTART_OUT_BASENAME, &
-       ATMOS_PHY_SF_RESTART_OUT_TITLE,    &
-       ATMOS_PHY_SF_RESTART_OUT_DTYPE,    &
-       ATMOS_PHY_SF_DEFAULT_SFC_TEMP,     &
-       ATMOS_PHY_SF_DEFAULT_SFC_albedo,   &
+       ATMOS_PHY_SF_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_SF_RESTART_IN_POSTFIX_TIMELABEL,  &
+       ATMOS_PHY_SF_RESTART_OUTPUT,                &
+       ATMOS_PHY_SF_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_SF_RESTART_OUT_POSTFIX_TIMELABEL, &
+       ATMOS_PHY_SF_RESTART_OUT_TITLE,             &
+       ATMOS_PHY_SF_RESTART_OUT_DTYPE,             &
+       ATMOS_PHY_SF_DEFAULT_SFC_TEMP,              &
+       ATMOS_PHY_SF_DEFAULT_SFC_albedo,            &
        ATMOS_PHY_SF_DEFAULT_SFC_Z0
 
     integer :: ierr
@@ -223,7 +227,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_VARS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_VARS)
 
     ! [add] 2014/08/28 A.Noda
     ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
@@ -234,22 +238,25 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_SF] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
+               '***       |', 'VARNAME                 ','|', &
+               'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
                   '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_PHY_SF_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_PHY_SF_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : YES, file = ', trim(ATMOS_PHY_SF_RESTART_IN_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_PHY_SF_RESTART_IN_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
     if (       ATMOS_PHY_SF_RESTART_OUTPUT             &
          .AND. ATMOS_PHY_SF_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES, file = ', trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Add timelabel?  : ', ATMOS_PHY_SF_RESTART_OUT_POSTFIX_TIMELABEL
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_SF_RESTART_OUTPUT = .false.
@@ -288,47 +295,34 @@ contains
   end subroutine ATMOS_PHY_SF_vars_fillhalo
 
   !-----------------------------------------------------------------------------
-  !> Read restart
-  subroutine ATMOS_PHY_SF_vars_restart_read
-    use scale_const, only: &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
+  !> Open restart file for read
+  subroutine ATMOS_PHY_SF_vars_restart_open
+    use scale_time, only: &
+       TIME_gettimelabel
     use scale_fileio, only: &
-       FILEIO_read
-    use scale_rm_statistics, only: &
-       STAT_total
+       FILEIO_open
     implicit none
 
-    real(RP) :: total
+    character(len=19)     :: timelabel
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_SF) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (ATMOS_PHY_SF) ***'
 
     if ( ATMOS_PHY_SF_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_SF_RESTART_IN_BASENAME)
 
-       call FILEIO_read( ATMOS_PHY_SF_SFC_TEMP  (:,:),                               & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(1), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW),                          & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(2), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW),                          & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(3), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFC_Z0M   (:,:),                               & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(4), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFC_Z0H   (:,:),                               & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(5), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFC_Z0E   (:,:),                               & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(6), 'XY', step=1 ) ! [IN]
+       if ( ATMOS_PHY_SF_RESTART_IN_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_SF_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_SF_RESTART_IN_BASENAME)
+       endif
 
-       call ATMOS_PHY_SF_vars_fillhalo
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call STAT_total( total, ATMOS_PHY_SF_SFC_TEMP  (:,:),      VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), VAR_NAME(2) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), VAR_NAME(3) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0M   (:,:),      VAR_NAME(4) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0H   (:,:),      VAR_NAME(5) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0E   (:,:),      VAR_NAME(6) )
+       call FILEIO_open( restart_fid, basename )
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_SF is not specified.'
        ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
@@ -339,62 +333,62 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_SF_vars_restart_read
+  end subroutine ATMOS_PHY_SF_vars_restart_open
 
   !-----------------------------------------------------------------------------
-  !> Write restart
-  subroutine ATMOS_PHY_SF_vars_restart_write
+  !> Read restart
+  subroutine ATMOS_PHY_SF_vars_restart_read
     use scale_const, only: &
        I_SW => CONST_I_SW, &
        I_LW => CONST_I_LW
-    use scale_time, only: &
-       TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_write
     use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
+    use scale_fileio, only: &
+       FILEIO_read, &
+       FILEIO_flush
     implicit none
-
-    character(len=20)     :: timelabel
-    character(len=H_LONG) :: basename
 
     real(RP) :: total
     !---------------------------------------------------------------------------
 
-    if ( ATMOS_PHY_SF_RESTART_OUT_BASENAME /= '' ) then
-
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
+    if ( restart_fid /= -1 ) then
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_SF) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_SF) ***'
 
-       call ATMOS_PHY_SF_vars_fillhalo
+       call FILEIO_read( ATMOS_PHY_SF_SFC_TEMP  (:,:),          & ! [OUT]
+                         restart_fid, VAR_NAME(1), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW),     & ! [OUT]
+                         restart_fid, VAR_NAME(2), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW),     & ! [OUT]
+                         restart_fid, VAR_NAME(3), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_Z0M   (:,:),          & ! [OUT]
+                         restart_fid, VAR_NAME(4), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_Z0H   (:,:),          & ! [OUT]
+                         restart_fid, VAR_NAME(5), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_Z0E   (:,:),          & ! [OUT]
+                         restart_fid, VAR_NAME(6), 'XY', step=1 ) ! [IN]
 
-       call STAT_total( total, ATMOS_PHY_SF_SFC_TEMP  (:,:),      VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), VAR_NAME(2) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), VAR_NAME(3) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0M   (:,:),      VAR_NAME(4) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0H   (:,:),      VAR_NAME(5) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0E   (:,:),      VAR_NAME(6) )
+       if ( IO_AGGREGATE) then
+          call FILEIO_flush( restart_fid ) ! X/Y halos have been read from file
+       else
+          call ATMOS_PHY_SF_vars_fillhalo
+       end if
 
-       call FILEIO_write( ATMOS_PHY_SF_SFC_TEMP  (:,:),      basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFC_Z0M   (:,:),      basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFC_Z0H   (:,:),      basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(5), VAR_DESC(5), VAR_UNIT(5), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFC_Z0E   (:,:),      basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(6), VAR_DESC(6), VAR_UNIT(6), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, ATMOS_PHY_SF_SFC_TEMP  (:,:),      VAR_NAME(1) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), VAR_NAME(2) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), VAR_NAME(3) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_Z0M   (:,:),      VAR_NAME(4) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_Z0H   (:,:),      VAR_NAME(5) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_Z0E   (:,:),      VAR_NAME(6) )
+       end if
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_SF.'
     endif
 
     return
-  end subroutine ATMOS_PHY_SF_vars_restart_write
+  end subroutine ATMOS_PHY_SF_vars_restart_read
 
   !-----------------------------------------------------------------------------
   !> Input from External I/O
@@ -436,31 +430,32 @@ contains
   !-----------------------------------------------------------------------------
   !> Create restart file
   subroutine ATMOS_PHY_SF_vars_restart_create
-    use scale_const, only: &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_create
     implicit none
 
-    character(len=20)     :: timelabel
+    character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
-
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_SF_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_SF) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (ATMOS_PHY_AE) ***'
+
+       if ( ATMOS_PHY_SF_RESTART_OUT_POSTFIX_TIMELABEL ) then
+          call TIME_gettimelabel( timelabel )
+          basename = trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+       else
+          basename = trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME)
+       endif
+
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create(restart_fid, basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                          ATMOS_PHY_SF_RESTART_OUT_DTYPE                         ) ! [IN]
+       call FILEIO_create( restart_fid,                                                             & ! [OUT]
+                           basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, ATMOS_PHY_SF_RESTART_OUT_DTYPE ) ! [IN]
     endif
 
     return
@@ -473,7 +468,7 @@ contains
        FILEIO_enddef
     implicit none
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
        call FILEIO_enddef( restart_fid ) ! [IN]
     endif
 
@@ -486,9 +481,14 @@ contains
     use scale_fileio, only: &
        FILEIO_close
     implicit none
+    !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_PHY_SF) ***'
+
        call FILEIO_close( restart_fid ) ! [IN]
+
        restart_fid = -1
     endif
 
@@ -501,10 +501,9 @@ contains
     use scale_fileio, only: &
        FILEIO_def_var
     implicit none
-
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
                             VAR_UNIT(1), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
@@ -525,29 +524,32 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
-  subroutine ATMOS_PHY_SF_vars_restart_write_var
+  subroutine ATMOS_PHY_SF_vars_restart_write
     use scale_const, only: &
        I_SW => CONST_I_SW, &
        I_LW => CONST_I_LW
+    use scale_rm_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_fileio, only: &
        FILEIO_write_var
-    use scale_rm_statistics, only: &
-       STAT_total
     implicit none
 
     real(RP) :: total
     !---------------------------------------------------------------------------
 
-    if ( restart_fid .NE. -1 ) then
+    if ( restart_fid /= -1 ) then
 
        call ATMOS_PHY_SF_vars_fillhalo
 
-       call STAT_total( total, ATMOS_PHY_SF_SFC_TEMP  (:,:),      VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), VAR_NAME(2) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), VAR_NAME(3) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0M   (:,:),      VAR_NAME(4) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0H   (:,:),      VAR_NAME(5) )
-       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0E   (:,:),      VAR_NAME(6) )
+       if ( STATISTICS_checktotal ) then
+          call STAT_total( total, ATMOS_PHY_SF_SFC_TEMP  (:,:),      VAR_NAME(1) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), VAR_NAME(2) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), VAR_NAME(3) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_Z0M   (:,:),      VAR_NAME(4) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_Z0H   (:,:),      VAR_NAME(5) )
+          call STAT_total( total, ATMOS_PHY_SF_SFC_Z0E   (:,:),      VAR_NAME(6) )
+       endif
 
        call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_SF_SFC_TEMP  (:,:),      & ! [IN]
                               VAR_NAME(1), 'XY'                                          ) ! [IN]
@@ -561,9 +563,10 @@ contains
                               VAR_NAME(5), 'XY'                                          ) ! [IN]
        call FILEIO_write_var( restart_fid, VAR_ID(6), ATMOS_PHY_SF_SFC_Z0E   (:,:),      & ! [IN]
                               VAR_NAME(6), 'XY'                                          ) ! [IN]
+
     endif
 
     return
-  end subroutine ATMOS_PHY_SF_vars_restart_write_var
+  end subroutine ATMOS_PHY_SF_vars_restart_write
 
 end module mod_atmos_phy_sf_vars

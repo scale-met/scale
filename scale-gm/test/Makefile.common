@@ -16,12 +16,15 @@ endif
 SYSDEP_DIR2 = $(TOPDIR)/scale-gm/test/sysdep
 
 
-BUILD_DIR := $(PWD)/.libs
+BUILD_DIR := $(TOPDIR)/.libs
 INDEX_DIR := $(PWD)
-BINDIR     = $(PWD)
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
+
+
+all: build
+
 
 $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	mkdir -p $(BUILD_DIR)
@@ -32,8 +35,7 @@ build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	$(MAKE) -C $(SCALEGMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
                                 INDEX_DIR=$(INDEX_DIR)   \
-                                BINDIR=$(BINDIR)         \
-                                postfix=$(postfix)
+                                BINDIR=$(BINDIR)
 
 
 

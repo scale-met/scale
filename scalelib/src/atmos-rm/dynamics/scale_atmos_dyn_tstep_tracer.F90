@@ -47,7 +47,7 @@ module scale_atmos_dyn_tstep_tracer
        use scale_precision
        use scale_grid_index
        use scale_index
-       real(RP), intent(out) :: QTRCo   (KA,IA,JA)
+       real(RP), intent(inout) :: QTRCo   (KA,IA,JA)
        real(RP), intent(in)  :: QTRC    (KA,IA,JA)
        real(RP), intent(in)  :: QTRC0   (KA,IA,JA)
        real(RP), intent(in)  :: RHOQ_t  (KA,IA,JA)
@@ -101,8 +101,8 @@ contains
     character(len=*),       intent(in)  :: ATMOS_DYN_TSTEP_TRACER_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( ATMOS_DYN_TSTEP_TRACER_TYPE )
-    case ( 'FVM-HEVE', 'HEVE' )
+    select case( ATMOS_DYN_TSTEP_TRACER_TYPE )
+    case( 'FVM-HEVE', 'HEVE' )
        call ATMOS_DYN_Tstep_tracer_fvm_heve_setup( &
             ATMOS_DYN_TSTEP_TRACER_TYPE )
        ATMOS_DYN_Tstep_tracer => ATMOS_DYN_Tstep_tracer_fvm_heve       

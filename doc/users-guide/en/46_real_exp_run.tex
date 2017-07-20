@@ -1,0 +1,137 @@
+%-------------------------------------------------------%
+\section{Execution of simulation: run} \label{sec:tutrial_real_run}
+%-------------------------------------------------------%
+\subsubsection{Preparations for run.conf}
+Move to the directory \verb|run|.
+\begin{verbatim}
+ $ cd ${Tutorial_DIR}/real/experiment/run
+\end{verbatim}
+In this directory, the configuration file \verb|run.d01.conf| has already been prepared according to the tutorial settings shown in Table \ref{tab:grids}. Although the file \verb|run.launch.conf| also exists in this directory, it is not used here.
+
+The topographical data and the initial/boundary data previously generated  are used for this execution of the simulation model. These files are configured in the following part of \verb|run.d01.conf|:
+\editbox{
+\verb|&PARAM_TOPO| \\
+\verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
+\verb|/| \\
+ \\
+\verb|&PARAM_LANDUSE| \\
+\verb|   LANDUSE_IN_BASENAME  = "../pp/landuse_d01",| \\
+\verb|/| \\
+ \\
+\verb|&PARAM_RESTART| \\
+\verb| RESTART_RUN          = .false.,|\\
+\verb| RESTART_OUTPUT       = .true., |\\
+\verb| RESTART_OUT_BASENAME = "restart_d01",|\\
+\verb| RESTART_IN_BASENAME  = "../init/init_d01_20070714-180000.000",|\\
+\verb|/| \\
+ \\
+\verb|&PARAM_ATMOS_BOUNDARY| \\
+\verb| ATMOS_BOUNDARY_TYPE           = "REAL",                |\\
+\verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/boundary_d01",|\\
+\verb| ATMOS_BOUNDARY_START_DATE     = 2007, 7, 14, 18, 0, 0, |\\
+\verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.0,               |\\
+\verb| ATMOS_BOUNDARY_USE_DENS       = .true.,     |\\
+\verb| ATMOS_BOUNDARY_USE_QHYD       = .false.,    |\\
+\verb| ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,        |\\
+\verb| ATMOS_BOUNDARY_LINEAR_H       = .false.,    |\\
+\verb| ATMOS_BOUNDARY_EXP_H          = 2.0,        |\\
+\verb|/| \\
+}
+
+With regard to temporal integration, it is configured in \namelist{PARAM_TIME} in \verb|run.d01.conf|. Specify the initial time in \nmitem{TIME_STARTDATE} in UTC. In the tutorial, it is given as 18:00 UTC on July 14, 2007. The integration period is specified at \nmitem{TIME_DURATION}. The time steps for the physical processes can be configured process by process.
+\editboxtwo{
+\verb|&PARAM_TIME| & \\
+\verb| TIME_STARTDATE         = 2007, 7, 14, 18, 0, 0,| & : starting time of integration \\
+\verb| TIME_STARTMS           = 0.D0,  | &\\
+\verb| TIME_DURATION          = 6.0D0, | & : integration period \\
+\verb| TIME_DURATION_UNIT     = "HOUR",| & : unit of \verb|TIME_DURATION|\\
+\verb| TIME_DT                = 90.0D0,| & : time step for tracer advection\\
+\verb| TIME_DT_UNIT           = "SEC", | & : unit of \verb|TIME_DT|\\
+\verb| TIME_DT_ATMOS_DYN      = 45.0D0,| & : time step of dynamical process except for tracer advection\\
+\verb| TIME_DT_ATMOS_DYN_UNIT = "SEC", | & : unit of \verb|TIME_DT_ATMOS_DYN|\\
+ \\
+\verb|   ...............           | & \\
+ \\
+\verb|/| &\\
+}
+
+The output of the results of the calculation are configured in \nmitem{PARAM_HISTORY}.
+\editboxtwo{
+\verb|&PARAM_HISTORY| & \\
+\verb|   HISTORY_DEFAULT_BASENAME  = "history_d01",| & : output file name\\
+\verb|   HISTORY_DEFAULT_TINTERVAL = 3600.D0,      | & : time interval for output\\
+\verb|   HISTORY_DEFAULT_TUNIT     = "SEC",        | & : unit of output time interval\\
+\verb|   HISTORY_DEFAULT_TAVERAGE  = .false.,      | & \\
+\verb|   HISTORY_DEFAULT_DATATYPE  = "REAL4",      | & \\
+\verb|   HISTORY_DEFAULT_ZCOORD    = "model",      | & : no vertical interpolation\\
+\verb|   HISTORY_OUTPUT_STEP0      = .true.,       | & : output at initial time(t=0) or not \\
+\verb|/| \\
+}
+According to the above setting,  variables listed in the following \nmitem{HISTITEM} are output.  It is possible to change output intervals at every variable in \nmitem{HISTITEM} by adding options if needed.  The mean value instead of the snapshot value can be output.  Refer to Section \ref{sec:output} for the details.
+\editboxtwo{
+\verb|&HISTITEM item="MSLP" /| 　   　  & : sea-level pressure \\
+\verb|&HISTITEM item="PREC" /| 　   　  & : precipitation intensity (2D) \\
+\verb|&HISTITEM item="OLR"  /| 　    　 & : outgoing longwave radiation (2D) \\
+\verb|&HISTITEM item="U10" / |　     　 & : horizontal wind speed along X direction at 10 m(2D) \\
+\verb|&HISTITEM item="V10" / |　     　 & : horizontal wind speed along Y direction at 10 m(2D) \\
+\verb|&HISTITEM item="T2"  / |　     　 & : temperature at 2m　(2D) \\
+\verb|&HISTITEM item="Q2"  / |　     　 &  : specific humidity at 2m (2D) \\
+\verb|&HISTITEM item="SFC_PRES"   /| 　 & : surface pressure (2D) \\
+\verb|&HISTITEM item="SFC_TEMP"   /| 　 & : bulk surface temperature(2D) \\
+\verb|&HISTITEM item="DENS" /| 　  　   & : density (3D) \\
+\verb|&HISTITEM item="QV"   /| 　  　   & : specific humidity (3D) \\
+\verb|&HISTITEM item="QHYD" /| 　  　   & : mass concentration of total hydrometeor　(3D) \\
+\verb|&HISTITEM item="PRES" /| 　  　   & : pressure (3D) \\
+\verb|&HISTITEM item="U"    /| 　  　   & : horizontal wind speed along X direction (3D) \\
+\verb|&HISTITEM item="V"    /| 　  　   & : horizontal wind speed along Y direction (3D) \\
+\verb|&HISTITEM item="T"    /| 　  　   & : temperature (3D) \\
+\verb|&HISTITEM item="W"    /| 　  　   & : vertical wind speed (3D) \\
+\verb|&HISTITEM item="Uabs" /| 　  　   & : absolute value of wind velocity(3D) \\
+\verb|&HISTITEM item="PT"   /| 　  　   & : potential temperature (3D) \\
+\verb|&HISTITEM item="RH"   /| 　   　  & : relative humidity (3D) \\
+}
+
+If other schemes for the dynamics process and the physical processes are used,  configure \namelist{&PARAM_ATMOS_DYN} for the dynamical process  and \namelist{PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}  for the physical processes.  Refer to Sections \ref{sec:atmos_dyn} and \ref{sec:basic_usel_physics}  for the details.
+
+
+\subsubsection{Execution of simulation}
+
+The lists below are the necessary files for the execution. They have already been prepared:
+\begin{verbatim}
+ $ ls
+    MIPAS\ PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc
+                                  : parameter file for radiation scheme
+    run.d01.conf      : configuration file
+    param.bucket.conf : parameter file for land schemes
+    scale-rm          : executable binary of \scalerm
+    run.launch.conf   : launch file for nesting calculations (not used in the tutorial)
+\end{verbatim}
+If all preparations are complete, execute \scalerm by using four-MPI parallel:
+\begin{verbatim}
+  $ mpirun -n 4 ./scale-rm run.d01.conf >& log &
+\end{verbatim}
+The execution takes some time to complete. It takes 10-20 minutes in the recommended environment. It is convenient to execute it as a background job  so that the standard output is written to a file. The processed results are output to the file \verb|"LOG_d01.pe000000"| while the computation is progressing.  If the job finishes normally, the following messages are output in the file:
+\msgbox{
+ ++++++ Finalize MPI...\\
+ ++++++ MPI is peacefully finalized\\
+}
+The following files are also generated:
+\begin{verbatim}
+ $ ls
+  history_d01.pe000000.nc
+  history_d01.pe000001.nc
+  history_d01.pe000002.nc
+  history_d01.pe000003.nc
+\end{verbatim}
+The size of each file is approximately 23 MB.
+The output files (\verb|history_d01.pe######.nc|) are
+split according to number of MPI processes,
+where \verb|######| represents the MPI process number.
+In these files, the variables specified in \nmitem{HISTITEM} are output.
+The files are formatted by NetCDF,
+corresponding to climate and forecast (CF) metadata convention.
+
+
+%####################################################################################
+
+

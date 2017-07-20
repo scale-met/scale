@@ -193,7 +193,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_COMM. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_COMM)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM)
 
     nreq_NS  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_WE  = 2         !--- send x 1    , recv x 1
@@ -250,23 +250,6 @@ contains
 
     COMM_world = PRC_LOCAL_COMM_WORLD
 
-#ifdef _USE_RDMA
-    call rdma_setup( COMM_vsize_max_pc, &
-                     IA,                &
-                     JA,                &
-                     KA,                &
-                     IHALO,             &
-                     JHALO,             &
-                     IS,                &
-                     IE,                &
-                     JS,                &
-                     JE,                &
-                     PRC_next(PRC_W),   &
-                     PRC_next(PRC_N),   &
-                     PRC_next(PRC_E),   &
-                     PRC_next(PRC_S)    )
-#endif
-
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Maximum number of vars for one communication: ', &
                                    COMM_vsize_max
@@ -276,19 +259,22 @@ contains
                                    RP*KA*(2*IA*JHALO+2*JMAX*IHALO)
     if( IO_L ) write(IO_FID_LOG,*) '*** Ratio of halo against the whole 3D grid     : ', &
                                    real(2*IA*JHALO+2*JMAX*IHALO) / real(IA*JA)
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** All side is periodic?: ', COMM_IsAllPeriodic
+    if( IO_L ) write(IO_FID_LOG,*) '*** All side is periodic?                       : ', COMM_IsAllPeriodic
 
     return
   end subroutine COMM_setup
 
   !-----------------------------------------------------------------------------
   !> Register variables
-  subroutine COMM_vars_init(var, vid)
+  subroutine COMM_vars_init( &
+       varname, &
+       var,     &
+       vid      )
     implicit none
 
-    real(RP), intent(inout) :: var(:,:,:) !< variable for register
-    integer,  intent(inout) :: vid        !< variable ID
+    character(len=*), intent(in)    :: varname    !< variable name
+    real(RP),         intent(inout) :: var(:,:,:) !< variable array for register
+    integer,          intent(inout) :: vid        !< variable ID
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
@@ -304,18 +290,14 @@ contains
           call PRC_MPIstop
        end if
 
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM_init_RDMA', 2)
-       call set_rdma_variable(var, COMM_vars_id-1)
-       call PROF_rapend  ('COMM_init_RDMA', 2)
-#else
        call PROF_rapstart('COMM_init_pers', 2)
        call vars_init_mpi_pc(var, COMM_vars_id, vid)
        call PROF_rapend  ('COMM_init_pers', 2)
-#endif
 
        vid = COMM_vars_id + COMM_vsize_max
-       if( IO_L ) write(IO_FID_LOG,*) '*** COMM: set variable ID:', vid
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,2A)') '*** [Pers.COMM] Initialize variable : ID = ', vid, &
+                                                                                       ', name = ', trim(varname)
 
     end if
 
@@ -324,11 +306,15 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Register variables
-  subroutine COMM_vars8_init(var, vid)
+  subroutine COMM_vars8_init( &
+       varname, &
+       var,     &
+       vid      )
     implicit none
 
-    real(RP), intent(inout) :: var(:,:,:) !< variable for register
-    integer,  intent(inout) :: vid        !< variable ID
+    character(len=*), intent(in)    :: varname    !< variable name
+    real(RP),         intent(inout) :: var(:,:,:) !< variable array for register
+    integer,          intent(inout) :: vid        !< variable ID
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
@@ -344,18 +330,14 @@ contains
           call PRC_MPIstop
        end if
 
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM_init_RDMA', 2)
-       call set_rdma_variable(var, COMM_vars_id-1)
-       call PROF_rapend  ('COMM_init_RDMA', 2)
-#else
        call PROF_rapstart('COMM_init_pers', 2)
        call vars8_init_mpi_pc(var, COMM_vars_id, vid)
        call PROF_rapend  ('COMM_init_pers', 2)
-#endif
 
        vid = COMM_vars_id + COMM_vsize_max
-       if( IO_L ) write(IO_FID_LOG,*) '*** COMM: set variable ID:', vid
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,2A)') '*** [Pers.COMM] Initialize variable : ID = ', vid, &
+                                                                                       ', name = ', trim(varname)
 
     end if
 
@@ -371,15 +353,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM_vars_RDMA', 2)
-       call rdma_put(vid-COMM_vsize_max-1, 1)
-       call PROF_rapend  ('COMM_vars_RDMA', 2)
-#else
        call PROF_rapstart('COMM_vars_pers', 2)
        call vars_3D_mpi_pc(var, vid-COMM_vsize_max)
        call PROF_rapend  ('COMM_vars_pers', 2)
-#endif
     else
        call PROF_rapstart('COMM_vars', 2)
        call vars_3D_mpi(var, vid)
@@ -398,15 +374,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM_vars_RDMA', 2)
-       call rdma_put8(vid-COMM_vsize_max-1,1)
-       call PROF_rapend  ('COMM_vars_RDMA', 2)
-#else
        call PROF_rapstart('COMM_vars_pers', 2)
        call vars_3D_mpi_pc(var, vid-COMM_vsize_max)
        call PROF_rapend  ('COMM_vars_pers', 2)
-#endif
     else
        call PROF_rapstart('COMM_vars', 2)
        call vars8_3D_mpi(var, vid)
@@ -431,13 +401,9 @@ contains
     if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
     if ( vid > COMM_vsize_max ) then
-#ifdef _USE_RDMA
-       ! do nothing
-#else
        call PROF_rapstart('COMM_wait_pers', 2)
        call wait_3D_mpi_pc(var, vid-COMM_vsize_max)
        call PROF_rapend  ('COMM_wait_pers', 2)
-#endif
     else
        call PROF_rapstart('COMM_wait', 2)
        call wait_3D_mpi(var, vid)
@@ -537,7 +503,7 @@ contains
     do k = 1,  KA
        if ( abs(var(k,i,j)) < abs(CONST_UNDEF) ) then
           statval(k) = statval(k) + var(k,i,j)
-          statcnt(k) = statcnt(k) + 1.D0
+          statcnt(k) = statcnt(k) + 1.0_RP
        endif
     enddo
     enddo
@@ -2957,7 +2923,8 @@ contains
        if ( PRC_HAS_W ) then
           !--- packing packets to West
 !OCL NORECURRENCE(sendpack_P2W)
-          !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IHALO,kd,var,sendpack_P2W,vid)
           do j = JS, JE
           do i = IS, IS+IHALO-1
           do k = 1, kd
@@ -2972,7 +2939,8 @@ contains
        if ( PRC_HAS_E ) then
           !--- packing packets to East
 !OCL NORECURRENCE(sendpack_P2E)
-          !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IE,IHALO,kd,var,sendpack_P2E,vid)
           do j = JS, JE
           do i = IE-IHALO+1, IE
           do k = 1, kd
@@ -3109,7 +3077,8 @@ contains
 
         if ( PRC_HAS_E ) then
            !--- unpacking packets from East
-           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+           !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
+           !$omp shared(JS,JE,IE,IHALO,kd,var,recvpack_E2P,vid)
            do j = JS, JE
            do i = IE+1, IE+IHALO
            do k = 1, kd
@@ -3124,7 +3093,8 @@ contains
 
         if ( PRC_HAS_W ) then
            !--- unpacking packets from West
-           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+           !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
+           !$omp shared(JS,JE,IS,IHALO,kd,var,recvpack_W2P,vid)
            do j = JS, JE
            do i = IS-IHALO, IS-1
            do k = 1, kd

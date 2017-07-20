@@ -31,20 +31,8 @@ module scale_atmos_phy_mp
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_MP_setup
+  public :: ATMOS_PHY_MP_config
 
-  !-----------------------------------------------------------------------------
-  !
-  !++ Public parameters & variables
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private procedure
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private parameters & variables
-  !
   abstract interface
      subroutine mp( &
           DENS,      &
@@ -71,6 +59,8 @@ module scale_atmos_phy_mp
        real(RP), intent(out)   :: SFLX_rain(IA,JA)
        real(RP), intent(out)   :: SFLX_snow(IA,JA)
      end subroutine mp
+     subroutine su
+     end subroutine su
      subroutine cf( &
           cldfrac,       &
           QTRC,          &
@@ -90,154 +80,218 @@ module scale_atmos_phy_mp
        use scale_precision
        use scale_grid_index
        use scale_tracer
-       real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius          [cm]
+       use scale_atmos_hydrometeor, only: N_HYD
+       real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
        real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
        real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
      end subroutine er
      subroutine mr( &
-          Qe,    &
-          QTRC0  )
+          Qe,   &
+          QTRC0 )
        use scale_precision
        use scale_grid_index
        use scale_tracer
-       real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
+       use scale_atmos_hydrometeor, only: N_HYD
+       real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
      end subroutine mr
   end interface
   procedure(mp), pointer :: ATMOS_PHY_MP => NULL()
+  procedure(su), pointer :: ATMOS_PHY_MP_setup => NULL()
   procedure(cf), pointer :: ATMOS_PHY_MP_CloudFraction => NULL()
   procedure(er), pointer :: ATMOS_PHY_MP_EffectiveRadius => NULL()
   procedure(mr), pointer :: ATMOS_PHY_MP_MixingRatio => NULL()
   public :: ATMOS_PHY_MP
+  public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP_CloudFraction
   public :: ATMOS_PHY_MP_EffectiveRadius
   public :: ATMOS_PHY_MP_MixingRatio
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  integer, public    :: QA_MP =  0 ! number of cloud microphysical tracers
+  integer, public    :: QS_MP = -1 ! start index in QTRC
+  integer, public    :: QE_MP = -1 ! end   index in QTRC
 
+  character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_NAME(:)
+  character(len=H_MID),   pointer, public :: ATMOS_PHY_MP_DESC(:)
+  character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_UNIT(:)
   real(RP), pointer, public :: ATMOS_PHY_MP_DENS(:)
-
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private procedure
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+  !
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_config( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef MP
-    use NAME(scale_atmos_phy_mp_, MP,), only: &
-       NAME(ATMOS_PHY_MP_, MP, _setup), &
-       NAME(ATMOS_PHY_MP_, MP,), &
-       NAME(ATMOS_PHY_MP_, MP, _CloudFraction), &
-       NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius), &
-       NAME(ATMOS_PHY_MP_, MP, _MixingRatio), &
-       NAME(ATMOS_PHY_MP_, MP, _DENS) => ATMOS_PHY_MP_DENS
-#else
     use scale_atmos_phy_mp_dry, only: &
+       ATMOS_PHY_MP_dry_config, &
        ATMOS_PHY_MP_dry_setup, &
        ATMOS_PHY_MP_dry, &
        ATMOS_PHY_MP_dry_CloudFraction, &
        ATMOS_PHY_MP_dry_EffectiveRadius, &
        ATMOS_PHY_MP_dry_MixingRatio, &
-       ATMOS_PHY_MP_dry_DENS => ATMOS_PHY_MP_DENS
+       ATMOS_PHY_MP_dry_NAME, &
+       ATMOS_PHY_MP_dry_DESC, &
+       ATMOS_PHY_MP_dry_UNIT, &
+       ATMOS_PHY_MP_dry_DENS
     use scale_atmos_phy_mp_kessler, only: &
+       ATMOS_PHY_MP_kessler_config, &
        ATMOS_PHY_MP_kessler_setup, &
        ATMOS_PHY_MP_kessler, &
        ATMOS_PHY_MP_kessler_CloudFraction, &
        ATMOS_PHY_MP_kessler_EffectiveRadius, &
        ATMOS_PHY_MP_kessler_MixingRatio, &
-       ATMOS_PHY_MP_kessler_DENS => ATMOS_PHY_MP_DENS
+       ATMOS_PHY_MP_kessler_NAME, &
+       ATMOS_PHY_MP_kessler_DESC, &
+       ATMOS_PHY_MP_kessler_UNIT, &
+       ATMOS_PHY_MP_kessler_DENS
     use scale_atmos_phy_mp_tomita08, only: &
+       ATMOS_PHY_MP_tomita08_config, &
        ATMOS_PHY_MP_tomita08_setup, &
        ATMOS_PHY_MP_tomita08, &
        ATMOS_PHY_MP_tomita08_CloudFraction, &
        ATMOS_PHY_MP_tomita08_EffectiveRadius, &
        ATMOS_PHY_MP_tomita08_MixingRatio, &
-       ATMOS_PHY_MP_tomita08_DENS => ATMOS_PHY_MP_DENS
+       ATMOS_PHY_MP_tomita08_NAME, &
+       ATMOS_PHY_MP_tomita08_DESC, &
+       ATMOS_PHY_MP_tomita08_UNIT, &
+       ATMOS_PHY_MP_tomita08_DENS
     use scale_atmos_phy_mp_sn14, only: &
+       ATMOS_PHY_MP_sn14_config, &
        ATMOS_PHY_MP_sn14_setup, &
        ATMOS_PHY_MP_sn14, &
        ATMOS_PHY_MP_sn14_CloudFraction, &
        ATMOS_PHY_MP_sn14_EffectiveRadius, &
        ATMOS_PHY_MP_sn14_MixingRatio, &
-       ATMOS_PHY_MP_sn14_DENS => ATMOS_PHY_MP_DENS
+       ATMOS_PHY_MP_sn14_NAME, &
+       ATMOS_PHY_MP_sn14_DESC, &
+       ATMOS_PHY_MP_sn14_UNIT, &
+       ATMOS_PHY_MP_sn14_DENS
     use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_config, &
        ATMOS_PHY_MP_suzuki10_setup, &
        ATMOS_PHY_MP_suzuki10, &
        ATMOS_PHY_MP_suzuki10_CloudFraction, &
        ATMOS_PHY_MP_suzuki10_EffectiveRadius, &
        ATMOS_PHY_MP_suzuki10_MixingRatio, &
-       ATMOS_PHY_MP_suzuki10_DENS => ATMOS_PHY_MP_DENS
+       ATMOS_PHY_MP_suzuki10_NAME, &
+       ATMOS_PHY_MP_suzuki10_DESC, &
+       ATMOS_PHY_MP_suzuki10_UNIT, &
+       ATMOS_PHY_MP_suzuki10_DENS
     use scale_atmos_phy_mp_sdm, only: &
+       ATMOS_PHY_MP_sdm_config, &
        ATMOS_PHY_MP_sdm_setup, &
        ATMOS_PHY_MP_sdm, &
        ATMOS_PHY_MP_sdm_CloudFraction, &
        ATMOS_PHY_MP_sdm_EffectiveRadius, &
        ATMOS_PHY_MP_sdm_MixingRatio, &
-       ATMOS_PHY_MP_sdm_DENS => ATMOS_PHY_MP_DENS
-#endif
+       ATMOS_PHY_MP_sdm_NAME, &
+       ATMOS_PHY_MP_sdm_DESC, &
+       ATMOS_PHY_MP_sdm_UNIT, &
+       ATMOS_PHY_MP_sdm_DENS
     implicit none
 
     character(len=*), intent(in) :: MP_TYPE
     !---------------------------------------------------------------------------
 
-#ifdef MP
-    call NAME(ATMOS_PHY_MP_, MP, _setup)( MP_TYPE )
-    ATMOS_PHY_MP                 => NAME(ATMOS_PHY_MP_, MP,)
-    ATMOS_PHY_MP_CloudFraction   => NAME(ATMOS_PHY_MP_, MP, _CloudFraction)
-    ATMOS_PHY_MP_EffectiveRadius => NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius)
-    ATMOS_PHY_MP_MixingRatio     => NAME(ATMOS_PHY_MP_, MP, _MixingRatio)
-    ATMOS_PHY_MP_DENS            => NAME(ATMOS_PHY_MP_, MP, _DENS)
-#else
-    select case ( MP_TYPE )
-    case ( 'DRY' )
-       call ATMOS_PHY_MP_dry_setup( MP_TYPE )
+    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(MP_TYPE), ' is selected.'
+
+    select case( MP_TYPE )
+    case( 'DRY' )
+       call ATMOS_PHY_MP_dry_config( &
+            MP_TYPE,     & ! (in)
+            QA_MP, QS_MP ) ! (out)
        ATMOS_PHY_MP                 => ATMOS_PHY_MP_dry
+       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_dry_setup
        ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_dry_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_dry_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_dry_MixingRatio
+       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_dry_NAME
+       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_dry_DESC
+       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_dry_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_dry_DENS
-    case ( 'KESSLER' )
-       call ATMOS_PHY_MP_kessler_setup( MP_TYPE )
+    case( 'KESSLER' )
+       call ATMOS_PHY_MP_kessler_config( &
+            MP_TYPE,     & ! (in)
+            QA_MP, QS_MP ) ! (out)
        ATMOS_PHY_MP                 => ATMOS_PHY_MP_kessler
+       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_kessler_setup
        ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_kessler_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_kessler_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_kessler_MixingRatio
+       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_kessler_NAME
+       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_kessler_DESC
+       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_kessler_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_kessler_DENS
-    case ( 'TOMITA08' )
-       call ATMOS_PHY_MP_tomita08_setup( MP_TYPE )
+    case( 'TOMITA08' )
+       call ATMOS_PHY_MP_tomita08_config( &
+            MP_TYPE,     & ! (in)
+            QA_MP, QS_MP ) ! (out)
        ATMOS_PHY_MP                 => ATMOS_PHY_MP_tomita08
+       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_tomita08_setup
        ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_tomita08_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_tomita08_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_tomita08_MixingRatio
+       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_tomita08_NAME
+       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_tomita08_DESC
+       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_tomita08_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_tomita08_DENS
-    case ( 'SN14' )
-       call ATMOS_PHY_MP_sn14_setup( MP_TYPE )
+    case( 'SN14' )
+       call ATMOS_PHY_MP_sn14_config( &
+            MP_TYPE,     & ! (in)
+            QA_MP, QS_MP ) ! (out)
        ATMOS_PHY_MP                 => ATMOS_PHY_MP_sn14
+       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_sn14_setup
        ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_sn14_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sn14_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_sn14_MixingRatio
+       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_sn14_NAME
+       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_sn14_DESC
+       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_sn14_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_sn14_DENS
-    case ( 'SUZUKI10' )
-       call ATMOS_PHY_MP_suzuki10_setup( MP_TYPE )
+    case( 'SUZUKI10' )
+       call ATMOS_PHY_MP_suzuki10_config( &
+            MP_TYPE,     & ! (in)
+            QA_MP, QS_MP ) ! (out)
        ATMOS_PHY_MP                 => ATMOS_PHY_MP_suzuki10
+       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_suzuki10_setup
        ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_suzuki10_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_suzuki10_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_suzuki10_MixingRatio
+       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_suzuki10_NAME
+       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_suzuki10_DESC
+       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_suzuki10_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_suzuki10_DENS
-    case ( 'SDM' )
-       call ATMOS_PHY_MP_sdm_setup( MP_TYPE )
+    case( 'SDM' )
+       call ATMOS_PHY_MP_sdm_config( &
+            MP_TYPE,     & ! (in)
+            QA_MP, QS_MP ) ! (out)
        ATMOS_PHY_MP                 => ATMOS_PHY_MP_sdm
+       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_sdm_setup
        ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_sdm_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sdm_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_sdm_MixingRatio
+       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_sdm_NAME
+       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_sdm_DESC
+       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_sdm_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_sdm_DENS
     end select
-#endif
+
+    QE_MP = QS_MP + QA_MP - 1
 
     return
-  end subroutine ATMOS_PHY_MP_setup
+  end subroutine ATMOS_PHY_MP_config
 
 end module scale_atmos_phy_mp

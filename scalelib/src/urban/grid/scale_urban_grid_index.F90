@@ -68,7 +68,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_INDEX. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN_INDEX)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_INDEX)
 
     UKS  = 1
     UKE  = UKMAX

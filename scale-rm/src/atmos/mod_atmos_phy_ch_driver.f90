@@ -156,7 +156,7 @@ contains
 
     if ( STATISTICS_checktotal ) then
        do iq = 1, QA
-          call STAT_total( total, RHOQ_t_CH(:,:,:,iq), trim(AQ_NAME(iq))//'_t_CH' )
+          call STAT_total( total, RHOQ_t_CH(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CH' )
        enddo
     endif
 

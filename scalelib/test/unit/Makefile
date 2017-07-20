@@ -1,30 +1,31 @@
-PWD = $(shell pwd)
-BUILD_DIR := $(PWD)/.libs
+################################################################################
+#
+# Makefile for library unit test
+#
+################################################################################
 
-TOPDIR     = ../../..
-SYSDEP_DIR = ../../../sysdep
+PWD         = $(shell pwd)
+TOPDIR      = $(abspath ../../..)
+SYSDEP_DIR  = $(TOPDIR)/sysdep
+BUILD_DIR  := $(PWD)/.libs
+BINDIR      = $(PWD)
+
+SCALE_DEBUG=T
+export SCALE_DEBUG
+SCALE_USE_AGRESSIVEOPT=F
+export SCALE_USE_AGRESSIVEOPT
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
 VPATH = $(BUILD_DIR)
 
-LDFLAGS = $(FFLAGS_DEBUG)
+BINNAME = unit
 
-PROJ_EXE = unit
+LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-#default index & tracer set
-index   = 10x10x2
-dynamics = heve
-tracer  = kessler
-radiation = mstrnx
-sfcflx  = const
-turbulence = smg
-precision = real8
-postfix = debug
-
-MODS = \
-	test_comm.o \
+OBJS = \
+	test_comm.o             \
 	test_atmos_phy_tb_smg.o \
 	test_atmos_dyn.o
 
@@ -35,38 +36,54 @@ all:
 	$(MAKE) run
 
 makedir:
+	mkdir -p $(LIBDIR)
 	mkdir -p $(BUILD_DIR)
 
 makelib:
-	cd $(SCALELIBDIR)/src && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)" BUILD_DIR=$(BUILD_DIR)
+	$(MAKE) -C $(SCALELIBDIR)/src BUILD_DIR=$(BUILD_DIR)
 
-makebin: $(BUILD_DIR)/$(PROJ_EXE)
+makebin: $(BINDIR)/$(BINNAME)
 
 run:
-	mpirun -n 4 $(BUILD_DIR)/$(PROJ_EXE) run.conf
+	mpirun -n 4 ./$(BINNAME) run.conf
 
-$(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(LD) $(LDFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS)
+$(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
 
-$(BUILD_DIR)/test_comm.o: test_comm.f90
+$(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
+$(BUILD_DIR)/test_comm.o:             test_comm.f90
 $(BUILD_DIR)/test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90
+$(BUILD_DIR)/test_atmos_dyn.o:        test_atmos_dyn.f90
+$(BUILD_DIR)/unit.o:                  unit.f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
-$(BUILD_DIR)/test_atmos_dyn.o: test_atmos_dyn.f90
 
-$(BUILD_DIR)/unit.o: unit.f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
-.SUFFIXES: .o .f90
-$(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS_DEBUG) -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
-
-%.o: %.mod
-
-.PHONY: clean distclean
-
-clean:
-	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
+allclean: distclean
+	$(MAKE) -C $(DCUTILSDIR)      allclean
+	$(MAKE) -C $(GTOOLDIR)        allclean
+	$(MAKE) -C $(SCALELIBDIR)/src allclean
+	rm -f $(BINDIR)/$(BINNAME)
 
 distclean: clean
-	rm -f $(BUILD_DIR)/$(PROJ_EXE)
+	rm -f $(BUILD_DIR)/$(BINNAME)
 	rm -f LOG.pe000000
+
+clean:
+	rm -rf $(BUILD_DIR)/*.dSYM
+	rm -f  $(BUILD_DIR)/*.*
+
+
+
+.SUFFIXES:
+.SUFFIXES: .o .f90 .mod
+
+%.mod: %.f90
+	make $(patsubst %.f90,%.o,$<)
+
+$(BUILD_DIR)/%.o : %.f90
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
+
+.PHONY : clean distclean allclean dcutils gtool scalelib
+
+include $(TOPDIR)/utils/Make_environments

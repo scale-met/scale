@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Include file of grid index
-!!          If you set environment "ENABLE_FIXEDINDEX=T", this file is used
+!!          If you set environment "SCALE_USE_FIXEDINDEX=T", this file is used
 !!          If you set this file, execute following:
 !!          "make fixedindex glevel=xxx rlevel=xxx nmpi=xxx zlayer=xxx diamond=xxx".
 !<

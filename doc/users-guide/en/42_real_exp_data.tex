@@ -1,0 +1,115 @@
+%-------------------------------------------------------%
+\section{Preparations for input data (boundary data)} \label{sec:tutrial_real_data}
+%-------------------------------------------------------%
+
+When a realistic atmospheric experiment is conducted, boundary data need to be provided to \scalerm. Table \ref{tab:real_bnd} shows the items for external input data to create boundary data. The variables denoted by {\color{blue}blue character} in this table  are always needed, whereas the others (black character) are optional. 
+\begin{table}[tb]
+\begin{center}
+  \caption{Items of external input data for real atmospheric experiments}
+  \label{tab:real_bnd}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9} 
+    \multicolumn{3}{l}{Data to create the topography and land-use data (in general, in-situ data)}\\ \hline
+    & \multicolumn{2}{l}{\color{blue}{Altitude data}}\\
+    & \multicolumn{2}{l}{\color{blue}{Land-use classification data}}\\ \hline
+    \rowcolor[gray]{0.9} 
+    \multicolumn{3}{l}{data to craete the initial and boundary data for \scalerm (in general, GCM data)}\\ \hline
+    &  \multicolumn{2}{l}{\color{blue}{Information for latitude and longitude of the parent model}}\\
+    &  \multicolumn{2}{l}{--- 3D atmospheric data ---}\\
+    &  & \multicolumn{1}{l}{\color{blue}{zonal and meridional winds, temperature, specific humidity (relative humidity),}} \\
+    &  & \multicolumn{1}{l}{\color{blue}{pressure, geopotential height}} \\
+    &  \multicolumn{2}{l}{--- 2D atmospheric data---}\\
+    &  & \multicolumn{1}{l}{sea-level pressure, surface pressure, zonal and meridional wind at 10m,} \\
+    &  &\multicolumn{1}{l}{temperature and specific humidity (relative humidity) at 2m} \\
+    &  \multicolumn{2}{l}{--- 2D land data ---}\\
+    & &  \multicolumn{1}{l}{land and sea map in the parent model}\\
+    & &  \multicolumn{1}{l}{\color{blue}{surface skin temperature}}\\
+    & &  \multicolumn{1}{l}{{\color{blue}{information of depth of soil data in the parent model, soil temperature,}}}\\
+    & &  \multicolumn{1}{l}{{{soil moisture(volume content or degree of saturation)}}}\\
+    &  \multicolumn{2}{l}{--- 2D ocean data at the surface ---}\\
+　　& &  \multicolumn{1}{l}{\color{blue}{sea surface temperature (omitted if skin temperature is also used for SST)}}\\ \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+\subsubsection{Topography and land-use classification data}
+
+The external topography and land-use classification data are used to obtain 
+the altitude, the ocean to land ratio, the lake ratio, urban covering and vegetation rates, and the classification of land use at every grid point.
+In order to allow users to calculate at any areas over the globe,
+the altitude data GTOPO30 from the USGS (U.S. Geological Survey)
+and land-use classification data from the GLCCv2 are provided in \scalerm.
+These files have already been formatted for \scalerm.
+\begin{enumerate}
+\item Downloading database\\
+Obtain the data for altitude and land-use classification formatted for \scalerm  from \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}, and extract them to any directory:
+\begin{verbatim}
+  $ tar -zxvf scale_database.tar.gz
+  $ ls
+    scale_database/topo/    <- altitude data
+    scale_database/landuse/ <- land use classification data
+\end{verbatim}
+\item Setting of the path\\
+To prepare the files used in the realistic atmospheric experiment,
+the ``making tool for the complete settings of the experiment" is available.
+To use the tool, set the directory name including above database 
+to an environment variable \verb|SCALE_DB| (hereinafter, it denoted as \verb|SCALE_DB|):
+\begin{verbatim}
+  $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
+\end{verbatim}
+where \verb|${path_to_directory_of_scale_database}| is the directory name 
+which the \verb|tar| file including topography and land-use database is extracted in. 
+%Thus, you should execute above command after substituting the portion of \verb|${path_to_directory_of_scale_database}|.
+For example, if the absolute path where you expanded \verb|scale_database.tar.gz| 
+was \verb|/home/user/scale|, you need to set as follows.
+\begin{verbatim}
+  $ export SCALE_DB="/home/user/scale/scale_database"
+\end{verbatim}
+
+\end{enumerate}
+
+
+\subsubsection{Data for atmosphere, land, and sea surface temperature}
+
+The initial and boundary data are readable
+when they are converted into four-byte binary (\grads form. Hereinafter, it is denoted by ``binary data.'').
+The users prepare the ``binary'' data by themselves as mentioned above.
+However, 
+the programs to prepare the ``binary'' data are provided in the directory \\
+\verb|${Tutorial_DIR}/real/tools/| for the execution of this tutorial.
+A procedure is explained below.
+Note that it is assumed that the installation
+of \verb|wgrib|\footnote{\url{http://www.cpc.ncep.noaa.gov/products/wesley/wgrib.html}} is complete
+to use NCEP FNL (Final) Operational Global Analysis data with grib1 format.
+
+
+\begin{enumerate}
+\item Downloading data
+Download 12-hour data from July 14, 2007 1800UTC from the NCAR website \url{http://rda.ucar.edu/datasets/ds083.2/}
+and place them in the directory \\ 
+\verb|${Tutorial_DIR}/real/tools/FNL_input/grib1/2007|.
+The following is the data list, formatted by grib1:
+\begin{verbatim}
+  fnl_20070714_18_00.grib1
+  fnl_20070715_00_00.grib1
+\end{verbatim}
+\item Conversion of data from grib to binary format\\
+Execute \verb|convert_FNL-grib2grads.sh| in the directory \verb|${Tutorial_DIR}/real/tools/|:
+\begin{verbatim}
+ $ cd ${Tutorial_DIR}/real/tools/
+ $ sh convert_FNL-grib2grads.sh 2007071418 2007071500 FNL_input FNL_output
+\end{verbatim}
+The following files are found if it is successful:
+\begin{verbatim}
+ $ ls FNL_output/*/*
+    FNL_output/200707/FNL_ATM_2007071418.grd
+    FNL_output/200707/FNL_ATM_2007071500.grd
+    FNL_output/200707/FNL_LND_2007071418.grd
+    FNL_output/200707/FNL_LND_2007071500.grd
+    FNL_output/200707/FNL_SFC_2007071418.grd
+    FNL_output/200707/FNL_SFC_2007071500.grd
+\end{verbatim}
+If the generation of the intended files is failed because of changing data format and variable names in NCEP-FNL data,
+\verb|convert_FNL-grib2grads.sh| should be fixed according to the used NCEP-FNL data.
+\end{enumerate}

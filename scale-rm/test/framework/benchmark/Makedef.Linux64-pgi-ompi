@@ -5,40 +5,47 @@
 ################################################################################
 
 ##### Fortran setting
-#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if DEBUG=T
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 FC  = mpif90
 SFC = pgfortran
 MODDIROPT = -module
 
-FFLAGS_FAST  = -Mpreprocess -m64 -O2 -fastsse -Mipa=fast,inline \
-               -Mbyteswapio -Mflushz -pc 64                     \
-               -mcmodel=medium -Msmartalloc=huge
+FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
+               -Mbyteswapio -Minfo                    \
+               -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
+               -Mvect=assoc
+
+FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Ktrap=fp -Mbounds -gopt
 
 FFLAGS_DYN   = $(FFLAGS)
 
-FFLAGS_DEBUG = -Mpreprocess -m64 -O2                            \
-               -Mbyteswapio -Mflushz -pc 80                     \
-               -mcmodel=medium -Msmartalloc=huge                \
-               -pg                                              \
-               -DDEBUG
+FFLAGS_DEBUG = -Mpreprocess -m64 -O0 \
+               -Mbyteswapio -Minfo   \
+               -Mflushz -Ktrap=fp    \
+               -Mbounds -Mstandard   \
+               -g -traceback
 
 
 
 ##### C setting
-#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if DEBUG=T
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 CC  = mpicc
 
-CFLAGS_FAST  = -fastsse -mcmodel=medium
-CFLAGS_DEBUG = -mcmodel=medium
+CFLAGS_FAST  = -fast
+CFLAGS_DEBUG = -O0
 
 
 
 ##### Special setting
 
-FFLAGS_SYSDEPEND = -D__PGI
-CFLAGS_SYSDEPEND = -D__PGI
+FFLAGS_OPENMP = -mp
+
+FFLAGS_OPENACC = -acc -ta=tesla,cuda8.0,cc60 -Mcuda -Minfo=accel
+
+FFLAGS_SYSDEPEND = -DPGI
+CFLAGS_SYSDEPEND = -DPGI
 
 
 
@@ -52,12 +59,16 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
-NETCDF_INCLUDE ?= -I$(NETCDF4)/include
-NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lcurl -lhdf5_hl -lhdf5 -lm -lz
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/opt/netcdf4-pgi/netcdf4/include -DNDEBUG -DpgiFortran -fPIC /opt/netcdf4-pgi/netcdf4/include"
+# export SCALE_NETCDF_LIBS="-L/opt/netcdf4-pgi/netcdf4/lib -lnetcdff -lnetcdf"
 
-###### Lapack
-LAPACK_LIBS    ?=
-# example: -lacml
+###### Math library
+# Please set environment variable
+# example:
+# export SCALE_MATHLIB_LIBS="-lacml"
 
 ##### for frontend
 INSTALL = install

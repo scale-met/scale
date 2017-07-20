@@ -94,9 +94,9 @@ contains
          ExternalFileGetShape
     implicit none
 
-    integer,               intent(out) :: dims(6)
-    integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in) :: basename_org
+    integer,          intent(out) :: dims(6)
+    integer,          intent(out) :: timelen
+    character(len=*), intent(in)  :: basename_org
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
@@ -116,7 +116,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
     call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_org, myrank, single=.true. )
     dims(1:6) = dims_wrf(1:6)
@@ -176,8 +176,21 @@ contains
     use scale_external_io, only: &
          ExternalFileRead
     use scale_atmos_thermodyn, only: &
-         THERMODYN_pott => ATMOS_THERMODYN_pott
+       THERMODYN_pott => ATMOS_THERMODYN_pott
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG, &
+       I_NC, &
+       I_NR, &
+       I_NI, &
+       I_NS, &
+       I_NG
     implicit none
+
     real(RP),         intent(out) :: velz_org(:,:,:)
     real(RP),         intent(out) :: llvelx_org(:,:,:)
     real(RP),         intent(out) :: llvely_org(:,:,:)
@@ -433,8 +446,8 @@ contains
          ExternalFileGetShape
     implicit none
 
-    integer,               intent(out) :: ldims(3)
-    character(len=H_LONG), intent(in) :: basename_land
+    integer,          intent(out) :: ldims(3)
+    character(len=*), intent(in)  :: basename_land
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
@@ -455,7 +468,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
 
     call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_land, myrank, single=.true. )
@@ -637,9 +650,9 @@ contains
          ExternalFileGetShape
     implicit none
 
-    integer,               intent(out) :: odims(2)
-    integer,               intent(out) :: timelen
-    character(len=H_LONG), intent(in) :: basename_org
+    integer,          intent(out) :: odims(2)
+    integer,          intent(out) :: timelen
+    character(len=*), intent(in)  :: basename_org
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
@@ -659,7 +672,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
 
     call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_org, myrank, single=.true. )

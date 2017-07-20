@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-TOPDIR      = $(abspath ../..)
-BUILD_DIR   = ./.libs
-SYSDEP_DIR  = ../../sysdep
+TOPDIR     = $(abspath ../..)
+BUILD_DIR  = ./.libs
+SYSDEP_DIR = ../../sysdep
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -22,10 +22,19 @@ PPNAME7  = gm_fio_cat
 PPNAME8  = gm_fio_sel
 PPNAME9  = gm_fio_ico2ll
 
-BINS = $(BINDIR)/$(BINNAME) $(BINDIR)/$(PPNAME1) $(BINDIR)/$(PPNAME2) $(BINDIR)/$(PPNAME3) $(BINDIR)/$(PPNAME4) $(BINDIR)/$(PPNAME5) $(BINDIR)/$(PPNAME6) $(BINDIR)/$(PPNAME7) $(BINDIR)/$(PPNAME8) $(BINDIR)/$(PPNAME9)
+BINS = $(BINDIR)/$(BINNAME) \
+       $(BINDIR)/$(PPNAME1) \
+       $(BINDIR)/$(PPNAME2) \
+       $(BINDIR)/$(PPNAME3) \
+       $(BINDIR)/$(PPNAME4) \
+       $(BINDIR)/$(PPNAME5) \
+       $(BINDIR)/$(PPNAME6) \
+       $(BINDIR)/$(PPNAME7) \
+       $(BINDIR)/$(PPNAME8) \
+       $(BINDIR)/$(PPNAME9)
 LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-ifneq ($(IGNOREDEP),T)
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
 endif
 
@@ -53,13 +62,9 @@ endif
 OBJS =	\
 	fio.o                \
 	fiof.o               \
-	hio.o                \
-	hiof.o               \
-	poh5.o                \
 	mod_io_param.o       \
 	mod_adm.o            \
 	mod_fio.o            \
-	mod_hio.o            \
 	mod_comm.o           \
 	mod_ideal_topo.o     \
 	mod_grd.o            \
@@ -112,6 +117,7 @@ OBJS =	\
 
 
 all:
+	$(MAKE) envlog
 	$(MAKE) makedir
 	$(MAKE) -C $(DCUTILSDIR)
 	$(MAKE) -C $(GTOOLDIR)
@@ -137,25 +143,25 @@ $(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a $(LIBDIR)/libgtool.a
 makebin: $(BINS)
 
 $(BINDIR)/$(BINNAME) : $(BUILD_DIR)/scale-gm.o       $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME1) : $(BUILD_DIR)/prg_mkmnginfo.o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME2) : $(BUILD_DIR)/prg_mkrawgrid.o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME3) : $(BUILD_DIR)/prg_mkhgrid.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME4) : $(BUILD_DIR)/prg_mkvlayer.o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME5) : $(BUILD_DIR)/prg_mkllmap.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME6) : $(BUILD_DIR)/prg_fio_dump.o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME7) : $(BUILD_DIR)/prg_fio_cat.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME8) : $(BUILD_DIR)/prg_fio_sel.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BINDIR)/$(PPNAME9) : $(BUILD_DIR)/prg_fio_ico2ll.o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
-	$(FC) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 
 $(BUILD_DIR)/scale-gm.o       : scale-gm.f90       $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 $(BUILD_DIR)/prg_mkmnginfo.o  : prg_mkmnginfo.f90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
@@ -175,13 +181,27 @@ allclean: distclean
 	$(MAKE) -C $(GTOOLDIR)        allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
-	rm -f $(BINDIR)/$(INITNAME)
-	rm -f $(BINDIR)/$(PPNAME)
+	rm -f $(BINDIR)/$(PPNAME1)
+	rm -f $(BINDIR)/$(PPNAME2)
+	rm -f $(BINDIR)/$(PPNAME3)
+	rm -f $(BINDIR)/$(PPNAME4)
+	rm -f $(BINDIR)/$(PPNAME5)
+	rm -f $(BINDIR)/$(PPNAME6)
+	rm -f $(BINDIR)/$(PPNAME7)
+	rm -f $(BINDIR)/$(PPNAME8)
+	rm -f $(BINDIR)/$(PPNAME9)
 
 distclean: clean
 	rm -f $(BUILD_DIR)/$(BINNAME)
-	rm -f $(BUILD_DIR)/$(INITNAME)
-	rm -f $(BUILD_DIR)/$(PPNAME)
+	rm -f $(BUILD_DIR)/$(PPNAME1)
+	rm -f $(BUILD_DIR)/$(PPNAME2)
+	rm -f $(BUILD_DIR)/$(PPNAME3)
+	rm -f $(BUILD_DIR)/$(PPNAME4)
+	rm -f $(BUILD_DIR)/$(PPNAME5)
+	rm -f $(BUILD_DIR)/$(PPNAME6)
+	rm -f $(BUILD_DIR)/$(PPNAME7)
+	rm -f $(BUILD_DIR)/$(PPNAME8)
+	rm -f $(BUILD_DIR)/$(PPNAME9)
 
 clean:
 	rm -f $(BUILD_DIR)/*.*
@@ -198,17 +218,18 @@ dependency:
 	make $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_oprt.o :
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
-	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<
 
 .PHONY : clean distclean allclean dcutils gtool scalelib depend dependency
 
+include $(TOPDIR)/utils/Make_environments
 
-ifneq ($(IGNOREDEP),T)
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend
 endif
 

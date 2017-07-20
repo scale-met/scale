@@ -100,8 +100,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine LAND_PHY_driver( update_flag )
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_templhv
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_time, only: &
        dt => TIME_DTSEC_LAND
     use scale_rm_statistics, only: &
@@ -170,8 +170,8 @@ contains
     real(RP) :: LAND_QVEF(IA,JA)
     real(RP) :: LAND_DZ1 (IA,JA)
 
-    real(RP) :: total ! dummy
-    real(RP) :: lhv(IA,JA)
+    real(RP) :: LHV      (IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: total            ! dummy
 
     character(len=2) :: sk
 
@@ -223,12 +223,12 @@ contains
                       LAND_PROPERTY  (:,:,I_Z0E),         & ! [IN]
                       dt                                  ) ! [IN]
 
-       call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
+       call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
 
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
-          LAND_SFLX_evap(i,j) = LAND_SFLX_LH(i,j) / lhv(i,j)
+          LAND_SFLX_evap(i,j) = LAND_SFLX_LH(i,j) / LHV(i,j)
        end do
        end do
 
@@ -253,9 +253,9 @@ contains
        call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     zdim='land' )
        call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'tendency of LAND_WATER', 'm3/m3', zdim='land' )
 
-       call HIST_in( LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t', 'tendency of LAND_SFC_TEMP', 'K'   )
-       call HIST_in( LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t',   'tendency of LAND_ALB_LW',   '0-1' )
-       call HIST_in( LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t',   'tendency of LAND_ALB_SW',   '0-1' )
+       call HIST_in( LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t', 'tendency of LAND_SFC_TEMP', 'K' )
+       call HIST_in( LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t',   'tendency of LAND_ALB_LW',   '1' )
+       call HIST_in( LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t',   'tendency of LAND_ALB_SW',   '1' )
 
        call HIST_in( LAND_PROPERTY(:,:,I_WaterLimit),    'LP_WaterLimit',    'LAND PROPERTY, WaterLimit',    'm3/m3'  )
        call HIST_in( LAND_PROPERTY(:,:,I_WaterCritical), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3'  )

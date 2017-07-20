@@ -2,24 +2,78 @@
 
 # Arguments
 BINDIR=${1}
-INITNAME=${2}
-BINNAME=${3}
-INITCONF=${4}
-RUNCONF=${5}
-TPROC=${6}
-DATDIR=${7}
-DATPARAM=(`echo ${8} | tr -s ',' ' '`)
-DATDISTS=(`echo ${9} | tr -s ',' ' '`)
+PPNAME=${2}
+INITNAME=${3}
+BINNAME=${4}
+N2GNAME=${5}
+PPCONF=${6}
+INITCONF=${7}
+RUNCONF=${8}
+N2GCONF=${9}
+PROCS=${10}
+eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpiexec"
+MPIEXEC="mpiexec -np"
 
-if [ ! ${INITNAME} = "NONE" ]; then
-  RUN_INIT="${MPIEXEC} ./${INITNAME} ${INITCONF} || exit"
+PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
+TPROC=${PROCLIST[0]}
+for n in ${PROCLIST[@]}
+do
+   (( n > TPROC )) && TPROC=${n}
+done
+
+if [ ! ${PPCONF} = "NONE" ]; then
+   SIN1_PP="#PJM --stgin  \"rank=* ${BINDIR}/${PPNAME}   %r:./\""
+
+   CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_PP=`echo -e "${SIN2_PP}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
+      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ./${PPNAME} ${CONFLIST[i]} "|| exit 1"`
+   done
 fi
 
-if [ ! ${BINNAME} = "NONE" ]; then
-  RUN_BIN="${MPIEXEC} ./${BINNAME} ${RUNCONF} || exit"
+if [ ! ${INITCONF} = "NONE" ]; then
+   SIN1_INIT="#PJM --stgin  \"rank=* ${BINDIR}/${INITNAME} %r:./\""
+
+   CONFLIST=(`echo ${INITCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_INIT=`echo -e "${SIN2_INIT}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
+      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ./${INITNAME} ${CONFLIST[i]} "|| exit 1"`
+   done
+fi
+
+if [ ! ${RUNCONF} = "NONE" ]; then
+   SIN1_MAIN="#PJM --stgin  \"rank=* ${BINDIR}/${BINNAME}  %r:./\""
+
+   CONFLIST=(`echo ${RUNCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_MAIN=`echo -e "${SIN2_MAIN}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ./${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+   done
+fi
+
+if [ ! ${N2GCONF} = "NONE" ]; then
+   SIN1_N2G="#PJM --stgin  \"rank=* ${BINDIR}/${N2GNAME}  %r:./\""
+
+   CONFLIST=(`echo ${N2GCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_N2G=`echo -e "${SIN2_N2G}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
+      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ./${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
+   done
 fi
 
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
@@ -48,34 +102,60 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=02:00:00"
+#PJM --rsc-list "elapse=04:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
-#PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
-#PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
-#PJM --stgin  "rank=*         ./${INITCONF} %r:./"
-#PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+${SIN1_PP}
+${SIN1_INIT}
+${SIN1_MAIN}
+${SIN1_N2G}
+${SIN2_PP}
+${SIN2_INIT}
+${SIN2_MAIN}
+${SIN2_N2G}
 EOF1
 
-if [ ! ${DATPARAM[0]} = "" ]; then
-   for f in ${DATPARAM[@]}
+# link to file or directory
+ndata=${#DATPARAM[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
    do
-         if [ -f ${DATDIR}/${f} ]; then
-            echo "#PJM --stgin  'rank=* ${DATDIR}/${f} %r:./'" >> ./run.sh
-         else
-            echo "datafile does not found! : ${DATDIR}/${f}"
-            exit 1
-         fi
+      let i="n - 1"
+
+      pair=(${DATPARAM[$i]})
+
+      src=${pair[0]}
+      dst=${pair[1]}
+      if [ "${dst}" = "" ]; then
+         dst=${pair[0]}
+      fi
+
+      if [ -f ${src} ]; then
+         echo "#PJM --stgin  'rank=* ${src}   %r:./${dst} '" >> ./run.sh
+      elif [ -d ${src} ]; then
+         echo "#PJM --stgin  'rank=* ${src}/* %r:./${dst}/'" >> ./run.sh
+      else
+         echo "datafile does not found! : ${src}"
+         exit 1
+      fi
    done
 fi
 
-if [ ! ${DATDISTS[0]} = "" ]; then
-   for f in ${DATDISTS[@]}
+# link to distributed file
+ndata=${#DATDISTS[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
    do
-      if [ -f ${f}.pe000000.nc ]; then
-         echo "#PJM --stgin  'rank=* ${f}.pe%06r.nc %r:./'" >> ./run.sh
+      let i="n - 1"
+
+      triple=(${DATDISTS[$i]})
+
+      if [ -f ${triple[1]}.pe000000.nc ]; then
+         echo "#PJM --stgin  'rank=* ${triple[1]}.pe%06r.nc %r:./${triple[2]}.pe%06r.nc'" >> ./run.sh
       else
-         echo "datafile does not found! : ${f}.pe000000.nc"
+         echo "datafile does not found! : ${triple[1]}.pe000000.nc"
          exit 1
       fi
    done
@@ -92,8 +172,10 @@ export PARALLEL=8
 export OMP_NUM_THREADS=8
 
 # run
+${RUN_PP}
 ${RUN_INIT}
-${RUN_BIN}
+${RUN_MAIN}
+${RUN_N2G}
 
 ################################################################################
 EOF2

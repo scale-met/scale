@@ -19,8 +19,7 @@ RUNCONF     = run.conf
 TPROC       = 8
 
 # required data (parameters,distributed files)
-DATDIR      = ../../../data
-DATPARAM    = input_sounding/squallline.txt
+DATPARAM    = " [${TESTDIR}/data/input_sounding/squallline.txt squallline.txt] "
 DATDISTS    =
 
 

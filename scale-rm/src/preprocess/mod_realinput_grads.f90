@@ -50,36 +50,44 @@ module mod_realinput_grads
   !++ Private parameters & variables
   !
   integer,  parameter    :: grads_vars_limit = 1000 !> limit of number of values
-  integer,  parameter    :: num_item_list = 17
-  integer,  parameter    :: num_item_list_atom  = 17
-  integer,  parameter    :: num_item_list_land  = 11
-  integer,  parameter    :: num_item_list_ocean = 9
+  integer,  parameter    :: num_item_list = 24
+  integer,  parameter    :: num_item_list_atom  = 24
+  integer,  parameter    :: num_item_list_land  = 12
+  integer,  parameter    :: num_item_list_ocean = 10
   logical                :: data_available(num_item_list_atom,3) ! 1:atom, 2:land, 3:ocean
   character(len=H_SHORT) :: item_list_atom (num_item_list_atom)
   character(len=H_SHORT) :: item_list_land (num_item_list_land)
   character(len=H_SHORT) :: item_list_ocean(num_item_list_ocean)
-  data item_list_atom  /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO' /
+  data item_list_atom  /'lon','lat','plev','DENS','U','V','W','T','HGT','QV','QC','QR','QI','QS','QG','RH', &
+                        'MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO' /
   data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','llev', &
-                        'STEMP','SMOISVC','SMOISDS','SKINT','TOPO' /
-  data item_list_ocean /'lsmask','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
+                        'STEMP','SMOISVC','SMOISDS','SKINT','TOPO','TOPO_sfc' /
+  data item_list_ocean /'lsmask','lsmask_sst','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
 
   integer,  parameter   :: Ia_lon    = 1
   integer,  parameter   :: Ia_lat    = 2
   integer,  parameter   :: Ia_p      = 3  ! Pressure (Pa)
-  integer,  parameter   :: Ia_u      = 4
-  integer,  parameter   :: Ia_v      = 5
-  integer,  parameter   :: Ia_t      = 6
-  integer,  parameter   :: Ia_hgt    = 7  ! Geopotential height (m)
-  integer,  parameter   :: Ia_qv     = 8
-  integer,  parameter   :: Ia_rh     = 9  ! Percentage (%)
-  integer,  parameter   :: Ia_slp    = 10 ! Sea level pressure (Pa)
-  integer,  parameter   :: Ia_ps     = 11 ! Surface pressure (Pa)
-  integer,  parameter   :: Ia_u10    = 12
-  integer,  parameter   :: Ia_v10    = 13
-  integer,  parameter   :: Ia_t2     = 14
-  integer,  parameter   :: Ia_q2     = 15
-  integer,  parameter   :: Ia_rh2    = 16 ! Percentage (%)
-  integer,  parameter   :: Ia_topo   = 17
+  integer,  parameter   :: Ia_dens   = 4
+  integer,  parameter   :: Ia_u      = 5
+  integer,  parameter   :: Ia_v      = 6
+  integer,  parameter   :: Ia_w      = 7 
+  integer,  parameter   :: Ia_t      = 8 
+  integer,  parameter   :: Ia_hgt    = 9  ! Geopotential height (m)
+  integer,  parameter   :: Ia_qv     = 10
+  integer,  parameter   :: Ia_qc     = 11
+  integer,  parameter   :: Ia_qr     = 12
+  integer,  parameter   :: Ia_qi     = 13
+  integer,  parameter   :: Ia_qs     = 14
+  integer,  parameter   :: Ia_qg     = 15
+  integer,  parameter   :: Ia_rh     = 16 ! Percentage (%)
+  integer,  parameter   :: Ia_slp    = 17 ! Sea level pressure (Pa)
+  integer,  parameter   :: Ia_ps     = 18 ! Surface pressure (Pa)
+  integer,  parameter   :: Ia_u10    = 19
+  integer,  parameter   :: Ia_v10    = 20
+  integer,  parameter   :: Ia_t2     = 21
+  integer,  parameter   :: Ia_q2     = 22
+  integer,  parameter   :: Ia_rh2    = 23 ! Percentage (%)
+  integer,  parameter   :: Ia_topo   = 24
 
   integer,  parameter   :: Il_lsmask  = 1
   integer,  parameter   :: Il_lon     = 2
@@ -92,16 +100,18 @@ module mod_realinput_grads
   integer,  parameter   :: Il_smoisds = 9  ! soil moisture (degree of saturation)
   integer,  parameter   :: Il_skint   = 10
   integer,  parameter   :: Il_topo    = 11
+  integer,  parameter   :: Il_topo_sfc= 12
 
-  integer,  parameter   :: Io_lsmask  = 1
-  integer,  parameter   :: Io_lon     = 2
-  integer,  parameter   :: Io_lat     = 3
-  integer,  parameter   :: Io_lon_sfc = 4
-  integer,  parameter   :: Io_lat_sfc = 5
-  integer,  parameter   :: Io_lon_sst = 6
-  integer,  parameter   :: Io_lat_sst = 7
-  integer,  parameter   :: Io_skint   = 8
-  integer,  parameter   :: Io_sst     = 9
+  integer,  parameter   :: Io_lsmask     = 1
+  integer,  parameter   :: Io_lsmask_sst = 2
+  integer,  parameter   :: Io_lon        = 3
+  integer,  parameter   :: Io_lat        = 4
+  integer,  parameter   :: Io_lon_sfc    = 5
+  integer,  parameter   :: Io_lat_sfc    = 6
+  integer,  parameter   :: Io_lon_sst    = 7
+  integer,  parameter   :: Io_lat_sst    = 8
+  integer,  parameter   :: Io_skint      = 9
+  integer,  parameter   :: Io_sst        = 10
 
 
   integer,  parameter   :: lvars_limit = 1000 ! limit of values for levels data
@@ -183,16 +193,16 @@ contains
     implicit none
 
     integer,          intent(out) :: dims(6)
-    character(len=H_LONG), intent(in) :: basename
+    character(len=*), intent(in)  :: basename
 
 
     NAMELIST / PARAM_MKINIT_REAL_GrADS / &
         upper_qv_type
 
-    integer             :: ielem
-    integer             :: k, n
+    integer :: ielem
 
-    integer             :: ierr
+    integer :: k, n
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: GrADS format'
@@ -202,15 +212,14 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_GrADS,iostat=ierr)
 
     if( ierr > 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_GrADS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_GrADS)
 
 
     if ( len_trim(basename) == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) &
-            'xxx "BASENAME_ORG" is not specified in "PARAM_MKINIT_REAL_ATMOS"!',trim(basename)
+       write(*,*) 'xxx [realinput_grads] "BASENAME_ORG" is not specified in "PARAM_MKINIT_REAL_ATMOS"!', trim(basename)
        call PRC_MPIstop
     endif
 
@@ -223,16 +232,16 @@ contains
          action = 'read',         &
          iostat = ierr            )
     if ( ierr /= 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Input file is not found! ', trim(basename)
+       write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(basename)
        call PRC_MPIstop
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
+    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
     ! full level
     dims(1) = outer_nz ! bottom_top
@@ -272,10 +281,15 @@ contains
        item  = item_list_atom(ielem)
        !--- check data
        select case(trim(item))
+       case('DENS','W','QC','QR','QI','QS','QG','MSLP','PSFC','U10','V10','T2','Q2','TOPO')
+          if (.not. data_available(ielem,1)) then
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
+             cycle
+          endif
        case('QV')
           if (.not. data_available(Ia_qv,1)) then
              if (.not.data_available(Ia_rh,1)) then
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : QV and RH'
+                write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : QV and RH'
                 call PRC_MPIstop
              else ! will read RH
                 cycle
@@ -285,25 +299,15 @@ contains
           if (.not. data_available(Ia_qv,1))then
              if(data_available(Ia_rh,1)) then
                 if ((.not. data_available(Ia_t,1)).or.(.not. data_available(Ia_p,1))) then
-                   if( IO_L ) write(IO_FID_LOG,*) 'xxx Temperature and pressure are required to convert from RH to QV ! '
+                   write(*,*) 'xxx [realinput_grads] Temperature and pressure are required to convert from RH to QV ! '
                    call PRC_MPIstop
                 else
                    cycle ! read RH and estimate QV
                 endif
              else
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : QV and RH'
+                write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : QV and RH'
                 call PRC_MPIstop
              endif
-          endif
-       case('MSLP','PSFC','U10','V10','T2')
-          if (.not. data_available(ielem,1)) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & will be estimated.'
-             cycle
-          endif
-       case('Q2')
-          if ( .not. data_available(Ia_q2,1) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: Q2 is not found & will be estimated.'
-             cycle
           endif
        case('RH2')
           if ( data_available(Ia_q2,1) ) then
@@ -311,24 +315,19 @@ contains
           else
              if ( data_available(Ia_rh2,1) ) then
                 if ((.not. data_available(Ia_t2,1)).or.(.not. data_available(Ia_ps,1))) then
-                   if (IO_L) write(IO_FID_LOG,*) 'warning: T2 and PSFC are required to convert from RH2 to Q2 !'
-                   if (IO_L) write(IO_FID_LOG,*) '         Q2 will be copied from data at above level.'
+                   if( IO_L ) write(IO_FID_LOG,*) 'warning: T2 and PSFC are required to convert from RH2 to Q2 !'
+                   if( IO_L ) write(IO_FID_LOG,*) '         Q2 will be copied from data at above level.'
                    data_available(Ia_rh2,1) = .false.
                    cycle
                 endif
              else
-                if (IO_L) write(IO_FID_LOG,*) 'warning: Q2 and RH2 are not found, Q2 will be estimated.'
+                if( IO_L ) write(IO_FID_LOG,*) 'warning: Q2 and RH2 are not found, Q2 will be estimated.'
                 cycle
              endif
           endif
-       case('TOPO')
-          if ( .not. data_available(ielem,1) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
-             cycle
-          endif
        case default ! lon, lat, plev, U, V, T, HGT
           if ( .not. data_available(ielem,1) ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : ',trim(item_list_atom(ielem))
+             write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_atom(ielem))
              call PRC_MPIstop
           endif
        end select
@@ -353,6 +352,7 @@ contains
        velx_org, &
        vely_org, &
        pres_org, &
+       dens_org, &
        temp_org, &
        qtrc_org, &
        lon_org,  &
@@ -362,16 +362,24 @@ contains
        dims, &
        nt )
     use scale_const, only: &
-         D2R => CONST_D2R,   &
-         EPS => CONST_EPS,   &
-         EPSvap => CONST_EPSvap, &
-         GRAV => CONST_GRAV, &
-         LAPS => CONST_LAPS, &
-         P00 => CONST_PRE00, &
-         Rdry => CONST_Rdry, &
-         CPdry => CONST_CPdry
+       UNDEF => CONST_UNDEF, &
+       D2R => CONST_D2R,   &
+       EPS => CONST_EPS,   &
+       EPSvap => CONST_EPSvap, &
+       GRAV => CONST_GRAV, &
+       LAPS => CONST_LAPS, &
+       P00 => CONST_PRE00, &
+       Rdry => CONST_Rdry, &
+       CPdry => CONST_CPdry
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG
     use scale_atmos_saturation, only: &
-         psat => ATMOS_SATURATION_psat_liq
+       psat => ATMOS_SATURATION_psat_liq
     implicit none
 
 
@@ -379,6 +387,7 @@ contains
     real(RP),         intent(out) :: velx_org(:,:,:)
     real(RP),         intent(out) :: vely_org(:,:,:)
     real(RP),         intent(out) :: pres_org(:,:,:)
+    real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: temp_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
     real(RP),         intent(out) :: lon_org(:,:)
@@ -394,19 +403,24 @@ contains
     real(RP) :: RovCP
     real(RP) :: CPovR
 
+    integer  :: lm_layer(dims(2),dims(3))
+
     ! data
     character(len=H_LONG) :: gfile
 
-    integer  :: QA_outer = 1
     real(RP) :: p_sat, qm, rhsfc
+    real(RP) :: lp2, lp3
 
-    integer  :: i, j, k, ielem
+    integer  :: i, j, k, iq, ielem
 
+    logical  :: pressure_coordinates
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputGrADS]'
 
-    qtrc_org = 0.0_RP
+    dens_org(:,:,:)   = UNDEF ! read data or set data by build-rho-3D
+    velz_org(:,:,:)   = 0.0_RP
+    qtrc_org(:,:,:,:) = 0.0_RP
 
     !--- read grads data
     loop_InputAtomGrADS : do ielem = 1, num_item_list_atom
@@ -417,6 +431,7 @@ contains
        dtype    = grads_dtype   (ielem,1)
        fname    = grads_fname   (ielem,1)
        lnum     = grads_lnum    (ielem,1)
+       missval  = grads_missval (ielem,1)
 
        if ( dims(1) < grads_knum(ielem,1) ) then
           write(*,*) 'xxx "knum" must be less than or equal to outer_nz. knum:',knum,'> outer_nz:',dims(1),trim(item)
@@ -427,7 +442,7 @@ contains
           knum = dims(1)
        endif
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,1)
           dd      = grads_dd      (ielem,1)
@@ -470,7 +485,7 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lon")
           if ( trim(dtype) == "linear" ) then
              do j = 1, dims(3)
@@ -499,6 +514,7 @@ contains
              call PRC_MPIstop
           endif
           if ( trim(dtype) == "levels" ) then
+             pressure_coordinates = .true. ! use pressure coordinate in the input data
              if(dims(1)/=lnum)then
                 write(*,*) 'xxx lnum must be same as the outer_nz for plev! ',dims(1),lnum
                 call PRC_MPIstop
@@ -511,12 +527,32 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
+             pressure_coordinates = .false.
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)
                 pres_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( pres_org(k+2,i,j) - missval ) < EPS ) then
+                   pres_org(k+2,i,j) = UNDEF
+                end if
              enddo
+             enddo
+             enddo
+          endif
+       case('DENS')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   dens_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( dens_org(k+2,i,j) - missval ) < EPS ) then
+                      dens_org(k+2,i,j) = UNDEF
+                   end if
+                enddo
              enddo
              enddo
           endif
@@ -528,6 +564,10 @@ contains
                 velx_org(1:2,i,j) = 0.0_RP
                 do k = 1, knum
                    velx_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( velx_org(k+2,i,j) - missval ) < EPS ) then
+                      velx_org(k+2,i,j) = UNDEF
+                   end if
                 enddo
                 if(dims(1)>knum)then
                    do k = knum+1, dims(1)
@@ -545,12 +585,32 @@ contains
                 vely_org(1:2,i,j) = 0.0_RP
                 do k = 1, knum
                    vely_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( vely_org(k+2,i,j) - missval ) < EPS ) then
+                      vely_org(k+2,i,j) = UNDEF
+                   end if
                 enddo
                 if(dims(1)>knum)then
                    do k = knum+1, dims(1)
                       vely_org(k+2,i,j) = vely_org(knum+2,i,j)
                    enddo
                 endif
+             enddo
+             enddo
+          endif
+       case('W')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                velz_org(1:2,i,j) = 0.0_RP
+                do k = 1, knum
+                   velz_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( velz_org(k+2,i,j) - missval ) < EPS ) then
+                      velz_org(k+2,i,j) = UNDEF
+                   end if
+                enddo
              enddo
              enddo
           endif
@@ -561,6 +621,10 @@ contains
              do i = 1, dims(2)
                 do k = 1, knum
                    temp_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( temp_org(k+2,i,j) - missval ) < EPS ) then
+                      temp_org(k+2,i,j) = UNDEF
+                   end if
                 enddo
                 if(dims(1)>knum)then
                    do k = knum+1, dims(1)
@@ -575,12 +639,29 @@ contains
              write(*,*) 'xxx The number of levels for HGT must be same as plevs! knum:',knum,'> outer_nz:',dims(1)
              call PRC_MPIstop
           endif
-          if ( trim(dtype) == "map" ) then
+          if ( trim(dtype) == "levels" ) then
+             if(dims(1)/=lnum)then
+                write(*,*) 'xxx lnum must be same as the outer_nz for HGT! ',dims(1),lnum
+                call PRC_MPIstop
+             endif
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, dims(1)
+                   cz_org(k+2,i,j) = real(lvars(k), kind=RP)
+                enddo
+                cz_org(1,i,j) = 0.0_RP
+             enddo
+             enddo
+          else if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, dims(1)
                    cz_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( cz_org(k+2,i,j) - missval ) < EPS ) then
+                      cz_org(k+2,i,j) = UNDEF
+                   end if
                 enddo
                 cz_org(1,i,j) = 0.0_RP
              enddo
@@ -592,28 +673,112 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
-                   qtrc_org(k+2,i,j,QA_outer) = real(gdata3D(i,j,k), kind=RP)
+                   qtrc_org(k+2,i,j,I_QV) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QV) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QV) = UNDEF
+                   end if
                 enddo
-                qtrc_org(1:2,i,j,QA_outer) = qtrc_org(3,i,j,QA_outer)
+                qtrc_org(1:2,i,j,I_QV) = qtrc_org(3,i,j,I_QV)
              enddo
              enddo
              if( dims(1)>knum ) then
-                select case ( upper_qv_type )
-                case ("COPY")
+                select case( upper_qv_type )
+                case("COPY")
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
-                      qtrc_org(k+2,i,j,QA_outer) = qtrc_org(knum+2,i,j,QA_outer)
+                      qtrc_org(k+2,i,j,I_QV) = qtrc_org(knum+2,i,j,I_QV)
                    enddo
                    enddo
                    enddo
-                case ("ZERO")
+                case("ZERO")
                    ! do nothing
                 case default
                    write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
                    call PRC_MPIstop
                 end select
              endif
+          endif
+       case('QC')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QC) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QC) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QC) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QC) = qtrc_org(3,i,j,I_QC)
+             enddo
+             enddo
+          endif
+       case('QR')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QR) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QR) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QR) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QR) = qtrc_org(3,i,j,I_QR)
+             enddo
+             enddo
+          endif
+       case('QI')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QI) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QI) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QI) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QI) = qtrc_org(3,i,j,I_QI)
+             enddo
+             enddo
+          endif
+       case('QS')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QS) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QS) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QS) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QS) = qtrc_org(3,i,j,I_QS)
+             enddo
+             enddo
+          endif
+       case('QG')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   qtrc_org(k+2,i,j,I_QG) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QG) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QG) = UNDEF
+                   end if
+                enddo
+                qtrc_org(1:2,i,j,I_QG) = qtrc_org(3,i,j,I_QG)
+             enddo
+             enddo
           endif
        case('RH')
           if (data_available(Ia_qv,1)) cycle  ! use QV
@@ -622,18 +787,24 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
-                   rhprs_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP) / 100.0_RP  ! relative humidity
-                   call psat( p_sat, temp_org(k+2,i,j) )                          ! satulation pressure
-                   qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
-                        / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )      ! mixing ratio
-                   qtrc_org(k+2,i,j,QA_outer) = qm / ( 1.0_RP + qm )              ! specific humidity
+                   qtrc_org(k+2,i,j,I_QV) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( qtrc_org(k+2,i,j,I_QV) - missval ) < EPS ) then
+                      qtrc_org(k+2,i,j,I_QV) = UNDEF
+                   else
+                      rhprs_org(k+2,i,j) = qtrc_org(k+2,i,j,I_QV) / 100.0_RP   ! relative humidity
+                      call psat( p_sat, temp_org(k+2,i,j) )                    ! satulation pressure
+                      qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
+                         / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )  ! mixing ratio
+                      qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )            ! specific humidity
+                   end if
                 enddo
-                qtrc_org(1:2,i,j,QA_outer) = qtrc_org(3,i,j,QA_outer)
+                qtrc_org(1:2,i,j,I_QV) = qtrc_org(3,i,j,I_QV)
              enddo
              enddo
              if( dims(3)>knum ) then
-                select case ( upper_qv_type )
-                case ("COPY")
+                select case( upper_qv_type )
+                case("COPY")
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
@@ -641,12 +812,12 @@ contains
                       call psat( p_sat, temp_org(k+2,i,j) )                   ! satulated specific humidity
                       qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
                          / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat ) ! mixing ratio
-                      qtrc_org(k+2,i,j,QA_outer) = qm / ( 1.0_RP + qm )       ! specific humidity
-                      qtrc_org(k+2,i,j,QA_outer) = min(qtrc_org(k+2,i,j,QA_outer),qtrc_org(k+1,i,j,QA_outer))
+                      qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )           ! specific humidity
+                      qtrc_org(k+2,i,j,I_QV) = min(qtrc_org(k+2,i,j,I_QV),qtrc_org(k+1,i,j,I_QV))
                    enddo
                    enddo
                    enddo
-                case ("ZERO")
+                case("ZERO")
                    ! do nothing
                 case default
                    write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
@@ -660,6 +831,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 pres_org(1,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( pres_org(1,i,j) - missval ) < EPS ) then
+                   pres_org(1,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -669,6 +844,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 pres_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( pres_org(2,i,j) - missval ) < EPS ) then
+                   pres_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -678,6 +857,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 velx_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( velx_org(2,i,j) - missval ) < EPS ) then
+                   velx_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -687,6 +870,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 vely_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( vely_org(2,i,j) - missval ) < EPS ) then
+                   vely_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -696,6 +883,10 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 temp_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( temp_org(2,i,j) - missval ) < EPS ) then
+                   temp_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -704,7 +895,11 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                qtrc_org(2,i,j,QA_outer) = real(gdata2D(i,j), kind=RP)
+                qtrc_org(2,i,j,I_QV) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( qtrc_org(2,i,j,I_QV) - missval ) < EPS ) then
+                   qtrc_org(2,i,j,I_QV) = UNDEF
+                end if
              enddo
              enddo
           endif
@@ -714,11 +909,17 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                rhsfc = real(gdata2D(i,j), kind=RP) / 100.0_RP   ! relative humidity
-                call psat( p_sat, temp_org(2,i,j) )                         ! satulation pressure
-                qm = EPSvap * rhsfc * p_sat &
-                   / ( pres_org(2,i,j) - rhsfc * p_sat )           ! mixing ratio
-                qtrc_org(2,i,j,QA_outer) = qm / ( 1.0_RP + qm )             ! specific humidity
+                qtrc_org(2,i,j,I_QV) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( qtrc_org(2,i,j,I_QV) - missval ) < EPS ) then
+                   qtrc_org(2,i,j,I_QV) = UNDEF
+                else
+                   rhsfc = qtrc_org(2,i,j,I_QV) / 100.0_RP
+                   call psat( p_sat, temp_org(2,i,j) )         ! satulation pressure
+                   qm = EPSvap * rhsfc * p_sat &
+                      / ( pres_org(2,i,j) - rhsfc * p_sat )    ! mixing ratio
+                   qtrc_org(2,i,j,I_QV) = qm / ( 1.0_RP + qm ) ! specific humidity
+                end if
              enddo
              enddo
           endif
@@ -728,12 +929,38 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 cz_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+                ! replace missval with UNDEF
+                if( abs( cz_org(2,i,j) - missval ) < EPS ) then
+                   cz_org(2,i,j) = UNDEF
+                end if
              enddo
              enddo
           endif
        end select
     enddo loop_InputAtomGrADS
 
+    lm_layer(:,:) = 3
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 3, dims(1)+2
+      ! search the lowermost layer excluding UNDEF
+      if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) then
+        lm_layer(i,j) = k + 1
+      else
+        exit
+      end if
+    end do
+    end do
+    end do
+
+    ! fill surface density
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       k = lm_layer(i,j)
+       dens_org(1:2,i,j) = dens_org(k,i,j)
+    end do
+    end do
 
     RovCP = Rdry / CPdry
     CPovR = CPdry / Rdry
@@ -747,7 +974,8 @@ contains
     else
        do j = 1, dims(3)
        do i = 1, dims(2)
-          pott(i,j) = temp_org(3,i,j) * (P00/pres_org(3,i,j))**RovCP
+          k = lm_layer(i,j)
+          pott(i,j) = temp_org(k,i,j) * (P00/pres_org(k,i,j))**RovCP
        end do
        end do
     end if
@@ -763,14 +991,16 @@ contains
           if ( data_available(Ia_topo,1) ) then
              do j = 1, dims(3)
              do i = 1, dims(2)
-                temp_org(2,i,j) = temp_org(3,i,j) &
-                                + LAPS * (cz_org(3,i,j)-cz_org(2,i,j))
+                k = lm_layer(i,j)
+                temp_org(2,i,j) = temp_org(k,i,j) &
+                                + LAPS * (cz_org(k,i,j)-cz_org(2,i,j))
              end do
              end do
           else
              do j = 1, dims(3)
              do i = 1, dims(2)
-                temp_org(2,i,j) = temp_org(3,i,j)
+                k = lm_layer(i,j)
+                temp_org(2,i,j) = temp_org(k,i,j)
              end do
              end do
           end if
@@ -801,7 +1031,8 @@ contains
        else
           do j = 1, dims(3)
           do i = 1, dims(2)
-             temp_org(1,i,j) = temp_org(3,i,j) + LAPS * cz_org(3,i,j)
+             k = lm_layer(i,j)
+             temp_org(1,i,j) = temp_org(k,i,j) + LAPS * cz_org(k,i,j)
           end do
           end do
        end if
@@ -816,54 +1047,56 @@ contains
        ! guess surface height (elevation)
        do j = 1, dims(3)
        do i = 1, dims(2)
-          cz_org(2,i,j) = max( 0.0_RP, &
-                               cz_org(3,i,j) &
-                               * ( log(pres_org(2,i,j)/pres_org(1,i,j)) ) &
-                               / ( log(pres_org(3,i,j)/pres_org(1,i,j)) ) )
+          k = lm_layer(i,j)
+          if ( pres_org(2,i,j) < pres_org(1,i,j) ) then
+             lp2 = log( pres_org(2,i,j) / pres_org(1,i,j) )
+          else
+             lp2 = 1.0_RP
+          end if
+          if ( pres_org(k,i,j) < pres_org(1,i,j) ) then
+             lp3 = log( pres_org(k,i,j) / pres_org(1,i,j) )
+          else
+             lp3 = 1.0_RP
+          end if
+          cz_org(2,i,j) = max( 0.0_RP, cz_org(k,i,j) * lp2 / lp3 )
        end do
        end do
     end if
 
-    velz_org = 0.0_RP
-
-
     ! check verticaly extrapolated data in outer model
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 3, dims(1)+2
-
-       if( pres_org(k,i,j)>pres_org(2,i,j) )then ! if Pressure is larger than Surface pressure
-          !velz_org(k,i,j)=velz_org(2,i,j)
-          velx_org(k,i,j)=velx_org(2,i,j)
-          vely_org(k,i,j)=vely_org(2,i,j)
-          temp_org(k,i,j)=temp_org(2,i,j)
-          qtrc_org(k,i,j,:)=qtrc_org(2,i,j,:)
-          cz_org(k,i,j)=cz_org(2,i,j)
-      end if
-
-    enddo
-    enddo
-    enddo
-
-
-    !do it = 1, nt
-    !   k=1 ; j=int(dims(3)/2) ; i=int(dims(2)/2) ; iq = 1
-    !   write(*,*) "read 3D grads data",i,j,k
-    !   write(*,*) "lon_org    ",lon_org   (i,j)/D2R
-    !   write(*,*) "lat_org    ",lat_org   (i,j)/D2R
-    !   write(*,*) "pres_org   ",pres_org  (k,i,j)
-    !   write(*,*) "usfc_org   ",usfc_org  (i,j)
-    !   write(*,*) "vsfc_org   ",vsfc_org  (i,j)
-    !   write(*,*) "tsfc_org   ",tsfc_org  (i,j)
-    !   write(*,*) "qsfc_org   ",qsfc_org  (i,j,iq)
-    !   write(*,*) "rhsfc_org  ",rhsfc_org (i,j)
-    !   write(*,*) "velx_org   ",velx_org  (k,i,j)
-    !   write(*,*) "vely_org   ",vely_org  (k,i,j)
-    !   write(*,*) "temp_org   ",temp_org  (k,i,j)
-    !   write(*,*) "hgt_org    ",hgt_org   (k,i,j)
-    !   write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
-    !   write(*,*) "rhprs_org  ",rhprs_org (k,i,j)
-    !enddo
+    if( pressure_coordinates ) then
+      do j = 1, dims(3)
+      do i = 1, dims(2)
+      do k = 3, dims(1)+2
+        if( pres_org(k,i,j) > pres_org(2,i,j) ) then ! if Pressure is larger than Surface pressure
+          velz_org(k,i,j)   = velz_org(2,i,j)
+          velx_org(k,i,j)   = velx_org(2,i,j)
+          vely_org(k,i,j)   = vely_org(2,i,j)
+          dens_org(k,i,j)   = dens_org(2,i,j)
+          temp_org(k,i,j)   = temp_org(2,i,j)
+          qtrc_org(k,i,j,:) = qtrc_org(2,i,j,:)
+          cz_org  (k,i,j)   = cz_org  (2,i,j)
+        end if
+      enddo
+      enddo
+      enddo
+    else
+      do j = 1, dims(3)
+      do i = 1, dims(2)
+      do k = 3, dims(1)+2
+        if( abs( velz_org(k,i,j) - UNDEF ) < EPS ) velz_org(k,i,j) = velz_org(2,i,j)
+        if( abs( velx_org(k,i,j) - UNDEF ) < EPS ) velx_org(k,i,j) = velx_org(2,i,j)
+        if( abs( vely_org(k,i,j) - UNDEF ) < EPS ) vely_org(k,i,j) = vely_org(2,i,j)
+        if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) pres_org(k,i,j) = pres_org(2,i,j)
+        if( abs( dens_org(k,i,j) - UNDEF ) < EPS ) dens_org(k,i,j) = dens_org(2,i,j)
+        if( abs( temp_org(k,i,j) - UNDEF ) < EPS ) temp_org(k,i,j) = temp_org(2,i,j)
+        do iq = 1, QA
+          if( abs( qtrc_org(k,i,j,iq) - UNDEF ) < EPS ) qtrc_org(k,i,j,iq) = 0.0_RP
+        end do
+      enddo
+      enddo
+      enddo
+    end if
 
     return
   end subroutine ParentAtomInputGrADS
@@ -894,8 +1127,7 @@ contains
     use_waterratio = .false.
 
     if ( len_trim(basename) == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) &
-            'xxx "BASEMAAME" is not specified in "PARAM_MKINIT_REAL_ATOMS"!',trim(basename)
+       write(*,*) 'xxx [realinput_grads] "BASEMAAME" is not specified in "PARAM_MKINIT_REAL_ATOMS"!', trim(basename)
        call PRC_MPIstop
     endif
 
@@ -908,16 +1140,16 @@ contains
          action = 'read',         &
          iostat = ierr            )
     if ( ierr /= 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Input file is not found! ', trim(basename)
+       write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(basename)
        call PRC_MPIstop
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
+    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
     ! land
     ldims(1) = outer_nl ! soil_layers_stag
@@ -963,9 +1195,9 @@ contains
        item  = item_list_land(ielem)
        !--- check data
        select case(trim(item))
-       case('TOPO','lsmask')
+       case('TOPO','TOPO_sfc', 'lsmask')
           if ( .not. data_available(ielem,2) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
              cycle
           endif
        case('lon', 'lat', 'lon_sfc', 'lat_sfc')
@@ -973,7 +1205,7 @@ contains
        case('SMOISVC', 'SMOISDS')
           if ( use_file_landwater ) then
              if (.not. data_available(Il_smoisvc,2) .and. .not. data_available(Il_smoisds,2)) then
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : ',trim(item_list_land(ielem))
+                write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_land(ielem))
                 call PRC_MPIstop
              end if
              use_waterratio =  data_available(Il_smoisds,2)
@@ -982,7 +1214,7 @@ contains
           end if
        case default ! llev, SKINT, STEMP
           if ( .not. data_available(ielem,2) ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : ',trim(item_list_land(ielem))
+             write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_land(ielem))
              call PRC_MPIstop
           endif
        end select
@@ -1057,7 +1289,7 @@ contains
           knum = ldims(1)
        endif
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,2)
           dd      = grads_dd      (ielem,2)
@@ -1100,7 +1332,7 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lsmask")
           if ( data_available(Il_lsmask,2) ) then
              if ( trim(dtype) == "map" ) then
@@ -1270,7 +1502,26 @@ contains
              enddo
           endif
        case('TOPO')
-          if ( data_available(Il_topo,2) ) then
+          if ( .not. data_available(Il_topo_sfc,2) ) then
+             if ( ldims(2)==outer_nx .or. ldims(3)==outer_ny ) then
+                if ( trim(dtype) == "map" ) then
+                   call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
+                   do j = 1, ldims(3)
+                   do i = 1, ldims(2)
+                      if ( abs(gland2D(i,j)-missval) < EPS ) then
+                         topo_org(i,j) = UNDEF
+                      else
+                         topo_org(i,j) = real(gland2D(i,j), kind=RP)
+                      end if
+                   enddo
+                   enddo
+                end if
+             else
+                topo_org = UNDEF
+             endif
+          end if
+       case('TOPO_sfc')
+          if ( data_available(Il_topo_sfc,2) ) then
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
                 do j = 1, ldims(3)
@@ -1283,7 +1534,7 @@ contains
                 enddo
                 enddo
              endif
-          else
+          else if ( .not. data_available(Il_topo,2) ) then
              topo_org = UNDEF
           endif
        end select
@@ -1342,16 +1593,16 @@ contains
          action = 'read',                        &
          iostat = ierr                           )
     if ( ierr /= 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Input file is not found! ', trim(grads_ctl)
+       write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(grads_ctl)
        call PRC_MPIstop
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in nml_grads_grid in ', trim(grads_ctl),'. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(grads_ctl),'. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
+    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
     timelen = 0        ! will be replaced later
 
@@ -1404,27 +1655,28 @@ contains
        item  = item_list_ocean(ielem)
        !--- check data
        select case(trim(item))
-       case('lsmask')
-          if ( .not. data_available(ielem,3) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
+       case('lsmask','lsmask_sst')
+          if ( .not. data_available(Io_lsmask,3) .and. .not. data_available(Io_lsmask_sst,3) ) then
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: ',trim(item),' is not found & not used.'
              cycle
           endif
        case('lon', 'lat', 'lon_sfc', 'lat_sfc', 'lon_sst', 'lat_sst')
           cycle
        case('SST')
           if (.not. data_available(Io_sst,3) .and. .not. data_available(Io_skint,3) ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx SST and SKINT are found in grads namelist!'
+             write(*,*) 'xxx [realinput_grads] SST and SKINT are found in grads namelist!'
              call PRC_MPIstop
           endif
           if (.not. data_available(Io_sst,3)) then
-             if (IO_L) write(IO_FID_LOG,*) 'warning: SST is found in grads namelist. SKINT is used in place of SST.'
+             if( IO_L ) write(IO_FID_LOG,*) 'warning: SST is found in grads namelist. SKINT is used in place of SST.'
              cycle
           endif
        case('SKINT')
           cycle
        case default !
           if ( .not. data_available(ielem,3) ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found in grads namelist! : ',trim(item_list_ocean(ielem))
+             write(*,*) 'xxx [realinput_grads/ParentOceanSetupGrADS] Not found in grads namelist! : ', &
+                        trim(item_list_ocean(ielem))
              call PRC_MPIstop
           endif
        end select
@@ -1493,7 +1745,7 @@ contains
        lnum     = grads_lnum    (ielem,3)
        missval  = grads_missval (ielem,3)
 
-       select case (trim(dtype))
+       select case(trim(dtype))
        case("linear")
           swpoint = grads_swpoint (ielem,3)
           dd      = grads_dd      (ielem,3)
@@ -1527,14 +1779,25 @@ contains
        end select
 
        ! read data
-       select case (trim(item))
+       select case(trim(item))
        case("lsmask")
-          if ( data_available(Io_lsmask,3) ) then
+          if ( .not. data_available(Io_lsmask_sst,3) .and. data_available(Io_lsmask,3) ) then
+             if ( odims(1)==outer_nx_sfc .and. odims(2)==outer_ny_sfc ) then
+                if ( trim(dtype) == "map" ) then
+                   call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
+                   omask_org(:,:) = real(gsst2D(:,:), kind=RP)
+                endif
+             else
+                omask_org = UNDEF
+             end if
+          end if
+       case("lsmask_sst")
+          if ( data_available(Io_lsmask_sst,3) ) then
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
                 omask_org(:,:) = real(gsst2D(:,:), kind=RP)
              endif
-          else
+          else if ( .not. data_available(Io_lsmask,3) ) then
              omask_org = UNDEF
           end if
        case("lon")
@@ -1608,7 +1871,7 @@ contains
           end if
        case("lat_sfc")
           if ( .not. data_available(Io_lat_sst,3) .and. data_available(Io_lat_sfc,3) ) then
-             if ( odims(1).ne.outer_nx .or. odims(1).ne.outer_ny ) then
+             if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_ny_sfc ) then
                 write(*,*) 'xxx namelist of "lat_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx_sfc and outer_nx_sst! ', outer_nx_sfc, odims(1)
                 write(*,*) '                          : outer_ny_sfc and outer_ny_sst! ', outer_ny_sfc, odims(2)
@@ -1726,7 +1989,7 @@ contains
     character(len=H_SHORT), intent(out) :: grads_fendian (:)
     real(SP),               intent(out) :: grads_missval (:)
     logical,                intent(out) :: data_available(:)
-    character(len=H_SHORT), intent(in)  :: item_list     (:)
+    character(len=*),       intent(in)  :: item_list     (:)
     integer,                intent(in)  :: num_item_list
     character(len=*),       intent(in)  :: basename
     integer,                intent(in)  :: io_fid_grads_nml
@@ -1756,7 +2019,8 @@ contains
        do n = 1, grads_vars_limit
           read(io_fid_grads_nml, nml=grdvar, iostat=ierr)
           if( ierr > 0 )then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Not appropriate names in grdvar in ', trim(basename),'. Check!'
+             write(*,*) 'xxx [realinput_grads/read_namelist] Not appropriate names in grdvar in ', &
+                        trim(basename),'. Check!'
              call PRC_MPIstop
           else if( ierr < 0 )then
              exit
@@ -1764,16 +2028,15 @@ contains
           grads_vars_nmax = grads_vars_nmax + 1
        enddo
     else
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx namelist file is not open! ', trim(basename)
+       write(*,*) 'xxx [realinput_grads/read_namelist] namelist file is not open! ', trim(basename)
        call PRC_MPIstop
     endif
 
     if ( grads_vars_nmax > grads_vars_limit ) then
-       if( IO_L ) write(IO_FID_LOG,*) &
-            'xxx The number of grads vars exceeds grads_vars_limit! ',grads_vars_nmax,' >', grads_vars_limit
+       write(*,*) 'xxx [realinput_grads/read_namelist] The number of grads vars exceeds grads_vars_limit! ', &
+                  grads_vars_nmax, ' > ', grads_vars_limit
        call PRC_MPIstop
     endif
-
 
     ! check data availability
     data_available(:) = .false.
@@ -1831,9 +2094,11 @@ contains
   !-----------------------------------------------------------------------------
   subroutine open_grads_file(io_fid,filename,irecl)
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: filename
-    integer,intent(in)      :: irecl
+
+    integer,          intent(in) :: io_fid
+    character(len=*), intent(in) :: filename
+    integer,          intent(in) :: irecl
+
     integer  :: ierr
 
     open(io_fid,                   &
@@ -1847,6 +2112,7 @@ contains
        write(*,*) 'xxx grads file does not found! ', trim(filename)
        call PRC_MPIstop
     endif
+
     return
   end subroutine open_grads_file
 
@@ -1861,14 +2127,15 @@ contains
        yrev,                      &
        gdata                      )
     implicit none
-    integer,     intent(in)  :: io_fid
-    character(*),intent(in)  :: gfile
-    integer,     intent(in)  :: nx,ny,nz,it
-    character(*),intent(in)  :: item
-    integer,     intent(in)  :: startrec
-    integer,     intent(in)  :: totalrec
-    character(*),intent(in)  :: yrev
-    real(SP),    intent(out) :: gdata(nx,ny)
+
+    integer,          intent(in)  :: io_fid
+    character(len=*), intent(in)  :: gfile
+    integer,          intent(in)  :: nx,ny,nz,it
+    character(len=*), intent(in)  :: item
+    integer,          intent(in)  :: startrec
+    integer,          intent(in)  :: totalrec
+    character(len=*), intent(in)  :: yrev
+    real(SP),         intent(out) :: gdata(nx,ny)
 
     real(SP) :: work(nx,ny)
 
@@ -1911,14 +2178,15 @@ contains
        yrev,                      &
        gdata                      )
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: gfile
-    integer,     intent(in) :: nx,ny,nz,it
-    character(*),intent(in) :: item
-    integer,     intent(in) :: startrec
-    integer,     intent(in) :: totalrec
-    character(*),intent(in) :: yrev
-    real(SP),intent(out)    :: gdata(nx,ny,nz)
+
+    integer,          intent(in)  :: io_fid
+    character(len=*), intent(in)  :: gfile
+    integer,          intent(in)  :: nx,ny,nz,it
+    character(len=*), intent(in)  :: item
+    integer,          intent(in)  :: startrec
+    integer,          intent(in)  :: totalrec
+    character(len=*), intent(in)  :: yrev
+    real(SP),         intent(out) :: gdata(nx,ny,nz)
 
     real(SP) :: work(nx,ny,nz)
 
@@ -1956,9 +2224,10 @@ contains
   !-----------------------------------------------------------------------------
   subroutine close_grads_file(io_fid,filename)
     implicit none
-    integer,intent(in)      :: io_fid
-    character(*),intent(in) :: filename
-    integer                 :: ierr
+
+    integer,          intent(in) :: io_fid
+    character(len=*), intent(in) :: filename
+    integer                      :: ierr
 
     close(io_fid, iostat=ierr)
     if ( ierr /= 0 ) then

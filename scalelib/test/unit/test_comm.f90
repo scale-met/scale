@@ -140,7 +140,7 @@ contains
 
     ! MPI PC
     data(:,:,:) = data_P
-    call COMM_vars_init( data, vid )
+    call COMM_vars_init( 'testdata', data, vid )
     call COMM_vars( data, vid )
     call COMM_wait( data, vid, .false. )
     call check_vars( data )
@@ -181,7 +181,7 @@ contains
     data(:,:,:,:) = data_P
     vid(:) = 1
     do n = 1, nmax
-       call COMM_vars8_init( data(:,:,:,n), vid(n) )
+       call COMM_vars8_init( 'PC1-testdata', data(:,:,:,n), vid(n) )
     end do
     do n = 1, nmax
        write(title(1:6),'(a4,i02)') "PC1-",n
@@ -193,7 +193,7 @@ contains
     data(:,:,:,:) = data_P
     do n = 1, nmax
        vid(n) = n
-       call COMM_vars8_init( data(:,:,:,n), vid(n) )
+       call COMM_vars8_init( 'PC2-testdata', data(:,:,:,n), vid(n) )
     end do
     do n = 1, nmax
        call COMM_vars8( data(:,:,:,n), vid(n) )

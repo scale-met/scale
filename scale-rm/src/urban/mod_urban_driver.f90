@@ -249,6 +249,8 @@ contains
     real(RP) :: ATMOS_SFLX_rad_dn(IA,JA,2,2)
     real(RP) :: ATMOS_SFLX_rain  (IA,JA)
     real(RP) :: ATMOS_SFLX_snow  (IA,JA)
+
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if ( URBAN_sw ) then
@@ -267,10 +269,17 @@ contains
                             ATMOS_SFLX_snow  (:,:)      ) ! [OUT]
     endif
 
-    ATMOS_SFLX_SW  (:,:,:) = ATMOS_SFLX_rad_dn(:,:,I_SW,:) ! direct/diffuse
-    ATMOS_SFLX_LW  (:,:,:) = ATMOS_SFLX_rad_dn(:,:,I_LW,:) ! direct/diffuse
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+       ATMOS_SFLX_SW  (i,j,1) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) ! direct
+       ATMOS_SFLX_LW  (i,j,1) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) ! direct
+       ATMOS_SFLX_SW  (i,j,2) = ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! diffuse
+       ATMOS_SFLX_LW  (i,j,2) = ATMOS_SFLX_rad_dn(i,j,I_LW,2) ! diffuse
 
-    ATMOS_SFLX_prec(:,:) = ATMOS_SFLX_rain(:,:) + ATMOS_SFLX_snow(:,:) ! liquid+ice
+       ATMOS_SFLX_prec(i,j)   = ATMOS_SFLX_rain(i,j) + ATMOS_SFLX_snow(i,j) ! liquid+ice
+    enddo
+    enddo
 
     return
   end subroutine URBAN_SURFACE_GET
