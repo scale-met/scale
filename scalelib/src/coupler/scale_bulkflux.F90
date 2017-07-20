@@ -690,9 +690,6 @@ contains
     ! function
     real(DP) :: fm_unstable
 
-    ! Wilson (2001)
-    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
-
     ! works
     real(DP) :: R
     !real(DP) :: r4R
@@ -702,7 +699,6 @@ contains
 
     ! Wilson (2001)
     fm_unstable = 3.0_DP * log( 1.0_DP + sqrt( 1.0_DP + 3.6_DP * (-R)**(2.0_DP/3.0_DP) ) )
-    fm_unstable = Pt * fm_unstable  + ( 1.0_DP - Pt ) * log( Z )
 
     ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
     ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
