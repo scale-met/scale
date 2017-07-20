@@ -370,8 +370,6 @@ contains
     ! parameter
     real(DP), parameter :: dIL = 1.0E-6_DP ! delta [1/m]
 
-    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
-
     ! argument
     real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
     real(RP), intent(out) :: Tstar   ! friction temperature [K]
@@ -472,14 +470,14 @@ contains
       ! unstable condition
       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
-      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
+      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       ! stable condition
       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
       UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
-      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
+      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
 
@@ -510,14 +508,14 @@ contains
       ! unstable condition
       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
-      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
+      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       ! stable condition
       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
       UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
-      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
+      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
 
@@ -545,14 +543,14 @@ contains
       ! unstable condition
       dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL+dIL) + fm_unstable(DP_Z0M,IL+dIL) ) * dUabsUS
-      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL) ) / Pt * ( TH1 - TH0 )
-      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL) ) / Pt * ( Q1  - Q0  )
+      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL) ) * ( TH1 - TH0 )
+      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL) ) * ( Q1  - Q0  )
 
       ! stable condition
       dUabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
       dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL+dIL) + fm_stable(DP_Z0M,IL+dIL) ) * dUabsS
-      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0H,IL+dIL) ) / Pt * ( TH1 - TH0 )
-      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0E,IL+dIL) ) / Pt * ( Q1  - Q0  )
+      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0H,IL+dIL) ) * ( TH1 - TH0 )
+      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0E,IL+dIL) ) * ( Q1  - Q0  )
 
       sw = 0.5_DP - sign( 0.5_DP, IL+dIL ) ! if unstable, sw = 1
 
@@ -595,14 +593,14 @@ contains
       ! unstable condition
       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
-      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
+      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       ! stable condition
       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
       UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
-      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
+      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
 
@@ -633,8 +631,8 @@ contains
     ! unstable condition
     UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
     UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-    TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
-    QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
+    TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+    QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
     FracU10US = ( log_10ovZ0M - fm_unstable(10.0_DP,IL) + fm_unstable(DP_Z0M,IL) ) &
               / ( log_Z1ovZ0M - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0M,IL) )
@@ -646,8 +644,8 @@ contains
     ! stable condition
     UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
     UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-    TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) / Pt * ( TH1 - TH0 )
-    QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) / Pt * ( Q1  - Q0  )
+    TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+    QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
     FracU10S = ( log_10ovZ0M - fm_stable(10.0_DP,IL) + fm_stable(DP_Z0M,IL) ) &
              / ( log_Z1ovZ0M - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0M,IL) )
@@ -724,6 +722,9 @@ contains
     ! function
     real(DP) :: fh_unstable
 
+    ! Wilson (2001)
+    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
+
     ! works
     real(DP) :: R
     !---------------------------------------------------------------------------
@@ -732,6 +733,7 @@ contains
 
     ! Wilson (2001)
     fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 7.9_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
+    fh_unstable = Pt * fh_unstable  + ( 1.0_DP - Pt ) * log( Z )
 
     ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
     ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
