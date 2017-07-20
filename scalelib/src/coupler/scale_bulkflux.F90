@@ -698,7 +698,7 @@ contains
     R = min( Z * IL, 0.0_DP )
 
     ! Wilson (2001)
-    fm_unstable = 3.0_DP * log( 1.0_DP + sqrt( 1.0_DP + 3.6_DP * (-R)**(2.0_DP/3.0_DP) ) )
+    fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 3.6_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
 
     ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
     ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
@@ -732,7 +732,7 @@ contains
     R = min( Z * IL, 0.0_DP )
 
     ! Wilson (2001)
-    fh_unstable = 3.0_DP * log( 1.0_DP + sqrt( 1.0_DP + 7.9_DP * (-R)**(2.0_DP/3.0_DP) ) )
+    fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 7.9_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
     fh_unstable = Pt * fh_unstable  + ( 1.0_DP - Pt ) * log( Z )
 
     ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
