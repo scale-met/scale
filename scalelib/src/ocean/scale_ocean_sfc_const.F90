@@ -46,8 +46,6 @@ contains
     implicit none
 
     character(len=*), intent(in) :: OCEAN_TYPE
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

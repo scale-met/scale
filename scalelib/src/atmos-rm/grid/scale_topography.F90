@@ -123,12 +123,7 @@ contains
        FILEIO_check_coordinates, &
        FILEIO_close
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_myrank
-    use scale_grid, only: &
-       GRID_CX, &
-       GRID_CY
-
+       PRC_MPIstop
     implicit none
 
     integer :: fid

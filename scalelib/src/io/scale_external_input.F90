@@ -839,8 +839,6 @@ contains
     integer  :: n
     integer  :: n1, n2, n3
     integer  :: nn1, nn2, nn3
-
-    integer :: tmp
     !---------------------------------------------------------------------------
 
     error = .true.

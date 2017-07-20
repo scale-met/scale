@@ -470,8 +470,6 @@ contains
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use mod_urban_admin, only: &
-       URBAN_sw
     implicit none
     !---------------------------------------------------------------------------
 

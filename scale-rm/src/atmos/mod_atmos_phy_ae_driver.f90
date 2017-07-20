@@ -158,7 +158,7 @@ contains
 
     real(RP) :: total ! dummy
 
-    integer  :: k, i, j, iq, iqa
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then

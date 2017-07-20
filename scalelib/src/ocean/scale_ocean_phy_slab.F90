@@ -60,7 +60,6 @@ contains
     NAMELIST / PARAM_OCEAN_PHY_SLAB / &
        OCEAN_PHY_SLAB_DEPTH
 
-    integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 

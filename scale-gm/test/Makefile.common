@@ -35,8 +35,7 @@ build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	$(MAKE) -C $(SCALEGMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
                                 INDEX_DIR=$(INDEX_DIR)   \
-                                BINDIR=$(BINDIR)         \
-                                postfix=$(postfix)
+                                BINDIR=$(BINDIR)
 
 
 

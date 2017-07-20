@@ -503,7 +503,7 @@ contains
     do k = 1,  KA
        if ( abs(var(k,i,j)) < abs(CONST_UNDEF) ) then
           statval(k) = statval(k) + var(k,i,j)
-          statcnt(k) = statcnt(k) + 1.D0
+          statcnt(k) = statcnt(k) + 1.0_RP
        endif
     enddo
     enddo

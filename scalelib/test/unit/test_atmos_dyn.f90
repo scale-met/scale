@@ -506,7 +506,7 @@ subroutine test_conserve
          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
          flag_fct_along_stream,                       & ! (in)
          .true.,                                      & ! (in)
-         1.0_RP, 1.0_DP                               ) ! (in)
+         1.0_DP, 1.0_DP                               ) ! (in)
 
   total_o = 0.0_RP
   total = 0.0_RP

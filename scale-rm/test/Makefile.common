@@ -95,12 +95,7 @@ build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
                                 INDEX_DIR=$(INDEX_DIR)   \
-                                BINDIR=$(BINDIR)         \
-                                dynamics=$(dynamics)     \
-                                sfcflx=$(sfcflx)         \
-                                turbulence=$(turbulence) \
-                                radiation=$(radiation)   \
-                                postfix=$(postfix)
+                                BINDIR=$(BINDIR)
 
 util:
 	$(MAKE) -C $(UTILDIR)

@@ -164,7 +164,7 @@ contains
     call FileRead( GRID_LFZ(:),  bname, 'LFZ',  1, PRC_myrank )
 
     call FileRead( tmp_CBFZ(:),  bname, 'CBFZ', 1, PRC_myrank )
-    call FileRead( tmp_CBFY(:),  bname, 'CBFX', 1, PRC_myrank )
+    call FileRead( tmp_CBFX(:),  bname, 'CBFX', 1, PRC_myrank )
     call FileRead( tmp_CBFY(:),  bname, 'CBFY', 1, PRC_myrank )
 
     do i = 1, IA

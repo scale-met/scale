@@ -1,5 +1,8 @@
-#include "netcdf.h"
 #include "gtool_file.h"
+#ifndef MPI_INCLUDED
+#define MPI_INCLUDED
+#endif
+#include "netcdf.h"
 
 #define RMISS -9.9999e+30
 #define TEPS 1e-6

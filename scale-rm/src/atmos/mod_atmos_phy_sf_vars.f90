@@ -430,9 +430,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Create restart file
   subroutine ATMOS_PHY_SF_vars_restart_create
-    use scale_const, only: &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &

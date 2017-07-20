@@ -33,7 +33,7 @@ if [ ! ${PPCONF} = "NONE" ]; then
    do
       let i="n - 1"
       SIN2_PP=`echo -e "${SIN2_PP}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
-      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ./${PPNAME} ${CONFLIST[i]} || exit`
+      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ./${PPNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -46,7 +46,7 @@ if [ ! ${INITCONF} = "NONE" ]; then
    do
       let i="n - 1"
       SIN2_INIT=`echo -e "${SIN2_INIT}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
-      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ./${INITNAME} ${CONFLIST[i]} || exit`
+      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ./${INITNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -59,7 +59,7 @@ if [ ! ${RUNCONF} = "NONE" ]; then
    do
       let i="n - 1"
       SIN2_MAIN=`echo -e "${SIN2_MAIN}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
-      RUN_MAIN=`echo -e "${RUN_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ./${BINNAME} ${CONFLIST[i]} || exit`
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ./${BINNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -72,7 +72,7 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    do
       let i="n - 1"
       SIN2_N2G=`echo -e "${SIN2_N2G}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
-      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ./${N2GNAME} ${CONFLIST[i]} || exit`
+      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ./${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 

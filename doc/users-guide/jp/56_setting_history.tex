@@ -30,25 +30,25 @@
 より選択可能である。
 %
 \verb|HISTORY_DEFAULT_TAVERAGE = .true.|として、平均値での出力を設定した場合、
-出力するタイミング直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。\\
+出力するタイミング直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。
 
 \nmitem{HISTORY_DEFAULT_ZCOORD}で絶対高度面座標(\verb|"z"|)を選択した場合は、
 出力データの鉛直層数はモデル面の鉛直層数と同じであり、
-各層の高度は標高ゼロ地点でのモデル面高度である。
+各層の高度は標高ゼロ地点でのモデル面高度である。\\
 \nmitem{HISTORY_DEFAULT_ZCOORD}で気圧面座標(\verb|"pressure"|)を選択した場合、
-\namelist{PARAM_HIST}の\nmitem{HIST_PRES_nlayer}と\nmitem{HIST_PRES}の設定が必要である。
-%
-また、\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合、
+\namelist{PARAM_HIST}の\\ \nmitem{HIST_PRES_nlayer}と\nmitem{HIST_PRES}の設定が必要である。
+
+\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合、
 計算領域の外側のハロ領域のデータも出力される。ただし、周期境界条件の場合にはこの設定は無視される。
 \nmitem{HIST_BND}の設定はすべての出力変数に対して適用される。\\
-
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_HIST| & \\
-\verb|  HIST_PRES_nlayer   = -1,|        & ; 気圧面内挿を用いる場合の層数。\\
-\verb|  HIST_PRES          = 0.0,|       & ; 気圧面内挿に用いる各層の気圧の値。下層から順にhPaで指定する。\\
+\verb|  HIST_PRES_nlayer   = -1,    |    & ; 層数 (オプション 気圧面出力の場合のみ) \\
+\verb|  HIST_PRES          = 0.0,   |    & ; 各層の気圧の値。下層から順に[hPa]で指定する。\\
+                                         & ~ (オプション 気圧面出力の場合のみ) \\
 \verb|  HIST_BND           = .false.|    & ; 計算領域の外側のハロ領域の値を出力するかどうか。\\
                                          & ~ \verb|.true.|: 出力する, \verb|.false.|: 出力しない.\\
 \verb|/| & \\
@@ -60,8 +60,8 @@
 
 次に、出力する変数の設定を\namelist{HISTITEM}で行う。
 \namelist{HISTITEM}は変数毎に設定するため、出力したい変数の数だけ追加することになる。
-また、それぞれの変数の出力形式は、基本的に \namelist{PARAM_HISTORY} の設定に従うが、
-変数毎に変更することも可能である。\\
+それぞれの変数の出力形式は、基本的に \namelist{PARAM_HISTORY} の設定に従うが、
+(オプション)のネイムリスとを追加することによって変数毎に変更することも可能である。\\
 
 \noindent {\small {\gt
 \ovalbox{

@@ -17,8 +17,8 @@ ORG_SRCS    =
 # parameters for run
 INITCONF    = ./sample/init_$(sample).conf
 RUNCONF     = ./sample/run_$(sample).conf
-N2GCONF     = net2g.conf
-TPROC       = 2
+N2GCONF     = ./sample/net2g_$(sample).conf
+TPROC      ?= 2
 
 # required data (parameters,distributed files)
 DATDIR      =

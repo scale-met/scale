@@ -88,13 +88,5 @@ do
    convert -density 150 -rotate 90 +antialias dcl.pdf column_${var}.png
    rm -f dcl.pdf
 
-   # snapshot
-   for sec in ${time_set[@]}
-   do
-       gpview history.pe\*.nc@${var},y=16000,z=0:15000,time=${sec} --nocont ${range} --wsn 2 || exit
-       convert -density 150 -rotate 90 +antialias dcl.pdf ${var}${sec}sec.png
-       rm -f dcl.pdf
-   done
-
    let i="${i} + 1"
 done

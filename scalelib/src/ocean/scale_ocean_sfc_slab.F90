@@ -46,8 +46,6 @@ contains
     implicit none
 
     character(len=*), intent(in) :: OCEAN_TYPE
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -142,10 +140,10 @@ contains
     ! works
     real(RP) :: SST1(IA,JA)
 
-    real(RP) :: Ustar, Ustar10, Ustar2 ! friction velocity [m]
-    real(RP) :: Tstar, Tstar10, Tstar2 ! friction temperature [K]
-    real(RP) :: Qstar, Qstar10, Qstar2 ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs,  Uabs10,  Uabs2  ! modified absolute velocity [m/s]
+    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Tstar ! friction temperature [K]
+    real(RP) :: Qstar ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs  ! modified absolute velocity [m/s]
 
     real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]

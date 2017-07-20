@@ -283,7 +283,6 @@ contains
     use scale_process, only: &
        PRC_MPIstop,         &
        PRC_GLOBAL_domainID, &
-       PRC_nprocs,          &
        PRC_IsMaster
     use scale_rm_process, only: &
        PRC_HAS_W,         &
@@ -300,10 +299,8 @@ contains
        MY_LONY => REAL_LONY, &
        MY_LATY => REAL_LATY, &
        MY_CZ   => REAL_CZ,   &
-       MY_FZ   => REAL_FZ,   &
-       p_latlon_catalog => REAL_DOMAIN_CATALOGUE
+       MY_FZ   => REAL_FZ
     use scale_comm, only: &
-       COMM_world, &
        COMM_Bcast
     use scale_interpolation_nest, only: &
        INTRPNEST_setup,            &
@@ -392,7 +389,7 @@ contains
 
        OFFLINE = .true.
        USE_NESTING = .true.
-       
+
        if ( PRC_IsMaster ) then
           call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CX", 0 )
           OFFLINE_PARENT_IMAX = dims(1)-4
@@ -807,8 +804,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   !> Solve relationship between ParentDomain & Daughter Domain
   subroutine NEST_domain_relate( &
       HANDLE  )
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_process, only: &
        PRC_myrank,   &
        PRC_MPIstop
@@ -1307,8 +1302,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        PRC_MPIstop, &
        PRC_myrank,  &
        PRC_IsMaster
-    use scale_grid_real, only: &
-       REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
        COMM_world, &
        COMM_bcast
@@ -1497,7 +1490,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
     use scale_grid_real, only: &
        REAL_LON,    &
@@ -1703,11 +1695,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       interped_ref_POTT,   & ! [inout]
       interped_ref_QTRC    ) ! [inout]
     use scale_process, only: &
-       PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
-    use scale_grid_real, only: &
-       REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -2157,18 +2145,16 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   subroutine NEST_COMM_recv_cancel( &
       HANDLE     ) ! [in]
     use scale_process, only: &
-       PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
     implicit none
 
     integer, intent(in) :: HANDLE   !< id number of nesting relation in this process target
 
     integer :: ierr
+    !logical :: flag
     !integer :: istatus(MPI_STATUS_SIZE)
 
     integer :: rq
-    logical :: flag
     !---------------------------------------------------------------------------
 
     if( .not. USE_NESTING ) then
@@ -2212,8 +2198,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       isu_tagf,  & ! [inout]
       flag_dens  ) ! [in ]: optional
     use scale_process, only: &
-       PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
@@ -2238,7 +2222,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer :: xs, xe
     integer :: ys, ye
 
-    integer :: i, j, k
+    integer :: k
     integer :: ig, rq, yp
     logical :: no_zstag    = .true.
     logical :: logarithmic = .false.
@@ -2397,7 +2381,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       flag_dens  ) ! [in ]: optional
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nprocs,  &
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype

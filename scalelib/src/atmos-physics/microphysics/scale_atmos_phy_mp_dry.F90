@@ -67,15 +67,11 @@ contains
        QA, QS   )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       CPdry => CONST_CPdry, &
-       CVdry => CONST_CVdry
     implicit none
 
-    character(len=*), intent(in) :: MP_TYPE
-    integer, intent(out) :: QA
-    integer, intent(out) :: QS
-
+    character(len=*), intent(in)  :: MP_TYPE
+    integer,          intent(out) :: QA
+    integer,          intent(out) :: QS
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -207,8 +203,6 @@ contains
 
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
-
-    integer  :: ihydro
     !---------------------------------------------------------------------------
 
     Qe = 0.0_RP

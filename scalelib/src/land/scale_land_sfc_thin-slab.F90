@@ -63,7 +63,6 @@ contains
        LAND_SFC_THIN_SLAB_err_min, &
        LAND_SFC_THIN_SLAB_dreslim
 
-    integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 

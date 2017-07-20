@@ -294,8 +294,6 @@ contains
     logical  :: lhist
 #endif
 
-    real(RP) :: fz, sw
-
     integer  :: IIS, IIE
     integer  :: JJS, JJE
     integer  :: IFS_OFF, JFS_OFF
@@ -635,19 +633,6 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
-       ! limiter at KS+1 (index is KS)
-       !$omp parallel do private(i,j,fz,sw) OMP_SCHEDULE_
-       do j = JJS, JJE
-       do i = IIS, IIE
-          fz = qflx_hi(KS,i,j,ZDIR) + qflx_J13(KS,i,j) + qflx_J23(KS,i,j)
-          ! if MOMZ0 >= 0; min(fz,momz0*dz*G/dt)
-          ! else         ; max(fz,momz0*dz*G/dt) = - min(-fz,-momz0*dz*G/dt)
-          sw = sign( 1.0_RP, MOMZ0(KS,i,j) )
-          qflx_hi(KS,i,j,ZDIR) = sw*min( sw*fz, sw*MOMZ0(KS,i,j)*FDZ(KS)*GSQRT(KS,i,j,I_XYW)/dtrk ) &
-                               - qflx_J13(KS,i,j) - qflx_J23(KS,i,j)
-       end do
-       end do
-
        ! pressure gradient force at (x, y, w)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -889,16 +874,6 @@ contains
             num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-
-       ! limiter at KS+1/2 (index is KS)
-       !$omp parallel do private(i,j,sw) OMP_SCHEDULE_
-       do j = JJS, JJE
-       do i = IIS, IIE
-          ! qflx_J13(KS,i,j) and qflx_hi(KS,i,j,ZDIR) should be almost canceled
-          sw = 0.25_RP + sign( 0.25_RP, abs(J13G(KS,i,j,I_UYZ))-EPS )
-          qflx_J13(KS,i,j) = ( qflx_J13(KS,i,j) - qflx_hi(KS,i,j,ZDIR) ) * sw
-       end do
-       end do
 
        ! pressure gradient force at (u, y, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1146,16 +1121,6 @@ contains
             num_diff(:,:,:,I_MOMY,YDIR), & ! (in
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-
-       ! limiter at KS+1/2 (index is KS)
-       !$omp parallel do private(i,j,sw) OMP_SCHEDULE_
-       do j = JJS, JJE
-       do i = IIS, IIE
-          ! qflx_J23(KS,i,j) and qflx_hi(KS,i,j,ZDIR) should be almost canceled
-          sw = 0.25_RP + sign( 0.25_RP, abs(J23G(KS,i,j,I_XVZ))-EPS )
-          qflx_J23(KS,i,j) = ( qflx_J23(KS,i,j) - qflx_hi(KS,i,j,ZDIR) ) * sw
-       end do
-       end do
 
        ! pressure gradient force at (x, v, z)
 

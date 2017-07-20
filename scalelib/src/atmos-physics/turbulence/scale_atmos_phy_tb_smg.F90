@@ -244,27 +244,15 @@ contains
        EPS  => CONST_EPS, &
        GRAV => CONST_GRAV
     use scale_grid, only: &
-       FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
        RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+       RFDZ => GRID_RFDZ
     use scale_gridtrans, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
        I_XVW, &
        I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV,  &
-       I_UV
+       I_XVZ
     use scale_atmos_phy_tb_common, only: &
        calc_strain_tensor => ATMOS_PHY_TB_calc_strain_tensor, &
        diffusion_solver   => ATMOS_PHY_TB_diffusion_solver,   &

@@ -167,7 +167,9 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private            :: MSTRN_nradius  =  8 !< # of radius mode for hygroscopic parameter
   integer,  private, parameter :: MSTRN_ncloud   =  2 !< # of cloud types [ClearSky/Cloud]
 
-  logical,  private, save :: ATMOS_PHY_RD_MSTRN_ONLY_QCI = .false.
+  logical,  private            :: ATMOS_PHY_RD_MSTRN_ONLY_QCI        = .false.
+  logical,  private            :: ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD = .false.
+
 
 
   real(RP), private, allocatable :: waveh   (:)         ! wavenumbers at band boundary [1/cm]
@@ -258,13 +260,13 @@ contains
        ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME,   &
        ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME,  &
        ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME, &
-       ATMOS_PHY_RD_MSTRN_nband, &
-       ATMOS_PHY_RD_MSTRN_nptype, &
-       ATMOS_PHY_RD_MSTRN_nradius, &
-       ATMOS_PHY_RD_MSTRN_ONLY_QCI
+       ATMOS_PHY_RD_MSTRN_nband,                 &
+       ATMOS_PHY_RD_MSTRN_nptype,                &
+       ATMOS_PHY_RD_MSTRN_nradius,               &
+       ATMOS_PHY_RD_MSTRN_ONLY_QCI,              &
+       ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD
 
     integer :: ngas, ncfc
-    integer :: ihydro, iaero
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -313,7 +315,7 @@ contains
     !--- setup climatological profile
     call RD_PROFILE_setup
 
-    RD_KMAX      = KMAX + RD_KADD
+    RD_KMAX = KMAX + RD_KADD
 
     !--- allocate arrays
     ! input
@@ -436,6 +438,9 @@ contains
     real(RP) :: MP_Qe  (KA,IA,JA,N_HYD)
     real(RP) :: AE_Re  (KA,IA,JA,N_AE)
 
+    integer  :: tropopause(IA,JA)
+    real(RP) :: gamma
+
     real(RP), parameter :: min_cldfrac = 1.E-8_RP
 
     real(RP) :: rhodz_merge       (RD_KMAX,IA,JA)
@@ -454,7 +459,7 @@ contains
 
     real(RP) :: zerosw
 
-    integer :: ihydro, iaero, iq
+    integer :: ihydro, iaero
     integer :: RD_k, k, i, j, v, ic
     !---------------------------------------------------------------------------
 
@@ -521,6 +526,34 @@ contains
        end do
     end if
 
+    if ( ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD ) then
+       do j  = JS, JE
+       do i  = IS, IE
+          tropopause(i,j) = KE+1
+          do k  = KE, KS, -1
+             if ( pres(k,i,j) >= 300.E+2_RP ) then
+                exit
+             elseif( pres(k,i,j) <  50.E+2_RP ) then
+                tropopause(i,j) = k
+             else
+                gamma = ( temp(k+1,i,j) - temp(k,i,j) ) / ( CZ(k+1,i,j) - CZ(k,i,j) )
+                if( gamma > 1.E-4 ) tropopause(i,j) = k
+             endif
+          enddo
+       enddo
+       enddo
+
+       do ihydro = 1, N_HYD
+       do j  = JS, JE
+       do i  = IS, IE
+          do k  = tropopause(i,j), KE
+             MP_Qe(k,i,j,ihydro) = 0.0_RP
+          enddo
+       enddo
+       enddo
+       enddo
+    endif
+
     ! marge basic profile and value in model domain
 
     if ( RD_PROFILE_use_climatology ) then
@@ -546,7 +579,7 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none)                                           &
-    !$omp shared(JS,JE,IS,IE,RD_KADD,temph_merge,RD_temph,KE,RD_KMAX,KS,temp) &
+    !$omp shared(JS,JE,IS,IE,RD_KADD,temph_merge,RD_temph,KE,RD_KMAX,KS,temp,CZ,FZ) &
     !$omp private(i,j,k,RD_k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -558,7 +591,8 @@ contains
        do RD_k = RD_KADD+1, RD_KMAX
           k = KS + RD_KMAX - RD_k ! reverse axis
 
-          temph_merge(RD_k,i,j) = 0.5_RP * ( temp(k,i,j) + temp(k+1,i,j) )
+          temph_merge(RD_k,i,j) = ( temp(k  ,i,j) * (CZ(k+1,i,j)-FZ(k,i,j)) / (CZ(k+1,i,j)-CZ(k,i,j)) &
+                                  + temp(k+1,i,j) * (FZ(k  ,i,j)-CZ(k,i,j)) / (CZ(k+1,i,j)-CZ(k,i,j)) )
        enddo
        temph_merge(RD_KMAX+1,i,j) = temp(KS,i,j)
     enddo
@@ -1896,7 +1930,6 @@ contains
        flux_direct   )
     use scale_const, only: &
        PI   => CONST_PI,   &
-       HUGE => CONST_HUGE, &
        EPS  => CONST_EPS,  &
        EPS1 => CONST_EPS1
     implicit none
@@ -1936,10 +1969,10 @@ contains
     real(RP) :: lamda                ! eigenvalue of X-, X+
     real(RP) :: E
     real(RP) :: Apls_mns, Bpls_mns   ! A+/A-, B+/B-
-    real(RP) :: V0mns, V0pls         ! V0-, V0+
-    real(RP) :: V1mns, V1pls         ! V1-, V1+
-    real(RP) :: Dmns0, Dmns1, Dmns2  ! D0-, D1-, D2-
-    real(RP) :: Dpls0, Dpls1, Dpls2  ! D0+, D1+, D2+
+    real(DP) :: V0mns, V0pls         ! V0-, V0+
+    real(DP) :: V1mns, V1pls         ! V1-, V1+
+    real(DP) :: Dmns0, Dmns1, Dmns2  ! D0-, D1-, D2-
+    real(DP) :: Dpls0, Dpls1, Dpls2  ! D0+, D1+, D2+
     real(RP) :: SIGmns, SIGpls       ! sigma-, sigma+
     real(RP) :: Qgamma               ! Q * gamma
     real(RP) :: zerosw, tmp
@@ -1979,7 +2012,6 @@ contains
 
     real(RP) :: sw
     integer  :: k, i, j, icloud
-    integer  :: kij
     !---------------------------------------------------------------------------
 
     M_irgn      = M(irgn)
@@ -2062,10 +2094,10 @@ contains
 #endif
 
           !--- A+/A-, B+/B-
-          Apls_mns = ( X * ( 1.0_RP+E ) - lamda * ( 1.0_RP-E ) ) &
-                   / ( X * ( 1.0_RP+E ) + lamda * ( 1.0_RP-E ) )
-          Bpls_mns = ( X * ( 1.0_RP-E ) - lamda * ( 1.0_RP+E ) ) &
-                   / ( X * ( 1.0_RP-E ) + lamda * ( 1.0_RP+E ) )
+          Apls_mns = ( X * ( 1.0_DP+E ) - lamda * ( 1.0_DP-E ) ) &
+                   / ( X * ( 1.0_DP+E ) + lamda * ( 1.0_DP-E ) )
+          Bpls_mns = ( X * ( 1.0_DP-E ) - lamda * ( 1.0_DP+E ) ) &
+                   / ( X * ( 1.0_DP-E ) + lamda * ( 1.0_DP+E ) )
 
           !--- R, T
           R0(k,i,j,icloud) = (        sw ) * 0.5_RP * ( Apls_mns + Bpls_mns ) &

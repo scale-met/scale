@@ -50,13 +50,6 @@ module scale_atmos_phy_sf_bulk
   !
   real(RP), private            :: ATMOS_PHY_SF_beta   =   1.0_RP ! evaporation efficiency (0-1)
 
-  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxM = 100.0_RP ! maximum limit of absolute velocity for momentum [m/s]
-  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxH = 100.0_RP ! maximum limit of absolute velocity for heat     [m/s]
-  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxE = 100.0_RP ! maximum limit of absolute velocity for vapor    [m/s]
-  real(RP), private            :: ATMOS_PHY_SF_U_minM =   0.0_RP ! minimum limit of absolute velocity for momentum [m/s]
-  real(RP), private            :: ATMOS_PHY_SF_U_minH =   0.0_RP ! minimum limit of absolute velocity for heat     [m/s]
-  real(RP), private            :: ATMOS_PHY_SF_U_minE =   0.0_RP ! minimum limit of absolute velocity for vapor    [m/s]
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -69,10 +62,7 @@ contains
     character(len=*), intent(in) :: ATMOS_PHY_SF_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_SF_BULK / &
-       ATMOS_PHY_SF_beta,   &
-       ATMOS_PHY_SF_U_minM, &
-       ATMOS_PHY_SF_U_minH, &
-       ATMOS_PHY_SF_U_minE
+       ATMOS_PHY_SF_beta
 
     integer :: ierr
     !---------------------------------------------------------------------------

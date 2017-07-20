@@ -114,6 +114,7 @@ module scale_atmos_phy_mp_tomita08
   logical,  private              :: MP_doexplicit_icegen = .false. ! apply explicit ice generation?
 
   logical,  private              :: fixed_re  = .false. ! use ice's effective radius for snow and graupel, and set rain transparent?
+  logical,  private              :: const_rec = .true. ! use constant  effective radius for cloud water?
   logical,  private              :: nofall_qr = .false. ! surpress sedimentation of rain?
   logical,  private              :: nofall_qi = .false. ! surpress sedimentation of ice?
   logical,  private              :: nofall_qs = .false. ! surpress sedimentation of snow?
@@ -457,6 +458,7 @@ contains
        gamma_gaut,      &
        qscrt_gaut,      &
        fixed_re,        &
+       const_rec,       &
        nofall_qr,       &
        nofall_qi,       &
        nofall_qs,       &
@@ -954,7 +956,7 @@ contains
 
     real(RP) :: w(w_nmax)
 
-    integer  :: k, i, j, iq, ip
+    integer  :: k, i, j, ip
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
@@ -1738,7 +1740,7 @@ contains
     real(RP) :: loga_, b_, nm
 
     real(RP) :: zerosw
-    integer  :: k, i, j, iq
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
 #ifndef __GFORTRAN__
@@ -1996,6 +1998,9 @@ contains
        TEMP0  )
     use scale_grid_index
     use scale_const, only: &
+       PI    => CONST_PI,     &
+       dens_w => CONST_DWATR, &
+       dens_i => CONST_DICE,  &
        TEM00 => CONST_TEM00
     use scale_tracer, only: &
        QA
@@ -2010,7 +2015,8 @@ contains
 
     real(RP) :: dens
     real(RP) :: temc
-    real(RP) :: qr, qs, qg
+    real(RP) :: qc, qr, qs, qg
+    real(RP) :: Nc(KA,IA,JA)              !< Number concentration of cloud water [1/m3]
     real(RP) :: N0r, N0s, N0g
     real(RP) :: RLMDr, RLMDs, RLMDg
 
@@ -2025,9 +2031,47 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    Re(:,:,:,I_HC) =  re_qc * um2cm
     Re(:,:,:,I_HI) =  re_qi * um2cm
     Re(:,:,:,I_HG+1:) = 0.0_RP
+
+    if ( const_rec .or. fixed_re ) then
+
+       Re(:,:,:,I_HC) = re_qc * um2cm
+
+    else
+
+       if ( MP_couple_aerosol ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             ! Nc(k,i,j) = max( CCN(k,i,j), Nc_def(i,j)*1.E+6_RP ) ! [#/m3] tentatively off the CCN effect
+             Nc(k,i,j) = Nc_def(i,j) * 1.E+6_RP ! [#/m3]
+          enddo
+          enddo
+          enddo
+       else
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             Nc(k,i,j) = Nc_def(i,j) * 1.E+6_RP ! [#/m3]
+          enddo
+          enddo
+          enddo
+       endif
+
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          dens = DENS0(k,i,j)
+          qc   = QTRC0(k,i,j,I_QC)
+
+          Re(k,i,j,I_HC) = 1.1_RP * ( dens * qc / Nc(k,i,j) / ( 4.0_RP / 3.0_RP * PI * dens_w ) )**(1.0_RP/3.0_RP)
+          Re(k,i,j,I_HC) = min( 1.E-3_RP, max( 1.E-6_RP, Re(k,i,j,I_HC) ) ) * um2cm
+       enddo
+       enddo
+       enddo
+
+    endif
 
     if ( fixed_re ) then
 
@@ -2099,10 +2143,12 @@ contains
 
           Re(k,i,j,I_HS) = (        sw_RS2014 ) * 0.5_RP * exp(ln10*loga_) * exp(log(Xs2+zerosw)*b_) * ( 1.0_RP-zerosw ) / ( Xs2+zerosw ) * um2cm &
                          + ( 1.0_RP-sw_RS2014 ) * 1.5_RP * RLMDs * um2cm
+!                         + ( 1.0_RP-sw_RS2014 ) * dens * qs / N0s / ( 2.0_RP / 3.0_RP * PI * dens_i ) / RLMDs**3 * um2cm
 
           zerosw = 0.5_RP - sign(0.5_RP, qg - 1.E-12_RP )
           RLMDg = sqrt(sqrt( dens * qg / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
           Re(k,i,j,I_HG) = 1.5_RP * RLMDg * um2cm
+!          Re(k,i,j,I_HG) = dens * qg / N0g / ( 2.0_RP / 3.0_RP * PI * dens_i ) / RLMDg**3 * um2cm
        enddo
        enddo
        enddo
