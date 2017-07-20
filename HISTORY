@@ -1,5 +1,35 @@
 = Release History
 
+== 2017-7-19 (5.2.0)
+* Changes:
+  * Add prefix of 'SCALE_' to all the environmental variable names
+  * Change namelist parameters for the nesting
+  * Change namelist parameters for the horizontal eddy viscosity
+  * Change name of the TKEs in the turbulent schemes for outputs
+  * Split the Rayleigh damping at upper layer from nudging in the buffer region
+* New features:
+  * Enable to give external radiation forcing
+  * Add Thick-SLAB land surface scheme
+  * Add new options for the Tomita08 scheme
+  * Enable to set the number of grids in global domain
+  * Enable to set buffer size with the number of grids
+  * Enable to output complete namelist parameter sets to a file separately from the log file
+  * Support single file I/O with PnetCDF (requires PnetCDF >= 1.7.0)
+  * Enable to output history data with pressure and height coordinates
+  * Add options for restart file name
+  * Support converter for FNL data with grib2 format for the real init
+  * Support different grid points for atmosphere, land and ocean data for the real init
+  * Provide English User Guide
+* Improvements:
+  * Update table for radiational data
+  * Improve spatial interpolation
+  * Implore numerical stability for steep terrains
+* Bug fixes:
+  * Fix bugs in the partial condensation in the MYNN scheme
+  * Fix several bugs in the KF scheme
+  * Fix wrong Prandtle number for stable case in the B91W01 scheme
+  * Many minor bug fixes
+
 == 2017-06-16 (5.1.5)
 * Bug fix:
   * Fix wrong land fraction when GLCCv2 data is used
@@ -17,7 +47,7 @@
   * Fix wrong metric for the terrain-following coordinate
 
 == 2016-11-08 (5.1.1)
-* Bug fixs:
+* Bug fixes:
   * Fix wrong tendency of the density
   * Fix wrong sign of the metric terms
   * Fix invalid value of some monitor variables
@@ -29,15 +59,15 @@
 * New features:
   * Add the Kain and Fritsch (1990) cumulus parameterization (experimental)
   * Provide the script to prepare the configurations for real atmospheric experiments
-* Implovements:
-  * Implove netCDF I/O handling
-* Bug fixs:
+* Improvements:
+  * Improve netCDF I/O handling
+* Bug fixes:
   * Fix bug in the Suzuki10 scheme
   * Fix treatment the boundary data for restart experiment
   * Fix handling for cyclic outer data
 
 == 2016-08-04 (5.0.1)
-* Bug fixs:
+* Bug fixes:
   * Fix wrong dependency for making SCALE-GM
 
 == 2016-07-05 (5.0.0)
@@ -51,12 +81,12 @@
   * Enable to integrate with tendencies of physical processes without advection
   * Enable to output clear-sky radiation flux
   * Add the Deardroff (1980) scheme for SGS turbulence
-  * Add the Kajino (2013) scheme for aerosol microphisics (experimental)
-  * Enable to use multiple data sources for topography and landuse
+  * Add the Kajino (2013) scheme for aerosol microphysics (experimental)
+  * Enable to use multiple data sources for topography and land use
   * Enable to put barrier at call of the rap time routine
-* Implovements:
-  * change algorighm of local filter in smoothing topography
-* Bug fixs:
+* Improvements:
+  * change algorithm of local filter in smoothing topography
+* Bug fixes:
   * Fix wrong calculation of internal energy
   * Fix negative fixer in the Tomita08 scheme
 
@@ -76,14 +106,14 @@
 * New features:
   * Enable to change parameters of the Tomita08 scheme
   * Enable to output some statistics (CAPE, CIN, PBL height, etc)
-  * Enable to skip arbitray temporal steps in files in the init program for real case
+  * Enable to skip arbitrary temporal steps in files in the init program for real case
   * Enable to use the eddy viscosity in the RANS mode
   * Add a terminator by wall clock time
   * Add a CFL checker
-* Implovements:
-  * Implove the init program for real case
+* Improvements:
+  * Improve the init program for real case
   * Optimize the Tomita08 scheme for better computational performance
-* Bug fixs:
+* Bug fixes:
   * Fix bugs in the single precision calculation
-  * Corretct the description document
-  * Corretct the users guide
+  * Correct the description document
+  * Correct the users guide
