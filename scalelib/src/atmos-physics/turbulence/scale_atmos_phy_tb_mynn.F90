@@ -1144,7 +1144,7 @@ contains
                     ATMOS_PHY_TB_MYNN_Lt_MAX )
        rlt = 1.0_RP / lt
 
-       us = ( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 )**0.25_RP / DENS(KS,i,j) ! friction velocity
+       us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ! friction velocity
        us = max(us, Us_min)
        rlm = - KARMAN * GRAV * SFLX_PT(i,j) / (PT0(KS,i,j) * us**3 )
 
