@@ -164,9 +164,9 @@ contains
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
-       DENS,              &
-       RHOT,              &
-       QTRC,              &
+       DENS   => DENS_av, &
+       RHOT   => RHOT_av, &
+       QTRC   => QTRC_av, &
        TEMP,              &
        PRES,              &
        W,                 &

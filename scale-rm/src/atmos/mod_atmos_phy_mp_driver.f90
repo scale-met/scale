@@ -136,12 +136,12 @@ contains
        QS_MP, &
        QE_MP
     use mod_atmos_vars, only: &
-       DENS,              &
-       MOMZ,              &
-       MOMX,              &
-       MOMY,              &
-       RHOT,              &
-       QTRC,              &
+       DENS   => DENS_av, &
+       MOMZ   => MOMZ_av, &
+       MOMX   => MOMX_av, &
+       MOMY   => MOMY_av, &
+       RHOT   => RHOT_av, &
+       QTRC   => QTRC_av, &
        DENS_t => DENS_tp, &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &

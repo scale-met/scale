@@ -170,9 +170,9 @@ contains
     use mod_atmos_vars, only: &
        TEMP,              &
        PRES,              &
-       DENS,              &
-       RHOT,              &
-       QTRC,              &
+       DENS   => DENS_av, &
+       RHOT   => RHOT_av, &
+       QTRC   => QTRC_av, &
        RHOT_t => RHOT_tp
     use mod_atmos_phy_sf_vars, only: &
        SFC_TEMP    => ATMOS_PHY_SF_SFC_TEMP,   &
