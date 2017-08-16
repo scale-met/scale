@@ -22,7 +22,7 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
 FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
                    -Kautoobjstack   \
                    -Ktemparraystack \
-                   -Kinstance=8     \
+                   -Kinstance=16    \
                    -Kswp_strong
 
 FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Nquickdbg -NRtrap
@@ -77,11 +77,11 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 # Default settings
-SCALE_NETCDF_INCLUDE ?=
-SCALE_NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz -lm
+SCALE_NETCDF_INCLUDE ?= -I/usr/local/netCDF-fortran/4.2/include -I/usr/local/HDF5/1.8.9/include -I/usr/local/netCDF/4.2.1.1/include
+SCALE_NETCDF_LIBS    ?= -L/usr/local/netCDF-fortran/4.2/lib -L/usr/local/HDF5/1.8.9/lib -L/usr/local/zlib/1.2.7/lib -L/usr/local/netCDF/4.2.1.1/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz
 # Or, please set environment variable
 # example:
-# export SCALE_NETCDF_INCLUDE="-I/usr/local/netCDF/4.2.1.1/include -I/usr/local/HDF5/1.8.9/include -I/usr/local/netCDF-fortran/4.2/include"
+# export SCALE_NETCDF_INCLUDE="-I/usr/local/netCDF-fortran/4.2/include -I/usr/local/HDF5/1.8.9/include -I/usr/local/netCDF/4.2.1.1/include"
 # export SCALE_NETCDF_LIBS="-L/usr/local/netCDF-fortran/4.2/lib -L/usr/local/HDF5/1.8.9/lib -L/usr/local/zlib/1.2.7/lib -L/usr/local/netCDF/4.2.1.1/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz"
 
 ###### Math library
@@ -89,7 +89,7 @@ SCALE_NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz -lm
 SCALE_MATHLIB_LIBS ?=
 # Or, please set environment variable
 # example:
-# export SCALE_MATHLIB_LIBS="-SSL2BLAMP"
+# export SCALE_MATHLIB_LIBS="-SSL2"
 
 ##### for frontend
 INSTALL = install

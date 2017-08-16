@@ -116,7 +116,7 @@ $(OBJ_DIR)/scale_roughness.o: coupler/scale_roughness.F90 $(inc_index) $(DEPENDL
 $(OBJ_DIR)/scale_specfunc.o: common/scale_specfunc.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_stdio.o: io/scale_stdio.F90 $(inc_index) $(DEPENDLIB)
 $(OBJ_DIR)/scale_time.o: common/scale_time.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
-$(OBJ_DIR)/scale_topography.o: atmos-rm/grid/scale_topography.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_comm.o $(OBJ_DIR)/scale_fileio.o $(OBJ_DIR)/scale_grid_cartesian.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_topography.o: atmos-rm/grid/scale_topography.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_comm.o $(OBJ_DIR)/scale_fileio.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_tracer.o: common/scale_tracer.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_urban_grid.o: urban/grid/scale_urban_grid.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_urban_grid_index.o
 $(OBJ_DIR)/scale_urban_grid_index.o: urban/grid/scale_urban_grid_index.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
