@@ -104,12 +104,12 @@ contains
 !    use scale_atmos_phy_ch, only: &
 !       ATMOS_PHY_CH
     use mod_atmos_vars, only: &
-!        DENS,              &
-!        MOMZ,              &
-!        MOMX,              &
-!        MOMY,              &
-!        RHOT,              &
-!        QTRC,              &
+!        DENS  => DENS_av, &
+!        MOMZ  => MOMZ_av, &
+!        MOMX  => MOMX_av, &
+!        MOMY  => MOMY_av, &
+!        RHOT  => RHOT_av, &
+!        QTRC  => QTRC_av, &
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ch_vars, only: &
        RHOQ_t_CH => ATMOS_PHY_CH_RHOQ_t, &

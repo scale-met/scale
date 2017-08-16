@@ -562,7 +562,7 @@ contains
       dBFLX = - dUstarC * dTstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * dUstarC * dQstarC * THM
 
       ! update d(free convection velocity scale)
-      tmp = -PBL * GRAV / T1 * dBFLX
+      tmp = PBL * GRAV / T1 * dBFLX
       sw  = 0.5_DP + sign( 0.5_DP, tmp ) ! if tmp is plus, sw = 1
 
       dWstar = ( tmp * sw )**( 1.0_DP / 3.0_DP )

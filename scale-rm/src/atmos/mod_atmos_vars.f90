@@ -1040,7 +1040,7 @@ contains
     real(RP) :: SFC_PRES(IA,JA)
     !---------------------------------------------------------------------------
 
-    call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
+    call BOTTOM_estimate( DENS_av  (:,:,:), & ! [IN]
                           PRES     (:,:,:), & ! [IN]
                           REAL_CZ  (:,:,:), & ! [IN]
                           TOPO_Zsfc(:,:),   & ! [IN]
@@ -1333,9 +1333,9 @@ contains
     ! prepare and history output of diagnostic variables
 
     if ( AD_PREP_sw(I_QDRY) > 0 ) then
-       call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
-                          QTRC(:,:,:,:), & ! [IN]
-                          TRACER_MASS(:) ) ! [IN]
+       call THERMODYN_qd( QDRY   (:,:,:),   & ! [OUT]
+                          QTRC_av(:,:,:,:), & ! [IN]
+                          TRACER_MASS(:)    ) ! [IN]
     endif
 
     if ( AD_PREP_sw(I_QTOT) > 0 ) then
@@ -1353,7 +1353,7 @@ contains
 !OCL XFILL
        QHYD(:,:,:) = 0.0_RP
        do iq = QHS, QHE
-         QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,iq)
+         QHYD(:,:,:) = QHYD(:,:,:) + QTRC_av(:,:,:,iq)
        enddo
     endif
 
@@ -1361,7 +1361,7 @@ contains
 !OCL XFILL
        QLIQ(:,:,:) = 0.0_RP
        do iq = QLS, QLE
-         QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC(:,:,:,iq)
+         QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC_av(:,:,:,iq)
        enddo
     endif
 
@@ -1369,7 +1369,7 @@ contains
 !OCL XFILL
        QICE(:,:,:) = 0.0_RP
        do iq = QIS, QIE
-         QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,iq)
+         QICE(:,:,:) = QICE(:,:,:) + QTRC_av(:,:,:,iq)
        enddo
     endif
 
@@ -1379,7 +1379,7 @@ contains
           LWP(i,j) = 0.0_RP
           do k  = KS, KE
              LWP(i,j) = LWP(i,j) &
-                      + QLIQ(k,i,j) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+                      + QLIQ(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
@@ -1391,7 +1391,7 @@ contains
           IWP(i,j) = 0.0_RP
           do k  = KS, KE
              IWP(i,j) = IWP(i,j) &
-                      + QICE(k,i,j) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+                      + QICE(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
@@ -1403,7 +1403,7 @@ contains
           PW(i,j) = 0.0_RP
           do k  = KS, KE
              PW(i,j) = PW(i,j) &
-                      + QTRC(k,i,j,I_QV) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+                      + QTRC_av(k,i,j,I_QV) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
@@ -1415,7 +1415,7 @@ contains
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          CALC_R(RTOT(k,i,j), QDRY(k,i,j), QTRC, k, i, j, iq, Rdry, TRACER_R)
+          CALC_R(RTOT(k,i,j), QDRY(k,i,j), QTRC_av, k, i, j, iq, Rdry, TRACER_R)
        enddo
        enddo
        enddo
@@ -1424,7 +1424,7 @@ contains
     if ( AD_PREP_sw(I_CPTOT) > 0 ) then
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(iq) &
-       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CPTOT,CPdry,QDRY,QA,CVTOT,CVdry,QTRC,TRACER_CP,TRACER_CV) &
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CPTOT,CPdry,QDRY,QA,CVTOT,CVdry,QTRC_av,TRACER_CP,TRACER_CV) &
        !$omp shared(I_QV,LHV,QIS,QIE,LHF)
 !OCL XFILL
        do j  = JSB, JEB
@@ -1433,8 +1433,8 @@ contains
           CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
           CVTOT(k,i,j) = CVdry * QDRY(k,i,j)
           do iq = 1, QA
-             CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * TRACER_CP(iq)
-             CVTOT(k,i,j) = CVTOT(k,i,j) + QTRC(k,i,j,iq) * TRACER_CV(iq)
+             CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC_av(k,i,j,iq) * TRACER_CP(iq)
+             CVTOT(k,i,j) = CVTOT(k,i,j) + QTRC_av(k,i,j,iq) * TRACER_CV(iq)
           end do
        enddo
        enddo
@@ -1467,9 +1467,9 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QSAT) > 0 ) then
-!       call SATURATION_dens2qsat_all( QSAT(:,:,:), & ! [OUT]
-!                                      TEMP(:,:,:), & ! [IN]
-!                                      DENS(:,:,:)  ) ! [IN]
+!       call SATURATION_dens2qsat_all( QSAT   (:,:,:), & ! [OUT]
+!                                      TEMP   (:,:,:), & ! [IN]
+!                                      DENS_av(:,:,:)  ) ! [IN]
     end if
 
     if ( AD_HIST_id(I_RHA) > 0 ) then
@@ -1480,7 +1480,7 @@ contains
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RHA(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+          RHA(k,i,j) = DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) &
                      / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
                      * 100.0_RP
        enddo
@@ -1496,7 +1496,7 @@ contains
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RHL(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+          RHL(k,i,j) = DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) &
                      / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
                      * 100.0_RP
        enddo
@@ -1512,7 +1512,7 @@ contains
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RHI(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+          RHI(k,i,j) = DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) &
                      / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
                      * 100.0_RP
        enddo
@@ -1527,8 +1527,8 @@ contains
        do j = 1, JA-1
        do i = 2, IA
        do k = KS, KE
-          UH(k,i,j) = 0.5_RP * ( MOMX(k,i,j)+MOMX(k,i,j+1)+MOMX(k,i-1,j)+MOMX(k,i-1,j+1) ) &
-                             / ( DENS(k,i,j)+DENS(k,i,j+1) )
+          UH(k,i,j) = 0.5_RP * ( MOMX_av(k,i,j)+MOMX_av(k,i,j+1)+MOMX_av(k,i-1,j)+MOMX_av(k,i-1,j+1) ) &
+                             / ( DENS_av(k,i,j)+DENS_av(k,i,j+1) )
        enddo
        enddo
        enddo
@@ -1539,8 +1539,8 @@ contains
        do j = 2, JA
        do i = 1, IA-1
        do k = KS, KE
-          VH(k,i,j) = 0.5_RP * ( MOMY(k,i,j)+MOMY(k,i+1,j)+MOMY(k,i,j-1)+MOMY(k,i+1,j-1) ) &
-                             / ( DENS(k,i,j)+DENS(k,i+1,j) )
+          VH(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j)+MOMY_av(k,i+1,j)+MOMY_av(k,i,j-1)+MOMY_av(k,i+1,j-1) ) &
+                             / ( DENS_av(k,i,j)+DENS_av(k,i+1,j) )
        enddo
        enddo
        enddo
@@ -1579,8 +1579,8 @@ contains
        do j = 2, JA
        do i = 2, IA
        do k = KS, KE
-          HDIV(k,i,j) = ( MOMX(k,i,j) - MOMX(k  ,i-1,j  ) ) * RCDX(i) &
-                      + ( MOMY(k,i,j) - MOMY(k  ,i  ,j-1) ) * RCDY(j)
+          HDIV(k,i,j) = ( MOMX_av(k,i,j) - MOMX_av(k  ,i-1,j  ) ) * RCDX(i) &
+                      + ( MOMY_av(k,i,j) - MOMY_av(k  ,i  ,j-1) ) * RCDY(j)
        enddo
        enddo
        enddo
@@ -1604,7 +1604,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          DIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
+          DIV(k,i,j) = ( MOMZ_av(k,i,j) - MOMZ_av(k-1,i  ,j  ) ) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
                      + HDIV(k,i,j)
        enddo
        enddo
@@ -1624,7 +1624,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_DENS_MEAN) > 0 ) then
-       call COMM_horizontal_mean( DENS_MEAN(:), DENS(:,:,:) )
+       call COMM_horizontal_mean( DENS_MEAN(:), DENS_av(:,:,:) )
     end if
 
     if ( AD_PREP_sw(I_DENS_PRIM) > 0 ) then
@@ -1632,7 +1632,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          DENS_PRIM(k,i,j) = DENS(k,i,j) - DENS_MEAN(k)
+          DENS_PRIM(k,i,j) = DENS_av(k,i,j) - DENS_MEAN(k)
        enddo
        enddo
        enddo
@@ -1643,7 +1643,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          W_PRIM(k,i,j) = W(k,i,j) * DENS(k,i,j)
+          W_PRIM(k,i,j) = W(k,i,j) * DENS_av(k,i,j)
        enddo
        enddo
        enddo
@@ -1668,7 +1668,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          U_PRIM(k,i,j) = U(k,i,j) * DENS(k,i,j)
+          U_PRIM(k,i,j) = U(k,i,j) * DENS_av(k,i,j)
        enddo
        enddo
        enddo
@@ -1693,7 +1693,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          V_PRIM(k,i,j) = V(k,i,j) * DENS(k,i,j)
+          V_PRIM(k,i,j) = V(k,i,j) * DENS_av(k,i,j)
        enddo
        enddo
        enddo
@@ -1718,7 +1718,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          POTT_PRIM(k,i,j) = TEMP(k,i,j) * DENS(k,i,j)
+          POTT_PRIM(k,i,j) = TEMP(k,i,j) * DENS_av(k,i,j)
        enddo
        enddo
        enddo
@@ -1729,7 +1729,7 @@ contains
     end if
 
     if ( AD_PREP_sw(I_POTT_MEAN) > 0 ) then
-       call COMM_horizontal_mean( PT_MEAN(:), RHOT(:,:,:) )
+       call COMM_horizontal_mean( PT_MEAN(:), RHOT_av(:,:,:) )
        do k = 1, KA
           PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
        enddo
@@ -1750,7 +1750,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          RHOQ(k,i,j) = QTRC(k,i,j,I_QV) * DENS(k,i,j)
+          RHOQ(k,i,j) = QTRC_av(k,i,j,I_QV) * DENS_av(k,i,j)
        enddo
        enddo
        enddo
@@ -1765,7 +1765,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          RHOQ(k,i,j) = QHYD(k,i,j) * DENS(k,i,j)
+          RHOQ(k,i,j) = QHYD(k,i,j) * DENS_av(k,i,j)
        enddo
        enddo
        enddo
@@ -1780,7 +1780,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          RHOQ(k,i,j) = QLIQ(k,i,j) * DENS(k,i,j)
+          RHOQ(k,i,j) = QLIQ(k,i,j) * DENS_av(k,i,j)
        enddo
        enddo
        enddo
@@ -1795,7 +1795,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          RHOQ(k,i,j) = QICE(k,i,j) * DENS(k,i,j)
+          RHOQ(k,i,j) = QICE(k,i,j) * DENS_av(k,i,j)
        enddo
        enddo
        enddo
@@ -1821,7 +1821,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          PT_W_PRIM(k,i,j) = W_PRIM(k,i,j) * POTT_PRIM(k,i,j) * DENS(k,i,j) * CPdry
+          PT_W_PRIM(k,i,j) = W_PRIM(k,i,j) * POTT_PRIM(k,i,j) * DENS_av(k,i,j) * CPdry
        enddo
        enddo
        enddo
@@ -1857,7 +1857,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
+          ENGP(k,i,j) = DENS_av(k,i,j) * GRAV * REAL_CZ(k,i,j)
        enddo
        enddo
        enddo
@@ -1869,9 +1869,9 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
-                                               + U(k,i,j)**2 &
-                                               + V(k,i,j)**2 )
+          ENGK(k,i,j) = 0.5_RP * DENS_av(k,i,j) * ( W(k,i,j)**2 &
+                                                  + U(k,i,j)**2 &
+                                                  + V(k,i,j)**2 )
        enddo
        enddo
        enddo
@@ -1883,7 +1883,7 @@ contains
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k = KS, KE
-          ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+          ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
        enddo
        enddo
        enddo
@@ -1894,7 +1894,7 @@ contains
        do k  = KS, KE
        do iq = 1, QA
           ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
+                      + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
        enddo
        enddo
        enddo
@@ -1906,7 +1906,7 @@ contains
        do i  = ISB, IEB
        do k  = KS, KE
           ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+                      + DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
        enddo
        enddo
        enddo
@@ -1918,7 +1918,7 @@ contains
        do i  = ISB, IEB
        do k  = KS, KE
           ENGI(k,i,j) = ENGI(k,i,j) &
-                      - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
+                      - DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
        enddo
        enddo
        enddo
@@ -2002,10 +2002,10 @@ contains
          .OR. AD_PREP_sw(I_LNB)  > 0 ) then
 
        call ADIABAT_cape( KS,               & ! [IN]
-                          DENS   (:,:,:),   & ! [IN]
+                          DENS_av(:,:,:),   & ! [IN]
                           TEMP   (:,:,:),   & ! [IN]
                           PRES   (:,:,:),   & ! [IN]
-                          QTRC   (:,:,:,:), & ! [IN]
+                          QTRC_av(:,:,:,:), & ! [IN]
                           REAL_CZ(:,:,:),   & ! [IN]
                           REAL_FZ(:,:,:),   & ! [IN]
                           CAPE   (:,:),     & ! [OUT]
@@ -2027,8 +2027,8 @@ contains
        do i = IS, IE
        do k = KS, KE
           fact = 1.0_RP
-          if ( I_QV > 0 ) fact = fact + 0.61_RP * QTRC(k,i,j,I_QV)
-          if ( I_QC > 0 ) fact = fact - 1.61 * QTRC(k,i,j,I_QC)
+          if ( I_QV > 0 ) fact = fact + 0.61_RP * QTRC_av(k,i,j,I_QV)
+          if ( I_QC > 0 ) fact = fact - 1.61_RP * QTRC_av(k,i,j,I_QC)
           POTTv(k,i,j) = POTT(k,i,j) * fact
        enddo
        enddo
@@ -2062,7 +2062,7 @@ contains
        do k = KS, KE
           MSE(k,i,j) = CPTOT(k,i,j) * TEMP(k,i,j)                    &
                      + GRAV * ( REAL_CZ(k,i,j) - REAL_FZ(KS-1,i,j) ) &
-                     + LHV_local(k,i,j) * QTRC(k,i,j,I_QV)
+                     + LHV_local(k,i,j) * QTRC_av(k,i,j,I_QV)
        enddo
        enddo
        enddo
@@ -2135,29 +2135,29 @@ contains
        call STAT_total( total, RHOT(:,:,:), VAR_NAME(I_RHOT) )
 
        do iq = 1, QA
-          RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
+          RHOQ(:,:,:) = DENS_av(:,:,:) * QTRC_av(:,:,:,iq)
 
           call STAT_total( total, RHOQ(:,:,:), TRACER_NAME(iq) )
        enddo
 
-       call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
-                          QTRC(:,:,:,:), & ! [IN]
+       call THERMODYN_qd( QDRY   (:,:,:),   & ! [OUT]
+                          QTRC_av(:,:,:,:), & ! [IN]
                           TRACER_MASS(:) ) ! [IN]
 
-       call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
-                                 PRES(:,:,:),   & ! [OUT]
-                                 DENS(:,:,:),   & ! [IN]
-                                 RHOT(:,:,:),   & ! [IN]
-                                 QTRC(:,:,:,:), & ! [IN]
+       call THERMODYN_temp_pres( TEMP   (:,:,:),   & ! [OUT]
+                                 PRES   (:,:,:),   & ! [OUT]
+                                 DENS_av(:,:,:),   & ! [IN]
+                                 RHOT_av(:,:,:),   & ! [IN]
+                                 QTRC_av(:,:,:,:), & ! [IN]
                                  TRACER_CV(:),  & ! [IN]
                                  TRACER_R(:),   & ! [IN]
                                  TRACER_MASS(:) ) ! [IN]
 
-       RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
+       RHOQ(KS:KE,IS:IE,JS:JE) = DENS_av(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
 
        call STAT_total( total, RHOQ(:,:,:), 'QDRY' )
 
-       RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * ( 1.0_RP - QDRY (KS:KE,IS:IE,JS:JE) ) ! Qtotal
+       RHOQ(KS:KE,IS:IE,JS:JE) = DENS_av(KS:KE,IS:IE,JS:JE) * ( 1.0_RP - QDRY (KS:KE,IS:IE,JS:JE) ) ! Qtotal
 
        call STAT_total( total, RHOQ(:,:,:), 'QTOT' )
 
@@ -2165,20 +2165,20 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-          U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-          V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+          W(k,i,j) = 0.5_RP * ( MOMZ_av(k-1,i,j)+MOMZ_av(k,i,j) ) / DENS_av(k,i,j)
+          U(k,i,j) = 0.5_RP * ( MOMX_av(k,i-1,j)+MOMX_av(k,i,j) ) / DENS_av(k,i,j)
+          V(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j-1)+MOMY_av(k,i,j) ) / DENS_av(k,i,j)
 
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
+          ENGP(k,i,j) = DENS_av(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
-          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
-                                               + U(k,i,j)**2 &
-                                               + V(k,i,j)**2 )
+          ENGK(k,i,j) = 0.5_RP * DENS_av(k,i,j) * ( W(k,i,j)**2 &
+                                                  + U(k,i,j)**2 &
+                                                  + V(k,i,j)**2 )
 
-          ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+          ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
           do iq = 1, QA
              ENGI(k,i,j) = ENGI(k,i,j) &
-                         + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
+                         + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
           enddo
 
           if ( I_QV > 0 ) then
@@ -2186,7 +2186,7 @@ contains
           end if
 
           do iq = QIS, QIE
-             ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
+             ENGI(k,i,j) = ENGI(k,i,j) - DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
           enddo
 
           ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
@@ -2295,11 +2295,11 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.false. )
-    call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.false. )
-    call MONIT_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, isflux=.false. )
-    call MONIT_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, isflux=.false. )
-    call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3, isflux=.false. )
+    call MONIT_in( DENS_av(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.false. )
+    call MONIT_in( MOMZ_av(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.false. )
+    call MONIT_in( MOMX_av(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, isflux=.false. )
+    call MONIT_in( MOMY_av(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, isflux=.false. )
+    call MONIT_in( RHOT_av(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3, isflux=.false. )
 
     !##### Mass Budget #####
 
@@ -2309,7 +2309,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          RHOQ(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
+          RHOQ(k,i,j) = DENS_av(k,i,j) * QTRC_av(k,i,j,iq)
        enddo
        enddo
        enddo
@@ -2319,8 +2319,8 @@ contains
 
     ! total dry airmass
 
-    call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
-                       QTRC(:,:,:,:), & ! [IN]
+    call THERMODYN_qd( QDRY   (:,:,:),   & ! [OUT]
+                       QTRC_av(:,:,:,:), & ! [IN]
                        TRACER_MASS(:) ) ! [IN]
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -2328,7 +2328,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
+       RHOQ(k,i,j) = DENS_av(k,i,j) * QDRY (k,i,j)
     enddo
     enddo
     enddo
@@ -2340,7 +2340,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
+       RHOQ(k,i,j) = DENS_av(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
     enddo
     enddo
     enddo
@@ -2363,40 +2363,32 @@ contains
 
     !##### Energy Budget #####
 
-    call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
-                              PRES(:,:,:),   & ! [OUT]
-                              DENS(:,:,:),   & ! [IN]
-                              RHOT(:,:,:),   & ! [IN]
-                              QTRC(:,:,:,:), & ! [IN]
-                              TRACER_CV(:),  & ! [IN]
-                              TRACER_R(:),   & ! [IN]
-                              TRACER_MASS(:) ) ! [IN]
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(iq) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,ENGP,DENS,GRAV,REAL_CZ,W,U,V,ENGI,ENGK,QDRY,TEMP,CVdry,QA) &
-    !$omp shared(TRACER_CV,QTRC,I_QV,LHV,QIS,QIE,LHF)
+    !$omp shared(JS,JE,IS,IE,KS,KE,ENGP,DENS_av,GRAV,REAL_CZ,W,U,V,ENGI,ENGK,QDRY,TEMP,CVdry,QA) &
+    !$omp shared(TRACER_CV,QTRC_av,I_QV,LHV,QIS,QIE,LHF)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
+       ENGP(k,i,j) = DENS_av(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
-       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
-                                            + U(k,i,j)**2 &
-                                            + V(k,i,j)**2 )
+       ENGK(k,i,j) = 0.5_RP * DENS_av(k,i,j) * ( W(k,i,j)**2 &
+                                               + U(k,i,j)**2 &
+                                               + V(k,i,j)**2 )
 
-       ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+       ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
        do iq = 1, QA
           ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
+                      + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
        enddo
 
        if ( I_QV > 0 ) then
-          ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+          ENGI(k,i,j) = ENGI(k,i,j) + DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
        end if
 
        do iq = QIS, QIE
-          ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
+          ENGI(k,i,j) = ENGI(k,i,j) - DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
        enddo
     enddo
     enddo
@@ -2477,11 +2469,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          WORK(k,i,j,1) = 0.5_RP * abs(MOMZ(k,i,j)) / ( DENS(k+1,i,j) + DENS(k,i,j) ) &
+          WORK(k,i,j,1) = 0.5_RP * abs(MOMZ_av(k,i,j)) / ( DENS_av(k+1,i,j) + DENS_av(k,i,j) ) &
                         * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
-          WORK(k,i,j,2) = 0.5_RP * abs(MOMX(k,i,j)) / ( DENS(k,i+1,j) + DENS(k,i,j) ) &
+          WORK(k,i,j,2) = 0.5_RP * abs(MOMX_av(k,i,j)) / ( DENS_av(k,i+1,j) + DENS_av(k,i,j) ) &
                         * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
-          WORK(k,i,j,3) = 0.5_RP * abs(MOMY(k,i,j)) / ( DENS(k,i,j+1) + DENS(k,i,j) ) &
+          WORK(k,i,j,3) = 0.5_RP * abs(MOMY_av(k,i,j)) / ( DENS_av(k,i,j+1) + DENS_av(k,i,j) ) &
                         * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
        enddo
        enddo
