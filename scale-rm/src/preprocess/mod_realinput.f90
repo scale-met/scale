@@ -2606,7 +2606,7 @@ contains
                                     igrd    (:,:,:),     &
                                     jgrd    (:,:,:),     &
                                     IA, JA, 1, LKMAX-1   )
-          do k = 1, LKMAX
+          do k = 1, LKMAX-1
              strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=soilwater_DS2VC_flag )
           end do
 
@@ -2637,18 +2637,17 @@ contains
                                     igrd    (:,:,:),     &
                                     jgrd    (:,:,:),     &
                                     IA, JA, 1, LKMAX-1   )
-          ! interpolation
-          do j = 1, JA
-          do i = 1, IA
-             strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
-          enddo
-          enddo
-
        end if
 
        ! replace values over the ocean
-       do k = 1, LKMAX
+       do k = 1, LKMAX-1
           call replace_misval_const( strg(k,:,:), maskval_strg, lsmask_nest )
+       enddo
+
+       do j = 1, JA
+       do i = 1, IA
+          strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+       enddo
        enddo
 
     else  ! not read from boundary file

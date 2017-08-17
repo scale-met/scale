@@ -100,13 +100,13 @@ cat << EOF1 > ./run.sh
 #PJM -j
 #PJM -s
 #
-module load netCDF
-module load netCDF-fortran
+module load netCDF/4.2.1.1
+module load netCDF-fortran/4.2
 module load HDF5/1.8.9
 module list
 #
-export PARALLEL=8
-export OMP_NUM_THREADS=8
+export PARALLEL=16
+export OMP_NUM_THREADS=16
 
 EOF1
 
