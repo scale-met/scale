@@ -285,7 +285,7 @@ contains
        endif
 
        call CNVTOPO_smooth( TOPO_Zsfc(:,:) ) ! (inout)
-       call TOPO_fillhalo
+       call TOPO_fillhalo( FILL_BND=.true. )
 
        if( CNVTOPO_copy_parent ) call COPYTOPO( TOPO_Zsfc )
 
@@ -1124,7 +1124,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Smoothing itelation : ', ite
 
-       call TOPO_fillhalo( Zsfc )
+       call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
        do j = 1, JA
        do i = 1, IA-1
@@ -1285,7 +1285,7 @@ contains
 
     end if
 
-    call TOPO_fillhalo( Zsfc )
+    call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
     varname(1) = "DZsfc_DX"
     call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
@@ -1313,7 +1313,7 @@ contains
 
     ! reduce grid-scale variation
     do ite = 1, nite
-       call TOPO_fillhalo( Zsfc )
+       call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
        work2(:,:) = Zsfc(:,:)
        p1 => work2
        p2 => work1
@@ -1325,7 +1325,7 @@ contains
                          - p1(i,j+1) + p1(i,j)*2.0_RP - p1(i,j-1) ) / 8.0_RP
           end do
           end do
-          call TOPO_fillhalo( p2 )
+          call TOPO_fillhalo( Zsfc=p2(:,:), FILL_BND=.true. )
           if ( mod(n,2) == 0 ) then
              p1 => work2
              p2 => work1
