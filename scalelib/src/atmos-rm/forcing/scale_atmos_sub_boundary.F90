@@ -202,8 +202,6 @@ contains
   subroutine ATMOS_BOUNDARY_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_comm, only: &
-       COMM_FILL_BND
     use scale_const, only: &
        CONST_UNDEF
     use scale_time, only: &
@@ -357,8 +355,6 @@ contains
           write(*,*) 'xxx Wrong parameter in ATMOS_BOUNDARY_interp_TYPE. Check!'
           call PRC_MPIstop
        end select
-
-       COMM_FILL_BND = .false.
 
        allocate( ATMOS_BOUNDARY_ref_DENS(KA,IA,JA,ref_size) )
        allocate( ATMOS_BOUNDARY_ref_VELZ(KA,IA,JA,ref_size) )

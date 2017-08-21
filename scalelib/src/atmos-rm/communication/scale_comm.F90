@@ -116,7 +116,6 @@ module scale_comm
   !
   integer, public :: COMM_datatype   !< datatype of variable
   integer, public :: COMM_world      !< communication world ID
-  logical, public :: COMM_FILL_BND = .true. !< switch whether fill boundary data
 
   !-----------------------------------------------------------------------------
   !
