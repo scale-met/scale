@@ -111,7 +111,7 @@ contains
 
     if ( present(Zsfc) ) then
        call COMM_vars8( Zsfc(:,:), 1 )
-       call COMM_wait ( Zsfc(:,:), 1 )
+       call COMM_wait ( Zsfc(:,:), 1, FILL_BND_ )
     else
        call COMM_vars8( TOPO_Zsfc(:,:), 1 )
        call COMM_wait ( TOPO_Zsfc(:,:), 1, FILL_BND_ )
