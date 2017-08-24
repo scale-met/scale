@@ -65,7 +65,7 @@ if [ ! ${N2GCONF} = "NONE" ]; then
 fi
 
 NNODE=`expr \( $TPROC - 1 \) / 24 + 1`
-NPROC=`expr $TPROC / $NNODE`
+NPROC=`expr \( $TPROC - 1 \) / $NNODE + 1`
 
 if [ ${NNODE} -gt 16 ]; then
    rscgrp="l"
