@@ -373,7 +373,9 @@ contains
        solins, cosSZA,        &
        flux_rad,              &
        flux_rad_top,          &
-       flux_rad_sfc_dn        )
+       flux_rad_sfc_dn,       &
+       dtau_s,                &
+       dem_s                  )
 !       Jval                            )
     use scale_grid_index
     use scale_tracer
@@ -427,6 +429,8 @@ contains
     real(RP), intent(out) :: flux_rad       (KA,IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_top   (IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_sfc_dn(IA,JA,2,2)
+    real(RP), intent(out) :: dtau_s         (KA,IA,JA) ! 0.67 micron cloud optical depth
+    real(RP), intent(out) :: dem_s          (KA,IA,JA) ! 10.5 micron cloud emissivity
 !    real(RP), intent(out) :: Jval        (KA,IA,JA,CH_QA_photo)
 
     real(RP) :: temp   (KA,IA,JA)
@@ -456,6 +460,8 @@ contains
 
     ! output
     real(RP) :: flux_rad_merge(RD_KMAX+1,IA,JA,2,2,MSTRN_ncloud)
+    real(RP) :: tauCLD_067u   (RD_KMAX,IA,JA) ! 0.67 micron cloud optical depth
+    real(RP) :: emisCLD_105u  (RD_KMAX,IA,JA) ! 10.5 micron cloud emissivity
 
     real(RP) :: zerosw
 
@@ -759,7 +765,9 @@ contains
                          fact_land         (:,:),         & ! [IN]
                          fact_urban        (:,:),         & ! [IN]
                          flux_rad_merge    (:,:,:,:,:,:), & ! [OUT]
-                         flux_rad_sfc_dn   (:,:,:,:)      ) ! [OUT]
+                         flux_rad_sfc_dn   (:,:,:,:),     & ! [OUT]
+                         tauCLD_067u       (:,:,:),       & ! [OUT]
+                         emisCLD_105u      (:,:,:)        ) ! [OUT]
 
     call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
 
@@ -791,6 +799,17 @@ contains
        flux_rad_top(i,j,I_LW,I_dn,ic) = flux_rad_merge(1,i,j,I_LW,I_dn,ic)
        flux_rad_top(i,j,I_SW,I_up,ic) = flux_rad_merge(1,i,j,I_SW,I_up,ic)
        flux_rad_top(i,j,I_SW,I_dn,ic) = flux_rad_merge(1,i,j,I_SW,I_dn,ic)
+    enddo
+    enddo
+    enddo
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do RD_k = RD_KADD+1, RD_KMAX+1
+       k = KS + RD_KMAX - RD_k ! reverse axis
+
+       dtau_s(k,i,j) = tauCLD_067u (RD_k,i,j)
+       dem_s (k,i,j) = emisCLD_105u(RD_k,i,j)
     enddo
     enddo
     enddo
@@ -1130,7 +1149,9 @@ contains
        fact_land,    &
        fact_urban,   &
        rflux,        &
-       rflux_sfc_dn  )
+       rflux_sfc_dn, &
+       tauCLD_067u,  &
+       emisCLD_105u  )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -1166,6 +1187,8 @@ contains
     real(RP), intent(in)  :: fact_urban  (IA,JA)
     real(RP), intent(out) :: rflux       (rd_kmax+1,IA,JA,2,2,MSTRN_ncloud)
     real(RP), intent(out) :: rflux_sfc_dn(IA,JA,2,2)                        ! surface downward radiation flux (LW/SW,direct/diffuse)
+    real(RP), intent(out) :: tauCLD_067u (rd_kmax,IA,JA)                    ! 0.67 micron cloud optical depth
+    real(RP), intent(out) :: emisCLD_105u(rd_kmax,IA,JA)                    ! 10.5 micron cloud emissivity
 
     ! for P-T fitting
     real(RP) :: dz_std (rd_kmax,IA,JA)       ! layer thickness at 0C, 1atm [cm]
@@ -1213,6 +1236,10 @@ contains
 
     real(RP) :: flux       (rd_kmax+1,IA,JA,2,MSTRN_ncloud) ! upward/downward flux
     real(RP) :: flux_direct(rd_kmax+1,IA,JA  ,MSTRN_ncloud) ! downward flux (direct solar)
+
+    ! for satellite simulator
+    real(RP) :: tauCLD (rd_kmax,IA,JA) ! cloud optical thickness
+    real(RP) :: emisCLD(rd_kmax,IA,JA) ! cloud emissivity
 
     real(RP) :: zerosw
     real(RP) :: valsum
@@ -1390,6 +1417,15 @@ contains
           !$acc end kernels
        enddo
 
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+       do k = 1, rd_kmax
+          tauCLD(k,i,j) = 0.0_RP
+       enddo
+       enddo
+       enddo
+
        !--- Gas line absorption
 !OCL SERIAL
        do igas = 1, ngasabs(iw)
@@ -1550,6 +1586,11 @@ contains
 
                 optparam(k,i,j,im,I_Cloud) = optparam(k,i,j,im,I_Cloud) + q_fit * length
              enddo
+
+             q_fit = q(ir  ,iptype,1,iw) * ( 1.0_RP-factR(k,i,j,iaero) ) &
+                   + q(ir+1,iptype,1,iw) * (        factR(k,i,j,iaero) )
+
+             tauCLD(k,i,j) = tauCLD(k,i,j) + q_fit * length
           enddo
           enddo
           enddo
@@ -1659,6 +1700,16 @@ contains
           enddo
           !$acc end kernels
        enddo
+
+       if ( waveh(iw) <= 1.493E+4_RP .AND. 1.493E+4_RP < waveh(iw+1) ) then ! 0.67 micron
+          do j = JS, JE
+          do i = IS, IE
+          do k = 1, rd_kmax
+             tauCLD_067u(k,i,j) = tauCLD(k,i,j) ! 0.67 micron tau for resolved clouds
+          enddo
+          enddo
+          enddo
+       endif
 
        ! sub-channel loop
        do ich = 1, chmax
@@ -1864,7 +1915,8 @@ contains
                                     albedo_sfc (:,:,:),     & ! [IN]
                                     cldfrac    (:,:,:),     & ! [IN]
                                     flux       (:,:,:,:,:), & ! [OUT]
-                                    flux_direct(:,:,:,:)    ) ! [OUT]
+                                    flux_direct(:,:,:,:),   & ! [OUT]
+                                    emisCLD    (:,:,:)      ) ! [OUT]
           call PROF_rapend  ('RD_MSTRN_twst', 3)
 
 !OCL SERIAL
@@ -1901,6 +1953,16 @@ contains
           !if( IO_L ) write(IO_FID_LOG,*) "flux mal", iw, ich, maxloc(flux(:,IS:IE,JS:JE,1)), maxloc(flux(:,IS:IE,JS:JE,2))
           !if( IO_L ) write(IO_FID_LOG,*) "flux mil", iw, ich, minloc(flux(:,IS:IE,JS:JE,1)), minloc(flux(:,IS:IE,JS:JE,2))
 
+          if ( waveh(iw) <= 952.0_RP .AND. 952.0_RP < waveh(iw+1) ) then ! 10.5 micron
+             do j = JS, JE
+             do i = IS, IE
+             do k = 1, rd_kmax
+                emisCLD_105u(k,i,j) = emisCLD(k,i,j) ! 10.5 micron emissivity for resolved clouds
+             enddo
+             enddo
+             enddo
+          endif
+
        enddo ! ICH loop
     enddo ! IW loop
 
@@ -1927,7 +1989,8 @@ contains
        albedo_sfc,   &
        cldfrac,      &
        flux,         &
-       flux_direct   )
+       flux_direct,  &
+       emisCLD       )
     use scale_const, only: &
        PI   => CONST_PI,   &
        EPS  => CONST_EPS,  &
@@ -1949,6 +2012,7 @@ contains
 
     real(RP), intent(out) :: flux       (rd_kmax+1,IA,JA,2,MSTRN_ncloud) ! upward(sfc->TOA)/downward(TOA->sfc) flux (clear-sky/cloud)
     real(RP), intent(out) :: flux_direct(rd_kmax+1,IA,JA,  MSTRN_ncloud) ! downward(TOA->sfc) flux, solar direct    (clear-sky/cloud)
+    real(RP), intent(out) :: emisCLD    (rd_kmax  ,IA,JA)                ! cloud emissivity factor (cloud)
 
     ! parameters with two-stream truncation
     real(RP) :: tau_new    ! optical thickness        : two-stream truncation
@@ -2369,6 +2433,16 @@ contains
        enddo
 
        !$acc end kernels
+
+       if ( icloud == 2 ) then ! cloud emissivity
+          do j = JS, JE
+          do i = IS, IE
+          do k = 1, rd_kmax
+             emisCLD(k,i,j) = 1.0_RP - R(k,i,j) - T(k,i,j)
+          enddo
+          enddo
+          enddo
+       endif
 
     enddo ! cloud loop
 

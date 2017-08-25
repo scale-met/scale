@@ -198,6 +198,9 @@ contains
     real(RP) :: flux_rad    (KA,IA,JA,2,2,2)
     real(RP) :: flux_rad_top(   IA,JA,2,2,2)
 
+    real(RP) :: dtau_s      (KA,IA,JA) ! 0.67 micron cloud optical depth
+    real(RP) :: dem_s       (KA,IA,JA) ! 10.5 micron cloud emissivity
+
     real(RP) :: flux_up     (KA,IA,JA,2)
     real(RP) :: flux_dn     (KA,IA,JA,2)
     real(RP) :: flux_net    (KA,IA,JA,2)
@@ -255,7 +258,9 @@ contains
                           solins, cosSZA,     & ! [IN]
                           flux_rad,           & ! [OUT]
                           flux_rad_top,       & ! [OUT]
-                          SFLX_rad_dn         ) ! [OUT]
+                          SFLX_rad_dn,        & ! [OUT]
+                          dtau_s,             & ! [OUT]
+                          dem_s               ) ! [OUT]
 
 
        ! apply radiative flux convergence -> heating rate
@@ -498,6 +503,9 @@ contains
        call HIST_in( flux_rad(:,:,:,I_LW,I_dn,2), 'RFLX_LW_dn', 'downward longwave  radiation flux (cell face)', 'W/m2', nohalo=.true. )
        call HIST_in( flux_rad(:,:,:,I_SW,I_up,2), 'RFLX_SW_up', 'upward   shortwave radiation flux (cell face)', 'W/m2', nohalo=.true. )
        call HIST_in( flux_rad(:,:,:,I_SW,I_dn,2), 'RFLX_SW_dn', 'downward shortwave radiation flux (cell face)', 'W/m2', nohalo=.true. )
+
+       call HIST_in( dtau_s(:,:,:), 'dtau_s', '0.67 micron cloud optical depth', '1', nohalo=.true. )
+       call HIST_in( dem_s (:,:,:), 'dem_s',  '10.5 micron cloud emissivity',    '1', nohalo=.true. )
 
        if ( ATMOS_PHY_RD_TYPE ==  'WRF' ) then
           ! revert all radiation flux from MM5 scheme to default

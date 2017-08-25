@@ -191,7 +191,9 @@ contains
        solins, cosSZA,        &
        flux_rad,              &
        flux_rad_top,          &
-       SFLX_rad_dn            )
+       SFLX_rad_dn,           &
+       dtau_s,                &
+       dem_s                  )
 !       Jval                   )
     use scale_grid_index
     use scale_tracer
@@ -224,6 +226,8 @@ contains
     real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_top(IA,JA,2,2,2)
     real(RP), intent(out) :: SFLX_rad_dn (IA,JA,2,2)
+    real(RP), intent(out) :: dtau_s      (KA,IA,JA) ! 0.67 micron cloud optical depth
+    real(RP), intent(out) :: dem_s       (KA,IA,JA) ! 10.5 micron cloud emissivity
 !    real(RP), intent(out) :: Jval        (KA,IA,JA,CH_QA_photo)
 
     real(RP) :: buffer(IA,JA)
@@ -361,6 +365,9 @@ contains
     ! clearsky and TOA value are not defined
     flux_rad    (:,:,:,:,:,1) = 0.0_RP
     flux_rad_top(:,:,:,:,:)   = 0.0_RP
+
+    dtau_s      (:,:,:) = 0.0_RP
+    dem_s       (:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_RD_offline
