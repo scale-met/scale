@@ -53,7 +53,9 @@ module scale_atmos_phy_rd
           solins, cosSZA,        &
           flux_rad,              &
           flux_rad_top,          &
-          flux_sfc_dn            )
+          flux_sfc_dn,           &
+          dtau_s,                &
+          dem_s                  )
        use scale_precision
        use scale_grid_index
        use scale_tracer
@@ -74,6 +76,8 @@ module scale_atmos_phy_rd
        real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2,2)
        real(RP), intent(out) :: flux_rad_top(IA,JA,2,2,2)
        real(RP), intent(out) :: flux_sfc_dn (IA,JA,2,2)
+       real(RP), intent(out) :: dtau_s      (KA,IA,JA)
+       real(RP), intent(out) :: dem_s       (KA,IA,JA)
      end subroutine rd
   end interface
   procedure(rd), pointer :: ATMOS_PHY_RD => NULL()
