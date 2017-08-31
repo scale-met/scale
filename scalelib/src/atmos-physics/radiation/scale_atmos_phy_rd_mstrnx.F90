@@ -1569,7 +1569,7 @@ contains
           !$acc loop gang
           !$omp parallel do default(none) private(i,j,k,im,ir,length,q_fit) OMP_SCHEDULE_ collapse(2) &
           !$omp shared(JS,JE,IS,IE,rd_kmax,indexR,iaero,aerosol_conc,dz_std) &
-          !$omp shared(q,iptype,iw,factR,optparam)
+          !$omp shared(q,iptype,iw,factR,optparam,tauCLD)
           do j = JS, JE
           !$acc loop gang vector(8)
           do i = IS, IE
@@ -1702,6 +1702,9 @@ contains
        enddo
 
        if ( waveh(iw) <= 1.493E+4_RP .AND. 1.493E+4_RP < waveh(iw+1) ) then ! 0.67 micron
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k) &
+          !$omp shared(JS,JE,IS,IE,rd_kmax,tauCLD_067u,tauCLD)
           do j = JS, JE
           do i = IS, IE
           do k = 1, rd_kmax
