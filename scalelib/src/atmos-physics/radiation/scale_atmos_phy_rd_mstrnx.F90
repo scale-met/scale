@@ -805,7 +805,7 @@ contains
 
     do j  = JS, JE
     do i  = IS, IE
-    do RD_k = RD_KADD+1, RD_KMAX+1
+    do RD_k = RD_KADD+1, RD_KMAX
        k = KS + RD_KMAX - RD_k ! reverse axis
 
        dtau_s(k,i,j) = tauCLD_067u (RD_k,i,j)
