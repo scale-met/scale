@@ -164,6 +164,7 @@ contains
        PRC_MPIstop
     use scale_landuse, only: &
        LANDUSE_calc_fact,  &
+       LANDUSE_fillhalo,   &
        LANDUSE_write
     implicit none
     !---------------------------------------------------------------------------
@@ -189,6 +190,7 @@ contains
 
        ! calculate landuse factors
        call LANDUSE_calc_fact
+       call LANDUSE_fillhalo( FILL_BND=.true. )
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT LANDUSE DATA ++++++'
 

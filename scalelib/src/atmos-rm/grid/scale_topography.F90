@@ -94,20 +94,27 @@ contains
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
-  subroutine TOPO_fillhalo( Zsfc )
+  subroutine TOPO_fillhalo( Zsfc, FILL_BND )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
+
     real(RP), intent(inout), optional :: Zsfc(IA,JA)
+    logical,  intent(in),    optional :: FILL_BND
+
+    logical :: FILL_BND_
     !---------------------------------------------------------------------------
+
+    FILL_BND_ = .false.
+    if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
     if ( present(Zsfc) ) then
        call COMM_vars8( Zsfc(:,:), 1 )
-       call COMM_wait ( Zsfc(:,:), 1 )
+       call COMM_wait ( Zsfc(:,:), 1, FILL_BND_ )
     else
        call COMM_vars8( TOPO_Zsfc(:,:), 1 )
-       call COMM_wait ( TOPO_Zsfc(:,:), 1 )
+       call COMM_wait ( TOPO_Zsfc(:,:), 1, FILL_BND_ )
     end if
 
     return
@@ -145,7 +152,7 @@ contains
 
        call FILEIO_close( fid )
 
-       call TOPO_fillhalo
+       call TOPO_fillhalo( FILL_BND=.false. )
 
        TOPO_exist = .true.
 
@@ -170,6 +177,8 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output topography file ***'
+
+       call TOPO_fillhalo( FILL_BND=.false. )
 
        call FILEIO_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
                           'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]

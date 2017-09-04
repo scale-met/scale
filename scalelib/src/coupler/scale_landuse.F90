@@ -26,6 +26,7 @@ module scale_landuse
   !
   public :: LANDUSE_setup
   public :: LANDUSE_calc_fact
+  public :: LANDUSE_fillhalo
   public :: LANDUSE_write
 
   !-----------------------------------------------------------------------------
@@ -171,6 +172,54 @@ contains
   end subroutine LANDUSE_calc_fact
 
   !-----------------------------------------------------------------------------
+  !> HALO Communication
+  subroutine LANDUSE_fillhalo( FILL_BND )
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    implicit none
+
+    logical, intent(in), optional :: FILL_BND
+
+    real(RP) :: temp(IA,JA)
+
+    logical  :: FILL_BND_
+    integer  :: p
+    !---------------------------------------------------------------------------
+
+    FILL_BND_ = .true.
+    if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
+
+    call COMM_vars8( LANDUSE_frac_land (:,:), 1 )
+    call COMM_vars8( LANDUSE_frac_lake (:,:), 2 )
+    call COMM_vars8( LANDUSE_frac_urban(:,:), 3 )
+    call COMM_vars8( LANDUSE_fact_ocean(:,:), 4 )
+    call COMM_vars8( LANDUSE_fact_land (:,:), 5 )
+    call COMM_vars8( LANDUSE_fact_urban(:,:), 6 )
+
+    call COMM_wait ( LANDUSE_frac_land (:,:), 1, FILL_BND_ )
+    call COMM_wait ( LANDUSE_frac_lake (:,:), 2, FILL_BND_ )
+    call COMM_wait ( LANDUSE_frac_urban(:,:), 3, FILL_BND_ )
+    call COMM_wait ( LANDUSE_fact_ocean(:,:), 4, FILL_BND_ )
+    call COMM_wait ( LANDUSE_fact_land (:,:), 5, FILL_BND_ )
+    call COMM_wait ( LANDUSE_fact_urban(:,:), 6, FILL_BND_ )
+
+    do p = 1, LANDUSE_PFT_mosaic
+       temp(:,:) = real(LANDUSE_index_PFT(:,:,p),kind=RP)
+
+       call COMM_vars8( LANDUSE_frac_PFT(:,:,p), 7+2*(p-1) )
+       call COMM_vars8( temp            (:,:)  , 8+2*(p-1) )
+
+       call COMM_wait ( LANDUSE_frac_PFT(:,:,p), 7+2*(p-1), FILL_BND_ )
+       call COMM_wait ( temp            (:,:)  , 8+2*(p-1), FILL_BND_ )
+
+       LANDUSE_index_PFT(:,:,p) = int(temp(:,:)+1.E-3_RP,kind=4)
+    enddo
+
+    return
+  end subroutine LANDUSE_fillhalo
+
+  !-----------------------------------------------------------------------------
   !> Read landuse data
   subroutine LANDUSE_read
     use scale_fileio, only: &
@@ -179,16 +228,14 @@ contains
        FILEIO_flush, &
        FILEIO_check_coordinates, &
        FILEIO_close
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
 
     real(RP) :: temp(IA,JA)
 
     character(len=H_SHORT) :: varname
-    integer :: fid
-    integer :: p, tag
+
+    integer  :: fid
+    integer  :: p
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -214,23 +261,6 @@ contains
 
        call FILEIO_flush( fid )
 
-       if ( LANDUSE_IN_CHECK_COORDINATES ) then
-          call FILEIO_check_coordinates( fid )
-       end if
-
-       call COMM_vars8( LANDUSE_frac_land (:,:), 1 )
-       call COMM_vars8( LANDUSE_frac_lake (:,:), 2 )
-       call COMM_vars8( LANDUSE_frac_urban(:,:), 3 )
-       call COMM_vars8( LANDUSE_fact_ocean(:,:), 4 )
-       call COMM_vars8( LANDUSE_fact_land (:,:), 5 )
-       call COMM_vars8( LANDUSE_fact_urban(:,:), 6 )
-       call COMM_wait ( LANDUSE_frac_land (:,:), 1 )
-       call COMM_wait ( LANDUSE_frac_lake (:,:), 2 )
-       call COMM_wait ( LANDUSE_frac_urban(:,:), 3 )
-       call COMM_wait ( LANDUSE_fact_ocean(:,:), 4 )
-       call COMM_wait ( LANDUSE_fact_land (:,:), 5 )
-       call COMM_wait ( LANDUSE_fact_urban(:,:), 6 )
-
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
 
@@ -238,24 +268,22 @@ contains
                             fid, varname, 'XY', step=1 ) ! [IN]
           call FILEIO_flush( fid )
 
-          tag = 7 + (p-1)*LANDUSE_PFT_mosaic
-          call COMM_vars8( LANDUSE_frac_PFT (:,:,p), tag )
-          call COMM_wait ( LANDUSE_frac_PFT (:,:,p), tag )
-
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
 
           call FILEIO_read( temp(:,:),                 & ! [OUT]
                             fid, varname, 'XY', step=1 ) ! [IN]
           call FILEIO_flush( fid )
 
-          tag = 8 + (p-1)*LANDUSE_PFT_mosaic
-          call COMM_vars8( temp(:,:), tag )
-          call COMM_wait ( temp(:,:), tag )
-
-          LANDUSE_index_PFT(:,:,p) = int(temp(:,:))
+          LANDUSE_index_PFT(:,:,p) = int(temp(:,:)+1.E-3_RP,kind=4)
        enddo
 
+       if ( LANDUSE_IN_CHECK_COORDINATES ) then
+          call FILEIO_check_coordinates( fid )
+       end if
+
        call FILEIO_close( fid )
+
+       call LANDUSE_fillhalo( FILL_BND=.false. )
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** landuse file is not specified.'
@@ -278,8 +306,10 @@ contains
 
     real(RP) :: temp(IA,JA)
 
-    integer :: fid, vid(6+LANDUSE_PFT_mosaic*2)
+    integer                :: vid(6+LANDUSE_PFT_mosaic*2)
     character(len=H_SHORT) :: varname
+
+    integer :: fid
     integer :: p
     !---------------------------------------------------------------------------
 
@@ -288,14 +318,16 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output landuse file ***'
 
-       call FILEIO_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, &
-                           LANDUSE_OUT_DTYPE, nozcoord=.true. )
+       call LANDUSE_fillhalo( FILL_BND=.false. )
 
-       call FILEIO_def_var( fid, vid(1), 'FRAC_LAND',  'LAND fraction',  '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILEIO_def_var( fid, vid(2), 'FRAC_LAKE',  'LAKE fraction',  '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILEIO_def_var( fid, vid(3), 'FRAC_URBAN', 'URBAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILEIO_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, &
+                           LANDUSE_OUT_DTYPE, nozcoord=.true.            )
+
+       call FILEIO_def_var( fid, vid(1), 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILEIO_def_var( fid, vid(2), 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILEIO_def_var( fid, vid(3), 'FRAC_URBAN'    , 'URBAN fraction'         , '1', 'XY', LANDUSE_OUT_DTYPE )
        call FILEIO_def_var( fid, vid(4), 'FRAC_OCEAN_abs', 'absolute OCEAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILEIO_def_var( fid, vid(5), 'FRAC_LAND_abs',  'absolute LAND fraction',  '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILEIO_def_var( fid, vid(5), 'FRAC_LAND_abs' , 'absolute LAND fraction' , '1', 'XY', LANDUSE_OUT_DTYPE )
        call FILEIO_def_var( fid, vid(6), 'FRAC_URBAN_abs', 'absolute URBAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
 
        do p = 1, LANDUSE_PFT_mosaic
@@ -307,11 +339,11 @@ contains
 
        call FILEIO_enddef( fid )
 
-       call FILEIO_write_var( fid, vid(1), LANDUSE_frac_land (:,:), 'FRAC_LAND',  'XY' )
-       call FILEIO_write_var( fid, vid(2), LANDUSE_frac_lake (:,:), 'FRAC_LAKE',  'XY' )
-       call FILEIO_write_var( fid, vid(3), LANDUSE_frac_urban(:,:), 'FRAC_URBAN', 'XY' )
+       call FILEIO_write_var( fid, vid(1), LANDUSE_frac_land (:,:), 'FRAC_LAND'     , 'XY' )
+       call FILEIO_write_var( fid, vid(2), LANDUSE_frac_lake (:,:), 'FRAC_LAKE'     , 'XY' )
+       call FILEIO_write_var( fid, vid(3), LANDUSE_frac_urban(:,:), 'FRAC_URBAN'    , 'XY' )
        call FILEIO_write_var( fid, vid(4), LANDUSE_fact_ocean(:,:), 'FRAC_OCEAN_abs', 'XY' )
-       call FILEIO_write_var( fid, vid(5), LANDUSE_fact_land (:,:), 'FRAC_LAND_abs',  'XY' )
+       call FILEIO_write_var( fid, vid(5), LANDUSE_fact_land (:,:), 'FRAC_LAND_abs' , 'XY' )
        call FILEIO_write_var( fid, vid(6), LANDUSE_fact_urban(:,:), 'FRAC_URBAN_abs', 'XY' )
 
        do p = 1, LANDUSE_PFT_mosaic
