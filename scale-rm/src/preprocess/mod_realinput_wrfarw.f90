@@ -172,6 +172,7 @@ contains
     use scale_const, only: &
          D2R => CONST_D2R, &
          LAPS => CONST_LAPS, &
+         Rdry => CONST_Rdry, &
          GRAV => CONST_GRAV
     use scale_external_io, only: &
          ExternalFileRead
@@ -217,6 +218,7 @@ contains
     real(RP) :: velys_org(dims(1),dims(2),dims(6))
     real(RP) :: geof_org (dims(4),dims(2),dims(3))
 
+    real(RP) :: dens
     real(RP) :: qhyd
 
     integer :: k, i, j, iq
@@ -225,8 +227,6 @@ contains
     character(len=H_MID) :: varname_W
     character(len=H_MID) :: varname_U
     character(len=H_MID) :: varname_V
-
-    logical :: lack_of_val
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -387,7 +387,10 @@ contains
        end do
        pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
        temp_org(1,i,j) = temp_org(2,i,j) + LAPS * topo_org(i,j)
-       pres_org(1,i,j) = p0 * ( temp_org(1,i,j) / pott_org(2,i,j) )**(1.0_RP/RCP) ! pott_org(1,i,j) == pott_org(2,i,j)
+       dens = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
+       pres_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens * cz_org(2,i,j) * 0.5_RP ) &
+                       / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP ) &
+                       * Rdry * temp_org(1,i,j)
     end do
     end do
 
