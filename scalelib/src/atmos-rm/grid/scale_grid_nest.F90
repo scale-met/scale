@@ -323,9 +323,6 @@ contains
     integer :: parent_id
     integer, allocatable :: errcodes(:)
 
-    integer :: ims, ime
-    integer :: jms, jme
-
     character(len=2) :: dom_num
 
     logical :: flag_parent = .false.
@@ -445,22 +442,14 @@ contains
     if( USE_NESTING ) then
 
        if ( OFFLINE .OR. ONLINE_IAM_DAUGHTER ) then
-          ims = IS-1
-          ime = IE
-          jms = JS-1
-          jme = JE
-          if ( .NOT. PRC_HAS_W ) ims = 1
-          if ( .NOT. PRC_HAS_E ) ime = IA
-          if ( .NOT. PRC_HAS_S ) jms = 1
-          if ( .NOT. PRC_HAS_N ) jme = JA
-          corner_loc(I_NW,I_LON) = REAL_LONXY(ims,jme) / D2R
-          corner_loc(I_NE,I_LON) = REAL_LONXY(ime,jme) / D2R
-          corner_loc(I_SW,I_LON) = REAL_LONXY(ims,jms) / D2R
-          corner_loc(I_SE,I_LON) = REAL_LONXY(ime,jms) / D2R
-          corner_loc(I_NW,I_LAT) = REAL_LATXY(ims,jme) / D2R
-          corner_loc(I_NE,I_LAT) = REAL_LATXY(ime,jme) / D2R
-          corner_loc(I_SW,I_LAT) = REAL_LATXY(ims,jms) / D2R
-          corner_loc(I_SE,I_LAT) = REAL_LATXY(ime,jms) / D2R
+          corner_loc(I_NW,I_LON) = REAL_LONXY( 1,JA) / D2R
+          corner_loc(I_NE,I_LON) = REAL_LONXY(IA,JA) / D2R
+          corner_loc(I_SW,I_LON) = REAL_LONXY( 1, 1) / D2R
+          corner_loc(I_SE,I_LON) = REAL_LONXY(IA, 1) / D2R
+          corner_loc(I_NW,I_LAT) = REAL_LATXY( 1,JA) / D2R
+          corner_loc(I_NE,I_LAT) = REAL_LATXY(IA,JA) / D2R
+          corner_loc(I_SW,I_LAT) = REAL_LATXY( 1, 1) / D2R
+          corner_loc(I_SE,I_LAT) = REAL_LATXY(IA, 1) / D2R
 
           allocate( ncopy(IA,JA,itp_nh,itp_ng) )
        end if
