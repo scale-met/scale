@@ -142,6 +142,8 @@ module mod_realinput
   integer                  :: NUMBER_OF_TSTEPS    = 1    ! num of time steps in one file
   integer                  :: NUMBER_OF_SKIP_TSTEPS  = 0 ! num of skipped first several data
 
+  logical                  :: MAKE_BOUNDARY       = .true.    ! switch for making boundary file
+
   character(len=H_LONG)    :: FILETYPE_ORG        = ''
   character(len=H_LONG)    :: BASENAME_ORG        = ''
   logical                  :: BASENAME_ADD_NUM    = .false.
@@ -177,6 +179,7 @@ contains
          NUMBER_OF_FILES,        &
          NUMBER_OF_TSTEPS,       &
          NUMBER_OF_SKIP_TSTEPS,  &
+         MAKE_BOUNDARY,          &
          FILETYPE_ORG,           &
          BASENAME_ORG,           &
          BASENAME_ADD_NUM,       &
@@ -304,8 +307,13 @@ contains
                              mdlid,                   &
                              flg_bin, flg_intrp,      &
                              PARENT_MP_TYPE,          &
+                             MAKE_BOUNDARY,           &
                              NUMBER_OF_TSTEPS,        &
                              skip_steps               )
+
+       ! required one-step data only
+       if( .NOT. MAKE_BOUNDARY ) exit
+
     enddo
 
     !--- input initial data
@@ -327,17 +335,19 @@ contains
     enddo
 
     !--- output boundary data
-    totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
-    call ParentAtomBoundary( DENS_ORG(:,:,:,ns:ne),   &
-                             MOMZ_ORG(:,:,:,ns:ne),   &
-                             MOMX_ORG(:,:,:,ns:ne),   &
-                             MOMY_ORG(:,:,:,ns:ne),   &
-                             RHOT_ORG(:,:,:,ns:ne),   &
-                             QTRC_ORG(:,:,:,:,ns:ne), &
-                             totaltimesteps,          &
-                             BOUNDARY_UPDATE_DT,      &
-                             BASENAME_BOUNDARY,       &
-                             BOUNDARY_TITLE           )
+    if( MAKE_BOUNDARY ) then
+       totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
+       call ParentAtomBoundary( DENS_ORG(:,:,:,ns:ne),   &
+                                MOMZ_ORG(:,:,:,ns:ne),   &
+                                MOMX_ORG(:,:,:,ns:ne),   &
+                                MOMY_ORG(:,:,:,ns:ne),   &
+                                RHOT_ORG(:,:,:,ns:ne),   &
+                                QTRC_ORG(:,:,:,:,ns:ne), &
+                                totaltimesteps,          &
+                                BOUNDARY_UPDATE_DT,      &
+                                BASENAME_BOUNDARY,       &
+                                BOUNDARY_TITLE           )
+    end if
 
     deallocate( dens_org )
     deallocate( momz_org )
@@ -420,6 +430,7 @@ contains
          NUMBER_OF_FILES,        &
          NUMBER_OF_TSTEPS,       &
          NUMBER_OF_SKIP_TSTEPS,  &
+         MAKE_BOUNDARY,          &
          FILETYPE_ORG,           &
          BASENAME_ORG,           &
          BASENAME_ADD_NUM,       &
@@ -437,6 +448,7 @@ contains
          NUMBER_OF_FILES,        &
          NUMBER_OF_TSTEPS,       &
          NUMBER_OF_SKIP_TSTEPS,  &
+         MAKE_BOUNDARY,          &
          FILETYPE_ORG,           &
          BASENAME_ORG,           &
          BASENAME_ADD_NUM,       &
@@ -661,8 +673,12 @@ contains
                                 INTRP_ITER_MAX,          &
                                 SOILWATER_DS2VC_flag,    &
                                 elevation_collection,    &
+                                MAKE_BOUNDARY,           &
                                 NUMBER_OF_TSTEPS,        &
                                 skip_steps, lit          )
+
+       ! required one-step data only
+       if( .NOT. MAKE_BOUNDARY ) exit
 
     enddo
 
@@ -732,22 +748,24 @@ contains
 
 
     !--- output boundary data
-    totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
-    if ( totaltimesteps > 1 ) then
-       if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
-          write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
-          call PRC_MPIstop
-       endif
+    if( MAKE_BOUNDARY ) then
+       totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
+       if ( totaltimesteps > 1 ) then
+          if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
+             write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
+             call PRC_MPIstop
+          endif
 
-       call ParentOceanBoundary( OCEAN_TEMP_ORG(:,:,ns:ne),         &
-                                 OCEAN_SFC_TEMP_ORG(:,:,ns:ne),     &
-                                 OCEAN_SFC_albedo_ORG(:,:,:,ns:ne), &
-                                 OCEAN_SFC_Z0_ORG(:,:,ns:ne),       &
-                                 totaltimesteps,     &
-                                 BOUNDARY_UPDATE_DT, &
-                                 BASENAME_BOUNDARY,  &
-                                 BOUNDARY_TITLE      )
+          call ParentOceanBoundary( OCEAN_TEMP_ORG(:,:,ns:ne),         &
+                                    OCEAN_SFC_TEMP_ORG(:,:,ns:ne),     &
+                                    OCEAN_SFC_albedo_ORG(:,:,:,ns:ne), &
+                                    OCEAN_SFC_Z0_ORG(:,:,ns:ne),       &
+                                    totaltimesteps,     &
+                                    BOUNDARY_UPDATE_DT, &
+                                    BASENAME_BOUNDARY,  &
+                                    BOUNDARY_TITLE      )
 
+       end if
     end if
 
     deallocate( ocean_temp_org )
@@ -907,6 +925,7 @@ contains
       flg_bin,          &
       flg_intrp,        &
       mptype_parent,    &
+      boundary_flag,    &
       timelen,          &
       skiplen           )
     use scale_comm, only: &
@@ -956,6 +975,7 @@ contains
     logical,          intent(in)  :: flg_bin          ! flag for SBM(S10) is used or not 0-> not used, 1-> used
     logical,          intent(in)  :: flg_intrp        ! flag for interpolation of SBM(S10) from outer bulk-MP model
     integer,          intent(in)  :: mptype_parent    ! microphysics type of the parent model (number of classes)
+    logical,          intent(in)  :: boundary_flag    ! switch for making boundary file
     integer,          intent(in)  :: timelen          ! time steps in one file
     integer,          intent(in)  :: skiplen          ! skip steps
 
@@ -1339,6 +1359,9 @@ contains
 
        call COMM_wait ( momx(:,:,:,nn), 1, .false. )
        call COMM_wait ( momy(:,:,:,nn), 2, .false. )
+
+       ! required one-step data only
+       if( .NOT. boundary_flag ) exit
 
     end do
 
@@ -1785,6 +1808,7 @@ contains
        intrp_iter_max, &
        soilwater_ds2vc_flag, &
        elevation_collection, &
+       boundary_flag,        &
        timelen,          &
        skiplen, &
        lit )
@@ -1860,6 +1884,7 @@ contains
     integer,          intent(in)  :: intrp_iter_max
     logical,          intent(in)  :: soilwater_ds2vc_flag
     logical,          intent(in)  :: elevation_collection
+    logical,          intent(in)  :: boundary_flag    ! switch for making boundary file
     integer,          intent(in)  :: timelen          ! time steps in one file
     integer,          intent(in)  :: skiplen          ! skip steps
     integer,          intent(in)  :: lit
@@ -2231,8 +2256,10 @@ contains
 
        end if
 
-
        first = .false.
+
+       ! required one-step data only
+       if( .NOT. boundary_flag ) exit
 
     end do ! time loop
 
