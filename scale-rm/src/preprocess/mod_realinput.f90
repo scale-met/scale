@@ -1578,7 +1578,7 @@ contains
        lmdlid = iWRFARW
        if ( do_read_land ) call ParentLandSetupWRFARW( ldims,        & ! (out)
                                                        basename_land ) ! (in)
-       use_waterratio = .true.
+       use_waterratio = .false.
 
     case('NICAM-NETCDF')
 
@@ -1922,7 +1922,7 @@ contains
           case( iWRFARW ) ! TYPE: WRF-ARW
 
              call ParentLandInputWRFARW( &
-                  tg_org, smds_org,           & ! (out)
+                  tg_org, strg_org,           & ! (out)
                   lst_org, ust_org, albg_org, & ! (out)
                   topo_org, lmask_org,        & ! (out)
                   llon_org, llat_org, lz_org, & ! (out)
