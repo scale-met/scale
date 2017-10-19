@@ -1972,6 +1972,7 @@ contains
           call COMM_bcast( lmask_org, ldims(2), ldims(3) )
           call COMM_bcast( llon_org, ldims(2), ldims(3) )
           call COMM_bcast( llat_org, ldims(2), ldims(3) )
+          call COMM_bcast( lz_org, ldims(1) )
        end if
 
 
