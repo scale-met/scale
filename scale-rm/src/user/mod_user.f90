@@ -212,21 +212,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Resuming operation, before calculating tendency
   subroutine USER_resume0
-    implicit none
-    !---------------------------------------------------------------------------
-
-    ! If you need, calculate first step and put diagnostic value to history buffer.
-    ! USER_resume0 calls before setup of Atmos/Ocean/Land/Urban submodels.
-    ! All variables are set before surface coupling.
-
-    !call USER_step
-
-    return
-  end subroutine USER_resume0
-
-  !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
     use scale_const, only: &
          I_SW  => CONST_I_SW, &
          I_LW  => CONST_I_LW
@@ -262,8 +247,8 @@ contains
     !---------------------------------------------------------------------------
 
     ! If you need, calculate first step and put diagnostic value to history buffer.
-    ! USER_resume calls after setup of Atmos/Ocean/Land/Urban submodels.
-    ! All variables are set after surface coupling.
+    ! USER_resume0 calls before setup of Atmos/Ocean/Land/Urban submodels.
+    ! All variables are set before surface coupling.
 
     !call USER_step
 
@@ -405,6 +390,21 @@ contains
        call FILEIO_read( OCEAN_SFLX_evap(:,:),                                      & ! [OUT]
                          OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_evap', 'XY', step=1 ) ! [IN]
     endif
+
+    return
+  end subroutine USER_resume0
+
+  !-----------------------------------------------------------------------------
+  !> Resuming operation
+  subroutine USER_resume
+    implicit none
+    !---------------------------------------------------------------------------
+
+    ! If you need, calculate first step and put diagnostic value to history buffer.
+    ! USER_resume calls after setup of Atmos/Ocean/Land/Urban submodels.
+    ! All variables are set after surface coupling.
+
+    !call USER_step
 
     return
   end subroutine USER_resume
