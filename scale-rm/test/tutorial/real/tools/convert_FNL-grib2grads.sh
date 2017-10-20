@@ -25,6 +25,11 @@ total_sec ()
     MIN=${BASH_REMATCH[5]}
     SEC=${BASH_REMATCH[6]}
 
+    if [ $MON -le 2 ]; then
+      YEAR=$(expr $YEAR - 1)
+      MON=$(expr $MON + 12)
+    fi
+
     TOTAL_DAYS=$(expr 365 \* \( $YEAR - 1 \) + $YEAR / 4 - $YEAR / 100 + $YEAR / 400 + 31 + 28 + 306 \* \( $MON + 1 \) / 10 - 122 + $DAY)
     TOTAL_SEC=$(expr $TOTAL_DAYS \* 24 \* 60 \* 60 + $HOUR \* 3600 + $MIN \* 60 + $SEC)
     echo $TOTAL_SEC
@@ -37,7 +42,7 @@ unix_time ()
   local DATETIME=$1
 
   # origin of unix time
-  EPOCH=$(total_sec "1969-13-01 00:00:00")
+  EPOCH=$(total_sec "1970-01-01 00:00:00")
 
   TOTAL_SEC_NOW=$(total_sec "$DATETIME")
   UNIX_NOW=$(expr $TOTAL_SEC_NOW - $EPOCH)
