@@ -2545,7 +2545,7 @@ contains
     integer  :: i, j, n
     logical  :: nohalo_
     integer  :: rankidx(2)
-    integer  :: start(3) ! used only when IO_AGGREGATE is .true.
+    integer  :: start(2) ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2711,7 +2711,7 @@ contains
     logical  :: nohalo_
     real(DP) :: timeofs_
     integer  :: rankidx(2)
-    integer  :: start(4) ! used only when IO_AGGREGATE is .true.
+    integer  :: start(3) ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
