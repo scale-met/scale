@@ -59,9 +59,9 @@ module mod_realinput
   !
   !++ Private procedure
   !
-  private :: ParentAtomSetup
-  private :: ParentAtomOpen
-  private :: ParentAtomInput
+  private :: ParentAtmosSetup
+  private :: ParentAtmosOpen
+  private :: ParentAtmosInput
   private :: BoundaryAtmosSetup
   private :: BoundaryAtmosOutput
 
@@ -252,12 +252,12 @@ contains
        endif
     endif
 
-    call ParentAtomSetup( FILETYPE_ORG,     & ![IN]
-                          basename_mod,     & ![IN]
-                          SERIAL_PROC_READ, & ![IN]
-                          USE_FILE_DENSITY, & ![IN]
-                          dims(:),          & ![OUT]
-                          timelen           ) ![OUT]
+    call ParentAtmosSetup( FILETYPE_ORG,     & ![IN]
+                           basename_mod,     & ![IN]
+                           SERIAL_PROC_READ, & ![IN]
+                           USE_FILE_DENSITY, & ![IN]
+                           dims(:),          & ![OUT]
+                           timelen           ) ![OUT]
 
     if ( timelen > 0 ) then
        NUMBER_OF_TSTEPS = timelen ! read from file
@@ -288,9 +288,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** read external data from : ', trim(basename_mod)
 
-       call ParentAtomOpen( FILETYPE_ORG, & ![IN]
-                            basename_mod, & ![IN]
-                            dims(:)       ) ![IN]
+       call ParentAtmosOpen( FILETYPE_ORG, & ![IN]
+                             basename_mod, & ![IN]
+                             dims(:)       ) ![IN]
 
        do istep = 1, NUMBER_OF_TSTEPS
 
@@ -309,24 +309,24 @@ contains
                         '*** [file,step,cons.] = [', ifile, ',', istep, ',', t, ']'
 
              ! read prepared data
-             call ParentAtomInput( FILETYPE_ORG,      & ! [IN]
-                                   basename_mod,      & ! [IN]
-                                   dims(:),           & ! [IN]
-                                   istep,             & ! [IN]
-                                   PARENT_MP_TYPE,    & ! [IN]
-                                   QA_MP,             & ! [IN]
-                                   flg_bin,           & ! [IN]
-                                   flg_bin_intrp,     & ! [IN]
-                                   DENS_org(:,:,:),   & ! [OUT]
-                                   MOMZ_org(:,:,:),   & ! [OUT]
-                                   MOMX_org(:,:,:),   & ! [OUT]
-                                   MOMY_org(:,:,:),   & ! [OUT]
-                                   RHOT_org(:,:,:),   & ! [OUT]
-                                   QTRC_org(:,:,:,:), & ! [OUT]
-                                   VELZ_org(:,:,:),   & ! [OUT]
-                                   VELX_org(:,:,:),   & ! [OUT]
-                                   VELY_org(:,:,:),   & ! [OUT]
-                                   POTT_org(:,:,:)    ) ! [OUT]
+             call ParentAtmosInput( FILETYPE_ORG,      & ! [IN]
+                                    basename_mod,      & ! [IN]
+                                    dims(:),           & ! [IN]
+                                    istep,             & ! [IN]
+                                    PARENT_MP_TYPE,    & ! [IN]
+                                    QA_MP,             & ! [IN]
+                                    flg_bin,           & ! [IN]
+                                    flg_bin_intrp,     & ! [IN]
+                                    DENS_org(:,:,:),   & ! [OUT]
+                                    MOMZ_org(:,:,:),   & ! [OUT]
+                                    MOMX_org(:,:,:),   & ! [OUT]
+                                    MOMY_org(:,:,:),   & ! [OUT]
+                                    RHOT_org(:,:,:),   & ! [OUT]
+                                    QTRC_org(:,:,:,:), & ! [OUT]
+                                    VELZ_org(:,:,:),   & ! [OUT]
+                                    VELX_org(:,:,:),   & ! [OUT]
+                                    VELY_org(:,:,:),   & ! [OUT]
+                                    POTT_org(:,:,:)    ) ! [OUT]
           else
              if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,I5,A,I6,A)') &
                         '*** [file,step,cons.] = [', ifile, ',', istep, ',', t, '] ...skip.'
@@ -362,15 +362,15 @@ contains
 
           !--- output boundary data
           if ( MAKE_BOUNDARY ) then
-             call BoundaryAtmosOutput( DENS_org(:,:,:),    & ! [IN]
-                                       VELZ_org(:,:,:),    & ! [IN]
-                                       VELX_org(:,:,:),    & ! [IN]
-                                       VELY_org(:,:,:),    & ! [IN]
-                                       POTT_org(:,:,:),    & ! [IN]
-                                       QTRC_org(:,:,:,:),  & ! [IN]
-                                       fid_atmos,          & ! [IN]
-                                       vid_atmos(:),       & ! [IN]
-                                       BOUNDARY_UPDATE_DT, & ! [IN]
+             call BoundaryAtmosOutput( DENS_org(:,:,:),        & ! [IN]
+                                       VELZ_org(:,:,:),        & ! [IN]
+                                       VELX_org(:,:,:),        & ! [IN]
+                                       VELY_org(:,:,:),        & ! [IN]
+                                       POTT_org(:,:,:),        & ! [IN]
+                                       QTRC_org(:,:,:,:),      & ! [IN]
+                                       fid_atmos,              & ! [IN]
+                                       vid_atmos(:),           & ! [IN]
+                                       BOUNDARY_UPDATE_DT,     & ! [IN]
                                        t-NUMBER_OF_SKIP_TSTEPS ) ! [IN]
           endif
 
@@ -800,7 +800,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Atmos Setup
-  subroutine ParentAtomSetup( &
+  subroutine ParentAtmosSetup( &
        inputtype,           &
        basename,            &
        serial_in,           &
@@ -813,13 +813,13 @@ contains
        iNICAM, &
        iGrADS
     use mod_realinput_scale, only: &
-       ParentAtomSetupSCALE
+       ParentAtmosSetupSCALE
     use mod_realinput_wrfarw, only: &
-       ParentAtomSetupWRFARW
+       ParentAtmosSetupWRFARW
     use mod_realinput_nicam, only: &
-       ParentAtomSetupNICAM
+       ParentAtmosSetupNICAM
     use mod_realinput_grads, only: &
-       ParentAtomSetupGrADS
+       ParentAtmosSetupGrADS
     implicit none
 
     character(len=*), intent(in)  :: inputtype
@@ -847,7 +847,7 @@ contains
        serial_atmos         = .false. ! force false
        read_by_myproc_atmos = .true.
 
-       call ParentAtomSetupSCALE( dims(:) ) ! [OUT]
+       call ParentAtmosSetupSCALE( dims(:) ) ! [OUT]
        timelen = -1
 
        use_file_density = use_file_density_in
@@ -858,8 +858,8 @@ contains
     case('GrADS')
 
        if ( read_by_myproc_atmos ) then
-          call ParentAtomSetupGrADS ( dims(:), & ! [OUT]
-                                      basename ) ! [IN]
+          call ParentAtmosSetupGrADS ( dims(:), & ! [OUT]
+                                       basename ) ! [IN]
        endif
        timelen = -1
 
@@ -871,9 +871,9 @@ contains
     case('WRF-ARW')
 
        if ( read_by_myproc_atmos ) then
-          call ParentAtomSetupWRFARW( dims(:), & ! [OUT]
-                                      timelen, & ! [OUT]
-                                      basename ) ! [IN]
+          call ParentAtmosSetupWRFARW( dims(:), & ! [OUT]
+                                       timelen, & ! [OUT]
+                                       basename ) ! [IN]
        endif
 
        use_file_density = .false.
@@ -884,9 +884,9 @@ contains
     case('NETCDF')
 
        if ( read_by_myproc_atmos ) then
-          call ParentAtomSetupNICAM ( dims(:), & ! [OUT]
-                                      timelen, & ! [OUT]
-                                      basename ) ! [IN]
+          call ParentAtmosSetupNICAM ( dims(:), & ! [OUT]
+                                       timelen, & ! [OUT]
+                                       basename ) ! [IN]
        endif
 
        use_file_density = .false.
@@ -931,22 +931,22 @@ contains
     allocate( ncopy(     IA, JA, itp_nh         ) )
 
     return
-  end subroutine ParentAtomSetup
+  end subroutine ParentAtmosSetup
 
   !-----------------------------------------------------------------------------
   !> Atmosphere Data Open
-  subroutine ParentAtomOpen( &
+  subroutine ParentAtmosOpen( &
        inputtype, &
        basename,  &
        dims       )
     use mod_realinput_scale, only: &
-       ParentAtomOpenSCALE
+       ParentAtmosOpenSCALE
     use mod_realinput_wrfarw, only: &
-       ParentAtomOpenWRFARW
+       ParentAtmosOpenWRFARW
     use mod_realinput_nicam, only: &
-       ParentAtomOpenNICAM
+       ParentAtmosOpenNICAM
     use mod_realinput_grads, only: &
-       ParentAtomOpenGrADS
+       ParentAtmosOpenGrADS
     implicit none
 
     character(len=*), intent(in)  :: inputtype
@@ -958,31 +958,31 @@ contains
 
        select case(inputtype)
        case('SCALE-RM')
-          call ParentAtomOpenSCALE( LON_org(:,:),   & ! [OUT]
-                                    LAT_org(:,:),   & ! [OUT]
-                                    CZ_org (:,:,:), & ! [OUT]
-                                    basename,       & ! [IN]
-                                    dims   (:)      ) ! [IN]
+          call ParentAtmosOpenSCALE( LON_org(:,:),   & ! [OUT]
+                                     LAT_org(:,:),   & ! [OUT]
+                                     CZ_org (:,:,:), & ! [OUT]
+                                     basename,       & ! [IN]
+                                     dims   (:)      ) ! [IN]
        case('GrADS')
-          call ParentAtomOpenGrADS
+          call ParentAtmosOpenGrADS
        case('WRF-ARW')
-          call ParentAtomOpenWRFARW
+          call ParentAtmosOpenWRFARW
        case('NETCDF')
-          call ParentAtomOpenSCALE( LON_org(:,:),   & ! [OUT]
-                                    LAT_org(:,:),   & ! [OUT]
-                                    CZ_org (:,:,:), & ! [OUT]
-                                    basename,       & ! [IN]
-                                    dims   (:)      ) ! [IN]
+          call ParentAtmosOpenSCALE( LON_org(:,:),   & ! [OUT]
+                                     LAT_org(:,:),   & ! [OUT]
+                                     CZ_org (:,:,:), & ! [OUT]
+                                     basename,       & ! [IN]
+                                     dims   (:)      ) ! [IN]
        end select
 
     endif
 
     return
-  end subroutine ParentAtomOpen
+  end subroutine ParentAtmosOpen
 
   !-----------------------------------------------------------------------------
   !> Atmosphere Data Read
-  subroutine ParentAtomInput( &
+  subroutine ParentAtmosInput( &
        inputtype,     &
        basename,      &
        dims,          &
@@ -1021,13 +1021,13 @@ contains
        INTRPNEST_interp_fact_llz,      &
        INTRPNEST_interp_3d
     use mod_realinput_scale, only: &
-       ParentAtomInputSCALE
+       ParentAtmosInputSCALE
     use mod_realinput_wrfarw, only: &
-       ParentAtomInputWRFARW
+       ParentAtmosInputWRFARW
     use mod_realinput_nicam, only: &
-       ParentAtomInputNICAM
+       ParentAtmosInputNICAM
     use mod_realinput_grads, only: &
-       ParentAtomInputGrADS
+       ParentAtmosInputGrADS
     implicit none
 
     character(len=*), intent(in)  :: inputtype
@@ -1065,59 +1065,59 @@ contains
 
        select case(inputtype)
        case('SCALE-RM')
-          call ParentAtomInputSCALE ( VELZ_org(:,:,:),   & ! [OUT]
-                                      VELX_org(:,:,:),   & ! [OUT]
-                                      VELY_org(:,:,:),   & ! [OUT]
-                                      PRES_org(:,:,:),   & ! [OUT]
-                                      DENS_org(:,:,:),   & ! [OUT]
-                                      POTT_org(:,:,:),   & ! [OUT]
-                                      QTRC_org(:,:,:,:), & ! [OUT]
-                                      CZ_org  (:,:,:),   & ! [IN]
-                                      flg_bin,           & ! [IN]
-                                      flg_bin_intrp,     & ! [IN]
-                                      basename,          & ! [IN]
-                                      mptype_org,        & ! [IN]
-                                      dims(:),           & ! [IN]
-                                      istep              ) ! [IN]
+          call ParentAtmosInputSCALE ( VELZ_org(:,:,:),   & ! [OUT]
+                                       VELX_org(:,:,:),   & ! [OUT]
+                                       VELY_org(:,:,:),   & ! [OUT]
+                                       PRES_org(:,:,:),   & ! [OUT]
+                                       DENS_org(:,:,:),   & ! [OUT]
+                                       POTT_org(:,:,:),   & ! [OUT]
+                                       QTRC_org(:,:,:,:), & ! [OUT]
+                                       CZ_org  (:,:,:),   & ! [IN]
+                                       flg_bin,           & ! [IN]
+                                       flg_bin_intrp,     & ! [IN]
+                                       basename,          & ! [IN]
+                                       mptype_org,        & ! [IN]
+                                       dims(:),           & ! [IN]
+                                       istep              ) ! [IN]
        case('GrADS')
-          call ParentAtomInputGrADS ( VELZ_org(:,:,:),   & ! [OUT]
-                                      VELX_org(:,:,:),   & ! [OUT]
-                                      VELY_org(:,:,:),   & ! [OUT]
-                                      PRES_org(:,:,:),   & ! [OUT]
-                                      DENS_org(:,:,:),   & ! [OUT]
-                                      TEMP_org(:,:,:),   & ! [OUT]
-                                      QTRC_org(:,:,:,:), & ! [OUT]
-                                      LON_org (:,:),     & ! [OUT]
-                                      LAT_org (:,:),     & ! [OUT]
-                                      CZ_org  (:,:,:),   & ! [OUT]
-                                      basename,          & ! [IN]
-                                      dims(:),           & ! [IN]
-                                      istep              ) ! [IN]
+          call ParentAtmosInputGrADS ( VELZ_org(:,:,:),   & ! [OUT]
+                                       VELX_org(:,:,:),   & ! [OUT]
+                                       VELY_org(:,:,:),   & ! [OUT]
+                                       PRES_org(:,:,:),   & ! [OUT]
+                                       DENS_org(:,:,:),   & ! [OUT]
+                                       TEMP_org(:,:,:),   & ! [OUT]
+                                       QTRC_org(:,:,:,:), & ! [OUT]
+                                       LON_org (:,:),     & ! [OUT]
+                                       LAT_org (:,:),     & ! [OUT]
+                                       CZ_org  (:,:,:),   & ! [OUT]
+                                       basename,          & ! [IN]
+                                       dims(:),           & ! [IN]
+                                       istep              ) ! [IN]
        case('WRF-ARW')
-          call ParentAtomInputWRFARW( VELZ_org(:,:,:),   & ! [OUT]
-                                      VELX_org(:,:,:),   & ! [OUT]
-                                      VELY_org(:,:,:),   & ! [OUT]
-                                      PRES_org(:,:,:),   & ! [OUT]
-                                      TEMP_org(:,:,:),   & ! [OUT]
-                                      QTRC_org(:,:,:,:), & ! [OUT]
-                                      LON_org (:,:),     & ! [OUT]
-                                      LAT_org (:,:),     & ! [OUT]
-                                      CZ_org  (:,:,:),   & ! [OUT]
-                                      basename,          & ! [IN]
-                                      mptype_org,        & ! [IN]
-                                      dims(:),           & ! [IN]
-                                      istep              ) ! [IN]
+          call ParentAtmosInputWRFARW( VELZ_org(:,:,:),   & ! [OUT]
+                                       VELX_org(:,:,:),   & ! [OUT]
+                                       VELY_org(:,:,:),   & ! [OUT]
+                                       PRES_org(:,:,:),   & ! [OUT]
+                                       TEMP_org(:,:,:),   & ! [OUT]
+                                       QTRC_org(:,:,:,:), & ! [OUT]
+                                       LON_org (:,:),     & ! [OUT]
+                                       LAT_org (:,:),     & ! [OUT]
+                                       CZ_org  (:,:,:),   & ! [OUT]
+                                       basename,          & ! [IN]
+                                       mptype_org,        & ! [IN]
+                                       dims(:),           & ! [IN]
+                                       istep              ) ! [IN]
           DENS_org(:,:,:) = 0.0_RP
        case('NETCDF')
-          call ParentAtomInputNICAM ( VELZ_org(:,:,:),   & ! [OUT]
-                                      VELX_org(:,:,:),   & ! [OUT]
-                                      VELY_org(:,:,:),   & ! [OUT]
-                                      PRES_org(:,:,:),   & ! [OUT]
-                                      TEMP_org(:,:,:),   & ! [OUT]
-                                      QTRC_org(:,:,:,:), & ! [OUT]
-                                      basename,          & ! [IN]
-                                      dims(:),           & ! [IN]
-                                      istep              ) ! [IN]
+          call ParentAtmosInputNICAM ( VELZ_org(:,:,:),   & ! [OUT]
+                                       VELX_org(:,:,:),   & ! [OUT]
+                                       VELY_org(:,:,:),   & ! [OUT]
+                                       PRES_org(:,:,:),   & ! [OUT]
+                                       TEMP_org(:,:,:),   & ! [OUT]
+                                       QTRC_org(:,:,:,:), & ! [OUT]
+                                       basename,          & ! [IN]
+                                       dims(:),           & ! [IN]
+                                       istep              ) ! [IN]
           DENS_org(:,:,:) = 0.0_RP
        end select
 
@@ -1402,7 +1402,7 @@ contains
     call COMM_wait ( MOMY(:,:,:), 2, .false. )
 
     return
-  end subroutine ParentAtomInput
+  end subroutine ParentAtmosInput
 
   !-----------------------------------------------------------------------------
   !> Boundary Data Write

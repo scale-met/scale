@@ -31,9 +31,9 @@ module mod_realinput_nicam
   !
   !++ Public procedure
   !
-  public :: ParentAtomSetupNICAM
-  public :: ParentAtomOpenNICAM
-  public :: ParentAtomInputNICAM
+  public :: ParentAtmosSetupNICAM
+  public :: ParentAtmosOpenNICAM
+  public :: ParentAtmosInputNICAM
   public :: ParentLandSetupNICAM
   public :: ParentLandInputNICAM
   public :: ParentOceanSetupNICAM
@@ -70,7 +70,7 @@ module mod_realinput_nicam
 contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
-  subroutine ParentAtomSetupNICAM( &
+  subroutine ParentAtmosSetupNICAM( &
       dims,    &
       timelen, &
       basename_org )
@@ -87,7 +87,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: NICAM-NETCDF'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: NICAM-NETCDF'
     basename = "ms_pres"//trim(basename_org)
     call FileGetShape( dims_ncm(:), trim(basename), "ms_pres", 1, single=.true. )
     timelen = dims_ncm(4)
@@ -109,10 +109,10 @@ contains
     allocate( read4D ( dims(1), dims(2), dims(3), 1 ) )
 
     return
-  end subroutine ParentAtomSetupNICAM
+  end subroutine ParentAtmosSetupNICAM
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomOpenNICAM( &
+  subroutine ParentAtmosOpenNICAM( &
        lon_org,      &
        lat_org,      &
        cz_org,       &
@@ -136,7 +136,7 @@ contains
 
     integer :: k, i, j
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomOpenNICAM]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenNICAM]'
 
     basename = "ms_pres"//trim(basename_num)
     call FileRead( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
@@ -173,10 +173,10 @@ contains
     enddo
 
     return
-  end subroutine ParentAtomOpenNICAM
+  end subroutine ParentAtmosOpenNICAM
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomInputNICAM( &
+  subroutine ParentAtmosInputNICAM( &
        velz_org,     &
        velx_org,     &
        vely_org,     &
@@ -222,7 +222,7 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputNICAM]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosInputNICAM]'
 
     !> [scale-offset]
     basename = "ms_u"//trim(basename_num)
@@ -333,7 +333,7 @@ contains
 
 
     return
-  end subroutine ParentAtomInputNICAM
+  end subroutine ParentAtmosInputNICAM
 
   !-----------------------------------------------------------------------------
   !> Land Setup

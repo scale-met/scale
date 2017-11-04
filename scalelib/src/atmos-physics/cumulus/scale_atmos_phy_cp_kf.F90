@@ -2724,7 +2724,7 @@ contains
           downdet(kk) = downdet2(kk)*ainc
        end do
     end if
-    !! theta set up by Emanuel Atomospheric convection, 1994 111p
+    !! theta set up by Emanuel Atmospheric convection, 1994 111p
     !! original KF theta is calced  apploximatly.
     do kk = KS,k_top
        call calcexn(pres(kk),qv(kk),exn(kk))

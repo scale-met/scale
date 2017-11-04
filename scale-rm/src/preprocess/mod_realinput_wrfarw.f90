@@ -31,9 +31,9 @@ module mod_realinput_wrfarw
   !
   !++ Public procedure
   !
-  public :: ParentAtomSetupWRFARW
-  public :: ParentAtomOpenWRFARW
-  public :: ParentAtomInputWRFARW
+  public :: ParentAtmosSetupWRFARW
+  public :: ParentAtmosOpenWRFARW
+  public :: ParentAtmosInputWRFARW
   public :: ParentLandSetupWRFARW
   public :: ParentLandInputWRFARW
   public :: ParentOceanSetupWRFARW
@@ -85,7 +85,7 @@ module mod_realinput_wrfarw
 contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
-  subroutine ParentAtomSetupWRFARW( &
+  subroutine ParentAtmosSetupWRFARW( &
       dims,    &
       timelen, &
       basename_org )
@@ -107,7 +107,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: WRF-ARW'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -144,18 +144,18 @@ contains
     allocate( phb_org  (dims(4),dims(2),dims(3)) )
 
     return
-  end subroutine ParentAtomSetupWRFARW
+  end subroutine ParentAtmosSetupWRFARW
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomOpenWRFARW
+  subroutine ParentAtmosOpenWRFARW
     implicit none
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomOpenWRFARW]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenWRFARW]'
     return
-  end subroutine ParentAtomOpenWRFARW
+  end subroutine ParentAtmosOpenWRFARW
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomInputWRFARW( &
+  subroutine ParentAtmosInputWRFARW( &
        velz_org,      &
        llvelx_org,    &
        llvely_org,    &
@@ -437,7 +437,7 @@ contains
 #endif
 
     return
-  end subroutine ParentAtomInputWRFARW
+  end subroutine ParentAtmosInputWRFARW
 
   !-----------------------------------------------------------------------------
   !> Land Setup
@@ -462,7 +462,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: WRF-ARW'
 
     !--- read namelist
     rewind(IO_FID_CONF)
