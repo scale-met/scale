@@ -17,9 +17,18 @@ module mod_realinput
   !
   use scale_precision
   use scale_stdio
+  use scale_prof
   use scale_grid_index
   use scale_land_grid_index
   use scale_urban_grid_index
+  use scale_index
+  use scale_tracer
+
+  use scale_process, only: &
+     PRC_IsMaster, &
+     PRC_MPIstop
+  use scale_comm, only: &
+     COMM_bcast
   use scale_grid_real, only: &
      LON  => REAL_LON,  &
      LAT  => REAL_LAT,  &
@@ -29,18 +38,11 @@ module mod_realinput
      FZ   => REAL_FZ
   use scale_grid_nest, only: &
      NEST_INTERP_LEVEL
-  use scale_index
-  use scale_tracer
-  use scale_process, only: &
-     PRC_IsMaster, &
-     PRC_MPIstop
   use scale_external_io, only: &
      iSCALE, &
      iWRFARW, &
      iNICAM, &
      iGrADS
-  use scale_comm, only: &
-     COMM_bcast
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -1062,6 +1064,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( read_by_myproc_atmos ) then
+       call PROF_rapstart('___AtmosInput',3)
 
        select case(inputtype)
        case('SCALE-RM')
@@ -1137,9 +1140,12 @@ contains
           enddo
        endif
 
+       call PROF_rapend  ('___AtmosInput',3)
     endif ! read by this process?
 
     if ( serial_atmos ) then
+       call PROF_rapstart('___AtmosBcast',3)
+
        if ( first .OR. update_coord ) then
           call COMM_bcast( LON_org,            dims(2), dims(3) )
           call COMM_bcast( LAT_org,            dims(2), dims(3) )
@@ -1153,6 +1159,8 @@ contains
        call COMM_bcast( PRES_org, dims(1)+2, dims(2), dims(3) )
        call COMM_bcast( DENS_org, dims(1)+2, dims(2), dims(3) )
        call COMM_bcast( QTRC_org, dims(1)+2, dims(2), dims(3), QA )
+
+       call PROF_rapend  ('___AtmosBcast',3)
     endif
 
     if ( mptype == 11 .AND. mptype_org <= 6 ) then
@@ -1171,6 +1179,7 @@ contains
     enddo
 
     ! interpolation
+    call PROF_rapstart('___AtmosInterp',3)
 
     if ( first .OR. update_coord ) then
        first = .false.
@@ -1401,6 +1410,8 @@ contains
     call COMM_wait ( MOMX(:,:,:), 1, .false. )
     call COMM_wait ( MOMY(:,:,:), 2, .false. )
 
+    call PROF_rapend  ('___AtmosInterp',3)
+
     return
   end subroutine ParentAtmosInput
 
@@ -1490,16 +1501,23 @@ contains
     integer  :: iq
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('___AtmosOutput',3)
+
     timeofs = real(istep-1,kind=DP) * timeintv
 
+!OCL XFILL
     work(:,:,:,1) = DENS(:,:,:)
     call FILEIO_write_var( fid, vid(1), work(:,:,:,:), 'DENS', 'ZXYT', timeintv, timeofs=timeofs )
+!OCL XFILL
     work(:,:,:,1) = VELZ(:,:,:)
     call FILEIO_write_var( fid, vid(2), work(:,:,:,:), 'VELZ', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZHXY
+!OCL XFILL
     work(:,:,:,1) = VELX(:,:,:)
     call FILEIO_write_var( fid, vid(3), work(:,:,:,:), 'VELX', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZXHY
+!OCL XFILL
     work(:,:,:,1) = VELY(:,:,:)
     call FILEIO_write_var( fid, vid(4), work(:,:,:,:), 'VELY', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZXYH
+!OCL XFILL
     work(:,:,:,1) = POTT(:,:,:)
     call FILEIO_write_var( fid, vid(5), work(:,:,:,:), 'POTT', 'ZXYT', timeintv, timeofs=timeofs )
 
@@ -1507,6 +1525,8 @@ contains
        call FILEIO_write_var( fid, vid(5+iq),QTRC(:,:,:,iq:iq), TRACER_NAME(iq), &
                               'ZXYT', timeintv, timeofs=timeofs                  )
     enddo
+
+    call PROF_rapend  ('___AtmosOutput',3)
 
     return
   end subroutine BoundaryAtmosOutput
@@ -1930,6 +1950,8 @@ contains
 
        if ( do_read_land ) then
 
+          call PROF_rapstart('___SurfaceInput',3)
+
           select case( mdlid_land )
           case( iSCALE ) ! TYPE: SCALE-RM
 
@@ -1976,6 +1998,8 @@ contains
              albg_org = UNDEF
 
           end select
+
+          call PROF_rapend  ('___SurfaceInput',3)
 
        end if
 
@@ -2080,6 +2104,8 @@ contains
 
        if ( do_read_ocean ) then
 
+          call PROF_rapstart('___SurfaceInput',3)
+
           select case( mdlid_ocean )
           case( iSCALE ) ! TYPE: SCALE-RM
 
@@ -2123,9 +2149,12 @@ contains
 
           end select
 
+          call PROF_rapend  ('___SurfaceInput',3)
+
        end if
 
        if ( serial_ocean ) then
+          call PROF_rapstart('___SurfaceBcast',3)
           call COMM_bcast( tw_org, odims(1), odims(2) )
           call COMM_bcast( sst_org, odims(1), odims(2) )
           call COMM_bcast( albw_org(:,:,I_LW), odims(1), odims(2) )
@@ -2136,8 +2165,10 @@ contains
              call COMM_bcast( olon_org, odims(1), odims(2) )
              call COMM_bcast( olat_org, odims(1), odims(2) )
           end if
+          call PROF_rapend  ('___SurfaceBcast',3)
        end if
 
+       call PROF_rapstart('___SurfaceInterp',3)
 
        if ( first .or. update_coord ) then
 
@@ -2254,6 +2285,8 @@ contains
 
        first = .false.
 
+       call PROF_rapend  ('___SurfaceInterp',3)
+
        ! required one-step data only
        if( .NOT. boundary_flag ) exit
 
@@ -2299,6 +2332,8 @@ contains
     integer :: ts, te
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('___SurfaceOutput',3)
+
     ts = 1
     te = numsteps
 
@@ -2333,6 +2368,8 @@ contains
        call FILEIO_write_var( fid, vid(3), albw(:,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT', update_dt )
        call FILEIO_write_var( fid, vid(4), albw(:,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT', update_dt )
        call FILEIO_write_var( fid, vid(5), z0(:,:,ts:te),        'OCEAN_SFC_Z0',   'XYT', update_dt )
+
+    call PROF_rapend  ('___SurfaceOutput',3)
 
     return
   end subroutine ParentOceanBoundary

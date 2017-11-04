@@ -413,6 +413,8 @@ contains
       qv_sfc  (:,:,:) = CONST_UNDEF8
       qc_sfc  (:,:,:) = CONST_UNDEF8
 
+      call PROF_rapstart('_MkInit_main',3)
+
       if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
          if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
          call SBMAERO_setup
@@ -501,7 +503,11 @@ contains
 
       call tke_setup
 
+      call PROF_rapend  ('_MkInit_main',3)
+
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
+
+      call PROF_rapstart('_MkInit_restart',3)
 
       ! setup surface condition
       call OCEAN_SURFACE_SET( countup = .false. )
@@ -518,6 +524,8 @@ contains
       TIME_DOURBAN_restart = .TRUE.
       TIME_DOATMOS_restart = .TRUE.
       call ADMIN_restart_write
+
+      call PROF_rapend  ('_MkInit_restart',3)
 
     endif
 
@@ -5434,9 +5442,16 @@ contains
          REALINPUT_surface
     implicit none
 
+    call PROF_rapstart('__Real_Atmos',2)
+
     call REALINPUT_atmos( flg_intrp )
 
+    call PROF_rapend  ('__Real_Atmos',2)
+    call PROF_rapstart('__Real_Surface',2)
+
     call REALINPUT_surface
+
+    call PROF_rapend  ('__Real_Surface',2)
 
     call flux_setup
 

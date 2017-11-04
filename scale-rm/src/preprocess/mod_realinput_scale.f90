@@ -230,9 +230,6 @@ contains
     integer :: k, i, j, iq, iqa
     !---------------------------------------------------------------------------
 
-
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputSCALE]'
-
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
        rank = NEST_TILE_ID(i)
@@ -246,36 +243,44 @@ contains
        ye = PARENT_JMAX(handle) * yloc
 
        call FileRead( read2D(:,:), BASENAME_ORG, "T2", it, rank )
+!OCL XFILL
        tsfc_org(xs:xe,ys:ye) = read2D(:,:)
 
        call FileRead( read2D(:,:), BASENAME_ORG, "MSLP", it, rank )
+!OCL XFILL
        pres_org(1,xs:xe,ys:ye) = read2D(:,:)
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "DENS", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           dens_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMZ", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           momz_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMX", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           momx_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMY", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           momy_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "RHOT", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           rhot_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
+!OCL XFILL
        do iq = 1, QA
           qtrc_org(:,xs:xe,ys:ye,iq) = 0.0_RP
        end do
