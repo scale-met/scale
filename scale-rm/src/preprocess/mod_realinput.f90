@@ -371,7 +371,7 @@ contains
                                        fid_atmos,          & ! [IN]
                                        vid_atmos(:),       & ! [IN]
                                        BOUNDARY_UPDATE_DT, & ! [IN]
-                                       t                   ) ! [IN]
+                                       t-NUMBER_OF_SKIP_TSTEPS ) ! [IN]
           endif
 
        enddo ! istep loop
@@ -1269,11 +1269,6 @@ contains
           VELY(k,i,j) = work2(k,i,j)
        enddo
        enddo
-
-       call COMM_vars8( VELX(:,:,:), 1 )
-       call COMM_vars8( VELY(:,:,:), 2 )
-       call COMM_wait ( VELX(:,:,:), 1, .false. )
-       call COMM_wait ( VELY(:,:,:), 2, .false. )
     endif
 
     call COMM_vars8( VELZ(:,:,:), 1 )
