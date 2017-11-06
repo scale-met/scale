@@ -244,11 +244,11 @@ contains
        flg_bin = .false.
     endif
 
-    if ( FILETYPE_ORG == "GrADS" ) then
+    if ( FILETYPE_ORG == 'GrADS' ) then
        basename_mod = trim(BASENAME_ORG) ! namelist file name
     else
        if ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) then
-          basename_mod = trim(BASENAME_ORG)//"_00000"
+          basename_mod = trim(BASENAME_ORG)//'_00000'
        else
           basename_mod = trim(BASENAME_ORG)
        endif
@@ -278,11 +278,15 @@ contains
 
     do ifile = 1, NUMBER_OF_FILES
 
-       if ( FILETYPE_ORG == "GrADS" ) then
-          basename_mod = trim(BASENAME_ORG) ! namelist file name
+       if ( FILETYPE_ORG == 'GrADS' ) then
+          if ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) then
+             write(basename_mod,'(A,I5.5)') '_', ifile-1 ! only the number postfix
+          else
+             basename_mod = ''
+          endif
        else
           if ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) then
-             write(basename_mod,'(A,A,I5.5)') trim(BASENAME_ORG), "_", ifile-1
+             write(basename_mod,'(A,A,I5.5)') trim(BASENAME_ORG), '_', ifile-1
           else
              basename_mod = trim(BASENAME_ORG)
           endif
