@@ -778,7 +778,7 @@ contains
     if( MAKE_BOUNDARY ) then
        totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
        if ( totaltimesteps > 1 ) then
-          if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
+          if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
              write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
              call PRC_MPIstop
           endif
@@ -2325,7 +2325,7 @@ contains
     real(RP),         intent(in)   :: sst(:,:,:)
     real(RP),         intent(in)   :: albw(:,:,:,:)
     real(RP),         intent(in)   :: z0(:,:,:)
-    real(RP),         intent(in)   :: update_dt
+    real(DP),         intent(in)   :: update_dt
     character(len=*), intent(in)   :: basename
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps

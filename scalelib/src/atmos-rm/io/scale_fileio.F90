@@ -1227,7 +1227,7 @@ contains
     character(len=*), intent(in) :: unit       !< unit        of the variable
     character(len=*), intent(in) :: axistype   !< axis type (X/Y/Time)
     character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
-    real(RP),         intent(in) :: timeintv   !< time interval [sec]
+    real(DP),         intent(in) :: timeintv   !< time interval [sec]
     integer ,         intent(in) :: tsince(6)  !< start time
 
     logical,          intent(in), optional :: append   !< append existing (closed) file?
@@ -1295,7 +1295,7 @@ contains
     character(len=*), intent(in) :: unit         !< unit        of the variable
     character(len=*), intent(in) :: axistype     !< axis type (Z/X/Y/Time)
     character(len=*), intent(in) :: datatype     !< data type (REAL8/REAL4/default)
-    real(RP),         intent(in) :: timeintv     !< time interval [sec]
+    real(DP),         intent(in) :: timeintv     !< time interval [sec]
     integer,          intent(in) :: tsince(6)    !< start time
 
     logical,          intent(in), optional :: append   !< append existing (closed) file?
@@ -2529,7 +2529,7 @@ contains
     real(RP),         intent(in) :: var(:,:,:) !< value of the variable
     character(len=*), intent(in) :: varname    !< name of the variable
     character(len=*), intent(in) :: axistype   !< axis type (X/Y/Time)
-    real(RP),         intent(in) :: timeintv   !< time interval [sec]
+    real(DP),         intent(in) :: timeintv   !< time interval [sec]
 
     integer,          intent(in), optional :: timetarg !< target timestep (optional)
     logical,          intent(in), optional :: nohalo   !< include halo data?
@@ -2692,7 +2692,7 @@ contains
     real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
     character(len=*), intent(in) :: varname      !< name        of the variable
     character(len=*), intent(in) :: axistype     !< axis type (Z/X/Y/Time)
-    real(RP),         intent(in) :: timeintv     !< time interval [sec]
+    real(DP),         intent(in) :: timeintv     !< time interval [sec]
 
     integer,          intent(in), optional :: timetarg !< target timestep (optional)
     real(DP),         intent(in), optional :: timeofs  !< offset time     (optional)
