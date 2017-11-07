@@ -116,6 +116,7 @@ contains
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
+      Rvap  => CONST_Rvap,  &
       STB   => CONST_STB
     use scale_landuse, only: &
       LANDUSE_fact_land
@@ -176,6 +177,9 @@ contains
     real(RP) :: Uabs   ! modified absolute velocity [m/s]
     real(RP) :: QVsat  ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: QVS    ! water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: SFC_DENS     ! density at the surface [kg/m3]
+    real(RP) :: Rtot
+    real(RP) :: RovCP
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -187,6 +191,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Thick-Slab'
+
+    RovCP = Rdry / CPdry
 
     call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
 
@@ -203,6 +209,11 @@ contains
     do i = IS, IE
 
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
+
+        Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
+             + (          QVA(i,j) ) * Rvap
+
+        SFC_DENS = PRSS(i,j) / ( Rtot * TMPA(i,j) )
 
         call qsat( QVsat,     & ! [OUT]
                    LST1(i,j), & ! [IN]
@@ -232,13 +243,11 @@ contains
             Z0H (i,j), & ! [IN]
             Z0E (i,j)  ) ! [IN]
 
-        ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
-        XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
-        YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
-
-        SHFLX(i,j) = - RHOA(i,j) * Ustar * Tstar &
-                   * CPdry * ( PRSS(i,j) / PRE00 )**( Rdry/CPdry )
-        LHFLX(i,j) = - RHOA(i,j) * Ustar * Qstar * LHV(i,j)
+        ZMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * WA(i,j)
+        XMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * UA(i,j)
+        YMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * VA(i,j)
+        SHFLX(i,j) = -SFC_DENS * Ustar * Tstar * CPdry * ( PRSS(i,j)/PRE00 )**RovCP
+        LHFLX(i,j) = -SFC_DENS * Ustar * Qstar * LHV(i,j)
 
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 

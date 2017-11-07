@@ -286,6 +286,9 @@ contains
         dt           )
     use scale_grid_index
     use scale_urban_grid_index
+    use scale_const, only: &
+       Rdry => CONST_Rdry, &
+       Rvap => CONST_Rvap
     use scale_history, only: &
        HIST_in
     use scale_atmos_saturation, only: &
@@ -398,7 +401,9 @@ contains
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
 
-    real(RP) :: QVsat ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: SFC_DENS     ! density at the surface [kg/m3]
+    real(RP) :: Rtot
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -413,6 +418,11 @@ contains
     do i = IS, IE
 
     if( is_URB(i,j) ) then
+
+       Rtot = ( 1.0_RP - QA(i,j) ) * Rdry &
+            + (          QA(i,j) ) * Rvap
+
+       SFC_DENS = PRSS(i,j) / ( Rtot * TMPA(i,j) )
 
        Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
 
@@ -532,9 +542,9 @@ contains
                       Z0HC,          & ! [IN]
                       Z0HC           ) ! [IN]
 
-       MWFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * W1(i,j)
-       MUFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * U1(i,j)
-       MVFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * V1(i,j)
+       MWFLX(i,j) = -SFC_DENS * Ustar**2 / Uabs * W1(i,j)
+       MUFLX(i,j) = -SFC_DENS * Ustar**2 / Uabs * U1(i,j)
+       MVFLX(i,j) = -SFC_DENS * Ustar**2 / Uabs * V1(i,j)
 
        Z0M(i,j) = Z0C
        Z0H(i,j) = Z0HC

@@ -91,6 +91,7 @@ contains
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
+      Rvap  => CONST_Rvap,  &
       STB   => CONST_STB
     use scale_landuse, only: &
       LANDUSE_fact_ocean
@@ -147,15 +148,20 @@ contains
 
     real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
+    real(RP) :: SFC_DENS     ! density at the surface [kg/m3]
+    real(RP) :: Rtot
+    real(RP) :: RovCP
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
-    integer :: i, j
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean surface step: Slab'
+
+    RovCP = Rdry / CPdry
 
     call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
 
@@ -172,6 +178,11 @@ contains
     do i = IS, IE
 
       if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
+
+        Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
+             + (          QVA(i,j) ) * Rvap
+
+        SFC_DENS = PRSS(i,j) / ( Rtot * TMPA(i,j) )
 
         ! saturation at the surface
         call qsat( QVsat,     & ! [OUT]
@@ -200,13 +211,11 @@ contains
             Z0H (i,j), & ! [IN]
             Z0E (i,j)  ) ! [IN]
 
-        ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
-        XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
-        YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
-
-        SHFLX(i,j) = - RHOA(i,j) * Ustar * Tstar &
-                   * CPdry * ( PRSS(i,j) / PRE00 )**( Rdry/CPdry )
-        LHFLX(i,j) = - RHOA(i,j) * Ustar * Qstar * LHV(i,j)
+        ZMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * WA(i,j)
+        XMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * UA(i,j)
+        YMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * VA(i,j)
+        SHFLX(i,j) = -SFC_DENS * Ustar * Tstar * CPdry * ( PRSS(i,j)/PRE00 )**RovCP
+        LHFLX(i,j) = -SFC_DENS * Ustar * Qstar * LHV(i,j)
 
         ! calculation for residual
         WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &
