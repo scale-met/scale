@@ -17,7 +17,7 @@ FFLAGS_FAST  = -fpp -m64 -O3 -xMIC-AVX512           \
                -qopt-streaming-stores always        \
                -static_intel
 
-FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -traceback -fpe0 -CB -CU
+FFLAGS_QUICKDEBUG = -traceback -fpe0 -CB -CU
 
 FFLAGS_DYN   = $(FFLAGS)
 

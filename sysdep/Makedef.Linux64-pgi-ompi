@@ -16,7 +16,7 @@ FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
                -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
                -Mvect=assoc
 
-FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Ktrap=fp -Mbounds -gopt
+FFLAGS_QUICKDEBUG = -Ktrap=fp -Mbounds -gopt
 
 FFLAGS_DYN   = $(FFLAGS)
 
