@@ -150,7 +150,6 @@ contains
     real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
     real(RP) :: SFC_DENS     ! density at the surface [kg/m3]
     real(RP) :: Rtot
-    real(RP) :: RovCP
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -160,8 +159,6 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean surface step: Slab'
-
-    RovCP = Rdry / CPdry
 
     call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
 
@@ -214,7 +211,7 @@ contains
         ZMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * WA(i,j)
         XMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * UA(i,j)
         YMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * VA(i,j)
-        SHFLX(i,j) = -SFC_DENS * Ustar * Tstar * CPdry * ( PRSS(i,j)/PRE00 )**RovCP
+        SHFLX(i,j) = -SFC_DENS * Ustar * Tstar * CPdry
         LHFLX(i,j) = -SFC_DENS * Ustar * Qstar * LHV(i,j)
 
         ! calculation for residual

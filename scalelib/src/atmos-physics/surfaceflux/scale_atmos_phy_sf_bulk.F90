@@ -166,14 +166,11 @@ contains
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
-    real(RP) :: RovCP
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(bulk)'
-
-    RovCP = Rdry/CPdry
 
     call ROUGHNESS( SFC_Z0M_t(:,:), & ! [OUT]
                     SFC_Z0H_t(:,:), & ! [OUT]
@@ -236,7 +233,7 @@ contains
        SFLX_MV(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_V(i,j)
 
        !-----< heat flux >-----
-       SFLX_SH(i,j) = -SFC_DENS(i,j) * Ustar * Tstar * CPdry * ( SFC_PRES(i,j)/PRE00 )**RovCP
+       SFLX_SH(i,j) = -SFC_DENS(i,j) * Ustar * Tstar * CPdry
        SFLX_LH(i,j) = -SFC_DENS(i,j) * Ustar * Qstar * LHV(i,j)
 
        !-----< mass flux >-----

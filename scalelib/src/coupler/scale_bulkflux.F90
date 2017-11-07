@@ -251,8 +251,8 @@ contains
     logZ0MZ0H = max( log( Z0M/Z0H ), 1.0_RP )
 
     Uabs = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-    TH1  = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
-    TH0  = T0 * ( PRE00 / P0 )**( Rdry / CPdry )
+    TH1  = T1 * ( P0 / P1 )**( Rdry / CPdry )
+    TH0  = T0
 
     ! bulk Richardson number
     RiB0 = GRAV * Z1 * ( TH1 - TH0 ) / ( TH1 * Uabs**2 )
@@ -438,8 +438,8 @@ contains
 
     UabsC = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
 
-    TH1 = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
-    TH0 = T0 * ( PRE00 / P0 )**( Rdry / CPdry )
+    TH1 = T1 * ( P0 / P1 )**( Rdry / CPdry )
+    TH0 = T0
     THM = ( TH1 + TH0 ) * 0.5_RP
     QM  = ( Q1  + Q0  ) * 0.5_RP
     TV1 = TH1 * ( 1.0_DP + EPSTvap * Q1 )
