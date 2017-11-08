@@ -1,5 +1,12 @@
 = Release History
 
+== 2017-11-08 (5.2.2)
+* Bug fixes:
+  * Fix wrong loop range in the SUZUKI10 bin microphysics scheme
+  * Fix wrong soil water content in the init process with the WRF file
+  * Fix wrong density in the init process with the SCALE file
+  * Fix the grib2grads converter for MacOS
+
 == 2017-08-16 (5.2.1)
 * Change:
   * Change the netcdf checker for Cent OS and Fedora
