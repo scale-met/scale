@@ -398,7 +398,7 @@ contains
     integer,          intent(in)  :: nt
 
     real(RP) :: rhprs_org(dims(1)+2,dims(2),dims(3))
-    real(RP) :: pott(dims(2),dims(3))
+    real(RP) :: pott
 
     real(RP) :: RovCP
     real(RP) :: CPovR
@@ -408,7 +408,7 @@ contains
     ! data
     character(len=H_LONG) :: gfile
 
-    real(RP) :: p_sat, qm, rhsfc
+    real(RP) :: p_sat, qm, rhsfc, dz
     real(RP) :: lp2, lp3
 
     integer  :: i, j, k, iq, ielem
@@ -954,94 +954,67 @@ contains
     end do
     end do
 
-    ! fill surface density
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       k = lm_layer(i,j)
-       dens_org(1:2,i,j) = dens_org(k,i,j)
-    end do
-    end do
-
     RovCP = Rdry / CPdry
     CPovR = CPdry / Rdry
 
     if ( data_available(Ia_t2,1) .and. data_available(Ia_ps,1) ) then
        do j = 1, dims(3)
        do i = 1, dims(2)
-          pott(i,j) = temp_org(2,i,j) * (P00/pres_org(2,i,j))**RovCP
+          dens_org(2,i,j) = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
        end do
        end do
-    else
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          k = lm_layer(i,j)
-          pott(i,j) = temp_org(k,i,j) * (P00/pres_org(k,i,j))**RovCP
-       end do
-       end do
-    end if
-
-    if ( .not. data_available(Ia_t2,1) ) then
-       if ( data_available(Ia_ps,1) ) then
+    else if ( data_available(Ia_ps,1) ) then
+       if ( data_available(Ia_topo,1) ) then
           do j = 1, dims(3)
           do i = 1, dims(2)
-             temp_org(2,i,j) = pott(i,j) * (pres_org(2,i,j)/P00)**RovCP
-          end do
-          end do
-       else
-          if ( data_available(Ia_topo,1) ) then
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                k = lm_layer(i,j)
-                temp_org(2,i,j) = temp_org(k,i,j) &
-                                + LAPS * (cz_org(k,i,j)-cz_org(2,i,j))
-             end do
-             end do
-          else
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                k = lm_layer(i,j)
-                temp_org(2,i,j) = temp_org(k,i,j)
-             end do
-             end do
-          end if
-       end if
-    end if
-
-    if ( .not. data_available(Ia_ps,1) ) then
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          pres_org(2,i,j) = P00 * (temp_org(2,i,j)/pott(i,j))**CPovR
-       end do
-       end do
-    end if
-
-    if ( data_available(Ia_slp,1) ) then
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          temp_org(1,i,j) = pott(i,j) * (pres_org(1,i,j)/P00)**RovCP
-       end do
-       end do
-    else
-       if ( data_available(Ia_t2,1) .and. data_available(Ia_topo,1) ) then
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-             temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
+             k = lm_layer(i,j)
+             dz = cz_org(k,i,j) - cz_org(2,i,j)
+             dens_org(2,i,j) = ( pres_org(k,i,j) - pres_org(2,i,j) ) * 2.0_RP / ( GRAV * dz ) &
+                             - dens_org(k,i,j) 
+             temp_org(2,i,j) = pres_org(2,i,j) / ( Rdry * dens_org(2,i,j) )
           end do
           end do
        else
           do j = 1, dims(3)
           do i = 1, dims(2)
              k = lm_layer(i,j)
-             temp_org(1,i,j) = temp_org(k,i,j) + LAPS * cz_org(k,i,j)
+             dz = cz_org(k,i,j) - cz_org(2,i,j)
+             temp_org(2,i,j) = temp_org(k,i,j)
+             dens_org(2,i,j) = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
+          end do
+          end do
+       end if
+    else if ( data_available(Ia_topo,1) ) then
+       if ( .not. data_available(Ia_t2,1) ) then
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             k = lm_layer(i,j)
+             dz = cz_org(k,i,j) - cz_org(2,i,j)
+             temp_org(2,i,j) = temp_org(k,i,j) + LAPS * dz
           end do
           end do
        end if
        do j = 1, dims(3)
        do i = 1, dims(2)
-          pres_org(1,i,j) = P00 * (temp_org(1,i,j)/pott(i,j))**CPovR
+          k = lm_layer(i,j)
+          dz = cz_org(k,i,j) - cz_org(2,i,j)
+
+          dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
+                          / ( Rdry * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
+          pres_org(2,i,j) = dens_org(2,i,j) * Rdry * temp_org(2,i,j)
+       end do
+       end do
+    else
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          k = lm_layer(i,j)
+          temp_org(2,i,j) = temp_org(k,i,j)
+          dens_org(2,i,j) = dens_org(k,i,j)
+          pres_org(2,i,j) = pres_org(k,i,j)
        end do
        end do
     end if
+
 
     if ( .not. data_available(Ia_topo,1) ) then
        ! guess surface height (elevation)
@@ -1059,6 +1032,28 @@ contains
              lp3 = 1.0_RP
           end if
           cz_org(2,i,j) = max( 0.0_RP, cz_org(k,i,j) * lp2 / lp3 )
+       end do
+       end do
+    end if
+
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
+    end do
+    end do
+    if ( data_available(Ia_slp,1) ) then
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1,i,j) )
+       end do
+       end do
+    else
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
+                          / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP )
+          pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1,i,j)
        end do
        end do
     end if
