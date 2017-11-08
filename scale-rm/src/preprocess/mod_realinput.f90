@@ -139,14 +139,13 @@ module mod_realinput
   integer,                private :: NUMBER_OF_TSTEPS      = 1       ! num of time steps in one file
   integer,                private :: NUMBER_OF_SKIP_TSTEPS = 0       ! num of skipped first several data
 
-  logical,                private :: MAKE_BOUNDARY         = .true.  ! switch for making boundary file
   logical,                private :: SERIAL_PROC_READ      = .true.  ! read by one MPI process and broadcast
 
   character(len=H_LONG),  private :: FILETYPE_ORG          = ''
   character(len=H_LONG),  private :: BASENAME_ORG          = ''
   logical,                private :: BASENAME_ADD_NUM      = .false.
 
-  character(len=H_LONG),  private :: BASENAME_BOUNDARY     = 'boundary_atmos'
+  character(len=H_LONG),  private :: BASENAME_BOUNDARY     = ''
   character(len=H_LONG),  private :: BOUNDARY_TITLE        = 'SCALE-RM BOUNDARY CONDITION for REAL CASE'
   character(len=H_SHORT), private :: BOUNDARY_DTYPE        = 'DEFAULT'
   real(DP),               private :: BOUNDARY_UPDATE_DT    = 0.0_DP  ! inteval time of boudary data update [s]
@@ -180,7 +179,6 @@ contains
        NUMBER_OF_FILES,       &
        NUMBER_OF_TSTEPS,      &
        NUMBER_OF_SKIP_TSTEPS, &
-       MAKE_BOUNDARY,         &
        SERIAL_PROC_READ,      &
        FILETYPE_ORG,          &
        BASENAME_ORG,          &
@@ -267,7 +265,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Number of temporal data in each file : ', NUMBER_OF_TSTEPS
 
-    if ( MAKE_BOUNDARY ) then
+    if ( BASENAME_BOUNDARY /= '' ) then
        call BoundaryAtmosSetup( BASENAME_BOUNDARY,  & ! [IN]
                                 BOUNDARY_TITLE,     & ! [IN]
                                 BOUNDARY_DTYPE,     & ! [IN]
@@ -309,7 +307,7 @@ contains
           endif
 
           if (      t == 1 + NUMBER_OF_SKIP_TSTEPS &
-               .OR. MAKE_BOUNDARY                  ) then ! skip first several data
+               .OR. BASENAME_BOUNDARY /= ''        ) then
 
              if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,I5,A,I6,A)') &
                         '*** [file,step,cons.] = [', ifile, ',', istep, ',', t, ']'
@@ -367,7 +365,7 @@ contains
           endif
 
           !--- output boundary data
-          if ( MAKE_BOUNDARY ) then
+          if ( BASENAME_BOUNDARY /= '' ) then
              call BoundaryAtmosOutput( DENS_org(:,:,:),        & ! [IN]
                                        VELZ_org(:,:,:),        & ! [IN]
                                        VELX_org(:,:,:),        & ! [IN]
@@ -457,7 +455,6 @@ contains
          NUMBER_OF_FILES,        &
          NUMBER_OF_TSTEPS,       &
          NUMBER_OF_SKIP_TSTEPS,  &
-         MAKE_BOUNDARY,          &
          FILETYPE_ORG,           &
          BASENAME_ORG,           &
          BASENAME_ADD_NUM,       &
@@ -475,7 +472,6 @@ contains
          NUMBER_OF_FILES,        &
          NUMBER_OF_TSTEPS,       &
          NUMBER_OF_SKIP_TSTEPS,  &
-         MAKE_BOUNDARY,          &
          FILETYPE_ORG,           &
          BASENAME_ORG,           &
          BASENAME_ADD_NUM,       &
@@ -527,6 +523,8 @@ contains
     integer :: lit
     integer :: lfn
     integer :: ierr
+
+    logical :: boundary_flag = .false.
 
     integer :: k, i, j, n, ns, ne
     !---------------------------------------------------------------------------
@@ -643,6 +641,10 @@ contains
        BASENAME_ORG = ""
     endif
 
+    if ( BASENAME_BOUNDARY /= '' ) then
+       boundary_flag = .true.
+    endif
+
     !--- read external file
     do n = 1, NUMBER_OF_FILES
 
@@ -700,12 +702,12 @@ contains
                                 INTRP_ITER_MAX,          &
                                 SOILWATER_DS2VC_flag,    &
                                 elevation_collection,    &
-                                MAKE_BOUNDARY,           &
+                                boundary_flag,           &
                                 NUMBER_OF_TSTEPS,        &
                                 skip_steps, lit          )
 
        ! required one-step data only
-       if( .NOT. MAKE_BOUNDARY ) exit
+       if( BASENAME_BOUNDARY == '' ) exit
 
     enddo
 
@@ -775,7 +777,7 @@ contains
 
 
     !--- output boundary data
-    if( MAKE_BOUNDARY ) then
+    if( BASENAME_BOUNDARY /= '' ) then
        totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
        if ( totaltimesteps > 1 ) then
           if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
