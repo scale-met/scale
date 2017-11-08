@@ -344,6 +344,8 @@ contains
     integer  :: js, je
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_fact',3)
+
     hfact(:,:,:) = 0.0_RP
 
     do j = 1, myJA
@@ -366,6 +368,8 @@ contains
                                     js, je        )
     enddo
     enddo
+
+    call PROF_rapend  ('INTRPNEST_fact',3)
 
     return
   end subroutine INTRPNEST_interp_fact_latlon
@@ -428,6 +432,8 @@ contains
     logical  :: lndgrd
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_fact',3)
+
     lndgrd = .false.
     if ( present(landgrid) ) then
     if ( landgrid ) then
@@ -474,6 +480,8 @@ contains
 
     enddo
     enddo
+
+    call PROF_rapend  ('INTRPNEST_fact',3)
 
     return
   end subroutine INTRPNEST_interp_fact_llz
@@ -1407,12 +1415,16 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_interp',3)
+
 !OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
        intp(i,j) = ref(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1)
     end do
     end do
+
+    call PROF_rapend  ('INTRPNEST_interp',3)
 
     return
   end subroutine INTRPNEST_interp_2d_1points
@@ -1454,6 +1466,8 @@ contains
     logical :: logarithmic
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_interp',3)
+
     logarithmic = .false.
     if ( present(logwegt) ) then
     if ( logwegt ) then
@@ -1485,6 +1499,8 @@ contains
        end do
     endif
 
+    call PROF_rapend  ('INTRPNEST_interp',3)
+
     return
   end subroutine INTRPNEST_interp_3d_1points
 
@@ -1513,6 +1529,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_interp',3)
+
 !OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
@@ -1521,6 +1539,8 @@ contains
                  + ref(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
     end do
     end do
+
+    call PROF_rapend  ('INTRPNEST_interp',3)
 
     return
   end subroutine INTRPNEST_interp_2d_3points
@@ -1562,6 +1582,8 @@ contains
     logical :: logarithmic
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_interp',3)
+
     logarithmic = .false.
     if ( present(logwegt) ) then
     if ( logwegt ) then
@@ -1601,6 +1623,8 @@ contains
        end do
     endif
 
+    call PROF_rapend  ('INTRPNEST_interp',3)
+
     return
   end subroutine INTRPNEST_interp_3d_3points
 
@@ -1629,6 +1653,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_interp',3)
+
 !OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
@@ -1638,6 +1664,8 @@ contains
                  + ref(igrd(i,j,4),jgrd(i,j,4)) * hfact(i,j,4)
     end do
     end do
+
+    call PROF_rapend  ('INTRPNEST_interp',3)
 
     return
   end subroutine INTRPNEST_interp_2d_4points
@@ -1678,6 +1706,8 @@ contains
     integer :: i, j, k
     logical :: logarithmic
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('INTRPNEST_interp',3)
 
     logarithmic = .false.
     if ( present(logwegt) ) then
@@ -1722,6 +1752,8 @@ contains
        end do
     endif
 
+    call PROF_rapend  ('INTRPNEST_interp',3)
+
     return
   end subroutine INTRPNEST_interp_3d_4points
 
@@ -1750,6 +1782,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_interp',3)
+
 !OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
@@ -1760,6 +1794,8 @@ contains
                  + ref(igrd(i,j,5),jgrd(i,j,5)) * hfact(i,j,5)
     end do
     end do
+
+    call PROF_rapend  ('INTRPNEST_interp',3)
 
     return
   end subroutine INTRPNEST_interp_2d_5points
@@ -1800,6 +1836,8 @@ contains
     integer :: i, j, k
     logical :: logarithmic
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('INTRPNEST_interp',3)
 
     logarithmic = .false.
     if ( present(logwegt) ) then
@@ -1848,6 +1886,8 @@ contains
        end do
     endif
 
+    call PROF_rapend  ('INTRPNEST_interp',3)
+
     return
   end subroutine INTRPNEST_interp_3d_5points
 
@@ -1876,6 +1916,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_interp',3)
+
 !OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
@@ -1889,6 +1931,8 @@ contains
                  + ref(igrd(i,j,8),jgrd(i,j,8)) * hfact(i,j,8)
     end do
     end do
+
+    call PROF_rapend  ('INTRPNEST_interp',3)
 
     return
   end subroutine INTRPNEST_interp_2d_8points
@@ -1929,6 +1973,8 @@ contains
     integer :: i, j, k
     logical :: logarithmic
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('INTRPNEST_interp',3)
 
     logarithmic = .false.
     if ( present(logwegt) ) then
@@ -1989,6 +2035,8 @@ contains
        end do
     endif
 
+    call PROF_rapend  ('INTRPNEST_interp',3)
+
     return
   end subroutine INTRPNEST_interp_3d_8points
 
@@ -2017,6 +2065,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTRPNEST_interp',3)
+
 !OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
@@ -2034,6 +2084,8 @@ contains
                  + ref(igrd(i,j,12),jgrd(i,j,12)) * hfact(i,j,12)
     end do
     end do
+
+    call PROF_rapend  ('INTRPNEST_interp',3)
 
     return
   end subroutine INTRPNEST_interp_2d_12points
@@ -2074,6 +2126,8 @@ contains
     integer :: i, j, k
     logical :: logarithmic
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('INTRPNEST_interp',3)
 
     logarithmic = .false.
     if ( present(logwegt) ) then
@@ -2149,6 +2203,8 @@ contains
        end do
        end do
     endif
+
+    call PROF_rapend  ('INTRPNEST_interp',3)
 
     return
   end subroutine INTRPNEST_interp_3d_12points

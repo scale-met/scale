@@ -1227,7 +1227,7 @@ contains
     character(len=*), intent(in) :: unit       !< unit        of the variable
     character(len=*), intent(in) :: axistype   !< axis type (X/Y/Time)
     character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
-    real(RP),         intent(in) :: timeintv   !< time interval [sec]
+    real(DP),         intent(in) :: timeintv   !< time interval [sec]
     integer ,         intent(in) :: tsince(6)  !< start time
 
     logical,          intent(in), optional :: append   !< append existing (closed) file?
@@ -1274,6 +1274,7 @@ contains
        tsince,   &
        append,   &
        timetarg, &
+       timeofs,  &
        nohalo    )
     use gtool_file, only: &
        RMISS
@@ -1294,11 +1295,12 @@ contains
     character(len=*), intent(in) :: unit         !< unit        of the variable
     character(len=*), intent(in) :: axistype     !< axis type (Z/X/Y/Time)
     character(len=*), intent(in) :: datatype     !< data type (REAL8/REAL4/default)
-    real(RP),         intent(in) :: timeintv     !< time interval [sec]
+    real(DP),         intent(in) :: timeintv     !< time interval [sec]
     integer,          intent(in) :: tsince(6)    !< start time
 
     logical,          intent(in), optional :: append   !< append existing (closed) file?
     integer,          intent(in), optional :: timetarg !< target timestep (optional)
+    real(DP),         intent(in), optional :: timeofs  !< offset time     (optional)
     logical,          intent(in), optional :: nohalo   !< include halo data?
 
     integer  :: fid, vid
@@ -1321,7 +1323,8 @@ contains
 
     call FILEIO_enddef( fid )
 
-    call FILEIO_write_var_4D( fid, vid, var, varname, axistype, timeintv, timetarg, nohalo )
+    call FILEIO_write_var_4D( fid, vid, var, varname, axistype, timeintv, &
+                              timetarg, timeofs, nohalo                   )
 
     return
   end subroutine FILEIO_write_4D
@@ -2045,7 +2048,7 @@ contains
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
 
-    real(RP),         intent(in), optional :: timeintv !< time interval [sec]
+    real(DP),         intent(in), optional :: timeintv !< time interval [sec]
     integer,          intent(in), optional :: nsteps   !< number of time steps
 
     integer          :: dtype, ndims, elm_size
@@ -2526,7 +2529,7 @@ contains
     real(RP),         intent(in) :: var(:,:,:) !< value of the variable
     character(len=*), intent(in) :: varname    !< name of the variable
     character(len=*), intent(in) :: axistype   !< axis type (X/Y/Time)
-    real(RP),         intent(in) :: timeintv   !< time interval [sec]
+    real(DP),         intent(in) :: timeintv   !< time interval [sec]
 
     integer,          intent(in), optional :: timetarg !< target timestep (optional)
     logical,          intent(in), optional :: nohalo   !< include halo data?
@@ -2669,6 +2672,7 @@ contains
        axistype, &
        timeintv, &
        timetarg, &
+       timeofs,  &
        nohalo    )
     use gtool_file, only: &
        RMISS
@@ -2688,9 +2692,10 @@ contains
     real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
     character(len=*), intent(in) :: varname      !< name        of the variable
     character(len=*), intent(in) :: axistype     !< axis type (Z/X/Y/Time)
-    real(RP),         intent(in) :: timeintv     !< time interval [sec]
+    real(DP),         intent(in) :: timeintv     !< time interval [sec]
 
     integer,          intent(in), optional :: timetarg !< target timestep (optional)
+    real(DP),         intent(in), optional :: timeofs  !< offset time     (optional)
     logical,          intent(in), optional :: nohalo   !< include halo data?
 
     real(RP) :: varhalo( size(var(:,1,1,1)), size(var(1,:,1,1)), size(var(1,1,:,1)) )
@@ -2704,6 +2709,7 @@ contains
     integer  :: step
     integer  :: i, j, k, n
     logical  :: nohalo_
+    real(DP) :: timeofs_
     integer  :: rankidx(2)
     integer  :: start(4) ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
@@ -2712,6 +2718,9 @@ contains
 
     nohalo_ = .false.
     if( present(nohalo) ) nohalo_ = nohalo
+
+    timeofs_ = 0.0_DP
+    if( present(timeofs) ) timeofs_ = timeofs
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -2744,7 +2753,7 @@ contains
     endif
 
     if ( present(timetarg) ) then
-       nowtime = (timetarg-1) * time_interval
+       nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( nohalo_ ) then
           varhalo(:,:,:) = var(:,:,:,timetarg)
@@ -2789,7 +2798,7 @@ contains
                           nowtime, nowtime, start                                            ) ! [IN]
        end if
     else
-       nowtime = 0.0_DP
+       nowtime = timeofs_
        do n = 1, step
           if ( nohalo_ ) then
              varhalo(:,:,:) = var(:,:,:,n)

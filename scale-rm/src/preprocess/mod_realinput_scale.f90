@@ -37,9 +37,9 @@ module mod_realinput_scale
   !
   !++ Public procedure
   !
-  public :: ParentAtomSetupSCALE
-  public :: ParentAtomOpenSCALE
-  public :: ParentAtomInputSCALE
+  public :: ParentAtmosSetupSCALE
+  public :: ParentAtmosOpenSCALE
+  public :: ParentAtmosInputSCALE
   public :: ParentLandSetupSCALE
   public :: ParentLandInputSCALE
   public :: ParentOceanSetupSCALE
@@ -68,7 +68,7 @@ module mod_realinput_scale
 contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
-  subroutine ParentAtomSetupSCALE( &
+  subroutine ParentAtmosSetupSCALE( &
        dims )
     implicit none
 
@@ -77,7 +77,7 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: SCALE-RM'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: SCALE-RM'
     ! full level
     dims(1) = PARENT_KMAX(handle)
     dims(2) = PARENT_IMAX(handle) * NEST_TILE_NUM_X
@@ -91,10 +91,10 @@ contains
     allocate( read3D ( PARENT_IMAX(handle), PARENT_JMAX(handle), dims(1) ) )
 
     return
-  end subroutine ParentAtomSetupSCALE
+  end subroutine ParentAtmosSetupSCALE
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomOpenSCALE( &
+  subroutine ParentAtmosOpenSCALE( &
        lon_org,      &
        lat_org,      &
        cz_org,       &
@@ -117,7 +117,7 @@ contains
 
     integer :: i, k
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomOpenSCALE]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenSCALE]'
 
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
@@ -149,10 +149,10 @@ contains
 
     cz_org(1,:,:)  = 0.0_RP
     return
-  end subroutine ParentAtomOpenSCALE
+  end subroutine ParentAtmosOpenSCALE
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomInputSCALE( &
+  subroutine ParentAtmosInputSCALE( &
        velz_org,      &
        velx_org,      &
        vely_org,      &
@@ -230,9 +230,6 @@ contains
     integer :: k, i, j, iq, iqa
     !---------------------------------------------------------------------------
 
-
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputSCALE]'
-
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
        rank = NEST_TILE_ID(i)
@@ -246,36 +243,44 @@ contains
        ye = PARENT_JMAX(handle) * yloc
 
        call FileRead( read2D(:,:), BASENAME_ORG, "T2", it, rank )
+!OCL XFILL
        tsfc_org(xs:xe,ys:ye) = read2D(:,:)
 
        call FileRead( read2D(:,:), BASENAME_ORG, "MSLP", it, rank )
+!OCL XFILL
        pres_org(1,xs:xe,ys:ye) = read2D(:,:)
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "DENS", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           dens_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMZ", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           momz_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMX", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           momx_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMY", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           momy_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        call FileRead( read3D(:,:,:), BASENAME_ORG, "RHOT", it, rank )
+!OCL XFILL
        do k = 1, dims(1)
           rhot_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
+!OCL XFILL
        do iq = 1, QA
           qtrc_org(:,xs:xe,ys:ye,iq) = 0.0_RP
        end do
@@ -303,10 +308,13 @@ contains
           do iq = 1, mptype_parent
              iqa = QS_MP + iq - 1
              call FileRead( read3D(:,:,:), BASENAME_ORG, TRACER_NAME(iq), it, rank )
+!OCL XFILL
              do k = 1, dims(1)
                 qtrc_org(k+2,xs:xe,ys:ye,iqa) = read3D(:,:,k)
              end do
+!OCL XFILL
              qtrc_org(2,xs:xe,ys:ye,iqa) = qtrc_org(3,xs:xe,ys:ye,iqa)
+!OCL XFILL
              qtrc_org(1,xs:xe,ys:ye,iqa) = qtrc_org(3,xs:xe,ys:ye,iqa)
           end do
 
@@ -318,6 +326,7 @@ contains
     end do
 
     ! convert from momentum to velocity
+!OCL XFILL
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 4, dims(1)+2
@@ -325,6 +334,7 @@ contains
     end do
     end do
     end do
+!OCL XFILL
     do j = 1, dims(3)
     do i = 1, dims(2)
        velz_org(1:3    ,i,j) = 0.0_RP
@@ -333,6 +343,7 @@ contains
     end do
 
     ! convert from momentum to velocity
+!OCL XFILL
     do j = 1, dims(3)
     do i = 2, dims(2)
     do k = 3, dims(1)+2
@@ -340,14 +351,17 @@ contains
     end do
     end do
     end do
+!OCL XFILL
     do j = 1, dims(3)
     do k = 3, dims(1)+2
        velx_org(k,1,j) = momx_org(k,1,j) / dens_org(k,1,j)
     end do
     end do
+!OCL XFILL
     velx_org(1:2,:,:) = 0.0_RP
 
     ! convert from momentum to velocity
+!OCL XFILL
     do j = 2, dims(3)
     do i = 1, dims(2)
     do k = 3, dims(1)+2
@@ -355,36 +369,52 @@ contains
     end do
     end do
     end do
+!OCL XFILL
     do i = 1, dims(2)
     do k = 3, dims(1)+2
        vely_org(k,i,1) = momy_org(k,i,1) / dens_org(k,i,1)
     end do
     end do
+!OCL XFILL
     vely_org(1:2,:,:) = 0.0_RP
 
 
     !!! must be rotate !!!
 
 
+    ! diagnose temp and pres
     do j = 1, dims(3)
     do i = 1, dims(2)
-       do k = 3, dims(1)+2
-          ! diagnose temp and pres
-          call THERMODYN_temp_pres( temp_org,          & ! [OUT]
-                                    pres_org(k,i,j),   & ! [OUT]
-                                    dens_org(k,i,j),   & ! [IN]
-                                    rhot_org(k,i,j),   & ! [IN]
-                                    qtrc_org(k,i,j,:), & ! [IN]
-                                    TRACER_CV(:),      & ! [IN]
-                                    TRACER_R(:),       & ! [IN]
-                                    TRACER_MASS(:)     ) ! [IN]
-          pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
-       end do
+    do k = 3, dims(1)+2
+       call THERMODYN_temp_pres( temp_org,          & ! [OUT]
+                                 pres_org(k,i,j),   & ! [OUT]
+                                 dens_org(k,i,j),   & ! [IN]
+                                 rhot_org(k,i,j),   & ! [IN]
+                                 qtrc_org(k,i,j,:), & ! [IN]
+                                 TRACER_CV(:),      & ! [IN]
+                                 TRACER_R(:),       & ! [IN]
+                                 TRACER_MASS(:)     ) ! [IN]
+    end do
+    end do
+    end do
+!OCL XFILL
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 3, dims(1)+2
+       pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
+    end do
+    end do
+    end do
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
        dz = cz_org(3,i,j) - cz_org(2,i,j)
+
        dens_org(2,i,j) = ( pres_org(3,i,j) + GRAV * dens_org(3,i,j) * dz * 0.5_RP ) &
                        / ( Rdry * tsfc_org(i,j) - GRAV * dz * 0.5_RP )
        pres_org(2,i,j) = dens_org(2,i,j) * Rdry * tsfc_org(i,j)
        pott_org(2,i,j) = tsfc_org(i,j) * ( P00 / pres_org(2,i,j) )**(Rdry/CPdry)
+
        temp_org = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
        pott_org(1,i,j) = temp_org * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
        dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org )
@@ -392,7 +422,7 @@ contains
     end do
 
     return
-  end subroutine ParentAtomInputSCALE
+  end subroutine ParentAtmosInputSCALE
 
   !-----------------------------------------------------------------------------
   !> Land Setup

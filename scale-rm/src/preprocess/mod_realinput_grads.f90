@@ -28,9 +28,9 @@ module mod_realinput_grads
   !
   !++ Public procedure
   !
-  public :: ParentAtomSetupGrADS
-  public :: ParentAtomOpenGrADS
-  public :: ParentAtomInputGrADS
+  public :: ParentAtmosSetupGrADS
+  public :: ParentAtmosOpenGrADS
+  public :: ParentAtmosInputGrADS
   public :: ParentLandSetupGrADS
   public :: ParentLandInputGrADS
   public :: ParentOceanSetupGrADS
@@ -187,7 +187,7 @@ module mod_realinput_grads
 contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
-  subroutine ParentAtomSetupGrADS( &
+  subroutine ParentAtmosSetupGrADS( &
       dims,                        & ! (out)
       basename                     ) ! (in)
     implicit none
@@ -205,7 +205,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: GrADS format'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: GrADS format'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -335,19 +335,19 @@ contains
     end do
 
     return
-  end subroutine ParentAtomSetupGrADS
+  end subroutine ParentAtmosSetupGrADS
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomOpenGrADS
+  subroutine ParentAtmosOpenGrADS
     implicit none
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomOpenGrADS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenGrADS]'
 
     return
-  end subroutine ParentAtomOpenGrADS
+  end subroutine ParentAtmosOpenGrADS
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomInputGrADS( &
+  subroutine ParentAtmosInputGrADS( &
        velz_org, &
        velx_org, &
        vely_org, &
@@ -416,14 +416,14 @@ contains
     logical  :: pressure_coordinates
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputGrADS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosInputGrADS]'
 
     dens_org(:,:,:)   = UNDEF ! read data or set data by build-rho-3D
     velz_org(:,:,:)   = 0.0_RP
     qtrc_org(:,:,:,:) = 0.0_RP
 
     !--- read grads data
-    loop_InputAtomGrADS : do ielem = 1, num_item_list_atom
+    loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
 
        if ( .not. data_available(ielem,1) ) cycle
 
@@ -937,7 +937,7 @@ contains
              enddo
           endif
        end select
-    enddo loop_InputAtomGrADS
+    enddo loop_InputAtmosGrADS
 
     lm_layer(:,:) = 3
 
@@ -1094,7 +1094,7 @@ contains
     end if
 
     return
-  end subroutine ParentAtomInputGrADS
+  end subroutine ParentAtmosInputGrADS
 
   !-----------------------------------------------------------------------------
   !> Land Setup

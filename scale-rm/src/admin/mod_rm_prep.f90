@@ -275,40 +275,41 @@ contains
     ! setup mkinit
     call MKINIT_setup
 
-    call PROF_rapend('Initialize')
+    call PROF_rapend('Initialize',0)
 
     !########## main ##########
 
-    call PROF_rapstart('Main_prep')
+    call PROF_setprefx('MAIN')
+    call PROF_rapstart('Main_prep',0)
 
     ! execute preprocess
-    call PROF_rapstart('Convert')
+    call PROF_rapstart('Convert',1)
     call CONVERT
-    call PROF_rapend  ('Convert')
+    call PROF_rapend  ('Convert',1)
 
     ! execute mktopo
-    call PROF_rapstart('MkTopo')
+    call PROF_rapstart('MkTopo',1)
     call MKTOPO
-    call PROF_rapend  ('MkTopo')
+    call PROF_rapend  ('MkTopo',1)
 
     ! re-setup
     call REAL_update_Z
 
     ! execute mkinit
-    call PROF_rapstart('MkInit')
+    call PROF_rapstart('MkInit',1)
     call MKINIT
-    call PROF_rapend  ('MkInit')
+    call PROF_rapend  ('MkInit',1)
 
-    call PROF_rapend('Main_prep')
+    call PROF_rapend('Main_prep',0)
 
     !########## Finalize ##########
-
-    call PROF_rapreport
 
     ! setup file I/O
     call FILEIO_cleanup
 
     call FileCloseAll
+
+    call PROF_rapreport
 
     return
   end subroutine scalerm_prep

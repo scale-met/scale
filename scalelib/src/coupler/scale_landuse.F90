@@ -235,7 +235,7 @@ contains
     character(len=H_SHORT) :: varname
 
     integer  :: fid
-    integer  :: p
+    integer  :: p, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -274,7 +274,11 @@ contains
                             fid, varname, 'XY', step=1 ) ! [IN]
           call FILEIO_flush( fid )
 
-          LANDUSE_index_PFT(:,:,p) = int(temp(:,:)+1.E-3_RP,kind=4)
+          do j = JS, JE
+          do i = IS, IE
+             LANDUSE_index_PFT(i,j,p) = int(temp(i,j)+1.E-3_RP,kind=4)
+          enddo
+          enddo
        enddo
 
        if ( LANDUSE_IN_CHECK_COORDINATES ) then
