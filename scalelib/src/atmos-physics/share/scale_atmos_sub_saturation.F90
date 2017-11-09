@@ -62,22 +62,26 @@ module scale_atmos_saturation
   interface ATMOS_SATURATION_alpha
      module procedure ATMOS_SATURATION_alpha_0D
      module procedure ATMOS_SATURATION_alpha_1D
+     module procedure ATMOS_SATURATION_alpha_1D_obsolute
      module procedure ATMOS_SATURATION_alpha_3D
   end interface ATMOS_SATURATION_alpha
 
   interface ATMOS_SATURATION_psat_all
      module procedure ATMOS_SATURATION_psat_all_0D
      module procedure ATMOS_SATURATION_psat_all_1D
+     module procedure ATMOS_SATURATION_psat_all_1D_obsolute
      module procedure ATMOS_SATURATION_psat_all_3D
   end interface ATMOS_SATURATION_psat_all
   interface ATMOS_SATURATION_psat_liq
      module procedure ATMOS_SATURATION_psat_liq_0D
      module procedure ATMOS_SATURATION_psat_liq_1D
+     module procedure ATMOS_SATURATION_psat_liq_1D_obsolute
      module procedure ATMOS_SATURATION_psat_liq_3D
   end interface ATMOS_SATURATION_psat_liq
   interface ATMOS_SATURATION_psat_ice
      module procedure ATMOS_SATURATION_psat_ice_0D
      module procedure ATMOS_SATURATION_psat_ice_1D
+     module procedure ATMOS_SATURATION_psat_ice_1D_obsolute
      module procedure ATMOS_SATURATION_psat_ice_3D
   end interface ATMOS_SATURATION_psat_ice
 
@@ -102,6 +106,7 @@ module scale_atmos_saturation
   interface ATMOS_SATURATION_dens2qsat_all
      module procedure ATMOS_SATURATION_dens2qsat_all_0D
      module procedure ATMOS_SATURATION_dens2qsat_all_1D
+     module procedure ATMOS_SATURATION_dens2qsat_all_1D_obsolute
      module procedure ATMOS_SATURATION_dens2qsat_all_3D
   end interface ATMOS_SATURATION_dens2qsat_all
   interface ATMOS_SATURATION_dens2qsat_liq
@@ -244,6 +249,33 @@ contains
   !-----------------------------------------------------------------------------
   !> calc liquid/ice separation factor (1D)
   subroutine ATMOS_SATURATION_alpha_1D( &
+       KA, KS, KE, &
+       alpha, &
+       temp   )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(out) :: alpha(KA) !< liquid/ice separation factor (0-1)
+
+    real(RP), intent(in)  :: temp (KA) !< temperature [K]
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+
+       alpha(k) = ( temp(k)                      - ATMOS_SATURATION_LLIMIT_TEMP ) &
+                / ( ATMOS_SATURATION_ULIMIT_TEMP - ATMOS_SATURATION_LLIMIT_TEMP )
+       alpha(k) = min( max( alpha(k), 0.0_RP ), 1.0_RP )
+
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_alpha_1D
+
+  !-----------------------------------------------------------------------------
+  !> calc liquid/ice separation factor (1D)
+  subroutine ATMOS_SATURATION_alpha_1D_obsolute( &
        alpha, &
        temp   )
     implicit none
@@ -263,7 +295,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_SATURATION_alpha_1D
+  end subroutine ATMOS_SATURATION_alpha_1D_obsolute
 
   !-----------------------------------------------------------------------------
   !> calc liquid/ice separation factor (3D)
@@ -321,6 +353,45 @@ contains
   !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure (liquid/ice mixture) (1D)
   subroutine ATMOS_SATURATION_psat_all_1D( &
+       KA, KS, KE, &
+       psat, &
+       temp  )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(out) :: psat(KA) !< saturation vapor pressure [Pa]
+
+    real(RP), intent(in)  :: temp(KA) !< temperature               [K]
+
+    real(RP) :: alpha(KA), psatl(KA), psati(KA)
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    call ATMOS_SATURATION_alpha( &
+         KA, KS, KE, &
+         alpha(:), & ! (out)
+         temp(:)   ) ! (in)
+    call ATMOS_SATURATION_psat_liq( &
+         KA, KS, KE, &
+         psatl(:), & ! (out)
+         temp(:)   ) ! (in)
+    call ATMOS_SATURATION_psat_ice( &
+         KA, KS, KE, &
+         psati(:), & ! (out)
+         temp(:)   ) ! (in)
+
+    do k = KS, KE
+       psat(k) = psatl(k) * (          alpha(k) ) &
+               + psati(k) * ( 1.0_RP - alpha(k) )
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_psat_all_1D
+
+  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure (liquid/ice mixture) (1D)
+  subroutine ATMOS_SATURATION_psat_all_1D_obsolute( &
        psat, &
        temp  )
     implicit none
@@ -343,7 +414,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_SATURATION_psat_all_1D
+  end subroutine ATMOS_SATURATION_psat_all_1D_obsolute
 
   !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure (liquid/ice mixture) (3D)
@@ -405,6 +476,30 @@ contains
   !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure from Clausius-Clapeyron equation (1D)
   subroutine ATMOS_SATURATION_psat_liq_1D( &
+       KA, KS, KE, &
+       psat, &
+       temp  )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(out) :: psat(KA) !< saturation vapor pressure [Pa]
+
+    real(RP), intent(in)  :: temp(KA) !< temperature               [K]
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       psat(k) = PSAT0 * ( temp(k) * RTEM00 )**CPovR_liq             &
+                       * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(k) ) )
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_psat_liq_1D
+
+  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation (1D)
+  subroutine ATMOS_SATURATION_psat_liq_1D_obsolute( &
        psat, &
        temp  )
     implicit none
@@ -421,7 +516,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_SATURATION_psat_liq_1D
+  end subroutine ATMOS_SATURATION_psat_liq_1D_obsolute
 
   !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure from Clausius-Clapeyron equation (3D)
@@ -469,6 +564,30 @@ contains
   !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure from Clausius-Clapeyron equation (1D)
   subroutine ATMOS_SATURATION_psat_ice_1D( &
+       KA, KS, KE, &
+       psat, &
+       temp  )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(out) :: psat(KA) !< saturation vapor pressure [Pa]
+
+    real(RP), intent(in)  :: temp(KA) !< temperature               [K]
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       psat(k) = PSAT0 * ( temp(k) * RTEM00 )**CPovR_ice             &
+                       * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(k) ) )
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_psat_ice_1D
+
+  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation (1D)
+  subroutine ATMOS_SATURATION_psat_ice_1D_obsolute( &
        psat, &
        temp  )
     implicit none
@@ -485,7 +604,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_SATURATION_psat_ice_1D
+  end subroutine ATMOS_SATURATION_psat_ice_1D_obsolute
 
   !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure from Clausius-Clapeyron equation (3D)
@@ -852,6 +971,37 @@ contains
   !-----------------------------------------------------------------------------
   !> calc temp & dens -> saturation vapor mass (liquid/ice mixture,1D)
   subroutine ATMOS_SATURATION_dens2qsat_all_1D( &
+       KA, KS, KE, &
+       qsat,       &
+       temp, dens  )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(out) :: qsat(KA)
+
+    real(RP), intent(in)  :: temp(KA)
+    real(RP), intent(in)  :: dens(KA)
+
+    real(RP) :: psat(KA)
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    call ATMOS_SATURATION_psat_all( &
+         KA, KS, KE, &
+         psat(:),    & ! (out)
+         temp(:)     ) ! (in)
+
+    do k = KS, KE
+       qsat(k) = psat(k) / ( dens(k) * Rvap * temp(k) )
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_dens2qsat_all_1D
+
+  !-----------------------------------------------------------------------------
+  !> calc temp & dens -> saturation vapor mass (liquid/ice mixture,1D)
+  subroutine ATMOS_SATURATION_dens2qsat_all_1D_obsolute( &
        qsat, &
        temp, &
        dens  )
@@ -873,7 +1023,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_SATURATION_dens2qsat_all_1D
+  end subroutine ATMOS_SATURATION_dens2qsat_all_1D_obsolute
 
   !-----------------------------------------------------------------------------
   !> calc temp & dens -> saturation vapor mass (liquid/ice mixture,3D)

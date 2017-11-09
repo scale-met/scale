@@ -55,6 +55,7 @@ SUB_OBJS =	\
 	mod_atmos_phy_rd_vars.o   \
 	mod_atmos_phy_sf_vars.o   \
 	mod_atmos_phy_tb_vars.o   \
+	mod_atmos_phy_bl_vars.o   \
 	mod_atmos_phy_ch_vars.o   \
 	mod_atmos_phy_ae_vars.o   \
 	mod_atmos_vars.o          \
@@ -71,6 +72,7 @@ SUB_OBJS =	\
 	mod_atmos_phy_rd_driver.o \
 	mod_atmos_phy_sf_driver.o \
 	mod_atmos_phy_tb_driver.o \
+	mod_atmos_phy_bl_driver.o \
 	mod_atmos_phy_cp_driver.o \
 	mod_atmos_driver.o        \
 	mod_ocean_phy_driver.o    \

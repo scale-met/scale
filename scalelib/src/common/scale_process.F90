@@ -33,7 +33,8 @@ module scale_process
   public :: PRC_UNIVERSAL_setup
   public :: PRC_GLOBAL_setup
   public :: PRC_LOCAL_setup
-  public :: PRC_MPIstop
+  public :: PRC_abort
+  public :: PRC_MPIstop ! obsolute
   public :: PRC_MPIfinish
   public :: PRC_MPIsplit
   public :: PRC_MPIsplit_letkf
@@ -41,6 +42,10 @@ module scale_process
   public :: PRC_MPIbarrier
   public :: PRC_MPItime
   public :: PRC_MPItimestat
+
+  interface PRC_MPIstop
+     procedure PRC_abort
+  end interface PRC_MPIstop
 
   !-----------------------------------------------------------------------------
   !
@@ -262,8 +267,8 @@ contains
   end subroutine PRC_LOCAL_setup
 
   !-----------------------------------------------------------------------------
-  !> Abort MPI
-  subroutine PRC_MPIstop
+  !> Abort Process
+  subroutine PRC_abort
     implicit none
 
     integer :: ierr
@@ -275,7 +280,7 @@ contains
     endif
 
     stop
-  end subroutine PRC_MPIstop
+  end subroutine PRC_abort
 
   !-----------------------------------------------------------------------------
   !> Stop MPI peacefully

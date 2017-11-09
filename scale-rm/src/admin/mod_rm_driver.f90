@@ -431,7 +431,7 @@ contains
        URBAN_driver_resume, &
        URBAN_SURFACE_SET
     use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_calc_diagnostics, &
        ATMOS_vars_history_setpres, &
        ATMOS_vars_restart_read
     use mod_ocean_vars, only: &
@@ -464,7 +464,7 @@ contains
 
     if ( ATMOS_do ) then
        ! calc diagnostics
-       call ATMOS_vars_diagnostics
+       call ATMOS_vars_calc_diagnostics
        call ATMOS_vars_history_setpres
     endif
 

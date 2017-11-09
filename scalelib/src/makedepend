@@ -56,7 +56,7 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
   deps.sort.each do |name, dep|
     file.print "$(OBJ_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(inc_index) $(DEPENDLIB)"
     ptype = ""
-    if /\Ascale_atmos_phy_(mp|tb|rd)\Z/ =~ name
+    if /\Ascale_atmos_phy_(mp|tb|bl|rd)\Z/ =~ name
       ptype = $1
       file.print " $(patsubst %,$(OBJ_DIR)/%,$(OBJS_#{ptype.upcase}))"
     end
@@ -79,11 +79,12 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
   mods = Array.new
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_MP))"
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_TB))"
+  mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_BL))"
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_RD))"
 
   pros.keys.sort.map{|mod|
      mod = mod.downcase
-     unless /\Ascale_atmos_phy_(mp|tb|rd)_(\w+)\Z/ =~ mod && ( $2 != "common" && $2 != "convert" )
+     unless /\Ascale_atmos_phy_(mp|tb|bl|rd)_(\w+)\Z/ =~ mod && ( $2 != "common" && $2 != "convert" )
        mods.push "$(OBJ_DIR)/#{mod}.mod"
      end
   }

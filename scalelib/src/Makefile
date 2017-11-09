@@ -15,9 +15,9 @@ LIBNAME = libscale.a
 DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
 VPATH = common:                     \
-        common/tracer:              \
         coupler:                    \
         io:                         \
+	atmosphere/physics/pbl      \
         atmos-physics:              \
         atmos-physics/share:        \
         atmos-physics/microphysics: \
@@ -97,9 +97,9 @@ OBJS_SF = scale_atmos_phy_sf_bulk.o	\
 
 OBJS_TB = scale_atmos_phy_tb_smg.o	\
           scale_atmos_phy_tb_d1980.o	\
-          scale_atmos_phy_tb_dns.o	\
-          scale_atmos_phy_tb_mynn.o	\
-          scale_atmos_phy_tb_hybrid.o
+          scale_atmos_phy_tb_dns.o
+
+OBJS_TB = scale_atmos_phy_bl_mynn.o
 
 OBJS_CP = scale_atmos_phy_cp_kf.o
 
@@ -132,6 +132,8 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_phy_tb.o	\
 	scale_atmos_phy_tb_common.o	\
 	$(OBJS_TB)	\
+        \
+	$(OBJS_BL)	\
 	\
 	scale_atmos_phy_cp.o	\
 	$(OBJS_CP)	\

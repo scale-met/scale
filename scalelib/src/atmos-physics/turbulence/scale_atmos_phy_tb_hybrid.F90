@@ -144,10 +144,9 @@ contains
        ATMOS_PHY_TB_smg_config, &
        ATMOS_PHY_TB_smg_setup, &
        ATMOS_PHY_TB_smg
-    use scale_atmos_phy_tb_mynn, only: &
-       ATMOS_PHY_TB_mynn_config, &
-       ATMOS_PHY_TB_mynn_setup, &
-       ATMOS_PHY_TB_mynn
+    use scale_atmos_phy_bl_mynn, only: &
+       ATMOS_PHY_BL_mynn_setup, &
+       ATMOS_PHY_BL_mynn
     implicit none
 
     character(len=*), intent(in)  :: TB_TYPE
@@ -199,11 +198,13 @@ contains
 
     select case( ATMOS_PHY_TB_HYBRID_PBL_TYPE )
     case('MYNN')
-       call ATMOS_PHY_TB_mynn_config( &
+       call TRACER_regist( &
+            I_TKE
+       call ATMOS_PHY_BL_mynn_config( &
             ATMOS_PHY_TB_HYBRID_PBL_TYPE, &
             I_TKE_PBL )
-       PBL_TB       => ATMOS_PHY_TB_mynn
-       PBL_TB_setup => ATMOS_PHY_TB_mynn_setup
+       PBL_TB       => ATMOS_PHY_BL_mynn
+       PBL_TB_setup => ATMOS_PHY_BL_mynn_setup
     case default
        write(*,*) 'xxx ATMOS_PHY_TB_HYBRID_PBL_TYPE is invalid'
        call PRC_MPIstop
