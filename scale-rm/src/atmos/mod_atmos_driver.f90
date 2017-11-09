@@ -327,10 +327,13 @@ contains
        QTRC,                       &
        DENS_tp,                    &
        MOMZ_tp,                    &
-       MOMX_tp,                    &
-       MOMY_tp,                    &
+       RHOU_tp,                    &
+       RHOV_tp,                    &
        RHOT_tp,                    &
-       RHOQ_tp
+       RHOH_tp,                    &
+       RHOQ_tp,                    &
+       MOMX_tp,                    &
+       MOMY_tp
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver
     use mod_atmos_phy_mp_driver, only: &
@@ -384,13 +387,19 @@ contains
 !OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    MOMX_tp(:,:,:)   = 0.0_RP
+    RHOU_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    MOMY_tp(:,:,:)   = 0.0_RP
+    RHOV_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
+    RHOH_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:)   = 0.0_RP
 
     !########## Calculate diagnostic variables ##########
     call PROF_rapstart('ATM_History', 1)

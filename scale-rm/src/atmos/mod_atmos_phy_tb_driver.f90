@@ -156,13 +156,13 @@ contains
        calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
        calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi
     use mod_atmos_vars, only: &
+       ATMOS_vars_get_diagnostic, &
        DENS => DENS_av,   &
        MOMZ => MOMZ_av,   &
        MOMX => MOMX_av,   &
        MOMY => MOMY_av,   &
        RHOT => RHOT_av,   &
        QTRC => QTRC_av,   &
-       N2   => N2,        &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
@@ -195,6 +195,8 @@ contains
     real(RP) :: Ri(KA,IA,JA) ! Richardson number
     real(RP) :: Pr(KA,IA,JA) ! Prandtl number
 
+    real(RP), pointer :: N2(:,:,:)
+
     real(RP) :: tend(KA,IA,JA)
     real(RP) :: total ! dummy
 
@@ -208,6 +210,7 @@ contains
 
        RHOQ_t_TB = 0.0_RP
 
+       call ATMOS_vars_get_diagnostic( "N2", N2 )
        call ATMOS_PHY_TB( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
                           QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
                           RHOQ_t_TB,                              & ! [INOUT]

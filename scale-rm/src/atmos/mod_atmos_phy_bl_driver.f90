@@ -171,7 +171,6 @@ contains
        PRES,  &
        EXNER, &
        QDRY,  &
-       N2,    &
        RHOU_t => RHOU_tp, &
        RHOV_t => RHOV_tp, &
        RHOT_t => RHOT_tp, &
@@ -196,7 +195,8 @@ contains
     real(RP) :: Nu(KA,IA,JA) !> eddy viscosity
     real(RP) :: Kh(KA,IA,JA) !> eddy diffution
 
-    real(RP), pointer :: QW  (:,:,:) !> total water
+    real(RP), pointer :: N2  (:,:,:) !> static stability
+    real(RP), pointer :: QTOT(:,:,:) !> total water
     real(RP), pointer :: POTL(:,:,:) !> liquid water potential temperature
 
     real(RP) :: total ! dummy
@@ -210,26 +210,28 @@ contains
 
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
-          call ATMOS_vars_get_diagnostic( "QW", QW   )
+          call ATMOS_vars_get_diagnostic( "N2",   N2   )
+          call ATMOS_vars_get_diagnostic( "QTOT", QTOT )
           call ATMOS_vars_get_diagnostic( "POTL", POTL )
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                    & ! (out)
-               RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,I_TKE),              & ! (out)
-               Nu(:,:,:), Kh(:,:,:),                                  & ! (out)
-               DENS(:,:,:), U(:,:,:), V(:,:,:),                       & ! (in)
-               POTT(:,:,:), QTRC(:,:,:,I_TKE),                        & ! (in)
-               PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                  & ! (in)
-               QDRY(:,:,:), QTRC(:,:,:,I_QV), QW(:,:,:), POTL(:,:,:), & ! (in)
-               SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), l_mo(:,:),   & ! (in)
-               CZ(:,:,:), FZ(:,:,:), dt_BL )
+               DENS(:,:,:), U(:,:,:), V(:,:,:),                         & ! (in)
+               POTT(:,:,:), QTRC(:,:,:,I_TKE),                          & ! (in)
+               PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                    & ! (in)
+               QDRY(:,:,:), QTRC(:,:,:,I_QV), QTOT(:,:,:), POTL(:,:,:), & ! (in)
+               SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), l_mo(:,:),     & ! (in)
+               CZ(:,:,:), FZ(:,:,:), dt_BL,                             & ! (in)
+               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                      & ! (out)
+               RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,I_TKE),                & ! (out)
+               Nu(:,:,:), Kh(:,:,:)                                     ) ! (out)
           do iq = 1, QA
              if ( .not. TRACER_ADVC(iq) .or. iq==I_TKE ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  RHOQ_t(:,:,:,iq), &
-                  DENS(:,:,:), QTRC(:,:,:,iq), SFLX_Q(:,:,iq), Kh(:,:,:), &
-                  CZ(:,:,:), FZ(:,:,:), dt_BL )
+                  DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
+                  SFLX_Q(:,:,iq), Kh(:,:,:),   & ! (in)
+                  CZ(:,:,:), FZ(:,:,:), dt_BL, & ! (in)
+                  RHOQ_t(:,:,:,iq)             ) ! (out)
           end do
        end select
 

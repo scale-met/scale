@@ -253,11 +253,16 @@ contains
        RHOT_av, &
        QTRC_av, &
        DENS_tp, &
+       RHOU_tp, &
+       RHOV_tp, &
+       RHOT_tp, &
+       RHOQ_tp, &
+       RHOH_tp, &
        MOMZ_tp, &
        MOMX_tp, &
        MOMY_tp, &
-       RHOT_tp, &
-       RHOQ_tp
+       CPtot,   &
+       EXNER
     use mod_atmos_dyn_vars, only: &
        PROG
     use scale_atmos_refstate, only: &
@@ -280,12 +285,67 @@ contains
        ATMOS_BOUNDARY_alpha_QTRC
     use scale_atmos_dyn, only: &
        ATMOS_DYN
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     logical, intent(in) :: do_flag
+
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( do_flag ) then
+
+       call COMM_vars8( RHOU_tp, 1 )
+       call COMM_vars8( RHOV_tp, 2 )
+       call COMM_vars8( MOMZ_tp, 3 )
+       do iq = 1, QA
+          call COMM_vars8( RHOQ_tp(:,:,:,iq), 4+iq)
+       end do
+       
+
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
+                         + RHOH_tp(k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )
+       end do
+       end do
+       end do
+       call COMM_vars8( RHOT_tp, 4 )
+
+       call COMM_wait ( RHOU_tp, 1 )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMX_tp(k,i,j) = MOMX_tp(k,i,j) &
+                         + 0.5_RP * ( RHOU_tp(k,i,j) + RHOU_tp(k,i+1,j) )
+       end do
+       end do
+       end do
+       call COMM_vars8( MOMX_tp, 1 )
+
+       call COMM_wait ( RHOV_tp, 2 )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMY_tp(k,i,j) = MOMY_tp(k,i,j) &
+                         + 0.5_RP * ( RHOV_tp(k,i,j) + RHOV_tp(k,i,j+1) )
+       end do
+       end do
+       end do
+       call COMM_vars8( MOMY_tp, 2 )
+
+       call COMM_wait ( MOMZ_tp, 3 )
+       call COMM_wait ( RHOT_tp, 4 )
+       do iq = 1, QA
+          call COMM_wait ( RHOQ_tp(:,:,:,iq), 4+iq )
+       end do
+       call COMM_wait ( MOMX_tp, 1 )
+       call COMM_wait ( MOMY_tp, 2 )
+
+
        call ATMOS_DYN( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
                        PROG,                                                 & ! [IN]
                        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]

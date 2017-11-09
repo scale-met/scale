@@ -48,18 +48,18 @@ contains
   !> solve tridiagonal matrix with Thomas's algorithm
   subroutine MATRIX_SOLVER_tridiagonal_1D( &
        KA, KS, KE, &
-       ov,         &
        ud, md, ld, &
-       iv          )
+       iv,         &
+       ov          )
     implicit none
     integer,  intent(in)  :: KA, KS, KE
-
-    real(RP), intent(out) :: ov(KA) ! output vector
 
     real(RP), intent(in)  :: ud(KA) ! upper  diagonal
     real(RP), intent(in)  :: md(KA) ! middle diagonal
     real(RP), intent(in)  :: ld(KA) ! lower  diagonal
     real(RP), intent(in)  :: iv(KA) ! input  vector
+
+    real(RP), intent(out) :: ov(KA) ! output vector
 
     real(RP) :: c(KA)
     real(RP) :: d(KA)
@@ -68,16 +68,16 @@ contains
     !---------------------------------------------------------------------------
 
     ! foward reduction
-    c(1) = ud(1) / md(1)
-    d(1) = iv(1) / md(1)
-    do k = 2, KA
+    c(KS) = ud(KS) / md(KS)
+    d(KS) = iv(KS) / md(KS)
+    do k = KS+1, KE
        c(k) =           ud(k)            / ( md(k) - ld(k) * c(k-1) )
        d(k) = ( iv(k) - ld(k) * d(k-1) ) / ( md(k) - ld(k) * c(k-1) )
     enddo
 
     ! backward substitution
-    ov(KA) = d(KA)
-    do k = KA-1, 1, -1
+    ov(KE) = d(KE)
+    do k = KE-1, KS, -1
        ov(k) = d(k) - c(k) * ov(k+1)
     enddo
 

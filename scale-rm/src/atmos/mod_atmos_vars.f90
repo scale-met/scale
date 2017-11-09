@@ -106,20 +106,19 @@ module mod_atmos_vars
 
  ! tendency by physical processes
   real(RP), public, allocatable :: DENS_tp(:,:,:)
-  real(RP), public, allocatable :: RHOW_tp(:,:,:)
+  real(RP), public, allocatable :: MOMZ_tp(:,:,:)
   real(RP), public, allocatable :: RHOU_tp(:,:,:)
   real(RP), public, allocatable :: RHOV_tp(:,:,:)
   real(RP), public, allocatable :: RHOT_tp(:,:,:)
+  real(RP), public, allocatable :: RHOH_tp(:,:,:)
   real(RP), public, allocatable :: RHOQ_tp(:,:,:,:)
-  real(RP), public, allocatable :: RHOH   (:,:,:)
 
   ! (obsolute)
-  real(RP), public, allocatable :: MOMZ_tp(:,:,:)
   real(RP), public, allocatable :: MOMX_tp(:,:,:)
   real(RP), public, allocatable :: MOMY_tp(:,:,:)
 
 
-  ! diagnostic variables
+  ! public diagnostic variables
   real(RP), public, allocatable, target :: W    (:,:,:) !> velocity w [m/s]
   real(RP), public, allocatable, target :: U    (:,:,:) !> velocity u [m/s]
   real(RP), public, allocatable, target :: V    (:,:,:) !> velocity v [m/s]
@@ -134,75 +133,6 @@ module mod_atmos_vars
   real(RP), public, allocatable, target :: Rtot (:,:,:) !> specific gass constant [J/kg/K]
   real(RP), public, allocatable, target :: CVtot(:,:,:) !> specific heat          [J/kg/K]
   real(RP), public, allocatable, target :: CPtot(:,:,:) !> specific heat          [J/kg/K]
-
-  real(RP), public, allocatable, target :: LHV  (:,:,:) !> latent heat for vaporization [J/kg]
-  real(RP), public, allocatable, target :: LHS  (:,:,:) !> latent heat for sublimation  [J/kg]
-  real(RP), public, allocatable, target :: LHF  (:,:,:) !> latent heat for fusion       [J/kg]
-
-  real(RP), public, allocatable, target :: POTV (:,:,:) !> virtual pot. temp.      [K]
-  real(RP), public, allocatable, target :: TEML (:,:,:) !> liquid water temp.      [K]
-  real(RP), public, allocatable, target :: POTL (:,:,:) !> liquid water pot. temp. [K]
-
-  real(RP), public, allocatable, target :: QTOT (:,:,:) !> total water content  [1]
-  real(RP), public, allocatable, target :: QHYD (:,:,:) !> total hydrometeornt  [1]
-  real(RP), public, allocatable, target :: QLIQ (:,:,:) !> liquid water content [1]
-  real(RP), public, allocatable, target :: QICE (:,:,:) !> ice water content    [1]
-
-  real(RP), public, allocatable, target :: LWP  (:,:)   !> liquid water path  [g/m2]
-  real(RP), public, allocatable, target :: IWP  (:,:)   !> ice    water path  [g/m2]
-  real(RP), public, allocatable, target :: PW   (:,:)   !> precipitable water [g/m2]
-
-  real(RP), public, allocatable, target :: PREC (:,:)   !> surface precipitation rate CP+MP(rain+snow) [kg/m2/s]
-  real(RP), public, allocatable, target :: RAIN (:,:)   !> surface rain rate CP+MP [kg/m2/s]
-  real(RP), public, allocatable, target :: SNOW (:,:)   !> surface snow rate CP+MP [kg/m2/s]
-
-  real(RP), public, allocatable, target :: QSAT (:,:,:) !> saturation specific humidity        [1]
-  real(RP), public, allocatable, target :: RHA  (:,:,:) !> relative humidity (liquid+ice)      [%]
-  real(RP), public, allocatable, target :: RHL  (:,:,:) !> relative humidity against to liquid [%]
-  real(RP), public, allocatable, target :: RHI  (:,:,:) !> relative humidity against to ice    [%]
-
-  real(RP), public, allocatable, target :: VOR  (:,:,:) !> vertical vorticity    [1/s]
-  real(RP), public, allocatable, target :: DIV  (:,:,:) !> divergence            [1/s]
-  real(RP), public, allocatable, target :: HDIV (:,:,:) !> horizontal divergence [1/s]
-  real(RP), public, allocatable, target :: Uabs (:,:,:) !> absolute velocity     [m/s]
-
-  real(RP), public, allocatable, target :: N2   (:,:,:) !> squared Brunt-Vaisala frequency [/s2]
-  real(RP), public, allocatable, target :: PBLH (:,:)   !> PBL height [m]
-
-  real(RP), public, allocatable, target :: MSE  (:,:,:) !> MSE                             [m2/s2]
-
-  real(RP), public, allocatable, target :: CAPE (:,:)   !> CAPE       [m2/s2]
-  real(RP), public, allocatable, target :: CIN  (:,:)   !> CIN        [m2/s2]
-  real(RP), public, allocatable, target :: LCL  (:,:)   !> LCL height [m]
-  real(RP), public, allocatable, target :: LFC  (:,:)   !> LFC height [m]
-  real(RP), public, allocatable, target :: LNB  (:,:)   !> LNB height [m]
-
-  real(RP), public, allocatable, target :: ENGT (:,:,:) !> total     energy [J/m3]
-  real(RP), public, allocatable, target :: ENGP (:,:,:) !> potential energy [J/m3]
-  real(RP), public, allocatable, target :: ENGK (:,:,:) !> kinetic   energy [J/m3]
-  real(RP), public, allocatable, target :: ENGI (:,:,:) !> internal  energy [J/m3]
-
-  real(RP), public, allocatable, target :: DENS_MEAN(:)     !> horiz. mean of density         [kg/m3]
-  real(RP), public, allocatable, target :: W_MEAN   (:)     !> horiz. mean of w               [m/s]
-  real(RP), public, allocatable, target :: U_MEAN   (:)     !> horiz. mean of u               [m/s]
-  real(RP), public, allocatable, target :: V_MEAN   (:)     !> horiz. mean of v               [m/s]
-  real(RP), public, allocatable, target :: PT_MEAN  (:)     !> horiz. mean of pot.            [K]
-  real(RP), public, allocatable, target :: T_MEAN   (:)     !> horiz. mean of t               [K]
-  real(RP), public, allocatable, target :: QV_MEAN  (:)     !> horiz. mean of QV
-  real(RP), public, allocatable, target :: QHYD_MEAN(:)     !> horiz. mean of QHYD
-  real(RP), public, allocatable, target :: QLIQ_MEAN(:)     !> horiz. mean of QLIQ
-  real(RP), public, allocatable, target :: QICE_MEAN(:)     !> horiz. mean of QICE
-
-  real(RP), public, allocatable, target :: DENS_PRIM(:,:,:) !> horiz. deviation of density    [kg/m3]
-  real(RP), public, allocatable, target :: W_PRIM   (:,:,:) !> horiz. deviation of w          [m/s]
-  real(RP), public, allocatable, target :: U_PRIM   (:,:,:) !> horiz. deviation of u          [m/s]
-  real(RP), public, allocatable, target :: V_PRIM   (:,:,:) !> horiz. deviation of v          [m/s]
-  real(RP), public, allocatable, target :: PT_PRIM  (:,:,:) !> horiz. deviation of pot. temp. [K]
-  real(RP), public, allocatable, target :: W_PRIM2  (:,:,:) !> variance of w                  [m2/s2]
-  real(RP), public, allocatable, target :: PT_W_PRIM(:,:,:) !> resolved scale heat flux       [W/s]
-  real(RP), public, allocatable, target :: W_PRIM3  (:,:,:) !> skewness of w                  [m3/s3]
-  real(RP), public, allocatable, target :: TKE_RS   (:,:,:) !> resolved scale TKE             [m2/s2]
-
 
 
   !-----------------------------------------------------------------------------
@@ -236,7 +166,78 @@ module mod_atmos_vars
        Vinfo( 'RHOT', 'rho * theta', 'kg/m3*K', 3 )  /
 
 
-  ! diagnostic variables
+  ! private diagnostic variables
+  real(RP), allocatable, target :: LHV  (:,:,:) !> latent heat for vaporization [J/kg]
+  real(RP), allocatable, target :: LHS  (:,:,:) !> latent heat for sublimation  [J/kg]
+  real(RP), allocatable, target :: LHF  (:,:,:) !> latent heat for fusion       [J/kg]
+
+  real(RP), allocatable, target :: POTV (:,:,:) !> virtual pot. temp.      [K]
+  real(RP), allocatable, target :: TEML (:,:,:) !> liquid water temp.      [K]
+  real(RP), allocatable, target :: POTL (:,:,:) !> liquid water pot. temp. [K]
+
+  real(RP), allocatable, target :: QTOT (:,:,:) !> total water content  [1]
+  real(RP), allocatable, target :: QHYD (:,:,:) !> total hydrometeornt  [1]
+  real(RP), allocatable, target :: QLIQ (:,:,:) !> liquid water content [1]
+  real(RP), allocatable, target :: QICE (:,:,:) !> ice water content    [1]
+
+  real(RP), allocatable, target :: LWP  (:,:)   !> liquid water path  [g/m2]
+  real(RP), allocatable, target :: IWP  (:,:)   !> ice    water path  [g/m2]
+  real(RP), allocatable, target :: PW   (:,:)   !> precipitable water [g/m2]
+
+  real(RP), allocatable, target :: PREC (:,:)   !> surface precipitation rate CP+MP(rain+snow) [kg/m2/s]
+  real(RP), allocatable, target :: RAIN (:,:)   !> surface rain rate CP+MP [kg/m2/s]
+  real(RP), allocatable, target :: SNOW (:,:)   !> surface snow rate CP+MP [kg/m2/s]
+
+  real(RP), allocatable, target :: QSAT (:,:,:) !> saturation specific humidity        [1]
+  real(RP), allocatable, target :: RHA  (:,:,:) !> relative humidity (liquid+ice)      [%]
+  real(RP), allocatable, target :: RHL  (:,:,:) !> relative humidity against to liquid [%]
+  real(RP), allocatable, target :: RHI  (:,:,:) !> relative humidity against to ice    [%]
+
+  real(RP), allocatable, target :: VOR  (:,:,:) !> vertical vorticity    [1/s]
+  real(RP), allocatable, target :: DIV  (:,:,:) !> divergence            [1/s]
+  real(RP), allocatable, target :: HDIV (:,:,:) !> horizontal divergence [1/s]
+  real(RP), allocatable, target :: Uabs (:,:,:) !> absolute velocity     [m/s]
+
+  real(RP), allocatable, target :: N2   (:,:,:) !> squared Brunt-Vaisala frequency [/s2]
+  real(RP), allocatable, target :: PBLH (:,:)   !> PBL height [m]
+
+  real(RP), allocatable, target :: MSE  (:,:,:) !> MSE                             [m2/s2]
+
+  real(RP), allocatable, target :: CAPE (:,:)   !> CAPE       [m2/s2]
+  real(RP), allocatable, target :: CIN  (:,:)   !> CIN        [m2/s2]
+  real(RP), allocatable, target :: LCL  (:,:)   !> LCL height [m]
+  real(RP), allocatable, target :: LFC  (:,:)   !> LFC height [m]
+  real(RP), allocatable, target :: LNB  (:,:)   !> LNB height [m]
+
+  real(RP), allocatable, target :: ENGT (:,:,:) !> total     energy [J/m3]
+  real(RP), allocatable, target :: ENGP (:,:,:) !> potential energy [J/m3]
+  real(RP), allocatable, target :: ENGK (:,:,:) !> kinetic   energy [J/m3]
+  real(RP), allocatable, target :: ENGI (:,:,:) !> internal  energy [J/m3]
+
+  real(RP), allocatable, target :: DENS_MEAN(:)     !> horiz. mean of density         [kg/m3]
+  real(RP), allocatable, target :: W_MEAN   (:)     !> horiz. mean of w               [m/s]
+  real(RP), allocatable, target :: U_MEAN   (:)     !> horiz. mean of u               [m/s]
+  real(RP), allocatable, target :: V_MEAN   (:)     !> horiz. mean of v               [m/s]
+  real(RP), allocatable, target :: PT_MEAN  (:)     !> horiz. mean of pot.            [K]
+  real(RP), allocatable, target :: T_MEAN   (:)     !> horiz. mean of t               [K]
+  real(RP), allocatable, target :: QV_MEAN  (:)     !> horiz. mean of QV
+  real(RP), allocatable, target :: QHYD_MEAN(:)     !> horiz. mean of QHYD
+  real(RP), allocatable, target :: QLIQ_MEAN(:)     !> horiz. mean of QLIQ
+  real(RP), allocatable, target :: QICE_MEAN(:)     !> horiz. mean of QICE
+
+  real(RP), allocatable, target :: DENS_PRIM(:,:,:) !> horiz. deviation of density    [kg/m3]
+  real(RP), allocatable, target :: W_PRIM   (:,:,:) !> horiz. deviation of w          [m/s]
+  real(RP), allocatable, target :: U_PRIM   (:,:,:) !> horiz. deviation of u          [m/s]
+  real(RP), allocatable, target :: V_PRIM   (:,:,:) !> horiz. deviation of v          [m/s]
+  real(RP), allocatable, target :: PT_PRIM  (:,:,:) !> horiz. deviation of pot. temp. [K]
+  real(RP), allocatable, target :: W_PRIM2  (:,:,:) !> variance of w                  [m2/s2]
+  real(RP), allocatable, target :: PT_W_PRIM(:,:,:) !> resolved scale heat flux       [W/s]
+  real(RP), allocatable, target :: W_PRIM3  (:,:,:) !> skewness of w                  [m3/s3]
+  real(RP), allocatable, target :: TKE_RS   (:,:,:) !> resolved scale TKE             [m2/s2]
+
+
+  ! id of diagnostic variables
+  !! public
   integer,     private, parameter :: I_W         =  1
   integer,     private, parameter :: I_U         =  2
   integer,     private, parameter :: I_V         =  3
@@ -249,6 +250,7 @@ module mod_atmos_vars
   integer,     private, parameter :: I_RTOT      = 10
   integer,     private, parameter :: I_CVTOT     = 11
   integer,     private, parameter :: I_CPTOT     = 12
+  !! private
   integer,     private, parameter :: I_LHV       = 13
   integer,     private, parameter :: I_LHS       = 14
   integer,     private, parameter :: I_LHF       = 15
@@ -504,12 +506,12 @@ contains
     endif
 
     allocate( DENS_tp(KA,IA,JA)    )
-    allocate( RHOW_tp(KA,IA,JA)    )
+    allocate( MOMZ_tp(KA,IA,JA)    )
     allocate( RHOU_tp(KA,IA,JA)    )
     allocate( RHOV_tp(KA,IA,JA)    )
     allocate( RHOT_tp(KA,IA,JA)    )
+    allocate( RHOH_tp(KA,IA,JA)    )
     allocate( RHOQ_tp(KA,IA,JA,max(QA,1)) )
-    allocate( RHOH   (KA,IA,JA)    )
 
     allocate( W(KA,IA,JA) )
     allocate( U(KA,IA,JA) )
@@ -527,7 +529,6 @@ contains
     allocate( CPtot(KA,IA,JA) )
 
     ! obsolute
-    allocate( MOMZ_tp(KA,IA,JA)    )
     allocate( MOMX_tp(KA,IA,JA)    )
     allocate( MOMY_tp(KA,IA,JA)    )
 
@@ -1152,7 +1153,7 @@ contains
     call HIST_put( DV_HIST_id(I_PHYD ), PHYD(:,:,:)  )
 
     call HIST_put( DV_HIST_id(I_QDRY ), QDRY(:,:,:)  )
-    call HIST_put( DV_HIST_id(I_RHOT ), RTOT(:,:,:)  )
+    call HIST_put( DV_HIST_id(I_RTOT ), RTOT(:,:,:)  )
     call HIST_put( DV_HIST_id(I_CVTOT), CVTOT(:,:,:) )
     call HIST_put( DV_HIST_id(I_CPTOT), CPTOT(:,:,:) )
 
@@ -1171,7 +1172,6 @@ contains
           end select
        end if
     end do
-
 
     return
   end subroutine ATMOS_vars_history
@@ -1617,7 +1617,7 @@ contains
        end if
        var => RHA
 
-    case ( 'RHL' )
+    case ( 'RHL', 'RH' )
        if ( .not. DV_calclated(I_RHL) ) then
           if ( .not. allocated(RHL) ) allocate( RHL(KA,IA,JA) )
           if ( I_QV > 0 ) then
@@ -2038,7 +2038,7 @@ contains
        var => TKE_RS
 
     case default
-       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic: ', trim(vname)
+       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic_3D: ', trim(vname)
        call PRC_abort
     end select
 
@@ -2220,7 +2220,7 @@ contains
        end select
 
     case default
-       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic: ', trim(vname)
+       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic_2D: ', trim(vname)
        call PRC_abort
     end select
 
@@ -2449,7 +2449,7 @@ contains
        var => QICE_MEAN
 
     case default
-       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic: ', trim(vname)
+       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic_1D: ', trim(vname)
        call PRC_abort
     end select
 
@@ -2566,7 +2566,7 @@ contains
 
     ! total vapor,liquid,solid tracers
     if ( DV_MONIT_id(IM_QTOT) > 0 ) then
-       call ATMOS_vars_get_diagnostic( 'QTOT', WORK2D )
+       call ATMOS_vars_get_diagnostic( 'QTOT', WORK3D )
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
        do j = JS, JE
@@ -2594,7 +2594,7 @@ contains
 
     !##### Energy Budget #####
 
-    if ( DV_MONIT_id(I_ENGT) > 0 ) then
+    if ( DV_MONIT_id(IM_ENGT) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGT', WORK3D )
        call MONIT_put( DV_MONIT_id(IM_ENGT), WORK3D(:,:,:) )
     end if

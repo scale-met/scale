@@ -193,14 +193,13 @@ contains
   !<
   subroutine ATMOS_PHY_BL_MYNN_tendency( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       RHOU_t, RHOV_t, RHOT_t, RTKE_t, &
-       Nu, Kh, &
-       DENS, U, V, POTT, TKE, &
-       PRES, EXNER, N2, &
-       QDRY, QV, Qw, POTL, &
+       DENS, U, V, POTT, TKE,           &
+       PRES, EXNER, N2,                 &
+       QDRY, QV, Qw, POTL,              &
        SFLX_MU, SFLX_MV, SFLX_SH, l_mo, &
-       CZ, FZ, dt, &
-       level )
+       CZ, FZ, dt,                      &
+       RHOU_t, RHOV_t, RHOT_t, RTKE_t,  &
+       Nu, Kh                           )
     use scale_const, only: &
        GRAV    => CONST_GRAV,  &
        Rdry    => CONST_Rdry,  &
@@ -225,13 +224,6 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(out) :: RHOU_t(KA,IA,JA) !> tendency of dens * u
-    real(RP), intent(out) :: RHOV_t(KA,IA,JA) !> tendency of dens * v
-    real(RP), intent(out) :: RHOT_t(KA,IA,JA) !> tendency of dens * pt
-    real(RP), intent(out) :: RTKE_t(KA,IA,JA) !> tenddency of dens * tke
-    real(RP), intent(out) :: Nu    (KA,IA,JA) !> eddy viscosity coefficient
-    real(RP), intent(out) :: Kh    (KA,IA,JA) !> eddy diffusion coefficient
-
     real(RP), intent(in) :: DENS   (KA,IA,JA) !> density
     real(RP), intent(in) :: U      (KA,IA,JA) !> zonal wind
     real(RP), intent(in) :: V      (KA,IA,JA) !> meridional wind
@@ -249,11 +241,16 @@ contains
     real(RP), intent(in) :: SFLX_SH(   IA,JA) !> surface sensible heat flux
     real(RP), intent(in) :: l_mo   (   IA,JA) !> Monin-Obukhov length
 
-    real(RP), intent(in)  :: CZ(KA,IA,JA)
-    real(RP), intent(in)  :: FZ(KA,IA,JA)
+    real(RP), intent(in)  :: CZ(  KA,IA,JA)
+    real(RP), intent(in)  :: FZ(0:KA,IA,JA)
     real(DP), intent(in)  :: dt
 
-    real(RP), intent(in), optional :: level !> MY level
+    real(RP), intent(out) :: RHOU_t(KA,IA,JA) !> tendency of dens * u
+    real(RP), intent(out) :: RHOV_t(KA,IA,JA) !> tendency of dens * v
+    real(RP), intent(out) :: RHOT_t(KA,IA,JA) !> tendency of dens * pt
+    real(RP), intent(out) :: RTKE_t(KA,IA,JA) !> tenddency of dens * tke
+    real(RP), intent(out) :: Nu    (KA,IA,JA) !> eddy viscosity coefficient
+    real(RP), intent(out) :: Kh    (KA,IA,JA) !> eddy diffusion coefficient
 
     real(RP) :: Ri   (KA,IA,JA) !> Richardson number
     real(RP) :: Pr   (KA,IA,JA) !> Plandtle number
@@ -313,9 +310,6 @@ contains
     if( IO_L ) write(IO_FID_LOG, *) "*** atmosphere / physics / pbl / MYNN"
 
     mynn_level = ATMOS_PHY_BL_MYNN_LEVEL
-    if ( present(level) ) then
-       mynn_level = level
-    end if
     if ( mynn_level .ne. 2.5_RP ) then
        write(*,*) 'xxx only level 2.5 is supported at this moment'
        call PRC_abort
@@ -339,7 +333,6 @@ contains
     !$omp         k,i,j)
     do j = JS, JE
     do i = IS, IE
-
        SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) * EXNER(KS,i,j) )
 
        do k = KS, KE_PBL
@@ -518,9 +511,9 @@ contains
        b(KE_PBL) = - c(KE_PBL) + 1.0_RP
 
        call MATRIX_SOLVER_tridiagonal( &
-            KA, KS, KE_PBL,        & ! (in)
-            phi_n(:),              & ! (out)
-            a(:), b(:), c(:), d(:) ) ! (in)
+            KA, KS, KE_PBL, &
+            a(:), b(:), c(:), d(:), & ! (in)
+            phi_n(:)                ) ! (out)
 
        RHOU_t(KS,i,j) = ( phi_n(KS) - U(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
        do k = KS+1, KE_PBL
@@ -546,9 +539,9 @@ contains
        ! a,b,c is the same as those for the u
 
        call MATRIX_SOLVER_tridiagonal( &
-            KA, KS, KE_PBL,        & ! (in)
-            phi_n(:),              & ! (out)
-            a(:), b(:), c(:), d(:) ) ! (in)
+            KA, KS, KE_PBL, &
+            a(:), b(:), c(:), d(:), & ! (in)
+            phi_n(:)                ) ! (out)
 
        RHOV_t(KS,i,j) = ( phi_n(KS) - V(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
        do k = KS+1, KE_PBL
@@ -583,9 +576,9 @@ contains
        b(KE_PBL) = - c(KE_PBL) + 1.0_RP
 
        call MATRIX_SOLVER_tridiagonal( &
-            KA, KS, KE_PBL,        & ! (in)
-            phi_n(:),              & ! (out)
-            a(:), b(:), c(:), d(:) ) ! (in)
+            KA, KS, KE_PBL, &
+            a(:), b(:), c(:), d(:), & ! (in)
+            phi_n(:)                ) ! (out)
 
        RHOT_t(KS,i,j) = ( phi_n(KS) - POTT(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
        do k = KS+1, KE_PBL
@@ -629,9 +622,9 @@ contains
        end do
 
        call MATRIX_SOLVER_tridiagonal( &
-            KA, KS, KE_PBL,        & ! (in)
-            phi_n(:),              & ! (out)
-            a(:), b(:), c(:), d(:) ) ! (in)
+            KA, KS, KE_PBL, &
+            a(:), b(:), c(:), d(:), & ! (in)
+            phi_n(:)                ) ! (out)
 
        do k = KS, KE_PBL
           RTKE_t(k,i,j) = ( max(phi_n(k), ATMOS_PHY_BL_MYNN_TKE_MIN) - TKE(k,i,j) ) * DENS(k,i,j) / dt
@@ -664,16 +657,14 @@ contains
   !<
   subroutine ATMOS_PHY_BL_MYNN_tendency_tracer( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       RHOQ_t, &
        DENS, QTRC, SFLX_Q, Kh, &
-       CZ, FZ, DT )
+       CZ, FZ, DT,             &
+       RHOQ_t                  )
     use scale_matrix, only: &
          MATRIX_SOLVER_tridiagonal
     integer,  intent(in) :: KA, KS, KE
     integer,  intent(in) :: IA, IS, IE
     integer,  intent(in) :: JA, JS, JE
-
-    real(RP), intent(out) :: RHOQ_t(KA,IA,JA) !> tendency of tracers
 
     real(RP), intent(in) :: DENS  (KA,IA,JA) !> density
     real(RP), intent(in) :: QTRC  (KA,IA,JA) !> tracers
@@ -684,6 +675,7 @@ contains
     real(RP), intent(in) :: FZ (0:KA,IA,JA) !> z at the half level
     real(DP), intent(in) :: DT             !> time step
 
+    real(RP), intent(out) :: RHOQ_t(KA,IA,JA) !> tendency of tracers
 
     real(RP) :: QTRC_n(KA) !> value at the next time step
     real(RP) :: a(KA)
@@ -731,8 +723,8 @@ contains
 
        call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
-               QTRC_n(:),             & ! (out)
-               a(:), b(:), c(:), d(:) ) ! (in)
+               a(:), b(:), c(:), d(:), & ! (in)
+               QTRC_n(:)               ) ! (out)
 
        RHOQ_t(KS,i,j) = ( QTRC_n(KS) - QTRC(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
        do k = KS+1, KE_PBL
