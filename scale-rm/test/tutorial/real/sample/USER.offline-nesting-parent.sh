@@ -35,6 +35,7 @@ TIME_DT_ATMOS_PHY_MP=(  "90.0" ) # required parameters for each domain - unit: S
 TIME_DT_ATMOS_PHY_RD=( "900.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_SF=(  "90.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_TB=(  "90.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_BL=(  "90.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_OCEAN=(        "450.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_LAND=(         "450.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_URBAN=(        "450.0" ) # required parameters for each domain - unit: SEC only
@@ -98,12 +99,13 @@ MPRJ_LC_LAT2="40.0"
 #
 #################################################
 
-ATMOS_DYN_TYPE=(    "HEVI"     ) # required parameters for each domain
-ATMOS_PHY_CP_TYPE=( "NONE"     ) # required parameters for each domain
-ATMOS_PHY_MP_TYPE=( "TOMITA08" ) # required parameters for each domain
-ATMOS_PHY_RD_TYPE=( "MSTRNX"   ) # required parameters for each domain
-ATMOS_PHY_SF_TYPE=( "COUPLE"   ) # required parameters for each domain
-ATMOS_PHY_TB_TYPE=( "HYBRID"   ) # required parameters for each domain
+ATMOS_DYN_TYPE=(    "HEVI"        ) # required parameters for each domain
+ATMOS_PHY_CP_TYPE=( "NONE"        ) # required parameters for each domain
+ATMOS_PHY_MP_TYPE=( "TOMITA08"    ) # required parameters for each domain
+ATMOS_PHY_RD_TYPE=( "MSTRNX"      ) # required parameters for each domain
+ATMOS_PHY_SF_TYPE=( "COUPLE"      ) # required parameters for each domain
+ATMOS_PHY_TB_TYPE=( "SMAGORINSKY" ) # required parameters for each domain
+ATMOS_PHY_BL_TYPE=( "MYNN"        ) # required parameters for each domain
 
 OCEAN_TYPE=( "CONST" ) # required parameters for each domain
 LAND_TYPE=(  "SLAB"  ) # required parameters for each domain

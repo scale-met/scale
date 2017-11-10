@@ -35,6 +35,7 @@ TIME_DT_ATMOS_PHY_MP=(  "90.0"  "30.0" ) # required parameters for each domain -
 TIME_DT_ATMOS_PHY_RD=( "900.0" "300.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_SF=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_TB=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_BL=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_OCEAN=(        "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_LAND=(         "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_URBAN=(        "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
@@ -111,12 +112,13 @@ MPRJ_LC_LAT2="40.0"
 #
 #################################################
 
-ATMOS_DYN_TYPE=(    "HEVI"     "HEVI"     ) # required parameters for each domain
-ATMOS_PHY_CP_TYPE=( "NONE"     "NONE"     ) # required parameters for each domain
-ATMOS_PHY_MP_TYPE=( "TOMITA08" "TOMITA08" ) # required parameters for each domain
-ATMOS_PHY_RD_TYPE=( "MSTRNX"   "MSTRNX"   ) # required parameters for each domain
-ATMOS_PHY_SF_TYPE=( "COUPLE"   "COUPLE"   ) # required parameters for each domain
-ATMOS_PHY_TB_TYPE=( "HYBRID"   "HYBRID"   ) # required parameters for each domain
+ATMOS_DYN_TYPE=(    "HEVI"        "HEVI"        ) # required parameters for each domain
+ATMOS_PHY_CP_TYPE=( "NONE"        "NONE"        ) # required parameters for each domain
+ATMOS_PHY_MP_TYPE=( "TOMITA08"    "TOMITA08"    ) # required parameters for each domain
+ATMOS_PHY_RD_TYPE=( "MSTRNX"      "MSTRNX"      ) # required parameters for each domain
+ATMOS_PHY_SF_TYPE=( "COUPLE"      "COUPLE"      ) # required parameters for each domain
+ATMOS_PHY_TB_TYPE=( "SMAGORINSKY" "SMAGORINSKY" ) # required parameters for each domain
+ATMOS_PHY_BL_TYPE=( "MYNN"        "MYNN"        ) # required parameters for each domain
 
 OCEAN_TYPE=( "CONST" "CONST" ) # required parameters for each domain
 LAND_TYPE=(  "SLAB"  "SLAB"  ) # required parameters for each domain
