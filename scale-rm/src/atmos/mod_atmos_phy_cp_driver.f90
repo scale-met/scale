@@ -99,11 +99,15 @@ contains
        STAT_total
     use scale_history, only: &
        HIST_in
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_diagnose_number_concentration
     use scale_atmos_phy_cp, only: &
        ATMOS_PHY_CP
     use scale_atmos_phy_mp, only: &
        QS_MP, &
        QE_MP
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
        MOMZ   => MOMZ_av, &
@@ -182,6 +186,10 @@ contains
           MFLX_cloudbase(i,j) = 0.0_RP
        enddo
        enddo
+
+       if ( ATMOS_PHY_MP_TYPE == 'SN14' ) then ! diagnose tendency of number concentration
+          call ATMOS_HYDROMETEOR_diagnose_number_concentration( RHOQ_t_CP(:,:,:,:) ) ! [INOUT]
+       endif
 
        call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', nohalo=.true. )
        call HIST_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', nohalo=.true. )
