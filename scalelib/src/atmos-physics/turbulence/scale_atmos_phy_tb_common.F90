@@ -1198,8 +1198,9 @@ contains
        qflx_phi, &
        DENS, PHI, Kh, FACT, &
        GSQRT, J13G, J23G, J33G, MAPF, &
-       a, b, c, dt, &
+       horizontal, &
        implicit, &
+       a, b, c, dt, &
        IIS, IIE, JJS, JJE )
     use scale_gridtrans, only: &
        I_XYZ, &
@@ -1225,11 +1226,12 @@ contains
     real(RP), intent(in)    :: J23G    (KA,IA,JA,7)
     real(RP), intent(in)    :: J33G
     real(RP), intent(in)    :: MAPF    (IA,JA,2,4)
+    logical,  intent(in)    :: horizontal
+    logical,  intent(in)    :: implicit
     real(RP), intent(in)    :: a       (KA,IA,JA)
     real(RP), intent(in)    :: b       (KA,IA,JA)
     real(RP), intent(in)    :: c       (KA,IA,JA)
     real(DP), intent(in)    :: dt
-    logical,  intent(in)    :: implicit
     integer,  intent(in)    :: IIS
     integer,  intent(in)    :: IIE
     integer,  intent(in)    :: JJS
@@ -1241,41 +1243,46 @@ contains
     integer :: k, i, j
 
     ! (x-y plane; x,y,w)
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,PHI,qflx_phi,GSQRT,I_XYW,RFDZ,J33G) &
-    !$omp shared(FDZ)
-    do j = JJS, JJE
-    do i = IIS, IIE
-    do k = KS, KE-1
+    if ( horizontal ) then
+!XFILL
+       qflx_phi(:,:,:,ZDIR) = 0.0_RP
+    else
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,PHI,qflx_phi,GSQRT,I_XYW,RFDZ,J33G) &
+       !$omp shared(FDZ)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE-1
 #ifdef DEBUG
-       call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, DENS(k+1,i,j) )
-       call CHECK( __LINE__, Kh(k,i,j) )
-       call CHECK( __LINE__, Kh(k+1,i,j) )
-       call CHECK( __LINE__, PHI(k+1,i,j) )
-       call CHECK( __LINE__, PHI(k,i,j) )
-       call CHECK( __LINE__, RFDZ(k) )
+          call CHECK( __LINE__, DENS(k,i,j) )
+          call CHECK( __LINE__, DENS(k+1,i,j) )
+          call CHECK( __LINE__, Kh(k,i,j) )
+          call CHECK( __LINE__, Kh(k+1,i,j) )
+          call CHECK( __LINE__, PHI(k+1,i,j) )
+          call CHECK( __LINE__, PHI(k,i,j) )
+          call CHECK( __LINE__, RFDZ(k) )
 #endif
-       qflx_phi(k,i,j,ZDIR) = - 0.25_RP & ! 1/2/2
+          qflx_phi(k,i,j,ZDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                * ( Kh(k,i,j) + Kh(k+1,i,j) ) &
                * ( PHI(k+1,i,j)-PHI(k,i,j) ) * RFDZ(k) * J33G &
                / GSQRT(k,i,j,I_XYW)
-    enddo
-    enddo
-    enddo
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
-    i = IUNDEF; j = IUNDEF; k = IUNDEF
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-    do j = JJS, JJE
-    do i = IIS, IIE
-       qflx_phi(KS-1,i,j,ZDIR) = 0.0_RP
-       qflx_phi(KE  ,i,j,ZDIR) = 0.0_RP
-    enddo
-    enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          qflx_phi(KS-1,i,j,ZDIR) = 0.0_RP
+          qflx_phi(KE  ,i,j,ZDIR) = 0.0_RP
+       enddo
+       enddo
 #ifdef DEBUG
-    i = IUNDEF; j = IUNDEF; k = IUNDEF
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    end if
 
     ! (y-z plane; u,y,z)
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
@@ -1415,7 +1422,7 @@ contains
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
-    if ( implicit ) then
+    if ( (.not. horizontal) .and. implicit ) then
        call ATMOS_PHY_TB_calc_tend_phi( TEND, & ! (out)
                            qflx_phi, & ! (in)
                            GSQRT, J13G, J23G, J33G, MAPF, & ! (in)

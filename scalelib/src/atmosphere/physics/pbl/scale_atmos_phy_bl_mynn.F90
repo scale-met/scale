@@ -52,7 +52,7 @@ module scale_atmos_phy_bl_mynn
   character(len=H_LONG),  parameter, public :: ATMOS_PHY_BL_MYNN_DESC(1) = &
        (/ 'turbulent kinetic energy (MYNN)' /)
   character(len=H_SHORT), parameter, public :: ATMOS_PHY_BL_MYNN_UNITS(1) = &
-       (/ 'm2/s2' /)
+       (/ 'm2/s2/kg3' /)
 
   !-----------------------------------------------------------------------------
   !
@@ -307,6 +307,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+
     if( IO_L ) write(IO_FID_LOG, *) "*** atmosphere / physics / pbl / MYNN"
 
     mynn_level = ATMOS_PHY_BL_MYNN_LEVEL
@@ -369,11 +370,11 @@ contains
 
        ! length
        call get_length( &
-            KA, KS, KE_PBL,             & ! (in)
-            l(:,i,j),                   & ! (out)
-            DENS(:,i,j), POTT(:,i,j),   & ! (in)
-            q(:), n2_new(:), l_mo(i,j), & ! (in)
-            FZ(:,i,j)                   ) ! (in)
+            KA, KS, KE_PBL, &
+            POTT(:,i,j), q(:), n2_new(:), & ! (in)
+            SFLX_PT, l_mo(i,j),           & ! (in)
+            FZ(:,i,j),                    & ! (in)
+            l(:,i,j)                      ) ! (out)
 
        call get_q2_level2( &
             KA, KS, KE_PBL,                   & ! (in)
@@ -451,11 +452,11 @@ contains
 
        ! length
        call get_length( &
-            KA, KS, KE_PBL,             & ! (in)
-            l(:,i,j),                   & ! (out)
-            DENS(:,i,j), POTT(:,i,j),   & ! (in)
-            q(:), n2_new(:), l_mo(i,j), & ! (in)
-            FZ(:,i,j)                   ) ! (in)
+            KA, KS, KE_PBL, &
+            POTT(:,i,j), q(:), n2_new(:), & ! (in)
+            SFLX_PT, l_mo(i,j),           & ! (in)
+            FZ(:,i,j),                    & ! (in)
+            l(:,i,j)                      ) ! (out)
 
        call get_q2_level2( &
             KA, KS, KE_PBL,                   & ! (in)
@@ -523,7 +524,7 @@ contains
           RHOU_t(k,i,j) = 0.0_RP
        end do
        do k = KS, KE_PBL-1
-          flxU(k,i,j) = RHONu(k) * ( f2h(k,1) * U(k+1,i,j) + f2h(k,2) * U(k,i,j) )
+          flxU(k,i,j) = - RHONu(k) * ( phi_n(k+1) - phi_n(k) ) / ( CZ(k+1,i,j) - CZ(k,i,j) )
        end do
        do k = KE_PBL, KE
           flxU(k,i,j) = 0.0_RP
@@ -551,7 +552,7 @@ contains
           RHOV_t(k,i,j) = 0.0_RP
        end do
        do k = KS, KE_PBL-1
-          flxV(k,i,j) = RHONu(k) * ( f2h(k,1) * V(k+1,i,j) + f2h(k,2) * V(k,i,j) )
+          flxV(k,i,j) = - RHONu(k) * ( phi_n(k+1) - phi_n(k) ) / ( CZ(k+1,i,j) - CZ(k,i,j) )
        end do
        do k = KE_PBL, KE
           flxV(k,i,j) = 0.0_RP
@@ -560,7 +561,7 @@ contains
 
        ! dens * pott
        sf_t = SFLX_PT / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
-       d(KS) = POTT(KS,i,j) + dt * sf_t / DENS(KS,i,j)
+       d(KS) = POTT(KS,i,j) + dt * sf_t
        do k = KS+1, KE_PBL
           d(k) = POTT(k,i,j)
        end do
@@ -570,7 +571,7 @@ contains
           ap = - dt * RHOKh(k) / ( CZ(k+1,i,j) - CZ(k,i,j) )
           a(k) = ap / ( DENS(k,i,j) * ( FZ(k,i,j) - FZ(k-1,i,j) ) )
           b(k) = - a(k) - c(k) + 1.0_RP
-          c(k+1) = ap / ( DENS(k,i,j) * ( FZ(k+1,i,j) - FZ(k,i,j) ) )
+          c(k+1) = ap / ( DENS(k+1,i,j) * ( FZ(k+1,i,j) - FZ(k,i,j) ) )
        end do
        a(KE_PBL) = 0.0_RP
        b(KE_PBL) = - c(KE_PBL) + 1.0_RP
@@ -580,7 +581,7 @@ contains
             a(:), b(:), c(:), d(:), & ! (in)
             phi_n(:)                ) ! (out)
 
-       RHOT_t(KS,i,j) = ( phi_n(KS) - POTT(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
+       RHOT_t(KS,i,j) = ( ( phi_n(KS) - POTT(KS,i,j) ) / dt - sf_t ) * DENS(KS,i,j)
        do k = KS+1, KE_PBL
           RHOT_t(k,i,j) = ( phi_n(k) - POTT(k,i,j) ) * DENS(k,i,j) / dt
        end do
@@ -588,7 +589,7 @@ contains
           RHOT_t(k,i,j) = 0.0_RP
        end do
        do k = KS, KE_PBL-1
-          flxT(k,i,j) = RHOKh(k) * ( f2h(k,1) * POTT(k+1,i,j) + f2h(k,2) * POTT(k,i,j) )
+          flxT(k,i,j) = - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / ( CZ(k+1,i,j) - CZ(k,i,j) )
        end do
        do k = KE_PBL, KE
           flxT(k,i,j) = 0.0_RP
@@ -606,9 +607,7 @@ contains
        end do
        c(KS) = 0.0_RP
        do k = KS, KE_PBL-1
-          ap = - dt * 3.0_RP * ( f2h(k,1) * DENS(k+1,i,j) * Nu(k+1,i,j) &
-                               + f2h(k,2) * DENS(k  ,i,j) * Nu(k  ,i,j) ) &
-             / ( CZ(k+1,i,j) - CZ(k,i,j) )
+          ap = - dt * 3.0_RP * RHONu(k) / ( CZ(k+1,i,j) - CZ(k,i,j) )
           a(k) = ap / ( DENS(k,i,j) * ( FZ(k,i,j) - FZ(k-1,i,j) ) )
           diss(k,i,j) = 2.0_RP * q(k) / ( B1 * l(k,i,j) )
           b(k) = - a(k) - c(k) + 1.0_RP + diss(k,i,j) * dt
@@ -637,12 +636,12 @@ contains
     end do
 
     l(KE_PBL+1:KE,:,:) = 0.0_RP
-    call HIST_in(Ri(:,:,:), 'Ri', 'Richardson number', '1',     nohalo=.true. )
-    call HIST_in(Pr(:,:,:), 'Pr', 'Prandtl number',    '1',     nohalo=.true. )
-    call HIST_in(prod(:,:,:), 'TKE_prod', 'TKE production',  'm2/s3', nohalo=.true.)
-    call HIST_in(diss(:,:,:), 'TKE_diss', 'TKE dissipation', 'm2/s3', nohalo=.true.)
-    call HIST_in(dudz2(:,:,:), 'dUdZ2', 'dudz2', 'm2/s2', nohalo=.true.)
-    call HIST_in(l(:,:,:), 'L_mix', 'minxing length', 'm', nohalo=.true.)
+    call HIST_in(Ri(:,:,:), 'Ri_MYNN', 'Richardson number', '1',     nohalo=.true. )
+    call HIST_in(Pr(:,:,:), 'Pr_MYNN', 'Prandtl number',    '1',     nohalo=.true. )
+    call HIST_in(prod(:,:,:), 'TKE_prod_MYNN', 'TKE production',  'm2/s3', nohalo=.true.)
+    call HIST_in(diss(:,:,:), 'TKE_diss_MYNN', 'TKE dissipation', 'm2/s3', nohalo=.true.)
+    call HIST_in(dudz2(:,:,:), 'dUdZ2_MYNN', 'dudz2', 'm2/s2', nohalo=.true.)
+    call HIST_in(l(:,:,:), 'L_mix_MYNN', 'minxing length', 'm', nohalo=.true.)
 
     call HIST_in(flxU(:,:,:), 'MYNN_ZFLX_RHOU', 'Z FLUX of RHOU (MYNN)', 'kg/m/s2', nohalo=.true.)
     call HIST_in(flxV(:,:,:), 'MYNN_ZFLX_RHOV', 'Z FLUX of RHOV (MYNN)', 'kg/m/s2', nohalo=.true.)
@@ -746,10 +745,10 @@ contains
 
   subroutine get_length( &
        KA, KS, KE_PBL, &
-       l,           &
-       DENS, PT0,   &
-       q, n2, l_mo, &
-       FZ )
+       PT0, q, n2,    &
+       SFLX_PT, l_mo, &
+       FZ,            &
+       l              )
     use scale_const, only: &
        GRAV   => CONST_GRAV, &
        KARMAN => CONST_KARMAN, &
@@ -758,15 +757,14 @@ contains
     implicit none
     integer,  intent(in) :: KA, KS, KE_PBL
 
-    real(RP), intent(out) :: l(KA)
-
-    real(RP), intent(in) :: DENS(KA)
     real(RP), intent(in) :: PT0(KA)
     real(RP), intent(in) :: q(KA)
     real(RP), intent(in) :: n2(KA)
+    real(RP), intent(in) :: SFLX_PT  !> surface temerture flux
     real(RP), intent(in) :: l_mo     !> Monin-Obukhov length
     real(RP), intent(in) :: FZ(0:KA)
 
+    real(RP), intent(out) :: l(KA)
 
     real(RP) :: ls     !> L_S
     real(RP) :: lt     !> L_T
@@ -801,7 +799,7 @@ contains
 
     rlm = 1.0_RP / l_mo
 
-    qc = ( GRAV / PT0(KS) * max(-l_mo,0.0_RP) * lt )**OneOverThree
+    qc = ( GRAV / PT0(KS) * max(SFLX_PT,0.0_RP) * lt )**OneOverThree
 
     do k = KS, KE_PBL
        z = ( FZ(k)+FZ(k-1) )*0.5_RP - FZ(KS-1)
@@ -920,7 +918,7 @@ contains
        FZ, &
        f2h )
     integer,  intent(in)  :: KA, KS, KE
-    real(RP), intent(in)  :: FZ(KA)
+    real(RP), intent(in)  :: FZ(0:KA)
     real(RP), intent(out) :: f2h(KA,2)
 
     real(RP) :: dz1, dz2

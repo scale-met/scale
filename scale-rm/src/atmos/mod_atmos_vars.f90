@@ -1267,29 +1267,28 @@ contains
     use scale_atmos_diagnostic, only: &
        ATMOS_DIAGNOSTIC_get_vel, &
        ATMOS_DIAGNOSTIC_get_therm, &
-       ATMOS_DIAGNOSTIC_get_phyd, &
-       ATMOS_DIAGNOSTIC_get_n2
+       ATMOS_DIAGNOSTIC_get_phyd
     implicit none
 
     call ATMOS_THERMODYN_specific_heat( &
-         KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
+         KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, QA, &
          QTRC(:,:,:,:),                                           & ! (in)
          TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! (in)
          Qdry(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:)     ) ! (out)
 
     call ATMOS_DIAGNOSTIC_get_vel( &
-         KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+         KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
          DENS_av(:,:,:), MOMZ_av(:,:,:), MOMX_av(:,:,:), MOMY_av(:,:,:), & ! (in)
          W(:,:,:), U(:,:,:), V(:,:,:)                                    ) ! (out)
 
     call ATMOS_DIAGNOSTIC_get_therm( &
-         KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+         KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
          DENS_av(:,:,:), RHOT_av(:,:,:),                     & ! (in)
          Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:),            & ! (in)
          POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), EXNER(:,:,:) ) ! (out)
 
     call ATMOS_DIAGNOSTIC_get_phyd( &
-         KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+         KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
          DENS(:,:,:), PRES(:,:,:),       & ! (in)
          REAL_CZ(:,:,:), REAL_FZ(:,:,:), & ! (in)
          PHYD(:,:,:)                     ) ! (out)
@@ -1412,7 +1411,7 @@ contains
        if ( .not. DV_calclated(I_POTV) ) then
           if ( .not. allocated(POTV) ) allocate( POTV(KA,IA,JA) )
           call ATMOS_DIAGNOSTIC_get_potv( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                POTT(:,:,:), Rtot(:,:,:), & ! (in)
                POTV(:,:,:)               ) ! (out)
           DV_calclated(I_POTV) = .true.
@@ -1427,7 +1426,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D )
           call ATMOS_vars_get_diagnostic( 'QICE', WORK3D )
           call ATMOS_DIAGNOSTIC_get_teml( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                TEMP(:,:,:), LHV(:,:,:), LHS(:,:,:),    & ! (in)
                QLIQ(:,:,:), QICE(:,:,:), CPtot(:,:,:), & ! (in)
                TEML(:,:,:)                             ) ! (out)
@@ -1447,7 +1446,7 @@ contains
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
-             POTL(k,i,j) = TEML(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
+             POTL(k,i,j) = TEML(k,i,j) / EXNER(k,i,j)
           enddo
           enddo
           enddo
@@ -2475,9 +2474,6 @@ contains
        MAPF => GTRANS_MAPF, &
        I_UY, &
        I_XV
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total,            &

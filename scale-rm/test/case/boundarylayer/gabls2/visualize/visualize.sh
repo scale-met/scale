@@ -43,7 +43,7 @@ do
    let i="${i} + 1"
 done
 
-var__set=(PT U V W QV TKE_MYNN NU Pr Ri)
+var__set=(PT U V W QV TKE_MYNN Nu_BL Pr_MYNN Ri_MYNN)
 rangeset=(275:310 -1:7 -13:0 -5e-4:5e-4 2e-3:5e-3 0:2 0:150 0:10 -20:20)
 time_set=
 

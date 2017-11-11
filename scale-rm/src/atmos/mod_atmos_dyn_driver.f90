@@ -305,8 +305,8 @@ contains
        end do
        
 
-       do j = JSB, JEB
-       do i = ISB, IEB
+       do j = JS, JE
+       do i = IS, IE
        do k = KS, KE
           RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
                          + RHOH_tp(k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )

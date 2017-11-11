@@ -947,8 +947,9 @@ contains
             qflx_sgs_rhot, &
             DENS, POTT, Kh, 1.0_RP, &
             GSQRT, J13G, J23G, J33G, MAPF, &
-            a, b, c, dt, &
+            ATMOS_PHY_TB_SMG_horizontal, &
             ATMOS_PHY_TB_SMG_implicit, &
+            a, b, c, dt, &
             IIS, IIE, JJS, JJE )
 
     enddo
@@ -969,8 +970,9 @@ contains
                qflx_sgs_rhoq(:,:,:,:,iq), &
                DENS, QTRC(:,:,:,iq), Kh, 1.0_RP, &
                GSQRT, J13G, J23G, J33G, MAPF, &
-               a, b, c, dt, &
+               ATMOS_PHY_TB_SMG_horizontal, &
                ATMOS_PHY_TB_SMG_implicit, &
+               a, b, c, dt, &
                IIS, IIE, JJS, JJE )
 
 

@@ -225,24 +225,25 @@ contains
                RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,I_TKE),                & ! (out)
                Nu(:,:,:), Kh(:,:,:)                                     ) ! (out)
           do iq = 1, QA
-             if ( .not. TRACER_ADVC(iq) .or. iq==I_TKE ) cycle
+             if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_TKE ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
                   SFLX_Q(:,:,iq), Kh(:,:,:),   & ! (in)
                   CZ(:,:,:), FZ(:,:,:), dt_BL, & ! (in)
-                  RHOQ_t(:,:,:,iq)             ) ! (out)
+                  RHOQ_t_BL(:,:,:,iq)          ) ! (out)
           end do
        end select
 
-       call HIST_in( Nu (:,:,:), 'NU',  'eddy viscosity', 'm2/s' , nohalo=.true. )
-       call HIST_in( Kh (:,:,:), 'Ku',  'eddy diffusion', 'm2/s'  , nohalo=.true. )
+       call HIST_in( Nu(:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      nohalo=.true. )
+       call HIST_in( Kh(:,:,:),        'Ku_BL',     'eddy diffusion',     'm2/s',      nohalo=.true. )
 
        call HIST_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)', 'kg/m2/s2',  nohalo=.true. )
        call HIST_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)', 'kg/m2/s2',  nohalo=.true. )
        call HIST_in( RHOT_t_BL(:,:,:), 'RHOT_t_BL', 'RHOT tendency (BL)', 'K.kg/m3/s', nohalo=.true. )
 
        do iq = 1, QA
+          if ( .not. TRACER_ADVC(iq) ) cycle
           call HIST_in( RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL',                      &
                         'RHO*'//trim(TRACER_NAME(iq))//' tendency (BL)', 'kg/m3/s', nohalo=.true. )
        enddo
@@ -251,8 +252,8 @@ contains
           call STAT_total( total, RHOU_t_BL(:,:,:), 'RHOU_t_BL' )
           call STAT_total( total, RHOV_t_BL(:,:,:), 'RHOV_t_BL' )
           call STAT_total( total, RHOT_t_BL(:,:,:), 'RHOT_t_BL' )
-          call STAT_total( total, Nu(:,:,:), 'Nu' )
-          call STAT_total( total, Kh(:,:,:), 'Kh' )
+          call STAT_total( total, Nu(:,:,:), 'Nu_BL' )
+          call STAT_total( total, Kh(:,:,:), 'Kh_BL' )
 
           do iq = 1, QA
              if ( .not. TRACER_ADVC(iq) ) cycle
@@ -276,13 +277,14 @@ contains
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do iq = 1,  QA
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_BL(k,i,j,iq)
-    enddo
-    enddo
-    enddo
+       if ( .not. TRACER_ADVC(iq) ) cycle
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_BL(k,i,j,iq)
+       enddo
+       enddo
+       enddo
     enddo
 
     return
