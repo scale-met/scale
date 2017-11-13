@@ -1286,7 +1286,7 @@ contains
                                  TRACER_CV(:),          & ! [IN]
                                  MP_DTSEC_SEDIMENTATION ) ! [IN]
 
-          do iq = 1, QA_MP
+          do iq = 1, QA_MP-1
           do j  = JS, JE
           do i  = IS, IE
           do k  = KS-1, KE-1

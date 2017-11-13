@@ -160,6 +160,7 @@ contains
        dens_org,      &
        pott_org,      &
        qtrc_org,      &
+       cz_org,        &
        flg_bin,       &
        flg_intrp,     &
        basename_org,  &
@@ -169,7 +170,9 @@ contains
     use scale_const, only: &
        P00 => CONST_PRE00, &
        CPdry => CONST_CPdry, &
-       Rdry => CONST_Rdry
+       Rdry => CONST_Rdry, &
+       GRAV => CONST_GRAV, &
+       LAPS => CONST_LAPS
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -201,6 +204,7 @@ contains
     real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: pott_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
+    real(RP),         intent(in)  :: cz_org(:,:,:)
     logical,          intent(in)  :: flg_bin            ! flag for SBM(S10)
     logical,          intent(in)  :: flg_intrp          ! flag for interpolation of SBM
     character(len=*), intent(in)  :: basename_org
@@ -216,6 +220,7 @@ contains
     real(RP) :: rhot_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: tsfc_org(          dims(2),dims(3))
     real(RP) :: temp_org
+    real(RP) :: dz
 
     integer :: xs, xe
     integer :: ys, ye
@@ -223,7 +228,6 @@ contains
     integer :: rank
 
     integer :: k, i, j, iq, iqa
-    logical :: lack_of_val
     !---------------------------------------------------------------------------
 
 
@@ -303,6 +307,7 @@ contains
                 qtrc_org(k+2,xs:xe,ys:ye,iqa) = read3D(:,:,k)
              end do
              qtrc_org(2,xs:xe,ys:ye,iqa) = qtrc_org(3,xs:xe,ys:ye,iqa)
+             qtrc_org(1,xs:xe,ys:ye,iqa) = qtrc_org(3,xs:xe,ys:ye,iqa)
           end do
 
        endif
@@ -375,11 +380,14 @@ contains
                                     TRACER_MASS(:)     ) ! [IN]
           pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
        end do
-       pott_org(1:2,i,j) = pott_org(3,i,j)
-       pres_org(2,i,j) = P00 * ( tsfc_org(i,j) / pott_org(2,i,j) )**(CPdry/Rdry)
-       dens_org(1,i,j) = P00 * ( P00/pres_org(1,i,j) )**(Rdry/CPdry-1.0_RP)
-       dens_org(2,i,j) = pres_org(2,i,j) / ( tsfc_org(i,j) * Rdry )
-       qtrc_org(1,i,j,:) = qtrc_org(2,i,j,:)
+       dz = cz_org(3,i,j) - cz_org(2,i,j)
+       dens_org(2,i,j) = ( pres_org(3,i,j) + GRAV * dens_org(3,i,j) * dz * 0.5_RP ) &
+                       / ( Rdry * tsfc_org(i,j) - GRAV * dz * 0.5_RP )
+       pres_org(2,i,j) = dens_org(2,i,j) * Rdry * tsfc_org(i,j)
+       pott_org(2,i,j) = tsfc_org(i,j) * ( P00 / pres_org(2,i,j) )**(Rdry/CPdry)
+       temp_org = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
+       pott_org(1,i,j) = temp_org * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+       dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org )
     end do
     end do
 

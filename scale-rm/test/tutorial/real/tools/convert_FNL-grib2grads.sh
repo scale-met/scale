@@ -12,6 +12,43 @@
 #
 #-------------------------------------------------------------------------------
 
+# convert date-time string to total seconds from 1/1/1 (Fairfield formula)
+total_sec ()
+{
+  local DATETIME=$1
+
+  if [[ ${DATETIME} =~ ^([0-9]+)-([0-9]+)-([0-9]+).([0-9]+):([0-9]+):([0-9]+)$ ]]; then
+    YEAR=${BASH_REMATCH[1]}
+    MON=${BASH_REMATCH[2]}
+    DAY=${BASH_REMATCH[3]}
+    HOUR=${BASH_REMATCH[4]}
+    MIN=${BASH_REMATCH[5]}
+    SEC=${BASH_REMATCH[6]}
+
+    if [ $MON -le 2 ]; then
+      YEAR=$(expr $YEAR - 1)
+      MON=$(expr $MON + 12)
+    fi
+
+    TOTAL_DAYS=$(expr 365 \* \( $YEAR - 1 \) + $YEAR / 4 - $YEAR / 100 + $YEAR / 400 + 31 + 28 + 306 \* \( $MON + 1 \) / 10 - 122 + $DAY)
+    TOTAL_SEC=$(expr $TOTAL_DAYS \* 24 \* 60 \* 60 + $HOUR \* 3600 + $MIN \* 60 + $SEC)
+    echo $TOTAL_SEC
+  fi
+}
+
+# convert date-time string to total seconds from 1970/1/1 (unix time)
+unix_time ()
+{
+  local DATETIME=$1
+
+  # origin of unix time
+  EPOCH=$(total_sec "1970-01-01 00:00:00")
+
+  TOTAL_SEC_NOW=$(total_sec "$DATETIME")
+  UNIX_NOW=$(expr $TOTAL_SEC_NOW - $EPOCH)
+  echo $UNIX_NOW
+}
+
 # set date you want to convert
 START_DATE=${1:-1999080100}
 END_DATE=${2:-1999080100}
@@ -38,9 +75,9 @@ CHECK_DATE2="2009-12-15 06:00:00"
 # change the name of soil temperature
 CHECK_DATE3="2015-01-14 00:00:00"
 
-UNIX_CHECK1=`date -u -d "$CHECK_DATE1" +%s`
-UNIX_CHECK2=`date -u -d "$CHECK_DATE2" +%s`
-UNIX_CHECK3=`date -u -d "$CHECK_DATE3" +%s`
+UNIX_CHECK1=$(unix_time "$CHECK_DATE1")
+UNIX_CHECK2=$(unix_time "$CHECK_DATE2")
+UNIX_CHECK3=$(unix_time "$CHECK_DATE3")
 
 YEAR=${START_YEAR}
 while [ ${YEAR} -le ${END_YEAR} ]
@@ -107,7 +144,7 @@ do
         HH=`printf "%02d" ${HOUR}`
 
         DATE="${YYYY}-${MM}-${DD} ${HH}:00:00"
-        UNIX_NOW=`date -u -d "$DATE" +%s`
+        UNIX_NOW=`unix_time "$DATE"` 
 
         if [ $UNIX_NOW -le $UNIX_CHECK1 ]; then
           FTYPE="grib1"
