@@ -46,6 +46,9 @@ contains
   !> Type of parcel method: Pseudo-adiabatic ascend from lowermost layer of the model
   !> Reference: Emanuel(1994)
   subroutine ATMOS_ADIABAT_cape( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
        Kstr, &
        DENS, &
        TEMP, &
@@ -71,6 +74,10 @@ contains
     use scale_history, only: &
        HIST_in
     implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
 
     integer,  intent(in)  :: Kstr
     real(RP), intent(in)  :: DENS(KA,IA,JA)

@@ -220,7 +220,7 @@ contains
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
-             QW(k,i,j) = QC(k,i,j) + QI(k,i,j)
+             QW(k,i,j) = QV(k,i,j) + QC(k,i,j) + QI(k,i,j)
           end do
           end do
           end do

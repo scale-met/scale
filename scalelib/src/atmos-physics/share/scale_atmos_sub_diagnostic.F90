@@ -97,8 +97,8 @@ contains
 
 !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
     do k = KS+1, KE-1
        W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
     enddo
@@ -106,8 +106,8 @@ contains
     enddo
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = 2, JA
-    do i = 2, IA
+    do j = max(2,JS), JE
+    do i = max(2,IS), IE
 !       W(KS,i,j) = 0.5_RP * ( MOMZ(KS,i,j) ) / DENS(KS,i,j)
 
        ! at KS+1/2
@@ -125,16 +125,16 @@ contains
     enddo
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j) ) / DENS(KE,i,j)
     enddo
     enddo
 
 !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 2, IA
+    do j = JS, JE
+    do i = max(2,IS), IE
     do k = KS, KE
        U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
     enddo
@@ -142,7 +142,7 @@ contains
     enddo
 !OCL XFILL
     !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
+    do j = JS, JE
     do k = KS, KE
        U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
     enddo
@@ -150,8 +150,8 @@ contains
 
    !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = 2, JA
-    do i = 1, IA
+    do j = max(2,JS), JE
+    do i = IS, IE
     do k = KS, KE
        V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
     enddo
@@ -159,15 +159,15 @@ contains
     enddo
 !OCL XFILL
     !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-    do i = 1, IA
+    do i = IS, IE
     do k = KS, KE
        V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
     enddo
     enddo
  
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = 1, JA
-    do i  = 1, IA
+    do j  = JS, JE
+    do i  = IS, IE
        W(   1:KS-1,i,j) = W(KS,i,j)
        U(   1:KS-1,i,j) = U(KS,i,j)
        V(   1:KS-1,i,j) = V(KS,i,j)

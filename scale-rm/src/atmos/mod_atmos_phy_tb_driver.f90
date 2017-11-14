@@ -140,9 +140,6 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use scale_history, only: &
        HIST_in
     use scale_time, only: &
