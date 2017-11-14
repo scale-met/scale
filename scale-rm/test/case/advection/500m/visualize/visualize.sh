@@ -7,8 +7,8 @@ rm -f energy.dat mass.dat
 while read -a line
 do
    if [ ${line[0]} == "STEP=" ]; then
-      echo ${line[1]} ${line[5]} ${line[6]} ${line[7]} ${line[8]} >> energy.dat
-      echo ${line[1]} ${line[3]} ${line[4]} ${line[9]}            >> mass.dat
+      echo ${line[1]} ${line[6]} ${line[7]} ${line[8]} ${line[9]} >> energy.dat
+      echo ${line[1]} ${line[4]} ${line[5]} ${line[3]}            >> mass.dat
    fi
 done < monitor.pe000000
 

@@ -391,7 +391,7 @@ contains
        JA, JS, JE, &
        TEMP,     &
        LHV, LHS, &
-       LIQ, ICE, &
+       QC, QI,   &
        CPtot,    &
        TEML      )
     use scale_const, only: &
@@ -403,8 +403,8 @@ contains
     real(RP), intent(in)  :: TEMP (KA,IA,JA)
     real(RP), intent(in)  :: LHV  (KA,IA,JA)
     real(RP), intent(in)  :: LHS  (KA,IA,JA)
-    real(RP), intent(in)  :: LIQ  (KA,IA,JA)
-    real(RP), intent(in)  :: ICE  (KA,IA,JA)
+    real(RP), intent(in)  :: QC   (KA,IA,JA)
+    real(RP), intent(in)  :: QI   (KA,IA,JA)
     real(RP), intent(in)  :: CPtot(KA,IA,JA)
 
     real(RP), intent(out) :: TEML(KA,IA,JA)
@@ -415,13 +415,13 @@ contains
 !OCL XFILL
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,k) &
-    !$omp shared(TEML,TEMP,LHV,LHS,LIQ,ICE,CPtot) &
+    !$omp shared(TEML,TEMP,LHV,LHS,QC,QI,CPtot) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        TEML(k,i,j) = TEMP(k,i,j) &
-                   - ( LHV(k,i,j) * LIQ(k,i,j) + LHS(k,i,j) * ICE(k,i,j) ) / CPtot(k,i,j)
+                   - ( LHV(k,i,j) * QC(k,i,j) + LHS(k,i,j) * QI(k,i,j) ) / CPtot(k,i,j)
     end do
     end do
     end do

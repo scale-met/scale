@@ -195,7 +195,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, U, V, POTT, TKE,           &
        PRES, EXNER, N2,                 &
-       QDRY, QV, Qw, POTL,              &
+       QDRY, QV, Qw, POTL, POTV,        &
        SFLX_MU, SFLX_MV, SFLX_SH, l_mo, &
        CZ, FZ, dt,                      &
        RHOU_t, RHOV_t, RHOT_t, RTKE_t,  &
@@ -236,6 +236,7 @@ contains
     real(RP), intent(in) :: QV     (KA,IA,JA) !> vapor
     real(RP), intent(in) :: Qw     (KA,IA,JA) !> total water content
     real(RP), intent(in) :: POTL   (KA,IA,JA) !> liquid water potential temp.
+    real(RP), intent(in) :: POTV   (KA,IA,JA) !> virtual potential temp.
     real(RP), intent(in) :: SFLX_MU(   IA,JA) !> surface flux of zonal wind
     real(RP), intent(in) :: SFLX_MV(   IA,JA) !> surface flux of meridional wind
     real(RP), intent(in) :: SFLX_SH(   IA,JA) !> surface sensible heat flux
@@ -263,7 +264,6 @@ contains
     real(RP) :: flxV(KA,IA,JA) !> dens * w * v
     real(RP) :: flxT(KA,IA,JA) !> dens * w * pt
 
-    real(RP) :: POTV  (KA) !> virtual potential temperature
     real(RP) :: TEML  (KA) !> liquid water temperature
     real(RP) :: RHONu (KA) !> dens * Nu at the half level
     real(RP) :: RHOKh (KA) !> dens * Kh at the half level
@@ -325,20 +325,16 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RTKE_t,Nu,Kh, &
-    !$omp        DENS,TKE,U,V,POTT,PRES,QDRY,QV,Qw,POTL,EXNER,N2,SFLX_MU,SFLX_MV,SFLX_SH,l_mo, &
+    !$omp        DENS,TKE,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2,SFLX_MU,SFLX_MV,SFLX_SH,l_mo, &
     !$omp        CZ,FZ,dt, &
     !$omp        Ri,Pr,prod,diss,dudz2,l) &
-    !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,POTV,TEML,qlp,ac, &
+    !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,TEML,qlp,ac, &
     !$omp         Q1,Qsl,dQsl,sigma_s,RR,Rt,betat,betaq,aa,bb,cc, &
     !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,f2h, &
     !$omp         k,i,j)
     do j = JS, JE
     do i = IS, IE
        SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) * EXNER(KS,i,j) )
-
-       do k = KS, KE_PBL
-          POTV(k) = POTT(k,i,j) * ( QDRY(k,i,j) + QV(k,i,j) * Rvap/Rdry )
-       end do
 
        dudz2(KS,i,j) = ( ( U(KS+1,i,j) - U(KS,i,j) )**2 + ( V(KS+1,i,j) - V(KS,i,j) )**2 ) &
                      / ( CZ(KS+1,i,j) - CZ(KS,i,j) )**2
@@ -437,7 +433,7 @@ contains
           n2_new(k) = min(ATMOS_PHY_BL_MYNN_N2_MAX, &
                           GRAV * ( ( POTL(k+1,i,j) - POTL(k-1,i,j) ) * betat &
                                  + ( Qw  (k+1,i,j) - Qw  (k-1,i,j) ) * betaq ) &
-                               / ( CZ(k+1,i,j) - CZ(k-1,i,j) ) / POTV(k) )
+                               / ( ( CZ(k+1,i,j) - CZ(k-1,i,j) ) * POTV(k,i,j) ) )
        end do
        n2_new(KS) = n2_new(KS+1)
 
