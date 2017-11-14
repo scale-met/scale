@@ -526,7 +526,7 @@ contains
 #endif
           damp = damp * DENS00(k,i,j)
           RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp
-          DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp
+          DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp * TRACER_MASS(iq) ! only for mass tracer
        enddo
        enddo
        enddo
