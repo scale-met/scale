@@ -908,9 +908,9 @@ contains
 #endif
 
        !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
-       do j  = JS, JE
-       do i  = IS, IE
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
+       do j  = JSB, JEB
+       do i  = ISB, IEB
           DENS(   1:KS-1,i,j) = DENS(KS,i,j)
           MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
           MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
