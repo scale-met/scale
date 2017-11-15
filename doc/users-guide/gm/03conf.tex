@@ -1,4 +1,4 @@
-\section{Change Model Configurations}
+
 %###############################################################################
  {\sf Terms}
  \begin{itemize}
@@ -9,16 +9,16 @@
          At that time, the number of available maximum MPI processes is ten.
  \end{itemize}
 
-\subsection{Change the Test Case}
+\section{Change the Test Case}
 %-------------------------------------------------------------------------------
 
  \noindent In this section, detail of the configurations of three experiments
- in DCMIP2016 are described. Each configuration set in the directory of \verb|${TOP}/test/case|
+ in DCMIP2016 are described. Each configuration set in the directory of \texttt{scale-{\version}/scale-gm/test/case}
  is ready to go. At the first step, please use these sets as it is.
 
-\subsubsection{preparing directory}
+\subsection{preparing directory}
  Change to the directory of target case. If you want to run test case 162,
- change to \verb|${TOP}/test/case/DCMIP2016-12/|. After that, make a directory.
+ change to \texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-12/}. After that, make a directory.
  The directory of gl05rl00z30pe40 already may exists, we assume create it newly.
  \begin{verbatim}
     > mkdir gl05rl00z30pe40
@@ -32,7 +32,7 @@
     > cp ../../DCMIP2016-11/gl05rl00z30pe10/nhm_driver.cnf ./
  \end{verbatim}
 
-\subsubsection{Edit configuration file: nhm\_driver.cnf}
+\subsection{Edit configuration file: nhm\_driver.cnf}
 
  %--------------------
  \vspace{0.5cm}
@@ -85,7 +85,7 @@
            as described in DCMIP2016 Test Case Document.
    \item items of history output variables, which specified by "NMHIST", should be added
          following the requirement in DCMIP2016 Test Case Document.
-   \item "small\_planet\_factor" in PARAM_CONST should be set as 1.
+   \item "small\_planet\_factor" in PARAM\_CONST should be set as 1.
  \end{itemize}
 
  %--------------------
@@ -129,7 +129,7 @@
            as described in DCMIP2016 Test Case Document.
    \item items of history output variables, which specified by "NMHIST", should be added
          following the requirement in DCMIP2016 Test Case Document.
-   \item "small\_planet\_factor" in PARAM_CONST should be set as 1.
+   \item "small\_planet\_factor" in PARAM\_CONST should be set as 1.
  \end{itemize}
 
  %--------------------
@@ -177,8 +177,8 @@
            as described in DCMIP2016 Test Case Document.
    \item items of history output variables, which specified by "NMHIST", should be added
          following the requirement in DCMIP2016 Test Case Document.
-   \item \textcolor{red}{"small\_planet\_factor" in PARAM_CONST should be set as 120}.
-   \item \textcolor{red}{"earth\_angvel" in PARAM_CONST should be set as 0}.
+   \item \textcolor{red}{"small\_planet\_factor" in PARAM\_CONST should be set as 120}.
+   \item \textcolor{red}{"earth\_angvel" in PARAM\_CONST should be set as 0}.
  \end{itemize}
 
  \noindent After above edit, you can run the experiment
@@ -189,7 +189,7 @@
  \end{verbatim}
 
 
-\subsection{Change Physics Schemes}
+\section{Change Physics Schemes}
 %-------------------------------------------------------------------------------
 
  \noindent Default settings for each test cases in DCMIP2016 is set
@@ -283,7 +283,7 @@
 
 
 
-\subsection{Increase MPI processes}
+\section{Increase MPI processes}
 %------------------------------------------------------------------------------
  \noindent To reduce elasped time of the model execution, we can increase
  number of MPI processes. For example, edit to change to use 40 MPI processes
@@ -292,9 +292,9 @@
  To increase MPI processes up to 40, r-level should be rised from 0 to 1
  because the upper limit of processes in r-level 0 is 10 processes.
 
-\subsubsection{preparing directory}
+\subsection{preparing directory}
 %------------------------------------------------------------------------------
- We assume in \${TOP}/test/case/DCMIP2016-11/
+ We assume in \texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-11/}
  \begin{verbatim}
     > mkdir gl05rl01z30pe40    <-- r-level is 1
     > cd gl05rl01z30pe40/
@@ -306,7 +306,7 @@
     > cp ../gl05rl00z30pe10/nhm_driver.cnf ./
  \end{verbatim}
 
-\subsubsection{Edit Makefile}
+\subsection{Edit Makefile}
 %------------------------------------------------------------------------------
  (symbols "\verb|<--|" means changed parameters) \\
  On the Lines from 17 to 21, edit parameters.
@@ -319,7 +319,7 @@
      vgrid  = vgrid30_stretch_30km_dcmip2016.dat
  \end{verbatim}
 
-\subsubsection{Edit configuration file: nhm\_driver.cnf}
+\subsection{Edit configuration file: nhm\_driver.cnf}
 %------------------------------------------------------------------------------
  (symbols "\verb|<--|" means changed parameters)
  \begin{verbatim}
@@ -358,7 +358,7 @@
  \end{verbatim}
 
 
-\subsection{Change grid spacing}
+\section{Change grid spacing}
 %------------------------------------------------------------------------------
  \noindent This is an example to change grid spacing of g-level 6
  (approxi. 120 km) with 40 MPI processes in test case 161.
@@ -367,9 +367,9 @@
  maximum number of time steps (LSTEP\_MAX), numerical filter parameters,
  and output interval of history data.
 
-\subsubsection{preparing directory}
+\subsection{preparing directory}
 %------------------------------------------------------------------------------
- We assume in \${TOP}/test/case/DCMIP2016-11/
+ We assume in \texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-11/}
  \begin{verbatim}
     > mkdir gl06rl01z30pe40  <-- g-level is 6, and r-level is 1
     > cd gl06rl01z30pe40/
@@ -381,7 +381,7 @@
     > cp ../gl05rl00z30pe10/nhm_driver.cnf ./
  \end{verbatim}
 
-\subsubsection{Edit Makefile}
+\subsection{Edit Makefile}
 %------------------------------------------------------------------------------
  (symbols "\verb|<--|" means changed parameters) \\
  On the Lines from 17 to 21, edit parameters.
@@ -394,7 +394,7 @@
      vgrid  = vgrid30_stretch_30km_dcmip2016.dat
  \end{verbatim}
 
-\subsubsection{Edit configuration file: nhm\_driver.cnf}
+\subsection{Edit configuration file: nhm\_driver.cnf}
 %------------------------------------------------------------------------------
  \noindent A guideline of changing interval of time integration (DTL) is \\
  {\sf take 1/2 of DTL by one up of g-level}.
@@ -472,3 +472,4 @@
     > make run
     > sh run.sh
  \end{verbatim}
+
