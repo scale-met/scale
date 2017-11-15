@@ -24,22 +24,28 @@
 \maketitle
 
 
-
 \clearpage
 \tableofcontents
 
-\clearpage
+\chapter{概要}\label{chap:overview}
 \input{01intro}
-\clearpage
+
+\chapter{クイックスタート}\label{chap:quickstart}
 \input{02start}
-\clearpage
+
+\chapter{実験設定とモデル設定の変更方法}\label{chap:settings}
 \input{03conf}
+
 %\clearpage
 %\input{04test}
-\clearpage
-\input{Aparam}
+
 \clearpage
 \input{Refs}
+
+\begin{appendix}
+\chapter{付録: 設定パラメータの説明}
+\input{Aparam}
+\end{appendix}
 
 %##########################################################################################
 \end{document}
