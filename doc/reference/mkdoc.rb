@@ -237,8 +237,8 @@ EOL
 
     hist.sort.each do |name, info|
       name = get_data(name,data,vars)
-      history[name] ||= Array.new
-      history[name].push modname
+      history[name] ||= [get_data(info[:desc],data,vars), Array.new]
+      history[name][1].push modname
       file.print <<EOL
 !>      <tr>
 !>        <td id="#{name}">#{name}</td>
@@ -263,7 +263,10 @@ end
 system("mkdir -p #{output_dir}")
 File.open("#{output_dir}/namelist.dox","w") do |file|
   file.print <<EOL
-!> @page namelist NAMELIST Parameters
+!> @page namelist List of NAMELIST Parameters
+!> <p>
+!> Click the corresponding "NAMELIST Group" or "module name" to see detail information of each variable
+!> </p>
 !> <table>
 !> <tr><th>Variable name</th><th>NAMELIST Group</th><th>module name</th></tr>
 EOL
@@ -279,15 +282,19 @@ end
 
 File.open("#{output_dir}/history.dox","w") do |file|
   file.print <<EOL
-!> @page history History Variables
+!> @page history List of History Variables
+!> <p>
+!> Click the corresponding "module name" to see detail information of each variable
+!> </p>
 !> <table>
-!> <tr><th>Variable name</th><th>module name</th></tr>
+!> <tr><th>Variable name</th><th>Description</th><th>module name</th></tr>
 EOL
-  history.sort.each do |name,list|
+  history.sort.each do |name,dat|
+    desc,list = dat
     list = list.map{|mod|
       "@ref history_#{mod} \"#{mod}\""
     }
-    file.print "!>    <tr><td>#{name}</td><td>#{list.join(", ")}</td></tr>\n"
+    file.print "!>    <tr><td>#{name}</td><td>#{desc}</td><td>#{list.join(", ")}</td></tr>\n"
   end
   file.print <<EOL
 !>    </table>
