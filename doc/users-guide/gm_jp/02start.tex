@@ -1,14 +1,12 @@
-\section{クイックスタート}
 %###############################################################################
-
-\subsection{実行の準備}
+\section{実行の準備}
 %-------------------------------------------------------------------------------
 ここではSCALE-GMのコンパイルについて簡潔に説明する。依存関係のあるライブラリの準備や
 コンパイル前に必要な環境変数の設定については、``SCALE USERS GUIDE''の第2章の
 2.1節、2.2節を参照されたい。
 SCALE-GMに必要とされるライブラリは、SCALE-RMと同じく、HDF5、NetCDF、およびMPIである。
 
-\subsection{コンパイル}
+\section{コンパイル}
 %-------------------------------------------------------------------------------
 ソースコードの取得方法については ``SCALE USERS GUIDE'' の2.3.1節、
 マシン環境やコンパイラ等を指定する環境変数(Makedef)の設定については
@@ -16,7 +14,8 @@ SCALE-GMに必要とされるライブラリは、SCALE-RMと同じく、HDF5、
 Makedefファイルは、SCALE-RMと共通のファイルを使用する。
 このMakedefファイルの設定をコンパイル前に忘れないようにすること。
 
-\textcolor{red}{[要検討C:　ここから]}
+%\textcolor{red}{[英語版未対応-----ここから]}
+\textcolor{blue}{[ご確認ください-----ここから]}
 
 DCMIP2016の理想実験を実行するために、DCMIPの組織委員が公開しているソースコードが必要になる。
 現行のSCALE-GMのコンパイルには、この追加ソースコードが必須となっている。
@@ -24,29 +23,30 @@ DCMIP2016の理想実験を実行するために、DCMIPの組織委員が公開
 \url{https://github.com/ClimateGlobalChange/DCMIP2016}
 から、zipパッケージとしてダウンロードするか、gitコマンドを使用して``DCMIP2016''パッケージをダウンロードする。
 ダウンロードしたパッケージを展開して、DCMIP2016/interface　の下にある
-fortranプログラムをすべて\verb|${TOP}/src/atmos/dcmip|へコピーする。
-これは、DCMIP2016パッケージを\verb|${ROOT}|下へ展開したことを想定した場合、次のコマンドのようになる。
+fortranプログラムをすべて\texttt{scale-{\version}/scale-gm/src/atmos/dcmip}へコピーする。
+これは、DCMIP2016パッケージを\texttt{scale-{\version}/}下へ展開したことを想定した場合、次のコマンドのようになる。
 \begin{verbatim}
-  > cp ${ROOT}/DCMIP2016/interface/*.f90 ${TOP}/src/atmos/dcmip/
+  > cp scale-{\version}/DCMIP2016/interface/*.f90 scale-{\version}/scale-gm/src/atmos/dcmip/
 \end{verbatim}
 
-\textcolor{red}{[ここまで]}
+\textcolor{blue}{[ご確認ください-----ここから]}
+%\textcolor{red}{[英語版未対応-----ここから]}
 
 これらの準備が整えば、srcディレクトリへ移動する。
-SCALE-GMでは、\verb|${TOP}/src|の下でコンパイルを行い、\verb|${TOP}/bin|の下に
+SCALE-GMでは、\texttt{scale-{\version}/scale-gm/src}の下でコンパイルを行い、\texttt{scale-{\version}/bin}の下に
 各種実行バイナリが生成され、このバイナリファイルを用いて各種実験や後処理を行う。
 各テストケースディレクトリでもmakeできるが、作業効率やバイナリの取り違えを防ぐために、
 ここで説明する方法を推奨する。
 
 \begin{verbatim}
-  > cd ${TOP}/src
+  > cd scale-{\version}/scale-gm/src
 \end{verbatim}
 
 \noindent makeコマンドを用いてコンパイルを行う。
 \begin{verbatim}
   > make -j 4
 \end{verbatim}
-コンパイルが正常に終了したならば、以下のバイナリが\verb|${ROOT}/bin|の下に生成される。
+コンパイルが正常に終了したならば、以下のバイナリが\texttt{scale-{\version}/bin}の下に生成される。
  \begin{itemize}
    \item \verb|scale-gm| (SCALE-GM本体の実行バイナリ)
    \item　\verb|gm_fio_cat| (fioフォーマットのcatコマンドツール)
@@ -68,7 +68,8 @@ SCALE-GMでは、\verb|${TOP}/src|の下でコンパイルを行い、\verb|${TO
 \end{itemize}
 
 
-\subsection{データベースの準備}
+%\textcolor{red}{[英語版未対応-----ここから]}
+\section{データベースの準備}
 %-------------------------------------------------------------------------------
 
 SCALE-GMの実行には、水平格子のデータが必要である。チュートリアルで使用する設定は、
@@ -92,34 +93,37 @@ g-level=5、r-level=0でMPIプロセスは10を想定している。
 \noindent 次にデータベースをそれぞれの格納場所に移動させる。
 
 \noindent まずboundaryファイルは、
-\${TOP}/test/data/grid/boundaryの下へ新たにディレクトリを作成して移動させる。
+\texttt{scale-{\version}/scale-gm/test/data/grid/boundary}の下へ新たにディレクトリを作成して移動させる。
 いま、展開したデータベースのディレクトリにいることを想定すると下記のようなコマンド実行になる。
 
 \begin{verbatim}
-  > mkdir ${TOP}/test/data/grid/boundary/gl06rl01pe40
-  > mkdir boundary_GL06RL01.* ${TOP}/test/data/grid/boundary/gl06rl01pe40/
+  > mkdir scale-{\version}/scale-gm/test/data/grid/boundary/gl06rl01pe40
+  > mkdir boundary_GL06RL01.* scale-{\version}/scale-gm/test/data/grid/boundary/gl06rl01pe40/
 \end{verbatim}
 
-\noindent 残るllmapファイルは、\${TOP}/test/data/grid/llmapの下へ新たにディレクトリを作成して移動させる。
+\noindent 残るllmapファイルは、\texttt{scale-{\version}/scale-gm/test/data/grid/llmap}の下へ新たにディレクトリを作成して移動させる。
 
 \begin{verbatim}
-  > mkdir -p ${TOP}/test/data/grid/boundary/gl06/rl01
-  > mkdir llmap.* ${TOP}/test/data/grid/boundary/gl06/rl01/
+  > mkdir -p scale-{\version}/scale-gm/test/data/grid/boundary/gl06/rl01
+  > mkdir llmap.* scale-{\version}/scale-gm/test/data/grid/boundary/gl06/rl01/
 \end{verbatim}
 
+%\textcolor{red}{[英語版未対応-----ここまで]}
 
-\subsection{実験の実行}
+\section{実験の実行}
 %-------------------------------------------------------------------------------
-\subsubsection{テストケースの説明}
+\subsection{テストケースの説明}
 
-\noindent \${TOP}/test/case のディレクトリの下にいくつかの理想実験ケースが準備されている。
+\noindent \texttt{scale-{\version}/scale-gm/test/case} のディレクトリの下にいくつかの理想実験ケースが準備されている。
 例えば、DCMIP2016の実験ケースについて表1にまとめた。
+%\textcolor{red}{[英語版未対応-----ここから]}
 テストケースの詳細については\url{https://www.earthsystemcog.org/projects/dcmip-2016/testcases}
 を参照するか、同WebページからダウンロードできるTest Case Documentを参照されたい。
 これらの実験ケースディレクトリの下には
 さらに格子間隔やMPIプロセス数ごとに異なるディレクトリが作成されている。
 自分の実行環境や目的に合わせてディレクトリを選択してほしい。
 また、各種ツールを用いて、任意の格子間隔やMPIプロセス数の設定を作成することも可能である。
+%\textcolor{red}{[英語版未対応-----ここまで]}
 
  \begin{table}[b]
  \begin{center}
@@ -134,7 +138,7 @@ g-level=5、r-level=0でMPIプロセスは10を想定している。
  \end{table}
 
 
-\subsubsection{計算実行: scale-gm}
+\subsection{計算実行: scale-gm}
 
 計算機上で数値モデルを実行するためのジョブコマンドはシステムによって異なるが、
 SCALE-GMでは計算機環境の違いを考慮してスクリプトを作成するシステムが用意されている。
@@ -155,12 +159,12 @@ SCALE-GMでは計算機環境の違いを考慮してスクリプトを作成す
 これで、実験の計算が開始される。DCMIP2016実験においては、scale-gmを実行したとき、
 一番はじめに初期値の作成を行っているため、数値モデルの実行前に初期値を作成する手順はない。
 
-\textcolor{red}{要検討D：1〜3の実験をgl04 or gl05くらいで、PE5あたりで実行したときのおおよその所要時間があると
+\textcolor{red}{要検討：1〜3の実験をgl04 or gl05くらいで、PE5あたりで実行したときのおおよその所要時間があると
  RMにおけるUGの仕様と合わせることができる。また、正常に実行できた場合にどんなファイルが
  生成されるのか、どれがHistoryファイルで、どれがログファイルなのかくらいの説明があってもよいだろう。}
 
 
-\subsection{後処理過程: ico2ll}
+\section{後処理過程: ico2ll}
 %-------------------------------------------------------------------------------
 計算結果の描画や解析を容易にするために、実験の実行が終了したあと、
 もとの二十面体格子からLatLon格子へ格子変換を行う。
