@@ -187,9 +187,8 @@ contains
        enddo
        enddo
 
-       if ( ATMOS_PHY_MP_TYPE == 'SN14' ) then ! diagnose tendency of number concentration
-          call ATMOS_HYDROMETEOR_diagnose_number_concentration( RHOQ_t_CP(:,:,:,:) ) ! [INOUT]
-       endif
+       ! diagnose tendency of number concentration
+       call ATMOS_HYDROMETEOR_diagnose_number_concentration( RHOQ_t_CP(:,:,:,:) ) ! [INOUT]
 
        call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', nohalo=.true. )
        call HIST_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', nohalo=.true. )
