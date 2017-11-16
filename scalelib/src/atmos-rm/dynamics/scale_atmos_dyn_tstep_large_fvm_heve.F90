@@ -512,7 +512,7 @@ contains
        !$omp shared(damp_t) &
 #endif
        !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
-       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00)
+       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
