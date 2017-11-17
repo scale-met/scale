@@ -41,7 +41,7 @@ module scale_atmos_phy_ae
           QTRC, &
           CN,   &
           CCN,  &
-          RHOQ_t_AE )
+          RHOQ_t )
        use scale_precision
        use scale_grid_index
        use scale_tracer
@@ -56,7 +56,7 @@ module scale_atmos_phy_ae
        real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
        real(RP), intent(out)   :: CN(KA,IA,JA)
        real(RP), intent(out)   :: CCN(KA,IA,JA)
-       real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)
+       real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QQA)
      end subroutine ae
      subroutine su
      end subroutine su

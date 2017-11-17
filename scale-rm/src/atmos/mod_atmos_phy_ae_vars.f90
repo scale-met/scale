@@ -88,7 +88,6 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_atmos_phy_ae, only: &
-       QA_AE, &
        QS_AE, &
        QE_AE
     implicit none
@@ -118,7 +117,7 @@ contains
     allocate( ATMOS_PHY_AE_CCN_t(KA,IA,JA) )
     ATMOS_PHY_AE_CCN_t(:,:,:) = UNDEF
 
-    allocate( ATMOS_PHY_AE_EMIT(KA,IA,JA,QA_AE) )
+    allocate( ATMOS_PHY_AE_EMIT(KA,IA,JA,QS_AE:QE_AE) )
     ATMOS_PHY_AE_EMIT(:,:,:,:) = 0.0_RP
 
     !--- read namelist
