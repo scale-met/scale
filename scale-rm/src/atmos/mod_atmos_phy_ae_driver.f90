@@ -165,8 +165,6 @@ contains
 !OCL XFILL
        CCN      (:,:,:)   = 0.0_RP ! reset
 !OCL XFILL
-       CCN_t    (:,:,:)   = 0.0_RP ! reset
-!OCL XFILL
        RHOQ_t_AE(:,:,:,:) = 0.0_RP ! reset
 
        do j  = JS, JE
@@ -197,15 +195,15 @@ contains
 
     endif
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do iq = QS_AE, QE_AE
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_AE(k,i,j,iq)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_AE(k,i,j,iq)
+       enddo
+       enddo
+       enddo
     enddo
 
     if ( STATISTICS_checktotal ) then

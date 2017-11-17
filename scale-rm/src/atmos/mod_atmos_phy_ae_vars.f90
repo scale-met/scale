@@ -57,6 +57,7 @@ module mod_atmos_phy_ae_vars
   real(RP), public, allocatable :: ATMOS_PHY_AE_CCN(:,:,:)                                    ! cloud condensation nuclei [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_AE_CCN_t(:,:,:)                                  ! tendency CCN [/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_AE_EMIT(:,:,:,:)                                 ! emission of aerosol and gas
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -65,7 +66,7 @@ module mod_atmos_phy_ae_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX = 1       !< number of the variables
+  integer,                private, parameter :: VMAX  = 1       !< number of the variables
   integer,                private, parameter :: I_CCN = 1
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
