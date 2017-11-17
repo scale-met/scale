@@ -31,7 +31,6 @@ module scale_atmos_phy_ae_dummy
   public :: ATMOS_PHY_AE_dummy_config
   public :: ATMOS_PHY_AE_dummy_setup
   public :: ATMOS_PHY_AE_dummy
-
   public :: ATMOS_PHY_AE_dummy_EffectiveRadius
 
   !-----------------------------------------------------------------------------
@@ -43,8 +42,7 @@ module scale_atmos_phy_ae_dummy
   character(len=H_SHORT), public, target :: ATMOS_PHY_AE_dummy_NAME(QA_AE)
   character(len=H_MID)  , public, target :: ATMOS_PHY_AE_dummy_DESC(QA_AE)
   character(len=H_SHORT), public, target :: ATMOS_PHY_AE_dummy_UNIT(QA_AE)
-
-  real(RP), public, target :: ATMOS_PHY_AE_dummy_DENS(QA_AE) ! hydrometeor density [kg/m3]=[g/L]
+  real(RP),               public, target :: ATMOS_PHY_AE_dummy_DENS(QA_AE) ! aerosol density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -60,13 +58,15 @@ contains
   !> Config
   subroutine ATMOS_PHY_AE_dummy_config( &
        AE_TYPE, &
-       QA_AE, QS_AE )
+       QA,      &
+       QS       )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     character(len=*), intent(in)  :: AE_TYPE
-    integer,          intent(out) :: QA_AE
-    integer,          intent(out) :: QS_AE
+    integer,          intent(out) :: QA
+    integer,          intent(out) :: QS
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -78,8 +78,8 @@ contains
        call PRC_MPIstop
     endif
 
-    QA_AE = 0
-    QS_AE = -1
+    QA = 0
+    QS = -1
 
     return
   end subroutine ATMOS_PHY_AE_dummy_config

@@ -60,12 +60,19 @@ contains
        ATMOS_PHY_MP_driver_config
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_config
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_config
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_config
     implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS] / Origin[SCALE-RM]'
 
     call ATMOS_PHY_MP_driver_config
     call ATMOS_PHY_AE_driver_config
+    call ATMOS_PHY_CH_driver_config
     call ATMOS_PHY_TB_driver_config
 
     return
@@ -86,12 +93,12 @@ contains
        ATMOS_DYN_driver_setup
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
-    use mod_atmos_phy_rd_driver, only: &
-       ATMOS_PHY_RD_driver_setup
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_setup
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_setup
     use mod_atmos_phy_tb_driver, only: &
@@ -158,12 +165,12 @@ contains
        ATMOS_BOUNDARY_resume
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_resume
-    use mod_atmos_phy_rd_driver, only: &
-       ATMOS_PHY_RD_driver_resume
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver_resume
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_resume
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_driver_resume
     implicit none
     !---------------------------------------------------------------------------
 
@@ -227,12 +234,12 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_vars_history, &
        ATMOS_vars_monitor
-    use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver_resume
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_resume
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_resume
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_resume
     implicit none
     !---------------------------------------------------------------------------
 

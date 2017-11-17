@@ -86,6 +86,9 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_atmos_phy_ch, only: &
+       QS_CH, &
+       QE_CH
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_CH_VARS / &
@@ -104,7 +107,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS PHY_CH] / Origin[SCALE-RM]'
 
-    allocate( ATMOS_PHY_CH_RHOQ_t(KA,IA,JA,QA) )
+    allocate( ATMOS_PHY_CH_RHOQ_t(KA,IA,JA,QS_CH:QE_CH) )
     ATMOS_PHY_CH_RHOQ_t(:,:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_CH_O3(KA,IA,JA) )
@@ -333,8 +336,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
-       call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
-                            VAR_UNIT(1), 'ZXY', ATMOS_PHY_CH_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), &
+                            'ZXY', ATMOS_PHY_CH_RESTART_OUT_DTYPE  ) ! [IN]
     endif
 
     return

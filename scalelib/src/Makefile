@@ -20,13 +20,13 @@ VPATH = common:                     \
         io:                         \
         atmos-physics:              \
         atmos-physics/share:        \
-        atmos-physics/cumulus:      \
         atmos-physics/microphysics: \
+        atmos-physics/aerosol:      \
+        atmos-physics/chemistry:    \
         atmos-physics/radiation:    \
         atmos-physics/surfaceflux:  \
         atmos-physics/turbulence:   \
-        atmos-physics/aerosol:      \
-        atmos-physics/chemistry:    \
+        atmos-physics/cumulus:      \
         atmos-rm:                   \
         atmos-rm/communication:     \
         atmos-rm/grid:              \
@@ -48,29 +48,6 @@ else
 endif
 
 SDM_EXIST := $(shell find $(TOPDIR)/contrib -name SDM 2> /dev/null )
-
-OBJS_MP = scale_atmos_phy_mp_dry.o	\
-          scale_atmos_phy_mp_kessler.o	\
-          scale_atmos_phy_mp_sn14.o	\
-          scale_atmos_phy_mp_sdm.o	\
-          scale_atmos_phy_mp_suzuki10.o	\
-          scale_atmos_phy_mp_tomita08.o
-
-OBJS_CP = scale_atmos_phy_cp_kf.o
-
-OBJS_AE = scale_atmos_phy_ae_dummy.o	\
-          scale_atmos_phy_ae_kajino13.o
-
-OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
-          scale_atmos_phy_rd_mm5sw.o	\
-          scale_atmos_phy_rd_offline.o	\
-          scale_atmos_phy_rd_profile.o
-
-OBJS_TB = scale_atmos_phy_tb_smg.o	\
-          scale_atmos_phy_tb_d1980.o	\
-          scale_atmos_phy_tb_dns.o	\
-          scale_atmos_phy_tb_mynn.o	\
-          scale_atmos_phy_tb_hybrid.o
 
 OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_fvm_flux_cd4.o	\
@@ -98,29 +75,67 @@ OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
            scale_atmos_dyn_tstep_tracer.o
 
+OBJS_MP = scale_atmos_phy_mp_dry.o	\
+          scale_atmos_phy_mp_kessler.o	\
+          scale_atmos_phy_mp_sn14.o	\
+          scale_atmos_phy_mp_sdm.o	\
+          scale_atmos_phy_mp_suzuki10.o	\
+          scale_atmos_phy_mp_tomita08.o
+
+OBJS_AE = scale_atmos_phy_ae_dummy.o	\
+          scale_atmos_phy_ae_kajino13.o
+
+OBJS_CH = scale_atmos_phy_ch_rn222.o
+
+OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
+          scale_atmos_phy_rd_mm5sw.o	\
+          scale_atmos_phy_rd_offline.o	\
+          scale_atmos_phy_rd_profile.o
+
+OBJS_SF = scale_atmos_phy_sf_bulk.o	\
+          scale_atmos_phy_sf_const.o
+
+OBJS_TB = scale_atmos_phy_tb_smg.o	\
+          scale_atmos_phy_tb_d1980.o	\
+          scale_atmos_phy_tb_dns.o	\
+          scale_atmos_phy_tb_mynn.o	\
+          scale_atmos_phy_tb_hybrid.o
+
+OBJS_CP = scale_atmos_phy_cp_kf.o
+
+
+
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	$(OBJS_DYN)	\
-	scale_atmos_phy_ae.o	\
-	scale_atmos_phy_ae_dummy.o	\
 	$(OBJS_NUMERIC_FDM)	\
-	$(OBJS_AE)	\
-	scale_atmos_phy_cp.o	\
-	$(OBJS_CP)	\
+	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
-	$(OBJS_MP)	\
 	scale_atmos_phy_mp_convert.o	\
+	$(OBJS_MP)	\
+	\
+	scale_atmos_phy_ae.o	\
+	$(OBJS_AE)	\
+	\
+	scale_atmos_phy_ch.o	\
+	$(OBJS_CH)	\
+	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\
+	\
 	scale_atmos_phy_sf.o	\
-	scale_atmos_phy_sf_bulk.o	\
-	scale_atmos_phy_sf_const.o	\
+	$(OBJS_SF)	\
+	\
 	scale_atmos_phy_tb.o	\
 	scale_atmos_phy_tb_common.o	\
 	$(OBJS_TB)	\
+	\
+	scale_atmos_phy_cp.o	\
+	$(OBJS_CP)	\
+	\
 	scale_atmos_sub_bottom.o	\
 	scale_atmos_sub_boundary.o	\
 	scale_atmos_sub_hydrostatic.o	\
