@@ -317,9 +317,6 @@ contains
     RHOT_RK3(:,:,:) = UNDEF
     if ( VA > 0 ) PROG_RK3(:,:,:,:) = UNDEF
 
-    mflx_hi(:,:,:,:) = UNDEF
-    tflx_hi(:,:,:,:) = UNDEF
-
     mflx_hi_RK(:,:,:,:,:) = UNDEF
     tflx_hi_RK(:,:,:,:,:) = UNDEF
 #endif

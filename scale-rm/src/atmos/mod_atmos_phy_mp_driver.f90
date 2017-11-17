@@ -131,9 +131,18 @@ contains
        STAT_total
     use scale_history, only: &
        HIST_in
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
     use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP, &
-       QS_MP, &
+       ATMOS_PHY_MP,                 &
+       ATMOS_PHY_MP_EffectiveRadius, &
+       QS_MP,                        &
        QE_MP
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
@@ -147,7 +156,8 @@ contains
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
        RHOT_t => RHOT_tp, &
-       RHOQ_t => RHOQ_tp
+       RHOQ_t => RHOQ_tp, &
+       TEMP
     use mod_atmos_phy_mp_vars, only: &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
        MOMZ_t_MP => ATMOS_PHY_MP_MOMZ_t,    &
@@ -172,6 +182,7 @@ contains
     real(RP) :: QTRC0(KA,IA,JA,QA)
     real(RP) :: CCN(KA,IA,JA)
 
+    real(RP) :: Re    (KA,IA,JA,N_HYD) ! effective radius
     real(RP) :: precip(IA,JA)
     real(RP) :: total ! dummy
 
@@ -274,6 +285,17 @@ contains
                         'tendency rho*'//trim(TRACER_NAME(iq))//'in MP', 'kg/m3/s', nohalo=.true. )
        enddo
 
+       call ATMOS_PHY_MP_EffectiveRadius( Re  (:,:,:,:), & ! [OUT]
+                                          QTRC(:,:,:,:), & ! [IN]
+                                          DENS(:,:,:),   & ! [IN]
+                                          TEMP(:,:,:)    ) ! [IN]
+
+       call HIST_in( Re(:,:,:,I_HC), 'Re_QC', 'effective radius cloud water', 'cm', nohalo=.true. )
+       call HIST_in( Re(:,:,:,I_HR), 'Re_QR', 'effective radius rain',        'cm', nohalo=.true. )
+       call HIST_in( Re(:,:,:,I_HI), 'Re_QI', 'effective radius ice water',   'cm', nohalo=.true. )
+       call HIST_in( Re(:,:,:,I_HS), 'Re_QS', 'effective radius snow',        'cm', nohalo=.true. )
+       call HIST_in( Re(:,:,:,I_HG), 'Re_QG', 'effective radius graupel',     'cm', nohalo=.true. )
+       call HIST_in( Re(:,:,:,I_HH), 'Re_QH', 'effective radius hail',        'cm', nohalo=.true. )
     endif
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
