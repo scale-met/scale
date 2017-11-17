@@ -112,6 +112,7 @@ MPRJ_LC_LAT2="40.0"
 #################################################
 
 ATMOS_DYN_TYPE=(    "HEVI"     "HEVI"     ) # required parameters for each domain
+ATMOS_PHY_CP_TYPE=( "NONE"     "NONE"     ) # required parameters for each domain
 ATMOS_PHY_MP_TYPE=( "TOMITA08" "TOMITA08" ) # required parameters for each domain
 ATMOS_PHY_RD_TYPE=( "MSTRNX"   "MSTRNX"   ) # required parameters for each domain
 ATMOS_PHY_SF_TYPE=( "COUPLE"   "COUPLE"   ) # required parameters for each domain

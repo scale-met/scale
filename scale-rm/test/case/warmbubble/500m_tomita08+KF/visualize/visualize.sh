@@ -62,8 +62,8 @@ do
    let i="${i} + 1"
 done
 
-var__set=(RH QC QR QI QS QG NC NR NI NS NG Re_QC Re_QR)
-rangeset=(auto auto auto auto auto auto auto auto auto auto auto auto auto)
+var__set=(RH QC QR QI QS QG Re_QC Re_QR)
+rangeset=(auto auto auto auto auto auto auto auto)
 time_set=
 
 i=0
@@ -91,8 +91,8 @@ do
    let i="${i} + 1"
 done
 
-var__set=(PREC RAIN SNOW)
-rangeset=(auto auto auto)
+var__set=(PREC RAIN SNOW RAIN_CP RAIN_MP)
+rangeset=(auto auto auto auto auto)
 
 i=0
 for var in ${var__set[@]}

@@ -512,7 +512,7 @@ contains
        !$omp shared(damp_t) &
 #endif
        !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
-       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00)
+       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -526,7 +526,7 @@ contains
 #endif
           damp = damp * DENS00(k,i,j)
           RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp
-          DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp
+          DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp * TRACER_MASS(iq) ! only for mass tracer
        enddo
        enddo
        enddo
@@ -908,9 +908,9 @@ contains
 #endif
 
        !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
-       do j  = JS, JE
-       do i  = IS, IE
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
+       do j  = JSB, JEB
+       do i  = ISB, IEB
           DENS(   1:KS-1,i,j) = DENS(KS,i,j)
           MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
           MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
