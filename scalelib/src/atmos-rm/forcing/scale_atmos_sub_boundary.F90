@@ -1426,7 +1426,7 @@ contains
 
     ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC(handle)
 
-    if ( NESTQA /= BND_QA ) then
+    if ( NESTQA > BND_QA ) then
        write(*,*) 'xxx ERROR: NEST_BND_QA exceeds BND_QA [initialize/ATMOS_BOUNDARY]'
        write(*,*) 'xxx check consistency between'
        write(*,*) '    ONLINE_BOUNDARY_USE_QHYD and ATMOS_BOUNDARY_USE_QHYD.'
@@ -2123,11 +2123,16 @@ contains
   subroutine ATMOS_BOUNDARY_recv( &
        ref_idx )
     use scale_grid_nest, only: &
-       NEST_COMM_nestdown,    &
-       PARENT_KA,             &
-       PARENT_IA,             &
-       PARENT_JA,             &
+       ONLINE_BOUNDARY_DIAGQNUM, &
+       NEST_COMM_nestdown,       &
+       PARENT_KA,                &
+       PARENT_IA,                &
+       PARENT_JA,                &
        NESTQA => NEST_BND_QA
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_diagnose_number_concentration
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     implicit none
 
     ! parameters
@@ -2157,6 +2162,10 @@ contains
                              ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_idx),         & !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_idx),         & !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_idx) ) !(KA,IA,JA,QA)
+
+    if ( ONLINE_BOUNDARY_DIAGQNUM .AND. QA_MP == 11 ) then
+       call ATMOS_HYDROMETEOR_diagnose_number_concentration( ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,ref_idx) ) ! [INOUT]
+    endif
 
     return
   end subroutine ATMOS_BOUNDARY_recv

@@ -111,6 +111,7 @@ module scale_grid_nest
   logical,  public              :: ONLINE_USE_VELZ      = .false.
   logical,  public              :: ONLINE_NO_ROTATE     = .false.
   logical,  public              :: ONLINE_BOUNDARY_USE_QHYD = .false.
+  logical,  public              :: ONLINE_BOUNDARY_DIAGQNUM = .false.
 
   !-----------------------------------------------------------------------------
   !
@@ -342,6 +343,7 @@ contains
        ONLINE_USE_VELZ,          &
        ONLINE_NO_ROTATE,         &
        ONLINE_BOUNDARY_USE_QHYD, &
+       ONLINE_BOUNDARY_DIAGQNUM, &
        ONLINE_AGGRESSIVE_COMM,   &
        ONLINE_WAIT_LIMIT,        &
        ONLINE_SPECIFIED_MAXRQ,   &
@@ -1152,10 +1154,17 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        call PRC_MPIstop
     endif
 
-    if( QA_OTHERSIDE /= NEST_BND_QA ) then
-       write(*,*) 'xxx [grd_nest/NEST_COMM_parentsize] NUMBER of QA are not matched!'
-       write(*,*) 'xxx check a flag of ONLINE_BOUNDARY_USE_QHYD.', QA_OTHERSIDE, NEST_BND_QA
-       call PRC_MPIstop
+    if ( ONLINE_BOUNDARY_DIAGQNUM ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Number concentration of hydrometeor will be diagnosed'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Number of QA (remote,local) = ', QA_OTHERSIDE, NEST_BND_QA
+       NEST_BND_QA = min(QA_OTHERSIDE, NEST_BND_QA)
+    else
+       if ( QA_OTHERSIDE /= NEST_BND_QA ) then
+          write(*,*) 'xxx [grd_nest/NEST_COMM_parentsize] NUMBER of QA are not matched!'
+          write(*,*) 'xxx check a flag of ONLINE_BOUNDARY_USE_QHYD.'
+          write(*,*) 'xxx Number of QA (remote,local) = ', QA_OTHERSIDE, NEST_BND_QA
+          call PRC_MPIstop
+       endif
     endif
 
     return

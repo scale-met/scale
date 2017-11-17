@@ -91,8 +91,8 @@ do
    let i="${i} + 1"
 done
 
-var__set=(PREC RAIN SNOW)
-rangeset=(auto auto auto)
+var__set=(PREC RAIN SNOW RAIN_CP RAIN_MP)
+rangeset=(auto auto auto auto auto)
 
 i=0
 for var in ${var__set[@]}
