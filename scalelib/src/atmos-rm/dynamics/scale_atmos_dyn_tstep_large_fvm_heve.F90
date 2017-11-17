@@ -59,9 +59,12 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   real(RP), private, allocatable :: MOMX_t(:,:,:)
   real(RP), private, allocatable :: MOMY_t(:,:,:)
   real(RP), private, allocatable :: RHOT_t(:,:,:)
-  real(RP), private, allocatable :: RHOQ_t(:,:,:,:)
+  real(RP), private, allocatable, target :: RHOQ_t(:,:,:,:)
+  real(RP), private, allocatable, target :: ZERO(:,:,:)
+  real(RP), private, pointer     :: RHOQ_tn(:,:,:)
 
   real(RP), private, allocatable :: mflx_hi(:,:,:,:)        ! rho * vel(x,y,z) @ (u,v,w)-face high order
+
 
   ! for communication
   integer :: I_COMM_DENS = 1
@@ -158,6 +161,9 @@ contains
     call COMM_vars8_init( 'mflx_X', mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
     call COMM_vars8_init( 'mflx_Y', mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
 
+    allocate( ZERO(KA,IA,JA) )
+    ZERO(:,:,:) = 0.0_RP
+
     mflx_hi(:,:,:,:) = UNDEF
 
     return
@@ -187,6 +193,7 @@ contains
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
        wdamp_coef,                                           &
        divdmp_coef,                                          &
+       FLAG_TRACER_SPLIT_TEND,                               &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
@@ -325,6 +332,7 @@ contains
     real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
 
+    logical,  intent(in)    :: FLAG_TRACER_SPLIT_TEND
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
     logical,  intent(in)    :: FLAG_FCT_TRACER
@@ -1018,9 +1026,25 @@ contains
 
           call PROF_rapstart("DYN_Tracer_Tinteg", 2)
 
+          if ( FLAG_TRACER_SPLIT_TEND ) then
+             !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(KA,IA,JA,iq,QTRC,RHOQ_t,DENS,dtl)
+             do j = 1, JA
+             do i = 1, IA
+             do k = 1, KA
+                QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
+                               + RHOQ_t(k,i,j,iq) * dtl / DENS(k,i,j)
+             end do
+             end do
+             end do
+             RHOQ_tn => ZERO
+          else
+             RHOQ_tn => RHOQ_t(:,:,:,iq)
+          end if
+
           call ATMOS_DYN_tinteg_tracer( &
                QTRC(:,:,:,iq), & ! (inout)
-               QTRC0(:,:,:,iq), RHOQ_t(:,:,:,iq), &! (in)
+               QTRC0(:,:,:,iq), RHOQ_tn, &! (in)
                DENS00, DENS, & ! (in)
                mflx_hi, num_diff_q, & ! (in)
                GSQRT, MAPF(:,:,:,I_XY), & ! (in)

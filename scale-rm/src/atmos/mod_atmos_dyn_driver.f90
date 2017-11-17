@@ -84,6 +84,7 @@ module mod_atmos_dyn_driver
   real(RP), private :: ATMOS_DYN_divdmp_coef                 = 0.0_RP    ! Divergence dumping coef
 
   ! Flux-Corrected Transport limiter
+  logical,  private :: ATMOS_DYN_FLAG_TRACER_SPLIT_TEND      = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_momentum           = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_T                  = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER             = .false.
@@ -140,6 +141,7 @@ contains
        ATMOS_DYN_wdamp_layer,                 &
        ATMOS_DYN_enable_coriolis,             &
        ATMOS_DYN_divdmp_coef,                 &
+       ATMOS_DYN_FLAG_TRACER_SPLIT_TEND,      &
        ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T,                  &
        ATMOS_DYN_FLAG_FCT_TRACER,             &
@@ -393,6 +395,7 @@ contains
                        ATMOS_BOUNDARY_alpha_POTT,                            & ! [IN]
                        ATMOS_BOUNDARY_alpha_QTRC,                            & ! [IN]
                        ATMOS_DYN_divdmp_coef,                                & ! [IN]
+                       ATMOS_DYN_FLAG_TRACER_SPLIT_TEND,                     & ! [IN]
                        ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
                        ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
                        ATMOS_DYN_FLAG_FCT_TRACER,                            & ! [IN]
