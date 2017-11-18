@@ -145,6 +145,7 @@ contains
     real(RP) :: Tstar ! friction temperature [K]
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
     real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
@@ -190,6 +191,7 @@ contains
             Tstar,     & ! [OUT]
             Qstar,     & ! [OUT]
             Uabs,      & ! [OUT]
+            Ra,        & ! [OUT]
             FracU10,   & ! [OUT]
             FracT2,    & ! [OUT]
             FracQ2,    & ! [OUT]

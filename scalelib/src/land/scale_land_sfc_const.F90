@@ -85,6 +85,7 @@ contains
         ALB_LW,     &
         ALB_SW,     &
         DZG,        &
+        Rb,         &
         TCS,        &
         Z0M,        &
         Z0H,        &
@@ -140,6 +141,7 @@ contains
     real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
     real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
     real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
+    real(RP), intent(in) :: Rb    (IA,JA) ! stomata resistance [1/s]
     real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
     real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
@@ -153,6 +155,7 @@ contains
     real(RP) :: Tstar ! friction potential temperature [K]
     real(RP) :: Qstar ! friction water vapor mass ratio [kg/kg]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
     real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: QVS          ! water vapor mixing ratio at surface [kg/kg]
@@ -201,6 +204,7 @@ contains
             Tstar,     & ! [OUT]
             Qstar,     & ! [OUT]
             Uabs,      & ! [OUT]
+            Ra,        & ! [OUT]
             FracU10,   & ! [OUT]
             FracT2,    & ! [OUT]
             FracQ2,    & ! [OUT]
@@ -222,7 +226,7 @@ contains
         XMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * UA(i,j)
         YMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * VA(i,j)
         SHFLX(i,j) = -SFC_DENS * Ustar * Tstar * CPdry
-        LHFLX(i,j) = -SFC_DENS * Ustar * Qstar * LHV(i,j)
+        LHFLX(i,j) = -SFC_DENS * Ustar * Qstar * LHV(i,j) * Ra / ( Ra + Rb(i,j) )
 
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j) ) / DZG(i,j)
 

@@ -163,6 +163,8 @@ contains
     real(RP) :: Tstar   ! friction temperature [K]
     real(RP) :: Qstar   ! friction mixing rate [kg/kg]
     real(RP) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP) :: Ra      ! Aerodynamic resistance (=1/Ce) [1/s]
+
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
@@ -210,6 +212,7 @@ contains
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
                       Uabs,          & ! [OUT]
+                      Ra,            & ! [OUT]
                       FracU10,       & ! [OUT]
                       FracT2,        & ! [OUT]
                       FracQ2,        & ! [OUT]

@@ -56,6 +56,7 @@ module scale_land_sfc
            ALB_LW, &
            ALB_SW, &
            DZG,    &
+           Rb,     &
            TCS,    &
            Z0M,    &
            Z0H,    &
@@ -96,6 +97,7 @@ module scale_land_sfc
        real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
        real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
        real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
+       real(RP), intent(in) :: Rb    (IA,JA) ! stomata resistance [1/s]
        real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
        real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
        real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]

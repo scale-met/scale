@@ -104,15 +104,16 @@ module mod_land_vars
 
   character(len=H_LONG), public :: LAND_PROPERTY_IN_FILENAME  = '' !< the file of land parameter table
 
-  integer,  public, parameter   :: LAND_PROPERTY_nmax = 8
+  integer,  public, parameter   :: LAND_PROPERTY_nmax = 9
   integer,  public, parameter   :: I_WaterLimit       = 1 ! maximum  soil moisture           [m3/m3]
   integer,  public, parameter   :: I_WaterCritical    = 2 ! critical soil moisture           [m3/m3]
-  integer,  public, parameter   :: I_ThermalCond      = 3 ! thermal conductivity for soil    [W/K/m]
-  integer,  public, parameter   :: I_HeatCapacity     = 4 ! heat capacity for soil           [J/K/m3]
-  integer,  public, parameter   :: I_WaterDiff        = 5 ! moisture diffusivity in the soil [m2/s]
-  integer,  public, parameter   :: I_Z0M              = 6 ! roughness length for momemtum    [m]
-  integer,  public, parameter   :: I_Z0H              = 7 ! roughness length for heat        [m]
-  integer,  public, parameter   :: I_Z0E              = 8 ! roughness length for vapor       [m]
+  integer,  public, parameter   :: I_StomataResist    = 3 ! stomata resistance               [1/s]
+  integer,  public, parameter   :: I_ThermalCond      = 4 ! thermal conductivity for soil    [W/K/m]
+  integer,  public, parameter   :: I_HeatCapacity     = 5 ! heat capacity for soil           [J/K/m3]
+  integer,  public, parameter   :: I_WaterDiff        = 6 ! moisture diffusivity in the soil [m2/s]
+  integer,  public, parameter   :: I_Z0M              = 7 ! roughness length for momemtum    [m]
+  integer,  public, parameter   :: I_Z0H              = 8 ! roughness length for heat        [m]
+  integer,  public, parameter   :: I_Z0E              = 9 ! roughness length for vapor       [m]
 
   !-----------------------------------------------------------------------------
   !
@@ -594,6 +595,7 @@ contains
     character(len=H_MID) :: description
     real(RP)             :: STRGMAX
     real(RP)             :: STRGCRT
+    real(RP)             :: RSTOMA
     real(RP)             :: TCS
     real(RP)             :: HCS
     real(RP)             :: DFW
@@ -609,6 +611,7 @@ contains
        description, &
        STRGMAX,     &
        STRGCRT,     &
+       RSTOMA,      &
        TCS,         &
        HCS,         &
        DFW,         &
@@ -653,6 +656,7 @@ contains
                                                   '                     description', &
                                                   'Max Stg.', &
                                                   'CRT Stg.', &
+                                                  'Stm.Res.', &
                                                   'T condu.', &
                                                   'H capac.', &
                                                   'DFC Wat.', &
@@ -664,9 +668,16 @@ contains
         rewind(IO_FID_LAND_PROPERTY)
 
         do n = 1, LANDUSE_PFT_nmax
-           ! undefined roughness length
-           Z0H = -1.0_RP
-           Z0E = -1.0_RP
+           ! default value
+           STRGMAX =  0.2_RP
+           STRGCRT =  0.1_RP
+           RSTOMA  = 50.0_RP
+           TCS     =  1.0_RP
+           HCS     =  2.E+6_RP
+           DFW     =  1.E-6_RP
+           Z0M     =  0.1_RP
+           Z0H     = -1.0_RP
+           Z0E     = -1.0_RP
 
            read(IO_FID_LAND_PROPERTY,nml=PARAM_LAND_DATA,iostat=ierr)
            if ( ierr < 0 ) then !--- no more data
@@ -685,6 +696,7 @@ contains
 
            LAND_PROPERTY_table(index,I_WaterLimit   ) = STRGMAX
            LAND_PROPERTY_table(index,I_WaterCritical) = STRGCRT
+           LAND_PROPERTY_table(index,I_StomataResist) = RSTOMA
            LAND_PROPERTY_table(index,I_ThermalCond  ) = TCS
            LAND_PROPERTY_table(index,I_HeatCapacity ) = HCS
            LAND_PROPERTY_table(index,I_WaterDiff    ) = DFW
@@ -697,6 +709,7 @@ contains
                                          trim(description), &
                                          STRGMAX, &
                                          STRGCRT, &
+                                         RSTOMA,  &
                                          TCS,     &
                                          HCS,     &
                                          DFW,     &

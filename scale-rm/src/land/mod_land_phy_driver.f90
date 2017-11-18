@@ -100,6 +100,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine LAND_PHY_driver( update_flag )
+    use scale_const, only: &
+       PI => CONST_PI
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_time, only: &
@@ -121,6 +123,7 @@ contains
        LAND_PROPERTY,     &
        I_WaterLimit,      &
        I_WaterCritical,   &
+       I_StomataResist,   &
        I_ThermalCond,     &
        I_HeatCapacity,    &
        I_WaterDiff,       &
@@ -162,6 +165,7 @@ contains
 
     ! parameters
     real(RP), parameter :: BETA_MAX = 1.0_RP
+    !real(RP) :: sw
 
     ! arguments
     logical, intent(in) :: update_flag
@@ -184,44 +188,51 @@ contains
        do j = JS, JE
        do i = IS, IE
           LAND_QVEF(i,j) = min( LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical), BETA_MAX )
+
+          ! eq.(12) in Merlin et al.(2011) but simplified P=0.5 used
+          !sw = 0.5_RP + sign(0.5_RP,LAND_WATER(LKS,i,j)-LAND_PROPERTY(i,j,I_WaterCritical)) ! if W > Wc, sw = 1
+          !LAND_QVEF(i,j) = (        sw ) * 1.0_RP &
+          !               + ( 1.0_RP-sw ) * sqrt( 0.5_RP - 0.5_RP * cos( PI * LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical) ) )
+
           LAND_DZ1 (i,j) = GRID_LCDZ(LKS)
        end do
        end do
 
-       call LAND_SFC( LAND_SFC_TEMP_t(:,:),               & ! [OUT]
-                      LAND_SFLX_MW   (:,:),               & ! [OUT]
-                      LAND_SFLX_MU   (:,:),               & ! [OUT]
-                      LAND_SFLX_MV   (:,:),               & ! [OUT]
-                      LAND_SFLX_SH   (:,:),               & ! [OUT]
-                      LAND_SFLX_LH   (:,:),               & ! [OUT]
-                      LAND_SFLX_GH   (:,:),               & ! [OUT]
-                      LAND_U10       (:,:),               & ! [OUT]
-                      LAND_V10       (:,:),               & ! [OUT]
-                      LAND_T2        (:,:),               & ! [OUT]
-                      LAND_Q2        (:,:),               & ! [OUT]
-                      ATMOS_TEMP     (:,:),               & ! [IN]
-                      ATMOS_PRES     (:,:),               & ! [IN]
-                      ATMOS_W        (:,:),               & ! [IN]
-                      ATMOS_U        (:,:),               & ! [IN]
-                      ATMOS_V        (:,:),               & ! [IN]
-                      ATMOS_DENS     (:,:),               & ! [IN]
-                      ATMOS_QV       (:,:),               & ! [IN]
-                      REAL_Z1        (:,:),               & ! [IN]
-                      ATMOS_PBL      (:,:),               & ! [IN]
-                      ATMOS_SFC_PRES (:,:),               & ! [IN]
-                      ATMOS_SFLX_LW  (:,:),               & ! [IN]
-                      ATMOS_SFLX_SW  (:,:),               & ! [IN]
-                      LAND_TEMP      (LKS,:,:),           & ! [IN]
-                      LAND_SFC_TEMP  (:,:),               & ! [IN]
-                      LAND_QVEF      (:,:),               & ! [IN]
-                      LAND_SFC_albedo(:,:,I_LW),          & ! [IN]
-                      LAND_SFC_albedo(:,:,I_SW),          & ! [IN]
-                      LAND_DZ1       (:,:),               & ! [IN]
-                      LAND_PROPERTY  (:,:,I_ThermalCond), & ! [IN]
-                      LAND_PROPERTY  (:,:,I_Z0M),         & ! [IN]
-                      LAND_PROPERTY  (:,:,I_Z0H),         & ! [IN]
-                      LAND_PROPERTY  (:,:,I_Z0E),         & ! [IN]
-                      dt                                  ) ! [IN]
+       call LAND_SFC( LAND_SFC_TEMP_t(:,:),                 & ! [OUT]
+                      LAND_SFLX_MW   (:,:),                 & ! [OUT]
+                      LAND_SFLX_MU   (:,:),                 & ! [OUT]
+                      LAND_SFLX_MV   (:,:),                 & ! [OUT]
+                      LAND_SFLX_SH   (:,:),                 & ! [OUT]
+                      LAND_SFLX_LH   (:,:),                 & ! [OUT]
+                      LAND_SFLX_GH   (:,:),                 & ! [OUT]
+                      LAND_U10       (:,:),                 & ! [OUT]
+                      LAND_V10       (:,:),                 & ! [OUT]
+                      LAND_T2        (:,:),                 & ! [OUT]
+                      LAND_Q2        (:,:),                 & ! [OUT]
+                      ATMOS_TEMP     (:,:),                 & ! [IN]
+                      ATMOS_PRES     (:,:),                 & ! [IN]
+                      ATMOS_W        (:,:),                 & ! [IN]
+                      ATMOS_U        (:,:),                 & ! [IN]
+                      ATMOS_V        (:,:),                 & ! [IN]
+                      ATMOS_DENS     (:,:),                 & ! [IN]
+                      ATMOS_QV       (:,:),                 & ! [IN]
+                      REAL_Z1        (:,:),                 & ! [IN]
+                      ATMOS_PBL      (:,:),                 & ! [IN]
+                      ATMOS_SFC_PRES (:,:),                 & ! [IN]
+                      ATMOS_SFLX_LW  (:,:),                 & ! [IN]
+                      ATMOS_SFLX_SW  (:,:),                 & ! [IN]
+                      LAND_TEMP      (LKS,:,:),             & ! [IN]
+                      LAND_SFC_TEMP  (:,:),                 & ! [IN]
+                      LAND_QVEF      (:,:),                 & ! [IN]
+                      LAND_SFC_albedo(:,:,I_LW),            & ! [IN]
+                      LAND_SFC_albedo(:,:,I_SW),            & ! [IN]
+                      LAND_DZ1       (:,:),                 & ! [IN]
+                      LAND_PROPERTY  (:,:,I_StomataResist), & ! [IN]
+                      LAND_PROPERTY  (:,:,I_ThermalCond),   & ! [IN]
+                      LAND_PROPERTY  (:,:,I_Z0M),           & ! [IN]
+                      LAND_PROPERTY  (:,:,I_Z0H),           & ! [IN]
+                      LAND_PROPERTY  (:,:,I_Z0E),           & ! [IN]
+                      dt                                    ) ! [IN]
 
        call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
 
