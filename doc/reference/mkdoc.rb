@@ -237,12 +237,31 @@ EOL
 
     hist.sort.each do |name, info|
       name = get_data(name,data,vars)
-      history[name] ||= [get_data(info[:desc],data,vars), Array.new]
+      desc = get_data(info[:desc],data,vars)
+      if /\A(.*)trim\(([^()]+)\([^()]+\)\)(.*)\Z/ =~ name
+        pre = $1
+        vn = $2
+        post = $3
+        pre.sub!(/'([^']+)'\/\//, '\1')
+        post.sub!(/\/\/'([^']+)'/, '\1')
+        name = "#{pre}<em>#{vn}</em>#{post}"
+      end
+      if /\A(.+)'\/\/trim\((.+)\([^()]+\)\)(.*)\Z/ =~ desc
+        pre = $1
+        vn = $2
+        post = $3 && $3.sub(/\/\/'(.+)/,'\1')
+        if /Boundary/ =~ pre
+          desc = "tracer name in the boundary data; #{vn} depends on the parent model or data, e.g, QV, QC, QR."
+        elsif /tendency|SGS/ =~ pre
+          desc = "#{pre}<em>#{vn}</em>#{post}; <em>#{vn}</em> depends on the physics schemes, e.g., QV, QC, QR."
+        end
+      end
+      history[name] ||= [desc, Array.new]
       history[name][1].push modname
       file.print <<EOL
 !>      <tr>
 !>        <td id="#{name}">#{name}</td>
-!>        <td>#{get_data(info[:desc],data,vars)}</td>
+!>        <td>#{desc}</td>
 !>        <td>#{get_data(info[:unit],data,vars)}</td>
 !>        <td>#{get_data(info[:var],data,vars)}</td>
 !>      </tr>
