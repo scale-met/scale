@@ -209,7 +209,7 @@ contains
 
        do iq = QS_MP, QE_MP
           call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
-                        'tendency rho*'//trim(TRACER_NAME(iq))//'in CP', 'kg/m3/s', nohalo=.true. )
+                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CP', 'kg/m3/s', nohalo=.true. )
        enddo
 
     endif

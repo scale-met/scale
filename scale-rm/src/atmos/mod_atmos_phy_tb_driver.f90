@@ -297,7 +297,7 @@ contains
 
        do iq = 1, QA
           call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB',                      &
-                        'RHO*'//trim(TRACER_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
+                        'tendency rho*'//trim(TRACER_NAME(iq))//' in TB', 'kg/m3/s', nohalo=.true. )
        enddo
 
        call HIST_in( QFLX_MOMZ(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ', 'SGS Z FLUX of MOMZ', 'kg/m/s2', &
