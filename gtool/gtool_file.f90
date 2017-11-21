@@ -184,6 +184,7 @@ contains
        master,      & ! (in)
        myrank,      & ! (in)
        rankidx,     & ! (in)
+       procsize,    & ! (in)
        single,      & ! (in) optional
        time_units,  & ! (in) optional
        append,      & ! (in) optional
@@ -200,6 +201,7 @@ contains
     integer,          intent( in)           :: master
     integer,          intent( in)           :: myrank
     integer,          intent( in)           :: rankidx(:)
+    integer,          intent( in)           :: procsize(:)
     character(len=*), intent( in), optional :: time_units
     logical,          intent( in), optional :: single
     logical,          intent( in), optional :: append
@@ -256,7 +258,9 @@ contains
        call FileSetGlobalAttribute( fid, & ! (in)
             "myrank", (/myrank/)         ) ! (in)
        call FileSetGlobalAttribute( fid, & ! (in)
-            "rankidx", rankidx           ) ! (in)
+            "rankidx", rankidx(:)        ) ! (in)
+       call FileSetGlobalAttribute( fid, & ! (in)
+            "procsize", procsize(:)      ) ! (in)
     end if
 
     call file_set_tunits( fid, & ! (in)

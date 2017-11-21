@@ -1036,11 +1036,6 @@ contains
        date,     &
        subsec,   &
        append    )
-    use gtool_file, only: &
-       FileCreate,      &
-       FileAddVariable, &
-       FileSetGlobalAttribute, &
-       FileWrite
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1091,11 +1086,6 @@ contains
        append,   &
        nohalo,   &
        nozcoord  )
-    use gtool_file, only: &
-       FileCreate,      &
-       FileAddVariable, &
-       FileSetGlobalAttribute, &
-       FileWrite
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1149,11 +1139,6 @@ contains
        nohalo    )
     use gtool_file, only: &
        RMISS
-    use gtool_file, only: &
-       FileCreate,      &
-       FileAddVariable, &
-       FileSetGlobalAttribute, &
-       FileWrite
     use scale_process, only: &
        PRC_masterrank, &
        PRC_MPIstop
@@ -1206,14 +1191,6 @@ contains
        append,   &
        timetarg, &
        nohalo    )
-    use gtool_file_h, only: &
-       File_REAL8, &
-       File_REAL4
-    use gtool_file, only: &
-       FileCreate,      &
-       FilePutAxis,     &
-       FileAddVariable, &
-       FileWrite
     use scale_process, only: &
        PRC_masterrank, &
        PRC_MPIstop
@@ -1278,11 +1255,6 @@ contains
        nohalo    )
     use gtool_file, only: &
        RMISS
-    use gtool_file, only: &
-       FileCreate,      &
-       FilePutAxis,     &
-       FileAddVariable, &
-       FileWrite
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1397,6 +1369,8 @@ contains
        PRC_LOCAL_COMM_WORLD
     use scale_rm_process, only: &
        PRC_2Drank,     &
+       PRC_NUM_X,      &
+       PRC_NUM_Y,      &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y
     use scale_time, only: &
@@ -1415,6 +1389,7 @@ contains
     logical,          intent(in), optional :: nozcoord !< switch whether include zcoordinate or not (default=false)
 
     integer                :: rankidx(2)
+    integer                :: procsize(2)
     integer                :: dtype
     logical                :: append_sw
     character(len=34)      :: tunits
@@ -1427,6 +1402,8 @@ contains
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
+    procsize(1) = PRC_NUM_X
+    procsize(2) = PRC_NUM_Y
 
     ! dtype is used to define the data type of axis variables in file
     if    ( datatype == 'REAL8' ) then
@@ -1471,6 +1448,7 @@ contains
                      PRC_masterrank,      & ! [IN]
                      PRC_myrank,          & ! [IN]
                      rankidx,             & ! [IN]
+                     procsize,            & ! [IN]
                      time_units = tunits, & ! [IN]
                      append = append_sw,  & ! [IN]
                      comm = comm          ) ! [IN]

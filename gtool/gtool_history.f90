@@ -166,6 +166,7 @@ module gtool_history
   integer,                    private              :: History_master                    !> Number of master rank
   integer,                    private              :: History_myrank                    !> Number of my rank
   integer,                    private, allocatable :: History_rankidx(:)                !> Index number in the 2D rank mesh
+  integer,                    private, allocatable :: History_procsize(:)               !> Process size of the 2D rank mesh
 
   real(DP),                   private              :: History_STARTDAYSEC               !> Start date [second]
   real(DP),                   private              :: History_DTSEC                     !> Delta t    [second]
@@ -219,6 +220,7 @@ contains
        master,            &
        myrank,            &
        rankidx,           &
+       procsize,          &
        title,             &
        source,            &
        institution,       &
@@ -254,6 +256,7 @@ contains
     integer,          intent(in)           :: master
     integer,          intent(in)           :: myrank
     integer,          intent(in)           :: rankidx(:)
+    integer,          intent(in)           :: procsize(:)
     character(len=*), intent(in)           :: title
     character(len=*), intent(in)           :: source
     character(len=*), intent(in)           :: institution
@@ -334,10 +337,12 @@ contains
     call Log('I','###### Module[HISTORY] / Origin[gtoollib]')
 
     ! setup
-    allocate( History_rankidx(size(rankidx)) )
+    allocate( History_rankidx (size(rankidx)) )
+    allocate( History_procsize(size(procsize)) )
     History_master      = master
     History_myrank      = myrank
     History_rankidx(:)  = rankidx(:)
+    History_procsize(:) = procsize(:)
 
     History_STARTDAYSEC = time_start
     History_DTSEC       = time_interval
@@ -699,6 +704,7 @@ contains
                               History_master,              & ! [IN]
                               History_myrank,              & ! [IN]
                               History_rankidx(:),          & ! [IN]
+                              History_procsize(:),         & ! [IN]
                               time_units = tunits,         & ! [IN]
                               comm = comm                  ) ! [IN]
 

@@ -133,6 +133,7 @@ contains
 
     real(DP) :: start_daysec
     integer  :: rankidx(2)
+    integer  :: procsize(2)
     integer  :: ierr
     integer  :: k
     !---------------------------------------------------------------------------
@@ -178,6 +179,8 @@ contains
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
+    procsize(1) = PRC_NUM_X
+    procsize(2) = PRC_NUM_Y
 
     start_daysec = TIME_STARTDAYSEC
     if ( TIME_NOWDATE(1) > 0 ) then
@@ -216,6 +219,7 @@ contains
                       PRC_masterrank,                   & ! [IN]
                       PRC_myrank,                       & ! [IN]
                       rankidx(:),                       & ! [IN]
+                      procsize(:),                      & ! [IN]
                       HISTORY_H_TITLE,                  & ! [IN]
                       H_SOURCE,                         & ! [IN]
                       H_INSTITUTE,                      & ! [IN]
@@ -750,7 +754,6 @@ contains
     integer                :: v, id
     logical                :: atom
 
-    integer                :: rankidx(2)
     integer                :: start(4), count(4)
     integer                :: comm
     !---------------------------------------------------------------------------
@@ -778,9 +781,6 @@ contains
     endif
 
     atom = .true.
-
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
     start = 0
     count = 0
