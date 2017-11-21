@@ -391,6 +391,11 @@ contains
 
     abssec = abssec - real(addday,kind=DP) * CALENDAR_HOUR * CALENDAR_MIN * CALENDAR_SEC
 
+    if ( abssec < 0.0_DP ) then
+       absday = absday - 1
+       abssec = abssec + CALENDAR_HOUR * CALENDAR_MIN * CALENDAR_SEC
+    endif
+
     return
   end subroutine CALENDAR_adjust_daysec
 
