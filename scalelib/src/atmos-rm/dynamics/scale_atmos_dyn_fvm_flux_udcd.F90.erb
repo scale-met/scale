@@ -55,7 +55,37 @@ class Fixnum
     0==self ? "" : self>0 ? "+"+_to_s : _to_s
   end
 end
-def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
+def flux1(idx0)
+  "val(#{idx0})"
+end
+def flux2(idx1,idx0)
+  "F2 * ( val(#{idx1})+val(#{idx0}) )"
+end
+def flux3(idx1,idx0,idxn1)
+  "( 2.0_RP * val(#{idx1}) + 5.0_RP * val(#{idx0}) - val(#{idxn1}) ) / 6.0_RP"
+end
+def flux3k(idx1,idx0,idxn1)
+                      "( val(#{idx0}) &
+                       + 0.5_RP * phi(val(#{idx1}),val(#{idx0}),val(#{idxn1})) * ( val(#{idx0})-val(#{idxn1}) ) )"
+end
+def flux4(idx2,idx1,idx0,idxn1)
+                      "F41 * ( val(#{idx1})+val(#{idx0}) ) &
+                     + F42 * ( val(#{idx2})+val(#{idxn1}) )"
+end
+def flux5(idx2,idx1,idx0,idxn1,idxn2)
+                      "( -  3.0_RP * val(#{idx2})  &
+                         + 27.0_RP * val(#{idx1})  &
+                         + 47.0_RP * val(#{idx0})  &
+                         - 13.0_RP * val(#{idxn1}) &
+                         + 2.0_RP * val(#{idxn2}) ) / 60.0_RP"
+end
+def flux6(idx3,idx2,idx1,idx0,idxn1,idxn2)
+                      "F61 * ( val(#{idx1})+val(#{idx0}) ) &
+                     + F62 * ( val(#{idx2})+val(#{idxn1}) ) &
+                     + F63 * ( val(#{idx3})+val(#{idxn2}) )"
+end
+
+def flux(vel, order, dir, k="k", i="i", j="j", dim=3, limiter=nil)
   if dim==3
     idx = [k,i,j]
   elsif dim==1
@@ -77,11 +107,67 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
   idx3 = idx.dup
   idx3[dir] = idx3[dir]+3
   idx3 = idx3.join(",")
+  if Array===order && order.max % 2 == 0
+    order = order.min
+  end
   case order
+  when Array
+    ou = order[0]
+    od = order[1]
+    case ou
+    when 1, -1
+      fu = flux1(idx0)
+    when 2
+      fu = flux2(idx1,idx0)
+    when 3
+      if @scheme=="ud3Koren1993"
+        fu = flux3k(idxn1,idx0,idx1)
+      else
+        fu = flux3(idx1,idx0,idxn1)
+      end
+    when 4
+       fu = flux4(idx2,idx1,idx0,idxn1)
+    when 5
+       fu = flux5(idx2,idx1,idx0,idxn1,idxn2)
+    else
+       raise "invalid order: #{order}"
+    end
+    case od
+    when 1, -1
+      fd = flux1(idx1)
+    when 2
+      fd = flux2(idx1,idx0)
+    when 3
+      if @scheme=="ud3Koren1993"
+        fd = flux3k(idx0,idx1,idx2)
+      else
+        fd = flux3(idx0,idx1,idx2)
+      end
+    when 4
+       fd = flux4(idx2,idx1,idx0,idxn1)
+    when 5
+       fd = flux5(idxn1,idx0,idx1,idx2,idx3)
+    else
+       raise "invalid order: #{order}"
+    end
+    if limiter
+      if limiter[0]
+        fu = "#{limiter[0]} * min( 1.0_RP, &
+                   ( #{fu} ) / ( #{limiter[0]} + EPS ) )"
+      end
+      if limiter[1]
+        fd = "#{limiter[1]} * min( 1.0_RP, &
+                   ( #{fd} ) / ( #{limiter[1]} + EPS ) )"
+      end
+    end
+                 "#{fu} &
+                     * ( 0.5_RP + sign(0.5_RP,#{vel}) ) &
+                + #{fd} &
+                     * ( 0.5_RP - sign(0.5_RP,#{vel}) )"
   when 1
     "F1 * ( val(#{idx1})+val(#{idx0}) ) - sign(F1,#{vel}) * ( val(#{idx1})-val(#{idx0}) )"
   when 2
-    "F2 * ( val(#{idx1})+val(#{idx0}) )"
+    "#{flux2(idx1,idx0)}"
   when 3
     if @scheme=="ud3Koren1993"
                       "( val(#{idx0}) &
@@ -95,8 +181,7 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
                      - ( F31 * ( val(#{idx2})-val(#{idxn1}) ) + F33 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
     end
   when 4
-                      "F41 * ( val(#{idx1})+val(#{idx0}) ) &
-                     + F42 * ( val(#{idx2})+val(#{idxn1}) )"
+                      "#{flux4(idx2,idx1,idx0,idxn1)}"
   when 5
                       "( F51 * ( val(#{idx3})+val(#{idxn2}) ) &
                        + F52 * ( val(#{idx2})+val(#{idxn1}) ) &
@@ -105,9 +190,7 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
                        + F54 * ( val(#{idx2})-val(#{idxn1}) ) &
                        + F55 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
   when 6
-                      "F61 * ( val(#{idx1})+val(#{idx0}) ) &
-                     + F62 * ( val(#{idx2})+val(#{idxn1}) ) &
-                     + F63 * ( val(#{idx3})+val(#{idxn2}) )"
+                      "#{flux6(idx3,idx2,idx1,idx0,idxn1,idxn2)}"
   else
     raise "invalid order: #{order}"
   end
@@ -325,13 +408,11 @@ contains
        call CHECK( __LINE__, val(KE<%=-k*2-1%>) )
 <% end %>
 #endif
-
-<% nh_ = ( nh > 0) ? nh : 1  %>
-<% nh_.times do |k| %>
-       valW(KS<%=k%>) = <%= flux("mflx(KS#{k})", [order-(nh-k)*2,2].max, 0, "KS"+k, nil, nil, 1) %>
-       valW(KE<%=-k-1%>) = <%= flux("mflx(KE#{-(k+1)})", [order-(nh-k)*2,2].max, 0, "KE"-(k+1), nil, nil, 1) %>
+<% nh.times do |k| %>
+       valW(KS<%=k%>) = <%= flux("mflx(KS#{k})", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k, nil, nil, 1) %>
+       valW(KE<%=-k-1%>) = <%= flux("mflx(KE#{-(k+1)})", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+1), nil, nil, 1) %>
 <% end %>
-       
+
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_<%=@scheme%>
 
@@ -343,6 +424,8 @@ contains
        num_diff,          &
        CDZ,               &
        IIS, IIE, JJS, JJE )
+    use scale_const, only: &
+      EPS => CONST_EPS
     implicit none
 
     real(RP), intent(inout) :: flux    (KA,IA,JA)
@@ -382,7 +465,7 @@ contains
 
     !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -399,10 +482,10 @@ contains
 <% nh.times do |k| %>
        vel = mflx(KS<%=k%>,i,j)
        flux(KS<%=k%>,i,j) = vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
+                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k, "i", "j", 3, ["val(KS,i,j)",nil]) %> ) <%= num_diff("KS"+k) %>
        vel = mflx(KE<%=-(k+1)%>,i,j)
        flux(KE<%=-k-1%>,i,j) = vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
+                   * ( <%= flux("vel", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+1), "i", "j", 3, [nil,"val(KE,i,j)"]) %> ) <%= num_diff("KE"-(k+1)) %>
 <% end %>
        flux(KE  ,i,j) = 0.0_RP
     enddo
@@ -545,14 +628,14 @@ contains
        vel = <%= interp("mom", "XYW", "XYZ", "KS"+(k+1)) %> &
            / DENS(KS<%=k+1%>,i,j)
        flux(KS<%=k%>,i,j) = J33G * vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KS"+k) %> ) <%= num_diff("KS"+(k+1)) %> ! k = KS<%=k+1%>
+                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k) %> ) <%= num_diff("KS"+(k+1)) %> ! k = KS<%=k+1%>
 <% end %>
 
 <% if nh >= 2 %>
        vel = <%= interp("mom", "XYW", "XYZ", "KE-1") %> &
            / DENS(KE-1,i,j)
        flux(KE-2,i,j) = J33G * vel &
-                   * ( <%= flux("vel", [order-(nh-1)*2,2].max, 0, "KE-2") %> ) <%= num_diff("KE-1") %> ! k = KE-1
+                   * ( <%= flux("vel", [[order-(nh-1-1)*2,[order,2].min].max,[order-(nh-1)*2,[order,2].min].max], 0, "KE-2") %> ) <%= num_diff("KE-1") %> ! k = KE-1
 <% end %>
        flux(KE-1,i,j) = 0.0_RP ! k = KE
        flux(KE  ,i,j) = 0.0_RP ! k = KE+1
@@ -621,18 +704,18 @@ contains
 !       vel = <%= interp("mom", uv, "XYZ", "KS+1") %> &
 !           / DENS(KS+1,i,j)
        flux(KS,i,j) = <%=dir%>G(KS+1,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-                   * ( <%= flux("vel", [order-nh*2,2].max, 0, "KS") %> ) ! k = KS+1
+                   * ( <%= flux("vel", [[order-nh*2,[order,2].min].max,[order-(nh-1)*2,[order,2].min].max], 0, "KS") %> ) ! k = KS+1
 <%   for k in 1...(nh-1) %>
        vel = <%= interp("mom", uv, "XYZ", "KS"+(k+1)) %> &
            / DENS(KS<%=k+1%>,i,j)
        flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%k+1%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KS"+k) %> ) ! k = KS<%=k+1%>
+                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k) %> ) ! k = KS<%=k+1%>
 <%   end %>
 <%   (nh-1).times do |k| %>
        vel = <%= interp("mom", uv, "XYZ", "KE"-(k+1)) %> &
            / DENS(KE<%=-k-1%>,i,j)
        flux(KE<%=-k-2%>,i,j) = <%=dir%>G(KE<%=-k-1%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KE"-(k+2)) %> ) ! k = KE<%=-k-3%>
+                   * ( <%= flux("vel", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+2)) %> ) ! k = KE<%=-k-3%>
 <%   end %>
        flux(KE-1,i,j) = 0.0_RP
     enddo
@@ -791,11 +874,11 @@ contains
        vel = <%= interp("mom", "XYW", uv+"W", "KS"+k) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KS"+k) %>
        flux(KS<%=k%>,i,j) = J33G * vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
+                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
        vel = <%= interp("mom", "XYW", uv+"W", "KE"-(k+1)) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KE"-(k+1)) %>
        flux(KE<%=-k-1%>,i,j) = J33G * vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
+                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
 <% end %>
        flux(KE,i,j) = 0.0_RP
     enddo
@@ -864,12 +947,12 @@ contains
        vel = <%= interp("mom", xyz, uv+"W", "KS"+k) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KS"+k) %>
        flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%=k%>,i,j) / MAPF(i,j,<%=im%>) * vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KS"+k) %> )
+                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k) %> )
 
        vel = <%= interp("mom", xyz, uv+"W", "KE"-(k+1)) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KE"-(k+1)) %>
        flux(KE<%=-k-1%>,i,j) = <%=dir%>G(KE<%=-k-1%>,i,j) / MAPF(i,j,<%=im%>) * vel &
-                   * ( <%= flux("vel", [order-(nh-k)*2,2].max, 0, "KE"-(k+1)) %> )
+                   * ( <%= flux("vel", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+1)) %> )
 <% end %>
        flux(KE  ,i,j) = 0.0_RP
     enddo
