@@ -644,18 +644,154 @@ int32_t file_set_global_attribute_double( int32_t  fid,   // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_tunits( int32_t fid,         // (in)
-                         char    *time_units) // (in)
+int32_t file_get_attribute_text( int32_t  fid,   // (in)
+				 char    *vname, // (in)
+				 char    *key,   // (in)
+				 char    *value, // (out)
+				 int32_t len)    // (in)
 {
-  strcpy(files[fid]->time_units, time_units);
+  int ncid;
+  int varid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode ) {
+    MPI_Offset l;
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+
+    CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
+    if ( len < l+1 ) return ERROR_CODE;
+
+    CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, key, value) )
+    value[l] = '\0';
+  }
+  else {
+    size_t l;
+    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+
+    CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
+    if ( len < l+1 ) return ERROR_CODE;
+
+    CHECK_ERROR( nc_get_att_text(ncid, varid, key, value) )
+    value[l] = '\0';
+  }
 
   return SUCCESS_CODE;
 }
 
-int32_t file_set_tattr( int32_t  fid,   // (in)
-                        char    *vname, // (in)
-                        char    *key,   // (in)
-                        char    *val)   // (in)
+int32_t file_get_attribute_int( int32_t  fid,   // (in)
+				char    *vname, // (in)
+				char    *key,   // (in)
+				int     *value, // (out)
+				size_t   len)   // (in)
+{
+  int ncid;
+  int varid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode ) {
+    MPI_Offset l;
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+
+    CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
+    if ( len < l+1 ) return ERROR_CODE;
+
+    CHECK_PNC_ERROR( ncmpi_get_att_int(ncid, varid, key, value) )
+    value[l] = '\0';
+  }
+  else {
+    size_t l;
+    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+
+    CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
+    if ( len < l+1 ) return ERROR_CODE;
+
+    CHECK_ERROR( nc_get_att_int(ncid, varid, key, value) )
+    value[l] = '\0';
+  }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_attribute_float( int32_t  fid,   // (in)
+				  char    *vname, // (in)
+				  char    *key,   // (in)
+				  float   *value, // (out)
+				  size_t   len)   // (in)
+{
+  int ncid;
+  int varid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode ) {
+    MPI_Offset l;
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+
+    CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
+    if ( len < l+1 ) return ERROR_CODE;
+
+    CHECK_PNC_ERROR( ncmpi_get_att_float(ncid, varid, key, value) )
+    value[l] = '\0';
+  }
+  else {
+    size_t l;
+    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+
+    CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
+    if ( len < l+1 ) return ERROR_CODE;
+
+    CHECK_ERROR( nc_get_att_float(ncid, varid, key, value) )
+    value[l] = '\0';
+  }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_attribute_double( int32_t  fid,   // (in)
+				   char    *vname, // (in)
+				   char    *key,   // (in)
+				   double  *value, // (out)
+				   size_t   len)   // (in)
+{
+  int ncid;
+  int varid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode ) {
+    MPI_Offset l;
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+
+    CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
+    if ( len < l+1 ) return ERROR_CODE;
+
+    CHECK_PNC_ERROR( ncmpi_get_att_double(ncid, varid, key, value) )
+    value[l] = '\0';
+  }
+  else {
+    size_t l;
+    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+
+    CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
+    if ( len < l+1 ) return ERROR_CODE;
+
+    CHECK_ERROR( nc_get_att_double(ncid, varid, key, value) )
+    value[l] = '\0';
+  }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_attribute_text( int32_t  fid,   // (in)
+			    char    *vname, // (in)
+			    char    *key,   // (in)
+			    char    *val)   // (in)
 {
   int ncid;
   int varid;
@@ -687,6 +823,134 @@ int32_t file_set_tattr( int32_t  fid,   // (in)
 
     CHECK_ERROR( nc_put_att_text(ncid, varid, key, strlen(val), val) )
   }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_attribute_int( int32_t  fid,   // (in)
+				char    *vname, // (in)
+				char    *key,   // (in)
+				int32_t *value, // (in)
+				size_t   len )  // (in)
+{
+  int ncid;
+  int varid;
+  int attid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode ) {
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+
+    if ( ncmpi_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+      return ALREADY_EXISTED_CODE;
+
+    CHECK_PNC_ERROR( ncmpi_put_att_int(ncid, varid, key, NC_INT, len, value) )
+  }
+  else {
+    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+
+    if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+      return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+    if (files[fid]->defmode == 0) {
+      CHECK_ERROR( nc_redef(ncid) )
+      files[fid]->defmode = 1;
+    }
+#endif
+
+    CHECK_ERROR( nc_put_att_int(ncid, varid, key, NC_INT, len, value) )
+  }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_attribute_float( int32_t  fid,   // (in)
+				  char    *vname, // (in)
+				  char    *key,   // (in)
+				  float   *value, // (in)
+				  size_t   len )  // (in)
+{
+  int ncid;
+  int varid;
+  int attid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode ) {
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+
+    if ( ncmpi_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+      return ALREADY_EXISTED_CODE;
+
+    CHECK_PNC_ERROR( ncmpi_put_att_float(ncid, varid, key, NC_FLOAT, len, value) )
+  }
+  else {
+    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+
+    if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+      return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+    if (files[fid]->defmode == 0) {
+      CHECK_ERROR( nc_redef(ncid) )
+      files[fid]->defmode = 1;
+    }
+#endif
+
+    CHECK_ERROR( nc_put_att_float(ncid, varid, key, NC_FLOAT, len, value) )
+  }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_attribute_double( int32_t  fid,   // (in)
+				   char    *vname, // (in)
+				   char    *key,   // (in)
+				   double  *value, // (in)
+				   size_t   len )  // (in)
+{
+  int ncid;
+  int varid;
+  int attid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode ) {
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+
+    if ( ncmpi_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+      return ALREADY_EXISTED_CODE;
+
+    CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, key, NC_DOUBLE, len, value) )
+  }
+  else {
+    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+
+    if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+      return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+    if (files[fid]->defmode == 0) {
+      CHECK_ERROR( nc_redef(ncid) )
+      files[fid]->defmode = 1;
+    }
+#endif
+
+    CHECK_ERROR( nc_put_att_double(ncid, varid, key, NC_DOUBLE, len, value) )
+  }
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_tunits( int32_t fid,         // (in)
+                         char    *time_units) // (in)
+{
+  strcpy(files[fid]->time_units, time_units);
 
   return SUCCESS_CODE;
 }

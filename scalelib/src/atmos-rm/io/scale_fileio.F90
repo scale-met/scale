@@ -116,14 +116,14 @@ module scale_fileio
   logical,  private              :: File_nozcoord(0:File_nfile_max-1)     ! whether nozcoord is true or false
   integer,  private              :: write_buf_amount = 0                  ! sum of write buffer amounts
 
-  ! local start and end
-  integer,  private              :: XSB, XEB, YSB, YEB
   ! global star and count
   integer,  private              :: startXY   (3), countXY   (3)
   integer,  private              :: startZX   (2), countZX   (2)
   integer,  private              :: startZXY  (4), countZXY  (4)
   integer,  private              :: startLAND (3), countLAND (3)
   integer,  private              :: startURBAN(3), countURBAN(3)
+  ! local start and end
+  integer,  private              :: XSB, XEB, YSB, YEB
 
   ! MPI element datatype for restart variables
   integer,  private              :: etype
@@ -1395,7 +1395,6 @@ contains
     character(len=34)      :: tunits
     integer                :: comm
     logical                :: fileexisted
-    character(len=H_SHORT) :: logical_str
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -1439,19 +1438,19 @@ contains
        comm = MPI_COMM_NULL
     end if
 
-    call FileCreate( fid,                 & ! [OUT]
-                     fileexisted,         & ! [OUT]
-                     basename,            & ! [IN]
-                     title,               & ! [IN]
-                     H_SOURCE,            & ! [IN]
-                     H_INSTITUTE,         & ! [IN]
-                     PRC_masterrank,      & ! [IN]
-                     PRC_myrank,          & ! [IN]
-                     rankidx,             & ! [IN]
-                     procsize,            & ! [IN]
-                     time_units = tunits, & ! [IN]
-                     append = append_sw,  & ! [IN]
-                     comm = comm          ) ! [IN]
+    call FileCreate( fid,                               & ! [OUT]
+                     fileexisted,                       & ! [OUT]
+                     basename,                          & ! [IN]
+                     title,                             & ! [IN]
+                     H_SOURCE,                          & ! [IN]
+                     H_INSTITUTE,                       & ! [IN]
+                     PRC_masterrank,                    & ! [IN]
+                     PRC_myrank,                        & ! [IN]
+                     rankidx,                           & ! [IN]
+                     procsize,                          & ! [IN]
+                     time_units = tunits,                      & ! [IN]
+                     append = append_sw,                       & ! [IN]
+                     comm = comm                               ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
        call FILEIO_def_axes( fid, dtype, xy = nozcoord ) ! [IN]
@@ -1473,14 +1472,6 @@ contains
           call getCFtunits(tunits, NOWDATE)
        end if
        call FileSetGlobalAttribute( fid, "time_units", tunits )
-       call FileSetGlobalAttribute( fid, "IHALO",  (/IHALO/) )
-       call FileSetGlobalAttribute( fid, "JHALO",  (/JHALO/) )
-       logical_str = "false"
-       if(PRC_PERIODIC_X .AND. .NOT. IO_AGGREGATE) logical_str = "true"
-       call FileSetGlobalAttribute( fid, "PRC_PERIODIC_X",  trim(logical_str) )
-       logical_str = "false"
-       if(PRC_PERIODIC_Y .AND. .NOT. IO_AGGREGATE) logical_str = "true"
-       call FileSetGlobalAttribute( fid, "PRC_PERIODIC_Y",  trim(logical_str) )
 
        File_closed(fid) = .false.
     endif
@@ -1591,11 +1582,17 @@ contains
        xy     )
     use gtool_file, only: &
        FileDefAxis,  &
-       FileSetTAttr, &
+       FileSetAttribute, &
        FileDefAssociatedCoordinates
     use scale_rm_process, only: &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y, &
        PRC_NUM_X, &
-       PRC_NUM_Y
+       PRC_NUM_Y, &
+       PRC_HAS_W, &
+       PRC_HAS_E, &
+       PRC_HAS_S, &
+       PRC_HAS_N
     implicit none
 
     integer, intent(in) :: fid
@@ -1604,6 +1601,13 @@ contains
 
     character(len=2) :: AXIS_name(3)
     logical          :: xy_
+
+    character(len=5) :: logical_str
+
+    integer :: isize, jsize
+    integer :: istart, jstart
+    integer :: whalo_g, ehalo_g, shalo_g, nhalo_g
+    integer :: whalo_l, ehalo_l, shalo_l, nhalo_l
     !---------------------------------------------------------------------------
 
     if ( present(xy) ) then
@@ -1764,15 +1768,84 @@ contains
     end if
 
     ! attributes
+    if ( PRC_PERIODIC_X ) then; logical_str = "true"; else; logical_str = "false"; end if
+    if( PRC_PERIODIC_X .AND. .NOT. IO_AGGREGATE ) then
+       isize = IMAX * PRC_NUM_X
+       istart = IS_inG - IHALO
+       whalo_g = 0
+       ehalo_g = 0
+       whalo_l = 0
+       ehalo_l = 0
+    else
+       isize = IAG
+       istart = ISGA
+       whalo_g = IHALO
+       ehalo_g = IHALO
+       if ( IO_AGGREGATE ) then
+          whalo_l = whalo_g
+          ehalo_l = ehalo_g
+       else
+          if ( PRC_HAS_W ) then; whalo_l = 0; else; whalo_l = whalo_g; end if
+          if ( PRC_HAS_E ) then; ehalo_l = 0; else; ehalo_l = ehalo_g; end if
+       end if
+    end if
+
+    call FileSetAttribute( fid, "x", "size_global",  (/ isize /) )
+    call FileSetAttribute( fid, "x", "start_global", (/ istart /) )
+    call FileSetAttribute( fid, "x", "halo_global",  (/ whalo_g, ehalo_g /) )
+    call FileSetAttribute( fid, "x", "halo_local",   (/ whalo_l, ehalo_l /) )
+    call FileSetAttribute( fid, "x", "periodic",     logical_str )
+
+    call FileSetAttribute( fid, "xh", "size_global",  (/ isize /) )
+    call FileSetAttribute( fid, "xh", "start_global", (/ istart /) )
+    call FileSetAttribute( fid, "xh", "halo_global",  (/ whalo_g, ehalo_g /) )
+    call FileSetAttribute( fid, "xh", "halo_local",   (/ whalo_l, ehalo_l /) )
+    call FileSetAttribute( fid, "xh", "periodic",     logical_str )
+
+
+    if ( PRC_PERIODIC_Y ) then; logical_str = "true"; else; logical_str = "false"; end if
+    if( PRC_PERIODIC_Y .AND. .NOT. IO_AGGREGATE ) then
+       jsize = JMAX * PRC_NUM_Y
+       jstart = JS_inG - JHALO
+       shalo_g = 0
+       nhalo_g = 0
+       shalo_l = 0
+       nhalo_l = 0
+    else
+       jsize = JAG
+       jstart = JSGA
+       shalo_g = JHALO
+       nhalo_g = JHALO
+       if ( IO_AGGREGATE ) then
+          shalo_l = shalo_g
+          nhalo_l = nhalo_g
+       else
+          if ( PRC_HAS_S ) then; shalo_l = 0; else; shalo_l = shalo_g; end if
+          if ( PRC_HAS_N ) then; nhalo_l = 0; else; nhalo_l = nhalo_g; end if
+       end if
+    end if
+
+    call FileSetAttribute( fid, "y", "size_global",  (/ jsize /) )
+    call FileSetAttribute( fid, "y", "start_global", (/ jstart /) )
+    call FileSetAttribute( fid, "y", "halo_global",  (/ shalo_g, nhalo_g /) )
+    call FileSetAttribute( fid, "y", "halo_local",   (/ shalo_l, nhalo_l /) )
+    call FileSetAttribute( fid, "y", "periodic",     logical_str )
+
+    call FileSetAttribute( fid, "yh", "size_global",  (/ jsize /) )
+    call FileSetAttribute( fid, "yh", "start_global", (/ jstart /) )
+    call FileSetAttribute( fid, "yh", "halo_global",  (/ shalo_g, nhalo_g /) )
+    call FileSetAttribute( fid, "yh", "halo_local",   (/ shalo_l, nhalo_l /) )
+    call FileSetAttribute( fid, "yh", "periodic",     logical_str )
+
     if ( .NOT. xy_ ) then
-       call FileSetTAttr( fid, 'lz',  'positive', 'down' )
-       call FileSetTAttr( fid, 'lzh', 'positive', 'down' )
-       call FileSetTAttr( fid, 'uz',  'positive', 'down' )
-       call FileSetTAttr( fid, 'uzh', 'positive', 'down' )
-       call FileSetTAttr( fid, 'LCZ', 'positive', 'down' )
-       call FileSetTAttr( fid, 'LFZ', 'positive', 'down' )
-       call FileSetTAttr( fid, 'UCZ', 'positive', 'down' )
-       call FileSetTAttr( fid, 'UFZ', 'positive', 'down' )
+       call FileSetAttribute( fid, 'lz',  'positive', 'down' )
+       call FileSetAttribute( fid, 'lzh', 'positive', 'down' )
+       call FileSetAttribute( fid, 'uz',  'positive', 'down' )
+       call FileSetAttribute( fid, 'uzh', 'positive', 'down' )
+       call FileSetAttribute( fid, 'LCZ', 'positive', 'down' )
+       call FileSetAttribute( fid, 'LFZ', 'positive', 'down' )
+       call FileSetAttribute( fid, 'UCZ', 'positive', 'down' )
+       call FileSetAttribute( fid, 'UFZ', 'positive', 'down' )
     end if
 
     return
@@ -2655,7 +2728,8 @@ contains
     use gtool_file, only: &
        RMISS
     use gtool_file, only: &
-       FileWrite
+       FileWrite, &
+       FileFlush
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -2820,6 +2894,7 @@ contains
              call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
                              nowtime, nowtime, start                                     ) ! [IN]
           end if
+          call FileFlush( fid )
           nowtime = nowtime + time_interval
        enddo
     endif

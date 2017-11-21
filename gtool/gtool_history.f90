@@ -44,7 +44,7 @@ module gtool_history
   public :: HistoryAddVariable
   public :: HistoryPutAxis
   public :: HistoryPutAssociatedCoordinates
-  public :: HistorySetTAttr
+  public :: HistorySetAttribute
   public :: HistoryQuery
   public :: HistoryPut
   public :: HistoryWriteAll
@@ -89,6 +89,13 @@ module gtool_history
      module procedure HistoryGet3DSP
      module procedure HistoryGet3DDP
   end interface HistoryGet
+
+  interface HistorySetAttribute
+     module procedure HistorySetAttributeText
+     module procedure HistorySetAttributeInt
+     module procedure HistorySetAttributeFloat
+     module procedure HistorySetAttributeDouble
+  end interface HistorySetAttribute
 
   type request
      character(len=File_HSHORT) :: item           !> Name of variable (in the code)
@@ -618,11 +625,11 @@ contains
        count,    &
        comm      )
     use gtool_file, only: &
-       FileCreate,      &
-       FileSetOption,   &
-       FileAddVariable, &
-       FileSetTAttr,    &
-       FileDefAxis,     &
+       FileCreate,       &
+       FileSetOption,    &
+       FileAddVariable,  &
+       FileSetAttribute, &
+       FileDefAxis,      &
        FileDefAssociatedCoordinates, &
        FileAttachBuffer
     use MPI, only: &
@@ -813,7 +820,7 @@ contains
              if ( .not. fileexisted ) then
                 do m = 1, History_axis_count
                    if ( History_axis(m)%down ) then
-                      call FileSetTAttr( fid, History_axis(m)%name, 'positive', 'down' )
+                      call FileSetAttribute( fid, History_axis(m)%name, 'positive', 'down' )
                    endif
                 enddo
              endif
@@ -1627,13 +1634,16 @@ contains
     return
   end subroutine HistoryPut4DAssociatedCoordinatesDP
 
+
   !-----------------------------------------------------------------------------
-  subroutine HistorySetTAttr( &
+  ! interface HistorySetAttribute
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetAttributeText( &
        varname, &
        key,     &
        val      )
     use gtool_file, only: &
-       FileSetTAttr
+       FileSetAttribute
     implicit none
 
     character(len=*), intent(in) :: varname
@@ -1644,13 +1654,87 @@ contains
     !---------------------------------------------------------------------------
 
     do id = 1, History_id_count
-       call FileSetTAttr( History_vars(id)%fid, & ! [IN]
-                          varname,              & ! [IN]
-                          key,                  & ! [IN]
-                          val                   ) ! [IN]
+       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
+                              varname,              & ! [IN]
+                              key,                  & ! [IN]
+                              val                   ) ! [IN]
     enddo
 
-  end subroutine HistorySetTAttr
+  end subroutine HistorySetAttributeText
+
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetAttributeInt( &
+       varname, &
+       key,     &
+       val      )
+    use gtool_file, only: &
+       FileSetAttribute
+    implicit none
+
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: key
+    integer,          intent(in) :: val(:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    do id = 1, History_id_count
+       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
+                              varname,              & ! [IN]
+                              key,                  & ! [IN]
+                              val(:)                ) ! [IN]
+    enddo
+
+  end subroutine HistorySetAttributeInt
+
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetAttributeFloat( &
+       varname, &
+       key,     &
+       val      )
+    use gtool_file, only: &
+       FileSetAttribute
+    implicit none
+
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: key
+    real(SP),    intent(in) :: val(:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    do id = 1, History_id_count
+       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
+                              varname,              & ! [IN]
+                              key,                  & ! [IN]
+                              val(:)                ) ! [IN]
+    enddo
+
+  end subroutine HistorySetAttributeFloat
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetAttributeDouble( &
+       varname, &
+       key,     &
+       val      )
+    use gtool_file, only: &
+       FileSetAttribute
+    implicit none
+
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: key
+    real(DP),    intent(in) :: val(:)
+
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    do id = 1, History_id_count
+       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
+                              varname,              & ! [IN]
+                              key,                  & ! [IN]
+                              val(:)                ) ! [IN]
+    enddo
+
+  end subroutine HistorySetAttributeDouble
 
   !-----------------------------------------------------------------------------
   subroutine HistoryQuery( &
