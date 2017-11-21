@@ -64,6 +64,8 @@ contains
        ATMOS_PHY_CH_driver_config
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_config
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_tracer_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -74,6 +76,7 @@ contains
     call ATMOS_PHY_AE_driver_config
     call ATMOS_PHY_CH_driver_config
     call ATMOS_PHY_TB_driver_config
+    call ATMOS_PHY_BL_driver_tracer_setup
 
     return
   end subroutine ATMOS_driver_config
@@ -103,6 +106,8 @@ contains
        ATMOS_PHY_SF_driver_setup
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_setup
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_setup
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_setup
     implicit none
@@ -133,6 +138,7 @@ contains
     call ATMOS_PHY_RD_driver_setup
     call ATMOS_PHY_SF_driver_setup
     call ATMOS_PHY_TB_driver_setup
+    call ATMOS_PHY_BL_driver_setup
     call ATMOS_PHY_CP_driver_setup
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -145,7 +151,7 @@ contains
   !> Resume
   subroutine ATMOS_driver_resume1
     use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_calc_diagnostics,     &
        ATMOS_vars_history_setpres, &
        DENS,                       &
        MOMZ,                       &
@@ -214,7 +220,7 @@ contains
     call ATMOS_PHY_RD_driver_resume
 
     !########## Calculate diagnostic variables ##########
-    call ATMOS_vars_diagnostics
+    call ATMOS_vars_calc_diagnostics
     call ATMOS_vars_history_setpres
 
     !########## Set Surface Boundary Condition ##########
@@ -240,6 +246,8 @@ contains
        ATMOS_PHY_TB_driver_resume
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_resume
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_resume
     implicit none
     !---------------------------------------------------------------------------
 
@@ -257,6 +265,7 @@ contains
     ! setup each components
     call ATMOS_PHY_SF_driver_resume
     call ATMOS_PHY_TB_driver_resume
+    call ATMOS_PHY_BL_driver_resume
     call ATMOS_PHY_CP_driver_resume
 
     !########## Set Surface Boundary Condition ##########
@@ -287,6 +296,7 @@ contains
        do_phy_rd => TIME_DOATMOS_PHY_RD, &
        do_phy_sf => TIME_DOATMOS_PHY_SF, &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
+       do_phy_bl => TIME_DOATMOS_PHY_BL, &
        do_phy_cp => TIME_DOATMOS_PHY_CP
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_UPDATE_FLAG, &
@@ -302,10 +312,11 @@ contains
        ATMOS_sw_phy_rd, &
        ATMOS_sw_phy_sf, &
        ATMOS_sw_phy_tb, &
+       ATMOS_sw_phy_bl, &
        ATMOS_sw_phy_cp
     use mod_atmos_vars, only: &
        ATMOS_vars_history,         &
-       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_calc_diagnostics,     &
        ATMOS_vars_history_setpres, &
        ATMOS_vars_monitor,         &
        DENS,                       &
@@ -316,10 +327,13 @@ contains
        QTRC,                       &
        DENS_tp,                    &
        MOMZ_tp,                    &
-       MOMX_tp,                    &
-       MOMY_tp,                    &
+       RHOU_tp,                    &
+       RHOV_tp,                    &
        RHOT_tp,                    &
-       RHOQ_tp
+       RHOH_tp,                    &
+       RHOQ_tp,                    &
+       MOMX_tp,                    &
+       MOMY_tp
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver
     use mod_atmos_phy_mp_driver, only: &
@@ -334,6 +348,8 @@ contains
        ATMOS_PHY_SF_driver
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver
     implicit none
@@ -371,17 +387,23 @@ contains
 !OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    MOMX_tp(:,:,:)   = 0.0_RP
+    RHOU_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    MOMY_tp(:,:,:)   = 0.0_RP
+    RHOV_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
+    RHOH_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:)   = 0.0_RP
 
     !########## Calculate diagnostic variables ##########
     call PROF_rapstart('ATM_History', 1)
-    call ATMOS_vars_diagnostics
+    call ATMOS_vars_calc_diagnostics
     call ATMOS_vars_history_setpres
     call PROF_rapend  ('ATM_History', 1)
 
@@ -425,6 +447,13 @@ contains
        call PROF_rapstart('ATM_Turbulence', 1)
        call ATMOS_PHY_TB_driver( update_flag = do_phy_tb )
        call PROF_rapend  ('ATM_Turbulence', 1)
+    endif
+
+    !########## Pnaletary Boundary layer ##########
+    if ( ATMOS_sw_phy_bl ) then
+       call PROF_rapstart('ATM_PBL', 1)
+       call ATMOS_PHY_BL_driver( update_flag = do_phy_bl )
+       call PROF_rapend  ('ATM_PBL', 1)
     endif
 
     !########## Cumulus ##########

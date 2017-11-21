@@ -912,7 +912,7 @@ contains
        do j  = JSB, JEB
        do i  = ISB, IEB
           DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-          MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+          MOMZ(   1:KS-1,i,j) = 0.0_RP
           MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
           MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
           RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
@@ -920,7 +920,7 @@ contains
              PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
           end do
           DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
-          MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+          MOMZ(KE+1:KA,  i,j) = 0.0_RP
           MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
           MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
           RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)

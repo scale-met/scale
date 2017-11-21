@@ -25,6 +25,8 @@ cat << EOF > base.run.conf
  TIME_DT_ATMOS_PHY_SF_UNIT  = "${TIME_DT_UNIT}",
  TIME_DT_ATMOS_PHY_TB       = ${TIME_DT_ATMOS_PHY_TB[$D]},
  TIME_DT_ATMOS_PHY_TB_UNIT  = "${TIME_DT_UNIT}",
+ TIME_DT_ATMOS_PHY_BL       = ${TIME_DT_ATMOS_PHY_BL[$D]},
+ TIME_DT_ATMOS_PHY_BL_UNIT  = "${TIME_DT_UNIT}",
  TIME_DT_OCEAN              = ${TIME_DT_OCEAN[$D]},
  TIME_DT_OCEAN_UNIT         = "${TIME_DT_UNIT}",
  TIME_DT_LAND               = ${TIME_DT_LAND[$D]},

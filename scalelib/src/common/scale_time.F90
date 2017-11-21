@@ -42,6 +42,7 @@ module scale_time
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_RD    !< time interval of physics(radiation   ) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_SF    !< time interval of physics(surface flux) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_TB    !< time interval of physics(turbulence  ) [sec]
+  real(DP), public :: TIME_DTSEC_ATMOS_PHY_BL    !< time interval of physics(pbl         ) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_CH    !< time interval of physics(chemistry   ) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_AE    !< time interval of physics(aerosol     ) [sec]
   real(DP), public :: TIME_DTSEC_OCEAN           !< time interval of ocean step            [sec]
@@ -55,6 +56,7 @@ module scale_time
   integer,  public :: TIME_DSTEP_ATMOS_PHY_RD    !< step interval of physics(radiation   )
   integer,  public :: TIME_DSTEP_ATMOS_PHY_SF    !< step interval of physics(surface flux)
   integer,  public :: TIME_DSTEP_ATMOS_PHY_TB    !< step interval of physics(turbulence  )
+  integer,  public :: TIME_DSTEP_ATMOS_PHY_BL    !< step interval of physics(pbl         )
   integer,  public :: TIME_DSTEP_ATMOS_PHY_CH    !< step interval of physics(chemistry   )
   integer,  public :: TIME_DSTEP_ATMOS_PHY_AE    !< step interval of physics(aerosol     )
   integer,  public :: TIME_DSTEP_OCEAN           !< step interval of ocean step

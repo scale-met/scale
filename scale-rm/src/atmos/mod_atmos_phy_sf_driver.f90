@@ -130,6 +130,10 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_const, only: &
+       GRAV   => CONST_GRAV,   &
+       KARMAN => CONST_KARMAN, &
+       CPdry  => CONST_CPdry
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
@@ -167,6 +171,7 @@ contains
        DENS   => DENS_av, &
        RHOT   => RHOT_av, &
        QTRC   => QTRC_av, &
+       POTT,              &
        TEMP,              &
        PRES,              &
        W,                 &
@@ -205,7 +210,8 @@ contains
        U10        => ATMOS_PHY_SF_U10,        &
        V10        => ATMOS_PHY_SF_V10,        &
        T2         => ATMOS_PHY_SF_T2,         &
-       Q2         => ATMOS_PHY_SF_Q2
+       Q2         => ATMOS_PHY_SF_Q2,         &
+       l_mo       => ATMOS_PHY_SF_l_mo
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
@@ -220,6 +226,8 @@ contains
     real(RP) :: qdry
     real(RP) :: Rtot
     real(RP) :: CPtot
+
+    real(RP) :: us, SFLX_PT
 
     real(RP) :: work
 
@@ -272,6 +280,17 @@ contains
        do j = JS, JE
        do i = IS, IE
           Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
+       end do
+       end do
+
+       ! temtative
+       do j = JS, JE
+       do i = IS, IE
+          us = max( 1.E-6_RP, &
+                    sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ) ! frictional velocity
+          SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) &
+                  * POTT(KS,i,j) / TEMP(KS,i,j)
+          l_mo(i,j) = - us**3 * POTT(KS,i,j) / ( KARMAN * GRAV * SFLX_PT )
        end do
        end do
 

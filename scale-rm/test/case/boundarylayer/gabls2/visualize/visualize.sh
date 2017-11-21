@@ -43,8 +43,8 @@ do
    let i="${i} + 1"
 done
 
-var__set=(PT U V W QV TKE_MYNN NU Pr Ri)
-rangeset=(275:310 -1:7 -13:0 -5e-4:5e-4 2e-3:5e-3 0:2 0:150 0:10 -20:20)
+var__set=(PT U V W QV TKE_MYNN Nu_BL Pr_MYNN Ri_MYNN)
+rangeset=(275:310 -1:7 -13:0 -5e-4:5e-4 1e-4:3e-3 0:2 0:150 0:10 -20:20)
 time_set=
 
 i=0
@@ -57,7 +57,7 @@ do
    fi
 
    # hovmoller diagram
-   gpview history.pe\*.nc@${var},x=0,y=0,z=0:3400 --nocont ${range} --wsn 2 || exit
+   gpview history.pe\*.nc@${var},x=0,y=0,z=0:3400 --nocont ${range} --wsn 2 --exch || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf hov_${var}.png
    rm -f dcl.pdf
 

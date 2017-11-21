@@ -19,6 +19,7 @@ cat << EOF > param.admin.conf
  ATMOS_PHY_RD_TYPE = "${ATMOS_PHY_RD_TYPE[$D]}",
  ATMOS_PHY_SF_TYPE = "${ATMOS_PHY_SF_TYPE[$D]}",
  ATMOS_PHY_TB_TYPE = "${ATMOS_PHY_TB_TYPE[$D]}",
+ ATMOS_PHY_BL_TYPE = "${ATMOS_PHY_BL_TYPE[$D]}",
 /
 
 &PARAM_OCEAN
@@ -152,18 +153,15 @@ cat << EOF > param.physics.conf
 
 EOF
 
-if [ ${ATMOS_PHY_TB_TYPE[$D]} = "HYBRID" ]; then
+if [ ${ATMOS_PHY_BL_TYPE[$D]} = "MYNN" ]; then
+if [ ${ATMOS_PHY_TB_TYPE[$D]} = "SMAGORINSKY" ]; then
   cat <<EOF >> param.physics.conf
-&PARAM_ATMOS_PHY_TB_HYBRID
- ATMOS_PHY_TB_HYBRID_SGS_TYPE = "SMAGORINSKY",
- ATMOS_PHY_TB_HYBRID_PBL_TYPE = "MYNN",
-/
-
 &PARAM_ATMOS_PHY_TB_SMG
  ATMOS_PHY_TB_SMG_horizontal = .true.,
 /
 
 EOF
+fi
 fi
 
 cat <<EOF >> param.physics.conf

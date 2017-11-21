@@ -39,6 +39,8 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_LHV_1D
      module procedure ATMOS_HYDROMETEOR_LHV_2D
      module procedure ATMOS_HYDROMETEOR_LHV_3D
+     module procedure ATMOS_HYDROMETEOR_LHV_1D_obsolute
+     module procedure ATMOS_HYDROMETEOR_LHV_3D_obsolute
   end interface ATMOS_HYDROMETEOR_LHV
 
   interface ATMOS_HYDROMETEOR_LHS
@@ -46,6 +48,7 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_LHS_1D
      module procedure ATMOS_HYDROMETEOR_LHS_2D
      module procedure ATMOS_HYDROMETEOR_LHS_3D
+     module procedure ATMOS_HYDROMETEOR_LHS_3D_obsolute
   end interface ATMOS_HYDROMETEOR_LHS
 
   interface ATMOS_HYDROMETEOR_LHF
@@ -53,6 +56,7 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_LHF_1D
      module procedure ATMOS_HYDROMETEOR_LHF_2D
      module procedure ATMOS_HYDROMETEOR_LHF_3D
+     module procedure ATMOS_HYDROMETEOR_LHF_3D_obsolute
   end interface ATMOS_HYDROMETEOR_LHF
 
   interface ATMOS_HYDROMETEOR_entr
@@ -313,7 +317,7 @@ contains
   end subroutine ATMOS_HYDROMETEOR_LHV_0D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETEOR_LHV_1D( &
+  subroutine ATMOS_HYDROMETEOR_LHV_1D_obsolute( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -332,8 +336,33 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETEOR_LHV_1D
+  end subroutine ATMOS_HYDROMETEOR_LHV_1D_obsolute
 
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHV_1D( &
+       KA, KS, KE, &
+       temp, &
+       lhv   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHV0  => CONST_LHV0
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp(KA) !< temperature                 [K]
+
+    real(RP), intent(out) :: lhv (KA) !< latent heat of vaporization [J/kg]
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       lhv(k) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k) - TEM00 ) * THERMODYN_EMASK
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHV_1D
+  
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHV_2D( &
        lhv, &
@@ -359,7 +388,7 @@ contains
   end subroutine ATMOS_HYDROMETEOR_LHV_2D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETEOR_LHV_3D( &
+  subroutine ATMOS_HYDROMETEOR_LHV_3D_obsolute( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -375,6 +404,40 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
+    do k = KS, KE
+       lhv(k,i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHV_3D_obsolute
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHV_3D( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       lhv   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHV0  => CONST_LHV0
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature                 [K]
+
+    real(RP), intent(out) :: lhv (KA,IA,JA) !< latent heat of vaporization [J/kg]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        lhv(k,i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
@@ -450,6 +513,38 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHS_3D( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       lhs   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHS0  => CONST_LHS0
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature                [K]
+    real(RP), intent(out) :: lhs (KA,IA,JA) !< latent heat of sublimation [J/kg]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       lhs(k,i,j) = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHS_3D
+
+  subroutine ATMOS_HYDROMETEOR_LHS_3D_obsolute( &
        lhs, &
        temp )
     use scale_const, only: &
@@ -472,7 +567,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETEOR_LHS_3D
+  end subroutine ATMOS_HYDROMETEOR_LHS_3D_obsolute
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHF_0D( &
@@ -540,6 +635,38 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHF_3D( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       lhf   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHF0  => CONST_LHF0
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(out) :: lhf (KA,IA,JA) !< latent heat of fusion [J/kg]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       lhf(k,i,j) = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHF_3D
+
+  subroutine ATMOS_HYDROMETEOR_LHF_3D_obsolute( &
        lhf, &
        temp )
     use scale_const, only: &
@@ -562,7 +689,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETEOR_LHF_3D
+  end subroutine ATMOS_HYDROMETEOR_LHF_3D_obsolute
 
   !-----------------------------------------------------------------------------
   !> calc temp, pres, q -> entropy (0D)

@@ -42,7 +42,8 @@ module mod_atmos_vars
   public :: ATMOS_vars_history_setpres
   public :: ATMOS_vars_history
   public :: ATMOS_vars_total
-  public :: ATMOS_vars_diagnostics
+  public :: ATMOS_vars_calc_diagnostics
+  public :: ATMOS_vars_get_diagnostic
   public :: ATMOS_vars_monitor
 
   public :: ATMOS_vars_restart_create
@@ -50,6 +51,12 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_def_var
   public :: ATMOS_vars_restart_enddef
   public :: ATMOS_vars_restart_close
+
+  interface ATMOS_vars_get_diagnostic
+     procedure ATMOS_vars_get_diagnostic_3D
+     procedure ATMOS_vars_get_diagnostic_2D
+     procedure ATMOS_vars_get_diagnostic_1D
+  end interface ATMOS_vars_get_diagnostic
 
   !-----------------------------------------------------------------------------
   !
@@ -90,23 +97,51 @@ module mod_atmos_vars
   real(RP), public, pointer             :: RHOT_av(:,:,:)
   real(RP), public, pointer             :: QTRC_av(:,:,:,:)
 
-  ! tendency by physical processes
+  real(RP), public, pointer             :: QV(:,:,:)
+  real(RP), public, pointer             :: QC(:,:,:)
+  real(RP), public, pointer             :: QR(:,:,:)
+  real(RP), public, pointer             :: QI(:,:,:)
+  real(RP), public, pointer             :: QS(:,:,:)
+  real(RP), public, pointer             :: QG(:,:,:)
+  real(RP), public, pointer             :: QH(:,:,:)
+
+  ! reference state
+  real(RP), public, allocatable :: DENS_ref(:,:,:)
+  real(RP), public, allocatable :: POTT_ref(:,:,:)
+  real(RP), public, allocatable :: TEMP_ref(:,:,:)
+  real(RP), public, allocatable :: PRES_ref(:,:,:)
+  real(RP), public, allocatable :: QV_ref(:,:,:)
+
+ ! tendency by physical processes
   real(RP), public, allocatable :: DENS_tp(:,:,:)
   real(RP), public, allocatable :: MOMZ_tp(:,:,:)
-  real(RP), public, allocatable :: MOMX_tp(:,:,:)
-  real(RP), public, allocatable :: MOMY_tp(:,:,:)
+  real(RP), public, allocatable :: RHOU_tp(:,:,:)
+  real(RP), public, allocatable :: RHOV_tp(:,:,:)
   real(RP), public, allocatable :: RHOT_tp(:,:,:)
+  real(RP), public, allocatable :: RHOH_tp(:,:,:)
   real(RP), public, allocatable :: RHOQ_tp(:,:,:,:)
 
-  ! diagnostic variables
-  real(RP), public, allocatable :: POTT(:,:,:)   ! potential temperature [K]
-  real(RP), public, allocatable :: TEMP(:,:,:)   ! temperature           [K]
-  real(RP), public, allocatable :: PRES(:,:,:)   ! pressure              [Pa=J/m3]
-  real(RP), public, allocatable :: PHYD(:,:,:)   ! hydrostatic pressure  [Pa=J/m3]
-  real(RP), public, allocatable :: W   (:,:,:)   ! velocity w            [m/s]
-  real(RP), public, allocatable :: U   (:,:,:)   ! velocity u            [m/s]
-  real(RP), public, allocatable :: V   (:,:,:)   ! velocity v            [m/s]
-  real(RP), public, allocatable :: N2  (:,:,:)   ! squared Brunt-Vaisala frequency [/s2]
+  ! (obsolute)
+  real(RP), public, allocatable :: MOMX_tp(:,:,:)
+  real(RP), public, allocatable :: MOMY_tp(:,:,:)
+
+
+  ! public diagnostic variables
+  real(RP), public, allocatable, target :: W    (:,:,:) !> velocity w [m/s]
+  real(RP), public, allocatable, target :: U    (:,:,:) !> velocity u [m/s]
+  real(RP), public, allocatable, target :: V    (:,:,:) !> velocity v [m/s]
+
+  real(RP), public, allocatable, target :: POTT (:,:,:) !> potential temperature [K]
+  real(RP), public, allocatable, target :: TEMP (:,:,:) !> temperature           [K]
+  real(RP), public, allocatable, target :: PRES (:,:,:) !> pressure              [Pa=J/m3]
+  real(RP), public, allocatable, target :: EXNER(:,:,:) !> Exner function (t/pt) [1]
+  real(RP), public, allocatable, target :: PHYD (:,:,:) !> hydrostatic pressure  [Pa=J/m3]
+
+  real(RP), public, allocatable, target :: Qdry (:,:,:) !> dry air                [1]
+  real(RP), public, allocatable, target :: Rtot (:,:,:) !> specific gass constant [J/kg/K]
+  real(RP), public, allocatable, target :: CVtot(:,:,:) !> specific heat          [J/kg/K]
+  real(RP), public, allocatable, target :: CPtot(:,:,:) !> specific heat          [J/kg/K]
+
 
   !-----------------------------------------------------------------------------
   !
@@ -116,135 +151,286 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private              :: ATMOS_VARS_CHECKRANGE = .false.
-  real(RP),               private              :: ATMOS_VARS_CHECKCFL   = 0.0_RP
+  logical,  private :: ATMOS_VARS_CHECKRANGE = .false.
+  real(RP), private :: ATMOS_VARS_CHECKCFL   = 0.0_RP
 
-  integer,                private, parameter   :: VMAX   = 5       !< number of the variables
-  character(len=H_SHORT), private              :: VAR_NAME(VMAX)
-  character(len=H_MID),   private              :: VAR_DESC(VMAX)
-  character(len=H_SHORT), private              :: VAR_UNIT(VMAX)
-  integer,                private, allocatable :: VAR_ID(:)
-  integer,                private              :: restart_fid = -1  ! file ID
+  type Vinfo
+     character(len=H_SHORT) :: NAME
+     character(len=H_MID)   :: DESC
+     character(len=H_SHORT) :: UNIT
+     integer                :: ndim
+  end type Vinfo
 
-  data VAR_NAME / 'DENS', &
-                  'MOMZ', &
-                  'MOMX', &
-                  'MOMY', &
-                  'RHOT'  /
-  data VAR_DESC / 'density',    &
-                  'momentum z', &
-                  'momentum x', &
-                  'momentum y', &
-                  'rho * theta' /
-  data VAR_UNIT / 'kg/m3',   &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'kg/m3*K'  /
+  ! prognostic variables
+  integer,     private, parameter   :: PV_nmax = 5
+  type(Vinfo), private              :: PV_info(PV_nmax)
+  integer,     private, allocatable :: PV_ID(:)
 
-  ! history output of prognostic variables
-  integer, private              :: VAR_HIST_id(VMAX)
-  integer, private, allocatable :: AQ_HIST_id(:)
+  data PV_info / &
+       Vinfo( 'DENS', 'density',     'kg/m3',   3 ), &
+       Vinfo( 'MOMZ', 'momentum z',  'kg/m2/s', 3 ), &
+       Vinfo( 'MOMX', 'momentum x',  'kg/m2/s', 3 ), &
+       Vinfo( 'MOMY', 'momentum y',  'kg/m2/s', 3 ), &
+       Vinfo( 'RHOT', 'rho * theta', 'kg/m3*K', 3 )  /
 
-  ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 71        ! number of diagnostic variables for history output
 
-  integer, private, parameter :: I_W            =  1 ! velocity w at cell center
-  integer, private, parameter :: I_U            =  2 ! velocity u at cell center
-  integer, private, parameter :: I_V            =  3 ! velocity v at cell center
-  integer, private, parameter :: I_POTT         =  4 ! potential temperature
+  ! private diagnostic variables
+  real(RP), allocatable, target :: LHV  (:,:,:) !> latent heat for vaporization [J/kg]
+  real(RP), allocatable, target :: LHS  (:,:,:) !> latent heat for sublimation  [J/kg]
+  real(RP), allocatable, target :: LHF  (:,:,:) !> latent heat for fusion       [J/kg]
 
-  integer, private, parameter :: I_QDRY         =  5 ! ratio of dry air            to total mass
-  integer, private, parameter :: I_QTOT         =  6 ! ratio of total tracer       to total mass
-  integer, private, parameter :: I_QHYD         =  7 ! ratio of total hydrometeor  to total mass
-  integer, private, parameter :: I_QLIQ         =  8 ! ratio of total liquid water to total mass
-  integer, private, parameter :: I_QICE         =  9 ! ratio of total ice    water to total mass
+  real(RP), allocatable, target :: POTV (:,:,:) !> virtual pot. temp.      [K]
+  real(RP), allocatable, target :: TEML (:,:,:) !> liquid water temp.      [K]
+  real(RP), allocatable, target :: POTL (:,:,:) !> liquid water pot. temp. [K]
 
-  integer, private, parameter :: I_LWP          = 10 ! liquid water path
-  integer, private, parameter :: I_IWP          = 11 ! ice water path
-  integer, private, parameter :: I_PW           = 12 ! ice water path
+  real(RP), allocatable, target :: QTOT (:,:,:) !> total water content  [1]
+  real(RP), allocatable, target :: QHYD (:,:,:) !> total hydrometeornt  [1]
+  real(RP), allocatable, target :: QLIQ (:,:,:) !> liquid water content [1]
+  real(RP), allocatable, target :: QICE (:,:,:) !> ice water content    [1]
 
-  integer, private, parameter :: I_RTOT         = 13 ! total gas constant
-  integer, private, parameter :: I_CPTOT        = 14 ! total heat capacity (constant pressure)
-  integer, private, parameter :: I_PRES         = 15 ! pressure
-  integer, private, parameter :: I_TEMP         = 16 ! temperature
+  real(RP), allocatable, target :: LWP  (:,:)   !> liquid water path  [g/m2]
+  real(RP), allocatable, target :: IWP  (:,:)   !> ice    water path  [g/m2]
+  real(RP), allocatable, target :: PW   (:,:)   !> precipitable water [g/m2]
 
-  integer, private, parameter :: I_POTL         = 17 ! liquid water potential temperature
-  integer, private, parameter :: I_RHA          = 18 ! relative humidity (liquid+ice)
-  integer, private, parameter :: I_RHL          = 19 ! relative humidity against to liquid
-  integer, private, parameter :: I_RHI          = 20 ! relative humidity against to ice
+  real(RP), allocatable, target :: PREC (:,:)   !> surface precipitation rate CP+MP(rain+snow) [kg/m2/s]
+  real(RP), allocatable, target :: RAIN (:,:)   !> surface rain rate CP+MP [kg/m2/s]
+  real(RP), allocatable, target :: SNOW (:,:)   !> surface snow rate CP+MP [kg/m2/s]
 
-  integer, private, parameter :: I_VOR          = 21 ! vertical vorticity
-  integer, private, parameter :: I_DIV          = 22 ! divergence
-  integer, private, parameter :: I_HDIV         = 23 ! horizontal divergence
+  real(RP), allocatable, target :: QSAT (:,:,:) !> saturation specific humidity        [1]
+  real(RP), allocatable, target :: RHA  (:,:,:) !> relative humidity (liquid+ice)      [%]
+  real(RP), allocatable, target :: RHL  (:,:,:) !> relative humidity against to liquid [%]
+  real(RP), allocatable, target :: RHI  (:,:,:) !> relative humidity against to ice    [%]
 
-  integer, private, parameter :: I_DENS_PRIM    = 24 ! prime term of density
-  integer, private, parameter :: I_W_PRIM       = 25 ! prime term of w
-  integer, private, parameter :: I_U_PRIM       = 26 ! prime term of u
-  integer, private, parameter :: I_V_PRIM       = 27 ! prime term of v
-  integer, private, parameter :: I_POTT_PRIM    = 28 ! prime term of potential temperature
-  integer, private, parameter :: I_W_PRIM2      = 29 ! variance of w
-  integer, private, parameter :: I_PT_W_PRIM    = 30 ! resolved scale heat flux
-  integer, private, parameter :: I_W_PRIM3      = 31 ! skewness of w
-  integer, private, parameter :: I_TKE_RS       = 32 ! resolved scale TKE
+  real(RP), allocatable, target :: VOR  (:,:,:) !> vertical vorticity    [1/s]
+  real(RP), allocatable, target :: DIV  (:,:,:) !> divergence            [1/s]
+  real(RP), allocatable, target :: HDIV (:,:,:) !> horizontal divergence [1/s]
+  real(RP), allocatable, target :: Uabs (:,:,:) !> absolute velocity     [m/s]
 
-  integer, private, parameter :: I_ENGP         = 33 ! potential energy
-  integer, private, parameter :: I_ENGK         = 34 ! kinetic   energy
-  integer, private, parameter :: I_ENGI         = 35 ! internal  energy
-  integer, private, parameter :: I_ENGT         = 36 ! total     energy
+  real(RP), allocatable, target :: N2   (:,:,:) !> squared Brunt-Vaisala frequency [/s2]
+  real(RP), allocatable, target :: PBLH (:,:)   !> PBL height [m]
 
-  integer, private, parameter :: I_ENGSFC_SH    = 37
-  integer, private, parameter :: I_ENGSFC_LH    = 38
-  integer, private, parameter :: I_ENGSFC_RD    = 39
-  integer, private, parameter :: I_ENGTOA_RD    = 40
+  real(RP), allocatable, target :: MSE  (:,:,:) !> MSE                             [m2/s2]
 
-  integer, private, parameter :: I_ENGSFC_LW_up = 41
-  integer, private, parameter :: I_ENGSFC_LW_dn = 42
-  integer, private, parameter :: I_ENGSFC_SW_up = 43
-  integer, private, parameter :: I_ENGSFC_SW_dn = 44
+  real(RP), allocatable, target :: CAPE (:,:)   !> CAPE       [m2/s2]
+  real(RP), allocatable, target :: CIN  (:,:)   !> CIN        [m2/s2]
+  real(RP), allocatable, target :: LCL  (:,:)   !> LCL height [m]
+  real(RP), allocatable, target :: LFC  (:,:)   !> LFC height [m]
+  real(RP), allocatable, target :: LNB  (:,:)   !> LNB height [m]
 
-  integer, private, parameter :: I_ENGTOA_LW_up = 45
-  integer, private, parameter :: I_ENGTOA_LW_dn = 46
-  integer, private, parameter :: I_ENGTOA_SW_up = 47
-  integer, private, parameter :: I_ENGTOA_SW_dn = 48
+  real(RP), allocatable, target :: ENGT (:,:,:) !> total     energy [J/m3]
+  real(RP), allocatable, target :: ENGP (:,:,:) !> potential energy [J/m3]
+  real(RP), allocatable, target :: ENGK (:,:,:) !> kinetic   energy [J/m3]
+  real(RP), allocatable, target :: ENGI (:,:,:) !> internal  energy [J/m3]
 
-  integer, private, parameter :: I_ENGFLXT      = 49
+  real(RP), allocatable, target :: DENS_MEAN(:)     !> horiz. mean of density         [kg/m3]
+  real(RP), allocatable, target :: W_MEAN   (:)     !> horiz. mean of w               [m/s]
+  real(RP), allocatable, target :: U_MEAN   (:)     !> horiz. mean of u               [m/s]
+  real(RP), allocatable, target :: V_MEAN   (:)     !> horiz. mean of v               [m/s]
+  real(RP), allocatable, target :: PT_MEAN  (:)     !> horiz. mean of pot.            [K]
+  real(RP), allocatable, target :: T_MEAN   (:)     !> horiz. mean of t               [K]
+  real(RP), allocatable, target :: QV_MEAN  (:)     !> horiz. mean of QV
+  real(RP), allocatable, target :: QHYD_MEAN(:)     !> horiz. mean of QHYD
+  real(RP), allocatable, target :: QLIQ_MEAN(:)     !> horiz. mean of QLIQ
+  real(RP), allocatable, target :: QICE_MEAN(:)     !> horiz. mean of QICE
 
-  integer, private, parameter :: I_EVAP         = 50
-  integer, private, parameter :: I_PRCP         = 51
+  real(RP), allocatable, target :: DENS_PRIM(:,:,:) !> horiz. deviation of density    [kg/m3]
+  real(RP), allocatable, target :: W_PRIM   (:,:,:) !> horiz. deviation of w          [m/s]
+  real(RP), allocatable, target :: U_PRIM   (:,:,:) !> horiz. deviation of u          [m/s]
+  real(RP), allocatable, target :: V_PRIM   (:,:,:) !> horiz. deviation of v          [m/s]
+  real(RP), allocatable, target :: PT_PRIM  (:,:,:) !> horiz. deviation of pot. temp. [K]
+  real(RP), allocatable, target :: W_PRIM2  (:,:,:) !> variance of w                  [m2/s2]
+  real(RP), allocatable, target :: PT_W_PRIM(:,:,:) !> resolved scale heat flux       [W/s]
+  real(RP), allocatable, target :: W_PRIM3  (:,:,:) !> skewness of w                  [m3/s3]
+  real(RP), allocatable, target :: TKE_RS   (:,:,:) !> resolved scale TKE             [m2/s2]
 
-  integer, private, parameter :: I_DENS_MEAN    = 52
-  integer, private, parameter :: I_W_MEAN       = 53
-  integer, private, parameter :: I_U_MEAN       = 54
-  integer, private, parameter :: I_V_MEAN       = 55
-  integer, private, parameter :: I_POTT_MEAN    = 56
-  integer, private, parameter :: I_T_MEAN       = 57
 
-  integer, private, parameter :: I_QV_MEAN      = 58
-  integer, private, parameter :: I_QHYD_MEAN    = 59
-  integer, private, parameter :: I_QLIQ_MEAN    = 60
-  integer, private, parameter :: I_QICE_MEAN    = 61
+  ! id of diagnostic variables
+  !! public
+  integer,     private, parameter :: I_W         =  1
+  integer,     private, parameter :: I_U         =  2
+  integer,     private, parameter :: I_V         =  3
+  integer,     private, parameter :: I_POTT      =  4
+  integer,     private, parameter :: I_TEMP      =  5
+  integer,     private, parameter :: I_PRES      =  6
+  integer,     private, parameter :: I_EXNER     =  7
+  integer,     private, parameter :: I_PHYD      =  8
+  integer,     private, parameter :: I_QDRY      =  9
+  integer,     private, parameter :: I_RTOT      = 10
+  integer,     private, parameter :: I_CVTOT     = 11
+  integer,     private, parameter :: I_CPTOT     = 12
+  !! private
+  integer,     private, parameter :: I_LHV       = 13
+  integer,     private, parameter :: I_LHS       = 14
+  integer,     private, parameter :: I_LHF       = 15
+  integer,     private, parameter :: I_POTV      = 16
+  integer,     private, parameter :: I_TEML      = 17
+  integer,     private, parameter :: I_POTL      = 18
+  integer,     private, parameter :: I_QTOT      = 19
+  integer,     private, parameter :: I_QHYD      = 20
+  integer,     private, parameter :: I_QLIQ      = 21
+  integer,     private, parameter :: I_QICE      = 22
+  integer,     private, parameter :: I_LWP       = 23
+  integer,     private, parameter :: I_IWP       = 24
+  integer,     private, parameter :: I_PW        = 25
+  integer,     private, parameter :: I_PREC      = 26
+  integer,     private, parameter :: I_RAIN      = 27
+  integer,     private, parameter :: I_SNOW      = 28
+  integer,     private, parameter :: I_QSAT      = 29
+  integer,     private, parameter :: I_RHA       = 30
+  integer,     private, parameter :: I_RHL       = 31
+  integer,     private, parameter :: I_RHI       = 32
+  integer,     private, parameter :: I_VOR       = 33
+  integer,     private, parameter :: I_DIV       = 34
+  integer,     private, parameter :: I_HDIV      = 35
+  integer,     private, parameter :: I_Uabs      = 36
+  integer,     private, parameter :: I_N2        = 37
+  integer,     private, parameter :: I_PBLH      = 38
+  integer,     private, parameter :: I_MSE       = 39
+  integer,     private, parameter :: I_CAPE      = 40
+  integer,     private, parameter :: I_CIN       = 41
+  integer,     private, parameter :: I_LCL       = 42
+  integer,     private, parameter :: I_LFC       = 43
+  integer,     private, parameter :: I_LNB       = 44
+  integer,     private, parameter :: I_ENGT      = 45
+  integer,     private, parameter :: I_ENGP      = 46
+  integer,     private, parameter :: I_ENGK      = 47
+  integer,     private, parameter :: I_ENGI      = 48
+  integer,     private, parameter :: I_DENS_MEAN = 49
+  integer,     private, parameter :: I_W_MEAN    = 50
+  integer,     private, parameter :: I_U_MEAN    = 51
+  integer,     private, parameter :: I_V_MEAN    = 52
+  integer,     private, parameter :: I_PT_MEAN   = 53
+  integer,     private, parameter :: I_T_MEAN    = 54
+  integer,     private, parameter :: I_QV_MEAN   = 55
+  integer,     private, parameter :: I_QHYD_MEAN = 56
+  integer,     private, parameter :: I_QLIQ_MEAN = 57
+  integer,     private, parameter :: I_QICE_MEAN = 58
+  integer,     private, parameter :: I_DENS_PRIM = 59
+  integer,     private, parameter :: I_W_PRIM    = 60
+  integer,     private, parameter :: I_U_PRIM    = 61
+  integer,     private, parameter :: I_V_PRIM    = 62
+  integer,     private, parameter :: I_PT_PRIM   = 63
+  integer,     private, parameter :: I_W_PRIM2   = 64
+  integer,     private, parameter :: I_PT_W_PRIM = 65
+  integer,     private, parameter :: I_W_PRIM3   = 66
+  integer,     private, parameter :: I_TKE_RS    = 67
+  integer,     private, parameter :: DV_nmax     = 67
+  type(Vinfo), private            :: DV_info(DV_nmax)
+  logical,     private            :: DV_calclated(DV_nmax)
 
-  integer, private, parameter :: I_QSAT         = 62
+  data DV_info / &
+       Vinfo( 'W',         'velocity w',                      'm/s',     3 ), &
+       Vinfo( 'U',         'velocity u',                      'm/s',     3 ), &
+       Vinfo( 'V',         'velocity v',                      'm/s',     3 ), &
+       Vinfo( 'PT',        'potential temp.',                 'K',       3 ), &
+       Vinfo( 'T',         'temperature',                     'K',       3 ), &
+       Vinfo( 'PRES',      'pressure',                        'Pa',      3 ), &
+       Vinfo( 'EXNER',     'Exner function',                  '1',       3 ), &
+       Vinfo( 'PHYD',      'hydrostatic pressure',            'Pa',      3 ), &
+       Vinfo( 'QDRY',      'dry air',                         'kg/kg',   3 ), &
+       Vinfo( 'RTOT',      'Total gas constant',              'J/kg/K',  3 ), &
+       Vinfo( 'CVTOT',     'Total heat capacity',             'J/kg/K',  3 ), &
+       Vinfo( 'CPTOT',     'Total heat capacity',             'J/kg/K',  3 ), &
+       Vinfo( 'LHV',       'latent heat for vaporization',    'J/kg',    3 ), &
+       Vinfo( 'LHS',       'latent heat for sublimation',     'J/kg',    3 ), &
+       Vinfo( 'LHF',       'latent heat for fusion',          'J/kg',    3 ), &
+       Vinfo( 'POTV',      'virtual potential temp.',         'K',       3 ), &
+       Vinfo( 'TEML',      'liq. water temperature',          'K',       3 ), &
+       Vinfo( 'POTL',      'liq. water potential temp.',      'K',       3 ), &
+       Vinfo( 'QTOT',      'total water',                     'kg/kg',   3 ), &
+       Vinfo( 'QHYD',      'total hydrometeors',              'kg/kg',   3 ), &
+       Vinfo( 'QLIQ',      'total liquid water',              'kg/kg',   3 ), &
+       Vinfo( 'QICE',      'total ice water',                 'kg/kg',   3 ), &
+       Vinfo( 'LWP',       'liquid water path',               'g/m2',    2 ), &
+       Vinfo( 'IWP',       'ice water path',                  'g/m2',    2 ), &
+       Vinfo( 'PW',        'precipitable water',              'g/m2',    2 ), &
+       Vinfo( 'PREC',      'surface precipitation rate',      'kg/m2/s', 2 ), &
+       Vinfo( 'RAIN',      'surface rain rate',               'kg/m2/s', 2 ), &
+       Vinfo( 'SNOW',      'surface snow rate',               'kg/m2/s', 2 ), &
+       Vinfo( 'QSAT',      'saturation specific humidity',    'kg/kg',   3 ), &
+       Vinfo( 'RHA',       'relative humidity(liq+ice)',      '%',       3 ), &
+       Vinfo( 'RH',        'relative humidity(liq)',          '%',       3 ), &
+       Vinfo( 'RHI',       'relative humidity(ice)',          '%',       3 ), &
+       Vinfo( 'VOR',       'vertical vorticity',              '1/s',     3 ), &
+       Vinfo( 'DIV',       'divergence',                      '1/s',     3 ), &
+       Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3 ), &
+       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3 ), &
+       Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3 ), &
+       Vinfo( 'PBLH',      'PBL height',                      'm',       3 ), &
+       Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3 ), &
+       Vinfo( 'CAPE',      'convection avail. pot. energy',   'm2/s2',   3 ), &
+       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   3 ), &
+       Vinfo( 'LCL',       'lifted condensation level',       'm',       3 ), &
+       Vinfo( 'LFC',       'level of free convection',        'm',       3 ), &
+       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       3 ), &
+       Vinfo( 'ENGT',      'total energy',                    'J/m3',    3 ), &
+       Vinfo( 'ENGP',      'potential energy',                'J/m3',    3 ), &
+       Vinfo( 'ENGK',      'kinetic energy',                  'J/m3',    3 ), &
+       Vinfo( 'ENGI',      'internal energy',                 'J/m3',    3 ), &
+       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   3 ), &
+       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     3 ), &
+       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     3 ), &
+       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     3 ), &
+       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       3 ), &
+       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       3 ), &
+       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       3 ), &
+       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       3 ), &
+       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       3 ), &
+       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       3 ), &
+       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   3 ), &
+       Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3 ), &
+       Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3 ), &
+       Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3 ), &
+       Vinfo( 'PT_PRIM',   'horiz. deviation of pot. temp.',  'K',       3 ), &
+       Vinfo( 'W_PRIM2',   'variance of w',                   'm2/s2',   3 ), &
+       Vinfo( 'PT_W_PRIM', 'resolved scale heat flux',        'W/s',     3 ), &
+       Vinfo( 'W_PRIM3',   'skewness of w',                   'm3/s3',   3 ), &
+       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3 )  /
 
-  integer, private, parameter :: I_Uabs         = 63
+  ! for history output and monitor
+  integer, private              :: PV_HIST_id (PV_nmax) !> prognostic variables
+  integer, private              :: PV_MONIT_id(PV_nmax)
+  integer, private, allocatable :: QP_HIST_id (:)       !> tracer variables
+  integer, private, allocatable :: QP_MONIT_id(:)
+  integer, private              :: DV_HIST_id (DV_nmax) !> diagnostic variables
 
-  integer, private, parameter :: I_N2           = 64
+  integer, private, parameter   :: IM_QDRY         =  1
+  integer, private, parameter   :: IM_QTOT         =  2
+  integer, private, parameter   :: IM_EVAP         =  3
+  integer, private, parameter   :: IM_PREC         =  4
+  integer, private, parameter   :: IM_ENGT         =  5
+  integer, private, parameter   :: IM_ENGP         =  6
+  integer, private, parameter   :: IM_ENGK         =  7
+  integer, private, parameter   :: IM_ENGI         =  8
+  integer, private, parameter   :: IM_ENGFLXT      =  9
+  integer, private, parameter   :: IM_ENGSFC_SH    = 10
+  integer, private, parameter   :: IM_ENGSFC_LH    = 11
+  integer, private, parameter   :: IM_ENGSFC_RD    = 12
+  integer, private, parameter   :: IM_ENGTOA_RD    = 13
+  integer, private, parameter   :: IM_ENGSFC_LW_up = 14
+  integer, private, parameter   :: IM_ENGSFC_LW_dn = 15
+  integer, private, parameter   :: IM_ENGSFC_SW_up = 16
+  integer, private, parameter   :: IM_ENGSFC_SW_dn = 17
+  integer, private, parameter   :: IM_ENGTOA_LW_up = 18
+  integer, private, parameter   :: IM_ENGTOA_LW_dn = 19
+  integer, private, parameter   :: IM_ENGTOA_SW_up = 20
+  integer, private, parameter   :: IM_ENGTOA_SW_dn = 21
+  integer, private, parameter   :: DVM_nmax        = 21
+  integer, private              :: DV_MONIT_id(DVM_nmax)
 
-  integer, private, parameter :: I_CAPE         = 65
-  integer, private, parameter :: I_CIN          = 66
-  integer, private, parameter :: I_LCL          = 67
-  integer, private, parameter :: I_LFC          = 68
-  integer, private, parameter :: I_LNB          = 69
 
-  integer, private, parameter :: I_PBLH         = 70
-  integer, private, parameter :: I_MSE          = 71
+  logical,  private                      :: moist
+  real(RP), private, target, allocatable :: QW(:,:,:,:)
+  real(RP), private, target, allocatable :: ZERO(:,:,:)
 
-  integer, private            :: AD_HIST_id (AD_nmax)
-  integer, private            :: AD_PREP_sw (AD_nmax)
-  integer, private            :: AD_MONIT_id(AD_nmax)
+  ! for restart
+  integer, private :: restart_fid = -1  ! file ID
+  logical, private :: ATMOS_RESTART_IN_CHECK_COORDINATES = .true.
 
-  logical, private            :: ATMOS_RESTART_IN_CHECK_COORDINATES = .true.
+
+  real(RP), pointer :: WORK3D(:,:,:)
+  real(RP), pointer :: WORK2D(:,:)
+  real(RP), pointer :: WORK1D(:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -252,11 +438,20 @@ contains
   !> Setup
   subroutine ATMOS_vars_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_history, only: &
        HIST_reg
     use scale_monitor, only: &
        MONIT_reg
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_QV, &
+       I_HC, &
+       I_HR, &
+       I_HI, &
+       I_HS, &
+       I_HG, &
+       I_HH
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE
     use mod_atmos_dyn_vars, only: &
@@ -273,6 +468,8 @@ contains
        ATMOS_PHY_SF_vars_setup
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_setup
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_setup
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_setup
     implicit none
@@ -331,22 +528,67 @@ contains
 
     allocate( DENS_tp(KA,IA,JA)    )
     allocate( MOMZ_tp(KA,IA,JA)    )
-    allocate( MOMX_tp(KA,IA,JA)    )
-    allocate( MOMY_tp(KA,IA,JA)    )
+    allocate( RHOU_tp(KA,IA,JA)    )
+    allocate( RHOV_tp(KA,IA,JA)    )
     allocate( RHOT_tp(KA,IA,JA)    )
+    allocate( RHOH_tp(KA,IA,JA)    )
     allocate( RHOQ_tp(KA,IA,JA,max(QA,1)) )
 
-    allocate( POTT(KA,IA,JA) )
-    allocate( TEMP(KA,IA,JA) )
-    allocate( PRES(KA,IA,JA) )
-    allocate( PHYD(KA,IA,JA) )
-    allocate( W   (KA,IA,JA) )
-    allocate( U   (KA,IA,JA) )
-    allocate( V   (KA,IA,JA) )
-    allocate( N2  (KA,IA,JA) )
+    allocate( W(KA,IA,JA) )
+    allocate( U(KA,IA,JA) )
+    allocate( V(KA,IA,JA) )
+
+    allocate( POTT (KA,IA,JA) )
+    allocate( TEMP (KA,IA,JA) )
+    allocate( PRES (KA,IA,JA) )
+    allocate( EXNER(KA,IA,JA) )
+    allocate( PHYD (KA,IA,JA) )
+
+    allocate( Qdry (KA,IA,JA) )
+    allocate( Rtot (KA,IA,JA) )
+    allocate( CVtot(KA,IA,JA) )
+    allocate( CPtot(KA,IA,JA) )
+
+    ! obsolute
+    allocate( MOMX_tp(KA,IA,JA)    )
+    allocate( MOMY_tp(KA,IA,JA)    )
+
 
     MOMZ(1:KS-1,:,:) = 0.0_RP
     MOMZ(KE:KA,:,:) = 0.0_RP
+
+
+    ! water content
+    if ( I_QV > 0 ) then
+       allocate( QW(KA,IA,JA,N_HYD) )
+!OCL XFILL
+       QW(:,:,:,:) = 0.0_RP
+
+       QV => QTRC_av(:,:,:,I_QV)
+       QC => QW(:,:,:,I_HC)
+       QR => QW(:,:,:,I_HR)
+       QI => QW(:,:,:,I_HI)
+       QS => QW(:,:,:,I_HS)
+       QG => QW(:,:,:,I_HG)
+       QH => QW(:,:,:,I_HH)
+
+       moist = .true.
+    else
+       allocate( ZERO(KA,IA,JA) )
+!OCL XFILL
+       ZERO(:,:,:) = 0.0_RP
+
+       QV => ZERO
+       QC => ZERO
+       QR => ZERO
+       QI => ZERO
+       QS => ZERO
+       QG => ZERO
+       QH => ZERO
+
+       moist = .false.
+    end if
+
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -355,7 +597,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_VARS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_VARS)
 
@@ -364,9 +606,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &
                '***       |', 'VARNAME                 ','|', &
                'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
-    do iv = 1, VMAX
+    do iv = 1, PV_nmax
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|', VAR_DESC(iv),'[', VAR_UNIT(iv),']'
+                  '*** NO.',iv,'|',PV_info(iv)%NAME,'|', PV_info(iv)%DESC,'[', PV_info(iv)%UNIT,']'
     enddo
     do iq = 1, QA
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A24,A,A48,A,A12,A)') &
@@ -410,345 +652,70 @@ contains
     call ATMOS_PHY_RD_vars_setup
     call ATMOS_PHY_SF_vars_setup
     call ATMOS_PHY_TB_vars_setup
+    call ATMOS_PHY_BL_vars_setup
     call ATMOS_PHY_CP_vars_setup
 
 
+    DV_calclated(DV_nmax) = .false.
 
-    !##### todo: the part below should be moved to the mod_atmos_diag #####
+    !-----< history output setup >-----
+    allocate( QP_HIST_id( max(QA,1) ) )
+    allocate( QP_MONIT_id( max(QA,1) ) )
+    PV_HIST_id (:) = -1
+    PV_MONIT_id(:) = -1
+    QP_HIST_id (:) = -1
+    QP_MONIT_id(:) = -1
+    DV_HIST_id (:) = -1
+    DV_MONIT_id(:) = -1
 
-    allocate( AQ_HIST_id (max(QA,1)))
 
-    VAR_HIST_id(:) = -1
-    AQ_HIST_id (:) = -1
-    AD_HIST_id (:) = -1
-    AD_MONIT_id(:) = -1
-    AD_PREP_sw (:) = -1
-
-    call HIST_reg( VAR_HIST_id(I_DENS), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
-    call HIST_reg( VAR_HIST_id(I_MOMZ), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, zdim='half' )
-    call HIST_reg( VAR_HIST_id(I_MOMX), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, xdim='half' )
-    call HIST_reg( VAR_HIST_id(I_MOMY), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, ydim='half' )
-    call HIST_reg( VAR_HIST_id(I_RHOT), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
+    do iv = 1, PV_nmax
+       call HIST_reg( PV_HIST_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, ndim=PV_info(iv)%ndim )
+    end do
     do iq = 1, QA
-       call HIST_reg( AQ_HIST_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3 )
+       call HIST_reg( QP_HIST_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3 )
     enddo
 
-    call HIST_reg( AD_HIST_id(I_W)        , 'W',         'velocity w',                     'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_U)        , 'U',         'velocity u',                     'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_V)        , 'V',         'velocity v',                     'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_POTT)     , 'PT',        'potential temp.',                'K',      ndim=3 )
+    do iv = 1, DV_nmax
+       call HIST_reg( DV_HIST_id(iv), DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, ndim=DV_info(iv)%ndim )
+    end do
 
-    call HIST_reg( AD_HIST_id(I_QDRY)     , 'QDRY',      'dry air',                        'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QTOT)     , 'QTOT',      'total water',                    'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QHYD)     , 'QHYD',      'total hydrometeors',             'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QLIQ)     , 'QLIQ',      'total liquid water',             'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QICE)     , 'QICE',      'total ice water',                'kg/kg',  ndim=3 )
-
-    call HIST_reg( AD_HIST_id(I_LWP)      , 'LWP',       'liquid water path',              'g/m2',   ndim=2 )
-    call HIST_reg( AD_HIST_id(I_IWP)      , 'IWP',       'ice water path',                 'g/m2',   ndim=2 )
-    call HIST_reg( AD_HIST_id(I_PW )      , 'PW',        'precipitable water',             'g/m2',   ndim=2 )
-
-    call HIST_reg( AD_HIST_id(I_RTOT)     , 'RTOT',      'Total gas constant',             'J/kg/K', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_CPTOT)    , 'CPTOT',     'Total heat capacity',            'J/kg/K', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_PRES)     , 'PRES',      'pressure',                       'Pa',     ndim=3 )
-    call HIST_reg( AD_HIST_id(I_TEMP)     , 'T',         'temperature',                    'K',      ndim=3 )
-
-    call HIST_reg( AD_HIST_id(I_POTL)     , 'LWPT',      'liq. potential temp.',           'K',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHA)      , 'RHA',       'relative humidity(liq+ice)',     '%',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHL)      , 'RH',        'relative humidity(liq)',         '%',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHI)      , 'RHI',       'relative humidity(ice)',         '%',      ndim=3 )
-
-    call HIST_reg( AD_HIST_id(I_VOR)      , 'VOR',       'vertical vorticity',             '1/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_DIV)      , 'DIV',       'divergence',                     '1/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_HDIV)     , 'HDIV',      'horizontal divergence',          '1/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_Uabs)     , 'Uabs',      'absolute velocity',              'm/s',    ndim=3 )
-
-    call HIST_reg( AD_HIST_id(I_N2)       , 'N2',        'squared Brunt-Vaisala frequency','1/s2',   ndim=3 )
-
-    call HIST_reg( AD_HIST_id(I_CAPE)     , 'CAPE',      'convection avail. pot. energy',  'm2/s2',  ndim=2 )
-    call HIST_reg( AD_HIST_id(I_CIN)      , 'CIN',       'convection inhibition',          'm2/s2',  ndim=2 )
-    call HIST_reg( AD_HIST_id(I_LCL)      , 'LCL',       'lifted condensation level',      'm',      ndim=2 )
-    call HIST_reg( AD_HIST_id(I_LFC)      , 'LFC',       'level of free convection',       'm',      ndim=2 )
-    call HIST_reg( AD_HIST_id(I_LNB)      , 'LNB',       'level of neutral buoyancy',      'm',      ndim=2 )
-
-    call HIST_reg( AD_HIST_id(I_PBLH)     , 'PBLH',      'PBL height',                     'm',      ndim=2 )
-    call HIST_reg( AD_HIST_id(I_MSE)      , 'MSE',       'moist static energy',            'm2/s2',  ndim=3 )
-
-    call HIST_reg( AD_HIST_id(I_DENS_MEAN), 'DENS_MEAN', 'horiz. mean of density',         'kg/m3',  ndim=1 )
-    call HIST_reg( AD_HIST_id(I_W_MEAN)   , 'W_MEAN',    'horiz. mean of w',               'm/s',    ndim=1 )
-    call HIST_reg( AD_HIST_id(I_U_MEAN)   , 'U_MEAN',    'horiz. mean of u',               'm/s',    ndim=1 )
-    call HIST_reg( AD_HIST_id(I_V_MEAN)   , 'V_MEAN',    'horiz. mean of v',               'm/s',    ndim=1 )
-    call HIST_reg( AD_HIST_id(I_POTT_MEAN), 'PT_MEAN',   'horiz. mean of pot.',            'K',      ndim=1 )
-    call HIST_reg( AD_HIST_id(I_T_MEAN)   , 'T_MEAN',    'horiz. mean of t',               'K',      ndim=1 )
-    call HIST_reg( AD_HIST_id(I_QV_MEAN)  , 'QV_MEAN',   'horiz. mean of QV',              '1',      ndim=1 )
-    call HIST_reg( AD_HIST_id(I_QHYD_MEAN), 'QHYD_MEAN', 'horiz. mean of QHYD',            '1',      ndim=1 )
-    call HIST_reg( AD_HIST_id(I_QLIQ_MEAN), 'QLIQ_MEAN', 'horiz. mean of QLIQ',            '1',      ndim=1 )
-    call HIST_reg( AD_HIST_id(I_QICE_MEAN), 'QICE_MEAN', 'horiz. mean of QICE',            '1',      ndim=1 )
-
-    call HIST_reg( AD_HIST_id(I_DENS_PRIM), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_W_PRIM   ), 'W_PRIM',    'horiz. deviation of w',          'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_U_PRIM   ), 'U_PRIM',    'horiz. deviation of u',          'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_V_PRIM   ), 'V_PRIM',    'horiz. deviation of v',          'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_POTT_PRIM), 'PT_PRIM',   'horiz. deviation of pot. temp.', 'K',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_W_PRIM2  ), 'W_PRIM2',   'variance of w',                  'm2/s2',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_PT_W_PRIM), 'PT_W_PRIM', 'resolved scale heat flux',       'W/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_W_PRIM3  ), 'W_PRIM3',   'skewness of w',                  'm3/s3',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_TKE_RS   ), 'TKE_RS',    'resolved scale TKE',             'm2/s2',  ndim=3 )
-
-    call HIST_reg( AD_HIST_id(I_ENGT)     , 'ENGT',      'total energy',                   'J/m3',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_ENGP)     , 'ENGP',      'potential energy',               'J/m3',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_ENGK)     , 'ENGK',      'kinetic energy',                 'J/m3',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_ENGI)     , 'ENGI',      'internal energy',                'J/m3',   ndim=3 )
 
     !-----< monitor output setup >-----
+    do iv = 1, PV_nmax
+       call MONIT_reg( PV_MONIT_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, ndim=PV_info(iv)%ndim, isflux=.false. )
+    end do
+    do iq = 1, QA
+       call MONIT_reg( QP_MONIT_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3, isflux=.false. )
+    enddo
 
-    call MONIT_reg( AD_MONIT_id(I_QDRY)        , 'QDRY',         'dry air mass',           'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_QTOT)        , 'QTOT',         'water mass',             'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_EVAP)        , 'EVAP',         'evaporation',            'kg', ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_PRCP)        , 'PRCP',         'precipitation',          'kg', ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_QDRY),         'QDRY',         'dry air mass',           'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( DV_MONIT_id(IM_QTOT),         'QTOT',         'water mass',             'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( DV_MONIT_id(IM_EVAP),         'EVAP',         'evaporation',            'kg', ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_PREC),         'PRCP',         'precipitation',          'kg', ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGT)        , 'ENGT',         'total     energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGP)        , 'ENGP',         'potential energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGK)        , 'ENGK',         'kinetic   energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( AD_MONIT_id(I_ENGI)        , 'ENGI',         'internal  energy',       'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( DV_MONIT_id(IM_ENGT),         'ENGT',         'total     energy',       'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( DV_MONIT_id(IM_ENGP),         'ENGP',         'potential energy',       'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( DV_MONIT_id(IM_ENGK),         'ENGK',         'kinetic   energy',       'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( DV_MONIT_id(IM_ENGI),         'ENGI',         'internal  energy',       'J',  ndim=3, isflux=.false. )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGFLXT)     , 'ENGFLXT',      'total energy flux',      'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGFLXT),      'ENGFLXT',      'total energy flux',      'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SH)   , 'ENGSFC_SH',    'SFC specific heat flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LH)   , 'ENGSFC_LH',    'SFC latent   heat flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_RD)   , 'ENGSFC_RD',    'SFC net radiation flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_RD)   , 'ENGTOA_RD',    'TOA net radiation flux', 'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SH),    'ENGSFC_SH',    'SFC specific heat flux', 'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LH),    'ENGSFC_LH',    'SFC latent   heat flux', 'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_RD),    'ENGSFC_RD',    'SFC net radiation flux', 'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_RD),    'ENGTOA_RD',    'TOA net radiation flux', 'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_up), 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_up), 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LW_up), 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SW_up), 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J',  ndim=2, isflux=.true.  )
 
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_up), 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_up), 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_LW_up), 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_SW_up), 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J',  ndim=2, isflux=.true.  )
+    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J',  ndim=2, isflux=.true.  )
 
-    if (      AD_HIST_id(I_QDRY) > 0 &
-         .OR. AD_MONIT_id(I_QDRY) > 0 ) then
-       AD_PREP_sw(I_QDRY) = 1
-    endif
-    if (      AD_HIST_id (I_QTOT) > 0 &
-         .OR. AD_MONIT_id(I_QTOT) > 0 ) then
-       AD_PREP_sw(I_QDRY) = 1
-       AD_PREP_sw(I_QTOT) = 1
-    endif
-    if ( AD_HIST_id(I_QHYD) > 0 ) then
-       AD_PREP_sw(I_QHYD) = 1
-    endif
-    if ( AD_HIST_id(I_QLIQ) > 0 ) then
-       AD_PREP_sw(I_QLIQ) = 1
-    endif
-    if ( AD_HIST_id(I_QICE) > 0 ) then
-       AD_PREP_sw(I_QICE) = 1
-    endif
-
-    if ( AD_HIST_id(I_LWP)  > 0 ) then
-       AD_PREP_sw(I_QLIQ) = 1
-       AD_PREP_sw(I_LWP)  = 1
-    endif
-    if ( AD_HIST_id(I_IWP)  > 0 ) then
-       AD_PREP_sw(I_QICE) = 1
-       AD_PREP_sw(I_IWP)  = 1
-    endif
-    if ( AD_HIST_id(I_PW)  > 0 ) then
-       AD_PREP_sw(I_PW)  = 1
-    endif
-
-    if ( AD_HIST_id(I_RTOT) > 0 ) then
-       AD_PREP_sw(I_QDRY) = 1
-       AD_PREP_sw(I_RTOT) = 1
-    endif
-    if ( AD_HIST_id(I_CPTOT) > 0 ) then
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-    endif
-
-    if ( AD_HIST_id(I_POTL) > 0 ) then
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_RTOT)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_POTL)  = 1
-    endif
-    if (      AD_HIST_id(I_RHA) > 0 &
-         .OR. AD_HIST_id(I_RHL) > 0 &
-         .OR. AD_HIST_id(I_RHI) > 0 ) then
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_RTOT)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_QSAT)  = 1
-    endif
-
-
-    if ( AD_HIST_id (I_VOR) > 0 ) then
-       AD_PREP_sw(I_VOR) = 1
-    endif
-
-    if ( AD_PREP_sw(I_DIV) > 0 ) then
-       AD_PREP_sw(I_HDIV) = 1
-    endif
-
-    if ( AD_HIST_id(I_Uabs) > 0 ) then
-       AD_PREP_sw(I_Uabs) = 1
-    endif
-
-    if (      AD_HIST_id(I_CAPE) > 0 &
-         .OR. AD_HIST_id(I_CIN)  > 0 &
-         .OR. AD_HIST_id(I_LCL)  > 0 &
-         .OR. AD_HIST_id(I_LFC)  > 0 &
-         .OR. AD_HIST_id(I_LNB)  > 0 ) then
-       AD_PREP_sw(I_CAPE) = 1
-       AD_PREP_sw(I_CIN)  = 1
-       AD_PREP_sw(I_LCL)  = 1
-       AD_PREP_sw(I_LFC)  = 1
-       AD_PREP_sw(I_LNB)  = 1
-    endif
-
-    if ( AD_HIST_id(I_PBLH) > 0 ) then
-       AD_PREP_sw(I_PBLH) = 1
-    endif
-
-    if ( AD_HIST_id(I_MSE) > 0 ) then
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_MSE)   = 1
-    endif
-
-    if ( AD_HIST_id(I_DENS_PRIM) > 0 ) then
-       AD_PREP_sw(I_DENS_PRIM) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_W_PRIM) > 0 ) then
-       AD_PREP_sw(I_W_PRIM) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-       AD_PREP_sw(I_W_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_U_PRIM) > 0 ) then
-       AD_PREP_sw(I_U_PRIM) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-       AD_PREP_sw(I_U_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_V_PRIM) > 0 ) then
-       AD_PREP_sw(I_V_PRIM) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-       AD_PREP_sw(I_V_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_POTT_PRIM) > 0 ) then
-       AD_PREP_sw(I_POTT_PRIM) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-       AD_PREP_sw(I_POTT_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_DENS_MEAN) > 0 ) then
-       AD_PREP_sw(I_DENS_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_W_MEAN) > 0 ) then
-       AD_PREP_sw(I_W_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_U_MEAN) > 0 ) then
-       AD_PREP_sw(I_U_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_V_MEAN) > 0 ) then
-       AD_PREP_sw(I_V_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_POTT_MEAN) > 0 ) then
-       AD_PREP_sw(I_POTT_MEAN) = 1
-    end if
-
-    if ( AD_HIST_id(I_T_MEAN) > 0 ) then
-       AD_PREP_sw(I_T_MEAN) = 1
-    end if
-
-    if ( AD_HIST_id(I_QV_MEAN) > 0 ) then
-       AD_PREP_sw(I_QV_MEAN) = 1
-    end if
-
-    if ( AD_HIST_id(I_QHYD_MEAN) > 0 ) then
-       AD_PREP_sw(I_QHYD) = 1
-       AD_PREP_sw(I_QHYD_MEAN) = 1
-    end if
-
-    if ( AD_HIST_id(I_QLIQ_MEAN) > 0 ) then
-       AD_PREP_sw(I_QLIQ) = 1
-       AD_PREP_sw(I_QLIQ_MEAN) = 1
-    end if
-
-    if ( AD_HIST_id(I_QICE_MEAN) > 0 ) then
-       AD_PREP_sw(I_QICE) = 1
-       AD_PREP_sw(I_QICE_MEAN) = 1
-    end if
-
-    if ( AD_HIST_id(I_W_PRIM2) > 0 ) then
-       AD_PREP_sw(I_W_PRIM)  = 1
-       AD_PREP_sw(I_W_PRIM2) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-       AD_PREP_sw(I_W_MEAN)    = 1
-    endif
-
-    if ( AD_HIST_id(I_PT_W_PRIM) > 0 ) then
-       AD_PREP_sw(I_W_PRIM)    = 1
-       AD_PREP_sw(I_POTT_PRIM) = 1
-       AD_PREP_sw(I_PT_W_PRIM) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-       AD_PREP_sw(I_W_MEAN)    = 1
-       AD_PREP_sw(I_POTT_MEAN) = 1
-    endif
-
-    if ( AD_HIST_id(I_W_PRIM3) > 0 ) then
-       AD_PREP_sw(I_W_PRIM)  = 1
-       AD_PREP_sw(I_W_PRIM3) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-       AD_PREP_sw(I_W_MEAN)  = 1
-    endif
-
-    if ( AD_HIST_id(I_TKE_RS) > 0 ) then
-       AD_PREP_sw(I_W_PRIM) = 1
-       AD_PREP_sw(I_U_PRIM) = 1
-       AD_PREP_sw(I_V_PRIM) = 1
-       AD_PREP_sw(I_TKE_RS) = 1
-       AD_PREP_sw(I_DENS_MEAN) = 1
-       AD_PREP_sw(I_W_MEAN) = 1
-       AD_PREP_sw(I_U_MEAN) = 1
-       AD_PREP_sw(I_V_MEAN) = 1
-    endif
-
-    if (      AD_HIST_id (I_ENGP) > 0 &
-         .OR. AD_MONIT_id(I_ENGP) > 0 ) then
-       AD_PREP_sw(I_ENGP) = 1
-    endif
-    if (      AD_HIST_id (I_ENGK) > 0 &
-         .OR. AD_MONIT_id(I_ENGK) > 0 ) then
-       AD_PREP_sw(I_ENGK) = 1
-    endif
-    if (      AD_HIST_id (I_ENGI) > 0 &
-         .OR. AD_MONIT_id(I_ENGI) > 0 ) then
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_RTOT)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_ENGI)  = 1
-    endif
-    if (      AD_HIST_id (I_ENGT) > 0 &
-         .OR. AD_MONIT_id(I_ENGT) > 0 ) then
-       AD_PREP_sw(I_ENGP)  = 1
-       AD_PREP_sw(I_ENGK)  = 1
-       AD_PREP_sw(I_QDRY)  = 1
-       AD_PREP_sw(I_RTOT)  = 1
-       AD_PREP_sw(I_CPTOT) = 1
-       AD_PREP_sw(I_ENGI)  = 1
-       AD_PREP_sw(I_ENGT)  = 1
-    endif
 
     return
   end subroutine ATMOS_vars_setup
@@ -822,7 +789,7 @@ contains
   !> Open restart file for reading atmospheric variables
   subroutine ATMOS_vars_restart_open
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_time, only: &
@@ -887,7 +854,7 @@ contains
 
     else
        write(*,*) '*** restart file for atmosphere is not specified. STOP!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( ATMOS_USE_AVERAGE ) then
@@ -915,7 +882,7 @@ contains
   !> Read restart of atmospheric variables
   subroutine ATMOS_vars_restart_read
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
@@ -957,16 +924,16 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS) ***'
 
-       call FILEIO_read( DENS(:,:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMZ(:,:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMX(:,:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(3), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMY(:,:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(4), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( RHOT(:,:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( DENS(:,:,:),                                     & ! [OUT]
+                         restart_fid, PV_info(I_DENS)%NAME, 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMZ(:,:,:),                                     & ! [OUT]
+                         restart_fid, PV_info(I_MOMZ)%NAME, 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMX(:,:,:),                                     & ! [OUT]
+                         restart_fid, PV_info(I_MOMX)%NAME, 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMY(:,:,:),                                     & ! [OUT]
+                         restart_fid, PV_info(I_MOMY)%NAME, 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( RHOT(:,:,:),                                     & ! [OUT]
+                         restart_fid, PV_info(I_RHOT)%NAME, 'ZXY', step=1 ) ! [IN]
 
        do iq = 1, QA
           call FILEIO_read( QTRC(:,:,:,iq),                             & ! [OUT]
@@ -998,7 +965,7 @@ contains
        call ATMOS_vars_total
     else
        write(*,*) '*** invalid restart file ID for atmosphere. STOP!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( ATMOS_USE_AVERAGE ) then
@@ -1192,895 +1159,67 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for atmospheric variables
   subroutine ATMOS_vars_history
-    use scale_const, only: &
-       GRAV  => CONST_GRAV,  &
-       Rdry  => CONST_Rdry,  &
-       Rvap  => CONST_Rvap,  &
-       CPdry => CONST_CPdry, &
-       CVdry => CONST_CVdry, &
-       P00   => CONST_PRE00
-    use scale_grid, only: &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY
     use scale_grid_real, only: &
        REAL_CZ, &
        REAL_FZ
-    use scale_comm, only: &
-       COMM_horizontal_mean
     use scale_history, only: &
-       HIST_in
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd => ATMOS_THERMODYN_qd
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
-       I_QV, &
-       I_QC, &
-       QHS,  &
-       QHE,  &
-       QLS,  &
-       QLE,  &
-       QIS,  &
-       QIE,  &
-       LHV,  &
-       LHF
-    use scale_atmos_saturation, only: &
-       SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
-       SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
-       SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
-    use scale_atmos_adiabat, only: &
-       ADIABAT_cape => ATMOS_ADIABAT_cape
-    use mod_atmos_phy_cp_vars, only: &
-       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
-    use mod_atmos_phy_mp_vars, only: &
-       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
+       HIST_put
     implicit none
 
-    real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
-    real(RP) :: QTOT  (KA,IA,JA) ! total water        [kg/kg]
-    real(RP) :: QHYD  (KA,IA,JA) ! total hydrometeor  [kg/kg]
-    real(RP) :: QLIQ  (KA,IA,JA) ! total liquid water [kg/kg]
-    real(RP) :: QICE  (KA,IA,JA) ! total ice water    [kg/kg]
-    real(RP) :: RHOQ  (KA,IA,JA)
-
-    real(RP) :: LWP   (IA,JA)    ! liquid water path  [g/m2]
-    real(RP) :: IWP   (IA,JA)    ! ice    water path  [g/m2]
-    real(RP) :: PW    (IA,JA)    ! precipitable water [g/m2]
-
-    real(RP) :: RTOT  (KA,IA,JA) ! Total gas constant  [J/kg/K]
-    real(RP) :: CPTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
-    real(RP) :: CVTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
-    real(RP) :: CPovCV(KA,IA,JA) ! Cp/Cv
-
-    real(RP) :: POTL  (KA,IA,JA) ! liquid water potential temperature [K]
-    real(RP) :: RHA   (KA,IA,JA) ! relative humidity (liquid+ice)      [%]
-    real(RP) :: RHL   (KA,IA,JA) ! relative humidity against to liquid [%]
-    real(RP) :: RHI   (KA,IA,JA) ! relative humidity against to ice    [%]
-
-    real(RP) :: VOR   (KA,IA,JA) ! vertical vorticity    [1/s]
-    real(RP) :: DIV   (KA,IA,JA) ! divergence            [1/s]
-    real(RP) :: HDIV  (KA,IA,JA) ! horizontal divergence [1/s]
-    real(RP) :: Uabs  (KA,IA,JA) ! absolute velocity     [m/s]
-
-    real(RP) :: CAPE  (IA,JA)    ! CAPE [m2/s2]
-    real(RP) :: CIN   (IA,JA)    ! CIN [m2/s2]
-    real(RP) :: LCL   (IA,JA)    ! LCL height [m]
-    real(RP) :: LFC   (IA,JA)    ! LFC height [m]
-    real(RP) :: LNB   (IA,JA)    ! LNB height [m]
-
-    real(RP) :: PBLH  (IA,JA)    ! PBL height [m]
-    real(RP) :: POTTv (KA,IA,JA) ! vertual potential temperature [K]
-    real(RP) :: fact
-
-    real(RP) :: MSE      (KA,IA,JA) ! MSE        [m2/s2]
-    real(RP) :: LHV_local(KA,IA,JA) ! latent heat for vaporization [m2/s2]
-
-    real(RP) :: PREC  (IA,JA)    ! surface precipitation rate CP+MP(rain+snow) [kg/m2/s]
-    real(RP) :: RAIN  (IA,JA)    ! surface rain rate CP+MP [kg/m2/s]
-    real(RP) :: SNOW  (IA,JA)    ! surface snow rate CP+MP [kg/m2/s]
-
-    real(RP) :: DENS_PRIM(KA,IA,JA) ! horiz. deviation of density    [kg/m3]
-    real(RP) :: W_PRIM   (KA,IA,JA) ! horiz. deviation of w          [m/s]
-    real(RP) :: U_PRIM   (KA,IA,JA) ! horiz. deviation of u          [m/s]
-    real(RP) :: V_PRIM   (KA,IA,JA) ! horiz. deviation of v          [m/s]
-    real(RP) :: POTT_PRIM(KA,IA,JA) ! horiz. deviation of pot. temp. [K]
-    real(RP) :: W_PRIM2  (KA,IA,JA) ! variance of w                  [m2/s2]
-    real(RP) :: PT_W_PRIM(KA,IA,JA) ! resolved scale heat flux       [W/s]
-    real(RP) :: W_PRIM3  (KA,IA,JA) ! skewness of w                  [m3/s3]
-    real(RP) :: TKE_RS   (KA,IA,JA) ! resolved scale TKE             [m2/s2]
-    real(RP) :: DENS_MEAN(KA)       ! horiz. mean of density         [kg/m3]
-    real(RP) :: W_MEAN   (KA)       ! horiz. mean of w               [m/s]
-    real(RP) :: U_MEAN   (KA)       ! horiz. mean of u               [m/s]
-    real(RP) :: V_MEAN   (KA)       ! horiz. mean of v               [m/s]
-    real(RP) :: PT_MEAN  (KA)       ! horiz. mean of pot.            [K]
-    real(RP) :: T_MEAN   (KA)       ! horiz. mean of t               [K]
-    real(RP) :: QV_MEAN  (KA)       ! horiz. mean of QV
-    real(RP) :: QHYD_MEAN(KA)       ! horiz. mean of QHYD
-    real(RP) :: QLIQ_MEAN(KA)       ! horiz. mean of QLIQ
-    real(RP) :: QICE_MEAN(KA)       ! horiz. mean of QICE
-
-    real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI  (KA,IA,JA) ! internal  energy [J/m3]
-
-    real(RP) :: PSAT  (KA,IA,JA)
-    real(RP) :: UH    (KA,IA,JA)
-    real(RP) :: VH    (KA,IA,JA)
-
-    integer :: k, i, j, iq
+    integer :: iq, iv
     !---------------------------------------------------------------------------
 
     ! value check for prognostic variables
     if ( ATMOS_VARS_CHECKRANGE ) then
-       call VALCHECK( DENS(:,:,:),    0.0_RP,    2.0_RP, VAR_NAME(I_DENS), __FILE__, __LINE__ )
-       call VALCHECK( MOMZ(:,:,:), -200.0_RP,  200.0_RP, VAR_NAME(I_MOMZ), __FILE__, __LINE__ )
-       call VALCHECK( MOMX(:,:,:), -200.0_RP,  200.0_RP, VAR_NAME(I_MOMX), __FILE__, __LINE__ )
-       call VALCHECK( MOMY(:,:,:), -200.0_RP,  200.0_RP, VAR_NAME(I_MOMY), __FILE__, __LINE__ )
-       call VALCHECK( RHOT(:,:,:),    0.0_RP, 1000.0_RP, VAR_NAME(I_RHOT), __FILE__, __LINE__ )
+       call VALCHECK( DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
     endif
 
     ! history output of prognostic variables
-    call HIST_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS) )
-    call HIST_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ) )
-    call HIST_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX) )
-    call HIST_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY) )
-    call HIST_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT) )
+    call HIST_put( PV_HIST_id(I_DENS), DENS(:,:,:) )
+    call HIST_put( PV_HIST_id(I_MOMZ), MOMZ(:,:,:) )
+    call HIST_put( PV_HIST_id(I_MOMX), MOMX(:,:,:) )
+    call HIST_put( PV_HIST_id(I_MOMY), MOMY(:,:,:) )
+    call HIST_put( PV_HIST_id(I_RHOT), RHOT(:,:,:) )
     do iq = 1, QA
-       call HIST_in( QTRC(:,:,:,iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq) )
+       call HIST_put( QP_HIST_id(iq), QTRC(:,:,:,iq) )
     enddo
 
-    ! prepare and history output of diagnostic variables
 
-    if ( AD_PREP_sw(I_QDRY) > 0 ) then
-       call THERMODYN_qd( QDRY   (:,:,:),   & ! [OUT]
-                          QTRC_av(:,:,:,:), & ! [IN]
-                          TRACER_MASS(:)    ) ! [IN]
-    endif
+    ! history output of diagnostic variables
+    call HIST_put( DV_HIST_id(I_W    ), W(:,:,:)     )
+    call HIST_put( DV_HIST_id(I_U    ), U(:,:,:)     )
+    call HIST_put( DV_HIST_id(I_V    ), V(:,:,:)     )
+    call HIST_put( DV_HIST_id(I_POTT ), POTT(:,:,:)  )
+    call HIST_put( DV_HIST_id(I_TEMP ), TEMP(:,:,:)  )
+    call HIST_put( DV_HIST_id(I_PRES ), PRES(:,:,:)  )
 
-    if ( AD_PREP_sw(I_QTOT) > 0 ) then
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          QTOT(k,i,j) = 1.0_RP - QDRY(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
+    call HIST_put( DV_HIST_id(I_EXNER), EXNER(:,:,:) )
+    call HIST_put( DV_HIST_id(I_PHYD ), PHYD(:,:,:)  )
 
-    if ( AD_PREP_sw(I_QHYD) > 0 ) then
-!OCL XFILL
-       QHYD(:,:,:) = 0.0_RP
-       do iq = QHS, QHE
-         QHYD(:,:,:) = QHYD(:,:,:) + QTRC_av(:,:,:,iq)
-       enddo
-    endif
+    call HIST_put( DV_HIST_id(I_QDRY ), QDRY(:,:,:)  )
+    call HIST_put( DV_HIST_id(I_RTOT ), RTOT(:,:,:)  )
+    call HIST_put( DV_HIST_id(I_CVTOT), CVTOT(:,:,:) )
+    call HIST_put( DV_HIST_id(I_CPTOT), CPTOT(:,:,:) )
 
-    if ( AD_PREP_sw(I_QLIQ) > 0 ) then
-!OCL XFILL
-       QLIQ(:,:,:) = 0.0_RP
-       do iq = QLS, QLE
-         QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC_av(:,:,:,iq)
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_QICE) > 0 ) then
-!OCL XFILL
-       QICE(:,:,:) = 0.0_RP
-       do iq = QIS, QIE
-         QICE(:,:,:) = QICE(:,:,:) + QTRC_av(:,:,:,iq)
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_LWP) > 0 ) then
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-          LWP(i,j) = 0.0_RP
-          do k  = KS, KE
-             LWP(i,j) = LWP(i,j) &
-                      + QLIQ(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
-          enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_IWP) > 0 ) then
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-          IWP(i,j) = 0.0_RP
-          do k  = KS, KE
-             IWP(i,j) = IWP(i,j) &
-                      + QICE(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
-          enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_PW) > 0 ) then
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-          PW(i,j) = 0.0_RP
-          do k  = KS, KE
-             PW(i,j) = PW(i,j) &
-                      + QTRC_av(k,i,j,I_QV) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
-          enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_RTOT) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          CALC_R(RTOT(k,i,j), QDRY(k,i,j), QTRC_av, k, i, j, iq, Rdry, TRACER_R)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_CPTOT) > 0 ) then
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(iq) &
-       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,CPTOT,CPdry,QDRY,QA,CVTOT,CVdry,QTRC_av,TRACER_CP,TRACER_CV) &
-       !$omp shared(I_QV,LHV,QIS,QIE,LHF)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
-          CVTOT(k,i,j) = CVdry * QDRY(k,i,j)
-          do iq = 1, QA
-             CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC_av(k,i,j,iq) * TRACER_CP(iq)
-             CVTOT(k,i,j) = CVTOT(k,i,j) + QTRC_av(k,i,j,iq) * TRACER_CV(iq)
-          end do
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          CPovCV(k,i,j) = CPTOT(k,i,j) / CVTOT(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_POTL) > 0 ) then
-       call HYDROMETEOR_LHV( LHV_local(:,:,:), TEMP(:,:,:) )
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k = KS, KE
-          POTL(k,i,j) = POTT(k,i,j) &
-                      - LHV_local(k,i,j) / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_QSAT) > 0 ) then
-!       call SATURATION_dens2qsat_all( QSAT   (:,:,:), & ! [OUT]
-!                                      TEMP   (:,:,:), & ! [IN]
-!                                      DENS_av(:,:,:)  ) ! [IN]
-    end if
-
-    if ( AD_HIST_id(I_RHA) > 0 ) then
-       call SATURATION_psat_all( PSAT(:,:,:), TEMP(:,:,:) )
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          RHA(k,i,j) = DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) &
-                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
-                     * 100.0_RP
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_HIST_id(I_RHL) > 0 ) then
-       call SATURATION_psat_liq( PSAT(:,:,:), & ! [OUT]
-                                 TEMP(:,:,:)  ) ! [IN]
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          RHL(k,i,j) = DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) &
-                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
-                     * 100.0_RP
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_HIST_id(I_RHI) > 0 ) then
-       call SATURATION_psat_ice( PSAT(:,:,:), & ! [OUT]
-                                 TEMP(:,:,:)  ) ! [IN]
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          RHI(k,i,j) = DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) &
-                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
-                     * 100.0_RP
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_VOR) > 0 ) then
-       ! at x, v, layer
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j = 1, JA-1
-       do i = 2, IA
-       do k = KS, KE
-          UH(k,i,j) = 0.5_RP * ( MOMX_av(k,i,j)+MOMX_av(k,i,j+1)+MOMX_av(k,i-1,j)+MOMX_av(k,i-1,j+1) ) &
-                             / ( DENS_av(k,i,j)+DENS_av(k,i,j+1) )
-       enddo
-       enddo
-       enddo
-
-       ! at u, y, layer
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j = 2, JA
-       do i = 1, IA-1
-       do k = KS, KE
-          VH(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j)+MOMY_av(k,i+1,j)+MOMY_av(k,i,j-1)+MOMY_av(k,i+1,j-1) ) &
-                             / ( DENS_av(k,i,j)+DENS_av(k,i+1,j) )
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j = 2, JA-1
-       do i = 2, IA-1
-       do k = KS, KE
-          VOR(k,i,j) = ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
-                     - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j)
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(j,k) OMP_SCHEDULE_
-       do j = 1, JA
-       do k = KS, KE
-          VOR(k,1 ,j) = VOR(k,2   ,j)
-          VOR(k,IA,j) = VOR(k,IA-1,j)
-       enddo
-       enddo
-
-       !$omp parallel do private(i,k) OMP_SCHEDULE_
-       do i = 1, IA
-       do k = KS, KE
-          VOR(k,i,1 ) = VOR(k,i,2   )
-          VOR(k,i,JA) = VOR(k,i,JA-1)
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_HDIV) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j = 2, JA
-       do i = 2, IA
-       do k = KS, KE
-          HDIV(k,i,j) = ( MOMX_av(k,i,j) - MOMX_av(k  ,i-1,j  ) ) * RCDX(i) &
-                      + ( MOMY_av(k,i,j) - MOMY_av(k  ,i  ,j-1) ) * RCDY(j)
-       enddo
-       enddo
-       enddo
-       !$omp parallel do private(i,k) OMP_SCHEDULE_
-       do i = 1, IA
-       do k = KS, KE
-          HDIV(k,i,1) = HDIV(k,i,2)
-       enddo
-       enddo
-       !$omp parallel do private(j,k) OMP_SCHEDULE_
-       do j = 1, JA
-       do k = KS, KE
-          HDIV(k,1,j) = HDIV(k,2,j)
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_DIV) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          DIV(k,i,j) = ( MOMZ_av(k,i,j) - MOMZ_av(k-1,i  ,j  ) ) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
-                     + HDIV(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_Uabs) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          Uabs(k,i,j) = sqrt( U(k,i,j) * U(k,i,j) &
-                            + V(k,i,j) * V(k,i,j) )
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_DENS_MEAN) > 0 ) then
-       call COMM_horizontal_mean( DENS_MEAN(:), DENS_av(:,:,:) )
-    end if
-
-    if ( AD_PREP_sw(I_DENS_PRIM) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          DENS_PRIM(k,i,j) = DENS_av(k,i,j) - DENS_MEAN(k)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_W_MEAN) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          W_PRIM(k,i,j) = W(k,i,j) * DENS_av(k,i,j)
-       enddo
-       enddo
-       enddo
-       call COMM_horizontal_mean( W_MEAN(:), W_PRIM(:,:,:) )
-       do k = 1, KA
-          W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-    if ( AD_PREP_sw(I_W_PRIM) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          W_PRIM(k,i,j) = W(k,i,j) - W_MEAN(k)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_U_MEAN) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          U_PRIM(k,i,j) = U(k,i,j) * DENS_av(k,i,j)
-       enddo
-       enddo
-       enddo
-       call COMM_horizontal_mean( U_MEAN(:), U_PRIM(:,:,:) )
-       do k = 1, KA
-          U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-    if ( AD_PREP_sw(I_U_PRIM) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          U_PRIM(k,i,j) = U(k,i,j) - U_MEAN(k)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_V_MEAN) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          V_PRIM(k,i,j) = V(k,i,j) * DENS_av(k,i,j)
-       enddo
-       enddo
-       enddo
-       call COMM_horizontal_mean( V_MEAN(:), V_PRIM(:,:,:) )
-       do k = 1, KA
-          V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-    if ( AD_PREP_sw(I_V_PRIM) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          V_PRIM(k,i,j) = V(k,i,j) - V_MEAN(k)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_T_MEAN) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          POTT_PRIM(k,i,j) = TEMP(k,i,j) * DENS_av(k,i,j)
-       enddo
-       enddo
-       enddo
-       call COMM_horizontal_mean( T_MEAN(:), POTT_PRIM(:,:,:) )
-       do k = 1, KA
-          T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-
-    if ( AD_PREP_sw(I_POTT_MEAN) > 0 ) then
-       call COMM_horizontal_mean( PT_MEAN(:), RHOT_av(:,:,:) )
-       do k = 1, KA
-          PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-    if ( AD_PREP_sw(I_POTT_PRIM) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          POTT_PRIM(k,i,j) = POTT(k,i,j) - PT_MEAN(k)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_QV_MEAN) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          RHOQ(k,i,j) = QTRC_av(k,i,j,I_QV) * DENS_av(k,i,j)
-       enddo
-       enddo
-       enddo
-       call COMM_horizontal_mean( QV_MEAN(:), RHOQ(:,:,:) )
-       do k = 1, KA
-          QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-
-    if ( AD_PREP_sw(I_QHYD_MEAN) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          RHOQ(k,i,j) = QHYD(k,i,j) * DENS_av(k,i,j)
-       enddo
-       enddo
-       enddo
-       call COMM_horizontal_mean( QHYD_MEAN(:), RHOQ(:,:,:) )
-       do k = 1, KA
-          QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-
-    if ( AD_PREP_sw(I_QLIQ_MEAN) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          RHOQ(k,i,j) = QLIQ(k,i,j) * DENS_av(k,i,j)
-       enddo
-       enddo
-       enddo
-       call COMM_horizontal_mean( QLIQ_MEAN(:), RHOQ(:,:,:) )
-       do k = 1, KA
-          QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-
-    if ( AD_PREP_sw(I_QICE_MEAN) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          RHOQ(k,i,j) = QICE(k,i,j) * DENS_av(k,i,j)
-       enddo
-       enddo
-       enddo
-       call COMM_horizontal_mean( QICE_MEAN(:), RHOQ(:,:,:) )
-       do k = 1, KA
-          QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
-       enddo
-    end if
-
-    if ( AD_PREP_sw(I_W_PRIM2) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          W_PRIM2(k,i,j) = W_PRIM(k,i,j) * W_PRIM(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_PT_W_PRIM) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          PT_W_PRIM(k,i,j) = W_PRIM(k,i,j) * POTT_PRIM(k,i,j) * DENS_av(k,i,j) * CPdry
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_W_PRIM3) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          W_PRIM3(k,i,j) = W_PRIM(k,i,j) * W_PRIM(k,i,j) * W_PRIM(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_TKE_RS) > 0 ) then
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          TKE_RS(k,i,j) = 0.5_RP * ( W_PRIM(k,i,j) * W_PRIM(k,i,j) &
-                                   + U_PRIM(k,i,j) * U_PRIM(k,i,j) &
-                                   + V_PRIM(k,i,j) * V_PRIM(k,i,j) )
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_ENGP) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          ENGP(k,i,j) = DENS_av(k,i,j) * GRAV * REAL_CZ(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_ENGK) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          ENGK(k,i,j) = 0.5_RP * DENS_av(k,i,j) * ( W(k,i,j)**2 &
-                                                  + U(k,i,j)**2 &
-                                                  + V(k,i,j)**2 )
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_ENGI) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k = KS, KE
-          ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-       do iq = 1, QA
-          ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
-       enddo
-       enddo
-       enddo
-       enddo
-
-       if ( I_QV > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
-       enddo
-       enddo
-       enddo
+    do iv = I_CPTOT+1, DV_nmax
+       if ( DV_HIST_id(iv) > 0 ) then
+          select case ( DV_info(iv)%ndim )
+          case ( 3 )
+             call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK3D )
+             call HIST_put( DV_HIST_id(iv), WORK3D(:,:,:) )
+          case ( 2 )
+             call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK2D )
+             call HIST_put( DV_HIST_id(iv), WORK2D(:,:) )
+          case ( 1 )
+             call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK1D )
+             call HIST_put( DV_HIST_id(iv), WORK1D(:) )
+          end select
        end if
-
-       do iq = QIS, QIE
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          ENGI(k,i,j) = ENGI(k,i,j) &
-                      - DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
-       enddo
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_ENGT) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = KS, KE
-          ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    call HIST_in( W    (:,:,:), 'W',     'velocity w',             'm/s'    )
-    call HIST_in( U    (:,:,:), 'U',     'velocity u',             'm/s'    )
-    call HIST_in( V    (:,:,:), 'V',     'velocity v',             'm/s'    )
-    call HIST_in( POTT (:,:,:), 'PT',    'potential temp.',        'K'      )
-
-    call HIST_in( QDRY (:,:,:), 'QDRY',  'dry air',                'kg/kg'  )
-    call HIST_in( QTOT (:,:,:), 'QTOT',  'total water',            'kg/kg'  )
-    call HIST_in( QHYD (:,:,:), 'QHYD',  'total hydrometeors',     'kg/kg'  )
-    call HIST_in( QLIQ (:,:,:), 'QLIQ',  'total liquid water',     'kg/kg'  )
-    call HIST_in( QICE (:,:,:), 'QICE',  'total ice water',        'kg/kg'  )
-
-    call HIST_in( LWP  (:,:),   'LWP',   'liquid water path',      'g/m2'   )
-    call HIST_in( IWP  (:,:),   'IWP',   'ice    water path',      'g/m2'   )
-    call HIST_in( PW   (:,:),   'PW',    'precipitable water',     'g/m2'   )
-
-    call HIST_in( RTOT (:,:,:), 'RTOT',  'Total gas constant',     'J/kg/K' )
-    call HIST_in( CPTOT(:,:,:), 'CPTOT', 'Total heat capacity',    'J/kg/K' )
-    call HIST_in( PRES (:,:,:), 'PRES',  'pressure',               'Pa'     )
-    call HIST_in( TEMP (:,:,:), 'T',     'temperature',            'K'      )
-
-    call HIST_in( POTL (:,:,:), 'LWPT',  'liq. potential temp.',   'K'      )
-    call HIST_in( RHA  (:,:,:), 'RHA',   'relative humidity(liq+ice)','%'   )
-    call HIST_in( RHL  (:,:,:), 'RH' ,   'relative humidity(liq)', '%'      )
-    call HIST_in( RHI  (:,:,:), 'RHI',   'relative humidity(ice)', '%'      )
-
-    call HIST_in( VOR  (:,:,:), 'VOR',   'vertical vorticity',     '1/s'    )
-    call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s'    )
-    call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s'    )
-    call HIST_in( Uabs (:,:,:), 'Uabs',  'absolute velocity',      'm/s'    )
-
-    call HIST_in( N2   (:,:,:), 'N2',    'squared Brunt-Vaisala frequency','1/s2' )
-
-    call HIST_in( DENS_MEAN(:), 'DENS_MEAN', 'horiz. mean of density',    'kg/m3' )
-    call HIST_in( W_MEAN   (:), 'W_MEAN',    'horiz. mean of w',          'm/s' )
-    call HIST_in( U_MEAN   (:), 'U_MEAN',    'horiz. mean of u',          'm/s' )
-    call HIST_in( V_MEAN   (:), 'V_MEAN',    'horiz. mean of v',          'm/s' )
-    call HIST_in( PT_MEAN  (:), 'PT_MEAN',   'horiz. mean of pot.',       'K' )
-    call HIST_in( T_MEAN   (:), 'T_MEAN',    'horiz. mean of t',          'K' )
-    call HIST_in( QV_MEAN  (:), 'QV_MEAN',   'horiz. mean of QV',         '1' )
-    call HIST_in( QHYD_MEAN(:), 'QHYD_MEAN', 'horiz. mean of QHYD',       '1' )
-    call HIST_in( QLIQ_MEAN(:), 'QLIQ_MEAN', 'horiz. mean of QLIQ',       '1' )
-    call HIST_in( QICE_MEAN(:), 'QICE_MEAN', 'horiz. mean of QICE',       '1' )
-
-    call HIST_in( DENS_PRIM(:,:,:), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3' )
-    call HIST_in( W_PRIM   (:,:,:), 'W_PRIM',    'horiz. deviation of w',          'm/s'   )
-    call HIST_in( U_PRIM   (:,:,:), 'U_PRIM',    'horiz. deviation of u',          'm/s'   )
-    call HIST_in( V_PRIM   (:,:,:), 'V_PRIM',    'horiz. deviation of v',          'm/s'   )
-    call HIST_in( POTT_PRIM(:,:,:), 'PT_PRIM',   'horiz. deviation of pot. temp.', 'K'     )
-    call HIST_in( W_PRIM2  (:,:,:), 'W_PRIM2',   'variance of w',                  'm2/s2' )
-    call HIST_in( PT_W_PRIM(:,:,:), 'PT_W_PRIM', 'resolved scale heat flux',       'W/s'   )
-    call HIST_in( W_PRIM3  (:,:,:), 'W_PRIM3',   'skewness of w',                  'm3/s3' )
-    call HIST_in( TKE_RS   (:,:,:), 'TKE_RS',    'resolved scale TKE',             'm2/s2' )
-
-    call HIST_in( ENGT (:,:,:), 'ENGT',  'total energy',           'J/m3'   )
-    call HIST_in( ENGP (:,:,:), 'ENGP',  'potential energy',       'J/m3'   )
-    call HIST_in( ENGK (:,:,:), 'ENGK',  'kinetic energy',         'J/m3'   )
-    call HIST_in( ENGI (:,:,:), 'ENGI',  'internal energy',        'J/m3'   )
-
-    if (      AD_PREP_sw(I_CAPE) > 0 &
-         .OR. AD_PREP_sw(I_CIN)  > 0 &
-         .OR. AD_PREP_sw(I_LCL)  > 0 &
-         .OR. AD_PREP_sw(I_LFC)  > 0 &
-         .OR. AD_PREP_sw(I_LNB)  > 0 ) then
-
-       call ADIABAT_cape( KS,               & ! [IN]
-                          DENS_av(:,:,:),   & ! [IN]
-                          TEMP   (:,:,:),   & ! [IN]
-                          PRES   (:,:,:),   & ! [IN]
-                          QTRC_av(:,:,:,:), & ! [IN]
-                          REAL_CZ(:,:,:),   & ! [IN]
-                          REAL_FZ(:,:,:),   & ! [IN]
-                          CAPE   (:,:),     & ! [OUT]
-                          CIN    (:,:),     & ! [OUT]
-                          LCL    (:,:),     & ! [OUT]
-                          LFC    (:,:),     & ! [OUT]
-                          LNB    (:,:)      ) ! [OUT]
-
-    endif
-
-    call HIST_in( CAPE(:,:), 'CAPE', 'convection avail. pot. energy', 'm2/s2' )
-    call HIST_in( CIN (:,:), 'CIN',  'convection inhibition',         'm2/s2' )
-    call HIST_in( LCL (:,:), 'LCL',  'lifted condensation level',     'm'     )
-    call HIST_in( LFC (:,:), 'LFC',  'level of free convection',      'm'     )
-    call HIST_in( LNB (:,:), 'LNB',  'level of neutral buoyancy',     'm'     )
-
-    if ( AD_PREP_sw(I_PBLH) > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          fact = 1.0_RP
-          if ( I_QV > 0 ) fact = fact + 0.61_RP * QTRC_av(k,i,j,I_QV)
-          if ( I_QC > 0 ) fact = fact - 1.61_RP * QTRC_av(k,i,j,I_QC)
-          POTTv(k,i,j) = POTT(k,i,j) * fact
-       enddo
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
-          PBLH(i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
-
-          do k = KS+1, KE
-             if ( POTTv(k,i,j) > POTTv(KS,i,j) ) then
-                fact = ( POTTv(KS,i,j) - POTTv(k-1,i,j) ) &
-                     / ( POTTv(k,i,j)  - POTTv(k-1,i,j) )
-
-                PBLH(i,j) = REAL_CZ(k-1,i,j) - REAL_FZ(KS-1,i,j) &
-                          + fact * ( REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) )
-
-                exit
-             endif
-          enddo
-       enddo
-       enddo
-    endif
-    call HIST_in( PBLH(:,:), 'PBLH', 'PBL height', 'm' )
-
-    if ( AD_PREP_sw(I_MSE) > 0 ) then
-       call HYDROMETEOR_LHV( LHV_local(:,:,:), TEMP(:,:,:) )
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          MSE(k,i,j) = CPTOT(k,i,j) * TEMP(k,i,j)                    &
-                     + GRAV * ( REAL_CZ(k,i,j) - REAL_FZ(KS-1,i,j) ) &
-                     + LHV_local(k,i,j) * QTRC_av(k,i,j,I_QV)
-       enddo
-       enddo
-       enddo
-    endif
-    call HIST_in( MSE(:,:,:), 'MSE', 'moist static energy', 'm2/s2' )
-
-    do j = JS, JE
-    do i = IS, IE
-       PREC(i,j) = SFLX_rain_CP(i,j)                     &
-                 + SFLX_rain_MP(i,j) + SFLX_snow_MP(i,j)
-       RAIN(i,j) = SFLX_rain_CP(i,j)                     &
-                 + SFLX_rain_MP(i,j)
-       SNOW(i,j) = SFLX_snow_MP(i,j)
-    enddo
-    enddo
-    call HIST_in( PREC(:,:), 'PREC', 'surface precipitation rate (total)', 'kg/m2/s' )
-    call HIST_in( RAIN(:,:), 'RAIN', 'surface rain rate (total)', 'kg/m2/s' )
-    call HIST_in( SNOW(:,:), 'SNOW', 'surface snow rate (total)', 'kg/m2/s' )
+    end do
 
     return
   end subroutine ATMOS_vars_history
@@ -2099,12 +1238,6 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       QIS,  &
-       QIE,  &
-       LHV,  &
-       LHF
     implicit none
 
     real(RP) :: W   (KA,IA,JA) ! velocity w at cell center [m/s]
@@ -2128,76 +1261,36 @@ contains
 
     if ( STATISTICS_checktotal ) then
 
-       call STAT_total( total, DENS(:,:,:), VAR_NAME(I_DENS) )
-       call STAT_total( total, MOMZ(:,:,:), VAR_NAME(I_MOMZ) )
-       call STAT_total( total, MOMX(:,:,:), VAR_NAME(I_MOMX) )
-       call STAT_total( total, MOMY(:,:,:), VAR_NAME(I_MOMY) )
-       call STAT_total( total, RHOT(:,:,:), VAR_NAME(I_RHOT) )
+       call STAT_total( total, DENS(:,:,:), PV_info(I_DENS)%NAME )
+       call STAT_total( total, MOMZ(:,:,:), PV_info(I_MOMZ)%NAME )
+       call STAT_total( total, MOMX(:,:,:), PV_info(I_MOMX)%NAME )
+       call STAT_total( total, MOMY(:,:,:), PV_info(I_MOMY)%NAME )
+       call STAT_total( total, RHOT(:,:,:), PV_info(I_RHOT)%NAME )
 
        do iq = 1, QA
-          RHOQ(:,:,:) = DENS_av(:,:,:) * QTRC_av(:,:,:,iq)
+          RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
 
           call STAT_total( total, RHOQ(:,:,:), TRACER_NAME(iq) )
        enddo
 
-       call THERMODYN_qd( QDRY   (:,:,:),   & ! [OUT]
-                          QTRC_av(:,:,:,:), & ! [IN]
-                          TRACER_MASS(:) ) ! [IN]
+       call ATMOS_vars_calc_diagnostics
 
-       call THERMODYN_temp_pres( TEMP   (:,:,:),   & ! [OUT]
-                                 PRES   (:,:,:),   & ! [OUT]
-                                 DENS_av(:,:,:),   & ! [IN]
-                                 RHOT_av(:,:,:),   & ! [IN]
-                                 QTRC_av(:,:,:,:), & ! [IN]
-                                 TRACER_CV(:),  & ! [IN]
-                                 TRACER_R(:),   & ! [IN]
-                                 TRACER_MASS(:) ) ! [IN]
 
-       RHOQ(KS:KE,IS:IE,JS:JE) = DENS_av(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
-
+       RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
        call STAT_total( total, RHOQ(:,:,:), 'QDRY' )
 
-       RHOQ(KS:KE,IS:IE,JS:JE) = DENS_av(KS:KE,IS:IE,JS:JE) * ( 1.0_RP - QDRY (KS:KE,IS:IE,JS:JE) ) ! Qtotal
-
+       RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * ( 1.0_RP - QDRY (KS:KE,IS:IE,JS:JE) ) ! Qtotal
        call STAT_total( total, RHOQ(:,:,:), 'QTOT' )
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          W(k,i,j) = 0.5_RP * ( MOMZ_av(k-1,i,j)+MOMZ_av(k,i,j) ) / DENS_av(k,i,j)
-          U(k,i,j) = 0.5_RP * ( MOMX_av(k,i-1,j)+MOMX_av(k,i,j) ) / DENS_av(k,i,j)
-          V(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j-1)+MOMY_av(k,i,j) ) / DENS_av(k,i,j)
 
-          ENGP(k,i,j) = DENS_av(k,i,j) * GRAV * REAL_CZ(k,i,j)
-
-          ENGK(k,i,j) = 0.5_RP * DENS_av(k,i,j) * ( W(k,i,j)**2 &
-                                                  + U(k,i,j)**2 &
-                                                  + V(k,i,j)**2 )
-
-          ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
-          do iq = 1, QA
-             ENGI(k,i,j) = ENGI(k,i,j) &
-                         + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
-          enddo
-
-          if ( I_QV > 0 ) then
-             ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
-          end if
-
-          do iq = QIS, QIE
-             ENGI(k,i,j) = ENGI(k,i,j) - DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
-          enddo
-
-          ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       call STAT_total( total, ENGP(:,:,:), 'ENGP' )
-       call STAT_total( total, ENGK(:,:,:), 'ENGK' )
-       call STAT_total( total, ENGI(:,:,:), 'ENGI' )
-       call STAT_total( total, ENGT(:,:,:), 'ENGT' )
+       call ATMOS_vars_get_diagnostic( 'ENGT', WORK3D )
+       call STAT_total( total, WORK3D(:,:,:), 'ENGT' )
+       call ATMOS_vars_get_diagnostic( 'ENGP', WORK3D )
+       call STAT_total( total, WORK3D(:,:,:), 'ENGP' )
+       call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D )
+       call STAT_total( total, WORK3D(:,:,:), 'ENGK' )
+       call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D )
+       call STAT_total( total, WORK3D(:,:,:), 'ENGI' )
 
     endif
 
@@ -2206,16 +1299,1266 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calc diagnostic variables
-  subroutine ATMOS_vars_diagnostics
+  subroutine ATMOS_vars_calc_diagnostics
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat
     use scale_atmos_diagnostic, only: &
-       ATMOS_DIAGNOSTIC_get
+       ATMOS_DIAGNOSTIC_get_vel, &
+       ATMOS_DIAGNOSTIC_get_therm, &
+       ATMOS_DIAGNOSTIC_get_phyd
+    use scale_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_mixingratio
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
-    call ATMOS_DIAGNOSTIC_get( POTT, TEMP, PRES, PHYD, W, U, V, N2,                 & ! (out)
-                               DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av ) ! (in)
+    integer :: iq
+
+    call ATMOS_THERMODYN_specific_heat( &
+         KA, KS, KE, IA, 1, IA, JA, 1, JA, QA, &
+         QTRC_av(:,:,:,:),                                        & ! (in)
+         TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! (in)
+         Qdry(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:)     ) ! (out)
+
+    call ATMOS_DIAGNOSTIC_get_vel( &
+         KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+         DENS_av(:,:,:), MOMZ_av(:,:,:), MOMX_av(:,:,:), MOMY_av(:,:,:), & ! (in)
+         W(:,:,:), U(:,:,:), V(:,:,:)                                    ) ! (out)
+
+    call ATMOS_DIAGNOSTIC_get_therm( &
+         KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+         DENS_av(:,:,:), RHOT_av(:,:,:),                     & ! (in)
+         Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:),            & ! (in)
+         POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), EXNER(:,:,:) ) ! (out)
+
+    call ATMOS_DIAGNOSTIC_get_phyd( &
+         KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+         DENS_av(:,:,:), PRES(:,:,:),    & ! (in)
+         REAL_CZ(:,:,:), REAL_FZ(:,:,:), & ! (in)
+         PHYD(:,:,:)                     ) ! (out)
+
+    if ( moist .and. associated(ATMOS_PHY_MP_mixingratio) ) then
+       call ATMOS_PHY_MP_mixingratio( &
+            QW(:,:,:,:),     & ! (out)
+            QTRC_av(:,:,:,:) ) ! (in)
+       do iq = 1, N_HYD
+          call COMM_vars8(QW(:,:,:,iq), iq)
+       end do
+       do iq = 1, N_HYD
+          call COMM_wait (QW(:,:,:,iq), iq)
+       end do
+    end if
+
+    ! reset diagnostic variables
+    DV_calclated(:) = .false.
 
     return
-  end subroutine ATMOS_vars_diagnostics
+  end subroutine ATMOS_vars_calc_diagnostics
+
+  !-----------------------------------------------------------------------------
+  !> get diagnostic variable 3D
+  recursive subroutine ATMOS_vars_get_diagnostic_3D( &
+       vname, &
+       var )
+    use scale_const, only: &
+       GRAV  => CONST_GRAV,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CVdry => CONST_CVdry
+    use scale_process, only: &
+       PRC_abort
+    use scale_grid, only: &
+       RCDX => GRID_RCDX, &
+       RCDY => GRID_RCDY
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
+    use scale_atmos_hydrometeor, only: &
+       LHVc => LHV, &
+       LHFc => LHF, &
+       ATMOS_HYDROMETEOR_LHV, &
+       ATMOS_HYDROMETEOR_LHF, &
+       ATMOS_HYDROMETEOR_LHS
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_dens2qsat_all, &
+       ATMOS_SATURATION_psat_all, &
+       ATMOS_SATURATION_psat_liq, &
+       ATMOS_SATURATION_psat_ice
+    use scale_atmos_diagnostic, only: &
+       ATMOS_DIAGNOSTIC_get_potv, &
+       ATMOS_DIAGNOSTIC_get_teml, &
+       ATMOS_DIAGNOSTIC_get_n2
+    implicit none
+    character(len=*),  intent(in)  :: vname
+    real(RP), pointer, intent(out) :: var(:,:,:)
+
+    real(RP) :: UH  (KA,IA,JA)
+    real(RP) :: VH  (KA,IA,JA)
+
+    real(RP) :: WORK(KA,IA,JA)
+
+    integer :: k, i, j, iq
+
+    select case ( vname )
+    case ( 'W' )
+       var => W
+
+    case ( 'U' )
+       var => W
+
+    case ( 'V' )
+       var => W
+
+    case ( 'PT' )
+       var => POTT
+
+    case ( 'T' )
+       var => TEMP
+
+    case ( 'EXNER' )
+       var => EXNER
+
+    case ( 'PHYD' )
+       var => PHYD
+
+    case ( 'QDRY' )
+       var => QDRY
+
+    case ( 'RTOT' )
+       var => RTOT
+
+    case ( 'CVTOT' )
+       var => CVTOT
+
+    case ( 'CPTOT' )
+       var => CPTOT
+
+    case ( 'LHV' )
+       if ( .not. DV_calclated(I_LHV) ) then
+          if ( .not. allocated(LHV) ) allocate( LHV(KA,IA,JA) )
+          call ATMOS_HYDROMETEOR_LHV( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               TEMP(:,:,:), & ! (in)
+               LHV(:,:,:)   ) ! (out)
+          DV_calclated(I_LHV) = .true.
+       end if
+       var => LHV
+
+    case ( 'LHS' )
+       if ( .not. DV_calclated(I_LHS) ) then
+          if ( .not. allocated(LHS) ) allocate( LHS(KA,IA,JA) )
+          call ATMOS_HYDROMETEOR_LHS( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               TEMP(:,:,:), & ! (in)
+               LHS(:,:,:)   ) ! (out)
+          DV_calclated(I_LHS) = .true.
+       end if
+       var => LHS
+
+    case ( 'LHF' )
+       if ( .not. DV_calclated(I_LHF) ) then
+          if ( .not. allocated(LHF) ) allocate( LHF(KA,IA,JA) )
+          call ATMOS_HYDROMETEOR_LHF( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               TEMP(:,:,:), & ! (in)
+               LHF(:,:,:)   ) ! (out)
+          DV_calclated(I_LHF) = .true.
+       end if
+       var => LHF
+
+    case ( 'POTV' )
+       if ( .not. DV_calclated(I_POTV) ) then
+          if ( .not. allocated(POTV) ) allocate( POTV(KA,IA,JA) )
+          call ATMOS_DIAGNOSTIC_get_potv( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               POTT(:,:,:), Rtot(:,:,:), & ! (in)
+               POTV(:,:,:)               ) ! (out)
+          DV_calclated(I_POTV) = .true.
+       end if
+       var => POTV
+
+    case ( 'TEML' )
+       if ( .not. DV_calclated(I_TEML) ) then
+          if ( .not. allocated(TEML) ) allocate( TEML(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'LHV', WORK3D )
+          call ATMOS_vars_get_diagnostic( 'LHS', WORK3D )
+          call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D )
+          call ATMOS_vars_get_diagnostic( 'QICE', WORK3D )
+          call ATMOS_DIAGNOSTIC_get_teml( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               TEMP(:,:,:), LHV(:,:,:), LHS(:,:,:), & ! (in)
+               QC(:,:,:), QI(:,:,:), CPtot(:,:,:),  & ! (in)
+               TEML(:,:,:)                          ) ! (out)
+          DV_calclated(I_TEML) = .true.
+       end if
+       var => TEML
+
+    case ( 'POTL' )
+       if ( .not. DV_calclated(I_POTL) ) then
+          if ( .not. allocated(POTL) ) allocate( POTL(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'TEML', WORK3D )
+!OCL XFILL
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k) &
+          !$omp shared(POTL,TEML,POTT,TEMP) &
+          !$omp shared(KS,KE,IA,JA)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             POTL(k,i,j) = TEML(k,i,j) / EXNER(k,i,j)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_POTL) = .true.
+       end if
+       var => POTL
+
+    case ( 'QTOT' )
+       if ( .not. DV_calclated(I_QTOT) ) then
+          if ( .not. allocated(QTOT) ) allocate( QTOT(KA,IA,JA) )
+          if ( moist ) then
+             call ATMOS_vars_get_diagnostic( 'QHYD', WORK3D )
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(QTOT,QV,QHYD) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                QTOT(k,i,j) = QV(k,i,j) + QHYD(k,i,j)
+             enddo
+             enddo
+             enddo
+          else
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(QTOT) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                QTOT(k,i,j) = 0.0_RP
+             enddo
+             enddo
+             enddo
+          end if
+          DV_calclated(I_QTOT) = .true.
+       end if
+       var => QTOT
+
+    case ( 'QHYD' )
+       if ( .not. DV_calclated(I_QHYD) ) then
+          if ( .not. allocated(QHYD) ) allocate( QHYD(KA,IA,JA) )
+          if ( moist ) then
+             call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D )
+             call ATMOS_vars_get_diagnostic( 'QICE', WORK3D )
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(QHYD,QLIQ,QICE) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                QHYD(k,i,j) = QLIQ(k,i,j) + QICE(k,i,j)
+             enddo
+             enddo
+             enddo
+          else
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(QHYD) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                QHYD(k,i,j) = 0.0_RP
+             enddo
+             enddo
+             enddo
+          end if
+          DV_calclated(I_QHYD) = .true.
+       end if
+       var => QHYD
+
+    case ( 'QLIQ' )
+       if ( .not. DV_calclated(I_QLIQ) ) then
+          if ( .not. allocated(QLIQ) ) allocate( QLIQ(KA,IA,JA) )
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k,iq) &
+          !$omp shared(QLIQ,QC,QR) &
+          !$omp shared(KS,KE,IA,JA)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+!OCL XFILL
+             QLIQ(k,i,j) = QC(k,i,j) + QR(k,i,j)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_QLIQ) = .true.
+       end if
+       var => QLIQ
+
+    case ( 'QICE' )
+       if ( .not. DV_calclated(I_QICE) ) then
+          if ( .not. allocated(QICE) ) allocate( QICE(KA,IA,JA) )
+!OCL XFILL
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k,iq) &
+          !$omp shared(QICE,QI,QS,QG,QH) &
+          !$omp shared(KS,KE,IA,JA)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             QICE(k,i,j) = QI(k,i,j) + QS(k,i,j) + QG(k,i,j) + QH(k,i,j)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_QICE) = .true.
+       end if
+       var => QICE
+
+    case ( 'QSAT' )
+       if ( .not. DV_calclated(I_QSAT) ) then
+          if ( .not. allocated(QSAT) ) allocate( QSAT(KA,IA,JA) )
+          call ATMOS_SATURATION_dens2qsat_all( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               TEMP(:,:,:), DENS_av(:,:,:), & ! (in)
+               QSAT(:,:,:)                  ) ! (out)
+          DV_calclated(I_QSAT) = .true.
+       end if
+       var => QSAT
+
+    case ( 'RHA' )
+       if ( .not. DV_calclated(I_RHA) ) then
+          if ( .not. allocated(RHA) ) allocate( RHA(KA,IA,JA) )
+          if ( moist ) then
+             call ATMOS_SATURATION_psat_all( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               TEMP(:,:,:), & ! (in)
+               WORK(:,:,:)  ) ! (out)
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(RHA,DENS,QV,WORK,TEMP) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                RHA(k,i,j) = DENS_av(k,i,j) * QV(k,i,j) &
+                           / WORK(k,i,j) * Rvap * TEMP(k,i,j) &
+                           * 100.0_RP
+             enddo
+             enddo
+             enddo
+          else
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(RHA) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                RHA(k,i,j) = 0.0_RP
+             enddo
+             enddo
+             enddo
+          end if
+          DV_calclated(I_RHA) = .true.
+       end if
+       var => RHA
+
+    case ( 'RHL', 'RH' )
+       if ( .not. DV_calclated(I_RHL) ) then
+          if ( .not. allocated(RHL) ) allocate( RHL(KA,IA,JA) )
+          if ( moist ) then
+             call ATMOS_SATURATION_psat_liq( &
+                  KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                  TEMP(:,:,:), & ! (in)
+                  WORK(:,:,:)  ) ! (out)
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(RHL,DENS,QV,WORK,TEMP) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                RHL(k,i,j) = DENS_av(k,i,j) * QV(k,i,j) &
+                           / WORK(k,i,j) * Rvap * TEMP(k,i,j) &
+                           * 100.0_RP
+             enddo
+             enddo
+             enddo
+          else
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(RHL) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                RHL(k,i,j) = 0.0_RP
+             enddo
+             enddo
+             enddo
+          end if
+          DV_calclated(I_RHL) = .true.
+       end if
+       var => RHL
+
+    case ( 'RHI' )
+       if ( .not. DV_calclated(I_RHI) ) then
+          if ( .not. allocated(RHI) ) allocate( RHI(KA,IA,JA) )
+          if ( moist ) then
+             call ATMOS_SATURATION_psat_ice( &
+                  KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                  TEMP(:,:,:), & ! (int)
+                  WORK(:,:,:)  ) ! (out)
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(RHI,DENS,QV,WORK,TEMP) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                RHI(k,i,j) = DENS_av(k,i,j) * QV(k,i,j) &
+                           / WORK(k,i,j) * Rvap * TEMP(k,i,j) &
+                           * 100.0_RP
+             enddo
+             enddo
+             enddo
+          else
+!OCL XFILL
+             !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+             !$omp private(i,j,k) &
+             !$omp shared(RHI) &
+             !$omp shared(KS,KE,IA,JA)
+             do j = 1, JA
+             do i = 1, IA
+             do k = KS, KE
+                RHI(k,i,j) = 0.0_RP
+             enddo
+             enddo
+             enddo
+          end if
+          DV_calclated(I_RHI) = .true.
+       end if
+       var => RHI
+
+    case ( 'VOR' )
+       if ( .not. DV_calclated(I_VOR) ) then
+          if ( .not. allocated(VOR) ) allocate( VOR(KA,IA,JA) )
+          !!!  to move to grid !!!
+          ! at x, v, layer
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+          do j = 1, JA-1
+          do i = 2, IA
+          do k = KS, KE
+             UH(k,i,j) = 0.5_RP * ( MOMX_av(k,i  ,j) + MOMX_av(k,i  ,j+1) &
+                                  + MOMX_av(k,i-1,j) + MOMX_av(k,i-1,j+1) ) &
+                       / ( DENS_av(k,i,j) + DENS_av(k,i,j+1) )
+          enddo
+          enddo
+          enddo
+          ! at u, y, layer
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+          do j = 2, JA
+          do i = 1, IA-1
+          do k = KS, KE
+             VH(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j  ) + MOMY_av(k,i+1,j  ) &
+                                  + MOMY_av(k,i,j-1) + MOMY_av(k,i+1,j-1) ) &
+                       / ( DENS_av(k,i,j) + DENS_av(k,i+1,j) )
+          enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+          do j = 2, JA-1
+          do i = 2, IA-1
+          do k = KS, KE
+             VOR(k,i,j) = ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
+                        - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j)
+          enddo
+          enddo
+          enddo
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = 1, JA
+          do k = KS, KE
+             VOR(k,1 ,j) = VOR(k,2   ,j)
+             VOR(k,IA,j) = VOR(k,IA-1,j)
+          enddo
+          enddo
+          !$omp parallel do private(i,k) OMP_SCHEDULE_
+          do i = 1, IA
+          do k = KS, KE
+             VOR(k,i,1 ) = VOR(k,i,2   )
+             VOR(k,i,JA) = VOR(k,i,JA-1)
+          enddo
+          enddo
+          DV_calclated(I_VOR) = .true.
+       end if
+       var => VOR
+
+    case ( 'DIV' )
+       if ( .not. DV_calclated(I_DIV) ) then
+          if ( .not. allocated(DIV) ) allocate( DIV(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'HDIV', WORK3D )
+          !!!! to move to grid !!!!
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             DIV(k,i,j) = ( MOMZ_av(k,i,j) - MOMZ_av(k-1,i  ,j  ) ) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
+                        + HDIV(k,i,j)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_DIV) = .true.
+       end if
+       var => DIV
+
+    case ( 'HDIV' )
+       if ( .not. DV_calclated(I_HDIV) ) then
+          if ( .not. allocated(HDIV) ) allocate( HDIV(KA,IA,JA) )
+          !!!! to move to grid !!!!
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+          do j = 2, JA
+          do i = 2, IA
+          do k = KS, KE
+             HDIV(k,i,j) = ( MOMX_av(k,i,j) - MOMX_av(k  ,i-1,j  ) ) * RCDX(i) &
+                         + ( MOMY_av(k,i,j) - MOMY_av(k  ,i  ,j-1) ) * RCDY(j)
+          enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,k) OMP_SCHEDULE_
+          do i = 1, IA
+          do k = KS, KE
+             HDIV(k,i,1) = HDIV(k,i,2)
+          enddo
+          enddo
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = 1, JA
+          do k = KS, KE
+             HDIV(k,1,j) = HDIV(k,2,j)
+          enddo
+          enddo
+          DV_calclated(I_HDIV) = .true.
+       end if
+       var => HDIV
+
+    case ( 'Uabs' )
+       if ( .not. DV_calclated(I_Uabs) ) then
+          if ( .not. allocated(Uabs) ) allocate( Uabs(KA,IA,JA) )
+!OCL XFILL
+          !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             Uabs(k,i,j) = sqrt( W(k,i,j)**2 + U(k,i,j)**2 + V(k,i,j)**2 )
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_Uabs) = .true.
+       end if
+       var => Uabs
+
+    case ( 'N2' )
+       if ( .not. DV_calclated(I_N2) ) then
+          if ( .not. allocated(N2) ) allocate( N2(KA,IA,JA) )
+          call ATMOS_DIAGNOSTIC_get_n2( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               POTT(:,:,:), Rtot(:,:,:), & !(in)
+               REAL_CZ(:,:,:),           & !(in)
+               N2(:,:,:)                 ) ! (out)
+          DV_calclated(I_N2) = .true.
+       end if
+       var => N2
+
+    case ( 'MSE' )
+       if ( .not. DV_calclated(I_MSE) ) then
+          if ( .not. allocated(MSE) ) allocate( MSE(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'LHV', WORK3D )
+!OCL XFILL
+          !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             MSE(k,i,j) = CPTOT(k,i,j) * TEMP(k,i,j)                    &
+                        + GRAV * ( REAL_CZ(k,i,j) - REAL_FZ(KS-1,i,j) ) &
+                        + LHV(k,i,j) * QV(k,i,j)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_MSE) = .true.
+       end if
+       var => MSE
+
+    case ( 'ENGP' )
+       if ( .not. DV_calclated(I_ENGP) ) then
+          if ( .not. allocated(ENGP) ) allocate( ENGP(KA,IA,JA) )
+          !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             ENGP(k,i,j) = DENS_av(k,i,j) * GRAV * REAL_CZ(k,i,j)
+          end do
+          end do
+          end do
+          DV_calclated(I_ENGP) = .true.
+       end if
+       var => ENGP
+
+    case ( 'ENGK' )
+       if ( .not. DV_calclated(I_ENGK) ) then
+          if ( .not. allocated(ENGK) ) allocate( ENGK(KA,IA,JA) )
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             ENGK(k,i,j) = 0.5_RP * DENS_av(k,i,j) &
+                         * ( W(k,i,j)**2 + U(k,i,j)**2 + V(k,i,j)**2 )
+          end do
+          end do
+          end do
+             DV_calclated(I_ENGK) = .true.
+       end if
+       var => ENGK
+
+    case ( 'ENGI' )
+       if ( .not. DV_calclated(I_ENGI) ) then
+          if ( .not. allocated(ENGI) ) allocate( ENGI(KA,IA,JA) )
+          if ( moist ) then
+             call ATMOS_vars_get_diagnostic( 'QICE', WORK3D )
+          end if
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+             do iq = 1, QA
+                ENGI(k,i,j) = ENGI(k,i,j) &
+                            + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
+             enddo
+             if ( moist ) then
+                ENGI(k,i,j) = ENGI(k,i,j) &
+                     + DENS_av(k,i,j) * ( QV  (k,i,j) * LHVc & ! Latent Heat [vapor->liquid]
+                                        - QICE(k,i,j) * LHFc ) ! Latent Heat [ice->liquid]
+             end if
+          end do
+          end do
+          end do
+          DV_calclated(I_ENGI) = .true.
+       end if
+       var => ENGI
+
+    case ( 'ENGT' )
+       if ( .not. DV_calclated(I_ENGT) ) then
+          if ( .not. allocated(ENGT) ) allocate( ENGT(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'ENGP', WORK3D )
+          call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D )
+          call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D )
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_ENGT) = .true.
+       end if
+       var => ENGT
+
+    case ( 'DENS_PRIM' )
+       if ( .not. DV_calclated(I_DENS_PRIM) ) then
+          if ( .not. allocated(DENS_PRIM) ) allocate( DENS_PRIM(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             DENS_PRIM(k,i,j) = DENS_av(k,i,j) - DENS_MEAN(k)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_DENS_PRIM) = .true.
+       end if
+       var => DENS_PRIM
+
+    case ( 'W_PRIM' )
+       if ( .not. DV_calclated(I_W_PRIM) ) then
+          if ( .not. allocated(W_PRIM) ) allocate( W_PRIM(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'W_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             W_PRIM(k,i,j) = W(k,i,j) - W_MEAN(k)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_W_PRIM) = .true.
+       end if
+       var => W_PRIM
+
+    case ( 'U_PRIM' )
+       if ( .not. DV_calclated(I_U_PRIM) ) then
+          if ( .not. allocated(U_PRIM) ) allocate( U_PRIM(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'U_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             U_PRIM(k,i,j) = U(k,i,j) - U_MEAN(k)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_U_PRIM) = .true.
+       end if
+       var => U_PRIM
+
+    case ( 'V_PRIM' )
+       if ( .not. DV_calclated(I_V_PRIM) ) then
+          if ( .not. allocated(V_PRIM) ) allocate( V_PRIM(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'V_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             V_PRIM(k,i,j) = V(k,i,j) - V_MEAN(k)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_V_PRIM) = .true.
+       end if
+       var => V_PRIM
+
+    case ( 'PT_PRIM' )
+       if ( .not. DV_calclated(I_PT_PRIM) ) then
+          if ( .not. allocated(PT_PRIM) ) allocate( PT_PRIM(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'PT_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             PT_PRIM(k,i,j) = POTT(k,i,j) - PT_MEAN(k)
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_PT_PRIM) = .true.
+       end if
+       var => PT_PRIM
+
+    case ( 'W_PRIM2' )
+       if ( .not. DV_calclated(I_W_PRIM2) ) then
+          if ( .not. allocated(W_PRIM2) ) allocate( W_PRIM2(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'W_PRIM', WORK3D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             W_PRIM2(k,i,j) = W_PRIM(k,i,j)**2
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_W_PRIM2) = .true.
+       end if
+       var => W_PRIM2
+
+    case ( 'PT_W_PRIM' )
+       if ( .not. DV_calclated(I_PT_W_PRIM) ) then
+          if ( .not. allocated(PT_W_PRIM) ) allocate( PT_W_PRIM(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'W_PRIM',  WORK3D )
+          call ATMOS_vars_get_diagnostic( 'PT_PRIM', WORK3D )
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             PT_W_PRIM(k,i,j) = W_PRIM(k,i,j) * PT_PRIM(k,i,j) * DENS_av(k,i,j) * CPdry
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_PT_W_PRIM) = .true.
+       end if
+       var => PT_W_PRIM
+
+    case ( 'W_PRIM3' )
+       if ( .not. DV_calclated(I_W_PRIM3) ) then
+          if ( .not. allocated(W_PRIM3) ) allocate( W_PRIM3(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'W_PRIM', WORK3D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             W_PRIM3(k,i,j) = W_PRIM(k,i,j)**3
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_W_PRIM3) = .true.
+       end if
+       var => W_PRIM3
+
+    case ( 'TKE_RS' )
+       if ( .not. DV_calclated(I_TKE_RS) ) then
+          if ( .not. allocated(TKE_RS) ) allocate( TKE_RS(KA,IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'W_PRIM', WORK3D )
+          call ATMOS_vars_get_diagnostic( 'U_PRIM', WORK3D )
+          call ATMOS_vars_get_diagnostic( 'V_PRIM', WORK3D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             TKE_RS(k,i,j) = 0.5_RP * ( W_PRIM(k,i,j)**2 + U_PRIM(k,i,j)**2 + V_PRIM(k,i,j)**2 )
+          enddo
+          enddo
+          enddo
+          DV_calclated(I_TKE_RS) = .true.
+       end if
+       var => TKE_RS
+
+    case default
+       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic_3D: ', trim(vname)
+       call PRC_abort
+    end select
+
+
+    return
+  end subroutine ATMOS_vars_get_diagnostic_3D
+
+  !-----------------------------------------------------------------------------
+  !> get diagnostic variable 2D
+  recursive subroutine ATMOS_vars_get_diagnostic_2D( &
+       vname, &
+       var )
+    use scale_process, only: &
+       PRC_abort
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
+    use scale_atmos_adiabat, only: &
+       ATMOS_ADIABAT_cape
+    use mod_atmos_phy_mp_vars, only: &
+       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_cp_vars, only: &
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
+    implicit none
+    character(len=*),  intent(in)  :: vname
+    real(RP), pointer, intent(out) :: var(:,:)
+
+    real(RP) :: fact
+
+    integer :: k, i, j, iq
+
+    select case ( vname )
+    case ( 'LWP' )
+       if ( .not. DV_calclated(I_LWP) ) then
+          if ( .not. allocated(LWP) ) allocate( LWP(IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D )
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k) &
+          !$omp shared(LWP,QLIQ,DENS,REAL_FZ) &
+          !$omp shared(KS,KE,IA,JA)
+          do j = 1, JA
+          do i = 1, IA
+             LWP(i,j) = 0.0_RP
+             do k  = KS, KE
+                LWP(i,j) = LWP(i,j) &
+                         + QLIQ(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+             enddo
+          enddo
+          enddo
+          DV_calclated(I_LWP) = .true.
+       end if
+       var => LWP
+
+    case ( 'IWP' )
+       if ( .not. DV_calclated(I_IWP) ) then
+          if ( .not. allocated(IWP) ) allocate( IWP(IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'QICE', WORK3D )
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k) &
+          !$omp shared(IWP,QICE,DENS,REAL_FZ) &
+          !$omp shared(KS,KE,IA,JA)
+          do j = 1, JA
+          do i = 1, IA
+             IWP(i,j) = 0.0_RP
+             do k  = KS, KE
+                IWP(i,j) = IWP(i,j) &
+                         + QICE(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+             enddo
+          enddo
+          enddo
+          DV_calclated(I_IWP) = .true.
+       end if
+       var => IWP
+
+    case ( 'PW' )
+       if ( .not. DV_calclated(I_PW) ) then
+          if ( .not. allocated(PW) ) allocate( PW(IA,JA) )
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k) &
+          !$omp shared(PW,QV,DENS,REAL_FZ) &
+          !$omp shared(KS,KE,IA,JA)
+          do j = 1, JA
+          do i = 1, IA
+             PW(i,j) = 0.0_RP
+             do k  = KS, KE
+                PW(i,j) = PW(i,j) &
+                        + QV(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+             enddo
+          enddo
+          enddo
+          DV_calclated(I_PW) = .true.
+       end if
+       var => PW
+
+    case ( 'PBLH' )
+       if ( .not. DV_calclated(I_PBLH) ) then
+          if ( .not. allocated(PBLH) ) allocate( PBLH(IA,JA) )
+          call ATMOS_vars_get_diagnostic( 'POTV', WORK3D )
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(k,i,j) &
+          !$omp private(fact) &
+          !$omp shared(PBLH,POTV,REAL_CZ,REAL_FZ) &
+          !$omp shared(KS,KE,IA,JA)
+          do j = 1, JA
+          do i = 1, IA
+             PBLH(i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
+             do k = KS+1, KE
+                if ( POTV(k,i,j) > POTV(KS,i,j) ) then
+                   fact = ( POTV(KS,i,j) - POTV(k-1,i,j) ) &
+                        / ( POTV(k,i,j)  - POTV(k-1,i,j) )
+                   PBLH(i,j) = REAL_CZ(k-1,i,j) - REAL_FZ(KS-1,i,j) &
+                             + fact * ( REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) )
+
+                   exit
+                endif
+             enddo
+          enddo
+          enddo
+          DV_calclated(I_PBLH) = .true.
+       end if
+       var => PBLH
+
+    case ( 'CAPE', 'CIN', 'LCL', 'LFC', 'LNB' )
+       if ( .not. DV_calclated(I_CAPE) ) then
+          if ( .not. allocated(CAPE) ) then
+             allocate( CAPE(IA,JA) )
+             allocate( CIN (IA,JA) )
+             allocate( LCL (IA,JA) )
+             allocate( LFC (IA,JA) )
+             allocate( LNB (IA,JA) )
+          end if
+          call ATMOS_ADIABAT_cape( &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+               KS,                                               & ! (in)
+               DENS_av(:,:,:), TEMP(:,:,:), PRES(:,:,:),         & ! (in)
+               QTRC_av(:,:,:,:),                                 & ! (in)
+               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                   & ! (in)
+               CAPE(:,:), CIN(:,:), LCL(:,:), LFC(:,:), LNB(:,:) ) ! (out)
+          DV_calclated(I_CAPE) = .true.
+       end if
+       select case ( vname )
+       case ( 'CAPE' )
+          var => CAPE
+       case ( 'CIN' )
+          var => CIN
+       case ( 'LCL' )
+          var => LCL
+       case ( 'LFC' )
+          var => LFC
+       case ( 'LNB' )
+          var => LNB
+       end select
+
+    case ( 'PREC', 'RAIN', 'SNOW' )
+       if ( .not. DV_calclated(I_PREC) ) then
+          if ( .not. allocated(PREC) ) then
+             allocate( PREC(IA,JA) )
+             allocate( RAIN(IA,JA) )
+             allocate( SNOW(IA,JA) )
+          end if
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = 1, JA
+          do i = 1, IA
+             RAIN(i,j) = SFLX_rain_CP(i,j) + SFLX_rain_MP(i,j)
+             SNOW(i,j) = SFLX_snow_MP(i,j)
+             PREC(i,j) = RAIN(i,j) + SNOW(i,j)
+          enddo
+          enddo
+          DV_calclated(I_PREC) = .true.
+       end if
+       select case (vname)
+       case ( 'RAIN' )
+          var => RAIN
+       case ( 'SNOW' )
+          var => SNOW
+       case ( 'PREC' )
+          var => PREC
+       end select
+
+    case default
+       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic_2D: ', trim(vname)
+       call PRC_abort
+    end select
+
+
+    return
+  end subroutine ATMOS_vars_get_diagnostic_2D
+
+  !-----------------------------------------------------------------------------
+  !> get diagnostic variable 1D
+  recursive subroutine ATMOS_vars_get_diagnostic_1D( &
+       vname, &
+       var )
+    use scale_const, only: &
+       CPdry => CONST_CPdry
+    use scale_process, only: &
+       PRC_abort
+    use scale_comm, only: &
+       COMM_horizontal_mean
+    implicit none
+    character(len=*),  intent(in)  :: vname
+    real(RP), pointer, intent(out) :: var(:)
+
+    real(RP) :: WORK(KA,IA,JA)
+
+    integer :: k, i, j, iq
+
+    select case ( vname )
+    case ( 'DENS_MEAN' )
+       if ( .not. DV_calclated(I_DENS_MEAN) ) then
+          if ( .not. allocated(DENS_MEAN) ) allocate( DENS_MEAN(KA) )
+          call COMM_horizontal_mean( DENS_MEAN(:), DENS(:,:,:) )
+          DV_calclated(I_DENS_MEAN) = .true.
+       end if
+       var => DENS_MEAN
+
+    case ( 'W_MEAN' )
+       if ( .not. DV_calclated(I_W_MEAN) ) then
+          if ( .not. allocated(W_MEAN) ) allocate( W_MEAN(KA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             WORK(k,i,j) = W(k,i,j) * DENS_av(k,i,j)
+          enddo
+          enddo
+          enddo
+          call COMM_horizontal_mean( W_MEAN(:), WORK(:,:,:) )
+          do k = KS, KE
+             W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
+          enddo
+          DV_calclated(I_W_MEAN) = .true.
+       end if
+       var => W_MEAN
+
+    case ( 'U_MEAN' )
+       if ( .not. DV_calclated(I_U_MEAN) ) then
+          if ( .not. allocated(U_MEAN) ) allocate( U_MEAN(KA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             WORK(k,i,j) = U(k,i,j) * DENS_av(k,i,j)
+          enddo
+          enddo
+          enddo
+          call COMM_horizontal_mean( U_MEAN(:), WORK(:,:,:) )
+          do k = KS, KE
+             U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
+          enddo
+          DV_calclated(I_U_MEAN) = .true.
+       end if
+       var => U_MEAN
+
+    case ( 'V_MEAN' )
+       if ( .not. DV_calclated(I_V_MEAN) ) then
+          if ( .not. allocated(V_MEAN) ) allocate( V_MEAN(KA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             WORK(k,i,j) = V(k,i,j) * DENS_av(k,i,j)
+          enddo
+          enddo
+          enddo
+          call COMM_horizontal_mean( V_MEAN(:), WORK(:,:,:) )
+          do k = KS, KE
+             V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
+          enddo
+          DV_calclated(I_V_MEAN) = .true.
+       end if
+       var => V_MEAN
+
+    case ( 'PT_MEAN' )
+       if ( .not. DV_calclated(I_PT_MEAN) ) then
+          if ( .not. allocated(PT_MEAN) ) allocate( PT_MEAN(KA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+          call COMM_horizontal_mean( PT_MEAN(:), RHOT(:,:,:) )
+          do k = KS, KE
+             PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
+          enddo
+          DV_calclated(I_PT_MEAN) = .true.
+       end if
+       var => PT_MEAN
+
+    case ( 'T_MEAN' )
+       if ( .not. DV_calclated(I_T_MEAN) ) then
+          if ( .not. allocated(T_MEAN) ) allocate( T_MEAN(KA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             WORK(k,i,j) = TEMP(k,i,j) * DENS_av(k,i,j)
+          enddo
+          enddo
+          enddo
+          call COMM_horizontal_mean( T_MEAN(:), WORK(:,:,:) )
+          do k = KS, KE
+             T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
+          enddo
+          DV_calclated(I_T_MEAN) = .true.
+       end if
+       var => T_MEAN
+
+    case ( 'QV_MEAN' )
+       if ( .not. DV_calclated(I_QV_MEAN) ) then
+          if ( .not. allocated(QV_MEAN) ) allocate( QV_MEAN(KA) )
+          if ( moist ) then
+             call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+!OCL XFILL
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JSB, JEB
+             do i = ISB, IEB
+             do k = KS, KE
+                WORK(k,i,j) = QV(k,i,j) * DENS_av(k,i,j)
+             enddo
+             enddo
+             enddo
+             call COMM_horizontal_mean( QV_MEAN(:), WORK(:,:,:) )
+             do k = KS, KE
+                QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
+             enddo
+          else
+             !$omp parallel do private(k) OMP_SCHEDULE_
+             do k = KS, KE
+                QV_MEAN(k) = 0.0_RP
+             enddo
+          end if
+          DV_calclated(I_QV_MEAN) = .true.
+       end if
+       var => QV_MEAN
+
+    case ( 'QHYD_MEAN' )
+       if ( .not. DV_calclated(I_QHYD_MEAN) ) then
+          if ( .not. allocated(QHYD_MEAN) ) allocate( QHYD_MEAN(KA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+          call ATMOS_vars_get_diagnostic( 'QHYD', WORK3D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             WORK(k,i,j) = QHYD(k,i,j) * DENS_av(k,i,j)
+          enddo
+          enddo
+          enddo
+          call COMM_horizontal_mean( QHYD_MEAN(:), WORK(:,:,:) )
+          do k = KS, KE
+             QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
+          enddo
+          DV_calclated(I_QHYD_MEAN) = .true.
+       end if
+       var => QHYD_MEAN
+
+    case ( 'QLIQ_MEAN' )
+       if ( .not. DV_calclated(I_QLIQ_MEAN) ) then
+          if ( .not. allocated(QLIQ_MEAN) ) allocate( QLIQ_MEAN(KA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+          call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             WORK(k,i,j) = QLIQ(k,i,j) * DENS_av(k,i,j)
+          enddo
+          enddo
+          enddo
+          call COMM_horizontal_mean( QLIQ_MEAN(:), WORK(:,:,:) )
+          do k = KS, KE
+             QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
+          enddo
+          DV_calclated(I_QLIQ_MEAN) = .true.
+       end if
+       var => QLIQ_MEAN
+
+    case ( 'QICE_MEAN' )
+       if ( .not. DV_calclated(I_QICE_MEAN) ) then
+          if ( .not. allocated(QICE_MEAN) ) allocate( QICE_MEAN(KA) )
+          call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D )
+          call ATMOS_vars_get_diagnostic( 'QICE', WORK3D )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             WORK(k,i,j) = QICE(k,i,j) * DENS_av(k,i,j)
+          enddo
+          enddo
+          enddo
+          call COMM_horizontal_mean( QICE_MEAN(:), WORK(:,:,:) )
+          do k = KS, KE
+             QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
+          enddo
+          DV_calclated(I_QICE_MEAN) = .true.
+       end if
+       var => QICE_MEAN
+
+    case default
+       write(*,*) 'xxx name is invalid for ATMOS_vars_get_diagnostic_1D: ', trim(vname)
+       call PRC_abort
+    end select
+
+
+    return
+  end subroutine ATMOS_vars_get_diagnostic_1D
 
   !-----------------------------------------------------------------------------
   !> monitor output
@@ -2229,32 +2572,25 @@ contains
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
     use scale_grid_real, only: &
-       REAL_CZ
+       REAL_CZ, &
+       REAL_FZ
     use scale_gridtrans, only: &
        MAPF => GTRANS_MAPF, &
        I_UY, &
        I_XV
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total,            &
        STAT_detail
     use scale_monitor, only: &
-       MONIT_put, &
-       MONIT_in
+       MONIT_put
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       QIS,  &
-       QIE,  &
-       LHV,  &
-       LHF
+       I_QV
     use mod_atmos_phy_cp_vars, only: &
        SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
     use mod_atmos_phy_mp_vars, only: &
@@ -2275,18 +2611,11 @@ contains
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
     implicit none
 
-    real(RP) :: QDRY(KA,IA,JA) ! dry air         [kg/kg]
-    real(RP) :: RHOQ(KA,IA,JA) ! DENS * tracer   [kg/m3]
-    real(RP) :: PRCP(IA,JA)    ! rain + snow     [kg/m2/s]
+    real(RP) :: RHOQ(KA,IA,JA)
 
-    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
-
-    real(RP) :: ENGFLXT      (IA,JA) ! total flux             [J/m2/s]
-    real(RP) :: SFLX_RD_net  (IA,JA) ! net SFC radiation flux [J/m2/s]
-    real(RP) :: TOAFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
+    real(RP) :: ENGFLXT    (IA,JA) ! total flux             [J/m2/s]
+    real(RP) :: SFLX_RD_net(IA,JA) ! net SFC radiation flux [J/m2/s]
+    real(RP) :: TFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
 
     real(RP)               :: WORK (KA,IA,JA,3)
     character(len=H_SHORT) :: WNAME(3)
@@ -2295,11 +2624,11 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call MONIT_in( DENS_av(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.false. )
-    call MONIT_in( MOMZ_av(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.false. )
-    call MONIT_in( MOMX_av(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, isflux=.false. )
-    call MONIT_in( MOMY_av(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, isflux=.false. )
-    call MONIT_in( RHOT_av(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3, isflux=.false. )
+    call MONIT_put( PV_MONIT_id(I_DENS), DENS(:,:,:) )
+    call MONIT_put( PV_MONIT_id(I_MOMZ), MOMZ(:,:,:) )
+    call MONIT_put( PV_MONIT_id(I_MOMX), MOMX(:,:,:) )
+    call MONIT_put( PV_MONIT_id(I_MOMY), MOMY(:,:,:) )
+    call MONIT_put( PV_MONIT_id(I_RHOT), RHOT(:,:,:) )
 
     !##### Mass Budget #####
 
@@ -2314,138 +2643,105 @@ contains
        enddo
        enddo
 
-       call MONIT_in( RHOQ(:,:,:), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3, isflux=.false. )
+       call MONIT_put( QP_MONIT_id(iq), RHOQ(:,:,:) )
     enddo
 
     ! total dry airmass
-
-    call THERMODYN_qd( QDRY   (:,:,:),   & ! [OUT]
-                       QTRC_av(:,:,:,:), & ! [IN]
-                       TRACER_MASS(:) ) ! [IN]
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    if ( DV_MONIT_id(IM_QDRY) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOQ(k,i,j) = DENS_av(k,i,j) * QDRY (k,i,j)
-    enddo
-    enddo
-    enddo
-    call MONIT_put( AD_MONIT_id(I_QDRY), RHOQ(:,:,:) )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
+       enddo
+       enddo
+       enddo
+       call MONIT_put( DV_MONIT_id(IM_QDRY), RHOQ(:,:,:) )
+    end if
 
     ! total vapor,liquid,solid tracers
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    if ( DV_MONIT_id(IM_QTOT) > 0 ) then
+       call ATMOS_vars_get_diagnostic( 'QTOT', WORK3D )
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOQ(k,i,j) = DENS_av(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
-    enddo
-    enddo
-    enddo
-    call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * QTOT(k,i,j)
+       enddo
+       enddo
+       enddo
+       call MONIT_put( DV_MONIT_id(IM_QTOT), RHOQ(:,:,:) )
+    end if
 
     ! total evapolation
-    if ( I_QV > 0 ) then
-       call MONIT_put( AD_MONIT_id(I_EVAP), SFLX_QTRC(:,:,I_QV) )
+    if ( moist ) then
+       call MONIT_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
+
     endif
 
     ! total precipitation
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       PRCP(i,j) = SFLX_rain_CP(i,j) &
-                 + SFLX_rain_MP(i,j) + SFLX_snow_MP(i,j)
-    enddo
-    enddo
-    call MONIT_put( AD_MONIT_id(I_PRCP), PRCP(:,:) )
+    if ( DV_MONIT_id(IM_PREC) > 0 ) then
+       call ATMOS_vars_get_diagnostic( 'PREC', WORK2D )
+       call MONIT_put( DV_MONIT_id(IM_PREC), WORK2D(:,:) )
+    end if
+
 
     !##### Energy Budget #####
 
+    if ( DV_MONIT_id(IM_ENGT) > 0 ) then
+       call ATMOS_vars_get_diagnostic( 'ENGT', WORK3D )
+       call MONIT_put( DV_MONIT_id(IM_ENGT), WORK3D(:,:,:) )
+    end if
+    if ( DV_MONIT_id(IM_ENGP) > 0 ) then
+       call ATMOS_vars_get_diagnostic( 'ENGP', WORK3D )
+       call MONIT_put( DV_MONIT_id(IM_ENGP), WORK3D(:,:,:) )
+    end if
+    if ( DV_MONIT_id(IM_ENGK) > 0 ) then
+       call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D )
+       call MONIT_put( DV_MONIT_id(IM_ENGK), WORK3D(:,:,:) )
+    end if
+    if ( DV_MONIT_id(IM_ENGI) > 0 ) then
+       call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D )
+       call MONIT_put( DV_MONIT_id(IM_ENGI), WORK3D(:,:,:) )
+    end if
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(iq) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,ENGP,DENS_av,GRAV,REAL_CZ,W,U,V,ENGI,ENGK,QDRY,TEMP,CVdry,QA) &
-    !$omp shared(TRACER_CV,QTRC_av,I_QV,LHV,QIS,QIE,LHF)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ENGP(k,i,j) = DENS_av(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
-       ENGK(k,i,j) = 0.5_RP * DENS_av(k,i,j) * ( W(k,i,j)**2 &
-                                               + U(k,i,j)**2 &
-                                               + V(k,i,j)**2 )
-
-       ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
-       do iq = 1, QA
-          ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
-       enddo
-
-       if ( I_QV > 0 ) then
-          ENGI(k,i,j) = ENGI(k,i,j) + DENS_av(k,i,j) * QTRC_av(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
-       end if
-
-       do iq = QIS, QIE
-          ENGI(k,i,j) = ENGI(k,i,j) - DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
-       enddo
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    ! radiation flux
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
-    enddo
-    enddo
-    enddo
-
-!OCL XFILL
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
                         + ( SFLX_SW_up(i,j) - SFLX_SW_dn(i,j) )
 
-       TOAFLX_RD_net(i,j) = ( TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j) ) &
-                          + ( TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j) )
+       TFLX_RD_net(i,j) = ( TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j) ) &
+                        + ( TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j) )
+
+       ENGFLXT    (i,j) = SFLX_SH(i,j) + SFLX_LH(i,j) &
+                        + SFLX_RD_net(i,j) - TFLX_RD_net(i,j)
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       ENGFLXT(i,j) = SFLX_SH(i,j) + SFLX_LH(i,j) &
-                    + SFLX_RD_net(i,j) - TOAFLX_RD_net(i,j)
-    enddo
-    enddo
+    call MONIT_put( DV_MONIT_id(IM_ENGFLXT),      ENGFLXT     (:,:) )
 
-    call MONIT_put( AD_MONIT_id(I_ENGP), ENGP(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGK), ENGK(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGI), ENGI(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGT), ENGT(:,:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SH),    SFLX_SH     (:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LH),    SFLX_LH     (:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGSFC_RD),    SFLX_RD_net (:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGTOA_RD),    TFLX_RD_net (:,:) )
 
-    call MONIT_put( AD_MONIT_id(I_ENGFLXT), ENGFLXT(:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LW_up), SFLX_LW_up  (:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LW_dn), SFLX_LW_dn  (:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SW_up), SFLX_SW_up  (:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SW_dn), SFLX_SW_dn  (:,:) )
+
+    call MONIT_put( DV_MONIT_id(IM_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
+    call MONIT_put( DV_MONIT_id(IM_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
 
 
-    call MONIT_put( AD_MONIT_id(I_ENGSFC_SH), SFLX_SH      (:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGSFC_LH), SFLX_LH      (:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGSFC_RD), SFLX_RD_net  (:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGTOA_RD), TOAFLX_RD_net(:,:) )
-
-    call MONIT_put( AD_MONIT_id(I_ENGSFC_LW_up), SFLX_LW_up(:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGSFC_LW_dn), SFLX_LW_dn(:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGSFC_SW_up), SFLX_SW_up(:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGSFC_SW_dn), SFLX_SW_dn(:,:) )
-
-    call MONIT_put( AD_MONIT_id(I_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
 
     if ( ATMOS_VARS_CHECKRANGE ) then
 !OCL XFILL
@@ -2565,7 +2861,7 @@ contains
        call FILEIO_create( restart_fid,                                               & ! [OUT]
                            basename, ATMOS_RESTART_OUT_TITLE, ATMOS_RESTART_OUT_DTYPE ) ! [IN]
 
-       allocate( VAR_ID(VMAX+QA) )
+       allocate( PV_ID(PV_nmax+QA) )
     endif
 
     if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_create
@@ -2693,7 +2989,7 @@ contains
 
        restart_fid = -1
 
-       if ( allocated(VAR_ID) ) deallocate( VAR_ID )
+       if ( allocated(PV_ID) ) deallocate( PV_ID )
     endif
 
     if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_close
@@ -2756,19 +3052,19 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       call FILEIO_def_var( restart_fid, VAR_ID(I_DENS), VAR_NAME(I_DENS), VAR_DESC(I_DENS), & ! [IN]
-                            VAR_UNIT(I_DENS), 'ZXY',  ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(I_MOMZ), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), & ! [IN]
-                            VAR_UNIT(I_MOMZ), 'ZHXY', ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(I_MOMX), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), & ! [IN]
-                            VAR_UNIT(I_MOMX), 'ZXHY', ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(I_MOMY), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), & ! [IN]
-                            VAR_UNIT(I_MOMY), 'ZXYH', ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(I_RHOT), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), & ! [IN]
-                            VAR_UNIT(I_RHOT), 'ZXY',  ATMOS_RESTART_OUT_DTYPE                ) ! [IN]
+       call FILEIO_def_var( restart_fid, PV_ID(I_DENS), PV_info(I_DENS)%NAME, PV_info(I_DENS)%DESC, & ! [IN]
+                            PV_info(I_DENS)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
+       call FILEIO_def_var( restart_fid, PV_ID(I_MOMZ), PV_info(I_MOMZ)%NAME, PV_info(I_MOMZ)%DESC, & ! [IN]
+                            PV_info(I_MOMZ)%UNIT, 'ZHXY', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
+       call FILEIO_def_var( restart_fid, PV_ID(I_MOMX), PV_info(I_MOMX)%NAME, PV_info(I_MOMX)%DESC, & ! [IN]
+                            PV_info(I_MOMX)%UNIT, 'ZXHY', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
+       call FILEIO_def_var( restart_fid, PV_ID(I_MOMY), PV_info(I_MOMY)%NAME, PV_info(I_MOMY)%DESC, & ! [IN]
+                            PV_info(I_MOMY)%UNIT, 'ZXYH', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
+       call FILEIO_def_var( restart_fid, PV_ID(I_RHOT), PV_info(I_RHOT)%NAME, PV_info(I_RHOT)%DESC, & ! [IN]
+                            PV_info(I_RHOT)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_def_var( restart_fid, VAR_ID(VMAX+iq), TRACER_NAME(iq), TRACER_DESC(iq), & ! [IN]
+          call FILEIO_def_var( restart_fid, PV_ID(PV_nmax+iq), TRACER_NAME(iq), TRACER_DESC(iq), & ! [IN]
                                TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE       ) ! [IN]
        enddo
 
@@ -2838,14 +3134,14 @@ contains
 
        call ATMOS_vars_total
 
-       call FILEIO_write_var( restart_fid, VAR_ID(I_DENS), DENS(:,:,:), VAR_NAME(I_DENS), 'ZXY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(I_MOMZ), MOMZ(:,:,:), VAR_NAME(I_MOMZ), 'ZHXY' ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(I_MOMX), MOMX(:,:,:), VAR_NAME(I_MOMX), 'ZXHY' ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(I_MOMY), MOMY(:,:,:), VAR_NAME(I_MOMY), 'ZXYH' ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(I_RHOT), RHOT(:,:,:), VAR_NAME(I_RHOT), 'ZXY'  ) ! [IN]
+       call FILEIO_write_var( restart_fid, PV_ID(I_DENS), DENS(:,:,:), PV_info(I_DENS)%NAME, 'ZXY'  ) ! [IN]
+       call FILEIO_write_var( restart_fid, PV_ID(I_MOMZ), MOMZ(:,:,:), PV_info(I_MOMZ)%NAME, 'ZHXY' ) ! [IN]
+       call FILEIO_write_var( restart_fid, PV_ID(I_MOMX), MOMX(:,:,:), PV_info(I_MOMX)%NAME, 'ZXHY' ) ! [IN]
+       call FILEIO_write_var( restart_fid, PV_ID(I_MOMY), MOMY(:,:,:), PV_info(I_MOMY)%NAME, 'ZXYH' ) ! [IN]
+       call FILEIO_write_var( restart_fid, PV_ID(I_RHOT), RHOT(:,:,:), PV_info(I_RHOT)%NAME, 'ZXY'  ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_write_var( restart_fid, VAR_ID(VMAX+iq), QTRC(:,:,:,iq), TRACER_NAME(iq), 'ZXY' ) ! [IN]
+          call FILEIO_write_var( restart_fid, PV_ID(PV_nmax+iq), QTRC(:,:,:,iq), TRACER_NAME(iq), 'ZXY' ) ! [IN]
        enddo
 
     endif

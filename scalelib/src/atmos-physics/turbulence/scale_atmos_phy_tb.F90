@@ -1,14 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Turbulence
+!> module atmosphere / physics / turbulence
 !!
 !! @par Description
 !!          Sub-grid scale turbulence process
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2013-12-05 (S.Nishizawa) [new]
-!! @li      2014-03-30 (A.Noda)      [mod] add DNS
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -132,14 +128,6 @@ contains
        ATMOS_PHY_TB_dns_config, &
        ATMOS_PHY_TB_dns_setup, &
        ATMOS_PHY_TB_dns
-    use scale_atmos_phy_tb_mynn, only: &
-       ATMOS_PHY_TB_mynn_config, &
-       ATMOS_PHY_TB_mynn_setup, &
-       ATMOS_PHY_TB_mynn
-    use scale_atmos_phy_tb_hybrid, only: &
-       ATMOS_PHY_TB_hybrid_config, &
-       ATMOS_PHY_TB_hybrid_setup, &
-       ATMOS_PHY_TB_hybrid
     implicit none
 
     character(len=*), intent(in) :: TB_TYPE
@@ -171,22 +159,6 @@ contains
 
        ATMOS_PHY_TB       => ATMOS_PHY_TB_dns
        ATMOS_PHY_TB_setup => ATMOS_PHY_TB_dns_setup
-
-    case( 'MYNN' )
-
-       call ATMOS_PHY_TB_mynn_config( TB_TYPE, & ! [IN]
-                                      I_TKE    ) ! [OUT]
-
-       ATMOS_PHY_TB       => ATMOS_PHY_TB_mynn
-       ATMOS_PHY_TB_setup => ATMOS_PHY_TB_mynn_setup
-
-    case('HYBRID')
-
-       call ATMOS_PHY_TB_hybrid_config( TB_TYPE, & ! [IN]
-                                        I_TKE    ) ! [OUT]
-
-       ATMOS_PHY_TB       => ATMOS_PHY_TB_hybrid
-       ATMOS_PHY_TB_setup => ATMOS_PHY_TB_hybrid_setup
 
     case('OFF')
 
