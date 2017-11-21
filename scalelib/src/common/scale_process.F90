@@ -33,6 +33,7 @@ module scale_process
   public :: PRC_UNIVERSAL_setup
   public :: PRC_GLOBAL_setup
   public :: PRC_LOCAL_setup
+  public :: PRC_SINGLECOM_setup
   public :: PRC_abort
   public :: PRC_MPIstop ! obsolute
   public :: PRC_MPIfinish
@@ -235,7 +236,7 @@ contains
   end subroutine PRC_GLOBAL_setup
 
   !-----------------------------------------------------------------------------
-  !> Setup MPI
+  !> Setup MPI in local communicator
   subroutine PRC_LOCAL_setup( &
        comm,    &
        myrank,  &
@@ -265,6 +266,57 @@ contains
 
     return
   end subroutine PRC_LOCAL_setup
+
+  !-----------------------------------------------------------------------------
+  !> Setup MPI single communicator (not use universal-global-local setting)
+  subroutine PRC_SINGLECOM_setup( &
+       comm,    &
+       nprocs,  &
+       myrank,  &
+       ismaster )
+    implicit none
+
+    integer, intent(in)  :: comm     ! communicator
+    integer, intent(out) :: nprocs   ! number of procs
+    integer, intent(out) :: myrank   ! myrank
+    logical, intent(out) :: ismaster ! master process?
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call MPI_Comm_size(comm,nprocs,ierr)
+    call MPI_Comm_rank(comm,myrank,ierr)
+
+    if ( myrank == PRC_masterrank ) then
+       ismaster = .true.
+    else
+       ismaster = .false.
+    endif
+
+    PRC_UNIVERSAL_COMM_WORLD = comm
+    PRC_UNIVERSAL_nprocs     = nprocs
+    PRC_UNIVERSAL_myrank     = myrank
+    PRC_UNIVERSAL_IsMaster   = ismaster
+
+    PRC_GLOBAL_COMM_WORLD    = comm
+    PRC_GLOBAL_nprocs        = nprocs
+    PRC_GLOBAL_myrank        = myrank
+    PRC_GLOBAL_IsMaster      = ismaster
+
+    PRC_LOCAL_COMM_WORLD     = comm
+    PRC_nprocs               = nprocs
+    PRC_myrank               = myrank
+    PRC_IsMaster             = ismaster
+
+
+
+    PRC_ABORT_COMM_WORLD = comm
+
+    call MPI_Comm_set_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
+    call MPI_Comm_get_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
+
+    return
+  end subroutine PRC_SINGLECOM_setup
 
   !-----------------------------------------------------------------------------
   !> Abort Process
