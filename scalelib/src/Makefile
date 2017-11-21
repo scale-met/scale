@@ -17,7 +17,7 @@ DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 VPATH = common:                     \
         coupler:                    \
         io:                         \
-	atmosphere/physics/pbl      \
+        atmosphere/physics/pbl      \
         atmos-physics:              \
         atmos-physics/share:        \
         atmos-physics/microphysics: \
