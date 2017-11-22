@@ -94,6 +94,7 @@ module mod_land_vars
   real(RP), public, allocatable :: ATMOS_DENS     (:,:)
   real(RP), public, allocatable :: ATMOS_QV       (:,:)
   real(RP), public, allocatable :: ATMOS_PBL      (:,:)
+  real(RP), public, allocatable :: ATMOS_SFC_DENS (:,:)
   real(RP), public, allocatable :: ATMOS_SFC_PRES (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
@@ -280,6 +281,7 @@ contains
     allocate( ATMOS_DENS     (IA,JA) )
     allocate( ATMOS_QV       (IA,JA) )
     allocate( ATMOS_PBL      (IA,JA) )
+    allocate( ATMOS_SFC_DENS (IA,JA) )
     allocate( ATMOS_SFC_PRES (IA,JA) )
     allocate( ATMOS_SFLX_LW  (IA,JA) )
     allocate( ATMOS_SFLX_SW  (IA,JA) )
@@ -293,6 +295,7 @@ contains
     ATMOS_DENS     (:,:) = UNDEF
     ATMOS_QV       (:,:) = UNDEF
     ATMOS_PBL      (:,:) = UNDEF
+    ATMOS_SFC_DENS (:,:) = UNDEF
     ATMOS_SFC_PRES (:,:) = UNDEF
     ATMOS_SFLX_LW  (:,:) = UNDEF
     ATMOS_SFLX_SW  (:,:) = UNDEF

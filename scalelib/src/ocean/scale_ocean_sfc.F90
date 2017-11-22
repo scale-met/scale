@@ -47,6 +47,7 @@ module scale_ocean_sfc
            QVA,    &
            Z1,     &
            PBL,    &
+           RHOS,   &
            PRSS,   &
            LWD,    &
            SWD,    &
@@ -83,6 +84,7 @@ module scale_ocean_sfc
        real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
        real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
        real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
+       real(RP), intent(in) :: RHOS(IA,JA) ! density  at the surface [kg/m3]
        real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
        real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]

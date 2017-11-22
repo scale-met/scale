@@ -263,6 +263,7 @@ contains
         QA,          &
         Z1,          &
         PBL,         &
+        RHOS,        &
         PRSS,        &
         LWD,         &
         SWD,         &
@@ -343,6 +344,7 @@ contains
     real(RP), intent(in) :: QA    (IA,JA)
     real(RP), intent(in) :: Z1    (IA,JA)
     real(RP), intent(in) :: PBL   (IA,JA)
+    real(RP), intent(in) :: RHOS  (IA,JA) ! density  at the surface [kg/m3]
     real(RP), intent(in) :: PRSS  (IA,JA)
     real(RP), intent(in) :: LWD   (IA,JA,2)
     real(RP), intent(in) :: SWD   (IA,JA,2)
@@ -402,8 +404,7 @@ contains
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
-    real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: SFC_DENS     ! density at the surface [kg/m3]
+    real(RP) :: QVsat   ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: Rtot
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
@@ -422,8 +423,6 @@ contains
 
        Rtot = ( 1.0_RP - QA(i,j) ) * Rdry &
             + (          QA(i,j) ) * Rvap
-
-       SFC_DENS = PRSS(i,j) / ( Rtot * TMPA(i,j) )
 
        Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
 
@@ -544,9 +543,9 @@ contains
                       Z0HC,          & ! [IN]
                       Z0HC           ) ! [IN]
 
-       MWFLX(i,j) = -SFC_DENS * Ustar**2 / Uabs * W1(i,j)
-       MUFLX(i,j) = -SFC_DENS * Ustar**2 / Uabs * U1(i,j)
-       MVFLX(i,j) = -SFC_DENS * Ustar**2 / Uabs * V1(i,j)
+       MWFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * W1(i,j)
+       MUFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * U1(i,j)
+       MVFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * V1(i,j)
 
        Z0M(i,j) = Z0C
        Z0H(i,j) = Z0HC

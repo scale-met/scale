@@ -67,6 +67,7 @@ module scale_urban_phy
            QA,          &
            Z1,          &
            PBL,         &
+           RHOS,        &
            PRSS,        &
            LWD,         &
            SWD,         &
@@ -133,6 +134,7 @@ module scale_urban_phy
        real(RP), intent(in) :: QA    (IA,JA)
        real(RP), intent(in) :: Z1    (IA,JA)
        real(RP), intent(in) :: PBL   (IA,JA)
+       real(RP), intent(in) :: RHOS  (IA,JA) ! density  at the surface [kg/m3]
        real(RP), intent(in) :: PRSS  (IA,JA)
        real(RP), intent(in) :: LWD   (IA,JA,2)
        real(RP), intent(in) :: SWD   (IA,JA,2)

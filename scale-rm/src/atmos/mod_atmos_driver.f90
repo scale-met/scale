@@ -608,6 +608,7 @@ contains
                         DENS       (KS,:,:),   & ! [IN]
                         QTRC       (KS,:,:,:), & ! [IN]
                         ATM_PBL    (:,:),      & ! [IN]
+                        SFC_DENS   (:,:),      & ! [IN]
                         SFC_PRES   (:,:),      & ! [IN]
                         SFLX_rad_dn(:,:,:,:),  & ! [IN]
                         cosSZA     (:,:),      & ! [IN]

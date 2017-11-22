@@ -76,6 +76,7 @@ contains
         QVA,        &
         Z1,         &
         PBL,        &
+        RHOS,       &
         PRSS,       &
         LWD,        &
         SWD,        &
@@ -131,6 +132,7 @@ contains
     real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
     real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
+    real(RP), intent(in) :: RHOS(IA,JA) ! density  at the surface [kg/m3]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [J/m2/s]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [J/m2/s]
@@ -157,9 +159,8 @@ contains
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
-    real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: QVS          ! water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: SFC_DENS     ! density at the surface [kg/m3]
+    real(RP) :: QVsat   ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVS     ! water vapor mixing ratio at surface [kg/kg]
     real(RP) :: Rtot
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
@@ -191,8 +192,6 @@ contains
         Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
              + (          QVA(i,j) ) * Rvap
 
-        SFC_DENS = PRSS(i,j) / ( Rtot * TMPA(i,j) )
-
         call qsat( QVsat,     & ! [OUT]
                    LST(i,j),  & ! [IN]
                    PRSS(i,j)  ) ! [IN]
@@ -222,11 +221,11 @@ contains
             Z0H (i,j), & ! [IN]
             Z0E (i,j)  ) ! [IN]
 
-        ZMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * WA(i,j)
-        XMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * UA(i,j)
-        YMFLX(i,j) = -SFC_DENS * Ustar * Ustar / Uabs * VA(i,j)
-        SHFLX(i,j) = -SFC_DENS * Ustar * Tstar * CPdry
-        LHFLX(i,j) = -SFC_DENS * Ustar * Qstar * LHV(i,j) * Ra / ( Ra + Rb(i,j) )
+        ZMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * WA(i,j)
+        XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
+        YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
+        SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
+        LHFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * LHV(i,j) * Ra / ( Ra + Rb(i,j) )
 
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j) ) / DZG(i,j)
 

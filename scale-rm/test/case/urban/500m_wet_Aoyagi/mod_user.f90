@@ -155,6 +155,7 @@ contains
        RHOA  => URB_ATM_DENS,        &
        QVA   => URB_ATM_QV,          &
        PBL   => URB_ATM_PBL,         &
+       RHOS  => URB_ATM_SFC_DENS,    &
        PRSS  => URB_ATM_SFC_PRES,    &
        RWD   => URB_ATM_SFLX_rad_dn, &
        RAIN  => URB_ATM_SFLX_rain,   &
@@ -345,6 +346,8 @@ contains
           PTA (i,j) = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
                       + (        dsec ) * PT(tloc+1) )
           TMPA(i,j) = PTA(i,j) * ( PRSA(i,j) / PRE00 )**RovCP   ! air temp, but now PRSA = 100000Pa
+
+          RHOS(i,j) = PRSS(i,j) / ( Rdry * TMPA(i,j) )
 
           UA  (i,j) = ( ( 1.0_RP-dsec ) * Wind(tloc  ) &
                       + (        dsec ) * Wind(tloc+1) )
