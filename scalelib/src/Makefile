@@ -99,7 +99,7 @@ OBJS_TB = scale_atmos_phy_tb_smg.o	\
           scale_atmos_phy_tb_d1980.o	\
           scale_atmos_phy_tb_dns.o
 
-OBJS_TB = scale_atmos_phy_bl_mynn.o
+OBJS_BL = scale_atmos_phy_bl_mynn.o
 
 OBJS_CP = scale_atmos_phy_cp_kf.o
 

@@ -320,15 +320,15 @@ contains
     !$omp parallel do default(none) &
     !$omp OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE_PBL,KE,IS,IE,JS,JE, &
-    !$omp        GRAV,CP,LHV,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
+    !$omp        GRAV,CPdry,LHV,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RTKE_t,Nu,Kh, &
     !$omp        DENS,TKE,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2,SFLX_MU,SFLX_MV,SFLX_SH,l_mo, &
     !$omp        CZ,FZ,dt, &
-    !$omp        Ri,Pr,prod,diss,dudz2,l) &
-    !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,TEML,qlp,ac, &
+    !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
+    !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,TEML,RHONu,RHOKh,LHVL,CPtot,qlp,ac, &
     !$omp         Q1,Qsl,dQsl,sigma_s,RR,Rt,betat,betaq,aa,bb,cc, &
     !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,f2h, &
     !$omp         k,i,j)
