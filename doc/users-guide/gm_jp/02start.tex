@@ -13,25 +13,6 @@ SCALE-GMに必要とされるライブラリは、SCALE-RMと同じく、HDF5、
  ``SCALE USERS GUIDE'' の2.3.2節を参照されたい。
 Makedefファイルは、SCALE-RMと共通のファイルを使用する。
 このMakedefファイルの設定をコンパイル前に忘れないようにすること。
-
-%\textcolor{red}{[英語版未対応-----ここから]}
-\textcolor{blue}{[ご確認ください-----ここから]}
-
-DCMIP2016の理想実験を実行するために、DCMIPの組織委員が公開しているソースコードが必要になる。
-現行のSCALE-GMのコンパイルには、この追加ソースコードが必須となっている。
-
-\url{https://github.com/ClimateGlobalChange/DCMIP2016}
-から、zipパッケージとしてダウンロードするか、gitコマンドを使用して``DCMIP2016''パッケージをダウンロードする。
-ダウンロードしたパッケージを展開して、DCMIP2016/interface　の下にある
-fortranプログラムをすべて\texttt{scale-{\version}/scale-gm/src/atmos/dcmip}へコピーする。
-これは、DCMIP2016パッケージを\texttt{scale-{\version}/}下へ展開したことを想定した場合、次のコマンドのようになる。
-\begin{verbatim}
-  > cp scale-{\version}/DCMIP2016/interface/*.f90 scale-{\version}/scale-gm/src/atmos/dcmip/
-\end{verbatim}
-
-\textcolor{blue}{[ご確認ください-----ここから]}
-%\textcolor{red}{[英語版未対応-----ここから]}
-
 これらの準備が整えば、srcディレクトリへ移動する。
 SCALE-GMでは、\texttt{scale-{\version}/scale-gm/src}の下でコンパイルを行い、\texttt{scale-{\version}/bin}の下に
 各種実行バイナリが生成され、このバイナリファイルを用いて各種実験や後処理を行う。
@@ -64,7 +45,7 @@ SCALE-GMでは、\texttt{scale-{\version}/scale-gm/src}の下でコンパイル�
   \item[*] makeコマンドの -j オプションは並列コンパイルに使用するプロセス数をしているオプションである。
    コンパイルにかかる時間を短縮するため、2以上の数を指定することで並列コンパイルを行うことができる。
    SCALE-GMでは、2 $\sim$ 8 プロセスの指定を推奨する。
-  \item[*] ``fio'' とは、ヘッダー情報付きバイナリをベースにしたNICAMの独自ファイルフォーマットである。
+  \item[*] ``fio'' とは、ヘッダー情報付きバイナリをベースにした独自ファイルフォーマットである。
 \end{itemize}
 
 
