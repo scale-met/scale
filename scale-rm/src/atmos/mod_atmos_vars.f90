@@ -1506,7 +1506,7 @@ contains
 !OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k) &
-          !$omp shared(POTL,TEML,POTT,TEMP) &
+          !$omp shared(POTL,TEML,EXNER) &
           !$omp shared(KS,KE,IA,JA)
           do j = 1, JA
           do i = 1, IA
@@ -1650,7 +1650,7 @@ contains
 !OCL XFILL
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k) &
-             !$omp shared(RHA,DENS,QV,WORK,TEMP) &
+             !$omp shared(RHA,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
              do j = 1, JA
              do i = 1, IA
@@ -1690,7 +1690,7 @@ contains
 !OCL XFILL
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k) &
-             !$omp shared(RHL,DENS,QV,WORK,TEMP) &
+             !$omp shared(RHL,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
              do j = 1, JA
              do i = 1, IA
@@ -1730,7 +1730,7 @@ contains
 !OCL XFILL
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k) &
-             !$omp shared(RHI,DENS,QV,WORK,TEMP) &
+             !$omp shared(RHI,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
              do j = 1, JA
              do i = 1, IA
@@ -2183,7 +2183,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k) &
-          !$omp shared(LWP,QLIQ,DENS,REAL_FZ) &
+          !$omp shared(LWP,QLIQ,DENS_av,REAL_FZ) &
           !$omp shared(KS,KE,IA,JA)
           do j = 1, JA
           do i = 1, IA
@@ -2204,7 +2204,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'QICE', WORK3D )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k) &
-          !$omp shared(IWP,QICE,DENS,REAL_FZ) &
+          !$omp shared(IWP,QICE,DENS_av,REAL_FZ) &
           !$omp shared(KS,KE,IA,JA)
           do j = 1, JA
           do i = 1, IA
@@ -2224,7 +2224,7 @@ contains
           if ( .not. allocated(PW) ) allocate( PW(IA,JA) )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k) &
-          !$omp shared(PW,QV,DENS,REAL_FZ) &
+          !$omp shared(PW,QV,DENS_av,REAL_FZ) &
           !$omp shared(KS,KE,IA,JA)
           do j = 1, JA
           do i = 1, IA

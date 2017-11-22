@@ -287,9 +287,9 @@ contains
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do iq = 1,  QA
        if ( .not. TRACER_ADVC(iq) ) cycle
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
