@@ -31,6 +31,7 @@ module scale_bulkflux
           Tstar,   & ! (out)
           Qstar,   & ! (out)
           Uabs,    & ! (out)
+          Ra,      & ! (out)
           FracU10, & ! (out)
           FracT2,  & ! (out)
           FracQ2,  & ! (out)
@@ -54,6 +55,7 @@ module scale_bulkflux
        real(RP), intent(out) :: Tstar   ! friction temperature [K]
        real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
        real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+       real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
        real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
        real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
        real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
@@ -177,6 +179,7 @@ contains
       Tstar,   & ! (out)
       Qstar,   & ! (out)
       Uabs,    & ! (out)
+      Ra,      & ! (out)
       FracU10, & ! (out)
       FracT2,  & ! (out)
       FracQ2,  & ! (out)
@@ -213,6 +216,7 @@ contains
     real(RP), intent(out) :: Tstar   ! friction temperature [K]
     real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
     real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
     real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
     real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
     real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
@@ -251,8 +255,8 @@ contains
     logZ0MZ0H = max( log( Z0M/Z0H ), 1.0_RP )
 
     Uabs = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-    TH1  = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
-    TH0  = T0 * ( PRE00 / P0 )**( Rdry / CPdry )
+    TH1  = T1 * ( P0 / P1 )**( Rdry / CPdry )
+    TH0  = T0
 
     ! bulk Richardson number
     RiB0 = GRAV * Z1 * ( TH1 - TH0 ) / ( TH1 * Uabs**2 )
@@ -323,6 +327,8 @@ contains
     FracT2  = ChZ1 / Ch02 * sqrt( Cm02 / CmZ1 )
     FracQ2  = CqZ1 / Cq02 * sqrt( Cm02 / CmZ1 )
 
+    Ra = 1.0_RP / ( CqZ1 * Uabs )
+
     return
   end subroutine BULKFLUX_U95
 
@@ -341,6 +347,7 @@ contains
       Tstar,   & ! (out)
       Qstar,   & ! (out)
       Uabs,    & ! (out)
+      Ra,      & ! (out)
       FracU10, & ! (out)
       FracT2,  & ! (out)
       FracQ2,  & ! (out)
@@ -375,6 +382,7 @@ contains
     real(RP), intent(out) :: Tstar   ! friction temperature [K]
     real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
     real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
     real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
     real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
     real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
@@ -438,8 +446,8 @@ contains
 
     UabsC = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
 
-    TH1 = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
-    TH0 = T0 * ( PRE00 / P0 )**( Rdry / CPdry )
+    TH1 = T1 * ( P0 / P1 )**( Rdry / CPdry )
+    TH0 = T0
     THM = ( TH1 + TH0 ) * 0.5_RP
     QM  = ( Q1  + Q0  ) * 0.5_RP
     TV1 = TH1 * ( 1.0_DP + EPSTvap * Q1 )
@@ -672,6 +680,8 @@ contains
     FracU10 = real( FracU10C, kind=RP )
     FracT2  = real( FracT2C,  kind=RP )
     FracQ2  = real( FracQ2C,  kind=RP )
+
+    Ra = ( Q1 - Q0 ) / ( UstarC * QstarC + EPS )
 
     return
   end subroutine BULKFLUX_B91W01

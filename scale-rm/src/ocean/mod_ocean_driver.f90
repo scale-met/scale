@@ -211,6 +211,7 @@ contains
        ATMOS_DENS,     &
        ATMOS_QV,       &
        ATMOS_PBL,      &
+       ATMOS_SFC_DENS, &
        ATMOS_SFC_PRES, &
        ATMOS_SFLX_LW,  &
        ATMOS_SFLX_SW,  &
@@ -236,6 +237,7 @@ contains
                             ATMOS_DENS       (:,:),     & ! [OUT]
                             ATMOS_QV         (:,:),     & ! [OUT]
                             ATMOS_PBL        (:,:),     & ! [OUT]
+                            ATMOS_SFC_DENS   (:,:),     & ! [OUT]
                             ATMOS_SFC_PRES   (:,:),     & ! [OUT]
                             ATMOS_SFLX_rad_dn(:,:,:,:), & ! [OUT]
                             ATMOS_cosSZA     (:,:),     & ! [OUT]

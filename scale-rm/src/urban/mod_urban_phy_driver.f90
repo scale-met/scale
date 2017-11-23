@@ -172,6 +172,7 @@ contains
        ATMOS_DENS,       &
        ATMOS_QV,         &
        ATMOS_PBL,        &
+       ATMOS_SFC_DENS,   &
        ATMOS_SFC_PRES,   &
        ATMOS_SFLX_LW,    &
        ATMOS_SFLX_SW,    &
@@ -230,6 +231,7 @@ contains
                        ATMOS_QV        (:,:),      & ! [IN]
                        REAL_Z1         (:,:),      & ! [IN]
                        ATMOS_PBL       (:,:),      & ! [IN]
+                       ATMOS_SFC_DENS  (:,:),      & ! [IN]
                        ATMOS_SFC_PRES  (:,:),      & ! [IN]
                        ATMOS_SFLX_LW   (:,:,:),    & ! [IN]
                        ATMOS_SFLX_SW   (:,:,:),    & ! [IN]

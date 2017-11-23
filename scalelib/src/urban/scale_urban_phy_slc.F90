@@ -263,6 +263,7 @@ contains
         QA,          &
         Z1,          &
         PBL,         &
+        RHOS,        &
         PRSS,        &
         LWD,         &
         SWD,         &
@@ -286,6 +287,9 @@ contains
         dt           )
     use scale_grid_index
     use scale_urban_grid_index
+    use scale_const, only: &
+       Rdry => CONST_Rdry, &
+       Rvap => CONST_Rvap
     use scale_history, only: &
        HIST_in
     use scale_atmos_saturation, only: &
@@ -340,6 +344,7 @@ contains
     real(RP), intent(in) :: QA    (IA,JA)
     real(RP), intent(in) :: Z1    (IA,JA)
     real(RP), intent(in) :: PBL   (IA,JA)
+    real(RP), intent(in) :: RHOS  (IA,JA) ! density  at the surface [kg/m3]
     real(RP), intent(in) :: PRSS  (IA,JA)
     real(RP), intent(in) :: LWD   (IA,JA,2)
     real(RP), intent(in) :: SWD   (IA,JA,2)
@@ -397,8 +402,10 @@ contains
     real(RP) :: Tstar ! friction temperature [K]
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
-    real(RP) :: QVsat ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVsat   ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: Rtot
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -413,6 +420,9 @@ contains
     do i = IS, IE
 
     if( is_URB(i,j) ) then
+
+       Rtot = ( 1.0_RP - QA(i,j) ) * Rdry &
+            + (          QA(i,j) ) * Rvap
 
        Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
 
@@ -515,6 +525,7 @@ contains
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
                       Uabs,          & ! [OUT]
+                      Ra,            & ! [OUT]
                       FracU10,       & ! [OUT]
                       FracT2,        & ! [OUT]
                       FracQ2,        & ! [OUT]
@@ -532,9 +543,9 @@ contains
                       Z0HC,          & ! [IN]
                       Z0HC           ) ! [IN]
 
-       MWFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * W1(i,j)
-       MUFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * U1(i,j)
-       MVFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * V1(i,j)
+       MWFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * W1(i,j)
+       MUFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * U1(i,j)
+       MVFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * V1(i,j)
 
        Z0M(i,j) = Z0C
        Z0H(i,j) = Z0HC

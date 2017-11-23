@@ -163,6 +163,8 @@ contains
     real(RP) :: Tstar   ! friction temperature [K]
     real(RP) :: Qstar   ! friction mixing rate [kg/kg]
     real(RP) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP) :: Ra      ! Aerodynamic resistance (=1/Ce) [1/s]
+
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
@@ -210,6 +212,7 @@ contains
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
                       Uabs,          & ! [OUT]
+                      Ra,            & ! [OUT]
                       FracU10,       & ! [OUT]
                       FracT2,        & ! [OUT]
                       FracQ2,        & ! [OUT]
@@ -228,14 +231,13 @@ contains
                       SFC_Z0E (i,j)  ) ! [IN]
 
        !-----< momentum >-----
-       SFLX_MW(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_W(i,j)
-       SFLX_MU(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_U(i,j)
-       SFLX_MV(i,j) = -ATM_DENS(i,j) * Ustar**2 / Uabs * ATM_V(i,j)
+       SFLX_MW(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_W(i,j)
+       SFLX_MU(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_U(i,j)
+       SFLX_MV(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_V(i,j)
 
        !-----< heat flux >-----
-       SFLX_SH(i,j) = - ATM_DENS(i,j) * Ustar * Tstar &
-                    * CPdry * ( SFC_PRES(i,j) / PRE00 )**( Rdry/CPdry )
-       SFLX_LH(i,j) = - ATM_DENS(i,j) * Ustar * Qstar * LHV(i,j)
+       SFLX_SH(i,j) = -SFC_DENS(i,j) * Ustar * Tstar * CPdry
+       SFLX_LH(i,j) = -SFC_DENS(i,j) * Ustar * Qstar * LHV(i,j)
 
        !-----< mass flux >-----
        if ( I_QV > 0 ) then

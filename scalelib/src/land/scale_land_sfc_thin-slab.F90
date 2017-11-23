@@ -105,6 +105,7 @@ contains
         QVA,        &
         Z1,         &
         PBL,        &
+        RHOS,       &
         PRSS,       &
         LWD,        &
         SWD,        &
@@ -114,6 +115,7 @@ contains
         ALB_LW,     &
         ALB_SW,     &
         DZG,        &
+        Rb,         &
         TCS,        &
         Z0M,        &
         Z0H,        &
@@ -126,6 +128,7 @@ contains
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
+      Rvap  => CONST_Rvap,  &
       STB   => CONST_STB
     use scale_landuse, only: &
       LANDUSE_fact_land
@@ -167,6 +170,7 @@ contains
     real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
     real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
+    real(RP), intent(in) :: RHOS(IA,JA) ! density  at the surface [kg/m3]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [J/m2/s]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [J/m2/s]
@@ -177,6 +181,7 @@ contains
     real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
     real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
     real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
+    real(RP), intent(in) :: Rb    (IA,JA) ! stomata resistance [1/s]
     real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
     real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
@@ -195,8 +200,11 @@ contains
     real(RP) :: Tstar, dTstar ! friction potential temperature [K]
     real(RP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
     real(RP) :: Uabs,  dUabs  ! modified absolute velocity [m/s]
+    real(RP) :: Ra,    dRa    ! Aerodynamic resistance (=1/Ce) [1/s]
+
     real(RP) :: QVsat, dQVsat ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: QVS, dQVS     ! water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: Rtot
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -224,6 +232,9 @@ contains
 
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
 
+        Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
+             + (          QVA(i,j) ) * Rvap
+
         redf   = 1.0_RP
         oldres = huge(0.0_RP)
 
@@ -245,6 +256,7 @@ contains
               Tstar,     & ! [OUT]
               Qstar,     & ! [OUT]
               Uabs,      & ! [OUT]
+              Ra,        & ! [OUT]
               FracU10,   & ! [OUT] ! not used
               FracT2,    & ! [OUT] ! not used
               FracQ2,    & ! [OUT] ! not used
@@ -267,6 +279,7 @@ contains
               dTstar,         & ! [OUT]
               dQstar,         & ! [OUT]
               dUabs,          & ! [OUT]
+              dRa,            & ! [OUT] ! not used
               FracU10,        & ! [OUT] ! not used
               FracT2,         & ! [OUT] ! not used
               FracQ2,         & ! [OUT] ! not used
@@ -287,14 +300,15 @@ contains
           ! calculation for residual
           res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
               + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
-              + CPdry    * RHOA(i,j) * Ustar * Tstar &
-              + LHV(i,j) * RHOA(i,j) * Ustar * Qstar &
+              + CPdry    * RHOS(i,j) * Ustar * Tstar &
+              + LHV(i,j) * RHOS(i,j) * Ustar * Qstar * Ra / ( Ra + Rb(i,j) ) &
               - 2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 
           ! calculation for d(residual)/dLST
           dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
-               + CPdry    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
-               + LHV(i,j) * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) &
+               + CPdry    * RHOS(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
+               + LHV(i,j) * RHOS(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) &
+               * Ra / ( Ra + Rb(i,j) ) &
                - 2.0_RP * TCS(i,j) / DZG(i,j)
 
           ! convergence test with residual and error levels
@@ -442,6 +456,9 @@ contains
 
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
 
+        Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
+             + (          QVA(i,j) ) * Rvap
+
         call qsat( QVsat,     & ! [OUT]
                    LST1(i,j), & ! [IN]
                    PRSS(i,j)  ) ! [IN]
@@ -453,6 +470,7 @@ contains
             Tstar,     & ! [OUT]
             Qstar,     & ! [OUT]
             Uabs,      & ! [OUT]
+            Ra,        & ! [OUT]
             FracU10,   & ! [OUT]
             FracT2,    & ! [OUT]
             FracQ2,    & ! [OUT]
@@ -470,13 +488,11 @@ contains
             Z0H (i,j), & ! [IN]
             Z0E (i,j)  ) ! [IN]
 
-        ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
-        XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
-        YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
-
-        SHFLX(i,j) = - RHOA(i,j) * Ustar * Tstar &
-                   * CPdry * ( PRSS(i,j) / PRE00 )**( Rdry/CPdry )
-        LHFLX(i,j) = - RHOA(i,j) * Ustar * Qstar * LHV(i,j)
+        ZMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * WA(i,j)
+        XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
+        YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
+        SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
+        LHFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * LHV(i,j) * Ra / ( Ra + Rb(i,j) )
 
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 
