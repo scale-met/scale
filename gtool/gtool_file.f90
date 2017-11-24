@@ -44,7 +44,6 @@ module gtool_file
   public :: FileWriteAssociatedCoordinates
   public :: FileAddVariable
   public :: FileDefineVariable
-  public :: FileSetTAttr
   public :: FileGetShape
   public :: FileGetDatainfo
   public :: FileGetAllDatainfo
@@ -52,6 +51,8 @@ module gtool_file
   public :: FileWrite
   public :: FileGetGlobalAttribute
   public :: FileSetGlobalAttribute
+  public :: FileGetAttribute
+  public :: FileSetAttribute
   public :: FileEndDef
   public :: FileFlush
   public :: FileClose
@@ -142,6 +143,18 @@ module gtool_file
      module procedure FileSetGlobalAttributeFloat
      module procedure FileSetGlobalAttributeDouble
   end interface FileSetGlobalAttribute
+  interface FileGetAttribute
+     module procedure FileGetAttributeText
+     module procedure FileGetAttributeInt
+     module procedure FileGetAttributeFloat
+     module procedure FileGetAttributeDouble
+  end interface FileGetAttribute
+  interface FileSetAttribute
+     module procedure FileSetAttributeText
+     module procedure FileSetAttributeInt
+     module procedure FileSetAttributeFloat
+     module procedure FileSetAttributeDouble
+  end interface FileSetAttribute
 
   !-----------------------------------------------------------------------------
   !
@@ -184,6 +197,7 @@ contains
        master,      & ! (in)
        myrank,      & ! (in)
        rankidx,     & ! (in)
+       procsize,    & ! (in)
        single,      & ! (in) optional
        time_units,  & ! (in) optional
        append,      & ! (in) optional
@@ -200,6 +214,7 @@ contains
     integer,          intent( in)           :: master
     integer,          intent( in)           :: myrank
     integer,          intent( in)           :: rankidx(:)
+    integer,          intent( in)           :: procsize(:)
     character(len=*), intent( in), optional :: time_units
     logical,          intent( in), optional :: single
     logical,          intent( in), optional :: append
@@ -256,7 +271,9 @@ contains
        call FileSetGlobalAttribute( fid, & ! (in)
             "myrank", (/myrank/)         ) ! (in)
        call FileSetGlobalAttribute( fid, & ! (in)
-            "rankidx", rankidx           ) ! (in)
+            "rankidx", rankidx(:)        ) ! (in)
+       call FileSetGlobalAttribute( fid, & ! (in)
+            "procsize", procsize(:)      ) ! (in)
     end if
 
     call file_set_tunits( fid, & ! (in)
@@ -1490,9 +1507,111 @@ contains
   end subroutine FileDefineVariable
 
   !-----------------------------------------------------------------------------
-  ! FileSetTAttr
+  ! FileGetAttribute
   !-----------------------------------------------------------------------------
-  subroutine FileSetTAttr( &
+  subroutine FileGetAttributeText( &
+       fid,   & ! (in)
+       vname, & ! (in)
+       key,   & ! (in)
+       val    ) ! (out)
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    character(len=*), intent(out) :: val
+
+    integer :: error
+
+    call file_get_attribute_text( &
+         fid, vname, & ! (in)
+         key,        & ! (in)
+         val, error  ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get text attribute for '//trim(vname)//': '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetAttributeText
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetAttributeInt( &
+       fid,   & ! (in)
+       vname, & ! (in)
+       key,   & ! (in)
+       val    ) ! (out)
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    integer,          intent(out) :: val(:)
+
+    integer :: error
+
+    intrinsic size
+
+    call file_get_attribute_int( &
+         fid, vname,     & ! (in)
+         key, size(val), & ! (in)
+         val, error      ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get integer attribute for '//trim(vname)//': '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetAttributeInt
+  !-----------------------------------------------------------------------------
+
+  subroutine FileGetAttributeFloat( &
+       fid,   & ! (in)
+       vname, & ! (in)
+       key,   & ! (in)
+       val    ) ! (out)
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    real(SP),    intent(out) :: val(:)
+
+    integer :: error
+
+    intrinsic size
+
+    call file_get_attribute_float( &
+         fid, vname,     & ! (in)
+         key, size(val), & ! (in)
+         val, error      ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get float attribute for '//trim(vname)//': '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetAttributeFloat
+  subroutine FileGetAttributeDouble( &
+       fid,   & ! (in)
+       vname, & ! (in)
+       key,   & ! (in)
+       val    ) ! (out)
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    real(DP),    intent(out) :: val(:)
+
+    integer :: error
+
+    intrinsic size
+
+    call file_get_attribute_double( &
+         fid, vname,     & ! (in)
+         key, size(val), & ! (in)
+         val, error      ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get double attribute for '//trim(vname)//': '//trim(key))
+    end if
+
+    return
+  end subroutine FileGetAttributeDouble
+
+  !-----------------------------------------------------------------------------
+  ! FileSetAttribute
+  !-----------------------------------------------------------------------------
+  subroutine FileSetAttributeText( &
      fid,   & ! (in)
      vname, & ! (in)
      key,   & ! (in)
@@ -1505,17 +1624,96 @@ contains
 
     integer :: error
 
-    call file_set_tattr( &
+    call file_set_attribute_text( &
          fid, vname, & ! (in)
          key, val,   & ! (in)
          error       ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to set attr for axis')
+       call Log('E', 'xxx failed to set text attribute for '//trim(vname)//': '//trim(key))
     end if
 
     return
-  end subroutine FileSetTAttr
+  end subroutine FileSetAttributeText
 
+  !-----------------------------------------------------------------------------
+  subroutine FileSetAttributeInt( &
+     fid,   & ! (in)
+     vname, & ! (in)
+     key,   & ! (in)
+     val    & ! (in)
+     )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    integer,          intent(in) :: val(:)
+
+    integer :: error
+
+    intrinsic :: size
+
+    call file_set_attribute_int( &
+         fid, vname,                & ! (in)
+         key, val(:), size(val(:)), & ! (in)
+         error                      ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to set integer attribute for '//trim(vname)//': '//trim(key))
+    end if
+
+    return
+  end subroutine FileSetAttributeInt
+
+  !-----------------------------------------------------------------------------
+  subroutine FileSetAttributeFloat( &
+     fid,   & ! (in)
+     vname, & ! (in)
+     key,   & ! (in)
+     val    & ! (in)
+     )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(SP),    intent(in) :: val(:)
+
+    integer :: error
+
+    intrinsic :: size
+
+    call file_set_attribute_float( &
+         fid, vname,                & ! (in)
+         key, val(:), size(val(:)), & ! (in)
+         error                      ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to set float attribute for '//trim(vname)//': '//trim(key))
+    end if
+
+    return
+  end subroutine FileSetAttributeFloat
+  !-----------------------------------------------------------------------------
+  subroutine FileSetAttributeDouble( &
+     fid,   & ! (in)
+     vname, & ! (in)
+     key,   & ! (in)
+     val    & ! (in)
+     )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(DP),    intent(in) :: val(:)
+
+    integer :: error
+
+    intrinsic :: size
+
+    call file_set_attribute_double( &
+         fid, vname,                & ! (in)
+         key, val(:), size(val(:)), & ! (in)
+         error                      ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to set double attribute for '//trim(vname)//': '//trim(key))
+    end if
+
+    return
+  end subroutine FileSetAttributeDouble
   !-----------------------------------------------------------------------------
   ! FileGetShape
   !-----------------------------------------------------------------------------

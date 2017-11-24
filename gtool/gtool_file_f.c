@@ -224,13 +224,13 @@ void file_set_global_attribute_text_( int32_t *fid,        // (in)
 {
   char _key[File_HLONG+1];
   char _value[File_HLONG+1];
-  int32_t len;
+  int32_t l;
 
-  len = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, len);
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
 
-  len = value_len > File_HLONG ? File_HLONG : value_len;
-  fstr2cstr(_value, value, len);
+  l = value_len > File_HLONG ? File_HLONG : value_len;
+  fstr2cstr(_value, value, l);
 
   *error = file_set_global_attribute_text( *fid, _key, _value );
 }
@@ -243,9 +243,10 @@ void file_set_global_attribute_int_( int32_t *fid,      // (in)
                                      int32_t  key_len ) // (in)
 {
   char _key[File_HLONG+1];
+  int32_t l;
 
-  key_len = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, key_len);
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
 
   *error = file_set_global_attribute_int( *fid, _key, value, (size_t)*len );
 }
@@ -282,6 +283,190 @@ void file_set_global_attribute_double_( int32_t *fid,      // (in)
   *error = file_set_global_attribute_double( *fid, _key, value, (size_t)*len );
 }
 
+void file_get_attribute_text_( int32_t *fid,        // (in)
+			       char    *vname,      // (in)
+                               char    *key,        // (in)
+			       char    *value,      // (out)
+			       int32_t *error,      // (out)
+			       int32_t  vname_len,  // (in)
+			       int32_t  key_len,    // (in)
+			       int32_t  value_len ) // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HLONG+1];
+  char _value[File_HLONG+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_attribute_text( *fid, _vname, _key, _value, value_len );
+
+  l = value_len > File_HLONG ? File_HLONG : value_len;
+  cstr2fstr(value, _value, l);
+}
+
+void file_get_attribute_int_( int32_t *fid,       // (in)
+			      char    *vname,     // (in)
+			      char    *key,       // (in)
+			      int32_t *len,       // (in)
+			      int32_t *value,     // (out)
+			      int32_t *error,     // (out)
+			      int32_t  vname_len, // (in)
+			      int32_t  key_len )  // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_attribute_int( *fid, _vname, _key, value, (size_t)*len );
+}
+
+void file_get_attribute_float_( int32_t *fid,       // (in)
+				char    *vname,     // (in)
+				char    *key,       // (in)
+				int32_t *len,       // (in)
+				float   *value,     // (out)
+				int32_t *error,     // (out)
+				int32_t  vname_len, // (in)
+				int32_t  key_len )  // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_attribute_float( *fid, _vname, _key, value, (size_t)*len );
+}
+
+void file_get_attribute_double_( int32_t *fid,       // (in)
+				 char    *vname,     // (in)
+				 char    *key,       // (in)
+				 int32_t *len,       // (in)
+				 double  *value,     // (out)
+				 int32_t *error,     // (out)
+				 int32_t  vname_len, // (in)
+				 int32_t  key_len )  // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_get_attribute_double( *fid, _vname, _key, value, (size_t)*len );
+}
+
+void file_set_attribute_text_( int32_t *fid,        // (in)
+			       char    *vname,      // (in)
+			       char    *key,        // (in)
+			       char    *value,      // (in)
+			       int32_t *error,      // (out)
+			       int32_t  vname_len,  // (in)
+			       int32_t  key_len,    // (in)
+			       int32_t  value_len ) // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HLONG+1];
+  char _value[File_HLONG+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  l = value_len > File_HLONG ? File_HLONG : value_len;
+  fstr2cstr(_value, value, l);
+
+  *error = file_set_attribute_text( *fid, _vname, _key, _value );
+}
+
+void file_set_attribute_int_( int32_t *fid,       // (in)
+			      char    *vname,     // (in)
+			      char    *key,       // (in)
+			      int32_t *value,     // (in)
+			      int32_t *len,       // (in)
+			      int32_t *error,     // (out)
+			      int32_t  vname_len, // (in)
+			      int32_t  key_len )  // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_set_attribute_int( *fid, _vname, _key, value, (size_t)*len );
+}
+
+void file_set_attribute_float_( int32_t *fid,       // (in)
+				char    *vname,     // (in)
+				char    *key,       // (in)
+				float   *value,     // (in)
+				int32_t *len,       // (in)
+				int32_t *error,     // (out)
+				int32_t  vname_len, // (in)
+				int32_t  key_len )  // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_set_attribute_float( *fid, _vname, _key, value, (size_t)*len );
+}
+
+void file_set_attribute_double_( int32_t *fid,       // (in)
+				 char    *vname,     // (in)
+				 char    *key,       // (in)
+				 double  *value,     // (in)
+				 int32_t *len,       // (in)
+				 int32_t *error,     // (out)
+				 int32_t  vname_len, // (in)
+				 int32_t  key_len )  // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HLONG+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  l = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, l);
+
+  *error = file_set_attribute_double( *fid, _vname, _key, value, (size_t)*len );
+}
+
 void file_set_tunits_( int32_t *fid,        // (in)
                        char    *time_units, // (in)
                        int32_t *error,      // (in)
@@ -293,32 +478,6 @@ void file_set_tunits_( int32_t *fid,        // (in)
   fstr2cstr(_time_units, time_units, len);
 
   *error = file_set_tunits( *fid, _time_units );
-}
-
-void file_set_tattr_( int32_t *fid,       // (in)
-                      char    *vname,     // (in)
-                      char    *key,       // (in)
-                      char    *val,       // (in)
-                      int32_t *error,     // (out)
-                      int32_t  vname_len, // (in)
-                      int32_t  key_len,   // (in)
-                      int32_t  val_len)   // (in)
-{
-  char _vname[File_HSHORT+1];
-  char _key[File_HSHORT+1];
-  char _val[File_HLONG+1];
-  int32_t len;
-
-  len = vname_len > File_HLONG ? File_HLONG : vname_len;
-  fstr2cstr(_vname, vname, len);
-
-  len = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, len);
-
-  len = val_len > File_HLONG ? File_HLONG : val_len;
-  fstr2cstr(_val, val, len);
-
-  *error = file_set_tattr( *fid, _vname, _key, _val );
 }
 
 void file_put_axis_( int32_t *fid,          // (in)
