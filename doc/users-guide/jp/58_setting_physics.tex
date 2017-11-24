@@ -256,8 +256,8 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 
 放射計算のための太陽放射量は、
 モデル実行の日付および時刻設定と、モデルの計算領域の緯度経度に従って計算される。
-理想実験のために、計算領域全域で放射計算のための緯度経度や時刻を固定することも出来る。また太陽定数の変更も可能である。
-これらは\namelist{PARAM_ATMOS_SOLARINS}で設定する。\\
+理想実験のために、特定の条件を仮定する場合には、\namelist{PARAM_ATMOS_SOLARINS}で設定する。
+\namelist{PARAM_ATMOS_SOLARINS}では、計算領域全域で放射計算のための緯度経度や時刻を固定することや、太陽定数の変更が可能である。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -277,6 +277,17 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 \nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat}のデフォルト値には、\\
 \nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}がそれぞれ与えられる。
 \namelist{PARAM_MAPPROJ}の説明は、第\ref{subsec:adv_mapproj}節を参照されたい。\\
+%
+\nmitem{ATMOS_SOLARINS_fixeddate}が\verb|.true.|の場合、
+\nmitem{ATMOS_SOLARINS_date}で指定した日時（y,m,d,h,m,s）を用いて、太陽放射を計算するようになる。
+このとき、\nmitem{ATMOS_SOLARINS_date}で指定した日時のうち、値が負のものはモデル内の時刻を使う。
+例えば、
+\nmitem{ATMOS_SOLARINS_date}を\verb|1950,3,21,-1,-1,-1|と指定すると、
+計算しているタイムステップのモデル内時刻に応じて、
+太陽放射は1950年3月21日（春分）の日の日変化を設定することが可能となる。
+
+
+
 
 実験設定によっては、モデルトップの高度が 10-20 kmと低いことがしばしばある。
 そのため放射計算ではモデルトップとは別の最上層高度を設定し、
