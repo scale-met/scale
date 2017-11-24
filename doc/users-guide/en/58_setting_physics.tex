@@ -175,7 +175,7 @@ Variables required as the external data are shown in Table \ref{tab:var_list_atm
 
 \subsubsection{Configuration for \texttt{MSTRNX}}
 
-The solar radiation is calculated by using date, time, latitude, and longitude according to the model setting of calculation.
+The solar radiation is calculated by using date, time, latitude, and longitude according to the model configuration of calculation.
 For the ideal experiment, they can be arbitrarily given as fixed values of time and location over the domain.
 The solar constant can also be changed. These are configured in \namelist{PARAM_ATMOS_SOLARINS} as follows:
 
@@ -198,7 +198,7 @@ Refer to Section \ref{subsec:adv_mapproj} for the explanation of \\
 %
 When \nmitem{ATMOS_SOLARINS_fixeddate} is \verb|.true.|,
 the radiation process is calculated using the date and time specified at \nmitem{ATMOS_SOLARINS_date} (y,m,d,h,m,s).
-The date and time with negative value in \nmitem{ATMOS_SOLARINS_date} are replaced by those in the model date.
+The date and time with negative value in \nmitem{ATMOS_SOLARINS_date} are replaced by those in the model.
 For example,
 when configuring \nmitem{ATMOS_SOLARINS_date} to \verb|1950,3,21,-1,-1,-1|,
 solar radiation is set to March 21, 1950 (Vernal Equinox Day) and
@@ -208,7 +208,7 @@ according to the model date at each timestep of calculation.
 
 
 
-Depending on experimental design, the top of the model is often too low, such as 10$\sim$ 20 km, compared to the height of atmosphere.
+Depending on the experimental design, the top of the model is often too low, such as 10$\sim$ 20 km, compared to the height of the atmosphere.
 To remedy this situation, another top height used only for radiation calculation is set.
 The top height for radiation depends on the parameter file of the radiation scheme.
 For example, when \verb|MSTRNX| is used, the default parameter table used for \verb|MSTRNX| assumes that it is 100 km.
@@ -298,7 +298,7 @@ Gases considered in radiation calculation are carbon dioxide($CO_{2}$), ozone($O
 \verb|/| & \\
 }\\
 
-In case of using user-defined profiles, users must prepare height [m], pressure [Pa], temperature [K], water vapor [kg/kg], and ozone concentration [kg/kg] in ASCII format. The concentrations of gases other than water vapor and ozone are set to zero and temporal variation is not considered.
+In case of using user-defined profiles, users must prepare height [m], pressure [Pa], temperature [K], water vapor [kg/kg], and ozone concentration [kg/kg] in ASCII format. The concentrations of gases other than water vapor and ozone are set to zero, and temporal variation is not considered.
 An example of user-defined files is provided in
 \begin{verbatim}
   scale-rm/test/data/rad/rad_o3_profs.txt
