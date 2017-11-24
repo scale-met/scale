@@ -121,7 +121,7 @@ The radiation scheme is specified in \nmitem{ATMOS_PHY_RD_TYPE} in \namelist{PAR
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  Value & Explanation of scheme & Reference\\ \hline
       \verb|OFF| or \verb|NONE| & Do not calculate the radiation scheme & \\
-      \verb|OFFLINE|      & Use prescrived radiative data given from a file & \\
+      \verb|OFFLINE|      & Use prescribed radiative data given from a file & \\
       \verb|MSTRNX|       & mstrnX (A k-distribution-based broadband radiation transfer model) & \citet{sekiguchi_2008} \\
 %      \verb|WRF|          & mstrnX(Long wave) + Dudhia (shortwave) & \citet{dudhia_1989} \\
     \hline
@@ -150,7 +150,7 @@ the file name and information of the data are specified in \namelist{PARAM_ATMOS
 
 \noindent
 The file format of external data file is \netcdf format
-with the same corrdinate variables as that of initial/boundary data files.
+with the same coordinate variables as that of initial/boundary data files.
 Variables required as the external data are shown in Table \ref{tab:var_list_atm_rd_offline}.\\
 
 \begin{table}[h]
@@ -175,7 +175,7 @@ Variables required as the external data are shown in Table \ref{tab:var_list_atm
 
 \subsubsection{Configuration for \texttt{MSTRNX}}
 
-The solar radiation is calculated by using date, time, latitude, and longitude in the model domain.
+The solar radiation is calculated by using date, time, latitude, and longitude according to the model setting of calculation.
 For the ideal experiment, they can be arbitrarily given as fixed values of time and location over the domain.
 The solar constant can also be changed. These are configured in \namelist{PARAM_ATMOS_SOLARINS} as follows:
 
@@ -195,6 +195,18 @@ the default values of \nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat} are set to
 \nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}.
 Refer to Section \ref{subsec:adv_mapproj} for the explanation of \\
 \namelist{PARAM_MAPPROJ}.\\
+%
+When \nmitem{ATMOS_SOLARINS_fixeddate} is \verb|.true.|,
+the radiation process is calculated using the date and time specified at \nmitem{ATMOS_SOLARINS_date} (y,m,d,h,m,s).
+The date and time with negative value in \nmitem{ATMOS_SOLARINS_date} are replaced by those in the model date.
+For example,
+when configuring \nmitem{ATMOS_SOLARINS_date} to \verb|1950,3,21,-1,-1,-1|,
+solar radiation is set to March 21, 1950 (Vernal Equinox Day) and
+its diurnal variation is considered
+according to the model date at each timestep of calculation.
+
+
+
 
 Depending on experimental design, the top of the model is often too low, such as 10$\sim$ 20 km, compared to the height of atmosphere.
 To remedy this situation, another top height used only for radiation calculation is set.
@@ -234,7 +246,7 @@ These files are specified in \namelist{PARAM_ATMOS_PHY_RD_MSTRN} as follows:
 
 The parameter files were updated in version 5.2.
 It is recommended to use new parameter files in the latest version of \scalerm.
-The previous parameter files, provided in version 5.1 or earlier, 
+The previous parameter files, provided in version 5.1 or earlier,
 are located in the directory \verb|scale-rm/test/data/rad/OpenCLASTR|.
 The number of particle type and the number of particle bins are different from those in the new parameter files.
 So if you want to use these files, \nmitem{ATMOS_PHY_RD_MSTRN_nptype, ATMOS_PHY_RD_MSTRN_nradius} should be specified in \\
@@ -272,7 +284,7 @@ The example of configuration of putting five files above to the current director
 \verb|/| & \\
 }\\
 
-Gases considered in radiation caluculation are carbon dioxide($CO_{2}$), ozone($O_{3}$), nitrus oxide($N_{2}O$), carbon monoxide($CO$), methane($CH_{4}$), oxigen($O_{2}$), and chlorofluorocarbons($CFCs$). These concentrations are able to be set to zero in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
+Gases considered in radiation calculation are carbon dioxide($CO_{2}$), ozone($O_{3}$), Nauru's oxide($N_{2}O$), carbon monoxide($CO$), methane($CH_{4}$), oxigen($O_{2}$), and chlorofluorocarbons($CFCs$). These concentrations are able to be set to zero in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
@@ -286,13 +298,13 @@ Gases considered in radiation caluculation are carbon dioxide($CO_{2}$), ozone($
 \verb|/| & \\
 }\\
 
-In case of using user-defined profiles, users must prepare height [m], pressure [Pa], temperature [K], water vapor [kg/kg], and ozone concentration [kg/kg] in ASCII format. The concentrations of gases other than water vapor and ozone are set to zero and temporal variation is not considered. 
+In case of using user-defined profiles, users must prepare height [m], pressure [Pa], temperature [K], water vapor [kg/kg], and ozone concentration [kg/kg] in ASCII format. The concentrations of gases other than water vapor and ozone are set to zero and temporal variation is not considered.
 An example of user-defined files is provided in
 \begin{verbatim}
   scale-rm/test/data/rad/rad_o3_profs.txt
 \end{verbatim}
 To use the user-defined profiles,
-it is required to set \nmitem{ATMOS_PHY_RD_PROFILE_use_climatology} $=$ \verb|.false.| in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}, 
+it is required to set \nmitem{ATMOS_PHY_RD_PROFILE_use_climatology} $=$ \verb|.false.| in \namelist{PARAM_ATMOS_PHY_RD_PROFILE},
 and to specify the file and directory names in \nmitem{ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME}.
 
 \editboxtwo{
@@ -321,7 +333,7 @@ If ocean, land, and urban models are not used, the bottom atmospheric boundary i
 \begin{center}
   \caption{Choices for the atmospheric bottom boundary }
   \label{tab:nml_atm_sf}
-  \begin{tabularx}{150mm}{lX} \hline
+  \begin{tabularx}{150mm}{lx} \hline
     \rowcolor[gray]{0.9}  Value & Description of scheme\\ \hline
       \verb|NONE|         & Do not calculate surface flux, but \verb|"NONE"| is replaced to \verb|"COUPLE"| according to settings of ocean, land, and urban models) \\
       \verb|OFF|          & Do not calculate surface flux\\
@@ -532,3 +544,4 @@ If the type of urban area is included in the land-use setup by \namelist{PARAM L
 \msgbox{
 \verb|xxx Urban fraction exists, but urban components never called. STOP.| \\
 }
+
