@@ -808,7 +808,7 @@ contains
     integer :: datatype
 
     integer :: istat(MPI_STATUS_SIZE)
-    integer :: n, nn, l, ierr
+    integer :: n, l, ierr
     !---------------------------------------------------------------------------
 
     if ( RP == DP ) then
@@ -826,9 +826,7 @@ contains
     do l = ADM_rgn_nmax, 1, -1
        if ( ADM_rgn_vnum(ADM_N,l) == ADM_vlink ) then
           do n = 1, ADM_vlink
-             nn = n + 1
-             if( nn > ADM_vlink ) nn = 1
-             rgntab(n) = ADM_rgn_vtab(ADM_RID,ADM_N,l,nn)
+             rgntab(n) = ADM_rgn_vtab(ADM_RID,ADM_N,l,n)
              prctab(n) = ADM_rgn2prc(rgntab(n))
           enddo
           exit
@@ -887,7 +885,7 @@ contains
     !--- send information of grid around south pole from regular region
 
     ! find region which has the south pole
-    do l = ADM_rgn_nmax, 1, -1
+    do l = 1, ADM_rgn_nmax
        if ( ADM_rgn_vnum(ADM_S,l) == ADM_vlink ) then
           do n = 1, ADM_vlink
              rgntab(n) = ADM_rgn_vtab(ADM_RID,ADM_S,l,n)
