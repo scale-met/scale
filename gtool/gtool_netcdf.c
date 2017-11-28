@@ -697,20 +697,16 @@ int32_t file_get_attribute_int( int32_t  fid,   // (in)
     CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l+1 ) return ERROR_CODE;
-
+    if ( len < l ) return ERROR_CODE;
     CHECK_PNC_ERROR( ncmpi_get_att_int(ncid, varid, key, value) )
-    value[l] = '\0';
   }
   else {
     size_t l;
     CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l+1 ) return ERROR_CODE;
-
+    if ( len < l ) return ERROR_CODE;
     CHECK_ERROR( nc_get_att_int(ncid, varid, key, value) )
-    value[l] = '\0';
   }
 
   return SUCCESS_CODE;
@@ -733,20 +729,16 @@ int32_t file_get_attribute_float( int32_t  fid,   // (in)
     CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l+1 ) return ERROR_CODE;
-
+    if ( len < l ) return ERROR_CODE;
     CHECK_PNC_ERROR( ncmpi_get_att_float(ncid, varid, key, value) )
-    value[l] = '\0';
   }
   else {
     size_t l;
     CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l+1 ) return ERROR_CODE;
-
+    if ( len < l ) return ERROR_CODE;
     CHECK_ERROR( nc_get_att_float(ncid, varid, key, value) )
-    value[l] = '\0';
   }
 
   return SUCCESS_CODE;
@@ -769,20 +761,16 @@ int32_t file_get_attribute_double( int32_t  fid,   // (in)
     CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l+1 ) return ERROR_CODE;
-
+    if ( len < l ) return ERROR_CODE;
     CHECK_PNC_ERROR( ncmpi_get_att_double(ncid, varid, key, value) )
-    value[l] = '\0';
   }
   else {
     size_t l;
     CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l+1 ) return ERROR_CODE;
-
+    if ( len < l ) return ERROR_CODE;
     CHECK_ERROR( nc_get_att_double(ncid, varid, key, value) )
-    value[l] = '\0';
   }
 
   return SUCCESS_CODE;
