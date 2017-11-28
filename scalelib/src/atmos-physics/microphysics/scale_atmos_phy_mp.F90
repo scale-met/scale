@@ -157,17 +157,6 @@ contains
        ATMOS_PHY_MP_kessler_DESC, &
        ATMOS_PHY_MP_kessler_UNIT, &
        ATMOS_PHY_MP_kessler_DENS
-    use scale_atmos_phy_mp_tomita08, only: &
-       ATMOS_PHY_MP_tomita08_config, &
-       ATMOS_PHY_MP_tomita08_setup, &
-       ATMOS_PHY_MP_tomita08, &
-       ATMOS_PHY_MP_tomita08_CloudFraction, &
-       ATMOS_PHY_MP_tomita08_EffectiveRadius, &
-       ATMOS_PHY_MP_tomita08_MixingRatio, &
-       ATMOS_PHY_MP_tomita08_NAME, &
-       ATMOS_PHY_MP_tomita08_DESC, &
-       ATMOS_PHY_MP_tomita08_UNIT, &
-       ATMOS_PHY_MP_tomita08_DENS
     use scale_atmos_phy_mp_sn14, only: &
        ATMOS_PHY_MP_sn14_config, &
        ATMOS_PHY_MP_sn14_setup, &
@@ -235,19 +224,6 @@ contains
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_kessler_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_kessler_UNIT
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_kessler_DENS
-    case( 'TOMITA08' )
-       call ATMOS_PHY_MP_tomita08_config( &
-            MP_TYPE,     & ! (in)
-            QA_MP, QS_MP ) ! (out)
-       ATMOS_PHY_MP                 => ATMOS_PHY_MP_tomita08
-       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_tomita08_setup
-       ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_tomita08_CloudFraction
-       ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_tomita08_EffectiveRadius
-       ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_tomita08_MixingRatio
-       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_tomita08_NAME
-       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_tomita08_DESC
-       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_tomita08_UNIT
-       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_tomita08_DENS
     case( 'SN14' )
        call ATMOS_PHY_MP_sn14_config( &
             MP_TYPE,     & ! (in)

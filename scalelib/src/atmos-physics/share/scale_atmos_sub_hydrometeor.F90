@@ -108,6 +108,13 @@ module scale_atmos_hydrometeor
   real(RP), public           :: LHS       !< latent heat of sublimation  for use [J/kg]
   real(RP), public           :: LHF       !< latent heat of fusion       for use [J/kg]
 
+  real(RP), public           :: CV_VAPOR !< CV for vapor [J/kg/K]
+  real(RP), public           :: CP_VAPOR !< CP for vapor [J/kg/K]
+  real(RP), public           :: CV_WATER !< CV for water [J/kg/K]
+  real(RP), public           :: CP_WATER !< CP for water [J/kg/K]
+  real(RP), public           :: CV_ICE   !< CV for ice   [J/kg/K]
+  real(RP), public           :: CP_ICE   !< CP for ice   [J/kg/K]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -116,13 +123,6 @@ module scale_atmos_hydrometeor
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: CV_VAPOR !< CV for vapor [J/kg/K]
-  real(RP), private :: CP_VAPOR !< CP for vapor [J/kg/K]
-  real(RP), private :: CV_WATER !< CV for water [J/kg/K]
-  real(RP), private :: CP_WATER !< CP for water [J/kg/K]
-  real(RP), private :: CV_ICE   !< CV for ice   [J/kg/K]
-  real(RP), private :: CP_ICE   !< CP for ice   [J/kg/K]
-
   real(RP), private :: THERMODYN_EMASK = 1.0_RP
 
   !-----------------------------------------------------------------------------
