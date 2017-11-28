@@ -241,10 +241,10 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
       \verb|RFLX_LW_dn|     & 下向き長波放射フラックス & 空間3次元+時間1次元 \\
       \verb|RFLX_SW_up|     & 上向き短波放射フラックス & 空間3次元+時間1次元 \\
       \verb|RFLX_SW_dn|     & 下向き短波放射フラックス & 空間3次元+時間1次元 \\
-      \verb|SFLX_LW_up|     & 地表面上向き長波放射    & 空間2次元+時間1次元 \\
-      \verb|SFLX_LW_dn|     & 地表面下向き長波放射    & 空間2次元+時間1次元 \\
-      \verb|SFLX_SW_up|     & 地表面上向き短波放射    & 空間2次元+時間1次元 \\
-      \verb|SFLX_SW_dn|     & 地表面下向き短波放射    & 空間2次元+時間1次元 \\
+      \verb|SFLX_LW_up|     & 地表面上向き長波放射　　 & 空間2次元+時間1次元 \\
+      \verb|SFLX_LW_dn|     & 地表面下向き長波放射　　 & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_up|     & 地表面上向き短波放射　　 & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn|     & 地表面下向き短波放射　　 & 空間2次元+時間1次元 \\
       \verb|SFLX_SW_dn_dir| & 地表面下向き直達短波放射 & 空間2次元+時間1次元 & オプション \\
     \hline
   \end{tabularx}
@@ -262,32 +262,42 @@ HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{lX}
-\verb|&PARAM_ATMOS_SOLARINS        | & \\
-\verb| ATMOS_SOLARINS_constant    = 1360.250117   | & 太陽定数 [W/m2] \\
-\verb| ATMOS_SOLARINS_fixedlatlon = .false.       | & 放射計算の緯度経度を固定するかどうか\\
-\verb| ATMOS_SOLARINS_fixeddate   = .false.       | & 放射計算の日時を固定するかどうか\\
-\verb| ATMOS_SOLARINS_lon         = 135.221       | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の経度 [deg.] \\
-\verb| ATMOS_SOLARINS_lat         =  34.653       | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の緯度 [deg.]\\
-\verb| ATMOS_SOLARINS_date = -1,-1,-1,-1,-1,-1,   | & \verb|ATMOS_SOLARINS_fixeddate=.true.|の場合の年月日時刻 [Y,M,D,H,M,S]\\
-\verb|/|            & \\
+\verb|&PARAM_ATMOS_SOLARINS                             | & \\
+\verb| ATMOS_SOLARINS_constant     = 1360.250117        | & 太陽定数 [W/m2] \\
+\verb| ATMOS_SOLARINS_set_ve       = .false.            | & 春分点条件に設定するかどうか \\
+\verb| ATMOS_SOLARINS_set_ideal    = .false.            | & 黄道傾斜角と離心率を固定するかどうか \\
+\verb| ATMOS_SOLARINS_obliquity    = 0.0                | & \verb|ATMOS_SOLARINS_set_ideal=.true.|の場合の黄道傾斜角 [deg.] \\
+\verb| ATMOS_SOLARINS_eccentricity = 0.0                | & \verb|ATMOS_SOLARINS_set_ideal=.true.|の場合の離心率 \\
+\verb| ATMOS_SOLARINS_fixedlatlon  = .false.            | & 放射計算の緯度経度を固定するかどうか\\
+\verb| ATMOS_SOLARINS_lon          = 135.221            | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の経度 [deg.] \\
+\verb| ATMOS_SOLARINS_lat          =  34.653            | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の緯度 [deg.]\\
+\verb| ATMOS_SOLARINS_fixeddate    = .false.            | & 放射計算の日時を固定するかどうか\\
+\verb| ATMOS_SOLARINS_date         = -1,-1,-1,-1,-1,-1, | & \verb|ATMOS_SOLARINS_fixeddate=.true.|の場合の年月日時刻 [Y,M,D,H,M,S]\\
+\verb|/                                                 | & \\
 \end{tabularx}
 }}}\\
 
-\namelist{PARAM_MAPPROJ}の\nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}が設定されている場合、\\
-\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat}のデフォルト値には、\\
-\nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}がそれぞれ与えられる。
-\namelist{PARAM_MAPPROJ}の説明は、第\ref{subsec:adv_mapproj}節を参照されたい。\\
+\nmitem{ATMOS_SOLARINS_set_ideal}が\verb|.true.|の場合、
+\nmitem{ATMOS_SOLARINS_obliquity}, \\
+\nmitem{ATMOS_SOLARINS_eccentricity}でそれぞれ指定した黄道傾斜角＝地軸（deg.）と離心率を用いる。
+これらの設定は理想実験や地球以外の惑星を想定した実験の時に有用である。\\
+%
+\nmitem{ATMOS_SOLARINS_fixedlatlon}が\verb|.true.|の場合、
+計算領域全域において\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat}で指定した緯度経度をもとに太陽天頂角を計算する。
+固定する緯度経度のデフォルト値には、
+\namelist{PARAM_MAPPROJ}の\nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}が設定されている場合、これらの値が用いられる。
+\namelist{PARAM_MAPPROJ}の説明は、第\ref{subsec:adv_mapproj}節を参照されたい。
 %
 \nmitem{ATMOS_SOLARINS_fixeddate}が\verb|.true.|の場合、
-\nmitem{ATMOS_SOLARINS_date}で指定した日時（y,m,d,h,m,s）を用いて、太陽放射を計算するようになる。
-このとき、\nmitem{ATMOS_SOLARINS_date}で指定した日時のうち、値が負のものはモデル内の時刻を使う。
-例えば、
-\nmitem{ATMOS_SOLARINS_date}を\verb|1950,3,21,-1,-1,-1|と指定すると、
-計算しているタイムステップのモデル内時刻に応じて、
-太陽放射は1950年3月21日（春分）の日の日変化を設定することが可能となる。
-
-
-
+\nmitem{ATMOS_SOLARINS_date}で指定した日時（年、月、日、時、分、秒）を用いて、太陽放射を計算するようになる。
+このとき、負の値を指定したものは固定されない。
+例えば、\nmitem{ATMOS_SOLARINS_date}を\verb|1950,3,21,-1,-1,-1|と指定すると時刻は固定されず、
+モデル内で計算している各ステップの時刻に応じて、1950年3月21日（春分）の太陽放射の日変化を与えることが可能となる。
+%
+\nmitem{ATMOS_SOLARINS_set_ve}が\verb|.true.|の場合、一般的な理想実験で用いる春分点条件のための設定をまとめて行うことが出来る。
+すなわち、黄道傾斜角と離心率をゼロ、計算領域全域が緯度０度、経度０度、日時が1950年3月21日12時00分00秒に設定する。
+これは\nmitem{ATMOS_SOLARINS_set_ideal, ATMOS_SOLARINS_fixedlatlon, ATMOS_SOLARINS_fixeddate}を用いて設定した場合と同じであり、
+それぞれ個別に設定を行なった場合はそちらが優先される。
 
 実験設定によっては、モデルトップの高度が 10-20 kmと低いことがしばしばある。
 そのため放射計算ではモデルトップとは別の最上層高度を設定し、
