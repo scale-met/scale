@@ -103,6 +103,8 @@ module mod_admin_time
   real(DP), private :: TIME_WALLCLOCK_SAFE    =  0.9_DP ! Safety coefficient for elapse time limit
   real(DP), private :: TIME_WALLCLOCK_safelim           ! TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE
 
+  logical,  private :: debug = .false.
+
   real(DP), private, parameter :: eps = 1.E-6_DP !> epsilon for timesec
 
   !-----------------------------------------------------------------------------
@@ -264,7 +266,8 @@ contains
        TIME_DT_RESUME,               &
        TIME_DT_RESUME_UNIT,          &
        TIME_WALLCLOCK_LIMIT,         &
-       TIME_WALLCLOCK_SAFE
+       TIME_WALLCLOCK_SAFE,          &
+       debug
 
     integer              :: dateday
     real(DP)             :: datesec
@@ -824,6 +827,10 @@ contains
                                                           ' (step interval=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
     endif
 
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [ADMIN_TIME_advance] ', TIME_NOWDAY, TIME_NOWSEC, TIME_NOWDATE(:), TIME_NOWMS
+     endif
+
     return
   end subroutine ADMIN_TIME_setup
 
@@ -1024,6 +1031,10 @@ contains
                                TIME_OFFSET_YEAR ) ! [IN]
 
     TIME_NOWDAYSEC = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
+
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [ADMIN_TIME_advance] ', TIME_NOWDAY, TIME_NOWSEC, TIME_NOWDATE(:), TIME_NOWMS
+    endif
 
     if ( TIME_NOWSTEP > TIME_NSTEP ) then
        TIME_DOend = .true.

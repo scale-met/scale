@@ -63,6 +63,9 @@ module scale_calendar
   !
   !++ Private parameters & variables
   !
+  logical,  private :: CALENDAR_360DAYS = .false.
+  logical,  private :: CALENDAR_365DAYS = .false.
+
   real(DP), private :: CALENDAR_DOI  = 365.0_DP !< days of year
   real(DP), private :: CALENDAR_HOUR = 24.0_DP  !< hours   of day
   real(DP), private :: CALENDAR_MIN  = 60.0_DP  !< minutes of hour
@@ -70,21 +73,60 @@ module scale_calendar
 
   integer,  private, parameter :: I_nonleapyear = 1   !< [index] non leap year
   integer,  private, parameter :: I_leapyear    = 2   !< [index] leap year
-  integer,  private            :: dayofmonth(12,2)    !< days of each month
+  integer,  private, parameter :: I_360days     = 3   !< [index] 360 days
+  integer,  private            :: dayofmonth(12,3)    !< days of each month
   data dayofmonth / 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, & ! non-leap year
-                    31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31  / ! leap year
+                    31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, & ! leap year
+                    30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30  / ! 360 days
+
+  logical,  private :: debug = .false.
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CALENDAR_setup
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
+
+    namelist / PARAM_CALENDAR / &
+       CALENDAR_360DAYS, &
+       CALENDAR_365DAYS, &
+       debug
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CALENDAR] / Categ[COMMON] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CALENDAR,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CALENDAR. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CALENDAR)
+
+    if    ( CALENDAR_360DAYS ) then
+       CALENDAR_DOI = 360.0_DP
+    elseif( CALENDAR_365DAYS ) then
+       CALENDAR_DOI = 365.0_DP
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Calendar settings ***'
+    if    ( CALENDAR_360DAYS ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** DayOfYear = 360 : ideal setting'
+    elseif( CALENDAR_365DAYS ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** DayOfYear = 365 : ideal setting'
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** DayOfYear = 365 or 366 : Gregorian calendar'
+    endif
 
     return
   end subroutine CALENDAR_setup
@@ -194,16 +236,21 @@ contains
     gmonth_mod = mod( gmonth-1, 12 ) + 1
     gyear_mod  = gyear + ( gmonth-gmonth_mod ) / 12
 
-    yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) ) &
-            + int( real(gyear_mod-1,kind=DP) /   4.0_DP ) &
-            - int( real(gyear_mod-1,kind=DP) / 100.0_DP ) &
-            + int( real(gyear_mod-1,kind=DP) / 400.0_DP ) &
-            - int( real(oyear    -1,kind=DP) /   4.0_DP ) &
-            + int( real(oyear    -1,kind=DP) / 100.0_DP ) &
-            - int( real(oyear    -1,kind=DP) / 400.0_DP )
+    if ( CALENDAR_360DAYS ) then
+       yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) )
+    else
+       yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) ) &
+               + int( real(gyear_mod-1,kind=DP) /   4.0_DP ) &
+               - int( real(gyear_mod-1,kind=DP) / 100.0_DP ) &
+               + int( real(gyear_mod-1,kind=DP) / 400.0_DP ) &
+               - int( real(oyear    -1,kind=DP) /   4.0_DP ) &
+               + int( real(oyear    -1,kind=DP) / 100.0_DP ) &
+               - int( real(oyear    -1,kind=DP) / 400.0_DP )
+    endif
 
     ileap = I_nonleapyear
     if( checkleap(gyear_mod) ) ileap = I_leapyear
+    if( CALENDAR_360DAYS     ) ileap = I_360days
 
     monthday = 0
     do m = 1, gmonth_mod-1
@@ -235,7 +282,12 @@ contains
     integer :: i, ileap
     !---------------------------------------------------------------------------
 
-    gyear = int( real(absday,kind=DP) / 366.0_DP ) + oyear ! first guess
+    if ( CALENDAR_360DAYS ) then
+       gyear = int( real(absday,kind=DP) / 361.0_DP ) + oyear ! first guess
+    else
+       gyear = int( real(absday,kind=DP) / 366.0_DP ) + oyear ! first guess
+    endif
+
     do i = 1, 1000
        call CALENDAR_ymd2absday( checkday, gyear+1, 1, 1, oyear )
        if( absday < checkday ) exit
@@ -244,6 +296,7 @@ contains
 
     ileap = I_nonleapyear
     if( checkleap(gyear) ) ileap = I_leapyear
+    if( CALENDAR_360DAYS ) ileap = I_360days
 
     gmonth = 1
     do i = 1, 1000
@@ -544,6 +597,9 @@ contains
     if( check4   == 0 ) checkleap = .true.
     if( check100 == 0 ) checkleap = .false.
     if( check400 == 0 ) checkleap = .true.
+
+    if( CALENDAR_360DAYS ) checkleap = .false.
+    if( CALENDAR_365DAYS ) checkleap = .false.
 
   end function checkleap
 
