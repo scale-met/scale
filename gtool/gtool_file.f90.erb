@@ -47,6 +47,7 @@ module gtool_file
   public :: FileAddVariable
   public :: FileDefineVariable
   public :: FileGetShape
+  public :: FileGetCommoninfo
   public :: FileGetDatainfo
   public :: FileGetAllDatainfo
   public :: FileRead
@@ -64,10 +65,16 @@ module gtool_file
   public :: FileAttachBuffer
   public :: FileDetachBuffer
 
+  interface FileGetCommoninfo
+     module procedure FileGetCommoninfoFId
+     module procedure FileGetCommoninfoFName
+  end interface FileGetCommoninfo
+
   interface FileGetDatainfo
      module procedure FileGetDatainfoFId
      module procedure FileGetDatainfoFName
   end interface FileGetDatainfo
+
   interface FileGetAllDatainfo
      module procedure FileGetAllDatainfoFId
      module procedure FileGetAllDatainfoFName
@@ -1125,6 +1132,122 @@ contains
 
     return
   end subroutine FileGetShape
+
+  !-----------------------------------------------------------------------------
+  ! FileGetCommoninfo
+  !-----------------------------------------------------------------------------
+  subroutine FileGetCommoninfoFName( &
+       basename,     &
+       myrank,       &
+       title,        &
+       source,       &
+       institution,  &
+       rankidx,      &
+       procsize,     &
+       size_global,  &
+       start_global, &
+       halo_global,  &
+       halo_local,   &
+       periodic      )
+    implicit none
+
+    character(len=*),         intent(in)  :: basename
+    integer,                  intent(in)  :: myrank
+    character(len=File_HMID), intent(out) :: title             ! title of the file
+    character(len=File_HMID), intent(out) :: source            ! for file header
+    character(len=File_HMID), intent(out) :: institution       ! for file header
+    integer,                  intent(out) :: rankidx     (2)   ! my rank in 2D process topology (x:y)
+    integer,                  intent(out) :: procsize    (2)   ! total process size             (x:y)
+    integer,                  intent(out) :: size_global (2)   ! total grid size     in global  (x:y)
+    integer,                  intent(out) :: start_global(2)   ! start index of grid in global  (x:y)
+    integer,                  intent(out) :: halo_global (2,2) ! halo  grid size     in global  (x:y,start:end)
+    integer,                  intent(out) :: halo_local  (2,2) ! halo  grid size     in local   (x:y,start:end)
+    logical,                  intent(out) :: periodic    (2)   ! periodic condition?            (x:y)
+
+    integer :: myrank_check(1)
+    integer :: fid
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    call FileOpen( fid,       & ! [OUT]
+                   basename,  & ! [IN]
+                   File_FREAD ) ! [IN]
+
+    call FileGetCommoninfoFId( fid,               & ! [IN]
+                               title,             & ! [OUT]
+                               source,            & ! [OUT]
+                               institution,       & ! [OUT]
+                               myrank_check(:),   & ! [OUT]
+                               rankidx     (:),   & ! [OUT]
+                               procsize    (:),   & ! [OUT]
+                               size_global (:),   & ! [OUT]
+                               start_global(:),   & ! [OUT]
+                               halo_global (:,:), & ! [OUT]
+                               halo_local  (:,:), & ! [OUT]
+                               periodic    (:)    ) ! [OUT]
+
+    if ( myrank /= myrank_check(1) ) then
+       call Log('E', 'xxx [FileGetCommoninfo] requested rank number is inconsistent with that in the file.')
+    endif
+
+    return
+  end subroutine FileGetCommoninfoFName
+
+  subroutine FileGetCommoninfoFId( &
+       fid,          &
+       title,        &
+       source,       &
+       institution,  &
+       myrank,       &
+       rankidx,      &
+       procsize,     &
+       size_global,  &
+       start_global, &
+       halo_global,  &
+       halo_local,   &
+       periodic      )
+    implicit none
+
+    integer,                  intent(in)  :: fid
+    character(len=File_HMID), intent(out) :: title             ! title of the file
+    character(len=File_HMID), intent(out) :: source            ! for file header
+    character(len=File_HMID), intent(out) :: institution       ! for file header
+    integer,                  intent(out) :: myrank      (1)   ! total process size             (x:y)
+    integer,                  intent(out) :: rankidx     (2)   ! my rank in 2D process topology (x:y)
+    integer,                  intent(out) :: procsize    (2)   ! total process size             (x:y)
+    integer,                  intent(out) :: size_global (2)   ! total grid size     in global  (x:y)
+    integer,                  intent(out) :: start_global(2)   ! start index of grid in global  (x:y)
+    integer,                  intent(out) :: halo_global (2,2) ! halo  grid size     in global  (x:y,start:end)
+    integer,                  intent(out) :: halo_local  (2,2) ! halo  grid size     in local   (x:y,start:end)
+    logical,                  intent(out) :: periodic    (2)   ! periodic condition?            (x:y)
+
+    character(len=6) :: logical_str
+    !---------------------------------------------------------------------------
+
+    call FileGetGlobalAttribute( fid, 'title',       title       )
+    call FileGetGlobalAttribute( fid, 'source',      source      )
+    call FileGetGlobalAttribute( fid, 'institution', institution )
+    call FileGetGlobalAttribute( fid, 'myrank',      myrank  (:) )
+    call FileGetGlobalAttribute( fid, 'rankidx',     rankidx (:) )
+    call FileGetGlobalAttribute( fid, 'procsize',    procsize(:) )
+
+    call FileGetAttribute( fid, 'x', 'size_global',  size_global (1:1) )
+    call FileGetAttribute( fid, 'x', 'start_global', start_global(1:1) )
+    call FileGetAttribute( fid, 'x', 'halo_global',  halo_global (1,:) )
+    call FileGetAttribute( fid, 'x', 'halo_local',   halo_local  (1,:) )
+    call FileGetAttribute( fid, 'x', 'periodic',     logical_str       )
+    periodic(1) = logical_str == 'true'
+
+    call FileGetAttribute( fid, 'y', 'size_global',  size_global (2:2) )
+    call FileGetAttribute( fid, 'y', 'start_global', start_global(2:2) )
+    call FileGetAttribute( fid, 'y', 'halo_global',  halo_global (2,:) )
+    call FileGetAttribute( fid, 'y', 'halo_local',   halo_local  (2,:) )
+    call FileGetAttribute( fid, 'y', 'periodic',     logical_str       )
+    periodic(2) = logical_str == 'true'
+
+    return
+  end subroutine FileGetCommoninfoFId
 
   !-----------------------------------------------------------------------------
   ! FileGetData
