@@ -57,7 +57,7 @@ contains
   !> Config
   subroutine ATMOS_driver_config
     use mod_atmos_phy_mp_driver, only: &
-       ATMOS_PHY_MP_driver_config
+       ATMOS_PHY_MP_driver_tracer_setup
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_config
     use mod_atmos_phy_ch_driver, only: &
@@ -72,7 +72,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS] / Origin[SCALE-RM]'
 
-    call ATMOS_PHY_MP_driver_config
+    call ATMOS_PHY_MP_driver_tracer_setup
     call ATMOS_PHY_AE_driver_config
     call ATMOS_PHY_CH_driver_config
     call ATMOS_PHY_TB_driver_config
@@ -330,7 +330,7 @@ contains
        RHOU_tp,                    &
        RHOV_tp,                    &
        RHOT_tp,                    &
-       RHOH_tp,                    &
+       RHOH_p,                     &
        RHOQ_tp,                    &
        MOMX_tp,                    &
        MOMY_tp
@@ -393,7 +393,7 @@ contains
 !OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    RHOH_tp(:,:,:)   = 0.0_RP
+    RHOH_p (:,:,:)   = 0.0_RP
 !OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
 !OCL XFILL

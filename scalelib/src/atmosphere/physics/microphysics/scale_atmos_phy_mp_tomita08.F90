@@ -38,23 +38,30 @@ module scale_atmos_phy_mp_tomita08
   !++ Public parameters & variables
   !
   integer, private, parameter :: QA_MP  = 6
+  integer, private, parameter :: I_QV = 1
+  integer, private, parameter :: I_QC = 2
+  integer, private, parameter :: I_QR = 3
+  integer, private, parameter :: I_QI = 4
+  integer, private, parameter :: I_QS = 5
+  integer, private, parameter :: I_QG = 6
 
-  integer,                parameter, public :: ATMOS_PHY_MP_tomita08_NTRACER = 6
-  character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_NAME(6) = (/ &
+  integer,                parameter, public :: ATMOS_PHY_MP_tomita08_NLIQ = 2
+  integer,                parameter, public :: ATMOS_PHY_MP_tomita08_NICE = 3
+  character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_NAME(QA_MP) = (/ &
        'QV', &
        'QC', &
        'QR', &
        'QI', &
        'QS', &
        'QG'  /)
-  character(len=H_MID)  , parameter, public :: ATMOS_PHY_MP_tomita08_DESC(6) = (/ &
+  character(len=H_MID)  , parameter, public :: ATMOS_PHY_MP_tomita08_DESC(QA_MP) = (/ &
        'Ratio of Water Vapor mass to total mass (Specific humidity)', &
        'Ratio of Cloud Water mass to total mass',                     &
        'Ratio of Rain Water mass to total mass',                      &
        'Ratio of Cloud Ice mixing ratio to total mass',               &
        'Ratio of Snow mixing ratio to total mass',                    &
        'Ratio of Graupel mixing ratio to total mass'                  /)
-  character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_UNIT(6) = (/ &
+  character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_UNIT(QA_MP) = (/ &
        'kg/kg',  &
        'kg/kg',  &
        'kg/kg',  &
@@ -319,7 +326,6 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        MP_doexplicit_icegen, &
        MP_couple_aerosol     )
-
     use scale_process, only: &
        PRC_abort
     use scale_const, only: &
@@ -440,6 +446,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?    : ', MP_doexplicit_icegen
     if( IO_L ) write(IO_FID_LOG,*)
 
+    do j = JS, JE
+    do i = IS, IE
+       Nc_def(i,j) = autoconv_nc
+    end do
+    end do
+
     !--- empirical coefficients A, B, C, D
     Ar = PI * dens_w / 6.0_RP
     As = PI * dens_s / 6.0_RP
@@ -522,13 +534,11 @@ contains
   !<
   subroutine ATMOS_PHY_MP_tomita08_adjustment( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, TEMP, PRES,       &
-       Rtot, CVtot,            &
-       CCN,                    &
-       dt,                     &
-       QV, QC, QR, QI, QS, QG, &
-       RHOH,                   &
-       EVAPORATE               )
+       DENS, PRES,               &
+       CCN,                      &
+       dt,                       &
+       TEMP, QTRC, CPtot, CVtot, &
+       RHOH, EVAPORATE           )
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        PI    => CONST_PI
@@ -553,25 +563,20 @@ contains
     integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: DENS (KA,IA,JA)
-    real(RP), intent(in) :: TEMP (KA,IA,JA)
     real(RP), intent(in) :: PRES (KA,IA,JA)
-    real(RP), intent(in) :: Rtot (KA,IA,JA)
-    real(RP), intent(in) :: CVtot(KA,IA,JA)
     real(RP), intent(in) :: CCN  (KA,IA,JA)
     real(DP), intent(in) :: dt
 
-    real(RP), intent(inout) :: QV(KA,IA,JA)
-    real(RP), intent(inout) :: QC(KA,IA,JA)
-    real(RP), intent(inout) :: QR(KA,IA,JA)
-    real(RP), intent(inout) :: QI(KA,IA,JA)
-    real(RP), intent(inout) :: QS(KA,IA,JA)
-    real(RP), intent(inout) :: QG(KA,IA,JA)
+    real(RP), intent(inout) :: TEMP(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA_MP)
+    real(RP), intent(inout) :: CPtot(KA,IA,JA)
+    real(RP), intent(inout) :: CVtot(KA,IA,JA)
 
     real(RP), intent(out) :: RHOH     (KA,IA,JA)
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
 
-    real(RP) :: RHOH_mp (KA,IA,JA)
-    real(RP) :: RHOH_sat(KA,IA,JA)
+    real(RP) :: RHOH_mp  (KA,IA,JA)
+    real(RP) :: RHOdQ_sat(KA,IA,JA)
 
     real(RP) :: QC_t_sat(KA,IA,JA)
     real(RP) :: QI_t_sat(KA,IA,JA)
@@ -584,50 +589,51 @@ contains
     !##### MP Main #####
     call MP_tomita08( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-         DENS(:,:,:), TEMP(:,:,:), PRES(:,:,:), & ! [IN]
-         CCN(:,:,:),                            & ! [IN]
-         Rtot(:,:,:), CVtot(:,:,:), dt,         & ! [IN]
-         QV(:,:,:), QC(:,:,:), QR(:,:,:),       & ! [INOUT]
-         QI(:,:,:), QS(:,:,:), QG(:,:,:),       & ! [INOUT]
-         RHOH_mp(:,:,:)                         ) ! [OUT]
+         DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), & ! [IN]
+         dt,                                   & ! [IN]
+         TEMP(:,:,:), QTRC(:,:,:,:),           & ! [INOUT]
+         CPtot(:,:,:), CVtot(:,:,:),           & ! [INOUT]
+         RHOH_mp(:,:,:)                        ) ! [OUT]
 
 
     ! save value before saturation adjustment
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       QC_t_sat(k,i,j) = QC(k,i,j)
-       QI_t_sat(k,i,j) = QI(k,i,j)
+       QC_t_sat(k,i,j) = QTRC(k,i,j,I_QC)
+       QI_t_sat(k,i,j) = QTRC(k,i,j,I_QI)
     enddo
     enddo
     enddo
 
     call MP_saturation_adjustment( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-         DENS(:,:,:), TEMP(:,:,:),        & ! [IN]
-         PRES(:,:,:), CVtot(:,:,:),       & ! [IN]
-         only_liquid,                     & ! [IN]
-         QV(:,:,:), QC(:,:,:), QI(:,:,:), & ! [INOUT]
-         RHOH_sat(:,:,:)                  ) ! [OUT]
+         DENS(:,:,:),                        & ! [IN]
+         only_liquid,                        & ! [IN]
+         TEMP(:,:,:),                        & ! [INOUT]
+         QTRC(:,:,:,I_QV),                   & ! [INOUT]
+         QTRC(:,:,:,I_QC), QTRC(:,:,:,I_QI), & ! [INOUT]
+         CPtot(:,:,:), CVtot(:,:,:),         & ! [INOUT]
+         RHOdQ_sat(:,:,:)                    ) ! [OUT]
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOH(k,i,j) = RHOH_mp(k,i,j) + RHOH_sat(k,i,j)
+       RHOH(k,i,j) = RHOH_mp(k,i,j) + RHOdQ_sat(k,i,j) / dt
     enddo
     enddo
     enddo
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       QC_t_sat(k,i,j) = ( QC(k,i,j) - QC_t_sat(k,i,j) ) / dt
+       QC_t_sat(k,i,j) = ( QTRC(k,i,j,I_QC) - QC_t_sat(k,i,j) ) / dt
     enddo
     enddo
     enddo
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       QI_t_sat(k,i,j) = ( QI(k,i,j) - QI_t_sat(k,i,j) ) / dt
+       QI_t_sat(k,i,j) = ( QTRC(k,i,j,I_QI) - QI_t_sat(k,i,j) ) / dt
     enddo
     enddo
     enddo
@@ -653,11 +659,11 @@ contains
   !> Lin-type cold rain microphysics
   subroutine MP_tomita08( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-         DENS0, TEMP0, PRES0,          &
-         CCN,                          &
-         Rtot, CVtot, dt,              &
-         QV0, QC0, QR0, QI0, QS0, QG0, &
-         RHOH                    )
+         DENS0, PRES0, CCN, &
+         dt,                &
+         TEMP0, QTRC0,      &
+         CPtot0, CVtot0,    &
+         RHOH               )
     use scale_const, only: &
        PI    => CONST_PI,    &
        EPS   => CONST_EPS,   &
@@ -673,33 +679,39 @@ contains
        HIST_in
     use scale_atmos_hydrometeor, only: &
        LHV, &
-       LHF
+       LHF, &
+       CP_VAPOR, &
+       CP_WATER, &
+       CP_ICE,   &
+       CV_VAPOR, &
+       CV_WATER, &
+       CV_ICE
+    use scale_atmos_saturation, only: &
+       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
+       SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: DENS0(KA,IA,JA) ! density [km/m3]
-    real(RP), intent(in) :: TEMP0(KA,IA,JA) ! temperature [K]
     real(RP), intent(in) :: PRES0(KA,IA,JA) ! pressure    [Pa]
     real(RP), intent(in) :: CCN  (KA,IA,JA) ! [1/m3]
-    real(RP), intent(in) :: Rtot (KA,IA,JA)
-    real(RP), intent(in) :: CVtot(KA,IA,JA)
     real(RP), intent(in) :: dt
 
-    real(RP), intent(inout) :: QV0(KA,IA,JA)
-    real(RP), intent(inout) :: QC0(KA,IA,JA)
-    real(RP), intent(inout) :: QR0(KA,IA,JA)
-    real(RP), intent(inout) :: QI0(KA,IA,JA)
-    real(RP), intent(inout) :: QS0(KA,IA,JA)
-    real(RP), intent(inout) :: QG0(KA,IA,JA)
+    real(RP), intent(inout) :: TEMP0 (KA,IA,JA) ! temperature [K]
+    real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA_MP)
+    real(RP), intent(inout) :: CPtot0(KA,IA,JA)
+    real(RP), intent(inout) :: CVtot0(KA,IA,JA)
 
     real(RP), intent(out) :: RHOH(KA,IA,JA)
 
     real(RP) :: dens            ! density
     real(RP) :: temp            ! T [K]
+    real(RP) :: cptot, cvtot
     real(RP) :: qv, qc, qr, qi, qs, qg
     real(RP) :: qv_t, qc_t, qr_t, qi_t, qs_t, qg_t
+    real(RP) :: e_t, cp_t, cv_t
 
     real(RP) :: QSATL ! saturated water vapor for liquid water [kg/kg]
     real(RP) :: QSATI ! saturated water vapor for ice water    [kg/kg]
@@ -767,10 +779,10 @@ contains
     call PROF_rapstart('MP_tomita08', 3)
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(DENS0,TEMP0,PRES0,CCN,Rtot,CVtot,dt, &
-    !$omp        QV0,QC0,QR0,QI0,QS0,QG0,RHOH, &
+    !$omp shared(DENS0,TEMP0,PRES0,CCN,CPtot0,CVtot0,dt, &
+    !$omp        QTRC0,RHOH, &
     !$omp        w3d) &
-    !$omp private(dens,temp,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t, &
+    !$omp private(dens,temp,cptot,cvtot,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t,e_t,cp_t,cv_t &
     !$omp         QSATL,QSATI,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g, &
     !$omp         RLMDr,RLMDr_2,RLMDr_3,RLMDs,RLMDs_2,RLMDs_3,RLMDg,RLMDg_2,RLMDg_3, &
     !$omp         RLMDr_1br,RLMDr_2br,RLMDr_3br,RLMDs_1bs,RLMDs_2bs,RLMDs_3bs, &
@@ -797,12 +809,12 @@ contains
        ! store to work
        dens = DENS0(k,i,j)
        temp = TEMP0(k,i,j)
-       qv   = QV0(k,i,j)
-       qc   = QC0(k,i,j)
-       qr   = QR0(k,i,j)
-       qi   = QI0(k,i,j)
-       qs   = QS0(k,i,j)
-       qg   = QG0(k,i,j)
+       qv   = QTRC0(k,i,j,I_QV)
+       qc   = QTRC0(k,i,j,I_QC)
+       qr   = QTRC0(k,i,j,I_QR)
+       qi   = QTRC0(k,i,j,I_QI)
+       qs   = QTRC0(k,i,j,I_QS)
+       qg   = QTRC0(k,i,j,I_QG)
 
        call MP_tomita08_BergeronParam( &
             temp,       & ! [IN]
@@ -1443,14 +1455,29 @@ contains
 
        qv_t = - ( qc_t + qr_t + qi_t + qs_t + qg_t )
 
-       QV0(k,i,j) = QV0(k,i,j) + qv_t * dt
-       QC0(k,i,j) = QC0(k,i,j) + qc_t * dt
-       QR0(k,i,j) = QR0(k,i,j) + qr_t * dt
-       QI0(k,i,j) = QI0(k,i,j) + qi_t * dt
-       QS0(k,i,j) = QS0(k,i,j) + qs_t * dt
-       QG0(k,i,j) = QG0(k,i,j) + qg_t * dt
+       QTRC0(k,i,j,I_QV) = QTRC0(k,i,j,I_QV) + qv_t * dt
+       QTRC0(k,i,j,I_QC) = QTRC0(k,i,j,I_QC) + qc_t * dt
+       QTRC0(k,i,j,I_QR) = QTRC0(k,i,j,I_QR) + qr_t * dt
+       QTRC0(k,i,j,I_QI) = QTRC0(k,i,j,I_QI) + qi_t * dt
+       QTRC0(k,i,j,I_QS) = QTRC0(k,i,j,I_QS) + qs_t * dt
+       QTRC0(k,i,j,I_QG) = QTRC0(k,i,j,I_QG) + qg_t * dt
 
-       RHOH(k,i,j) = - dens * ( LHV * qv_t - LHF * ( qi_t + qs_t + qg_t ) )
+       e_t = - LHV * qv_t + LHF * ( qi_t + qs_t + qg_t ) ! internal energy change
+       cp_t = CP_VAPOR * qv_t &
+            + CP_WATER * ( qc_t + qr_t ) &
+            + CP_ICE   * ( qi_t + qs_t + qg_t )
+       cptot = CPtot0(k,i,j) + cp_t * dt
+
+       cv_t = CV_VAPOR * qv_t &
+            + CV_WATER * ( qc_t + qr_t ) &
+            + CV_ICE   * ( qi_t + qs_t + qg_t )
+       cvtot = CVtot0(k,i,j) + cv_t * dt
+
+       RHOH(k,i,j) = dens * ( e_t - cv_t * temp )
+
+       TEMP0(k,i,j) = ( temp * CVtot0(k,i,j) + e_t * dt ) / cvtot
+       CPtot0(k,i,j) = cptot
+       CVtot0(k,i,j) = cvtot
 
        do ip = 1, w_nmax
           w3d(k,i,j,ip) = w(ip)
@@ -1471,25 +1498,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Lin-type cold rain microphysics (terminal velocity)
   subroutine ATMOS_PHY_MP_tomita08_terminal_velocity( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS0, TEMP0,       &
-       QR0, QI0, QS0, QG0, &
-       vterm               )
+       KA, KS, KE, &
+       DENS0, TEMP0, RHOQ0, &
+       vterm                )
     use scale_const, only: &
        TEM00 => CONST_TEM00
     implicit none
     integer,  intent(in)  :: KA, KS, KE
-    integer,  intent(in)  :: IA, IS, IE
-    integer,  intent(in)  :: JA, JS, JE
 
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)
-    real(RP), intent(in)  :: QR0  (KA,IA,JA)
-    real(RP), intent(in)  :: QI0  (KA,IA,JA)
-    real(RP), intent(in)  :: QS0  (KA,IA,JA)
-    real(RP), intent(in)  :: QG0  (KA,IA,JA)
+    real(RP), intent(in)  :: DENS0(KA)
+    real(RP), intent(in)  :: TEMP0(KA)
+    real(RP), intent(in)  :: RHOQ0(KA,QA_MP-1)
 
-    real(RP), intent(out) :: vterm(KA,IA,JA,5)
+    real(RP), intent(out) :: vterm(KA,QA_MP-1)
 
     real(RP) :: dens
     real(RP) :: temc
@@ -1511,33 +1532,14 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-#ifndef __GFORTRAN__
-    !$omp parallel do default(none) &
-    !$omp private(i,j,k) &
-    !$omp private(dens,temc,qr,qi,qs,qg,rho_fact,N0r,N0s,N0g,zerosw,RLMDr,RLMDr_dr) &
-    !$omp private(RLMDs,RLMDs_ds,RMOMs_Vt,Xs2,tems,nm,loga_,b_,RLMDg,RLMDg_dg) &
-    !$omp private(coef_at,coef_bt,MOMs_0bs) &
-    !$omp OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,DENS0,TEMP0,QTRC0, &
-    !$omp shared(sw_WDXZ2014,N0r_def,N0s_def,N0g_def,Ar,GAM_1br,As,GAM_1bs) &
-    !$omp shared(sw_RS2014,vterm,GAM_1brdr,Cs,Cg,GAM_1bg,GAM_1bgdg,Cr,Ag) &
-    !$omp shared(ln10,GAM_1bsds)
-#else
-    !$omp parallel do default(shared) &
-    !$omp private(i,j,k,dens,temc,qr,qi,qs,qg,rho_fact,N0r,N0s,N0g,zerosw,RLMDr,RLMDr_dr) &
-    !$omp private(RLMDs,RLMDs_ds,RMOMs_Vt,Xs2,tems,nm,loga_,b_,RLMDg,RLMDg_dg) &
-    !$omp private(coef_at,coef_bt,MOMs_0bs) OMP_SCHEDULE_ collapse(2)
-#endif
-    do j = JS, JE
-    do i = IS, IE
     do k = KS, KE
        ! store to work
-       dens = DENS0(k,i,j)
-       temc = TEMP0(k,i,j) - TEM00
-       qr   = QR0(k,i,j)
-       qi   = QI0(k,i,j)
-       qs   = QS0(k,i,j)
-       qg   = QG0(k,i,j)
+       dens = DENS0(k)
+       temc = TEMP0(k) - TEM00
+       qr   = RHOQ0(k,I_mp_QR) / dens
+       qi   = RHOQ0(k,I_mp_QI) / dens
+       qs   = RHOQ0(k,I_mp_QS) / dens
+       qg   = RHOQ0(k,I_mp_QG) / dens
 
        rho_fact = sqrt( dens00 / dens )
 
@@ -1596,145 +1598,64 @@ contains
 
        !---< terminal velocity >
        zerosw = 0.5_RP - sign(0.5_RP, qi - 1.E-8_RP )
-       vterm(k,i,j,I_mp_QI) = -3.29_RP * exp( log( dens*qi+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
-       vterm(k,i,j,I_mp_QR) = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
-       vterm(k,i,j,I_mp_QS) = -Cs * rho_fact * RMOMs_Vt
-       vterm(k,i,j,I_mp_QG) = -Cg * rho_fact * GAM_1bgdg / GAM_1bg * RLMDg_dg
-    enddo
-    enddo
+       vterm(k,I_mp_QI) = -3.29_RP * exp( log( dens*qi+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+       vterm(k,I_mp_QR) = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
+       vterm(k,I_mp_QS) = -Cs * rho_fact * RMOMs_Vt
+       vterm(k,I_mp_QG) = -Cg * rho_fact * GAM_1bgdg / GAM_1bg * RLMDg_dg
     enddo
 
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
     do k = KS, KE
-       vterm(k,i,j,I_mp_QC) = 0.0_RP
-    end do
-    end do
+       vterm(k,I_mp_QC) = 0.0_RP
     end do
 
     if ( nofall_qr ) then
-       do j = JS, JE
-       do i = IS, IE
+!OCL XFILL
        do k = KS, KE
-          vterm(k,i,j,I_mp_QR) = 0.0_RP
-       enddo
-       enddo
+          vterm(k,I_mp_QR) = 0.0_RP
        enddo
     endif
 
     if ( nofall_qi ) then
-       do j = JS, JE
-       do i = IS, IE
+!OCL XFILL
        do k = KS, KE
-          vterm(k,i,j,I_mp_QI) = 0.0_RP
-       enddo
-       enddo
+          vterm(k,I_mp_QI) = 0.0_RP
        enddo
     endif
 
     if ( nofall_qs ) then
-       do j = JS, JE
-       do i = IS, IE
+!OCL XFILL
        do k = KS, KE
-          vterm(k,i,j,I_mp_QS) = 0.0_RP
-       enddo
-       enddo
+          vterm(k,I_mp_QS) = 0.0_RP
        enddo
     endif
 
     if ( nofall_qg ) then
-       do j = JS, JE
-       do i = IS, IE
+!OCL XFILL
        do k = KS, KE
-          vterm(k,i,j,I_mp_QG) = 0.0_RP
-       enddo
-       enddo
+          vterm(k,I_mp_QG) = 0.0_RP
        enddo
     endif
 
-    do j = JS, JE
-    do i = IS, IE
-       vterm(    1:KS-1,i,j,:) = 0.0_RP
-       vterm(KE+1:KA   ,i,j,:) = 0.0_RP
-    enddo
-    enddo
+    vterm(    1:KS-1,:) = 0.0_RP
+    vterm(KE+1:KA   ,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_terminal_velocity
 
   !-----------------------------------------------------------------------------
-  subroutine MP_tomita08_BergeronParam( &
-       temp, &
-       a1,   &
-       a2,   &
-       ma2   )
-    use scale_const, only: &
-       TEM00 => CONST_TEM00
-    implicit none
-
-    real(RP), intent(in)  :: temp
-    real(RP), intent(out) :: a1
-    real(RP), intent(out) :: a2
-    real(RP), intent(out) :: ma2
-
-    real(RP), parameter :: a1_tab(32) = (/ &
-         0.0001E-7_RP, 0.7939E-7_RP, 0.7841E-6_RP, 0.3369E-5_RP, 0.4336E-5_RP, &
-         0.5285E-5_RP, 0.3728E-5_RP, 0.1852E-5_RP, 0.2991E-6_RP, 0.4248E-6_RP, &
-         0.7434E-6_RP, 0.1812E-5_RP, 0.4394E-5_RP, 0.9145E-5_RP, 0.1725E-4_RP, &
-         0.3348E-4_RP, 0.1725E-4_RP, 0.9175E-5_RP, 0.4412E-5_RP, 0.2252E-5_RP, &
-         0.9115E-6_RP, 0.4876E-6_RP, 0.3473E-6_RP, 0.4758E-6_RP, 0.6306E-6_RP, &
-         0.8573E-6_RP, 0.7868E-6_RP, 0.7192E-6_RP, 0.6513E-6_RP, 0.5956E-6_RP, &
-         0.5333E-6_RP, 0.4834E-6_RP  /)
-    real(RP), parameter :: a2_tab(32) = (/ &
-         0.0100_RP, 0.4006_RP, 0.4831_RP, 0.5320_RP, 0.5307_RP, &
-         0.5319_RP, 0.5249_RP, 0.4888_RP, 0.3849_RP, 0.4047_RP, &
-         0.4318_RP, 0.4771_RP, 0.5183_RP, 0.5463_RP, 0.5651_RP, &
-         0.5813_RP, 0.5655_RP, 0.5478_RP, 0.5203_RP, 0.4906_RP, &
-         0.4447_RP, 0.4126_RP, 0.3960_RP, 0.4149_RP, 0.4320_RP, &
-         0.4506_RP, 0.4483_RP, 0.4460_RP, 0.4433_RP, 0.4413_RP, &
-         0.4382_RP, 0.4361_RP  /)
-
-    real(RP) :: temc
-    integer  :: itemc
-    real(RP) :: fact
-
-    !---------------------------------------------------------------------------
-
-    temc  = min( max( temp-TEM00, -30.99_RP ), 0.0_RP ) ! 0C <= T  <  31C
-    itemc = int( -temc ) + 1                            ! 1  <= iT <= 31
-    fact  = - ( temc + real(itemc-1,kind=8) )
-
-    a1 = ( 1.0_RP-fact ) * a1_tab(itemc  ) &
-       + (        fact ) * a1_tab(itemc+1)
-
-    a2 = ( 1.0_RP-fact ) * a2_tab(itemc  ) &
-       + (        fact ) * a2_tab(itemc+1)
-
-    ma2 = 1.0_RP - a2
-
-    a1 = a1 * exp( log(1.E-3_RP)*ma2 ) ! [g->kg]
-
-    return
-  end subroutine MP_tomita08_BergeronParam
-
-  !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
   subroutine ATMOS_PHY_MP_tomita08_cloud_fraction( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QC, QR, QI, QS, QG, &
-       mask_criterion,     &
-       cldfrac             )
+       QTRC,           &
+       mask_criterion, &
+       cldfrac         )
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QC(KA,IA,JA)
-    real(RP), intent(in)  :: QR(KA,IA,JA)
-    real(RP), intent(in)  :: QI(KA,IA,JA)
-    real(RP), intent(in)  :: QS(KA,IA,JA)
-    real(RP), intent(in)  :: QG(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA_MP-1)
     real(RP), intent(in)  :: mask_criterion
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
@@ -1746,7 +1667,8 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       qhydro = QC(k,i,j) + QR(k,i,j) + QI(k,i,j) + QS(k,i,j) + QG(k,i,j)
+       qhydro = QTRC(k,i,j,I_mp_QC) + QTRC(k,i,j,I_mp_QR) &
+              + QTRC(k,i,j,I_mp_QI) + QTRC(k,i,j,I_mp_QS) + QTRC(k,i,j,I_mp_QG)
        cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
     enddo
     enddo
@@ -1759,9 +1681,8 @@ contains
   !> Calculate Effective Radius
   subroutine ATMOS_PHY_MP_tomita08_effective_radius( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS0, TEMP0,            &
-       QC0, QR0, QI0, QS0, QG0, &
-       Re                       )
+       DENS0, TEMP0, QTRC0, &
+       Re                   )
     use scale_const, only: &
        PI    => CONST_PI,     &
        dens_w => CONST_DWATR, &
@@ -1781,11 +1702,7 @@ contains
 
     real(RP), intent(in)  :: DENS0(KA,IA,JA) !> density                   [kg/m3]
     real(RP), intent(in)  :: TEMP0(KA,IA,JA) !> temperature               [K]
-    real(RP), intent(in)  :: QC0  (KA,IA,JA)
-    real(RP), intent(in)  :: QR0  (KA,IA,JA)
-    real(RP), intent(in)  :: QI0  (KA,IA,JA)
-    real(RP), intent(in)  :: QS0  (KA,IA,JA)
-    real(RP), intent(in)  :: QG0  (KA,IA,JA)
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1)
 
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
     real(RP) :: dens
@@ -1838,7 +1755,7 @@ contains
        do i  = IS, IE
        do k  = KS, KE
           Re(k,i,j,I_HC) = 1.1_RP &
-               * ( DENS0(k,i,j) * QC0(k,i,j) / Nc(k,i,j) / ( 4.0_RP / 3.0_RP * PI * dens_w ) )**(1.0_RP/3.0_RP)
+               * ( DENS0(k,i,j) * QTRC0(k,i,j,I_mp_QC) / Nc(k,i,j) / ( 4.0_RP / 3.0_RP * PI * dens_w ) )**(1.0_RP/3.0_RP)
           Re(k,i,j,I_HC) = min( 1.E-3_RP, max( 1.E-6_RP, Re(k,i,j,I_HC) ) ) * um2cm
        enddo
        enddo
@@ -1856,7 +1773,7 @@ contains
 
 #ifndef __GFORTRAN__
        !$omp parallel do default(none)                                                          &
-       !$omp shared(JS,JE,IS,IE,KS,KE,DENS0,TEMP0,QTRC0,I_QR,I_QS,I_QG,sw_WDXZ2014,N0r_def)     &
+       !$omp shared(JS,JE,IS,IE,KS,KE,DENS0,TEMP0,QTRC0,sw_WDXZ2014,N0r_def)     &
        !$omp shared(N0s_def,N0g_def,Ar,GAM_1br,Re,As,GAM_1bs)                                   &
        !$omp shared(sw_RS2014,ln10,Ag,GAM_1bg)                                                  &
        !$omp private(i,j,k,dens,temc,qr,qs,qg,N0r,N0s,N0g,zerosw,RLMDr,RLMDs,Xs2,nm,tems,loga_) &
@@ -1873,9 +1790,9 @@ contains
        do k  = KS, KE
           dens = DENS0(k,i,j)
           temc = TEMP0(k,i,j) - TEM00
-          qr   = QR0(k,i,j)
-          qs   = QS0(k,i,j)
-          qg   = QG0(k,i,j)
+          qr   = QTRC0(k,i,j,I_mp_QR)
+          qs   = QTRC0(k,i,j,I_mp_QS)
+          qg   = QTRC0(k,i,j,I_mp_QG)
 
           ! intercept parameter N0
           N0r = ( 1.0_RP-sw_WDXZ2014 ) * N0r_def &                                                                             ! Marshall and Palmer (1948)
@@ -1935,8 +1852,8 @@ contains
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_tomita08_mixing_ratio( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QC0, QR0, QI0, QS0, QG0, &
-       Qe                       )
+       QTRC0, &
+       Qe     )
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC, &
@@ -1949,29 +1866,80 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QC0  (KA,IA,JA)
-    real(RP), intent(in)  :: QR0  (KA,IA,JA)
-    real(RP), intent(in)  :: QI0  (KA,IA,JA)
-    real(RP), intent(in)  :: QS0  (KA,IA,JA)
-    real(RP), intent(in)  :: QG0  (KA,IA,JA)
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1)
 
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     !---------------------------------------------------------------------------
 
 !OCL XFILL
-    Qe(:,:,:,I_HC) = QC0(:,:,:)
+    Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_mp_QC)
 !OCL XFILL
-    Qe(:,:,:,I_HR) = QR0(:,:,:)
+    Qe(:,:,:,I_HR) = QTRC0(:,:,:,I_mp_QR)
 !OCL XFILL
-    Qe(:,:,:,I_HI) = QI0(:,:,:)
+    Qe(:,:,:,I_HI) = QTRC0(:,:,:,I_mp_QI)
 !OCL XFILL
-    Qe(:,:,:,I_HS) = QS0(:,:,:)
+    Qe(:,:,:,I_HS) = QTRC0(:,:,:,I_mp_QS)
 !OCL XFILL
-    Qe(:,:,:,I_HG) = QG0(:,:,:)
+    Qe(:,:,:,I_HG) = QTRC0(:,:,:,I_mp_QG)
 !OCL XFILL
     Qe(:,:,:,I_HG+1:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_mixing_ratio
+
+  !-----------------------------------------------------------------------------
+  subroutine MP_tomita08_BergeronParam( &
+       temp, &
+       a1,   &
+       a2,   &
+       ma2   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00
+    implicit none
+
+    real(RP), intent(in)  :: temp
+    real(RP), intent(out) :: a1
+    real(RP), intent(out) :: a2
+    real(RP), intent(out) :: ma2
+
+    real(RP), parameter :: a1_tab(32) = (/ &
+         0.0001E-7_RP, 0.7939E-7_RP, 0.7841E-6_RP, 0.3369E-5_RP, 0.4336E-5_RP, &
+         0.5285E-5_RP, 0.3728E-5_RP, 0.1852E-5_RP, 0.2991E-6_RP, 0.4248E-6_RP, &
+         0.7434E-6_RP, 0.1812E-5_RP, 0.4394E-5_RP, 0.9145E-5_RP, 0.1725E-4_RP, &
+         0.3348E-4_RP, 0.1725E-4_RP, 0.9175E-5_RP, 0.4412E-5_RP, 0.2252E-5_RP, &
+         0.9115E-6_RP, 0.4876E-6_RP, 0.3473E-6_RP, 0.4758E-6_RP, 0.6306E-6_RP, &
+         0.8573E-6_RP, 0.7868E-6_RP, 0.7192E-6_RP, 0.6513E-6_RP, 0.5956E-6_RP, &
+         0.5333E-6_RP, 0.4834E-6_RP  /)
+    real(RP), parameter :: a2_tab(32) = (/ &
+         0.0100_RP, 0.4006_RP, 0.4831_RP, 0.5320_RP, 0.5307_RP, &
+         0.5319_RP, 0.5249_RP, 0.4888_RP, 0.3849_RP, 0.4047_RP, &
+         0.4318_RP, 0.4771_RP, 0.5183_RP, 0.5463_RP, 0.5651_RP, &
+         0.5813_RP, 0.5655_RP, 0.5478_RP, 0.5203_RP, 0.4906_RP, &
+         0.4447_RP, 0.4126_RP, 0.3960_RP, 0.4149_RP, 0.4320_RP, &
+         0.4506_RP, 0.4483_RP, 0.4460_RP, 0.4433_RP, 0.4413_RP, &
+         0.4382_RP, 0.4361_RP  /)
+
+    real(RP) :: temc
+    integer  :: itemc
+    real(RP) :: fact
+
+    !---------------------------------------------------------------------------
+
+    temc  = min( max( temp-TEM00, -30.99_RP ), 0.0_RP ) ! 0C <= T  <  31C
+    itemc = int( -temc ) + 1                            ! 1  <= iT <= 31
+    fact  = - ( temc + real(itemc-1,kind=8) )
+
+    a1 = ( 1.0_RP-fact ) * a1_tab(itemc  ) &
+       + (        fact ) * a1_tab(itemc+1)
+
+    a2 = ( 1.0_RP-fact ) * a2_tab(itemc  ) &
+       + (        fact ) * a2_tab(itemc+1)
+
+    ma2 = 1.0_RP - a2
+
+    a1 = a1 * exp( log(1.E-3_RP)*ma2 ) ! [g->kg]
+
+    return
+  end subroutine MP_tomita08_BergeronParam
 
 end module scale_atmos_phy_mp_tomita08

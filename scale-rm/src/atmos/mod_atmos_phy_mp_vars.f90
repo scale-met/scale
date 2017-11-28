@@ -55,14 +55,27 @@ module mod_atmos_phy_mp_vars
 
   real(RP), public, allocatable :: ATMOS_PHY_MP_DENS_t(:,:,:)    ! tendency DENS [kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_MOMZ_t(:,:,:)    ! tendency MOMZ [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMY_t(:,:,:)    ! tendency MOMY [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOU_t(:,:,:)    ! tendency dens*U [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOV_t(:,:,:)    ! tendency dens*V [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOT_t(:,:,:)    ! tendency RHOT [K*kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOH  (:,:,:)    ! adiabatic heating [J/kg/s]
+
+  ! obsolute
+  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMY_t(:,:,:)    ! tendency MOMY [kg/m2/s2]
 
   real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
+
+  real(RP), public, allocatable :: ATMOS_PHY_MP_CLDFRAC(:,:,:,:) ! cloud fraction
+  real(RP), public, allocatable :: ATMOS_PHY_MP_Re     (:,:,:,:) ! effective radious
+  real(RP), public, allocatable :: ATMOS_PHY_MP_Qe     (:,:,:,:) ! mixing ratio
+
+  integer, public :: QA_MP
+  integer, public :: QS_MP
+  integer, public :: QE_MP
 
   !-----------------------------------------------------------------------------
   !
@@ -98,9 +111,8 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_atmos_phy_mp, only: &
-       QS_MP, &
-       QE_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP_VARS / &
@@ -119,26 +131,39 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS PHY_MP] / Origin[SCALE-RM]'
 
-    allocate( ATMOS_PHY_MP_DENS_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_MOMZ_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_MOMX_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_MOMY_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_RHOT_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_RHOQ_t(KA,IA,JA,QS_MP:QE_MP) )
+    allocate( ATMOS_PHY_MP_DENS_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_MOMZ_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_RHOU_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_RHOV_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_RHOT_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_RHOQ_t   (KA,IA,JA,QS_MP:QE_MP) )
+    allocate( ATMOS_PHY_MP_RHOH     (KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_EVAPORATE(KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_MOMX_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_MOMY_t   (KA,IA,JA)    )
     ! tentative approach
-    ATMOS_PHY_MP_DENS_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_MOMZ_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_MOMX_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_MOMY_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_RHOT_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_RHOQ_t(:,:,:,:) = 0.0_RP
-    ATMOS_PHY_MP_EVAPORATE(:,:,:) = 0.0_RP
+    ATMOS_PHY_MP_DENS_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMZ_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOU_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOV_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOT_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOQ_t   (:,:,:,:) = 0.0_RP
+    ATMOS_PHY_MP_RHOH     (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_EVAPORATE(:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMX_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMY_t   (:,:,:)   = 0.0_RP
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
     ATMOS_PHY_MP_SFLX_rain(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_snow(:,:) = UNDEF
+
+    allocate( ATMOS_PHY_MP_CLDFRAC(KA,IA,JA,N_HYD) )
+    allocate( ATMOS_PHY_MP_Re     (KA,IA,JA,N_HYD) )
+    allocate( ATMOS_PHY_MP_Qe     (KA,IA,JA,N_HYD) )
+    ATMOS_PHY_MP_CLDFRAC(:,:,:,:) = UNDEF
+    ATMOS_PHY_MP_Re     (:,:,:,:) = UNDEF
+    ATMOS_PHY_MP_Qe     (:,:,:,:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)

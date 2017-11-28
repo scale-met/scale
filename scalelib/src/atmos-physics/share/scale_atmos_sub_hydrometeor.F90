@@ -34,6 +34,11 @@ module scale_atmos_hydrometeor
   public :: ATMOS_HYDROMETEOR_entr
   public :: ATMOS_HYDROMETEOR_diagnose_number_concentration
 
+  interface ATMOS_HYDROMETEOR_regist
+     module procedure ATMOS_HYDROMETEOR_regist
+     module procedure ATMOS_HYDROMETEOR_regist_obsolute
+  end interface ATMOS_HYDROMETEOR_regist
+
   interface ATMOS_HYDROMETEOR_LHV
      module procedure ATMOS_HYDROMETEOR_LHV_0D
      module procedure ATMOS_HYDROMETEOR_LHV_1D
@@ -98,9 +103,11 @@ module scale_atmos_hydrometeor
   integer, public            :: QHS = -1
   integer, public            :: QHE = -2
   ! water
+  integer, public            :: QLA =  0
   integer, public            :: QLS = -1
   integer, public            :: QLE = -2
   ! ice
+  integer, public            :: QIA =  0
   integer, public            :: QIS = -1
   integer, public            :: QIE = -2
 
@@ -187,10 +194,11 @@ contains
   end subroutine ATMOS_HYDROMETEOR_setup
 
   !-----------------------------------------------------------------------------
-  !> Regist tracer
+  !> ATMOS_HYDROMETEOR_regist
+  !! Regist tracer
+  !<
   subroutine ATMOS_HYDROMETEOR_regist( &
        Q0,   &
-       NV,   &
        NL,   &
        NI,   &
        NAME, &
@@ -206,20 +214,19 @@ contains
     implicit none
 
     integer,          intent(out) :: Q0
-    integer,          intent(in)  :: NV             !< number of vapor
     integer,          intent(in)  :: NL             !< number of liquid water tracers
     integer,          intent(in)  :: NI             !< number of ice water tracers
-    character(len=*), intent(in)  :: NAME(NV+NL+NI)
-    character(len=*), intent(in)  :: DESC(NV+NL+NI)
-    character(len=*), intent(in)  :: UNIT(NV+NL+NI)
+    character(len=*), intent(in)  :: NAME(1+NL+NI)
+    character(len=*), intent(in)  :: DESC(1+NL+NI)
+    character(len=*), intent(in)  :: UNIT(1+NL+NI)
 
-    logical,          intent(in), optional :: ADVC(NV+NL+NI)
+    logical,          intent(in), optional :: ADVC(1+NL+NI)
 
-    real(RP) :: CV   (NV+NL+NI)
-    real(RP) :: CP   (NV+NL+NI)
-    real(RP) :: R    (NV+NL+NI)
-    logical  :: MASS (NV+NL+NI)
-    logical  :: ADVC_(NV+NL+NI)
+    real(RP) :: CV   (1+NL+NI)
+    real(RP) :: CP   (1+NL+NI)
+    real(RP) :: R    (1+NL+NI)
+    logical  :: MASS (1+NL+NI)
+    logical  :: ADVC_(1+NL+NI)
 
     integer  :: NQ
     integer  :: n
@@ -230,20 +237,15 @@ contains
        call PRC_MPIstop
     endif
 
-    if ( NV /= 1 ) then
-       write(*,*) 'xxx number of vapor must be 1 at this moment'
-       call PRC_MPIstop
-    endif
-
     NQ = 0
 
-    do n = 1, NV
-       NQ = NQ + 1
-       CV(NQ) = CV_VAPOR
-       CP(NQ) = CP_VAPOR
-       R (NQ) = Rvap
-    end do
+    ! vapor
+    NQ = NQ + 1
+    CV(NQ) = CV_VAPOR
+    CP(NQ) = CP_VAPOR
+    R (NQ) = Rvap
 
+    ! liquid
     do n = 1, NL
        NQ = NQ + 1
        CV(NQ) = CV_WATER
@@ -251,6 +253,7 @@ contains
        R (NQ) = 0.0_RP
     end do
 
+    ! ice
     do n = 1, NI
        NQ = NQ + 1
        CV(NQ) = CV_ICE
@@ -287,17 +290,54 @@ contains
 
     if ( NL > 0 ) then
        QLS = I_QV + 1
+       QLA = NL
        QLE = QLS + NL - 1
     endif
 
     if ( NI > 0 ) then
        QIS = QLE + 1
+       QIA = NI
        QIE = QIS + NI - 1
     endif
 
     return
   end subroutine ATMOS_HYDROMETEOR_regist
 
+  subroutine ATMOS_HYDROMETEOR_regist_obsolute( &
+       Q0,   &
+       NV,   &
+       NL,   &
+       NI,   &
+       NAME, &
+       DESC, &
+       UNIT, &
+       ADVC  )
+    use scale_process, only: &
+      PRC_MPIstop
+    use scale_tracer, only: &
+      TRACER_regist
+    use scale_const, only: &
+      Rvap => CONST_Rvap
+    implicit none
+
+    integer,          intent(out) :: Q0
+    integer,          intent(in)  :: NV             !< number of vapor
+    integer,          intent(in)  :: NL             !< number of liquid water tracers
+    integer,          intent(in)  :: NI             !< number of ice water tracers
+    character(len=*), intent(in)  :: NAME(NV+NL+NI)
+    character(len=*), intent(in)  :: DESC(NV+NL+NI)
+    character(len=*), intent(in)  :: UNIT(NV+NL+NI)
+
+    logical,          intent(in), optional :: ADVC(NV+NL+NI)
+
+    call ATMOS_HYDROMETEOR_regist( &
+         Q0,               & ! [IN]
+         NL, NI,           & ! [IN]
+         NAME, DESC, UNIT, & ! [IN]
+         ADVC              )
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_regist_obsolute
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHV_0D( &
        lhv, &

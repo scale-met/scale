@@ -190,6 +190,10 @@ contains
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall, &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
+    use mod_atmos_phy_mp_vars, only: &
+       CLDFRAC => ATMOS_PHY_MP_CLDFRAC, &
+       Re      => ATMOS_PHY_MP_Re     , &
+       Qe      => ATMOS_PHY_MP_Qe
     implicit none
 
     logical, intent(in) :: update_flag
@@ -256,6 +260,7 @@ contains
                           SFC_TEMP,           & ! [IN]
                           SFC_albedo,         & ! [IN]
                           solins, cosSZA,     & ! [IN]
+                          CLDFRAC, Re, Qe,    & ! [IN]
                           flux_rad,           & ! [OUT]
                           flux_rad_top,       & ! [OUT]
                           SFLX_rad_dn,        & ! [OUT]

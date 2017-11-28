@@ -79,6 +79,7 @@ contains
                ATMOS_PHY_BL_MYNN_UNITS    )
        case default
           if ( IO_L ) write(IO_FID_LOG,*) '+++ ATMOS_PHY_BL_TYPE is invalid: ', trim(ATMOS_PHY_BL_TYPE)
+          call PRC_abort
        end select
     end if
 

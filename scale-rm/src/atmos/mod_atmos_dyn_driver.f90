@@ -257,7 +257,7 @@ contains
        RHOV_tp, &
        RHOT_tp, &
        RHOQ_tp, &
-       RHOH_tp, &
+       RHOH_p,  &
        MOMZ_tp, &
        MOMX_tp, &
        MOMY_tp, &
@@ -305,11 +305,12 @@ contains
        end do
        
 
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
-                         + RHOH_tp(k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )
+                         + RHOH_p (k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )
+!                        - RHOT(k,i,j) * dCP / CPtot(k,i,j)
        end do
        end do
        end do
@@ -338,9 +339,9 @@ contains
        call COMM_vars8( MOMY_tp, 2 )
 
        call COMM_wait ( MOMZ_tp, 3 )
-       call COMM_wait ( RHOT_tp, 4 )
+       call COMM_wait ( RHOT_tp, 4, .false. )
        do iq = 1, QA
-          call COMM_wait ( RHOQ_tp(:,:,:,iq), 4+iq )
+          call COMM_wait ( RHOQ_tp(:,:,:,iq), 4+iq, .false. )
        end do
        call COMM_wait ( MOMX_tp, 1 )
        call COMM_wait ( MOMY_tp, 2 )

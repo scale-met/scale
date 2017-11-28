@@ -118,7 +118,7 @@ module mod_atmos_vars
   real(RP), public, allocatable :: RHOU_tp(:,:,:)
   real(RP), public, allocatable :: RHOV_tp(:,:,:)
   real(RP), public, allocatable :: RHOT_tp(:,:,:)
-  real(RP), public, allocatable :: RHOH_tp(:,:,:)
+  real(RP), public, allocatable :: RHOH_p (:,:,:)
   real(RP), public, allocatable :: RHOQ_tp(:,:,:,:)
 
   ! (obsolute)
@@ -531,7 +531,7 @@ contains
     allocate( RHOU_tp(KA,IA,JA)    )
     allocate( RHOV_tp(KA,IA,JA)    )
     allocate( RHOT_tp(KA,IA,JA)    )
-    allocate( RHOH_tp(KA,IA,JA)    )
+    allocate( RHOH_p (KA,IA,JA)    )
     allocate( RHOQ_tp(KA,IA,JA,max(QA,1)) )
 
     allocate( W(KA,IA,JA) )

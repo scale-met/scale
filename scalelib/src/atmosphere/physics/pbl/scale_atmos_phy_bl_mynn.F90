@@ -390,9 +390,9 @@ contains
        end do
 
        call ATMOS_SATURATION_dens2qsat( &
-            KA, KS, KE_PBL,      & ! (in)
-            Qsl(:),              & ! (out)
-            TEML(:), DENS(:,i,j) ) ! (in)
+            KA, KS, KE_PBL, &
+            TEML(:), DENS(:,i,j), & ! (in)
+            Qsl(:)                ) ! (out)
 
        call HYDROMETEOR_LHV( &
             KA, KS, KE_PBL, & ! (in)

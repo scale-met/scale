@@ -189,6 +189,7 @@ contains
        fact_urban,            &
        temp_sfc, albedo_land, &
        solins, cosSZA,        &
+       cldfrac, Re, Qe,       &
        flux_rad,              &
        flux_rad_top,          &
        SFLX_rad_dn,           &
@@ -210,6 +211,8 @@ contains
        I_up,     &
        I_direct, &
        I_diffuse
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
     real(RP), intent(in)  :: DENS        (KA,IA,JA)
     real(RP), intent(in)  :: RHOT        (KA,IA,JA)
@@ -223,6 +226,9 @@ contains
     real(RP), intent(in)  :: albedo_land (IA,JA,2)
     real(RP), intent(in)  :: solins      (IA,JA)
     real(RP), intent(in)  :: cosSZA      (IA,JA)
+    real(RP), intent(in)  :: cldfrac     (KA,IA,JA)
+    real(RP), intent(in)  :: Re          (KA,IA,JA,N_HYD)
+    real(RP), intent(in)  :: Qe          (KA,IA,JA,N_HYD)
     real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_top(IA,JA,2,2,2)
     real(RP), intent(out) :: SFLX_rad_dn (IA,JA,2,2)

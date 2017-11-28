@@ -51,6 +51,7 @@ module scale_atmos_phy_rd
           fact_urban,            &
           temp_sfc, albedo_land, &
           solins, cosSZA,        &
+          CLDFRAC, Re, Qe,       &
           flux_rad,              &
           flux_rad_top,          &
           flux_sfc_dn,           &
@@ -59,6 +60,7 @@ module scale_atmos_phy_rd
        use scale_precision
        use scale_grid_index
        use scale_tracer
+       use scale_atmos_hydrometeor, only: N_HYD
        implicit none
 
        real(RP), intent(in)  :: DENS        (KA,IA,JA)
@@ -73,6 +75,9 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: albedo_land (IA,JA,2)
        real(RP), intent(in)  :: solins      (IA,JA)
        real(RP), intent(in)  :: cosSZA      (IA,JA)
+       real(RP), intent(in)  :: cldfrac     (KA,IA,JA)
+       real(RP), intent(in)  :: Re          (KA,IA,JA,N_HYD)
+       real(RP), intent(in)  :: Qe          (KA,IA,JA,N_HYD)
        real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2,2)
        real(RP), intent(out) :: flux_rad_top(IA,JA,2,2,2)
        real(RP), intent(out) :: flux_sfc_dn (IA,JA,2,2)
