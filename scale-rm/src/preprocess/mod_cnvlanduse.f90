@@ -261,7 +261,7 @@ contains
     real(RP) :: ifrac_l ! fraction for iloc
     real(RP) :: jfrac_b ! fraction for jloc
 
-    real(RP) :: REAL_LONX_mod(IA,JA)
+    real(RP) :: REAL_LONX_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
     integer  :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)
@@ -345,7 +345,7 @@ contains
     DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < REAL_LONX_mod(1 ,DOMAIN_LONSLOC(2)) &
+    if (      DOMAIN_LONS < REAL_LONX_mod(0 ,DOMAIN_LONSLOC(2)) &
          .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
        DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))
@@ -741,7 +741,7 @@ contains
     real(RP) :: ifrac_l ! fraction for iloc
     real(RP) :: jfrac_b ! fraction for jloc
 
-    real(RP) :: REAL_LONX_mod(IA,JA)
+    real(RP) :: REAL_LONX_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
     integer  :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)

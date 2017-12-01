@@ -30,12 +30,10 @@ module mod_realinput
   use scale_comm, only: &
      COMM_bcast
   use scale_grid_real, only: &
-     LON  => REAL_LON,  &
-     LAT  => REAL_LAT,  &
-     LONX => REAL_LONX, &
-     LATY => REAL_LATY, &
-     CZ   => REAL_CZ,   &
-     FZ   => REAL_FZ
+     LON => REAL_LON, &
+     LAT => REAL_LAT, &
+     CZ  => REAL_CZ,  &
+     FZ  => REAL_FZ
   use scale_grid_nest, only: &
      NEST_INTERP_LEVEL
   use scale_external_io, only: &
