@@ -4,7 +4,7 @@
 \author{\Large Team SCALE\\ UGC working group}
 \date{\today}
 
-
+\setcounter{secnumdepth}{3}
 \usepackage[dvipdfmx]{graphicx, color}
 \usepackage[dvipdfmx]{hyperref}
 \usepackage{amsmath}
@@ -47,61 +47,91 @@
 \ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.eps}
 \tableofcontents
 
+%-----------------------------------------------------------------------
+% Chapter, section, and subsection are defined in this main tex file.
+% Sections under subsection are defined in each input tex file.
+%-----------------------------------------------------------------------
+
 \chapter{Overview} \label{chap:overview}
-\input{11_introduction}
-\input{12_notation}
+ \input{11_introduction}  %\section{Introduction} \label{sec:introduction}
+ %\input{12_notation}      %\section{Notations used in this document} \label{sec:notation}
+ %\input{gm_01intro}
 
 \chapter{Install} \label{chap:install}
-\input{21_install}
+ %\input{21_install}       % \section{Necessary system environment} \label{sec:req_env}
+ %\input{gm_02start}
 
-\chapter{Operation check and basic usage} \label{chap:tutorial_ideal}
-\input{31_ideal_exp_introduction}
-\input{32_ideal_exp_run}
-\input{33_ideal_exp_net2g}
-\input{34_ideal_exp_last}
+\chapter{Tutorial for \scalerm}
+ \section{Operation check and basic usage} \label{chap:tutorial_ideal}
+ %\input{31_ideal_exp_introduction}
+ %\input{32_ideal_exp_run}
+ %\input{33_ideal_exp_net2g}
+ %\input{34_ideal_exp_last}
 
-\chapter{Conduction of real atomsphere experiment} \label{chap:tutorial_real}
-\input{41_real_exp_introduction}
-\input{42_real_exp_data}
-\input{43_real_exp_prep}
-\input{44_real_exp_pp}
-\input{45_real_exp_init}
-\input{46_real_exp_run}
-\input{47_real_exp_net2g}
+ \section{Ideal atomsphere experiment} %\label{chap:tutorial_ideal}
+
+ \section{Real atomsphere experiment} \label{chap:tutorial_real}
+ %\input{41_real_exp_introduction}
+ %\input{42_real_exp_data}
+ %\input{43_real_exp_prep}
+ %\input{44_real_exp_pp}
+ %\input{45_real_exp_init}
+ %\input{46_real_exp_run}
+ %\input{47_real_exp_net2g}
+
+
+\chapter{Tutorial for \scalegm}
+ \section{Operation check and basic usage}
+ %\input{gm_03conf}
+ \section{Ideal atomsphere experiment}
+ \section{Real atomsphere experiment}
+
 
 \chapter{Various settings} \label{chap:basic_usel}
-\input{50_setting_introduction}
-\input{51_setting_domain}
-\input{52_setting_mapproj}
-\input{53_setting_topo}
-\input{54_setting_howtoinput}
-\clearpage
-\input{55_setting_time}
-\input{56_setting_history}
-\input{57_setting_dynamics}
-\input{58_setting_physics}
-\input{59_setting_net2g}
-\input{510_setting_restart}
-\input{511_0setting_nesting}
-\input{511_1setting_nesting_topo}
-\input{511_2setting_offline_nesting}
-\input{511_3setting_online_nesting}
-\input{512_setting_bulkjob}
-\input{513_setting_makeconf}
-\input{514_setting_common}
+ \section{Common settings}
+ %\input{514_setting_common}
+ %\input{55_setting_time}
+ %\input{56_setting_history}
+
+ \section{Dynamics and frameworkfor \scalerm}
+ %\input{50_setting_introduction}
+ %\input{51_setting_domain}
+ %\input{52_setting_mapproj}
+ %\input{53_setting_topo}
+ %\input{54_setting_howtoinput}
+ %\clearpage
+ %\input{57_setting_dynamics}
+ %\input{59_setting_net2g}
+ %\input{510_setting_restart}
+ %\input{511_0setting_nesting}
+ %\input{511_1setting_nesting_topo}
+ %\input{511_2setting_offline_nesting}
+ %\input{511_3setting_online_nesting}
+ %\input{512_setting_bulkjob}
+ %\input{513_setting_makeconf}
+
+ \section{Dynamics and frameworkfor \scalegm}
+
+ \section{Setting the physical process} \label{sec:basic_usel_physics}
+ %\input{58_setting_physics}
+
+\chapter{Advanced use} \label{chap:advance_use}
+ \section{File convention of SCALE}
+ \section{How to use user defined program}
+ \section{How to use scale library}
+
 
 \bibliographystyle{plainnat}
 \bibliography{reference}
 
 \begin{appendix}
-%\chapter{Install of common library environment} \label{achap:env_setting}
-%\input{A1_setting_for_install}
 \chapter{Namelist of configuration file and variable name list for history output} \label{achap:namelist}
 \input{A2_namelist}
 \chapter{Frequently asked questions} \label{achap:practice}
 \input{A3_practice1_Q}
 \input{A3_practice2_A}
 \end{appendix}
+
 
 %backmatter
 \ClearWallPaper
