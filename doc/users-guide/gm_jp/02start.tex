@@ -17,20 +17,19 @@ Makedefファイルは、SCALE-RMと共通のファイルを使用する。
 SCALE-GMでは、\texttt{scale-{\version}/scale-gm/src}の下でコンパイルを行い、\texttt{scale-{\version}/bin}の下に
 各種実行バイナリが生成され、このバイナリファイルを用いて各種実験や後処理を行う。
 各テストケースディレクトリでもmakeできるが、作業効率やバイナリの取り違えを防ぐために、
-ここで説明する方法を推奨する。
+ここで説明する方法を推奨する。\\
 
-\begin{verbatim}
-  > cd scale-{\version}/scale-gm/src
-\end{verbatim}
+\verb|  > cd scale-|{\version}\verb|/scale-gm/src|\\
 
-\noindent makeコマンドを用いてコンパイルを行う。
-\begin{verbatim}
-  > make -j 4
-\end{verbatim}
-コンパイルが正常に終了したならば、以下のバイナリが\texttt{scale-{\version}/bin}の下に生成される。
+
+\noindent makeコマンドを用いてコンパイルを行う。\\
+
+\verb|  > make -j 4|\footnote{makeコマンドの -j オプションはコンパイル時に使用する並列プロセス数を指定している。   コンパイルにかかる時間を短縮するため、2以上の数を指定することで並列コンパイルを行うことができる。SCALE-GMでは、2 $\sim$ 8 プロセスの指定を推奨する。}\\
+
+\verb|コンパイルが正常に終了したならば、以下のバイナリが|\texttt{scale-{\version}/bin}の下に生成される。
  \begin{itemize}
    \item \verb|scale-gm| (SCALE-GM本体の実行バイナリ)
-   \item　\verb|gm_fio_cat| (fioフォーマットのcatコマンドツール)
+   \item　\verb|gm_fio_cat| (fioフォーマットのcatコマンドツール)\footnote{``fio'' とは、ヘッダー情報付きバイナリをベースにした独自ファイルフォーマットである。}
    \item　\verb|gm_fio_dump| (fioフォーマットのファイルをダンプするツール)
    \item　\verb|gm_fio_ico2ll| (fioフォーマットの二十面体格子データをLatLon格子データに変換するツール)
    \item　\verb|gm_fio_sel| (fioフォーマットのselコマンドツール)
@@ -41,13 +40,6 @@ SCALE-GMでは、\texttt{scale-{\version}/scale-gm/src}の下でコンパイル�
    \item　\verb|gm_mkvlayer| (鉛直格子を作成するツール)
  \end{itemize}
 
-\begin{itemize}
-  \item[*] makeコマンドの -j オプションは並列コンパイルに使用するプロセス数をしているオプションである。
-   コンパイルにかかる時間を短縮するため、2以上の数を指定することで並列コンパイルを行うことができる。
-   SCALE-GMでは、2 $\sim$ 8 プロセスの指定を推奨する。
-  \item[*] ``fio'' とは、ヘッダー情報付きバイナリをベースにした独自ファイルフォーマットである。
-\end{itemize}
-
 
 %\textcolor{red}{[英語版未対応-----ここから]}
 \section{データベースの準備}
@@ -56,38 +48,155 @@ SCALE-GMでは、\texttt{scale-{\version}/scale-gm/src}の下でコンパイル�
 SCALE-GMの実行には、水平格子のデータが必要である。チュートリアルで使用する設定は、
 g-level=5、r-level=0でMPIプロセスは10を想定している。
 この設定のデータベースはソースコードのtarballに含まれているので、
-別途ダウンロードする必要はないが、これ以外の設定で
-実験を行う場合は以下に説明する要領で追加のダウンロードが必要になる。
+別途ダウンロードする必要はないが、これ以外の設定で実験を行う場合は
+以下に述べるいずれかの方法でデータベースを準備する必要がある。
+\subsection{既存のデータベースを使用する}
+いくつかの代表的な計算設定に対応するデータベースが\noindent \url{http://scale.aics.riken.jp/ja/download/}に用意されているので、それをダウンロードして使用する。
 
-\noindent \url{http://scale.aics.riken.jp/ja/download/}
-から任意のデータベース(水平格子および正20面体LatLon格子変換テーブル)をダウンロードして
-展開しておく。
-
-\noindent 例えば、scale-gm\_database\_gl06rl01pe40.tar.gzをダウンロードした場合、
+例えば、
+scale-gm\_database\_gl06rl01pe40.tar.gz\footnote{g-level=6,r-level=1,40プロセ
+  スを使うことを想定}をダウンロードした場合、
 40個のboundaryファイル(水平格子データベース)と41個のllmapファイル(LatLon格子変換テーブル)
 が格納されている。
 \begin{verbatim}
   > tar -zxvf scale-gm_database_gl06rl01pe40.tar.gz
 \end{verbatim}
 
-
 \noindent 次にデータベースをそれぞれの格納場所に移動させる。
 
 \noindent まずboundaryファイルは、
 \texttt{scale-{\version}/scale-gm/test/data/grid/boundary}の下へ新たにディレクトリを作成して移動させる。
 いま、展開したデータベースのディレクトリにいることを想定すると下記のようなコマンド実行になる。
+\\
 
+\verb|  > mkdir scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40|
+
+\verb|  > mv boundary_GL06RL01.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40/|
+\\
+
+\noindent 残るllmapファイルは、\texttt{scale-{\version}/scale-gm/test/data/grid/llmap}の下へ新たにディレクトリを作成して移動させる。\\
+
+\verb|  > mkdir -p scale-|{\version}\verb|/scale-gm/test/data/grid/llmap/gl06/rl01|
+
+\verb|  > mv llmap.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06/rl01/| \\
+
+
+\subsection{新たにデータベースを作成する}
+\textcolor{red}{[要検討: ここで言及するのがいいのか、後(例えば3章)の方がいいのか]}
+
+データベースは必要に応じて以下の要領で作成することができる。
+\subsubsection{1.水平格子データベースの作成}
+水平格子データベースはの作成は以下の3つの手順からなり、この順番に実行する必要がる。
+以下のプロセスで作成されるデータベースは前節で述べた場所に保存される。
+\footnote{例えば\texttt{scale-{\version}/scale-gm/test/data/grid/boundary}}
+\renewcommand{\labelenumi}{(\roman{enumi})}
+\begin{enumerate}
+
+\item{プロセス管理データベースの作成} 
+
+\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkmnginfo/rl01pe40|
+\vspace{-4mm}
 \begin{verbatim}
-  > mkdir scale-{\version}/scale-gm/test/data/grid/boundary/gl06rl01pe40
-  > mkdir boundary_GL06RL01.* scale-{\version}/scale-gm/test/data/grid/boundary/gl06rl01pe40/
+  > make jobshell
+  > make run
 \end{verbatim}
+ この際、以下のファイルを適切に編集する。
+ \begin{verbatim}
+    > vi nhm_driver.cnf
+     &mkmnginfo_cnf
+      rlevel       = 1,                      <-- rlevel 
+      prc_num      = 40,                     <-- proess number
+      output_fname = "rl01-prc40.info",      <-- output filename
+     /
+ \end{verbatim}
 
-\noindent 残るllmapファイルは、\texttt{scale-{\version}/scale-gm/test/data/grid/llmap}の下へ新たにディレクトリを作成して移動させる。
+\item{素の格子データベースの作成}
 
+\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkrawgrid/gl05rl00pe10|
+\vspace{-4mm}
 \begin{verbatim}
-  > mkdir -p scale-{\version}/scale-gm/test/data/grid/boundary/gl06/rl01
-  > mkdir llmap.* scale-{\version}/scale-gm/test/data/grid/boundary/gl06/rl01/
+  > make jobshell
+  > make run
 \end{verbatim}
+ この際、以下のファイルを適切に編集する。
+ \begin{verbatim}
+    > vi mkrawgrid.cnf
+     &ADMPARAM
+       glevel      = 5,                      <-- glevel
+       rlevel      = 0,                      <-- rlevel
+       vlayer      = 1,                      <-- vertical layer?
+       rgnmngfname = "rl00-prc10.info",      <-- input filename 
+     /
+
+     &PARAM_MKGRD
+       MKGRD_DOSPRING     = .true.,           <-- バネ格子を使うかどうか
+       MKGRD_OUT_BASENAME = "rawgrid_GL05RL00",<-- output filename
+       MKGRD_spring_beta  = 1.15D0,           <-- バネ格子を使った場合のバネの強さ
+    /
+ \end{verbatim}
+
+
+\item{水平格子データベースの作成}
+
+\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkhgrid/gl05rl00pe10|
+\vspace{-4mm}
+\begin{verbatim}
+  > make jobshell
+  > make run
+\end{verbatim}
+ この際、以下のファイルを適切に編集する。
+ \begin{verbatim}
+    > vi mkhgrid.cnf
+     &ADMPARAM
+       glevel      = 5,                      <-- glevel
+       rlevel      = 0,                      <-- rlevel
+       vlayer      = 1,                      <-- vertical layer
+       rgnmngfname = "rl00-prc10.info",      <-- input management filename
+     /
+
+    &PARAM_MKGRD
+       MKGRD_DOPREROTATE      = .false.,     <-- 回転するかどうか
+       MKGRD_DOSTRETCH        = .false.,     <-- ストレッチするかどうか
+       MKGRD_DOSHRINK         = .false.,     <-- 縮退させるかどうか
+       MKGRD_DOROTATE         = .false.,     <-- 始めに回転させるかどうか
+       MKGRD_IN_BASENAME      = "rawgrid_GL05RL00", <-- input rawgrid filename
+       MKGRD_OUT_BASENAME     = "boundary_GL05RL00",<-- outputput bondary filename
+   /
+\end{verbatim}
+\end{enumerate}
+
+\subsubsection{2. LatLon格子変換テーブルデータベースの作成}
+
+\verb|> cd scale-|{\version}\verb|/scale-gm/test/framework/mkllmap/gl05rl00pe10_t42|
+\vspace{-3mm}
+\begin{verbatim}
+  > make jobshell
+  > make run
+\end{verbatim}
+ この際、以下のファイルを適切に編集する。
+ \begin{verbatim}
+    > vi mkllmap.cnf
+     &ADMPARAM
+       glevel      = 5,
+       rlevel      = 0,
+       vlayer      = 1,
+       rgnmngfname = "rl00-prc10.info",
+     /
+
+     &GRDPARAM
+       hgrid_io_mode = "ADVANCED",
+       hgrid_fname   = "boundary_GL05RL00",
+       VGRID_fname   = "NONE",
+       topo_fname    = "NONE",
+     /
+
+     &LATLONPARAM
+       latlon_type = "GAUSSIAN",     <-- ``GAUSSIAN'' or ``EQUIDIST'' (equal distance)
+       imax        = 128,            <-- 経度方向の格子数
+       jmax        = 64,             <-- 緯度方向の格子数
+     /
+ \end{verbatim}
+
 
 %\textcolor{red}{[英語版未対応-----ここまで]}
 
@@ -105,8 +214,7 @@ g-level=5、r-level=0でMPIプロセスは10を想定している。
 自分の実行環境や目的に合わせてディレクトリを選択してほしい。
 また、各種ツールを用いて、任意の格子間隔やMPIプロセス数の設定を作成することも可能である。
 %\textcolor{red}{[英語版未対応-----ここまで]}
-
- \begin{table}[b]
+ \begin{table}[H]
  \begin{center}
  \caption{Corresponding test cases}
  \begin{tabularx}{150mm}{|l|X|} \hline
@@ -123,7 +231,7 @@ g-level=5、r-level=0でMPIプロセスは10を想定している。
 
 計算機上で数値モデルを実行するためのジョブコマンドはシステムによって異なるが、
 SCALE-GMでは計算機環境の違いを考慮してスクリプトを作成するシステムが用意されている。
-任意の実験ディレクトリへ移動したあと、モデル実行スクリプトと後処理スクリプトを
+任意の実験ディレクトリ\footnote{例えば\texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-11/gl06rl01z30pe40}}へ移動したあと、モデル実行スクリプトと後処理スクリプトを
 作成するために下記のコマンドを実行する。
 
  \begin{verbatim}

@@ -181,10 +181,6 @@ DCMIP2016で取り扱われた3つのテストケースの設定について説�
    \item ``NMHIST''の項目の``item''は、ヒストリー出力する変数を指定している。任意の設定が可能である。
    \item \textcolor{red}{``CNSTPARAM''の項目の``small\_planet\_factor''は必ず``120''と指定すること。}
    \item \textcolor{red}{``CNSTPARAM''の項目の``earth\_angvel''は必ず``0''と指定すること。}
-   \item この実験を行うためにはlapackを組み込んだ状態でコンパイルする必要があ
-     る。環境変数\verb|SCALE_ENABLE_MATHLIB=T|を設定し、lapackのライブラリを以
-     下のような要領で指定する必要がある場合がある。
-     \verb|export scale_math_libs=-L/usr/lib64 -llpack -blas|。
  \end{itemize}
 
  \noindent 上記の編集を行ったあとは、0.2.4節の説明に沿って計算の実行ができる。
