@@ -4,7 +4,6 @@
 \author{\Large Team SCALE\\ UGC working group}
 \date{\today}
 
-\setcounter{secnumdepth}{3}
 \usepackage[dvipdfmx]{graphicx, color}
 \usepackage[dvipdfmx]{hyperref}
 \usepackage{amsmath}
@@ -28,6 +27,11 @@
 }
 
 
+%\setcounter{secnumdepth}{3}
+\makeatletter
+\@addtoreset{chapter}{part}
+\makeatother
+
 
 %\setlength{\textwidth}{42zw}
 %\setlength{\textheight}{40\baselineskip}
@@ -35,7 +39,7 @@
 \usepackage{wallpaper}
 %\renewcommand{\thefootnote}{\fnsymbol{footnote}}
 \renewcommand{\thefootnote}{*\arabic{footnote})}
-
+\renewcommand{\thechapter}{\Roman{part}.\arabic{chapter}}
 
 \input{local_macro}
 
@@ -48,29 +52,29 @@
 \tableofcontents
 
 %-----------------------------------------------------------------------
-% Chapter, section, and subsection are defined in this main tex file.
+% Part, chapter, and section are defined in this main tex file.
 % Sections under subsection are defined in each input tex file.
 %-----------------------------------------------------------------------
 
-\chapter{Overview} \label{chap:overview}
- \input{11_introduction}  %\section{Introduction} \label{sec:introduction}
+\part{Overview} \label{chap:overview}
+ %\input{11_introduction}  %\section{Introduction} \label{sec:introduction}
  %\input{12_notation}      %\section{Notations used in this document} \label{sec:notation}
  %\input{gm_01intro}
 
-\chapter{Install} \label{chap:install}
+\part{Install} \label{chap:install}
  %\input{21_install}       % \section{Necessary system environment} \label{sec:req_env}
  %\input{gm_02start}
 
-\chapter{Tutorial for \scalerm}
- \section{Operation check and basic usage} \label{chap:tutorial_ideal}
+\part{Tutorial for \scalerm}
+ \chapter{Operation check and basic usage} \label{chap:tutorial_ideal}
  %\input{31_ideal_exp_introduction}
  %\input{32_ideal_exp_run}
  %\input{33_ideal_exp_net2g}
  %\input{34_ideal_exp_last}
 
- \section{Ideal atomsphere experiment} %\label{chap:tutorial_ideal}
+ \chapter{Ideal atomsphere experiment} %\label{chap:tutorial_ideal}
 
- \section{Real atomsphere experiment} \label{chap:tutorial_real}
+ \chapter{Real atomsphere experiment} \label{chap:tutorial_real}
  %\input{41_real_exp_introduction}
  %\input{42_real_exp_data}
  %\input{43_real_exp_prep}
@@ -80,20 +84,20 @@
  %\input{47_real_exp_net2g}
 
 
-\chapter{Tutorial for \scalegm}
- \section{Operation check and basic usage}
+\part{Tutorial for \scalegm}
+ \chapter{Operation check and basic usage}
  %\input{gm_03conf}
- \section{Ideal atomsphere experiment}
- \section{Real atomsphere experiment}
+ \chapter{Ideal atomsphere experiment}
+ \chapter{Real atomsphere experiment}
 
 
-\chapter{Various settings} \label{chap:basic_usel}
- \section{Common settings}
+\part{Various settings} \label{chap:basic_usel}
+ \chapter{Common basic settings}
  %\input{514_setting_common}
  %\input{55_setting_time}
  %\input{56_setting_history}
 
- \section{Dynamics and frameworkfor \scalerm}
+ \chapter{Dynamics and framework for \scalerm}
  %\input{50_setting_introduction}
  %\input{51_setting_domain}
  %\input{52_setting_mapproj}
@@ -110,21 +114,22 @@
  %\input{512_setting_bulkjob}
  %\input{513_setting_makeconf}
 
- \section{Dynamics and frameworkfor \scalegm}
+ \chapter{Dynamics and framework for \scalegm}
 
- \section{Setting the physical process} \label{sec:basic_usel_physics}
+ \chapter{Setting the physical process} \label{sec:basic_usel_physics}
  %\input{58_setting_physics}
 
-\chapter{Advanced use} \label{chap:advance_use}
- \section{File convention of SCALE}
- \section{How to use user defined program}
- \section{How to use scale library}
+\part{Advanced use} \label{chap:advance_use}
+ \chapter{File convention of SCALE}
+ \chapter{How to use user defined program}
+ \chapter{How to use scale library}
 
 
 \bibliographystyle{plainnat}
 \bibliography{reference}
 
 \begin{appendix}
+\part{Appendix}
 \chapter{Namelist of configuration file and variable name list for history output} \label{achap:namelist}
 \input{A2_namelist}
 \chapter{Frequently asked questions} \label{achap:practice}
