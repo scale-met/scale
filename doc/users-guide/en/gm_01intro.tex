@@ -15,16 +15,24 @@ A reference paper for NICAM is
 Tomita and Satoh (2004), Satoh et al. (2008).
 %See also NICAM.jp (\url{http://nicam.jp/}).
 
-\section{Terms of SCALE-GM}
-%-------------------------------------------------------------------------------
 
- \begin{itemize}
-   \item g-level (grid level): number of subdivision times of the grid from the original icosahedron.
-         the number starts from 1, we recommend to use the number larger than 4.
-   \item r-level (region level): number of subdivision times of the region(tile)
-         from the original icosahedron. When r-level = 0, we have ten regions(tiles).
-         At that time, the number of available maximum MPI processes is ten.
- \end{itemize}
+%\textcolor{red}{[英語版未対応-------ここから]}
+
+ここで、SCALE-GMの力学コアについて簡潔に説明する。
+予報変数は、密度、運動量、全エネルギー(運動エネルギー＋内部エネルギー)、及び凝結物等のトレーサーである。
+音波は水平方向には陽解法で計算され、鉛直方向には陰解法で計算される(HEVI)。
+格子のトポロジーは正二十面体をベースにしており、水平方向にはArakawa A-gridの格子点配置が適用されている。
+したがって、全ての予報変数は六角形セルの中心に位置している。
+水平方向のオペレーターの離散化には有限体積法を用いている。
+鉛直方向にはLorenzタイプのスタッガード格子が利用されている。
+正二十面体格子の最適化にはバネ格子法(Tomita et al. 2002)を用いて最適化されており、特定の場所に
+格子点を集めて局所的に高解像度化させるストレッチ格子(Tomita et al. 2008)も利用できる。
+有限体積法による水平離散化においては、2次精度のdivergenceとgradientが使用されている(Tomita et al. 2001)。
+トレーサー移流においては、線形再構築を用いた上流型の移流スキーム(Miura 2007)が用いられている。
+時間積分に関しては、3段、もしくは2段のルンゲ・クッタスキームを用いることができる。
+また、計算安定性のための数値粘性として、4次の高次粘性スキームが実装されている。
+
+%\textcolor{red}{[英語版未対応-------ここまで]}
 
 
 \section{Note}
