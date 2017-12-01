@@ -41,12 +41,20 @@ module scale_atmos_solarins
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: ATMOS_SOLARINS_constant    = 1360.250117_RP ! Solar constant [W/m2]
-  logical,  public :: ATMOS_SOLARINS_fixedlatlon = .false.        ! Latitude/Longitude is fixed?
-  logical,  public :: ATMOS_SOLARINS_fixeddate   = .false.        ! Date is fixed?
-  real(RP), public :: ATMOS_SOLARINS_lon                          ! Longitude for radiation [rad]
-  real(RP), public :: ATMOS_SOLARINS_lat                          ! Latitude  for radiation [rad]
-  integer,  public :: ATMOS_SOLARINS_date(6)                      ! Date      for radiation [Y,M,D,H,M,S]
+  real(RP), public :: ATMOS_SOLARINS_constant     = 1360.250117_RP ! Solar constant [W/m2]
+
+  logical,  public :: ATMOS_SOLARINS_set_ve       = .false.        ! Set vernal equinox condition?
+
+  logical,  public :: ATMOS_SOLARINS_set_ideal    = .false.        ! Set obliquity and eccentricity?
+  real(RP), public :: ATMOS_SOLARINS_obliquity    = 0.0_RP         ! Obliquity [deg]
+  real(RP), public :: ATMOS_SOLARINS_eccentricity = 0.0_RP         ! Eccentricity
+
+  logical,  public :: ATMOS_SOLARINS_fixedlatlon  = .false.        ! Latitude/Longitude is fixed?
+  real(RP), public :: ATMOS_SOLARINS_lon                           ! Longitude for radiation [rad]
+  real(RP), public :: ATMOS_SOLARINS_lat                           ! Latitude  for radiation [rad]
+
+  logical,  public :: ATMOS_SOLARINS_fixeddate    = .false.        ! Date is fixed?
+  integer,  public :: ATMOS_SOLARINS_date(6)                       ! Date      for radiation [Y,M,D,H,M,S]
 
   !-----------------------------------------------------------------------------
   !
@@ -556,11 +564,15 @@ contains
     integer, intent(in) :: iyear ! year at setup
 
     namelist / PARAM_ATMOS_SOLARINS / &
-       ATMOS_SOLARINS_constant,    &
-       ATMOS_SOLARINS_fixedlatlon, &
-       ATMOS_SOLARINS_fixeddate,   &
-       ATMOS_SOLARINS_lon,         &
-       ATMOS_SOLARINS_lat,         &
+       ATMOS_SOLARINS_constant,     &
+       ATMOS_SOLARINS_set_ve,       &
+       ATMOS_SOLARINS_set_ideal,    &
+       ATMOS_SOLARINS_obliquity,    &
+       ATMOS_SOLARINS_eccentricity, &
+       ATMOS_SOLARINS_fixedlatlon,  &
+       ATMOS_SOLARINS_lon,          &
+       ATMOS_SOLARINS_lat,          &
+       ATMOS_SOLARINS_fixeddate,    &
        ATMOS_SOLARINS_date
 
     real(RP) :: dyear ! delta t [year]
@@ -587,6 +599,28 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SOLARINS)
 
+    if ( ATMOS_SOLARINS_set_ve ) then
+       if ( .NOT. ATMOS_SOLARINS_set_ideal ) then
+          ATMOS_SOLARINS_set_ideal    = .true.
+          ATMOS_SOLARINS_obliquity    = 0.0_RP
+          ATMOS_SOLARINS_eccentricity = 0.0_RP
+       endif
+       if ( .NOT. ATMOS_SOLARINS_fixedlatlon ) then
+          ATMOS_SOLARINS_fixedlatlon  = .true.
+          ATMOS_SOLARINS_lon          = 0.0_RP
+          ATMOS_SOLARINS_lat          = 0.0_RP
+       endif
+       if ( .NOT. ATMOS_SOLARINS_fixeddate ) then
+          ATMOS_SOLARINS_fixeddate    = .true.
+          ATMOS_SOLARINS_date(1)      = ve_date(1)
+          ATMOS_SOLARINS_date(2)      = ve_date(2)
+          ATMOS_SOLARINS_date(3)      = ve_date(3)
+          ATMOS_SOLARINS_date(4)      = 12
+          ATMOS_SOLARINS_date(5)      = 0
+          ATMOS_SOLARINS_date(6)      = 0
+       endif
+    endif
+
     arcsec2d = 1.0_RP / (60.0_RP*60.0_RP)
     arcsec2r = arcsec2d * CONST_D2R
 
@@ -604,7 +638,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,A)')       '*** Solar insolation parameters ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Reference year                        : ', year_ref
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Current   year                        : ', iyear
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Current   year                        : ', year
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Difference from ref.                  : ', int(dyear)
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Solar constant                 [W/m2] : ', ATMOS_SOLARINS_constant
@@ -672,6 +706,11 @@ contains
        EcosOMG = EcosOMG + Eclip_amp(i) * cos( Eclip_rate(i)*arcsec2r*dyear + Eclip_phase(i)*CONST_D2R )
     enddo
     E = sqrt( EsinOMG*EsinOMG + EcosOMG*EcosOMG )
+
+    if ( ATMOS_SOLARINS_set_ideal ) then
+       obliquity = ATMOS_SOLARINS_obliquity * CONST_D2R
+       E         = ATMOS_SOLARINS_eccentricity
+    endif
 
     ! longitude of fixed perihelion
     if ( EcosOMG == 0.0_RP ) then

@@ -175,38 +175,51 @@ Variables required as the external data are shown in Table \ref{tab:var_list_atm
 
 \subsubsection{Configuration for \texttt{MSTRNX}}
 
-The solar radiation is calculated by using date, time, latitude, and longitude according to the model configuration of calculation.
+The solar radiation is calculated by using date, time, longitude, and latitude according to the model configuration of calculation.
 For the ideal experiment, they can be arbitrarily given as fixed values of time and location over the domain.
 The solar constant can also be changed. These are configured in \namelist{PARAM_ATMOS_SOLARINS} as follows:
 
 \editboxtwo{
-\verb|&PARAM_ATMOS_SOLARINS        | & \\
-\verb| ATMOS_SOLARINS_constant    = 1360.250117   | & Solar constant [W/m2] \\
-\verb| ATMOS_SOLARINS_fixedlatlon = .false.       | & Whether values are fixed for latitude and longitude at radiation calculation\\
-\verb| ATMOS_SOLARINS_fixeddate   = .false.       | & Whether values are fixed for date and time at radiation calculation\\
-\verb| ATMOS_SOLARINS_lon         = 135.221       | & Longitude [deg.] in the case that  \verb|ATMOS_SOLARINS_fixedlatlon=.true.|  \\
-\verb| ATMOS_SOLARINS_lat         =  34.653       | & Latitude [deg.] in the case that  \verb|ATMOS_SOLARINS_fixedlatlon=.true.| \\
-\verb| ATMOS_SOLARINS_date = -1,-1,-1,-1,-1,-1,   | & Year, month, day, and time in the case that \verb|ATMOS_SOLARINS_fixeddate=.true.|[Y,M,D,H,M,S]\\
-\verb|/|            & \\
+\verb|&PARAM_ATMOS_SOLARINS                             | & \\
+\verb| ATMOS_SOLARINS_constant     = 1360.250117        | & Solar constant [W/m2] \\
+\verb| ATMOS_SOLARINS_set_ve       = .false.            | & Whether settings of the ideal vernal equinox are used \\
+\verb| ATMOS_SOLARINS_set_ideal    = .false.            | & Whether values are fixed for obliquity and eccentricity \\
+\verb| ATMOS_SOLARINS_obliquity    = 0.0                | & obliquity [deg.] in the case that \verb|ATMOS_SOLARINS_set_ideal=.true.| \\
+\verb| ATMOS_SOLARINS_eccentricity = 0.0                | & eccentricity     in the case that \verb|ATMOS_SOLARINS_set_ideal=.true.| \\
+\verb| ATMOS_SOLARINS_fixedlatlon  = .false.            | & Whether values are fixed for latitude and longitude at radiation calculation \\
+\verb| ATMOS_SOLARINS_lon          = 135.221            | & Longitude [deg.] in the case that \verb|ATMOS_SOLARINS_fixedlatlon=.true.| \\
+\verb| ATMOS_SOLARINS_lat          =  34.653            | & Latitude  [deg.] in the case that \verb|ATMOS_SOLARINS_fixedlatlon=.true.| \\
+\verb| ATMOS_SOLARINS_fixeddate    = .false.            | & Whether values are fixed for date and time at radiation calculation \\
+\verb| ATMOS_SOLARINS_date         = -1,-1,-1,-1,-1,-1, | & Date and time [Y,M,D,H,M,S] in the case that \verb|ATMOS_SOLARINS_fixeddate=.true.| \\
+\verb|/                                                 | & \\
 }\\
 
-If \nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat} in \namelist{PARAM_MAPPROJ} are given,\\
-the default values of \nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat} are set to those of \\
-\nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat}.
-Refer to Section \ref{subsec:adv_mapproj} for the explanation of \\
-\namelist{PARAM_MAPPROJ}.\\
+When \nmitem{ATMOS_SOLARINS_set_ideal} is \verb|.true.|,
+the solar insolation is calculated using obliquity(deg.) and eccentricity
+specified at \nmitem{ATMOS_SOLARINS_obliquity}, \\
+\nmitem{ATMOS_SOLARINS_eccentricity}, respectively.
+These configurations are useful for the ideal simulations and the simulations of planets other than the Earth.
+%
+When \nmitem{ATMOS_SOLARINS_fixedlatlon} is \verb|.true.|,
+the solar insolation is calculated using same longitude and latitude
+specified at \\
+\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat} over the whole domain.
+the default values of them are \nmitem{MPRJ_basepoint_lon, MPRJ_basepoint_lat},
+which are set in \namelist{PARAM_MAPPROJ}.
+Refer to Section \ref{subsec:adv_mapproj} for the explanation of \namelist{PARAM_MAPPROJ}.
 %
 When \nmitem{ATMOS_SOLARINS_fixeddate} is \verb|.true.|,
-the radiation process is calculated using the date and time specified at \nmitem{ATMOS_SOLARINS_date} (y,m,d,h,m,s).
-The date and time with negative value in \nmitem{ATMOS_SOLARINS_date} are replaced by those in the model.
-For example,
-when configuring \nmitem{ATMOS_SOLARINS_date} to \verb|1950,3,21,-1,-1,-1|,
-solar radiation is set to March 21, 1950 (Vernal Equinox Day) and
-its diurnal variation is considered
-according to the model date at each timestep of calculation.
-
-
-
+the solar insolation is calculated according to date and time (Y,M,D,H,M,S) specified at \nmitem{ATMOS_SOLARINS_date}.
+The date and time are not fixed if the negative values are specified.
+For example, when configuring \nmitem{ATMOS_SOLARINS_date} to \verb|1950,3,21,-1,-1,-1|,
+The date is fixed to March 21, 1950 (the vernal equinox)
+and diurnal variations of the solar insolation are considered in the simulation.
+%
+When \nmitem{ATMOS_SOLARINS_set_ve} is \verb|.true.|,
+the multiple configurations of ideal vernal equinox is automatically set.
+This option sets obliquity and eccentricity to zero, both longitude and latitude to zero deg., and the date and time to 12UTC, March 21, 1950.
+If the values are specified by using \nmitem{ATMOS_SOLARINS_set_ideal, ATMOS_SOLARINS_fixedlatlon, ATMOS_SOLARINS_fixeddate} as described above,
+those settings are given priority.
 
 Depending on the experimental design, the top of the model is often too low, such as 10$\sim$ 20 km, compared to the height of the atmosphere.
 To remedy this situation, another top height used only for radiation calculation is set.
