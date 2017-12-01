@@ -236,7 +236,7 @@ contains
     gmonth_mod = mod( gmonth-1, 12 ) + 1
     gyear_mod  = gyear + ( gmonth-gmonth_mod ) / 12
 
-    if ( CALENDAR_360DAYS ) then
+    if ( CALENDAR_360DAYS .OR. CALENDAR_365DAYS ) then
        yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) )
     else
        yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) ) &

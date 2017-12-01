@@ -582,8 +582,8 @@ contains
        TIME_NSTEP   = int( TIME_DURATIONSEC / TIME_DTSEC )
        TIME_NOWSTEP = 1
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I10)'  ) '*** No. of steps   :', TIME_NSTEP
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)') '*** delta t (sec.) :', TIME_DTSEC
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I12)'  ) '*** No. of steps   :', TIME_NSTEP
 
        !--- calculate intervals for atmosphere
        if ( TIME_DT_ATMOS_DYN /= UNDEF8 ) then
