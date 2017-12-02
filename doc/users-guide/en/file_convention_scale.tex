@@ -1,0 +1,17 @@
+In this chapter,
+the data file convention used in \scalelib is explained.
+\scalelib employs the data format devloped by Unidata
+(\url{http://www.unidata.ucar.edu}) and utilizes \netcdf to
+treat the SCALE native file.
+\netcdf file format is self-descriptive and
+can store any information required for data
+with axis information in the file itself.
+Since the data file does not have much less dependecy such as bit endian,
+it is available on many machine that installs \netcdf. 
+Unpon this format, there is some  convention peculiar to \scalelib.
+The SCALE native file is referred to as SCALE-IO file.
+
+\section{Global Attributes} 
+In SCALE-IO file,
+the explanation of data itself and spatial mesh information
+are store as Global Attribute.
