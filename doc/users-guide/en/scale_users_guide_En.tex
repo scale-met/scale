@@ -52,8 +52,8 @@
 \tableofcontents
 
 %-----------------------------------------------------------------------
-% Part, chapter, and section are defined in this main tex file.
-% Sections under subsection are defined in each input tex file.
+% Part and chapter are defined in this main tex file.
+% Sections are defined in each input tex file.
 %-----------------------------------------------------------------------
 
 \part{Overview} \label{part:overview}
@@ -63,7 +63,7 @@
 
 \part{Install} \label{part:install}
  %\input{21_install}       % \section{Necessary system environment} \label{sec:req_env}
- %\input{gm_02start}
+ %\input{gm_02install}
 
 \part{Tutorial for \scalerm}
  \chapter{Operation check and basic usage} \label{chap:tutorial_ideal}
@@ -86,8 +86,9 @@
 
 \part{Tutorial for \scalegm}
  \chapter{Operation check and basic usage}
- \input{gm_03conf}
+ \input{gm_02basic}
  \chapter{Ideal atomsphere experiment}
+ \input{gm_03conf}
  \chapter{Real atomsphere experiment}
 
 
@@ -97,14 +98,13 @@
  \input{55_setting_time}
  \input{56_setting_history}
 
- \chapter{Dynamics and framework for \scalerm}
+ \chapter{Framework for \scalerm}
  \input{50_setting_introduction}
  \input{51_setting_domain}
  \input{52_setting_mapproj}
  \input{53_setting_topo}
  \input{54_setting_howtoinput}
  \clearpage
- \input{57_setting_dynamics}
  \input{59_setting_net2g}
  \input{510_setting_restart}
  \input{511_0setting_nesting}
@@ -114,8 +114,12 @@
  \input{512_setting_bulkjob}
  \input{513_setting_makeconf}
 
- \chapter{Dynamics and framework for \scalegm}
+ \chapter{Framework for \scalegm}
  \input{setting_gm_level}
+
+ \chapter{Setting the dynamical core} 
+ \input{57_setting_dynamics}
+ %input \section{Dynamical core for \scalegm} here
 
  \chapter{Setting the physical process} \label{sec:basic_usel_physics}
  \input{58_setting_physics}
