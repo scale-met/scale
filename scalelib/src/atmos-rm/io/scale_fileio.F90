@@ -1844,10 +1844,12 @@ contains
        GRID_FBFYG
     use scale_land_grid, only: &
        GRID_LCZ, &
-       GRID_LFZ
+       GRID_LFZ, &
+       GRID_LCDZ
     use scale_urban_grid, only: &
        GRID_UCZ, &
-       GRID_UFZ
+       GRID_UFZ, &
+       GRID_UCDZ
     implicit none
 
     integer, intent(in) :: fid
@@ -1923,11 +1925,11 @@ contains
 
        call FileWriteAxis( fid, 'LCZ',  GRID_LCZ,  start )
        call FileWriteAxis( fid, 'LFZ',  GRID_LFZ,  start )
-       call FileWriteAxis( fid, 'LCDZ', GRID_LCZ,  start )
+       call FileWriteAxis( fid, 'LCDZ', GRID_LCDZ, start )
 
        call FileWriteAxis( fid, 'UCZ',  GRID_UCZ,  start )
        call FileWriteAxis( fid, 'UFZ',  GRID_UFZ,  start )
-       call FileWriteAxis( fid, 'UCDZ', GRID_UCZ,  start )
+       call FileWriteAxis( fid, 'UCDZ', GRID_UCDZ, start )
 
        call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ, start )
        call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ, start )
