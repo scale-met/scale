@@ -1,7 +1,7 @@
 %\section{Setting the physical process} \label{sec:basic_usel_physics}
 %------------------------------------------------------
 
-\subsection{Cloud micro-physics} \label{subsec:basic_usel_microphys}
+\section{Cloud micro-physics} \label{sec:basic_usel_microphys}
 %------------------------------------------------------
 The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively.
 {\color{blue} Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in both \texttt{init.conf} and \texttt{run.conf}}.
@@ -57,7 +57,7 @@ In this case, {\color{blue}{\namelist{PARAM_BIN} in \texttt{init.conf} must also
 To avoid this error, it is necessary to delete the old \verb|micpara.dat| beforehand and regenerate it. The regeneration is automatically done at the execution of \scalerm with \verb|SUZUKI10|.
 
 
-\subsection{Turbulence scheme} \label{subsec:basic_usel_turbulence}
+\section{Turbulence scheme} \label{sec:basic_usel_turbulence}
 %------------------------------------------------------
 
 The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the turbulence scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
@@ -104,7 +104,7 @@ In order to use the \verb|HYBRID| scheme for the horizontal eddy viscosity in RA
 }
 
 
-\subsection{Radiation scheme} \label{subsec:basic_usel_radiation}
+\section{Radiation scheme} \label{sec:basic_usel_radiation}
 %-------------------------------------------------------------------------------
 The radiation scheme is specified in \nmitem{ATMOS_PHY_RD_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the radiation scheme is specified in \namelist{PARAM_TIME}.  Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
@@ -331,7 +331,7 @@ The number of layers and their heights in this user-defined file can be given in
 
 
 
-\subsection{Surface flux at the bottom of atmospheric boundary } \label{subsec:basic_usel_surface}
+\section{Surface flux at the bottom of atmospheric boundary } \label{sec:basic_usel_surface}
 %------------------------------------------------------
 The flux scheme at the bottom atmospheric boundary is configured in \nmitem{ATMOS_PHY_SF_TYPE} in \namelist{PARAM_ATMOS} as follows:
 
@@ -424,7 +424,7 @@ The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \
 \end{center}
 \end{table}
 
-\subsection{Ocean model} \label{subsecp:basic_usel_ocean}
+\section{Ocean model} \label{sec:basic_usel_ocean}
 %-------------------------------------------------------------------------------
 The ocean process consists of two main parts, i.e., update of sea surface state and flux calculation at the interface of atmosphere and ocean. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
@@ -481,10 +481,10 @@ is calculated by using only the solar zenith angle.
 
 \subsubsection{Flux in atmosphere and ocean}
 %-------------------------------------------------------------------------------
-Once a sea surface scheme except for \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of atmosphere and ocean. The fluxes between the atmosphere and the ocean are calculated by some kind of bulk schemes contained in \scalerm. The scheme for the length of the roughness on the sea surface is also selected from several schemes prepared. The scheme of roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in file \verb|run.conf|. The scheme for the bulk transfer coefficient is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{subsec:basic_usel_surface} for more details.
+Once a sea surface scheme except for \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of atmosphere and ocean. The fluxes between the atmosphere and the ocean are calculated by some kind of bulk schemes contained in \scalerm. The scheme for the length of the roughness on the sea surface is also selected from several schemes prepared. The scheme of roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in file \verb|run.conf|. The scheme for the bulk transfer coefficient is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for more details.
 
 
-\subsection{Land model} \label{subsec:basic_usel_land}
+\section{Land model} \label{sec:basic_usel_land}
 %-------------------------------------------------------------------------------
 Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of flux at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
@@ -524,9 +524,9 @@ in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
 
 \subsubsection{Flux in atmosphere and on land}
 %-------------------------------------------------------------------------------
-Once any land surface scheme except \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of the atmosphere and land. The flux between atmosphere and land is calculated by some kind of land scheme contained in \scalerm. If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|, the bulk scheme is the same as that for ocean or ideal land surface. This is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{subsec:basic_usel_surface} for details.
+Once any land surface scheme except \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of the atmosphere and land. The flux between atmosphere and land is calculated by some kind of land scheme contained in \scalerm. If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|, the bulk scheme is the same as that for ocean or ideal land surface. This is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for details.
 
-\subsection{Urban model} \label{subsec:basic_usel_urban}
+\section{Urban model} \label{sec:basic_usel_urban}
 %------------------------------------------------------
 The urban process consists of two main parts, i.e., updating the urban state and flux calculation at the interface of the atmosphere and the urban environment. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
