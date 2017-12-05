@@ -310,7 +310,6 @@ contains
        do k = KS, KE
           RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
                          + RHOH_p (k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )
-!                        - RHOT(k,i,j) * dCP / CPtot(k,i,j)
        end do
        end do
        end do

@@ -172,7 +172,7 @@ contains
          TEMP0,          &
          QV0, QC0, QI0,  &
          CPtot0, CVtot0, &
-         RHOdH           )
+         RHOE_d          )
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
        CP_WATER, &
@@ -198,7 +198,7 @@ contains
     real(RP), intent(inout) :: CPtot0(KA,IA,JA)
     real(RP), intent(inout) :: CVtot0(KA,IA,JA)
 
-    real(RP), intent(out) :: RHOdH(KA,IA,JA)
+    real(RP), intent(out) :: RHOE_d(KA,IA,JA)
 
     ! working
     real(RP) :: TEMP
@@ -248,8 +248,7 @@ contains
                k, i, j,                    & ! [IN]
                TEMP, QV, QC, CPtot, CVtot  ) ! [INOUT]
 
-          RHOdH = ( - LHV * ( QV - QV0(k,i,j) ) &
-                  - ( CVtot - CVtot0(k,i,j) ) * TEMP0(k,i,j) ) * DENS
+          RHOE_d(k,i,j) = - LHV * ( QV - QV0(k,i,j) ) * DENS(k,i,j)
 
           TEMP0 (k,i,j) = TEMP
           QV0   (k,i,j) = QV
@@ -299,9 +298,8 @@ contains
                k, i, j,                        & ! [IN]
                TEMP, QV, QC, QI, CPtot, CVtot  ) ! [INOUT]
 
-          RHOdH = ( - LHV * ( QV - QV0(k,i,j) ) + LHF * ( QI - QI0(k,i,j) ) &
-                  - ( CVtot - CVtot0(k,i,j) ) * TEMP0(k,i,j) &
-                  ) * DENS
+          RHOE_d(k,i,j) = ( - LHV * ( QV - QV0(k,i,j) ) &
+                            + LHF * ( QI - QI0(k,i,j) ) ) * DENS(k,i,j)
 
           TEMP0 (k,i,j) = TEMP
           QV0   (k,i,j) = QV
@@ -912,13 +910,13 @@ contains
        end do
 
        ! internal energy flux
-       do k = KS, KE-1
+       do k = KS-1, KE-1
           eflx(k) = qflx(k) * TEMP(k+1) * CV &
                   + qflx(k) * FDZ(k) * GRAV               ! potential energy
        end do
        !--- update internal energy
        do k = KS, KE
-          RHOE(k) = RHOE(k) + ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
+          RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
        end do
 
     end do

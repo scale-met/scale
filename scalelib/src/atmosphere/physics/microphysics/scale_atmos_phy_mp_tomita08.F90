@@ -85,8 +85,6 @@ module scale_atmos_phy_mp_tomita08
   integer,  private, parameter   :: I_mp_QI =  3
   integer,  private, parameter   :: I_mp_QS =  4
   integer,  private, parameter   :: I_mp_QG =  5
-  integer,  private              :: QS_MP
-  integer,  private              :: QE_MP
 
   logical,  private              :: couple_aerosol                 ! apply CCN effect?
   logical,  private              :: doexplicit_icegen              ! apply explicit ice generation?
@@ -538,7 +536,7 @@ contains
        CCN,                      &
        dt,                       &
        TEMP, QTRC, CPtot, CVtot, &
-       RHOH, EVAPORATE           )
+       RHOE_t, EVAPORATE         )
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        PI    => CONST_PI
@@ -572,11 +570,10 @@ contains
     real(RP), intent(inout) :: CPtot(KA,IA,JA)
     real(RP), intent(inout) :: CVtot(KA,IA,JA)
 
-    real(RP), intent(out) :: RHOH     (KA,IA,JA)
+    real(RP), intent(out) :: RHOE_t   (KA,IA,JA)
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
 
-    real(RP) :: RHOH_mp  (KA,IA,JA)
-    real(RP) :: RHOdQ_sat(KA,IA,JA)
+    real(RP) :: RHOE_d_sat(KA,IA,JA)
 
     real(RP) :: QC_t_sat(KA,IA,JA)
     real(RP) :: QI_t_sat(KA,IA,JA)
@@ -593,8 +590,7 @@ contains
          dt,                                   & ! [IN]
          TEMP(:,:,:), QTRC(:,:,:,:),           & ! [INOUT]
          CPtot(:,:,:), CVtot(:,:,:),           & ! [INOUT]
-         RHOH_mp(:,:,:)                        ) ! [OUT]
-
+         RHOE_t(:,:,:)                         ) ! [OUT]
 
     ! save value before saturation adjustment
     do j = JS, JE
@@ -614,12 +610,12 @@ contains
          QTRC(:,:,:,I_QV),                   & ! [INOUT]
          QTRC(:,:,:,I_QC), QTRC(:,:,:,I_QI), & ! [INOUT]
          CPtot(:,:,:), CVtot(:,:,:),         & ! [INOUT]
-         RHOdQ_sat(:,:,:)                    ) ! [OUT]
+         RHOE_d_sat(:,:,:)                   ) ! [OUT]
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOH(k,i,j) = RHOH_mp(k,i,j) + RHOdQ_sat(k,i,j) / dt
+       RHOE_t(k,i,j) = RHOE_t(k,i,j) + RHOE_d_sat(k,i,j) / dt
     enddo
     enddo
     enddo
@@ -663,7 +659,7 @@ contains
          dt,                &
          TEMP0, QTRC0,      &
          CPtot0, CVtot0,    &
-         RHOH               )
+         RHOE_t             )
     use scale_const, only: &
        PI    => CONST_PI,    &
        EPS   => CONST_EPS,   &
@@ -704,7 +700,7 @@ contains
     real(RP), intent(inout) :: CPtot0(KA,IA,JA)
     real(RP), intent(inout) :: CVtot0(KA,IA,JA)
 
-    real(RP), intent(out) :: RHOH(KA,IA,JA)
+    real(RP), intent(out) :: RHOE_t(KA,IA,JA)
 
     real(RP) :: dens            ! density
     real(RP) :: temp            ! T [K]
@@ -780,7 +776,7 @@ contains
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(DENS0,TEMP0,PRES0,CCN,CPtot0,CVtot0,dt, &
-    !$omp        QTRC0,RHOH, &
+    !$omp        QTRC0,RHOE_t, &
     !$omp        w3d) &
     !$omp private(dens,temp,cptot,cvtot,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t,e_t,cp_t,cv_t &
     !$omp         QSATL,QSATI,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g, &
@@ -1473,7 +1469,7 @@ contains
             + CV_ICE   * ( qi_t + qs_t + qg_t )
        cvtot = CVtot0(k,i,j) + cv_t * dt
 
-       RHOH(k,i,j) = dens * ( e_t - cv_t * temp )
+       RHOE_t(k,i,j) = dens * e_t
 
        TEMP0(k,i,j) = ( temp * CVtot0(k,i,j) + e_t * dt ) / cvtot
        CPtot0(k,i,j) = cptot

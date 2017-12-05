@@ -230,8 +230,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_MP_driver( update_flag )
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_MP_TYPE
+    use scale_const, only: &
+       PRE00 => CONST_PRE00
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
     use scale_grid_real, only: &
@@ -266,6 +266,8 @@ contains
        ATMOS_PHY_MP_TOMITA08_mixing_ratio, &
        ATMOS_PHY_MP_TOMITA08_effective_radius, &
        ATMOS_PHY_MP_TOMITA08_cloud_fraction
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
        MOMZ   => MOMZ_av, &
@@ -316,6 +318,7 @@ contains
 
     logical, intent(in) :: update_flag
 
+    real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: TEMP1 (KA,IA,JA)
     real(RP) :: CPtot1(KA,IA,JA)
     real(RP) :: CVtot1(KA,IA,JA)
@@ -346,6 +349,8 @@ contains
     real(RP) :: FDZ (KA)
     real(RP) :: RFDZ(KA)
     real(RP) :: RCDZ(KA)
+
+    real(RP) :: CP_t, CV_t
 
     real(RP) :: precip   (IA,JA)
 
@@ -379,13 +384,29 @@ contains
 
           call ATMOS_PHY_MP_tomita08_adjustment( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-               DENS(:,:,:), PRES(:,:,:),        & ! [IN]
-               CCN(:,:,:),                      & ! [IN]
-               dt_MP,                           & ! [IN]
-               TEMP1(:,:,:),                    & ! [INOUT]
-               QTRC1(:,:,:,QS_MP:QE_MP),        & ! [INOUT]
-               CPtot1(:,:,:), CVtot1(:,:,:),    & ! [INOUT]
-               RHOH_MP(:,:,:), EVAPORATE(:,:,:) ) ! [OUT]
+               DENS(:,:,:), PRES(:,:,:),       & ! [IN]
+               CCN(:,:,:),                     & ! [IN]
+               dt_MP,                          & ! [IN]
+               TEMP1(:,:,:),                   & ! [INOUT]
+               QTRC1(:,:,:,QS_MP:QE_MP),       & ! [INOUT]
+               CPtot1(:,:,:), CVtot1(:,:,:),   & ! [INOUT]
+               RHOE_t(:,:,:), EVAPORATE(:,:,:) ) ! [OUT]
+
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
+             CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
+             RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
+                  - ( CP_t + log( PRE00 / PRES(k,i,j) ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                  * DENS(k,i,j) * TEMP(k,i,j)
+!             RHOT_t_MP(k,i,j) = RHOE_t(k,i,j) / ( EXNER(k,i,j) * CPtot(k,i,j) ) &
+!                  - RHOT(k,i,j) * CP_t / CPtot(k,i,j) &
+!                  - RHOT(k,i,j) * CVtot(k,i,j) / ( CPtot(k,i,j) - CVtot(k,i,j) ) &
+!                  * log( EXNER(k,i,j) ) * ( CP_t / CPtot(k,i,j) - CV_t / CVtot(k,i,j) )
+          end do
+          end do
+          end do
 
           do iq = QS_MP, QE_MP
           do j = JSB, JEB
@@ -500,21 +521,16 @@ contains
              enddo
 
              DENS2(:) = DENS(:,i,j)
-             TEMP2(:) = TEMP1(:,i,j) ! use updated value
-             CPtot2(:) = CPtot1(:,i,j) ! use updated value
-             CVtot2(:) = CVtot1(:,i,j) ! use updated value
-!             TEMP2(:) = TEMP(:,i,j) ! use original value
-!             CPtot2(:) = CPtot(:) ! use original value
-!             CVtot2(:) = CVtot(:) ! use original value
+             TEMP2(:) = TEMP(:,i,j)
+             CPtot2(:) = CPtot(:,i,j)
+             CVtot2(:) = CVtot(:,i,j)
              do k = KS, KE
-!                RHOE(k) = TEMP(k,i,j) * CVtot(k,i,j) ! use original value
-                RHOE(k) = TEMP2(k) * CVtot1(k,i,j) ! use updated value
+                RHOE(k) = TEMP(k,i,j) * CVtot(k,i,j)
                 RHOE2(k) = RHOE(k)
              end do
              do iq = QS_MP+1, QE_MP
              do k = KS, KE
-!                RHOQ2(k,iq) = DENS2(k) * QTRC(k,i,j,iq) ! use original value
-                RHOQ2(k,iq) = DENS2(k) * QTRC1(k,i,j,iq) ! use updated value
+                RHOQ2(k,iq) = DENS2(k) * QTRC(k,i,j,iq)
              end do
              end do
 
@@ -560,14 +576,23 @@ contains
              end do
 
              do k = KS, KE
+                CP_t = ( CPtot2(k) - CPtot(k,i,j) ) / dt_MP
+                CV_t = ( CVtot2(k) - CVtot(k,i,j) ) / dt_MP
                 RHOH_MP(k,i,j) = RHOH_MP(k,i,j) &
-                     + ( RHOE2(k) - RHOE(k) ) / dt_MP
+                     + ( RHOE2(k) - RHOE(k) ) / dt_MP &
+                     - ( CP_t + log( PRE00 / PRES(k,i,j) ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                     * DENS(k,i,j) * TEMP(k,i,j)
+!                RHOT_t_MP(k,i,j) = RHOT_t_MP(k,i,j) &
+!                     + ( RHOE2(k) - RHOE(k) ) / ( dt_MP * EXNER(k,i,j) * CPtot(k,i,j) ) &
+!                     - RHOT(k,i,j) * CP_t / CPtot(k,i,j) &
+!                     - RHOT(k,i,j) * CVtot(k,i,j) / ( CPtot(k,i,j) - CVtot(k,i,j) ) &
+!                     * log( EXNER(k,i,j) ) * ( CP_t / CPtot(k,i,j) - CV_t / CVtot(k,i,j) )
              end do
 
              do iq = QS_MP+1, QE_MP
              do k  = KS, KE
                 RHOQ_t_MP(k,i,j,iq) = RHOQ_t_MP(k,i,j,iq) &
-                     + ( RHOQ2(k,iq) - DENS(k,i,j) * QTRC1(k,i,j,iq) ) / dt_MP
+                     + ( RHOQ2(k,iq) - DENS(k,i,j) * QTRC(k,i,j,iq) ) / dt_MP
              enddo
              enddo
 
