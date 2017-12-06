@@ -444,14 +444,14 @@ contains
     if( USE_NESTING ) then
 
        if ( OFFLINE .OR. ONLINE_IAM_DAUGHTER ) then
-          corner_loc(I_NW,I_LON) = REAL_LONXY( 1,JA) / D2R
+          corner_loc(I_NW,I_LON) = REAL_LONXY( 0,JA) / D2R
           corner_loc(I_NE,I_LON) = REAL_LONXY(IA,JA) / D2R
-          corner_loc(I_SW,I_LON) = REAL_LONXY( 1, 1) / D2R
-          corner_loc(I_SE,I_LON) = REAL_LONXY(IA, 1) / D2R
-          corner_loc(I_NW,I_LAT) = REAL_LATXY( 1,JA) / D2R
+          corner_loc(I_SW,I_LON) = REAL_LONXY( 0, 0) / D2R
+          corner_loc(I_SE,I_LON) = REAL_LONXY(IA, 0) / D2R
+          corner_loc(I_NW,I_LAT) = REAL_LATXY( 0,JA) / D2R
           corner_loc(I_NE,I_LAT) = REAL_LATXY(IA,JA) / D2R
-          corner_loc(I_SW,I_LAT) = REAL_LATXY( 1, 1) / D2R
-          corner_loc(I_SE,I_LAT) = REAL_LATXY(IA, 1) / D2R
+          corner_loc(I_SW,I_LAT) = REAL_LATXY( 0, 0) / D2R
+          corner_loc(I_SE,I_LAT) = REAL_LATXY(IA, 0) / D2R
 
           allocate( ncopy(IA,JA,itp_nh,itp_ng) )
        end if
@@ -735,8 +735,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                                             jgrd           (:,:,:,I_XSTG),     & ! [OUT]
                                             ncopy          (:,:,:,I_XSTG),     & ! [OUT]
                                             MY_CZ          (:,:,:),            & ! [IN]
-                                            MY_LATX        (:,:),              & ! [IN]
-                                            MY_LONX        (:,:),              & ! [IN]
+                                            MY_LATX        (1:IA,:),           & ! [IN]
+                                            MY_LONX        (1:IA,:),           & ! [IN]
                                             DATR_KS(HANDLING_NUM),             & ! [IN]
                                             DATR_KE(HANDLING_NUM),             & ! [IN]
                                             DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
@@ -756,8 +756,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                                             jgrd           (:,:,:,I_YSTG),     & ! [OUT]
                                             ncopy          (:,:,:,I_YSTG),     & ! [OUT]
                                             MY_CZ          (:,:,:),            & ! [IN]
-                                            MY_LATY        (:,:),              & ! [IN]
-                                            MY_LONY        (:,:),              & ! [IN]
+                                            MY_LATY        (:,1:JA),           & ! [IN]
+                                            MY_LONY        (:,1:JA),           & ! [IN]
                                             DATR_KS(HANDLING_NUM),             & ! [IN]
                                             DATR_KE(HANDLING_NUM),             & ! [IN]
                                             DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
@@ -1545,25 +1545,25 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lonx
-          call MPI_ISEND(REAL_LONX, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(REAL_LONX(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_latx
-          call MPI_ISEND(REAL_LATX, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(REAL_LATX(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lony
-          call MPI_ISEND(REAL_LONY, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(REAL_LONY(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_laty
-          call MPI_ISEND(REAL_LATY, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(REAL_LATY(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
