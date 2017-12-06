@@ -96,6 +96,8 @@ contains
        ATMOS_DYN_driver_setup
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_ae_driver, only: &
@@ -127,7 +129,7 @@ contains
     call PROF_rapend  ('ATM_Refstate', 2)
 
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_setup
+    call ATMOS_BOUNDARY_setup( QA_MP )
     call PROF_rapend  ('ATM_Boundary', 2)
 
     ! setup each components

@@ -83,7 +83,8 @@ contains
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP_config, &
        QA_MP_obsolute => QA_MP, &
-       QS_MP_obsolute => QS_MP
+       QS_MP_obsolute => QS_MP, &
+       QE_MP_obsolute => QE_MP
     implicit none
     !---------------------------------------------------------------------------
 
@@ -111,6 +112,11 @@ contains
     end if
 
     QE_MP = QS_MP + QA_MP - 1
+
+    ! tentative
+    QA_MP_obsolute = QA_MP
+    QS_MP_obsolute = QS_MP
+    QE_MP_obsolute = QE_MP
 
     return
   end subroutine ATMOS_PHY_MP_driver_tracer_setup
@@ -243,10 +249,12 @@ contains
        DENS, &
        RHOT, &
        QTRC
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
 
     real(RP) :: DENS0(KA,IA,JA)
 
-    integer :: k, i, j
+    integer :: k, i, j, iq
 
     if ( MP_donegative_fixer ) then
 
@@ -258,6 +266,17 @@ contains
             MP_limit_negative,                    & ! [IN]
             DENS(:,:,:),                          & ! [INOUT]
             QTRC(:,:,:,I_QV), QTRC(:,:,:,QHS:QHE) ) ! [INOUT]
+
+       ! for non-mass tracers, such as number density
+       do iq = QHE+1, QA_MP
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
+       end do
+       end do
+       end do
+       end do
 
        do j = 1, JA
        do i = 1, IA
@@ -295,6 +314,9 @@ contains
        I_HS,  &
        I_HG,  &
        I_HH,  &
+       QHA,   &
+       QHS,   &
+       QHE,   &
        QLA,   &
        QIA
     use scale_atmos_phy_mp, only: &
@@ -339,7 +361,6 @@ contains
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP, &
        QS_MP, &
        QE_MP, &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
@@ -369,7 +390,6 @@ contains
     real(RP) :: CVtot1(KA,IA,JA)
     real(RP) :: CCN   (KA,IA,JA)
     real(RP) :: vterm (KA,QS_MP+1:QE_MP)
-
 !    real(RP), target :: QTRC1(KA,IA,JA,QS_MP:QA_MP)
 
     ! obsolute
@@ -422,13 +442,9 @@ contains
 
           call ATMOS_PHY_MP_tomita08_adjustment( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-               DENS(:,:,:), PRES(:,:,:),       & ! [IN]
-               CCN(:,:,:),                     & ! [IN]
-               dt_MP,                          & ! [IN]
-               TEMP1(:,:,:),                   & ! [INOUT]
-               QTRC1(:,:,:,QS_MP:QE_MP),       & ! [INOUT]
-               CPtot1(:,:,:), CVtot1(:,:,:),   & ! [INOUT]
-               RHOE_t(:,:,:), EVAPORATE(:,:,:) ) ! [OUT]
+               DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), dt_MP,                          & ! [IN]
+               TEMP1(:,:,:), QTRC1(:,:,:,QS_MP:QE_MP), CPtot1(:,:,:), CVtot1(:,:,:), & ! [INOUT]
+               RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
 
           do j = JSB, JEB
           do i = ISB, IEB
@@ -458,20 +474,18 @@ contains
 
           call ATMOS_PHY_MP_tomita08_cloud_fraction( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               QTRC(:,:,:,QS_MP:QE_MP), & ! [IN]
-               MP_cldfrac_thleshold,    & ! [IN]
-               CLDFRAC(:,:,:,:)         ) ! [OUT]
+               QTRC(:,:,:,QHS:QHE), MP_cldfrac_thleshold, & ! [IN]
+               CLDFRAC(:,:,:)                             ) ! [OUT]
 
           call ATMOS_PHY_MP_tomita08_effective_radius( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:), TEMP(:,:,:), &
-               QTRC(:,:,:,QS_MP:QE_MP),  &
-               Re(:,:,:,:)               )
+               DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
+               Re(:,:,:,:)                                    ) ! [OUT]
 
           call ATMOS_PHY_MP_tomita08_mixing_ratio( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               QTRC(:,:,:,QS_MP:QE_MP), &
-               Qe(:,:,:,:)              )
+               QTRC(:,:,:,QHS:QHE), & ! [IN]
+               Qe(:,:,:,:)          ) ! [OUT]
 
        case default
 
@@ -529,7 +543,7 @@ contains
           enddo
           enddo
 
-          call ATMOS_PHY_MP_CloudFraction( CLDFRAC(:,:,:,:),    & ! [OUT]
+          call ATMOS_PHY_MP_CloudFraction( CLDFRAC(:,:,:),      & ! [OUT]
                                            QTRC(:,:,:,:),       & ! [IN]
                                            MP_cldfrac_thleshold ) ! [IN]
 
@@ -572,8 +586,6 @@ contains
              end do
              end do
 
-             TEMP2(KE+1) = 0.0_RP
-
              SFLX_rain(i,j) = 0.0_RP
              SFLX_snow(i,j) = 0.0_RP
              FLX_hydro(:) = 0.0_RP
@@ -585,7 +597,7 @@ contains
                      vterm(:,:)                      ) ! [OUT]
 
                 call ATMOS_PHY_MP_precipitation( &
-                     KA, KS, KE, QA_MP-1, QLA, QIA, &
+                     KA, KS, KE, QHA, QLA, QIA, &
                      TEMP2(:), vterm(:,:),   & ! [IN]
                      FDZ(:), RCDZ(:),        & ! [IN]
                      MP_DTSEC_SEDIMENTATION, & ! [IN]

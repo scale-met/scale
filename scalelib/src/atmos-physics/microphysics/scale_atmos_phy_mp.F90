@@ -111,14 +111,15 @@ module scale_atmos_phy_mp
   !
   !++ Public parameters & variables
   !
+  ! obsolute
   integer, public    :: QA_MP =  0 ! number of cloud microphysical tracers
   integer, public    :: QS_MP = -1 ! start index in QTRC
   integer, public    :: QE_MP = -1 ! end   index in QTRC
 
+  ! obsolute
   character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_NAME(:)
   character(len=H_MID),   pointer, public :: ATMOS_PHY_MP_DESC(:)
   character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_UNIT(:)
-  real(RP), pointer, public :: ATMOS_PHY_MP_DENS(:)
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -144,8 +145,7 @@ contains
        ATMOS_PHY_MP_dry_MixingRatio, &
        ATMOS_PHY_MP_dry_NAME, &
        ATMOS_PHY_MP_dry_DESC, &
-       ATMOS_PHY_MP_dry_UNIT, &
-       ATMOS_PHY_MP_dry_DENS
+       ATMOS_PHY_MP_dry_UNIT
     use scale_atmos_phy_mp_kessler, only: &
        ATMOS_PHY_MP_kessler_config, &
        ATMOS_PHY_MP_kessler_setup, &
@@ -155,8 +155,7 @@ contains
        ATMOS_PHY_MP_kessler_MixingRatio, &
        ATMOS_PHY_MP_kessler_NAME, &
        ATMOS_PHY_MP_kessler_DESC, &
-       ATMOS_PHY_MP_kessler_UNIT, &
-       ATMOS_PHY_MP_kessler_DENS
+       ATMOS_PHY_MP_kessler_UNIT
     use scale_atmos_phy_mp_sn14, only: &
        ATMOS_PHY_MP_sn14_config, &
        ATMOS_PHY_MP_sn14_setup, &
@@ -166,8 +165,7 @@ contains
        ATMOS_PHY_MP_sn14_MixingRatio, &
        ATMOS_PHY_MP_sn14_NAME, &
        ATMOS_PHY_MP_sn14_DESC, &
-       ATMOS_PHY_MP_sn14_UNIT, &
-       ATMOS_PHY_MP_sn14_DENS
+       ATMOS_PHY_MP_sn14_UNIT
     use scale_atmos_phy_mp_suzuki10, only: &
        ATMOS_PHY_MP_suzuki10_config, &
        ATMOS_PHY_MP_suzuki10_setup, &
@@ -177,8 +175,7 @@ contains
        ATMOS_PHY_MP_suzuki10_MixingRatio, &
        ATMOS_PHY_MP_suzuki10_NAME, &
        ATMOS_PHY_MP_suzuki10_DESC, &
-       ATMOS_PHY_MP_suzuki10_UNIT, &
-       ATMOS_PHY_MP_suzuki10_DENS
+       ATMOS_PHY_MP_suzuki10_UNIT
     use scale_atmos_phy_mp_sdm, only: &
        ATMOS_PHY_MP_sdm_config, &
        ATMOS_PHY_MP_sdm_setup, &
@@ -188,8 +185,7 @@ contains
        ATMOS_PHY_MP_sdm_MixingRatio, &
        ATMOS_PHY_MP_sdm_NAME, &
        ATMOS_PHY_MP_sdm_DESC, &
-       ATMOS_PHY_MP_sdm_UNIT, &
-       ATMOS_PHY_MP_sdm_DENS
+       ATMOS_PHY_MP_sdm_UNIT
     implicit none
 
     character(len=*), intent(in) :: MP_TYPE
@@ -210,7 +206,6 @@ contains
        ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_dry_NAME
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_dry_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_dry_UNIT
-       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_dry_DENS
     case( 'KESSLER' )
        call ATMOS_PHY_MP_kessler_config( &
             MP_TYPE,     & ! (in)
@@ -223,7 +218,6 @@ contains
        ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_kessler_NAME
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_kessler_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_kessler_UNIT
-       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_kessler_DENS
     case( 'SN14' )
        call ATMOS_PHY_MP_sn14_config( &
             MP_TYPE,     & ! (in)
@@ -236,7 +230,6 @@ contains
        ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_sn14_NAME
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_sn14_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_sn14_UNIT
-       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_sn14_DENS
     case( 'SUZUKI10' )
        call ATMOS_PHY_MP_suzuki10_config( &
             MP_TYPE,     & ! (in)
@@ -249,7 +242,6 @@ contains
        ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_suzuki10_NAME
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_suzuki10_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_suzuki10_UNIT
-       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_suzuki10_DENS
     case( 'SDM' )
        call ATMOS_PHY_MP_sdm_config( &
             MP_TYPE,     & ! (in)
@@ -262,7 +254,6 @@ contains
        ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_sdm_NAME
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_sdm_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_sdm_UNIT
-       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_sdm_DENS
     end select
 
     QE_MP = QS_MP + QA_MP - 1

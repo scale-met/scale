@@ -69,7 +69,7 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_MP_CLDFRAC(:,:,:,:) ! cloud fraction
+  real(RP), public, allocatable :: ATMOS_PHY_MP_CLDFRAC(:,:,:)   ! cloud fraction
   real(RP), public, allocatable :: ATMOS_PHY_MP_Re     (:,:,:,:) ! effective radious
   real(RP), public, allocatable :: ATMOS_PHY_MP_Qe     (:,:,:,:) ! mixing ratio
 
@@ -112,6 +112,7 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_atmos_hydrometeor, only: &
+       QHA,  &
        N_HYD
     implicit none
 
@@ -158,10 +159,10 @@ contains
     ATMOS_PHY_MP_SFLX_rain(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_snow(:,:) = UNDEF
 
-    allocate( ATMOS_PHY_MP_CLDFRAC(KA,IA,JA,N_HYD) )
+    allocate( ATMOS_PHY_MP_CLDFRAC(KA,IA,JA) )
     allocate( ATMOS_PHY_MP_Re     (KA,IA,JA,N_HYD) )
     allocate( ATMOS_PHY_MP_Qe     (KA,IA,JA,N_HYD) )
-    ATMOS_PHY_MP_CLDFRAC(:,:,:,:) = UNDEF
+    ATMOS_PHY_MP_CLDFRAC(:,:,:)   = UNDEF
     ATMOS_PHY_MP_Re     (:,:,:,:) = UNDEF
     ATMOS_PHY_MP_Qe     (:,:,:,:) = UNDEF
 

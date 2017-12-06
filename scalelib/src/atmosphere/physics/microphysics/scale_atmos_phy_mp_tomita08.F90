@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module atmosphere / physics / microphysics / tomita08
+!> module atmosphere / physics / microphysics / Tomita08
 !!
 !! @par Description
 !!          Cloud Microphysics by Lin-type parametarization
@@ -397,7 +397,7 @@ contains
 
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics tomita08] / Categ[atmosphere physics] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tomita08] / Categ[atmosphere physics] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Tomita (2008) 1-moment bulk 6 category'
 
     allocate( w3d(KA,IA,JA,w_nmax) )
@@ -566,7 +566,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmosphere / physics / microphysics / tomita08'
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmosphere / physics / microphysics / Tomita08'
 
     !##### MP Main #####
     call MP_tomita08( &

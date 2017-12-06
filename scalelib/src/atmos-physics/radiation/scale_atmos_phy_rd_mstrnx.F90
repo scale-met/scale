@@ -393,14 +393,13 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
-    use scale_atmos_phy_mp, only: &
-       MP_DENS            => ATMOS_PHY_MP_DENS
     use scale_atmos_phy_ae, only: &
        AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
        AE_DENS            => ATMOS_PHY_AE_DENS, &
        QA_AE, &
        QS_AE
     use scale_atmos_hydrometeor, only: &
+       DENS_HYD, &
        N_HYD, &
        I_QV, &
        I_HC, &
@@ -674,18 +673,18 @@ contains
           cycle
        end if
 !OCL PARALLEL
-    do j = JS, JE
-    do i = IS, IE
-       do RD_k = RD_KADD+1, RD_KADD+1 + KE - tropopause(i,j)
-          aerosol_conc_merge(RD_k,i,j,ihydro) = 0.0_RP
-       end do
-       do RD_k = RD_KADD+1 + KE - tropopause(i,j) + 1, RD_KMAX
-          k = KS + RD_KMAX - RD_k ! reverse axis
-          aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
-                                              / MP_DENS(ihydro) * RHO_std / PPM ! [PPM to standard air]
+       do j = JS, JE
+       do i = IS, IE
+          do RD_k = RD_KADD+1, RD_KADD+1 + KE - tropopause(i,j)
+             aerosol_conc_merge(RD_k,i,j,ihydro) = 0.0_RP
+          end do
+          do RD_k = RD_KADD+1 + KE - tropopause(i,j) + 1, RD_KMAX
+             k = KS + RD_KMAX - RD_k ! reverse axis
+             aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
+                                                 / DENS_HYD(ihydro) * RHO_std / PPM ! [PPM to standard air]
+          enddo
        enddo
-    enddo
-    enddo
+       enddo
     enddo
 
 !OCL SERIAL

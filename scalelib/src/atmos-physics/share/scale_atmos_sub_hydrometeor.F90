@@ -99,6 +99,8 @@ module scale_atmos_hydrometeor
   integer, public            :: I_NG = -1
   integer, public            :: I_NH = -1
 
+  real(RP), public           :: DENS_HYD(N_HYD)
+
   ! hydrometeor (water + ice)
   integer, public            :: QHA =  0
   integer, public            :: QHS = -1
@@ -142,16 +144,18 @@ contains
   subroutine ATMOS_HYDROMETEOR_setup
     use scale_const, only: &
        CONST_setup, &
-       CPvap          => CONST_CPvap,          &
-       CVvap          => CONST_CVvap,          &
-       CL             => CONST_CL,             &
-       CI             => CONST_CI,             &
-       LHV00          => CONST_LHV00,          &
-       LHS00          => CONST_LHS00,          &
-       LHF00          => CONST_LHF00,          &
-       LHV0           => CONST_LHV0,           &
-       LHS0           => CONST_LHS0,           &
-       LHF0           => CONST_LHF0,           &
+       CPvap          => CONST_CPvap, &
+       CVvap          => CONST_CVvap, &
+       CL             => CONST_CL,    &
+       CI             => CONST_CI,    &
+       LHV00          => CONST_LHV00, &
+       LHS00          => CONST_LHS00, &
+       LHF00          => CONST_LHF00, &
+       LHV0           => CONST_LHV0,  &
+       LHS0           => CONST_LHS0,  &
+       LHF0           => CONST_LHF0,  &
+       DWATR          => CONST_DWATR, &
+       DICE           => CONST_DICE,  &
        THERMODYN_TYPE => CONST_THERMODYN_TYPE
     use scale_process, only: &
        PRC_abort
@@ -198,6 +202,13 @@ contains
        write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(THERMODYN_TYPE)
        call PRC_abort
     endif
+
+    DENS_HYD(:) = (/ DWATR, & ! HC
+                     DWATR, & ! HR
+                     DICE,  & ! HI
+                     DICE,  & ! HS
+                     DICE,  & ! HG
+                     DICE  /) ! HH
 
     return
   end subroutine ATMOS_HYDROMETEOR_setup
@@ -294,7 +305,8 @@ contains
 
     if ( NQ > 1 ) then
        QHS = I_QV + 1
-       QHE = QHS + NL + NI - 1
+       QHA = NL + NI
+       QHE = QHS + QHA - 1
     endif
 
     if ( NL > 0 ) then
@@ -308,8 +320,6 @@ contains
        QIA = NI
        QIE = QIS + NI - 1
     endif
-
-    QHA = QLA + QIA
 
     return
   end subroutine ATMOS_HYDROMETEOR_regist
