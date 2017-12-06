@@ -27,7 +27,7 @@ DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29      PARAG.29    ] \
                 [${TESTDIR}/data/rad/MIPAS/equ.atm equ.atm     ] \
                 [${TESTDIR}/data/rad/MIPAS/sum.atm sum.atm     ] \
                 [${TESTDIR}/data/rad/MIPAS/win.atm win.atm     ] "
-DATDISTS    = " [${TPROC} ../500m/rad_offline rad_offline] "
+DATDISTS    = " [${TPROC} ../500m/rad_offline_19000321-000000.000 rad_offline_19000321-000000.000] "
 
 
 
