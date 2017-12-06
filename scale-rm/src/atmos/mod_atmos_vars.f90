@@ -1240,19 +1240,6 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
 
-    real(RP) :: W   (KA,IA,JA) ! velocity w at cell center [m/s]
-    real(RP) :: U   (KA,IA,JA) ! velocity u at cell center [m/s]
-    real(RP) :: V   (KA,IA,JA) ! velocity v at cell center [m/s]
-
-    real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
-    real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
-    real(RP) :: TEMP(KA,IA,JA) ! temperature [K]
-
-    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
-
     real(RP) :: RHOQ(KA,IA,JA)
 
     real(RP) :: total ! dummy
