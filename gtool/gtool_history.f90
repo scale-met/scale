@@ -98,13 +98,14 @@ module gtool_history
   end interface HistorySetAttribute
 
   type request
-     character(len=File_HSHORT) :: item           !> Name of variable (in the code)
-     character(len=File_HMID)   :: zcoord         !> Z-coordinate
-     character(len=File_HSHORT) :: outname        !> Name of variable (for output)
-     character(len=File_HLONG)  :: basename       !> Base name of the file
-     integer                    :: dstep          !> Time unit
-     logical                    :: taverage       !> Apply time average?
-     integer                    :: dtype          !> Data type
+     character(len=File_HSHORT) :: item              !> Name of variable (in the code)
+     character(len=File_HMID)   :: zcoord            !> Z-coordinate
+     character(len=File_HSHORT) :: outname           !> Name of variable (for output)
+     character(len=File_HLONG)  :: basename          !> Base name of the file
+     logical                    :: postfix_timelabel !> Add time label to basename?
+     integer                    :: dstep             !> Time unit
+     logical                    :: taverage          !> Apply time average?
+     integer                    :: dtype             !> Data type
   end type request
 
   type vars
@@ -188,7 +189,7 @@ module gtool_history
   logical,                    private              :: History_OUTPUT_STEP0  = .false.   !> Output value at step=0?
   real(DP),                   private              :: History_OUTPUT_WAIT   = 0.0_DP    !> Time length to suppress output [sec]
 
-  logical,                    private              :: History_ERROR_PUTMISS = .true.   !> Abort if the value is never stored after last output?
+  logical,                    private              :: History_ERROR_PUTMISS = .true.    !> Abort if the value is never stored after last output?
 
   ! working
   integer,                    private, parameter   :: History_req_limit     = 1000      !> number limit for history item request
@@ -197,7 +198,7 @@ module gtool_history
 
   integer,                    private              :: History_id_count      = 0         !> number of registered item
   type(vars),                 private, allocatable :: History_vars(:)
-  logical,                    private, allocatable :: History_axis_written(:) !> Axis for this file is already written?
+  logical,                    private, allocatable :: History_axis_written(:)           !> Axis for this file is already written?
 
   integer,                    private, parameter   :: History_axis_limit    = 100       !> number limit of axes
   integer,                    private              :: History_axis_count    =   0
@@ -216,33 +217,35 @@ module gtool_history
 
   integer,                    private              :: io_buffer_size                    !>  internal buffer for PnetCDF
 
+  !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine HistoryInit( &
-       item_count,        &
-       variant_count,     &
-       isize,             &
-       jsize,             &
-       ksize,             &
-       master,            &
-       myrank,            &
-       rankidx,           &
-       procsize,          &
-       title,             &
-       source,            &
-       institution,       &
-       time_start,        &
-       time_interval,     &
-       time_units,        &
-       time_since,        &
-       default_basename,  &
-       default_zcoord,    &
-       default_tinterval, &
-       default_tunit,     &
-       default_taverage,  &
-       default_datatype,  &
-       namelist_filename, &
-       namelist_fid       )
+       item_count,                &
+       variant_count,             &
+       isize,                     &
+       jsize,                     &
+       ksize,                     &
+       master,                    &
+       myrank,                    &
+       rankidx,                   &
+       procsize,                  &
+       title,                     &
+       source,                    &
+       institution,               &
+       time_start,                &
+       time_interval,             &
+       time_units,                &
+       time_since,                &
+       default_basename,          &
+       default_postfix_timelabel, &
+       default_zcoord,            &
+       default_tinterval,         &
+       default_tunit,             &
+       default_taverage,          &
+       default_datatype,          &
+       namelist_filename,         &
+       namelist_fid               )
 #if defined(PGI) || defined(SX)
     use dc_log, only: &
        LOG_master_nml
@@ -272,6 +275,7 @@ contains
     character(len=*), intent(in), optional :: time_units
     character(len=*), intent(in), optional :: time_since
     character(len=*), intent(in), optional :: default_basename
+    logical,          intent(in), optional :: default_postfix_timelabel
     character(len=*), intent(in), optional :: default_zcoord
     real(DP),         intent(in), optional :: default_tinterval
     character(len=*), intent(in), optional :: default_tunit
@@ -280,49 +284,53 @@ contains
     character(len=*), intent(in), optional :: namelist_filename
     integer         , intent(in), optional :: namelist_fid
 
-    character(len=File_HLONG)  :: History_DEFAULT_BASENAME  !> base name of the file
-    real(DP)                   :: History_DEFAULT_TINTERVAL !> time interval
-    character(len=File_HSHORT) :: History_DEFAULT_TUNIT     !> time unit
-    logical                    :: History_DEFAULT_TAVERAGE  !> apply time average?
-    character(len=File_HSHORT) :: History_DEFAULT_ZCOORD    !> default z-coordinate
-    character(len=File_HSHORT) :: History_DEFAULT_DATATYPE  !> data type
-                                                            !> REAL4 : single precision
-                                                            !> REAL8 : double precision
+    character(len=File_HLONG)  :: History_DEFAULT_BASENAME          !> base name of the file
+    logical                    :: History_DEFAULT_POSTFIX_TIMELABEL !> Add timelabel to the basename?
+    real(DP)                   :: History_DEFAULT_TINTERVAL         !> time interval
+    character(len=File_HSHORT) :: History_DEFAULT_TUNIT             !> time unit
+    logical                    :: History_DEFAULT_TAVERAGE          !> apply time average?
+    character(len=File_HSHORT) :: History_DEFAULT_ZCOORD            !> default z-coordinate
+    character(len=File_HSHORT) :: History_DEFAULT_DATATYPE          !> data type
+                                                                    !> REAL4 : single precision
+                                                                    !> REAL8 : double precision
 
     NAMELIST / PARAM_HISTORY / &
-       History_TITLE,             &
-       History_SOURCE,            &
-       History_INSTITUTION,       &
-       History_TIME_UNITS,        &
-       History_DEFAULT_BASENAME,  &
-       History_DEFAULT_TINTERVAL, &
-       History_DEFAULT_TUNIT,     &
-       History_DEFAULT_TAVERAGE,  &
-       History_DEFAULT_ZCOORD,    &
-       History_DEFAULT_DATATYPE,  &
-       History_OUTPUT_STEP0,      &
-       History_OUTPUT_WAIT,       &
-       History_ERROR_PUTMISS,     &
+       History_TITLE,                     &
+       History_SOURCE,                    &
+       History_INSTITUTION,               &
+       History_TIME_UNITS,                &
+       History_DEFAULT_BASENAME,          &
+       History_DEFAULT_POSTFIX_TIMELABEL, &
+       History_DEFAULT_TINTERVAL,         &
+       History_DEFAULT_TUNIT,             &
+       History_DEFAULT_TAVERAGE,          &
+       History_DEFAULT_ZCOORD,            &
+       History_DEFAULT_DATATYPE,          &
+       History_OUTPUT_STEP0,              &
+       History_OUTPUT_WAIT,               &
+       History_ERROR_PUTMISS,             &
        debug
 
-    character(len=File_HSHORT) :: ITEM      !> name of variable (in the code)
-    character(len=File_HSHORT) :: OUTNAME   !> name of variable (for output)
+    character(len=File_HSHORT) :: ITEM              !> name of variable (in the code)
+    character(len=File_HSHORT) :: OUTNAME           !> name of variable (for output)
 
-    character(len=File_HLONG)  :: BASENAME  !> base name of the file
-    real(DP)                   :: TINTERVAL !> time interval
-    character(len=File_HSHORT) :: TUNIT     !> time unit
-    logical                    :: TAVERAGE  !> apply time average?
-    character(len=File_HSHORT) :: ZCOORD    !> z-coordinate
-    character(len=File_HSHORT) :: DATATYPE  !> data type
+    character(len=File_HLONG)  :: BASENAME          !> base name of the file
+   logical                     :: POSTFIX_TIMELABEL !> Add timelabel to the basename?
+    real(DP)                   :: TINTERVAL         !> time interval
+    character(len=File_HSHORT) :: TUNIT             !> time unit
+    logical                    :: TAVERAGE          !> apply time average?
+    character(len=File_HSHORT) :: ZCOORD            !> z-coordinate
+    character(len=File_HSHORT) :: DATATYPE          !> data type
 
     NAMELIST / HISTITEM / &
-       ITEM,      &
-       OUTNAME,   &
-       BASENAME,  &
-       TINTERVAL, &
-       TUNIT,     &
-       TAVERAGE,  &
-       ZCOORD,    &
+       ITEM,              &
+       OUTNAME,           &
+       BASENAME,          &
+       POSTFIX_TIMELABEL, &
+       TINTERVAL,         &
+       TUNIT,             &
+       TAVERAGE,          &
+       ZCOORD,            &
        DATATYPE
 
     integer  :: array_size
@@ -344,7 +352,7 @@ contains
     call Log('I','###### Module[HISTORY] / Origin[gtoollib]')
 
     ! setup
-    allocate( History_rankidx (size(rankidx)) )
+    allocate( History_rankidx (size(rankidx) ) )
     allocate( History_procsize(size(procsize)) )
     History_master      = master
     History_myrank      = myrank
@@ -353,31 +361,33 @@ contains
 
     History_STARTDAYSEC = time_start
     History_DTSEC       = time_interval
-    if( present(time_since) ) then
-      History_TIME_SINCE = time_since
+    if ( present(time_since) ) then
+       History_TIME_SINCE = time_since
     else
-      History_TIME_SINCE        = ''
-    end if
+       History_TIME_SINCE        = ''
+    endif
 
-    History_TIME_UNITS        = 'seconds' !> Unit for time axis
-    History_DEFAULT_BASENAME  = ''        !> base name of the file
-    History_DEFAULT_TINTERVAL = -1.0_DP   !> time interval
-    History_DEFAULT_TUNIT     = 'sec'     !> time unit
-    History_DEFAULT_TAVERAGE  = .false.   !> apply time average?
-    History_DEFAULT_ZCOORD    = ''        !> default z-coordinate
-    History_DEFAULT_DATATYPE  = 'REAL4'   !> data type
+    History_TIME_UNITS                = 'seconds' !> Unit for time axis
+    History_DEFAULT_BASENAME          = ''        !> base name of the file
+    History_DEFAULT_POSTFIX_TIMELABEL = .false.   !> Add timelabel to the basename?
+    History_DEFAULT_TINTERVAL         = -1.0_DP   !> time interval
+    History_DEFAULT_TUNIT             = 'sec'     !> time unit
+    History_DEFAULT_TAVERAGE          = .false.   !> apply time average?
+    History_DEFAULT_ZCOORD            = ''        !> default z-coordinate
+    History_DEFAULT_DATATYPE          = 'REAL4'   !> data type
 
     !--- read namelist
     History_TITLE       = title
     History_SOURCE      = source
     History_INSTITUTION = institution
-    if( present(time_units)        ) History_TIME_UNITS        = time_units
-    if( present(default_basename)  ) History_DEFAULT_BASENAME  = default_basename
-    if( present(default_tinterval) ) History_DEFAULT_TINTERVAL = default_tinterval
-    if( present(default_tunit)     ) History_DEFAULT_TUNIT     = default_tunit
-    if( present(default_taverage)  ) History_DEFAULT_TAVERAGE  = default_taverage
-    if( present(default_zcoord)    ) History_DEFAULT_ZCOORD    = default_zcoord
-    if( present(default_datatype)  ) History_DEFAULT_DATATYPE  = default_datatype
+    if( present(time_units)                ) History_TIME_UNITS                = time_units
+    if( present(default_basename)          ) History_DEFAULT_BASENAME          = default_basename
+    if( present(default_postfix_timelabel) ) History_DEFAULT_POSTFIX_TIMELABEL = default_postfix_timelabel
+    if( present(default_tinterval)         ) History_DEFAULT_TINTERVAL         = default_tinterval
+    if( present(default_tunit)             ) History_DEFAULT_TUNIT             = default_tunit
+    if( present(default_taverage)          ) History_DEFAULT_TAVERAGE          = default_taverage
+    if( present(default_zcoord)            ) History_DEFAULT_ZCOORD            = default_zcoord
+    if( present(default_datatype)          ) History_DEFAULT_DATATYPE          = default_datatype
 
     fid = -1
     if ( present(namelist_fid) ) then
@@ -443,28 +453,26 @@ contains
        return
     endif
 
-
     allocate( History_req(History_req_count) )
 
     ! allows PnetCDF to use an internal buffer to aggregate write requests
     io_buffer_size = array_size * History_req_count * 8
 
     ! read history request
-
-
     memsize = 0
     reqid   = 0
     if ( fid > 0 ) rewind(fid)
     do n = 1, History_req_limit
        ! set default
-       ITEM      = ''
-       OUTNAME   = 'undefined'
-       BASENAME  = History_DEFAULT_BASENAME
-       TINTERVAL = History_DEFAULT_TINTERVAL
-       TUNIT     = History_DEFAULT_TUNIT
-       TAVERAGE  = History_DEFAULT_TAVERAGE
-       ZCOORD    = History_DEFAULT_ZCOORD
-       DATATYPE  = History_DEFAULT_DATATYPE
+       ITEM              = ''
+       OUTNAME           = 'undefined'
+       BASENAME          = History_DEFAULT_BASENAME
+       POSTFIX_TIMELABEL = History_DEFAULT_POSTFIX_TIMELABEL
+       TINTERVAL         = History_DEFAULT_TINTERVAL
+       TUNIT             = History_DEFAULT_TUNIT
+       TAVERAGE          = History_DEFAULT_TAVERAGE
+       ZCOORD            = History_DEFAULT_ZCOORD
+       DATATYPE          = History_DEFAULT_DATATYPE
 
        read(fid,nml=HISTITEM,iostat=ierr)
        if( ierr /= 0 ) exit
@@ -491,10 +499,11 @@ contains
 
        reqid = reqid + 1
 
-       History_req(reqid)%item     = ITEM
-       History_req(reqid)%outname  = OUTNAME
-       History_req(reqid)%basename = BASENAME
-       History_req(reqid)%taverage = TAVERAGE
+       History_req(reqid)%item              = ITEM
+       History_req(reqid)%outname           = OUTNAME
+       History_req(reqid)%basename          = BASENAME
+       History_req(reqid)%postfix_timelabel = POSTFIX_TIMELABEL
+       History_req(reqid)%taverage          = TAVERAGE
 
        call CalendarYmdhms2sec( item_dtsec, TINTERVAL, TUNIT )
        item_dstep = int( item_dtsec / History_DTSEC )
@@ -613,17 +622,20 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryAddVariable( &
-       nregist,  &
-       item,     &
-       dims,     &
-       desc,     &
-       units,    &
-       now_step, &
-       zcoord,   &
-       options,  &
-       start,    &
-       count,    &
-       comm      )
+       nregist,   &
+       item,      &
+       dims,      &
+       desc,      &
+       units,     &
+       now_step,  &
+       timelabel, &
+       zcoord,    &
+       options,   &
+       start,     &
+       count,     &
+       comm       )
+    use mpi, only: &
+       MPI_COMM_NULL
     use gtool_file, only: &
        FileCreate,       &
        FileSetOption,    &
@@ -632,33 +644,34 @@ contains
        FileDefAxis,      &
        FileDefAssociatedCoordinates, &
        FileAttachBuffer
-    use MPI, only: &
-       MPI_COMM_NULL
     implicit none
 
-    integer,          intent(out) :: nregist
-    character(len=*), intent(in)  :: item
-    character(len=*), intent(in)  :: dims(:)
-    character(len=*), intent(in)  :: desc
-    character(len=*), intent(in)  :: units
-    integer,          intent(in)  :: now_step
-    character(len=*), intent(in), optional :: zcoord
-    character(len=*), intent(in), optional :: options  ! 'filetype1:key1=val1&filetype2:key2=val2&...'
-    integer,          intent(in), optional :: start(:) ! global subarray starting indices of this process's write request
-    integer,          intent(in), optional :: count(:) ! lengths of this process's write request along each dimension
-    integer,          intent(in), optional :: comm     ! MPI communicator
+    integer,           intent(out) :: nregist
+    character(len=*),  intent(in)  :: item
+    character(len=*),  intent(in)  :: dims(:)
+    character(len=*),  intent(in)  :: desc
+    character(len=*),  intent(in)  :: units
+    integer,           intent(in)  :: now_step
+    character(len=19), intent(in)  :: timelabel
 
-    character(len=File_HMID) :: tunits
-    logical                  :: fileexisted
-    integer                  :: ic, ie, is, lo
-    real(DP)                 :: dtsec
-    logical                  :: existed
-    integer                  :: ndim
+    character(len=*),  intent(in), optional :: zcoord
+    character(len=*),  intent(in), optional :: options  ! 'filetype1:key1=val1&filetype2:key2=val2&...'
+    integer,           intent(in), optional :: start(:) ! global subarray starting indices of this process's write request
+    integer,           intent(in), optional :: count(:) ! lengths of this process's write request along each dimension
+    integer,           intent(in), optional :: comm     ! MPI communicator
 
-    logical                  :: shared_file_io
-    integer                  :: reqid
-    integer                  :: id, fid
-    integer                  :: m, dim_size
+    logical                   :: shared_file_io
+    logical                   :: existed
+    character(len=File_HMID)  :: tunits
+    integer                   :: ndim
+    character(len=File_HLONG) :: basename_mod
+    logical                   :: fileexisted
+    integer                   :: dim_size
+    real(DP)                  :: dtsec
+
+    integer :: ic, ie, is, lo
+    integer :: reqid, id, m
+    integer :: fid
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -666,8 +679,8 @@ contains
     nregist = 0
 
     ! check whether shared-file I/O method is enabled
-    shared_file_io = .FALSE.
-    if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) shared_file_io = .TRUE.
+    shared_file_io = .false.
+    if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) shared_file_io = .true.
 
     call HistoryCheck( existed, & ! [OUT]
                        item,    & ! [IN]
@@ -691,7 +704,7 @@ contains
 
              if ( present(zcoord) ) then
                 if ( History_req(reqid)%zcoord /= zcoord ) cycle
-             end if
+             endif
 
              existed = .true.
              nregist = nregist + 1
@@ -699,21 +712,27 @@ contains
              History_id_count = History_id_count + 1
              id               = History_id_count
 
-             History_vars(id)%item     = History_req(reqid)%item
-             History_vars(id)%outname  = History_req(reqid)%outname
+             History_vars(id)%item    = History_req(reqid)%item
+             History_vars(id)%outname = History_req(reqid)%outname
 
-             call FileCreate( fid,                         & ! [OUT]
-                              fileexisted,                 & ! [OUT]
-                              History_req(reqid)%basename, & ! [IN]
-                              History_TITLE,               & ! [IN]
-                              History_SOURCE,              & ! [IN]
-                              History_INSTITUTION,         & ! [IN]
-                              History_master,              & ! [IN]
-                              History_myrank,              & ! [IN]
-                              History_rankidx(:),          & ! [IN]
-                              History_procsize(:),         & ! [IN]
-                              time_units = tunits,         & ! [IN]
-                              comm = comm                  ) ! [IN]
+             if ( History_req(reqid)%postfix_timelabel ) then
+                basename_mod = trim(History_req(reqid)%basename)//'_'//trim(timelabel)
+             else
+                basename_mod = trim(History_req(reqid)%basename)
+             endif
+
+             call FileCreate( fid,                 & ! [OUT]
+                              fileexisted,         & ! [OUT]
+                              basename_mod,        & ! [IN]
+                              History_TITLE,       & ! [IN]
+                              History_SOURCE,      & ! [IN]
+                              History_INSTITUTION, & ! [IN]
+                              History_master,      & ! [IN]
+                              History_myrank,      & ! [IN]
+                              History_rankidx(:),  & ! [IN]
+                              History_procsize(:), & ! [IN]
+                              time_units = tunits, & ! [IN]
+                              comm       = comm    ) ! [IN]
 
              History_vars(id)%fid      = fid
              History_vars(id)%dstep    = History_req(reqid)%dstep
