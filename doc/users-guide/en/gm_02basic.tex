@@ -1,29 +1,31 @@
 %\textcolor{red}{[英語版未対応-----ここから]}
-\section{データベースの準備}
+\section{Preparataion of databases}
 %-------------------------------------------------------------------------------
 
-SCALE-GMの実行には、水平格子のデータが必要である。チュートリアルで使用する設定は、
-g-level=5、r-level=0でMPIプロセスは10を想定している。
-この設定のデータベースはソースコードのtarballに含まれているので、
-別途ダウンロードする必要はないが、これ以外の設定で実験を行う場合は
-以下に述べるいずれかの方法でデータベースを準備する必要がある。
-\subsection{既存のデータベースを使用する}
-いくつかの代表的な計算設定に対応するデータベースが\noindent \url{http://scale.aics.riken.jp/ja/download/}に用意されているので、それをダウンロードして使用する。
+To run the scale-gm, you need horizontal grid databases. We assume that 
+we use g-level=5, r-level=0, and 10 MPI processes in this tutorial.
+The databases for this setting is included in the tarball and 
+thus are not need to be prepared. 
+But if you use a different set of settings, you need to use databases 
+in one of the following ways.
+\subsection{Use preprepared databases}
+The databases for some of the typical settings can be downloaded from 
+\noindent \url{http://scale.aics.r%iken.jp/ja/download/}
 
-例えば、
-scale-gm\_database\_gl06rl01pe40.tar.gz\footnote{g-level=6,r-level=1,40プロセ
-  スを使うことを想定}をダウンロードした場合、
-40個のboundaryファイル(水平格子データベース)と41個のllmapファイル(LatLon格子変換テーブル)
-が格納されている。
+For example, when you download
+scale-gm\_database\_gl06rl01pe40.tar.gz\footnote{g-level=6,r-level=1,40
+  processes are assumed to be used}
+you have 40 boundary (horizontal grid databases) files and 41 llmap (LatLon
+grid conversion table) files. 
 \begin{verbatim}
   > tar -zxvf scale-gm_database_gl06rl01pe40.tar.gz
 \end{verbatim}
 
-\noindent 次にデータベースをそれぞれの格納場所に移動させる。
+\noindent Then you need to move each database to appropriate directories.
 
-\noindent まずboundaryファイルは、
-\texttt{scale-{\version}/scale-gm/test/data/grid/boundary}の下へ新たにディレクトリを作成して移動させる。
-いま、展開したデータベースのディレクトリにいることを想定すると下記のようなコマンド実行になる。
+\noindent First the boundary files are moved to a new directory under 
+\texttt{scale-{\version}/scale-gm/test/data/grid/boundary}
+If we suppose we are in the untared directory, you may use the following commands
 \\
 
 \verb|  > mkdir scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40|
@@ -31,145 +33,150 @@ scale-gm\_database\_gl06rl01pe40.tar.gz\footnote{g-level=6,r-level=1,40プロセ
 \verb|  > mv boundary_GL06RL01.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40/|
 \\
 
-\noindent 残るllmapファイルは、\texttt{scale-{\version}/scale-gm/test/data/grid/llmap}の下へ新たにディレクトリを作成して移動させる。\\
+\noindent The llmap files are move to a new directory under 
+\texttt{scale-{\version}/scale-gm/test/data/grid/llmap}
 
 \verb|  > mkdir -p scale-|{\version}\verb|/scale-gm/test/data/grid/llmap/gl06/rl01|
 
 \verb|  > mv llmap.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06/rl01/| \\
 
 
-\subsection{新たにデータベースを作成する}
+\subsection{Create new databases}
 \textcolor{red}{[要検討: ここで言及するのがいいのか、後(例えば3章)の方がいいのか]}
 
-データベースは必要に応じて以下の要領で作成することができる。
-\subsubsection{1.水平格子データベースの作成}
-水平格子データベースはの作成は以下の3つの手順からなり、この順番に実行する必要がる。
-以下のプロセスで作成されるデータベースは前節で述べた場所に保存される。
-\footnote{例えば\texttt{scale-{\version}/scale-gm/test/data/grid/boundary}}
+Databases can be made in the following steps.
+\subsubsection{1.Creation of horizontal grid databases}
+Creating horizontal grid databases consist of the following three steps.
+\textcolor{red}{the created databases should be moved to the appropriate directories?}
+\footnote{For example\texttt{scale-{\version}/scale-gm/test/data/grid/boundary}}
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{enumerate}
 
-\item{プロセス管理データベースの作成} 
+\item{Creation of process managing database} 
 
-\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkmnginfo/rl01pe40|
+\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkmnginfo/rl01pe20|
 \vspace{-4mm}
 \begin{verbatim}
   > make jobshell
   > make run
 \end{verbatim}
- この際、以下のファイルを適切に編集する。
+You need to edit the following file appropriately
  \begin{verbatim}
     > vi nhm_driver.cnf
      &mkmnginfo_cnf
       rlevel       = 1,                      <-- rlevel 
-      prc_num      = 40,                     <-- proess number
-      output_fname = "rl01-prc40.info",      <-- output filename
+      prc_num      = 20,                     <-- proess number
+      output_fname = "rl01-prc20.info",      <-- output filename
      /
  \end{verbatim}
 
-\item{素の格子データベースの作成}
+\item{Creation of raw grid database}
 
-\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkrawgrid/gl05rl00pe10|
+\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkrawgrid/gl05rl01pe20|
 \vspace{-4mm}
 \begin{verbatim}
   > make jobshell
   > make run
 \end{verbatim}
- この際、以下のファイルを適切に編集する。
+You need to edit the following file appropriately
  \begin{verbatim}
     > vi mkrawgrid.cnf
      &ADMPARAM
        glevel      = 5,                      <-- glevel
-       rlevel      = 0,                      <-- rlevel
+       rlevel      = 1,                      <-- rlevel
        vlayer      = 1,                      <-- vertical layer?
-       rgnmngfname = "rl00-prc10.info",      <-- input filename 
+       rgnmngfname = "rl01-prc20.info",      <-- input filename 
      /
 
      &PARAM_MKGRD
-       MKGRD_DOSPRING     = .true.,           <-- バネ格子を使うかどうか
-       MKGRD_OUT_BASENAME = "rawgrid_GL05RL00",<-- output filename
-       MKGRD_spring_beta  = 1.15D0,           <-- バネ格子を使った場合のバネの強さ
+       MKGRD_DOSPRING     = .true.,           <-- use spring grid or not
+       MKGRD_OUT_BASENAME = "rawgrid_GL05RL01",<-- output filename
+       MKGRD_spring_beta  = 1.15D0,           <-- strength of the spring
     /
  \end{verbatim}
 
 
 \item{水平格子データベースの作成}
 
-\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkhgrid/gl05rl00pe10|
+\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkhgrid/gl05rl01pe20|
 \vspace{-4mm}
 \begin{verbatim}
   > make jobshell
   > make run
 \end{verbatim}
- この際、以下のファイルを適切に編集する。
+You need to edit the following file appropriately
  \begin{verbatim}
     > vi mkhgrid.cnf
      &ADMPARAM
        glevel      = 5,                      <-- glevel
-       rlevel      = 0,                      <-- rlevel
+       rlevel      = 1,                      <-- rlevel
        vlayer      = 1,                      <-- vertical layer
-       rgnmngfname = "rl00-prc10.info",      <-- input management filename
+       rgnmngfname = "rl01-prc20.info",      <-- input management filename
      /
 
     &PARAM_MKGRD
-       MKGRD_DOPREROTATE      = .false.,     <-- 回転するかどうか
-       MKGRD_DOSTRETCH        = .false.,     <-- ストレッチするかどうか
-       MKGRD_DOSHRINK         = .false.,     <-- 縮退させるかどうか
-       MKGRD_DOROTATE         = .false.,     <-- 始めに回転させるかどうか
-       MKGRD_IN_BASENAME      = "rawgrid_GL05RL00", <-- input rawgrid filename
-       MKGRD_OUT_BASENAME     = "boundary_GL05RL00",<-- outputput bondary filename
+       MKGRD_DOPREROTATE      = .false.,     <-- rotate or not
+       MKGRD_DOSTRETCH        = .false.,     <-- stretch or not
+       MKGRD_DOSHRINK         = .false.,     <-- shrink or not
+       MKGRD_DOROTATE         = .false.,     <-- rotate first or not
+       MKGRD_IN_BASENAME      = "rawgrid_GL05RL01", <-- input rawgrid filename
+       MKGRD_OUT_BASENAME     = "boundary_GL05RL01",<-- outputput bondary filename
    /
 \end{verbatim}
 \end{enumerate}
 
-\subsubsection{2. LatLon格子変換テーブルデータベースの作成}
+\subsubsection{2. Creation of LatLon grid conversion database}
 
-\verb|> cd scale-|{\version}\verb|/scale-gm/test/framework/mkllmap/gl05rl00pe10_t42|
+\verb|> cd scale-|{\version}\verb|/scale-gm/test/framework/mkllmap/gl05rl01pe20_t42|
 \vspace{-3mm}
 \begin{verbatim}
   > make jobshell
   > make run
 \end{verbatim}
- この際、以下のファイルを適切に編集する。
+You need to edit the following file appropriately
  \begin{verbatim}
     > vi mkllmap.cnf
      &ADMPARAM
        glevel      = 5,
-       rlevel      = 0,
+       rlevel      = 1,
        vlayer      = 1,
-       rgnmngfname = "rl00-prc10.info",
+       rgnmngfname = "rl01-prc20.info",
      /
 
      &GRDPARAM
        hgrid_io_mode = "ADVANCED",
-       hgrid_fname   = "boundary_GL05RL00",
+       hgrid_fname   = "boundary_GL05RL01",
        VGRID_fname   = "NONE",
        topo_fname    = "NONE",
      /
 
      &LATLONPARAM
        latlon_type = "GAUSSIAN",     <-- ``GAUSSIAN'' or ``EQUIDIST'' (equal distance)
-       imax        = 128,            <-- 経度方向の格子数
-       jmax        = 64,             <-- 緯度方向の格子数
+       imax        = 128,            <-- number of grid points in x
+       jmax        = 64,             <-- number of grid points in y
      /
  \end{verbatim}
 
 
 %\textcolor{red}{[英語版未対応-----ここまで]}
 
-\section{実験の実行}
+\section{Run the model}
 %-------------------------------------------------------------------------------
-\subsection{テストケースの説明}
+\subsection{Test cases}
 
-\noindent \texttt{scale-{\version}/scale-gm/test/case} のディレクトリの下にいくつかの理想実験ケースが準備されている。
-例えば、DCMIP2016の実験ケースについて表1にまとめた。
+Several idealized case studies are prepared under the directory 
+\noindent \texttt{scale-{\version}/scale-gm/test/case} 
+For example, table 1 summarizes the DCMIP2016 experiment cases.
 %\textcolor{red}{[英語版未対応-----ここから]}
-テストケースの詳細については\url{https://www.earthsystemcog.org/projects/dcmip-2016/testcases}
-を参照するか、同WebページからダウンロードできるTest Case Documentを参照されたい。
-これらの実験ケースディレクトリの下には
-さらに格子間隔やMPIプロセス数ごとに異なるディレクトリが作成されている。
-自分の実行環境や目的に合わせてディレクトリを選択してほしい。
-また、各種ツールを用いて、任意の格子間隔やMPIプロセス数の設定を作成することも可能である。
+The details of these test cases can be found at 
+\url{https://www.earthsystemcog.org/projects/dcmip-2016/testcases}
+or the Test Case Document that is downloadable from the site.
+Under these test case directories lie some directories with 
+different horizontal grid space and MPI process numbers. 
+You can chose a directory depending on your computational resources 
+and purposes.
+It is also possible to make the databases that are suitable for your needs,
+according to the steps addressed in the previous section.
 %\textcolor{red}{[英語版未対応-----ここまで]}
  \begin{table}[h]
  \begin{center}
@@ -186,23 +193,25 @@ scale-gm\_database\_gl06rl01pe40.tar.gz\footnote{g-level=6,r-level=1,40プロセ
 
 \subsection{計算実行: scale-gm}
 
-計算機上で数値モデルを実行するためのジョブコマンドはシステムによって異なるが、
-SCALE-GMでは計算機環境の違いを考慮してスクリプトを作成するシステムが用意されている。
-任意の実験ディレクトリ\footnote{例えば\texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-11/gl06rl01z30pe40}}へ移動したあと、モデル実行スクリプトと後処理スクリプトを
-作成するために下記のコマンドを実行する。
+Jobcommands depend on the system you use, but we have a system 
+that creates scripts depending on your computational environments.
+After moving to an arbitrary directory \footnote{for example
+  \texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-11/gl06rl01z30pe40}},
+execute the following comman to create model run script and post-process script.
 
  \begin{verbatim}
    > make jobshell
  \end{verbatim}
 
-このコマンドによって``\verb|run.sh|''と``\verb|ico2ll_netcdf.sh|''のスクリプトが作成される。
-モデルを実行するためには、下記のようにコマンドを実行する。
+This commands create ``\verb|run.sh|'' and ``\verb|ico2ll_netcdf.sh|.''
+To run the model, execute the following command.
 
  \begin{verbatim}
    > make run
  \end{verbatim}
 
-これで、実験の計算が開始される。DCMIP2016実験においては、scale-gmを実行したとき、
+This will run the model.
+DCMIP2016実験においては、scale-gmを実行したとき、
 一番はじめに初期値の作成を行っているため、数値モデルの実行前に初期値を作成する手順はない。
 
 \textcolor{red}{要検討：1〜3の実験をgl04 or gl05くらいで、PE5あたりで実行したときのおおよその所要時間があると
@@ -210,13 +219,13 @@ SCALE-GMでは計算機環境の違いを考慮してスクリプトを作成す
  生成されるのか、どれがHistoryファイルで、どれがログファイルなのかくらいの説明があってもよいだろう。}
 
 
-\section{後処理過程: ico2ll}
+\section{Post-process: ico2ll}
 %-------------------------------------------------------------------------------
-計算結果の描画や解析を容易にするために、実験の実行が終了したあと、
-もとの二十面体格子からLatLon格子へ格子変換を行う。
+To ease drawing and analysis of the outputs, you can convert 
+from the original icosahedral horizontal grid itno LatLon horizotnal grid.
 
-後処理過程を実行するまえに、実施した実験設定に合わせて\verb|ico2ll_netcdf.sh|
-の下記の箇所を編集する必要がある。
+Before executing the post-process, you need to edit \verb|ico2ll_netcdf.sh|
+according to your experimental setups.
  \begin{verbatim}
    > vi ico2ll_netcdf.sh
 
@@ -229,7 +238,7 @@ SCALE-GMでは計算機環境の違いを考慮してスクリプトを作成す
    out_intev='day' # output interval (format: "1hr", "6hr", "day", "100s")
  \end{verbatim}
 
- \noindent 後処理過程のスクリプトの編集が完了すれば、下記のコマンドによって後処理過程を実行できる。
+ \noindent The following comman execute the post-process.
  \begin{verbatim}
    sh ico2ll_netcdf.sh
  \end{verbatim}
@@ -238,8 +247,8 @@ SCALE-GMでは計算機環境の違いを考慮してスクリプトを作成す
 %   > bsub < ico2ll_netcdf.sh
 % \end{verbatim}
 
- \noindent ico2llによって作成されるLatLon格子hデータは、現行のスクリプトでは、
-netcdfフォーマットで出力されるようになっている。この場合、``\verb|nicam.161.200.L30.interp_latlon.nc|''
-といったファイル名になる。また、スクリプトの設定を変更することで、GrADS形式の単純バイナリフォーマットで
-データ出力することもできる。
-
+ \noindent The LatLon grid data created by ico2ll is in netcdf format. 
+In this case, the output file name is something like 
+``\verb|nicam.161.200.L30.interp_latlon.nc|''
+Also by changing the script settings, you can create output data in 
+grads format. 
