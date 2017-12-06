@@ -100,6 +100,7 @@ module scale_atmos_hydrometeor
   integer, public            :: I_NH = -1
 
   ! hydrometeor (water + ice)
+  integer, public            :: QHA =  0
   integer, public            :: QHS = -1
   integer, public            :: QHE = -2
   ! water
@@ -132,12 +133,15 @@ module scale_atmos_hydrometeor
   !
   real(RP), private :: THERMODYN_EMASK = 1.0_RP
 
+  logical,  private :: initialized = .false.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_HYDROMETEOR_setup
     use scale_const, only: &
+       CONST_setup, &
        CPvap          => CONST_CPvap,          &
        CVvap          => CONST_CVvap,          &
        CL             => CONST_CL,             &
@@ -150,9 +154,14 @@ contains
        LHF0           => CONST_LHF0,           &
        THERMODYN_TYPE => CONST_THERMODYN_TYPE
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
     !---------------------------------------------------------------------------
+
+    if ( initialized ) return
+    initialized = .true.
+
+    call CONST_setup
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HYDEROMETER] / Categ[ATMOS SHARE] / Origin[SCALElib]'
@@ -187,7 +196,7 @@ contains
 
     else
        write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(THERMODYN_TYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -206,7 +215,7 @@ contains
        UNIT, &
        ADVC  )
     use scale_process, only: &
-      PRC_MPIstop
+      PRC_abort
     use scale_tracer, only: &
       TRACER_regist
     use scale_const, only: &
@@ -234,7 +243,7 @@ contains
 
     if ( I_QV > 0 ) then
        write(*,*) 'xxx tracer for hydrometeor is already registerd'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     NQ = 0
@@ -299,6 +308,8 @@ contains
        QIA = NI
        QIE = QIS + NI - 1
     endif
+
+    QHA = QLA + QIA
 
     return
   end subroutine ATMOS_HYDROMETEOR_regist

@@ -35,6 +35,11 @@ module scale_atmos_phy_mp_common
   public :: ATMOS_PHY_MP_precipitation
   public :: ATMOS_PHY_MP_precipitation_momentum
 
+  interface ATMOS_PHY_MP_negative_fixer
+     module procedure ATMOS_PHY_MP_negative_fixer
+     module procedure ATMOS_PHY_MP_negative_fixer_obsolute
+  end interface ATMOS_PHY_MP_negative_fixer
+
   interface ATMOS_PHY_MP_saturation_adjustment
      module procedure ATMOS_PHY_MP_saturation_adjustment_3D
      module procedure ATMOS_PHY_MP_saturation_adjustment_obsolute
@@ -64,9 +69,105 @@ module scale_atmos_phy_mp_common
 contains
 
   !-----------------------------------------------------------------------------
-  !> Negative fixer
+  !> ATMOS_PHY_MP_negative_fixer
+  !! negative fixer
+  !<
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_negative_fixer( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, QHA, &
+       limit_negative, &
+       DENS, QV, QTRC )
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_abort
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QHA
+
+    real(RP), intent(in)    :: limit_negative
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: QV  (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QHA)
+
+    real(RP) :: diffq
+    real(RP) :: diffq_check(KA,IA,JA)
+    real(RP) :: diffq_min
+
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('MP_filter', 3)
+
+    !$omp parallel do default(none) private(i,j,k,iq,diffq) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KS,KE,QHA,QTRC,DENS,RHOT,diffq_check)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+
+       diffq = 0.0_RP
+       do iq = 1, QHA
+          ! total hydrometeor (before correction)
+          diffq = diffq + QTRC(k,i,j,iq)
+          ! remove negative value of hydrometeors (mass)
+          QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
+       enddo
+
+       do iq = 1, QHA
+          ! difference between before and after correction
+          diffq = diffq - QTRC(k,i,j,iq)
+       enddo
+
+       ! Compensate for the lack of hydrometeors by the water vapor
+       QV(k,i,j) = QV(k,i,j) + diffq
+       diffq_check(k,i,j) = diffq
+
+       ! TODO: We have to consider energy conservation (but very small)
+
+       ! remove negative value of water vapor (mass)
+       diffq = QV(k,i,j)
+       QV(k,i,j) = max( QV(k,i,j), 0.0_RP )
+       diffq = diffq - QV(k,i,j)
+
+       ! Apply correction to total density
+       ! TODO: We have to consider energy conservation (but very small)
+       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - diffq ) ! diffq is negative
+
+    enddo
+    enddo
+    enddo
+
+    diffq_min = minval( diffq_check(KS:KE,ISB:IEB,JSB:JEB) )
+
+    if (       abs(limit_negative) > 0.0_RP         &
+         .AND. abs(limit_negative) < abs(diffq_min) ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx [MP_negative_fixer] large negative is found.'
+       write(*,*)                     'xxx [MP_negative_fixer] large negative is found. rank = ', PRC_myrank
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS,  KE
+          if (     abs(limit_negative) < abs(diffq_check(k,i,j)) &
+              .OR. abs(QV(k,i,j)     ) < abs(diffq_check(k,i,j)) ) then
+             if( IO_L ) write(IO_FID_LOG,*) &
+                        'xxx k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QV(k,i,j)
+          endif
+       enddo
+       enddo
+       enddo
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx criteria: total negative hydrometeor < ', abs(limit_negative)
+
+       call PRC_abort
+    endif
+
+    call PROF_rapend('MP_filter', 3)
+
+    return
+  end subroutine ATMOS_PHY_MP_negative_fixer
+
+  subroutine ATMOS_PHY_MP_negative_fixer_obsolute( &
        DENS,          &
        RHOT,          &
        QTRC,          &
@@ -160,7 +261,7 @@ contains
     call PROF_rapend('MP_filter', 3)
 
     return
-  end subroutine ATMOS_PHY_MP_negative_fixer
+  end subroutine ATMOS_PHY_MP_negative_fixer_obsolute
 
   !-----------------------------------------------------------------------------
   !> Saturation adjustment

@@ -29,7 +29,8 @@ module mod_atmos_phy_mp_driver
   public :: ATMOS_PHY_MP_driver_tracer_setup
   public :: ATMOS_PHY_MP_driver_setup
   public :: ATMOS_PHY_MP_driver_resume
-  public :: ATMOS_PHY_MP_driver
+  public :: ATMOS_PHY_MP_driver_calc_tendency
+  public :: ATMOS_PHY_MP_driver_adjustment
 
   !-----------------------------------------------------------------------------
   !
@@ -219,7 +220,7 @@ contains
 
        ! run once (only for the diagnostic value)
        call PROF_rapstart('ATM_Microphysics', 1)
-       call ATMOS_PHY_MP_driver( update_flag = .true. )
+       call ATMOS_PHY_MP_driver_calc_tendency( update_flag = .true. )
        call PROF_rapend  ('ATM_Microphysics', 1)
 
     end if
@@ -227,9 +228,53 @@ contains
     return
   end subroutine ATMOS_PHY_MP_driver_resume
 
+
   !-----------------------------------------------------------------------------
-  !> Driver
-  subroutine ATMOS_PHY_MP_driver( update_flag )
+  !> adjustment
+  subroutine ATMOS_PHY_MP_driver_adjustment
+    use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       QHA, &
+       QHS, &
+       QHE
+    use scale_atmos_phy_mp_common, only: &
+       ATMOS_PHY_MP_negative_fixer
+    use mod_atmos_vars, only: &
+       DENS, &
+       RHOT, &
+       QTRC
+
+    real(RP) :: DENS0(KA,IA,JA)
+
+    integer :: k, i, j
+
+    if ( MP_donegative_fixer ) then
+
+!OCL XFILL
+       DENS0(:,:,:) = DENS(:,:,:)
+
+       call ATMOS_PHY_MP_negative_fixer( &
+            KA, KS, KE, IA, 1, IA, JA, 1, JA, QHA, &
+            MP_limit_negative,                    & ! [IN]
+            DENS(:,:,:),                          & ! [INOUT]
+            QTRC(:,:,:,I_QV), QTRC(:,:,:,QHS:QHE) ) ! [INOUT]
+
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOT(k,i,j) = RHOT(k,i,j) * DENS(k,i,j) / DENS0(k,i,j)
+       end do
+       end do
+       end do
+
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_driver_adjustment
+
+  !-----------------------------------------------------------------------------
+  !> calculate tendency
+  subroutine ATMOS_PHY_MP_driver_calc_tendency( update_flag )
     use scale_const, only: &
        PRE00 => CONST_PRE00
     use scale_time, only: &
@@ -363,13 +408,6 @@ contains
     if ( update_flag ) then
 
        CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
-
-       ! negative fixer
-       ! if ( MP_donegative_fixer ) then
-       !!!!!!!!!!!!!!!!!!!!!!!!!!!
-       !!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! call ATMOS_PHY_MP_negative_fixer
-       ! end if
 
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'TOMITA08' )
@@ -686,6 +724,6 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_MP_driver
+  end subroutine ATMOS_PHY_MP_driver_calc_tendency
 
 end module mod_atmos_phy_mp_driver

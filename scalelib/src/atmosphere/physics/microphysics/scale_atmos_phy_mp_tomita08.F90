@@ -334,10 +334,6 @@ contains
        dens_i => CONST_DICE
     use scale_specfunc, only: &
        SF_gamma
-    use scale_time, only: &
-       TIME_DTSEC_ATMOS_PHY_MP
-    use scale_grid, only: &
-       CDZ => GRID_CDZ
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -542,18 +538,7 @@ contains
        PI    => CONST_PI
     use scale_history, only: &
        HIST_in
-    use scale_tracer, only: &
-       QA,         &
-       TRACER_R,   &
-       TRACER_CV,  &
-       TRACER_MASS
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
-       THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
-       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_phy_mp_common, only: &
-       MP_negative_fixer        => ATMOS_PHY_MP_negative_fixer,       &
-       MP_precipitation         => ATMOS_PHY_MP_precipitation,        &
        MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
     implicit none
     integer, intent(in) :: KA, KS, KE
