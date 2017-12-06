@@ -345,7 +345,7 @@ contains
     DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < REAL_LONX_mod(0 ,DOMAIN_LONSLOC(2)) &
+    if (      DOMAIN_LONS < REAL_LONX_mod( 0,DOMAIN_LONSLOC(2)) &
          .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
        DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))
@@ -818,7 +818,7 @@ contains
     DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < REAL_LONX_mod(1 ,DOMAIN_LONSLOC(2)) &
+    if (      DOMAIN_LONS < REAL_LONX_mod( 0,DOMAIN_LONSLOC(2)) &
          .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
        DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))
